@@ -1,0 +1,5 @@
+build --incompatible_strict_action_env --cxxopt=-std=c++17 --host_cxxopt=-std=c++17 --client_env=BAZEL_CXXOPTS=-std=c++17
+build --aspects @mypy_integration//:mypy.bzl%mypy_aspect
+build --output_groups=+mypy
+build:release --copt=-g0 --copt=-O3 --copt=-DNDEBUG --copt=-msse --copt=-msse2 --copt=-mmmx
+build:debug --compilation_mode=dbg

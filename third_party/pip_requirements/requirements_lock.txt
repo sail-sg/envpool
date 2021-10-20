@@ -1,0 +1,12 @@
+setuptools==57.4.0
+absl-py==0.13.0
+cloudpickle==2.0.0
+dm-env==1.5
+dm-tree==0.1.6
+filelock==3.0.12
+gym==0.20.0
+jinja2==3.0.1
+numpy==1.21.2
+six==1.16.0
+types-protobuf==3.17.3
+types-filelock==0.1.5
