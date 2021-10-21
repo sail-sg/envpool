@@ -34,7 +34,17 @@ clang-format:
 # bazel file linter
 
 buildifier:
-	buildifier -r -lint warn .
+	buildifier -r -lint=warn .
+
+# bazel build/test in gitlab ci
+
+bazel-build:
+	bazel build --remote_cache=http://bazel-cache-http.ai.seacloud.garenanow.com //... --config=release
+	bazel run  --remote_cache=http://bazel-cache-http.ai.seacloud.garenanow.com //:build_wheel --config=release
+	cp $(ls bazel-bin/build_wheel.runfiles/envpool/dist/*.whl) ./
+
+bazel-test:
+	bazel test --test_output=all --remote_cache=http://bazel-cache-http.ai.seacloud.garenanow.com //... --config=release
 
 # documentation
 
@@ -70,6 +80,7 @@ format:
 	buildifier -r -lint=fix .
 
 # Build docker images
+
 docker:
 	./scripts/build_docker.sh ${PROJECT_NAME} interactive
 

@@ -1,0 +1,53 @@
+# base
+default:
+  image: harbor.seacloud.garenanow.com/sail/envpool2:fd572aa
+  tags:
+    - sail
+
+stages:
+  - lint
+  - build
+  - test
+
+flake8:
+  stage: lint
+  script:
+    - make flake8
+
+py-format:
+  stage: lint
+  script:
+    - make py-format
+
+mypy:
+  stage: lint
+  script:
+    - make mypy
+
+cpplint:
+  stage: lint
+  script:
+    - make cpplint
+
+clang-format:
+  stage: lint
+  script:
+    - make clang-format
+
+buildifier:
+  stage: lint
+  script:
+    - make buildifier
+
+build:
+  stage: build
+  script:
+    - make bazel-build
+  artifacts:
+    paths:
+      - "*.whl"
+
+test:
+  stage: test
+  script:
+    - make bazel-test
