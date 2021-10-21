@@ -1,4 +1,4 @@
-"""envpool workspace initialization, load after workspace0"""
+"""EnvPool workspace initialization, load after workspace0."""
 
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
 load("@rules_python//python:pip.bzl", "pip_parse")
@@ -7,6 +7,7 @@ load("@mypy_integration//repositories:deps.bzl", mypy_integration_deps = "deps")
 load("@mypy_integration//:config.bzl", "mypy_configuration")
 
 def workspace():
+    """Configure pip requirements and mypy integration."""
     python_configure(
         name = "local_config_python",
         python_version = "3",
