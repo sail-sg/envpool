@@ -23,7 +23,7 @@
 auto common_config =
     MakeDict("num_envs"_.bind(1), "batch_size"_.bind(0), "num_threads"_.bind(0),
              "max_num_players"_.bind(1), "thread_affinity_offset"_.bind(-1),
-             "seed"_.bind(42));
+             "base_path"_.bind(std::string("envpool")), "seed"_.bind(42));
 // Note: this action order is hardcoded in async_envpool Send function
 // and env ParseAction function for performance
 auto common_action_spec = MakeDict("env_id"_.bind(Spec<int>({})),

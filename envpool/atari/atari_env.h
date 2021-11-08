@@ -38,16 +38,10 @@ bool TurnOffVerbosity() {
 
 static bool verbosity_off = TurnOffVerbosity();
 
-std::string GetRomPath(std::string task, std::string rom_path) {
-  if (rom_path.length() > 0) {
-    return rom_path;
-  }
-  // task = task.lower()
-  std::transform(task.begin(), task.end(), task.begin(),
-                 [](unsigned char c) { return std::tolower(c); });
+std::string GetRomPath(std::string base_path, std::string task) {
   std::stringstream ss;
   // hardcode path here :(
-  ss << "envpool/atari/atari_roms/" << task << "/" << task << ".bin";
+  ss << base_path << "/atari/atari_roms/" << task << "/" << task << ".bin";
   return ss.str();
 }
 
@@ -59,8 +53,7 @@ class AtariEnvFns {
                     "zero_discount_on_life_loss"_.bind(false),
                     "episodic_life"_.bind(false), "reward_clip"_.bind(false),
                     "img_height"_.bind(84), "img_width"_.bind(84),
-                    "task"_.bind(std::string("pong")),
-                    "rom_path"_.bind(std::string("")));
+                    "task"_.bind(std::string("pong")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -75,7 +68,7 @@ class AtariEnvFns {
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
     ale::ALEInterface env;
-    env.loadROM(GetRomPath(conf["task"_], conf["rom_path"_]));
+    env.loadROM(GetRomPath(conf["base_path"_], conf["task"_]));
     int action_size = env.getMinimalActionSet().size();
     return MakeDict("action"_.bind(Spec<int>({-1}, {0, action_size - 1})));
   }
@@ -119,7 +112,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
         dist_noop_(0, spec.config["noop_max"_] - 1) {
     env_->setFloat("repeat_action_probability", 0);
     env_->setInt("random_seed", seed_);
-    env_->loadROM(GetRomPath(spec.config["task"_], spec.config["rom_path"_]));
+    env_->loadROM(GetRomPath(spec.config["base_path"_], spec.config["task"_]));
     action_set_ = env_->getMinimalActionSet();
     for (auto a : action_set_) {
       if (a == 1) {
