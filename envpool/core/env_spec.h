@@ -17,6 +17,8 @@
 #ifndef ENVPOOL_CORE_ENV_SPEC_H_
 #define ENVPOOL_CORE_ENV_SPEC_H_
 
+#include <string>
+
 #include "envpool/core/array.h"
 #include "envpool/core/dict.h"
 

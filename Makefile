@@ -90,7 +90,7 @@ bazel-clean:
 # documentation
 
 addlicense: addlicense-install
-	addlicense -c $(COPYRIGHT) -l apache -y 2021 -check $(PROJECT_NAME) third_party
+	addlicense -c $(COPYRIGHT) -l apache -y 2021 -check $(PROJECT_NAME) third_party examples
 
 docstyle: doc-install
 	pydocstyle $(PROJECT_NAME) && doc8 docs && cd docs && make html SPHINXOPTS="-W"
@@ -111,7 +111,7 @@ format: py-format-install clang-format-install buildifier-install addlicense-ins
 	yapf -ir $(PYTHON_FILES)
 	clang-format-11 -style=file -i $(CPP_FILES)
 	buildifier -r -lint=fix .
-	addlicense -c $(COPYRIGHT) -l apache -y 2021 $(PROJECT_NAME) third_party
+	addlicense -c $(COPYRIGHT) -l apache -y 2021 $(PROJECT_NAME) third_party examples
 
 # Build docker images
 
