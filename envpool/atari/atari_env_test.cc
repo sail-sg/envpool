@@ -27,7 +27,7 @@ TEST(AtariEnvTest, Seed) {
   auto config = atari::AtariEnvSpec::default_config;
   std::size_t batch = 4;
   config["num_envs"_] = batch;
-  config["batch"_] = batch;
+  config["batch_size"_] = batch;
   config["seed"_] = 0;
   int total_iter = 10000;
   atari::AtariEnvSpec spec(config);
@@ -73,7 +73,7 @@ TEST(AtariEnvTest, MaxEpisodeSteps) {
   int batch = 4;
   int max_episode_steps = 10;
   config["num_envs"_] = batch;
-  config["batch"_] = batch;
+  config["batch_size"_] = batch;
   config["seed"_] = 0;
   config["max_episode_steps"_] = max_episode_steps;
   int total_iter = 100;
@@ -113,7 +113,7 @@ TEST(AtariEnvTest, EpisodicLife) {
   int total_iter = 3000;
   auto config = atari::AtariEnvSpec::default_config;
   config["num_envs"_] = batch;
-  config["batch"_] = batch;
+  config["batch_size"_] = batch;
   config["episodic_life"_] = true;
   config["task"_] = "pong";
   atari::AtariEnvSpec spec(config);
@@ -194,7 +194,7 @@ TEST(AtariEnvTest, ZeroDiscountOnLifeLoss) {
   int total_iter = 3000;
   auto config = atari::AtariEnvSpec::default_config;
   config["num_envs"_] = batch;
-  config["batch"_] = batch;
+  config["batch_size"_] = batch;
   config["task"_] = "breakout";
   atari::AtariEnvSpec spec(config);
   atari::AtariEnvPool envpool(spec);
@@ -273,7 +273,7 @@ TEST(AtariEnvSpeedTest, Benchmark) {
   // int total_iter = 50000;
   auto config = atari::AtariEnvSpec::default_config;
   config["num_envs"_] = num_envs;
-  config["batch"_] = batch;
+  config["batch_size"_] = batch;
   config["num_threads"_] = num_threads;
   config["thread_affinity_offset"_] = 0;
   atari::AtariEnvSpec spec(config);

@@ -17,6 +17,7 @@
 #ifndef ENVPOOL_CORE_ASYNC_ENVPOOL_H_
 #define ENVPOOL_CORE_ASYNC_ENVPOOL_H_
 
+#include <algorithm>
 #include <atomic>
 #include <memory>
 #include <thread>
@@ -65,7 +66,8 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
   explicit AsyncEnvPool(const Spec& spec)
       : EnvPool<Spec>(spec),
         num_envs_(spec.config["num_envs"_]),
-        batch_(spec.config["batch"_] <= 0 ? num_envs_ : spec.config["batch"_]),
+        batch_(spec.config["batch_size"_] <= 0 ? num_envs_
+                                               : spec.config["batch_size"_]),
         max_num_players_(spec.config["max_num_players"_]),
         num_threads_(spec.config["num_threads"_]),
         is_sync_(batch_ == num_envs_ && max_num_players_ == 1),
@@ -76,8 +78,8 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
             new StateBufferQueue(batch_, num_envs_, max_num_players_,
                                  spec.state_spec.template values<ShapeSpec>())),
         envs_(num_envs_) {
-    int processor_count = std::thread::hardware_concurrency();
-    ThreadPool init_pool(processor_count);
+    std::size_t processor_count = std::thread::hardware_concurrency();
+    ThreadPool init_pool(std::min(processor_count, num_envs_));
     std::vector<std::future<void>> result;
     for (std::size_t i = 0; i < num_envs_; ++i) {
       result.emplace_back(init_pool.enqueue(

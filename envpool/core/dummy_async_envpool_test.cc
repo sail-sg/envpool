@@ -27,7 +27,7 @@ TEST(DummyAsyncEnvPoolTest, SplitZeroAction) {
   auto config = dummy::DummyAsyncEnvSpec::default_config;
   int num_envs = 4;
   config["num_envs"_] = num_envs;
-  config["batch"_] = 4;
+  config["batch_size"_] = 4;
   config["num_threads"_] = 1;
   config["seed"_] = 42;
   config["max_num_players"_] = 4;
@@ -98,7 +98,7 @@ void runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
   bool is_sync = num_envs == batch && max_num_players == 1;
   auto config = dummy::DummyAsyncEnvSpec::default_config;
   config["num_envs"_] = num_envs;
-  config["batch"_] = batch;
+  config["batch_size"_] = batch;
   config["num_threads"_] = num_threads;
   config["seed"_] = seed;
   config["max_num_players"_] = max_num_players;

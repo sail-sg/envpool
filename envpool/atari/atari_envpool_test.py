@@ -37,7 +37,7 @@ class _AtariEnvPoolTest(absltest.TestCase):
     )
     conf["task"] = b"pong"
     conf["num_envs"] = num_envs = 3
-    conf["batch"] = batch = 3
+    conf["batch_size"] = batch = 3
     conf["num_threads"] = 3  # os.cpu_count()
     # conf["episodic_life"] = True
     # conf["zero_discount_on_life_loss"] = True
@@ -125,7 +125,7 @@ class _AtariEnvPoolTest(absltest.TestCase):
     config = AtariEnvSpec.gen_config(
       task="pong",
       num_envs=num_envs,
-      batch=batch,
+      batch_size=batch,
       num_threads=num_threads,
       thread_affinity_offset=0,
     )

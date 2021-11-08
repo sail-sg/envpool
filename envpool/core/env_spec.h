@@ -21,7 +21,7 @@
 #include "envpool/core/dict.h"
 
 auto common_config =
-    MakeDict("num_envs"_.bind(1), "batch"_.bind(0), "num_threads"_.bind(0),
+    MakeDict("num_envs"_.bind(1), "batch_size"_.bind(0), "num_threads"_.bind(0),
              "max_num_players"_.bind(1), "thread_affinity_offset"_.bind(-1),
              "seed"_.bind(42));
 // Note: this action order is hardcoded in async_envpool Send function

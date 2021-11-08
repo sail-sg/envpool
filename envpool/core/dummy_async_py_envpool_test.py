@@ -30,8 +30,8 @@ class _DummyAsyncEnvPoolTest(absltest.TestCase):
 
   def test_config(self) -> None:
     ref_config_keys = [
-      'num_envs', 'batch', 'num_threads', 'max_num_players',
-      'thread_affinity_offset', 'state_num', 'action_num', 'seed'
+      "num_envs", "batch_size", "num_threads", "max_num_players",
+      "thread_affinity_offset", "state_num", "action_num", "seed"
     ]
     default_conf = _DummyAsyncEnvSpec._default_config_values
     self.assertTrue(isinstance(default_conf, tuple))
@@ -69,7 +69,7 @@ class _DummyAsyncEnvPoolTest(absltest.TestCase):
       )
     )
     conf["num_envs"] = num_envs = 100
-    conf["batch"] = batch = 31
+    conf["batch_size"] = batch = 31
     conf["num_threads"] = os.cpu_count()
     env_spec = _DummyAsyncEnvSpec(tuple(conf.values()))
     env = _DummyAsyncEnvPool(env_spec)
