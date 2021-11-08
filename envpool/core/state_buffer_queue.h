@@ -40,7 +40,6 @@ class StateBufferQueue {
   std::size_t queue_size_;
   std::vector<std::unique_ptr<StateBuffer>> queue_;
   std::atomic<uint64_t> alloc_count_, done_ptr_, alloc_tail_;
-  std::chrono::duration<double> dur_new_, dur_wait_;
 
   // Create stock statebuffers in a background thread
   CircularBuffer<std::unique_ptr<StateBuffer>> stock_buffer_;
@@ -102,8 +101,6 @@ class StateBufferQueue {
 
  public:
   ~StateBufferQueue() {
-    LOG(INFO) << "sbq new: " << dur_new_.count();
-    LOG(INFO) << "sbq wait: " << dur_wait_.count();
     // stop the thread
     quit_ = true;
     for (std::size_t i = 0; i < create_buffer_thread_.size(); ++i) {
@@ -145,14 +142,10 @@ class StateBufferQueue {
    * time of each state buffer is in the same order as the allocation time.
    */
   std::vector<Array> Wait(int additional_done_count = 0) {
-    auto new_start = std::chrono::system_clock::now();
     std::unique_ptr<StateBuffer> newbuf = stock_buffer_.Get();
-    dur_new_ += std::chrono::system_clock::now() - new_start;
     std::size_t pos = done_ptr_.fetch_add(1);
     std::size_t offset = pos % queue_size_;
-    auto wait_start = std::chrono::system_clock::now();
     auto arr = queue_[offset]->Wait(additional_done_count);
-    dur_wait_ += std::chrono::system_clock::now() - wait_start;
     if (additional_done_count > 0) {
       // move pointer to the next block
       alloc_count_.fetch_add(additional_done_count);

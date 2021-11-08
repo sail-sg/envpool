@@ -70,7 +70,7 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
         num_threads_(spec.config["num_threads"_]),
         is_sync_(batch_ == num_envs_ && max_num_players_ == 1),
         stop_(0),
-        stepping_env_num_(num_envs_),
+        stepping_env_num_(0),
         action_buffer_queue_(new ActionBufferQueue(num_envs_)),
         state_buffer_queue_(
             new StateBufferQueue(batch_, num_envs_, max_num_players_,
@@ -173,6 +173,9 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
       actions[i].force_reset = true;
       actions[i].env_id = env_ids[i];
       actions[i].order = is_sync_ ? i : -1;
+    }
+    if (is_sync_) {
+      stepping_env_num_ += shared_offset;
     }
     action_buffer_queue_->EnqueueBulk(actions);
   }
