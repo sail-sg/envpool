@@ -118,8 +118,8 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
 
   ~AsyncEnvPool() {
     stop_ = 1;
-    LOG(INFO) << "envpool send: " << dur_send_.count();
-    LOG(INFO) << "envpool recv: " << dur_recv_.count();
+    // LOG(INFO) << "envpool send: " << dur_send_.count();
+    // LOG(INFO) << "envpool recv: " << dur_recv_.count();
     // send n actions to clear threadpool
     std::vector<ActionSlice> empty_actions(workers_.size());
     action_buffer_queue_->EnqueueBulk(empty_actions);

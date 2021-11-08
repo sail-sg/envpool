@@ -30,6 +30,8 @@ class _MakeTest(absltest.TestCase):
     spec = envpool.make_spec("Defender-v5")
     env_gym = envpool.make_gym("Defender-v5")
     env_dm = envpool.make_dm("Defender-v5")
+    print(env_dm)
+    print(env_gym)
     self.assertIsInstance(env_gym, gym.Env)
     self.assertIsInstance(env_dm, dm_env.Environment)
     self.assertEqual(spec.action_space.n, 18)

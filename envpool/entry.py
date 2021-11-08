@@ -19,7 +19,8 @@ from envpool.registration import register
 
 # Atari
 
-atari_game_list = os.listdir(os.path.join("envpool", "atari", "atari_roms"))
+atari_rom_path = os.path.join(os.path.dirname(__file__), "atari", "atari_roms")
+atari_game_list = os.listdir(atari_rom_path)
 
 for game in atari_game_list:
   name = "".join([g.capitalize() for g in game.split("_")])
@@ -30,4 +31,5 @@ for game in atari_game_list:
     dm_cls="AtariDMEnvPool",
     gym_cls="AtariGymEnvPool",
     task=game,
+    rom_path=os.path.join(atari_rom_path, game, game + ".bin")
   )
