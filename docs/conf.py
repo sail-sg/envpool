@@ -19,7 +19,7 @@ import os
 import sphinx_rtd_theme
 
 
-def get_version():
+def get_version() -> str:
   # https://packaging.python.org/guides/single-sourcing-package-version/
   with open(os.path.join("..", "envpool", "__init__.py"), "r") as f:
     init = f.read().split()
@@ -68,3 +68,21 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
+html_logo = "_static/images/envpool-logo.png"
+
+def setup(app):
+    app.add_js_file("js/copybutton.js")
+    app.add_css_file("css/style.css")
+
+# -- Extension configuration -------------------------------------------------
+
+# -- Options for intersphinx extension ---------------------------------------
+
+# Example configuration for intersphinx: refer to the Python standard library.
+# intersphinx_mapping = {'https://docs.python.org/3/': None}
+
+# -- Options for todo extension ----------------------------------------------
+
+# If true, `todo` and `todoList` produce output, else they produce nothing.
+# todo_include_todos = False

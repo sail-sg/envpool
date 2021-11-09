@@ -22,13 +22,14 @@ Here are EnvPool's several highlights:
 - Easy C++ developer API to add new envs;
 - **1 Million** Atari frames per second simulation with 256 CPU cores, **~13x** throughput of Python subprocess-based vector env;
 - **~3x** throughput of Python subprocess-based vector env on low resource setup like 12 CPU cores;
-- Comparing with existing GPU-based solution ([Brax](https://github.com/google/brax) / [Isaac-gym](https://developer.nvidia.com/isaac-gym)), EnvPool is a **general** solution for various kinds of speeding-up RL environment parallelization.
+- Comparing with existing GPU-based solution ([Brax](https://github.com/google/brax) / [Isaac-gym](https://developer.nvidia.com/isaac-gym)), EnvPool is a **general** solution for various kinds of speeding-up RL environment parallelization;
+- Compatible with some existing RL libraries, e.g., [Tianshou](https://github.com/thu-ml/tianshou).
 
 ## Installation
 
 ### PyPI
 
-EnvPool is currently hosted on [PyPI](https://pypi.org/project/envpool/). It requires Python>=3.6.
+EnvPool is currently hosted on [PyPI](https://pypi.org/project/envpool/). It requires Python >= 3.6.
 
 You can simply install EnvPool with the following command:
 
@@ -47,7 +48,7 @@ If no error occurs, you have successfully installed EnvPool.
 
 ### Build From Source
 
-Please refer to the [contribution guideline](https://envpool.readthedocs.io/en/latest/contributing.html).
+Please refer to the [guideline](https://envpool.readthedocs.io/en/latest/pages/build.html).
 
 ## Documentation
 
@@ -78,7 +79,7 @@ Our benchmark script is in [examples/benchmark.py](https://github.com/sail-sg/en
 | Highest FPS          | i7-8750H laptop (12) | TPU-VM (96) | Apollo (96) | DGX-A100 (256) |
 | -------------------- | -------------------- | ----------- | ----------- | -------------- |
 | For-loop             | 4876                 | 3817        | 4053        | 4336           |
-| subprocess           | 18249                | 42885       | 19560       | 79509          |
+| Subprocess           | 18249                | 42885       | 19560       | 79509          |
 | Sample Factory       | 27035                | 192074      | 262963      | 639389         |
 | EnvPool (sync)       | 40791                | 175938      | 159191      | 470170         |
 | EnvPool (async)      | **50513**            | 352243      | 410941      | 845537         |
@@ -154,7 +155,7 @@ envpool.make("Pong-v5", env_type="gym", num_envs=64, batch_size=16)
 
 ## Contributing
 
-EnvPool is still under development. More environments are going to be added and we always welcome contributions to help EnvPool better. If you would like to contribute, please check out our [contribution guideline](https://envpool.readthedocs.io/en/latest/contributing.html).
+EnvPool is still under development. More environments are going to be added and we always welcome contributions to help EnvPool better. If you would like to contribute, please check out our [contribution guideline](https://envpool.readthedocs.io/en/latest/pages/contributing.html).
 
 ## License
 

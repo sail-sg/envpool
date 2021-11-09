@@ -140,3 +140,4 @@ cython_debug/
 # Customized
 bazel-*
 pyflakes*
+.DS_Store
