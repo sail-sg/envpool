@@ -1,5 +1,4 @@
-load("@pip_requirements//:requirements.bzl", "requirement")
-load("@pybind11_bazel//:build_defs.bzl", "pybind_extension", "pybind_library")
+load("@pybind11_bazel//:build_defs.bzl", "pybind_library")
 
 package(default_visibility = ["//visibility:public"])
 
