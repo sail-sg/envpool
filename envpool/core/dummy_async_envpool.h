@@ -18,6 +18,7 @@
 #define ENVPOOL_CORE_DUMMY_ASYNC_ENVPOOL_H_
 
 #include "envpool/core/async_envpool.h"
+#include "envpool/core/env.h"
 
 namespace dummy {
 

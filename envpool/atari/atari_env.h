@@ -27,6 +27,7 @@
 
 #include "ale_interface.hpp"
 #include "envpool/core/async_envpool.h"
+#include "envpool/core/env.h"
 #include "envpool/utils/resize.h"
 
 namespace atari {

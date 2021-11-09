@@ -27,8 +27,6 @@
 #include "ThreadPool.h"
 #include "envpool/core/action_buffer_queue.h"
 #include "envpool/core/array.h"
-#include "envpool/core/dict.h"
-#include "envpool/core/env.h"
 #include "envpool/core/envpool.h"
 #include "envpool/core/spec.h"
 #include "envpool/core/state_buffer_queue.h"
