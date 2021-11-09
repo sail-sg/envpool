@@ -11,8 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Atari Network from tianshou repo."""
 
-from typing import Any, Dict, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Optional, Sequence, Tuple, Union, no_type_check
 
 import numpy as np
 import torch
@@ -31,6 +32,7 @@ class DQN(nn.Module):
     device: Union[str, int, torch.device] = "cpu",
     features_only: bool = False,
   ) -> None:
+    """Constructor of DQN."""
     super().__init__()
     self.device = device
     self.net = nn.Sequential(
@@ -53,6 +55,7 @@ class DQN(nn.Module):
       )
       self.output_dim = np.prod(action_shape)
 
+  @no_type_check
   def forward(
     self,
     x: Union[np.ndarray, torch.Tensor],
@@ -60,11 +63,7 @@ class DQN(nn.Module):
     info: Optional[Dict[str, Any]] = None,
   ) -> Tuple[torch.Tensor, Any]:
     r"""Mapping: x -> Q(x, \*)."""
-    x = torch.as_tensor(
-      x,
-      device=self.device,  # type: ignore
-      dtype=torch.float32,
-    )
+    x = torch.as_tensor(x, device=self.device, dtype=torch.float32)
     return self.net(x), state
 
 
@@ -80,6 +79,7 @@ class C51(DQN):
     num_atoms: int = 51,
     device: Union[str, int, torch.device] = "cpu",
   ) -> None:
+    """Constructor of C51."""
     self.action_num = np.prod(action_shape)
     super().__init__(c, h, w, [self.action_num * num_atoms], device)
     self.num_atoms = num_atoms
@@ -110,6 +110,7 @@ class QRDQN(DQN):
     num_quantiles: int = 200,
     device: Union[str, int, torch.device] = "cpu",
   ) -> None:
+    """Constructor of QRDQN."""
     self.action_num = np.prod(action_shape)
     super().__init__(c, h, w, [self.action_num * num_quantiles], device)
     self.num_quantiles = num_quantiles
