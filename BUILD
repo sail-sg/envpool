@@ -14,5 +14,6 @@ py_binary(
     python_version = "PY3",
     deps = [
         requirement("setuptools"),
+        requirement("wheel"),
     ],
 )

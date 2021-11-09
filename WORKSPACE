@@ -8,6 +8,6 @@ load("//envpool:workspace1.bzl", workspace1 = "workspace")
 
 workspace1()
 
-load("@pip_requirements//:requirements.bzl", "install_deps")
+load("//envpool:pip.bzl", pip_workspace = "workspace")
 
-install_deps()
+pip_workspace()

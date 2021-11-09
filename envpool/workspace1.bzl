@@ -15,7 +15,6 @@
 """EnvPool workspace initialization, load after workspace0."""
 
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
-load("@rules_python//python:pip.bzl", "pip_parse")
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
 load("@mypy_integration//repositories:repositories.bzl", mypy_integration_repositories = "repositories")
 load("@mypy_integration//repositories:deps.bzl", mypy_integration_deps = "deps")
@@ -27,14 +26,6 @@ def workspace():
         name = "local_config_python",
         python_version = "3",
     )
-
-    if "pip_requirements" not in native.existing_rules().keys():
-        pip_parse(
-            name = "pip_requirements",
-            python_interpreter = "python3",
-            quiet = False,
-            requirements_lock = "@envpool//third_party/pip_requirements:requirements_lock.txt",
-        )
 
     rules_foreign_cc_dependencies()
 
