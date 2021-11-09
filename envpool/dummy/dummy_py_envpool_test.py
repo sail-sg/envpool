@@ -20,10 +20,7 @@ import numpy as np
 from absl import logging
 from absl.testing import absltest
 
-from envpool.dummy.dummy_envpool import (
-  _DummyEnvPool,
-  _DummyEnvSpec,
-)
+from envpool.dummy.dummy_envpool import _DummyEnvPool, _DummyEnvSpec
 
 
 class _DummyEnvPoolTest(absltest.TestCase):

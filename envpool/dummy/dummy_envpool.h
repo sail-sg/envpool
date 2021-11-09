@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef ENVPOOL_DUMMY_ENVPOOL_H_
-#define ENVPOOL_DUMMY_ENVPOOL_H_
+#ifndef ENVPOOL_DUMMY_DUMMY_ENVPOOL_H_
+#define ENVPOOL_DUMMY_DUMMY_ENVPOOL_H_
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
@@ -198,4 +198,4 @@ typedef AsyncEnvPool<DummyEnv> DummyEnvPool;
 
 }  // namespace dummy
 
-#endif  // ENVPOOL_DUMMY_ENVPOOL_H_
+#endif  // ENVPOOL_DUMMY_DUMMY_ENVPOOL_H_
