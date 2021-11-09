@@ -6,7 +6,7 @@ from setuptools.dist import Distribution
 
 class BinaryDistribution(Distribution):
 
-  def is_pure(self):
+  def is_pure(self) -> bool:
     return False
 
   def has_ext_modules(foo) -> bool:
