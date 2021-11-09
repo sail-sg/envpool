@@ -40,3 +40,4 @@ urllib3
 oauthlib
 pyasn1
 typed-ast
+typing-extensions

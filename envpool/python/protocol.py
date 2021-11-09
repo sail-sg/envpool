@@ -13,17 +13,12 @@
 # limitations under the License.
 """Protocol of C++ EnvPool."""
 
-from typing import (
-  Any,
-  Dict,
-  List,
-  NamedTuple,
-  Optional,
-  Protocol,
-  Tuple,
-  Type,
-  Union,
-)
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Type, Union
+
+try:
+  from typing import Protocol
+except ImportError:
+  from typing_extensions import Protocol
 
 import dm_env
 import gym
