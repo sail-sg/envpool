@@ -10,6 +10,18 @@ genrule(
     cmd = "cp -r $(SRCS) $(OUTS)",
 )
 
+genrule(
+    name = "gen_pretrain_weight",
+    srcs = [
+        "@pretrain_weight//:pth",
+    ],
+    outs = [
+        "policy-pong.pth",
+        "policy-breakout.pth",
+    ],
+    cmd = "cp -r $(SRCS) $(@D)",
+)
+
 py_library(
     name = "atari",
     srcs = ["__init__.py"],
@@ -36,6 +48,15 @@ cc_test(
     deps = [
         ":atari_env",
         "@com_google_googletest//:gtest_main",
+    ],
+)
+
+py_library(
+    name = "atari_network",
+    srcs = ["atari_network.py"],
+    deps = [
+        requirement("numpy"),
+        requirement("torch"),
     ],
 )
 
@@ -67,9 +88,26 @@ py_test(
     name = "atari_envpool_test",
     srcs = ["atari_envpool_test.py"],
     deps = [
-        ":atari",
+        "//envpool",
         requirement("numpy"),
         requirement("dm-env"),
         requirement("absl-py"),
+    ],
+)
+
+py_test(
+    name = "atari_pretrain_test",
+    srcs = ["atari_pretrain_test.py"],
+    data = [
+        ":gen_pretrain_weight",
+    ],
+    deps = [
+        ":atari_network",
+        "//envpool",
+        requirement("numpy"),
+        requirement("absl-py"),
+        requirement("tianshou"),
+        requirement("tqdm"),
+        requirement("torch"),
     ],
 )

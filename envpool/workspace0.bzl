@@ -159,6 +159,16 @@ def workspace():
         build_file = "//third_party/atari_roms:atari_roms.BUILD",
     )
 
+    # Atari/VizDoom pretrained weight for testing pipeline
+
+    maybe(
+        http_archive,
+        name = "pretrain_weight",
+        sha256 = "93dda459563f2b2243787dd3b8cc8974e609806295c1501c00791ef55c28343f",
+        urls = ["https://cdn.sail.sea.com/sail/pretrain.tar.gz"],
+        build_file = "//third_party/pretrain_weight:pretrain_weight.BUILD",
+    )
+
     mypy_integration_version = "0.2.0"  # Latest @ 26th June 2021
 
     maybe(
