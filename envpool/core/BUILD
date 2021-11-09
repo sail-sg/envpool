@@ -198,31 +198,6 @@ pybind_library(
 )
 
 pybind_extension(
-    name = "dummy_envpool",
-    srcs = [
-        "dummy_envpool.cc",
-    ],
-    linkopts = [
-        "-ldl",
-    ],
-    deps = [
-        ":dict",
-        ":py_envpool",
-        ":spec",
-    ],
-)
-
-py_test(
-    name = "dummy_envpool_test",
-    srcs = ["dummy_envpool_test.py"],
-    data = ["dummy_envpool.so"],
-    deps = [
-        requirement("numpy"),
-        requirement("absl-py"),
-    ],
-)
-
-pybind_extension(
     name = "dummy_async_py_envpool",
     srcs = [
         "dummy_async_py_envpool.cc",
