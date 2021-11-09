@@ -18,7 +18,7 @@ from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Type, Union
 try:
   from typing import Protocol
 except ImportError:
-  from typing_extensions import Protocol
+  from typing_extensions import Protocol  # type: ignore
 
 import dm_env
 import gym
