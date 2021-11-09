@@ -9,8 +9,8 @@ PATH         := $(HOME)/go/bin:$(PATH)
 
 # installation
 
-check_install = python3 -c "import $(1)" || pip3 install $(1) --upgrade
-check_install_extra = python3 -c "import $(1)" || pip3 install $(2) --upgrade
+check_install = python3 -c "import $(1)" || (cd && pip3 install $(1) --upgrade && cd -)
+check_install_extra = python3 -c "import $(1)" || (cd && pip3 install $(2) --upgrade && cd -)
 
 flake8-install:
 	$(call check_install, flake8)
