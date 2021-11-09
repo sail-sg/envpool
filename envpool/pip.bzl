@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 """EnvPool pip requirements initialization, this is loaded in WORKSPACE."""
 
 load("@rules_python//python:pip.bzl", "pip_install")
