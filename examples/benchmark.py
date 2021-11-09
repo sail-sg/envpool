@@ -11,6 +11,33 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""EnvPool python benchmark script.
+
+Single Python Thread
+====================
+
+In general, we recommend to first decide batch_size, then with
+num_envs = (2.5~3) * batch_size to achieve the best simulation speed.
+
+In DGX-A100, we use batch_size 248 and num_envs 645.
+In TPU-VM, we use batch_size 96 and num_envs 288.
+
+NUMA
+====
+
+To test with NUMA, first use ``numactl -s`` to see the number of NUMA core;
+then use ``./numa_test.sh `YOUR_CORE_NUM-1` python3 benchmark.py [args]``.
+
+In DGX-A100 (8 NUMA core), we use the following script to achieve overall
+1M+ FPS:
+::
+
+  ./numa_test.sh 7 python3 benchmark.py --num-envs 100 --batch-size 32 \
+    --thread-affinity-offset -1
+
+Note: When using NUMA, it's better to disable thread affinity by setting
+`--thread-affinity-offset -1`.
+"""
 
 import argparse
 import time
