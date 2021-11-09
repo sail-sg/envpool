@@ -30,6 +30,12 @@
  */
 template <typename EnvSpec>
 class Env {
+ protected:
+  int max_num_players_;
+  EnvSpec spec_;
+  int env_id_, seed_;
+  std::mt19937 gen_;
+
  private:
   StateBufferQueue* sbq_;
   int order_, elapsed_step_;
@@ -42,11 +48,6 @@ class Env {
   std::vector<Array> raw_action_;
   int env_index_;
 
- protected:
-  EnvSpec spec_;
-  int env_id_, seed_;
-  std::mt19937 gen_;
-
  public:
   typedef EnvSpec Spec;
   using State = NamedVector<typename EnvSpec::StateKeys, std::vector<Array>>;
@@ -54,18 +55,17 @@ class Env {
 
  public:
   Env(const EnvSpec& spec, int env_id)
-      : elapsed_step_(-1),
-        is_single_player_(spec.config["max_num_players"_] == 1),
-        action_specs_(spec.action_spec.template values<ShapeSpec>()),
-        is_player_action_(Transform(action_specs_,
-                                    [](const ShapeSpec& s) {
-                                      return (s.shape.size() > 0 &&
-                                              s.shape[0] == -1);
-                                    })),
+      : max_num_players_(spec.config["max_num_players"_]),
         spec_(spec),
         env_id_(env_id),
         seed_(spec.config["seed"_] + env_id),
-        gen_(seed_) {
+        gen_(seed_),
+        elapsed_step_(-1),
+        is_single_player_(max_num_players_ == 1),
+        action_specs_(spec.action_spec.template values<ShapeSpec>()),
+        is_player_action_(Transform(action_specs_, [](const ShapeSpec& s) {
+          return (s.shape.size() > 0 && s.shape[0] == -1);
+        })) {
     slice_.done_write = [] { LOG(INFO) << "Use `Allocate` to write state."; };
   }
 
