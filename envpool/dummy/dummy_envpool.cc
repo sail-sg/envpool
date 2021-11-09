@@ -18,7 +18,14 @@
 
 #include "envpool/core/py_envpool.h"
 
+/**
+ * Wrap the `DummyEnvSpec` and `DummyEnvPool` with the corresponding `PyEnvSpec`
+ * and `PyEnvPool` template.
+ */
 typedef PyEnvSpec<dummy::DummyEnvSpec> DummyEnvSpec;
 typedef PyEnvPool<dummy::DummyEnvPool> DummyEnvPool;
 
+/**
+ * Finally, call the REGISTER macro to expose them to python
+ */
 PYBIND11_MODULE(dummy_envpool, m) { REGISTER(m, DummyEnvSpec, DummyEnvPool) }
