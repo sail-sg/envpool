@@ -9,7 +9,7 @@ py_library(
 )
 
 cc_library(
-    name = "dummy_envpool",
+    name = "dummy_envpool_h",
     hdrs = ["dummy_envpool.h"],
     deps = [
         "//envpool/core:async_envpool",
@@ -22,7 +22,7 @@ cc_test(
     name = "dummy_envpool_test",
     srcs = ["dummy_envpool_test.cc"],
     deps = [
-        ":dummy_envpool",
+        ":dummy_envpool_h",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -46,7 +46,7 @@ pybind_extension(
         "-ldl",
     ],
     deps = [
-        ":dummy_envpool",
+        ":dummy_envpool_h",
         "//envpool/core:py_envpool",
     ],
 )
