@@ -17,7 +17,6 @@ import os
 
 import numpy as np
 import torch
-import tqdm
 from absl import logging
 from absl.testing import absltest
 from tianshou.data import Batch
@@ -58,25 +57,23 @@ class _AtariPretrainTest(absltest.TestCase):
     ids = np.arange(num_envs)
     reward = np.zeros(num_envs)
     obs = env.reset()
-    with tqdm.trange(25000) as tq:
-      for t in tq:
-        if np.random.rand() < 5e-3:
-          act = np.random.randint(action_shape, size=len(ids))
-        else:
-          act = policy(Batch(obs=obs, info={})).act
-        obs, rew, done, info = env.step(act, ids)
-        ids = np.asarray(info["env_id"])
-        tq.set_postfix(rew=reward.mean())
-        reward[ids] += rew
-        obs = obs[~done]
-        ids = ids[~done]
-        if len(ids) == 0:
-          break
-        if cv2 is not None:
-          obs_all = np.zeros((84, 84 * num_envs, 3), np.uint8)
-          for i, j in enumerate(ids):
-            obs_all[:, 84 * j:84 * (j + 1)] = obs[i, 1:].transpose(1, 2, 0)
-          cv2.imwrite(f"/tmp/{task}-{t}.png", obs_all)
+    for t in range(25000):
+      if np.random.rand() < 5e-3:
+        act = np.random.randint(action_shape, size=len(ids))
+      else:
+        act = policy(Batch(obs=obs, info={})).act
+      obs, rew, done, info = env.step(act, ids)
+      ids = np.asarray(info["env_id"])
+      reward[ids] += rew
+      obs = obs[~done]
+      ids = ids[~done]
+      if len(ids) == 0:
+        break
+      if cv2 is not None:
+        obs_all = np.zeros((84, 84 * num_envs, 3), np.uint8)
+        for i, j in enumerate(ids):
+          obs_all[:, 84 * j:84 * (j + 1)] = obs[i, 1:].transpose(1, 2, 0)
+        cv2.imwrite(f"/tmp/{task}-{t}.png", obs_all)
 
     rew = reward.mean()
     logging.info(f"Mean reward of {task}: {rew}")

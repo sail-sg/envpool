@@ -192,7 +192,7 @@ class EnvPool(Protocol):
   def recv(self, reset: bool = False) -> Union[TimeStep, Tuple]:
     """Envpool recv wrapper."""
 
-  def async_reset(self, env_id: Optional[np.ndarray] = None) -> None:
+  def async_reset(self) -> None:
     """Envpool async reset interface."""
 
   def step(

@@ -103,11 +103,9 @@ class EnvPoolMixin(ABC):
     state_list = self._recv()
     return self._to(state_list, reset)
 
-  def async_reset(self: EnvPool, env_id: Optional[np.ndarray] = None) -> None:
+  def async_reset(self: EnvPool) -> None:
     """Follows the async semantics, reset the envs in env_ids."""
-    if env_id is None:
-      env_id = self.all_env_ids
-    self._reset(env_id)
+    self._reset(self.all_env_ids)
 
   def step(
     self: EnvPool,
