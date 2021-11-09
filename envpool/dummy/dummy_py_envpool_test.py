@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit test for async envpool and speed benchmark."""
+"""Unit test for dummy envpool and speed benchmark."""
 
 import os
 import time
@@ -20,13 +20,13 @@ import numpy as np
 from absl import logging
 from absl.testing import absltest
 
-from envpool.core.dummy_async_py_envpool import (
-  _DummyAsyncEnvPool,
-  _DummyAsyncEnvSpec,
+from envpool.dummy.dummy_envpool import (
+  _DummyEnvPool,
+  _DummyEnvSpec,
 )
 
 
-class _DummyAsyncEnvPoolTest(absltest.TestCase):
+class _DummyEnvPoolTest(absltest.TestCase):
 
   def test_config(self) -> None:
     ref_config_keys = [
@@ -40,16 +40,16 @@ class _DummyAsyncEnvPoolTest(absltest.TestCase):
       "state_num",
       "action_num",
     ]
-    default_conf = _DummyAsyncEnvSpec._default_config_values
+    default_conf = _DummyEnvSpec._default_config_values
     self.assertTrue(isinstance(default_conf, tuple))
-    config_keys = _DummyAsyncEnvSpec._config_keys
+    config_keys = _DummyEnvSpec._config_keys
     self.assertTrue(isinstance(config_keys, list))
     self.assertEqual(len(default_conf), len(config_keys))
     self.assertEqual(sorted(config_keys), sorted(ref_config_keys))
 
   def test_spec(self) -> None:
-    conf = _DummyAsyncEnvSpec._default_config_values
-    env_spec = _DummyAsyncEnvSpec(conf)
+    conf = _DummyEnvSpec._default_config_values
+    env_spec = _DummyEnvSpec(conf)
     state_spec = env_spec._state_spec
     action_spec = env_spec._action_spec
     state_keys = env_spec._state_keys
@@ -62,24 +62,21 @@ class _DummyAsyncEnvPoolTest(absltest.TestCase):
     self.assertEqual(state_spec["obs"][1][-1], 10)
     # change conf and see if it can successfully change state_spec
     # directly send dict or expose config as dict?
-    conf = dict(zip(_DummyAsyncEnvSpec._config_keys, conf))
+    conf = dict(zip(_DummyEnvSpec._config_keys, conf))
     conf["state_num"] = 666
-    env_spec = _DummyAsyncEnvSpec(tuple(conf.values()))
+    env_spec = _DummyEnvSpec(tuple(conf.values()))
     state_spec = dict(zip(state_keys, env_spec._state_spec))
     self.assertEqual(state_spec["obs"][1][-1], 666)
 
   def test_envpool(self) -> None:
     conf = dict(
-      zip(
-        _DummyAsyncEnvSpec._config_keys,
-        _DummyAsyncEnvSpec._default_config_values
-      )
+      zip(_DummyEnvSpec._config_keys, _DummyEnvSpec._default_config_values)
     )
     conf["num_envs"] = num_envs = 100
     conf["batch_size"] = batch = 31
     conf["num_threads"] = os.cpu_count()
-    env_spec = _DummyAsyncEnvSpec(tuple(conf.values()))
-    env = _DummyAsyncEnvPool(env_spec)
+    env_spec = _DummyEnvSpec(tuple(conf.values()))
+    env = _DummyEnvPool(env_spec)
     state_keys = env._state_keys
     total = 100000
     env._reset(np.arange(num_envs, dtype=np.int32))

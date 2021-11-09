@@ -172,76 +172,10 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "dummy_async_envpool",
-    hdrs = ["dummy_async_envpool.h"],
-    deps = [
-        ":async_envpool",
-    ],
-)
-
-cc_test(
-    name = "dummy_async_envpool_test",
-    srcs = ["dummy_async_envpool_test.cc"],
-    deps = [
-        ":dummy_async_envpool",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
 pybind_library(
     name = "py_envpool",
     hdrs = ["py_envpool.h"],
     deps = [
         ":envpool",
-    ],
-)
-
-pybind_extension(
-    name = "dummy_envpool",
-    srcs = [
-        "dummy_envpool.cc",
-    ],
-    linkopts = [
-        "-ldl",
-    ],
-    deps = [
-        ":dict",
-        ":py_envpool",
-        ":spec",
-    ],
-)
-
-py_test(
-    name = "dummy_envpool_test",
-    srcs = ["dummy_envpool_test.py"],
-    data = ["dummy_envpool.so"],
-    deps = [
-        requirement("numpy"),
-        requirement("absl-py"),
-    ],
-)
-
-pybind_extension(
-    name = "dummy_async_py_envpool",
-    srcs = [
-        "dummy_async_py_envpool.cc",
-    ],
-    linkopts = [
-        "-ldl",
-    ],
-    deps = [
-        ":dummy_async_envpool",
-        ":py_envpool",
-    ],
-)
-
-py_test(
-    name = "dummy_async_py_envpool_test",
-    srcs = ["dummy_async_py_envpool_test.py"],
-    data = ["dummy_async_py_envpool.so"],
-    deps = [
-        requirement("numpy"),
-        requirement("absl-py"),
     ],
 )

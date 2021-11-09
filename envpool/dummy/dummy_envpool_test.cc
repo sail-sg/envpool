@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "envpool/core/dummy_async_envpool.h"
+#include "envpool/dummy/dummy_envpool.h"
 
 #include <glog/logging.h>
 #include <gtest/gtest.h>
@@ -20,19 +20,19 @@
 #include <random>
 #include <vector>
 
-typedef typename dummy::DummyAsyncEnv::Action DummyAction;
-typedef typename dummy::DummyAsyncEnv::State DummyState;
+typedef typename dummy::DummyEnv::Action DummyAction;
+typedef typename dummy::DummyEnv::State DummyState;
 
-TEST(DummyAsyncEnvPoolTest, SplitZeroAction) {
-  auto config = dummy::DummyAsyncEnvSpec::default_config;
+TEST(DummyEnvPoolTest, SplitZeroAction) {
+  auto config = dummy::DummyEnvSpec::default_config;
   int num_envs = 4;
   config["num_envs"_] = num_envs;
   config["batch_size"_] = 4;
   config["num_threads"_] = 1;
   config["seed"_] = 42;
   config["max_num_players"_] = 4;
-  dummy::DummyAsyncEnvSpec spec(config);
-  dummy::DummyAsyncEnvPool envpool(spec);
+  dummy::DummyEnvSpec spec(config);
+  dummy::DummyEnvPool envpool(spec);
   Array all_env_ids(Spec<int>({num_envs}));
   for (int i = 0; i < num_envs; ++i) {
     all_env_ids[i] = i;
@@ -96,7 +96,7 @@ void runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
   LOG(INFO) << num_envs << " " << batch << " " << seed << " " << total_iter
             << " " << num_threads << " " << max_num_players;
   bool is_sync = num_envs == batch && max_num_players == 1;
-  auto config = dummy::DummyAsyncEnvSpec::default_config;
+  auto config = dummy::DummyEnvSpec::default_config;
   config["num_envs"_] = num_envs;
   config["batch_size"_] = batch;
   config["num_threads"_] = num_threads;
@@ -107,8 +107,8 @@ void runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
     length.push_back(seed + i);
     counter.push_back(-1);
   }
-  dummy::DummyAsyncEnvSpec spec(config);
-  dummy::DummyAsyncEnvPool envpool(spec);
+  dummy::DummyEnvSpec spec(config);
+  dummy::DummyEnvPool envpool(spec);
   Array all_env_ids(Spec<int>({num_envs}));
   for (int i = 0; i < num_envs; ++i) {
     all_env_ids[i] = i;
@@ -187,7 +187,7 @@ void runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
   LOG(INFO) << "time(s): " << t << ", FPS: " << fps;
 }
 
-TEST(DummyAsyncEnvPoolTest, SinglePlayer) {
+TEST(DummyEnvPoolTest, SinglePlayer) {
   runner(1, 1, 20, 100000, 1, 1);
   runner(3, 1, 20, 100000, 1, 1);
   runner(3, 1, 20, 100000, 3, 1);
@@ -197,7 +197,7 @@ TEST(DummyAsyncEnvPoolTest, SinglePlayer) {
   runner(10, 10, 25, 100000, 0, 1);
 }
 
-TEST(DummyAsyncEnvPoolTest, MultiPlayers) {
+TEST(DummyEnvPoolTest, MultiPlayers) {
   runner(1, 1, 20, 100000, 1, 10);
   runner(3, 1, 20, 100000, 1, 10);
   runner(3, 1, 20, 100000, 3, 10);
