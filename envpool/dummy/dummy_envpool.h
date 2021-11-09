@@ -1,28 +1,26 @@
-/*
- * Copyright 2021 Garena Online Private Limited
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright 2021 Garena Online Private Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#ifndef ENVPOOL_CORE_DUMMY_ASYNC_ENVPOOL_H_
-#define ENVPOOL_CORE_DUMMY_ASYNC_ENVPOOL_H_
+#ifndef ENVPOOL_DUMMY_ENVPOOL_H_
+#define ENVPOOL_DUMMY_ENVPOOL_H_
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
 
 namespace dummy {
 
-class DummyAsyncEnvFns {
+class DummyEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict("state_num"_.bind(10), "action_num"_.bind(6));
@@ -41,17 +39,15 @@ class DummyAsyncEnvFns {
   }
 };
 
-typedef class EnvSpec<DummyAsyncEnvFns> DummyAsyncEnvSpec;
+typedef class EnvSpec<DummyEnvFns> DummyEnvSpec;
 
-class DummyAsyncEnv : public Env<DummyAsyncEnvSpec> {
+class DummyEnv : public Env<DummyEnvSpec> {
  protected:
-  int state_, max_num_players_;
+  int state_;
 
  public:
-  DummyAsyncEnv(const Spec& spec, int env_id)
-      : Env<DummyAsyncEnvSpec>(spec, env_id),
-        state_(0),
-        max_num_players_(spec.config["max_num_players"_]) {
+  DummyEnv(const Spec& spec, int env_id)
+      : Env<DummyEnvSpec>(spec, env_id), state_(0) {
     if (seed_ < 1) {
       seed_ = 1;
     }
@@ -91,8 +87,8 @@ class DummyAsyncEnv : public Env<DummyAsyncEnvSpec> {
   bool IsDone() override { return state_ >= seed_; }
 };
 
-typedef AsyncEnvPool<DummyAsyncEnv> DummyAsyncEnvPool;
+typedef AsyncEnvPool<DummyEnv> DummyEnvPool;
 
 }  // namespace dummy
 
-#endif  // ENVPOOL_CORE_DUMMY_ASYNC_ENVPOOL_H_
+#endif  // ENVPOOL_DUMMY_ENVPOOL_H_
