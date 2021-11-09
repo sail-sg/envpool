@@ -73,10 +73,20 @@ class EnvPoolMixin(ABC):
       adict["players.env_id"] = adict["env_id"]
     return list(map(lambda k: adict[k], self._spec._action_keys))
 
+  def __len__(self: EnvPool) -> int:
+    """Return the number of environments."""
+    return self.config["num_envs"]
+
   @property
-  def all_env_ids(self) -> np.ndarray:
+  def all_env_ids(self: EnvPool) -> np.ndarray:
     """All env_id in numpy ndarray with dtype=np.int32."""
     return np.arange(self.config["num_envs"], dtype=np.int32)
+
+  @property
+  def is_async(self: EnvPool) -> bool:
+    """Return if this env is in sync mode or async mode."""
+    return self.config["batch_size"] > 0 and self.config[
+      "num_envs"] != self.config["batch_size"]
 
   def send(
     self: EnvPool,
@@ -120,7 +130,7 @@ class EnvPoolMixin(ABC):
     return self.recv(reset=True)
 
   @property
-  def config(self) -> Dict[str, Any]:
+  def config(self: EnvPool) -> Dict[str, Any]:
     """Config dict of this class."""
     return dict(zip(self._spec._config_keys, self._spec._config_values))
 

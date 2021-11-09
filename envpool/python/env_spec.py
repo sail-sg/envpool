@@ -16,7 +16,7 @@
 import pprint
 from abc import ABC, ABCMeta
 from collections import namedtuple
-from typing import Any, Dict, List, NamedTuple, Tuple, Type, Union
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Type, Union
 
 import dm_env
 import gym
@@ -40,6 +40,11 @@ class EnvSpecMixin(ABC):
   def config(self: EnvSpec) -> NamedTuple:
     """Configuration used to create the current EnvSpec."""
     return self.gen_config(*self._config_values)
+
+  @property
+  def reward_threshold(self: EnvSpec) -> Optional[float]:
+    """Reward threshold, None for no threshold."""
+    return None
 
   @property
   def state_array_spec(self: EnvSpec) -> Dict[str, Any]:

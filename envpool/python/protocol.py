@@ -87,6 +87,10 @@ class EnvSpec(Protocol):
   def action_space(self) -> Union[gym.Space, Dict[str, Any]]:
     """Specs of the actions of the environment in gym.Env format."""
 
+  @property
+  def reward_threshold(self) -> Optional[float]:
+    """Reward threshold, None for no threshold."""
+
 
 class ArraySpec(object):
   """Spec of numpy array."""
@@ -116,6 +120,9 @@ class EnvPool(Protocol):
 
   def __init__(self, spec: EnvSpec):
     """Constructor of EnvPool."""
+
+  def __len__(self) -> int:
+    """Return the number of environments."""
 
   @property
   def _spec(self) -> EnvSpec:
@@ -152,6 +159,10 @@ class EnvPool(Protocol):
   @property
   def all_env_ids(self) -> np.ndarray:
     """All env_id in numpy ndarray with dtype=np.int32."""
+
+  @property
+  def is_async(self) -> bool:
+    """Return if this env is in sync mode or async mode."""
 
   @property
   def observation_space(self) -> Union[gym.Space, Dict[str, Any]]:
