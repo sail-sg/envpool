@@ -85,7 +85,7 @@ bazel-test: bazel-install
 	bazel test --test_output=all $(BAZELOPT) //... --config=release
 
 bazel-clean:
-	rm -rf $(HOME)/.cache/bazel
+	bazel clean --expunge
 
 # documentation
 
