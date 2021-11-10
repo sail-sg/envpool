@@ -141,3 +141,4 @@ cython_debug/
 bazel-*
 pyflakes*
 .DS_Store
+.git
