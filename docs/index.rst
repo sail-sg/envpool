@@ -32,7 +32,7 @@ Installation
 ------------
 
 EnvPool is currently hosted on `PyPI <https://pypi.org/project/envpool/>`_.
-It requires Python >= 3.6.
+It requires Python >= 3.7.
 
 You can simply install EnvPool with the following command:
 

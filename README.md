@@ -29,7 +29,7 @@ Here are EnvPool's several highlights:
 
 ### PyPI
 
-EnvPool is currently hosted on [PyPI](https://pypi.org/project/envpool/). It requires Python >= 3.6.
+EnvPool is currently hosted on [PyPI](https://pypi.org/project/envpool/). It requires Python >= 3.7.
 
 You can simply install EnvPool with the following command:
 
