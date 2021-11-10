@@ -25,14 +25,14 @@ Lint Check
 
 We use several tools to secure code quality, including
 
-- PEP8 code style: flake8, yapf, isort
-- Type check: mypy
-- C++ Google-style: cpplint, clang-format
-- Bazel build file: buildifier
-- License: addlicense
+- PEP8 code style: flake8, yapf, isort;
+- Type check: mypy;
+- C++ Google-style: cpplint, clang-format;
+- Bazel build file: buildifier;
+- License: addlicense;
 - Documentation: pydocstyle, doc8.
 
-To make things easier, we create several shortcuts.
+To make things easier, we create several shortcuts as follows.
 
 To automatically format the code, run:
 
