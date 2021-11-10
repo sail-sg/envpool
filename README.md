@@ -1,6 +1,7 @@
 <div align="center">
-  <a href="http://envpool.readthedocs.io"><img width="666px" height="auto" src="docs/_static/images/envpool-logo.png"></a>
+  <a href="http://envpool.readthedocs.io"><img width="666px" height="auto" src="https://envpool.readthedocs.io/en/latest/_static/envpool-logo.png"></a>
 </div>
+
 
 ---
 
@@ -76,18 +77,20 @@ Our benchmark script is in [examples/benchmark.py](https://github.com/sail-sg/en
 - Apollo: 96 core `AMD EPYC 7352 24-Core Processor`
 - DGX-A100: 256 core `AMD EPYC 7742 64-Core Processor`
 
-| Highest FPS          | i7-8750H laptop (12) | TPU-VM (96) | Apollo (96) | DGX-A100 (256) |
-| -------------------- | -------------------- | ----------- | ----------- | -------------- |
-| For-loop             | 4,876                | 3,817       | 4,053       | 4,336          |
-| Subprocess           | 18,249               | 42,885      | 19,560      | 79,509         |
-| Sample Factory       | 27,035               | 192,074     | 262,963     | 639,389        |
-| EnvPool (sync)       | 40,791               | 175,938     | 159,191     | 470,170        |
-| EnvPool (async)      | **50,513**           | 352,243     | 410,941     | 845,537        |
-| EnvPool (numa+async) | /                    | **367,799** | **458,414** | **1,060,371**  |
+|     Highest FPS      | Laptop (12) | TPU-VM (96) | Apollo (96) | DGX-A100 (256) |
+| :------------------: | :---------: | :---------: | :---------: | :------------: |
+|       For-loop       |    4,876    |    3,817    |    4,053    |     4,336      |
+|      Subprocess      |   18,249    |   42,885    |   19,560    |     79,509     |
+|    Sample Factory    |   27,035    |   192,074   |   262,963   |    639,389     |
+|    EnvPool (sync)    |   40,791    |   175,938   |   159,191   |    470,170     |
+|   EnvPool (async)    | **50,513**  |   352,243   |   410,941   |    845,537     |
+| EnvPool (numa+async) |      /      | **367,799** | **458,414** | **1,060,371**  |
 
-![](https://i.imgur.com/wHu7m4C.png)
+<p float="center">
+<img width="49%" height="auto" src="https://i.imgur.com/wHu7m4C.png">
+<img width="48%" height="auto" src="https://i.imgur.com/JP5RApq.png">
+</p>
 
-![](https://i.imgur.com/JP5RApq.png)
 
 ## API Usage
 
