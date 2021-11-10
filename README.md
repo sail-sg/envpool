@@ -89,7 +89,7 @@ Our benchmark script is in [examples/benchmark.py](https://github.com/sail-sg/en
 
 ![](https://i.imgur.com/JP5RApq.png)
 
-## Quick Start
+## API Usage
 
 The following content shows both synchronous and asynchronous API usage of EnvPool. You can also run the full script at [examples/env_step.py](https://github.com/sail-sg/envpool/blob/master/examples/env_step.py)
 

@@ -71,9 +71,11 @@ html_static_path = ["_static"]
 
 html_logo = "_static/images/envpool-logo.png"
 
+
 def setup(app):
-    app.add_js_file("js/copybutton.js")
-    app.add_css_file("css/style.css")
+  app.add_js_file("js/copybutton.js")
+  app.add_css_file("css/style.css")
+
 
 # -- Extension configuration -------------------------------------------------
 

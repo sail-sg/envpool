@@ -1,13 +1,17 @@
 Atari
 =====
 
-We use ``ale_py>=0.7.2`` as the codebase. See https://github.com/mgbellemare/Arcade-Learning-Environment/tree/v0.7.2
+We use ``ale_py>=0.7.2`` as the codebase.
+See https://github.com/mgbellemare/Arcade-Learning-Environment/tree/v0.7.2
 
 
 Env Wrappers
 ------------
 
-Currently it includes these wrappers: ``random-noops`` / ``fire-reset`` / ``episodic-life`` / ``frame-skip`` / ``action-repeat`` / ``image-resize`` / ``reward-clip``. The wrapper execution order is the same as `OpenAI Baselines <https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py>`_.
+Currently it includes these wrappers: ``random-noops`` / ``fire-reset`` /
+``episodic-life`` / ``frame-skip`` / ``action-repeat`` / ``image-resize`` /
+``reward-clip``. The wrapper execution order is the same as
+`OpenAI Baselines <https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py>`_.
 
 
 Options
@@ -15,30 +19,43 @@ Options
 
 * ``task_id (str)``: see available tasks below;
 * ``num_envs (int)``: how many environments you would like to create;
-* ``batch_size (int)``: the expected batch size for return result, default to ``num_envs``;
-* ``num_threads (int)``: the maximum thread number for executing the actual ``env.step``, default to ``batch_size``;
+* ``batch_size (int)``: the expected batch size for return result, default to
+  ``num_envs``;
+* ``num_threads (int)``: the maximum thread number for executing the actual
+  ``env.step``, default to ``batch_size``;
 * ``seed (int)``: the environment seed, default to ``0``;
-* ``max_episode_steps (int)``: the maximum number of steps for one episode, default to ``25000``;
-* ``img_height (int)``: the desired observation image height, default to ``84``;
+* ``max_episode_steps (int)``: the maximum number of steps for one episode,
+  default to ``25000``;
+* ``img_height (int)``: the desired observation image height, default to
+  ``84``;
 * ``img_width (int)``: the desired observation image width, default to ``84``;
-* ``stack_num (int)``: the number of frames to stack for a single observation, default to ``4``;
-* ``frame_skip (int)``: the number of frames to execute one repeated action, only the last frame would be kept, default to ``4``;
-* ``noop_max (int)``: the maximum number of no-op action being executed when calling a single ``env.reset``, default to ``30``;
-* ``episodic_life (bool)``: make end-of-life == end-of-episode, but only reset on true game over. It helps the value estimation. Default to ``False``;
-* ``zero_discount_on_life_loss (bool)``: when the agent losses a life, the ``discount`` in dm_env.TimeStep is set to 0. This option doesn't affect gym's behavior (since there is no ``discount`` field in gym's API). Default to ``False``;
-* ``reward_clip (bool)``: whether to change the reward to ``sign(reward)``, default to ``False``.
-
+* ``stack_num (int)``: the number of frames to stack for a single observation,
+  default to ``4``;
+* ``frame_skip (int)``: the number of frames to execute one repeated action,
+  only the last frame would be kept, default to ``4``;
+* ``noop_max (int)``: the maximum number of no-op action being executed when
+  calling a single ``env.reset``, default to ``30``;
+* ``episodic_life (bool)``: make end-of-life == end-of-episode, but only reset
+  on true game over. It helps the value estimation. Default to ``False``;
+* ``zero_discount_on_life_loss (bool)``: when the agent losses a life, the
+  ``discount`` in dm_env.TimeStep is set to 0. This option doesn't affect gym's
+  behavior (since there is no ``discount`` field in gym's API). Default to
+  ``False``;
+* ``reward_clip (bool)``: whether to change the reward to ``sign(reward)``,
+  default to ``False``.
 
 Observation Space
 -----------------
 
-The observation image size should be ``(stack_num, img_height, img_width)``, ``(4, 84, 84)`` by default. For a single frame, it has been gray-scaled and resized inside the c++ code.
+The observation image size should be ``(stack_num, img_height, img_width)``,
+``(4, 84, 84)`` by default. For a single frame, it has been gray-scaled and
+resized inside the c++ code.
 
 
 Action Space
 ------------
 
-Each atari games has its own discrete action space.
+Each Atari games has its own discrete action space.
 
 
 Available Tasks
