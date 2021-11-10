@@ -60,9 +60,15 @@ stable version through `envpool.readthedocs.io/en/stable/
 
    pages/build
    pages/interface
-   pages/atari
    pages/benchmark
    pages/contributing
+
+
+.. toctree::
+   :maxdepth: 1
+   :caption: API Reference
+
+   api/atari
 
 
 Indices and tables

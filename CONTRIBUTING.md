@@ -1,3 +1,3 @@
 # Contributing to EnvPool
 
-Please refer to [envpool.readthedocs.io/en/latest/contributing.html](https://envpool.readthedocs.io/en/latest/contributing.html)
+Please refer to [envpool.readthedocs.io/en/latest/pages/contributing.html](https://envpool.readthedocs.io/en/latest/pages/contributing.html)

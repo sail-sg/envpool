@@ -46,7 +46,7 @@ print(envpool.__version__)
 
 If no error occurs, you have successfully installed EnvPool.
 
-### Build From Source
+### From Source
 
 Please refer to the [guideline](https://envpool.readthedocs.io/en/latest/pages/build.html).
 
@@ -69,7 +69,7 @@ We perform our benchmarks with ALE Atari environment (with environment wrappers)
 
 We report EnvPool performance with sync mode, async mode and NUMA + async mode, compared with the baselines on different number of workers (i.e., number of CPU cores). As we can see from the results, EnvPool achieves significant improvements over the baselines on all settings. On the high-end setup, EnvPool achieves 1 Million frames per second on 256 CPU cores, which is 13.3x of the `gym.vector_env` baseline. On a typical PC setup with 12 CPU cores, EnvPool's throughput is 2.8x of `gym.vector_env`.
 
-Our benchmark script is in [examples/benchmark.py](https://github.com/sail-sg/envpool/blob/master/examples/benchmark.py). We choose 4 types of system:
+Our benchmark script is in [examples/benchmark.py](https://github.com/sail-sg/envpool/blob/master/examples/benchmark.py). The detail configurations of 4 types of system are:
 
 - Personal laptop: 12 core `Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz` 
 - TPU-VM: 96 core `Intel(R) Xeon(R) CPU @ 2.00GHz`
@@ -152,6 +152,8 @@ Besides `num_envs`, there's one more argument `batch_size`. While `num_envs` def
 ```python
 envpool.make("Pong-v5", env_type="gym", num_envs=64, batch_size=16)
 ```
+
+There are other configurable arguments with `envpool.make`, please check out [envpool interface introduction](https://envpool.readthedocs.io/en/latest/pages/interface.html).
 
 ## Contributing
 
