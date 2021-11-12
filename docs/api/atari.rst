@@ -42,7 +42,10 @@ Options
   behavior (since there is no ``discount`` field in gym's API). Default to
   ``False``;
 * ``reward_clip (bool)``: whether to change the reward to ``sign(reward)``,
-  default to ``False``.
+  default to ``False``;
+* ``repeat_action_probability (float)``: the action repeat probability in ALE
+  configuration, default to 0 (no action repeat to perform deterministic
+  result).
 
 Observation Space
 -----------------
@@ -61,7 +64,9 @@ Each Atari games has its own discrete action space.
 Available Tasks
 ---------------
 
-**Note: Our Atari environments ALE settings follow gym's** ``*NoFrameSkip-v4`` **instead of** ``*-v5`` by default, see the related discussions at `Issue #14 <https://github.com/sail-sg/envpool/issues/14>`_.
+**Note: Our Atari environments ALE settings follow gym's** ``*NoFrameSkip-v4``
+**instead of** ``*-v5`` by default, see the related discussions at
+`Issue #14 <https://github.com/sail-sg/envpool/issues/14>`_.
 
 * ``Adventure-v5``
 * ``AirRaid-v5``
