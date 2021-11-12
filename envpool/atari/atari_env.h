@@ -150,8 +150,8 @@ class AtariEnv : public Env<AtariEnvSpec> {
     }
     ale::pixel_t* ale_screen_data = env_->getScreen().getArray();
     uint8_t* ptr = static_cast<uint8_t*>(maxpool_buf_[0].data());
-    env_->theOSystem->colourPalette().applyPaletteRGB(
-        ptr, ale_screen_data, kRawSize);
+    env_->theOSystem->colourPalette().applyPaletteRGB(ptr, ale_screen_data,
+                                                      kRawSize);
     PushStack();
     done_ = false;
     State state = Allocate();
@@ -171,8 +171,8 @@ class AtariEnv : public Env<AtariEnvSpec> {
       if (skip_id <= 2) {  // put final two frames in to maxpool buffer
         ale::pixel_t* ale_screen_data = env_->getScreen().getArray();
         uint8_t* ptr = static_cast<uint8_t*>(maxpool_buf_[2 - skip_id].data());
-        env_->theOSystem->colourPalette().applyPaletteRGB(
-            ptr, ale_screen_data, kRawSize);
+        env_->theOSystem->colourPalette().applyPaletteRGB(ptr, ale_screen_data,
+                                                          kRawSize);
       }
     }
     MaxPool();    // max pool two buffers into the first one
