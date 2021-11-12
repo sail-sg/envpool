@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "envpool/utils/resize.h"
+#include "envpool/utils/image_process.h"
 
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
 #include <vector>
 
-TEST(ResizeTest, Correctness) {
+TEST(ImageProcessTest, Resize) {
   // shape
   Array a(Spec<uint8_t>({4, 3, 1}));
   Array b(Spec<uint8_t>({6, 7, 1}));
@@ -36,4 +36,15 @@ TEST(ResizeTest, Correctness) {
   EXPECT_NE(a2.data(), b2.data());
   EXPECT_EQ(6, static_cast<int>(b2(1, 0, 1)));
   EXPECT_EQ(4, static_cast<int>(b2(3, 1, 0)));
+}
+
+TEST(ImageProcessTest, GrayScale) {
+  // shape
+  Array a(Spec<uint8_t>({4, 3, 3}));
+  Array b(Spec<uint8_t>({4, 3, 1}));
+  a(3, 2, 2) = 255;
+  GrayScale(a, &b);
+  EXPECT_EQ(static_cast<uint8_t>(b(3, 1)), 0);
+  EXPECT_EQ(static_cast<uint8_t>(b(2, 2)), 0);
+  EXPECT_NE(static_cast<uint8_t>(b(3, 2)), 0);
 }

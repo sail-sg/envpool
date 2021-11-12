@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ENVPOOL_UTILS_RESIZE_H_
-#define ENVPOOL_UTILS_RESIZE_H_
+#ifndef ENVPOOL_UTILS_IMAGE_PROCESS_H_
+#define ENVPOOL_UTILS_IMAGE_PROCESS_H_
 
 #include <opencv2/opencv.hpp>
 
@@ -28,7 +28,16 @@ void Resize(Array src, Array* tgt) {
   int channel = src.Shape(2);
   cv::Mat src_img(src.Shape(0), src.Shape(1), CV_8UC(channel), src.data());
   cv::Mat tgt_img(tgt->Shape(0), tgt->Shape(1), CV_8UC(channel), tgt->data());
-  cv::resize(src_img, tgt_img, tgt_img.size(), cv::INTER_AREA);
+  cv::resize(src_img, tgt_img, tgt_img.size(), 0, 0, cv::INTER_AREA);
 }
 
-#endif  // ENVPOOL_UTILS_RESIZE_H_
+/**
+ * Change src (with RGB format) to grayscale image.
+ */
+void GrayScale(Array src, Array* tgt) {
+  cv::Mat src_img(src.Shape(0), src.Shape(1), CV_8UC3, src.data());
+  cv::Mat tgt_img(tgt->Shape(0), tgt->Shape(1), CV_8UC1, tgt->data());
+  cv::cvtColor(src_img, tgt_img, cv::COLOR_RGB2GRAY);
+}
+
+#endif  // ENVPOOL_UTILS_IMAGE_PROCESS_H_
