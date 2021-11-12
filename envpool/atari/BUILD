@@ -37,7 +37,7 @@ cc_library(
     ],
     deps = [
         "//envpool/core:async_envpool",
-        "//envpool/utils:resize",
+        "//envpool/utils:image_process",
         "@ale//:ale_interface",
     ],
 )

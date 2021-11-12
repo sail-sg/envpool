@@ -28,7 +28,7 @@
 #include "ale_interface.hpp"
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
-#include "envpool/utils/resize.h"
+#include "envpool/utils/image_process.h"
 
 namespace atari {
 
@@ -92,13 +92,14 @@ class AtariEnv : public Env<AtariEnvSpec> {
   int lives_;
   std::deque<Array> stack_buf_;
   std::vector<Array> maxpool_buf_;
+  Array gray_obs_;
   std::uniform_int_distribution<> dist_noop_;
 
  public:
   AtariEnv(const Spec& spec, int env_id)
       : Env<AtariEnvSpec>(spec, env_id),
         env_(new ale::ALEInterface()),
-        raw_spec_({kRawHeight, kRawWidth, 1}),
+        raw_spec_({kRawHeight, kRawWidth, 3}),
         resize_spec_(
             {spec.config["img_height"_], spec.config["img_width"_], 1}),
         max_episode_steps_(spec.config["max_episode_steps"_]),
@@ -127,6 +128,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
     for (int i = 0; i < stack_num_; ++i) {
       stack_buf_.push_back(Array(resize_spec_));
     }
+    gray_obs_ = Array(FrameSpec({kRawHeight, kRawWidth, 1}));
     ResetObsBuffer();
   }
 
@@ -148,8 +150,8 @@ class AtariEnv : public Env<AtariEnvSpec> {
     }
     ale::pixel_t* ale_screen_data = env_->getScreen().getArray();
     uint8_t* ptr = static_cast<uint8_t*>(maxpool_buf_[0].data());
-    env_->theOSystem->colourPalette().applyPaletteGrayscale(
-        ptr, ale_screen_data, kRawSize);
+    env_->theOSystem->colourPalette().applyPaletteRGB(ptr, ale_screen_data,
+                                                      kRawSize);
     PushStack();
     done_ = false;
     State state = Allocate();
@@ -169,8 +171,8 @@ class AtariEnv : public Env<AtariEnvSpec> {
       if (skip_id <= 2) {  // put final two frames in to maxpool buffer
         ale::pixel_t* ale_screen_data = env_->getScreen().getArray();
         uint8_t* ptr = static_cast<uint8_t*>(maxpool_buf_[2 - skip_id].data());
-        env_->theOSystem->colourPalette().applyPaletteGrayscale(
-            ptr, ale_screen_data, kRawSize);
+        env_->theOSystem->colourPalette().applyPaletteRGB(ptr, ale_screen_data,
+                                                          kRawSize);
       }
     }
     MaxPool();    // max pool two buffers into the first one
@@ -216,7 +218,8 @@ class AtariEnv : public Env<AtariEnvSpec> {
   void MaxPool() {
     uint8_t* ptr0 = static_cast<uint8_t*>(maxpool_buf_[0].data());
     uint8_t* ptr1 = static_cast<uint8_t*>(maxpool_buf_[1].data());
-    for (int i = 0; i < kRawSize; ++i) {
+    for (int i = 0; i < kRawSize * 3; ++i) {
+      // RGB in maxpool_buf_
       ptr0[i] = std::max(ptr0[i], ptr1[i]);
     }
   }
@@ -224,7 +227,8 @@ class AtariEnv : public Env<AtariEnvSpec> {
   void PushStack() {
     Array tgt = std::move(*stack_buf_.begin());
     stack_buf_.pop_front();
-    Resize(maxpool_buf_[0], &tgt);
+    GrayScale(maxpool_buf_[0], &gray_obs_);
+    Resize(gray_obs_, &tgt);
     stack_buf_.push_back(std::move(tgt));
   }
 };

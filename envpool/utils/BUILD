@@ -1,8 +1,8 @@
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-    name = "resize",
-    hdrs = ["resize.h"],
+    name = "image_process",
+    hdrs = ["image_process.h"],
     deps = [
         "//envpool/core:array",
         "@opencv",
@@ -10,10 +10,10 @@ cc_library(
 )
 
 cc_test(
-    name = "resize_test",
-    srcs = ["resize_test.cc"],
+    name = "image_process_test",
+    srcs = ["image_process_test.cc"],
     deps = [
-        ":resize",
+        ":image_process",
         "@com_google_googletest//:gtest_main",
     ],
 )
