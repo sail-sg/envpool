@@ -1,0 +1,20 @@
+FROM ubuntu:16.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN sed -i "s/archive.ubuntu.com/mirror.0x.sg/g" /etc/apt/sources.list
+
+# install base dependencies
+
+RUN apt-get update
+RUN apt-get install -y software-properties-common && add-apt-repository ppa:ubuntu-toolchain-r/test && add-apt-repository ppa:deadsnakes/ppa
+RUN apt-get update && apt-get install -y gcc-9 g++-9 npm git curl git build-essential libbz2-dev libssl-dev \
+    libreadline-dev libffi-dev libsqlite3-dev tk-dev python3.6 python3.7 python3.8 python3.9 python3.10 \
+    python3.6-dev python3.7-dev python3.8-dev python3.9-dev python3.10-dev python3.8-distutils python3.9-distutils python3.10-distutils
+
+RUN ln -sf /usr/bin/nodejs /usr/bin/node
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
+
+# install bazel
+RUN npm i -g "@bazel/bazelisk"
+
