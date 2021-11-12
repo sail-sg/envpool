@@ -164,7 +164,7 @@ def workspace():
     maybe(
         http_archive,
         name = "pretrain_weight",
-        sha256 = "93dda459563f2b2243787dd3b8cc8974e609806295c1501c00791ef55c28343f",
+        sha256 = "b1b64e0db84cf7317c2a96b27f549147dfcb4074ed2d799334c23a067075ac1c",
         urls = ["https://cdn.sail.sea.com/sail/pretrain.tar.gz"],
         build_file = "//third_party/pretrain_weight:pretrain_weight.BUILD",
     )
