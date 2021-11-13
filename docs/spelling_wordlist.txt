@@ -19,3 +19,4 @@ parallelization
 parallelly
 mypy
 numpy
+openai
