@@ -1,8 +1,8 @@
 Atari
 =====
 
-We use ``ale_py>=0.7.2`` as the codebase.
-See https://github.com/mgbellemare/Arcade-Learning-Environment/tree/v0.7.2
+We use ``ale_py==0.7.3`` as the codebase.
+See https://github.com/mgbellemare/Arcade-Learning-Environment/tree/v0.7.3
 
 
 Env Wrappers
@@ -65,7 +65,8 @@ Available Tasks
 ---------------
 
 **Note: Our Atari environments ALE settings follow gym's** ``*NoFrameSkip-v4``
-**instead of** ``*-v5`` by default, see the related discussions at
+(with openai/baselines wrapper) **instead of** ``*-v5`` by default, see the
+related discussions at
 `Issue #14 <https://github.com/sail-sg/envpool/issues/14>`_.
 
 * ``Adventure-v5``
