@@ -143,3 +143,4 @@ bazel-*
 pyflakes*
 .DS_Store
 .idea/
+*.swp
