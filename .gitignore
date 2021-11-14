@@ -11,6 +11,7 @@ __pycache__/
 build/
 develop-eggs/
 dist/
+wheelhouse/
 downloads/
 eggs/
 .eggs/
@@ -141,4 +142,5 @@ cython_debug/
 bazel-*
 pyflakes*
 .DS_Store
-.git
+.idea/
+*.swp
