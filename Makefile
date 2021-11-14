@@ -116,6 +116,15 @@ format: py-format-install clang-format-install buildifier-install addlicense-ins
 # Build docker images
 
 docker:
-	docker build -t $(PROJECT_NAME):$(COMMIT_HASH) -f Dockerfile .
+	docker build -t $(PROJECT_NAME):$(COMMIT_HASH) -f docker/dev.dockerfile .
 	docker run --mount type=bind,source=/,target=/host -it $(PROJECT_NAME):$(COMMIT_HASH) bash
 	echo successfully build docker image with tag $(PROJECT_NAME):$(COMMIT_HASH)
+
+docker-release:
+	docker build -t $(PROJECT_NAME)-release:$(COMMIT_HASH) -f docker/release.dockerfile .
+	docker run --mount type=bind,source=/,target=/host -it $(PROJECT_NAME)-release:$(COMMIT_HASH) bash
+	echo successfully build docker image with tag $(PROJECT_NAME)-release:$(COMMIT_HASH)
+
+release-test:
+	cd examples && python3 -c "import envpool; print(envpool.__version__)" && python3 env_step.py
+
