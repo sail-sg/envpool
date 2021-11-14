@@ -54,7 +54,8 @@ class AtariEnvFns {
                     "zero_discount_on_life_loss"_.bind(false),
                     "episodic_life"_.bind(false), "reward_clip"_.bind(false),
                     "img_height"_.bind(84), "img_width"_.bind(84),
-                    "task"_.bind(std::string("pong")));
+                    "task"_.bind(std::string("pong")),
+                    "repeat_action_probability"_.bind(0.0f));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -112,7 +113,8 @@ class AtariEnv : public Env<AtariEnvSpec> {
         episodic_life_(spec.config["episodic_life"_]),
         done_(true),
         dist_noop_(0, spec.config["noop_max"_] - 1) {
-    env_->setFloat("repeat_action_probability", 0);
+    env_->setFloat("repeat_action_probability",
+                   spec.config["repeat_action_probability"_]);
     env_->setInt("random_seed", seed_);
     env_->loadROM(GetRomPath(spec.config["base_path"_], spec.config["task"_]));
     action_set_ = env_->getMinimalActionSet();
@@ -134,15 +136,17 @@ class AtariEnv : public Env<AtariEnvSpec> {
 
   void Reset() override {
     int noop = dist_noop_(gen_) + 1 - fire_reset_;
+    int push_num = 1;
     if (env_->game_over() || elapsed_step_ >= max_episode_steps_) {
       env_->reset_game();
       elapsed_step_ = 0;
-      ResetObsBuffer();
+      push_num = stack_num_;
     }
     while (noop--) {
       env_->act((ale::Action)0);
       if (env_->game_over()) {
         env_->reset_game();
+        push_num = stack_num_;
       }
     }
     if (fire_reset_) {
@@ -152,7 +156,9 @@ class AtariEnv : public Env<AtariEnvSpec> {
     uint8_t* ptr = static_cast<uint8_t*>(maxpool_buf_[0].data());
     env_->theOSystem->colourPalette().applyPaletteRGB(ptr, ale_screen_data,
                                                       kRawSize);
-    PushStack();
+    for (int i = 0; i < push_num; ++i) {
+      PushStack();
+    }
     done_ = false;
     State state = Allocate();
     state["discount"_] = 1.0f;

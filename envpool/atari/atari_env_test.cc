@@ -51,12 +51,16 @@ TEST(AtariEnvTest, Seed) {
               std::vector<std::size_t>({batch, 4, 84, 84}));
     uint8_t* data0 = static_cast<uint8_t*>(state0["obs"_].data());
     uint8_t* data1 = static_cast<uint8_t*>(state1["obs"_].data());
-    int sum = 0;
-    for (std::size_t j = 0; j < batch * 4 * 84 * 84; ++j) {
-      EXPECT_EQ(data0[j], data1[j]);
-      sum += data0[j];
+    int index = 0;
+    for (std::size_t j = 0; j < batch * 4; ++j) {
+      // ensure there's no black screen in each frame
+      int sum = 0;
+      for (int k = 0; k < 84 * 84; ++k) {
+        EXPECT_EQ(data0[index], data1[index]);
+        sum += data0[index++];
+      }
+      EXPECT_NE(sum, 0) << i << " " << j;
     }
-    EXPECT_NE(sum, 0) << i;
     action["env_id"_] = state0["info:env_id"_];
     action["players.env_id"_] = state0["info:env_id"_];
     action["action"_] = Array(Spec<int>({static_cast<int>(batch)}));
@@ -76,6 +80,7 @@ TEST(AtariEnvTest, MaxEpisodeSteps) {
   config["batch_size"_] = batch;
   config["seed"_] = 0;
   config["max_episode_steps"_] = max_episode_steps;
+  config["repeat_action_probability"_] = 0.2f;
   int total_iter = 100;
   atari::AtariEnvSpec spec(config);
   atari::AtariEnvPool envpool(spec);
