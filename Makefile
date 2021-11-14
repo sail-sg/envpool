@@ -49,6 +49,9 @@ doc-install:
 	$(call check_install, sphinx_rtd_theme)
 	$(call check_install_extra, sphinxcontrib.spelling, sphinxcontrib.spelling pyenchant)
 
+auditwheel-install:
+	$(call check_install, auditwheel)
+
 # python linter
 
 flake8: flake8-install
@@ -115,7 +118,19 @@ format: py-format-install clang-format-install buildifier-install addlicense-ins
 
 # Build docker images
 
-docker:
-	docker build -t $(PROJECT_NAME):$(COMMIT_HASH) -f Dockerfile .
-	docker run --mount type=bind,source=/,target=/host -it $(PROJECT_NAME):$(COMMIT_HASH) bash
+docker-dev:
+	docker build -t $(PROJECT_NAME):$(COMMIT_HASH) -f docker/dev.dockerfile .
+	docker run -v /:/host -it $(PROJECT_NAME):$(COMMIT_HASH) bash
 	echo successfully build docker image with tag $(PROJECT_NAME):$(COMMIT_HASH)
+
+docker-release:
+	docker build -t $(PROJECT_NAME)-release:$(COMMIT_HASH) -f docker/release.dockerfile .
+	docker run -v `pwd`/wheelhouse:/whl -it $(PROJECT_NAME)-release:$(COMMIT_HASH) bash -c "cp wheelhouse/* /whl"
+	echo successfully build docker image with tag $(PROJECT_NAME)-release:$(COMMIT_HASH)
+
+pypi-wheel: bazel-clean auditwheel-install bazel-build
+	ls dist/*.whl | xargs auditwheel repair --plat manylinux_2_17_x86_64
+
+release-test:
+	cd examples && python3 -c "import envpool; print(envpool.__version__)" && python3 env_step.py
+
