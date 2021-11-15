@@ -49,7 +49,7 @@ std::string GetRomPath(std::string base_path, std::string task) {
 class AtariEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.bind(25000), "stack_num"_.bind(4),
+    return MakeDict("max_episode_steps"_.bind(108000), "stack_num"_.bind(4),
                     "frame_skip"_.bind(4), "noop_max"_.bind(30),
                     "zero_discount_on_life_loss"_.bind(false),
                     "episodic_life"_.bind(false), "reward_clip"_.bind(false),

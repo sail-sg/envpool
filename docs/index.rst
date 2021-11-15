@@ -61,6 +61,7 @@ stable version through `envpool.readthedocs.io/en/stable/
    pages/build
    pages/interface
    pages/benchmark
+   pages/env
    pages/contributing
 
 
