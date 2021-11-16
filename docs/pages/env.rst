@@ -11,15 +11,19 @@ we provide a developer interface in `envpool/core/env.h
   <https://github.com/sail-sg/envpool/tree/master/envpool/atari>`_ serves as
   a more complex, real example.
 
-In the following example, we will create an environment called ``Demo``
+In the following example, we will create an environment called ``CartPole-v0``.
+It is the same version as
+`gym <https://github.com/openai/gym/blob/master/gym/envs/classic_control/cartpole.py>`_.
 
 
 Create a Folder
 ---------------
 
-The first thing is to create a ``demo`` folder under ``envpool/``:
+The first thing is to create a ``classic_control`` folder under ``envpool/``:
 
 .. code-block:: bash
 
     cd envpool
-    mkdir -p demo
+    mkdir -p classic_control
+
+To be completed

@@ -18,14 +18,15 @@ C++ .so files has some advantages:
 Install Bazelisk
 ----------------
 
-Bazelisk is a version controller for bazel. You can install it via `npm <>`_:
+Bazelisk is a version controller for bazel. You can install it via
+`npm <https://nodejs.org/en/download/package-manager/#debian-and-ubuntu-based-linux-distributions>`_
 
 .. code-block:: bash
 
     sudo apt install -y npm
     npm install -g @bazel/bazelisk
 
-or `golang <>`_ with version >= 1.16:
+or `golang <https://golang.org/doc/install>`_ with version >= 1.16:
 
 .. code-block:: bash
 

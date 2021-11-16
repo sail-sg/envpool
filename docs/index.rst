@@ -20,8 +20,8 @@ Here are EnvPool's several highlights:
   **~13x** throughput of Python subprocess-based vector env;
 - **~3x** throughput of Python subprocess-based vector env on low resource
   setup like 12 CPU cores;
-- Comparing with existing GPU-based solution (
-  `Brax <https://github.com/google/brax>`_ /
+- Comparing with existing GPU-based solution
+  (`Brax <https://github.com/google/brax>`_ /
   `Isaac-gym <https://developer.nvidia.com/isaac-gym>`_), EnvPool is a
   **general** solution for various kinds of speeding-up RL environment
   parallelization;
