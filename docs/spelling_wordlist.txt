@@ -20,3 +20,7 @@ parallelly
 mypy
 numpy
 openai
+gcc
+repo
+cmake
+dockerfile

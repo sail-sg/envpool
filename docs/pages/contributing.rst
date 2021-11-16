@@ -1,23 +1,17 @@
 Contributing to EnvPool
 =======================
 
+
 Build From Source
 -----------------
 
 See :doc:`/pages/build`.
 
+
 Adding A New Environment
 ------------------------
 
-To add a new environment in C++ that will be parallelly run by EnvPool,
-we provide a developer interface in `envpool/core/env.h
-<https://github.com/sail-sg/envpool/blob/master/envpool/core/env.h>`_.
-
-- For a quick and annotated example, please refer to
-  `envpool/dummy/ <https://github.com/sail-sg/envpool/tree/master/envpool/dummy>`_.
-- `envpool/atari
-  <https://github.com/sail-sg/envpool/tree/master/envpool/atari>`_ serves as
-  a more complex, real example.
+See :doc:`/pages/env`.
 
 
 Lint Check
