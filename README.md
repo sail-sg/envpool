@@ -130,12 +130,16 @@ You don't need to manually reset one environment when any of `done` is true, ins
 import envpool
 import numpy as np
 
-# make asynchronous 
-env = envpool.make("Pong-v5", env_type="gym", num_envs=64, batch_size=16)
+# make asynchronous
+num_envs = 64
+batch_size = 16
+env = envpool.make("Pong-v5", env_type="gym", num_envs=num_envs, batch_size=batch_size)
+action_num = env.action_space.n
 env.async_reset()  # send the initial reset signal to all envs
 while True:
     obs, rew, done, info = env.recv()
-    action = np.random.randint(batch_size, size=len(info.env_id))
+    env_id = info["env_id"]
+    action = np.random.randint(action_num, size=batch_size)
     env.send(action, env_id)
 ```
 
