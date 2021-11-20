@@ -201,7 +201,8 @@ class AtariEnv : public Env<AtariEnvSpec> {
                kRawSize);
       }
     }
-    PushStack(false, skip_id == 0);  // push the maxpool outcome to the stack_buf
+    PushStack(false,
+              skip_id == 0);  // push the maxpool outcome to the stack_buf
     ++elapsed_step_;
     if (reward_clip_) {
       if (reward > 0) {
