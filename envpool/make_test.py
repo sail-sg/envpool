@@ -13,6 +13,8 @@
 # limitations under the License.
 """Test for envpool.make."""
 
+import pprint
+
 import dm_env
 import gym
 from absl.testing import absltest
@@ -23,9 +25,9 @@ import envpool
 class _MakeTest(absltest.TestCase):
 
   def test_list_all_envs(self) -> None:
-    envpool.list_all_envs()
+    pprint.pprint(envpool.list_all_envs())
 
-  def test_make(self) -> None:
+  def test_make_atari(self) -> None:
     self.assertRaises(TypeError, envpool.make, "Pong-v5")
     spec = envpool.make_spec("Defender-v5")
     env_gym = envpool.make_gym("Defender-v5")

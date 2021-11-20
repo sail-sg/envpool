@@ -44,7 +44,10 @@ class EnvSpecMixin(ABC):
   @property
   def reward_threshold(self: EnvSpec) -> Optional[float]:
     """Reward threshold, None for no threshold."""
-    return None
+    try:
+      return self.config.reward_threshold  # type: ignore
+    except AttributeError:
+      return None
 
   @property
   def state_array_spec(self: EnvSpec) -> Dict[str, Any]:

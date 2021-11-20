@@ -22,7 +22,7 @@ from absl.testing import absltest
 from tianshou.data import Batch
 from tianshou.policy import QRDQNPolicy
 
-import envpool
+from envpool.atari import AtariEnvSpec, AtariGymEnvPool
 from envpool.atari.atari_network import QRDQN
 
 try:
@@ -38,11 +38,14 @@ class _AtariPretrainTest(absltest.TestCase):
     task: str,
     resume_path: str,
     num_envs: int = 10,
-    seed: int = 0
+    seed: int = 0,
+    target_reward: float = 0.0,
   ) -> None:
-    env = envpool.make_gym(task, num_envs=num_envs)
-    state_shape = env.observation_space.shape
-    action_shape = env.action_space.n
+    config = AtariEnvSpec.gen_config(task=task, num_envs=num_envs, seed=seed)
+    spec = AtariEnvSpec(config)
+    env = AtariGymEnvPool(spec)
+    state_shape = env.observation_space.shape  # type: ignore
+    action_shape = env.action_space.n  # type: ignore
     device = "cuda" if torch.cuda.is_available() else "cpu"
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -77,20 +80,17 @@ class _AtariPretrainTest(absltest.TestCase):
 
     rew = reward.mean()
     logging.info(f"Mean reward of {task}: {rew}")
-    if task.startswith("Pong"):
-      assert rew >= 19
-    elif task.startswith("Breakout"):
-      assert rew >= 350
+    self.assertAlmostEqual(rew, target_reward)
 
   def test_pong(self) -> None:
     model_path = os.path.join("envpool", "atari", "policy-pong.pth")
     self.assertTrue(os.path.exists(model_path))
-    self.eval_qrdqn("Pong-v5", model_path)
+    self.eval_qrdqn("pong", model_path, target_reward=20.6)
 
   def test_breakout(self) -> None:
     model_path = os.path.join("envpool", "atari", "policy-breakout.pth")
     self.assertTrue(os.path.exists(model_path))
-    self.eval_qrdqn("Breakout-v5", model_path)
+    self.eval_qrdqn("breakout", model_path, target_reward=367.8)
 
 
 if __name__ == "__main__":

@@ -144,3 +144,5 @@ pyflakes*
 .DS_Store
 .idea/
 *.swp
+train_dir
+log
