@@ -63,7 +63,7 @@ class EnvSpec {
       ConcatDict(common_config, EnvFns::DefaultConfig());
 
  public:
-  EnvSpec(): EnvSpec(default_config) {}
+  EnvSpec() : EnvSpec(default_config) {}
   explicit EnvSpec(const ConfigValues& conf)
       : config(conf),
         state_spec(ConcatDict(common_state_spec, EnvFns::StateSpec(config))),
