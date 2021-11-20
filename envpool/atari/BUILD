@@ -88,7 +88,7 @@ py_test(
     name = "atari_envpool_test",
     srcs = ["atari_envpool_test.py"],
     deps = [
-        "//envpool",
+        ":atari",
         requirement("numpy"),
         requirement("dm-env"),
         requirement("absl-py"),
@@ -102,8 +102,8 @@ py_test(
         ":gen_pretrain_weight",
     ],
     deps = [
+        ":atari",
         ":atari_network",
-        "//envpool",
         requirement("numpy"),
         requirement("absl-py"),
         requirement("tianshou"),

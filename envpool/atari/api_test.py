@@ -73,6 +73,23 @@ class _SpecTest(absltest.TestCase):
     )
     self.assertRaises(ValueError, AtariEnvSpec, config)
 
+  def test_metadata(self) -> None:
+    num_envs = 4
+    config = AtariEnvSpec.gen_config(task="pong", num_envs=num_envs)
+    spec = AtariEnvSpec(config)
+    env = AtariGymEnvPool(spec)
+    self.assertEqual(len(env), num_envs)
+    self.assertFalse(env.is_async)
+    num_envs = 8
+    batch_size = 4
+    config = AtariEnvSpec.gen_config(
+      task="pong", num_envs=num_envs, batch_size=batch_size
+    )
+    spec = AtariEnvSpec(config)
+    env = AtariGymEnvPool(spec)
+    self.assertEqual(len(env), num_envs)
+    self.assertTrue(env.is_async)
+
 
 class _DMSyncTest(absltest.TestCase):
 
