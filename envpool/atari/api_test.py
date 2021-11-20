@@ -89,6 +89,7 @@ class _SpecTest(absltest.TestCase):
     env = AtariGymEnvPool(spec)
     self.assertEqual(len(env), num_envs)
     self.assertTrue(env.is_async)
+    self.assertIsNone(env.spec.reward_threshold)
 
 
 class _DMSyncTest(absltest.TestCase):
