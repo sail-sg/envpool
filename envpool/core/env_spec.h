@@ -63,18 +63,7 @@ class EnvSpec {
       ConcatDict(common_config, EnvFns::DefaultConfig());
 
  public:
-  EnvSpec()
-      : config(default_config),
-        state_spec(ConcatDict(common_state_spec, EnvFns::StateSpec(config))),
-        action_spec(
-            ConcatDict(common_action_spec, EnvFns::ActionSpec(config))) {
-    if (config["batch_size"_] > config["num_envs"_]) {
-      throw std::invalid_argument(
-          "It is required that batch_size <= num_envs, got num_envs = " +
-          std::to_string(config["num_envs"_]) +
-          ", batch_size = " + std::to_string(config["batch_size"_]));
-    }
-  }
+  EnvSpec(): EnvSpec(default_config) {}
   explicit EnvSpec(const ConfigValues& conf)
       : config(conf),
         state_spec(ConcatDict(common_state_spec, EnvFns::StateSpec(config))),
