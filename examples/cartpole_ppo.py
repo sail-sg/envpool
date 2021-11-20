@@ -18,7 +18,6 @@ import pprint
 
 import gym
 import numpy as np
-import pytest
 import torch
 from tianshou.data import Collector, VectorReplayBuffer
 from tianshou.env import DummyVectorEnv
@@ -67,7 +66,7 @@ def get_args():
   return args
 
 
-def run_ppo(args=get_args()):
+def run_ppo(args):
   env = gym.make(args.task)
   if args.task == "CartPole-v0":
     env.spec.reward_threshold = 200
@@ -170,13 +169,6 @@ def run_ppo(args=get_args()):
   pprint.pprint(result)
   assert stop_fn(result["best_reward"])
   return watch()
-
-
-@pytest.mark.parametrize("task", ["CartPole-v0", "CartPole-v1"])
-def test_classic(task: str):
-  args = get_args()
-  args.task = task
-  run_ppo(args)
 
 
 if __name__ == "__main__":
