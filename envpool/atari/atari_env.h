@@ -46,6 +46,8 @@ std::string GetRomPath(std::string base_path, std::string task) {
   return ss.str();
 }
 
+typedef Spec<uint8_t> FrameSpec;
+
 class AtariEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
@@ -76,8 +78,9 @@ class AtariEnvFns {
   }
 };
 
+static uint8_t gray_scale_mapping[65536];
+
 typedef class EnvSpec<AtariEnvFns> AtariEnvSpec;
-typedef Spec<uint8_t> FrameSpec;
 
 class AtariEnv : public Env<AtariEnvSpec> {
  protected:
@@ -85,7 +88,6 @@ class AtariEnv : public Env<AtariEnvSpec> {
   const int kRawWidth = 160;
   const int kRawSize = kRawWidth * kRawHeight;
   std::unique_ptr<ale::ALEInterface> env_;
-  uint8_t arr[65536];
   ale::ActionVect action_set_;
   FrameSpec raw_spec_, resize_spec_;
   int max_episode_steps_, elapsed_step_, stack_num_, frame_skip_;
@@ -96,6 +98,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
   std::array<std::unique_ptr<uint8_t[]>, 2> maxpool_buf_;
   Array gray_obs_;
   std::uniform_int_distribution<> dist_noop_;
+  std::string rom_path_;
 
  public:
   AtariEnv(const Spec& spec, int env_id)
@@ -113,11 +116,14 @@ class AtariEnv : public Env<AtariEnvSpec> {
         zero_discount_on_life_loss_(spec.config["zero_discount_on_life_loss"_]),
         episodic_life_(spec.config["episodic_life"_]),
         done_(true),
-        dist_noop_(0, spec.config["noop_max"_] - 1) {
+        dist_noop_(0, spec.config["noop_max"_] - 1),
+        rom_path_(GetRomPath(spec.config["base_path"_], spec.config["task"_])) {
+    // use `static` here to only initialize once
+    static bool initialized = InitMapping(rom_path_);
     env_->setFloat("repeat_action_probability",
                    spec.config["repeat_action_probability"_]);
     env_->setInt("random_seed", seed_);
-    env_->loadROM(GetRomPath(spec.config["base_path"_], spec.config["task"_]));
+    env_->loadROM(rom_path_);
     action_set_ = env_->getMinimalActionSet();
     for (auto a : action_set_) {
       if (a == 1) {
@@ -132,6 +138,9 @@ class AtariEnv : public Env<AtariEnvSpec> {
       stack_buf_.push_back(Array(resize_spec_));
     }
     gray_obs_ = Array(FrameSpec({kRawHeight, kRawWidth, 1}));
+  }
+
+  static bool InitMapping(const std::string rom_path) {
     // init arr[65536] for grayscale mapping
     const int N = 256;
     uint8_t ptr0[N * N];
@@ -148,8 +157,11 @@ class AtariEnv : public Env<AtariEnvSpec> {
     uint8_t* col0_ptr = static_cast<uint8_t*>(col0.data());
     uint8_t* col1_ptr = static_cast<uint8_t*>(col1.data());
     // color mapping from pixel_t to RGB
-    env_->theOSystem->colourPalette().applyPaletteRGB(col0_ptr, ptr0, N * N);
-    env_->theOSystem->colourPalette().applyPaletteRGB(col1_ptr, ptr1, N * N);
+    ale::ALEInterface env;
+    env.loadROM(rom_path);
+    LOG(INFO) << env.theOSystem->console().getFormat();
+    env.theOSystem->colourPalette().applyPaletteRGB(col0_ptr, ptr0, N * N);
+    env.theOSystem->colourPalette().applyPaletteRGB(col1_ptr, ptr1, N * N);
     // maxpool RGB
     for (int i = 0; i < N * N * 3; ++i) {
       col0_ptr[i] = std::max(col0_ptr[i], col1_ptr[i]);
@@ -157,7 +169,8 @@ class AtariEnv : public Env<AtariEnvSpec> {
     // gray scale
     GrayScale(col0, &result);
     uint8_t* result_ptr = static_cast<uint8_t*>(result.data());
-    memcpy(arr, result_ptr, sizeof arr);
+    memcpy(gray_scale_mapping, result_ptr, sizeof gray_scale_mapping);
+    return true;
   }
 
   void Reset() override {
@@ -241,11 +254,11 @@ class AtariEnv : public Env<AtariEnvSpec> {
     if (maxpool) {
       uint8_t* ptr1 = maxpool_buf_[1].get();
       for (int i = 0; i < kRawSize; ++i) {
-        gray_ptr[i] = arr[256 * ptr[i] + ptr1[i]];
+        gray_ptr[i] = gray_scale_mapping[ptr[i] * 256 + ptr1[i]];
       }
     } else {
       for (int i = 0; i < kRawSize; ++i) {
-        gray_ptr[i] = arr[ptr[i]];
+        gray_ptr[i] = gray_scale_mapping[ptr[i]];
       }
     }
     Array tgt = std::move(*stack_buf_.begin());
