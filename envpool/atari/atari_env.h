@@ -162,24 +162,24 @@ class AtariEnv : public Env<AtariEnvSpec> {
 
   void Reset() override {
     int noop = dist_noop_(gen_) + 1 - fire_reset_;
-    int push_num = 1;
+    bool push_all = false;
     if (env_->game_over() || elapsed_step_ >= max_episode_steps_) {
       env_->reset_game();
       elapsed_step_ = 0;
-      push_num = stack_num_;
+      push_all = true;
     }
     while (noop--) {
       env_->act((ale::Action)0);
       if (env_->game_over()) {
         env_->reset_game();
-        push_num = stack_num_;
+        push_all = true;
       }
     }
     if (fire_reset_) {
       env_->act((ale::Action)1);
     }
     memcpy(maxpool_buf_[0].get(), env_->getScreen().getArray(), kRawSize);
-    PushStack(push_num, false);
+    PushStack(push_all, false);
     done_ = false;
     State state = Allocate();
     state["discount"_] = 1.0f;
@@ -201,7 +201,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
                kRawSize);
       }
     }
-    PushStack(1, skip_id == 0);  // push the maxpool outcome to the stack_buf
+    PushStack(false, skip_id == 0);  // push the maxpool outcome to the stack_buf
     ++elapsed_step_;
     if (reward_clip_) {
       if (reward > 0) {
@@ -234,7 +234,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
     }
   }
 
-  void PushStack(int num, bool maxpool) {
+  void PushStack(bool push_all, bool maxpool) {
     uint8_t* gray_ptr = static_cast<uint8_t*>(gray_obs_.data());
     uint8_t* ptr = maxpool_buf_[0].get();
     if (maxpool) {
@@ -251,9 +251,9 @@ class AtariEnv : public Env<AtariEnvSpec> {
     ptr = static_cast<uint8_t*>(tgt.data());
     stack_buf_.pop_front();
     Resize(gray_obs_, &tgt);
-    std::size_t size = tgt.Shape(0) * tgt.Shape(1);
+    std::size_t size = tgt.size;
     stack_buf_.push_back(std::move(tgt));
-    if (num > 1) {
+    if (push_all) {
       for (auto& s : stack_buf_) {
         uint8_t* ptr_s = static_cast<uint8_t*>(s.data());
         if (ptr != ptr_s) {
