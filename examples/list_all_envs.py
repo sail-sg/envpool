@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pprint
+
 import envpool
 
 if __name__ == "__main__":
-  envpool.list_all_envs()
+  pprint.pprint(envpool.list_all_envs())
