@@ -64,8 +64,7 @@ class AtariEnvFns {
             {conf["stack_num"_], conf["img_height"_], conf["img_width"_]},
             {0, 255})),
         "discount"_.bind(Spec<float>({-1}, {0.0f, 1.0f})),
-        "info:lives"_.bind(Spec<int>({-1}, {0, 5})),
-        "reward"_.bind(Spec<float>({-1})));
+        "info:lives"_.bind(Spec<int>({-1}, {0, 5})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

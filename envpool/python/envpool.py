@@ -14,6 +14,7 @@
 """EnvPool Mixin class for meta class definition."""
 
 import pprint
+import warnings
 from abc import ABC
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -87,6 +88,15 @@ class EnvPoolMixin(ABC):
     """Return if this env is in sync mode or async mode."""
     return self.config["batch_size"] > 0 and self.config[
       "num_envs"] != self.config["batch_size"]
+
+  def seed(
+    self: EnvPool, seed: Optional[Union[int, List[int]]] = None
+  ) -> None:
+    """Set the seed for all environments (abandoned)."""
+    warnings.warn(
+      "The `seed` function in envpool is abandoned. "
+      "You can set seed by envpool.make(\"..., seed=seed\") instead."
+    )
 
   def send(
     self: EnvPool,

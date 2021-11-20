@@ -74,7 +74,6 @@ class DummyEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict("obs"_.bind(Spec<int>({-1, conf["state_num"_]})),
-                    "reward"_.bind(Spec<float>({-1})),
                     "info:players.done"_.bind(Spec<bool>({-1})),
                     "info:players.id"_.bind(
                         Spec<int>({-1}, {0, conf["max_num_players"_]})));

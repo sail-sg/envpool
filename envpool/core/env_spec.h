@@ -34,7 +34,8 @@ auto common_action_spec = MakeDict("env_id"_.bind(Spec<int>({})),
 auto common_state_spec =
     MakeDict("info:env_id"_.bind(Spec<int>({})),
              "info:players.env_id"_.bind(Spec<int>({-1})),
-             "elapsed_step"_.bind(Spec<int>({})), "done"_.bind(Spec<bool>({})));
+             "elapsed_step"_.bind(Spec<int>({})), "done"_.bind(Spec<bool>({})),
+             "reward"_.bind(Spec<float>({-1})));
 
 /**
  * EnvSpec funciton, it constructs the env spec when a Config is passed.
@@ -66,12 +67,26 @@ class EnvSpec {
       : config(default_config),
         state_spec(ConcatDict(common_state_spec, EnvFns::StateSpec(config))),
         action_spec(
-            ConcatDict(common_action_spec, EnvFns::ActionSpec(config))) {}
+            ConcatDict(common_action_spec, EnvFns::ActionSpec(config))) {
+    if (config["batch_size"_] > config["num_envs"_]) {
+      throw std::invalid_argument(
+          "It is required that batch_size <= num_envs, got num_envs = " +
+          std::to_string(config["num_envs"_]) +
+          ", batch_size = " + std::to_string(config["batch_size"_]));
+    }
+  }
   explicit EnvSpec(const ConfigValues& conf)
       : config(conf),
         state_spec(ConcatDict(common_state_spec, EnvFns::StateSpec(config))),
         action_spec(
-            ConcatDict(common_action_spec, EnvFns::ActionSpec(config))) {}
+            ConcatDict(common_action_spec, EnvFns::ActionSpec(config))) {
+    if (config["batch_size"_] > config["num_envs"_]) {
+      throw std::invalid_argument(
+          "It is required that batch_size <= num_envs, got num_envs = " +
+          std::to_string(config["num_envs"_]) +
+          ", batch_size = " + std::to_string(config["batch_size"_]));
+    }
+  }
 };
 
 #endif  // ENVPOOL_CORE_ENV_SPEC_H_

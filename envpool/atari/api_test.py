@@ -54,6 +54,25 @@ class _SpecTest(absltest.TestCase):
       self.assertIsInstance(gym_act_space, gym.spaces.Discrete)
       self.assertEqual(gym_act_space.n, action_num)
 
+  def test_seed_warning(self) -> None:
+    num_envs = 4
+    config = AtariEnvSpec.gen_config(task="pong", num_envs=num_envs)
+    spec = AtariEnvSpec(config)
+    env = AtariDMEnvPool(spec)
+    with self.assertWarns(UserWarning):
+      env.seed(1)
+    env = AtariGymEnvPool(spec)
+    with self.assertWarns(UserWarning):
+      env.seed()
+
+  def test_invalid_batch_size(self) -> None:
+    num_envs = 4
+    batch_size = 5
+    config = AtariEnvSpec.gen_config(
+      task="pong", num_envs=num_envs, batch_size=batch_size
+    )
+    self.assertRaises(ValueError, AtariEnvSpec, config)
+
 
 class _DMSyncTest(absltest.TestCase):
 
