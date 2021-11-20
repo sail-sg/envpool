@@ -35,3 +35,25 @@ for game in atari_game_list:
     task=game,
     base_path=base_path,
   )
+
+# Classic Control
+
+register(
+  task_id="CartPole-v0",
+  import_path="envpool.classic_control",
+  spec_cls="CartPoleEnvSpec",
+  dm_cls="CartPoleDMEnvPool",
+  gym_cls="CartPoleGymEnvPool",
+  max_episode_steps=200,
+  reward_threshold=195.0,
+)
+
+register(
+  task_id="CartPole-v1",
+  import_path="envpool.classic_control",
+  spec_cls="CartPoleEnvSpec",
+  dm_cls="CartPoleDMEnvPool",
+  gym_cls="CartPoleGymEnvPool",
+  max_episode_steps=500,
+  reward_threshold=475.0,
+)

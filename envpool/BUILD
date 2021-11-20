@@ -27,6 +27,7 @@ py_library(
         ":entry",
         ":registration",
         "//envpool/atari",
+        "//envpool/classic_control",
         "//envpool/python",
     ],
 )
