@@ -173,6 +173,9 @@ class EnvPool(Protocol):
   def action_spec(self) -> Union[dm_env.specs.Array, Tuple]:
     """Dm action spec."""
 
+  def seed(self, seed: Optional[Union[int, List[int]]] = None) -> None:
+    """Set the seed for all environments."""
+
   @property
   def config(self) -> Dict[str, Any]:
     """Envpool config."""

@@ -78,9 +78,9 @@ class _AtariPretrainTest(absltest.TestCase):
     rew = reward.mean()
     logging.info(f"Mean reward of {task}: {rew}")
     if task.startswith("Pong"):
-      assert rew >= 19
+      assert rew == 20.2
     elif task.startswith("Breakout"):
-      assert rew >= 350
+      assert rew == 362.5
 
   def test_pong(self) -> None:
     model_path = os.path.join("envpool", "atari", "policy-pong.pth")
