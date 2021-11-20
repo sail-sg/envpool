@@ -67,7 +67,7 @@ class CartPoleEnv : public Env<CartPoleEnvSpec> {
       : Env<CartPoleEnvSpec>(spec, env_id),
         max_episode_steps_(spec.config["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
-        dist_(-0.05, 0.05),
+        dist_(-kInitRange, kInitRange),
         done_(true) {}
 
   bool IsDone() override { return done_; }

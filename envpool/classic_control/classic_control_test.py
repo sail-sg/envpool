@@ -34,7 +34,7 @@ class _CartPoleEnvPoolTest(absltest.TestCase):
     env2 = CartPoleGymEnvPool(spec)
     fmax = np.finfo(np.float32).max
     obs_range = np.array([4.8, fmax, np.pi / 7.5, fmax])
-    for _ in range(1000):
+    for _ in range(5000):
       action = np.random.randint(2, size=(num_envs,))
       obs0 = env0.step(action)[0]
       obs1 = env1.step(action)[0]
