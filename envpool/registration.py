@@ -14,8 +14,7 @@
 """Global env registry."""
 
 import importlib
-import pprint
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 
 
 class EnvRegistry:
@@ -63,9 +62,9 @@ class EnvRegistry:
     config = spec_cls.gen_config(**kwargs)
     return spec_cls(config)
 
-  def list_all_envs(self) -> None:
-    """Print all available task_id."""
-    pprint.pprint(list(self.specs.keys()))
+  def list_all_envs(self) -> List[str]:
+    """Return all available task_id."""
+    return list(self.specs.keys())
 
 
 # use a global EnvRegistry
