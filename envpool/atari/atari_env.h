@@ -77,8 +77,6 @@ class AtariEnvFns {
   }
 };
 
-static uint8_t gray_scale_mapping[65536];
-
 typedef class EnvSpec<AtariEnvFns> AtariEnvSpec;
 
 class AtariEnv : public Env<AtariEnvSpec> {
@@ -86,6 +84,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
   const int kRawHeight = 210;
   const int kRawWidth = 160;
   const int kRawSize = kRawWidth * kRawHeight;
+  static uint8_t gray_scale_mapping[65536];
   std::unique_ptr<ale::ALEInterface> env_;
   ale::ActionVect action_set_;
   FrameSpec raw_spec_, resize_spec_;
@@ -158,7 +157,6 @@ class AtariEnv : public Env<AtariEnvSpec> {
     // color mapping from pixel_t to RGB
     ale::ALEInterface env;
     env.loadROM(rom_path);
-    LOG(INFO) << env.theOSystem->console().getFormat();
     env.theOSystem->colourPalette().applyPaletteRGB(col0_ptr, ptr0, N * N);
     env.theOSystem->colourPalette().applyPaletteRGB(col1_ptr, ptr1, N * N);
     // maxpool RGB
@@ -247,6 +245,23 @@ class AtariEnv : public Env<AtariEnvSpec> {
     }
   }
 
+  /**
+   * FrameStack env wrapper implementation.
+   *
+   * The original images (without transforming) are saved inside maxpool_buf_.
+   * The stacked result is in stack_buf_ where len(stack_buf_) == stack_num_.
+   *
+   * At reset time, we need to clear all data in stack_buf_ with push_all =
+   * true and maxpool = false (there is only one observation); at step time,
+   * we push transform(maxpool_buf_[0], maxpool_buf_[1]) at the end of
+   * stack_buf_, and pop the first item in stack_buf_, with push_all = false
+   * and maxpool = true.
+   *
+   * @param push_all whether to use the most recent observation to write all
+   *   of the data in stack_buf_.
+   * @param maxpool whether to perform maxpool operation on the last two
+   *   observation. Maybe there is only one?
+   */
   void PushStack(bool push_all, bool maxpool) {
     uint8_t* gray_ptr = static_cast<uint8_t*>(gray_obs_.data());
     uint8_t* ptr = maxpool_buf_[0].get();
@@ -276,6 +291,9 @@ class AtariEnv : public Env<AtariEnvSpec> {
     }
   }
 };
+
+// static array decl
+uint8_t AtariEnv::gray_scale_mapping[65536];
 
 typedef AsyncEnvPool<AtariEnv> AtariEnvPool;
 
