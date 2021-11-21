@@ -16,7 +16,7 @@ py_library(
     name = "entry",
     srcs = ["entry.py"],
     deps = [
-        ":registration",
+        "//envpool/atari:atari_registration",
     ],
 )
 
