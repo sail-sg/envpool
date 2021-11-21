@@ -48,7 +48,7 @@ This command will run automatic tests in the main directory
 
 .. code-block:: bash
 
-    $ make bazel-test
+    make bazel-test
 
 
 Documentation
@@ -63,6 +63,6 @@ To compile documentation into web page, run
 
 .. code-block:: bash
 
-    $ make doc
+    make doc
 
 And the website is in `http://localhost:8000 <http://localhost:8000>`_
