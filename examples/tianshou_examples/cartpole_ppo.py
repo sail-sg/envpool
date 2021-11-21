@@ -24,7 +24,7 @@ from tianshou.env import DummyVectorEnv
 from tianshou.policy import PPOPolicy
 from tianshou.trainer import onpolicy_trainer
 from tianshou.utils import TensorboardLogger
-from tianshou.utils.net.common import Net
+from tianshou.utils.net.common import ActorCritic, Net
 from tianshou.utils.net.discrete import Actor, Critic
 from torch.utils.tensorboard import SummaryWriter
 
@@ -93,14 +93,13 @@ def run_ppo(args):
   )
   actor = Actor(net, args.action_shape, device=args.device).to(args.device)
   critic = Critic(net, device=args.device).to(args.device)
+  actor_critic = ActorCritic(actor, critic)
   # orthogonal initialization
-  for m in list(actor.modules()) + list(critic.modules()):
+  for m in actor_critic.modules():
     if isinstance(m, torch.nn.Linear):
       torch.nn.init.orthogonal_(m.weight)
       torch.nn.init.zeros_(m.bias)
-  optim = torch.optim.Adam(
-    set(actor.parameters()).union(critic.parameters()), lr=args.lr
-  )
+  optim = torch.optim.Adam(actor_critic.parameters(), lr=args.lr)
   dist = torch.distributions.Categorical
   policy = PPOPolicy(
     actor,
