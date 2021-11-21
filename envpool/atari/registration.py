@@ -11,7 +11,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Entry point for all envs' registration."""
+"""Atari env registration."""
 
-import envpool.atari.registration  # noqa: F401
-import envpool.classic_control.registration  # noqa: F401
+import os
+
+from envpool.registration import register
+
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+atari_rom_path = os.path.join(base_path, "atari", "atari_roms")
+atari_game_list = os.listdir(atari_rom_path)
+
+for game in atari_game_list:
+  name = "".join([g.capitalize() for g in game.split("_")])
+  register(
+    task_id=name + "-v5",
+    import_path="envpool.atari",
+    spec_cls="AtariEnvSpec",
+    dm_cls="AtariDMEnvPool",
+    gym_cls="AtariGymEnvPool",
+    task=game,
+    base_path=base_path,
+  )

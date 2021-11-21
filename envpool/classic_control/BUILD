@@ -38,3 +38,11 @@ py_test(
         requirement("absl-py"),
     ],
 )
+
+py_library(
+    name = "classic_control_registration",
+    srcs = ["registration.py"],
+    deps = [
+        "//envpool:registration",
+    ],
+)

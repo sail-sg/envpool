@@ -11,7 +11,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Entry point for all envs' registration."""
+"""Classic control env registration."""
 
-import envpool.atari.registration  # noqa: F401
-import envpool.classic_control.registration  # noqa: F401
+from envpool.registration import register
+
+register(
+  task_id="CartPole-v0",
+  import_path="envpool.classic_control",
+  spec_cls="CartPoleEnvSpec",
+  dm_cls="CartPoleDMEnvPool",
+  gym_cls="CartPoleGymEnvPool",
+  max_episode_steps=200,
+  reward_threshold=195.0,
+)
+
+register(
+  task_id="CartPole-v1",
+  import_path="envpool.classic_control",
+  spec_cls="CartPoleEnvSpec",
+  dm_cls="CartPoleDMEnvPool",
+  gym_cls="CartPoleGymEnvPool",
+  max_episode_steps=500,
+  reward_threshold=475.0,
+)

@@ -111,3 +111,11 @@ py_test(
         requirement("torch"),
     ],
 )
+
+py_library(
+    name = "atari_registration",
+    srcs = ["registration.py"],
+    deps = [
+        "//envpool:registration",
+    ],
+)
