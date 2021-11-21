@@ -46,8 +46,6 @@ std::string GetRomPath(std::string base_path, std::string task) {
   return ss.str();
 }
 
-typedef Spec<uint8_t> FrameSpec;
-
 class AtariEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
@@ -78,6 +76,7 @@ class AtariEnvFns {
 };
 
 typedef class EnvSpec<AtariEnvFns> AtariEnvSpec;
+typedef Spec<uint8_t> FrameSpec;
 
 class AtariEnv : public Env<AtariEnvSpec> {
  protected:
@@ -211,8 +210,8 @@ class AtariEnv : public Env<AtariEnvSpec> {
                kRawSize);
       }
     }
-    PushStack(false,
-              skip_id == 0);  // push the maxpool outcome to the stack_buf
+    // push the maxpool outcome to the stack_buf
+    PushStack(false, skip_id == 0);
     ++elapsed_step_;
     if (reward_clip_) {
       if (reward > 0) {
