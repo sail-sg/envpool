@@ -67,11 +67,16 @@ First, include the core header files:
     #include "envpool/core/async_envpool.h"
     #include "envpool/core/env.h"
 
+
+CartPoleEnvSpec
+~~~~~~~~~~~~~~~
+
 Next, we need to create ``CartPoleEnvSpec`` to define the env-specific config,
-state space, and action space. We first create a class ``CartPoleEnvFns``:
+state space, and action space. Create a class ``CartPoleEnvFns``:
 
 .. code-block:: c++
 
+    // env-specific definition of config and state/action spec
     class CartPoleEnvFns {
      public:
       static decltype(auto) DefaultConfig() {
@@ -84,9 +89,13 @@ state space, and action space. We first create a class ``CartPoleEnvFns``:
       }
       template <typename Config>
       static decltype(auto) ActionSpec(const Config& conf) {
+        // the last argument in Spec is for the range definition
         return MakeDict("action"_.bind(Spec<int>({-1}, {0, 1})));
       }
     };
+
+    // this line will concat common config and common state/action spec
+    typedef class EnvSpec<CartPoleEnvFns> CartPoleEnvSpec;
 
 - ``DefaultConfig``: the default config to create cartpole environment;
 - ``StateSpec``: the state space (including observation and info) definition;
@@ -116,3 +125,86 @@ definition is also available to see in python side:
     >>> env.spec.reward_threshold
     666.0
 
+.. danger ::
+
+    When using string in ``MakeDict``, you should explicit use ``std::string``.
+    For example,
+
+    .. code-block:: c++
+
+        auto config = MakeDict("path"_.bind("init_path"));
+
+    this will be a ``const char *`` type instead of ``std::string``, which will
+    cause sometimes ``config["path"_]`` be a meaningless string in further
+    usage. Instead, you should change the code as
+
+    .. code-block:: c++
+
+        auto config = MakeDict("path"_.bind(std::string("init_path")));
+
+.. note ::
+
+    ``-1`` in Spec is reserved for number of players. In single-player
+    environment, ``Spec<int>({-1})`` is the same as ``Spec<int>({})`` (empty
+    shape), but in multi-player environment, empty shape spec will be only a
+    single int value per environment, while the former will be an array with
+    length == #players (can be 0 when all players are dead).
+
+.. note ::
+
+    The common config and common state/action spec are defined in
+    `env_spec.h <https://github.com/sail-sg/envpool/blob/master/envpool/core/env_spec.h>`_.
+
+.. note ::
+
+    EnvPool supports the environment that has multiple observations, or even
+    nested observations. For example, ``FetchReach-v1``:
+
+    ::
+
+        >>> import gym
+        >>> env = gym.make("FetchReach-v1")
+        >>> e.observation_space
+        Dict(achieved_goal:Box([-inf ...], [inf ...], (3,), float32), desired_goal:Box([-inf ...], [inf ...], (3,), float32), observation:Box([-inf ...], [inf ...], (10,), float32))
+        >>> env.reset()
+        >>> env.step([0, 0, 0, 0])
+        ({'observation': array([ 1.34185919e+00,  7.49100661e-01,  5.34545376e-01,  0.00000000e+00,
+                  0.00000000e+00,  2.49364315e-05,  2.35502607e-07, -1.56066826e-04,
+                  3.22889321e-06, -1.55593223e-06]),
+          'achieved_goal': array([1.34185919, 0.74910066, 0.53454538]),
+          'desired_goal': array([1.36677977, 0.67090477, 0.60136475])},
+         -1.0,
+         False,
+         {'is_success': 0.0})
+
+    If we want to create such a state spec (including both obs and info), here
+    is the solution:
+
+    .. code-block:: c++
+
+        template <typename Config>
+        static decltype(auto) StateSpec(const Config& conf) {
+          return MakeDict(
+            "obs:observation"_.bind(Spec<float>({10})),
+            "obs:achieved_goal"_.bind(Spec<float>({3})),
+            "obs:desired_goal"_.bind(Spec<float>({3})),
+            "info:is_success"_.bind(Spec<float>({})));
+        }
+
+    The keys start with ``obs:`` will be parsed to obs dict, and similarly
+    ``info:`` will be parsed to info dict.
+
+    For nested observations such as ``{"obs_a": {"obs_b": 6}}``, use ``.`` to
+    indicate the hierarchy:
+
+    .. code-block:: c++
+
+        return MakeDict("obs:obs_a.obs_b"_.bind(Spec<int>({})));
+
+.. note ::
+
+    In dm_env, keys in Spec that start with either ``obs:`` or ``info:`` will
+    be merged together under ``timestep.observation``.
+
+CartPoleEnvPool
+~~~~~~~~~~~~~~~
