@@ -1,8 +1,8 @@
 Add New Environment into EnvPool
 ================================
 
-To add a new environment in C++ that will be parallelly run by EnvPool,
-we provide a developer interface in `envpool/core/env.h
+To add a new environment in C++ that EnvPool will parallelly run, we provide a
+developer interface in `envpool/core/env.h
 <https://github.com/sail-sg/envpool/blob/master/envpool/core/env.h>`_.
 
 - For a quick and annotated example, please refer to
@@ -30,7 +30,7 @@ The first thing is to create a ``classic_control`` folder under ``envpool/``:
     cd envpool
     mkdir -p classic_control
 
-Here are the expected file structure:
+Here is the expected file structure:
 
 .. code-block:: bash
 
@@ -71,7 +71,7 @@ First, include the core header files:
 CartPoleEnvSpec
 ~~~~~~~~~~~~~~~
 
-Next, we need to create ``CartPoleEnvSpec`` to define the env-specific config,
+Next, we need create ``CartPoleEnvSpec`` to define the env-specific config,
 state space, and action space. Create a class ``CartPoleEnvFns``:
 
 .. code-block:: c++
@@ -101,9 +101,9 @@ state space, and action space. Create a class ``CartPoleEnvFns``:
 - ``StateSpec``: the state space (including observation and info) definition;
 - ``ActionSpec``: the action space definition.
 
-CartPole is quite a simple environment. The observation is a numpy array with
-shape ``(4,)``, and the action is a discrete action ``[0, 1]``. This
-definition is also available to see in python side:
+CartPole is quite a simple environment. The observation is a NumPy array with
+shape ``(4,)``, and the action is discrete ``[0, 1]``. This definition is also
+available to see on the python side:
 
 ::
 
@@ -127,15 +127,15 @@ definition is also available to see in python side:
 
 .. danger ::
 
-    When using string in ``MakeDict``, you should explicit use ``std::string``.
-    For example,
+    When using a string in ``MakeDict``, you should explicitly use
+    ``std::string``. For example,
 
     .. code-block:: c++
 
         auto config = MakeDict("path"_.bind("init_path"));
 
-    this will be a ``const char *`` type instead of ``std::string``, which will
-    cause sometimes ``config["path"_]`` be a meaningless string in further
+    This will be a ``const char *`` type instead of ``std::string``, which will
+    sometimes cause ``config["path"_]`` to be a meaningless string in further
     usage. Instead, you should change the code as
 
     .. code-block:: c++
@@ -144,9 +144,9 @@ definition is also available to see in python side:
 
 .. note ::
 
-    ``-1`` in Spec is reserved for number of players. In single-player
+    ``-1`` in Spec is reserved for the number of players. In single-player
     environment, ``Spec<int>({-1})`` is the same as ``Spec<int>({})`` (empty
-    shape), but in multi-player environment, empty shape spec will be only a
+    shape), but in a multi-player environment, empty shape spec will be only a
     single int value per environment, while the former will be an array with
     length == #players (can be 0 when all players are dead).
 
@@ -157,7 +157,7 @@ definition is also available to see in python side:
 
 .. note ::
 
-    EnvPool supports the environment that has multiple observations, or even
+    EnvPool supports the environment that has multiple observations or even
     nested observations. For example, ``FetchReach-v1``:
 
     ::
@@ -201,10 +201,155 @@ definition is also available to see in python side:
 
         return MakeDict("obs:obs_a.obs_b"_.bind(Spec<int>({})));
 
+    It is the same as ActionSpec. The only difference is: there's no ``obs:``
+    and ``info:`` in action.
+
 .. note ::
 
     In dm_env, keys in Spec that start with either ``obs:`` or ``info:`` will
-    be merged together under ``timestep.observation``.
+    be merged under ``timestep.observation``.
+
+
+CartPoleEnv
+~~~~~~~~~~~
+
+Now we are going to create a class ``CartPoleEnv`` that inherits
+`Env <https://github.com/sail-sg/envpool/blob/master/envpool/core/env.h>`_.
+
+We have already defined three types ``Spec``, ``State`` and ``Action`` in Env
+class for convenience, which follow the definition of ``CartPoleEnvSpec``.
+
+The following functions are required to override:
+
+- constructor, in this case it is ``CartPoleEnv(const Spec& spec, int env_id)``;
+  you can use ``spec.config["max_episode_steps"_]`` to extract the value from
+  config;
+- ``bool IsDone()``: return a boolean that indicate whether the current episode
+  is finished or not;
+- ``void Reset()``: perform one ``env.reset()``;
+- ``void Step(const Action& action)``: perform one ``env.step(action)``.
+
+
+Array Read/Write
+~~~~~~~~~~~~~~~~
+
+``State`` and ``Action`` are dict-style data structures for easier prototyping.
+All values in these dictionaries are with type ``Array``, which mimic the
+functionality of a multi-dimensional array.
+
+To extract value from action in ``CartPoleEnv``:
+
+.. code-block:: c++
+
+    // auto convert the first element in action["action"_]
+    int act = action["action"_];
+    // for continuous action space, e.g.
+    // float act2 = action["action"_][2];
+
+If the state/action contains several keys and each element is a
+multi-dimensional array, e.g., an image, there are three ways to deal with array
+read/write:
+
+.. code-block:: c++
+
+    uint8_t *ptr = static_cast<uint8_t *>(state["obs"_].data());
+
+    for (int i = 0; i < 4; ++i) {
+      for (int j = 0; j < 84; ++j) {
+        for (int k = 0; k < 84; ++k) {
+          // 1. use []
+          state["obs"_][i][j][k] = ...
+          // 2. use (), faster than 1
+          state["obs"_](i, j, k) = ...
+          // 3. use raw pointer
+          ptr[i * 84 * 84 + j * 84 + k] = ...
+        }
+      }
+    }
+
+
+Allocate State in Reset and Step
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+EnvPool has carefully designed the data movement to achieve zero-copy
+with the lowest overhead. We create a simple API to make it be more
+user-friendly.
+
+At the end of ``Reset`` and ``Step`` function, you need to call ``Allocate``
+method to allocate state for writing. For example, in CartPoleEnv:
+
+.. code-block:: c++
+
+    State state = Allocate();
+    state["obs"_][0] = static_cast<float>(x_);
+    state["obs"_][1] = static_cast<float>(x_dot_);
+    state["obs"_][2] = static_cast<float>(theta_);
+    state["obs"_][3] = static_cast<float>(theta_dot_);
+    state["reward"_] = 1.0f;
+
+    // here is a buggy usage because x_ is float64 and state["obs"_] is float32
+    // state["obs"_][0] = x_;
+
+
+You do not pass this state to any other functions or return. Instead,
+AsyncEnvPool will automatically process the data and pack it to the python
+interface.
+
+.. note ::
+
+    For multi-player environments, you need to allocate state with an extra
+    argument ``player_num``. For example, if the state spec is:
+
+    .. code-block:: c++
+
+        template <typename Config>
+        static decltype(auto) StateSpec(const Config& conf) {
+          return MakeDict(
+            "obs:players.obs"_.bind(Spec<uint8_t>({-1, 4, 84, 84})),
+            "obs:players.location"_.bind(Spec<uint8_t>({-1, 2})),
+            "info:players.health"_.bind(Spec<int>({-1})),
+            "info:player_num"_.bind(Spec<int>({})),
+            "info:bla"_.bind(Spec<float>({2, 3, 3}))
+          );
+        }
+
+    By calling ``auto state = Allocate(10)``, the state would be like:
+
+    .. code-block:: c++
+
+        state["obs:players.obs"_];      // shape: (10, 4, 84, 84)
+        state["obs:players.location"];  // shape: (10, 2)
+        state["info:players.health"];   // shape: (10,)
+        state["info:player_num"];       // shape: (), only one element
+        state["info:bla"];              // shape: (2, 3, 3)
+
+.. danger ::
+
+    Please make sure the types are correct. Assigning int to a float array or
+    assigning double to an uint64_t array will not generate any compilation
+    error, but in the actual runtime, the data is wrong. Please use
+    ``static_cast`` to convert the type correctly.
+
 
 CartPoleEnvPool
 ~~~~~~~~~~~~~~~
+
+After creating ``CartPoleEnv``, just one more line we can get
+``CartPoleEnvPool``:
+
+.. code-block:: c++
+
+    typedef AsyncEnvPool<CartPoleEnv> CartPoleEnvPool;
+
+
+Miscellaneous
+~~~~~~~~~~~~~
+
+.. note ::
+
+    Please do not use the pseudo-random number by ``rand() % MAX``. Instead,
+    use `random number distributions
+    <https://en.cppreference.com/w/cpp/numeric/random>`_ to generate
+    thread-safe deterministic pseudo-random number. ``std::mt19937`` generator
+    has already been defined as ``gen_`` (`link
+    <https://github.com/sail-sg/envpool/blob/v0.4.0/envpool/core/env.h#L37>`_).
