@@ -11,7 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Entry point for all envs' registration."""
+"""Classic control env in EnvPool."""
 
-import envpool.atari.registration  # noqa: F401
-import envpool.classic_control.registration  # noqa: F401
+from envpool.python.api import py_env
+
+from .classic_control_envpool import _CartPoleEnvPool, _CartPoleEnvSpec
+
+CartPoleEnvSpec, CartPoleDMEnvPool, CartPoleGymEnvPool = py_env(
+  _CartPoleEnvSpec, _CartPoleEnvPool
+)
+
+__all__ = [
+  "CartPoleEnvSpec",
+  "CartPoleDMEnvPool",
+  "CartPoleGymEnvPool",
+]

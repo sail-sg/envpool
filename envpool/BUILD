@@ -17,6 +17,7 @@ py_library(
     srcs = ["entry.py"],
     deps = [
         "//envpool/atari:atari_registration",
+        "//envpool/classic_control:classic_control_registration",
     ],
 )
 
@@ -27,6 +28,7 @@ py_library(
         ":entry",
         ":registration",
         "//envpool/atari",
+        "//envpool/classic_control",
         "//envpool/python",
     ],
 )

@@ -40,6 +40,18 @@ class _MakeTest(absltest.TestCase):
     self.assertEqual(env_gym.action_space.n, 18)
     self.assertEqual(env_dm.action_spec().num_values, 18)
 
+  def test_make_classic(self) -> None:
+    spec = envpool.make_spec("CartPole-v0")
+    env_gym = envpool.make_gym("CartPole-v1")
+    env_dm = envpool.make_dm("CartPole-v1")
+    print(env_dm)
+    print(env_gym)
+    self.assertIsInstance(env_gym, gym.Env)
+    self.assertIsInstance(env_dm, dm_env.Environment)
+    # check reward threshold
+    self.assertEqual(spec.reward_threshold, 195.0)
+    self.assertEqual(env_gym.spec.reward_threshold, 475.0)
+
 
 if __name__ == "__main__":
   absltest.main()
