@@ -184,9 +184,5 @@ class EnvSpecMeta(ABCMeta):
       map(lambda s: s.replace(".", "_"), config_keys)
     )
     defaults: Tuple = base._default_config_values
-    attrs["gen_config"] = namedtuple(
-      "Config",
-      config_keys,
-      defaults=defaults,
-    )
+    attrs["gen_config"] = namedtuple("Config", config_keys, defaults=defaults)
     return super().__new__(cls, name, parents, attrs)
