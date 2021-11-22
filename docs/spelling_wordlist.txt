@@ -30,3 +30,6 @@ pre
 boolean
 uint
 runtime
+http
+deps
+namespace
