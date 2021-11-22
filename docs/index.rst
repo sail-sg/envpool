@@ -58,6 +58,7 @@ stable version through `envpool.readthedocs.io/en/stable/
    :maxdepth: 1
    :caption: Pages
 
+   pages/slides
    pages/build
    pages/interface
    pages/benchmark

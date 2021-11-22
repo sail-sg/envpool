@@ -55,6 +55,7 @@ root_doc = "index"
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+spelling_exclude_patterns = ["pages/slides.rst"]
 
 # -- Options for HTML output -------------------------------------------------
 
