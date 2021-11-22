@@ -57,7 +57,7 @@ and their functionalities:
   we can use ``envpool.make("CartPole-v0")`` to create an environment.
 
 
-Implement CartPole environment in cartpole.h
+Implement CartPole Environment in cartpole.h
 --------------------------------------------
 
 First, include the core header files:
@@ -141,6 +141,34 @@ available to see on the python side:
     .. code-block:: c++
 
         auto config = MakeDict("path"_.bind(std::string("init_path")));
+
+.. note ::
+
+    The above example shows how to define a discrete action space by specifying
+    the last argument of ``Spec``. Here is another example, if our environment
+    has 6 actions, ranging from 0 to 5:
+
+    .. code-block:: c++
+
+        template <typename Config>
+        static decltype(auto) ActionSpec(const Config& conf) {
+          return MakeDict("action"_.bind(Spec<int>({-1}, {0, 5})));
+          // or remove -1, no difference in single-player env
+          // return MakeDict("action"_.bind(Spec<int>({}, {0, 5})));
+        }
+
+    For continuous action space, simply change the type of ``Spec`` to float or
+    double. For example, if the action is a NumPy array with 4 floats, ranging
+    from -2 to 2:
+
+    .. code-block:: c++
+
+        template <typename Config>
+        static decltype(auto) ActionSpec(const Config& conf) {
+          return MakeDict("action"_.bind(Spec<float>({-1, 4}, {-2.0f, 2.0f})));
+          // or remove -1, no difference in single-player env
+          // return MakeDict("action"_.bind(Spec<float>({4}, {-2.0f, 2.0f})));
+        }
 
 .. note ::
 
@@ -353,3 +381,38 @@ Miscellaneous
     thread-safe deterministic pseudo-random number. ``std::mt19937`` generator
     has already been defined as ``gen_`` (`link
     <https://github.com/sail-sg/envpool/blob/v0.4.0/envpool/core/env.h#L37>`_).
+
+
+Generate Dynamic Linked .so File by classic_control.cc
+------------------------------------------------------
+
+We use `pybind11 <https://github.com/pybind/pybind11>`_ to let python interface
+use this C++ code. We have already wrapped this interface, you just need to add
+only a few lines to make it work:
+
+.. code-block:: c++
+
+    #include "envpool/classic_control/cartpole.h"
+    #include "envpool/core/py_envpool.h"
+
+    // generate python-side CartPoleEnvSpec
+    typedef PyEnvSpec<classic_control::CartPoleEnvSpec> CartPoleEnvSpec;
+    // generate python-side CartPoleEnvPool
+    typedef PyEnvPool<classic_control::CartPoleEnvPool> CartPoleEnvPool;
+
+    // generate classic_control_envpool.so
+    PYBIND11_MODULE(classic_control_envpool, m) {
+      REGISTER(m, CartPoleEnvSpec, CartPoleEnvPool)
+    }
+
+
+Write Bazel BUILD File
+----------------------
+
+
+Register CartPole-v0/1 in EnvPool
+---------------------------------
+
+
+Add Unit Test for CartPoleEnv
+-----------------------------
