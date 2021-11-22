@@ -257,6 +257,9 @@ The following functions are required to override:
 - ``void Reset()``: perform one ``env.reset()``;
 - ``void Step(const Action& action)``: perform one ``env.step(action)``.
 
+The reference implementation is in `envpool/classic_control/cartpole.h
+<https://github.com/sail-sg/envpool/blob/master/envpool/classic_control/cartpole.h>`_.
+
 
 Array Read/Write
 ~~~~~~~~~~~~~~~~
