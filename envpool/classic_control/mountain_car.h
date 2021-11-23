@@ -15,8 +15,8 @@
  */
 // https://github.com/openai/gym/blob/master/gym/envs/classic_control/mountain_car.py
 
-#ifndef ENVPOOL_CLASSIC_CONTROL_MOUNTAIN_CAR_DISCRETE_H_
-#define ENVPOOL_CLASSIC_CONTROL_MOUNTAIN_CAR_DISCRETE_H_
+#ifndef ENVPOOL_CLASSIC_CONTROL_MOUNTAIN_CAR_H_
+#define ENVPOOL_CLASSIC_CONTROL_MOUNTAIN_CAR_H_
 
 #include <cmath>
 #include <random>
@@ -26,7 +26,7 @@
 
 namespace classic_control {
 
-class MountainCarDiscreteEnvFns {
+class MountainCarEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict("max_episode_steps"_.bind(200),
@@ -43,9 +43,9 @@ class MountainCarDiscreteEnvFns {
   }
 };
 
-typedef class EnvSpec<MountainCarDiscreteEnvFns> MountainCarDiscreteEnvSpec;
+typedef class EnvSpec<MountainCarEnvFns> MountainCarEnvSpec;
 
-class MountainCarDiscreteEnv : public Env<MountainCarDiscreteEnvSpec> {
+class MountainCarEnv : public Env<MountainCarEnvSpec> {
  protected:
   const double kMinPos = -1.2;
   const double kMaxPos = 0.6;
@@ -60,8 +60,8 @@ class MountainCarDiscreteEnv : public Env<MountainCarDiscreteEnvSpec> {
   bool done_;
 
  public:
-  MountainCarDiscreteEnv(const Spec& spec, int env_id)
-      : Env<MountainCarDiscreteEnvSpec>(spec, env_id),
+  MountainCarEnv(const Spec& spec, int env_id)
+      : Env<MountainCarEnvSpec>(spec, env_id),
         max_episode_steps_(spec.config["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
         dist_(-0.6, -0.4),
@@ -111,8 +111,8 @@ class MountainCarDiscreteEnv : public Env<MountainCarDiscreteEnvSpec> {
   }
 };
 
-typedef AsyncEnvPool<MountainCarDiscreteEnv> MountainCarDiscreteEnvPool;
+typedef AsyncEnvPool<MountainCarEnv> MountainCarEnvPool;
 
 }  // namespace classic_control
 
-#endif  // ENVPOOL_CLASSIC_CONTROL_MOUNTAIN_CAR_DISCRETE_H_
+#endif  // ENVPOOL_CLASSIC_CONTROL_MOUNTAIN_CAR_H_

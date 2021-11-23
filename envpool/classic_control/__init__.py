@@ -22,8 +22,8 @@ from .classic_control_envpool import (
   _CatchEnvSpec,
   _MountainCarContinuousEnvPool,
   _MountainCarContinuousEnvSpec,
-  _MountainCarDiscreteEnvPool,
-  _MountainCarDiscreteEnvSpec,
+  _MountainCarEnvPool,
+  _MountainCarEnvSpec,
   _PendulumEnvPool,
   _PendulumEnvSpec,
 )
@@ -40,10 +40,8 @@ PendulumEnvSpec, PendulumDMEnvPool, PendulumGymEnvPool = py_env(
   _PendulumEnvSpec, _PendulumEnvPool
 )
 
-(
-  MountainCarDiscreteEnvSpec, MountainCarDiscreteDMEnvPool,
-  MountainCarDiscreteGymEnvPool
-) = py_env(_MountainCarDiscreteEnvSpec, _MountainCarDiscreteEnvPool)
+(MountainCarEnvSpec, MountainCarDMEnvPool,
+ MountainCarGymEnvPool) = py_env(_MountainCarEnvSpec, _MountainCarEnvPool)
 
 (
   MountainCarContinuousEnvSpec, MountainCarContinuousDMEnvPool,
@@ -60,9 +58,9 @@ __all__ = [
   "PendulumEnvSpec",
   "PendulumDMEnvPool",
   "PendulumGymEnvPool",
-  "MountainCarDiscreteEnvSpec",
-  "MountainCarDiscreteDMEnvPool",
-  "MountainCarDiscreteGymEnvPool",
+  "MountainCarEnvSpec",
+  "MountainCarDMEnvPool",
+  "MountainCarGymEnvPool",
   "MountainCarContinuousEnvSpec",
   "MountainCarContinuousDMEnvPool",
   "MountainCarContinuousGymEnvPool",
