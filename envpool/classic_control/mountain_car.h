@@ -71,8 +71,9 @@ class MountainCarEnv : public Env<MountainCarEnvSpec> {
         is_continuous_(spec.config["is_continuous"_]),
         done_(true),
         max_episode_steps_(spec.config["max_episode_steps"_]),
-        dist_(-0.6, -0.4),
-        goal_pos_(is_continuous_ ? 0.45 : 0.5) {}
+        elapsed_step_(max_episode_steps_ + 1),
+        goal_pos_(is_continuous_ ? 0.45 : 0.5),
+        dist_(-0.6, -0.4) {}
 
   bool IsDone() override { return done_; }
 
