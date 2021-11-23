@@ -39,7 +39,7 @@ class MountainCarContinuousEnvFns {
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<float>({-1}, {-1.0f, 1.0f})));
+    return MakeDict("action"_.bind(Spec<float>({-1, 1}, {-1.0f, 1.0f})));
   }
 };
 
