@@ -204,14 +204,14 @@ template <typename EnvPool>
 std::vector<std::string> PyEnvPool<EnvPool>::py_action_keys =
     PyEnvPool<EnvPool>::PySpec::py_action_keys;
 
+py::object abc_meta = py::module::import("abc").attr("ABCMeta");
+
 /**
  * Call this macro in the translation unit of each envpool instance
  * It will register the envpool instance to the registry.
  * The static bool status is local to the translation unit.
  */
 #define REGISTER(MODULE, SPEC, ENVPOOL)                              \
-  py::module abc = py::module::import("abc");                        \
-  py::object abc_meta = abc.attr("ABCMeta");                         \
   py::class_<SPEC>(MODULE, "_" #SPEC, py::metaclass(abc_meta))       \
       .def(py::init<const typename SPEC::ConfigValues&>())           \
       .def_readonly("_config_values", &SPEC::py_config_values)       \
