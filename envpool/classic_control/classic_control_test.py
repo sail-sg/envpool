@@ -25,6 +25,8 @@ from envpool.classic_control import (
   CatchDMEnvPool,
   CatchEnvSpec,
   CatchGymEnvPool,
+  MountainCarContinuousEnvSpec,
+  MountainCarContinuousGymEnvPool,
   MountainCarEnvSpec,
   MountainCarGymEnvPool,
   PendulumEnvSpec,
@@ -89,11 +91,9 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
       MountainCarEnvSpec, MountainCarGymEnvPool, (obs_min, obs_max)
     )
     self.run_deterministic_check(
-      MountainCarEnvSpec,
-      MountainCarGymEnvPool,
+      MountainCarContinuousEnvSpec,
+      MountainCarContinuousGymEnvPool,
       (obs_min, obs_max),
-      max_episode_steps=500,
-      is_continuous=True,
     )
 
 

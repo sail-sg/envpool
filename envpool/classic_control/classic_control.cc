@@ -30,9 +30,15 @@ typedef PyEnvPool<classic_control::PendulumEnvPool> PendulumEnvPool;
 typedef PyEnvSpec<classic_control::MountainCarEnvSpec> MountainCarEnvSpec;
 typedef PyEnvPool<classic_control::MountainCarEnvPool> MountainCarEnvPool;
 
+typedef PyEnvSpec<classic_control::MountainCarContinuousEnvSpec>
+    MountainCarContinuousEnvSpec;
+typedef PyEnvPool<classic_control::MountainCarContinuousEnvPool>
+    MountainCarContinuousEnvPool;
+
 PYBIND11_MODULE(classic_control_envpool, m) {
   REGISTER(m, CatchEnvSpec, CatchEnvPool)
   REGISTER(m, CartPoleEnvSpec, CartPoleEnvPool)
   REGISTER(m, PendulumEnvSpec, PendulumEnvPool)
   REGISTER(m, MountainCarEnvSpec, MountainCarEnvPool)
+  REGISTER(m, MountainCarContinuousEnvSpec, MountainCarContinuousEnvPool)
 }

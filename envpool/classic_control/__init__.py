@@ -20,6 +20,8 @@ from .classic_control_envpool import (
   _CartPoleEnvSpec,
   _CatchEnvPool,
   _CatchEnvSpec,
+  _MountainCarContinuousEnvPool,
+  _MountainCarContinuousEnvSpec,
   _MountainCarEnvPool,
   _MountainCarEnvSpec,
   _PendulumEnvPool,
@@ -42,6 +44,11 @@ MountainCarEnvSpec, MountainCarDMEnvPool, MountainCarGymEnvPool = py_env(
   _MountainCarEnvSpec, _MountainCarEnvPool
 )
 
+(
+  MountainCarContinuousEnvSpec, MountainCarContinuousDMEnvPool,
+  MountainCarContinuousGymEnvPool
+) = py_env(_MountainCarContinuousEnvSpec, _MountainCarContinuousEnvPool)
+
 __all__ = [
   "CatchEnvSpec",
   "CatchDMEnvPool",
@@ -55,4 +62,7 @@ __all__ = [
   "MountainCarEnvSpec",
   "MountainCarDMEnvPool",
   "MountainCarGymEnvPool",
+  "MountainCarContinuousEnvSpec",
+  "MountainCarContinuousDMEnvPool",
+  "MountainCarContinuousGymEnvPool",
 ]

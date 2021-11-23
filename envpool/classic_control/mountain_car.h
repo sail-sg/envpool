@@ -31,8 +31,7 @@ class MountainCarEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict("max_episode_steps"_.bind(200),
-                    "reward_threshold"_.bind(-110.0),
-                    "is_continuous"_.bind(false));
+                    "reward_threshold"_.bind(-110.0));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -41,17 +40,29 @@ class MountainCarEnvFns {
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    if (conf["is_continuous"_]) {
-      return MakeDict("action"_.bind(Spec<float>({-1}, {-1.0f, 1.0f})));
-    } else {
-      return MakeDict("action"_.bind(Spec<int>({-1}, {0, 2})));
-    }
+    return MakeDict("action"_.bind(Spec<int>({-1}, {0, 2})));
+  }
+};
+
+// We cannot return ActionSpec with different type,
+// so that another class of EnvFns is created.
+class MountainCarContinuousEnvFns : public MountainCarEnvFns {
+ public:
+  static decltype(auto) DefaultConfig() {
+    return MakeDict("max_episode_steps"_.bind(999),
+                    "reward_threshold"_.bind(90.0));
+  }
+  template <typename Config>
+  static decltype(auto) ActionSpec(const Config& conf) {
+    return MakeDict("action"_.bind(Spec<float>({-1}, {-1.0f, 1.0f})));
   }
 };
 
 typedef class EnvSpec<MountainCarEnvFns> MountainCarEnvSpec;
+typedef class EnvSpec<MountainCarContinuousEnvFns> MountainCarContinuousEnvSpec;
 
-class MountainCarEnv : public Env<MountainCarEnvSpec> {
+template <typename EnvSpec, bool is_continuous>
+class MountainCarEnv : public Env<EnvSpec> {
  protected:
   const double kMinPos = -1.2;
   const double kMaxPos = 0.6;
@@ -68,7 +79,7 @@ class MountainCarEnv : public Env<MountainCarEnvSpec> {
  public:
   MountainCarEnv(const Spec& spec, int env_id)
       : Env<MountainCarEnvSpec>(spec, env_id),
-        is_continuous_(spec.config["is_continuous"_]),
+        is_continuous_(is_continuous),
         done_(true),
         max_episode_steps_(spec.config["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
@@ -139,7 +150,12 @@ class MountainCarEnv : public Env<MountainCarEnvSpec> {
   }
 };
 
-typedef AsyncEnvPool<MountainCarEnv> MountainCarEnvPool;
+typedef class MountainCarEnv<MountainCarEnvFns, false> MountainCarDiscreteEnv;
+typedef class MountainCarEnv<MountainCarContinuousEnvFns, true>
+    MountainCarContinuousEnv;
+
+typedef AsyncEnvPool<MountainCarDiscreteEnv> MountainCarEnvPool;
+typedef AsyncEnvPool<MountainCarContinuousEnv> MountainCarContinuousEnvPool;
 
 }  // namespace classic_control
 
