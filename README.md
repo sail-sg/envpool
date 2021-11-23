@@ -13,13 +13,17 @@
 [![GitHub forks](https://img.shields.io/github/forks/sail-sg/envpool)](https://github.com/sail-sg/envpool/network)
 [![GitHub license](https://img.shields.io/github/license/sail-sg/envpool)](https://github.com/sail-sg/envpool/blob/master/LICENSE)
 
-**EnvPool** is a highly parallel reinforcement learning environment execution engine that significantly outperforms existing environment executors. With a curated design dedicated to the RL use case, we leverage techniques of a general asynchronous execution model, implemented with C++ thread pool on the environment execution.
+**EnvPool** is a C++-based batched environment pool with pybind11 and thread
+pool. It has high performance (\~1M raw FPS in DGX on Atari games) and
+compatible APIs (supports both gym and dm_env, both sync and async, both single
+and multi player environment).
 
 Here are EnvPool's several highlights:
 
-- Compatible with OpenAI `gym` APIs and DeepMind `dm_env` APIs;
+- Compatible with OpenAI ``gym`` APIs and DeepMind ``dm_env`` APIs;
 - Manage a pool of envs, interact with the envs in batched APIs by default;
-- Synchronous execution API and asynchronous execution API;
+- Support both synchronous execution and asynchronous execution;
+- Support both single player and multi-player environment;
 - Easy C++ developer API to add new envs;
 - **1 Million** Atari frames per second simulation with 256 CPU cores, **~13x** throughput of Python subprocess-based vector env;
 - **~3x** throughput of Python subprocess-based vector env on low resource setup like 12 CPU cores;

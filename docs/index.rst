@@ -6,15 +6,17 @@
 Welcome to EnvPool!
 ===================
 
-EnvPool is a C++-based batched environment pool with pybind11 and thread pool.
-It has high performance (~1M raw FPS in DGX on Atari games) and compatible APIs
-(supports both gym and dm_env, both sync and async).
+**EnvPool** is a C++-based batched environment pool with pybind11 and thread
+pool. It has high performance (~1M raw FPS in DGX on Atari games) and
+compatible APIs (supports both gym and dm_env, both sync and async, both single
+and multi player environment).
 
 Here are EnvPool's several highlights:
 
-- Compatible with OpenAI `gym` APIs and DeepMind `dm_env` APIs;
+- Compatible with OpenAI ``gym`` APIs and DeepMind ``dm_env`` APIs;
 - Manage a pool of envs, interact with the envs in batched APIs by default;
-- Synchronous execution API and asynchronous execution API;
+- Support both synchronous execution and asynchronous execution;
+- Support both single player and multi-player environment;
 - Easy C++ developer API to add new envs;
 - **1 Million** Atari frames per second simulation with 256 CPU cores,
   **~13x** throughput of Python subprocess-based vector env;
