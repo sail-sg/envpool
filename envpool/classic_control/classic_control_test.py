@@ -27,8 +27,8 @@ from envpool.classic_control import (
   CatchGymEnvPool,
   MountainCarContinuousEnvSpec,
   MountainCarContinuousGymEnvPool,
-  MountainCarEnvSpec,
-  MountainCarGymEnvPool,
+  MountainCarDiscreteEnvSpec,
+  MountainCarDiscreteGymEnvPool,
   PendulumEnvSpec,
   PendulumGymEnvPool,
 )
@@ -88,7 +88,9 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
     obs_min = np.array([-1.2, -0.07])
     obs_max = np.array([0.6, 0.07])
     self.run_deterministic_check(
-      MountainCarEnvSpec, MountainCarGymEnvPool, (obs_min, obs_max)
+      MountainCarDiscreteEnvSpec,
+      MountainCarDiscreteGymEnvPool,
+      (obs_min, obs_max),
     )
     self.run_deterministic_check(
       MountainCarContinuousEnvSpec,

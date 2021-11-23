@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 // https://github.com/openai/gym/blob/master/gym/envs/classic_control/mountain_car.py
-// https://github.com/openai/gym/blob/master/gym/envs/classic_control/continuous_mountain_car.py
 
-#ifndef ENVPOOL_CLASSIC_CONTROL_MOUNTAIN_CAR_H_
-#define ENVPOOL_CLASSIC_CONTROL_MOUNTAIN_CAR_H_
+#ifndef ENVPOOL_CLASSIC_CONTROL_MOUNTAIN_CAR_DISCRETE_H_
+#define ENVPOOL_CLASSIC_CONTROL_MOUNTAIN_CAR_DISCRETE_H_
 
 #include <cmath>
 #include <random>
@@ -27,7 +26,7 @@
 
 namespace classic_control {
 
-class MountainCarEnvFns {
+class MountainCarDiscreteEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict("max_episode_steps"_.bind(200),
@@ -44,47 +43,29 @@ class MountainCarEnvFns {
   }
 };
 
-// We cannot return ActionSpec with different type,
-// so that another class of EnvFns is created.
-class MountainCarContinuousEnvFns : public MountainCarEnvFns {
- public:
-  static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.bind(999),
-                    "reward_threshold"_.bind(90.0));
-  }
-  template <typename Config>
-  static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<float>({-1}, {-1.0f, 1.0f})));
-  }
-};
+typedef class EnvSpec<MountainCarDiscreteEnvFns> MountainCarDiscreteEnvSpec;
 
-typedef class EnvSpec<MountainCarEnvFns> MountainCarEnvSpec;
-typedef class EnvSpec<MountainCarContinuousEnvFns> MountainCarContinuousEnvSpec;
-
-template <typename EnvSpec, bool is_continuous>
-class MountainCarEnv : public Env<EnvSpec> {
+class MountainCarDiscreteEnv : public Env<MountainCarDiscreteEnvSpec> {
  protected:
   const double kMinPos = -1.2;
   const double kMaxPos = 0.6;
   const double kMaxSpeed = 0.07;
-  const double kPower = 0.0015;
-  const double kGoalVel = 0;
   const double kForce = 0.001;
+  const double kGoalPos = 0.5;
+  const double kGoalVel = 0;
   const double kGravity = 0.0025;
-  bool is_continuous_, done_;
   int max_episode_steps_, elapsed_step_;
-  double pos_, vel_, goal_pos_;
+  double pos_, vel_;
   std::uniform_real_distribution<> dist_;
+  bool done_;
 
  public:
-  MountainCarEnv(const Spec& spec, int env_id)
-      : Env<MountainCarEnvSpec>(spec, env_id),
-        is_continuous_(is_continuous),
-        done_(true),
+  MountainCarDiscreteEnv(const Spec& spec, int env_id)
+      : Env<MountainCarDiscreteEnvSpec>(spec, env_id),
         max_episode_steps_(spec.config["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
-        goal_pos_(is_continuous_ ? 0.45 : 0.5),
-        dist_(-0.6, -0.4) {}
+        dist_(-0.6, -0.4),
+        done_(true) {}
 
   bool IsDone() override { return done_; }
 
@@ -99,25 +80,8 @@ class MountainCarEnv : public Env<EnvSpec> {
 
   void Step(const Action& action) override {
     done_ = (++elapsed_step_ >= max_episode_steps_);
-    double act;
-    if (is_continuous_) {
-      act = static_cast<float>(action["action"_]);
-    } else {
-      act = static_cast<int>(action["action"_]) - 1;
-    }
-    float reward;
-    if (is_continuous_) {
-      reward = -0.1 * act * act;
-      if (act < -1) {
-        act = -1;
-      } else if (act > 1) {
-        act = 1;
-      }
-      vel_ += act * kPower - std::cos(3 * pos_) * kGravity;
-    } else {
-      reward = -1;
-      vel_ += act * kForce - std::cos(3 * pos_) * kGravity;
-    }
+    double act = static_cast<int>(action["action"_]) - 1;
+    vel_ += act * kForce - std::cos(3 * pos_) * kGravity;
     if (vel_ < -kMaxSpeed) {
       vel_ = -kMaxSpeed;
     } else if (vel_ > kMaxSpeed) {
@@ -132,14 +96,11 @@ class MountainCarEnv : public Env<EnvSpec> {
     if (pos_ == kMinPos && vel_ < 0) {
       vel_ = 0;
     }
-    if (pos_ >= goal_pos_ && vel_ >= kGoalVel) {
+    if (pos_ >= kGoalPos && vel_ >= kGoalVel) {
       done_ = true;
-      if (is_continuous_) {
-        reward += 100;
-      }
     }
     State state = Allocate();
-    WriteObs(state, reward);
+    WriteObs(state, -1.0f);
   }
 
  private:
@@ -150,13 +111,8 @@ class MountainCarEnv : public Env<EnvSpec> {
   }
 };
 
-typedef class MountainCarEnv<MountainCarEnvFns, false> MountainCarDiscreteEnv;
-typedef class MountainCarEnv<MountainCarContinuousEnvFns, true>
-    MountainCarContinuousEnv;
-
-typedef AsyncEnvPool<MountainCarDiscreteEnv> MountainCarEnvPool;
-typedef AsyncEnvPool<MountainCarContinuousEnv> MountainCarContinuousEnvPool;
+typedef AsyncEnvPool<MountainCarDiscreteEnv> MountainCarDiscreteEnvPool;
 
 }  // namespace classic_control
 
-#endif  // ENVPOOL_CLASSIC_CONTROL_MOUNTAIN_CAR_H_
+#endif  // ENVPOOL_CLASSIC_CONTROL_MOUNTAIN_CAR_DISCRETE_H_

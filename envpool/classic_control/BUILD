@@ -28,8 +28,16 @@ cc_library(
 )
 
 cc_library(
-    name = "mountain_car",
-    hdrs = ["mountain_car.h"],
+    name = "mountain_car_discrete",
+    hdrs = ["mountain_car_discrete.h"],
+    deps = [
+        "//envpool/core:async_envpool",
+    ],
+)
+
+cc_library(
+    name = "mountain_car_continuous",
+    hdrs = ["mountain_car_continuous.h"],
     deps = [
         "//envpool/core:async_envpool",
     ],
@@ -43,7 +51,8 @@ pybind_extension(
     deps = [
         ":cartpole",
         ":catch",
-        ":mountain_car",
+        ":mountain_car_continuous",
+        ":mountain_car_discrete",
         ":pendulum",
         "//envpool/core:py_envpool",
     ],

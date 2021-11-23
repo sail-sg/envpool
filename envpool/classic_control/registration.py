@@ -57,9 +57,9 @@ register(
 register(
   task_id="MountainCar-v0",
   import_path="envpool.classic_control",
-  spec_cls="MountainCarEnvSpec",
-  dm_cls="MountainCarDMEnvPool",
-  gym_cls="MountainCarGymEnvPool",
+  spec_cls="MountainCarDiscreteEnvSpec",
+  dm_cls="MountainCarDiscreteDMEnvPool",
+  gym_cls="MountainCarDiscreteGymEnvPool",
   max_episode_steps=200,
   reward_threshold=-110.0,
 )
