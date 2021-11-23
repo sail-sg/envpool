@@ -13,10 +13,7 @@
 [![GitHub forks](https://img.shields.io/github/forks/sail-sg/envpool)](https://github.com/sail-sg/envpool/network)
 [![GitHub license](https://img.shields.io/github/license/sail-sg/envpool)](https://github.com/sail-sg/envpool/blob/master/LICENSE)
 
-**EnvPool** is a C++-based batched environment pool with pybind11 and thread
-pool. It has high performance (\~1M raw FPS in DGX on Atari games) and
-compatible APIs (supports both gym and dm\_env, both sync and async, both single
-and multi player environment).
+**EnvPool** is a C++-based batched environment pool with pybind11 and thread pool. It has high performance (\~1M raw FPS in DGX on Atari games) and compatible APIs (supports both gym and dm\_env, both sync and async, both single and multi player environment).
 
 Here are EnvPool's several highlights:
 
