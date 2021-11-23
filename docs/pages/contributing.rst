@@ -44,7 +44,7 @@ To check if everything conforms to the specification, run:
 Test Locally
 ------------
 
-This command will run automatic tests in the main directory
+This command will run automatic tests in the main directory:
 
 .. code-block:: bash
 
@@ -59,7 +59,7 @@ Documentations are written under the ``docs/`` directory as ReStructuredText
 ReStructuredText can be found `here
 <https://pythonhosted.org/an_example_pypi_project/sphinx.html>`_.
 
-To compile documentation into web page, run
+To compile documentation into the web page, run:
 
 .. code-block:: bash
 

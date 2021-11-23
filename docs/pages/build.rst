@@ -1,24 +1,24 @@
 Build From Source
 =================
 
-We recommend to build EnvPool on Ubuntu 20.04 environment.
+We recommend building EnvPool on Ubuntu 20.04 environment.
 
 We use `bazel <https://bazel.build/>`_ to build EnvPool. Comparing with
-`pip <https://pip.pypa.io/>`_, using bazel to build python package with
-C++ .so files has some advantages:
+`pip <https://pip.pypa.io/>`_, using Bazel to build python package with C++ .so
+files has some advantages:
 
-- bazel allows us to build from source code but no need to directly includes
+- Bazel allows us to build from source code, but no need to directly includes
   the code in our repo;
-- no need to write complex cmake files, especially with multiple third-party
+- no need to write complex CMake files, especially with multiple third-party
   dependencies;
-- using bazel for CI test pipeline can only run the test with modified part,
+- using Bazel for CI test pipeline can only run the test with modified part,
   so that it can save a lot of time.
 
 
 Install Bazelisk
 ----------------
 
-Bazelisk is a version controller for bazel. You can install it via
+Bazelisk is a version controller for Bazel. You can install it via
 `npm <https://nodejs.org/en/download/package-manager/#debian-and-ubuntu-based-linux-distributions>`_
 
 .. code-block:: bash
@@ -58,7 +58,7 @@ It also requires python version >= 3.7:
 Build Wheel
 -----------
 
-To build a release version, type
+To build a release version, type:
 
 .. code-block:: bash
 
@@ -94,5 +94,5 @@ develop environment, run
 
     make docker-dev
 
-The code is under ``/app`` and you can communicate with host machine file
+The code is under ``/app``, and you can communicate with the host machine file
 system via ``/host``.

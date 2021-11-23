@@ -22,7 +22,7 @@ numpy
 openai
 gcc
 repo
-cmake
+CMake
 dockerfile
 config
 cartpole

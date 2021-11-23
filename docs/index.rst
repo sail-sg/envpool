@@ -6,7 +6,7 @@
 Welcome to EnvPool!
 ===================
 
-EnvPool is a C++ based batched environment pool with pybind11 and threadpool.
+EnvPool is a C++-based batched environment pool with pybind11 and thread pool.
 It has high performance (~1M raw FPS in DGX on Atari games) and compatible APIs
 (supports both gym and dm_env, both sync and async).
 
@@ -20,7 +20,7 @@ Here are EnvPool's several highlights:
   **~13x** throughput of Python subprocess-based vector env;
 - **~3x** throughput of Python subprocess-based vector env on low resource
   setup like 12 CPU cores;
-- Comparing with existing GPU-based solution
+- Comparing with the existing GPU-based solution
   (`Brax <https://github.com/google/brax>`_ /
   `Isaac-gym <https://developer.nvidia.com/isaac-gym>`_), EnvPool is a
   **general** solution for various kinds of speeding-up RL environment
@@ -34,7 +34,7 @@ Installation
 EnvPool is currently hosted on `PyPI <https://pypi.org/project/envpool/>`_.
 It requires Python >= 3.7.
 
-You can simply install EnvPool with the following command:
+You can install EnvPool with the following command:
 
 .. code-block:: bash
 
@@ -49,7 +49,7 @@ After installation, open a Python console and type
 
 If no error occurs, you have successfully installed EnvPool.
 
-EnvPool is still under development, you can also check out the documents in
+EnvPool is still under development; you can also check out the documents in
 stable version through `envpool.readthedocs.io/en/stable/
 <https://envpool.readthedocs.io/en/stable/>`_.
 
