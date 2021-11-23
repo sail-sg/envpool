@@ -59,6 +59,9 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
     )
     act_space = env0.action_space
     obs_min, obs_max = obs_range
+    eps = np.finfo(np.float32).min
+    obs_min -= eps
+    obs_max += eps
     for _ in range(5000):
       action = np.array([act_space.sample() for _ in range(num_envs)])
       obs0 = env0.step(action)[0]
@@ -66,10 +69,10 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
       obs2 = env2.step(action)[0]
       np.testing.assert_allclose(obs0, obs1)
       self.assertFalse(np.allclose(obs0, obs2))
-      self.assertTrue(np.all(obs_min <= obs0))
-      self.assertTrue(np.all(obs_min <= obs2))
-      self.assertTrue(np.all(obs0 <= obs_max))
-      self.assertTrue(np.all(obs2 <= obs_max))
+      self.assertTrue(np.all(obs_min <= obs0), obs0)
+      self.assertTrue(np.all(obs_min <= obs2), obs2)
+      self.assertTrue(np.all(obs0 <= obs_max), obs0)
+      self.assertTrue(np.all(obs2 <= obs_max), obs2)
 
   def test_cartpole(self) -> None:
     fmax = np.finfo(np.float32).max
