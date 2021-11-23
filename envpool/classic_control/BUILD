@@ -19,6 +19,14 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "catch",
+    hdrs = ["catch.h"],
+    deps = [
+        "//envpool/core:async_envpool",
+    ],
+)
+
 pybind_extension(
     name = "classic_control_envpool",
     srcs = [
@@ -26,6 +34,7 @@ pybind_extension(
     ],
     deps = [
         ":cartpole",
+        ":catch",
         ":pendulum",
         "//envpool/core:py_envpool",
     ],
@@ -44,6 +53,7 @@ py_test(
     deps = [
         ":classic_control",
         requirement("numpy"),
+        requirement("dm_env"),
         requirement("absl-py"),
     ],
 )

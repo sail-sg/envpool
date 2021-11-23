@@ -16,6 +16,16 @@
 from envpool.registration import register
 
 register(
+  task_id="Catch-v0",
+  import_path="envpool.classic_control",
+  spec_cls="CatchEnvSpec",
+  dm_cls="CatchDMEnvPool",
+  gym_cls="CatchGymEnvPool",
+  height=10,
+  width=5,
+)
+
+register(
   task_id="CartPole-v0",
   import_path="envpool.classic_control",
   spec_cls="CartPoleEnvSpec",

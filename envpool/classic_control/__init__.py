@@ -18,8 +18,14 @@ from envpool.python.api import py_env
 from .classic_control_envpool import (
   _CartPoleEnvPool,
   _CartPoleEnvSpec,
+  _CatchEnvPool,
+  _CatchEnvSpec,
   _PendulumEnvPool,
   _PendulumEnvSpec,
+)
+
+CatchEnvSpec, CatchDMEnvPool, CatchGymEnvPool = py_env(
+  _CatchEnvSpec, _CatchEnvPool
 )
 
 CartPoleEnvSpec, CartPoleDMEnvPool, CartPoleGymEnvPool = py_env(
@@ -31,6 +37,9 @@ PendulumEnvSpec, PendulumDMEnvPool, PendulumGymEnvPool = py_env(
 )
 
 __all__ = [
+  "CatchEnvSpec",
+  "CatchDMEnvPool",
+  "CatchGymEnvPool",
   "CartPoleEnvSpec",
   "CartPoleDMEnvPool",
   "CartPoleGymEnvPool",
