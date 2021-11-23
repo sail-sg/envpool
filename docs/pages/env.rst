@@ -556,8 +556,34 @@ CartPole environment is so simple that there is no third-party dependencies.
 However, for a more complex environment, it is often the case to include some
 third-party dependencies.
 
-For example, if we want to download `ThreadPool
-<https://github.com/progschj/ThreadPool>`_ and use it in
+For third-party Python dependency, for instance, if we want to add ``tianshou``
+as test dependency, in ``third_party/pip_requirements/requirements.txt``:
+
+.. code-block:: diff
+
+    six
+    tensorboard
+   +tianshou
+    torch
+    tqdm
+
+If we want to add ``tianshou`` as build dependency, in ``setup.cfg``:
+
+.. code-block:: diff
+
+    [options]
+    packages = find:
+    python_requires = >=3.7
+    install_requires =
+        dm-env>=1.4
+        gym>=0.18
+        numpy>=1.19
+        types-protobuf>=3.17.3
+        typing-extensions
+   +    tianshou
+
+As for source-code dependency, for example, if we want to download
+`ThreadPool <https://github.com/progschj/ThreadPool>`_ and use it in
 ``//envpool/core:async_envpool``, here are the steps to follow:
 
 1. add download item for ThreadPool in ``envpool/workspace0.bzl``:
