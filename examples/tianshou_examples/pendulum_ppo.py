@@ -24,7 +24,7 @@ from tianshou.env import DummyVectorEnv
 from tianshou.policy import PPOPolicy
 from tianshou.trainer import onpolicy_trainer
 from tianshou.utils import TensorboardLogger
-from tianshou.utils.net.common import Net, ActorCritic
+from tianshou.utils.net.common import ActorCritic, Net
 from tianshou.utils.net.continuous import ActorProb, Critic
 from torch.distributions import Independent, Normal
 from torch.utils.tensorboard import SummaryWriter
