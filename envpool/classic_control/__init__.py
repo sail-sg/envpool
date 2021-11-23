@@ -15,14 +15,26 @@
 
 from envpool.python.api import py_env
 
-from .classic_control_envpool import _CartPoleEnvPool, _CartPoleEnvSpec
+from .classic_control_envpool import (
+  _CartPoleEnvPool,
+  _CartPoleEnvSpec,
+  _PendulumEnvPool,
+  _PendulumEnvSpec,
+)
 
 CartPoleEnvSpec, CartPoleDMEnvPool, CartPoleGymEnvPool = py_env(
   _CartPoleEnvSpec, _CartPoleEnvPool
+)
+
+PendulumEnvSpec, PendulumDMEnvPool, PendulumGymEnvPool = py_env(
+  _PendulumEnvSpec, _PendulumEnvPool
 )
 
 __all__ = [
   "CartPoleEnvSpec",
   "CartPoleDMEnvPool",
   "CartPoleGymEnvPool",
+  "PendulumEnvSpec",
+  "PendulumDMEnvPool",
+  "PendulumGymEnvPool",
 ]

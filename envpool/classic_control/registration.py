@@ -34,3 +34,12 @@ register(
   max_episode_steps=500,
   reward_threshold=475.0,
 )
+
+register(
+  task_id="Pendulum-v0",
+  import_path="envpool.classic_control",
+  spec_cls="PendulumEnvSpec",
+  dm_cls="PendulumDMEnvPool",
+  gym_cls="PendulumGymEnvPool",
+  max_episode_steps=200,
+)

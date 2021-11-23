@@ -13,11 +13,16 @@
 // limitations under the License.
 
 #include "envpool/classic_control/cartpole.h"
+#include "envpool/classic_control/pendulum.h"
 #include "envpool/core/py_envpool.h"
 
 typedef PyEnvSpec<classic_control::CartPoleEnvSpec> CartPoleEnvSpec;
 typedef PyEnvPool<classic_control::CartPoleEnvPool> CartPoleEnvPool;
 
+typedef PyEnvSpec<classic_control::PendulumEnvSpec> PendulumEnvSpec;
+typedef PyEnvPool<classic_control::PendulumEnvPool> PendulumEnvPool;
+
 PYBIND11_MODULE(classic_control_envpool, m) {
   REGISTER(m, CartPoleEnvSpec, CartPoleEnvPool)
+  REGISTER(m, PendulumEnvSpec, PendulumEnvPool)
 }

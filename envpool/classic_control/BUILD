@@ -11,6 +11,14 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "pendulum",
+    hdrs = ["pendulum.h"],
+    deps = [
+        "//envpool/core:async_envpool",
+    ],
+)
+
 pybind_extension(
     name = "classic_control_envpool",
     srcs = [
@@ -18,6 +26,7 @@ pybind_extension(
     ],
     deps = [
         ":cartpole",
+        ":pendulum",
         "//envpool/core:py_envpool",
     ],
 )
