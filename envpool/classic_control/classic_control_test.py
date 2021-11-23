@@ -58,7 +58,7 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
       spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=1, **kwargs))
     )
     act_space = env0.action_space
-    eps = np.finfo(np.float32).min
+    eps = np.finfo(np.float32).eps
     obs_min, obs_max = obs_range[0] - eps, obs_range[1] + eps
     for _ in range(5000):
       action = np.array([act_space.sample() for _ in range(num_envs)])
