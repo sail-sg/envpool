@@ -14,6 +14,7 @@
 
 #include "envpool/classic_control/cartpole.h"
 #include "envpool/classic_control/catch.h"
+#include "envpool/classic_control/mountain_car.h"
 #include "envpool/classic_control/pendulum.h"
 #include "envpool/core/py_envpool.h"
 
@@ -26,8 +27,12 @@ typedef PyEnvPool<classic_control::CartPoleEnvPool> CartPoleEnvPool;
 typedef PyEnvSpec<classic_control::PendulumEnvSpec> PendulumEnvSpec;
 typedef PyEnvPool<classic_control::PendulumEnvPool> PendulumEnvPool;
 
+typedef PyEnvSpec<classic_control::MountainCarEnvSpec> MountainCarEnvSpec;
+typedef PyEnvPool<classic_control::MountainCarEnvPool> MountainCarEnvPool;
+
 PYBIND11_MODULE(classic_control_envpool, m) {
   REGISTER(m, CatchEnvSpec, CatchEnvPool)
   REGISTER(m, CartPoleEnvSpec, CartPoleEnvPool)
   REGISTER(m, PendulumEnvSpec, PendulumEnvPool)
+  REGISTER(m, MountainCarEnvSpec, MountainCarEnvPool)
 }

@@ -4,6 +4,14 @@ load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+    name = "catch",
+    hdrs = ["catch.h"],
+    deps = [
+        "//envpool/core:async_envpool",
+    ],
+)
+
+cc_library(
     name = "cartpole",
     hdrs = ["cartpole.h"],
     deps = [
@@ -20,8 +28,8 @@ cc_library(
 )
 
 cc_library(
-    name = "catch",
-    hdrs = ["catch.h"],
+    name = "mountain_car",
+    hdrs = ["mountain_car.h"],
     deps = [
         "//envpool/core:async_envpool",
     ],
@@ -35,6 +43,7 @@ pybind_extension(
     deps = [
         ":cartpole",
         ":catch",
+        ":mountain_car",
         ":pendulum",
         "//envpool/core:py_envpool",
     ],

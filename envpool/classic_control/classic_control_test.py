@@ -13,7 +13,7 @@
 # limitations under the License.
 """Unit tests for classic control environments."""
 
-from typing import Any
+from typing import Any, Tuple
 
 import numpy as np
 from absl.testing import absltest
@@ -25,6 +25,8 @@ from envpool.classic_control import (
   CatchDMEnvPool,
   CatchEnvSpec,
   CatchGymEnvPool,
+  MountainCarEnvSpec,
+  MountainCarGymEnvPool,
   PendulumEnvSpec,
   PendulumGymEnvPool,
 )
@@ -37,19 +39,24 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
     # TODO(jiayi): wait for #27
 
   def run_deterministic_check(
-    self, spec_cls: Any, envpool_cls: Any, obs_range: np.ndarray
+    self,
+    spec_cls: Any,
+    envpool_cls: Any,
+    obs_range: Tuple[np.ndarray, np.ndarray],
+    **kwargs: Any,
   ) -> None:
     num_envs = 4
     env0 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0))
+      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, **kwargs))
     )
     env1 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0))
+      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, **kwargs))
     )
     env2 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=1))
+      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=1, **kwargs))
     )
     act_space = env0.action_space
+    obs_min, obs_max = obs_range
     for _ in range(5000):
       action = np.array([act_space.sample() for _ in range(num_envs)])
       obs0 = env0.step(action)[0]
@@ -57,20 +64,36 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
       obs2 = env2.step(action)[0]
       np.testing.assert_allclose(obs0, obs1)
       self.assertFalse(np.allclose(obs0, obs2))
-      self.assertTrue(np.all(np.abs(obs0) <= obs_range))
-      self.assertTrue(np.all(np.abs(obs2) <= obs_range))
+      self.assertTrue(np.all(obs_min <= obs0))
+      self.assertTrue(np.all(obs_min <= obs2))
+      self.assertTrue(np.all(obs0 <= obs_max))
+      self.assertTrue(np.all(obs2 <= obs_max))
 
   def test_cartpole(self) -> None:
     fmax = np.finfo(np.float32).max
-    obs_range = np.array([4.8, fmax, np.pi / 7.5, fmax])
+    obs_max = np.array([4.8, fmax, np.pi / 7.5, fmax])
     self.run_deterministic_check(
-      CartPoleEnvSpec, CartPoleGymEnvPool, obs_range
+      CartPoleEnvSpec, CartPoleGymEnvPool, (-obs_max, obs_max)
     )
 
   def test_pendulum(self) -> None:
-    obs_range = np.array([1.0, 1.0, 8.0])
+    obs_max = np.array([1.0, 1.0, 8.0])
     self.run_deterministic_check(
-      PendulumEnvSpec, PendulumGymEnvPool, obs_range
+      PendulumEnvSpec, PendulumGymEnvPool, (-obs_max, obs_max)
+    )
+
+  def test_mountain_car(self) -> None:
+    obs_min = np.array([-1.2, -0.07])
+    obs_max = np.array([0.6, 0.07])
+    self.run_deterministic_check(
+      MountainCarEnvSpec, MountainCarGymEnvPool, (obs_min, obs_max)
+    )
+    self.run_deterministic_check(
+      MountainCarEnvSpec,
+      MountainCarGymEnvPool,
+      (obs_min, obs_max),
+      max_episode_steps=500,
+      is_continuous=True,
     )
 
 

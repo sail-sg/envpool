@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// https://github.com/openai/gym/blob/master/gym/envs/classic_control/pendulum.py
 
 #ifndef ENVPOOL_CLASSIC_CONTROL_PENDULUM_H_
 #define ENVPOOL_CLASSIC_CONTROL_PENDULUM_H_
