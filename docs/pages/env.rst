@@ -30,7 +30,7 @@ The first thing is to create a ``classic_control`` folder under ``envpool/``:
     cd envpool
     mkdir -p classic_control
 
-Here is the expected file structure:
+Here is the typical file structure:
 
 .. code-block:: bash
 
@@ -134,9 +134,9 @@ available to see on the python side:
 
         auto config = MakeDict("path"_.bind("init_path"));
 
-    This will be a ``const char *`` type instead of ``std::string``, which will
-    sometimes cause ``config["path"_]`` to be a meaningless string in further
-    usage. Instead, you should change the code as
+    The type of "path" will be a ``const char *`` type instead of
+    ``std::string``, which sometimes causes ``config["path"_]`` to be a
+    meaningless string in further usage. Instead, you should change the code as
 
     .. code-block:: c++
 
@@ -157,9 +157,9 @@ available to see on the python side:
           // return MakeDict("action"_.bind(Spec<int>({}, {0, 5})));
         }
 
-    For continuous action space, simply change the type of ``Spec`` to float or
-    double. For example, if the action is a NumPy array with 4 floats, ranging
-    from -2 to 2:
+    For continuous action space, change the type of ``Spec`` to float or
+    double. For example, if the action is a NumPy array with four floats,
+    ranging from -2 to 2:
 
     .. code-block:: c++
 
@@ -245,7 +245,7 @@ Now we are going to create a class ``CartPoleEnv`` that inherits
 `Env <https://github.com/sail-sg/envpool/blob/master/envpool/core/env.h>`_.
 
 We have already defined three types ``Spec``, ``State`` and ``Action`` in Env
-class for convenience, which follow the definition of ``CartPoleEnvSpec``.
+class for convenience, which follows the definition of ``CartPoleEnvSpec``.
 
 The following functions are required to override:
 
@@ -381,7 +381,7 @@ Miscellaneous
     Please do not use the pseudo-random number by ``rand() % MAX``. Instead,
     use `random number distributions
     <https://en.cppreference.com/w/cpp/numeric/random>`_ to generate
-    thread-safe deterministic pseudo-random number. ``std::mt19937`` generator
+    thread-safe deterministic pseudo-random numbers. ``std::mt19937`` generator
     has already been defined as ``gen_`` (`link
     <https://github.com/sail-sg/envpool/blob/v0.4.0/envpool/core/env.h#L37>`_).
 
@@ -390,7 +390,7 @@ Generate Dynamic Linked .so File and Instantiate in Python
 ----------------------------------------------------------
 
 We use `pybind11 <https://github.com/pybind/pybind11>`_ to let python interface
-use this C++ code. We have already wrapped this interface, you just need to add
+use this C++ code. We have already wrapped this interface, and you need to add
 only a few lines to make it work:
 
 .. code-block:: c++
@@ -437,8 +437,8 @@ Write Bazel BUILD File
 ----------------------
 
 `Bazel <https://bazel.build/>`_ is a powerful tool to build and test C++-based
-projects. It can also be applied to python project. All files in EnvPool are
-managed by Bazel.
+projects. Python projects can also apply it. Bazel manages all files in
+EnvPool.
 
 There are `some tutorials <https://docs.bazel.build/versions/4.2.1/guide.html>`_
 for Bazel, but for convenience, we only demonstrate the key point here when
@@ -448,8 +448,7 @@ using Bazel in this project, i.e., how to write BUILD correctly.
 Bazel Header
 ~~~~~~~~~~~~
 
-Most of the time, just directly include the following things at the top of
-BUILD:
+Most of the time, directly include the following things at the top of BUILD:
 ::
 
     load("@pip_requirements//:requirements.bzl", "requirement")
@@ -473,11 +472,11 @@ Types of Rules
   fields: ``name``, ``srcs``.
 
 All of the above declarations can have ``deps`` and ``data`` fields, which
-explicit specify the dependencies of either a bazel build rule or a third party
-data. We will explain ``deps`` in the next section.
+explicitly specify the dependencies of either a Bazel BUILD rule or a
+third-party data. We will explain ``deps`` in the next section.
 
-If you seek for other functionalities like ``gen_rules``, please refer to
-:ref:`bazel_third_party`.
+If you are looking for other functionalities like ``gen_rules``, please refer
+to :ref:`bazel_third_party`.
 
 
 deps
@@ -552,9 +551,9 @@ We have several ways for dependency declaration:
 Third-party Dependencies
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-CartPole environment is so simple that there is no third-party dependencies.
-However, for a more complex environment, it is often the case to include some
-third-party dependencies.
+CartPole environment is so simple that there are no third-party dependencies.
+However, it is often the case to include some third-party dependencies for a
+more complex environment.
 
 For third-party Python dependency, for instance, if we want to add ``tianshou``
 as test dependency, in ``third_party/pip_requirements/requirements.txt``:
@@ -567,7 +566,7 @@ as test dependency, in ``third_party/pip_requirements/requirements.txt``:
     torch
     tqdm
 
-If we want to add ``tianshou`` as build dependency, in ``setup.cfg``:
+If we want to add ``tianshou`` as a build dependency, in ``setup.cfg``:
 
 .. code-block:: diff
 
@@ -622,7 +621,7 @@ leave ``BUILD`` empty, and add the following rules in ``threadpool.BUILD``:
         hdrs = ["ThreadPool.h"],
     )
 
-It says ``ThreadPool.h`` is exposed on the top level of threadpool namespace.
+It says ``ThreadPool.h`` is exposed on the top level of "threadpool" namespace.
 
 3. modify Bazel build rules of async_envpool:
 
@@ -685,13 +684,13 @@ required arguments. Other arguments such as ``max_episode_steps`` and
 ``envpool.make("CartPole-v1")``, the ``reward_threshold`` will be set to 475.0
 at ``CartPoleEnvPool`` initialization.
 
-Finally, it is important to let the top-level module import this file. In
+Finally, it is crucial to let the top-level module import this file. In
 ``envpool/entry.py``, add the following line:
 ::
 
     import envpool.classic_control.registration
 
-And don't forget to modify the bazel BUILD dependency:
+And don't forget to modify the Bazel BUILD dependency:
 
 .. code-block:: diff
 
@@ -739,15 +738,15 @@ Now you can run ``envpool.make("CartPole-v0")`` by re-installing EnvPool:
 Add Unit Test for CartPoleEnv
 -----------------------------
 
-It is highly encouraged to write unit test to ensure the correctness of the new
-environment. You can write both Python and C++ tests.
+It is highly encouraged to write unit tests to ensure the correctness of the
+new environment. You can write both Python and C++ tests.
 
 
 C++ Env Tests
 ~~~~~~~~~~~~~
 
 We use `GoogleTest <https://github.com/google/googletest>`_ to run C++ unit
-tests. You can reach out the `Google Test official documentation
+tests. You can reach out to `Google Test official documentation
 <https://google.github.io/googletest/>`_ to see how to use it.
 
 To enable GoogleTest, you need to modify the corresponding Bazel BUILD rule:
