@@ -13,13 +13,14 @@
 [![GitHub forks](https://img.shields.io/github/forks/sail-sg/envpool)](https://github.com/sail-sg/envpool/network)
 [![GitHub license](https://img.shields.io/github/license/sail-sg/envpool)](https://github.com/sail-sg/envpool/blob/master/LICENSE)
 
-**EnvPool** is a highly parallel reinforcement learning environment execution engine which significantly outperforms existing environment executors. With a curated design dedicated to the RL use case, we leverage techniques of a general asynchronous execution model, implemented with C++ thread pool on the environment execution.
+**EnvPool** is a C++-based batched environment pool with pybind11 and thread pool. It has high performance (\~1M raw FPS in DGX on Atari games) and compatible APIs (supports both gym and dm\_env, both sync and async, both single and multi player environment).
 
 Here are EnvPool's several highlights:
 
 - Compatible with OpenAI `gym` APIs and DeepMind `dm_env` APIs;
 - Manage a pool of envs, interact with the envs in batched APIs by default;
-- Synchronous execution API and asynchronous execution API;
+- Support both synchronous execution and asynchronous execution;
+- Support both single player and multi-player environment;
 - Easy C++ developer API to add new envs;
 - **1 Million** Atari frames per second simulation with 256 CPU cores, **~13x** throughput of Python subprocess-based vector env;
 - **~3x** throughput of Python subprocess-based vector env on low resource setup like 12 CPU cores;
@@ -59,7 +60,7 @@ The example scripts are under [examples/](https://github.com/sail-sg/envpool/tre
 
 ## Supported Environments
 
-We're in the progress of open-sourcing all available envs from our internal version, stay tuned.
+We are in the progress of open-sourcing all available envs from our internal version. Stay tuned.
 
 - [x] Atari via ALE
 - [ ] Single/Multi players Vizdoom
@@ -68,7 +69,7 @@ We're in the progress of open-sourcing all available envs from our internal vers
 ## Benchmark Results
 We perform our benchmarks with ALE Atari environment (with environment wrappers) on different hardware setups, including a TPUv3-8 virtual machine (VM) of 96 CPU cores and 2 NUMA nodes, and an NVIDIA DGX-A100 of 256 CPU cores with 8 NUMA nodes. Baselines include 1) naive Python for-loop; 2) the most popular RL environment parallelization execution by Python subprocess, e.g., [gym.vector_env](https://github.com/openai/gym/blob/master/gym/vector/vector_env.py); 3) to our knowledge, the fastest RL environment executor [Sample Factory](https://github.com/alex-petrenko/sample-factory) before EnvPool. 
 
-We report EnvPool performance with sync mode, async mode and NUMA + async mode, compared with the baselines on different number of workers (i.e., number of CPU cores). As we can see from the results, EnvPool achieves significant improvements over the baselines on all settings. On the high-end setup, EnvPool achieves 1 Million frames per second on 256 CPU cores, which is 13.3x of the `gym.vector_env` baseline. On a typical PC setup with 12 CPU cores, EnvPool's throughput is 2.8x of `gym.vector_env`.
+We report EnvPool performance with sync mode, async mode, and NUMA + async mode, compared with the baselines on different number of workers (i.e., number of CPU cores). As we can see from the results, EnvPool achieves significant improvements over the baselines on all settings. On the high-end setup, EnvPool achieves 1 Million frames per second on 256 CPU cores, which is 13.3x of the `gym.vector_env` baseline. On a typical PC setup with 12 CPU cores, EnvPool's throughput is 2.8x of `gym.vector_env`.
 
 Our benchmark script is in [examples/benchmark.py](https://github.com/sail-sg/envpool/blob/master/examples/benchmark.py). The detail configurations of 4 types of system are:
 
@@ -110,19 +111,19 @@ act = np.zeros(100, dtype=int)
 obs, rew, done, info = env.step(act)
 ```
 
-Under the synchronous mode, `envpool` closely resembles `openai-gym`/`dm-env`. It has the `reset` and `step` function with the same meaning. There is one exception though, in `envpool` batch interaction is the default. Therefore, during creation of the envpool, there is a `num_envs` argument that denotes how many envs you like to run in parallel.
+Under the synchronous mode, `envpool` closely resembles `openai-gym`/`dm-env`. It has the `reset` and `step` functions with the same meaning. However, there is one exception in `envpool`: batch interaction is the default. Therefore, during the creation of the envpool, there is a `num_envs` argument that denotes how many envs you like to run in parallel.
 
 ```python
 env = envpool.make("Pong-v5", env_type="gym", num_envs=100)
 ```
 
-The first dimension of `action` passed to the step function should be equal to `num_envs`.
+The first dimension of `action` passed to the step function should equal `num_envs`.
 
 ```python
 act = np.zeros(100, dtype=int)
 ```
 
-You don't need to manually reset one environment when any of `done` is true, instead, all envs in `envpool` has enabled auto-reset by default.
+You don't need to manually reset one environment when any of `done` is true; instead, all envs in `envpool` have enabled auto-reset by default.
 
 ### Asynchronous API
 
@@ -143,36 +144,36 @@ while True:
     env.send(action, env_id)
 ```
 
-In the asynchronous mode, the `step` function is splitted into two part, namely the `send`/`recv` functions. `send` takes two arguments, a batch of action, and the corresponding `env_id` that each action should be sent to. Unlike `step`, `send` does not wait for the envs to execute and return the next state, it returns immediately after the actions are fed to the envs. (The reason why it is called async mode).
+In the asynchronous mode, the `step` function is split into two parts: the `send`/`recv` functions. `send` takes two arguments, a batch of action, and the corresponding `env_id` that each action should be sent to. Unlike `step`, `send` does not wait for the envs to execute and return the next state, it returns immediately after the actions are fed to the envs. (The reason why it is called async mode).
 
 ```python
 env.send(action, env_id)
 ```
-To get the "next states", we need to call the `recv` function. However, `recv` does not guarantee that you will get back the "next states" of the envs that you just called `send` on. Instead, whatever envs finishes execution first gets `recv`ed first.
+To get the "next states", we need to call the `recv` function. However, `recv` does not guarantee that you will get back the "next states" of the envs you just called `send` on. Instead, whatever envs finishes execution gets `recv`ed first.
 
 ```python
 state = env.recv()
 ```
 
-Besides `num_envs`, there's one more argument `batch_size`. While `num_envs` defines how many envs in total is being managed by the `envpool`, `batch_size` defines the number of envs involved each time we interact with `envpool`. e.g. There're 64 envs executing in the `envpool`, `send` and `recv` each time interacts with a batch of 16 envs.
+Besides `num_envs`, there is one more argument `batch_size`. While `num_envs` defines how many envs in total are managed by the `envpool`, `batch_size` specifies the number of envs involved each time we interact with `envpool`. e.g. There are 64 envs executing in the `envpool`, `send` and `recv` each time interacts with a batch of 16 envs.
 
 ```python
 envpool.make("Pong-v5", env_type="gym", num_envs=64, batch_size=16)
 ```
 
-There are other configurable arguments with `envpool.make`, please check out [envpool interface introduction](https://envpool.readthedocs.io/en/latest/pages/interface.html).
+There are other configurable arguments with `envpool.make`; please check out [envpool interface introduction](https://envpool.readthedocs.io/en/latest/pages/interface.html).
 
 ## Contributing
 
-EnvPool is still under development. More environments are going to be added and we always welcome contributions to help EnvPool better. If you would like to contribute, please check out our [contribution guideline](https://envpool.readthedocs.io/en/latest/pages/contributing.html).
+EnvPool is still under development. More environments will be added, and we always welcome contributions to help EnvPool better. If you would like to contribute, please check out our [contribution guideline](https://envpool.readthedocs.io/en/latest/pages/contributing.html).
 
 ## License
 
 EnvPool is under Apache2 license.
 
-Other third party source-code and data are under their corresponding licenses.
+Other third-party source-code and data are under their corresponding licenses.
 
-We do not include their source-code and data in this repo.
+We do not include their source code and data in this repo.
 
 ## Citing EnvPool
 
@@ -182,5 +183,5 @@ If you find EnvPool useful, please cite it in your publications.
 
 
 ## Disclaimer
-This is not an official Sea Limited or Garena Online Private Limited product.
 
+This is not an official Sea Limited or Garena Online Private Limited product.

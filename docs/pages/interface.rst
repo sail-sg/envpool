@@ -43,7 +43,7 @@ envpool.make_spec
 
 If you don't want to create a fake environment, meanwhile want to get the
 observation / action space, ``envpool.make_spec`` would help. The argument is
-exactly the same as ``envpool.make``, and you can use
+the same as ``envpool.make``, and you can use
 
 - ``spec.observation_space`` gym's observation space;
 - ``spec.action_space`` gym's action space;
@@ -132,5 +132,5 @@ demonstrate this idea (``waitnum`` is the same as ``batch_size``):
     :width: 500px
     :align: center
 
-Synchronous step is a special case by using the above API:
-``batch_size == num_envs``, ``id`` is always all env's id.
+The synchronous step is a special case by using the above API:
+``batch_size == num_envs``, ``id`` is always all envs' id.

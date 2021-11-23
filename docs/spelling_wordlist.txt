@@ -22,7 +22,7 @@ numpy
 openai
 gcc
 repo
-cmake
+CMake
 dockerfile
 config
 cartpole
@@ -30,3 +30,6 @@ pre
 boolean
 uint
 runtime
+http
+deps
+namespace
