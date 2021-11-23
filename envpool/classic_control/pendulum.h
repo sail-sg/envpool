@@ -37,7 +37,7 @@ class PendulumEnvFns {
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<float>({-1}, {-2.0f, 2.0f})));
+    return MakeDict("action"_.bind(Spec<float>({-1, 1}, {-2.0f, 2.0f})));
   }
 };
 
