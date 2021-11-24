@@ -46,8 +46,8 @@ MountainCar-v0, MountainCarContinuous-v0
 ----------------------------------------
 
 `gym MountainCar-v0 source code
-<https://github.com/openai/gym/blob/master/gym/envs/classic_control/mountain_car.py>`_,
-`gym MountainCarContinuous-v0 source code
+<https://github.com/openai/gym/blob/master/gym/envs/classic_control/mountain_car.py>`_
+and `gym MountainCarContinuous-v0 source code
 <https://github.com/openai/gym/blob/master/gym/envs/classic_control/continuous_mountain_car.py>`_
 
 The agent (a car) is started at the bottom of a valley. For any given state the
