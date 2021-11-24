@@ -25,7 +25,7 @@ Options
   ``env.step``, default to ``batch_size``;
 * ``seed (int)``: the environment seed, default to ``0``;
 * ``max_episode_steps (int)``: the maximum number of steps for one episode,
-  default to ``25000``;
+  default to ``108000``;
 * ``img_height (int)``: the desired observation image height, default to
   ``84``;
 * ``img_width (int)``: the desired observation image width, default to ``84``;
@@ -45,7 +45,9 @@ Options
   default to ``False``;
 * ``repeat_action_probability (float)``: the action repeat probability in ALE
   configuration, default to 0 (no action repeat to perform deterministic
-  result).
+  result);
+* ``use_inter_area_resize (bool)``: whether to use ``cv::INTER_AREA`` for
+  image resize, default to ``True``.
 
 Observation Space
 -----------------
