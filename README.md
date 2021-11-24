@@ -64,9 +64,10 @@ We are in the progress of open-sourcing all available envs from our internal ver
 
 - [x] Atari via ALE
 - [ ] Single/Multi players Vizdoom
-- [ ] Classic RL envs, including CartPole, MountainCar, ... 
+- [x] Classic RL envs, including CartPole, MountainCar, ... 
 
 ## Benchmark Results
+
 We perform our benchmarks with ALE Atari environment (with environment wrappers) on different hardware setups, including a TPUv3-8 virtual machine (VM) of 96 CPU cores and 2 NUMA nodes, and an NVIDIA DGX-A100 of 256 CPU cores with 8 NUMA nodes. Baselines include 1) naive Python for-loop; 2) the most popular RL environment parallelization execution by Python subprocess, e.g., [gym.vector_env](https://github.com/openai/gym/blob/master/gym/vector/vector_env.py); 3) to our knowledge, the fastest RL environment executor [Sample Factory](https://github.com/alex-petrenko/sample-factory) before EnvPool. 
 
 We report EnvPool performance with sync mode, async mode, and NUMA + async mode, compared with the baselines on different number of workers (i.e., number of CPU cores). As we can see from the results, EnvPool achieves significant improvements over the baselines on all settings. On the high-end setup, EnvPool achieves 1 Million frames per second on 256 CPU cores, which is 13.3x of the `gym.vector_env` baseline. On a typical PC setup with 12 CPU cores, EnvPool's throughput is 2.8x of `gym.vector_env`.

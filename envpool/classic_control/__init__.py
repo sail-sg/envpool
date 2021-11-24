@@ -15,14 +15,62 @@
 
 from envpool.python.api import py_env
 
-from .classic_control_envpool import _CartPoleEnvPool, _CartPoleEnvSpec
+from .classic_control_envpool import (
+  _AcrobotEnvPool,
+  _AcrobotEnvSpec,
+  _CartPoleEnvPool,
+  _CartPoleEnvSpec,
+  _CatchEnvPool,
+  _CatchEnvSpec,
+  _MountainCarContinuousEnvPool,
+  _MountainCarContinuousEnvSpec,
+  _MountainCarEnvPool,
+  _MountainCarEnvSpec,
+  _PendulumEnvPool,
+  _PendulumEnvSpec,
+)
+
+CatchEnvSpec, CatchDMEnvPool, CatchGymEnvPool = py_env(
+  _CatchEnvSpec, _CatchEnvPool
+)
 
 CartPoleEnvSpec, CartPoleDMEnvPool, CartPoleGymEnvPool = py_env(
   _CartPoleEnvSpec, _CartPoleEnvPool
 )
 
+PendulumEnvSpec, PendulumDMEnvPool, PendulumGymEnvPool = py_env(
+  _PendulumEnvSpec, _PendulumEnvPool
+)
+
+(MountainCarEnvSpec, MountainCarDMEnvPool,
+ MountainCarGymEnvPool) = py_env(_MountainCarEnvSpec, _MountainCarEnvPool)
+
+(
+  MountainCarContinuousEnvSpec, MountainCarContinuousDMEnvPool,
+  MountainCarContinuousGymEnvPool
+) = py_env(_MountainCarContinuousEnvSpec, _MountainCarContinuousEnvPool)
+
+AcrobotEnvSpec, AcrobotDMEnvPool, AcrobotGymEnvPool = py_env(
+  _AcrobotEnvSpec, _AcrobotEnvPool
+)
+
 __all__ = [
+  "CatchEnvSpec",
+  "CatchDMEnvPool",
+  "CatchGymEnvPool",
   "CartPoleEnvSpec",
   "CartPoleDMEnvPool",
   "CartPoleGymEnvPool",
+  "PendulumEnvSpec",
+  "PendulumDMEnvPool",
+  "PendulumGymEnvPool",
+  "MountainCarEnvSpec",
+  "MountainCarDMEnvPool",
+  "MountainCarGymEnvPool",
+  "MountainCarContinuousEnvSpec",
+  "MountainCarContinuousDMEnvPool",
+  "MountainCarContinuousGymEnvPool",
+  "AcrobotEnvSpec",
+  "AcrobotDMEnvPool",
+  "AcrobotGymEnvPool",
 ]

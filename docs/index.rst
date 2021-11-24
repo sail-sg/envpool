@@ -73,6 +73,7 @@ stable version through `envpool.readthedocs.io/en/stable/
    :caption: API Reference
 
    api/atari
+   api/classic
 
 
 Indices and tables

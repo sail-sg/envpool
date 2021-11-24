@@ -78,7 +78,7 @@ def dm_spec_transform(
     )
   return dm_env.specs.BoundedArray(
     name=name,
-    shape=[0 if s == -1 else s for s in spec.shape],
+    shape=[s for s in spec.shape if s != -1],
     dtype=spec.dtype,
     minimum=spec.minimum,
     maximum=spec.maximum,
@@ -100,7 +100,10 @@ def gym_spec_transform(
     except TypeError:  # old gym version doesn't have `start`
       return gym.spaces.Discrete(n=spec.maximum - spec.minimum + 1)
   return gym.spaces.Box(
-    shape=spec.shape, dtype=spec.dtype, low=spec.minimum, high=spec.maximum
+    shape=[s for s in spec.shape if s != -1],
+    dtype=spec.dtype,
+    low=spec.minimum,
+    high=spec.maximum,
   )
 
 
