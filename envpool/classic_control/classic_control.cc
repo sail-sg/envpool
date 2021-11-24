@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "envpool/classic_control/acrobot.h"
 #include "envpool/classic_control/cartpole.h"
 #include "envpool/classic_control/catch.h"
 #include "envpool/classic_control/mountain_car.h"
@@ -36,10 +37,14 @@ typedef PyEnvSpec<classic_control::MountainCarContinuousEnvSpec>
 typedef PyEnvPool<classic_control::MountainCarContinuousEnvPool>
     MountainCarContinuousEnvPool;
 
+typedef PyEnvSpec<classic_control::AcrobotEnvSpec> AcrobotEnvSpec;
+typedef PyEnvPool<classic_control::AcrobotEnvPool> AcrobotEnvPool;
+
 PYBIND11_MODULE(classic_control_envpool, m) {
   REGISTER(m, CatchEnvSpec, CatchEnvPool)
   REGISTER(m, CartPoleEnvSpec, CartPoleEnvPool)
   REGISTER(m, PendulumEnvSpec, PendulumEnvPool)
   REGISTER(m, MountainCarEnvSpec, MountainCarEnvPool)
   REGISTER(m, MountainCarContinuousEnvSpec, MountainCarContinuousEnvPool)
+  REGISTER(m, AcrobotEnvSpec, AcrobotEnvPool)
 }

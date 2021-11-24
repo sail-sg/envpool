@@ -73,3 +73,13 @@ register(
   max_episode_steps=999,
   reward_threshold=90.0,
 )
+
+register(
+  task_id="Acrobot-v1",
+  import_path="envpool.classic_control",
+  spec_cls="AcrobotEnvSpec",
+  dm_cls="AcrobotDMEnvPool",
+  gym_cls="AcrobotGymEnvPool",
+  max_episode_steps=500,
+  reward_threshold=-100.0,
+)

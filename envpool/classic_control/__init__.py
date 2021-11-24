@@ -16,6 +16,8 @@
 from envpool.python.api import py_env
 
 from .classic_control_envpool import (
+  _AcrobotEnvPool,
+  _AcrobotEnvSpec,
   _CartPoleEnvPool,
   _CartPoleEnvSpec,
   _CatchEnvPool,
@@ -48,6 +50,10 @@ PendulumEnvSpec, PendulumDMEnvPool, PendulumGymEnvPool = py_env(
   MountainCarContinuousGymEnvPool
 ) = py_env(_MountainCarContinuousEnvSpec, _MountainCarContinuousEnvPool)
 
+AcrobotEnvSpec, AcrobotDMEnvPool, AcrobotGymEnvPool = py_env(
+  _AcrobotEnvSpec, _AcrobotEnvPool
+)
+
 __all__ = [
   "CatchEnvSpec",
   "CatchDMEnvPool",
@@ -64,4 +70,7 @@ __all__ = [
   "MountainCarContinuousEnvSpec",
   "MountainCarContinuousDMEnvPool",
   "MountainCarContinuousGymEnvPool",
+  "AcrobotEnvSpec",
+  "AcrobotDMEnvPool",
+  "AcrobotGymEnvPool",
 ]

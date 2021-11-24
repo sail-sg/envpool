@@ -74,12 +74,6 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
       self.assertTrue(np.all(obs2 <= obs_max), obs2)
 
   def run_align_check(self, env0: gym.Env, env1: Any, reset_fn: Any) -> None:
-    # assert env0.observation_space.shape == env1.observation_space.shape
-    # assert np.all(env0.observation_space.low == env1.observation_space.low)
-    # assert np.all(env0.observation_space.high == env1.observation_space.high)
-    # assert env0.action_space.shape == env1.action_space.shape
-    # assert np.all(env0.action_space.low == env1.action_space.low)
-    # assert np.all(env0.action_space.high == env1.action_space.high)
     for _ in range(10):
       reset_fn(env0, env1)
       d0 = False
@@ -107,11 +101,13 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
   def test_mountain_car(self) -> None:
     obs_min = np.array([-1.2, -0.07])
     obs_max = np.array([0.6, 0.07])
+
     self.run_deterministic_check(
       MountainCarEnvSpec,
       MountainCarGymEnvPool,
       (obs_min, obs_max),
     )
+
     self.run_deterministic_check(
       MountainCarContinuousEnvSpec,
       MountainCarContinuousGymEnvPool,

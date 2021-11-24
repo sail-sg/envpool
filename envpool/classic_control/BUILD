@@ -43,12 +43,21 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "acrobot",
+    hdrs = ["acrobot.h"],
+    deps = [
+        "//envpool/core:async_envpool",
+    ],
+)
+
 pybind_extension(
     name = "classic_control_envpool",
     srcs = [
         "classic_control.cc",
     ],
     deps = [
+        ":acrobot",
         ":cartpole",
         ":catch",
         ":mountain_car",
