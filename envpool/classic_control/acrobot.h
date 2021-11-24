@@ -35,7 +35,8 @@ class AcrobotEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     // TODO(jiayi): specify range with [1, 1, 1, 1, 4 * np.pi, 9 * np.pi]
-    return MakeDict("obs"_.bind(Spec<float>({4})));
+    return MakeDict("obs"_.bind(Spec<float>({6})),
+                    "info:state"_.bind(Spec<float>({2})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -160,6 +161,8 @@ class AcrobotEnv : public Env<AcrobotEnvSpec> {
     state["obs"_][3] = static_cast<float>(std::sin(s_.s1));
     state["obs"_][4] = static_cast<float>(s_.s2);
     state["obs"_][5] = static_cast<float>(s_.s3);
+    state["info:state"_][0] = static_cast<float>(s_.s0);
+    state["info:state"_][1] = static_cast<float>(s_.s1);
     state["reward"_] = reward;
   }
 };

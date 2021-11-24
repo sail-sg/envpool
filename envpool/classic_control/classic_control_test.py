@@ -21,6 +21,8 @@ from absl.testing import absltest
 from dm_env import TimeStep
 
 from envpool.classic_control import (
+  AcrobotEnvSpec,
+  AcrobotGymEnvPool,
   CartPoleEnvSpec,
   CartPoleGymEnvPool,
   CatchDMEnvPool,
@@ -130,6 +132,25 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
     )
     env1 = MountainCarContinuousGymEnvPool(spec)
     self.run_align_check(env0, env1, reset_fn)
+
+  def test_acrobot(self) -> None:
+    obs_max = np.array([1, 1, 1, 1, 4 * np.pi, 9 * np.pi])
+    self.run_deterministic_check(
+      AcrobotEnvSpec, AcrobotGymEnvPool, (-obs_max, obs_max)
+    )
+
+    # in envpool we use float64 but gym use float32
+
+    # def reset_fn(env0: gym.Env, env1: Any) -> None:
+    #   env0.reset()
+    #   obs, rew, done, info = env1.step(np.array([1]))
+    #   env0.unwrapped.state = np.concatenate([info["state"][0], obs[0, -2:]])
+    #   print(env0.unwrapped.state)
+
+    # env0 = gym.make("Acrobot-v1")
+    # spec = AcrobotEnvSpec(AcrobotEnvSpec.gen_config())
+    # env1 = AcrobotGymEnvPool(spec)
+    # self.run_align_check(env0, env1, reset_fn)
 
 
 class _CatchEnvTest(absltest.TestCase):
