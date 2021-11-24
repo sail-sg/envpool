@@ -55,7 +55,8 @@ class AtariEnvFns {
                     "episodic_life"_.bind(false), "reward_clip"_.bind(false),
                     "img_height"_.bind(84), "img_width"_.bind(84),
                     "task"_.bind(std::string("pong")),
-                    "repeat_action_probability"_.bind(0.0f));
+                    "repeat_action_probability"_.bind(0.0f),
+                    "use_inter_area_resize"_.bind(true));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -83,17 +84,16 @@ class AtariEnv : public Env<AtariEnvSpec> {
   const int kRawHeight = 210;
   const int kRawWidth = 160;
   const int kRawSize = kRawWidth * kRawHeight;
-  static uint8_t gray_scale_mapping[65536];
   std::unique_ptr<ale::ALEInterface> env_;
   ale::ActionVect action_set_;
   FrameSpec raw_spec_, resize_spec_;
   int max_episode_steps_, elapsed_step_, stack_num_, frame_skip_;
-  bool fire_reset_, reward_clip_, zero_discount_on_life_loss_, episodic_life_;
+  bool fire_reset_, reward_clip_, zero_discount_on_life_loss_;
+  bool episodic_life_, use_inter_area_resize_;
   bool done_;
   int lives_;
   std::deque<Array> stack_buf_;
-  std::array<std::unique_ptr<uint8_t[]>, 2> maxpool_buf_;
-  Array gray_obs_;
+  std::vector<Array> maxpool_buf_;
   std::uniform_int_distribution<> dist_noop_;
   std::string rom_path_;
 
@@ -101,7 +101,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
   AtariEnv(const Spec& spec, int env_id)
       : Env<AtariEnvSpec>(spec, env_id),
         env_(new ale::ALEInterface()),
-        raw_spec_({kRawHeight, kRawWidth, 3}),
+        raw_spec_({kRawHeight, kRawWidth, 1}),
         resize_spec_(
             {spec.config["img_height"_], spec.config["img_width"_], 1}),
         max_episode_steps_(spec.config["max_episode_steps"_]),
@@ -112,11 +112,10 @@ class AtariEnv : public Env<AtariEnvSpec> {
         reward_clip_(spec.config["reward_clip"_]),
         zero_discount_on_life_loss_(spec.config["zero_discount_on_life_loss"_]),
         episodic_life_(spec.config["episodic_life"_]),
+        use_inter_area_resize_(spec.config["use_inter_area_resize"_]),
         done_(true),
         dist_noop_(0, spec.config["noop_max"_] - 1),
         rom_path_(GetRomPath(spec.config["base_path"_], spec.config["task"_])) {
-    // use `static` here to only initialize once
-    static bool initialized = InitMapping(rom_path_);
     env_->setFloat("repeat_action_probability",
                    spec.config["repeat_action_probability"_]);
     env_->setInt("random_seed", seed_);
@@ -129,44 +128,11 @@ class AtariEnv : public Env<AtariEnvSpec> {
     }
     // init buf
     for (int i = 0; i < 2; ++i) {
-      maxpool_buf_[i].reset(new uint8_t[kRawSize]);
+      maxpool_buf_.push_back(std::move(Array(raw_spec_)));
     }
     for (int i = 0; i < stack_num_; ++i) {
       stack_buf_.push_back(Array(resize_spec_));
     }
-    gray_obs_ = Array(FrameSpec({kRawHeight, kRawWidth, 1}));
-  }
-
-  static bool InitMapping(const std::string rom_path) {
-    // init arr[65536] for grayscale mapping
-    const int N = 256;
-    uint8_t ptr0[N * N];
-    uint8_t ptr1[N * N];
-    for (int i = 0; i < N; ++i) {
-      for (int j = 0; j < N; ++j) {
-        ptr0[i * N + j] = i;
-        ptr1[i * N + j] = j;
-      }
-    }
-    Array col0(FrameSpec({N, N, 3}));
-    Array col1(FrameSpec({N, N, 3}));
-    Array result(FrameSpec({N, N, 1}));
-    uint8_t* col0_ptr = static_cast<uint8_t*>(col0.data());
-    uint8_t* col1_ptr = static_cast<uint8_t*>(col1.data());
-    // color mapping from pixel_t to RGB
-    ale::ALEInterface env;
-    env.loadROM(rom_path);
-    env.theOSystem->colourPalette().applyPaletteRGB(col0_ptr, ptr0, N * N);
-    env.theOSystem->colourPalette().applyPaletteRGB(col1_ptr, ptr1, N * N);
-    // maxpool RGB
-    for (int i = 0; i < N * N * 3; ++i) {
-      col0_ptr[i] = std::max(col0_ptr[i], col1_ptr[i]);
-    }
-    // gray scale
-    GrayScale(col0, &result);
-    uint8_t* result_ptr = static_cast<uint8_t*>(result.data());
-    memcpy(gray_scale_mapping, result_ptr, sizeof gray_scale_mapping);
-    return true;
   }
 
   void Reset() override {
@@ -187,7 +153,10 @@ class AtariEnv : public Env<AtariEnvSpec> {
     if (fire_reset_) {
       env_->act((ale::Action)1);
     }
-    memcpy(maxpool_buf_[0].get(), env_->getScreen().getArray(), kRawSize);
+    uint8_t* ale_screen_data = env_->getScreen().getArray();
+    uint8_t* ptr = static_cast<uint8_t*>(maxpool_buf_[0].data());
+    env_->theOSystem->colourPalette().applyPaletteGrayscale(
+        ptr, ale_screen_data, kRawSize);
     PushStack(push_all, false);
     done_ = false;
     State state = Allocate();
@@ -206,8 +175,10 @@ class AtariEnv : public Env<AtariEnvSpec> {
       reward += env_->act(action_set_[act]);
       done_ = env_->game_over();
       if (skip_id <= 2) {  // put final two frames in to maxpool buffer
-        memcpy(maxpool_buf_[2 - skip_id].get(), env_->getScreen().getArray(),
-               kRawSize);
+        uint8_t* ale_screen_data = env_->getScreen().getArray();
+        uint8_t* ptr = static_cast<uint8_t*>(maxpool_buf_[2 - skip_id].data());
+        env_->theOSystem->colourPalette().applyPaletteGrayscale(
+            ptr, ale_screen_data, kRawSize);
       }
     }
     // push the maxpool outcome to the stack_buf
@@ -247,12 +218,12 @@ class AtariEnv : public Env<AtariEnvSpec> {
   /**
    * FrameStack env wrapper implementation.
    *
-   * The original images (without transforming) are saved inside maxpool_buf_.
+   * The original gray scale image are saved inside maxpool_buf_.
    * The stacked result is in stack_buf_ where len(stack_buf_) == stack_num_.
    *
    * At reset time, we need to clear all data in stack_buf_ with push_all =
    * true and maxpool = false (there is only one observation); at step time,
-   * we push transform(maxpool_buf_[0], maxpool_buf_[1]) at the end of
+   * we push max(maxpool_buf_[0], maxpool_buf_[1]) at the end of
    * stack_buf_, and pop the first item in stack_buf_, with push_all = false
    * and maxpool = true.
    *
@@ -262,22 +233,17 @@ class AtariEnv : public Env<AtariEnvSpec> {
    *   observation. Maybe there is only one?
    */
   void PushStack(bool push_all, bool maxpool) {
-    uint8_t* gray_ptr = static_cast<uint8_t*>(gray_obs_.data());
-    uint8_t* ptr = maxpool_buf_[0].get();
+    uint8_t* ptr = static_cast<uint8_t*>(maxpool_buf_[0].data());
     if (maxpool) {
-      uint8_t* ptr1 = maxpool_buf_[1].get();
+      uint8_t* ptr1 = static_cast<uint8_t*>(maxpool_buf_[1].data());
       for (int i = 0; i < kRawSize; ++i) {
-        gray_ptr[i] = gray_scale_mapping[ptr[i] * 256 + ptr1[i]];
-      }
-    } else {
-      for (int i = 0; i < kRawSize; ++i) {
-        gray_ptr[i] = gray_scale_mapping[ptr[i]];
+        ptr[i] = std::max(ptr[i], ptr1[i]);
       }
     }
     Array tgt = std::move(*stack_buf_.begin());
     ptr = static_cast<uint8_t*>(tgt.data());
     stack_buf_.pop_front();
-    Resize(gray_obs_, &tgt);
+    Resize(maxpool_buf_[0], &tgt, use_inter_area_resize_);
     std::size_t size = tgt.size;
     stack_buf_.push_back(std::move(tgt));
     if (push_all) {
@@ -290,9 +256,6 @@ class AtariEnv : public Env<AtariEnvSpec> {
     }
   }
 };
-
-// static array decl
-uint8_t AtariEnv::gray_scale_mapping[65536];
 
 typedef AsyncEnvPool<AtariEnv> AtariEnvPool;
 

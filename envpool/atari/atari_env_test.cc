@@ -22,6 +22,66 @@
 typedef typename atari::AtariEnv::State AtariState;
 typedef typename atari::AtariEnv::Action AtariAction;
 
+TEST(AtariEnvTest, GrayScaleMaxPoolOrder) {
+  std::string rom_path = atari::GetRomPath("envpool", "pong");
+  const int N = 256;
+  uint8_t arr[N * N];      // grayscale -> maxpool
+  uint8_t arr_ref[N * N];  // maxpool -> grayscale
+  uint8_t ptr0[N * N];
+  uint8_t ptr1[N * N];
+  for (int i = 0; i < N; ++i) {
+    for (int j = 0; j < N; ++j) {
+      ptr0[i * N + j] = i;
+      ptr1[i * N + j] = j;
+    }
+  }
+  Array col0(Spec<uint8_t>({N, N, 3}));
+  Array col1(Spec<uint8_t>({N, N, 3}));
+  Array result(Spec<uint8_t>({N, N, 1}));
+  uint8_t* col0_ptr = static_cast<uint8_t*>(col0.data());
+  uint8_t* col1_ptr = static_cast<uint8_t*>(col1.data());
+  uint8_t* result_ptr = static_cast<uint8_t*>(result.data());
+  ale::ALEInterface env;
+  env.loadROM(rom_path);
+  // color mapping from pixel_t to RGB
+  env.theOSystem->colourPalette().applyPaletteRGB(col0_ptr, ptr0, N * N);
+  env.theOSystem->colourPalette().applyPaletteRGB(col1_ptr, ptr1, N * N);
+  // maxpool RGB
+  for (int i = 0; i < N * N * 3; ++i) {
+    col0_ptr[i] = std::max(col0_ptr[i], col1_ptr[i]);
+  }
+  // gray scale
+  GrayScale(col0, &result);
+  memcpy(arr, result_ptr, sizeof arr);
+  // ref
+  env.theOSystem->colourPalette().applyPaletteGrayscale(col0_ptr, ptr0, N * N);
+  env.theOSystem->colourPalette().applyPaletteGrayscale(col1_ptr, ptr1, N * N);
+  // maxpool
+  for (int i = 0; i < N * N; ++i) {
+    arr_ref[i] = std::max(col0_ptr[i], col1_ptr[i]);
+  }
+  // calc diff
+  int diff_count = 0;
+  int total_count = 0;
+  int diff_sum = 0;
+  for (int i = 0; i < N; i += 2) {
+    for (int j = 0; j < N; j += 2) {
+      int k = i * N + j;
+      ++total_count;
+      if (arr[k] != arr_ref[k]) {
+        ++diff_count;
+        if (arr[k] > arr_ref[k]) {
+          diff_sum += arr[k] - arr_ref[k];
+        } else {
+          diff_sum += arr_ref[k] - arr[k];
+        }
+      }
+    }
+  }
+  LOG(INFO) << diff_count << "/" << total_count;
+  LOG(INFO) << "Mean diff " << 1.0 * diff_sum / total_count;
+}
+
 TEST(AtariEnvTest, Seed) {
   std::srand(std::time(nullptr));
   auto config = atari::AtariEnvSpec::default_config;

@@ -24,11 +24,15 @@
 /**
  * Resize `src` image to `tgt`. Use inplace modification to reduce overhead.
  */
-void Resize(Array src, Array* tgt) {
+void Resize(Array src, Array* tgt, bool use_inter_area = true) {
   int channel = src.Shape(2);
   cv::Mat src_img(src.Shape(0), src.Shape(1), CV_8UC(channel), src.data());
   cv::Mat tgt_img(tgt->Shape(0), tgt->Shape(1), CV_8UC(channel), tgt->data());
-  cv::resize(src_img, tgt_img, tgt_img.size(), 0, 0, cv::INTER_AREA);
+  if (use_inter_area) {
+    cv::resize(src_img, tgt_img, tgt_img.size(), 0, 0, cv::INTER_AREA);
+  } else {
+    cv::resize(src_img, tgt_img, tgt_img.size());
+  }
 }
 
 /**

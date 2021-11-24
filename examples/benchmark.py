@@ -63,6 +63,7 @@ if __name__ == "__main__":
     batch_size=args.batch_size,
     num_threads=args.num_threads,
     thread_affinity_offset=args.thread_affinity_offset,
+    use_inter_area_resize=False,
   )
   env.async_reset()
   action = np.ones(args.batch_size, dtype=np.int32)
