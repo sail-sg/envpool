@@ -15,6 +15,7 @@
 
 from typing import Any, Tuple
 
+import gym
 import numpy as np
 from absl.testing import absltest
 from dm_env import TimeStep
@@ -72,6 +73,24 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
       self.assertTrue(np.all(obs0 <= obs_max), obs0)
       self.assertTrue(np.all(obs2 <= obs_max), obs2)
 
+  def run_align_check(self, env0: gym.Env, env1: Any, reset_fn: Any) -> None:
+    # assert env0.observation_space.shape == env1.observation_space.shape
+    # assert np.all(env0.observation_space.low == env1.observation_space.low)
+    # assert np.all(env0.observation_space.high == env1.observation_space.high)
+    # assert env0.action_space.shape == env1.action_space.shape
+    # assert np.all(env0.action_space.low == env1.action_space.low)
+    # assert np.all(env0.action_space.high == env1.action_space.high)
+    for _ in range(10):
+      reset_fn(env0, env1)
+      d0 = False
+      while not d0:
+        a = env0.action_space.sample()
+        o0, r0, d0, _ = env0.step(a)
+        o1, r1, d1, _ = env1.step(np.array([a]), np.array([0]))
+        np.testing.assert_allclose(o0, o1[0], atol=1e-6)
+        np.testing.assert_allclose(r0, r1[0])
+        np.testing.assert_allclose(d0, d1[0])
+
   def test_cartpole(self) -> None:
     fmax = np.finfo(np.float32).max
     obs_max = np.array([4.8, fmax, np.pi / 7.5, fmax])
@@ -98,6 +117,23 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
       MountainCarContinuousGymEnvPool,
       (obs_min, obs_max),
     )
+
+    def reset_fn(env0: gym.Env, env1: Any) -> None:
+      env0.reset()
+      obs = env1.reset()
+      env0.unwrapped.state = obs[0]
+
+    env0 = gym.make("MountainCar-v0")
+    spec = MountainCarEnvSpec(MountainCarEnvSpec.gen_config())
+    env1 = MountainCarGymEnvPool(spec)
+    self.run_align_check(env0, env1, reset_fn)
+
+    env0 = gym.make("MountainCarContinuous-v0")
+    spec = MountainCarContinuousEnvSpec(
+      MountainCarContinuousEnvSpec.gen_config()
+    )
+    env1 = MountainCarContinuousGymEnvPool(spec)
+    self.run_align_check(env0, env1, reset_fn)
 
 
 class _CatchEnvTest(absltest.TestCase):

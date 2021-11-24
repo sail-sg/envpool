@@ -70,9 +70,10 @@ py_test(
     srcs = ["classic_control_test.py"],
     deps = [
         ":classic_control",
-        requirement("numpy"),
-        requirement("dm_env"),
         requirement("absl-py"),
+        requirement("dm_env"),
+        requirement("gym"),
+        requirement("numpy"),
     ],
 )
 
