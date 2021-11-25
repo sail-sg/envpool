@@ -34,6 +34,12 @@ RUN ln -sf /usr/local/go/bin/go /usr/bin/go
 
 RUN go install github.com/bazelbuild/bazelisk@latest && ln -sf $HOME/go/bin/bazelisk $HOME/go/bin/bazel
 
+# install big wheels
+
+RUN for i in 7 8 9; do ln -sf /usr/bin/python3.$i /usr/bin/python3; pip3 install torch opencv-python-headless; done
+
+RUN bazel version
+
 WORKDIR /app
 COPY . .
 

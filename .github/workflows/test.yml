@@ -13,7 +13,7 @@ jobs:
     - uses: actions/checkout@v2
     - uses: actions/setup-go@v2
       with:
-        go-version: '^1.17.2'
+        go-version: '^1.17.3'
     - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
@@ -21,10 +21,6 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip setuptools wheel
-        # make bazel-install
-    - name: Build
-      run: |
-        make bazel-build BAZELOPT="--remote_cache=http://bazel-cache.sail:8080"
     - name: Test
       run: |
         make bazel-test BAZELOPT="--remote_cache=http://bazel-cache.sail:8080"

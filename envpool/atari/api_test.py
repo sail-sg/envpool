@@ -13,6 +13,8 @@
 # limitations under the License.
 """Unit test for atari envpool and speed benchmark."""
 
+from typing import no_type_check
+
 import dm_env
 import gym
 import numpy as np
@@ -24,6 +26,7 @@ from envpool.atari import AtariDMEnvPool, AtariEnvSpec, AtariGymEnvPool
 
 class _SpecTest(absltest.TestCase):
 
+  @no_type_check
   def test_spec(self) -> None:
     action_nums = {"pong": 6, "breakout": 4}
     for task in ["pong", "breakout"]:
@@ -35,9 +38,8 @@ class _SpecTest(absltest.TestCase):
         spec.action_array_spec["action"].maximum + 1, action_num
       )
       # check dm spec
-      dm_obs_spec: dm_env.specs.BoundedArray = spec.observation_spec(
-      ).obs  # type: ignore
-      dm_act_spec: dm_env.specs.DiscreteArray = spec.action_spec()
+      dm_obs_spec = spec.observation_spec().obs
+      dm_act_spec = spec.action_spec()
       self.assertEqual(len(spec.action_array_spec), 3)
       self.assertIsInstance(dm_obs_spec, dm_env.specs.BoundedArray)
       self.assertEqual(dm_obs_spec.dtype, np.uint8)
@@ -94,6 +96,7 @@ class _SpecTest(absltest.TestCase):
 
 class _DMSyncTest(absltest.TestCase):
 
+  @no_type_check
   def test_spec(self) -> None:
     action_nums = {"pong": 6, "breakout": 4}
     for task in ["pong", "breakout"]:
@@ -104,9 +107,8 @@ class _DMSyncTest(absltest.TestCase):
       self.assertIsInstance(env, dm_env.Environment)
       logging.info(env)
       # check dm spec
-      dm_obs_spec: dm_env.specs.BoundedArray = env.observation_spec(
-      ).obs  # type: ignore
-      dm_act_spec: dm_env.specs.DiscreteArray = env.action_spec()
+      dm_obs_spec = env.observation_spec().obs
+      dm_act_spec = env.action_spec()
       self.assertIsInstance(dm_obs_spec, dm_env.specs.BoundedArray)
       self.assertEqual(dm_obs_spec.dtype, np.uint8)
       self.assertEqual(dm_obs_spec.maximum, 255)
