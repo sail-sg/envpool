@@ -120,13 +120,13 @@ format: py-format-install clang-format-install buildifier-install addlicense-ins
 
 docker-dev:
 	docker build --network=host -t $(PROJECT_NAME):$(COMMIT_HASH) -f docker/dev.dockerfile .
-	docker run -v /:/host -it $(PROJECT_NAME):$(COMMIT_HASH) bash
+	docker run --network=host -v /:/host -it $(PROJECT_NAME):$(COMMIT_HASH) bash
 	echo successfully build docker image with tag $(PROJECT_NAME):$(COMMIT_HASH)
 
 docker-release:
 	docker build --network=host -t $(PROJECT_NAME)-release:$(COMMIT_HASH) -f docker/release.dockerfile .
 	mkdir -p wheelhouse
-	docker run -v `pwd`/wheelhouse:/whl -it $(PROJECT_NAME)-release:$(COMMIT_HASH) bash -c "cp wheelhouse/* /whl"
+	docker run --network=host -v `pwd`/wheelhouse:/whl -it $(PROJECT_NAME)-release:$(COMMIT_HASH) bash -c "cp wheelhouse/* /whl"
 	echo successfully build docker image with tag $(PROJECT_NAME)-release:$(COMMIT_HASH)
 
 pypi-wheel: bazel-clean auditwheel-install bazel-build

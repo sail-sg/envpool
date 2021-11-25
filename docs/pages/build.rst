@@ -43,8 +43,6 @@ EnvPool requires gcc/g++ version >= 9.0 to build the source code. To install:
 
 .. code-block:: bash
 
-    ### For Ubuntu
-
     # optional
     sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 
@@ -54,28 +52,12 @@ EnvPool requires gcc/g++ version >= 9.0 to build the source code. To install:
     # to change the default cc to gcc-9:
     sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
 
-.. code-block:: bash
-
-    ### For CentOS
-
-    sudo yum update -y
-    sudo yum install -y centos-release-scl
-    sudo yum install -y devtoolset-9
-
 It also requires python version >= 3.7:
 
 .. code-block:: bash
 
-    ### For Ubuntu
-
     sudo apt install -y python3-dev python3-pip
     sudo ln -sf /usr/bin/python3 /usr/bin/python
-
-.. code-block:: bash
-
-    ### For CentOS
-
-    sudo yum install -y python3
 
 
 Build Wheel
