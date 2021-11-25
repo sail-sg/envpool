@@ -155,6 +155,7 @@ def workspace():
         sha256 = "e39e9fc379fe3f336911d928ce0a52e6ff6861258906efc5e849390867ff35f5",
         urls = [
             "https://roms8.s3.us-east-2.amazonaws.com/Roms.tar.gz",
+            "https://cdn.sail.sea.com/sail/Roms.tar.gz",
         ],
         build_file = "//third_party/atari_roms:atari_roms.BUILD",
     )
