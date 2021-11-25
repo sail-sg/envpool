@@ -43,7 +43,12 @@ EnvPool requires gcc/g++ version >= 9.0 to build the source code. To install:
 
 .. code-block:: bash
 
+    # optional
+    sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+
+    # install
     sudo apt install -y gcc-9 g++-9
+
     # to change the default cc to gcc-9:
     sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
 

@@ -87,7 +87,7 @@ bazel-build: bazel-install
 bazel-test: bazel-install
 	bazel test --test_output=all $(BAZELOPT) //... --config=release
 
-bazel-clean:
+bazel-clean: bazel-install
 	bazel clean --expunge
 
 # documentation
