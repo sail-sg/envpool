@@ -50,7 +50,7 @@ doc-install:
 	$(call check_install_extra, sphinxcontrib.spelling, sphinxcontrib.spelling pyenchant)
 
 auditwheel-install:
-	$(call check_install, auditwheel)
+	$(call check_install_extra, auditwheel, auditwheel typed-ast)
 
 # python linter
 
