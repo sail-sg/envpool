@@ -15,18 +15,15 @@
 
 import os
 import time
+from typing import no_type_check
 
+import cv2
 import numpy as np
 from absl import logging
 from absl.testing import absltest
 
 from envpool.atari import AtariDMEnvPool, AtariEnvSpec, AtariGymEnvPool
 from envpool.atari.atari_envpool import _AtariEnvPool, _AtariEnvSpec
-
-try:
-  import cv2
-except ImportError:
-  cv2 = None
 
 
 class _AtariEnvPoolTest(absltest.TestCase):
@@ -51,8 +48,7 @@ class _AtariEnvPoolTest(absltest.TestCase):
     for i in range(total):
       state = dict(zip(state_keys, env._recv()))
       obs = state["obs"]
-      if cv2:
-        cv2.imwrite(f"/tmp/log/raw{i}.png", obs[0, 1:].transpose(1, 2, 0))
+      cv2.imwrite(f"/tmp/log/raw{i}.png", obs[0, 1:].transpose(1, 2, 0))
       action = {
         "env_id": state["info:env_id"],
         "players.env_id": state["info:players.env_id"],
@@ -110,6 +106,31 @@ class _AtariEnvPoolTest(absltest.TestCase):
         env_id=partial_ids[0],
       )[-1]
       assert np.all(info["TimeLimit.truncated"])
+
+  @no_type_check
+  def test_no_gray_scale(self) -> None:
+    ref_shape = (12, 84, 84)
+    raw_shape = (12, 210, 160)
+    config = AtariEnvSpec.gen_config(task="breakout", gray_scale=False)
+    spec = AtariEnvSpec(config)
+    env = AtariGymEnvPool(spec)
+    self.assertTrue(env.observation_space.shape, ref_shape)
+    obs = env.reset()
+    self.assertTrue(obs.shape, ref_shape)
+    config = AtariEnvSpec.gen_config(
+      task="breakout", gray_scale=False, img_height=210, img_width=160
+    )
+    spec = AtariEnvSpec(config)
+    env = AtariGymEnvPool(spec)
+    self.assertTrue(env.observation_space.shape, raw_shape)
+    obs1 = env.reset()
+    self.assertTrue(obs1.shape, raw_shape)
+    for i in range(0, 12, 3):
+      obs_ = cv2.resize(
+        obs1[0, i:i + 3].transpose(1, 2, 0), (84, 84),
+        interpolation=cv2.INTER_AREA
+      )
+      np.testing.assert_allclose(obs_, obs[0, i:i + 3].transpose(1, 2, 0))
 
   def test_benchmark(self) -> None:
     if os.cpu_count() == 256:

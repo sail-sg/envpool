@@ -31,6 +31,8 @@ Options
 * ``img_width (int)``: the desired observation image width, default to ``84``;
 * ``stack_num (int)``: the number of frames to stack for a single observation,
   default to ``4``;
+* ``gray_scale (bool)``: whether to use gray scale env wrapper, default to
+  ``True``;
 * ``frame_skip (int)``: the number of frames to execute one repeated action,
   only the last frame would be kept, default to ``4``;
 * ``noop_max (int)``: the maximum number of no-op action being executed when
