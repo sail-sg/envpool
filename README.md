@@ -25,7 +25,7 @@ Here are EnvPool's several highlights:
 - **1 Million** Atari frames per second simulation with 256 CPU cores, **~13x** throughput of Python subprocess-based vector env;
 - **~3x** throughput of Python subprocess-based vector env on low resource setup like 12 CPU cores;
 - Comparing with existing GPU-based solution ([Brax](https://github.com/google/brax) / [Isaac-gym](https://developer.nvidia.com/isaac-gym)), EnvPool is a **general** solution for various kinds of speeding-up RL environment parallelization;
-- Compatible with some existing RL libraries, e.g., [Tianshou](https://github.com/thu-ml/tianshou).
+- Compatible with some existing RL libraries, e.g., [Tianshou](https://github.com/thu-ml/tianshou) or [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3).
 
 ## Installation
 
