@@ -24,6 +24,9 @@ import envpool
 
 class _MakeTest(absltest.TestCase):
 
+  def test_version(self) -> None:
+    print(envpool.__version__)
+
   def test_list_all_envs(self) -> None:
     pprint.pprint(envpool.list_all_envs())
 

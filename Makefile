@@ -132,6 +132,11 @@ docker-release:
 pypi-wheel: bazel-clean auditwheel-install bazel-build
 	ls dist/*.whl | xargs auditwheel repair --plat manylinux_2_17_x86_64
 
-release-test:
-	cd examples && python3 -c "import envpool; print(envpool.__version__)" && python3 env_step.py
+release-test1:
+	cd envpool && python3 make_test.py
+
+release-test2:
+	cd examples && python3 env_step.py
+
+release-test: release-test1 release-test2
 

@@ -37,3 +37,4 @@ un
 Acrobot
 frictionless
 effector
+walkable

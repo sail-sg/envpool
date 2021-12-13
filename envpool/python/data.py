@@ -67,9 +67,8 @@ def dm_spec_transform(
   name: str, spec: ArraySpec, spec_type: str
 ) -> dm_env.specs.Array:
   """Transform ArraySpec to dm_env compatible specs."""
-  if spec_type.startswith("act") and not name.endswith("env_id") and np.prod(
-    np.abs(spec.shape)
-  ) == 1 and np.issubdtype(spec.dtype, np.integer):
+  if np.prod(np.abs(spec.shape)) == 1 and \
+      np.issubdtype(spec.dtype, np.integer):
     # special treatment for discrete action space
     return dm_env.specs.DiscreteArray(
       name=name,
@@ -89,9 +88,8 @@ def gym_spec_transform(
   name: str, spec: ArraySpec, spec_type: str
 ) -> gym.Space:
   """Transform ArraySpec to gym.Env compatible spaces."""
-  if spec_type.startswith("act") and not name.endswith("env_id") and np.prod(
-    np.abs(spec.shape)
-  ) == 1 and np.issubdtype(spec.dtype, np.integer):
+  if np.prod(np.abs(spec.shape)) == 1 and \
+      np.issubdtype(spec.dtype, np.integer):
     # special treatment for discrete action space
     try:
       return gym.spaces.Discrete(

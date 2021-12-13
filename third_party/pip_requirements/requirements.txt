@@ -8,6 +8,7 @@ h5py
 jinja2
 numpy
 opencv-python-headless
+scipy
 setuptools
 six
 tensorboard

@@ -13,11 +13,19 @@
 # limitations under the License.
 """Unit tests for classic control environments."""
 
+import gym
 import numpy as np
+from absl import logging
 from absl.testing import absltest
 from dm_env import TimeStep
 
-from envpool.toy_text import CatchDMEnvPool, CatchEnvSpec, CatchGymEnvPool
+from envpool.toy_text import (
+  CatchDMEnvPool,
+  CatchEnvSpec,
+  CatchGymEnvPool,
+  FrozenLakeEnvSpec,
+  FrozenLakeGymEnvPool,
+)
 
 
 class _ToyTextEnvTest(absltest.TestCase):
@@ -75,6 +83,50 @@ class _ToyTextEnvTest(absltest.TestCase):
           assert np.all(rew == 0) and np.all(~done)
         else:
           assert np.all(rew == -1) and np.all(done)
+
+  def test_frozen_lake(self) -> None:
+    for size in [4, 8]:
+      config = FrozenLakeEnvSpec.gen_config(
+        num_envs=1, size=size, max_episode_steps=size * 25
+      )
+      spec = FrozenLakeEnvSpec(config)
+      env = FrozenLakeGymEnvPool(spec)
+      logging.info(env)
+      assert isinstance(env.observation_space, gym.spaces.Discrete)
+      assert env.observation_space.n == size * size
+      assert isinstance(env.action_space, gym.spaces.Discrete)
+      assert env.action_space.n == 4
+      if size == 4:
+        ref = gym.make("FrozenLake-v1")
+      else:
+        ref = gym.make("FrozenLake8x8-v1")
+      last_obs = env.reset()
+      elapsed_step = 0
+      for _ in range(1000):
+        act = np.random.randint(4, size=(1,))
+        obs, rew, done, info = env.step(act)
+        flag = False
+        for _ in range(50):
+          ref.reset()
+          ref._elapsed_steps = elapsed_step
+          ref.unwrapped.s = int(last_obs[0])
+          ref_obs, ref_rew, ref_done, ref_info = ref.step(int(act[0]))
+          if ref_obs == obs[0]:
+            if ref_rew == rew[0] and ref_done == done[0]:
+              flag = True
+            else:
+              logging.info(
+                f"At step {elapsed_step}, action {act}, {last_obs} -> {obs}, "
+                f"ref: {ref_obs}, {ref_rew}, {ref_done}, {ref_info}, "
+                f"but got {obs}, {rew}, {done}, {info}"
+              )
+              break
+        assert flag
+        last_obs = obs
+        elapsed_step += 1
+        if done:
+          elapsed_step = 0
+          last_obs = env.reset()
 
 
 if __name__ == "__main__":

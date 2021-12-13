@@ -11,6 +11,14 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "frozen_lake",
+    hdrs = ["frozen_lake.h"],
+    deps = [
+        "//envpool/core:async_envpool",
+    ],
+)
+
 pybind_extension(
     name = "toy_text_envpool",
     srcs = [
@@ -18,6 +26,7 @@ pybind_extension(
     ],
     deps = [
         ":catch",
+        ":frozen_lake",
         "//envpool/core:py_envpool",
     ],
 )
@@ -38,6 +47,7 @@ py_test(
         requirement("dm_env"),
         requirement("gym"),
         requirement("numpy"),
+        requirement("scipy"),
     ],
 )
 
