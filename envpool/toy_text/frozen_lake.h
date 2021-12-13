@@ -18,8 +18,11 @@
 #ifndef ENVPOOL_TOY_TEXT_FROZEN_LAKE_H_
 #define ENVPOOL_TOY_TEXT_FROZEN_LAKE_H_
 
+#include <algorithm>
 #include <cmath>
 #include <random>
+#include <string>
+#include <vector>
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
