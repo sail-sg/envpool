@@ -14,8 +14,15 @@
 
 #include "envpool/core/py_envpool.h"
 #include "envpool/toy_text/catch.h"
+#include "envpool/toy_text/frozen_lake.h"
 
 typedef PyEnvSpec<toy_text::CatchEnvSpec> CatchEnvSpec;
 typedef PyEnvPool<toy_text::CatchEnvPool> CatchEnvPool;
 
-PYBIND11_MODULE(toy_text_envpool, m) { REGISTER(m, CatchEnvSpec, CatchEnvPool) }
+typedef PyEnvSpec<toy_text::FrozenLakeEnvSpec> FrozenLakeEnvSpec;
+typedef PyEnvPool<toy_text::FrozenLakeEnvPool> FrozenLakeEnvPool;
+
+PYBIND11_MODULE(toy_text_envpool, m) {
+  REGISTER(m, CatchEnvSpec, CatchEnvPool)
+  REGISTER(m, FrozenLakeEnvSpec, FrozenLakeEnvPool)
+}

@@ -15,14 +15,26 @@
 
 from envpool.python.api import py_env
 
-from .toy_text_envpool import _CatchEnvPool, _CatchEnvSpec
+from .toy_text_envpool import (
+  _CatchEnvPool,
+  _CatchEnvSpec,
+  _FrozenLakeEnvPool,
+  _FrozenLakeEnvSpec,
+)
 
 CatchEnvSpec, CatchDMEnvPool, CatchGymEnvPool = py_env(
   _CatchEnvSpec, _CatchEnvPool
+)
+
+FrozenLakeEnvSpec, FrozenLakeDMEnvPool, FrozenLakeGymEnvPool = py_env(
+  _FrozenLakeEnvSpec, _FrozenLakeEnvPool
 )
 
 __all__ = [
   "CatchEnvSpec",
   "CatchDMEnvPool",
   "CatchGymEnvPool",
+  "FrozenLakeEnvSpec",
+  "FrozenLakeDMEnvPool",
+  "FrozenLakeGymEnvPool",
 ]

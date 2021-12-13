@@ -24,3 +24,25 @@ register(
   height=10,
   width=5,
 )
+
+register(
+  task_id="FrozenLake-v1",
+  import_path="envpool.toy_text",
+  spec_cls="FrozenLakeEnvSpec",
+  dm_cls="FrozenLakeDMEnvPool",
+  gym_cls="FrozenLakeGymEnvPool",
+  size=4,
+  max_episode_steps=100,
+  reward_threshold=0.7,
+)
+
+register(
+  task_id="FrozenLake8x8-v1",
+  import_path="envpool.toy_text",
+  spec_cls="FrozenLakeEnvSpec",
+  dm_cls="FrozenLakeDMEnvPool",
+  gym_cls="FrozenLakeGymEnvPool",
+  size=8,
+  max_episode_steps=200,
+  reward_threshold=0.85,
+)
