@@ -74,6 +74,7 @@ stable version through `envpool.readthedocs.io/en/stable/
 
    api/atari
    api/classic
+   api/toy_text
 
 
 Indices and tables

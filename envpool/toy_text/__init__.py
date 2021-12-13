@@ -11,8 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Entry point for all envs' registration."""
+"""Toy text env in EnvPool."""
 
-import envpool.atari.registration  # noqa: F401
-import envpool.classic_control.registration  # noqa: F401
-import envpool.toy_text.registration  # noqa: F401
+from envpool.python.api import py_env
+
+from .toy_text_envpool import _CatchEnvPool, _CatchEnvSpec
+
+CatchEnvSpec, CatchDMEnvPool, CatchGymEnvPool = py_env(
+  _CatchEnvSpec, _CatchEnvPool
+)
+
+__all__ = [
+  "CatchEnvSpec",
+  "CatchDMEnvPool",
+  "CatchGymEnvPool",
+]

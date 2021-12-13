@@ -15,8 +15,8 @@
  */
 // https://github.com/deepmind/bsuite/blob/master/bsuite/environments/catch.py
 
-#ifndef ENVPOOL_CLASSIC_CONTROL_CATCH_H_
-#define ENVPOOL_CLASSIC_CONTROL_CATCH_H_
+#ifndef ENVPOOL_TOY_TEXT_CATCH_H_
+#define ENVPOOL_TOY_TEXT_CATCH_H_
 
 #include <cmath>
 #include <random>
@@ -24,7 +24,7 @@
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
 
-namespace classic_control {
+namespace toy_text {
 
 class CatchEnvFns {
  public:
@@ -93,6 +93,6 @@ class CatchEnv : public Env<CatchEnvSpec> {
 
 typedef AsyncEnvPool<CatchEnv> CatchEnvPool;
 
-}  // namespace classic_control
+}  // namespace toy_text
 
-#endif  // ENVPOOL_CLASSIC_CONTROL_CATCH_H_
+#endif  // ENVPOOL_TOY_TEXT_CATCH_H_

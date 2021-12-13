@@ -40,11 +40,13 @@ class _MakeTest(absltest.TestCase):
     self.assertEqual(env_gym.action_space.n, 18)
     self.assertEqual(env_dm.action_spec().num_values, 18)
 
-  def test_make_classic(self) -> None:
-    for task_id in [
+  def test_make_classic_and_toytext(self) -> None:
+    classic = [
       "CartPole-v0", "CartPole-v1", "Pendulum-v0", "MountainCar-v0",
-      "MountainCarContinuous-v0", "Acrobot-v1", "Catch-v0"
-    ]:
+      "MountainCarContinuous-v0", "Acrobot-v1"
+    ]
+    toytext = ["Catch-v0"]
+    for task_id in classic + toytext:
       envpool.make_spec(task_id)
       env_gym = envpool.make_gym(task_id)
       env_dm = envpool.make_dm(task_id)

@@ -20,18 +20,12 @@ from .classic_control_envpool import (
   _AcrobotEnvSpec,
   _CartPoleEnvPool,
   _CartPoleEnvSpec,
-  _CatchEnvPool,
-  _CatchEnvSpec,
   _MountainCarContinuousEnvPool,
   _MountainCarContinuousEnvSpec,
   _MountainCarEnvPool,
   _MountainCarEnvSpec,
   _PendulumEnvPool,
   _PendulumEnvSpec,
-)
-
-CatchEnvSpec, CatchDMEnvPool, CatchGymEnvPool = py_env(
-  _CatchEnvSpec, _CatchEnvPool
 )
 
 CartPoleEnvSpec, CartPoleDMEnvPool, CartPoleGymEnvPool = py_env(
@@ -55,9 +49,6 @@ AcrobotEnvSpec, AcrobotDMEnvPool, AcrobotGymEnvPool = py_env(
 )
 
 __all__ = [
-  "CatchEnvSpec",
-  "CatchDMEnvPool",
-  "CatchGymEnvPool",
   "CartPoleEnvSpec",
   "CartPoleDMEnvPool",
   "CartPoleGymEnvPool",

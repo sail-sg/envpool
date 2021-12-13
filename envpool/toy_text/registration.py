@@ -11,8 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Entry point for all envs' registration."""
+"""Classic control env registration."""
 
-import envpool.atari.registration  # noqa: F401
-import envpool.classic_control.registration  # noqa: F401
-import envpool.toy_text.registration  # noqa: F401
+from envpool.registration import register
+
+register(
+  task_id="Catch-v0",
+  import_path="envpool.toy_text",
+  spec_cls="CatchEnvSpec",
+  dm_cls="CatchDMEnvPool",
+  gym_cls="CatchGymEnvPool",
+  height=10,
+  width=5,
+)
