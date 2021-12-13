@@ -102,11 +102,11 @@ class _ToyTextEnvTest(absltest.TestCase):
         ref = gym.make("FrozenLake8x8-v1")
       last_obs = env.reset()
       elapsed_step = 0
-      for _ in range(10000):
+      for _ in range(1000):
         act = np.random.randint(4, size=(1,))
         obs, rew, done, info = env.step(act)
         flag = False
-        for _ in range(20):
+        for _ in range(50):
           ref.reset()
           ref._elapsed_steps = elapsed_step
           ref.unwrapped.s = int(last_obs[0])
