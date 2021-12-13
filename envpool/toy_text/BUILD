@@ -47,6 +47,7 @@ py_test(
         requirement("dm_env"),
         requirement("gym"),
         requirement("numpy"),
+        requirement("scipy"),
     ],
 )
 
