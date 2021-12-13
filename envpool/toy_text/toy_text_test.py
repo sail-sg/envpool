@@ -15,6 +15,7 @@
 
 import gym
 import numpy as np
+from absl import logging
 from absl.testing import absltest
 from dm_env import TimeStep
 
@@ -85,9 +86,12 @@ class _ToyTextEnvTest(absltest.TestCase):
 
   def test_frozen_lake(self) -> None:
     for size in [4, 8]:
-      config = FrozenLakeEnvSpec.gen_config(num_envs=1, size=size)
+      config = FrozenLakeEnvSpec.gen_config(
+        num_envs=1, size=size, max_episode_steps=size * 25
+      )
       spec = FrozenLakeEnvSpec(config)
       env = FrozenLakeGymEnvPool(spec)
+      logging.info(env)
       assert isinstance(env.observation_space, gym.spaces.Discrete)
       assert env.observation_space.n == size * size
       assert isinstance(env.action_space, gym.spaces.Discrete)
@@ -111,6 +115,11 @@ class _ToyTextEnvTest(absltest.TestCase):
             if ref_rew == rew[0] and ref_done == done[0]:
               flag = True
             else:
+              logging.info(
+                f"At step {elapsed_step}, {last_obs} -> {obs}, "
+                f"ref: {ref_obs}, {ref_rew}, {ref_done}, {ref_info}, "
+                f"but got {obs}, {rew}, {done}, {info}"
+              )
               break
         assert flag
         last_obs = obs
