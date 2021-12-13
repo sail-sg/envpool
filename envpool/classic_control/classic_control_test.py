@@ -18,7 +18,6 @@ from typing import Any, Tuple
 import gym
 import numpy as np
 from absl.testing import absltest
-from dm_env import TimeStep
 
 from envpool.classic_control import (
   AcrobotEnvSpec,
