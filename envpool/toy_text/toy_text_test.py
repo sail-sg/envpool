@@ -105,7 +105,7 @@ class _ToyTextEnvTest(absltest.TestCase):
         for _ in range(20):
           ref.reset()
           ref._elapsed_steps = elapsed_step
-          ref.unwrapped.s = last_obs[0]
+          ref.unwrapped.s = int(last_obs[0])
           ref_obs, ref_rew, ref_done, ref_info = ref.step(act)
           if ref_obs == obs[0]:
             if ref_rew == rew[0] and ref_done == done[0]:
