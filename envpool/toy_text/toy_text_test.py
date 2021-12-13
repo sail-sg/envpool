@@ -116,7 +116,7 @@ class _ToyTextEnvTest(absltest.TestCase):
               flag = True
             else:
               logging.info(
-                f"At step {elapsed_step}, {last_obs} -> {obs}, "
+                f"At step {elapsed_step}, action {act}, {last_obs} -> {obs}, "
                 f"ref: {ref_obs}, {ref_rew}, {ref_done}, {ref_info}, "
                 f"but got {obs}, {rew}, {done}, {info}"
               )

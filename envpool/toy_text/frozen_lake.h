@@ -75,6 +75,7 @@ class FrozenLakeEnv : public Env<FrozenLakeEnvSpec> {
 
   void Reset() override {
     x_ = y_ = 0;
+    done = false;
     State state = Allocate();
     WriteObs(state, 0.0f);
   }
