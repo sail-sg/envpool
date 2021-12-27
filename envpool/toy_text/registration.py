@@ -46,3 +46,13 @@ register(
   max_episode_steps=200,
   reward_threshold=0.85,
 )
+
+register(
+  task_id="Taxi-v3",
+  import_path="envpool.toy_text",
+  spec_cls="TaxiEnvSpec",
+  dm_cls="TaxiDMEnvPool",
+  gym_cls="TaxiGymEnvPool",
+  max_episode_steps=200,
+  reward_threshold=8.0,
+)
