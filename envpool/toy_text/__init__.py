@@ -32,9 +32,7 @@ FrozenLakeEnvSpec, FrozenLakeDMEnvPool, FrozenLakeGymEnvPool = py_env(
   _FrozenLakeEnvSpec, _FrozenLakeEnvPool
 )
 
-TaxiEnvSpec, TaxiDMEnvPool, TaxiGymEnvPool = py_env(
-  _TaxiEnvSpec, _TaxiEnvPool
-)
+TaxiEnvSpec, TaxiDMEnvPool, TaxiGymEnvPool = py_env(_TaxiEnvSpec, _TaxiEnvPool)
 
 __all__ = [
   "CatchEnvSpec",

@@ -128,6 +128,9 @@ class _ToyTextEnvTest(absltest.TestCase):
           elapsed_step = 0
           last_obs = env.reset()
 
+  def test_taxi(self) -> None:
+    pass
+
 
 if __name__ == "__main__":
   absltest.main()
