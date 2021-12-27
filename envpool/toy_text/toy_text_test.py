@@ -25,6 +25,8 @@ from envpool.toy_text import (
   CatchGymEnvPool,
   FrozenLakeEnvSpec,
   FrozenLakeGymEnvPool,
+  TaxiEnvSpec,
+  TaxiGymEnvPool,
 )
 
 
@@ -129,7 +131,63 @@ class _ToyTextEnvTest(absltest.TestCase):
           last_obs = env.reset()
 
   def test_taxi(self) -> None:
-    pass
+    spec = TaxiEnvSpec(TaxiEnvSpec.gen_config(num_envs=1))
+    env = TaxiGymEnvPool(spec)
+    assert isinstance(env.observation_space, gym.spaces.Discrete)
+    assert env.observation_space.n == 500
+    assert isinstance(env.action_space, gym.spaces.Discrete)
+    assert env.action_space.n == 6
+    ref = gym.make("Taxi-v3")
+    for _ in range(10):
+      # random agent
+      ref.reset()
+      ref.unwrapped.s = env.reset()[0]
+      done = [False]
+      while not done[0]:
+        act = np.random.randint(6, size=(1,))
+        obs, rew, done, info = env.step(act)
+        ref_obs, ref_rew, ref_done, ref_info = ref.step(int(act[0]))
+        assert ref_obs == obs[0] and ref_rew == rew[0] and ref_done == done[0]
+    locs = ref.unwrapped.locs
+    left_point = [(4, 4), (0, 3), (4, 2), (0, 1)]
+    right_point = [(0, 0), (4, 1), (0, 2), (4, 3)]
+    left = {0: 1, 1: -1, 2: 1, 3: -1, 4: 1}
+    right = {0: -1, 1: 1, 2: -1, 3: 1, 4: -1}
+    for _ in range(10):
+      # 10IQ agent
+      ref.reset()
+      obs = ref.unwrapped.s = env.reset()[0]
+      x, y, s, t = ref.unwrapped.decode(obs)
+      actions = []
+      for i, g in [[0, s], [1, t]]:
+        # to (4, 0)
+        while (x, y) != (4, 0):
+          if (x, y) in left_point:
+            y -= 1
+            actions.append(3)
+          else:
+            x += left[y]
+            actions.append(int(left[y] == -1))
+        if (x, y) == locs[g]:
+          actions.append(4 + i)
+        else:
+          # to (0, 4)
+          while (x, y) != (0, 4):
+            if (x, y) in right_point:
+              y += 1
+              actions.append(2)
+            else:
+              x += right[y]
+              actions.append(int(right[y] == -1))
+            if (x, y) == locs[g]:
+              actions.append(4 + i)
+              break
+      while len(actions):
+        a = actions.pop(0)
+        ref_obs, ref_rew, ref_done, ref_info = ref.step(a)
+        obs, rew, done, info = env.step(np.array([a], int))
+        assert ref_obs == obs[0] and ref_rew == rew[0] and ref_done == done[0]
+      assert ref_rew == 20 and ref_done
 
 
 if __name__ == "__main__":

@@ -84,12 +84,12 @@ class TaxiEnv : public Env<TaxiEnvSpec> {
     int act = action["action"_];
     float reward = -1.0f;
     if (act == 0) {
-      if (x_ > 0) {
-        --x_;
-      }
-    } else if (act == 1) {
       if (x_ < 4) {
         ++x_;
+      }
+    } else if (act == 1) {
+      if (x_ > 0) {
+        --x_;
       }
     } else if (act == 2) {
       if (map_[x_][y_ + 1] == ':') {
