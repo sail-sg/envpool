@@ -20,6 +20,8 @@ from .toy_text_envpool import (
   _CatchEnvSpec,
   _FrozenLakeEnvPool,
   _FrozenLakeEnvSpec,
+  _NChainEnvPool,
+  _NChainEnvSpec,
   _TaxiEnvPool,
   _TaxiEnvSpec,
 )
@@ -34,6 +36,10 @@ FrozenLakeEnvSpec, FrozenLakeDMEnvPool, FrozenLakeGymEnvPool = py_env(
 
 TaxiEnvSpec, TaxiDMEnvPool, TaxiGymEnvPool = py_env(_TaxiEnvSpec, _TaxiEnvPool)
 
+NChainEnvSpec, NChainDMEnvPool, NChainGymEnvPool = py_env(
+  _NChainEnvSpec, _NChainEnvPool
+)
+
 __all__ = [
   "CatchEnvSpec",
   "CatchDMEnvPool",
@@ -44,4 +50,7 @@ __all__ = [
   "TaxiEnvSpec",
   "TaxiDMEnvPool",
   "TaxiGymEnvPool",
+  "NChainEnvSpec",
+  "NChainDMEnvPool",
+  "NChainGymEnvPool",
 ]

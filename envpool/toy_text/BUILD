@@ -27,6 +27,14 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "nchain",
+    hdrs = ["nchain.h"],
+    deps = [
+        "//envpool/core:async_envpool",
+    ],
+)
+
 pybind_extension(
     name = "toy_text_envpool",
     srcs = [
@@ -35,6 +43,7 @@ pybind_extension(
     deps = [
         ":catch",
         ":frozen_lake",
+        ":nchain",
         ":taxi",
         "//envpool/core:py_envpool",
     ],

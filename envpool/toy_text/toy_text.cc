@@ -15,6 +15,7 @@
 #include "envpool/core/py_envpool.h"
 #include "envpool/toy_text/catch.h"
 #include "envpool/toy_text/frozen_lake.h"
+#include "envpool/toy_text/nchain.h"
 #include "envpool/toy_text/taxi.h"
 
 typedef PyEnvSpec<toy_text::CatchEnvSpec> CatchEnvSpec;
@@ -26,8 +27,12 @@ typedef PyEnvPool<toy_text::FrozenLakeEnvPool> FrozenLakeEnvPool;
 typedef PyEnvSpec<toy_text::TaxiEnvSpec> TaxiEnvSpec;
 typedef PyEnvPool<toy_text::TaxiEnvPool> TaxiEnvPool;
 
+typedef PyEnvSpec<toy_text::NChainEnvSpec> NChainEnvSpec;
+typedef PyEnvPool<toy_text::NChainEnvPool> NChainEnvPool;
+
 PYBIND11_MODULE(toy_text_envpool, m) {
   REGISTER(m, CatchEnvSpec, CatchEnvPool)
   REGISTER(m, FrozenLakeEnvSpec, FrozenLakeEnvPool)
   REGISTER(m, TaxiEnvSpec, TaxiEnvPool)
+  REGISTER(m, NChainEnvSpec, NChainEnvPool)
 }

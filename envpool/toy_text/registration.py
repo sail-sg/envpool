@@ -56,3 +56,12 @@ register(
   max_episode_steps=200,
   reward_threshold=8.0,
 )
+
+register(
+  task_id="NChain-v0",
+  import_path="envpool.toy_text",
+  spec_cls="NChainEnvSpec",
+  dm_cls="NChainDMEnvPool",
+  gym_cls="NChainGymEnvPool",
+  max_episode_steps=1000,
+)
