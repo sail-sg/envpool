@@ -35,6 +35,14 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "cliffwalking",
+    hdrs = ["cliffwalking.h"],
+    deps = [
+        "//envpool/core:async_envpool",
+    ],
+)
+
 pybind_extension(
     name = "toy_text_envpool",
     srcs = [
@@ -42,6 +50,7 @@ pybind_extension(
     ],
     deps = [
         ":catch",
+        ":cliffwalking",
         ":frozen_lake",
         ":nchain",
         ":taxi",

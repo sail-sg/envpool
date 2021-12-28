@@ -23,6 +23,8 @@ from envpool.toy_text import (
   CatchDMEnvPool,
   CatchEnvSpec,
   CatchGymEnvPool,
+  CliffWalkingEnvSpec,
+  CliffWalkingGymEnvPool,
   FrozenLakeEnvSpec,
   FrozenLakeGymEnvPool,
   NChainEnvSpec,
@@ -207,6 +209,25 @@ class _ToyTextEnvTest(absltest.TestCase):
       obs, rew, done, info = env.step(actions)
       reward += rew
     assert abs(np.mean(reward) - 1310) < 30 and abs(np.std(reward) - 78) < 15
+
+  def test_cliffwalking(self) -> None:
+    spec = CliffWalkingEnvSpec(CliffWalkingEnvSpec.gen_config())
+    env = CliffWalkingGymEnvPool(spec)
+    assert isinstance(env.observation_space, gym.spaces.Discrete)
+    assert env.observation_space.n == 48
+    assert isinstance(env.action_space, gym.spaces.Discrete)
+    assert env.action_space.n == 4
+    ref = gym.make("CliffWalking-v0")
+    for i in range(12):
+      action = [0] * 4 + [1] * i + [2] * 4
+      assert env.reset()[0] == ref.reset()
+      while len(action) > 0:
+        a = action.pop(0)
+        ref_obs, ref_rew, ref_done, ref_info = ref.step(a)
+        obs, rew, done, info = env.step(np.array([a], int))
+        assert ref_obs == obs[0] and ref_rew == rew[0] and ref_done == done[0]
+        if ref_done:
+          break
 
 
 if __name__ == "__main__":
