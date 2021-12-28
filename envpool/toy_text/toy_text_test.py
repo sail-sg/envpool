@@ -20,6 +20,8 @@ from absl.testing import absltest
 from dm_env import TimeStep
 
 from envpool.toy_text import (
+  BlackjackEnvSpec,
+  BlackjackGymEnvPool,
   CatchDMEnvPool,
   CatchEnvSpec,
   CatchGymEnvPool,
@@ -228,6 +230,25 @@ class _ToyTextEnvTest(absltest.TestCase):
         assert ref_obs == obs[0] and ref_rew == rew[0] and ref_done == done[0]
         if ref_done:
           break
+
+  def test_blackjack(self) -> None:
+    np.random.seed(0)
+    num_envs = 100
+    spec = BlackjackEnvSpec(BlackjackEnvSpec.gen_config(num_envs=num_envs))
+    env = BlackjackGymEnvPool(spec)
+    assert isinstance(env.observation_space, gym.spaces.Box)
+    assert env.observation_space.shape == (3,)
+    assert isinstance(env.action_space, gym.spaces.Discrete)
+    assert env.action_space.n == 2
+    reward, rewards = np.zeros(num_envs), []
+    for _ in range(1000):
+      obs, rew, done, info = env.step(np.random.randint(2, size=(num_envs,)))
+      reward += rew
+      if np.any(done):
+        rewards += reward[done].tolist()
+        reward[done] = 0
+    assert abs(np.mean(rewards) + 0.395) < 0.05
+    assert abs(np.std(rewards) - 0.89) < 0.05
 
 
 if __name__ == "__main__":

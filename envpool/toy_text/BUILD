@@ -43,12 +43,21 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "blackjack",
+    hdrs = ["blackjack.h"],
+    deps = [
+        "//envpool/core:async_envpool",
+    ],
+)
+
 pybind_extension(
     name = "toy_text_envpool",
     srcs = [
         "toy_text.cc",
     ],
     deps = [
+        ":blackjack",
         ":catch",
         ":cliffwalking",
         ":frozen_lake",

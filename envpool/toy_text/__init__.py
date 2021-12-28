@@ -16,6 +16,8 @@
 from envpool.python.api import py_env
 
 from .toy_text_envpool import (
+  _BlackjackEnvPool,
+  _BlackjackEnvSpec,
   _CatchEnvPool,
   _CatchEnvSpec,
   _CliffWalkingEnvPool,
@@ -46,6 +48,10 @@ CliffWalkingEnvSpec, CliffWalkingDMEnvPool, CliffWalkingGymEnvPool = py_env(
   _CliffWalkingEnvSpec, _CliffWalkingEnvPool
 )
 
+BlackjackEnvSpec, BlackjackDMEnvPool, BlackjackGymEnvPool = py_env(
+  _BlackjackEnvSpec, _BlackjackEnvPool
+)
+
 __all__ = [
   "CatchEnvSpec",
   "CatchDMEnvPool",
@@ -62,4 +68,7 @@ __all__ = [
   "CliffWalkingEnvSpec",
   "CliffWalkingDMEnvPool",
   "CliffWalkingGymEnvPool",
+  "BlackjackEnvSpec",
+  "BlackjackDMEnvPool",
+  "BlackjackGymEnvPool",
 ]

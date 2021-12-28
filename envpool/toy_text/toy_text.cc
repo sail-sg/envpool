@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "envpool/core/py_envpool.h"
+#include "envpool/toy_text/blackjack.h"
 #include "envpool/toy_text/catch.h"
 #include "envpool/toy_text/cliffwalking.h"
 #include "envpool/toy_text/frozen_lake.h"
@@ -34,10 +35,14 @@ typedef PyEnvPool<toy_text::NChainEnvPool> NChainEnvPool;
 typedef PyEnvSpec<toy_text::CliffWalkingEnvSpec> CliffWalkingEnvSpec;
 typedef PyEnvPool<toy_text::CliffWalkingEnvPool> CliffWalkingEnvPool;
 
+typedef PyEnvSpec<toy_text::BlackjackEnvSpec> BlackjackEnvSpec;
+typedef PyEnvPool<toy_text::BlackjackEnvPool> BlackjackEnvPool;
+
 PYBIND11_MODULE(toy_text_envpool, m) {
   REGISTER(m, CatchEnvSpec, CatchEnvPool)
   REGISTER(m, FrozenLakeEnvSpec, FrozenLakeEnvPool)
   REGISTER(m, TaxiEnvSpec, TaxiEnvPool)
   REGISTER(m, NChainEnvSpec, NChainEnvPool)
   REGISTER(m, CliffWalkingEnvSpec, CliffWalkingEnvPool)
+  REGISTER(m, BlackjackEnvSpec, BlackjackEnvPool)
 }
