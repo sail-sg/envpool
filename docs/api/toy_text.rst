@@ -46,3 +46,21 @@ square and the passenger is at a random location. The taxi drives to the
 passenger's location, picks up the passenger, drives to the passenger's
 destination (another one of the four specified locations), and then drops off
 the passenger. Once the passenger is dropped off, the episode ends.
+
+
+NChain-v0
+---------
+
+`gym NChain-v0 source code
+<https://github.com/openai/gym/blob/v0.20.0/gym/envs/toy_text/nchain.py>`_
+
+This game presents moves along a linear chain of states, with two actions:
+
+0. forward, which moves along the chain but returns no reward
+1. backward, which returns to the beginning and has a small reward
+
+The end of the chain, however, presents a large reward, and by moving
+'forward' at the end of the chain this large reward can be repeated.
+At each action, there is a small probability that the agent 'slips' and the
+opposite transition is instead taken.
+The observed state is the current state in the chain (0 to n-1).

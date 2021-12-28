@@ -25,6 +25,8 @@ from envpool.toy_text import (
   CatchGymEnvPool,
   FrozenLakeEnvSpec,
   FrozenLakeGymEnvPool,
+  NChainEnvSpec,
+  NChainGymEnvPool,
   TaxiEnvSpec,
   TaxiGymEnvPool,
 )
@@ -188,6 +190,23 @@ class _ToyTextEnvTest(absltest.TestCase):
         obs, rew, done, info = env.step(np.array([a], int))
         assert ref_obs == obs[0] and ref_rew == rew[0] and ref_done == done[0]
       assert ref_rew == 20 and ref_done
+
+  def test_nchain(self) -> None:
+    num_envs = 100
+    spec = NChainEnvSpec(NChainEnvSpec.gen_config(num_envs=num_envs))
+    env = NChainGymEnvPool(spec)
+    assert isinstance(env.observation_space, gym.spaces.Discrete)
+    assert env.observation_space.n == 5
+    assert isinstance(env.action_space, gym.spaces.Discrete)
+    assert env.action_space.n == 2
+    done = [False]
+    env.reset()
+    reward = 0
+    while not done[0]:
+      actions = np.random.randint(2, size=(num_envs,))
+      obs, rew, done, info = env.step(actions)
+      reward += rew
+    assert abs(np.mean(reward) - 1310) < 30 and abs(np.std(reward) - 78) < 15
 
 
 if __name__ == "__main__":
