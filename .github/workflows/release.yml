@@ -30,7 +30,7 @@ jobs:
     - name: Build
       run: |
         make pypi-wheel BAZELOPT="--remote_cache=http://bazel-cache.sail:8080"
-        pip3 install wheelhouse/*.whl
+        pip3 install wheelhouse/*.whl --force-reinstall
     - name: Test
       run: |
         make release-test
