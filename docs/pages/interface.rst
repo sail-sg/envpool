@@ -134,3 +134,36 @@ demonstrate this idea (``waitnum`` is the same as ``batch_size``):
 
 The synchronous step is a special case by using the above API:
 ``batch_size == num_envs``, ``id`` is always all envs' id.
+
+
+Auto Reset
+----------
+
+EnvPool enables auto-reset by default. Let's suppose an environment that has a
+``max_episode_steps = 3``. When we call ``env.step(action)`` five consecutive
+times, the following would happen:
+
+1. the first call would trigger ``env.reset()`` and return with
+   ``done = False`` and ``reward = 0``, i.e., the action will be discarded;
+2. the second call would trigger ``env.step(action)`` and elapsed step is 1;
+3. the third call would trigger ``env.step(action)`` and elapsed step is 2;
+4. the fourth call would trigger ``env.step(action)`` and elapsed step is 3.
+   At this time it returns ``done = True`` and (if using gym)
+   ``info["TimeLimit.truncated"] = True``;
+5. the fifth call would trigger ``env.reset()`` since the last episode has
+   finished, and return with ``done = False`` and ``reward = 0``, i.e., the
+   action will be discarded.
+
++---+-------------+-------------+---------+-----------------------+
+| # | User Call   | Actual      | Elapsed | Misc                  |
++===+=============+=============+=========+=======================+
+| 1 | env.step(a) | env.reset() | 0       |                       |
++---+-------------+-------------+---------+-----------------------+
+| 2 | env.step(a) | env.step(a) | 1       |                       |
++---+-------------+-------------+---------+-----------------------+
+| 3 | env.step(a) | env.step(a) | 2       |                       |
++---+-------------+-------------+---------+-----------------------+
+| 4 | env.step(a) | env.step(a) | 3       | Hit max_episode_steps |
++---+-------------+-------------+---------+-----------------------+
+| 5 | env.step(a) | env.reset() | 0       |                       |
++---+-------------+-------------+---------+-----------------------+

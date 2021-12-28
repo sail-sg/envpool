@@ -13,7 +13,16 @@
 [![GitHub forks](https://img.shields.io/github/forks/sail-sg/envpool)](https://github.com/sail-sg/envpool/network)
 [![GitHub license](https://img.shields.io/github/license/sail-sg/envpool)](https://github.com/sail-sg/envpool/blob/master/LICENSE)
 
-**EnvPool** is a C++-based batched environment pool with pybind11 and thread pool. It has high performance (\~1M raw FPS in DGX on Atari games) and compatible APIs (supports both gym and dm\_env, both sync and async, both single and multi player environment).
+**EnvPool** is a C++-based batched environment pool with pybind11 and thread pool. It has high performance (\~1M raw FPS in DGX on Atari games) and compatible APIs (supports both gym and dm\_env, both sync and async, both single and multi player environment). Currently it supports:
+
+- [x] Atari games
+- [x] Classic RL envs: CartPole, MountainCar, Pendulum, Acrobot
+- [x] Toy text RL envs: Catch, FrozenLake, Taxi, NChain, CliffWalking, Blackjack
+- [ ] ViZDoom single/multi players
+- [ ] Mujoco
+- [ ] Box2D
+- [ ] Procgen
+- [ ] Minigrid
 
 Here are EnvPool's several highlights:
 
@@ -57,14 +66,6 @@ Please refer to the [guideline](https://envpool.readthedocs.io/en/latest/pages/b
 The tutorials and API documentation are hosted on [envpool.readthedocs.io](https://envpool.readthedocs.io).
 
 The example scripts are under [examples/](https://github.com/sail-sg/envpool/tree/master/examples) folder.
-
-## Supported Environments
-
-We are in the progress of open-sourcing all available envs from our internal version. Stay tuned.
-
-- [x] Atari via ALE
-- [ ] Single/Multi players Vizdoom
-- [x] Classic RL envs, including CartPole, MountainCar, ... 
 
 ## Benchmark Results
 
