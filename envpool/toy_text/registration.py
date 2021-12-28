@@ -65,3 +65,11 @@ register(
   gym_cls="NChainGymEnvPool",
   max_episode_steps=1000,
 )
+
+register(
+  task_id="CliffWalking-v0",
+  import_path="envpool.toy_text",
+  spec_cls="CliffWalkingEnvSpec",
+  dm_cls="CliffWalkingDMEnvPool",
+  gym_cls="CliffWalkingGymEnvPool",
+)

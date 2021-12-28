@@ -64,3 +64,20 @@ The end of the chain, however, presents a large reward, and by moving
 At each action, there is a small probability that the agent 'slips' and the
 opposite transition is instead taken.
 The observed state is the current state in the chain (0 to n-1).
+
+
+CliffWalking-v0
+---------------
+
+`gym CliffWalking-v0 source code
+<https://github.com/openai/gym/blob/master/gym/envs/toy_text/cliffwalking.py>`_
+
+The board is a 4x12 matrix, with (using NumPy matrix indexing):
+
+- [3, 0] as the start at bottom-left
+- [3, 11] as the goal at bottom-right
+- [3, 1..10] as the cliff at bottom-center
+
+Each time step incurs -1 reward, and stepping into the cliff incurs -100
+reward and a reset to the start. An episode terminates when the agent reaches
+the goal.
