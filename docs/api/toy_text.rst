@@ -86,7 +86,7 @@ the goal.
 Blackjack-v1
 ------------
 
-`gym Blackjack-v0 source code
+`gym Blackjack-v1 source code
 <https://github.com/openai/gym/blob/master/gym/envs/toy_text/blackjack.py>`_
 
 Blackjack is a card game where the goal is to obtain cards that sum to as near
