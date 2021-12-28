@@ -81,3 +81,25 @@ The board is a 4x12 matrix, with (using NumPy matrix indexing):
 Each time step incurs -1 reward, and stepping into the cliff incurs -100
 reward and a reset to the start. An episode terminates when the agent reaches
 the goal.
+
+
+Blackjack-v1
+------------
+
+`gym Blackjack-v0 source code
+<https://github.com/openai/gym/blob/master/gym/envs/toy_text/blackjack.py>`_
+
+Blackjack is a card game where the goal is to obtain cards that sum to as near
+as possible to 21 without going over. They're playing against a fixed dealer.
+Face cards (Jack, Queen, King) have point value 10. Aces can either count as
+11 or 1, and it's called 'usable' at 11.
+
+This game is placed with an infinite deck (or with replacement). The game
+starts with dealer having one face up and one face down card, while player
+having two face up cards. (Virtually for all Blackjack games today). The player
+can request additional cards (hit=1) until they decide to stop (stick=0) or
+exceed 21 (bust). After the player sticks, the dealer reveals their facedown
+card, and draws until their sum is 17 or greater. If the dealer goes bust the
+player wins. If neither player nor dealer busts, the outcome (win, lose, draw)
+is decided by whose sum is closer to 21. The reward for winning is +1, drawing
+is 0, and losing is -1.

@@ -73,3 +73,13 @@ register(
   dm_cls="CliffWalkingDMEnvPool",
   gym_cls="CliffWalkingGymEnvPool",
 )
+
+register(
+  task_id="Blackjack-v1",
+  import_path="envpool.toy_text",
+  spec_cls="BlackjackEnvSpec",
+  dm_cls="BlackjackDMEnvPool",
+  gym_cls="BlackjackGymEnvPool",
+  sab=True,
+  natural=False,
+)

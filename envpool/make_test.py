@@ -50,7 +50,7 @@ class _MakeTest(absltest.TestCase):
     ]
     toytext = [
       "Catch-v0", "FrozenLake-v1", "FrozenLake8x8-v1", "Taxi-v3", "NChain-v0",
-      "CliffWalking-v0"
+      "CliffWalking-v0", "Blackjack-v1"
     ]
     for task_id in classic + toytext:
       envpool.make_spec(task_id)
