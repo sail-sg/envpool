@@ -16,12 +16,12 @@ Options
 -------
 
 * ``task_id (str)``: see available tasks below;
-* ``numenv (int)``: how many environments you would like to create;
-* ``waitnum (int)``: the expected batch size for return result, default to
-  ``numenv``;
-* ``max_thread_num (int)``: the maximum thread number for executing the actual
-  ``env.step``, default to ``min(numenv, cpu_count() - 1)``;
-* ``seed (int)``: the environment seed, default to ``0``;
+* ``num_envs (int)``: how many environments you would like to create;
+* ``batch_size (int)``: the expected batch size for return result, default to
+  ``num_envs``;
+* ``num_threads (int)``: the maximum thread number for executing the actual
+  ``env.step``, default to ``batch_size``;
+* ``seed (int)``: the environment seed, default to ``42``;
 * ``max_episode_steps (int)``: the maximum number of steps for one episode,
   default to ``2625``;
 * ``img_height (int)``: the desired observation image height, default to
@@ -60,8 +60,8 @@ Options
 .. note::
 
     EnvPool provides the default config about CIG single player game for both
-    train and eval phases at ``envpool.utils.cig_singleplayer_args`` (train)
-    and ``envpool.utils.cig_singleplayer_args_eval`` (evaluation).
+    train and eval phases at ``envpool.vizdoom.cig_singleplayer_args`` (train)
+    and ``envpool.vizdoom.cig_singleplayer_args_eval`` (evaluation).
 
 * ``reward_config (Dict[str, Tuple[float, float]])``: how to calculate the
   reward (see below), default to ``{"FRAGCOUNT": [1, -1.5], "KILLCOUNT": [1, 0],
@@ -75,6 +75,7 @@ agent training. Instead, other reward related to some game variable is very
 useful. You can pass various reward config into vizdoom env. Each item in this
 dictionary has format of ``NAME: [pos_reward, neg_reward]``. If we take
 ``HEALTH: [pos_health, neg_health]`` as an example:
+
 ::
 
     delta = current[HEALTH] - last[HEALTH]
@@ -89,7 +90,9 @@ where ``last[*]`` is the corresponding value at the last timestep.
   ``min_duration`` and ``SELECTED2 / SELECTED3 / ... / SELECTED7``, it means if
   the agent holds ``i``th weapon for at least ``min_duration`` timestep, the
   reward will be added by ``selected_weapon_reward_config[f"SELECTED{i}"]``;
-* ``delta_button_config (Dict[str, Tuple[int, float, float]])``: see :ref:`vizdoom_action_space`.
+* ``delta_button_config (Dict[str, Tuple[int, float, float]])``:see
+  :ref:`vizdoom_action_space`.
+
 
 Customized VizDoom Env
 ----------------------

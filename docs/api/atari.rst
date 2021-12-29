@@ -23,7 +23,7 @@ Options
   ``num_envs``;
 * ``num_threads (int)``: the maximum thread number for executing the actual
   ``env.step``, default to ``batch_size``;
-* ``seed (int)``: the environment seed, default to ``0``;
+* ``seed (int)``: the environment seed, default to ``42``;
 * ``max_episode_steps (int)``: the maximum number of steps for one episode,
   default to ``108000``;
 * ``img_height (int)``: the desired observation image height, default to
