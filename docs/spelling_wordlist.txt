@@ -40,3 +40,9 @@ effector
 walkable
 NChain
 facedown
+vizdoom
+args
+lmp
+timestep
+RGB
+py
