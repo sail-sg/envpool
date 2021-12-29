@@ -1,0 +1,11 @@
+--- src/posix/sdl/critsec.h
++++ src/posix/sdl/critsec.h
+@@ -6,7 +6,7 @@
+ #define CRITSEC_H
+ 
+ #include "SDL2/SDL.h"
+-#include "SDL_thread.h"
++#include "SDL2/SDL_thread.h"
+ #include "i_system.h"
+ 
+ class FCriticalSection

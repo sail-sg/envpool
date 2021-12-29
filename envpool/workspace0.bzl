@@ -160,6 +160,56 @@ def workspace():
         build_file = "//third_party/atari_roms:atari_roms.BUILD",
     )
 
+    maybe(
+        http_archive,
+        name = "libjpeg_turbo",
+        sha256 = "b3090cd37b5a8b3e4dbd30a1311b3989a894e5d3c668f14cbc6739d77c9402b7",
+        strip_prefix = "libjpeg-turbo-2.0.5",
+        urls = [
+            "https://github.com/libjpeg-turbo/libjpeg-turbo/archive/2.0.5.tar.gz",
+        ],
+        build_file = "//third_party/jpeg:jpeg.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "nasm",
+        sha256 = "63ec86477ad3f0f6292325fd89e1d93aea2e2fd490070863f17d48f7cd387011",
+        strip_prefix = "nasm-2.13.03",
+        urls = [
+            "https://cdn.sail.sea.com/sail/bazel/nasm-2.13.03.tar.bz2",
+            "https://storage.googleapis.com/mirror.tensorflow.org/www.nasm.us/pub/nasm/releasebuilds/2.13.03/nasm-2.13.03.tar.bz2",
+        ],
+        build_file = "//third_party/nasm:nasm.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "sdl2",
+        sha256 = "65be9ff6004034b5b2ce9927b5a4db1814930f169c4b2dae0a1e4697075f287b",
+        strip_prefix = "SDL2-2.0.16",
+        urls = [
+            "https://cdn.sail.sea.com/sail/bazel/SDL2-2.0.16.tar.gz",
+            "https://www.libsdl.org/release/SDL2-2.0.16.tar.gz",
+        ],
+        build_file = "//third_party/sdl2:sdl2.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "vizdoom",
+        sha256 = "1ec04a66da0f77616d31b8f052d0233070ae5f8e5da1cacfb0c45c04b18c99d6",
+        strip_prefix = "ViZDoom-1.1.11/src/vizdoom/",
+        urls = [
+            "https://github.com/mwydmuch/ViZDoom/archive/refs/tags/1.1.11.tar.gz",
+        ],
+        build_file = "//third_party/vizdoom:vizdoom.BUILD",
+        patches = [
+            "//third_party/vizdoom:st_start.patch",
+            "//third_party/vizdoom:sdl_thread.patch",
+        ],
+    )
+
     # Atari/VizDoom pretrained weight for testing pipeline
 
     maybe(
