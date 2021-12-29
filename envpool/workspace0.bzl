@@ -205,7 +205,6 @@ def workspace():
         ],
         build_file = "//third_party/vizdoom:vizdoom.BUILD",
         patches = [
-            "//third_party/vizdoom:st_start.patch",
             "//third_party/vizdoom:sdl_thread.patch",
         ],
     )
