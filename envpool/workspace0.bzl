@@ -209,6 +209,28 @@ def workspace():
         ],
     )
 
+    maybe(
+        http_archive,
+        name = "vizdoom_lib",
+        sha256 = "1ec04a66da0f77616d31b8f052d0233070ae5f8e5da1cacfb0c45c04b18c99d6",
+        strip_prefix = "ViZDoom-1.1.11/",
+        urls = [
+            "https://github.com/mwydmuch/ViZDoom/archive/refs/tags/1.1.11.tar.gz",
+        ],
+        build_file = "//third_party/vizdoom_lib:vizdoom_lib.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "vizdoom_extra_maps",
+        sha256 = "325440fe566ff478f35947c824ea5562e2735366845d36c5a0e40867b59f7d69",
+        strip_prefix = "DirectFuturePrediction-b4757769f167f1bd7fb1ece5fdc6d874409c68a9/",
+        urls = [
+            "https://github.com/isl-org/DirectFuturePrediction/archive/b4757769f167f1bd7fb1ece5fdc6d874409c68a9.zip",
+        ],
+        build_file = "//third_party/vizdoom_extra_maps:vizdoom_extra_maps.BUILD",
+    )
+
     # Atari/VizDoom pretrained weight for testing pipeline
 
     maybe(
