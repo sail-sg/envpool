@@ -37,7 +37,7 @@ Here are EnvPool's several highlights:
 - Compatible with some existing RL libraries, e.g., [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3), [Tianshou](https://github.com/thu-ml/tianshou), or [CleanRL](https://github.com/vwxyzjn/cleanrl).
   - Stable-Baselines3 [`Pendulum-v0` example](https://github.com/sail-sg/envpool/blob/master/examples/sb3_examples/ppo.py);
   - Tianshou [`CartPole` example](https://github.com/sail-sg/envpool/blob/master/examples/tianshou_examples/cartpole_ppo.py) and [`Pendulum-v0` example](https://github.com/sail-sg/envpool/blob/master/examples/tianshou_examples/pendulum_ppo.py);
-  - CleanRL [`Pong-v5` example](https://github.com/sail-sg/envpool/blob/master/examples/cleanrl_examples/ppo_atari_envpool.py) (solving Pong in 5 mins ([tracked experiment](https://wandb.ai/costa-huang/cleanRL/runs/3rx432mj)));
+  - CleanRL [`Pong-v5` example](https://github.com/sail-sg/envpool/blob/master/examples/cleanrl_examples/ppo_atari_envpool.py) (solving Pong in 5 mins ([tracked experiment](https://wandb.ai/costa-huang/cleanRL/runs/opk2dmta)));
 
 ## Installation
 
