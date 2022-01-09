@@ -24,15 +24,6 @@ genrule(
     cmd = "mkdir -p $(OUTS) && cp $(SRCS) $(OUTS)",
 )
 
-'''
-genrule(
-    name = "gen_vizdoom_lib",
-    srcs = ["@vizdoom_lib//:vizdoom_lib"],
-    outs = ["lib"],
-    cmd = "cp -r $(SRCS) $(OUTS)",
-)
-'''
-
 py_library(
     name = "atari_network",
     srcs = ["atari_network.py"],
