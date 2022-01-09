@@ -24,6 +24,24 @@ genrule(
     cmd = "mkdir -p $(OUTS) && cp $(SRCS) $(OUTS)",
 )
 
+cc_library(
+    name = "utils",
+    hdrs = ["utils.h"],
+    deps = [
+        "@vizdoom_lib",
+    ],
+)
+
+cc_library(
+    name = "vizdoom_env",
+    hdrs = ["vizdoom_env.h"],
+    deps = [
+        ":utils",
+        "//envpool/core:async_envpool",
+        "//envpool/utils:image_process",
+    ],
+)
+
 py_library(
     name = "atari_network",
     srcs = ["atari_network.py"],

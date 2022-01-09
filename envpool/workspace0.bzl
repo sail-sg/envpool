@@ -197,6 +197,30 @@ def workspace():
 
     maybe(
         http_archive,
+        name = "com_github_nelhage_rules_boost",
+        sha256 = "b3cbdceaa95b8cfe3a69ff37f8ad0e53a77937433234f6b9a6add2eff5bde333",
+        strip_prefix = "rules_boost-1e3a69bf2d5cd10c34b74f066054cd335d033d71",
+        urls = [
+            "https://github.com/nelhage/rules_boost/archive/1e3a69bf2d5cd10c34b74f066054cd335d033d71.tar.gz",
+        ],
+    )
+
+    maybe(
+        http_archive,
+        name = "boost",
+        build_file = "@com_github_nelhage_rules_boost//:BUILD.boost",
+        patch_cmds = ["rm -f doc/pdf/BUILD"],
+        sha256 = "d73a8da01e8bf8c7eda40b4c84915071a8c8a0df4a6734537ddde4a8580524ee",
+        strip_prefix = "boost_1_71_0",
+        urls = [
+            "https://cdn.sail.sea.com/sail/bazel/boost_1_71_0.tar.bz2",
+            "https://mirror.bazel.build/dl.bintray.com/boostorg/release/1.71.0/source/boost_1_71_0.tar.bz2",
+            "https://dl.bintray.com/boostorg/release/1.71.0/source/boost_1_71_0.tar.bz2",
+        ],
+    )
+
+    maybe(
+        http_archive,
         name = "vizdoom",
         sha256 = "1ec04a66da0f77616d31b8f052d0233070ae5f8e5da1cacfb0c45c04b18c99d6",
         strip_prefix = "ViZDoom-1.1.11/src/vizdoom/",

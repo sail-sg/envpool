@@ -19,6 +19,7 @@ load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_depende
 load("@mypy_integration//repositories:repositories.bzl", mypy_integration_repositories = "repositories")
 load("@mypy_integration//repositories:deps.bzl", mypy_integration_deps = "deps")
 load("@mypy_integration//:config.bzl", "mypy_configuration")
+load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
 
 def workspace():
     """Configure pip requirements and mypy integration."""
@@ -35,5 +36,7 @@ def workspace():
 
     if "mypy_integration_config" not in native.existing_rules().keys():
         mypy_configuration("@envpool//third_party/mypy:mypy.ini")
+
+    boost_deps()
 
 workspace1 = workspace
