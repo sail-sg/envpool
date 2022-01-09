@@ -1,3 +1,4 @@
+# flake8: noqa
 import argparse
 import os
 import random
@@ -12,7 +13,6 @@ import torch.optim as optim
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 import envpool
-from collections import deque
 
 
 def parse_args():
