@@ -34,7 +34,10 @@ Here are EnvPool's several highlights:
 - **1 Million** Atari frames per second simulation with 256 CPU cores, **~13x** throughput of Python subprocess-based vector env;
 - **~3x** throughput of Python subprocess-based vector env on low resource setup like 12 CPU cores;
 - Comparing with existing GPU-based solution ([Brax](https://github.com/google/brax) / [Isaac-gym](https://developer.nvidia.com/isaac-gym)), EnvPool is a **general** solution for various kinds of speeding-up RL environment parallelization;
-- Compatible with some existing RL libraries, e.g., [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3) or [Tianshou](https://github.com/thu-ml/tianshou).
+- Compatible with some existing RL libraries, e.g., [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3), [Tianshou](https://github.com/thu-ml/tianshou), or [CleanRL](https://github.com/vwxyzjn/cleanrl).
+  - Stable-Baselines3 [`Pendulum-v0` example](https://github.com/sail-sg/envpool/blob/master/examples/sb3_examples/ppo.py);
+  - Tianshou [`CartPole` example](https://github.com/sail-sg/envpool/blob/master/examples/tianshou_examples/cartpole_ppo.py) and [`Pendulum-v0` example](https://github.com/sail-sg/envpool/blob/master/examples/tianshou_examples/pendulum_ppo.py);
+  - CleanRL [`Pong-v5` example](https://github.com/sail-sg/envpool/blob/master/examples/cleanrl_examples/ppo_atari_envpool.py) (solving Pong in 10 mins ([tracked experiment](https://wandb.ai/costa-huang/cleanRL/runs/3rx432mj)));
 
 ## Installation
 
