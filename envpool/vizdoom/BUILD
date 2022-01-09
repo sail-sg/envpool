@@ -42,15 +42,6 @@ cc_library(
     ],
 )
 
-py_library(
-    name = "atari_network",
-    srcs = ["atari_network.py"],
-    deps = [
-        requirement("numpy"),
-        requirement("torch"),
-    ],
-)
-
 py_test(
     name = "vizdoom_test",
     srcs = ["vizdoom_test.py"],
@@ -59,7 +50,7 @@ py_test(
         ":gen_vizdoom_maps",
     ],
     deps = [
-        ":atari_network",
+        "//envpool/atari:atari_network",
         requirement("numpy"),
         requirement("absl-py"),
         requirement("tianshou"),

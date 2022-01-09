@@ -9,7 +9,7 @@ jinja2
 numpy
 opencv-python-headless
 scipy
-setuptools
+setuptools<=59.5
 six
 tensorboard
 tianshou

@@ -14,6 +14,7 @@
 """Unit tests for vizdoom environments."""
 
 from absl.testing import absltest
+# import envpool.atari.atari_network
 
 if __name__ == "__main__":
   absltest.main()
