@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Solve Pong in about 5 mins by PPO:
+https://github.com/vwxyzjn/cleanrl/pull/100
+CleanRL: Solve Pong in about 5 mins by PPO:
 
 python3 ppo_atari_envpool.py --clip-coef=0.2 --num-envs=16 \
   --num-minibatches=8 --num-steps=128 --update-epochs=3
