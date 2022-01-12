@@ -198,17 +198,9 @@ class AtariEnv : public Env<AtariEnvSpec> {
         }
       }
     }
-    state["info:reward"_] = reward;
     // push the maxpool outcome to the stack_buf
     PushStack(false, skip_id == 0);
     ++elapsed_step_;
-    if (reward_clip_) {
-      if (reward > 0) {
-        reward = 1;
-      } else if (reward < 0) {
-        reward = -1;
-      }
-    }
     done_ |= (elapsed_step_ >= max_episode_steps_);
     if (episodic_life_ && env_->lives() < lives_) {
       done_ = true;
@@ -218,6 +210,14 @@ class AtariEnv : public Env<AtariEnvSpec> {
       state["discount"_] = 1.0f * (lives_ == env_->lives() && !done_);
     } else {
       state["discount"_] = 1.0f - done_;
+    }
+    state["info:reward"_] = reward;
+    if (reward_clip_) {
+      if (reward > 0) {
+        reward = 1;
+      } else if (reward < 0) {
+        reward = -1;
+      }
     }
     state["reward"_] = reward;
     state["info:lives"_] = lives_ = env_->lives();
