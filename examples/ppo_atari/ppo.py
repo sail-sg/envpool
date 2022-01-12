@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import argparse
-from typing import Any, Dict, Optional, Tuple, Type
+from typing import Any, Dict, Tuple, Type
 
 import numpy as np
 import torch
@@ -154,7 +154,8 @@ class DiscretePPO:
         clip_loss = -torch.min(surr1, surr2).mean()
         vf_loss = (returns[i] - b_value.flatten()).pow(2).mean()
         ent_loss = b_dist.entropy().mean()
-        loss = clip_loss + self.config.vf_coef * vf_loss - self.config.ent_coef * ent_loss
+        loss = clip_loss + self.config.vf_coef * vf_loss \
+          - self.config.ent_coef * ent_loss
         # update param
         self.optim.zero_grad()
         loss.backward()
@@ -226,7 +227,7 @@ class Actor:
       ) as t:
         while t.n < self.config.step_per_epoch:
           # collect
-          for i in range(self.config.step_per_collect // self.config.waitnum):
+          for _ in range(self.config.step_per_collect // self.config.waitnum):
             obs, rew, done, info = self.train_envs.recv()
             env_id = info["env_id"]
             obs = torch.tensor(obs, device="cuda")

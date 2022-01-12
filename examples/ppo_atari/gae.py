@@ -40,8 +40,8 @@ def compute_gae(
   adv = np.zeros((T, B))
   for t in range(T - 1, -1, -1):
     eid = env_id[t]
-    adv[t] = delta[t] + gamma * value_tp1[eid] * (1 - done[t]
-                                                 ) + mask[t] * gae_tp1[eid]
+    adv[t] = delta[t] + gamma * value_tp1[eid] * (1 - done[t]) \
+      + mask[t] * gae_tp1[eid]
     mask[t] = (done[t] | (index_tp1[eid] != -1))
     gae_tp1[eid] = adv[t]
     value_tp1[eid] = value[t]
