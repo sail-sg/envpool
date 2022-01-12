@@ -36,8 +36,9 @@ void _build_action_set(
   if (cur_id == 43) {
     // get full action set, move to result
     vzd_act_t current_result_vec;
-    for (int i = 0; i < button_num; ++i)
+    for (int i = 0; i < button_num; ++i) {
       current_result_vec.push_back(current_result[i]);
+    }
     result.push_back(current_result_vec);
   } else if (38 <= cur_id && cur_id <= 42) {
     // delta button, parse delta_config
@@ -61,13 +62,14 @@ void _build_action_set(
     _build_action_set(button_num, delta_config, button_index, force_speed, 31,
                       current_result, result);
     // select one weapon
-    for (int i = 21; i <= 30; ++i)
+    for (int i = 21; i <= 30; ++i) {
       if (button_index[i] != -1) {
         current_result[button_index[i]] = 1;
         _build_action_set(button_num, delta_config, button_index, force_speed,
                           31, current_result, result);
         current_result[button_index[i]] = 0;
       }
+    }
   } else if ((cur_id == 10 || cur_id == 12 || cur_id == 14 || cur_id == 16 ||
               cur_id == 18 || cur_id == 31 || cur_id == 35) &&
              (button_index[cur_id] != -1 && button_index[cur_id + 1] != -1)) {
@@ -113,14 +115,16 @@ void _build_action_set(
 }
 
 std::vector<vzd_act_t> build_action_set(
-    std::vector<vzd::Button> button_list, bool force_speed,
+    std::vector<Button> button_list, bool force_speed,
     std::vector<std::tuple<int, float, float>> delta_config) {
   std::vector<vzd_act_t> result;
   int button_index[43];
   double current_result[43];
   memset(button_index, -1, sizeof(button_index));
   memset(current_result, 0, sizeof(current_result));
-  for (int i = 0; i < button_list.size(); ++i) button_index[button_list[i]] = i;
+  for (int i = 0; i < button_list.size(); ++i) {
+    button_index[button_list[i]] = i;
+  }
   _build_action_set(button_list.size(), delta_config, button_index, force_speed,
                     0, current_result, result);
   return result;
@@ -172,7 +176,7 @@ std::vector<std::string> _button_string_list({
     "MOVE_UP_DOWN_DELTA",
 });
 
-std::string button2str(vzd::Button b) {
+std::string button2str(Button b) {
   assert(b >= 0 && b < _button_string_list.size());
   return _button_string_list[b];
 }
@@ -180,8 +184,9 @@ std::string button2str(vzd::Button b) {
 int str2button(std::string s) {
   auto result =
       std::find(_button_string_list.begin(), _button_string_list.end(), s);
-  if (result != _button_string_list.end())
+  if (result != _button_string_list.end()) {
     return result - _button_string_list.begin();
+  }
   return -1;
 }
 
@@ -320,14 +325,16 @@ std::vector<std::string> _gv_string_list({
     "USER60",
 });
 
-std::string gv2str(vzd::GameVariable gv) {
+std::string gv2str(GameVariable gv) {
   assert(gv >= 0 && gv < _gv_string_list.size());
   return _gv_string_list[gv];
 }
 
 int str2gv(std::string s) {
   auto result = std::find(_gv_string_list.begin(), _gv_string_list.end(), s);
-  if (result != _gv_string_list.end()) return result - _gv_string_list.begin();
+  if (result != _gv_string_list.end()) {
+    return result - _gv_string_list.begin();
+  }
   return -1;
 }
 
