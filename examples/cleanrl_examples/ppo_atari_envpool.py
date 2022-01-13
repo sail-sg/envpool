@@ -109,7 +109,8 @@ def parse_args():
     default=False,
     nargs="?",
     const=True,
-    help="weather to capture videos of the agent performances (check out `videos` folder)"
+    help="weather to capture videos of the agent performances "
+    "(check out `videos` folder)"
   )
 
   # Algorithm specific arguments
@@ -131,7 +132,7 @@ def parse_args():
     default=True,
     nargs="?",
     const=True,
-    help="Toggle learning rate annealing for policy and value networks"
+    help="toggle learning rate annealing for policy and value networks"
   )
   parser.add_argument(
     "--gae",
@@ -139,7 +140,7 @@ def parse_args():
     default=True,
     nargs="?",
     const=True,
-    help="Use GAE for advantage computation"
+    help="use GAE for advantage computation"
   )
   parser.add_argument(
     "--gamma", type=float, default=0.99, help="the discount factor gamma"
@@ -168,7 +169,7 @@ def parse_args():
     default=True,
     nargs="?",
     const=True,
-    help="Toggles advantages normalization"
+    help="toggle advantages normalization"
   )
   parser.add_argument(
     "--clip-coef",
@@ -182,7 +183,8 @@ def parse_args():
     default=True,
     nargs="?",
     const=True,
-    help="Toggles whether or not to use a clipped loss for the value function, as per the paper."
+    help="toggle whether or not to use a clipped loss "
+    "for the value function, as per the paper."
   )
   parser.add_argument(
     "--ent-coef", type=float, default=0.01, help="coefficient of the entropy"
@@ -260,7 +262,7 @@ class RecordEpisodeStatistics(gym.Wrapper):
     )
 
 
-def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
+def layer_init(layer, std=2**0.5, bias_const=0.0):
   torch.nn.init.orthogonal_(layer.weight, std)
   torch.nn.init.constant_(layer.bias, bias_const)
   return layer
@@ -424,9 +426,8 @@ if __name__ == "__main__":
             nextvalues = values[t + 1]
           delta = rewards[
             t] + args.gamma * nextvalues * nextnonterminal - values[t]
-          advantages[
-            t
-          ] = lastgaelam = delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam
+          advantages[t] = lastgaelam = \
+            delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam
         returns = advantages + values
       else:
         returns = torch.zeros_like(rewards).to(device)
@@ -451,7 +452,7 @@ if __name__ == "__main__":
     # Optimizing the policy and value network
     b_inds = np.arange(args.batch_size)
     clipfracs = []
-    for epoch in range(args.update_epochs):
+    for _epoch in range(args.update_epochs):
       np.random.shuffle(b_inds)
       for start in range(0, args.batch_size, args.minibatch_size):
         end = start + args.minibatch_size
