@@ -109,7 +109,7 @@ def parse_args():
     default=False,
     nargs="?",
     const=True,
-    help="weather to capture videos of the agent performances "
+    help="whether to capture videos of the agent performances "
     "(check out `videos` folder)"
   )
 
