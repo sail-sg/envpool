@@ -94,7 +94,7 @@ def parse_args():
   parser.add_argument(
     "--wandb-project-name",
     type=str,
-    default="ppo-implementation-details",
+    default="cleanRL",
     help="the wandb's project name"
   )
   parser.add_argument(
