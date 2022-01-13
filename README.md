@@ -184,8 +184,16 @@ We do not include their source code and data in this repo.
 
 If you find EnvPool useful, please cite it in your publications.
 
-[Coming soon!]
-
+```
+@misc{envpool,
+  author = {Jiayi Weng, Min Lin, Zhongwen Xu, Shuicheng Yan},
+  title = {EnvPool},
+  year = {2021},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/sail-sg/envpool}},
+}
+```
 
 ## Disclaimer
 
