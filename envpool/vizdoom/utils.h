@@ -114,7 +114,7 @@ void _build_action_set(
   }
 }
 
-std::vector<vzd_act_t> build_action_set(
+std::vector<vzd_act_t> BuildActionSet(
     std::vector<Button> button_list, bool force_speed,
     std::vector<std::tuple<int, float, float>> delta_config) {
   std::vector<vzd_act_t> result;

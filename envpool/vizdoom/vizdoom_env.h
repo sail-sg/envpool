@@ -14,8 +14,16 @@
  * limitations under the License.
  */
 
-#ifndef ENVPOOL_VIZDOOM_ENGINE_H_
-#define ENVPOOL_VIZDOOM_ENGINE_H_
+#ifndef ENVPOOL_VIZDOOM_VIZDOOM_ENV_H_
+#define ENVPOOL_VIZDOOM_VIZDOOM_ENV_H_
+
+#include <deque>
+#include <map>
+#include <memory>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/utils/image_process.h"
@@ -30,7 +38,8 @@ class VizdoomEnvFns {
         "max_episode_steps"_.bind(525), "img_height"_.bind(84),
         "img_width"_.bind(84), "stack_num"_.bind(4), "frame_skip"_.bind(4),
         "lmp_save_dir"_.bind(std::string("")), "episodic_life"_.bind(false),
-        "zero_discount_on_life_loss"_.bind(false),
+        "force_speed"_.bind(false), "use_raw_action"_.bind(true),
+        "use_inter_area_resize"_.bind(true),
         "reward_config"_.bind(std::map<std::string, std::tuple<float, float>>(
             {{'FRAGCOUNT', {1, -1.5}},         {'KILLCOUNT', {1, 0}},
              {'DEATHCOUNT', {-0.75, 0.75}},    {'HITCOUNT', {0.01, -0.01}},
@@ -58,97 +67,127 @@ class VizdoomEnvFns {
             std::map<std::string, std::tuple<int, float, float>>()),
         "cfg_path"_.bind(std::string("")), "wad_path"_.bind(std::string("")),
         "iwad_path"_.bind(std::string("freedoom2")),
+        "game_args"_.bind(std::string("")),
         "map_id"_.bind(std::string("map01")));
   }
   template <typename Config>
-  static decltype(auto) StateSpec(const config& conf) {
-    return MakeDict("obs"_.bind(Spec<uint8_t>()),
-                    "discount"_.bind(Spec<float>({-1}, {0.0f, 1.0f})),
-                    );
+  static decltype(auto) StateSpec(const Config& conf) {
+    DoomGame dg;
+    dg.loadConfig(conf["cfg_path"_]);
+    return MakeDict(
+        "obs"_.bind(Spec<uint8_t>({conf["stack_num"_] * dg_.getScreenChannels(),
+                                   conf["img_height"_], conf["img_width"_]},
+                                  {0, 255})),
+        "discount"_.bind(Spec<float>({-1}, {0.0f, 1.0f})),
+        "info:AMMO2"_.bind(0.0f), "info:AMMO3"_.bind(0.0f),
+        "info:AMMO4"_.bind(0.0f), "info:AMMO5"_.bind(0.0f),
+        "info:AMMO6"_.bind(0.0f), "info:AMMO7"_.bind(0.0f),
+        "info:ARMOR"_.bind(0.0f), "info:DAMAGECOUNT"_.bind(0.0f),
+        "info:DEATHCOUNT"_.bind(0.0f), "info:FRAGCOUNT"_.bind(0.0f),
+        "info:HEALTH"_.bind(0.0f), "info:HITCOUNT"_.bind(0.0f),
+        "info:KILLCOUNT"_.bind(0.0f), "info:SELECTED_WEAPON"_.bind(0.0f),
+        "info:SELECTED_WEAPON_AMMO"_.bind(0.0f), "info:USER2"_.bind(0.0f));
+  }
+  template <typename Config>
+  static decltype(auto) ActionSpec(const Config& conf) {
+    DoomGame dg;
+    dg.loadConfig(conf["cfg_path"_]);
+    if (conf["use_raw_action"_]) {
+      return MakeDict(
+          "action"_.bind(Spec<double>({-1, dg.getAvailableButtons().size()})));
+    } else {
+      auto button_list = dg->getAvailableButtons();
+      std::vector<std::tuple<int, float, float>> delta_config(
+          _button_string_list.size());
+      for (auto& i : conf["delta_button_config"_]) {
+        int button_index = str2button(i.first);
+        if (button_index != -1) {
+          delta_config[button_index] = i.second;
+        }
+      }
+      auto action_set =
+          BuildActionSet(button_list, conf["force_speed"_], delta_config);
+      return MakeDict(
+          "action"_.bind(Spec<double>({-1}, {0.0f, action_set.size() - 1.0f})));
+    }
   }
 };
 
-class VizdoomEnv {
+typedef class EnvSpec<VizdoomEnvFns> VizdoomEnvSpec;
+typedef Spec<uint8_t> FrameSpec;
+
+class VizdoomEnv : public Env<VizdoomEnvSpec> {
+  const std::vector<int> kInfoIndex({0, 3, 4, 5, 7, 9, 10, 15, 16, 19, 20, 21,
+                                     22, 23, 24, 73});
+  // ({"AMMO2", "AMMO3", "AMMO4", "AMMO5", "AMMO6", "AMMO7", "ARMOR",
+  //   "DAMAGECOUNT", "DEATHCOUNT", "FRAGCOUNT", "HEALTH", "HITCOUNT",
+  //   "KILLCOUNT", "SELECTED_WEAPON", "SELECTED_WEAPON_AMMO", "USER2"});
+
  protected:
-  int raw_height_, raw_width_, raw_channel_, channel_, has_depth_;
+  std::unique_ptr<DoomGame> dg_;
+  FrameSpec raw_spec_, resize_spec_;
+  Array raw_buf_;
   std::deque<Array> stack_buf_;
   std::string lmp_dir_;
-  bool save_lmp_, episodic_life_, use_raw_action_;
-  int stack_num_, frame_skip_, episode_count_;
-  int elapsed_step_, max_episode_steps_;
-  int height_, width_, screen_size_;
+  bool save_lmp_, episodic_life_, use_raw_action_, use_inter_area_resize_;
+  bool done_;
+  int max_episode_steps_, elapsed_step_, stack_num_, frame_skip_,
+      episode_count_, channel_;
   int deathcount_idx_, hitcount_idx_, damagecount_idx_;  // bugged var
   double last_deathcount_, last_hitcount_, last_damagecount_;
   int selected_weapon_, selected_weapon_count_, weapon_duration_;
   std::vector<vzd_act_t> action_set_;
   std::vector<Button> button_list_;
   std::vector<GameVariable> gv_list_;
-  std::vector<std::string> button_name_, gv_name_;
   std::vector<double> gvs_, last_gvs_, pos_reward_, neg_reward_, weapon_reward_;
 
  public:
-  std::unique_ptr<DoomGame> dg_;
-  bool done_;
-
-  VizdoomEnv(
-      int seed, int env_id, int max_episode_steps, int stack_num,
-      int frame_skip, bool episodic_life, bool use_raw_action, bool force_speed,
-      int height, int width,
-      std::map<std::string, std::tuple<float, float>> reward_config,
-      std::map<std::string, float> weapon_config,
-      std::map<std::string, std::tuple<int, float, float>> delta_button_config,
-      std::string cfg_path, std::string wad_path, std::string vzd_path,
-      std::string iwad_path, std::string map_id, std::string game_args,
-      std::string lmp_save_dir)
-      : height_(height),
-        width_(width),
-        max_episode_steps_(max_episode_steps),
-        elapsed_step_(max_episode_steps + 1),
-        stack_num_(stack_num),
-        frame_skip_(frame_skip),
-        episodic_life_(episodic_life),
-        use_raw_action_(use_raw_action),
-        save_lmp_(lmp_save_dir.length() > 0),
-        episode_count_(0),
-        lmp_dir_(lmp_save_dir),
-        last_damagecount_(0),
-        last_hitcount_(0),
-        last_deathcount_(0),
-        weapon_duration_(5),
-        weapon_reward_(10),
+  VizdoomEnv(const Spec& spec, int env_id)
+      : Env<VizdoomEnvSpec>(spec, env_id),
         dg_(new DoomGame()),
-        done_(true) {
+        lmp_dir_(spec.config["lmp_save_dir"_]),
+        save_lmp_(lmp_dir_.length() > 0),
+        episodic_life_(spec.config["episodic_life"_]),
+        zero_discount_on_life_loss_(spec.config["zero_discount_on_life_loss"_]),
+        use_raw_action_(spec.config["use_raw_action"_]),
+        use_inter_area_resize_(spec.config["use_inter_area_resize"_]),
+        done_(true),
+        max_episode_steps_(spec.config["max_episode_steps"_]),
+        elapsed_step_(max_episode_steps_ + 1),
+        stack_num_(spec.config["stack_num"_]),
+        frame_skip_(spec.config["frame_skip"_]),
+        episode_count_(0),
+        last_deathcount_(0),
+        last_hitcount_(0),
+        last_damagecount_(0),
+        weapon_duration_(5),
+        weapon_reward_(10) {
     if (save_lmp_) {
-      lmp_dir_ = lmp_save_dir + "/episode_" + std::to_string(env_id) + "_";
+      lmp_dir_ = lmp_save_dir + "/env_" + std::to_string(env_id) + "_";
     }
-    dg_->setViZDoomPath(vzd_path);
-    dg_->setDoomGamePath(iwad_path);
-    dg_->loadConfig(cfg_path);
+    dg_->setViZDoomPath(spec.config["vzd_path"_]);
+    dg_->setDoomGamePath(spec.config["iwad_path"_]);
+    dg_->loadConfig(spec.config["cfg_path"_]);
     dg_->setWindowVisible(false);
-    dg_->addGameArgs(game_args);
+    dg_->addGameArgs(spec.config["game_args"]);
     dg_->setMode(PLAYER);
-    dg_->setEpisodeTimeout((max_episode_steps + 1) * frame_skip);
-    if (wad_path.size()) {
-      dg_->setDoomScenarioPath(wad_path);
+    dg_->setEpisodeTimeout((max_episode_steps_ + 1) * frame_skip_);
+    if (spec.config["wad_path"_].size()) {
+      dg_->setDoomScenarioPath(spec.config["wad_path"_]);
     }
-    dg_->setSeed(seed);
-    dg_->setDoomMap(map_id);
+    dg_->setSeed(spec.config["seed"_]);
+    dg_->setDoomMap(spec.config["map_id"_]);
 
-    has_depth_ = dg_->isDepthBufferEnabled();
-    raw_height_ = dg_->getScreenHeight();
-    raw_width_ = dg_->getScreenWidth();
-    raw_channel_ = dg_->getScreenChannels();
-    channel_ = raw_channel_ + has_depth_;
-    screen_size_ = width_ * height_ * channel_;
-
+    channel_ = dg_->getScreenChannels();
+    raw_spec_ = FrameSpec({dg_->getScreenHeight(), dg_->getScreenWidth(), 1});
+    raw_buf_ = Array(raw_spec_);
+    resize_spec_ = FrameSpec(
+        {channel_, spec.config["img_height"_], spec.config["img_width"_]});
     for (int i = 0; i < stack_num_; ++i) {
-      stack_buf_.push_back(Array(Spec<uint8_t>({channel_, width_, height_})));
+      stack_buf_.push_back(Array(resize_spec_));
     }
 
     gv_list_ = dg_->getAvailableGameVariables();
-    for (GameVariable gv : gv_list_) {
-      gv_name_.push_back(gv2str(gv));
-    }
     // handle buggy DEATHCOUNT/HITCOUNT/DAMAGECOUNT in multi-player setting
     auto result = std::find(gv_list_.begin(), gv_list_.end(), DEATHCOUNT);
     if (result == gv_list_.end()) {
@@ -170,23 +209,21 @@ class VizdoomEnv {
     }
 
     button_list_ = dg_->getAvailableButtons();
-    for (Button b : button_list_) {
-      button_name_.push_back(button2str(b));
-    }
     std::vector<std::tuple<int, float, float>> delta_config(
         _button_string_list.size());
-    for (auto& i : delta_button_config) {
+    for (auto& i : spec.config["delta_button_config"_]) {
       int button_index = str2button(i.first);
       if (button_index != -1) {
         delta_config[button_index] = i.second;
       }
     }
-    action_set = build_action_set(button_list_, force_speed, delta_config);
+    action_set_ =
+        BuildActionSet(button_list_, spec.config["force_speed"_], delta_config);
 
     // reward config
     pos_reward_.resize(gv_list_.size(), 0.0);
     neg_reward_.resize(gv_list_.size(), 0.0);
-    for (auto& i : reward_config) {
+    for (auto& i : spec.config["reward_config"_]) {
       int gv_index = str2gv(i.first);
       if (gv_index == -1) {
         continue;
@@ -200,71 +237,53 @@ class VizdoomEnv {
       neg_reward_[index] = std::get<1>(i.second);
     }
     // weapon reward config
+    auto& weapon_config = spec.config["weapon_config"_];
     if (weapon_config.contains("min_duration")) {
       weapon_duration_ = weapon_config["min_duration"];
     }
     for (int i = 0; i < 8; ++i) {
       std::string key = "SELECTED" + std::to_string(i);
-      if (weapon_config.contains(key)) weapon_reward_[i] = weapon_config[key];
+      if (weapon_config.contains(key)) {
+        weapon_reward_[i] = weapon_config[key];
+      }
     }
   }
 
-  ~VizdoomEnv() { close(); }
+  ~VizdoomEnv() { dg_->close(); }
 
-  void NewEpisode() {
-    elapsed_step_ = 0;
-    if (episode_count_ == 0) {  // NewEpisode at beginning may hang on MAEnv
-      return;
-    }
-    if (save_lmp_) {
-      dg_->newEpisode(lmp_dir_ + std::to_string(episode_count_) + ".lmp");
-    } else {
-      dg_->newEpisode();
-    }
-  }
-
-  void ResetMeta() {
-    done_ = false;
-    ++episode_count_;
-    ResetBuffer();
-    GetState(true);
-  }
-
-  void Reset() {
+  void Reset() override {
     if (dg_->isEpisodeFinished() || elapsed_step_ >= max_episode_steps_) {
-      NewEpisode();
+      elapsed_step_ = 0;
+      if (episode_count_ > 0) {  // NewEpisode at beginning may hang on MAEnv
+        if (save_lmp_) {
+          dg_->newEpisode(lmp_dir_ + std::to_string(episode_count_) + ".lmp");
+        } else {
+          dg_->newEpisode();
+        }
+      }
     } else {
       ++elapsed_step_;
       dg_->makeAction(action_set_[0], frame_skip_);
     }
-    ResetMeta();
+    done_ = false;
+    ++episode_count_;
+    GetState(true);
   }
 
-  // for multiplayer usecase
-  void SetAction(vzd_act_t act) { current_act_ = act; }
-
-  void StepBefore() { dg_->setAction(current_act_); }
-
-  void StepAfter() {
-    this->reward = 0.0;
-    ++elapsed_step;
-    done = (dg_->isEpisodeFinished() | (elapsed_step_ >= max_episode_steps_));
+  void Step(const Action& action) override {
+    double* ptr = static_cast<double*>(action["action"_].data());
+    if (use_raw_action_) {
+      dg_->setAction(std::vector<double>(ptr, ptr + button_list_.size()));
+    } else {
+      dg_->setAction(action_set_[static_cast<int>(ptr[0])]);
+    }
+    dg_->advanceAction(frame_skip_, true);
+    ++elapsed_step_;
+    done_ = (dg_->isEpisodeFinished() | (elapsed_step_ >= max_episode_steps_));
     if (episodic_life_ && dg_->isPlayerDead()) {
       done_ = true;
     }
     GetState(false);
-  }
-
-  void Step() {
-    StepBefore();
-    dg_->advanceAction(frame_skip_, true);
-    StepAfter();
-  }
-
-  void ResetBuffer() {
-    for (frame_t& buf_ptr : stack_buf) {
-      memset(buf_ptr.get(), 0, sizeof(obs_t) * screen_size);
-    }
   }
 
   void GetState(bool is_reset) {
@@ -273,124 +292,119 @@ class VizdoomEnv {
       return;
     }
 
-    // stack[:-1] = stack[1:]
-    stack_buf_.push_back(std::move(stack_buf_.front()));
-    stack_buf_.pop_front();
-
     // game variables and reward
     if (is_reset) {
-      last_gvs = state->gameVariables;
-      selected_weapon = -1;
-      selected_weapon_count = 0;
+      last_gvs_ = state->gameVariables;
+      selected_weapon_ = -1;
+      selected_weapon_count_ = 0;
     } else {
-      last_gvs = gvs;
+      last_gvs_ = gvs_;
     }
-    gvs = state->gameVariables;
+    gvs_ = state->gameVariables;
 
     // some variables don't get reset to zero on game.newEpisode().
     // see https://github.com/mwydmuch/ViZDoom/issues/399
-    if (hitcount_idx >= 0) {
+    if (hitcount_idx_ >= 0) {
       if (is_reset) {
-        last_hitcount = gvs[hitcount_idx];
-        last_gvs[hitcount_idx] = 0;
+        last_hitcount_ = gvs_[hitcount_idx];
+        last_gvs_[hitcount_idx] = 0;
       }
-      gvs[hitcount_idx] -= last_hitcount;
+      gvs_[hitcount_idx] -= last_hitcount_;
     }
-    if (damagecount_idx >= 0) {
+    if (damagecount_idx_ >= 0) {
       if (is_reset) {
-        last_damagecount = gvs[damagecount_idx];
-        last_gvs[damagecount_idx] = 0;
+        last_damagecount_ = gvs_[damagecount_idx];
+        last_gvs_[damagecount_idx] = 0;
       }
-      gvs[damagecount_idx] -= last_damagecount;
+      gvs_[damagecount_idx] -= last_damagecount_;
     }
-    if (deathcount_idx >= 0) {
+    if (deathcount_idx_ >= 0) {
       if (is_reset) {
-        last_deathcount = gvs[deathcount_idx];
-        last_gvs[deathcount_idx] = 0;
+        last_deathcount_ = gvs_[deathcount_idx];
+        last_gvs_[deathcount_idx] = 0;
       }
-      gvs[deathcount_idx] -= last_deathcount;
+      gvs_[deathcount_idx] -= last_deathcount_;
     }
 
     int curr_weapon = -1, curr_weapon_ammo = 0;
+    float reward = 0.0f;
 
-    for (int i = 0; i < gvs.size(); ++i) {
-      double delta = gvs[i] - last_gvs[i];
+    for (int i = 0; i < gvs_.size(); ++i) {
+      double delta = gvs_[i] - last_gvs_[i];
       // without this we reward using BFG and shotguns too much
-      if (gv_list[i] == DAMAGECOUNT && delta >= 200) {
+      if (gv_list_[i] == DAMAGECOUNT && delta >= 200) {
         delta = 200;
-      } else if (gv_list[i] == HITCOUNT && delta >= 5) {
+      } else if (gv_list_[i] == HITCOUNT && delta >= 5) {
         delta = 5;
-      } else if (gv_list[i] == SELECTED_WEAPON) {
-        curr_weapon = gvs[i];
-      } else if (gv_list[i] == SELECTED_WEAPON_AMMO) {
-        curr_weapon_ammo = gvs[i];
-      } else if (gv_list[i] == HEALTH) {  // NOLINT
+      } else if (gv_list_[i] == SELECTED_WEAPON) {
+        curr_weapon = gvs_[i];
+      } else if (gv_list_[i] == SELECTED_WEAPON_AMMO) {
+        curr_weapon_ammo = gvs_[i];
+      } else if (gv_list_[i] == HEALTH) {  // NOLINT
         // HEALTH -999900: https://github.com/mwydmuch/ViZDoom/issues/202
-        if (last_gvs[i] < 0 && gvs[i] < 0) {
-          last_gvs[i] = gvs[i] = 100;
-        } else if (gvs[i] < 0) {
-          gvs[i] = last_gvs[i];
-        } else if (last_gvs[i] < 0) {
-          last_gvs[i] = gvs[i];
+        if (last_gvs_[i] < 0 && gvs_[i] < 0) {
+          last_gvs_[i] = gvs_[i] = 100;
+        } else if (gvs_[i] < 0) {
+          gvs_[i] = last_gvs_[i];
+        } else if (last_gvs_[i] < 0) {
+          last_gvs_[i] = gvs_[i];
         }
-        delta = gvs[i] - last_gvs[i];
+        delta = gvs_[i] - last_gvs_[i];
       }
       if (delta >= 0) {
-        this->reward += delta * pos_reward[i];
+        reward += delta * pos_reward_[i];
       } else {
-        this->reward -= delta * neg_reward[i];
+        reward -= delta * neg_reward_[i];
       }
     }
 
     // update weapon counter
-    if (curr_weapon == selected_weapon) {
-      ++selected_weapon_count;
+    if (curr_weapon == selected_weapon_) {
+      ++selected_weapon_count_;
     } else {
-      selected_weapon = curr_weapon;
-      selected_weapon_count = 1;
+      selected_weapon_ = curr_weapon;
+      selected_weapon_count_ = 1;
     }
-    if (curr_weapon >= 0 && selected_weapon_count >= weapon_duration &&
-        curr_weapon_ammo > 0)
-      this->reward += weapon_reward[selected_weapon];
+    if (curr_weapon >= 0 && selected_weapon_count_ >= weapon_duration_ &&
+        curr_weapon_ammo > 0) {
+      reward += weapon_reward_[selected_weapon_];
+    }
+
+    Array tgt = std::move(*stack_buf_.begin());
+    uint8_t* ptr = static_cast<uint8_t*>(tgt.data());
+    stack_buf_.pop_front();
 
     // get screen
-    obs_t* frame_ptr = stack_buf.back().get();
-    if (!depth_only) {
-      for (int c = 0; c < raw_channel; ++c) {
-        // state->screenBuffer is channel-first image
-        resize(state->screenBuffer + c * raw_height * raw_width,
-               frame_ptr + c * height * width, raw_height, raw_width, height,
-               width, 1);
-      }
-      if (has_depth) {
-        resize(state->depthBuffer, frame_ptr + raw_channel * height * width,
-               raw_height, raw_width, height, width, 1);
-      }
-    } else {
-      resize(state->depthBuffer, frame_ptr, raw_height, raw_width, height,
-             width, 1);
+    uint8_t* raw_ptr = static_cast<uint8_t*>(raw_buf_.data());
+    std::size_t size = raw_buf_.size;
+    for (int c = 0; c < channel_; ++c) {
+      // state->screenBuffer is channel-first image
+      memcpy(raw_ptr, state->screenBuffer + c * size, size);
+      auto slice = tgt[c];
+      Resize(raw_buf_, &slice, use_inter_area_resize_);
     }
-  }
+    size = tgt.size;
+    stack_buf_.push_back(std::move(tgt));
+    if (is_reset) {
+      for (auto& s : stack_buf_) {
+        uint8_t* ptr_s = static_cast<uint8_t*>(s.data());
+        if (ptr != ptr_s) {
+          memcpy(ptr_s, ptr, size);
+        }
+      }
+    }
 
-  void get_obs(obs_t* obs) {
-    for (int i = 0; i < stack_num; ++i)
-      memcpy(obs + i * screen_size, stack_buf[i].get(),
-             sizeof(obs_t) * screen_size);
-  }
-
-  void get_info(info_t* info) {
-    for (int i = 0; i < gvs.size(); ++i) info[i] = gvs[i];
-  }
-
-  int get_action_size() {
-    return use_raw_action ? button_list.size() : action_set.size();
-  }
-
-  std::vector<int> get_obs_shape() {
-    return {stack_num * channel, height, width};
+    State state = Allocate();
+    state["reward"_] = reward;
+    for (int i = 0; i < stack_num_; ++i) {
+      state["obs"_]
+          .Slice(i * channel_, (i + 1) * channel_)
+          .Assign(stack_buf_[i]);
+    }
+    // info
   }
 };
 
 }  // namespace vizdoom
 
-#endif  // ENVPOOL_VIZDOOM_ENGINE_H_
+#endif  // ENVPOOL_VIZDOOM_VIZDOOM_ENV_H_
