@@ -17,21 +17,66 @@
 #ifndef ENVPOOL_VIZDOOM_ENGINE_H_
 #define ENVPOOL_VIZDOOM_ENGINE_H_
 
-#include "utils.h"
 #include "envpool/core/async_envpool.h"
 #include "envpool/utils/image_process.h"
+#include "utils.h"
 
 namespace vizdoom {
 
-class VizdoomCore {
+class VizdoomEnvFns {
+ public:
+  static decltype(auto) DefaultConfig() {
+    return MakeDict(
+        "max_episode_steps"_.bind(525), "img_height"_.bind(84),
+        "img_width"_.bind(84), "stack_num"_.bind(4), "frame_skip"_.bind(4),
+        "lmp_save_dir"_.bind(std::string("")), "episodic_life"_.bind(false),
+        "zero_discount_on_life_loss"_.bind(false),
+        "reward_config"_.bind(std::map<std::string, std::tuple<float, float>>(
+            {{'FRAGCOUNT', {1, -1.5}},         {'KILLCOUNT', {1, 0}},
+             {'DEATHCOUNT', {-0.75, 0.75}},    {'HITCOUNT', {0.01, -0.01}},
+             {'DAMAGECOUNT', {0.003, -0.003}}, {'HEALTH', {0.005, -0.003}},
+             {'ARMOR', {0.005, -0.001}},       {'WEAPON0', {0.02, -0.01}},
+             {'AMMO0', {0.0002, -0.0001}},     {'WEAPON1', {0.02, -0.01}},
+             {'AMMO1', {0.0002, -0.0001}},     {'WEAPON2', {0.02, -0.01}},
+             {'AMMO2', {0.0002, -0.0001}},     {'WEAPON3', {0.1, -0.05}},
+             {'AMMO3', {0.001, -0.0005}},      {'WEAPON4', {0.1, -0.05}},
+             {'AMMO4', {0.001, -0.0005}},      {'WEAPON5', {0.1, -0.05}},
+             {'AMMO5', {0.001, -0.0005}},      {'WEAPON6', {0.2, -0.1}},
+             {'AMMO6', {0.002, -0.001}},       {'WEAPON7', {0.2, -0.1}},
+             {'AMMO7', {0.002, -0.001}}})),
+        "selected_weapon_reward_config"_.bind(
+            std::map<std::string, float>({{'min_duration', 5.0},
+                                          {'SELECTED0', 0.0002},
+                                          {'SELECTED1', 0.0002},
+                                          {'SELECTED2', 0.0002},
+                                          {'SELECTED3', 0.001},
+                                          {'SELECTED4', 0.001},
+                                          {'SELECTED5', 0.001},
+                                          {'SELECTED6', 0.002},
+                                          {'SELECTED7', 0.002}})),
+        "delta_button_config"_.bind(
+            std::map<std::string, std::tuple<int, float, float>>()),
+        "cfg_path"_.bind(std::string("")), "wad_path"_.bind(std::string("")),
+        "iwad_path"_.bind(std::string("freedoom2")),
+        "map_id"_.bind(std::string("map01")));
+  }
+  template <typename Config>
+  static decltype(auto) StateSpec(const config& conf) {
+    return MakeDict("obs"_.bind(Spec<uint8_t>()),
+                    "discount"_.bind(Spec<float>({-1}, {0.0f, 1.0f})),
+                    );
+  }
+};
+
+class VizdoomEnv {
  protected:
-  int raw_height_, raw_width_, raw_screen_size_, raw_channel_, channel_, has_depth_;
+  int raw_height_, raw_width_, raw_channel_, channel_, has_depth_;
   std::deque<Array> stack_buf_;
   std::string lmp_dir_;
-  bool save_lmp_, episodic_life_, use_raw_action_, is_cig_;
+  bool save_lmp_, episodic_life_, use_raw_action_;
   int stack_num_, frame_skip_, episode_count_;
   int elapsed_step_, max_episode_steps_;
-  int height_, width_, screen_size_, obs_size_;
+  int height_, width_, screen_size_;
   int deathcount_idx_, hitcount_idx_, damagecount_idx_;  // bugged var
   double last_deathcount_, last_hitcount_, last_damagecount_;
   int selected_weapon_, selected_weapon_count_, weapon_duration_;
@@ -40,21 +85,21 @@ class VizdoomCore {
   std::vector<GameVariable> gv_list_;
   std::vector<std::string> button_name_, gv_name_;
   std::vector<double> gvs_, last_gvs_, pos_reward_, neg_reward_, weapon_reward_;
-  vzd_act_t current_act_;
 
  public:
   std::unique_ptr<DoomGame> dg_;
   bool done_;
 
-  VizdoomCore(int seed, int env_id, int max_episode_steps, int stack_num,
-              int frame_skip, bool episodic_life,
-              bool use_raw_action, bool force_speed, int height, int width,
-              std::map<std::string, std::tuple<float, float>> reward_config,
-              std::map<std::string, float> weapon_config,
-              std::map<std::string, std::tuple<int, float, float>> delta_button_config,
-              std::string cfg_path, std::string wad_path, std::string vzd_path,
-              std::string iwad_path, std::string map_id, std::string game_args,
-              std::string lmp_save_dir)
+  VizdoomEnv(
+      int seed, int env_id, int max_episode_steps, int stack_num,
+      int frame_skip, bool episodic_life, bool use_raw_action, bool force_speed,
+      int height, int width,
+      std::map<std::string, std::tuple<float, float>> reward_config,
+      std::map<std::string, float> weapon_config,
+      std::map<std::string, std::tuple<int, float, float>> delta_button_config,
+      std::string cfg_path, std::string wad_path, std::string vzd_path,
+      std::string iwad_path, std::string map_id, std::string game_args,
+      std::string lmp_save_dir)
       : height_(height),
         width_(width),
         max_episode_steps_(max_episode_steps),
@@ -94,9 +139,7 @@ class VizdoomCore {
     raw_width_ = dg_->getScreenWidth();
     raw_channel_ = dg_->getScreenChannels();
     channel_ = raw_channel_ + has_depth_;
-    raw_screen_size_ = raw_width_ * raw_height_ * channel_;
     screen_size_ = width_ * height_ * channel_;
-    obs_size_ = screen_size_ * stack_num_;
 
     for (int i = 0; i < stack_num_; ++i) {
       stack_buf_.push_back(Array(Spec<uint8_t>({channel_, width_, height_})));
@@ -132,116 +175,107 @@ class VizdoomCore {
     }
     std::vector<std::tuple<int, float, float>> delta_config(
         _button_string_list.size());
-    for (auto i : delta_button_config) {
-      std::string name = i.first.cast<py::str>();
-      int button_index = str2button(name);
-      if (button_index == -1) continue;
-      auto cfg = i.second.cast<py::tuple>();
-      delta_config[button_index] = std::make_tuple(
-          py::int_(cfg[0]), py::float_(cfg[1]), py::float_(cfg[2]));
+    for (auto& i : delta_button_config) {
+      int button_index = str2button(i.first);
+      if (button_index != -1) {
+        delta_config[button_index] = i.second;
+      }
     }
-    action_set = build_action_set(button_list, force_speed, delta_config);
+    action_set = build_action_set(button_list_, force_speed, delta_config);
 
     // reward config
-    pos_reward.resize(gv_list.size(), 0.0);
-    neg_reward.resize(gv_list.size(), 0.0);
-    for (auto i : reward_config) {
-      std::string name = i.first.cast<py::str>();
-      int gv_index = str2gv(name);
-      if (gv_index == -1) continue;
-      auto result = std::find(gv_list.begin(), gv_list.end(), gv_index);
-      if (result == gv_list.end()) continue;
-      int index = result - gv_list.begin();
-      auto cfg = i.second.cast<py::tuple>();
-      pos_reward[index] = py::float_(cfg[0]);
-      neg_reward[index] = py::float_(cfg[1]);
+    pos_reward_.resize(gv_list_.size(), 0.0);
+    neg_reward_.resize(gv_list_.size(), 0.0);
+    for (auto& i : reward_config) {
+      int gv_index = str2gv(i.first);
+      if (gv_index == -1) {
+        continue;
+      }
+      auto result = std::find(gv_list_.begin(), gv_list_.end(), gv_index);
+      if (result == gv_list_.end()) {
+        continue;
+      }
+      int index = result - gv_list_.begin();
+      pos_reward_[index] = std::get<0>(i.second);
+      neg_reward_[index] = std::get<1>(i.second);
     }
     // weapon reward config
     if (weapon_config.contains("min_duration")) {
-      weapon_duration = weapon_config["min_duration"].cast<double>();
+      weapon_duration_ = weapon_config["min_duration"];
     }
     for (int i = 0; i < 8; ++i) {
       std::string key = "SELECTED" + std::to_string(i);
-      if (weapon_config.contains(key))
-        weapon_reward[i] = weapon_config[key.c_str()].cast<double>();
+      if (weapon_config.contains(key)) weapon_reward_[i] = weapon_config[key];
     }
   }
 
-  ~VizdoomCore() { close(); }
+  ~VizdoomEnv() { close(); }
 
-  std::vector<std::string> get_game_variable_name() { return gv_name; }
-
-  std::vector<std::string> get_button_name() { return button_name; }
-
-  std::vector<vzd_act_t> get_action_set() { return action_set; }
-
-  void new_episode() {
-    elapsed_step = 0;
-    if (episode_count == 0) { // newEpisode at beginning may hang on MAEnv
+  void NewEpisode() {
+    elapsed_step_ = 0;
+    if (episode_count_ == 0) {  // NewEpisode at beginning may hang on MAEnv
       return;
     }
-    if (save_lmp) {
-      dg_->newEpisode(lmp_dir + std::to_string(episode_count) + ".lmp");
+    if (save_lmp_) {
+      dg_->newEpisode(lmp_dir_ + std::to_string(episode_count_) + ".lmp");
     } else {
       dg_->newEpisode();
     }
   }
 
-  void _reset_meta() {
-    this->reward = 0.0;
-    this->done = false;
-    ++episode_count;
-    _reset_buffer();
-    _get_state(true);
+  void ResetMeta() {
+    done_ = false;
+    ++episode_count_;
+    ResetBuffer();
+    GetState(true);
   }
 
-  int reset() {
-    if (dg_->isEpisodeFinished() || elapsed_step >= max_episode_steps) {
-      new_episode();
+  void Reset() {
+    if (dg_->isEpisodeFinished() || elapsed_step_ >= max_episode_steps_) {
+      NewEpisode();
     } else {
-      ++elapsed_step;
-      dg_->makeAction(action_set[0], frame_skip_);
+      ++elapsed_step_;
+      dg_->makeAction(action_set_[0], frame_skip_);
     }
-    _reset_meta();
-    return 1;
+    ResetMeta();
   }
 
   // for multiplayer usecase
-  void set_action(vzd_act_t act) { current_act = act; }
+  void SetAction(vzd_act_t act) { current_act_ = act; }
 
-  void step_before() { dg_->setAction(current_act); }
+  void StepBefore() { dg_->setAction(current_act_); }
 
-  void step_after() {
+  void StepAfter() {
     this->reward = 0.0;
     ++elapsed_step;
-    this->done =
-        (dg_->isEpisodeFinished() | (elapsed_step >= max_episode_steps));
-    if (episodic_life && dg_->isPlayerDead()) this->done = true;
-    _get_state(false);
+    done = (dg_->isEpisodeFinished() | (elapsed_step_ >= max_episode_steps_));
+    if (episodic_life_ && dg_->isPlayerDead()) {
+      done_ = true;
+    }
+    GetState(false);
   }
 
-  int step() {
-    step_before();
+  void Step() {
+    StepBefore();
     dg_->advanceAction(frame_skip_, true);
-    step_after();
-    return 1;
+    StepAfter();
   }
 
-  void _reset_buffer() {
-    for (frame_t &buf_ptr : stack_buf) {
+  void ResetBuffer() {
+    for (frame_t& buf_ptr : stack_buf) {
       memset(buf_ptr.get(), 0, sizeof(obs_t) * screen_size);
     }
   }
 
-  void _get_state(bool is_reset) {
+  void GetState(bool is_reset) {
     GameStatePtr state = dg_->getState();
     if (state == nullptr) {  // finish episode
       return;
     }
 
     // stack[:-1] = stack[1:]
-    stack_buf.push_back(std::move(stack_buf.front()));
-    stack_buf.pop_front();
+    stack_buf_.push_back(std::move(stack_buf_.front()));
+    stack_buf_.pop_front();
 
     // game variables and reward
     if (is_reset) {
@@ -320,7 +354,7 @@ class VizdoomCore {
       this->reward += weapon_reward[selected_weapon];
 
     // get screen
-    obs_t *frame_ptr = stack_buf.back().get();
+    obs_t* frame_ptr = stack_buf.back().get();
     if (!depth_only) {
       for (int c = 0; c < raw_channel; ++c) {
         // state->screenBuffer is channel-first image
@@ -338,13 +372,13 @@ class VizdoomCore {
     }
   }
 
-  void get_obs(obs_t *obs) {
+  void get_obs(obs_t* obs) {
     for (int i = 0; i < stack_num; ++i)
       memcpy(obs + i * screen_size, stack_buf[i].get(),
              sizeof(obs_t) * screen_size);
   }
 
-  void get_info(info_t *info) {
+  void get_info(info_t* info) {
     for (int i = 0; i < gvs.size(); ++i) info[i] = gvs[i];
   }
 
@@ -354,13 +388,6 @@ class VizdoomCore {
 
   std::vector<int> get_obs_shape() {
     return {stack_num * channel, height, width};
-  }
-
-  py::dict cast_info_dict(py::array info) {
-    py::dict result = py::dict();
-    for (int i = 0; i < gv_name.size(); ++i)
-      result[gv_name[i].c_str()] = info[py::make_tuple(py::ellipsis(), i)];
-    return result;
   }
 };
 
