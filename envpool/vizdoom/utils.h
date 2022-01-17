@@ -122,7 +122,7 @@ std::vector<vzd_act_t> BuildActionSet(
   double current_result[43];
   memset(button_index, -1, sizeof(button_index));
   memset(current_result, 0, sizeof(current_result));
-  for (int i = 0; i < button_list.size(); ++i) {
+  for (std::size_t i = 0; i < button_list.size(); ++i) {
     button_index[button_list[i]] = i;
   }
   _build_action_set(button_list.size(), delta_config, button_index, force_speed,

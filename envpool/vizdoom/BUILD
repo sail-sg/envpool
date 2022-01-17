@@ -1,4 +1,5 @@
 load("@pip_requirements//:requirements.bzl", "requirement")
+load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -42,6 +43,25 @@ cc_library(
     ],
 )
 
+pybind_extension(
+    name = "vizdoom_envpool",
+    srcs = ["vizdoom_envpool.cc"],
+    linkopts = [
+        "-ldl",
+    ],
+    deps = [
+        ":vizdoom_env",
+        "//envpool/core:py_envpool",
+    ],
+)
+
+py_library(
+    name = "vizdoom",
+    srcs = ["__init__.py"],
+    data = [":vizdoom_envpool.so"],
+    deps = ["//envpool/python:api"],
+)
+
 py_test(
     name = "vizdoom_test",
     srcs = ["vizdoom_test.py"],
@@ -50,6 +70,7 @@ py_test(
         ":gen_vizdoom_maps",
     ],
     deps = [
+        ":vizdoom",
         "//envpool/atari:atari_network",
         requirement("numpy"),
         requirement("absl-py"),
@@ -57,4 +78,10 @@ py_test(
         requirement("tqdm"),
         requirement("torch"),
     ],
+)
+
+py_library(
+    name = "vizdoom_registration",
+    srcs = ["registration.py"],
+    deps = ["//envpool:registration"],
 )

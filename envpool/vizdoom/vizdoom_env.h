@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "envpool/core/async_envpool.h"
+#include "envpool/core/env.h"
 #include "envpool/utils/image_process.h"
 #include "utils.h"
 
@@ -41,28 +42,28 @@ class VizdoomEnvFns {
         "force_speed"_.bind(false), "use_raw_action"_.bind(true),
         "use_inter_area_resize"_.bind(true),
         "reward_config"_.bind(std::map<std::string, std::tuple<float, float>>(
-            {{'FRAGCOUNT', {1, -1.5}},         {'KILLCOUNT', {1, 0}},
-             {'DEATHCOUNT', {-0.75, 0.75}},    {'HITCOUNT', {0.01, -0.01}},
-             {'DAMAGECOUNT', {0.003, -0.003}}, {'HEALTH', {0.005, -0.003}},
-             {'ARMOR', {0.005, -0.001}},       {'WEAPON0', {0.02, -0.01}},
-             {'AMMO0', {0.0002, -0.0001}},     {'WEAPON1', {0.02, -0.01}},
-             {'AMMO1', {0.0002, -0.0001}},     {'WEAPON2', {0.02, -0.01}},
-             {'AMMO2', {0.0002, -0.0001}},     {'WEAPON3', {0.1, -0.05}},
-             {'AMMO3', {0.001, -0.0005}},      {'WEAPON4', {0.1, -0.05}},
-             {'AMMO4', {0.001, -0.0005}},      {'WEAPON5', {0.1, -0.05}},
-             {'AMMO5', {0.001, -0.0005}},      {'WEAPON6', {0.2, -0.1}},
-             {'AMMO6', {0.002, -0.001}},       {'WEAPON7', {0.2, -0.1}},
-             {'AMMO7', {0.002, -0.001}}})),
+            {{"FRAGCOUNT", {1, -1.5}},         {"KILLCOUNT", {1, 0}},
+             {"DEATHCOUNT", {-0.75, 0.75}},    {"HITCOUNT", {0.01, -0.01}},
+             {"DAMAGECOUNT", {0.003, -0.003}}, {"HEALTH", {0.005, -0.003}},
+             {"ARMOR", {0.005, -0.001}},       {"WEAPON0", {0.02, -0.01}},
+             {"AMMO0", {0.0002, -0.0001}},     {"WEAPON1", {0.02, -0.01}},
+             {"AMMO1", {0.0002, -0.0001}},     {"WEAPON2", {0.02, -0.01}},
+             {"AMMO2", {0.0002, -0.0001}},     {"WEAPON3", {0.1, -0.05}},
+             {"AMMO3", {0.001, -0.0005}},      {"WEAPON4", {0.1, -0.05}},
+             {"AMMO4", {0.001, -0.0005}},      {"WEAPON5", {0.1, -0.05}},
+             {"AMMO5", {0.001, -0.0005}},      {"WEAPON6", {0.2, -0.1}},
+             {"AMMO6", {0.002, -0.001}},       {"WEAPON7", {0.2, -0.1}},
+             {"AMMO7", {0.002, -0.001}}})),
         "selected_weapon_reward_config"_.bind(
-            std::map<std::string, float>({{'min_duration', 5.0},
-                                          {'SELECTED0', 0.0002},
-                                          {'SELECTED1', 0.0002},
-                                          {'SELECTED2', 0.0002},
-                                          {'SELECTED3', 0.001},
-                                          {'SELECTED4', 0.001},
-                                          {'SELECTED5', 0.001},
-                                          {'SELECTED6', 0.002},
-                                          {'SELECTED7', 0.002}})),
+            std::map<std::string, float>({{"min_duration", 5.0},
+                                          {"SELECTED0", 0.0002},
+                                          {"SELECTED1", 0.0002},
+                                          {"SELECTED2", 0.0002},
+                                          {"SELECTED3", 0.001},
+                                          {"SELECTED4", 0.001},
+                                          {"SELECTED5", 0.001},
+                                          {"SELECTED6", 0.002},
+                                          {"SELECTED7", 0.002}})),
         "delta_button_config"_.bind(
             std::map<std::string, std::tuple<int, float, float>>()),
         "cfg_path"_.bind(std::string("")), "wad_path"_.bind(std::string("")),
@@ -75,28 +76,35 @@ class VizdoomEnvFns {
     DoomGame dg;
     dg.loadConfig(conf["cfg_path"_]);
     return MakeDict(
-        "obs"_.bind(Spec<uint8_t>({conf["stack_num"_] * dg_.getScreenChannels(),
+        "obs"_.bind(Spec<uint8_t>({conf["stack_num"_] * dg.getScreenChannels(),
                                    conf["img_height"_], conf["img_width"_]},
                                   {0, 255})),
-        "discount"_.bind(Spec<float>({-1}, {0.0f, 1.0f})),
-        "info:AMMO2"_.bind(0.0f), "info:AMMO3"_.bind(0.0f),
-        "info:AMMO4"_.bind(0.0f), "info:AMMO5"_.bind(0.0f),
-        "info:AMMO6"_.bind(0.0f), "info:AMMO7"_.bind(0.0f),
-        "info:ARMOR"_.bind(0.0f), "info:DAMAGECOUNT"_.bind(0.0f),
-        "info:DEATHCOUNT"_.bind(0.0f), "info:FRAGCOUNT"_.bind(0.0f),
-        "info:HEALTH"_.bind(0.0f), "info:HITCOUNT"_.bind(0.0f),
-        "info:KILLCOUNT"_.bind(0.0f), "info:SELECTED_WEAPON"_.bind(0.0f),
-        "info:SELECTED_WEAPON_AMMO"_.bind(0.0f), "info:USER2"_.bind(0.0f));
+        "info:AMMO2"_.bind(Spec<double>({-1})),
+        "info:AMMO3"_.bind(Spec<double>({-1})),
+        "info:AMMO4"_.bind(Spec<double>({-1})),
+        "info:AMMO5"_.bind(Spec<double>({-1})),
+        "info:AMMO6"_.bind(Spec<double>({-1})),
+        "info:AMMO7"_.bind(Spec<double>({-1})),
+        "info:ARMOR"_.bind(Spec<double>({-1})),
+        "info:DAMAGECOUNT"_.bind(Spec<double>({-1})),
+        "info:DEATHCOUNT"_.bind(Spec<double>({-1})),
+        "info:FRAGCOUNT"_.bind(Spec<double>({-1})),
+        "info:HEALTH"_.bind(Spec<double>({-1})),
+        "info:HITCOUNT"_.bind(Spec<double>({-1})),
+        "info:KILLCOUNT"_.bind(Spec<double>({-1})),
+        "info:SELECTED_WEAPON"_.bind(Spec<double>({-1})),
+        "info:SELECTED_WEAPON_AMMO"_.bind(Spec<double>({-1})),
+        "info:USER2"_.bind(Spec<double>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
     DoomGame dg;
     dg.loadConfig(conf["cfg_path"_]);
     if (conf["use_raw_action"_]) {
-      return MakeDict(
-          "action"_.bind(Spec<double>({-1, dg.getAvailableButtons().size()})));
+      return MakeDict("action"_.bind(Spec<double>(
+          {-1, static_cast<int>(dg.getAvailableButtons().size())})));
     } else {
-      auto button_list = dg->getAvailableButtons();
+      auto button_list = dg.getAvailableButtons();
       std::vector<std::tuple<int, float, float>> delta_config(
           _button_string_list.size());
       for (auto& i : conf["delta_button_config"_]) {
@@ -117,13 +125,11 @@ typedef class EnvSpec<VizdoomEnvFns> VizdoomEnvSpec;
 typedef Spec<uint8_t> FrameSpec;
 
 class VizdoomEnv : public Env<VizdoomEnvSpec> {
-  const std::vector<int> kInfoIndex({0, 3, 4, 5, 7, 9, 10, 15, 16, 19, 20, 21,
-                                     22, 23, 24, 73});
-  // ({"AMMO2", "AMMO3", "AMMO4", "AMMO5", "AMMO6", "AMMO7", "ARMOR",
-  //   "DAMAGECOUNT", "DEATHCOUNT", "FRAGCOUNT", "HEALTH", "HITCOUNT",
-  //   "KILLCOUNT", "SELECTED_WEAPON", "SELECTED_WEAPON_AMMO", "USER2"});
-
  protected:
+  const std::vector<std::string> kInfoName(
+      {"AMMO2", "AMMO3", "AMMO4", "AMMO5", "AMMO6", "AMMO7", "ARMOR",
+       "DAMAGECOUNT", "DEATHCOUNT", "FRAGCOUNT", "HEALTH", "HITCOUNT",
+       "KILLCOUNT", "SELECTED_WEAPON", "SELECTED_WEAPON_AMMO", "USER2"});
   std::unique_ptr<DoomGame> dg_;
   FrameSpec raw_spec_, resize_spec_;
   Array raw_buf_;
@@ -139,6 +145,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
   std::vector<vzd_act_t> action_set_;
   std::vector<Button> button_list_;
   std::vector<GameVariable> gv_list_;
+  std::vector<int> info_index_, gv_info_index_;
   std::vector<double> gvs_, last_gvs_, pos_reward_, neg_reward_, weapon_reward_;
 
  public:
@@ -207,6 +214,16 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     } else {
       damagecount_idx_ = result - gv_list_.begin();
     }
+    for (auto s : kInfoName) {
+      int i = str2gv(s);
+      info_index_.push_back(i);
+      result = std::find(gv_list_.begin(), gv_list_.end(), i);
+      if (result == gv_list_.end()) {
+        gv_info_index_.push_back(-1);
+      } else {
+        gv_info_index_.push_back(result - gv_list_.begin());
+      }
+    }
 
     button_list_ = dg_->getAvailableButtons();
     std::vector<std::tuple<int, float, float>> delta_config(
@@ -254,10 +271,11 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
   void Reset() override {
     if (dg_->isEpisodeFinished() || elapsed_step_ >= max_episode_steps_) {
       elapsed_step_ = 0;
-      if (episode_count_ > 0) {  // NewEpisode at beginning may hang on MAEnv
-        if (save_lmp_) {
+      if (episode_count_ > 0) {  // NewEpisode at beginning may hang on
+        MAEnv if (save_lmp_) {
           dg_->newEpisode(lmp_dir_ + std::to_string(episode_count_) + ".lmp");
-        } else {
+        }
+        else {
           dg_->newEpisode();
         }
       }
@@ -395,6 +413,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     }
 
     State state = Allocate();
+    std::vector<Array>* state_array(state);
     state["reward"_] = reward;
     for (int i = 0; i < stack_num_; ++i) {
       state["obs"_]
@@ -402,8 +421,19 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
           .Assign(stack_buf_[i]);
     }
     // info
+    double zero = 0.0f;
+    for (std::size_t i = 0; i < gv_info_index_.size(); ++i) {
+      std::string key = "info:" + kInfoName[i];
+      if (gv_info_index_[i] != -1) {
+        state_array[i + 1] = gvs_[gv_info_index_[i]];
+      } else {
+        state_array[i + 1] = zero;
+      }
+    }
   }
 };
+
+typedef AsyncEnvPool<VizdoomEnv> VizdoomEnvPool;
 
 }  // namespace vizdoom
 
