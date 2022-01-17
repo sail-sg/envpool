@@ -40,7 +40,7 @@ class VizdoomEnvFns {
         "img_width"_.bind(84), "stack_num"_.bind(4), "frame_skip"_.bind(4),
         "lmp_save_dir"_.bind(std::string("")), "episodic_life"_.bind(false),
         "force_speed"_.bind(false), "use_raw_action"_.bind(true),
-        "use_inter_area_resize"_.bind(true),
+        "use_inter_area_resize"_.bind(true), "weapon_duration"_.bind(5.0f),
         "reward_config"_.bind(std::map<std::string, std::tuple<float, float>>(
             {{"FRAGCOUNT", {1, -1.5}},         {"KILLCOUNT", {1, 0}},
              {"DEATHCOUNT", {-0.75, 0.75}},    {"HITCOUNT", {0.01, -0.01}},
@@ -55,18 +55,18 @@ class VizdoomEnvFns {
              {"AMMO6", {0.002, -0.001}},       {"WEAPON7", {0.2, -0.1}},
              {"AMMO7", {0.002, -0.001}}})),
         "selected_weapon_reward_config"_.bind(
-            std::map<std::string, float>({{"min_duration", 5.0},
-                                          {"SELECTED0", 0.0002},
-                                          {"SELECTED1", 0.0002},
-                                          {"SELECTED2", 0.0002},
-                                          {"SELECTED3", 0.001},
-                                          {"SELECTED4", 0.001},
-                                          {"SELECTED5", 0.001},
-                                          {"SELECTED6", 0.002},
-                                          {"SELECTED7", 0.002}})),
+            std::map<int, float>({{0, 0.0002},
+                                  {1, 0.0002},
+                                  {2, 0.0002},
+                                  {3, 0.001},
+                                  {4, 0.001},
+                                  {5, 0.001},
+                                  {6, 0.002},
+                                  {7, 0.002}})),
         "delta_button_config"_.bind(
             std::map<std::string, std::tuple<int, float, float>>()),
         "cfg_path"_.bind(std::string("")), "wad_path"_.bind(std::string("")),
+        "vzd_path"_.bind(std::string("")),
         "iwad_path"_.bind(std::string("freedoom2")),
         "game_args"_.bind(std::string("")),
         "map_id"_.bind(std::string("map01")));
@@ -126,12 +126,12 @@ typedef Spec<uint8_t> FrameSpec;
 
 class VizdoomEnv : public Env<VizdoomEnvSpec> {
  protected:
-  const std::vector<std::string> kInfoName(
-      {"AMMO2", "AMMO3", "AMMO4", "AMMO5", "AMMO6", "AMMO7", "ARMOR",
-       "DAMAGECOUNT", "DEATHCOUNT", "FRAGCOUNT", "HEALTH", "HITCOUNT",
-       "KILLCOUNT", "SELECTED_WEAPON", "SELECTED_WEAPON_AMMO", "USER2"});
+  std::vector<int> info_index_;
+  // ({19, 20, 21, 22, 23, 24, 10, 7, 4, 3, 9, 5, 0, 15, 16, 73});
+  // {"AMMO2", "AMMO3", "AMMO4", "AMMO5", "AMMO6", "AMMO7", "ARMOR",
+  //  "DAMAGECOUNT", "DEATHCOUNT", "FRAGCOUNT", "HEALTH", "HITCOUNT",
+  //  "KILLCOUNT", "SELECTED_WEAPON", "SELECTED_WEAPON_AMMO", "USER2"});
   std::unique_ptr<DoomGame> dg_;
-  FrameSpec raw_spec_, resize_spec_;
   Array raw_buf_;
   std::deque<Array> stack_buf_;
   std::string lmp_dir_;
@@ -145,17 +145,17 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
   std::vector<vzd_act_t> action_set_;
   std::vector<Button> button_list_;
   std::vector<GameVariable> gv_list_;
-  std::vector<int> info_index_, gv_info_index_;
+  std::vector<int> gv_info_index_;
   std::vector<double> gvs_, last_gvs_, pos_reward_, neg_reward_, weapon_reward_;
 
  public:
   VizdoomEnv(const Spec& spec, int env_id)
       : Env<VizdoomEnvSpec>(spec, env_id),
+        info_index_({19, 20, 21, 22, 23, 24, 10, 7, 4, 3, 9, 5, 0, 15, 16, 73}),
         dg_(new DoomGame()),
         lmp_dir_(spec.config["lmp_save_dir"_]),
         save_lmp_(lmp_dir_.length() > 0),
         episodic_life_(spec.config["episodic_life"_]),
-        zero_discount_on_life_loss_(spec.config["zero_discount_on_life_loss"_]),
         use_raw_action_(spec.config["use_raw_action"_]),
         use_inter_area_resize_(spec.config["use_inter_area_resize"_]),
         done_(true),
@@ -167,16 +167,17 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
         last_deathcount_(0),
         last_hitcount_(0),
         last_damagecount_(0),
-        weapon_duration_(5),
+        weapon_duration_(spec.config["weapon_duration"_]),
         weapon_reward_(10) {
     if (save_lmp_) {
-      lmp_dir_ = lmp_save_dir + "/env_" + std::to_string(env_id) + "_";
+      lmp_dir_ =
+          spec.config["lmp_save_dir"_] + "/env_" + std::to_string(env_id) + "_";
     }
     dg_->setViZDoomPath(spec.config["vzd_path"_]);
     dg_->setDoomGamePath(spec.config["iwad_path"_]);
     dg_->loadConfig(spec.config["cfg_path"_]);
     dg_->setWindowVisible(false);
-    dg_->addGameArgs(spec.config["game_args"]);
+    dg_->addGameArgs(spec.config["game_args"_]);
     dg_->setMode(PLAYER);
     dg_->setEpisodeTimeout((max_episode_steps_ + 1) * frame_skip_);
     if (spec.config["wad_path"_].size()) {
@@ -186,12 +187,11 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     dg_->setDoomMap(spec.config["map_id"_]);
 
     channel_ = dg_->getScreenChannels();
-    raw_spec_ = FrameSpec({dg_->getScreenHeight(), dg_->getScreenWidth(), 1});
-    raw_buf_ = Array(raw_spec_);
-    resize_spec_ = FrameSpec(
-        {channel_, spec.config["img_height"_], spec.config["img_width"_]});
+    raw_buf_ =
+        Array(FrameSpec({dg_->getScreenHeight(), dg_->getScreenWidth(), 1}));
     for (int i = 0; i < stack_num_; ++i) {
-      stack_buf_.push_back(Array(resize_spec_));
+      stack_buf_.push_back(Array(FrameSpec(
+          {channel_, spec.config["img_height"_], spec.config["img_width"_]})));
     }
 
     gv_list_ = dg_->getAvailableGameVariables();
@@ -214,9 +214,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     } else {
       damagecount_idx_ = result - gv_list_.begin();
     }
-    for (auto s : kInfoName) {
-      int i = str2gv(s);
-      info_index_.push_back(i);
+    for (auto i : info_index_) {
       result = std::find(gv_list_.begin(), gv_list_.end(), i);
       if (result == gv_list_.end()) {
         gv_info_index_.push_back(-1);
@@ -254,14 +252,11 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
       neg_reward_[index] = std::get<1>(i.second);
     }
     // weapon reward config
-    auto& weapon_config = spec.config["weapon_config"_];
-    if (weapon_config.contains("min_duration")) {
-      weapon_duration_ = weapon_config["min_duration"];
-    }
+    auto& weapon_config = spec.config["selected_weapon_reward_config"_];
     for (int i = 0; i < 8; ++i) {
-      std::string key = "SELECTED" + std::to_string(i);
-      if (weapon_config.contains(key)) {
-        weapon_reward_[i] = weapon_config[key];
+      auto it = weapon_config.find(i);
+      if (it != weapon_config.end()) {
+        weapon_reward_[i] = it->second;
       }
     }
   }
@@ -271,11 +266,10 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
   void Reset() override {
     if (dg_->isEpisodeFinished() || elapsed_step_ >= max_episode_steps_) {
       elapsed_step_ = 0;
-      if (episode_count_ > 0) {  // NewEpisode at beginning may hang on
-        MAEnv if (save_lmp_) {
+      if (episode_count_ > 0) {  // NewEpisode at beginning may hang on MAEnv
+        if (save_lmp_) {
           dg_->newEpisode(lmp_dir_ + std::to_string(episode_count_) + ".lmp");
-        }
-        else {
+        } else {
           dg_->newEpisode();
         }
       }
@@ -305,49 +299,49 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
   }
 
   void GetState(bool is_reset) {
-    GameStatePtr state = dg_->getState();
-    if (state == nullptr) {  // finish episode
+    GameStatePtr gamestate = dg_->getState();
+    if (gamestate == nullptr) {  // finish episode
       return;
     }
 
     // game variables and reward
     if (is_reset) {
-      last_gvs_ = state->gameVariables;
+      last_gvs_ = gamestate->gameVariables;
       selected_weapon_ = -1;
       selected_weapon_count_ = 0;
     } else {
       last_gvs_ = gvs_;
     }
-    gvs_ = state->gameVariables;
+    gvs_ = gamestate->gameVariables;
 
     // some variables don't get reset to zero on game.newEpisode().
     // see https://github.com/mwydmuch/ViZDoom/issues/399
     if (hitcount_idx_ >= 0) {
       if (is_reset) {
-        last_hitcount_ = gvs_[hitcount_idx];
-        last_gvs_[hitcount_idx] = 0;
+        last_hitcount_ = gvs_[hitcount_idx_];
+        last_gvs_[hitcount_idx_] = 0;
       }
-      gvs_[hitcount_idx] -= last_hitcount_;
+      gvs_[hitcount_idx_] -= last_hitcount_;
     }
     if (damagecount_idx_ >= 0) {
       if (is_reset) {
-        last_damagecount_ = gvs_[damagecount_idx];
-        last_gvs_[damagecount_idx] = 0;
+        last_damagecount_ = gvs_[damagecount_idx_];
+        last_gvs_[damagecount_idx_] = 0;
       }
-      gvs_[damagecount_idx] -= last_damagecount_;
+      gvs_[damagecount_idx_] -= last_damagecount_;
     }
     if (deathcount_idx_ >= 0) {
       if (is_reset) {
-        last_deathcount_ = gvs_[deathcount_idx];
-        last_gvs_[deathcount_idx] = 0;
+        last_deathcount_ = gvs_[deathcount_idx_];
+        last_gvs_[deathcount_idx_] = 0;
       }
-      gvs_[deathcount_idx] -= last_deathcount_;
+      gvs_[deathcount_idx_] -= last_deathcount_;
     }
 
     int curr_weapon = -1, curr_weapon_ammo = 0;
     float reward = 0.0f;
 
-    for (int i = 0; i < gvs_.size(); ++i) {
+    for (std::size_t i = 0; i < gvs_.size(); ++i) {
       double delta = gvs_[i] - last_gvs_[i];
       // without this we reward using BFG and shotguns too much
       if (gv_list_[i] == DAMAGECOUNT && delta >= 200) {
@@ -396,8 +390,8 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     uint8_t* raw_ptr = static_cast<uint8_t*>(raw_buf_.data());
     std::size_t size = raw_buf_.size;
     for (int c = 0; c < channel_; ++c) {
-      // state->screenBuffer is channel-first image
-      memcpy(raw_ptr, state->screenBuffer + c * size, size);
+      // gamestate->screenBuffer is channel-first image
+      memcpy(raw_ptr, gamestate->screenBuffer->data() + c * size, size);
       auto slice = tgt[c];
       Resize(raw_buf_, &slice, use_inter_area_resize_);
     }
@@ -413,7 +407,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     }
 
     State state = Allocate();
-    std::vector<Array>* state_array(state);
+    std::vector<Array> state_array(state);
     state["reward"_] = reward;
     for (int i = 0; i < stack_num_; ++i) {
       state["obs"_]
@@ -423,11 +417,10 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     // info
     double zero = 0.0f;
     for (std::size_t i = 0; i < gv_info_index_.size(); ++i) {
-      std::string key = "info:" + kInfoName[i];
       if (gv_info_index_[i] != -1) {
-        state_array[i + 1] = gvs_[gv_info_index_[i]];
+        state_array[i + 1][0] = gvs_[gv_info_index_[i]];
       } else {
-        state_array[i + 1] = zero;
+        state_array[i + 1][0] = zero;
       }
     }
   }
