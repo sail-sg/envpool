@@ -221,6 +221,17 @@ def workspace():
 
     maybe(
         http_archive,
+        name = "freedoom",
+        sha256 = "f42c6810fc89b0282de1466c2c9c7c9818031a8d556256a6db1b69f6a77b5806",
+        strip_prefix = "freedoom-0.12.1/",
+        urls = [
+            "https://github.com/freedoom/freedoom/releases/download/v0.12.1/freedoom-0.12.1.zip",
+        ],
+        build_file = "//third_party/freedoom:freedoom.BUILD",
+    )
+
+    maybe(
+        http_archive,
         name = "vizdoom",
         sha256 = "1ec04a66da0f77616d31b8f052d0233070ae5f8e5da1cacfb0c45c04b18c99d6",
         strip_prefix = "ViZDoom-1.1.11/src/vizdoom/",

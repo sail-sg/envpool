@@ -32,6 +32,13 @@
 
 namespace vizdoom {
 
+std::string MergePath(std::string base_path, std::string file_path) {
+  if (file_path[0] == '/') {
+    return file_path;
+  }
+  return base_path + "/" + file_path;
+}
+
 class VizdoomEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
@@ -66,15 +73,15 @@ class VizdoomEnvFns {
         "delta_button_config"_.bind(
             std::map<std::string, std::tuple<int, float, float>>()),
         "cfg_path"_.bind(std::string("")), "wad_path"_.bind(std::string("")),
-        "vzd_path"_.bind(std::string("")),
-        "iwad_path"_.bind(std::string("freedoom2")),
+        "vzd_path"_.bind(std::string("vizdoom/bin/vizdoom")),
+        "iwad_path"_.bind(std::string("vizdoom/bin/freedoom2")),
         "game_args"_.bind(std::string("")),
         "map_id"_.bind(std::string("map01")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     DoomGame dg;
-    dg.loadConfig(conf["cfg_path"_]);
+    dg.loadConfig(MergePath(conf["base_path"_], conf["cfg_path"_]));
     return MakeDict(
         "obs"_.bind(Spec<uint8_t>({conf["stack_num"_] * dg.getScreenChannels(),
                                    conf["img_height"_], conf["img_width"_]},
@@ -99,7 +106,7 @@ class VizdoomEnvFns {
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
     DoomGame dg;
-    dg.loadConfig(conf["cfg_path"_]);
+    dg.loadConfig(MergePath(conf["base_path"_], conf["cfg_path"_]));
     if (conf["use_raw_action"_]) {
       return MakeDict("action"_.bind(Spec<double>(
           {-1, static_cast<int>(dg.getAvailableButtons().size())})));
@@ -173,15 +180,19 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
       lmp_dir_ =
           spec.config["lmp_save_dir"_] + "/env_" + std::to_string(env_id) + "_";
     }
-    dg_->setViZDoomPath(spec.config["vzd_path"_]);
-    dg_->setDoomGamePath(spec.config["iwad_path"_]);
-    dg_->loadConfig(spec.config["cfg_path"_]);
+    dg_->setViZDoomPath(
+        MergePath(spec.config["base_path"_], spec.config["vzd_path"_]));
+    dg_->setDoomGamePath(
+        MergePath(spec.config["base_path"_], spec.config["iwad_path"_]));
+    dg_->loadConfig(
+        MergePath(spec.config["base_path"_], spec.config["cfg_path"_]));
     dg_->setWindowVisible(false);
     dg_->addGameArgs(spec.config["game_args"_]);
     dg_->setMode(PLAYER);
     dg_->setEpisodeTimeout((max_episode_steps_ + 1) * frame_skip_);
     if (spec.config["wad_path"_].size()) {
-      dg_->setDoomScenarioPath(spec.config["wad_path"_]);
+      dg_->setDoomScenarioPath(
+          MergePath(spec.config["base_path"_], spec.config["wad_path"_]));
     }
     dg_->setSeed(spec.config["seed"_]);
     dg_->setDoomMap(spec.config["map_id"_]);
@@ -259,9 +270,12 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
         weapon_reward_[i] = it->second;
       }
     }
+    dg_->init();
   }
 
   ~VizdoomEnv() { dg_->close(); }
+
+  bool IsDone() override { return done_; }
 
   void Reset() override {
     if (dg_->isEpisodeFinished() || elapsed_step_ >= max_episode_steps_) {
@@ -416,11 +430,12 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     }
     // info
     double zero = 0.0f;
+    std::size_t offset = state_array.size() - gv_info_index_.size();
     for (std::size_t i = 0; i < gv_info_index_.size(); ++i) {
       if (gv_info_index_[i] != -1) {
-        state_array[i + 1][0] = gvs_[gv_info_index_[i]];
+        state_array[i + offset][0] = gvs_[gv_info_index_[i]];
       } else {
-        state_array[i + 1][0] = zero;
+        state_array[i + offset][0] = zero;
       }
     }
   }
