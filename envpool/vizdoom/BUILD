@@ -25,12 +25,20 @@ genrule(
     cmd = "mkdir -p $(OUTS) && cp $(SRCS) $(OUTS)",
 )
 
+genrule(
+    name = "gen_vizdoom_exe",
+    srcs = [
+        "@vizdoom//:vizdoom",
+        "@vizdoom//:vizdoom_pk3",
+    ],
+    outs = ["bin"],
+    cmd = "mkdir -p $(OUTS) && cp $(SRCS) $(OUTS)",
+)
+
 cc_library(
     name = "utils",
     hdrs = ["utils.h"],
-    deps = [
-        "@vizdoom_lib",
-    ],
+    deps = ["@vizdoom_lib"],
 )
 
 cc_library(
@@ -58,17 +66,18 @@ pybind_extension(
 py_library(
     name = "vizdoom",
     srcs = ["__init__.py"],
-    data = [":vizdoom_envpool.so"],
+    data = [
+        ":vizdoom_envpool.so",
+        ":gen_vizdoom_exe",
+        ":gen_vizdoom_maps",
+    ],
     deps = ["//envpool/python:api"],
 )
 
 py_test(
     name = "vizdoom_test",
     srcs = ["vizdoom_test.py"],
-    data = [
-        ":gen_pretrain_weight",
-        ":gen_vizdoom_maps",
-    ],
+    data = [":gen_pretrain_weight"],
     deps = [
         ":vizdoom",
         "//envpool/atari:atari_network",
