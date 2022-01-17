@@ -14,7 +14,7 @@
 """Test Vizdoom env by well-trained RL agents."""
 
 import os
-from typing import Tuple, no_type_check
+from typing import Optional, Tuple, no_type_check
 
 import numpy as np
 import torch
@@ -41,19 +41,22 @@ class _VizdoomPretrainTest(absltest.TestCase):
     resume_path: str,
     num_envs: int = 10,
     seed: int = 0,
-    reward_config: dict = {},
+    reward_config: Optional[dict] = None,
+    render_config: Optional[dict] = None,
   ) -> Tuple[np.ndarray, np.ndarray]:
+    kwargs = {
+      "num_envs": num_envs,
+      "seed": seed,
+      "cfg_path": f"vizdoom/maps/{task}.cfg",
+      "wad_path": f"vizdoom/maps/{task}.wad",
+      "use_combined_action": True,
+    }
+    if reward_config is not None:
+      kwargs.update(reward_config=reward_config)
+    if render_config is not None:
+      kwargs.update(render_config=render_config)
     env = VizdoomGymEnvPool(
-      VizdoomEnvSpec(
-        VizdoomEnvSpec.gen_config(
-          num_envs=num_envs,
-          seed=seed,
-          cfg_path=f"vizdoom/maps/{task}.cfg",
-          wad_path=f"vizdoom/maps/{task}.wad",
-          use_combined_action=True,
-          reward_config=reward_config,
-        )
-      )
+      VizdoomEnvSpec(VizdoomEnvSpec.gen_config(**kwargs))
     )
 
     state_shape = env.observation_space.shape
@@ -75,7 +78,7 @@ class _VizdoomPretrainTest(absltest.TestCase):
     length = np.zeros(num_envs)
     obs = env.reset()
     for t in range(25000):
-      if np.random.rand() < 0:
+      if np.random.rand() < 0.05:
         act = np.random.randint(action_shape, size=len(ids))
       else:
         act = policy(Batch(obs=obs, info={})).act
@@ -93,8 +96,8 @@ class _VizdoomPretrainTest(absltest.TestCase):
           obs_all[:, 84 * j:84 * (j + 1)] = obs[i, 1:].transpose(1, 2, 0)
         cv2.imwrite(f"/tmp/{task}-{t}.png", obs_all)
 
-    logging.info(f"Mean reward of {task}: {reward.mean()}")
-    logging.info(f"Mean length of {task}: {length.mean()}")
+    logging.info(f"Mean reward of {task}: {reward.mean()} ± {reward.std()}")
+    logging.info(f"Mean length of {task}: {length.mean()} ± {length.std()}")
     return reward, length
 
   def test_d1(self) -> None:
@@ -107,7 +110,10 @@ class _VizdoomPretrainTest(absltest.TestCase):
     model_path = os.path.join("envpool", "vizdoom", "policy-d3.pth")
     self.assertTrue(os.path.exists(model_path))
     reward, length = self.eval_c51(
-      "D3_battle", model_path, reward_config={"KILLCOUNT": [1, 0]}
+      "D3_battle",
+      model_path,
+      reward_config={"KILLCOUNT": [1, 0]},
+      render_config={"hud": True},
     )
     self.assertGreaterEqual(reward.mean(), 20)
 

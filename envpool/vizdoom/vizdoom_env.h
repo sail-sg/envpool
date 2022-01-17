@@ -61,6 +61,7 @@ class VizdoomEnvFns {
              {"AMMO5", {0.001, -0.0005}},      {"WEAPON6", {0.2, -0.1}},
              {"AMMO6", {0.002, -0.001}},       {"WEAPON7", {0.2, -0.1}},
              {"AMMO7", {0.002, -0.001}}})),
+        "render_config"_.bind(std::map<std::string, bool>()),
         "selected_weapon_reward_config"_.bind(
             std::map<int, float>({{0, 0.0002},
                                   {1, 0.0002},
@@ -196,6 +197,32 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     }
     dg_->setSeed(spec.config["seed"_]);
     dg_->setDoomMap(spec.config["map_id"_]);
+    for (auto& i : spec.config["render_config"_]) {
+      LOG(INFO) << i.first;
+      if (i.first == "hud") {
+        dg_->setRenderHud(i.second);
+      } else if (i.first == "all_frames") {
+        dg_->setRenderAllFrames(i.second);
+      } else if (i.first == "messages") {
+        dg_->setRenderMessages(i.second);
+      } else if (i.first == "weapon") {
+        dg_->setRenderWeapon(i.second);
+      } else if (i.first == "crosshair") {
+        dg_->setRenderCrosshair(i.second);
+      } else if (i.first == "decals") {
+        dg_->setRenderDecals(i.second);
+      } else if (i.first == "particles") {
+        dg_->setRenderParticles(i.second);
+      } else if (i.first == "effects_sprites") {
+        dg_->setRenderEffectsSprites(i.second);
+      } else if (i.first == "corpses") {
+        dg_->setRenderCorpses(i.second);
+      } else if (i.first == "screen_flashes") {
+        dg_->setRenderScreenFlashes(i.second);
+      } else if (i.first == "minimal_hud") {
+        dg_->setRenderMinimalHud(i.second);
+      }
+    }
 
     channel_ = dg_->getScreenChannels();
     raw_buf_ =
