@@ -78,6 +78,17 @@ py_library(
 py_test(
     name = "vizdoom_test",
     srcs = ["vizdoom_test.py"],
+    deps = [
+        ":vizdoom",
+        requirement("numpy"),
+        requirement("absl-py"),
+        requirement("opencv-python-headless"),
+    ],
+)
+
+py_test(
+    name = "vizdoom_pretrain_test",
+    srcs = ["vizdoom_pretrain_test.py"],
     data = [":gen_pretrain_weight"],
     deps = [
         ":vizdoom",
@@ -85,9 +96,7 @@ py_test(
         requirement("numpy"),
         requirement("absl-py"),
         requirement("tianshou"),
-        requirement("tqdm"),
         requirement("torch"),
-        requirement("opencv-python-headless"),
     ],
 )
 

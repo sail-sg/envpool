@@ -75,7 +75,7 @@ def dm_spec_transform(
     return dm_env.specs.DiscreteArray(
       name=name,
       dtype=spec.dtype,
-      num_values=spec.maximum - spec.minimum + 1,
+      num_values=int(spec.maximum - spec.minimum + 1),
     )
   return dm_env.specs.BoundedArray(
     name=name,
@@ -93,12 +93,11 @@ def gym_spec_transform(
   if np.prod(np.abs(spec.shape)) == 1 and \
       np.isclose(spec.minimum, 0) and spec.maximum < ACTION_THRESHOLD:
     # special treatment for discrete action space
+    discrete_range = int(spec.maximum - spec.minimum + 1)
     try:
-      return gym.spaces.Discrete(
-        n=spec.maximum - spec.minimum + 1, start=spec.minimum
-      )
+      return gym.spaces.Discrete(n=discrete_range, start=spec.minimum)
     except TypeError:  # old gym version doesn't have `start`
-      return gym.spaces.Discrete(n=spec.maximum - spec.minimum + 1)
+      return gym.spaces.Discrete(n=discrete_range)
   return gym.spaces.Box(
     shape=[s for s in spec.shape if s != -1],
     dtype=spec.dtype,

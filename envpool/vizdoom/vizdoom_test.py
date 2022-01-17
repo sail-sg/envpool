@@ -118,56 +118,80 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
 
   @no_type_check
   def test_delta_action_space(self) -> None:
-    e = VizdoomGymEnvPool(VizdoomEnvSpec(VizdoomEnvSpec.gen_config(
-      cfg_path="vizdoom/maps/deathmatch.cfg",
-      wad_path="vizdoom/maps/deathmatch.wad",
-      use_combined_action=True,
-    )))
-    e2 = VizdoomGymEnvPool(VizdoomEnvSpec(VizdoomEnvSpec.gen_config(
-      cfg_path="vizdoom/maps/deathmatch.cfg",
-      wad_path="vizdoom/maps/deathmatch.wad",
-      use_combined_action=True,
-      delta_button_config={
-        "LOOK_UP_DOWN_DELTA": [11, -10, 10],
-      }
-    )))
+    e = VizdoomGymEnvPool(
+      VizdoomEnvSpec(
+        VizdoomEnvSpec.gen_config(
+          cfg_path="vizdoom/maps/deathmatch.cfg",
+          wad_path="vizdoom/maps/deathmatch.wad",
+          use_combined_action=True,
+        )
+      )
+    )
+    e2 = VizdoomGymEnvPool(
+      VizdoomEnvSpec(
+        VizdoomEnvSpec.gen_config(
+          cfg_path="vizdoom/maps/deathmatch.cfg",
+          wad_path="vizdoom/maps/deathmatch.wad",
+          use_combined_action=True,
+          delta_button_config={
+            "LOOK_UP_DOWN_DELTA": [11, -10, 10],
+          }
+        )
+      )
+    )
     assert e2.action_space.n == 11 * e.action_space.n
-    e3 = VizdoomGymEnvPool(VizdoomEnvSpec(VizdoomEnvSpec.gen_config(
-      cfg_path="vizdoom/maps/deathmatch.cfg",
-      wad_path="vizdoom/maps/deathmatch.wad",
-      use_combined_action=True,
-      delta_button_config={
-        "MOVE_LEFT_RIGHT_DELTA": [11, -10, 10],
-        "LOOK_UP_DOWN_DELTA": [11, -10, 10],
-      }
-    )))
+    e3 = VizdoomGymEnvPool(
+      VizdoomEnvSpec(
+        VizdoomEnvSpec.gen_config(
+          cfg_path="vizdoom/maps/deathmatch.cfg",
+          wad_path="vizdoom/maps/deathmatch.wad",
+          use_combined_action=True,
+          delta_button_config={
+            "MOVE_LEFT_RIGHT_DELTA": [11, -10, 10],
+            "LOOK_UP_DOWN_DELTA": [11, -10, 10],
+          }
+        )
+      )
+    )
     assert e3.action_space.n == 121 * e.action_space.n
-    e4 = VizdoomGymEnvPool(VizdoomEnvSpec(VizdoomEnvSpec.gen_config(
-      cfg_path="vizdoom/maps/deathmatch.cfg",
-      wad_path="vizdoom/maps/deathmatch.wad",
-      use_combined_action=False,
-      delta_button_config={
-        "MOVE_LEFT_RIGHT_DELTA": [11, -10, 10],
-        "LOOK_UP_DOWN_DELTA": [11, -10, 10],
-      }
-    )))
+    e4 = VizdoomGymEnvPool(
+      VizdoomEnvSpec(
+        VizdoomEnvSpec.gen_config(
+          cfg_path="vizdoom/maps/deathmatch.cfg",
+          wad_path="vizdoom/maps/deathmatch.wad",
+          use_combined_action=False,
+          delta_button_config={
+            "MOVE_LEFT_RIGHT_DELTA": [11, -10, 10],
+            "LOOK_UP_DOWN_DELTA": [11, -10, 10],
+          }
+        )
+      )
+    )
     assert e4.action_space.shape[0] == 20
 
   @no_type_check
   def test_depth_buffer(self) -> None:
-    e = VizdoomGymEnvPool(VizdoomEnvSpec(VizdoomEnvSpec.gen_config(
-      cfg_path="vizdoom/maps/deathmatch.cfg",
-      wad_path="vizdoom/maps/deathmatch.wad",
-      use_combined_action=True,
-    )))
+    e = VizdoomGymEnvPool(
+      VizdoomEnvSpec(
+        VizdoomEnvSpec.gen_config(
+          cfg_path="vizdoom/maps/deathmatch.cfg",
+          wad_path="vizdoom/maps/deathmatch.wad",
+          use_combined_action=True,
+        )
+      )
+    )
     assert e.observation_space.shape[0] == 3 * 4
     e.reset()
     assert e.step(np.array([0]), np.array([0]))[0].shape[1] == 3 * 4
-    e = VizdoomGymEnvPool(VizdoomEnvSpec(VizdoomEnvSpec.gen_config(
-      cfg_path="vizdoom/maps/D1_basic.cfg",
-      wad_path="vizdoom/maps/D1_basic.wad",
-      use_combined_action=True,
-    )))
+    e = VizdoomGymEnvPool(
+      VizdoomEnvSpec(
+        VizdoomEnvSpec.gen_config(
+          cfg_path="vizdoom/maps/D1_basic.cfg",
+          wad_path="vizdoom/maps/D1_basic.wad",
+          use_combined_action=True,
+        )
+      )
+    )
     assert e.observation_space.shape[0] == 1 * 4
     e.reset()
     assert e.step(np.array([0]), np.array([0]))[0].shape[1] == 1 * 4
