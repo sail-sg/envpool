@@ -87,6 +87,7 @@ py_test(
         requirement("tianshou"),
         requirement("tqdm"),
         requirement("torch"),
+        requirement("opencv-python-headless"),
     ],
 )
 

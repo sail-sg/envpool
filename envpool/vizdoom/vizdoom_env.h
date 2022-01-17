@@ -46,7 +46,7 @@ class VizdoomEnvFns {
         "max_episode_steps"_.bind(525), "img_height"_.bind(84),
         "img_width"_.bind(84), "stack_num"_.bind(4), "frame_skip"_.bind(4),
         "lmp_save_dir"_.bind(std::string("")), "episodic_life"_.bind(false),
-        "force_speed"_.bind(false), "use_raw_action"_.bind(true),
+        "force_speed"_.bind(false), "use_combined_action"_.bind(false),
         "use_inter_area_resize"_.bind(true), "weapon_duration"_.bind(5.0f),
         "reward_config"_.bind(std::map<std::string, std::tuple<float, float>>(
             {{"FRAGCOUNT", {1, -1.5}},         {"KILLCOUNT", {1, 0}},
@@ -107,7 +107,7 @@ class VizdoomEnvFns {
   static decltype(auto) ActionSpec(const Config& conf) {
     DoomGame dg;
     dg.loadConfig(MergePath(conf["base_path"_], conf["cfg_path"_]));
-    if (conf["use_raw_action"_]) {
+    if (!conf["use_combined_action"_]) {
       return MakeDict("action"_.bind(Spec<double>(
           {-1, static_cast<int>(dg.getAvailableButtons().size())})));
     } else {
@@ -142,7 +142,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
   Array raw_buf_;
   std::deque<Array> stack_buf_;
   std::string lmp_dir_;
-  bool save_lmp_, episodic_life_, use_raw_action_, use_inter_area_resize_;
+  bool save_lmp_, episodic_life_, use_combined_action_, use_inter_area_resize_;
   bool done_;
   int max_episode_steps_, elapsed_step_, stack_num_, frame_skip_,
       episode_count_, channel_;
@@ -163,7 +163,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
         lmp_dir_(spec.config["lmp_save_dir"_]),
         save_lmp_(lmp_dir_.length() > 0),
         episodic_life_(spec.config["episodic_life"_]),
-        use_raw_action_(spec.config["use_raw_action"_]),
+        use_combined_action_(spec.config["use_combined_action"_]),
         use_inter_area_resize_(spec.config["use_inter_area_resize"_]),
         done_(true),
         max_episode_steps_(spec.config["max_episode_steps"_]),
@@ -298,10 +298,10 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
 
   void Step(const Action& action) override {
     double* ptr = static_cast<double*>(action["action"_].data());
-    if (use_raw_action_) {
-      dg_->setAction(std::vector<double>(ptr, ptr + button_list_.size()));
-    } else {
+    if (use_combined_action_) {
       dg_->setAction(action_set_[static_cast<int>(ptr[0])]);
+    } else {
+      dg_->setAction(std::vector<double>(ptr, ptr + button_list_.size()));
     }
     dg_->advanceAction(frame_skip_, true);
     ++elapsed_step_;
@@ -315,6 +315,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
   void GetState(bool is_reset) {
     GameStatePtr gamestate = dg_->getState();
     if (gamestate == nullptr) {  // finish episode
+      WriteState(0.0f);
       return;
     }
 
@@ -419,7 +420,10 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
         }
       }
     }
+    WriteState(reward);
+  }
 
+  void WriteState(float reward) {
     State state = Allocate();
     std::vector<Array> state_array(state);
     state["reward"_] = reward;

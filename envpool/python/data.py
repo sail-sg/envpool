@@ -23,6 +23,8 @@ import tree
 
 from .protocol import ArraySpec
 
+ACTION_THRESHOLD = 2**20
+
 
 def to_nested_dict(flatten_dict: Dict[str, Any],
                    generator: Type = dict) -> Dict[str, Any]:
@@ -68,7 +70,7 @@ def dm_spec_transform(
 ) -> dm_env.specs.Array:
   """Transform ArraySpec to dm_env compatible specs."""
   if np.prod(np.abs(spec.shape)) == 1 and \
-      np.issubdtype(spec.dtype, np.integer):
+      np.isclose(spec.minimum, 0) and spec.maximum < ACTION_THRESHOLD:
     # special treatment for discrete action space
     return dm_env.specs.DiscreteArray(
       name=name,
@@ -89,7 +91,7 @@ def gym_spec_transform(
 ) -> gym.Space:
   """Transform ArraySpec to gym.Env compatible spaces."""
   if np.prod(np.abs(spec.shape)) == 1 and \
-      np.issubdtype(spec.dtype, np.integer):
+      np.isclose(spec.minimum, 0) and spec.maximum < ACTION_THRESHOLD:
     # special treatment for discrete action space
     try:
       return gym.spaces.Discrete(
