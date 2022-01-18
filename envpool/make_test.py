@@ -43,6 +43,12 @@ class _MakeTest(absltest.TestCase):
     self.assertEqual(env_gym.action_space.n, 18)
     self.assertEqual(env_dm.action_spec().num_values, 18)
 
+  def test_make_vizdoom(self) -> None:
+    env = envpool.make_gym("MyWayHome-v1")
+    print(env)
+    self.assertIsInstance(env, gym.Env)
+    env.reset()
+
   def test_make_classic_and_toytext(self) -> None:
     classic = [
       "CartPole-v0", "CartPole-v1", "Pendulum-v0", "MountainCar-v0",

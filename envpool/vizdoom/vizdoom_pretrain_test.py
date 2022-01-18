@@ -34,6 +34,9 @@ except ImportError:
 
 class _VizdoomPretrainTest(absltest.TestCase):
 
+  def get_path(self, path: str) -> str:
+    return os.path.join("envpool", "vizdoom", "maps", path)
+
   @no_type_check
   def eval_c51(
     self,
@@ -47,11 +50,11 @@ class _VizdoomPretrainTest(absltest.TestCase):
     kwargs = {
       "num_envs": num_envs,
       "seed": seed,
-      "wad_path": f"vizdoom/maps/{task}.wad",
+      "wad_path": self.get_path(task + ".wad"),
       "use_combined_action": True,
     }
     if cfg_path is None:
-      kwargs.update(cfg_path=f"vizdoom/maps/{task}.cfg")
+      kwargs.update(cfg_path=self.get_path(task + ".cfg"))
     else:
       kwargs.update(cfg_path=cfg_path)
     if reward_config is not None:
@@ -111,18 +114,14 @@ class _VizdoomPretrainTest(absltest.TestCase):
     model_path = os.path.join("envpool", "vizdoom", "policy-d3.pth")
     self.assertTrue(os.path.exists(model_path))
     # test with customized config
-    with open("envpool/vizdoom/maps/D3_battle.cfg") as f:
+    with open(self.get_path("D3_battle.cfg")) as f:
       cfg = f.read()
-    with open("/tmp/d3.cfg", "w") as f:
-      f.write(
-        cfg.replace("hud = false", "hud = true").replace(
-          "{AMMO2 HEALTH USER2}", "{AMMO2 HEALTH USER2 KILLCOUNT}"
-        )
-      )
+    with open("d3.cfg", "w") as f:
+      f.write(cfg.replace("hud = false", "hud = true"))
     reward, length = self.eval_c51(
       "D3_battle",
       model_path,
-      cfg_path="/tmp/d3.cfg",  # use abs path to overwrite base_path
+      cfg_path="d3.cfg",
       reward_config={"KILLCOUNT": [1, 0]},
     )
     self.assertGreaterEqual(reward.mean(), 20)

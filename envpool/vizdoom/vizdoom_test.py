@@ -25,14 +25,17 @@ from envpool.vizdoom import VizdoomEnvSpec, VizdoomGymEnvPool
 
 class _VizdoomEnvPoolBasicTest(absltest.TestCase):
 
+  def get_path(self, path: str) -> str:
+    return os.path.join("envpool", "vizdoom", "maps", path)
+
   def test_timelimit(
     self, num_envs: int = 5, max_episode_steps: int = 10
   ) -> None:
     conf = VizdoomEnvSpec.gen_config(
       num_envs=num_envs,
       max_episode_steps=max_episode_steps,
-      cfg_path="vizdoom/maps/D1_basic.cfg",
-      wad_path="vizdoom/maps/D1_basic.wad",
+      cfg_path=self.get_path("D1_basic.cfg"),
+      wad_path=self.get_path("D1_basic.wad"),
       use_combined_action=True,
     )
     env = VizdoomGymEnvPool(VizdoomEnvSpec(conf))
@@ -70,8 +73,8 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
       os.makedirs("img", exist_ok=True)
     conf = VizdoomEnvSpec.gen_config(
       num_envs=num_envs,
-      cfg_path="vizdoom/maps/D1_basic.cfg",
-      wad_path="vizdoom/maps/D1_basic.wad",
+      cfg_path=self.get_path("D1_basic.cfg"),
+      wad_path=self.get_path("D1_basic.wad"),
       use_combined_action=True,
       img_width=width,
       img_height=height,
@@ -101,15 +104,15 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
   @no_type_check
   def test_d3_action_space(self) -> None:
     conf = VizdoomEnvSpec.gen_config(
-      cfg_path="vizdoom/maps/D3_battle.cfg",
-      wad_path="vizdoom/maps/D3_battle.wad",
+      cfg_path=self.get_path("D3_battle.cfg"),
+      wad_path=self.get_path("D3_battle.wad"),
       use_combined_action=True,
     )
     env = VizdoomGymEnvPool(VizdoomEnvSpec(conf))
     action_num = env.action_space.n
     conf = VizdoomEnvSpec.gen_config(
-      cfg_path="vizdoom/maps/D3_battle.cfg",
-      wad_path="vizdoom/maps/D3_battle.wad",
+      cfg_path=self.get_path("D3_battle.cfg"),
+      wad_path=self.get_path("D3_battle.wad"),
       use_combined_action=True,
       force_speed=True,
     )
@@ -121,8 +124,8 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
     e = VizdoomGymEnvPool(
       VizdoomEnvSpec(
         VizdoomEnvSpec.gen_config(
-          cfg_path="vizdoom/maps/deathmatch.cfg",
-          wad_path="vizdoom/maps/deathmatch.wad",
+          cfg_path=self.get_path("deathmatch.cfg"),
+          wad_path=self.get_path("deathmatch.wad"),
           use_combined_action=True,
         )
       )
@@ -130,8 +133,8 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
     e2 = VizdoomGymEnvPool(
       VizdoomEnvSpec(
         VizdoomEnvSpec.gen_config(
-          cfg_path="vizdoom/maps/deathmatch.cfg",
-          wad_path="vizdoom/maps/deathmatch.wad",
+          cfg_path=self.get_path("deathmatch.cfg"),
+          wad_path=self.get_path("deathmatch.wad"),
           use_combined_action=True,
           delta_button_config={
             "LOOK_UP_DOWN_DELTA": [11, -10, 10],
@@ -143,8 +146,8 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
     e3 = VizdoomGymEnvPool(
       VizdoomEnvSpec(
         VizdoomEnvSpec.gen_config(
-          cfg_path="vizdoom/maps/deathmatch.cfg",
-          wad_path="vizdoom/maps/deathmatch.wad",
+          cfg_path=self.get_path("deathmatch.cfg"),
+          wad_path=self.get_path("deathmatch.wad"),
           use_combined_action=True,
           delta_button_config={
             "MOVE_LEFT_RIGHT_DELTA": [11, -10, 10],
@@ -157,8 +160,8 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
     e4 = VizdoomGymEnvPool(
       VizdoomEnvSpec(
         VizdoomEnvSpec.gen_config(
-          cfg_path="vizdoom/maps/deathmatch.cfg",
-          wad_path="vizdoom/maps/deathmatch.wad",
+          cfg_path=self.get_path("deathmatch.cfg"),
+          wad_path=self.get_path("deathmatch.wad"),
           use_combined_action=False,
           delta_button_config={
             "MOVE_LEFT_RIGHT_DELTA": [11, -10, 10],
@@ -170,12 +173,12 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
     assert e4.action_space.shape[0] == 20
 
   @no_type_check
-  def test_depth_buffer(self) -> None:
+  def test_obs_space(self) -> None:
     e = VizdoomGymEnvPool(
       VizdoomEnvSpec(
         VizdoomEnvSpec.gen_config(
-          cfg_path="vizdoom/maps/deathmatch.cfg",
-          wad_path="vizdoom/maps/deathmatch.wad",
+          cfg_path=self.get_path("deathmatch.cfg"),
+          wad_path=self.get_path("deathmatch.wad"),
           use_combined_action=True,
         )
       )
@@ -186,8 +189,8 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
     e = VizdoomGymEnvPool(
       VizdoomEnvSpec(
         VizdoomEnvSpec.gen_config(
-          cfg_path="vizdoom/maps/D1_basic.cfg",
-          wad_path="vizdoom/maps/D1_basic.wad",
+          cfg_path=self.get_path("D1_basic.cfg"),
+          wad_path=self.get_path("D1_basic.wad"),
           use_combined_action=True,
         )
       )

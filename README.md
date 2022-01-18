@@ -18,9 +18,9 @@
 - [x] Atari games
 - [x] Classic RL envs: CartPole, MountainCar, Pendulum, Acrobot
 - [x] Toy text RL envs: Catch, FrozenLake, Taxi, NChain, CliffWalking, Blackjack
-- [ ] ViZDoom single/multi players
-- [ ] Mujoco
+- [x] ViZDoom single player
 - [ ] Box2D
+- [ ] Mujoco
 - [ ] Procgen
 - [ ] Minigrid
 
@@ -38,6 +38,7 @@ Here are EnvPool's several highlights:
   - Stable-Baselines3 [`Pendulum-v0` example](https://github.com/sail-sg/envpool/blob/master/examples/sb3_examples/ppo.py);
   - Tianshou [`CartPole` example](https://github.com/sail-sg/envpool/blob/master/examples/tianshou_examples/cartpole_ppo.py) and [`Pendulum-v0` example](https://github.com/sail-sg/envpool/blob/master/examples/tianshou_examples/pendulum_ppo.py);
   - CleanRL [`Pong-v5` example](https://github.com/sail-sg/envpool/blob/master/examples/cleanrl_examples/ppo_atari_envpool.py) (solving Pong in 5 mins ([tracked experiment](https://wandb.ai/costa-huang/cleanRL/runs/opk2dmta)));
+- Support [customized C++ environment integration](https://envpool.readthedocs.io/en/latest/pages/env.html).
 
 ## Installation
 

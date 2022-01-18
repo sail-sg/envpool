@@ -23,46 +23,39 @@ Options
   ``env.step``, default to ``batch_size``;
 * ``seed (int)``: the environment seed, default to ``42``;
 * ``max_episode_steps (int)``: the maximum number of steps for one episode,
-  default to ``2625``;
+  default to ``525``;
 * ``img_height (int)``: the desired observation image height, default to
   ``84``;
 * ``img_width (int)``: the desired observation image width, default to ``84``;
 * ``stack_num (int)``: the number of frames to stack for a single observation,
   default to ``4``;
-* ``frameskip (int)``: the number of frames to execute one repeated action,
+* ``frame_skip (int)``: the number of frames to execute one repeated action,
   only the last frame would be kept, default to ``4``;
+* ``use_inter_area_resize (bool)``: whether to use ``cv::INTER_AREA`` for
+  image resize, default to ``True``;
 * ``episodic_life (bool)``: make end-of-life == end-of-episode, but only reset
   on true game over. It helps the value estimation. Default to ``False``;
-* ``depth_only (bool)``: if set to ``True``, the observation contains only
-  depth buffer instead of RGB/Gray image, default to ``False`` (as-is);
-* ``use_raw_action (bool)``: whether to use a list of float as action input
-  (for doom game engine), default to ``False`` (use combined action space, see
-  :ref:`vizdoom_action_space`);
+* ``use_combined_action (bool)``: whether to use a discrete action space as
+  action input (for doom game engine), see :ref:`vizdoom_action_space`,
+  default to ``False`` (use raw action space);
 * ``force_speed (bool)``: if ``SPEED`` button is available, press it in every
-  frame, default to ``False``;
+  frame. Only available when using combined action. Default to ``False``;
 * ``lmp_save_dir (str)``: the directory to save ``.lmp`` files for recording
   and replay (see tests/vizdoom/replay.py), default to ``""`` (no lmp saving);
-* ``cfg_path (str)``: the ``.cfg`` file path, using in customized env setup,
+* ``vzd_path (str)``: the vizdoom binary path, default to
+  ``vizdoom/bin/vizdoom``;
+* ``cfg_path (str)``: the ``.cfg`` file path, used in customized env setup,
   default to ``""``;
-* ``wad_path (str)``: the ``.wad`` file path, using in customized env setup,
+* ``wad_path (str)``: the ``.wad`` file path, used in customized env setup,
   default to ``""``;
-* ``iwad (str)``: the rendering resource package to choose, available options
-  are ``freedoom2`` and ``doom2``, default to ``freedoom2``;
+* ``iwad_path (str)``: the rendering resource package path, default to
+  ``vizdoom/bin/freedoom2``;
 * ``map_id (str)``: the vizdoom map id, see `setDoomMap
   <https://github.com/mwydmuch/ViZDoom/blob/master/doc/DoomGame.md#setDoomMap>`_,
-  available options are ``"map01", "map02", ...``, default to ``map01``;
+  available options are ``"map01", "map02", ...``, default to ``"map01"``;
 * ``game_args (str)``: the args string for vizdoom game, see `addGameArgs
   <https://github.com/mwydmuch/ViZDoom/blob/master/doc/DoomGame.md#addGameArgs>`_,
-  default to ``""`` (normal game) and ``"-host 1 -deathmatch +timelimit 10.0
-  +sv_forcerespawn 1 +sv_noautoaim 1 +sv_respawnprotect 1 +sv_spawnfarthest 1
-  +sv_nocrouch 1 +viz_respawn_delay 0"`` (Single-agent CIG game);
-
-.. note::
-
-    EnvPool provides the default config about CIG single player game for both
-    train and eval phases at ``envpool.vizdoom.cig_singleplayer_args`` (train)
-    and ``envpool.vizdoom.cig_singleplayer_args_eval`` (evaluation).
-
+  default to ``""``;
 * ``reward_config (Dict[str, Tuple[float, float]])``: how to calculate the
   reward (see below), default to ``{"FRAGCOUNT": [1, -1.5], "KILLCOUNT": [1, 0],
   "DEATHCOUNT": [-0.75, 0.75], "HITCOUNT": [0.01, -0.01], "DAMAGECOUNT":
@@ -86,11 +79,12 @@ dictionary has format of ``NAME: [pos_reward, neg_reward]``. If we take
 
 where ``last[*]`` is the corresponding value at the last timestep.
 
-* ``selected_weapon_reward_config (Dict[str, float])``: the available keys are
-  ``min_duration`` and ``SELECTED2 / SELECTED3 / ... / SELECTED7``, it means if
-  the agent holds ``i``th weapon for at least ``min_duration`` timestep, the
-  reward will be added by ``selected_weapon_reward_config[f"SELECTED{i}"]``;
-* ``delta_button_config (Dict[str, Tuple[int, float, float]])``:see
+* ``weapon_duration`` see below, default to ``5``;
+* ``selected_weapon_reward_config (Dict[int, float])``: the available keys are
+  ``2 / 3 / ... / 7``, it means if the agent holds ``i``th weapon for at least
+  ``weapon_duration`` timestep, the reward will be added by
+  ``selected_weapon_reward_config[i]``;
+* ``delta_button_config (Dict[str, Tuple[int, float, float]])``: see
   :ref:`vizdoom_action_space`.
 
 
@@ -100,45 +94,33 @@ Customized VizDoom Env
 Use ``VizdoomCustom-v1`` with ``cfg_path`` and ``wad_path``:
 ::
 
-   env = envpool.make("VizdoomCustom-v1", cfg_path="xxx.cfg", wad_path="xxx.wad", ...)
-
-
-Methods
--------
-
-* ``env.get_button_name() -> List[str]``: return the name list of available
-  buttons in configuration file;
-* ``env.get_action_set() -> List[List[float]]``: return the actual combo-action
-  setting used in envpool;
-* ``env.get_game_variable_name() -> List[str]``: return the name list of
-  available game variables in configuration file.
-* ``env.set_difficulty(mean: float, std: float) -> None``: set AI bots'
-  difficulty in multi-player game, the available difficulty levels are
-  ``[10, 20, ..., 90, 100]``. Every ``env.reset`` will use sampled AI bots with
-  given difficulty configuration if this function is set.
+   env = envpool.make(
+     "VizdoomCustom-v1",
+     cfg_path="xxx.cfg",
+     wad_path="xxx.wad",
+     ...
+    )
 
 
 Observation Space
 -----------------
 
 The observation channel number is defined in configuration file (e.g.,
-``GRAY8`` or ``CRCGCB``). If the depth buffer is enabled, it will append to the
-image's last channel. For example, if someone uses ``CRCGCB`` and enables depth
-buffer, meanwhile set ``stack_num=4``, the resulted observation image size will
-be ``(16, img_height, img_width)`` where 16 comes from
-``stack_num * (channel + has_depth)``.
+``GRAY8`` or ``CRCGCB``).
 
 The game variables defined in configuration file are in observation (dm) / are
-in info (gym). Each variable tags a key.
-
+in info (gym). Each variable tags a key. Currently it includes:
+``"AMMO2", "AMMO3", "AMMO4", "AMMO5", "AMMO6", "AMMO7", "ARMOR",
+"DAMAGECOUNT", "DEATHCOUNT", "FRAGCOUNT", "HEALTH", "HITCOUNT",
+"KILLCOUNT", "SELECTED_WEAPON", "SELECTED_WEAPON_AMMO", "USER2"``
 
 .. _vizdoom_action_space:
 
 Action Space
 ------------
 
-If ``use_raw_action`` is set to ``True``, it only accepts the original action
-input (which is a list of float); otherwise:
+If ``use_combined_action`` is set to ``False``, it only accepts the original
+action input (which is a list of float); otherwise:
 
 All of the buttons are in discrete space, including delta button. In EnvPool
 we directly generate the combo action with the following rule:
@@ -162,7 +144,6 @@ we directly generate the combo action with the following rule:
    ``delta_button_config={"TURN_LEFT_RIGHT_DELTA": [4, -2.0, 1.0]}``, it will
    build ``TURN_LEFT_RIGHT_DELTA = [-2.0, -1.0, 0.0, 1.0]`` 4 discrete choices.
 
-
 For example, if we have ``MOVE_FORWARD``, ``TURN_LEFT`` and ``TURN_RIGHT``
 three buttons (which is exactly health-gathering setting), we have 2x3=6
 discrete actions according the above rule.
@@ -176,9 +157,7 @@ Available Tasks
 * ``D1Basic-v1``
 * ``D2Navigation-v1``
 * ``D3Battle-v1``
-* ``D3Battle99maps-v1``
 * ``D4Battle2-v1``
-* ``D4Battle299maps-v1``
 * ``DeadlyCorridor-v1``
 * ``Deathmatch-v1``
 * ``DefendTheCenter-v1``
@@ -192,5 +171,3 @@ Available Tasks
 * ``SimplerBasic-v1``
 * ``TakeCover-v1``
 * ``VizdoomCustom-v1``
-* ``MultiAgentCig-v0``
-* ``MultiAgentVizdoomCustom-v0``
