@@ -1,5 +1,12 @@
 load("@envpool//third_party:common.bzl", "template_rule")
 
+genrule(
+    name = "glibc_fix",
+    srcs = ["@glibc_version_header//:glibc_2_17"],
+    outs = ["glibc.h"],
+    cmd = "cp $< $@",
+)
+
 cc_binary(
     name = "arithchk",
     srcs = ["gdtoa/arithchk.c"],
@@ -695,7 +702,6 @@ cc_binary(
         "-DNO_GTK=1",
         "-DNO_FMOD=1",
         "-DNO_OPENAL=1",
-        "-std=c++11",
         "-fPIC",
         "-fomit-frame-pointer",
         "-D__forceinline=inline",
@@ -715,9 +721,11 @@ cc_binary(
         "-msse",
         "-msse2",
         "-mmmx",
+        "-include glibc.h"
     ],
     data = [
         ":vizdoom_pk3",
+        ":glibc_fix",
     ],
     includes = [
         "src",
