@@ -11,9 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Entry point for all envs' registration."""
+"""Vizdoom env in EnvPool."""
 
-import envpool.atari.registration  # noqa: F401
-import envpool.classic_control.registration  # noqa: F401
-import envpool.toy_text.registration  # noqa: F401
-import envpool.vizdoom.registration  # noqa: F401
+from envpool.python.api import py_env
+
+from .vizdoom_envpool import _VizdoomEnvPool, _VizdoomEnvSpec
+
+VizdoomEnvSpec, VizdoomDMEnvPool, VizdoomGymEnvPool = py_env(
+  _VizdoomEnvSpec, _VizdoomEnvPool
+)
+
+__all__ = [
+  "VizdoomEnvSpec",
+  "VizdoomDMEnvPool",
+  "VizdoomGymEnvPool",
+]

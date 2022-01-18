@@ -160,6 +160,112 @@ def workspace():
         build_file = "//third_party/atari_roms:atari_roms.BUILD",
     )
 
+    maybe(
+        http_archive,
+        name = "libjpeg_turbo",
+        sha256 = "b3090cd37b5a8b3e4dbd30a1311b3989a894e5d3c668f14cbc6739d77c9402b7",
+        strip_prefix = "libjpeg-turbo-2.0.5",
+        urls = [
+            "https://github.com/libjpeg-turbo/libjpeg-turbo/archive/2.0.5.tar.gz",
+        ],
+        build_file = "//third_party/jpeg:jpeg.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "nasm",
+        sha256 = "63ec86477ad3f0f6292325fd89e1d93aea2e2fd490070863f17d48f7cd387011",
+        strip_prefix = "nasm-2.13.03",
+        urls = [
+            "https://cdn.sail.sea.com/sail/bazel/nasm-2.13.03.tar.bz2",
+            "https://storage.googleapis.com/mirror.tensorflow.org/www.nasm.us/pub/nasm/releasebuilds/2.13.03/nasm-2.13.03.tar.bz2",
+        ],
+        build_file = "//third_party/nasm:nasm.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "sdl2",
+        sha256 = "65be9ff6004034b5b2ce9927b5a4db1814930f169c4b2dae0a1e4697075f287b",
+        strip_prefix = "SDL2-2.0.16",
+        urls = [
+            "https://cdn.sail.sea.com/sail/bazel/SDL2-2.0.16.tar.gz",
+            "https://www.libsdl.org/release/SDL2-2.0.16.tar.gz",
+        ],
+        build_file = "//third_party/sdl2:sdl2.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "com_github_nelhage_rules_boost",
+        sha256 = "b3cbdceaa95b8cfe3a69ff37f8ad0e53a77937433234f6b9a6add2eff5bde333",
+        strip_prefix = "rules_boost-1e3a69bf2d5cd10c34b74f066054cd335d033d71",
+        urls = [
+            "https://github.com/nelhage/rules_boost/archive/1e3a69bf2d5cd10c34b74f066054cd335d033d71.tar.gz",
+        ],
+    )
+
+    maybe(
+        http_archive,
+        name = "boost",
+        build_file = "@com_github_nelhage_rules_boost//:BUILD.boost",
+        patch_cmds = ["rm -f doc/pdf/BUILD"],
+        sha256 = "d73a8da01e8bf8c7eda40b4c84915071a8c8a0df4a6734537ddde4a8580524ee",
+        strip_prefix = "boost_1_71_0",
+        urls = [
+            "https://cdn.sail.sea.com/sail/bazel/boost_1_71_0.tar.bz2",
+            "https://mirror.bazel.build/dl.bintray.com/boostorg/release/1.71.0/source/boost_1_71_0.tar.bz2",
+            "https://dl.bintray.com/boostorg/release/1.71.0/source/boost_1_71_0.tar.bz2",
+        ],
+    )
+
+    maybe(
+        http_archive,
+        name = "freedoom",
+        sha256 = "f42c6810fc89b0282de1466c2c9c7c9818031a8d556256a6db1b69f6a77b5806",
+        strip_prefix = "freedoom-0.12.1/",
+        urls = [
+            "https://github.com/freedoom/freedoom/releases/download/v0.12.1/freedoom-0.12.1.zip",
+        ],
+        build_file = "//third_party/freedoom:freedoom.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "vizdoom",
+        sha256 = "1ec04a66da0f77616d31b8f052d0233070ae5f8e5da1cacfb0c45c04b18c99d6",
+        strip_prefix = "ViZDoom-1.1.11/src/vizdoom/",
+        urls = [
+            "https://github.com/mwydmuch/ViZDoom/archive/refs/tags/1.1.11.tar.gz",
+        ],
+        build_file = "//third_party/vizdoom:vizdoom.BUILD",
+        patches = [
+            "//third_party/vizdoom:sdl_thread.patch",
+        ],
+    )
+
+    maybe(
+        http_archive,
+        name = "vizdoom_lib",
+        sha256 = "1ec04a66da0f77616d31b8f052d0233070ae5f8e5da1cacfb0c45c04b18c99d6",
+        strip_prefix = "ViZDoom-1.1.11/",
+        urls = [
+            "https://github.com/mwydmuch/ViZDoom/archive/refs/tags/1.1.11.tar.gz",
+        ],
+        build_file = "//third_party/vizdoom_lib:vizdoom_lib.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "vizdoom_extra_maps",
+        sha256 = "325440fe566ff478f35947c824ea5562e2735366845d36c5a0e40867b59f7d69",
+        strip_prefix = "DirectFuturePrediction-b4757769f167f1bd7fb1ece5fdc6d874409c68a9/",
+        urls = [
+            "https://github.com/isl-org/DirectFuturePrediction/archive/b4757769f167f1bd7fb1ece5fdc6d874409c68a9.zip",
+        ],
+        build_file = "//third_party/vizdoom_extra_maps:vizdoom_extra_maps.BUILD",
+    )
+
     # Atari/VizDoom pretrained weight for testing pipeline
 
     maybe(

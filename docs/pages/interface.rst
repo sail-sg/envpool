@@ -118,7 +118,9 @@ Data Output Format
 |   step   |  (obs, rew, done, info|env_id)              | TimeStep(StepType, obs|info|env_id, rew, discount or 1 - done)   |
 +----------+---------------------------------------------+------------------------------------------------------------------+
 
-Note: ``gym.reset()`` doesn't support async step setting because it cannot get ``env_id`` from ``reset()`` function, so it's better to use low-level APIs such as ``send`` and ``recv``.
+Note: ``gym.reset()`` doesn't support async step setting because it cannot get
+``env_id`` from ``reset()`` function, so it's better to use low-level APIs such
+as ``send`` and ``recv``.
 
 
 Batch Size

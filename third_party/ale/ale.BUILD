@@ -15,11 +15,11 @@ template_rule(
     src = "src/version.hpp.in",
     out = "version.hpp",
     substitutions = {
-        "@ALE_VERSION@": "0.7.2",
+        "@ALE_VERSION@": "0.7.3",
         "@ALE_VERSION_MAJOR@": "0",
         "@ALE_VERSION_MINOR@": "7",
-        "@ALE_VERSION_PATCH@": "2",
-        "@ALE_VERSION_GIT_SHA@": "a7a216c36dff79049d8dec6189931e209834dc45",
+        "@ALE_VERSION_PATCH@": "3",
+        "@ALE_VERSION_GIT_SHA@": "978d2ce25665338ba71e45d32fff853b17c15f2e",
     },
 )
 

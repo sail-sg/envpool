@@ -19,6 +19,7 @@ py_library(
         "//envpool/atari:atari_registration",
         "//envpool/classic_control:classic_control_registration",
         "//envpool/toy_text:toy_text_registration",
+        "//envpool/vizdoom:vizdoom_registration",
     ],
 )
 
@@ -32,6 +33,7 @@ py_library(
         "//envpool/classic_control",
         "//envpool/python",
         "//envpool/toy_text",
+        "//envpool/vizdoom",
     ],
 )
 
