@@ -20,7 +20,7 @@ import cv2
 import numpy as np
 from absl.testing import absltest
 
-from envpool.vizdoom import VizdoomEnvSpec, VizdoomGymEnvPool
+from envpool.vizdoom import VizdoomDMEnvPool, VizdoomEnvSpec, VizdoomGymEnvPool
 
 
 class _VizdoomEnvPoolBasicTest(absltest.TestCase):
@@ -174,7 +174,7 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
 
   @no_type_check
   def test_obs_space(self) -> None:
-    e = VizdoomGymEnvPool(
+    e = VizdoomDMEnvPool(
       VizdoomEnvSpec(
         VizdoomEnvSpec.gen_config(
           cfg_path=self.get_path("deathmatch.cfg"),
@@ -183,10 +183,11 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
         )
       )
     )
-    assert e.observation_space.shape[0] == 3 * 4
+    assert e.observation_spec().obs.shape[0] == 3 * 4
     e.reset()
-    assert e.step(np.array([0]), np.array([0]))[0].shape[1] == 3 * 4
-    e = VizdoomGymEnvPool(
+    assert e.step(np.array([0]),
+                  np.array([0])).observation.obs.shape[1] == 3 * 4
+    e = VizdoomDMEnvPool(
       VizdoomEnvSpec(
         VizdoomEnvSpec.gen_config(
           cfg_path=self.get_path("D1_basic.cfg"),
@@ -195,9 +196,10 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
         )
       )
     )
-    assert e.observation_space.shape[0] == 1 * 4
+    assert e.observation_spec().obs.shape[0] == 1 * 4
     e.reset()
-    assert e.step(np.array([0]), np.array([0]))[0].shape[1] == 1 * 4
+    assert e.step(np.array([0]),
+                  np.array([0])).observation.obs.shape[1] == 1 * 4
 
 
 if __name__ == "__main__":
