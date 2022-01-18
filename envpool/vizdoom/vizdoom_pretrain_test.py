@@ -41,20 +41,21 @@ class _VizdoomPretrainTest(absltest.TestCase):
     resume_path: str,
     num_envs: int = 10,
     seed: int = 0,
+    cfg_path: Optional[str] = None,
     reward_config: Optional[dict] = None,
-    render_config: Optional[dict] = None,
   ) -> Tuple[np.ndarray, np.ndarray]:
     kwargs = {
       "num_envs": num_envs,
       "seed": seed,
-      "cfg_path": f"vizdoom/maps/{task}.cfg",
       "wad_path": f"vizdoom/maps/{task}.wad",
       "use_combined_action": True,
     }
+    if cfg_path is None:
+      kwargs.update(cfg_path=f"vizdoom/maps/{task}.cfg")
+    else:
+      kwargs.update(cfg_path=cfg_path)
     if reward_config is not None:
       kwargs.update(reward_config=reward_config)
-    if render_config is not None:
-      kwargs.update(render_config=render_config)
     env = VizdoomGymEnvPool(
       VizdoomEnvSpec(VizdoomEnvSpec.gen_config(**kwargs))
     )
@@ -77,7 +78,7 @@ class _VizdoomPretrainTest(absltest.TestCase):
     reward = np.zeros(num_envs)
     length = np.zeros(num_envs)
     obs = env.reset()
-    for t in range(25000):
+    for t in range(555):
       if np.random.rand() < 0.05:
         act = np.random.randint(action_shape, size=len(ids))
       else:
@@ -109,11 +110,20 @@ class _VizdoomPretrainTest(absltest.TestCase):
   def test_d3(self) -> None:
     model_path = os.path.join("envpool", "vizdoom", "policy-d3.pth")
     self.assertTrue(os.path.exists(model_path))
+    # test with customized config
+    with open("envpool/vizdoom/maps/D3_battle.cfg") as f:
+      cfg = f.read()
+    with open("/tmp/d3.cfg", "w") as f:
+      f.write(
+        cfg.replace("hud = false", "hud = true").replace(
+          "{AMMO2 HEALTH USER2}", "{AMMO2 HEALTH USER2 KILLCOUNT}"
+        )
+      )
     reward, length = self.eval_c51(
       "D3_battle",
       model_path,
+      cfg_path="/tmp/d3.cfg",  # use abs path to overwrite base_path
       reward_config={"KILLCOUNT": [1, 0]},
-      render_config={"hud": True},
     )
     self.assertGreaterEqual(reward.mean(), 20)
 
