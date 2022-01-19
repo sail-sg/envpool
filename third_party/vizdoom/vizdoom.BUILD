@@ -2,9 +2,7 @@ load("@envpool//third_party:common.bzl", "template_rule")
 
 cc_binary(
     name = "arithchk",
-    srcs = [
-        "gdtoa/arithchk.c",
-    ],
+    srcs = ["gdtoa/arithchk.c"],
 )
 
 genrule(
@@ -133,9 +131,7 @@ cc_binary(
 
 cc_binary(
     name = "lemon",
-    srcs = [
-        "tools/lemon/lemon.c",
-    ],
+    srcs = ["tools/lemon/lemon.c"],
 )
 
 genrule(

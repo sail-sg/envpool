@@ -44,6 +44,8 @@ class _MakeTest(absltest.TestCase):
     self.assertEqual(env_dm.action_spec().num_values, 18)
 
   def test_make_vizdoom(self) -> None:
+    spec = envpool.make_spec("MyWayHome-v1")
+    print(spec)
     env = envpool.make_gym("MyWayHome-v1")
     print(env)
     self.assertIsInstance(env, gym.Env)
