@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   test:
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: [self-hosted, Linux, X64, Test]
     steps:
     - name: Cancel previous run
       uses: styfle/cancel-workflow-action@0.9.1
