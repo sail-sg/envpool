@@ -1,9 +1,10 @@
 name: Release PyPI Wheel
 
-on:
-  push:
-    branches:
-      - master
+# on:
+#   push:
+#     branches:
+#       - master
+on: [push, pull_request]
 
 jobs:
   release:
