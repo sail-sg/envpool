@@ -23,4 +23,4 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
     - name: Test
       run: |
-        make bazel-test BAZELOPT="--remote_cache=http://bazel-cache.sail:8080"
+        make bazel-test BAZELOPT="--remote_cache=http://bazel-cache.sail:8080 --remote_accept_cached=false"

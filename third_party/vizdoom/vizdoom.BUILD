@@ -2,13 +2,7 @@ load("@envpool//third_party:common.bzl", "template_rule")
 
 cc_binary(
     name = "arithchk",
-    srcs = [
-        "gdtoa/arithchk.c",
-        "@glibc_version_header//:glibc_2_17",
-    ],
-    copts = [
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
-    ],
+    srcs = ["gdtoa/arithchk.c"],
 )
 
 genrule(
@@ -24,10 +18,6 @@ cc_binary(
     srcs = [
         "gdtoa/qnan.c",
         ":arith.h",
-        "@glibc_version_header//:glibc_2_17",
-    ],
-    copts = [
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
     ],
 )
 
@@ -47,7 +37,6 @@ cc_library(
         "gdtoa/misc.c",
         ":arith.h",
         ":gd_qnan.h",
-        "@glibc_version_header//:glibc_2_17",
     ],
     hdrs = glob(["gdtoa/*.h"]),
     copts = [
@@ -55,7 +44,6 @@ cc_library(
         "-Wextra",
         "-DINFNAN_CHECK",
         "-DMULTIPLE_THREADS",
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
     ],
     strip_include_prefix = "gdtoa",
 )
@@ -70,7 +58,6 @@ cc_library(
         "bzip2/decompress.c",
         "bzip2/huffman.c",
         "bzip2/randtable.c",
-        "@glibc_version_header//:glibc_2_17",
     ],
     hdrs = glob([
         "bzip2/*.h",
@@ -80,7 +67,6 @@ cc_library(
         "-Wall",
         "-Wextra",
         "-fomit-frame-pointer",
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
     ],
     strip_include_prefix = "bzip2",
 )
@@ -105,9 +91,7 @@ cc_library(
             "lzma/C/Threads.c",
             "lzma/C/LzFindMt.c",
         ],
-    ) + [
-        "@glibc_version_header//:glibc_2_17",
-    ],
+    ),
     hdrs = glob(
         [
             "lzma/C/*.h",
@@ -123,7 +107,6 @@ cc_library(
         "-Wextra",
         "-fomit-frame-pointer",
         "-D_7ZIP_PPMD_SUPPPORT",
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
     ],
     strip_include_prefix = "lzma/C",
 )
@@ -140,23 +123,15 @@ cc_binary(
         "tools/re2c/scanner.cc",
         "tools/re2c/substr.cc",
         "tools/re2c/translate.cc",
-        "@glibc_version_header//:glibc_2_17",
     ] + glob(["tools/re2c/*.h"]),
     copts = [
         "-DHAVE_CONFIG_H",
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
     ],
 )
 
 cc_binary(
     name = "lemon",
-    srcs = [
-        "tools/lemon/lemon.c",
-        "@glibc_version_header//:glibc_2_17",
-    ],
-    copts = [
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
-    ],
+    srcs = ["tools/lemon/lemon.c"],
 )
 
 genrule(
@@ -202,9 +177,7 @@ cc_library(
         "dumb/**/*.h",
         "dumb/**/*.c",
         "dumb/**/*.inc",
-    ]) + [
-        "@glibc_version_header//:glibc_2_17",
-    ],
+    ]),
     hdrs = glob([
         "dumb/include/*.h",
     ]),
@@ -214,7 +187,6 @@ cc_library(
         "-Wno-pointer-sign",
         "-Wno-uninitialized",
         "-Wno-unused-but-set-variable",
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
     ],
     includes = [
         "dumb/include",
@@ -226,9 +198,7 @@ cc_library(
     srcs = glob([
         "game-music-emu/gme/*.cpp",
         "game-music-emu/gme/*.h",
-    ]) + [
-        "@glibc_version_header//:glibc_2_17",
-    ],
+    ]),
     hdrs = [
         "game-music-emu/gme/gme.h",
     ],
@@ -236,7 +206,6 @@ cc_library(
         "-DLIBGME_VISIBILITY",
         "-fvisibility=hidden",
         "-fvisibility-inlines-hidden",
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
     ],
     strip_include_prefix = "game-music-emu",
 )
@@ -331,14 +300,12 @@ cc_library(
         "src/*.h",
     ]) + [
         "src/oplsynth/fmopl.cpp",
-        "@glibc_version_header//:glibc_2_17",
     ],
     copts = [
         "-Dstricmp=strcasecmp",
         "-Dstrnicmp=strncasecmp",
         "-fno-tree-dominator-opts",
         "-fno-tree-fre",
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
     ],
     includes = [
         "src",
@@ -349,15 +316,11 @@ cc_binary(
     name = "zipdir",
     srcs = [
         "tools/zipdir/zipdir.c",
-        "@glibc_version_header//:glibc_2_17",
     ],
     deps = [
         ":bzip2",
         ":lzma",
         "@zlib",
-    ],
-    copts = [
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
     ],
 )
 
