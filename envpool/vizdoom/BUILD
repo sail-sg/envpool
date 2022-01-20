@@ -57,7 +57,7 @@ py_library(
     name = "vizdoom",
     srcs = ["__init__.py"],
     data = [
-        "//envpool/vizdoom/bin:vizdoom",
+        "//envpool/vizdoom/bin:vizdoom_bin",
         "//envpool/vizdoom/bin:vizdoom_pk3",
         "//envpool/vizdoom/bin:freedoom",
         ":gen_vizdoom_maps",

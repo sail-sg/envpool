@@ -129,7 +129,7 @@ docker-release:
 	docker run --network=host -v `pwd`/wheelhouse:/whl -it $(PROJECT_NAME)-release:$(COMMIT_HASH) bash -c "cp wheelhouse/* /whl"
 	echo successfully build docker image with tag $(PROJECT_NAME)-release:$(COMMIT_HASH)
 
-pypi-wheel: bazel-clean auditwheel-install bazel-build
+pypi-wheel: auditwheel-install bazel-build
 	ls dist/*.whl | xargs auditwheel repair --plat manylinux_2_17_x86_64
 
 release-test1:

@@ -1,7 +1,7 @@
 package(default_visibility = ["//visibility:public"])
 
 genrule(
-    name = "vizdoom",
+    name = "vizdoom_bin",
     srcs = ["@vizdoom//:vizdoom"],
     outs = ["vizdoom"],
     cmd = "cp $< $@",
