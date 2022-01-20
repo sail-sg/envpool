@@ -8,10 +8,10 @@ on: [push, pull_request]
 
 jobs:
   release:
+    runs-on: [self-hosted, Linux, X64, Wheel, ${{ matrix.python-version }}]
     strategy:
       matrix:
         python-version: [3.7, 3.8, 3.9]
-    runs-on: [self-hosted, Linux, X64, Wheel, ${{ matrix.python-version }}]
     steps:
     - name: Cancel previous run
       uses: styfle/cancel-workflow-action@0.9.1
