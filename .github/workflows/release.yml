@@ -7,7 +7,7 @@ on:
 
 jobs:
   release:
-    runs-on: [self-hosted, Linux, X64, Wheel]
+    runs-on: ${{ matrix.python-version }}
     strategy:
       matrix:
         python-version: [3.7, 3.8, 3.9]

@@ -96,6 +96,17 @@ def workspace():
 
     maybe(
         http_archive,
+        name = "glibc_version_header",
+        sha256 = "57db74f933b7a9ea5c653498640431ce0e52aaef190d6bb586711ec4f8aa2b9e",
+        strip_prefix = "glibc_version_header-0.1/version_headers/",
+        urls = [
+            "https://github.com/wheybags/glibc_version_header/archive/refs/tags/0.1.tar.gz",
+        ],
+        build_file = "//third_party/glibc_version_header:glibc_version_header.BUILD",
+    )
+
+    maybe(
+        http_archive,
         name = "concurrentqueue",
         sha256 = "eb37336bf9ae59aca7b954db3350d9b30d1cab24b96c7676f36040aa76e915e8",
         strip_prefix = "concurrentqueue-1.0.3",

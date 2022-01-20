@@ -25,17 +25,6 @@ genrule(
     cmd = "mkdir -p $(OUTS) && cp $(SRCS) $(OUTS)",
 )
 
-genrule(
-    name = "gen_vizdoom_exe",
-    srcs = [
-        "@vizdoom",
-        "@vizdoom//:vizdoom_pk3",
-        "@freedoom",
-    ],
-    outs = ["bin"],
-    cmd = "mkdir -p $(OUTS) && cp $(SRCS) $(OUTS)",
-)
-
 cc_library(
     name = "utils",
     hdrs = ["utils.h"],
@@ -68,7 +57,9 @@ py_library(
     name = "vizdoom",
     srcs = ["__init__.py"],
     data = [
-        ":gen_vizdoom_exe",
+        "//envpool/vizdoom/bin:vizdoom_bin",
+        "//envpool/vizdoom/bin:vizdoom_pk3",
+        "//envpool/vizdoom/bin:freedoom",
         ":gen_vizdoom_maps",
         ":vizdoom_envpool.so",
     ],
