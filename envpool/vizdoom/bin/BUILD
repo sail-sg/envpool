@@ -11,7 +11,7 @@ genrule(
 genrule(
     name = "vizdoom_pk3",
     srcs = ["@vizdoom//:vizdoom_pk3"],
-    outs = ["vizdoom_pk3"],
+    outs = ["vizdoom.pk3"],
     cmd = "cp $< $@",
     executable = True,
 )
