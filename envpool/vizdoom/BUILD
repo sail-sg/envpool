@@ -28,7 +28,8 @@ genrule(
 genrule(
     name = "gen_vizdoom_exe",
     srcs = [
-        "@vizdoom",
+        "@vizdoom//:vizdoom",
+        "@vizdoom//:vizdoom_pk3",
         "@freedoom",
     ],
     outs = ["bin"],
