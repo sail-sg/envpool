@@ -29,11 +29,10 @@ genrule(
     name = "gen_vizdoom_exe",
     srcs = [
         "@vizdoom",
-        "@vizdoom//:vizdoom_pk3",
         "@freedoom",
     ],
     outs = ["bin"],
-    cmd = "mkdir -p $(OUTS) && cp $(SRCS) $(OUTS)",
+    cmd = "mkdir -p $(OUTS) && cp $(SRCS) $(OUTS) && chmod +x $@",
 )
 
 cc_library(
