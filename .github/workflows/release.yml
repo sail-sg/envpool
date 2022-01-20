@@ -30,7 +30,7 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
     - name: Build
       run: |
-        make pypi-wheel BAZELOPT="--remote_cache=http://bazel-cache.sail:8080"
+        make pypi-wheel BAZELOPT="--remote_cache=http://bazel-cache.sail:8080 --remote_accept_cached=false"
         pip3 install wheelhouse/*.whl --force-reinstall
     - name: Test
       run: |
