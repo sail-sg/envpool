@@ -39,7 +39,7 @@ class _GymEnvTest(absltest.TestCase):
     assert env.observation_space.shape == ref[0].observation_space.shape
     assert isinstance(env.action_space, gym.spaces.Box)
     assert env.action_space.shape == ref[0].action_space.shape
-    for _ in range(1000):
+    for _ in range(10):
       act = np.random.randint(2, size=(num_envs,))
       obs, rew, done, info = env.step(act)
 

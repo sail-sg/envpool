@@ -38,7 +38,8 @@ class GymEnvFns {
   static decltype(auto) DefaultConfig() {
     return MakeDict("state_shape"_.bind(std::vector<int>()),
                     "action_shape"_.bind(std::vector<int>()),
-                    "env_fn"_.bind(py::function()),
+                    "env_fn"_.bind(std::function<py::object()>(
+                        [] { return py::object(); })),
                     "max_episode_steps"_.bind(0));
   }
   template <typename Config>
