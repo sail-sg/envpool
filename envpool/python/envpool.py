@@ -63,7 +63,7 @@ class EnvPoolMixin(ABC):
     else:  # only 3 keys in action_keys
       adict = {
         self._spec._action_keys[-1]:
-          action.astype(self._spec._action_spec[-1][0])
+          action.astype(self._spec._action_spec[-1][0], order='C')
       }
     if env_id is None:
       if "env_id" not in adict:
