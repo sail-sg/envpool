@@ -47,7 +47,7 @@ class CartPoleEnvFns {
 typedef class EnvSpec<CartPoleEnvFns> CartPoleEnvSpec;
 
 class CartPoleEnv : public Env<CartPoleEnvSpec> {
- protected:
+ protected:WW
   const double kPi = std::acos(-1);
   const double kGravity = 9.8;
   const double kMassCart = 1.0;
