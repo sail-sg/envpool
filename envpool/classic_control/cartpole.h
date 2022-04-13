@@ -36,7 +36,7 @@ class CartPoleEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     // TODO(jiayi): specify range with [4.8, fmax, np.pi / 7.5, fmax]
     float inf = std::numeric_limits<float>::infinity();
-    return MakeDict("obs"_.bind(Spec<float>({4}, {{4.8, -4.8}, {inf, -inf}, {M_PI/7.5, -M_PI/7.5}, {inf, -inf}})));
+    return MakeDict("obs"_.bind(Spec<float>({4}, { {4.8, -4.8}, {inf, -inf}, {M_PI/7.5, -M_PI/7.5}, {inf, -inf}})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -47,7 +47,7 @@ class CartPoleEnvFns {
 typedef class EnvSpec<CartPoleEnvFns> CartPoleEnvSpec;
 
 class CartPoleEnv : public Env<CartPoleEnvSpec> {
- protected:WW
+ protected:
   const double kPi = std::acos(-1);
   const double kGravity = 9.8;
   const double kMassCart = 1.0;
