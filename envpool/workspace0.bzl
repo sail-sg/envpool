@@ -299,4 +299,20 @@ def workspace():
         ],
     )
 
+    maybe(
+        http_archive,
+        name = "procgen",
+        sha256 = "8d443b7b8fba44ef051b182e9a87abfa4e05292568e476ca1e5f08f9666a1b72",
+        strip_prefix = "procgen-0.10.7/procgen/src/",
+        urls = [
+            "https://github.com/openai/procgen/archive/refs/tags/0.10.7.zip",
+        ],
+        patches = [
+            "//third_party/procgen:assetgen.patch",
+            "//third_party/procgen:qt-utils.patch",
+            "//third_party/procgen:libenv.patch",
+        ],
+        build_file = "//third_party/procgen:procgen.BUILD",
+    )
+
 workspace0 = workspace
