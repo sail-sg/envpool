@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Copyright 2021 Garena Online Private Limited
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,11 +12,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Entry point for all envs' registration."""
+"""Box2D env in EnvPool."""
 
-import envpool.atari.registration  # noqa: F401
-import envpool.classic_control.registration  # noqa: F401
-import envpool.mujoco.registration  # noqa: F401
-import envpool.toy_text.registration  # noqa: F401
-import envpool.vizdoom.registration  # noqa: F401
-import envpool.box2d.registration  # noqa: F401
+from envpool.python.api import py_env
+
+from .box2d_envpool import (
+  _CarRacingEnvPool,
+  _CarRacingEnvSpec
+)
+
+CarRacingEnvSpec, CarRacingDMEnvPool, CarRacingGymEnvPool = py_env(
+  _CarRacingEnvPool, _CarRacingEnvSpec
+)
+
+__all__ = [
+  "CarRacingEnvSpec",
+  "CarRacingDMEnvPool",
+  "CarRacingGymEnvPool",
+]

@@ -11,11 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Entry point for all envs' registration."""
+"""Box2D env registration."""
 
-import envpool.atari.registration  # noqa: F401
-import envpool.classic_control.registration  # noqa: F401
-import envpool.mujoco.registration  # noqa: F401
-import envpool.toy_text.registration  # noqa: F401
-import envpool.vizdoom.registration  # noqa: F401
-import envpool.box2d.registration  # noqa: F401
+from envpool.registration import register
+
+register(
+  task_id="CarRacing-v1",
+  import_path="envpool.box2d",
+  spec_cls="CarRacingEnvSpec",
+  dm_cls="CarRacingDMEnvPool",
+  gym_cls="CarRacingGymEnvPool",
+  max_episode_steps=1000,
+  reward_threshold=900,
+)
