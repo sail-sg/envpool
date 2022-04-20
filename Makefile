@@ -79,10 +79,10 @@ buildifier: buildifier-install
 # bazel build/test
 
 bazel-build: bazel-install
-	rm -f bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl
+	mkdir -p dist
+	rm -f dist/*.whl
 	bazel build $(BAZELOPT) //... --config=release
 	bazel run $(BAZELOPT) //:setup --config=release -- bdist_wheel
-	mkdir -p dist
 	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-test: bazel-install
