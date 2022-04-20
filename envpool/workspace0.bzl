@@ -61,10 +61,10 @@ def workspace():
     maybe(
         http_archive,
         name = "com_google_absl",
-        sha256 = "59b862f50e710277f8ede96f083a5bb8d7c9595376146838b9580be90374ee1f",
-        strip_prefix = "abseil-cpp-20210324.2",
+        sha256 = "dcf71b9cba8dc0ca9940c4b316a0c796be8fab42b070bb6b7cab62b48f0e66c4",
+        strip_prefix = "abseil-cpp-20211102.0",
         urls = [
-            "https://github.com/abseil/abseil-cpp/archive/refs/tags/20210324.2.tar.gz",
+            "https://github.com/abseil/abseil-cpp/archive/refs/tags/20211102.0.tar.gz",
         ],
     )
 
@@ -79,9 +79,9 @@ def workspace():
     maybe(
         http_archive,
         name = "com_github_google_glog",
-        sha256 = "21bc744fb7f2fa701ee8db339ded7dce4f975d0d55837a97be7d46e8382dea5a",
-        strip_prefix = "glog-0.5.0",
-        urls = ["https://github.com/google/glog/archive/v0.5.0.zip"],
+        sha256 = "122fb6b712808ef43fbf80f75c52a21c9760683dae470154f02bddfc61135022",
+        strip_prefix = "glog-0.6.0",
+        urls = ["https://github.com/google/glog/archive/v0.6.0.zip"],
     )
 
     maybe(
@@ -142,10 +142,10 @@ def workspace():
         http_archive,
         name = "opencv",
         urls = [
-            "https://github.com/opencv/opencv/archive/refs/tags/4.5.4.tar.gz",
+            "https://github.com/opencv/opencv/archive/refs/tags/4.5.5.tar.gz",
         ],
-        sha256 = "c20bb83dd790fc69df9f105477e24267706715a9d3c705ca1e7f613c7b3bad3d",
-        strip_prefix = "opencv-4.5.4",
+        sha256 = "a1cfdcf6619387ca9e232687504da996aaa9f7b5689986b8331ec02cb61d28ad",
+        strip_prefix = "opencv-4.5.5",
         build_file = "//third_party/opencv:opencv.BUILD",
     )
 
