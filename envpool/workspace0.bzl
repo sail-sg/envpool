@@ -22,19 +22,17 @@ def workspace():
     maybe(
         http_archive,
         name = "rules_python",
-        sha256 = "954aa89b491be4a083304a2cb838019c8b8c3720a7abb9c4cb81ac7a24230cea",
-        urls = [
-            "https://mirror.bazel.build/github.com/bazelbuild/rules_python/releases/download/0.4.0/rules_python-0.4.0.tar.gz",
-            "https://github.com/bazelbuild/rules_python/releases/download/0.4.0/rules_python-0.4.0.tar.gz",
-        ],
+        sha256 = "9fcf91dbcc31fde6d1edb15f117246d912c33c36f44cf681976bd886538deba6",
+        strip_prefix = "rules_python-0.8.0",
+        url = "https://github.com/bazelbuild/rules_python/archive/refs/tags/0.8.0.tar.gz",
     )
 
     maybe(
         http_archive,
         name = "rules_foreign_cc",
-        sha256 = "69023642d5781c68911beda769f91fcbc8ca48711db935a75da7f6536b65047f",
-        strip_prefix = "rules_foreign_cc-0.6.0",
-        url = "https://github.com/bazelbuild/rules_foreign_cc/archive/0.6.0.tar.gz",
+        sha256 = "6041f1374ff32ba711564374ad8e007aef77f71561a7ce784123b9b4b88614fc",
+        strip_prefix = "rules_foreign_cc-0.8.0",
+        url = "https://github.com/bazelbuild/rules_foreign_cc/archive/0.8.0.tar.gz",
     )
 
     maybe(
@@ -285,18 +283,6 @@ def workspace():
         sha256 = "b1b64e0db84cf7317c2a96b27f549147dfcb4074ed2d799334c23a067075ac1c",
         urls = ["https://cdn.sail.sea.com/sail/pretrain.tar.gz"],
         build_file = "//third_party/pretrain_weight:pretrain_weight.BUILD",
-    )
-
-    mypy_integration_version = "0.2.1"  # latest @ September 28th 2021
-
-    maybe(
-        http_archive,
-        name = "mypy_integration",
-        sha256 = "9a6837afe5d4953bdfaeed8ff6572c9958845a932f835c2c1058b5fe67bf573f",
-        strip_prefix = "bazel-mypy-integration-{version}".format(version = mypy_integration_version),
-        urls = [
-            "https://github.com/thundergolfer/bazel-mypy-integration/archive/refs/tags/{version}.tar.gz".format(version = mypy_integration_version),
-        ],
     )
 
 workspace0 = workspace

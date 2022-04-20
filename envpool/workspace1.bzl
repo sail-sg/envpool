@@ -16,26 +16,16 @@
 
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
-load("@mypy_integration//repositories:repositories.bzl", mypy_integration_repositories = "repositories")
-load("@mypy_integration//repositories:deps.bzl", mypy_integration_deps = "deps")
-load("@mypy_integration//:config.bzl", "mypy_configuration")
 load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
 
 def workspace():
-    """Configure pip requirements and mypy integration."""
+    """Configure pip requirements."""
     python_configure(
         name = "local_config_python",
         python_version = "3",
     )
 
     rules_foreign_cc_dependencies()
-
-    mypy_integration_repositories()
-
-    mypy_integration_deps(mypy_requirements_file = "@envpool//third_party/mypy:mypy_version.txt")
-
-    if "mypy_integration_config" not in native.existing_rules().keys():
-        mypy_configuration("@envpool//third_party/mypy:mypy.ini")
 
     boost_deps()
 
