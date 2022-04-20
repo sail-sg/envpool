@@ -13,6 +13,8 @@
 # limitations under the License.
 """Unit tests for classic control environments."""
 
+from typing import no_type_check
+
 import gym
 import numpy as np
 from absl import logging
@@ -92,6 +94,7 @@ class _ToyTextEnvTest(absltest.TestCase):
         else:
           assert np.all(rew == -1) and np.all(done)
 
+  @no_type_check
   def test_frozen_lake(self) -> None:
     for size in [4, 8]:
       config = FrozenLakeEnvSpec.gen_config(
@@ -136,6 +139,7 @@ class _ToyTextEnvTest(absltest.TestCase):
           elapsed_step = 0
           last_obs = env.reset()
 
+  @no_type_check
   def test_taxi(self) -> None:
     spec = TaxiEnvSpec(TaxiEnvSpec.gen_config(num_envs=1))
     env = TaxiGymEnvPool(spec)

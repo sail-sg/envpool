@@ -20,6 +20,7 @@ cc_library(
 
 cc_test(
     name = "dummy_envpool_test",
+    size = "enormous",
     srcs = ["dummy_envpool_test.cc"],
     deps = [
         ":dummy_envpool_h",

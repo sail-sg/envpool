@@ -34,8 +34,8 @@ class MountainCarEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    // TODO(jiayi): specify range with [-1.2, -0.07] ~ [0.6, 0.07]
-    return MakeDict("obs"_.bind(Spec<float>({2}, {-1.2, 0.6})));
+    return MakeDict(
+        "obs"_.bind(Spec<float>({2}, {{-1.2, -0.07}, {0.6, 0.07}})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

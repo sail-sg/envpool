@@ -33,8 +33,8 @@ class PendulumEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    // TODO(jiayi): specify range with [1, 1, 8]
-    return MakeDict("obs"_.bind(Spec<float>({3}, {-8.0f, 8.0f})));
+    return MakeDict(
+        "obs"_.bind(Spec<float>({3}, {{-1.0, -1.0, -8.0}, {1.0, 1.0, 8.0}})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

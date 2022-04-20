@@ -1,8 +1,8 @@
 ViZDoom
 =======
 
-We use ``vizdoom==1.1.11`` as the codebase. See
-https://github.com/mwydmuch/ViZDoom/tree/1.1.11
+We use ``vizdoom==1.1.13`` as the codebase. See
+https://github.com/mwydmuch/ViZDoom/tree/1.1.13
 
 
 Env Wrappers
