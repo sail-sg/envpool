@@ -35,11 +35,12 @@ from envpool.classic_control import (
 
 class _ClassicControlEnvPoolTest(absltest.TestCase):
 
+  @no_type_check
   def run_space_check(self, env0: gym.Env, env1: Any) -> None:
     """Check if envpool.observation_space == gym.make().observation_space."""
     obs0, obs1 = env0.observation_space, env1.observation_space
-    np.testing.assert_allclose(obs0.low, obs1.low)  # type: ignore
-    np.testing.assert_allclose(obs0.high, obs1.high)  # type: ignore
+    np.testing.assert_allclose(obs0.low, obs1.low)
+    np.testing.assert_allclose(obs0.high, obs1.high)
 
   def run_deterministic_check(
     self,
