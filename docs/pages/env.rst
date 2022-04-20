@@ -85,7 +85,10 @@ state space, and action space. Create a class ``CartPoleEnvFns``:
       }
       template <typename Config>
       static decltype(auto) StateSpec(const Config& conf) {
-        return MakeDict("obs"_.bind(Spec<float>({4})));
+        float fmax = std::numeric_limits<float>::max();
+        return MakeDict("obs"_.bind(
+            Spec<float>({4}, {{-4.8, -fmax, -M_PI / 7.5, -fmax},
+                              {4.8, fmax, M_PI / 7.5, fmax}})));
       }
       template <typename Config>
       static decltype(auto) ActionSpec(const Config& conf) {
@@ -119,7 +122,7 @@ available to see on the python side:
 
     >>> # observation space and action space
     >>> env.observation_space
-    Box([1.1754944e-38 1.1754944e-38 1.1754944e-38 1.1754944e-38], [3.4028235e+38 3.4028235e+38 3.4028235e+38 3.4028235e+38], (4,), float32)
+    Box([-4.8000002e+00 -3.4028235e+38 -4.1887903e-01 -3.4028235e+38], [4.8000002e+00 3.4028235e+38 4.1887903e-01 3.4028235e+38], (4,), float32)
     >>> env.action_space
     Discrete(2)
     >>> env.spec.reward_threshold

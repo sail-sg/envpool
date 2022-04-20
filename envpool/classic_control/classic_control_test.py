@@ -13,7 +13,7 @@
 # limitations under the License.
 """Unit tests for classic control environments."""
 
-from typing import Any, Tuple, no_type_check
+from typing import Any, no_type_check
 
 import gym
 import numpy as np
@@ -35,18 +35,20 @@ from envpool.classic_control import (
 
 class _ClassicControlEnvPoolTest(absltest.TestCase):
 
-  def run_space_check(self, spec_cls: Any) -> None:
+  @no_type_check
+  def run_space_check(self, env0: gym.Env, env1: Any) -> None:
     """Check if envpool.observation_space == gym.make().observation_space."""
-    # TODO(jiayi): wait for #27
+    obs0, obs1 = env0.observation_space, env1.observation_space
+    np.testing.assert_allclose(obs0.low, obs1.low)
+    np.testing.assert_allclose(obs0.high, obs1.high)
 
   def run_deterministic_check(
     self,
     spec_cls: Any,
     envpool_cls: Any,
-    obs_range: Tuple[np.ndarray, np.ndarray],
+    num_envs: int = 4,
     **kwargs: Any,
   ) -> None:
-    num_envs = 4
     env0 = envpool_cls(
       spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, **kwargs))
     )
@@ -58,7 +60,8 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
     )
     act_space = env0.action_space
     eps = np.finfo(np.float32).eps
-    obs_min, obs_max = obs_range[0] - eps, obs_range[1] + eps
+    obs_space = env0.observation_space
+    obs_min, obs_max = obs_space.low - eps, obs_space.high + eps
     for _ in range(5000):
       action = np.array([act_space.sample() for _ in range(num_envs)])
       obs0 = env0.step(action)[0]
@@ -85,32 +88,21 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
         np.testing.assert_allclose(d0, d1[0])
 
   def test_cartpole(self) -> None:
-    fmax = np.finfo(np.float32).max
-    obs_max = np.array([4.8, fmax, np.pi / 7.5, fmax])
-    self.run_deterministic_check(
-      CartPoleEnvSpec, CartPoleGymEnvPool, (-obs_max, obs_max)
-    )
+    env0 = gym.make("CartPole-v1")
+    env1 = CartPoleGymEnvPool(CartPoleEnvSpec(CartPoleEnvSpec.gen_config()))
+    self.run_space_check(env0, env1)
+    self.run_deterministic_check(CartPoleEnvSpec, CartPoleGymEnvPool)
 
   def test_pendulum(self) -> None:
-    obs_max = np.array([1.0, 1.0, 8.0])
-    self.run_deterministic_check(
-      PendulumEnvSpec, PendulumGymEnvPool, (-obs_max, obs_max)
-    )
+    env0 = gym.make("Pendulum-v1")
+    env1 = PendulumGymEnvPool(PendulumEnvSpec(PendulumEnvSpec.gen_config()))
+    self.run_space_check(env0, env1)
+    self.run_deterministic_check(PendulumEnvSpec, PendulumGymEnvPool)
 
   def test_mountain_car(self) -> None:
-    obs_min = np.array([-1.2, -0.07])
-    obs_max = np.array([0.6, 0.07])
-
+    self.run_deterministic_check(MountainCarEnvSpec, MountainCarGymEnvPool)
     self.run_deterministic_check(
-      MountainCarEnvSpec,
-      MountainCarGymEnvPool,
-      (obs_min, obs_max),
-    )
-
-    self.run_deterministic_check(
-      MountainCarContinuousEnvSpec,
-      MountainCarContinuousGymEnvPool,
-      (obs_min, obs_max),
+      MountainCarContinuousEnvSpec, MountainCarContinuousGymEnvPool
     )
 
     @no_type_check
@@ -122,6 +114,7 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
     env0 = gym.make("MountainCar-v0")
     spec = MountainCarEnvSpec(MountainCarEnvSpec.gen_config())
     env1 = MountainCarGymEnvPool(spec)
+    self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, reset_fn)
 
     env0 = gym.make("MountainCarContinuous-v0")
@@ -129,13 +122,11 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
       MountainCarContinuousEnvSpec.gen_config()
     )
     env1 = MountainCarContinuousGymEnvPool(spec)
+    self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, reset_fn)
 
   def test_acrobot(self) -> None:
-    obs_max = np.array([1, 1, 1, 1, 4 * np.pi, 9 * np.pi])
-    self.run_deterministic_check(
-      AcrobotEnvSpec, AcrobotGymEnvPool, (-obs_max, obs_max)
-    )
+    self.run_deterministic_check(AcrobotEnvSpec, AcrobotGymEnvPool)
 
     # in envpool we use float64 but gym use float32
 
@@ -145,9 +136,10 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
     #   env0.unwrapped.state = np.concatenate([info["state"][0], obs[0, -2:]])
     #   print(env0.unwrapped.state)
 
-    # env0 = gym.make("Acrobot-v1")
-    # spec = AcrobotEnvSpec(AcrobotEnvSpec.gen_config())
-    # env1 = AcrobotGymEnvPool(spec)
+    env0 = gym.make("Acrobot-v1")
+    spec = AcrobotEnvSpec(AcrobotEnvSpec.gen_config())
+    env1 = AcrobotGymEnvPool(spec)
+    self.run_space_check(env0, env1)
     # self.run_align_check(env0, env1, reset_fn)
 
 
