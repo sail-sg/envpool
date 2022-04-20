@@ -13,7 +13,7 @@
 # limitations under the License.
 """Unit tests for classic control environments."""
 
-from typing import Any, Tuple
+from typing import Any, Tuple, no_type_check
 
 import gym
 import numpy as np
@@ -112,10 +112,11 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
       (obs_min, obs_max),
     )
 
+    @no_type_check
     def reset_fn(env0: gym.Env, env1: Any) -> None:
       env0.reset()
       obs = env1.reset()
-      env0.unwrapped.state = obs[0]  # type: ignore
+      env0.unwrapped.state = obs[0]
 
     env0 = gym.make("MountainCar-v0")
     spec = MountainCarEnvSpec(MountainCarEnvSpec.gen_config())
