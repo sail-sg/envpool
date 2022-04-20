@@ -232,8 +232,8 @@ class _GymSyncTest(absltest.TestCase):
       self.assertIsInstance(env, gym.Env)
       logging.info(env)
       # check gym space
-      gym_obs_space: gym.spaces.Box = env.observation_space
-      gym_act_space: gym.spaces.Discrete = env.action_space
+      gym_obs_space: gym.spaces.Box = env.observation_space  # type: ignore
+      gym_act_space: gym.spaces.Discrete = env.action_space  # type: ignore
       self.assertEqual(len(spec.action_array_spec), 3)
       self.assertIsInstance(gym_obs_space, gym.spaces.Box)
       self.assertEqual(gym_obs_space.dtype, np.uint8)
