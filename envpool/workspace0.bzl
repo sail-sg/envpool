@@ -152,10 +152,10 @@ def workspace():
     maybe(
         http_archive,
         name = "ale",
-        sha256 = "e3bada34cc6c116377c4a807c24d9890ce33afa854ffc45e32dc90ba0dcc9140",
-        strip_prefix = "Arcade-Learning-Environment-0.7.3",
+        sha256 = "31ff9a51187a1237b683c7a5eff232b294f0bd48ca078ab57eabc9e3564ff1c1",
+        strip_prefix = "Arcade-Learning-Environment-0.7.5",
         urls = [
-            "https://github.com/mgbellemare/Arcade-Learning-Environment/archive/refs/tags/v0.7.3.tar.gz",
+            "https://github.com/mgbellemare/Arcade-Learning-Environment/archive/refs/tags/v0.7.5.tar.gz",
         ],
         build_file = "//third_party/ale:ale.BUILD",
     )
