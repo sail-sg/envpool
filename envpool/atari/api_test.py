@@ -222,6 +222,7 @@ class _DMSyncTest(absltest.TestCase):
 
 class _GymSyncTest(absltest.TestCase):
 
+  @no_type_check
   def test_spec(self) -> None:
     action_nums = {"pong": 6, "breakout": 4}
     for task in ["pong", "breakout"]:
@@ -232,8 +233,8 @@ class _GymSyncTest(absltest.TestCase):
       self.assertIsInstance(env, gym.Env)
       logging.info(env)
       # check gym space
-      gym_obs_space: gym.spaces.Box = env.observation_space  # type: ignore
-      gym_act_space: gym.spaces.Discrete = env.action_space  # type: ignore
+      gym_obs_space: gym.spaces.Box = env.observation_space
+      gym_act_space: gym.spaces.Discrete = env.action_space
       self.assertEqual(len(spec.action_array_spec), 3)
       self.assertIsInstance(gym_obs_space, gym.spaces.Box)
       self.assertEqual(gym_obs_space.dtype, np.uint8)
