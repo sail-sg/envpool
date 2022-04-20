@@ -34,8 +34,9 @@ class AcrobotEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    // TODO(jiayi): specify range with [1, 1, 1, 1, 4 * np.pi, 9 * np.pi]
-    return MakeDict("obs"_.bind(Spec<float>({6})),
+    return MakeDict("obs"_.bind(Spec<float>(
+                        {6}, {{-1.0, -1.0, -1.0, -1.0, -4 * M_PI, -9 * M_PI},
+                              {1.0, 1.0, 1.0, 1.0, 4 * M_PI, 9 * M_PI}})),
                     "info:state"_.bind(Spec<float>({2})));
   }
   template <typename Config>
