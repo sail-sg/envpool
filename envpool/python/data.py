@@ -81,8 +81,8 @@ def dm_spec_transform(
     name=name,
     shape=[s for s in spec.shape if s != -1],
     dtype=spec.dtype,
-    minimum=spec.minimum_elementwise or spec.minimum,
-    maximum=spec.maximum_elementwise or spec.maximum,
+    minimum=spec.minimum,
+    maximum=spec.maximum,
   )
 
 
@@ -98,18 +98,12 @@ def gym_spec_transform(
       return gym.spaces.Discrete(n=discrete_range, start=int(spec.minimum))
     except TypeError:  # old gym version doesn't have `start`
       return gym.spaces.Discrete(n=discrete_range)
-  minimum = np.array(
-    spec.minimum_elementwise
-  ) if spec.minimum_elementwise else spec.minimum
-  maximum = np.array(
-    spec.maximum_elementwise
-  ) if spec.maximum_elementwise else spec.maximum
 
   return gym.spaces.Box(
     shape=[s for s in spec.shape if s != -1],
     dtype=spec.dtype,
-    low=minimum,
-    high=maximum,
+    low=spec.minimum,
+    high=spec.maximum,
   )
 
 

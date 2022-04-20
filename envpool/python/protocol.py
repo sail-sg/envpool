@@ -97,22 +97,21 @@ class ArraySpec(object):
     """Constructor of ArraySpec."""
     self.dtype = dtype
     self.shape = shape
-    self.minimum, self.maximum = bounds
-    self.minimum_elementwise, self.maximum_elementwise = element_wise_bounds
+    if element_wise_bounds[0]:
+      self.minimum = np.array(element_wise_bounds[0])
+    else:
+      self.minimum = bounds[0]
+    if element_wise_bounds[1]:
+      self.maximum = np.array(element_wise_bounds[1])
+    else:
+      self.maximum = bounds[1]
 
   def __repr__(self) -> str:
     """Beautify debug info."""
-    if len(self.minimum_elementwise) and len(self.maximum_elementwise):
-      return (
-        f"ArraySpec(shape={self.shape}, dtype={self.dtype}, "
-        f"minimum={self.minimum_elementwise}, "
-        f"maximum={self.maximum_elementwise})"
-      )
-    else:
-      return (
-        f"ArraySpec(shape={self.shape}, dtype={self.dtype}, "
-        f"minimum={self.minimum}, maximum={self.maximum}), "
-      )
+    return (
+      f"ArraySpec(shape={self.shape}, dtype={self.dtype}, "
+      f"minimum={self.minimum}, maximum={self.maximum}), "
+    )
 
 
 class EnvPool(Protocol):
