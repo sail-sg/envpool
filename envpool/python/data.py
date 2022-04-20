@@ -98,12 +98,23 @@ def gym_spec_transform(
       return gym.spaces.Discrete(n=discrete_range, start=spec.minimum)
     except TypeError:  # old gym version doesn't have `start`
       return gym.spaces.Discrete(n=discrete_range)
-  return gym.spaces.Box(
-    shape=[s for s in spec.shape if s != -1],
-    dtype=spec.dtype,
-    low=spec.minimum,
-    high=spec.maximum,
-  )
+
+  if len(spec.maximum_elementwise) > 0 and len(spec.minimum_elementwise) > 0:
+    minimum = np.array(spec.minimum_elementwise)
+    maximum = np.array(spec.maximum_elementwise)
+    return gym.spaces.Box(
+      shape=[s for s in spec.shape if s != -1],
+      dtype=spec.dtype,
+      low=minimum,
+      high=maximum,
+    )
+  else:
+    return gym.spaces.Box(
+      shape=[s for s in spec.shape if s != -1],
+      dtype=spec.dtype,
+      low=spec.minimum,
+      high=spec.maximum,
+    )
 
 
 def dm_structure(root_name: str, keys: List[str]) -> Tuple[Tuple, List[int]]:

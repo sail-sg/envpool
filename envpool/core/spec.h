@@ -63,7 +63,8 @@ class Spec : public ShapeSpec {
   using dtype = D;
   std::tuple<dtype, dtype> bounds = {std::numeric_limits<dtype>::min(),
                                      std::numeric_limits<dtype>::max()};
-  std::vector<std::tuple<dtype, dtype>> elementwise_bounds;
+  std::tuple<std::vector<dtype>, std::vector<dtype>> elementwise_bounds;
+  bool enable_elementwise_bounds = false;
   explicit Spec(std::vector<int>&& shape)
       : ShapeSpec(sizeof(dtype), std::move(shape)) {}
   explicit Spec(const std::vector<int>& shape)
@@ -76,9 +77,9 @@ class Spec : public ShapeSpec {
       : ShapeSpec(sizeof(dtype), shape), bounds(bounds) {}
 
   /* init with elementwise bounds */
-  Spec(const std::vector<int>&& shape, std::vector<std::tuple<dtype, dtype>> &&elementwise_bounds)
+  Spec(const std::vector<int>&& shape, std::tuple<std::vector<dtype>, std::vector<dtype>> &&elementwise_bounds)
       : ShapeSpec(sizeof(dtype), std::move(shape)), elementwise_bounds(std::move(elementwise_bounds)) {}
-  Spec(const std::vector<int>& shape, const std::vector<std::tuple<dtype, dtype>>& elementwise_bounds)
+  Spec(const std::vector<int>& shape, const std::tuple<std::vector<dtype>, std::vector<dtype>>& elementwise_bounds)
       : ShapeSpec(sizeof(dtype), shape), elementwise_bounds(elementwise_bounds) {}
 
   Spec Batch(int batch_size) const {
