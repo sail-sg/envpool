@@ -287,12 +287,12 @@ def workspace():
         build_file = "//third_party/pretrain_weight:pretrain_weight.BUILD",
     )
 
-    mypy_integration_version = "0.2.0"  # Latest @ 26th June 2021
+    mypy_integration_version = "0.2.1"  # latest @ September 28th 2021
 
     maybe(
         http_archive,
         name = "mypy_integration",
-        sha256 = "621df076709dc72809add1f5fe187b213fee5f9b92e39eb33851ab13487bd67d",
+        sha256 = "9a6837afe5d4953bdfaeed8ff6572c9958845a932f835c2c1058b5fe67bf573f",
         strip_prefix = "bazel-mypy-integration-{version}".format(version = mypy_integration_version),
         urls = [
             "https://github.com/thundergolfer/bazel-mypy-integration/archive/refs/tags/{version}.tar.gz".format(version = mypy_integration_version),
