@@ -130,7 +130,7 @@ docker-release:
 	echo successfully build docker image with tag $(PROJECT_NAME)-release:$(COMMIT_HASH)
 
 pypi-wheel: auditwheel-install bazel-build
-	ls dist/*.whl | xargs auditwheel repair --plat manylinux_2_17_x86_64
+	ls dist/*.whl -Art | tail -n 1 | xargs auditwheel repair --plat manylinux_2_17_x86_64
 
 release-test1:
 	cd envpool && python3 make_test.py
