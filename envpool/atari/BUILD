@@ -98,6 +98,7 @@ py_test(
 
 py_test(
     name = "atari_pretrain_test",
+    size = "enormous",
     srcs = ["atari_pretrain_test.py"],
     data = [
         ":gen_pretrain_weight",

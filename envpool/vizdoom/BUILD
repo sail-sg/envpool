@@ -79,6 +79,7 @@ py_test(
 
 py_test(
     name = "vizdoom_pretrain_test",
+    size = "enormous",
     srcs = ["vizdoom_pretrain_test.py"],
     data = [":gen_pretrain_weight"],
     deps = [
