@@ -39,6 +39,9 @@ jobs:
     - name: addlicense
       run: |
         make addlicense
+    - name: mypy
+      run: |
+        make mypy
     - name: docstyle
       run: |
         make docstyle

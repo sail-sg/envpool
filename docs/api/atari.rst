@@ -1,8 +1,8 @@
 Atari
 =====
 
-We use ``ale_py==0.7.3`` as the codebase.
-See https://github.com/mgbellemare/Arcade-Learning-Environment/tree/v0.7.3
+We use ``ale_py==0.7.5`` as the codebase.
+See https://github.com/mgbellemare/Arcade-Learning-Environment/tree/v0.7.5
 
 
 Env Wrappers

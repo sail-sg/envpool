@@ -222,6 +222,7 @@ class _DMSyncTest(absltest.TestCase):
 
 class _GymSyncTest(absltest.TestCase):
 
+  @no_type_check
   def test_spec(self) -> None:
     action_nums = {"pong": 6, "breakout": 4}
     for task in ["pong", "breakout"]:

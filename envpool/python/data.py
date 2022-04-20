@@ -95,7 +95,7 @@ def gym_spec_transform(
     # special treatment for discrete action space
     discrete_range = int(spec.maximum - spec.minimum + 1)
     try:
-      return gym.spaces.Discrete(n=discrete_range, start=spec.minimum)
+      return gym.spaces.Discrete(n=discrete_range, start=int(spec.minimum))
     except TypeError:  # old gym version doesn't have `start`
       return gym.spaces.Discrete(n=discrete_range)
   return gym.spaces.Box(
