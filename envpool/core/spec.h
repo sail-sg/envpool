@@ -64,7 +64,6 @@ class Spec : public ShapeSpec {
   std::tuple<dtype, dtype> bounds = {std::numeric_limits<dtype>::min(),
                                      std::numeric_limits<dtype>::max()};
   std::tuple<std::vector<dtype>, std::vector<dtype>> elementwise_bounds;
-  bool enable_elementwise_bounds = false;
   explicit Spec(std::vector<int>&& shape)
       : ShapeSpec(sizeof(dtype), std::move(shape)) {}
   explicit Spec(const std::vector<int>& shape)
