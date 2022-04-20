@@ -244,10 +244,10 @@ def workspace():
     maybe(
         http_archive,
         name = "vizdoom",
-        sha256 = "1ec04a66da0f77616d31b8f052d0233070ae5f8e5da1cacfb0c45c04b18c99d6",
-        strip_prefix = "ViZDoom-1.1.11/src/vizdoom/",
+        sha256 = "e379a242ada7e1028b7a635da672b0936d99da3702781b76a4400b83602d78c4",
+        strip_prefix = "ViZDoom-1.1.13/src/vizdoom/",
         urls = [
-            "https://github.com/mwydmuch/ViZDoom/archive/refs/tags/1.1.11.tar.gz",
+            "https://github.com/mwydmuch/ViZDoom/archive/refs/tags/1.1.13.tar.gz",
         ],
         build_file = "//third_party/vizdoom:vizdoom.BUILD",
         patches = [
@@ -258,10 +258,10 @@ def workspace():
     maybe(
         http_archive,
         name = "vizdoom_lib",
-        sha256 = "1ec04a66da0f77616d31b8f052d0233070ae5f8e5da1cacfb0c45c04b18c99d6",
-        strip_prefix = "ViZDoom-1.1.11/",
+        sha256 = "e379a242ada7e1028b7a635da672b0936d99da3702781b76a4400b83602d78c4",
+        strip_prefix = "ViZDoom-1.1.13/",
         urls = [
-            "https://github.com/mwydmuch/ViZDoom/archive/refs/tags/1.1.11.tar.gz",
+            "https://github.com/mwydmuch/ViZDoom/archive/refs/tags/1.1.13.tar.gz",
         ],
         build_file = "//third_party/vizdoom_lib:vizdoom_lib.BUILD",
     )
