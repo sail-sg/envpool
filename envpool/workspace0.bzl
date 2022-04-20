@@ -38,22 +38,18 @@ def workspace():
     maybe(
         http_archive,
         name = "pybind11_bazel",
-        sha256 = "a5666d950c3344a8b0d3892a88dc6b55c8e0c78764f9294e806d69213c03f19d",
-        strip_prefix = "pybind11_bazel-26973c0ff320cb4b39e45bc3e4297b82bc3a6c09",
-        urls = [
-            "https://github.com/pybind/pybind11_bazel/archive/26973c0ff320cb4b39e45bc3e4297b82bc3a6c09.zip",
-        ],
+        sha256 = "fec6281e4109115c5157ca720b8fe20c8f655f773172290b03f57353c11869c2",
+        strip_prefix = "pybind11_bazel-72cbbf1fbc830e487e3012862b7b720001b70672",
+        url = "https://github.com/pybind/pybind11_bazel/archive/72cbbf1fbc830e487e3012862b7b720001b70672.zip",
     )
 
     maybe(
         http_archive,
         name = "pybind11",
         build_file = "@pybind11_bazel//:pybind11.BUILD",
-        sha256 = "8ff2fff22df038f5cd02cea8af56622bc67f5b64534f1b83b9f133b8366acff2",
-        strip_prefix = "pybind11-2.6.2",
-        urls = [
-            "https://github.com/pybind/pybind11/archive/refs/tags/v2.6.2.tar.gz",
-        ],
+        sha256 = "6bd528c4dbe2276635dc787b6b1f2e5316cf6b49ee3e150264e455a0d68d19c1",
+        strip_prefix = "pybind11-2.9.2",
+        url = "https://github.com/pybind/pybind11/archive/refs/tags/v2.9.2.tar.gz",
     )
 
     maybe(
@@ -61,9 +57,7 @@ def workspace():
         name = "com_google_absl",
         sha256 = "dcf71b9cba8dc0ca9940c4b316a0c796be8fab42b070bb6b7cab62b48f0e66c4",
         strip_prefix = "abseil-cpp-20211102.0",
-        urls = [
-            "https://github.com/abseil/abseil-cpp/archive/refs/tags/20211102.0.tar.gz",
-        ],
+        url = "https://github.com/abseil/abseil-cpp/archive/refs/tags/20211102.0.tar.gz",
     )
 
     maybe(
@@ -71,7 +65,7 @@ def workspace():
         name = "com_github_gflags_gflags",
         sha256 = "34af2f15cf7367513b352bdcd2493ab14ce43692d2dcd9dfc499492966c64dcf",
         strip_prefix = "gflags-2.2.2",
-        urls = ["https://github.com/gflags/gflags/archive/v2.2.2.tar.gz"],
+        url = "https://github.com/gflags/gflags/archive/v2.2.2.tar.gz",
     )
 
     maybe(
@@ -79,7 +73,7 @@ def workspace():
         name = "com_github_google_glog",
         sha256 = "122fb6b712808ef43fbf80f75c52a21c9760683dae470154f02bddfc61135022",
         strip_prefix = "glog-0.6.0",
-        urls = ["https://github.com/google/glog/archive/v0.6.0.zip"],
+        url = "https://github.com/google/glog/archive/v0.6.0.zip",
     )
 
     maybe(
@@ -87,9 +81,7 @@ def workspace():
         name = "com_google_googletest",
         sha256 = "b4870bf121ff7795ba20d20bcdd8627b8e088f2d1dab299a031c1034eddc93d5",
         strip_prefix = "googletest-release-1.11.0",
-        urls = [
-            "https://github.com/google/googletest/archive/refs/tags/release-1.11.0.tar.gz",
-        ],
+        url = "https://github.com/google/googletest/archive/refs/tags/release-1.11.0.tar.gz",
     )
 
     maybe(
@@ -97,9 +89,7 @@ def workspace():
         name = "glibc_version_header",
         sha256 = "57db74f933b7a9ea5c653498640431ce0e52aaef190d6bb586711ec4f8aa2b9e",
         strip_prefix = "glibc_version_header-0.1/version_headers/",
-        urls = [
-            "https://github.com/wheybags/glibc_version_header/archive/refs/tags/0.1.tar.gz",
-        ],
+        url = "https://github.com/wheybags/glibc_version_header/archive/refs/tags/0.1.tar.gz",
         build_file = "//third_party/glibc_version_header:glibc_version_header.BUILD",
     )
 
@@ -108,9 +98,7 @@ def workspace():
         name = "concurrentqueue",
         sha256 = "eb37336bf9ae59aca7b954db3350d9b30d1cab24b96c7676f36040aa76e915e8",
         strip_prefix = "concurrentqueue-1.0.3",
-        urls = [
-            "https://github.com/cameron314/concurrentqueue/archive/refs/tags/v1.0.3.tar.gz",
-        ],
+        url = "https://github.com/cameron314/concurrentqueue/archive/refs/tags/v1.0.3.tar.gz",
         build_file = "//third_party/concurrentqueue:concurrentqueue.BUILD",
     )
 
@@ -119,29 +107,23 @@ def workspace():
         name = "threadpool",
         sha256 = "18854bb7ecc1fc9d7dda9c798a1ef0c81c2dd331d730c76c75f648189fa0c20f",
         strip_prefix = "ThreadPool-9a42ec1329f259a5f4881a291db1dcb8f2ad9040",
-        urls = [
-            "https://github.com/progschj/ThreadPool/archive/9a42ec1329f259a5f4881a291db1dcb8f2ad9040.zip",
-        ],
+        url = "https://github.com/progschj/ThreadPool/archive/9a42ec1329f259a5f4881a291db1dcb8f2ad9040.zip",
         build_file = "//third_party/threadpool:threadpool.BUILD",
     )
 
     maybe(
         http_archive,
         name = "zlib",
-        sha256 = "629380c90a77b964d896ed37163f5c3a34f6e6d897311f1df2a7016355c45eff",
-        strip_prefix = "zlib-1.2.11",
-        urls = [
-            "https://github.com/madler/zlib/archive/refs/tags/v1.2.11.tar.gz",
-        ],
+        sha256 = "d8688496ea40fb61787500e863cc63c9afcbc524468cedeb478068924eb54932",
+        strip_prefix = "zlib-1.2.12",
+        url = "https://github.com/madler/zlib/archive/refs/tags/v1.2.12.tar.gz",
         build_file = "//third_party/zlib:zlib.BUILD",
     )
 
     maybe(
         http_archive,
         name = "opencv",
-        urls = [
-            "https://github.com/opencv/opencv/archive/refs/tags/4.5.5.tar.gz",
-        ],
+        url = "https://github.com/opencv/opencv/archive/refs/tags/4.5.5.tar.gz",
         sha256 = "a1cfdcf6619387ca9e232687504da996aaa9f7b5689986b8331ec02cb61d28ad",
         strip_prefix = "opencv-4.5.5",
         build_file = "//third_party/opencv:opencv.BUILD",
@@ -152,9 +134,7 @@ def workspace():
         name = "ale",
         sha256 = "31ff9a51187a1237b683c7a5eff232b294f0bd48ca078ab57eabc9e3564ff1c1",
         strip_prefix = "Arcade-Learning-Environment-0.7.5",
-        urls = [
-            "https://github.com/mgbellemare/Arcade-Learning-Environment/archive/refs/tags/v0.7.5.tar.gz",
-        ],
+        url = "https://github.com/mgbellemare/Arcade-Learning-Environment/archive/refs/tags/v0.7.5.tar.gz",
         build_file = "//third_party/ale:ale.BUILD",
     )
 
@@ -174,9 +154,7 @@ def workspace():
         name = "libjpeg_turbo",
         sha256 = "b3090cd37b5a8b3e4dbd30a1311b3989a894e5d3c668f14cbc6739d77c9402b7",
         strip_prefix = "libjpeg-turbo-2.0.5",
-        urls = [
-            "https://github.com/libjpeg-turbo/libjpeg-turbo/archive/2.0.5.tar.gz",
-        ],
+        url = "https://github.com/libjpeg-turbo/libjpeg-turbo/archive/2.0.5.tar.gz",
         build_file = "//third_party/jpeg:jpeg.BUILD",
     )
 
@@ -185,33 +163,25 @@ def workspace():
         name = "nasm",
         sha256 = "63ec86477ad3f0f6292325fd89e1d93aea2e2fd490070863f17d48f7cd387011",
         strip_prefix = "nasm-2.13.03",
-        urls = [
-            "https://cdn.sail.sea.com/sail/bazel/nasm-2.13.03.tar.bz2",
-            "https://storage.googleapis.com/mirror.tensorflow.org/www.nasm.us/pub/nasm/releasebuilds/2.13.03/nasm-2.13.03.tar.bz2",
-        ],
+        url = "https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/nasm-2.13.03.tar.bz2",
         build_file = "//third_party/nasm:nasm.BUILD",
     )
 
     maybe(
         http_archive,
         name = "sdl2",
-        sha256 = "65be9ff6004034b5b2ce9927b5a4db1814930f169c4b2dae0a1e4697075f287b",
-        strip_prefix = "SDL2-2.0.16",
-        urls = [
-            "https://cdn.sail.sea.com/sail/bazel/SDL2-2.0.16.tar.gz",
-            "https://www.libsdl.org/release/SDL2-2.0.16.tar.gz",
-        ],
+        sha256 = "c56aba1d7b5b0e7e999e4a7698c70b63a3394ff9704b5f6e1c57e0c16f04dd06",
+        strip_prefix = "SDL2-2.0.20",
+        url = "https://www.libsdl.org/release/SDL2-2.0.20.tar.gz",
         build_file = "//third_party/sdl2:sdl2.BUILD",
     )
 
     maybe(
         http_archive,
         name = "com_github_nelhage_rules_boost",
-        sha256 = "b3cbdceaa95b8cfe3a69ff37f8ad0e53a77937433234f6b9a6add2eff5bde333",
-        strip_prefix = "rules_boost-1e3a69bf2d5cd10c34b74f066054cd335d033d71",
-        urls = [
-            "https://github.com/nelhage/rules_boost/archive/1e3a69bf2d5cd10c34b74f066054cd335d033d71.tar.gz",
-        ],
+        sha256 = "ce95d0705592e51eda91b38870e847c303f65219871683f7c34233caad150b0b",
+        strip_prefix = "rules_boost-32164a62e2472077320f48f52b8077207cd0c9c8",
+        url = "https://github.com/nelhage/rules_boost/archive/32164a62e2472077320f48f52b8077207cd0c9c8.tar.gz",
     )
 
     maybe(
@@ -219,13 +189,9 @@ def workspace():
         name = "boost",
         build_file = "@com_github_nelhage_rules_boost//:BUILD.boost",
         patch_cmds = ["rm -f doc/pdf/BUILD"],
-        sha256 = "d73a8da01e8bf8c7eda40b4c84915071a8c8a0df4a6734537ddde4a8580524ee",
-        strip_prefix = "boost_1_71_0",
-        urls = [
-            "https://cdn.sail.sea.com/sail/bazel/boost_1_71_0.tar.bz2",
-            "https://mirror.bazel.build/dl.bintray.com/boostorg/release/1.71.0/source/boost_1_71_0.tar.bz2",
-            "https://dl.bintray.com/boostorg/release/1.71.0/source/boost_1_71_0.tar.bz2",
-        ],
+        sha256 = "475d589d51a7f8b3ba2ba4eda022b170e562ca3b760ee922c146b6c65856ef39",
+        strip_prefix = "boost_1_79_0",
+        url = "https://boostorg.jfrog.io/artifactory/main/release/1.79.0/source/boost_1_79_0.tar.bz2",
     )
 
     maybe(
@@ -233,9 +199,7 @@ def workspace():
         name = "freedoom",
         sha256 = "f42c6810fc89b0282de1466c2c9c7c9818031a8d556256a6db1b69f6a77b5806",
         strip_prefix = "freedoom-0.12.1/",
-        urls = [
-            "https://github.com/freedoom/freedoom/releases/download/v0.12.1/freedoom-0.12.1.zip",
-        ],
+        url = "https://github.com/freedoom/freedoom/releases/download/v0.12.1/freedoom-0.12.1.zip",
         build_file = "//third_party/freedoom:freedoom.BUILD",
     )
 
@@ -244,9 +208,7 @@ def workspace():
         name = "vizdoom",
         sha256 = "e379a242ada7e1028b7a635da672b0936d99da3702781b76a4400b83602d78c4",
         strip_prefix = "ViZDoom-1.1.13/src/vizdoom/",
-        urls = [
-            "https://github.com/mwydmuch/ViZDoom/archive/refs/tags/1.1.13.tar.gz",
-        ],
+        url = "https://github.com/mwydmuch/ViZDoom/archive/refs/tags/1.1.13.tar.gz",
         build_file = "//third_party/vizdoom:vizdoom.BUILD",
         patches = [
             "//third_party/vizdoom:sdl_thread.patch",
@@ -258,9 +220,7 @@ def workspace():
         name = "vizdoom_lib",
         sha256 = "e379a242ada7e1028b7a635da672b0936d99da3702781b76a4400b83602d78c4",
         strip_prefix = "ViZDoom-1.1.13/",
-        urls = [
-            "https://github.com/mwydmuch/ViZDoom/archive/refs/tags/1.1.13.tar.gz",
-        ],
+        url = "https://github.com/mwydmuch/ViZDoom/archive/refs/tags/1.1.13.tar.gz",
         build_file = "//third_party/vizdoom_lib:vizdoom_lib.BUILD",
     )
 
@@ -269,9 +229,7 @@ def workspace():
         name = "vizdoom_extra_maps",
         sha256 = "325440fe566ff478f35947c824ea5562e2735366845d36c5a0e40867b59f7d69",
         strip_prefix = "DirectFuturePrediction-b4757769f167f1bd7fb1ece5fdc6d874409c68a9/",
-        urls = [
-            "https://github.com/isl-org/DirectFuturePrediction/archive/b4757769f167f1bd7fb1ece5fdc6d874409c68a9.zip",
-        ],
+        url = "https://github.com/isl-org/DirectFuturePrediction/archive/b4757769f167f1bd7fb1ece5fdc6d874409c68a9.zip",
         build_file = "//third_party/vizdoom_extra_maps:vizdoom_extra_maps.BUILD",
     )
 
@@ -281,7 +239,7 @@ def workspace():
         http_archive,
         name = "pretrain_weight",
         sha256 = "b1b64e0db84cf7317c2a96b27f549147dfcb4074ed2d799334c23a067075ac1c",
-        urls = ["https://cdn.sail.sea.com/sail/pretrain.tar.gz"],
+        url = "https://cdn.sail.sea.com/sail/pretrain.tar.gz",
         build_file = "//third_party/pretrain_weight:pretrain_weight.BUILD",
     )
 
