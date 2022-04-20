@@ -79,10 +79,9 @@ buildifier: buildifier-install
 # bazel build/test
 
 bazel-build: bazel-install
-	mkdir -p dist
-	rm -f dist/*.whl bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl
 	bazel build $(BAZELOPT) //... --config=release
 	bazel run $(BAZELOPT) //:setup --config=release -- bdist_wheel
+	mkdir -p dist
 	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-test: bazel-install
@@ -131,7 +130,7 @@ docker-release:
 	echo successfully build docker image with tag $(PROJECT_NAME)-release:$(COMMIT_HASH)
 
 pypi-wheel: auditwheel-install bazel-build
-	ls dist/*.whl | xargs auditwheel repair --plat manylinux_2_17_x86_64
+	ls dist/*.whl -Art | tail -n 1 | xargs auditwheel repair --plat manylinux_2_17_x86_64
 
 release-test1:
 	cd envpool && python3 make_test.py
