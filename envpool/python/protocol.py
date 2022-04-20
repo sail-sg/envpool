@@ -91,7 +91,7 @@ class ArraySpec(object):
   """Spec of numpy array."""
 
   def __init__(
-    self, dtype: np.dtype, shape: List[int], bounds: Tuple[Any, Any], element_wise_bounds: Tuple[Any, Any]
+    self, dtype: Type, shape: List[int], bounds: Tuple[Any, Any], element_wise_bounds: Tuple[Any, Any]
   ):
     """Constructor of ArraySpec."""
     self.dtype = dtype

@@ -93,7 +93,7 @@ bazel-clean: bazel-install
 # documentation
 
 addlicense: addlicense-install
-	addlicense -c $(COPYRIGHT) -l apache -y 2021 -check $(PROJECT_NAME) third_party examples
+	addlicense -c $(COPYRIGHT) -l apache -y 2022 -check $(PROJECT_NAME) third_party examples
 
 docstyle: doc-install
 	pydocstyle $(PROJECT_NAME) && doc8 docs && cd docs && make html SPHINXOPTS="-W"
@@ -114,7 +114,7 @@ format: py-format-install clang-format-install buildifier-install addlicense-ins
 	yapf -ir $(PYTHON_FILES)
 	clang-format-11 -style=file -i $(CPP_FILES)
 	buildifier -r -lint=fix .
-	addlicense -c $(COPYRIGHT) -l apache -y 2021 $(PROJECT_NAME) third_party examples
+	addlicense -c $(COPYRIGHT) -l apache -y 2022 $(PROJECT_NAME) third_party examples
 
 # Build docker images
 
@@ -130,7 +130,7 @@ docker-release:
 	echo successfully build docker image with tag $(PROJECT_NAME)-release:$(COMMIT_HASH)
 
 pypi-wheel: auditwheel-install bazel-build
-	ls dist/*.whl | xargs auditwheel repair --plat manylinux_2_17_x86_64
+	ls dist/*.whl -Art | tail -n 1 | xargs auditwheel repair --plat manylinux_2_17_x86_64
 
 release-test1:
 	cd envpool && python3 make_test.py

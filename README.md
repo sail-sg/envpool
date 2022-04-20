@@ -187,7 +187,7 @@ If you find EnvPool useful, please cite it in your publications.
 
 ```
 @misc{envpool,
-  author = {Jiayi Weng, Min Lin, Zhongwen Xu, Shuicheng Yan},
+  author = {Jiayi Weng and Min Lin and Zhongwen Xu and Shuicheng Yan},
   title = {EnvPool},
   year = {2021},
   publisher = {GitHub},
