@@ -84,6 +84,7 @@ py_test(
         requirement("gym"),
         requirement("numpy"),
         requirement("scipy"),
+        requirement("pygame"),
     ],
 )
 
