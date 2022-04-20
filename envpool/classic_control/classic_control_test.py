@@ -72,14 +72,15 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
       self.assertTrue(np.all(obs2 <= obs_max), obs2)
 
   def run_align_check(self, env0: gym.Env, env1: Any, reset_fn: Any) -> None:
-    for _ in range(10):
+    for i in range(10):
+      np.random.seed(i)
       reset_fn(env0, env1)
       d0 = False
       while not d0:
         a = env0.action_space.sample()
         o0, r0, d0, _ = env0.step(a)
         o1, r1, d1, _ = env1.step(np.array([a]), np.array([0]))
-        np.testing.assert_allclose(o0, o1[0], atol=1e-5)
+        np.testing.assert_allclose(o0, o1[0], atol=1e-4)
         np.testing.assert_allclose(r0, r1[0])
         np.testing.assert_allclose(d0, d1[0])
 
