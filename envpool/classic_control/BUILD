@@ -67,6 +67,7 @@ py_library(
 
 py_test(
     name = "classic_control_test",
+    size = "enormous",
     srcs = ["classic_control_test.py"],
     deps = [
         ":classic_control",
@@ -74,6 +75,7 @@ py_test(
         requirement("dm_env"),
         requirement("gym"),
         requirement("numpy"),
+        requirement("pygame"),
     ],
 )
 
