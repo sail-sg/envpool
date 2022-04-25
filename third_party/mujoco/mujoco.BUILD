@@ -12,5 +12,5 @@ cc_library(
 
 filegroup(
     name = "mujoco_so",
-    srcs = glob(["lib/*.so.*"]),
+    srcs = ["lib/libmujoco.so.2.1.5"],
 )

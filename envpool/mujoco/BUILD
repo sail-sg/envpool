@@ -13,7 +13,7 @@ genrule(
 genrule(
     name = "gen_mujoco_so",
     srcs = ["@mujoco//:mujoco_so"],
-    outs = ["libmujoco.so"],
+    outs = ["libmujoco.so.2.1.5"],
     cmd = "cp $< $@",
 )
 
@@ -51,6 +51,7 @@ py_library(
     srcs = ["__init__.py"],
     data = [
         ":gen_mujoco_xml",
+        ":gen_mujoco_so",
         ":mujoco_envpool.so",
     ],
     deps = ["//envpool/python:api"],
