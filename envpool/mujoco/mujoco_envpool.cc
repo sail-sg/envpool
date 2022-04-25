@@ -14,8 +14,15 @@
 
 #include "envpool/core/py_envpool.h"
 #include "envpool/mujoco/ant.h"
+#include "envpool/mujoco/halfcheetah.h"
 
 typedef PyEnvSpec<mujoco::AntEnvSpec> AntEnvSpec;
 typedef PyEnvPool<mujoco::AntEnvPool> AntEnvPool;
 
-PYBIND11_MODULE(mujoco_envpool, m) { REGISTER(m, AntEnvSpec, AntEnvPool) }
+typedef PyEnvSpec<mujoco::HalfCheetahEnvSpec> HalfCheetahEnvSpec;
+typedef PyEnvPool<mujoco::HalfCheetahEnvPool> HalfCheetahEnvPool;
+
+PYBIND11_MODULE(mujoco_envpool, m) {
+  REGISTER(m, AntEnvSpec, AntEnvPool)
+  REGISTER(m, HalfCheetahEnvSpec, HalfCheetahEnvPool)
+}

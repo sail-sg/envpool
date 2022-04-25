@@ -22,3 +22,14 @@ Ant-v4
   elements for ``qvel``, other elements for clipped ``cfrc_ext`` (contact
   force);
 - Action space: ``(8)``, with range ``[-1, 1]``.
+
+
+HalfCheetah-v4
+--------------
+
+`gym HalfCheetah-v4 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/half_cheetah_v4.py>`_
+
+- Observation space: ``(17)``, first 8 elements for ``qpos[1:]``, next 9
+  elements for ``qvel``;
+- Action space: ``(6)``, with range ``[-1, 1]``.

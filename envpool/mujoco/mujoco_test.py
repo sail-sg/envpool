@@ -21,7 +21,12 @@ import numpy as np
 from absl import logging
 from absl.testing import absltest
 
-from envpool.mujoco import AntEnvSpec, AntGymEnvPool
+from envpool.mujoco import (
+  AntEnvSpec,
+  AntGymEnvPool,
+  HalfCheetahEnvSpec,
+  HalfCheetahGymEnvPool,
+)
 
 
 class _MujocoEnvPoolTest(absltest.TestCase):
@@ -102,6 +107,15 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
     self.run_deterministic_check(AntEnvSpec, AntGymEnvPool)
+
+  def test_half_cheetah(self) -> None:
+    env0 = mjc_mwe.HalfCheetahEnv()
+    env1 = HalfCheetahGymEnvPool(
+      HalfCheetahEnvSpec(HalfCheetahEnvSpec.gen_config())
+    )
+    self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1)
+    self.run_deterministic_check(HalfCheetahEnvSpec, HalfCheetahGymEnvPool)
 
 
 if __name__ == "__main__":
