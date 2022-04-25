@@ -15,12 +15,23 @@
 
 from envpool.python.api import py_env
 
-from .mujoco_envpool import _AntEnvPool, _AntEnvSpec
+from .mujoco_envpool import (
+  _AntEnvPool,
+  _AntEnvSpec,
+  _HalfCheetahEnvPool,
+  _HalfCheetahEnvSpec,
+)
 
 AntEnvSpec, AntDMEnvPool, AntGymEnvPool = py_env(_AntEnvSpec, _AntEnvPool)
+HalfCheetahEnvSpec, HalfCheetahDMEnvPool, HalfCheetahGymEnvPool = py_env(
+  _HalfCheetahEnvSpec, _HalfCheetahEnvPool
+)
 
 __all__ = [
   "AntEnvSpec",
   "AntDMEnvPool",
   "AntGymEnvPool",
+  "HalfCheetahEnvSpec",
+  "HalfCheetahDMEnvPool",
+  "HalfCheetahGymEnvPool",
 ]

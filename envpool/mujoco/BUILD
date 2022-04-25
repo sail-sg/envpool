@@ -37,11 +37,21 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "half_cheetah",
+    hdrs = ["half_cheetah.h"],
+    deps = [
+        ":mujoco_env",
+        "//envpool/core:async_envpool",
+    ],
+)
+
 pybind_extension(
     name = "mujoco_envpool",
     srcs = ["mujoco_envpool.cc"],
     deps = [
         ":ant",
+        ":half_cheetah",
         "//envpool/core:py_envpool",
     ],
 )

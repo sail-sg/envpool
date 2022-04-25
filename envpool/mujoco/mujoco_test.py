@@ -21,7 +21,12 @@ import numpy as np
 from absl import logging
 from absl.testing import absltest
 
-from envpool.mujoco import AntEnvSpec, AntGymEnvPool
+from envpool.mujoco import (
+  AntEnvSpec,
+  AntGymEnvPool,
+  HalfCheetahEnvSpec,
+  HalfCheetahGymEnvPool,
+)
 
 
 class _MujocoEnvPoolTest(absltest.TestCase):
@@ -74,7 +79,10 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     env.set_state(qpos, qvel)
     env._mujoco_bindings.mj_forward(env.model, env.data)
 
-  def run_align_check(self, env0: gym.Env, env1: Any) -> None:
+  def run_align_check(
+    self, env0: gym.Env, env1: Any, no_time_limit: bool = False
+  ) -> None:
+    logging.info(f"align check for {env1.__class__.__name__}")
     for i in range(5):
       env0.action_space.seed(i)
       env0.reset()
@@ -86,12 +94,13 @@ class _MujocoEnvPoolTest(absltest.TestCase):
       while not d1[0]:
         cnt += 1
         a = env0.action_space.sample()
-        logging.info(f"{cnt} {a}")
+        # logging.info(f"{cnt} {a}")
         o0, r0, d0, i0 = env0.step(a)
         o1, r1, d1, i1 = env1.step(np.array([a]), np.array([0]))
         np.testing.assert_allclose(o0, o1[0], atol=1e-4)
         np.testing.assert_allclose(r0, r1[0], atol=1e-4)
-        np.testing.assert_allclose(d0, d1[0])
+        if not no_time_limit:
+          np.testing.assert_allclose(d0, d1[0])
         for k in i0:
           if k in i1:
             np.testing.assert_allclose(i0[k], i1[k][0], atol=1e-4)
@@ -102,6 +111,15 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
     self.run_deterministic_check(AntEnvSpec, AntGymEnvPool)
+
+  def test_half_cheetah(self) -> None:
+    env0 = mjc_mwe.HalfCheetahEnv()
+    env1 = HalfCheetahGymEnvPool(
+      HalfCheetahEnvSpec(HalfCheetahEnvSpec.gen_config())
+    )
+    self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1, no_time_limit=True)
+    self.run_deterministic_check(HalfCheetahEnvSpec, HalfCheetahGymEnvPool)
 
 
 if __name__ == "__main__":
