@@ -33,11 +33,11 @@ class AntEnvFns {
   static decltype(auto) DefaultConfig() {
     return MakeDict(
         "max_episode_steps"_.bind(1000), "reward_threshold"_.bind(6000.0),
+        "frame_skip"_.bind(5), "post_constraint"_.bind(true),
         "ctrl_cost_weight"_.bind(0.5), "contact_cost_weight"_.bind(5e-4),
         "healthy_reward"_.bind(1.0), "healthy_z_min"_.bind(0.2),
         "healthy_z_max"_.bind(1.0), "contact_force_min"_.bind(-1.0),
-        "contact_force_max"_.bind(1.0), "reset_noise_scale"_.bind(0.1),
-        "frame_skip"_.bind(5));
+        "contact_force_max"_.bind(1.0), "reset_noise_scale"_.bind(0.1));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -78,7 +78,7 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
   AntEnv(const Spec& spec, int env_id)
       : Env<AntEnvSpec>(spec, env_id),
         MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/ant.xml",
-                  spec.config["frame_skip"_]),
+                  spec.config["frame_skip"_], spec.config["post_constraint"_]),
         max_episode_steps_(spec.config["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
