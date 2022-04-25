@@ -16,8 +16,9 @@
 from typing import Any, no_type_check
 
 import gym
-import numpy as np
 import mjc_mwe
+import numpy as np
+from absl import logging
 from absl.testing import absltest
 
 from envpool.mujoco import AntEnvSpec, AntGymEnvPool
@@ -52,7 +53,7 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     eps = np.finfo(np.float32).eps
     obs_space = env0.observation_space
     obs_min, obs_max = obs_space.low - eps, obs_space.high + eps
-    for _ in range(5000):
+    for _ in range(3000):
       action = np.array([act_space.sample() for _ in range(num_envs)])
       obs0 = env0.step(action)[0]
       obs1 = env1.step(action)[0]
@@ -64,23 +65,42 @@ class _MujocoEnvPoolTest(absltest.TestCase):
       self.assertTrue(np.all(obs0 <= obs_max), obs0)
       self.assertTrue(np.all(obs2 <= obs_max), obs2)
 
-  def run_align_check(self, env0: gym.Env, env1: Any, reset_fn: Any) -> None:
-    for i in range(10):
-      np.random.seed(i)
-      reset_fn(env0, env1)
-      d0 = False
-      while not d0:
+  @no_type_check
+  def reset_state(
+    self, env: gym.Env, qpos: np.ndarray, qvel: np.ndarray
+  ) -> None:
+    # manually reset
+    env._mujoco_bindings.mj_resetData(env.model, env.data)
+    env.set_state(qpos, qvel)
+    env._mujoco_bindings.mj_forward(env.model, env.data)
+
+  def run_align_check(self, env0: gym.Env, env1: Any) -> None:
+    for i in range(5):
+      env0.action_space.seed(i)
+      env0.reset()
+      a = env0.action_space.sample()
+      obs, _, _, info = env1.step(np.array([a]), np.array([0]))
+      self.reset_state(env0, info["qpos0"][0], info["qvel0"][0])
+      d1 = np.array([False])
+      cnt = 0
+      while not d1[0]:
+        cnt += 1
         a = env0.action_space.sample()
-        o0, r0, d0, _ = env0.step(a)
-        o1, r1, d1, _ = env1.step(np.array([a]), np.array([0]))
+        logging.info(f"{cnt} {a}")
+        o0, r0, d0, i0 = env0.step(a)
+        o1, r1, d1, i1 = env1.step(np.array([a]), np.array([0]))
         np.testing.assert_allclose(o0, o1[0], atol=1e-4)
-        np.testing.assert_allclose(r0, r1[0])
+        np.testing.assert_allclose(r0, r1[0], atol=1e-4)
         np.testing.assert_allclose(d0, d1[0])
+        for k in i0:
+          if k in i1:
+            np.testing.assert_allclose(i0[k], i1[k][0], atol=1e-4)
 
   def test_ant(self) -> None:
     env0 = mjc_mwe.AntEnv()
     env1 = AntGymEnvPool(AntEnvSpec(AntEnvSpec.gen_config()))
     self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1)
     self.run_deterministic_check(AntEnvSpec, AntGymEnvPool)
 
 

@@ -18,6 +18,8 @@
 #define ENVPOOL_MUJOCO_ANT_H_
 
 #include <algorithm>
+#include <limits>
+#include <memory>
 #include <string>
 
 #include "envpool/core/async_envpool.h"
@@ -39,7 +41,8 @@ class AntEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs"_.bind(Spec<mjtNum>({111})),
+    mjtNum inf = std::numeric_limits<mjtNum>::infinity();
+    return MakeDict("obs"_.bind(Spec<mjtNum>({111}, {-inf, inf})),
                     "info:reward_forward"_.bind(Spec<mjtNum>({-1})),
                     "info:reward_ctrl"_.bind(Spec<mjtNum>({-1})),
                     "info:reward_contact"_.bind(Spec<mjtNum>({-1})),
@@ -48,7 +51,9 @@ class AntEnvFns {
                     "info:y_position"_.bind(Spec<mjtNum>({-1})),
                     "info:distance_from_origin"_.bind(Spec<mjtNum>({-1})),
                     "info:x_velocity"_.bind(Spec<mjtNum>({-1})),
-                    "info:y_velocity"_.bind(Spec<mjtNum>({-1})));
+                    "info:y_velocity"_.bind(Spec<mjtNum>({-1})),
+                    "info:qpos0"_.bind(Spec<mjtNum>({15})),
+                    "info:qvel0"_.bind(Spec<mjtNum>({14})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -64,6 +69,7 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
   mjtNum ctrl_cost_weight_, contact_cost_weight_, healthy_reward_;
   mjtNum healthy_z_min_, healthy_z_max_;
   mjtNum contact_force_min_, contact_force_max_;
+  std::unique_ptr<mjtNum> qpos0_, qvel0_;  // for align check
   std::uniform_real_distribution<> dist_qpos_;
   std::normal_distribution<> dist_qvel_;
   bool done_;
@@ -82,6 +88,8 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
         healthy_z_max_(spec.config["healthy_z_max"_]),
         contact_force_min_(spec.config["contact_force_min"_]),
         contact_force_max_(spec.config["contact_force_max"_]),
+        qpos0_(new mjtNum[model_->nq]),
+        qvel0_(new mjtNum[model_->nv]),
         dist_qpos_(-spec.config["reset_noise_scale"_],
                    spec.config["reset_noise_scale"_]),
         dist_qvel_(0, spec.config["reset_noise_scale"_]),
@@ -89,10 +97,10 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
 
   void MujocoResetModel() {
     for (int i = 0; i < model_->nq; ++i) {
-      data_->qpos[i] = init_qpos_[i] + dist_qpos_(gen_);
+      data_->qpos[i] = qpos0_.get()[i] = init_qpos_[i] + dist_qpos_(gen_);
     }
     for (int i = 0; i < model_->nv; ++i) {
-      data_->qvel[i] = init_qvel_[i] + dist_qvel_(gen_);
+      data_->qvel[i] = qvel0_.get()[i] = init_qvel_[i] + dist_qvel_(gen_);
     }
   }
 
@@ -185,6 +193,8 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
         std::sqrt(x_after * x_after + y_after * y_after);
     state["info:x_velocity"_] = xv;
     state["info:y_velocity"_] = yv;
+    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
+    state["info:qvel0"_].Assign(qvel0_.get(), model_->nv);
   }
 };
 
