@@ -14,7 +14,7 @@
 
 #include "envpool/core/py_envpool.h"
 #include "envpool/mujoco/ant.h"
-#include "envpool/mujoco/halfcheetah.h"
+#include "envpool/mujoco/half_cheetah.h"
 
 typedef PyEnvSpec<mujoco::AntEnvSpec> AntEnvSpec;
 typedef PyEnvPool<mujoco::AntEnvPool> AntEnvPool;
