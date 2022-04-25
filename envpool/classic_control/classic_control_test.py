@@ -77,6 +77,7 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
   def run_align_check(self, env0: gym.Env, env1: Any, reset_fn: Any) -> None:
     for i in range(10):
       np.random.seed(i)
+      env0.action_space.seed(i)
       reset_fn(env0, env1)
       d0 = False
       while not d0:
