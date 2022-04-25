@@ -71,6 +71,19 @@ class _MakeTest(absltest.TestCase):
       env_dm.reset()
       env_gym.reset()
 
+  def test_make_mujoco(self) -> None:
+    mujoco = ["Ant-v4"]
+    for task_id in mujoco:
+      envpool.make_spec(task_id)
+      env_gym = envpool.make_gym(task_id)
+      env_dm = envpool.make_dm(task_id)
+      print(env_dm)
+      print(env_gym)
+      self.assertIsInstance(env_gym, gym.Env)
+      self.assertIsInstance(env_dm, dm_env.Environment)
+      env_dm.reset()
+      env_gym.reset()
+
 
 if __name__ == "__main__":
   absltest.main()

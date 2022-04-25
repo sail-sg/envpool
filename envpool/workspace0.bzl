@@ -233,6 +233,24 @@ def workspace():
         build_file = "//third_party/vizdoom_extra_maps:vizdoom_extra_maps.BUILD",
     )
 
+    maybe(
+        http_archive,
+        name = "mujoco",
+        sha256 = "3f1804d28833295a310aac23279401936f2558dee63cd3778429577e4ab55dff",
+        strip_prefix = "mujoco-2.1.5",
+        url = "https://github.com/deepmind/mujoco/releases/download/2.1.5/mujoco-2.1.5-linux-x86_64.tar.gz",
+        build_file = "//third_party/mujoco:mujoco.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "mujoco_xml",
+        sha256 = "94098a9b888bc80fa303571d83dfdda1412762d8b5565d99c52b38a2a93c919a",
+        strip_prefix = "gym-0.23.1/gym/envs/mujoco",
+        url = "https://github.com/openai/gym/archive/refs/tags/0.23.1.tar.gz",
+        build_file = "//third_party/mujoco_xml:mujoco_xml.BUILD",
+    )
+
     # Atari/VizDoom pretrained weight for testing pipeline
 
     maybe(
