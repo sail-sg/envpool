@@ -17,6 +17,7 @@ from typing import Any, no_type_check
 
 import gym
 import numpy as np
+import mjc_mwe
 from absl.testing import absltest
 
 from envpool.mujoco import AntEnvSpec, AntGymEnvPool
@@ -77,7 +78,7 @@ class _MujocoEnvPoolTest(absltest.TestCase):
         np.testing.assert_allclose(d0, d1[0])
 
   def test_ant(self) -> None:
-    env0 = gym.make("Ant-v3")
+    env0 = mjc_mwe.AntEnv()
     env1 = AntGymEnvPool(AntEnvSpec(AntEnvSpec.gen_config()))
     self.run_space_check(env0, env1)
     self.run_deterministic_check(AntEnvSpec, AntGymEnvPool)

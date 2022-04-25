@@ -58,6 +58,7 @@ py_test(
         requirement("absl-py"),
         requirement("gym"),
         requirement("mujoco"),
+        requirement("mjc_mwe"),
     ],
 )
 
