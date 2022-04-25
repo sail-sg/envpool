@@ -10,6 +10,13 @@ genrule(
     cmd = "mkdir -p $(OUTS) && cp $(SRCS) $(OUTS)",
 )
 
+genrule(
+    name = "gen_mujoco_so",
+    srcs = ["@mujoco//:mujoco_so"],
+    outs = ["libmujoco.so"],
+    cmd = "cp $< $@",
+)
+
 cc_library(
     name = "mujoco_env",
     hdrs = ["mujoco_env.h"],

@@ -6,7 +6,7 @@ filelock
 gym
 pygame
 mujoco
-mjc-mwe>=0.0.2
+mjc-mwe>=0.0.3
 h5py
 jinja2
 numpy

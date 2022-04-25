@@ -9,3 +9,8 @@ cc_library(
     ],
     linkstatic = 0,
 )
+
+filegroup(
+    name = "mujoco_so",
+    srcs = glob(["lib/*.so.*"]),
+)
