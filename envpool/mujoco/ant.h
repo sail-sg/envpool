@@ -52,6 +52,7 @@ class AntEnvFns {
                     "info:distance_from_origin"_.bind(Spec<mjtNum>({-1})),
                     "info:x_velocity"_.bind(Spec<mjtNum>({-1})),
                     "info:y_velocity"_.bind(Spec<mjtNum>({-1})),
+                    // TODO(jiayi): remove these two lines for speed
                     "info:qpos0"_.bind(Spec<mjtNum>({15})),
                     "info:qvel0"_.bind(Spec<mjtNum>({14})));
   }
