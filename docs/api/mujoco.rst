@@ -33,3 +33,14 @@ HalfCheetah-v4
 - Observation space: ``(17)``, first 8 elements for ``qpos[1:]``, next 9
   elements for ``qvel``;
 - Action space: ``(6)``, with range ``[-1, 1]``.
+
+
+Hopper-v4
+---------
+
+`gym Hopper-v4 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/hopper_v4.py>`_
+
+- Observation space: ``(11)``, first 5 elements for ``qpos[1:]``, next 6
+  elements for ``qvel``;
+- Action space: ``(3)``, with range ``[-1, 1]``.

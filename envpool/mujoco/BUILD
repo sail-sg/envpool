@@ -46,12 +46,22 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "hopper",
+    hdrs = ["hopper.h"],
+    deps = [
+        ":mujoco_env",
+        "//envpool/core:async_envpool",
+    ],
+)
+
 pybind_extension(
     name = "mujoco_envpool",
     srcs = ["mujoco_envpool.cc"],
     deps = [
         ":ant",
         ":half_cheetah",
+        ":hopper",
         "//envpool/core:py_envpool",
     ],
 )
