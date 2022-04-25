@@ -34,11 +34,12 @@ class HopperEnvFns {
     return MakeDict(
         "max_episode_steps"_.bind(1000), "reward_threshold"_.bind(6000.0),
         "frame_skip"_.bind(4), "post_constraint"_.bind(true),
-        "ctrl_cost_weight"_.bind(1e-3), "healthy_reward"_.bind(1.0),
-        "velocity_min"_.bind(-10.0), "velocity_max"_.bind(10.0),
-        "healthy_state_min"_.bind(-100.0), "healthy_state_max"_.bind(100.0),
-        "healthy_angle_min"_.bind(-0.2), "healthy_angle_max"_.bind(0.2),
-        "healthy_z_min"_.bind(0.7), "reset_noise_scale"_.bind(5e-3));
+        "ctrl_cost_weight"_.bind(1e-3), "forward_reward_weight"_.bind(1.0),
+        "healthy_reward"_.bind(1.0), "velocity_min"_.bind(-10.0),
+        "velocity_max"_.bind(10.0), "healthy_state_min"_.bind(-100.0),
+        "healthy_state_max"_.bind(100.0), "healthy_angle_min"_.bind(-0.2),
+        "healthy_angle_max"_.bind(0.2), "healthy_z_min"_.bind(0.7),
+        "reset_noise_scale"_.bind(5e-3));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -61,7 +62,8 @@ typedef class EnvSpec<HopperEnvFns> HopperEnvSpec;
 class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
  protected:
   int max_episode_steps_, elapsed_step_;
-  mjtNum ctrl_cost_weight_, healthy_reward_, healthy_z_min_;
+  mjtNum ctrl_cost_weight_, forward_reward_weight_;
+  mjtNum healthy_reward_, healthy_z_min_;
   mjtNum velocity_min_, velocity_max_;
   mjtNum healthy_state_min_, healthy_state_max_;
   mjtNum healthy_angle_min_, healthy_angle_max_;
@@ -77,6 +79,7 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
         max_episode_steps_(spec.config["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
+        forward_reward_weight_(spec.config["forward_reward_weight"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
         healthy_z_min_(spec.config["healthy_z_min"_]),
         velocity_min_(spec.config["velocity_min"_]),
@@ -125,7 +128,7 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
     mjtNum dt = frame_skip_ * model_->opt.timestep;
     mjtNum xv = (x_after - x_before) / dt;
     // reward and done
-    float reward = xv + healthy_reward_ - ctrl_cost;
+    float reward = xv * forward_reward_weight_ + healthy_reward_ - ctrl_cost;
     ++elapsed_step_;
     done_ = !IsHealthy() || (elapsed_step_ >= max_episode_steps_);
     WriteObs(reward, xv, x_after);

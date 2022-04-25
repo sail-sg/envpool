@@ -34,10 +34,11 @@ class AntEnvFns {
     return MakeDict(
         "max_episode_steps"_.bind(1000), "reward_threshold"_.bind(6000.0),
         "frame_skip"_.bind(5), "post_constraint"_.bind(true),
-        "ctrl_cost_weight"_.bind(0.5), "contact_cost_weight"_.bind(5e-4),
-        "healthy_reward"_.bind(1.0), "healthy_z_min"_.bind(0.2),
-        "healthy_z_max"_.bind(1.0), "contact_force_min"_.bind(-1.0),
-        "contact_force_max"_.bind(1.0), "reset_noise_scale"_.bind(0.1));
+        "forward_reward_weight"_.bind(1.0), "ctrl_cost_weight"_.bind(0.5),
+        "contact_cost_weight"_.bind(5e-4), "healthy_reward"_.bind(1.0),
+        "healthy_z_min"_.bind(0.2), "healthy_z_max"_.bind(1.0),
+        "contact_force_min"_.bind(-1.0), "contact_force_max"_.bind(1.0),
+        "reset_noise_scale"_.bind(0.1));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -67,7 +68,8 @@ typedef class EnvSpec<AntEnvFns> AntEnvSpec;
 class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
  protected:
   int max_episode_steps_, elapsed_step_;
-  mjtNum ctrl_cost_weight_, contact_cost_weight_, healthy_reward_;
+  mjtNum ctrl_cost_weight_, contact_cost_weight_;
+  mjtNum forward_reward_weight_, healthy_reward_;
   mjtNum healthy_z_min_, healthy_z_max_;
   mjtNum contact_force_min_, contact_force_max_;
   std::unique_ptr<mjtNum> qpos0_, qvel0_;  // for align check
@@ -84,6 +86,7 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
         elapsed_step_(max_episode_steps_ + 1),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         contact_cost_weight_(spec.config["contact_cost_weight"_]),
+        forward_reward_weight_(spec.config["forward_reward_weight"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
         healthy_z_min_(spec.config["healthy_z_min"_]),
         healthy_z_max_(spec.config["healthy_z_max"_]),
@@ -140,7 +143,8 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
     }
 
     // reward and done
-    float reward = xv + healthy_reward_ - ctrl_cost - contact_cost;
+    float reward = xv * forward_reward_weight_ + healthy_reward_ - ctrl_cost -
+                   contact_cost;
     ++elapsed_step_;
     done_ = !IsHealthy() || (elapsed_step_ >= max_episode_steps_);
     WriteObs(reward, xv, yv, ctrl_cost, contact_cost, x_after, y_after);
@@ -184,7 +188,7 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
       *(obs++) = x;
     }
     // info
-    state["info:reward_forward"_] = xv;
+    state["info:reward_forward"_] = xv * forward_reward_weight_;
     state["info:reward_ctrl"_] = -ctrl_cost;
     state["info:reward_contact"_] = -contact_cost;
     state["info:reward_survive"_] = healthy_reward_;
