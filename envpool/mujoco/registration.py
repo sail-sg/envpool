@@ -40,3 +40,14 @@ register(
   reward_threshold=4800.0,
   base_path=base_path,
 )
+
+register(
+  task_id="Hopper-v4",
+  import_path="envpool.mujoco",
+  spec_cls="HopperEnvSpec",
+  dm_cls="HopperDMEnvPool",
+  gym_cls="HopperGymEnvPool",
+  max_episode_steps=1000,
+  reward_threshold=3800.0,
+  base_path=base_path,
+)

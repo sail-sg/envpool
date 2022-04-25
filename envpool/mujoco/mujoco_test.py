@@ -26,6 +26,8 @@ from envpool.mujoco import (
   AntGymEnvPool,
   HalfCheetahEnvSpec,
   HalfCheetahGymEnvPool,
+  HopperEnvSpec,
+  HopperGymEnvPool,
 )
 
 
@@ -120,6 +122,13 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
     self.run_deterministic_check(HalfCheetahEnvSpec, HalfCheetahGymEnvPool)
+
+  def test_hopper(self) -> None:
+    env0 = mjc_mwe.HopperEnv()
+    env1 = HopperGymEnvPool(HopperEnvSpec(HopperEnvSpec.gen_config()))
+    self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1)
+    self.run_deterministic_check(HopperEnvSpec, HopperGymEnvPool)
 
 
 if __name__ == "__main__":

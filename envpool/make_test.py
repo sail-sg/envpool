@@ -72,7 +72,7 @@ class _MakeTest(absltest.TestCase):
       env_gym.reset()
 
   def test_make_mujoco(self) -> None:
-    mujoco = ["Ant-v4", "HalfCheetah-v4"]
+    mujoco = ["Ant-v4", "HalfCheetah-v4", "Hopper-v4"]
     for task_id in mujoco:
       envpool.make_spec(task_id)
       env_gym = envpool.make_gym(task_id)

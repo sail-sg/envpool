@@ -20,11 +20,18 @@ from .mujoco_envpool import (
   _AntEnvSpec,
   _HalfCheetahEnvPool,
   _HalfCheetahEnvSpec,
+  _HopperEnvPool,
+  _HopperEnvSpec,
 )
 
 AntEnvSpec, AntDMEnvPool, AntGymEnvPool = py_env(_AntEnvSpec, _AntEnvPool)
+
 HalfCheetahEnvSpec, HalfCheetahDMEnvPool, HalfCheetahGymEnvPool = py_env(
   _HalfCheetahEnvSpec, _HalfCheetahEnvPool
+)
+
+HopperEnvSpec, HopperDMEnvPool, HopperGymEnvPool = py_env(
+  _HopperEnvSpec, _HopperEnvPool
 )
 
 __all__ = [
@@ -34,4 +41,7 @@ __all__ = [
   "HalfCheetahEnvSpec",
   "HalfCheetahDMEnvPool",
   "HalfCheetahGymEnvPool",
+  "HopperEnvSpec",
+  "HopperDMEnvPool",
+  "HopperGymEnvPool",
 ]

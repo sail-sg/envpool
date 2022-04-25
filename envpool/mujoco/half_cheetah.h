@@ -34,8 +34,7 @@ class HalfCheetahEnvFns {
     return MakeDict(
         "max_episode_steps"_.bind(1000), "reward_threshold"_.bind(4800.0),
         "frame_skip"_.bind(5), "post_constraint"_.bind(true),
-        "forward_reward_weight"_.bind(1.0), "ctrl_cost_weight"_.bind(0.1),
-        "reset_noise_scale"_.bind(0.1));
+        "ctrl_cost_weight"_.bind(0.1), "reset_noise_scale"_.bind(0.1));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -60,7 +59,7 @@ typedef class EnvSpec<HalfCheetahEnvFns> HalfCheetahEnvSpec;
 class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
  protected:
   int max_episode_steps_, elapsed_step_;
-  mjtNum forward_reward_weight_, ctrl_cost_weight_;
+  mjtNum ctrl_cost_weight_;
   std::unique_ptr<mjtNum> qpos0_, qvel0_;  // for align check
   std::uniform_real_distribution<> dist_qpos_;
   std::normal_distribution<> dist_qvel_;
@@ -73,7 +72,6 @@ class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
                   spec.config["frame_skip"_], spec.config["post_constraint"_]),
         max_episode_steps_(spec.config["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
-        forward_reward_weight_(spec.config["forward_reward_weight"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         qpos0_(new mjtNum[model_->nq]),
         qvel0_(new mjtNum[model_->nv]),
@@ -116,7 +114,7 @@ class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
     mjtNum dt = frame_skip_ * model_->opt.timestep;
     mjtNum xv = (x_after - x_before) / dt;
     // reward and done
-    float reward = forward_reward_weight_ * xv - ctrl_cost;
+    float reward = xv - ctrl_cost;
     done_ = (++elapsed_step_ >= max_episode_steps_);
     WriteObs(reward, xv, ctrl_cost, x_after);
   }
@@ -135,7 +133,7 @@ class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
       *(obs++) = data_->qvel[i];
     }
     // info
-    state["info:reward_run"_] = forward_reward_weight_ * xv;
+    state["info:reward_run"_] = xv;
     state["info:reward_ctrl"_] = -ctrl_cost;
     state["info:x_position"_] = x_after;
     state["info:x_velocity"_] = xv;
