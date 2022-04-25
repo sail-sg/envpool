@@ -1,4 +1,4 @@
-# Copyright 2021 Garena Online Private Limited
+# Copyright 2022 Garena Online Private Limited
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,10 +11,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Entry point for all envs' registration."""
+"""Mujoco env registration."""
 
-import envpool.atari.registration  # noqa: F401
-import envpool.classic_control.registration  # noqa: F401
-import envpool.mujoco.registration  # noqa: F401
-import envpool.toy_text.registration  # noqa: F401
-import envpool.vizdoom.registration  # noqa: F401
+import os
+
+from envpool.registration import register
+
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+register(
+  task_id="Ant-v4",
+  import_path="envpool.mujoco",
+  spec_cls="AntEnvSpec",
+  dm_cls="AntDMEnvPool",
+  gym_cls="AntGymEnvPool",
+  max_episode_steps=1000,
+  reward_threshold=6000.0,
+  base_path=base_path,
+)

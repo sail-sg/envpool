@@ -18,6 +18,7 @@ py_library(
     deps = [
         "//envpool/atari:atari_registration",
         "//envpool/classic_control:classic_control_registration",
+        "//envpool/mujoco:mujoco_registration",
         "//envpool/toy_text:toy_text_registration",
         "//envpool/vizdoom:vizdoom_registration",
     ],
@@ -31,6 +32,7 @@ py_library(
         ":registration",
         "//envpool/atari",
         "//envpool/classic_control",
+        "//envpool/mujoco",
         "//envpool/python",
         "//envpool/toy_text",
         "//envpool/vizdoom",

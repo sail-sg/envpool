@@ -5,6 +5,7 @@ dm-tree
 filelock
 gym
 pygame
+mujoco
 h5py
 jinja2
 numpy
