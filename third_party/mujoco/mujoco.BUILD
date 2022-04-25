@@ -4,9 +4,8 @@ cc_library(
     name = "mujoco_lib",
     srcs = glob(["lib/*"]),
     hdrs = glob(["include/*.h"]),
-    includes = [
-        "include/",
-    ],
+    includes = ["include/"],
+    linkopts = ["-Wl,-rpath,'$$ORIGIN'"],
     linkstatic = 0,
 )
 

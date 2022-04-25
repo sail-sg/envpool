@@ -7,7 +7,7 @@ genrule(
     name = "gen_mujoco_xml",
     srcs = ["@mujoco_xml"],
     outs = ["assets"],
-    cmd = "mkdir -p $(OUTS) && cp $(SRCS) $(OUTS)",
+    cmd = "cp -r $(SRCS) $(@D)",
 )
 
 genrule(
@@ -50,8 +50,8 @@ py_library(
     name = "mujoco",
     srcs = ["__init__.py"],
     data = [
-        ":gen_mujoco_xml",
         ":gen_mujoco_so",
+        ":gen_mujoco_xml",
         ":mujoco_envpool.so",
     ],
     deps = ["//envpool/python:api"],
@@ -59,6 +59,7 @@ py_library(
 
 py_test(
     name = "mujoco_test",
+    size = "enormous",
     srcs = ["mujoco_test.py"],
     deps = [
         ":mujoco",

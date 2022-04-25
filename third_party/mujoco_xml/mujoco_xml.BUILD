@@ -1,5 +1,5 @@
 filegroup(
     name = "mujoco_xml",
-    srcs = glob(["assets/*"]),
+    srcs = ["assets"],
     visibility = ["//visibility:public"],
 )
