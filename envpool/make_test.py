@@ -14,6 +14,7 @@
 """Test for envpool.make."""
 
 import pprint
+from typing import List
 
 import dm_env
 import gym
@@ -51,16 +52,8 @@ class _MakeTest(absltest.TestCase):
     self.assertIsInstance(env, gym.Env)
     env.reset()
 
-  def test_make_classic_and_toytext(self) -> None:
-    classic = [
-      "CartPole-v0", "CartPole-v1", "Pendulum-v0", "MountainCar-v0",
-      "MountainCarContinuous-v0", "Acrobot-v1"
-    ]
-    toytext = [
-      "Catch-v0", "FrozenLake-v1", "FrozenLake8x8-v1", "Taxi-v3", "NChain-v0",
-      "CliffWalking-v0", "Blackjack-v1"
-    ]
-    for task_id in classic + toytext:
+  def check_step(self, env_list: List[str]) -> None:
+    for task_id in env_list:
       envpool.make_spec(task_id)
       env_gym = envpool.make_gym(task_id)
       env_dm = envpool.make_dm(task_id)
@@ -71,18 +64,38 @@ class _MakeTest(absltest.TestCase):
       env_dm.reset()
       env_gym.reset()
 
+  def test_make_classic(self) -> None:
+    self.check_step(
+      [
+        "CartPole-v0",
+        "CartPole-v1",
+        "Pendulum-v0",
+        "MountainCar-v0",
+        "MountainCarContinuous-v0",
+        "Acrobot-v1",
+      ]
+    )
+
+  def test_make_toytext(self) -> None:
+    self.check_step(
+      [
+        "Catch-v0",
+        "FrozenLake-v1",
+        "FrozenLake8x8-v1",
+        "Taxi-v3",
+        "NChain-v0",
+        "CliffWalking-v0",
+        "Blackjack-v1",
+      ]
+    )
+
   def test_make_mujoco(self) -> None:
-    mujoco = ["Ant-v4", "HalfCheetah-v4", "Hopper-v4"]
-    for task_id in mujoco:
-      envpool.make_spec(task_id)
-      env_gym = envpool.make_gym(task_id)
-      env_dm = envpool.make_dm(task_id)
-      print(env_dm)
-      print(env_gym)
-      self.assertIsInstance(env_gym, gym.Env)
-      self.assertIsInstance(env_dm, dm_env.Environment)
-      env_dm.reset()
-      env_gym.reset()
+    self.check_step([
+      "Ant-v4",
+      "HalfCheetah-v4",
+      "Hopper-v4",
+      "Humanoid-v4",
+    ])
 
 
 if __name__ == "__main__":
