@@ -74,6 +74,15 @@ cc_library(
 )
 
 cc_library(
+    name = "inverted_double_pendulum",
+    hdrs = ["inverted_double_pendulum.h"],
+    deps = [
+        ":mujoco_env",
+        "//envpool/core:async_envpool",
+    ],
+)
+
+cc_library(
     name = "inverted_pendulum",
     hdrs = ["inverted_pendulum.h"],
     deps = [
@@ -118,6 +127,7 @@ pybind_extension(
         ":hopper",
         ":humanoid",
         ":humanoid_standup",
+        ":inverted_double_pendulum",
         ":inverted_pendulum",
         ":pusher",
         ":reacher",

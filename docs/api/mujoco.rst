@@ -78,6 +78,21 @@ Humanoid-v3/v4, HumanoidStandup-v2/v4
 - Action space: ``(17)``, with range ``[-0.4, 0.4]``.
 
 
+InvertedDoublePendulum-v2/v4
+----------------------------
+
+`gym InvertedDoublePendulum-v2 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/inverted_double_pendulum.py>`_
+
+`gym InvertedDoublePendulum-v4 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/inverted_double_pendulum_v4.py>`_
+
+- Observation space: ``(11)``, first 1 element for ``qpos[0]``, next 2
+  elements for ``sin(qpos[1:])``, next 2 elements for ``cos(qpos[1:])``,
+  next 3 elements for ``qvel``, next 3 elements for ``qfrc_constraint``;
+- Action space: ``(1)``, with range ``[-1, 1]``.
+
+
 InvertedPendulum-v2/v4
 ----------------------
 
