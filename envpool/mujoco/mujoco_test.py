@@ -34,6 +34,8 @@ from envpool.mujoco import (
   HumanoidStandupGymEnvPool,
   InvertedPendulumEnvSpec,
   InvertedPendulumGymEnvPool,
+  PusherEnvSpec,
+  PusherGymEnvPool,
   ReacherEnvSpec,
   ReacherGymEnvPool,
   SwimmerEnvSpec,
@@ -170,6 +172,13 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     self.run_deterministic_check(
       InvertedPendulumEnvSpec, InvertedPendulumGymEnvPool
     )
+
+  def test_pusher(self) -> None:
+    env0 = mjc_mwe.PusherEnv()
+    env1 = PusherGymEnvPool(PusherEnvSpec(PusherEnvSpec.gen_config()))
+    self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1, no_time_limit=True)
+    self.run_deterministic_check(PusherEnvSpec, PusherGymEnvPool)
 
   def test_reacher(self) -> None:
     env0 = mjc_mwe.ReacherEnv()
