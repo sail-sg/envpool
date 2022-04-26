@@ -102,6 +102,8 @@ class _MakeTest(absltest.TestCase):
         "Humanoid-v4",
         "HumanoidStandup-v2",
         "HumanoidStandup-v4",
+        "InvertedDoublePendulum-v2",
+        "InvertedDoublePendulum-v4",
         "InvertedPendulum-v2",
         "InvertedPendulum-v4",
         "Pusher-v2",
