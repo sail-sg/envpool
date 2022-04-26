@@ -21,7 +21,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip setuptools wheel
-    - name: clang-tidy
+    - name: Run clang-tidy
       run: |
         make bazel-clang-tidy BAZELOPT="--remote_cache=http://bazel-cache.sail:8080"
     - name: Test
