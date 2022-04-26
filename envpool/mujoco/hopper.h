@@ -156,7 +156,7 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
     return true;
   }
 
-  void WriteObs(float reward, mjtNum xv, mjtNum x_after) {  // NOLINT
+  void WriteObs(float reward, mjtNum xv, mjtNum x_after) {
     State state = Allocate();
     state["reward"_] = reward;
     // obs

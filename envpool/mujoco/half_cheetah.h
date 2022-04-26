@@ -122,8 +122,7 @@ class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
   }
 
  private:
-  void WriteObs(float reward, mjtNum xv, mjtNum ctrl_cost,
-                mjtNum x_after) {  // NOLINT
+  void WriteObs(float reward, mjtNum xv, mjtNum ctrl_cost, mjtNum x_after) {
     State state = Allocate();
     state["reward"_] = reward;
     // obs

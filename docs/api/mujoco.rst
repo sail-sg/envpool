@@ -61,3 +61,14 @@ Humanoid-v4, HumanoidStandup-v4
   rot; 3D tran]), next 23 elements for ``qfrc_actuator`` (actuator force),
   next 84 elements for ``cfrc_ext`` (com-based external force on body);
 - Action space: ``(17)``, with range ``[-0.4, 0.4]``.
+
+
+InvertedPendulum-v4
+-------------------
+
+`gym InvertedPendulum-v4 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/inverted_pendulum_v4.py>`_
+
+- Observation space: ``(4)``, first 2 elements for ``qpos``, next 2 elements
+  for ``qvel``;
+- Action space: ``(1)``, with range ``[-3, 3]``.
