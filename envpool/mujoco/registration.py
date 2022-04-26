@@ -19,66 +19,31 @@ from envpool.registration import register
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-register(
-  task_id="Ant-v4",
-  import_path="envpool.mujoco",
-  spec_cls="AntEnvSpec",
-  dm_cls="AntDMEnvPool",
-  gym_cls="AntGymEnvPool",
-  max_episode_steps=1000,
-  reward_threshold=6000.0,
-  base_path=base_path,
-)
+mujoco_envs = [
+  ("Ant", "v3", False),
+  ("Ant", "v4", True),
+  ("HalfCheetah", "v3", False),
+  ("HalfCheetah", "v4", True),
+  ("Hopper", "v3", False),
+  ("Hopper", "v4", True),
+  ("Humanoid", "v3", False),
+  ("Humanoid", "v4", True),
+  ("HumanoidStandup", "v2", False),
+  ("HumanoidStandup", "v4", True),
+  ("InvertedPendulum", "v2", False),
+  ("InvertedPendulum", "v4", True),
+  ("Swimmer", "v3", False),
+  ("Swimmer", "v4", True),
+]
 
-register(
-  task_id="HalfCheetah-v4",
-  import_path="envpool.mujoco",
-  spec_cls="HalfCheetahEnvSpec",
-  dm_cls="HalfCheetahDMEnvPool",
-  gym_cls="HalfCheetahGymEnvPool",
-  max_episode_steps=1000,
-  reward_threshold=4800.0,
-  base_path=base_path,
-)
-
-register(
-  task_id="Hopper-v4",
-  import_path="envpool.mujoco",
-  spec_cls="HopperEnvSpec",
-  dm_cls="HopperDMEnvPool",
-  gym_cls="HopperGymEnvPool",
-  max_episode_steps=1000,
-  reward_threshold=3800.0,
-  base_path=base_path,
-)
-
-register(
-  task_id="Humanoid-v4",
-  import_path="envpool.mujoco",
-  spec_cls="HumanoidEnvSpec",
-  dm_cls="HumanoidDMEnvPool",
-  gym_cls="HumanoidGymEnvPool",
-  max_episode_steps=1000,
-  base_path=base_path,
-)
-
-register(
-  task_id="HumanoidStandup-v4",
-  import_path="envpool.mujoco",
-  spec_cls="HumanoidStandupEnvSpec",
-  dm_cls="HumanoidStandupDMEnvPool",
-  gym_cls="HumanoidStandupGymEnvPool",
-  max_episode_steps=1000,
-  base_path=base_path,
-)
-
-register(
-  task_id="InvertedPendulum-v4",
-  import_path="envpool.mujoco",
-  spec_cls="InvertedPendulumEnvSpec",
-  dm_cls="InvertedPendulumDMEnvPool",
-  gym_cls="InvertedPendulumGymEnvPool",
-  max_episode_steps=1000,
-  reward_threshold=950.0,
-  base_path=base_path,
-)
+for task, version, post_constraint in mujoco_envs:
+  register(
+    task_id=f"{task}-{version}",
+    import_path="envpool.mujoco",
+    spec_cls=f"{task}EnvSpec",
+    dm_cls=f"{task}DMEnvPool",
+    gym_cls=f"{task}GymEnvPool",
+    max_episode_steps=1000,
+    base_path=base_path,
+    post_constraint=post_constraint,
+  )
