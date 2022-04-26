@@ -29,6 +29,9 @@ cpplint-install:
 clang-format-install:
 	command -v clang-format-11 || sudo apt-get install -y clang-format-11
 
+clang-tidy-install:
+	command -v clang-tidy || sudo apt-get install -y clang-tidy
+
 go-install:
 	# requires go >= 1.16
 	command -v go || (sudo apt-get install -y golang-1.16 && sudo ln -sf /usr/lib/go-1.16/bin/go /usr/bin/go)
@@ -77,6 +80,15 @@ buildifier: buildifier-install
 	buildifier -r -lint=warn .
 
 # bazel build/test
+
+bazel-clang-tidy: clang-tidy-install
+	bazel build $(BAZELOPT) //... --config=clang-tidy --config=release
+
+bazel-debug: bazel-install
+	bazel build $(BAZELOPT) //... --config=debug
+	bazel run $(BAZELOPT) //:setup --config=debug -- bdist_wheel
+	mkdir -p dist
+	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-build: bazel-install
 	bazel build $(BAZELOPT) //... --config=release

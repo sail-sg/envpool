@@ -50,6 +50,7 @@ TEST(StateBufferQueueTest, SinglePlayerSync) {
   std::size_t num_envs = 256;
   std::size_t max_num_players = 1;
   StateBufferQueue queue(batch, num_envs, max_num_players, specs);
+  std::mt19937 gen(0);
   std::srand(std::time(nullptr));
   std::size_t mul = 100;
   std::vector<int> order;
@@ -59,7 +60,7 @@ TEST(StateBufferQueueTest, SinglePlayerSync) {
     env_id.push_back(i);
   }
   for (std::size_t m = 0; m < mul; ++m) {
-    std::random_shuffle(order.begin(), order.end());
+    std::shuffle(order.begin(), order.end(), gen);
     for (std::size_t i = 0; i < batch; ++i) {
       auto slice = queue.Allocate(1, order[i]);
       EXPECT_EQ(slice.arr[0].Shape(0), 1);
@@ -75,7 +76,7 @@ TEST(StateBufferQueueTest, SinglePlayerSync) {
   }
   // remove env_id to see if it works with no deadlock
   while (env_id.size() > 1) {
-    std::random_shuffle(env_id.begin(), env_id.end());
+    std::shuffle(env_id.begin(), env_id.end(), gen);
     env_id.pop_back();
     for (std::size_t i = 0; i < env_id.size(); ++i) {
       auto slice = queue.Allocate(1, i);
