@@ -87,7 +87,7 @@ InvertedDoublePendulum-v2/v4
 `gym InvertedDoublePendulum-v4 source code
 <https://github.com/openai/gym/blob/master/gym/envs/mujoco/inverted_double_pendulum_v4.py>`_
 
-- Observation space: ``(11)``, first 1 element for ``qpos[:1]``, next 2
+- Observation space: ``(11)``, first 1 element for ``qpos[0]``, next 2
   elements for ``sin(qpos[1:])``, next 2 elements for ``cos(qpos[1:])``,
   next 3 elements for ``qvel``, next 3 elements for ``qfrc_constraint``;
 - Action space: ``(1)``, with range ``[-1, 1]``.
