@@ -79,7 +79,7 @@ Humanoid-v3/v4, HumanoidStandup-v2/v4
 
 
 InvertedDoublePendulum-v2/v4
-----------------------
+----------------------------
 
 `gym InvertedDoublePendulum-v2 source code
 <https://github.com/openai/gym/blob/master/gym/envs/mujoco/inverted_double_pendulum.py>`_

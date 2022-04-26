@@ -82,7 +82,6 @@ cc_library(
     ],
 )
 
-
 cc_library(
     name = "inverted_pendulum",
     hdrs = ["inverted_pendulum.h"],

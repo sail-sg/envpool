@@ -167,7 +167,9 @@ class _MujocoEnvPoolTest(absltest.TestCase):
   def test_inverted_double_pendulum(self) -> None:
     env0 = mjc_mwe.InvertedDoublePendulumEnv()
     env1 = InvertedDoublePendulumGymEnvPool(
-      InvertedDoublePendulumEnvSpec(InvertedDoublePendulumEnvSpec.gen_config())
+      InvertedDoublePendulumEnvSpec(
+        InvertedDoublePendulumEnvSpec.gen_config()
+      )
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)

@@ -39,8 +39,10 @@ typedef PyEnvPool<mujoco::HumanoidEnvPool> HumanoidEnvPool;
 typedef PyEnvSpec<mujoco::HumanoidStandupEnvSpec> HumanoidStandupEnvSpec;
 typedef PyEnvPool<mujoco::HumanoidStandupEnvPool> HumanoidStandupEnvPool;
 
-typedef PyEnvSpec<mujoco::InvertedDoublePendulumEnvSpec> InvertedDoublePendulumEnvSpec;
-typedef PyEnvPool<mujoco::InvertedDoublePendulumEnvPool> InvertedDoublePendulumEnvPool;
+typedef PyEnvSpec<mujoco::InvertedDoublePendulumEnvSpec>
+    InvertedDoublePendulumEnvSpec;
+typedef PyEnvPool<mujoco::InvertedDoublePendulumEnvPool>
+    InvertedDoublePendulumEnvPool;
 
 typedef PyEnvSpec<mujoco::InvertedPendulumEnvSpec> InvertedPendulumEnvSpec;
 typedef PyEnvPool<mujoco::InvertedPendulumEnvPool> InvertedPendulumEnvPool;

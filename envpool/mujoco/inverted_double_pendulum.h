@@ -31,20 +31,14 @@ namespace mujoco {
 class InvertedDoublePendulumEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.bind(1000),
-                    "reward_threshold"_.bind(9100.0), 
-                    "frame_skip"_.bind(5),
-                    "post_constraint"_.bind(true), 
-                    "healthy_reward"_.bind(10.0),
-                    "healthy_z_max"_.bind(1),
+    return MakeDict(
+        "max_episode_steps"_.bind(1000), "reward_threshold"_.bind(9100.0),
+        "frame_skip"_.bind(5), "post_constraint"_.bind(true),
+        "healthy_reward"_.bind(10.0), "healthy_z_max"_.bind(1),
 
-                    "ob_min"_.bind(-10), 
-                    "ob_max"_.bind(10),
-                    "dist_penalty_1"_.bind(0.01), 
-                    "dist_penalty_2"_.bind(2),
-                    "vel_penalty_1"_.bind(0.001), 
-                    "vel_penalty_2"_.bind(0.00003),
-                    "reset_noise_scale"_.bind(0.1));
+        "ob_min"_.bind(-10), "ob_max"_.bind(10), "dist_penalty_1"_.bind(0.01),
+        "dist_penalty_2"_.bind(2), "vel_penalty_1"_.bind(0.001),
+        "vel_penalty_2"_.bind(0.00003), "reset_noise_scale"_.bind(0.1));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -60,13 +54,15 @@ class InvertedDoublePendulumEnvFns {
   }
 };
 
-typedef class EnvSpec<InvertedDoublePendulumEnvFns> InvertedDoublePendulumEnvSpec;
+typedef class EnvSpec<InvertedDoublePendulumEnvFns>
+    InvertedDoublePendulumEnvSpec;
 
 class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
-                            public MujocoEnv {
+                                  public MujocoEnv {
  protected:
   int max_episode_steps_, elapsed_step_;
-  mjtNum healthy_reward_, healthy_z_max_, ob_min_, ob_max_, dist_penalty_1_, dist_penalty_2_, vel_penalty_1_, vel_penalty_2_;
+  mjtNum healthy_reward_, healthy_z_max_, ob_min_, ob_max_, dist_penalty_1_,
+      dist_penalty_2_, vel_penalty_1_, vel_penalty_2_;
   std::unique_ptr<mjtNum> qpos0_, qvel0_;  // for align check
   std::uniform_real_distribution<> dist_qpos_;
   std::normal_distribution<> dist_qvel_;
@@ -75,9 +71,9 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
  public:
   InvertedDoublePendulumEnv(const Spec& spec, int env_id)
       : Env<InvertedDoublePendulumEnvSpec>(spec, env_id),
-        MujocoEnv(
-            spec.config["base_path"_] + "/mujoco/assets/inverted_double_pendulum.xml",
-            spec.config["frame_skip"_], spec.config["post_constraint"_]),
+        MujocoEnv(spec.config["base_path"_] +
+                      "/mujoco/assets/inverted_double_pendulum.xml",
+                  spec.config["frame_skip"_], spec.config["post_constraint"_]),
         max_episode_steps_(spec.config["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
         healthy_reward_(spec.config["healthy_reward"_]),
@@ -116,21 +112,21 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
     // step
     MujocoStep(static_cast<mjtNum*>(action["action"_].data()));
 
-    //dist_penalty
+    // dist_penalty
     mjtNum x = data_->site_xpos[0][0];
     mjtNum y = data_->site_xpos[0][2] - dist_penalty_2_;
-    mjtNum dist_penalty = dist_penalty_1_ * x*x +y*y;
-    //vel_penalty
+    mjtNum dist_penalty = dist_penalty_1_ * x * x + y * y;
+    // vel_penalty
 
     mjtNum m = data_->qvel[1];
     mjtNum n = data_->qvel[2];
-    mjtNum vel_penalty = vel_penalty_1_* m*m + vel_penalty_2_*n*n;
+    mjtNum vel_penalty = vel_penalty_1_ * m * m + vel_penalty_2_ * n * n;
 
-    //alive_bonus
+    // alive_bonus
     // reward and done
     ++elapsed_step_;
-    float reward = healthy_reward - dist_penalty - vel_penalty
-    done_ = !IsHealthy() || (elapsed_step_ >= max_episode_steps_);
+    float reward = healthy_reward - dist_penalty - vel_penalty done_ =
+                       !IsHealthy() || (elapsed_step_ >= max_episode_steps_);
     WriteObs(1.0f);
   }
 
