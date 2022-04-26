@@ -90,12 +90,15 @@ class _MakeTest(absltest.TestCase):
     )
 
   def test_make_mujoco(self) -> None:
-    self.check_step([
-      "Ant-v4",
-      "HalfCheetah-v4",
-      "Hopper-v4",
-      "Humanoid-v4",
-    ])
+    self.check_step(
+      [
+        "Ant-v4",
+        "HalfCheetah-v4",
+        "Hopper-v4",
+        "Humanoid-v4",
+        "HumanoidStandup-v4",
+      ]
+    )
 
 
 if __name__ == "__main__":

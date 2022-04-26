@@ -24,6 +24,8 @@ from .mujoco_envpool import (
   _HopperEnvSpec,
   _HumanoidEnvPool,
   _HumanoidEnvSpec,
+  _HumanoidStandupEnvPool,
+  _HumanoidStandupEnvSpec,
 )
 
 AntEnvSpec, AntDMEnvPool, AntGymEnvPool = py_env(_AntEnvSpec, _AntEnvPool)
@@ -40,6 +42,9 @@ HumanoidEnvSpec, HumanoidDMEnvPool, HumanoidGymEnvPool = py_env(
   _HumanoidEnvSpec, _HumanoidEnvPool
 )
 
+HumanoidStandupEnvSpec, HumanoidStandupDMEnvPool, HumanoidStandupGymEnvPool \
+  = py_env(_HumanoidStandupEnvSpec, _HumanoidStandupEnvPool)
+
 __all__ = [
   "AntEnvSpec",
   "AntDMEnvPool",
@@ -53,4 +58,7 @@ __all__ = [
   "HumanoidEnvSpec",
   "HumanoidDMEnvPool",
   "HumanoidGymEnvPool",
+  "HumanoidStandupEnvSpec",
+  "HumanoidStandupDMEnvPool",
+  "HumanoidStandupGymEnvPool",
 ]
