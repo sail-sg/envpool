@@ -20,8 +20,8 @@
 #include <random>
 #include <vector>
 
-typedef typename dummy::DummyEnv::Action DummyAction;
-typedef typename dummy::DummyEnv::State DummyState;
+using DummyAction = typename dummy::DummyEnv::Action;
+using DummyState = typename dummy::DummyEnv::State;
 
 TEST(DummyEnvPoolTest, SplitZeroAction) {
   auto config = dummy::DummyEnvSpec::default_config;
@@ -91,7 +91,7 @@ TEST(DummyEnvPoolTest, SplitZeroAction) {
   }
 }
 
-void runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
+void Runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
             int max_num_players) {
   LOG(INFO) << num_envs << " " << batch << " " << seed << " " << total_iter
             << " " << num_threads << " " << max_num_players;
@@ -102,7 +102,8 @@ void runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
   config["num_threads"_] = num_threads;
   config["seed"_] = seed;
   config["max_num_players"_] = max_num_players;
-  std::vector<int> length, counter;
+  std::vector<int> length;
+  std::vector<int> counter;
   for (int i = 0; i < num_envs; ++i) {
     length.push_back(seed + i);
     counter.push_back(-1);
@@ -188,21 +189,21 @@ void runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
 }
 
 TEST(DummyEnvPoolTest, SinglePlayer) {
-  runner(1, 1, 20, 100000, 1, 1);
-  runner(3, 1, 20, 100000, 1, 1);
-  runner(3, 1, 20, 100000, 3, 1);
-  runner(9, 4, 20, 100000, 1, 1);
-  runner(9, 4, 30, 100000, 4, 1);
-  runner(9, 4, 30, 100000, 9, 1);
-  runner(10, 10, 25, 100000, 0, 1);
+  Runner(1, 1, 20, 100000, 1, 1);
+  Runner(3, 1, 20, 100000, 1, 1);
+  Runner(3, 1, 20, 100000, 3, 1);
+  Runner(9, 4, 20, 100000, 1, 1);
+  Runner(9, 4, 30, 100000, 4, 1);
+  Runner(9, 4, 30, 100000, 9, 1);
+  Runner(10, 10, 25, 100000, 0, 1);
 }
 
 TEST(DummyEnvPoolTest, MultiPlayers) {
-  runner(1, 1, 20, 100000, 1, 10);
-  runner(3, 1, 20, 100000, 1, 10);
-  runner(3, 1, 20, 100000, 3, 10);
-  runner(9, 4, 30, 100000, 1, 6);
-  runner(9, 4, 30, 100000, 4, 6);
-  runner(9, 4, 30, 100000, 9, 6);
-  runner(10, 10, 25, 100000, 0, 9);
+  Runner(1, 1, 20, 100000, 1, 10);
+  Runner(3, 1, 20, 100000, 1, 10);
+  Runner(3, 1, 20, 100000, 3, 10);
+  Runner(9, 4, 30, 100000, 1, 6);
+  Runner(9, 4, 30, 100000, 4, 6);
+  Runner(9, 4, 30, 100000, 9, 6);
+  Runner(10, 10, 25, 100000, 0, 9);
 }

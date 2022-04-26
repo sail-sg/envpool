@@ -26,7 +26,7 @@
 #include "envpool/core/dict.h"
 #include "envpool/core/spec.h"
 
-typedef typename ActionBufferQueue::ActionSlice ActionSlice;
+using ActionSlice = typename ActionBufferQueue::ActionSlice;
 
 TEST(ActionBufferQueueTest, Concurrent) {
   std::size_t num_envs = 1000;

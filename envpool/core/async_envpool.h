@@ -56,10 +56,10 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
   std::chrono::duration<double> dur_send_, dur_recv_, dur_send_all_;
 
  public:
-  typedef typename Env::Spec Spec;
-  typedef typename Env::Action Action;
-  typedef typename Env::State State;
-  typedef typename ActionBufferQueue::ActionSlice ActionSlice;
+  using Spec = typename Env::Spec;
+  using Action = typename Env::Action;
+  using State = typename Env::State;
+  using ActionSlice = typename ActionBufferQueue::ActionSlice;
 
   explicit AsyncEnvPool(const Spec& spec)
       : EnvPool<Spec>(spec),

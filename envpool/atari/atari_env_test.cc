@@ -19,54 +19,58 @@
 
 #include <random>
 
-typedef typename atari::AtariEnv::State AtariState;
-typedef typename atari::AtariEnv::Action AtariAction;
+using AtariState = atari::AtariEnv::State;
+using AtariAction = atari::AtariEnv::Action;
 
 TEST(AtariEnvTest, GrayScaleMaxPoolOrder) {
   std::string rom_path = atari::GetRomPath("envpool", "pong");
-  const int N = 256;
-  uint8_t arr[N * N];      // grayscale -> maxpool
-  uint8_t arr_ref[N * N];  // maxpool -> grayscale
-  uint8_t ptr0[N * N];
-  uint8_t ptr1[N * N];
-  for (int i = 0; i < N; ++i) {
-    for (int j = 0; j < N; ++j) {
-      ptr0[i * N + j] = i;
-      ptr1[i * N + j] = j;
+  const int n = 256;
+  std::array<uint8_t, n * n> arr;      // grayscale -> maxpool
+  std::array<uint8_t, n * n> arr_ref;  // maxpool -> grayscale
+  std::array<uint8_t, n * n> ptr0;
+  std::array<uint8_t, n * n> ptr1;
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < n; ++j) {
+      ptr0[i * n + j] = i;
+      ptr1[i * n + j] = j;
     }
   }
-  Array col0(Spec<uint8_t>({N, N, 3}));
-  Array col1(Spec<uint8_t>({N, N, 3}));
-  Array result(Spec<uint8_t>({N, N, 1}));
-  uint8_t* col0_ptr = static_cast<uint8_t*>(col0.data());
-  uint8_t* col1_ptr = static_cast<uint8_t*>(col1.data());
-  uint8_t* result_ptr = static_cast<uint8_t*>(result.data());
+  Array col0(Spec<uint8_t>({n, n, 3}));
+  Array col1(Spec<uint8_t>({n, n, 3}));
+  Array result(Spec<uint8_t>({n, n, 1}));
+  auto* col0_ptr = static_cast<uint8_t*>(col0.data());
+  auto* col1_ptr = static_cast<uint8_t*>(col1.data());
+  auto* result_ptr = static_cast<uint8_t*>(result.data());
   ale::ALEInterface env;
   env.loadROM(rom_path);
   // color mapping from pixel_t to RGB
-  env.theOSystem->colourPalette().applyPaletteRGB(col0_ptr, ptr0, N * N);
-  env.theOSystem->colourPalette().applyPaletteRGB(col1_ptr, ptr1, N * N);
+  env.theOSystem->colourPalette().applyPaletteRGB(col0_ptr, ptr0.begin(),
+                                                  n * n);
+  env.theOSystem->colourPalette().applyPaletteRGB(col1_ptr, ptr1.begin(),
+                                                  n * n);
   // maxpool RGB
-  for (int i = 0; i < N * N * 3; ++i) {
+  for (int i = 0; i < n * n * 3; ++i) {
     col0_ptr[i] = std::max(col0_ptr[i], col1_ptr[i]);
   }
   // gray scale
   GrayScale(col0, &result);
-  memcpy(arr, result_ptr, sizeof arr);
+  memcpy(arr.begin(), result_ptr, sizeof arr);
   // ref
-  env.theOSystem->colourPalette().applyPaletteGrayscale(col0_ptr, ptr0, N * N);
-  env.theOSystem->colourPalette().applyPaletteGrayscale(col1_ptr, ptr1, N * N);
+  env.theOSystem->colourPalette().applyPaletteGrayscale(col0_ptr, ptr0.begin(),
+                                                        n * n);
+  env.theOSystem->colourPalette().applyPaletteGrayscale(col1_ptr, ptr1.begin(),
+                                                        n * n);
   // maxpool
-  for (int i = 0; i < N * N; ++i) {
+  for (int i = 0; i < n * n; ++i) {
     arr_ref[i] = std::max(col0_ptr[i], col1_ptr[i]);
   }
   // calc diff
   int diff_count = 0;
   int total_count = 0;
   int diff_sum = 0;
-  for (int i = 0; i < N; i += 2) {
-    for (int j = 0; j < N; j += 2) {
-      int k = i * N + j;
+  for (int i = 0; i < n; i += 2) {
+    for (int j = 0; j < n; j += 2) {
+      int k = i * n + j;
       ++total_count;
       if (arr[k] != arr_ref[k]) {
         ++diff_count;
@@ -91,7 +95,8 @@ TEST(AtariEnvTest, Seed) {
   config["seed"_] = 0;
   int total_iter = 10000;
   atari::AtariEnvSpec spec(config);
-  atari::AtariEnvPool envpool0(spec), envpool1(spec);
+  atari::AtariEnvPool envpool0(spec);
+  atari::AtariEnvPool envpool1(spec);
   Array all_env_ids(Spec<int>({static_cast<int>(batch)}));
   for (std::size_t i = 0; i < batch; ++i) {
     all_env_ids[i] = i;
@@ -140,7 +145,7 @@ TEST(AtariEnvTest, MaxEpisodeSteps) {
   config["batch_size"_] = batch;
   config["seed"_] = 0;
   config["max_episode_steps"_] = max_episode_steps;
-  config["repeat_action_probability"_] = 0.2f;
+  config["repeat_action_probability"_] = 0.2F;
   int total_iter = 100;
   atari::AtariEnvSpec spec(config);
   atari::AtariEnvPool envpool(spec);
@@ -289,29 +294,32 @@ TEST(AtariEnvTest, ZeroDiscountOnLifeLoss) {
     auto lives2 = state2["info:lives"_];
     auto discount2 = state2["discount"_];
     for (int j = 0; j < batch; ++j) {
-      int live = lives[j], live2 = lives2[j];
-      bool d = done[j], d2 = done2[j];
-      float disc = discount[j], disc2 = discount2[j];
+      int live = lives[j];
+      int live2 = lives2[j];
+      bool d = done[j];
+      bool d2 = done2[j];
+      float disc = discount[j];
+      float disc2 = discount2[j];
       EXPECT_EQ(d, d2);
       EXPECT_EQ(live, live2);
       if (live == last_lives[j]) {
         EXPECT_FALSE(d);
         EXPECT_GT(live, 0);
-        EXPECT_EQ(disc, 1.0f);
-        EXPECT_EQ(disc2, 1.0f);
+        EXPECT_EQ(disc, 1.0F);
+        EXPECT_EQ(disc2, 1.0F);
       } else if (live == 5) {
         // init of episode
         EXPECT_EQ(last_lives[j], 0);
         EXPECT_FALSE(d);
         EXPECT_TRUE(last_done[j]);
-        EXPECT_EQ(disc, 1.0f);
-        EXPECT_EQ(disc2, 1.0f);
+        EXPECT_EQ(disc, 1.0F);
+        EXPECT_EQ(disc2, 1.0F);
       } else {
         EXPECT_EQ(last_lives[j], live + 1);
         EXPECT_EQ(d, live == 0);
         EXPECT_FALSE(last_done[j]);
         EXPECT_EQ(disc, live > 0);
-        EXPECT_EQ(disc2, 0.0f);
+        EXPECT_EQ(disc2, 0.0F);
       }
       last_lives[j] = live;
       last_done[j] = d;

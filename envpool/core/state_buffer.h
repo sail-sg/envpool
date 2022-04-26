@@ -124,7 +124,7 @@ class StateBuffer {
    * When the allocated memory has been filled, the user of the memory will call
    * this callback to notify StateBuffer that its part has been written.
    */
-  void Done(int num = 1) {
+  void Done(std::size_t num = 1) {
     std::size_t done_count = done_count_.fetch_add(num);
     if (done_count + num == batch_) {
       sem_.signal();
@@ -135,7 +135,7 @@ class StateBuffer {
    * Blocks until the entire buffer is ready, aka, all quota has been
    * distributed out, and all user has called done.
    */
-  std::vector<Array> Wait(int additional_done_count = 0) {
+  std::vector<Array> Wait(std::size_t additional_done_count = 0) {
     if (additional_done_count > 0) {
       Done(additional_done_count);
     }

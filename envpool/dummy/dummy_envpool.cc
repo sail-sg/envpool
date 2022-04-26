@@ -22,8 +22,8 @@
  * Wrap the `DummyEnvSpec` and `DummyEnvPool` with the corresponding `PyEnvSpec`
  * and `PyEnvPool` template.
  */
-typedef PyEnvSpec<dummy::DummyEnvSpec> DummyEnvSpec;
-typedef PyEnvPool<dummy::DummyEnvPool> DummyEnvPool;
+using DummyEnvSpec = PyEnvSpec<dummy::DummyEnvSpec>;
+using DummyEnvPool = PyEnvPool<dummy::DummyEnvPool>;
 
 /**
  * Finally, call the REGISTER macro to expose them to python

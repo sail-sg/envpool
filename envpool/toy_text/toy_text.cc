@@ -20,23 +20,23 @@
 #include "envpool/toy_text/nchain.h"
 #include "envpool/toy_text/taxi.h"
 
-typedef PyEnvSpec<toy_text::CatchEnvSpec> CatchEnvSpec;
-typedef PyEnvPool<toy_text::CatchEnvPool> CatchEnvPool;
+using CatchEnvSpec = PyEnvSpec<toy_text::CatchEnvSpec>;
+using CatchEnvPool = PyEnvPool<toy_text::CatchEnvPool>;
 
-typedef PyEnvSpec<toy_text::FrozenLakeEnvSpec> FrozenLakeEnvSpec;
-typedef PyEnvPool<toy_text::FrozenLakeEnvPool> FrozenLakeEnvPool;
+using FrozenLakeEnvSpec = PyEnvSpec<toy_text::FrozenLakeEnvSpec>;
+using FrozenLakeEnvPool = PyEnvPool<toy_text::FrozenLakeEnvPool>;
 
-typedef PyEnvSpec<toy_text::TaxiEnvSpec> TaxiEnvSpec;
-typedef PyEnvPool<toy_text::TaxiEnvPool> TaxiEnvPool;
+using TaxiEnvSpec = PyEnvSpec<toy_text::TaxiEnvSpec>;
+using TaxiEnvPool = PyEnvPool<toy_text::TaxiEnvPool>;
 
-typedef PyEnvSpec<toy_text::NChainEnvSpec> NChainEnvSpec;
-typedef PyEnvPool<toy_text::NChainEnvPool> NChainEnvPool;
+using NChainEnvSpec = PyEnvSpec<toy_text::NChainEnvSpec>;
+using NChainEnvPool = PyEnvPool<toy_text::NChainEnvPool>;
 
-typedef PyEnvSpec<toy_text::CliffWalkingEnvSpec> CliffWalkingEnvSpec;
-typedef PyEnvPool<toy_text::CliffWalkingEnvPool> CliffWalkingEnvPool;
+using CliffWalkingEnvSpec = PyEnvSpec<toy_text::CliffWalkingEnvSpec>;
+using CliffWalkingEnvPool = PyEnvPool<toy_text::CliffWalkingEnvPool>;
 
-typedef PyEnvSpec<toy_text::BlackjackEnvSpec> BlackjackEnvSpec;
-typedef PyEnvPool<toy_text::BlackjackEnvPool> BlackjackEnvPool;
+using BlackjackEnvSpec = PyEnvSpec<toy_text::BlackjackEnvSpec>;
+using BlackjackEnvPool = PyEnvPool<toy_text::BlackjackEnvPool>;
 
 PYBIND11_MODULE(toy_text_envpool, m) {
   REGISTER(m, CatchEnvSpec, CatchEnvPool)

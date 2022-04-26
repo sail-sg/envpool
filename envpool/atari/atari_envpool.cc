@@ -15,7 +15,7 @@
 #include "envpool/atari/atari_env.h"
 #include "envpool/core/py_envpool.h"
 
-typedef PyEnvSpec<atari::AtariEnvSpec> AtariEnvSpec;
-typedef PyEnvPool<atari::AtariEnvPool> AtariEnvPool;
+using AtariEnvSpec = PyEnvSpec<atari::AtariEnvSpec>;
+using AtariEnvPool = PyEnvPool<atari::AtariEnvPool>;
 
 PYBIND11_MODULE(atari_envpool, m) { REGISTER(m, AtariEnvSpec, AtariEnvPool) }
