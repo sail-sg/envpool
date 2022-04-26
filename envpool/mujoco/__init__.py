@@ -28,6 +28,8 @@ from .mujoco_envpool import (
   _HumanoidStandupEnvSpec,
   _InvertedPendulumEnvPool,
   _InvertedPendulumEnvSpec,
+  _ReacherEnvPool,
+  _ReacherEnvSpec,
   _SwimmerEnvPool,
   _SwimmerEnvSpec,
 )
@@ -58,6 +60,10 @@ HumanoidEnvSpec, HumanoidDMEnvPool, HumanoidGymEnvPool = py_env(
   InvertedPendulumGymEnvPool,
 ) = py_env(_InvertedPendulumEnvSpec, _InvertedPendulumEnvPool)
 
+ReacherEnvSpec, ReacherDMEnvPool, ReacherGymEnvPool = py_env(
+  _ReacherEnvSpec, _ReacherEnvPool
+)
+
 SwimmerEnvSpec, SwimmerDMEnvPool, SwimmerGymEnvPool = py_env(
   _SwimmerEnvSpec, _SwimmerEnvPool
 )
@@ -81,6 +87,9 @@ __all__ = [
   "InvertedPendulumEnvSpec",
   "InvertedPendulumDMEnvPool",
   "InvertedPendulumGymEnvPool",
+  "ReacherEnvSpec",
+  "ReacherDMEnvPool",
+  "ReacherGymEnvPool",
   "SwimmerEnvSpec",
   "SwimmerDMEnvPool",
   "SwimmerGymEnvPool",

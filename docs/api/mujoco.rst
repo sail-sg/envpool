@@ -12,8 +12,8 @@ You can set ``post_constraint`` to ``False`` to disable the bug fix with
 environments' standard approach.
 
 
-Ant-v3/4
---------
+Ant-v3/v4
+---------
 
 `gym Ant-v3 source code
 <https://github.com/openai/gym/blob/master/gym/envs/mujoco/ant_v3.py>`_
@@ -27,8 +27,8 @@ Ant-v3/4
 - Action space: ``(8)``, with range ``[-1, 1]``.
 
 
-HalfCheetah-v3/4
-----------------
+HalfCheetah-v3/v4
+-----------------
 
 `gym HalfCheetah-v3 source code
 <https://github.com/openai/gym/blob/master/gym/envs/mujoco/half_cheetah_v3.py>`_
@@ -41,8 +41,8 @@ HalfCheetah-v3/4
 - Action space: ``(6)``, with range ``[-1, 1]``.
 
 
-Hopper-v3/4
------------
+Hopper-v3/v4
+------------
 
 `gym Hopper-v3 source code
 <https://github.com/openai/gym/blob/master/gym/envs/mujoco/hopper_v3.py>`_
@@ -55,8 +55,8 @@ Hopper-v3/4
 - Action space: ``(3)``, with range ``[-1, 1]``.
 
 
-Humanoid-v3/4, HumanoidStandup-v2/4
------------------------------------
+Humanoid-v3/v4, HumanoidStandup-v2/v4
+-------------------------------------
 
 `gym Humanoid-v3 source code
 <https://github.com/openai/gym/blob/master/gym/envs/mujoco/humanoid_v3.py>`_
@@ -78,8 +78,8 @@ Humanoid-v3/4, HumanoidStandup-v2/4
 - Action space: ``(17)``, with range ``[-0.4, 0.4]``.
 
 
-InvertedPendulum-v2/4
----------------------
+InvertedPendulum-v2/v4
+----------------------
 
 `gym InvertedPendulum-v2 source code
 <https://github.com/openai/gym/blob/master/gym/envs/mujoco/inverted_pendulum.py>`_
@@ -92,8 +92,24 @@ InvertedPendulum-v2/4
 - Action space: ``(1)``, with range ``[-3, 3]``.
 
 
-Swimmer-v3/4
-------------
+Reacher-v2/v4
+-------------
+
+`gym Reacher-v2 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/reacher.py>`_
+
+`gym Reacher-v4 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/reacher_v4.py>`_
+
+- Observation space: ``(11)``, first 2 elements for ``cos(qpos[:2])``, next 2
+  elements for ``sin(qpos[:2])``, next 2 elements for ``qpos[2:]``, next 2
+  elements for ``qvel[:2]``, next 3 elements for ``dist``, a.k.a.
+  ``fingertip - target``;
+- Action space: ``(2)``, with range ``[-1, 1]``.
+
+
+Swimmer-v3/v4
+-------------
 
 `gym Swimmer-v3 source code
 <https://github.com/openai/gym/blob/master/gym/envs/mujoco/swimmer_v3.py>`_

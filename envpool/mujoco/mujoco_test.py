@@ -34,6 +34,8 @@ from envpool.mujoco import (
   HumanoidStandupGymEnvPool,
   InvertedPendulumEnvSpec,
   InvertedPendulumGymEnvPool,
+  ReacherEnvSpec,
+  ReacherGymEnvPool,
   SwimmerEnvSpec,
   SwimmerGymEnvPool,
 )
@@ -99,6 +101,8 @@ class _MujocoEnvPoolTest(absltest.TestCase):
       a = env0.action_space.sample()
       obs, _, _, info = env1.step(np.array([a]), np.array([0]))
       self.reset_state(env0, info["qpos0"][0], info["qvel0"][0])
+      logging.info(f'reset qpos {info["qpos0"][0]}')
+      logging.info(f'reset qvel {info["qvel0"][0]}')
       d1 = np.array([False])
       cnt = 0
       while not d1[0]:
@@ -166,6 +170,13 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     self.run_deterministic_check(
       InvertedPendulumEnvSpec, InvertedPendulumGymEnvPool
     )
+
+  def test_reacher(self) -> None:
+    env0 = mjc_mwe.ReacherEnv()
+    env1 = ReacherGymEnvPool(ReacherEnvSpec(ReacherEnvSpec.gen_config()))
+    self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1, no_time_limit=True)
+    self.run_deterministic_check(ReacherEnvSpec, ReacherGymEnvPool)
 
   def test_swimmer(self) -> None:
     env0 = mjc_mwe.SwimmerEnv()

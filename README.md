@@ -16,11 +16,11 @@
 **EnvPool** is a C++-based batched environment pool with pybind11 and thread pool. It has high performance (\~1M raw FPS in DGX on Atari games) and compatible APIs (supports both gym and dm\_env, both sync and async, both single and multi player environment). Currently it supports:
 
 - [x] Atari games
+- [x] Mujoco
 - [x] Classic RL envs: CartPole, MountainCar, Pendulum, Acrobot
 - [x] Toy text RL envs: Catch, FrozenLake, Taxi, NChain, CliffWalking, Blackjack
 - [x] ViZDoom single player
 - [ ] Box2D
-- [ ] Mujoco
 - [ ] Procgen
 - [ ] Minigrid
 
