@@ -30,6 +30,8 @@ from envpool.mujoco import (
   HopperGymEnvPool,
   HumanoidEnvSpec,
   HumanoidGymEnvPool,
+  HumanoidStandupEnvSpec,
+  HumanoidStandupGymEnvPool,
 )
 
 
@@ -101,7 +103,7 @@ class _MujocoEnvPoolTest(absltest.TestCase):
         # logging.info(f"{cnt} {a}")
         o0, r0, d0, i0 = env0.step(a)
         o1, r1, d1, i1 = env1.step(np.array([a]), np.array([0]))
-        np.testing.assert_allclose(o0, o1[0], atol=1e-4)
+        np.testing.assert_allclose(o0, o1[0], atol=3e-4)
         np.testing.assert_allclose(r0, r1[0], atol=1e-4)
         if not no_time_limit:
           np.testing.assert_allclose(d0, d1[0])
@@ -138,6 +140,17 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
     self.run_deterministic_check(HumanoidEnvSpec, HumanoidGymEnvPool)
+
+  def test_humanoid_standup(self) -> None:
+    env0 = mjc_mwe.HumanoidStandupEnv()
+    env1 = HumanoidStandupGymEnvPool(
+      HumanoidStandupEnvSpec(HumanoidStandupEnvSpec.gen_config())
+    )
+    self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1, no_time_limit=True)
+    self.run_deterministic_check(
+      HumanoidStandupEnvSpec, HumanoidStandupGymEnvPool
+    )
 
 
 if __name__ == "__main__":

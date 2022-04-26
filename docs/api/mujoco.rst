@@ -46,11 +46,14 @@ Hopper-v4
 - Action space: ``(3)``, with range ``[-1, 1]``.
 
 
-Humanoid-v4
------------
+Humanoid-v4, HumanoidStandup-v4
+-------------------------------
 
 `gym Humanoid-v4 source code
 <https://github.com/openai/gym/blob/master/gym/envs/mujoco/humanoid_v4.py>`_
+
+`gym HumanoidStandup-v4 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/humanoidstandup_v4.py>`_
 
 - Observation space: ``(376)``, first 22 elements for ``qpos[2:]``, next 23
   elements for ``qvel``, next 140 elements for ``cinert`` (com-based body

@@ -64,6 +64,15 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "humanoid_standup",
+    hdrs = ["humanoid_standup.h"],
+    deps = [
+        ":mujoco_env",
+        "//envpool/core:async_envpool",
+    ],
+)
+
 pybind_extension(
     name = "mujoco_envpool",
     srcs = ["mujoco_envpool.cc"],
@@ -72,6 +81,7 @@ pybind_extension(
         ":half_cheetah",
         ":hopper",
         ":humanoid",
+        ":humanoid_standup",
         "//envpool/core:py_envpool",
     ],
 )
