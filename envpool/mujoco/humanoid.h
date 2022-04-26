@@ -168,8 +168,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
   }
 
   void WriteObs(float reward, mjtNum xv, mjtNum yv, mjtNum ctrl_cost,
-                mjtNum contact_cost, mjtNum x_after,
-                mjtNum y_after) {  // NOLINT
+                mjtNum contact_cost, mjtNum x_after, mjtNum y_after) {
     State state = Allocate();
     state["reward"_] = reward;
     // obs

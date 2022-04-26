@@ -18,6 +18,7 @@
 #include "envpool/mujoco/hopper.h"
 #include "envpool/mujoco/humanoid.h"
 #include "envpool/mujoco/humanoid_standup.h"
+#include "envpool/mujoco/inverted_pendulum.h"
 
 typedef PyEnvSpec<mujoco::AntEnvSpec> AntEnvSpec;
 typedef PyEnvPool<mujoco::AntEnvPool> AntEnvPool;
@@ -34,10 +35,14 @@ typedef PyEnvPool<mujoco::HumanoidEnvPool> HumanoidEnvPool;
 typedef PyEnvSpec<mujoco::HumanoidStandupEnvSpec> HumanoidStandupEnvSpec;
 typedef PyEnvPool<mujoco::HumanoidStandupEnvPool> HumanoidStandupEnvPool;
 
+typedef PyEnvSpec<mujoco::InvertedPendulumEnvSpec> InvertedPendulumEnvSpec;
+typedef PyEnvPool<mujoco::InvertedPendulumEnvPool> InvertedPendulumEnvPool;
+
 PYBIND11_MODULE(mujoco_envpool, m) {
   REGISTER(m, AntEnvSpec, AntEnvPool)
   REGISTER(m, HalfCheetahEnvSpec, HalfCheetahEnvPool)
   REGISTER(m, HopperEnvSpec, HopperEnvPool)
   REGISTER(m, HumanoidEnvSpec, HumanoidEnvPool)
   REGISTER(m, HumanoidStandupEnvSpec, HumanoidStandupEnvPool)
+  REGISTER(m, InvertedPendulumEnvSpec, InvertedPendulumEnvPool)
 }

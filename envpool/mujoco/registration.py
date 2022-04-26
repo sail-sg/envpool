@@ -71,3 +71,14 @@ register(
   max_episode_steps=1000,
   base_path=base_path,
 )
+
+register(
+  task_id="InvertedPendulum-v4",
+  import_path="envpool.mujoco",
+  spec_cls="InvertedPendulumEnvSpec",
+  dm_cls="InvertedPendulumDMEnvPool",
+  gym_cls="InvertedPendulumGymEnvPool",
+  max_episode_steps=1000,
+  reward_threshold=950.0,
+  base_path=base_path,
+)

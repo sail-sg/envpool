@@ -152,25 +152,24 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
 
  private:
   bool IsHealthy() {
-    if (healthy_z_min_ <= data_->qpos[2] && data_->qpos[2] <= healthy_z_max_) {
-      for (int i = 0; i < model_->nq; ++i) {
-        if (!std::isfinite(data_->qpos[i])) {
-          return false;
-        }
-      }
-      for (int i = 0; i < model_->nv; ++i) {
-        if (!std::isfinite(data_->qvel[i])) {
-          return false;
-        }
-      }
-      return true;
+    if (data_->qpos[2] < healthy_z_min_ || data_->qpos[2] > healthy_z_max_) {
+      return false;
     }
-    return false;
+    for (int i = 0; i < model_->nq; ++i) {
+      if (!std::isfinite(data_->qpos[i])) {
+        return false;
+      }
+    }
+    for (int i = 0; i < model_->nv; ++i) {
+      if (!std::isfinite(data_->qvel[i])) {
+        return false;
+      }
+    }
+    return true;
   }
 
   void WriteObs(float reward, mjtNum xv, mjtNum yv, mjtNum ctrl_cost,
-                mjtNum contact_cost, mjtNum x_after,
-                mjtNum y_after) {  // NOLINT
+                mjtNum contact_cost, mjtNum x_after, mjtNum y_after) {
     State state = Allocate();
     state["reward"_] = reward;
     // obs

@@ -32,6 +32,8 @@ from envpool.mujoco import (
   HumanoidGymEnvPool,
   HumanoidStandupEnvSpec,
   HumanoidStandupGymEnvPool,
+  InvertedPendulumEnvSpec,
+  InvertedPendulumGymEnvPool,
 )
 
 
@@ -150,6 +152,17 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     self.run_align_check(env0, env1, no_time_limit=True)
     self.run_deterministic_check(
       HumanoidStandupEnvSpec, HumanoidStandupGymEnvPool
+    )
+
+  def test_inverted_pendulum(self) -> None:
+    env0 = mjc_mwe.InvertedPendulumEnv()
+    env1 = InvertedPendulumGymEnvPool(
+      InvertedPendulumEnvSpec(InvertedPendulumEnvSpec.gen_config())
+    )
+    self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1)
+    self.run_deterministic_check(
+      InvertedPendulumEnvSpec, InvertedPendulumGymEnvPool
     )
 
 
