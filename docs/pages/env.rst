@@ -23,7 +23,8 @@ Let's go through the details step by step!
 Setup File Structure
 --------------------
 
-The first thing is to create a ``classic_control`` folder under ``envpool/``:
+The first thing is to fork the project and add the new environment in the
+envpool folder, i.e., create a ``classic_control`` folder under ``envpool/``:
 
 .. code-block:: bash
 

@@ -119,7 +119,7 @@ spelling: doc-install
 doc-clean:
 	cd docs && make clean
 
-lint: buildifier flake8 py-format clang-format cpplint mypy docstyle spelling
+lint: buildifier flake8 py-format clang-format cpplint bazel-clang-tidy mypy docstyle spelling
 
 format: py-format-install clang-format-install buildifier-install addlicense-install
 	isort $(PYTHON_FILES)
