@@ -28,6 +28,8 @@ from envpool.mujoco import (
   HalfCheetahGymEnvPool,
   HopperEnvSpec,
   HopperGymEnvPool,
+  HumanoidEnvSpec,
+  HumanoidGymEnvPool,
 )
 
 
@@ -129,6 +131,13 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
     self.run_deterministic_check(HopperEnvSpec, HopperGymEnvPool)
+
+  def test_humanoid(self) -> None:
+    env0 = mjc_mwe.HumanoidEnv()
+    env1 = HumanoidGymEnvPool(HumanoidEnvSpec(HumanoidEnvSpec.gen_config()))
+    self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1)
+    self.run_deterministic_check(HumanoidEnvSpec, HumanoidGymEnvPool)
 
 
 if __name__ == "__main__":

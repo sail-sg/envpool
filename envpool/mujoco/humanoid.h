@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ENVPOOL_MUJOCO_ANT_H_
-#define ENVPOOL_MUJOCO_ANT_H_
+#ifndef ENVPOOL_MUJOCO_HUMANOID_H_
+#define ENVPOOL_MUJOCO_HUMANOID_H_
 
 #include <algorithm>
 #include <limits>
@@ -28,83 +28,81 @@
 
 namespace mujoco {
 
-class AntEnvFns {
+class HumanoidEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
-        "max_episode_steps"_.bind(1000), "reward_threshold"_.bind(6000.0),
-        "frame_skip"_.bind(5), "post_constraint"_.bind(true),
-        "forward_reward_weight"_.bind(1.0), "ctrl_cost_weight"_.bind(0.5),
-        "contact_cost_weight"_.bind(5e-4), "healthy_reward"_.bind(1.0),
-        "healthy_z_min"_.bind(0.2), "healthy_z_max"_.bind(1.0),
-        "contact_force_min"_.bind(-1.0), "contact_force_max"_.bind(1.0),
-        "reset_noise_scale"_.bind(0.1));
+        "max_episode_steps"_.bind(1000), "frame_skip"_.bind(5),
+        "post_constraint"_.bind(true), "forward_reward_weight"_.bind(1.25),
+        "ctrl_cost_weight"_.bind(0.1), "contact_cost_weight"_.bind(5e-7),
+        "contact_cost_max"_.bind(10.0), "healthy_reward"_.bind(5.0),
+        "healthy_z_min"_.bind(1.0), "healthy_z_max"_.bind(2.0),
+        "reset_noise_scale"_.bind(1e-2));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
-    return MakeDict("obs"_.bind(Spec<mjtNum>({111}, {-inf, inf})),
-                    "info:reward_forward"_.bind(Spec<mjtNum>({-1})),
-                    "info:reward_ctrl"_.bind(Spec<mjtNum>({-1})),
-                    "info:reward_contact"_.bind(Spec<mjtNum>({-1})),
-                    "info:reward_survive"_.bind(Spec<mjtNum>({-1})),
+    return MakeDict("obs"_.bind(Spec<mjtNum>({376}, {-inf, inf})),
+                    "info:reward_linvel"_.bind(Spec<mjtNum>({-1})),
+                    "info:reward_quadctrl"_.bind(Spec<mjtNum>({-1})),
+                    "info:reward_alive"_.bind(Spec<mjtNum>({-1})),
+                    "info:reward_impact"_.bind(Spec<mjtNum>({-1})),
                     "info:x_position"_.bind(Spec<mjtNum>({-1})),
                     "info:y_position"_.bind(Spec<mjtNum>({-1})),
                     "info:distance_from_origin"_.bind(Spec<mjtNum>({-1})),
                     "info:x_velocity"_.bind(Spec<mjtNum>({-1})),
                     "info:y_velocity"_.bind(Spec<mjtNum>({-1})),
                     // TODO(jiayi): remove these two lines for speed
-                    "info:qpos0"_.bind(Spec<mjtNum>({15})),
-                    "info:qvel0"_.bind(Spec<mjtNum>({14})));
+                    "info:qpos0"_.bind(Spec<mjtNum>({24})),
+                    "info:qvel0"_.bind(Spec<mjtNum>({23})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 8}, {-1.0f, 1.0f})));
+    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 17}, {-0.4f, 0.4f})));
   }
 };
 
-typedef class EnvSpec<AntEnvFns> AntEnvSpec;
+typedef class EnvSpec<HumanoidEnvFns> HumanoidEnvSpec;
 
-class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
+class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
  protected:
   int max_episode_steps_, elapsed_step_;
-  mjtNum ctrl_cost_weight_, contact_cost_weight_;
+  mjtNum ctrl_cost_weight_, contact_cost_weight_, contact_cost_max_;
   mjtNum forward_reward_weight_, healthy_reward_;
   mjtNum healthy_z_min_, healthy_z_max_;
-  mjtNum contact_force_min_, contact_force_max_;
+  mjtNum mass_x_, mass_y_;
   std::unique_ptr<mjtNum> qpos0_, qvel0_;  // for align check
-  std::uniform_real_distribution<> dist_qpos_;
-  std::normal_distribution<> dist_qvel_;
+  std::uniform_real_distribution<> dist_;
   bool done_;
 
  public:
-  AntEnv(const Spec& spec, int env_id)
-      : Env<AntEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/ant.xml",
+  HumanoidEnv(const Spec& spec, int env_id)
+      : Env<HumanoidEnvSpec>(spec, env_id),
+        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/humanoid.xml",
                   spec.config["frame_skip"_], spec.config["post_constraint"_]),
         max_episode_steps_(spec.config["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         contact_cost_weight_(spec.config["contact_cost_weight"_]),
+        contact_cost_max_(spec.config["contact_cost_max"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
         healthy_z_min_(spec.config["healthy_z_min"_]),
         healthy_z_max_(spec.config["healthy_z_max"_]),
-        contact_force_min_(spec.config["contact_force_min"_]),
-        contact_force_max_(spec.config["contact_force_max"_]),
+        mass_x_(0),
+        mass_y_(0),
         qpos0_(new mjtNum[model_->nq]),
         qvel0_(new mjtNum[model_->nv]),
-        dist_qpos_(-spec.config["reset_noise_scale"_],
-                   spec.config["reset_noise_scale"_]),
-        dist_qvel_(0, spec.config["reset_noise_scale"_]),
+        dist_(-spec.config["reset_noise_scale"_],
+              spec.config["reset_noise_scale"_]),
         done_(true) {}
 
   void MujocoResetModel() {
     for (int i = 0; i < model_->nq; ++i) {
-      data_->qpos[i] = qpos0_.get()[i] = init_qpos_[i] + dist_qpos_(gen_);
+      data_->qpos[i] = qpos0_.get()[i] = init_qpos_[i] + dist_(gen_);
     }
     for (int i = 0; i < model_->nv; ++i) {
-      data_->qvel[i] = qvel0_.get()[i] = init_qvel_[i] + dist_qvel_(gen_);
+      data_->qvel[i] = qvel0_.get()[i] = init_qvel_[i] + dist_(gen_);
     }
   }
 
@@ -120,14 +118,17 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
   void Step(const Action& action) override {
     // step
     mjtNum* act = static_cast<mjtNum*>(action["action"_].data());
-    mjtNum x_before = data_->xpos[3], y_before = data_->xpos[4];
+    GetMassCenter();
+    mjtNum x_before = mass_x_, y_before = mass_y_;
     MujocoStep(act);
-    mjtNum x_after = data_->xpos[3], y_after = data_->xpos[4];
+    GetMassCenter();
+    mjtNum x_after = mass_x_, y_after = mass_y_;
 
     // ctrl_cost
     mjtNum ctrl_cost = 0.0;
     for (int i = 0; i < model_->nu; ++i) {
-      ctrl_cost += ctrl_cost_weight_ * act[i] * act[i];
+      // ctrl_cost += ctrl_cost_weight_ * act[i] * act[i];
+      ctrl_cost += ctrl_cost_weight_ * data_->ctrl[i] * data_->ctrl[i];
     }
     // xv and yv
     mjtNum dt = frame_skip_ * model_->opt.timestep;
@@ -137,10 +138,9 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
     mjtNum contact_cost = 0.0;
     for (int i = 0; i < 6 * model_->nbody; ++i) {
       mjtNum x = data_->cfrc_ext[i];
-      x = std::min(contact_force_max_, x);
-      x = std::max(contact_force_min_, x);
       contact_cost += contact_cost_weight_ * x * x;
     }
+    contact_cost = std::min(contact_cost, contact_cost_max_);
 
     // reward and done
     float reward = xv * forward_reward_weight_ + healthy_reward_ - ctrl_cost -
@@ -152,20 +152,20 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
 
  private:
   bool IsHealthy() {
-    if (healthy_z_min_ <= data_->qpos[2] && data_->qpos[2] <= healthy_z_max_) {
-      for (int i = 0; i < model_->nq; ++i) {
-        if (!std::isfinite(data_->qpos[i])) {
-          return false;
-        }
-      }
-      for (int i = 0; i < model_->nv; ++i) {
-        if (!std::isfinite(data_->qvel[i])) {
-          return false;
-        }
-      }
-      return true;
+    return healthy_z_min_ < data_->qpos[2] && data_->qpos[2] < healthy_z_max_;
+  }
+
+  void GetMassCenter() {
+    mjtNum mass_sum = 0.0;
+    mass_x_ = mass_y_ = 0.0;
+    for (int i = 0; i < model_->nbody; ++i) {
+      mjtNum mass = model_->body_mass[i];
+      mass_sum += mass;
+      mass_x_ += mass * data_->xipos[3 * i + 0];
+      mass_y_ += mass * data_->xipos[3 * i + 1];
     }
-    return false;
+    mass_x_ /= mass_sum;
+    mass_y_ /= mass_sum;
   }
 
   void WriteObs(float reward, mjtNum xv, mjtNum yv, mjtNum ctrl_cost,
@@ -181,17 +181,23 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
     for (int i = 0; i < model_->nv; ++i) {
       *(obs++) = data_->qvel[i];
     }
+    for (int i = 0; i < 10 * model_->nbody; ++i) {
+      *(obs++) = data_->cinert[i];
+    }
     for (int i = 0; i < 6 * model_->nbody; ++i) {
-      mjtNum x = data_->cfrc_ext[i];
-      x = std::min(contact_force_max_, x);
-      x = std::max(contact_force_min_, x);
-      *(obs++) = x;
+      *(obs++) = data_->cvel[i];
+    }
+    for (int i = 0; i < model_->nv; ++i) {
+      *(obs++) = data_->qfrc_actuator[i];
+    }
+    for (int i = 0; i < 6 * model_->nbody; ++i) {
+      *(obs++) = data_->cfrc_ext[i];
     }
     // info
-    state["info:reward_forward"_] = xv * forward_reward_weight_;
-    state["info:reward_ctrl"_] = -ctrl_cost;
-    state["info:reward_contact"_] = -contact_cost;
-    state["info:reward_survive"_] = healthy_reward_;
+    state["info:reward_linvel"_] = xv * forward_reward_weight_;
+    state["info:reward_quadctrl"_] = -ctrl_cost;
+    state["info:reward_impact"_] = -contact_cost;
+    state["info:reward_alive"_] = healthy_reward_;
     state["info:x_position"_] = x_after;
     state["info:y_position"_] = y_after;
     state["info:distance_from_origin"_] =
@@ -203,8 +209,8 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
   }
 };
 
-typedef AsyncEnvPool<AntEnv> AntEnvPool;
+typedef AsyncEnvPool<HumanoidEnv> HumanoidEnvPool;
 
 }  // namespace mujoco
 
-#endif  // ENVPOOL_MUJOCO_ANT_H_
+#endif  // ENVPOOL_MUJOCO_HUMANOID_H_

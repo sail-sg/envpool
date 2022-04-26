@@ -19,8 +19,8 @@ Ant-v4
 <https://github.com/openai/gym/blob/master/gym/envs/mujoco/ant_v4.py>`_
 
 - Observation space: ``(111)``, first 13 elements for ``qpos[2:]``, next 14
-  elements for ``qvel``, other elements for clipped ``cfrc_ext`` (contact
-  force);
+  elements for ``qvel``, other elements for clipped ``cfrc_ext`` (com-based
+  external force on body, a.k.a. contact force);
 - Action space: ``(8)``, with range ``[-1, 1]``.
 
 
@@ -44,3 +44,17 @@ Hopper-v4
 - Observation space: ``(11)``, first 5 elements for ``qpos[1:]``, next 6
   elements for ``qvel``;
 - Action space: ``(3)``, with range ``[-1, 1]``.
+
+
+Humanoid-v4
+-----------
+
+`gym Humanoid-v4 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/humanoid_v4.py>`_
+
+- Observation space: ``(376)``, first 22 elements for ``qpos[2:]``, next 23
+  elements for ``qvel``, next 140 elements for ``cinert`` (com-based body
+  inertia and mass), next 84 elements for ``cvel`` (com-based velocity [3D
+  rot; 3D tran]), next 23 elements for ``qfrc_actuator`` (actuator force),
+  next 84 elements for ``cfrc_ext`` (com-based external force on body);
+- Action space: ``(17)``, with range ``[-0.4, 0.4]``.
