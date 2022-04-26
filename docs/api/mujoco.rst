@@ -12,8 +12,11 @@ You can set ``post_constraint`` to ``False`` to disable the bug fix with
 environments' standard approach.
 
 
-Ant-v4
-------
+Ant-v3/4
+--------
+
+`gym Ant-v3 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/ant_v3.py>`_
 
 `gym Ant-v4 source code
 <https://github.com/openai/gym/blob/master/gym/envs/mujoco/ant_v4.py>`_
@@ -24,8 +27,11 @@ Ant-v4
 - Action space: ``(8)``, with range ``[-1, 1]``.
 
 
-HalfCheetah-v4
---------------
+HalfCheetah-v3/4
+----------------
+
+`gym HalfCheetah-v3 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/half_cheetah_v3.py>`_
 
 `gym HalfCheetah-v4 source code
 <https://github.com/openai/gym/blob/master/gym/envs/mujoco/half_cheetah_v4.py>`_
@@ -35,8 +41,11 @@ HalfCheetah-v4
 - Action space: ``(6)``, with range ``[-1, 1]``.
 
 
-Hopper-v4
----------
+Hopper-v3/4
+-----------
+
+`gym Hopper-v3 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/hopper_v3.py>`_
 
 `gym Hopper-v4 source code
 <https://github.com/openai/gym/blob/master/gym/envs/mujoco/hopper_v4.py>`_
@@ -46,11 +55,17 @@ Hopper-v4
 - Action space: ``(3)``, with range ``[-1, 1]``.
 
 
-Humanoid-v4, HumanoidStandup-v4
--------------------------------
+Humanoid-v3/4, HumanoidStandup-v2/4
+-----------------------------------
+
+`gym Humanoid-v3 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/humanoid_v3.py>`_
 
 `gym Humanoid-v4 source code
 <https://github.com/openai/gym/blob/master/gym/envs/mujoco/humanoid_v4.py>`_
+
+`gym HumanoidStandup-v2 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/humanoidstandup.py>`_
 
 `gym HumanoidStandup-v4 source code
 <https://github.com/openai/gym/blob/master/gym/envs/mujoco/humanoidstandup_v4.py>`_
@@ -63,8 +78,11 @@ Humanoid-v4, HumanoidStandup-v4
 - Action space: ``(17)``, with range ``[-0.4, 0.4]``.
 
 
-InvertedPendulum-v4
--------------------
+InvertedPendulum-v2/4
+---------------------
+
+`gym InvertedPendulum-v2 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/inverted_pendulum.py>`_
 
 `gym InvertedPendulum-v4 source code
 <https://github.com/openai/gym/blob/master/gym/envs/mujoco/inverted_pendulum_v4.py>`_
@@ -74,8 +92,11 @@ InvertedPendulum-v4
 - Action space: ``(1)``, with range ``[-3, 3]``.
 
 
-Swimmer-v4
-----------
+Swimmer-v3/4
+------------
+
+`gym Swimmer-v3 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/swimmer_v3.py>`_
 
 `gym Swimmer-v4 source code
 <https://github.com/openai/gym/blob/master/gym/envs/mujoco/swimmer_v4.py>`_
