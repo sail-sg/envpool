@@ -32,6 +32,8 @@ mujoco_envs = [
   ("HumanoidStandup", "v4", True),
   ("InvertedPendulum", "v2", False),
   ("InvertedPendulum", "v4", True),
+  ("Pusher", "v2", False),
+  ("Pusher", "v4", True),
   ("Reacher", "v2", False),
   ("Reacher", "v4", True),
   ("Swimmer", "v3", False),

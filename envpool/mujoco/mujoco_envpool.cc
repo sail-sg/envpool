@@ -19,6 +19,7 @@
 #include "envpool/mujoco/humanoid.h"
 #include "envpool/mujoco/humanoid_standup.h"
 #include "envpool/mujoco/inverted_pendulum.h"
+#include "envpool/mujoco/pusher.h"
 #include "envpool/mujoco/reacher.h"
 #include "envpool/mujoco/swimmer.h"
 
@@ -40,6 +41,9 @@ typedef PyEnvPool<mujoco::HumanoidStandupEnvPool> HumanoidStandupEnvPool;
 typedef PyEnvSpec<mujoco::InvertedPendulumEnvSpec> InvertedPendulumEnvSpec;
 typedef PyEnvPool<mujoco::InvertedPendulumEnvPool> InvertedPendulumEnvPool;
 
+typedef PyEnvSpec<mujoco::PusherEnvSpec> PusherEnvSpec;
+typedef PyEnvPool<mujoco::PusherEnvPool> PusherEnvPool;
+
 typedef PyEnvSpec<mujoco::ReacherEnvSpec> ReacherEnvSpec;
 typedef PyEnvPool<mujoco::ReacherEnvPool> ReacherEnvPool;
 
@@ -53,6 +57,7 @@ PYBIND11_MODULE(mujoco_envpool, m) {
   REGISTER(m, HumanoidEnvSpec, HumanoidEnvPool)
   REGISTER(m, HumanoidStandupEnvSpec, HumanoidStandupEnvPool)
   REGISTER(m, InvertedPendulumEnvSpec, InvertedPendulumEnvPool)
+  REGISTER(m, PusherEnvSpec, PusherEnvPool)
   REGISTER(m, ReacherEnvSpec, ReacherEnvPool)
   REGISTER(m, SwimmerEnvSpec, SwimmerEnvPool)
 }

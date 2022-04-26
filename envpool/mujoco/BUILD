@@ -83,6 +83,15 @@ cc_library(
 )
 
 cc_library(
+    name = "pusher",
+    hdrs = ["pusher.h"],
+    deps = [
+        ":mujoco_env",
+        "//envpool/core:async_envpool",
+    ],
+)
+
+cc_library(
     name = "reacher",
     hdrs = ["reacher.h"],
     deps = [
@@ -110,6 +119,7 @@ pybind_extension(
         ":humanoid",
         ":humanoid_standup",
         ":inverted_pendulum",
+        ":pusher",
         ":reacher",
         ":swimmer",
         "//envpool/core:py_envpool",

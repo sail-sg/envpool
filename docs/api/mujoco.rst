@@ -92,6 +92,21 @@ InvertedPendulum-v2/v4
 - Action space: ``(1)``, with range ``[-3, 3]``.
 
 
+Pusher-v2/v4
+------------
+
+`gym Pusher-v2 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/pusher.py>`_
+
+`gym Pusher-v4 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/pusher_v4.py>`_
+
+- Observation space: ``(23)``, first 7 elements for ``qpos[:7]``, next 7
+  elements for ``qvel[:7]``, next 3 elements for ``tips_arm``, next 3
+  elements for ``object``, next 3 elements for ``goal``;
+- Action space: ``(7)``, with range ``[-2, 2]``.
+
+
 Reacher-v2/v4
 -------------
 
