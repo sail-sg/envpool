@@ -82,3 +82,14 @@ register(
   reward_threshold=950.0,
   base_path=base_path,
 )
+
+register(
+  task_id="Swimmer-v4",
+  import_path="envpool.mujoco",
+  spec_cls="SwimmerEnvSpec",
+  dm_cls="SwimmerDMEnvPool",
+  gym_cls="SwimmerGymEnvPool",
+  max_episode_steps=1000,
+  reward_threshold=360.0,
+  base_path=base_path,
+)

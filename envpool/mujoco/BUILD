@@ -82,6 +82,15 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "swimmer",
+    hdrs = ["swimmer.h"],
+    deps = [
+        ":mujoco_env",
+        "//envpool/core:async_envpool",
+    ],
+)
+
 pybind_extension(
     name = "mujoco_envpool",
     srcs = ["mujoco_envpool.cc"],
@@ -92,6 +101,7 @@ pybind_extension(
         ":humanoid",
         ":humanoid_standup",
         ":inverted_pendulum",
+        ":swimmer",
         "//envpool/core:py_envpool",
     ],
 )

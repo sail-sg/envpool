@@ -34,6 +34,8 @@ from envpool.mujoco import (
   HumanoidStandupGymEnvPool,
   InvertedPendulumEnvSpec,
   InvertedPendulumGymEnvPool,
+  SwimmerEnvSpec,
+  SwimmerGymEnvPool,
 )
 
 
@@ -164,6 +166,13 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     self.run_deterministic_check(
       InvertedPendulumEnvSpec, InvertedPendulumGymEnvPool
     )
+
+  def test_swimmer(self) -> None:
+    env0 = mjc_mwe.SwimmerEnv()
+    env1 = SwimmerGymEnvPool(SwimmerEnvSpec(SwimmerEnvSpec.gen_config()))
+    self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1, no_time_limit=True)
+    self.run_deterministic_check(SwimmerEnvSpec, SwimmerGymEnvPool)
 
 
 if __name__ == "__main__":

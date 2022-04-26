@@ -28,6 +28,8 @@ from .mujoco_envpool import (
   _HumanoidStandupEnvSpec,
   _InvertedPendulumEnvPool,
   _InvertedPendulumEnvSpec,
+  _SwimmerEnvPool,
+  _SwimmerEnvSpec,
 )
 
 AntEnvSpec, AntDMEnvPool, AntGymEnvPool = py_env(_AntEnvSpec, _AntEnvPool)
@@ -44,11 +46,21 @@ HumanoidEnvSpec, HumanoidDMEnvPool, HumanoidGymEnvPool = py_env(
   _HumanoidEnvSpec, _HumanoidEnvPool
 )
 
-HumanoidStandupEnvSpec, HumanoidStandupDMEnvPool, HumanoidStandupGymEnvPool \
-  = py_env(_HumanoidStandupEnvSpec, _HumanoidStandupEnvPool)
+(
+  HumanoidStandupEnvSpec,
+  HumanoidStandupDMEnvPool,
+  HumanoidStandupGymEnvPool,
+) = py_env(_HumanoidStandupEnvSpec, _HumanoidStandupEnvPool)
 
-InvertedPendulumEnvSpec, InvertedPendulumDMEnvPool, InvertedPendulumGymEnvPool\
-  = py_env(_InvertedPendulumEnvSpec, _InvertedPendulumEnvPool)
+(
+  InvertedPendulumEnvSpec,
+  InvertedPendulumDMEnvPool,
+  InvertedPendulumGymEnvPool,
+) = py_env(_InvertedPendulumEnvSpec, _InvertedPendulumEnvPool)
+
+SwimmerEnvSpec, SwimmerDMEnvPool, SwimmerGymEnvPool = py_env(
+  _SwimmerEnvSpec, _SwimmerEnvPool
+)
 
 __all__ = [
   "AntEnvSpec",
@@ -69,4 +81,7 @@ __all__ = [
   "InvertedPendulumEnvSpec",
   "InvertedPendulumDMEnvPool",
   "InvertedPendulumGymEnvPool",
+  "SwimmerEnvSpec",
+  "SwimmerDMEnvPool",
+  "SwimmerGymEnvPool",
 ]

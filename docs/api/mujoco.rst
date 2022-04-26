@@ -72,3 +72,14 @@ InvertedPendulum-v4
 - Observation space: ``(4)``, first 2 elements for ``qpos``, next 2 elements
   for ``qvel``;
 - Action space: ``(1)``, with range ``[-3, 3]``.
+
+
+Swimmer-v4
+----------
+
+`gym Swimmer-v4 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/swimmer_v4.py>`_
+
+- Observation space: ``(8)``, first 3 elements for ``qpos[2:]``, next 5
+  elements for ``qvel``;
+- Action space: ``(2)``, with range ``[-1, 1]``.
