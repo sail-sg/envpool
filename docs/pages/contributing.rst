@@ -50,7 +50,7 @@ This command will run automatic tests in the main directory:
 
     make bazel-test
 
-If you only want to debug for bazel build:
+If you only want to debug for Bazel build:
 
 .. code-block:: bash
 
