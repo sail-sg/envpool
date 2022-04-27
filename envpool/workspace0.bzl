@@ -261,4 +261,12 @@ def workspace():
         build_file = "//third_party/pretrain_weight:pretrain_weight.BUILD",
     )
 
+    maybe(
+        http_archive,
+        name = "bazel_clang_tidy",
+        sha256 = "ec8c5bf0c02503b928c2e42edbd15f75e306a05b2cae1f34a7bc84724070b98b",
+        strip_prefix = "bazel_clang_tidy-783aa523aafb4a6798a538c61e700b6ed27975a7",
+        url = "https://github.com/erenon/bazel_clang_tidy/archive/783aa523aafb4a6798a538c61e700b6ed27975a7.zip",
+    )
+
 workspace0 = workspace

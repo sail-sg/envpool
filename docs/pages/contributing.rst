@@ -21,7 +21,7 @@ We use several tools to secure code quality, including
 
 - PEP8 code style: flake8, yapf, isort;
 - Type check: mypy;
-- C++ Google-style: cpplint, clang-format;
+- C++ Google-style: cpplint, clang-format, clang-tidy;
 - Bazel build file: buildifier;
 - License: addlicense;
 - Documentation: pydocstyle, doc8.
@@ -49,6 +49,25 @@ This command will run automatic tests in the main directory:
 .. code-block:: bash
 
     make bazel-test
+
+If you only want to debug for Bazel build:
+
+.. code-block:: bash
+
+    # this is for general use case
+    make bazel-debug
+    # this is for a special folder "envpool/classic_control"
+    bazel build //envpool/classic_control --config=debug
+
+
+If you'd like to run only a single test, for example, testing Mujoco
+integration; however, you don't want to build other stuff such as OpenCV:
+
+.. code-block:: bash
+
+    bazel test --test_output=all //envpool/mujoco:mujoco_test --config=release
+
+Feel free to customize the command in ``Makefile``!
 
 
 Documentation

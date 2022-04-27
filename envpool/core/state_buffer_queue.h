@@ -141,7 +141,7 @@ class StateBufferQueue {
    * If Wait is accessed from multiple threads, it is only safe if the finish
    * time of each state buffer is in the same order as the allocation time.
    */
-  std::vector<Array> Wait(int additional_done_count = 0) {
+  std::vector<Array> Wait(std::size_t additional_done_count = 0) {
     std::unique_ptr<StateBuffer> newbuf = stock_buffer_.Get();
     std::size_t pos = done_ptr_.fetch_add(1);
     std::size_t offset = pos % queue_size_;

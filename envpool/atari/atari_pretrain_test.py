@@ -25,10 +25,10 @@ from tianshou.policy import QRDQNPolicy
 from envpool.atari import AtariEnvSpec, AtariGymEnvPool
 from envpool.atari.atari_network import QRDQN
 
-try:
-  import cv2
-except ImportError:
-  cv2 = None
+# try:
+#   import cv2
+# except ImportError:
+#   cv2 = None
 
 
 class _AtariPretrainTest(absltest.TestCase):
@@ -60,7 +60,7 @@ class _AtariPretrainTest(absltest.TestCase):
     ids = np.arange(num_envs)
     reward = np.zeros(num_envs)
     obs = env.reset()
-    for t in range(25000):
+    for _ in range(25000):
       if np.random.rand() < 5e-3:
         act = np.random.randint(action_shape, size=len(ids))
       else:
@@ -72,11 +72,11 @@ class _AtariPretrainTest(absltest.TestCase):
       ids = ids[~done]
       if len(ids) == 0:
         break
-      if cv2 is not None:
-        obs_all = np.zeros((84, 84 * num_envs, 3), np.uint8)
-        for i, j in enumerate(ids):
-          obs_all[:, 84 * j:84 * (j + 1)] = obs[i, 1:].transpose(1, 2, 0)
-        cv2.imwrite(f"/tmp/{task}-{t}.png", obs_all)
+      # if cv2 is not None:
+      #   obs_all = np.zeros((84, 84 * num_envs, 3), np.uint8)
+      #   for i, j in enumerate(ids):
+      #     obs_all[:, 84 * j:84 * (j + 1)] = obs[i, 1:].transpose(1, 2, 0)
+      #   cv2.imwrite(f"/tmp/{task}-{t}.png", obs_all)
 
     rew = reward.mean()
     logging.info(f"Mean reward of {task}: {rew}")

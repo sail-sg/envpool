@@ -58,7 +58,8 @@ TEST(DictTest, Modification) {
   EXPECT_EQ(d["ijk"_], 1);
   d["abc"_] = 1;
   d["xyz"_] = "456";
-  d["ijk"_] = 0.5;  // force convert to int
+  // force convert to int
+  d["ijk"_] = 0.5;  // NOLINT
   EXPECT_EQ(d["abc"_], 1);
   EXPECT_EQ(d["xyz"_], "456");
   EXPECT_EQ(d["ijk"_], 0);

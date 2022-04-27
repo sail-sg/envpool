@@ -23,7 +23,8 @@ Let's go through the details step by step!
 Setup File Structure
 --------------------
 
-The first thing is to create a ``classic_control`` folder under ``envpool/``:
+The first thing is to fork the project and add the new environment in the
+envpool folder, i.e., create a ``classic_control`` folder under ``envpool/``:
 
 .. code-block:: bash
 
@@ -402,9 +403,9 @@ only a few lines to make it work:
     #include "envpool/core/py_envpool.h"
 
     // generate python-side (raw) CartPoleEnvSpec
-    typedef PyEnvSpec<classic_control::CartPoleEnvSpec> CartPoleEnvSpec;
+    using CartPoleEnvSpec = PyEnvSpec<classic_control::CartPoleEnvSpec>;
     // generate python-side (raw) CartPoleEnvPool
-    typedef PyEnvPool<classic_control::CartPoleEnvPool> CartPoleEnvPool;
+    using CartPoleEnvPool = PyEnvPool<classic_control::CartPoleEnvPool>;
 
     // generate classic_control_envpool.so
     PYBIND11_MODULE(classic_control_envpool, m) {
@@ -547,6 +548,19 @@ We have several ways for dependency declaration:
 3. python dependency: ``requirement("numpy")`` means this file use NumPy as
    runtime dependencies;
 4. third-party dependency (not shown above): will explain in the next section.
+
+
+Testing
+~~~~~~~
+
+To test whether the BUILD file is correct for Bazel to compile:
+
+.. code-block:: bash
+
+    bazel build //envpool/classic_control --config=debug
+
+This command will automatically display the details of the compilation and
+help make your life easier.
 
 
 .. _bazel_third_party:

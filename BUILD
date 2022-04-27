@@ -1,5 +1,10 @@
 load("@pip_requirements//:requirements.bzl", "requirement")
 
+filegroup(
+    name = "clang_tidy_config",
+    data = [".clang-tidy"],
+)
+
 py_binary(
     name = "setup",
     srcs = [

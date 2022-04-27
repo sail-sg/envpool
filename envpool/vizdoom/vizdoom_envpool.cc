@@ -15,8 +15,8 @@
 #include "envpool/core/py_envpool.h"
 #include "envpool/vizdoom/vizdoom_env.h"
 
-typedef PyEnvSpec<vizdoom::VizdoomEnvSpec> VizdoomEnvSpec;
-typedef PyEnvPool<vizdoom::VizdoomEnvPool> VizdoomEnvPool;
+using VizdoomEnvSpec = PyEnvSpec<vizdoom::VizdoomEnvSpec>;
+using VizdoomEnvPool = PyEnvPool<vizdoom::VizdoomEnvPool>;
 
 PYBIND11_MODULE(vizdoom_envpool, m) {
   REGISTER(m, VizdoomEnvSpec, VizdoomEnvPool)

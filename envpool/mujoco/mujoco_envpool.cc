@@ -24,37 +24,37 @@
 #include "envpool/mujoco/reacher.h"
 #include "envpool/mujoco/swimmer.h"
 
-typedef PyEnvSpec<mujoco::AntEnvSpec> AntEnvSpec;
-typedef PyEnvPool<mujoco::AntEnvPool> AntEnvPool;
+using AntEnvSpec = PyEnvSpec<mujoco::AntEnvSpec>;
+using AntEnvPool = PyEnvPool<mujoco::AntEnvPool>;
 
-typedef PyEnvSpec<mujoco::HalfCheetahEnvSpec> HalfCheetahEnvSpec;
-typedef PyEnvPool<mujoco::HalfCheetahEnvPool> HalfCheetahEnvPool;
+using HalfCheetahEnvSpec = PyEnvSpec<mujoco::HalfCheetahEnvSpec>;
+using HalfCheetahEnvPool = PyEnvPool<mujoco::HalfCheetahEnvPool>;
 
-typedef PyEnvSpec<mujoco::HopperEnvSpec> HopperEnvSpec;
-typedef PyEnvPool<mujoco::HopperEnvPool> HopperEnvPool;
+using HopperEnvSpec = PyEnvSpec<mujoco::HopperEnvSpec>;
+using HopperEnvPool = PyEnvPool<mujoco::HopperEnvPool>;
 
-typedef PyEnvSpec<mujoco::HumanoidEnvSpec> HumanoidEnvSpec;
-typedef PyEnvPool<mujoco::HumanoidEnvPool> HumanoidEnvPool;
+using HumanoidEnvSpec = PyEnvSpec<mujoco::HumanoidEnvSpec>;
+using HumanoidEnvPool = PyEnvPool<mujoco::HumanoidEnvPool>;
 
-typedef PyEnvSpec<mujoco::HumanoidStandupEnvSpec> HumanoidStandupEnvSpec;
-typedef PyEnvPool<mujoco::HumanoidStandupEnvPool> HumanoidStandupEnvPool;
+using HumanoidStandupEnvSpec = PyEnvSpec<mujoco::HumanoidStandupEnvSpec>;
+using HumanoidStandupEnvPool = PyEnvPool<mujoco::HumanoidStandupEnvPool>;
 
-typedef PyEnvSpec<mujoco::InvertedDoublePendulumEnvSpec>
-    InvertedDoublePendulumEnvSpec;
-typedef PyEnvPool<mujoco::InvertedDoublePendulumEnvPool>
-    InvertedDoublePendulumEnvPool;
+using InvertedDoublePendulumEnvSpec =
+    PyEnvSpec<mujoco::InvertedDoublePendulumEnvSpec>;
+using InvertedDoublePendulumEnvPool =
+    PyEnvPool<mujoco::InvertedDoublePendulumEnvPool>;
 
-typedef PyEnvSpec<mujoco::InvertedPendulumEnvSpec> InvertedPendulumEnvSpec;
-typedef PyEnvPool<mujoco::InvertedPendulumEnvPool> InvertedPendulumEnvPool;
+using InvertedPendulumEnvSpec = PyEnvSpec<mujoco::InvertedPendulumEnvSpec>;
+using InvertedPendulumEnvPool = PyEnvPool<mujoco::InvertedPendulumEnvPool>;
 
-typedef PyEnvSpec<mujoco::PusherEnvSpec> PusherEnvSpec;
-typedef PyEnvPool<mujoco::PusherEnvPool> PusherEnvPool;
+using PusherEnvSpec = PyEnvSpec<mujoco::PusherEnvSpec>;
+using PusherEnvPool = PyEnvPool<mujoco::PusherEnvPool>;
 
-typedef PyEnvSpec<mujoco::ReacherEnvSpec> ReacherEnvSpec;
-typedef PyEnvPool<mujoco::ReacherEnvPool> ReacherEnvPool;
+using ReacherEnvSpec = PyEnvSpec<mujoco::ReacherEnvSpec>;
+using ReacherEnvPool = PyEnvPool<mujoco::ReacherEnvPool>;
 
-typedef PyEnvSpec<mujoco::SwimmerEnvSpec> SwimmerEnvSpec;
-typedef PyEnvPool<mujoco::SwimmerEnvPool> SwimmerEnvPool;
+using SwimmerEnvSpec = PyEnvSpec<mujoco::SwimmerEnvSpec>;
+using SwimmerEnvPool = PyEnvPool<mujoco::SwimmerEnvPool>;
 
 PYBIND11_MODULE(mujoco_envpool, m) {
   REGISTER(m, AntEnvSpec, AntEnvPool)

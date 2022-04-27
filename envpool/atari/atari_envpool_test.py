@@ -47,8 +47,8 @@ class _AtariEnvPoolTest(absltest.TestCase):
     t = time.time()
     for i in range(total):
       state = dict(zip(state_keys, env._recv()))
-      obs = state["obs"]
-      cv2.imwrite(f"/tmp/log/raw{i}.png", obs[0, 1:].transpose(1, 2, 0))
+      # obs = state["obs"]
+      # cv2.imwrite(f"/tmp/log/raw{i}.png", obs[0, 1:].transpose(1, 2, 0))
       action = {
         "env_id": state["info:env_id"],
         "players.env_id": state["info:players.env_id"],
@@ -69,13 +69,12 @@ class _AtariEnvPoolTest(absltest.TestCase):
     obs0 = env0.reset()
     obs1 = env1.reset().observation.obs  # type: ignore
     np.testing.assert_allclose(obs0, obs1)
-    for i in range(1000):
+    for _ in range(1000):
       action = np.random.randint(6, size=num_envs)
       obs0 = env0.step(action)[0]
       obs1 = env1.step(action).observation.obs  # type: ignore
       np.testing.assert_allclose(obs0, obs1)
-      if cv2:
-        cv2.imwrite(f"/tmp/log/align{i}.png", obs0[0, 1:].transpose(1, 2, 0))
+      # cv2.imwrite(f"/tmp/log/align{i}.png", obs0[0, 1:].transpose(1, 2, 0))
 
   def test_partial_step(self) -> None:
     num_envs = 5

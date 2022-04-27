@@ -19,22 +19,22 @@
 #include "envpool/classic_control/pendulum.h"
 #include "envpool/core/py_envpool.h"
 
-typedef PyEnvSpec<classic_control::CartPoleEnvSpec> CartPoleEnvSpec;
-typedef PyEnvPool<classic_control::CartPoleEnvPool> CartPoleEnvPool;
+using CartPoleEnvSpec = PyEnvSpec<classic_control::CartPoleEnvSpec>;
+using CartPoleEnvPool = PyEnvPool<classic_control::CartPoleEnvPool>;
 
-typedef PyEnvSpec<classic_control::PendulumEnvSpec> PendulumEnvSpec;
-typedef PyEnvPool<classic_control::PendulumEnvPool> PendulumEnvPool;
+using PendulumEnvSpec = PyEnvSpec<classic_control::PendulumEnvSpec>;
+using PendulumEnvPool = PyEnvPool<classic_control::PendulumEnvPool>;
 
-typedef PyEnvSpec<classic_control::MountainCarEnvSpec> MountainCarEnvSpec;
-typedef PyEnvPool<classic_control::MountainCarEnvPool> MountainCarEnvPool;
+using MountainCarEnvSpec = PyEnvSpec<classic_control::MountainCarEnvSpec>;
+using MountainCarEnvPool = PyEnvPool<classic_control::MountainCarEnvPool>;
 
-typedef PyEnvSpec<classic_control::MountainCarContinuousEnvSpec>
-    MountainCarContinuousEnvSpec;
-typedef PyEnvPool<classic_control::MountainCarContinuousEnvPool>
-    MountainCarContinuousEnvPool;
+using MountainCarContinuousEnvSpec =
+    PyEnvSpec<classic_control::MountainCarContinuousEnvSpec>;
+using MountainCarContinuousEnvPool =
+    PyEnvPool<classic_control::MountainCarContinuousEnvPool>;
 
-typedef PyEnvSpec<classic_control::AcrobotEnvSpec> AcrobotEnvSpec;
-typedef PyEnvPool<classic_control::AcrobotEnvPool> AcrobotEnvPool;
+using AcrobotEnvSpec = PyEnvSpec<classic_control::AcrobotEnvSpec>;
+using AcrobotEnvPool = PyEnvPool<classic_control::AcrobotEnvPool>;
 
 PYBIND11_MODULE(classic_control_envpool, m) {
   REGISTER(m, CartPoleEnvSpec, CartPoleEnvPool)
