@@ -21,9 +21,10 @@ Checks:     '
             portability-*,
             readability-*,
             -clang-diagnostic-delete-non-abstract-non-virtual-dtor,
-            -readability-static-accessed-through-instance,
-            -readability-magic-numbers,
             -google-runtime-references,
+            -modernize-use-trailing-return-type,
+            -readability-magic-numbers,
+            -readability-static-accessed-through-instance,
             '
 CheckOptions:
   - { key: readability-identifier-naming.ClassCase,           value: CamelCase  }

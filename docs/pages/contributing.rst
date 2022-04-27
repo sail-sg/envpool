@@ -54,7 +54,11 @@ If you only want to debug for bazel build:
 
 .. code-block:: bash
 
+    # this is for general use case
     make bazel-debug
+    # this is for a special folder "envpool/classic_control"
+    bazel build //envpool/classic_control --config=debug
+
 
 If you'd like to run only a single test, for example, testing Mujoco
 integration; however, you don't want to build other stuff such as OpenCV:
