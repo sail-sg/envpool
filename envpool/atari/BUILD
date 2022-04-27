@@ -93,7 +93,7 @@ py_test(
         requirement("numpy"),
         requirement("dm-env"),
         requirement("absl-py"),
-        # requirement("opencv-python-headless"),
+        requirement("opencv-python-headless"),
     ],
 )
 
