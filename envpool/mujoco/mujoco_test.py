@@ -42,6 +42,8 @@ from envpool.mujoco import (
   ReacherGymEnvPool,
   SwimmerEnvSpec,
   SwimmerGymEnvPool,
+  Walker2dEnvSpec,
+  Walker2dGymEnvPool,
 )
 
 
@@ -208,6 +210,13 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
     self.run_deterministic_check(SwimmerEnvSpec, SwimmerGymEnvPool)
+
+  def test_walker2d(self) -> None:
+    env0 = mjc_mwe.Walker2dEnv()
+    env1 = Walker2dGymEnvPool(Walker2dEnvSpec(Walker2dEnvSpec.gen_config()))
+    self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1, no_time_limit=True)
+    self.run_deterministic_check(Walker2dEnvSpec, Walker2dGymEnvPool)
 
 
 if __name__ == "__main__":

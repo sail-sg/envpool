@@ -40,6 +40,8 @@ mujoco_envs = [
   ("Reacher", "v4", True),
   ("Swimmer", "v3", False),
   ("Swimmer", "v4", True),
+  ("Walker2d", "v3", False),
+  ("Walker2d", "v4", True),
 ]
 
 for task, version, post_constraint in mujoco_envs:

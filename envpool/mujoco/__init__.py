@@ -36,6 +36,8 @@ from .mujoco_envpool import (
   _ReacherEnvSpec,
   _SwimmerEnvPool,
   _SwimmerEnvSpec,
+  _Walker2dEnvPool,
+  _Walker2dEnvSpec,
 )
 
 AntEnvSpec, AntDMEnvPool, AntGymEnvPool = py_env(_AntEnvSpec, _AntEnvPool)
@@ -82,6 +84,10 @@ SwimmerEnvSpec, SwimmerDMEnvPool, SwimmerGymEnvPool = py_env(
   _SwimmerEnvSpec, _SwimmerEnvPool
 )
 
+Walker2dEnvSpec, Walker2dDMEnvPool, Walker2dGymEnvPool = py_env(
+  _Walker2dEnvSpec, _Walker2dEnvPool
+)
+
 __all__ = [
   "AntEnvSpec",
   "AntDMEnvPool",
@@ -113,4 +119,7 @@ __all__ = [
   "SwimmerEnvSpec",
   "SwimmerDMEnvPool",
   "SwimmerGymEnvPool",
+  "Walker2dEnvSpec",
+  "Walker2dDMEnvPool",
+  "Walker2dGymEnvPool",
 ]
