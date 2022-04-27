@@ -6,6 +6,7 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
     name = "car_racing",
     hdrs = ["car_racing.h"],
+    srcs = ["car_racing.cc"],
     deps = [
         "//envpool/core:async_envpool",
         "@box2d//:box2d",

@@ -15,8 +15,7 @@
  */
 // https://github.com/openai/gym/blob/master/gym/envs/box2d/car_racing.py
 
-#include <car_racing.h>
-
+#include "car_racing.h"
 
 namespace box2d {
 
