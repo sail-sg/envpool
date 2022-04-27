@@ -77,27 +77,7 @@ class FrictionDetector: public b2ContactListener {
 
 class Car {
   public:
-    Car(b2World* _world, float init_angle, float init_x, float init_y)
-      : world(_world), fuel_spent(0.0) {
-        b2BodyDef bd;
-        bd.position.Set(init_x, init_y);
-        bd.angle = init_angle;
-        bd.type = b2_dynamicBody;
-        hull = world->CreateBody(&bd);
-
-        b2PolygonShape polygon1 = generatePolygon(kHullPoly1, 4);
-        fixtures.emplace_back(hull->CreateFixture(&polygon1, 1.f));
-
-        b2PolygonShape polygon2 = generatePolygon(kHullPoly2, 4);
-        fixtures.emplace_back(hull->CreateFixture(&polygon2, 1.f));
-
-        b2PolygonShape polygon3 = generatePolygon(kHullPoly3, 8);
-        fixtures.emplace_back(hull->CreateFixture(&polygon3, 1.f));
-
-        b2PolygonShape polygon4 = generatePolygon(kHullPoly4, 4);
-        fixtures.emplace_back(hull->CreateFixture(&polygon4, 1.f));
-
-    }
+    Car(b2World* _world, float init_angle, float init_x, float init_y);
   protected:
     b2World* world;
     b2Body* hull;
@@ -149,20 +129,20 @@ class CarRacingEnv : public Env<CarRacingEnvSpec> {
     const float border = 8 / scale;
     const int borderMinCount = 4;
 
-    float reward = 0.0;
-    float prev_reward = 0.0;
-
     bool verbose; // true
     FrictionDetector* contactListener_keepref;
     b2World* world;
-    std::vector<std::vector<float>> track;
-    int tile_visited_count;
 
     int max_episode_steps_, elapsed_step_;
     std::uniform_real_distribution<> dist_;
     bool done_;
     
  public:
+  float reward = 0.0;
+  float prev_reward = 0.0;
+  int tile_visited_count = 0;
+  std::vector<std::vector<float>> track;
+
   CarRacingEnv(const Spec& spec, int env_id)
       : Env<CarRacingEnvSpec>(spec, env_id),
         max_episode_steps_(spec.config["max_episode_steps"_]),

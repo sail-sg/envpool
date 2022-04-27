@@ -73,10 +73,8 @@ void FrictionDetector::_Contact(b2Contact *contact, bool begin) {
         obj->objTiles.erase(tile);
       }
     }
-};
 
-
-Car:: Car(b2World* _world, float init_angle, float init_x, float init_y)
+Car::Car(b2World* _world, float init_angle, float init_x, float init_y)
       : world(_world), fuel_spent(0.0) {
         b2BodyDef bd;
         bd.position.Set(init_x, init_y);
@@ -95,7 +93,7 @@ Car:: Car(b2World* _world, float init_angle, float init_x, float init_y)
 
         b2PolygonShape polygon4 = generatePolygon(kHullPoly4, 4);
         fixtures.emplace_back(hull->CreateFixture(&polygon4, 1.f));
-
+   
     }
 
 }  // namespace box2d
