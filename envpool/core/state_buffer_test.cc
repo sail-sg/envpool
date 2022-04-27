@@ -68,7 +68,7 @@ TEST(StateBufferTest, SinglePlayerSync) {
   auto bs = buffer.Wait();
   EXPECT_EQ(bs[0].Shape(0), total);
   for (int i = 0; i < batch; ++i) {
-    auto ptr = reinterpret_cast<int*>(bs[1][i].data());
+    auto* ptr = reinterpret_cast<int*>(bs[1][i].data());
     EXPECT_EQ(ptr[0], batch - 1 - i);
   }
 }
