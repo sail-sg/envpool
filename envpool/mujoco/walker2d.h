@@ -126,6 +126,7 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
     mjtNum xv = (x_after - x_before) / dt;
     // reward and done
     float reward = xv * forward_reward_weight_ + healthy_reward_ - ctrl_cost;
+    ++elapsed_step_;
     done_ = !IsHealthy() || (elapsed_step_ >= max_episode_steps_);
     WriteObs(reward, xv, x_after);
   }
