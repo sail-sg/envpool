@@ -118,6 +118,15 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "walker2d",
+    hdrs = ["walker2d.h"],
+    deps = [
+        ":mujoco_env",
+        "//envpool/core:async_envpool",
+    ],
+)
+
 pybind_extension(
     name = "mujoco_envpool",
     srcs = ["mujoco_envpool.cc"],
@@ -132,6 +141,7 @@ pybind_extension(
         ":pusher",
         ":reacher",
         ":swimmer",
+        ":walker2d",
         "//envpool/core:py_envpool",
     ],
 )

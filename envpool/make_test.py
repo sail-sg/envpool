@@ -112,6 +112,8 @@ class _MakeTest(absltest.TestCase):
         "Reacher-v4",
         "Swimmer-v3",
         "Swimmer-v4",
+        "Walker2d-v3",
+        "Walker2d-v4",
       ]
     )
 

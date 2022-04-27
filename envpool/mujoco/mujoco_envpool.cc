@@ -23,6 +23,7 @@
 #include "envpool/mujoco/pusher.h"
 #include "envpool/mujoco/reacher.h"
 #include "envpool/mujoco/swimmer.h"
+#include "envpool/mujoco/walker2d.h"
 
 using AntEnvSpec = PyEnvSpec<mujoco::AntEnvSpec>;
 using AntEnvPool = PyEnvPool<mujoco::AntEnvPool>;
@@ -56,6 +57,9 @@ using ReacherEnvPool = PyEnvPool<mujoco::ReacherEnvPool>;
 using SwimmerEnvSpec = PyEnvSpec<mujoco::SwimmerEnvSpec>;
 using SwimmerEnvPool = PyEnvPool<mujoco::SwimmerEnvPool>;
 
+using Walker2dEnvSpec = PyEnvSpec<mujoco::Walker2dEnvSpec>;
+using Walker2dEnvPool = PyEnvPool<mujoco::Walker2dEnvPool>;
+
 PYBIND11_MODULE(mujoco_envpool, m) {
   REGISTER(m, AntEnvSpec, AntEnvPool)
   REGISTER(m, HalfCheetahEnvSpec, HalfCheetahEnvPool)
@@ -67,4 +71,5 @@ PYBIND11_MODULE(mujoco_envpool, m) {
   REGISTER(m, PusherEnvSpec, PusherEnvPool)
   REGISTER(m, ReacherEnvSpec, ReacherEnvPool)
   REGISTER(m, SwimmerEnvSpec, SwimmerEnvPool)
+  REGISTER(m, Walker2dEnvSpec, Walker2dEnvPool)
 }

@@ -150,3 +150,17 @@ Swimmer-v3/v4
 - Observation space: ``(8)``, first 3 elements for ``qpos[2:]``, next 5
   elements for ``qvel``;
 - Action space: ``(2)``, with range ``[-1, 1]``.
+
+
+Walker2d-v3/v4
+--------------
+
+`gym Walker2d-v3 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/walker2d_v3.py>`_
+
+`gym Walker2d-v4 source code
+<https://github.com/openai/gym/blob/master/gym/envs/mujoco/walker2d_v4.py>`_
+
+- Observation space: ``(17)``, first 8 elements for ``qpos[1:]``, next 9
+  elements for ``qvel``;
+- Action space: ``(6)``, with range ``[-1, 1]``.
