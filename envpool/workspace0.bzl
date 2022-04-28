@@ -163,7 +163,7 @@ def workspace():
         name = "nasm",
         sha256 = "63ec86477ad3f0f6292325fd89e1d93aea2e2fd490070863f17d48f7cd387011",
         strip_prefix = "nasm-2.13.03",
-        url = "https://www.nasm.us/pub/nasm/releasebuilds/2.15.05/nasm-2.13.03.tar.bz2",
+        url = "https://www.nasm.us/pub/nasm/releasebuilds/2.13.03/nasm-2.13.03.tar.bz2",
         build_file = "//third_party/nasm:nasm.BUILD",
     )
 
