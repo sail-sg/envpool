@@ -4,11 +4,11 @@ load("@com_justbuchanan_rules_qt//:qt.bzl", "qt_cc_library", "qt_ui_library")
 cc_library(
     name = "procgen",
     srcs = [
+        "game-registry.cpp",
         "assetgen.cpp",
         "basic-abstract-game.cpp",
         "cpp-utils.cpp",
         "entity.cpp",
-        "game-registry.cpp",
         "game.cpp",
         "mazegen.cpp",
         "randgen.cpp",
@@ -16,7 +16,7 @@ cc_library(
         "roomgen.cpp",
         "vecgame.cpp",
         "vecoptions.cpp",
-        "games/bigfish.cpp",
+        # "games/bigfish.cpp",
         "games/bossfight.cpp",
         "games/caveflyer.cpp",
         "games/chaser.cpp",
@@ -35,12 +35,13 @@ cc_library(
         "games/starpilot.cpp",
     ],
     hdrs = [
+        "procgen_games.h",
+        "game-registry.h",
         "assetgen.h",
         "basic-abstract-game.h",
         "buffer.h",
         "cpp-utils.h",
         "entity.h",
-        "game-registry.h",
         "game.h",
         "grid.h",
         "mazegen.h",
@@ -51,7 +52,7 @@ cc_library(
         "roomgen.h",
         "vecgame.h",
         "vecoptions.h",
-        "libenv.h"
+        "libenv.h",
     ],
     copts = [
             '-fpic',

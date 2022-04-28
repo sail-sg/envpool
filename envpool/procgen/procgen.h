@@ -102,15 +102,17 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
 
  public:
   ProcgenEnv(const Spec& spec, int env_id)
-      : Env<ProcgenEnvSpec>(spec, env_id),
-        game_(globalGameRegistry->at(std::string(spec.config["game_name"_]))()),
-        rand_seed_(spec.config["rand_seed"_]) {
+      : Env<ProcgenEnvSpec>(spec, env_id)
+      {
     /* Initialize the single game we are holding in this EnvPool environment */
     /* It depends on some default setting along with the config map passed in */
     /* We mostly follow how it's done in the vector environment at Procgen and
      * translate it into single one */
     /* https://github.com/openai/procgen/blob/5e1dbf341d291eff40d1f9e0c0a0d5003643aebf/procgen/src/vecgame.cpp#L312
      */
+      //game_ = globalGameRegistry->at(std::string(spec.config["game_name"_]))();
+      game_ = make_game(spec.config["game_name"_]);
+    rand_seed_ = spec.config["rand_seed"_];
     game_level_seed_gen_.seed(rand_seed_);
     game_->level_seed_rand_gen.seed(game_level_seed_gen_.randint());
     game_->level_seed_low = spec.config["level_seed_low"_];

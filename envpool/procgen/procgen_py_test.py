@@ -14,6 +14,7 @@
 
 import os
 import time
+import random
 from typing import no_type_check
 
 import numpy as np
@@ -50,6 +51,47 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
     self.assertEqual(sorted(config_keys), sorted(ref_config_keys))
     print("Passed the Procgen config test...")
 
+  def test_spec(self) -> None:
+    conf = _ProcgenEnvSpec._default_config_values
+    env_spec = _ProcgenEnvSpec(conf)
+    state_spec = env_spec._state_spec
+    action_spec = env_spec._action_spec
+    state_keys = env_spec._state_keys
+    action_keys = env_spec._action_keys
+    self.assertTrue(isinstance(state_spec, tuple))
+    self.assertTrue(isinstance(action_spec, tuple))
+    state_spec = dict(zip(state_keys, state_spec))
+    action_spec = dict(zip(action_keys, action_spec))
+    # default value of state_num is RES_W * RES_H * RGB_FACTOR = 64 * 64 * 3 = 12288
+    self.assertEqual(state_spec["obs"][1][-1], 12288)
+    # change conf and see if it can successfully change state_spec
+    conf = dict(zip(_ProcgenEnvSpec._config_keys, conf))
+    conf["state_num"] = 10086
+    env_spec = ProcgenEnvSpec(tuple(conf.values()))
+    state_spec = dict(zip(state_keys, env_spec._state_spec))
+    self.assertEqual(state_spec["obs"][1][-1], 10086)
+    print("Passed the Procgen Spec test...")
+
+  def test_envpool(self) -> None:
+    conf = dict(
+      zip(_ProcgenEnvSpec._config_keys, _ProcgenEnvSpec._default_config_values)
+    )
+    conf["num_envs"] = num_envs = 100
+    conf["batch_size"] = batch = 31
+    conf["num_threads"] = os.cpu_count()
+    env_spec = _ProcgenEnvSpec(tuple(conf.values()))
+    env = _ProcgenEnvPool(env_spec)
+    state_keys = env._state_keys
+    total = 100000
+    env._reset(np.arange(num_envs, dtype=np.int32))
+    t = time.time()
+    for i in range(total):
+      state = dict(zip(state_keys, env._recv()))
+      action = {
+        "action": random.randint(0, 14)
+      }
+      env._send(tuple(action.values()))
+    print("Passed the Procgen Envpool test...")
 
 if __name__ == "__main__":
   absltest.main()

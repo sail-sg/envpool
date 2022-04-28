@@ -1,0 +1,5528 @@
++++ procgen_games.h
+@@ -0,0 +1,5524 @@
++#include "basic-abstract-game.h"
++#include "assetgen.h"
++#include "mazegen.h"
++#include "cpp-utils.h"
++#include "qt-utils.h"
++#include <set>
++#include <queue>
++#include <memory>
++
++/* ---------------------BIGFISH----------------------*/
++const std::string BIGFISH_NAME = "bigfish";
++
++const int COMPLETION_BONUS = 10.0f;
++const int POSITIVE_REWARD = 1.0f;
++
++const int FISH = 2;
++
++const float FISH_MIN_R = .25;
++const float FISH_MAX_R = 2;
++
++const int FISH_QUOTA = 30;
++
++class BigFish : public BasicAbstractGame {
++  public:
++    int fish_eaten = 0;
++    float r_inc = 0.0;
++
++    BigFish()
++        : BasicAbstractGame(BIGFISH_NAME) {
++        timeout = 6000;
++
++        main_width = 20;
++        main_height = 20;
++    }
++
++    void load_background_images() override {
++        main_bg_images_ptr = &water_backgrounds;
++    }
++
++    void asset_for_type(int type, std::vector<std::string> &names) override {
++        if (type == PLAYER) {
++            names.push_back("misc_assets/fishTile_072.png");
++        } else if (type == FISH) {
++            names.push_back("misc_assets/fishTile_074.png");
++            names.push_back("misc_assets/fishTile_078.png");
++            names.push_back("misc_assets/fishTile_080.png");
++        }
++    }
++
++    void handle_agent_collision(const std::shared_ptr<Entity> &obj) override {
++        BasicAbstractGame::handle_agent_collision(obj);
++
++        if (obj->type == FISH) {
++            if (obj->rx > agent->rx) {
++                step_data.done = true;
++            } else {
++                step_data.reward += POSITIVE_REWARD;
++                obj->will_erase = true;
++                agent->rx += r_inc;
++                agent->ry += r_inc;
++                fish_eaten += 1;
++            }
++        }
++    }
++
++    void game_reset() override {
++        BasicAbstractGame::game_reset();
++
++        options.center_agent = false;
++        fish_eaten = 0;
++
++        float start_r = .5;
++
++        if (options.distribution_mode == EasyMode) {
++            start_r = 1;
++        }
++
++        r_inc = (FISH_MAX_R - start_r) / FISH_QUOTA;
++
++        agent->rx = start_r;
++        agent->ry = start_r;
++        agent->y = 1 + agent->ry;
++    }
++
++    void game_step() override {
++        BasicAbstractGame::game_step();
++
++        if (rand_gen.randn(10) == 1) {
++            float ent_r = (FISH_MAX_R - FISH_MIN_R) * pow(rand_gen.rand01(), 1.4) + FISH_MIN_R;
++            float ent_y = rand_gen.rand01() * (main_height - 2 * ent_r);
++            float moves_right = rand_gen.rand01() < .5;
++            float ent_vx = (.15 + rand_gen.rand01() * .25) * (moves_right ? 1 : -1);
++            float ent_x = moves_right ? -1 * ent_r : main_width + ent_r;
++            int type = FISH;
++            auto ent = add_entity(ent_x, ent_y, ent_vx, 0, ent_r, type);
++            choose_random_theme(ent);
++            match_aspect_ratio(ent);
++            ent->is_reflected = !moves_right;
++        }
++
++        if (fish_eaten >= FISH_QUOTA) {
++            step_data.done = true;
++            step_data.reward += COMPLETION_BONUS;
++            step_data.level_complete = true;
++        }
++
++        if (action_vx > 0)
++            agent->is_reflected = false;
++        if (action_vx < 0)
++            agent->is_reflected = true;
++    }
++
++    void serialize(WriteBuffer *b) override {
++        BasicAbstractGame::serialize(b);
++        b->write_int(fish_eaten);
++        b->write_float(r_inc);
++    }
++
++    void deserialize(ReadBuffer *b) override {
++        BasicAbstractGame::deserialize(b);
++        fish_eaten = b->read_int();
++        r_inc = b->read_float();
++    }
++};
++
++
++std::shared_ptr<BigFish> make_bigfish(void) {
++    return std::make_shared<BigFish>();
++}
++
++/* ---------------------BOSSFIGHT----------------------*/
++const std::string BOSSFIGHT_NAME = "bossfight";
++
++const int PLAYER_BULLET = 1;
++const int BOSS = 2;
++const int SHIELDS = 3;
++const int ENEMY_BULLET = 4;
++const int LASER_TRAIL = 5;
++const int REFLECTED_BULLET = 6;
++const int BARRIER = 7;
++
++const float BOSS_R = 3;
++
++const int NUM_ATTACK_MODES = 4;
++
++const int NUM_LASER_THEMES = 3;
++
++const int PLAYER_BULLET_VEL = 1;
++
++const int BOTTOM_MARGIN = 6;
++
++const int BOSS_VEL_TIMEOUT = 20;
++const int BOSS_DAMAGED_TIMEOUT = 40;
++
++class BossfightGame : public BasicAbstractGame {
++  public:
++    std::shared_ptr<Entity> boss, shields;
++    std::vector<int> attack_modes;
++    int last_fire_time = 0;
++    int time_to_swap = 0;
++    int invulnerable_duration = 0;
++    int vulnerable_duration = 0;
++    int num_rounds = 0;
++    int round_num = 0;
++    int round_health = 0;
++    int boss_vel_timeout = 0;
++    int curr_vel_timeout = 0;
++    int attack_mode = 0;
++    int player_laser_theme = 0;
++    int boss_laser_theme = 0;
++    int damaged_until_time = 0;
++
++    bool shields_are_up = false;
++    bool barriers_moves_right = false;
++    float base_fire_prob = 0.0f;
++    float boss_bullet_vel = 0.0f;
++    float barrier_vel = 0.0f;
++    float barrier_spawn_prob = 0.0f;
++    float rand_pct = 0.0f;
++    float rand_fire_pct = 0.0f;
++    float rand_pct_x = 0.0f;
++    float rand_pct_y = 0.0f;
++
++    BossfightGame()
++        : BasicAbstractGame(BOSSFIGHT_NAME) {
++        timeout = 4000;
++
++        main_width = 20;
++        main_height = 20;
++
++        mixrate = .5;
++        maxspeed = 0.85f;
++    }
++
++    void load_background_images() override {
++        main_bg_images_ptr = &space_backgrounds;
++    }
++
++    void asset_for_type(int type, std::vector<std::string> &names) override {
++        if (type == PLAYER) {
++            names.push_back("misc_assets/playerShip1_blue.png");
++            names.push_back("misc_assets/playerShip1_green.png");
++            names.push_back("misc_assets/playerShip2_orange.png");
++            names.push_back("misc_assets/playerShip3_red.png");
++        } else if (type == BOSS) {
++            names.push_back("misc_assets/enemyShipBlack1.png");
++            names.push_back("misc_assets/enemyShipBlue2.png");
++            names.push_back("misc_assets/enemyShipGreen3.png");
++            names.push_back("misc_assets/enemyShipRed4.png");
++        } else if (type == ENEMY_BULLET) {
++            names.push_back("misc_assets/laserGreen14.png");
++            names.push_back("misc_assets/laserRed11.png");
++            names.push_back("misc_assets/laserBlue09.png");
++        } else if (type == PLAYER_BULLET) {
++            names.push_back("misc_assets/laserGreen14.png");
++            names.push_back("misc_assets/laserRed11.png");
++            names.push_back("misc_assets/laserBlue09.png");
++        } else if (type == SHIELDS) {
++            names.push_back("misc_assets/shield2.png");
++        } else if (type == BARRIER) {
++            names.push_back("misc_assets/spaceMeteors_001.png");
++            names.push_back("misc_assets/spaceMeteors_002.png");
++            names.push_back("misc_assets/spaceMeteors_003.png");
++            names.push_back("misc_assets/spaceMeteors_004.png");
++            names.push_back("misc_assets/meteorGrey_big1.png");
++            names.push_back("misc_assets/meteorGrey_big2.png");
++            names.push_back("misc_assets/meteorGrey_big3.png");
++            names.push_back("misc_assets/meteorGrey_big4.png");
++        }
++    }
++
++    void handle_agent_collision(const std::shared_ptr<Entity> &obj) override {
++        BasicAbstractGame::handle_agent_collision(obj);
++
++        if (obj->type == BOSS) {
++            step_data.done = true;
++        } else if (obj->type == BARRIER) {
++            step_data.done = true;
++        }
++        if (obj->type == ENEMY_BULLET) {
++            step_data.done = true;
++        }
++    }
++
++    bool should_draw_entity(const std::shared_ptr<Entity> &entity) override {
++        if (entity->type == SHIELDS)
++            return shields_are_up;
++
++        return BasicAbstractGame::should_draw_entity(entity);
++    }
++
++    void handle_collision(const std::shared_ptr<Entity> &src, const std::shared_ptr<Entity> &target) override {
++        if (src->type == PLAYER_BULLET) {
++            bool will_erase = false;
++
++            if (target->type == SHIELDS) {
++                if (shields_are_up) {
++                    src->type = REFLECTED_BULLET;
++
++                    float theta = PI * (1.25 + .5 * rand_pct);
++                    src->vy = PLAYER_BULLET_VEL * sin(theta) * .5;
++                    src->vx = PLAYER_BULLET_VEL * cos(theta) * .5;
++                    src->expire_time = 4;
++                    src->life_time = 0;
++                    src->alpha_decay = 0.8f;
++                }
++            } else if (target->type == BOSS) {
++                if (!shields_are_up) {
++                    target->health -= 1;
++                    will_erase = true;
++
++                    if (int(target->health) % round_health == 0) {
++                        step_data.reward += POSITIVE_REWARD;
++
++                        if (target->health == 0) {
++                            step_data.done = true;
++                            step_data.reward += COMPLETION_BONUS;
++                            step_data.level_complete = true;
++                        } else {
++                            round_num++;
++                            prepare_boss();
++                            curr_vel_timeout = BOSS_DAMAGED_TIMEOUT;
++                            damaged_until_time = cur_time + BOSS_DAMAGED_TIMEOUT;
++                        }
++                    }
++                }
++            }
++
++            if (will_erase && !src->will_erase) {
++                src->will_erase = true;
++
++                auto explosion = spawn_child(src, EXPLOSION, .5 * src->rx);
++                explosion->vx = target->vx;
++                explosion->vy = target->vy;
++            }
++        } else if (src->type == BARRIER) {
++            if (target->type == ENEMY_BULLET || target->type == PLAYER_BULLET) {
++                target->will_erase = true;
++                spawn_child(target, EXPLOSION, .5 * target->rx);
++            } else if (target->type == LASER_TRAIL) {
++                target->will_erase = true;
++            }
++
++            if (src->health <= 0) {
++                if (!src->will_erase) {
++                    auto explosion = spawn_child(src, EXPLOSION, .5 * src->rx);
++                    explosion->vx = src->vx;
++                    explosion->vy = src->vy;
++                }
++
++                src->will_erase = true;
++            }
++        }
++    }
++
++    void prepare_boss() {
++        shields_are_up = true;
++        curr_vel_timeout = boss_vel_timeout;
++        time_to_swap = invulnerable_duration;
++        attack_mode = attack_modes[round_num % attack_modes.size()];
++        boss->vx = 0;
++        boss->vy = 0;
++    }
++
++    void game_reset() override {
++        BasicAbstractGame::game_reset();
++
++        damaged_until_time = 0;
++        last_fire_time = 0;
++        boss_bullet_vel = options.distribution_mode == EasyMode ? .5 : .75;
++        int max_extra_invulnerable = options.distribution_mode == EasyMode ? 1 : 3;
++
++        options.center_agent = false;
++
++        boss = add_entity(main_width / 2, main_height / 2, 0, 0, BOSS_R, BOSS);
++        choose_random_theme(boss);
++        match_aspect_ratio(boss);
++
++        shields = add_entity_rxy(boss->x, boss->y, 0, 0, 1.2 * boss->rx, 1.2 * boss->ry, SHIELDS);
++
++        boss_vel_timeout = BOSS_VEL_TIMEOUT;
++        base_fire_prob = 0.1f;
++        round_health = rand_gen.randn(9) + 1;
++        num_rounds = 1 + rand_gen.randn(5);
++        invulnerable_duration = 2 + rand_gen.randn(max_extra_invulnerable + 1);
++        vulnerable_duration = 500; // essentially infinite
++
++        boss->health = round_health * num_rounds;
++
++        choose_random_theme(agent);
++
++        player_laser_theme = rand_gen.randn(NUM_LASER_THEMES);
++        boss_laser_theme = rand_gen.randn(NUM_LASER_THEMES);
++
++        attack_modes.clear();
++
++        for (int i = 0; i < num_rounds; i++) {
++            attack_modes.push_back(rand_gen.randn(NUM_ATTACK_MODES));
++        }
++
++        round_num = 0;
++        prepare_boss();
++
++        agent->rx = .75;
++        match_aspect_ratio(agent);
++        reposition_agent();
++        agent->y = agent->ry;
++
++        barrier_vel = 0.1f;
++        barriers_moves_right = rand_gen.randbool();
++        barrier_spawn_prob = 0.025f;
++
++        spawn_barriers();
++
++        // for (int i = 0; i < main_width / barrier_vel; i++) {
++        //     spawn_barriers();
++        //     step_entities(entities);
++        // }
++    }
++
++    void boss_fire(float bullet_r, float vel, float theta) {
++        auto new_bullet = add_entity(boss->x, boss->y, vel * cos(theta), vel * sin(theta), bullet_r, ENEMY_BULLET);
++        new_bullet->image_theme = boss_laser_theme;
++        new_bullet->expire_time = 50;
++        new_bullet->vrot = PI / 8;
++    }
++
++    void passive_attack_mode() {
++        if (rand_fire_pct < base_fire_prob) {
++            boss_fire(.5, boss_bullet_vel, PI * (1 + rand_pct));
++        }
++    }
++
++    void attack_mode_0() {
++        if (cur_time % 8 == 0) {
++            for (int i = 0; i < 5; i++) {
++                boss_fire(.5, boss_bullet_vel, PI * 1.5 + (i - 2) * PI / 8);
++            }
++        }
++    }
++
++    void attack_mode_1() {
++        int dt = 5;
++        if (cur_time % dt == 0) {
++            int k = cur_time / dt;
++            k = abs(8 - (k % 16));
++            for (int i = 0; i < 4; i++) {
++                boss_fire(.5, boss_bullet_vel, PI * (1.25 + .5 * k / 8.0) + i * PI / 2);
++            }
++        }
++    }
++
++    void attack_mode_2() {
++        if (cur_time % 10 == 0) {
++            int num_bullets = 8;
++            float offset = rand_pct * 2 * PI;
++            for (int i = 0; i < num_bullets; i++) {
++                float vel = boss_bullet_vel;
++                float theta = 2 * PI / num_bullets * i + offset;
++                boss_fire(.5, vel, theta);
++            }
++        }
++    }
++
++    void attack_mode_3() {
++        if (cur_time % 4 == 0) {
++            boss_fire(.5, boss_bullet_vel, PI * (1 + rand_pct));
++        }
++    }
++
++    void damaged_mode() {
++        if (cur_time % 3 == 0) {
++            float pos_x = boss->x + (2 * rand_pct_x - 1) * boss->rx;
++            float pos_y = boss->y + (2 * rand_pct_y - 1) * boss->ry;
++            add_entity(pos_x, pos_y, 0, 0, .75, EXPLOSION);
++        }
++    }
++
++    void active_attack() {
++        if (attack_mode == 0) {
++            attack_mode_0();
++        } else if (attack_mode == 1) {
++            attack_mode_1();
++        } else if (attack_mode == 2) {
++            attack_mode_2();
++        } else if (attack_mode == 3) {
++            attack_mode_3();
++        }
++    }
++
++    void spawn_barriers() {
++        int num_barriers = rand_gen.randn(3) + 1;
++        for (int i = 0; i < num_barriers; i++) {
++            float barrier_r = 0.6f;
++            float min_barrier_y = 2 * agent->ry + barrier_r + .5;
++            float ent_y = rand_gen.rand01() * (BOTTOM_MARGIN - min_barrier_y - barrier_r) + min_barrier_y;
++            float ent_x = rand_gen.rand01() * (main_width - 2 * barrier_r) + barrier_r;
++
++            auto ent = std::make_shared<Entity>(ent_x, ent_y, 0, 0, barrier_r, BARRIER);
++            choose_random_theme(ent);
++            match_aspect_ratio(ent);
++            ent->health = 3;
++            ent->collides_with_entities = true;
++
++            if (!has_any_collision(ent)) {
++                entities.push_back(ent);
++            }
++        }
++    }
++
++    void game_step() override {
++        BasicAbstractGame::game_step();
++
++        // spawn_barriers();
++
++        shields->x = boss->x;
++        shields->y = boss->y;
++
++        rand_pct = rand_gen.rand01();
++        rand_fire_pct = rand_gen.rand01();
++        rand_pct_x = rand_gen.rand01();
++        rand_pct_y = rand_gen.rand01();
++
++        if (curr_vel_timeout <= 0) {
++            float dest_x = rand_pct_x * (main_width - 2 * BOSS_R) + BOSS_R;
++            float dest_y = rand_pct_y * (main_height - 2 * BOSS_R - BOTTOM_MARGIN) + BOSS_R + BOTTOM_MARGIN;
++            boss->vx = (dest_x - boss->x) / boss_vel_timeout;
++            boss->vy = (dest_y - boss->y) / boss_vel_timeout;
++            curr_vel_timeout = boss_vel_timeout;
++
++            if (time_to_swap > 0) {
++                time_to_swap -= 1;
++            } else {
++                if (shields_are_up) {
++                    time_to_swap = vulnerable_duration;
++                } else {
++                    time_to_swap = invulnerable_duration;
++                }
++
++                shields_are_up = !shields_are_up;
++            }
++        } else {
++            curr_vel_timeout -= 1;
++        }
++
++        if (special_action == 1 && (cur_time - last_fire_time) >= 3) {
++            auto new_bullet = add_entity(agent->x, agent->y, 0, PLAYER_BULLET_VEL, .25, PLAYER_BULLET);
++            new_bullet->image_theme = player_laser_theme;
++            new_bullet->collides_with_entities = true;
++            new_bullet->expire_time = 25;
++            last_fire_time = cur_time;
++        }
++
++        if (damaged_until_time >= cur_time) {
++            damaged_mode();
++        } else if (shields_are_up) {
++            active_attack();
++        } else {
++            passive_attack_mode();
++        }
++
++        for (int i = (int)(entities.size()) - 1; i >= 0; i--) {
++            auto ent = entities[i];
++
++            if (ent->type == ENEMY_BULLET) {
++                float v_trail = .5;
++                auto trail = add_entity_rxy(ent->x, ent->y, ent->vx * v_trail, ent->vy * v_trail, ent->rx, ent->ry, LASER_TRAIL);
++                trail->alpha_decay = 0.7f;
++                trail->image_type = ENEMY_BULLET;
++                trail->image_theme = boss_laser_theme;
++                trail->vrot = ent->vrot;
++                trail->rotation = ent->rotation;
++                trail->expire_time = 8;
++            }
++        }
++    }
++
++    void serialize(WriteBuffer *b) override {
++        BasicAbstractGame::serialize(b);
++        b->write_vector_int(attack_modes);
++        b->write_int(last_fire_time);
++        b->write_int(time_to_swap);
++        b->write_int(invulnerable_duration);
++        b->write_int(vulnerable_duration);
++        b->write_int(num_rounds);
++        b->write_int(round_num);
++        b->write_int(round_health);
++        b->write_int(boss_vel_timeout);
++        b->write_int(curr_vel_timeout);
++        b->write_int(attack_mode);
++        b->write_int(player_laser_theme);
++        b->write_int(boss_laser_theme);
++        b->write_int(damaged_until_time);
++        b->write_bool(shields_are_up);
++        b->write_bool(barriers_moves_right);
++        b->write_float(base_fire_prob);
++        b->write_float(boss_bullet_vel);
++        b->write_float(barrier_vel);
++        b->write_float(barrier_spawn_prob);
++        b->write_float(rand_pct);
++        b->write_float(rand_fire_pct);
++        b->write_float(rand_pct_x);
++        b->write_float(rand_pct_y);
++    }
++
++    void deserialize(ReadBuffer *b) override {
++        BasicAbstractGame::deserialize(b);
++        attack_modes = b->read_vector_int();
++        last_fire_time = b->read_int();
++        time_to_swap = b->read_int();
++        invulnerable_duration = b->read_int();
++        vulnerable_duration = b->read_int();
++        num_rounds = b->read_int();
++        round_num = b->read_int();
++        round_health = b->read_int();
++        boss_vel_timeout = b->read_int();
++        curr_vel_timeout = b->read_int();
++        attack_mode = b->read_int();
++        player_laser_theme = b->read_int();
++        boss_laser_theme = b->read_int();
++        damaged_until_time = b->read_int();
++        shields_are_up = b->read_bool();
++        barriers_moves_right = b->read_bool();
++        base_fire_prob = b->read_float();
++        boss_bullet_vel = b->read_float();
++        barrier_vel = b->read_float();
++        barrier_spawn_prob = b->read_float();
++        rand_pct = b->read_float();
++        rand_fire_pct = b->read_float();
++        rand_pct_x = b->read_float();
++        rand_pct_y = b->read_float();
++
++        int boss_idx = find_entity_index(BOSS);
++        fassert(boss_idx >= 0);
++        boss = entities[boss_idx];
++
++        int shields_idx = find_entity_index(SHIELDS);
++        fassert(shields_idx >= 0);
++        shields = entities[shields_idx];
++    }
++};
++
++std::shared_ptr<BossfightGame> make_bossfight(void) {
++    return std::make_shared<BossfightGame>();
++}
++
++/* ---------------------CAVEFLYER----------------------*/
++
++const std::string CAVEFLYER_NAME = "caveflyer";
++
++const float GOAL_REWARD = 10.0f;
++const float TARGET_REWARD = 3.0f;
++
++const int GOAL = 1;
++const int OBSTACLE = 2;
++const int TARGET = 3;
++const int PLAYER_BULLET_caveflyer = 4;
++const int ENEMY = 5;
++const int CAVEWALL = 8;
++const int EXHAUST = 9;
++
++const int MARKER = 1003;
++
++class CaveFlyerGame : public BasicAbstractGame {
++  public:
++    std::unique_ptr<RoomGenerator> room_manager;
++
++    CaveFlyerGame()
++        : BasicAbstractGame(CAVEFLYER_NAME) {
++        mixrate = 0.9f;
++        room_manager = std::make_unique<RoomGenerator>(this);
++    }
++
++    void load_background_images() override {
++        main_bg_images_ptr = &space_backgrounds;
++    }
++
++    void asset_for_type(int type, std::vector<std::string> &names) override {
++        if (type == GOAL) {
++            names.push_back("misc_assets/ufoGreen2.png");
++        } else if (type == OBSTACLE) {
++            names.push_back("misc_assets/meteorBrown_big1.png");
++        } else if (type == TARGET) {
++            names.push_back("misc_assets/ufoRed2.png");
++        } else if (type == PLAYER_BULLET_caveflyer) {
++            names.push_back("misc_assets/laserBlue02.png");
++        } else if (type == ENEMY) {
++            names.push_back("misc_assets/enemyShipBlue4.png");
++        } else if (type == PLAYER) {
++            names.push_back("misc_assets/playerShip1_red.png");
++        } else if (type == CAVEWALL) {
++            names.push_back("misc_assets/groundA.png");
++        } else if (type == EXHAUST) {
++            names.push_back("misc_assets/towerDefense_tile295.png");
++        }
++    }
++
++    void handle_agent_collision(const std::shared_ptr<Entity> &obj) override {
++        BasicAbstractGame::handle_agent_collision(obj);
++
++        if (obj->type == GOAL) {
++            step_data.reward += GOAL_REWARD;
++            step_data.level_complete = true;
++            step_data.done = true;
++        } else if (obj->type == OBSTACLE) {
++            step_data.done = true;
++        } else if (obj->type == ENEMY) {
++            step_data.done = true;
++        } else if (obj->type == TARGET) {
++            step_data.done = true;
++        }
++    }
++
++    void update_agent_velocity() override {
++        float v_scale = get_agent_acceleration_scale();
++
++        agent->vx += mixrate * maxspeed * action_vx * v_scale * .2;
++        agent->vy += mixrate * maxspeed * action_vy * v_scale * .2;
++
++        decay_agent_velocity();
++    }
++
++    bool use_block_asset(int type) override {
++        return BasicAbstractGame::use_block_asset(type) || (type == CAVEWALL);
++    }
++
++    bool is_blocked(const std::shared_ptr<Entity> &src, int target, bool is_horizontal) override {
++        if (BasicAbstractGame::is_blocked(src, target, is_horizontal))
++            return true;
++        if (src->type == PLAYER && target == CAVEWALL)
++            return true;
++
++        return false;
++    }
++
++    void handle_collision(const std::shared_ptr<Entity> &src, const std::shared_ptr<Entity> &target) override {
++        if (target->type == PLAYER_BULLET_caveflyer) {
++            bool erase_bullet = false;
++
++            if (src->type == TARGET) {
++                src->health -= 1;
++                erase_bullet = true;
++
++                if (src->health <= 0 && !src->will_erase) {
++                    spawn_child(src, EXPLOSION, .5 * src->rx);
++                    src->will_erase = true;
++                    step_data.reward += TARGET_REWARD;
++                }
++            } else if (src->type == OBSTACLE) {
++                erase_bullet = true;
++            } else if (src->type == ENEMY) {
++                erase_bullet = true;
++            } else if (src->type == GOAL) {
++                erase_bullet = true;
++            }
++
++            if (erase_bullet && !target->will_erase) {
++                target->will_erase = true;
++                auto explosion = spawn_child(target, EXPLOSION, .5 * target->rx);
++                explosion->vx = src->vx;
++                explosion->vy = src->vy;
++            }
++        }
++    }
++
++    bool will_reflect(int src, int target) override {
++        return BasicAbstractGame::will_reflect(src, target) || (src == ENEMY && (target == CAVEWALL || target == out_of_bounds_object));
++    }
++
++    void choose_world_dim() override {
++        DistributionMode dist_diff = options.distribution_mode;
++
++        int world_dim = 20;
++
++        if (dist_diff == EasyMode) {
++            world_dim = 30;
++        } else if (dist_diff == HardMode) {
++            world_dim = 40;
++        } else if (dist_diff == MemoryMode) {
++            world_dim = 60;
++        }
++
++        main_width = world_dim;
++        main_height = world_dim;
++    }
++
++    void game_reset() override {
++        BasicAbstractGame::game_reset();
++
++        out_of_bounds_object = WALL_OBJ;
++
++        for (int i = 0; i < grid_size; i++) {
++            if (rand_gen.rand01() < .5) {
++                set_obj(i, WALL_OBJ);
++            } else {
++                set_obj(i, SPACE);
++            }
++        }
++
++        for (int iteration = 0; iteration < 4; iteration++) {
++            room_manager->update();
++        }
++
++        std::set<int> best_room;
++        room_manager->find_best_room(best_room);
++        fassert(best_room.size() > 0);
++
++        for (int i = 0; i < grid_size; i++) {
++            set_obj(i, WALL_OBJ);
++        }
++
++        std::vector<int> free_cells;
++
++        for (int i : best_room) {
++            set_obj(i, SPACE);
++            free_cells.push_back(i);
++        }
++
++        std::vector<int> selected_idxs = rand_gen.simple_choose((int)(free_cells.size()), 2);
++        int agent_cell = free_cells[selected_idxs[0]];
++        int goal_cell = free_cells[selected_idxs[1]];
++
++        agent->x = (agent_cell % main_width) + .5;
++        agent->y = (agent_cell / main_width) + .5;
++
++        auto ent = spawn_entity_at_idx(goal_cell, .5, GOAL);
++        ent->collides_with_entities = true;
++
++        std::vector<int> goal_path;
++        room_manager->find_path(agent_cell, goal_cell, goal_path);
++
++        bool should_prune = options.distribution_mode != MemoryMode;
++
++        if (should_prune) {
++            std::set<int> wide_path;
++            wide_path.insert(goal_path.begin(), goal_path.end());
++            room_manager->expand_room(wide_path, 4);
++
++            for (int i = 0; i < grid_size; i++) {
++                set_obj(i, WALL_OBJ);
++            }
++
++            for (int i : wide_path) {
++                set_obj(i, SPACE);
++            }
++        }
++
++        for (int iteration = 0; iteration < 4; iteration++) {
++            room_manager->update();
++
++            for (int i : goal_path) {
++                set_obj(i, SPACE);
++            }
++        }
++
++        for (int i : goal_path) {
++            set_obj(i, MARKER);
++        }
++
++        free_cells.clear();
++
++        for (int i = 0; i < grid_size; i++) {
++            if (get_obj(i) == SPACE) {
++                free_cells.push_back(i);
++            } else if (get_obj(i) == WALL_OBJ) {
++                set_obj(i, CAVEWALL);
++            }
++        }
++
++        int chunk_size = ((int)(free_cells.size()) / 80);
++        int num_objs = 3 * chunk_size;
++
++        std::vector<int> obstacle_idxs = rand_gen.simple_choose((int)(free_cells.size()), num_objs);
++
++        for (int i = 0; i < num_objs; i++) {
++            int val = free_cells[obstacle_idxs[i]];
++
++            if (i < chunk_size) {
++                auto e = spawn_entity_at_idx(val, .5, OBSTACLE);
++                e->collides_with_entities = true;
++            } else if (i < 2 * chunk_size) {
++                auto e = spawn_entity_at_idx(val, .5, TARGET);
++                e->health = 5;
++                e->collides_with_entities = true;
++            } else {
++                auto e = spawn_entity_at_idx(val, .5, ENEMY);
++                float vel = (.1 * rand_gen.rand01() + .1) * (rand_gen.randn(2) * 2 - 1);
++                if (rand_gen.rand01() < .5) {
++                    e->vx = vel;
++                } else {
++                    e->vy = vel;
++                }
++                e->smart_step = true;
++                e->collides_with_entities = true;
++            }
++        }
++
++        for (int i = 0; i < grid_size; i++) {
++            int val = get_obj(i);
++            if (val == MARKER)
++                val = SPACE;
++            set_obj(i, val);
++        }
++
++        out_of_bounds_object = CAVEWALL;
++        visibility = options.distribution_mode == EasyMode ? 10 : 16;
++    }
++
++    void set_action_xy(int move_action) override {
++        float acceleration = move_action % 3 - 1;
++        if (acceleration < 0)
++            acceleration *= 0.33f;
++
++        float theta = -1 * agent->rotation + PI / 2;
++
++        if (acceleration > 0) {
++            auto exhaust = add_entity(agent->x - agent->rx * cos(theta), agent->y - agent->ry * sin(theta), 0, 0, .5 * agent->rx, EXHAUST);
++            exhaust->expire_time = 4;
++            exhaust->rotation = -1 * theta - PI / 2;
++            exhaust->grow_rate = 1.25;
++            exhaust->alpha_decay = 0.8f;
++        }
++
++        action_vy = acceleration * sin(theta);
++        action_vx = acceleration * cos(theta);
++        action_vrot = move_action / 3 - 1;
++    }
++
++    void game_step() override {
++        BasicAbstractGame::game_step();
++
++        if (special_action == 1) {
++            float theta = -1 * agent->rotation + PI / 2;
++            float vx = cos(theta);
++            float vy = sin(theta);
++            auto new_bullet = add_entity_rxy(agent->x, agent->y, vx, vy, 0.1f, 0.25f, PLAYER_BULLET_caveflyer);
++            new_bullet->expire_time = 10;
++            new_bullet->rotation = agent->rotation;
++        }
++
++        for (int ent_idx = (int)(entities.size()) - 1; ent_idx >= 0; ent_idx--) {
++            auto ent = entities[ent_idx];
++            if (ent->type == ENEMY) {
++                ent->face_direction(ent->vx, ent->vy, -1 * PI / 2);
++            }
++
++            if (ent->type != PLAYER_BULLET_caveflyer)
++                continue;
++
++            bool found_wall = false;
++
++            for (int i = 0; i < 2; i++) {
++                for (int j = 0; j < 2; j++) {
++                    int type2 = get_obj_from_floats(ent->x + ent->rx * (2 * i - 1), ent->y + ent->ry * (2 * j - 1));
++                    found_wall = found_wall || type2 == CAVEWALL;
++                }
++            }
++
++            if (found_wall) {
++                ent->will_erase = true;
++                spawn_child(ent, EXPLOSION, .5 * ent->rx);
++            }
++        }
++
++        erase_if_needed();
++    }
++};
++
++std::shared_ptr<CaveFlyerGame> make_caveflyer(void) {
++    return std::make_shared<CaveFlyerGame>();
++}
++
++/* ---------------------CHASER----------------------*/
++const std::string CHASER_NAME = "chaser";
++
++const float ORB_REWARD = 0.04f;
++const float ORB_DIM = 0.3f;
++
++const int LARGE_ORB = 2;
++const int ENEMY_WEAK = 3;
++const int ENEMY_EGG = 4;
++const int MAZE_WALL = 5;
++const int ENEMY_chaser = 6;
++const int ENEMY2 = 7;
++const int ENEMY3 = 8;
++
++const int MARKER_chaser = 1001;
++const int ORB = 1002;
++
++class ChaserGame : public BasicAbstractGame {
++  public:
++    std::shared_ptr<MazeGen> maze_gen;
++    std::vector<int> free_cells;
++    std::vector<bool> is_space_vec;
++    int eat_timeout = 0;
++    int egg_timeout = 0;
++    int eat_time = 0;
++    int total_enemies = 0;
++    int total_orbs = 0;
++    int orbs_collected = 0;
++    int maze_dim = 0;
++
++    ChaserGame()
++        : BasicAbstractGame(CHASER_NAME) {
++        mixrate = 1;
++        maxspeed = .5;
++
++        eat_timeout = 75;
++        egg_timeout = 50;
++
++        maze_gen = nullptr;
++        has_useful_vel_info = false;
++    }
++
++    void load_background_images() override {
++        main_bg_images_ptr = &topdown_simple_backgrounds;
++    }
++
++    void asset_for_type(int type, std::vector<std::string> &names) override {
++        if (type == PLAYER) {
++            names.push_back("misc_assets/enemyFloating_1b.png");
++        } else if (type == ENEMY_chaser) {
++            names.push_back("misc_assets/enemyFlying_1.png");
++        } else if (type == ENEMY2) {
++            names.push_back("misc_assets/enemyFlying_2.png");
++        } else if (type == ENEMY3) {
++            names.push_back("misc_assets/enemyFlying_3.png");
++        } else if (type == LARGE_ORB) {
++            names.push_back("misc_assets/yellowCrystal.png");
++        } else if (type == ENEMY_WEAK) {
++            names.push_back("misc_assets/enemyWalking_1b.png");
++        } else if (type == ENEMY_EGG) {
++            names.push_back("misc_assets/enemySpikey_1b.png");
++        } else if (type == MAZE_WALL) {
++            names.push_back("misc_assets/tileStone_slope.png");
++        }
++    }
++
++    bool use_block_asset(int type) override {
++        return BasicAbstractGame::use_block_asset(type) || (type == MAZE_WALL);
++    }
++
++    void update_agent_velocity() override {
++        if (action_vx != 0)
++            agent->vx = maxspeed * action_vx;
++        if (action_vy != 0)
++            agent->vy = maxspeed * action_vy;
++
++        // handles some edge cases in collision detection that can reduce velocity
++        agent->vx = sign(agent->vx) * maxspeed;
++        agent->vy = sign(agent->vy) * maxspeed;
++    }
++
++    bool is_blocked(const std::shared_ptr<Entity> &src, int target, bool is_horizontal) override {
++        if (target == MAZE_WALL)
++            return true;
++
++        return BasicAbstractGame::is_blocked(src, target, is_horizontal);
++    }
++
++    int image_for_type(int type) override {
++        if (type == ENEMY_chaser) {
++            if (can_eat_enemies()) {
++                return ENEMY_WEAK;
++            } else {
++                int rem = (cur_time / 2) % 4;
++                if (rem == 3)
++                    rem = 1;
++                return ENEMY_chaser + rem;
++            }
++        }
++
++        return BasicAbstractGame::image_for_type(type);
++    }
++
++    void draw_grid_obj(QPainter &p, const QRectF &rect, int type, int theme) override {
++        if (type == ORB) {
++            p.fillRect(QRectF(rect.x() + rect.width() * (1 - ORB_DIM) / 2, rect.y() + rect.height() * (1 - ORB_DIM) / 2, rect.width() * ORB_DIM, rect.height() * ORB_DIM), QColor(0, 255, 0));
++        } else {
++            BasicAbstractGame::draw_grid_obj(p, rect, type, theme);
++        }
++    }
++
++    void handle_agent_collision(const std::shared_ptr<Entity> &obj) override {
++        BasicAbstractGame::handle_agent_collision(obj);
++
++        if (obj->type == LARGE_ORB) {
++            eat_time = cur_time;
++            step_data.reward += ORB_REWARD;
++            obj->will_erase = true;
++        } else if (obj->type == ENEMY_chaser) {
++            if (can_eat_enemies()) {
++                obj->will_erase = true;
++            } else {
++                step_data.done = true;
++            }
++        }
++    }
++
++    void choose_world_dim() override {
++        main_width = maze_dim;
++        main_height = maze_dim;
++    }
++
++    void game_reset() override {
++        int extra_orb_sign = 1;
++
++        if (options.distribution_mode == EasyMode) {
++            maze_dim = 11;
++            total_enemies = 3;
++            extra_orb_sign = 0;
++        } else if (options.distribution_mode == HardMode) {
++            maze_dim = 13;
++            total_enemies = 3;
++            extra_orb_sign = -1;
++        } else if (options.distribution_mode == ExtremeMode) {
++            maze_dim = 19;
++            total_enemies = 5;
++            extra_orb_sign = 1;
++        } else {
++            fassert(false);
++        }
++
++        if (maze_gen == nullptr) {
++            std::shared_ptr<MazeGen> _maze_gen(new MazeGen(&rand_gen, maze_dim));
++            maze_gen = _maze_gen;
++        }
++
++        BasicAbstractGame::game_reset();
++
++        options.center_agent = false;
++
++        agent->rx = .5;
++        agent->ry = .5;
++
++        eat_time = -1 * eat_timeout;
++
++        fill_elem(0, 0, main_width, main_height, MAZE_WALL);
++
++        maze_gen->generate_maze_no_dead_ends();
++
++        free_cells.clear();
++
++        std::vector<std::vector<int>> quadrants;
++        std::vector<int> orbs_for_quadrant;
++        int num_quadrants = 4;
++        int extra_quad = rand_gen.randn(num_quadrants);
++
++        for (int i = 0; i < num_quadrants; i++) {
++            std::vector<int> quadrant;
++            orbs_for_quadrant.push_back(1 + (i == extra_quad ? extra_orb_sign : 0));
++            quadrants.push_back(quadrant);
++        }
++
++        for (int i = 0; i < maze_dim; i++) {
++            for (int j = 0; j < maze_dim; j++) {
++                int obj = maze_gen->grid.get(i + MAZE_OFFSET, j + MAZE_OFFSET);
++
++                set_obj(i, j, obj == WALL_OBJ ? MAZE_WALL : obj);
++
++                if (obj == SPACE) {
++                    int idx = j * maze_dim + i;
++                    free_cells.push_back(idx);
++
++                    int quad_idx = (i >= maze_dim / 2.0 ? 1 : 0) * 2 + (j >= maze_dim / 2.0 ? 1 : 0);
++                    quadrants[quad_idx].push_back(idx);
++                }
++            }
++        }
++
++        for (int i = 0; i < num_quadrants; i++) {
++            int num_orbs = orbs_for_quadrant[i];
++            std::vector<int> quadrant = quadrants[i];
++            std::vector<int> selected_idxs = rand_gen.simple_choose((int)(quadrant.size()), num_orbs);
++
++            for (int j : selected_idxs) {
++                int cell = quadrant[j];
++                spawn_entity_at_idx(cell, 0.4f, LARGE_ORB);
++                set_obj(cell, MARKER_chaser);
++            }
++        }
++
++        free_cells = get_cells_with_type(SPACE);
++        std::vector<int> selected_idxs = rand_gen.simple_choose((int)(free_cells.size()), 1 + total_enemies);
++
++        int start_idx = selected_idxs[0];
++        int start = free_cells[start_idx];
++
++        agent->x = (start % maze_dim) + .5;
++        agent->y = (start / maze_dim) + .5;
++
++        for (int i = 0; i < total_enemies; i++) {
++            int cell = free_cells[selected_idxs[i + 1]];
++            set_obj(cell, MARKER_chaser);
++            spawn_egg(cell);
++        }
++
++        for (int cell : free_cells) {
++            set_obj(cell, ORB);
++        }
++
++        total_orbs = (int)(free_cells.size());
++        orbs_collected = 0;
++
++        std::vector<int> marker_cells = get_cells_with_type(MARKER_chaser);
++
++        for (int cell : marker_cells) {
++            set_obj(cell, SPACE);
++        }
++
++        free_cells.clear();
++        is_space_vec.clear();
++
++        for (int i = 0; i < grid_size; i++) {
++            bool is_space = get_obj(i) != MAZE_WALL;
++
++            if (is_space) {
++                free_cells.push_back(i);
++            }
++
++            is_space_vec.push_back(is_space);
++        }
++    }
++
++    bool can_eat_enemies() {
++        return cur_time - eat_time < eat_timeout;
++    }
++
++    void spawn_egg(int enemy_cell) {
++        auto egg = add_entity((enemy_cell % maze_dim) + .5, (enemy_cell / maze_dim) + .5, 0, 0, .5, ENEMY_EGG);
++        egg->health = egg_timeout;
++    }
++
++    int manhattan_dist(int a, int b) {
++        return abs((a % main_width) - (b % main_width)) + abs((a / main_width) - (b / main_width));
++    }
++
++    void get_adjacent(int idx, std::vector<int> &neighbors) {
++        int x = idx % main_width;
++        int y = idx / main_width;
++
++        for (int i = -1; i <= 1; i++) {
++            for (int j = -1; j <= 1; j++) {
++                if (i == 0 && j == 0)
++                    continue;
++                if (i != 0 && j != 0)
++                    continue;
++
++                int neighbor = to_grid_idx(x + i, y + j);
++
++                if (neighbor != INVALID_IDX) {
++                    neighbors.push_back(neighbor);
++                }
++            }
++        }
++    }
++
++    void game_step() override {
++        BasicAbstractGame::game_step();
++
++        int num_orbs = 0;
++        int num_enemies = 0;
++
++        float default_enemy_speed = .5;
++        float vscale = can_eat_enemies() ? (default_enemy_speed * .5) : default_enemy_speed;
++
++        for (int j = (int)(entities.size()) - 1; j >= 0; j--) {
++            auto ent = entities[j];
++
++            if (ent->type == ORB) {
++                num_orbs++;
++            } else if (ent->type == ENEMY_EGG) {
++                num_enemies++;
++                ent->health -= 1;
++
++                if (ent->health == 0) {
++                    ent->will_erase = true;
++                    auto enemy = spawn_child(ent, ENEMY_chaser, .5);
++                    enemy->smart_step = true;
++                }
++            } else if (ent->type == ENEMY_chaser) {
++                num_enemies++;
++
++                float x = ent->x - .5;
++                float y = ent->y - .5;
++
++                int dist_scale = can_eat_enemies() ? -1 : 1;
++
++                int enemy_idx = to_grid_idx(x, y);
++                int agent_idx = to_grid_idx(agent->x, agent->y);
++
++                bool is_at_junction = fabs(x - round(x)) + fabs(y - round(y)) < .01;
++                bool be_agressive = step_rand_int % 2 == 0;
++
++                if ((ent->vx == 0 && ent->vy == 0) || is_at_junction) {
++                    std::vector<int> adj_elems;
++                    std::vector<int> space_neighbors;
++                    int prev_idx = to_grid_idx(x - sign(ent->vx), y - sign(ent->vy));
++                    get_adjacent(enemy_idx, adj_elems);
++
++                    int min_dist = 2 * main_width;
++
++                    for (int adj : adj_elems) {
++                        if (is_space_vec[adj] && adj != prev_idx) {
++                            int md = manhattan_dist(adj, agent_idx) * dist_scale;
++
++                            if (be_agressive) {
++                                if (md < min_dist) {
++                                    min_dist = md;
++                                    space_neighbors.clear();
++                                    space_neighbors.push_back(adj);
++                                } else if (md == min_dist) {
++                                    space_neighbors.push_back(adj);
++                                }
++                            } else {
++                                space_neighbors.push_back(adj);
++                            }
++                        }
++                    }
++
++                    int neighbor_idx = step_rand_int % space_neighbors.size();
++                    int neighbor = space_neighbors[neighbor_idx];
++
++                    int nx = neighbor % main_width;
++                    int ny = neighbor / main_width;
++
++                    ent->vx = (nx - x) * vscale;
++                    ent->vy = (ny - y) * vscale;
++                }
++            }
++        };
++
++        if (num_enemies < total_enemies) {
++            int selected_idx = step_rand_int % free_cells.size();
++            spawn_egg(free_cells[selected_idx]);
++        }
++
++        int agent_idx = get_agent_index();
++
++        if (get_obj(agent_idx) == ORB) {
++            set_obj(agent_idx, SPACE);
++            step_data.reward += ORB_REWARD;
++            orbs_collected += 1;
++        }
++
++        if (orbs_collected == total_orbs) {
++            step_data.reward += COMPLETION_BONUS;
++            step_data.level_complete = true;
++            step_data.done = true;
++        }
++    }
++
++    void serialize(WriteBuffer *b) override {
++        BasicAbstractGame::serialize(b);
++        b->write_vector_int(free_cells);
++        b->write_vector_bool(is_space_vec);
++        b->write_int(eat_timeout);
++        b->write_int(egg_timeout);
++        b->write_int(eat_time);
++        b->write_int(total_enemies);
++        b->write_int(total_orbs);
++        b->write_int(orbs_collected);
++        b->write_int(maze_dim);
++    }
++
++    void deserialize(ReadBuffer *b) override {
++        BasicAbstractGame::deserialize(b);
++        free_cells = b->read_vector_int();
++        is_space_vec = b->read_vector_bool();
++        eat_timeout = b->read_int();
++        egg_timeout = b->read_int();
++        eat_time = b->read_int();
++        total_enemies = b->read_int();
++        total_orbs = b->read_int();
++        orbs_collected = b->read_int();
++        maze_dim = b->read_int();
++    }
++};
++
++std::shared_ptr<ChaserGame> make_chaser(void) {
++    return std::make_shared<ChaserGame>();
++}
++
++/* ---------------------CLIMBER----------------------*/
++const std::string CLIMBER_NAME = "climber";
++
++const float COIN_REWARD = 1.0f;
++
++const int COIN = 1;
++const int ENEMY_climber = 5;
++const int ENEMY1_climber = 6;
++const int ENEMY2_climber = 7;
++
++const int PLAYER_JUMP = 9;
++const int PLAYER_RIGHT1 = 12;
++const int PLAYER_RIGHT2 = 13;
++
++const int WALL_MID = 15;
++const int WALL_TOP = 16;
++const int ENEMY_BARRIER = 19;
++
++const float PATROL_RANGE = 4;
++
++const int NUM_WALL_THEMES = 4;
++
++class Climber : public BasicAbstractGame {
++  public:
++    bool has_support = false;
++    bool facing_right = false;
++    int coin_quota = 0;
++    int coins_collected = 0;
++    int wall_theme = 0;
++    float gravity = 0.0f;
++    float air_control = 0.0f;
++
++    Climber()
++        : BasicAbstractGame(CLIMBER_NAME) {
++        out_of_bounds_object = WALL_MID;
++    }
++
++    void load_background_images() override {
++        main_bg_images_ptr = &platform_backgrounds;
++    }
++
++    void asset_for_type(int type, std::vector<std::string> &names) override {
++        if (type == PLAYER) {
++            names.push_back("platformer/playerBlue_stand.png");
++            names.push_back("platformer/playerGreen_stand.png");
++            names.push_back("platformer/playerGrey_stand.png");
++            names.push_back("platformer/playerRed_stand.png");
++        } else if (type == PLAYER_JUMP) {
++            names.push_back("platformer/playerBlue_walk4.png");
++            names.push_back("platformer/playerGreen_walk4.png");
++            names.push_back("platformer/playerGrey_walk4.png");
++            names.push_back("platformer/playerRed_walk4.png");
++        } else if (type == PLAYER_RIGHT1) {
++            names.push_back("platformer/playerBlue_walk1.png");
++            names.push_back("platformer/playerGreen_walk1.png");
++            names.push_back("platformer/playerGrey_walk1.png");
++            names.push_back("platformer/playerRed_walk1.png");
++        } else if (type == PLAYER_RIGHT2) {
++            names.push_back("platformer/playerBlue_walk2.png");
++            names.push_back("platformer/playerGreen_walk2.png");
++            names.push_back("platformer/playerGrey_walk2.png");
++            names.push_back("platformer/playerRed_walk2.png");
++        } else if (type == WALL_TOP) {
++            names.push_back("platformer/tileBlue_05.png");
++            names.push_back("platformer/tileGreen_05.png");
++            names.push_back("platformer/tileYellow_06.png");
++            names.push_back("platformer/tileBrown_06.png");
++        } else if (type == WALL_MID) {
++            names.push_back("platformer/tileBlue_08.png");
++            names.push_back("platformer/tileGreen_08.png");
++            names.push_back("platformer/tileYellow_09.png");
++            names.push_back("platformer/tileBrown_09.png");
++        } else if (type == ENEMY1_climber) {
++            names.push_back("platformer/enemySwimming_1.png");
++        } else if (type == ENEMY2_climber) {
++            names.push_back("platformer/enemySwimming_2.png");
++        } else if (type == COIN) {
++            names.push_back("platformer/yellowCrystal.png");
++        }
++    }
++
++    void handle_agent_collision(const std::shared_ptr<Entity> &obj) override {
++        BasicAbstractGame::handle_agent_collision(obj);
++
++        if (obj->type == ENEMY_climber) {
++            step_data.done = true;
++        } else if (obj->type == COIN) {
++            step_data.reward += COIN_REWARD;
++            coins_collected += 1;
++            obj->will_erase = true;
++        }
++    }
++
++    int theme_for_grid_obj(int type) override {
++        if (is_wall(type))
++            return wall_theme;
++
++        return 0;
++    }
++
++    bool will_reflect(int src, int target) override {
++        return BasicAbstractGame::will_reflect(src, target) || (src == ENEMY_climber && (is_wall(target) || target == ENEMY_BARRIER));
++    }
++
++    void update_agent_velocity() override {
++        float mixrate_x = has_support ? mixrate : (mixrate * air_control);
++        agent->vx = (1 - mixrate_x) * agent->vx + mixrate_x * maxspeed * action_vx;
++        if (action_vy > 0)
++            agent->vy = max_jump;
++
++        if (!has_support) {
++            if (agent->vy > -2) {
++                agent->vy -= gravity;
++            }
++        }
++    }
++
++    bool is_wall(int type) {
++        return type == WALL_MID || type == WALL_TOP;
++    }
++
++    bool use_block_asset(int type) override {
++        return BasicAbstractGame::use_block_asset(type) || is_wall(type);
++    }
++
++    bool is_blocked(const std::shared_ptr<Entity> &src, int target, bool is_horizontal) override {
++        if (BasicAbstractGame::is_blocked(src, target, is_horizontal))
++            return true;
++        if (src->type == PLAYER && is_wall(target))
++            return true;
++
++        return false;
++    }
++
++    int image_for_type(int type) override {
++        if (type == PLAYER) {
++            if (!has_support) {
++                return PLAYER_JUMP;
++            } else if (fabs(agent->vx) < .01 && action_vx == 0 && has_support) {
++                return PLAYER;
++            } else {
++                return (cur_time / 5 % 2 == 0 || !has_support) ? PLAYER_RIGHT1 : PLAYER_RIGHT2;
++            }
++        } else if (type == ENEMY_BARRIER) {
++            return -1;
++        }
++
++        return BasicAbstractGame::image_for_type(type);
++    }
++
++    void init_floor_and_walls() {
++        fill_elem(0, 0, main_width, 1, WALL_TOP);
++        fill_elem(0, 0, 1, main_height, WALL_MID);
++        fill_elem(main_width - 1, 0, 1, main_height, WALL_MID);
++        fill_elem(0, main_height - 1, main_width, 1, WALL_MID);
++    }
++
++    int choose_delta_y() {
++        int max_dy = max_jump * max_jump / (2 * gravity);
++        int min_dy = 3;
++
++        return rand_gen.randn(max_dy - min_dy + 1) + min_dy;
++    }
++
++    void generate_platforms() {
++        int difficulty = rand_gen.randn(3);
++        int min_platforms = difficulty * difficulty + 1;
++        int max_platforms = (difficulty + 1) * (difficulty + 1) + 1;
++        int num_platforms = rand_gen.randn(max_platforms - min_platforms + 1) + min_platforms;
++
++        coin_quota = 0;
++        coins_collected = 0;
++
++        int curr_x = rand_gen.randn(main_width - 4) + 2;
++        int curr_y = 0;
++
++        int margin_x = 3;
++        float enemy_prob = options.distribution_mode == EasyMode ? .2 : .5;
++
++        for (int i = 0; i < num_platforms; i++) {
++            int delta_y = choose_delta_y();
++
++            // only spawn enemies that won't be trapped in tight spaces
++            bool can_spawn_enemy = (curr_x >= margin_x) && (curr_x <= main_width - margin_x);
++
++            if (can_spawn_enemy && (rand_gen.rand01() < enemy_prob)) {
++                auto ent = add_entity(curr_x + .5, curr_y + rand_gen.randn(2) + 2 + .5, .15 * (rand_gen.randn(2) * 2 - 1), 0, .5, ENEMY_climber);
++                ent->image_type = ENEMY1_climber;
++                ent->smart_step = true;
++                ent->climber_spawn_x = curr_x + .5;
++                match_aspect_ratio(ent);
++            }
++
++            curr_y += delta_y;
++            int plat_len = 2 + rand_gen.randn(10);
++
++            int vx = rand_gen.randn(2) * 2 - 1;
++            if (curr_x < margin_x)
++                vx = 1;
++            if (curr_x > main_width - margin_x)
++                vx = -1;
++
++            std::vector<int> candidates;
++
++            for (int j = 0; j < plat_len; j++) {
++                int nx = curr_x + (j + 1) * vx;
++                if (nx <= 0 || nx >= main_width - 1)
++                    break;
++                candidates.push_back(nx);
++                set_obj(nx, curr_y, WALL_TOP);
++            }
++
++            if (rand_gen.rand01() < .5 || i == num_platforms - 1) {
++                int coin_x = rand_gen.choose_one(candidates);
++                add_entity(coin_x + .5, curr_y + 1.5, 0, 0, 0.3f, COIN);
++                coin_quota += 1;
++            }
++
++            int next_x = rand_gen.choose_one(candidates);
++            curr_x = next_x;
++        }
++    }
++
++    void choose_world_dim() override {
++        main_width = options.distribution_mode == EasyMode ? 16 : 20;
++        main_height = 64;
++    }
++
++    void game_reset() override {
++        BasicAbstractGame::game_reset();
++
++        gravity = 0.2f;
++        max_jump = 1.5;
++        air_control = 0.15f;
++        maxspeed = .5;
++        has_support = false;
++        facing_right = true;
++
++        agent->rx = .5;
++        agent->ry = .5;
++
++        agent->x = 1 + agent->rx;
++        agent->y = 1 + agent->ry;
++        choose_random_theme(agent);
++        wall_theme = rand_gen.randn(NUM_WALL_THEMES);
++
++        init_floor_and_walls();
++        generate_platforms();
++    }
++
++    bool can_support(int obj) {
++        return is_wall(obj) || obj == out_of_bounds_object;
++    }
++
++    void choose_center(float &cx, float &cy) override {
++        cx = main_width / 2.0;
++        cy = agent->y + main_width / 2.0 - 5 * agent->ry;
++        visibility = main_width;
++    }
++
++    void set_action_xy(int move_action) override {
++        action_vx = move_action / 3 - 1;
++        action_vy = (move_action % 3) - 1;
++        if (action_vy < 0)
++            action_vy = 0;
++
++        if (action_vx > 0)
++            facing_right = true;
++        if (action_vx < 0)
++            facing_right = false;
++
++        int obj_below_1 = get_obj_from_floats(agent->x - (agent->rx - .01), agent->y - (agent->ry + .01));
++        int obj_below_2 = get_obj_from_floats(agent->x + (agent->rx - .01), agent->y - (agent->ry + .01));
++
++        has_support = can_support(obj_below_1) || can_support(obj_below_2);
++
++        if (has_support && action_vy == 1) {
++            action_vy = 1;
++        } else {
++            action_vy = 0;
++        }
++    }
++
++    void game_step() override {
++        BasicAbstractGame::game_step();
++
++        if (action_vx > 0)
++            agent->is_reflected = false;
++        if (action_vx < 0)
++            agent->is_reflected = true;
++
++        for (int i = (int)(entities.size()) - 1; i >= 0; i--) {
++            auto ent = entities[i];
++
++            if (ent->type == ENEMY_climber) {
++                if (ent->x > ent->climber_spawn_x + PATROL_RANGE) {
++                    ent->vx = -1 * fabs(ent->vx);
++                } else if (ent->x < ent->climber_spawn_x - PATROL_RANGE) {
++                    ent->vx = fabs(ent->vx);
++                }
++
++                ent->image_type = cur_time / 5 % 2 == 0 ? ENEMY1_climber : ENEMY2_climber;
++                ent->is_reflected = ent->vx < 0;
++            }
++        }
++
++        if (coin_quota == coins_collected) {
++            step_data.done = true;
++            step_data.reward += COMPLETION_BONUS;
++            step_data.level_complete = true;
++        }
++    }
++
++    void serialize(WriteBuffer *b) override {
++        BasicAbstractGame::serialize(b);
++        b->write_bool(has_support);
++        b->write_bool(facing_right);
++        b->write_int(coin_quota);
++        b->write_int(coins_collected);
++        b->write_int(wall_theme);
++        b->write_float(gravity);
++        b->write_float(air_control);
++    }
++
++    void deserialize(ReadBuffer *b) override {
++        BasicAbstractGame::deserialize(b);
++        has_support = b->read_bool();
++        facing_right = b->read_bool();
++        coin_quota = b->read_int();
++        coins_collected = b->read_int();
++        wall_theme = b->read_int();
++        gravity = b->read_float();
++        air_control = b->read_float();
++    }
++};
++
++std::shared_ptr<Climber> make_climber(void) {
++    return std::make_shared<Climber>();
++}
++
++/* ---------------------COINRUN----------------------*/
++
++const std::string COINRUN_NAME = "coinrun";
++
++const int SAW = 2;
++const int SAW2 = 3;
++const int ENEMY_coinrun = 5;
++const int ENEMY1_coinrun = 6;
++const int ENEMY2_coinrun = 7;
++
++const int LAVA_MID = 17;
++const int LAVA_TOP = 18;
++
++const int CRATE = 20;
++
++std::vector<std::string> WALKING_ENEMIES = {"slimeBlock", "slimePurple", "slimeBlue", "slimeGreen", "mouse", "snail", "ladybug", "wormGreen", "wormPink"};
++std::vector<std::string> PLAYER_THEME_COLORS = {"Beige", "Blue", "Green", "Pink", "Yellow"};
++std::vector<std::string> GROUND_THEMES = {"Dirt", "Grass", "Planet", "Sand", "Snow", "Stone"};
++
++const int NUM_GROUND_THEMES = (int)(GROUND_THEMES.size());
++
++class CoinRun : public BasicAbstractGame {
++  public:
++    std::shared_ptr<Entity> goal;
++    float last_agent_y = 0.0f;
++    int wall_theme = 0;
++    bool has_support = false;
++    bool facing_right = false;
++    bool is_on_crate = false;
++    float gravity = 0.0f;
++    float air_control = 0.0f;
++
++    CoinRun()
++        : BasicAbstractGame(COINRUN_NAME) {
++        visibility = 13;
++        mixrate = 0.2f;
++
++        main_width = 64;
++        main_height = 64;
++
++        out_of_bounds_object = WALL_MID;
++    }
++
++    void load_background_images() override {
++        main_bg_images_ptr = &platform_backgrounds;
++    }
++
++    QRectF get_adjusted_image_rect(int type, const QRectF &rect) override {
++        if (type == PLAYER || type == PLAYER_JUMP || type == PLAYER_RIGHT1 || type == PLAYER_RIGHT2) {
++            return adjust_rect(rect, QRectF(0, -.7415, 1, 1.7415));
++        }
++
++        return BasicAbstractGame::get_adjusted_image_rect(type, rect);
++    }
++
++    void asset_for_type(int type, std::vector<std::string> &names) override {
++        if (type == PLAYER) {
++            for (const auto &color : PLAYER_THEME_COLORS) {
++                names.push_back("kenney/Players/128x256/" + color + "/alien" + color + "_stand.png");
++            }
++        } else if (type == PLAYER_JUMP) {
++            for (const auto &color : PLAYER_THEME_COLORS) {
++                names.push_back("kenney/Players/128x256/" + color + "/alien" + color + "_jump.png");
++            }
++        } else if (type == PLAYER_RIGHT1) {
++            for (const auto &color : PLAYER_THEME_COLORS) {
++                names.push_back("kenney/Players/128x256/" + color + "/alien" + color + "_walk1.png");
++            }
++        } else if (type == PLAYER_RIGHT2) {
++            for (const auto &color : PLAYER_THEME_COLORS) {
++                names.push_back("kenney/Players/128x256/" + color + "/alien" + color + "_walk2.png");
++            }
++        } else if (type == ENEMY1_coinrun) {
++            for (const auto &enemy : WALKING_ENEMIES) {
++                names.push_back("kenney/Enemies/" + enemy + ".png");
++            }
++        } else if (type == ENEMY2_coinrun) {
++            for (const auto &enemy : WALKING_ENEMIES) {
++                names.push_back("kenney/Enemies/" + enemy + "_move.png");
++            }
++        } else if (type == GOAL) {
++            names.push_back("kenney/Items/coinGold.png");
++        } else if (type == WALL_TOP) {
++            for (const auto &ground : GROUND_THEMES) {
++                names.push_back("kenney/Ground/" + ground + "/" + to_lower(ground) + "Mid.png");
++            }
++        } else if (type == WALL_MID) {
++            for (const auto &ground : GROUND_THEMES) {
++                names.push_back("kenney/Ground/" + ground + "/" + to_lower(ground) + "Center.png");
++            }
++        } else if (type == LAVA_TOP) {
++            names.push_back("kenney/Tiles/lavaTop_low.png");
++        } else if (type == LAVA_MID) {
++            names.push_back("kenney/Tiles/lava.png");
++        } else if (type == SAW) {
++            names.push_back("kenney/Enemies/sawHalf.png");
++        } else if (type == SAW2) {
++            names.push_back("kenney/Enemies/sawHalf_move.png");
++        } else if (type == CRATE) {
++            names.push_back("kenney/Tiles/boxCrate.png");
++            names.push_back("kenney/Tiles/boxCrate_double.png");
++            names.push_back("kenney/Tiles/boxCrate_single.png");
++            names.push_back("kenney/Tiles/boxCrate_warning.png");
++        }
++    }
++
++    void handle_agent_collision(const std::shared_ptr<Entity> &obj) override {
++        BasicAbstractGame::handle_agent_collision(obj);
++
++        if (obj->type == ENEMY_coinrun) {
++            step_data.done = true;
++        } else if (obj->type == SAW) {
++            step_data.done = true;
++        }
++    }
++
++    int theme_for_grid_obj(int type) override {
++        if (is_wall(type))
++            return wall_theme;
++
++        return 0;
++    }
++
++    bool will_reflect(int src, int target) override {
++        return BasicAbstractGame::will_reflect(src, target) || (src == ENEMY_coinrun && (is_wall(target) || target == ENEMY_BARRIER));
++    }
++
++    void handle_grid_collision(const std::shared_ptr<Entity> &obj, int type, int i, int j) override {
++        if (obj->type == PLAYER) {
++            if (type == GOAL) {
++                step_data.reward += GOAL_REWARD;
++                step_data.done = true;
++                step_data.level_complete = true;
++            } else if (is_lava(type)) {
++                step_data.done = true;
++            }
++        }
++    }
++
++    void update_agent_velocity() override {
++        float mixrate_x = has_support ? mixrate : (mixrate * air_control);
++        agent->vx = (1 - mixrate_x) * agent->vx + mixrate_x * maxspeed * action_vx;
++        if (fabs(agent->vx) < mixrate_x * maxspeed)
++            agent->vx = 0;
++        if (action_vy > 0) {
++            agent->vy = max_jump;
++        } else {
++            if (has_support) {
++                agent->vy += .2 * action_vy;
++            }
++        }
++
++        if (!(has_support && action_vy > 0)) {
++            agent->vy -= gravity;
++            agent->vy = clip_abs(agent->vy, max_jump);
++        }
++    }
++
++    bool is_wall(int type) {
++        return type == WALL_MID || type == WALL_TOP;
++    }
++
++    bool is_lava(int type) {
++        return type == LAVA_MID || type == LAVA_TOP;
++    }
++
++    bool use_block_asset(int type) override {
++        return BasicAbstractGame::use_block_asset(type) || is_wall(type);
++    }
++
++    bool is_blocked_ents(const std::shared_ptr<Entity> &src, const std::shared_ptr<Entity> &target, bool is_horizontal) override {
++        if (target->type == CRATE && !is_horizontal) {
++            if (agent->vy >= 0)
++                return false;
++            if (action_vy < 0)
++                return false;
++            if (last_agent_y < (target->y + target->ry + agent->ry))
++                return false;
++
++            is_on_crate = true;
++
++            return true;
++        }
++
++        return BasicAbstractGame::is_blocked_ents(src, target, is_horizontal);
++    }
++
++    bool is_blocked(const std::shared_ptr<Entity> &src, int target, bool is_horizontal) override {
++        if (BasicAbstractGame::is_blocked(src, target, is_horizontal))
++            return true;
++        if (src->type == PLAYER && is_wall(target))
++            return true;
++
++        return false;
++    }
++
++    int image_for_type(int type) override {
++        if (type == PLAYER) {
++            if (fabs(agent->vx) < .01 && action_vx == 0 && has_support) {
++                return PLAYER;
++            } else {
++                return (cur_time / 5 % 2 == 0 || !has_support) ? PLAYER_RIGHT1 : PLAYER_RIGHT2;
++            }
++        } else if (type == ENEMY_BARRIER) {
++            return -1;
++        }
++
++        return BasicAbstractGame::image_for_type(type);
++    }
++
++    void fill_block_top(int x, int y, int dx, int dy, char fill, char top) {
++        fassert(dy > 0);
++        fill_elem(x, y, dx, dy - 1, fill);
++        fill_elem(x, y + dy - 1, dx, 1, top);
++    }
++
++    void fill_ground_block(int x, int y, int dx, int dy) {
++        fill_block_top(x, y, dx, dy, WALL_MID, WALL_TOP);
++    }
++
++    void fill_lava_block(int x, int y, int dx, int dy) {
++        fill_block_top(x, y, dx, dy, LAVA_MID, LAVA_TOP);
++    }
++
++    void init_floor_and_walls() {
++        fill_elem(0, 0, main_width, 1, WALL_TOP);
++        fill_elem(0, 0, 1, main_height, WALL_MID);
++        fill_elem(main_width - 1, 0, 1, main_height, WALL_MID);
++        fill_elem(0, main_height - 1, main_width, 1, WALL_MID);
++    }
++
++    void create_saw_enemy(int x, int y) {
++        add_entity(x + .5, y + .5, 0, 0, .5, SAW);
++    }
++
++    void create_enemy(int x, int y) {
++        auto ent = add_entity(x + .5, y + .5, .15 * (rand_gen.randn(2) * 2 - 1), 0, .5, ENEMY_coinrun);
++        ent->smart_step = true;
++        ent->image_type = ENEMY1_coinrun;
++        ent->render_z = 1;
++        choose_random_theme(ent);
++    }
++
++    void create_crate(int x, int y) {
++        auto ent = add_entity(x + .5, y + .5, 0, 0, .5, CRATE);
++        choose_random_theme(ent);
++    }
++
++    void generate_coin_to_the_right() {
++        int max_difficulty = 3;
++        int dif = rand_gen.randn(max_difficulty) + 1;
++
++        int num_sections = rand_gen.randn(dif) + dif;
++        int curr_x = 5;
++        int curr_y = 1;
++
++        int pit_threshold = dif;
++        int danger_type = rand_gen.randn(3);
++
++        bool allow_pit = (options.debug_mode & (1 << 1)) == 0;
++        bool allow_crate = (options.debug_mode & (1 << 2)) == 0;
++        bool allow_dy = (options.debug_mode & (1 << 3)) == 0;
++
++        int w = main_width;
++
++        float _max_dy = max_jump * max_jump / (2 * gravity);
++        float _max_dx = maxspeed * 2 * max_jump / gravity;
++
++        int max_dy = (_max_dy - .5);
++        int max_dx = (_max_dx - .5);
++
++        bool allow_monsters = true;
++
++        if (options.distribution_mode == EasyMode) {
++            allow_monsters = false;
++        }
++
++        for (int section_idx = 0; section_idx < num_sections; section_idx++) {
++            if (curr_x + 15 >= w) {
++                break;
++            }
++
++            int dy = rand_gen.randn(4) + 1 + int(dif / 3);
++
++            if (!allow_dy) {
++                dy = 0;
++            }
++
++            if (dy > max_dy) {
++                dy = max_dy;
++            }
++
++            if (curr_y >= 20) {
++                dy *= -1;
++            } else if (curr_y >= 5 && rand_gen.randn(2) == 1) {
++                dy *= -1;
++            }
++
++            int dx = rand_gen.randn(2 * dif) + 3 + int(dif / 3);
++
++            curr_y += dy;
++
++            if (curr_y < 1) {
++                curr_y = 1;
++            }
++
++            bool use_pit = allow_pit && (dx > 7) && (curr_y > 3) && (rand_gen.randn(20) >= pit_threshold);
++
++            if (use_pit) {
++                int x1 = rand_gen.randn(3) + 1;
++                int x2 = rand_gen.randn(3) + 1;
++                int pit_width = dx - x1 - x2;
++
++                if (pit_width > max_dx) {
++                    pit_width = max_dx;
++                    x2 = dx - x1 - pit_width;
++                }
++
++                fill_ground_block(curr_x, 0, x1, curr_y);
++                fill_ground_block(curr_x + dx - x2, 0, x2, curr_y);
++
++                int lava_height = rand_gen.randn(curr_y - 3) + 1;
++
++                if (danger_type == 0) {
++                    fill_lava_block(curr_x + x1, 1, pit_width, lava_height);
++                } else if (danger_type == 1) {
++                    for (int ei = 0; ei < pit_width; ei++) {
++                        create_saw_enemy(curr_x + x1 + ei, 1);
++                    }
++                } else if (danger_type == 2) {
++                    for (int ei = 0; ei < pit_width; ei++) {
++                        create_enemy(curr_x + x1 + ei, 1);
++                    }
++                }
++
++                if (pit_width > 4) {
++                    int x3, w1;
++                    if (pit_width == 5) {
++                        x3 = 1 + rand_gen.randn(2);
++                        w1 = 1 + rand_gen.randn(2);
++                    } else if (pit_width == 6) {
++                        x3 = 2 + rand_gen.randn(2);
++                        w1 = 1 + rand_gen.randn(2);
++                    } else {
++                        x3 = 2 + rand_gen.randn(2);
++                        int x4 = 2 + rand_gen.randn(2);
++                        w1 = pit_width - x3 - x4;
++                    }
++
++                    fill_ground_block(curr_x + x1 + x3, curr_y - 1, w1, 1);
++                }
++
++            } else {
++                fill_ground_block(curr_x, 0, dx, curr_y);
++
++                int ob1_x = -1;
++                int ob2_x = -1;
++
++                if (rand_gen.randn(10) < (2 * dif) && dx > 3) {
++                    ob1_x = curr_x + rand_gen.randn(dx - 2) + 1;
++                    create_saw_enemy(ob1_x, curr_y);
++                }
++
++                if (rand_gen.randn(10) < dif && dx > 3 && (max_dx >= 4) && allow_monsters) {
++                    ob2_x = curr_x + rand_gen.randn(dx - 2) + 1;
++
++                    create_enemy(ob2_x, curr_y);
++                }
++
++                if (allow_crate) {
++                    for (int i = 0; i < 2; i++) {
++                        int crate_x = curr_x + rand_gen.randn(dx - 2) + 1;
++
++                        if (rand_gen.randn(2) == 1 && ob1_x != crate_x && ob2_x != crate_x) {
++                            int pile_height = rand_gen.randn(3) + 1;
++
++                            for (int j = 0; j < pile_height; j++) {
++                                create_crate(crate_x, curr_y + j);
++                            }
++                        }
++                    }
++                }
++            }
++
++            if (!is_wall(get_obj(curr_x - 1, curr_y))) {
++                set_obj(curr_x - 1, curr_y, ENEMY_BARRIER);
++            }
++
++            curr_x += dx;
++
++            set_obj(curr_x, curr_y, ENEMY_BARRIER);
++        }
++
++        set_obj(curr_x, curr_y, GOAL);
++
++        fill_ground_block(curr_x, 0, 1, curr_y);
++        fill_elem(curr_x + 1, 0, main_width - curr_x - 1, main_height, WALL_MID);
++    }
++
++    void game_reset() override {
++        BasicAbstractGame::game_reset();
++
++        gravity = 0.2f;
++        max_jump = 1.5;
++        air_control = 0.15f;
++        maxspeed = .5;
++        has_support = false;
++        facing_right = true;
++
++        if (options.distribution_mode == EasyMode) {
++            agent->image_theme = 0;
++            wall_theme = 0;
++            background_index = 0;
++        } else {
++            choose_random_theme(agent);
++            wall_theme = rand_gen.randn(NUM_GROUND_THEMES);
++        }
++
++        agent->rx = .5;
++        agent->ry = 0.5787f;
++
++        agent->x = 1 + agent->rx;
++        agent->y = 1 + agent->ry;
++        last_agent_y = agent->y;
++        is_on_crate = false;
++
++        init_floor_and_walls();
++        generate_coin_to_the_right();
++    }
++
++    bool can_support(int obj) {
++        return is_wall(obj) || obj == out_of_bounds_object;
++    }
++
++    void set_action_xy(int move_action) override {
++        action_vx = move_action / 3 - 1;
++        action_vy = (move_action % 3) - 1;
++
++        if (action_vx > 0)
++            facing_right = true;
++        if (action_vx < 0)
++            facing_right = false;
++
++        int obj_below_1 = get_obj_from_floats(agent->x - (agent->rx - .01), agent->y - (agent->ry + .01));
++        int obj_below_2 = get_obj_from_floats(agent->x + (agent->rx - .01), agent->y - (agent->ry + .01));
++
++        has_support = (is_on_crate || can_support(obj_below_1) || can_support(obj_below_2)) && agent->vy == 0;
++
++        is_on_crate = false;
++
++        if (action_vy == 1) {
++            if (!has_support) {
++                action_vy = 0;
++            }
++        }
++    }
++
++    void game_step() override {
++        BasicAbstractGame::game_step();
++
++        if (action_vx > 0)
++            agent->is_reflected = false;
++        if (action_vx < 0)
++            agent->is_reflected = true;
++
++        for (int i = (int)(entities.size()) - 1; i >= 0; i--) {
++            auto ent = entities[i];
++
++            if (ent->type == ENEMY_coinrun) {
++                auto trail = add_entity_rxy(ent->x, ent->y - ent->ry * .5, 0, 0.01f, 0.3f, 0.2f, TRAIL);
++                trail->expire_time = 8;
++                trail->alpha = .5;
++
++                ent->image_type = cur_time / 5 % 2 == 0 ? ENEMY1_coinrun : ENEMY2_coinrun;
++                ent->is_reflected = ent->vx > 0;
++            } else if (ent->type == SAW) {
++                ent->image_type = cur_time % 2 == 0 ? SAW : SAW2;
++            }
++        }
++
++        last_agent_y = agent->y;
++    }
++
++    void serialize(WriteBuffer *b) override {
++        BasicAbstractGame::serialize(b);
++        b->write_float(last_agent_y);
++        b->write_int(wall_theme);
++        b->write_bool(has_support);
++        b->write_bool(facing_right);
++        b->write_bool(is_on_crate);
++        b->write_float(gravity);
++        b->write_float(air_control);
++    }
++
++    void deserialize(ReadBuffer *b) override {
++        BasicAbstractGame::deserialize(b);
++        last_agent_y = b->read_float();
++        wall_theme = b->read_int();
++        has_support = b->read_bool();
++        facing_right = b->read_bool();
++        is_on_crate = b->read_bool();
++        gravity = b->read_float();
++        air_control = b->read_float();
++    }
++};
++
++std::shared_ptr<CoinRun> make_coinrun(void) {
++    return std::make_shared<CoinRun>();
++}
++/* ---------------------DODGEBALL----------------------*/
++const std::string DODGEBALL_NAME = "dodgeball";
++
++
++const int LAVA_WALL = 1;
++const int PLAYER_BALL = 3;
++const int ENEMY_dodgeball = 4;
++const int DOOR = 5;
++const int ENEMY_BALL = 6;
++const int DOOR_OPEN = 7;
++const int DUST_CLOUD = 8;
++
++const int OOB_WALL = 10;
++
++const int ENEMY_REWARD = 2.0f;
++const int NUM_ENEMY_THEMES = 7;
++
++const float ENEMY_VEL = 0.05f;
++const float BALL_V_ROT = PI * 0.23f;
++
++class DodgeballGame : public BasicAbstractGame {
++  public:
++    std::vector<QRectF> rooms;
++    float min_dim = 0.0f;
++    float hard_min_dim = 0.0f;
++    float ball_vscale = 0.0f;
++    float ball_r = 0.0f;
++    int last_fire_time = 0;
++    int num_enemies = 0;
++    int enemy_fire_delay = 0;
++
++    DodgeballGame()
++        : BasicAbstractGame(DODGEBALL_NAME) {
++        mixrate = .5;
++
++        enemy_fire_delay = 50;
++
++        out_of_bounds_object = OOB_WALL;
++    }
++
++    void load_background_images() override {
++        main_bg_images_ptr = &topdown_backgrounds;
++    }
++
++    void asset_for_type(int type, std::vector<std::string> &names) override {
++        if (type == PLAYER) {
++            names.push_back("misc_assets/character12.png");
++        } else if (type == PLAYER_BALL) {
++            names.push_back("misc_assets/ball_soccer1.png");
++        } else if (type == ENEMY_dodgeball) {
++            names.push_back("misc_assets/character1.png");
++            names.push_back("misc_assets/character2.png");
++            names.push_back("misc_assets/character3.png");
++            names.push_back("misc_assets/character4.png");
++            names.push_back("misc_assets/character5.png");
++            names.push_back("misc_assets/character6.png");
++            names.push_back("misc_assets/character7.png");
++            names.push_back("misc_assets/character8.png");
++            names.push_back("misc_assets/character9.png");
++            names.push_back("misc_assets/character10.png");
++            names.push_back("misc_assets/character11.png");
++        } else if (type == DOOR) {
++            names.push_back("misc_assets/blockRed.png");
++        } else if (type == ENEMY_BALL) {
++            names.push_back("misc_assets/ball_soccer2.png");
++        } else if (type == DOOR_OPEN) {
++            names.push_back("misc_assets/blockGreen.png");
++        } else if (type == LAVA_WALL) {
++            names.push_back("misc_assets/tileStone_slope2.png");
++        } else if (type == OOB_WALL) {
++            names.push_back("misc_assets/tileStone_slope2.png");
++        } else if (type == DUST_CLOUD) {
++            names.push_back("misc_assets/spaceEffect1.png");
++            names.push_back("misc_assets/spaceEffect2.png");
++            names.push_back("misc_assets/spaceEffect3.png");
++            names.push_back("misc_assets/spaceEffect4.png");
++            names.push_back("misc_assets/spaceEffect5.png");
++            names.push_back("misc_assets/spaceEffect6.png");
++            names.push_back("misc_assets/spaceEffect7.png");
++            names.push_back("misc_assets/spaceEffect8.png");
++            names.push_back("misc_assets/spaceEffect9.png");
++        }
++    }
++
++    int image_for_type(int type) override {
++        if (type == DOOR) {
++            return num_enemies == 0 ? DOOR_OPEN : DOOR;
++        }
++
++        return BasicAbstractGame::image_for_type(type);
++    }
++
++    bool will_reflect(int src, int target) override {
++        return BasicAbstractGame::will_reflect(src, target) || (src == ENEMY_dodgeball && (target == LAVA_WALL || target == out_of_bounds_object));
++    }
++
++    void handle_agent_collision(const std::shared_ptr<Entity> &obj) override {
++        BasicAbstractGame::handle_agent_collision(obj);
++
++        if (obj->type == ENEMY_dodgeball) {
++            step_data.done = true;
++        } else if (obj->type == ENEMY_BALL) {
++            step_data.done = true;
++        } else if (obj->type == DOOR) {
++            if (num_enemies == 0) {
++                step_data.done = true;
++                step_data.reward += COMPLETION_BONUS;
++                step_data.level_complete = true;
++            }
++        } else if (obj->type == LAVA_WALL) {
++            step_data.done = true;
++        }
++    }
++
++    void handle_collision(const std::shared_ptr<Entity> &src, const std::shared_ptr<Entity> &target) override {
++        if (target->type == PLAYER_BALL) {
++            if (src->type == LAVA_WALL) {
++                target->will_erase = true;
++            } else if (src->type == ENEMY_dodgeball) {
++                src->health -= 1;
++                target->will_erase = true;
++
++                if (src->health <= 0 && !src->will_erase) {
++                    src->will_erase = true;
++                    step_data.reward += ENEMY_REWARD;
++
++                    auto ent = spawn_child(src, DUST_CLOUD, src->rx);
++                    ent->vrot = PI / 0.3f;
++                    ent->grow_rate = 1.0f / 1.2f;
++                    ent->expire_time = 4;
++                    ent->alpha_decay = 0.9f;
++                    choose_step_random_theme(ent);
++                }
++            }
++        } else if (target->type == ENEMY_BALL) {
++            if (src->type == LAVA_WALL) {
++                target->will_erase = true;
++            }
++
++            // Uncomment to enable ball collisions
++            // else if (src->type == PLAYER_BALL) {
++            //     src->will_erase = true;
++            //     target->will_erase = true;
++            // }
++        }
++    }
++
++    bool use_block_asset(int type) override {
++        return BasicAbstractGame::use_block_asset(type) || (type == LAVA_WALL) || (type == DOOR) || (type == DOOR_OPEN);
++    }
++
++    void add_room(QRectF room) {
++        float rw = room.width();
++        float rh = room.height();
++
++        if ((rw >= min_dim || rh >= min_dim) && (rw >= hard_min_dim) && (rh >= hard_min_dim)) {
++            rooms.push_back(room);
++        }
++    }
++
++    void split_room(QRectF room, float thickness) {
++        bool will_split_width = rand_gen.rand01() < .5;
++        bool choice2 = rand_gen.rand01() < .5;
++
++        if (room.width() < min_dim)
++            will_split_width = false;
++        if (room.height() < min_dim)
++            will_split_width = true;
++
++        float rx = room.x();
++        float ry = room.y();
++        float rw = room.width();
++        float rh = room.height();
++
++        float gap = .25 * (rand_gen.randn(3) + 1);
++        float pct = 1 - gap;
++
++        if (!will_split_width) {
++            float wy, wh, remy;
++
++            if (choice2) {
++                wy = ry;
++                remy = ry + pct * rh;
++                wh = pct * rh;
++            } else {
++                wy = ry + (1 - pct) * rh;
++                remy = ry;
++                wh = pct * rh;
++            }
++
++            add_entity_rxy(rx + rw / 2, wy + wh / 2, 0, 0, thickness, wh / 2, LAVA_WALL);
++
++            float nextw = rw / 2 - thickness;
++
++            add_room(QRectF(rx, wy, nextw, wh));
++            add_room(QRectF(rx + rw / 2 + thickness, wy, nextw, wh));
++            add_room(QRectF(rx, remy, rw, rh - wh));
++        } else {
++            float wx, ww, remx;
++
++            if (choice2) {
++                wx = rx;
++                remx = rx + pct * rw;
++                ww = pct * rw;
++            } else {
++                wx = rx + (1 - pct) * rw;
++                remx = rx;
++                ww = pct * rw;
++            }
++
++            add_entity_rxy(wx + ww / 2, ry + rh / 2, 0, 0, ww / 2, thickness, LAVA_WALL);
++
++            float nexth = rh / 2 - thickness;
++
++            add_room(QRectF(wx, ry, ww, nexth));
++            add_room(QRectF(wx, ry + rh / 2 + thickness, ww, nexth));
++            add_room(QRectF(remx, ry, rw - ww, rh));
++        }
++    }
++
++    void choose_vel(const std::shared_ptr<Entity> &ent) {
++        float vel = ENEMY_VEL * (rand_gen.randn(2) * 2 - 1);
++
++        if (rand_gen.randn(2) == 0) {
++            ent->vx = vel;
++            ent->vy = 0;
++        } else {
++            ent->vy = vel;
++            ent->vx = 0;
++        }
++
++        ent->spawn_time = rand_gen.randn(50) + 25;
++    }
++
++    float get_tile_aspect_ratio(const std::shared_ptr<Entity> &ent) override {
++        if (ent->type == LAVA_WALL) {
++            return ent->rx > ent->ry ? 1 : -1;
++        }
++
++        return 0;
++    }
++
++    void choose_world_dim() override {
++        int world_dim = 20;
++
++        if (options.distribution_mode == MemoryMode) {
++            world_dim = 40;
++        }
++
++        main_width = world_dim;
++        main_height = world_dim;
++    }
++
++    void game_reset() override {
++        BasicAbstractGame::game_reset();
++
++        options.center_agent = options.distribution_mode == MemoryMode;
++
++        last_fire_time = 0;
++
++        rooms.clear();
++        rooms.push_back(QRectF(0, 0, main_width, main_height));
++
++        int distribution_mode = options.distribution_mode;
++
++        float thickness = 0.3f;
++        float enemy_r = .5;
++        float exit_r = .75;
++        ball_r = .25;
++        ball_vscale = .25;
++        int num_iterations;
++        int max_extra_enemies = 3;
++
++        if (distribution_mode == EasyMode) {
++            num_iterations = 2;
++            thickness *= 2;
++            enemy_r *= 2;
++            ball_r *= 2;
++            ball_vscale *= 2;
++            maxspeed = .75;
++            agent->rx = 1;
++            agent->ry = 1;
++            exit_r *= 2;
++        } else if (distribution_mode == HardMode) {
++            num_iterations = 4;
++            thickness *= 1.5;
++            enemy_r *= 1.5;
++            ball_r *= 1.5;
++            ball_vscale *= 1.5;
++            maxspeed = .5;
++            agent->rx = .75;
++            agent->ry = .75;
++        } else if (distribution_mode == ExtremeMode) {
++            num_iterations = 8;
++            maxspeed = .25;
++        } else if (distribution_mode == MemoryMode) {
++            num_iterations = 16;
++            thickness *= 1.5;
++            enemy_r *= 1.5;
++            ball_r *= 1.5;
++            ball_vscale *= 1.5;
++            maxspeed = .5;
++            agent->rx = .75;
++            agent->ry = .75;
++            max_extra_enemies = 16;
++        } else {
++            fassert(false);
++        }
++
++        hard_min_dim = 4 * agent->rx + 2 * thickness + .5;
++        min_dim = agent->rx * 8 + .5;
++
++        for (int iteration = 0; iteration < num_iterations; iteration++) {
++            if (rooms.size() == 0)
++                break;
++
++            int idx = rand_gen.randn((int)(rooms.size()));
++            QRectF room = rooms[idx];
++            rooms.erase(rooms.begin() + idx);
++
++            split_room(room, thickness);
++        }
++
++        float border_r = 0;
++
++        float doorlen = 2 * exit_r;
++
++        int exit_wall_choice = rand_gen.randn(4);
++
++        if (exit_wall_choice == 0) {
++            spawn_entity_rxy(doorlen / 2, exit_r, DOOR, 2 * border_r, 2 * border_r, main_width - 4 * border_r, 2 * exit_r);
++        } else if (exit_wall_choice == 1) {
++            spawn_entity_rxy(doorlen / 2, exit_r, DOOR, 2 * border_r, main_height - 2 * border_r - 2 * exit_r, main_width - 4 * border_r, 2 * exit_r);
++        } else if (exit_wall_choice == 2) {
++            spawn_entity_rxy(exit_r, doorlen / 2, DOOR, 2 * border_r, 2 * border_r, 2 * exit_r, main_height - 4 * border_r);
++        } else if (exit_wall_choice == 3) {
++            spawn_entity_rxy(exit_r, doorlen / 2, DOOR, main_width - 2 * border_r - 2 * exit_r, 2 * border_r, 2 * exit_r, main_height - 4 * border_r);
++        }
++
++        reposition_agent();
++
++        num_enemies = rand_gen.randn(max_extra_enemies + 1) + 3;
++
++        spawn_entities(num_enemies, enemy_r, ENEMY_dodgeball, 0, 0, main_width, main_height);
++
++        int enemy_theme = rand_gen.randn(NUM_ENEMY_THEMES);
++
++        for (auto ent : entities) {
++            if (ent->type == ENEMY_dodgeball) {
++                ent->image_theme = enemy_theme;
++                ent->health = 1;
++                ent->spawn_time = 0;
++                ent->fire_time = 10;
++                ent->collides_with_entities = true;
++                ent->smart_step = true;
++                choose_vel(ent);
++                ent->face_direction(ent->vx, ent->vy);
++            } else if (ent->type == LAVA_WALL) {
++                ent->collides_with_entities = true;
++            }
++        }
++
++        agent->face_direction(1, 0);
++    }
++
++    void fire_ball(const std::shared_ptr<Entity> &ent, float vx, float vy) {
++        auto new_ball = add_entity(ent->x, ent->y, vx * ball_vscale, vy * ball_vscale, ball_r, ENEMY_BALL);
++        ent->fire_time = cur_time + rand_gen.randn(4);
++        new_ball->vrot = BALL_V_ROT;
++        new_ball->expire_time = 50;
++    }
++
++    void game_step() override {
++        BasicAbstractGame::game_step();
++
++        float vx = last_move_action / 3 - 1;
++        float vy = last_move_action % 3 - 1;
++
++        agent->face_direction(vx, vy);
++
++        if (special_action == 1 && (cur_time - last_fire_time) >= 7) {
++            auto new_ball = add_entity(agent->x, agent->y, vx * ball_vscale, vy * ball_vscale, ball_r, PLAYER_BALL);
++            new_ball->collides_with_entities = true;
++            new_ball->expire_time = 50;
++            new_ball->vrot = BALL_V_ROT;
++            last_fire_time = cur_time;
++        }
++
++        num_enemies = 0;
++
++        for (int i = (int)(entities.size()) - 1; i >= 0; i--) {
++            auto ent = entities[i];
++
++            if (ent->type == ENEMY_dodgeball) {
++                num_enemies++;
++
++                if (ent->spawn_time == 0) {
++                    choose_vel(ent);
++                } else {
++                    ent->spawn_time -= 1;
++                }
++
++                bool can_fire = (cur_time - ent->fire_time) >= enemy_fire_delay;
++
++                if (can_fire) {
++                    float dx = ent->x - agent->x;
++                    float dy = ent->y - agent->y;
++
++                    float bvelx = (ent->x < agent->x ? 1 : -1);
++                    float bvely = (ent->y < agent->y ? 1 : -1);
++
++                    if (fabs(dx) < 1) {
++                        fire_ball(ent, 0, bvely);
++                        ent->vx = 0;
++                        ent->vy = bvely * ENEMY_VEL;
++                    } else if (fabs(dy) < 1) {
++                        fire_ball(ent, bvelx, 0);
++                        ent->vx = bvelx * ENEMY_VEL;
++                        ent->vy = 0;
++                    }
++
++                    // Uncomment to enable diagonal firing
++                    // else if (fabs(fabs(dx) - fabs(dy)) < 1) {
++                    //     fire_ball(ent, bvelx, bvely);
++                    // }
++                }
++
++                ent->face_direction(ent->vx, ent->vy);
++            } else if (ent->type == PLAYER_BALL || ent->type == ENEMY_BALL) {
++                if (ent->x < ent->rx || ent->x > (main_width - ent->rx)) {
++                    ent->will_erase = true;
++                } else if (ent->y < ent->ry || ent->y > (main_height - ent->ry)) {
++                    ent->will_erase = true;
++                }
++            }
++        }
++
++        erase_if_needed();
++    }
++
++    void serialize(WriteBuffer *b) override {
++        BasicAbstractGame::serialize(b);
++        b->write_float(min_dim);
++        b->write_float(hard_min_dim);
++        b->write_float(ball_vscale);
++        b->write_float(ball_r);
++        b->write_int(last_fire_time);
++        b->write_int(num_enemies);
++        b->write_int(enemy_fire_delay);
++    }
++
++    void deserialize(ReadBuffer *b) override {
++        BasicAbstractGame::deserialize(b);
++        min_dim = b->read_float();
++        hard_min_dim = b->read_float();
++        ball_vscale = b->read_float();
++        ball_r = b->read_float();
++        last_fire_time = b->read_int();
++        num_enemies = b->read_int();
++        enemy_fire_delay = b->read_int();
++    }
++};
++
++std::shared_ptr<DodgeballGame> make_dodge(void) {
++    return std::make_shared<DodgeballGame>();
++}
++/* ---------------------FRUITBOT----------------------*/
++const std::string FRUITBOT_NAME = "fruitbot";
++
++const int PENALTY = -4.0f;
++
++const int BARRIER_fruitbot = 1;
++const int OUT_OF_BOUNDS_WALL = 2;
++const int PLAYER_BULLET_fruitbot = 3;
++const int BAD_OBJ = 4;
++const int GOOD_OBJ = 7;
++const int LOCKED_DOOR = 10;
++const int LOCK = 11;
++const int PRESENT = 12;
++
++const int KEY_DURATION = 8;
++
++const float DOOR_ASPECT_RATIO = 3.25;
++
++class FruitBotGame : public BasicAbstractGame {
++  public:
++    float min_dim = 0.0f;
++    float bullet_vscale = 0.0f;
++    int last_fire_time = 0;
++
++    FruitBotGame()
++        : BasicAbstractGame(FRUITBOT_NAME) {
++        mixrate = .5;
++        maxspeed = 0.85f;
++
++        min_dim = 5;
++        bullet_vscale = .5;
++        bg_tile_ratio = -1;
++
++        out_of_bounds_object = OUT_OF_BOUNDS_WALL;
++    }
++
++    void load_background_images() override {
++        main_bg_images_ptr = &topdown_backgrounds;
++    }
++
++    void asset_for_type(int type, std::vector<std::string> &names) override {
++        if (type == PLAYER) {
++            names.push_back("misc_assets/robot_3Dblue.png");
++        } else if (type == BARRIER_fruitbot || type == OUT_OF_BOUNDS_WALL) {
++            names.push_back("misc_assets/tileStone_slope.png");
++        } else if (type == PLAYER_BULLET_fruitbot) {
++            names.push_back("misc_assets/keyRed2.png");
++        } else if (type == BAD_OBJ) {
++            names.push_back("misc_assets/food1.png");
++            names.push_back("misc_assets/food2.png");
++            names.push_back("misc_assets/food3.png");
++            names.push_back("misc_assets/food4.png");
++            names.push_back("misc_assets/food5.png");
++            names.push_back("misc_assets/food6.png");
++        } else if (type == GOOD_OBJ) {
++            names.push_back("misc_assets/fruit1.png");
++            names.push_back("misc_assets/fruit2.png");
++            names.push_back("misc_assets/fruit3.png");
++            names.push_back("misc_assets/fruit4.png");
++            names.push_back("misc_assets/fruit5.png");
++            names.push_back("misc_assets/fruit6.png");
++        } else if (type == LOCKED_DOOR) {
++            names.push_back("misc_assets/fenceYellow.png");
++        } else if (type == LOCK) {
++            names.push_back("misc_assets/lockRed2.png");
++        } else if (type == PRESENT) {
++            names.push_back("misc_assets/present1.png");
++            names.push_back("misc_assets/present2.png");
++            names.push_back("misc_assets/present3.png");
++        }
++    }
++
++    bool will_reflect(int src, int target) override {
++        return BasicAbstractGame::will_reflect(src, target) || (src == BAD_OBJ && (target == BARRIER_fruitbot || target == WALL_OBJ));
++    }
++
++    bool is_blocked(const std::shared_ptr<Entity> &src, int target, bool is_horizontal) override {
++        return BasicAbstractGame::is_blocked(src, target, is_horizontal) || (src->type == PLAYER && target == OUT_OF_BOUNDS_WALL);
++    }
++
++    float get_tile_aspect_ratio(const std::shared_ptr<Entity> &ent) override {
++        if (ent->type == BARRIER_fruitbot)
++            return 1;
++        if (ent->type == LOCKED_DOOR)
++            return DOOR_ASPECT_RATIO;
++
++        return 0;
++    }
++
++    void handle_agent_collision(const std::shared_ptr<Entity> &obj) override {
++        BasicAbstractGame::handle_agent_collision(obj);
++
++        if (obj->type == BARRIER_fruitbot) {
++            step_data.done = true;
++        } else if (obj->type == BAD_OBJ) {
++            step_data.reward += PENALTY;
++            obj->will_erase = true;
++        } else if (obj->type == LOCKED_DOOR) {
++            step_data.done = true;
++        } else if (obj->type == GOOD_OBJ) {
++            step_data.reward += POSITIVE_REWARD;
++            obj->will_erase = true;
++        } else if (obj->type == PRESENT) {
++            if (!step_data.done) {
++            }
++            step_data.reward += COMPLETION_BONUS;
++            step_data.done = true;
++            step_data.level_complete = true;
++        }
++    }
++
++    void handle_collision(const std::shared_ptr<Entity> &src, const std::shared_ptr<Entity> &target) override {
++        if (src->type == PLAYER_BULLET_fruitbot) {
++            if (target->type == BARRIER_fruitbot) {
++                src->will_erase = true;
++            } else if (target->type == LOCK) {
++                src->will_erase = true;
++                target->will_erase = true;
++
++                // find and erase the corresponding door entity
++                for (auto ent : entities) {
++                    if (ent->type == LOCKED_DOOR && fabs(ent->y - target->y) < 1) {
++                        ent->will_erase = true;
++                        break;
++                    }
++                }
++            }
++        }
++    }
++
++    bool use_block_asset(int type) override {
++        return BasicAbstractGame::use_block_asset(type) || (type == BARRIER_fruitbot) || (type == LOCKED_DOOR) || (type == PRESENT);
++    }
++
++    void choose_center(float &cx, float &cy) override {
++        cx = main_width / 2.0;
++        cy = agent->y + main_width / 2.0 - 2 * agent->ry;
++        visibility = main_width;
++    }
++
++    void choose_world_dim() override {
++        if (options.distribution_mode == EasyMode) {
++            main_width = 10;
++        } else {
++            main_width = 20;
++        }
++
++        main_height = 60;
++    }
++
++    void set_action_xy(int move_action) override {
++        action_vx = move_action / 3 - 1;
++        action_vy = 0.2f; //(move_action % 3) * .2;
++        action_vrot = 0;
++    }
++
++    void add_walls(float ry, bool use_door, float min_pct) {
++        float rw = main_width;
++        float wall_ry = 0.3f;
++        float lock_rx = .25;
++        float lock_ry = 0.45f;
++
++        float pct = min_pct + .2 * rand_gen.rand01();
++
++        if (use_door) {
++            pct += 0.1f;
++            float lock_pct_w = 2 * lock_rx / main_width;
++            float door_pct_w = (wall_ry * 2 * DOOR_ASPECT_RATIO) / main_width;
++            int num_doors = ceil((pct - 2 * lock_pct_w) / door_pct_w);
++            pct = 2 * lock_pct_w + door_pct_w * num_doors;
++        }
++
++        float gapw = pct * rw;
++
++        float w1 = rand_gen.rand01() * (rw - gapw);
++        float w2 = rw - w1 - gapw;
++
++        add_entity_rxy(w1 / 2, ry, 0, 0, w1 / 2, wall_ry, BARRIER_fruitbot);
++        add_entity_rxy(rw - w2 / 2, ry, 0, 0, w2 / 2, wall_ry, BARRIER_fruitbot);
++
++        if (use_door) {
++            int is_on_right = rand_gen.randn(2);
++            float lock_x = w1 + lock_rx + is_on_right * (gapw - 2 * lock_rx);
++            float door_x = w1 + gapw / 2 - (is_on_right * 2 - 1) * lock_rx;
++
++            add_entity_rxy(door_x, ry, 0, 0, gapw / 2 - lock_rx, wall_ry, LOCKED_DOOR);
++            add_entity_rxy(lock_x, ry - lock_ry + wall_ry, 0, 0, lock_rx, lock_ry, LOCK);
++        }
++    }
++
++    void game_reset() override {
++        BasicAbstractGame::game_reset();
++
++        last_fire_time = 0;
++
++        int min_sep = 4;
++        int num_walls = 10;
++        int object_group_size = 6;
++        int buf_h = 4;
++        float door_prob = .125;
++        float min_pct = .1;
++
++        if (options.distribution_mode == EasyMode) {
++            num_walls = 5;
++            object_group_size = 2;
++            door_prob = 0;
++            min_pct = .2;
++        }
++
++        std::vector<int> partition = rand_gen.partition(main_height - min_sep * num_walls - buf_h, num_walls);
++
++        int curr_h = 0;
++
++        for (int part : partition) {
++            int dy = min_sep + part;
++            curr_h += dy;
++
++            bool use_door = (dy > 5) && rand_gen.rand01() < door_prob;
++
++            add_walls(curr_h, use_door, min_pct);
++        }
++
++        agent->y = agent->ry;
++
++        int num_good = rand_gen.randn(10) + 10;
++        int num_bad = rand_gen.randn(10) + 10;
++
++        for (int i = 0; i < main_width; i++) {
++            auto present = add_entity_rxy(i + .5, main_height - .5, 0, 0, .5, .5, PRESENT);
++            choose_random_theme(present);
++        }
++
++        spawn_entities(num_good, .5, GOOD_OBJ, 0, 0, main_width, main_height);
++        spawn_entities(num_bad, .5, BAD_OBJ, 0, 0, main_width, main_height);
++
++        for (auto ent : entities) {
++            if (ent->type == GOOD_OBJ || ent->type == BAD_OBJ) {
++                ent->image_theme = rand_gen.randn(object_group_size);
++                fit_aspect_ratio(ent);
++            }
++        }
++
++        agent->rotation = -1 * PI / 2;
++    }
++
++    void game_step() override {
++        BasicAbstractGame::game_step();
++
++        if (special_action == 1 && (cur_time - last_fire_time) >= KEY_DURATION) {
++            float vx = 0;
++            float vy = 1;
++            auto new_bullet = add_entity(agent->x, agent->y, vx * bullet_vscale, vy * bullet_vscale, .25, PLAYER_BULLET_fruitbot);
++            new_bullet->expire_time = KEY_DURATION;
++            new_bullet->collides_with_entities = true;
++            last_fire_time = cur_time;
++        }
++    }
++
++    void serialize(WriteBuffer *b) override {
++        BasicAbstractGame::serialize(b);
++        b->write_float(min_dim);
++        b->write_float(bullet_vscale);
++        b->write_int(last_fire_time);
++    }
++
++    void deserialize(ReadBuffer *b) override {
++        BasicAbstractGame::deserialize(b);
++        min_dim = b->read_float();
++        bullet_vscale = b->read_float();
++        last_fire_time = b->read_int();
++    }
++};
++
++std::shared_ptr<FruitBotGame> make_fruitbot(void) {
++    return std::make_shared<FruitBotGame>();
++}
++/* ---------------------HEIST----------------------*/
++const std::string HEIST_NAME = "heist";
++
++const int LOCKED_DOOR_heist = 1;
++const int KEY = 2;
++const int EXIT = 9;
++const int KEY_ON_RING = 11;
++
++class HeistGame : public BasicAbstractGame {
++  public:
++    std::shared_ptr<MazeGen> maze_gen;
++    int world_dim = 0;
++    int num_keys = 0;
++    std::vector<bool> has_keys;
++
++    HeistGame()
++        : BasicAbstractGame(HEIST_NAME) {
++        maze_gen = nullptr;
++        has_useful_vel_info = false;
++
++        main_width = 20;
++        main_height = 20;
++
++        out_of_bounds_object = WALL_OBJ;
++        visibility = 8.0;
++    }
++
++    void load_background_images() override {
++        main_bg_images_ptr = &topdown_backgrounds;
++    }
++
++    bool should_preserve_type_themes(int type) override {
++        return type == KEY || type == LOCKED_DOOR_heist;
++    }
++
++    void asset_for_type(int type, std::vector<std::string> &names) override {
++        if (type == WALL_OBJ) {
++            names.push_back("kenney/Ground/Dirt/dirtCenter.png");
++        } else if (type == EXIT) {
++            names.push_back("misc_assets/gemYellow.png");
++        } else if (type == PLAYER) {
++            names.push_back("misc_assets/spaceAstronauts_008.png");
++        } else if (type == KEY) {
++            names.push_back("misc_assets/keyBlue.png");
++            names.push_back("misc_assets/keyGreen.png");
++            names.push_back("misc_assets/keyRed.png");
++        } else if (type == LOCKED_DOOR_heist) {
++            names.push_back("misc_assets/lock_blue.png");
++            names.push_back("misc_assets/lock_green.png");
++            names.push_back("misc_assets/lock_red.png");
++        }
++    }
++
++    bool use_block_asset(int type) override {
++        return BasicAbstractGame::use_block_asset(type) || (type == WALL_OBJ) || (type == LOCKED_DOOR_heist);
++    }
++
++    bool is_blocked_ents(const std::shared_ptr<Entity> &src, const std::shared_ptr<Entity> &target, bool is_horizontal) override {
++        if (target->type == LOCKED_DOOR_heist)
++            return !has_keys[target->image_theme];
++
++        return BasicAbstractGame::is_blocked_ents(src, target, is_horizontal);
++    }
++
++    bool should_draw_entity(const std::shared_ptr<Entity> &entity) override {
++        if (entity->type == KEY_ON_RING)
++            return has_keys[entity->image_theme];
++
++        return BasicAbstractGame::should_draw_entity(entity);
++    }
++
++    void handle_agent_collision(const std::shared_ptr<Entity> &obj) override {
++        BasicAbstractGame::handle_agent_collision(obj);
++
++        if (obj->type == EXIT) {
++            step_data.done = true;
++            step_data.reward = COMPLETION_BONUS;
++            step_data.level_complete = true;
++        } else if (obj->type == KEY) {
++            obj->will_erase = true;
++            has_keys[obj->image_theme] = true;
++        } else if (obj->type == LOCKED_DOOR_heist) {
++            int door_num = obj->image_theme;
++            if (has_keys[door_num]) {
++                obj->will_erase = true;
++            }
++        }
++    }
++
++    void choose_world_dim() override {
++        int dist_diff = options.distribution_mode;
++
++        if (dist_diff == EasyMode) {
++            world_dim = 9;
++        } else if (dist_diff == HardMode) {
++            world_dim = 13;
++        } else if (dist_diff == MemoryMode) {
++            world_dim = 23;
++        }
++
++        maxspeed = .75;
++
++        main_width = world_dim;
++        main_height = world_dim;
++    }
++
++    void game_reset() override {
++        BasicAbstractGame::game_reset();
++
++        int min_maze_dim = 5;
++        int max_diff = (world_dim - min_maze_dim) / 2;
++        int difficulty = rand_gen.randn(max_diff + 1);
++
++        options.center_agent = options.distribution_mode == MemoryMode;
++
++        if (options.distribution_mode == MemoryMode) {
++            num_keys = rand_gen.randn(4);
++        } else {
++            num_keys = difficulty + rand_gen.randn(2);
++        }
++
++        if (num_keys > 3)
++            num_keys = 3;
++
++        has_keys.clear();
++
++        for (int i = 0; i < num_keys; i++) {
++            has_keys.push_back(false);
++        }
++
++        int maze_dim = difficulty * 2 + min_maze_dim;
++        float maze_scale = main_height / (world_dim * 1.0);
++
++        agent->rx = .375 * maze_scale;
++        agent->ry = .375 * maze_scale;
++
++        float r_ent = maze_scale / 2;
++
++        maze_gen = std::make_shared<MazeGen>(&rand_gen, maze_dim);
++        maze_gen->generate_maze_with_doors(num_keys);
++
++        // move agent out of the way for maze generation
++        agent->x = -1;
++        agent->y = -1;
++
++        int off_x = rand_gen.randn(world_dim - maze_dim + 1);
++        int off_y = rand_gen.randn(world_dim - maze_dim + 1);
++
++        for (int i = 0; i < grid_size; i++) {
++            set_obj(i, WALL_OBJ);
++        }
++
++        for (int i = 0; i < maze_dim; i++) {
++            for (int j = 0; j < maze_dim; j++) {
++                int x = off_x + i;
++                int y = off_y + j;
++
++                int obj = maze_gen->grid.get(i + MAZE_OFFSET, j + MAZE_OFFSET);
++
++                float obj_x = (x + .5) * maze_scale;
++                float obj_y = (y + .5) * maze_scale;
++
++                if (obj != WALL_OBJ) {
++                    set_obj(x, y, SPACE);
++                }
++
++                if (obj >= KEY_OBJ) {
++                    auto ent = spawn_entity(.375 * maze_scale, KEY, maze_scale * x, maze_scale * y, maze_scale, maze_scale);
++                    ent->image_theme = obj - KEY_OBJ - 1;
++                    match_aspect_ratio(ent);
++                } else if (obj >= DOOR_OBJ) {
++                    auto ent = add_entity(obj_x, obj_y, 0, 0, r_ent, LOCKED_DOOR_heist);
++                    ent->image_theme = obj - DOOR_OBJ - 1;
++                } else if (obj == EXIT_OBJ) {
++                    auto ent = spawn_entity(.375 * maze_scale, EXIT, maze_scale * x, maze_scale * y, maze_scale, maze_scale);
++                    match_aspect_ratio(ent);
++                } else if (obj == AGENT_OBJ) {
++                    agent->x = obj_x;
++                    agent->y = obj_y;
++                }
++            }
++        }
++
++        float ring_key_r = 0.03f;
++
++        for (int i = 0; i < num_keys; i++) {
++            auto ent = add_entity(1 - ring_key_r * (2 * i + 1.25), ring_key_r * .75, 0, 0, ring_key_r, KEY_ON_RING);
++            ent->image_theme = i;
++            ent->image_type = KEY;
++            ent->rotation = PI / 2;
++            ent->render_z = 1;
++            ent->use_abs_coords = true;
++            match_aspect_ratio(ent);
++        }
++    }
++
++    void game_step() override {
++        BasicAbstractGame::game_step();
++
++        agent->face_direction(action_vx, action_vy);
++    }
++
++    void serialize(WriteBuffer *b) override {
++        BasicAbstractGame::serialize(b);
++        b->write_int(num_keys);
++        b->write_int(world_dim);
++        b->write_vector_bool(has_keys);
++    }
++
++    void deserialize(ReadBuffer *b) override {
++        BasicAbstractGame::deserialize(b);
++        num_keys = b->read_int();
++        world_dim = b->read_int();
++        has_keys = b->read_vector_bool();
++    }
++};
++
++
++std::shared_ptr<HeistGame> make_heist(void) {
++    return std::make_shared<HeistGame>();
++}
++/* ---------------------JUMPER----------------------*/
++const std::string JUMPER_NAME = "jumper";
++
++const int SPIKE = 2;
++const int CAVEWALL_jumper = 6;
++const int CAVEWALL_TOP = 7;
++
++const int PLAYER_LEFT1 = 10;
++const int PLAYER_LEFT2 = 11;
++
++const int MAZE_SCALE = 3;
++
++const int JUMP_COOLDOWN = 3;
++
++class Jumper : public BasicAbstractGame {
++  public:
++    std::shared_ptr<Entity> goal;
++    int jump_count = 0;
++    int jump_delta = 0;
++    int jump_time = 0;
++    bool has_support = false;
++    bool facing_right = false;
++    int wall_theme = 0;
++    float compass_dim = 0.0f;
++    std::unique_ptr<RoomGenerator> room_manager;
++
++    Jumper()
++        : BasicAbstractGame(JUMPER_NAME) {
++        room_manager = std::make_unique<RoomGenerator>(this);
++    }
++
++    void load_background_images() override {
++        main_bg_images_ptr = &platform_backgrounds;
++    }
++
++    void asset_for_type(int type, std::vector<std::string> &names) override {
++        if (type == PLAYER) {
++            names.push_back("misc_assets/bunny2_ready.png");
++        } else if (type == SPIKE) {
++            names.push_back("misc_assets/spikeMan_stand.png");
++        } else if (type == GOAL) {
++            names.push_back("misc_assets/carrot.png");
++        } else if (type == PLAYER_JUMP) {
++            names.push_back("misc_assets/bunny2_jump.png");
++        } else if (type == PLAYER_RIGHT1) {
++            names.push_back("misc_assets/bunny2_walk1.png");
++        } else if (type == PLAYER_RIGHT2) {
++            names.push_back("misc_assets/bunny2_walk2.png");
++        } else if (type == PLAYER_LEFT1) {
++            names.push_back("misc_assets/bunny2_walk1.png");
++        } else if (type == PLAYER_LEFT2) {
++            names.push_back("misc_assets/bunny2_walk2.png");
++        } else if (type == CAVEWALL_TOP) {
++            names.push_back("platformer/tileBlue_05.png");
++            names.push_back("platformer/tileGreen_05.png");
++            names.push_back("platformer/tileYellow_06.png");
++            names.push_back("platformer/tileBrown_06.png");
++        } else if (type == CAVEWALL_jumper) {
++            names.push_back("platformer/tileBlue_08.png");
++            names.push_back("platformer/tileGreen_08.png");
++            names.push_back("platformer/tileYellow_09.png");
++            names.push_back("platformer/tileBrown_09.png");
++        }
++    }
++
++    void handle_agent_collision(const std::shared_ptr<Entity> &obj) override {
++        BasicAbstractGame::handle_agent_collision(obj);
++
++        if (obj->type == GOAL) {
++            step_data.reward += GOAL_REWARD;
++            step_data.level_complete = true;
++            step_data.done = true;
++        } else if (obj->type == SPIKE) {
++            step_data.done = true;
++        }
++    }
++
++    void update_agent_velocity() override {
++        float v_scale = get_agent_acceleration_scale();
++
++        agent->vx = (1 - mixrate) * agent->vx + mixrate * maxspeed * action_vx * v_scale;
++        if (action_vy != 0)
++            agent->vy = maxspeed * action_vy * 2;
++    }
++
++    int theme_for_grid_obj(int type) override {
++        if (is_wall(type))
++            return wall_theme;
++
++        return 0;
++    }
++
++    bool use_block_asset(int type) override {
++        return BasicAbstractGame::use_block_asset(type) || is_wall(type);
++    }
++
++    bool is_blocked(const std::shared_ptr<Entity> &src, int target, bool is_horizontal) override {
++        if (BasicAbstractGame::is_blocked(src, target, is_horizontal))
++            return true;
++        if (src->type == PLAYER && is_wall(target))
++            return true;
++
++        return false;
++    }
++
++    int image_for_type(int type) override {
++        if (type == PLAYER) {
++            // if (jump_delta < 0) {
++            //     return PLAYER_JUMP;
++            // } else
++            if (fabs(agent->vx) < .01 && action_vx == 0 && has_support) {
++                return PLAYER;
++            } else if (facing_right) {
++                return (cur_time / 5 % 2 == 0 || !has_support) ? PLAYER_RIGHT1 : PLAYER_RIGHT2;
++            } else {
++                return (cur_time / 5 % 2 == 0 || !has_support) ? PLAYER_LEFT1 : PLAYER_LEFT2;
++            }
++        }
++
++        return BasicAbstractGame::image_for_type(type);
++    }
++
++    void draw_compass(QPainter &p, const QRect &rect) {
++        QRectF compass_rect = get_abs_rect(view_dim - compass_dim - .25, .25, compass_dim, compass_dim);
++        QColor clock_color = QColor(168, 166, 158);
++
++        set_pen_brush_color(p, clock_color);
++        p.drawEllipse(compass_rect);
++        QColor highlight_color = QColor(252, 186, 3);
++
++        float pen_thickness = rect.width() / (256.0 / compass_dim);
++
++        set_pen_brush_color(p, highlight_color, pen_thickness);
++        float cx = compass_rect.center().x();
++        float cy = compass_rect.center().y();
++        float cr = compass_rect.width() / 2 * .95;
++        float theta = get_theta(agent, goal);
++
++        p.drawLine(cx, cy, cx + cr * cos(theta), cy - cr * sin(theta));
++
++        float dist = get_distance(agent, goal);
++        float dist_pct = dist / (main_width * sqrt(2));
++
++        float bar_thickness = compass_dim / 8;
++
++        QRectF dist_rect = get_abs_rect(view_dim - compass_dim - .25, .25 + compass_dim, compass_dim * dist_pct, bar_thickness);
++        p.fillRect(dist_rect, highlight_color);
++
++        if (jump_delta < 0 && !has_support) {
++            QRectF r1 = get_object_rect(agent);
++            p.setBrush(QColor(255, 255, 255, 120));
++            p.setPen(Qt::NoPen);
++            p.drawEllipse(QRect(r1.x(), r1.y() + r1.height() * (5.0 / 6), r1.width(), r1.height() / 3));
++        }
++    }
++
++    void game_draw(QPainter &p, const QRect &rect) override {
++        BasicAbstractGame::game_draw(p, rect);
++
++        if (options.distribution_mode != MemoryMode) {
++            draw_compass(p, rect);
++        }
++    }
++
++    bool will_reflect(int src, int target) override {
++        return BasicAbstractGame::will_reflect(src, target);
++    }
++
++    bool is_space_on_ground(int x, int y) {
++        if (get_obj(x, y) != SPACE)
++            return false;
++        if (get_obj(x, y + 1) != SPACE)
++            return false;
++        int below_obj = get_obj(x, y - 1);
++        return below_obj == CAVEWALL_jumper || below_obj == out_of_bounds_object;
++    }
++
++    bool is_top_wall(int x, int y) {
++        return get_obj(x, y) == CAVEWALL_jumper && get_obj(x, y + 1) == SPACE;
++    }
++
++    bool is_left_wall(int x, int y) {
++        return get_obj(x, y) == CAVEWALL_jumper && get_obj(x + 1, y) == SPACE;
++    }
++
++    bool is_right_wall(int x, int y) {
++        return get_obj(x, y) == CAVEWALL_jumper && get_obj(x - 1, y) == SPACE;
++    }
++
++    void choose_world_dim() override {
++        int dist_diff = options.distribution_mode;
++
++        int world_dim = 20;
++
++        if (dist_diff == EasyMode) {
++            world_dim = 20;
++        } else if (dist_diff == HardMode) {
++            world_dim = 40;
++        } else if (dist_diff == MemoryMode) {
++            world_dim = 45;
++        }
++
++        main_width = world_dim;
++        main_height = world_dim;
++    }
++
++    void game_reset() override {
++        if (options.distribution_mode == EasyMode) {
++            visibility = 12;
++            compass_dim = 3;
++        } else {
++            visibility = 16;
++            compass_dim = 2;
++        }
++
++        if (options.distribution_mode == MemoryMode) {
++            timeout = 2000;
++        }
++
++        BasicAbstractGame::game_reset();
++
++        out_of_bounds_object = WALL_OBJ;
++
++        wall_theme = rand_gen.randn(NUM_WALL_THEMES);
++        jump_count = 0;
++        jump_delta = 0;
++        jump_time = 0;
++        has_support = false;
++        facing_right = true;
++
++        int maze_dim = main_width / MAZE_SCALE;
++
++        std::shared_ptr<MazeGen> maze_gen(new MazeGen(&rand_gen, maze_dim));
++        maze_gen->generate_maze_no_dead_ends();
++
++        for (int i = 0; i < grid_size; i++) {
++            int obj = maze_gen->grid.get((i % main_width) / MAZE_SCALE + 1, (i / main_width) / MAZE_SCALE + 1);
++
++            float prob = obj == WALL_OBJ ? .8 : .2;
++            if (rand_gen.rand01() < prob) {
++                set_obj(i, WALL_OBJ);
++            } else {
++                set_obj(i, SPACE);
++            }
++        }
++
++        for (int iteration = 0; iteration < 2; iteration++) {
++            room_manager->update();
++        }
++
++        // add border cells. needed for helping with solvability and proper rendering of bottommost floor tiles
++        for (int i = 0; i < main_width; i++) {
++            set_obj(i, 0, CAVEWALL_jumper);
++            set_obj(i, main_height - 1, CAVEWALL_jumper);
++        }
++
++        for (int i = 0; i < main_height; i++) {
++            set_obj(0, i, CAVEWALL_jumper);
++            set_obj(main_width - 1, i, CAVEWALL_jumper);
++        }
++
++        std::set<int> best_room;
++        room_manager->find_best_room(best_room);
++        fassert(best_room.size() > 0);
++
++        for (int i = 0; i < grid_size; i++) {
++            set_obj(i, CAVEWALL_jumper);
++        }
++
++        std::vector<int> free_cells;
++
++        for (int i : best_room) {
++            set_obj(i, SPACE);
++            free_cells.push_back(i);
++        }
++
++        int goal_cell = rand_gen.choose_one(free_cells);
++
++        std::vector<int> agent_candidates;
++
++        for (int i = 0; i < grid_size; i++) {
++            int x = i % main_width;
++            int y = i / main_width;
++
++            if (is_space_on_ground(x, y)) {
++                agent_candidates.push_back(i);
++            }
++        }
++
++        int agent_cell = rand_gen.choose_one(agent_candidates);
++
++        std::vector<int> goal_path;
++        room_manager->find_path(agent_cell, goal_cell, goal_path);
++
++        bool should_prune = options.distribution_mode != MemoryMode;
++
++        if (should_prune) {
++            std::set<int> wide_path;
++            wide_path.insert(goal_path.begin(), goal_path.end());
++            room_manager->expand_room(wide_path, 4);
++
++            for (int i = 0; i < grid_size; i++) {
++                set_obj(i, CAVEWALL_jumper);
++            }
++
++            for (int i : wide_path) {
++                set_obj(i, SPACE);
++            }
++        }
++
++        goal = spawn_entity_at_idx(goal_cell, .5, GOAL);
++        float spike_prob = options.distribution_mode == MemoryMode ? 0 : .2;
++
++        for (int i = 0; i < grid_size; i++) {
++            int x = i % main_width;
++            int y = i / main_width;
++
++            if (is_space_on_ground(x, y) && (is_space_on_ground(x - 1, y) && is_space_on_ground(x + 1, y))) {
++                if (rand_gen.rand01() < spike_prob) {
++                    set_obj(x, y, SPIKE);
++                }
++            }
++        }
++
++        // We prevent log vertical walls to improve solvability
++        for (int i = 0; i < grid_size; i++) {
++            int x = i % main_width;
++            int y = i / main_width;
++
++            if (is_left_wall(x, y) && is_left_wall(x, y + 1) && is_left_wall(x, y + 2)) {
++                set_obj(x, y + rand_gen.randn(3), SPACE);
++            }
++
++            if (is_right_wall(x, y) && is_right_wall(x, y + 1) && is_right_wall(x, y + 2)) {
++                set_obj(x, y + rand_gen.randn(3), SPACE);
++            }
++        }
++
++        agent->x = (agent_cell % main_width) + .5;
++        agent->y = (agent_cell / main_width) + agent->ry;
++
++        std::vector<int> spike_cells = get_cells_with_type(SPIKE);
++
++        for (int spike_cell : spike_cells) {
++            set_obj(spike_cell, SPACE);
++            float spike_ry = 0.4f;
++            float spike_rx = 0.23f;
++
++            add_entity_rxy((spike_cell % main_width) + .5, (spike_cell / main_width) + spike_ry, 0, 0, spike_rx, spike_ry, SPIKE);
++        }
++
++        for (int i = 0; i < grid_size; i++) {
++            int x = i % main_width;
++            int y = i / main_width;
++
++            if (is_top_wall(x, y)) {
++                set_obj(x, y, CAVEWALL_TOP);
++            }
++        }
++
++        agent->rx = 0.254f;
++        agent->ry = 0.4f;
++
++        out_of_bounds_object = CAVEWALL_jumper;
++    }
++
++    bool is_wall(int obj) {
++        return obj == CAVEWALL || obj == CAVEWALL_TOP;
++    }
++
++    bool can_support(int obj) {
++        return is_wall(obj) || obj == out_of_bounds_object;
++    }
++
++    void set_action_xy(int move_action) override {
++        action_vx = move_action / 3 - 1;
++        action_vy = (move_action % 3) - 1;
++        if (action_vy < 0)
++            action_vy = 0;
++
++        if (action_vx > 0)
++            facing_right = true;
++        if (action_vx < 0)
++            facing_right = false;
++
++        int obj_below_1 = get_obj_from_floats(agent->x - (agent->rx - .01), agent->y - (agent->ry + .01));
++        int obj_below_2 = get_obj_from_floats(agent->x + (agent->rx - .01), agent->y - (agent->ry + .01));
++
++        jump_delta = 0;
++
++        has_support = can_support(obj_below_1) || can_support(obj_below_2);
++
++        if (has_support) {
++            jump_count = 2;
++        }
++
++        if (action_vy == 1 && jump_count > 0 && (cur_time - jump_time > JUMP_COOLDOWN)) {
++            jump_count -= 1;
++            jump_delta = -1;
++        } else {
++            action_vy = 0;
++        }
++
++        if (action_vy > 0) {
++            jump_time = cur_time;
++        }
++
++        action_vrot = 0;
++    }
++
++    void game_step() override {
++        BasicAbstractGame::game_step();
++
++        if (action_vx > 0)
++            agent->is_reflected = false;
++        if (action_vx < 0)
++            agent->is_reflected = true;
++
++        if (fabs(agent->vx) + fabs(agent->vy) > .05) {
++            auto trail = add_entity_rxy(agent->x, agent->y - agent->ry * .5, 0, 0.01f, 0.3f, 0.2f, TRAIL);
++            trail->expire_time = 8;
++            trail->alpha = .5;
++        }
++
++        if (agent->vy > -2) {
++            agent->vy -= 0.15f;
++        }
++    }
++
++    void serialize(WriteBuffer *b) override {
++        BasicAbstractGame::serialize(b);
++        b->write_int(jump_count);
++        b->write_int(jump_delta);
++        b->write_int(jump_time);
++        b->write_bool(has_support);
++        b->write_bool(facing_right);
++        b->write_int(wall_theme);
++        b->write_float(compass_dim);
++    }
++
++    void deserialize(ReadBuffer *b) override {
++        BasicAbstractGame::deserialize(b);
++        jump_count = b->read_int();
++        jump_delta = b->read_int();
++        jump_time = b->read_int();
++        has_support = b->read_bool();
++        facing_right = b->read_bool();
++        wall_theme = b->read_int();
++        compass_dim = b->read_float();
++
++        int goal_idx = find_entity_index(GOAL);
++        fassert(goal_idx >= 0);
++        goal = entities[goal_idx];
++    }
++};
++
++std::shared_ptr<Jumper> make_jumper(void) {
++    return std::make_shared<Jumper>();
++}
++
++/* ---------------------LEAPER----------------------*/
++const std::string LEAPER_NAME = "leaper";
++
++const int LOG = 1;
++const int ROAD = 2;
++const int WATER = 3;
++const int CAR = 4;
++const int FINISH_LINE = 5;
++
++const float MONSTER_RADIUS = 0.25;
++const float LOG_RADIUS = 0.45f;
++
++const int NSTEP = 5;
++const int FROG_ANIMATION_FRAMES = NSTEP;
++
++const float MAX_SPEED = 2 / (NSTEP - 1.0);
++const float VEL_DECAY = MAX_SPEED / NSTEP;
++
++float sign(float x) {
++    return x > 0 ? +1 : (x == 0 ? 0 : -1);
++}
++
++class LeaperGame : public BasicAbstractGame {
++  public:
++    int bottom_road_y = 0;
++    std::vector<float> road_lane_speeds;
++    int bottom_water_y = 0;
++    std::vector<float> water_lane_speeds;
++    int goal_y = 0;
++
++    LeaperGame()
++        : BasicAbstractGame(LEAPER_NAME) {
++        maxspeed = MAX_SPEED;
++        timeout = 500;
++    }
++
++    void load_background_images() override {
++        main_bg_images_ptr = &topdown_backgrounds;
++    }
++
++    void asset_for_type(int type, std::vector<std::string> &names) override {
++        if (type == ROAD) {
++            names.push_back("misc_assets/roadTile6b.png");
++        } else if (type == WATER) {
++            names.push_back("misc_assets/terrainTile6.png");
++        } else if (type == CAR) {
++            names.push_back("misc_assets/car_yellow_5.png");
++            names.push_back("misc_assets/car_black_1.png");
++            names.push_back("misc_assets/car_blue_2.png");
++            names.push_back("misc_assets/car_green_3.png");
++            names.push_back("misc_assets/car_red_4.png");
++        } else if (type == LOG) {
++            names.push_back("misc_assets/elementWood044.png");
++        } else if (type == PLAYER) {
++            names.push_back("misc_assets/frog1.png");
++            names.push_back("misc_assets/frog2.png");
++            names.push_back("misc_assets/frog4.png");
++            names.push_back("misc_assets/frog6.png");
++            names.push_back("misc_assets/frog7.png");
++        } else if (type == FINISH_LINE) {
++            names.push_back("misc_assets/finish2.png");
++        }
++    }
++
++    float get_tile_aspect_ratio(const std::shared_ptr<Entity> &ent) override {
++        if (ent->type == FINISH_LINE) {
++            return 1;
++        }
++
++        return BasicAbstractGame::get_tile_aspect_ratio(ent);
++    }
++
++    void handle_agent_collision(const std::shared_ptr<Entity> &obj) override {
++        if (obj->type == CAR) {
++            step_data.done = true;
++        } else if (obj->type == FINISH_LINE && agent->vx == 0 && agent->vy == 0) {
++            step_data.reward += GOAL_REWARD;
++            step_data.done = true;
++            step_data.level_complete = true;
++        }
++    }
++
++    bool use_block_asset(int type) override {
++        return type == WATER || type == ROAD;
++    }
++
++    bool should_preserve_type_themes(int type) override {
++        return type == PLAYER;
++    }
++
++    float rand_sign() {
++        if (rand_gen.rand01() < 0.5) {
++            return 1.0;
++        } else {
++            return -1.0;
++        }
++    }
++
++    void choose_world_dim() override {
++        int dist_diff = options.distribution_mode;
++
++        int world_dim = 20;
++
++        if (dist_diff == EasyMode) {
++            world_dim = 9;
++        } else if (dist_diff == HardMode) {
++            world_dim = 15;
++        }
++
++        main_width = world_dim;
++        main_height = world_dim;
++    }
++
++    int choose_extra_space() {
++        return options.distribution_mode == EasyMode ? 0 : rand_gen.randn(2);
++    }
++
++    void game_reset() override {
++        BasicAbstractGame::game_reset();
++
++        options.center_agent = false;
++
++        agent->y = agent->ry;
++
++        float min_car_speed = 0.05f;
++        float max_car_speed = 0.2f;
++        float min_log_speed = 0.05f;
++        float max_log_speed = 0.1f;
++
++        if (options.distribution_mode == EasyMode) {
++            min_car_speed = 0.03f;
++            max_car_speed = 0.12f;
++            min_log_speed = 0.025f;
++            max_log_speed = 0.075f;
++        } else if (options.distribution_mode == ExtremeMode) {
++            min_car_speed = 0.1f;
++            max_car_speed = 0.3f;
++            min_log_speed = 0.1f;
++            max_log_speed = 0.2f;
++        }
++
++        // road
++        bottom_road_y = choose_extra_space() + 1;
++
++        int max_diff = options.distribution_mode == EasyMode ? 3 : 4;
++        int difficulty = rand_gen.randn(max_diff + 1);
++
++        // half the time we add an extra lane to either roads or water
++        int extra_lane_option = options.distribution_mode == EasyMode ? 0 : rand_gen.randn(4);
++
++        int num_road_lanes = difficulty + (extra_lane_option == 2 ? 1 : 0);
++        road_lane_speeds.clear();
++        for (int lane = 0; lane < num_road_lanes; lane++) {
++            road_lane_speeds.push_back(rand_sign() * rand_gen.randrange(min_car_speed, max_car_speed));
++            fill_elem(0, bottom_road_y + lane, main_width, 1, ROAD);
++        }
++
++        // water
++        bottom_water_y = bottom_road_y + num_road_lanes + choose_extra_space() + 1;
++
++        water_lane_speeds.clear();
++        int num_water_lanes = difficulty + (extra_lane_option == 3 ? 1 : 0);
++        int curr_sign = rand_sign();
++        for (int lane = 0; lane < num_water_lanes; lane++) {
++            water_lane_speeds.push_back(curr_sign * rand_gen.randrange(min_log_speed, max_log_speed));
++            curr_sign *= -1;
++            fill_elem(0, bottom_water_y + lane, main_width, 1, WATER);
++        }
++
++        goal_y = bottom_water_y + num_water_lanes + 1;
++
++        // spawn initial entities
++        for (int i = 0; i < main_width / std::min(min_car_speed, min_log_speed); i++) {
++            spawn_entities();
++            step_entities(entities);
++        }
++
++        add_entity_rxy(main_width / 2.0, goal_y - .5, 0, 0, main_width / 2.0, .5, FINISH_LINE);
++    }
++
++    void spawn_entities() {
++        // cars
++        for (int lane = 0; lane < int(road_lane_speeds.size()); lane++) {
++            float speed = road_lane_speeds[lane];
++            float spawn_prob = fabs(speed) / 6.0;
++            if (rand_gen.rand01() < spawn_prob) {
++                float x = speed > 0 ? (-1 * MONSTER_RADIUS) : (main_width + MONSTER_RADIUS);
++                auto m = std::make_shared<Entity>(x, bottom_road_y + lane + 0.5, speed, 0, 2 * MONSTER_RADIUS, MONSTER_RADIUS, CAR);
++                choose_random_theme(m);
++                if (speed < 0) {
++                    m->rotation = PI;
++                }
++                if (!has_any_collision(m)) {
++                    entities.push_back(m);
++                }
++            }
++        }
++
++        // logs
++        for (int lane = 0; lane < int(water_lane_speeds.size()); lane++) {
++            float speed = water_lane_speeds[lane];
++            float spawn_prob = fabs(speed) / 2.0;
++            if (rand_gen.rand01() < spawn_prob) {
++                float x = speed > 0 ? (-1 * LOG_RADIUS) : (main_width + LOG_RADIUS);
++                auto m = std::make_shared<Entity>(x, bottom_water_y + lane + 0.5, speed, 0, LOG_RADIUS, LOG);
++                if (!has_any_collision(m)) {
++                    entities.push_back(m);
++                }
++            }
++        }
++    }
++
++    void decay_vel(float &vel) {
++        float vel_sign = sign(1.0 * vel);
++        vel = (fabs(vel) - VEL_DECAY);
++        if (vel < 0)
++            vel = 0;
++        vel = vel * vel_sign;
++    }
++
++    void update_agent_velocity() override {
++        if (agent->vx == 0 && agent->vy == 0) {
++            if (action_vx != 0) {
++                agent->vx = maxspeed * action_vx;
++                agent->image_theme = 1;
++                agent->rotation = (agent->vx > 0 ? 1 : -1) * PI / 2;
++            } else if (action_vy != 0) {
++                agent->vy = maxspeed * action_vy;
++                agent->image_theme = 1;
++                agent->rotation = agent->vy > 0 ? 0 : PI;
++            }
++        }
++
++        decay_vel(agent->vx);
++        decay_vel(agent->vy);
++    }
++
++    QRectF get_adjusted_image_rect(int type, const QRectF &rect) override {
++        if (type == PLAYER) {
++            return adjust_rect(rect, QRectF(0, -.275, 1, 1.55));
++        }
++
++        return BasicAbstractGame::get_adjusted_image_rect(type, rect);
++    }
++
++    void game_step() override {
++        if (agent->image_theme >= 1) {
++            agent->image_theme = (agent->image_theme + 1) % FROG_ANIMATION_FRAMES;
++        }
++
++        BasicAbstractGame::game_step();
++
++        spawn_entities();
++
++        bool standing_on_log = false;
++        float log_vx = 0.0;
++        float margin = -1 * agent->rx;
++        for (auto &m : entities) {
++            if (m->type == LOG && has_collision(agent, m, margin)) {
++                // we're standing on a log, don't die
++                standing_on_log = true;
++                log_vx = m->vx;
++            }
++        }
++
++        if (get_obj(agent->x, agent->y) == WATER) {
++            if (!standing_on_log && agent->vx == 0 && agent->vy == 0) {
++                step_data.done = true;
++            }
++        }
++
++        if (standing_on_log) {
++            agent->x += log_vx;
++        }
++
++        if (is_out_of_bounds(agent)) {
++            step_data.done = true;
++        }
++    }
++
++    void serialize(WriteBuffer *b) override {
++        BasicAbstractGame::serialize(b);
++        b->write_int(bottom_road_y);
++        b->write_vector_float(road_lane_speeds);
++        b->write_int(bottom_water_y);
++        b->write_vector_float(water_lane_speeds);
++        b->write_int(goal_y);
++    }
++
++    void deserialize(ReadBuffer *b) override {
++        BasicAbstractGame::deserialize(b);
++        bottom_road_y = b->read_int();
++        road_lane_speeds = b->read_vector_float();
++        bottom_water_y = b->read_int();
++        water_lane_speeds = b->read_vector_float();
++        goal_y = b->read_int();
++    }
++};
++
++std::shared_ptr<LeaperGame> make_leaper(void) {
++    return std::make_shared<LeaperGame>();
++}
++/* ---------------------MAZE----------------------*/
++const std::string MAZE_NAME = "maze";
++
++const float REWARD = 10.0;
++
++const int GOAL_maze = 2;
++
++class MazeGame : public BasicAbstractGame {
++  public:
++    std::shared_ptr<MazeGen> maze_gen;
++    int maze_dim = 0;
++    int world_dim = 0;
++
++    MazeGame()
++        : BasicAbstractGame(MAZE_NAME) {
++        timeout = 500;
++        random_agent_start = false;
++        has_useful_vel_info = false;
++
++        out_of_bounds_object = WALL_OBJ;
++        visibility = 8.0;
++    }
++
++    void load_background_images() override {
++        main_bg_images_ptr = &topdown_backgrounds;
++    }
++
++    void asset_for_type(int type, std::vector<std::string> &names) override {
++        if (type == WALL_OBJ) {
++            names.push_back("kenney/Ground/Sand/sandCenter.png");
++        } else if (type == GOAL_maze) {
++            names.push_back("misc_assets/cheese.png");
++        } else if (type == PLAYER) {
++            names.push_back("kenney/Enemies/mouse_move.png");
++        }
++    }
++
++    void choose_world_dim() override {
++        int dist_diff = options.distribution_mode;
++
++        if (dist_diff == EasyMode) {
++            world_dim = 15;
++        } else if (dist_diff == HardMode) {
++            world_dim = 25;
++        } else if (dist_diff == MemoryMode) {
++            world_dim = 31;
++        }
++
++        main_width = world_dim;
++        main_height = world_dim;
++    }
++
++    void game_reset() override {
++        BasicAbstractGame::game_reset();
++
++        grid_step = true;
++
++        maze_dim = rand_gen.randn((world_dim - 1) / 2) * 2 + 3;
++        int margin = (world_dim - maze_dim) / 2;
++
++        std::shared_ptr<MazeGen> _maze_gen(new MazeGen(&rand_gen, maze_dim));
++        maze_gen = _maze_gen;
++
++        options.center_agent = options.distribution_mode == MemoryMode;
++
++        agent->rx = .5;
++        agent->ry = .5;
++        agent->x = margin + .5;
++        agent->y = margin + .5;
++
++        maze_gen->generate_maze();
++        maze_gen->place_objects(GOAL_maze, 1);
++
++        for (int i = 0; i < grid_size; i++) {
++            set_obj(i, WALL_OBJ);
++        }
++
++        for (int i = 0; i < maze_dim; i++) {
++            for (int j = 0; j < maze_dim; j++) {
++                int type = maze_gen->grid.get(i + MAZE_OFFSET, j + MAZE_OFFSET);
++
++                set_obj(margin + i, margin + j, type);
++            }
++        }
++
++        if (margin > 0) {
++            for (int i = 0; i < maze_dim + 2; i++) {
++                set_obj(margin - 1, margin + i - 1, WALL_OBJ);
++                set_obj(margin + maze_dim, margin + i - 1, WALL_OBJ);
++
++                set_obj(margin + i - 1, margin - 1, WALL_OBJ);
++                set_obj(margin + i - 1, margin + maze_dim, WALL_OBJ);
++            }
++        }
++    }
++
++    void set_action_xy(int move_action) override {
++        BasicAbstractGame::set_action_xy(move_action);
++        if (action_vx != 0)
++            action_vy = 0;
++    }
++
++    void game_step() override {
++        BasicAbstractGame::game_step();
++
++        if (action_vx > 0)
++            agent->is_reflected = true;
++        if (action_vx < 0)
++            agent->is_reflected = false;
++
++        int ix = int(agent->x);
++        int iy = int(agent->y);
++
++        if (get_obj(ix, iy) == GOAL_maze) {
++            set_obj(ix, iy, SPACE);
++            step_data.reward += REWARD;
++            step_data.level_complete = true;
++        }
++
++        step_data.done = step_data.reward > 0;
++    }
++
++    void serialize(WriteBuffer *b) override {
++        BasicAbstractGame::serialize(b);
++        b->write_int(maze_dim);
++        b->write_int(world_dim);
++    }
++
++    void deserialize(ReadBuffer *b) override {
++        BasicAbstractGame::deserialize(b);
++        maze_dim = b->read_int();
++        world_dim = b->read_int();
++    }
++};
++
++std::shared_ptr<MazeGame> make_maze(void) {
++    return std::make_shared<MazeGame>();
++}
++
++/* ---------------------MINER----------------------*/
++const std::string MINER_NAME = "miner";
++
++const int DIAMOND_REWARD = 1.0;
++
++const int BOULDER = 1;
++const int DIAMOND = 2;
++const int MOVING_BOULDER = 3;
++const int MOVING_DIAMOND = 4;
++const int EXIT_miner = 6;
++const int DIRT = 9;
++
++
++class MinerGame : public BasicAbstractGame {
++  public:
++    int diamonds_remaining = 0;
++
++    MinerGame()
++        : BasicAbstractGame(MINER_NAME) {
++        main_width = 20;
++        main_height = 20;
++
++        mixrate = .5;
++        maxspeed = .5;
++        has_useful_vel_info = false;
++
++        out_of_bounds_object = OOB_WALL;
++        visibility = 8.0;
++    }
++
++    void load_background_images() override {
++        main_bg_images_ptr = &platform_backgrounds;
++    }
++
++    void asset_for_type(int type, std::vector<std::string> &names) override {
++        if (type == PLAYER) {
++            names.push_back("misc_assets/robot_greenDrive1.png");
++        } else if (type == BOULDER) {
++            names.push_back("misc_assets/elementStone007.png");
++        } else if (type == DIAMOND) {
++            names.push_back("misc_assets/gemBlue.png");
++        } else if (type == EXIT_miner) {
++            names.push_back("misc_assets/window.png");
++        } else if (type == DIRT) {
++            names.push_back("misc_assets/dirt.png");
++        } else if (type == OOB_WALL) {
++            names.push_back("misc_assets/tile_bricksGrey.png");
++        }
++    }
++
++    bool is_blocked(const std::shared_ptr<Entity> &src, int target, bool is_horizontal) override {
++        if (BasicAbstractGame::is_blocked(src, target, is_horizontal))
++            return true;
++        if (src->type == PLAYER && (target == BOULDER || target == MOVING_BOULDER || target == OOB_WALL))
++            return true;
++
++        return false;
++    }
++
++    bool will_reflect(int src, int target) override {
++        return BasicAbstractGame::will_reflect(src, target) || (src == ENEMY && (target == BOULDER || target == DIAMOND || target == MOVING_BOULDER || target == MOVING_DIAMOND || target == out_of_bounds_object));
++    }
++
++    void handle_agent_collision(const std::shared_ptr<Entity> &obj) override {
++        BasicAbstractGame::handle_agent_collision(obj);
++
++        if (obj->type == ENEMY) {
++            step_data.done = true;
++        } else if (obj->type == EXIT_miner) {
++            if (diamonds_remaining == 0) {
++                step_data.reward += COMPLETION_BONUS;
++                step_data.level_complete = true;
++                step_data.done = true;
++            }
++        }
++    }
++
++    int image_for_type(int type) override {
++        if (type == MOVING_BOULDER) {
++            return BOULDER;
++        } else if (type == MOVING_DIAMOND) {
++            return DIAMOND;
++        }
++
++        return BasicAbstractGame::image_for_type(type);
++    }
++
++    int get_agent_index() {
++        return int(agent->y) * main_width + int(agent->x);
++    }
++
++    void set_action_xy(int move_action) override {
++        BasicAbstractGame::set_action_xy(move_action);
++        if (action_vx != 0)
++            action_vy = 0;
++    }
++
++    void choose_new_vel(const std::shared_ptr<Entity> &ent) {
++        int is_horizontal = rand_gen.randbool();
++        int vel = rand_gen.randn(2) * 2 - 1;
++        if (is_horizontal) {
++            ent->vx = vel;
++            ent->vy = 0;
++        } else {
++            ent->vx = 0;
++            ent->vy = vel;
++        }
++    }
++
++    void choose_world_dim() override {
++        int dist_diff = options.distribution_mode;
++
++        if (dist_diff == EasyMode) {
++            main_width = 10;
++            main_height = 10;
++        } else if (dist_diff == HardMode) {
++            main_width = 20;
++            main_height = 20;
++        } else if (dist_diff == MemoryMode) {
++            main_width = 35;
++            main_height = 35;
++        }
++    }
++
++    void game_reset() override {
++        BasicAbstractGame::game_reset();
++
++        agent->rx = .5;
++        agent->ry = .5;
++
++        int main_area = main_height * main_width;
++
++        options.center_agent = options.distribution_mode == MemoryMode;
++        grid_step = true;
++
++        float diamond_pct = 12 / 400.0f;
++        float boulder_pct = 80 / 400.0f;
++
++        int num_diamonds = (int)(diamond_pct * grid_size);
++        int num_boulders = (int)(boulder_pct * grid_size);
++
++        std::vector<int> obj_idxs = rand_gen.simple_choose(main_area, num_diamonds + num_boulders + 1);
++
++        int agent_x = obj_idxs[0] % main_width;
++        int agent_y = obj_idxs[0] / main_width;
++
++        agent->x = agent_x + .5;
++        agent->y = agent_y + .5;
++
++        for (int i = 0; i < main_area; i++) {
++            set_obj(i, DIRT);
++        }
++
++        for (int i = 0; i < num_diamonds; i++) {
++            int cell = obj_idxs[i + 1];
++            set_obj(cell, DIAMOND);
++        }
++
++        for (int i = 0; i < num_boulders; i++) {
++            int cell = obj_idxs[i + 1 + num_diamonds];
++            set_obj(cell, BOULDER);
++        }
++
++        std::vector<int> dirt_cells = get_cells_with_type(DIRT);
++
++        set_obj(int(agent->x), int(agent->y), SPACE);
++
++        for (int i = -1; i <= 1; i++) {
++            for (int j = -1; j <= 1; j++) {
++                int ox = agent_x + i;
++                int oy = agent_y + j;
++                if (get_obj(ox, oy) == BOULDER) {
++                    set_obj(ox, oy, DIRT);
++                }
++            }
++        }
++
++        std::vector<int> exit_candidates;
++
++        for (int cell : dirt_cells) {
++            int above_obj = get_obj(cell + main_width);
++            if (above_obj == DIRT || above_obj == out_of_bounds_object) {
++                exit_candidates.push_back(cell);
++            }
++        }
++
++        fassert(exit_candidates.size() > 0);
++
++        int exit_cell = exit_candidates[rand_gen.randn((int)(exit_candidates.size()))];
++        set_obj(exit_cell, SPACE);
++        auto exit = add_entity((exit_cell % main_width) + .5, (exit_cell / main_width) + .5, 0, 0, .5, EXIT);
++        exit->render_z = -1;
++    }
++
++    int get_moving_type(int type) {
++        if (type == DIAMOND)
++            return MOVING_DIAMOND;
++        if (type == BOULDER)
++            return MOVING_BOULDER;
++
++        return type;
++    }
++
++    bool is_moving(int type) {
++        return type == MOVING_BOULDER || type == MOVING_DIAMOND;
++    }
++
++    int get_stationary_type(int type) {
++        if (type == MOVING_DIAMOND)
++            return DIAMOND;
++        if (type == MOVING_BOULDER)
++            return BOULDER;
++
++        return type;
++    }
++
++    bool is_free(int idx) {
++        return get_obj(idx) == SPACE && (get_agent_index() != idx);
++    }
++
++    bool is_round(int type) {
++        return type == BOULDER || type == MOVING_BOULDER || type == DIAMOND || type == MOVING_DIAMOND;
++    }
++
++    void handle_push() {
++        int agent_idx = get_agent_index();
++        int agentx = agent_idx % main_width;
++
++        if (action_vx == 1 && (agent->vx == 0) && (agentx < main_width - 2) && get_obj(agent_idx + 1) == BOULDER && get_obj(agent_idx + 2) == SPACE) {
++            set_obj(agent_idx + 1, SPACE);
++            set_obj(agent_idx + 2, BOULDER);
++            agent->x += 1;
++        } else if (action_vx == -1 && (agent->vx == 0) && (agentx > 1) && get_obj(agent_idx - 1) == BOULDER && get_obj(agent_idx - 2) == SPACE) {
++            set_obj(agent_idx - 1, SPACE);
++            set_obj(agent_idx - 2, BOULDER);
++            agent->x -= 1;
++        }
++    }
++
++    void game_step() override {
++        BasicAbstractGame::game_step();
++
++        if (action_vx > 0)
++            agent->is_reflected = false;
++        if (action_vx < 0)
++            agent->is_reflected = true;
++
++        handle_push();
++
++        int agent_obj = get_obj(int(agent->x), int(agent->y));
++
++        if (agent_obj == DIAMOND) {
++            step_data.reward += DIAMOND_REWARD;
++        }
++
++        if (agent_obj == DIRT || agent_obj == DIAMOND) {
++            set_obj(int(agent->x), int(agent->y), SPACE);
++        }
++
++        int main_area = main_width * main_height;
++
++        int diamonds_count = 0;
++
++        for (int idx = 0; idx < main_area; idx++) {
++            int obj = get_obj(idx);
++
++            int obj_x = idx % main_width;
++            int agent_idx = (agent->y - .5) * main_width + (agent->x - .5);
++
++            int stat_type = get_stationary_type(obj);
++
++            if (stat_type == DIAMOND) {
++                diamonds_count++;
++            }
++
++            if (obj == BOULDER || obj == MOVING_BOULDER || obj == DIAMOND || obj == MOVING_DIAMOND) {
++                int below_idx = idx - main_width;
++                int obj2 = get_obj(below_idx);
++                bool agent_is_below = agent_idx == below_idx;
++
++                if (obj2 == SPACE && !agent_is_below) {
++                    set_obj(idx, SPACE);
++                    set_obj(below_idx, get_moving_type(obj));
++                } else if (agent_is_below && is_moving(obj)) {
++                    step_data.done = true;
++                } else if (is_round(obj2) && obj_x > 0 && is_free(idx - 1) && is_free(idx - main_width - 1)) {
++                    set_obj(idx, SPACE);
++                    set_obj(idx - 1, get_stationary_type(obj));
++                } else if (is_round(obj2) && obj_x < main_width - 1 && is_free(idx + 1) && is_free(idx - main_width + 1)) {
++                    set_obj(idx, SPACE);
++                    set_obj(idx + 1, stat_type);
++                } else {
++                    set_obj(idx, stat_type);
++                }
++            }
++        }
++
++        diamonds_remaining = diamonds_count;
++
++        for (auto ent : entities) {
++            if (ent->type == ENEMY) {
++                if (rand_gen.randn(6) == 0) {
++                    choose_new_vel(ent);
++                }
++            }
++        }
++    }
++
++    void serialize(WriteBuffer *b) override {
++        BasicAbstractGame::serialize(b);
++        b->write_int(diamonds_remaining);
++    }
++
++    void deserialize(ReadBuffer *b) override {
++        BasicAbstractGame::deserialize(b);
++        diamonds_remaining = b->read_int();
++    }
++};
++
++std::shared_ptr<MinerGame> make_miner(void) {
++    return std::make_shared<MinerGame>();
++}
++/* ---------------------NINJA----------------------*/
++const std::string NINJA_NAME = "ninja";
++
++const int BOMB = 6;
++const int THROWING_STAR = 7;
++const int FIRE = 14;
++
++const int WALL_MID_ninja = 20;
++const int NUM_WALL_THEMES_ninja = 3;
++
++class Ninja : public BasicAbstractGame {
++  public:
++    bool has_support = false;
++    bool facing_right = false;
++    int last_fire_time = 0;
++    int wall_theme = 0;
++    float gravity = 0.0f;
++    float air_control = 0.0f;
++    float jump_charge = 0.0f;
++    float jump_charge_inc = 0.0f;
++
++    Ninja()
++        : BasicAbstractGame(NINJA_NAME) {
++        main_width = 64;
++        main_height = 64;
++
++        out_of_bounds_object = WALL_MID_ninja;
++    }
++
++    void load_background_images() override {
++        main_bg_images_ptr = &platform_backgrounds;
++    }
++
++    void asset_for_type(int type, std::vector<std::string> &names) override {
++        std::shared_ptr<QImage> asset_ptr = nullptr;
++
++        if (type == WALL_MID_ninja) {
++            names.push_back("misc_assets/tile_bricksGrey.png");
++            names.push_back("misc_assets/tile_bricksGrown.png");
++            names.push_back("misc_assets/tile_bricksRed.png");
++        } else if (type == GOAL) {
++            names.push_back("platformer/shroom1.png");
++            names.push_back("platformer/shroom2.png");
++            names.push_back("platformer/shroom3.png");
++            names.push_back("platformer/shroom4.png");
++            names.push_back("platformer/shroom5.png");
++            names.push_back("platformer/shroom6.png");
++        } else if (type == PLAYER) {
++            names.push_back("platformer/zombie_idle.png");
++        } else if (type == PLAYER_JUMP) {
++            names.push_back("platformer/zombie_jump.png");
++        } else if (type == PLAYER_RIGHT1) {
++            names.push_back("platformer/zombie_walk1.png");
++        } else if (type == PLAYER_RIGHT2) {
++            names.push_back("platformer/zombie_walk2.png");
++        } else if (type == BOMB) {
++            names.push_back("misc_assets/bomb.png");
++        } else if (type == THROWING_STAR) {
++            names.push_back("misc_assets/saw.png");
++        } else if (type == FIRE) {
++            names.push_back("misc_assets/bomb.png");
++        }
++    }
++
++    void handle_agent_collision(const std::shared_ptr<Entity> &obj) override {
++        BasicAbstractGame::handle_agent_collision(obj);
++
++        if (obj->type == EXPLOSION) {
++            step_data.done = true;
++        } else if (obj->type == GOAL) {
++            step_data.reward += GOAL_REWARD;
++            step_data.level_complete = true;
++            step_data.done = true;
++        }
++    }
++
++    void handle_grid_collision(const std::shared_ptr<Entity> &obj, int type, int i, int j) override {
++        if (obj->type == PLAYER) {
++            if (type == FIRE) {
++                step_data.done = true;
++            } else if (type == BOMB) {
++                step_data.done = true;
++            }
++        } else if (obj->type == THROWING_STAR) {
++            if (type == BOMB) {
++                obj->will_erase = true;
++                set_obj(i, j, SPACE);
++                add_entity(i + .5, j + .5, 0, 0, .5, EXPLOSION);
++            }
++            if (is_wall(type)) {
++                obj->will_erase = true;
++            }
++        }
++    }
++
++    void update_agent_velocity() override {
++        float mixrate_x = has_support ? mixrate : (mixrate * air_control);
++        agent->vx = (1 - mixrate_x) * agent->vx + mixrate_x * maxspeed * action_vx;
++
++        if (action_vy < 1 && jump_charge > 0) {
++            agent->vy = jump_charge * max_jump;
++            jump_charge = 0;
++        }
++
++        if (!has_support) {
++            if (agent->vy > -2) {
++                agent->vy -= gravity;
++            }
++        }
++    }
++
++    bool is_wall(int type) {
++        return type == WALL_MID_ninja;
++    }
++
++    int theme_for_grid_obj(int type) override {
++        if (is_wall(type))
++            return wall_theme;
++
++        return 0;
++    }
++
++    bool use_block_asset(int type) override {
++        return BasicAbstractGame::use_block_asset(type) || is_wall(type);
++    }
++
++    bool is_blocked(const std::shared_ptr<Entity> &src, int target, bool is_horizontal) override {
++        if (is_wall(target)) {
++            if (src->type == PLAYER) {
++                return true;
++            } else if (src->type == THROWING_STAR) {
++                // throwing stars stick to walls
++                src->vx = 0;
++                src->vy = 0;
++                return true;
++            }
++        }
++
++        return BasicAbstractGame::is_blocked(src, target, is_horizontal);
++    }
++
++    int image_for_type(int type) override {
++        if (type == PLAYER) {
++            if (fabs(agent->vx) < .01 && action_vx == 0 && has_support) {
++                return PLAYER;
++            } else {
++                return (cur_time / 5 % 2 == 0 || !has_support) ? PLAYER_RIGHT1 : PLAYER_RIGHT2;
++            }
++        }
++
++        return BasicAbstractGame::image_for_type(type);
++    }
++
++    void game_draw(QPainter &p, const QRect &rect) override {
++        BasicAbstractGame::game_draw(p, rect);
++
++        QColor charge_color = QColor(66, 245, 135);
++
++        float bar_height = 3 * jump_charge;
++
++        QRectF dist_rect2 = get_abs_rect(.25, visibility - .5 - bar_height, .5, bar_height);
++        p.fillRect(dist_rect2, charge_color);
++    }
++
++    void fill_block_top(int x, int y, int dx, int dy, char fill, char top) {
++        if (dy <= 0)
++            return;
++        fill_elem(x, y, dx, dy - 1, fill);
++        fill_elem(x, y + dy - 1, dx, 1, top);
++    }
++
++    void fill_ground_block(int x, int y, int dx, int dy) {
++        fill_block_top(x, y, dx, dy, WALL_MID_ninja, WALL_MID_ninja);
++    }
++
++    void init_floor_and_walls() {
++        fill_elem(0, 0, main_width, 1, WALL_MID_ninja);
++        fill_elem(0, 0, 1, main_height, WALL_MID_ninja);
++        fill_elem(main_width - 1, 0, 1, main_height, WALL_MID_ninja);
++        fill_elem(0, main_height - 1, main_width, 1, WALL_MID_ninja);
++    }
++
++    void generate_coin_to_the_right(int difficulty) {
++        int min_gap = difficulty - 1;
++        int min_plat_w = 1;
++        int inc_dy = 4;
++
++        if (options.distribution_mode == EasyMode) {
++            min_gap -= 1;
++            if (min_gap < 0)
++                min_gap = 0;
++            min_plat_w = 3;
++            inc_dy = 2;
++        }
++
++        float bomb_prob = .25 * (difficulty - 1);
++        int max_gap_inc = difficulty == 1 ? 1 : 2;
++
++        int num_sections = rand_gen.randn(difficulty) + difficulty;
++        int start_x = 5;
++        int curr_x = start_x;
++        int curr_y = main_height / 2;
++        int min_y = curr_y;
++
++        int w = main_width;
++
++        float _max_dy = max_jump * max_jump / (2 * gravity);
++
++        int max_dy = (_max_dy - .5);
++
++        int prev_x;
++        int prev_y;
++
++        fill_ground_block(0, 0, start_x, curr_y);
++        fill_elem(0, curr_y + 8, start_x, main_height - curr_y - 8, WALL_MID_ninja);
++
++        for (int i = 0; i < num_sections; i++) {
++            prev_x = curr_x;
++            prev_y = curr_y;
++            int num_edges = rand_gen.randn(2) + 1;
++            int max_y = -1;
++            int last_edge_y = -1;
++
++            for (int j = 0; j < num_edges; j++) {
++                curr_x = prev_x + j;
++
++                if (curr_x + 15 >= w) {
++                    break;
++                }
++
++                curr_y = prev_y;
++
++                int dy = rand_gen.randn(inc_dy) + 1 + int(difficulty / 3);
++
++                if (dy > max_dy) {
++                    dy = max_dy;
++                }
++
++                if (curr_y >= main_height - 15) {
++                    dy *= -1;
++                } else if (curr_y >= 5 && rand_gen.rand01() < .4) {
++                    dy *= -1;
++                }
++
++                curr_y += dy;
++
++                if (curr_y < 3) {
++                    curr_y = 3;
++                }
++
++                if (abs(curr_y - last_edge_y) <= 1) {
++                    curr_y = last_edge_y + 2;
++                }
++
++                int dx = min_plat_w + rand_gen.randn(3);
++
++                fill_ground_block(curr_x, curr_y - 1, dx, 1);
++
++                curr_x += dx;
++                curr_x += min_gap + rand_gen.randn(max_gap_inc + 1);
++
++                if (curr_y > max_y)
++                    max_y = curr_y;
++                if (curr_y < min_y)
++                    min_y = curr_y;
++
++                last_edge_y = curr_y;
++            }
++
++            if (rand_gen.rand01() < bomb_prob) {
++                set_obj(rand_gen.randn(curr_x - prev_x + 1) + prev_x, max_y + 2, BOMB);
++            }
++
++            int ceiling_height = 11;
++            int ceiling_start = max_y - 1 + ceiling_height;
++
++            fill_ground_block(prev_x, ceiling_start, curr_x - prev_x, main_height - ceiling_start);
++        }
++
++        auto ent = add_entity(curr_x + .5, curr_y + .5, 0, 0, .5, GOAL);
++        choose_random_theme(ent);
++
++        fill_ground_block(curr_x, curr_y - 1, 1, 1);
++        fill_elem(curr_x, curr_y + 6, 1, main_height - curr_y - 6, WALL_MID_ninja);
++
++        int fire_y = min_y - 2;
++        if (fire_y < 1)
++            fire_y = 1;
++
++        fill_ground_block(start_x, 0, main_width - start_x, fire_y);
++        fill_elem(start_x, fire_y, main_width - start_x, 1, FIRE);
++        fill_elem(curr_x + 1, 0, main_width - curr_x - 1, main_height, WALL_MID_ninja);
++    }
++
++    void game_reset() override {
++        BasicAbstractGame::game_reset();
++
++        gravity = 0.2f;
++        max_jump = 1.5;
++        air_control = 0.15f;
++        maxspeed = .5;
++        has_support = false;
++        facing_right = true;
++        jump_charge = 0;
++        jump_charge_inc = .25;
++        visibility = 16;
++
++        agent->rx = .5;
++        agent->ry = .5;
++
++        agent->x = 1 + agent->rx;
++        agent->y = main_height / 2 + agent->ry;
++
++        if (options.distribution_mode == EasyMode) {
++            max_jump = 1.25;
++            jump_charge_inc = 1;
++            visibility = 10;
++        }
++
++        int max_difficulty = 3;
++        int difficulty = rand_gen.randn(max_difficulty) + 1;
++
++        last_fire_time = 0;
++
++        wall_theme = rand_gen.randn(NUM_WALL_THEMES_ninja);
++
++        init_floor_and_walls();
++        generate_coin_to_the_right(difficulty);
++    }
++
++    bool can_support(int obj) {
++        return is_wall(obj) || obj == out_of_bounds_object;
++    }
++
++    void set_action_xy(int move_action) override {
++        action_vx = move_action / 3 - 1;
++        action_vy = (move_action % 3) - 1;
++        if (action_vy < 0)
++            action_vy = 0;
++
++        if (action_vx > 0)
++            facing_right = true;
++        if (action_vx < 0)
++            facing_right = false;
++
++        int obj_below_1 = get_obj_from_floats(agent->x - (agent->rx - .01), agent->y - (agent->ry + .01));
++        int obj_below_2 = get_obj_from_floats(agent->x + (agent->rx - .01), agent->y - (agent->ry + .01));
++
++        has_support = can_support(obj_below_1) || can_support(obj_below_2);
++
++        if (has_support && action_vy == 1) {
++            action_vy = 1;
++            jump_charge += jump_charge_inc;
++
++            if (jump_charge > 1) {
++                jump_charge = 1;
++            }
++        } else {
++            action_vy = 0;
++        }
++
++        if (!has_support) {
++            jump_charge = 0;
++        }
++    }
++
++    void game_step() override {
++        BasicAbstractGame::game_step();
++
++        if (action_vx > 0)
++            agent->is_reflected = false;
++        if (action_vx < 0)
++            agent->is_reflected = true;
++
++        if (special_action > 0 && (cur_time - last_fire_time) >= 3) {
++            float theta = 0;
++            float bullet_vel = 1;
++
++            if (special_action == 1) {
++                theta = 0;
++            } else if (special_action == 2) {
++                theta = PI / 4;
++            } else if (special_action == 3) {
++                theta = PI / 2;
++            } else if (special_action == 4) {
++                theta = -1 * PI / 4;
++            }
++
++            if (agent->is_reflected) {
++                theta = PI - theta;
++            }
++
++            auto new_bullet = add_entity(agent->x, agent->y, bullet_vel * cos(theta), bullet_vel * sin(theta), .25, THROWING_STAR);
++            new_bullet->collides_with_entities = true;
++            new_bullet->expire_time = 15;
++            new_bullet->smart_step = true;
++            last_fire_time = cur_time;
++        }
++    }
++
++    void serialize(WriteBuffer *b) override {
++        BasicAbstractGame::serialize(b);
++        b->write_bool(has_support);
++        b->write_bool(facing_right);
++        b->write_int(last_fire_time);
++        b->write_int(wall_theme);
++        b->write_float(gravity);
++        b->write_float(air_control);
++        b->write_float(jump_charge);
++        b->write_float(jump_charge_inc);
++    }
++
++    void deserialize(ReadBuffer *b) override {
++        BasicAbstractGame::deserialize(b);
++        has_support = b->read_bool();
++        facing_right = b->read_bool();
++        last_fire_time = b->read_int();
++        wall_theme = b->read_int();
++        gravity = b->read_float();
++        air_control = b->read_float();
++        jump_charge = b->read_float();
++        jump_charge_inc = b->read_float();
++    }
++};
++
++std::shared_ptr<Ninja> make_ninja(void) {
++    return std::make_shared<Ninja>();
++}
++/* ---------------------PLUNDER----------------------*/
++const std::string PLUNDER_NAME = "plunder";
++
++const int TARGET_LEGEND = 2;
++const int TARGET_BACKGROUND = 3;
++const int PANEL = 6;
++const int SHIP = 7;
++
++class PlunderGame : public BasicAbstractGame {
++  public:
++    int last_fire_time = 0;
++    std::vector<bool> lane_directions, target_bools;
++    std::vector<int> image_permutation;
++    std::vector<float> lane_vels;
++    int num_lanes = 0;
++    int num_current_ship_types = 0;
++    int targets_hit = 0;
++    int target_quota = 0;
++    float juice_left = 0.0f;
++    float r_scale = 0.0f;
++    float spawn_prob = 0.0f;
++    float legend_r = 0.0f;
++    float min_agent_x = 0.0f;
++
++    PlunderGame()
++        : BasicAbstractGame(PLUNDER_NAME) {
++        timeout = 4000;
++
++        main_width = 20;
++        main_height = 20;
++
++        mixrate = .5;
++        maxspeed = 0.85f;
++        has_useful_vel_info = false;
++    }
++
++    void load_background_images() override {
++        main_bg_images_ptr = &water_surface_backgrounds;
++    }
++
++    void asset_for_type(int type, std::vector<std::string> &names) override {
++        if (type == SHIP) {
++            names.push_back("misc_assets/ship_1.png");
++            names.push_back("misc_assets/ship_2.png");
++            names.push_back("misc_assets/ship_3.png");
++            names.push_back("misc_assets/ship_4.png");
++            names.push_back("misc_assets/ship_5.png");
++            names.push_back("misc_assets/ship_6.png");
++        } else if (type == PLAYER_BULLET) {
++            names.push_back("misc_assets/cannonBall.png");
++        } else if (type == PANEL) {
++            names.push_back("misc_assets/panel_wood.png");
++        } else if (type == TARGET_BACKGROUND) {
++            names.push_back("misc_assets/target_red2.png");
++        }
++    }
++
++    void game_draw(QPainter &p, const QRect &rect) override {
++        BasicAbstractGame::game_draw(p, rect);
++
++        QColor juice_color = QColor(66, 245, 135);
++        QColor progress_color = QColor(245, 66, 144);
++
++        QRectF dist_rect1 = get_abs_rect(.25, .25, main_width * juice_left, .5);
++        p.fillRect(dist_rect1, juice_color);
++
++        QRectF dist_rect2 = get_abs_rect(.25, .75, main_width * (targets_hit * 1.0 / target_quota), .5);
++        p.fillRect(dist_rect2, progress_color);
++    }
++
++    bool is_target(int theme_num) {
++        return target_bools[theme_num];
++    }
++
++    bool should_preserve_type_themes(int type) override {
++        return type == SHIP;
++    }
++
++    void handle_collision(const std::shared_ptr<Entity> &src, const std::shared_ptr<Entity> &target) override {
++        if (src->type == PLAYER_BULLET) {
++            if (target->type == SHIP) {
++                target->will_erase = true;
++                src->will_erase = true;
++
++                if (is_target(target->image_theme)) {
++                    targets_hit += 1;
++                    step_data.reward += POSITIVE_REWARD;
++                    juice_left += 0.1f;
++                } else {
++                    juice_left -= 0.1f;
++                }
++            } else if (target->type == PANEL) {
++                src->will_erase = true;
++            }
++
++            if (target->will_erase) {
++                add_entity(target->x, target->y, target->vx / 2, target->vy / 2, .5 * target->rx, EXPLOSION);
++            }
++        }
++    }
++
++    void set_action_xy(int move_action) override {
++        action_vx = move_action / 3 - 1;
++        action_vy = 0;
++        action_vrot = 0;
++    }
++
++    void game_reset() override {
++        BasicAbstractGame::game_reset();
++
++        agent->image_type = SHIP;
++
++        juice_left = 1;
++        targets_hit = 0;
++        target_quota = 20;
++        spawn_prob = 0.06f;
++        r_scale = options.distribution_mode == EasyMode ? 1.5f : 1.0f;
++        int num_total_ship_types = 6;
++
++        num_lanes = 5;
++        lane_directions.clear();
++        lane_vels.clear();
++        target_bools.clear();
++
++        std::vector<int> image_idxs;
++
++        for (int i = 0; i < num_total_ship_types; i++) {
++            image_idxs.push_back(i);
++        }
++
++        image_permutation = rand_gen.choose_n(image_idxs, num_total_ship_types);
++
++        num_current_ship_types = 2;
++
++        for (int i = 0; i < num_total_ship_types; i++) {
++            target_bools.push_back(false);
++        }
++
++        for (int i = 0; i < num_current_ship_types / 2; i++) {
++            target_bools[image_permutation[i]] = true;
++        }
++
++        for (int i = 0; i < num_lanes; i++) {
++            lane_directions.push_back(rand_gen.rand01() < .5);
++            lane_vels.push_back(.15 + .1 * rand_gen.rand01());
++        }
++
++        int num_panels = options.distribution_mode == EasyMode ? 0 : rand_gen.randn(4);
++        float panel_width = 1.2f;
++
++        if (panel_width > 0) {
++            for (int i = 0; i < num_panels; i++) {
++                spawn_entity_rxy(panel_width, .5, PANEL, 0, .25 * main_height, main_width, .25 * main_height);
++            }
++        }
++
++        float key_scale = 1.5;
++        legend_r = 2;
++
++        add_entity(legend_r, legend_r, 0, 0, legend_r, TARGET_BACKGROUND);
++
++        auto ent = add_entity(legend_r, legend_r, 0, 0, r_scale * key_scale, TARGET_LEGEND);
++        ent->image_theme = image_permutation[0];
++        ent->image_type = SHIP;
++        match_aspect_ratio(ent);
++        ent->rotation = PI / 2;
++
++        last_fire_time = 0;
++
++        options.center_agent = false;
++
++        agent->rx = r_scale;
++        agent->rotation = -1 * PI / 2;
++        agent->image_theme = image_permutation[rand_gen.randn(num_current_ship_types / 2) + num_current_ship_types / 2];
++        match_aspect_ratio(agent);
++        reposition_agent();
++        agent->y = 1 + agent->ry;
++
++        min_agent_x = 2 * legend_r + agent->rx;
++
++        if (agent->x < min_agent_x) {
++            agent->x = min_agent_x;
++        }
++    }
++
++    void game_step() override {
++        BasicAbstractGame::game_step();
++
++        juice_left -= 0.0015f;
++
++        if (rand_gen.rand01() < spawn_prob) {
++            float ent_r = r_scale;
++            int lane = rand_gen.randn(num_lanes);
++            float ent_y = (lane * .11 + .4) * (main_height / 2 - ent_r) + main_height / 2;
++            float moves_right = lane_directions[lane];
++            float ent_vx = lane_vels[lane] * (moves_right ? 1 : -1);
++            auto ent = std::make_shared<Entity>(0, ent_y, ent_vx, 0, ent_r, SHIP);
++            ent->image_type = SHIP;
++            ent->image_theme = image_permutation[rand_gen.randn(num_current_ship_types)];
++            match_aspect_ratio(ent);
++            ent->x = moves_right ? -1 * ent_r : (main_width + ent_r);
++            ent->is_reflected = !moves_right;
++
++            if (!has_any_collision(ent)) {
++                entities.push_back(ent);
++            }
++        }
++
++        if (special_action == 1 && (cur_time - last_fire_time) >= 3) {
++            auto new_bullet = add_entity(agent->x, agent->y, 0, 1, .25, PLAYER_BULLET);
++            new_bullet->collides_with_entities = true;
++            new_bullet->expire_time = 50;
++            last_fire_time = cur_time;
++            juice_left -= 0.02f;
++        }
++
++        if (juice_left <= 0) {
++            step_data.done = true;
++        } else if (juice_left >= 1) {
++            juice_left = 1;
++        }
++
++        if (targets_hit >= target_quota) {
++            step_data.done = true;
++            step_data.reward += COMPLETION_BONUS;
++            step_data.level_complete = true;
++        }
++
++        // don't collide with legend
++        if (agent->x < min_agent_x) {
++            agent->x = min_agent_x;
++        }
++    }
++
++    void serialize(WriteBuffer *b) override {
++        BasicAbstractGame::serialize(b);
++        b->write_int(last_fire_time);
++        b->write_vector_bool(lane_directions);
++        b->write_vector_bool(target_bools);
++        b->write_vector_int(image_permutation);
++        b->write_vector_float(lane_vels);
++        b->write_int(num_lanes);
++        b->write_int(num_current_ship_types);
++        b->write_int(targets_hit);
++        b->write_int(target_quota);
++        b->write_float(juice_left);
++        b->write_float(r_scale);
++        b->write_float(spawn_prob);
++        b->write_float(legend_r);
++        b->write_float(min_agent_x);
++    }
++
++    void deserialize(ReadBuffer *b) override {
++        BasicAbstractGame::deserialize(b);
++        last_fire_time = b->read_int();
++        lane_directions = b->read_vector_bool();
++        target_bools = b->read_vector_bool();
++        image_permutation = b->read_vector_int();
++        lane_vels = b->read_vector_float();
++        num_lanes = b->read_int();
++        num_current_ship_types = b->read_int();
++        targets_hit = b->read_int();
++        target_quota = b->read_int();
++        juice_left = b->read_float();
++        r_scale = b->read_float();
++        spawn_prob = b->read_float();
++        legend_r = b->read_float();
++        min_agent_x = b->read_float();
++    }
++};
++
++std::shared_ptr<PlunderGame> make_plunder(void) {
++    return std::make_shared<PlunderGame>();
++}
++/* ---------------------STARPILOT----------------------*/
++const std::string STARPILOT_NAME = "starpilot";
++
++const float V_SCALE = 2.0f / 5.0f;
++
++const float BG_RATIO = 18;
++const float ENEMY_REWARD_starpilot = 1.0;
++
++const int BULLET_PLAYER = 1;
++const int BULLET2 = 2;
++const int BULLET3 = 3;
++const int FLYER = 4;
++const int METEOR = 5;
++const int CLOUD = 6;
++const int TURRET = 7;
++const int FAST_FLYER = 8;
++
++const int FINISH_LINE_starpilot = 9;
++
++const int SHOOTER_WIN_TIME = 500;
++
++const int NUM_BASIC_OBJECTS = 9;
++const int NUM_SHIP_THEMES = 7;
++
++bool spawn_cmp(const std::shared_ptr<Entity> &x, const std::shared_ptr<Entity> &y) {
++    return (x->spawn_time > y->spawn_time);
++}
++
++class StarPilotGame : public BasicAbstractGame {
++  public:
++    std::vector<std::shared_ptr<Entity>> spawners;
++
++    float hp_vs[NUM_BASIC_OBJECTS] = {};
++    float hp_healths[NUM_BASIC_OBJECTS] = {};
++    float hp_bullet_r[NUM_BASIC_OBJECTS] = {};
++    float hp_object_r[NUM_BASIC_OBJECTS] = {};
++    float hp_object_prob_weight[NUM_BASIC_OBJECTS] = {};
++    float total_prob_weight = 0.0f;
++    float hp_slow_v = 0.0f;
++    float hp_weapon_bullet_dist = 0.0f;
++    float hp_spawn_right_threshold = 0.0f;
++
++    int hp_min_enemy_delta_t = 0;
++    int hp_max_group_size = 0;
++    int hp_max_enemy_delta_t = 0;
++
++    StarPilotGame()
++        : BasicAbstractGame(STARPILOT_NAME) {
++        main_width = 16;
++        main_height = 16;
++    }
++
++    void load_background_images() override {
++        main_bg_images_ptr = &space_backgrounds;
++    }
++
++    void asset_for_type(int type, std::vector<std::string> &names) override {
++        if (type == PLAYER) {
++            names.push_back("misc_assets/playerShip2_blue.png");
++        } else if (type == BULLET_PLAYER) {
++            names.push_back("misc_assets/towerDefense_tile295.png");
++        } else if (type == BULLET2) {
++            names.push_back("misc_assets/towerDefense_tile296.png");
++        } else if (type == BULLET3) {
++            names.push_back("misc_assets/towerDefense_tile297.png");
++        } else if (type == FLYER || type == FAST_FLYER) {
++            names.push_back("misc_assets/spaceShips_001.png");
++            names.push_back("misc_assets/spaceShips_002.png");
++            names.push_back("misc_assets/spaceShips_003.png");
++            names.push_back("misc_assets/spaceShips_004.png");
++            names.push_back("misc_assets/spaceShips_005.png");
++            names.push_back("misc_assets/spaceShips_006.png");
++            names.push_back("misc_assets/spaceShips_007.png");
++        } else if (type == METEOR) {
++            names.push_back("misc_assets/spaceMeteors_001.png");
++            names.push_back("misc_assets/spaceMeteors_002.png");
++            names.push_back("misc_assets/spaceMeteors_003.png");
++            names.push_back("misc_assets/spaceMeteors_004.png");
++            names.push_back("misc_assets/meteorGrey_big1.png");
++            names.push_back("misc_assets/meteorGrey_big2.png");
++            names.push_back("misc_assets/meteorGrey_big3.png");
++            names.push_back("misc_assets/meteorGrey_big4.png");
++        } else if (type == CLOUD) {
++            names.push_back("misc_assets/spaceEffect1.png");
++            names.push_back("misc_assets/spaceEffect2.png");
++            names.push_back("misc_assets/spaceEffect3.png");
++            names.push_back("misc_assets/spaceEffect4.png");
++            names.push_back("misc_assets/spaceEffect5.png");
++            names.push_back("misc_assets/spaceEffect6.png");
++            names.push_back("misc_assets/spaceEffect7.png");
++            names.push_back("misc_assets/spaceEffect8.png");
++            names.push_back("misc_assets/spaceEffect9.png");
++        } else if (type == TURRET) {
++            names.push_back("misc_assets/spaceStation_018.png");
++            names.push_back("misc_assets/spaceStation_019.png");
++        } else if (type == FINISH_LINE_starpilot) {
++            names.push_back("misc_assets/spaceRockets_001.png");
++            names.push_back("misc_assets/spaceRockets_002.png");
++            names.push_back("misc_assets/spaceRockets_003.png");
++            names.push_back("misc_assets/spaceRockets_004.png");
++        }
++    }
++
++    void game_draw(QPainter &p, const QRect &rect) override {
++        float scale = rect.height() / main_height;
++
++        QColor bg_color = QColor(0, 0, 0);
++
++        p.fillRect(rect, bg_color);
++
++        if (options.use_backgrounds) {
++            float bg_k = 3;
++            float t = cur_time;
++            float x_off = -t * scale * hp_slow_v * 2 / char_dim;
++
++            QRectF r_bg = QRectF(x_off, -rect.height() * (bg_k - 1) / 2, rect.height() * bg_k * BG_RATIO, rect.height() * bg_k);
++            tile_image(p, main_bg_images_ptr->at(background_index).get(), r_bg, 1);
++        }
++
++        draw_foreground(p, rect);
++    }
++
++    void handle_agent_collision(const std::shared_ptr<Entity> &obj) override {
++        BasicAbstractGame::handle_agent_collision(obj);
++
++        if (obj->type == FINISH_LINE_starpilot) {
++            step_data.done = true;
++            step_data.reward += COMPLETION_BONUS;
++            step_data.level_complete = true;
++        } else if (is_lethal(obj)) {
++            step_data.done = true;
++        }
++    }
++
++    void handle_collision(const std::shared_ptr<Entity> &src, const std::shared_ptr<Entity> &target) override {
++        if (src->type == BULLET_PLAYER && target->type != CLOUD && is_destructible(target->type)) {
++            src->will_erase = true;
++            target->health -= 1;
++
++            add_entity(src->x, src->y, target->vx, target->vy, .5 * src->rx, EXPLOSION);
++        }
++    }
++
++    void init_hps() {
++        float scale = 1;
++
++        for (int i = 0; i < NUM_BASIC_OBJECTS; i++) {
++            hp_vs[i] = 1;
++            hp_healths[i] = 0;
++            hp_object_prob_weight[i] = 1;
++            hp_object_r[i] = scale / 2;
++        }
++
++        float default_bullet_r = scale / 2.5;
++
++        if (options.distribution_mode == EasyMode) {
++            hp_object_prob_weight[METEOR] = 0;
++            hp_object_prob_weight[CLOUD] = 0;
++            hp_object_prob_weight[TURRET] = 0;
++            hp_object_prob_weight[FAST_FLYER] = 0;
++            hp_vs[FLYER] = .75;
++            hp_vs[BULLET2] = 1.25;
++            hp_healths[TURRET] = 5;
++            hp_healths[FLYER] = 2;
++            hp_healths[FAST_FLYER] = 1;
++            maxspeed = 0.75;
++        } else if (options.distribution_mode == HardMode) {
++            hp_vs[BULLET2] = 2;
++
++            hp_healths[TURRET] = 5;
++            hp_healths[FLYER] = 2;
++            hp_healths[FAST_FLYER] = 1;
++            maxspeed = 0.75;
++        } else if (options.distribution_mode == ExtremeMode) {
++            hp_vs[BULLET2] = 2;
++            hp_healths[TURRET] = 10;
++            hp_healths[FLYER] = 5;
++            hp_healths[FAST_FLYER] = 2;
++            maxspeed = 0.5;
++            default_bullet_r = scale / 5;
++        } else {
++            fassert(false);
++        }
++
++        for (int i = 0; i < NUM_BASIC_OBJECTS; i++) {
++            hp_bullet_r[i] = default_bullet_r;
++        }
++
++        hp_healths[METEOR] = 500;
++
++        hp_vs[FAST_FLYER] = 1.5;
++
++        hp_vs[BULLET_PLAYER] = 2;
++
++        hp_vs[BULLET3] = 2;
++        hp_object_r[TURRET] = scale * 2;
++        hp_object_r[METEOR] = scale * 2;
++        hp_object_r[CLOUD] = scale * 2;
++
++        hp_object_prob_weight[FLYER] = 3;
++
++        hp_slow_v = .5;
++        hp_max_group_size = 5;
++
++        hp_weapon_bullet_dist = 3;
++
++        hp_min_enemy_delta_t = 10;
++        hp_max_enemy_delta_t = hp_min_enemy_delta_t + 20;
++
++        hp_spawn_right_threshold = 0.9f;
++
++        hp_object_prob_weight[BULLET_PLAYER] = 0;
++        hp_object_prob_weight[BULLET2] = 0;
++        hp_object_prob_weight[BULLET3] = 0;
++
++        total_prob_weight = 0;
++
++        for (int i = 2; i < NUM_BASIC_OBJECTS; i++) {
++            total_prob_weight += hp_object_prob_weight[i];
++        }
++    }
++
++    void add_spawners() {
++        int t = 1 + rand_gen.randint(hp_min_enemy_delta_t, hp_max_enemy_delta_t);
++
++        bool can_spawn_left = options.distribution_mode != EasyMode;
++
++        for (int i = 0; t <= SHOOTER_WIN_TIME; i++) {
++            int group_size = 1;
++            float start_weight = rand_gen.rand01() * total_prob_weight;
++            float curr_weight = start_weight;
++            int type;
++
++            for (type = 2; type < NUM_BASIC_OBJECTS; type++) {
++                curr_weight -= hp_object_prob_weight[type];
++
++                if (curr_weight <= 0) {
++                    break;
++                }
++            }
++
++            if (type >= NUM_BASIC_OBJECTS) {
++                type = NUM_BASIC_OBJECTS - 1;
++            }
++
++            float r = hp_object_r[type];
++            int flyer_theme = 0;
++
++            if (type == FLYER || type == FAST_FLYER) {
++                group_size = rand_gen.randint(0, hp_max_group_size) + 1;
++                flyer_theme = rand_gen.randn(NUM_SHIP_THEMES);
++            }
++
++            float y_pos = rand_pos(r, main_height);
++
++            for (int j = 0; j < group_size; j++) {
++                int spawn_time = t + j * 5;
++                int fire_time = rand_gen.randint(10, 100);
++
++                float k = 2 * PI / 4;
++                float theta = (rand_gen.rand01() - .5) * k;
++                float v_scale = hp_vs[type];
++
++                if (rand_gen.randint(0, 2) == 1) {
++                    theta = 0;
++                }
++
++                float health = hp_healths[type];
++
++                if (type == METEOR || type == CLOUD) {
++                    theta = 0;
++                    v_scale = hp_slow_v;
++                    fire_time = -1;
++                } else if (type == TURRET) {
++                    theta = 0;
++                    v_scale = hp_slow_v;
++                    fire_time = rand_gen.randint(20, 30);
++                }
++
++                v_scale *= V_SCALE;
++
++                float vx = -1 * cos(theta) * v_scale;
++                float vy = sin(theta) * v_scale;
++
++                bool spawn_right = true;
++                float x_pos;
++
++                if (type == FLYER || type == FAST_FLYER) {
++                    if (rand_gen.rand01() > hp_spawn_right_threshold && can_spawn_left) {
++                        spawn_right = false;
++                    }
++                }
++
++                if (spawn_right) {
++                    x_pos = main_width + r;
++                } else {
++                    x_pos = -r;
++                    vx *= -1;
++                }
++
++                auto spawner = std::make_shared<Entity>(x_pos, y_pos, vx, vy, r, type);
++                spawner->fire_time = fire_time;
++                spawner->spawn_time = spawn_time;
++                spawner->health = health;
++
++                if (type == CLOUD) {
++                    spawner->render_z = 1;
++                    choose_random_theme(spawner);
++                } else if (type == METEOR) {
++                    choose_random_theme(spawner);
++                } else if (type == FLYER || type == FAST_FLYER) {
++                    spawner->image_theme = flyer_theme;
++                    spawner->rotation = ((vx > 0) ? -1 : 1) * PI / 2;
++                } else if (type == TURRET) {
++                    choose_random_theme(spawner);
++                    match_aspect_ratio(spawner);
++                }
++
++                spawners.push_back(spawner);
++            }
++
++            t += rand_gen.randint(hp_min_enemy_delta_t, hp_max_enemy_delta_t);
++        }
++    }
++
++    void game_reset() override {
++        BasicAbstractGame::game_reset();
++
++        options.center_agent = false;
++
++        init_hps();
++
++        spawners.clear();
++
++        add_spawners();
++
++        std::sort(spawners.begin(), spawners.end(), spawn_cmp);
++
++        agent->rotation = PI / 2;
++        choose_random_theme(agent);
++    }
++
++    bool is_lethal(const std::shared_ptr<Entity> &e1) {
++        int type = e1->type;
++
++        return type == FLYER || type == FAST_FLYER || type == BULLET2 || type == BULLET3 || type == TURRET || type == METEOR;
++    }
++
++    bool is_destructible(int type) {
++        return type == FLYER || type == FAST_FLYER || type == TURRET || type == METEOR;
++    }
++
++    bool should_fire(const std::shared_ptr<Entity> &e1, int cur_time) {
++        if (e1->fire_time <= 0) {
++            return false;
++        }
++
++        if (e1->type == TURRET) {
++            return (cur_time - e1->spawn_time) % e1->fire_time == 0;
++        }
++
++        return cur_time - e1->spawn_time == e1->fire_time;
++    }
++
++    void game_step() override {
++        BasicAbstractGame::game_step();
++
++        bool is_firing = special_action != 0;
++
++        for (int i = (int)(entities.size()) - 1; i >= 0; i--) {
++            auto m = entities[i];
++
++            if (m->type == PLAYER)
++                continue;
++
++            if (should_fire(m, cur_time)) {
++                int bullet_type = m->type == TURRET ? BULLET3 : BULLET2;
++                float bullet_r = hp_bullet_r[m->type];
++                float b_vx = agent->x - m->x;
++                float b_vy = agent->y - m->y;
++                float bv_scale = hp_vs[bullet_type] * V_SCALE / sqrt(b_vx * b_vx + b_vy * b_vy);
++                b_vx = b_vx * bv_scale;
++                b_vy = b_vy * bv_scale;
++
++                std::shared_ptr<Entity> new_bullet(new Entity(m->x, m->y, b_vx, b_vy, bullet_r, bullet_type));
++                new_bullet->face_direction(b_vx, b_vy, -1 * PI / 2);
++                entities.push_back(new_bullet);
++            }
++
++            if (m->health <= 0 && is_destructible(m->type) && !m->will_erase) {
++                spawn_child(m, EXPLOSION, .5 * m->rx, true);
++
++                step_data.reward += ENEMY_REWARD_starpilot;
++                m->will_erase = true;
++            }
++        }
++
++        while (spawners.size() > 0 && cur_time == spawners[int(spawners.size()) - 1]->spawn_time) {
++            entities.push_back(spawners[int(spawners.size()) - 1]);
++            spawners.pop_back();
++        }
++
++        float bullet_r = hp_bullet_r[PLAYER];
++
++        if (is_firing) {
++            float theta = special_action == 2 ? PI : 0;
++            float v_scale = hp_vs[BULLET_PLAYER] * V_SCALE;
++
++            float vx = cos(theta) * v_scale;
++            float vy = sin(theta) * v_scale;
++            float x_off = agent->rx * cos(theta);
++
++            auto bullet = std::make_shared<Entity>(agent->x + x_off, agent->y, vx, vy, bullet_r, BULLET_PLAYER);
++            bullet->collides_with_entities = true;
++            bullet->face_direction(vx, vy);
++            bullet->rotation -= PI / 2;
++            entities.push_back(bullet);
++        }
++
++        if (cur_time == SHOOTER_WIN_TIME) {
++            auto finish = std::make_shared<Entity>(main_width, main_height / 2, -1 * hp_slow_v * V_SCALE, 0, 2, main_height / 2, FINISH_LINE_starpilot);
++            choose_random_theme(finish);
++            match_aspect_ratio(finish, false);
++            finish->x = main_width + finish->rx;
++            entities.push_back(finish);
++        }
++    }
++
++    void serialize(WriteBuffer *b) override {
++        BasicAbstractGame::serialize(b);
++        write_entities(b, spawners);
++    }
++
++    void deserialize(ReadBuffer *b) override {
++        BasicAbstractGame::deserialize(b);
++        read_entities(b, spawners);
++
++        init_hps();
++    }
++};
++
++std::shared_ptr<StarPilotGame> make_starpilot(void) {
++    return std::make_shared<StarPilotGame>();
++}
+
+

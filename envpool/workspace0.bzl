@@ -311,6 +311,7 @@ def workspace():
             "//third_party/procgen:assetgen.patch",
             "//third_party/procgen:qt-utils.patch",
             "//third_party/procgen:libenv.patch",
+            "//third_party/procgen:procgen_games.patch",
         ],
         build_file = "//third_party/procgen:procgen.BUILD",
     )
