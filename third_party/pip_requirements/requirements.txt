@@ -4,6 +4,7 @@ dm-env
 dm-tree
 filelock
 gym
+pygame
 h5py
 jinja2
 numpy

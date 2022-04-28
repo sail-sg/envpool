@@ -91,12 +91,20 @@ class ArraySpec(object):
   """Spec of numpy array."""
 
   def __init__(
-    self, dtype: np.dtype, shape: List[int], bounds: Tuple[Any, Any]
+    self, dtype: Type, shape: List[int], bounds: Tuple[Any, Any],
+    element_wise_bounds: Tuple[Any, Any]
   ):
     """Constructor of ArraySpec."""
     self.dtype = dtype
     self.shape = shape
-    self.minimum, self.maximum = bounds
+    if element_wise_bounds[0]:
+      self.minimum = np.array(element_wise_bounds[0])
+    else:
+      self.minimum = bounds[0]
+    if element_wise_bounds[1]:
+      self.maximum = np.array(element_wise_bounds[1])
+    else:
+      self.maximum = bounds[1]
 
   def __repr__(self) -> str:
     """Beautify debug info."""

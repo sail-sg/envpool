@@ -90,8 +90,8 @@ template_rule(
     src = "src/viz_version.h.in",
     out = "viz_version.h",
     substitutions = {
-        "@ViZDoom_VERSION_ID@": "1111",
-        "@ViZDoom_VERSION_STR@": "1.1.11",
+        "@ViZDoom_VERSION_ID@": "1113",
+        "@ViZDoom_VERSION_STR@": "1.1.13",
     },
 )
 

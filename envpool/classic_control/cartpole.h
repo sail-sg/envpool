@@ -19,6 +19,7 @@
 #define ENVPOOL_CLASSIC_CONTROL_CARTPOLE_H_
 
 #include <cmath>
+#include <limits>
 #include <random>
 
 #include "envpool/core/async_envpool.h"
@@ -34,8 +35,10 @@ class CartPoleEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    // TODO(jiayi): specify range with [4.8, fmax, np.pi / 7.5, fmax]
-    return MakeDict("obs"_.bind(Spec<float>({4})));
+    float fmax = std::numeric_limits<float>::max();
+    return MakeDict(
+        "obs"_.bind(Spec<float>({4}, {{-4.8, -fmax, -M_PI / 7.5, -fmax},
+                                      {4.8, fmax, M_PI / 7.5, fmax}})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
