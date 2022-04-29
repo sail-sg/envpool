@@ -130,6 +130,21 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     env1 = AntGymEnvPool(AntEnvSpec(AntEnvSpec.gen_config()))
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
+    env0 = mjc_mwe.AntEnv(
+      terminate_when_unhealthy=False,
+      exclude_current_positions_from_observation=False,
+    )
+    env1 = AntGymEnvPool(
+      AntEnvSpec(
+        AntEnvSpec.gen_config(
+          terminate_when_unhealthy=False,
+          exclude_current_positions_from_observation=False,
+          max_episode_steps=100,
+        )
+      )
+    )
+    self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1, no_time_limit=True)
     self.run_deterministic_check(AntEnvSpec, AntGymEnvPool)
 
   def test_half_cheetah(self) -> None:
