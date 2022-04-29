@@ -30,17 +30,26 @@ class MujocoEnv {
   mjModel* model_;
   mjData* data_;
   mjtNum *init_qpos_, *init_qvel_;
+  mjtNum *qpos0_, *qvel0_;  // for align check
   int frame_skip_;
   bool post_constraint_;
+  int max_episode_steps_, current_step_;
+  bool done_;
 
  public:
-  MujocoEnv(std::string xml, int frame_skip, bool post_constraint)
+  MujocoEnv(std::string xml, int frame_skip, bool post_constraint,
+            int max_episode_steps)
       : model_(mj_loadXML(xml.c_str(), 0, error_, 1000)),
         data_(mj_makeData(model_)),
         init_qpos_(new mjtNum[model_->nq]),
         init_qvel_(new mjtNum[model_->nv]),
+        qpos0_(new mjtNum[model_->nq]),
+        qvel0_(new mjtNum[model_->nv]),
         frame_skip_(frame_skip),
-        post_constraint_(post_constraint) {
+        post_constraint_(post_constraint),
+        max_episode_steps_(max_episode_steps),
+        current_step_(max_episode_steps + 1),
+        done_(true) {
     memcpy(init_qpos_, data_->qpos, sizeof(mjtNum) * model_->nq);
     memcpy(init_qvel_, data_->qvel, sizeof(mjtNum) * model_->nv);
   }
@@ -50,6 +59,8 @@ class MujocoEnv {
     mj_deleteModel(model_);
     delete[] init_qpos_;
     delete[] init_qvel_;
+    delete[] qpos0_;
+    delete[] qvel0_;
   }
 
   void MujocoReset() {

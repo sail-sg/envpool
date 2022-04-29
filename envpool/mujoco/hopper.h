@@ -61,23 +61,19 @@ typedef class EnvSpec<HopperEnvFns> HopperEnvSpec;
 
 class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
  protected:
-  int max_episode_steps_, elapsed_step_;
   mjtNum ctrl_cost_weight_, forward_reward_weight_;
   mjtNum healthy_reward_, healthy_z_min_;
   mjtNum velocity_min_, velocity_max_;
   mjtNum healthy_state_min_, healthy_state_max_;
   mjtNum healthy_angle_min_, healthy_angle_max_;
-  std::unique_ptr<mjtNum> qpos0_, qvel0_;  // for align check
   std::uniform_real_distribution<> dist_;
-  bool done_;
 
  public:
   HopperEnv(const Spec& spec, int env_id)
       : Env<HopperEnvSpec>(spec, env_id),
         MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/hopper.xml",
-                  spec.config["frame_skip"_], spec.config["post_constraint"_]),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
-        elapsed_step_(max_episode_steps_ + 1),
+                  spec.config["frame_skip"_], spec.config["post_constraint"_],
+                  spec.config["max_episode_steps"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
@@ -88,18 +84,15 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
         healthy_state_max_(spec.config["healthy_state_max"_]),
         healthy_angle_min_(spec.config["healthy_angle_min"_]),
         healthy_angle_max_(spec.config["healthy_angle_max"_]),
-        qpos0_(new mjtNum[model_->nq]),
-        qvel0_(new mjtNum[model_->nv]),
         dist_(-spec.config["reset_noise_scale"_],
-              spec.config["reset_noise_scale"_]),
-        done_(true) {}
+              spec.config["reset_noise_scale"_]) {}
 
   void MujocoResetModel() {
     for (int i = 0; i < model_->nq; ++i) {
-      data_->qpos[i] = qpos0_.get()[i] = init_qpos_[i] + dist_(gen_);
+      data_->qpos[i] = qpos0_[i] = init_qpos_[i] + dist_(gen_);
     }
     for (int i = 0; i < model_->nv; ++i) {
-      data_->qvel[i] = qvel0_.get()[i] = init_qvel_[i] + dist_(gen_);
+      data_->qvel[i] = qvel0_[i] = init_qvel_[i] + dist_(gen_);
     }
   }
 
@@ -107,7 +100,7 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
 
   void Reset() override {
     done_ = false;
-    elapsed_step_ = 0;
+    current_step_ = 0;
     MujocoReset();
     WriteObs(0.0f, 0, 0);
   }
@@ -129,8 +122,8 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
     mjtNum xv = (x_after - x_before) / dt;
     // reward and done
     float reward = xv * forward_reward_weight_ + healthy_reward_ - ctrl_cost;
-    ++elapsed_step_;
-    done_ = !IsHealthy() || (elapsed_step_ >= max_episode_steps_);
+    ++current_step_;
+    done_ = !IsHealthy() || (current_step_ >= max_episode_steps_);
     WriteObs(reward, xv, x_after);
   }
 
@@ -173,8 +166,8 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
     // info
     state["info:x_position"_] = x_after;
     state["info:x_velocity"_] = xv;
-    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    state["info:qvel0"_].Assign(qvel0_.get(), model_->nv);
+    state["info:qpos0"_].Assign(qpos0_, model_->nq);
+    state["info:qvel0"_].Assign(qvel0_, model_->nv);
   }
 };
 

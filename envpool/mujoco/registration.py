@@ -51,7 +51,6 @@ for task, version, post_constraint in mujoco_envs:
     spec_cls=f"{task}EnvSpec",
     dm_cls=f"{task}DMEnvPool",
     gym_cls=f"{task}GymEnvPool",
-    max_episode_steps=1000,
     base_path=base_path,
     post_constraint=post_constraint,
   )

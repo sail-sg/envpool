@@ -58,39 +58,32 @@ typedef class EnvSpec<InvertedDoublePendulumEnvFns>
 class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
                                   public MujocoEnv {
  protected:
-  int max_episode_steps_, elapsed_step_;
   mjtNum healthy_reward_, healthy_z_max_;
   mjtNum observation_min_, observation_max_;
-  std::unique_ptr<mjtNum> qpos0_, qvel0_;  // for align check
   std::uniform_real_distribution<> dist_qpos_;
   std::normal_distribution<> dist_qvel_;
-  bool done_;
 
  public:
   InvertedDoublePendulumEnv(const Spec& spec, int env_id)
       : Env<InvertedDoublePendulumEnvSpec>(spec, env_id),
         MujocoEnv(spec.config["base_path"_] +
                       "/mujoco/assets/inverted_double_pendulum.xml",
-                  spec.config["frame_skip"_], spec.config["post_constraint"_]),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
-        elapsed_step_(max_episode_steps_ + 1),
+                  spec.config["frame_skip"_], spec.config["post_constraint"_],
+                  spec.config["max_episode_steps"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
         healthy_z_max_(spec.config["healthy_z_max"_]),
         observation_min_(spec.config["observation_min"_]),
         observation_max_(spec.config["observation_max"_]),
-        qpos0_(new mjtNum[model_->nq]),
-        qvel0_(new mjtNum[model_->nv]),
         dist_qpos_(-spec.config["reset_noise_scale"_],
                    spec.config["reset_noise_scale"_]),
-        dist_qvel_(0, spec.config["reset_noise_scale"_]),
-        done_(true) {}
+        dist_qvel_(0, spec.config["reset_noise_scale"_]) {}
 
   void MujocoResetModel() {
     for (int i = 0; i < model_->nq; ++i) {
-      data_->qpos[i] = qpos0_.get()[i] = init_qpos_[i] + dist_qpos_(gen_);
+      data_->qpos[i] = qpos0_[i] = init_qpos_[i] + dist_qpos_(gen_);
     }
     for (int i = 0; i < model_->nv; ++i) {
-      data_->qvel[i] = qvel0_.get()[i] = init_qvel_[i] + dist_qvel_(gen_);
+      data_->qvel[i] = qvel0_[i] = init_qvel_[i] + dist_qvel_(gen_);
     }
   }
 
@@ -98,7 +91,7 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
 
   void Reset() override {
     done_ = false;
-    elapsed_step_ = 0;
+    current_step_ = 0;
     MujocoReset();
     WriteObs(0.0f);
   }
@@ -117,8 +110,8 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
     mjtNum vel_penalty = 1e-3 * v1 * v1 + 5e-3 * v2 * v2;
     // reward and done
     float reward = healthy_reward_ - dist_penalty - vel_penalty;
-    ++elapsed_step_;
-    done_ = !IsHealthy() || (elapsed_step_ >= max_episode_steps_);
+    ++current_step_;
+    done_ = !IsHealthy() || (current_step_ >= max_episode_steps_);
     WriteObs(reward);
   }
 
@@ -148,8 +141,8 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
       *(obs++) = x;
     }
     // info
-    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    state["info:qvel0"_].Assign(qvel0_.get(), model_->nv);
+    state["info:qpos0"_].Assign(qpos0_, model_->nq);
+    state["info:qvel0"_].Assign(qvel0_, model_->nv);
   }
 };
 

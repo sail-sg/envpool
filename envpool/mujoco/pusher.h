@@ -60,50 +60,43 @@ typedef class EnvSpec<PusherEnvFns> PusherEnvSpec;
 
 class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
  protected:
-  int max_episode_steps_, elapsed_step_;
   mjtNum ctrl_cost_weight_, dist_cost_weight_, near_cost_weight_;
   mjtNum cylinder_dist_min_;
-  std::unique_ptr<mjtNum> qpos0_, qvel0_;  // for align check
   std::uniform_real_distribution<> dist_qpos_x_, dist_qpos_y_, dist_qvel_;
-  bool done_;
 
  public:
   PusherEnv(const Spec& spec, int env_id)
       : Env<PusherEnvSpec>(spec, env_id),
         MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/pusher.xml",
-                  spec.config["frame_skip"_], spec.config["post_constraint"_]),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
-        elapsed_step_(max_episode_steps_ + 1),
+                  spec.config["frame_skip"_], spec.config["post_constraint"_],
+                  spec.config["max_episode_steps"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         dist_cost_weight_(spec.config["dist_cost_weight"_]),
         near_cost_weight_(spec.config["near_cost_weight"_]),
         cylinder_dist_min_(spec.config["cylinder_dist_min"_]),
-        qpos0_(new mjtNum[model_->nq]),
-        qvel0_(new mjtNum[model_->nv]),
         dist_qpos_x_(spec.config["cylinder_x_min"_],
                      spec.config["cylinder_x_max"_]),
         dist_qpos_y_(spec.config["cylinder_y_min"_],
                      spec.config["cylinder_y_max"_]),
         dist_qvel_(-spec.config["reset_qvel_scale"_],
-                   spec.config["reset_qvel_scale"_]),
-        done_(true) {}
+                   spec.config["reset_qvel_scale"_]) {}
 
   void MujocoResetModel() {
     for (int i = 0; i < model_->nq - 4; ++i) {
-      data_->qpos[i] = qpos0_.get()[i] = init_qpos_[i];
+      data_->qpos[i] = qpos0_[i] = init_qpos_[i];
     }
     while (1) {
       mjtNum x = dist_qpos_x_(gen_), y = dist_qpos_y_(gen_);
       if (std::sqrt(x * x + y * y) > cylinder_dist_min_) {
-        data_->qpos[model_->nq - 4] = qpos0_.get()[model_->nq - 4] = x;
-        data_->qpos[model_->nq - 3] = qpos0_.get()[model_->nq - 3] = y;
-        data_->qpos[model_->nq - 2] = qpos0_.get()[model_->nq - 2] = 0.0;
-        data_->qpos[model_->nq - 1] = qpos0_.get()[model_->nq - 1] = 0.0;
+        data_->qpos[model_->nq - 4] = qpos0_[model_->nq - 4] = x;
+        data_->qpos[model_->nq - 3] = qpos0_[model_->nq - 3] = y;
+        data_->qpos[model_->nq - 2] = qpos0_[model_->nq - 2] = 0.0;
+        data_->qpos[model_->nq - 1] = qpos0_[model_->nq - 1] = 0.0;
         break;
       }
     }
     for (int i = 0; i < model_->nv; ++i) {
-      data_->qvel[i] = qvel0_.get()[i] =
+      data_->qvel[i] = qvel0_[i] =
           i < model_->nv - 4 ? init_qvel_[i] + dist_qvel_(gen_) : 0.0;
     }
   }
@@ -112,7 +105,7 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
 
   void Reset() override {
     done_ = false;
-    elapsed_step_ = 0;
+    current_step_ = 0;
     MujocoReset();
     WriteObs(0.0f, 0, 0);
   }
@@ -134,7 +127,7 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
     float reward = -ctrl_cost * ctrl_cost_weight_ -
                    dist_cost * dist_cost_weight_ -
                    near_cost * near_cost_weight_;
-    done_ = (++elapsed_step_ >= max_episode_steps_);
+    done_ = (++current_step_ >= max_episode_steps_);
     WriteObs(reward, ctrl_cost, dist_cost);
   }
 
@@ -163,8 +156,8 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
     // info
     state["info:reward_dist"_] = -dist_cost;
     state["info:reward_ctrl"_] = -ctrl_cost;
-    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    state["info:qvel0"_].Assign(qvel0_.get(), model_->nv);
+    state["info:qpos0"_].Assign(qpos0_, model_->nq);
+    state["info:qvel0"_].Assign(qvel0_, model_->nv);
   }
 };
 

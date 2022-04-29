@@ -67,23 +67,19 @@ typedef class EnvSpec<AntEnvFns> AntEnvSpec;
 
 class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
  protected:
-  int max_episode_steps_, elapsed_step_;
   mjtNum ctrl_cost_weight_, contact_cost_weight_;
   mjtNum forward_reward_weight_, healthy_reward_;
   mjtNum healthy_z_min_, healthy_z_max_;
   mjtNum contact_force_min_, contact_force_max_;
-  std::unique_ptr<mjtNum> qpos0_, qvel0_;  // for align check
   std::uniform_real_distribution<> dist_qpos_;
   std::normal_distribution<> dist_qvel_;
-  bool done_;
 
  public:
   AntEnv(const Spec& spec, int env_id)
       : Env<AntEnvSpec>(spec, env_id),
         MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/ant.xml",
-                  spec.config["frame_skip"_], spec.config["post_constraint"_]),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
-        elapsed_step_(max_episode_steps_ + 1),
+                  spec.config["frame_skip"_], spec.config["post_constraint"_],
+                  spec.config["max_episode_steps"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         contact_cost_weight_(spec.config["contact_cost_weight"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
@@ -92,19 +88,16 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
         healthy_z_max_(spec.config["healthy_z_max"_]),
         contact_force_min_(spec.config["contact_force_min"_]),
         contact_force_max_(spec.config["contact_force_max"_]),
-        qpos0_(new mjtNum[model_->nq]),
-        qvel0_(new mjtNum[model_->nv]),
         dist_qpos_(-spec.config["reset_noise_scale"_],
                    spec.config["reset_noise_scale"_]),
-        dist_qvel_(0, spec.config["reset_noise_scale"_]),
-        done_(true) {}
+        dist_qvel_(0, spec.config["reset_noise_scale"_]) {}
 
   void MujocoResetModel() {
     for (int i = 0; i < model_->nq; ++i) {
-      data_->qpos[i] = qpos0_.get()[i] = init_qpos_[i] + dist_qpos_(gen_);
+      data_->qpos[i] = qpos0_[i] = init_qpos_[i] + dist_qpos_(gen_);
     }
     for (int i = 0; i < model_->nv; ++i) {
-      data_->qvel[i] = qvel0_.get()[i] = init_qvel_[i] + dist_qvel_(gen_);
+      data_->qvel[i] = qvel0_[i] = init_qvel_[i] + dist_qvel_(gen_);
     }
   }
 
@@ -112,7 +105,7 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
 
   void Reset() override {
     done_ = false;
-    elapsed_step_ = 0;
+    current_step_ = 0;
     MujocoReset();
     WriteObs(0.0f, 0, 0, 0, 0, 0, 0);
   }
@@ -145,8 +138,8 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
     // reward and done
     float reward = xv * forward_reward_weight_ + healthy_reward_ - ctrl_cost -
                    contact_cost;
-    ++elapsed_step_;
-    done_ = !IsHealthy() || (elapsed_step_ >= max_episode_steps_);
+    ++current_step_;
+    done_ = !IsHealthy() || (current_step_ >= max_episode_steps_);
     WriteObs(reward, xv, yv, ctrl_cost, contact_cost, x_after, y_after);
   }
 
@@ -197,8 +190,8 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
         std::sqrt(x_after * x_after + y_after * y_after);
     state["info:x_velocity"_] = xv;
     state["info:y_velocity"_] = yv;
-    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    state["info:qvel0"_].Assign(qvel0_.get(), model_->nv);
+    state["info:qpos0"_].Assign(qpos0_, model_->nq);
+    state["info:qvel0"_].Assign(qvel0_, model_->nv);
   }
 };
 
