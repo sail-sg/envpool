@@ -97,7 +97,7 @@ bazel-build: bazel-install
 	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-test: bazel-install
-	bazel test --test_output=all $(BAZELOPT) //... --config=release
+	bazel test --test_output=all $(BAZELOPT) //... --config=release --config=test
 
 bazel-clean: bazel-install
 	bazel clean --expunge
@@ -154,7 +154,7 @@ release-test1:
 	cd envpool && python3 make_test.py
 
 release-test2:
-	cd examples && python3 env_step.py
+	cd examples && python3 make_env.py && python3 env_step.py
 
 release-test: release-test1 release-test2
 

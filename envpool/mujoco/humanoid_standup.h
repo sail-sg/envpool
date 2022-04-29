@@ -34,6 +34,7 @@ class HumanoidStandupEnvFns {
     return MakeDict(
         "max_episode_steps"_.bind(1000), "frame_skip"_.bind(5),
         "post_constraint"_.bind(true), "forward_reward_weight"_.bind(1.0),
+        "exclude_current_positions_from_observation"_.bind(true),
         "ctrl_cost_weight"_.bind(0.1), "contact_cost_weight"_.bind(5e-7),
         "contact_cost_max"_.bind(10.0), "healthy_reward"_.bind(1.0),
         "reset_noise_scale"_.bind(1e-2));
@@ -41,14 +42,17 @@ class HumanoidStandupEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
-    return MakeDict("obs"_.bind(Spec<mjtNum>({376}, {-inf, inf})),
-                    "info:reward_linup"_.bind(Spec<mjtNum>({-1})),
-                    "info:reward_quadctrl"_.bind(Spec<mjtNum>({-1})),
-                    "info:reward_alive"_.bind(Spec<mjtNum>({-1})),
-                    "info:reward_impact"_.bind(Spec<mjtNum>({-1})),
-                    // TODO(jiayi): remove these two lines for speed
-                    "info:qpos0"_.bind(Spec<mjtNum>({24})),
-                    "info:qvel0"_.bind(Spec<mjtNum>({23})));
+    bool no_pos = conf["exclude_current_positions_from_observation"_];
+    return MakeDict(
+#ifdef ENVPOOL_TEST
+        "info:qpos0"_.bind(Spec<mjtNum>({24})),
+        "info:qvel0"_.bind(Spec<mjtNum>({23})),
+#endif
+        "obs"_.bind(Spec<mjtNum>({no_pos ? 376 : 378}, {-inf, inf})),
+        "info:reward_linup"_.bind(Spec<mjtNum>({-1})),
+        "info:reward_quadctrl"_.bind(Spec<mjtNum>({-1})),
+        "info:reward_alive"_.bind(Spec<mjtNum>({-1})),
+        "info:reward_impact"_.bind(Spec<mjtNum>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -61,38 +65,33 @@ typedef class EnvSpec<HumanoidStandupEnvFns> HumanoidStandupEnvSpec;
 class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
                            public MujocoEnv {
  protected:
-  int max_episode_steps_, elapsed_step_;
+  bool no_pos_;
   mjtNum ctrl_cost_weight_, contact_cost_weight_, contact_cost_max_;
   mjtNum forward_reward_weight_, healthy_reward_;
-  std::unique_ptr<mjtNum> qpos0_, qvel0_;  // for align check
   std::uniform_real_distribution<> dist_;
-  bool done_;
 
  public:
   HumanoidStandupEnv(const Spec& spec, int env_id)
       : Env<HumanoidStandupEnvSpec>(spec, env_id),
         MujocoEnv(
             spec.config["base_path"_] + "/mujoco/assets/humanoidstandup.xml",
-            spec.config["frame_skip"_], spec.config["post_constraint"_]),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
-        elapsed_step_(max_episode_steps_ + 1),
+            spec.config["frame_skip"_], spec.config["post_constraint"_],
+            spec.config["max_episode_steps"_]),
+        no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         contact_cost_weight_(spec.config["contact_cost_weight"_]),
         contact_cost_max_(spec.config["contact_cost_max"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
-        qpos0_(new mjtNum[model_->nq]),
-        qvel0_(new mjtNum[model_->nv]),
         dist_(-spec.config["reset_noise_scale"_],
-              spec.config["reset_noise_scale"_]),
-        done_(true) {}
+              spec.config["reset_noise_scale"_]) {}
 
   void MujocoResetModel() {
     for (int i = 0; i < model_->nq; ++i) {
-      data_->qpos[i] = qpos0_.get()[i] = init_qpos_[i] + dist_(gen_);
+      data_->qpos[i] = qpos0_[i] = init_qpos_[i] + dist_(gen_);
     }
     for (int i = 0; i < model_->nv; ++i) {
-      data_->qvel[i] = qvel0_.get()[i] = init_qvel_[i] + dist_(gen_);
+      data_->qvel[i] = qvel0_[i] = init_qvel_[i] + dist_(gen_);
     }
   }
 
@@ -139,7 +138,7 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
     state["reward"_] = reward;
     // obs
     mjtNum* obs = static_cast<mjtNum*>(state["obs"_].data());
-    for (int i = 2; i < model_->nq; ++i) {
+    for (int i = no_pos_ ? 2 : 0; i < model_->nq; ++i) {
       *(obs++) = data_->qpos[i];
     }
     for (int i = 0; i < model_->nv; ++i) {
@@ -162,8 +161,10 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
     state["info:reward_quadctrl"_] = -ctrl_cost;
     state["info:reward_impact"_] = -contact_cost;
     state["info:reward_alive"_] = healthy_reward_;
-    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    state["info:qvel0"_].Assign(qvel0_.get(), model_->nv);
+#ifdef ENVPOOL_TEST
+    state["info:qpos0"_].Assign(qpos0_, model_->nq);
+    state["info:qvel0"_].Assign(qvel0_, model_->nv);
+#endif
   }
 };
 

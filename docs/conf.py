@@ -29,7 +29,7 @@ def get_version() -> str:
 # -- Project information -----------------------------------------------------
 
 project = "EnvPool"
-copyright = "2021, Garena Online Private Limited"
+copyright = "2022, Garena Online Private Limited"
 author = "EnvPool Contributors"
 
 # The full version, including alpha/beta/rc tags

@@ -389,6 +389,17 @@ Miscellaneous
     has already been defined as ``gen_`` (`link
     <https://github.com/sail-sg/envpool/blob/v0.4.0/envpool/core/env.h#L37>`_).
 
+.. note ::
+
+    ``ENVPOOL_TEST`` is a test-time macro. If you want a piece of C++ code only
+    available during unit test:
+
+    .. code-block:: c++
+
+        #ifdef ENVPOOL_TEST
+            fprintf(stderr, "here");
+        #endif
+
 
 Generate Dynamic Linked .so File and Instantiate in Python
 ----------------------------------------------------------

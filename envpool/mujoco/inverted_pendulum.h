@@ -40,10 +40,13 @@ class InvertedPendulumEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
+#ifdef ENVPOOL_TEST
     return MakeDict("obs"_.bind(Spec<mjtNum>({4}, {-inf, inf})),
-                    // TODO(jiayi): remove these two lines for speed
                     "info:qpos0"_.bind(Spec<mjtNum>({2})),
                     "info:qvel0"_.bind(Spec<mjtNum>({2})));
+#else
+    return MakeDict("obs"_.bind(Spec<mjtNum>({4}, {-inf, inf})));
+#endif
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -56,35 +59,28 @@ typedef class EnvSpec<InvertedPendulumEnvFns> InvertedPendulumEnvSpec;
 class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
                             public MujocoEnv {
  protected:
-  int max_episode_steps_, elapsed_step_;
   mjtNum healthy_reward_, healthy_z_min_, healthy_z_max_;
-  std::unique_ptr<mjtNum> qpos0_, qvel0_;  // for align check
   std::uniform_real_distribution<> dist_;
-  bool done_;
 
  public:
   InvertedPendulumEnv(const Spec& spec, int env_id)
       : Env<InvertedPendulumEnvSpec>(spec, env_id),
         MujocoEnv(
             spec.config["base_path"_] + "/mujoco/assets/inverted_pendulum.xml",
-            spec.config["frame_skip"_], spec.config["post_constraint"_]),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
-        elapsed_step_(max_episode_steps_ + 1),
+            spec.config["frame_skip"_], spec.config["post_constraint"_],
+            spec.config["max_episode_steps"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
         healthy_z_min_(spec.config["healthy_z_min"_]),
         healthy_z_max_(spec.config["healthy_z_max"_]),
-        qpos0_(new mjtNum[model_->nq]),
-        qvel0_(new mjtNum[model_->nv]),
         dist_(-spec.config["reset_noise_scale"_],
-              spec.config["reset_noise_scale"_]),
-        done_(true) {}
+              spec.config["reset_noise_scale"_]) {}
 
   void MujocoResetModel() {
     for (int i = 0; i < model_->nq; ++i) {
-      data_->qpos[i] = qpos0_.get()[i] = init_qpos_[i] + dist_(gen_);
+      data_->qpos[i] = qpos0_[i] = init_qpos_[i] + dist_(gen_);
     }
     for (int i = 0; i < model_->nv; ++i) {
-      data_->qvel[i] = qvel0_.get()[i] = init_qvel_[i] + dist_(gen_);
+      data_->qvel[i] = qvel0_[i] = init_qvel_[i] + dist_(gen_);
     }
   }
 
@@ -137,8 +133,10 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
       *(obs++) = data_->qvel[i];
     }
     // info
-    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    state["info:qvel0"_].Assign(qvel0_.get(), model_->nv);
+#ifdef ENVPOOL_TEST
+    state["info:qpos0"_].Assign(qpos0_, model_->nq);
+    state["info:qvel0"_].Assign(qvel0_, model_->nv);
+#endif
   }
 };
 

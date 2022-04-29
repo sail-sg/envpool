@@ -42,11 +42,12 @@ class ReacherEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
     return MakeDict("obs"_.bind(Spec<mjtNum>({11}, {-inf, inf})),
-                    "info:reward_dist"_.bind(Spec<mjtNum>({-1})),
-                    "info:reward_ctrl"_.bind(Spec<mjtNum>({-1})),
-                    // TODO(jiayi): remove these two lines for speed
+#ifdef ENVPOOL_TEST
                     "info:qpos0"_.bind(Spec<mjtNum>({4})),
-                    "info:qvel0"_.bind(Spec<mjtNum>({4})));
+                    "info:qvel0"_.bind(Spec<mjtNum>({4})),
+#endif
+                    "info:reward_dist"_.bind(Spec<mjtNum>({-1})),
+                    "info:reward_ctrl"_.bind(Spec<mjtNum>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -58,47 +59,40 @@ typedef class EnvSpec<ReacherEnvFns> ReacherEnvSpec;
 
 class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
  protected:
-  int max_episode_steps_, elapsed_step_;
   mjtNum ctrl_cost_weight_, dist_cost_weight_;
   mjtNum reset_goal_scale_, dist_x_, dist_y_, dist_z_;
-  std::unique_ptr<mjtNum> qpos0_, qvel0_;  // for align check
   std::uniform_real_distribution<> dist_qpos_, dist_qvel_, dist_goal_;
-  bool done_;
 
  public:
   ReacherEnv(const Spec& spec, int env_id)
       : Env<ReacherEnvSpec>(spec, env_id),
         MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/reacher.xml",
-                  spec.config["frame_skip"_], spec.config["post_constraint"_]),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
-        elapsed_step_(max_episode_steps_ + 1),
+                  spec.config["frame_skip"_], spec.config["post_constraint"_],
+                  spec.config["max_episode_steps"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         dist_cost_weight_(spec.config["dist_cost_weight"_]),
         reset_goal_scale_(spec.config["reset_goal_scale"_]),
-        qpos0_(new mjtNum[model_->nq]),
-        qvel0_(new mjtNum[model_->nv]),
         dist_qpos_(-spec.config["reset_qpos_scale"_],
                    spec.config["reset_qpos_scale"_]),
         dist_qvel_(-spec.config["reset_qvel_scale"_],
                    spec.config["reset_qvel_scale"_]),
         dist_goal_(-spec.config["reset_goal_scale"_],
-                   spec.config["reset_goal_scale"_]),
-        done_(true) {}
+                   spec.config["reset_goal_scale"_]) {}
 
   void MujocoResetModel() {
     for (int i = 0; i < model_->nq - 2; ++i) {
-      data_->qpos[i] = qpos0_.get()[i] = init_qpos_[i] + dist_qpos_(gen_);
+      data_->qpos[i] = qpos0_[i] = init_qpos_[i] + dist_qpos_(gen_);
     }
     while (1) {
       mjtNum x = dist_goal_(gen_), y = dist_goal_(gen_);
       if (std::sqrt(x * x + y * y) < reset_goal_scale_) {
-        data_->qpos[model_->nq - 2] = qpos0_.get()[model_->nq - 2] = x;
-        data_->qpos[model_->nq - 1] = qpos0_.get()[model_->nq - 1] = y;
+        data_->qpos[model_->nq - 2] = qpos0_[model_->nq - 2] = x;
+        data_->qpos[model_->nq - 1] = qpos0_[model_->nq - 1] = y;
         break;
       }
     }
     for (int i = 0; i < model_->nv; ++i) {
-      data_->qvel[i] = qvel0_.get()[i] =
+      data_->qvel[i] = qvel0_[i] =
           i < model_->nv - 2 ? init_qvel_[i] + dist_qvel_(gen_) : 0.0;
     }
   }
@@ -163,8 +157,10 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     // info
     state["info:reward_dist"_] = -dist_cost;
     state["info:reward_ctrl"_] = -ctrl_cost;
-    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    state["info:qvel0"_].Assign(qvel0_.get(), model_->nv);
+#ifdef ENVPOOL_TEST
+    state["info:qpos0"_].Assign(qpos0_, model_->nq);
+    state["info:qvel0"_].Assign(qvel0_, model_->nv);
+#endif
   }
 };
 

@@ -58,6 +58,13 @@ def make_spec() -> None:
   assert dm_act_spec.num_values, 6
 
 
+def check_info_optim() -> None:
+  env = envpool.make_gym("Ant-v3")
+  info = env.step(np.array([env.action_space.sample()]), np.array([0]))[-1]
+  assert "qpos0" not in info and "qvel0" not in info
+
+
 if __name__ == "__main__":
   make_env()
   make_spec()
+  check_info_optim()

@@ -130,6 +130,21 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     env1 = AntGymEnvPool(AntEnvSpec(AntEnvSpec.gen_config()))
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
+    env0 = mjc_mwe.AntEnv(
+      terminate_when_unhealthy=False,
+      exclude_current_positions_from_observation=False,
+    )
+    env1 = AntGymEnvPool(
+      AntEnvSpec(
+        AntEnvSpec.gen_config(
+          terminate_when_unhealthy=False,
+          exclude_current_positions_from_observation=False,
+          max_episode_steps=100,
+        )
+      )
+    )
+    self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1, no_time_limit=True)
     self.run_deterministic_check(AntEnvSpec, AntGymEnvPool)
 
   def test_half_cheetah(self) -> None:
@@ -139,6 +154,17 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
+    env0 = mjc_mwe.HalfCheetahEnv(
+      exclude_current_positions_from_observation=True
+    )
+    env1 = HalfCheetahGymEnvPool(
+      HalfCheetahEnvSpec(
+        HalfCheetahEnvSpec.gen_config(
+          exclude_current_positions_from_observation=True
+        )
+      )
+    )
+    self.run_space_check(env0, env1)
     self.run_deterministic_check(HalfCheetahEnvSpec, HalfCheetahGymEnvPool)
 
   def test_hopper(self) -> None:
@@ -146,6 +172,20 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     env1 = HopperGymEnvPool(HopperEnvSpec(HopperEnvSpec.gen_config()))
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
+    env0 = mjc_mwe.HopperEnv(
+      terminate_when_unhealthy=False,
+      exclude_current_positions_from_observation=False,
+    )
+    env1 = HopperGymEnvPool(
+      HopperEnvSpec(
+        HopperEnvSpec.gen_config(
+          terminate_when_unhealthy=False,
+          exclude_current_positions_from_observation=False,
+        )
+      )
+    )
+    self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1, no_time_limit=True)
     self.run_deterministic_check(HopperEnvSpec, HopperGymEnvPool)
 
   def test_humanoid(self) -> None:
@@ -153,6 +193,20 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     env1 = HumanoidGymEnvPool(HumanoidEnvSpec(HumanoidEnvSpec.gen_config()))
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
+    env0 = mjc_mwe.HumanoidEnv(
+      terminate_when_unhealthy=False,
+      exclude_current_positions_from_observation=False,
+    )
+    env1 = HumanoidGymEnvPool(
+      HumanoidEnvSpec(
+        HumanoidEnvSpec.gen_config(
+          terminate_when_unhealthy=False,
+          exclude_current_positions_from_observation=False,
+        )
+      )
+    )
+    self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1, no_time_limit=True)
     self.run_deterministic_check(HumanoidEnvSpec, HumanoidGymEnvPool)
 
   def test_humanoid_standup(self) -> None:
@@ -209,11 +263,35 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     env1 = SwimmerGymEnvPool(SwimmerEnvSpec(SwimmerEnvSpec.gen_config()))
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
+    env0 = mjc_mwe.SwimmerEnv(exclude_current_positions_from_observation=False)
+    env1 = SwimmerGymEnvPool(
+      SwimmerEnvSpec(
+        SwimmerEnvSpec.gen_config(
+          exclude_current_positions_from_observation=False
+        )
+      )
+    )
+    self.run_space_check(env0, env1)
     self.run_deterministic_check(SwimmerEnvSpec, SwimmerGymEnvPool)
 
   def test_walker2d(self) -> None:
     env0 = mjc_mwe.Walker2dEnv()
     env1 = Walker2dGymEnvPool(Walker2dEnvSpec(Walker2dEnvSpec.gen_config()))
+    self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1)
+    env0 = mjc_mwe.Walker2dEnv(
+      terminate_when_unhealthy=False,
+      exclude_current_positions_from_observation=False,
+    )
+    env1 = Walker2dGymEnvPool(
+      Walker2dEnvSpec(
+        Walker2dEnvSpec.gen_config(
+          terminate_when_unhealthy=False,
+          exclude_current_positions_from_observation=False,
+          max_episode_steps=100,
+        )
+      )
+    )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
     self.run_deterministic_check(Walker2dEnvSpec, Walker2dGymEnvPool)
