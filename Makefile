@@ -136,8 +136,8 @@ docker-dev:
 	echo successfully build docker image with tag $(PROJECT_NAME):$(COMMIT_HASH)
 
 # for mainland China
-docker-dev0:
-	docker build --network=host -t $(PROJECT_NAME):$(COMMIT_HASH) -f docker/dev0.dockerfile .
+docker-dev-cn:
+	docker build --network=host -t $(PROJECT_NAME):$(COMMIT_HASH) -f docker/dev-cn.dockerfile .
 	docker run --network=host -v /:/host -it $(PROJECT_NAME):$(COMMIT_HASH) bash
 	echo successfully build docker image with tag $(PROJECT_NAME):$(COMMIT_HASH)
 

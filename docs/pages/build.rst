@@ -153,4 +153,4 @@ system via ``/host``.
 
     .. code-block:: bash
 
-        make docker-dev0
+        make docker-dev-cn
