@@ -36,6 +36,31 @@ or `golang <https://golang.org/doc/install>`_ with version >= 1.16:
     ln -sf $HOME/go/bin/bazelisk $HOME/go/bin/bazel
 
 
+.. note ::
+
+    For users in mainland China, please do the following step to install go and bazel:
+
+    1. Install golang >= 1.16 from other sites, e.g., https://studygolang.com/dl
+    2. Change go proxy: ``go env -w GOPROXY=https://goproxy.cn``
+    3. Install bazel from https://mirrors.huaweicloud.com/bazel/
+
+    .. code-block:: bash
+
+        wget https://studygolang.com/dl/golang/go1.18.1.linux-amd64.tar.gz
+        # then follow the instructions on golang official website
+        go env -w GOPROXY=https://goproxy.cn
+
+        wget https://mirrors.huaweicloud.com/bazel/5.1.1/bazel-5.1.1-linux-x86_64
+        chmod +x bazel-5.1.1-linux-x86_64
+        mkdir -p $HOME/go/bin
+        mv bazel-5.1.1-linux-x86_64 $HOME/go/bin/bazel
+
+        export PATH=$PATH:$HOME/go/bin  # or write to .bashrc / .zshrc
+
+        # check if successfully installed
+        bazel
+
+
 Install Other Dependencies
 --------------------------
 
@@ -72,6 +97,23 @@ To build a release version, type:
 This creates a wheel under ``bazel-bin/setup.runfiles/envpool/dist``.
 
 
+.. note ::
+
+    For users in mainland China:
+
+    - If you find ``pip install`` is quite slow to fetch 3rd-party libraries,
+      the solution is to uncomment ``extra_args`` in ``envpool/pip.bzl`` to
+      switch the pip source.
+    - If you find ``bazel build`` is quite slow to fetch 3rd-party libraries,
+      please refer https://docs.bazel.build/versions/main/external.html#using-proxies
+
+      .. code-block:: bash
+
+        export HTTP_PROXY=http://...
+        export HTTPS_PROXY=http://...
+        # then run the command to build
+
+
 Use Shortcut
 ------------
 
@@ -81,6 +123,9 @@ We provide several shortcuts to make things easier.
 
     # This will install bazelisk via golang, need sudo
     make bazel-install
+
+    # This will verbose all compile commands to help debug
+    make bazel-debug
 
     # This will build python wheel (.whl) file under `dist/` folder
     make bazel-build
@@ -101,3 +146,11 @@ develop environment, run
 
 The code is under ``/app``, and you can communicate with the host machine file
 system via ``/host``.
+
+.. note ::
+
+    For users in mainland China:
+
+    .. code-block:: bash
+
+        make docker-dev-cn

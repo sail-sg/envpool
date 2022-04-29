@@ -9,8 +9,12 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 RUN ln -s /usr/bin/python3 /usr/bin/python
 RUN ln -sf /usr/lib/go-1.16/bin/go /usr/bin/go
+RUN go env -w GOPROXY=https://goproxy.cn
 
-RUN go install github.com/bazelbuild/bazelisk@latest && ln -sf $HOME/go/bin/bazelisk $HOME/go/bin/bazel
+RUN wget https://mirrors.huaweicloud.com/bazel/5.1.1/bazel-5.1.1-linux-x86_64
+RUN chmod +x bazel-5.1.1-linux-x86_64
+RUN mkdir -p $HOME/go/bin
+RUN mv bazel-5.1.1-linux-x86_64 $HOME/go/bin/bazel
 RUN go install github.com/bazelbuild/buildtools/buildifier@latest
 RUN pip3 install --upgrade pip isort yapf cpplint flake8 flake8_bugbear mypy && rm -rf ~/.pip/cache
 
