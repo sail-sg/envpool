@@ -153,5 +153,4 @@ system via ``/host``.
 
     .. code-block:: bash
 
-        mv docker/dev0.dockerfile docker/dev.dockerfile
-        make docker-dev
+        make docker-dev0

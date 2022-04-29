@@ -135,6 +135,12 @@ docker-dev:
 	docker run --network=host -v /:/host -it $(PROJECT_NAME):$(COMMIT_HASH) bash
 	echo successfully build docker image with tag $(PROJECT_NAME):$(COMMIT_HASH)
 
+# for mainland China
+docker-dev0:
+	docker build --network=host -t $(PROJECT_NAME):$(COMMIT_HASH) -f docker/dev0.dockerfile .
+	docker run --network=host -v /:/host -it $(PROJECT_NAME):$(COMMIT_HASH) bash
+	echo successfully build docker image with tag $(PROJECT_NAME):$(COMMIT_HASH)
+
 docker-release:
 	docker build --network=host -t $(PROJECT_NAME)-release:$(COMMIT_HASH) -f docker/release.dockerfile .
 	mkdir -p wheelhouse
