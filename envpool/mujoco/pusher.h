@@ -105,7 +105,7 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
 
   void Reset() override {
     done_ = false;
-    current_step_ = 0;
+    elapsed_step_ = 0;
     MujocoReset();
     WriteObs(0.0f, 0, 0);
   }
@@ -127,7 +127,7 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
     float reward = -ctrl_cost * ctrl_cost_weight_ -
                    dist_cost * dist_cost_weight_ -
                    near_cost * near_cost_weight_;
-    done_ = (++current_step_ >= max_episode_steps_);
+    done_ = (++elapsed_step_ >= max_episode_steps_);
     WriteObs(reward, ctrl_cost, dist_cost);
   }
 

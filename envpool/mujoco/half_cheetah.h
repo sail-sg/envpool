@@ -88,7 +88,7 @@ class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
 
   void Reset() override {
     done_ = false;
-    current_step_ = 0;
+    elapsed_step_ = 0;
     MujocoReset();
     WriteObs(0.0f, 0, 0, 0);
   }
@@ -110,7 +110,7 @@ class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
     mjtNum xv = (x_after - x_before) / dt;
     // reward and done
     float reward = xv * forward_reward_weight_ - ctrl_cost;
-    done_ = (++current_step_ >= max_episode_steps_);
+    done_ = (++elapsed_step_ >= max_episode_steps_);
     WriteObs(reward, xv, ctrl_cost, x_after);
   }
 

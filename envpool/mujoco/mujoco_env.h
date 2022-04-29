@@ -33,7 +33,7 @@ class MujocoEnv {
   mjtNum *qpos0_, *qvel0_;  // for align check
   int frame_skip_;
   bool post_constraint_;
-  int max_episode_steps_, current_step_;
+  int max_episode_steps_, elapsed_step_;
   bool done_;
 
  public:
@@ -48,7 +48,7 @@ class MujocoEnv {
         frame_skip_(frame_skip),
         post_constraint_(post_constraint),
         max_episode_steps_(max_episode_steps),
-        current_step_(max_episode_steps + 1),
+        elapsed_step_(max_episode_steps + 1),
         done_(true) {
     memcpy(init_qpos_, data_->qpos, sizeof(mjtNum) * model_->nq);
     memcpy(init_qvel_, data_->qvel, sizeof(mjtNum) * model_->nv);

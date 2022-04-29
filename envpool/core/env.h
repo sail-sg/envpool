@@ -38,7 +38,7 @@ class Env {
 
  private:
   StateBufferQueue* sbq_;
-  int order_, elapsed_step_;
+  int order_, current_step_;
   bool is_single_player_;
   StateBuffer::WritableSlice slice_;
   // for parsing single env action from input action batch
@@ -60,7 +60,7 @@ class Env {
         env_id_(env_id),
         seed_(spec.config["seed"_] + env_id),
         gen_(seed_),
-        elapsed_step_(-1),
+        current_step_(-1),
         is_single_player_(max_num_players_ == 1),
         action_specs_(spec.action_spec.template values<ShapeSpec>()),
         is_player_action_(Transform(action_specs_, [](const ShapeSpec& s) {
@@ -147,9 +147,9 @@ class Env {
     sbq_ = sbq;
     order_ = order;
     if (reset) {
-      elapsed_step_ = 0;
+      current_step_ = 0;
     } else {
-      ++elapsed_step_;
+      ++current_step_;
     }
   }
 
@@ -163,7 +163,7 @@ class Env {
     State state(&slice_.arr);
     state["done"_] = IsDone();
     state["info:env_id"_] = env_id_;
-    state["elapsed_step"_] = elapsed_step_;
+    state["elapsed_step"_] = current_step_;
     int* player_env_id(static_cast<int*>(state["info:players.env_id"_].data()));
     for (int i = 0; i < player_num; ++i) {
       player_env_id[i] = env_id_;

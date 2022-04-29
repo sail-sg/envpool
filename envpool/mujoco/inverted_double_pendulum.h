@@ -91,7 +91,7 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
 
   void Reset() override {
     done_ = false;
-    current_step_ = 0;
+    elapsed_step_ = 0;
     MujocoReset();
     WriteObs(0.0f);
   }
@@ -110,8 +110,8 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
     mjtNum vel_penalty = 1e-3 * v1 * v1 + 5e-3 * v2 * v2;
     // reward and done
     float reward = healthy_reward_ - dist_penalty - vel_penalty;
-    ++current_step_;
-    done_ = !IsHealthy() || (current_step_ >= max_episode_steps_);
+    ++elapsed_step_;
+    done_ = !IsHealthy() || (elapsed_step_ >= max_episode_steps_);
     WriteObs(reward);
   }
 

@@ -100,7 +100,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
 
   void Reset() override {
     done_ = false;
-    current_step_ = 0;
+    elapsed_step_ = 0;
     MujocoReset();
     WriteObs(0.0f, 0, 0);
   }
@@ -123,7 +123,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
 
     // reward and done
     float reward = -dist_cost - ctrl_cost;
-    done_ = (++current_step_ >= max_episode_steps_);
+    done_ = (++elapsed_step_ >= max_episode_steps_);
     WriteObs(reward, ctrl_cost, dist_cost);
   }
 

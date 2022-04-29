@@ -85,7 +85,7 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
 
   void Reset() override {
     done_ = false;
-    current_step_ = 0;
+    elapsed_step_ = 0;
     MujocoReset();
     WriteObs(0.0f);
   }
@@ -95,8 +95,8 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
     MujocoStep(static_cast<mjtNum*>(action["action"_].data()));
 
     // reward and done
-    ++current_step_;
-    done_ = !IsHealthy() || (current_step_ >= max_episode_steps_);
+    ++elapsed_step_;
+    done_ = !IsHealthy() || (elapsed_step_ >= max_episode_steps_);
     WriteObs(1.0f);
   }
 

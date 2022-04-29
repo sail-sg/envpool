@@ -100,7 +100,7 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
 
   void Reset() override {
     done_ = false;
-    current_step_ = 0;
+    elapsed_step_ = 0;
     MujocoReset();
     WriteObs(0.0f, 0, 0);
   }
@@ -122,8 +122,8 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
     mjtNum xv = (x_after - x_before) / dt;
     // reward and done
     float reward = xv * forward_reward_weight_ + healthy_reward_ - ctrl_cost;
-    ++current_step_;
-    done_ = !IsHealthy() || (current_step_ >= max_episode_steps_);
+    ++elapsed_step_;
+    done_ = !IsHealthy() || (elapsed_step_ >= max_episode_steps_);
     WriteObs(reward, xv, x_after);
   }
 
