@@ -44,11 +44,12 @@ class PusherEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
     return MakeDict("obs"_.bind(Spec<mjtNum>({23}, {-inf, inf})),
-                    "info:reward_dist"_.bind(Spec<mjtNum>({-1})),
-                    "info:reward_ctrl"_.bind(Spec<mjtNum>({-1})),
-                    // TODO(jiayi): remove these two lines for speed
+#ifdef ENVPOOL_TEST
                     "info:qpos0"_.bind(Spec<mjtNum>({11})),
-                    "info:qvel0"_.bind(Spec<mjtNum>({11})));
+                    "info:qvel0"_.bind(Spec<mjtNum>({11})),
+#endif
+                    "info:reward_dist"_.bind(Spec<mjtNum>({-1})),
+                    "info:reward_ctrl"_.bind(Spec<mjtNum>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -156,8 +157,10 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
     // info
     state["info:reward_dist"_] = -dist_cost;
     state["info:reward_ctrl"_] = -ctrl_cost;
+#ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_, model_->nq);
     state["info:qvel0"_].Assign(qvel0_, model_->nv);
+#endif
   }
 };
 

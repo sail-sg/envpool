@@ -97,7 +97,7 @@ bazel-build: bazel-install
 	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-test: bazel-install
-	bazel test --test_output=all $(BAZELOPT) //... --config=release
+	bazel test --test_output=all $(BAZELOPT) //... --config=release --config=test
 
 bazel-clean: bazel-install
 	bazel clean --expunge

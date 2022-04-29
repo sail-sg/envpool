@@ -40,10 +40,13 @@ class InvertedPendulumEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
+#ifdef ENVPOOL_TEST
     return MakeDict("obs"_.bind(Spec<mjtNum>({4}, {-inf, inf})),
-                    // TODO(jiayi): remove these two lines for speed
                     "info:qpos0"_.bind(Spec<mjtNum>({2})),
                     "info:qvel0"_.bind(Spec<mjtNum>({2})));
+#else
+    return MakeDict("obs"_.bind(Spec<mjtNum>({4}, {-inf, inf})));
+#endif
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -130,8 +133,10 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
       *(obs++) = data_->qvel[i];
     }
     // info
+#ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_, model_->nq);
     state["info:qvel0"_].Assign(qvel0_, model_->nv);
+#endif
   }
 };
 

@@ -48,6 +48,10 @@ class AntEnvFns {
     bool no_pos = conf["exclude_current_positions_from_observation"_];
     return MakeDict(
         "obs"_.bind(Spec<mjtNum>({no_pos ? 111 : 113}, {-inf, inf})),
+#ifdef ENVPOOL_TEST
+        "info:qpos0"_.bind(Spec<mjtNum>({15})),
+        "info:qvel0"_.bind(Spec<mjtNum>({14})),
+#endif
         "info:reward_forward"_.bind(Spec<mjtNum>({-1})),
         "info:reward_ctrl"_.bind(Spec<mjtNum>({-1})),
         "info:reward_contact"_.bind(Spec<mjtNum>({-1})),
@@ -56,10 +60,7 @@ class AntEnvFns {
         "info:y_position"_.bind(Spec<mjtNum>({-1})),
         "info:distance_from_origin"_.bind(Spec<mjtNum>({-1})),
         "info:x_velocity"_.bind(Spec<mjtNum>({-1})),
-        "info:y_velocity"_.bind(Spec<mjtNum>({-1})),
-        // TODO(jiayi): remove these two lines for speed
-        "info:qpos0"_.bind(Spec<mjtNum>({15})),
-        "info:qvel0"_.bind(Spec<mjtNum>({14})));
+        "info:y_velocity"_.bind(Spec<mjtNum>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -201,8 +202,10 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
         std::sqrt(x_after * x_after + y_after * y_after);
     state["info:x_velocity"_] = xv;
     state["info:y_velocity"_] = yv;
+#ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_, model_->nq);
     state["info:qvel0"_].Assign(qvel0_, model_->nv);
+#endif
   }
 };
 

@@ -44,14 +44,15 @@ class HumanoidStandupEnvFns {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
     bool no_pos = conf["exclude_current_positions_from_observation"_];
     return MakeDict(
+#ifdef ENVPOOL_TEST
+        "info:qpos0"_.bind(Spec<mjtNum>({24})),
+        "info:qvel0"_.bind(Spec<mjtNum>({23})),
+#endif
         "obs"_.bind(Spec<mjtNum>({no_pos ? 376 : 378}, {-inf, inf})),
         "info:reward_linup"_.bind(Spec<mjtNum>({-1})),
         "info:reward_quadctrl"_.bind(Spec<mjtNum>({-1})),
         "info:reward_alive"_.bind(Spec<mjtNum>({-1})),
-        "info:reward_impact"_.bind(Spec<mjtNum>({-1})),
-        // TODO(jiayi): remove these two lines for speed
-        "info:qpos0"_.bind(Spec<mjtNum>({24})),
-        "info:qvel0"_.bind(Spec<mjtNum>({23})));
+        "info:reward_impact"_.bind(Spec<mjtNum>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -160,8 +161,10 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
     state["info:reward_quadctrl"_] = -ctrl_cost;
     state["info:reward_impact"_] = -contact_cost;
     state["info:reward_alive"_] = healthy_reward_;
+#ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_, model_->nq);
     state["info:qvel0"_].Assign(qvel0_, model_->nv);
+#endif
   }
 };
 
