@@ -46,19 +46,20 @@ class AntEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
     bool no_pos = conf["exclude_current_positions_from_observation"_];
-    return MakeDict("obs"_.bind(Spec<mjtNum>({no_pos ? 111 : 113}, {-inf, inf})),
-                    "info:reward_forward"_.bind(Spec<mjtNum>({-1})),
-                    "info:reward_ctrl"_.bind(Spec<mjtNum>({-1})),
-                    "info:reward_contact"_.bind(Spec<mjtNum>({-1})),
-                    "info:reward_survive"_.bind(Spec<mjtNum>({-1})),
-                    "info:x_position"_.bind(Spec<mjtNum>({-1})),
-                    "info:y_position"_.bind(Spec<mjtNum>({-1})),
-                    "info:distance_from_origin"_.bind(Spec<mjtNum>({-1})),
-                    "info:x_velocity"_.bind(Spec<mjtNum>({-1})),
-                    "info:y_velocity"_.bind(Spec<mjtNum>({-1})),
-                    // TODO(jiayi): remove these two lines for speed
-                    "info:qpos0"_.bind(Spec<mjtNum>({15})),
-                    "info:qvel0"_.bind(Spec<mjtNum>({14})));
+    return MakeDict(
+        "obs"_.bind(Spec<mjtNum>({no_pos ? 111 : 113}, {-inf, inf})),
+        "info:reward_forward"_.bind(Spec<mjtNum>({-1})),
+        "info:reward_ctrl"_.bind(Spec<mjtNum>({-1})),
+        "info:reward_contact"_.bind(Spec<mjtNum>({-1})),
+        "info:reward_survive"_.bind(Spec<mjtNum>({-1})),
+        "info:x_position"_.bind(Spec<mjtNum>({-1})),
+        "info:y_position"_.bind(Spec<mjtNum>({-1})),
+        "info:distance_from_origin"_.bind(Spec<mjtNum>({-1})),
+        "info:x_velocity"_.bind(Spec<mjtNum>({-1})),
+        "info:y_velocity"_.bind(Spec<mjtNum>({-1})),
+        // TODO(jiayi): remove these two lines for speed
+        "info:qpos0"_.bind(Spec<mjtNum>({15})),
+        "info:qvel0"_.bind(Spec<mjtNum>({14})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -140,10 +141,9 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
       x = std::max(contact_force_min_, x);
       contact_cost += contact_cost_weight_ * x * x;
     }
+    // reward and done
     mjtNum healthy_reward =
         terminate_when_unhealthy_ || IsHealthy() ? healthy_reward_ : 0.0;
-
-    // reward and done
     float reward =
         xv * forward_reward_weight_ + healthy_reward - ctrl_cost - contact_cost;
     ++elapsed_step_;

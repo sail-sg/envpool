@@ -34,6 +34,8 @@ class Walker2dEnvFns {
     return MakeDict(
         "max_episode_steps"_.bind(1000), "frame_skip"_.bind(4),
         "post_constraint"_.bind(true), "ctrl_cost_weight"_.bind(0.001),
+        "terminate_when_unhealthy"_.bind(true),
+        "exclude_current_positions_from_observation"_.bind(true),
         "forward_reward_weight"_.bind(1.0), "healthy_reward"_.bind(1.0),
         "healthy_z_min"_.bind(0.8), "healthy_z_max"_.bind(2.0),
         "healthy_angle_min"_.bind(-1.0), "healthy_angle_max"_.bind(1.0),
@@ -43,7 +45,8 @@ class Walker2dEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
-    return MakeDict("obs"_.bind(Spec<mjtNum>({17}, {-inf, inf})),
+    bool no_pos = conf["exclude_current_positions_from_observation"_];
+    return MakeDict("obs"_.bind(Spec<mjtNum>({no_pos ? 17 : 18}, {-inf, inf})),
                     "info:x_position"_.bind(Spec<mjtNum>({-1})),
                     "info:x_velocity"_.bind(Spec<mjtNum>({-1})),
                     // TODO(jiayi): remove these two lines for speed
@@ -60,6 +63,7 @@ typedef class EnvSpec<Walker2dEnvFns> Walker2dEnvSpec;
 
 class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
  protected:
+  bool terminate_when_unhealthy_, no_pos_;
   mjtNum ctrl_cost_weight_, forward_reward_weight_;
   mjtNum healthy_reward_, healthy_z_min_, healthy_z_max_;
   mjtNum healthy_angle_min_, healthy_angle_max_;
@@ -72,6 +76,8 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
         MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/walker2d.xml",
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
+        terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
+        no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
@@ -118,9 +124,12 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
     mjtNum dt = frame_skip_ * model_->opt.timestep;
     mjtNum xv = (x_after - x_before) / dt;
     // reward and done
-    float reward = xv * forward_reward_weight_ + healthy_reward_ - ctrl_cost;
+    mjtNum healthy_reward =
+        terminate_when_unhealthy_ || IsHealthy() ? healthy_reward_ : 0.0;
+    float reward = xv * forward_reward_weight_ + healthy_reward - ctrl_cost;
     ++elapsed_step_;
-    done_ = !IsHealthy() || (elapsed_step_ >= max_episode_steps_);
+    done_ = (terminate_when_unhealthy_ ? !IsHealthy() : false) ||
+            (elapsed_step_ >= max_episode_steps_);
     WriteObs(reward, xv, x_after);
   }
 
@@ -141,7 +150,7 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
     state["reward"_] = reward;
     // obs
     mjtNum* obs = static_cast<mjtNum*>(state["obs"_].data());
-    for (int i = 1; i < model_->nq; ++i) {
+    for (int i = no_pos_ ? 1 : 0; i < model_->nq; ++i) {
       *(obs++) = data_->qpos[i];
     }
     for (int i = 0; i < model_->nv; ++i) {

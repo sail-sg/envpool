@@ -34,13 +34,15 @@ class SwimmerEnvFns {
     return MakeDict(
         "max_episode_steps"_.bind(1000), "reward_threshold"_.bind(360.0),
         "frame_skip"_.bind(4), "post_constraint"_.bind(true),
+        "exclude_current_positions_from_observation"_.bind(true),
         "forward_reward_weight"_.bind(1.0), "ctrl_cost_weight"_.bind(1e-4),
         "reset_noise_scale"_.bind(0.1));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
-    return MakeDict("obs"_.bind(Spec<mjtNum>({8}, {-inf, inf})),
+    bool no_pos = conf["exclude_current_positions_from_observation"_];
+    return MakeDict("obs"_.bind(Spec<mjtNum>({no_pos ? 8 : 10}, {-inf, inf})),
                     "info:reward_fwd"_.bind(Spec<mjtNum>({-1})),
                     "info:reward_ctrl"_.bind(Spec<mjtNum>({-1})),
                     "info:x_position"_.bind(Spec<mjtNum>({-1})),
@@ -62,6 +64,7 @@ typedef class EnvSpec<SwimmerEnvFns> SwimmerEnvSpec;
 
 class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
  protected:
+  bool no_pos_;
   mjtNum ctrl_cost_weight_, forward_reward_weight_;
   std::uniform_real_distribution<> dist_;
 
@@ -71,6 +74,7 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
         MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/swimmer.xml",
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
+        no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
         dist_(-spec.config["reset_noise_scale"_],
@@ -124,7 +128,7 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
     state["reward"_] = reward;
     // obs
     mjtNum* obs = static_cast<mjtNum*>(state["obs"_].data());
-    for (int i = 2; i < model_->nq; ++i) {
+    for (int i = no_pos_ ? 2 : 0; i < model_->nq; ++i) {
       *(obs++) = data_->qpos[i];
     }
     for (int i = 0; i < model_->nv; ++i) {

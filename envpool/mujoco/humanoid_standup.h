@@ -34,6 +34,7 @@ class HumanoidStandupEnvFns {
     return MakeDict(
         "max_episode_steps"_.bind(1000), "frame_skip"_.bind(5),
         "post_constraint"_.bind(true), "forward_reward_weight"_.bind(1.0),
+        "exclude_current_positions_from_observation"_.bind(true),
         "ctrl_cost_weight"_.bind(0.1), "contact_cost_weight"_.bind(5e-7),
         "contact_cost_max"_.bind(10.0), "healthy_reward"_.bind(1.0),
         "reset_noise_scale"_.bind(1e-2));
@@ -41,14 +42,16 @@ class HumanoidStandupEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
-    return MakeDict("obs"_.bind(Spec<mjtNum>({376}, {-inf, inf})),
-                    "info:reward_linup"_.bind(Spec<mjtNum>({-1})),
-                    "info:reward_quadctrl"_.bind(Spec<mjtNum>({-1})),
-                    "info:reward_alive"_.bind(Spec<mjtNum>({-1})),
-                    "info:reward_impact"_.bind(Spec<mjtNum>({-1})),
-                    // TODO(jiayi): remove these two lines for speed
-                    "info:qpos0"_.bind(Spec<mjtNum>({24})),
-                    "info:qvel0"_.bind(Spec<mjtNum>({23})));
+    bool no_pos = conf["exclude_current_positions_from_observation"_];
+    return MakeDict(
+        "obs"_.bind(Spec<mjtNum>({no_pos ? 376 : 378}, {-inf, inf})),
+        "info:reward_linup"_.bind(Spec<mjtNum>({-1})),
+        "info:reward_quadctrl"_.bind(Spec<mjtNum>({-1})),
+        "info:reward_alive"_.bind(Spec<mjtNum>({-1})),
+        "info:reward_impact"_.bind(Spec<mjtNum>({-1})),
+        // TODO(jiayi): remove these two lines for speed
+        "info:qpos0"_.bind(Spec<mjtNum>({24})),
+        "info:qvel0"_.bind(Spec<mjtNum>({23})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -61,6 +64,7 @@ typedef class EnvSpec<HumanoidStandupEnvFns> HumanoidStandupEnvSpec;
 class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
                            public MujocoEnv {
  protected:
+  bool no_pos_;
   mjtNum ctrl_cost_weight_, contact_cost_weight_, contact_cost_max_;
   mjtNum forward_reward_weight_, healthy_reward_;
   std::uniform_real_distribution<> dist_;
@@ -72,6 +76,7 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
             spec.config["base_path"_] + "/mujoco/assets/humanoidstandup.xml",
             spec.config["frame_skip"_], spec.config["post_constraint"_],
             spec.config["max_episode_steps"_]),
+        no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         contact_cost_weight_(spec.config["contact_cost_weight"_]),
         contact_cost_max_(spec.config["contact_cost_max"_]),
@@ -132,7 +137,7 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
     state["reward"_] = reward;
     // obs
     mjtNum* obs = static_cast<mjtNum*>(state["obs"_].data());
-    for (int i = 2; i < model_->nq; ++i) {
+    for (int i = no_pos_ ? 2 : 0; i < model_->nq; ++i) {
       *(obs++) = data_->qpos[i];
     }
     for (int i = 0; i < model_->nv; ++i) {
