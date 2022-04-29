@@ -97,6 +97,13 @@ To build a release version, type:
 This creates a wheel under ``bazel-bin/setup.runfiles/envpool/dist``.
 
 
+.. note ::
+
+    For users in mainland China, if you find ``pip install`` is quite slow,
+    the solution is to uncomment ``extra_args`` in ``envpool/pip.bzl`` to
+    switch the pip source.
+
+
 Use Shortcut
 ------------
 
