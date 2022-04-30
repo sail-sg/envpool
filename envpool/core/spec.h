@@ -39,9 +39,7 @@ class ShapeSpec {
   int element_size;
   std::vector<int> shape;
   ShapeSpec() = default;
-  ShapeSpec(int element_size, const std::vector<int>& shape_vec)
-      : element_size(element_size), shape(shape_vec) {}
-  ShapeSpec(int element_size, std::vector<int>&& shape_vec)
+  ShapeSpec(int element_size, std::vector<int> shape_vec)
       : element_size(element_size), shape(std::move(shape_vec)) {}
   [[nodiscard]] ShapeSpec Batch(int batch_size) const {
     std::vector<int> new_shape = {batch_size};

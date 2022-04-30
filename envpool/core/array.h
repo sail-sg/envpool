@@ -38,7 +38,8 @@ class Array {
   std::shared_ptr<char> ptr_;
 
   template <class Shape, class Deleter>
-  Array(char* ptr, Shape&& shape, std::size_t element_size, Deleter&& deleter)
+  Array(char* ptr, Shape&& shape, std::size_t element_size,  // NOLINT
+        Deleter&& deleter)
       : size(prod(shape.data(), shape.size())),
         ndim(shape.size()),
         element_size(element_size),
@@ -46,13 +47,12 @@ class Array {
         ptr_(ptr, std::forward<Deleter>(deleter)) {}
 
   template <class Shape>
-  Array(const std::shared_ptr<char>& ptr, Shape&& shape,
-        std::size_t element_size)
+  Array(std::shared_ptr<char> ptr, Shape&& shape, std::size_t element_size)
       : size(prod(shape.data(), shape.size())),
         ndim(shape.size()),
         element_size(element_size),
         shape_(std::forward<Shape>(shape)),
-        ptr_(ptr) {}
+        ptr_(std::move(ptr)) {}
 
  public:
   Array() = default;
@@ -63,7 +63,7 @@ class Array {
    * the memory.
    */
   template <class Deleter>
-  Array(const ShapeSpec& spec, char* data, Deleter&& deleter)
+  Array(const ShapeSpec& spec, char* data, Deleter&& deleter)  // NOLINT
       : Array(data, spec.Shape(), spec.element_size,
               std::forward<Deleter>(deleter)) {}
 
