@@ -71,7 +71,7 @@ class StateBuffer {
       : batch_(batch),
         max_num_players_(max_num_players),
         arrays_(MakeArray(specs)),
-        is_player_state_(is_player_state) {}
+        is_player_state_(std::move(is_player_state)) {}
 
   /**
    * Tries to allocate a piece of memory without lock.
@@ -84,10 +84,10 @@ class StateBuffer {
     if (alloc_count < batch_) {
       // Make a increment atomically on two uint32_t simultaneously
       // This avoids lock
-      uint64_t increment = ((uint64_t)num_players) << 32 | (uint32_t)1;
+      uint64_t increment = static_cast<uint64_t>(num_players) << 32 | 1;
       uint64_t offsets = offsets_.fetch_add(increment);
-      uint32_t player_offset = (uint32_t)(offsets >> 32);
-      uint32_t shared_offset = (uint32_t)offsets;
+      uint32_t player_offset = offsets >> 32;
+      uint32_t shared_offset = offsets;
       DCHECK_LE((std::size_t)shared_offset + 1, batch_);
       DCHECK_LE((std::size_t)(player_offset + num_players),
                 batch_ * max_num_players_);
@@ -108,21 +108,20 @@ class StateBuffer {
       }
       return WritableSlice{.arr = std::move(state),
                            .done_write = [this]() { Done(); }};
-    } else {
-      DLOG(INFO) << "Allocation failed, continue to the next block of memory";
-      throw std::out_of_range("StateBuffer out of storage");
     }
+    DLOG(INFO) << "Allocation failed, continue to the next block of memory";
+    throw std::out_of_range("StateBuffer out of storage");
   }
 
-  std::pair<uint32_t, uint32_t> Offsets() const {
-    uint32_t player_offset = (uint32_t)(offsets_ >> 32);
-    uint32_t shared_offset = (uint32_t)offsets_;
+  [[nodiscard]] std::pair<uint32_t, uint32_t> Offsets() const {
+    uint32_t player_offset = offsets_ >> 32;
+    uint32_t shared_offset = offsets_;
     return {player_offset, shared_offset};
   }
 
   /**
-   * When the allocated memory has been filled, the user of the memory will call
-   * this callback to notify StateBuffer that its part has been written.
+   * When the allocated memory has been filled, the user of the memory will
+   * call this callback to notify StateBuffer that its part has been written.
    */
   void Done(std::size_t num = 1) {
     std::size_t done_count = done_count_.fetch_add(num);
@@ -146,8 +145,8 @@ class StateBuffer {
     uint32_t player_offset = (uint32_t)(offsets >> 32);
     uint32_t shared_offset = (uint32_t)offsets;
     DCHECK_EQ((std::size_t)shared_offset, batch_)
-        << "When this StateBuffer is ready, the shared state arrays should be "
-           "used up.";
+        << "When this StateBuffer is ready, the shared state arrays should "
+           "be used up.";
     std::vector<Array> ret;
     ret.reserve(arrays_.size());
     for (std::size_t i = 0; i < arrays_.size(); ++i) {

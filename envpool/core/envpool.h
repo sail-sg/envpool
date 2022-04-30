@@ -17,6 +17,7 @@
 #ifndef ENVPOOL_CORE_ENVPOOL_H_
 #define ENVPOOL_CORE_ENVPOOL_H_
 
+#include <utility>
 #include <vector>
 
 #include "envpool/core/env_spec.h"
@@ -30,10 +31,10 @@ class EnvPool {
   EnvSpec spec_;
 
  public:
-  typedef EnvSpec Spec;
+  using Spec = EnvSpec;
   using State = NamedVector<typename EnvSpec::StateKeys, std::vector<Array>>;
   using Action = NamedVector<typename EnvSpec::ActionKeys, std::vector<Array>>;
-  explicit EnvPool(const EnvSpec& spec) : spec_(spec) {}
+  explicit EnvPool(EnvSpec spec) : spec_(std::move(spec)) {}
 
  protected:
   virtual void Send(const std::vector<Array>& action) {

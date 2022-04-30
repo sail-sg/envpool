@@ -44,7 +44,8 @@ class Value {
 template <char... C>
 class Key {
  public:
-  static constexpr const inline char _str[sizeof...(C) + 1]{C..., '\0'};
+  static constexpr const inline char _str[sizeof...(C) + 1]{C...,  // NOLINT
+                                                            '\0'};
   static constexpr const inline std::string_view str_view{_str, sizeof...(C)};
   template <typename Type>
   static constexpr inline auto bind(Type&& v) {
@@ -54,7 +55,7 @@ class Key {
 };
 
 template <class CharT, CharT... CS>
-inline constexpr auto operator""_() {
+inline constexpr auto operator""_() {  // NOLINT
   return Key<CS...>{};
 }
 

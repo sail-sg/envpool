@@ -84,7 +84,7 @@ class Spec : public ShapeSpec {
       : ShapeSpec(sizeof(dtype), shape),
         elementwise_bounds(elementwise_bounds) {}
 
-  Spec Batch(int batch_size) const {
+  [[nodiscard]] Spec Batch(int batch_size) const {
     std::vector<int> new_shape = {batch_size};
     new_shape.insert(new_shape.end(), shape.begin(), shape.end());
     return Spec(std::move(new_shape));
