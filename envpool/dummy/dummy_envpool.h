@@ -193,7 +193,7 @@ class DummyEnv : public Env<DummyEnvSpec> {
  * Pass the DummyEnv we defined above as an template parameter to the
  * AsyncEnvPool template, it gives us a parallelized version of the single env.
  */
-typedef AsyncEnvPool<DummyEnv> DummyEnvPool;
+using DummyEnvPool = AsyncEnvPool<DummyEnv>;
 
 }  // namespace dummy
 

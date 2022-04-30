@@ -77,9 +77,9 @@ class StateBufferQueue {
     // At the consumption of each block, the first consumping thread
     // will allocate a new state buffer and append to the tail.
     // alloc_tail_ = num_envs / batch_env + 2;
-    for (std::size_t i = 0; i < queue_.size(); ++i) {
-      queue_[i] = std::make_unique<StateBuffer>(batch_, max_num_players_,
-                                                specs_, is_player_state_);
+    for (auto& q : queue_) {
+      q = std::make_unique<StateBuffer>(batch_, max_num_players_, specs_,
+                                        is_player_state_);
     }
     std::size_t processor_count = std::thread::hardware_concurrency();
     // hardcode here :(
@@ -88,7 +88,7 @@ class StateBufferQueue {
       create_buffer_thread_num = 1;
     }
     for (std::size_t i = 0; i < create_buffer_thread_num; ++i) {
-      create_buffer_thread_.emplace_back(std::move(std::thread([&]() {
+      create_buffer_thread_.emplace_back(std::thread([&]() {
         while (true) {
           stock_buffer_.Put(std::make_unique<StateBuffer>(
               batch_, max_num_players_, specs_, is_player_state_));
@@ -96,7 +96,7 @@ class StateBufferQueue {
             break;
           }
         }
-      })));
+      }));
     }
   }
 

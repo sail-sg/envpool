@@ -103,12 +103,12 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
         }
       });
     }
-    int thread_affinity_offset = spec.config["thread_affinity_offset"_];
+    std::size_t thread_affinity_offset = spec.config["thread_affinity_offset"_];
     if (thread_affinity_offset >= 0) {
       for (std::size_t tid = 0; tid < num_threads_; ++tid) {
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
-        int cid = (thread_affinity_offset + tid) % processor_count;
+        std::size_t cid = (thread_affinity_offset + tid) % processor_count;
         CPU_SET(cid, &cpuset);
         pthread_setaffinity_np(workers_[tid].native_handle(), sizeof(cpu_set_t),
                                &cpuset);

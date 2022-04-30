@@ -55,7 +55,7 @@ Array NumpyToArray(const py::array& arr) {
 template <typename dtype>
 Array NumpyToArrayIncRef(const py::array& arr) {
   using array_t = py::array_t<dtype, py::array::c_style | py::array::forcecast>;
-  array_t* arr_ptr = new array_t(arr);
+  auto* arr_ptr = new array_t(arr);
   ShapeSpec spec(
       arr_ptr->itemsize(),
       std::vector<int>(arr_ptr->shape(), arr_ptr->shape() + arr_ptr->ndim()));
@@ -85,7 +85,6 @@ class PyEnvSpec : public EnvSpec {
   using action_spec_t =
       decltype(ExportSpecs(std::declval<typename EnvSpec::ActionSpec>()));
 
- public:
   state_spec_t py_state_spec;
   action_spec_t py_action_spec;
   typename EnvSpec::ConfigValues py_config_values;
@@ -94,7 +93,6 @@ class PyEnvSpec : public EnvSpec {
   static std::vector<std::string> py_action_keys;
   static typename EnvSpec::ConfigValues py_default_config_values;
 
- public:
   explicit PyEnvSpec(const typename EnvSpec::ConfigValues& conf)
       : EnvSpec(conf),
         py_state_spec(ExportSpecs(EnvSpec::state_spec)),
@@ -151,12 +149,10 @@ class PyEnvPool : public EnvPool {
  public:
   using PySpec = PyEnvSpec<typename EnvPool::Spec>;
 
- public:
   PySpec py_spec;
   static std::vector<std::string> py_state_keys;
   static std::vector<std::string> py_action_keys;
 
- public:
   explicit PyEnvPool(const PySpec& py_spec)
       : EnvPool(py_spec), py_spec(py_spec) {}
 

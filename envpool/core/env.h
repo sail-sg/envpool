@@ -107,8 +107,7 @@ class Env {
       for (std::size_t i = 0; i < action_size; ++i) {
         if (is_player_action_[i]) {
           if (continuous) {
-            raw_action_.emplace_back(
-                std::move((*action_batch_)[i].Slice(start, end)));
+            raw_action_.emplace_back((*action_batch_)[i].Slice(start, end));
           } else {
             action_specs_[i].shape[0] = player_num;
             Array arr(action_specs_[i]);
@@ -119,7 +118,7 @@ class Env {
             raw_action_.emplace_back(std::move(arr));
           }
         } else {
-          raw_action_.emplace_back(std::move((*action_batch_)[i][env_index_]));
+          raw_action_.emplace_back((*action_batch_)[i][env_index_]);
         }
       }
     }

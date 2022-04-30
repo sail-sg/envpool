@@ -67,7 +67,7 @@ class StateBuffer {
    */
   StateBuffer(std::size_t batch, std::size_t max_num_players,
               const std::vector<ShapeSpec>& specs,
-              const std::vector<bool>& is_player_state)
+              std::vector<bool> is_player_state)
       : batch_(batch),
         max_num_players_(max_num_players),
         arrays_(MakeArray(specs)),
@@ -142,8 +142,8 @@ class StateBuffer {
     }
     // when things are all done, compact the buffer.
     uint64_t offsets = offsets_;
-    uint32_t player_offset = (uint32_t)(offsets >> 32);
-    uint32_t shared_offset = (uint32_t)offsets;
+    uint32_t player_offset = (offsets >> 32);
+    uint32_t shared_offset = offsets;
     DCHECK_EQ((std::size_t)shared_offset, batch_)
         << "When this StateBuffer is ready, the shared state arrays should "
            "be used up.";
