@@ -133,7 +133,7 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
     int shared_offset = action[0].Shape(0);
     std::vector<ActionSlice> actions;
     std::shared_ptr<std::vector<Array>> action_batch =
-        std::make_shared<std::vector<Array>>(std::move(action));
+        std::make_shared<std::vector<Array>>(action);
     for (int i = 0; i < shared_offset; ++i) {
       int eid = env_id[i];
       envs_[eid]->SetAction(action_batch, i);

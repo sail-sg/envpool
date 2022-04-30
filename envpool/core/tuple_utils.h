@@ -37,7 +37,8 @@ struct Index<T, std::tuple<U, Types...>> {
 };
 
 template <class F, class K, class V, std::size_t... I>
-decltype(auto) ApplyZip(F&& f, K&& k, V&& v, std::index_sequence<I...>) {
+decltype(auto) ApplyZip(F&& f, K&& k, V&& v,
+                        std::index_sequence<I...> /*unused*/) {
   return std::invoke(std::forward<F>(f),
                      std::make_tuple(I, std::get<I>(std::forward<K>(k)),
                                      std::get<I>(std::forward<V>(v)))...);

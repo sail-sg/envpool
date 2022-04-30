@@ -99,7 +99,6 @@ class StateBufferQueue {
     }
   }
 
- public:
   ~StateBufferQueue() {
     // stop the thread
     quit_ = true;

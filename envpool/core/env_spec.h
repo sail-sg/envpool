@@ -43,18 +43,16 @@ auto common_state_spec =
 template <typename EnvFns>
 class EnvSpec {
  public:
-  typedef decltype(ConcatDict(common_config, EnvFns::DefaultConfig())) Config;
-  typedef typename Config::Keys ConfigKeys;
-  typedef typename Config::Values ConfigValues;
-  typedef decltype(ConcatDict(
-      common_state_spec, EnvFns::StateSpec(std::declval<Config>()))) StateSpec;
-  typedef decltype(
-      ConcatDict(common_action_spec,
-                 EnvFns::ActionSpec(std::declval<Config>()))) ActionSpec;
-  typedef typename StateSpec::Keys StateKeys;
-  typedef typename ActionSpec::Keys ActionKeys;
+  using Config = decltype(ConcatDict(common_config, EnvFns::DefaultConfig()));
+  using ConfigKeys = typename Config::Keys;
+  using ConfigValues = typename Config::Values;
+  using StateSpec = decltype(
+      ConcatDict(common_state_spec, EnvFns::StateSpec(std::declval<Config>())));
+  using ActionSpec = decltype(ConcatDict(
+      common_action_spec, EnvFns::ActionSpec(std::declval<Config>())));
+  using StateKeys = typename StateSpec::Keys;
+  using ActionKeys = typename ActionSpec::Keys;
 
- public:
   // For C++
   Config config;
   StateSpec state_spec;
@@ -62,7 +60,6 @@ class EnvSpec {
   static inline const Config default_config =
       ConcatDict(common_config, EnvFns::DefaultConfig());
 
- public:
   EnvSpec() : EnvSpec(default_config) {}
   explicit EnvSpec(const ConfigValues& conf)
       : config(conf),

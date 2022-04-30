@@ -49,7 +49,7 @@ class Env {
   int env_index_;
 
  public:
-  typedef EnvSpec Spec;
+  using Spec = EnvSpec;
   using State = NamedVector<typename EnvSpec::StateKeys, std::vector<Array>>;
   using Action = NamedVector<typename EnvSpec::ActionKeys, std::vector<Array>>;
 

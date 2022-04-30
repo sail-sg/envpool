@@ -74,7 +74,7 @@ class ActionBufferQueue {
     while (!sem_dequeue_.wait()) {
     }
     auto ptr = done_ptr_.fetch_add(1);
-    auto ret = std::move(queue_[ptr % queue_size_]);
+    auto ret = queue_[ptr % queue_size_];
     sem_dequeue_.signal(1);
     return ret;
   }
