@@ -65,7 +65,7 @@ integration; however, you don't want to build other stuff such as OpenCV:
 
 .. code-block:: bash
 
-    bazel test --test_output=all //envpool/mujoco:mujoco_test --config=release
+    bazel test --test_output=all //envpool/mujoco:mujoco_test --config=test
     # or alternatively
     cd bazel-bin/envpool/mujoco/mujoco_test.runfiles/envpool/
     ./envpool/mujoco/mujoco_test

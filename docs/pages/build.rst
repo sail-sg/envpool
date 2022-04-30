@@ -64,7 +64,7 @@ or `golang <https://golang.org/doc/install>`_ with version >= 1.16:
 Install Other Dependencies
 --------------------------
 
-EnvPool requires gcc/g++ version >= 9.0 to build the source code. To install:
+EnvPool requires **GCC/G++ version >= 9.0** to build the source code. To install:
 
 .. code-block:: bash
 
@@ -77,7 +77,7 @@ EnvPool requires gcc/g++ version >= 9.0 to build the source code. To install:
     # to change the default cc to gcc-9:
     sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
 
-It also requires python version >= 3.7:
+It also requires **Python version >= 3.7**:
 
 .. code-block:: bash
 

@@ -26,4 +26,4 @@ jobs:
         make bazel-test BAZELOPT="--remote_cache=http://bazel-cache.sail:8080"
     - name: Run clang-tidy
       run: |
-        make bazel-clang-tidy BAZELOPT="--remote_cache=http://bazel-cache.sail:8080"
+        make clang-tidy BAZELOPT="--remote_cache=http://bazel-cache.sail:8080"

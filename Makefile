@@ -81,8 +81,8 @@ buildifier: buildifier-install
 
 # bazel build/test
 
-bazel-clang-tidy: clang-tidy-install
-	bazel build $(BAZELOPT) //... --config=clang-tidy --config=release
+clang-tidy: clang-tidy-install
+	bazel build $(BAZELOPT) //... --config=clang-tidy --config=test
 
 bazel-debug: bazel-install
 	bazel build $(BAZELOPT) //... --config=debug
@@ -91,13 +91,19 @@ bazel-debug: bazel-install
 	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-build: bazel-install
+	bazel build $(BAZELOPT) //... --config=test
+	bazel run $(BAZELOPT) //:setup --config=test -- bdist_wheel
+	mkdir -p dist
+	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
+
+bazel-release: bazel-install
 	bazel build $(BAZELOPT) //... --config=release
 	bazel run $(BAZELOPT) //:setup --config=release -- bdist_wheel
 	mkdir -p dist
 	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-test: bazel-install
-	bazel test --test_output=all $(BAZELOPT) //... --config=release --config=test
+	bazel test --test_output=all $(BAZELOPT) //... --config=test
 
 bazel-clean: bazel-install
 	bazel clean --expunge
@@ -119,7 +125,7 @@ spelling: doc-install
 doc-clean:
 	cd docs && make clean
 
-lint: buildifier flake8 py-format clang-format cpplint bazel-clang-tidy mypy docstyle spelling
+lint: buildifier flake8 py-format clang-format cpplint clang-tidy mypy docstyle spelling
 
 format: py-format-install clang-format-install buildifier-install addlicense-install
 	isort $(PYTHON_FILES)
@@ -147,7 +153,7 @@ docker-release:
 	docker run --network=host -v `pwd`/wheelhouse:/whl -it $(PROJECT_NAME)-release:$(COMMIT_HASH) bash -c "cp wheelhouse/* /whl"
 	echo successfully build docker image with tag $(PROJECT_NAME)-release:$(COMMIT_HASH)
 
-pypi-wheel: auditwheel-install bazel-build
+pypi-wheel: auditwheel-install bazel-release
 	ls dist/*.whl -Art | tail -n 1 | xargs auditwheel repair --plat manylinux_2_17_x86_64
 
 release-test1:
