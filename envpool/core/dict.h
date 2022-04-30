@@ -106,7 +106,7 @@ class NamedVector {
     return rets;
   }
 
-  operator Vector&() const {  // NOLINT(google-explicit-constructor)
+  operator Vector&() const {  // NOLINT
     return *values_;
   }
 };

@@ -157,7 +157,7 @@ class Array {
    * scalar shape.
    */
   template <typename T>
-  operator T() const {  // NOLINT(google-explicit-constructor)
+  operator T() const {  // NOLINT
     DCHECK_EQ(element_size, sizeof(T)) << " there could be a type mismatch";
     DCHECK_EQ(size, (std::size_t)1)
         << " Array with a shape can't be used as a scalar";
