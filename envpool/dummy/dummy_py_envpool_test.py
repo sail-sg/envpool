@@ -34,9 +34,9 @@ class _DummyEnvPoolTest(absltest.TestCase):
       "thread_affinity_offset",
       "base_path",
       "seed",
+      "gym_reset_return_info",
       "state_num",
       "action_num",
-      "gym_reset_return_info",
     ]
     default_conf = _DummyEnvSpec._default_config_values
     self.assertTrue(isinstance(default_conf, tuple))

@@ -154,8 +154,12 @@ class EnvPool(Protocol):
   ) -> List[np.ndarray]:
     """Convertion for input action."""
 
-  def _to(self, state: List[np.ndarray], reset: bool,
-          return_info: bool) -> Union[TimeStep, Tuple]:
+  def _to(
+    self,
+    state: List[np.ndarray],
+    reset: bool,
+    return_info: bool,
+  ) -> Union[TimeStep, Tuple]:
     """A switch of to_dm and to_gym for output state."""
 
   @property
