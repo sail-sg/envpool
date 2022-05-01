@@ -31,15 +31,14 @@ void BuildActionSetImpl(
     int button_num,
     const std::vector<std::tuple<int, float, float>>& delta_config,
     int* button_index, bool force_speed, int cur_id, double* current_result,
-    std::vector<VzdActT>& result  // NOLINT
-) {
+    std::vector<VzdActT>* result) {
   if (cur_id == 43) {
     // get full action set, move to result
     VzdActT current_result_vec;
     for (int i = 0; i < button_num; ++i) {
       current_result_vec.push_back(current_result[i]);
     }
-    result.push_back(current_result_vec);
+    result->push_back(current_result_vec);
   } else if (38 <= cur_id && cur_id <= 42) {
     // delta button, parse delta_config
     int num;
@@ -128,7 +127,7 @@ std::vector<VzdActT> BuildActionSet(
     button_index[button_list[i]] = i;
   }
   BuildActionSetImpl(button_list.size(), delta_config, button_index.begin(),
-                     force_speed, 0, current_result.begin(), result);
+                     force_speed, 0, current_result.begin(), &result);
   return result;
 }
 

@@ -45,6 +45,6 @@ decltype(auto) ApplyZip(F&& f, K&& k, V&& v,
 }
 
 template <typename... T>
-using TupleCatT = decltype(std::tuple_cat(std::declval<T>()...));
+using tuple_cat_t = decltype(std::tuple_cat(std::declval<T>()...));  // NOLINT
 
 #endif  // ENVPOOL_CORE_TUPLE_UTILS_H_

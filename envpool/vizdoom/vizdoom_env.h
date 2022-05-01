@@ -370,7 +370,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
         curr_weapon = gvs_[i];
       } else if (gv_list_[i] == SELECTED_WEAPON_AMMO) {
         curr_weapon_ammo = gvs_[i];
-      } else if (gv_list_[i] == HEALTH) {  // NOLINT
+      } else if (gv_list_[i] == HEALTH) {
         // HEALTH -999900: https://github.com/mwydmuch/ViZDoom/issues/202
         if (last_gvs_[i] < 0 && gvs_[i] < 0) {
           last_gvs_[i] = gvs_[i] = 100;
