@@ -77,7 +77,7 @@ class AtariEnvFns {
   }
 };
 
-using AtariEnvSpec = class EnvSpec<AtariEnvFns>;
+using AtariEnvSpec = EnvSpec<AtariEnvFns>;
 using FrameSpec = Spec<uint8_t>;
 
 class AtariEnv : public Env<AtariEnvSpec> {

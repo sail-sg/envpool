@@ -46,7 +46,7 @@ class CartPoleEnvFns {
   }
 };
 
-typedef class EnvSpec<CartPoleEnvFns> CartPoleEnvSpec;
+using CartPoleEnvSpec = EnvSpec<CartPoleEnvFns>;
 
 class CartPoleEnv : public Env<CartPoleEnvSpec> {
  protected:
@@ -84,8 +84,7 @@ class CartPoleEnv : public Env<CartPoleEnvSpec> {
     theta_dot_ = dist_(gen_);
     done_ = false;
     elapsed_step_ = 0;
-    State state = Allocate();
-    WriteObs(state, 0.0f);
+    WriteState(0.0);
   }
 
   void Step(const Action& action) override {
@@ -107,15 +106,15 @@ class CartPoleEnv : public Env<CartPoleEnvSpec> {
     theta_ += kTau * theta_dot_;
     theta_dot_ += kTau * theta_acc;
     if (x_ < -kXThreshold || x_ > kXThreshold ||
-        theta_ < -kThetaThresholdRadians || theta_ > kThetaThresholdRadians)
+        theta_ < -kThetaThresholdRadians || theta_ > kThetaThresholdRadians) {
       done_ = true;
-
-    State state = Allocate();
-    WriteObs(state, 1.0f);
+    }
+    WriteState(1.0);
   }
 
  private:
-  void WriteObs(State& state, float reward) {  // NOLINT
+  void WriteState(float reward) {
+    State state = Allocate();
     state["obs"_][0] = static_cast<float>(x_);
     state["obs"_][1] = static_cast<float>(x_dot_);
     state["obs"_][2] = static_cast<float>(theta_);
@@ -124,7 +123,7 @@ class CartPoleEnv : public Env<CartPoleEnvSpec> {
   }
 };
 
-typedef AsyncEnvPool<CartPoleEnv> CartPoleEnvPool;
+using CartPoleEnvPool = AsyncEnvPool<CartPoleEnv>;
 
 }  // namespace classic_control
 

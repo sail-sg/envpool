@@ -38,11 +38,11 @@ class PendulumEnvFns {
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<float>({-1, 1}, {-2.0f, 2.0f})));
+    return MakeDict("action"_.bind(Spec<float>({-1, 1}, {-2.0, 2.0})));
   }
 };
 
-typedef class EnvSpec<PendulumEnvFns> PendulumEnvSpec;
+using PendulumEnvSpec = EnvSpec<PendulumEnvFns>;
 
 class PendulumEnv : public Env<PendulumEnvSpec> {
  protected:
@@ -73,8 +73,7 @@ class PendulumEnv : public Env<PendulumEnvSpec> {
     theta_dot_ = dist_dot_(gen_);
     done_ = false;
     elapsed_step_ = 0;
-    State state = Allocate();
-    WriteObs(state, 0.0f);
+    WriteState(0.0);
   }
 
   void Step(const Action& action) override {
@@ -91,14 +90,18 @@ class PendulumEnv : public Env<PendulumEnvSpec> {
     theta_dot_ = new_theta_dot < -kMaxSpeed  ? -kMaxSpeed
                  : new_theta_dot > kMaxSpeed ? kMaxSpeed
                                              : new_theta_dot;
-    while (theta_ < -kPi) theta_ += kPi * 2;
-    while (theta_ >= kPi) theta_ -= kPi * 2;
-    State state = Allocate();
-    WriteObs(state, -cost);
+    while (theta_ < -kPi) {
+      theta_ += kPi * 2;
+    }
+    while (theta_ >= kPi) {
+      theta_ -= kPi * 2;
+    }
+    WriteState(static_cast<float>(-cost));
   }
 
  private:
-  void WriteObs(State& state, float reward) {  // NOLINT
+  void WriteState(float reward) {
+    State state = Allocate();
     state["obs"_][0] = static_cast<float>(std::cos(theta_));
     state["obs"_][1] = static_cast<float>(std::sin(theta_));
     state["obs"_][2] = static_cast<float>(theta_dot_);
@@ -106,7 +109,7 @@ class PendulumEnv : public Env<PendulumEnvSpec> {
   }
 };
 
-typedef AsyncEnvPool<PendulumEnv> PendulumEnvPool;
+using PendulumEnvPool = AsyncEnvPool<PendulumEnv>;
 
 }  // namespace classic_control
 

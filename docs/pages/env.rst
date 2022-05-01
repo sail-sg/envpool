@@ -99,7 +99,7 @@ state space, and action space. Create a class ``CartPoleEnvFns``:
     };
 
     // this line will concat common config and common state/action spec
-    typedef class EnvSpec<CartPoleEnvFns> CartPoleEnvSpec;
+    using CartPoleEnvSpec = EnvSpec<CartPoleEnvFns>;
 
 - ``DefaultConfig``: the default config to create cartpole environment;
 - ``StateSpec``: the state space (including observation and info) definition;
@@ -374,7 +374,7 @@ After creating ``CartPoleEnv``, just one more line we can get
 
 .. code-block:: c++
 
-    typedef AsyncEnvPool<CartPoleEnv> CartPoleEnvPool;
+    using CartPoleEnvPool = AsyncEnvPool<CartPoleEnv>;
 
 
 Miscellaneous

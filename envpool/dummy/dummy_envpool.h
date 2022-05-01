@@ -101,7 +101,7 @@ class DummyEnvFns {
 /**
  * Create an DummyEnvSpec by passing the above functions to EnvSpec.
  */
-typedef class EnvSpec<DummyEnvFns> DummyEnvSpec;
+using DummyEnvSpec = EnvSpec<DummyEnvFns> ;
 
 /**
  * The main part of the single env.
