@@ -115,15 +115,16 @@ third case, use ``env.step(action)`` where action is a dictionary.
 Data Output Format
 ------------------
 
-+----------+---------------------------------------------+------------------------------------------------------------------+
-| function |   gym                                       | dm                                                               |
-|          |                                             |                                                                  |
-+==========+=============================================+==================================================================+
-|   reset  |  | env_id -> obs array (single observation) | env_id -> TimeStep(FIRST, obs|info|env_id, rew=0, discount or 1) |
-|          |  | or an obs dict (multi observation)       |                                                                  |
-+----------+---------------------------------------------+------------------------------------------------------------------+
-|   step   |  (obs, rew, done, info|env_id)              | TimeStep(StepType, obs|info|env_id, rew, discount or 1 - done)   |
-+----------+---------------------------------------------+------------------------------------------------------------------+
++----------+------------------------------------------------------------------+------------------------------------------------------------------+
+| function |   gym                                                            | dm                                                               |
+|          |                                                                  |                                                                  |
++==========+==================================================================+==================================================================+
+|   reset  |  | env_id -> obs array (single observation)                      | env_id -> TimeStep(FIRST, obs|info|env_id, rew=0, discount or 1) |
+|          |  | or an obs dict (multi observation)                            |                                                                  |
+|          |  | or (obs, info) tuple (when ``gym_reset_return_info`` == True) |                                                                  |
++----------+------------------------------------------------------------------+------------------------------------------------------------------+
+|   step   |  (obs, rew, done, info|env_id)                                   | TimeStep(StepType, obs|info|env_id, rew, discount or 1 - done)   |
++----------+------------------------------------------------------------------+------------------------------------------------------------------+
 
 Note: ``gym.reset()`` doesn't support async step setting because it cannot get
 ``env_id`` from ``reset()`` function, so it's better to use low-level APIs such
