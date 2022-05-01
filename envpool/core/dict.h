@@ -37,21 +37,21 @@ class Value {
  public:
   using Key = K;
   using Type = D;
-  explicit Value(Type&& v) : v(v) {}
-  Type v;
+  explicit Value(Type&& v) : v_(v) {}
+  Type v_;
 };
 
 template <char... C>
 class Key {
  public:
-  static constexpr const inline char _str[sizeof...(C) + 1]{C...,  // NOLINT
-                                                            '\0'};
-  static constexpr const inline std::string_view str_view{_str, sizeof...(C)};
+  static constexpr const inline char STR[sizeof...(C) + 1]{C...,  // NOLINT
+                                                           '\0'};
+  static constexpr const inline std::string_view STR_VIEW{STR, sizeof...(C)};
   template <typename Type>
   static constexpr inline auto Bind(Type&& v) {
     return Value<Key, Type>(std::forward<Type>(v));
   }
-  static inline std::string str() { return {str_view.data(), str_view.size()}; }
+  static inline std::string str() { return {STR_VIEW.data(), STR_VIEW.size()}; }
 };
 
 template <class CharT, CharT... CS>
@@ -63,7 +63,7 @@ template <
     typename Key, typename Keys, typename TupleOrVector,
     std::enable_if_t<IS_TUPLE_V<std::decay_t<TupleOrVector>>, bool> = true>
 inline decltype(auto) Take(const Key& key, TupleOrVector&& values) {
-  constexpr std::size_t index = Index<Key, Keys>::value;
+  constexpr std::size_t index = Index<Key, Keys>::VALUE;
   return std::get<index>(std::forward<TupleOrVector>(values));
 }
 
@@ -71,7 +71,7 @@ template <
     typename Key, typename Keys, typename TupleOrVector,
     std::enable_if_t<IS_VECTOR_V<std::decay_t<TupleOrVector>>, bool> = true>
 inline decltype(auto) Take(const Key& key, TupleOrVector&& values) {
-  constexpr std::size_t index = Index<Key, Keys>::value;
+  constexpr std::size_t index = Index<Key, Keys>::VALUE;
   return std::forward<TupleOrVector>(values).at(index);
 }
 
@@ -237,7 +237,7 @@ class Dict : public std::decay_t<TupleOrVector> {
 template <typename... Value>
 decltype(auto) MakeDict(Value... v) {
   return Dict(std::make_tuple(typename Value::Key()...),
-              std::make_tuple(v.v...));
+              std::make_tuple(v.v_...));
 }
 
 template <
