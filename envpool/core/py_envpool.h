@@ -72,7 +72,7 @@ decltype(auto) ExportSpecs(const std::tuple<Spec...>& specs) {
       [&](auto&&... spec) {
         return std::make_tuple(
             std::make_tuple(py::dtype::of<typename Spec::dtype>(), spec.shape_,
-                            spec.bounds, spec.elementwise_bounds)...);
+                            spec.bounds_, spec.elementwise_bounds_)...);
       },
       specs);
 }
