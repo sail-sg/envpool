@@ -56,11 +56,11 @@ class Walker2dEnvFns {
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 6}, {-1.0f, 1.0f})));
+    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 6}, {-1.0, 1.0})));
   }
 };
 
-typedef class EnvSpec<Walker2dEnvFns> Walker2dEnvSpec;
+using Walker2dEnvSpec = EnvSpec<Walker2dEnvFns>;
 
 class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
  protected:
@@ -91,7 +91,7 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
         dist_(-spec.config["reset_noise_scale"_],
               spec.config["reset_noise_scale"_]) {}
 
-  void MujocoResetModel() {
+  void MujocoResetModel() override {
     for (int i = 0; i < model_->nq; ++i) {
       data_->qpos[i] = qpos0_[i] = init_qpos_[i] + dist_(gen_);
     }
@@ -106,7 +106,7 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteState(0.0f, 0, 0);
+    WriteState(0.0, 0.0, 0.0);
   }
 
   void Step(const Action& action) override {
@@ -127,7 +127,8 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
     // reward and done
     mjtNum healthy_reward =
         terminate_when_unhealthy_ || IsHealthy() ? healthy_reward_ : 0.0;
-    float reward = xv * forward_reward_weight_ + healthy_reward - ctrl_cost;
+    auto reward = static_cast<float>(xv * forward_reward_weight_ +
+                                     healthy_reward - ctrl_cost);
     ++elapsed_step_;
     done_ = (terminate_when_unhealthy_ ? !IsHealthy() : false) ||
             (elapsed_step_ >= max_episode_steps_);
@@ -170,7 +171,7 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
   }
 };
 
-typedef AsyncEnvPool<Walker2dEnv> Walker2dEnvPool;
+using Walker2dEnvPool = AsyncEnvPool<Walker2dEnv>;
 
 }  // namespace mujoco
 

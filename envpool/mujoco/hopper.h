@@ -57,11 +57,11 @@ class HopperEnvFns {
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 3}, {-1.0f, 1.0f})));
+    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 3}, {-1.0, 1.0})));
   }
 };
 
-typedef class EnvSpec<HopperEnvFns> HopperEnvSpec;
+using HopperEnvSpec = EnvSpec<HopperEnvFns>;
 
 class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
  protected:
@@ -94,7 +94,7 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
         dist_(-spec.config["reset_noise_scale"_],
               spec.config["reset_noise_scale"_]) {}
 
-  void MujocoResetModel() {
+  void MujocoResetModel() override {
     for (int i = 0; i < model_->nq; ++i) {
       data_->qpos[i] = qpos0_[i] = init_qpos_[i] + dist_(gen_);
     }
@@ -109,7 +109,7 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteState(0.0f, 0, 0);
+    WriteState(0.0, 0.0, 0.0);
   }
 
   void Step(const Action& action) override {
@@ -130,7 +130,8 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
     // reward and done
     mjtNum healthy_reward =
         terminate_when_unhealthy_ || IsHealthy() ? healthy_reward_ : 0.0;
-    float reward = xv * forward_reward_weight_ + healthy_reward - ctrl_cost;
+    auto reward = static_cast<float>(xv * forward_reward_weight_ +
+                                     healthy_reward - ctrl_cost);
     ++elapsed_step_;
     done_ = (terminate_when_unhealthy_ ? !IsHealthy() : false) ||
             (elapsed_step_ >= max_episode_steps_);
@@ -139,7 +140,8 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
 
  private:
   bool IsHealthy() {
-    mjtNum z = data_->qpos[1], angle = data_->qpos[2];
+    mjtNum z = data_->qpos[1];
+    mjtNum angle = data_->qpos[2];
     if (angle <= healthy_angle_min_ || angle >= healthy_angle_max_ ||
         z <= healthy_z_min_) {
       return false;
@@ -183,7 +185,7 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
   }
 };
 
-typedef AsyncEnvPool<HopperEnv> HopperEnvPool;
+using HopperEnvPool = AsyncEnvPool<HopperEnv>;
 
 }  // namespace mujoco
 

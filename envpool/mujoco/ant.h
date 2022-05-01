@@ -64,11 +64,11 @@ class AntEnvFns {
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 8}, {-1.0f, 1.0f})));
+    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 8}, {-1.0, 1.0})));
   }
 };
 
-typedef class EnvSpec<AntEnvFns> AntEnvSpec;
+using AntEnvSpec = EnvSpec<AntEnvFns>;
 
 class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
  protected:
@@ -100,7 +100,7 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
                    spec.config["reset_noise_scale"_]),
         dist_qvel_(0, spec.config["reset_noise_scale"_]) {}
 
-  void MujocoResetModel() {
+  void MujocoResetModel() override {
     for (int i = 0; i < model_->nq; ++i) {
       data_->qpos[i] = qpos0_[i] = init_qpos_[i] + dist_qpos_(gen_);
     }
@@ -115,15 +115,17 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteState(0.0f, 0, 0, 0, 0, 0, 0, 0);
+    WriteState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
   }
 
   void Step(const Action& action) override {
     // step
     mjtNum* act = static_cast<mjtNum*>(action["action"_].data());
-    mjtNum x_before = data_->xpos[3], y_before = data_->xpos[4];
+    mjtNum x_before = data_->xpos[3];
+    mjtNum y_before = data_->xpos[4];
     MujocoStep(act);
-    mjtNum x_after = data_->xpos[3], y_after = data_->xpos[4];
+    mjtNum x_after = data_->xpos[3];
+    mjtNum y_after = data_->xpos[4];
 
     // ctrl_cost
     mjtNum ctrl_cost = 0.0;
@@ -145,8 +147,8 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
     // reward and done
     mjtNum healthy_reward =
         terminate_when_unhealthy_ || IsHealthy() ? healthy_reward_ : 0.0;
-    float reward =
-        xv * forward_reward_weight_ + healthy_reward - ctrl_cost - contact_cost;
+    auto reward = static_cast<float>(xv * forward_reward_weight_ +
+                                     healthy_reward - ctrl_cost - contact_cost);
     ++elapsed_step_;
     done_ = (terminate_when_unhealthy_ ? !IsHealthy() : false) ||
             (elapsed_step_ >= max_episode_steps_);
@@ -209,7 +211,7 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
   }
 };
 
-typedef AsyncEnvPool<AntEnv> AntEnvPool;
+using AntEnvPool = AsyncEnvPool<AntEnv>;
 
 }  // namespace mujoco
 

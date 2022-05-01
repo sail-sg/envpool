@@ -57,11 +57,11 @@ class SwimmerEnvFns {
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 2}, {-1.0f, 1.0f})));
+    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 2}, {-1.0, 1.0})));
   }
 };
 
-typedef class EnvSpec<SwimmerEnvFns> SwimmerEnvSpec;
+using SwimmerEnvSpec = EnvSpec<SwimmerEnvFns>;
 
 class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
  protected:
@@ -81,7 +81,7 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
         dist_(-spec.config["reset_noise_scale"_],
               spec.config["reset_noise_scale"_]) {}
 
-  void MujocoResetModel() {
+  void MujocoResetModel() override {
     for (int i = 0; i < model_->nq; ++i) {
       data_->qpos[i] = qpos0_[i] = init_qpos_[i] + dist_(gen_);
     }
@@ -96,15 +96,17 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteState(0.0f, 0, 0, 0, 0, 0);
+    WriteState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
   }
 
   void Step(const Action& action) override {
     // step
     mjtNum* act = static_cast<mjtNum*>(action["action"_].data());
-    mjtNum x_before = data_->qpos[0], y_before = data_->qpos[1];
+    mjtNum x_before = data_->qpos[0];
+    mjtNum y_before = data_->qpos[1];
     MujocoStep(act);
-    mjtNum x_after = data_->qpos[0], y_after = data_->qpos[1];
+    mjtNum x_after = data_->qpos[0];
+    mjtNum y_after = data_->qpos[1];
 
     // ctrl_cost
     mjtNum ctrl_cost = 0.0;
@@ -117,7 +119,7 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
     mjtNum yv = (y_after - y_before) / dt;
 
     // reward and done
-    float reward = xv * forward_reward_weight_ - ctrl_cost;
+    auto reward = static_cast<float>(xv * forward_reward_weight_ - ctrl_cost);
     done_ = (++elapsed_step_ >= max_episode_steps_);
     WriteState(reward, xv, yv, ctrl_cost, x_after, y_after);
   }
@@ -151,7 +153,7 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
   }
 };
 
-typedef AsyncEnvPool<SwimmerEnv> SwimmerEnvPool;
+using SwimmerEnvPool = AsyncEnvPool<SwimmerEnv>;
 
 }  // namespace mujoco
 

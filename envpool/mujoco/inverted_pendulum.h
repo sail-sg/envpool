@@ -50,11 +50,11 @@ class InvertedPendulumEnvFns {
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 1}, {-3.0f, 3.0f})));
+    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 1}, {-3.0, 3.0})));
   }
 };
 
-typedef class EnvSpec<InvertedPendulumEnvFns> InvertedPendulumEnvSpec;
+using InvertedPendulumEnvSpec = EnvSpec<InvertedPendulumEnvFns>;
 
 class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
                             public MujocoEnv {
@@ -75,7 +75,7 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
         dist_(-spec.config["reset_noise_scale"_],
               spec.config["reset_noise_scale"_]) {}
 
-  void MujocoResetModel() {
+  void MujocoResetModel() override {
     for (int i = 0; i < model_->nq; ++i) {
       data_->qpos[i] = qpos0_[i] = init_qpos_[i] + dist_(gen_);
     }
@@ -90,7 +90,7 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteState(0.0f);
+    WriteState(0.0);
   }
 
   void Step(const Action& action) override {
@@ -100,7 +100,7 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
     // reward and done
     ++elapsed_step_;
     done_ = !IsHealthy() || (elapsed_step_ >= max_episode_steps_);
-    WriteState(1.0f);
+    WriteState(1.0);
   }
 
  private:
@@ -140,7 +140,7 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
   }
 };
 
-typedef AsyncEnvPool<InvertedPendulumEnv> InvertedPendulumEnvPool;
+using InvertedPendulumEnvPool = AsyncEnvPool<InvertedPendulumEnv>;
 
 }  // namespace mujoco
 
