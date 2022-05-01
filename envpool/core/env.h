@@ -61,7 +61,7 @@ class Env {
         gen_(seed_),
         current_step_(-1),
         is_single_player_(max_num_players_ == 1),
-        action_specs_(spec.action_spec_.template values<ShapeSpec>()),
+        action_specs_(spec.action_spec_.template AllValues<ShapeSpec>()),
         is_player_action_(Transform(action_specs_, [](const ShapeSpec& s) {
           return (!s.shape_.empty() && s.shape_[0] == -1);
         })) {

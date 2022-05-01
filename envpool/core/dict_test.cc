@@ -22,20 +22,20 @@
 
 TEST(DictTest, Keys) {
   auto d = MakeDict("abc"_.Bind(0.), "xyz"_.Bind(0.), "ijk"_.Bind(1));
-  auto keys = decltype(d)::static_keys();
-  auto dkeys = d.keys();
+  auto keys = decltype(d)::StaticKeys();
+  auto dkeys = d.AllKeys();
   EXPECT_EQ(dkeys[0], "abc");
   EXPECT_EQ(dkeys[1], "xyz");
   EXPECT_EQ(dkeys[2], "ijk");
-  EXPECT_EQ(std::get<0>(keys).str(), "abc");
-  EXPECT_EQ(std::get<1>(keys).str(), "xyz");
-  EXPECT_EQ(std::get<2>(keys).str(), "ijk");
+  EXPECT_EQ(std::get<0>(keys).Str(), "abc");
+  EXPECT_EQ(std::get<1>(keys).Str(), "xyz");
+  EXPECT_EQ(std::get<2>(keys).Str(), "ijk");
 }
 
 TEST(DictTest, Values) {
   auto d = MakeDict("abc"_.Bind(0.), "xyz"_.Bind(0.), "ijk"_.Bind(1));
-  auto values = d.values();
-  auto int_vector = d.values<int>();
+  auto values = d.AllValues();
+  auto int_vector = d.AllValues<int>();
   EXPECT_EQ(std::get<0>(values), 0.);
   EXPECT_EQ(std::get<1>(values), 0.);
   EXPECT_EQ(std::get<2>(values), 1);

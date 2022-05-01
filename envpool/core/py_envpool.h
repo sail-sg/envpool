@@ -97,20 +97,20 @@ class PyEnvSpec : public EnvSpec {
       : EnvSpec(conf),
         py_state_spec(ExportSpecs(EnvSpec::state_spec_)),
         py_action_spec(ExportSpecs(EnvSpec::action_spec_)),
-        py_config_values(EnvSpec::config_.values()) {}
+        py_config_values(EnvSpec::config_.AllValues()) {}
 };
 template <typename EnvSpec>
 std::vector<std::string> PyEnvSpec<EnvSpec>::py_config_keys =
-    EnvSpec::Config::keys();
+    EnvSpec::Config::AllKeys();
 template <typename EnvSpec>
 std::vector<std::string> PyEnvSpec<EnvSpec>::py_state_keys =
-    EnvSpec::StateSpec::keys();
+    EnvSpec::StateSpec::AllKeys();
 template <typename EnvSpec>
 std::vector<std::string> PyEnvSpec<EnvSpec>::py_action_keys =
-    EnvSpec::ActionSpec::keys();
+    EnvSpec::ActionSpec::AllKeys();
 template <typename EnvSpec>
 typename EnvSpec::ConfigValues PyEnvSpec<EnvSpec>::py_default_config_values =
-    EnvSpec::DEFAULT_CONFIG.values();
+    EnvSpec::DEFAULT_CONFIG.AllValues();
 
 /**
  * Bind specs to arrs, and return py::array in ret

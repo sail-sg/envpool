@@ -74,7 +74,7 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
         action_buffer_queue_(new ActionBufferQueue(num_envs_)),
         state_buffer_queue_(new StateBufferQueue(
             batch_, num_envs_, max_num_players_,
-            spec.state_spec_.template values<ShapeSpec>())),
+            spec.state_spec_.template AllValues<ShapeSpec>())),
         envs_(num_envs_) {
     std::size_t processor_count = std::thread::hardware_concurrency();
     ThreadPool init_pool(std::min(processor_count, num_envs_));

@@ -51,7 +51,7 @@ class Key {
   static constexpr inline auto Bind(Type&& v) {
     return Value<Key, Type>(std::forward<Type>(v));
   }
-  static inline std::string str() { return {STR_VIEW.data(), STR_VIEW.size()}; }
+  static inline std::string Str() { return {STR_VIEW.data(), STR_VIEW.size()}; }
 };
 
 template <class CharT, CharT... CS>
@@ -95,12 +95,12 @@ class NamedVector {
   /**
    * Return a static constexpr list of all the keys in a tuple.
    */
-  static constexpr decltype(auto) static_keys() { return Keys(); }
+  static constexpr decltype(auto) StaticKeys() { return Keys(); }
 
   /**
    * Return a list of all the keys as strings.
    */
-  static std::vector<std::string> keys() {
+  static std::vector<std::string> AllKeys() {
     std::vector<std::string> rets;
     std::apply([&](auto&&... key) { (rets.push_back(key.str()), ...); },
                Keys());
@@ -173,14 +173,14 @@ class Dict : public std::decay_t<TupleOrVector> {
   /**
    * Return a static constexpr list of all the keys in a tuple.
    */
-  static constexpr decltype(auto) static_keys() { return Keys(); }
+  static constexpr decltype(auto) StaticKeys() { return Keys(); }
 
   /**
    * Return a list of all the keys as strings.
    */
-  static std::vector<std::string> keys() {
+  static std::vector<std::string> AllKeys() {
     std::vector<std::string> rets;
-    std::apply([&](auto&&... key) { (rets.push_back(key.str()), ...); },
+    std::apply([&](auto&&... key) { (rets.push_back(key.Str()), ...); },
                Keys());
     return rets;
   }
@@ -188,12 +188,12 @@ class Dict : public std::decay_t<TupleOrVector> {
   /**
    * Return a static list of all the values in a tuple.
    */
-  Values& values() { return *this; }
+  Values& AllValues() { return *this; }
 
   /**
    * Const version of static_values
    */
-  [[nodiscard]] const Values& values() const { return *this; }
+  [[nodiscard]] const Values& AllValues() const { return *this; }
 
   /**
    * Convert the value tuple to a dynamic vector of values.
@@ -203,7 +203,7 @@ class Dict : public std::decay_t<TupleOrVector> {
   template <typename Type, bool IsTuple = IS_TUPLE_V<Values>,
             std::enable_if_t<IsTuple, bool> = true,
             std::enable_if_t<all_convertible<Type, Values>::value, bool> = true>
-  [[nodiscard]] std::vector<Type> values() const {
+  [[nodiscard]] std::vector<Type> AllValues() const {
     std::vector<Type> rets;
     std::apply([&](auto&&... value) { (rets.push_back(Type(value)), ...); },
                *static_cast<const Values*>(this));
@@ -217,13 +217,13 @@ class Dict : public std::decay_t<TupleOrVector> {
    */
   template <typename Type, bool IsTuple = IS_TUPLE_V<Values>,
             std::enable_if_t<!IsTuple, bool> = true>
-  std::vector<Type> values() const {
+  std::vector<Type> AllValues() const {
     return std::vector<Type>(this->begin(), this->end());
   }
 
   template <class F, bool IsTuple = IS_TUPLE_V<Values>,
             std::enable_if_t<IsTuple, bool> = true>
-  decltype(auto) apply(F&& f) const {
+  decltype(auto) Apply(F&& f) const {
     ApplyZip(f, Keys(), *this, std::make_index_sequence<size>{});
   }
 };
