@@ -69,7 +69,8 @@ class Spec : public ShapeSpec {
 
   /* init with constant bounds */
   Spec(std::vector<int>&& shape, std::tuple<dtype, dtype>&& bounds)
-      : ShapeSpec(sizeof(dtype), std::move(shape)), bounds_(std::move(bounds)) {}
+      : ShapeSpec(sizeof(dtype), std::move(shape)),
+        bounds_(std::move(bounds)) {}
   Spec(const std::vector<int>& shape, const std::tuple<dtype, dtype>& bounds)
       : ShapeSpec(sizeof(dtype), shape), bounds_(bounds) {}
 

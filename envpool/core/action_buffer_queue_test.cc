@@ -53,8 +53,9 @@ TEST(ActionBufferQueueTest, Concurrent) {
       }
       actions.clear();
       for (std::size_t i = 0; i < env_num[m]; ++i) {
-        actions.push_back(ActionSlice{
-            .env_id_ = static_cast<int>(i), .order_ = -1, .force_reset_ = false});
+        actions.push_back(ActionSlice{.env_id_ = static_cast<int>(i),
+                                      .order_ = -1,
+                                      .force_reset_ = false});
       }
       queue.EnqueueBulk(actions);
     }
