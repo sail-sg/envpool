@@ -35,9 +35,9 @@
 class ActionBufferQueue {
  public:
   struct ActionSlice {
-    int env_id;
-    int order;
-    bool force_reset;
+    int env_id_;
+    int order_;
+    bool force_reset_;
   };
 
  protected:

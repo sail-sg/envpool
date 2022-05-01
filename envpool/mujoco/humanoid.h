@@ -32,38 +32,38 @@ class HumanoidEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
-        "max_episode_steps"_.bind(1000), "frame_skip"_.bind(5),
-        "post_constraint"_.bind(true), "forward_reward_weight"_.bind(1.25),
-        "terminate_when_unhealthy"_.bind(true),
-        "exclude_current_positions_from_observation"_.bind(true),
-        "ctrl_cost_weight"_.bind(0.1), "contact_cost_weight"_.bind(5e-7),
-        "contact_cost_max"_.bind(10.0), "healthy_reward"_.bind(5.0),
-        "healthy_z_min"_.bind(1.0), "healthy_z_max"_.bind(2.0),
-        "reset_noise_scale"_.bind(1e-2));
+        "max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(5),
+        "post_constraint"_.Bind(true), "forward_reward_weight"_.Bind(1.25),
+        "terminate_when_unhealthy"_.Bind(true),
+        "exclude_current_positions_from_observation"_.Bind(true),
+        "ctrl_cost_weight"_.Bind(0.1), "contact_cost_weight"_.Bind(5e-7),
+        "contact_cost_max"_.Bind(10.0), "healthy_reward"_.Bind(5.0),
+        "healthy_z_min"_.Bind(1.0), "healthy_z_max"_.Bind(2.0),
+        "reset_noise_scale"_.Bind(1e-2));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
     bool no_pos = conf["exclude_current_positions_from_observation"_];
     return MakeDict(
-        "obs"_.bind(Spec<mjtNum>({no_pos ? 376 : 378}, {-inf, inf})),
+        "obs"_.Bind(Spec<mjtNum>({no_pos ? 376 : 378}, {-inf, inf})),
 #ifdef ENVPOOL_TEST
-        "info:qpos0"_.bind(Spec<mjtNum>({24})),
-        "info:qvel0"_.bind(Spec<mjtNum>({23})),
+        "info:qpos0"_.Bind(Spec<mjtNum>({24})),
+        "info:qvel0"_.Bind(Spec<mjtNum>({23})),
 #endif
-        "info:reward_linvel"_.bind(Spec<mjtNum>({-1})),
-        "info:reward_quadctrl"_.bind(Spec<mjtNum>({-1})),
-        "info:reward_alive"_.bind(Spec<mjtNum>({-1})),
-        "info:reward_impact"_.bind(Spec<mjtNum>({-1})),
-        "info:x_position"_.bind(Spec<mjtNum>({-1})),
-        "info:y_position"_.bind(Spec<mjtNum>({-1})),
-        "info:distance_from_origin"_.bind(Spec<mjtNum>({-1})),
-        "info:x_velocity"_.bind(Spec<mjtNum>({-1})),
-        "info:y_velocity"_.bind(Spec<mjtNum>({-1})));
+        "info:reward_linvel"_.Bind(Spec<mjtNum>({-1})),
+        "info:reward_quadctrl"_.Bind(Spec<mjtNum>({-1})),
+        "info:reward_alive"_.Bind(Spec<mjtNum>({-1})),
+        "info:reward_impact"_.Bind(Spec<mjtNum>({-1})),
+        "info:x_position"_.Bind(Spec<mjtNum>({-1})),
+        "info:y_position"_.Bind(Spec<mjtNum>({-1})),
+        "info:distance_from_origin"_.Bind(Spec<mjtNum>({-1})),
+        "info:x_velocity"_.Bind(Spec<mjtNum>({-1})),
+        "info:y_velocity"_.Bind(Spec<mjtNum>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 17}, {-0.4, 0.4})));
+    return MakeDict("action"_.Bind(Spec<mjtNum>({-1, 17}, {-0.4, 0.4})));
   }
 };
 
@@ -81,22 +81,22 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
  public:
   HumanoidEnv(const Spec& spec, int env_id)
       : Env<HumanoidEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/humanoid.xml",
-                  spec.config["frame_skip"_], spec.config["post_constraint"_],
-                  spec.config["max_episode_steps"_]),
-        terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
-        no_pos_(spec.config["exclude_current_positions_from_observation"_]),
-        ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
-        contact_cost_weight_(spec.config["contact_cost_weight"_]),
-        contact_cost_max_(spec.config["contact_cost_max"_]),
-        forward_reward_weight_(spec.config["forward_reward_weight"_]),
-        healthy_reward_(spec.config["healthy_reward"_]),
-        healthy_z_min_(spec.config["healthy_z_min"_]),
-        healthy_z_max_(spec.config["healthy_z_max"_]),
+        MujocoEnv(spec.config_["base_path"_] + "/mujoco/assets/humanoid.xml",
+                  spec.config_["frame_skip"_], spec.config_["post_constraint"_],
+                  spec.config_["max_episode_steps"_]),
+        terminate_when_unhealthy_(spec.config_["terminate_when_unhealthy"_]),
+        no_pos_(spec.config_["exclude_current_positions_from_observation"_]),
+        ctrl_cost_weight_(spec.config_["ctrl_cost_weight"_]),
+        contact_cost_weight_(spec.config_["contact_cost_weight"_]),
+        contact_cost_max_(spec.config_["contact_cost_max"_]),
+        forward_reward_weight_(spec.config_["forward_reward_weight"_]),
+        healthy_reward_(spec.config_["healthy_reward"_]),
+        healthy_z_min_(spec.config_["healthy_z_min"_]),
+        healthy_z_max_(spec.config_["healthy_z_max"_]),
         mass_x_(0),
         mass_y_(0),
-        dist_(-spec.config["reset_noise_scale"_],
-              spec.config["reset_noise_scale"_]) {}
+        dist_(-spec.config_["reset_noise_scale"_],
+              spec.config_["reset_noise_scale"_]) {}
 
   void MujocoResetModel() override {
     for (int i = 0; i < model_->nq; ++i) {
@@ -118,7 +118,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
 
   void Step(const Action& action) override {
     // step
-    mjtNum* act = static_cast<mjtNum*>(action["action"_].data());
+    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
     GetMassCenter();
     mjtNum x_before = mass_x_;
     mjtNum y_before = mass_y_;
@@ -180,7 +180,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     State state = Allocate();
     state["reward"_] = reward;
     // obs
-    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].data());
+    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());
     for (int i = no_pos_ ? 2 : 0; i < model_->nq; ++i) {
       *(obs++) = data_->qpos[i];
     }

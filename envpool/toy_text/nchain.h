@@ -32,15 +32,15 @@ namespace toy_text {
 class NChainEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.bind(1000));
+    return MakeDict("max_episode_steps"_.Bind(1000));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs"_.bind(Spec<int>({-1}, {0, 4})));
+    return MakeDict("obs"_.Bind(Spec<int>({-1}, {0, 4})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<int>({-1}, {0, 1})));
+    return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 1})));
   }
 };
 
@@ -55,7 +55,7 @@ class NChainEnv : public Env<NChainEnvSpec> {
  public:
   NChainEnv(const Spec& spec, int env_id)
       : Env<NChainEnvSpec>(spec, env_id),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
+        max_episode_steps_(spec.config_["max_episode_steps"_]),
         dist_(0, 1),
         done_(true) {}
 

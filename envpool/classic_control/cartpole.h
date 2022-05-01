@@ -30,19 +30,19 @@ namespace classic_control {
 class CartPoleEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.bind(200),
-                    "reward_threshold"_.bind(195.0));
+    return MakeDict("max_episode_steps"_.Bind(200),
+                    "reward_threshold"_.Bind(195.0));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     float fmax = std::numeric_limits<float>::max();
     return MakeDict(
-        "obs"_.bind(Spec<float>({4}, {{-4.8, -fmax, -M_PI / 7.5, -fmax},
+        "obs"_.Bind(Spec<float>({4}, {{-4.8, -fmax, -M_PI / 7.5, -fmax},
                                       {4.8, fmax, M_PI / 7.5, fmax}})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<int>({-1}, {0, 1})));
+    return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 1})));
   }
 };
 
@@ -70,7 +70,7 @@ class CartPoleEnv : public Env<CartPoleEnvSpec> {
  public:
   CartPoleEnv(const Spec& spec, int env_id)
       : Env<CartPoleEnvSpec>(spec, env_id),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
+        max_episode_steps_(spec.config_["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
         dist_(-kInitRange, kInitRange),
         done_(true) {}

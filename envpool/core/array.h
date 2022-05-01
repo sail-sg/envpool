@@ -29,9 +29,9 @@
 
 class Array {
  public:
-  std::size_t size;
-  std::size_t ndim;
-  std::size_t element_size;
+  std::size_t size_;
+  std::size_t ndim_;
+  std::size_t element_size_;
 
  protected:
   std::vector<std::size_t> shape_;
@@ -40,17 +40,17 @@ class Array {
   template <class Shape, class Deleter>
   Array(char* ptr, Shape&& shape, std::size_t element_size,  // NOLINT
         Deleter&& deleter)
-      : size(prod(shape.data(), shape.size())),
-        ndim(shape.size()),
-        element_size(element_size),
+      : size_(Prod(shape.data(), shape.size())),
+        ndim_(shape.size()),
+        element_size_(element_size),
         shape_(std::forward<Shape>(shape)),
         ptr_(ptr, std::forward<Deleter>(deleter)) {}
 
   template <class Shape>
   Array(std::shared_ptr<char> ptr, Shape&& shape, std::size_t element_size)
-      : size(prod(shape.data(), shape.size())),
-        ndim(shape.size()),
-        element_size(element_size),
+      : size_(Prod(shape.data(), shape.size())),
+        ndim_(shape.size()),
+        element_size_(element_size),
         shape_(std::forward<Shape>(shape)),
         ptr_(std::move(ptr)) {}
 
@@ -64,11 +64,12 @@ class Array {
    */
   template <class Deleter>
   Array(const ShapeSpec& spec, char* data, Deleter&& deleter)  // NOLINT
-      : Array(data, spec.Shape(), spec.element_size,
+      : Array(data, spec.Shape(), spec.element_size_,
               std::forward<Deleter>(deleter)) {}
 
   Array(const ShapeSpec& spec, char* data)
-      : Array(data, spec.Shape(), spec.element_size, [](char* /*unused*/) {}) {}
+      : Array(data, spec.Shape(), spec.element_size_, [](char* /*unused*/) {}) {
+  }
 
   /**
    * Constructor an `Array` of shape defined by `spec`. This constructor
@@ -76,7 +77,7 @@ class Array {
    */
   explicit Array(const ShapeSpec& spec)
       : Array(spec, nullptr, [](char* /*unused*/) {}) {
-    ptr_.reset(new char[size * element_size](),
+    ptr_.reset(new char[size_ * element_size_](),
                [](const char* p) { delete[] p; });
   }
 
@@ -86,16 +87,16 @@ class Array {
   template <typename... Index>
   inline Array operator()(Index... index) const {
     constexpr std::size_t num_index = sizeof...(Index);
-    DCHECK_GE(ndim, num_index);
+    DCHECK_GE(ndim_, num_index);
     std::size_t offset = 0;
     std::size_t i = 0;
-    for (((offset = offset * shape_[i++] + index), ...); i < ndim; ++i) {
+    for (((offset = offset * shape_[i++] + index), ...); i < ndim_; ++i) {
       offset *= shape_[i];
     }
     return Array(
-        ptr_.get() + offset * element_size,
+        ptr_.get() + offset * element_size_,
         std::vector<std::size_t>(shape_.begin() + num_index, shape_.end()),
-        element_size, [](char* /*unused*/) {});
+        element_size_, [](char* /*unused*/) {});
   }
 
   /**
@@ -107,27 +108,27 @@ class Array {
    * Take a slice at the first axis of the Array.
    */
   [[nodiscard]] Array Slice(std::size_t start, std::size_t end) const {
-    DCHECK_GT(ndim, (std::size_t)0);
+    DCHECK_GT(ndim_, (std::size_t)0);
     CHECK_GE(shape_[0], end);
     CHECK_GE(end, start);
     std::vector<std::size_t> new_shape(shape_);
     new_shape[0] = end - start;
     std::size_t offset = 0;
     if (shape_[0] > 0) {
-      offset = start * size / shape_[0];
+      offset = start * size_ / shape_[0];
     }
-    return Array(ptr_.get() + offset * element_size, std::move(new_shape),
-                 element_size, [](char* p) {});
+    return Array(ptr_.get() + offset * element_size_, std::move(new_shape),
+                 element_size_, [](char* p) {});
   }
 
   /**
    * Copy the content of another Array to this Array.
    */
   void Assign(const Array& value) const {
-    DCHECK_EQ(element_size, value.element_size)
+    DCHECK_EQ(element_size_, value.element_size_)
         << " element size doesn't match";
-    DCHECK_EQ(size, value.size) << " ndim doesn't match";
-    std::memcpy(ptr_.get(), value.ptr_.get(), size * element_size);
+    DCHECK_EQ(size_, value.size_) << " ndim doesn't match";
+    std::memcpy(ptr_.get(), value.ptr_.get(), size_ * element_size_);
   }
 
   /**
@@ -136,8 +137,8 @@ class Array {
    */
   template <typename T>
   void operator=(const T& value) const {
-    DCHECK_EQ(element_size, sizeof(T)) << " element size doesn't match";
-    DCHECK_EQ(size, (std::size_t)1) << " assigning scalar to non-scalar array";
+    DCHECK_EQ(element_size_, sizeof(T)) << " element size doesn't match";
+    DCHECK_EQ(size_, (std::size_t)1) << " assigning scalar to non-scalar array";
     *reinterpret_cast<T*>(ptr_.get()) = value;
   }
 
@@ -147,8 +148,8 @@ class Array {
    */
   template <typename T>
   void Assign(const T* buff, std::size_t sz) const {
-    DCHECK_EQ(sz, size) << " assignment size mismatch";
-    DCHECK_EQ(sizeof(T), element_size) << " element size mismatch";
+    DCHECK_EQ(sz, size_) << " assignment size mismatch";
+    DCHECK_EQ(sizeof(T), element_size_) << " element size mismatch";
     std::memcpy(ptr_.get(), buff, sz * sizeof(T));
   }
 
@@ -158,8 +159,8 @@ class Array {
    */
   template <typename T>
   operator T() const {  // NOLINT
-    DCHECK_EQ(element_size, sizeof(T)) << " there could be a type mismatch";
-    DCHECK_EQ(size, (std::size_t)1)
+    DCHECK_EQ(element_size_, sizeof(T)) << " there could be a type mismatch";
+    DCHECK_EQ(size_, (std::size_t)1)
         << " Array with a shape can't be used as a scalar";
     return *reinterpret_cast<T*>(ptr_.get());
   }
@@ -181,7 +182,7 @@ class Array {
   /**
    * Pointer to the raw memory.
    */
-  [[nodiscard]] inline void* data() const { return ptr_.get(); }
+  [[nodiscard]] inline void* Data() const { return ptr_.get(); }
 
   /**
    * Truncate the Array. Return a new Array that shares the same memory
@@ -190,11 +191,11 @@ class Array {
   [[nodiscard]] Array Truncate(std::size_t end) const {
     auto new_shape = std::vector<std::size_t>(shape_);
     new_shape[0] = end;
-    Array ret(ptr_, std::move(new_shape), element_size);
+    Array ret(ptr_, std::move(new_shape), element_size_);
     return ret;
   }
 
-  void Zero() const { std::memset(ptr_.get(), 0, size * element_size); }
+  void Zero() const { std::memset(ptr_.get(), 0, size_ * element_size_); }
   [[nodiscard]] std::shared_ptr<char> SharedPtr() const { return ptr_; }
 };
 

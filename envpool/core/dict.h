@@ -37,21 +37,21 @@ class Value {
  public:
   using Key = K;
   using Type = D;
-  explicit Value(Type&& v) : v(v) {}
-  Type v;
+  explicit Value(Type&& v) : v_(v) {}
+  Type v_;
 };
 
 template <char... C>
 class Key {
  public:
-  static constexpr const inline char _str[sizeof...(C) + 1]{C...,  // NOLINT
-                                                            '\0'};
-  static constexpr const inline std::string_view str_view{_str, sizeof...(C)};
+  static constexpr const inline char STR[sizeof...(C) + 1]{C...,  // NOLINT
+                                                           '\0'};
+  static constexpr const inline std::string_view STR_VIEW{STR, sizeof...(C)};
   template <typename Type>
-  static constexpr inline auto bind(Type&& v) {
+  static constexpr inline auto Bind(Type&& v) {
     return Value<Key, Type>(std::forward<Type>(v));
   }
-  static inline std::string str() { return {str_view.data(), str_view.size()}; }
+  static inline std::string Str() { return {STR_VIEW.data(), STR_VIEW.size()}; }
 };
 
 template <class CharT, CharT... CS>
@@ -63,7 +63,7 @@ template <
     typename Key, typename Keys, typename TupleOrVector,
     std::enable_if_t<is_tuple_v<std::decay_t<TupleOrVector>>, bool> = true>
 inline decltype(auto) Take(const Key& key, TupleOrVector&& values) {
-  constexpr std::size_t index = Index<Key, Keys>::value;
+  constexpr std::size_t index = Index<Key, Keys>::VALUE;
   return std::get<index>(std::forward<TupleOrVector>(values));
 }
 
@@ -71,7 +71,7 @@ template <
     typename Key, typename Keys, typename TupleOrVector,
     std::enable_if_t<is_vector_v<std::decay_t<TupleOrVector>>, bool> = true>
 inline decltype(auto) Take(const Key& key, TupleOrVector&& values) {
-  constexpr std::size_t index = Index<Key, Keys>::value;
+  constexpr std::size_t index = Index<Key, Keys>::VALUE;
   return std::forward<TupleOrVector>(values).at(index);
 }
 
@@ -83,7 +83,7 @@ class NamedVector {
 
  public:
   using Keys = StringKeys;
-  constexpr static std::size_t size = std::tuple_size<Keys>::value;
+  constexpr static std::size_t SIZE = std::tuple_size<Keys>::value;
   explicit NamedVector(Vector* values) : values_(values) {}
   NamedVector(const Keys& keys, Vector* values) : values_(values) {}
   template <typename Key,
@@ -95,12 +95,12 @@ class NamedVector {
   /**
    * Return a static constexpr list of all the keys in a tuple.
    */
-  static constexpr decltype(auto) static_keys() { return Keys(); }
+  static constexpr decltype(auto) StaticKeys() { return Keys(); }
 
   /**
    * Return a list of all the keys as strings.
    */
-  static std::vector<std::string> keys() {
+  static std::vector<std::string> AllKeys() {
     std::vector<std::string> rets;
     std::apply([&](auto&&... key) { (rets.push_back(key.str()), ...); },
                Keys());
@@ -118,7 +118,7 @@ class Dict : public std::decay_t<TupleOrVector> {
  public:
   using Values = std::decay_t<TupleOrVector>;
   using Keys = StringKeys;
-  constexpr static std::size_t size = std::tuple_size<Keys>::value;
+  constexpr static std::size_t SIZE = std::tuple_size<Keys>::value;
 
   /**
    * Check that the size of values / keys tuple should match
@@ -173,14 +173,14 @@ class Dict : public std::decay_t<TupleOrVector> {
   /**
    * Return a static constexpr list of all the keys in a tuple.
    */
-  static constexpr decltype(auto) static_keys() { return Keys(); }
+  static constexpr decltype(auto) StaticKeys() { return Keys(); }
 
   /**
    * Return a list of all the keys as strings.
    */
-  static std::vector<std::string> keys() {
+  static std::vector<std::string> AllKeys() {
     std::vector<std::string> rets;
-    std::apply([&](auto&&... key) { (rets.push_back(key.str()), ...); },
+    std::apply([&](auto&&... key) { (rets.push_back(key.Str()), ...); },
                Keys());
     return rets;
   }
@@ -188,12 +188,12 @@ class Dict : public std::decay_t<TupleOrVector> {
   /**
    * Return a static list of all the values in a tuple.
    */
-  Values& values() { return *this; }
+  Values& AllValues() { return *this; }
 
   /**
    * Const version of static_values
    */
-  [[nodiscard]] const Values& values() const { return *this; }
+  [[nodiscard]] const Values& AllValues() const { return *this; }
 
   /**
    * Convert the value tuple to a dynamic vector of values.
@@ -203,7 +203,7 @@ class Dict : public std::decay_t<TupleOrVector> {
   template <typename Type, bool IsTuple = is_tuple_v<Values>,
             std::enable_if_t<IsTuple, bool> = true,
             std::enable_if_t<all_convertible<Type, Values>::value, bool> = true>
-  [[nodiscard]] std::vector<Type> values() const {
+  [[nodiscard]] std::vector<Type> AllValues() const {
     std::vector<Type> rets;
     std::apply([&](auto&&... value) { (rets.push_back(Type(value)), ...); },
                *static_cast<const Values*>(this));
@@ -217,27 +217,27 @@ class Dict : public std::decay_t<TupleOrVector> {
    */
   template <typename Type, bool IsTuple = is_tuple_v<Values>,
             std::enable_if_t<!IsTuple, bool> = true>
-  std::vector<Type> values() const {
+  std::vector<Type> AllValues() const {
     return std::vector<Type>(this->begin(), this->end());
   }
 
   template <class F, bool IsTuple = is_tuple_v<Values>,
             std::enable_if_t<IsTuple, bool> = true>
-  decltype(auto) apply(F&& f) const {
-    ApplyZip(f, Keys(), *this, std::make_index_sequence<size>{});
+  decltype(auto) Apply(F&& f) const {
+    ApplyZip(f, Keys(), *this, std::make_index_sequence<SIZE>{});
   }
 };
 
 /**
  * Make a dict which is actually an namedtuple in cpp
  * Syntax is like
- * auto d = MakeDict("abc"_.bind(0.), "xyz"_.bind(0.), "ijk"_.bind(1));
+ * auto d = MakeDict("abc"_.Bind(0.), "xyz"_.Bind(0.), "ijk"_.Bind(1));
  * The above makes a dict { "abc": 0., "xyz": 0., "ijk": 1 }
  */
 template <typename... Value>
 decltype(auto) MakeDict(Value... v) {
   return Dict(std::make_tuple(typename Value::Key()...),
-              std::make_tuple(v.v...));
+              std::make_tuple(v.v_...));
 }
 
 template <
@@ -260,8 +260,7 @@ template <
         std::is_same_v<typename DictA::Values, typename DictA::Values>, bool> =
         true>
 decltype(auto) ConcatDict(const DictA& a, const DictB& b) {
-  using value_type = typename DictA::Values::value_type;
-  std::vector<value_type> c;
+  std::vector<typename DictA::Values::value_type> c;
   c.insert(c.end(), a.begin(), a.end());
   c.insert(c.end(), b.begin(), b.end());
   return Dict<AllKeys, decltype(c)>(c);

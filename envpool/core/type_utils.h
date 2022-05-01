@@ -42,13 +42,13 @@ struct all_convertible<To, Tuple<Fs...>>
     : std::conjunction<std::is_convertible<Fs, To>...> {};
 
 template <typename T>
-constexpr bool is_tuple_v = false;
+constexpr bool is_tuple_v = false;  // NOLINT
 template <typename... types>
-constexpr bool is_tuple_v<std::tuple<types...>> = true;
+constexpr bool is_tuple_v<std::tuple<types...>> = true;  // NOLINT
 
 template <typename T>
-constexpr bool is_vector_v = false;
+constexpr bool is_vector_v = false;  // NOLINT
 template <typename VT>
-constexpr bool is_vector_v<std::vector<VT>> = true;
+constexpr bool is_vector_v<std::vector<VT>> = true;  // NOLINT
 
 #endif  // ENVPOOL_CORE_TYPE_UTILS_H_

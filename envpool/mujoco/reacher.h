@@ -32,26 +32,26 @@ class ReacherEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
-        "max_episode_steps"_.bind(50), "reward_threshold"_.bind(-3.75),
-        "frame_skip"_.bind(2), "post_constraint"_.bind(true),
-        "ctrl_cost_weight"_.bind(1.0), "dist_cost_weight"_.bind(1.0),
-        "reset_qpos_scale"_.bind(0.1), "reset_qvel_scale"_.bind(0.005),
-        "reset_goal_scale"_.bind(0.2));
+        "max_episode_steps"_.Bind(50), "reward_threshold"_.Bind(-3.75),
+        "frame_skip"_.Bind(2), "post_constraint"_.Bind(true),
+        "ctrl_cost_weight"_.Bind(1.0), "dist_cost_weight"_.Bind(1.0),
+        "reset_qpos_scale"_.Bind(0.1), "reset_qvel_scale"_.Bind(0.005),
+        "reset_goal_scale"_.Bind(0.2));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
-    return MakeDict("obs"_.bind(Spec<mjtNum>({11}, {-inf, inf})),
+    return MakeDict("obs"_.Bind(Spec<mjtNum>({11}, {-inf, inf})),
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.bind(Spec<mjtNum>({4})),
-                    "info:qvel0"_.bind(Spec<mjtNum>({4})),
+                    "info:qpos0"_.Bind(Spec<mjtNum>({4})),
+                    "info:qvel0"_.Bind(Spec<mjtNum>({4})),
 #endif
-                    "info:reward_dist"_.bind(Spec<mjtNum>({-1})),
-                    "info:reward_ctrl"_.bind(Spec<mjtNum>({-1})));
+                    "info:reward_dist"_.Bind(Spec<mjtNum>({-1})),
+                    "info:reward_ctrl"_.Bind(Spec<mjtNum>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 2}, {-1.0, 1.0})));
+    return MakeDict("action"_.Bind(Spec<mjtNum>({-1, 2}, {-1.0, 1.0})));
   }
 };
 
@@ -66,18 +66,18 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
  public:
   ReacherEnv(const Spec& spec, int env_id)
       : Env<ReacherEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/reacher.xml",
-                  spec.config["frame_skip"_], spec.config["post_constraint"_],
-                  spec.config["max_episode_steps"_]),
-        ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
-        dist_cost_weight_(spec.config["dist_cost_weight"_]),
-        reset_goal_scale_(spec.config["reset_goal_scale"_]),
-        dist_qpos_(-spec.config["reset_qpos_scale"_],
-                   spec.config["reset_qpos_scale"_]),
-        dist_qvel_(-spec.config["reset_qvel_scale"_],
-                   spec.config["reset_qvel_scale"_]),
-        dist_goal_(-spec.config["reset_goal_scale"_],
-                   spec.config["reset_goal_scale"_]) {}
+        MujocoEnv(spec.config_["base_path"_] + "/mujoco/assets/reacher.xml",
+                  spec.config_["frame_skip"_], spec.config_["post_constraint"_],
+                  spec.config_["max_episode_steps"_]),
+        ctrl_cost_weight_(spec.config_["ctrl_cost_weight"_]),
+        dist_cost_weight_(spec.config_["dist_cost_weight"_]),
+        reset_goal_scale_(spec.config_["reset_goal_scale"_]),
+        dist_qpos_(-spec.config_["reset_qpos_scale"_],
+                   spec.config_["reset_qpos_scale"_]),
+        dist_qvel_(-spec.config_["reset_qvel_scale"_],
+                   spec.config_["reset_qvel_scale"_]),
+        dist_goal_(-spec.config_["reset_goal_scale"_],
+                   spec.config_["reset_goal_scale"_]) {}
 
   void MujocoResetModel() override {
     for (int i = 0; i < model_->nq - 2; ++i) {
@@ -109,7 +109,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
 
   void Step(const Action& action) override {
     // step
-    mjtNum* act = static_cast<mjtNum*>(action["action"_].data());
+    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
     GetDist();
     MujocoStep(act);
 
@@ -140,7 +140,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     State state = Allocate();
     state["reward"_] = reward;
     // obs
-    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].data());
+    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());
     *(obs++) = std::cos(data_->qpos[0]);
     *(obs++) = std::cos(data_->qpos[1]);
     *(obs++) = std::sin(data_->qpos[0]);

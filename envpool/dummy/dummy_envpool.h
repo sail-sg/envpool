@@ -43,7 +43,7 @@ class DummyEnvFns {
    *
    */
   static decltype(auto) DefaultConfig() {
-    return MakeDict("state_num"_.bind(10), "action_num"_.bind(6));
+    return MakeDict("state_num"_.Bind(10), "action_num"_.Bind(6));
   }
 
   /**
@@ -73,9 +73,9 @@ class DummyEnvFns {
    */
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs"_.bind(Spec<int>({-1, conf["state_num"_]})),
-                    "info:players.done"_.bind(Spec<bool>({-1})),
-                    "info:players.id"_.bind(
+    return MakeDict("obs"_.Bind(Spec<int>({-1, conf["state_num"_]})),
+                    "info:players.done"_.Bind(Spec<bool>({-1})),
+                    "info:players.id"_.Bind(
                         Spec<int>({-1}, {0, conf["max_num_players"_]})));
   }
 
@@ -93,8 +93,8 @@ class DummyEnvFns {
    */
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("players.action"_.bind(Spec<int>({-1})),
-                    "players.id"_.bind(Spec<int>({-1})));
+    return MakeDict("players.action"_.Bind(Spec<int>({-1})),
+                    "players.id"_.Bind(Spec<int>({-1})));
   }
 };
 

@@ -31,26 +31,26 @@ namespace mujoco {
 class InvertedPendulumEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.bind(1000),
-                    "reward_threshold"_.bind(950.0), "frame_skip"_.bind(2),
-                    "post_constraint"_.bind(true), "healthy_reward"_.bind(1.0),
-                    "healthy_z_min"_.bind(-0.2), "healthy_z_max"_.bind(0.2),
-                    "reset_noise_scale"_.bind(0.01));
+    return MakeDict("max_episode_steps"_.Bind(1000),
+                    "reward_threshold"_.Bind(950.0), "frame_skip"_.Bind(2),
+                    "post_constraint"_.Bind(true), "healthy_reward"_.Bind(1.0),
+                    "healthy_z_min"_.Bind(-0.2), "healthy_z_max"_.Bind(0.2),
+                    "reset_noise_scale"_.Bind(0.01));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
 #ifdef ENVPOOL_TEST
-    return MakeDict("obs"_.bind(Spec<mjtNum>({4}, {-inf, inf})),
-                    "info:qpos0"_.bind(Spec<mjtNum>({2})),
-                    "info:qvel0"_.bind(Spec<mjtNum>({2})));
+    return MakeDict("obs"_.Bind(Spec<mjtNum>({4}, {-inf, inf})),
+                    "info:qpos0"_.Bind(Spec<mjtNum>({2})),
+                    "info:qvel0"_.Bind(Spec<mjtNum>({2})));
 #else
-    return MakeDict("obs"_.bind(Spec<mjtNum>({4}, {-inf, inf})));
+    return MakeDict("obs"_.Bind(Spec<mjtNum>({4}, {-inf, inf})));
 #endif
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 1}, {-3.0, 3.0})));
+    return MakeDict("action"_.Bind(Spec<mjtNum>({-1, 1}, {-3.0, 3.0})));
   }
 };
 
@@ -66,14 +66,14 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
   InvertedPendulumEnv(const Spec& spec, int env_id)
       : Env<InvertedPendulumEnvSpec>(spec, env_id),
         MujocoEnv(
-            spec.config["base_path"_] + "/mujoco/assets/inverted_pendulum.xml",
-            spec.config["frame_skip"_], spec.config["post_constraint"_],
-            spec.config["max_episode_steps"_]),
-        healthy_reward_(spec.config["healthy_reward"_]),
-        healthy_z_min_(spec.config["healthy_z_min"_]),
-        healthy_z_max_(spec.config["healthy_z_max"_]),
-        dist_(-spec.config["reset_noise_scale"_],
-              spec.config["reset_noise_scale"_]) {}
+            spec.config_["base_path"_] + "/mujoco/assets/inverted_pendulum.xml",
+            spec.config_["frame_skip"_], spec.config_["post_constraint"_],
+            spec.config_["max_episode_steps"_]),
+        healthy_reward_(spec.config_["healthy_reward"_]),
+        healthy_z_min_(spec.config_["healthy_z_min"_]),
+        healthy_z_max_(spec.config_["healthy_z_max"_]),
+        dist_(-spec.config_["reset_noise_scale"_],
+              spec.config_["reset_noise_scale"_]) {}
 
   void MujocoResetModel() override {
     for (int i = 0; i < model_->nq; ++i) {
@@ -95,7 +95,7 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
 
   void Step(const Action& action) override {
     // step
-    MujocoStep(static_cast<mjtNum*>(action["action"_].data()));
+    MujocoStep(static_cast<mjtNum*>(action["action"_].Data()));
 
     // reward and done
     ++elapsed_step_;
@@ -125,7 +125,7 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
     State state = Allocate();
     state["reward"_] = reward;
     // obs
-    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].data());
+    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());
     for (int i = 0; i < model_->nq; ++i) {
       *(obs++) = data_->qpos[i];
     }

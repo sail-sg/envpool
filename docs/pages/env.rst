@@ -81,20 +81,20 @@ state space, and action space. Create a class ``CartPoleEnvFns``:
     class CartPoleEnvFns {
      public:
       static decltype(auto) DefaultConfig() {
-        return MakeDict("max_episode_steps"_.bind(200),
-                        "reward_threshold"_.bind(195.0));
+        return MakeDict("max_episode_steps"_.Bind(200),
+                        "reward_threshold"_.Bind(195.0));
       }
       template <typename Config>
       static decltype(auto) StateSpec(const Config& conf) {
         float fmax = std::numeric_limits<float>::max();
-        return MakeDict("obs"_.bind(
+        return MakeDict("obs"_.Bind(
             Spec<float>({4}, {{-4.8, -fmax, -M_PI / 7.5, -fmax},
                               {4.8, fmax, M_PI / 7.5, fmax}})));
       }
       template <typename Config>
       static decltype(auto) ActionSpec(const Config& conf) {
         // the last argument in Spec is for the range definition
-        return MakeDict("action"_.bind(Spec<int>({-1}, {0, 1})));
+        return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 1})));
       }
     };
 
@@ -136,7 +136,7 @@ available to see on the python side:
 
     .. code-block:: c++
 
-        auto config = MakeDict("path"_.bind("init_path"));
+        auto config = MakeDict("path"_.Bind("init_path"));
 
     The type of "path" will be a ``const char *`` type instead of
     ``std::string``, which sometimes causes ``config["path"_]`` to be a
@@ -144,7 +144,7 @@ available to see on the python side:
 
     .. code-block:: c++
 
-        auto config = MakeDict("path"_.bind(std::string("init_path")));
+        auto config = MakeDict("path"_.Bind(std::string("init_path")));
 
 .. note ::
 
@@ -156,9 +156,9 @@ available to see on the python side:
 
         template <typename Config>
         static decltype(auto) ActionSpec(const Config& conf) {
-          return MakeDict("action"_.bind(Spec<int>({-1}, {0, 5})));
+          return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 5})));
           // or remove -1, no difference in single-player env
-          // return MakeDict("action"_.bind(Spec<int>({}, {0, 5})));
+          // return MakeDict("action"_.Bind(Spec<int>({}, {0, 5})));
         }
 
     For continuous action space, change the type of ``Spec`` to float or
@@ -169,9 +169,9 @@ available to see on the python side:
 
         template <typename Config>
         static decltype(auto) ActionSpec(const Config& conf) {
-          return MakeDict("action"_.bind(Spec<float>({-1, 4}, {-2.0, 2.0})));
+          return MakeDict("action"_.Bind(Spec<float>({-1, 4}, {-2.0, 2.0})));
           // or remove -1, no difference in single-player env
-          // return MakeDict("action"_.bind(Spec<float>({4}, {-2.0, 2.0})));
+          // return MakeDict("action"_.Bind(Spec<float>({4}, {-2.0, 2.0})));
         }
 
 .. note ::
@@ -217,10 +217,10 @@ available to see on the python side:
         template <typename Config>
         static decltype(auto) StateSpec(const Config& conf) {
           return MakeDict(
-            "obs:observation"_.bind(Spec<float>({10})),
-            "obs:achieved_goal"_.bind(Spec<float>({3})),
-            "obs:desired_goal"_.bind(Spec<float>({3})),
-            "info:is_success"_.bind(Spec<float>({})));
+            "obs:observation"_.Bind(Spec<float>({10})),
+            "obs:achieved_goal"_.Bind(Spec<float>({3})),
+            "obs:desired_goal"_.Bind(Spec<float>({3})),
+            "info:is_success"_.Bind(Spec<float>({})));
         }
 
     The keys start with ``obs:`` will be parsed to obs dict, and similarly
@@ -231,7 +231,7 @@ available to see on the python side:
 
     .. code-block:: c++
 
-        return MakeDict("obs:obs_a.obs_b"_.bind(Spec<int>({})));
+        return MakeDict("obs:obs_a.obs_b"_.Bind(Spec<int>({})));
 
     It is the same as ActionSpec. The only difference is: there's no ``obs:``
     and ``info:`` in action.
@@ -254,7 +254,7 @@ class for convenience, which follows the definition of ``CartPoleEnvSpec``.
 The following functions are required to override:
 
 - constructor, in this case it is ``CartPoleEnv(const Spec& spec, int env_id)``;
-  you can use ``spec.config["max_episode_steps"_]`` to extract the value from
+  you can use ``spec.config_["max_episode_steps"_]`` to extract the value from
   config;
 - ``bool IsDone()``: return a boolean that indicate whether the current episode
   is finished or not;
@@ -340,11 +340,11 @@ interface.
         template <typename Config>
         static decltype(auto) StateSpec(const Config& conf) {
           return MakeDict(
-            "obs:players.obs"_.bind(Spec<uint8_t>({-1, 4, 84, 84})),
-            "obs:players.location"_.bind(Spec<uint8_t>({-1, 2})),
-            "info:players.health"_.bind(Spec<int>({-1})),
-            "info:player_num"_.bind(Spec<int>({})),
-            "info:bla"_.bind(Spec<float>({2, 3, 3}))
+            "obs:players.obs"_.Bind(Spec<uint8_t>({-1, 4, 84, 84})),
+            "obs:players.location"_.Bind(Spec<uint8_t>({-1, 2})),
+            "info:players.health"_.Bind(Spec<int>({-1})),
+            "info:player_num"_.Bind(Spec<int>({})),
+            "info:bla"_.Bind(Spec<float>({2, 3, 3}))
           );
         }
 

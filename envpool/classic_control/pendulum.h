@@ -29,16 +29,16 @@ namespace classic_control {
 class PendulumEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.bind(200));
+    return MakeDict("max_episode_steps"_.Bind(200));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict(
-        "obs"_.bind(Spec<float>({3}, {{-1.0, -1.0, -8.0}, {1.0, 1.0, 8.0}})));
+        "obs"_.Bind(Spec<float>({3}, {{-1.0, -1.0, -8.0}, {1.0, 1.0, 8.0}})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<float>({-1, 1}, {-2.0, 2.0})));
+    return MakeDict("action"_.Bind(Spec<float>({-1, 1}, {-2.0, 2.0})));
   }
 };
 
@@ -60,7 +60,7 @@ class PendulumEnv : public Env<PendulumEnvSpec> {
  public:
   PendulumEnv(const Spec& spec, int env_id)
       : Env<PendulumEnvSpec>(spec, env_id),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
+        max_episode_steps_(spec.config_["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
         dist_(-kPi, kPi),
         dist_dot_(-1, 1),

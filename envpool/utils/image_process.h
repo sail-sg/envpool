@@ -26,8 +26,8 @@
  */
 void Resize(const Array& src, Array* tgt, bool use_inter_area = true) {
   int channel = src.Shape(2);
-  cv::Mat src_img(src.Shape(0), src.Shape(1), CV_8UC(channel), src.data());
-  cv::Mat tgt_img(tgt->Shape(0), tgt->Shape(1), CV_8UC(channel), tgt->data());
+  cv::Mat src_img(src.Shape(0), src.Shape(1), CV_8UC(channel), src.Data());
+  cv::Mat tgt_img(tgt->Shape(0), tgt->Shape(1), CV_8UC(channel), tgt->Data());
   if (use_inter_area) {
     cv::resize(src_img, tgt_img, tgt_img.size(), 0, 0, cv::INTER_AREA);
   } else {
@@ -39,8 +39,8 @@ void Resize(const Array& src, Array* tgt, bool use_inter_area = true) {
  * Change src (with RGB format) to grayscale image.
  */
 void GrayScale(const Array& src, Array* tgt) {
-  cv::Mat src_img(src.Shape(0), src.Shape(1), CV_8UC3, src.data());
-  cv::Mat tgt_img(tgt->Shape(0), tgt->Shape(1), CV_8UC1, tgt->data());
+  cv::Mat src_img(src.Shape(0), src.Shape(1), CV_8UC3, src.Data());
+  cv::Mat tgt_img(tgt->Shape(0), tgt->Shape(1), CV_8UC1, tgt->Data());
   cv::cvtColor(src_img, tgt_img, cv::COLOR_RGB2GRAY);
 }
 

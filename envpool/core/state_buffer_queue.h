@@ -54,14 +54,14 @@ class StateBufferQueue {
         max_num_players_(max_num_players),
         is_player_state_(Transform(specs,
                                    [](const ShapeSpec& s) {
-                                     return (!s.shape.empty() &&
-                                             s.shape[0] == -1);
+                                     return (!s.shape_.empty() &&
+                                             s.shape_[0] == -1);
                                    })),
         specs_(Transform(specs,
                          [=](ShapeSpec s) {
-                           if (!s.shape.empty() && s.shape[0] == -1) {
+                           if (!s.shape_.empty() && s.shape_[0] == -1) {
                              // If first dim is num_players
-                             s.shape[0] = batch_ * max_num_players_;
+                             s.shape_[0] = batch_ * max_num_players_;
                              return s;
                            }
                            return s.Batch(batch_);

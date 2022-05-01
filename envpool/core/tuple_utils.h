@@ -27,13 +27,13 @@ struct Index;
 
 template <class T, class... Types>
 struct Index<T, std::tuple<T, Types...>> {
-  static constexpr std::size_t value = 0;
+  static constexpr std::size_t VALUE = 0;
 };
 
 template <class T, class U, class... Types>
 struct Index<T, std::tuple<U, Types...>> {
-  static constexpr std::size_t value =
-      1 + Index<T, std::tuple<Types...>>::value;
+  static constexpr std::size_t VALUE =
+      1 + Index<T, std::tuple<Types...>>::VALUE;
 };
 
 template <class F, class K, class V, std::size_t... I>
@@ -45,6 +45,6 @@ decltype(auto) ApplyZip(F&& f, K&& k, V&& v,
 }
 
 template <typename... T>
-using tuple_cat_t = decltype(std::tuple_cat(std::declval<T>()...));
+using tuple_cat_t = decltype(std::tuple_cat(std::declval<T>()...));  // NOLINT
 
 #endif  // ENVPOOL_CORE_TUPLE_UTILS_H_
