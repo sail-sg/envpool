@@ -33,9 +33,9 @@ TEST(StateBufferQueueTest, Basic) {
   for (std::size_t i = 0; i < batch; ++i) {
     std::size_t num_players = 1;
     auto slice = queue.Allocate(num_players);
-    slice.done_write();
-    EXPECT_EQ(slice.arr[0].Shape(0), 10);
-    EXPECT_EQ(slice.arr[1].Shape(0), 1);
+    slice.done_write_();
+    EXPECT_EQ(slice.arr_[0].Shape(0), 10);
+    EXPECT_EQ(slice.arr_[1].Shape(0), 1);
     size += num_players;
   }
   std::vector<Array> out = queue.Wait();
@@ -63,9 +63,9 @@ TEST(StateBufferQueueTest, SinglePlayerSync) {
     std::shuffle(order.begin(), order.end(), gen);
     for (std::size_t i = 0; i < batch; ++i) {
       auto slice = queue.Allocate(1, order[i]);
-      EXPECT_EQ(slice.arr[0].Shape(0), 1);
-      slice.arr[0] = static_cast<int>(i);
-      slice.done_write();
+      EXPECT_EQ(slice.arr_[0].Shape(0), 1);
+      slice.arr_[0] = static_cast<int>(i);
+      slice.done_write_();
     }
     std::vector<Array> out = queue.Wait();
     EXPECT_EQ(out[0].Shape(0), batch);
@@ -80,8 +80,8 @@ TEST(StateBufferQueueTest, SinglePlayerSync) {
     env_id.pop_back();
     for (std::size_t i = 0; i < env_id.size(); ++i) {
       auto slice = queue.Allocate(1, i);
-      slice.arr[0] = env_id[i];
-      slice.done_write();
+      slice.arr_[0] = env_id[i];
+      slice.done_write_();
     }
     std::vector<Array> out = queue.Wait(batch - env_id.size());
     EXPECT_EQ(out[0].Shape(0), env_id.size());
@@ -104,9 +104,9 @@ TEST(StateBufferQueueTest, NumPlayers) {
   for (std::size_t i = 0; i < batch; ++i) {
     std::size_t num_players = 1 + std::rand() % max_num_players;
     auto slice = queue.Allocate(num_players);
-    slice.done_write();
-    EXPECT_EQ(slice.arr[0].Shape(0), num_players);
-    EXPECT_EQ(slice.arr[1].Shape(0), 1);
+    slice.done_write_();
+    EXPECT_EQ(slice.arr_[0].Shape(0), num_players);
+    EXPECT_EQ(slice.arr_[1].Shape(0), 1);
     size += num_players;
   }
   std::vector<Array> out = queue.Wait();
@@ -128,9 +128,9 @@ TEST(StateBufferQueueTest, MultipleTimes) {
     for (std::size_t i = 0; i < batch; ++i) {
       std::size_t num_players = 1 + std::rand() % max_num_players;
       auto slice = queue.Allocate(num_players);
-      slice.done_write();
-      EXPECT_EQ(slice.arr[0].Shape(0), num_players);
-      EXPECT_EQ(slice.arr[1].Shape(0), 1);
+      slice.done_write_();
+      EXPECT_EQ(slice.arr_[0].Shape(0), num_players);
+      EXPECT_EQ(slice.arr_[1].Shape(0), 1);
       size += num_players;
     }
     std::vector<Array> out = queue.Wait();
@@ -152,7 +152,7 @@ TEST(StateBufferQueueTest, ConcurrentSinglePlayer) {
   for (std::size_t i = 0; i < num_envs; ++i) {
     pool.enqueue([&] {
       auto slice = queue.Allocate(1);
-      slice.done_write();
+      slice.done_write_();
     });
   }
   std::size_t total = 10000;
@@ -164,7 +164,7 @@ TEST(StateBufferQueueTest, ConcurrentSinglePlayer) {
         auto slice = queue.Allocate(1);
         std::this_thread::sleep_for(
             std::chrono::nanoseconds(std::rand() % 1000 + 1));
-        slice.done_write();
+        slice.done_write_();
       });
     }
   }
@@ -184,7 +184,7 @@ TEST(StateBufferQueueTest, ConcurrentMultiPlayer) {
     pool.enqueue([&] {
       std::size_t num_players = 1 + std::rand() % max_num_players;
       auto slice = queue.Allocate(num_players);
-      slice.done_write();
+      slice.done_write_();
     });
   }
   std::size_t total = 1000;
@@ -197,7 +197,7 @@ TEST(StateBufferQueueTest, ConcurrentMultiPlayer) {
         auto slice = queue.Allocate(num_players);
         std::this_thread::sleep_for(
             std::chrono::nanoseconds(std::rand() % 1000 + 1));
-        slice.done_write();
+        slice.done_write_();
       });
     }
   }

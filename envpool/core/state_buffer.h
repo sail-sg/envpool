@@ -57,8 +57,8 @@ class StateBuffer {
    * invoke done write.
    */
   struct WritableSlice {
-    std::vector<Array> arr;
-    std::function<void()> done_write;
+    std::vector<Array> arr_;
+    std::function<void()> done_write_;
   };
 
   /**
@@ -106,8 +106,8 @@ class StateBuffer {
           state.emplace_back(a[shared_offset]);
         }
       }
-      return WritableSlice{.arr = std::move(state),
-                           .done_write = [this]() { Done(); }};
+      return WritableSlice{.arr_ = std::move(state),
+                           .done_write_ = [this]() { Done(); }};
     }
     DLOG(INFO) << "Allocation failed, continue to the next block of memory";
     throw std::out_of_range("StateBuffer out of storage");

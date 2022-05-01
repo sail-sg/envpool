@@ -65,7 +65,7 @@ class Env {
         is_player_action_(Transform(action_specs_, [](const ShapeSpec& s) {
           return (!s.shape_.empty() && s.shape_[0] == -1);
         })) {
-    slice_.done_write = [] { LOG(INFO) << "Use `Allocate` to write state."; };
+    slice_.done_write_ = [] { LOG(INFO) << "Use `Allocate` to write state."; };
   }
 
   void SetAction(std::shared_ptr<std::vector<Array>> action_batch,
@@ -153,13 +153,13 @@ class Env {
   }
 
   void PostProcess() {
-    slice_.done_write();
+    slice_.done_write_();
     // action_batch_.reset();
   }
 
   State Allocate(int player_num = 1) {
     slice_ = sbq_->Allocate(player_num, order_);
-    State state(&slice_.arr);
+    State state(&slice_.arr_);
     state["done"_] = IsDone();
     state["info:env_id"_] = env_id_;
     state["elapsed_step"_] = current_step_;

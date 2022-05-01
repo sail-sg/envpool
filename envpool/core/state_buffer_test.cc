@@ -37,7 +37,7 @@ TEST(StateBufferTest, Basic) {
     auto r = buffer.Allocate(num);
     offset = buffer.Offsets();
     EXPECT_EQ(std::get<0>(offset), std::get<1>(offset));
-    r.done_write();
+    r.done_write_();
   }
   auto bs = buffer.Wait();
   EXPECT_EQ(bs[0].Shape(0), total);
@@ -60,10 +60,10 @@ TEST(StateBufferTest, SinglePlayerSync) {
     auto r = buffer.Allocate(num, batch - 1 - i);
     offset = buffer.Offsets();
     EXPECT_EQ(std::get<0>(offset), std::get<1>(offset));
-    EXPECT_EQ(r.arr[0].Shape(), std::vector<std::size_t>({10, 2, 2}));
-    EXPECT_EQ(r.arr[1].Shape(), std::vector<std::size_t>({1, 2, 2}));
-    r.arr[1] = i;  // only the first element is modified
-    r.done_write();
+    EXPECT_EQ(r.arr_[0].Shape(), std::vector<std::size_t>({10, 2, 2}));
+    EXPECT_EQ(r.arr_[1].Shape(), std::vector<std::size_t>({1, 2, 2}));
+    r.arr_[1] = i;  // only the first element is modified
+    r.done_write_();
   }
   auto bs = buffer.Wait();
   EXPECT_EQ(bs[0].Shape(0), total);
@@ -82,7 +82,7 @@ TEST(StateBufferTest, Truncate) {
   StateBuffer buffer(batch, max_num_players, specs,
                      std::vector<bool>({false, true}));
   auto r = buffer.Allocate(player_num);
-  r.done_write();
+  r.done_write_();
   buffer.Done(batch - 1);
   auto bs = buffer.Wait();
   EXPECT_EQ(bs[0].Shape(), std::vector<std::size_t>({1, 10, 2, 2}));
@@ -105,10 +105,10 @@ TEST(StateBufferTest, MultiPlayers) {
     total += num;
     auto r = buffer.Allocate(num);
     offset = buffer.Offsets();
-    EXPECT_EQ(num, r.arr[0].Shape()[0]);
+    EXPECT_EQ(num, r.arr_[0].Shape()[0]);
     EXPECT_EQ(std::get<0>(offset), total);
     EXPECT_EQ(std::get<1>(offset), i + 1);
-    r.done_write();
+    r.done_write_();
   }
   auto bs = buffer.Wait();
   EXPECT_EQ(bs[0].Shape(0), total);
