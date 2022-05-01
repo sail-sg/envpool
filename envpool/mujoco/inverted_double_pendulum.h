@@ -31,27 +31,27 @@ namespace mujoco {
 class InvertedDoublePendulumEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.bind(1000),
-                    "reward_threshold"_.bind(9100.0), "frame_skip"_.bind(5),
-                    "post_constraint"_.bind(true), "healthy_reward"_.bind(10.0),
-                    "healthy_z_max"_.bind(1.0), "observation_min"_.bind(-10.0),
-                    "observation_max"_.bind(10.0),
-                    "reset_noise_scale"_.bind(0.1));
+    return MakeDict("max_episode_steps"_.Bind(1000),
+                    "reward_threshold"_.Bind(9100.0), "frame_skip"_.Bind(5),
+                    "post_constraint"_.Bind(true), "healthy_reward"_.Bind(10.0),
+                    "healthy_z_max"_.Bind(1.0), "observation_min"_.Bind(-10.0),
+                    "observation_max"_.Bind(10.0),
+                    "reset_noise_scale"_.Bind(0.1));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
 #ifdef ENVPOOL_TEST
-    return MakeDict("obs"_.bind(Spec<mjtNum>({11}, {-inf, inf})),
-                    "info:qpos0"_.bind(Spec<mjtNum>({3})),
-                    "info:qvel0"_.bind(Spec<mjtNum>({3})));
+    return MakeDict("obs"_.Bind(Spec<mjtNum>({11}, {-inf, inf})),
+                    "info:qpos0"_.Bind(Spec<mjtNum>({3})),
+                    "info:qvel0"_.Bind(Spec<mjtNum>({3})));
 #else
-    return MakeDict("obs"_.bind(Spec<mjtNum>({11}, {-inf, inf})));
+    return MakeDict("obs"_.Bind(Spec<mjtNum>({11}, {-inf, inf})));
 #endif
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 1}, {-1.0, 1.0})));
+    return MakeDict("action"_.Bind(Spec<mjtNum>({-1, 1}, {-1.0, 1.0})));
   }
 };
 
@@ -68,17 +68,17 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
  public:
   InvertedDoublePendulumEnv(const Spec& spec, int env_id)
       : Env<InvertedDoublePendulumEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] +
+        MujocoEnv(spec.config_["base_path"_] +
                       "/mujoco/assets/inverted_double_pendulum.xml",
-                  spec.config["frame_skip"_], spec.config["post_constraint"_],
-                  spec.config["max_episode_steps"_]),
-        healthy_reward_(spec.config["healthy_reward"_]),
-        healthy_z_max_(spec.config["healthy_z_max"_]),
-        observation_min_(spec.config["observation_min"_]),
-        observation_max_(spec.config["observation_max"_]),
-        dist_qpos_(-spec.config["reset_noise_scale"_],
-                   spec.config["reset_noise_scale"_]),
-        dist_qvel_(0, spec.config["reset_noise_scale"_]) {}
+                  spec.config_["frame_skip"_], spec.config_["post_constraint"_],
+                  spec.config_["max_episode_steps"_]),
+        healthy_reward_(spec.config_["healthy_reward"_]),
+        healthy_z_max_(spec.config_["healthy_z_max"_]),
+        observation_min_(spec.config_["observation_min"_]),
+        observation_max_(spec.config_["observation_max"_]),
+        dist_qpos_(-spec.config_["reset_noise_scale"_],
+                   spec.config_["reset_noise_scale"_]),
+        dist_qvel_(0, spec.config_["reset_noise_scale"_]) {}
 
   void MujocoResetModel() override {
     for (int i = 0; i < model_->nq; ++i) {
@@ -100,7 +100,7 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
 
   void Step(const Action& action) override {
     // step
-    MujocoStep(static_cast<mjtNum*>(action["action"_].data()));
+    MujocoStep(static_cast<mjtNum*>(action["action"_].Data()));
 
     // dist_penalty
     mjtNum x = data_->site_xpos[0];
@@ -125,7 +125,7 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
     State state = Allocate();
     state["reward"_] = reward;
     // obs
-    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].data());
+    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());
     *(obs++) = data_->qpos[0];
     *(obs++) = std::sin(data_->qpos[1]);
     *(obs++) = std::sin(data_->qpos[2]);

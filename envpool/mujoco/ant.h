@@ -32,39 +32,39 @@ class AntEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
-        "max_episode_steps"_.bind(1000), "reward_threshold"_.bind(6000.0),
-        "frame_skip"_.bind(5), "post_constraint"_.bind(true),
-        "terminate_when_unhealthy"_.bind(true),
-        "exclude_current_positions_from_observation"_.bind(true),
-        "forward_reward_weight"_.bind(1.0), "ctrl_cost_weight"_.bind(0.5),
-        "contact_cost_weight"_.bind(5e-4), "healthy_reward"_.bind(1.0),
-        "healthy_z_min"_.bind(0.2), "healthy_z_max"_.bind(1.0),
-        "contact_force_min"_.bind(-1.0), "contact_force_max"_.bind(1.0),
-        "reset_noise_scale"_.bind(0.1));
+        "max_episode_steps"_.Bind(1000), "reward_threshold"_.Bind(6000.0),
+        "frame_skip"_.Bind(5), "post_constraint"_.Bind(true),
+        "terminate_when_unhealthy"_.Bind(true),
+        "exclude_current_positions_from_observation"_.Bind(true),
+        "forward_reward_weight"_.Bind(1.0), "ctrl_cost_weight"_.Bind(0.5),
+        "contact_cost_weight"_.Bind(5e-4), "healthy_reward"_.Bind(1.0),
+        "healthy_z_min"_.Bind(0.2), "healthy_z_max"_.Bind(1.0),
+        "contact_force_min"_.Bind(-1.0), "contact_force_max"_.Bind(1.0),
+        "reset_noise_scale"_.Bind(0.1));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
     bool no_pos = conf["exclude_current_positions_from_observation"_];
     return MakeDict(
-        "obs"_.bind(Spec<mjtNum>({no_pos ? 111 : 113}, {-inf, inf})),
+        "obs"_.Bind(Spec<mjtNum>({no_pos ? 111 : 113}, {-inf, inf})),
 #ifdef ENVPOOL_TEST
-        "info:qpos0"_.bind(Spec<mjtNum>({15})),
-        "info:qvel0"_.bind(Spec<mjtNum>({14})),
+        "info:qpos0"_.Bind(Spec<mjtNum>({15})),
+        "info:qvel0"_.Bind(Spec<mjtNum>({14})),
 #endif
-        "info:reward_forward"_.bind(Spec<mjtNum>({-1})),
-        "info:reward_ctrl"_.bind(Spec<mjtNum>({-1})),
-        "info:reward_contact"_.bind(Spec<mjtNum>({-1})),
-        "info:reward_survive"_.bind(Spec<mjtNum>({-1})),
-        "info:x_position"_.bind(Spec<mjtNum>({-1})),
-        "info:y_position"_.bind(Spec<mjtNum>({-1})),
-        "info:distance_from_origin"_.bind(Spec<mjtNum>({-1})),
-        "info:x_velocity"_.bind(Spec<mjtNum>({-1})),
-        "info:y_velocity"_.bind(Spec<mjtNum>({-1})));
+        "info:reward_forward"_.Bind(Spec<mjtNum>({-1})),
+        "info:reward_ctrl"_.Bind(Spec<mjtNum>({-1})),
+        "info:reward_contact"_.Bind(Spec<mjtNum>({-1})),
+        "info:reward_survive"_.Bind(Spec<mjtNum>({-1})),
+        "info:x_position"_.Bind(Spec<mjtNum>({-1})),
+        "info:y_position"_.Bind(Spec<mjtNum>({-1})),
+        "info:distance_from_origin"_.Bind(Spec<mjtNum>({-1})),
+        "info:x_velocity"_.Bind(Spec<mjtNum>({-1})),
+        "info:y_velocity"_.Bind(Spec<mjtNum>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 8}, {-1.0, 1.0})));
+    return MakeDict("action"_.Bind(Spec<mjtNum>({-1, 8}, {-1.0, 1.0})));
   }
 };
 
@@ -83,22 +83,22 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
  public:
   AntEnv(const Spec& spec, int env_id)
       : Env<AntEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/ant.xml",
-                  spec.config["frame_skip"_], spec.config["post_constraint"_],
-                  spec.config["max_episode_steps"_]),
-        terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
-        no_pos_(spec.config["exclude_current_positions_from_observation"_]),
-        ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
-        contact_cost_weight_(spec.config["contact_cost_weight"_]),
-        forward_reward_weight_(spec.config["forward_reward_weight"_]),
-        healthy_reward_(spec.config["healthy_reward"_]),
-        healthy_z_min_(spec.config["healthy_z_min"_]),
-        healthy_z_max_(spec.config["healthy_z_max"_]),
-        contact_force_min_(spec.config["contact_force_min"_]),
-        contact_force_max_(spec.config["contact_force_max"_]),
-        dist_qpos_(-spec.config["reset_noise_scale"_],
-                   spec.config["reset_noise_scale"_]),
-        dist_qvel_(0, spec.config["reset_noise_scale"_]) {}
+        MujocoEnv(spec.config_["base_path"_] + "/mujoco/assets/ant.xml",
+                  spec.config_["frame_skip"_], spec.config_["post_constraint"_],
+                  spec.config_["max_episode_steps"_]),
+        terminate_when_unhealthy_(spec.config_["terminate_when_unhealthy"_]),
+        no_pos_(spec.config_["exclude_current_positions_from_observation"_]),
+        ctrl_cost_weight_(spec.config_["ctrl_cost_weight"_]),
+        contact_cost_weight_(spec.config_["contact_cost_weight"_]),
+        forward_reward_weight_(spec.config_["forward_reward_weight"_]),
+        healthy_reward_(spec.config_["healthy_reward"_]),
+        healthy_z_min_(spec.config_["healthy_z_min"_]),
+        healthy_z_max_(spec.config_["healthy_z_max"_]),
+        contact_force_min_(spec.config_["contact_force_min"_]),
+        contact_force_max_(spec.config_["contact_force_max"_]),
+        dist_qpos_(-spec.config_["reset_noise_scale"_],
+                   spec.config_["reset_noise_scale"_]),
+        dist_qvel_(0, spec.config_["reset_noise_scale"_]) {}
 
   void MujocoResetModel() override {
     for (int i = 0; i < model_->nq; ++i) {
@@ -120,7 +120,7 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
 
   void Step(const Action& action) override {
     // step
-    mjtNum* act = static_cast<mjtNum*>(action["action"_].data());
+    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
     mjtNum x_before = data_->xpos[3];
     mjtNum y_before = data_->xpos[4];
     MujocoStep(act);
@@ -180,7 +180,7 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
     State state = Allocate();
     state["reward"_] = reward;
     // obs
-    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].data());
+    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());
     for (int i = no_pos_ ? 2 : 0; i < model_->nq; ++i) {
       *(obs++) = data_->qpos[i];
     }

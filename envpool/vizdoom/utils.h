@@ -25,17 +25,17 @@
 
 namespace vizdoom {
 
-using vzd_act_t = std::vector<double>;
+using VzdActT = std::vector<double>;
 
-void _build_action_set(
+void BuildActionSetImpl(
     int button_num,
     const std::vector<std::tuple<int, float, float>>& delta_config,
     int* button_index, bool force_speed, int cur_id, double* current_result,
-    std::vector<vzd_act_t>& result  // NOLINT
+    std::vector<VzdActT>& result  // NOLINT
 ) {
   if (cur_id == 43) {
     // get full action set, move to result
-    vzd_act_t current_result_vec;
+    VzdActT current_result_vec;
     for (int i = 0; i < button_num; ++i) {
       current_result_vec.push_back(current_result[i]);
     }
@@ -47,28 +47,28 @@ void _build_action_set(
     float action_max;
     std::tie(num, action_min, action_max) = delta_config[cur_id];
     if (num <= 1) {
-      _build_action_set(button_num, delta_config, button_index, force_speed,
-                        cur_id + 1, current_result, result);
+      BuildActionSetImpl(button_num, delta_config, button_index, force_speed,
+                         cur_id + 1, current_result, result);
     } else {
       float delta = (action_max - action_min) / static_cast<float>(num - 1);
       float a = action_min;
       for (int i = 0; i < num; ++i, a += delta) {
         current_result[button_index[cur_id]] = a;
-        _build_action_set(button_num, delta_config, button_index, force_speed,
-                          cur_id + 1, current_result, result);
+        BuildActionSetImpl(button_num, delta_config, button_index, force_speed,
+                           cur_id + 1, current_result, result);
       }
     }
   } else if (21 <= cur_id && cur_id <= 30) {
     // SELECT_WEAPONX
     // select none of weapons
-    _build_action_set(button_num, delta_config, button_index, force_speed, 31,
-                      current_result, result);
+    BuildActionSetImpl(button_num, delta_config, button_index, force_speed, 31,
+                       current_result, result);
     // select one weapon
     for (int i = 21; i <= 30; ++i) {
       if (button_index[i] != -1) {
         current_result[button_index[i]] = 1;
-        _build_action_set(button_num, delta_config, button_index, force_speed,
-                          31, current_result, result);
+        BuildActionSetImpl(button_num, delta_config, button_index, force_speed,
+                           31, current_result, result);
         current_result[button_index[i]] = 0;
       }
     }
@@ -84,42 +84,42 @@ void _build_action_set(
     // 31, 32: SELECT_NEXT_WEAPON / SELECT_PREV_WEAPON
     // 34, 35: SELECT_NEXT_ITEM / SELECT_PREV_ITEM
     // False, False
-    _build_action_set(button_num, delta_config, button_index, force_speed,
-                      cur_id + 2, current_result, result);
+    BuildActionSetImpl(button_num, delta_config, button_index, force_speed,
+                       cur_id + 2, current_result, result);
     current_result[button_index[cur_id]] = 1;
     // True, False
-    _build_action_set(button_num, delta_config, button_index, force_speed,
-                      cur_id + 2, current_result, result);
+    BuildActionSetImpl(button_num, delta_config, button_index, force_speed,
+                       cur_id + 2, current_result, result);
     current_result[button_index[cur_id]] = 0;
     current_result[button_index[cur_id + 1]] = 1;
     // False, True
-    _build_action_set(button_num, delta_config, button_index, force_speed,
-                      cur_id + 2, current_result, result);
+    BuildActionSetImpl(button_num, delta_config, button_index, force_speed,
+                       cur_id + 2, current_result, result);
     current_result[button_index[cur_id + 1]] = 0;
   } else if (button_index[cur_id] != -1) {
     // single button
     if (cur_id == 8 && force_speed) {  // SPEED
       current_result[button_index[cur_id]] = 1;
-      _build_action_set(button_num, delta_config, button_index, force_speed,
-                        cur_id + 1, current_result, result);
+      BuildActionSetImpl(button_num, delta_config, button_index, force_speed,
+                         cur_id + 1, current_result, result);
       return;
     }
-    _build_action_set(button_num, delta_config, button_index, force_speed,
-                      cur_id + 1, current_result, result);
+    BuildActionSetImpl(button_num, delta_config, button_index, force_speed,
+                       cur_id + 1, current_result, result);
     current_result[button_index[cur_id]] = 1;
-    _build_action_set(button_num, delta_config, button_index, force_speed,
-                      cur_id + 1, current_result, result);
+    BuildActionSetImpl(button_num, delta_config, button_index, force_speed,
+                       cur_id + 1, current_result, result);
     current_result[button_index[cur_id]] = 0;
   } else {
-    _build_action_set(button_num, delta_config, button_index, force_speed,
-                      cur_id + 1, current_result, result);
+    BuildActionSetImpl(button_num, delta_config, button_index, force_speed,
+                       cur_id + 1, current_result, result);
   }
 }
 
-std::vector<vzd_act_t> BuildActionSet(
+std::vector<VzdActT> BuildActionSet(
     std::vector<Button> button_list, bool force_speed,
     const std::vector<std::tuple<int, float, float>>& delta_config) {
-  std::vector<vzd_act_t> result;
+  std::vector<VzdActT> result;
   std::array<int, 43> button_index;
   std::array<double, 43> current_result;
   memset(button_index.begin(), -1, sizeof(int) * 43);
@@ -127,12 +127,12 @@ std::vector<vzd_act_t> BuildActionSet(
   for (std::size_t i = 0; i < button_list.size(); ++i) {
     button_index[button_list[i]] = i;
   }
-  _build_action_set(button_list.size(), delta_config, button_index.begin(),
-                    force_speed, 0, current_result.begin(), result);
+  BuildActionSetImpl(button_list.size(), delta_config, button_index.begin(),
+                     force_speed, 0, current_result.begin(), result);
   return result;
 }
 
-std::vector<std::string> _button_string_list({
+std::vector<std::string> button_string_list({
     "ATTACK",
     "USE",
     "JUMP",
@@ -178,21 +178,21 @@ std::vector<std::string> _button_string_list({
     "MOVE_UP_DOWN_DELTA",
 });
 
-std::string button2str(Button b) {
-  assert(b >= 0 && b < _button_string_list.size());
-  return _button_string_list[b];
+std::string Button2Str(Button b) {
+  assert(b >= 0 && b < button_string_list.size());
+  return button_string_list[b];
 }
 
-int str2button(const std::string& s) {
+int Str2Button(const std::string& s) {
   auto result =
-      std::find(_button_string_list.begin(), _button_string_list.end(), s);
-  if (result != _button_string_list.end()) {
-    return result - _button_string_list.begin();
+      std::find(button_string_list.begin(), button_string_list.end(), s);
+  if (result != button_string_list.end()) {
+    return result - button_string_list.begin();
   }
   return -1;
 }
 
-std::vector<std::string> _gv_string_list({
+std::vector<std::string> gv_string_list({
     "KILLCOUNT",
     "ITEMCOUNT",
     "SECRETCOUNT",
@@ -327,15 +327,15 @@ std::vector<std::string> _gv_string_list({
     "USER60",
 });
 
-std::string gv2str(GameVariable gv) {
-  assert(gv >= 0 && gv < _gv_string_list.size());
-  return _gv_string_list[gv];
+std::string GV2Str(GameVariable gv) {
+  assert(gv >= 0 && gv < gv_string_list.size());
+  return gv_string_list[gv];
 }
 
-int str2gv(const std::string& s) {
-  auto result = std::find(_gv_string_list.begin(), _gv_string_list.end(), s);
-  if (result != _gv_string_list.end()) {
-    return result - _gv_string_list.begin();
+int Str2GV(const std::string& s) {
+  auto result = std::find(gv_string_list.begin(), gv_string_list.end(), s);
+  if (result != gv_string_list.end()) {
+    return result - gv_string_list.begin();
   }
   return -1;
 }

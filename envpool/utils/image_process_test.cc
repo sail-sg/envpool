@@ -25,7 +25,7 @@ TEST(ImageProcessTest, Resize) {
   Array b(Spec<uint8_t>({6, 7, 1}));
   Resize(a, &b);
   EXPECT_EQ(b.Shape(), std::vector<std::size_t>({6, 7, 1}));
-  EXPECT_NE(a.data(), b.data());
+  EXPECT_NE(a.Data(), b.Data());
   // same shape, no reference
   Array a2(Spec<uint8_t>({4, 3, 2}));
   a2(1, 0, 1) = 6;
@@ -33,7 +33,7 @@ TEST(ImageProcessTest, Resize) {
   Array b2(Spec<uint8_t>({4, 3, 2}));
   Resize(a2, &b2);
   EXPECT_EQ(a2.Shape(), b2.Shape());
-  EXPECT_NE(a2.data(), b2.data());
+  EXPECT_NE(a2.Data(), b2.Data());
   EXPECT_EQ(6, static_cast<int>(b2(1, 0, 1)));
   EXPECT_EQ(4, static_cast<int>(b2(3, 1, 0)));
 }

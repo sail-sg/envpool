@@ -50,30 +50,30 @@ class AtariEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
-        "max_episode_steps"_.bind(108000), "stack_num"_.bind(4),
-        "frame_skip"_.bind(4), "noop_max"_.bind(30),
-        "zero_discount_on_life_loss"_.bind(false), "episodic_life"_.bind(false),
-        "reward_clip"_.bind(false), "img_height"_.bind(84),
-        "img_width"_.bind(84), "task"_.bind(std::string("pong")),
-        "repeat_action_probability"_.bind(0.0F),
-        "use_inter_area_resize"_.bind(true), "gray_scale"_.bind(true));
+        "max_episode_steps"_.Bind(108000), "stack_num"_.Bind(4),
+        "frame_skip"_.Bind(4), "noop_max"_.Bind(30),
+        "zero_discount_on_life_loss"_.Bind(false), "episodic_life"_.Bind(false),
+        "reward_clip"_.Bind(false), "img_height"_.Bind(84),
+        "img_width"_.Bind(84), "task"_.Bind(std::string("pong")),
+        "repeat_action_probability"_.Bind(0.0F),
+        "use_inter_area_resize"_.Bind(true), "gray_scale"_.Bind(true));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs"_.bind(Spec<uint8_t>(
+    return MakeDict("obs"_.Bind(Spec<uint8_t>(
                         {conf["stack_num"_] * (conf["gray_scale"_] ? 1 : 3),
                          conf["img_height"_], conf["img_width"_]},
                         {0, 255})),
-                    "discount"_.bind(Spec<float>({-1}, {0.0, 1.0})),
-                    "info:lives"_.bind(Spec<int>({-1}, {0, 5})),
-                    "info:reward"_.bind(Spec<float>({-1})));
+                    "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})),
+                    "info:lives"_.Bind(Spec<int>({-1}, {0, 5})),
+                    "info:reward"_.Bind(Spec<float>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
     ale::ALEInterface env;
     env.loadROM(GetRomPath(conf["base_path"_], conf["task"_]));
     int action_size = env.getMinimalActionSet().size();
-    return MakeDict("action"_.bind(Spec<int>({-1}, {0, action_size - 1})));
+    return MakeDict("action"_.Bind(Spec<int>({-1}, {0, action_size - 1})));
   }
 };
 
@@ -103,27 +103,29 @@ class AtariEnv : public Env<AtariEnvSpec> {
   AtariEnv(const Spec& spec, int env_id)
       : Env<AtariEnvSpec>(spec, env_id),
         env_(new ale::ALEInterface()),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
+        max_episode_steps_(spec.config_["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
-        stack_num_(spec.config["stack_num"_]),
-        frame_skip_(spec.config["frame_skip"_]),
+        stack_num_(spec.config_["stack_num"_]),
+        frame_skip_(spec.config_["frame_skip"_]),
         fire_reset_(false),
-        reward_clip_(spec.config["reward_clip"_]),
-        zero_discount_on_life_loss_(spec.config["zero_discount_on_life_loss"_]),
-        gray_scale_(spec.config["gray_scale"_]),
-        episodic_life_(spec.config["episodic_life"_]),
-        use_inter_area_resize_(spec.config["use_inter_area_resize"_]),
+        reward_clip_(spec.config_["reward_clip"_]),
+        zero_discount_on_life_loss_(
+            spec.config_["zero_discount_on_life_loss"_]),
+        gray_scale_(spec.config_["gray_scale"_]),
+        episodic_life_(spec.config_["episodic_life"_]),
+        use_inter_area_resize_(spec.config_["use_inter_area_resize"_]),
         done_(true),
         raw_spec_({kRawHeight, kRawWidth, gray_scale_ ? 1 : 3}),
-        resize_spec_({spec.config["img_height"_], spec.config["img_width"_],
+        resize_spec_({spec.config_["img_height"_], spec.config_["img_width"_],
                       gray_scale_ ? 1 : 3}),
-        transpose_spec_({gray_scale_ ? 1 : 3, spec.config["img_height"_],
-                         spec.config["img_width"_]}),
+        transpose_spec_({gray_scale_ ? 1 : 3, spec.config_["img_height"_],
+                         spec.config_["img_width"_]}),
         resize_img_(resize_spec_),
-        dist_noop_(0, spec.config["noop_max"_] - 1),
-        rom_path_(GetRomPath(spec.config["base_path"_], spec.config["task"_])) {
+        dist_noop_(0, spec.config_["noop_max"_] - 1),
+        rom_path_(
+            GetRomPath(spec.config_["base_path"_], spec.config_["task"_])) {
     env_->setFloat("repeat_action_probability",
-                   spec.config["repeat_action_probability"_]);
+                   spec.config_["repeat_action_probability"_]);
     env_->setInt("random_seed", seed_);
     env_->loadROM(rom_path_);
     action_set_ = env_->getMinimalActionSet();
@@ -160,7 +162,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
       env_->act(static_cast<ale::Action>(1));
     }
     uint8_t* ale_screen_data = env_->getScreen().getArray();
-    auto* ptr = static_cast<uint8_t*>(maxpool_buf_[0].data());
+    auto* ptr = static_cast<uint8_t*>(maxpool_buf_[0].Data());
     if (gray_scale_) {
       env_->theOSystem->colourPalette().applyPaletteGrayscale(
           ptr, ale_screen_data, kRawSize);
@@ -184,7 +186,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
       done_ = env_->game_over();
       if (skip_id <= 2) {  // put final two frames in to maxpool buffer
         uint8_t* ale_screen_data = env_->getScreen().getArray();
-        auto* ptr = static_cast<uint8_t*>(maxpool_buf_[2 - skip_id].data());
+        auto* ptr = static_cast<uint8_t*>(maxpool_buf_[2 - skip_id].Data());
         if (gray_scale_) {
           env_->theOSystem->colourPalette().applyPaletteGrayscale(
               ptr, ale_screen_data, kRawSize);
@@ -253,21 +255,21 @@ class AtariEnv : public Env<AtariEnvSpec> {
    *   observation. Maybe there is only one?
    */
   void PushStack(bool push_all, bool maxpool) {
-    auto* ptr = static_cast<uint8_t*>(maxpool_buf_[0].data());
+    auto* ptr = static_cast<uint8_t*>(maxpool_buf_[0].Data());
     if (maxpool) {
-      auto* ptr1 = static_cast<uint8_t*>(maxpool_buf_[1].data());
-      for (std::size_t i = 0; i < maxpool_buf_[0].size; ++i) {
+      auto* ptr1 = static_cast<uint8_t*>(maxpool_buf_[1].Data());
+      for (std::size_t i = 0; i < maxpool_buf_[0].size_; ++i) {
         ptr[i] = std::max(ptr[i], ptr1[i]);
       }
     }
     Resize(maxpool_buf_[0], &resize_img_, use_inter_area_resize_);
     Array tgt = std::move(*stack_buf_.begin());
-    ptr = static_cast<uint8_t*>(tgt.data());
+    ptr = static_cast<uint8_t*>(tgt.Data());
     stack_buf_.pop_front();
     if (gray_scale_) {
       tgt.Assign(resize_img_);
     } else {
-      auto* ptr1 = static_cast<uint8_t*>(resize_img_.data());
+      auto* ptr1 = static_cast<uint8_t*>(resize_img_.Data());
       // tgt = resize_img_.transpose(1, 2, 0)
       // tgt[i, j, k] = resize_img_[j, k, i]
       std::size_t h = resize_img_.Shape(0);
@@ -280,11 +282,11 @@ class AtariEnv : public Env<AtariEnvSpec> {
         }
       }
     }
-    std::size_t size = tgt.size;
+    std::size_t size = tgt.size_;
     stack_buf_.push_back(std::move(tgt));
     if (push_all) {
       for (auto& s : stack_buf_) {
-        auto* ptr_s = static_cast<uint8_t*>(s.data());
+        auto* ptr_s = static_cast<uint8_t*>(s.Data());
         if (ptr != ptr_s) {
           memcpy(ptr_s, ptr, size);
         }

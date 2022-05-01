@@ -40,7 +40,7 @@ py::array ArrayToNumpy(const Array& a) {
   auto capsule = py::capsule(ptr, [](void* ptr) {
     delete reinterpret_cast<std::shared_ptr<char>*>(ptr);
   });
-  return py::array(a.Shape(), reinterpret_cast<dtype*>(a.data()), capsule);
+  return py::array(a.Shape(), reinterpret_cast<dtype*>(a.Data()), capsule);
 }
 
 template <typename dtype>
@@ -71,7 +71,7 @@ decltype(auto) ExportSpecs(const std::tuple<Spec...>& specs) {
   return std::apply(
       [&](auto&&... spec) {
         return std::make_tuple(
-            std::make_tuple(py::dtype::of<typename Spec::dtype>(), spec.shape,
+            std::make_tuple(py::dtype::of<typename Spec::dtype>(), spec.shape_,
                             spec.bounds, spec.elementwise_bounds)...);
       },
       specs);
@@ -95,9 +95,9 @@ class PyEnvSpec : public EnvSpec {
 
   explicit PyEnvSpec(const typename EnvSpec::ConfigValues& conf)
       : EnvSpec(conf),
-        py_state_spec(ExportSpecs(EnvSpec::state_spec)),
-        py_action_spec(ExportSpecs(EnvSpec::action_spec)),
-        py_config_values(EnvSpec::config.values()) {}
+        py_state_spec(ExportSpecs(EnvSpec::state_spec_)),
+        py_action_spec(ExportSpecs(EnvSpec::action_spec_)),
+        py_config_values(EnvSpec::config_.values()) {}
 };
 template <typename EnvSpec>
 std::vector<std::string> PyEnvSpec<EnvSpec>::py_config_keys =
@@ -110,7 +110,7 @@ std::vector<std::string> PyEnvSpec<EnvSpec>::py_action_keys =
     EnvSpec::ActionSpec::keys();
 template <typename EnvSpec>
 typename EnvSpec::ConfigValues PyEnvSpec<EnvSpec>::py_default_config_values =
-    EnvSpec::default_config.values();
+    EnvSpec::DEFAULT_CONFIG.values();
 
 /**
  * Bind specs to arrs, and return py::array in ret
@@ -162,7 +162,7 @@ class PyEnvPool : public EnvPool {
   void py_send(const std::vector<py::array>& action) {
     std::vector<Array> arr;
     arr.reserve(action.size());
-    ToArray(action, py_spec.action_spec, &arr);
+    ToArray(action, py_spec.action_spec_, &arr);
     py::gil_scoped_release release;
     EnvPool::Send(arr);  // delegate to the c++ api
   }
@@ -179,7 +179,7 @@ class PyEnvPool : public EnvPool {
     }
     std::vector<py::array> ret;
     ret.reserve(EnvPool::State::size);
-    ToNumpy(arr, py_spec.state_spec, &ret);
+    ToNumpy(arr, py_spec.state_spec_, &ret);
     return ret;
   }
 

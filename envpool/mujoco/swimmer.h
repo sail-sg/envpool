@@ -32,32 +32,32 @@ class SwimmerEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
-        "max_episode_steps"_.bind(1000), "reward_threshold"_.bind(360.0),
-        "frame_skip"_.bind(4), "post_constraint"_.bind(true),
-        "exclude_current_positions_from_observation"_.bind(true),
-        "forward_reward_weight"_.bind(1.0), "ctrl_cost_weight"_.bind(1e-4),
-        "reset_noise_scale"_.bind(0.1));
+        "max_episode_steps"_.Bind(1000), "reward_threshold"_.Bind(360.0),
+        "frame_skip"_.Bind(4), "post_constraint"_.Bind(true),
+        "exclude_current_positions_from_observation"_.Bind(true),
+        "forward_reward_weight"_.Bind(1.0), "ctrl_cost_weight"_.Bind(1e-4),
+        "reset_noise_scale"_.Bind(0.1));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
     bool no_pos = conf["exclude_current_positions_from_observation"_];
-    return MakeDict("obs"_.bind(Spec<mjtNum>({no_pos ? 8 : 10}, {-inf, inf})),
+    return MakeDict("obs"_.Bind(Spec<mjtNum>({no_pos ? 8 : 10}, {-inf, inf})),
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.bind(Spec<mjtNum>({5})),
-                    "info:qvel0"_.bind(Spec<mjtNum>({5})),
+                    "info:qpos0"_.Bind(Spec<mjtNum>({5})),
+                    "info:qvel0"_.Bind(Spec<mjtNum>({5})),
 #endif
-                    "info:reward_fwd"_.bind(Spec<mjtNum>({-1})),
-                    "info:reward_ctrl"_.bind(Spec<mjtNum>({-1})),
-                    "info:x_position"_.bind(Spec<mjtNum>({-1})),
-                    "info:y_position"_.bind(Spec<mjtNum>({-1})),
-                    "info:distance_from_origin"_.bind(Spec<mjtNum>({-1})),
-                    "info:x_velocity"_.bind(Spec<mjtNum>({-1})),
-                    "info:y_velocity"_.bind(Spec<mjtNum>({-1})));
+                    "info:reward_fwd"_.Bind(Spec<mjtNum>({-1})),
+                    "info:reward_ctrl"_.Bind(Spec<mjtNum>({-1})),
+                    "info:x_position"_.Bind(Spec<mjtNum>({-1})),
+                    "info:y_position"_.Bind(Spec<mjtNum>({-1})),
+                    "info:distance_from_origin"_.Bind(Spec<mjtNum>({-1})),
+                    "info:x_velocity"_.Bind(Spec<mjtNum>({-1})),
+                    "info:y_velocity"_.Bind(Spec<mjtNum>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 2}, {-1.0, 1.0})));
+    return MakeDict("action"_.Bind(Spec<mjtNum>({-1, 2}, {-1.0, 1.0})));
   }
 };
 
@@ -72,14 +72,14 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
  public:
   SwimmerEnv(const Spec& spec, int env_id)
       : Env<SwimmerEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/swimmer.xml",
-                  spec.config["frame_skip"_], spec.config["post_constraint"_],
-                  spec.config["max_episode_steps"_]),
-        no_pos_(spec.config["exclude_current_positions_from_observation"_]),
-        ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
-        forward_reward_weight_(spec.config["forward_reward_weight"_]),
-        dist_(-spec.config["reset_noise_scale"_],
-              spec.config["reset_noise_scale"_]) {}
+        MujocoEnv(spec.config_["base_path"_] + "/mujoco/assets/swimmer.xml",
+                  spec.config_["frame_skip"_], spec.config_["post_constraint"_],
+                  spec.config_["max_episode_steps"_]),
+        no_pos_(spec.config_["exclude_current_positions_from_observation"_]),
+        ctrl_cost_weight_(spec.config_["ctrl_cost_weight"_]),
+        forward_reward_weight_(spec.config_["forward_reward_weight"_]),
+        dist_(-spec.config_["reset_noise_scale"_],
+              spec.config_["reset_noise_scale"_]) {}
 
   void MujocoResetModel() override {
     for (int i = 0; i < model_->nq; ++i) {
@@ -101,7 +101,7 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
 
   void Step(const Action& action) override {
     // step
-    mjtNum* act = static_cast<mjtNum*>(action["action"_].data());
+    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
     mjtNum x_before = data_->qpos[0];
     mjtNum y_before = data_->qpos[1];
     MujocoStep(act);
@@ -130,7 +130,7 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
     State state = Allocate();
     state["reward"_] = reward;
     // obs
-    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].data());
+    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());
     for (int i = no_pos_ ? 2 : 0; i < model_->nq; ++i) {
       *(obs++) = data_->qpos[i];
     }

@@ -21,7 +21,7 @@
 #include <iostream>
 
 TEST(DictTest, Keys) {
-  auto d = MakeDict("abc"_.bind(0.), "xyz"_.bind(0.), "ijk"_.bind(1));
+  auto d = MakeDict("abc"_.Bind(0.), "xyz"_.Bind(0.), "ijk"_.Bind(1));
   auto keys = decltype(d)::static_keys();
   auto dkeys = d.keys();
   EXPECT_EQ(dkeys[0], "abc");
@@ -33,7 +33,7 @@ TEST(DictTest, Keys) {
 }
 
 TEST(DictTest, Values) {
-  auto d = MakeDict("abc"_.bind(0.), "xyz"_.bind(0.), "ijk"_.bind(1));
+  auto d = MakeDict("abc"_.Bind(0.), "xyz"_.Bind(0.), "ijk"_.Bind(1));
   auto values = d.values();
   auto int_vector = d.values<int>();
   EXPECT_EQ(std::get<0>(values), 0.);
@@ -45,14 +45,14 @@ TEST(DictTest, Values) {
 }
 
 TEST(DictTest, Lookup) {
-  auto d = MakeDict("abc"_.bind(0.), "xyz"_.bind(0.), "ijk"_.bind(1));
+  auto d = MakeDict("abc"_.Bind(0.), "xyz"_.Bind(0.), "ijk"_.Bind(1));
   EXPECT_EQ(d["abc"_], 0.);
   EXPECT_EQ(d["xyz"_], 0.);
   EXPECT_EQ(d["ijk"_], 1);
 }
 
 TEST(DictTest, Modification) {
-  auto d = MakeDict("abc"_.bind(0.), "xyz"_.bind("123"), "ijk"_.bind(1));
+  auto d = MakeDict("abc"_.Bind(0.), "xyz"_.Bind("123"), "ijk"_.Bind(1));
   EXPECT_EQ(d["abc"_], 0.);
   EXPECT_EQ(d["xyz"_], "123");
   EXPECT_EQ(d["ijk"_], 1);

@@ -32,17 +32,17 @@ namespace toy_text {
 class FrozenLakeEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.bind(100),
-                    "reward_threshold"_.bind(0.7), "size"_.bind(4));
+    return MakeDict("max_episode_steps"_.Bind(100),
+                    "reward_threshold"_.Bind(0.7), "size"_.Bind(4));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     int size = conf["size"_];
-    return MakeDict("obs"_.bind(Spec<int>({-1}, {0, size * size - 1})));
+    return MakeDict("obs"_.Bind(Spec<int>({-1}, {0, size * size - 1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<int>({-1}, {0, 3})));
+    return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 3})));
   }
 };
 
@@ -58,8 +58,8 @@ class FrozenLakeEnv : public Env<FrozenLakeEnvSpec> {
  public:
   FrozenLakeEnv(const Spec& spec, int env_id)
       : Env<FrozenLakeEnvSpec>(spec, env_id),
-        size_(spec.config["size"_]),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
+        size_(spec.config_["size"_]),
+        max_episode_steps_(spec.config_["max_episode_steps"_]),
         dist_(-1, 1),
         done_(true) {
     if (size_ != 8) {

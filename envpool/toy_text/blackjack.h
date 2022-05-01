@@ -32,15 +32,15 @@ namespace toy_text {
 class BlackjackEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("natural"_.bind(false), "sab"_.bind(true));
+    return MakeDict("natural"_.Bind(false), "sab"_.Bind(true));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs"_.bind(Spec<int>({3}, {0, 31})));
+    return MakeDict("obs"_.Bind(Spec<int>({3}, {0, 31})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<int>({-1}, {0, 1})));
+    return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 1})));
   }
 };
 
@@ -56,8 +56,8 @@ class BlackjackEnv : public Env<BlackjackEnvSpec> {
  public:
   BlackjackEnv(const Spec& spec, int env_id)
       : Env<BlackjackEnvSpec>(spec, env_id),
-        natural_(spec.config["natural"_]),
-        sab_(spec.config["sab"_]),
+        natural_(spec.config_["natural"_]),
+        sab_(spec.config_["sab"_]),
         dist_(1, 13),
         done_(true) {}
 

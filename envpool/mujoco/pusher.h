@@ -32,28 +32,28 @@ class PusherEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
-        "max_episode_steps"_.bind(100), "reward_threshold"_.bind(0.0),
-        "frame_skip"_.bind(5), "post_constraint"_.bind(true),
-        "ctrl_cost_weight"_.bind(0.1), "dist_cost_weight"_.bind(1.0),
-        "near_cost_weight"_.bind(0.5), "reset_qvel_scale"_.bind(0.005),
-        "cylinder_x_min"_.bind(-0.3), "cylinder_x_max"_.bind(0.0),
-        "cylinder_y_min"_.bind(-0.2), "cylinder_y_max"_.bind(0.2),
-        "cylinder_dist_min"_.bind(0.17));
+        "max_episode_steps"_.Bind(100), "reward_threshold"_.Bind(0.0),
+        "frame_skip"_.Bind(5), "post_constraint"_.Bind(true),
+        "ctrl_cost_weight"_.Bind(0.1), "dist_cost_weight"_.Bind(1.0),
+        "near_cost_weight"_.Bind(0.5), "reset_qvel_scale"_.Bind(0.005),
+        "cylinder_x_min"_.Bind(-0.3), "cylinder_x_max"_.Bind(0.0),
+        "cylinder_y_min"_.Bind(-0.2), "cylinder_y_max"_.Bind(0.2),
+        "cylinder_dist_min"_.Bind(0.17));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
-    return MakeDict("obs"_.bind(Spec<mjtNum>({23}, {-inf, inf})),
+    return MakeDict("obs"_.Bind(Spec<mjtNum>({23}, {-inf, inf})),
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.bind(Spec<mjtNum>({11})),
-                    "info:qvel0"_.bind(Spec<mjtNum>({11})),
+                    "info:qpos0"_.Bind(Spec<mjtNum>({11})),
+                    "info:qvel0"_.Bind(Spec<mjtNum>({11})),
 #endif
-                    "info:reward_dist"_.bind(Spec<mjtNum>({-1})),
-                    "info:reward_ctrl"_.bind(Spec<mjtNum>({-1})));
+                    "info:reward_dist"_.Bind(Spec<mjtNum>({-1})),
+                    "info:reward_ctrl"_.Bind(Spec<mjtNum>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 7}, {-2.0, 2.0})));
+    return MakeDict("action"_.Bind(Spec<mjtNum>({-1, 7}, {-2.0, 2.0})));
   }
 };
 
@@ -68,19 +68,19 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
  public:
   PusherEnv(const Spec& spec, int env_id)
       : Env<PusherEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/pusher.xml",
-                  spec.config["frame_skip"_], spec.config["post_constraint"_],
-                  spec.config["max_episode_steps"_]),
-        ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
-        dist_cost_weight_(spec.config["dist_cost_weight"_]),
-        near_cost_weight_(spec.config["near_cost_weight"_]),
-        cylinder_dist_min_(spec.config["cylinder_dist_min"_]),
-        dist_qpos_x_(spec.config["cylinder_x_min"_],
-                     spec.config["cylinder_x_max"_]),
-        dist_qpos_y_(spec.config["cylinder_y_min"_],
-                     spec.config["cylinder_y_max"_]),
-        dist_qvel_(-spec.config["reset_qvel_scale"_],
-                   spec.config["reset_qvel_scale"_]) {}
+        MujocoEnv(spec.config_["base_path"_] + "/mujoco/assets/pusher.xml",
+                  spec.config_["frame_skip"_], spec.config_["post_constraint"_],
+                  spec.config_["max_episode_steps"_]),
+        ctrl_cost_weight_(spec.config_["ctrl_cost_weight"_]),
+        dist_cost_weight_(spec.config_["dist_cost_weight"_]),
+        near_cost_weight_(spec.config_["near_cost_weight"_]),
+        cylinder_dist_min_(spec.config_["cylinder_dist_min"_]),
+        dist_qpos_x_(spec.config_["cylinder_x_min"_],
+                     spec.config_["cylinder_x_max"_]),
+        dist_qpos_y_(spec.config_["cylinder_y_min"_],
+                     spec.config_["cylinder_y_max"_]),
+        dist_qvel_(-spec.config_["reset_qvel_scale"_],
+                   spec.config_["reset_qvel_scale"_]) {}
 
   void MujocoResetModel() override {
     for (int i = 0; i < model_->nq - 4; ++i) {
@@ -114,7 +114,7 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
 
   void Step(const Action& action) override {
     // step
-    mjtNum* act = static_cast<mjtNum*>(action["action"_].data());
+    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
     mjtNum near_cost = GetDist(30, 33);
     mjtNum dist_cost = GetDist(33, 36);
     MujocoStep(act);
@@ -145,7 +145,7 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
     State state = Allocate();
     state["reward"_] = reward;
     // obs
-    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].data());
+    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());
     for (int i = 0; i < 7; ++i) {
       *(obs++) = data_->qpos[i];
     }

@@ -32,16 +32,16 @@ namespace toy_text {
 class TaxiEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.bind(200),
-                    "reward_threshold"_.bind(8.0));
+    return MakeDict("max_episode_steps"_.Bind(200),
+                    "reward_threshold"_.Bind(8.0));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs"_.bind(Spec<int>({-1}, {0, 499})));
+    return MakeDict("obs"_.Bind(Spec<int>({-1}, {0, 499})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<int>({-1}, {0, 5})));
+    return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 5})));
   }
 };
 
@@ -58,7 +58,7 @@ class TaxiEnv : public Env<TaxiEnvSpec> {
  public:
   TaxiEnv(const Spec& spec, int env_id)
       : Env<TaxiEnvSpec>(spec, env_id),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
+        max_episode_steps_(spec.config_["max_episode_steps"_]),
         dist_car_(0, 3),
         dist_loc_(0, 4),
         done_(true),

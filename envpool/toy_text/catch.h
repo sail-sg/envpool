@@ -29,16 +29,16 @@ namespace toy_text {
 class CatchEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("height"_.bind(10), "width"_.bind(5));
+    return MakeDict("height"_.Bind(10), "width"_.Bind(5));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs"_.bind(
+    return MakeDict("obs"_.Bind(
         Spec<float>({conf["height"_], conf["width"_]}, {0.0F, 1.0F})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<int>({-1}, {0, 2})));
+    return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 2})));
   }
 };
 
@@ -53,8 +53,8 @@ class CatchEnv : public Env<CatchEnvSpec> {
  public:
   CatchEnv(const Spec& spec, int env_id)
       : Env<CatchEnvSpec>(spec, env_id),
-        height_(spec.config["height"_]),
-        width_(spec.config["width"_]),
+        height_(spec.config_["height"_]),
+        width_(spec.config_["width"_]),
         dist_(0, width_ - 1),
         done_(true) {}
 

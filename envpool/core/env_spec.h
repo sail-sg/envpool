@@ -23,19 +23,19 @@
 #include "envpool/core/dict.h"
 
 auto common_config =
-    MakeDict("num_envs"_.bind(1), "batch_size"_.bind(0), "num_threads"_.bind(0),
-             "max_num_players"_.bind(1), "thread_affinity_offset"_.bind(-1),
-             "base_path"_.bind(std::string("envpool")), "seed"_.bind(42));
+    MakeDict("num_envs"_.Bind(1), "batch_size"_.Bind(0), "num_threads"_.Bind(0),
+             "max_num_players"_.Bind(1), "thread_affinity_offset"_.Bind(-1),
+             "base_path"_.Bind(std::string("envpool")), "seed"_.Bind(42));
 // Note: this action order is hardcoded in async_envpool Send function
 // and env ParseAction function for performance
-auto common_action_spec = MakeDict("env_id"_.bind(Spec<int>({})),
-                                   "players.env_id"_.bind(Spec<int>({-1})));
+auto common_action_spec = MakeDict("env_id"_.Bind(Spec<int>({})),
+                                   "players.env_id"_.Bind(Spec<int>({-1})));
 // Note: this state order is hardcoded in async_envpool Recv function
 auto common_state_spec =
-    MakeDict("info:env_id"_.bind(Spec<int>({})),
-             "info:players.env_id"_.bind(Spec<int>({-1})),
-             "elapsed_step"_.bind(Spec<int>({})), "done"_.bind(Spec<bool>({})),
-             "reward"_.bind(Spec<float>({-1})));
+    MakeDict("info:env_id"_.Bind(Spec<int>({})),
+             "info:players.env_id"_.Bind(Spec<int>({-1})),
+             "elapsed_step"_.Bind(Spec<int>({})), "done"_.Bind(Spec<bool>({})),
+             "reward"_.Bind(Spec<float>({-1})));
 
 /**
  * EnvSpec funciton, it constructs the env spec when a Config is passed.
@@ -54,23 +54,23 @@ class EnvSpec {
   using ActionKeys = typename ActionSpec::Keys;
 
   // For C++
-  Config config;
-  StateSpec state_spec;
-  ActionSpec action_spec;
-  static inline const Config default_config =
+  Config config_;
+  StateSpec state_spec_;
+  ActionSpec action_spec_;
+  static inline const Config DEFAULT_CONFIG =
       ConcatDict(common_config, EnvFns::DefaultConfig());
 
-  EnvSpec() : EnvSpec(default_config) {}
+  EnvSpec() : EnvSpec(DEFAULT_CONFIG) {}
   explicit EnvSpec(const ConfigValues& conf)
-      : config(conf),
-        state_spec(ConcatDict(common_state_spec, EnvFns::StateSpec(config))),
-        action_spec(
-            ConcatDict(common_action_spec, EnvFns::ActionSpec(config))) {
-    if (config["batch_size"_] > config["num_envs"_]) {
+      : config_(conf),
+        state_spec_(ConcatDict(common_state_spec, EnvFns::StateSpec(config_))),
+        action_spec_(
+            ConcatDict(common_action_spec, EnvFns::ActionSpec(config_))) {
+    if (config_["batch_size"_] > config_["num_envs"_]) {
       throw std::invalid_argument(
           "It is required that batch_size <= num_envs, got num_envs = " +
-          std::to_string(config["num_envs"_]) +
-          ", batch_size = " + std::to_string(config["batch_size"_]));
+          std::to_string(config_["num_envs"_]) +
+          ", batch_size = " + std::to_string(config_["batch_size"_]));
     }
   }
 };

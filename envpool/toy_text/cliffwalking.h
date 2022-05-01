@@ -34,11 +34,11 @@ class CliffWalkingEnvFns {
   static decltype(auto) DefaultConfig() { return MakeDict(); }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs"_.bind(Spec<int>({-1}, {0, 47})));
+    return MakeDict("obs"_.Bind(Spec<int>({-1}, {0, 47})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<int>({-1}, {0, 3})));
+    return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 3})));
   }
 };
 

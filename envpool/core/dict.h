@@ -48,7 +48,7 @@ class Key {
                                                             '\0'};
   static constexpr const inline std::string_view str_view{_str, sizeof...(C)};
   template <typename Type>
-  static constexpr inline auto bind(Type&& v) {
+  static constexpr inline auto Bind(Type&& v) {
     return Value<Key, Type>(std::forward<Type>(v));
   }
   static inline std::string str() { return {str_view.data(), str_view.size()}; }

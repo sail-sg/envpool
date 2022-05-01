@@ -29,17 +29,17 @@ namespace classic_control {
 class MountainCarEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.bind(200),
-                    "reward_threshold"_.bind(-110.0));
+    return MakeDict("max_episode_steps"_.Bind(200),
+                    "reward_threshold"_.Bind(-110.0));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict(
-        "obs"_.bind(Spec<float>({2}, {{-1.2, -0.07}, {0.6, 0.07}})));
+        "obs"_.Bind(Spec<float>({2}, {{-1.2, -0.07}, {0.6, 0.07}})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<int>({-1}, {0, 2})));
+    return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 2})));
   }
 };
 
@@ -62,7 +62,7 @@ class MountainCarEnv : public Env<MountainCarEnvSpec> {
  public:
   MountainCarEnv(const Spec& spec, int env_id)
       : Env<MountainCarEnvSpec>(spec, env_id),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
+        max_episode_steps_(spec.config_["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
         dist_(-0.6, -0.4),
         done_(true) {}

@@ -69,7 +69,7 @@ TEST(StateBufferQueueTest, SinglePlayerSync) {
     }
     std::vector<Array> out = queue.Wait();
     EXPECT_EQ(out[0].Shape(0), batch);
-    auto* ptr = reinterpret_cast<int*>(out[0].data());
+    auto* ptr = reinterpret_cast<int*>(out[0].Data());
     for (std::size_t i = 0; i < batch; ++i) {
       EXPECT_EQ(ptr[order[i]], i);
     }
@@ -85,7 +85,7 @@ TEST(StateBufferQueueTest, SinglePlayerSync) {
     }
     std::vector<Array> out = queue.Wait(batch - env_id.size());
     EXPECT_EQ(out[0].Shape(0), env_id.size());
-    auto* ptr = reinterpret_cast<int*>(out[0].data());
+    auto* ptr = reinterpret_cast<int*>(out[0].Data());
     for (std::size_t i = 0; i < env_id.size(); ++i) {
       EXPECT_EQ(ptr[i], env_id[i]);
     }

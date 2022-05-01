@@ -63,18 +63,18 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
 
   explicit AsyncEnvPool(const Spec& spec)
       : EnvPool<Spec>(spec),
-        num_envs_(spec.config["num_envs"_]),
-        batch_(spec.config["batch_size"_] <= 0 ? num_envs_
-                                               : spec.config["batch_size"_]),
-        max_num_players_(spec.config["max_num_players"_]),
-        num_threads_(spec.config["num_threads"_]),
+        num_envs_(spec.config_["num_envs"_]),
+        batch_(spec.config_["batch_size"_] <= 0 ? num_envs_
+                                               : spec.config_["batch_size"_]),
+        max_num_players_(spec.config_["max_num_players"_]),
+        num_threads_(spec.config_["num_threads"_]),
         is_sync_(batch_ == num_envs_ && max_num_players_ == 1),
         stop_(0),
         stepping_env_num_(0),
         action_buffer_queue_(new ActionBufferQueue(num_envs_)),
         state_buffer_queue_(
             new StateBufferQueue(batch_, num_envs_, max_num_players_,
-                                 spec.state_spec.template values<ShapeSpec>())),
+                                 spec.state_spec_.template values<ShapeSpec>())),
         envs_(num_envs_) {
     std::size_t processor_count = std::thread::hardware_concurrency();
     ThreadPool init_pool(std::min(processor_count, num_envs_));
@@ -103,7 +103,7 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
         }
       });
     }
-    std::size_t thread_affinity_offset = spec.config["thread_affinity_offset"_];
+    std::size_t thread_affinity_offset = spec.config_["thread_affinity_offset"_];
     if (thread_affinity_offset >= 0) {
       for (std::size_t tid = 0; tid < num_threads_; ++tid) {
         cpu_set_t cpuset;
@@ -129,7 +129,7 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
   }
 
   void Send(const std::vector<Array>& action) override {
-    int* env_id = static_cast<int*>(action[0].data());
+    int* env_id = static_cast<int*>(action[0].Data());
     int shared_offset = action[0].Shape(0);
     std::vector<ActionSlice> actions;
     std::shared_ptr<std::vector<Array>> action_batch =
