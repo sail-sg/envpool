@@ -6,6 +6,7 @@
 ---
 
 [![PyPI](https://img.shields.io/pypi/v/envpool)](https://pypi.org/project/envpool/)
+[![Downloads](https://static.pepy.tech/personalized-badge/envpool?period=total&units=international_system&left_color=grey&right_color=orange&left_text=PyPI%20Download)](https://pepy.tech/project/envpool)
 [![Read the Docs](https://img.shields.io/readthedocs/envpool)](https://envpool.readthedocs.io/)
 [![Unittest](https://github.com/sail-sg/envpool/workflows/Bazel%20Build%20and%20Test/badge.svg?branch=master)](https://github.com/sail-sg/envpool/actions)
 [![GitHub issues](https://img.shields.io/github/issues/sail-sg/envpool)](https://github.com/sail-sg/envpool/issues)
