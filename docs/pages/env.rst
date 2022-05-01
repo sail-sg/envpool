@@ -169,9 +169,9 @@ available to see on the python side:
 
         template <typename Config>
         static decltype(auto) ActionSpec(const Config& conf) {
-          return MakeDict("action"_.bind(Spec<float>({-1, 4}, {-2.0f, 2.0f})));
+          return MakeDict("action"_.bind(Spec<float>({-1, 4}, {-2.0, 2.0})));
           // or remove -1, no difference in single-player env
-          // return MakeDict("action"_.bind(Spec<float>({4}, {-2.0f, 2.0f})));
+          // return MakeDict("action"_.bind(Spec<float>({4}, {-2.0, 2.0})));
         }
 
 .. note ::
