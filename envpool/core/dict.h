@@ -61,7 +61,7 @@ inline constexpr auto operator""_() {  // NOLINT
 
 template <
     typename Key, typename Keys, typename TupleOrVector,
-    std::enable_if_t<is_tuple_v<std::decay_t<TupleOrVector>>, bool> = true>
+    std::enable_if_t<IS_TUPLE_V<std::decay_t<TupleOrVector>>, bool> = true>
 inline decltype(auto) Take(const Key& key, TupleOrVector&& values) {
   constexpr std::size_t index = Index<Key, Keys>::value;
   return std::get<index>(std::forward<TupleOrVector>(values));
@@ -69,14 +69,14 @@ inline decltype(auto) Take(const Key& key, TupleOrVector&& values) {
 
 template <
     typename Key, typename Keys, typename TupleOrVector,
-    std::enable_if_t<is_vector_v<std::decay_t<TupleOrVector>>, bool> = true>
+    std::enable_if_t<IS_VECTOR_V<std::decay_t<TupleOrVector>>, bool> = true>
 inline decltype(auto) Take(const Key& key, TupleOrVector&& values) {
   constexpr std::size_t index = Index<Key, Keys>::value;
   return std::forward<TupleOrVector>(values).at(index);
 }
 
 template <typename StringKeys, typename Vector,
-          std::enable_if_t<is_vector_v<std::decay_t<Vector>>, bool> = true>
+          std::enable_if_t<IS_VECTOR_V<std::decay_t<Vector>>, bool> = true>
 class NamedVector {
  protected:
   Vector* values_;
@@ -113,7 +113,7 @@ class NamedVector {
 };
 
 template <typename StringKeys, typename TupleOrVector,
-          typename = std::enable_if_t<is_tuple_v<StringKeys>>>
+          typename = std::enable_if_t<IS_TUPLE_V<StringKeys>>>
 class Dict : public std::decay_t<TupleOrVector> {
  public:
   using Values = std::decay_t<TupleOrVector>;
@@ -123,13 +123,13 @@ class Dict : public std::decay_t<TupleOrVector> {
   /**
    * Check that the size of values / keys tuple should match
    */
-  template <typename V = Values, std::enable_if_t<is_tuple_v<V>, bool> = true>
+  template <typename V = Values, std::enable_if_t<IS_TUPLE_V<V>, bool> = true>
   void Check() {
     static_assert(std::tuple_size_v<Keys> == std::tuple_size_v<Values>,
                   "Number of keys and values doesn't match");
   }
 
-  template <typename V = Values, std::enable_if_t<is_vector_v<V>, bool> = true>
+  template <typename V = Values, std::enable_if_t<IS_VECTOR_V<V>, bool> = true>
   void Check() {
     DCHECK_EQ(std::tuple_size<Keys>(), static_cast<V*>(this)->size())
         << "Size must match";
@@ -200,7 +200,7 @@ class Dict : public std::decay_t<TupleOrVector> {
    * This function is only enabled when Values is instantiation of std::tuple,
    * and when all elements in the values can be converted to Type
    */
-  template <typename Type, bool IsTuple = is_tuple_v<Values>,
+  template <typename Type, bool IsTuple = IS_TUPLE_V<Values>,
             std::enable_if_t<IsTuple, bool> = true,
             std::enable_if_t<all_convertible<Type, Values>::value, bool> = true>
   [[nodiscard]] std::vector<Type> values() const {
@@ -215,13 +215,13 @@ class Dict : public std::decay_t<TupleOrVector> {
    * This function is only enabled when Values is an instantiation of
    * std::vector.
    */
-  template <typename Type, bool IsTuple = is_tuple_v<Values>,
+  template <typename Type, bool IsTuple = IS_TUPLE_V<Values>,
             std::enable_if_t<!IsTuple, bool> = true>
   std::vector<Type> values() const {
     return std::vector<Type>(this->begin(), this->end());
   }
 
-  template <class F, bool IsTuple = is_tuple_v<Values>,
+  template <class F, bool IsTuple = IS_TUPLE_V<Values>,
             std::enable_if_t<IsTuple, bool> = true>
   decltype(auto) apply(F&& f) const {
     ApplyZip(f, Keys(), *this, std::make_index_sequence<size>{});
@@ -242,9 +242,9 @@ decltype(auto) MakeDict(Value... v) {
 
 template <
     typename DictA, typename DictB,
-    typename AllKeys = tuple_cat_t<typename DictA::Keys, typename DictB::Keys>,
-    std::enable_if_t<is_tuple_v<typename DictA::Values> &&
-                         is_tuple_v<typename DictB::Values>,
+    typename AllKeys = TupleCatT<typename DictA::Keys, typename DictB::Keys>,
+    std::enable_if_t<IS_TUPLE_V<typename DictA::Values> &&
+                         IS_TUPLE_V<typename DictB::Values>,
                      bool> = true>
 decltype(auto) ConcatDict(const DictA& a, const DictB& b) {
   auto c = std::tuple_cat(static_cast<const typename DictA::Values&>(a),
@@ -254,8 +254,8 @@ decltype(auto) ConcatDict(const DictA& a, const DictB& b) {
 
 template <
     typename DictA, typename DictB,
-    typename AllKeys = tuple_cat_t<typename DictA::Keys, typename DictB::Keys>,
-    std::enable_if_t<is_vector_v<DictA> && is_vector_v<DictB>, bool> = true,
+    typename AllKeys = TupleCatT<typename DictA::Keys, typename DictB::Keys>,
+    std::enable_if_t<IS_VECTOR_V<DictA> && IS_VECTOR_V<DictB>, bool> = true,
     std::enable_if_t<
         std::is_same_v<typename DictA::Values, typename DictA::Values>, bool> =
         true>
