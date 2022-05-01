@@ -45,8 +45,8 @@ py::array ArrayToNumpy(const Array& a) {
 
 template <typename dtype>
 Array NumpyToArray(const py::array& arr) {
-  using array_t = py::array_t<dtype, py::array::c_style | py::array::forcecast>;
-  array_t arr_t(arr);
+  using ArrayT = py::array_t<dtype, py::array::c_style | py::array::forcecast>;
+  ArrayT arr_t(arr);
   ShapeSpec spec(arr_t.itemsize(),
                  std::vector<int>(arr_t.shape(), arr_t.shape() + arr_t.ndim()));
   return Array(spec, reinterpret_cast<char*>(arr_t.mutable_data()));
@@ -54,8 +54,8 @@ Array NumpyToArray(const py::array& arr) {
 
 template <typename dtype>
 Array NumpyToArrayIncRef(const py::array& arr) {
-  using array_t = py::array_t<dtype, py::array::c_style | py::array::forcecast>;
-  auto* arr_ptr = new array_t(arr);
+  using ArrayT = py::array_t<dtype, py::array::c_style | py::array::forcecast>;
+  auto* arr_ptr = new ArrayT(arr);
   ShapeSpec spec(
       arr_ptr->itemsize(),
       std::vector<int>(arr_ptr->shape(), arr_ptr->shape() + arr_ptr->ndim()));
@@ -80,13 +80,13 @@ decltype(auto) ExportSpecs(const std::tuple<Spec...>& specs) {
 template <typename EnvSpec>
 class PyEnvSpec : public EnvSpec {
  public:
-  using state_spec_t =
+  using StateSpecT =
       decltype(ExportSpecs(std::declval<typename EnvSpec::StateSpec>()));
-  using action_spec_t =
+  using ActionSpecT =
       decltype(ExportSpecs(std::declval<typename EnvSpec::ActionSpec>()));
 
-  state_spec_t py_state_spec;
-  action_spec_t py_action_spec;
+  StateSpecT py_state_spec;
+  ActionSpecT py_action_spec;
   typename EnvSpec::ConfigValues py_config_values;
   static std::vector<std::string> py_config_keys;
   static std::vector<std::string> py_state_keys;
@@ -159,7 +159,7 @@ class PyEnvPool : public EnvPool {
   /**
    * py api
    */
-  void py_send(const std::vector<py::array>& action) {
+  void PySend(const std::vector<py::array>& action) {
     std::vector<Array> arr;
     arr.reserve(action.size());
     ToArray(action, py_spec.action_spec_, &arr);
@@ -170,7 +170,7 @@ class PyEnvPool : public EnvPool {
   /**
    * py api
    */
-  std::vector<py::array> py_recv() {
+  std::vector<py::array> PyRecv() {
     std::vector<Array> arr;
     {
       py::gil_scoped_release release;
@@ -186,7 +186,7 @@ class PyEnvPool : public EnvPool {
   /**
    * py api
    */
-  void py_reset(const py::array& env_ids) {
+  void PyReset(const py::array& env_ids) {
     // PyArray arr = PyArray::From<int>(env_ids);
     auto arr = NumpyToArray<int>(env_ids);
     py::gil_scoped_release release;
@@ -222,9 +222,9 @@ py::object abc_meta = py::module::import("abc").attr("ABCMeta");
   py::class_<ENVPOOL>(MODULE, "_" #ENVPOOL, py::metaclass(abc_meta)) \
       .def(py::init<const SPEC&>())                                  \
       .def_readonly("_spec", &ENVPOOL::py_spec)                      \
-      .def("_recv", &ENVPOOL::py_recv)                               \
-      .def("_send", &ENVPOOL::py_send)                               \
-      .def("_reset", &ENVPOOL::py_reset)                             \
+      .def("_recv", &ENVPOOL::PyRecv)                                \
+      .def("_send", &ENVPOOL::PySend)                                \
+      .def("_reset", &ENVPOOL::PyReset)                              \
       .def_readonly_static("_state_keys", &ENVPOOL::py_state_keys)   \
       .def_readonly_static("_action_keys", &ENVPOOL::py_action_keys);
 
