@@ -83,7 +83,7 @@ class NamedVector {
 
  public:
   using Keys = StringKeys;
-  constexpr static std::size_t size = std::tuple_size<Keys>::value;
+  constexpr static std::size_t SIZE = std::tuple_size<Keys>::value;
   explicit NamedVector(Vector* values) : values_(values) {}
   NamedVector(const Keys& keys, Vector* values) : values_(values) {}
   template <typename Key,
@@ -118,7 +118,7 @@ class Dict : public std::decay_t<TupleOrVector> {
  public:
   using Values = std::decay_t<TupleOrVector>;
   using Keys = StringKeys;
-  constexpr static std::size_t size = std::tuple_size<Keys>::value;
+  constexpr static std::size_t SIZE = std::tuple_size<Keys>::value;
 
   /**
    * Check that the size of values / keys tuple should match
@@ -224,7 +224,7 @@ class Dict : public std::decay_t<TupleOrVector> {
   template <class F, bool IsTuple = IS_TUPLE_V<Values>,
             std::enable_if_t<IsTuple, bool> = true>
   decltype(auto) Apply(F&& f) const {
-    ApplyZip(f, Keys(), *this, std::make_index_sequence<size>{});
+    ApplyZip(f, Keys(), *this, std::make_index_sequence<SIZE>{});
   }
 };
 
@@ -260,8 +260,7 @@ template <
         std::is_same_v<typename DictA::Values, typename DictA::Values>, bool> =
         true>
 decltype(auto) ConcatDict(const DictA& a, const DictB& b) {
-  using value_type = typename DictA::Values::value_type;
-  std::vector<value_type> c;
+  std::vector<typename DictA::Values::value_type> c;
   c.insert(c.end(), a.begin(), a.end());
   c.insert(c.end(), b.begin(), b.end());
   return Dict<AllKeys, decltype(c)>(c);

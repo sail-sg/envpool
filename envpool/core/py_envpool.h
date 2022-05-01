@@ -178,7 +178,7 @@ class PyEnvPool : public EnvPool {
       DCHECK_EQ(arr.size(), std::tuple_size_v<typename EnvPool::State::Keys>);
     }
     std::vector<py::array> ret;
-    ret.reserve(EnvPool::State::size);
+    ret.reserve(EnvPool::State::SIZE);
     ToNumpy(arr, py_spec.state_spec_, &ret);
     return ret;
   }
