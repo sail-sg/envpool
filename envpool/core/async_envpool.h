@@ -96,9 +96,9 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
           if (stop_ == 1) {
             break;
           }
-          int env_id = raw_action.env_id;
-          int order = raw_action.order;
-          bool reset = raw_action.force_reset || envs_[env_id]->IsDone();
+          int env_id = raw_action.env_id_;
+          int order = raw_action.order_;
+          bool reset = raw_action.force_reset_ || envs_[env_id]->IsDone();
           envs_[env_id]->EnvStep(state_buffer_queue_.get(), order, reset);
         }
       });
@@ -139,9 +139,9 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
       int eid = env_id[i];
       envs_[eid]->SetAction(action_batch, i);
       actions.emplace_back(ActionSlice{
-          .env_id = eid,
-          .order = is_sync_ ? i : -1,
-          .force_reset = false,
+          .env_id_ = eid,
+          .order_ = is_sync_ ? i : -1,
+          .force_reset_ = false,
       });
     }
     if (is_sync_) {
@@ -171,9 +171,9 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
     int shared_offset = env_ids.Shape(0);
     std::vector<ActionSlice> actions(shared_offset);
     for (int i = 0; i < shared_offset; ++i) {
-      actions[i].force_reset = true;
-      actions[i].env_id = env_ids[i];
-      actions[i].order = is_sync_ ? i : -1;
+      actions[i].force_reset_ = true;
+      actions[i].env_id_ = env_ids[i];
+      actions[i].order_ = is_sync_ ? i : -1;
     }
     if (is_sync_) {
       stepping_env_num_ += shared_offset;
