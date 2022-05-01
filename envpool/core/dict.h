@@ -231,7 +231,7 @@ class Dict : public std::decay_t<TupleOrVector> {
 /**
  * Make a dict which is actually an namedtuple in cpp
  * Syntax is like
- * auto d = MakeDict("abc"_.bind(0.), "xyz"_.bind(0.), "ijk"_.bind(1));
+ * auto d = MakeDict("abc"_.Bind(0.), "xyz"_.Bind(0.), "ijk"_.Bind(1));
  * The above makes a dict { "abc": 0., "xyz": 0., "ijk": 1 }
  */
 template <typename... Value>
