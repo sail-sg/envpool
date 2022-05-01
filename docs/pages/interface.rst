@@ -26,6 +26,13 @@ batched environments:
 * ``thread_affinity_offset (int)``: the start id of binding thread. ``-1``
   means not to use thread affinity in thread pool, and this is the default
   behavior;
+* ``reward_threshold (float)``: the reward threshold for solving this
+  environment; this option comes from ``env.spec.reward_threshold`` in
+  ``gym.Env``, while some environments may not have such an option;
+* ``gym_reset_return_info (bool)``: whether to return a tuple of
+  ``(obs, info)`` instead of only ``obs`` when calling reset in ``gym.Env``,
+  default to ``False``; this option is to adapt the newest version of gym's
+  interface;
 * other configurations such as ``img_height`` / ``img_width`` / ``stack_num``
   / ``frame_skip`` / ``noop_max`` in Atari env, ``reward_metric`` /
   ``lmp_save_dir`` in ViZDoom env, please refer to the corresponding pages.

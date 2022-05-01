@@ -154,9 +154,8 @@ class EnvPool(Protocol):
   ) -> List[np.ndarray]:
     """Convertion for input action."""
 
-  def _to(
-    self, state: List[np.ndarray], reset: bool
-  ) -> Union[TimeStep, Tuple[Any, np.ndarray, np.ndarray, Any]]:
+  def _to(self, state: List[np.ndarray], reset: bool,
+          return_info: bool) -> Union[TimeStep, Tuple]:
     """A switch of to_dm and to_gym for output state."""
 
   @property
@@ -195,7 +194,11 @@ class EnvPool(Protocol):
   ) -> None:
     """Envpool send wrapper."""
 
-  def recv(self, reset: bool = False) -> Union[TimeStep, Tuple]:
+  def recv(
+    self,
+    reset: bool = False,
+    return_info: bool = True,
+  ) -> Union[TimeStep, Tuple]:
     """Envpool recv wrapper."""
 
   def async_reset(self) -> None:
