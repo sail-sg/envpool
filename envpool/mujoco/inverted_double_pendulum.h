@@ -96,7 +96,7 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteObs(0.0f);
+    WriteState(0.0f);
   }
 
   void Step(const Action& action) override {
@@ -115,13 +115,13 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
     float reward = healthy_reward_ - dist_penalty - vel_penalty;
     ++elapsed_step_;
     done_ = !IsHealthy() || (elapsed_step_ >= max_episode_steps_);
-    WriteObs(reward);
+    WriteState(reward);
   }
 
  private:
   bool IsHealthy() { return data_->site_xpos[2] > healthy_z_max_; }
 
-  void WriteObs(float reward) {
+  void WriteState(float reward) {
     State state = Allocate();
     state["reward"_] = reward;
     // obs

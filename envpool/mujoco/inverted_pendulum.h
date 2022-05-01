@@ -90,7 +90,7 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteObs(0.0f);
+    WriteState(0.0f);
   }
 
   void Step(const Action& action) override {
@@ -100,7 +100,7 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
     // reward and done
     ++elapsed_step_;
     done_ = !IsHealthy() || (elapsed_step_ >= max_episode_steps_);
-    WriteObs(1.0f);
+    WriteState(1.0f);
   }
 
  private:
@@ -121,7 +121,7 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
     return true;
   }
 
-  void WriteObs(float reward) {
+  void WriteState(float reward) {
     State state = Allocate();
     state["reward"_] = reward;
     // obs

@@ -103,7 +103,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteObs(0.0f, 0, 0);
+    WriteState(0.0f, 0, 0);
   }
 
   void Step(const Action& action) override {
@@ -125,7 +125,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     // reward and done
     float reward = -dist_cost - ctrl_cost;
     done_ = (++elapsed_step_ >= max_episode_steps_);
-    WriteObs(reward, ctrl_cost, dist_cost);
+    WriteState(reward, ctrl_cost, dist_cost);
   }
 
  private:
@@ -135,7 +135,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     dist_z_ = data_->xpos[11] - data_->xpos[14];
   }
 
-  void WriteObs(float reward, mjtNum ctrl_cost, mjtNum dist_cost) {
+  void WriteState(float reward, mjtNum ctrl_cost, mjtNum dist_cost) {
     State state = Allocate();
     state["reward"_] = reward;
     // obs

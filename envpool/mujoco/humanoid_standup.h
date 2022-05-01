@@ -101,7 +101,7 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteObs(0.0f, 0, 0, 0);
+    WriteState(0.0f, 0, 0, 0);
   }
 
   void Step(const Action& action) override {
@@ -128,12 +128,12 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
     float reward = xv * forward_reward_weight_ + healthy_reward_ - ctrl_cost -
                    contact_cost;
     done_ = (++elapsed_step_ >= max_episode_steps_);
-    WriteObs(reward, xv, ctrl_cost, contact_cost);
+    WriteState(reward, xv, ctrl_cost, contact_cost);
   }
 
  private:
-  void WriteObs(float reward, mjtNum xv, mjtNum ctrl_cost,
-                mjtNum contact_cost) {
+  void WriteState(float reward, mjtNum xv, mjtNum ctrl_cost,
+                  mjtNum contact_cost) {
     State state = Allocate();
     state["reward"_] = reward;
     // obs

@@ -95,7 +95,7 @@ class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteObs(0.0f, 0, 0, 0);
+    WriteState(0.0f, 0, 0, 0);
   }
 
   void Step(const Action& action) override {
@@ -116,11 +116,11 @@ class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
     // reward and done
     float reward = xv * forward_reward_weight_ - ctrl_cost;
     done_ = (++elapsed_step_ >= max_episode_steps_);
-    WriteObs(reward, xv, ctrl_cost, x_after);
+    WriteState(reward, xv, ctrl_cost, x_after);
   }
 
  private:
-  void WriteObs(float reward, mjtNum xv, mjtNum ctrl_cost, mjtNum x_after) {
+  void WriteState(float reward, mjtNum xv, mjtNum ctrl_cost, mjtNum x_after) {
     State state = Allocate();
     state["reward"_] = reward;
     // obs

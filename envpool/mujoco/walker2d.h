@@ -106,7 +106,7 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteObs(0.0f, 0, 0);
+    WriteState(0.0f, 0, 0);
   }
 
   void Step(const Action& action) override {
@@ -131,7 +131,7 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
     ++elapsed_step_;
     done_ = (terminate_when_unhealthy_ ? !IsHealthy() : false) ||
             (elapsed_step_ >= max_episode_steps_);
-    WriteObs(reward, xv, x_after);
+    WriteState(reward, xv, x_after);
   }
 
  private:
@@ -146,7 +146,7 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
     return true;
   }
 
-  void WriteObs(float reward, mjtNum xv, mjtNum x_after) {
+  void WriteState(float reward, mjtNum xv, mjtNum x_after) {
     State state = Allocate();
     state["reward"_] = reward;
     // obs

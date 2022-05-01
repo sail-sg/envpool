@@ -115,7 +115,7 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteObs(0.0f, 0, 0, 0, 0, 0, 0, 0);
+    WriteState(0.0f, 0, 0, 0, 0, 0, 0, 0);
   }
 
   void Step(const Action& action) override {
@@ -150,8 +150,8 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
     ++elapsed_step_;
     done_ = (terminate_when_unhealthy_ ? !IsHealthy() : false) ||
             (elapsed_step_ >= max_episode_steps_);
-    WriteObs(reward, xv, yv, ctrl_cost, contact_cost, x_after, y_after,
-             healthy_reward);
+    WriteState(reward, xv, yv, ctrl_cost, contact_cost, x_after, y_after,
+               healthy_reward);
   }
 
  private:
@@ -172,9 +172,9 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
     return true;
   }
 
-  void WriteObs(float reward, mjtNum xv, mjtNum yv, mjtNum ctrl_cost,
-                mjtNum contact_cost, mjtNum x_after, mjtNum y_after,
-                mjtNum healthy_reward) {
+  void WriteState(float reward, mjtNum xv, mjtNum yv, mjtNum ctrl_cost,
+                  mjtNum contact_cost, mjtNum x_after, mjtNum y_after,
+                  mjtNum healthy_reward) {
     State state = Allocate();
     state["reward"_] = reward;
     // obs

@@ -108,7 +108,7 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteObs(0.0f, 0, 0);
+    WriteState(0.0f, 0, 0);
   }
 
   void Step(const Action& action) override {
@@ -129,7 +129,7 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
                    dist_cost * dist_cost_weight_ -
                    near_cost * near_cost_weight_;
     done_ = (++elapsed_step_ >= max_episode_steps_);
-    WriteObs(reward, ctrl_cost, dist_cost);
+    WriteState(reward, ctrl_cost, dist_cost);
   }
 
  private:
@@ -140,7 +140,7 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
     return std::sqrt(x * x + y * y + z * z);
   }
 
-  void WriteObs(float reward, mjtNum ctrl_cost, mjtNum dist_cost) {
+  void WriteState(float reward, mjtNum ctrl_cost, mjtNum dist_cost) {
     State state = Allocate();
     state["reward"_] = reward;
     // obs
