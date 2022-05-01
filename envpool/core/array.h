@@ -68,7 +68,8 @@ class Array {
               std::forward<Deleter>(deleter)) {}
 
   Array(const ShapeSpec& spec, char* data)
-      : Array(data, spec.Shape(), spec.element_size_, [](char* /*unused*/) {}) {}
+      : Array(data, spec.Shape(), spec.element_size_, [](char* /*unused*/) {}) {
+  }
 
   /**
    * Constructor an `Array` of shape defined by `spec`. This constructor
