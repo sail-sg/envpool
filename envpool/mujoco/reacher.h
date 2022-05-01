@@ -51,11 +51,11 @@ class ReacherEnvFns {
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 2}, {-1.0f, 1.0f})));
+    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 2}, {-1.0, 1.0})));
   }
 };
 
-typedef class EnvSpec<ReacherEnvFns> ReacherEnvSpec;
+using ReacherEnvSpec = EnvSpec<ReacherEnvFns>;
 
 class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
  protected:
@@ -79,12 +79,13 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
         dist_goal_(-spec.config["reset_goal_scale"_],
                    spec.config["reset_goal_scale"_]) {}
 
-  void MujocoResetModel() {
+  void MujocoResetModel() override {
     for (int i = 0; i < model_->nq - 2; ++i) {
       data_->qpos[i] = qpos0_[i] = init_qpos_[i] + dist_qpos_(gen_);
     }
-    while (1) {
-      mjtNum x = dist_goal_(gen_), y = dist_goal_(gen_);
+    while (true) {
+      mjtNum x = dist_goal_(gen_);
+      mjtNum y = dist_goal_(gen_);
       if (std::sqrt(x * x + y * y) < reset_goal_scale_) {
         data_->qpos[model_->nq - 2] = qpos0_[model_->nq - 2] = x;
         data_->qpos[model_->nq - 1] = qpos0_[model_->nq - 1] = y;
@@ -103,7 +104,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteObs(0.0f, 0, 0);
+    WriteState(0.0, 0.0, 0.0);
   }
 
   void Step(const Action& action) override {
@@ -123,9 +124,9 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     }
 
     // reward and done
-    float reward = -dist_cost - ctrl_cost;
+    auto reward = static_cast<float>(-dist_cost - ctrl_cost);
     done_ = (++elapsed_step_ >= max_episode_steps_);
-    WriteObs(reward, ctrl_cost, dist_cost);
+    WriteState(reward, ctrl_cost, dist_cost);
   }
 
  private:
@@ -135,7 +136,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     dist_z_ = data_->xpos[11] - data_->xpos[14];
   }
 
-  void WriteObs(float reward, mjtNum ctrl_cost, mjtNum dist_cost) {
+  void WriteState(float reward, mjtNum ctrl_cost, mjtNum dist_cost) {
     State state = Allocate();
     state["reward"_] = reward;
     // obs
@@ -164,7 +165,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
   }
 };
 
-typedef AsyncEnvPool<ReacherEnv> ReacherEnvPool;
+using ReacherEnvPool = AsyncEnvPool<ReacherEnv>;
 
 }  // namespace mujoco
 

@@ -33,7 +33,7 @@ class TaxiEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict("max_episode_steps"_.bind(200),
-                    "reward_threshold"_.bind(8.0f));
+                    "reward_threshold"_.bind(8.0));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -45,7 +45,7 @@ class TaxiEnvFns {
   }
 };
 
-typedef class EnvSpec<TaxiEnvFns> TaxiEnvSpec;
+using TaxiEnvSpec = EnvSpec<TaxiEnvFns>;
 
 class TaxiEnv : public Env<TaxiEnvSpec> {
  protected:
@@ -75,14 +75,13 @@ class TaxiEnv : public Env<TaxiEnvSpec> {
     t_ = dist_car_(gen_);
     done_ = false;
     elapsed_step_ = 0;
-    State state = Allocate();
-    WriteObs(state, 0.0f);
+    WriteState(0.0);
   }
 
   void Step(const Action& action) override {
     done_ = (++elapsed_step_ >= max_episode_steps_);
     int act = action["action"_];
-    float reward = -1.0f;
+    float reward = -1.0;
     if (act == 0) {
       if (x_ < 4) {
         ++x_;
@@ -104,32 +103,32 @@ class TaxiEnv : public Env<TaxiEnvSpec> {
       if (s_ < 4 && x_ == loc_[s_][0] && y_ == loc_[s_][1]) {
         s_ = 4;
       } else {
-        reward = -10.0f;
+        reward = -10.0;
       }
     } else {
       // drop off
       if (s_ == 4 && x_ == loc_[t_][0] && y_ == loc_[t_][1]) {
         s_ = t_;
         done_ = true;
-        reward = 20.0f;
+        reward = 20.0;
       } else if (s_ == 4 && loc_map_[x_][y_] != ' ') {
         s_ = loc_map_[x_][y_] - '0';
       } else {
-        reward = -10.0f;
+        reward = -10.0;
       }
     }
-    State state = Allocate();
-    WriteObs(state, reward);
+    WriteState(reward);
   }
 
  private:
-  void WriteObs(State& state, float reward) {  // NOLINT
+  void WriteState(float reward) {
+    State state = Allocate();
     state["obs"_] = ((x_ * 5 + y_) * 5 + s_) * 4 + t_;
     state["reward"_] = reward;
   }
 };
 
-typedef AsyncEnvPool<TaxiEnv> TaxiEnvPool;
+using TaxiEnvPool = AsyncEnvPool<TaxiEnv>;
 
 }  // namespace toy_text
 

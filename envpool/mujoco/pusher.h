@@ -53,11 +53,11 @@ class PusherEnvFns {
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 7}, {-2.0f, 2.0f})));
+    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 7}, {-2.0, 2.0})));
   }
 };
 
-typedef class EnvSpec<PusherEnvFns> PusherEnvSpec;
+using PusherEnvSpec = EnvSpec<PusherEnvFns>;
 
 class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
  protected:
@@ -82,12 +82,13 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
         dist_qvel_(-spec.config["reset_qvel_scale"_],
                    spec.config["reset_qvel_scale"_]) {}
 
-  void MujocoResetModel() {
+  void MujocoResetModel() override {
     for (int i = 0; i < model_->nq - 4; ++i) {
       data_->qpos[i] = qpos0_[i] = init_qpos_[i];
     }
-    while (1) {
-      mjtNum x = dist_qpos_x_(gen_), y = dist_qpos_y_(gen_);
+    while (true) {
+      mjtNum x = dist_qpos_x_(gen_);
+      mjtNum y = dist_qpos_y_(gen_);
       if (std::sqrt(x * x + y * y) > cylinder_dist_min_) {
         data_->qpos[model_->nq - 4] = qpos0_[model_->nq - 4] = x;
         data_->qpos[model_->nq - 3] = qpos0_[model_->nq - 3] = y;
@@ -108,7 +109,7 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteObs(0.0f, 0, 0);
+    WriteState(0.0, 0.0, 0.0);
   }
 
   void Step(const Action& action) override {
@@ -125,11 +126,11 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
     }
 
     // reward and done
-    float reward = -ctrl_cost * ctrl_cost_weight_ -
-                   dist_cost * dist_cost_weight_ -
-                   near_cost * near_cost_weight_;
+    auto reward = static_cast<float>(-ctrl_cost * ctrl_cost_weight_ -
+                                     dist_cost * dist_cost_weight_ -
+                                     near_cost * near_cost_weight_);
     done_ = (++elapsed_step_ >= max_episode_steps_);
-    WriteObs(reward, ctrl_cost, dist_cost);
+    WriteState(reward, ctrl_cost, dist_cost);
   }
 
  private:
@@ -140,7 +141,7 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
     return std::sqrt(x * x + y * y + z * z);
   }
 
-  void WriteObs(float reward, mjtNum ctrl_cost, mjtNum dist_cost) {
+  void WriteState(float reward, mjtNum ctrl_cost, mjtNum dist_cost) {
     State state = Allocate();
     state["reward"_] = reward;
     // obs
@@ -164,7 +165,7 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
   }
 };
 
-typedef AsyncEnvPool<PusherEnv> PusherEnvPool;
+using PusherEnvPool = AsyncEnvPool<PusherEnv>;
 
 }  // namespace mujoco
 

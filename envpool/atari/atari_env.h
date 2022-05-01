@@ -39,7 +39,7 @@ bool TurnOffVerbosity() {
 
 static bool verbosity_off = TurnOffVerbosity();
 
-std::string GetRomPath(std::string base_path, std::string task) {
+std::string GetRomPath(const std::string& base_path, const std::string& task) {
   std::stringstream ss;
   // hardcode path here :(
   ss << base_path << "/atari/atari_roms/" << task << "/" << task << ".bin";
@@ -55,7 +55,7 @@ class AtariEnvFns {
         "zero_discount_on_life_loss"_.bind(false), "episodic_life"_.bind(false),
         "reward_clip"_.bind(false), "img_height"_.bind(84),
         "img_width"_.bind(84), "task"_.bind(std::string("pong")),
-        "repeat_action_probability"_.bind(0.0f),
+        "repeat_action_probability"_.bind(0.0F),
         "use_inter_area_resize"_.bind(true), "gray_scale"_.bind(true));
   }
   template <typename Config>
@@ -64,7 +64,7 @@ class AtariEnvFns {
                         {conf["stack_num"_] * (conf["gray_scale"_] ? 1 : 3),
                          conf["img_height"_], conf["img_width"_]},
                         {0, 255})),
-                    "discount"_.bind(Spec<float>({-1}, {0.0f, 1.0f})),
+                    "discount"_.bind(Spec<float>({-1}, {0.0, 1.0})),
                     "info:lives"_.bind(Spec<int>({-1}, {0, 5})),
                     "info:reward"_.bind(Spec<float>({-1})));
   }
@@ -77,8 +77,8 @@ class AtariEnvFns {
   }
 };
 
-typedef class EnvSpec<AtariEnvFns> AtariEnvSpec;
-typedef Spec<uint8_t> FrameSpec;
+using AtariEnvSpec = EnvSpec<AtariEnvFns>;
+using FrameSpec = Spec<uint8_t>;
 
 class AtariEnv : public Env<AtariEnvSpec> {
  protected:
@@ -134,33 +134,33 @@ class AtariEnv : public Env<AtariEnvSpec> {
     }
     // init buf
     for (int i = 0; i < 2; ++i) {
-      maxpool_buf_.push_back(std::move(Array(raw_spec_)));
+      maxpool_buf_.emplace_back(Array(raw_spec_));
     }
     for (int i = 0; i < stack_num_; ++i) {
-      stack_buf_.push_back(Array(transpose_spec_));
+      stack_buf_.emplace_back(Array(transpose_spec_));
     }
   }
 
   void Reset() override {
-    int noop = dist_noop_(gen_) + 1 - fire_reset_;
+    int noop = dist_noop_(gen_) + 1 - static_cast<int>(fire_reset_);
     bool push_all = false;
     if (env_->game_over() || elapsed_step_ >= max_episode_steps_) {
       env_->reset_game();
       elapsed_step_ = 0;
       push_all = true;
     }
-    while (noop--) {
-      env_->act((ale::Action)0);
+    while ((noop--) != 0) {
+      env_->act(static_cast<ale::Action>(0));
       if (env_->game_over()) {
         env_->reset_game();
         push_all = true;
       }
     }
     if (fire_reset_) {
-      env_->act((ale::Action)1);
+      env_->act(static_cast<ale::Action>(1));
     }
     uint8_t* ale_screen_data = env_->getScreen().getArray();
-    uint8_t* ptr = static_cast<uint8_t*>(maxpool_buf_[0].data());
+    auto* ptr = static_cast<uint8_t*>(maxpool_buf_[0].data());
     if (gray_scale_) {
       env_->theOSystem->colourPalette().applyPaletteGrayscale(
           ptr, ale_screen_data, kRawSize);
@@ -170,16 +170,12 @@ class AtariEnv : public Env<AtariEnvSpec> {
     }
     PushStack(push_all, false);
     done_ = false;
-    State state = Allocate();
-    state["discount"_] = 1.0f;
-    state["reward"_] = 0.0f;
-    state["info:lives"_] = lives_ = env_->lives();
-    state["info:reward"_] = 0.0f;
-    WriteObs(state);
+    lives_ = env_->lives();
+    WriteState(0.0, 1.0, 0.0);
   }
 
   void Step(const Action& action) override {
-    float reward = 0.0f;
+    float reward = 0.0;
     done_ = false;
     int act = action["action"_];
     int skip_id = frame_skip_;
@@ -188,7 +184,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
       done_ = env_->game_over();
       if (skip_id <= 2) {  // put final two frames in to maxpool buffer
         uint8_t* ale_screen_data = env_->getScreen().getArray();
-        uint8_t* ptr = static_cast<uint8_t*>(maxpool_buf_[2 - skip_id].data());
+        auto* ptr = static_cast<uint8_t*>(maxpool_buf_[2 - skip_id].data());
         if (gray_scale_) {
           env_->theOSystem->colourPalette().applyPaletteGrayscale(
               ptr, ale_screen_data, kRawSize);
@@ -205,13 +201,13 @@ class AtariEnv : public Env<AtariEnvSpec> {
     if (episodic_life_ && env_->lives() < lives_) {
       done_ = true;
     }
-    State state = Allocate();
+    float discount;
     if (zero_discount_on_life_loss_) {
-      state["discount"_] = 1.0f * (lives_ == env_->lives() && !done_);
+      discount = static_cast<float>(lives_ == env_->lives() && !done_);
     } else {
-      state["discount"_] = 1.0f - done_;
+      discount = 1.0F - static_cast<float>(done_);
     }
-    state["info:reward"_] = reward;
+    float info_reward = reward;
     if (reward_clip_) {
       if (reward > 0) {
         reward = 1;
@@ -219,15 +215,19 @@ class AtariEnv : public Env<AtariEnvSpec> {
         reward = -1;
       }
     }
-    state["reward"_] = reward;
-    state["info:lives"_] = lives_ = env_->lives();
-    WriteObs(state);
+    lives_ = env_->lives();
+    WriteState(reward, discount, info_reward);
   }
 
   bool IsDone() override { return done_; }
 
  private:
-  void WriteObs(State& state) {  // NOLINT
+  void WriteState(float reward, float discount, float info_reward) {
+    State state = Allocate();
+    state["discount"_] = discount;
+    state["reward"_] = reward;
+    state["info:lives"_] = lives_;
+    state["info:reward"_] = info_reward;
     for (int i = 0; i < stack_num_; ++i) {
       state["obs"_]
           .Slice(gray_scale_ ? i : i * 3, gray_scale_ ? i + 1 : (i + 1) * 3)
@@ -253,9 +253,9 @@ class AtariEnv : public Env<AtariEnvSpec> {
    *   observation. Maybe there is only one?
    */
   void PushStack(bool push_all, bool maxpool) {
-    uint8_t* ptr = static_cast<uint8_t*>(maxpool_buf_[0].data());
+    auto* ptr = static_cast<uint8_t*>(maxpool_buf_[0].data());
     if (maxpool) {
-      uint8_t* ptr1 = static_cast<uint8_t*>(maxpool_buf_[1].data());
+      auto* ptr1 = static_cast<uint8_t*>(maxpool_buf_[1].data());
       for (std::size_t i = 0; i < maxpool_buf_[0].size; ++i) {
         ptr[i] = std::max(ptr[i], ptr1[i]);
       }
@@ -267,7 +267,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
     if (gray_scale_) {
       tgt.Assign(resize_img_);
     } else {
-      uint8_t* ptr1 = static_cast<uint8_t*>(resize_img_.data());
+      auto* ptr1 = static_cast<uint8_t*>(resize_img_.data());
       // tgt = resize_img_.transpose(1, 2, 0)
       // tgt[i, j, k] = resize_img_[j, k, i]
       std::size_t h = resize_img_.Shape(0);
@@ -284,7 +284,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
     stack_buf_.push_back(std::move(tgt));
     if (push_all) {
       for (auto& s : stack_buf_) {
-        uint8_t* ptr_s = static_cast<uint8_t*>(s.data());
+        auto* ptr_s = static_cast<uint8_t*>(s.data());
         if (ptr != ptr_s) {
           memcpy(ptr_s, ptr, size);
         }

@@ -45,18 +45,18 @@ class AcrobotEnvFns {
   }
 };
 
-typedef class EnvSpec<AcrobotEnvFns> AcrobotEnvSpec;
+using AcrobotEnvSpec = EnvSpec<AcrobotEnvFns>;
 
 class AcrobotEnv : public Env<AcrobotEnvSpec> {
   struct V5 {
-    double s0, s1, s2, s3, s4;
-    V5() : s0(0), s1(0), s2(0), s3(0), s4(0) {}
+    double s0{0}, s1{0}, s2{0}, s3{0}, s4{0};
+    V5() = default;
     V5(double s0, double s1, double s2, double s3, double s4)
         : s0(s0), s1(s1), s2(s2), s3(s3), s4(s4) {}
     V5 operator+(const V5& v) const {
       return V5(s0 + v.s0, s1 + v.s1, s2 + v.s2, s3 + v.s3, s4 + v.s4);
     }
-    V5 operator*(double v) {
+    V5 operator*(double v) const {
       return V5(s0 * v, s1 * v, s2 * v, s3 * v, s4 * v);
     }
   };
@@ -96,32 +96,46 @@ class AcrobotEnv : public Env<AcrobotEnvSpec> {
     s_.s4 = 0;
     done_ = false;
     elapsed_step_ = 0;
-    State state = Allocate();
-    WriteObs(state, 0.0f);
+    WriteState(0.0);
   }
 
   void Step(const Action& action) override {
     done_ = (++elapsed_step_ >= max_episode_steps_);
     int act = action["action"_];
-    double reward = -1;
+    float reward = -1.0;
 
     s_.s4 = act - 1;
     s_ = rk4(s_);
-    while (s_.s0 < -kPi) s_.s0 += kPi * 2;
-    while (s_.s1 < -kPi) s_.s1 += kPi * 2;
-    while (s_.s0 >= kPi) s_.s0 -= kPi * 2;
-    while (s_.s1 >= kPi) s_.s1 -= kPi * 2;
-    if (s_.s2 < -kMaxVel1) s_.s2 = -kMaxVel1;
-    if (s_.s3 < -kMaxVel2) s_.s3 = -kMaxVel2;
-    if (s_.s2 > kMaxVel1) s_.s2 = kMaxVel1;
-    if (s_.s3 > kMaxVel2) s_.s3 = kMaxVel2;
+    while (s_.s0 < -kPi) {
+      s_.s0 += kPi * 2;
+    }
+    while (s_.s1 < -kPi) {
+      s_.s1 += kPi * 2;
+    }
+    while (s_.s0 >= kPi) {
+      s_.s0 -= kPi * 2;
+    }
+    while (s_.s1 >= kPi) {
+      s_.s1 -= kPi * 2;
+    }
+    if (s_.s2 < -kMaxVel1) {
+      s_.s2 = -kMaxVel1;
+    }
+    if (s_.s3 < -kMaxVel2) {
+      s_.s3 = -kMaxVel2;
+    }
+    if (s_.s2 > kMaxVel1) {
+      s_.s2 = kMaxVel1;
+    }
+    if (s_.s3 > kMaxVel2) {
+      s_.s3 = kMaxVel2;
+    }
     if (-std::cos(s_.s0) - std::cos(s_.s0 + s_.s1) > 1) {
       done_ = true;
-      reward = 0;
+      reward = 0.0;
     }
 
-    State state = Allocate();
-    WriteObs(state, reward);
+    WriteState(reward);
   }
 
  private:
@@ -133,7 +147,7 @@ class AcrobotEnv : public Env<AcrobotEnvSpec> {
     return y0 + (k1 + k2 * 2 + k3 * 2 + k4) * (kDt / 6.0);
   }
 
-  V5 derivs(V5 s, double t) {
+  [[nodiscard]] V5 derivs(V5 s, double t) const {
     double theta1 = s.s0;
     double theta2 = s.s1;
     double dtheta1 = s.s2;
@@ -155,7 +169,8 @@ class AcrobotEnv : public Env<AcrobotEnvSpec> {
     return V5(dtheta1, dtheta2, ddtheta1, ddtheta2, 0);
   }
 
-  void WriteObs(State& state, float reward) {  // NOLINT
+  void WriteState(float reward) {
+    State state = Allocate();
     state["obs"_][0] = static_cast<float>(std::cos(s_.s0));
     state["obs"_][1] = static_cast<float>(std::sin(s_.s0));
     state["obs"_][2] = static_cast<float>(std::cos(s_.s1));
@@ -168,7 +183,7 @@ class AcrobotEnv : public Env<AcrobotEnvSpec> {
   }
 };
 
-typedef AsyncEnvPool<AcrobotEnv> AcrobotEnvPool;
+using AcrobotEnvPool = AsyncEnvPool<AcrobotEnv>;
 
 }  // namespace classic_control
 

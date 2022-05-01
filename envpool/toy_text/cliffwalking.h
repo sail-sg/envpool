@@ -42,7 +42,7 @@ class CliffWalkingEnvFns {
   }
 };
 
-typedef class EnvSpec<CliffWalkingEnvFns> CliffWalkingEnvSpec;
+using CliffWalkingEnvSpec = EnvSpec<CliffWalkingEnvFns>;
 
 class CliffWalkingEnv : public Env<CliffWalkingEnvSpec> {
  protected:
@@ -59,13 +59,12 @@ class CliffWalkingEnv : public Env<CliffWalkingEnvSpec> {
     x_ = 3;
     y_ = 0;
     done_ = false;
-    State state = Allocate();
-    WriteObs(state, 0.0f);
+    WriteState(0.0);
   }
 
   void Step(const Action& action) override {
     int act = action["action"_];
-    float reward = -1.0f;
+    float reward = -1.0;
     if (act == 0) {
       --x_;
     } else if (act == 1) {
@@ -78,25 +77,25 @@ class CliffWalkingEnv : public Env<CliffWalkingEnvSpec> {
     x_ = std::min(3, std::max(0, x_));
     y_ = std::min(11, std::max(0, y_));
     if (x_ == 3 && y_ > 0 && y_ < 11) {
-      reward = -100.0f;
+      reward = -100.0;
       x_ = 3;
       y_ = 0;
     }
     if (x_ == 3 && y_ == 11) {
       done_ = true;
     }
-    State state = Allocate();
-    WriteObs(state, reward);
+    WriteState(reward);
   }
 
  private:
-  void WriteObs(State& state, float reward) {  // NOLINT
+  void WriteState(float reward) {
+    State state = Allocate();
     state["obs"_] = x_ * 12 + y_;
     state["reward"_] = reward;
   }
 };
 
-typedef AsyncEnvPool<CliffWalkingEnv> CliffWalkingEnvPool;
+using CliffWalkingEnvPool = AsyncEnvPool<CliffWalkingEnv>;
 
 }  // namespace toy_text
 

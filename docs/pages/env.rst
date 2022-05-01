@@ -99,7 +99,7 @@ state space, and action space. Create a class ``CartPoleEnvFns``:
     };
 
     // this line will concat common config and common state/action spec
-    typedef class EnvSpec<CartPoleEnvFns> CartPoleEnvSpec;
+    using CartPoleEnvSpec = EnvSpec<CartPoleEnvFns>;
 
 - ``DefaultConfig``: the default config to create cartpole environment;
 - ``StateSpec``: the state space (including observation and info) definition;
@@ -169,9 +169,9 @@ available to see on the python side:
 
         template <typename Config>
         static decltype(auto) ActionSpec(const Config& conf) {
-          return MakeDict("action"_.bind(Spec<float>({-1, 4}, {-2.0f, 2.0f})));
+          return MakeDict("action"_.bind(Spec<float>({-1, 4}, {-2.0, 2.0})));
           // or remove -1, no difference in single-player env
-          // return MakeDict("action"_.bind(Spec<float>({4}, {-2.0f, 2.0f})));
+          // return MakeDict("action"_.bind(Spec<float>({4}, {-2.0, 2.0})));
         }
 
 .. note ::
@@ -374,7 +374,7 @@ After creating ``CartPoleEnv``, just one more line we can get
 
 .. code-block:: c++
 
-    typedef AsyncEnvPool<CartPoleEnv> CartPoleEnvPool;
+    using CartPoleEnvPool = AsyncEnvPool<CartPoleEnv>;
 
 
 Miscellaneous

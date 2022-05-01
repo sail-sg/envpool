@@ -63,11 +63,11 @@ class HumanoidEnvFns {
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 17}, {-0.4f, 0.4f})));
+    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 17}, {-0.4, 0.4})));
   }
 };
 
-typedef class EnvSpec<HumanoidEnvFns> HumanoidEnvSpec;
+using HumanoidEnvSpec = EnvSpec<HumanoidEnvFns>;
 
 class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
  protected:
@@ -98,7 +98,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
         dist_(-spec.config["reset_noise_scale"_],
               spec.config["reset_noise_scale"_]) {}
 
-  void MujocoResetModel() {
+  void MujocoResetModel() override {
     for (int i = 0; i < model_->nq; ++i) {
       data_->qpos[i] = qpos0_[i] = init_qpos_[i] + dist_(gen_);
     }
@@ -113,17 +113,19 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteObs(0.0f, 0, 0, 0, 0, 0, 0, 0);
+    WriteState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
   }
 
   void Step(const Action& action) override {
     // step
     mjtNum* act = static_cast<mjtNum*>(action["action"_].data());
     GetMassCenter();
-    mjtNum x_before = mass_x_, y_before = mass_y_;
+    mjtNum x_before = mass_x_;
+    mjtNum y_before = mass_y_;
     MujocoStep(act);
     GetMassCenter();
-    mjtNum x_after = mass_x_, y_after = mass_y_;
+    mjtNum x_after = mass_x_;
+    mjtNum y_after = mass_y_;
 
     // ctrl_cost
     mjtNum ctrl_cost = 0.0;
@@ -145,13 +147,13 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     // reward and done
     mjtNum healthy_reward =
         terminate_when_unhealthy_ || IsHealthy() ? healthy_reward_ : 0.0;
-    float reward =
-        xv * forward_reward_weight_ + healthy_reward - ctrl_cost - contact_cost;
+    auto reward = static_cast<float>(xv * forward_reward_weight_ +
+                                     healthy_reward - ctrl_cost - contact_cost);
     ++elapsed_step_;
     done_ = (terminate_when_unhealthy_ ? !IsHealthy() : false) ||
             (elapsed_step_ >= max_episode_steps_);
-    WriteObs(reward, xv, yv, ctrl_cost, contact_cost, x_after, y_after,
-             healthy_reward);
+    WriteState(reward, xv, yv, ctrl_cost, contact_cost, x_after, y_after,
+               healthy_reward);
   }
 
  private:
@@ -172,9 +174,9 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     mass_y_ /= mass_sum;
   }
 
-  void WriteObs(float reward, mjtNum xv, mjtNum yv, mjtNum ctrl_cost,
-                mjtNum contact_cost, mjtNum x_after, mjtNum y_after,
-                mjtNum healthy_reward) {
+  void WriteState(float reward, mjtNum xv, mjtNum yv, mjtNum ctrl_cost,
+                  mjtNum contact_cost, mjtNum x_after, mjtNum y_after,
+                  mjtNum healthy_reward) {
     State state = Allocate();
     state["reward"_] = reward;
     // obs
@@ -215,7 +217,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
   }
 };
 
-typedef AsyncEnvPool<HumanoidEnv> HumanoidEnvPool;
+using HumanoidEnvPool = AsyncEnvPool<HumanoidEnv>;
 
 }  // namespace mujoco
 

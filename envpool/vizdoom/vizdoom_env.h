@@ -32,7 +32,8 @@
 
 namespace vizdoom {
 
-std::string MergePath(std::string base_path, std::string file_path) {
+std::string MergePath(const std::string& base_path,
+                      const std::string& file_path) {
   if (file_path[0] == '/') {
     return file_path;
   }
@@ -110,26 +111,25 @@ class VizdoomEnvFns {
     if (!conf["use_combined_action"_]) {
       return MakeDict("action"_.bind(Spec<double>(
           {-1, static_cast<int>(dg.getAvailableButtons().size())})));
-    } else {
-      auto button_list = dg.getAvailableButtons();
-      std::vector<std::tuple<int, float, float>> delta_config(
-          _button_string_list.size());
-      for (auto& i : conf["delta_button_config"_]) {
-        int button_index = str2button(i.first);
-        if (button_index != -1) {
-          delta_config[button_index] = i.second;
-        }
-      }
-      auto action_set =
-          BuildActionSet(button_list, conf["force_speed"_], delta_config);
-      return MakeDict(
-          "action"_.bind(Spec<double>({-1}, {0.0f, action_set.size() - 1.0f})));
     }
+    auto button_list = dg.getAvailableButtons();
+    std::vector<std::tuple<int, float, float>> delta_config(
+        _button_string_list.size());
+    for (auto& i : conf["delta_button_config"_]) {
+      int button_index = str2button(i.first);
+      if (button_index != -1) {
+        delta_config[button_index] = i.second;
+      }
+    }
+    auto action_set =
+        BuildActionSet(button_list, conf["force_speed"_], delta_config);
+    return MakeDict(
+        "action"_.bind(Spec<double>({-1}, {0.0, action_set.size() - 1.0})));
   }
 };
 
-typedef class EnvSpec<VizdoomEnvFns> VizdoomEnvSpec;
-typedef Spec<uint8_t> FrameSpec;
+using VizdoomEnvSpec = EnvSpec<VizdoomEnvFns>;
+using FrameSpec = Spec<uint8_t>;
 
 class VizdoomEnv : public Env<VizdoomEnvSpec> {
  protected:
@@ -189,7 +189,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     dg_->addGameArgs(spec.config["game_args"_]);
     dg_->setMode(PLAYER);
     dg_->setEpisodeTimeout((max_episode_steps_ + 1) * frame_skip_);
-    if (spec.config["wad_path"_].size()) {
+    if (!spec.config["wad_path"_].empty()) {
       dg_->setDoomScenarioPath(spec.config["wad_path"_]);
     }
     dg_->setSeed(spec.config["seed"_]);
@@ -199,7 +199,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     raw_buf_ =
         Array(FrameSpec({dg_->getScreenHeight(), dg_->getScreenWidth(), 1}));
     for (int i = 0; i < stack_num_; ++i) {
-      stack_buf_.push_back(Array(FrameSpec(
+      stack_buf_.emplace_back(Array(FrameSpec(
           {channel_, spec.config["img_height"_], spec.config["img_width"_]})));
     }
     for (auto i : info_index_) {
@@ -229,16 +229,16 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     for (auto i : info_index_) {
       result = std::find(gv_list_.begin(), gv_list_.end(), i);
       if (result == gv_list_.end()) {
-        gv_info_index_.push_back(-1);
+        gv_info_index_.emplace_back(-1);
       } else {
-        gv_info_index_.push_back(result - gv_list_.begin());
+        gv_info_index_.emplace_back(result - gv_list_.begin());
       }
     }
 
     button_list_ = dg_->getAvailableButtons();
     std::vector<std::tuple<int, float, float>> delta_config(
         _button_string_list.size());
-    for (auto& i : spec.config["delta_button_config"_]) {
+    for (const auto& i : spec.config["delta_button_config"_]) {
       int button_index = str2button(i.first);
       if (button_index != -1) {
         delta_config[button_index] = i.second;
@@ -250,7 +250,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     // reward config
     pos_reward_.resize(gv_list_.size(), 0.0);
     neg_reward_.resize(gv_list_.size(), 0.0);
-    for (auto& i : spec.config["reward_config"_]) {
+    for (const auto& i : spec.config["reward_config"_]) {
       int gv_index = str2gv(i.first);
       if (gv_index == -1) {
         continue;
@@ -264,7 +264,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
       neg_reward_[index] = std::get<1>(i.second);
     }
     // weapon reward config
-    auto& weapon_config = spec.config["selected_weapon_reward_config"_];
+    const auto& weapon_config = spec.config["selected_weapon_reward_config"_];
     for (int i = 0; i < 8; ++i) {
       auto it = weapon_config.find(i);
       if (it != weapon_config.end()) {
@@ -306,7 +306,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     }
     dg_->advanceAction(frame_skip_, true);
     ++elapsed_step_;
-    done_ = (dg_->isEpisodeFinished() | (elapsed_step_ >= max_episode_steps_));
+    done_ = (dg_->isEpisodeFinished() || (elapsed_step_ >= max_episode_steps_));
     if (episodic_life_ && dg_->isPlayerDead()) {
       done_ = true;
     }
@@ -316,7 +316,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
   void GetState(bool is_reset) {
     GameStatePtr gamestate = dg_->getState();
     if (gamestate == nullptr) {  // finish episode
-      WriteState(0.0f);
+      WriteState(0.0);
       return;
     }
 
@@ -354,8 +354,9 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
       gvs_[deathcount_idx_] -= last_deathcount_;
     }
 
-    int curr_weapon = -1, curr_weapon_ammo = 0;
-    float reward = 0.0f;
+    int curr_weapon = -1;
+    int curr_weapon_ammo = 0;
+    float reward = 0.0;
 
     for (std::size_t i = 0; i < gvs_.size(); ++i) {
       double delta = gvs_[i] - last_gvs_[i];
@@ -380,9 +381,9 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
         delta = gvs_[i] - last_gvs_[i];
       }
       if (delta >= 0) {
-        reward += delta * pos_reward_[i];
+        reward += static_cast<float>(delta * pos_reward_[i]);
       } else {
-        reward -= delta * neg_reward_[i];
+        reward -= static_cast<float>(delta * neg_reward_[i]);
       }
     }
 
@@ -399,11 +400,11 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     }
 
     Array tgt = std::move(*stack_buf_.begin());
-    uint8_t* ptr = static_cast<uint8_t*>(tgt.data());
+    auto* ptr = static_cast<uint8_t*>(tgt.data());
     stack_buf_.pop_front();
 
     // get screen
-    uint8_t* raw_ptr = static_cast<uint8_t*>(raw_buf_.data());
+    auto* raw_ptr = static_cast<uint8_t*>(raw_buf_.data());
     std::size_t size = raw_buf_.size;
     for (int c = 0; c < channel_; ++c) {
       // gamestate->screenBuffer is channel-first image
@@ -412,10 +413,10 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
       Resize(raw_buf_, &slice, use_inter_area_resize_);
     }
     size = tgt.size;
-    stack_buf_.push_back(std::move(tgt));
+    stack_buf_.emplace_back(tgt);
     if (is_reset) {
       for (auto& s : stack_buf_) {
-        uint8_t* ptr_s = static_cast<uint8_t*>(s.data());
+        auto* ptr_s = static_cast<uint8_t*>(s.data());
         if (ptr != ptr_s) {
           memcpy(ptr_s, ptr, size);
         }
@@ -434,7 +435,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
           .Assign(stack_buf_[i]);
     }
     // info
-    double zero = 0.0f;
+    double zero = 0.0;
     std::size_t offset = state_array.size() - gv_info_index_.size();
     for (std::size_t i = 0; i < gv_info_index_.size(); ++i) {
       if (gv_info_index_[i] != -1) {
@@ -446,7 +447,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
   }
 };
 
-typedef AsyncEnvPool<VizdoomEnv> VizdoomEnvPool;
+using VizdoomEnvPool = AsyncEnvPool<VizdoomEnv>;
 
 }  // namespace vizdoom
 

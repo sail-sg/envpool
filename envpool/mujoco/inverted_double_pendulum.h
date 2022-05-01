@@ -51,12 +51,11 @@ class InvertedDoublePendulumEnvFns {
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 1}, {-1.0f, 1.0f})));
+    return MakeDict("action"_.bind(Spec<mjtNum>({-1, 1}, {-1.0, 1.0})));
   }
 };
 
-typedef class EnvSpec<InvertedDoublePendulumEnvFns>
-    InvertedDoublePendulumEnvSpec;
+using InvertedDoublePendulumEnvSpec = EnvSpec<InvertedDoublePendulumEnvFns>;
 
 class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
                                   public MujocoEnv {
@@ -81,7 +80,7 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
                    spec.config["reset_noise_scale"_]),
         dist_qvel_(0, spec.config["reset_noise_scale"_]) {}
 
-  void MujocoResetModel() {
+  void MujocoResetModel() override {
     for (int i = 0; i < model_->nq; ++i) {
       data_->qpos[i] = qpos0_[i] = init_qpos_[i] + dist_qpos_(gen_);
     }
@@ -96,7 +95,7 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteObs(0.0f);
+    WriteState(0.0);
   }
 
   void Step(const Action& action) override {
@@ -112,16 +111,17 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
     mjtNum v2 = data_->qvel[2];
     mjtNum vel_penalty = 1e-3 * v1 * v1 + 5e-3 * v2 * v2;
     // reward and done
-    float reward = healthy_reward_ - dist_penalty - vel_penalty;
+    auto reward =
+        static_cast<float>(healthy_reward_ - dist_penalty - vel_penalty);
     ++elapsed_step_;
     done_ = !IsHealthy() || (elapsed_step_ >= max_episode_steps_);
-    WriteObs(reward);
+    WriteState(reward);
   }
 
  private:
   bool IsHealthy() { return data_->site_xpos[2] > healthy_z_max_; }
 
-  void WriteObs(float reward) {
+  void WriteState(float reward) {
     State state = Allocate();
     state["reward"_] = reward;
     // obs
@@ -151,7 +151,7 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
   }
 };
 
-typedef AsyncEnvPool<InvertedDoublePendulumEnv> InvertedDoublePendulumEnvPool;
+using InvertedDoublePendulumEnvPool = AsyncEnvPool<InvertedDoublePendulumEnv>;
 
 }  // namespace mujoco
 

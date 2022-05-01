@@ -24,7 +24,7 @@
 
 class MujocoEnv {
  private:
-  char error_[1000];
+  std::array<char, 1000> error_;
 
  protected:
   mjModel* model_;
@@ -37,9 +37,9 @@ class MujocoEnv {
   bool done_;
 
  public:
-  MujocoEnv(std::string xml, int frame_skip, bool post_constraint,
+  MujocoEnv(const std::string& xml, int frame_skip, bool post_constraint,
             int max_episode_steps)
-      : model_(mj_loadXML(xml.c_str(), 0, error_, 1000)),
+      : model_(mj_loadXML(xml.c_str(), nullptr, error_.begin(), 1000)),
         data_(mj_makeData(model_)),
         init_qpos_(new mjtNum[model_->nq]),
         init_qvel_(new mjtNum[model_->nv]),
@@ -73,7 +73,7 @@ class MujocoEnv {
     throw std::runtime_error("reset_model not implemented");
   }
 
-  void MujocoStep(mjtNum* action) {
+  void MujocoStep(const mjtNum* action) {
     for (int i = 0; i < model_->nu; ++i) {
       data_->ctrl[i] = action[i];
     }

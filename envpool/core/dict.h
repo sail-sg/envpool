@@ -44,7 +44,8 @@ class Value {
 template <char... C>
 class Key {
  public:
-  static constexpr const inline char _str[sizeof...(C) + 1]{C..., '\0'};
+  static constexpr const inline char _str[sizeof...(C) + 1]{C...,  // NOLINT
+                                                            '\0'};
   static constexpr const inline std::string_view str_view{_str, sizeof...(C)};
   template <typename Type>
   static constexpr inline auto bind(Type&& v) {
@@ -54,7 +55,7 @@ class Key {
 };
 
 template <class CharT, CharT... CS>
-inline constexpr auto operator""_() {
+inline constexpr auto operator""_() {  // NOLINT
   return Key<CS...>{};
 }
 
@@ -81,7 +82,7 @@ class NamedVector {
   Vector* values_;
 
  public:
-  typedef StringKeys Keys;
+  using Keys = StringKeys;
   constexpr static std::size_t size = std::tuple_size<Keys>::value;
   explicit NamedVector(Vector* values) : values_(values) {}
   NamedVector(const Keys& keys, Vector* values) : values_(values) {}
@@ -106,15 +107,17 @@ class NamedVector {
     return rets;
   }
 
-  operator Vector&() const { return *values_; }
+  operator Vector&() const {  // NOLINT
+    return *values_;
+  }
 };
 
 template <typename StringKeys, typename TupleOrVector,
           typename = std::enable_if_t<is_tuple_v<StringKeys>>>
 class Dict : public std::decay_t<TupleOrVector> {
  public:
-  typedef std::decay_t<TupleOrVector> Values;
-  typedef StringKeys Keys;
+  using Values = std::decay_t<TupleOrVector>;
+  using Keys = StringKeys;
   constexpr static std::size_t size = std::tuple_size<Keys>::value;
 
   /**
@@ -190,7 +193,7 @@ class Dict : public std::decay_t<TupleOrVector> {
   /**
    * Const version of static_values
    */
-  const Values& values() const { return *this; }
+  [[nodiscard]] const Values& values() const { return *this; }
 
   /**
    * Convert the value tuple to a dynamic vector of values.
@@ -200,7 +203,7 @@ class Dict : public std::decay_t<TupleOrVector> {
   template <typename Type, bool IsTuple = is_tuple_v<Values>,
             std::enable_if_t<IsTuple, bool> = true,
             std::enable_if_t<all_convertible<Type, Values>::value, bool> = true>
-  std::vector<Type> values() const {
+  [[nodiscard]] std::vector<Type> values() const {
     std::vector<Type> rets;
     std::apply([&](auto&&... value) { (rets.push_back(Type(value)), ...); },
                *static_cast<const Values*>(this));
@@ -257,7 +260,7 @@ template <
         std::is_same_v<typename DictA::Values, typename DictA::Values>, bool> =
         true>
 decltype(auto) ConcatDict(const DictA& a, const DictB& b) {
-  typedef typename DictA::Values::value_type value_type;
+  using value_type = typename DictA::Values::value_type;
   std::vector<value_type> c;
   c.insert(c.end(), a.begin(), a.end());
   c.insert(c.end(), b.begin(), b.end());

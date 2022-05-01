@@ -39,11 +39,11 @@ class MountainCarContinuousEnvFns {
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<float>({-1, 1}, {-1.0f, 1.0f})));
+    return MakeDict("action"_.bind(Spec<float>({-1, 1}, {-1.0, 1.0})));
   }
 };
 
-typedef class EnvSpec<MountainCarContinuousEnvFns> MountainCarContinuousEnvSpec;
+using MountainCarContinuousEnvSpec = EnvSpec<MountainCarContinuousEnvFns>;
 
 class MountainCarContinuousEnv : public Env<MountainCarContinuousEnvSpec> {
  protected:
@@ -71,11 +71,10 @@ class MountainCarContinuousEnv : public Env<MountainCarContinuousEnvSpec> {
 
   void Reset() override {
     pos_ = dist_(gen_);
-    vel_ = 0.0f;
+    vel_ = 0.0;
     done_ = false;
     elapsed_step_ = 0;
-    State state = Allocate();
-    WriteObs(state, 0.0f);
+    WriteState(0.0);
   }
 
   void Step(const Action& action) override {
@@ -106,19 +105,19 @@ class MountainCarContinuousEnv : public Env<MountainCarContinuousEnvSpec> {
       done_ = true;
       reward += 100;
     }
-    State state = Allocate();
-    WriteObs(state, reward);
+    WriteState(static_cast<float>(reward));
   }
 
  private:
-  void WriteObs(State& state, float reward) {  // NOLINT
+  void WriteState(float reward) {
+    State state = Allocate();
     state["obs"_][0] = static_cast<float>(pos_);
     state["obs"_][1] = static_cast<float>(vel_);
     state["reward"_] = reward;
   }
 };
 
-typedef AsyncEnvPool<MountainCarContinuousEnv> MountainCarContinuousEnvPool;
+using MountainCarContinuousEnvPool = AsyncEnvPool<MountainCarContinuousEnv>;
 
 }  // namespace classic_control
 

@@ -25,7 +25,7 @@
 
 namespace vizdoom {
 
-typedef std::vector<double> vzd_act_t;
+using vzd_act_t = std::vector<double>;
 
 void _build_action_set(
     int button_num,
@@ -43,13 +43,15 @@ void _build_action_set(
   } else if (38 <= cur_id && cur_id <= 42) {
     // delta button, parse delta_config
     int num;
-    float action_min, action_max;
+    float action_min;
+    float action_max;
     std::tie(num, action_min, action_max) = delta_config[cur_id];
     if (num <= 1) {
       _build_action_set(button_num, delta_config, button_index, force_speed,
                         cur_id + 1, current_result, result);
     } else {
-      float delta = (action_max - action_min) / (num - 1), a = action_min;
+      float delta = (action_max - action_min) / static_cast<float>(num - 1);
+      float a = action_min;
       for (int i = 0; i < num; ++i, a += delta) {
         current_result[button_index[cur_id]] = a;
         _build_action_set(button_num, delta_config, button_index, force_speed,
@@ -116,17 +118,17 @@ void _build_action_set(
 
 std::vector<vzd_act_t> BuildActionSet(
     std::vector<Button> button_list, bool force_speed,
-    std::vector<std::tuple<int, float, float>> delta_config) {
+    const std::vector<std::tuple<int, float, float>>& delta_config) {
   std::vector<vzd_act_t> result;
-  int button_index[43];
-  double current_result[43];
-  memset(button_index, -1, sizeof(button_index));
-  memset(current_result, 0, sizeof(current_result));
+  std::array<int, 43> button_index;
+  std::array<double, 43> current_result;
+  memset(button_index.begin(), -1, sizeof(int) * 43);
+  memset(current_result.begin(), 0, sizeof(double) * 43);
   for (std::size_t i = 0; i < button_list.size(); ++i) {
     button_index[button_list[i]] = i;
   }
-  _build_action_set(button_list.size(), delta_config, button_index, force_speed,
-                    0, current_result, result);
+  _build_action_set(button_list.size(), delta_config, button_index.begin(),
+                    force_speed, 0, current_result.begin(), result);
   return result;
 }
 
@@ -181,7 +183,7 @@ std::string button2str(Button b) {
   return _button_string_list[b];
 }
 
-int str2button(std::string s) {
+int str2button(const std::string& s) {
   auto result =
       std::find(_button_string_list.begin(), _button_string_list.end(), s);
   if (result != _button_string_list.end()) {
@@ -330,7 +332,7 @@ std::string gv2str(GameVariable gv) {
   return _gv_string_list[gv];
 }
 
-int str2gv(std::string s) {
+int str2gv(const std::string& s) {
   auto result = std::find(_gv_string_list.begin(), _gv_string_list.end(), s);
   if (result != _gv_string_list.end()) {
     return result - _gv_string_list.begin();
