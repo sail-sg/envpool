@@ -62,6 +62,7 @@ def dm_sync_step() -> None:
 def async_step() -> None:
   num_envs = 8
   batch_size = 4
+
   # Create an envpool that each step only 4 of 8 result will be out,
   # and left other "slow step" envs execute at background.
   env = envpool.make_dm("Pong-v5", num_envs=num_envs, batch_size=batch_size)
@@ -73,13 +74,27 @@ def async_step() -> None:
     # generate action with len(action) == len(env_id)
     action = np.random.randint(action_num, size=batch_size)
     ts = env.step(action, env_id)
+
   # Same as gym
-  env = envpool.make_gym("Pong-v5", num_envs=num_envs, batch_size=batch_size)
-  # But gym's reset() API cannot return env_id
-  obs = env.reset()
+  env = envpool.make_gym(
+    "Pong-v5",
+    num_envs=num_envs,
+    batch_size=batch_size,
+    gym_reset_return_info=True,
+  )
+  # If you want gym's reset() API return env_id,
+  # just set gym_reset_return_info=True
+  obs, info = env.reset()
   assert obs.shape == (batch_size, 4, 84, 84)
-  # But we cannot get this observation's corresponding env_id,
-  # therefore we use a low-level API
+  env_id = info["env_id"]
+  for _ in range(1000):
+    action = np.random.randint(action_num, size=batch_size)
+    obs, rew, done, info = env.step(action, env_id)
+    env_id = info["env_id"]
+    assert len(env_id) == batch_size
+    assert obs.shape == (batch_size, 4, 84, 84)
+
+  # We can also use a low-level API (send and recv)
   env = envpool.make_gym("Pong-v5", num_envs=num_envs, batch_size=batch_size)
   env.async_reset()  # no return, just send `reset` signal to all envs
   for _ in range(1000):

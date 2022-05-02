@@ -58,7 +58,7 @@ if __name__ == "__main__":
   parser.add_argument("--total-iter", type=int, default=50000)
   args = parser.parse_args()
   env = envpool.make_gym(
-    "Pong-v5",
+    args.task,
     num_envs=args.num_envs,
     batch_size=args.batch_size,
     num_threads=args.num_threads,
