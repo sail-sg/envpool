@@ -26,13 +26,13 @@ NUMA
 ====
 
 To test with NUMA, first use ``numactl -s`` to see the number of NUMA core;
-then use ``./numa_test.sh `YOUR_CORE_NUM-1` python3 benchmark.py [args]``.
+then use ``./numa_test.sh `YOUR_CORE_NUM` python3 benchmark.py [args]``.
 
 In DGX-A100 (8 NUMA core), we use the following script to achieve overall
 1M+ FPS:
 ::
 
-  ./numa_test.sh 7 python3 benchmark.py --num-envs 100 --batch-size 32 \
+  ./numa_test.sh 8 python3 benchmark.py --num-envs 100 --batch-size 32 \
     --thread-affinity-offset -1
 
 Note: When using NUMA, it's better to disable thread affinity by setting
