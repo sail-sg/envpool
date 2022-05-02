@@ -25,6 +25,7 @@
 #include <memory>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "envpool/core/envpool.h"
@@ -35,13 +36,44 @@ namespace py = pybind11;
  * Convert Array to py::array, with py::capsule
  */
 template <typename dtype>
-py::array ArrayToNumpy(const Array& a) {
-  auto* ptr = new std::shared_ptr<char>(a.SharedPtr());
-  auto capsule = py::capsule(ptr, [](void* ptr) {
-    delete reinterpret_cast<std::shared_ptr<char>*>(ptr);
-  });
-  return py::array(a.Shape(), reinterpret_cast<dtype*>(a.Data()), capsule);
-}
+struct ArrayToNumpyHelper {
+  static py::array Convert(const Array& a) {
+    auto* ptr = new std::shared_ptr<char>(a.SharedPtr());
+    auto capsule = py::capsule(ptr, [](void* ptr) {
+      delete reinterpret_cast<std::shared_ptr<char>*>(ptr);
+    });
+    return py::array(a.Shape(), reinterpret_cast<dtype*>(a.Data()), capsule);
+  }
+};
+
+template <typename dtype>
+struct ArrayToNumpyHelper<Container<dtype>> {
+  using UniquePtr = Container<dtype>;
+  static py::array Convert(const Array& a) {
+    auto* ptr_arr = reinterpret_cast<UniquePtr*>(a.Data());
+    auto* ptr =
+        new std::unique_ptr<py::object[]>(new py::object[a.size]);  // NOLINT
+    auto capsule = py::capsule(ptr, [](void* ptr) {
+      delete reinterpret_cast<std::unique_ptr<py::object[]>*>(ptr);  // NOLINT
+    });
+    for (std::size_t i = 0; i < a.size; ++i) {
+      auto* inner_ptr = new UniquePtr(std::move(ptr_arr[i]));
+      (ptr_arr + i)->~UniquePtr();
+      auto capsule = py::capsule(inner_ptr, [](void* inner_ptr) {
+        delete reinterpret_cast<UniquePtr*>(inner_ptr);
+      });
+      if (*inner_ptr == nullptr) {
+        (*ptr)[i] = py::none();
+      } else {
+        (*ptr)[i] =
+            py::array((*inner_ptr)->Shape(),
+                      reinterpret_cast<dtype*>((*inner_ptr)->Data()), capsule);
+      }
+    }
+    return py::array(py::dtype("object"), a.Shape(),
+                     reinterpret_cast<py::object*>(ptr->get()), capsule);
+  }
+};
 
 template <typename dtype>
 Array NumpyToArray(const py::array& arr) {
@@ -66,13 +98,36 @@ Array NumpyToArrayIncRef(const py::array& arr) {
                });
 }
 
+template <typename Spec>
+struct SpecTupleHelper {
+  static decltype(auto) Make(const Spec& spec) {
+    return std::make_tuple(py::dtype::of<typename Spec::dtype>(), spec.shape,
+                           spec.bounds, spec.elementwise_bounds);
+  }
+};
+
+/**
+ * For Container type, it is converted a numpy array of numpy array.
+ * The spec itself describes the shape of the outer array, the inner_spec
+ * contains the spec of the inner array.
+ * Therefore the shape returned to python side has the format
+ * (outer_shape, inner_shape).
+ */
+template <typename dtype>
+struct SpecTupleHelper<Spec<Container<dtype>>> {
+  static decltype(auto) Make(const Spec<Container<dtype>>& spec) {
+    return std::make_tuple(py::dtype::of<dtype>(),
+                           std::make_tuple(spec.shape, spec.inner_spec.shape),
+                           spec.inner_spec.bounds,
+                           spec.inner_spec.elementwise_bounds);
+  }
+};
+
 template <typename... Spec>
 decltype(auto) ExportSpecs(const std::tuple<Spec...>& specs) {
   return std::apply(
       [&](auto&&... spec) {
-        return std::make_tuple(
-            std::make_tuple(py::dtype::of<typename Spec::dtype>(), spec.shape,
-                            spec.bounds, spec.elementwise_bounds)...);
+        return std::make_tuple(SpecTupleHelper<Spec>::Make(spec)...);
       },
       specs);
 }
@@ -121,7 +176,8 @@ void ToNumpy(const std::vector<Array>& arrs, const std::tuple<Spec...>& specs,
   std::size_t index = 0;
   std::apply(
       [&](auto&&... spec) {
-        (ret->emplace_back(ArrayToNumpy<typename Spec::dtype>(arrs[index++])),
+        (ret->emplace_back(
+             ArrayToNumpyHelper<typename Spec::dtype>::Convert(arrs[index++])),
          ...);
       },
       specs);

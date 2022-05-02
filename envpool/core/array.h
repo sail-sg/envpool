@@ -198,4 +198,10 @@ class Array {
   [[nodiscard]] std::shared_ptr<char> SharedPtr() const { return ptr_; }
 };
 
+template <typename Dtype>
+class TArray : public Array {
+ public:
+  explicit TArray(const Spec<Dtype>& spec) : Array(spec) {}
+};
+
 #endif  // ENVPOOL_CORE_ARRAY_H_

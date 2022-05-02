@@ -74,6 +74,8 @@ class DummyEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict("obs"_.Bind(Spec<int>({-1, conf["state_num"_]})),
+                    "dyn"_.Bind(Spec<Container<int>>(
+                        {-1}, Spec<int>({-1, conf["state_num"_]}))),
                     "info:players.done"_.Bind(Spec<bool>({-1})),
                     "info:players.id"_.Bind(
                         Spec<int>({-1}, {0, conf["max_num_players"_]})));

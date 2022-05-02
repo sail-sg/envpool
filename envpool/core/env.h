@@ -25,6 +25,26 @@
 #include "envpool/core/env_spec.h"
 #include "envpool/core/state_buffer_queue.h"
 
+template <typename Dtype>
+struct InitializeHelper {
+  static void Init(Array* arr) {}
+};
+
+template <typename Dtype>
+struct InitializeHelper<Container<Dtype>> {
+  static void Init(Array* arr) {
+    auto* carr = reinterpret_cast<Container<Dtype>*>(arr->Data());
+    for (std::size_t i = 0; i < arr->size; ++i) {
+      new (carr + i) Container<Dtype>(nullptr);
+    }
+  }
+};
+
+template <typename Spec>
+void InplaceInitialize(const Spec& spec, Array* arr) {
+  InitializeHelper<typename Spec::dtype>::Init(arr);
+}
+
 /**
  * Single RL environment abstraction.
  */
@@ -167,6 +187,13 @@ class Env {
     for (int i = 0; i < player_num; ++i) {
       player_env_id[i] = env_id_;
     }
+    // Inplace initialize all container fields
+    int i = 0;
+    std::apply(
+        [&](auto&&... spec) {
+          (InplaceInitialize(spec, &slice_.arr[i++]), ...);
+        },
+        spec_.state_spec.AllValues());
     return state;
   }
 };

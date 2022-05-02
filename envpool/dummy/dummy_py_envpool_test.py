@@ -58,6 +58,7 @@ class _DummyEnvPoolTest(absltest.TestCase):
     action_spec = dict(zip(action_keys, action_spec))
     # default value of state_num is 10
     self.assertEqual(state_spec["obs"][1][-1], 10)
+    self.assertEqual(state_spec["dyn"][1][1][-1], 10)
     # change conf and see if it can successfully change state_spec
     # directly send dict or expose config as dict?
     conf = dict(zip(_DummyEnvSpec._config_keys, conf))

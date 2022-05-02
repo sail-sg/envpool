@@ -91,4 +91,22 @@ class Spec : public ShapeSpec {
   }
 };
 
+template <typename dtype>
+class TArray;
+
+template <typename dtype>
+using Container = std::unique_ptr<TArray<dtype>>;
+
+template <typename D>
+class Spec<Container<D>> : public ShapeSpec {
+ public:
+  using dtype = Container<D>;  // NOLINT
+  Spec<D> inner_spec;
+  explicit Spec(const std::vector<int>& shape, const Spec<D>& inner_spec)
+      : ShapeSpec(sizeof(Container<D>), shape), inner_spec(inner_spec) {}
+  explicit Spec(std::vector<int>&& shape, Spec<D>&& inner_spec)
+      : ShapeSpec(sizeof(Container<D>), std::move(shape)),
+        inner_spec(std::move(inner_spec)) {}
+};
+
 #endif  // ENVPOOL_CORE_SPEC_H_
