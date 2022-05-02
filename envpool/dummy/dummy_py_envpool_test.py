@@ -34,6 +34,7 @@ class _DummyEnvPoolTest(absltest.TestCase):
       "thread_affinity_offset",
       "base_path",
       "seed",
+      "gym_reset_return_info",
       "state_num",
       "action_num",
     ]

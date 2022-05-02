@@ -295,7 +295,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
   }
 };
 
-typedef AsyncEnvPool<AtariEnv> AtariEnvPool;
+using AtariEnvPool = AsyncEnvPool<AtariEnv>;
 
 }  // namespace atari
 

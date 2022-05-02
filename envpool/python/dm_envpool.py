@@ -53,7 +53,10 @@ class DMEnvPoolMeta(ABCMeta):
     state_structure, state_idx = dm_structure("State", state_keys)
 
     def _to_dm(
-      self: Any, state_values: List[np.ndarray], reset: bool
+      self: Any,
+      state_values: List[np.ndarray],
+      reset: bool,
+      return_info: bool,
     ) -> TimeStep:
       state = tree.unflatten_as(
         state_structure, [state_values[i] for i in state_idx]
