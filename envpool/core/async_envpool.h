@@ -63,18 +63,18 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
 
   explicit AsyncEnvPool(const Spec& spec)
       : EnvPool<Spec>(spec),
-        num_envs_(spec.config_["num_envs"_]),
-        batch_(spec.config_["batch_size"_] <= 0 ? num_envs_
-                                                : spec.config_["batch_size"_]),
-        max_num_players_(spec.config_["max_num_players"_]),
-        num_threads_(spec.config_["num_threads"_]),
+        num_envs_(spec.config["num_envs"_]),
+        batch_(spec.config["batch_size"_] <= 0 ? num_envs_
+                                               : spec.config["batch_size"_]),
+        max_num_players_(spec.config["max_num_players"_]),
+        num_threads_(spec.config["num_threads"_]),
         is_sync_(batch_ == num_envs_ && max_num_players_ == 1),
         stop_(0),
         stepping_env_num_(0),
         action_buffer_queue_(new ActionBufferQueue(num_envs_)),
         state_buffer_queue_(new StateBufferQueue(
             batch_, num_envs_, max_num_players_,
-            spec.state_spec_.template AllValues<ShapeSpec>())),
+            spec.state_spec.template AllValues<ShapeSpec>())),
         envs_(num_envs_) {
     std::size_t processor_count = std::thread::hardware_concurrency();
     ThreadPool init_pool(std::min(processor_count, num_envs_));
@@ -96,15 +96,14 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
           if (stop_ == 1) {
             break;
           }
-          int env_id = raw_action.env_id_;
-          int order = raw_action.order_;
-          bool reset = raw_action.force_reset_ || envs_[env_id]->IsDone();
+          int env_id = raw_action.env_id;
+          int order = raw_action.order;
+          bool reset = raw_action.force_reset || envs_[env_id]->IsDone();
           envs_[env_id]->EnvStep(state_buffer_queue_.get(), order, reset);
         }
       });
     }
-    std::size_t thread_affinity_offset =
-        spec.config_["thread_affinity_offset"_];
+    std::size_t thread_affinity_offset = spec.config["thread_affinity_offset"_];
     if (thread_affinity_offset >= 0) {
       for (std::size_t tid = 0; tid < num_threads_; ++tid) {
         cpu_set_t cpuset;
@@ -139,9 +138,9 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
       int eid = env_id[i];
       envs_[eid]->SetAction(action_batch, i);
       actions.emplace_back(ActionSlice{
-          .env_id_ = eid,
-          .order_ = is_sync_ ? i : -1,
-          .force_reset_ = false,
+          .env_id = eid,
+          .order = is_sync_ ? i : -1,
+          .force_reset = false,
       });
     }
     if (is_sync_) {
@@ -171,9 +170,9 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
     int shared_offset = env_ids.Shape(0);
     std::vector<ActionSlice> actions(shared_offset);
     for (int i = 0; i < shared_offset; ++i) {
-      actions[i].force_reset_ = true;
-      actions[i].env_id_ = env_ids[i];
-      actions[i].order_ = is_sync_ ? i : -1;
+      actions[i].force_reset = true;
+      actions[i].env_id = env_ids[i];
+      actions[i].order = is_sync_ ? i : -1;
     }
     if (is_sync_) {
       stepping_env_num_ += shared_offset;

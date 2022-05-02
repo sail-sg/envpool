@@ -160,48 +160,47 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
       : Env<VizdoomEnvSpec>(spec, env_id),
         info_index_({19, 20, 21, 22, 23, 24, 10, 7, 4, 3, 9, 5, 0, 15, 16, 73}),
         dg_(new DoomGame()),
-        lmp_dir_(spec.config_["lmp_save_dir"_]),
+        lmp_dir_(spec.config["lmp_save_dir"_]),
         save_lmp_(lmp_dir_.length() > 0),
-        episodic_life_(spec.config_["episodic_life"_]),
-        use_combined_action_(spec.config_["use_combined_action"_]),
-        use_inter_area_resize_(spec.config_["use_inter_area_resize"_]),
+        episodic_life_(spec.config["episodic_life"_]),
+        use_combined_action_(spec.config["use_combined_action"_]),
+        use_inter_area_resize_(spec.config["use_inter_area_resize"_]),
         done_(true),
-        max_episode_steps_(spec.config_["max_episode_steps"_]),
+        max_episode_steps_(spec.config["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
-        stack_num_(spec.config_["stack_num"_]),
-        frame_skip_(spec.config_["frame_skip"_]),
+        stack_num_(spec.config["stack_num"_]),
+        frame_skip_(spec.config["frame_skip"_]),
         episode_count_(0),
         last_deathcount_(0),
         last_hitcount_(0),
         last_damagecount_(0),
-        weapon_duration_(spec.config_["weapon_duration"_]),
+        weapon_duration_(spec.config["weapon_duration"_]),
         weapon_reward_(10) {
     if (save_lmp_) {
-      lmp_dir_ = spec.config_["lmp_save_dir"_] + "/env_" +
-                 std::to_string(env_id) + "_";
+      lmp_dir_ =
+          spec.config["lmp_save_dir"_] + "/env_" + std::to_string(env_id) + "_";
     }
     dg_->setViZDoomPath(
-        MergePath(spec.config_["base_path"_], spec.config_["vzd_path"_]));
+        MergePath(spec.config["base_path"_], spec.config["vzd_path"_]));
     dg_->setDoomGamePath(
-        MergePath(spec.config_["base_path"_], spec.config_["iwad_path"_]));
-    dg_->loadConfig(spec.config_["cfg_path"_]);
+        MergePath(spec.config["base_path"_], spec.config["iwad_path"_]));
+    dg_->loadConfig(spec.config["cfg_path"_]);
     dg_->setWindowVisible(false);
-    dg_->addGameArgs(spec.config_["game_args"_]);
+    dg_->addGameArgs(spec.config["game_args"_]);
     dg_->setMode(PLAYER);
     dg_->setEpisodeTimeout((max_episode_steps_ + 1) * frame_skip_);
-    if (!spec.config_["wad_path"_].empty()) {
-      dg_->setDoomScenarioPath(spec.config_["wad_path"_]);
+    if (!spec.config["wad_path"_].empty()) {
+      dg_->setDoomScenarioPath(spec.config["wad_path"_]);
     }
-    dg_->setSeed(spec.config_["seed"_]);
-    dg_->setDoomMap(spec.config_["map_id"_]);
+    dg_->setSeed(spec.config["seed"_]);
+    dg_->setDoomMap(spec.config["map_id"_]);
 
     channel_ = dg_->getScreenChannels();
     raw_buf_ =
         Array(FrameSpec({dg_->getScreenHeight(), dg_->getScreenWidth(), 1}));
     for (int i = 0; i < stack_num_; ++i) {
-      stack_buf_.emplace_back(
-          Array(FrameSpec({channel_, spec.config_["img_height"_],
-                           spec.config_["img_width"_]})));
+      stack_buf_.emplace_back(Array(FrameSpec(
+          {channel_, spec.config["img_height"_], spec.config["img_width"_]})));
     }
     for (auto i : info_index_) {
       dg_->addAvailableGameVariable(static_cast<GameVariable>(i));
@@ -239,19 +238,19 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     button_list_ = dg_->getAvailableButtons();
     std::vector<std::tuple<int, float, float>> delta_config(
         button_string_list.size());
-    for (const auto& i : spec.config_["delta_button_config"_]) {
+    for (const auto& i : spec.config["delta_button_config"_]) {
       int button_index = Str2Button(i.first);
       if (button_index != -1) {
         delta_config[button_index] = i.second;
       }
     }
-    action_set_ = BuildActionSet(button_list_, spec.config_["force_speed"_],
-                                 delta_config);
+    action_set_ =
+        BuildActionSet(button_list_, spec.config["force_speed"_], delta_config);
 
     // reward config
     pos_reward_.resize(gv_list_.size(), 0.0);
     neg_reward_.resize(gv_list_.size(), 0.0);
-    for (const auto& i : spec.config_["reward_config"_]) {
+    for (const auto& i : spec.config["reward_config"_]) {
       int gv_index = Str2GV(i.first);
       if (gv_index == -1) {
         continue;
@@ -265,7 +264,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
       neg_reward_[index] = std::get<1>(i.second);
     }
     // weapon reward config
-    const auto& weapon_config = spec.config_["selected_weapon_reward_config"_];
+    const auto& weapon_config = spec.config["selected_weapon_reward_config"_];
     for (int i = 0; i < 8; ++i) {
       auto it = weapon_config.find(i);
       if (it != weapon_config.end()) {
@@ -406,14 +405,14 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
 
     // get screen
     auto* raw_ptr = static_cast<uint8_t*>(raw_buf_.Data());
-    std::size_t size = raw_buf_.size_;
+    std::size_t size = raw_buf_.size;
     for (int c = 0; c < channel_; ++c) {
       // gamestate->screenBuffer is channel-first image
       memcpy(raw_ptr, gamestate->screenBuffer->data() + c * size, size);
       auto slice = tgt[c];
       Resize(raw_buf_, &slice, use_inter_area_resize_);
     }
-    size = tgt.size_;
+    size = tgt.size;
     stack_buf_.emplace_back(tgt);
     if (is_reset) {
       for (auto& s : stack_buf_) {

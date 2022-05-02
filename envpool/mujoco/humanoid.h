@@ -81,22 +81,22 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
  public:
   HumanoidEnv(const Spec& spec, int env_id)
       : Env<HumanoidEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config_["base_path"_] + "/mujoco/assets/humanoid.xml",
-                  spec.config_["frame_skip"_], spec.config_["post_constraint"_],
-                  spec.config_["max_episode_steps"_]),
-        terminate_when_unhealthy_(spec.config_["terminate_when_unhealthy"_]),
-        no_pos_(spec.config_["exclude_current_positions_from_observation"_]),
-        ctrl_cost_weight_(spec.config_["ctrl_cost_weight"_]),
-        contact_cost_weight_(spec.config_["contact_cost_weight"_]),
-        contact_cost_max_(spec.config_["contact_cost_max"_]),
-        forward_reward_weight_(spec.config_["forward_reward_weight"_]),
-        healthy_reward_(spec.config_["healthy_reward"_]),
-        healthy_z_min_(spec.config_["healthy_z_min"_]),
-        healthy_z_max_(spec.config_["healthy_z_max"_]),
+        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/humanoid.xml",
+                  spec.config["frame_skip"_], spec.config["post_constraint"_],
+                  spec.config["max_episode_steps"_]),
+        terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
+        no_pos_(spec.config["exclude_current_positions_from_observation"_]),
+        ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
+        contact_cost_weight_(spec.config["contact_cost_weight"_]),
+        contact_cost_max_(spec.config["contact_cost_max"_]),
+        forward_reward_weight_(spec.config["forward_reward_weight"_]),
+        healthy_reward_(spec.config["healthy_reward"_]),
+        healthy_z_min_(spec.config["healthy_z_min"_]),
+        healthy_z_max_(spec.config["healthy_z_max"_]),
         mass_x_(0),
         mass_y_(0),
-        dist_(-spec.config_["reset_noise_scale"_],
-              spec.config_["reset_noise_scale"_]) {}
+        dist_(-spec.config["reset_noise_scale"_],
+              spec.config["reset_noise_scale"_]) {}
 
   void MujocoResetModel() override {
     for (int i = 0; i < model_->nq; ++i) {

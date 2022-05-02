@@ -58,7 +58,7 @@ class TaxiEnv : public Env<TaxiEnvSpec> {
  public:
   TaxiEnv(const Spec& spec, int env_id)
       : Env<TaxiEnvSpec>(spec, env_id),
-        max_episode_steps_(spec.config_["max_episode_steps"_]),
+        max_episode_steps_(spec.config["max_episode_steps"_]),
         dist_car_(0, 3),
         dist_loc_(0, 4),
         done_(true),

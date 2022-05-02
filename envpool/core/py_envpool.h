@@ -71,8 +71,8 @@ decltype(auto) ExportSpecs(const std::tuple<Spec...>& specs) {
   return std::apply(
       [&](auto&&... spec) {
         return std::make_tuple(
-            std::make_tuple(py::dtype::of<typename Spec::dtype>(), spec.shape_,
-                            spec.bounds_, spec.elementwise_bounds_)...);
+            std::make_tuple(py::dtype::of<typename Spec::dtype>(), spec.shape,
+                            spec.bounds, spec.elementwise_bounds)...);
       },
       specs);
 }
@@ -85,9 +85,9 @@ class PyEnvSpec : public EnvSpec {
   using ActionSpecT =
       decltype(ExportSpecs(std::declval<typename EnvSpec::ActionSpec>()));
 
-  StateSpecT py_state_spec_;
-  ActionSpecT py_action_spec_;
-  typename EnvSpec::ConfigValues py_config_values_;
+  StateSpecT py_state_spec;
+  ActionSpecT py_action_spec;
+  typename EnvSpec::ConfigValues py_config_values;
   static std::vector<std::string> py_config_keys;
   static std::vector<std::string> py_state_keys;
   static std::vector<std::string> py_action_keys;
@@ -95,9 +95,9 @@ class PyEnvSpec : public EnvSpec {
 
   explicit PyEnvSpec(const typename EnvSpec::ConfigValues& conf)
       : EnvSpec(conf),
-        py_state_spec_(ExportSpecs(EnvSpec::state_spec_)),
-        py_action_spec_(ExportSpecs(EnvSpec::action_spec_)),
-        py_config_values_(EnvSpec::config_.AllValues()) {}
+        py_state_spec(ExportSpecs(EnvSpec::state_spec)),
+        py_action_spec(ExportSpecs(EnvSpec::action_spec)),
+        py_config_values(EnvSpec::config.AllValues()) {}
 };
 template <typename EnvSpec>
 std::vector<std::string> PyEnvSpec<EnvSpec>::py_config_keys =
@@ -149,12 +149,12 @@ class PyEnvPool : public EnvPool {
  public:
   using PySpec = PyEnvSpec<typename EnvPool::Spec>;
 
-  PySpec py_spec_;
+  PySpec py_spec;
   static std::vector<std::string> py_state_keys;
   static std::vector<std::string> py_action_keys;
 
   explicit PyEnvPool(const PySpec& py_spec)
-      : EnvPool(py_spec), py_spec_(py_spec) {}
+      : EnvPool(py_spec), py_spec(py_spec) {}
 
   /**
    * py api
@@ -162,7 +162,7 @@ class PyEnvPool : public EnvPool {
   void PySend(const std::vector<py::array>& action) {
     std::vector<Array> arr;
     arr.reserve(action.size());
-    ToArray(action, py_spec_.action_spec_, &arr);
+    ToArray(action, py_spec.action_spec, &arr);
     py::gil_scoped_release release;
     EnvPool::Send(arr);  // delegate to the c++ api
   }
@@ -179,7 +179,7 @@ class PyEnvPool : public EnvPool {
     }
     std::vector<py::array> ret;
     ret.reserve(EnvPool::State::SIZE);
-    ToNumpy(arr, py_spec_.state_spec_, &ret);
+    ToNumpy(arr, py_spec.state_spec, &ret);
     return ret;
   }
 
@@ -211,9 +211,9 @@ py::object abc_meta = py::module::import("abc").attr("ABCMeta");
 #define REGISTER(MODULE, SPEC, ENVPOOL)                              \
   py::class_<SPEC>(MODULE, "_" #SPEC, py::metaclass(abc_meta))       \
       .def(py::init<const typename SPEC::ConfigValues&>())           \
-      .def_readonly("_config_values", &SPEC::py_config_values_)      \
-      .def_readonly("_state_spec", &SPEC::py_state_spec_)            \
-      .def_readonly("_action_spec", &SPEC::py_action_spec_)          \
+      .def_readonly("_config_values", &SPEC::py_config_values)       \
+      .def_readonly("_state_spec", &SPEC::py_state_spec)             \
+      .def_readonly("_action_spec", &SPEC::py_action_spec)           \
       .def_readonly_static("_state_keys", &SPEC::py_state_keys)      \
       .def_readonly_static("_action_keys", &SPEC::py_action_keys)    \
       .def_readonly_static("_config_keys", &SPEC::py_config_keys)    \
@@ -221,7 +221,7 @@ py::object abc_meta = py::module::import("abc").attr("ABCMeta");
                            &SPEC::py_default_config_values);         \
   py::class_<ENVPOOL>(MODULE, "_" #ENVPOOL, py::metaclass(abc_meta)) \
       .def(py::init<const SPEC&>())                                  \
-      .def_readonly("_spec", &ENVPOOL::py_spec_)                     \
+      .def_readonly("_spec", &ENVPOOL::py_spec)                      \
       .def("_recv", &ENVPOOL::PyRecv)                                \
       .def("_send", &ENVPOOL::PySend)                                \
       .def("_reset", &ENVPOOL::PyReset)                              \

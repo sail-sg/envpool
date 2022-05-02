@@ -33,6 +33,7 @@ CheckOptions:
   - { key: readability-identifier-naming.GlobalConstantCase,    value: UPPER_CASE }
   - { key: readability-identifier-naming.MemberCase,            value: lower_case }
   - { key: readability-identifier-naming.MemberSuffix,          value: _          }
+  - { key: readability-identifier-naming.PublicMemberCase,      value: lower_case }
   - { key: readability-identifier-naming.TypeAliasCase,         value: CamelCase  }
   - { key: readability-identifier-naming.ConstantMemberCase,    value: CamelCase  }
   - { key: readability-identifier-naming.ConstantMemberPrefix,  value: k          }

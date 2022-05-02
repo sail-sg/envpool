@@ -53,8 +53,8 @@ class CatchEnv : public Env<CatchEnvSpec> {
  public:
   CatchEnv(const Spec& spec, int env_id)
       : Env<CatchEnvSpec>(spec, env_id),
-        height_(spec.config_["height"_]),
-        width_(spec.config_["width"_]),
+        height_(spec.config["height"_]),
+        width_(spec.config["width"_]),
         dist_(0, width_ - 1),
         done_(true) {}
 

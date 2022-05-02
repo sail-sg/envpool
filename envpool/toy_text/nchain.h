@@ -55,7 +55,7 @@ class NChainEnv : public Env<NChainEnvSpec> {
  public:
   NChainEnv(const Spec& spec, int env_id)
       : Env<NChainEnvSpec>(spec, env_id),
-        max_episode_steps_(spec.config_["max_episode_steps"_]),
+        max_episode_steps_(spec.config["max_episode_steps"_]),
         dist_(0, 1),
         done_(true) {}
 

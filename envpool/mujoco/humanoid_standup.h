@@ -74,17 +74,17 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
   HumanoidStandupEnv(const Spec& spec, int env_id)
       : Env<HumanoidStandupEnvSpec>(spec, env_id),
         MujocoEnv(
-            spec.config_["base_path"_] + "/mujoco/assets/humanoidstandup.xml",
-            spec.config_["frame_skip"_], spec.config_["post_constraint"_],
-            spec.config_["max_episode_steps"_]),
-        no_pos_(spec.config_["exclude_current_positions_from_observation"_]),
-        ctrl_cost_weight_(spec.config_["ctrl_cost_weight"_]),
-        contact_cost_weight_(spec.config_["contact_cost_weight"_]),
-        contact_cost_max_(spec.config_["contact_cost_max"_]),
-        forward_reward_weight_(spec.config_["forward_reward_weight"_]),
-        healthy_reward_(spec.config_["healthy_reward"_]),
-        dist_(-spec.config_["reset_noise_scale"_],
-              spec.config_["reset_noise_scale"_]) {}
+            spec.config["base_path"_] + "/mujoco/assets/humanoidstandup.xml",
+            spec.config["frame_skip"_], spec.config["post_constraint"_],
+            spec.config["max_episode_steps"_]),
+        no_pos_(spec.config["exclude_current_positions_from_observation"_]),
+        ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
+        contact_cost_weight_(spec.config["contact_cost_weight"_]),
+        contact_cost_max_(spec.config["contact_cost_max"_]),
+        forward_reward_weight_(spec.config["forward_reward_weight"_]),
+        healthy_reward_(spec.config["healthy_reward"_]),
+        dist_(-spec.config["reset_noise_scale"_],
+              spec.config["reset_noise_scale"_]) {}
 
   void MujocoResetModel() override {
     for (int i = 0; i < model_->nq; ++i) {

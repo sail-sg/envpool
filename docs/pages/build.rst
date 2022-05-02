@@ -60,6 +60,8 @@ or `golang <https://golang.org/doc/install>`_ with version >= 1.16:
         # check if successfully installed
         bazel
 
+    See `Issue #87 <https://github.com/sail-sg/envpool/issues/87>`_.
+
 
 Install Other Dependencies
 --------------------------
@@ -113,6 +115,8 @@ This creates a wheel under ``bazel-bin/setup.runfiles/envpool/dist``.
         export HTTPS_PROXY=http://...
         # then run the command to build
 
+    See `Issue #87 <https://github.com/sail-sg/envpool/issues/87>`_.
+
 
 Use Shortcut
 ------------
@@ -154,3 +158,5 @@ system via ``/host``.
     .. code-block:: bash
 
         make docker-dev-cn
+
+    See `Issue #87 <https://github.com/sail-sg/envpool/issues/87>`_.

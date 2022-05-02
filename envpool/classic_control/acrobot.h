@@ -49,16 +49,15 @@ using AcrobotEnvSpec = EnvSpec<AcrobotEnvFns>;
 
 class AcrobotEnv : public Env<AcrobotEnvSpec> {
   struct V5 {
-    double s0_{0}, s1_{0}, s2_{0}, s3_{0}, s4_{0};
+    double s0{0}, s1{0}, s2{0}, s3{0}, s4{0};
     V5() = default;
     V5(double s0, double s1, double s2, double s3, double s4)
-        : s0_(s0), s1_(s1), s2_(s2), s3_(s3), s4_(s4) {}
+        : s0(s0), s1(s1), s2(s2), s3(s3), s4(s4) {}
     V5 operator+(const V5& v) const {
-      return V5(s0_ + v.s0_, s1_ + v.s1_, s2_ + v.s2_, s3_ + v.s3_,
-                s4_ + v.s4_);
+      return V5(s0 + v.s0, s1 + v.s1, s2 + v.s2, s3 + v.s3, s4 + v.s4);
     }
     V5 operator*(double v) const {
-      return V5(s0_ * v, s1_ * v, s2_ * v, s3_ * v, s4_ * v);
+      return V5(s0 * v, s1 * v, s2 * v, s3 * v, s4 * v);
     }
   };
 
@@ -82,7 +81,7 @@ class AcrobotEnv : public Env<AcrobotEnvSpec> {
  public:
   AcrobotEnv(const Spec& spec, int env_id)
       : Env<AcrobotEnvSpec>(spec, env_id),
-        max_episode_steps_(spec.config_["max_episode_steps"_]),
+        max_episode_steps_(spec.config["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
         dist_(-kInitRange, kInitRange),
         done_(true) {}
@@ -90,11 +89,11 @@ class AcrobotEnv : public Env<AcrobotEnvSpec> {
   bool IsDone() override { return done_; }
 
   void Reset() override {
-    s_.s0_ = dist_(gen_);
-    s_.s1_ = dist_(gen_);
-    s_.s2_ = dist_(gen_);
-    s_.s3_ = dist_(gen_);
-    s_.s4_ = 0;
+    s_.s0 = dist_(gen_);
+    s_.s1 = dist_(gen_);
+    s_.s2 = dist_(gen_);
+    s_.s3 = dist_(gen_);
+    s_.s4 = 0;
     done_ = false;
     elapsed_step_ = 0;
     WriteState(0.0);
@@ -105,33 +104,33 @@ class AcrobotEnv : public Env<AcrobotEnvSpec> {
     int act = action["action"_];
     float reward = -1.0;
 
-    s_.s4_ = act - 1;
+    s_.s4 = act - 1;
     s_ = Rk4(s_);
-    while (s_.s0_ < -kPi) {
-      s_.s0_ += kPi * 2;
+    while (s_.s0 < -kPi) {
+      s_.s0 += kPi * 2;
     }
-    while (s_.s1_ < -kPi) {
-      s_.s1_ += kPi * 2;
+    while (s_.s1 < -kPi) {
+      s_.s1 += kPi * 2;
     }
-    while (s_.s0_ >= kPi) {
-      s_.s0_ -= kPi * 2;
+    while (s_.s0 >= kPi) {
+      s_.s0 -= kPi * 2;
     }
-    while (s_.s1_ >= kPi) {
-      s_.s1_ -= kPi * 2;
+    while (s_.s1 >= kPi) {
+      s_.s1 -= kPi * 2;
     }
-    if (s_.s2_ < -kMaxVel1) {
-      s_.s2_ = -kMaxVel1;
+    if (s_.s2 < -kMaxVel1) {
+      s_.s2 = -kMaxVel1;
     }
-    if (s_.s3_ < -kMaxVel2) {
-      s_.s3_ = -kMaxVel2;
+    if (s_.s3 < -kMaxVel2) {
+      s_.s3 = -kMaxVel2;
     }
-    if (s_.s2_ > kMaxVel1) {
-      s_.s2_ = kMaxVel1;
+    if (s_.s2 > kMaxVel1) {
+      s_.s2 = kMaxVel1;
     }
-    if (s_.s3_ > kMaxVel2) {
-      s_.s3_ = kMaxVel2;
+    if (s_.s3 > kMaxVel2) {
+      s_.s3 = kMaxVel2;
     }
-    if (-std::cos(s_.s0_) - std::cos(s_.s0_ + s_.s1_) > 1) {
+    if (-std::cos(s_.s0) - std::cos(s_.s0 + s_.s1) > 1) {
       done_ = true;
       reward = 0.0;
     }
@@ -149,11 +148,11 @@ class AcrobotEnv : public Env<AcrobotEnvSpec> {
   }
 
   [[nodiscard]] V5 Derivs(V5 s, double t) const {
-    double theta1 = s.s0_;
-    double theta2 = s.s1_;
-    double dtheta1 = s.s2_;
-    double dtheta2 = s.s3_;
-    double a = s.s4_;
+    double theta1 = s.s0;
+    double theta2 = s.s1;
+    double dtheta1 = s.s2;
+    double dtheta2 = s.s3;
+    double a = s.s4;
     double d1 = kM * kLC * kLC +
                 kM * (kL * kL + kLC * kLC + 2 * kL * kLC * std::cos(theta2)) +
                 kI * 2;
@@ -172,14 +171,14 @@ class AcrobotEnv : public Env<AcrobotEnvSpec> {
 
   void WriteState(float reward) {
     State state = Allocate();
-    state["obs"_][0] = static_cast<float>(std::cos(s_.s0_));
-    state["obs"_][1] = static_cast<float>(std::sin(s_.s0_));
-    state["obs"_][2] = static_cast<float>(std::cos(s_.s1_));
-    state["obs"_][3] = static_cast<float>(std::sin(s_.s1_));
-    state["obs"_][4] = static_cast<float>(s_.s2_);
-    state["obs"_][5] = static_cast<float>(s_.s3_);
-    state["info:state"_][0] = static_cast<float>(s_.s0_);
-    state["info:state"_][1] = static_cast<float>(s_.s1_);
+    state["obs"_][0] = static_cast<float>(std::cos(s_.s0));
+    state["obs"_][1] = static_cast<float>(std::sin(s_.s0));
+    state["obs"_][2] = static_cast<float>(std::cos(s_.s1));
+    state["obs"_][3] = static_cast<float>(std::sin(s_.s1));
+    state["obs"_][4] = static_cast<float>(s_.s2);
+    state["obs"_][5] = static_cast<float>(s_.s3);
+    state["info:state"_][0] = static_cast<float>(s_.s0);
+    state["info:state"_][1] = static_cast<float>(s_.s1);
     state["reward"_] = reward;
   }
 };

@@ -37,8 +37,8 @@ class Value {
  public:
   using Key = K;
   using Type = D;
-  explicit Value(Type&& v) : v_(v) {}
-  Type v_;
+  explicit Value(Type&& v) : v(v) {}
+  Type v;
 };
 
 template <char... C>
@@ -237,7 +237,7 @@ class Dict : public std::decay_t<TupleOrVector> {
 template <typename... Value>
 decltype(auto) MakeDict(Value... v) {
   return Dict(std::make_tuple(typename Value::Key()...),
-              std::make_tuple(v.v_...));
+              std::make_tuple(v.v...));
 }
 
 template <

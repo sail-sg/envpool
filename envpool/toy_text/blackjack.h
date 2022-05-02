@@ -56,8 +56,8 @@ class BlackjackEnv : public Env<BlackjackEnvSpec> {
  public:
   BlackjackEnv(const Spec& spec, int env_id)
       : Env<BlackjackEnvSpec>(spec, env_id),
-        natural_(spec.config_["natural"_]),
-        sab_(spec.config_["sab"_]),
+        natural_(spec.config["natural"_]),
+        sab_(spec.config["sab"_]),
         dist_(1, 13),
         done_(true) {}
 

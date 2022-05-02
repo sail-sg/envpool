@@ -66,14 +66,14 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
   InvertedPendulumEnv(const Spec& spec, int env_id)
       : Env<InvertedPendulumEnvSpec>(spec, env_id),
         MujocoEnv(
-            spec.config_["base_path"_] + "/mujoco/assets/inverted_pendulum.xml",
-            spec.config_["frame_skip"_], spec.config_["post_constraint"_],
-            spec.config_["max_episode_steps"_]),
-        healthy_reward_(spec.config_["healthy_reward"_]),
-        healthy_z_min_(spec.config_["healthy_z_min"_]),
-        healthy_z_max_(spec.config_["healthy_z_max"_]),
-        dist_(-spec.config_["reset_noise_scale"_],
-              spec.config_["reset_noise_scale"_]) {}
+            spec.config["base_path"_] + "/mujoco/assets/inverted_pendulum.xml",
+            spec.config["frame_skip"_], spec.config["post_constraint"_],
+            spec.config["max_episode_steps"_]),
+        healthy_reward_(spec.config["healthy_reward"_]),
+        healthy_z_min_(spec.config["healthy_z_min"_]),
+        healthy_z_max_(spec.config["healthy_z_max"_]),
+        dist_(-spec.config["reset_noise_scale"_],
+              spec.config["reset_noise_scale"_]) {}
 
   void MujocoResetModel() override {
     for (int i = 0; i < model_->nq; ++i) {
