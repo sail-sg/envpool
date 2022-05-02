@@ -254,7 +254,7 @@ class for convenience, which follows the definition of ``CartPoleEnvSpec``.
 The following functions are required to override:
 
 - constructor, in this case it is ``CartPoleEnv(const Spec& spec, int env_id)``;
-  you can use ``spec.config_["max_episode_steps"_]`` to extract the value from
+  you can use ``spec.config["max_episode_steps"_]`` to extract the value from
   config;
 - ``bool IsDone()``: return a boolean that indicate whether the current episode
   is finished or not;
