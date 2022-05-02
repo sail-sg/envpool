@@ -54,18 +54,18 @@ class Env {
   using Action = NamedVector<typename EnvSpec::ActionKeys, std::vector<Array>>;
 
   Env(const EnvSpec& spec, int env_id)
-      : max_num_players_(spec.config_["max_num_players"_]),
+      : max_num_players_(spec.config["max_num_players"_]),
         spec_(spec),
         env_id_(env_id),
-        seed_(spec.config_["seed"_] + env_id),
+        seed_(spec.config["seed"_] + env_id),
         gen_(seed_),
         current_step_(-1),
         is_single_player_(max_num_players_ == 1),
-        action_specs_(spec.action_spec_.template AllValues<ShapeSpec>()),
+        action_specs_(spec.action_spec.template AllValues<ShapeSpec>()),
         is_player_action_(Transform(action_specs_, [](const ShapeSpec& s) {
-          return (!s.shape_.empty() && s.shape_[0] == -1);
+          return (!s.shape.empty() && s.shape[0] == -1);
         })) {
-    slice_.done_write_ = [] { LOG(INFO) << "Use `Allocate` to write state."; };
+    slice_.done_write = [] { LOG(INFO) << "Use `Allocate` to write state."; };
   }
 
   void SetAction(std::shared_ptr<std::vector<Array>> action_batch,
@@ -109,7 +109,7 @@ class Env {
           if (continuous) {
             raw_action_.emplace_back((*action_batch_)[i].Slice(start, end));
           } else {
-            action_specs_[i].shape_[0] = player_num;
+            action_specs_[i].shape[0] = player_num;
             Array arr(action_specs_[i]);
             for (int j = 0; j < player_num; ++j) {
               int player_index = env_player_index[j];
@@ -153,13 +153,13 @@ class Env {
   }
 
   void PostProcess() {
-    slice_.done_write_();
+    slice_.done_write();
     // action_batch_.reset();
   }
 
   State Allocate(int player_num = 1) {
     slice_ = sbq_->Allocate(player_num, order_);
-    State state(&slice_.arr_);
+    State state(&slice_.arr);
     state["done"_] = IsDone();
     state["info:env_id"_] = env_id_;
     state["elapsed_step"_] = current_step_;

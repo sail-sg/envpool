@@ -37,7 +37,7 @@ TEST(ActionBufferQueueTest, Concurrent) {
   // enqueue all envs
   for (std::size_t i = 0; i < num_envs; ++i) {
     actions.push_back(ActionSlice{
-        .env_id_ = static_cast<int>(i), .order_ = -1, .force_reset_ = false});
+        .env_id = static_cast<int>(i), .order = -1, .force_reset = false});
   }
   queue.EnqueueBulk(actions);
   std::vector<std::atomic<std::size_t>> flag(mul);
@@ -53,9 +53,8 @@ TEST(ActionBufferQueueTest, Concurrent) {
       }
       actions.clear();
       for (std::size_t i = 0; i < env_num[m]; ++i) {
-        actions.push_back(ActionSlice{.env_id_ = static_cast<int>(i),
-                                      .order_ = -1,
-                                      .force_reset_ = false});
+        actions.push_back(ActionSlice{
+            .env_id = static_cast<int>(i), .order = -1, .force_reset = false});
       }
       queue.EnqueueBulk(actions);
     }

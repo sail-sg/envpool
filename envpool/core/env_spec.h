@@ -55,23 +55,23 @@ class EnvSpec {
   using ActionKeys = typename ActionSpec::Keys;
 
   // For C++
-  Config config_;
-  StateSpec state_spec_;
-  ActionSpec action_spec_;
+  Config config;
+  StateSpec state_spec;
+  ActionSpec action_spec;
   static inline const Config DEFAULT_CONFIG =
       ConcatDict(common_config, EnvFns::DefaultConfig());
 
   EnvSpec() : EnvSpec(DEFAULT_CONFIG) {}
   explicit EnvSpec(const ConfigValues& conf)
-      : config_(conf),
-        state_spec_(ConcatDict(common_state_spec, EnvFns::StateSpec(config_))),
-        action_spec_(
-            ConcatDict(common_action_spec, EnvFns::ActionSpec(config_))) {
-    if (config_["batch_size"_] > config_["num_envs"_]) {
+      : config(conf),
+        state_spec(ConcatDict(common_state_spec, EnvFns::StateSpec(config))),
+        action_spec(
+            ConcatDict(common_action_spec, EnvFns::ActionSpec(config))) {
+    if (config["batch_size"_] > config["num_envs"_]) {
       throw std::invalid_argument(
           "It is required that batch_size <= num_envs, got num_envs = " +
-          std::to_string(config_["num_envs"_]) +
-          ", batch_size = " + std::to_string(config_["batch_size"_]));
+          std::to_string(config["num_envs"_]) +
+          ", batch_size = " + std::to_string(config["batch_size"_]));
     }
   }
 };

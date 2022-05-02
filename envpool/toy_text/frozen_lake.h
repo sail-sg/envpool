@@ -58,8 +58,8 @@ class FrozenLakeEnv : public Env<FrozenLakeEnvSpec> {
  public:
   FrozenLakeEnv(const Spec& spec, int env_id)
       : Env<FrozenLakeEnvSpec>(spec, env_id),
-        size_(spec.config_["size"_]),
-        max_episode_steps_(spec.config_["max_episode_steps"_]),
+        size_(spec.config["size"_]),
+        max_episode_steps_(spec.config["max_episode_steps"_]),
         dist_(-1, 1),
         done_(true) {
     if (size_ != 8) {

@@ -70,7 +70,7 @@ class CartPoleEnv : public Env<CartPoleEnvSpec> {
  public:
   CartPoleEnv(const Spec& spec, int env_id)
       : Env<CartPoleEnvSpec>(spec, env_id),
-        max_episode_steps_(spec.config_["max_episode_steps"_]),
+        max_episode_steps_(spec.config["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
         dist_(-kInitRange, kInitRange),
         done_(true) {}

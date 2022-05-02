@@ -68,19 +68,19 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
  public:
   PusherEnv(const Spec& spec, int env_id)
       : Env<PusherEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config_["base_path"_] + "/mujoco/assets/pusher.xml",
-                  spec.config_["frame_skip"_], spec.config_["post_constraint"_],
-                  spec.config_["max_episode_steps"_]),
-        ctrl_cost_weight_(spec.config_["ctrl_cost_weight"_]),
-        dist_cost_weight_(spec.config_["dist_cost_weight"_]),
-        near_cost_weight_(spec.config_["near_cost_weight"_]),
-        cylinder_dist_min_(spec.config_["cylinder_dist_min"_]),
-        dist_qpos_x_(spec.config_["cylinder_x_min"_],
-                     spec.config_["cylinder_x_max"_]),
-        dist_qpos_y_(spec.config_["cylinder_y_min"_],
-                     spec.config_["cylinder_y_max"_]),
-        dist_qvel_(-spec.config_["reset_qvel_scale"_],
-                   spec.config_["reset_qvel_scale"_]) {}
+        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/pusher.xml",
+                  spec.config["frame_skip"_], spec.config["post_constraint"_],
+                  spec.config["max_episode_steps"_]),
+        ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
+        dist_cost_weight_(spec.config["dist_cost_weight"_]),
+        near_cost_weight_(spec.config["near_cost_weight"_]),
+        cylinder_dist_min_(spec.config["cylinder_dist_min"_]),
+        dist_qpos_x_(spec.config["cylinder_x_min"_],
+                     spec.config["cylinder_x_max"_]),
+        dist_qpos_y_(spec.config["cylinder_y_min"_],
+                     spec.config["cylinder_y_max"_]),
+        dist_qvel_(-spec.config["reset_qvel_scale"_],
+                   spec.config["reset_qvel_scale"_]) {}
 
   void MujocoResetModel() override {
     for (int i = 0; i < model_->nq - 4; ++i) {

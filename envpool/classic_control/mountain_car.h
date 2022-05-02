@@ -62,7 +62,7 @@ class MountainCarEnv : public Env<MountainCarEnvSpec> {
  public:
   MountainCarEnv(const Spec& spec, int env_id)
       : Env<MountainCarEnvSpec>(spec, env_id),
-        max_episode_steps_(spec.config_["max_episode_steps"_]),
+        max_episode_steps_(spec.config["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
         dist_(-0.6, -0.4),
         done_(true) {}
