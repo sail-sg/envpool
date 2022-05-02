@@ -125,6 +125,9 @@ spelling: doc-install
 doc-clean:
 	cd docs && make clean
 
+benchmark-rst:
+	pandoc benchmark/README.md --from markdown --to rst -s -o docs/pages/benchmark.rst --columns 1000
+
 lint: buildifier flake8 py-format clang-format cpplint clang-tidy mypy docstyle spelling
 
 format: py-format-install clang-format-install buildifier-install addlicense-install
@@ -163,4 +166,3 @@ release-test2:
 	cd examples && python3 make_env.py && python3 env_step.py
 
 release-test: release-test1 release-test2
-
