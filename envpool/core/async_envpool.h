@@ -103,8 +103,9 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
         }
       });
     }
-    std::size_t thread_affinity_offset = spec.config["thread_affinity_offset"_];
-    if (thread_affinity_offset >= 0) {
+    if (spec.config["thread_affinity_offset"_] >= 0) {
+      std::size_t thread_affinity_offset =
+          spec.config["thread_affinity_offset"_];
       for (std::size_t tid = 0; tid < num_threads_; ++tid) {
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
