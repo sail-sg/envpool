@@ -157,6 +157,7 @@ class DummyEnv : public Env<DummyEnvSpec> {
       // use this spec to create an array
       auto* array = new TArray<int>(dyn_spec);
       // perform some normal array writing
+      array->Fill(env_id_);
       // finally pass it to dynamic array
       dyn.reset(array);
     }
