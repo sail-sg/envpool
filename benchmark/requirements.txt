@@ -1,0 +1,5 @@
+gym==0.23.1
+ale-py==0.7.5
+mujoco==2.1.5
+envpool==0.5.3
+sample-factory==1.123.0
