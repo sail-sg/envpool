@@ -148,6 +148,10 @@ class DummyEnv : public Env<DummyEnvSpec> {
       state["obs"_](i, 0) = state_;
       state["obs"_](i, 1) = 0;
       state["reward"_][i] = -i;
+      Container<int>& dyn = state["dyn"_][i];
+      auto dyn_spec = ::Spec<int>({env_id_ + 1, spec_.config["state_num"_]});
+      dyn.reset(new TArray<int>(dyn_spec));
+      dyn->Fill(state_);
     }
   }
 
@@ -182,6 +186,10 @@ class DummyEnv : public Env<DummyEnvSpec> {
       state["obs"_](i, 0) = state_;
       state["obs"_](i, 1) = action_num;
       state["reward"_][i] = -i;
+      Container<int>& dyn = state["dyn"_][i];
+      auto dyn_spec = ::Spec<int>({action_num, spec_.config["state_num"_]});
+      dyn.reset(new TArray<int>(dyn_spec));
+      dyn->Fill(action_num);
     }
   }
 

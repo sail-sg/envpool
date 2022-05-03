@@ -142,6 +142,16 @@ class Array {
   }
 
   /**
+   * Fills this array with a scalar value of type T.
+   */
+  template <typename T>
+  void Fill(const T& value) const {
+    DCHECK_EQ(element_size, sizeof(T)) << " element size doesn't match";
+    auto* data = reinterpret_cast<T*>(ptr_.get());
+    std::fill(data, data + size, value);
+  }
+
+  /**
    * Copy the memory starting at `raw.first`, to `raw.first + raw.second` to the
    * memory of this Array.
    */
@@ -157,7 +167,19 @@ class Array {
    * scalar shape.
    */
   template <typename T>
-  operator T() const {  // NOLINT
+  operator const T&() const {  // NOLINT
+    DCHECK_EQ(element_size, sizeof(T)) << " there could be a type mismatch";
+    DCHECK_EQ(size, (std::size_t)1)
+        << " Array with a shape can't be used as a scalar";
+    return *reinterpret_cast<T*>(ptr_.get());
+  }
+
+  /**
+   * Cast the Array to a scalar value of type `T`. This Array needs to have a
+   * scalar shape.
+   */
+  template <typename T>
+  operator T&() {  // NOLINT
     DCHECK_EQ(element_size, sizeof(T)) << " there could be a type mismatch";
     DCHECK_EQ(size, (std::size_t)1)
         << " Array with a shape can't be used as a scalar";

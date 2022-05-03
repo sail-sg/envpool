@@ -60,11 +60,19 @@ TEST(DummyEnvPoolTest, SplitZeroAction) {
     EXPECT_EQ(static_cast<int>(state["info:env_id"_][i]), i);
   }
   auto obs = state["obs"_];
+  auto dyn = state["dyn"_];
   auto peid = state["info:players.env_id"_];
   std::vector<int> counter({2, 3, 3, 0});
   for (int i = 0; i < 8; ++i) {
     int p = peid[i];
     EXPECT_EQ(static_cast<int>(obs(i, 1)), counter[p]);
+    // check dyn
+    const Container<int>& c = dyn[i];
+    EXPECT_EQ(c->Shape(0), counter[p]);
+    auto* data = reinterpret_cast<int*>(c->Data());
+    for (std::size_t j = 0; j < c->size; ++j) {
+      EXPECT_EQ(data[j], counter[p]);
+    }
   }
   // construct continuous action
   envpool.Reset(action["env_id"_]);
@@ -83,11 +91,19 @@ TEST(DummyEnvPoolTest, SplitZeroAction) {
     EXPECT_EQ(static_cast<int>(state["info:env_id"_][i]), i);
   }
   obs = state["obs"_];
+  dyn = state["dyn"_];
   peid = state["info:players.env_id"_];
   counter = std::vector<int>({3, 0, 2, 3});
   for (int i = 0; i < 8; ++i) {
     int p = peid[i];
     EXPECT_EQ(static_cast<int>(obs(i, 1)), counter[p]);
+    // check dyn
+    const Container<int>& c = dyn[i];
+    EXPECT_EQ(c->Shape(0), counter[p]);
+    auto* data = reinterpret_cast<int*>(c->Data());
+    for (std::size_t j = 0; j < c->size; ++j) {
+      EXPECT_EQ(data[j], counter[p]);
+    }
   }
 }
 
@@ -125,6 +141,7 @@ void Runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
     auto player_env_id = state["info:players.env_id"_];
     auto player_id = state["info:players.id"_];
     auto obs = state["obs"_];
+    auto dyn = state["dyn"_];
     auto reward = state["reward"_];
     auto done = state["done"_];
     auto player_done = state["info:players.done"_];
@@ -161,6 +178,11 @@ void Runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
       if (is_sync) {
         EXPECT_EQ(eid, i);
       }
+      // check dyn
+      const Container<int>& c = dyn[i];
+      EXPECT_EQ(c->Shape(0), num_players);
+      auto* data = reinterpret_cast<int*>(c->Data());
+      EXPECT_EQ(data[0], num_players);  // checking all is too expensive
     }
 
     for (int i = 0; i < batch; ++i) {
