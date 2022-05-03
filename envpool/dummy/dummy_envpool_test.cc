@@ -68,10 +68,10 @@ TEST(DummyEnvPoolTest, SplitZeroAction) {
     EXPECT_EQ(static_cast<int>(obs(i, 1)), counter[p]);
     // check dyn
     const Container<int>& c = dyn[i];
-    EXPECT_EQ(c->Shape(0), counter[p]);
+    EXPECT_EQ(c->Shape(0), p + 1);
     auto* data = reinterpret_cast<int*>(c->Data());
     for (std::size_t j = 0; j < c->size; ++j) {
-      EXPECT_EQ(data[j], counter[p]);
+      EXPECT_EQ(data[j], p);
     }
   }
   // construct continuous action
@@ -99,10 +99,10 @@ TEST(DummyEnvPoolTest, SplitZeroAction) {
     EXPECT_EQ(static_cast<int>(obs(i, 1)), counter[p]);
     // check dyn
     const Container<int>& c = dyn[i];
-    EXPECT_EQ(c->Shape(0), counter[p]);
+    EXPECT_EQ(c->Shape(0), p + 1);
     auto* data = reinterpret_cast<int*>(c->Data());
     for (std::size_t j = 0; j < c->size; ++j) {
-      EXPECT_EQ(data[j], counter[p]);
+      EXPECT_EQ(data[j], p);
     }
   }
 }
@@ -180,9 +180,9 @@ void Runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
       }
       // check dyn
       const Container<int>& c = dyn[i];
-      EXPECT_EQ(c->Shape(0), num_players);
+      EXPECT_EQ(c->Shape(0), eid + 1);
       auto* data = reinterpret_cast<int*>(c->Data());
-      EXPECT_EQ(data[0], num_players);  // checking all is too expensive
+      EXPECT_EQ(data[0], eid);  // checking all is too expensive
     }
 
     for (int i = 0; i < batch; ++i) {
