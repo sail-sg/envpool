@@ -43,8 +43,8 @@ import argparse
 import time
 
 import numpy as np
-
 import tqdm
+
 import envpool
 
 if __name__ == "__main__":
@@ -58,7 +58,7 @@ if __name__ == "__main__":
   parser.add_argument("--num-threads", type=int, default=0)
   # thread_affinity_offset == -1 means no thread affinity
   parser.add_argument("--thread-affinity-offset", type=int, default=0)
-  parser.add_argument("--total-iter", type=int, default=50000)
+  parser.add_argument("--total-step", type=int, default=50000)
   parser.add_argument("--seed", type=int, default=0)
   args = parser.parse_args()
   print(args)
@@ -82,11 +82,11 @@ if __name__ == "__main__":
     [env.action_space.sample() for _ in range(args.batch_size)]
   )
   t = time.time()
-  for _ in tqdm.trange(args.total_iter):
+  for _ in tqdm.trange(args.total_step):
     info = env.recv()[-1]
     env.send(action, info["env_id"])
   duration = time.time() - t
   frame_skip = getattr(env.spec.config, "frame_skip", 1)
-  fps = args.total_iter * args.batch_size / duration * frame_skip
+  fps = args.total_step * args.batch_size / duration * frame_skip
   print(f"Duration = {duration:.2f}s")
   print(f"EnvPool FPS = {fps:.2f}")
