@@ -73,8 +73,8 @@ class DummyEnvFns {
    */
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs"_.Bind(Spec<int>({-1, conf["state_num"_]})),
-                    "dyn"_.Bind(Spec<Container<int>>(
+    return MakeDict("obs:raw"_.Bind(Spec<int>({-1, conf["state_num"_]})),
+                    "obs:dyn"_.Bind(Spec<Container<int>>(
                         {-1}, Spec<int>({-1, conf["state_num"_]}))),
                     "info:players.done"_.Bind(Spec<bool>({-1})),
                     "info:players.id"_.Bind(
@@ -145,10 +145,11 @@ class DummyEnv : public Env<DummyEnvSpec> {
     for (int i = 0; i < num_players; ++i) {
       state["info:players.id"_][i] = i;
       state["info:players.done"_][i] = IsDone();
-      state["obs"_](i, 0) = state_;
-      state["obs"_](i, 1) = 0;
+      state["obs:raw"_](i, 0) = state_;
+      state["obs:raw"_](i, 1) = 0;
       state["reward"_][i] = -i;
-      Container<int>& dyn = state["dyn"_][i];
+      Container<int>& dyn = state["obs:dyn"_][i];
+      // this is for dynamic shape array
       auto dyn_spec = ::Spec<int>({env_id_ + 1, spec_.config["state_num"_]});
       dyn.reset(new TArray<int>(dyn_spec));
       dyn->Fill(env_id_);
@@ -183,10 +184,10 @@ class DummyEnv : public Env<DummyEnvSpec> {
     for (int i = 0; i < num_players; ++i) {
       state["info:players.id"_][i] = i;
       state["info:players.done"_][i] = IsDone();
-      state["obs"_](i, 0) = state_;
-      state["obs"_](i, 1) = action_num;
+      state["obs:raw"_](i, 0) = state_;
+      state["obs:raw"_](i, 1) = action_num;
       state["reward"_][i] = -i;
-      Container<int>& dyn = state["dyn"_][i];
+      Container<int>& dyn = state["obs:dyn"_][i];
       auto dyn_spec = ::Spec<int>({env_id_ + 1, spec_.config["state_num"_]});
       dyn.reset(new TArray<int>(dyn_spec));
       dyn->Fill(env_id_);

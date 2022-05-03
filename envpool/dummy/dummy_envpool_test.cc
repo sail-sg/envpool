@@ -59,8 +59,8 @@ TEST(DummyEnvPoolTest, SplitZeroAction) {
   for (int i = 0; i < 4; ++i) {
     EXPECT_EQ(static_cast<int>(state["info:env_id"_][i]), i);
   }
-  auto obs = state["obs"_];
-  auto dyn = state["dyn"_];
+  auto obs = state["obs:raw"_];
+  auto dyn = state["obs:dyn"_];
   auto peid = state["info:players.env_id"_];
   std::vector<int> counter({2, 3, 3, 0});
   for (int i = 0; i < 8; ++i) {
@@ -90,8 +90,8 @@ TEST(DummyEnvPoolTest, SplitZeroAction) {
   for (int i = 0; i < 4; ++i) {
     EXPECT_EQ(static_cast<int>(state["info:env_id"_][i]), i);
   }
-  obs = state["obs"_];
-  dyn = state["dyn"_];
+  obs = state["obs:raw"_];
+  dyn = state["obs:dyn"_];
   peid = state["info:players.env_id"_];
   counter = std::vector<int>({3, 0, 2, 3});
   for (int i = 0; i < 8; ++i) {
@@ -140,8 +140,8 @@ void Runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
     auto env_id = state["info:env_id"_];
     auto player_env_id = state["info:players.env_id"_];
     auto player_id = state["info:players.id"_];
-    auto obs = state["obs"_];
-    auto dyn = state["dyn"_];
+    auto obs = state["obs:raw"_];
+    auto dyn = state["obs:dyn"_];
     auto reward = state["reward"_];
     auto done = state["done"_];
     auto player_done = state["info:players.done"_];
