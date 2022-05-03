@@ -44,6 +44,7 @@ import time
 
 import numpy as np
 
+import tqdm
 import envpool
 
 if __name__ == "__main__":
@@ -81,7 +82,7 @@ if __name__ == "__main__":
     [env.action_space.sample() for _ in range(args.batch_size)]
   )
   t = time.time()
-  for _ in range(args.total_iter):
+  for _ in tqdm.trange(args.total_iter):
     info = env.recv()[-1]
     env.send(action, info["env_id"])
   duration = time.time() - t

@@ -20,18 +20,18 @@ import tqdm
 from atari_wrappers import wrap_deepmind
 
 
-def run(env, numenv, total_step, async_):
+def run(env, num_envs, total_step, async_):
   if env == "atari":
     task_id = "PongNoFrameskip-v4"
     frame_skip = 4
     env = gym.vector.make(
-      task_id, numenv, async_, lambda e:
+      task_id, num_envs, async_, lambda e:
       wrap_deepmind(e, episode_life=False, clip_rewards=False, frame_stack=4)
     )
   elif env == "mujoco":
     task_id = "Ant-v3"
     frame_skip = 5
-    env = gym.vector.make(task_id, numenv, async_)
+    env = gym.vector.make(task_id, num_envs, async_)
   else:
     raise NotImplementedError(f"Unknown env {env}")
   env.seed(0)
@@ -40,7 +40,7 @@ def run(env, numenv, total_step, async_):
   t = time.time()
   for _ in tqdm.trange(total_step):
     env.step(action)
-  print(f"FPS = {frame_skip * total_step * numenv / (time.time() - t):.2f}")
+  print(f"FPS = {frame_skip * total_step * num_envs / (time.time() - t):.2f}")
 
 
 if __name__ == '__main__':
@@ -49,8 +49,8 @@ if __name__ == '__main__':
     "--env", type=str, default="atari", choices=["atari", "mujoco"]
   )
   parser.add_argument("--async_", action="store_true")
-  parser.add_argument("--numenv", type=int, default=10)
+  parser.add_argument("--num-envs", type=int, default=10)
   parser.add_argument("--total-step", type=int, default=5000)
   args = parser.parse_args()
   print(args)
-  run(args.env, args.numenv, args.total_step, args.async_)
+  run(args.env, args.num_envs, args.total_step, args.async_)
