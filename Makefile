@@ -1,11 +1,12 @@
-SHELL        = /bin/bash
-PROJECT_NAME = envpool
-PYTHON_FILES = $(shell find . -type f -name "*.py")
-CPP_FILES    = $(shell find $(PROJECT_NAME) -type f -name "*.h" -o -name "*.cc")
-COMMIT_HASH  = $(shell git log -1 --format=%h)
-COPYRIGHT    = "Garena Online Private Limited"
-BAZELOPT     =
-PATH         := $(HOME)/go/bin:$(PATH)
+SHELL          = /bin/bash
+PROJECT_NAME   = envpool
+PROJECT_FOLDER = $(PROJECT_NAME) third_party examples benchmark
+PYTHON_FILES   = $(shell find . -type f -name "*.py")
+CPP_FILES      = $(shell find $(PROJECT_NAME) -type f -name "*.h" -o -name "*.cc")
+COMMIT_HASH    = $(shell git log -1 --format=%h)
+COPYRIGHT      = "Garena Online Private Limited"
+BAZELOPT       =
+PATH           := $(HOME)/go/bin:$(PATH)
 
 # installation
 
@@ -111,7 +112,7 @@ bazel-clean: bazel-install
 # documentation
 
 addlicense: addlicense-install
-	addlicense -c $(COPYRIGHT) -l apache -y 2022 -check $(PROJECT_NAME) third_party examples
+	addlicense -c $(COPYRIGHT) -l apache -y 2022 -check $(PROJECT_FOLDER)
 
 docstyle: doc-install
 	pydocstyle $(PROJECT_NAME) && doc8 docs && cd docs && make html SPHINXOPTS="-W"
@@ -135,7 +136,7 @@ format: py-format-install clang-format-install buildifier-install addlicense-ins
 	yapf -ir $(PYTHON_FILES)
 	clang-format-11 -style=file -i $(CPP_FILES)
 	buildifier -r -lint=fix .
-	addlicense -c $(COPYRIGHT) -l apache -y 2022 $(PROJECT_NAME) third_party examples
+	addlicense -c $(COPYRIGHT) -l apache -y 2022 $(PROJECT_FOLDER)
 
 # Build docker images
 

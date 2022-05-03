@@ -26,13 +26,13 @@ NUMA
 ====
 
 To test with NUMA, first use ``numactl -s`` to see the number of NUMA core;
-then use ``./numa_test.sh `YOUR_CORE_NUM` python3 benchmark.py [args]``.
+then use ``./numa_test.sh `YOUR_CORE_NUM` python3 test_envpool.py [args]``.
 
 In DGX-A100 (8 NUMA core), we use the following script to achieve overall
 1M+ FPS:
 ::
 
-  ./numa_test.sh 8 python3 benchmark.py --num-envs 100 --batch-size 32 \
+  ./numa_test.sh 8 python3 test_envpool.py --num-envs 100 --batch-size 32 \
     --thread-affinity-offset -1
 
 Note: When using NUMA, it's better to disable thread affinity by setting
@@ -60,20 +60,21 @@ if __name__ == "__main__":
   parser.add_argument("--total-iter", type=int, default=50000)
   parser.add_argument("--seed", type=int, default=0)
   args = parser.parse_args()
-  task = {
+  print(args)
+  task_id = {
     "atari": "Pong-v5",
     "mujoco": "Ant-v3",
     "vizdoom": "HealthGathering-v1",
-  }
+  }[args.env]
   kwargs = dict(
     num_envs=args.num_envs,
     batch_size=args.batch_size,
     num_threads=args.num_threads,
     thread_affinity_offset=args.thread_affinity_offset,
   )
-  if task in ["atari", "vizdoom"]:
+  if args.env in ["atari", "vizdoom"]:
     kwargs.update(use_inter_area_resize=False)
-  env = envpool.make_gym(task[args.env], **kwargs)
+  env = envpool.make_gym(task_id, **kwargs)
   env.async_reset()
   env.action_space.seed(args.seed)
   action = np.array(
