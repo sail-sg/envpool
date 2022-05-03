@@ -241,6 +241,15 @@ available to see on the python side:
     In dm_env, keys in Spec that start with either ``obs:`` or ``info:`` will
     be merged under ``timestep.observation``.
 
+.. note ::
+
+    To create a dynamic shape array (which will be converted into a numpy
+    array with object type), you can use ``Spec<Container<...>>``, e.g.:
+
+    .. code-block:: c++
+
+        "info:id_list"_.Bind(Spec<int>({-1})),
+
 
 CartPoleEnv
 ~~~~~~~~~~~
@@ -302,6 +311,19 @@ read/write:
       }
     }
 
+If one of the array for state is dynamic-shaped:
+
+.. code-block:: c++
+
+    Container<int>& dyn = state["obs:dyn"_][i];
+    // new spec
+    auto dyn_spec = ::Spec<int>({env_id_ + 1, spec_.config["state_num"_]});
+    // use this spec to create an array
+    auto* array = new TArray<int>(dyn_spec);
+    // perform some normal array writing
+    // finally pass it to dynamic array
+    dyn.reset(array);
+
 
 Allocate State in Reset and Step
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -344,7 +366,8 @@ interface.
             "obs:players.location"_.Bind(Spec<uint8_t>({-1, 2})),
             "info:players.health"_.Bind(Spec<int>({-1})),
             "info:player_num"_.Bind(Spec<int>({})),
-            "info:bla"_.Bind(Spec<float>({2, 3, 3}))
+            "info:bla"_.Bind(Spec<float>({2, 3, 3})),
+            "info:list"_.Bind(Spec<Container<float>>({-1}))
           );
         }
 
@@ -357,6 +380,7 @@ interface.
         state["info:players.health"];   // shape: (10,)
         state["info:player_num"];       // shape: (), only one element
         state["info:bla"];              // shape: (2, 3, 3)
+        state["info:list"];             // shape: (10,) with dtype=object
 
 .. danger ::
 

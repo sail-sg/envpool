@@ -15,6 +15,8 @@
 #ifndef ENVPOOL_DUMMY_DUMMY_ENVPOOL_H_
 #define ENVPOOL_DUMMY_DUMMY_ENVPOOL_H_
 
+#include <memory>
+
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
 
@@ -148,11 +150,15 @@ class DummyEnv : public Env<DummyEnvSpec> {
       state["obs:raw"_](i, 0) = state_;
       state["obs:raw"_](i, 1) = 0;
       state["reward"_][i] = -i;
+      // dynamic array
       Container<int>& dyn = state["obs:dyn"_][i];
-      // this is for dynamic shape array
+      // new spec
       auto dyn_spec = ::Spec<int>({env_id_ + 1, spec_.config["state_num"_]});
-      dyn.reset(new TArray<int>(dyn_spec));
-      dyn->Fill(env_id_);
+      // use this spec to create an array
+      auto* array = new TArray<int>(dyn_spec);
+      // perform some normal array writing
+      // finally pass it to dynamic array
+      dyn.reset(array);
     }
   }
 
@@ -189,7 +195,7 @@ class DummyEnv : public Env<DummyEnvSpec> {
       state["reward"_][i] = -i;
       Container<int>& dyn = state["obs:dyn"_][i];
       auto dyn_spec = ::Spec<int>({env_id_ + 1, spec_.config["state_num"_]});
-      dyn.reset(new TArray<int>(dyn_spec));
+      dyn = std::make_unique<TArray<int>>(dyn_spec);
       dyn->Fill(env_id_);
     }
   }
