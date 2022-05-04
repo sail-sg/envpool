@@ -4,10 +4,10 @@ The following results are generated from four types of machine:
 
 1. Personal laptop: 12 core ``Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz``
 2. Personal workstation: 32 core ``AMD Ryzen 9 5950X 16-Core Processor``
-3. TPU-VM: 96 core ``Intel(R) Xeon(R) CPU @ 2.00GHz``
-4. DGX-A100: 256 core ``AMD EPYC 7742 64-Core Processor``
+3. TPU-VM (v3-8): 96 core ``Intel(R) Xeon(R) CPU @ 2.00GHz``, 2 NUMA core
+4. DGX-A100: 256 core ``AMD EPYC 7742 64-Core Processor``, 8 NUMA core
 
-We use `PongNoFrameskip-v4` and `Ant-v3` for Atari/Mujoco environment benchmark test. The package version is in `requirements.txt`:
+We use `PongNoFrameskip-v4` and `Ant-v3` for Atari/Mujoco environment benchmark test with `envpool==0.5.3.post1`. Other packages' versions are all in `requirements.txt`:
 
 ```bash
 $ pip install -r requirements.txt
@@ -43,10 +43,10 @@ python3 test_gym.py --env mujoco --async_ --num-envs 10 --total-step 50000
 
 ### Sample Factory
 
-To run with Ant-v3 in SF, add one line in `sample_factory/envs/mujoco/mujoco_utils.py`:
+To run with Ant-v3 in Sample Factory, add one line in `sample_factory/envs/mujoco/mujoco_utils.py`:
 
 ```diff
- MUJOCO_ENVS = [ 
+ MUJOCO_ENVS = [
 +    MujocoSpec('mujoco_ant', 'Ant-v3'),
      MujocoSpec('mujoco_hopper', 'Hopper-v2'),
      MujocoSpec('mujoco_halfcheetah', 'HalfCheetah-v2'),
@@ -65,7 +65,7 @@ python3 -m sample_factory.run_algorithm --algo=DUMMY_SAMPLER --env=atari_pong --
 python3 -m sample_factory.run_algorithm --algo=DUMMY_SAMPLER --env=mujoco_ant --env_frameskip=1 --num_workers=12 --num_envs_per_worker=1 --sample_env_frames=1000000 --experiment=test
 ```
 
-We found that `num_envs_per_worker == 1` is best for all scenarios. Here's our Python script:
+We found that `num_envs_per_worker == 1` is best for all scenarios. Here's our Python test script:
 
 ```python
 def run_sf(w, fac=312500, frame_skip=1, task="atari_pong"):
@@ -80,13 +80,34 @@ for i in num_workers:
 
 ### EnvPool
 
+<!--
+
+```bash
+for i in num_workers:
+    for j in [1, 2.5, 2.6, 3, 4]:
+        print(i, j)
+        os.system(f"python3 test_envpool.py --env mujoco --num-envs {int(i * j)} --batch-size {int(i)} 2>/dev/null > tmp")
+        os.system("grep FPS tmp")
+
+numa_cnt = 8
+for i in num_workers:
+    x = i // numa_cnt
+    if x == 0:
+        continue
+    for j in [2.5, 3, 4]:
+        os.system(f"./numa_test.sh {numa_cnt} python3 test_envpool.py --env mujoco --num-envs {int(x * j)} --batch-size {x} --thread-affinity-offset -1")
+        print(i, x, int(x * j), f'{sum([float([i for i in open(f"log{i}").read().splitlines() if "EnvPool FPS" in i][0].split("=")[-1]) for i in range(numa_cnt)]):.2f}')
+```
+
+-->
+
 #### sync
 
 ```bash
 # atari
 python3 test_envpool.py --env atari --num-envs 12 --batch-size 12
 # mujoco
-python3 test_envpool.py --env mujoco --num-envs 12 --batch-size 12 --total-step 200000
+python3 test_envpool.py --env mujoco --num-envs 12 --batch-size 12
 ```
 
 #### async
@@ -95,14 +116,21 @@ python3 test_envpool.py --env mujoco --num-envs 12 --batch-size 12 --total-step 
 # atari
 python3 test_envpool.py --env atari --num-envs 36 --batch-size 12
 # mujoco
-python3 test_envpool.py --env mujoco --num-envs 36 --batch-size 12 --total-step 200000
+python3 test_envpool.py --env mujoco --num-envs 36 --batch-size 12
 ```
 
 #### numa+async
 
+Use `numactl -s` to determine the number of NUMA cores.
 
+```bash
+# atari
+./numa_test.sh 8 python3 test_envpool.py --env atari --num-envs 100 --batch-size 32 --thread-affinity-offset -1
+# mujoco
+./numa_test.sh 8 python3 test_envpool.py --env mujoco --num-envs 100 --batch-size 32 --thread-affinity-offset -1
+```
 
-### BRAX and Isaac-gym (Mujoco only)
+### Brax and Isaac-gym (Mujoco only)
 
 
 
@@ -138,27 +166,27 @@ python3 test_envpool.py --env mujoco --num-envs 36 --batch-size 12 --total-step 
 
 <!-- Atari - TPU-VM -->
 
-| Atari - TPU-VM       | 1    | 2    | 4    | 8    | 16   | 24   | 32   | 48   | 64   | 80   | 96   |
-| -------------------- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
-| For-loop             |      |      |      |      |      |      |      |      |      |      |      |
-| Subprocess           |      |      |      |      |      |      |      |      |      |      |      |
-| Sample-Factory       |      |      |      |      |      |      |      |      |      |      |      |
-| EnvPool (sync)       |      |      |      |      |      |      |      |      |      |      |      |
-| EnvPool (async)      |      |      |      |      |      |      |      |      |      |      |      |
-| EnvPool (numa+async) |      |      |      |      |      |      |      |      |      |      |      |
+| Atari - TPU-VM       | 1       | 2        | 4        | 8        | 16        | 24        | 32        | 48        | 64        | 80        | 96        |
+| -------------------- | ------- | -------- | -------- | -------- | --------- | --------- | --------- | --------- | --------- | --------- | --------- |
+| For-loop             | 3830.19 | 3942.33  | 3993.01  | 3987.62  | 3967.83   | 3990.12   | 3976.47   | 3986.15   | 3946.44   | 3964.18   | 3973.26   |
+| Subprocess           | 3361.86 | 6586.32  | 12341.66 | 21547.19 | 34152.83  | 34864.23  | 38675.01  | 45471.75  | 41927.33  | 45893.35  | 46910.45  |
+| Sample-Factory       | 4906.3  | 9751.2   | 19450.3  | 38828.2  | 76206.7   | 108471.7  | 137571.6  | 203113.6  | 210596.9  | 217512.9  | 222327.4  |
+| EnvPool (sync)       | 7213.41 | 13827.95 | 27057.69 | 47143.35 | 71660.49  | 98892.99  | 123136.03 | 148110.55 | 141873.23 | 159635.70 | 170380.26 |
+| EnvPool (async)      | 8836.44 | 17815.91 | 35524.72 | 69888.53 | 127106.74 | 184798.27 | 246497.85 | 352195.40 | 354203.40 | 356793.59 | 359558.61 |
+| EnvPool (numa+async) | /       | 17976.26 | 35761.01 | 71967.27 | 136663.09 | 196424.25 | 253789.56 | 368680.81 | 371798.47 | 373169.33 | 362744.14 |
 
 <!-- Atari - TPU-VM -->
 
 <!-- Atari - DGX-A100 -->
 
-| Atari - DGX-A100     | 1       | 2       | 4       | 8       | 16      | 32       | 64       | 96       | 128      | 160      | 192      | 224      | 256      |
-| -------------------- | ------- | ------- | ------- | ------- | ------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- |
-| For-loop             | 4449.38 | 4587.37 | 4620.44 | 4635.26 | 4617.21 | 4639.16  | 4618.30  | 4594.96  | 4629.90  | 4616.15  | 4640.20  | 4596.57  | 4620.50  |
-| Subprocess           |         |         |         |         |         |          |          |          |          |          |          |          |          |
-| Sample-Factory       | 5563.2  | 11003.0 | 21976.3 | 43891.1 | 87702.0 | 175408.8 | 350855.5 | 476048.4 | 505494.8 | 616958.7 | 651428.8 | 679186.5 | 707494.3 |
-| EnvPool (sync)       |         |         |         |         |         |          |          |          |          |          |          |          |          |
-| EnvPool (async)      |         |         |         |         |         |          |          |          |          |          |          |          |          |
-| EnvPool (numa+async) |         |         |         |         |         |          |          |          |          |          |          |          |          |
+| Atari - DGX-A100     | 1       | 2        | 4        | 8        | 16        | 32        | 64        | 96        | 128       | 160       | 192       | 224        | 256        |
+| -------------------- | ------- | -------- | -------- | -------- | --------- | --------- | --------- | --------- | --------- | --------- | --------- | ---------- | ---------- |
+| For-loop             | 4449.38 | 4587.37  | 4620.44  | 4635.26  | 4617.21   | 4639.16   | 4618.30   | 4594.96   | 4629.90   | 4616.15   | 4640.20   | 4596.57    | 4620.50    |
+| Subprocess           | 4052.06 | 7832.98  | 12460.71 | 18306.28 | 24754.34  | 33336.38  | 43208.56  | 52435.64  | 42449.85  | 32958.90  | 45312.39  | 45767.11   | 61237.64   |
+| Sample-Factory       | 5563.2  | 11003.0  | 21976.3  | 43891.1  | 87702.0   | 175408.8  | 350855.5  | 476048.4  | 505494.8  | 616958.7  | 651428.8  | 679186.5   | 707494.3   |
+| EnvPool (sync)       | 7723.96 | 14865.81 | 28499.79 | 52681.02 | 91970.45  | 155386.07 | 243231.45 | 304423.24 | 358549.95 | 367559.69 | 388419.70 | 427851.27  | 427395.89  |
+| EnvPool (async)      | 8790.69 | 17866.75 | 36089.43 | 70749.63 | 139540.29 | 278186.45 | 451858.26 | 677504.68 | 817738.45 | 838174.97 | 881210.42 | 891286.00  | 874802.04  |
+| EnvPool (numa+async) | /       | /        | /        | 70629.88 | 140528.93 | 279113.15 | 555426.41 | 762417.99 | 936443.47 | 955620.20 | 998668.02 | 1032953.80 | 1069921.98 |
 
 <!-- Atari - DGX-A100 -->
 
@@ -190,26 +218,26 @@ python3 test_envpool.py --env mujoco --num-envs 36 --batch-size 12 --total-step 
 
 <!-- Mujoco - TPU-VM -->
 
-| Mujoco - TPU-VM      | 1    | 2    | 4    | 8    | 16   | 24   | 32   | 48   | 64   | 80   | 96   |
-| -------------------- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
-| For-loop             |      |      |      |      |      |      |      |      |      |      |      |
-| Subprocess           |      |      |      |      |      |      |      |      |      |      |      |
-| Sample-Factory       |      |      |      |      |      |      |      |      |      |      |      |
-| EnvPool (sync)       |      |      |      |      |      |      |      |      |      |      |      |
-| EnvPool (async)      |      |      |      |      |      |      |      |      |      |      |      |
-| EnvPool (numa+async) |      |      |      |      |      |      |      |      |      |      |      |
+| Mujoco - TPU-VM      | 1        | 2        | 4        | 8         | 16        | 24        | 32        | 48        | 64        | 80        | 96        |
+| -------------------- | -------- | -------- | -------- | --------- | --------- | --------- | --------- | --------- | --------- | --------- | --------- |
+| For-loop             | 9960.98  | 10239.58 | 10186.08 | 10473.73  | 10201.70  | 10370.85  | 10454.78  | 10460.48  | 10455.71  | 10360.71  | 10386.68  |
+| Subprocess           | 7236.32  | 13788.93 | 25054.73 | 40668.40  | 64148.06  | 60409.58  | 70747.21  | 78947.79  | 87403.16  | 79734.62  | 81964.35  |
+| Sample-Factory       | 11008.0  | 21368.0  | 42730.0  | 83475.5   | 153976.0  | 222311.5  | 280664.5  | 406916.5  | 432212.0  | 449143.0  | 461515.0  |
+| EnvPool (sync)       | 13706.61 | 26587.92 | 49074.86 | 92444.28  | 155288.26 | 181397.00 | 231293.39 | 283748.86 | 250586.54 | 268296.99 | 296680.68 |
+| EnvPool (async)      | 18195.81 | 37359.25 | 78337.13 | 148284.57 | 259915.75 | 386448.09 | 512987.78 | 745083.58 | 801768.88 | 857586.18 | 887539.80 |
+| EnvPool (numa+async) | /        | 35804.57 | 75467.72 | 147281.29 | 284323.79 | 412165.16 | 516120.17 | 755509.66 | 816405.50 | 868455.12 | 896830.21 |
 
 <!-- Mujoco - TPU-VM -->
 
 <!-- Mujoco - DGX-A100 -->
 
-| Mujoco - DGX-A100    | 1        | 2        | 4        | 8        | 16       | 32       | 64       | 96       | 128       | 160       | 192       | 224       | 256        |
-| -------------------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | --------- | --------- | --------- | --------- | ---------- |
-| For-loop             | 11018.57 | 11269.45 | 11059.39 | 11250.06 | 11505.15 | 11328.79 | 11568.72 | 11485.74 | 11245.55  | 11478.49  | 11430.16  | 11151.71  | 11199.28   |
-| Subprocess           |          |          |          |          |          |          |          |          |           |           |           |           |            |
-| Sample-Factory       | 11870.0  | 24602.0  | 48577.0  | 96826.5  | 193800.5 | 381208.5 | 761752.0 | 985909.0 | 1249369.5 | 1332128.5 | 1397427.5 | 1318249.0 | 1573262.0  |
-| EnvPool (sync)       |          |          |          |          |          |          |          |          |           |           |           |           |            |
-| EnvPool (async)      |          |          |          |          |          |          |          |          |           |           |           |           | 2331272.82 |
-| EnvPool (numa+async) |          |          |          |          |          |          |          |          |           |           |           |           |            |
+| Mujoco - DGX-A100    | 1        | 2        | 4        | 8         | 16        | 32        | 64         | 96         | 128        | 160        | 192        | 224        | 256        |
+| -------------------- | -------- | -------- | -------- | --------- | --------- | --------- | ---------- | ---------- | ---------- | ---------- | ---------- | ---------- | ---------- |
+| For-loop             | 11018.57 | 11269.45 | 11059.39 | 11250.06  | 11505.15  | 11328.79  | 11568.72   | 11485.74   | 11245.55   | 11478.49   | 11430.16   | 11151.71   | 11199.28   |
+| Subprocess           | 8814.10  | 17201.64 | 27106.27 | 44383.63  | 62785.60  | 83054.19  | 151352.88  | 158797.86  | 148815.92  | 116200.41  | 163656.36  | 147653.41  | 161599.97  |
+| Sample-Factory       | 11870.0  | 24602.0  | 48577.0  | 96826.5   | 193800.5  | 381208.5  | 761752.0   | 985909.0   | 1249369.5  | 1332128.5  | 1397427.5  | 1318249.0  | 1573262.0  |
+| EnvPool (sync)       | 16024.43 | 31899.44 | 61605.04 | 114488.28 | 228492.88 | 388624.94 | 656277.80  | 832101.96  | 949787.15  | 858298.85  | 945808.57  | 813799.36  | 849410.96  |
+| EnvPool (async)      | 21177.71 | 44025.65 | 92312.35 | 176135.82 | 354006.02 | 700052.08 | 1167838.03 | 1678787.71 | 1730102.62 | 2052844.58 | 2185146.77 | 2355604.96 | 2363863.67 |
+| EnvPool (numa+async) | /        | /        | /        | 170348.47 | 340269.34 | 693793.45 | 1388410.00 | 1920762.84 | 2341562.20 | 2569997.03 | 2776143.15 | 2964886.91 | 3134286.77 |
 
 <!-- Mujoco - DGX-A100 -->
