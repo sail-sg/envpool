@@ -39,7 +39,7 @@ def parse_table(env: str, system: str, suffix: str) -> None:
     "FPS": [],
     "Env": [],
     "System": [],
-    "Method": []
+    "Method": [],
   }
   sep = f"<!-- {env} - {system} -->"
   raw = open("README.md").read().split(sep)[1].strip().splitlines()

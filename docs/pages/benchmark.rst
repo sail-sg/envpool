@@ -105,7 +105,8 @@ We found that ``num_envs_per_worker == 1`` is best for all scenarios.
 
    ```python
    def run_sf(w, fac=312500, frame_skip=1, task="atari_pong"):
-       p = subprocess.check_output(shlex.split(f"python3 -m sample_factory.run_algorithm --algo=DUMMY_SAMPLER --env={task} --env_frameskip={frame_skip} --num_workers={w} --num_envs_per_worker=1 --sample_env_frames={fac * w} --experiment=test"), stderr=subprocess.STDOUT)
+       cmd = f"python3 -m sample_factory.run_algorithm --algo=DUMMY_SAMPLER --env={task} --env_frameskip={frame_skip} --num_workers={w} --num_envs_per_worker=1 --sample_env_frames={fac * w} --experiment=test"
+       p = subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT)
        return float([i for i in p.decode().splitlines() if "avg FPS" in i][0].split("FPS: ")[-1].split("\x1b")[0])
 
    for i in num_workers:
@@ -352,12 +353,12 @@ EnvPool (numa+async) /        /        /        170348.47 340269.34 693793.45 13
 
 |image8|
 
-.. |image0| image:: https://envpool.readthedocs.io/en/latest/_images/throughput/throughput.png
-.. |image1| image:: https://envpool.readthedocs.io/en/latest/_images/throughput/Atari_Laptop.png
-.. |image2| image:: https://envpool.readthedocs.io/en/latest/_images/throughput/Atari_Workstation.png
-.. |image3| image:: https://envpool.readthedocs.io/en/latest/_images/throughput/Atari_TPU-VM.png
-.. |image4| image:: https://envpool.readthedocs.io/en/latest/_images/throughput/Atari_DGX-A100.png
-.. |image5| image:: https://envpool.readthedocs.io/en/latest/_images/throughput/Mujoco_Laptop.png
-.. |image6| image:: https://envpool.readthedocs.io/en/latest/_images/throughput/Mujoco_Workstation.png
-.. |image7| image:: https://envpool.readthedocs.io/en/latest/_images/throughput/Mujoco_TPU-VM.png
-.. |image8| image:: https://envpool.readthedocs.io/en/latest/_images/throughput/Mujoco_DGX-A100.png
+.. |image0| image:: ../_static/images/throughput/throughput.png
+.. |image1| image:: ../_static/images/throughput/Atari_Laptop.png
+.. |image2| image:: ../_static/images/throughput/Atari_Workstation.png
+.. |image3| image:: ../_static/images/throughput/Atari_TPU-VM.png
+.. |image4| image:: ../_static/images/throughput/Atari_DGX-A100.png
+.. |image5| image:: ../_static/images/throughput/Mujoco_Laptop.png
+.. |image6| image:: ../_static/images/throughput/Mujoco_Workstation.png
+.. |image7| image:: ../_static/images/throughput/Mujoco_TPU-VM.png
+.. |image8| image:: ../_static/images/throughput/Mujoco_DGX-A100.png

@@ -171,7 +171,7 @@ Besides `num_envs`, there is one more argument `batch_size`. While `num_envs` de
 envpool.make("Pong-v5", env_type="gym", num_envs=64, batch_size=16)
 ```
 
-There are other configurable arguments with `envpool.make`; please check out [envpool Python interface introduction](https://envpool.readthedocs.io/en/latest/pages/interface.html).
+There are other configurable arguments with `envpool.make`; please check out [EnvPool Python interface introduction](https://envpool.readthedocs.io/en/latest/pages/interface.html).
 
 ## Contributing
 

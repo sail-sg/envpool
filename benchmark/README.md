@@ -36,7 +36,7 @@ To align with other baseline results, FPS is multiplied with `frame_skip` (4 for
 | EnvPool (async)      | **105,126** | **582,446**      | 887,540     | 2,363,864      |
 | EnvPool (numa+async) | /           | /                | **896,830** | **3,134,287**  |
 
-![](https://envpool.readthedocs.io/en/latest/_images/throughput/throughput.png)
+![](../_static/images/throughput/throughput.png)
 
 ## Testing Method and Command
 
@@ -94,7 +94,8 @@ We found that `num_envs_per_worker == 1` is best for all scenarios.
 
 ```python
 def run_sf(w, fac=312500, frame_skip=1, task="atari_pong"):
-    p = subprocess.check_output(shlex.split(f"python3 -m sample_factory.run_algorithm --algo=DUMMY_SAMPLER --env={task} --env_frameskip={frame_skip} --num_workers={w} --num_envs_per_worker=1 --sample_env_frames={fac * w} --experiment=test"), stderr=subprocess.STDOUT)
+    cmd = f"python3 -m sample_factory.run_algorithm --algo=DUMMY_SAMPLER --env={task} --env_frameskip={frame_skip} --num_workers={w} --num_envs_per_worker=1 --sample_env_frames={fac * w} --experiment=test"
+    p = subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT)
     return float([i for i in p.decode().splitlines() if "avg FPS" in i][0].split("FPS: ")[-1].split("\x1b")[0])
 
 for i in num_workers:
@@ -177,7 +178,7 @@ TODO
 
 <!-- Atari - Laptop -->
 
-![](https://envpool.readthedocs.io/en/latest/_images/throughput/Atari_Laptop.png)
+![](../_static/images/throughput/Atari_Laptop.png)
 
 <!-- Atari - Workstation -->
 
@@ -191,7 +192,7 @@ TODO
 
 <!-- Atari - Workstation -->
 
-![](https://envpool.readthedocs.io/en/latest/_images/throughput/Atari_Workstation.png)
+![](../_static/images/throughput/Atari_Workstation.png)
 
 <!-- Atari - TPU-VM -->
 
@@ -206,7 +207,7 @@ TODO
 
 <!-- Atari - TPU-VM -->
 
-![](https://envpool.readthedocs.io/en/latest/_images/throughput/Atari_TPU-VM.png)
+![](../_static/images/throughput/Atari_TPU-VM.png)
 
 <!-- Atari - DGX-A100 -->
 
@@ -221,7 +222,7 @@ TODO
 
 <!-- Atari - DGX-A100 -->
 
-![](https://envpool.readthedocs.io/en/latest/_images/throughput/Atari_DGX-A100.png)
+![](../_static/images/throughput/Atari_DGX-A100.png)
 
 ### Mujoco
 
@@ -237,7 +238,7 @@ TODO
 
 <!-- Mujoco - Laptop -->
 
-![](https://envpool.readthedocs.io/en/latest/_images/throughput/Mujoco_Laptop.png)
+![](../_static/images/throughput/Mujoco_Laptop.png)
 
 <!-- Mujoco - Workstation -->
 
@@ -251,7 +252,7 @@ TODO
 
 <!-- Mujoco - Workstation -->
 
-![](https://envpool.readthedocs.io/en/latest/_images/throughput/Mujoco_Workstation.png)
+![](../_static/images/throughput/Mujoco_Workstation.png)
 
 <!-- Mujoco - TPU-VM -->
 
@@ -266,7 +267,7 @@ TODO
 
 <!-- Mujoco - TPU-VM -->
 
-![](https://envpool.readthedocs.io/en/latest/_images/throughput/Mujoco_TPU-VM.png)
+![](../_static/images/throughput/Mujoco_TPU-VM.png)
 
 <!-- Mujoco - DGX-A100 -->
 
@@ -281,4 +282,4 @@ TODO
 
 <!-- Mujoco - DGX-A100 -->
 
-![](https://envpool.readthedocs.io/en/latest/_images/throughput/Mujoco_DGX-A100.png)
+![](../_static/images/throughput/Mujoco_DGX-A100.png)

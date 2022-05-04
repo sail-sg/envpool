@@ -25,17 +25,18 @@ import numpy as np
 
 class NoopResetEnv(gym.Wrapper):
   """Sample initial states by taking random number of no-ops on reset.
-    No-op is assumed to be action 0.
 
-    :param gym.Env env: the environment to wrap.
-    :param int noop_max: the maximum value of no-ops to run.
-    """
+  No-op is assumed to be action 0.
+
+  :param gym.Env env: the environment to wrap.
+  :param int noop_max: the maximum value of no-ops to run.
+  """
 
   def __init__(self, env, noop_max=30):
     super().__init__(env)
     self.noop_max = noop_max
     self.noop_action = 0
-    assert env.unwrapped.get_action_meanings()[0] == 'NOOP'
+    assert env.unwrapped.get_action_meanings()[0] == "NOOP"
 
   def reset(self):
     self.env.reset()
@@ -49,20 +50,21 @@ class NoopResetEnv(gym.Wrapper):
 
 class MaxAndSkipEnv(gym.Wrapper):
   """Return only every `skip`-th frame (frameskipping) using most recent raw
-    observations (for max pooling across time steps)
+  observations (for max pooling across time steps)
 
-    :param gym.Env env: the environment to wrap.
-    :param int skip: number of `skip`-th frame.
-    """
+  :param gym.Env env: the environment to wrap.
+  :param int skip: number of `skip`-th frame.
+  """
 
   def __init__(self, env, skip=4):
     super().__init__(env)
     self._skip = skip
 
   def step(self, action):
-    """Step the environment with the given action. Repeat action, sum
-        reward, and max over last observations.
-        """
+    """Step the environment with the given action.
+
+    Repeat action, sum reward, and max over last observations.
+    """
     obs_list, total_reward, done = [], 0., False
     for _ in range(self._skip):
       obs, reward, done, info = self.env.step(action)
@@ -75,11 +77,12 @@ class MaxAndSkipEnv(gym.Wrapper):
 
 
 class EpisodicLifeEnv(gym.Wrapper):
-  """Make end-of-life == end-of-episode, but only reset on true game over. It
-    helps the value estimation.
+  """Make end-of-life == end-of-episode, but only reset on true game over.
 
-    :param gym.Env env: the environment to wrap.
-    """
+  It helps the value estimation.
+
+  :param gym.Env env: the environment to wrap.
+  """
 
   def __init__(self, env):
     super().__init__(env)
@@ -101,10 +104,11 @@ class EpisodicLifeEnv(gym.Wrapper):
     return obs, reward, done, info
 
   def reset(self):
-    """Calls the Gym environment reset, only when lives are exhausted. This
-        way all states are still reachable even though lives are episodic, and
-        the learner need not know about any of this behind-the-scenes.
-        """
+    """Calls the Gym environment reset, only when lives are exhausted.
+
+    This way all states are still reachable even though lives are episodic,
+    and the learner need not know about any of this behind-the-scenes.
+    """
     if self.was_real_done:
       obs = self.env.reset()
     else:
@@ -116,14 +120,15 @@ class EpisodicLifeEnv(gym.Wrapper):
 
 class FireResetEnv(gym.Wrapper):
   """Take action on reset for environments that are fixed until firing.
-    Related discussion: https://github.com/openai/baselines/issues/240
 
-    :param gym.Env env: the environment to wrap.
-    """
+  Related discussion: https://github.com/openai/baselines/issues/240
+
+  :param gym.Env env: the environment to wrap.
+  """
 
   def __init__(self, env):
     super().__init__(env)
-    assert env.unwrapped.get_action_meanings()[1] == 'FIRE'
+    assert env.unwrapped.get_action_meanings()[1] == "FIRE"
     assert len(env.unwrapped.get_action_meanings()) >= 3
 
   def reset(self):
@@ -134,8 +139,8 @@ class FireResetEnv(gym.Wrapper):
 class WarpFrame(gym.ObservationWrapper):
   """Warp frames to 84x84 as done in the Nature paper and later work.
 
-    :param gym.Env env: the environment to wrap.
-    """
+  :param gym.Env env: the environment to wrap.
+  """
 
   def __init__(self, env):
     super().__init__(env)
@@ -148,7 +153,7 @@ class WarpFrame(gym.ObservationWrapper):
     )
 
   def observation(self, frame):
-    """returns the current observation from a frame"""
+    """Returns the current observation from a frame"""
     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
     return cv2.resize(
       frame, (self.size, self.size), interpolation=cv2.INTER_AREA
@@ -158,8 +163,8 @@ class WarpFrame(gym.ObservationWrapper):
 class ScaledFloatFrame(gym.ObservationWrapper):
   """Normalize observations to 0~1.
 
-    :param gym.Env env: the environment to wrap.
-    """
+  :param gym.Env env: the environment to wrap.
+  """
 
   def __init__(self, env):
     super().__init__(env)
@@ -178,8 +183,8 @@ class ScaledFloatFrame(gym.ObservationWrapper):
 class ClipRewardEnv(gym.RewardWrapper):
   """clips the reward to {+1, 0, -1} by its sign.
 
-    :param gym.Env env: the environment to wrap.
-    """
+  :param gym.Env env: the environment to wrap.
+  """
 
   def __init__(self, env):
     super().__init__(env)
@@ -193,9 +198,9 @@ class ClipRewardEnv(gym.RewardWrapper):
 class FrameStack(gym.Wrapper):
   """Stack n_frames last frames.
 
-    :param gym.Env env: the environment to wrap.
-    :param int n_frames: the number of frames to stack.
-    """
+  :param gym.Env env: the environment to wrap.
+  :param int n_frames: the number of frames to stack.
+  """
 
   def __init__(self, env, n_frames):
     super().__init__(env)
@@ -232,25 +237,26 @@ def wrap_deepmind(
   clip_rewards=True,
   frame_stack=4,
   scale=False,
-  warp_frame=True
+  warp_frame=True,
 ):
-  """Configure environment for DeepMind-style Atari. The observation is
-    channel-first: (c, h, w) instead of (h, w, c).
+  """Configure environment for DeepMind-style Atari.
 
-    :param str env: the raw atari environment.
-    :param bool episode_life: wrap the episode life wrapper.
-    :param bool clip_rewards: wrap the reward clipping wrapper.
-    :param int frame_stack: wrap the frame stacking wrapper.
-    :param bool scale: wrap the scaling observation wrapper.
-    :param bool warp_frame: wrap the grayscale + resize observation wrapper.
-    :return: the wrapped atari environment.
-    """
-  assert 'NoFrameskip' in env.spec.id
+  The observation is channel-first: (c, h, w) instead of (h, w, c).
+
+  :param str env: the raw atari environment.
+  :param bool episode_life: wrap the episode life wrapper.
+  :param bool clip_rewards: wrap the reward clipping wrapper.
+  :param int frame_stack: wrap the frame stacking wrapper.
+  :param bool scale: wrap the scaling observation wrapper.
+  :param bool warp_frame: wrap the grayscale + resize observation wrapper.
+  :return: the wrapped atari environment.
+  """
+  assert "NoFrameskip" in env.spec.id
   env = NoopResetEnv(env, noop_max=30)
   env = MaxAndSkipEnv(env, skip=4)
   if episode_life:
     env = EpisodicLifeEnv(env)
-  if 'FIRE' in env.unwrapped.get_action_meanings():
+  if "FIRE" in env.unwrapped.get_action_meanings():
     env = FireResetEnv(env)
   if warp_frame:
     env = WarpFrame(env)
