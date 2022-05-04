@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-total=`seq 0 $1`
+total=`seq 0 $(expr $1 - 1)`
 shift
 for i in $total
 do

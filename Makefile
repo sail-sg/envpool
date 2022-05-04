@@ -1,11 +1,12 @@
-SHELL        = /bin/bash
-PROJECT_NAME = envpool
-PYTHON_FILES = $(shell find . -type f -name "*.py")
-CPP_FILES    = $(shell find $(PROJECT_NAME) -type f -name "*.h" -o -name "*.cc")
-COMMIT_HASH  = $(shell git log -1 --format=%h)
-COPYRIGHT    = "Garena Online Private Limited"
-BAZELOPT     =
-PATH         := $(HOME)/go/bin:$(PATH)
+SHELL          = /bin/bash
+PROJECT_NAME   = envpool
+PROJECT_FOLDER = $(PROJECT_NAME) third_party examples benchmark
+PYTHON_FILES   = $(shell find . -type f -name "*.py")
+CPP_FILES      = $(shell find $(PROJECT_NAME) -type f -name "*.h" -o -name "*.cc")
+COMMIT_HASH    = $(shell git log -1 --format=%h)
+COPYRIGHT      = "Garena Online Private Limited"
+BAZELOPT       =
+PATH           := $(HOME)/go/bin:$(PATH)
 
 # installation
 
@@ -111,7 +112,7 @@ bazel-clean: bazel-install
 # documentation
 
 addlicense: addlicense-install
-	addlicense -c $(COPYRIGHT) -l apache -y 2022 -check $(PROJECT_NAME) third_party examples
+	addlicense -c $(COPYRIGHT) -l apache -y 2022 -check $(PROJECT_FOLDER)
 
 docstyle: doc-install
 	pydocstyle $(PROJECT_NAME) && doc8 docs && cd docs && make html SPHINXOPTS="-W"
@@ -125,6 +126,10 @@ spelling: doc-install
 doc-clean:
 	cd docs && make clean
 
+doc-benchmark:
+	pandoc benchmark/README.md --from markdown --to rst -s -o docs/pages/benchmark.rst --columns 1000
+	cd benchmark && ./plot.py --suffix png && mv *.png ../docs/_static/images/throughput
+
 lint: buildifier flake8 py-format clang-format cpplint clang-tidy mypy docstyle spelling
 
 format: py-format-install clang-format-install buildifier-install addlicense-install
@@ -132,7 +137,7 @@ format: py-format-install clang-format-install buildifier-install addlicense-ins
 	yapf -ir $(PYTHON_FILES)
 	clang-format-11 -style=file -i $(CPP_FILES)
 	buildifier -r -lint=fix .
-	addlicense -c $(COPYRIGHT) -l apache -y 2022 $(PROJECT_NAME) third_party examples
+	addlicense -c $(COPYRIGHT) -l apache -y 2022 $(PROJECT_FOLDER)
 
 # Build docker images
 
@@ -163,4 +168,3 @@ release-test2:
 	cd examples && python3 make_env.py && python3 env_step.py
 
 release-test: release-test1 release-test2
-

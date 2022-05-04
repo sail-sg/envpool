@@ -24,7 +24,10 @@ Ant-v3/v4
 - Observation space: ``(111)``, first 13 elements for ``qpos[2:]``, next 14
   elements for ``qvel``, other elements for clipped ``cfrc_ext`` (com-based
   external force on body, a.k.a. contact force);
-- Action space: ``(8)``, with range ``[-1, 1]``.
+- Action space: ``(8)``, with range ``[-1, 1]``;
+- ``frame_skip``: 5;
+- ``max_episode_steps``: 1000;
+- ``reward_threshold``: 6000.0;
 
 
 HalfCheetah-v3/v4
@@ -38,7 +41,10 @@ HalfCheetah-v3/v4
 
 - Observation space: ``(17)``, first 8 elements for ``qpos[1:]``, next 9
   elements for ``qvel``;
-- Action space: ``(6)``, with range ``[-1, 1]``.
+- Action space: ``(6)``, with range ``[-1, 1]``;
+- ``frame_skip``: 5;
+- ``max_episode_steps``: 1000;
+- ``reward_threshold``: 4800.0;
 
 
 Hopper-v3/v4
@@ -52,7 +58,10 @@ Hopper-v3/v4
 
 - Observation space: ``(11)``, first 5 elements for ``qpos[1:]``, next 6
   elements for ``qvel``;
-- Action space: ``(3)``, with range ``[-1, 1]``.
+- Action space: ``(3)``, with range ``[-1, 1]``;
+- ``frame_skip``: 4;
+- ``max_episode_steps``: 1000;
+- ``reward_threshold``: 6000.0;
 
 
 Humanoid-v3/v4, HumanoidStandup-v2/v4
@@ -75,7 +84,9 @@ Humanoid-v3/v4, HumanoidStandup-v2/v4
   inertia and mass), next 84 elements for ``cvel`` (com-based velocity [3D
   rot; 3D tran]), next 23 elements for ``qfrc_actuator`` (actuator force),
   next 84 elements for ``cfrc_ext`` (com-based external force on body);
-- Action space: ``(17)``, with range ``[-0.4, 0.4]``.
+- Action space: ``(17)``, with range ``[-0.4, 0.4]``;
+- ``frame_skip``: 5;
+- ``max_episode_steps``: 1000;
 
 
 InvertedDoublePendulum-v2/v4
@@ -90,7 +101,10 @@ InvertedDoublePendulum-v2/v4
 - Observation space: ``(11)``, first 1 element for ``qpos[0]``, next 2
   elements for ``sin(qpos[1:])``, next 2 elements for ``cos(qpos[1:])``,
   next 3 elements for ``qvel``, next 3 elements for ``qfrc_constraint``;
-- Action space: ``(1)``, with range ``[-1, 1]``.
+- Action space: ``(1)``, with range ``[-1, 1]``;
+- ``frame_skip``: 5;
+- ``max_episode_steps``: 1000;
+- ``reward_threshold``: 9100.0;
 
 
 InvertedPendulum-v2/v4
@@ -104,7 +118,10 @@ InvertedPendulum-v2/v4
 
 - Observation space: ``(4)``, first 2 elements for ``qpos``, next 2 elements
   for ``qvel``;
-- Action space: ``(1)``, with range ``[-3, 3]``.
+- Action space: ``(1)``, with range ``[-3, 3]``;
+- ``frame_skip``: 2;
+- ``max_episode_steps``: 1000;
+- ``reward_threshold``: 950.0;
 
 
 Pusher-v2/v4
@@ -119,7 +136,10 @@ Pusher-v2/v4
 - Observation space: ``(23)``, first 7 elements for ``qpos[:7]``, next 7
   elements for ``qvel[:7]``, next 3 elements for ``tips_arm``, next 3
   elements for ``object``, next 3 elements for ``goal``;
-- Action space: ``(7)``, with range ``[-2, 2]``.
+- Action space: ``(7)``, with range ``[-2, 2]``;
+- ``frame_skip``: 5;
+- ``max_episode_steps``: 100;
+- ``reward_threshold``: 0.0;
 
 
 Reacher-v2/v4
@@ -135,7 +155,10 @@ Reacher-v2/v4
   elements for ``sin(qpos[:2])``, next 2 elements for ``qpos[2:]``, next 2
   elements for ``qvel[:2]``, next 3 elements for ``dist``, a.k.a.
   ``fingertip - target``;
-- Action space: ``(2)``, with range ``[-1, 1]``.
+- Action space: ``(2)``, with range ``[-1, 1]``;
+- ``frame_skip``: 2;
+- ``max_episode_steps``: 50;
+- ``reward_threshold``: -3.75;
 
 
 Swimmer-v3/v4
@@ -149,7 +172,10 @@ Swimmer-v3/v4
 
 - Observation space: ``(8)``, first 3 elements for ``qpos[2:]``, next 5
   elements for ``qvel``;
-- Action space: ``(2)``, with range ``[-1, 1]``.
+- Action space: ``(2)``, with range ``[-1, 1]``;
+- ``frame_skip``: 4;
+- ``max_episode_steps``: 1000;
+- ``reward_threshold``: 360.0;
 
 
 Walker2d-v3/v4
@@ -163,4 +189,6 @@ Walker2d-v3/v4
 
 - Observation space: ``(17)``, first 8 elements for ``qpos[1:]``, next 9
   elements for ``qvel``;
-- Action space: ``(6)``, with range ``[-1, 1]``.
+- Action space: ``(6)``, with range ``[-1, 1]``;
+- ``frame_skip``: 4;
+- ``max_episode_steps``: 1000;
