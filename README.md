@@ -38,7 +38,7 @@ Here are EnvPool's several highlights:
 - Compatible with some existing RL libraries, e.g., [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3), [Tianshou](https://github.com/thu-ml/tianshou), or [CleanRL](https://github.com/vwxyzjn/cleanrl).
   - Stable-Baselines3 [`Pendulum-v0` example](https://github.com/sail-sg/envpool/blob/master/examples/sb3_examples/ppo.py);
   - Tianshou [`CartPole` example](https://github.com/sail-sg/envpool/blob/master/examples/tianshou_examples/cartpole_ppo.py) and [`Pendulum-v0` example](https://github.com/sail-sg/envpool/blob/master/examples/tianshou_examples/pendulum_ppo.py);
-  - CleanRL [`Pong-v5` example](https://github.com/sail-sg/envpool/blob/master/examples/cleanrl_examples/ppo_atari_envpool.py) ([Solving Pong in 5 mins](https://ppo-details.cleanrl.dev/2021/11/05/ppo-implementation-details/#solving-pong-in-5-minutes-with-ppo--envpool) ([tracked experiment](https://wandb.ai/costa-huang/cleanRL/runs/opk2dmta)));
+  - CleanRL [`Pong-v5` example](https://github.com/sail-sg/envpool/blob/master/examples/cleanrl_examples/ppo_atari_envpool.py) ([Solving Pong in 5 mins](https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/#solving-pong-in-5-minutes-with-ppo--envpool) ([tracked experiment](https://wandb.ai/costa-huang/cleanRL/runs/opk2dmta)));
 - Support [customized C++ environment integration](https://envpool.readthedocs.io/en/latest/pages/env.html).
 
 ## Installation
@@ -70,7 +70,7 @@ Please refer to the [guideline](https://envpool.readthedocs.io/en/latest/pages/b
 
 The tutorials and API documentation are hosted on [envpool.readthedocs.io](https://envpool.readthedocs.io).
 
-The example scripts are under [examples/](https://github.com/sail-sg/envpool/tree/master/examples) folder.
+The example scripts are under [examples/](https://github.com/sail-sg/envpool/tree/master/examples) folder; benchmark scripts are under [benchmark/](https://github.com/sail-sg/envpool/tree/master/benchmark) folder.
 
 ## Benchmark Results
 
@@ -101,7 +101,7 @@ We report EnvPool performance with sync mode, async mode, and NUMA + async mode,
 <img width="48%" height="auto" src="https://envpool.readthedocs.io/en/latest/_images/throughput/Mujoco_DGX-A100.png">
 </p>
 
-Please refer to the [benchmark](https://envpool.readthedocs.io/en/latest/pages/benchmark.html) page and [benchmark/](benchmark) folder for more details.
+Please refer to the [benchmark](https://envpool.readthedocs.io/en/latest/pages/benchmark.html) page for more details.
 
 ## API Usage
 
