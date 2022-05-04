@@ -2,18 +2,41 @@
 
 The following results are generated from four types of machine:
 
-1. Personal laptop: 12 core ``Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz``
-2. Personal workstation: 32 core ``AMD Ryzen 9 5950X 16-Core Processor``
-3. TPU-VM (v3-8): 96 core ``Intel(R) Xeon(R) CPU @ 2.00GHz``, 2 NUMA core
-4. DGX-A100: 256 core ``AMD EPYC 7742 64-Core Processor``, 8 NUMA core
+1. Personal laptop: 12 core ``Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz``, GTX1060
+2. Personal workstation: 32 core ``AMD Ryzen 9 5950X 16-Core Processor``, 2x RTX3090
+3. TPU-VM: 96 core ``Intel(R) Xeon(R) CPU @ 2.00GHz``, 2 NUMA core, TPU v3-8
+4. DGX-A100: 256 core ``AMD EPYC 7742 64-Core Processor``, 8 NUMA core, 8x A100
 
-We use `PongNoFrameskip-v4` and `Ant-v3` for Atari/Mujoco environment benchmark test with `envpool==0.5.3.post1`. Other packages' versions are all in `requirements.txt`:
+We use `PongNoFrameskip-v4` (with environment wrappers from [OpenAI baselines](https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py)) and `Ant-v3` for Atari/Mujoco environment benchmark test with `envpool==0.5.3.post1`. Other packages' versions are all in `requirements.txt`:
 
 ```bash
 $ pip install -r requirements.txt
 ```
 
 To align with other baseline results, FPS is multiplied with `frame_skip` (4 for `PongNoFrameskip-v4` and 5 for `Ant-v3`).
+
+## Highest FPS Overview
+
+
+| Atari Highest FPS    | Laptop (12) | Workstation (32) | TPU-VM (96) | DGX-A100 (256) |
+| -------------------- | ----------- | ---------------- | ----------- | -------------- |
+| For-loop             | 4,893       | 7,914            | 3,993       | 4,640          |
+| Subprocess           | 15,863      | 47,699           | 46,910      | 71,943         |
+| Sample-Factory       | 28,216      | 138,847          | 222,327     | 707,494        |
+| EnvPool (sync)       | 37,396      | 133,824          | 170,380     | 427,851        |
+| EnvPool (async)      | 49,439      | 200,428          | 359,559     | 891,286        |
+| EnvPool (numa+async) | /           | /                | 373,169     | 1,069,922      |
+
+| Mujoco Highest FPS   | Laptop (12) | Workstation (32) | TPU-VM (96) | DGX-A100 (256) |
+| -------------------- | ----------- | ---------------- | ----------- | -------------- |
+| For-loop             | 12,861      | 20,298           | 10,474      | 11,569         |
+| Subprocess           | 36,586      | 105,432          | 87,403      | 163,656        |
+| Sample-Factory       | 62,510      | 309,264          | 461,515     | 1,573,262      |
+| EnvPool (sync)       | 66,622      | 380,950          | 296,681     | 949,787        |
+| EnvPool (async)      | 105,126     | 582,446          | 887,540     | 2,363,864      |
+| EnvPool (numa+async) | /           | /                | 896,830     | 3,134,287      |
+
+
 
 ## Testing Method and Command
 
@@ -65,7 +88,9 @@ python3 -m sample_factory.run_algorithm --algo=DUMMY_SAMPLER --env=atari_pong --
 python3 -m sample_factory.run_algorithm --algo=DUMMY_SAMPLER --env=mujoco_ant --env_frameskip=1 --num_workers=12 --num_envs_per_worker=1 --sample_env_frames=1000000 --experiment=test
 ```
 
-We found that `num_envs_per_worker == 1` is best for all scenarios. Here's our Python test script:
+We found that `num_envs_per_worker == 1` is best for all scenarios.
+
+<!--
 
 ```python
 def run_sf(w, fac=312500, frame_skip=1, task="atari_pong"):
@@ -77,6 +102,8 @@ for i in num_workers:
 for i in num_workers:
     print(i, run_sf(i, frame_skip=1, task="mujoco_ant", fac=fac) * 5)
 ```
+
+-->
 
 ### EnvPool
 
@@ -182,7 +209,7 @@ Use `numactl -s` to determine the number of NUMA cores.
 | Atari - DGX-A100     | 1       | 2        | 4        | 8        | 16        | 32        | 64        | 96        | 128       | 160       | 192       | 224        | 256        |
 | -------------------- | ------- | -------- | -------- | -------- | --------- | --------- | --------- | --------- | --------- | --------- | --------- | ---------- | ---------- |
 | For-loop             | 4449.38 | 4587.37  | 4620.44  | 4635.26  | 4617.21   | 4639.16   | 4618.30   | 4594.96   | 4629.90   | 4616.15   | 4640.20   | 4596.57    | 4620.50    |
-| Subprocess           | 4052.06 | 7832.98  | 12460.71 | 18306.28 | 24754.34  | 33336.38  | 43208.56  | 52435.64  | 42449.85  | 32958.90  | 45312.39  | 45767.11   | 61237.64   |
+| Subprocess           | 4052.06 | 7832.98  | 12460.71 | 18306.28 | 24754.34  | 33336.38  | 43208.56  | 52435.64  | 42449.85  | 32958.90  | 45312.39  | 45767.11   | 71942.74   |
 | Sample-Factory       | 5563.2  | 11003.0  | 21976.3  | 43891.1  | 87702.0   | 175408.8  | 350855.5  | 476048.4  | 505494.8  | 616958.7  | 651428.8  | 679186.5   | 707494.3   |
 | EnvPool (sync)       | 7723.96 | 14865.81 | 28499.79 | 52681.02 | 91970.45  | 155386.07 | 243231.45 | 304423.24 | 358549.95 | 367559.69 | 388419.70 | 427851.27  | 427395.89  |
 | EnvPool (async)      | 8790.69 | 17866.75 | 36089.43 | 70749.63 | 139540.29 | 278186.45 | 451858.26 | 677504.68 | 817738.45 | 838174.97 | 881210.42 | 891286.00  | 874802.04  |
