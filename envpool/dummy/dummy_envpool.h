@@ -15,6 +15,8 @@
 #ifndef ENVPOOL_DUMMY_DUMMY_ENVPOOL_H_
 #define ENVPOOL_DUMMY_DUMMY_ENVPOOL_H_
 
+#include <memory>
+
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
 
@@ -73,7 +75,9 @@ class DummyEnvFns {
    */
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs"_.Bind(Spec<int>({-1, conf["state_num"_]})),
+    return MakeDict("obs:raw"_.Bind(Spec<int>({-1, conf["state_num"_]})),
+                    "obs:dyn"_.Bind(Spec<Container<int>>(
+                        {-1}, Spec<int>({-1, conf["state_num"_]}))),
                     "info:players.done"_.Bind(Spec<bool>({-1})),
                     "info:players.id"_.Bind(
                         Spec<int>({-1}, {0, conf["max_num_players"_]})));
@@ -143,9 +147,19 @@ class DummyEnv : public Env<DummyEnvSpec> {
     for (int i = 0; i < num_players; ++i) {
       state["info:players.id"_][i] = i;
       state["info:players.done"_][i] = IsDone();
-      state["obs"_](i, 0) = state_;
-      state["obs"_](i, 1) = 0;
+      state["obs:raw"_](i, 0) = state_;
+      state["obs:raw"_](i, 1) = 0;
       state["reward"_][i] = -i;
+      // dynamic array
+      Container<int>& dyn = state["obs:dyn"_][i];
+      // new spec
+      auto dyn_spec = ::Spec<int>({env_id_ + 1, spec_.config["state_num"_]});
+      // use this spec to create an array
+      auto* array = new TArray<int>(dyn_spec);
+      // perform some normal array writing
+      array->Fill(env_id_);
+      // finally pass it to dynamic array
+      dyn.reset(array);
     }
   }
 
@@ -177,9 +191,13 @@ class DummyEnv : public Env<DummyEnvSpec> {
     for (int i = 0; i < num_players; ++i) {
       state["info:players.id"_][i] = i;
       state["info:players.done"_][i] = IsDone();
-      state["obs"_](i, 0) = state_;
-      state["obs"_](i, 1) = action_num;
+      state["obs:raw"_](i, 0) = state_;
+      state["obs:raw"_](i, 1) = action_num;
       state["reward"_][i] = -i;
+      Container<int>& dyn = state["obs:dyn"_][i];
+      auto dyn_spec = ::Spec<int>({env_id_ + 1, spec_.config["state_num"_]});
+      dyn = std::make_unique<TArray<int>>(dyn_spec);
+      dyn->Fill(env_id_);
     }
   }
 
