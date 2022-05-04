@@ -26,8 +26,8 @@ For-loop             4,893       7,914            3,993       4,640
 Subprocess           15,863      47,699           46,910      71,943
 Sample-Factory       28,216      138,847          222,327     707,494
 EnvPool (sync)       37,396      133,824          170,380     427,851
-EnvPool (async)      49,439      200,428          359,559     891,286
-EnvPool (numa+async) /           /                373,169     1,069,922
+EnvPool (async)      **49,439**  **200,428**      359,559     891,286
+EnvPool (numa+async) /           /                **373,169** **1,069,922**
 ==================== =========== ================ =========== ==============
 
 ==================== =========== ================ =========== ==============
@@ -37,14 +37,16 @@ For-loop             12,861      20,298           10,474      11,569
 Subprocess           36,586      105,432          87,403      163,656
 Sample-Factory       62,510      309,264          461,515     1,573,262
 EnvPool (sync)       66,622      380,950          296,681     949,787
-EnvPool (async)      105,126     582,446          887,540     2,363,864
-EnvPool (numa+async) /           /                896,830     3,134,287
+EnvPool (async)      **105,126** **582,446**      887,540     2,363,864
+EnvPool (numa+async) /           /                **896,830** **3,134,287**
 ==================== =========== ================ =========== ==============
+
+|image0|
 
 Testing Method and Command
 --------------------------
 
-When increasing the number of envs, we also adjust the total number of steps to make each test run for about one minute.
+All of the scripts are under ``benchmark/`` folder. When increasing the number of envs, we also adjust the total number of steps to make each test run for about one minute.
 
 For-loop
 ~~~~~~~~
@@ -175,6 +177,8 @@ Use ``numactl -s`` to determine the number of NUMA cores.
 Brax and Isaac-gym (Mujoco only)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+TODO
+
 Result
 ------
 
@@ -199,6 +203,8 @@ EnvPool (async) 10213.75 18880.65 26599.45 36375.89 48390.40 46921.23 47184.54 4
 
    <!-- Atari - Laptop -->
 
+|image1|
+
 .. raw:: html
 
    <!-- Atari - Workstation -->
@@ -216,6 +222,8 @@ EnvPool (async)     14577.17 28383.39 55106.44 106992.10 153258.47 188554.16 192
 .. raw:: html
 
    <!-- Atari - Workstation -->
+
+|image2|
 
 .. raw:: html
 
@@ -236,6 +244,8 @@ EnvPool (numa+async) /       17976.26 35761.01 71967.27 136663.09 196424.25 2537
 
    <!-- Atari - TPU-VM -->
 
+|image3|
+
 .. raw:: html
 
    <!-- Atari - DGX-A100 -->
@@ -254,6 +264,8 @@ EnvPool (numa+async) /       /        /        70629.88 140528.93 279113.15 5554
 .. raw:: html
 
    <!-- Atari - DGX-A100 -->
+
+|image4|
 
 Mujoco
 ~~~~~~
@@ -276,6 +288,8 @@ EnvPool (async) 20922.70 41279.93 57362.56 73119.43 95542.45 105126.36 100771.24
 
    <!-- Mujoco - Laptop -->
 
+|image5|
+
 .. raw:: html
 
    <!-- Mujoco - Workstation -->
@@ -293,6 +307,8 @@ EnvPool (async)      34500.65 68382.03 133496.84 265710.65 383015.28 478845.88 5
 .. raw:: html
 
    <!-- Mujoco - Workstation -->
+
+|image6|
 
 .. raw:: html
 
@@ -313,6 +329,8 @@ EnvPool (numa+async) /        35804.57 75467.72 147281.29 284323.79 412165.16 51
 
    <!-- Mujoco - TPU-VM -->
 
+|image7|
+
 .. raw:: html
 
    <!-- Mujoco - DGX-A100 -->
@@ -331,3 +349,15 @@ EnvPool (numa+async) /        /        /        170348.47 340269.34 693793.45 13
 .. raw:: html
 
    <!-- Mujoco - DGX-A100 -->
+
+|image8|
+
+.. |image0| image:: https://envpool.readthedocs.io/en/latest/_images/throughput/throughput.png
+.. |image1| image:: https://envpool.readthedocs.io/en/latest/_images/throughput/Atari_Laptop.png
+.. |image2| image:: https://envpool.readthedocs.io/en/latest/_images/throughput/Atari_Workstation.png
+.. |image3| image:: https://envpool.readthedocs.io/en/latest/_images/throughput/Atari_TPU-VM.png
+.. |image4| image:: https://envpool.readthedocs.io/en/latest/_images/throughput/Atari_DGX-A100.png
+.. |image5| image:: https://envpool.readthedocs.io/en/latest/_images/throughput/Mujoco_Laptop.png
+.. |image6| image:: https://envpool.readthedocs.io/en/latest/_images/throughput/Mujoco_Workstation.png
+.. |image7| image:: https://envpool.readthedocs.io/en/latest/_images/throughput/Mujoco_TPU-VM.png
+.. |image8| image:: https://envpool.readthedocs.io/en/latest/_images/throughput/Mujoco_DGX-A100.png

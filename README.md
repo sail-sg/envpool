@@ -32,13 +32,13 @@ Here are EnvPool's several highlights:
 - Support both synchronous execution and asynchronous execution;
 - Support both single player and multi-player environment;
 - Easy C++ developer API to add new envs;
-- **1 Million** Atari frames per second simulation with 256 CPU cores, **~13x** throughput of Python subprocess-based vector env;
+- **1 Million** Atari frames / **3 Miillion** Mujoco steps per second simulation with 256 CPU cores, **~20x** throughput of Python subprocess-based vector env;
 - **~3x** throughput of Python subprocess-based vector env on low resource setup like 12 CPU cores;
 - Comparing with existing GPU-based solution ([Brax](https://github.com/google/brax) / [Isaac-gym](https://developer.nvidia.com/isaac-gym)), EnvPool is a **general** solution for various kinds of speeding-up RL environment parallelization;
 - Compatible with some existing RL libraries, e.g., [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3), [Tianshou](https://github.com/thu-ml/tianshou), or [CleanRL](https://github.com/vwxyzjn/cleanrl).
   - Stable-Baselines3 [`Pendulum-v0` example](https://github.com/sail-sg/envpool/blob/master/examples/sb3_examples/ppo.py);
   - Tianshou [`CartPole` example](https://github.com/sail-sg/envpool/blob/master/examples/tianshou_examples/cartpole_ppo.py) and [`Pendulum-v0` example](https://github.com/sail-sg/envpool/blob/master/examples/tianshou_examples/pendulum_ppo.py);
-  - CleanRL [`Pong-v5` example](https://github.com/sail-sg/envpool/blob/master/examples/cleanrl_examples/ppo_atari_envpool.py) (solving Pong in 5 mins ([tracked experiment](https://wandb.ai/costa-huang/cleanRL/runs/opk2dmta)));
+  - CleanRL [`Pong-v5` example](https://github.com/sail-sg/envpool/blob/master/examples/cleanrl_examples/ppo_atari_envpool.py) ([Solving Pong in 5 mins](https://ppo-details.cleanrl.dev/2021/11/05/ppo-implementation-details/#solving-pong-in-5-minutes-with-ppo--envpool) ([tracked experiment](https://wandb.ai/costa-huang/cleanRL/runs/opk2dmta)));
 - Support [customized C++ environment integration](https://envpool.readthedocs.io/en/latest/pages/env.html).
 
 ## Installation
@@ -74,31 +74,34 @@ The example scripts are under [examples/](https://github.com/sail-sg/envpool/tre
 
 ## Benchmark Results
 
-We perform our benchmarks with ALE Atari environment (with environment wrappers) on different hardware setups, including a TPUv3-8 virtual machine (VM) of 96 CPU cores and 2 NUMA nodes, and an NVIDIA DGX-A100 of 256 CPU cores with 8 NUMA nodes. Baselines include 1) naive Python for-loop; 2) the most popular RL environment parallelization execution by Python subprocess, e.g., [gym.vector_env](https://github.com/openai/gym/blob/master/gym/vector/vector_env.py); 3) to our knowledge, the fastest RL environment executor [Sample Factory](https://github.com/alex-petrenko/sample-factory) before EnvPool. 
+We perform our benchmarks with ALE Atari environment (with environment wrappers) and Mujoco environment on different hardware setups, including a TPUv3-8 virtual machine (VM) of 96 CPU cores and 2 NUMA nodes, and an NVIDIA DGX-A100 of 256 CPU cores with 8 NUMA nodes. Baselines include 1) naive Python for-loop; 2) the most popular RL environment parallelization execution by Python subprocess, e.g., [gym.vector_env](https://github.com/openai/gym/blob/master/gym/vector/vector_env.py); 3) to our knowledge, the fastest RL environment executor [Sample Factory](https://github.com/alex-petrenko/sample-factory) before EnvPool. 
 
-We report EnvPool performance with sync mode, async mode, and NUMA + async mode, compared with the baselines on different number of workers (i.e., number of CPU cores). As we can see from the results, EnvPool achieves significant improvements over the baselines on all settings. On the high-end setup, EnvPool achieves 1 Million frames per second on 256 CPU cores, which is 13.3x of the `gym.vector_env` baseline. On a typical PC setup with 12 CPU cores, EnvPool's throughput is 2.8x of `gym.vector_env`.
+We report EnvPool performance with sync mode, async mode, and NUMA + async mode, compared with the baselines on different number of workers (i.e., number of CPU cores). As we can see from the results, EnvPool achieves significant improvements over the baselines on all settings. On the high-end setup, EnvPool achieves 1 Million frames per second with Atari and 3 Million frames per second with Mujoco on 256 CPU cores, which is 14.9x / 19.6x of the `gym.vector_env` baseline. On a typical PC setup with 12 CPU cores, EnvPool's throughput is 3.1x / 2.9x of `gym.vector_env`.
 
-Our benchmark script is in [examples/benchmark.py](https://github.com/sail-sg/envpool/blob/master/examples/benchmark.py). The detail configurations of 4 types of system are:
+|  Atari Highest FPS   | Laptop (12) | Workstation (32) | TPU-VM (96) | DGX-A100 (256) |
+| :------------------: | :---------: | :--------------: | :---------: | :------------: |
+|       For-loop       |    4,893    |      7,914       |    3,993    |     4,640      |
+|      Subprocess      |   15,863    |      47,699      |   46,910    |     71,943     |
+|    Sample-Factory    |   28,216    |     138,847      |   222,327   |    707,494     |
+|    EnvPool (sync)    |   37,396    |     133,824      |   170,380   |    427,851     |
+|   EnvPool (async)    | **49,439**  |   **200,428**    |   359,559   |    891,286     |
+| EnvPool (numa+async) |      /      |        /         | **373,169** | **1,069,922**  |
 
-- Personal laptop: 12 core `Intel(R) Core(TM) i7-8750H CPU @ 2.20GHz` 
-- TPU-VM: 96 core `Intel(R) Xeon(R) CPU @ 2.00GHz`
-- Apollo: 96 core `AMD EPYC 7352 24-Core Processor`
-- DGX-A100: 256 core `AMD EPYC 7742 64-Core Processor`
-
-|     Highest FPS      | Laptop (12) | TPU-VM (96) | Apollo (96) | DGX-A100 (256) |
-| :------------------: | :---------: | :---------: | :---------: | :------------: |
-|       For-loop       |    4,876    |    3,817    |    4,053    |     4,336      |
-|      Subprocess      |   18,249    |   42,885    |   19,560    |     79,509     |
-|    Sample Factory    |   27,035    |   192,074   |   262,963   |    639,389     |
-|    EnvPool (sync)    |   40,791    |   175,938   |   159,191   |    470,170     |
-|   EnvPool (async)    | **50,513**  |   352,243   |   410,941   |    845,537     |
-| EnvPool (numa+async) |      /      | **367,799** | **458,414** | **1,060,371**  |
+|  Mujoco Highest FPS  | Laptop (12) | Workstation (32) | TPU-VM (96) | DGX-A100 (256) |
+| :------------------: | :---------: | :--------------: | :---------: | :------------: |
+|       For-loop       |   12,861    |      20,298      |   10,474    |     11,569     |
+|      Subprocess      |   36,586    |     105,432      |   87,403    |    163,656     |
+|    Sample-Factory    |   62,510    |     309,264      |   461,515   |   1,573,262    |
+|    EnvPool (sync)    |   66,622    |     380,950      |   296,681   |    949,787     |
+|   EnvPool (async)    | **105,126** |   **582,446**    |   887,540   |   2,363,864    |
+| EnvPool (numa+async) |      /      |        /         | **896,830** | **3,134,287**  |
 
 <p float="center">
-<img width="49%" height="auto" src="https://i.imgur.com/wHu7m4C.png">
-<img width="48%" height="auto" src="https://i.imgur.com/JP5RApq.png">
+<img width="48%" height="auto" src="https://envpool.readthedocs.io/en/latest/_images/throughput/Atari_DGX-A100.png">
+<img width="48%" height="auto" src="https://envpool.readthedocs.io/en/latest/_images/throughput/Mujoco_DGX-A100.png">
 </p>
 
+Please refer to the [benchmark](https://envpool.readthedocs.io/en/latest/pages/benchmark.html) page and [benchmark/](benchmark) folder for more details.
 
 ## API Usage
 
@@ -168,7 +171,7 @@ Besides `num_envs`, there is one more argument `batch_size`. While `num_envs` de
 envpool.make("Pong-v5", env_type="gym", num_envs=64, batch_size=16)
 ```
 
-There are other configurable arguments with `envpool.make`; please check out [envpool interface introduction](https://envpool.readthedocs.io/en/latest/pages/interface.html).
+There are other configurable arguments with `envpool.make`; please check out [envpool Python interface introduction](https://envpool.readthedocs.io/en/latest/pages/interface.html).
 
 ## Contributing
 

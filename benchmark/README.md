@@ -24,8 +24,8 @@ To align with other baseline results, FPS is multiplied with `frame_skip` (4 for
 | Subprocess           | 15,863      | 47,699           | 46,910      | 71,943         |
 | Sample-Factory       | 28,216      | 138,847          | 222,327     | 707,494        |
 | EnvPool (sync)       | 37,396      | 133,824          | 170,380     | 427,851        |
-| EnvPool (async)      | 49,439      | 200,428          | 359,559     | 891,286        |
-| EnvPool (numa+async) | /           | /                | 373,169     | 1,069,922      |
+| EnvPool (async)      | **49,439**  | **200,428**      | 359,559     | 891,286        |
+| EnvPool (numa+async) | /           | /                | **373,169** | **1,069,922**  |
 
 | Mujoco Highest FPS   | Laptop (12) | Workstation (32) | TPU-VM (96) | DGX-A100 (256) |
 | -------------------- | ----------- | ---------------- | ----------- | -------------- |
@@ -33,14 +33,14 @@ To align with other baseline results, FPS is multiplied with `frame_skip` (4 for
 | Subprocess           | 36,586      | 105,432          | 87,403      | 163,656        |
 | Sample-Factory       | 62,510      | 309,264          | 461,515     | 1,573,262      |
 | EnvPool (sync)       | 66,622      | 380,950          | 296,681     | 949,787        |
-| EnvPool (async)      | 105,126     | 582,446          | 887,540     | 2,363,864      |
-| EnvPool (numa+async) | /           | /                | 896,830     | 3,134,287      |
+| EnvPool (async)      | **105,126** | **582,446**      | 887,540     | 2,363,864      |
+| EnvPool (numa+async) | /           | /                | **896,830** | **3,134,287**  |
 
-
+![](https://envpool.readthedocs.io/en/latest/_images/throughput/throughput.png)
 
 ## Testing Method and Command
 
-When increasing the number of envs, we also adjust the total number of steps to make each test run for about one minute.
+All of the scripts are under `benchmark/` folder. When increasing the number of envs, we also adjust the total number of steps to make each test run for about one minute.
 
 ### For-loop
 
@@ -159,9 +159,7 @@ Use `numactl -s` to determine the number of NUMA cores.
 
 ### Brax and Isaac-gym (Mujoco only)
 
-
-
-
+TODO
 
 ## Result
 
@@ -179,6 +177,8 @@ Use `numactl -s` to determine the number of NUMA cores.
 
 <!-- Atari - Laptop -->
 
+![](https://envpool.readthedocs.io/en/latest/_images/throughput/Atari_Laptop.png)
+
 <!-- Atari - Workstation -->
 
 | Atari - Workstation | 1        | 2        | 4        | 8         | 12        | 16        | 20        | 24        | 28        | 32        |
@@ -190,6 +190,8 @@ Use `numactl -s` to determine the number of NUMA cores.
 | EnvPool (async)     | 14577.17 | 28383.39 | 55106.44 | 106992.10 | 153258.47 | 188554.16 | 192034.45 | 196540.73 | 200427.90 | 199684.50 |
 
 <!-- Atari - Workstation -->
+
+![](https://envpool.readthedocs.io/en/latest/_images/throughput/Atari_Workstation.png)
 
 <!-- Atari - TPU-VM -->
 
@@ -204,6 +206,8 @@ Use `numactl -s` to determine the number of NUMA cores.
 
 <!-- Atari - TPU-VM -->
 
+![](https://envpool.readthedocs.io/en/latest/_images/throughput/Atari_TPU-VM.png)
+
 <!-- Atari - DGX-A100 -->
 
 | Atari - DGX-A100     | 1       | 2        | 4        | 8        | 16        | 32        | 64        | 96        | 128       | 160       | 192       | 224        | 256        |
@@ -216,6 +220,8 @@ Use `numactl -s` to determine the number of NUMA cores.
 | EnvPool (numa+async) | /       | /        | /        | 70629.88 | 140528.93 | 279113.15 | 555426.41 | 762417.99 | 936443.47 | 955620.20 | 998668.02 | 1032953.80 | 1069921.98 |
 
 <!-- Atari - DGX-A100 -->
+
+![](https://envpool.readthedocs.io/en/latest/_images/throughput/Atari_DGX-A100.png)
 
 ### Mujoco
 
@@ -231,6 +237,8 @@ Use `numactl -s` to determine the number of NUMA cores.
 
 <!-- Mujoco - Laptop -->
 
+![](https://envpool.readthedocs.io/en/latest/_images/throughput/Mujoco_Laptop.png)
+
 <!-- Mujoco - Workstation -->
 
 | Mujoco - Workstation | 1        | 2        | 4         | 8         | 12        | 16        | 20        | 24        | 28        | 32        |
@@ -242,6 +250,8 @@ Use `numactl -s` to determine the number of NUMA cores.
 | EnvPool (async)      | 34500.65 | 68382.03 | 133496.84 | 265710.65 | 383015.28 | 478845.88 | 511142.63 | 538558.16 | 566014.54 | 582445.50 |
 
 <!-- Mujoco - Workstation -->
+
+![](https://envpool.readthedocs.io/en/latest/_images/throughput/Mujoco_Workstation.png)
 
 <!-- Mujoco - TPU-VM -->
 
@@ -256,6 +266,8 @@ Use `numactl -s` to determine the number of NUMA cores.
 
 <!-- Mujoco - TPU-VM -->
 
+![](https://envpool.readthedocs.io/en/latest/_images/throughput/Mujoco_TPU-VM.png)
+
 <!-- Mujoco - DGX-A100 -->
 
 | Mujoco - DGX-A100    | 1        | 2        | 4        | 8         | 16        | 32        | 64         | 96         | 128        | 160        | 192        | 224        | 256        |
@@ -268,3 +280,5 @@ Use `numactl -s` to determine the number of NUMA cores.
 | EnvPool (numa+async) | /        | /        | /        | 170348.47 | 340269.34 | 693793.45 | 1388410.00 | 1920762.84 | 2341562.20 | 2569997.03 | 2776143.15 | 2964886.91 | 3134286.77 |
 
 <!-- Mujoco - DGX-A100 -->
+
+![](https://envpool.readthedocs.io/en/latest/_images/throughput/Mujoco_DGX-A100.png)
