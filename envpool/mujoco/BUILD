@@ -17,132 +17,30 @@ genrule(
     cmd = "cp $< $@",
 )
 
-cc_library(
-    name = "mujoco_env",
-    hdrs = ["mujoco_env.h"],
+pybind_extension(
+    name = "mujoco_envpool",
+    srcs = [
+        "ant.h",
+        "half_cheetah.h",
+        "hopper.h",
+        "humanoid.h",
+        "humanoid_standup.h",
+        "inverted_double_pendulum.h",
+        "inverted_pendulum.h",
+        "mujoco_env.h",
+        "mujoco_envpool.cc",
+        "pusher.h",
+        "reacher.h",
+        "swimmer.h",
+        "walker2d.h",
+    ],
     data = [
         ":gen_mujoco_xml",
     ],
     deps = [
-        "@mujoco//:mujoco_lib",
-    ],
-)
-
-cc_library(
-    name = "ant",
-    hdrs = ["ant.h"],
-    deps = [
-        ":mujoco_env",
         "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "half_cheetah",
-    hdrs = ["half_cheetah.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "hopper",
-    hdrs = ["hopper.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "humanoid",
-    hdrs = ["humanoid.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "humanoid_standup",
-    hdrs = ["humanoid_standup.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "inverted_double_pendulum",
-    hdrs = ["inverted_double_pendulum.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "inverted_pendulum",
-    hdrs = ["inverted_pendulum.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "pusher",
-    hdrs = ["pusher.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "reacher",
-    hdrs = ["reacher.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "swimmer",
-    hdrs = ["swimmer.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "walker2d",
-    hdrs = ["walker2d.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-pybind_extension(
-    name = "mujoco_envpool",
-    srcs = ["mujoco_envpool.cc"],
-    deps = [
-        ":ant",
-        ":half_cheetah",
-        ":hopper",
-        ":humanoid",
-        ":humanoid_standup",
-        ":inverted_double_pendulum",
-        ":inverted_pendulum",
-        ":pusher",
-        ":reacher",
-        ":swimmer",
-        ":walker2d",
         "//envpool/core:py_envpool",
+        "@mujoco//:mujoco_lib",
     ],
 )
 

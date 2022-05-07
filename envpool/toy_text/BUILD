@@ -3,66 +3,19 @@ load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 
 package(default_visibility = ["//visibility:public"])
 
-cc_library(
-    name = "catch",
-    hdrs = ["catch.h"],
-    deps = [
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "frozen_lake",
-    hdrs = ["frozen_lake.h"],
-    deps = [
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "taxi",
-    hdrs = ["taxi.h"],
-    deps = [
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "nchain",
-    hdrs = ["nchain.h"],
-    deps = [
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "cliffwalking",
-    hdrs = ["cliffwalking.h"],
-    deps = [
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "blackjack",
-    hdrs = ["blackjack.h"],
-    deps = [
-        "//envpool/core:async_envpool",
-    ],
-)
-
 pybind_extension(
     name = "toy_text_envpool",
     srcs = [
+        "blackjack.h",
+        "catch.h",
+        "cliffwalking.h",
+        "frozen_lake.h",
+        "nchain.h",
+        "taxi.h",
         "toy_text.cc",
     ],
     deps = [
-        ":blackjack",
-        ":catch",
-        ":cliffwalking",
-        ":frozen_lake",
-        ":nchain",
-        ":taxi",
+        "//envpool/core:async_envpool",
         "//envpool/core:py_envpool",
     ],
 )
