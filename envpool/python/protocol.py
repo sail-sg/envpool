@@ -215,6 +215,8 @@ class EnvPool(Protocol):
   ) -> Union[TimeStep, Tuple]:
     """Envpool step interface that performs send/recv."""
 
-  def reset(self,
-            env_id: Optional[np.ndarray] = None) -> Union[TimeStep, Tuple]:
+  def reset(
+    self,
+    env_id: Optional[np.ndarray] = None,
+  ) -> Union[TimeStep, Tuple]:
     """Envpool reset interface."""
