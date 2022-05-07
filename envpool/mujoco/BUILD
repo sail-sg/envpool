@@ -17,6 +17,17 @@ genrule(
     cmd = "cp $< $@",
 )
 
+cc_library(
+    name = "mujoco_env",
+    hdrs = ["mujoco_env.h"],
+    data = [
+        ":gen_mujoco_xml",
+    ],
+    deps = [
+        "@mujoco//:mujoco_lib",
+    ],
+)
+
 pybind_extension(
     name = "mujoco_envpool",
     srcs = [
@@ -27,20 +38,16 @@ pybind_extension(
         "humanoid_standup.h",
         "inverted_double_pendulum.h",
         "inverted_pendulum.h",
-        "mujoco_env.h",
         "mujoco_envpool.cc",
         "pusher.h",
         "reacher.h",
         "swimmer.h",
         "walker2d.h",
     ],
-    data = [
-        ":gen_mujoco_xml",
-    ],
     deps = [
+        ":mujoco_env",
         "//envpool/core:async_envpool",
         "//envpool/core:py_envpool",
-        "@mujoco//:mujoco_lib",
     ],
 )
 
@@ -56,9 +63,9 @@ py_library(
 )
 
 py_test(
-    name = "mujoco_test",
+    name = "mujoco_gym_v4_test",
     size = "enormous",
-    srcs = ["mujoco_test.py"],
+    srcs = ["mujoco_gym_v4_test.py"],
     deps = [
         ":mujoco",
         requirement("numpy"),
