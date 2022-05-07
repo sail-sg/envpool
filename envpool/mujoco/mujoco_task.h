@@ -30,12 +30,12 @@ class MujocoTask {
   mjModel* model_;
   mjData* data_;
 
-
  public:
   MujocoTask(const std::string& xml, int frame_skip, bool post_constraint,
-            int max_episode_steps)
+             int max_episode_steps)
       : model_(mj_loadXML(xml.c_str(), nullptr, error_.begin(), 1000)),
-        data_(mj_makeData(model_)), {
+        data_(mj_makeData(model_)),
+  {
     memcpy(init_qpos_, data_->qpos, sizeof(mjtNum) * model_->nq);
     memcpy(init_qvel_, data_->qvel, sizeof(mjtNum) * model_->nv);
   }
@@ -49,25 +49,23 @@ class MujocoTask {
     delete[] qvel0_;
   }
 
-  void MujocoBeforeControlStep(const mjtNum* action) {
-  };
+  void MujocoInitializeEpisodeMjcf() {}
 
-  void MujocoBeforeSimStep(const mjtNum* action) {
-  };
+  void MujocoInitializeEpisode() {}
 
-  void MujocoAfterControlStep(const mjtNum* action) {
-  }; 
+  void MujocoBeforeStep(const mjtNum* action) {}
 
-  void MujocoAftersSimStep(const mjtNum* action) {
-  };
+  void MujocoBeforeSubStep(const mjtNum* action) {}
 
-  void MujocoGetReward(const mjtNum* action) {
-  }; 
+  void MujocoAfterStep() {}
 
-  void MujocoGetDiscount(const mjtNum* action) {
-  }; 
+  void MujocoAftersSubStep() {}
 
-  void MujocoShouldTerminateEpisode(const mjtNum* action) {
-  }; 
+  float MujocoGetReward() { return 0.0; }
+
+  float MujocoGetDiscount() { return 1.0; }
+
+  bool MujocoShouldTerminateEpisode() { return false; }
+};
 
 #endif  // ENVPOOL_MUJOCO_MUJOCO_TASK_H_
