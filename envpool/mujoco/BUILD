@@ -77,19 +77,6 @@ py_test(
 )
 
 py_test(
-    name = "mujoco_gym_v3_test",
-    size = "enormous",
-    srcs = ["gym/mujoco_gym_v3_test.py"],
-    deps = [
-        ":mujoco",
-        requirement("numpy"),
-        requirement("absl-py"),
-        requirement("gym"),
-        requirement("mujoco_py"),
-    ],
-)
-
-py_test(
     name = "mujoco_gym_v4_test",
     size = "enormous",
     srcs = ["gym/mujoco_gym_v4_test.py"],
