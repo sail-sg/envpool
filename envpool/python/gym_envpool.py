@@ -23,6 +23,7 @@ import tree
 from .data import gym_structure
 from .envpool import EnvPoolMixin
 from .utils import check_key_duplication
+from .lax import XlaMixin
 
 
 class GymEnvPoolMixin(ABC):
@@ -45,7 +46,7 @@ class GymEnvPoolMeta(ABCMeta):
   def __new__(cls: Any, name: str, parents: Tuple, attrs: Dict) -> Any:
     """Check internal config and initialize data format convertion."""
     base = parents[0]
-    parents = (base, GymEnvPoolMixin, EnvPoolMixin, gym.Env)
+    parents = (base, GymEnvPoolMixin, EnvPoolMixin, XlaMixin, gym.Env)
     state_keys = base._state_keys
     action_keys = base._action_keys
     check_key_duplication(name, "state", state_keys)

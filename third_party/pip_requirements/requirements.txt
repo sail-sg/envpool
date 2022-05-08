@@ -45,3 +45,4 @@ oauthlib
 pyasn1
 typed-ast
 typing-extensions
+jax[cpu]

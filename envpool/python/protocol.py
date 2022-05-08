@@ -13,7 +13,9 @@
 # limitations under the License.
 """Protocol of C++ EnvPool."""
 
-from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Type, Union
+from typing import (
+  Any, Dict, List, NamedTuple, Optional, Tuple, Type, Union, Callable
+)
 
 try:
   from typing import Protocol
@@ -218,3 +220,6 @@ class EnvPool(Protocol):
   def reset(self,
             env_id: Optional[np.ndarray] = None) -> Union[TimeStep, Tuple]:
     """Envpool reset interface."""
+
+  def xla(self) -> Tuple[Any, Callable, Callable, Callable]:
+    """Get the xla functions"""
