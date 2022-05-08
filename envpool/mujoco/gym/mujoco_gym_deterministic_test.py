@@ -46,21 +46,15 @@ from envpool.mujoco import (
 
 class _MujocoEnvPoolDeterministicTest(absltest.TestCase):
 
-  def check(
-    self,
-    spec_cls: Any,
-    envpool_cls: Any,
-    num_envs: int = 4,
-    **kwargs: Any,
-  ) -> None:
+  def check(self, spec_cls: Any, envpool_cls: Any, num_envs: int = 4) -> None:
     env0 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, **kwargs))
+      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0))
     )
     env1 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, **kwargs))
+      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0))
     )
     env2 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=1, **kwargs))
+      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=1))
     )
     act_space = env0.action_space
     eps = np.finfo(np.float32).eps
