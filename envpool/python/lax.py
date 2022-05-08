@@ -1,14 +1,14 @@
 from abc import ABC
 from functools import partial
-from typing import Any, Dict, List, Tuple, Union, Optional, Callable
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
+from dm_env import TimeStep
 from jax import core, dtypes
 from jax import numpy as jnp
 from jax.abstract_arrays import ShapedArray
 from jax.interpreters import xla
 from jax.lib import xla_client
-from dm_env import TimeStep
 
 from .protocol import EnvPool
 

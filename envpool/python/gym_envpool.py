@@ -22,8 +22,8 @@ import tree
 
 from .data import gym_structure
 from .envpool import EnvPoolMixin
-from .utils import check_key_duplication
 from .lax import XlaMixin
+from .utils import check_key_duplication
 
 
 class GymEnvPoolMixin(ABC):

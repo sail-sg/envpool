@@ -14,7 +14,15 @@
 """Protocol of C++ EnvPool."""
 
 from typing import (
-  Any, Dict, List, NamedTuple, Optional, Tuple, Type, Union, Callable
+  Any,
+  Callable,
+  Dict,
+  List,
+  NamedTuple,
+  Optional,
+  Tuple,
+  Type,
+  Union,
 )
 
 try:
