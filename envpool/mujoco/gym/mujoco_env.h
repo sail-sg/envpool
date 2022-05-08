@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ENVPOOL_MUJOCO_MUJOCO_ENV_H_
-#define ENVPOOL_MUJOCO_MUJOCO_ENV_H_
+#ifndef ENVPOOL_MUJOCO_GYM_MUJOCO_ENV_H_
+#define ENVPOOL_MUJOCO_GYM_MUJOCO_ENV_H_
 
 #include <mjxmacro.h>
 #include <mujoco.h>
@@ -86,4 +86,4 @@ class MujocoEnv {
   }
 };
 
-#endif  // ENVPOOL_MUJOCO_MUJOCO_ENV_H_
+#endif  // ENVPOOL_MUJOCO_GYM_MUJOCO_ENV_H_

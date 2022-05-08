@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ENVPOOL_MUJOCO_HALF_CHEETAH_H_
-#define ENVPOOL_MUJOCO_HALF_CHEETAH_H_
+#ifndef ENVPOOL_MUJOCO_GYM_WALKER2D_H_
+#define ENVPOOL_MUJOCO_GYM_WALKER2D_H_
 
 #include <algorithm>
 #include <limits>
@@ -24,19 +24,23 @@
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
-#include "envpool/mujoco/mujoco_env.h"
+#include "envpool/mujoco/gym/mujoco_env.h"
 
 namespace mujoco {
 
-class HalfCheetahEnvFns {
+class Walker2dEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
-        "max_episode_steps"_.Bind(1000), "reward_threshold"_.Bind(4800.0),
-        "frame_skip"_.Bind(5), "post_constraint"_.Bind(true),
+        "max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(4),
+        "post_constraint"_.Bind(true), "ctrl_cost_weight"_.Bind(0.001),
+        "terminate_when_unhealthy"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
-        "ctrl_cost_weight"_.Bind(0.1), "forward_reward_weight"_.Bind(1.0),
-        "reset_noise_scale"_.Bind(0.1));
+        "forward_reward_weight"_.Bind(1.0), "healthy_reward"_.Bind(1.0),
+        "healthy_z_min"_.Bind(0.8), "healthy_z_max"_.Bind(2.0),
+        "healthy_angle_min"_.Bind(-1.0), "healthy_angle_max"_.Bind(1.0),
+        "velocity_min"_.Bind(-10.0), "velocity_max"_.Bind(10.0),
+        "reset_noise_scale"_.Bind(0.005));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -47,8 +51,6 @@ class HalfCheetahEnvFns {
                     "info:qpos0"_.Bind(Spec<mjtNum>({9})),
                     "info:qvel0"_.Bind(Spec<mjtNum>({9})),
 #endif
-                    "info:reward_run"_.Bind(Spec<mjtNum>({-1})),
-                    "info:reward_ctrl"_.Bind(Spec<mjtNum>({-1})),
                     "info:x_position"_.Bind(Spec<mjtNum>({-1})),
                     "info:x_velocity"_.Bind(Spec<mjtNum>({-1})));
   }
@@ -58,34 +60,43 @@ class HalfCheetahEnvFns {
   }
 };
 
-using HalfCheetahEnvSpec = EnvSpec<HalfCheetahEnvFns>;
+using Walker2dEnvSpec = EnvSpec<Walker2dEnvFns>;
 
-class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
+class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
  protected:
-  bool no_pos_;
+  bool terminate_when_unhealthy_, no_pos_;
   mjtNum ctrl_cost_weight_, forward_reward_weight_;
-  std::uniform_real_distribution<> dist_qpos_;
-  std::normal_distribution<> dist_qvel_;
+  mjtNum healthy_reward_, healthy_z_min_, healthy_z_max_;
+  mjtNum healthy_angle_min_, healthy_angle_max_;
+  mjtNum velocity_min_, velocity_max_;
+  std::uniform_real_distribution<> dist_;
 
  public:
-  HalfCheetahEnv(const Spec& spec, int env_id)
-      : Env<HalfCheetahEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/half_cheetah.xml",
+  Walker2dEnv(const Spec& spec, int env_id)
+      : Env<Walker2dEnvSpec>(spec, env_id),
+        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets_gym/walker2d.xml",
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
+        terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
-        dist_qpos_(-spec.config["reset_noise_scale"_],
-                   spec.config["reset_noise_scale"_]),
-        dist_qvel_(0, spec.config["reset_noise_scale"_]) {}
+        healthy_reward_(spec.config["healthy_reward"_]),
+        healthy_z_min_(spec.config["healthy_z_min"_]),
+        healthy_z_max_(spec.config["healthy_z_max"_]),
+        healthy_angle_min_(spec.config["healthy_angle_min"_]),
+        healthy_angle_max_(spec.config["healthy_angle_max"_]),
+        velocity_min_(spec.config["velocity_min"_]),
+        velocity_max_(spec.config["velocity_max"_]),
+        dist_(-spec.config["reset_noise_scale"_],
+              spec.config["reset_noise_scale"_]) {}
 
   void MujocoResetModel() override {
     for (int i = 0; i < model_->nq; ++i) {
-      data_->qpos[i] = qpos0_[i] = init_qpos_[i] + dist_qpos_(gen_);
+      data_->qpos[i] = qpos0_[i] = init_qpos_[i] + dist_(gen_);
     }
     for (int i = 0; i < model_->nv; ++i) {
-      data_->qvel[i] = qvel0_[i] = init_qvel_[i] + dist_qvel_(gen_);
+      data_->qvel[i] = qvel0_[i] = init_qvel_[i] + dist_(gen_);
     }
   }
 
@@ -95,7 +106,7 @@ class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteState(0.0, 0.0, 0.0, 0.0);
+    WriteState(0.0, 0.0, 0.0);
   }
 
   void Step(const Action& action) override {
@@ -114,13 +125,29 @@ class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
     mjtNum dt = frame_skip_ * model_->opt.timestep;
     mjtNum xv = (x_after - x_before) / dt;
     // reward and done
-    auto reward = static_cast<float>(xv * forward_reward_weight_ - ctrl_cost);
-    done_ = (++elapsed_step_ >= max_episode_steps_);
-    WriteState(reward, xv, ctrl_cost, x_after);
+    mjtNum healthy_reward =
+        terminate_when_unhealthy_ || IsHealthy() ? healthy_reward_ : 0.0;
+    auto reward = static_cast<float>(xv * forward_reward_weight_ +
+                                     healthy_reward - ctrl_cost);
+    ++elapsed_step_;
+    done_ = (terminate_when_unhealthy_ ? !IsHealthy() : false) ||
+            (elapsed_step_ >= max_episode_steps_);
+    WriteState(reward, xv, x_after);
   }
 
  private:
-  void WriteState(float reward, mjtNum xv, mjtNum ctrl_cost, mjtNum x_after) {
+  bool IsHealthy() {
+    if (data_->qpos[1] < healthy_z_min_ || data_->qpos[1] > healthy_z_max_) {
+      return false;
+    }
+    if (data_->qpos[2] < healthy_angle_min_ ||
+        data_->qpos[2] > healthy_angle_max_) {
+      return false;
+    }
+    return true;
+  }
+
+  void WriteState(float reward, mjtNum xv, mjtNum x_after) {
     State state = Allocate();
     state["reward"_] = reward;
     // obs
@@ -129,11 +156,12 @@ class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
       *(obs++) = data_->qpos[i];
     }
     for (int i = 0; i < model_->nv; ++i) {
-      *(obs++) = data_->qvel[i];
+      mjtNum x = data_->qvel[i];
+      x = std::min(velocity_max_, x);
+      x = std::max(velocity_min_, x);
+      *(obs++) = x;
     }
     // info
-    state["info:reward_run"_] = xv * forward_reward_weight_;
-    state["info:reward_ctrl"_] = -ctrl_cost;
     state["info:x_position"_] = x_after;
     state["info:x_velocity"_] = xv;
 #ifdef ENVPOOL_TEST
@@ -143,8 +171,8 @@ class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
   }
 };
 
-using HalfCheetahEnvPool = AsyncEnvPool<HalfCheetahEnv>;
+using Walker2dEnvPool = AsyncEnvPool<Walker2dEnv>;
 
 }  // namespace mujoco
 
-#endif  // ENVPOOL_MUJOCO_HALF_CHEETAH_H_
+#endif  // ENVPOOL_MUJOCO_GYM_WALKER2D_H_

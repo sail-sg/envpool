@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ENVPOOL_MUJOCO_REACHER_H_
-#define ENVPOOL_MUJOCO_REACHER_H_
+#ifndef ENVPOOL_MUJOCO_GYM_REACHER_H_
+#define ENVPOOL_MUJOCO_GYM_REACHER_H_
 
 #include <algorithm>
 #include <limits>
@@ -24,7 +24,7 @@
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
-#include "envpool/mujoco/mujoco_env.h"
+#include "envpool/mujoco/gym/mujoco_env.h"
 
 namespace mujoco {
 
@@ -66,7 +66,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
  public:
   ReacherEnv(const Spec& spec, int env_id)
       : Env<ReacherEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/reacher.xml",
+        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets_gym/reacher.xml",
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
@@ -169,4 +169,4 @@ using ReacherEnvPool = AsyncEnvPool<ReacherEnv>;
 
 }  // namespace mujoco
 
-#endif  // ENVPOOL_MUJOCO_REACHER_H_
+#endif  // ENVPOOL_MUJOCO_GYM_REACHER_H_
