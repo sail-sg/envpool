@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ENVPOOL_MUJOCO_INVERTED_DOUBLE_PENDULUM_H_
-#define ENVPOOL_MUJOCO_INVERTED_DOUBLE_PENDULUM_H_
+#ifndef ENVPOOL_MUJOCO_GYM_INVERTED_DOUBLE_PENDULUM_H_
+#define ENVPOOL_MUJOCO_GYM_INVERTED_DOUBLE_PENDULUM_H_
 
 #include <algorithm>
 #include <limits>
@@ -24,7 +24,7 @@
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
-#include "envpool/mujoco/mujoco_env.h"
+#include "envpool/mujoco/gym/mujoco_env.h"
 
 namespace mujoco {
 
@@ -69,7 +69,7 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
   InvertedDoublePendulumEnv(const Spec& spec, int env_id)
       : Env<InvertedDoublePendulumEnvSpec>(spec, env_id),
         MujocoEnv(spec.config["base_path"_] +
-                      "/mujoco/assets/inverted_double_pendulum.xml",
+                      "/mujoco/assets_gym/inverted_double_pendulum.xml",
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
@@ -155,4 +155,4 @@ using InvertedDoublePendulumEnvPool = AsyncEnvPool<InvertedDoublePendulumEnv>;
 
 }  // namespace mujoco
 
-#endif  // ENVPOOL_MUJOCO_INVERTED_DOUBLE_PENDULUM_H_
+#endif  // ENVPOOL_MUJOCO_GYM_INVERTED_DOUBLE_PENDULUM_H_

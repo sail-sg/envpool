@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ENVPOOL_MUJOCO_ANT_H_
-#define ENVPOOL_MUJOCO_ANT_H_
+#ifndef ENVPOOL_MUJOCO_GYM_ANT_H_
+#define ENVPOOL_MUJOCO_GYM_ANT_H_
 
 #include <algorithm>
 #include <limits>
@@ -24,7 +24,7 @@
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
-#include "envpool/mujoco/mujoco_env.h"
+#include "envpool/mujoco/gym/mujoco_env.h"
 
 namespace mujoco {
 
@@ -83,7 +83,7 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
  public:
   AntEnv(const Spec& spec, int env_id)
       : Env<AntEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/ant.xml",
+        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets_gym/ant.xml",
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
@@ -215,4 +215,4 @@ using AntEnvPool = AsyncEnvPool<AntEnv>;
 
 }  // namespace mujoco
 
-#endif  // ENVPOOL_MUJOCO_ANT_H_
+#endif  // ENVPOOL_MUJOCO_GYM_ANT_H_

@@ -15,7 +15,7 @@
 
 from envpool.python.api import py_env
 
-from .mujoco_envpool import (
+from .mujoco_gym_envpool import (
   _AntEnvPool,
   _AntEnvSpec,
   _HalfCheetahEnvPool,

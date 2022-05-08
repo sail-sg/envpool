@@ -317,14 +317,14 @@ def workspace():
 
     maybe(
         http_archive,
-        name = "mujoco_xml",
+        name = "mujoco_gym_xml",
         sha256 = "94098a9b888bc80fa303571d83dfdda1412762d8b5565d99c52b38a2a93c919a",
         strip_prefix = "gym-0.23.1/gym/envs/mujoco",
         urls = [
             "https://github.com/openai/gym/archive/refs/tags/0.23.1.tar.gz",
             "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/openai/gym/0.23.1.tar.gz",
         ],
-        build_file = "//third_party/mujoco_xml:mujoco_xml.BUILD",
+        build_file = "//third_party/mujoco_gym_xml:mujoco_gym_xml.BUILD",
     )
 
     # Atari/VizDoom pretrained weight for testing pipeline

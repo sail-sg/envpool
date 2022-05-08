@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ENVPOOL_MUJOCO_WALKER2D_H_
-#define ENVPOOL_MUJOCO_WALKER2D_H_
+#ifndef ENVPOOL_MUJOCO_GYM_HOPPER_H_
+#define ENVPOOL_MUJOCO_GYM_HOPPER_H_
 
 #include <algorithm>
 #include <limits>
@@ -24,57 +24,59 @@
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
-#include "envpool/mujoco/mujoco_env.h"
+#include "envpool/mujoco/gym/mujoco_env.h"
 
 namespace mujoco {
 
-class Walker2dEnvFns {
+class HopperEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
-        "max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(4),
-        "post_constraint"_.Bind(true), "ctrl_cost_weight"_.Bind(0.001),
+        "max_episode_steps"_.Bind(1000), "reward_threshold"_.Bind(6000.0),
+        "frame_skip"_.Bind(4), "post_constraint"_.Bind(true),
         "terminate_when_unhealthy"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
-        "forward_reward_weight"_.Bind(1.0), "healthy_reward"_.Bind(1.0),
-        "healthy_z_min"_.Bind(0.8), "healthy_z_max"_.Bind(2.0),
-        "healthy_angle_min"_.Bind(-1.0), "healthy_angle_max"_.Bind(1.0),
-        "velocity_min"_.Bind(-10.0), "velocity_max"_.Bind(10.0),
-        "reset_noise_scale"_.Bind(0.005));
+        "ctrl_cost_weight"_.Bind(1e-3), "forward_reward_weight"_.Bind(1.0),
+        "healthy_reward"_.Bind(1.0), "velocity_min"_.Bind(-10.0),
+        "velocity_max"_.Bind(10.0), "healthy_state_min"_.Bind(-100.0),
+        "healthy_state_max"_.Bind(100.0), "healthy_angle_min"_.Bind(-0.2),
+        "healthy_angle_max"_.Bind(0.2), "healthy_z_min"_.Bind(0.7),
+        "reset_noise_scale"_.Bind(5e-3));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
     bool no_pos = conf["exclude_current_positions_from_observation"_];
-    return MakeDict("obs"_.Bind(Spec<mjtNum>({no_pos ? 17 : 18}, {-inf, inf})),
+    return MakeDict("obs"_.Bind(Spec<mjtNum>({no_pos ? 11 : 12}, {-inf, inf})),
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.Bind(Spec<mjtNum>({9})),
-                    "info:qvel0"_.Bind(Spec<mjtNum>({9})),
+                    "info:qpos0"_.Bind(Spec<mjtNum>({6})),
+                    "info:qvel0"_.Bind(Spec<mjtNum>({6})),
 #endif
                     "info:x_position"_.Bind(Spec<mjtNum>({-1})),
                     "info:x_velocity"_.Bind(Spec<mjtNum>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.Bind(Spec<mjtNum>({-1, 6}, {-1.0, 1.0})));
+    return MakeDict("action"_.Bind(Spec<mjtNum>({-1, 3}, {-1.0, 1.0})));
   }
 };
 
-using Walker2dEnvSpec = EnvSpec<Walker2dEnvFns>;
+using HopperEnvSpec = EnvSpec<HopperEnvFns>;
 
-class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
+class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
  protected:
   bool terminate_when_unhealthy_, no_pos_;
   mjtNum ctrl_cost_weight_, forward_reward_weight_;
-  mjtNum healthy_reward_, healthy_z_min_, healthy_z_max_;
-  mjtNum healthy_angle_min_, healthy_angle_max_;
+  mjtNum healthy_reward_, healthy_z_min_;
   mjtNum velocity_min_, velocity_max_;
+  mjtNum healthy_state_min_, healthy_state_max_;
+  mjtNum healthy_angle_min_, healthy_angle_max_;
   std::uniform_real_distribution<> dist_;
 
  public:
-  Walker2dEnv(const Spec& spec, int env_id)
-      : Env<Walker2dEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/walker2d.xml",
+  HopperEnv(const Spec& spec, int env_id)
+      : Env<HopperEnvSpec>(spec, env_id),
+        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets_gym/hopper.xml",
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
@@ -83,11 +85,12 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
         healthy_z_min_(spec.config["healthy_z_min"_]),
-        healthy_z_max_(spec.config["healthy_z_max"_]),
-        healthy_angle_min_(spec.config["healthy_angle_min"_]),
-        healthy_angle_max_(spec.config["healthy_angle_max"_]),
         velocity_min_(spec.config["velocity_min"_]),
         velocity_max_(spec.config["velocity_max"_]),
+        healthy_state_min_(spec.config["healthy_state_min"_]),
+        healthy_state_max_(spec.config["healthy_state_max"_]),
+        healthy_angle_min_(spec.config["healthy_angle_min"_]),
+        healthy_angle_max_(spec.config["healthy_angle_max"_]),
         dist_(-spec.config["reset_noise_scale"_],
               spec.config["reset_noise_scale"_]) {}
 
@@ -137,12 +140,23 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
 
  private:
   bool IsHealthy() {
-    if (data_->qpos[1] < healthy_z_min_ || data_->qpos[1] > healthy_z_max_) {
+    mjtNum z = data_->qpos[1];
+    mjtNum angle = data_->qpos[2];
+    if (angle <= healthy_angle_min_ || angle >= healthy_angle_max_ ||
+        z <= healthy_z_min_) {
       return false;
     }
-    if (data_->qpos[2] < healthy_angle_min_ ||
-        data_->qpos[2] > healthy_angle_max_) {
-      return false;
+    for (int i = 2; i < model_->nq; ++i) {
+      if (data_->qpos[i] <= healthy_state_min_ ||
+          data_->qpos[i] >= healthy_state_max_) {
+        return false;
+      }
+    }
+    for (int i = 0; i < model_->nv; ++i) {
+      if (data_->qvel[i] <= healthy_state_min_ ||
+          data_->qvel[i] >= healthy_state_max_) {
+        return false;
+      }
     }
     return true;
   }
@@ -171,8 +185,8 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
   }
 };
 
-using Walker2dEnvPool = AsyncEnvPool<Walker2dEnv>;
+using HopperEnvPool = AsyncEnvPool<HopperEnv>;
 
 }  // namespace mujoco
 
-#endif  // ENVPOOL_MUJOCO_WALKER2D_H_
+#endif  // ENVPOOL_MUJOCO_GYM_HOPPER_H_
