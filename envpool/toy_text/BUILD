@@ -3,19 +3,28 @@ load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 
 package(default_visibility = ["//visibility:public"])
 
-pybind_extension(
-    name = "toy_text_envpool",
-    srcs = [
+cc_library(
+    name = "toy_text_env",
+    hdrs = [
         "blackjack.h",
         "catch.h",
         "cliffwalking.h",
         "frozen_lake.h",
         "nchain.h",
         "taxi.h",
-        "toy_text.cc",
     ],
     deps = [
         "//envpool/core:async_envpool",
+    ],
+)
+
+pybind_extension(
+    name = "toy_text_envpool",
+    srcs = [
+        "toy_text.cc",
+    ],
+    deps = [
+        ":toy_text_env",
         "//envpool/core:py_envpool",
     ],
 )

@@ -17,9 +17,9 @@ genrule(
     cmd = "cp $< $@",
 )
 
-pybind_extension(
-    name = "mujoco_gym_envpool",
-    srcs = [
+cc_library(
+    name = "mujoco_gym_env",
+    hdrs = [
         "gym/ant.h",
         "gym/half_cheetah.h",
         "gym/hopper.h",
@@ -28,7 +28,6 @@ pybind_extension(
         "gym/inverted_double_pendulum.h",
         "gym/inverted_pendulum.h",
         "gym/mujoco_env.h",
-        "gym/mujoco_envpool.cc",
         "gym/pusher.h",
         "gym/reacher.h",
         "gym/swimmer.h",
@@ -39,8 +38,18 @@ pybind_extension(
     ],
     deps = [
         "//envpool/core:async_envpool",
-        "//envpool/core:py_envpool",
         "@mujoco//:mujoco_lib",
+    ],
+)
+
+pybind_extension(
+    name = "mujoco_gym_envpool",
+    srcs = [
+        "gym/mujoco_envpool.cc",
+    ],
+    deps = [
+        ":mujoco_gym_env",
+        "//envpool/core:py_envpool",
     ],
 )
 

@@ -3,18 +3,25 @@ load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 
 package(default_visibility = ["//visibility:public"])
 
-pybind_extension(
-    name = "classic_control_envpool",
-    srcs = [
+cc_library(
+    name = "classic_control_env",
+    hdrs = [
         "acrobot.h",
         "cartpole.h",
-        "classic_control.cc",
         "mountain_car.h",
         "mountain_car_continuous.h",
         "pendulum.h",
     ],
     deps = [
         "//envpool/core:async_envpool",
+    ],
+)
+
+pybind_extension(
+    name = "classic_control_envpool",
+    srcs = ["classic_control.cc"],
+    deps = [
+        ":classic_control_env",
         "//envpool/core:py_envpool",
     ],
 )
