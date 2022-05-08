@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit tests for Mujoco environments."""
+"""Unit tests for Mujoco gym v4 environments."""
 
 from typing import Any, no_type_check
 
@@ -55,38 +55,6 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     obs0, obs1 = env0.observation_space, env1.observation_space
     np.testing.assert_allclose(obs0.low, obs1.low)
     np.testing.assert_allclose(obs0.high, obs1.high)
-
-  def run_deterministic_check(
-    self,
-    spec_cls: Any,
-    envpool_cls: Any,
-    num_envs: int = 4,
-    **kwargs: Any,
-  ) -> None:
-    env0 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, **kwargs))
-    )
-    env1 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, **kwargs))
-    )
-    env2 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=1, **kwargs))
-    )
-    act_space = env0.action_space
-    eps = np.finfo(np.float32).eps
-    obs_space = env0.observation_space
-    obs_min, obs_max = obs_space.low - eps, obs_space.high + eps
-    for _ in range(3000):
-      action = np.array([act_space.sample() for _ in range(num_envs)])
-      obs0 = env0.step(action)[0]
-      obs1 = env1.step(action)[0]
-      obs2 = env2.step(action)[0]
-      np.testing.assert_allclose(obs0, obs1)
-      self.assertFalse(np.allclose(obs0, obs2))
-      self.assertTrue(np.all(obs_min <= obs0), obs0)
-      self.assertTrue(np.all(obs_min <= obs2), obs2)
-      self.assertTrue(np.all(obs0 <= obs_max), obs0)
-      self.assertTrue(np.all(obs2 <= obs_max), obs2)
 
   @no_type_check
   def reset_state(
@@ -148,7 +116,6 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
-    self.run_deterministic_check(AntEnvSpec, AntGymEnvPool)
 
   def test_half_cheetah(self) -> None:
     env0 = mjc_mwe.HalfCheetahEnv()
@@ -171,7 +138,6 @@ class _MujocoEnvPoolTest(absltest.TestCase):
       )
     )
     self.run_space_check(env0, env1)
-    self.run_deterministic_check(HalfCheetahEnvSpec, HalfCheetahGymEnvPool)
 
   def test_hopper(self) -> None:
     env0 = mjc_mwe.HopperEnv()
@@ -195,7 +161,6 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
-    self.run_deterministic_check(HopperEnvSpec, HopperGymEnvPool)
 
   def test_humanoid(self) -> None:
     env0 = mjc_mwe.HumanoidEnv()
@@ -219,7 +184,6 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
-    self.run_deterministic_check(HumanoidEnvSpec, HumanoidGymEnvPool)
 
   def test_humanoid_standup(self) -> None:
     env0 = mjc_mwe.HumanoidStandupEnv()
@@ -230,9 +194,6 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
-    self.run_deterministic_check(
-      HumanoidStandupEnvSpec, HumanoidStandupGymEnvPool
-    )
 
   def test_inverted_double_pendulum(self) -> None:
     env0 = mjc_mwe.InvertedDoublePendulumEnv()
@@ -243,9 +204,6 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
-    self.run_deterministic_check(
-      InvertedDoublePendulumEnvSpec, InvertedDoublePendulumGymEnvPool
-    )
 
   def test_inverted_pendulum(self) -> None:
     env0 = mjc_mwe.InvertedPendulumEnv()
@@ -256,9 +214,6 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
-    self.run_deterministic_check(
-      InvertedPendulumEnvSpec, InvertedPendulumGymEnvPool
-    )
 
   def test_pusher(self) -> None:
     env0 = mjc_mwe.PusherEnv()
@@ -267,7 +222,6 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
-    self.run_deterministic_check(PusherEnvSpec, PusherGymEnvPool)
 
   def test_reacher(self) -> None:
     env0 = mjc_mwe.ReacherEnv()
@@ -276,7 +230,6 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
-    self.run_deterministic_check(ReacherEnvSpec, ReacherGymEnvPool)
 
   def test_swimmer(self) -> None:
     env0 = mjc_mwe.SwimmerEnv()
@@ -295,7 +248,6 @@ class _MujocoEnvPoolTest(absltest.TestCase):
       )
     )
     self.run_space_check(env0, env1)
-    self.run_deterministic_check(SwimmerEnvSpec, SwimmerGymEnvPool)
 
   def test_walker2d(self) -> None:
     env0 = mjc_mwe.Walker2dEnv()
@@ -320,7 +272,6 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
-    self.run_deterministic_check(Walker2dEnvSpec, Walker2dGymEnvPool)
 
 
 if __name__ == "__main__":

@@ -4,40 +4,14 @@ load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-    name = "cartpole",
-    hdrs = ["cartpole.h"],
-    deps = [
-        "//envpool/core:async_envpool",
+    name = "classic_control_env",
+    hdrs = [
+        "acrobot.h",
+        "cartpole.h",
+        "mountain_car.h",
+        "mountain_car_continuous.h",
+        "pendulum.h",
     ],
-)
-
-cc_library(
-    name = "pendulum",
-    hdrs = ["pendulum.h"],
-    deps = [
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "mountain_car",
-    hdrs = ["mountain_car.h"],
-    deps = [
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "mountain_car_continuous",
-    hdrs = ["mountain_car_continuous.h"],
-    deps = [
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "acrobot",
-    hdrs = ["acrobot.h"],
     deps = [
         "//envpool/core:async_envpool",
     ],
@@ -45,15 +19,9 @@ cc_library(
 
 pybind_extension(
     name = "classic_control_envpool",
-    srcs = [
-        "classic_control.cc",
-    ],
+    srcs = ["classic_control.cc"],
     deps = [
-        ":acrobot",
-        ":cartpole",
-        ":mountain_car",
-        ":mountain_car_continuous",
-        ":pendulum",
+        ":classic_control_env",
         "//envpool/core:py_envpool",
     ],
 )

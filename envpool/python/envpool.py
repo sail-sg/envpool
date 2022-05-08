@@ -95,7 +95,7 @@ class EnvPoolMixin(ABC):
     """Set the seed for all environments (abandoned)."""
     warnings.warn(
       "The `seed` function in envpool is abandoned. "
-      "You can set seed by envpool.make(\"..., seed=seed\") instead."
+      "You can set seed by envpool.make(..., seed=seed) instead."
     )
 
   def send(
@@ -130,8 +130,10 @@ class EnvPoolMixin(ABC):
     self.send(action, env_id)
     return self.recv(reset=False, return_info=True)
 
-  def reset(self: EnvPool,
-            env_id: Optional[np.ndarray] = None) -> Union[TimeStep, Tuple]:
+  def reset(
+    self: EnvPool,
+    env_id: Optional[np.ndarray] = None,
+  ) -> Union[TimeStep, Tuple]:
     """Reset envs in env_id.
 
     This behavior is not defined in async mode.

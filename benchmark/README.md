@@ -83,9 +83,9 @@ Command to run:
 
 ```bash
 # atari
-python3 -m sample_factory.run_algorithm --algo=DUMMY_SAMPLER --env=atari_pong --env_frameskip=4 --num_workers=12 --num_envs_per_worker=1 --sample_env_frames=1600000 --experiment=test
+python3 -m sample_factory.run_algorithm --algo=DUMMY_SAMPLER --env=atari_pong --env_frameskip=4 --num_workers=12 --num_envs_per_worker=1 --sample_env_frames=1600000
 # mujoco
-python3 -m sample_factory.run_algorithm --algo=DUMMY_SAMPLER --env=mujoco_ant --env_frameskip=1 --num_workers=12 --num_envs_per_worker=1 --sample_env_frames=1000000 --experiment=test
+python3 -m sample_factory.run_algorithm --algo=DUMMY_SAMPLER --env=mujoco_ant --env_frameskip=1 --num_workers=12 --num_envs_per_worker=1 --sample_env_frames=1000000
 ```
 
 We found that `num_envs_per_worker == 1` is best for all scenarios.
@@ -94,7 +94,7 @@ We found that `num_envs_per_worker == 1` is best for all scenarios.
 
 ```python
 def run_sf(w, fac=312500, frame_skip=1, task="atari_pong"):
-    cmd = f"python3 -m sample_factory.run_algorithm --algo=DUMMY_SAMPLER --env={task} --env_frameskip={frame_skip} --num_workers={w} --num_envs_per_worker=1 --sample_env_frames={fac * w} --experiment=test"
+    cmd = f"python3 -m sample_factory.run_algorithm --algo=DUMMY_SAMPLER --env={task} --env_frameskip={frame_skip} --num_workers={w} --num_envs_per_worker=1 --sample_env_frames={fac * w}"
     p = subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT)
     return float([i for i in p.decode().splitlines() if "avg FPS" in i][0].split("FPS: ")[-1].split("\x1b")[0])
 

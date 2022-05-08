@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ENVPOOL_MUJOCO_HUMANOID_H_
-#define ENVPOOL_MUJOCO_HUMANOID_H_
+#ifndef ENVPOOL_MUJOCO_GYM_HUMANOID_H_
+#define ENVPOOL_MUJOCO_GYM_HUMANOID_H_
 
 #include <algorithm>
 #include <limits>
@@ -24,7 +24,7 @@
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
-#include "envpool/mujoco/mujoco_env.h"
+#include "envpool/mujoco/gym/mujoco_env.h"
 
 namespace mujoco {
 
@@ -81,7 +81,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
  public:
   HumanoidEnv(const Spec& spec, int env_id)
       : Env<HumanoidEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/humanoid.xml",
+        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets_gym/humanoid.xml",
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
@@ -221,4 +221,4 @@ using HumanoidEnvPool = AsyncEnvPool<HumanoidEnv>;
 
 }  // namespace mujoco
 
-#endif  // ENVPOOL_MUJOCO_HUMANOID_H_
+#endif  // ENVPOOL_MUJOCO_GYM_HUMANOID_H_
