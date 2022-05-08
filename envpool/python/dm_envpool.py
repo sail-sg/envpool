@@ -23,8 +23,8 @@ from dm_env import TimeStep
 
 from .data import dm_structure
 from .envpool import EnvPoolMixin
-from .utils import check_key_duplication
 from .lax import XlaMixin
+from .utils import check_key_duplication
 
 
 class DMEnvPoolMixin(ABC):
