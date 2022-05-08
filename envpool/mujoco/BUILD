@@ -4,10 +4,10 @@ load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 package(default_visibility = ["//visibility:public"])
 
 genrule(
-    name = "gen_mujoco_xml",
-    srcs = ["@mujoco_xml"],
-    outs = ["assets"],
-    cmd = "cp -r $(SRCS) $(@D)",
+    name = "gen_mujoco_gym_xml",
+    srcs = ["@mujoco_gym_xml"],
+    outs = ["assets_gym"],
+    cmd = "mkdir -p $(OUTS) && cp -r $(SRCS) $(OUTS)",
 )
 
 genrule(
@@ -18,130 +18,37 @@ genrule(
 )
 
 cc_library(
-    name = "mujoco_env",
-    hdrs = ["mujoco_env.h"],
+    name = "mujoco_gym_env",
+    hdrs = [
+        "gym/ant.h",
+        "gym/half_cheetah.h",
+        "gym/hopper.h",
+        "gym/humanoid.h",
+        "gym/humanoid_standup.h",
+        "gym/inverted_double_pendulum.h",
+        "gym/inverted_pendulum.h",
+        "gym/mujoco_env.h",
+        "gym/pusher.h",
+        "gym/reacher.h",
+        "gym/swimmer.h",
+        "gym/walker2d.h",
+    ],
     data = [
-        ":gen_mujoco_xml",
+        ":gen_mujoco_gym_xml",
     ],
     deps = [
+        "//envpool/core:async_envpool",
         "@mujoco//:mujoco_lib",
     ],
 )
 
-cc_library(
-    name = "ant",
-    hdrs = ["ant.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "half_cheetah",
-    hdrs = ["half_cheetah.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "hopper",
-    hdrs = ["hopper.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "humanoid",
-    hdrs = ["humanoid.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "humanoid_standup",
-    hdrs = ["humanoid_standup.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "inverted_double_pendulum",
-    hdrs = ["inverted_double_pendulum.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "inverted_pendulum",
-    hdrs = ["inverted_pendulum.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "pusher",
-    hdrs = ["pusher.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "reacher",
-    hdrs = ["reacher.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "swimmer",
-    hdrs = ["swimmer.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
-cc_library(
-    name = "walker2d",
-    hdrs = ["walker2d.h"],
-    deps = [
-        ":mujoco_env",
-        "//envpool/core:async_envpool",
-    ],
-)
-
 pybind_extension(
-    name = "mujoco_envpool",
-    srcs = ["mujoco_envpool.cc"],
+    name = "mujoco_gym_envpool",
+    srcs = [
+        "gym/mujoco_envpool.cc",
+    ],
     deps = [
-        ":ant",
-        ":half_cheetah",
-        ":hopper",
-        ":humanoid",
-        ":humanoid_standup",
-        ":inverted_double_pendulum",
-        ":inverted_pendulum",
-        ":pusher",
-        ":reacher",
-        ":swimmer",
-        ":walker2d",
+        ":mujoco_gym_env",
         "//envpool/core:py_envpool",
     ],
 )
@@ -150,17 +57,29 @@ py_library(
     name = "mujoco",
     srcs = ["__init__.py"],
     data = [
+        ":gen_mujoco_gym_xml",
         ":gen_mujoco_so",
-        ":gen_mujoco_xml",
-        ":mujoco_envpool.so",
+        ":mujoco_gym_envpool.so",
     ],
     deps = ["//envpool/python:api"],
 )
 
 py_test(
-    name = "mujoco_test",
+    name = "mujoco_gym_deterministic_test",
     size = "enormous",
-    srcs = ["mujoco_test.py"],
+    srcs = ["gym/mujoco_gym_deterministic_test.py"],
+    deps = [
+        ":mujoco",
+        requirement("numpy"),
+        requirement("absl-py"),
+        requirement("gym"),
+    ],
+)
+
+py_test(
+    name = "mujoco_gym_v4_test",
+    size = "enormous",
+    srcs = ["gym/mujoco_gym_v4_test.py"],
     deps = [
         ":mujoco",
         requirement("numpy"),

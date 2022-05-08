@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ENVPOOL_MUJOCO_SWIMMER_H_
-#define ENVPOOL_MUJOCO_SWIMMER_H_
+#ifndef ENVPOOL_MUJOCO_GYM_SWIMMER_H_
+#define ENVPOOL_MUJOCO_GYM_SWIMMER_H_
 
 #include <algorithm>
 #include <limits>
@@ -24,7 +24,7 @@
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
-#include "envpool/mujoco/mujoco_env.h"
+#include "envpool/mujoco/gym/mujoco_env.h"
 
 namespace mujoco {
 
@@ -72,7 +72,7 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
  public:
   SwimmerEnv(const Spec& spec, int env_id)
       : Env<SwimmerEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets/swimmer.xml",
+        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets_gym/swimmer.xml",
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
@@ -157,4 +157,4 @@ using SwimmerEnvPool = AsyncEnvPool<SwimmerEnv>;
 
 }  // namespace mujoco
 
-#endif  // ENVPOOL_MUJOCO_SWIMMER_H_
+#endif  // ENVPOOL_MUJOCO_GYM_SWIMMER_H_

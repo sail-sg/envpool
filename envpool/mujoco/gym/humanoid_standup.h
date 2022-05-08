@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ENVPOOL_MUJOCO_HUMANOID_STANDUP_H_
-#define ENVPOOL_MUJOCO_HUMANOID_STANDUP_H_
+#ifndef ENVPOOL_MUJOCO_GYM_HUMANOID_STANDUP_H_
+#define ENVPOOL_MUJOCO_GYM_HUMANOID_STANDUP_H_
 
 #include <algorithm>
 #include <limits>
@@ -24,7 +24,7 @@
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
-#include "envpool/mujoco/mujoco_env.h"
+#include "envpool/mujoco/gym/mujoco_env.h"
 
 namespace mujoco {
 
@@ -73,10 +73,10 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
  public:
   HumanoidStandupEnv(const Spec& spec, int env_id)
       : Env<HumanoidStandupEnvSpec>(spec, env_id),
-        MujocoEnv(
-            spec.config["base_path"_] + "/mujoco/assets/humanoidstandup.xml",
-            spec.config["frame_skip"_], spec.config["post_constraint"_],
-            spec.config["max_episode_steps"_]),
+        MujocoEnv(spec.config["base_path"_] +
+                      "/mujoco/assets_gym/humanoidstandup.xml",
+                  spec.config["frame_skip"_], spec.config["post_constraint"_],
+                  spec.config["max_episode_steps"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         contact_cost_weight_(spec.config["contact_cost_weight"_]),
@@ -173,4 +173,4 @@ using HumanoidStandupEnvPool = AsyncEnvPool<HumanoidStandupEnv>;
 
 }  // namespace mujoco
 
-#endif  // ENVPOOL_MUJOCO_HUMANOID_STANDUP_H_
+#endif  // ENVPOOL_MUJOCO_GYM_HUMANOID_STANDUP_H_

@@ -13,17 +13,17 @@
 // limitations under the License.
 
 #include "envpool/core/py_envpool.h"
-#include "envpool/mujoco/ant.h"
-#include "envpool/mujoco/half_cheetah.h"
-#include "envpool/mujoco/hopper.h"
-#include "envpool/mujoco/humanoid.h"
-#include "envpool/mujoco/humanoid_standup.h"
-#include "envpool/mujoco/inverted_double_pendulum.h"
-#include "envpool/mujoco/inverted_pendulum.h"
-#include "envpool/mujoco/pusher.h"
-#include "envpool/mujoco/reacher.h"
-#include "envpool/mujoco/swimmer.h"
-#include "envpool/mujoco/walker2d.h"
+#include "envpool/mujoco/gym/ant.h"
+#include "envpool/mujoco/gym/half_cheetah.h"
+#include "envpool/mujoco/gym/hopper.h"
+#include "envpool/mujoco/gym/humanoid.h"
+#include "envpool/mujoco/gym/humanoid_standup.h"
+#include "envpool/mujoco/gym/inverted_double_pendulum.h"
+#include "envpool/mujoco/gym/inverted_pendulum.h"
+#include "envpool/mujoco/gym/pusher.h"
+#include "envpool/mujoco/gym/reacher.h"
+#include "envpool/mujoco/gym/swimmer.h"
+#include "envpool/mujoco/gym/walker2d.h"
 
 using AntEnvSpec = PyEnvSpec<mujoco::AntEnvSpec>;
 using AntEnvPool = PyEnvPool<mujoco::AntEnvPool>;
@@ -60,7 +60,7 @@ using SwimmerEnvPool = PyEnvPool<mujoco::SwimmerEnvPool>;
 using Walker2dEnvSpec = PyEnvSpec<mujoco::Walker2dEnvSpec>;
 using Walker2dEnvPool = PyEnvPool<mujoco::Walker2dEnvPool>;
 
-PYBIND11_MODULE(mujoco_envpool, m) {
+PYBIND11_MODULE(mujoco_gym_envpool, m) {
   REGISTER(m, AntEnvSpec, AntEnvPool)
   REGISTER(m, HalfCheetahEnvSpec, HalfCheetahEnvPool)
   REGISTER(m, HopperEnvSpec, HopperEnvPool)
