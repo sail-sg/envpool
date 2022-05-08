@@ -24,6 +24,7 @@ from dm_env import TimeStep
 from .data import dm_structure
 from .envpool import EnvPoolMixin
 from .utils import check_key_duplication
+from .lax import XlaMixin
 
 
 class DMEnvPoolMixin(ABC):
@@ -44,7 +45,9 @@ class DMEnvPoolMeta(ABCMeta):
   def __new__(cls: Any, name: str, parents: Tuple, attrs: Dict) -> Any:
     """Check internal config and initialize data format convertion."""
     base = parents[0]
-    parents = (base, DMEnvPoolMixin, EnvPoolMixin, dm_env.Environment)
+    parents = (
+      base, DMEnvPoolMixin, EnvPoolMixin, XlaMixin, dm_env.Environment
+    )
     state_keys = base._state_keys
     action_keys = base._action_keys
     check_key_duplication(name, "state", state_keys)

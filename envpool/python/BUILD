@@ -56,6 +56,18 @@ py_library(
 )
 
 py_library(
+    name = "lax",
+    srcs = ["lax.py"],
+    deps = [
+        requirement("jax"),
+        requirement("dm-env"),
+        requirement("numpy"),
+        requirement("absl-py"),
+        ":protocol",
+    ],
+)
+
+py_library(
     name = "dm_envpool",
     srcs = ["dm_envpool.py"],
     deps = [
@@ -64,6 +76,7 @@ py_library(
         requirement("numpy"),
         ":data",
         ":envpool",
+        ":lax",
         ":utils",
     ],
 )
@@ -78,6 +91,7 @@ py_library(
         requirement("numpy"),
         ":data",
         ":envpool",
+        ":lax",
         ":utils",
     ],
 )

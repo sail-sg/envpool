@@ -106,6 +106,24 @@ class _AtariEnvPoolTest(absltest.TestCase):
       )[-1]
       assert np.all(info["TimeLimit.truncated"])
 
+  def test_xla_step(self) -> None:
+    num_envs = 10
+    config = AtariEnvSpec.gen_config(
+      task="pong",
+      num_envs=num_envs,
+      batch_size=5,
+      num_threads=2,
+      thread_affinity_offset=0,
+    )
+    spec = AtariEnvSpec(config)
+    env = AtariGymEnvPool(spec)
+    handle, recv, send, step = env.xla()
+    env.reset()
+    handle, states = recv(handle)
+    action = np.ones(5, dtype=np.int32)
+    print(states)
+    handle = send(handle, action)
+
   @no_type_check
   def test_no_gray_scale(self) -> None:
     ref_shape = (12, 84, 84)
