@@ -22,6 +22,8 @@
 
 #include <string>
 
+namespace mujoco {
+
 class MujocoEnv {
  private:
   std::array<char, 1000> error_;
@@ -85,5 +87,7 @@ class MujocoEnv {
     }
   }
 };
+
+}  // namespace mujoco
 
 #endif  // ENVPOOL_MUJOCO_GYM_MUJOCO_ENV_H_
