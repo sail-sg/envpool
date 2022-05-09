@@ -327,6 +327,18 @@ def workspace():
         build_file = "//third_party/mujoco_gym_xml:mujoco_gym_xml.BUILD",
     )
 
+    maybe(
+        http_archive,
+        name = "mujoco_dmc_xml",
+        sha256 = "f3e481b22758e69453781ad21aa42cb0a667323e1272d5d6ecf83f3481ae143a",
+        strip_prefix = "dm_control-1.0.2/dm_control",
+        urls = [
+            "https://github.com/deepmind/dm_control/archive/refs/tags/1.0.2.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/dm_control/1.0.2.tar.gz",
+        ],
+        build_file = "//third_party/mujoco_dmc_xml:mujoco_dmc_xml.BUILD",
+    )
+
     # Atari/VizDoom pretrained weight for testing pipeline
 
     maybe(

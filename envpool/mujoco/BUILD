@@ -11,6 +11,13 @@ genrule(
 )
 
 genrule(
+    name = "gen_mujoco_dmc_xml",
+    srcs = ["@mujoco_dmc_xml"],
+    outs = ["assets_dmc"],
+    cmd = "mkdir -p $(OUTS) && cp -r $(SRCS) $(OUTS)",
+)
+
+genrule(
     name = "gen_mujoco_so",
     srcs = ["@mujoco//:mujoco_so"],
     outs = ["libmujoco.so.2.1.5"],
@@ -53,10 +60,23 @@ pybind_extension(
     ],
 )
 
+cc_library(
+    name = "mujoco_dmc_env",
+    hdrs = [
+        "dmc/mujoco_env.h",
+    ],
+    data = [":gen_mujoco_dmc_xml"],
+    deps = [
+        "//envpool/core:async_envpool",
+        "@mujoco//:mujoco_lib",
+    ],
+)
+
 py_library(
     name = "mujoco",
     srcs = ["__init__.py"],
     data = [
+        ":gen_mujoco_dmc_xml",
         ":gen_mujoco_gym_xml",
         ":gen_mujoco_so",
         ":mujoco_gym_envpool.so",

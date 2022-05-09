@@ -2,6 +2,7 @@ absl-py
 cloudpickle
 dm-env
 dm-tree
+dm-control
 filelock
 gym
 pygame

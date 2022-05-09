@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-#ifndef ENVPOOL_MUJOCO_MUJOCO_TASK_H_
-#define ENVPOOL_MUJOCO_MUJOCO_TASK_H_
+#ifndef ENVPOOL_MUJOCO_DMC_MUJOCO_ENV_H_
+#define ENVPOOL_MUJOCO_DMC_MUJOCO_ENV_H_
 
 #include <mjxmacro.h>
 #include <mujoco.h>
 
 #include <string>
 
-class MujocoTask {
+class MujocoEnv {
  private:
   std::array<char, 1000> error_;
 
@@ -31,8 +31,7 @@ class MujocoTask {
   mjData* data_;
 
  public:
-  MujocoTask(const std::string& xml, int frame_skip, bool post_constraint,
-             int max_episode_steps)
+  MujocoEnv(const std::string& xml, int frame_skip, int max_episode_steps)
       : model_(mj_loadXML(xml.c_str(), nullptr, error_.begin(), 1000)),
         data_(mj_makeData(model_)),
   {
@@ -40,13 +39,11 @@ class MujocoTask {
     memcpy(init_qvel_, data_->qvel, sizeof(mjtNum) * model_->nv);
   }
 
-  ~MujocoTask() {
+  ~MujocoEnv() {
     mj_deleteData(data_);
     mj_deleteModel(model_);
     delete[] init_qpos_;
     delete[] init_qvel_;
-    delete[] qpos0_;
-    delete[] qvel0_;
   }
 
   void MujocoInitializeEpisodeMjcf() {}
@@ -68,4 +65,4 @@ class MujocoTask {
   bool MujocoShouldTerminateEpisode() { return false; }
 };
 
-#endif  // ENVPOOL_MUJOCO_MUJOCO_TASK_H_
+#endif  // ENVPOOL_MUJOCO_DMC_MUJOCO_ENV_H_

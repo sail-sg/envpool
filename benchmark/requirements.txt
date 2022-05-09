@@ -5,3 +5,4 @@ envpool==0.5.3.post1
 sample-factory==1.123.0
 mujoco_py==2.1.2.14
 tqdm
+opencv-python-headless
