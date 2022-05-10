@@ -26,119 +26,74 @@
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
+#include "car_dynamics.h"
 
 namespace box2d {
 
-class CarRacingEnvFns;
-class CarRacingEnv;
-
-
 static float kRoadColor[3] = {0.4, 0.4, 0.4};
 
-static float kSize = 0.02;
-static float kEnginePower = 100000000 * kSize * kSize;
-static float kWheelMomentOfInertia = 4000 * kSize * kSize;
-static float kFrictionLimit = 1000000 * kSize * kSize;
-// friction ~= mass ~= size^2 (calculated implicitly using density)
-static float kWheelR = 27;
-static float kWheelW = 14;
-// WHEELPOS = [(-55, +80), (+55, +80), (-55, -82), (+55, -82)]
-static float kWheelPos[8] = {-55, +80, +55, +80, -55, -82, +55, -82};
-static float kHullPoly1[8] = {-60, +130, +60, +130, +60, +110, -60, +110};
-static float kHullPoly2[8] = {-15, +120, +15, +120, +20, +20, -20, 20};
-static float kHullPoly3[16] = {+25, +20, +50, -10, +50, -40, +20, -90, -20, -90, -50, -40, -50, -10, -25, +20};
-static float kHullPoly4[8] = {-50, -120, +50, -120, +50, -90, -50, -90};
 
-static float kWheelColor[3] = {0.0, 0.0, 0.0};
-static float kWheelWhite[3] = {0.3, 0.3, 0.3};
-static float kMudColor[3] = {0.4, 0.4, 0.0};
-
-
-typedef struct UserData{
-  b2Body* body;
-  bool isTile;
-  bool tileRoadVisited;
-  float tileColor[3];
-  float roadFriction;
-  std::unordered_set<struct UserData*> objTiles;
-} UserData;
-
-
-class Particle {
-  public:
-    float color[3];
-    float ttl;
-    std::vector<std::tuple<float, float> > poly;
-    bool isGrass;
-    Particle(b2Vec2 point1, b2Vec2 point2, bool _isGrass) {
-      if (!_isGrass) {
-        memcpy(color, kWheelColor, 3 * sizeof(float));
-      } else {
-        memcpy(color, kMudColor, 3 * sizeof(float));
-      }
-      ttl = 1;
-      poly.push_back({point1.x, point1.y});
-      poly.push_back({point2.x, point2.y});
-      isGrass = _isGrass;
-    };
+struct CarEnvWrapper {
+  float reward;
+  float prev_reward;
+  int tile_visited_count;
+  std::vector<std::vector<float>> track;
+  CarEnvWrapper() {
+    reward = 0.f;
+    prev_reward = 0.f;
+    tile_visited_count = 0;
+  }
 };
-
-typedef struct WheelData{
-  float wheel_rad;
-  float color[3];
-  float gas;
-  float brake;
-  float steer;
-  float phase;
-  float omega;
-  b2Vec2* skid_start;
-  Particle* skid_particle;
-  b2RevoluteJoint *joint;
-  std::unordered_set<UserData*> tiles;
-  b2Body* wheel;
-} WheelData;
-
-b2PolygonShape generatePolygon(float* array, int size);
 
 class FrictionDetector: public b2ContactListener {
   public:
-    FrictionDetector(CarRacingEnv* _env);
-    void BeginContact (b2Contact *contact);
-    void EndContact (b2Contact *contact);
-  protected:
-    box2d::CarRacingEnv* env;
-  private:
-    void _Contact(b2Contact *contact, bool begin);
-
-};
-
-
-class Car {
-  public:
-    Car(b2World* _world, float init_angle, float init_x, float init_y);
-    void gas(float g);
-    void brake(float b);
-    void steer(float s);
-    void step(float dt);
-  protected:
-    b2World* world;
-    b2Body* hull;
-    std::vector<WheelData*> wheels;
-    std::vector<b2Fixture*> hullFixtures;
-    std::vector<Particle*> particles;
-    float fuel_spent = 0.f;
-    const float color[3] = {0.8, 0.0, 0.0};
-    const float wheelPoly[8] = {-kWheelW, +kWheelR, +kWheelW, +kWheelR, +kWheelW, -kWheelR, -kWheelW, -kWheelR};
-    Particle* createParticle(b2Vec2 point1, b2Vec2 point2, bool isGrass) {
-      Particle* p = new Particle(point1, point2, isGrass);
-      particles.push_back(p);
-      while (particles.size() > 30) {
-        particles.erase(particles.begin());
-      }
-      return p;
+    FrictionDetector(CarEnvWrapper* _env)
+      : env(_env){};
+    void BeginContact (b2Contact *contact) {
+      _Contact(contact, true);
     };
-};
+    void EndContact (b2Contact *contact) {
+      _Contact(contact, false);
+    };
+  protected:
+    CarEnvWrapper* env;
+  private:
+    void _Contact(b2Contact *contact, bool begin) {
+      UserData* tile = nullptr;
+      UserData* obj = nullptr;
+      void* u1 = (void*) contact->GetFixtureA()->GetBody()->GetUserData().pointer;
+      void* u2 = (void*) contact->GetFixtureB()->GetBody()->GetUserData().pointer;
 
+      if (u1 && static_cast<UserData*>(u1)->isTile) {
+        tile = static_cast<UserData*>(u1);
+        obj = static_cast<UserData*>(u2);
+      }
+      if (u2 && static_cast<UserData*>(u2)->isTile) {
+        tile = static_cast<UserData*>(u2);
+        obj = static_cast<UserData*>(u1);
+      }
+      if (tile == nullptr) return;
+  
+      tile->tileColor[0] = kRoadColor[0];
+      tile->tileColor[1] = kRoadColor[1];
+      tile->tileColor[2] = kRoadColor[2];
+
+      // if not obj or "tiles" not in obj.__dict__:
+      //     return
+      if (obj == nullptr) return;
+      if (begin) {
+        obj->objTiles.insert(tile);
+        if (!tile->tileRoadVisited) {
+          tile->tileRoadVisited = true;
+          env->reward += 1000.0 / env->track.size();
+          env->tile_visited_count += 1;
+        }
+      } else {
+        obj->objTiles.erase(tile);
+      }
+    };
+
+};
 
 class CarRacingEnvFns {
  public:
@@ -191,17 +146,14 @@ class CarRacingEnv : public Env<CarRacingEnvSpec> {
     bool done_;
     
  public:
-  float reward = 0.0;
-  float prev_reward = 0.0;
-  int tile_visited_count = 0;
-  std::vector<std::vector<float>> track;
+  CarEnvWrapper* carEnvWrapper = new CarEnvWrapper();
 
   CarRacingEnv(const Spec& spec, int env_id)
       : Env<CarRacingEnvSpec>(spec, env_id),
         max_episode_steps_(spec.config["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
         done_(true) {
-          contactListener_keepref = new FrictionDetector(this);
+          contactListener_keepref = new FrictionDetector(carEnvWrapper);
           b2Vec2 gravity(0.0f, 0.0f);
           world = new b2World(gravity);
           world->SetContactListener(contactListener_keepref);

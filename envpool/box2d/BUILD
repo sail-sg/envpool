@@ -4,12 +4,21 @@ load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+    name = "car_dynamics",
+    hdrs = ["car_dynamics.h"],
+    srcs = ["car_dynamics.cc"],
+    deps = [
+        "@box2d//:box2d",
+    ],
+)
+
+cc_library(
     name = "car_racing",
     hdrs = ["car_racing.h"],
-    srcs = ["car_racing.cc"],
     deps = [
-        "//envpool/core:async_envpool",
         "@box2d//:box2d",
+        ":car_dynamics",
+        "//envpool/core:async_envpool",
     ],
 )
 

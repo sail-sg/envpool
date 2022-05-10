@@ -15,7 +15,7 @@
  */
 // https://github.com/openai/gym/blob/master/gym/envs/box2d/car_racing.py
 
-#include "car_racing.h"
+#include "car_dynamics.h"
 #include <math.h>  
 
 float min(float a, float b) {
@@ -37,50 +37,6 @@ b2PolygonShape generatePolygon(float* array, int size) {
   free(vertices);
   return polygon;
 }
-
-
-FrictionDetector::FrictionDetector(CarRacingEnv* _env)
-        : env(_env){}
-void FrictionDetector::BeginContact (b2Contact *contact) {
-      _Contact(contact, true);
-    }
-void FrictionDetector::EndContact (b2Contact *contact) {
-      _Contact(contact, false);
-    }
-void FrictionDetector::_Contact(b2Contact *contact, bool begin) {
-      UserData* tile = nullptr;
-      UserData* obj = nullptr;
-      void* u1 = (void*) contact->GetFixtureA()->GetBody()->GetUserData().pointer;
-      void* u2 = (void*) contact->GetFixtureB()->GetBody()->GetUserData().pointer;
-
-      if (u1 && static_cast<UserData*>(u1)->isTile) {
-        tile = static_cast<UserData*>(u1);
-        obj = static_cast<UserData*>(u2);
-      }
-      if (u2 && static_cast<UserData*>(u2)->isTile) {
-        tile = static_cast<UserData*>(u2);
-        obj = static_cast<UserData*>(u1);
-      }
-      if (tile == nullptr) return;
-  
-      tile->tileColor[0] = kRoadColor[0];
-      tile->tileColor[1] = kRoadColor[1];
-      tile->tileColor[2] = kRoadColor[2];
-
-      // if not obj or "tiles" not in obj.__dict__:
-      //     return
-      if (obj == nullptr) return;
-      if (begin) {
-        obj->objTiles.insert(tile);
-        if (!tile->tileRoadVisited) {
-          tile->tileRoadVisited = true;
-          env->reward += 1000.0 / env->track.size();
-          env->tile_visited_count += 1;
-        }
-      } else {
-        obj->objTiles.erase(tile);
-      }
-    }
 
 Car::Car(b2World* _world, float init_angle, float init_x, float init_y)
       : world(_world), fuel_spent(0.0) {
@@ -267,5 +223,13 @@ void Car::step(float dt) {
         },
         true);
   }
+}
+void Car::destroy() {
+  world->DestroyBody(hull);
+  hull = NULL;
+  for (auto w: wheels) {
+    world->DestroyBody(w->wheel);
+  }
+  wheels.clear();
 }
 }  // namespace box2d
