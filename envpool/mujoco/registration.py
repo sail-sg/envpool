@@ -48,9 +48,9 @@ for task, version, post_constraint in mujoco_envs:
   register(
     task_id=f"{task}-{version}",
     import_path="envpool.mujoco",
-    spec_cls=f"{task}EnvSpec",
-    dm_cls=f"{task}DMEnvPool",
-    gym_cls=f"{task}GymEnvPool",
+    spec_cls=f"Gym{task}EnvSpec",
+    dm_cls=f"Gym{task}DMEnvPool",
+    gym_cls=f"Gym{task}GymEnvPool",
     base_path=base_path,
     post_constraint=post_constraint,
   )

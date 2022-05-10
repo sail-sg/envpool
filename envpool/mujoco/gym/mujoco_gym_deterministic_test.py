@@ -18,30 +18,38 @@ from typing import Any
 import numpy as np
 from absl.testing import absltest
 
+from envpool.mujoco import GymAntEnvSpec as AntEnvSpec
+from envpool.mujoco import GymAntGymEnvPool as AntGymEnvPool
+from envpool.mujoco import GymHalfCheetahEnvSpec as HalfCheetahEnvSpec
+from envpool.mujoco import GymHalfCheetahGymEnvPool as HalfCheetahGymEnvPool
+from envpool.mujoco import GymHopperEnvSpec as HopperEnvSpec
+from envpool.mujoco import GymHopperGymEnvPool as HopperGymEnvPool
+from envpool.mujoco import GymHumanoidEnvSpec as HumanoidEnvSpec
+from envpool.mujoco import GymHumanoidGymEnvPool as HumanoidGymEnvPool
+from envpool.mujoco import GymHumanoidStandupEnvSpec as HumanoidStandupEnvSpec
 from envpool.mujoco import (
-  AntEnvSpec,
-  AntGymEnvPool,
-  HalfCheetahEnvSpec,
-  HalfCheetahGymEnvPool,
-  HopperEnvSpec,
-  HopperGymEnvPool,
-  HumanoidEnvSpec,
-  HumanoidGymEnvPool,
-  HumanoidStandupEnvSpec,
-  HumanoidStandupGymEnvPool,
-  InvertedDoublePendulumEnvSpec,
-  InvertedDoublePendulumGymEnvPool,
-  InvertedPendulumEnvSpec,
-  InvertedPendulumGymEnvPool,
-  PusherEnvSpec,
-  PusherGymEnvPool,
-  ReacherEnvSpec,
-  ReacherGymEnvPool,
-  SwimmerEnvSpec,
-  SwimmerGymEnvPool,
-  Walker2dEnvSpec,
-  Walker2dGymEnvPool,
+  GymHumanoidStandupGymEnvPool as HumanoidStandupGymEnvPool,
 )
+from envpool.mujoco import (
+  GymInvertedDoublePendulumEnvSpec as InvertedDoublePendulumEnvSpec,
+)
+from envpool.mujoco import (
+  GymInvertedDoublePendulumGymEnvPool as InvertedDoublePendulumGymEnvPool,
+)
+from envpool.mujoco import (
+  GymInvertedPendulumEnvSpec as InvertedPendulumEnvSpec,
+)
+from envpool.mujoco import (
+  GymInvertedPendulumGymEnvPool as InvertedPendulumGymEnvPool,
+)
+from envpool.mujoco import GymPusherEnvSpec as PusherEnvSpec
+from envpool.mujoco import GymPusherGymEnvPool as PusherGymEnvPool
+from envpool.mujoco import GymReacherEnvSpec as ReacherEnvSpec
+from envpool.mujoco import GymReacherGymEnvPool as ReacherGymEnvPool
+from envpool.mujoco import GymSwimmerEnvSpec as SwimmerEnvSpec
+from envpool.mujoco import GymSwimmerGymEnvPool as SwimmerGymEnvPool
+from envpool.mujoco import GymWalker2dEnvSpec as Walker2dEnvSpec
+from envpool.mujoco import GymWalker2dGymEnvPool as Walker2dGymEnvPool
 
 
 class _MujocoEnvPoolDeterministicTest(absltest.TestCase):
