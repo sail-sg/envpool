@@ -25,6 +25,7 @@
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
 #include "envpool/mujoco/dmc/mujoco_env.h"
+#include "envpool/mujoco/dmc/utils.h"
 
 namespace mujoco {
 
@@ -32,7 +33,7 @@ class HopperEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(4),
-                    "raw_xml"_.Bind(std::string("")),
+                    "raw_xml"_.Bind(GetFileContent("envpool", "hopper.xml")),
                     "task_name"_.Bind(std::string("stand")));
   }
   template <typename Config>
@@ -90,28 +91,25 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
     WriteState();
   }
 
+  // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/hopper.py#L119
   float TaskGetReward() {
-    // standing = rewards.tolerance(physics.height(), (_STAND_HEIGHT, 2))
-    // if self._hopping:
-    //   hopping = rewards.tolerance(physics.speed(),
-    //                               bounds=(_HOP_SPEED, float('inf')),
-    //                               margin=_HOP_SPEED/2,
-    //                               value_at_margin=0.5,
-    //                               sigmoid='linear')
-    //   return standing * hopping
-    // else:
-    //   small_control = rewards.tolerance(physics.control(),
-    //                                     margin=1, value_at_margin=0,
-    //                                     sigmoid='quadratic').mean()
-    //   small_control = (small_control + 4) / 5
-    //   return standing * small_control
-    return 0.0;
+    double standing = RewardTolerance(Height(), kStandHeight, 2);
+    if (hopping_) {
+      double hopping = RewardTolerance(
+          Speed(), kHopSpeed, std::numeric_limits<double>::infinity(),
+          kHopSpeed / 2, 0.5, SigmoidType::kLinear);
+      return standing * hopping;
+    }
+    double small_control = 0.0;
+    for (int i = 0; i < model_->nu; ++i) {
+      small_control += RewardTolerance(data_->ctrl[i], 0.0, 0.0, 1.0, 0.0,
+                                       SigmoidType::kQuadratic);
+    }
+    small_control = (small_control / model_->nu + 4) / 5;
+    return standing * small_control;
   }
 
-  bool TaskShouldTerminateEpisode() {
-    //
-    return false;
-  }
+  bool TaskShouldTerminateEpisode() { return false; }
 
  private:
   mjtNum Height() {
@@ -127,8 +125,8 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
 
   std::array<mjtNum, 2> Touch() {
     // return np.log1p(self.named.data.sensordata[['touch_toe', 'touch_heel']])
-    return std::array<mjtNum, 2>{std::log(1 + data_->sensordata[3]),
-                                 std::log(1 + data_->sensordata[4])};
+    return std::array<mjtNum, 2>{std::log1p(data_->sensordata[3]),
+                                 std::log1p(data_->sensordata[4])};
   }
 
   void WriteState() {

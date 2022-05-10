@@ -29,6 +29,16 @@
 
 namespace mujoco {
 
+std::string GetFileContent(const std::string& base_path,
+                           const std::string asset_name) {
+  // hardcode path here :(
+  std::string filename = base_path + "/mujoco/assets_dmc/" + asset_name;
+  std::ifstream ifs(filename);
+  std::stringstream ss;
+  ss << ifs.rdbuf();
+  return ss.str();
+}
+
 /*
  * This class combines with dmc Task and Physics API.
  *
@@ -80,13 +90,9 @@ class MujocoEnv {
     std::vector<std::string> common_assets_name({"./common/materials.xml",
                                                  "./common/skybox.xml",
                                                  "./common/visual.xml"});
-    for (const auto& i : common_assets_name) {
-      std::string filename = base_path + "/" + i;
-      std::ifstream ifs(filename);
-      std::stringstream buffer;
-      buffer << ifs.rdbuf();
-      std::string content = buffer.str();
-      mj_makeEmptyFileVFS(vfs.get(), i.c_str(), content.size());
+    for (const auto& asset_name : common_assets_name) {
+      std::string content = GetFileContent(base_path, asset_name);
+      mj_makeEmptyFileVFS(vfs.get(), asset_name.c_str(), content.size());
       std::memcpy(vfs->filedata[vfs->nfile - 1], content.c_str(),
                   content.size());
     }
