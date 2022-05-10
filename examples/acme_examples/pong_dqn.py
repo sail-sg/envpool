@@ -15,18 +15,20 @@
 import argparse
 import operator
 import time
+from typing import List
 
 import acme
 import dm_env
 import numpy as np
 import tree
-from acme import specs
-from acme.agents.tf import dqn
-from acme.tf import networks
+from acme import specs, types
+from acme.agents.jax import r2d2
 from acme.utils import loggers
 from acme.wrappers import EnvironmentWrapper
+from acme.wrappers.observation_action_reward import OAR
 
 import envpool
+from envpool.python.protocol import EnvPool
 
 
 def get_args():
@@ -34,15 +36,20 @@ def get_args():
   parser.add_argument("--task", type=str, default="Pong-v5")
   parser.add_argument('--epoch', type=int, default=100)
   parser.add_argument("--training-num", type=int, default=20)
+  parser.add_argument("--seed", type=int, default=0)
+  parser.add_argument("--batch-size", type=int, default=16)
+  parser.add_argument("--trace-length", type=int, default=20)
+  parser.add_argument("--burn-in-length", type=int, default=10)
+  parser.add_argument("--sequence-period", type=int, default=10)
   return parser.parse_args()
 
 
 class EnvWrapper(EnvironmentWrapper):
 
-  def __init__(self, environment):
+  def __init__(self, environment: EnvPool):
     super().__init__(environment)
 
-  def observation_spec(self):
+  def observation_spec(self) -> OAR:
     obs = self._environment.observation_spec().obs
     new_obs = dm_env.specs.BoundedArray(
       name=obs.name,
@@ -51,17 +58,40 @@ class EnvWrapper(EnvironmentWrapper):
       minimum=obs.minimum,
       maximum=obs.maximum,
     )
-    return new_obs
+    return OAR(
+      observation=new_obs,
+      action=self.action_spec(),
+      reward=self.reward_spec()
+    )
 
-  def reset(self):
+  def reset(self) -> List[OAR]:
     timestep = self._environment.reset()
-    return self.split_timestep(timestep)
+    timesteps = self._split_timestep(timestep)
 
-  def step(self, action, env_id):
+    # Initialize with zeros of the appropriate shape/dtype.
+    action = tree.map_structure(
+      lambda x: x.generate_value(), self._environment.action_spec()
+    )
+    reward = tree.map_structure(
+      lambda x: x.generate_value(), self._environment.reward_spec()
+    )
+
+    new_timesteps = [
+      self._augment_observation(action, reward, ts) for ts in timesteps
+    ]
+    return new_timesteps
+
+  def step(self, action: np.ndarray, env_id: List[str]) -> List[OAR]:
     timestep = self._environment.step(action, env_id)
-    return self.split_timestep(timestep)
+    timesteps = self._split_timestep(timestep)
+    new_timesteps = [
+      self._augment_observation(action[i], timesteps[i].reward, timesteps[i])
+      for i in range(len(timesteps))
+    ]
+    return new_timesteps
 
-  def split_timestep(self, timestep):
+  def _split_timestep(self,
+                      timestep: dm_env.TimeStep) -> List[dm_env.TimeStep]:
     timesteps = []
     for i in range(len(self._environment)):
       timesteps.append(
@@ -73,6 +103,13 @@ class EnvWrapper(EnvironmentWrapper):
         )
       )
     return timesteps
+
+  def _augment_observation(
+    self, action: types.NestedArray, reward: types.NestedArray,
+    timestep: dm_env.TimeStep
+  ) -> dm_env.TimeStep:
+    oar = OAR(observation=timestep.observation, action=action, reward=reward)
+    return timestep._replace(observation=oar)
 
 
 def _generate_zeros_from_spec(spec: specs.Array) -> np.ndarray:
@@ -169,9 +206,18 @@ def run_dqn(args):
     envpool.make(args.task, num_envs=args.training_num, env_type="dm")
   )
   env_spec = acme.make_environment_spec(train_envs)
-  network = networks.DQNAtariNetwork(env_spec.actions.num_values)
 
-  agent = dqn.DQN(env_spec, network)
+  config = r2d2.R2D2Config(
+    batch_size=16, trace_length=20, burn_in_length=10, sequence_period=10
+  )
+
+  agent = r2d2.R2D2(
+    env_spec,
+    networks=r2d2.make_atari_networks(config.batch_size, env_spec),
+    config=config,
+    seed=args.seed
+  )
+
   loop = EnvironmentLoopWrapper(train_envs, agent)
   loop.run(args.epoch)
 
