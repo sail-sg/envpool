@@ -20,7 +20,9 @@
 #include <mjxmacro.h>
 #include <mujoco.h>
 
+#include <cmath>
 #include <memory>
+#include <random>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -34,6 +36,7 @@ namespace mujoco {
  * https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/base.py
  * https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/mujoco/engine.py
  * https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/composer/task.py
+ * https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/composer/environment.py
  */
 class MujocoEnv {
  private:
@@ -46,13 +49,20 @@ class MujocoEnv {
   float reward_, discount_;
   bool done_;
 
+ private:
+  const double kPi = std::acos(-1);
+  std::uniform_real_distribution<> dist_uniform_;
+  std::normal_distribution<> dist_normal_;
+
  public:
   MujocoEnv(const std::string& base_path, const std::string& raw_xml,
             int n_sub_steps, int max_episode_steps)
       : n_sub_steps_(n_sub_steps),
         max_episode_steps_(max_episode_steps),
         elapsed_step_(max_episode_steps + 1),
-        done_(true) {
+        done_(true),
+        dist_uniform_(0, 1),
+        dist_normal_(0, 1) {
     // initialize vfs from common assets and raw xml
     // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/mujoco/wrapper/core.py#L158
     // https://github.com/deepmind/mujoco/blob/main/python/mujoco/structs.cc
@@ -99,6 +109,7 @@ class MujocoEnv {
     elapsed_step_ = 0;
     discount_ = 1.0;
     done_ = false;
+    TaskInitializeEpisodeMjcf();
     // attention: no keyframe_id
     PhysicsReset();  // first mj_forward
     TaskInitializeEpisode();
@@ -108,7 +119,7 @@ class MujocoEnv {
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/rl/control.py#L94
   void ControlStep(const mjtNum* action) {
     TaskBeforeStep(action);
-    PhysicsStep(n_sub_steps_);
+    PhysicsStep(n_sub_steps_, action);
     TaskAfterStep();
     reward_ = TaskGetReward();
     if (++elapsed_step_ >= max_episode_steps_) {
@@ -174,20 +185,55 @@ class MujocoEnv {
   void PhysicsForward() { mj_forward(model_.get(), data_.get()); }
 
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/mujoco/engine.py#L146
-  void PhysicsStep(int nstep) {
+  void PhysicsStep(int nstep, const mjtNum* action) {
+    TaskBeforeSubStep(action);
     if (model_->opt.integrator != mjINT_RK4) {
       mj_step2(model_.get(), data_.get());
-      if (nstep > 1) {
-        for (int i = 0; i < nstep - 1; ++i) {
-          mj_step(model_.get(), data_.get());
-        }
-      }
     } else {
-      for (int i = 0; i < nstep; ++i) {
+      mj_step(model_.get(), data_.get());
+    }
+    TaskAftersSubStep();
+    if (nstep > 1) {
+      for (int i = 0; i < nstep - 1; ++i) {
+        TaskBeforeSubStep(action);
         mj_step(model_.get(), data_.get());
+        TaskAftersSubStep();
       }
     }
     mj_step1(model_.get(), data_.get());
+  }
+
+  // randomizer
+  // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/utils/randomizers.py#L35
+  void RandomizeLimitedAndRotationalJoints(std::mt19937 gen) {
+    // Note: not sure the mapping
+    // The following code use qpos[id] instead of qpos[name], maybe wrong?
+    assert(model_->njnt == model_->nq);
+    for (int joint_id = 0; joint_id < model_->njnt; ++joint_id) {
+      int joint_type = model_->jnt_type[joint_id];
+      mjtByte is_limited = model_->jnt_limited[joint_id];
+      mjtNum range_min = model_->jnt_range[joint_id * 2 + 0];
+      mjtNum range_max = model_->jnt_range[joint_id * 2 + 1];
+      mjtNum range = range_max - range_min;
+      if (is_limited != 0) {
+        if (joint_type == mjJNT_HINGE || joint_type == mjJNT_SLIDE) {
+          data_->qpos[joint_id] = dist_uniform_(gen_) * range + range_min;
+        } else if (joint_type == mjJNT_BALL) {
+          throw std::runtime_error("RandomLimitedQuaternion not implemented");
+        }
+      } else {
+        if (joint_type == mjJNT_HINGE) {
+          range_min = -kPi;
+          range_max = kPi;
+          range = range_max - range_min;
+          data_->qpos[joint_id] = dist_uniform_(gen_) * range + range_min;
+        } else if (joint_type == mjJNT_BALL) {
+          throw std::runtime_error("not implemented");
+        } else if (joint_type == mjJNT_FREE) {
+          throw std::runtime_error("not implemented");
+        }
+      }
+    }
   }
 };
 

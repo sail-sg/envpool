@@ -73,6 +73,7 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
 
   void TaskInitializeEpisode() override {
     // randomizers.randomize_limited_and_rotational_joints(physics, self.random)
+    RandomizeLimitedAndRotationalJoints(gen_);
   }
 
   bool IsDone() override { return done_; }
@@ -124,6 +125,12 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
     return data_->sensordata[0];
   }
 
+  std::array<mjtNum, 2> Touch() {
+    // return np.log1p(self.named.data.sensordata[['touch_toe', 'touch_heel']])
+    return std::array<mjtNum, 2>{std::log(1 + data_->sensordata[3]),
+                                 std::log(1 + data_->sensordata[4])};
+  }
+
   void WriteState() {
     State state = Allocate();
     state["reward"_] = reward_;
@@ -131,9 +138,8 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
     // obs
     state["obs:position"_].Assign(data_->qpos_ + 1, model_->nq - 1);
     state["obs:velocity"_].Assign(data_->qvel, model_->nv);
-    mjtNum* obs_touch = static_cast<mjtNum*>(state["obs:touch"_].Data());
-    obs_touch[0] = std::log(1 + data_->sensordata[3]);
-    obs_touch[1] = std::log(1 + data_->sensordata[4]);
+    const auto& touch = Touch();
+    state["obs:touch"_].Assign(touch.begin(), 2);
   }
 };
 
