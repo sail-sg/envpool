@@ -92,13 +92,13 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
   }
 
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/hopper.py#L119
-  float TaskGetReward() {
+  float TaskGetReward() override {
     double standing = RewardTolerance(Height(), kStandHeight, 2);
     if (hopping_) {
       double hopping = RewardTolerance(
           Speed(), kHopSpeed, std::numeric_limits<double>::infinity(),
           kHopSpeed / 2, 0.5, SigmoidType::kLinear);
-      return standing * hopping;
+      return static_cast<float>(standing * hopping);
     }
     double small_control = 0.0;
     for (int i = 0; i < model_->nu; ++i) {
@@ -106,10 +106,10 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
                                        SigmoidType::kQuadratic);
     }
     small_control = (small_control / model_->nu + 4) / 5;
-    return standing * small_control;
+    return static_cast<float>(standing * small_control);
   }
 
-  bool TaskShouldTerminateEpisode() { return false; }
+  bool TaskShouldTerminateEpisode() override { return false; }
 
  private:
   mjtNum Height() {
@@ -134,7 +134,7 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
-    state["obs:position"_].Assign(data_->qpos_ + 1, model_->nq - 1);
+    state["obs:position"_].Assign(data_->qpos + 1, model_->nq - 1);
     state["obs:velocity"_].Assign(data_->qvel, model_->nv);
     const auto& touch = Touch();
     state["obs:touch"_].Assign(touch.begin(), 2);

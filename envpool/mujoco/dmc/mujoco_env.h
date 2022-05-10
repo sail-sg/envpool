@@ -21,6 +21,7 @@
 #include <mujoco.h>
 
 #include <cmath>
+#include <fstream>
 #include <memory>
 #include <random>
 #include <sstream>
@@ -30,7 +31,7 @@
 namespace mujoco {
 
 std::string GetFileContent(const std::string& base_path,
-                           const std::string asset_name) {
+                           const std::string& asset_name) {
   // hardcode path here :(
   std::string filename = base_path + "/mujoco/assets_dmc/" + asset_name;
   std::ifstream ifs(filename);
@@ -53,8 +54,8 @@ class MujocoEnv {
   std::array<char, 1000> error_;
 
  protected:
-  std::unique_ptr<mjModel> model_;
-  std::unique_ptr<mjData> data_;
+  mjModel* model_;
+  mjData* data_;
   int n_sub_steps_, max_episode_steps_, elapsed_step_;
   float reward_, discount_;
   bool done_;
@@ -97,16 +98,14 @@ class MujocoEnv {
                   content.size());
     }
     // create model and data
-    model_ = std::make_unique<mjModel>(
-        mj_loadXML(model_filename.c_str(), vfs.get(), error_.begin(), 1000),
-        [](mjModel* model) {
-          mj_deleteModel(model);
-          delete mode;
-        });
-    data_ = std::make_unique<mjData>(mj_makeData(model_), [](mjData* data) {
-      mj_deleteData(data);
-      delete data;
-    });
+    model_ =
+        mj_loadXML(model_filename.c_str(), vfs.get(), error_.begin(), 1000);
+    data_ = mj_makeData(model_);
+  }
+
+  ~MujocoEnv() {
+    mj_deleteModel(model_);
+    mj_deleteData(data_);
   }
 
   // rl control Environment
@@ -143,28 +142,30 @@ class MujocoEnv {
   }
 
   // Task
-  void TaskInitializeEpisodeMjcf() {}
-  void TaskInitializeEpisode() {}
+  virtual void TaskInitializeEpisodeMjcf() {}
+  virtual void TaskInitializeEpisode() {}
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/base.py#L73
-  void TaskBeforeStep(const mjtNum* action) { PhysicsSetControl(action); }
-  void TaskBeforeSubStep(const mjtNum* action) {}
-  void TaskAfterStep() {}
-  void TaskAftersSubStep() {}
-  float TaskGetReward() {
+  virtual void TaskBeforeStep(const mjtNum* action) {
+    PhysicsSetControl(action);
+  }
+  virtual void TaskBeforeSubStep(const mjtNum* action) {}
+  virtual void TaskAfterStep() {}
+  virtual void TaskAftersSubStep() {}
+  virtual float TaskGetReward() {
     throw std::runtime_error("GetReward not implemented");
   }
-  float TaskGetDiscount() { return 1.0; }
-  bool TaskShouldTerminateEpisode() { return false; }
+  virtual float TaskGetDiscount() { return 1.0; }
+  virtual bool TaskShouldTerminateEpisode() { return false; }
 
   // Physics
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/mujoco/engine.py#L263
   void PhysicsReset(int keyframe_id = -1) {
     if (keyframe_id < 0) {
-      mj_resetData(model_.get(), data_.get());
+      mj_resetData(model_, data_);
     } else {
       // actually no one steps to this line
       assert(keyframe_id < model_->nkey);
-      mj_resetDataKeyframe(model_.get(), data_.get(), keyframe_id);
+      mj_resetDataKeyframe(model_, data_, keyframe_id);
     }
 
     // PhysicsAfterReset may be overwritten?
@@ -188,25 +189,25 @@ class MujocoEnv {
   }
 
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/mujoco/engine.py#L292
-  void PhysicsForward() { mj_forward(model_.get(), data_.get()); }
+  void PhysicsForward() { mj_forward(model_, data_); }
 
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/mujoco/engine.py#L146
   void PhysicsStep(int nstep, const mjtNum* action) {
     TaskBeforeSubStep(action);
     if (model_->opt.integrator != mjINT_RK4) {
-      mj_step2(model_.get(), data_.get());
+      mj_step2(model_, data_);
     } else {
-      mj_step(model_.get(), data_.get());
+      mj_step(model_, data_);
     }
     TaskAftersSubStep();
     if (nstep > 1) {
       for (int i = 0; i < nstep - 1; ++i) {
         TaskBeforeSubStep(action);
-        mj_step(model_.get(), data_.get());
+        mj_step(model_, data_);
         TaskAftersSubStep();
       }
     }
-    mj_step1(model_.get(), data_.get());
+    mj_step1(model_, data_);
   }
 
   // randomizer
@@ -223,21 +224,17 @@ class MujocoEnv {
       mjtNum range = range_max - range_min;
       if (is_limited != 0) {
         if (joint_type == mjJNT_HINGE || joint_type == mjJNT_SLIDE) {
-          data_->qpos[joint_id] = dist_uniform_(gen_) * range + range_min;
+          data_->qpos[joint_id] = dist_uniform_(gen) * range + range_min;
         } else if (joint_type == mjJNT_BALL) {
           throw std::runtime_error("RandomLimitedQuaternion not implemented");
         }
-      } else {
-        if (joint_type == mjJNT_HINGE) {
-          range_min = -kPi;
-          range_max = kPi;
-          range = range_max - range_min;
-          data_->qpos[joint_id] = dist_uniform_(gen_) * range + range_min;
-        } else if (joint_type == mjJNT_BALL) {
-          throw std::runtime_error("not implemented");
-        } else if (joint_type == mjJNT_FREE) {
-          throw std::runtime_error("not implemented");
-        }
+      } else if (joint_type == mjJNT_HINGE) {
+        range_min = -kPi;
+        range_max = kPi;
+        range = range_max - range_min;
+        data_->qpos[joint_id] = dist_uniform_(gen) * range + range_min;
+      } else if (joint_type == mjJNT_BALL || joint_type == mjJNT_FREE) {
+        throw std::runtime_error("not implemented");
       }
     }
   }

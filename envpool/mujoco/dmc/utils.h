@@ -47,22 +47,26 @@ double RewardTolerance(double x, double bound_min = 0.0, double bound_max = 0.0,
     // return np.exp(-0.5 * (x*scale)**2)
     double scaled_x = std::sqrt(-2 * std::log(value_at_margin)) * x;
     return std::exp(-0.5 * scaled_x * scaled_x);
-  } else if (sigmoid_type == SigmoidType::kHyperbolic) {
+  }
+  if (sigmoid_type == SigmoidType::kHyperbolic) {
     // scale = np.arccosh(1/value_at_1)
     // return 1 / np.cosh(x*scale)
     double scaled_x = std::acosh(1 / value_at_margin) * x;
     return 1 / std::cosh(scaled_x);
-  } else if (sigmoid_type == SigmoidType::kLongTail) {
+  }
+  if (sigmoid_type == SigmoidType::kLongTail) {
     // scale = np.sqrt(1/value_at_1 - 1)
     // return 1 / ((x*scale)**2 + 1)
     double scaled_x = std::sqrt(1 / value_at_margin - 1) * x;
     return 1 / (scaled_x * scaled_x + 1);
-  } else if (sigmoid_type == SigmoidType::kReciprocal) {
+  }
+  if (sigmoid_type == SigmoidType::kReciprocal) {
     // scale = 1/value_at_1 - 1
     // return 1 / (abs(x)*scale + 1)
     double scale = 1 / value_at_margin - 1;
     return 1 / (std::abs(x) * scale + 1);
-  } else if (sigmoid_type == SigmoidType::kCosine) {
+  }
+  if (sigmoid_type == SigmoidType::kCosine) {
     // scale = np.arccos(2*value_at_1 - 1) / np.pi
     // scaled_x = x*scale
     // with warnings.catch_warnings():
@@ -73,26 +77,28 @@ double RewardTolerance(double x, double bound_min = 0.0, double bound_max = 0.0,
     const double pi = std::acos(-1);
     double scaled_x = std::acos(2 * value_at_margin - 1) / pi * x;
     return std::abs(scaled_x) < 1 ? (1 + std::cos(pi * scaled_x)) / 2 : 0.0;
-  } else if (sigmoid_type == SigmoidType::kLinear) {
+  }
+  if (sigmoid_type == SigmoidType::kLinear) {
     // scale = 1-value_at_1
     // scaled_x = x*scale
     // return np.where(abs(scaled_x) < 1, 1 - scaled_x, 0.0)
     double scaled_x = (1 - value_at_margin) * x;
     return std::abs(scaled_x) < 1 ? 1 - scaled_x : 0.0;
-  } else if (sigmoid_type == SigmoidType::kQuadratic) {
+  }
+  if (sigmoid_type == SigmoidType::kQuadratic) {
     // scale = np.sqrt(1-value_at_1)
     // scaled_x = x*scale
     // return np.where(abs(scaled_x) < 1, 1 - scaled_x**2, 0.0)
     double scaled_x = std::sqrt(1 - value_at_margin) * x;
     return std::abs(scaled_x) < 1 ? 1 - scaled_x * scaled_x : 0.0;
-  } else if (sigmoid_type == SigmoidType::: kTanhSquared) {
+  }
+  if (sigmoid_type == SigmoidType::kTanhSquared) {
     // scale = np.arctanh(np.sqrt(1-value_at_1))
     // return 1 - np.tanh(x*scale)**2
     double scaled_x = std::atanh(std::sqrt(1 - value_at_margin)) * x;
     return 1 - std::tanh(scaled_x) * std::tanh(scaled_x);
-  } else {
-    throw std::runtime_error("Unknown sigmoid type for RewardTolerance.");
   }
+  throw std::runtime_error("Unknown sigmoid type for RewardTolerance.");
 }
 
 }  // namespace mujoco

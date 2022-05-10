@@ -63,12 +63,25 @@ pybind_extension(
 cc_library(
     name = "mujoco_dmc_env",
     hdrs = [
+        "dmc/hopper.h",
         "dmc/mujoco_env.h",
+        "dmc/utils.h",
     ],
     data = [":gen_mujoco_dmc_xml"],
     deps = [
         "//envpool/core:async_envpool",
         "@mujoco//:mujoco_lib",
+    ],
+)
+
+pybind_extension(
+    name = "mujoco_dmc_envpool",
+    srcs = [
+        "dmc/mujoco_envpool.cc",
+    ],
+    deps = [
+        ":mujoco_dmc_env",
+        "//envpool/core:py_envpool",
     ],
 )
 
@@ -79,6 +92,7 @@ py_library(
         ":gen_mujoco_dmc_xml",
         ":gen_mujoco_gym_xml",
         ":gen_mujoco_so",
+        ":mujoco_dmc_envpool.so",
         ":mujoco_gym_envpool.so",
     ],
     deps = ["//envpool/python:api"],
