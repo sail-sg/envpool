@@ -52,10 +52,6 @@ class _MakeTest(absltest.TestCase):
     self.assertIsInstance(env, gym.Env)
     env.reset()
 
-  def test_make_box2d(self) -> None:
-    # todo
-    pass
-
   def check_step(self, env_list: List[str]) -> None:
     for task_id in env_list:
       envpool.make_spec(task_id)
@@ -92,6 +88,11 @@ class _MakeTest(absltest.TestCase):
         "Blackjack-v1",
       ]
     )
+
+  def test_make_box2d(self) -> None:
+    self.check_step([
+      "CarRacing-v0",
+    ])
 
   def test_make_mujoco_gym(self) -> None:
     self.check_step(

@@ -16,7 +16,7 @@
 from envpool.registration import register
 
 register(
-  task_id="CarRacing-v1",
+  task_id="CarRacing-v0",
   import_path="envpool.box2d",
   spec_cls="CarRacingEnvSpec",
   dm_cls="CarRacingDMEnvPool",

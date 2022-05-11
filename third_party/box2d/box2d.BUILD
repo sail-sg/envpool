@@ -1,5 +1,3 @@
-load("@envpool//third_party:common.bzl", "template_rule")
-
 cc_library(
     name = "box2d",
     srcs = glob(["include/box2d/*.h"]) + [
