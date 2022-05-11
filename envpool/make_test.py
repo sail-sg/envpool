@@ -53,11 +53,13 @@ class _MakeTest(absltest.TestCase):
     env.reset()
 
   def test_make_box2d(self) -> None:
-    pass
     # todo
-  
+    pass
+
   def check_step(self, env_list: List[str]) -> None:
     for task_id in env_list:
+      envpool.make_spec(task_id)
+      env_gym = envpool.make_gym(task_id)
       env_dm = envpool.make_dm(task_id)
       print(env_dm)
       print(env_gym)

@@ -17,11 +17,11 @@ py_library(
     srcs = ["entry.py"],
     deps = [
         "//envpool/atari:atari_registration",
+        "//envpool/box2d:box2d_registration",
         "//envpool/classic_control:classic_control_registration",
         "//envpool/mujoco:mujoco_registration",
         "//envpool/toy_text:toy_text_registration",
         "//envpool/vizdoom:vizdoom_registration",
-        "//envpool/box2d:box2d_registration",
     ],
 )
 
@@ -32,12 +32,12 @@ py_library(
         ":entry",
         ":registration",
         "//envpool/atari",
+        "//envpool/box2d",
         "//envpool/classic_control",
         "//envpool/mujoco",
         "//envpool/python",
         "//envpool/toy_text",
         "//envpool/vizdoom",
-        "//envpool/box2d",
     ],
 )
 

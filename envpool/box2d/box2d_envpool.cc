@@ -15,9 +15,9 @@
 #include "envpool/box2d/car_racing.h"
 #include "envpool/core/py_envpool.h"
 
-typedef PyEnvSpec<box2d::CarRacingEnvSpec> CarRacingEnvSpec;
-typedef PyEnvPool<box2d::CarRacingEnvPool> CarRacingEnvPool;
+using CarRacingEnvSpec = PyEnvSpec<box2d::CarRacingEnvSpec>;
+using CarRacingEnvPool = PyEnvPool<box2d::CarRacingEnvPool>;
 
 PYBIND11_MODULE(box2d_envpool, m) {
-    REGISTER(m, CarRacingEnvSpec, CarRacingEnvPool)
+  REGISTER(m, CarRacingEnvSpec, CarRacingEnvPool)
 }

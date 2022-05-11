@@ -16,10 +16,7 @@
 
 from envpool.python.api import py_env
 
-from .box2d_envpool import (
-  _CarRacingEnvPool,
-  _CarRacingEnvSpec
-)
+from .box2d_envpool import _CarRacingEnvPool, _CarRacingEnvSpec
 
 CarRacingEnvSpec, CarRacingDMEnvPool, CarRacingGymEnvPool = py_env(
   _CarRacingEnvPool, _CarRacingEnvSpec
