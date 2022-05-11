@@ -56,8 +56,8 @@ class MujocoEnv {
         max_episode_steps_(max_episode_steps),
         elapsed_step_(max_episode_steps + 1),
         done_(true) {
-    memcpy(init_qpos_, data_->qpos, sizeof(mjtNum) * model_->nq);
-    memcpy(init_qvel_, data_->qvel, sizeof(mjtNum) * model_->nv);
+    std::memcpy(init_qpos_, data_->qpos, sizeof(mjtNum) * model_->nq);
+    std::memcpy(init_qvel_, data_->qvel, sizeof(mjtNum) * model_->nv);
   }
 
   ~MujocoEnv() {

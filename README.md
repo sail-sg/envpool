@@ -14,7 +14,7 @@
 - [x] [Classic control RL envs](https://envpool.readthedocs.io/en/latest/api/classic.html): CartPole, MountainCar, Pendulum, Acrobot
 - [x] [Toy text RL envs](https://envpool.readthedocs.io/en/latest/api/toy_text.html): Catch, FrozenLake, Taxi, NChain, CliffWalking, Blackjack
 - [x] [ViZDoom single player](https://envpool.readthedocs.io/en/latest/api/vizdoom.html)
-- [ ] [dm_control suite benchmark](https://envpool.readthedocs.io/en/latest/api/dm_control.html)
+- [ ] [DeepMind Control Suite](https://envpool.readthedocs.io/en/latest/api/dm_control.html)
 - [ ] Box2D
 - [ ] Procgen
 - [ ] Minigrid

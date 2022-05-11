@@ -408,7 +408,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     std::size_t size = raw_buf_.size;
     for (int c = 0; c < channel_; ++c) {
       // gamestate->screenBuffer is channel-first image
-      memcpy(raw_ptr, gamestate->screenBuffer->data() + c * size, size);
+      std::memcpy(raw_ptr, gamestate->screenBuffer->data() + c * size, size);
       auto slice = tgt[c];
       Resize(raw_buf_, &slice, use_inter_area_resize_);
     }
@@ -418,7 +418,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
       for (auto& s : stack_buf_) {
         auto* ptr_s = static_cast<uint8_t*>(s.Data());
         if (ptr != ptr_s) {
-          memcpy(ptr_s, ptr, size);
+          std::memcpy(ptr_s, ptr, size);
         }
       }
     }

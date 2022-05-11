@@ -54,7 +54,7 @@ TEST(AtariEnvTest, GrayScaleMaxPoolOrder) {
   }
   // gray scale
   GrayScale(col0, &result);
-  memcpy(arr.begin(), result_ptr, sizeof arr);
+  std::memcpy(arr.begin(), result_ptr, sizeof arr);
   // ref
   env.theOSystem->colourPalette().applyPaletteGrayscale(col0_ptr, ptr0.begin(),
                                                         n * n);

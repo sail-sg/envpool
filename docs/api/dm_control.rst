@@ -1,5 +1,5 @@
-dm_control suite benchmark
-==========================
+DeepMind Control Suite
+======================
 
 We use ``dm_control==1.0.2`` and ``mujoco==2.1.5`` as the codebase.
 See https://github.com/deepmind/dm_control/tree/1.0.2 and
