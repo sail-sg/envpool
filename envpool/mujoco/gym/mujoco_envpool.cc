@@ -25,51 +25,54 @@
 #include "envpool/mujoco/gym/swimmer.h"
 #include "envpool/mujoco/gym/walker2d.h"
 
-using AntEnvSpec = PyEnvSpec<mujoco::AntEnvSpec>;
-using AntEnvPool = PyEnvPool<mujoco::AntEnvPool>;
+using GymAntEnvSpec = PyEnvSpec<mujoco_gym::AntEnvSpec>;
+using GymAntEnvPool = PyEnvPool<mujoco_gym::AntEnvPool>;
 
-using HalfCheetahEnvSpec = PyEnvSpec<mujoco::HalfCheetahEnvSpec>;
-using HalfCheetahEnvPool = PyEnvPool<mujoco::HalfCheetahEnvPool>;
+using GymHalfCheetahEnvSpec = PyEnvSpec<mujoco_gym::HalfCheetahEnvSpec>;
+using GymHalfCheetahEnvPool = PyEnvPool<mujoco_gym::HalfCheetahEnvPool>;
 
-using HopperEnvSpec = PyEnvSpec<mujoco::HopperEnvSpec>;
-using HopperEnvPool = PyEnvPool<mujoco::HopperEnvPool>;
+using GymHopperEnvSpec = PyEnvSpec<mujoco_gym::HopperEnvSpec>;
+using GymHopperEnvPool = PyEnvPool<mujoco_gym::HopperEnvPool>;
 
-using HumanoidEnvSpec = PyEnvSpec<mujoco::HumanoidEnvSpec>;
-using HumanoidEnvPool = PyEnvPool<mujoco::HumanoidEnvPool>;
+using GymHumanoidEnvSpec = PyEnvSpec<mujoco_gym::HumanoidEnvSpec>;
+using GymHumanoidEnvPool = PyEnvPool<mujoco_gym::HumanoidEnvPool>;
 
-using HumanoidStandupEnvSpec = PyEnvSpec<mujoco::HumanoidStandupEnvSpec>;
-using HumanoidStandupEnvPool = PyEnvPool<mujoco::HumanoidStandupEnvPool>;
+using GymHumanoidStandupEnvSpec = PyEnvSpec<mujoco_gym::HumanoidStandupEnvSpec>;
+using GymHumanoidStandupEnvPool = PyEnvPool<mujoco_gym::HumanoidStandupEnvPool>;
 
-using InvertedDoublePendulumEnvSpec =
-    PyEnvSpec<mujoco::InvertedDoublePendulumEnvSpec>;
-using InvertedDoublePendulumEnvPool =
-    PyEnvPool<mujoco::InvertedDoublePendulumEnvPool>;
+using GymInvertedDoublePendulumEnvSpec =
+    PyEnvSpec<mujoco_gym::InvertedDoublePendulumEnvSpec>;
+using GymInvertedDoublePendulumEnvPool =
+    PyEnvPool<mujoco_gym::InvertedDoublePendulumEnvPool>;
 
-using InvertedPendulumEnvSpec = PyEnvSpec<mujoco::InvertedPendulumEnvSpec>;
-using InvertedPendulumEnvPool = PyEnvPool<mujoco::InvertedPendulumEnvPool>;
+using GymInvertedPendulumEnvSpec =
+    PyEnvSpec<mujoco_gym::InvertedPendulumEnvSpec>;
+using GymInvertedPendulumEnvPool =
+    PyEnvPool<mujoco_gym::InvertedPendulumEnvPool>;
 
-using PusherEnvSpec = PyEnvSpec<mujoco::PusherEnvSpec>;
-using PusherEnvPool = PyEnvPool<mujoco::PusherEnvPool>;
+using GymPusherEnvSpec = PyEnvSpec<mujoco_gym::PusherEnvSpec>;
+using GymPusherEnvPool = PyEnvPool<mujoco_gym::PusherEnvPool>;
 
-using ReacherEnvSpec = PyEnvSpec<mujoco::ReacherEnvSpec>;
-using ReacherEnvPool = PyEnvPool<mujoco::ReacherEnvPool>;
+using GymReacherEnvSpec = PyEnvSpec<mujoco_gym::ReacherEnvSpec>;
+using GymReacherEnvPool = PyEnvPool<mujoco_gym::ReacherEnvPool>;
 
-using SwimmerEnvSpec = PyEnvSpec<mujoco::SwimmerEnvSpec>;
-using SwimmerEnvPool = PyEnvPool<mujoco::SwimmerEnvPool>;
+using GymSwimmerEnvSpec = PyEnvSpec<mujoco_gym::SwimmerEnvSpec>;
+using GymSwimmerEnvPool = PyEnvPool<mujoco_gym::SwimmerEnvPool>;
 
-using Walker2dEnvSpec = PyEnvSpec<mujoco::Walker2dEnvSpec>;
-using Walker2dEnvPool = PyEnvPool<mujoco::Walker2dEnvPool>;
+using GymWalker2dEnvSpec = PyEnvSpec<mujoco_gym::Walker2dEnvSpec>;
+using GymWalker2dEnvPool = PyEnvPool<mujoco_gym::Walker2dEnvPool>;
 
 PYBIND11_MODULE(mujoco_gym_envpool, m) {
-  REGISTER(m, AntEnvSpec, AntEnvPool)
-  REGISTER(m, HalfCheetahEnvSpec, HalfCheetahEnvPool)
-  REGISTER(m, HopperEnvSpec, HopperEnvPool)
-  REGISTER(m, HumanoidEnvSpec, HumanoidEnvPool)
-  REGISTER(m, HumanoidStandupEnvSpec, HumanoidStandupEnvPool)
-  REGISTER(m, InvertedDoublePendulumEnvSpec, InvertedDoublePendulumEnvPool)
-  REGISTER(m, InvertedPendulumEnvSpec, InvertedPendulumEnvPool)
-  REGISTER(m, PusherEnvSpec, PusherEnvPool)
-  REGISTER(m, ReacherEnvSpec, ReacherEnvPool)
-  REGISTER(m, SwimmerEnvSpec, SwimmerEnvPool)
-  REGISTER(m, Walker2dEnvSpec, Walker2dEnvPool)
+  REGISTER(m, GymAntEnvSpec, GymAntEnvPool)
+  REGISTER(m, GymHalfCheetahEnvSpec, GymHalfCheetahEnvPool)
+  REGISTER(m, GymHopperEnvSpec, GymHopperEnvPool)
+  REGISTER(m, GymHumanoidEnvSpec, GymHumanoidEnvPool)
+  REGISTER(m, GymHumanoidStandupEnvSpec, GymHumanoidStandupEnvPool)
+  REGISTER(m, GymInvertedDoublePendulumEnvSpec,
+           GymInvertedDoublePendulumEnvPool)
+  REGISTER(m, GymInvertedPendulumEnvSpec, GymInvertedPendulumEnvPool)
+  REGISTER(m, GymPusherEnvSpec, GymPusherEnvPool)
+  REGISTER(m, GymReacherEnvSpec, GymReacherEnvPool)
+  REGISTER(m, GymSwimmerEnvSpec, GymSwimmerEnvPool)
+  REGISTER(m, GymWalker2dEnvSpec, GymWalker2dEnvPool)
 }

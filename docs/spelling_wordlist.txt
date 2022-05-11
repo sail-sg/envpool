@@ -56,3 +56,4 @@ Procgen
 Minigrid
 Garena
 Tianshou
+namedtuple

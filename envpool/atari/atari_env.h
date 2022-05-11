@@ -286,7 +286,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
       for (auto& s : stack_buf_) {
         auto* ptr_s = static_cast<uint8_t*>(s.Data());
         if (ptr != ptr_s) {
-          memcpy(ptr_s, ptr, size);
+          std::memcpy(ptr_s, ptr, size);
         }
       }
     }

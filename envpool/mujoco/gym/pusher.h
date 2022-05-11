@@ -26,7 +26,7 @@
 #include "envpool/core/env.h"
 #include "envpool/mujoco/gym/mujoco_env.h"
 
-namespace mujoco {
+namespace mujoco_gym {
 
 class PusherEnvFns {
  public:
@@ -84,23 +84,27 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
 
   void MujocoResetModel() override {
     for (int i = 0; i < model_->nq - 4; ++i) {
-      data_->qpos[i] = qpos0_[i] = init_qpos_[i];
+      data_->qpos[i] = init_qpos_[i];
     }
     while (true) {
       mjtNum x = dist_qpos_x_(gen_);
       mjtNum y = dist_qpos_y_(gen_);
       if (std::sqrt(x * x + y * y) > cylinder_dist_min_) {
-        data_->qpos[model_->nq - 4] = qpos0_[model_->nq - 4] = x;
-        data_->qpos[model_->nq - 3] = qpos0_[model_->nq - 3] = y;
-        data_->qpos[model_->nq - 2] = qpos0_[model_->nq - 2] = 0.0;
-        data_->qpos[model_->nq - 1] = qpos0_[model_->nq - 1] = 0.0;
+        data_->qpos[model_->nq - 4] = x;
+        data_->qpos[model_->nq - 3] = y;
+        data_->qpos[model_->nq - 2] = 0.0;
+        data_->qpos[model_->nq - 1] = 0.0;
         break;
       }
     }
     for (int i = 0; i < model_->nv; ++i) {
-      data_->qvel[i] = qvel0_[i] =
+      data_->qvel[i] =
           i < model_->nv - 4 ? init_qvel_[i] + dist_qvel_(gen_) : 0.0;
     }
+#ifdef ENVPOOL_TEST
+    std::memcpy(qpos0_, data_->qpos, sizeof(mjtNum) * model_->nq);
+    std::memcpy(qvel0_, data_->qvel, sizeof(mjtNum) * model_->nv);
+#endif
   }
 
   bool IsDone() override { return done_; }
@@ -167,6 +171,6 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
 
 using PusherEnvPool = AsyncEnvPool<PusherEnv>;
 
-}  // namespace mujoco
+}  // namespace mujoco_gym
 
 #endif  // ENVPOOL_MUJOCO_GYM_PUSHER_H_

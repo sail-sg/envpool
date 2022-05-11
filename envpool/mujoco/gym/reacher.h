@@ -26,7 +26,7 @@
 #include "envpool/core/env.h"
 #include "envpool/mujoco/gym/mujoco_env.h"
 
-namespace mujoco {
+namespace mujoco_gym {
 
 class ReacherEnvFns {
  public:
@@ -81,21 +81,25 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
 
   void MujocoResetModel() override {
     for (int i = 0; i < model_->nq - 2; ++i) {
-      data_->qpos[i] = qpos0_[i] = init_qpos_[i] + dist_qpos_(gen_);
+      data_->qpos[i] = init_qpos_[i] + dist_qpos_(gen_);
     }
     while (true) {
       mjtNum x = dist_goal_(gen_);
       mjtNum y = dist_goal_(gen_);
       if (std::sqrt(x * x + y * y) < reset_goal_scale_) {
-        data_->qpos[model_->nq - 2] = qpos0_[model_->nq - 2] = x;
-        data_->qpos[model_->nq - 1] = qpos0_[model_->nq - 1] = y;
+        data_->qpos[model_->nq - 2] = x;
+        data_->qpos[model_->nq - 1] = y;
         break;
       }
     }
     for (int i = 0; i < model_->nv; ++i) {
-      data_->qvel[i] = qvel0_[i] =
+      data_->qvel[i] =
           i < model_->nv - 2 ? init_qvel_[i] + dist_qvel_(gen_) : 0.0;
     }
+#ifdef ENVPOOL_TEST
+    std::memcpy(qpos0_, data_->qpos, sizeof(mjtNum) * model_->nq);
+    std::memcpy(qvel0_, data_->qvel, sizeof(mjtNum) * model_->nv);
+#endif
   }
 
   bool IsDone() override { return done_; }
@@ -167,6 +171,6 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
 
 using ReacherEnvPool = AsyncEnvPool<ReacherEnv>;
 
-}  // namespace mujoco
+}  // namespace mujoco_gym
 
 #endif  // ENVPOOL_MUJOCO_GYM_REACHER_H_

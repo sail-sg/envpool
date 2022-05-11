@@ -19,32 +19,32 @@ import numpy as np
 from absl.testing import absltest
 
 from envpool.mujoco import (
-  AntEnvSpec,
-  AntGymEnvPool,
-  HalfCheetahEnvSpec,
-  HalfCheetahGymEnvPool,
-  HopperEnvSpec,
-  HopperGymEnvPool,
-  HumanoidEnvSpec,
-  HumanoidGymEnvPool,
-  HumanoidStandupEnvSpec,
-  HumanoidStandupGymEnvPool,
-  InvertedDoublePendulumEnvSpec,
-  InvertedDoublePendulumGymEnvPool,
-  InvertedPendulumEnvSpec,
-  InvertedPendulumGymEnvPool,
-  PusherEnvSpec,
-  PusherGymEnvPool,
-  ReacherEnvSpec,
-  ReacherGymEnvPool,
-  SwimmerEnvSpec,
-  SwimmerGymEnvPool,
-  Walker2dEnvSpec,
-  Walker2dGymEnvPool,
+  GymAntEnvSpec,
+  GymAntGymEnvPool,
+  GymHalfCheetahEnvSpec,
+  GymHalfCheetahGymEnvPool,
+  GymHopperEnvSpec,
+  GymHopperGymEnvPool,
+  GymHumanoidEnvSpec,
+  GymHumanoidGymEnvPool,
+  GymHumanoidStandupEnvSpec,
+  GymHumanoidStandupGymEnvPool,
+  GymInvertedDoublePendulumEnvSpec,
+  GymInvertedDoublePendulumGymEnvPool,
+  GymInvertedPendulumEnvSpec,
+  GymInvertedPendulumGymEnvPool,
+  GymPusherEnvSpec,
+  GymPusherGymEnvPool,
+  GymReacherEnvSpec,
+  GymReacherGymEnvPool,
+  GymSwimmerEnvSpec,
+  GymSwimmerGymEnvPool,
+  GymWalker2dEnvSpec,
+  GymWalker2dGymEnvPool,
 )
 
 
-class _MujocoEnvPoolDeterministicTest(absltest.TestCase):
+class _MujocoGymDeterministicTest(absltest.TestCase):
 
   def check(self, spec_cls: Any, envpool_cls: Any, num_envs: int = 4) -> None:
     env0 = envpool_cls(
@@ -73,37 +73,39 @@ class _MujocoEnvPoolDeterministicTest(absltest.TestCase):
       self.assertTrue(np.all(obs2 <= obs_max), obs2)
 
   def test_ant(self) -> None:
-    self.check(AntEnvSpec, AntGymEnvPool)
+    self.check(GymAntEnvSpec, GymAntGymEnvPool)
 
   def test_half_cheetah(self) -> None:
-    self.check(HalfCheetahEnvSpec, HalfCheetahGymEnvPool)
+    self.check(GymHalfCheetahEnvSpec, GymHalfCheetahGymEnvPool)
 
   def test_hopper(self) -> None:
-    self.check(HopperEnvSpec, HopperGymEnvPool)
+    self.check(GymHopperEnvSpec, GymHopperGymEnvPool)
 
   def test_humanoid(self) -> None:
-    self.check(HumanoidEnvSpec, HumanoidGymEnvPool)
+    self.check(GymHumanoidEnvSpec, GymHumanoidGymEnvPool)
 
   def test_humanoid_standup(self) -> None:
-    self.check(HumanoidStandupEnvSpec, HumanoidStandupGymEnvPool)
+    self.check(GymHumanoidStandupEnvSpec, GymHumanoidStandupGymEnvPool)
 
   def test_inverted_double_pendulum(self) -> None:
-    self.check(InvertedDoublePendulumEnvSpec, InvertedDoublePendulumGymEnvPool)
+    self.check(
+      GymInvertedDoublePendulumEnvSpec, GymInvertedDoublePendulumGymEnvPool
+    )
 
   def test_inverted_pendulum(self) -> None:
-    self.check(InvertedPendulumEnvSpec, InvertedPendulumGymEnvPool)
+    self.check(GymInvertedPendulumEnvSpec, GymInvertedPendulumGymEnvPool)
 
   def test_pusher(self) -> None:
-    self.check(PusherEnvSpec, PusherGymEnvPool)
+    self.check(GymPusherEnvSpec, GymPusherGymEnvPool)
 
   def test_reacher(self) -> None:
-    self.check(ReacherEnvSpec, ReacherGymEnvPool)
+    self.check(GymReacherEnvSpec, GymReacherGymEnvPool)
 
   def test_swimmer(self) -> None:
-    self.check(SwimmerEnvSpec, SwimmerGymEnvPool)
+    self.check(GymSwimmerEnvSpec, GymSwimmerGymEnvPool)
 
   def test_walker2d(self) -> None:
-    self.check(Walker2dEnvSpec, Walker2dGymEnvPool)
+    self.check(GymWalker2dEnvSpec, GymWalker2dGymEnvPool)
 
 
 if __name__ == "__main__":

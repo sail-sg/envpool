@@ -89,7 +89,7 @@ class _MakeTest(absltest.TestCase):
       ]
     )
 
-  def test_make_mujoco(self) -> None:
+  def test_make_mujoco_gym(self) -> None:
     self.check_step(
       [
         "Ant-v3",
@@ -116,6 +116,12 @@ class _MakeTest(absltest.TestCase):
         "Walker2d-v4",
       ]
     )
+
+  def test_make_mujoco_dmc(self) -> None:
+    self.check_step([
+      "HopperStand-v1",
+      "HopperHop-v1",
+    ])
 
 
 if __name__ == "__main__":

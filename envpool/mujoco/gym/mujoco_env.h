@@ -22,6 +22,8 @@
 
 #include <string>
 
+namespace mujoco_gym {
+
 class MujocoEnv {
  private:
   std::array<char, 1000> error_;
@@ -30,7 +32,9 @@ class MujocoEnv {
   mjModel* model_;
   mjData* data_;
   mjtNum *init_qpos_, *init_qvel_;
+#ifdef ENVPOOL_TEST
   mjtNum *qpos0_, *qvel0_;  // for align check
+#endif
   int frame_skip_;
   bool post_constraint_;
   int max_episode_steps_, elapsed_step_;
@@ -43,15 +47,17 @@ class MujocoEnv {
         data_(mj_makeData(model_)),
         init_qpos_(new mjtNum[model_->nq]),
         init_qvel_(new mjtNum[model_->nv]),
+#ifdef ENVPOOL_TEST
         qpos0_(new mjtNum[model_->nq]),
         qvel0_(new mjtNum[model_->nv]),
+#endif
         frame_skip_(frame_skip),
         post_constraint_(post_constraint),
         max_episode_steps_(max_episode_steps),
         elapsed_step_(max_episode_steps + 1),
         done_(true) {
-    memcpy(init_qpos_, data_->qpos, sizeof(mjtNum) * model_->nq);
-    memcpy(init_qvel_, data_->qvel, sizeof(mjtNum) * model_->nv);
+    std::memcpy(init_qpos_, data_->qpos, sizeof(mjtNum) * model_->nq);
+    std::memcpy(init_qvel_, data_->qvel, sizeof(mjtNum) * model_->nv);
   }
 
   ~MujocoEnv() {
@@ -59,8 +65,10 @@ class MujocoEnv {
     mj_deleteModel(model_);
     delete[] init_qpos_;
     delete[] init_qvel_;
+#ifdef ENVPOOL_TEST
     delete[] qpos0_;
     delete[] qvel0_;
+#endif
   }
 
   void MujocoReset() {
@@ -85,5 +93,7 @@ class MujocoEnv {
     }
   }
 };
+
+}  // namespace mujoco_gym
 
 #endif  // ENVPOOL_MUJOCO_GYM_MUJOCO_ENV_H_

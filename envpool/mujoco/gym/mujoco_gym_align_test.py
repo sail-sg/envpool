@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit tests for Mujoco gym v4 environments."""
+"""Unit tests for Mujoco gym v4 environments alignment."""
 
 from typing import Any, no_type_check
 
@@ -22,39 +22,42 @@ from absl import logging
 from absl.testing import absltest
 
 from envpool.mujoco import (
-  AntEnvSpec,
-  AntGymEnvPool,
-  HalfCheetahEnvSpec,
-  HalfCheetahGymEnvPool,
-  HopperEnvSpec,
-  HopperGymEnvPool,
-  HumanoidEnvSpec,
-  HumanoidGymEnvPool,
-  HumanoidStandupEnvSpec,
-  HumanoidStandupGymEnvPool,
-  InvertedDoublePendulumEnvSpec,
-  InvertedDoublePendulumGymEnvPool,
-  InvertedPendulumEnvSpec,
-  InvertedPendulumGymEnvPool,
-  PusherEnvSpec,
-  PusherGymEnvPool,
-  ReacherEnvSpec,
-  ReacherGymEnvPool,
-  SwimmerEnvSpec,
-  SwimmerGymEnvPool,
-  Walker2dEnvSpec,
-  Walker2dGymEnvPool,
+  GymAntEnvSpec,
+  GymAntGymEnvPool,
+  GymHalfCheetahEnvSpec,
+  GymHalfCheetahGymEnvPool,
+  GymHopperEnvSpec,
+  GymHopperGymEnvPool,
+  GymHumanoidEnvSpec,
+  GymHumanoidGymEnvPool,
+  GymHumanoidStandupEnvSpec,
+  GymHumanoidStandupGymEnvPool,
+  GymInvertedDoublePendulumEnvSpec,
+  GymInvertedDoublePendulumGymEnvPool,
+  GymInvertedPendulumEnvSpec,
+  GymInvertedPendulumGymEnvPool,
+  GymPusherEnvSpec,
+  GymPusherGymEnvPool,
+  GymReacherEnvSpec,
+  GymReacherGymEnvPool,
+  GymSwimmerEnvSpec,
+  GymSwimmerGymEnvPool,
+  GymWalker2dEnvSpec,
+  GymWalker2dGymEnvPool,
 )
 
 
-class _MujocoEnvPoolTest(absltest.TestCase):
+class _MujocoGymAlignTest(absltest.TestCase):
 
   @no_type_check
   def run_space_check(self, env0: gym.Env, env1: Any) -> None:
-    """Check if envpool.observation_space == gym.make().observation_space."""
+    """Check observation_space and action space."""
     obs0, obs1 = env0.observation_space, env1.observation_space
     np.testing.assert_allclose(obs0.low, obs1.low)
     np.testing.assert_allclose(obs0.high, obs1.high)
+    act0, act1 = env0.action_space, env1.action_space
+    np.testing.assert_allclose(act0.low, act1.low)
+    np.testing.assert_allclose(act0.high, act1.high)
 
   @no_type_check
   def reset_state(
@@ -95,8 +98,8 @@ class _MujocoEnvPoolTest(absltest.TestCase):
 
   def test_ant(self) -> None:
     env0 = mjc_mwe.AntEnv()
-    env1 = AntGymEnvPool(
-      AntEnvSpec(AntEnvSpec.gen_config(gym_reset_return_info=True))
+    env1 = GymAntGymEnvPool(
+      GymAntEnvSpec(GymAntEnvSpec.gen_config(gym_reset_return_info=True))
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
@@ -104,9 +107,9 @@ class _MujocoEnvPoolTest(absltest.TestCase):
       terminate_when_unhealthy=False,
       exclude_current_positions_from_observation=False,
     )
-    env1 = AntGymEnvPool(
-      AntEnvSpec(
-        AntEnvSpec.gen_config(
+    env1 = GymAntGymEnvPool(
+      GymAntEnvSpec(
+        GymAntEnvSpec.gen_config(
           terminate_when_unhealthy=False,
           exclude_current_positions_from_observation=False,
           max_episode_steps=100,
@@ -119,9 +122,9 @@ class _MujocoEnvPoolTest(absltest.TestCase):
 
   def test_half_cheetah(self) -> None:
     env0 = mjc_mwe.HalfCheetahEnv()
-    env1 = HalfCheetahGymEnvPool(
-      HalfCheetahEnvSpec(
-        HalfCheetahEnvSpec.gen_config(gym_reset_return_info=True)
+    env1 = GymHalfCheetahGymEnvPool(
+      GymHalfCheetahEnvSpec(
+        GymHalfCheetahEnvSpec.gen_config(gym_reset_return_info=True)
       )
     )
     self.run_space_check(env0, env1)
@@ -129,9 +132,9 @@ class _MujocoEnvPoolTest(absltest.TestCase):
     env0 = mjc_mwe.HalfCheetahEnv(
       exclude_current_positions_from_observation=True
     )
-    env1 = HalfCheetahGymEnvPool(
-      HalfCheetahEnvSpec(
-        HalfCheetahEnvSpec.gen_config(
+    env1 = GymHalfCheetahGymEnvPool(
+      GymHalfCheetahEnvSpec(
+        GymHalfCheetahEnvSpec.gen_config(
           exclude_current_positions_from_observation=True,
           gym_reset_return_info=True,
         )
@@ -141,8 +144,10 @@ class _MujocoEnvPoolTest(absltest.TestCase):
 
   def test_hopper(self) -> None:
     env0 = mjc_mwe.HopperEnv()
-    env1 = HopperGymEnvPool(
-      HopperEnvSpec(HopperEnvSpec.gen_config(gym_reset_return_info=True))
+    env1 = GymHopperGymEnvPool(
+      GymHopperEnvSpec(
+        GymHopperEnvSpec.gen_config(gym_reset_return_info=True)
+      )
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
@@ -150,9 +155,9 @@ class _MujocoEnvPoolTest(absltest.TestCase):
       terminate_when_unhealthy=False,
       exclude_current_positions_from_observation=False,
     )
-    env1 = HopperGymEnvPool(
-      HopperEnvSpec(
-        HopperEnvSpec.gen_config(
+    env1 = GymHopperGymEnvPool(
+      GymHopperEnvSpec(
+        GymHopperEnvSpec.gen_config(
           terminate_when_unhealthy=False,
           exclude_current_positions_from_observation=False,
           gym_reset_return_info=True,
@@ -164,8 +169,10 @@ class _MujocoEnvPoolTest(absltest.TestCase):
 
   def test_humanoid(self) -> None:
     env0 = mjc_mwe.HumanoidEnv()
-    env1 = HumanoidGymEnvPool(
-      HumanoidEnvSpec(HumanoidEnvSpec.gen_config(gym_reset_return_info=True))
+    env1 = GymHumanoidGymEnvPool(
+      GymHumanoidEnvSpec(
+        GymHumanoidEnvSpec.gen_config(gym_reset_return_info=True)
+      )
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
@@ -173,9 +180,9 @@ class _MujocoEnvPoolTest(absltest.TestCase):
       terminate_when_unhealthy=False,
       exclude_current_positions_from_observation=False,
     )
-    env1 = HumanoidGymEnvPool(
-      HumanoidEnvSpec(
-        HumanoidEnvSpec.gen_config(
+    env1 = GymHumanoidGymEnvPool(
+      GymHumanoidEnvSpec(
+        GymHumanoidEnvSpec.gen_config(
           terminate_when_unhealthy=False,
           exclude_current_positions_from_observation=False,
           gym_reset_return_info=True,
@@ -187,9 +194,9 @@ class _MujocoEnvPoolTest(absltest.TestCase):
 
   def test_humanoid_standup(self) -> None:
     env0 = mjc_mwe.HumanoidStandupEnv()
-    env1 = HumanoidStandupGymEnvPool(
-      HumanoidStandupEnvSpec(
-        HumanoidStandupEnvSpec.gen_config(gym_reset_return_info=True)
+    env1 = GymHumanoidStandupGymEnvPool(
+      GymHumanoidStandupEnvSpec(
+        GymHumanoidStandupEnvSpec.gen_config(gym_reset_return_info=True)
       )
     )
     self.run_space_check(env0, env1)
@@ -197,9 +204,11 @@ class _MujocoEnvPoolTest(absltest.TestCase):
 
   def test_inverted_double_pendulum(self) -> None:
     env0 = mjc_mwe.InvertedDoublePendulumEnv()
-    env1 = InvertedDoublePendulumGymEnvPool(
-      InvertedDoublePendulumEnvSpec(
-        InvertedDoublePendulumEnvSpec.gen_config(gym_reset_return_info=True)
+    env1 = GymInvertedDoublePendulumGymEnvPool(
+      GymInvertedDoublePendulumEnvSpec(
+        GymInvertedDoublePendulumEnvSpec.gen_config(
+          gym_reset_return_info=True
+        )
       )
     )
     self.run_space_check(env0, env1)
@@ -207,9 +216,9 @@ class _MujocoEnvPoolTest(absltest.TestCase):
 
   def test_inverted_pendulum(self) -> None:
     env0 = mjc_mwe.InvertedPendulumEnv()
-    env1 = InvertedPendulumGymEnvPool(
-      InvertedPendulumEnvSpec(
-        InvertedPendulumEnvSpec.gen_config(gym_reset_return_info=True)
+    env1 = GymInvertedPendulumGymEnvPool(
+      GymInvertedPendulumEnvSpec(
+        GymInvertedPendulumEnvSpec.gen_config(gym_reset_return_info=True)
       )
     )
     self.run_space_check(env0, env1)
@@ -217,31 +226,37 @@ class _MujocoEnvPoolTest(absltest.TestCase):
 
   def test_pusher(self) -> None:
     env0 = mjc_mwe.PusherEnv()
-    env1 = PusherGymEnvPool(
-      PusherEnvSpec(PusherEnvSpec.gen_config(gym_reset_return_info=True))
+    env1 = GymPusherGymEnvPool(
+      GymPusherEnvSpec(
+        GymPusherEnvSpec.gen_config(gym_reset_return_info=True)
+      )
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
 
   def test_reacher(self) -> None:
     env0 = mjc_mwe.ReacherEnv()
-    env1 = ReacherGymEnvPool(
-      ReacherEnvSpec(ReacherEnvSpec.gen_config(gym_reset_return_info=True))
+    env1 = GymReacherGymEnvPool(
+      GymReacherEnvSpec(
+        GymReacherEnvSpec.gen_config(gym_reset_return_info=True)
+      )
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
 
   def test_swimmer(self) -> None:
     env0 = mjc_mwe.SwimmerEnv()
-    env1 = SwimmerGymEnvPool(
-      SwimmerEnvSpec(SwimmerEnvSpec.gen_config(gym_reset_return_info=True))
+    env1 = GymSwimmerGymEnvPool(
+      GymSwimmerEnvSpec(
+        GymSwimmerEnvSpec.gen_config(gym_reset_return_info=True)
+      )
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
     env0 = mjc_mwe.SwimmerEnv(exclude_current_positions_from_observation=False)
-    env1 = SwimmerGymEnvPool(
-      SwimmerEnvSpec(
-        SwimmerEnvSpec.gen_config(
+    env1 = GymSwimmerGymEnvPool(
+      GymSwimmerEnvSpec(
+        GymSwimmerEnvSpec.gen_config(
           exclude_current_positions_from_observation=False,
           gym_reset_return_info=True,
         )
@@ -251,8 +266,10 @@ class _MujocoEnvPoolTest(absltest.TestCase):
 
   def test_walker2d(self) -> None:
     env0 = mjc_mwe.Walker2dEnv()
-    env1 = Walker2dGymEnvPool(
-      Walker2dEnvSpec(Walker2dEnvSpec.gen_config(gym_reset_return_info=True))
+    env1 = GymWalker2dGymEnvPool(
+      GymWalker2dEnvSpec(
+        GymWalker2dEnvSpec.gen_config(gym_reset_return_info=True)
+      )
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
@@ -260,9 +277,9 @@ class _MujocoEnvPoolTest(absltest.TestCase):
       terminate_when_unhealthy=False,
       exclude_current_positions_from_observation=False,
     )
-    env1 = Walker2dGymEnvPool(
-      Walker2dEnvSpec(
-        Walker2dEnvSpec.gen_config(
+    env1 = GymWalker2dGymEnvPool(
+      GymWalker2dEnvSpec(
+        GymWalker2dEnvSpec.gen_config(
           terminate_when_unhealthy=False,
           exclude_current_positions_from_observation=False,
           max_episode_steps=100,
