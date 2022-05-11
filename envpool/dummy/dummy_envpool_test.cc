@@ -24,7 +24,7 @@ using DummyAction = typename dummy::DummyEnv::Action;
 using DummyState = typename dummy::DummyEnv::State;
 
 TEST(DummyEnvPoolTest, SplitZeroAction) {
-  auto config = dummy::DummyEnvSpec::default_config;
+  auto config = dummy::DummyEnvSpec::DEFAULT_CONFIG;
   int num_envs = 4;
   config["num_envs"_] = num_envs;
   config["batch_size"_] = 4;
@@ -59,12 +59,20 @@ TEST(DummyEnvPoolTest, SplitZeroAction) {
   for (int i = 0; i < 4; ++i) {
     EXPECT_EQ(static_cast<int>(state["info:env_id"_][i]), i);
   }
-  auto obs = state["obs"_];
+  auto obs = state["obs:raw"_];
+  auto dyn = state["obs:dyn"_];
   auto peid = state["info:players.env_id"_];
   std::vector<int> counter({2, 3, 3, 0});
   for (int i = 0; i < 8; ++i) {
     int p = peid[i];
     EXPECT_EQ(static_cast<int>(obs(i, 1)), counter[p]);
+    // check dyn
+    const Container<int>& c = dyn[i];
+    EXPECT_EQ(c->Shape(0), p + 1);
+    auto* data = reinterpret_cast<int*>(c->Data());
+    for (std::size_t j = 0; j < c->size; ++j) {
+      EXPECT_EQ(data[j], p);
+    }
   }
   // construct continuous action
   envpool.Reset(action["env_id"_]);
@@ -82,12 +90,20 @@ TEST(DummyEnvPoolTest, SplitZeroAction) {
   for (int i = 0; i < 4; ++i) {
     EXPECT_EQ(static_cast<int>(state["info:env_id"_][i]), i);
   }
-  obs = state["obs"_];
+  obs = state["obs:raw"_];
+  dyn = state["obs:dyn"_];
   peid = state["info:players.env_id"_];
   counter = std::vector<int>({3, 0, 2, 3});
   for (int i = 0; i < 8; ++i) {
     int p = peid[i];
     EXPECT_EQ(static_cast<int>(obs(i, 1)), counter[p]);
+    // check dyn
+    const Container<int>& c = dyn[i];
+    EXPECT_EQ(c->Shape(0), p + 1);
+    auto* data = reinterpret_cast<int*>(c->Data());
+    for (std::size_t j = 0; j < c->size; ++j) {
+      EXPECT_EQ(data[j], p);
+    }
   }
 }
 
@@ -96,7 +112,7 @@ void Runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
   LOG(INFO) << num_envs << " " << batch << " " << seed << " " << total_iter
             << " " << num_threads << " " << max_num_players;
   bool is_sync = num_envs == batch && max_num_players == 1;
-  auto config = dummy::DummyEnvSpec::default_config;
+  auto config = dummy::DummyEnvSpec::DEFAULT_CONFIG;
   config["num_envs"_] = num_envs;
   config["batch_size"_] = batch;
   config["num_threads"_] = num_threads;
@@ -124,7 +140,8 @@ void Runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
     auto env_id = state["info:env_id"_];
     auto player_env_id = state["info:players.env_id"_];
     auto player_id = state["info:players.id"_];
-    auto obs = state["obs"_];
+    auto obs = state["obs:raw"_];
+    auto dyn = state["obs:dyn"_];
     auto reward = state["reward"_];
     auto done = state["done"_];
     auto player_done = state["info:players.done"_];
@@ -161,6 +178,11 @@ void Runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
       if (is_sync) {
         EXPECT_EQ(eid, i);
       }
+      // check dyn
+      const Container<int>& c = dyn[i];
+      EXPECT_EQ(c->Shape(0), eid + 1);
+      auto* data = reinterpret_cast<int*>(c->Data());
+      EXPECT_EQ(data[0], eid);  // checking all is too expensive
     }
 
     for (int i = 0; i < batch; ++i) {

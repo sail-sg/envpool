@@ -29,20 +29,20 @@ namespace toy_text {
 class CatchEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("height"_.bind(10), "width"_.bind(5));
+    return MakeDict("height"_.Bind(10), "width"_.Bind(5));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs"_.bind(
-        Spec<float>({conf["height"_], conf["width"_]}, {0.0f, 1.0f})));
+    return MakeDict("obs"_.Bind(
+        Spec<float>({conf["height"_], conf["width"_]}, {0.0F, 1.0F})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<int>({-1}, {0, 2})));
+    return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 2})));
   }
 };
 
-typedef class EnvSpec<CatchEnvFns> CatchEnvSpec;
+using CatchEnvSpec = EnvSpec<CatchEnvFns>;
 
 class CatchEnv : public Env<CatchEnvSpec> {
  protected:
@@ -65,33 +65,36 @@ class CatchEnv : public Env<CatchEnvSpec> {
     y_ = dist_(gen_);
     paddle_ = width_ / 2;
     done_ = false;
-    State state = Allocate();
-    WriteObs(state, 0.0f);
+    WriteState(0.0);
   }
 
   void Step(const Action& action) override {
     int act = action["action"_];
-    float reward = 0.0f;
+    float reward = 0.0;
     paddle_ += act - 1;
-    if (paddle_ < 0) paddle_ = 0;
-    if (paddle_ >= width_) paddle_ = width_ - 1;
+    if (paddle_ < 0) {
+      paddle_ = 0;
+    }
+    if (paddle_ >= width_) {
+      paddle_ = width_ - 1;
+    }
     if (++x_ == height_ - 1) {
       done_ = true;
-      reward = y_ == paddle_ ? 1.0f : -1.0f;
+      reward = y_ == paddle_ ? 1.0 : -1.0;
     }
-    State state = Allocate();
-    WriteObs(state, reward);
+    WriteState(reward);
   }
 
  private:
-  void WriteObs(State& state, float reward) {  // NOLINT
-    state["obs"_](x_, y_) = 1.0f;
-    state["obs"_](height_ - 1, paddle_) = 1.0f;
+  void WriteState(float reward) {
+    State state = Allocate();
+    state["obs"_](x_, y_) = 1.0F;
+    state["obs"_](height_ - 1, paddle_) = 1.0F;
     state["reward"_] = reward;
   }
 };
 
-typedef AsyncEnvPool<CatchEnv> CatchEnvPool;
+using CatchEnvPool = AsyncEnvPool<CatchEnv>;
 
 }  // namespace toy_text
 

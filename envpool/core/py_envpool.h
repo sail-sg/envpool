@@ -25,6 +25,7 @@
 #include <memory>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "envpool/core/envpool.h"
@@ -35,18 +36,49 @@ namespace py = pybind11;
  * Convert Array to py::array, with py::capsule
  */
 template <typename dtype>
-py::array ArrayToNumpy(const Array& a) {
-  auto* ptr = new std::shared_ptr<char>(a.SharedPtr());
-  auto capsule = py::capsule(ptr, [](void* ptr) {
-    delete reinterpret_cast<std::shared_ptr<char>*>(ptr);
-  });
-  return py::array(a.Shape(), reinterpret_cast<dtype*>(a.data()), capsule);
-}
+struct ArrayToNumpyHelper {
+  static py::array Convert(const Array& a) {
+    auto* ptr = new std::shared_ptr<char>(a.SharedPtr());
+    auto capsule = py::capsule(ptr, [](void* ptr) {
+      delete reinterpret_cast<std::shared_ptr<char>*>(ptr);
+    });
+    return py::array(a.Shape(), reinterpret_cast<dtype*>(a.Data()), capsule);
+  }
+};
+
+template <typename dtype>
+struct ArrayToNumpyHelper<Container<dtype>> {
+  using UniquePtr = Container<dtype>;
+  static py::array Convert(const Array& a) {
+    auto* ptr_arr = reinterpret_cast<UniquePtr*>(a.Data());
+    auto* ptr =
+        new std::unique_ptr<py::object[]>(new py::object[a.size]);  // NOLINT
+    auto capsule = py::capsule(ptr, [](void* ptr) {
+      delete reinterpret_cast<std::unique_ptr<py::object[]>*>(ptr);  // NOLINT
+    });
+    for (std::size_t i = 0; i < a.size; ++i) {
+      auto* inner_ptr = new UniquePtr(std::move(ptr_arr[i]));
+      (ptr_arr + i)->~UniquePtr();
+      auto capsule = py::capsule(inner_ptr, [](void* inner_ptr) {
+        delete reinterpret_cast<UniquePtr*>(inner_ptr);
+      });
+      if (*inner_ptr == nullptr) {
+        (*ptr)[i] = py::none();
+      } else {
+        (*ptr)[i] =
+            py::array((*inner_ptr)->Shape(),
+                      reinterpret_cast<dtype*>((*inner_ptr)->Data()), capsule);
+      }
+    }
+    return py::array(py::dtype("object"), a.Shape(),
+                     reinterpret_cast<py::object*>(ptr->get()), capsule);
+  }
+};
 
 template <typename dtype>
 Array NumpyToArray(const py::array& arr) {
-  using array_t = py::array_t<dtype, py::array::c_style | py::array::forcecast>;
-  array_t arr_t(arr);
+  using ArrayT = py::array_t<dtype, py::array::c_style | py::array::forcecast>;
+  ArrayT arr_t(arr);
   ShapeSpec spec(arr_t.itemsize(),
                  std::vector<int>(arr_t.shape(), arr_t.shape() + arr_t.ndim()));
   return Array(spec, reinterpret_cast<char*>(arr_t.mutable_data()));
@@ -54,8 +86,8 @@ Array NumpyToArray(const py::array& arr) {
 
 template <typename dtype>
 Array NumpyToArrayIncRef(const py::array& arr) {
-  using array_t = py::array_t<dtype, py::array::c_style | py::array::forcecast>;
-  array_t* arr_ptr = new array_t(arr);
+  using ArrayT = py::array_t<dtype, py::array::c_style | py::array::forcecast>;
+  auto* arr_ptr = new ArrayT(arr);
   ShapeSpec spec(
       arr_ptr->itemsize(),
       std::vector<int>(arr_ptr->shape(), arr_ptr->shape() + arr_ptr->ndim()));
@@ -66,13 +98,36 @@ Array NumpyToArrayIncRef(const py::array& arr) {
                });
 }
 
+template <typename Spec>
+struct SpecTupleHelper {
+  static decltype(auto) Make(const Spec& spec) {
+    return std::make_tuple(py::dtype::of<typename Spec::dtype>(), spec.shape,
+                           spec.bounds, spec.elementwise_bounds);
+  }
+};
+
+/**
+ * For Container type, it is converted a numpy array of numpy array.
+ * The spec itself describes the shape of the outer array, the inner_spec
+ * contains the spec of the inner array.
+ * Therefore the shape returned to python side has the format
+ * (outer_shape, inner_shape).
+ */
+template <typename dtype>
+struct SpecTupleHelper<Spec<Container<dtype>>> {
+  static decltype(auto) Make(const Spec<Container<dtype>>& spec) {
+    return std::make_tuple(py::dtype::of<dtype>(),
+                           std::make_tuple(spec.shape, spec.inner_spec.shape),
+                           spec.inner_spec.bounds,
+                           spec.inner_spec.elementwise_bounds);
+  }
+};
+
 template <typename... Spec>
 decltype(auto) ExportSpecs(const std::tuple<Spec...>& specs) {
   return std::apply(
       [&](auto&&... spec) {
-        return std::make_tuple(
-            std::make_tuple(py::dtype::of<typename Spec::dtype>(), spec.shape,
-                            spec.bounds, spec.elementwise_bounds)...);
+        return std::make_tuple(SpecTupleHelper<Spec>::Make(spec)...);
       },
       specs);
 }
@@ -80,39 +135,37 @@ decltype(auto) ExportSpecs(const std::tuple<Spec...>& specs) {
 template <typename EnvSpec>
 class PyEnvSpec : public EnvSpec {
  public:
-  using state_spec_t =
+  using StateSpecT =
       decltype(ExportSpecs(std::declval<typename EnvSpec::StateSpec>()));
-  using action_spec_t =
+  using ActionSpecT =
       decltype(ExportSpecs(std::declval<typename EnvSpec::ActionSpec>()));
 
- public:
-  state_spec_t py_state_spec;
-  action_spec_t py_action_spec;
+  StateSpecT py_state_spec;
+  ActionSpecT py_action_spec;
   typename EnvSpec::ConfigValues py_config_values;
   static std::vector<std::string> py_config_keys;
   static std::vector<std::string> py_state_keys;
   static std::vector<std::string> py_action_keys;
   static typename EnvSpec::ConfigValues py_default_config_values;
 
- public:
   explicit PyEnvSpec(const typename EnvSpec::ConfigValues& conf)
       : EnvSpec(conf),
         py_state_spec(ExportSpecs(EnvSpec::state_spec)),
         py_action_spec(ExportSpecs(EnvSpec::action_spec)),
-        py_config_values(EnvSpec::config.values()) {}
+        py_config_values(EnvSpec::config.AllValues()) {}
 };
 template <typename EnvSpec>
 std::vector<std::string> PyEnvSpec<EnvSpec>::py_config_keys =
-    EnvSpec::Config::keys();
+    EnvSpec::Config::AllKeys();
 template <typename EnvSpec>
 std::vector<std::string> PyEnvSpec<EnvSpec>::py_state_keys =
-    EnvSpec::StateSpec::keys();
+    EnvSpec::StateSpec::AllKeys();
 template <typename EnvSpec>
 std::vector<std::string> PyEnvSpec<EnvSpec>::py_action_keys =
-    EnvSpec::ActionSpec::keys();
+    EnvSpec::ActionSpec::AllKeys();
 template <typename EnvSpec>
 typename EnvSpec::ConfigValues PyEnvSpec<EnvSpec>::py_default_config_values =
-    EnvSpec::default_config.values();
+    EnvSpec::DEFAULT_CONFIG.AllValues();
 
 /**
  * Bind specs to arrs, and return py::array in ret
@@ -123,7 +176,8 @@ void ToNumpy(const std::vector<Array>& arrs, const std::tuple<Spec...>& specs,
   std::size_t index = 0;
   std::apply(
       [&](auto&&... spec) {
-        (ret->emplace_back(ArrayToNumpy<typename Spec::dtype>(arrs[index++])),
+        (ret->emplace_back(
+             ArrayToNumpyHelper<typename Spec::dtype>::Convert(arrs[index++])),
          ...);
       },
       specs);
@@ -151,19 +205,17 @@ class PyEnvPool : public EnvPool {
  public:
   using PySpec = PyEnvSpec<typename EnvPool::Spec>;
 
- public:
   PySpec py_spec;
   static std::vector<std::string> py_state_keys;
   static std::vector<std::string> py_action_keys;
 
- public:
   explicit PyEnvPool(const PySpec& py_spec)
       : EnvPool(py_spec), py_spec(py_spec) {}
 
   /**
    * py api
    */
-  void py_send(const std::vector<py::array>& action) {
+  void PySend(const std::vector<py::array>& action) {
     std::vector<Array> arr;
     arr.reserve(action.size());
     ToArray(action, py_spec.action_spec, &arr);
@@ -174,7 +226,7 @@ class PyEnvPool : public EnvPool {
   /**
    * py api
    */
-  std::vector<py::array> py_recv() {
+  std::vector<py::array> PyRecv() {
     std::vector<Array> arr;
     {
       py::gil_scoped_release release;
@@ -182,7 +234,7 @@ class PyEnvPool : public EnvPool {
       DCHECK_EQ(arr.size(), std::tuple_size_v<typename EnvPool::State::Keys>);
     }
     std::vector<py::array> ret;
-    ret.reserve(EnvPool::State::size);
+    ret.reserve(EnvPool::State::SIZE);
     ToNumpy(arr, py_spec.state_spec, &ret);
     return ret;
   }
@@ -190,7 +242,7 @@ class PyEnvPool : public EnvPool {
   /**
    * py api
    */
-  void py_reset(const py::array& env_ids) {
+  void PyReset(const py::array& env_ids) {
     // PyArray arr = PyArray::From<int>(env_ids);
     auto arr = NumpyToArray<int>(env_ids);
     py::gil_scoped_release release;
@@ -226,9 +278,9 @@ py::object abc_meta = py::module::import("abc").attr("ABCMeta");
   py::class_<ENVPOOL>(MODULE, "_" #ENVPOOL, py::metaclass(abc_meta)) \
       .def(py::init<const SPEC&>())                                  \
       .def_readonly("_spec", &ENVPOOL::py_spec)                      \
-      .def("_recv", &ENVPOOL::py_recv)                               \
-      .def("_send", &ENVPOOL::py_send)                               \
-      .def("_reset", &ENVPOOL::py_reset)                             \
+      .def("_recv", &ENVPOOL::PyRecv)                                \
+      .def("_send", &ENVPOOL::PySend)                                \
+      .def("_reset", &ENVPOOL::PyReset)                              \
       .def_readonly_static("_state_keys", &ENVPOOL::py_state_keys)   \
       .def_readonly_static("_action_keys", &ENVPOOL::py_action_keys);
 

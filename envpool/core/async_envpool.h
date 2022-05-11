@@ -72,9 +72,9 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
         stop_(0),
         stepping_env_num_(0),
         action_buffer_queue_(new ActionBufferQueue(num_envs_)),
-        state_buffer_queue_(
-            new StateBufferQueue(batch_, num_envs_, max_num_players_,
-                                 spec.state_spec.template values<ShapeSpec>())),
+        state_buffer_queue_(new StateBufferQueue(
+            batch_, num_envs_, max_num_players_,
+            spec.state_spec.template AllValues<ShapeSpec>())),
         envs_(num_envs_) {
     std::size_t processor_count = std::thread::hardware_concurrency();
     ThreadPool init_pool(std::min(processor_count, num_envs_));
@@ -103,12 +103,13 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
         }
       });
     }
-    int thread_affinity_offset = spec.config["thread_affinity_offset"_];
-    if (thread_affinity_offset >= 0) {
+    if (spec.config["thread_affinity_offset"_] >= 0) {
+      std::size_t thread_affinity_offset =
+          spec.config["thread_affinity_offset"_];
       for (std::size_t tid = 0; tid < num_threads_; ++tid) {
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
-        int cid = (thread_affinity_offset + tid) % processor_count;
+        std::size_t cid = (thread_affinity_offset + tid) % processor_count;
         CPU_SET(cid, &cpuset);
         pthread_setaffinity_np(workers_[tid].native_handle(), sizeof(cpu_set_t),
                                &cpuset);
@@ -129,11 +130,11 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
   }
 
   void Send(const std::vector<Array>& action) override {
-    int* env_id = static_cast<int*>(action[0].data());
+    int* env_id = static_cast<int*>(action[0].Data());
     int shared_offset = action[0].Shape(0);
     std::vector<ActionSlice> actions;
     std::shared_ptr<std::vector<Array>> action_batch =
-        std::make_shared<std::vector<Array>>(std::move(action));
+        std::make_shared<std::vector<Array>>(action);
     for (int i = 0; i < shared_offset; ++i) {
       int eid = env_id[i];
       envs_[eid]->SetAction(action_batch, i);

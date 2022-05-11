@@ -34,6 +34,7 @@ class _DummyEnvPoolTest(absltest.TestCase):
       "thread_affinity_offset",
       "base_path",
       "seed",
+      "gym_reset_return_info",
       "state_num",
       "action_num",
     ]
@@ -56,14 +57,15 @@ class _DummyEnvPoolTest(absltest.TestCase):
     state_spec = dict(zip(state_keys, state_spec))
     action_spec = dict(zip(action_keys, action_spec))
     # default value of state_num is 10
-    self.assertEqual(state_spec["obs"][1][-1], 10)
+    self.assertEqual(state_spec["obs:raw"][1][-1], 10)
+    self.assertEqual(state_spec["obs:dyn"][1][1][-1], 10)
     # change conf and see if it can successfully change state_spec
     # directly send dict or expose config as dict?
     conf = dict(zip(_DummyEnvSpec._config_keys, conf))
     conf["state_num"] = 666
     env_spec = _DummyEnvSpec(tuple(conf.values()))
     state_spec = dict(zip(state_keys, env_spec._state_spec))
-    self.assertEqual(state_spec["obs"][1][-1], 666)
+    self.assertEqual(state_spec["obs:raw"][1][-1], 666)
 
   def test_envpool(self) -> None:
     conf = dict(

@@ -2,11 +2,13 @@ absl-py
 cloudpickle
 dm-env
 dm-tree
+dm-control
 filelock
 gym
 pygame
 mujoco
 mjc-mwe>=0.0.3
+mujoco_py>=2.1.2.14
 h5py
 jinja2
 numpy

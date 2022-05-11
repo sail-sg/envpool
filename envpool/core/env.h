@@ -25,6 +25,26 @@
 #include "envpool/core/env_spec.h"
 #include "envpool/core/state_buffer_queue.h"
 
+template <typename Dtype>
+struct InitializeHelper {
+  static void Init(Array* arr) {}
+};
+
+template <typename Dtype>
+struct InitializeHelper<Container<Dtype>> {
+  static void Init(Array* arr) {
+    auto* carr = reinterpret_cast<Container<Dtype>*>(arr->Data());
+    for (std::size_t i = 0; i < arr->size; ++i) {
+      new (carr + i) Container<Dtype>(nullptr);
+    }
+  }
+};
+
+template <typename Spec>
+void InplaceInitialize(const Spec& spec, Array* arr) {
+  InitializeHelper<typename Spec::dtype>::Init(arr);
+}
+
 /**
  * Single RL environment abstraction.
  */
@@ -38,7 +58,7 @@ class Env {
 
  private:
   StateBufferQueue* sbq_;
-  int order_, elapsed_step_;
+  int order_, current_step_;
   bool is_single_player_;
   StateBuffer::WritableSlice slice_;
   // for parsing single env action from input action batch
@@ -49,29 +69,28 @@ class Env {
   int env_index_;
 
  public:
-  typedef EnvSpec Spec;
+  using Spec = EnvSpec;
   using State = NamedVector<typename EnvSpec::StateKeys, std::vector<Array>>;
   using Action = NamedVector<typename EnvSpec::ActionKeys, std::vector<Array>>;
 
- public:
   Env(const EnvSpec& spec, int env_id)
       : max_num_players_(spec.config["max_num_players"_]),
         spec_(spec),
         env_id_(env_id),
         seed_(spec.config["seed"_] + env_id),
         gen_(seed_),
-        elapsed_step_(-1),
+        current_step_(-1),
         is_single_player_(max_num_players_ == 1),
-        action_specs_(spec.action_spec.template values<ShapeSpec>()),
+        action_specs_(spec.action_spec.template AllValues<ShapeSpec>()),
         is_player_action_(Transform(action_specs_, [](const ShapeSpec& s) {
-          return (s.shape.size() > 0 && s.shape[0] == -1);
+          return (!s.shape.empty() && s.shape[0] == -1);
         })) {
     slice_.done_write = [] { LOG(INFO) << "Use `Allocate` to write state."; };
   }
 
   void SetAction(std::shared_ptr<std::vector<Array>> action_batch,
                  int env_index) {
-    action_batch_ = action_batch;
+    action_batch_ = std::move(action_batch);
     env_index_ = env_index;
   }
 
@@ -89,7 +108,7 @@ class Env {
       }
     } else {
       std::vector<int> env_player_index;
-      int* player_env_id = static_cast<int*>((*action_batch_)[1].data());
+      int* player_env_id = static_cast<int*>((*action_batch_)[1].Data());
       int player_offset = (*action_batch_)[1].Shape(0);
       for (int i = 0; i < player_offset; ++i) {
         if (player_env_id[i] == env_id_) {
@@ -98,7 +117,8 @@ class Env {
       }
       int player_num = env_player_index.size();
       bool continuous = false;
-      int start = 0, end = 0;
+      int start = 0;
+      int end = 0;
       if (player_num > 0) {
         start = env_player_index[0];
         end = env_player_index[player_num - 1] + 1;
@@ -107,8 +127,7 @@ class Env {
       for (std::size_t i = 0; i < action_size; ++i) {
         if (is_player_action_[i]) {
           if (continuous) {
-            raw_action_.emplace_back(
-                std::move((*action_batch_)[i].Slice(start, end)));
+            raw_action_.emplace_back((*action_batch_)[i].Slice(start, end));
           } else {
             action_specs_[i].shape[0] = player_num;
             Array arr(action_specs_[i]);
@@ -119,7 +138,7 @@ class Env {
             raw_action_.emplace_back(std::move(arr));
           }
         } else {
-          raw_action_.emplace_back(std::move((*action_batch_)[i][env_index_]));
+          raw_action_.emplace_back((*action_batch_)[i][env_index_]);
         }
       }
     }
@@ -147,9 +166,9 @@ class Env {
     sbq_ = sbq;
     order_ = order;
     if (reset) {
-      elapsed_step_ = 0;
+      current_step_ = 0;
     } else {
-      ++elapsed_step_;
+      ++current_step_;
     }
   }
 
@@ -163,11 +182,18 @@ class Env {
     State state(&slice_.arr);
     state["done"_] = IsDone();
     state["info:env_id"_] = env_id_;
-    state["elapsed_step"_] = elapsed_step_;
-    int* player_env_id(static_cast<int*>(state["info:players.env_id"_].data()));
+    state["elapsed_step"_] = current_step_;
+    int* player_env_id(static_cast<int*>(state["info:players.env_id"_].Data()));
     for (int i = 0; i < player_num; ++i) {
       player_env_id[i] = env_id_;
     }
+    // Inplace initialize all container fields
+    int i = 0;
+    std::apply(
+        [&](auto&&... spec) {
+          (InplaceInitialize(spec, &slice_.arr[i++]), ...);
+        },
+        spec_.state_spec.AllValues());
     return state;
   }
 };

@@ -32,19 +32,19 @@ namespace toy_text {
 class BlackjackEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("natural"_.bind(false), "sab"_.bind(true));
+    return MakeDict("natural"_.Bind(false), "sab"_.Bind(true));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs"_.bind(Spec<int>({3}, {0, 31})));
+    return MakeDict("obs"_.Bind(Spec<int>({3}, {0, 31})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<int>({-1}, {0, 1})));
+    return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 1})));
   }
 };
 
-typedef class EnvSpec<BlackjackEnvFns> BlackjackEnvSpec;
+using BlackjackEnvSpec = EnvSpec<BlackjackEnvFns>;
 
 class BlackjackEnv : public Env<BlackjackEnvSpec> {
  protected:
@@ -71,18 +71,17 @@ class BlackjackEnv : public Env<BlackjackEnvSpec> {
     dealer_.push_back(DrawCard());
     dealer_.push_back(DrawCard());
     done_ = false;
-    State state = Allocate();
-    WriteObs(state, 0.0f);
+    WriteState(0.0);
   }
 
   void Step(const Action& action) override {
     int act = action["action"_];
-    float reward = 0.0f;
-    if (act) {  // hit: add a card to players hand and return
+    float reward = 0.0;
+    if (act != 0) {  // hit: add a card to players hand and return
       player_.push_back(DrawCard());
       if (IsBust(player_)) {
         done_ = true;
-        reward = -1.0f;
+        reward = -1.0;
       }
     } else {  // stick: play out the dealers hand, and score
       done_ = true;
@@ -91,20 +90,20 @@ class BlackjackEnv : public Env<BlackjackEnvSpec> {
       }
       int player_score = Score(player_);
       int dealer_score = Score(dealer_);
-      reward = (player_score > dealer_score ? 1.0f : 0.0f) -
-               (player_score < dealer_score ? 1.0f : 0.0f);
+      reward = (player_score > dealer_score ? 1.0F : 0.0F) -
+               (player_score < dealer_score ? 1.0F : 0.0F);
       if (sab_ && IsNatural(player_) && !IsNatural(dealer_)) {
-        reward = 1.0f;
-      } else if (!sab_ && natural_ && IsNatural(player_) && reward == 1.0f) {
-        reward = 1.5f;
+        reward = 1.0;
+      } else if (!sab_ && natural_ && IsNatural(player_) && reward == 1.0) {
+        reward = 1.5;
       }
     }
-    State state = Allocate();
-    WriteObs(state, reward);
+    WriteState(reward);
   }
 
  private:
-  void WriteObs(State& state, float reward) {  // NOLINT
+  void WriteState(float reward) {
+    State state = Allocate();
     state["obs"_][0] = SumHand(player_);
     state["obs"_][1] = dealer_[0];
     state["obs"_][2] = UsableAce(player_);
@@ -113,7 +112,7 @@ class BlackjackEnv : public Env<BlackjackEnvSpec> {
 
   int DrawCard() { return std::min(10, dist_(gen_)); }
 
-  int UsableAce(const std::vector<int>& hand) {
+  static int UsableAce(const std::vector<int>& hand) {
     for (auto i : hand) {
       if (i == 1) {
         return 1;
@@ -122,31 +121,33 @@ class BlackjackEnv : public Env<BlackjackEnvSpec> {
     return 0;
   }
 
-  int SumHand(const std::vector<int>& hand) {
+  static int SumHand(const std::vector<int>& hand) {
     int sum = 0;
     for (auto i : hand) {
       sum += i;
     }
-    if (UsableAce(hand) && sum + 10 <= 21) {
+    if (UsableAce(hand) != 0 && sum + 10 <= 21) {
       return sum + 10;
     }
     return sum;
   }
 
-  bool IsBust(const std::vector<int>& hand) { return SumHand(hand) > 21; }
+  static bool IsBust(const std::vector<int>& hand) {
+    return SumHand(hand) > 21;
+  }
 
-  int Score(const std::vector<int>& hand) {
+  static int Score(const std::vector<int>& hand) {
     int result = SumHand(hand);
     return result > 21 ? 0 : result;
   }
 
-  bool IsNatural(const std::vector<int>& hand) {
+  static bool IsNatural(const std::vector<int>& hand) {
     return hand.size() == 2 &&
            ((hand[0] == 1 && hand[1] == 10) || (hand[0] == 10 && hand[1] == 1));
   }
 };
 
-typedef AsyncEnvPool<BlackjackEnv> BlackjackEnvPool;
+using BlackjackEnvPool = AsyncEnvPool<BlackjackEnv>;
 
 }  // namespace toy_text
 

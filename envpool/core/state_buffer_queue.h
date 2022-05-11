@@ -54,40 +54,38 @@ class StateBufferQueue {
         max_num_players_(max_num_players),
         is_player_state_(Transform(specs,
                                    [](const ShapeSpec& s) {
-                                     return (s.shape.size() > 0 &&
+                                     return (!s.shape.empty() &&
                                              s.shape[0] == -1);
                                    })),
         specs_(Transform(specs,
                          [=](ShapeSpec s) {
-                           if (s.shape.size() > 0 && s.shape[0] == -1) {
+                           if (!s.shape.empty() && s.shape[0] == -1) {
                              // If first dim is num_players
                              s.shape[0] = batch_ * max_num_players_;
                              return s;
-                           } else {
-                             return s.Batch(batch_);
                            }
+                           return s.Batch(batch_);
                          })),
-        queue_size_(
-            (num_envs / batch_env + (std::size_t)2) *
-            (std::size_t)2),  // two times enough buffer for all the envs
+        // two times enough buffer for all the envs
+        queue_size_((num_envs / batch_env + 2) * 2),
         queue_(queue_size_),  // circular buffer
         alloc_count_(0),
         done_ptr_(0),
-        stock_buffer_((num_envs / batch_env + (std::size_t)2) * (std::size_t)2),
+        stock_buffer_((num_envs / batch_env + 2) * 2),
         quit_(false) {
     // Only initialize first half of the buffer
     // At the consumption of each block, the first consumping thread
     // will allocate a new state buffer and append to the tail.
     // alloc_tail_ = num_envs / batch_env + 2;
-    for (std::size_t i = 0; i < queue_.size(); ++i) {
-      queue_[i].reset(
-          new StateBuffer(batch_, max_num_players_, specs_, is_player_state_));
+    for (auto& q : queue_) {
+      q = std::make_unique<StateBuffer>(batch_, max_num_players_, specs_,
+                                        is_player_state_);
     }
-    int processor_count = std::thread::hardware_concurrency();
-    // hardcode here
-    int create_buffer_thread_num = std::max(1, processor_count / 64);
-    for (int i = 0; i < create_buffer_thread_num; ++i) {
-      create_buffer_thread_.emplace_back(std::move(std::thread([&]() {
+    std::size_t processor_count = std::thread::hardware_concurrency();
+    // hardcode here :(
+    std::size_t create_buffer_thread_num = std::max(1UL, processor_count / 64);
+    for (std::size_t i = 0; i < create_buffer_thread_num; ++i) {
+      create_buffer_thread_.emplace_back(std::thread([&]() {
         while (true) {
           stock_buffer_.Put(std::make_unique<StateBuffer>(
               batch_, max_num_players_, specs_, is_player_state_));
@@ -95,11 +93,10 @@ class StateBufferQueue {
             break;
           }
         }
-      })));
+      }));
     }
   }
 
- public:
   ~StateBufferQueue() {
     // stop the thread
     quit_ = true;

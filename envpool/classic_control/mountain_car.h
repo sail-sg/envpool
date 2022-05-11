@@ -29,21 +29,21 @@ namespace classic_control {
 class MountainCarEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.bind(200),
-                    "reward_threshold"_.bind(-110.0));
+    return MakeDict("max_episode_steps"_.Bind(200),
+                    "reward_threshold"_.Bind(-110.0));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict(
-        "obs"_.bind(Spec<float>({2}, {{-1.2, -0.07}, {0.6, 0.07}})));
+        "obs"_.Bind(Spec<float>({2}, {{-1.2, -0.07}, {0.6, 0.07}})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<int>({-1}, {0, 2})));
+    return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 2})));
   }
 };
 
-typedef class EnvSpec<MountainCarEnvFns> MountainCarEnvSpec;
+using MountainCarEnvSpec = EnvSpec<MountainCarEnvFns>;
 
 class MountainCarEnv : public Env<MountainCarEnvSpec> {
  protected:
@@ -71,11 +71,10 @@ class MountainCarEnv : public Env<MountainCarEnvSpec> {
 
   void Reset() override {
     pos_ = dist_(gen_);
-    vel_ = 0.0f;
+    vel_ = 0.0;
     done_ = false;
     elapsed_step_ = 0;
-    State state = Allocate();
-    WriteObs(state, 0.0f);
+    WriteState(0.0);
   }
 
   void Step(const Action& action) override {
@@ -99,19 +98,19 @@ class MountainCarEnv : public Env<MountainCarEnvSpec> {
     if (pos_ >= kGoalPos && vel_ >= kGoalVel) {
       done_ = true;
     }
-    State state = Allocate();
-    WriteObs(state, -1.0f);
+    WriteState(-1.0);
   }
 
  private:
-  void WriteObs(State& state, float reward) {  // NOLINT
+  void WriteState(float reward) {
+    State state = Allocate();
     state["obs"_][0] = static_cast<float>(pos_);
     state["obs"_][1] = static_cast<float>(vel_);
     state["reward"_] = reward;
   }
 };
 
-typedef AsyncEnvPool<MountainCarEnv> MountainCarEnvPool;
+using MountainCarEnvPool = AsyncEnvPool<MountainCarEnv>;
 
 }  // namespace classic_control
 

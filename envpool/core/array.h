@@ -37,26 +37,25 @@ class Array {
   std::vector<std::size_t> shape_;
   std::shared_ptr<char> ptr_;
 
- protected:
   template <class Shape, class Deleter>
-  Array(char* ptr, Shape&& shape, std::size_t element_size, Deleter&& deleter)
-      : size(prod(shape.data(), shape.size())),
+  Array(char* ptr, Shape&& shape, std::size_t element_size,  // NOLINT
+        Deleter&& deleter)
+      : size(Prod(shape.data(), shape.size())),
         ndim(shape.size()),
         element_size(element_size),
         shape_(std::forward<Shape>(shape)),
         ptr_(ptr, std::forward<Deleter>(deleter)) {}
 
   template <class Shape>
-  Array(const std::shared_ptr<char>& ptr, Shape&& shape,
-        std::size_t element_size)
-      : size(prod(shape.data(), shape.size())),
+  Array(std::shared_ptr<char> ptr, Shape&& shape, std::size_t element_size)
+      : size(Prod(shape.data(), shape.size())),
         ndim(shape.size()),
         element_size(element_size),
         shape_(std::forward<Shape>(shape)),
-        ptr_(ptr) {}
+        ptr_(std::move(ptr)) {}
 
  public:
-  Array() {}
+  Array() = default;
 
   /**
    * Constructor an `Array` of shape defined by `spec`, with `data` as pointer
@@ -64,21 +63,21 @@ class Array {
    * the memory.
    */
   template <class Deleter>
-  Array(const ShapeSpec& spec, char* data, Deleter&& deleter)
+  Array(const ShapeSpec& spec, char* data, Deleter&& deleter)  // NOLINT
       : Array(data, spec.Shape(), spec.element_size,
               std::forward<Deleter>(deleter)) {}
 
   Array(const ShapeSpec& spec, char* data)
-      : Array(data, spec.Shape(), spec.element_size, [](char* p) {}) {}
+      : Array(data, spec.Shape(), spec.element_size, [](char* /*unused*/) {}) {}
 
   /**
    * Constructor an `Array` of shape defined by `spec`. This constructor
    * allocates and owns the memory.
    */
-  explicit Array(const ShapeSpec& spec) : Array(spec, nullptr, [](char* p) {}) {
-    ptr_.reset(new char[size * element_size](), [](char* p) {
-      if (p) delete[] p;
-    });
+  explicit Array(const ShapeSpec& spec)
+      : Array(spec, nullptr, [](char* /*unused*/) {}) {
+    ptr_.reset(new char[size * element_size](),
+               [](const char* p) { delete[] p; });
   }
 
   /**
@@ -96,7 +95,7 @@ class Array {
     return Array(
         ptr_.get() + offset * element_size,
         std::vector<std::size_t>(shape_.begin() + num_index, shape_.end()),
-        element_size, [](char*) {});
+        element_size, [](char* /*unused*/) {});
   }
 
   /**
@@ -107,7 +106,7 @@ class Array {
   /**
    * Take a slice at the first axis of the Array.
    */
-  Array Slice(std::size_t start, std::size_t end) const {
+  [[nodiscard]] Array Slice(std::size_t start, std::size_t end) const {
     DCHECK_GT(ndim, (std::size_t)0);
     CHECK_GE(shape_[0], end);
     CHECK_GE(end, start);
@@ -143,6 +142,16 @@ class Array {
   }
 
   /**
+   * Fills this array with a scalar value of type T.
+   */
+  template <typename T>
+  void Fill(const T& value) const {
+    DCHECK_EQ(element_size, sizeof(T)) << " element size doesn't match";
+    auto* data = reinterpret_cast<T*>(ptr_.get());
+    std::fill(data, data + size, value);
+  }
+
+  /**
    * Copy the memory starting at `raw.first`, to `raw.first + raw.second` to the
    * memory of this Array.
    */
@@ -158,7 +167,19 @@ class Array {
    * scalar shape.
    */
   template <typename T>
-  operator T() const {
+  operator const T&() const {  // NOLINT
+    DCHECK_EQ(element_size, sizeof(T)) << " there could be a type mismatch";
+    DCHECK_EQ(size, (std::size_t)1)
+        << " Array with a shape can't be used as a scalar";
+    return *reinterpret_cast<T*>(ptr_.get());
+  }
+
+  /**
+   * Cast the Array to a scalar value of type `T`. This Array needs to have a
+   * scalar shape.
+   */
+  template <typename T>
+  operator T&() {  // NOLINT
     DCHECK_EQ(element_size, sizeof(T)) << " there could be a type mismatch";
     DCHECK_EQ(size, (std::size_t)1)
         << " Array with a shape can't be used as a scalar";
@@ -168,23 +189,27 @@ class Array {
   /**
    * Size of axis `dim`.
    */
-  inline std::size_t Shape(std::size_t dim) const { return shape_[dim]; }
+  [[nodiscard]] inline std::size_t Shape(std::size_t dim) const {
+    return shape_[dim];
+  }
 
   /**
    * Shape
    */
-  inline const std::vector<std::size_t>& Shape() const { return shape_; }
+  [[nodiscard]] inline const std::vector<std::size_t>& Shape() const {
+    return shape_;
+  }
 
   /**
    * Pointer to the raw memory.
    */
-  inline void* data() const { return ptr_.get(); }
+  [[nodiscard]] inline void* Data() const { return ptr_.get(); }
 
   /**
    * Truncate the Array. Return a new Array that shares the same memory
    * location but with a truncated shape.
    */
-  Array Truncate(std::size_t end) const {
+  [[nodiscard]] Array Truncate(std::size_t end) const {
     auto new_shape = std::vector<std::size_t>(shape_);
     new_shape[0] = end;
     Array ret(ptr_, std::move(new_shape), element_size);
@@ -192,7 +217,13 @@ class Array {
   }
 
   void Zero() const { std::memset(ptr_.get(), 0, size * element_size); }
-  std::shared_ptr<char> SharedPtr() const { return ptr_; }
+  [[nodiscard]] std::shared_ptr<char> SharedPtr() const { return ptr_; }
+};
+
+template <typename Dtype>
+class TArray : public Array {
+ public:
+  explicit TArray(const Spec<Dtype>& spec) : Array(spec) {}
 };
 
 #endif  // ENVPOOL_CORE_ARRAY_H_

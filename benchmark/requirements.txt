@@ -1,0 +1,8 @@
+gym[accept-rom-license]==0.23.1
+ale-py==0.7.5
+mujoco==2.1.5
+envpool==0.5.3.post1
+sample-factory==1.123.0
+mujoco_py==2.1.2.14
+tqdm
+opencv-python-headless

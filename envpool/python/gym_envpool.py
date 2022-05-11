@@ -54,18 +54,20 @@ class GymEnvPoolMeta(ABCMeta):
     state_structure, state_idx = gym_structure(state_keys)
 
     def _to_gym(
-      self: Any, state_values: List[np.ndarray], reset: bool
-    ) -> Union[Any, Tuple[Any, np.ndarray, np.ndarray, Any]]:
+      self: Any, state_values: List[np.ndarray], reset: bool, return_info: bool
+    ) -> Union[Any, Tuple[Any, Any], Tuple[Any, np.ndarray, np.ndarray, Any]]:
       state = tree.unflatten_as(
         state_structure, [state_values[i] for i in state_idx]
       )
-      if reset:
+      if reset and not return_info:
         return state["obs"]
       done = state["done"]
       elapse = state["elapsed_step"]
       max_episode_steps = self.config.get("max_episode_steps", np.inf)
       trunc = (done & (elapse >= max_episode_steps))
       state["info"]["TimeLimit.truncated"] = trunc
+      if reset:
+        return state["obs"], state["info"]
       return state["obs"], state["reward"], state["done"], state["info"]
 
     attrs["_to"] = _to_gym

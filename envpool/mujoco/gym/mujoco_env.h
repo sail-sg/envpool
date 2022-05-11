@@ -14,35 +14,50 @@
  * limitations under the License.
  */
 
-#ifndef ENVPOOL_MUJOCO_MUJOCO_ENV_H_
-#define ENVPOOL_MUJOCO_MUJOCO_ENV_H_
+#ifndef ENVPOOL_MUJOCO_GYM_MUJOCO_ENV_H_
+#define ENVPOOL_MUJOCO_GYM_MUJOCO_ENV_H_
 
 #include <mjxmacro.h>
 #include <mujoco.h>
 
 #include <string>
 
+namespace mujoco_gym {
+
 class MujocoEnv {
  private:
-  char error_[1000];
+  std::array<char, 1000> error_;
 
  protected:
   mjModel* model_;
   mjData* data_;
   mjtNum *init_qpos_, *init_qvel_;
+#ifdef ENVPOOL_TEST
+  mjtNum *qpos0_, *qvel0_;  // for align check
+#endif
   int frame_skip_;
   bool post_constraint_;
+  int max_episode_steps_, elapsed_step_;
+  bool done_;
 
  public:
-  MujocoEnv(std::string xml, int frame_skip, bool post_constraint)
-      : model_(mj_loadXML(xml.c_str(), 0, error_, 1000)),
+  MujocoEnv(const std::string& xml, int frame_skip, bool post_constraint,
+            int max_episode_steps)
+      : model_(mj_loadXML(xml.c_str(), nullptr, error_.begin(), 1000)),
         data_(mj_makeData(model_)),
         init_qpos_(new mjtNum[model_->nq]),
         init_qvel_(new mjtNum[model_->nv]),
+#ifdef ENVPOOL_TEST
+        qpos0_(new mjtNum[model_->nq]),
+        qvel0_(new mjtNum[model_->nv]),
+#endif
         frame_skip_(frame_skip),
-        post_constraint_(post_constraint) {
-    memcpy(init_qpos_, data_->qpos, sizeof(mjtNum) * model_->nq);
-    memcpy(init_qvel_, data_->qvel, sizeof(mjtNum) * model_->nv);
+        post_constraint_(post_constraint),
+        max_episode_steps_(max_episode_steps),
+        elapsed_step_(max_episode_steps + 1),
+        done_(true) {
+    std::memcpy(init_qpos_, data_->qpos, sizeof(mjtNum) * model_->nq);
+    std::memcpy(init_qvel_, data_->qvel, sizeof(mjtNum) * model_->nv);
   }
 
   ~MujocoEnv() {
@@ -50,6 +65,10 @@ class MujocoEnv {
     mj_deleteModel(model_);
     delete[] init_qpos_;
     delete[] init_qvel_;
+#ifdef ENVPOOL_TEST
+    delete[] qpos0_;
+    delete[] qvel0_;
+#endif
   }
 
   void MujocoReset() {
@@ -62,7 +81,7 @@ class MujocoEnv {
     throw std::runtime_error("reset_model not implemented");
   }
 
-  void MujocoStep(mjtNum* action) {
+  void MujocoStep(const mjtNum* action) {
     for (int i = 0; i < model_->nu; ++i) {
       data_->ctrl[i] = action[i];
     }
@@ -75,4 +94,6 @@ class MujocoEnv {
   }
 };
 
-#endif  // ENVPOOL_MUJOCO_MUJOCO_ENV_H_
+}  // namespace mujoco_gym
+
+#endif  // ENVPOOL_MUJOCO_GYM_MUJOCO_ENV_H_

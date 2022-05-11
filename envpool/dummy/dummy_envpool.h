@@ -15,6 +15,8 @@
 #ifndef ENVPOOL_DUMMY_DUMMY_ENVPOOL_H_
 #define ENVPOOL_DUMMY_DUMMY_ENVPOOL_H_
 
+#include <memory>
+
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
 
@@ -43,7 +45,7 @@ class DummyEnvFns {
    *
    */
   static decltype(auto) DefaultConfig() {
-    return MakeDict("state_num"_.bind(10), "action_num"_.bind(6));
+    return MakeDict("state_num"_.Bind(10), "action_num"_.Bind(6));
   }
 
   /**
@@ -73,9 +75,11 @@ class DummyEnvFns {
    */
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs"_.bind(Spec<int>({-1, conf["state_num"_]})),
-                    "info:players.done"_.bind(Spec<bool>({-1})),
-                    "info:players.id"_.bind(
+    return MakeDict("obs:raw"_.Bind(Spec<int>({-1, conf["state_num"_]})),
+                    "obs:dyn"_.Bind(Spec<Container<int>>(
+                        {-1}, Spec<int>({-1, conf["state_num"_]}))),
+                    "info:players.done"_.Bind(Spec<bool>({-1})),
+                    "info:players.id"_.Bind(
                         Spec<int>({-1}, {0, conf["max_num_players"_]})));
   }
 
@@ -93,15 +97,15 @@ class DummyEnvFns {
    */
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("players.action"_.bind(Spec<int>({-1})),
-                    "players.id"_.bind(Spec<int>({-1})));
+    return MakeDict("players.action"_.Bind(Spec<int>({-1})),
+                    "players.id"_.Bind(Spec<int>({-1})));
   }
 };
 
 /**
  * Create an DummyEnvSpec by passing the above functions to EnvSpec.
  */
-typedef class EnvSpec<DummyEnvFns> DummyEnvSpec;
+using DummyEnvSpec = EnvSpec<DummyEnvFns>;
 
 /**
  * The main part of the single env.
@@ -143,9 +147,19 @@ class DummyEnv : public Env<DummyEnvSpec> {
     for (int i = 0; i < num_players; ++i) {
       state["info:players.id"_][i] = i;
       state["info:players.done"_][i] = IsDone();
-      state["obs"_](i, 0) = state_;
-      state["obs"_](i, 1) = 0;
+      state["obs:raw"_](i, 0) = state_;
+      state["obs:raw"_](i, 1) = 0;
       state["reward"_][i] = -i;
+      // dynamic array
+      Container<int>& dyn = state["obs:dyn"_][i];
+      // new spec
+      auto dyn_spec = ::Spec<int>({env_id_ + 1, spec_.config["state_num"_]});
+      // use this spec to create an array
+      auto* array = new TArray<int>(dyn_spec);
+      // perform some normal array writing
+      array->Fill(env_id_);
+      // finally pass it to dynamic array
+      dyn.reset(array);
     }
   }
 
@@ -177,9 +191,13 @@ class DummyEnv : public Env<DummyEnvSpec> {
     for (int i = 0; i < num_players; ++i) {
       state["info:players.id"_][i] = i;
       state["info:players.done"_][i] = IsDone();
-      state["obs"_](i, 0) = state_;
-      state["obs"_](i, 1) = action_num;
+      state["obs:raw"_](i, 0) = state_;
+      state["obs:raw"_](i, 1) = action_num;
       state["reward"_][i] = -i;
+      Container<int>& dyn = state["obs:dyn"_][i];
+      auto dyn_spec = ::Spec<int>({env_id_ + 1, spec_.config["state_num"_]});
+      dyn = std::make_unique<TArray<int>>(dyn_spec);
+      dyn->Fill(env_id_);
     }
   }
 
@@ -193,7 +211,7 @@ class DummyEnv : public Env<DummyEnvSpec> {
  * Pass the DummyEnv we defined above as an template parameter to the
  * AsyncEnvPool template, it gives us a parallelized version of the single env.
  */
-typedef AsyncEnvPool<DummyEnv> DummyEnvPool;
+using DummyEnvPool = AsyncEnvPool<DummyEnv>;
 
 }  // namespace dummy
 

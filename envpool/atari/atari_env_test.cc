@@ -38,9 +38,9 @@ TEST(AtariEnvTest, GrayScaleMaxPoolOrder) {
   Array col0(Spec<uint8_t>({n, n, 3}));
   Array col1(Spec<uint8_t>({n, n, 3}));
   Array result(Spec<uint8_t>({n, n, 1}));
-  auto* col0_ptr = static_cast<uint8_t*>(col0.data());
-  auto* col1_ptr = static_cast<uint8_t*>(col1.data());
-  auto* result_ptr = static_cast<uint8_t*>(result.data());
+  auto* col0_ptr = static_cast<uint8_t*>(col0.Data());
+  auto* col1_ptr = static_cast<uint8_t*>(col1.Data());
+  auto* result_ptr = static_cast<uint8_t*>(result.Data());
   ale::ALEInterface env;
   env.loadROM(rom_path);
   // color mapping from pixel_t to RGB
@@ -54,7 +54,7 @@ TEST(AtariEnvTest, GrayScaleMaxPoolOrder) {
   }
   // gray scale
   GrayScale(col0, &result);
-  memcpy(arr.begin(), result_ptr, sizeof arr);
+  std::memcpy(arr.begin(), result_ptr, sizeof arr);
   // ref
   env.theOSystem->colourPalette().applyPaletteGrayscale(col0_ptr, ptr0.begin(),
                                                         n * n);
@@ -88,7 +88,7 @@ TEST(AtariEnvTest, GrayScaleMaxPoolOrder) {
 
 TEST(AtariEnvTest, Seed) {
   std::srand(std::time(nullptr));
-  auto config = atari::AtariEnvSpec::default_config;
+  auto config = atari::AtariEnvSpec::DEFAULT_CONFIG;
   std::size_t batch = 4;
   config["num_envs"_] = batch;
   config["batch_size"_] = batch;
@@ -114,8 +114,8 @@ TEST(AtariEnvTest, Seed) {
               std::vector<std::size_t>({batch, 4, 84, 84}));
     EXPECT_EQ(state1["obs"_].Shape(),
               std::vector<std::size_t>({batch, 4, 84, 84}));
-    uint8_t* data0 = static_cast<uint8_t*>(state0["obs"_].data());
-    uint8_t* data1 = static_cast<uint8_t*>(state1["obs"_].data());
+    uint8_t* data0 = static_cast<uint8_t*>(state0["obs"_].Data());
+    uint8_t* data1 = static_cast<uint8_t*>(state1["obs"_].Data());
     int index = 0;
     for (std::size_t j = 0; j < batch * 4; ++j) {
       // ensure there's no black screen in each frame
@@ -138,7 +138,7 @@ TEST(AtariEnvTest, Seed) {
 }
 
 TEST(AtariEnvTest, MaxEpisodeSteps) {
-  auto config = atari::AtariEnvSpec::default_config;
+  auto config = atari::AtariEnvSpec::DEFAULT_CONFIG;
   int batch = 4;
   int max_episode_steps = 10;
   config["num_envs"_] = batch;
@@ -181,7 +181,7 @@ TEST(AtariEnvTest, EpisodicLife) {
   std::srand(std::time(nullptr));
   int batch = 4;
   int total_iter = 3000;
-  auto config = atari::AtariEnvSpec::default_config;
+  auto config = atari::AtariEnvSpec::DEFAULT_CONFIG;
   config["num_envs"_] = batch;
   config["batch_size"_] = batch;
   config["episodic_life"_] = true;
@@ -262,7 +262,7 @@ TEST(AtariEnvTest, ZeroDiscountOnLifeLoss) {
   std::srand(std::time(nullptr));
   int batch = 4;
   int total_iter = 3000;
-  auto config = atari::AtariEnvSpec::default_config;
+  auto config = atari::AtariEnvSpec::DEFAULT_CONFIG;
   config["num_envs"_] = batch;
   config["batch_size"_] = batch;
   config["task"_] = "breakout";
@@ -344,7 +344,7 @@ TEST(AtariEnvSpeedTest, Benchmark) {
   // int batch = 252;
   // int num_threads = 252;
   // int total_iter = 50000;
-  auto config = atari::AtariEnvSpec::default_config;
+  auto config = atari::AtariEnvSpec::DEFAULT_CONFIG;
   config["num_envs"_] = num_envs;
   config["batch_size"_] = batch;
   config["num_threads"_] = num_threads;

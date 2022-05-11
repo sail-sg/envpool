@@ -81,25 +81,25 @@ state space, and action space. Create a class ``CartPoleEnvFns``:
     class CartPoleEnvFns {
      public:
       static decltype(auto) DefaultConfig() {
-        return MakeDict("max_episode_steps"_.bind(200),
-                        "reward_threshold"_.bind(195.0));
+        return MakeDict("max_episode_steps"_.Bind(200),
+                        "reward_threshold"_.Bind(195.0));
       }
       template <typename Config>
       static decltype(auto) StateSpec(const Config& conf) {
         float fmax = std::numeric_limits<float>::max();
-        return MakeDict("obs"_.bind(
+        return MakeDict("obs"_.Bind(
             Spec<float>({4}, {{-4.8, -fmax, -M_PI / 7.5, -fmax},
                               {4.8, fmax, M_PI / 7.5, fmax}})));
       }
       template <typename Config>
       static decltype(auto) ActionSpec(const Config& conf) {
         // the last argument in Spec is for the range definition
-        return MakeDict("action"_.bind(Spec<int>({-1}, {0, 1})));
+        return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 1})));
       }
     };
 
     // this line will concat common config and common state/action spec
-    typedef class EnvSpec<CartPoleEnvFns> CartPoleEnvSpec;
+    using CartPoleEnvSpec = EnvSpec<CartPoleEnvFns>;
 
 - ``DefaultConfig``: the default config to create cartpole environment;
 - ``StateSpec``: the state space (including observation and info) definition;
@@ -136,7 +136,7 @@ available to see on the python side:
 
     .. code-block:: c++
 
-        auto config = MakeDict("path"_.bind("init_path"));
+        auto config = MakeDict("path"_.Bind("init_path"));
 
     The type of "path" will be a ``const char *`` type instead of
     ``std::string``, which sometimes causes ``config["path"_]`` to be a
@@ -144,7 +144,7 @@ available to see on the python side:
 
     .. code-block:: c++
 
-        auto config = MakeDict("path"_.bind(std::string("init_path")));
+        auto config = MakeDict("path"_.Bind(std::string("init_path")));
 
 .. note ::
 
@@ -156,9 +156,9 @@ available to see on the python side:
 
         template <typename Config>
         static decltype(auto) ActionSpec(const Config& conf) {
-          return MakeDict("action"_.bind(Spec<int>({-1}, {0, 5})));
+          return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 5})));
           // or remove -1, no difference in single-player env
-          // return MakeDict("action"_.bind(Spec<int>({}, {0, 5})));
+          // return MakeDict("action"_.Bind(Spec<int>({}, {0, 5})));
         }
 
     For continuous action space, change the type of ``Spec`` to float or
@@ -169,9 +169,9 @@ available to see on the python side:
 
         template <typename Config>
         static decltype(auto) ActionSpec(const Config& conf) {
-          return MakeDict("action"_.bind(Spec<float>({-1, 4}, {-2.0f, 2.0f})));
+          return MakeDict("action"_.Bind(Spec<float>({-1, 4}, {-2.0, 2.0})));
           // or remove -1, no difference in single-player env
-          // return MakeDict("action"_.bind(Spec<float>({4}, {-2.0f, 2.0f})));
+          // return MakeDict("action"_.Bind(Spec<float>({4}, {-2.0, 2.0})));
         }
 
 .. note ::
@@ -217,10 +217,10 @@ available to see on the python side:
         template <typename Config>
         static decltype(auto) StateSpec(const Config& conf) {
           return MakeDict(
-            "obs:observation"_.bind(Spec<float>({10})),
-            "obs:achieved_goal"_.bind(Spec<float>({3})),
-            "obs:desired_goal"_.bind(Spec<float>({3})),
-            "info:is_success"_.bind(Spec<float>({})));
+            "obs:observation"_.Bind(Spec<float>({10})),
+            "obs:achieved_goal"_.Bind(Spec<float>({3})),
+            "obs:desired_goal"_.Bind(Spec<float>({3})),
+            "info:is_success"_.Bind(Spec<float>({})));
         }
 
     The keys start with ``obs:`` will be parsed to obs dict, and similarly
@@ -231,7 +231,7 @@ available to see on the python side:
 
     .. code-block:: c++
 
-        return MakeDict("obs:obs_a.obs_b"_.bind(Spec<int>({})));
+        return MakeDict("obs:obs_a.obs_b"_.Bind(Spec<int>({})));
 
     It is the same as ActionSpec. The only difference is: there's no ``obs:``
     and ``info:`` in action.
@@ -240,6 +240,15 @@ available to see on the python side:
 
     In dm_env, keys in Spec that start with either ``obs:`` or ``info:`` will
     be merged under ``timestep.observation``.
+
+.. note ::
+
+    To create a dynamic shape array (which will be converted into a numpy
+    array with object type), you can use ``Spec<Container<...>>``, e.g.:
+
+    .. code-block:: c++
+
+        "info:id_list"_.Bind(Spec<int>({-1})),
 
 
 CartPoleEnv
@@ -302,6 +311,19 @@ read/write:
       }
     }
 
+If one of the array for state is dynamic-shaped:
+
+.. code-block:: c++
+
+    Container<int>& dyn = state["obs:dyn"_][i];
+    // new spec
+    auto dyn_spec = ::Spec<int>({env_id_ + 1, spec_.config["state_num"_]});
+    // use this spec to create an array
+    auto* array = new TArray<int>(dyn_spec);
+    // perform some normal array writing
+    // finally pass it to dynamic array
+    dyn.reset(array);
+
 
 Allocate State in Reset and Step
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -340,11 +362,12 @@ interface.
         template <typename Config>
         static decltype(auto) StateSpec(const Config& conf) {
           return MakeDict(
-            "obs:players.obs"_.bind(Spec<uint8_t>({-1, 4, 84, 84})),
-            "obs:players.location"_.bind(Spec<uint8_t>({-1, 2})),
-            "info:players.health"_.bind(Spec<int>({-1})),
-            "info:player_num"_.bind(Spec<int>({})),
-            "info:bla"_.bind(Spec<float>({2, 3, 3}))
+            "obs:players.obs"_.Bind(Spec<uint8_t>({-1, 4, 84, 84})),
+            "obs:players.location"_.Bind(Spec<uint8_t>({-1, 2})),
+            "info:players.health"_.Bind(Spec<int>({-1})),
+            "info:player_num"_.Bind(Spec<int>({})),
+            "info:bla"_.Bind(Spec<float>({2, 3, 3})),
+            "info:list"_.Bind(Spec<Container<float>>({-1}))
           );
         }
 
@@ -357,6 +380,7 @@ interface.
         state["info:players.health"];   // shape: (10,)
         state["info:player_num"];       // shape: (), only one element
         state["info:bla"];              // shape: (2, 3, 3)
+        state["info:list"];             // shape: (10,) with dtype=object
 
 .. danger ::
 
@@ -374,7 +398,7 @@ After creating ``CartPoleEnv``, just one more line we can get
 
 .. code-block:: c++
 
-    typedef AsyncEnvPool<CartPoleEnv> CartPoleEnvPool;
+    using CartPoleEnvPool = AsyncEnvPool<CartPoleEnv>;
 
 
 Miscellaneous
@@ -388,6 +412,17 @@ Miscellaneous
     thread-safe deterministic pseudo-random numbers. ``std::mt19937`` generator
     has already been defined as ``gen_`` (`link
     <https://github.com/sail-sg/envpool/blob/v0.4.0/envpool/core/env.h#L37>`_).
+
+.. note ::
+
+    ``ENVPOOL_TEST`` is a test-time macro. If you want a piece of C++ code only
+    available during unit test:
+
+    .. code-block:: c++
+
+        #ifdef ENVPOOL_TEST
+            fprintf(stderr, "here");
+        #endif
 
 
 Generate Dynamic Linked .so File and Instantiate in Python

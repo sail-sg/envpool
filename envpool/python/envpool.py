@@ -95,7 +95,7 @@ class EnvPoolMixin(ABC):
     """Set the seed for all environments (abandoned)."""
     warnings.warn(
       "The `seed` function in envpool is abandoned. "
-      "You can set seed by envpool.make(\"..., seed=seed\") instead."
+      "You can set seed by envpool.make(..., seed=seed) instead."
     )
 
   def send(
@@ -108,10 +108,14 @@ class EnvPoolMixin(ABC):
     self._check_action(action)
     self._send(action)
 
-  def recv(self: EnvPool, reset: bool = False) -> Union[TimeStep, Tuple]:
+  def recv(
+    self: EnvPool,
+    reset: bool = False,
+    return_info: bool = True,
+  ) -> Union[TimeStep, Tuple]:
     """Recv a batch state from EnvPool."""
     state_list = self._recv()
-    return self._to(state_list, reset)
+    return self._to(state_list, reset, return_info)
 
   def async_reset(self: EnvPool) -> None:
     """Follows the async semantics, reset the envs in env_ids."""
@@ -124,10 +128,12 @@ class EnvPoolMixin(ABC):
   ) -> Union[TimeStep, Tuple]:
     """Perform one step with multiple environments in EnvPool."""
     self.send(action, env_id)
-    return self.recv(reset=False)
+    return self.recv(reset=False, return_info=True)
 
-  def reset(self: EnvPool,
-            env_id: Optional[np.ndarray] = None) -> Union[TimeStep, Tuple]:
+  def reset(
+    self: EnvPool,
+    env_id: Optional[np.ndarray] = None,
+  ) -> Union[TimeStep, Tuple]:
     """Reset envs in env_id.
 
     This behavior is not defined in async mode.
@@ -135,7 +141,9 @@ class EnvPoolMixin(ABC):
     if env_id is None:
       env_id = self.all_env_ids
     self._reset(env_id)
-    return self.recv(reset=True)
+    return self.recv(
+      reset=True, return_info=self.config["gym_reset_return_info"]
+    )
 
   @property
   def config(self: EnvPool) -> Dict[str, Any]:

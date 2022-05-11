@@ -30,23 +30,23 @@ namespace classic_control {
 class CartPoleEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.bind(200),
-                    "reward_threshold"_.bind(195.0));
+    return MakeDict("max_episode_steps"_.Bind(200),
+                    "reward_threshold"_.Bind(195.0));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     float fmax = std::numeric_limits<float>::max();
     return MakeDict(
-        "obs"_.bind(Spec<float>({4}, {{-4.8, -fmax, -M_PI / 7.5, -fmax},
+        "obs"_.Bind(Spec<float>({4}, {{-4.8, -fmax, -M_PI / 7.5, -fmax},
                                       {4.8, fmax, M_PI / 7.5, fmax}})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<int>({-1}, {0, 1})));
+    return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 1})));
   }
 };
 
-typedef class EnvSpec<CartPoleEnvFns> CartPoleEnvSpec;
+using CartPoleEnvSpec = EnvSpec<CartPoleEnvFns>;
 
 class CartPoleEnv : public Env<CartPoleEnvSpec> {
  protected:
@@ -84,8 +84,7 @@ class CartPoleEnv : public Env<CartPoleEnvSpec> {
     theta_dot_ = dist_(gen_);
     done_ = false;
     elapsed_step_ = 0;
-    State state = Allocate();
-    WriteObs(state, 0.0f);
+    WriteState(0.0);
   }
 
   void Step(const Action& action) override {
@@ -107,15 +106,15 @@ class CartPoleEnv : public Env<CartPoleEnvSpec> {
     theta_ += kTau * theta_dot_;
     theta_dot_ += kTau * theta_acc;
     if (x_ < -kXThreshold || x_ > kXThreshold ||
-        theta_ < -kThetaThresholdRadians || theta_ > kThetaThresholdRadians)
+        theta_ < -kThetaThresholdRadians || theta_ > kThetaThresholdRadians) {
       done_ = true;
-
-    State state = Allocate();
-    WriteObs(state, 1.0f);
+    }
+    WriteState(1.0);
   }
 
  private:
-  void WriteObs(State& state, float reward) {  // NOLINT
+  void WriteState(float reward) {
+    State state = Allocate();
     state["obs"_][0] = static_cast<float>(x_);
     state["obs"_][1] = static_cast<float>(x_dot_);
     state["obs"_][2] = static_cast<float>(theta_);
@@ -124,7 +123,7 @@ class CartPoleEnv : public Env<CartPoleEnvSpec> {
   }
 };
 
-typedef AsyncEnvPool<CartPoleEnv> CartPoleEnvPool;
+using CartPoleEnvPool = AsyncEnvPool<CartPoleEnv>;
 
 }  // namespace classic_control
 

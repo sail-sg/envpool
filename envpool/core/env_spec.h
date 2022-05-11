@@ -23,19 +23,20 @@
 #include "envpool/core/dict.h"
 
 auto common_config =
-    MakeDict("num_envs"_.bind(1), "batch_size"_.bind(0), "num_threads"_.bind(0),
-             "max_num_players"_.bind(1), "thread_affinity_offset"_.bind(-1),
-             "base_path"_.bind(std::string("envpool")), "seed"_.bind(42));
+    MakeDict("num_envs"_.Bind(1), "batch_size"_.Bind(0), "num_threads"_.Bind(0),
+             "max_num_players"_.Bind(1), "thread_affinity_offset"_.Bind(-1),
+             "base_path"_.Bind(std::string("envpool")), "seed"_.Bind(42),
+             "gym_reset_return_info"_.Bind(false));
 // Note: this action order is hardcoded in async_envpool Send function
 // and env ParseAction function for performance
-auto common_action_spec = MakeDict("env_id"_.bind(Spec<int>({})),
-                                   "players.env_id"_.bind(Spec<int>({-1})));
+auto common_action_spec = MakeDict("env_id"_.Bind(Spec<int>({})),
+                                   "players.env_id"_.Bind(Spec<int>({-1})));
 // Note: this state order is hardcoded in async_envpool Recv function
 auto common_state_spec =
-    MakeDict("info:env_id"_.bind(Spec<int>({})),
-             "info:players.env_id"_.bind(Spec<int>({-1})),
-             "elapsed_step"_.bind(Spec<int>({})), "done"_.bind(Spec<bool>({})),
-             "reward"_.bind(Spec<float>({-1})));
+    MakeDict("info:env_id"_.Bind(Spec<int>({})),
+             "info:players.env_id"_.Bind(Spec<int>({-1})),
+             "elapsed_step"_.Bind(Spec<int>({})), "done"_.Bind(Spec<bool>({})),
+             "reward"_.Bind(Spec<float>({-1})));
 
 /**
  * EnvSpec funciton, it constructs the env spec when a Config is passed.
@@ -43,27 +44,24 @@ auto common_state_spec =
 template <typename EnvFns>
 class EnvSpec {
  public:
-  typedef decltype(ConcatDict(common_config, EnvFns::DefaultConfig())) Config;
-  typedef typename Config::Keys ConfigKeys;
-  typedef typename Config::Values ConfigValues;
-  typedef decltype(ConcatDict(
-      common_state_spec, EnvFns::StateSpec(std::declval<Config>()))) StateSpec;
-  typedef decltype(
-      ConcatDict(common_action_spec,
-                 EnvFns::ActionSpec(std::declval<Config>()))) ActionSpec;
-  typedef typename StateSpec::Keys StateKeys;
-  typedef typename ActionSpec::Keys ActionKeys;
+  using Config = decltype(ConcatDict(common_config, EnvFns::DefaultConfig()));
+  using ConfigKeys = typename Config::Keys;
+  using ConfigValues = typename Config::Values;
+  using StateSpec = decltype(
+      ConcatDict(common_state_spec, EnvFns::StateSpec(std::declval<Config>())));
+  using ActionSpec = decltype(ConcatDict(
+      common_action_spec, EnvFns::ActionSpec(std::declval<Config>())));
+  using StateKeys = typename StateSpec::Keys;
+  using ActionKeys = typename ActionSpec::Keys;
 
- public:
   // For C++
   Config config;
   StateSpec state_spec;
   ActionSpec action_spec;
-  static inline const Config default_config =
+  static inline const Config DEFAULT_CONFIG =
       ConcatDict(common_config, EnvFns::DefaultConfig());
 
- public:
-  EnvSpec() : EnvSpec(default_config) {}
+  EnvSpec() : EnvSpec(DEFAULT_CONFIG) {}
   explicit EnvSpec(const ConfigValues& conf)
       : config(conf),
         state_spec(ConcatDict(common_state_spec, EnvFns::StateSpec(config))),

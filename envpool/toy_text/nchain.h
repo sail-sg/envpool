@@ -32,19 +32,19 @@ namespace toy_text {
 class NChainEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.bind(1000));
+    return MakeDict("max_episode_steps"_.Bind(1000));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs"_.bind(Spec<int>({-1}, {0, 4})));
+    return MakeDict("obs"_.Bind(Spec<int>({-1}, {0, 4})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<int>({-1}, {0, 1})));
+    return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 1})));
   }
 };
 
-typedef class EnvSpec<NChainEnvFns> NChainEnvSpec;
+using NChainEnvSpec = EnvSpec<NChainEnvFns>;
 
 class NChainEnv : public Env<NChainEnvSpec> {
  protected:
@@ -65,8 +65,7 @@ class NChainEnv : public Env<NChainEnvSpec> {
     s_ = 0;
     done_ = false;
     elapsed_step_ = 0;
-    State state = Allocate();
-    WriteObs(state, 0.0f);
+    WriteState(0.0);
   }
 
   void Step(const Action& action) override {
@@ -75,27 +74,27 @@ class NChainEnv : public Env<NChainEnvSpec> {
     if (dist_(gen_) < 0.2) {
       act = 1 - act;
     }
-    float reward = 0.0f;
-    if (act) {
-      reward = 2.0f;
+    float reward = 0.0;
+    if (act != 0) {
+      reward = 2.0;
       s_ = 0;
     } else if (s_ < 4) {
       ++s_;
     } else {
-      reward = 10.0f;
+      reward = 10.0;
     }
-    State state = Allocate();
-    WriteObs(state, reward);
+    WriteState(reward);
   }
 
  private:
-  void WriteObs(State& state, float reward) {  // NOLINT
+  void WriteState(float reward) {
+    State state = Allocate();
     state["obs"_] = s_;
     state["reward"_] = reward;
   }
 };
 
-typedef AsyncEnvPool<NChainEnv> NChainEnvPool;
+using NChainEnvPool = AsyncEnvPool<NChainEnv>;
 
 }  // namespace toy_text
 

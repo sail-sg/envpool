@@ -32,21 +32,21 @@ namespace toy_text {
 class FrozenLakeEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.bind(100),
-                    "reward_threshold"_.bind(0.7f), "size"_.bind(4));
+    return MakeDict("max_episode_steps"_.Bind(100),
+                    "reward_threshold"_.Bind(0.7), "size"_.Bind(4));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     int size = conf["size"_];
-    return MakeDict("obs"_.bind(Spec<int>({-1}, {0, size * size - 1})));
+    return MakeDict("obs"_.Bind(Spec<int>({-1}, {0, size * size - 1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.bind(Spec<int>({-1}, {0, 3})));
+    return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 3})));
   }
 };
 
-typedef class EnvSpec<FrozenLakeEnvFns> FrozenLakeEnvSpec;
+using FrozenLakeEnvSpec = EnvSpec<FrozenLakeEnvFns>;
 
 class FrozenLakeEnv : public Env<FrozenLakeEnvSpec> {
  protected:
@@ -77,8 +77,7 @@ class FrozenLakeEnv : public Env<FrozenLakeEnvSpec> {
     x_ = y_ = 0;
     done_ = false;
     elapsed_step_ = 0;
-    State state = Allocate();
-    WriteObs(state, 0.0f);
+    WriteState(0.0);
   }
 
   void Step(const Action& action) override {
@@ -96,23 +95,23 @@ class FrozenLakeEnv : public Env<FrozenLakeEnvSpec> {
     }
     x_ = std::min(std::max(x_, 0), size_ - 1);
     y_ = std::min(std::max(y_, 0), size_ - 1);
-    float reward = 0.0f;
+    float reward = 0.0;
     if (map_[x_][y_] == 'H' || map_[x_][y_] == 'G') {
       done_ = true;
-      reward = map_[x_][y_] == 'G' ? 1.0f : 0.0f;
+      reward = map_[x_][y_] == 'G' ? 1.0F : 0.0F;
     }
-    State state = Allocate();
-    WriteObs(state, reward);
+    WriteState(reward);
   }
 
  private:
-  void WriteObs(State& state, float reward) {  // NOLINT
+  void WriteState(float reward) {
+    State state = Allocate();
     state["obs"_] = x_ * size_ + y_;
     state["reward"_] = reward;
   }
 };
 
-typedef AsyncEnvPool<FrozenLakeEnv> FrozenLakeEnvPool;
+using FrozenLakeEnvPool = AsyncEnvPool<FrozenLakeEnv>;
 
 }  // namespace toy_text
 
