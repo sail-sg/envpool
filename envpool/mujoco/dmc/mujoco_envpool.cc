@@ -15,9 +15,9 @@
 #include "envpool/core/py_envpool.h"
 #include "envpool/mujoco/dmc/hopper.h"
 
-using HopperEnvSpec = PyEnvSpec<mujoco::HopperEnvSpec>;
-using HopperEnvPool = PyEnvPool<mujoco::HopperEnvPool>;
+using DmcHopperEnvSpec = PyEnvSpec<mujoco_dmc::HopperEnvSpec>;
+using DmcHopperEnvPool = PyEnvPool<mujoco_dmc::HopperEnvPool>;
 
-PYBIND11_MODULE(mujoco_gym_envpool, m) {
-  REGISTER(m, HopperEnvSpec, HopperEnvPool)
+PYBIND11_MODULE(mujoco_dmc_envpool, m) {
+  REGISTER(m, DmcHopperEnvSpec, DmcHopperEnvPool)
 }

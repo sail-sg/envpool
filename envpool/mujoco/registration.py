@@ -19,7 +19,7 @@ from envpool.registration import register
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-mujoco_envs = [
+gym_mujoco_envs = [
   ("Ant", "v3", False),
   ("Ant", "v4", True),
   ("HalfCheetah", "v3", False),
@@ -44,7 +44,7 @@ mujoco_envs = [
   ("Walker2d", "v4", True),
 ]
 
-for task, version, post_constraint in mujoco_envs:
+for task, version, post_constraint in gym_mujoco_envs:
   register(
     task_id=f"{task}-{version}",
     import_path="envpool.mujoco",

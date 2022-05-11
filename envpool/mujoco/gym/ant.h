@@ -26,7 +26,7 @@
 #include "envpool/core/env.h"
 #include "envpool/mujoco/gym/mujoco_env.h"
 
-namespace mujoco {
+namespace mujoco_gym {
 
 class AntEnvFns {
  public:
@@ -213,6 +213,6 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
 
 using AntEnvPool = AsyncEnvPool<AntEnv>;
 
-}  // namespace mujoco
+}  // namespace mujoco_gym
 
 #endif  // ENVPOOL_MUJOCO_GYM_ANT_H_

@@ -26,7 +26,7 @@
 #include "envpool/core/env.h"
 #include "envpool/mujoco/gym/mujoco_env.h"
 
-namespace mujoco {
+namespace mujoco_gym {
 
 class ReacherEnvFns {
  public:
@@ -167,6 +167,6 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
 
 using ReacherEnvPool = AsyncEnvPool<ReacherEnv>;
 
-}  // namespace mujoco
+}  // namespace mujoco_gym
 
 #endif  // ENVPOOL_MUJOCO_GYM_REACHER_H_

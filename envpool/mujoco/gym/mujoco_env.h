@@ -22,7 +22,7 @@
 
 #include <string>
 
-namespace mujoco {
+namespace mujoco_gym {
 
 class MujocoEnv {
  private:
@@ -88,6 +88,6 @@ class MujocoEnv {
   }
 };
 
-}  // namespace mujoco
+}  // namespace mujoco_gym
 
 #endif  // ENVPOOL_MUJOCO_GYM_MUJOCO_ENV_H_

@@ -26,7 +26,7 @@
 #include "envpool/core/env.h"
 #include "envpool/mujoco/gym/mujoco_env.h"
 
-namespace mujoco {
+namespace mujoco_gym {
 
 class PusherEnvFns {
  public:
@@ -167,6 +167,6 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
 
 using PusherEnvPool = AsyncEnvPool<PusherEnv>;
 
-}  // namespace mujoco
+}  // namespace mujoco_gym
 
 #endif  // ENVPOOL_MUJOCO_GYM_PUSHER_H_

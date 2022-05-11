@@ -19,7 +19,7 @@
 
 #include <cmath>
 
-namespace mujoco {
+namespace mujoco_dmc {
 
 enum class SigmoidType {
   kGaussian,
@@ -101,6 +101,6 @@ double RewardTolerance(double x, double bound_min = 0.0, double bound_max = 0.0,
   throw std::runtime_error("Unknown sigmoid type for RewardTolerance.");
 }
 
-}  // namespace mujoco
+}  // namespace mujoco_dmc
 
 #endif  // ENVPOOL_MUJOCO_DMC_UTILS_H_

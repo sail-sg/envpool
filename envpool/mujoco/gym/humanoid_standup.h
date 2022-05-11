@@ -26,7 +26,7 @@
 #include "envpool/core/env.h"
 #include "envpool/mujoco/gym/mujoco_env.h"
 
-namespace mujoco {
+namespace mujoco_gym {
 
 class HumanoidStandupEnvFns {
  public:
@@ -171,6 +171,6 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
 
 using HumanoidStandupEnvPool = AsyncEnvPool<HumanoidStandupEnv>;
 
-}  // namespace mujoco
+}  // namespace mujoco_gym
 
 #endif  // ENVPOOL_MUJOCO_GYM_HUMANOID_STANDUP_H_

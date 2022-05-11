@@ -26,7 +26,7 @@
 #include "envpool/core/env.h"
 #include "envpool/mujoco/gym/mujoco_env.h"
 
-namespace mujoco {
+namespace mujoco_gym {
 
 class Walker2dEnvFns {
  public:
@@ -173,6 +173,6 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
 
 using Walker2dEnvPool = AsyncEnvPool<Walker2dEnv>;
 
-}  // namespace mujoco
+}  // namespace mujoco_gym
 
 #endif  // ENVPOOL_MUJOCO_GYM_WALKER2D_H_

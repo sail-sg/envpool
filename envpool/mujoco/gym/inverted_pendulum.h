@@ -26,7 +26,7 @@
 #include "envpool/core/env.h"
 #include "envpool/mujoco/gym/mujoco_env.h"
 
-namespace mujoco {
+namespace mujoco_gym {
 
 class InvertedPendulumEnvFns {
  public:
@@ -142,6 +142,6 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
 
 using InvertedPendulumEnvPool = AsyncEnvPool<InvertedPendulumEnv>;
 
-}  // namespace mujoco
+}  // namespace mujoco_gym
 
 #endif  // ENVPOOL_MUJOCO_GYM_INVERTED_PENDULUM_H_

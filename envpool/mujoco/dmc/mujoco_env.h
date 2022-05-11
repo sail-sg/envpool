@@ -28,7 +28,7 @@
 #include <string>
 #include <vector>
 
-namespace mujoco {
+namespace mujoco_dmc {
 
 std::string GetFileContent(const std::string& base_path,
                            const std::string& asset_name) {
@@ -240,6 +240,6 @@ class MujocoEnv {
   }
 };
 
-}  // namespace mujoco
+}  // namespace mujoco_dmc
 
 #endif  // ENVPOOL_MUJOCO_DMC_MUJOCO_ENV_H_

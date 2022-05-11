@@ -27,7 +27,7 @@
 #include "envpool/mujoco/dmc/mujoco_env.h"
 #include "envpool/mujoco/dmc/utils.h"
 
-namespace mujoco {
+namespace mujoco_dmc {
 
 class HopperEnvFns {
  public:
@@ -143,6 +143,6 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
 
 using HopperEnvPool = AsyncEnvPool<HopperEnv>;
 
-}  // namespace mujoco
+}  // namespace mujoco_dmc
 
 #endif  // ENVPOOL_MUJOCO_DMC_HOPPER_H_
