@@ -1,5 +1,5 @@
-Mujoco
-======
+Mujoco (gym)
+============
 
 We use ``mujoco==2.1.5`` as the codebase.
 See https://github.com/deepmind/mujoco/tree/2.1.5

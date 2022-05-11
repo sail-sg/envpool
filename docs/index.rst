@@ -75,6 +75,7 @@ stable version through `envpool.readthedocs.io/en/stable/
    api/atari
    api/classic
    api/mujoco
+   api/dm_control
    api/toy_text
    api/vizdoom
 
