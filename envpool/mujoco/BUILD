@@ -111,9 +111,9 @@ py_test(
 )
 
 py_test(
-    name = "mujoco_gym_v4_test",
+    name = "mujoco_gym_align_test",
     size = "enormous",
-    srcs = ["gym/mujoco_gym_v4_test.py"],
+    srcs = ["gym/mujoco_gym_align_test.py"],
     deps = [
         ":mujoco",
         requirement("numpy"),
@@ -132,6 +132,19 @@ py_test(
         ":mujoco",
         requirement("numpy"),
         requirement("absl-py"),
+    ],
+)
+
+py_test(
+    name = "mujoco_dmc_align_test",
+    size = "enormous",
+    srcs = ["dmc/mujoco_dmc_align_test.py"],
+    deps = [
+        ":mujoco",
+        requirement("numpy"),
+        requirement("absl-py"),
+        requirement("mujoco"),
+        requirement("dm-env"),
         requirement("dm-control"),
     ],
 )

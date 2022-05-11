@@ -44,7 +44,7 @@ from envpool.mujoco import (
 )
 
 
-class _MujocoEnvPoolDeterministicTest(absltest.TestCase):
+class _MujocoGymDeterministicTest(absltest.TestCase):
 
   def check(self, spec_cls: Any, envpool_cls: Any, num_envs: int = 4) -> None:
     env0 = envpool_cls(

@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit tests for Mujoco gym v4 environments."""
+"""Unit tests for Mujoco gym v4 environments alignment."""
 
 from typing import Any, no_type_check
 
@@ -47,14 +47,17 @@ from envpool.mujoco import (
 )
 
 
-class _MujocoEnvPoolTest(absltest.TestCase):
+class _MujocoGymAlignTest(absltest.TestCase):
 
   @no_type_check
   def run_space_check(self, env0: gym.Env, env1: Any) -> None:
-    """Check if envpool.observation_space == gym.make().observation_space."""
+    """Check observation_space and action space."""
     obs0, obs1 = env0.observation_space, env1.observation_space
     np.testing.assert_allclose(obs0.low, obs1.low)
     np.testing.assert_allclose(obs0.high, obs1.high)
+    act0, act1 = env0.action_space, env1.action_space
+    np.testing.assert_allclose(act0.low, act1.low)
+    np.testing.assert_allclose(act0.high, act1.high)
 
   @no_type_check
   def reset_state(

@@ -21,7 +21,7 @@ from absl.testing import absltest
 from envpool.mujoco import DmcHopperDMEnvPool, DmcHopperEnvSpec
 
 
-class _MujocoEnvPoolDeterministicTest(absltest.TestCase):
+class _MujocoDmcDeterministicTest(absltest.TestCase):
 
   def check(
     self,
@@ -29,7 +29,7 @@ class _MujocoEnvPoolDeterministicTest(absltest.TestCase):
     envpool_cls: Any,
     task: str,
     obs_keys: List[str],
-    num_envs: int = 4
+    num_envs: int = 4,
   ) -> None:
     env0 = envpool_cls(
       spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, task_name=task))
