@@ -124,6 +124,18 @@ py_test(
     ],
 )
 
+py_test(
+    name = "mujoco_dmc_deterministic_test",
+    size = "enormous",
+    srcs = ["dmc/mujoco_dmc_deterministic_test.py"],
+    deps = [
+        ":mujoco",
+        requirement("numpy"),
+        requirement("absl-py"),
+        requirement("dm-control"),
+    ],
+)
+
 py_library(
     name = "mujoco_registration",
     srcs = ["registration.py"],

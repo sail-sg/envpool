@@ -29,11 +29,15 @@
 
 namespace mujoco_dmc {
 
+std::string GetHopperXML(const std::string& base_path,
+                         const std::string& task_name) {
+  return GetFileContent(base_path, "hopper.xml");
+}
+
 class HopperEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(4),
-                    "raw_xml"_.Bind(GetFileContent("envpool", "hopper.xml")),
                     "task_name"_.Bind(std::string("stand")));
   }
   template <typename Config>
@@ -59,9 +63,10 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
  public:
   HopperEnv(const Spec& spec, int env_id)
       : Env<HopperEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_], spec.config["raw_xml"_],
-                  spec.config["frame_skip"_],
-                  spec.config["max_episode_steps"_]) {
+        MujocoEnv(
+            spec.config["base_path"_],
+            GetHopperXML(spec.config["base_path"_], spec.config["task_name"_]),
+            spec.config["frame_skip"_], spec.config["max_episode_steps"_]) {
     std::string task_name = spec.config["task_name"_];
     if (task_name == "stand") {
       hopping_ = false;

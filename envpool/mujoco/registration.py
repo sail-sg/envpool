@@ -19,6 +19,12 @@ from envpool.registration import register
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
+# from suite.BENCHMARKING
+dmc_mujoco_envs = [
+  ("hopper", "stand"),
+  ("hopper", "hop"),
+]
+
 gym_mujoco_envs = [
   ("Ant", "v3", False),
   ("Ant", "v4", True),
@@ -43,6 +49,19 @@ gym_mujoco_envs = [
   ("Walker2d", "v3", False),
   ("Walker2d", "v4", True),
 ]
+
+for domain, task in dmc_mujoco_envs:
+  domain_name = "".join([g.capitalize() for g in domain.split("_")])
+  task_name = "".join([g.capitalize() for g in task.split("_")])
+  register(
+    task_id=f"{domain_name}{task_name}-v1",
+    import_path="envpool.mujoco",
+    spec_cls=f"Dmc{domain_name}EnvSpec",
+    dm_cls=f"Dmc{domain_name}DMEnvPool",
+    gym_cls=f"Dmc{domain_name}GymEnvPool",
+    base_path=base_path,
+    task_name=task,
+  )
 
 for task, version, post_constraint in gym_mujoco_envs:
   register(
