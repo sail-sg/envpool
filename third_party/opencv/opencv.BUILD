@@ -1,4 +1,3 @@
-load("@rules_cc//cc:defs.bzl", "cc_binary")
 load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
 
 filegroup(
@@ -61,15 +60,15 @@ cmake(
         "-DWITH_TIFF=OFF",
     ],
     lib_source = ":srcs",
+    linkopts = [
+        "-ldl",
+    ],
     out_include_dir = "include/opencv4",
     out_static_libs = [
         "libopencv_imgproc.a",
         "libopencv_features2d.a",
         "libopencv_flann.a",
         "libopencv_core.a",
-    ],
-    linkopts = [
-        "-ldl",
     ],
     visibility = ["//visibility:public"],
 )

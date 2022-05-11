@@ -2,11 +2,11 @@
 # Description:
 #   libjpeg-turbo is a drop in replacement for jpeglib optimized with SIMD.
 
+load("@envpool//third_party:common.bzl", "template_rule")
+
 licenses(["notice"])  # custom notice-style license, see LICENSE.md
 
 exports_files(["LICENSE.md"])
-
-load("@envpool//third_party:common.bzl", "template_rule")
 
 WIN_COPTS = [
     "/Ox",
@@ -119,6 +119,9 @@ cc_library(
         "jstdhuff.c",  # should have been named .inc
     ],
     copts = libjpegturbo_copts,
+    includes = [
+        ".",
+    ],
     visibility = ["//visibility:public"],
     deps = select({
         ":k8": [":simd_x86_64"],
@@ -128,9 +131,6 @@ cc_library(
         ":windows": [":simd_win_x86_64"],
         "//conditions:default": [":simd_none"],
     }),
-    includes = [
-        ".",
-    ],
 )
 
 cc_library(

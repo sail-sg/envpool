@@ -1,4 +1,3 @@
-load("@rules_cc//cc:defs.bzl", "cc_binary")
 load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
 
 filegroup(
@@ -12,7 +11,7 @@ cmake(
     name = "sdl2",
     generate_args = [
         "-GNinja",
-        "-DCMAKE_BUILD_TYPE=Release", # always compile for release
+        "-DCMAKE_BUILD_TYPE=Release",  # always compile for release
         "-DSDL_STATIC=ON",
         "-DSDL_STATIC_LIB=ON",
         "-DSDL_DLOPEN=ON",
