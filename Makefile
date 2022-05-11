@@ -3,6 +3,7 @@ PROJECT_NAME   = envpool
 PROJECT_FOLDER = $(PROJECT_NAME) third_party examples benchmark
 PYTHON_FILES   = $(shell find . -type f -name "*.py")
 CPP_FILES      = $(shell find $(PROJECT_NAME) -type f -name "*.h" -o -name "*.cc")
+BAZEL_FILES    = $(shell find . -type f -name "*BUILD" -o -name "*.bzl")
 COMMIT_HASH    = $(shell git log -1 --format=%h)
 COPYRIGHT      = "Garena Online Private Limited"
 BAZELOPT       =
@@ -78,7 +79,7 @@ clang-format: clang-format-install
 # bazel file linter
 
 buildifier: buildifier-install
-	buildifier -r -lint=warn .
+	buildifier -r -lint=warn $(BAZEL_FILES)
 
 # bazel build/test
 
@@ -136,7 +137,7 @@ format: py-format-install clang-format-install buildifier-install addlicense-ins
 	isort $(PYTHON_FILES)
 	yapf -ir $(PYTHON_FILES)
 	clang-format-11 -style=file -i $(CPP_FILES)
-	buildifier -r -lint=fix .
+	buildifier -r -lint=fix $(BAZEL_FILES)
 	addlicense -c $(COPYRIGHT) -l apache -y 2022 $(PROJECT_FOLDER)
 
 # Build docker images

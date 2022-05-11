@@ -1,6 +1,6 @@
-package(default_visibility = ["//visibility:public"])
-
 load("@envpool//third_party:common.bzl", "template_rule")
+
+package(default_visibility = ["//visibility:public"])
 
 template_rule(
     name = "vizdoom_version",
@@ -21,11 +21,11 @@ cc_library(
         "src/lib/boost/**/*.hpp",
     ]) + [":vizdoom_version"],
     hdrs = ["include/ViZDoom.h"],
-    linkopts = ["-ldl"],
     includes = [
         "include",
         "src/lib",
     ],
+    linkopts = ["-ldl"],
     deps = [
         "@boost//:asio",
         "@boost//:filesystem",

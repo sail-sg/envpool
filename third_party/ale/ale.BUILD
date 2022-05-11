@@ -1,6 +1,6 @@
-package(default_visibility = ["//visibility:public"])
-
 load("@envpool//third_party:common.bzl", "template_rule")
+
+package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "irregular_files",
@@ -41,9 +41,6 @@ cc_library(
         ":ale_version",
     ],
     hdrs = ["src/ale_interface.hpp"],
-    linkopts = [
-        "-ldl",
-    ],
     includes = [
         "src",
         "src/common",
@@ -51,6 +48,9 @@ cc_library(
         "src/environment",
         "src/games",
         "src/games/supported",
+    ],
+    linkopts = [
+        "-ldl",
     ],
     linkstatic = 0,
     deps = [

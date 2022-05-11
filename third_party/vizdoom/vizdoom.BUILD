@@ -351,13 +351,13 @@ cc_binary(
         "tools/zipdir/zipdir.c",
         "@glibc_version_header//:glibc_2_17",
     ],
+    copts = [
+        "-include $(execpath @glibc_version_header//:glibc_2_17)",
+    ],
     deps = [
         ":bzip2",
         ":lzma",
         "@zlib",
-    ],
-    copts = [
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
     ],
 )
 
