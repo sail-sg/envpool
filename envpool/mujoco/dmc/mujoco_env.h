@@ -212,7 +212,7 @@ class MujocoEnv {
 
   // randomizer
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/utils/randomizers.py#L35
-  void RandomizeLimitedAndRotationalJoints(std::mt19937 gen) {
+  void RandomizeLimitedAndRotationalJoints(std::mt19937* gen) {
     // Note: not sure the mapping
     // The following code use qpos[id] instead of qpos[name], maybe wrong?
     assert(model_->njnt == model_->nq);
@@ -224,7 +224,7 @@ class MujocoEnv {
       mjtNum range = range_max - range_min;
       if (is_limited != 0) {
         if (joint_type == mjJNT_HINGE || joint_type == mjJNT_SLIDE) {
-          data_->qpos[joint_id] = dist_uniform_(gen) * range + range_min;
+          data_->qpos[joint_id] = dist_uniform_(*gen) * range + range_min;
         } else if (joint_type == mjJNT_BALL) {
           throw std::runtime_error("RandomLimitedQuaternion not implemented");
         }
@@ -232,7 +232,7 @@ class MujocoEnv {
         range_min = -kPi;
         range_max = kPi;
         range = range_max - range_min;
-        data_->qpos[joint_id] = dist_uniform_(gen) * range + range_min;
+        data_->qpos[joint_id] = dist_uniform_(*gen) * range + range_min;
       } else if (joint_type == mjJNT_BALL || joint_type == mjJNT_FREE) {
         throw std::runtime_error("not implemented");
       }

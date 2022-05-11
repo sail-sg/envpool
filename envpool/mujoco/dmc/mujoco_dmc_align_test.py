@@ -41,10 +41,8 @@ class _MujocoDmcAlignTest(absltest.TestCase):
   @no_type_check
   def reset_state(self, env: dm_env.Environment, ts: dm_env.TimeStep) -> None:
     # manually reset
-    pass
-    # env._mujoco_bindings.mj_resetData(env.model, env.data)
-    # env.set_state(qpos, qvel)
-    # env._mujoco_bindings.mj_forward(env.model, env.data)
+    with env.physics.reset_context():
+      env.physics.data.qpos = ts.observation.qpos0[0]
 
   def sample_action(self, action_spec: dm_env.specs.Array) -> np.ndarray:
     return np.random.uniform(
@@ -62,8 +60,7 @@ class _MujocoDmcAlignTest(absltest.TestCase):
       a = self.sample_action(action_spec)
       ts = env1.reset(np.array([0]))
       self.reset_state(env0, ts)
-      # logging.info(f'reset qpos {info["qpos0"][0]}')
-      # logging.info(f'reset qvel {info["qvel0"][0]}')
+      logging.info(f'reset qpos {ts.observation.qpos0[0]}')
       cnt = 0
       done = False
       while not done:
@@ -78,7 +75,7 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         np.testing.assert_allclose(ts0.discount, ts1.discount[0])
         o0, o1 = ts0.observation, ts1.observation
         for k in obs_spec:
-          np.testing.assert_allclose(o0[k], getattr(o1, k)[0], atol=1e-4)
+          np.testing.assert_allclose(o0[k], getattr(o1, k)[0])
 
   def test_hopper(self) -> None:
     env0 = suite.load("hopper", "stand")
