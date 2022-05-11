@@ -62,7 +62,6 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
   const mjtNum kStandHeight = 0.6;
   const mjtNum kHopSpeed = 2;
   bool hopping_;
-  std::unique_ptr<mjtNum> qpos0_;
 
  public:
   HopperEnv(const Spec& spec, int env_id)
@@ -70,8 +69,7 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
         MujocoEnv(
             spec.config["base_path"_],
             GetHopperXML(spec.config["base_path"_], spec.config["task_name"_]),
-            spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
-        qpos0_(new mjtNum[model_->nq]) {
+            spec.config["frame_skip"_], spec.config["max_episode_steps"_]) {
     std::string task_name = spec.config["task_name"_];
     if (task_name == "stand") {
       hopping_ = false;
@@ -85,7 +83,9 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
   void TaskInitializeEpisode() override {
     // randomizers.randomize_limited_and_rotational_joints(physics, self.random)
     RandomizeLimitedAndRotationalJoints(&gen_);
+#ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
+#endif
   }
 
   bool IsDone() override { return done_; }
@@ -96,7 +96,6 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
   }
 
   void Step(const Action& action) override {
-    // step
     mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
     ControlStep(act);
     WriteState();

@@ -58,7 +58,7 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
         o2 = getattr(obs2, k)
         np.testing.assert_allclose(o0, o1)
         if np.abs(o0).sum() > 0:
-          self.assertFalse(np.allclose(o0, o2))
+          self.assertFalse(np.allclose(o0, o2), (o0, o2))
 
   def test_hopper(self) -> None:
     obs_keys = ["position", "velocity", "touch"]

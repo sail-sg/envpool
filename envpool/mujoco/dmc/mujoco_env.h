@@ -59,6 +59,9 @@ class MujocoEnv {
   int n_sub_steps_, max_episode_steps_, elapsed_step_;
   float reward_, discount_;
   bool done_;
+#ifdef ENVPOOL_TEST
+  std::unique_ptr<mjtNum> qpos0_;
+#endif
 
  private:
   const double kPi = std::acos(-1);
@@ -101,6 +104,9 @@ class MujocoEnv {
     model_ =
         mj_loadXML(model_filename.c_str(), vfs.get(), error_.begin(), 1000);
     data_ = mj_makeData(model_);
+#ifdef ENVPOOL_TEST
+    qpos0_.reset(new mjtNum[model_->nq]);
+#endif
   }
 
   ~MujocoEnv() {

@@ -83,11 +83,15 @@ class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
 
   void MujocoResetModel() override {
     for (int i = 0; i < model_->nq; ++i) {
-      data_->qpos[i] = qpos0_[i] = init_qpos_[i] + dist_qpos_(gen_);
+      data_->qpos[i] = init_qpos_[i] + dist_qpos_(gen_);
     }
     for (int i = 0; i < model_->nv; ++i) {
-      data_->qvel[i] = qvel0_[i] = init_qvel_[i] + dist_qvel_(gen_);
+      data_->qvel[i] = init_qvel_[i] + dist_qvel_(gen_);
     }
+#ifdef ENVPOOL_TEST
+    std::memcpy(qpos0_, data_->qpos, sizeof(mjtNum) * model_->nq);
+    std::memcpy(qvel0_, data_->qvel, sizeof(mjtNum) * model_->nv);
+#endif
   }
 
   bool IsDone() override { return done_; }
