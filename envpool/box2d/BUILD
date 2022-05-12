@@ -1,0 +1,36 @@
+load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "box2d_env",
+    hdrs = ["lunar_lander.h"],
+    deps = [
+        "//envpool/core:async_envpool",
+        "@box2d",
+    ],
+)
+
+pybind_extension(
+    name = "box2d_envpool",
+    srcs = ["box2d_envpool.cc"],
+    deps = [
+        ":box2d_env",
+        "//envpool/core:py_envpool",
+    ],
+)
+
+py_library(
+    name = "box2d",
+    srcs = ["__init__.py"],
+    data = [":box2d_envpool.so"],
+    deps = ["//envpool/python:api"],
+)
+
+py_library(
+    name = "box2d_registration",
+    srcs = ["registration.py"],
+    deps = [
+        "//envpool:registration",
+    ],
+)

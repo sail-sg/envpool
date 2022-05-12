@@ -1,4 +1,4 @@
-# Copyright 2021 Garena Online Private Limited
+# Copyright 2022 Garena Online Private Limited
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,11 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Entry point for all envs' registration."""
+"""Box2D env registration."""
 
-import envpool.atari.registration  # noqa: F401
-import envpool.box2d.registration  # noqa: F401
-import envpool.classic_control.registration  # noqa: F401
-import envpool.mujoco.registration  # noqa: F401
-import envpool.toy_text.registration  # noqa: F401
-import envpool.vizdoom.registration  # noqa: F401
+from envpool.registration import register
+
+register(
+  task_id="LunarLander-v2",
+  import_path="envpool.box2d",
+  spec_cls="LunarLanderEnvSpec",
+  dm_cls="LunarLanderDMEnvPool",
+  gym_cls="LunarLanderGymEnvPool",
+)
