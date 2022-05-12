@@ -18,40 +18,41 @@ from typing import Any, List
 import numpy as np
 from absl.testing import absltest
 
-from envpool.mujoco import DmcHopperDMEnvPool, DmcHopperEnvSpec
-from envpool.mujoco import DmcCheetahDMEnvPool, DmcCheetahEnvSpec
+from envpool.mujoco import (
+  DmcCheetahDMEnvPool,
+  DmcCheetahEnvSpec,
+  DmcHopperDMEnvPool,
+  DmcHopperEnvSpec,
+)
 
 
 class _MujocoDmcDeterministicTest(absltest.TestCase):
 
   def check(
-      self,
-      spec_cls: Any,
-      envpool_cls: Any,
-      task: str,
-      obs_keys: List[str],
-      num_envs: int = 4,
+    self,
+    spec_cls: Any,
+    envpool_cls: Any,
+    task: str,
+    obs_keys: List[str],
+    num_envs: int = 4,
   ) -> None:
     env0 = envpool_cls(
-        spec_cls(spec_cls.gen_config(
-            num_envs=num_envs, seed=0, task_name=task))
+      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, task_name=task))
     )
     env1 = envpool_cls(
-        spec_cls(spec_cls.gen_config(
-            num_envs=num_envs, seed=0, task_name=task))
+      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, task_name=task))
     )
     env2 = envpool_cls(
-        spec_cls(spec_cls.gen_config(
-            num_envs=num_envs, seed=1, task_name=task))
+      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=1, task_name=task))
     )
     act_spec = env0.action_spec()
     for _ in range(3000):
       action = np.array(
-          [
-              np.random.uniform(
-                  low=act_spec.minimum, high=act_spec.maximum, size=act_spec.shape
-              ) for _ in range(num_envs)
-          ]
+        [
+          np.random.uniform(
+            low=act_spec.minimum, high=act_spec.maximum, size=act_spec.shape
+          ) for _ in range(num_envs)
+        ]
       )
       obs0 = env0.step(action).observation
       obs1 = env1.step(action).observation
