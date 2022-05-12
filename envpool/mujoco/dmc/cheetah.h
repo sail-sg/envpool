@@ -67,11 +67,11 @@ class CheetahEnv : public Env<CheetachEnvSpec>, public MujocoEnv {
   void TaskInitializeEpisode() override {
     assert(model_->njnt == model_->nq);
     int is_limited = int(model_->jnt_limited) == 1;
-    mjtNum range_min = model_->jnt_range[is_limited * 2 + 1];
-    mjtNum range_max = model_->jnt_range[is_limited * 2 + 0];
+    mjtNum range_min = model_->jnt_range[is_limited * 2 + 0];
+    mjtNum range_max = model_->jnt_range[is_limited * 2 + 1];
     mjtNum range = range_max - range_min;
     data_->qpos[is_limited] = dist_uniform_(gen_) * range + range_min;
-    for (int i = 0; i < 200; i++) PhysicsStep(n_sub_steps_, NULL);  // ?
+    for (int i = 0; i < 200; i++) PhysicsStep(200, NULL);
     data_->time = 0;
   }
 
