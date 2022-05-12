@@ -65,10 +65,10 @@ class MujocoEnv {
 
  private:
   const double kPi = std::acos(-1);
-  std::uniform_real_distribution<> dist_uniform_;
-  std::normal_distribution<> dist_normal_;
 
  public:
+  std::uniform_real_distribution<> dist_uniform_;
+  std::normal_distribution<> dist_normal_;
   MujocoEnv(const std::string& base_path, const std::string& raw_xml,
             int n_sub_steps, int max_episode_steps)
       : n_sub_steps_(n_sub_steps),

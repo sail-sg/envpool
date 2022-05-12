@@ -41,15 +41,12 @@ class CheetahEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs:position"_.Bind(Spec<mjtNum>({6})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({7})),
-                    "discount"_.Bind(Spec<float>(
-                        {-1}, {0.0, 1.0})));  // the same with hopper?
+    return MakeDict("obs:position"_.Bind(Spec<mjtNum>({8})),
+                    "obs:velocity"_.Bind(Spec<mjtNum>({9}));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.Bind(
-        Spec<mjtNum>({-1, 4}, {-1.0, 1.0})));  // the same with hopper?
+    return MakeDict("action"_.Bind(Spec<mjtNum>({-1, 6}, {-1.0, 1.0})));
   }
 };
 
@@ -73,23 +70,18 @@ class CheetahEnv : public Env<CheetachEnvSpec>, public MujocoEnv {
     mjtNum range_min = model_->jnt_range[is_limited * 2 + 1];
     mjtNum range_max = model_->jnt_range[is_limited * 2 + 0];
     mjtNum range = range_max - range_min;
-    std::uniform_real_distribution<> dist_uniform_(0, 1);
     data_->qpos[is_limited] = dist_uniform_(gen_) * range + range_min;
-    for (int i = 0; i < 200; i++) Step();  // ?
+    for (int i = 0; i < 200; i++) PhysicsStep(n_sub_steps_, NULL);  // ?
     data_->time = 0;
-    // timeout_progress?
   }
 
-  // the same with hopper?
   bool IsDone() override { return done_; }
 
-  // the same with hopper?
   void Reset() override {
     ControlReset();
     WriteState();
   }
 
-  // the same with hopper?
   void Step(const Action& action) override {
     mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
     ControlStep(act);
@@ -102,7 +94,6 @@ class CheetahEnv : public Env<CheetachEnvSpec>, public MujocoEnv {
         0, SigmoidType::kQuadratic));
   }
 
-  // the same with hopper?
   bool TaskShouldTerminateEpisode() override { return false; }
 
  private:
