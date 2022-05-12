@@ -1,12 +1,12 @@
 Box2D
 =====
 
-We use ``box2d==2.4.1`` and ``gym==0.21.0`` as the codebase. See
+We use ``box2d==2.4.1`` and ``gym==0.23.1`` as the codebase. See
 https://github.com/erincatto/box2d/tree/v2.4.1 and
-https://github.com/openai/gym/tree/v0.21.0/gym/envs/box2d
+https://github.com/openai/gym/tree/v0.23.1/gym/envs/box2d
 
 
-CarRacing-v0
+CarRacing-v1
 ------------
 
 The easiest control task to learn from pixels - a top-down racing environment.

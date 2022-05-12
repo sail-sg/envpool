@@ -99,14 +99,11 @@ class CarRacingEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs"_.Bind(Spec<uint8_t>({96, 96, 3}, {0, 256})));
+    return MakeDict("obs"_.Bind(Spec<uint8_t>({96, 96, 3}, {0, 255})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    // TODO(alicia): specify range for steer, gas, brake:
-    // np.array([-1, 0, 0]).astype(np.float32),
-    // np.array([+1, +1, +1]).astype(np.float32),
-    return MakeDict("action"_.Bind(Spec<float>({3})));
+    return MakeDict("action"_.Bind(Spec<float>({3}, {{-1, 0, 0}, {1, 1, 1}})));
   }
 };
 

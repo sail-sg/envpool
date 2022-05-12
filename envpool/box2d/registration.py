@@ -16,11 +16,9 @@
 from envpool.registration import register
 
 register(
-  task_id="CarRacing-v0",
+  task_id="CarRacing-v1",
   import_path="envpool.box2d",
   spec_cls="CarRacingEnvSpec",
   dm_cls="CarRacingDMEnvPool",
   gym_cls="CarRacingGymEnvPool",
-  max_episode_steps=1000,
-  reward_threshold=900,
 )

@@ -91,7 +91,7 @@ class _MakeTest(absltest.TestCase):
 
   def test_make_box2d(self) -> None:
     self.check_step([
-      "CarRacing-v0",
+      "CarRacing-v1",
     ])
 
   def test_make_mujoco_gym(self) -> None:

@@ -28,33 +28,30 @@
 
 namespace box2d {
 
-static float kSize = 0.02;
-static float kEnginePower = 100000000 * kSize * kSize;
-static float kWheelMomentOfInertia = 4000 * kSize * kSize;
-static float kFrictionLimit = 1000000 * kSize * kSize;
-// friction ~= mass ~= size^2 (calculated implicitly using density)
-static float kWheelR = 27;
-static float kWheelW = 14;
-// WHEELPOS = [(-55, +80), (+55, +80), (-55, -82), (+55, -82)]
-static float kWheelPos[8] = {-55, +80, +55, +80, -55, -82, +55, -82};
-static float kHullPoly1[8] = {-60, +130, +60, +130, +60, +110, -60, +110};
-static float kHullPoly2[8] = {-15, +120, +15, +120, +20, +20, -20, 20};
-static float kHullPoly3[16] = {+25, +20, +50, -10, +50, -40, +20, -90,
-                               -20, -90, -50, -40, -50, -10, -25, +20};
-static float kHullPoly4[8] = {-50, -120, +50, -120, +50, -90, -50, -90};
+static const double kSize = 0.02;
+static const double kEnginePower = 100000000 * kSize * kSize;
+static const double kWheelMomentOfInertia = 4000 * kSize * kSize;
+static const double kFrictionLimit = 1000000 * kSize * kSize;
+static const double kWheelR = 27;
+static const double kWheelW = 14;
+static const double kWheelPos[4][2] = {{-55, 80}, {55, 80}, {-55, -82}, {55, -82}};
+static const double kHullPoly1[4][2] = {{-60, 130}, {60, 130}, {60, 110}, {-60, 110}};
+static const double kHullPoly2[4][2] = {{-15, 120}, {15, 120}, {20, 20}, {-20, 20}};
+static const double kHullPoly3[8][2] = {{25, 20}, {50, -10}, {50, -40}, {20, -90},
+                               {-20, -90}, {-50, -40}, {-50, -10}, {-25, 20}};
+static const double kHullPoly4[4][2] = {{-50, -120}, {50, -120}, {50, -90}, {-50, -90}};
+static const double kWheelColor[3] = {0.0, 0.0, 0.0};
+static const double kWheelWhite[3] = {0.3, 0.3, 0.3};
+static const double kMudColor[3] = {0.4, 0.4, 0.0};
 
-static float kWheelColor[3] = {0.0, 0.0, 0.0};
-// static float kWheelWhite[3] = {0.3, 0.3, 0.3};
-static float kMudColor[3] = {0.4, 0.4, 0.0};
-
-typedef struct UserData {
+struct UserData {
   b2Body* body;
   bool isTile;
   bool tileRoadVisited;
   float tileColor[3];
   float roadFriction;
-  std::unordered_set<struct UserData*> objTiles;
-} UserData;
+  std::unordered_set<UserData*> objTiles;
+};
 
 class Particle {
  public:
@@ -75,7 +72,7 @@ class Particle {
   }
 };
 
-typedef struct WheelData {
+struct WheelData {
   float wheel_rad;
   float color[3];
   float gas;
@@ -88,7 +85,7 @@ typedef struct WheelData {
   b2RevoluteJoint* joint;
   std::unordered_set<UserData*> tiles;
   b2Body* wheel;
-} WheelData;
+};
 
 b2PolygonShape generatePolygon(float* array, int size);
 
