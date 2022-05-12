@@ -4,6 +4,7 @@ package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "box2d_env",
+    srcs = ["lunar_lander.cc"],
     hdrs = ["lunar_lander.h"],
     deps = [
         "//envpool/core:async_envpool",
