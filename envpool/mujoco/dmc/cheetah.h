@@ -42,7 +42,7 @@ class CheetahEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict("obs:position"_.Bind(Spec<mjtNum>({8})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({9}));
+                    "obs:velocity"_.Bind(Spec<mjtNum>({9})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -50,15 +50,15 @@ class CheetahEnvFns {
   }
 };
 
-using CheetachEnvSpec = EnvSpec<CheetahEnvFns>;
+using CheetahEnvSpec = EnvSpec<CheetahEnvFns>;
 
 // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/cheetah.py#L60
-class CheetahEnv : public Env<CheetachEnvSpec>, public MujocoEnv {
+class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
   const mjtNum kRunSpeed = 10;
 
  public:
   CheetahEnv(const Spec& spec, int env_id)
-      : Env<CheetachEnvSpec>(spec, env_id),
+      : Env<CheetahEnvSpec>(spec, env_id),
         MujocoEnv(
             spec.config["base_path"_],
             GetCheetahXML(spec.config["base_path"_], spec.config["task_name"_]),
@@ -110,6 +110,9 @@ class CheetahEnv : public Env<CheetachEnvSpec>, public MujocoEnv {
     // return self.named.data.sensordata['torso_subtreelinvel'][0]
     return data_->sensordata[0];
   }
+};
+
+using CheetahEnvPool = AsyncEnvPool<CheetahEnv>;
 
 }  // namespace mujoco_dmc
 

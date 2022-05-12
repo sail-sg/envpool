@@ -17,118 +17,126 @@ from envpool.python.api import py_env
 
 # dmc mujoco
 from .mujoco_dmc_envpool import _DmcHopperEnvPool, _DmcHopperEnvSpec
+from .mujoco_dmc_envpool import _DmcCheetahEnvPool, _DmcCheetahEnvSpec
 
 # gym mujoco
 from .mujoco_gym_envpool import (
-  _GymAntEnvPool,
-  _GymAntEnvSpec,
-  _GymHalfCheetahEnvPool,
-  _GymHalfCheetahEnvSpec,
-  _GymHopperEnvPool,
-  _GymHopperEnvSpec,
-  _GymHumanoidEnvPool,
-  _GymHumanoidEnvSpec,
-  _GymHumanoidStandupEnvPool,
-  _GymHumanoidStandupEnvSpec,
-  _GymInvertedDoublePendulumEnvPool,
-  _GymInvertedDoublePendulumEnvSpec,
-  _GymInvertedPendulumEnvPool,
-  _GymInvertedPendulumEnvSpec,
-  _GymPusherEnvPool,
-  _GymPusherEnvSpec,
-  _GymReacherEnvPool,
-  _GymReacherEnvSpec,
-  _GymSwimmerEnvPool,
-  _GymSwimmerEnvSpec,
-  _GymWalker2dEnvPool,
-  _GymWalker2dEnvSpec,
+    _GymAntEnvPool,
+    _GymAntEnvSpec,
+    _GymHalfCheetahEnvPool,
+    _GymHalfCheetahEnvSpec,
+    _GymHopperEnvPool,
+    _GymHopperEnvSpec,
+    _GymHumanoidEnvPool,
+    _GymHumanoidEnvSpec,
+    _GymHumanoidStandupEnvPool,
+    _GymHumanoidStandupEnvSpec,
+    _GymInvertedDoublePendulumEnvPool,
+    _GymInvertedDoublePendulumEnvSpec,
+    _GymInvertedPendulumEnvPool,
+    _GymInvertedPendulumEnvSpec,
+    _GymPusherEnvPool,
+    _GymPusherEnvSpec,
+    _GymReacherEnvPool,
+    _GymReacherEnvSpec,
+    _GymSwimmerEnvPool,
+    _GymSwimmerEnvSpec,
+    _GymWalker2dEnvPool,
+    _GymWalker2dEnvSpec,
 )
 
 # dmc
 DmcHopperEnvSpec, DmcHopperDMEnvPool, DmcHopperGymEnvPool = py_env(
-  _DmcHopperEnvSpec, _DmcHopperEnvPool
+    _DmcHopperEnvSpec, _DmcHopperEnvPool
+)
+
+DmcCheetahEnvSpec, DmcCheetahDMEnvPool, DmcCheetahGymEnvPool = py_env(
+    _DmcCheetahEnvSpec, _DmcCheetahEnvPool
 )
 
 # gym
 GymAntEnvSpec, GymAntDMEnvPool, GymAntGymEnvPool = py_env(
-  _GymAntEnvSpec, _GymAntEnvPool
+    _GymAntEnvSpec, _GymAntEnvPool
 )
 (
-  GymHalfCheetahEnvSpec,
-  GymHalfCheetahDMEnvPool,
-  GymHalfCheetahGymEnvPool,
+    GymHalfCheetahEnvSpec,
+    GymHalfCheetahDMEnvPool,
+    GymHalfCheetahGymEnvPool,
 ) = py_env(_GymHalfCheetahEnvSpec, _GymHalfCheetahEnvPool)
 GymHopperEnvSpec, GymHopperDMEnvPool, GymHopperGymEnvPool = py_env(
-  _GymHopperEnvSpec, _GymHopperEnvPool
+    _GymHopperEnvSpec, _GymHopperEnvPool
 )
 GymHumanoidEnvSpec, GymHumanoidDMEnvPool, GymHumanoidGymEnvPool = py_env(
-  _GymHumanoidEnvSpec, _GymHumanoidEnvPool
+    _GymHumanoidEnvSpec, _GymHumanoidEnvPool
 )
 (
-  GymHumanoidStandupEnvSpec,
-  GymHumanoidStandupDMEnvPool,
-  GymHumanoidStandupGymEnvPool,
+    GymHumanoidStandupEnvSpec,
+    GymHumanoidStandupDMEnvPool,
+    GymHumanoidStandupGymEnvPool,
 ) = py_env(_GymHumanoidStandupEnvSpec, _GymHumanoidStandupEnvPool)
 (
-  GymInvertedDoublePendulumEnvSpec,
-  GymInvertedDoublePendulumDMEnvPool,
-  GymInvertedDoublePendulumGymEnvPool,
+    GymInvertedDoublePendulumEnvSpec,
+    GymInvertedDoublePendulumDMEnvPool,
+    GymInvertedDoublePendulumGymEnvPool,
 ) = py_env(
-  _GymInvertedDoublePendulumEnvSpec, _GymInvertedDoublePendulumEnvPool
+    _GymInvertedDoublePendulumEnvSpec, _GymInvertedDoublePendulumEnvPool
 )
 (
-  GymInvertedPendulumEnvSpec,
-  GymInvertedPendulumDMEnvPool,
-  GymInvertedPendulumGymEnvPool,
+    GymInvertedPendulumEnvSpec,
+    GymInvertedPendulumDMEnvPool,
+    GymInvertedPendulumGymEnvPool,
 ) = py_env(_GymInvertedPendulumEnvSpec, _GymInvertedPendulumEnvPool)
 GymPusherEnvSpec, GymPusherDMEnvPool, GymPusherGymEnvPool = py_env(
-  _GymPusherEnvSpec, _GymPusherEnvPool
+    _GymPusherEnvSpec, _GymPusherEnvPool
 )
 GymReacherEnvSpec, GymReacherDMEnvPool, GymReacherGymEnvPool = py_env(
-  _GymReacherEnvSpec, _GymReacherEnvPool
+    _GymReacherEnvSpec, _GymReacherEnvPool
 )
 GymSwimmerEnvSpec, GymSwimmerDMEnvPool, GymSwimmerGymEnvPool = py_env(
-  _GymSwimmerEnvSpec, _GymSwimmerEnvPool
+    _GymSwimmerEnvSpec, _GymSwimmerEnvPool
 )
 GymWalker2dEnvSpec, GymWalker2dDMEnvPool, GymWalker2dGymEnvPool = py_env(
-  _GymWalker2dEnvSpec, _GymWalker2dEnvPool
+    _GymWalker2dEnvSpec, _GymWalker2dEnvPool
 )
 
 __all__ = [
-  "DmcHopperEnvSpec",
-  "DmcHopperDMEnvPool",
-  "DmcHopperGymEnvPool",
-  "GymAntEnvSpec",
-  "GymAntDMEnvPool",
-  "GymAntGymEnvPool",
-  "GymHalfCheetahEnvSpec",
-  "GymHalfCheetahDMEnvPool",
-  "GymHalfCheetahGymEnvPool",
-  "GymHopperEnvSpec",
-  "GymHopperDMEnvPool",
-  "GymHopperGymEnvPool",
-  "GymHumanoidEnvSpec",
-  "GymHumanoidDMEnvPool",
-  "GymHumanoidGymEnvPool",
-  "GymHumanoidStandupEnvSpec",
-  "GymHumanoidStandupDMEnvPool",
-  "GymHumanoidStandupGymEnvPool",
-  "GymInvertedDoublePendulumEnvSpec",
-  "GymInvertedDoublePendulumDMEnvPool",
-  "GymInvertedDoublePendulumGymEnvPool",
-  "GymInvertedPendulumEnvSpec",
-  "GymInvertedPendulumDMEnvPool",
-  "GymInvertedPendulumGymEnvPool",
-  "GymPusherEnvSpec",
-  "GymPusherDMEnvPool",
-  "GymPusherGymEnvPool",
-  "GymReacherEnvSpec",
-  "GymReacherDMEnvPool",
-  "GymReacherGymEnvPool",
-  "GymSwimmerEnvSpec",
-  "GymSwimmerDMEnvPool",
-  "GymSwimmerGymEnvPool",
-  "GymWalker2dEnvSpec",
-  "GymWalker2dDMEnvPool",
-  "GymWalker2dGymEnvPool",
+    "DmcHopperEnvSpec",
+    "DmcHopperDMEnvPool",
+    "DmcHopperGymEnvPool",
+    "DmcCheetahEnvSpec",
+    "DmcCheetahDMEnvPool",
+    "DmcCheetahGymEnvPool",
+    "GymAntEnvSpec",
+    "GymAntDMEnvPool",
+    "GymAntGymEnvPool",
+    "GymHalfCheetahEnvSpec",
+    "GymHalfCheetahDMEnvPool",
+    "GymHalfCheetahGymEnvPool",
+    "GymHopperEnvSpec",
+    "GymHopperDMEnvPool",
+    "GymHopperGymEnvPool",
+    "GymHumanoidEnvSpec",
+    "GymHumanoidDMEnvPool",
+    "GymHumanoidGymEnvPool",
+    "GymHumanoidStandupEnvSpec",
+    "GymHumanoidStandupDMEnvPool",
+    "GymHumanoidStandupGymEnvPool",
+    "GymInvertedDoublePendulumEnvSpec",
+    "GymInvertedDoublePendulumDMEnvPool",
+    "GymInvertedDoublePendulumGymEnvPool",
+    "GymInvertedPendulumEnvSpec",
+    "GymInvertedPendulumDMEnvPool",
+    "GymInvertedPendulumGymEnvPool",
+    "GymPusherEnvSpec",
+    "GymPusherDMEnvPool",
+    "GymPusherGymEnvPool",
+    "GymReacherEnvSpec",
+    "GymReacherDMEnvPool",
+    "GymReacherGymEnvPool",
+    "GymSwimmerEnvSpec",
+    "GymSwimmerDMEnvPool",
+    "GymSwimmerGymEnvPool",
+    "GymWalker2dEnvSpec",
+    "GymWalker2dDMEnvPool",
+    "GymWalker2dGymEnvPool",
 ]

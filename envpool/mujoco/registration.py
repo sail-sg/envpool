@@ -23,6 +23,7 @@ base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 dmc_mujoco_envs = [
   ("hopper", "stand"),
   ("hopper", "hop"),
+  ("cheetah", "run")
 ]
 
 gym_mujoco_envs = [

@@ -64,6 +64,7 @@ cc_library(
     name = "mujoco_dmc_env",
     hdrs = [
         "dmc/hopper.h",
+        "dmc/cheetah.h",
         "dmc/mujoco_env.h",
         "dmc/utils.h",
     ],

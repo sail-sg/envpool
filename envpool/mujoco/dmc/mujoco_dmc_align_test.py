@@ -22,6 +22,7 @@ from absl.testing import absltest
 from dm_control import suite
 
 from envpool.mujoco import DmcHopperDMEnvPool, DmcHopperEnvSpec
+from envpool.mujoco import DmcCheetahDMEnvPool, DmcCheetahEnvSpec
 
 
 class _MujocoDmcAlignTest(absltest.TestCase):
@@ -46,9 +47,9 @@ class _MujocoDmcAlignTest(absltest.TestCase):
 
   def sample_action(self, action_spec: dm_env.specs.Array) -> np.ndarray:
     return np.random.uniform(
-      low=action_spec.minimum,
-      high=action_spec.maximum,
-      size=action_spec.shape,
+        low=action_spec.minimum,
+        high=action_spec.maximum,
+        size=action_spec.shape,
     )
 
   def run_align_check(self, env0: dm_env.Environment, env1: Any) -> None:
@@ -80,14 +81,22 @@ class _MujocoDmcAlignTest(absltest.TestCase):
   def test_hopper(self) -> None:
     env0 = suite.load("hopper", "stand")
     env1 = DmcHopperDMEnvPool(
-      DmcHopperEnvSpec(DmcHopperEnvSpec.gen_config(task_name="stand"))
+        DmcHopperEnvSpec(DmcHopperEnvSpec.gen_config(task_name="stand"))
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
 
     env0 = suite.load("hopper", "hop")
     env1 = DmcHopperDMEnvPool(
-      DmcHopperEnvSpec(DmcHopperEnvSpec.gen_config(task_name="hop"))
+        DmcHopperEnvSpec(DmcHopperEnvSpec.gen_config(task_name="hop"))
+    )
+    self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1)
+
+  def test_cheetah(self) -> None:
+    env0 = suite.load("hopper", "run")
+    env1 = DmcCheetahDMEnvPool(
+        DmcCheetahEnvSpec(DmcCheetahEnvSpec.gen_config(task_name="hop"))
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
