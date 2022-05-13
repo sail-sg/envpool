@@ -21,6 +21,7 @@
 #include <box2d/box2d.h>
 
 #include <array>
+#include <memory>
 #include <random>
 #include <vector>
 
@@ -29,23 +30,23 @@ namespace box2d {
 class ContactDetector;
 
 class LunarLanderEnv {
-  const double kFPS = 50;
-  const double kScale = 30.0;
-  const double kMainEnginePower = 13.0;
-  const double kSideEnginePower = 0.6;
-  const double kInitialRandom = 1000.0;
-  const double kLanderPoly[6][2] = {{-14, 17}, {-17, 0}, {-17, -10},
-                                    {17, -10}, {17, 0},  {14, 17}};
-  const double kLegAway = 20;
-  const double kLegDown = 18;
-  const double kLegW = 2;
-  const double kLegH = 8;
-  const double kLegSpringTorque = 40;
-  const double kSideEngineHeight = 14.0;
-  const double kSideEngineAway = 12.0;
-  const double kViewportW = 600;
-  const double kViewportH = 400;
-  const int kChunks = 11;
+  static constexpr double kFPS = 50;
+  static constexpr double kScale = 30.0;
+  static constexpr double kMainEnginePower = 13.0;
+  static constexpr double kSideEnginePower = 0.6;
+  static constexpr double kInitialRandom = 1000.0;
+  static constexpr double kLanderPoly[6][2] = {{-14, 17}, {-17, 0}, {-17, -10},
+                                               {17, -10}, {17, 0},  {14, 17}};
+  static constexpr double kLegAway = 20;
+  static constexpr double kLegDown = 18;
+  static constexpr double kLegW = 2;
+  static constexpr double kLegH = 8;
+  static constexpr double kLegSpringTorque = 40;
+  static constexpr double kSideEngineHeight = 14.0;
+  static constexpr double kSideEngineAway = 12.0;
+  static constexpr double kViewportW = 600;
+  static constexpr double kViewportH = 400;
+  static const int kChunks = 11;
 
   friend class ContactDetector;
 
@@ -55,13 +56,14 @@ class LunarLanderEnv {
   bool continuous_, done_;
 
   // box2d related
-  b2World world_;
+  std::unique_ptr<b2World> world_;
   b2Body *moon_, *lander_;
   std::vector<b2Body*> particles_;
   std::array<b2Body*, 2> legs_;
   std::array<bool, 2> ground_contact_;
-  ContactDetector* listener_;
+  std::unique_ptr<ContactDetector> listener_;
   std::uniform_real_distribution<> dist_;
+  double helipad_y_;
 
  public:
   LunarLanderEnv(bool continuous, int max_episode_steps);
@@ -70,6 +72,9 @@ class LunarLanderEnv {
   // continuous action space: action1 and action2
   void LunarLanderStep(std::mt19937* gen, int action0, float action1,
                        float action2);
+
+ private:
+  void ResetBox2d(std::mt19937* gen);
 };
 
 class ContactDetector : public b2ContactListener {
