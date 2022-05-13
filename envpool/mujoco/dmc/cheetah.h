@@ -38,14 +38,14 @@ std::string GetCheetahXML(const std::string& base_path,
 class CheetahEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(4),
+    return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(1),
                     "task_name"_.Bind(std::string("run")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict("obs:position"_.Bind(Spec<mjtNum>({8})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({9}))),
-           "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0}));
+                    "obs:velocity"_.Bind(Spec<mjtNum>({9})),
+                    "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -63,21 +63,25 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
 
  public:
   CheetahEnv(const Spec& spec, int env_id)
-      : dist_uniform_(0, 1),
-        Env<CheetahEnvSpec>(spec, env_id),
+      : Env<CheetahEnvSpec>(spec, env_id),
         MujocoEnv(
             spec.config["base_path"_],
             GetCheetahXML(spec.config["base_path"_], spec.config["task_name"_]),
-            spec.config["frame_skip"_], spec.config["max_episode_steps"_]) {}
+            spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
+        dist_uniform_(0, 1) {}
 
   void TaskInitializeEpisode() override {
     assert(model_->njnt == model_->nq);
-    int is_limited = static_cast<int>(*(model_->jnt_limited)) == 1;
-    mjtNum range_min = model_->jnt_range[is_limited * 2 + 0];
-    mjtNum range_max = model_->jnt_range[is_limited * 2 + 1];
-    mjtNum range = range_max - range_min;
-    data_->qpos[is_limited] = dist_uniform_(gen_) * range + range_min;
-    PhysicsStep(200, NULL);
+    for (int i = 0; i < model_->njnt; i++) {
+      bool is_limited = *(model_->jnt_limited + i) == 1;
+      if (is_limited) {
+        mjtNum range_min = model_->jnt_range[i * 2 + 0];
+        mjtNum range_max = model_->jnt_range[i * 2 + 1];
+        mjtNum range = range_max - range_min;
+        data_->qpos[i] = dist_uniform_(gen_) * range + range_min;
+      }
+    }
+    PhysicsStep(200, nullptr);
     data_->time = 0;
   }
 
@@ -97,7 +101,7 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
   float TaskGetReward() override {
     return static_cast<float>(RewardTolerance(
         Speed(), kRunSpeed, std::numeric_limits<double>::infinity(), kRunSpeed,
-        0, SigmoidType::kQuadratic));
+        0, SigmoidType::kLinear));
   }
 
   bool TaskShouldTerminateEpisode() override { return false; }
