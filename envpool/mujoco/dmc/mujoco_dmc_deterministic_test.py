@@ -72,7 +72,7 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
 
   def test_cheetah(self) -> None:
     obs_keys = ["position", "velocity"]
-    self.check(DmcCheetahDMEnvPool, DmcCheetahEnvSpec, "run", obs_keys)
+    self.check(DmcCheetahEnvSpec, DmcCheetahDMEnvPool, "run", obs_keys)
 
 
 if __name__ == "__main__":

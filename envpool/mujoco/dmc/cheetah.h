@@ -45,6 +45,9 @@ class CheetahEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict("obs:position"_.Bind(Spec<mjtNum>({8})),
                     "obs:velocity"_.Bind(Spec<mjtNum>({9})),
+#ifdef ENVPOOL_TEST
+                    "info:qpos0"_.Bind(Spec<mjtNum>({9})),
+#endif
                     "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
   }
   template <typename Config>
@@ -83,6 +86,9 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
     }
     PhysicsStep(200, nullptr);
     data_->time = 0;
+#ifdef ENVPOOL_TEST
+    std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
+#endif
   }
 
   bool IsDone() override { return done_; }
@@ -112,8 +118,11 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
-    state["obs:position"_].Assign(data_->qpos + 1, model_->nq - 1);  // ?
+    state["obs:position"_].Assign(data_->qpos + 1, model_->nq - 1);
     state["obs:velocity"_].Assign(data_->qvel, model_->nv);
+#ifdef ENVPOOL_TEST
+    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
+#endif
   }
 
   mjtNum Speed() {

@@ -98,9 +98,9 @@ class _MujocoDmcAlignTest(absltest.TestCase):
     self.run_align_check(env0, env1)
 
   def test_cheetah(self) -> None:
-    env0 = suite.load("hopper", "run")
+    env0 = suite.load("cheetah", "run")
     env1 = DmcCheetahDMEnvPool(
-      DmcCheetahEnvSpec(DmcCheetahEnvSpec.gen_config(task_name="hop"))
+      DmcCheetahEnvSpec(DmcCheetahEnvSpec.gen_config(task_name="run"))
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
