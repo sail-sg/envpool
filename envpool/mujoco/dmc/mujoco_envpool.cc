@@ -22,9 +22,7 @@ using DmcHopperEnvPool = PyEnvPool<mujoco_dmc::HopperEnvPool>;
 using DmcCheetahEnvSpec = PyEnvSpec<mujoco_dmc::CheetahEnvSpec>;
 using DmcCheetahEnvPool = PyEnvPool<mujoco_dmc::CheetahEnvPool>;
 
-PYBIND11_MODULE(mujoco_dmc_envpool,
-                m){REGISTER(m, DmcCheetahEnvSpec, DmcCheetahEnvPool)}
-
 PYBIND11_MODULE(mujoco_dmc_envpool, m) {
+  REGISTER(m, DmcCheetahEnvSpec, DmcCheetahEnvPool)
   REGISTER(m, DmcHopperEnvSpec, DmcHopperEnvPool)
 }

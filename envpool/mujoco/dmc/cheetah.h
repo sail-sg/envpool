@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <limits>
 #include <memory>
+#include <random>
 #include <string>
 
 #include "envpool/core/async_envpool.h"
@@ -35,14 +36,16 @@ std::string GetCheetahXML(const std::string& base_path,
 }
 
 class CheetahEnvFns {
+ public:
   static decltype(auto) DefaultConfig() {
     return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(4),
-                    "task_name"_.Bind(std::string("stand")));
+                    "task_name"_.Bind(std::string("run")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict("obs:position"_.Bind(Spec<mjtNum>({8})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({9})));
+                    "obs:velocity"_.Bind(Spec<mjtNum>({9}))),
+           "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0}));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -54,11 +57,14 @@ using CheetahEnvSpec = EnvSpec<CheetahEnvFns>;
 
 // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/cheetah.py#L60
 class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
+ protected:
   const mjtNum kRunSpeed = 10;
+  std::uniform_real_distribution<> dist_uniform_;
 
  public:
   CheetahEnv(const Spec& spec, int env_id)
-      : Env<CheetahEnvSpec>(spec, env_id),
+      : dist_uniform_(0, 1),
+        Env<CheetahEnvSpec>(spec, env_id),
         MujocoEnv(
             spec.config["base_path"_],
             GetCheetahXML(spec.config["base_path"_], spec.config["task_name"_]),
@@ -66,12 +72,12 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
 
   void TaskInitializeEpisode() override {
     assert(model_->njnt == model_->nq);
-    int is_limited = int(model_->jnt_limited) == 1;
+    int is_limited = static_cast<int>(*(model_->jnt_limited)) == 1;
     mjtNum range_min = model_->jnt_range[is_limited * 2 + 0];
     mjtNum range_max = model_->jnt_range[is_limited * 2 + 1];
     mjtNum range = range_max - range_min;
     data_->qpos[is_limited] = dist_uniform_(gen_) * range + range_min;
-    for (int i = 0; i < 200; i++) PhysicsStep(200, NULL);
+    PhysicsStep(200, NULL);
     data_->time = 0;
   }
 
