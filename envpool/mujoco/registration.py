@@ -20,7 +20,11 @@ from envpool.registration import register
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 # from suite.BENCHMARKING
-dmc_mujoco_envs = [("hopper", "stand"), ("hopper", "hop"), ("cheetah", "run")]
+dmc_mujoco_envs = [
+  ("cheetah", "run"),
+  ("hopper", "stand"),
+  ("hopper", "hop"),
+]
 
 gym_mujoco_envs = [
   ("Ant", "v3", False),

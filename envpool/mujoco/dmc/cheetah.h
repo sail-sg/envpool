@@ -76,7 +76,7 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
   void TaskInitializeEpisode() override {
     assert(model_->njnt == model_->nq);
     for (int i = 0; i < model_->njnt; i++) {
-      bool is_limited = *(model_->jnt_limited + i) == 1;
+      bool is_limited = model_->jnt_limited[i] == 1;
       if (is_limited) {
         mjtNum range_min = model_->jnt_range[i * 2 + 0];
         mjtNum range_max = model_->jnt_range[i * 2 + 1];
