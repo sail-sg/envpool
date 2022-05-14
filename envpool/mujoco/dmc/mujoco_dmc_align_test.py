@@ -79,7 +79,7 @@ class _MujocoDmcAlignTest(absltest.TestCase):
       while not done:
         cnt += 1
         a = self.sample_action(action_spec)
-        logging.info(f"{cnt} {a}")
+        # logging.info(f"{cnt} {a}")
         ts0 = env0.step(a)
         ts1 = env1.step(np.array([a]), np.array([0]))
         done = ts0.step_type == dm_env.StepType.LAST

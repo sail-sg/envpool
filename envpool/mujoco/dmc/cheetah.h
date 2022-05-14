@@ -84,11 +84,11 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
         data_->qpos[i] = dist_uniform_(gen_) * range + range_min;
       }
     }
-    PhysicsStep(200, nullptr);
-    data_->time = 0;
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
 #endif
+    PhysicsStep(200, nullptr);
+    data_->time = 0;
   }
 
   bool IsDone() override { return done_; }
