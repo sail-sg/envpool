@@ -13,11 +13,16 @@
 // limitations under the License.
 
 #include "envpool/core/py_envpool.h"
+#include "envpool/mujoco/dmc/cheetah.h"
 #include "envpool/mujoco/dmc/hopper.h"
 
 using DmcHopperEnvSpec = PyEnvSpec<mujoco_dmc::HopperEnvSpec>;
 using DmcHopperEnvPool = PyEnvPool<mujoco_dmc::HopperEnvPool>;
 
+using DmcCheetahEnvSpec = PyEnvSpec<mujoco_dmc::CheetahEnvSpec>;
+using DmcCheetahEnvPool = PyEnvPool<mujoco_dmc::CheetahEnvPool>;
+
 PYBIND11_MODULE(mujoco_dmc_envpool, m) {
+  REGISTER(m, DmcCheetahEnvSpec, DmcCheetahEnvPool)
   REGISTER(m, DmcHopperEnvSpec, DmcHopperEnvPool)
 }

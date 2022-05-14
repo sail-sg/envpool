@@ -18,7 +18,12 @@ from typing import Any, List
 import numpy as np
 from absl.testing import absltest
 
-from envpool.mujoco import DmcHopperDMEnvPool, DmcHopperEnvSpec
+from envpool.mujoco import (
+  DmcCheetahDMEnvPool,
+  DmcCheetahEnvSpec,
+  DmcHopperDMEnvPool,
+  DmcHopperEnvSpec,
+)
 
 
 class _MujocoDmcDeterministicTest(absltest.TestCase):
@@ -64,6 +69,10 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
     obs_keys = ["position", "velocity", "touch"]
     self.check(DmcHopperEnvSpec, DmcHopperDMEnvPool, "stand", obs_keys)
     self.check(DmcHopperEnvSpec, DmcHopperDMEnvPool, "hop", obs_keys)
+
+  def test_cheetah(self) -> None:
+    obs_keys = ["position", "velocity"]
+    self.check(DmcCheetahEnvSpec, DmcCheetahDMEnvPool, "run", obs_keys)
 
 
 if __name__ == "__main__":
