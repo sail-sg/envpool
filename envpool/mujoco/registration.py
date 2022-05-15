@@ -21,12 +21,12 @@ base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 # from suite.BENCHMARKING
 dmc_mujoco_envs = [
+  ("cheetah", "run"),
+  ("hopper", "hop"),
+  ("hopper", "stand"),
+  ("walker", "run"),
   ("walker", "stand"),
   ("walker", "walk"),
-  ("walker", "run"),
-  ("cheetah", "run"),
-  ("hopper", "stand"),
-  ("hopper", "hop"),
 ]
 
 gym_mujoco_envs = [

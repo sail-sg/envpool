@@ -20,19 +20,6 @@ converted into ``DomainNameTaskName-v1`` in envpool, e.g.,
   envpool.make_dm("BallInCupCatch-v1", num_envs=1)
 
 
-WalkerStand-v1, WalkerWalk-v1, WalkerRun-v1
--------------------------------------------
-
-`dm_control suite walker source code
-<https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/walker.py>`_
-
-- Observation spec: a namedtuple with three keys: ``orientations (14)``, ``height ()`` and
-  ``velocity (9)``;
-- Action spec: ``(6)``, with range ``[-1, 1]``;
-- ``frame_skip``: 10;
-- ``max_episode_steps``: 1000;
-
-
 CheetahRun-v1
 -------------
 
@@ -56,4 +43,17 @@ HopperStand-v1, HopperHop-v1
   ``velocity (7)``, ``touch (2)``;
 - Action spec: ``(4)``, with range ``[-1, 1]``;
 - ``frame_skip``: 4;
+- ``max_episode_steps``: 1000;
+
+
+WalkerRun-v1, WalkerStand-v1, WalkerWalk-v1
+-------------------------------------------
+
+`dm_control suite walker source code
+<https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/walker.py>`_
+
+- Observation spec: a namedtuple with three keys: ``orientations (14)``,
+  ``height ()`` and ``velocity (9)``;
+- Action spec: ``(6)``, with range ``[-1, 1]``;
+- ``frame_skip``: 10;
 - ``max_episode_steps``: 1000;

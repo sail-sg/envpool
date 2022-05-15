@@ -52,15 +52,14 @@ from .mujoco_gym_envpool import (
 )
 
 # dmc
-DmcWalkerEnvSpec, DmcWalkerDMEnvPool, DmcWalkerGymEnvPool = py_env(
-  _DmcWalkerEnvSpec, _DmcWalkerEnvPool
-)
-
 DmcCheetahEnvSpec, DmcCheetahDMEnvPool, DmcCheetahGymEnvPool = py_env(
   _DmcCheetahEnvSpec, _DmcCheetahEnvPool
 )
 DmcHopperEnvSpec, DmcHopperDMEnvPool, DmcHopperGymEnvPool = py_env(
   _DmcHopperEnvSpec, _DmcHopperEnvPool
+)
+DmcWalkerEnvSpec, DmcWalkerDMEnvPool, DmcWalkerGymEnvPool = py_env(
+  _DmcWalkerEnvSpec, _DmcWalkerEnvPool
 )
 
 # gym
@@ -109,15 +108,15 @@ GymWalker2dEnvSpec, GymWalker2dDMEnvPool, GymWalker2dGymEnvPool = py_env(
 )
 
 __all__ = [
-  "DmcWalkerEnvSpec",
-  "DmcWalkerDMEnvPool",
-  "DmcWalkerGymEnvPool",
   "DmcCheetahEnvSpec",
   "DmcCheetahDMEnvPool",
   "DmcCheetahGymEnvPool",
   "DmcHopperEnvSpec",
   "DmcHopperDMEnvPool",
   "DmcHopperGymEnvPool",
+  "DmcWalkerEnvSpec",
+  "DmcWalkerDMEnvPool",
+  "DmcWalkerGymEnvPool",
   "GymAntEnvSpec",
   "GymAntDMEnvPool",
   "GymAntGymEnvPool",

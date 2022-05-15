@@ -80,9 +80,8 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
 
   def test_walker(self) -> None:
     obs_keys = ["orientations", "height", "velocity"]
-    self.check(DmcWalkerEnvSpec, DmcWalkerDMEnvPool, "stand", obs_keys)
-    self.check(DmcWalkerEnvSpec, DmcWalkerDMEnvPool, "walk", obs_keys)
-    self.check(DmcWalkerEnvSpec, DmcWalkerDMEnvPool, "run", obs_keys)
+    for task in ["run", "stand", "walk"]:
+      self.check(DmcWalkerEnvSpec, DmcWalkerDMEnvPool, task, obs_keys)
 
 
 if __name__ == "__main__":
