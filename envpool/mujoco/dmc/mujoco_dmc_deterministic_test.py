@@ -71,24 +71,25 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
         if np.abs(o0).sum() > 0 and ts0.step_type[0] != dm_env.StepType.FIRST:
           self.assertFalse(np.allclose(o0, o2), (o0, o2))
 
-  def test_hopper(self) -> None:
-    obs_keys = ["position", "velocity", "touch"]
-    self.check(DmcHopperEnvSpec, DmcHopperDMEnvPool, "stand", obs_keys)
-    self.check(DmcHopperEnvSpec, DmcHopperDMEnvPool, "hop", obs_keys)
-
   def test_cheetah(self) -> None:
     obs_keys = ["position", "velocity"]
-    self.check(DmcCheetahEnvSpec, DmcCheetahDMEnvPool, "run", obs_keys)
+    for task in ["run"]:
+      self.check(DmcCheetahEnvSpec, DmcCheetahDMEnvPool, task, obs_keys)
+
+  def test_hopper(self) -> None:
+    obs_keys = ["position", "velocity", "touch"]
+    for task in ["stand", "hop"]:
+      self.check(DmcHopperEnvSpec, DmcHopperDMEnvPool, task, obs_keys)
+
+  def test_reacher(self) -> None:
+    obs_keys = ["position", "to_target", "velocity"]
+    for task in ["easy", "hard"]:
+      self.check(DmcReacherEnvSpec, DmcReacherDMEnvPool, task, obs_keys)
 
   def test_walker(self) -> None:
     obs_keys = ["orientations", "height", "velocity"]
     for task in ["run", "stand", "walk"]:
       self.check(DmcWalkerEnvSpec, DmcWalkerDMEnvPool, task, obs_keys)
-
-  def test_reacher(self) -> None:
-    obs_keys = ["position", "to_target", "velocity"]
-    self.check(DmcReacherEnvSpec, DmcReacherDMEnvPool, "easy", obs_keys)
-    self.check(DmcReacherEnvSpec, DmcReacherDMEnvPool, "hard", obs_keys)
 
 
 if __name__ == "__main__":

@@ -51,17 +51,17 @@ class _MujocoDmcAlignTest(absltest.TestCase):
   def reset_state(
     self, env: dm_env.Environment, ts: dm_env.TimeStep, task: str
   ) -> None:
-    # manually reset
+    # manually reset, mimic initialize_episode
     with env.physics.reset_context():
       env.physics.data.qpos = ts.observation.qpos0[0]
       if task == "cheetah":
         for _ in range(200):
           env.physics.step()
         env.physics.data.time = 0
-      if task == "reacher":
-        env.physics.model.geom_pos = ts.observation.geom_pos.reshape(
-          env.physics.model.geom_pos.shape
-        )
+      elif task == "reacher":
+        target = ts.observation.target[0]
+        env.physics.named.model.geom_pos["target", "x"] = target[0]
+        env.physics.named.model.geom_pos["target", "y"] = target[1]
 
   def sample_action(self, action_spec: dm_env.specs.Array) -> np.ndarray:
     return np.random.uniform(
@@ -107,14 +107,14 @@ class _MujocoDmcAlignTest(absltest.TestCase):
       self.run_space_check(env0, env1)
       self.run_align_check(env0, env1, domain)
 
-  def test_hopper(self) -> None:
-    self.run_align_check_entry(
-      "hopper", ["hop", "stand"], DmcHopperEnvSpec, DmcHopperDMEnvPool
-    )
-
   def test_cheetah(self) -> None:
     self.run_align_check_entry(
       "cheetah", ["run"], DmcCheetahEnvSpec, DmcCheetahDMEnvPool
+    )
+
+  def test_hopper(self) -> None:
+    self.run_align_check_entry(
+      "hopper", ["hop", "stand"], DmcHopperEnvSpec, DmcHopperDMEnvPool
     )
 
   def test_reacher(self) -> None:

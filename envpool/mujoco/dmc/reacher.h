@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/reacher.py
 
 #ifndef ENVPOOL_MUJOCO_DMC_REACHER_H_
 #define ENVPOOL_MUJOCO_DMC_REACHER_H_
@@ -49,7 +50,7 @@ class ReacherEnvFns {
                     "obs:velocity"_.Bind(Spec<mjtNum>({2})),
 #ifdef ENVPOOL_TEST
                     "info:qpos0"_.Bind(Spec<mjtNum>({2})),
-                    "info:geom_pos"_.Bind(Spec<mjtNum>({30})),
+                    "info:target"_.Bind(Spec<mjtNum>({30})),
 #endif
                     "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
   }
@@ -65,11 +66,10 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
  protected:
   const mjtNum kBigTarget = 0.05;
   const mjtNum kSmallTarget = 0.015;
-  float target_size_;
+  mjtNum target_size_;
   std::uniform_real_distribution<> dist_uniform_;
 #ifdef ENVPOOL_TEST
-  //   std::unique_ptr<std::unique_ptr<mjtNum>[]> geom_pos_;
-  std::unique_ptr<mjtNum> geom_pos_;
+  std::array<mjtNum, 2> target_;
 #endif
 
  public:
@@ -88,13 +88,6 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     } else {
       throw std::runtime_error("Unknown task_name for dmc reacher.");
     }
-#ifdef ENVPOOL_TEST
-    geom_pos_.reset(new mjtNum[model_->ngeom * 3]);
-    // geom_pos_ = new std::unique_ptr<mjtNum>[model_->ngeom];
-    // for(int i=0;i<model_->ngeom;i++){
-    //     geom_pos_[i] = std::unique_ptr<mjtNum[]>(new mjtNum[3]);
-    // }
-#endif
   }
 
   void TaskInitializeEpisode() override {
@@ -102,16 +95,12 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     RandomizeLimitedAndRotationalJoints(&gen_);
     mjtNum angle = dist_uniform_(gen_) * 2 * M_PI;
     mjtNum radius = dist_uniform_(gen_) * 0.15 + 0.05;
-    model_->geom_pos[6 * 3 + 0] = radius * sin(angle);
-    model_->geom_pos[6 * 3 + 1] = radius * cos(angle);
+    model_->geom_pos[6 * 3 + 0] = radius * std::sin(angle);
+    model_->geom_pos[6 * 3 + 1] = radius * std::cos(angle);
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
-    std::memcpy(geom_pos_.get(), model_->geom_pos,
-                sizeof(mjtNum) * model_->ngeom * 3);
-    // for(int i=0;i<model_->ngeom;i++){
-    //     std::memcpy(geom_pos_[i].get(), model_->geom_pos[i*3],
-    //             sizeof(mjtNum) * 3);
-    // }
+    target_[0] = model_->geom_pos[6 * 3 + 0];
+    target_[1] = model_->geom_pos[6 * 3 + 1];
 #endif
   }
 
@@ -141,12 +130,12 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     // obs
     state["obs:position"_].Assign(data_->qpos, model_->nq);
     auto finger = FingerToTarget();
-    state["obs:to_target"_].Assign(finger.begin(), 2);
+    state["obs:to_target"_].Assign(finger.begin(), finger.size());
     state["obs:velocity"_].Assign(data_->qvel, model_->nv);
     // info for check alignment
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    state["info:geom_pos"_].Assign(geom_pos_.get(), model_->ngeom * 3);
+    state["info:target"_].Assign(target_.begin(), target_.size());
 #endif
   }
 
