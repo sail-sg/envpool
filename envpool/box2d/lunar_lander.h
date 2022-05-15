@@ -35,8 +35,9 @@ class LunarLanderEnv {
   static constexpr double kMainEnginePower = 13.0;
   static constexpr double kSideEnginePower = 0.6;
   static constexpr double kInitialRandom = 1000.0;
-  static constexpr double kLanderPoly[6][2] = {{-14, 17}, {-17, 0}, {-17, -10},
-                                               {17, -10}, {17, 0},  {14, 17}};
+  static constexpr double kLanderPoly[6][2] = {{-14, 17},  {-17, 0},  // NOLINT
+                                               {-17, -10}, {17, -10},
+                                               {17, 0},    {14, 17}};
   static constexpr double kLegAway = 20;
   static constexpr double kLegDown = 18;
   static constexpr double kLegW = 2;
@@ -52,7 +53,7 @@ class LunarLanderEnv {
 
  protected:
   int max_episode_steps_, elapsed_step_;
-  float reward_;
+  float reward_, prev_shaping_;
   bool continuous_, done_;
   std::array<float, 8> obs_;
 
@@ -62,22 +63,22 @@ class LunarLanderEnv {
   std::vector<b2Body*> particles_;
   std::vector<b2Vec2> lander_poly_;
   std::array<b2Body*, 2> legs_;
-  std::array<bool, 2> ground_contact_;
+  std::array<float, 2> ground_contact_;
   std::unique_ptr<ContactDetector> listener_;
   std::uniform_real_distribution<> dist_;
 
  public:
   LunarLanderEnv(bool continuous, int max_episode_steps);
   void LunarLanderReset(std::mt19937* gen);
-  // discrete action space: action0
-  // continuous action space: action1 and action2
-  void LunarLanderStep(std::mt19937* gen, int action0, float action1,
-                       float action2);
+  // discrete action space: action
+  // continuous action space: action0 and action1
+  void LunarLanderStep(std::mt19937* gen, int action, float action0,
+                       float action1);
 
  private:
   void ResetBox2d(std::mt19937* gen);
-  void StepBox2d(std::mt19937* gen, int action0, float action1, float action2);
-  b2Body* CreateParticle(double mass, double x, double y);
+  void StepBox2d(std::mt19937* gen, int action, float action0, float action1);
+  b2Body* CreateParticle(float mass, b2Vec2 pos);
 };
 
 class ContactDetector : public b2ContactListener {
