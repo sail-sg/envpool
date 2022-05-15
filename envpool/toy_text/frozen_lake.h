@@ -98,7 +98,7 @@ class FrozenLakeEnv : public Env<FrozenLakeEnvSpec> {
     float reward = 0.0;
     if (map_[x_][y_] == 'H' || map_[x_][y_] == 'G') {
       done_ = true;
-      reward = map_[x_][y_] == 'G' ? 1.0F : 0.0F;
+      reward = map_[x_][y_] == 'G' ? 1.0f : 0.0f;
     }
     WriteState(reward);
   }
