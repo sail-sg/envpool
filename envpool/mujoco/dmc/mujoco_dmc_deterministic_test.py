@@ -15,6 +15,7 @@
 
 from typing import Any, List
 
+import dm_env
 import numpy as np
 from absl.testing import absltest
 
@@ -23,6 +24,8 @@ from envpool.mujoco import (
   DmcCheetahEnvSpec,
   DmcHopperDMEnvPool,
   DmcHopperEnvSpec,
+  DmcWalkerDMEnvPool,
+  DmcWalkerEnvSpec,
 )
 
 
@@ -54,7 +57,8 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
           ) for _ in range(num_envs)
         ]
       )
-      obs0 = env0.step(action).observation
+      ts0 = env0.step(action)
+      obs0 = ts0.observation
       obs1 = env1.step(action).observation
       obs2 = env2.step(action).observation
       for k in obs_keys:
@@ -62,7 +66,7 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
         o1 = getattr(obs1, k)
         o2 = getattr(obs2, k)
         np.testing.assert_allclose(o0, o1)
-        if np.abs(o0).sum() > 0:
+        if np.abs(o0).sum() > 0 and ts0.step_type[0] != dm_env.StepType.FIRST:
           self.assertFalse(np.allclose(o0, o2), (o0, o2))
 
   def test_hopper(self) -> None:
@@ -73,6 +77,11 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
   def test_cheetah(self) -> None:
     obs_keys = ["position", "velocity"]
     self.check(DmcCheetahEnvSpec, DmcCheetahDMEnvPool, "run", obs_keys)
+
+  def test_walker(self) -> None:
+    obs_keys = ["orientations", "height", "velocity"]
+    for task in ["run", "stand", "walk"]:
+      self.check(DmcWalkerEnvSpec, DmcWalkerDMEnvPool, task, obs_keys)
 
 
 if __name__ == "__main__":

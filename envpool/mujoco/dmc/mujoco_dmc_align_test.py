@@ -13,7 +13,7 @@
 # limitations under the License.
 """Unit tests for Mujoco dm_control suite align check."""
 
-from typing import Any, no_type_check
+from typing import Any, List, no_type_check
 
 import dm_env
 import numpy as np
@@ -26,6 +26,8 @@ from envpool.mujoco import (
   DmcCheetahEnvSpec,
   DmcHopperDMEnvPool,
   DmcHopperEnvSpec,
+  DmcWalkerDMEnvPool,
+  DmcWalkerEnvSpec,
 )
 
 
@@ -90,28 +92,29 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         np.testing.assert_allclose(ts0.reward, ts1.reward[0])
         np.testing.assert_allclose(ts0.discount, ts1.discount[0])
 
-  def test_hopper(self) -> None:
-    env0 = suite.load("hopper", "stand")
-    env1 = DmcHopperDMEnvPool(
-      DmcHopperEnvSpec(DmcHopperEnvSpec.gen_config(task_name="stand"))
-    )
-    self.run_space_check(env0, env1)
-    self.run_align_check(env0, env1, "hopper")
+  def run_align_check_entry(
+    self, domain: str, tasks: List[str], spec_cls: Any, envpool_cls: Any
+  ) -> None:
+    for task in tasks:
+      env0 = suite.load(domain, task)
+      env1 = envpool_cls(spec_cls(spec_cls.gen_config(task_name=task)))
+      self.run_space_check(env0, env1)
+      self.run_align_check(env0, env1, domain)
 
-    env0 = suite.load("hopper", "hop")
-    env1 = DmcHopperDMEnvPool(
-      DmcHopperEnvSpec(DmcHopperEnvSpec.gen_config(task_name="hop"))
+  def test_hopper(self) -> None:
+    self.run_align_check_entry(
+      "hopper", ["hop", "stand"], DmcHopperEnvSpec, DmcHopperDMEnvPool
     )
-    self.run_space_check(env0, env1)
-    self.run_align_check(env0, env1, "hopper")
 
   def test_cheetah(self) -> None:
-    env0 = suite.load("cheetah", "run")
-    env1 = DmcCheetahDMEnvPool(
-      DmcCheetahEnvSpec(DmcCheetahEnvSpec.gen_config(task_name="run"))
+    self.run_align_check_entry(
+      "cheetah", ["run"], DmcCheetahEnvSpec, DmcCheetahDMEnvPool
     )
-    self.run_space_check(env0, env1)
-    self.run_align_check(env0, env1, "cheetah")
+
+  def test_walker(self) -> None:
+    self.run_align_check_entry(
+      "walker", ["run", "stand", "walk"], DmcWalkerEnvSpec, DmcWalkerDMEnvPool
+    )
 
 
 if __name__ == "__main__":
