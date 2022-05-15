@@ -66,6 +66,7 @@ cc_library(
         "dmc/cheetah.h",
         "dmc/hopper.h",
         "dmc/mujoco_env.h",
+        "dmc/reacher.h",
         "dmc/utils.h",
         "dmc/walker.h",
     ],

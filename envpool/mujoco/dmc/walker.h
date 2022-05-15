@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/walker.py
 
 #ifndef ENVPOOL_MUJOCO_DMC_WALKER_H_
 #define ENVPOOL_MUJOCO_DMC_WALKER_H_
@@ -28,7 +29,6 @@
 #include "envpool/mujoco/dmc/mujoco_env.h"
 #include "envpool/mujoco/dmc/utils.h"
 
-// https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/walker.py
 namespace mujoco_dmc {
 
 std::string GetWalkerXML(const std::string& base_path,
@@ -84,7 +84,7 @@ class WalkerEnv : public Env<WalkerEnvSpec>, public MujocoEnv {
     } else if (task_name == "run") {
       move_speed_ = kRunSpeed;
     } else {
-      throw std::runtime_error("Unknown task_name for dmc hopper.");
+      throw std::runtime_error("Unknown task_name for dmc walker.");
     }
   }
 

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/cheetah.py
 
 #ifndef ENVPOOL_MUJOCO_DMC_CHEETAH_H_
 #define ENVPOOL_MUJOCO_DMC_CHEETAH_H_
@@ -58,7 +59,6 @@ class CheetahEnvFns {
 
 using CheetahEnvSpec = EnvSpec<CheetahEnvFns>;
 
-// https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/cheetah.py#L60
 class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
  protected:
   const mjtNum kRunSpeed = 10;
