@@ -121,7 +121,7 @@ class _MakeTest(absltest.TestCase):
     self.check_step(
       [
         "WalkerStand-v1",
-        "WalkerWalker-v1",
+        "WalkerWalk-v1",
         "WalkerRun-v1",
         "CheetahRun-v1",
         "HopperStand-v1",
