@@ -13,7 +13,7 @@
 # limitations under the License.
 """Unit tests for Mujoco dm_control suite align check."""
 
-from typing import Any, no_type_check
+from typing import Any, List, no_type_check
 
 import dm_env
 import numpy as np
@@ -21,7 +21,14 @@ from absl import logging
 from absl.testing import absltest
 from dm_control import suite
 
-from envpool.mujoco import DmcHopperDMEnvPool, DmcHopperEnvSpec
+from envpool.mujoco import (
+  DmcCheetahDMEnvPool,
+  DmcCheetahEnvSpec,
+  DmcHopperDMEnvPool,
+  DmcHopperEnvSpec,
+  DmcWalkerDMEnvPool,
+  DmcWalkerEnvSpec,
+)
 
 
 class _MujocoDmcAlignTest(absltest.TestCase):
@@ -39,10 +46,16 @@ class _MujocoDmcAlignTest(absltest.TestCase):
     np.testing.assert_allclose(act0.maximum, act1.maximum)
 
   @no_type_check
-  def reset_state(self, env: dm_env.Environment, ts: dm_env.TimeStep) -> None:
+  def reset_state(
+    self, env: dm_env.Environment, ts: dm_env.TimeStep, task: str
+  ) -> None:
     # manually reset
     with env.physics.reset_context():
       env.physics.data.qpos = ts.observation.qpos0[0]
+      if task == "cheetah":
+        for _ in range(200):
+          env.physics.step()
+        env.physics.data.time = 0
 
   def sample_action(self, action_spec: dm_env.specs.Array) -> np.ndarray:
     return np.random.uniform(
@@ -51,7 +64,9 @@ class _MujocoDmcAlignTest(absltest.TestCase):
       size=action_spec.shape,
     )
 
-  def run_align_check(self, env0: dm_env.Environment, env1: Any) -> None:
+  def run_align_check(
+    self, env0: dm_env.Environment, env1: Any, task: str
+  ) -> None:
     logging.info(f"align check for {env1.__class__.__name__}")
     obs_spec, action_spec = env0.observation_spec(), env0.action_spec()
     for i in range(5):
@@ -59,7 +74,7 @@ class _MujocoDmcAlignTest(absltest.TestCase):
       env0.reset()
       a = self.sample_action(action_spec)
       ts = env1.reset(np.array([0]))
-      self.reset_state(env0, ts)
+      self.reset_state(env0, ts, task)
       logging.info(f'reset qpos {ts.observation.qpos0[0]}')
       cnt = 0
       done = False
@@ -70,27 +85,36 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         ts0 = env0.step(a)
         ts1 = env1.step(np.array([a]), np.array([0]))
         done = ts0.step_type == dm_env.StepType.LAST
-        np.testing.assert_allclose(ts0.step_type, ts1.step_type[0])
-        np.testing.assert_allclose(ts0.reward, ts1.reward[0])
-        np.testing.assert_allclose(ts0.discount, ts1.discount[0])
         o0, o1 = ts0.observation, ts1.observation
         for k in obs_spec:
           np.testing.assert_allclose(o0[k], getattr(o1, k)[0])
+        np.testing.assert_allclose(ts0.step_type, ts1.step_type[0])
+        np.testing.assert_allclose(ts0.reward, ts1.reward[0])
+        np.testing.assert_allclose(ts0.discount, ts1.discount[0])
+
+  def run_align_check_entry(
+    self, domain: str, tasks: List[str], spec_cls: Any, envpool_cls: Any
+  ) -> None:
+    for task in tasks:
+      env0 = suite.load(domain, task)
+      env1 = envpool_cls(spec_cls(spec_cls.gen_config(task_name=task)))
+      self.run_space_check(env0, env1)
+      self.run_align_check(env0, env1, domain)
 
   def test_hopper(self) -> None:
-    env0 = suite.load("hopper", "stand")
-    env1 = DmcHopperDMEnvPool(
-      DmcHopperEnvSpec(DmcHopperEnvSpec.gen_config(task_name="stand"))
+    self.run_align_check_entry(
+      "hopper", ["hop", "stand"], DmcHopperEnvSpec, DmcHopperDMEnvPool
     )
-    self.run_space_check(env0, env1)
-    self.run_align_check(env0, env1)
 
-    env0 = suite.load("hopper", "hop")
-    env1 = DmcHopperDMEnvPool(
-      DmcHopperEnvSpec(DmcHopperEnvSpec.gen_config(task_name="hop"))
+  def test_cheetah(self) -> None:
+    self.run_align_check_entry(
+      "cheetah", ["run"], DmcCheetahEnvSpec, DmcCheetahDMEnvPool
     )
-    self.run_space_check(env0, env1)
-    self.run_align_check(env0, env1)
+
+  def test_walker(self) -> None:
+    self.run_align_check_entry(
+      "walker", ["run", "stand", "walk"], DmcWalkerEnvSpec, DmcWalkerDMEnvPool
+    )
 
 
 if __name__ == "__main__":

@@ -63,9 +63,11 @@ pybind_extension(
 cc_library(
     name = "mujoco_dmc_env",
     hdrs = [
+        "dmc/cheetah.h",
         "dmc/hopper.h",
         "dmc/mujoco_env.h",
         "dmc/utils.h",
+        "dmc/walker.h",
     ],
     data = [":gen_mujoco_dmc_xml"],
     deps = [
