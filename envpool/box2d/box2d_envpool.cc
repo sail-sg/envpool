@@ -12,12 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "envpool/box2d/lunar_lander.h"
+#include "envpool/box2d/lunar_lander_continuous.h"
+#include "envpool/box2d/lunar_lander_discrete.h"
 #include "envpool/core/py_envpool.h"
 
-using LunarLanderEnvSpec = PyEnvSpec<box2d::LunarLanderEnvSpec>;
-using LunarLanderEnvPool = PyEnvPool<box2d::LunarLanderEnvPool>;
+using LunarLanderContinuousEnvSpec =
+    PyEnvSpec<box2d::LunarLanderContinuousEnvSpec>;
+using LunarLanderContinuousEnvPool =
+    PyEnvPool<box2d::LunarLanderContinuousEnvPool>;
+
+using LunarLanderDiscreteEnvSpec = PyEnvSpec<box2d::LunarLanderDiscreteEnvSpec>;
+using LunarLanderDiscreteEnvPool = PyEnvPool<box2d::LunarLanderDiscreteEnvPool>;
 
 PYBIND11_MODULE(box2d_envpool, m) {
-  REGISTER(m, LunarLanderEnvSpec, LunarLanderEnvPool)
+  REGISTER(m, LunarLanderContinuousEnvSpec, LunarLanderContinuousEnvPool)
+  REGISTER(m, LunarLanderDiscreteEnvSpec, LunarLanderDiscreteEnvPool)
 }

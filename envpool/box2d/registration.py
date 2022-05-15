@@ -18,7 +18,15 @@ from envpool.registration import register
 register(
   task_id="LunarLander-v2",
   import_path="envpool.box2d",
-  spec_cls="LunarLanderEnvSpec",
-  dm_cls="LunarLanderDMEnvPool",
-  gym_cls="LunarLanderGymEnvPool",
+  spec_cls="LunarLanderDiscreteEnvSpec",
+  dm_cls="LunarLanderDiscreteDMEnvPool",
+  gym_cls="LunarLanderDiscreteGymEnvPool",
+)
+
+register(
+  task_id="LunarLanderContinuous-v2",
+  import_path="envpool.box2d",
+  spec_cls="LunarLanderContinuousEnvSpec",
+  dm_cls="LunarLanderContinuousDMEnvPool",
+  gym_cls="LunarLanderContinuousGymEnvPool",
 )

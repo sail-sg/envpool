@@ -15,14 +15,30 @@
 
 from envpool.python.api import py_env
 
-from .box2d_envpool import _LunarLanderEnvPool, _LunarLanderEnvSpec
-
-LunarLanderEnvSpec, LunarLanderDMEnvPool, LunarLanderGymEnvPool = py_env(
-  _LunarLanderEnvPool, _LunarLanderEnvSpec
+from .box2d_envpool import (
+  _LunarLanderContinuousEnvPool,
+  _LunarLanderContinuousEnvSpec,
+  _LunarLanderDiscreteEnvPool,
+  _LunarLanderDiscreteEnvSpec,
 )
 
+(
+  LunarLanderContinuousEnvSpec,
+  LunarLanderContinuousDMEnvPool,
+  LunarLanderContinuousGymEnvPool,
+) = py_env(_LunarLanderContinuousEnvSpec, _LunarLanderContinuousEnvPool)
+
+(
+  LunarLanderDiscreteEnvSpec,
+  LunarLanderDiscreteDMEnvPool,
+  LunarLanderDiscreteGymEnvPool,
+) = py_env(_LunarLanderDiscreteEnvSpec, _LunarLanderDiscreteEnvPool)
+
 __all__ = [
-  "LunarLanderEnvSpec",
-  "LunarLanderDMEnvPool",
-  "LunarLanderGymEnvPool",
+  "LunarLanderContinuousEnvSpec",
+  "LunarLanderContinuousDMEnvPool",
+  "LunarLanderContinuousGymEnvPool",
+  "LunarLanderDiscreteEnvSpec",
+  "LunarLanderDiscreteDMEnvPool",
+  "LunarLanderDiscreteGymEnvPool",
 ]
