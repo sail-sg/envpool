@@ -21,7 +21,7 @@ converted into ``DomainNameTaskName-v1`` in envpool, e.g.,
 
 
 WalkerStand-v1, WalkerWalk-v1, WalkerRun-v1
--------------
+-------------------------------------------
 
 `dm_control suite cheetah source code
 <https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/walker.py>`_
