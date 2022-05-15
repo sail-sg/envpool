@@ -58,6 +58,10 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         for _ in range(200):
           env.physics.step()
         env.physics.data.time = 0
+      if task == "reacher":
+        env.physics.model.geom_pos = ts.observation.geom_pos.reshape(
+          env.physics.model.geom_pos.shape
+        )
 
   def sample_action(self, action_spec: dm_env.specs.Array) -> np.ndarray:
     return np.random.uniform(

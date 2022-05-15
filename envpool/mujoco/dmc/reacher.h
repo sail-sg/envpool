@@ -68,6 +68,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
   float target_size_;
   std::uniform_real_distribution<> dist_uniform_;
 #ifdef ENVPOOL_TEST
+  //   std::unique_ptr<std::unique_ptr<mjtNum>[]> geom_pos_;
   std::unique_ptr<mjtNum> geom_pos_;
 #endif
 
@@ -89,6 +90,10 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     }
 #ifdef ENVPOOL_TEST
     geom_pos_.reset(new mjtNum[model_->ngeom * 3]);
+    // geom_pos_ = new std::unique_ptr<mjtNum>[model_->ngeom];
+    // for(int i=0;i<model_->ngeom;i++){
+    //     geom_pos_[i] = std::unique_ptr<mjtNum[]>(new mjtNum[3]);
+    // }
 #endif
   }
 
@@ -103,6 +108,10 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
     std::memcpy(geom_pos_.get(), model_->geom_pos,
                 sizeof(mjtNum) * model_->ngeom * 3);
+    // for(int i=0;i<model_->ngeom;i++){
+    //     std::memcpy(geom_pos_[i].get(), model_->geom_pos[i*3],
+    //             sizeof(mjtNum) * 3);
+    // }
 #endif
   }
 
