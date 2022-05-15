@@ -59,6 +59,7 @@ class LunarLanderEnv {
   std::unique_ptr<b2World> world_;
   b2Body *moon_, *lander_;
   std::vector<b2Body*> particles_;
+  std::vector<b2Vec2> lander_poly_;
   std::array<b2Body*, 2> legs_;
   std::array<bool, 2> ground_contact_;
   std::unique_ptr<ContactDetector> listener_;

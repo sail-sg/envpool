@@ -51,7 +51,12 @@ LunarLanderEnv::LunarLanderEnv(bool continuous, int max_episode_steps)
       world_(new b2World(b2Vec2(0.0, -10.0))),
       moon_(nullptr),
       lander_(nullptr),
-      dist_(0, 1) {}
+      dist_(0, 1) {
+  for (int i = 0; i < 6; ++i) {
+    lander_poly_.emplace_back(
+        b2Vec2(kLanderPoly[i][0] / kScale, kLanderPoly[i][1] / kScale));
+  }
+}
 
 void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
   // clean all body in world
@@ -70,9 +75,11 @@ void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
   world_->SetContactListener(listener_.get());
   double h = kViewportH / kScale;
   double w = kViewportW / kScale;
+
   // moon
   std::array<double, kChunks + 1> height;
-  std::array<double, kChunks> chunk_x, smooth_y;
+  std::array<double, kChunks> chunk_x;
+  std::array<double, kChunks> smooth_y;
   helipad_y_ = h / 4;
   for (int i = 0; i <= kChunks; ++i) {
     if (kChunks / 2 - 2 <= i && i <= kChunks / 2 + 2) {
@@ -89,23 +96,88 @@ void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
   {
     b2BodyDef bd;
     bd.type = b2_staticBody;
-    moon_ = world_->CreateBody(&bd);
+
     b2EdgeShape shape;
     shape.SetTwoSided(b2Vec2(0, 0), b2Vec2(w, 0));
+
+    moon_ = world_->CreateBody(&bd);
     moon_->CreateFixture(&shape, 0);
   }
   for (int i = 0; i < kChunks - 1; ++i) {
     b2EdgeShape shape;
     shape.SetTwoSided(b2Vec2(chunk_x[i], smooth_y[i]),
                       b2Vec2(chunk_x[i + 1], smooth_y[i + 1]));
-    b2FixtureDef bd;
-    bd.shape = &shape;
-    bd.friction = 0.1;
-    bd.density = 0;
-    moon_->CreateFixture(&bd);
+
+    b2FixtureDef fd;
+    fd.shape = &shape;
+    fd.friction = 0.1;
+    fd.density = 0;
+
+    moon_->CreateFixture(&fd);
   }
+
   // lander
-  // double initial_y = kViewportH / kScale;
+  double initial_x = kViewportW / kScale / 2;
+  double initial_y = kViewportH / kScale;
+  {
+    b2BodyDef bd;
+    bd.type = b2_dynamicBody;
+    bd.position.Set(initial_x, initial_y);
+    bd.angle = 0;
+
+    b2PolygonShape polygon;
+    polygon.Set(lander_poly_.data(), lander_poly_.size());
+
+    b2FixtureDef fd;
+    fd.shape = &polygon;
+    fd.density = 5.0;
+    fd.friction = 0.1;
+    fd.filter.categoryBits = 0x0010;
+    fd.filter.maskBits = 0x001;
+    fd.restitution = 0.0;
+
+    lander_ = world_->CreateBody(&bd);
+    lander_->CreateFixture(&fd);
+    b2Vec2 force(dist_(*gen) * 2 * kInitialRandom - kInitialRandom,
+                 dist_(*gen) * 2 * kInitialRandom - kInitialRandom);
+    lander_->ApplyForceToCenter(force, true);
+  }
+  // legs
+  for (int index = 0; index < 2; ++index) {
+    int i = index == 0 ? -1 : 1;
+
+    b2BodyDef bd;
+    bd.type = b2_dynamicBody;
+    bd.position.Set(initial_x - i * kLegAway, initial_y);
+    bd.angle = i * 0.05;
+
+    b2PolygonShape polygon;
+    polygon.SetAsBox(kLegW / kScale, kLegH / kScale);
+
+    b2FixtureDef fd;
+    fd.shape = &polygon;
+    fd.density = 1.0;
+    fd.filter.categoryBits = 0x0020;
+    fd.filter.maskBits = 0x001;
+    fd.restitution = 0.0;
+
+    legs_[index] = world_->CreateBody(&bd);
+    legs_[index]->CreateFixture(&fd);
+    ground_contact_[index] = false;
+
+    b2RevoluteJointDef rjd;
+    rjd.bodyA = lander_;
+    rjd.bodyB = legs_[index];
+    rjd.localAnchorA.Set(0, 0);
+    rjd.localAnchorB.Set(i * kLegAway / kScale, kLegDown / kScale);
+    rjd.enableMotor = true;
+    rjd.enableLimit = true;
+    rjd.maxMotorTorque = kLegSpringTorque;
+    rjd.motorSpeed = 0.3 * i;
+    rjd.lowerAngle = i == -1 ? 0.4 : -0.9;
+    rjd.upperAngle = i == -1 ? 0.9 : -0.4;
+    world_->CreateJoint(&rjd);
+  }
 }
 
 void LunarLanderEnv::LunarLanderReset(std::mt19937* gen) {
