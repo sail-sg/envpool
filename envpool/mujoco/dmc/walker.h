@@ -115,7 +115,7 @@ class WalkerEnv : public Env<WalkerEnvSpec>, public MujocoEnv {
                                     std::numeric_limits<double>::infinity(),
                                     kStandHeight / 2);
     auto upright = (1 + TorsoUpright()) / 2;
-    float stand_reward = (3 * standing + upright) / 4;
+    auto stand_reward = (3 * standing + upright) / 4;
     if (move_speed_ == 0) {
       return static_cast<float>(stand_reward);
     }
