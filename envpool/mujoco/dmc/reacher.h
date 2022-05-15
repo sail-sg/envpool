@@ -87,6 +87,9 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     } else {
       throw std::runtime_error("Unknown task_name for dmc reacher.");
     }
+#ifdef ENVPOOL_TEST
+    geom_pos_.reset(new mjtNum[model_->ngeom * 3]);
+#endif
   }
 
   void TaskInitializeEpisode() override {
@@ -140,15 +143,13 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
 
   std::array<mjtNum, 2> FingerToTarget() {
     std::array<mjtNum, 2> finger;
-    finger[0] = data_->geom_xpos[6 * model_->ngeom + 0] -
-                data_->geom_xpos[9 * model_->ngeom + 0];
-    finger[1] = data_->geom_xpos[6 * model_->ngeom + 1] -
-                data_->geom_xpos[9 * model_->ngeom + 1];
+    finger[0] = data_->geom_xpos[6 * 3 + 0] - data_->geom_xpos[9 * 3 + 0];
+    finger[1] = data_->geom_xpos[6 * 3 + 1] - data_->geom_xpos[9 * 3 + 1];
     return finger;
   }
   mjtNum FingerToTargetDist() {
     std::array<mjtNum, 2> finger = FingerToTarget();
-    return std::sqrt(finger[0] * finger[0] + finger[1] + finger[1]);
+    return std::sqrt(finger[0] * finger[0] + finger[1] * finger[1]);
   }
 };
 
