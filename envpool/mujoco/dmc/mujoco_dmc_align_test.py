@@ -26,6 +26,8 @@ from envpool.mujoco import (
   DmcCheetahEnvSpec,
   DmcHopperDMEnvPool,
   DmcHopperEnvSpec,
+  DmcWalkerDMEnvPool,
+  DmcWalkerEnvSpec,
 )
 
 
@@ -112,6 +114,28 @@ class _MujocoDmcAlignTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, "cheetah")
+
+  def test_walker(self) -> None:
+    env0 = suite.load("walker", "stand")
+    env1 = DmcWalkerDMEnvPool(
+      DmcWalkerEnvSpec(DmcWalkerEnvSpec.gen_config(task_name="stand"))
+    )
+    self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1, "walker")
+
+    env0 = suite.load("walker", "walk")
+    env1 = DmcWalkerDMEnvPool(
+      DmcWalkerEnvSpec(DmcWalkerEnvSpec.gen_config(task_name="walk"))
+    )
+    self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1, "walker")
+
+    env0 = suite.load("walker", "run")
+    env1 = DmcWalkerDMEnvPool(
+      DmcWalkerEnvSpec(DmcWalkerEnvSpec.gen_config(task_name="run"))
+    )
+    self.run_space_check(env0, env1)
+    self.run_align_check(env0, env1, "walker")
 
 
 if __name__ == "__main__":

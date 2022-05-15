@@ -56,10 +56,6 @@ class WalkerEnvFns {
   static decltype(auto) ActionSpec(const Config& conf) {
     return MakeDict("action"_.Bind(Spec<mjtNum>({-1, 6}, {-1.0, 1.0})));
   }
-  template <typename Config>
-  static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.Bind(Spec<mjtNum>({-1, 6}, {-1.0, 1.0})));
-  }
 };
 
 using WalkerEnvSpec = EnvSpec<WalkerEnvFns>;
@@ -71,8 +67,8 @@ class WalkerEnv : public Env<WalkerEnvSpec>, public MujocoEnv {
   // Horizontal speeds(meters / second) above which move reward is 1.
   const mjtNum kWalkSpeed = 1;
   const mjtNum kRunSpeed = 8;
-  mjtNum* kOrient = nullptr;
-  float moveSpeed_;
+  mjtNum* k_orient_ = nullptr;
+  float move_speed_;
 
  public:
   WalkerEnv(const Spec& spec, int env_id)
@@ -81,20 +77,20 @@ class WalkerEnv : public Env<WalkerEnvSpec>, public MujocoEnv {
             spec.config["base_path"_],
             GetWalkerXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]) {
-    kOrient = static_cast<mjtNum*> std::malloc(14 * sizeof(mjtNum));
+    k_orient_ = static_cast<mjtNum*>(std::malloc(14 * sizeof(mjtNum)));
     std::string task_name = spec.config["task_name"_];
     if (task_name == "stand") {
-      moveSpeed_ = 0;
+      move_speed_ = 0;
     } else if (task_name == "walk") {
-      moveSpeed_ = kWalkSpeed;
+      move_speed_ = kWalkSpeed;
     } else if (task_name == "run") {
-      moveSpeed_ = kRunSpeed;
+      move_speed_ = kRunSpeed;
     } else {
       throw std::runtime_error("Unknown task_name for dmc hopper.");
     }
   }
 
-  ~WalkerEnv() { std::free(kOrient); }
+  ~WalkerEnv() { std::free(k_orient_); }
 
   void TaskInitializeEpisode() override {
     // randomizers.randomize_limited_and_rotational_joints(physics,
@@ -119,20 +115,19 @@ class WalkerEnv : public Env<WalkerEnvSpec>, public MujocoEnv {
   }
 
   float TaskGetReward() override {
-    float standing = static_cast<float>(RewardTolerance(
-        Torso_height(), kStandHeight, std::numeric_limits<double>::infinity(),
+    auto standing = static_cast<float>(RewardTolerance(
+        TorsoHeight(), kStandHeight, std::numeric_limits<double>::infinity(),
         kStandHeight / 2));
-    float upright = static_cast<float>(1 + Torso_upright()) / 2;
+    auto upright = static_cast<float>(1 + TorsoUpright()) / 2;
     float stand_reward = (3 * standing + upright) / 4;
-    if (moveSpeed_ == 0) {
+    if (move_speed_ == 0) {
       return stand_reward;
-    } else {
-      float move_reward = static_cast<float>(
-          RewardTolerance(Horizontal_velocity(), moveSpeed_,
-                          std::numeric_limits<double>::infinity(),
-                          moveSpeed_ / 2, 0.5, SigmoidType::kLinear));
-      return stand_reward * (5 * move_reward + 1) / 6;
     }
+    auto move_reward = static_cast<float>(
+        RewardTolerance(HorizontalVelocity(), move_speed_,
+                        std::numeric_limits<double>::infinity(),
+                        move_speed_ / 2, 0.5, SigmoidType::kLinear));
+    return stand_reward * (5 * move_reward + 1) / 6;
   }
   bool TaskShouldTerminateEpisode() override { return false; }
 
@@ -143,7 +138,7 @@ class WalkerEnv : public Env<WalkerEnvSpec>, public MujocoEnv {
     state["discount"_] = discount_;
     // obs
     state["obs:orientations"_].Assign(Orientations(), 14);
-    state["obs:height"_] = Torso_height();
+    state["obs:height"_] = TorsoHeight();
     state["obs:velocity"_].Assign(data_->qvel, model_->nv);
     // info for check alignment
 #ifdef ENVPOOL_TEST
@@ -151,25 +146,25 @@ class WalkerEnv : public Env<WalkerEnvSpec>, public MujocoEnv {
 #endif
   }
 
-  mjtNum Torso_upright() {
+  mjtNum TorsoUpright() {
     //   return self.named.data.xmat['torso', 'zz']
     return data_->xmat[1 * 9 + 8];
   }
-  mjtNum Torso_height() {
+  mjtNum TorsoHeight() {
     //   return self.named.data.xpos['torso', 'z']
     return data_->xpos[1 * 3 + 2];
   }
-  mjtNum Horizontal_velocity() {
+  mjtNum HorizontalVelocity() {
     // return self.named.data.sensordata['torso_subtreelinvel'][0]
     return data_->sensordata[0];
   }
   mjtNum* Orientations() {
     //   return self.named.data.xmat[1:, ['xx', 'xz']].ravel()
     for (int i = 0; i < 7; i++) {
-      kOrient[i * 2 + 0] = data_->xmat[(1 + i) * 9 + 0];
-      kOrient[i * 2 + 1] = data_->xmat[(1 + i) * 9 + 2];
+      k_orient_[i * 2 + 0] = data_->xmat[(1 + i) * 9 + 0];
+      k_orient_[i * 2 + 1] = data_->xmat[(1 + i) * 9 + 2];
     }
-    return kOrient;
+    return k_orient_;
   }
 };
 

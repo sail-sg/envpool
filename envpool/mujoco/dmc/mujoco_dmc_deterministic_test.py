@@ -23,6 +23,8 @@ from envpool.mujoco import (
   DmcCheetahEnvSpec,
   DmcHopperDMEnvPool,
   DmcHopperEnvSpec,
+  DmcWalkerDMEnvPool,
+  DmcWalkerEnvSpec,
 )
 
 
@@ -73,6 +75,12 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
   def test_cheetah(self) -> None:
     obs_keys = ["position", "velocity"]
     self.check(DmcCheetahEnvSpec, DmcCheetahDMEnvPool, "run", obs_keys)
+
+  def test_walker(self) -> None:
+    obs_keys = ["orientations", "height", "velocity"]
+    self.check(DmcWalkerEnvSpec, DmcWalkerDMEnvPool, "stand", obs_keys)
+    self.check(DmcWalkerEnvSpec, DmcWalkerDMEnvPool, "walk", obs_keys)
+    self.check(DmcWalkerEnvSpec, DmcWalkerDMEnvPool, "run", obs_keys)
 
 
 if __name__ == "__main__":

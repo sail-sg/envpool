@@ -67,6 +67,7 @@ cc_library(
         "dmc/hopper.h",
         "dmc/mujoco_env.h",
         "dmc/utils.h",
+        "dmc/walker.h",
     ],
     data = [":gen_mujoco_dmc_xml"],
     deps = [
