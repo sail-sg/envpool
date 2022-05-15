@@ -123,6 +123,8 @@ class _MakeTest(absltest.TestCase):
         "CheetahRun-v1",
         "HopperHop-v1",
         "HopperStand-v1",
+        "ReacherEasy-v1",
+        "ReacherHard-v1",
         "WalkerRun-v1",
         "WalkerStand-v1",
         "WalkerWalk-v1",

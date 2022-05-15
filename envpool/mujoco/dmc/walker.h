@@ -84,7 +84,7 @@ class WalkerEnv : public Env<WalkerEnvSpec>, public MujocoEnv {
     } else if (task_name == "run") {
       move_speed_ = kRunSpeed;
     } else {
-      throw std::runtime_error("Unknown task_name for dmc hopper.");
+      throw std::runtime_error("Unknown task_name for dmc walker.");
     }
   }
 

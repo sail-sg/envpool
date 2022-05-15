@@ -26,6 +26,8 @@ from envpool.mujoco import (
   DmcCheetahEnvSpec,
   DmcHopperDMEnvPool,
   DmcHopperEnvSpec,
+  DmcReacherDMEnvPool,
+  DmcReacherEnvSpec,
   DmcWalkerDMEnvPool,
   DmcWalkerEnvSpec,
 )
@@ -109,6 +111,11 @@ class _MujocoDmcAlignTest(absltest.TestCase):
   def test_cheetah(self) -> None:
     self.run_align_check_entry(
       "cheetah", ["run"], DmcCheetahEnvSpec, DmcCheetahDMEnvPool
+    )
+
+  def test_reacher(self) -> None:
+    self.run_align_check_entry(
+      "reacher", ["easy", "hard"], DmcReacherEnvSpec, DmcReacherDMEnvPool
     )
 
   def test_walker(self) -> None:

@@ -24,6 +24,8 @@ from envpool.mujoco import (
   DmcCheetahEnvSpec,
   DmcHopperDMEnvPool,
   DmcHopperEnvSpec,
+  DmcReacherDMEnvPool,
+  DmcReacherEnvSpec,
   DmcWalkerDMEnvPool,
   DmcWalkerEnvSpec,
 )
@@ -82,6 +84,11 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
     obs_keys = ["orientations", "height", "velocity"]
     for task in ["run", "stand", "walk"]:
       self.check(DmcWalkerEnvSpec, DmcWalkerDMEnvPool, task, obs_keys)
+
+  def test_reacher(self) -> None:
+    obs_keys = ["position", "to_target", "velocity"]
+    self.check(DmcReacherEnvSpec, DmcReacherDMEnvPool, "easy", obs_keys)
+    self.check(DmcReacherEnvSpec, DmcReacherDMEnvPool, "hard", obs_keys)
 
 
 if __name__ == "__main__":
