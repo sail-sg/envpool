@@ -58,7 +58,7 @@ stable version through `envpool.readthedocs.io/en/stable/
 
 .. toctree::
    :maxdepth: 1
-   :caption: Pages
+   :caption: Contents
 
    pages/slides
    pages/build
@@ -70,7 +70,7 @@ stable version through `envpool.readthedocs.io/en/stable/
 
 .. toctree::
    :maxdepth: 1
-   :caption: API Reference
+   :caption: Environments
 
    api/atari
    api/classic
