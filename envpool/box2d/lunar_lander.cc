@@ -71,7 +71,7 @@ void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
     world_->DestroyBody(legs_[0]);
     world_->DestroyBody(legs_[1]);
   }
-  listener_.reset(new ContactDetector(this));
+  listener_ = std::make_unique<ContactDetector>(this);
   world_->SetContactListener(listener_.get());
   double h = kViewportH / kScale;
   double w = kViewportW / kScale;
