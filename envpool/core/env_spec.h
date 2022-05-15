@@ -58,10 +58,10 @@ class EnvSpec {
   Config config;
   StateSpec state_spec;
   ActionSpec action_spec;
-  static inline const Config DEFAULT_CONFIG =
+  static inline const Config kDefaultConfig =
       ConcatDict(common_config, EnvFns::DefaultConfig());
 
-  EnvSpec() : EnvSpec(DEFAULT_CONFIG) {}
+  EnvSpec() : EnvSpec(kDefaultConfig) {}
   explicit EnvSpec(const ConfigValues& conf)
       : config(conf),
         state_spec(ConcatDict(common_state_spec, EnvFns::StateSpec(config))),

@@ -165,7 +165,7 @@ std::vector<std::string> PyEnvSpec<EnvSpec>::py_action_keys =
     EnvSpec::ActionSpec::AllKeys();
 template <typename EnvSpec>
 typename EnvSpec::ConfigValues PyEnvSpec<EnvSpec>::py_default_config_values =
-    EnvSpec::DEFAULT_CONFIG.AllValues();
+    EnvSpec::kDefaultConfig.AllValues();
 
 /**
  * Bind specs to arrs, and return py::array in ret
@@ -234,7 +234,7 @@ class PyEnvPool : public EnvPool {
       DCHECK_EQ(arr.size(), std::tuple_size_v<typename EnvPool::State::Keys>);
     }
     std::vector<py::array> ret;
-    ret.reserve(EnvPool::State::SIZE);
+    ret.reserve(EnvPool::State::kSize);
     ToNumpy(arr, py_spec.state_spec, &ret);
     return ret;
   }

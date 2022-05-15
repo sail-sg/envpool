@@ -27,13 +27,13 @@ struct Index;
 
 template <class T, class... Types>
 struct Index<T, std::tuple<T, Types...>> {
-  static constexpr std::size_t VALUE = 0;
+  static constexpr std::size_t kValue = 0;
 };
 
 template <class T, class U, class... Types>
 struct Index<T, std::tuple<U, Types...>> {
-  static constexpr std::size_t VALUE =
-      1 + Index<T, std::tuple<Types...>>::VALUE;
+  static constexpr std::size_t kValue =
+      1 + Index<T, std::tuple<Types...>>::kValue;
 };
 
 template <class F, class K, class V, std::size_t... I>

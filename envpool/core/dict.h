@@ -44,14 +44,14 @@ class Value {
 template <char... C>
 class Key {
  public:
-  static constexpr const inline char STR[sizeof...(C) + 1]{C...,  // NOLINT
-                                                           '\0'};
-  static constexpr const inline std::string_view STR_VIEW{STR, sizeof...(C)};
+  static constexpr const inline char kStr[sizeof...(C) + 1]{C...,  // NOLINT
+                                                            '\0'};
+  static constexpr const inline std::string_view kStrView{kStr, sizeof...(C)};
   template <typename Type>
   static constexpr inline auto Bind(Type&& v) {
     return Value<Key, Type>(std::forward<Type>(v));
   }
-  static inline std::string Str() { return {STR_VIEW.data(), STR_VIEW.size()}; }
+  static inline std::string Str() { return {kStrView.data(), kStrView.size()}; }
 };
 
 template <class CharT, CharT... CS>
@@ -63,7 +63,7 @@ template <
     typename Key, typename Keys, typename TupleOrVector,
     std::enable_if_t<is_tuple_v<std::decay_t<TupleOrVector>>, bool> = true>
 inline decltype(auto) Take(const Key& key, TupleOrVector&& values) {
-  constexpr std::size_t index = Index<Key, Keys>::VALUE;
+  constexpr std::size_t index = Index<Key, Keys>::kValue;
   return std::get<index>(std::forward<TupleOrVector>(values));
 }
 
@@ -71,7 +71,7 @@ template <
     typename Key, typename Keys, typename TupleOrVector,
     std::enable_if_t<is_vector_v<std::decay_t<TupleOrVector>>, bool> = true>
 inline decltype(auto) Take(const Key& key, TupleOrVector&& values) {
-  constexpr std::size_t index = Index<Key, Keys>::VALUE;
+  constexpr std::size_t index = Index<Key, Keys>::kValue;
   return std::forward<TupleOrVector>(values).at(index);
 }
 
@@ -83,7 +83,7 @@ class NamedVector {
 
  public:
   using Keys = StringKeys;
-  constexpr static std::size_t SIZE = std::tuple_size<Keys>::value;
+  constexpr static std::size_t kSize = std::tuple_size<Keys>::value;
   explicit NamedVector(Vector* values) : values_(values) {}
   NamedVector(const Keys& keys, Vector* values) : values_(values) {}
   template <typename Key,
@@ -118,7 +118,7 @@ class Dict : public std::decay_t<TupleOrVector> {
  public:
   using Values = std::decay_t<TupleOrVector>;
   using Keys = StringKeys;
-  constexpr static std::size_t SIZE = std::tuple_size<Keys>::value;
+  constexpr static std::size_t kSize = std::tuple_size<Keys>::value;
 
   /**
    * Check that the size of values / keys tuple should match
@@ -224,7 +224,7 @@ class Dict : public std::decay_t<TupleOrVector> {
   template <class F, bool IsTuple = is_tuple_v<Values>,
             std::enable_if_t<IsTuple, bool> = true>
   decltype(auto) Apply(F&& f) const {
-    ApplyZip(f, Keys(), *this, std::make_index_sequence<SIZE>{});
+    ApplyZip(f, Keys(), *this, std::make_index_sequence<kSize>{});
   }
 };
 

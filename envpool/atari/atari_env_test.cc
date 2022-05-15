@@ -88,7 +88,7 @@ TEST(AtariEnvTest, GrayScaleMaxPoolOrder) {
 
 TEST(AtariEnvTest, Seed) {
   std::srand(std::time(nullptr));
-  auto config = atari::AtariEnvSpec::DEFAULT_CONFIG;
+  auto config = atari::AtariEnvSpec::kDefaultConfig;
   std::size_t batch = 4;
   config["num_envs"_] = batch;
   config["batch_size"_] = batch;
@@ -138,7 +138,7 @@ TEST(AtariEnvTest, Seed) {
 }
 
 TEST(AtariEnvTest, MaxEpisodeSteps) {
-  auto config = atari::AtariEnvSpec::DEFAULT_CONFIG;
+  auto config = atari::AtariEnvSpec::kDefaultConfig;
   int batch = 4;
   int max_episode_steps = 10;
   config["num_envs"_] = batch;
@@ -181,7 +181,7 @@ TEST(AtariEnvTest, EpisodicLife) {
   std::srand(std::time(nullptr));
   int batch = 4;
   int total_iter = 3000;
-  auto config = atari::AtariEnvSpec::DEFAULT_CONFIG;
+  auto config = atari::AtariEnvSpec::kDefaultConfig;
   config["num_envs"_] = batch;
   config["batch_size"_] = batch;
   config["episodic_life"_] = true;
@@ -262,7 +262,7 @@ TEST(AtariEnvTest, ZeroDiscountOnLifeLoss) {
   std::srand(std::time(nullptr));
   int batch = 4;
   int total_iter = 3000;
-  auto config = atari::AtariEnvSpec::DEFAULT_CONFIG;
+  auto config = atari::AtariEnvSpec::kDefaultConfig;
   config["num_envs"_] = batch;
   config["batch_size"_] = batch;
   config["task"_] = "breakout";
@@ -344,7 +344,7 @@ TEST(AtariEnvSpeedTest, Benchmark) {
   // int batch = 252;
   // int num_threads = 252;
   // int total_iter = 50000;
-  auto config = atari::AtariEnvSpec::DEFAULT_CONFIG;
+  auto config = atari::AtariEnvSpec::kDefaultConfig;
   config["num_envs"_] = num_envs;
   config["batch_size"_] = batch;
   config["num_threads"_] = num_threads;
