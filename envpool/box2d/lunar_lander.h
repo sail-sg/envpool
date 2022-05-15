@@ -54,6 +54,7 @@ class LunarLanderEnv {
   int max_episode_steps_, elapsed_step_;
   float reward_;
   bool continuous_, done_;
+  std::array<float, 8> obs_;
 
   // box2d related
   std::unique_ptr<b2World> world_;
@@ -64,7 +65,6 @@ class LunarLanderEnv {
   std::array<bool, 2> ground_contact_;
   std::unique_ptr<ContactDetector> listener_;
   std::uniform_real_distribution<> dist_;
-  double helipad_y_;
 
  public:
   LunarLanderEnv(bool continuous, int max_episode_steps);
@@ -76,6 +76,8 @@ class LunarLanderEnv {
 
  private:
   void ResetBox2d(std::mt19937* gen);
+  void StepBox2d(std::mt19937* gen, int action0, float action1, float action2);
+  b2Body* CreateParticle(double mass, double x, double y);
 };
 
 class ContactDetector : public b2ContactListener {

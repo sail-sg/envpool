@@ -14,6 +14,8 @@
 
 #include "envpool/box2d/lunar_lander.h"
 
+#include <algorithm>
+
 namespace box2d {
 
 ContactDetector::ContactDetector(LunarLanderEnv* env) : env_(env) {}
@@ -80,10 +82,10 @@ void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
   std::array<double, kChunks + 1> height;
   std::array<double, kChunks> chunk_x;
   std::array<double, kChunks> smooth_y;
-  helipad_y_ = h / 4;
+  double helipad_y = h / 4;
   for (int i = 0; i <= kChunks; ++i) {
     if (kChunks / 2 - 2 <= i && i <= kChunks / 2 + 2) {
-      height[i] = helipad_y_;
+      height[i] = helipad_y;
     } else {
       height[i] = dist_(*gen) * h / 2;
     }
@@ -117,13 +119,13 @@ void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
   }
 
   // lander
-  double initial_x = kViewportW / kScale / 2;
-  double initial_y = kViewportH / kScale;
+  double initial_x = h / 2;
+  double initial_y = w;
   {
     b2BodyDef bd;
     bd.type = b2_dynamicBody;
     bd.position.Set(initial_x, initial_y);
-    bd.angle = 0;
+    bd.angle = 0.0;
 
     b2PolygonShape polygon;
     polygon.Set(lander_poly_.data(), lander_poly_.size());
@@ -151,11 +153,11 @@ void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
     bd.position.Set(initial_x - i * kLegAway, initial_y);
     bd.angle = i * 0.05;
 
-    b2PolygonShape polygon;
-    polygon.SetAsBox(kLegW / kScale, kLegH / kScale);
+    b2PolygonShape shape;
+    shape.SetAsBox(kLegW / kScale, kLegH / kScale);
 
     b2FixtureDef fd;
-    fd.shape = &polygon;
+    fd.shape = &shape;
     fd.density = 1.0;
     fd.filter.categoryBits = 0x0020;
     fd.filter.maskBits = 0x001;
@@ -173,11 +175,41 @@ void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
     rjd.enableMotor = true;
     rjd.enableLimit = true;
     rjd.maxMotorTorque = kLegSpringTorque;
-    rjd.motorSpeed = 0.3 * i;
+    rjd.motorSpeed = i * 0.3f;
     rjd.lowerAngle = i == -1 ? 0.4 : -0.9;
     rjd.upperAngle = i == -1 ? 0.9 : -0.4;
     world_->CreateJoint(&rjd);
   }
+}
+
+b2Body* LunarLanderEnv::CreateParticle(double mass, double x, double y) {
+  b2BodyDef bd;
+  bd.type = b2_dynamicBody;
+  bd.position.Set(x, y);
+  bd.angle = 0.0;
+
+  b2CircleShape shape;
+  shape.m_radius = 2 / kScale;
+  shape.m_p.SetZero();
+
+  b2FixtureDef fd;
+  fd.shape = &shape;
+  fd.density = mass;
+  fd.friction = 0.1;
+  fd.filter.categoryBits = 0x0100;
+  fd.filter.maskBits = 0x001;
+  fd.restitution = 0.3;
+
+  auto* p = world_->CreateBody(&bd);
+  p->CreateFixture(&fd);
+  particles_.emplace_back(p);
+  return p;
+}
+
+void LunarLanderEnv::StepBox2d(std::mt19937* gen, int action0, float action1,
+                               float action2) {
+  action1 = std::max(std::min(action1, 1.0), -1.0);
+  action2 = std::max(std::min(action2, 1.0), -1.0);
 }
 
 void LunarLanderEnv::LunarLanderReset(std::mt19937* gen) {
@@ -190,6 +222,7 @@ void LunarLanderEnv::LunarLanderReset(std::mt19937* gen) {
 void LunarLanderEnv::LunarLanderStep(std::mt19937* gen, int action0,
                                      float action1, float action2) {
   ++elapsed_step_;
+  StepBox2d(gen, action0, action1, action2);
 }
 
 }  // namespace box2d
