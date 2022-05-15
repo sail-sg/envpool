@@ -45,7 +45,7 @@ class WalkerEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict("obs:orientations"_.Bind(Spec<mjtNum>({14})),
-                    "obs:height"_.Bind(Spec<mjtNum>({1})),
+                    "obs:height"_.Bind(Spec<mjtNum>({})),
                     "obs:velocity"_.Bind(Spec<mjtNum>({9})),
 #ifdef ENVPOOL_TEST
                     "info:qpos0"_.Bind(Spec<mjtNum>({9})),
