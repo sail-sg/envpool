@@ -90,8 +90,8 @@ class BlackjackEnv : public Env<BlackjackEnvSpec> {
       }
       int player_score = Score(player_);
       int dealer_score = Score(dealer_);
-      reward = (player_score > dealer_score ? 1.0F : 0.0F) -
-               (player_score < dealer_score ? 1.0F : 0.0F);
+      reward = (player_score > dealer_score ? 1.0f : 0.0f) -
+               (player_score < dealer_score ? 1.0f : 0.0f);
       if (sab_ && IsNatural(player_) && !IsNatural(dealer_)) {
         reward = 1.0;
       } else if (!sab_ && natural_ && IsNatural(player_) && reward == 1.0) {
