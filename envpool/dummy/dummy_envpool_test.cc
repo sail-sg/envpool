@@ -24,7 +24,7 @@ using DummyAction = typename dummy::DummyEnv::Action;
 using DummyState = typename dummy::DummyEnv::State;
 
 TEST(DummyEnvPoolTest, SplitZeroAction) {
-  auto config = dummy::DummyEnvSpec::DEFAULT_CONFIG;
+  auto config = dummy::DummyEnvSpec::kDefaultConfig;
   int num_envs = 4;
   config["num_envs"_] = num_envs;
   config["batch_size"_] = 4;
@@ -112,7 +112,7 @@ void Runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
   LOG(INFO) << num_envs << " " << batch << " " << seed << " " << total_iter
             << " " << num_threads << " " << max_num_players;
   bool is_sync = num_envs == batch && max_num_players == 1;
-  auto config = dummy::DummyEnvSpec::DEFAULT_CONFIG;
+  auto config = dummy::DummyEnvSpec::kDefaultConfig;
   config["num_envs"_] = num_envs;
   config["batch_size"_] = batch;
   config["num_threads"_] = num_threads;
