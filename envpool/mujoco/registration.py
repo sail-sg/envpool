@@ -24,6 +24,8 @@ dmc_mujoco_envs = [
   ("cheetah", "run"),
   ("hopper", "hop"),
   ("hopper", "stand"),
+  ("reacher", "easy"),
+  ("reacher", "hard"),
   ("walker", "run"),
   ("walker", "stand"),
   ("walker", "walk"),

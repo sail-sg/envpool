@@ -145,7 +145,7 @@ TEST(AtariEnvTest, MaxEpisodeSteps) {
   config["batch_size"_] = batch;
   config["seed"_] = 0;
   config["max_episode_steps"_] = max_episode_steps;
-  config["repeat_action_probability"_] = 0.2F;
+  config["repeat_action_probability"_] = 0.2f;
   int total_iter = 100;
   atari::AtariEnvSpec spec(config);
   atari::AtariEnvPool envpool(spec);
@@ -305,21 +305,21 @@ TEST(AtariEnvTest, ZeroDiscountOnLifeLoss) {
       if (live == last_lives[j]) {
         EXPECT_FALSE(d);
         EXPECT_GT(live, 0);
-        EXPECT_EQ(disc, 1.0F);
-        EXPECT_EQ(disc2, 1.0F);
+        EXPECT_EQ(disc, 1.0f);
+        EXPECT_EQ(disc2, 1.0f);
       } else if (live == 5) {
         // init of episode
         EXPECT_EQ(last_lives[j], 0);
         EXPECT_FALSE(d);
         EXPECT_TRUE(last_done[j]);
-        EXPECT_EQ(disc, 1.0F);
-        EXPECT_EQ(disc2, 1.0F);
+        EXPECT_EQ(disc, 1.0f);
+        EXPECT_EQ(disc2, 1.0f);
       } else {
         EXPECT_EQ(last_lives[j], live + 1);
         EXPECT_EQ(d, live == 0);
         EXPECT_FALSE(last_done[j]);
         EXPECT_EQ(disc, live > 0);
-        EXPECT_EQ(disc2, 0.0F);
+        EXPECT_EQ(disc2, 0.0f);
       }
       last_lives[j] = live;
       last_done[j] = d;

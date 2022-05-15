@@ -34,7 +34,7 @@ class CatchEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict("obs"_.Bind(
-        Spec<float>({conf["height"_], conf["width"_]}, {0.0F, 1.0F})));
+        Spec<float>({conf["height"_], conf["width"_]}, {0.0, 1.0})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -88,8 +88,8 @@ class CatchEnv : public Env<CatchEnvSpec> {
  private:
   void WriteState(float reward) {
     State state = Allocate();
-    state["obs"_](x_, y_) = 1.0F;
-    state["obs"_](height_ - 1, paddle_) = 1.0F;
+    state["obs"_](x_, y_) = 1.0f;
+    state["obs"_](height_ - 1, paddle_) = 1.0f;
     state["reward"_] = reward;
   }
 };

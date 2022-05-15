@@ -55,7 +55,7 @@ class AtariEnvFns {
         "zero_discount_on_life_loss"_.Bind(false), "episodic_life"_.Bind(false),
         "reward_clip"_.Bind(false), "img_height"_.Bind(84),
         "img_width"_.Bind(84), "task"_.Bind(std::string("pong")),
-        "repeat_action_probability"_.Bind(0.0F),
+        "repeat_action_probability"_.Bind(0.0f),
         "use_inter_area_resize"_.Bind(true), "gray_scale"_.Bind(true));
   }
   template <typename Config>
@@ -205,7 +205,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
     if (zero_discount_on_life_loss_) {
       discount = static_cast<float>(lives_ == env_->lives() && !done_);
     } else {
-      discount = 1.0F - static_cast<float>(done_);
+      discount = 1.0f - static_cast<float>(done_);
     }
     float info_reward = reward;
     if (reward_clip_) {
