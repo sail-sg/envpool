@@ -28,6 +28,7 @@ dmc_mujoco_envs = [
   ("finger", "turn_hard"),
   ("hopper", "hop"),
   ("hopper", "stand"),
+  ("pendulum", "swingup"),
   ("reacher", "easy"),
   ("reacher", "hard"),
   ("walker", "run"),

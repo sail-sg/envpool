@@ -30,6 +30,8 @@ from envpool.mujoco import (
   DmcFingerEnvSpec,
   DmcHopperDMEnvPool,
   DmcHopperEnvSpec,
+  DmcPendulumDMEnvPool,
+  DmcPendulumEnvSpec,
   DmcReacherDMEnvPool,
   DmcReacherEnvSpec,
   DmcWalkerDMEnvPool,
@@ -133,6 +135,11 @@ class _MujocoDmcAlignTest(absltest.TestCase):
   def test_hopper(self) -> None:
     self.run_align_check_entry(
       "hopper", ["hop", "stand"], DmcHopperEnvSpec, DmcHopperDMEnvPool
+    )
+
+  def test_pendulum(self) -> None:
+    self.run_align_check_entry(
+      "pendulum", ["swingup"], DmcPendulumEnvSpec, DmcPendulumDMEnvPool
     )
 
   def test_reacher(self) -> None:
