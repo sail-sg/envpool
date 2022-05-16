@@ -53,9 +53,6 @@ class FingerEnvFns {
 #ifdef ENVPOOL_TEST
                     "info:qpos0"_.Bind(Spec<mjtNum>({3})),
                     "info:target"_.Bind(Spec<mjtNum>({2})),
-                    "info:site_size"_.Bind(Spec<mjtNum>({1})),
-                    "info:rgba"_.Bind(Spec<mjtNum>({2})),
-                    "info:dof_damping"_.Bind(Spec<mjtNum>({1})),
 #endif
                     "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
   }
@@ -77,9 +74,6 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
   bool is_spin_;
 #ifdef ENVPOOL_TEST
   std::array<mjtNum, 2> target_;
-  std::array<mjtNum, 2> rgba_;
-  mjtNum dof_damping_;
-  mjtNum site_size_;
 #endif
 
  public:
@@ -89,7 +83,7 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
             spec.config["base_path"_],
             GetFingerXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
-        dist_uniform_(0, 1),
+        dist_uniform_(-M_PI, M_PI),
         is_spin_(spec.config["task_name"_] == "spin") {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name == "turn_easy") {
@@ -107,13 +101,8 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
       model_->site_rgba[3 * 3 + 3] = 0;
       model_->dof_damping[2] = 0.03;
       SetRandomJointAngles();
-#ifdef ENVPOOL_TEST
-      rgba_[0] = 0;
-      rgba_[1] = 0;
-      dof_damping_ = 0.03;
-#endif
     } else {
-      mjtNum target_angle = dist_uniform_(gen_) * 2 * M_PI - M_PI;
+      mjtNum target_angle = dist_uniform_(gen_);
       mjtNum hinge_x = data_->xanchor[2 * 3 + 0];
       mjtNum hinge_z = data_->xanchor[2 * 3 + 2];
       mjtNum radius = model_->geom_size[5 * 3 + 0] + model_->geom_size[5 * 1] +
@@ -126,7 +115,6 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
 #ifdef ENVPOOL_TEST
       target_[0] = target_x;
       target_[1] = target_z;
-      site_size_ = target_radius_;
 #endif
       SetRandomJointAngles();
     }
@@ -178,12 +166,8 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
     // info
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    if (is_spin_) {
-      state["info:rgba"_].Assign(rgba_.begin(), rgba_.size());
-      state["info:dof_damping"_] = dof_damping_;
-    } else {
+    if (!is_spin_) {
       state["info:target"_].Assign(target_.begin(), target_.size());
-      state["info:site_size"_] = site_size_;
     }
 #endif
   }
@@ -201,11 +185,6 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
       throw std::runtime_error(
           "Could not find a collision-free state after max_attempts attempts");
     }
-  }
-
-  mjtNum Speed() {
-    // return self.named.data.sensordata['torso_subtreelinvel'][0]
-    return data_->sensordata[0];
   }
 
   mjtNum HingeVelocity() {
