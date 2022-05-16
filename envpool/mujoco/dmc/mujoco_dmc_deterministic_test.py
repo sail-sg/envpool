@@ -13,13 +13,15 @@
 # limitations under the License.
 """Unit tests for Mujoco dm_control deterministic check."""
 
-from typing import Any, List
+from typing import Any, List, Optional
 
 import dm_env
 import numpy as np
 from absl.testing import absltest
 
 from envpool.mujoco import (
+  DmcBallInCupDMEnvPool,
+  DmcBallInCupEnvSpec,
   DmcCheetahDMEnvPool,
   DmcCheetahEnvSpec,
   DmcFingerDMEnvPool,
@@ -43,8 +45,10 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
     envpool_cls: Any,
     task: str,
     obs_keys: List[str],
+    blacklist: Optional[List[str]] = None,
     num_envs: int = 4,
   ) -> None:
+    np.random.seed(0)
     env0 = envpool_cls(
       spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, task_name=task))
     )
@@ -72,8 +76,22 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
         o1 = getattr(obs1, k)
         o2 = getattr(obs2, k)
         np.testing.assert_allclose(o0, o1)
+        if blacklist and k in blacklist:
+          continue
         if np.abs(o0).sum() > 0 and ts0.step_type[0] != dm_env.StepType.FIRST:
-          self.assertFalse(np.allclose(o0, o2), (o0, o2))
+          self.assertFalse(np.allclose(o0, o2), (k, o0, o2))
+
+  def test_ball_in_cup(self) -> None:
+    obs_keys = ["position", "velocity"]
+    for task in ["catch"]:
+      self.check(
+        DmcBallInCupEnvSpec,
+        DmcBallInCupDMEnvPool,
+        task,
+        obs_keys,
+        # https://github.com/sail-sg/envpool/pull/124#issuecomment-1127860698
+        blacklist=["velocity"],
+      )
 
   def test_cheetah(self) -> None:
     obs_keys = ["position", "velocity"]

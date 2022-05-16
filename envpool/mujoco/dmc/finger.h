@@ -100,7 +100,6 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
       model_->site_rgba[3 * 0 + 3] = 0;
       model_->site_rgba[3 * 3 + 3] = 0;
       model_->dof_damping[2] = 0.03;
-      SetRandomJointAngles();
     } else {
       mjtNum target_angle = dist_uniform_(gen_);
       mjtNum hinge_x = data_->xanchor[2 * 3 + 0];
@@ -116,11 +115,8 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
       target_[0] = target_x;
       target_[1] = target_z;
 #endif
-      SetRandomJointAngles();
     }
-#ifdef ENVPOOL_TEST
-    std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
-#endif
+    SetRandomJointAngles();
   }
 
   bool IsDone() override { return done_; }
@@ -176,6 +172,9 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
     int i = 0;
     for (int i = 0; i < max_attempts; i++) {
       RandomizeLimitedAndRotationalJoints(&gen_);
+#ifdef ENVPOOL_TEST
+      std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
+#endif
       PhysicsAfterReset();
       if (data_->ncon == 0) {
         break;

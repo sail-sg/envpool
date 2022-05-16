@@ -22,6 +22,8 @@ from absl.testing import absltest
 from dm_control import suite
 
 from envpool.mujoco import (
+  DmcBallInCupDMEnvPool,
+  DmcBallInCupEnvSpec,
   DmcCheetahDMEnvPool,
   DmcCheetahEnvSpec,
   DmcFingerDMEnvPool,
@@ -66,9 +68,11 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         target = ts.observation.target[0]
         env.physics.named.model.geom_pos["target", "x"] = target[0]
         env.physics.named.model.geom_pos["target", "y"] = target[1]
-      elif domain == "finger" and task in ["turn_easy", "turn_hard"]:
-        obs = ts.observation
-        env.physics.named.model.site_pos["target", ["x", "z"]] = obs.target[0]
+      elif domain in ["finger", "ball_in_cup"]:
+        if domain == "finger" and task in ["turn_easy", "turn_hard"]:
+          target = ts.observation.target[0]
+          env.physics.named.model.site_pos["target", ["x", "z"]] = target
+        env.physics.after_reset()
 
   def sample_action(self, action_spec: dm_env.specs.Array) -> np.ndarray:
     return np.random.uniform(
@@ -82,7 +86,7 @@ class _MujocoDmcAlignTest(absltest.TestCase):
   ) -> None:
     logging.info(f"align check for {domain} {task}")
     obs_spec, action_spec = env0.observation_spec(), env0.action_spec()
-    for i in range(5):
+    for i in range(3):
       np.random.seed(i)
       env0.reset()
       a = self.sample_action(action_spec)
@@ -113,6 +117,11 @@ class _MujocoDmcAlignTest(absltest.TestCase):
       env1 = envpool_cls(spec_cls(spec_cls.gen_config(task_name=task)))
       self.run_space_check(env0, env1)
       self.run_align_check(env0, env1, domain, task)
+
+  def test_ball_in_cup(self) -> None:
+    self.run_align_check_entry(
+      "ball_in_cup", ["catch"], DmcBallInCupEnvSpec, DmcBallInCupDMEnvPool
+    )
 
   def test_cheetah(self) -> None:
     self.run_align_check_entry(

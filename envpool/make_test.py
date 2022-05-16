@@ -120,6 +120,7 @@ class _MakeTest(absltest.TestCase):
   def test_make_mujoco_dmc(self) -> None:
     self.check_step(
       [
+        "BallInCupCatch-v1",
         "CheetahRun-v1",
         "FingerSpin-v1",
         "FingerTurnEasy-v1",

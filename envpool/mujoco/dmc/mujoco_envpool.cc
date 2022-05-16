@@ -13,12 +13,16 @@
 // limitations under the License.
 
 #include "envpool/core/py_envpool.h"
+#include "envpool/mujoco/dmc/ball_in_cup.h"
 #include "envpool/mujoco/dmc/cheetah.h"
 #include "envpool/mujoco/dmc/finger.h"
 #include "envpool/mujoco/dmc/hopper.h"
 #include "envpool/mujoco/dmc/pendulum.h"
 #include "envpool/mujoco/dmc/reacher.h"
 #include "envpool/mujoco/dmc/walker.h"
+
+using DmcBallInCupEnvSpec = PyEnvSpec<mujoco_dmc::BallInCupEnvSpec>;
+using DmcBallInCupEnvPool = PyEnvPool<mujoco_dmc::BallInCupEnvPool>;
 
 using DmcCheetahEnvSpec = PyEnvSpec<mujoco_dmc::CheetahEnvSpec>;
 using DmcCheetahEnvPool = PyEnvPool<mujoco_dmc::CheetahEnvPool>;
@@ -39,6 +43,7 @@ using DmcWalkerEnvSpec = PyEnvSpec<mujoco_dmc::WalkerEnvSpec>;
 using DmcWalkerEnvPool = PyEnvPool<mujoco_dmc::WalkerEnvPool>;
 
 PYBIND11_MODULE(mujoco_dmc_envpool, m) {
+  REGISTER(m, DmcBallInCupEnvSpec, DmcBallInCupEnvPool)
   REGISTER(m, DmcCheetahEnvSpec, DmcCheetahEnvPool)
   REGISTER(m, DmcFingerEnvSpec, DmcFingerEnvPool)
   REGISTER(m, DmcHopperEnvSpec, DmcHopperEnvPool)
