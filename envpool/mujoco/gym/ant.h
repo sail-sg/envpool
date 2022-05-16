@@ -72,6 +72,7 @@ using AntEnvSpec = EnvSpec<AntEnvFns>;
 
 class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
  protected:
+  int id_torso_;
   bool terminate_when_unhealthy_, no_pos_;
   mjtNum ctrl_cost_weight_, contact_cost_weight_;
   mjtNum forward_reward_weight_, healthy_reward_;
@@ -86,6 +87,7 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
         MujocoEnv(spec.config["base_path"_] + "/mujoco/assets_gym/ant.xml",
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
+        id_torso_(mj_name2id(model_, mjOBJ_BODY, "torso")),
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
@@ -125,11 +127,11 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
   void Step(const Action& action) override {
     // step
     mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
-    mjtNum x_before = data_->xpos[3];
-    mjtNum y_before = data_->xpos[4];
+    mjtNum x_before = data_->xpos[3 * id_torso_];
+    mjtNum y_before = data_->xpos[3 * id_torso_ + 1];
     MujocoStep(act);
-    mjtNum x_after = data_->xpos[3];
-    mjtNum y_after = data_->xpos[4];
+    mjtNum x_after = data_->xpos[3 * id_torso_];
+    mjtNum y_after = data_->xpos[3 * id_torso_ + 1];
 
     // ctrl_cost
     mjtNum ctrl_cost = 0.0;
