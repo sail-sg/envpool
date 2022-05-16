@@ -86,7 +86,7 @@ class _MujocoDmcAlignTest(absltest.TestCase):
   ) -> None:
     logging.info(f"align check for {domain} {task}")
     obs_spec, action_spec = env0.observation_spec(), env0.action_spec()
-    for i in range(5):
+    for i in range(3):
       np.random.seed(i)
       env0.reset()
       a = self.sample_action(action_spec)

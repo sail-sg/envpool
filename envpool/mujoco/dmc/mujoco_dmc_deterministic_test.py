@@ -75,7 +75,7 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
         o2 = getattr(obs2, k)
         np.testing.assert_allclose(o0, o1)
         if np.abs(o0).sum() > 0 and ts0.step_type[0] != dm_env.StepType.FIRST:
-          self.assertFalse(np.allclose(o0, o2), (o0, o2))
+          self.assertFalse(np.allclose(o0, o2), (k, o0, o2))
 
   def test_ball_in_cup(self) -> None:
     obs_keys = ["position", "velocity"]
