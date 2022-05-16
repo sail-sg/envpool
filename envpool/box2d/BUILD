@@ -1,3 +1,4 @@
+load("@pip_requirements//:requirements.bzl", "requirement")
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 
 package(default_visibility = ["//visibility:public"])
@@ -30,6 +31,29 @@ py_library(
     srcs = ["__init__.py"],
     data = [":box2d_envpool.so"],
     deps = ["//envpool/python:api"],
+)
+
+py_test(
+    name = "box2d_deterministic_test",
+    size = "enormous",
+    srcs = ["box2d_deterministic_test.py"],
+    deps = [
+        ":box2d",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "box2d_correctness_test",
+    size = "enormous",
+    srcs = ["box2d_correctness_test.py"],
+    deps = [
+        ":box2d",
+        requirement("absl-py"),
+        requirement("gym"),
+        requirement("numpy"),
+    ],
 )
 
 py_library(
