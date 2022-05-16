@@ -139,9 +139,9 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
   std::array<mjtNum, 3> GetDist() {
     // self.get_body_com("fingertip") - self.get_body_com("target")
     return {
-        data_->xpos[3 * id_fingertip_ + 0] - data_->xpos[3 * id_target_ + 0],
-        data_->xpos[3 * id_fingertip_ + 1] - data_->xpos[3 * id_target_ + 1],
-        data_->xpos[3 * id_fingertip_ + 2] - data_->xpos[3 * id_target_ + 2]};
+        data_->xpos[id_fingertip_ * 3 + 0] - data_->xpos[id_target_ * 3 + 0],
+        data_->xpos[id_fingertip_ * 3 + 1] - data_->xpos[id_target_ * 3 + 1],
+        data_->xpos[id_fingertip_ * 3 + 2] - data_->xpos[id_target_ * 3 + 2]};
   }
 
   void WriteState(float reward, mjtNum ctrl_cost, mjtNum dist_cost) {

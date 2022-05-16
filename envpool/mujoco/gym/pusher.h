@@ -143,9 +143,9 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
 
  private:
   mjtNum GetDist(int off0, int off1) {
-    mjtNum x = data_->xpos[3 * off0 + 0] - data_->xpos[3 * off1 + 0];
-    mjtNum y = data_->xpos[3 * off0 + 1] - data_->xpos[3 * off1 + 1];
-    mjtNum z = data_->xpos[3 * off0 + 2] - data_->xpos[3 * off1 + 2];
+    mjtNum x = data_->xpos[off0 * 3 + 0] - data_->xpos[off1 * 3 + 0];
+    mjtNum y = data_->xpos[off0 * 3 + 1] - data_->xpos[off1 * 3 + 1];
+    mjtNum z = data_->xpos[off0 * 3 + 2] - data_->xpos[off1 * 3 + 2];
     return std::sqrt(x * x + y * y + z * z);
   }
 
@@ -161,13 +161,13 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
       *(obs++) = data_->qvel[i];
     }
     for (int i = 0; i < 3; ++i) {
-      *(obs++) = data_->xpos[3 * id_tips_arm_ + i];
+      *(obs++) = data_->xpos[id_tips_arm_ * 3 + i];
     }
     for (int i = 0; i < 3; ++i) {
-      *(obs++) = data_->xpos[3 * id_object_ + i];
+      *(obs++) = data_->xpos[id_object_ * 3 + i];
     }
     for (int i = 0; i < 3; ++i) {
-      *(obs++) = data_->xpos[3 * id_goal_ + i];
+      *(obs++) = data_->xpos[id_goal_ * 3 + i];
     }
     // info
     state["info:reward_dist"_] = -dist_cost;

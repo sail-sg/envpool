@@ -165,8 +165,8 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     for (int i = 0; i < model_->nbody; ++i) {
       mjtNum mass = model_->body_mass[i];
       mass_sum += mass;
-      mass_x += mass * data_->xipos[3 * i + 0];
-      mass_y += mass * data_->xipos[3 * i + 1];
+      mass_x += mass * data_->xipos[i * 3 + 0];
+      mass_y += mass * data_->xipos[i * 3 + 1];
     }
     return {mass_x / mass_sum, mass_y / mass_sum};
   }

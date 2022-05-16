@@ -127,11 +127,11 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
   void Step(const Action& action) override {
     // step
     mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
-    mjtNum x_before = data_->xpos[3 * id_torso_];
-    mjtNum y_before = data_->xpos[3 * id_torso_ + 1];
+    mjtNum x_before = data_->xpos[id_torso_ * 3];
+    mjtNum y_before = data_->xpos[id_torso_ * 3 + 1];
     MujocoStep(act);
-    mjtNum x_after = data_->xpos[3 * id_torso_];
-    mjtNum y_after = data_->xpos[3 * id_torso_ + 1];
+    mjtNum x_after = data_->xpos[id_torso_ * 3];
+    mjtNum y_after = data_->xpos[id_torso_ * 3 + 1];
 
     // ctrl_cost
     mjtNum ctrl_cost = 0.0;
