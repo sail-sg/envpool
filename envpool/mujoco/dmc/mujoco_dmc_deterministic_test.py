@@ -84,7 +84,7 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
       self.check(DmcHopperEnvSpec, DmcHopperDMEnvPool, task, obs_keys)
 
   def test_pendulum(self) -> None:
-    obs_keys = ["orientations", "velocity"]
+    obs_keys = ["orientation", "velocity"]
     for task in ["swingup"]:
       self.check(DmcPendulumEnvSpec, DmcPendulumDMEnvPool, task, obs_keys)
 
