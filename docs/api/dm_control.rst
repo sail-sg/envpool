@@ -33,6 +33,26 @@ CheetahRun-v1
 - ``max_episode_steps``: 1000;
 
 
+FingerSpin-v1, FingerTurnEasy-v1, FingerTurnHard-v1
+---------------------------------------------------
+
+`dm_control suite finger source code
+<https://github.com/deepmind/dm_control/blob/main/dm_control/suite/finger.py>`_
+
+- Observation spec: a namedtuple with five keys: ``position (4)``,
+  ``velocity (3)``, ``touch (2)``, ``target_position (2)``,
+  ``dist_to_target ()``;
+- Action spec: ``(2)``, with range ``[-1, 1]``;
+- ``frame_skip``: 2;
+- ``max_episode_steps``: 1000;
+
+.. note ::
+
+    The observation keys ``target_position`` and ``dist_to_target`` are only
+    available in ``FingerTurnEasy-v1`` and ``FingerTurnHard-v1`` tasks. Their
+    values are meaningless in ``FingerSpin-v1``.
+
+
 HopperStand-v1, HopperHop-v1
 ----------------------------
 

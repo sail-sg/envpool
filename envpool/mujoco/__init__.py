@@ -19,6 +19,8 @@ from envpool.python.api import py_env
 from .mujoco_dmc_envpool import (
   _DmcCheetahEnvPool,
   _DmcCheetahEnvSpec,
+  _DmcFingerEnvPool,
+  _DmcFingerEnvSpec,
   _DmcHopperEnvPool,
   _DmcHopperEnvSpec,
   _DmcPendulumEnvPool,
@@ -59,6 +61,11 @@ from .mujoco_gym_envpool import (
 DmcCheetahEnvSpec, DmcCheetahDMEnvPool, DmcCheetahGymEnvPool = py_env(
   _DmcCheetahEnvSpec, _DmcCheetahEnvPool
 )
+
+DmcFingerEnvSpec, DmcFingerDMEnvPool, DmcFingerGymEnvPool = py_env(
+  _DmcFingerEnvSpec, _DmcFingerEnvPool
+)
+
 DmcHopperEnvSpec, DmcHopperDMEnvPool, DmcHopperGymEnvPool = py_env(
   _DmcHopperEnvSpec, _DmcHopperEnvPool
 )
