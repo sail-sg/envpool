@@ -39,7 +39,7 @@ std::string GetBallInCupXML(const std::string& base_path,
 class BallInCupEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(1),
+    return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(10),
                     "task_name"_.Bind(std::string("catch")));
   }
   template <typename Config>
@@ -128,8 +128,8 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
     return std::array<mjtNum, 2>{target[0] - ball[0], target[1] - ball[1]};
   }
 
-  mjtNum InTarget() {
-    std::array<mjtNum, 2> ball_to_target = BallToTarget();
+  bool InTarget() {
+    auto ball_to_target = BallToTarget();
     for (int i = 0; i < 2; ++i) {
       if (ball_to_target[i] < 0) {
         ball_to_target[i] = -ball_to_target[i];
@@ -144,9 +144,8 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
     if (ball_to_target[0] < target_size[0] - ball_size[0] &&
         ball_to_target[1] < target_size[1] - ball_size[1]) {
       return true;
-    } else {
-      return false;
     }
+    return false;
   }
 };
 
