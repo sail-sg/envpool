@@ -121,6 +121,9 @@ class _MakeTest(absltest.TestCase):
     self.check_step(
       [
         "CheetahRun-v1",
+        "FingerSpin-v1",
+        "FingerTurnEasy-v1",
+        "FingerTurnHard-v1",
         "HopperHop-v1",
         "HopperStand-v1",
         "ReacherEasy-v1",
