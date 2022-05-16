@@ -65,6 +65,7 @@ cc_library(
     hdrs = [
         "dmc/ball_in_cup.h",
         "dmc/cheetah.h",
+        "dmc/finger.h",
         "dmc/hopper.h",
         "dmc/mujoco_env.h",
         "dmc/reacher.h",

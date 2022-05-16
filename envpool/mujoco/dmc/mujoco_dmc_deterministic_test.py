@@ -24,6 +24,8 @@ from envpool.mujoco import (
   DmcBallInCupEnvSpec,
   DmcCheetahDMEnvPool,
   DmcCheetahEnvSpec,
+  DmcFingerDMEnvPool,
+  DmcFingerEnvSpec,
   DmcHopperDMEnvPool,
   DmcHopperEnvSpec,
   DmcReacherDMEnvPool,
@@ -82,6 +84,14 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
     obs_keys = ["position", "velocity"]
     for task in ["run"]:
       self.check(DmcCheetahEnvSpec, DmcCheetahDMEnvPool, task, obs_keys)
+
+  def test_finger(self) -> None:
+    obs_keys = ["position", "velocity", "touch"]
+    for task in ["spin"]:
+      self.check(DmcFingerEnvSpec, DmcFingerDMEnvPool, task, obs_keys)
+    obs_keys += ["target_position", "dist_to_target"]
+    for task in ["turn_easy", "turn_hard"]:
+      self.check(DmcFingerEnvSpec, DmcFingerDMEnvPool, task, obs_keys)
 
   def test_hopper(self) -> None:
     obs_keys = ["position", "velocity", "touch"]

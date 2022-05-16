@@ -23,6 +23,9 @@ base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 dmc_mujoco_envs = [
   ("ball_in_cup", "catch"),
   ("cheetah", "run"),
+  ("finger", "spin"),
+  ("finger", "turn_easy"),
+  ("finger", "turn_hard"),
   ("hopper", "hop"),
   ("hopper", "stand"),
   ("reacher", "easy"),
