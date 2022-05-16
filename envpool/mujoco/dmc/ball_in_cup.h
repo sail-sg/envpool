@@ -74,11 +74,14 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
         dist_uniform_(0, 1) {}
 
   void TaskInitializeEpisode() override {
-    while (data_->ncon >= 0) {
+    while (true) {
       // Assign a random ball position.
       data_->qpos[2] = dist_uniform_(gen_) * 0.4 - 0.2;  // ball_x
       data_->qpos[3] = dist_uniform_(gen_) * 0.3 + 0.2;  // ball_z
       PhysicsAfterReset();
+      if (data_->ncon <= 0) {
+        break
+      }
     }
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
