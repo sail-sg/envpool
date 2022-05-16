@@ -17,6 +17,9 @@
 #ifndef ENVPOOL_MUJOCO_DMC_UTILS_H_
 #define ENVPOOL_MUJOCO_DMC_UTILS_H_
 
+#include <mjxmacro.h>
+#include <mujoco.h>
+
 #include <cmath>
 
 namespace mujoco_dmc {

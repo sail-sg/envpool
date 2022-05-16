@@ -24,6 +24,8 @@ from dm_control import suite
 from envpool.mujoco import (
   DmcCheetahDMEnvPool,
   DmcCheetahEnvSpec,
+  DmcFingerDMEnvPool,
+  DmcFingerEnvSpec,
   DmcHopperDMEnvPool,
   DmcHopperEnvSpec,
   DmcReacherDMEnvPool,
@@ -49,19 +51,29 @@ class _MujocoDmcAlignTest(absltest.TestCase):
 
   @no_type_check
   def reset_state(
-    self, env: dm_env.Environment, ts: dm_env.TimeStep, task: str
+    self, env: dm_env.Environment, ts: dm_env.TimeStep, domain: str, task: str
   ) -> None:
     # manually reset, mimic initialize_episode
     with env.physics.reset_context():
       env.physics.data.qpos = ts.observation.qpos0[0]
-      if task == "cheetah":
+      if domain == "cheetah":
         for _ in range(200):
           env.physics.step()
         env.physics.data.time = 0
-      elif task == "reacher":
+      elif domain == "reacher":
         target = ts.observation.target[0]
         env.physics.named.model.geom_pos["target", "x"] = target[0]
-        env.physics.named.model.geom_pos["target", "y"] = target[1]
+        env.physics.named.model.geom_pos["tip", "y"] = target[1]
+      elif domain == "finger" and task == "spin":
+        env.physics.named.model.site_rgba['target', 3] = ts.observation.rgba[0]
+        env.physics.named.model.site_rgba['target', 3] = ts.observation.rgba[1]
+        env.physics.named.model.dof_damping['hinge'
+                                           ] = ts.observation.dof_damping[0]
+      elif domain == "finger" and (task == "turn_easy" or task == "turn_hard"):
+        env.physics.named.model.site_pos['target',
+                                         ['x', 'z']] = ts.observation.target
+        env.physics.named.model.site_size['target',
+                                          0] = ts.observation.site_size
 
   def sample_action(self, action_spec: dm_env.specs.Array) -> np.ndarray:
     return np.random.uniform(
@@ -71,7 +83,7 @@ class _MujocoDmcAlignTest(absltest.TestCase):
     )
 
   def run_align_check(
-    self, env0: dm_env.Environment, env1: Any, task: str
+    self, env0: dm_env.Environment, env1: Any, domain: str, task: str
   ) -> None:
     logging.info(f"align check for {env1.__class__.__name__}")
     obs_spec, action_spec = env0.observation_spec(), env0.action_spec()
@@ -80,7 +92,7 @@ class _MujocoDmcAlignTest(absltest.TestCase):
       env0.reset()
       a = self.sample_action(action_spec)
       ts = env1.reset(np.array([0]))
-      self.reset_state(env0, ts, task)
+      self.reset_state(env0, ts, domain, task)
       logging.info(f'reset qpos {ts.observation.qpos0[0]}')
       cnt = 0
       done = False
@@ -110,6 +122,12 @@ class _MujocoDmcAlignTest(absltest.TestCase):
   def test_cheetah(self) -> None:
     self.run_align_check_entry(
       "cheetah", ["run"], DmcCheetahEnvSpec, DmcCheetahDMEnvPool
+    )
+
+  def test_finger(self) -> None:
+    self.run_align_check_entry(
+      "finger", ["spin", "turn_easy", "turn_hard"], DmcFingerEnvSpec,
+      DmcFingerDMEnvPool
     )
 
   def test_hopper(self) -> None:
