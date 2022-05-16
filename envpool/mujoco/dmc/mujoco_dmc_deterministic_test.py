@@ -82,9 +82,7 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
     obs_keys = ["position", "velocity", "touch"]
     for task in ["spin"]:
       self.check(DmcFingerEnvSpec, DmcFingerDMEnvPool, task, obs_keys)
-    obs_keys = [
-      "position", "velocity", "touch", "target_position", "dist_to_target"
-    ]
+    obs_keys += ["target_position", "dist_to_target"]
     for task in ["turn_easy", "turn_hard"]:
       self.check(DmcFingerEnvSpec, DmcFingerDMEnvPool, task, obs_keys)
 
