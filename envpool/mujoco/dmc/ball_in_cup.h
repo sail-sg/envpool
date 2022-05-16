@@ -80,7 +80,7 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
       data_->qpos[3] = dist_uniform_(gen_) * 0.3 + 0.2;  // ball_z
       PhysicsAfterReset();
       if (data_->ncon <= 0) {
-        break
+        break;
       }
     }
 #ifdef ENVPOOL_TEST
