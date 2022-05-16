@@ -47,6 +47,7 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
     obs_keys: List[str],
     num_envs: int = 4,
   ) -> None:
+    np.random.seed(0)
     env0 = envpool_cls(
       spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, task_name=task))
     )
