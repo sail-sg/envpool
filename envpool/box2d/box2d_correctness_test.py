@@ -93,7 +93,7 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
         )
       )
     # each env run two episodes
-    for i in range(2):
+    for _ in range(2):
       env_id = np.arange(num_envs)
       done = np.array([False] * num_envs)
       obs = env.reset(env_id)
@@ -113,7 +113,7 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
         mean_reward >= threshold, (continuous, mean_reward, threshold)
       )
 
-  def test_lunar_lander(self, num_envs: int = 16) -> None:
+  def test_lunar_lander_correctness(self, num_envs: int = 16) -> None:
     self.solve_lunar_lander(num_envs, True)
     self.solve_lunar_lander(num_envs, False)
 
