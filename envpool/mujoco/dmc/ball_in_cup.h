@@ -61,7 +61,8 @@ using BallInCupEnvSpec = EnvSpec<BallInCupEnvFns>;
 
 class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
  protected:
-  std::uniform_real_distribution<> dist_uniform_;
+  int id_target_, id_ball_, id_ball_x_, id_ball_z_;
+  std::uniform_real_distribution<> dist_ball_x_, dist_ball_z_;
 
  public:
   BallInCupEnv(const Spec& spec, int env_id)
@@ -71,13 +72,18 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
                                   spec.config["task_name"_]),
                   spec.config["frame_skip"_],
                   spec.config["max_episode_steps"_]),
-        dist_uniform_(0, 1) {}
+        id_target_(mj_name2id(model_, mjOBJ_SITE, "target")),
+        id_ball_(mj_name2id(model_, mjOBJ_XBODY, "body")),
+        id_ball_x_(mj_name2id(model_, mjOBJ_JOINT, "ball_x")),
+        id_ball_z_(mj_name2id(model_, mjOBJ_JOINT, "ball_z")),
+        dist_ball_x_(-0.2, 0.2),
+        dist_ball_z_(0.2, 0.5) {}
 
   void TaskInitializeEpisode() override {
     while (true) {
       // Assign a random ball position.
-      data_->qpos[2] = dist_uniform_(gen_) * 0.4 - 0.2;  // ball_x
-      data_->qpos[3] = dist_uniform_(gen_) * 0.3 + 0.2;  // ball_z
+      data_->qpos[id_ball_x_] = dist_ball_x_(gen_);
+      data_->qpos[id_ball_z_] = dist_ball_z_(gen_);
 #ifdef ENVPOOL_TEST
       std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
 #endif
@@ -122,10 +128,10 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
     // target = self.named.data.site_xpos['target', ['x', 'z']]
     // ball = self.named.data.xpos['ball', ['x', 'z']]
     // return target - ball
-    std::array<mjtNum, 2> target{data_->site_xpos[1 * 3],
-                                 data_->site_xpos[1 * 3 + 2]};
-    std::array<mjtNum, 2> ball{data_->site_xpos[2 * 3],
-                               data_->site_xpos[2 * 3 + 2]};
+    std::array<mjtNum, 2> target{data_->site_xpos[id_target_ * 3],
+                                 data_->site_xpos[id_target_ * 3 + 2]};
+    std::array<mjtNum, 2> ball{data_->xpos[id_ball_ * 3],
+                               data_->xpos[id_ball_ * 3 + 2]};
     return {target[0] - ball[0], target[1] - ball[1]};
   }
 
@@ -135,9 +141,9 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
     // ball_size = self.named.model.geom_size['ball', 0]
     // return float(all(ball_to_target < target_size - ball_size))
     const auto& ball_to_target = BallToTarget();
-    std::array<mjtNum, 2> target_size{model_->site_size[1 * 3],
-                                      model_->site_size[1 * 3 + 2]};
-    auto ball_size = model_->geom_size[2 * 3];
+    std::array<mjtNum, 2> target_size{model_->site_size[id_target_ * 3],
+                                      model_->site_size[id_target_ * 3 + 2]};
+    auto ball_size = model_->geom_size[id_ball_ * 3];
     return std::abs(ball_to_target[0]) < target_size[0] - ball_size &&
            std::abs(ball_to_target[1]) < target_size[1] - ball_size;
   }
