@@ -68,9 +68,11 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         target = ts.observation.target[0]
         env.physics.named.model.geom_pos["target", "x"] = target[0]
         env.physics.named.model.geom_pos["target", "y"] = target[1]
-      elif domain == "finger" and task in ["turn_easy", "turn_hard"]:
-        obs = ts.observation
-        env.physics.named.model.site_pos["target", ["x", "z"]] = obs.target[0]
+      elif domain in ["finger", "ball_in_cup"]:
+        if domain == "finger" and task in ["turn_easy", "turn_hard"]:
+          target = ts.observation.target[0]
+          env.physics.named.model.site_pos["target", ["x", "z"]] = target
+        env.physics.after_reset()
 
   def sample_action(self, action_spec: dm_env.specs.Array) -> np.ndarray:
     return np.random.uniform(

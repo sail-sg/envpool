@@ -78,14 +78,14 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
       // Assign a random ball position.
       data_->qpos[2] = dist_uniform_(gen_) * 0.4 - 0.2;  // ball_x
       data_->qpos[3] = dist_uniform_(gen_) * 0.3 + 0.2;  // ball_z
+#ifdef ENVPOOL_TEST
+      std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
+#endif
       PhysicsAfterReset();
       if (data_->ncon <= 0) {
         break;
       }
     }
-#ifdef ENVPOOL_TEST
-    std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
-#endif
   }
 
   bool IsDone() override { return done_; }
@@ -119,33 +119,27 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
   }
 
   std::array<mjtNum, 2> BallToTarget() {
-    std::array<mjtNum, 2> target;
-    target[0] = data_->site_xpos[1 * 3];
-    target[1] = data_->site_xpos[1 * 3 + 2];
-    std::array<mjtNum, 2> ball;
-    ball[0] = data_->site_xpos[2 * 3];
-    ball[1] = data_->site_xpos[2 * 3 + 2];
-    return std::array<mjtNum, 2>{target[0] - ball[0], target[1] - ball[1]};
+    // target = self.named.data.site_xpos['target', ['x', 'z']]
+    // ball = self.named.data.xpos['ball', ['x', 'z']]
+    // return target - ball
+    std::array<mjtNum, 2> target{data_->site_xpos[1 * 3],
+                                 data_->site_xpos[1 * 3 + 2]};
+    std::array<mjtNum, 2> ball{data_->site_xpos[2 * 3],
+                               data_->site_xpos[2 * 3 + 2]};
+    return {target[0] - ball[0], target[1] - ball[1]};
   }
 
   bool InTarget() {
-    auto ball_to_target = BallToTarget();
-    for (int i = 0; i < 2; ++i) {
-      if (ball_to_target[i] < 0) {
-        ball_to_target[i] = -ball_to_target[i];
-      }
-    }
-    std::array<mjtNum, 2> target_size;
-    target_size[0] = model_->site_size[1 * 3];
-    target_size[1] = model_->site_size[1 * 3 + 2];
-    std::array<mjtNum, 2> ball_size;
-    ball_size[0] = model_->geom_size[2 * 3];
-    ball_size[1] = model_->geom_size[2 * 3];
-    if (ball_to_target[0] < target_size[0] - ball_size[0] &&
-        ball_to_target[1] < target_size[1] - ball_size[1]) {
-      return true;
-    }
-    return false;
+    // ball_to_target = abs(self.ball_to_target())
+    // target_size = self.named.model.site_size['target', [0, 2]]
+    // ball_size = self.named.model.geom_size['ball', 0]
+    // return float(all(ball_to_target < target_size - ball_size))
+    const auto& ball_to_target = BallToTarget();
+    std::array<mjtNum, 2> target_size{model_->site_size[1 * 3],
+                                      model_->site_size[1 * 3 + 2]};
+    auto ball_size = model_->geom_size[2 * 3];
+    return std::abs(ball_to_target[0]) < target_size[0] - ball_size &&
+           std::abs(ball_to_target[1]) < target_size[1] - ball_size;
   }
 };
 
