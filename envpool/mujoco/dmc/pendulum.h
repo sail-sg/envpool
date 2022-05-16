@@ -45,7 +45,7 @@ class PendulumEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs:orientations"_.Bind(Spec<mjtNum>({2})),
+    return MakeDict("obs:orientation"_.Bind(Spec<mjtNum>({2})),
                     "obs:velocity"_.Bind(Spec<mjtNum>({1})),
 #ifdef ENVPOOL_TEST
                     "info:qpos0"_.Bind(Spec<mjtNum>({1})),
@@ -107,7 +107,7 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public MujocoEnv {
     state["discount"_] = discount_;
     // obs
     auto pole_orient = PoleOrientation();
-    state["obs:orientations"_].Assign(pole_orient.begin(), pole_orient.size());
+    state["obs:orientation"_].Assign(pole_orient.begin(), pole_orient.size());
     state["obs:velocity"_] = AngularVelocity();
     // info for check alignment
 #ifdef ENVPOOL_TEST
