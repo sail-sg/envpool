@@ -21,6 +21,8 @@ from .mujoco_dmc_envpool import (
   _DmcCheetahEnvSpec,
   _DmcHopperEnvPool,
   _DmcHopperEnvSpec,
+  _DmcPendulumEnvPool,
+  _DmcPendulumEnvSpec,
   _DmcReacherEnvPool,
   _DmcReacherEnvSpec,
   _DmcWalkerEnvPool,
@@ -59,6 +61,9 @@ DmcCheetahEnvSpec, DmcCheetahDMEnvPool, DmcCheetahGymEnvPool = py_env(
 )
 DmcHopperEnvSpec, DmcHopperDMEnvPool, DmcHopperGymEnvPool = py_env(
   _DmcHopperEnvSpec, _DmcHopperEnvPool
+)
+DmcPendulumEnvSpec, DmcPendulumDMEnvPool, DmcPendulumGymEnvPool = py_env(
+  _DmcPendulumEnvSpec, _DmcPendulumEnvPool
 )
 DmcReacherEnvSpec, DmcReacherDMEnvPool, DmcReacherGymEnvPool = py_env(
   _DmcReacherEnvSpec, _DmcReacherEnvPool
@@ -119,6 +124,9 @@ __all__ = [
   "DmcHopperEnvSpec",
   "DmcHopperDMEnvPool",
   "DmcHopperGymEnvPool",
+  "DmcPendulumEnvSpec",
+  "DmcPendulumDMEnvPool",
+  "DmcPendulumGymEnvPool",
   "DmcReacherEnvSpec",
   "DmcReacherDMEnvPool",
   "DmcReacherGymEnvPool",
