@@ -117,11 +117,12 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
 
   std::array<mjtNum, 2> BallToTarget() {
     std::array<mjtNum, 2> target;
-    target[0] = data_->site_xpos[1 * 3] target[1] =
-        data_->site_xpos[1 * 3 + 2] std::array<mjtNum, 2> ball;
-    ball[0] = data_->site_xpos[2 * 3] ball[1] =
-        data_->site_xpos[2 * 3 + 2] return std::array<mjtNum, 2>{
-            target[0] - ball[0], target[1] - ball[1]};
+    target[0] = data_->site_xpos[1 * 3];
+    target[1] = data_->site_xpos[1 * 3 + 2];
+    std::array<mjtNum, 2> ball;
+    ball[0] = data_->site_xpos[2 * 3];
+    ball[1] = data_->site_xpos[2 * 3 + 2] return std::array<mjtNum, 2>{
+        target[0] - ball[0], target[1] - ball[1]};
   }
 
   mjtNum InTarget() {
