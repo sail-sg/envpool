@@ -16,6 +16,7 @@
 #include "envpool/mujoco/dmc/cheetah.h"
 #include "envpool/mujoco/dmc/finger.h"
 #include "envpool/mujoco/dmc/hopper.h"
+#include "envpool/mujoco/dmc/pendulum.h"
 #include "envpool/mujoco/dmc/reacher.h"
 #include "envpool/mujoco/dmc/walker.h"
 
@@ -28,6 +29,9 @@ using DmcFingerEnvPool = PyEnvPool<mujoco_dmc::FingerEnvPool>;
 using DmcHopperEnvSpec = PyEnvSpec<mujoco_dmc::HopperEnvSpec>;
 using DmcHopperEnvPool = PyEnvPool<mujoco_dmc::HopperEnvPool>;
 
+using DmcPendulumEnvSpec = PyEnvSpec<mujoco_dmc::PendulumEnvSpec>;
+using DmcPendulumEnvPool = PyEnvPool<mujoco_dmc::PendulumEnvPool>;
+
 using DmcReacherEnvSpec = PyEnvSpec<mujoco_dmc::ReacherEnvSpec>;
 using DmcReacherEnvPool = PyEnvPool<mujoco_dmc::ReacherEnvPool>;
 
@@ -38,6 +42,7 @@ PYBIND11_MODULE(mujoco_dmc_envpool, m) {
   REGISTER(m, DmcCheetahEnvSpec, DmcCheetahEnvPool)
   REGISTER(m, DmcFingerEnvSpec, DmcFingerEnvPool)
   REGISTER(m, DmcHopperEnvSpec, DmcHopperEnvPool)
+  REGISTER(m, DmcPendulumEnvSpec, DmcPendulumEnvPool)
   REGISTER(m, DmcReacherEnvSpec, DmcReacherEnvPool)
   REGISTER(m, DmcWalkerEnvSpec, DmcWalkerEnvPool)
 }
