@@ -13,7 +13,7 @@
 # limitations under the License.
 """Unit tests for Mujoco dm_control deterministic check."""
 
-from typing import Any, List
+from typing import Any, List, Optional
 
 import dm_env
 import numpy as np
@@ -45,7 +45,7 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
     envpool_cls: Any,
     task: str,
     obs_keys: List[str],
-    blacklist: List[str] = [],
+    blacklist: Optional[List[str]] = None,
     num_envs: int = 4,
   ) -> None:
     np.random.seed(0)
@@ -76,7 +76,7 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
         o1 = getattr(obs1, k)
         o2 = getattr(obs2, k)
         np.testing.assert_allclose(o0, o1)
-        if k in blacklist:
+        if blacklist and k in blacklist:
           continue
         if np.abs(o0).sum() > 0 and ts0.step_type[0] != dm_env.StepType.FIRST:
           self.assertFalse(np.allclose(o0, o2), (k, o0, o2))
