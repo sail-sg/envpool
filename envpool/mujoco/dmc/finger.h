@@ -33,7 +33,7 @@
 namespace mujoco_dmc {
 
 std::string GetFingerXML(const std::string& base_path,
-                         const std::string& task_name) {
+                         const std::string& task_name_) {
   return GetFileContent(base_path, "finger.xml");
 }
 
@@ -74,10 +74,11 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
   const mjtNum kSpinVelocity = 15;
   std::uniform_real_distribution<> dist_uniform_;
   mjtNum target_radius_;
+  std::string task_name_;
 #ifdef ENVPOOL_TEST
   std::array<mjtNum, 2> target_;
   std::array<mjtNum, 2> rgba_;
-  mjtNum dof_dampling;
+  mjtNum dof_damping_;
   mjtNum site_size_;
 #endif
 
@@ -89,12 +90,11 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
             GetFingerXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
         dist_uniform_(0, 1) {
-    std::string task_name = spec.config["task_name"_];
-    if (task_name == "spin") {
-      ;
-    } else if (task_name == "turn_easy") {
+    task_name_ = spec.config["task_name"_];
+    // if (task_name_ == "spin") {}
+    if (task_name_ == "turn_easy") {
       target_radius_ = kEasyTargetSize;
-    } else if (task_name == "turn_hard") {
+    } else if (task_name_ == "turn_hard") {
       target_radius_ = kHardTargetSize;
     } else {
       throw std::runtime_error("Unknown task_name for dmc finger.");
@@ -102,13 +102,17 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
   }
 
   void TaskInitializeEpisode() override {
-    std::string task_name = spec.config["task_name"_];
-    if (task_name == "spin") {
+    if (task_name_ == "spin") {
       model_->site_rgba[3 * 0 + 3] = 0;
       model_->site_rgba[3 * 3 + 3] = 0;
       model_->dof_damping[2] = 0.03;
       SetRandomJointAngles();
-    } else if (task_name == "turn_easy" || task_name == "turn_hard") {
+#ifdef ENVPOOL_TEST
+      rgba_[0] = 0;
+      rgba_[1] = 0;
+      dof_damping_ = 0.03;
+#endif
+    } else if (task_name_ == "turn_easy" || task_name_ == "turn_hard") {
       mjtNum target_angle = dist_uniform_(gen_) * 2 * M_PI - M_PI;
       mjtNum hinge_x = data_->xanchor[2 * 3 + 0];
       mjtNum hinge_z = data_->xanchor[2 * 3 + 2];
@@ -119,24 +123,17 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
       model_->site_pos[0] = target_x;
       model_->site_pos[2] = target_z;
       model_->site_size[0] = target_radius_;
+#ifdef ENVPOOL_TEST
+      target_[0] = target_x;
+      target_[1] = target_z;
+      site_size_ = target_radius_;
+#endif
       SetRandomJointAngles();
     } else {
       throw std::runtime_error("Unknown task_name for dmc finger.");
     }
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
-    if (task_name == "spin") {
-      rgba_[0] = 0;
-      rgba_[1] = 0;
-      dof_damping_ = 0.03;
-    } else if (task_name == "turn_easy" || task_name == "turn_hard") {
-      target_[0] = target_x;
-      target_[1] = target_z;
-      site_size_ = target_radius_;
-    } else {
-      throw std::runtime_error("Unknown task_name for dmc finger.");
-    }
-
 #endif
   }
 
@@ -154,24 +151,22 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
   }
 
   float TaskGetReward() override {
-    std::string task_name = spec.config["task_name"_];
-    if (task_name == "spin") {
-      return static_cast<float>(HingeVelocity() <= -kSpinVelocity);
-    } else if (task_name == "turn_easy" || task_name == "turn_hard") {
-      return static_cast<float>(DistToTarget() <= 0);
-    } else {
-      throw std::runtime_error("Unknown task_name for dmc finger.");
+    float reward = 0;
+    if (task_name_ == "spin") {
+      reward = static_cast<float>(HingeVelocity() <= -kSpinVelocity);
+    } else if (task_name_ == "turn_easy" || task_name_ == "turn_hard") {
+      reward = static_cast<float>(DistToTarget() <= 0);
     }
+    return reward;
   }
 
   bool TaskShouldTerminateEpisode() override { return false; }
 
  private:
   void WriteState() {
-    std::string task_name = spec.config["task_name"_];
-    if (take_name != "spin" || task_name != "turn_easy" ||
-        task_name != "turn_hard") {
-      throw std::runtime_error("Unknown task_name for dmc finger.");
+    if (task_name_ != "spin" || task_name_ != "turn_easy" ||
+        task_name_ != "turn_hard") {
+      throw std::runtime_error("Unknown task_name_ for dmc finger.");
       return;
     }
     State state = Allocate();
@@ -184,7 +179,7 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
     state["obs:velocity"_].Assign(velocity.begin(), velocity.size());
     std::array<mjtNum, 2> touch = Touch();
     state["obs:touch"_].Assign(touch.begin(), touch.size());
-    if (task_name == "turn_easy" || task_name == "turn_hard") {
+    if (task_name_ == "turn_easy" || task_name_ == "turn_hard") {
       std::array<mjtNum, 2> target_position = TargetPosition();
       state["obs:target_position"_].Assign(target_position.begin(),
                                            target_position.size());
@@ -193,14 +188,12 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
 
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    if (task_name == "spin") {
-      state["info:rgba"_].Assign(rgba_.get(), rgba_.size());
+    if (task_name_ == "spin") {
+      state["info:rgba"_].Assign(rgba_.begin(), rgba_.size());
       state["info:dof_damping"_] = dof_damping_;
-    } else if (task_name == "turn_easy" || task_name == "turn_hard") {
-      state["info:target"_].Assign(target_.get(), target_.size());
+    } else if (task_name_ == "turn_easy" || task_name_ == "turn_hard") {
+      state["info:target"_].Assign(target_.begin(), target_.size());
       state["info:site_size"_] = site_size_;
-    } else {
-      throw std::runtime_error("Unknown task_name for dmc finger.");
     }
 #endif
   }
@@ -208,7 +201,7 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
   void SetRandomJointAngles(int max_attempts = 1000) {
     int i = 0;
     for (int i = 0; i < max_attempts; i++) {
-      RandomizeLimitedAndRotationalJoints();
+      RandomizeLimitedAndRotationalJoints(&gen_);
       PhysicsAfterReset();
       if (data_->ncon == 0) {
         break;
@@ -216,8 +209,7 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
     }
     if (i == max_attempts) {
       throw std::runtime_error(
-          "Could not find a collision-free state after %d attempts\n",
-          max_attempts);
+          "Could not find a collision-free state after max_attempts attempts");
     }
   }
 

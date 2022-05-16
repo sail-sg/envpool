@@ -67,8 +67,8 @@ class _MujocoDmcAlignTest(absltest.TestCase):
       elif domain == "finger" and task == "spin":
         env.physics.named.model.site_rgba['target', 3] = ts.observation.rgba[0]
         env.physics.named.model.site_rgba['target', 3] = ts.observation.rgba[1]
-        env.physics.named.model.dof_damping['hinge'
-                                           ] = ts.observation.dof_damping[0]
+        dof = ts.observation.dof_damping[0]
+        env.physics.named.model.dof_damping['hinge'] = dof
       elif domain == "finger" and (task == "turn_easy" or task == "turn_hard"):
         env.physics.named.model.site_pos['target',
                                          ['x', 'z']] = ts.observation.target
@@ -117,7 +117,7 @@ class _MujocoDmcAlignTest(absltest.TestCase):
       env0 = suite.load(domain, task)
       env1 = envpool_cls(spec_cls(spec_cls.gen_config(task_name=task)))
       self.run_space_check(env0, env1)
-      self.run_align_check(env0, env1, domain)
+      self.run_align_check(env0, env1, domain, task)
 
   def test_cheetah(self) -> None:
     self.run_align_check_entry(

@@ -17,6 +17,7 @@
 #include "envpool/mujoco/dmc/finger.h"
 #include "envpool/mujoco/dmc/hopper.h"
 #include "envpool/mujoco/dmc/reacher.h"
+#include "envpool/mujoco/dmc/walker.h"
 
 using DmcCheetahEnvSpec = PyEnvSpec<mujoco_dmc::CheetahEnvSpec>;
 using DmcCheetahEnvPool = PyEnvPool<mujoco_dmc::CheetahEnvPool>;
