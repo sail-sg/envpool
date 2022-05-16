@@ -91,12 +91,11 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
         dist_uniform_(0, 1) {
     task_name_ = spec.config["task_name"_];
-    // if (task_name_ == "spin") {}
     if (task_name_ == "turn_easy") {
       target_radius_ = kEasyTargetSize;
     } else if (task_name_ == "turn_hard") {
       target_radius_ = kHardTargetSize;
-    } else {
+    } else if (task_name_ != "spin") {
       throw std::runtime_error("Unknown task_name for dmc finger.");
     }
   }
@@ -129,8 +128,6 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
       site_size_ = target_radius_;
 #endif
       SetRandomJointAngles();
-    } else {
-      throw std::runtime_error("Unknown task_name for dmc finger.");
     }
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
@@ -164,11 +161,6 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
 
  private:
   void WriteState() {
-    if (task_name_ != "spin" || task_name_ != "turn_easy" ||
-        task_name_ != "turn_hard") {
-      throw std::runtime_error("Unknown task_name_ for dmc finger.");
-      return;
-    }
     State state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
