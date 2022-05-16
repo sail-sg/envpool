@@ -129,7 +129,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     state["discount"_] = discount_;
     // obs
     state["obs:position"_].Assign(data_->qpos, model_->nq);
-    auto finger = FingerToTarget();
+    const auto& finger = FingerToTarget();
     state["obs:to_target"_].Assign(finger.begin(), finger.size());
     state["obs:velocity"_].Assign(data_->qvel, model_->nv);
     // info for check alignment
@@ -140,13 +140,11 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
   }
 
   std::array<mjtNum, 2> FingerToTarget() {
-    std::array<mjtNum, 2> finger;
-    finger[0] = data_->geom_xpos[6 * 3 + 0] - data_->geom_xpos[9 * 3 + 0];
-    finger[1] = data_->geom_xpos[6 * 3 + 1] - data_->geom_xpos[9 * 3 + 1];
-    return finger;
+    return {data_->geom_xpos[6 * 3 + 0] - data_->geom_xpos[9 * 3 + 0],
+            data_->geom_xpos[6 * 3 + 1] - data_->geom_xpos[9 * 3 + 1]};
   }
   mjtNum FingerToTargetDist() {
-    std::array<mjtNum, 2> finger = FingerToTarget();
+    const auto& finger = FingerToTarget();
     return std::sqrt(finger[0] * finger[0] + finger[1] * finger[1]);
   }
 };

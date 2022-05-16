@@ -165,14 +165,14 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
-    std::array<mjtNum, 4> bound_pos = BoundedPosition();
+    const auto& bound_pos = BoundedPosition();
+    const auto& velocity = Velocity();
+    const auto& touch = Touch();
     state["obs:position"_].Assign(bound_pos.begin(), bound_pos.size());
-    std::array<mjtNum, 3> velocity = Velocity();
     state["obs:velocity"_].Assign(velocity.begin(), velocity.size());
-    std::array<mjtNum, 2> touch = Touch();
     state["obs:touch"_].Assign(touch.begin(), touch.size());
     if (task_name_ == "turn_easy" || task_name_ == "turn_hard") {
-      std::array<mjtNum, 2> target_position = TargetPosition();
+      const auto& target_position = TargetPosition();
       state["obs:target_position"_].Assign(target_position.begin(),
                                            target_position.size());
       state["obs:dist_to_target"_] = DistToTarget();
@@ -215,48 +215,39 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
     return data_->sensordata[4];
   }
   std::array<mjtNum, 4> BoundedPosition() {
-    std::array<mjtNum, 4> bound_pos;
-    std::array<mjtNum, 2> tip_position = TipPosition();
-    bound_pos[0] = data_->sensordata[0];
-    bound_pos[1] = data_->sensordata[1];
-    bound_pos[2] = tip_position[0];
-    bound_pos[3] = tip_position[1];
-    return bound_pos;
+    const auto& tip_position = TipPosition();
+    return {data_->sensordata[0], data_->sensordata[1], tip_position[0],
+            tip_position[1]};
   }
 
   std::array<mjtNum, 2> TipPosition() {
-    std::array<mjtNum, 2> tip_position;
-    tip_position[0] = data_->sensordata[5] - data_->sensordata[11];
-    tip_position[1] = data_->sensordata[7] - data_->sensordata[13];
-    return tip_position;
+    return {data_->sensordata[5] - data_->sensordata[11],
+            data_->sensordata[7] - data_->sensordata[13]};
   }
 
   std::array<mjtNum, 2> TargetPosition() {
-    std::array<mjtNum, 2> target_position;
-    target_position[0] = data_->sensordata[8] - data_->sensordata[11];
-    target_position[1] = data_->sensordata[10] - data_->sensordata[13];
-    return target_position;
+    return {data_->sensordata[8] - data_->sensordata[11],
+            data_->sensordata[10] - data_->sensordata[13]};
   }
 
   std::array<mjtNum, 2> Touch() {
-    return std::array<mjtNum, 2>{std::log1p(data_->sensordata[14]),
-                                 std::log1p(data_->sensordata[15])};
+    return {std::log1p(data_->sensordata[14]),
+            std::log1p(data_->sensordata[15])};
   }
 
   std::array<mjtNum, 3> Velocity() {
-    return std::array<mjtNum, 3>{data_->sensordata[2], data_->sensordata[3],
-                                 data_->sensordata[4]};
+    return {data_->sensordata[2], data_->sensordata[3], data_->sensordata[4]};
   }
 
   std::array<mjtNum, 2> ToTarget() {
-    std::array<mjtNum, 2> target_position = TargetPosition();
-    std::array<mjtNum, 2> tip_position = TipPosition();
-    return std::array<mjtNum, 2>{target_position[0] - tip_position[0],
-                                 target_position[1] - tip_position[1]};
+    const auto& target_position = TargetPosition();
+    const auto& tip_position = TipPosition();
+    return {target_position[0] - tip_position[0],
+            target_position[1] - tip_position[1]};
   }
 
   mjtNum DistToTarget() {
-    std::array<mjtNum, 2> to_target = ToTarget();
+    const auto& to_target = ToTarget();
     return std::sqrt(to_target[0] * to_target[0] +
                      to_target[1] * to_target[1]) -
            model_->site_size[0];

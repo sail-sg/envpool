@@ -67,7 +67,7 @@ class WalkerEnv : public Env<WalkerEnvSpec>, public MujocoEnv {
   // Horizontal speeds(meters / second) above which move reward is 1.
   const mjtNum kWalkSpeed = 1;
   const mjtNum kRunSpeed = 8;
-  float move_speed_;
+  mjtNum move_speed_;
 
  public:
   WalkerEnv(const Spec& spec, int env_id)
@@ -133,7 +133,7 @@ class WalkerEnv : public Env<WalkerEnvSpec>, public MujocoEnv {
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
-    auto orient = Orientations();
+    const auto& orient = Orientations();
     state["obs:orientations"_].Assign(orient.begin(), orient.size());
     state["obs:height"_] = TorsoHeight();
     state["obs:velocity"_].Assign(data_->qvel, model_->nv);
