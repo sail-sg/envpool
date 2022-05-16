@@ -66,10 +66,10 @@ HopperStand-v1, HopperHop-v1
 - ``max_episode_steps``: 1000;
 
 
-PendulumSwingUp-v1
+PendulumSwingup-v1
 ------------------
 
-`dm_control suite Pendulum source code
+`dm_control suite pendulum source code
 <https://github.com/deepmind/dm_control/blob/main/dm_control/suite/pendulum.py>`_
 
 - Observation spec: a namedtuple with three keys: ``orientations (2)``,

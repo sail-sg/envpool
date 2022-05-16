@@ -73,10 +73,10 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public MujocoEnv {
                                  spec.config["task_name"_]),
                   spec.config["frame_skip"_],
                   spec.config["max_episode_steps"_]),
-        dist_uniform_(0, 1) {}
+        dist_uniform_(-M_PI, M_PI) {}
 
   void TaskInitializeEpisode() override {
-    data_->qpos[0] = dist_uniform_(gen_) * 2 * M_PI - M_PI;
+    data_->qpos[0] = dist_uniform_(gen_);
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
 #endif
@@ -106,7 +106,7 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public MujocoEnv {
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
-    auto pole_orient = PoleOrientation();
+    const auto& pole_orient = PoleOrientation();
     state["obs:orientation"_].Assign(pole_orient.begin(), pole_orient.size());
     state["obs:velocity"_] = AngularVelocity();
     // info for check alignment
@@ -118,8 +118,7 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public MujocoEnv {
   mjtNum PoleVertical() { return data_->xmat[1 * 9 + 8]; }
   mjtNum AngularVelocity() { return data_->qvel[0]; }
   std::array<mjtNum, 2> PoleOrientation() {
-    return std::array<mjtNum, 2>{data_->xmat[1 * 9 + 8],
-                                 data_->xmat[1 * 9 + 2]};
+    return {data_->xmat[1 * 9 + 8], data_->xmat[1 * 9 + 2]};
   }
 };
 
