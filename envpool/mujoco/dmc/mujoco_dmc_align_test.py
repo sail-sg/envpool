@@ -62,19 +62,17 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         env.physics.data.time = 0
       elif domain == "reacher":
         target = ts.observation.target[0]
-        env.physics.named.model.geom_pos["target", "x"] = target[0]
-        env.physics.named.model.geom_pos["target", "y"] = target[1]
+        env.physics.named.model.geom_pos["target", ["x", "y"]] = target
       elif domain == "finger" and task == "spin":
-        env.physics.named.model.site_rgba['target',
-                                          3] = ts.observation.rgba[0][0]
-        env.physics.named.model.site_rgba['tip', 3] = ts.observation.rgba[0][1]
+        rgba = ts.observation.rgba[0]
+        env.physics.named.model.site_rgba["target", 3] = rgba[0]
+        env.physics.named.model.site_rgba["tip", 3] = rgba[1]
         dof = ts.observation.dof_damping[0]
-        env.physics.named.model.dof_damping['hinge'] = dof
-      elif domain == "finger" and (task == "turn_easy" or task == "turn_hard"):
-        env.physics.named.model.site_pos['target',
-                                         ['x', 'z']] = ts.observation.target
-        env.physics.named.model.site_size['target',
-                                          0] = ts.observation.site_size
+        env.physics.named.model.dof_damping["hinge"] = dof
+      elif domain == "finger" and task in ["turn_easy", "turn_hard"]:
+        obs = ts.observation
+        env.physics.named.model.site_pos["target", ["x", "z"]] = obs.target[0]
+        env.physics.named.model.site_size["target", 0] = obs.site_size[0]
 
   def sample_action(self, action_spec: dm_env.specs.Array) -> np.ndarray:
     return np.random.uniform(
@@ -94,7 +92,7 @@ class _MujocoDmcAlignTest(absltest.TestCase):
       a = self.sample_action(action_spec)
       ts = env1.reset(np.array([0]))
       self.reset_state(env0, ts, domain, task)
-      logging.info(f'reset qpos {ts.observation.qpos0[0]}')
+      logging.info(f"reset qpos {ts.observation.qpos0[0]}")
       cnt = 0
       done = False
       while not done:

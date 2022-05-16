@@ -74,7 +74,7 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
   const mjtNum kSpinVelocity = 15;
   std::uniform_real_distribution<> dist_uniform_;
   mjtNum target_radius_;
-  std::string task_name_;
+  bool is_spin_;
 #ifdef ENVPOOL_TEST
   std::array<mjtNum, 2> target_;
   std::array<mjtNum, 2> rgba_;
@@ -89,19 +89,20 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
             spec.config["base_path"_],
             GetFingerXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
-        dist_uniform_(0, 1) {
-    task_name_ = spec.config["task_name"_];
-    if (task_name_ == "turn_easy") {
+        dist_uniform_(0, 1),
+        is_spin_(spec.config["task_name"_] == "spin") {
+    const std::string& task_name = spec.config["task_name"_];
+    if (task_name == "turn_easy") {
       target_radius_ = kEasyTargetSize;
-    } else if (task_name_ == "turn_hard") {
+    } else if (task_name == "turn_hard") {
       target_radius_ = kHardTargetSize;
-    } else if (task_name_ != "spin") {
+    } else if (task_name != "spin") {
       throw std::runtime_error("Unknown task_name for dmc finger.");
     }
   }
 
   void TaskInitializeEpisode() override {
-    if (task_name_ == "spin") {
+    if (is_spin_) {
       model_->site_rgba[3 * 0 + 3] = 0;
       model_->site_rgba[3 * 3 + 3] = 0;
       model_->dof_damping[2] = 0.03;
@@ -111,7 +112,7 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
       rgba_[1] = 0;
       dof_damping_ = 0.03;
 #endif
-    } else if (task_name_ == "turn_easy" || task_name_ == "turn_hard") {
+    } else {
       mjtNum target_angle = dist_uniform_(gen_) * 2 * M_PI - M_PI;
       mjtNum hinge_x = data_->xanchor[2 * 3 + 0];
       mjtNum hinge_z = data_->xanchor[2 * 3 + 2];
@@ -148,13 +149,10 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
   }
 
   float TaskGetReward() override {
-    float reward = 0;
-    if (task_name_ == "spin") {
-      reward = static_cast<float>(HingeVelocity() <= -kSpinVelocity);
-    } else if (task_name_ == "turn_easy" || task_name_ == "turn_hard") {
-      reward = static_cast<float>(DistToTarget() <= 0);
+    if (is_spin_) {
+      return static_cast<float>(HingeVelocity() <= -kSpinVelocity);
     }
-    return reward;
+    return static_cast<float>(DistToTarget() <= 0);
   }
 
   bool TaskShouldTerminateEpisode() override { return false; }
@@ -171,19 +169,19 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
     state["obs:position"_].Assign(bound_pos.begin(), bound_pos.size());
     state["obs:velocity"_].Assign(velocity.begin(), velocity.size());
     state["obs:touch"_].Assign(touch.begin(), touch.size());
-    if (task_name_ == "turn_easy" || task_name_ == "turn_hard") {
+    if (!is_spin_) {
       const auto& target_position = TargetPosition();
       state["obs:target_position"_].Assign(target_position.begin(),
                                            target_position.size());
       state["obs:dist_to_target"_] = DistToTarget();
     }
-
+    // info
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    if (task_name_ == "spin") {
+    if (is_spin_) {
       state["info:rgba"_].Assign(rgba_.begin(), rgba_.size());
       state["info:dof_damping"_] = dof_damping_;
-    } else if (task_name_ == "turn_easy" || task_name_ == "turn_hard") {
+    } else {
       state["info:target"_].Assign(target_.begin(), target_.size());
       state["info:site_size"_] = site_size_;
     }
@@ -215,31 +213,41 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
     return data_->sensordata[4];
   }
   std::array<mjtNum, 4> BoundedPosition() {
+    // return np.hstack((self.named.data.sensordata[['proximal', 'distal']],
+    //                   self.tip_position()))
     const auto& tip_position = TipPosition();
     return {data_->sensordata[0], data_->sensordata[1], tip_position[0],
             tip_position[1]};
   }
 
   std::array<mjtNum, 2> TipPosition() {
+    // return (self.named.data.sensordata['tip'][[0, 2]] -
+    //         self.named.data.sensordata['spinner'][[0, 2]])
     return {data_->sensordata[5] - data_->sensordata[11],
             data_->sensordata[7] - data_->sensordata[13]};
   }
 
   std::array<mjtNum, 2> TargetPosition() {
+    // return (self.named.data.sensordata['target'][[0, 2]] -
+    //         self.named.data.sensordata['spinner'][[0, 2]])
     return {data_->sensordata[8] - data_->sensordata[11],
             data_->sensordata[10] - data_->sensordata[13]};
   }
 
   std::array<mjtNum, 2> Touch() {
+    // return np.log1p(self.named.data.sensordata[['touchtop', 'touchbottom']])
     return {std::log1p(data_->sensordata[14]),
             std::log1p(data_->sensordata[15])};
   }
 
   std::array<mjtNum, 3> Velocity() {
+    // return self.named.data.sensordata[['proximal_velocity',
+    // 'distal_velocity', 'hinge_velocity']]
     return {data_->sensordata[2], data_->sensordata[3], data_->sensordata[4]};
   }
 
   std::array<mjtNum, 2> ToTarget() {
+    // return self.target_position() - self.tip_position()
     const auto& target_position = TargetPosition();
     const auto& tip_position = TipPosition();
     return {target_position[0] - tip_position[0],
@@ -247,6 +255,8 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
   }
 
   mjtNum DistToTarget() {
+    // return (np.linalg.norm(self.to_target()) -
+    //         self.named.model.site_size['target', 0])
     const auto& to_target = ToTarget();
     return std::sqrt(to_target[0] * to_target[0] +
                      to_target[1] * to_target[1]) -
