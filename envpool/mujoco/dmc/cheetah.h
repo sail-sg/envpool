@@ -72,8 +72,7 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
             spec.config["base_path"_],
             GetCheetahXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
-        id_torso_subtreelinvel_(
-            mj_name2id(model_, mjOBJ_SENSOR, "torso_subtreelinvel")),
+        id_torso_subtreelinvel_(GetSensorId(model_, "torso_subtreelinvel")),
         dist_uniform_(0, 1) {}
 
   void TaskInitializeEpisode() override {
