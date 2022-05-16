@@ -52,6 +52,7 @@ py_test(
         ":box2d",
         requirement("absl-py"),
         requirement("gym"),
+        requirement("box2d"),
         requirement("numpy"),
     ],
 )
