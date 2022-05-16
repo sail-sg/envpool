@@ -20,6 +20,8 @@ import numpy as np
 from absl.testing import absltest
 
 from envpool.mujoco import (
+  DmcBallInCupDMEnvPool,
+  DmcBallInCupEnvSpec,
   DmcCheetahDMEnvPool,
   DmcCheetahEnvSpec,
   DmcHopperDMEnvPool,
@@ -70,6 +72,11 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
         np.testing.assert_allclose(o0, o1)
         if np.abs(o0).sum() > 0 and ts0.step_type[0] != dm_env.StepType.FIRST:
           self.assertFalse(np.allclose(o0, o2), (o0, o2))
+
+  def test_ball_in_cup(self) -> None:
+    obs_keys = ["position", "velocity"]
+    for task in ["catch"]:
+      self.check(DmcBallInCupEnvSpec, DmcBallInCupDMEnvPool, task, obs_keys)
 
   def test_cheetah(self) -> None:
     obs_keys = ["position", "velocity"]
