@@ -65,8 +65,8 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         env.physics.named.model.geom_pos["target", "x"] = target[0]
         env.physics.named.model.geom_pos["tip", "y"] = target[1]
       elif domain == "finger" and task == "spin":
-        env.physics.named.model.site_rgba['target', 3] = ts.observation.rgba[0]
-        env.physics.named.model.site_rgba['target', 3] = ts.observation.rgba[1]
+        env.physics.named.model.site_rgba['target', 3] = ts.observation.rgba[0][0]
+        env.physics.named.model.site_rgba['tip', 3] = ts.observation.rgba[0][1]
         dof = ts.observation.dof_damping[0]
         env.physics.named.model.dof_damping['hinge'] = dof
       elif domain == "finger" and (task == "turn_easy" or task == "turn_hard"):
