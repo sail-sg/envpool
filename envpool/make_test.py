@@ -70,6 +70,7 @@ class _MakeTest(absltest.TestCase):
         "CartPole-v0",
         "CartPole-v1",
         "Pendulum-v0",
+        "Pendulum-v1",
         "MountainCar-v0",
         "MountainCarContinuous-v0",
         "Acrobot-v1",
@@ -126,9 +127,14 @@ class _MakeTest(absltest.TestCase):
   def test_make_mujoco_dmc(self) -> None:
     self.check_step(
       [
+        "BallInCupCatch-v1",
         "CheetahRun-v1",
+        "FingerSpin-v1",
+        "FingerTurnEasy-v1",
+        "FingerTurnHard-v1",
         "HopperHop-v1",
         "HopperStand-v1",
+        "PendulumSwingup-v1",
         "ReacherEasy-v1",
         "ReacherHard-v1",
         "WalkerRun-v1",

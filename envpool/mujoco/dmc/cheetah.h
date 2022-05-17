@@ -62,6 +62,7 @@ using CheetahEnvSpec = EnvSpec<CheetahEnvFns>;
 class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
  protected:
   const mjtNum kRunSpeed = 10;
+  int id_torso_subtreelinvel_;
   std::uniform_real_distribution<> dist_uniform_;
 
  public:
@@ -71,6 +72,7 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
             spec.config["base_path"_],
             GetCheetahXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
+        id_torso_subtreelinvel_(GetSensorId(model_, "torso_subtreelinvel")),
         dist_uniform_(0, 1) {}
 
   void TaskInitializeEpisode() override {
@@ -127,7 +129,7 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
 
   mjtNum Speed() {
     // return self.named.data.sensordata['torso_subtreelinvel'][0]
-    return data_->sensordata[0];
+    return data_->sensordata[id_torso_subtreelinvel_];
   }
 };
 

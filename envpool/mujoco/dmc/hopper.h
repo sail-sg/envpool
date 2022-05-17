@@ -62,6 +62,8 @@ using HopperEnvSpec = EnvSpec<HopperEnvFns>;
 class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
   const mjtNum kStandHeight = 0.6;
   const mjtNum kHopSpeed = 2;
+  int id_torso_, id_foot_;
+  int id_torso_subtreelinvel_, id_touch_toe_, id_touch_heel_;
   bool hopping_;
 
  public:
@@ -70,7 +72,12 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
         MujocoEnv(
             spec.config["base_path"_],
             GetHopperXML(spec.config["base_path"_], spec.config["task_name"_]),
-            spec.config["frame_skip"_], spec.config["max_episode_steps"_]) {
+            spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
+        id_torso_(mj_name2id(model_, mjOBJ_XBODY, "torso")),
+        id_foot_(mj_name2id(model_, mjOBJ_XBODY, "foot")),
+        id_torso_subtreelinvel_(GetSensorId(model_, "torso_subtreelinvel")),
+        id_touch_toe_(GetSensorId(model_, "touch_toe")),
+        id_touch_heel_(GetSensorId(model_, "touch_heel")) {
     std::string task_name = spec.config["task_name"_];
     if (task_name == "stand") {
       hopping_ = false;
@@ -126,18 +133,18 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
   mjtNum Height() {
     // return (self.named.data.xipos['torso', 'z'] -
     //         self.named.data.xipos['foot', 'z'])
-    return data_->xipos[5] - data_->xipos[17];
+    return data_->xipos[id_torso_ * 3 + 2] - data_->xipos[id_foot_ * 3 + 2];
   }
 
   mjtNum Speed() {
     // return self.named.data.sensordata['torso_subtreelinvel'][0]
-    return data_->sensordata[0];
+    return data_->sensordata[id_torso_subtreelinvel_];
   }
 
   std::array<mjtNum, 2> Touch() {
     // return np.log1p(self.named.data.sensordata[['touch_toe', 'touch_heel']])
-    return std::array<mjtNum, 2>{std::log1p(data_->sensordata[3]),
-                                 std::log1p(data_->sensordata[4])};
+    return {std::log1p(data_->sensordata[id_touch_toe_]),
+            std::log1p(data_->sensordata[id_touch_heel_])};
   }
 
   void WriteState() {
