@@ -79,8 +79,8 @@ void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
   }
   listener_ = std::make_unique<ContactDetector>(this);
   world_->SetContactListener(listener_.get());
-  double h = kViewportH / kScale;
   double w = kViewportW / kScale;
+  double h = kViewportH / kScale;
 
   // moon
   std::array<double, kChunks + 1> height;
@@ -123,8 +123,8 @@ void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
   }
 
   // lander
-  double initial_x = h / 2;
-  double initial_y = w;
+  double initial_x = w / 2;
+  double initial_y = h;
   {
     b2BodyDef bd;
     bd.type = b2_dynamicBody;
@@ -155,7 +155,7 @@ void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
 
     b2BodyDef bd;
     bd.type = b2_dynamicBody;
-    bd.position = Vec2(initial_x - sign * kLegAway, initial_y);
+    bd.position = Vec2(initial_x - sign * kLegAway / kScale, initial_y);
     bd.angle = sign * 0.05f;
 
     b2PolygonShape shape;
@@ -275,8 +275,8 @@ void LunarLanderEnv::StepBox2d(std::mt19937* gen, int action, float action0,
   // state and reward
   auto pos = lander_->GetPosition();
   auto vel = lander_->GetLinearVelocity();
-  double h = kViewportH / kScale;
   double w = kViewportW / kScale;
+  double h = kViewportH / kScale;
   obs_[0] = (pos.x - w / 2) / (w / 2);
   obs_[1] = (pos.y - h / 4 - kLegDown / kScale) / (h / 2);
   obs_[2] = vel.x * w / 2 / kFPS;
