@@ -15,7 +15,7 @@
 - [x] [Toy text RL envs](https://envpool.readthedocs.io/en/latest/api/toy_text.html): Catch, FrozenLake, Taxi, NChain, CliffWalking, Blackjack
 - [x] [ViZDoom single player](https://envpool.readthedocs.io/en/latest/api/vizdoom.html)
 - [ ] [DeepMind Control Suite](https://envpool.readthedocs.io/en/latest/api/dm_control.html)
-- [ ] Box2D
+- [ ] [Box2D](https://envpool.readthedocs.io/en/latest/api/box2d.html)
 - [ ] Procgen
 - [ ] Minigrid
 
