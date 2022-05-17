@@ -19,6 +19,18 @@ converted into ``DomainNameTaskName-v1`` in envpool, e.g.,
   # equal to
   envpool.make_dm("BallInCupCatch-v1", num_envs=1)
 
+AcrobotSwingup-v1, AcrobotSwingupSparse-v1
+------------------------------------------
+
+`dm_control suite acrobot source code
+<https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/acrobot.py>`_
+
+- Observation spec: a namedtuple with two keys: ``orientations (4)``,
+  ``velocity (2)``;
+- Action spec: ``(1)``, with range ``[-1, 1]``;
+- ``frame_skip``: 1;
+- ``max_episode_stes``: 1000;
+
 
 BallInCupCatch-v1
 -----------------
