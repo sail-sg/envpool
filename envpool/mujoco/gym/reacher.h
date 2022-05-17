@@ -59,8 +59,8 @@ using ReacherEnvSpec = EnvSpec<ReacherEnvFns>;
 
 class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
  protected:
-  mjtNum ctrl_cost_weight_, dist_cost_weight_;
-  mjtNum reset_goal_scale_, dist_x_, dist_y_, dist_z_;
+  int id_fingertip_, id_target_;
+  mjtNum ctrl_cost_weight_, dist_cost_weight_, reset_goal_scale_;
   std::uniform_real_distribution<> dist_qpos_, dist_qvel_, dist_goal_;
 
  public:
@@ -69,6 +69,8 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
         MujocoEnv(spec.config["base_path"_] + "/mujoco/assets_gym/reacher.xml",
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
+        id_fingertip_(mj_name2id(model_, mjOBJ_XBODY, "fingertip")),
+        id_target_(mj_name2id(model_, mjOBJ_XBODY, "target")),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         dist_cost_weight_(spec.config["dist_cost_weight"_]),
         reset_goal_scale_(spec.config["reset_goal_scale"_]),
@@ -114,13 +116,13 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
   void Step(const Action& action) override {
     // step
     mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
-    GetDist();
+    const auto& dist = GetDist();
     MujocoStep(act);
 
     // dist_cost
     mjtNum dist_cost =
         dist_cost_weight_ *
-        std::sqrt(dist_x_ * dist_x_ + dist_y_ * dist_y_ + dist_z_ * dist_z_);
+        std::sqrt(dist[0] * dist[0] + dist[1] * dist[1] + dist[2] * dist[2]);
     // ctrl_cost
     mjtNum ctrl_cost = 0.0;
     for (int i = 0; i < model_->nu; ++i) {
@@ -134,10 +136,12 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
   }
 
  private:
-  void GetDist() {
-    dist_x_ = data_->xpos[9] - data_->xpos[12];
-    dist_y_ = data_->xpos[10] - data_->xpos[13];
-    dist_z_ = data_->xpos[11] - data_->xpos[14];
+  std::array<mjtNum, 3> GetDist() {
+    // self.get_body_com("fingertip") - self.get_body_com("target")
+    return {
+        data_->xpos[id_fingertip_ * 3 + 0] - data_->xpos[id_target_ * 3 + 0],
+        data_->xpos[id_fingertip_ * 3 + 1] - data_->xpos[id_target_ * 3 + 1],
+        data_->xpos[id_fingertip_ * 3 + 2] - data_->xpos[id_target_ * 3 + 2]};
   }
 
   void WriteState(float reward, mjtNum ctrl_cost, mjtNum dist_cost) {
@@ -155,10 +159,10 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     for (int i = 0; i < 2; ++i) {
       *(obs++) = data_->qvel[i];
     }
-    GetDist();
-    *(obs++) = dist_x_;
-    *(obs++) = dist_y_;
-    *(obs++) = dist_z_;
+    const auto& dist = GetDist();
+    *(obs++) = dist[0];
+    *(obs++) = dist[1];
+    *(obs++) = dist[2];
     // info
     state["info:reward_dist"_] = -dist_cost;
     state["info:reward_ctrl"_] = -ctrl_cost;

@@ -67,6 +67,7 @@ class WalkerEnv : public Env<WalkerEnvSpec>, public MujocoEnv {
   // Horizontal speeds(meters / second) above which move reward is 1.
   const mjtNum kWalkSpeed = 1;
   const mjtNum kRunSpeed = 8;
+  int id_torso_, id_torso_subtreelinvel_;
   mjtNum move_speed_;
 
  public:
@@ -75,7 +76,9 @@ class WalkerEnv : public Env<WalkerEnvSpec>, public MujocoEnv {
         MujocoEnv(
             spec.config["base_path"_],
             GetWalkerXML(spec.config["base_path"_], spec.config["task_name"_]),
-            spec.config["frame_skip"_], spec.config["max_episode_steps"_]) {
+            spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
+        id_torso_(mj_name2id(model_, mjOBJ_XBODY, "torso")),
+        id_torso_subtreelinvel_(GetSensorId(model_, "torso_subtreelinvel")) {
     std::string task_name = spec.config["task_name"_];
     if (task_name == "stand") {
       move_speed_ = 0;
@@ -89,8 +92,6 @@ class WalkerEnv : public Env<WalkerEnvSpec>, public MujocoEnv {
   }
 
   void TaskInitializeEpisode() override {
-    // randomizers.randomize_limited_and_rotational_joints(physics,
-    // self.random)
     RandomizeLimitedAndRotationalJoints(&gen_);
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
@@ -145,15 +146,15 @@ class WalkerEnv : public Env<WalkerEnvSpec>, public MujocoEnv {
 
   mjtNum TorsoUpright() {
     // return self.named.data.xmat['torso', 'zz']
-    return data_->xmat[1 * 9 + 8];
+    return data_->xmat[id_torso_ * 9 + 8];
   }
   mjtNum TorsoHeight() {
     // return self.named.data.xpos['torso', 'z']
-    return data_->xpos[1 * 3 + 2];
+    return data_->xpos[id_torso_ * 3 + 2];
   }
   mjtNum HorizontalVelocity() {
     // return self.named.data.sensordata['torso_subtreelinvel'][0]
-    return data_->sensordata[0];
+    return data_->sensordata[id_torso_subtreelinvel_];
   }
   std::array<mjtNum, 14> Orientations() {
     // return self.named.data.xmat[1:, ['xx', 'xz']].ravel()

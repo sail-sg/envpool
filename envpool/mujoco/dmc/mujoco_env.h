@@ -40,6 +40,10 @@ std::string GetFileContent(const std::string& base_path,
   return ss.str();
 }
 
+int GetSensorId(mjModel* model, const std::string& name) {
+  return model->sensor_adr[mj_name2id(model, mjOBJ_SENSOR, name.c_str())];
+}
+
 /*
  * This class combines with dmc Task and Physics API.
  *

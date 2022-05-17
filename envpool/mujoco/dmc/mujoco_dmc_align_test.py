@@ -70,8 +70,13 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         env.physics.named.model.geom_pos["target", "y"] = target[1]
       elif domain in ["finger", "ball_in_cup"]:
         if domain == "finger" and task in ["turn_easy", "turn_hard"]:
-          target = ts.observation.target[0]
-          env.physics.named.model.site_pos["target", ["x", "z"]] = target
+          target_angle = ts.observation.target[0][0]
+          hinge = env.physics.named.data.xanchor["hinge", ["x", "z"]]
+          radius = env.physics.named.model.geom_size["cap1"].sum()
+          target_x = hinge[0] + radius * np.sin(target_angle)
+          target_z = hinge[1] + radius * np.cos(target_angle)
+          env.physics.named.model.site_pos["target",
+                                           ["x", "z"]] = target_x, target_z
         env.physics.after_reset()
 
   def sample_action(self, action_spec: dm_env.specs.Array) -> np.ndarray:

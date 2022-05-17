@@ -75,7 +75,6 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
   mjtNum ctrl_cost_weight_, contact_cost_weight_, contact_cost_max_;
   mjtNum forward_reward_weight_, healthy_reward_;
   mjtNum healthy_z_min_, healthy_z_max_;
-  mjtNum mass_x_, mass_y_;
   std::uniform_real_distribution<> dist_;
 
  public:
@@ -93,8 +92,6 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
         healthy_reward_(spec.config["healthy_reward"_]),
         healthy_z_min_(spec.config["healthy_z_min"_]),
         healthy_z_max_(spec.config["healthy_z_max"_]),
-        mass_x_(0),
-        mass_y_(0),
         dist_(-spec.config["reset_noise_scale"_],
               spec.config["reset_noise_scale"_]) {}
 
@@ -123,13 +120,9 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
   void Step(const Action& action) override {
     // step
     mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
-    GetMassCenter();
-    mjtNum x_before = mass_x_;
-    mjtNum y_before = mass_y_;
+    const auto& before = GetMassCenter();
     MujocoStep(act);
-    GetMassCenter();
-    mjtNum x_after = mass_x_;
-    mjtNum y_after = mass_y_;
+    const auto& after = GetMassCenter();
 
     // ctrl_cost
     mjtNum ctrl_cost = 0.0;
@@ -138,8 +131,8 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     }
     // xv and yv
     mjtNum dt = frame_skip_ * model_->opt.timestep;
-    mjtNum xv = (x_after - x_before) / dt;
-    mjtNum yv = (y_after - y_before) / dt;
+    mjtNum xv = (after[0] - before[0]) / dt;
+    mjtNum yv = (after[1] - before[1]) / dt;
     // contact cost
     mjtNum contact_cost = 0.0;
     for (int i = 0; i < 6 * model_->nbody; ++i) {
@@ -156,7 +149,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     ++elapsed_step_;
     done_ = (terminate_when_unhealthy_ ? !IsHealthy() : false) ||
             (elapsed_step_ >= max_episode_steps_);
-    WriteState(reward, xv, yv, ctrl_cost, contact_cost, x_after, y_after,
+    WriteState(reward, xv, yv, ctrl_cost, contact_cost, after[0], after[1],
                healthy_reward);
   }
 
@@ -165,17 +158,17 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     return healthy_z_min_ < data_->qpos[2] && data_->qpos[2] < healthy_z_max_;
   }
 
-  void GetMassCenter() {
+  std::array<mjtNum, 2> GetMassCenter() {
     mjtNum mass_sum = 0.0;
-    mass_x_ = mass_y_ = 0.0;
+    mjtNum mass_x = 0.0;
+    mjtNum mass_y = 0.0;
     for (int i = 0; i < model_->nbody; ++i) {
       mjtNum mass = model_->body_mass[i];
       mass_sum += mass;
-      mass_x_ += mass * data_->xipos[3 * i + 0];
-      mass_y_ += mass * data_->xipos[3 * i + 1];
+      mass_x += mass * data_->xipos[i * 3 + 0];
+      mass_y += mass * data_->xipos[i * 3 + 1];
     }
-    mass_x_ /= mass_sum;
-    mass_y_ /= mass_sum;
+    return {mass_x / mass_sum, mass_y / mass_sum};
   }
 
   void WriteState(float reward, mjtNum xv, mjtNum yv, mjtNum ctrl_cost,
