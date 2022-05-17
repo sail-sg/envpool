@@ -136,8 +136,7 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
 
   std::array<mjtNum, 2> Touch() {
     // return np.log1p(self.named.data.sensordata[['touch_toe', 'touch_heel']])
-    return std::array<mjtNum, 2>{std::log1p(data_->sensordata[3]),
-                                 std::log1p(data_->sensordata[4])};
+    return {std::log1p(data_->sensordata[3]), std::log1p(data_->sensordata[4])};
   }
 
   void WriteState() {
