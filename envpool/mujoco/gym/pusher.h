@@ -61,6 +61,7 @@ using PusherEnvSpec = EnvSpec<PusherEnvFns>;
 
 class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
  protected:
+  int id_tips_arm_, id_object_, id_goal_;
   mjtNum ctrl_cost_weight_, dist_cost_weight_, near_cost_weight_;
   mjtNum cylinder_dist_min_;
   std::uniform_real_distribution<> dist_qpos_x_, dist_qpos_y_, dist_qvel_;
@@ -71,6 +72,9 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
         MujocoEnv(spec.config["base_path"_] + "/mujoco/assets_gym/pusher.xml",
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
+        id_tips_arm_(mj_name2id(model_, mjOBJ_XBODY, "tips_arm")),
+        id_object_(mj_name2id(model_, mjOBJ_XBODY, "object")),
+        id_goal_(mj_name2id(model_, mjOBJ_XBODY, "goal")),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         dist_cost_weight_(spec.config["dist_cost_weight"_]),
         near_cost_weight_(spec.config["near_cost_weight"_]),
@@ -119,8 +123,8 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
   void Step(const Action& action) override {
     // step
     mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
-    mjtNum near_cost = GetDist(30, 33);
-    mjtNum dist_cost = GetDist(33, 36);
+    mjtNum near_cost = GetDist(id_object_, id_tips_arm_);
+    mjtNum dist_cost = GetDist(id_object_, id_goal_);
     MujocoStep(act);
 
     // ctrl_cost
@@ -139,9 +143,9 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
 
  private:
   mjtNum GetDist(int off0, int off1) {
-    mjtNum x = data_->xpos[off0 + 0] - data_->xpos[off1 + 0];
-    mjtNum y = data_->xpos[off0 + 1] - data_->xpos[off1 + 1];
-    mjtNum z = data_->xpos[off0 + 2] - data_->xpos[off1 + 2];
+    mjtNum x = data_->xpos[off0 * 3 + 0] - data_->xpos[off1 * 3 + 0];
+    mjtNum y = data_->xpos[off0 * 3 + 1] - data_->xpos[off1 * 3 + 1];
+    mjtNum z = data_->xpos[off0 * 3 + 2] - data_->xpos[off1 * 3 + 2];
     return std::sqrt(x * x + y * y + z * z);
   }
 
@@ -156,8 +160,14 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
     for (int i = 0; i < 7; ++i) {
       *(obs++) = data_->qvel[i];
     }
-    for (int i = 30; i < 3 * model_->nbody; ++i) {
-      *(obs++) = data_->xpos[i];
+    for (int i = 0; i < 3; ++i) {
+      *(obs++) = data_->xpos[id_tips_arm_ * 3 + i];
+    }
+    for (int i = 0; i < 3; ++i) {
+      *(obs++) = data_->xpos[id_object_ * 3 + i];
+    }
+    for (int i = 0; i < 3; ++i) {
+      *(obs++) = data_->xpos[id_goal_ * 3 + i];
     }
     // info
     state["info:reward_dist"_] = -dist_cost;
