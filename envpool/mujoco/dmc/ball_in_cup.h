@@ -73,7 +73,7 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
                   spec.config["frame_skip"_],
                   spec.config["max_episode_steps"_]),
         id_target_(mj_name2id(model_, mjOBJ_SITE, "target")),
-        id_ball_(mj_name2id(model_, mjOBJ_XBODY, "body")),
+        id_ball_(mj_name2id(model_, mjOBJ_XBODY, "ball")),
         id_ball_x_(mj_name2id(model_, mjOBJ_JOINT, "ball_x")),
         id_ball_z_(mj_name2id(model_, mjOBJ_JOINT, "ball_z")),
         dist_ball_x_(-0.2, 0.2),
