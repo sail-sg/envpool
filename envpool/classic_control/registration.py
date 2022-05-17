@@ -41,7 +41,16 @@ register(
   spec_cls="PendulumEnvSpec",
   dm_cls="PendulumDMEnvPool",
   gym_cls="PendulumGymEnvPool",
-  max_episode_steps=200,
+  version=0,
+)
+
+register(
+  task_id="Pendulum-v1",
+  import_path="envpool.classic_control",
+  spec_cls="PendulumEnvSpec",
+  dm_cls="PendulumDMEnvPool",
+  gym_cls="PendulumGymEnvPool",
+  version=1,
 )
 
 register(
@@ -50,8 +59,6 @@ register(
   spec_cls="MountainCarEnvSpec",
   dm_cls="MountainCarDMEnvPool",
   gym_cls="MountainCarGymEnvPool",
-  max_episode_steps=200,
-  reward_threshold=-110.0,
 )
 
 register(
@@ -60,8 +67,6 @@ register(
   spec_cls="MountainCarContinuousEnvSpec",
   dm_cls="MountainCarContinuousDMEnvPool",
   gym_cls="MountainCarContinuousGymEnvPool",
-  max_episode_steps=999,
-  reward_threshold=90.0,
 )
 
 register(
@@ -70,6 +75,4 @@ register(
   spec_cls="AcrobotEnvSpec",
   dm_cls="AcrobotDMEnvPool",
   gym_cls="AcrobotGymEnvPool",
-  max_episode_steps=500,
-  reward_threshold=-100.0,
 )

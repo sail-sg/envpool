@@ -29,7 +29,7 @@ namespace classic_control {
 class PendulumEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(200));
+    return MakeDict("max_episode_steps"_.Bind(200), "version"_.Bind(0));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -53,6 +53,7 @@ class PendulumEnv : public Env<PendulumEnvSpec> {
   const double kGravity = 10;
 
   int max_episode_steps_, elapsed_step_;
+  int version_;
   double theta_, theta_dot_;
   std::uniform_real_distribution<> dist_, dist_dot_;
   bool done_;
@@ -61,6 +62,7 @@ class PendulumEnv : public Env<PendulumEnvSpec> {
   PendulumEnv(const Spec& spec, int env_id)
       : Env<PendulumEnvSpec>(spec, env_id),
         max_episode_steps_(spec.config["max_episode_steps"_]),
+        version_(spec.config["version"_]),
         elapsed_step_(max_episode_steps_ + 1),
         dist_(-kPi, kPi),
         dist_dot_(-1, 1),
@@ -86,10 +88,15 @@ class PendulumEnv : public Env<PendulumEnvSpec> {
         theta_ * theta_ + 0.1 * theta_dot_ * theta_dot_ + 0.001 * u * u;
     double new_theta_dot =
         theta_dot_ + 3 * (kGravity / 2 * std::sin(theta_) + u) * kDt;
-    theta_ += new_theta_dot * kDt;
+    if (version_ == 0) {
+      theta_ += new_theta_dot * kDt;
+    }
     theta_dot_ = new_theta_dot < -kMaxSpeed  ? -kMaxSpeed
                  : new_theta_dot > kMaxSpeed ? kMaxSpeed
                                              : new_theta_dot;
+    if (version_ == 1) {
+      theta_ += new_theta_dot * kDt;
+    }
     while (theta_ < -kPi) {
       theta_ += kPi * 2;
     }
