@@ -163,7 +163,7 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
   std::array<mjtNum, 4> Orientations() {
     const auto& horizontal = Horizontal();
     const auto& vertical = Vertical();
-    return {horizontal, vertical};
+    return {horizontal[0], horizontal[1], vertical[0], vertical[1]};
   }
 };
 
