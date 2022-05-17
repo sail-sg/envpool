@@ -127,9 +127,9 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
-    const auto& pole_orient = PoleOrientation();
-    state["obs:orientation"_].Assign(pole_orient.begin(), pole_orient.size());
-    state["obs:velocity"_] = AngularVelocity();
+    const auto& orientations = Orientations();
+    state["obs:orientation"_].Assign(orientations.begin(), orientations.size());
+    state["obs:velocity"_].Assign(data_->qvel, model_->nv);
     // info for check alignment
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
