@@ -148,9 +148,8 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
             data_->xmat[id_lower_arm_ * 9 + 8]};
   }
   mjtNum ToTarget() {
-  // return the distance from the tip to the target.
-  std:
-    array<mjtNum, 3> tip_to_target = {
+    // return the distance from the tip to the target.
+    std::array<mjtNum, 3> tip_to_target = {
         data_->site_xpos[id_target_ * 3] - data_->site_xpos[id_tip_ * 3],
         data_->site_xpos[id_target_ * 3 + 1] -
             data_->site_xpos[id_tip_ * 3 + 1],
