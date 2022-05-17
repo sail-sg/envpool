@@ -92,6 +92,19 @@ PendulumSwingup-v1
 - ``max_episode_stes``: 1000;
 
 
+PointMassEasy-v1, PointMassHard-v1
+----------------------------------
+
+`dm_control suite point mass source code
+<https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/point_mass.py>`_
+
+- Observation spec: a namedtuple with three keys: ``position (2)``,
+  ``velocity (2)``;
+- Action spec: ``(1)``, with range ``[-1, 1]``;
+- ``frame_skip``: 1;
+- ``max_episode_stes``: 1000;
+
+
 ReacherEasy-v1, ReacherHard-v1
 ------------------------------
 

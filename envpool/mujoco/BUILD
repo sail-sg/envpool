@@ -69,6 +69,7 @@ cc_library(
         "dmc/hopper.h",
         "dmc/mujoco_env.h",
         "dmc/pendulum.h",
+        "dmc/point_mass.h",
         "dmc/reacher.h",
         "dmc/utils.h",
         "dmc/walker.h",
