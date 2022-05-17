@@ -81,7 +81,7 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
         id_tip_(mj_name2id(model_, mjOBJ_SITE, "tip")),
         id_shoulder_(mj_name2id(model_, mjOBJ_JOINT, "shoulder")),
         id_elbow_(mj_name2id(model_, mjOBJ_JOINT, "elbow")),
-        dist_uniform_(-M_PI, M_PI){},
+        dist_uniform_(-M_PI, M_PI),
         is_sparse_(spec.config["task_name"_] == "swingup_sparse") {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name == "swingup") {
