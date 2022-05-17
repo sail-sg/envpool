@@ -29,6 +29,8 @@ dmc_mujoco_envs = [
   ("hopper", "hop"),
   ("hopper", "stand"),
   ("pendulum", "swingup"),
+  ("point_mass", "easy"),
+  ("point_mass", "hard"),
   ("reacher", "easy"),
   ("reacher", "hard"),
   ("walker", "run"),

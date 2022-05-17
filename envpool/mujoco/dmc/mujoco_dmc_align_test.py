@@ -32,6 +32,8 @@ from envpool.mujoco import (
   DmcHopperEnvSpec,
   DmcPendulumDMEnvPool,
   DmcPendulumEnvSpec,
+  DmcPointMassDMEnvPool,
+  DmcPointMassEnvSpec,
   DmcReacherDMEnvPool,
   DmcReacherEnvSpec,
   DmcWalkerDMEnvPool,
@@ -78,6 +80,8 @@ class _MujocoDmcAlignTest(absltest.TestCase):
           env.physics.named.model.site_pos["target",
                                            ["x", "z"]] = target_x, target_z
         env.physics.after_reset()
+      elif domain == "point_mass":
+        env.physics.model.wrap_prm = ts.observation.wrap_prm
 
   def sample_action(self, action_spec: dm_env.specs.Array) -> np.ndarray:
     return np.random.uniform(
@@ -111,7 +115,7 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         for k in obs_spec:
           np.testing.assert_allclose(o0[k], getattr(o1, k)[0])
         np.testing.assert_allclose(ts0.step_type, ts1.step_type[0])
-        np.testing.assert_allclose(ts0.reward, ts1.reward[0])
+        np.testing.assert_allclose(ts0.reward, ts1.reward[0], atol=1e-8)
         np.testing.assert_allclose(ts0.discount, ts1.discount[0])
 
   def run_align_check_entry(
@@ -147,6 +151,12 @@ class _MujocoDmcAlignTest(absltest.TestCase):
   def test_pendulum(self) -> None:
     self.run_align_check_entry(
       "pendulum", ["swingup"], DmcPendulumEnvSpec, DmcPendulumDMEnvPool
+    )
+
+  def test_point_mass(self) -> None:
+    self.run_align_check_entry(
+      "point_mass", ["easy", "hard"], DmcPointMassEnvSpec,
+      DmcPointMassDMEnvPool
     )
 
   def test_reacher(self) -> None:
