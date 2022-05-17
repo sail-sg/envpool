@@ -33,7 +33,7 @@
 namespace mujoco_dmc {
 
 std::string GetAcrobotXML(const std::string& base_path,
-                           const std::string& task_name) {
+                          const std::string& task_name) {
   return GetFileContent(base_path, "acrobot.xml");
 }
 
@@ -62,7 +62,8 @@ using AcrobotEnvSpec = EnvSpec<AcrobotmEnvFns>;
 
 class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
  protected:
-  int id_upper_arm_, id_lower_arm_, id_target_, id_tip_, id_shoulder_, id_elbow_;
+  int id_upper_arm_, id_lower_arm_, id_target_, id_tip_, id_shoulder_,
+      id_elbow_;
   std::uniform_real_distribution<> dist_uniform_;
   mjtNum margin_;
   bool is_sparse_;
@@ -70,19 +71,18 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
  public:
   AcrobotEnv(const Spec& spec, int env_id)
       : Env<AcrobotEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_],
-                  GetAcrobotXML(spec.config["base_path"_],
-                                 spec.config["task_name"_]),
-                  spec.config["frame_skip"_],
-                  spec.config["max_episode_steps"_]),
+        MujocoEnv(
+            spec.config["base_path"_],
+            GetAcrobotXML(spec.config["base_path"_], spec.config["task_name"_]),
+            spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
         id_upper_arm_(mj_name2id(model_, mjOBJ_XBODY, "upper_arm")),
         id_lower_arm_(mj_name2id(model_, mjOBJ_XBODY, "lower_arm")),
         id_target_(mj_name2id(model_, mjOBJ_SITE, "target")),
         id_tip_(mj_name2id(model_, mjOBJ_SITE, "tip")),
         id_shoulder_(mj_name2id(model_, mjOBJ_JOINT, "shoulder")),
         id_elbow_(mj_name2id(model_, mjOBJ_JOINT, "elbow")),
-        dist_uniform_(-M_PI, M_PI) {},
-        is_sparse_(spec.config["task_name"_] == "swingup_sparse"){
+        dist_uniform_(-M_PI, M_PI){},
+        is_sparse_(spec.config["task_name"_] == "swingup_sparse") {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name == "swingup") {
       margin_ = !is_sparse_;
@@ -115,8 +115,9 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
   }
 
   float TaskGetReward() override {
-    mjtNum target_radius = model_->site_size[id_target_]
-    return static_cast<float>(RewardTolerance(ToTarget(), 0.0, target_radius, margin_));
+    mjtNum target_radius =
+        model_->site_size[id_target_] return static_cast<float>(
+            RewardTolerance(ToTarget(), 0.0, target_radius, margin_));
   }
   bool TaskShouldTerminateEpisode() override { return false; }
 
@@ -138,19 +139,26 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
   std::array<mjtNum, 2> Horizontal() {
     // return self.named.data.xmat[['upper_arm', 'lower_arm'], 'xz']
 
-    return {data_->xmat[id_upper_arm_ * 9 + 2], data_->xmat[id_lower_arm_ * 9 + 2]};
+    return {data_->xmat[id_upper_arm_ * 9 + 2],
+            data_->xmat[id_lower_arm_ * 9 + 2]};
   }
   std::array<mjtNum, 2> Vertical() {
     // return self.named.data.xmat[['upper_arm', 'lower_arm'], 'zz']
-    return {data_->xmat[id_upper_arm_ * 9 + 8], data_->xmat[id_lower_arm_ * 9 + 8]};
+    return {data_->xmat[id_upper_arm_ * 9 + 8],
+            data_->xmat[id_lower_arm_ * 9 + 8]};
   }
   mjtNum ToTarget() {
-    // return the distance from the tip to the target.
-    std:array<mjtNum, 3> tip_to_target 
-    = {data_->site_xpos[id_target_*3]-data_->site_xpos[id_tip_*3], 
-       data_->site_xpos[id_target_*3+1]-data_->site_xpos[id_tip_*3+1], 
-       data_->site_xpos[id_target_*3+2]-data_->site_xpos[id_tip_*3+2]};
-    return std::sqrt(tip_to_target[0]*tip_to_target[0]+tip_to_target[1]*tip_to_target[1]+tip_to_target[2]*tip_to_target[2]);
+  // return the distance from the tip to the target.
+  std:
+    array<mjtNum, 3> tip_to_target = {
+        data_->site_xpos[id_target_ * 3] - data_->site_xpos[id_tip_ * 3],
+        data_->site_xpos[id_target_ * 3 + 1] -
+            data_->site_xpos[id_tip_ * 3 + 1],
+        data_->site_xpos[id_target_ * 3 + 2] -
+            data_->site_xpos[id_tip_ * 3 + 2]};
+    return std::sqrt(tip_to_target[0] * tip_to_target[0] +
+                     tip_to_target[1] * tip_to_target[1] +
+                     tip_to_target[2] * tip_to_target[2]);
   }
   std::array<mjtNum, 4> Orientations() {
     const auto& horizontal = Horizontal();

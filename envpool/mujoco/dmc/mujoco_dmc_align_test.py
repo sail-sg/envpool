@@ -131,7 +131,8 @@ class _MujocoDmcAlignTest(absltest.TestCase):
 
   def test_acrobot(self) -> None:
     self.run_align_check_entry(
-      "acrobot", ["swingup", "swingup_sparse"], DmAcrobotEnvSpec, DmcAcrobotDMEnvPool
+      "acrobot", ["swingup", "swingup_sparse"], DmcAcrobotEnvSpec,
+      DmcAcrobotDMEnvPool
     )
 
   def test_ball_in_cup(self) -> None:
