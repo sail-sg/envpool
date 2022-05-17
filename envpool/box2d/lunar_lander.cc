@@ -251,7 +251,8 @@ void LunarLanderEnv::StepBox2d(std::mt19937* gen, int action, float action0,
       (!continuous_ && (action == 1 || action == 3))) {
     double direction;
     if (continuous_) {
-      direction = action1 > 0 ? 1 : -1;
+      float eps = 1e-8;
+      direction = action1 > eps ? 1 : action1 < -eps ? -1 : 0;
       s_power = std::min(std::max(std::abs(action1), 0.5f), 1.0f);
     } else {
       direction = action - 2;
@@ -267,7 +268,7 @@ void LunarLanderEnv::StepBox2d(std::mt19937* gen, int action, float action0,
     auto impulse =
         Vec2(ox * kSideEnginePower * s_power, oy * kSideEnginePower * s_power);
     p->ApplyLinearImpulse(impulse, impulse_pos, true);
-    lander_->ApplyLinearImpulse(impulse, impulse_pos, true);
+    lander_->ApplyLinearImpulse(-impulse, impulse_pos, true);
   }
 
   world_->Step(1.0 / kFPS, 6 * 30, 2 * 30);
@@ -302,6 +303,9 @@ void LunarLanderEnv::StepBox2d(std::mt19937* gen, int action, float action0,
   if (!lander_->IsAwake()) {
     done_ = true;
     reward_ = 100;
+  }
+  if (elapsed_step_ >= max_episode_steps_) {
+    done_ = true;
   }
 }
 

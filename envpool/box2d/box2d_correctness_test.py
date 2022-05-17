@@ -110,10 +110,11 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
       threshold = 260 if continuous else 220
       mean_reward = np.mean(rewards)
       self.assertTrue(
-        mean_reward >= threshold, (continuous, mean_reward, threshold)
+        mean_reward >= threshold,
+        (continuous, mean_reward, threshold, rewards),
       )
 
-  def test_lunar_lander_correctness(self, num_envs: int = 16) -> None:
+  def test_lunar_lander_correctness(self, num_envs: int = 40) -> None:
     self.solve_lunar_lander(num_envs, True)
     self.solve_lunar_lander(num_envs, False)
 
