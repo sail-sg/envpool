@@ -58,7 +58,7 @@ class AcrobotEnvFns {
   }
 };
 
-using AcrobotEnvSpec = EnvSpec<AcrobotmEnvFns>;
+using AcrobotEnvSpec = EnvSpec<AcrobotEnvFns>;
 
 class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
  protected:
