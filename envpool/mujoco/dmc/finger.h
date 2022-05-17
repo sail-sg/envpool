@@ -52,7 +52,7 @@ class FingerEnvFns {
                     "obs:dist_to_target"_.Bind(Spec<mjtNum>({})),
 #ifdef ENVPOOL_TEST
                     "info:qpos0"_.Bind(Spec<mjtNum>({3})),
-                    "info:target"_.Bind(Spec<mjtNum>({2})),
+                    "info:target"_.Bind(Spec<mjtNum>({1})),
 #endif
                     "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
   }
@@ -80,7 +80,7 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
   mjtNum target_radius_;
   bool is_spin_;
 #ifdef ENVPOOL_TEST
-  std::array<mjtNum, 2> target_;
+  mjtNum target_angle_;
 #endif
 
  public:
@@ -144,8 +144,7 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
       model_->site_pos[id_site_target_ + 2] = target_z;
       model_->site_size[id_site_target_] = target_radius_;
 #ifdef ENVPOOL_TEST
-      target_[0] = target_x;
-      target_[1] = target_z;
+      target_angle_ = target_angle;
 #endif
     }
     SetRandomJointAngles();
@@ -195,7 +194,7 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
     if (!is_spin_) {
-      state["info:target"_].Assign(target_.begin(), target_.size());
+      state["info:target"_] = target_angle_;
     }
 #endif
   }
