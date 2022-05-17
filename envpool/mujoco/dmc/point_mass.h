@@ -46,7 +46,7 @@ class PointMassEnvFns {
     return MakeDict("obs:position"_.Bind(Spec<mjtNum>({2})),
                     "obs:velocity"_.Bind(Spec<mjtNum>({2})),
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.Bind(Spec<mjtNum>({7})),
+                    "info:qpos0"_.Bind(Spec<mjtNum>({2})),
                     "info:wrap_prm"_.Bind(Spec<mjtNum>({4})),
 #endif
                     "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
@@ -135,11 +135,10 @@ class PointMassEnv : public Env<PointMassEnvSpec>, public MujocoEnv {
   }
 
   float TaskGetReward() override {
-    mjtNum target_size = model_->geom_size[id_geom_target_ * 3];
-    // return self.data.ctrl.copy()
+    mjtNum target_size = model_->geom_size[id_geom_target_ * 3 + 0];
     mjtNum near_target =
         RewardTolerance(MassToTargetDist(), 0, target_size, target_size);
-
+    // return self.data.ctrl.copy()
     mjtNum control_reward =
         (RewardTolerance(data_->ctrl[0], 0, 0, 1, 0, SigmoidType::kQuadratic) +
          RewardTolerance(data_->ctrl[1], 0, 0, 1, 0, SigmoidType::kQuadratic)) /

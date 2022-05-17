@@ -80,6 +80,8 @@ class _MujocoDmcAlignTest(absltest.TestCase):
           env.physics.named.model.site_pos["target",
                                            ["x", "z"]] = target_x, target_z
         env.physics.after_reset()
+      elif domain == "point_mass":
+        env.physics.model.wrap_prm = ts.observation.wrap_prm
 
   def sample_action(self, action_spec: dm_env.specs.Array) -> np.ndarray:
     return np.random.uniform(
