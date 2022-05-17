@@ -115,9 +115,9 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
   }
 
   float TaskGetReward() override {
-    mjtNum target_radius =
-        model_->site_size[id_target_] return static_cast<float>(
-            RewardTolerance(ToTarget(), 0.0, target_radius, margin_));
+    mjtNum target_radius = model_->site_size[id_target_];
+    return static_cast<float>(
+        RewardTolerance(ToTarget(), 0.0, target_radius, margin_));
   }
   bool TaskShouldTerminateEpisode() override { return false; }
 
