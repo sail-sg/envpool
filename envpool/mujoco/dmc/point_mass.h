@@ -88,7 +88,9 @@ class PointMassEnv : public Env<PointMassEnvSpec>, public MujocoEnv {
     } else {
       throw std::runtime_error("Unknown task_name for dmc point_mass.");
     }
+#ifdef ENVPOOL_TEST
     wrap_prm_.reset(new mjtNum[model_->nwrap]);
+#endif
   }
 
   void TaskInitializeEpisode() override {
