@@ -87,7 +87,7 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
         MujocoEnv(spec.config["base_path"_] + "/mujoco/assets_gym/ant.xml",
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
-        id_torso_(mj_name2id(model_, mjOBJ_BODY, "torso")),
+        id_torso_(mj_name2id(model_, mjOBJ_XBODY, "torso")),
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),

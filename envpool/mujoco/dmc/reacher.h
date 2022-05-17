@@ -66,8 +66,9 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
  protected:
   const mjtNum kBigTarget = 0.05;
   const mjtNum kSmallTarget = 0.015;
+  int id_target_, id_finger_;
   mjtNum target_size_;
-  std::uniform_real_distribution<> dist_uniform_;
+  std::uniform_real_distribution<> dist_angle_, dist_radius_;
 #ifdef ENVPOOL_TEST
   std::array<mjtNum, 2> target_;
 #endif
@@ -79,7 +80,10 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
             spec.config["base_path"_],
             GetReacherXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
-        dist_uniform_(0, 1) {
+        id_target_(mj_name2id(model_, mjOBJ_GEOM, "target")),
+        id_finger_(mj_name2id(model_, mjOBJ_GEOM, "finger")),
+        dist_angle_(0, 2 * M_PI),
+        dist_radius_(0.05, 0.2) {
     std::string task_name = spec.config["task_name"_];
     if (task_name == "easy") {
       target_size_ = kBigTarget;
@@ -93,14 +97,16 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
   void TaskInitializeEpisode() override {
     model_->geom_size[6 * 3] = target_size_;
     RandomizeLimitedAndRotationalJoints(&gen_);
-    mjtNum angle = dist_uniform_(gen_) * 2 * M_PI;
-    mjtNum radius = dist_uniform_(gen_) * 0.15 + 0.05;
-    model_->geom_pos[6 * 3 + 0] = radius * std::sin(angle);
-    model_->geom_pos[6 * 3 + 1] = radius * std::cos(angle);
+    mjtNum angle = dist_angle_(gen_);
+    mjtNum radius = dist_radius_(gen_);
+    // physics.named.model.geom_pos['target', 'x'] = radius * np.sin(angle)
+    // physics.named.model.geom_pos['target', 'y'] = radius * np.cos(angle)
+    model_->geom_pos[id_target_ * 3 + 0] = radius * std::sin(angle);
+    model_->geom_pos[id_target_ * 3 + 1] = radius * std::cos(angle);
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
-    target_[0] = model_->geom_pos[6 * 3 + 0];
-    target_[1] = model_->geom_pos[6 * 3 + 1];
+    target_[0] = model_->geom_pos[id_target_ * 3 + 0];
+    target_[1] = model_->geom_pos[id_target_ * 3 + 1];
 #endif
   }
 
@@ -118,7 +124,9 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
   }
 
   float TaskGetReward() override {
-    mjtNum radii = model_->geom_size[6 * 3] + model_->geom_size[9 * 3];
+    // radii = physics.named.model.geom_size[['target', 'finger'], 0].sum()
+    mjtNum radii =
+        model_->geom_size[id_target_ * 3] + model_->geom_size[id_finger_ * 3];
     return static_cast<float>(RewardTolerance(FingerToTargetDist(), 0, radii));
   }
 
@@ -140,8 +148,12 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
   }
 
   std::array<mjtNum, 2> FingerToTarget() {
-    return {data_->geom_xpos[6 * 3 + 0] - data_->geom_xpos[9 * 3 + 0],
-            data_->geom_xpos[6 * 3 + 1] - data_->geom_xpos[9 * 3 + 1]};
+    // return (self.named.data.geom_xpos['target', :2] -
+    //         self.named.data.geom_xpos['finger', :2])
+    return {data_->geom_xpos[id_target_ * 3 + 0] -
+                data_->geom_xpos[id_finger_ * 3 + 0],
+            data_->geom_xpos[id_target_ * 3 + 1] -
+                data_->geom_xpos[id_finger_ * 3 + 1]};
   }
   mjtNum FingerToTargetDist() {
     const auto& finger = FingerToTarget();

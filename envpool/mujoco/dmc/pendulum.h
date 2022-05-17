@@ -62,7 +62,8 @@ using PendulumEnvSpec = EnvSpec<PendulumEnvFns>;
 
 class PendulumEnv : public Env<PendulumEnvSpec>, public MujocoEnv {
  protected:
-  const mjtNum kCosineBound = 0.9902680687415704;
+  const mjtNum kCosineBound = std::cos(8.0 / 180 * M_PI);
+  int id_hinge_, id_pole_;
   std::uniform_real_distribution<> dist_uniform_;
 
  public:
@@ -73,6 +74,8 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public MujocoEnv {
                                  spec.config["task_name"_]),
                   spec.config["frame_skip"_],
                   spec.config["max_episode_steps"_]),
+        id_hinge_(mj_name2id(model_, mjOBJ_JOINT, "hinge")),
+        id_pole_(mj_name2id(model_, mjOBJ_XBODY, "pole")),
         dist_uniform_(-M_PI, M_PI) {}
 
   void TaskInitializeEpisode() override {
@@ -115,10 +118,17 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public MujocoEnv {
 #endif
   }
 
-  mjtNum PoleVertical() { return data_->xmat[1 * 9 + 8]; }
-  mjtNum AngularVelocity() { return data_->qvel[0]; }
+  mjtNum PoleVertical() {
+    // return self.named.data.xmat['pole', 'zz']
+    return data_->xmat[id_pole_ * 9 + 8];
+  }
+  mjtNum AngularVelocity() {
+    // return self.named.data.qvel['hinge'].copy()
+    return data_->qvel[id_hinge_];
+  }
   std::array<mjtNum, 2> PoleOrientation() {
-    return {data_->xmat[1 * 9 + 8], data_->xmat[1 * 9 + 2]};
+    // return self.named.data.xmat['pole', ['zz', 'xz']]
+    return {data_->xmat[id_pole_ * 9 + 8], data_->xmat[id_pole_ * 9 + 2]};
   }
 };
 
