@@ -30,6 +30,8 @@ from envpool.mujoco import (
   DmcHopperEnvSpec,
   DmcPendulumDMEnvPool,
   DmcPendulumEnvSpec,
+  DmcPointMassDMEnvPool,
+  DmcPointMassEnvSpec,
   DmcReacherDMEnvPool,
   DmcReacherEnvSpec,
   DmcWalkerDMEnvPool,
@@ -115,6 +117,11 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
     obs_keys = ["orientation", "velocity"]
     for task in ["swingup"]:
       self.check(DmcPendulumEnvSpec, DmcPendulumDMEnvPool, task, obs_keys)
+
+  def test_point_mass(self) -> None:
+    obs_keys = ["position", "velocity"]
+    for task in ["easy", "hard"]:
+      self.check(DmcPointMassEnvSpec, DmcPointMassDMEnvPool, task, obs_keys)
 
   def test_reacher(self) -> None:
     obs_keys = ["position", "to_target", "velocity"]
