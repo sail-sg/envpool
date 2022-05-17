@@ -62,8 +62,8 @@ class PendulumEnv : public Env<PendulumEnvSpec> {
   PendulumEnv(const Spec& spec, int env_id)
       : Env<PendulumEnvSpec>(spec, env_id),
         max_episode_steps_(spec.config["max_episode_steps"_]),
-        version_(spec.config["version"_]),
         elapsed_step_(max_episode_steps_ + 1),
+        version_(spec.config["version"_]),
         dist_(-kPi, kPi),
         dist_dot_(-1, 1),
         done_(true) {}
