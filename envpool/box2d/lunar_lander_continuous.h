@@ -35,7 +35,7 @@ class LunarLanderContinuousEnvFns {
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.Bind(Spec<float>({-1, 2}, {-1.0, 1.0})));
+    return MakeDict("action"_.Bind(Spec<float>({2}, {-1.0, 1.0})));
   }
 };
 
