@@ -70,6 +70,7 @@ class _MakeTest(absltest.TestCase):
         "CartPole-v0",
         "CartPole-v1",
         "Pendulum-v0",
+        "Pendulum-v1",
         "MountainCar-v0",
         "MountainCarContinuous-v0",
         "Acrobot-v1",

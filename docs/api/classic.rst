@@ -8,7 +8,7 @@ All of the environments in classic control borrow from `Gym
 CartPole-v0/1
 -------------
 
-`gym CartPole-v0 source code
+`gym cartpole source code
 <https://github.com/openai/gym/blob/master/gym/envs/classic_control/cartpole.py>`_
 
 A pole is attached by an un-actuated joint to a cart, which moves along a
@@ -20,23 +20,26 @@ has ``max_episode_steps`` 200 with 195 reward threshold, while the latter has
 ``max_episode_steps`` 500 with 475 reward threshold.
 
 
-Pendulum-v0
------------
+Pendulum-v0, Pendulum-v1
+------------------------
 
-`gym Pendulum-v0 source code
+`gym pendulum source code
 <https://github.com/openai/gym/blob/master/gym/envs/classic_control/pendulum.py>`_
 
 The inverted pendulum swing-up problem is a classic problem in the control
 literature. In this version of the problem, the pendulum starts in a random
 position, and the goal is to swing it up to stay upright.
 
+You can find the difference between ``Pendulum-v0`` and ``Pendulum-v1`` in
+`this pull request <https://github.com/openai/gym/pull/2423>`_.
+
 
 MountainCar-v0, MountainCarContinuous-v0
 ----------------------------------------
 
-`gym MountainCar-v0 source code
+`gym mountain_car source code
 <https://github.com/openai/gym/blob/master/gym/envs/classic_control/mountain_car.py>`_
-and `gym MountainCarContinuous-v0 source code
+and `gym mountain_car continuous source code
 <https://github.com/openai/gym/blob/master/gym/envs/classic_control/continuous_mountain_car.py>`_
 
 The agent (a car) is started at the bottom of a valley. For any given state the
@@ -46,7 +49,7 @@ agent may choose to accelerate to the left, right or cease any acceleration.
 Acrobot-v1
 ----------
 
-`gym Acrobot-v1 source code
+`gym acrobot source code
 <https://github.com/openai/gym/blob/master/gym/envs/classic_control/acrobot.py>`_
 
 Acrobot is a 2-link pendulum with only the second joint actuated. Initially,
