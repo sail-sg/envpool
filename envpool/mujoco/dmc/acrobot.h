@@ -45,7 +45,7 @@ class AcrobotEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs:orientation"_.Bind(Spec<mjtNum>({4})),
+    return MakeDict("obs:orientations"_.Bind(Spec<mjtNum>({4})),
                     "obs:velocity"_.Bind(Spec<mjtNum>({2})),
 #ifdef ENVPOOL_TEST
                     "info:qpos0"_.Bind(Spec<mjtNum>({2})),
