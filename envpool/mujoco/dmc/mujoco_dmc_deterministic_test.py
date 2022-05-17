@@ -119,9 +119,15 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
       self.check(DmcPendulumEnvSpec, DmcPendulumDMEnvPool, task, obs_keys)
 
   def test_point_mass(self) -> None:
-    obs_keys = ["position"]  # "velocity"
+    obs_keys = ["position", "velocity"]
     for task in ["easy", "hard"]:
-      self.check(DmcPointMassEnvSpec, DmcPointMassDMEnvPool, task, obs_keys)
+      self.check(
+        DmcPointMassEnvSpec,
+        DmcPointMassDMEnvPool,
+        task,
+        obs_keys,
+        blacklist=["velocity"] if task == "easy" else [],
+      )
 
   def test_reacher(self) -> None:
     obs_keys = ["position", "to_target", "velocity"]

@@ -91,6 +91,7 @@ PendulumSwingup-v1
 - ``frame_skip``: 1;
 - ``max_episode_stes``: 1000;
 
+
 PointMassEasy-v1, PointMassHard-v1
 ----------------------------------
 
@@ -102,6 +103,7 @@ PointMassEasy-v1, PointMassHard-v1
 - Action spec: ``(1)``, with range ``[-1, 1]``;
 - ``frame_skip``: 1;
 - ``max_episode_stes``: 1000;
+
 
 ReacherEasy-v1, ReacherHard-v1
 ------------------------------

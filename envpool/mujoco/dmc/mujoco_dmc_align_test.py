@@ -115,7 +115,7 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         for k in obs_spec:
           np.testing.assert_allclose(o0[k], getattr(o1, k)[0])
         np.testing.assert_allclose(ts0.step_type, ts1.step_type[0])
-        np.testing.assert_allclose(ts0.reward, ts1.reward[0])
+        np.testing.assert_allclose(ts0.reward, ts1.reward[0], atol=1e-8)
         np.testing.assert_allclose(ts0.discount, ts1.discount[0])
 
   def run_align_check_entry(

@@ -116,9 +116,7 @@ class PointMassEnv : public Env<PointMassEnvSpec>, public MujocoEnv {
   std::array<mjtNum, 2> GetDir() {
     std::array<mjtNum, 2> dir = {dist_normal_(gen_), dist_normal_(gen_)};
     mjtNum norm_of_dir = std::sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
-    dir[0] /= norm_of_dir;
-    dir[1] /= norm_of_dir;
-    return dir;
+    return {dir[0] / norm_of_dir, dir[1] / norm_of_dir};
   }
 
   bool IsDone() override { return done_; }
@@ -138,7 +136,6 @@ class PointMassEnv : public Env<PointMassEnvSpec>, public MujocoEnv {
     mjtNum target_size = model_->geom_size[id_geom_target_ * 3 + 0];
     mjtNum near_target =
         RewardTolerance(MassToTargetDist(), 0, target_size, target_size);
-    // return self.data.ctrl.copy()
     mjtNum control_reward =
         (RewardTolerance(data_->ctrl[0], 0, 0, 1, 0, SigmoidType::kQuadratic) +
          RewardTolerance(data_->ctrl[1], 0, 0, 1, 0, SigmoidType::kQuadratic)) /
