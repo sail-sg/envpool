@@ -86,7 +86,7 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
           self.assertFalse(np.allclose(o0, o2), (k, o0, o2))
 
   def test_acrobot(self) -> None:
-    obs_keys = ["orientation", "velocity"]
+    obs_keys = ["orientations", "velocity"]
     for task in ["swingup", "swingup_sparse"]:
       self.check(DmcAcrobotEnvSpec, DmcAcrobotDMEnvPool, task, obs_keys)
 
