@@ -46,7 +46,6 @@ using PendulumEnvSpec = EnvSpec<PendulumEnvFns>;
 
 class PendulumEnv : public Env<PendulumEnvSpec> {
  protected:
-  const double kPi = std::acos(-1);
   const double kMaxSpeed = 8;
   const double kMaxTorque = 2;
   const double kDt = 0.05;
@@ -64,7 +63,7 @@ class PendulumEnv : public Env<PendulumEnvSpec> {
         max_episode_steps_(spec.config["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
         version_(spec.config["version"_]),
-        dist_(-kPi, kPi),
+        dist_(-M_PI, M_PI),
         dist_dot_(-1, 1),
         done_(true) {}
 
@@ -97,11 +96,11 @@ class PendulumEnv : public Env<PendulumEnvSpec> {
     if (version_ == 1) {
       theta_ += new_theta_dot * kDt;
     }
-    while (theta_ < -kPi) {
-      theta_ += kPi * 2;
+    while (theta_ < -M_PI) {
+      theta_ += M_PI * 2;
     }
-    while (theta_ >= kPi) {
-      theta_ -= kPi * 2;
+    while (theta_ >= M_PI) {
+      theta_ -= M_PI * 2;
     }
     WriteState(static_cast<float>(-cost));
   }

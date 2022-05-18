@@ -68,7 +68,6 @@ class MujocoEnv {
 #endif
 
  private:
-  const double kPi = std::acos(-1);
   std::uniform_real_distribution<> dist_uniform_;
   std::normal_distribution<> dist_normal_;
 
@@ -239,10 +238,7 @@ class MujocoEnv {
           throw std::runtime_error("RandomLimitedQuaternion not implemented");
         }
       } else if (joint_type == mjJNT_HINGE) {
-        range_min = -kPi;
-        range_max = kPi;
-        range = range_max - range_min;
-        data_->qpos[joint_id] = dist_uniform_(*gen) * range + range_min;
+        data_->qpos[joint_id] = dist_uniform_(*gen) * M_PI * 2 - M_PI;
       } else if (joint_type == mjJNT_BALL || joint_type == mjJNT_FREE) {
         throw std::runtime_error("not implemented");
       }
