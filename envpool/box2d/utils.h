@@ -14,17 +14,12 @@
  * limitations under the License.
  */
 
-#ifndef ENVPOOL_BOX2D_BIPEDAL_WALKER_H_
-#define ENVPOOL_BOX2D_BIPEDAL_WALKER_H_
+#ifndef ENVPOOL_BOX2D_UTILS_H_
+#define ENVPOOL_BOX2D_UTILS_H_
 
-#include "envpool/box2d/bipedal_walker.h"
-#include "envpool/core/async_envpool.h"
-#include "envpool/core/env.h"
+#include <box2d/box2d.h>
 
-namespace box2d {
+// this function is to pass clang-tidy conversion check
+b2Vec2 Vec2(double x, double y);
 
-class BipedalWalkerEnv {};
-
-}  // namespace box2d
-
-#endif  // ENVPOOL_BOX2D_BIPEDAL_WALKER_H_
+#endif  // ENVPOOL_BOX2D_UTILS_H_

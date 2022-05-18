@@ -13,18 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// https://github.com/openai/gym/blob/0.23.1/gym/envs/box2d/bipedal_walker.py
 
-#ifndef ENVPOOL_BOX2D_BIPEDAL_WALKER_H_
-#define ENVPOOL_BOX2D_BIPEDAL_WALKER_H_
+#ifndef ENVPOOL_BOX2D_BIPEDAL_WALKER_ENV_H_
+#define ENVPOOL_BOX2D_BIPEDAL_WALKER_ENV_H_
 
-#include "envpool/box2d/bipedal_walker.h"
-#include "envpool/core/async_envpool.h"
-#include "envpool/core/env.h"
+#include <box2d/box2d.h>
+
+#include <array>
+#include <memory>
+#include <random>
+#include <vector>
 
 namespace box2d {
 
-class BipedalWalkerEnv {};
+class BipedalWalkerBox2dEnv {};
 
 }  // namespace box2d
 
-#endif  // ENVPOOL_BOX2D_BIPEDAL_WALKER_H_
+#endif  // ENVPOOL_BOX2D_BIPEDAL_WALKER_ENV_H_
