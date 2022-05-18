@@ -19,6 +19,7 @@
 #define ENVPOOL_MUJOCO_DMC_MANIPULATOR_H_
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <memory>
 #include <random>
@@ -69,8 +70,14 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
   const mjtNum kClose = 0.01;
   const mjtNum kPInHand = 0.1;
   const mjtNum kPInTarget = 0.1;
-  bool use_peg = false;
-  bool insert = false;
+  bool use_peg_;
+  bool insert_;
+  bool fully_observable_;
+  std::string target_;
+  std::string object_;
+  std::array<std::string, 3> object_joints_;
+  std::string receptacle_;
+
   std::set<std::string> kArmJoints = {"arm_root",  "arm_shoulder", "arm_elbow",
                                       "arm_wrist", "finger",       "fingertip",
                                       "thumb",     "thumbtip"};
@@ -89,7 +96,30 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
                                     spec.config["task_name"_]),
                   spec.config["frame_skip"_],
                   spec.config["max_episode_steps"_]),
-        dist_uniform_(0, 1) {}
+        dist_uniform_(0, 1) {
+    std::string task_name = spec.config["task_name"_];
+    if (task_name == "bring_ball") {
+      use_peg_ = false;
+      insert_ = false;
+    } else if (task_name == "bring_peg") {
+      use_peg_ = true;
+      insert_ = false;
+    } else if (task_name == "insert_ball") {
+      use_peg_ = false;
+      insert_ = true;
+    } else if (task_name == "insert_peg") {
+      use_peg_ = true;
+      insert_ = true;
+    } else {
+      throw std::runtime_error("Unknown task_name for dmc hopper.");
+    }
+    target_ = use_peg_ ? "target_peg" : "target_ball";
+    object_ = use_peg_ ? "peg" : "ball";
+    receptacle_ = use_peg_ ? "slot" : "cup";
+    object_joints_ =
+        use_peg ? {"peg_x", "peg_y", "peg_z"} : {"ball_x", "ball_y", "ball_z"};
+    fully_observable_ = true;
+  }
 
   void TaskInitializeEpisode() override {
 #ifdef ENVPOOL_TEST
@@ -110,38 +140,61 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
     WriteState();
   }
 
-  float TaskGetReward() override {}
+  float TaskGetReward() override {
+    float reward;
+    if (use_peg_) {
+      reward = PegReward();
+    } else {
+      reward = BallReward();
+    }
+    return reward;
+  }
+
+  float PegReward() {
+    float grasping = (IsClose(SiteDistance("peg_grasp", "grasp")) +
+                      IsClose(SiteDistance("peg_pinch", "pinch"))) /
+                     2;
+    float bring_tip = (IsClose(SiteDistance("peg", "target_peg")) +
+                       IsClose(SiteDistance("target_peg_tip", "peg_tip"))) /
+                      2;
+    float bringing = (bring + bring_tip) / 2;
+    return Max(bringing, grasping / 3);
+  }
+  float BallReward() {
+    // return self._is_close(physics.site_distance('ball', 'target_ball'))
+    return IsClose(SiteDistance("ball", "target_ball"));
+  }
+  float IsClose(double distance) {
+    // return rewards.tolerance(distance, (0, _CLOSE), _CLOSE * 2)
+    return static_cast<float>(RewardTolerance(distance, 0, kClose, kClose * 2));
+  }
 
   bool TaskShouldTerminateEpisode() override { return false; }
 
  private:
-  std::string MakeManipulatorModel(const std::string& task_name) {
-    if (task_name == "bring_ball") {
-      use_peg = false;
-      insert = false;
-    } else if (task_name == "bring_peg") {
-      use_peg = true;
-      insert = false;
-    } else if (task_name == "insert_ball") {
-      use_peg = false;
-      insert = true;
-    } else if (task_name == "insert_peg") {
-      use_peg = true;
-      insert = true;
-    } else {
-      throw std::runtime_error("Unknown task_name for dmc hopper.");
-    }
+  double SiteDistance(const std::string site1, const std::string site2) {
+    int id_site_1 = mj_name2id(model_, mjOBJ_SITE, site1);
+    int id_site_2 = mj_name2id(model_, mjOBJ_SITE, site2);
+    std::array<mjtNum, 3> diff = {data_->site_xpos[id_site_1 * 3 + 0] -
+                                      data_->site_xpos[id_site_2 * 3 + 0],
+                                  data_->site_xpos[id_site_1 * 3 + 1] -
+                                      data_->site_xpos[id_site_2 * 3 + 1],
+                                  data_->site_xpos[id_site_1 * 3 + 2] -
+                                      data_->site_xpos[id_site_2 * 3 + 2]};
+    return std::sqrt(diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2]);
+  }
+  std::string MakeManipulatorModel() {
     std::set<std::string> required_props;
-    if (use_peg) {
+    if (use_peg_) {
       required_props.insert("peg");
       required_props.insert("target_peg");
-      if (insert) {
+      if (insert_) {
         required_props.insert("slot");
       }
     } else {
       required_props.insert("ball");
       required_props.insert("target_ball");
-      if (insert) {
+      if (insert_) {
         required_props.insert("cup");
       }
     }
