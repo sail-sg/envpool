@@ -17,6 +17,7 @@ from typing import Any, no_type_check
 
 import gym
 import numpy as np
+from absl import logging
 from absl.testing import absltest
 
 from envpool.box2d import (
@@ -107,14 +108,17 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
         rewards[env_id] += rew
         obs = obs[~done]
         env_id = env_id[~done]
-      threshold = 260 if continuous else 220
       mean_reward = np.mean(rewards)
-      self.assertTrue(
-        mean_reward >= threshold,
-        (continuous, mean_reward, threshold, rewards),
+      logging.info(
+        f"{continuous}, {np.mean(rewards):.6f} ± {np.std(rewards):.6f}"
       )
+      # the following number is from gym's 1000 episode mean reward
+      if continuous:  # 283.872619 ± 18.881830
+        self.assertTrue(abs(mean_reward - 284) < 10, (continuous, mean_reward))
+      else:  # 236.898334 ± 105.832610
+        self.assertTrue(abs(mean_reward - 237) < 20, (continuous, mean_reward))
 
-  def test_lunar_lander_correctness(self, num_envs: int = 40) -> None:
+  def test_lunar_lander_correctness(self, num_envs: int = 30) -> None:
     self.solve_lunar_lander(num_envs, True)
     self.solve_lunar_lander(num_envs, False)
 
