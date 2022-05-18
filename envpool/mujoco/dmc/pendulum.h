@@ -74,7 +74,7 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public MujocoEnv {
                                  spec.config["task_name"_]),
                   spec.config["frame_skip"_],
                   spec.config["max_episode_steps"_]),
-        id_hinge_(mj_name2id(model_, mjOBJ_JOINT, "hinge")),
+        id_hinge_(GetQposId(model_, "hinge")),
         id_pole_(mj_name2id(model_, mjOBJ_XBODY, "pole")),
         dist_uniform_(-M_PI, M_PI) {
     const std::string& task_name = spec.config["task_name"_];

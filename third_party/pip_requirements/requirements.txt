@@ -6,6 +6,7 @@ dm-control
 filelock
 gym
 pygame
+box2d
 mujoco
 mjc-mwe>=0.0.3
 mujoco_py>=2.1.2.14

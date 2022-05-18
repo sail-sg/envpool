@@ -11,4 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Mujoco env in EnvPool."""
+"""Box2D env registration."""
+
+from envpool.registration import register
+
+register(
+  task_id="LunarLander-v2",
+  import_path="envpool.box2d",
+  spec_cls="LunarLanderDiscreteEnvSpec",
+  dm_cls="LunarLanderDiscreteDMEnvPool",
+  gym_cls="LunarLanderDiscreteGymEnvPool",
+)
+
+register(
+  task_id="LunarLanderContinuous-v2",
+  import_path="envpool.box2d",
+  spec_cls="LunarLanderContinuousEnvSpec",
+  dm_cls="LunarLanderContinuousDMEnvPool",
+  gym_cls="LunarLanderContinuousGymEnvPool",
+)

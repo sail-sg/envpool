@@ -21,7 +21,7 @@ import numpy as np
 from absl import logging
 from absl.testing import absltest
 
-from envpool.mujoco import (
+from envpool.mujoco.gym import (
   GymAntEnvSpec,
   GymAntGymEnvPool,
   GymHalfCheetahEnvSpec,

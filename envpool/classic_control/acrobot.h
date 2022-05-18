@@ -62,15 +62,14 @@ class AcrobotEnv : public Env<AcrobotEnvSpec> {
   };
 
  protected:
-  const double kPi = std::acos(-1);
   const double kG = 9.8;
   const double kDt = 0.2;
   const double kL = 1.0;
   const double kM = 1.0;
   const double kLC = 0.5;
   const double kI = 1.0;
-  const double kMaxVel1 = 4 * kPi;
-  const double kMaxVel2 = 9 * kPi;
+  const double kMaxVel1 = 4 * M_PI;
+  const double kMaxVel2 = 9 * M_PI;
   const double kInitRange = 0.1;
 
   int max_episode_steps_, elapsed_step_;
@@ -106,17 +105,17 @@ class AcrobotEnv : public Env<AcrobotEnvSpec> {
 
     s_.s4 = act - 1;
     s_ = Rk4(s_);
-    while (s_.s0 < -kPi) {
-      s_.s0 += kPi * 2;
+    while (s_.s0 < -M_PI) {
+      s_.s0 += M_PI * 2;
     }
-    while (s_.s1 < -kPi) {
-      s_.s1 += kPi * 2;
+    while (s_.s1 < -M_PI) {
+      s_.s1 += M_PI * 2;
     }
-    while (s_.s0 >= kPi) {
-      s_.s0 -= kPi * 2;
+    while (s_.s0 >= M_PI) {
+      s_.s0 -= M_PI * 2;
     }
-    while (s_.s1 >= kPi) {
-      s_.s1 -= kPi * 2;
+    while (s_.s1 >= M_PI) {
+      s_.s1 -= M_PI * 2;
     }
     if (s_.s2 < -kMaxVel1) {
       s_.s2 = -kMaxVel1;
@@ -157,10 +156,10 @@ class AcrobotEnv : public Env<AcrobotEnvSpec> {
                 kM * (kL * kL + kLC * kLC + 2 * kL * kLC * std::cos(theta2)) +
                 kI * 2;
     double d2 = kM * (kLC * kLC + kL * kLC * std::cos(theta2)) + kI;
-    double phi2 = kM * kLC * kG * std::cos(theta1 + theta2 - kPi / 2);
+    double phi2 = kM * kLC * kG * std::cos(theta1 + theta2 - M_PI / 2);
     double phi1 =
         -(dtheta2 + 2 * dtheta1) * kM * kL * kLC * dtheta2 * std::sin(theta2) +
-        kM * (kLC + kL) * kG * std::cos(theta1 - kPi / 2) + phi2;
+        kM * (kLC + kL) * kG * std::cos(theta1 - M_PI / 2) + phi2;
     double ddtheta2 =
         (a + d2 / d1 * phi1 -
          kM * kL * kLC * dtheta1 * dtheta1 * std::sin(theta2) - phi2) /
