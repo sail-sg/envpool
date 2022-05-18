@@ -19,7 +19,7 @@ import dm_env
 import numpy as np
 from absl.testing import absltest
 
-from envpool.mujoco import (
+from envpool.mujoco.dmc import (
   DmcAcrobotDMEnvPool,
   DmcAcrobotEnvSpec,
   DmcBallInCupDMEnvPool,

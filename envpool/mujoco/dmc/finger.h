@@ -92,7 +92,7 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
         id_site_target_(mj_name2id(model_, mjOBJ_SITE, "target")),
         id_site_tip_(mj_name2id(model_, mjOBJ_SITE, "tip")),
-        id_hinge_(mj_name2id(model_, mjOBJ_JOINT, "hinge")),
+        id_hinge_(model_->jnt_dofadr[mj_name2id(model_, mjOBJ_JOINT, "hinge")]),
         id_cap1_(mj_name2id(model_, mjOBJ_GEOM, "cap1")),
         id_proximal_(GetSensorId(model_, "proximal")),
         id_distal_(GetSensorId(model_, "distal")),

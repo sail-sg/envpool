@@ -50,7 +50,6 @@ using CartPoleEnvSpec = EnvSpec<CartPoleEnvFns>;
 
 class CartPoleEnv : public Env<CartPoleEnvSpec> {
  protected:
-  const double kPi = std::acos(-1);
   const double kGravity = 9.8;
   const double kMassCart = 1.0;
   const double kMassPole = 0.1;
@@ -59,7 +58,7 @@ class CartPoleEnv : public Env<CartPoleEnvSpec> {
   const double kMassPoleLength = kMassPole * kLength;
   const double kForceMag = 10.0;
   const double kTau = 0.02;
-  const double kThetaThresholdRadians = 12 * 2 * kPi / 360;
+  const double kThetaThresholdRadians = 12 * 2 * M_PI / 360;
   const double kXThreshold = 2.4;
   const double kInitRange = 0.05;
   int max_episode_steps_, elapsed_step_;

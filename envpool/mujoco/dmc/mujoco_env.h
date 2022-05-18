@@ -40,6 +40,10 @@ std::string GetFileContent(const std::string& base_path,
   return ss.str();
 }
 
+int GetQposId(mjModel* model, const std::string& name) {
+  return model->jnt_qposadr[mj_name2id(model, mjOBJ_JOINT, name.c_str())];
+}
+
 int GetSensorId(mjModel* model, const std::string& name) {
   return model->sensor_adr[mj_name2id(model, mjOBJ_SENSOR, name.c_str())];
 }
@@ -68,7 +72,6 @@ class MujocoEnv {
 #endif
 
  private:
-  const double kPi = std::acos(-1);
   std::uniform_real_distribution<> dist_uniform_;
   std::normal_distribution<> dist_normal_;
 
@@ -223,28 +226,44 @@ class MujocoEnv {
   // randomizer
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/utils/randomizers.py#L35
   void RandomizeLimitedAndRotationalJoints(std::mt19937* gen) {
-    // Note: not sure the mapping
-    // The following code use qpos[id] instead of qpos[name], maybe wrong?
-    assert(model_->njnt == model_->nq);
     for (int joint_id = 0; joint_id < model_->njnt; ++joint_id) {
-      int joint_type = model_->jnt_type[joint_id];
-      mjtByte is_limited = model_->jnt_limited[joint_id];
-      mjtNum range_min = model_->jnt_range[joint_id * 2 + 0];
-      mjtNum range_max = model_->jnt_range[joint_id * 2 + 1];
-      mjtNum range = range_max - range_min;
+      auto joint_type = model_->jnt_type[joint_id];
+      auto is_limited = model_->jnt_limited[joint_id];
+      auto range_min = model_->jnt_range[joint_id * 2 + 0];
+      auto range_max = model_->jnt_range[joint_id * 2 + 1];
+      auto range = range_max - range_min;
+      auto qpos_offset = model_->jnt_qposadr[joint_id];
       if (is_limited != 0) {
         if (joint_type == mjJNT_HINGE || joint_type == mjJNT_SLIDE) {
-          data_->qpos[joint_id] = dist_uniform_(*gen) * range + range_min;
+          data_->qpos[qpos_offset] = dist_uniform_(*gen) * range + range_min;
         } else if (joint_type == mjJNT_BALL) {
-          throw std::runtime_error("RandomLimitedQuaternion not implemented");
+          // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/utils/randomizers.py#L23
+          std::array<mjtNum, 3> axis = {dist_normal_(*gen), dist_normal_(*gen),
+                                        dist_normal_(*gen)};
+          auto norm = std::sqrt(axis[0] * axis[0] + axis[1] * axis[1] +
+                                axis[2] * axis[2]);
+          axis = {axis[0] / norm, axis[1] / norm, axis[2] / norm};
+          auto angle = dist_uniform_(*gen) * range_max;
+          mju_axisAngle2Quat(data_->qpos + qpos_offset, axis.begin(), angle);
         }
       } else if (joint_type == mjJNT_HINGE) {
-        range_min = -kPi;
-        range_max = kPi;
-        range = range_max - range_min;
-        data_->qpos[joint_id] = dist_uniform_(*gen) * range + range_min;
+        data_->qpos[qpos_offset] = dist_uniform_(*gen) * M_PI * 2 - M_PI;
       } else if (joint_type == mjJNT_BALL || joint_type == mjJNT_FREE) {
-        throw std::runtime_error("not implemented");
+        std::array<mjtNum, 4> quat;
+        if (joint_type == mjJNT_BALL) {
+          quat = {dist_normal_(*gen), dist_normal_(*gen), dist_normal_(*gen),
+                  dist_normal_(*gen)};
+        } else {
+          quat = {dist_uniform_(*gen), dist_uniform_(*gen), dist_uniform_(*gen),
+                  dist_uniform_(*gen)};
+        }
+        auto norm = std::sqrt(quat[0] * quat[0] + quat[1] * quat[1] +
+                              quat[2] * quat[2] + quat[3] * quat[3]);
+        int extra_offset = joint_type == mjJNT_BALL ? 0 : 3;
+        data_->qpos[qpos_offset + extra_offset + 0] = quat[0] / norm;
+        data_->qpos[qpos_offset + extra_offset + 1] = quat[1] / norm;
+        data_->qpos[qpos_offset + extra_offset + 2] = quat[2] / norm;
+        data_->qpos[qpos_offset + extra_offset + 3] = quat[3] / norm;
       }
     }
   }
