@@ -90,6 +90,12 @@ class _MakeTest(absltest.TestCase):
       ]
     )
 
+  def test_make_box2d(self) -> None:
+    self.check_step([
+      "LunarLander-v2",
+      "LunarLanderContinuous-v2",
+    ])
+
   def test_make_mujoco_gym(self) -> None:
     self.check_step(
       [

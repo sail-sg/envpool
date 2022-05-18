@@ -73,9 +73,10 @@ stable version through `envpool.readthedocs.io/en/stable/
    :caption: Environments
 
    api/atari
+   api/box2d
    api/classic
-   api/mujoco
    api/dm_control
+   api/mujoco
    api/toy_text
    api/vizdoom
 

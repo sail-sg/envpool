@@ -339,6 +339,18 @@ def workspace():
         build_file = "//third_party/mujoco_dmc_xml:mujoco_dmc_xml.BUILD",
     )
 
+    maybe(
+        http_archive,
+        name = "box2d",
+        sha256 = "d6b4650ff897ee1ead27cf77a5933ea197cbeef6705638dd181adc2e816b23c2",
+        strip_prefix = "box2d-2.4.1",
+        urls = [
+            "https://github.com/erincatto/box2d/archive/refs/tags/v2.4.1.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/erincatto/box2d/v2.4.1.tar.gz",
+        ],
+        build_file = "//third_party/box2d:box2d.BUILD",
+    )
+
     # Atari/VizDoom pretrained weight for testing pipeline
 
     maybe(
