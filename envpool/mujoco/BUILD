@@ -67,6 +67,7 @@ cc_library(
         "dmc/cheetah.h",
         "dmc/finger.h",
         "dmc/hopper.h",
+        "dmc/manipulator.h",
         "dmc/mujoco_env.h",
         "dmc/pendulum.h",
         "dmc/point_mass.h",

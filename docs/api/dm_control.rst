@@ -78,6 +78,20 @@ HopperStand-v1, HopperHop-v1
 - ``frame_skip``: 4;
 - ``max_episode_steps``: 1000;
 
+ManipulatorBringBall-v1, ManipulatorBringPeg-v1, ManipulatorInsertBall-v1, ManipulatorInsertPeg-v1
+--------------------------------------------------------------------------------------------------
+
+`dm_control suite manipulator source code
+<https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/manipulator.py>`_
+
+- Observation spec: a namedtuple with three keys: ``arm_pos (8,2)``, ``arm_vel (8)``, ``touch (5)``, ``hand_pos (4)``,
+  ``object_pos (4)``, ``object_vel (3)``, ``target_pos (4)``;
+- Action spec: ``(5)``, with range ``[-1, 1]``;
+- ``frame_skip``: 40;
+- ``max_episode_steps``: 1000;
+
+
+
 
 PendulumSwingup-v1
 ------------------

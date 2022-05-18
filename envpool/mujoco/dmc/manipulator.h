@@ -105,7 +105,7 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
                   spec.config["frame_skip"_],
                   spec.config["max_episode_steps"_]),
         dist_uniform_(0, 1) {
-    std::string task_name = spec.config["task_name"_];
+    const std::string& task_name = spec.config["task_name"_];
     if (task_name == "bring_ball") {
       use_peg_ = false;
       insert_ = false;
@@ -119,7 +119,8 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
       use_peg_ = true;
       insert_ = true;
     } else {
-      throw std::runtime_error("Unknown task_name for dmc hopper.");
+      throw std::runtime_error("Unknown task_name " + task_name +
+                               " for dmc manipulator.");
     }
     target_ = use_peg_ ? "target_peg" : "target_ball";
     object_ = use_peg_ ? "peg" : "ball";
