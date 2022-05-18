@@ -85,9 +85,9 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
         is_sparse_(spec.config["task_name"_] == "swingup_sparse") {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name == "swingup") {
-      margin_ = !is_sparse_;
+      margin_ = 1.0;
     } else if (task_name == "swingup_sparse") {
-      margin_ = !is_sparse_;
+      margin_ = 0.0;
     } else if (task_name != "swingup") {
       throw std::runtime_error("Unknown task_name for dmc acrobot.");
     }
