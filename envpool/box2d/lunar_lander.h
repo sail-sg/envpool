@@ -30,23 +30,22 @@ namespace box2d {
 class ContactDetector;
 
 class LunarLanderEnv {
-  static constexpr double kFPS = 50;
-  static constexpr double kScale = 30.0;
-  static constexpr double kMainEnginePower = 13.0;
-  static constexpr double kSideEnginePower = 0.6;
-  static constexpr double kInitialRandom = 1000.0;
-  static constexpr double kLanderPoly[6][2] = {{-14, 17},  {-17, 0},  // NOLINT
-                                               {-17, -10}, {17, -10},
-                                               {17, 0},    {14, 17}};
-  static constexpr double kLegAway = 20;
-  static constexpr double kLegDown = 18;
-  static constexpr double kLegW = 2;
-  static constexpr double kLegH = 8;
-  static constexpr double kLegSpringTorque = 40;
-  static constexpr double kSideEngineHeight = 14.0;
-  static constexpr double kSideEngineAway = 12.0;
-  static constexpr double kViewportW = 600;
-  static constexpr double kViewportH = 400;
+  const double kFPS = 50;
+  const double kScale = 30.0;
+  const double kMainEnginePower = 13.0;
+  const double kSideEnginePower = 0.6;
+  const double kInitialRandom = 1000.0;
+  const double kLanderPoly[6][2] = {  // NOLINT
+      {-14, 17}, {-17, 0}, {-17, -10}, {17, -10}, {17, 0}, {14, 17}};
+  const double kLegAway = 20;
+  const double kLegDown = 18;
+  const double kLegW = 2;
+  const double kLegH = 8;
+  const double kLegSpringTorque = 40;
+  const double kSideEngineHeight = 14.0;
+  const double kSideEngineAway = 12.0;
+  const double kViewportW = 600;
+  const double kViewportH = 400;
   static const int kChunks = 11;
 
   friend class ContactDetector;

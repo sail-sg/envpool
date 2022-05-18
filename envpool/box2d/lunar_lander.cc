@@ -159,7 +159,8 @@ void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
     bd.angle = sign * 0.05f;
 
     b2PolygonShape shape;
-    shape.SetAsBox(kLegW / kScale, kLegH / kScale);
+    shape.SetAsBox(static_cast<float>(kLegW / kScale),
+                   static_cast<float>(kLegH / kScale));
 
     b2FixtureDef fd;
     fd.shape = &shape;
@@ -179,7 +180,7 @@ void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
     rjd.localAnchorB = Vec2(sign * kLegAway / kScale, kLegDown / kScale);
     rjd.enableMotor = true;
     rjd.enableLimit = true;
-    rjd.maxMotorTorque = kLegSpringTorque;
+    rjd.maxMotorTorque = static_cast<float>(kLegSpringTorque);
     rjd.motorSpeed = sign * 0.3f;
     rjd.lowerAngle = index == 0 ? 0.4 : -0.9;
     rjd.upperAngle = index == 0 ? 0.9 : -0.4;
@@ -194,7 +195,7 @@ b2Body* LunarLanderEnv::CreateParticle(float mass, b2Vec2 pos) {
   bd.angle = 0.0;
 
   b2CircleShape shape;
-  shape.m_radius = 2 / kScale;
+  shape.m_radius = static_cast<float>(2 / kScale);
   shape.m_p.SetZero();
 
   b2FixtureDef fd;
@@ -271,7 +272,7 @@ void LunarLanderEnv::StepBox2d(std::mt19937* gen, int action, float action0,
     lander_->ApplyLinearImpulse(-impulse, impulse_pos, true);
   }
 
-  world_->Step(1.0 / kFPS, 6 * 30, 2 * 30);
+  world_->Step(static_cast<float>(1.0 / kFPS), 6 * 30, 2 * 30);
 
   // state and reward
   auto pos = lander_->GetPosition();
