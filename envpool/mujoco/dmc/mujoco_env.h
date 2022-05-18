@@ -40,6 +40,10 @@ std::string GetFileContent(const std::string& base_path,
   return ss.str();
 }
 
+int GetQposId(mjModel* model, const std::string& name) {
+  return model->jnt_qposadr[mj_name2id(model, mjOBJ_JOINT, name.c_str())];
+}
+
 int GetSensorId(mjModel* model, const std::string& name) {
   return model->sensor_adr[mj_name2id(model, mjOBJ_SENSOR, name.c_str())];
 }
@@ -222,23 +226,21 @@ class MujocoEnv {
   // randomizer
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/utils/randomizers.py#L35
   void RandomizeLimitedAndRotationalJoints(std::mt19937* gen) {
-    // Note: not sure the mapping
-    // The following code use qpos[id] instead of qpos[name], maybe wrong?
-    assert(model_->njnt == model_->nq);
     for (int joint_id = 0; joint_id < model_->njnt; ++joint_id) {
       int joint_type = model_->jnt_type[joint_id];
       mjtByte is_limited = model_->jnt_limited[joint_id];
       mjtNum range_min = model_->jnt_range[joint_id * 2 + 0];
       mjtNum range_max = model_->jnt_range[joint_id * 2 + 1];
       mjtNum range = range_max - range_min;
+      int qpos_offset = model_->jnt_qposadr[joint_id];
       if (is_limited != 0) {
         if (joint_type == mjJNT_HINGE || joint_type == mjJNT_SLIDE) {
-          data_->qpos[joint_id] = dist_uniform_(*gen) * range + range_min;
+          data_->qpos[qpos_offset] = dist_uniform_(*gen) * range + range_min;
         } else if (joint_type == mjJNT_BALL) {
           throw std::runtime_error("RandomLimitedQuaternion not implemented");
         }
       } else if (joint_type == mjJNT_HINGE) {
-        data_->qpos[joint_id] = dist_uniform_(*gen) * M_PI * 2 - M_PI;
+        data_->qpos[qpos_offset] = dist_uniform_(*gen) * M_PI * 2 - M_PI;
       } else if (joint_type == mjJNT_BALL || joint_type == mjJNT_FREE) {
         throw std::runtime_error("not implemented");
       }

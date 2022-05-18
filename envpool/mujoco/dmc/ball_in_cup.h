@@ -74,8 +74,8 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
                   spec.config["max_episode_steps"_]),
         id_target_(mj_name2id(model_, mjOBJ_SITE, "target")),
         id_ball_(mj_name2id(model_, mjOBJ_XBODY, "ball")),
-        id_ball_x_(mj_name2id(model_, mjOBJ_JOINT, "ball_x")),
-        id_ball_z_(mj_name2id(model_, mjOBJ_JOINT, "ball_z")),
+        id_ball_x_(GetQposId(model_, "ball_x")),
+        id_ball_z_(GetQposId(model_, "ball_z")),
         dist_ball_x_(-0.2, 0.2),
         dist_ball_z_(0.2, 0.5) {
     const std::string& task_name = spec.config["task_name"_];
