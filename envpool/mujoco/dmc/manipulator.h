@@ -91,90 +91,89 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
                   spec.config["max_episode_steps"_]),
         dist_uniform_(0, 1) {}
 
-  void TaskInitializeEpisode() override {}
+  void TaskInitializeEpisode() override {
 #ifdef ENVPOOL_TEST
-  std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
+    std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
 #endif
-}
-
-  bool IsDone() override {
-  return done_;
-}
-
-void Reset() override {
-  ControlReset();
-  WriteState();
-}
-
-void Step(const Action& action) override {
-  mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
-  ControlStep(act);
-  WriteState();
-}
-
-float TaskGetReward() override {}
-
-bool TaskShouldTerminateEpisode() override { return false; }
-
-private:
-std::string MakeManipulatorModel(const std::string& task_name) {
-  if (task_name == "bring_ball") {
-    use_peg = false;
-    insert = false;
-  } else if (task_name == "bring_peg") {
-    use_peg = true;
-    insert = false;
-  } else if (task_name == "insert_ball") {
-    use_peg = false;
-    insert = true;
-  } else if (task_name == "insert_peg") {
-    use_peg = true;
-    insert = true;
-  } else {
-    throw std::runtime_error("Unknown task_name for dmc hopper.");
   }
-  std::set<std::string> required_props;
-  if (use_peg) {
-    required_props.insert("peg");
-    required_props.insert("target_peg");
-    if (insert) {
-      required_props.insert("slot");
-    }
-  } else {
-    required_props.insert("ball");
-    required_props.insert("target_ball");
-    if (insert) {
-      required_props.insert("cup");
-    }
-  }
-  std::string content = GetManipulatorXML();
-  for (set<int>::iterator it = kAllProps.begin(); it != kAllProps.end(); it++) {
-    if (required_props.find(*it) == required_props.end()) {
-      content = ReplaceRegex(content, *it);
-    }
-  }
-  return content;
-}
-std::string ReplaceRegex(const std::string& content, std::string& unused_prop) {
-  std::ostringstream pattern_ss;
-  pattern_ss << "<body name=\"" << unused_prop
-             << "\"((?!</body>)[\\s\\S])+</body>";
-  std::regex pattern(pattern_ss.str());
-  std::stringstream ss;
-  ss << regex_replace(content, pattern, "");
-  return ss.str();
-}
 
-void WriteState() {
-  State state = Allocate();
-  state["reward"_] = reward_;
-  state["discount"_] = discount_;
-  // obs
+  bool IsDone() override { return done_; }
+
+  void Reset() override {
+    ControlReset();
+    WriteState();
+  }
+
+  void Step(const Action& action) override {
+    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
+    ControlStep(act);
+    WriteState();
+  }
+
+  float TaskGetReward() override {}
+
+  bool TaskShouldTerminateEpisode() override { return false; }
+
+ private:
+  std::string MakeManipulatorModel(const std::string& task_name) {
+    if (task_name == "bring_ball") {
+      use_peg = false;
+      insert = false;
+    } else if (task_name == "bring_peg") {
+      use_peg = true;
+      insert = false;
+    } else if (task_name == "insert_ball") {
+      use_peg = false;
+      insert = true;
+    } else if (task_name == "insert_peg") {
+      use_peg = true;
+      insert = true;
+    } else {
+      throw std::runtime_error("Unknown task_name for dmc hopper.");
+    }
+    std::set<std::string> required_props;
+    if (use_peg) {
+      required_props.insert("peg");
+      required_props.insert("target_peg");
+      if (insert) {
+        required_props.insert("slot");
+      }
+    } else {
+      required_props.insert("ball");
+      required_props.insert("target_ball");
+      if (insert) {
+        required_props.insert("cup");
+      }
+    }
+    std::string content = GetManipulatorXML();
+    for (set<int>::iterator it = kAllProps.begin(); it != kAllProps.end();
+         it++) {
+      if (required_props.find(*it) == required_props.end()) {
+        content = ReplaceRegex(content, *it);
+      }
+    }
+    return content;
+  }
+  std::string ReplaceRegex(const std::string& content,
+                           std::string& unused_prop) {
+    std::ostringstream pattern_ss;
+    pattern_ss << "<body name=\"" << unused_prop
+               << "\"((?!</body>)[\\s\\S])+</body>";
+    std::regex pattern(pattern_ss.str());
+    std::stringstream ss;
+    ss << regex_replace(content, pattern, "");
+    return ss.str();
+  }
+
+  void WriteState() {
+    State state = Allocate();
+    state["reward"_] = reward_;
+    state["discount"_] = discount_;
+    // obs
 #ifdef ENVPOOL_TEST
-  state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
+    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
 #endif
-}
-
+  }
 };
 
 using ManipulatorEnvPool = AsyncEnvPool<ManipulatorEnv>;
