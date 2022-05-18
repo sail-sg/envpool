@@ -27,7 +27,45 @@
 
 namespace box2d {
 
-class BipedalWalkerBox2dEnv {};
+class BipedalWalkerContactDetector;
+
+class BipedalWalkerBox2dEnv {
+  friend class BipedalWalkerContactDetector;
+
+ protected:
+  int max_episode_steps_, elapsed_step_;
+  float reward_;
+  bool is_hardcore_, done_;
+  std::array<float, 24> obs_;
+  std::uniform_real_distribution<> dist_uniform_;
+
+  // box2d related
+  std::unique_ptr<b2World> world_;
+  b2Body* hull_;
+  std::array<b2Body*, 4> legs_;
+  std::array<float, 4> ground_contact_;
+  std::unique_ptr<BipedalWalkerContactDetector> listener_;
+
+ public:
+  BipedalWalkerBox2dEnv(bool is_hardcore, int max_episode_steps);
+  void BipedalWalkerReset(std::mt19937* gen);
+  void BipedalWalkerStep(std::mt19937* gen, float action0, float action1,
+                         float action2, float action3);
+
+ private:
+  void ResetBox2d(std::mt19937* gen);
+  void StepBox2d(std::mt19937* gen, float action0, float action1, float action2,
+                 float action3);
+};
+
+class BipedalWalkerContactDetector : public b2ContactListener {
+  BipedalWalkerBox2dEnv* env_;
+
+ public:
+  explicit BipedalWalkerContactDetector(BipedalWalkerBox2dEnv* env);
+  void BeginContact(b2Contact* contact) override;
+  void EndContact(b2Contact* contact) override;
+};
 
 }  // namespace box2d
 

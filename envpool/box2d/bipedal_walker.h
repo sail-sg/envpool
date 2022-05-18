@@ -17,13 +17,60 @@
 #ifndef ENVPOOL_BOX2D_BIPEDAL_WALKER_H_
 #define ENVPOOL_BOX2D_BIPEDAL_WALKER_H_
 
-#include "envpool/box2d/bipedal_walker.h"
+#include "envpool/box2d/bipedal_walker_env.h"
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
 
 namespace box2d {
 
-class BipedalWalkerEnv {};
+class BipedalWalkerEnvFns {
+ public:
+  static decltype(auto) DefaultConfig() {
+    return MakeDict("max_episode_steps"_.Bind(1600),
+                    "reward_threshold"_.Bind(300.0), "hardcore"_.Bind(false));
+  }
+  template <typename Config>
+  static decltype(auto) StateSpec(const Config& conf) {
+    return MakeDict("obs"_.Bind(Spec<float>({24})));
+  }
+  template <typename Config>
+  static decltype(auto) ActionSpec(const Config& conf) {
+    return MakeDict("action"_.Bind(Spec<float>({4}, {-1.0, 1.0})));
+  }
+};
+
+using BipedalWalkerEnvSpec = EnvSpec<BipedalWalkerEnvFns>;
+
+class BipedalWalkerEnv : public Env<BipedalWalkerEnvSpec>,
+                         public BipedalWalkerBox2dEnv {
+ public:
+  BipedalWalkerEnv(const Spec& spec, int env_id)
+      : Env<BipedalWalkerEnvSpec>(spec, env_id),
+        BipedalWalkerBox2dEnv(spec.config["hardcore"_],
+                              spec.config["max_episode_steps"_]) {}
+
+  bool IsDone() override { return done_; }
+
+  void Reset() override {
+    BipedalWalkerReset(&gen_);
+    WriteState();
+  }
+
+  void Step(const Action& action) override {
+    BipedalWalkerStep(&gen_, action["action"_][0], action["action"_][1],
+                      action["action"_][2], action["action"_][3]);
+    WriteState();
+  }
+
+ private:
+  void WriteState() {
+    State state = Allocate();
+    state["reward"_] = reward_;
+    state["obs"_].Assign(obs_.begin(), obs_.size());
+  }
+};
+
+using BipedalWalkerEnvPool = AsyncEnvPool<BipedalWalkerEnv>;
 
 }  // namespace box2d
 

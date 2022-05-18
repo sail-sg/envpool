@@ -53,10 +53,10 @@ LunarLanderBox2dEnv::LunarLanderBox2dEnv(bool continuous, int max_episode_steps)
       elapsed_step_(max_episode_steps + 1),
       continuous_(continuous),
       done_(true),
+      dist_(0, 1),
       world_(new b2World(b2Vec2(0.0, -10.0))),
       moon_(nullptr),
-      lander_(nullptr),
-      dist_(0, 1) {
+      lander_(nullptr) {
   for (const auto* p : kLanderPoly) {
     lander_poly_.emplace_back(Vec2(p[0] / kScale, p[1] / kScale));
   }
