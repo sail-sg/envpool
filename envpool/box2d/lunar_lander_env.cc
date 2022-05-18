@@ -309,10 +309,10 @@ void LunarLanderBox2dEnv::StepBox2d(std::mt19937* gen, int action,
 }
 
 void LunarLanderBox2dEnv::LunarLanderReset(std::mt19937* gen) {
-  elapsed_step_ = -1;  // because of the step(0)
+  elapsed_step_ = 0;
   done_ = false;
   ResetBox2d(gen);
-  LunarLanderStep(gen, 0, 0, 0);
+  StepBox2d(gen, 0, 0, 0);
 }
 
 void LunarLanderBox2dEnv::LunarLanderStep(std::mt19937* gen, int action,
