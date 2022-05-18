@@ -54,6 +54,9 @@ class ManipulatorEnvFns {
                     "obs:target_pos"_.Bind(Spec<mjtNum>({4}),
 #ifdef ENVPOOL_TEST
                     "info:qpos0"_.Bind(Spec<mjtNum>({14})),
+                    "info:qvel"_.Bind(Spec<mjtNum>({14})),
+                    "info:body_pos"_.Bind(Spec<mjtNum>({16,4})),
+                    "info:body_quat"_.Bind(Spec<mjtNum>({16,3})),
 #endif
                     "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
   }
@@ -77,6 +80,11 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
   std::string object_;
   std::array<std::string, 3> object_joints_;
   std::string receptacle_;
+#ifdef ENVPOOL_TEST
+  std::unique_ptr<mjtNum> qvel_;
+  std::unique_ptr<mjtNum> body_pos_;
+  std::unique_ptr<mjtNum> body_quat_;
+#endif
 
   std::array<std::string> kArmJoints = {
       "arm_root", "arm_shoulder", "arm_elbow", "arm_wrist",
@@ -119,6 +127,11 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
     object_joints_ =
         use_peg ? {"peg_x", "peg_y", "peg_z"} : {"ball_x", "ball_y", "ball_z"};
     fully_observable_ = true;
+#ifdef ENVPOOL_TEST
+    qvel_.reset(new mjtNum[model_->nv]);
+    body_pos_.reset(new mjtNum[model_->nbody * 3]);
+    body_quat_.reset(new mjtNum[model_->nbody * 4]);
+#endif
   }
 
   void TaskInitializeEpisode() override {
@@ -138,16 +151,27 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
       mjtNum target_angle;
       if (insert_) {
         target_angle = dist_uniform_(gen_) * (M_PI * 2 / 3) - M_PI / 3;
-        int id_body = mj_name2id(model_, mjOBJ_JOINT, receptacle_);
+        int id_body_receptacle = mj_name2id(model_, mjOBJ_JOINT, receptacle_);
         // model.body_pos[self._receptacle, ['x', 'z']]
-        model_->body_pos[id_body * 3 + 0] = target_x;
-        model_->body_pos[id_body * 3 + 2] = target_z;
+        model_->body_pos[id_body_receptacle * 3 + 0] = target_x;
+        model_->body_pos[id_body_receptacle * 3 + 2] = target_z;
         // model.body_quat[self._receptacle, ['qw', 'qy']]
-        model_->body_quat[id_body * 4 + 0] = std::cos(target_angle / 2);
-        model_->body_quat[id_body * 4 + 2] = std::sin(target_angle / 2);
+        model_->body_quat[id_body_receptacle * 4 + 0] =
+            std::cos(target_angle / 2);
+        model_->body_quat[id_body_receptacle * 4 + 2] =
+            std::sin(target_angle / 2);
       } else {
         target_angle = dist_uniform_(gen_) * 2 * M_PI - M_PI;
       }
+      int id_body_target = mj_name2id(model_, mjOBJ_JOINT, target_);
+      //   model.body_pos[self._target, ['x', 'z']] = target_x, target_z
+      //   model.body_quat[self._target, ['qw', 'qy']] = [
+      //       np.cos(target_angle/2), np.sin(target_angle/2)]
+      model_->body_pos[id_body_target * 3 + 0] = target_x;
+      model_->body_pos[id_body_target * 3 + 2] = target_z;
+      model_->body_quat[id_body_target * 4 + 0] = std::cos(target_angle / 2);
+      model_->body_quat[id_body_target * 4 + 2] = std::sin(target_angle / 2);
+
       float choice = dist_uniform_(gen_);
       mjtNum object_x, object_z, object_angle;
       if (choice <= kPInHand) {
@@ -191,6 +215,12 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
 
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
+    std::memcpy(qvel_.get(), data_->qvel, sizeof(mjtNum) * model_->nv);
+    std::memcpy(body_pos_.get(), model_->body_pos,
+                sizeof(mjtNum) * model_->nbody * 3);
+    std::memcpy(body_quat_.get(), model_->body_quat,
+                sizeof(mjtNum) * model_->nbody * 4);
+
 #endif
   }
 
@@ -345,6 +375,9 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
     }
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
+    state["info:qvel"_].Assign(qvel_.get(), model_->nv);
+    state["info:body_pos"_].Assign(body_pos_.get(), model_->nbody * 3);
+    state["info:body_quat"_].Assign(body_quat_.get(), model_->nbody * 4);
 #endif
   }
 };
