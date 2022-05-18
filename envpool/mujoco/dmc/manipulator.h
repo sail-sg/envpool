@@ -122,6 +122,73 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
   }
 
   void TaskInitializeEpisode() override {
+    bool penetrating = True;
+    while (penetrating) {
+      for (int i = 0; i < kArmJoints.size(); i++) {
+        int id_joint = mj_name2id(model_, mjOBJ_JOINT, kArmJoints[i]);
+        bool is_limited = model_->jnt_limited[id_joint] == 1 ? true : false;
+        double lower = is_limited ? model_->jnt_range[id_joint * 2 + 0] : -M_PI;
+        double upper = is_limited ? model_->jnt_range[id_joint * 2 + 1] : M_PI;
+        data_->qpos[id_joint] = dist_uniform_(gen_) * (upper - lower) + lower;
+      }
+      data_->qpos[mj_name2id(model_, mjOBJ_JOINT, "finger")] =
+          data_->qpos[mj_name2id(model_, mjOBJ_JOINT, "thumb")];
+      mjtNum target_x = dist_uniform_(gen_) * 0.4 - 0.4;
+      mjtNum target_z = dist_uniform_(gen_) * 0.3 + 0.1;
+      mjtNum target_angle;
+      if (insert_) {
+        target_angle = dist_uniform_(gen_) * (M_PI * 2 / 3) - M_PI / 3;
+        int id_body = mj_name2id(model_, mjOBJ_JOINT, receptacle_);
+        // model.body_pos[self._receptacle, ['x', 'z']]
+        model_->body_pos[id_body * 3 + 0] = target_x;
+        model_->body_pos[id_body * 3 + 2] = target_z;
+        // model.body_quat[self._receptacle, ['qw', 'qy']]
+        model_->body_quat[id_body * 4 + 0] = std::cos(target_angle / 2);
+        model_->body_quat[id_body * 4 + 2] = std::sin(target_angle / 2);
+      } else {
+        target_angle = dist_uniform_(gen_) * 2 * M_PI - M_PI;
+      }
+      float choice = dist_uniform_(gen_);
+      mjtNum object_x, object_z, object_angle;
+      if (choice <= kPInHand) {
+        // in_hand
+        object_x = target_x;
+        object_z = target_z;
+        object_angle = target_angle;
+      } else if (choice <= kPInHand + kPInTarget) {
+        // in_target
+        // physics.after_reset()
+        // object_x = data.site_xpos['grasp', 'x']
+        // object_z = data.site_xpos['grasp', 'z']
+        // grasp_direction = data.site_xmat['grasp', ['xx', 'zx']]
+        // object_angle = np.pi-np.arctan2(grasp_direction[1],
+        // grasp_direction[0])
+        PhysicsAfterReset();
+        int id_site_grasp = mj_name2id(model_, mjOBJ_SITE, "grasp");
+        object_x = data_->site_xpos[id_site_grasp * 3 + 0];
+        object_z = data_->site_xpos[id_site_grasp * 3 + 2];
+        std::array<mjtNum, 2> grasp_direction = {
+            data_->site_xmat[id_site_grasp * 9 + 0],
+            data_->site_xmat[id_site_grasp * 9 + 6]};
+        object_angle =
+            M_PI - std::atan2(grasp_direction[1], grasp_direction[0]);
+      } else {
+        // uniform
+        // object_x = uniform(-.5, .5)
+        // object_z = uniform(0, .7)
+        // object_angle = uniform(0, 2*np.pi)
+        // data.qvel[self._object + '_x'] = uniform(-5, 5)
+        object_x = dist_uniform_(gen_) * 1 - 0.5;
+        object_z = dist_uniform_(gen_) * 0.7;
+        object_angle = dist_uniform_(gen_) * 2 * M_PI;
+        data_->qvel[mj_name2id(model_, mjOBJ_JOINT, object_ + "_x")] =
+            dist_uniform_(gen_) * 10 - 5;
+      }
+      // Check for collisions.
+      PhysicsAfterReset();
+      penetrating = data_->ncon > 0;
+    }
+
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
 #endif
