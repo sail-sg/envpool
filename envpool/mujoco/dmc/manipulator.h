@@ -78,14 +78,14 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
   std::array<std::string, 3> object_joints_;
   std::string receptacle_;
 
-  std::set<std::string> kArmJoints = {"arm_root",  "arm_shoulder", "arm_elbow",
-                                      "arm_wrist", "finger",       "fingertip",
-                                      "thumb",     "thumbtip"};
+  std::array<std::string> kArmJoints = {
+      "arm_root", "arm_shoulder", "arm_elbow", "arm_wrist",
+      "finger",   "fingertip",    "thumb",     "thumbtip"};
   std::set<std::string> kAllProps = {"ball", "target_ball", "cup",
                                      "peg",  "target_peg",  "slot"};
-  std::set<std::string> kTouchSensors = {"palm_touch", "finger_touch",
-                                         "thumb_touch", "fingertip_touch",
-                                         "thumbtip_touch"};
+  std::array<std::string> kTouchSensors = {"palm_touch", "finger_touch",
+                                           "thumb_touch", "fingertip_touch",
+                                           "thumbtip_touch"};
   std::uniform_real_distribution<> dist_uniform_;
 
  public:
@@ -172,6 +172,42 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
   bool TaskShouldTerminateEpisode() override { return false; }
 
  private:
+  std::array<mjtNum, 16> BoundedJointPos(std::array<std::string> joint_names) {
+    std::array<mjtNum, 16> bound;
+    for (int i = 0; i < joint_names.size(); i++) {
+      int id = mj_name2id(model_, mjOBJ_JOINT, joint_names[i]);
+      bound[i * 2 + 0] = std::sin(data_->qpos[id]);
+      bound[i * 2 + 1] = std::cos(data_->qpos[id]);
+    }
+    return bound;
+  }
+
+  std::array<mjtNum, 8> JointVel(std::array<std::string> joint_names) {
+    std::array<mjtNum, 8> joint;
+    for (int i = 0; i < joint_names.size(); i++) {
+      int id = mj_name2id(model_, mjOBJ_JOINT, joint_names[i]);
+      joint[i] = data_->qvel[id];
+    }
+    return joint;
+  }
+
+  std::array<mjtNum, 5> Touch() {
+    std::array<mjtNum, 5> touch;
+    for (int i = 0; i < kTouchSensors.size(); i++) {
+      int id = GetSensorId(model_, kTouchSensors[i]);
+      touch[i] = std::log1p(data_->sensordata[id]);
+    }
+    return touch;
+  }
+
+  std::array<mjtNum, 4> Body2dPose(std::string body_names) {
+    int id = mj_name2id(model_, mjOBJ_XBODY, body_names);
+    // self.named.data.xpos[body_names, ['x', 'z']]
+    // self.named.data.xquat[body_names, ['qw', 'qy']]
+    return {data_->xpos[id * 3 + 0], data_->xpos[id * 3 + 2],
+            data_->xquat[id * 4 + 0], data_->xquat[id * 4 + 2]};
+  }
+
   double SiteDistance(const std::string site1, const std::string site2) {
     int id_site_1 = mj_name2id(model_, mjOBJ_SITE, site1);
     int id_site_2 = mj_name2id(model_, mjOBJ_SITE, site2);
@@ -223,6 +259,23 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
+    const auto& bounded_joint_pos = BoundedJointPos(kArmJoints);
+    const auto& joint_vel = JointVel(kArmJoints);
+    const auto& touch = Touch();
+    state["obs:arm_pos"_].Assign(bounded_joint_pos.begin(),
+                                 bounded_joint_pos.size());
+    state["obs:arm_vel"_].Assign(joint_vel.begin(), joint_vel.size());
+    state["obs:touch"_].Assign(Touch.begin(), Touch.size());
+    if (fully_observable_) {
+      const auto& hand_pos = Body2dPose("hand");
+      const auto& object_pos = Body2dPose(object_);
+      const auto& joint_vel = JointVel(object_joints_);
+      const auto& target_pos = Body2dPose(target_);
+      state["obs:hand_pos"_].Assign(hand_pos.begin(), hand_pos.size());
+      state["obs:object_pos"_].Assign(object_pos.begin(), object_pos.size());
+      state["obs:object_vel"_].Assign(joint_vel.begin(), joint_vel.size());
+      state["obs:target_pos"_].Assign(target_pos.begin(), target_pos.size());
+    }
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
 #endif
