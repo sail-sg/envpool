@@ -79,7 +79,7 @@ class WalkerEnv : public Env<WalkerEnvSpec>, public MujocoEnv {
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
         id_torso_(mj_name2id(model_, mjOBJ_XBODY, "torso")),
         id_torso_subtreelinvel_(GetSensorId(model_, "torso_subtreelinvel")) {
-    std::string task_name = spec.config["task_name"_];
+    const std::string& task_name = spec.config["task_name"_];
     if (task_name == "stand") {
       move_speed_ = 0;
     } else if (task_name == "walk") {
@@ -87,7 +87,8 @@ class WalkerEnv : public Env<WalkerEnvSpec>, public MujocoEnv {
     } else if (task_name == "run") {
       move_speed_ = kRunSpeed;
     } else {
-      throw std::runtime_error("Unknown task_name for dmc walker.");
+      throw std::runtime_error("Unknown task_name " + task_name +
+                               " for dmc walker.");
     }
   }
 
