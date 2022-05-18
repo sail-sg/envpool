@@ -17,6 +17,9 @@
 #include "envpool/box2d/lunar_lander_discrete.h"
 #include "envpool/core/py_envpool.h"
 
+using BipedalWalkerEnvSpec = PyEnvSpec<box2d::BipedalWalkerEnvSpec>;
+using BipedalWalkerEnvPool = PyEnvPool<box2d::BipedalWalkerEnvPool>;
+
 using LunarLanderContinuousEnvSpec =
     PyEnvSpec<box2d::LunarLanderContinuousEnvSpec>;
 using LunarLanderContinuousEnvPool =
@@ -26,6 +29,7 @@ using LunarLanderDiscreteEnvSpec = PyEnvSpec<box2d::LunarLanderDiscreteEnvSpec>;
 using LunarLanderDiscreteEnvPool = PyEnvPool<box2d::LunarLanderDiscreteEnvPool>;
 
 PYBIND11_MODULE(box2d_envpool, m) {
+  REGISTER(m, BipedalWalkerEnvSpec, BipedalWalkerEnvPool)
   REGISTER(m, LunarLanderContinuousEnvSpec, LunarLanderContinuousEnvPool)
   REGISTER(m, LunarLanderDiscreteEnvSpec, LunarLanderDiscreteEnvPool)
 }

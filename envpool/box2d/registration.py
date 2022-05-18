@@ -16,6 +16,26 @@
 from envpool.registration import register
 
 register(
+  task_id="BipedalWalker-v3",
+  import_path="envpool.box2d",
+  spec_cls="BipedalWalkerEnvSpec",
+  dm_cls="BipedalWalkerDMEnvPool",
+  gym_cls="BipedalWalkerGymEnvPool",
+  hardcore=False,
+  max_episode_steps=1600,
+)
+
+register(
+  task_id="BipedalWalkerHardcore-v3",
+  import_path="envpool.box2d",
+  spec_cls="BipedalWalkerEnvSpec",
+  dm_cls="BipedalWalkerDMEnvPool",
+  gym_cls="BipedalWalkerGymEnvPool",
+  hardcore=True,
+  max_episode_steps=2000,
+)
+
+register(
   task_id="LunarLander-v2",
   import_path="envpool.box2d",
   spec_cls="LunarLanderDiscreteEnvSpec",
