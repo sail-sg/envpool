@@ -14,6 +14,10 @@
 
 #include "envpool/box2d/bipedal_walker_env.h"
 
+#include <algorithm>
+
+#include "envpool/box2d/utils.h"
+
 namespace box2d {
 
 BipedalWalkerContactDetector::BipedalWalkerContactDetector(
@@ -53,7 +57,11 @@ BipedalWalkerBox2dEnv::BipedalWalkerBox2dEnv(bool hardcore,
       done_(true),
       dist_uniform_(0, 1),
       world_(new b2World(b2Vec2(0.0, -10.0))),
-      hull_(nullptr) {}
+      hull_(nullptr) {
+  for (const auto* p : kHullPoly) {
+    hull_poly_.emplace_back(Vec2(p[0] / kScale, p[1] / kScale));
+  }
+}
 
 void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {}
 
@@ -66,10 +74,10 @@ void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
 }
 
 void BipedalWalkerBox2dEnv::BipedalWalkerReset(std::mt19937* gen) {
-  elapsed_step_ = -1;  // because of the step(0)
+  elapsed_step_ = 0;
   done_ = false;
   ResetBox2d(gen);
-  BipedalWalkerStep(gen, 0, 0, 0, 0);
+  StepBox2d(gen, 0, 0, 0, 0);
 }
 
 void BipedalWalkerBox2dEnv::BipedalWalkerStep(std::mt19937* gen, float action0,
