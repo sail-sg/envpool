@@ -27,9 +27,7 @@
 
 namespace box2d {
 
-
-class BipedalWalkerEnv {
-};
+class BipedalWalkerEnv {};
 
 }  // namespace box2d
 

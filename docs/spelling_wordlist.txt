@@ -61,3 +61,4 @@ playfield
 Pontryagin
 booleans
 viewport
+lidar
