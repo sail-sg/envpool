@@ -34,11 +34,6 @@
 
 namespace mujoco_dmc {
 
-std::string GetManipulatorXML(const std::string& base_path,
-                              const std::string& task_name) {
-  return GetFileContent(base_path, "manipulator.xml");
-}
-
 class ManipulatorEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
@@ -101,7 +96,9 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
  public:
   ManipulatorEnv(const Spec& spec, int env_id)
       : Env<ManipulatorEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_], MakeManipulatorModel(spec),
+        MujocoEnv(spec.config["base_path"_],
+                  GetManipulatorXML(spec.config["base_path"_],
+                                    spec.config["task_name"_]),
                   spec.config["frame_skip"_],
                   spec.config["max_episode_steps"_]),
         dist_uniform_(0, 1) {
@@ -271,7 +268,7 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
  private:
   std::array<mjtNum, 16> BoundedJointPos() {
     std::array<mjtNum, 16> bound;
-    for (int i = 0; i < k_arm_joints_.size(); i++) {
+    for (unsigned int i = 0; i < k_arm_joints_.size(); i++) {
       int id = mj_name2id(model_, mjOBJ_JOINT, k_arm_joints_[i].c_str());
       bound[i * 2 + 0] = std::sin(data_->qpos[id]);
       bound[i * 2 + 1] = std::cos(data_->qpos[id]);
@@ -282,7 +279,7 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
   // bug :(
   std::array<mjtNum, 8> JointVelArm() {
     std::array<mjtNum, 8> joint;
-    for (int i = 0; i < k_arm_joints_.size(); i++) {
+    for (unsigned int i = 0; i < k_arm_joints_.size(); i++) {
       int id = mj_name2id(model_, mjOBJ_JOINT, k_arm_joints_[i].c_str());
       joint[i] = data_->qvel[id];
     }
@@ -291,7 +288,7 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
 
   std::array<mjtNum, 3> JointVelObj() {
     std::array<mjtNum, 3> joint;
-    for (int i = 0; i < object_joints_.size(); i++) {
+    for (unsigned int i = 0; i < object_joints_.size(); i++) {
       int id = mj_name2id(model_, mjOBJ_JOINT, object_joints_[i].c_str());
       joint[i] = data_->qvel[id];
     }
@@ -300,7 +297,7 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
 
   std::array<mjtNum, 5> Touch() {
     std::array<mjtNum, 5> touch;
-    for (int i = 0; i < k_touch_sensors_.size(); i++) {
+    for (unsigned int i = 0; i < k_touch_sensors_.size(); i++) {
       int id = GetSensorId(model_, k_touch_sensors_[i]);
       touch[i] = std::log1p(data_->sensordata[id]);
     }
@@ -315,8 +312,8 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
             data_->xquat[id * 4 + 0], data_->xquat[id * 4 + 2]};
   }
 
-  std::string MakeManipulatorModel(const Spec& spec) {
-    const std::string& task_name = spec.config["task_name"_];
+  std::string GetManipulatorXML(const std::string& base_path,
+                                const std::string& task_name) {
     if (task_name == "bring_ball") {
       use_peg_ = false;
       insert_ = false;
@@ -356,10 +353,7 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
         required_props.insert("cup");
       }
     }
-    std::string content =
-        GetManipulatorXML(spec.config["base_path"_], spec.config["task_name"_]);
-    // for (std::set<int>::iterator it = k_all_props_.begin();
-    //      it != k_all_props_.end(); it++) {
+    std::string content = GetFileContent(base_path, "manipulator.xml");
     for (const auto& k_all_props : k_all_props_) {
       if (required_props.find(k_all_props) == required_props.end()) {
         content = ReplaceRegex(content, k_all_props);

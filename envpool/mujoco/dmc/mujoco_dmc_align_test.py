@@ -30,6 +30,8 @@ from envpool.mujoco import (
   DmcFingerEnvSpec,
   DmcHopperDMEnvPool,
   DmcHopperEnvSpec,
+  DmcManipulatorDMEnvPool,
+  DmcManipulatorEnvSpec,
   DmcPendulumDMEnvPool,
   DmcPendulumEnvSpec,
   DmcPointMassDMEnvPool,

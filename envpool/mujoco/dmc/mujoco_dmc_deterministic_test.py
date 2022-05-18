@@ -28,6 +28,8 @@ from envpool.mujoco import (
   DmcFingerEnvSpec,
   DmcHopperDMEnvPool,
   DmcHopperEnvSpec,
+  DmcManipulatorDMEnvPool,
+  DmcManipulatorEnvSpec,
   DmcPendulumDMEnvPool,
   DmcPendulumEnvSpec,
   DmcPointMassDMEnvPool,
@@ -112,6 +114,16 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
     obs_keys = ["position", "velocity", "touch"]
     for task in ["stand", "hop"]:
       self.check(DmcHopperEnvSpec, DmcHopperDMEnvPool, task, obs_keys)
+
+  def test_manipulator(self) -> None:
+    obs_keys = [
+      "arm_pos", "arm_vel", "touch", "hand_pos", "object_pos", "object_vel",
+      "target_pos"
+    ]
+    for task in ["bring_ball", "bring_peg", "insert_ball", "insert_peg"]:
+      self.check(
+        DmcManipulatorEnvSpec, DmcManipulatorDMEnvPool, task, obs_keys
+      )
 
   def test_pendulum(self) -> None:
     obs_keys = ["orientation", "velocity"]
