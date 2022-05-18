@@ -19,6 +19,7 @@ converted into ``DomainNameTaskName-v1`` in envpool, e.g.,
   # equal to
   envpool.make_dm("BallInCupCatch-v1", num_envs=1)
 
+
 AcrobotSwingup-v1, AcrobotSwingupSparse-v1
 ------------------------------------------
 

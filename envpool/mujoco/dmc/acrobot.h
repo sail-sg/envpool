@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/hopper.py
+// https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/acrobot.py
 
 #ifndef ENVPOOL_MUJOCO_DMC_ACROBOT_H_
 #define ENVPOOL_MUJOCO_DMC_ACROBOT_H_
@@ -65,7 +65,6 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
   int id_upper_arm_, id_lower_arm_, id_target_, id_tip_, id_shoulder_,
       id_elbow_;
   std::uniform_real_distribution<> dist_uniform_;
-  mjtNum margin_;
   bool is_sparse_;
 
  public:
@@ -84,12 +83,9 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
         dist_uniform_(-M_PI, M_PI),
         is_sparse_(spec.config["task_name"_] == "swingup_sparse") {
     const std::string& task_name = spec.config["task_name"_];
-    if (task_name == "swingup") {
-      margin_ = 1.0;
-    } else if (task_name == "swingup_sparse") {
-      margin_ = 0.0;
-    } else if (task_name != "swingup") {
-      throw std::runtime_error("Unknown task_name for dmc acrobot.");
+    if (task_name != "swingup" && task_name != "swingup_sparse") {
+      throw std::runtime_error("Unknown task_name " + task_name +
+                               " for dmc acrobot.");
     }
   }
 
@@ -116,8 +112,8 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
 
   float TaskGetReward() override {
     mjtNum target_radius = model_->site_size[id_target_];
-    return static_cast<float>(
-        RewardTolerance(ToTarget(), 0.0, target_radius, margin_));
+    return static_cast<float>(RewardTolerance(ToTarget(), 0.0, target_radius,
+                                              is_sparse_ ? 0.0 : 1.0));
   }
   bool TaskShouldTerminateEpisode() override { return false; }
 
@@ -139,7 +135,6 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
 
   std::array<mjtNum, 2> Horizontal() {
     // return self.named.data.xmat[['upper_arm', 'lower_arm'], 'xz']
-
     return {data_->xmat[id_upper_arm_ * 9 + 2],
             data_->xmat[id_lower_arm_ * 9 + 2]};
   }
@@ -149,7 +144,9 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
             data_->xmat[id_lower_arm_ * 9 + 8]};
   }
   mjtNum ToTarget() {
-    // return the distance from the tip to the target.
+    // tip_to_target = (self.named.data.site_xpos['target'] -
+    //                  self.named.data.site_xpos['tip'])
+    // return np.linalg.norm(tip_to_target)
     std::array<mjtNum, 3> tip_to_target = {
         data_->site_xpos[id_target_ * 3] - data_->site_xpos[id_tip_ * 3],
         data_->site_xpos[id_target_ * 3 + 1] -
