@@ -242,7 +242,21 @@ class MujocoEnv {
       } else if (joint_type == mjJNT_HINGE) {
         data_->qpos[qpos_offset] = dist_uniform_(*gen) * M_PI * 2 - M_PI;
       } else if (joint_type == mjJNT_BALL || joint_type == mjJNT_FREE) {
-        throw std::runtime_error("not implemented");
+        std::array<mjtNum, 4> quat;
+        if (joint_type == mjJNT_BALL) {
+          quat = {dist_normal_(*gen), dist_normal_(*gen), dist_normal_(*gen),
+                  dist_normal_(*gen)};
+        } else {
+          quat = {dist_uniform_(*gen), dist_uniform_(*gen), dist_uniform_(*gen),
+                  dist_uniform_(*gen)};
+        }
+        auto norm = std::sqrt(quat[0] * quat[0] + quat[1] * quat[1] +
+                              quat[2] * quat[2] + quat[3] * quat[3]);
+        int extra_offset = joint_type == mjJNT_BALL ? 0 : 3;
+        data_->qpos[qpos_offset + extra_offset + 0] = quat[0] / norm;
+        data_->qpos[qpos_offset + extra_offset + 1] = quat[1] / norm;
+        data_->qpos[qpos_offset + extra_offset + 2] = quat[2] / norm;
+        data_->qpos[qpos_offset + extra_offset + 3] = quat[3] / norm;
       }
     }
   }
