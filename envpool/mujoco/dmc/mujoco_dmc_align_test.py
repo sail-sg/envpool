@@ -21,7 +21,7 @@ from absl import logging
 from absl.testing import absltest
 from dm_control import suite
 
-from envpool.mujoco import (
+from envpool.mujoco.dmc import (
   DmcAcrobotDMEnvPool,
   DmcAcrobotEnvSpec,
   DmcBallInCupDMEnvPool,

@@ -16,6 +16,7 @@
 import envpool.atari.registration  # noqa: F401
 import envpool.box2d.registration  # noqa: F401
 import envpool.classic_control.registration  # noqa: F401
-import envpool.mujoco.registration  # noqa: F401
+import envpool.mujoco.dmc.registration  # noqa: F401
+import envpool.mujoco.gym.registration  # noqa: F401
 import envpool.toy_text.registration  # noqa: F401
 import envpool.vizdoom.registration  # noqa: F401
