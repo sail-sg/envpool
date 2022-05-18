@@ -21,6 +21,8 @@ base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 # from suite.BENCHMARKING
 dmc_mujoco_envs = [
+  ("acrobot", "swingup"),
+  ("acrobot", "swingup_sparse"),
   ("ball_in_cup", "catch"),
   ("cheetah", "run"),
   ("finger", "spin"),

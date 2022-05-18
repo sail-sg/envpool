@@ -77,7 +77,13 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
         id_ball_x_(mj_name2id(model_, mjOBJ_JOINT, "ball_x")),
         id_ball_z_(mj_name2id(model_, mjOBJ_JOINT, "ball_z")),
         dist_ball_x_(-0.2, 0.2),
-        dist_ball_z_(0.2, 0.5) {}
+        dist_ball_z_(0.2, 0.5) {
+    const std::string& task_name = spec.config["task_name"_];
+    if (task_name != "catch") {
+      throw std::runtime_error("Unknown task_name " + task_name +
+                               " for dmc ball_in_cup.");
+    }
+  }
 
   void TaskInitializeEpisode() override {
     while (true) {
