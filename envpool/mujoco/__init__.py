@@ -17,6 +17,8 @@ from envpool.python.api import py_env
 
 # dmc mujoco
 from .mujoco_dmc_envpool import (
+  _DmcAcrobotEnvPool,
+  _DmcAcrobotEnvSpec,
   _DmcBallInCupEnvPool,
   _DmcBallInCupEnvSpec,
   _DmcCheetahEnvPool,
@@ -64,6 +66,9 @@ from .mujoco_gym_envpool import (
 )
 
 # dmc
+DmcAcrobotEnvSpec, DmcAcrobotDMEnvPool, DmcAcrobotGymEnvPool = py_env(
+  _DmcAcrobotEnvSpec, _DmcAcrobotEnvPool
+)
 DmcBallInCupEnvSpec, DmcBallInCupDMEnvPool, DmcBallInCupGymEnvPool = py_env(
   _DmcBallInCupEnvSpec, _DmcBallInCupEnvPool
 )
@@ -137,6 +142,9 @@ GymWalker2dEnvSpec, GymWalker2dDMEnvPool, GymWalker2dGymEnvPool = py_env(
 )
 
 __all__ = [
+  "DmcAcrobotEnvSpec",
+  "DmcAcrobotDMEnvPool",
+  "DmcAcrobotGymEnvPool",
   "DmcBallInCupEnvSpec",
   "DmcBallInCupDMEnvPool",
   "DmcBallInCupGymEnvPool",

@@ -112,7 +112,8 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
     } else if (task_name == "turn_hard") {
       target_radius_ = kHardTargetSize;
     } else if (task_name != "spin") {
-      throw std::runtime_error("Unknown task_name for dmc finger.");
+      throw std::runtime_error("Unknown task_name " + task_name +
+                               " for dmc finger.");
     }
   }
 
