@@ -76,7 +76,13 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public MujocoEnv {
                   spec.config["max_episode_steps"_]),
         id_hinge_(mj_name2id(model_, mjOBJ_JOINT, "hinge")),
         id_pole_(mj_name2id(model_, mjOBJ_XBODY, "pole")),
-        dist_uniform_(-M_PI, M_PI) {}
+        dist_uniform_(-M_PI, M_PI) {
+    const std::string& task_name = spec.config["task_name"_];
+    if (task_name != "swingup") {
+      throw std::runtime_error("Unknown task_name " + task_name +
+                               " for dmc pendulum.");
+    }
+  }
 
   void TaskInitializeEpisode() override {
     data_->qpos[0] = dist_uniform_(gen_);

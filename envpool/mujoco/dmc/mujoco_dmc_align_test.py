@@ -22,6 +22,8 @@ from absl.testing import absltest
 from dm_control import suite
 
 from envpool.mujoco import (
+  DmcAcrobotDMEnvPool,
+  DmcAcrobotEnvSpec,
   DmcBallInCupDMEnvPool,
   DmcBallInCupEnvSpec,
   DmcCheetahDMEnvPool,
@@ -126,6 +128,12 @@ class _MujocoDmcAlignTest(absltest.TestCase):
       env1 = envpool_cls(spec_cls(spec_cls.gen_config(task_name=task)))
       self.run_space_check(env0, env1)
       self.run_align_check(env0, env1, domain, task)
+
+  def test_acrobot(self) -> None:
+    self.run_align_check_entry(
+      "acrobot", ["swingup", "swingup_sparse"], DmcAcrobotEnvSpec,
+      DmcAcrobotDMEnvPool
+    )
 
   def test_ball_in_cup(self) -> None:
     self.run_align_check_entry(

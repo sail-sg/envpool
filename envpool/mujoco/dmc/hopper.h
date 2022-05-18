@@ -78,13 +78,14 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
         id_torso_subtreelinvel_(GetSensorId(model_, "torso_subtreelinvel")),
         id_touch_toe_(GetSensorId(model_, "touch_toe")),
         id_touch_heel_(GetSensorId(model_, "touch_heel")) {
-    std::string task_name = spec.config["task_name"_];
+    const std::string& task_name = spec.config["task_name"_];
     if (task_name == "stand") {
       hopping_ = false;
     } else if (task_name == "hop") {
       hopping_ = true;
     } else {
-      throw std::runtime_error("Unknown task_name for dmc hopper.");
+      throw std::runtime_error("Unknown task_name " + task_name +
+                               " for dmc hopper.");
     }
   }
 

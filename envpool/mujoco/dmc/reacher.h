@@ -84,13 +84,14 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
         id_finger_(mj_name2id(model_, mjOBJ_GEOM, "finger")),
         dist_angle_(0, 2 * M_PI),
         dist_radius_(0.05, 0.2) {
-    std::string task_name = spec.config["task_name"_];
+    const std::string& task_name = spec.config["task_name"_];
     if (task_name == "easy") {
       target_size_ = kBigTarget;
     } else if (task_name == "hard") {
       target_size_ = kSmallTarget;
     } else {
-      throw std::runtime_error("Unknown task_name for dmc reacher.");
+      throw std::runtime_error("Unknown task_name " + task_name +
+                               " for dmc reacher.");
     }
   }
 
