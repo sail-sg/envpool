@@ -17,7 +17,7 @@
 #ifndef ENVPOOL_BOX2D_LUNAR_LANDER_CONTINUOUS_H_
 #define ENVPOOL_BOX2D_LUNAR_LANDER_CONTINUOUS_H_
 
-#include "envpool/box2d/lunar_lander.h"
+#include "envpool/box2d/lunar_lander_env.h"
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
 
@@ -42,11 +42,11 @@ class LunarLanderContinuousEnvFns {
 using LunarLanderContinuousEnvSpec = EnvSpec<LunarLanderContinuousEnvFns>;
 
 class LunarLanderContinuousEnv : public Env<LunarLanderContinuousEnvSpec>,
-                                 public LunarLanderEnv {
+                                 public LunarLanderBox2dEnv {
  public:
   LunarLanderContinuousEnv(const Spec& spec, int env_id)
       : Env<LunarLanderContinuousEnvSpec>(spec, env_id),
-        LunarLanderEnv(true, spec.config["max_episode_steps"_]) {}
+        LunarLanderBox2dEnv(true, spec.config["max_episode_steps"_]) {}
 
   bool IsDone() override { return done_; }
 

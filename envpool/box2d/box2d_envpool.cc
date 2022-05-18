@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "envpool/box2d/bipedal_walker.h"
 #include "envpool/box2d/lunar_lander_continuous.h"
 #include "envpool/box2d/lunar_lander_discrete.h"
 #include "envpool/core/py_envpool.h"
