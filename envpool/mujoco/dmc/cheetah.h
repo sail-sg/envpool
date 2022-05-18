@@ -73,7 +73,13 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
             GetCheetahXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
         id_torso_subtreelinvel_(GetSensorId(model_, "torso_subtreelinvel")),
-        dist_uniform_(0, 1) {}
+        dist_uniform_(0, 1) {
+    const std::string& task_name = spec.config["task_name"_];
+    if (task_name != "run") {
+      throw std::runtime_error("Unknown task_name " + task_name +
+                               " for dmc cheetah.");
+    }
+  }
 
   void TaskInitializeEpisode() override {
     assert(model_->njnt == model_->nq);

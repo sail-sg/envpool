@@ -80,13 +80,14 @@ class PointMassEnv : public Env<PointMassEnvSpec>, public MujocoEnv {
         id_geom_target_(mj_name2id(model_, mjOBJ_GEOM, "target")),
         id_geom_pointmass_(mj_name2id(model_, mjOBJ_GEOM, "pointmass")),
         dist_normal_(0, 1) {
-    std::string task_name = spec.config["task_name"_];
+    const std::string& task_name = spec.config["task_name"_];
     if (task_name == "easy") {
       randomize_gains_ = false;
     } else if (task_name == "hard") {
       randomize_gains_ = true;
     } else {
-      throw std::runtime_error("Unknown task_name for dmc point_mass.");
+      throw std::runtime_error("Unknown task_name " + task_name +
+                               " for dmc point_mass.");
     }
 #ifdef ENVPOOL_TEST
     wrap_prm_.reset(new mjtNum[model_->nwrap]);
