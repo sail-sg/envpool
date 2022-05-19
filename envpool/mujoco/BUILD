@@ -95,13 +95,22 @@ pybind_extension(
 )
 
 py_library(
-    name = "mujoco",
-    srcs = ["__init__.py"],
+    name = "mujoco_dmc",
+    srcs = ["dmc/__init__.py"],
     data = [
         ":gen_mujoco_dmc_xml",
-        ":gen_mujoco_gym_xml",
         ":gen_mujoco_so",
         ":mujoco_dmc_envpool.so",
+    ],
+    deps = ["//envpool/python:api"],
+)
+
+py_library(
+    name = "mujoco_gym",
+    srcs = ["gym/__init__.py"],
+    data = [
+        ":gen_mujoco_gym_xml",
+        ":gen_mujoco_so",
         ":mujoco_gym_envpool.so",
     ],
     deps = ["//envpool/python:api"],
@@ -112,7 +121,7 @@ py_test(
     size = "enormous",
     srcs = ["gym/mujoco_gym_deterministic_test.py"],
     deps = [
-        ":mujoco",
+        ":mujoco_gym",
         requirement("numpy"),
         requirement("absl-py"),
         requirement("gym"),
@@ -124,7 +133,7 @@ py_test(
     size = "enormous",
     srcs = ["gym/mujoco_gym_align_test.py"],
     deps = [
-        ":mujoco",
+        ":mujoco_gym",
         requirement("numpy"),
         requirement("absl-py"),
         requirement("gym"),
@@ -138,7 +147,7 @@ py_test(
     size = "enormous",
     srcs = ["dmc/mujoco_dmc_deterministic_test.py"],
     deps = [
-        ":mujoco",
+        ":mujoco_dmc",
         requirement("numpy"),
         requirement("absl-py"),
     ],
@@ -149,7 +158,7 @@ py_test(
     size = "enormous",
     srcs = ["dmc/mujoco_dmc_align_test.py"],
     deps = [
-        ":mujoco",
+        ":mujoco_dmc",
         requirement("numpy"),
         requirement("absl-py"),
         requirement("mujoco"),
@@ -159,7 +168,13 @@ py_test(
 )
 
 py_library(
-    name = "mujoco_registration",
-    srcs = ["registration.py"],
+    name = "mujoco_dmc_registration",
+    srcs = ["dmc/registration.py"],
+    deps = ["//envpool:registration"],
+)
+
+py_library(
+    name = "mujoco_gym_registration",
+    srcs = ["gym/registration.py"],
     deps = ["//envpool:registration"],
 )
