@@ -18,6 +18,8 @@
 #include <fstream>
 #include <sstream>
 
+#include "pugixml.hpp"
+
 namespace mujoco_dmc {
 
 std::string GetFileContent(const std::string& base_path,
@@ -28,6 +30,29 @@ std::string GetFileContent(const std::string& base_path,
   std::stringstream ss;
   ss << ifs.rdbuf();
   return ss.str();
+}
+
+class XMLStringWriter : public pugi::xml_writer {
+ public:
+  std::string result;
+  void write(const void* data, size_t size) override {
+    result.append(static_cast<const char*>(data), size);
+  }
+};
+
+std::string XMLRemoveByBodyName(const std::string& content,
+                                const std::vector<std::string>& body_names) {
+  pugi::xml_document doc;
+  doc.load_string(content.c_str());
+  for (const auto& name : body_names) {
+    std::string xpath = "//body[@name='" + name + "']";
+    pugi::xml_node node = doc.select_node(xpath.c_str()).node();
+    auto parent = node.parent();
+    parent.remove_child(node);
+  }
+  XMLStringWriter writer;
+  doc.print(writer);
+  return writer.result;
 }
 
 int GetQposId(mjModel* model, const std::string& name) {
