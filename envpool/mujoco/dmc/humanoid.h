@@ -161,7 +161,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     if (move_speed_ == 0) {
       double dont_move = 0.0;
       for (int i = 0; i < 2; ++i) {
-        dont_move += RewardTolerance(horizontal_velocity[i], 0.0, 0.0, 2.0,
+        dont_move += RewardTolerance(horizontal_velocity[i], 0.0, 0.0, 2.0, 0.1,
                                      SigmoidType::kQuadratic) /
                      2;
       }
@@ -186,19 +186,17 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     state["discount"_] = discount_;
     // obs
     const auto& joint_angles = JointAngles();
-    const auto& head_height = HeadHeight();
     const auto& extremities = Extremities();
     const auto& com_velocity = CenterOfMassVelocity();
     const auto& torso_vertical = TorsoVerticalOrientation();
-    const auto& com_velocity = CenterOfMassVelocity();
     state["obs:velocity"_].Assign(data_->qvel, model_->nv);
     if (is_pure_state_) {
       state["obs:position"_].Assign(data_->qpos, model_->nq);
     } else {
       state["obs:joint_angles"_].Assign(joint_angles.begin(),
                                         joint_angles.size());
-      state["obs:head_height"_].Assign(head_height.begin(), head_height.size());
-      state["obs:extremities"_].Assign(extremities.begin(), extremitiessize());
+      state["obs:head_height"_] = HeadHeight();
+      state["obs:extremities"_].Assign(extremities.begin(), extremities.size());
       state["obs:torso_vertical"_].Assign(torso_vertical.begin(),
                                           torso_vertical.size());
       state["obs:com_velocity"_].Assign(com_velocity.begin(),
