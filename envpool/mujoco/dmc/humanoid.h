@@ -136,40 +136,31 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
   }
 
   float TaskGetReward() override {
-    auto standing = RewardTolerance(HeadHeight(), kStandHeight,
-                                    std::numeric_limits<double>::infinity(),
-                                    kStandHeight / 4);
-    auto upright = RewardTolerance(TorsoUpright(), 0.9,
-                                   std::numeric_limits<double>::infinity(), 1.9,
-                                   0, SigmoidType::kLinear);
+    auto standing = RewardTolerance(HeadHeight(), kStandHeight, std::numeric_limits<double>::infinity(), kStandHeight / 4);
+    auto upright = RewardTolerance(TorsoUpright(), 0.9, std::numeric_limits<double>::infinity(), 1.9, 0, SigmoidType::kLinear);
     auto stand_reward = standing * upright;
     double small_control = 0.0;
     for (int i = 0; i < model_->nu; ++i) {
-      small_control += RewardTolerance(data_->ctrl[i], 0.0, 0.0, 1.0, 0.0,
-                                       SigmoidType::kQuadratic);
+      small_control += RewardTolerance(data_->ctrl[i], 0.0, 0.0, 1.0, 0.0, SigmoidType::kQuadratic);
     }
     small_control = (small_control / model_->nu + 4) / 5;
     std::array<mjtNum, 2> horizontal_velocity;
-    const auto& center_of_mass_velocity = CenterOfMassVelocity();
+    auto center_of_mass_velocity = CenterOfMassVelocity();
     horizontal_velocity[0] = center_of_mass_velocity[0];
     horizontal_velocity[1] = center_of_mass_velocity[1];
     if (move_speed_ == 0) {
       double dont_move = 0.0;
       for (int i = 0; i < 2; ++i) {
-        dont_move += RewardTolerance(horizontal_velocity[i], 0.0, 0.0, 2.0,
-                                     SigmoidType::kQuadratic) /
-                     2;
+        dont_move += RewardTolerance(horizontal_velocity[i], 0.0, 0.0, 2.0, SigmoidType::kQuadratic) /2;
       }
       return static_cast<float>(small_control * stand_reward * dont_move);
     }
     auto com_velocity =
         std::sqrt(horizontal_velocity[0] * horizontal_velocity[0] +
                   horizontal_velocity[1] * horizontal_velocity[1]);
-    auto move = RewardTolerance(com_velocity, move_speed_,
-                                std::numeric_limits<double>::infinity(),
-                                move_speed_, 0, SigmoidType::kLinear);
-    move = (5 * move + 1) /
-           6 return static_cast<float>(small_control * stand_reward * move);
+    auto move = RewardTolerance(com_velocity, move_speed_, std::numeric_limits<double>::infinity(), move_speed_, 0, SigmoidType::kLinear);
+    move = (5 * move + 1) / 6;
+    return static_cast<float>(small_control * stand_reward * move);
   }
 
   bool TaskShouldTerminateEpisode() override { return false; }
