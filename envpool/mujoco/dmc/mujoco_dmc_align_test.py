@@ -86,6 +86,9 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         env.physics.after_reset()
       elif domain == "point_mass":
         env.physics.model.wrap_prm = ts.observation.wrap_prm
+      elif domain == "manipulator":
+        pass
+        # need add
 
   def sample_action(self, action_spec: dm_env.specs.Array) -> np.ndarray:
     return np.random.uniform(
@@ -156,6 +159,12 @@ class _MujocoDmcAlignTest(absltest.TestCase):
   def test_hopper(self) -> None:
     self.run_align_check_entry(
       "hopper", ["hop", "stand"], DmcHopperEnvSpec, DmcHopperDMEnvPool
+    )
+
+  def test_manipulator(self) -> None:
+    self.run_align_check_entry(
+      "manipulator", ["bring_ball", "bring_peg", "insert_ball", "insert_peg"],
+      DmcManipulatorEnvSpec, DmcManipulatorDMEnvPool
     )
 
   def test_pendulum(self) -> None:
