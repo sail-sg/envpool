@@ -62,6 +62,10 @@ pybind_extension(
 
 cc_library(
     name = "mujoco_dmc_env",
+    srcs = [
+        "dmc/mujoco_env.cc",
+        "dmc/utils.cc",
+    ],
     hdrs = [
         "dmc/acrobot.h",
         "dmc/ball_in_cup.h",

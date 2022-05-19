@@ -112,7 +112,7 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
   void TaskInitializeEpisode() override {
     bool penetrating = true;
     while (penetrating) {
-      for (auto& arm_joint : kArmJoints) {
+      for (const auto& arm_joint : kArmJoints) {
         int id_joint = mj_name2id(model_, mjOBJ_JOINT, arm_joint.c_str());
         bool is_limited = model_->jnt_limited[id_joint] == 1 ? true : false;
         double lower = is_limited ? model_->jnt_range[id_joint * 2 + 0] : -M_PI;
