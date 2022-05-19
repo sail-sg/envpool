@@ -32,6 +32,8 @@ from envpool.mujoco.dmc import (
   DmcFingerEnvSpec,
   DmcHopperDMEnvPool,
   DmcHopperEnvSpec,
+  DmcHumanoidDMEnvPool,
+  DmcHumanoidEnvSpec,
   DmcPendulumDMEnvPool,
   DmcPendulumEnvSpec,
   DmcPointMassDMEnvPool,
@@ -72,7 +74,7 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         target = ts.observation.target[0]
         env.physics.named.model.geom_pos["target", "x"] = target[0]
         env.physics.named.model.geom_pos["target", "y"] = target[1]
-      elif domain in ["finger", "ball_in_cup"]:
+      elif domain in ["finger", "ball_in_cup", "humanoid"]:
         if domain == "finger" and task in ["turn_easy", "turn_hard"]:
           target_angle = ts.observation.target[0][0]
           hinge = env.physics.named.data.xanchor["hinge", ["x", "z"]]
@@ -154,6 +156,12 @@ class _MujocoDmcAlignTest(absltest.TestCase):
   def test_hopper(self) -> None:
     self.run_align_check_entry(
       "hopper", ["hop", "stand"], DmcHopperEnvSpec, DmcHopperDMEnvPool
+    )
+
+  def test_humanoid(self) -> None:
+    self.run_align_check_entry(
+      "humanoid", ["stand", "walk", "run", "run_pure_state"],
+      DmcHumanoidEnvSpec, DmcHumanoidDMEnvPool
     )
 
   def test_pendulum(self) -> None:
