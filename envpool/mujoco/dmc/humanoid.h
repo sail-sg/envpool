@@ -214,7 +214,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
   }
   mjtNum HeadHeight() {
     // return self.named.data.xpos['torso', 'z']
-    return data_->xpos[id_torso_ * 3 + 2];
+    return data_->xpos[id_head_ * 3 + 2];
   }
   std::array<mjtNum, 3> CenterOfMassPosition() {
     // return self.named.data.subtree_com['torso'].copy()
