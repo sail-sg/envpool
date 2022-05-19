@@ -70,8 +70,8 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
   // Height of head above which stand reward is 1.
   const mjtNum kStandHeight = 1.4;
   // Horizontal speeds above which move reward is 1.
-  const mjtNum kWalkSpeed = 1;
-  const mjtNum kRunSpeed = 10;
+  const mjtNum kWalkSpeed = 1.;
+  const mjtNum kRunSpeed = 10.;
   int id_head_;
   int id_left_hand_;
   int id_left_foot_;
@@ -146,9 +146,9 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
                                     kStandHeight / 4);
     auto upright = RewardTolerance(TorsoUpright(), 0.9,
                                    std::numeric_limits<double>::infinity(), 1.9,
-                                   0, SigmoidType::kLinear);
+                                   0.0, SigmoidType::kLinear);
     auto stand_reward = standing * upright;
-    double small_control = 0.0;
+    mjtNum small_control = 0.0;
     for (int i = 0; i < model_->nu; ++i) {
       small_control += RewardTolerance(data_->ctrl[i], 0.0, 0.0, 1.0, 0.0,
                                        SigmoidType::kQuadratic);
@@ -159,7 +159,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     horizontal_velocity[0] = center_of_mass_velocity[0];
     horizontal_velocity[1] = center_of_mass_velocity[1];
     if (move_speed_ == 0) {
-      double dont_move = 0.0;
+      mjtNum dont_move = 0.0;
       for (int i = 0; i < 2; ++i) {
         dont_move += 0.5 * RewardTolerance(horizontal_velocity[i], 0.0, 0.0,
                                            2.0, 0.1, SigmoidType::kQuadratic);
