@@ -98,7 +98,7 @@ HumanoidStand-v1, HumanoidWalk-v1, HumanoidRun-v1, HumanoidRunPureState-v1
 `dm_control suite humanoid source code
 <https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/humanoid.py>`_
 
-- Observation spec: a namedtuple with three keys: ``joint_angles (21)``,
+- Observation spec: a namedtuple with seven keys: ``joint_angles (21)``,
   ``head_height ()``, ``extremities (12)``, ``torso_vertical (3)``, 
   ``com_velocity (3)``, ``position (28)``, and ``velocity (27)``;
 - Action spec: ``(21)``, with range ``[-1, 1]``;

@@ -245,9 +245,13 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
   std::array<mjtNum, 12> Extremities() {
     // returns end effector positions in egocentric frame.
     std::array<mjtNum, 9> torso_frame;
-    torso_frame = data_->xmat[id_torso_];
+    for (int i = 0; i < 9; i++) {
+      torso_frame[i] = data_->xmat[id_torso_ * 9 + i];
+    }
     std::array<mjtNum, 3> torso_pos;
-    torso_pos = data_->xpos[id_torso_];
+    for (int i = 0; i < 3; i++) {
+      torso_pos[i] = data_->xpos[id_torso_ * 3 + i];
+    }
     // left hand
     std::array<mjtNum, 3> torso_to_limb_lh;
     for (int i = 0; i < 3; i++) {
