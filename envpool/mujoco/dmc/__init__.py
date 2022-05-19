@@ -57,8 +57,11 @@ DmcHopperEnvSpec, DmcHopperDMEnvPool, DmcHopperGymEnvPool = py_env(
 DmcHumanoidEnvSpec, DmcHumanoidDMEnvPool, DmcHumanoidGymEnvPool = py_env(
   _DmcHumanoidEnvSpec, _DmcHumanoidEnvPool
 )
-(DmcManipulatorEnvSpec, DmcManipulatorDMEnvPool, DmcManipulatorGymEnvPool) =
-    py_env(_DmcManipulatorEnvSpec, _DmcManipulatorEnvPool)
+(
+  DmcManipulatorEnvSpec,
+  DmcManipulatorDMEnvPool,
+  DmcManipulatorGymEnvPool,
+) = py_env(_DmcManipulatorEnvSpec, _DmcManipulatorEnvPool)
 DmcPendulumEnvSpec, DmcPendulumDMEnvPool, DmcPendulumGymEnvPool = py_env(
   _DmcPendulumEnvSpec, _DmcPendulumEnvPool
 )
