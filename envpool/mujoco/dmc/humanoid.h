@@ -153,7 +153,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
       small_control += RewardTolerance(data_->ctrl[i], 0.0, 0.0, 1.0, 0.0,
                                        SigmoidType::kQuadratic);
     }
-    small_control = (small_control / model_->nu + 4) / 5;
+    small_control = (small_control / model_->nu + 4.0) / 5.0;
     std::array<mjtNum, 2> horizontal_velocity;
     auto center_of_mass_velocity = CenterOfMassVelocity();
     horizontal_velocity[0] = center_of_mass_velocity[0];
@@ -161,8 +161,8 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     if (move_speed_ == 0) {
       double dont_move = 0.0;
       for (int i = 0; i < 2; ++i) {
-        dont_move += RewardTolerance(horizontal_velocity[i], 0.0, 0.0, 2.0, 0.1,
-                                     SigmoidType::kQuadratic) * 0.5;
+        dont_move += 0.5 * RewardTolerance(horizontal_velocity[i], 0.0, 0.0,
+                                           2.0, 0.1, SigmoidType::kQuadratic);
       }
       return static_cast<float>(small_control * stand_reward * dont_move);
     }
@@ -171,8 +171,8 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
                   horizontal_velocity[1] * horizontal_velocity[1]);
     auto move = RewardTolerance(com_velocity, move_speed_,
                                 std::numeric_limits<double>::infinity(),
-                                move_speed_, 0, SigmoidType::kLinear);
-    move = (5 * move + 1) / 6;
+                                move_speed_, 0.0, SigmoidType::kLinear);
+    move = (5.0 * move + 1.0) / 6.0;
     return static_cast<float>(small_control * stand_reward * move);
   }
 
