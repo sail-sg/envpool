@@ -24,6 +24,8 @@ from envpool.mujoco.mujoco_dmc_envpool import (
   _DmcFingerEnvSpec,
   _DmcHopperEnvPool,
   _DmcHopperEnvSpec,
+  _DmcHumanoidEnvPool,
+  _DmcHumanoidEnvSpec,
   _DmcManipulatorEnvPool,
   _DmcManipulatorEnvSpec,
   _DmcPendulumEnvPool,
@@ -52,7 +54,10 @@ DmcFingerEnvSpec, DmcFingerDMEnvPool, DmcFingerGymEnvPool = py_env(
 DmcHopperEnvSpec, DmcHopperDMEnvPool, DmcHopperGymEnvPool = py_env(
   _DmcHopperEnvSpec, _DmcHopperEnvPool
 )
-DmcManipulatorEnvSpec, DmcManipulatorDMEnvPool, DmcManipulatorGymEnvPool = \
+DmcHumanoidEnvSpec, DmcHumanoidDMEnvPool, DmcHumanoidGymEnvPool = py_env(
+  _DmcHumanoidEnvSpec, _DmcHumanoidEnvPool
+)
+(DmcManipulatorEnvSpec, DmcManipulatorDMEnvPool, DmcManipulatorGymEnvPool) =
     py_env(_DmcManipulatorEnvSpec, _DmcManipulatorEnvPool)
 DmcPendulumEnvSpec, DmcPendulumDMEnvPool, DmcPendulumGymEnvPool = py_env(
   _DmcPendulumEnvSpec, _DmcPendulumEnvPool
@@ -80,6 +85,12 @@ __all__ = [
   "DmcHopperEnvSpec",
   "DmcHopperDMEnvPool",
   "DmcHopperGymEnvPool",
+  "DmcHumanoidEnvSpec",
+  "DmcHumanoidDMEnvPool",
+  "DmcHumanoidGymEnvPool",
+  "DmcManipulatorEnvSpec",
+  "DmcManipulatorDMEnvPool",
+  "DmcManipulatorGymEnvPool",
   "DmcPendulumEnvSpec",
   "DmcPendulumDMEnvPool",
   "DmcPendulumGymEnvPool",
