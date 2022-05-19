@@ -103,7 +103,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
       move_speed_ = 0;
     } else if (task_name == "walk") {
       move_speed_ = kWalkSpeed;
-    } else if (task_name == "run") {
+    } else if (task_name == "run" || task_name == "run_pure_state") {
       move_speed_ = kRunSpeed;
     } else {
       throw std::runtime_error("Unknown task_name " + task_name +
