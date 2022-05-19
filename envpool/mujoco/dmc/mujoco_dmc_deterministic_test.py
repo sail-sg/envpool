@@ -123,7 +123,10 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
       self.check(DmcHopperEnvSpec, DmcHopperDMEnvPool, task, obs_keys)
 
   def test_humanoid(self) -> None:
-    obs_keys = ["joint_angles", "head_height", "extremities", "torso_vertical", "com_velocity", "velocity"]
+    obs_keys = [
+      "joint_angles", "head_height", "extremities", "torso_vertical",
+      "com_velocity", "velocity"
+    ]
     for task in ["stand", "walk", "run"]:
       self.check(DmcHumanoidEnvSpec, DmcHumanoidDMEnvPool, task, obs_keys)
     obs_keys = ["position", "velocity"]

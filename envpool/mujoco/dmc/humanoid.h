@@ -32,8 +32,8 @@
 
 namespace mujoco_dmc {
 
-std::string GetFingerXML(const std::string& base_path,
-                         const std::string& task_name_) {
+std::string GetHumanoidXML(const std::string& base_path,
+                           const std::string& task_name_) {
   return GetFileContent(base_path, "humanoid.xml");
 }
 
@@ -180,7 +180,6 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
-    const auto& velocity = Velocity();
     const auto& joint_angles = JointAngles();
     const auto& head_height = HeadHeight();
     const auto& extremities = Extremities();
