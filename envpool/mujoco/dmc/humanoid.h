@@ -70,8 +70,8 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
   // Height of head above which stand reward is 1.
   const mjtNum kStandHeight = 1.4;
   // Horizontal speeds above which move reward is 1.
-  const mjtNum kWalkSpeed = 1.;
-  const mjtNum kRunSpeed = 10.;
+  const mjtNum kWalkSpeed = 1;
+  const mjtNum kRunSpeed = 10;
   int id_head_;
   int id_left_hand_;
   int id_left_foot_;
@@ -154,21 +154,18 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
                                        SigmoidType::kQuadratic);
     }
     small_control = (small_control / model_->nu + 4.0) / 5.0;
-    std::array<mjtNum, 2> horizontal_velocity;
     auto center_of_mass_velocity = CenterOfMassVelocity();
-    horizontal_velocity[0] = center_of_mass_velocity[0];
-    horizontal_velocity[1] = center_of_mass_velocity[1];
     if (move_speed_ == 0) {
       mjtNum dont_move = 0.0;
       for (int i = 0; i < 2; ++i) {
-        dont_move += 0.5 * RewardTolerance(horizontal_velocity[i], 0.0, 0.0,
-                                           2.0, 0.1, SigmoidType::kQuadratic);
+        dont_move +=
+            0.5 * RewardTolerance(center_of_mass_velocity[i], 0.0, 0.0, 2.0);
       }
       return static_cast<float>(small_control * stand_reward * dont_move);
     }
     auto com_velocity =
-        std::sqrt(horizontal_velocity[0] * horizontal_velocity[0] +
-                  horizontal_velocity[1] * horizontal_velocity[1]);
+        std::sqrt(center_of_mass_velocity[0] * center_of_mass_velocity[0] +
+                  center_of_mass_velocity[1] * center_of_mass_velocity[1]);
     auto move = RewardTolerance(com_velocity, move_speed_,
                                 std::numeric_limits<double>::infinity(),
                                 move_speed_, 0.0, SigmoidType::kLinear);
@@ -212,7 +209,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     return data_->xmat[id_torso_ * 9 + 8];
   }
   mjtNum HeadHeight() {
-    // return self.named.data.xpos['torso', 'z']
+    // return self.named.data.xpos['head', 'z']
     return data_->xpos[id_head_ * 3 + 2];
   }
   std::array<mjtNum, 3> CenterOfMassPosition() {
@@ -241,6 +238,14 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
   }
   std::array<mjtNum, 12> Extremities() {
     // returns end effector positions in egocentric frame.
+    // torso_frame = self.named.data.xmat['torso'].reshape(3, 3)
+    // torso_pos = self.named.data.xpos['torso']
+    // positions = []
+    // for side in ('left_', 'right_'):
+    //   for limb in ('hand', 'foot'):
+    //     torso_to_limb = self.named.data.xpos[side + limb] - torso_pos
+    //     positions.append(torso_to_limb.dot(torso_frame))
+    // return np.hstack(positions)
     std::array<mjtNum, 9> torso_frame;
     for (int i = 0; i < 9; i++) {
       torso_frame[i] = data_->xmat[id_torso_ * 9 + i];
