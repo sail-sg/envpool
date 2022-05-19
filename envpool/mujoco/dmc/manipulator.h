@@ -70,6 +70,15 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
   const mjtNum kClose = 0.01;
   const mjtNum kPInHand = 0.1;
   const mjtNum kPInTarget = 0.1;
+  const std::array<std::string, 8> kArmJoints = {
+      "arm_root", "arm_shoulder", "arm_elbow", "arm_wrist",
+      "finger",   "fingertip",    "thumb",     "thumbtip"};
+  const std::array<std::string, 6> kAllProps = {"ball", "target_ball", "cup",
+                                                "peg",  "target_peg",  "slot"};
+  const std::array<std::string, 5> kTouchSensors = {
+      "palm_touch", "finger_touch", "thumb_touch", "fingertip_touch",
+      "thumbtip_touch"};
+
   bool use_peg_;
   bool insert_;
   bool fully_observable_;
@@ -77,21 +86,12 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
   std::string object_;
   std::array<std::string, 3> object_joints_;
   std::string receptacle_;
+  std::uniform_real_distribution<> dist_uniform_;
 #ifdef ENVPOOL_TEST
   std::unique_ptr<mjtNum> qvel_;
   std::unique_ptr<mjtNum> body_pos_;
   std::unique_ptr<mjtNum> body_quat_;
 #endif
-
-  std::array<std::string, 8> k_arm_joints_ = {
-      "arm_root", "arm_shoulder", "arm_elbow", "arm_wrist",
-      "finger",   "fingertip",    "thumb",     "thumbtip"};
-  std::set<std::string> k_all_props_ = {"ball", "target_ball", "cup",
-                                        "peg",  "target_peg",  "slot"};
-  std::array<std::string, 5> k_touch_sensors_ = {
-      "palm_touch", "finger_touch", "thumb_touch", "fingertip_touch",
-      "thumbtip_touch"};
-  std::uniform_real_distribution<> dist_uniform_;
 
  public:
   ManipulatorEnv(const Spec& spec, int env_id)
@@ -112,12 +112,13 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
   void TaskInitializeEpisode() override {
     bool penetrating = true;
     while (penetrating) {
-      for (auto& k_arm_joint : k_arm_joints_) {
-        int id_joint = mj_name2id(model_, mjOBJ_JOINT, k_arm_joint.c_str());
+      for (auto& arm_joint : kArmJoints) {
+        int id_joint = mj_name2id(model_, mjOBJ_JOINT, arm_joint.c_str());
         bool is_limited = model_->jnt_limited[id_joint] == 1 ? true : false;
         double lower = is_limited ? model_->jnt_range[id_joint * 2 + 0] : -M_PI;
         double upper = is_limited ? model_->jnt_range[id_joint * 2 + 1] : M_PI;
-        data_->qpos[id_joint] = dist_uniform_(gen_) * (upper - lower) + lower;
+        data_->qpos[model_->jnt_qposadr[id_joint]] =
+            dist_uniform_(gen_) * (upper - lower) + lower;
       }
       data_->qpos[mj_name2id(model_, mjOBJ_JOINT, "finger")] =
           data_->qpos[mj_name2id(model_, mjOBJ_JOINT, "thumb")];
@@ -268,8 +269,8 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
  private:
   std::array<mjtNum, 16> BoundedJointPos() {
     std::array<mjtNum, 16> bound;
-    for (unsigned int i = 0; i < k_arm_joints_.size(); i++) {
-      int id = mj_name2id(model_, mjOBJ_JOINT, k_arm_joints_[i].c_str());
+    for (unsigned int i = 0; i < kArmJoints.size(); i++) {
+      int id = mj_name2id(model_, mjOBJ_JOINT, kArmJoints[i].c_str());
       bound[i * 2 + 0] = std::sin(data_->qpos[id]);
       bound[i * 2 + 1] = std::cos(data_->qpos[id]);
     }
@@ -279,8 +280,8 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
   // bug :(
   std::array<mjtNum, 8> JointVelArm() {
     std::array<mjtNum, 8> joint;
-    for (unsigned int i = 0; i < k_arm_joints_.size(); i++) {
-      int id = mj_name2id(model_, mjOBJ_JOINT, k_arm_joints_[i].c_str());
+    for (unsigned int i = 0; i < kArmJoints.size(); i++) {
+      int id = mj_name2id(model_, mjOBJ_JOINT, kArmJoints[i].c_str());
       joint[i] = data_->qvel[id];
     }
     return joint;
@@ -297,8 +298,8 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
 
   std::array<mjtNum, 5> Touch() {
     std::array<mjtNum, 5> touch;
-    for (unsigned int i = 0; i < k_touch_sensors_.size(); i++) {
-      int id = GetSensorId(model_, k_touch_sensors_[i]);
+    for (unsigned int i = 0; i < kTouchSensors.size(); i++) {
+      int id = GetSensorId(model_, kTouchSensors[i]);
       touch[i] = std::log1p(data_->sensordata[id]);
     }
     return touch;
@@ -354,7 +355,7 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
       }
     }
     std::string content = GetFileContent(base_path, "manipulator.xml");
-    for (const auto& k_all_props : k_all_props_) {
+    for (const auto& k_all_props : kAllProps) {
       if (required_props.find(k_all_props) == required_props.end()) {
         content = ReplaceRegex(content, k_all_props);
       }
