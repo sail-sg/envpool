@@ -85,6 +85,7 @@ cc_library(
     deps = [
         "//envpool/core:async_envpool",
         "@mujoco//:mujoco_lib",
+        "@pugixml",
     ],
 )
 
