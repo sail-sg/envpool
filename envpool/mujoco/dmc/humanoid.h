@@ -72,8 +72,9 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
   // Horizontal speeds above which move reward is 1.
   const mjtNum kWalkSpeed = 1;
   const mjtNum kRunSpeed = 10;
-  int id_torso_, id_torso_subtreelinvel_, id_head_;
-  int id_left_hand_, id_left_foot_, id_right_hand_, id_right_foot_;
+  int id_head_, id_left_hand_, id_left_foot_;
+  int id_right_hand_, id_right_foot_;
+  int id_torso_, id_torso_subtreelinvel_;
   mjtNum move_speed_;
   bool is_pure_state_;
 
@@ -136,12 +137,17 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
   }
 
   float TaskGetReward() override {
-    auto standing = RewardTolerance(HeadHeight(), kStandHeight, std::numeric_limits<double>::infinity(), kStandHeight / 4);
-    auto upright = RewardTolerance(TorsoUpright(), 0.9, std::numeric_limits<double>::infinity(), 1.9, 0, SigmoidType::kLinear);
+    auto standing = RewardTolerance(HeadHeight(), kStandHeight,
+                                    std::numeric_limits<double>::infinity(),
+                                    kStandHeight / 4);
+    auto upright = RewardTolerance(TorsoUpright(), 0.9,
+                                   std::numeric_limits<double>::infinity(), 1.9,
+                                   0, SigmoidType::kLinear);
     auto stand_reward = standing * upright;
-    double small_control = 0.0;
+    mjtNum small_control = 0.0;
     for (int i = 0; i < model_->nu; ++i) {
-      small_control += RewardTolerance(data_->ctrl[i], 0.0, 0.0, 1.0, 0.0, SigmoidType::kQuadratic);
+      small_control += RewardTolerance(data_->ctrl[i], 0.0, 0.0, 1.0, 0.0,
+                                       SigmoidType::kQuadratic);
     }
     small_control = (small_control / model_->nu + 4) / 5;
     std::array<mjtNum, 2> horizontal_velocity;
@@ -149,16 +155,20 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     horizontal_velocity[0] = center_of_mass_velocity[0];
     horizontal_velocity[1] = center_of_mass_velocity[1];
     if (move_speed_ == 0) {
-      double dont_move = 0.0;
+      mjtNum dont_move = 0.0;
       for (int i = 0; i < 2; ++i) {
-        dont_move += RewardTolerance(horizontal_velocity[i], 0.0, 0.0, 2.0, SigmoidType::kQuadratic) /2;
+        dont_move += RewardTolerance(horizontal_velocity[i], 0.0, 0.0, 2.0,
+                                     SigmoidType::kQuadratic) /
+                     2;
       }
       return static_cast<float>(small_control * stand_reward * dont_move);
     }
     auto com_velocity =
         std::sqrt(horizontal_velocity[0] * horizontal_velocity[0] +
                   horizontal_velocity[1] * horizontal_velocity[1]);
-    auto move = RewardTolerance(com_velocity, move_speed_, std::numeric_limits<double>::infinity(), move_speed_, 0, SigmoidType::kLinear);
+    auto move = RewardTolerance(com_velocity, move_speed_,
+                                std::numeric_limits<double>::infinity(),
+                                move_speed_, 0, SigmoidType::kLinear);
     move = (5 * move + 1) / 6;
     return static_cast<float>(small_control * stand_reward * move);
   }
@@ -231,40 +241,48 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
   std::array<mjtNum, 12> Extremities() {
     // returns end effector positions in egocentric frame.
     std::array<mjtNum, 9> torso_frame;
-    torso_frame = data_->xmat[id_torso_] std::array<mjtNum, 3> torso_pos;
-    torso_pos = data_->xpos[id_torso_]
-                // left hand
-                std::array<mjtNum, 3>
-                    torso_to_limb_lh;
+    torso_frame = data_->xmat[id_torso_];
+    std::array<mjtNum, 3> torso_pos;
+    torso_pos = data_->xpos[id_torso_];
+    // left hand
+    std::array<mjtNum, 3> torso_to_limb_lh;
     for (int i = 0; i < 3; i++) {
       torso_to_limb_lh[i] =
-          (data_->xpos[id_left_hand_][0] - torso_pos[0]) * torso_frame[i] +
-          (data_->xpos[id_left_hand_][1] - torso_pos[1]) * torso_frame[i + 3] +
-          (data_->xpos[id_left_hand_][2] - torso_pos[2]) * torso_frame[i + 6];
+          (data_->xpos[id_left_hand_ * 3] - torso_pos[0]) * torso_frame[i] +
+          (data_->xpos[id_left_hand_ * 3 + 1] - torso_pos[1]) *
+              torso_frame[i + 3] +
+          (data_->xpos[id_left_hand_ * 3 + 2] - torso_pos[2]) *
+              torso_frame[i + 6];
     }
     // left foot
     std::array<mjtNum, 3> torso_to_limb_lf;
     for (int i = 0; i < 3; i++) {
       torso_to_limb_lf[i] =
-          (data_->xpos[id_left_foot_][0] - torso_pos[0]) * torso_frame[i] +
-          (data_->xpos[id_left_foot_][1] - torso_pos[1]) * torso_frame[i + 3] +
-          (data_->xpos[id_left_foot_][2] - torso_pos[2]) * torso_frame[i + 6];
+          (data_->xpos[id_left_foot_ * 3] - torso_pos[0]) * torso_frame[i] +
+          (data_->xpos[id_left_foot_ * 3 + 1] - torso_pos[1]) *
+              torso_frame[i + 3] +
+          (data_->xpos[id_left_foot_ * 3 + 2] - torso_pos[2]) *
+              torso_frame[i + 6];
     }
     // right hand
     std::array<mjtNum, 3> torso_to_limb_rh;
     for (int i = 0; i < 3; i++) {
       torso_to_limb_rh[i] =
-          (data_->xpos[id_right_hand_][0] - torso_pos[0]) * torso_frame[i] +
-          (data_->xpos[id_right_hand_][1] - torso_pos[1]) * torso_frame[i + 3] +
-          (data_->xpos[id_right_hand_][2] - torso_pos[2]) * torso_frame[i + 6];
+          (data_->xpos[id_right_hand_ * 3] - torso_pos[0]) * torso_frame[i] +
+          (data_->xpos[id_right_hand_ * 3 + 1] - torso_pos[1]) *
+              torso_frame[i + 3] +
+          (data_->xpos[id_right_hand_ * 3 + 2] - torso_pos[2]) *
+              torso_frame[i + 6];
     }
     // right foot
     std::array<mjtNum, 3> torso_to_limb_rf;
     for (int i = 0; i < 3; i++) {
       torso_to_limb_rf[i] =
-          (data_->xpos[id_right_foot_][0] - torso_pos[0]) * torso_frame[i] +
-          (data_->xpos[id_right_foot_][1] - torso_pos[1]) * torso_frame[i + 3] +
-          (data_->xpos[id_right_foot_][2] - torso_pos[2]) * torso_frame[i + 6];
+          (data_->xpos[id_right_foot_ * 3] - torso_pos[0]) * torso_frame[i] +
+          (data_->xpos[id_right_foot_ * 3 + 1] - torso_pos[1]) *
+              torso_frame[i + 3] +
+          (data_->xpos[id_right_foot_ * 3 + 2] - torso_pos[2]) *
+              torso_frame[i + 6];
     }
     return {
         torso_to_limb_lh[0], torso_to_limb_lh[1], torso_to_limb_lh[2],
