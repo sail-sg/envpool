@@ -34,6 +34,25 @@
 
 namespace mujoco_dmc {
 
+std::string GetManipulatorXML(const std::string& base_path,
+                              const std::string& task_name) {
+  auto content = GetFileContent(base_path, "manipulator.xml");
+  if (task_name == "bring_ball") {
+    return XMLRemoveByBodyName(content, {"slot", "target_peg", "cup", "peg"});
+  }
+  if (task_name == "bring_peg") {
+    return XMLRemoveByBodyName(content, {"slot", "target_ball", "cup", "ball"});
+  }
+  if (task_name == "insert_ball") {
+    return XMLRemoveByBodyName(content, {"slot", "target_peg", "peg"});
+  }
+  if (task_name == "insert_peg") {
+    return XMLRemoveByBodyName(content, {"target_ball", "cup", "ball"});
+  }
+  throw std::runtime_error("Unknown task_name " + task_name +
+                           " for dmc manipulator.");
+}
+
 class ManipulatorEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
@@ -311,66 +330,6 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
     // self.named.data.xquat[body_names, ['qw', 'qy']]
     return {data_->xpos[id * 3 + 0], data_->xpos[id * 3 + 2],
             data_->xquat[id * 4 + 0], data_->xquat[id * 4 + 2]};
-  }
-
-  std::string GetManipulatorXML(const std::string& base_path,
-                                const std::string& task_name) {
-    if (task_name == "bring_ball") {
-      use_peg_ = false;
-      insert_ = false;
-    } else if (task_name == "bring_peg") {
-      use_peg_ = true;
-      insert_ = false;
-    } else if (task_name == "insert_ball") {
-      use_peg_ = false;
-      insert_ = true;
-    } else if (task_name == "insert_peg") {
-      use_peg_ = true;
-      insert_ = true;
-    } else {
-      throw std::runtime_error("Unknown task_name " + task_name +
-                               " for dmc manipulator.");
-    }
-    target_ = use_peg_ ? "target_peg" : "target_ball";
-    object_ = use_peg_ ? "peg" : "ball";
-    receptacle_ = use_peg_ ? "slot" : "cup";
-    if (use_peg_) {
-      object_joints_ = {"peg_x", "peg_y", "peg_z"};
-    } else {
-      object_joints_ = {"ball_x", "ball_y", "ball_z"};
-    }
-    fully_observable_ = true;
-    std::set<std::string> required_props;
-    if (use_peg_) {
-      required_props.insert("peg");
-      required_props.insert("target_peg");
-      if (insert_) {
-        required_props.insert("slot");
-      }
-    } else {
-      required_props.insert("ball");
-      required_props.insert("target_ball");
-      if (insert_) {
-        required_props.insert("cup");
-      }
-    }
-    std::string content = GetFileContent(base_path, "manipulator.xml");
-    for (const auto& k_all_props : kAllProps) {
-      if (required_props.find(k_all_props) == required_props.end()) {
-        content = ReplaceRegex(content, k_all_props);
-      }
-    }
-    return content;
-  }
-  static std::string ReplaceRegex(const std::string& content,
-                                  const std::string& unused_prop) {
-    std::ostringstream pattern_ss;
-    pattern_ss << "<body name=\"" << unused_prop
-               << R"("((?!</body>)[\s\S])+</body>)";
-    std::regex pattern(pattern_ss.str());
-    std::stringstream ss;
-    ss << regex_replace(content, pattern, "");
-    return ss.str();
   }
 
   void WriteState() {
