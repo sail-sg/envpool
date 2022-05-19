@@ -72,9 +72,13 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
   // Horizontal speeds above which move reward is 1.
   const mjtNum kWalkSpeed = 1;
   const mjtNum kRunSpeed = 10;
-  int id_head_, id_left_hand_, id_left_foot_;
-  int id_right_hand_, id_right_foot_;
-  int id_torso_, id_torso_subtreelinvel_;
+  int id_head_;
+  int id_left_hand_;
+  int id_left_foot_;
+  int id_right_hand_;
+  int id_right_foot_;
+  int id_torso_;
+  int id_torso_subtreelinvel_;
   mjtNum move_speed_;
   bool is_pure_state_;
 
@@ -86,12 +90,12 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
                                  spec.config["task_name"_]),
                   spec.config["frame_skip"_],
                   spec.config["max_episode_steps"_]),
-        id_torso_(mj_name2id(model_, mjOBJ_XBODY, "torso")),
         id_head_(mj_name2id(model_, mjOBJ_XBODY, "head")),
         id_left_hand_(mj_name2id(model_, mjOBJ_XBODY, "left_hand")),
         id_left_foot_(mj_name2id(model_, mjOBJ_XBODY, "left_foot")),
         id_right_hand_(mj_name2id(model_, mjOBJ_XBODY, "right_hand")),
         id_right_foot_(mj_name2id(model_, mjOBJ_XBODY, "right_foot")),
+        id_torso_(mj_name2id(model_, mjOBJ_XBODY, "torso")),
         id_torso_subtreelinvel_(GetSensorId(model_, "torso_subtreelinvel")),
         is_pure_state_(spec.config["task_name"_] == "run_pure_state") {
     const std::string& task_name = spec.config["task_name"_];
@@ -144,7 +148,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
                                    std::numeric_limits<double>::infinity(), 1.9,
                                    0, SigmoidType::kLinear);
     auto stand_reward = standing * upright;
-    mjtNum small_control = 0.0;
+    double small_control = 0.0;
     for (int i = 0; i < model_->nu; ++i) {
       small_control += RewardTolerance(data_->ctrl[i], 0.0, 0.0, 1.0, 0.0,
                                        SigmoidType::kQuadratic);
@@ -155,7 +159,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     horizontal_velocity[0] = center_of_mass_velocity[0];
     horizontal_velocity[1] = center_of_mass_velocity[1];
     if (move_speed_ == 0) {
-      mjtNum dont_move = 0.0;
+      double dont_move = 0.0;
       for (int i = 0; i < 2; ++i) {
         dont_move += RewardTolerance(horizontal_velocity[i], 0.0, 0.0, 2.0,
                                      SigmoidType::kQuadratic) /
