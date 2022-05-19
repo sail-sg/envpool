@@ -162,8 +162,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
       double dont_move = 0.0;
       for (int i = 0; i < 2; ++i) {
         dont_move += RewardTolerance(horizontal_velocity[i], 0.0, 0.0, 2.0, 0.1,
-                                     SigmoidType::kQuadratic) /
-                     2;
+                                     SigmoidType::kQuadratic) * 0.5;
       }
       return static_cast<float>(small_control * stand_reward * dont_move);
     }
