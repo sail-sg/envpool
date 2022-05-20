@@ -34,6 +34,8 @@ from envpool.mujoco.dmc import (
   DmcHopperEnvSpec,
   DmcHumanoidDMEnvPool,
   DmcHumanoidEnvSpec,
+  DmcManipulatorDMEnvPool,
+  DmcManipulatorEnvSpec,
   DmcPendulumDMEnvPool,
   DmcPendulumEnvSpec,
   DmcPointMassDMEnvPool,
@@ -85,7 +87,49 @@ class _MujocoDmcAlignTest(absltest.TestCase):
                                            ["x", "z"]] = target_x, target_z
         env.physics.after_reset()
       elif domain == "point_mass":
-        env.physics.model.wrap_prm = ts.observation.wrap_prm
+        env.physics.model.wrap_prm = ts.observation.wrap_prm[0]
+      elif domain == "manipulator":
+        # config
+        use_peg = "peg" in task
+        insert = "insert" in task
+        obj = "peg" if use_peg else "ball"
+        target = "target_" + obj
+        obj_joints = [obj + "_x", obj + "_z", obj + "_y"]
+        receptacle = "slot" if use_peg else "cup"
+        (
+          target_x, target_z, target_angle, init_type, object_x, object_z,
+          object_angle, qvel_objx
+        ) = ts.observation.random_info[0]
+        logging.info(ts.observation.random_info[0])
+        p = env.physics.named
+        # assign random value from envpool
+        if insert:
+          p.model.body_pos[receptacle, ["x", "z"]] = target_x, target_z
+          p.model.body_quat[receptacle, ["qw", "qy"]] = (
+            np.cos(target_angle / 2), np.sin(target_angle / 2)
+          )
+        p.model.body_pos[target, ["x", "z"]] = target_x, target_z
+        p.model.body_quat[target, ["qw", "qy"]] = \
+          (np.cos(target_angle / 2), np.sin(target_angle / 2))
+        if np.isclose(init_type, 1):
+          np.testing.assert_allclose(
+            [object_x, object_z, object_angle],
+            [target_x, target_z, target_angle]
+          )
+        elif np.isclose(init_type, 2):
+          env.physics.after_reset()
+          np.testing.assert_allclose(
+            [object_x, object_z], p.data.site_xpos["grasp", ["x", "z"]]
+          )
+          grasp_direction = p.data.site_xmat["grasp", ["xx", "zx"]]
+          np.testing.assert_allclose(
+            object_angle,
+            np.pi - np.arctan2(grasp_direction[1], grasp_direction[0])
+          )
+        else:
+          p.data.qvel[obj + "_x"] = qvel_objx
+        p.data.qpos[obj_joints] = object_x, object_z, object_angle
+        env.physics.after_reset()
 
   def sample_action(self, action_spec: dm_env.specs.Array) -> np.ndarray:
     return np.random.uniform(
@@ -162,6 +206,12 @@ class _MujocoDmcAlignTest(absltest.TestCase):
     self.run_align_check_entry(
       "humanoid", ["stand", "walk", "run", "run_pure_state"],
       DmcHumanoidEnvSpec, DmcHumanoidDMEnvPool
+    )
+
+  def test_manipulator(self) -> None:
+    self.run_align_check_entry(
+      "manipulator", ["bring_ball", "bring_peg", "insert_ball", "insert_peg"],
+      DmcManipulatorEnvSpec, DmcManipulatorDMEnvPool
     )
 
   def test_pendulum(self) -> None:
