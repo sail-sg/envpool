@@ -34,7 +34,7 @@ import envpool
 
 def get_args():
   parser = argparse.ArgumentParser()
-  parser.add_argument("--task", type=str, default="Pendulum-v0")
+  parser.add_argument("--task", type=str, default="Pendulum-v1")
   parser.add_argument("--seed", type=int, default=1)
   parser.add_argument("--buffer-size", type=int, default=20000)
   parser.add_argument("--lr", type=float, default=1e-3)
@@ -70,7 +70,7 @@ def get_args():
 
 def run_ppo(args):
   env = gym.make(args.task)
-  if args.task == "Pendulum-v0":
+  if args.task == "Pendulum-v1":
     env.spec.reward_threshold = -250
   args.state_shape = env.observation_space.shape or env.observation_space.n
   args.action_shape = env.action_space.shape or env.action_space.n
@@ -161,7 +161,7 @@ def run_ppo(args):
     result = collector.collect(n_episode=args.test_num)
     rews, lens = result["rews"], result["lens"]
     print(f"Final reward: {rews.mean()}, length: {lens.mean()}")
-    if args.task == "Pendulum-v0":
+    if args.task == "Pendulum-v1":
       assert stop_fn(rews.mean() + 50)
     return rews.mean()
 

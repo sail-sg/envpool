@@ -1,10 +1,10 @@
 name: Release PyPI Wheel
 
-# on: [push, pull_request]
-on:
-  push:
-    branches:
-      - master
+on: [push, pull_request]
+# on:
+#   push:
+#     branches:
+#       - main
 
 jobs:
   release:
@@ -36,7 +36,7 @@ jobs:
       run: |
         make release-test
     - name: Upload artifact
-      uses: actions/upload-artifact@master
+      uses: actions/upload-artifact@main
       with:
         name: wheel
         path: wheelhouse/
