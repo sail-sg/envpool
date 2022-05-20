@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/finger.py
+// https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/fish.py
 
-#ifndef ENVPOOL_MUJOCO_DMC_FINGER_H_
-#define ENVPOOL_MUJOCO_DMC_FINGER_H_
+#ifndef ENVPOOL_MUJOCO_DMC_FISH_H_
+#define ENVPOOL_MUJOCO_DMC_FISH_H_
 
 #include <algorithm>
 #include <cmath>
@@ -34,121 +34,136 @@ namespace mujoco_dmc {
 
 std::string GetFingerXML(const std::string& base_path,
                          const std::string& task_name_) {
-  return GetFileContent(base_path, "finger.xml");
+  return GetFileContent(base_path, "fish.xml");
 }
 
-class FingerEnvFns {
+class FishEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(2),
-                    "task_name"_.Bind(std::string("spin")));
+    return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(10),
+                    "task_name"_.Bind(std::string("upright")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs:position"_.Bind(Spec<mjtNum>({4})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({3})),
-                    "obs:touch"_.Bind(Spec<mjtNum>({2})),
-                    "obs:target_position"_.Bind(Spec<mjtNum>({2})),
-                    "obs:dist_to_target"_.Bind(Spec<mjtNum>({})),
+    return MakeDict("obs:joint_angles"_.Bind(Spec<mjtNum>({4})),
+                    "obs:upright"_.Bind(Spec<mjtNum>({})),
+                    "obs:velocity"_.Bind(Spec<mjtNum>({13})),
+                    "obs:target"_.Bind(Spec<mjtNum>({3})),
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.Bind(Spec<mjtNum>({3})),
-                    "info:target"_.Bind(Spec<mjtNum>({1})),
+                    "info:qpos0"_.Bind(Spec<mjtNum>({14})),
+                    "info:target"_.Bind(Spec<mjtNum>({3})),
 #endif
                     "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.Bind(Spec<mjtNum>({-1, 2}, {-1.0, 1.0})));
+    return MakeDict("action"_.Bind(Spec<mjtNum>({-1, 5}, {-1.0, 1.0})));
   }
 };
 
-using FingerEnvSpec = EnvSpec<FingerEnvFns>;
+using FishEnvSpec = EnvSpec<FishEnvFns>;
 
-class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
+class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
  protected:
-  const mjtNum kEasyTargetSize = 0.07;
-  const mjtNum kHardTargetSize = 0.03;
-  const mjtNum kSpinVelocity = 15;
-  // others
-  int id_site_target_, id_site_tip_, id_hinge_, id_cap1_;
-  // sensor
-  int id_proximal_, id_distal_, id_proximal_velocity_;
-  int id_distal_velocity_, id_hinge_velocity_;
-  int id_sensor_tip_, id_sensor_target_;
-  int id_spinner_, id_touchtop_, id_touchbottom_;
+  int id_qpos_tail1_, id_qpos_tail2_, id_qpos_tail_twist_;
+  int id_qpos_finright_roll_, id_qpos_finright_pitch_;
+  int id_qpos_finleft_roll_, id_qpos_finleft_pitch_;
+  int id_qvel_tail1_, id_qvel_tail2_, id_qvel_tail_twist_;
+  int id_qvel_finright_roll_, id_qvel_finright_pitch_;
+  int id_qvel_finleft_roll_, id_qvel_finleft_pitch_;
+  int id_qpos_root_, id_torso_;
+  int id_target_;
   std::uniform_real_distribution<> dist_uniform_;
-  mjtNum target_radius_;
-  bool is_spin_;
+  std::normal_distribution<> dist_normal_;
+  bool is_swim_;
 #ifdef ENVPOOL_TEST
-  mjtNum target_angle_;
+  std::array<mjtNum, 3> target_;
 #endif
 
  public:
-  FingerEnv(const Spec& spec, int env_id)
-      : Env<FingerEnvSpec>(spec, env_id),
+  FishEnv(const Spec& spec, int env_id)
+      : Env<FishEnvSpec>(spec, env_id),
         MujocoEnv(
             spec.config["base_path"_],
-            GetFingerXML(spec.config["base_path"_], spec.config["task_name"_]),
+            GetFishXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
-        id_site_target_(mj_name2id(model_, mjOBJ_SITE, "target")),
-        id_site_tip_(mj_name2id(model_, mjOBJ_SITE, "tip")),
-        id_hinge_(model_->jnt_dofadr[mj_name2id(model_, mjOBJ_JOINT, "hinge")]),
-        id_cap1_(mj_name2id(model_, mjOBJ_GEOM, "cap1")),
-        id_proximal_(GetSensorId(model_, "proximal")),
-        id_distal_(GetSensorId(model_, "distal")),
-        id_proximal_velocity_(GetSensorId(model_, "proximal_velocity")),
-        id_distal_velocity_(GetSensorId(model_, "distal_velocity")),
-        id_hinge_velocity_(GetSensorId(model_, "hinge_velocity")),
-        id_sensor_tip_(GetSensorId(model_, "tip")),
-        id_sensor_target_(GetSensorId(model_, "target")),
-        id_spinner_(GetSensorId(model_, "spinner")),
-        id_touchtop_(GetSensorId(model_, "touchtop")),
-        id_touchbottom_(GetSensorId(model_, "touchbottom")),
-        dist_uniform_(-M_PI, M_PI),
-        is_spin_(spec.config["task_name"_] == "spin") {
+        id_torso_(mj_name2id(model_, mjOBJ_XBODY, "torso")),
+        id_target_(mj_name2id(model_, mjOBJ_GEOM, "target")),  
+        id_mouth_(mj_name2id(model_, mjOBJ_GEOM, "mouth")),  
+        //qpos
+        id_qpos_root_(GetQposId(model_, "root")),
+        id_qpos_tail1_(GetQposId(model_, "tail1")),
+        id_qpos_tail_twist_(GetQposId(model_, "tail_twist")),
+        id_qpos_tail2_(GetQposId(model_, "tail2")),
+        id_qpos_finright_roll_(GetQposId(model_, "finright_roll")),
+        id_qpos_finright_pitch_(GetQposId(model_, "finright_pitch")),
+        id_qpos_finleft_roll_(GetQposId(model_, "finleft_roll")),
+        id_qpos_finright_roll_(GetQposId(model_, "finright_roll")),
+        //qvel
+        id_qvel_tail1_(GetQvelId(model_, "tail1")),
+        id_qvel_tail_twist_(GetQvelId(model_, "tail_twist")),
+        id_qvel_tail2_(GetQvelId(model_, "tail2")),
+        id_qvel_finright_roll_(GetQvelId(model_, "finright_roll")),
+        id_qvel_finright_pitch_(GetQvelId(model_, "finright_pitch")),
+        id_qvel_finleft_roll_(GetQvelId(model_, "finleft_roll")),
+        id_qvel_finright_roll_(GetQvelId(model_, "finright_roll")),  
+        id_qvel_finright_roll_(GetQvelId(model_, "finright_roll")),  
+        dist_normal_(0, 1),
+        dist_uniform_(0, 1),
+        is_swim_(spec.config["task_name"_] == "swim") {
     const std::string& task_name = spec.config["task_name"_];
-    if (task_name == "turn_easy") {
-      target_radius_ = kEasyTargetSize;
-    } else if (task_name == "turn_hard") {
-      target_radius_ = kHardTargetSize;
-    } else if (task_name != "spin") {
+    if (task_name != "upright" || task_name != "swim") {
       throw std::runtime_error("Unknown task_name " + task_name +
-                               " for dmc finger.");
+                               " for dmc fish.");
     }
   }
 
   void TaskInitializeEpisode() override {
-    if (is_spin_) {
-      // physics.named.model.site_rgba['target', 3] = 0
-      // physics.named.model.site_rgba['tip', 3] = 0
-      // physics.named.model.dof_damping['hinge'] = .03
-      model_->site_rgba[id_site_target_ * 3 + 3] = 0;
-      model_->site_rgba[id_site_tip_ * 3 + 3] = 0;
-      model_->dof_damping[id_hinge_] = 0.03;
-    } else {
-      // target_angle = self.random.uniform(-np.pi, np.pi)
-      // hinge_x, hinge_z = physics.named.data.xanchor['hinge', ['x', 'z']]
-      // radius = physics.named.model.geom_size['cap1'].sum()
-      // target_x = hinge_x + radius * np.sin(target_angle)
-      // target_z = hinge_z + radius * np.cos(target_angle)
-      // physics.named.model.site_pos['target', ['x', 'z']] = target_x, target_z
-      // physics.named.model.site_size['target', 0] = self._target_radius
-      mjtNum target_angle = dist_uniform_(gen_);
-      mjtNum hinge_x = data_->xanchor[id_hinge_ * 3 + 0];
-      mjtNum hinge_z = data_->xanchor[id_hinge_ * 3 + 2];
-      mjtNum radius = model_->geom_size[id_cap1_ * 3 + 0] +
-                      model_->geom_size[id_cap1_ * 3 + 1] +
-                      model_->geom_size[id_cap1_ * 3 + 2];
-      mjtNum target_x = hinge_x + radius * std::sin(target_angle);
-      mjtNum target_z = hinge_z + radius * std::cos(target_angle);
-      model_->site_pos[id_site_target_] = target_x;
-      model_->site_pos[id_site_target_ + 2] = target_z;
-      model_->site_size[id_site_target_] = target_radius_;
-#ifdef ENVPOOL_TEST
-      target_angle_ = target_angle;
-#endif
+    // quat = self.random.randn(4)
+    // physics.named.data.qpos['root'][3:7] = quat / np.linalg.norm(quat)
+    std::array<mjtNum, 4> quat = {dist_normal_(gen_), dist_normal_(gen_), 
+                                  dist_normal_(gen_), dist_normal_(gen_)};
+    mjtNum quat_norm = std::sqrt(quat[0] * quat[0] + 
+                                 quat[1] * quat[1] +
+                                 quat[2] * quat[2] +
+                                 quat[3] * quat[3] +);
+    quat = quat / quat_norm;
+    for (int i = 0; i < 4; ++i) {
+      data_->qpos[id_qpos_root_ + 3] = quat[i];
     }
-    SetRandomJointAngles();
+    // for joint in _JOINTS:
+    //   physics.named.data.qpos[joint] = self.random.uniform(-.2, .2)
+    data_->qpos[id_qpos_tail1_] = dist_uniform_(gen_) * 0.4 - 0.2;
+    data_->qpos[id_qpos_tail_twist_] = dist_uniform_(gen_) * 0.4 - 0.2;
+    data_->qpos[id_qpos_tail2_] = dist_uniform_(gen_) * 0.4 - 0.2;
+    data_->qpos[id_qpos_finright_roll_] = dist_uniform_(gen_) * 0.4 - 0.2;
+    data_->qpos[id_qpos_finright_pitch_] = dist_uniform_(gen_) * 0.4 - 0.2;
+    data_->qpos[id_qpos_finleft_roll_] = dist_uniform_(gen_) * 0.4 - 0.2;
+    data_->qpos[id_qpos_finleft_pitch_] = dist_uniform_(gen_) * 0.4 - 0.2;
+    if (is_swim_) {
+      // Randomize target position.
+      // physics.named.model.geom_pos['target', 'x'] = self.random.uniform(-.4, .4)
+      // physics.named.model.geom_pos['target', 'y'] = self.random.uniform(-.4, .4)
+      // physics.named.model.geom_pos['target', 'z'] = self.random.uniform(.1, .3)
+      mjtNum target_x = dist_uniform_(gen_) * 0.8 - 0.4;
+      mjtNum target_y = dist_uniform_(gen_) * 0.8 - 0.4;
+      mjtNum target_z = dist_uniform_(gen_) * 0.2 + 0.1;
+      model_->geom_pos[id_target_ * 3] = target_x
+      model_->geom_pos[id_target_ * 3 + 1] = target_y
+      model_->geom_pos[id_target_ * 3 + 2] = target_z
+#ifdef ENVPOOL_TEST
+      target_[0] = target_x;
+      target_[1] = target_y;
+      target_[2] = target_z;
+#endif
+    } else {
+      // Hide the target. It's irrelevant for this task.
+      // physics.named.model.geom_rgba['target', 3] = 0
+      model_->geom_rgba[id_target_ * 3 + 3] = 0;
+    }
+#ifdef ENVPOOL_TEST
+    std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
+#endif
   }
 
   bool IsDone() override { return done_; }
@@ -165,10 +180,17 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
   }
 
   float TaskGetReward() override {
-    if (is_spin_) {
-      return static_cast<float>(HingeVelocity() <= -kSpinVelocity);
+    if (is_swim_) {
+      return static_cast<float>(RewardTolerance(UpRight(), 1.0, 1.0, 1.0));
     }
-    return static_cast<float>(DistToTarget() <= 0);
+    mjtNum radii = model_->geom_size[id_mouth_] + model_->geom_size[id_target_];
+    const auto& target = MouthToTarget();
+    auto target_norm = std::sqrt(target[0] * target[0] + 
+                                 target[1] * target[1] +
+                                 target[2] * target[2]); 
+    auto in_target = RewardTolerance(target_norm, 0.0, radii, 2*radii)
+    auto is_upright = 0.5 * (UpRight() + 1.0)                              
+    return static_cast<float>((7 * in_target + is_upright) / 8);
   }
 
   bool TaskShouldTerminateEpisode() override { return false; }
@@ -179,108 +201,81 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
-    const auto& bound_pos = BoundedPosition();
-    const auto& velocity = Velocity();
-    const auto& touch = Touch();
-    state["obs:position"_].Assign(bound_pos.begin(), bound_pos.size());
-    state["obs:velocity"_].Assign(velocity.begin(), velocity.size());
-    state["obs:touch"_].Assign(touch.begin(), touch.size());
-    if (!is_spin_) {
-      const auto& target_position = TargetPosition();
-      state["obs:target_position"_].Assign(target_position.begin(),
-                                           target_position.size());
-      state["obs:dist_to_target"_] = DistToTarget();
+    const auto& joint_angles = JointAngles();
+    state["obs:joint_angles"_].Assign(joint_angles.begin(), joint_angles.size());
+    state["obs:upright"_] = UpRight();
+    state["obs:velocity"_].Assign(data_->qvel, model_->nv);
+    if (is_swim_) {
+      const auto& target = MouthToTarget();
+      state["obs:target"_].Assign(target.begin(),
+                                  target.size());
     }
     // info
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    if (!is_spin_) {
-      state["info:target"_] = target_angle_;
+    if (is_swim_) {
+      state["info:target"_].Assign(target_.begin(), target_.size());;
     }
 #endif
   }
-
-  void SetRandomJointAngles(int max_attempts = 1000) {
-    int i = 0;
-    for (int i = 0; i < max_attempts; i++) {
-      RandomizeLimitedAndRotationalJoints(&gen_);
-#ifdef ENVPOOL_TEST
-      std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
-#endif
-      PhysicsAfterReset();
-      if (data_->ncon == 0) {
-        break;
-      }
+  mjtNum UpRight() {
+    // return self.named.data.xmat['torso', 'zz']
+    return data_->xmat[id_torso_ * 9 + 8];
+  }
+  std::array<mjtNum, 6> TorsoVelocity() {
+    // return self.data.sensordata
+    return {data_->sensordata[0],
+            data_->sensordata[1],
+            data_->sensordata[2],
+            data_->sensordata[3],
+            data_->sensordata[4],
+            data_->sensordata[5]};
+  }
+  std::array<mjtNum, 7> JointVelocities() {
+    // return self.named.data.qvel[_JOINTS]
+    return {data_->qvel[id_qvel_tail1_],
+            data_->qvel[id_qvel_tail_twist_],
+            data_->qvel[id_qvel_tail2_],
+            data_->qvel[id_qvel_finright_roll_],
+            data_->qvel[id_qvel_finright_pitch_],
+            data_->qvel[id_qvel_finleft_roll_],
+            data_->qvel[id_qvel_finleft_pitch_]};
+  }
+  std::array<mjtNum, 7> JointAngles() {
+    // return self.named.data.qpos[_JOINTS]
+    return {data_->qpos[id_qpos_tail1_],
+            data_->qpos[id_qpos_tail_twist_],
+            data_->qpos[id_qpos_tail2_],
+            data_->qpos[id_qpos_finright_roll_],
+            data_->qpos[id_qpos_finright_pitch_],
+            data_->qpos[id_qpos_finleft_roll_],
+            data_->qpos[id_qpos_finleft_pitch_]};
+  }
+  std::array<mjtNum, 3> MouthToTarget() {
+    // returns a vector, from mouth to target in local coordinate of mouth.
+    // mouth_to_target_global = data.geom_xpos['target'] - data.geom_xpos['mouth']
+    // return mouth_to_target_global.dot(data.geom_xmat['mouth'].reshape(3, 3))
+    std::array<mjtNum, 3> mouth_to_target_global;
+    for (int i = 0; i < 3; i++) {
+      mouth_to_target_global[i] =
+          (data_->geom_xpos[id_target_ * 3 + i] - data_->geom_xpos[id_mouth_ * 3 + i]) 
+    }    
+    std::array<mjtNum, 3> mouth_to_target;
+    for (int i = 0; i < 3; i++) {
+      mouth_to_target[i] =
+          mouth_to_target_global[0] * 
+              data_->geom_xpos[id_mouth_ * 9 + i] +
+          mouth_to_target_global[1] *
+              data_->geom_xpos[id_mouth_ * 9 + i + 3] +
+          mouth_to_target_global[2] *
+              data_->geom_xpos[id_mouth_ * 9 + i + 6];
     }
-    if (i == max_attempts) {
-      throw std::runtime_error(
-          "Could not find a collision-free state after max_attempts attempts");
-    }
-  }
-
-  mjtNum HingeVelocity() {
-    // return self.named.data.sensordata['hinge_velocity']
-    return data_->sensordata[id_hinge_velocity_];
-  }
-  std::array<mjtNum, 4> BoundedPosition() {
-    // return np.hstack((self.named.data.sensordata[['proximal', 'distal']],
-    //                   self.tip_position()))
-    const auto& tip_position = TipPosition();
-    return {data_->sensordata[id_proximal_], data_->sensordata[id_distal_],
-            tip_position[0], tip_position[1]};
-  }
-
-  std::array<mjtNum, 2> TipPosition() {
-    // return (self.named.data.sensordata['tip'][[0, 2]] -
-    //         self.named.data.sensordata['spinner'][[0, 2]])
-    return {data_->sensordata[id_sensor_tip_] - data_->sensordata[id_spinner_],
-            data_->sensordata[id_sensor_tip_ + 2] -
-                data_->sensordata[id_spinner_ + 2]};
-  }
-
-  std::array<mjtNum, 2> TargetPosition() {
-    // return (self.named.data.sensordata['target'][[0, 2]] -
-    //         self.named.data.sensordata['spinner'][[0, 2]])
-    return {
-        data_->sensordata[id_sensor_target_] - data_->sensordata[id_spinner_],
-        data_->sensordata[id_sensor_target_ + 2] -
-            data_->sensordata[id_spinner_ + 2]};
-  }
-
-  std::array<mjtNum, 2> Touch() {
-    // return np.log1p(self.named.data.sensordata[['touchtop', 'touchbottom']])
-    return {std::log1p(data_->sensordata[id_touchtop_]),
-            std::log1p(data_->sensordata[id_touchbottom_])};
-  }
-
-  std::array<mjtNum, 3> Velocity() {
-    // return self.named.data.sensordata[['proximal_velocity',
-    // 'distal_velocity', 'hinge_velocity']]
-    return {data_->sensordata[id_proximal_velocity_],
-            data_->sensordata[id_distal_velocity_],
-            data_->sensordata[id_hinge_velocity_]};
-  }
-
-  std::array<mjtNum, 2> ToTarget() {
-    // return self.target_position() - self.tip_position()
-    const auto& target_position = TargetPosition();
-    const auto& tip_position = TipPosition();
-    return {target_position[0] - tip_position[0],
-            target_position[1] - tip_position[1]};
-  }
-
-  mjtNum DistToTarget() {
-    // return (np.linalg.norm(self.to_target()) -
-    //         self.named.model.site_size['target', 0])
-    const auto& to_target = ToTarget();
-    return std::sqrt(to_target[0] * to_target[0] +
-                     to_target[1] * to_target[1]) -
-           model_->site_size[0];
+    return mouth_to_target;
   }
 };
 
-using FingerEnvPool = AsyncEnvPool<FingerEnv>;
+using FishEnvPool = AsyncEnvPool<FishEnv>;
 
 }  // namespace mujoco_dmc
 
-#endif  // ENVPOOL_MUJOCO_DMC_FINGER_H_
+#endif  // ENVPOOL_MUJOCO_DMC_FISH_H_

@@ -94,8 +94,7 @@ FishSwim-v1, FishUpRight-v1
 .. note ::
 
     The observation keys ``target`` are only
-    available in ``FishSwim-v1`` task. Their
-    values are meaningless in ``FingerSpin-v1``.
+    available in ``FishSwim-v1`` task.
 
 
 HopperStand-v1, HopperHop-v1

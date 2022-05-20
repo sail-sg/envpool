@@ -28,6 +28,8 @@ from envpool.mujoco.dmc import (
   DmcCheetahEnvSpec,
   DmcFingerDMEnvPool,
   DmcFingerEnvSpec,
+  DmcFishDMEnvPool,
+  DmcFishEnvSpec,
   DmcHopperDMEnvPool,
   DmcHopperEnvSpec,
   DmcHumanoidDMEnvPool,
@@ -116,6 +118,16 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
     obs_keys += ["target_position", "dist_to_target"]
     for task in ["turn_easy", "turn_hard"]:
       self.check(DmcFingerEnvSpec, DmcFingerDMEnvPool, task, obs_keys)
+
+  def test_fish(self) -> None:
+    obs_keys = [
+      "joint_angles", "upright", "target", "velocity"
+    ]
+    for task in ["swim"]:
+      self.check(DmcFishEnvSpec, DmcFishDMEnvPool, task, obs_keys)
+    obs_keys = ["joint_angles", "upright", "velocity"]
+    for task in ["upright"]:
+      self.check(DmcFishEnvSpec, DmcFishDMEnvPool, task, obs_keys)
 
   def test_hopper(self) -> None:
     obs_keys = ["position", "velocity", "touch"]

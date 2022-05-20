@@ -67,6 +67,7 @@ cc_library(
         "dmc/ball_in_cup.h",
         "dmc/cheetah.h",
         "dmc/finger.h",
+        "dmc/fish.h",
         "dmc/hopper.h",
         "dmc/humanoid.h",
         "dmc/mujoco_env.h",

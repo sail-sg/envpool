@@ -30,6 +30,8 @@ from envpool.mujoco.dmc import (
   DmcCheetahEnvSpec,
   DmcFingerDMEnvPool,
   DmcFingerEnvSpec,
+  DmcFishDMEnvPool,
+  DmcFishEnvSpec,
   DmcHopperDMEnvPool,
   DmcHopperEnvSpec,
   DmcHumanoidDMEnvPool,
@@ -151,6 +153,12 @@ class _MujocoDmcAlignTest(absltest.TestCase):
     self.run_align_check_entry(
       "finger", ["spin", "turn_easy", "turn_hard"], DmcFingerEnvSpec,
       DmcFingerDMEnvPool
+    )
+
+  def test_fish(self) -> None:
+    self.run_align_check_entry(
+      "fish", ["swim", "upright"], DmcFishEnvSpec,
+      DmcFishDMEnvPool
     )
 
   def test_hopper(self) -> None:
