@@ -64,25 +64,13 @@ class FishEnvFns {
 using FishEnvSpec = EnvSpec<FishEnvFns>;
 
 class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
+  const std::array<std::string, 7> kJoints = {
+      "tail1",          "tail_twist",   "tail2",        "finright_roll",
+      "finright_pitch", "finleft_roll", "finleft_pitch"};
+
  protected:
-  int id_mouth_;
-  int id_qpos_finleft_pitch_;
-  int id_qpos_finleft_roll_;
-  int id_qpos_finright_pitch_;
-  int id_qpos_finright_roll_;
-  int id_qpos_root_;
-  int id_qpos_tail1_;
-  int id_qpos_tail2_;
-  int id_qpos_tail_twist_;
-  int id_qvel_finleft_pitch_;
-  int id_qvel_finleft_roll_;
-  int id_qvel_finright_pitch_;
-  int id_qvel_finright_roll_;
-  int id_qvel_tail1_;
-  int id_qvel_tail2_;
-  int id_qvel_tail_twist_;
-  int id_torso_;
-  int id_target_;
+  int id_mouth_, id_qpos_root_, id_torso_, id_target_;
+  std::array<int, 7> id_qpos_joint_, id_qvel_joint_;
   std::normal_distribution<> dist_normal_;
   std::uniform_real_distribution<> dist_uniform_;
   bool is_swim_;
@@ -97,26 +85,10 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
             spec.config["base_path"_],
             GetFishXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
+        id_mouth_(mj_name2id(model_, mjOBJ_GEOM, "mouth")),
+        id_qpos_root_(GetQposId(model_, "root")),
         id_torso_(mj_name2id(model_, mjOBJ_XBODY, "torso")),
         id_target_(mj_name2id(model_, mjOBJ_GEOM, "target")),
-        id_mouth_(mj_name2id(model_, mjOBJ_GEOM, "mouth")),
-        // qpos
-        id_qpos_root_(GetQposId(model_, "root")),
-        id_qpos_tail1_(GetQposId(model_, "tail1")),
-        id_qpos_tail_twist_(GetQposId(model_, "tail_twist")),
-        id_qpos_tail2_(GetQposId(model_, "tail2")),
-        id_qpos_finright_roll_(GetQposId(model_, "finright_roll")),
-        id_qpos_finright_pitch_(GetQposId(model_, "finright_pitch")),
-        id_qpos_finleft_roll_(GetQposId(model_, "finleft_roll")),
-        id_qpos_finleft_pitch_(GetQposId(model_, "finleft_pitch")),
-        // qvel
-        id_qvel_tail1_(GetQvelId(model_, "tail1")),
-        id_qvel_tail_twist_(GetQvelId(model_, "tail_twist")),
-        id_qvel_tail2_(GetQvelId(model_, "tail2")),
-        id_qvel_finright_roll_(GetQvelId(model_, "finright_roll")),
-        id_qvel_finright_pitch_(GetQvelId(model_, "finright_pitch")),
-        id_qvel_finleft_roll_(GetQvelId(model_, "finleft_roll")),
-        id_qvel_finleft_pitch_(GetQvelId(model_, "finleft_pitch")),
         dist_normal_(0, 1),
         dist_uniform_(0, 1),
         is_swim_(spec.config["task_name"_] == "swim") {
@@ -124,6 +96,10 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
     if (task_name != "upright" && task_name != "swim") {
       throw std::runtime_error("Unknown task_name " + task_name +
                                " for dmc fish.");
+    }
+    for (std::size_t i = 0; i < kJoints.size(); ++i) {
+      id_qpos_joint_[i] = GetQposId(model_, kJoints[i]);
+      id_qvel_joint_[i] = GetQvelId(model_, kJoints[i]);
     }
   }
 
@@ -139,23 +115,18 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
     }
     // for joint in _JOINTS:
     //   physics.named.data.qpos[joint] = self.random.uniform(-.2, .2)
-    data_->qpos[id_qpos_tail1_] = dist_uniform_(gen_) * 0.4 - 0.2;
-    data_->qpos[id_qpos_tail_twist_] = dist_uniform_(gen_) * 0.4 - 0.2;
-    data_->qpos[id_qpos_tail2_] = dist_uniform_(gen_) * 0.4 - 0.2;
-    data_->qpos[id_qpos_finright_roll_] = dist_uniform_(gen_) * 0.4 - 0.2;
-    data_->qpos[id_qpos_finright_pitch_] = dist_uniform_(gen_) * 0.4 - 0.2;
-    data_->qpos[id_qpos_finleft_roll_] = dist_uniform_(gen_) * 0.4 - 0.2;
-    data_->qpos[id_qpos_finleft_pitch_] = dist_uniform_(gen_) * 0.4 - 0.2;
+    for (std::size_t i = 0; i < id_qpos_joint_.size(); ++i) {
+      data_->qpos[id_qpos_joint_[i]] = dist_uniform_(gen_) * 0.4 - 0.2;
+    }
     if (is_swim_) {
       // Randomize target position.
-      // physics.named.model.geom_pos['target', 'x'] = self.random.uniform(-.4,
-      // .4) physics.named.model.geom_pos['target', 'y'] =
-      // self.random.uniform(-.4, .4) physics.named.model.geom_pos['target',
-      // 'z'] = self.random.uniform(.1, .3)
+      // physics.named.model.geom_pos['target', 'x'] = uniform(-.4, .4)
+      // physics.named.model.geom_pos['target', 'y'] = uniform(-.4, .4)
+      // physics.named.model.geom_pos['target', 'z'] = uniform(.1, .3)
       mjtNum target_x = dist_uniform_(gen_) * 0.8 - 0.4;
       mjtNum target_y = dist_uniform_(gen_) * 0.8 - 0.4;
       mjtNum target_z = dist_uniform_(gen_) * 0.2 + 0.1;
-      model_->geom_pos[id_target_ * 3] = target_x;
+      model_->geom_pos[id_target_ * 3 + 0] = target_x;
       model_->geom_pos[id_target_ * 3 + 1] = target_y;
       model_->geom_pos[id_target_ * 3 + 2] = target_z;
     } else {
@@ -186,14 +157,15 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
 
   float TaskGetReward() override {
     if (!is_swim_) {
-      return static_cast<float>(RewardTolerance(UpRight(), 1.0, 1.0, 1.0));
+      return static_cast<float>(RewardTolerance(Upright(), 1.0, 1.0, 1.0));
     }
-    mjtNum radii = model_->geom_size[id_mouth_] + model_->geom_size[id_target_];
+    mjtNum radii =
+        model_->geom_size[id_mouth_ * 3] + model_->geom_size[id_target_ * 3];
     const auto& target = MouthToTarget();
     auto target_norm = std::sqrt(target[0] * target[0] + target[1] * target[1] +
                                  target[2] * target[2]);
     auto in_target = RewardTolerance(target_norm, 0.0, radii, 2 * radii);
-    auto is_upright = 0.5 * (UpRight() + 1);
+    auto is_upright = 0.5 * (Upright() + 1);
     return static_cast<float>((7 * in_target + is_upright) / 8);
   }
 
@@ -208,7 +180,7 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
     const auto& joint_angles = JointAngles();
     state["obs:joint_angles"_].Assign(joint_angles.begin(),
                                       joint_angles.size());
-    state["obs:upright"_] = UpRight();
+    state["obs:upright"_] = Upright();
     state["obs:velocity"_].Assign(data_->qvel, model_->nv);
     if (is_swim_) {
       const auto& target = MouthToTarget();
@@ -220,48 +192,48 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
     state["info:target0"_].Assign(target0_.begin(), target0_.size());
 #endif
   }
-  mjtNum UpRight() {
+
+  mjtNum Upright() {
     // return self.named.data.xmat['torso', 'zz']
-    return data_->xmat[5 * 9 + 8];
+    return data_->xmat[id_torso_ * 9 + 8];
   }
+
   std::array<mjtNum, 6> TorsoVelocity() {
     // return self.data.sensordata
     return {data_->sensordata[0], data_->sensordata[1], data_->sensordata[2],
             data_->sensordata[3], data_->sensordata[4], data_->sensordata[5]};
   }
+
   std::array<mjtNum, 7> JointVelocities() {
     // return self.named.data.qvel[_JOINTS]
-    return {data_->qvel[id_qvel_tail1_],
-            data_->qvel[id_qvel_tail_twist_],
-            data_->qvel[id_qvel_tail2_],
-            data_->qvel[id_qvel_finright_roll_],
-            data_->qvel[id_qvel_finright_pitch_],
-            data_->qvel[id_qvel_finleft_roll_],
-            data_->qvel[id_qvel_finleft_pitch_]};
+    std::array<mjtNum, 7> result;
+    for (std::size_t i = 0; i < id_qvel_joint_.size(); ++i) {
+      result[i] = data_->qvel[id_qvel_joint_[i]];
+    }
+    return result;
   }
+
   std::array<mjtNum, 7> JointAngles() {
     // return self.named.data.qpos[_JOINTS]
-    return {data_->qpos[id_qpos_tail1_],
-            data_->qpos[id_qpos_tail_twist_],
-            data_->qpos[id_qpos_tail2_],
-            data_->qpos[id_qpos_finright_roll_],
-            data_->qpos[id_qpos_finright_pitch_],
-            data_->qpos[id_qpos_finleft_roll_],
-            data_->qpos[id_qpos_finleft_pitch_]};
+    std::array<mjtNum, 7> result;
+    for (std::size_t i = 0; i < id_qpos_joint_.size(); ++i) {
+      result[i] = data_->qpos[id_qpos_joint_[i]];
+    }
+    return result;
   }
+
   std::array<mjtNum, 3> MouthToTarget() {
-    // returns a vector, from mouth to target in local coordinate of mouth.
-    // mouth_to_target_global = data.geom_xpos['target'] - data.geom_xpos['mouth']
-    // return mouth_to_target_global.dot(data.geom_xmat['mouth'].reshape(3, 3))
+    // data.geom_xpos['target'] - data.geom_xpos['mouth']
     std::array<mjtNum, 3> mouth_to_target_global;
     for (int i = 0; i < 3; i++) {
       mouth_to_target_global[i] = (data_->geom_xpos[id_target_ * 3 + i] -
                                    data_->geom_xpos[id_mouth_ * 3 + i]);
     }
+    // mouth_to_target_global.dot(data.geom_xmat['mouth'].reshape(3, 3))
     std::array<mjtNum, 3> mouth_to_target;
     for (int i = 0; i < 3; i++) {
       mouth_to_target[i] =
-          mouth_to_target_global[0] * data_->geom_xmat[id_mouth_ * 9 + i] +
+          mouth_to_target_global[0] * data_->geom_xmat[id_mouth_ * 9 + i + 0] +
           mouth_to_target_global[1] * data_->geom_xmat[id_mouth_ * 9 + i + 3] +
           mouth_to_target_global[2] * data_->geom_xmat[id_mouth_ * 9 + i + 6];
     }
