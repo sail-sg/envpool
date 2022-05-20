@@ -14,7 +14,7 @@
 - [x] [Classic control RL envs](https://envpool.readthedocs.io/en/latest/env/classic_control.html): CartPole, MountainCar, Pendulum, Acrobot
 - [x] [Toy text RL envs](https://envpool.readthedocs.io/en/latest/env/toy_text.html): Catch, FrozenLake, Taxi, NChain, CliffWalking, Blackjack
 - [x] [ViZDoom single player](https://envpool.readthedocs.io/en/latest/env/vizdoom.html)
-- [ ] [DeepMind Control Suite](https://envpool.readthedocs.io/en/latest/env/dm_control.html)
+- [x] [DeepMind Control Suite](https://envpool.readthedocs.io/en/latest/env/dm_control.html)
 - [ ] [Box2D](https://envpool.readthedocs.io/en/latest/env/box2d.html)
 - [ ] Procgen
 - [ ] Minigrid
@@ -25,15 +25,14 @@ Here are EnvPool's several highlights:
 - Manage a pool of envs, interact with the envs in batched APIs by default;
 - Support both synchronous execution and asynchronous execution;
 - Support both single player and multi-player environment;
-- Easy C++ developer API to add new envs;
+- Easy C++ developer API to add new envs: [Customized C++ environment integration](https://envpool.readthedocs.io/en/latest/content/new_env.html);
 - **1 Million** Atari frames / **3 Million** Mujoco steps per second simulation with 256 CPU cores, **~20x** throughput of Python subprocess-based vector env;
 - **~3x** throughput of Python subprocess-based vector env on low resource setup like 12 CPU cores;
 - Comparing with existing GPU-based solution ([Brax](https://github.com/google/brax) / [Isaac-gym](https://developer.nvidia.com/isaac-gym)), EnvPool is a **general** solution for various kinds of speeding-up RL environment parallelization;
 - Compatible with some existing RL libraries, e.g., [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3), [Tianshou](https://github.com/thu-ml/tianshou), or [CleanRL](https://github.com/vwxyzjn/cleanrl).
   - Stable-Baselines3 [`Pendulum-v1` example](https://github.com/sail-sg/envpool/blob/main/examples/sb3_examples/ppo.py);
   - Tianshou [`CartPole` example](https://github.com/sail-sg/envpool/blob/main/examples/tianshou_examples/cartpole_ppo.py), [`Pendulum-v1` example](https://github.com/sail-sg/envpool/blob/main/examples/tianshou_examples/pendulum_ppo.py), [Atari example](https://github.com/thu-ml/tianshou/tree/master/examples/atari#envpool), [Mujoco example](https://github.com/thu-ml/tianshou/tree/master/examples/mujoco#envpool), and [integration guideline](https://tianshou.readthedocs.io/en/master/tutorials/cheatsheet.html#envpool-integration);
-  - CleanRL [`Pong-v5` example](https://github.com/sail-sg/envpool/blob/main/examples/cleanrl_examples/ppo_atari_envpool.py) ([Solving Pong in 5 mins](https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/#solving-pong-in-5-minutes-with-ppo--envpool) ([tracked experiment](https://wandb.ai/costa-huang/cleanRL/runs/opk2dmta)));
-- Support [customized C++ environment integration](https://envpool.readthedocs.io/en/latest/content/new_env.html).
+  - CleanRL [`Pong-v5` example](https://github.com/sail-sg/envpool/blob/main/examples/cleanrl_examples/ppo_atari_envpool.py) ([Solving Pong in 5 mins](https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/#solving-pong-in-5-minutes-with-ppo--envpool) ([tracked experiment](https://wandb.ai/costa-huang/cleanRL/runs/opk2dmta))).
 
 ## Installation
 
