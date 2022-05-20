@@ -34,7 +34,7 @@ from envpool.python.protocol import EnvPool
 th.set_num_threads(1)
 
 num_envs = 4
-env_id = "Pendulum-v0"  # "CartPole-v1"
+env_id = "Pendulum-v1"  # "CartPole-v1"
 seed = 0
 use_env_pool = True  # whether to use EnvPool or Gym for training
 render = False  # whether to render final policy using Gym
@@ -90,9 +90,9 @@ if use_env_pool:
 else:
   env = make_vec_env(env_id, n_envs=num_envs)
 
-# Tuned hyperparams for Pendulum-v0, works also for CartPole-v1
+# Tuned hyperparams for Pendulum-v1, works also for CartPole-v1
 kwargs = {}
-if env_id == "Pendulum-v0":
+if env_id == "Pendulum-v1":
   # Use gSDE for better results
   kwargs = dict(use_sde=True, sde_sample_freq=4)
 
