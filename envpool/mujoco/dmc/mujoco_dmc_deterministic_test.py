@@ -30,6 +30,10 @@ from envpool.mujoco.dmc import (
   DmcFingerEnvSpec,
   DmcHopperDMEnvPool,
   DmcHopperEnvSpec,
+  DmcHumanoidDMEnvPool,
+  DmcHumanoidEnvSpec,
+  DmcManipulatorDMEnvPool,
+  DmcManipulatorEnvSpec,
   DmcPendulumDMEnvPool,
   DmcPendulumEnvSpec,
   DmcPointMassDMEnvPool,
@@ -119,6 +123,27 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
     obs_keys = ["position", "velocity", "touch"]
     for task in ["stand", "hop"]:
       self.check(DmcHopperEnvSpec, DmcHopperDMEnvPool, task, obs_keys)
+
+  def test_humanoid(self) -> None:
+    obs_keys = [
+      "joint_angles", "head_height", "extremities", "torso_vertical",
+      "com_velocity", "velocity"
+    ]
+    for task in ["stand", "walk", "run"]:
+      self.check(DmcHumanoidEnvSpec, DmcHumanoidDMEnvPool, task, obs_keys)
+    obs_keys = ["position", "velocity"]
+    for task in ["run_pure_state"]:
+      self.check(DmcHumanoidEnvSpec, DmcHumanoidDMEnvPool, task, obs_keys)
+
+  def test_manipulator(self) -> None:
+    obs_keys = [
+      "arm_pos", "arm_vel", "touch", "hand_pos", "object_pos", "object_vel",
+      "target_pos"
+    ]
+    for task in ["bring_ball", "bring_peg", "insert_ball", "insert_peg"]:
+      self.check(
+        DmcManipulatorEnvSpec, DmcManipulatorDMEnvPool, task, obs_keys
+      )
 
   def test_pendulum(self) -> None:
     obs_keys = ["orientation", "velocity"]

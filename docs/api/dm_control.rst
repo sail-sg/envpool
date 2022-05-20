@@ -92,6 +92,42 @@ HopperStand-v1, HopperHop-v1
 - ``max_episode_steps``: 1000;
 
 
+ManipulatorBringBall-v1, ManipulatorBringPeg-v1, ManipulatorInsertBall-v1, ManipulatorInsertPeg-v1
+--------------------------------------------------------------------------------------------------
+
+`dm_control suite manipulator source code
+<https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/manipulator.py>`_
+
+- Observation spec: a namedtuple with three keys: ``arm_pos (8,2)``,
+  ``arm_vel (8)``, ``touch (5)``, ``hand_pos (4)``, ``object_pos (4)``,
+  ``object_vel (3)``, ``target_pos (4)``;
+- Action spec: ``(5)``, with range ``[-1, 1]``;
+- ``frame_skip``: 10;
+- ``max_episode_steps``: 1000;
+
+
+HumanoidStand-v1, HumanoidWalk-v1, HumanoidRun-v1, HumanoidRunPureState-v1
+--------------------------------------------------------------------------
+
+`dm_control suite humanoid source code
+<https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/humanoid.py>`_
+
+- Observation spec: a namedtuple with seven keys: ``joint_angles (21)``,
+  ``head_height ()``, ``extremities (12)``, ``torso_vertical (3)``,
+  ``com_velocity (3)``, ``position (28)``, and ``velocity (27)``;
+- Action spec: ``(21)``, with range ``[-1, 1]``;
+- ``frame_skip``: 5;
+- ``max_episode_steps``: 1000;
+
+.. note ::
+
+    The observation keys ``joint_angles``, ``head_height``, ``extremities``,
+    ``torso_vertical`` and ``com_velocity`` are only available in
+    ``HumanoidStand-v1``, ``HumanoidWalk-v1`` and ``HumanoidRun-v1``.
+    The observation keys ``position`` are only available in
+    ``HumanoidRunPureState-v1`` tasks.
+
+
 PendulumSwingup-v1
 ------------------
 

@@ -33,7 +33,7 @@
 namespace mujoco_dmc {
 
 std::string GetFingerXML(const std::string& base_path,
-                         const std::string& task_name_) {
+                         const std::string& task_name) {
   return GetFileContent(base_path, "finger.xml");
 }
 

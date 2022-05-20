@@ -170,6 +170,18 @@ def workspace():
 
     maybe(
         http_archive,
+        name = "pugixml",
+        urls = [
+            "https://github.com/zeux/pugixml/releases/download/v1.12.1/pugixml-1.12.1.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/zeux/pugixml/pugixml-1.12.1.tar.gz",
+        ],
+        sha256 = "dcf671a919cc4051210f08ffd3edf9e4247f79ad583c61577a13ee93af33afc7",
+        strip_prefix = "pugixml-1.12/src",
+        build_file = "//third_party/pugixml:pugixml.BUILD",
+    )
+
+    maybe(
+        http_archive,
         name = "ale",
         sha256 = "31ff9a51187a1237b683c7a5eff232b294f0bd48ca078ab57eabc9e3564ff1c1",
         strip_prefix = "Arcade-Learning-Environment-0.7.5",

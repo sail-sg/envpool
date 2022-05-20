@@ -82,14 +82,14 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
   }
 
   void TaskInitializeEpisode() override {
-    assert(model_->njnt == model_->nq);
-    for (int i = 0; i < model_->njnt; i++) {
-      bool is_limited = model_->jnt_limited[i] == 1;
+    for (int id_joint = 0; id_joint < model_->njnt; ++id_joint) {
+      bool is_limited = model_->jnt_limited[id_joint] == 1;
       if (is_limited) {
-        mjtNum range_min = model_->jnt_range[i * 2 + 0];
-        mjtNum range_max = model_->jnt_range[i * 2 + 1];
+        mjtNum range_min = model_->jnt_range[id_joint * 2 + 0];
+        mjtNum range_max = model_->jnt_range[id_joint * 2 + 1];
         mjtNum range = range_max - range_min;
-        data_->qpos[i] = dist_uniform_(gen_) * range + range_min;
+        data_->qpos[model_->jnt_qposadr[id_joint]] =
+            dist_uniform_(gen_) * range + range_min;
       }
     }
 #ifdef ENVPOOL_TEST
