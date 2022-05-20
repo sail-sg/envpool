@@ -65,26 +65,26 @@ using FishEnvSpec = EnvSpec<FishEnvFns>;
 
 class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
  protected:
+  int id_mouth_;
+  int id_qpos_finleft_pitch_;
+  int id_qpos_finleft_roll_;
+  int id_qpos_finright_pitch_;
+  int id_qpos_finright_roll_;
+  int id_qpos_root_;
   int id_qpos_tail1_;
   int id_qpos_tail2_;
   int id_qpos_tail_twist_;
-  int id_qpos_finright_pitch_;
-  int id_qpos_finright_roll_;
-  int id_qpos_finleft_pitch_;
-  int id_qpos_finleft_roll_;
+  int id_qvel_finleft_pitch_;
+  int id_qvel_finleft_roll_;
+  int id_qvel_finright_pitch_;
+  int id_qvel_finright_roll_;
   int id_qvel_tail1_;
   int id_qvel_tail2_;
   int id_qvel_tail_twist_;
-  int id_qvel_finright_roll_;
-  int id_qvel_finright_pitch_;
-  int id_qvel_finleft_roll_;
-  int id_qvel_finleft_pitch_;
-  int id_qpos_root_;
   int id_torso_;
   int id_target_;
-  int id_mouth_;
-  std::uniform_real_distribution<> dist_uniform_;
   std::normal_distribution<> dist_normal_;
+  std::uniform_real_distribution<> dist_uniform_;
   bool is_swim_;
 #ifdef ENVPOOL_TEST
   std::array<mjtNum, 3> target_;
@@ -121,7 +121,7 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
         dist_uniform_(0, 1),
         is_swim_(spec.config["task_name"_] == "swim") {
     const std::string& task_name = spec.config["task_name"_];
-    if (task_name != "upright" || task_name != "swim") {
+    if (task_name != "upright" && task_name != "swim") {
       throw std::runtime_error("Unknown task_name " + task_name +
                                " for dmc fish.");
     }
