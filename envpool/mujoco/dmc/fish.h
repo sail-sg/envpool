@@ -251,9 +251,8 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
   }
   std::array<mjtNum, 3> MouthToTarget() {
     // returns a vector, from mouth to target in local coordinate of mouth.
-    // mouth_to_target_global = data.geom_xpos['target'] -
-    // data.geom_xpos['mouth'] return
-    // mouth_to_target_global.dot(data.geom_xmat['mouth'].reshape(3, 3))
+    // mouth_to_target_global = data.geom_xpos['target'] - data.geom_xpos['mouth']
+    // return mouth_to_target_global.dot(data.geom_xmat['mouth'].reshape(3, 3))
     std::array<mjtNum, 3> mouth_to_target_global;
     for (int i = 0; i < 3; i++) {
       mouth_to_target_global[i] = (data_->geom_xpos[id_target_ * 3 + i] -
