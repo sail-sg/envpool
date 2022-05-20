@@ -97,7 +97,7 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
             spec.config["base_path"_],
             GetFishXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
-        id_torso_(mj_name2id(model_, mjOBJ_GEOM, "torso")),
+        id_torso_(mj_name2id(model_, mjOBJ_XBODY, "torso")),
         id_target_(mj_name2id(model_, mjOBJ_GEOM, "target")),
         id_mouth_(mj_name2id(model_, mjOBJ_GEOM, "mouth")),
         // qpos
@@ -222,7 +222,7 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
   }
   mjtNum UpRight() {
     // return self.named.data.xmat['torso', 'zz']
-    return data_->xmat[id_torso_ * 9 + 8];
+    return data_->xmat[5 * 9 + 8];
   }
   std::array<mjtNum, 6> TorsoVelocity() {
     // return self.data.sensordata
