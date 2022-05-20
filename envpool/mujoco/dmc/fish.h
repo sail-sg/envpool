@@ -161,7 +161,7 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
     } else {
       // Hide the target. It's irrelevant for this task.
       // physics.named.model.geom_rgba['target', 3] = 0
-      model_->geom_rgba[id_target_ * 3 + 3] = 0;
+      model_->geom_rgba[id_target_ * 4 + 3] = 0;
     }
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
