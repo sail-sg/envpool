@@ -61,6 +61,20 @@ class ManipulatorEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
+#ifdef ENVPOOL_TEST
+    const std::string task_name = conf["task_name"_];
+    int nbody;
+    if (task_name == "bring_ball") {
+      nbody = 12;
+    } else if (task_name == "bring_peg" || task_name == "insert_ball") {
+      nbody = 13;
+    } else if (task_name == "insert_peg") {
+      nbody = 14;
+    } else {
+      throw std::runtime_error("Unknown task_name " + task_name +
+                               " for dmc manipulator.");
+    }
+#endif
     return MakeDict("obs:arm_pos"_.Bind(Spec<mjtNum>({8, 2})),
                     "obs:arm_vel"_.Bind(Spec<mjtNum>({8})),
                     "obs:touch"_.Bind(Spec<mjtNum>({5})),
@@ -69,10 +83,10 @@ class ManipulatorEnvFns {
                     "obs:object_vel"_.Bind(Spec<mjtNum>({3})),
                     "obs:target_pos"_.Bind(Spec<mjtNum>({4})),
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.Bind(Spec<mjtNum>({14})),
-                    "info:qvel"_.Bind(Spec<mjtNum>({14})),
-                    "info:body_pos"_.Bind(Spec<mjtNum>({16, 4})),
-                    "info:body_quat"_.Bind(Spec<mjtNum>({16, 3})),
+                    "info:qpos0"_.Bind(Spec<mjtNum>({11})),
+                    "info:qvel"_.Bind(Spec<mjtNum>({11})),
+                    "info:body_pos"_.Bind(Spec<mjtNum>({nbody, 3})),
+                    "info:body_quat"_.Bind(Spec<mjtNum>({nbody, 4})),
 #endif
                     "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
   }
@@ -150,7 +164,7 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
       }
       data_->qpos[mj_name2id(model_, mjOBJ_JOINT, "finger")] =
           data_->qpos[mj_name2id(model_, mjOBJ_JOINT, "thumb")];
-      mjtNum target_x = dist_uniform_(gen_) * 0.4 - 0.4;
+      mjtNum target_x = dist_uniform_(gen_) * 0.8 - 0.4;
       mjtNum target_z = dist_uniform_(gen_) * 0.3 + 0.1;
       mjtNum target_angle;
       if (insert_) {
@@ -169,9 +183,9 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
         target_angle = dist_uniform_(gen_) * 2 * M_PI - M_PI;
       }
       int id_body_target = mj_name2id(model_, mjOBJ_JOINT, target_.c_str());
-      //   model.body_pos[self._target, ['x', 'z']] = target_x, target_z
-      //   model.body_quat[self._target, ['qw', 'qy']] = [
-      //       np.cos(target_angle/2), np.sin(target_angle/2)]
+      // model.body_pos[self._target, ['x', 'z']] = target_x, target_z
+      // model.body_quat[self._target, ['qw', 'qy']] = [
+      //     np.cos(target_angle/2), np.sin(target_angle/2)]
       model_->body_pos[id_body_target * 3 + 0] = target_x;
       model_->body_pos[id_body_target * 3 + 2] = target_z;
       model_->body_quat[id_body_target * 4 + 0] = std::cos(target_angle / 2);
@@ -181,13 +195,13 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
       mjtNum object_x;
       mjtNum object_z;
       mjtNum object_angle;
-      if (choice <= kPInHand) {
-        // in_hand
+      if (choice <= kPInTarget) {
+        // in_target
         object_x = target_x;
         object_z = target_z;
         object_angle = target_angle;
-      } else if (choice <= kPInHand + kPInTarget) {
-        // in_target
+      } else if (choice <= kPInTarget + kPInHand) {
+        // in_hand
         // physics.after_reset()
         // object_x = data.site_xpos['grasp', 'x']
         // object_z = data.site_xpos['grasp', 'z']
@@ -215,12 +229,9 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
         data_->qvel[GetQposId(model_, object_ + "_x")] =
             dist_uniform_(gen_) * 10 - 5;
       }
-      data_->qpos[mj_name2id(model_, mjOBJ_JOINT, object_joints_[0].c_str())] =
-          object_x;
-      data_->qpos[mj_name2id(model_, mjOBJ_JOINT, object_joints_[1].c_str())] =
-          object_z;
-      data_->qpos[mj_name2id(model_, mjOBJ_JOINT, object_joints_[2].c_str())] =
-          object_angle;
+      data_->qpos[GetQposId(model_, object_joints_[0])] = object_x;
+      data_->qpos[GetQposId(model_, object_joints_[1])] = object_z;
+      data_->qpos[GetQposId(model_, object_joints_[2])] = object_angle;
       // Check for collisions.
       PhysicsAfterReset();
       penetrating = data_->ncon > 0;

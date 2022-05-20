@@ -7,9 +7,9 @@ Welcome to EnvPool!
 ===================
 
 **EnvPool** is a C++-based batched environment pool with pybind11 and thread
-pool. It has high performance (~1M raw FPS in DGX on Atari games) and
-compatible APIs (supports both gym and dm_env, both sync and async, both single
-and multi player environment).
+pool. It has high performance (~1M raw FPS on Atari games / ~3M FPS with Mujoco
+physics engine in DGX-A100) and compatible APIs (supports both gym and dm_env,
+both sync and async, both single and multi player environment).
 
 Here are EnvPool's several highlights:
 
@@ -18,8 +18,9 @@ Here are EnvPool's several highlights:
 - Support both synchronous execution and asynchronous execution;
 - Support both single player and multi-player environment;
 - Easy C++ developer API to add new envs;
-- **1 Million** Atari frames per second simulation with 256 CPU cores,
-  **~13x** throughput of Python subprocess-based vector env;
+- **1 Million** Atari frames / **3 Million** Mujoco steps per second
+  simulation with 256 CPU cores, **~20x** throughput of Python
+  subprocess-based vector env;
 - **~3x** throughput of Python subprocess-based vector env on low resource
   setup like 12 CPU cores;
 - Comparing with the existing GPU-based solution
@@ -27,8 +28,10 @@ Here are EnvPool's several highlights:
   `Isaac-gym <https://developer.nvidia.com/isaac-gym>`_), EnvPool is a
   **general** solution for various kinds of speeding-up RL environment
   parallelization;
-- Compatible with some existing RL libraries, e.g.,
-  `Tianshou <https://github.com/thu-ml/tianshou>`_.
+  `Stable-Baselines3 <https://github.com/DLR-RM/stable-baselines3>`_,
+  `Tianshou <https://github.com/thu-ml/tianshou>`_,
+  or `CleanRL <https://github.com/vwxyzjn/cleanrl>`_
+  (`Solving Pong in 5 mins <https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/#solving-pong-in-5-minutes-with-ppo--envpool>`_).
 
 Installation
 ------------
