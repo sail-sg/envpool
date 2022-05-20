@@ -185,7 +185,7 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
   }
 
   float TaskGetReward() override {
-    if (is_swim_) {
+    if (!is_swim_) {
       return static_cast<float>(RewardTolerance(UpRight(), 1.0, 1.0, 1.0));
     }
     mjtNum radii = model_->geom_size[id_mouth_] + model_->geom_size[id_target_];
