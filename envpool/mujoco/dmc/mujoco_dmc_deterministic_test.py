@@ -120,9 +120,7 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
       self.check(DmcFingerEnvSpec, DmcFingerDMEnvPool, task, obs_keys)
 
   def test_fish(self) -> None:
-    obs_keys = [
-      "joint_angles", "upright", "target", "velocity"
-    ]
+    obs_keys = ["joint_angles", "upright", "target", "velocity"]
     for task in ["swim"]:
       self.check(DmcFishEnvSpec, DmcFishDMEnvPool, task, obs_keys)
     obs_keys = ["joint_angles", "upright", "velocity"]

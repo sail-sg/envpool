@@ -157,8 +157,7 @@ class _MujocoDmcAlignTest(absltest.TestCase):
 
   def test_fish(self) -> None:
     self.run_align_check_entry(
-      "fish", ["swim", "upright"], DmcFishEnvSpec,
-      DmcFishDMEnvPool
+      "fish", ["swim", "upright"], DmcFishEnvSpec, DmcFishDMEnvPool
     )
 
   def test_hopper(self) -> None:
