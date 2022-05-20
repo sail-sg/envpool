@@ -20,6 +20,7 @@
 #include "envpool/mujoco/dmc/fish.h"
 #include "envpool/mujoco/dmc/hopper.h"
 #include "envpool/mujoco/dmc/humanoid.h"
+#include "envpool/mujoco/dmc/manipulator.h"
 #include "envpool/mujoco/dmc/pendulum.h"
 #include "envpool/mujoco/dmc/point_mass.h"
 #include "envpool/mujoco/dmc/reacher.h"
@@ -46,6 +47,9 @@ using DmcHopperEnvPool = PyEnvPool<mujoco_dmc::HopperEnvPool>;
 using DmcHumanoidEnvSpec = PyEnvSpec<mujoco_dmc::HumanoidEnvSpec>;
 using DmcHumanoidEnvPool = PyEnvPool<mujoco_dmc::HumanoidEnvPool>;
 
+using DmcManipulatorEnvSpec = PyEnvSpec<mujoco_dmc::ManipulatorEnvSpec>;
+using DmcManipulatorEnvPool = PyEnvPool<mujoco_dmc::ManipulatorEnvPool>;
+
 using DmcPendulumEnvSpec = PyEnvSpec<mujoco_dmc::PendulumEnvSpec>;
 using DmcPendulumEnvPool = PyEnvPool<mujoco_dmc::PendulumEnvPool>;
 
@@ -66,6 +70,7 @@ PYBIND11_MODULE(mujoco_dmc_envpool, m) {
   REGISTER(m, DmcFishEnvSpec, DmcFishEnvPool)
   REGISTER(m, DmcHopperEnvSpec, DmcHopperEnvPool)
   REGISTER(m, DmcHumanoidEnvSpec, DmcHumanoidEnvPool)
+  REGISTER(m, DmcManipulatorEnvSpec, DmcManipulatorEnvPool)
   REGISTER(m, DmcPendulumEnvSpec, DmcPendulumEnvPool)
   REGISTER(m, DmcPointMassEnvSpec, DmcPointMassEnvPool)
   REGISTER(m, DmcReacherEnvSpec, DmcReacherEnvPool)

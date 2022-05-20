@@ -40,7 +40,7 @@ To align with other baseline results, FPS is multiplied with `frame_skip` (4 for
 
 ## Testing Method and Command
 
-All of the scripts are under [benchmark/](https://github.com/sail-sg/envpool/tree/master/benchmark) folder. When increasing the number of envs, we also adjust the total number of steps to make each test run for about one minute.
+All of the scripts are under [benchmark/](https://github.com/sail-sg/envpool/tree/main/benchmark) folder. When increasing the number of envs, we also adjust the total number of steps to make each test run for about one minute.
 
 ### For-loop
 
