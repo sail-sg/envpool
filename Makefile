@@ -128,7 +128,7 @@ doc-clean:
 	cd docs && make clean
 
 doc-benchmark:
-	pandoc benchmark/README.md --from markdown --to rst -s -o docs/pages/benchmark.rst --columns 1000
+	pandoc benchmark/README.md --from markdown --to rst -s -o docs/content/benchmark.rst --columns 1000
 	cd benchmark && ./plot.py --suffix png && mv *.png ../docs/_static/images/throughput
 
 lint: buildifier flake8 py-format clang-format cpplint clang-tidy mypy docstyle spelling

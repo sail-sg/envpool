@@ -9,13 +9,13 @@
 
 **EnvPool** is a C++-based batched environment pool with pybind11 and thread pool. It has high performance (\~1M raw FPS with Atari games, \~3M raw FPS with Mujoco simulator on DGX-A100) and compatible APIs (supports both gym and dm\_env, both sync and async, both single and multi player environment). Currently it supports:
 
-- [x] [Atari games](https://envpool.readthedocs.io/en/latest/api/atari.html)
-- [x] [Mujoco (gym)](https://envpool.readthedocs.io/en/latest/api/mujoco.html)
-- [x] [Classic control RL envs](https://envpool.readthedocs.io/en/latest/api/classic.html): CartPole, MountainCar, Pendulum, Acrobot
-- [x] [Toy text RL envs](https://envpool.readthedocs.io/en/latest/api/toy_text.html): Catch, FrozenLake, Taxi, NChain, CliffWalking, Blackjack
-- [x] [ViZDoom single player](https://envpool.readthedocs.io/en/latest/api/vizdoom.html)
-- [ ] [DeepMind Control Suite](https://envpool.readthedocs.io/en/latest/api/dm_control.html)
-- [ ] [Box2D](https://envpool.readthedocs.io/en/latest/api/box2d.html)
+- [x] [Atari games](https://envpool.readthedocs.io/en/latest/env/atari.html)
+- [x] [Mujoco (gym)](https://envpool.readthedocs.io/en/latest/env/mujoco_gym.html)
+- [x] [Classic control RL envs](https://envpool.readthedocs.io/en/latest/env/classic_control.html): CartPole, MountainCar, Pendulum, Acrobot
+- [x] [Toy text RL envs](https://envpool.readthedocs.io/en/latest/env/toy_text.html): Catch, FrozenLake, Taxi, NChain, CliffWalking, Blackjack
+- [x] [ViZDoom single player](https://envpool.readthedocs.io/en/latest/env/vizdoom.html)
+- [ ] [DeepMind Control Suite](https://envpool.readthedocs.io/en/latest/env/dm_control.html)
+- [ ] [Box2D](https://envpool.readthedocs.io/en/latest/env/box2d.html)
 - [ ] Procgen
 - [ ] Minigrid
 
@@ -33,7 +33,7 @@ Here are EnvPool's several highlights:
   - Stable-Baselines3 [`Pendulum-v0` example](https://github.com/sail-sg/envpool/blob/master/examples/sb3_examples/ppo.py);
   - Tianshou [`CartPole` example](https://github.com/sail-sg/envpool/blob/master/examples/tianshou_examples/cartpole_ppo.py), [`Pendulum-v0` example](https://github.com/sail-sg/envpool/blob/master/examples/tianshou_examples/pendulum_ppo.py), [Atari example](https://github.com/thu-ml/tianshou/tree/master/examples/atari#envpool), [Mujoco example](https://github.com/thu-ml/tianshou/tree/master/examples/mujoco#envpool), and [integration guideline](https://tianshou.readthedocs.io/en/master/tutorials/cheatsheet.html#envpool-integration);
   - CleanRL [`Pong-v5` example](https://github.com/sail-sg/envpool/blob/master/examples/cleanrl_examples/ppo_atari_envpool.py) ([Solving Pong in 5 mins](https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/#solving-pong-in-5-minutes-with-ppo--envpool) ([tracked experiment](https://wandb.ai/costa-huang/cleanRL/runs/opk2dmta)));
-- Support [customized C++ environment integration](https://envpool.readthedocs.io/en/latest/pages/env.html).
+- Support [customized C++ environment integration](https://envpool.readthedocs.io/en/latest/content/new_env.html).
 
 ## Installation
 
@@ -58,7 +58,7 @@ If no error occurs, you have successfully installed EnvPool.
 
 ### From Source
 
-Please refer to the [guideline](https://envpool.readthedocs.io/en/latest/pages/build.html).
+Please refer to the [guideline](https://envpool.readthedocs.io/en/latest/content/build.html).
 
 ## Documentation
 
@@ -93,7 +93,7 @@ We report EnvPool performance with sync mode, async mode, and NUMA + async mode,
 ![](https://envpool.readthedocs.io/en/latest/_images/throughput.png)
 
 
-Please refer to the [benchmark](https://envpool.readthedocs.io/en/latest/pages/benchmark.html) page for more details.
+Please refer to the [benchmark](https://envpool.readthedocs.io/en/latest/content/benchmark.html) page for more details.
 
 ## API Usage
 
@@ -163,11 +163,11 @@ Besides `num_envs`, there is one more argument `batch_size`. While `num_envs` de
 envpool.make("Pong-v5", env_type="gym", num_envs=64, batch_size=16)
 ```
 
-There are other configurable arguments with `envpool.make`; please check out [EnvPool Python interface introduction](https://envpool.readthedocs.io/en/latest/pages/interface.html).
+There are other configurable arguments with `envpool.make`; please check out [EnvPool Python interface introduction](https://envpool.readthedocs.io/en/latest/content/python_interface.html).
 
 ## Contributing
 
-EnvPool is still under development. More environments will be added, and we always welcome contributions to help EnvPool better. If you would like to contribute, please check out our [contribution guideline](https://envpool.readthedocs.io/en/latest/pages/contributing.html).
+EnvPool is still under development. More environments will be added, and we always welcome contributions to help EnvPool better. If you would like to contribute, please check out our [contribution guideline](https://envpool.readthedocs.io/en/latest/content/contributing.html).
 
 ## License
 
