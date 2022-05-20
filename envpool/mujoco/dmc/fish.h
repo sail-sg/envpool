@@ -51,7 +51,7 @@ class FishEnvFns {
                     "obs:target"_.Bind(Spec<mjtNum>({3})),
 #ifdef ENVPOOL_TEST
                     "info:qpos0"_.Bind(Spec<mjtNum>({14})),
-                    "info:target"_.Bind(Spec<mjtNum>({3})),
+                    "info:target0"_.Bind(Spec<mjtNum>({3})),
 #endif
                     "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
   }
@@ -87,7 +87,7 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
   std::uniform_real_distribution<> dist_uniform_;
   bool is_swim_;
 #ifdef ENVPOOL_TEST
-  std::array<mjtNum, 3> target_;
+  std::array<mjtNum, 3> target0_;
 #endif
 
  public:
@@ -158,11 +158,6 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
       model_->geom_pos[id_target_ * 3] = target_x;
       model_->geom_pos[id_target_ * 3 + 1] = target_y;
       model_->geom_pos[id_target_ * 3 + 2] = target_z;
-#ifdef ENVPOOL_TEST
-      target_[0] = model_->geom_pos[id_target_ * 3 + 0];
-      target_[1] = model_->geom_pos[id_target_ * 3 + 1];
-      target_[2] = model_->geom_pos[id_target_ * 3 + 2];
-#endif
     } else {
       // Hide the target. It's irrelevant for this task.
       // physics.named.model.geom_rgba['target', 3] = 0
@@ -170,6 +165,9 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
     }
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
+    target0_[0] = model_->geom_pos[id_target_ * 3 + 0];
+    target0_[1] = model_->geom_pos[id_target_ * 3 + 1];
+    target0_[2] = model_->geom_pos[id_target_ * 3 + 2];
 #endif
   }
 
@@ -219,9 +217,7 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
     // info
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    if (is_swim_) {
-      state["info:target"_].Assign(target_.begin(), target_.size());
-    }
+    state["info:target0"_].Assign(target0_.begin(), target0_.size());
 #endif
   }
   mjtNum UpRight() {

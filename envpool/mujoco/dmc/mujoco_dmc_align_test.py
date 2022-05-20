@@ -78,10 +78,13 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         env.physics.named.model.geom_pos["target", "y"] = target[1]
       elif domain == "fish":
         if task in ["swim"]:
-          target = ts.observation.target[0]
+          target = ts.observation.target0[0]
           env.physics.named.model.geom_pos["target", "x"] = target[0]
           env.physics.named.model.geom_pos["target", "y"] = target[1]
           env.physics.named.model.geom_pos["target", "z"] = target[2]
+        else:
+          env.physics.named.model.geom_rgba['target', 3] = 0
+
       elif domain in ["finger", "ball_in_cup", "humanoid"]:
         if domain == "finger" and task in ["turn_easy", "turn_hard"]:
           target_angle = ts.observation.target[0][0]
