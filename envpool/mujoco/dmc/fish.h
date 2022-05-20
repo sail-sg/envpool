@@ -66,7 +66,7 @@ using FishEnvSpec = EnvSpec<FishEnvFns>;
 class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
  protected:
   int id_qpos_tail1_;
-  int id_qpos_tail2_; 
+  int id_qpos_tail2_;
   int id_qpos_tail_twist_;
   int id_qpos_finright_pitch_, id_qpos_finright_roll_;
   int id_qpos_finleft_pitch_, id_qpos_finleft_roll_;
@@ -106,7 +106,7 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
         id_qpos_finright_roll_(GetQposId(model_, "finright_roll")),
         id_qpos_finright_pitch_(GetQposId(model_, "finright_pitch")),
         id_qpos_finleft_roll_(GetQposId(model_, "finleft_roll")),
-        id_qpos_finright_roll_(GetQposId(model_, "finright_roll")),
+        id_qpos_finleft_pitch_(GetQposId(model_, "finleft_pitch")),
         // qvel
         id_qvel_tail1_(GetQvelId(model_, "tail1")),
         id_qvel_tail_twist_(GetQvelId(model_, "tail_twist")),
