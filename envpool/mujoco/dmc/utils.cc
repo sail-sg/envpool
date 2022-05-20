@@ -59,6 +59,10 @@ int GetQposId(mjModel* model, const std::string& name) {
   return model->jnt_qposadr[mj_name2id(model, mjOBJ_JOINT, name.c_str())];
 }
 
+int GetQvelId(mjModel* model, const std::string& name) {
+  return model->jnt_dofadr[mj_name2id(model, mjOBJ_JOINT, name.c_str())];
+}
+
 int GetSensorId(mjModel* model, const std::string& name) {
   return model->sensor_adr[mj_name2id(model, mjOBJ_SENSOR, name.c_str())];
 }

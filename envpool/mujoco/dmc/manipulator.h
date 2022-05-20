@@ -103,10 +103,10 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
   // object_angle, qvel_objx
 
   // ids
-  std::array<int, 8> id_arm_joints_, id_arm_qpos_;
+  std::array<int, 8> id_arm_joints_, id_arm_qpos_, id_arm_qvel_;
   int id_finger_, id_thumb_, id_body_receptacle_, id_body_target_;
   int id_xbody_hand_, id_xbody_object_, id_xbody_target_, id_object_x_;
-  std::array<int, 3> id_object_joints_;
+  std::array<int, 3> id_qpos_object_joints_, id_qvel_object_joints_;
   std::array<int, 5> id_touch_sensors_;
   int id_site_peg_grasp_, id_site_grasp_, id_site_peg_pinch_, id_site_pinch_;
   int id_site_peg_, id_site_target_peg_, id_site_target_peg_tip_;
@@ -136,7 +136,7 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
             mj_name2id(model_, mjOBJ_XBODY, use_peg_ ? "peg" : "ball")),
         id_xbody_target_(mj_name2id(model_, mjOBJ_XBODY,
                                     use_peg_ ? "target_peg" : "target_ball")),
-        id_object_x_(GetQposId(model_, use_peg_ ? "peg_x" : "ball_x")),
+        id_object_x_(GetQvelId(model_, use_peg_ ? "peg_x" : "ball_x")),
         id_site_peg_grasp_(mj_name2id(model_, mjOBJ_SITE, "peg_grasp")),
         id_site_grasp_(mj_name2id(model_, mjOBJ_SITE, "grasp")),
         id_site_peg_pinch_(mj_name2id(model_, mjOBJ_SITE, "peg_pinch")),
@@ -152,6 +152,7 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
       id_arm_joints_[i] =
           mj_name2id(model_, mjOBJ_JOINT, kArmJoints[i].c_str());
       id_arm_qpos_[i] = GetQposId(model_, kArmJoints[i]);
+      id_arm_qvel_[i] = GetQvelId(model_, kArmJoints[i]);
     }
     std::array<std::string, 3> object_joints;
     if (use_peg_) {
@@ -160,7 +161,8 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
       object_joints = {"ball_x", "ball_z", "ball_y"};
     }
     for (std::size_t i = 0; i < object_joints.size(); ++i) {
-      id_object_joints_[i] = GetQposId(model_, object_joints[i]);
+      id_qpos_object_joints_[i] = GetQposId(model_, object_joints[i]);
+      id_qvel_object_joints_[i] = GetQvelId(model_, object_joints[i]);
     }
     for (std::size_t i = 0; i < kTouchSensors.size(); ++i) {
       id_touch_sensors_[i] = GetSensorId(model_, kTouchSensors[i]);
@@ -250,9 +252,9 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
         data_->qvel[id_object_x_] = random_info_[7] =
             dist_uniform_(gen_) * 10 - 5;
       }
-      data_->qpos[id_object_joints_[0]] = random_info_[4] = object_x;
-      data_->qpos[id_object_joints_[1]] = random_info_[5] = object_z;
-      data_->qpos[id_object_joints_[2]] = random_info_[6] = object_angle;
+      data_->qpos[id_qpos_object_joints_[0]] = random_info_[4] = object_x;
+      data_->qpos[id_qpos_object_joints_[1]] = random_info_[5] = object_z;
+      data_->qpos[id_qpos_object_joints_[2]] = random_info_[6] = object_angle;
       // Check for collisions.
       PhysicsAfterReset();
       penetrating = data_->ncon > 0;
@@ -294,16 +296,16 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
   // bug :(
   std::array<mjtNum, 8> JointVelArm() {
     std::array<mjtNum, 8> joint;
-    for (std::size_t i = 0; i < id_arm_qpos_.size(); i++) {
-      joint[i] = data_->qvel[id_arm_qpos_[i]];
+    for (std::size_t i = 0; i < id_arm_qvel_.size(); i++) {
+      joint[i] = data_->qvel[id_arm_qvel_[i]];
     }
     return joint;
   }
 
   std::array<mjtNum, 3> JointVelObj() {
     std::array<mjtNum, 3> joint;
-    for (std::size_t i = 0; i < id_object_joints_.size(); i++) {
-      joint[i] = data_->qvel[id_object_joints_[i]];
+    for (std::size_t i = 0; i < id_qvel_object_joints_.size(); i++) {
+      joint[i] = data_->qvel[id_qvel_object_joints_[i]];
     }
     return joint;
   }

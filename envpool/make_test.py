@@ -134,6 +134,8 @@ class _MakeTest(absltest.TestCase):
         "FingerSpin-v1",
         "FingerTurnEasy-v1",
         "FingerTurnHard-v1",
+        "FishSwim-v1",
+        "FishUpright-v1",
         "HopperHop-v1",
         "HopperStand-v1",
         "HumanoidStand-v1",
