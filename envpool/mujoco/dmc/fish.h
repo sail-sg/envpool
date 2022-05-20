@@ -135,7 +135,7 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
     mjtNum quat_norm = std::sqrt(quat[0] * quat[0] + quat[1] * quat[1] +
                                  quat[2] * quat[2] + quat[3] * quat[3]);
     for (int i = 0; i < 4; ++i) {
-      data_->qpos[id_qpos_root_ + 3] = quat[i] / quat_norm;
+      data_->qpos[id_qpos_root_ + 3 + i] = quat[i] / quat_norm;
     }
     // for joint in _JOINTS:
     //   physics.named.data.qpos[joint] = self.random.uniform(-.2, .2)
