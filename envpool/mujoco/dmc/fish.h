@@ -97,7 +97,7 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
             spec.config["base_path"_],
             GetFishXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
-        id_torso_(mj_name2id(model_, mjOBJ_XBODY, "torso")),
+        id_torso_(mj_name2id(model_, mjOBJ_GEOM, "torso")),
         id_target_(mj_name2id(model_, mjOBJ_GEOM, "target")),
         id_mouth_(mj_name2id(model_, mjOBJ_GEOM, "mouth")),
         // qpos
@@ -193,7 +193,7 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
     auto target_norm = std::sqrt(target[0] * target[0] + target[1] * target[1] +
                                  target[2] * target[2]);
     auto in_target = RewardTolerance(target_norm, 0.0, radii, 2 * radii);
-    auto is_upright = 0.5 * (UpRight() + 1.0);
+    auto is_upright = 0.5 * (UpRight() + 1);
     return static_cast<float>((7 * in_target + is_upright) / 8);
   }
 
