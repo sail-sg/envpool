@@ -262,9 +262,9 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
     std::array<mjtNum, 3> mouth_to_target;
     for (int i = 0; i < 3; i++) {
       mouth_to_target[i] =
-          mouth_to_target_global[0] * data_->geom_xpos[id_mouth_ * 9 + i] +
-          mouth_to_target_global[1] * data_->geom_xpos[id_mouth_ * 9 + i + 3] +
-          mouth_to_target_global[2] * data_->geom_xpos[id_mouth_ * 9 + i + 6];
+          mouth_to_target_global[0] * data_->geom_xmat[id_mouth_ * 9 + i] +
+          mouth_to_target_global[1] * data_->geom_xmat[id_mouth_ * 9 + i + 3] +
+          mouth_to_target_global[2] * data_->geom_xmat[id_mouth_ * 9 + i + 6];
     }
     return mouth_to_target;
   }
