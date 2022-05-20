@@ -98,11 +98,8 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
       "palm_touch", "finger_touch", "thumb_touch", "fingertip_touch",
       "thumbtip_touch"};
 
-  bool use_peg_;
-  bool insert_;
-  bool fully_observable_;
-  std::string target_;
-  std::string object_;
+  bool use_peg_, insert_;
+  std::string target_, object_;
   std::array<std::string, 3> object_joints_;
   std::string receptacle_;
   std::uniform_real_distribution<> dist_uniform_;
@@ -120,7 +117,19 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
                                     spec.config["task_name"_]),
                   spec.config["frame_skip"_],
                   spec.config["max_episode_steps"_]),
+        use_peg_(spec.config["task_name"_] == "bring_peg" ||
+                 spec.config["task_name"_] == "insert_peg"),
+        insert_(spec.config["task_name"_] == "insert_peg" ||
+                spec.config["task_name"_] == "insert_ball"),
+        target_(use_peg_ ? "target_peg" : "target_ball"),
+        object_(use_peg_ ? "peg" : "ball"),
+        receptacle_(use_peg_ ? "slot" : "cup"),
         dist_uniform_(0, 1) {
+    if (use_peg_) {
+      object_joints_ = {"peg_x", "peg_z", "peg_y"};
+    } else {
+      object_joints_ = {"ball_x", "ball_z", "ball_y"};
+    }
 #ifdef ENVPOOL_TEST
     qvel_.reset(new mjtNum[model_->nv]);
     body_pos_.reset(new mjtNum[model_->nbody * 3]);
@@ -134,8 +143,8 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
       for (const auto& arm_joint : kArmJoints) {
         int id_joint = mj_name2id(model_, mjOBJ_JOINT, arm_joint.c_str());
         bool is_limited = model_->jnt_limited[id_joint] == 1 ? true : false;
-        double lower = is_limited ? model_->jnt_range[id_joint * 2 + 0] : -M_PI;
-        double upper = is_limited ? model_->jnt_range[id_joint * 2 + 1] : M_PI;
+        mjtNum lower = is_limited ? model_->jnt_range[id_joint * 2 + 0] : -M_PI;
+        mjtNum upper = is_limited ? model_->jnt_range[id_joint * 2 + 1] : M_PI;
         data_->qpos[model_->jnt_qposadr[id_joint]] =
             dist_uniform_(gen_) * (upper - lower) + lower;
       }
@@ -168,7 +177,7 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
       model_->body_quat[id_body_target * 4 + 0] = std::cos(target_angle / 2);
       model_->body_quat[id_body_target * 4 + 2] = std::sin(target_angle / 2);
 
-      float choice = dist_uniform_(gen_);
+      mjtNum choice = dist_uniform_(gen_);
       mjtNum object_x;
       mjtNum object_z;
       mjtNum object_angle;
@@ -203,7 +212,7 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
         object_x = dist_uniform_(gen_) * 1 - 0.5;
         object_z = dist_uniform_(gen_) * 0.7;
         object_angle = dist_uniform_(gen_) * 2 * M_PI;
-        data_->qvel[mj_name2id(model_, mjOBJ_JOINT, (object_ + "_x").c_str())] =
+        data_->qvel[GetQposId(model_, object_ + "_x")] =
             dist_uniform_(gen_) * 10 - 5;
       }
       data_->qpos[mj_name2id(model_, mjOBJ_JOINT, object_joints_[0].c_str())] =
@@ -224,7 +233,6 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
                 sizeof(mjtNum) * model_->nbody * 3);
     std::memcpy(body_quat_.get(), model_->body_quat,
                 sizeof(mjtNum) * model_->nbody * 4);
-
 #endif
   }
 
@@ -242,45 +250,10 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
   }
 
   float TaskGetReward() override {
-    float reward;
     if (use_peg_) {
-      reward = PegReward();
-    } else {
-      reward = BallReward();
+      return static_cast<float>(PegReward());
     }
-    return reward;
-  }
-
-  double SiteDistance(const std::string& site1, const std::string& site2) {
-    int id_site_1 = mj_name2id(model_, mjOBJ_SITE, site1.c_str());
-    int id_site_2 = mj_name2id(model_, mjOBJ_SITE, site2.c_str());
-    std::array<mjtNum, 3> diff = {data_->site_xpos[id_site_1 * 3 + 0] -
-                                      data_->site_xpos[id_site_2 * 3 + 0],
-                                  data_->site_xpos[id_site_1 * 3 + 1] -
-                                      data_->site_xpos[id_site_2 * 3 + 1],
-                                  data_->site_xpos[id_site_1 * 3 + 2] -
-                                      data_->site_xpos[id_site_2 * 3 + 2]};
-    return std::sqrt(diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2]);
-  }
-
-  [[nodiscard]] float IsClose(double distance) const {
-    // return rewards.tolerance(distance, (0, _CLOSE), _CLOSE * 2)
-    return static_cast<float>(RewardTolerance(distance, 0, kClose, kClose * 2));
-  }
-
-  float PegReward() {
-    float grasping = (IsClose(SiteDistance("peg_grasp", "grasp")) +
-                      IsClose(SiteDistance("peg_pinch", "pinch"))) /
-                     2;
-
-    float bringing = (IsClose(SiteDistance("peg", "target_peg")) +
-                      IsClose(SiteDistance("target_peg_tip", "peg_tip"))) /
-                     2;
-    return std::max(bringing, grasping / 3);
-  }
-  float BallReward() {
-    // return self._is_close(physics.site_distance('ball', 'target_ball'))
-    return IsClose(SiteDistance("ball", "target_ball"));
+    return static_cast<float>(BallReward());
   }
 
   bool TaskShouldTerminateEpisode() override { return false; }
@@ -288,8 +261,8 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
  private:
   std::array<mjtNum, 16> BoundedJointPos() {
     std::array<mjtNum, 16> bound;
-    for (unsigned int i = 0; i < kArmJoints.size(); i++) {
-      int id = mj_name2id(model_, mjOBJ_JOINT, kArmJoints[i].c_str());
+    for (std::size_t i = 0; i < kArmJoints.size(); i++) {
+      int id = GetQposId(model_, kArmJoints[i]);
       bound[i * 2 + 0] = std::sin(data_->qpos[id]);
       bound[i * 2 + 1] = std::cos(data_->qpos[id]);
     }
@@ -299,8 +272,8 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
   // bug :(
   std::array<mjtNum, 8> JointVelArm() {
     std::array<mjtNum, 8> joint;
-    for (unsigned int i = 0; i < kArmJoints.size(); i++) {
-      int id = mj_name2id(model_, mjOBJ_JOINT, kArmJoints[i].c_str());
+    for (std::size_t i = 0; i < kArmJoints.size(); i++) {
+      int id = GetQposId(model_, kArmJoints[i]);
       joint[i] = data_->qvel[id];
     }
     return joint;
@@ -308,8 +281,8 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
 
   std::array<mjtNum, 3> JointVelObj() {
     std::array<mjtNum, 3> joint;
-    for (unsigned int i = 0; i < object_joints_.size(); i++) {
-      int id = mj_name2id(model_, mjOBJ_JOINT, object_joints_[i].c_str());
+    for (std::size_t i = 0; i < object_joints_.size(); i++) {
+      int id = GetQposId(model_, object_joints_[i]);
       joint[i] = data_->qvel[id];
     }
     return joint;
@@ -317,7 +290,7 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
 
   std::array<mjtNum, 5> Touch() {
     std::array<mjtNum, 5> touch;
-    for (unsigned int i = 0; i < kTouchSensors.size(); i++) {
+    for (std::size_t i = 0; i < kTouchSensors.size(); i++) {
       int id = GetSensorId(model_, kTouchSensors[i]);
       touch[i] = std::log1p(data_->sensordata[id]);
     }
@@ -332,29 +305,59 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
             data_->xquat[id * 4 + 0], data_->xquat[id * 4 + 2]};
   }
 
+  mjtNum SiteDistance(const std::string& site1, const std::string& site2) {
+    int id_site_1 = mj_name2id(model_, mjOBJ_SITE, site1.c_str());
+    int id_site_2 = mj_name2id(model_, mjOBJ_SITE, site2.c_str());
+    std::array<mjtNum, 3> diff = {data_->site_xpos[id_site_1 * 3 + 0] -
+                                      data_->site_xpos[id_site_2 * 3 + 0],
+                                  data_->site_xpos[id_site_1 * 3 + 1] -
+                                      data_->site_xpos[id_site_2 * 3 + 1],
+                                  data_->site_xpos[id_site_1 * 3 + 2] -
+                                      data_->site_xpos[id_site_2 * 3 + 2]};
+    return std::sqrt(diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2]);
+  }
+
+  [[nodiscard]] mjtNum IsClose(mjtNum distance) const {
+    // return rewards.tolerance(distance, (0, _CLOSE), _CLOSE * 2)
+    return RewardTolerance(distance, 0, kClose, kClose * 2);
+  }
+
+  mjtNum PegReward() {
+    auto grasping = (IsClose(SiteDistance("peg_grasp", "grasp")) +
+                     IsClose(SiteDistance("peg_pinch", "pinch"))) /
+                    2;
+    auto bringing = (IsClose(SiteDistance("peg", "target_peg")) +
+                     IsClose(SiteDistance("target_peg_tip", "peg_tip"))) /
+                    2;
+    return std::max(bringing, grasping / 3);
+  }
+  mjtNum BallReward() {
+    // return self._is_close(physics.site_distance('ball', 'target_ball'))
+    return IsClose(SiteDistance("ball", "target_ball"));
+  }
+
   void WriteState() {
+    const auto& bounded_joint_pos = BoundedJointPos();
+    const auto& joint_vel_arm = JointVelArm();
+    const auto& touch = Touch();
+    const auto& hand_pos = Body2dPose("hand");
+    const auto& object_pos = Body2dPose(object_);
+    const auto& joint_vel_obj = JointVelObj();
+    const auto& target_pos = Body2dPose(target_);
+
     State state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
-    const auto& bounded_joint_pos = BoundedJointPos();
-    const auto& joint_vel_arm = JointVelArm();
-    const auto& touch = Touch();
     state["obs:arm_pos"_].Assign(bounded_joint_pos.begin(),
                                  bounded_joint_pos.size());
     state["obs:arm_vel"_].Assign(joint_vel_arm.begin(), joint_vel_arm.size());
     state["obs:touch"_].Assign(touch.begin(), touch.size());
-    if (fully_observable_) {
-      const auto& hand_pos = Body2dPose("hand");
-      const auto& object_pos = Body2dPose(object_);
-      const auto& joint_vel_obj = JointVelObj();
-      const auto& target_pos = Body2dPose(target_);
-      state["obs:hand_pos"_].Assign(hand_pos.begin(), hand_pos.size());
-      state["obs:object_pos"_].Assign(object_pos.begin(), object_pos.size());
-      state["obs:object_vel"_].Assign(joint_vel_obj.begin(),
-                                      joint_vel_obj.size());
-      state["obs:target_pos"_].Assign(target_pos.begin(), target_pos.size());
-    }
+    state["obs:hand_pos"_].Assign(hand_pos.begin(), hand_pos.size());
+    state["obs:object_pos"_].Assign(object_pos.begin(), object_pos.size());
+    state["obs:object_vel"_].Assign(joint_vel_obj.begin(),
+                                    joint_vel_obj.size());
+    state["obs:target_pos"_].Assign(target_pos.begin(), target_pos.size());
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
     state["info:qvel"_].Assign(qvel_.get(), model_->nv);

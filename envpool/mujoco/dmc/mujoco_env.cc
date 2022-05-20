@@ -165,12 +165,12 @@ void MujocoEnv::PhysicsStep(int nstep, const mjtNum* action) {
 // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/utils/randomizers.py#L35
 void MujocoEnv::RandomizeLimitedAndRotationalJoints(std::mt19937* gen) {
   for (int joint_id = 0; joint_id < model_->njnt; ++joint_id) {
-    auto joint_type = model_->jnt_type[joint_id];
-    auto is_limited = model_->jnt_limited[joint_id];
-    auto range_min = model_->jnt_range[joint_id * 2 + 0];
-    auto range_max = model_->jnt_range[joint_id * 2 + 1];
-    auto range = range_max - range_min;
-    auto qpos_offset = model_->jnt_qposadr[joint_id];
+    int joint_type = model_->jnt_type[joint_id];
+    mjtByte is_limited = model_->jnt_limited[joint_id];
+    mjtNum range_min = model_->jnt_range[joint_id * 2 + 0];
+    mjtNum range_max = model_->jnt_range[joint_id * 2 + 1];
+    mjtNum range = range_max - range_min;
+    int qpos_offset = model_->jnt_qposadr[joint_id];
     if (is_limited != 0) {
       if (joint_type == mjJNT_HINGE || joint_type == mjJNT_SLIDE) {
         data_->qpos[qpos_offset] = dist_uniform_(*gen) * range + range_min;
