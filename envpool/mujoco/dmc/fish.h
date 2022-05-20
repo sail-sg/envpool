@@ -159,9 +159,9 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
       model_->geom_pos[id_target_ * 3 + 1] = target_y;
       model_->geom_pos[id_target_ * 3 + 2] = target_z;
 #ifdef ENVPOOL_TEST
-      target_[0] = target_x;
-      target_[1] = target_y;
-      target_[2] = target_z;
+      target_[0] = model_->geom_pos[id_target_ * 3 + 0];
+      target_[1] = model_->geom_pos[id_target_ * 3 + 1];
+      target_[2] = model_->geom_pos[id_target_ * 3 + 2];
 #endif
     } else {
       // Hide the target. It's irrelevant for this task.
