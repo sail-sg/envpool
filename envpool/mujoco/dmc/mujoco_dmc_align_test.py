@@ -109,9 +109,8 @@ class _MujocoDmcAlignTest(absltest.TestCase):
             np.cos(target_angle / 2), np.sin(target_angle / 2)
           )
         p.model.body_pos[target, ["x", "z"]] = target_x, target_z
-        p.model.body_quat[
-          target,
-          ["qw", "qy"]] = (np.cos(target_angle / 2), np.sin(target_angle / 2))
+        p.model.body_quat[target, ["qw", "qy"]] = \
+          (np.cos(target_angle / 2), np.sin(target_angle / 2))
         if np.isclose(init_type, 1):
           np.testing.assert_allclose(
             [object_x, object_z, object_angle],
