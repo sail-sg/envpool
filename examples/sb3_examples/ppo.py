@@ -90,7 +90,7 @@ if use_env_pool:
 else:
   env = make_vec_env(env_id, n_envs=num_envs)
 
-# Tuned hyperparams for Pendulum-v0, works also for CartPole-v1
+# Tuned hyperparams for Pendulum-v1, works also for CartPole-v1
 kwargs = {}
 if env_id == "Pendulum-v1":
   # Use gSDE for better results
