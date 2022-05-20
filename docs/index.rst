@@ -62,27 +62,27 @@ stable version through `envpool.readthedocs.io/en/stable/
 
 .. toctree::
    :maxdepth: 1
-   :caption: Contents
+   :caption: Content
 
-   pages/slides
-   pages/build
-   pages/interface
-   pages/benchmark
-   pages/env
-   pages/contributing
+   content/slides
+   content/build
+   content/python_interface
+   content/benchmark
+   content/new_env
+   content/contributing
 
 
 .. toctree::
    :maxdepth: 1
-   :caption: Environments
+   :caption: Environment
 
-   api/atari
-   api/box2d
-   api/classic
-   api/dm_control
-   api/mujoco
-   api/toy_text
-   api/vizdoom
+   env/atari
+   env/box2d
+   env/classic_control
+   env/dm_control
+   env/mujoco_gym
+   env/toy_text
+   env/vizdoom
 
 
 Indices and tables

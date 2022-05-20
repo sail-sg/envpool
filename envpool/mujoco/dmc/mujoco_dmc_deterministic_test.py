@@ -28,6 +28,8 @@ from envpool.mujoco.dmc import (
   DmcCheetahEnvSpec,
   DmcFingerDMEnvPool,
   DmcFingerEnvSpec,
+  DmcFishDMEnvPool,
+  DmcFishEnvSpec,
   DmcHopperDMEnvPool,
   DmcHopperEnvSpec,
   DmcHumanoidDMEnvPool,
@@ -67,7 +69,7 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
       spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=1, task_name=task))
     )
     act_spec = env0.action_spec()
-    for _ in range(3000):
+    for t in range(3000):
       action = np.array(
         [
           np.random.uniform(
@@ -87,7 +89,7 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
         if blacklist and k in blacklist:
           continue
         if np.abs(o0).sum() > 0 and ts0.step_type[0] != dm_env.StepType.FIRST:
-          self.assertFalse(np.allclose(o0, o2), (k, o0, o2))
+          self.assertFalse(np.allclose(o0, o2), (t, k, o0, o2))
 
   def test_acrobot(self) -> None:
     obs_keys = ["orientations", "velocity"]
@@ -118,6 +120,17 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
     obs_keys += ["target_position", "dist_to_target"]
     for task in ["turn_easy", "turn_hard"]:
       self.check(DmcFingerEnvSpec, DmcFingerDMEnvPool, task, obs_keys)
+
+  def test_fish(self) -> None:
+    obs_keys = ["joint_angles", "upright", "velocity"]
+    for task in ["swim", "upright"]:
+      self.check(
+        DmcFishEnvSpec,
+        DmcFishDMEnvPool,
+        task,
+        obs_keys + (["target"] if task == "swim" else []),
+        blacklist=["joint_angles"],
+      )
 
   def test_hopper(self) -> None:
     obs_keys = ["position", "velocity", "touch"]

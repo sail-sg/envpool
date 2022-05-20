@@ -5,13 +5,13 @@ Contributing to EnvPool
 Build From Source
 -----------------
 
-See :doc:`/pages/build`.
+See :doc:`/content/build`.
 
 
 Adding A New Environment
 ------------------------
 
-See :doc:`/pages/env`.
+See :doc:`/content/new_env`.
 
 
 Lint Check

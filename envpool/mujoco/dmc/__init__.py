@@ -22,6 +22,8 @@ from envpool.mujoco.mujoco_dmc_envpool import (
   _DmcCheetahEnvSpec,
   _DmcFingerEnvPool,
   _DmcFingerEnvSpec,
+  _DmcFishEnvPool,
+  _DmcFishEnvSpec,
   _DmcHopperEnvPool,
   _DmcHopperEnvSpec,
   _DmcHumanoidEnvPool,
@@ -50,6 +52,9 @@ DmcCheetahEnvSpec, DmcCheetahDMEnvPool, DmcCheetahGymEnvPool = py_env(
 )
 DmcFingerEnvSpec, DmcFingerDMEnvPool, DmcFingerGymEnvPool = py_env(
   _DmcFingerEnvSpec, _DmcFingerEnvPool
+)
+DmcFishEnvSpec, DmcFishDMEnvPool, DmcFishGymEnvPool = py_env(
+  _DmcFishEnvSpec, _DmcFishEnvPool
 )
 DmcHopperEnvSpec, DmcHopperDMEnvPool, DmcHopperGymEnvPool = py_env(
   _DmcHopperEnvSpec, _DmcHopperEnvPool
@@ -85,6 +90,12 @@ __all__ = [
   "DmcCheetahEnvSpec",
   "DmcCheetahDMEnvPool",
   "DmcCheetahGymEnvPool",
+  "DmcFingerEnvSpec",
+  "DmcFingerDMEnvPool",
+  "DmcFingerGymEnvPool",
+  "DmcFishEnvSpec",
+  "DmcFishDMEnvPool",
+  "DmcFishGymEnvPool",
   "DmcHopperEnvSpec",
   "DmcHopperDMEnvPool",
   "DmcHopperGymEnvPool",

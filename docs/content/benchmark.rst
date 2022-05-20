@@ -46,7 +46,7 @@ EnvPool (numa+async) /           /                **896,830** **3,134,287**
 Testing Method and Command
 --------------------------
 
-All of the scripts are under `benchmark/ <https://github.com/sail-sg/envpool/tree/master/benchmark>`__ folder. When increasing the number of envs, we also adjust the total number of steps to make each test run for about one minute.
+All of the scripts are under `benchmark/ <https://github.com/sail-sg/envpool/tree/main/benchmark>`__ folder. When increasing the number of envs, we also adjust the total number of steps to make each test run for about one minute.
 
 For-loop
 ~~~~~~~~

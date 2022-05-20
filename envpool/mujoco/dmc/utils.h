@@ -33,6 +33,7 @@ std::string XMLRemoveByBodyName(const std::string& content,
 
 // the following id is not 1 on 1 mapping
 int GetQposId(mjModel* model, const std::string& name);
+int GetQvelId(mjModel* model, const std::string& name);
 int GetSensorId(mjModel* model, const std::string& name);
 
 // rewards

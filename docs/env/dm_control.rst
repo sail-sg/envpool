@@ -79,6 +79,24 @@ FingerSpin-v1, FingerTurnEasy-v1, FingerTurnHard-v1
     values are meaningless in ``FingerSpin-v1``.
 
 
+FishSwim-v1, FishUpright-v1
+---------------------------
+
+`dm_control suite fish source code
+<https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/fish.py>`_
+
+- Observation spec: a namedtuple with four keys: ``joint_angles (7)``,
+  ``upright ()``, ``target (3)``, ``velocity (13)``;
+- Action spec: ``(5)``, with range ``[-1, 1]``;
+- ``frame_skip``: 10;
+- ``max_episode_steps``: 1000;
+
+.. note ::
+
+    The observation key ``target`` is only available in ``FishSwim-v1`` task.
+    The value is meaningless in ``FishUpright-v1``.
+
+
 HopperStand-v1, HopperHop-v1
 ----------------------------
 

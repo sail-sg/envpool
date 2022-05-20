@@ -30,6 +30,8 @@ from envpool.mujoco.dmc import (
   DmcCheetahEnvSpec,
   DmcFingerDMEnvPool,
   DmcFingerEnvSpec,
+  DmcFishDMEnvPool,
+  DmcFishEnvSpec,
   DmcHopperDMEnvPool,
   DmcHopperEnvSpec,
   DmcHumanoidDMEnvPool,
@@ -76,6 +78,11 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         target = ts.observation.target[0]
         env.physics.named.model.geom_pos["target", "x"] = target[0]
         env.physics.named.model.geom_pos["target", "y"] = target[1]
+      elif domain == "fish" and task == "swim":
+        target = ts.observation.target0[0]
+        env.physics.named.model.geom_pos["target", "x"] = target[0]
+        env.physics.named.model.geom_pos["target", "y"] = target[1]
+        env.physics.named.model.geom_pos["target", "z"] = target[2]
       elif domain in ["finger", "ball_in_cup", "humanoid"]:
         if domain == "finger" and task in ["turn_easy", "turn_hard"]:
           target_angle = ts.observation.target[0][0]
@@ -195,6 +202,11 @@ class _MujocoDmcAlignTest(absltest.TestCase):
     self.run_align_check_entry(
       "finger", ["spin", "turn_easy", "turn_hard"], DmcFingerEnvSpec,
       DmcFingerDMEnvPool
+    )
+
+  def test_fish(self) -> None:
+    self.run_align_check_entry(
+      "fish", ["swim", "upright"], DmcFishEnvSpec, DmcFishDMEnvPool
     )
 
   def test_hopper(self) -> None:

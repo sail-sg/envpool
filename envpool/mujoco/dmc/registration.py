@@ -30,6 +30,8 @@ dmc_mujoco_envs = [
   ("finger", "spin"),
   ("finger", "turn_easy"),
   ("finger", "turn_hard"),
+  ("fish", "swim"),
+  ("fish", "upright"),
   ("hopper", "hop"),
   ("hopper", "stand"),
   ("humanoid", "stand"),
