@@ -65,14 +65,22 @@ using FishEnvSpec = EnvSpec<FishEnvFns>;
 
 class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
  protected:
-  int id_qpos_tail1_, id_qpos_tail2_, id_qpos_tail_twist_;
-  int id_qpos_finright_roll_, id_qpos_finright_pitch_;
-  int id_qpos_finleft_roll_, id_qpos_finleft_pitch_;
-  int id_qvel_tail1_, id_qvel_tail2_, id_qvel_tail_twist_;
-  int id_qvel_finright_roll_, id_qvel_finright_pitch_;
-  int id_qvel_finleft_roll_, id_qvel_finleft_pitch_;
-  int id_qpos_root_, id_torso_;
-  int id_target_, id_mouth_;
+  int id_qpos_tail1_;
+  int id_qpos_tail2_; 
+  int id_qpos_tail_twist_;
+  int id_qpos_finright_pitch_, id_qpos_finright_roll_;
+  int id_qpos_finleft_pitch_, id_qpos_finleft_roll_;
+  int id_qvel_tail1_;
+  int id_qvel_tail2_;
+  int id_qvel_tail_twist_;
+  int id_qvel_finright_roll_;
+  int id_qvel_finright_pitch_;
+  int id_qvel_finleft_roll_;
+  int id_qvel_finleft_pitch_;
+  int id_qpos_root_;
+  int id_torso_;
+  int id_target_;
+  int id_mouth_;
   std::uniform_real_distribution<> dist_uniform_;
   std::normal_distribution<> dist_normal_;
   bool is_swim_;
@@ -106,8 +114,7 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
         id_qvel_finright_roll_(GetQvelId(model_, "finright_roll")),
         id_qvel_finright_pitch_(GetQvelId(model_, "finright_pitch")),
         id_qvel_finleft_roll_(GetQvelId(model_, "finleft_roll")),
-        id_qvel_finright_roll_(GetQvelId(model_, "finright_roll")),
-        id_qvel_finright_roll_(GetQvelId(model_, "finright_roll")),
+        id_qvel_finleft_pitch_(GetQvelId(model_, "finleft_pitch")),
         dist_normal_(0, 1),
         dist_uniform_(0, 1),
         is_swim_(spec.config["task_name"_] == "swim") {
@@ -124,10 +131,9 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
     std::array<mjtNum, 4> quat = {dist_normal_(gen_), dist_normal_(gen_),
                                   dist_normal_(gen_), dist_normal_(gen_)};
     mjtNum quat_norm = std::sqrt(quat[0] * quat[0] + quat[1] * quat[1] +
-                                 quat[2] * quat[2] + quat[3] * quat[3] +);
-    quat = quat / quat_norm;
+                                 quat[2] * quat[2] + quat[3] * quat[3]);
     for (int i = 0; i < 4; ++i) {
-      data_->qpos[id_qpos_root_ + 3] = quat[i];
+      data_->qpos[id_qpos_root_ + 3] = quat[i] / quat_norm;
     }
     // for joint in _JOINTS:
     //   physics.named.data.qpos[joint] = self.random.uniform(-.2, .2)
