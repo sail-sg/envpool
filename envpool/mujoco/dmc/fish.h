@@ -115,8 +115,8 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
     }
     // for joint in _JOINTS:
     //   physics.named.data.qpos[joint] = self.random.uniform(-.2, .2)
-    for (std::size_t i = 0; i < id_qpos_joint_.size(); ++i) {
-      data_->qpos[id_qpos_joint_[i]] = dist_uniform_(gen_) * 0.4 - 0.2;
+    for (int id : id_qpos_joint_) {
+      data_->qpos[id] = dist_uniform_(gen_) * 0.4 - 0.2;
     }
     if (is_swim_) {
       // Randomize target position.
