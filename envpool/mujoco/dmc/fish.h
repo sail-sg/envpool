@@ -45,7 +45,7 @@ class FishEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs:joint_angles"_.Bind(Spec<mjtNum>({4})),
+    return MakeDict("obs:joint_angles"_.Bind(Spec<mjtNum>({7})),
                     "obs:upright"_.Bind(Spec<mjtNum>({})),
                     "obs:velocity"_.Bind(Spec<mjtNum>({13})),
                     "obs:target"_.Bind(Spec<mjtNum>({3})),
