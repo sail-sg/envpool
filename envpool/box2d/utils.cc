@@ -14,6 +14,10 @@
 
 #include "envpool/box2d/utils.h"
 
+namespace box2d {
+
 b2Vec2 Vec2(double x, double y) {
   return b2Vec2(static_cast<float>(x), static_cast<float>(y));
 }
+
+}  // namespace box2d

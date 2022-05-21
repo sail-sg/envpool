@@ -55,7 +55,6 @@ BipedalWalkerBox2dEnv::BipedalWalkerBox2dEnv(bool hardcore,
       elapsed_step_(max_episode_steps + 1),
       hardcore_(hardcore),
       done_(true),
-      dist_uniform_(0, 1),
       world_(new b2World(b2Vec2(0.0, -10.0))),
       hull_(nullptr) {
   for (const auto* p : kHullPoly) {
@@ -63,7 +62,70 @@ BipedalWalkerBox2dEnv::BipedalWalkerBox2dEnv(bool hardcore,
   }
 }
 
-void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {}
+void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
+  // clean all body in world
+  if (hull_ != nullptr) {
+    world_->SetContactListener(nullptr);
+    for (auto& t : terrain_) {
+      world_->DestroyBody(t);
+    }
+    terrain_.clear();
+    world_->DestroyBody(hull_);
+    for (auto& l : legs_) {
+      world_->DestroyBody(l);
+    }
+  }
+  listener_ = std::make_unique<BipedalWalkerContactDetector>(this);
+  world_->SetContactListener(listener_.get());
+  // terrain
+  {
+    int state = kGrass;
+    double velocity = 0.0;
+    double y = kTerrainHeight;
+    int counter = kTerrainStartpad;
+    bool oneshot = false;
+    std::vector<double> terrain_x;
+    std::vector<double> terrain_y;
+    double original_y = 0.0;
+    for (int i = 0; i < kTerrainLength; ++i) {
+      double x = i * kTerrainStep;
+      terrain_x.emplace_back(x);
+      if (state == kGrass && !oneshot) {
+        velocity = 0.8 * velocity + 0.01 * Sign(kTerrainHeight - y);
+        if (i > kTerrainStartpad) {
+          velocity += RandUniform(-1, 1)(*gen) / kScale;
+        }
+        y += velocity;
+      } else if (state == kPit && oneshot) {
+        counter = RandInt(3, 5)(*gen);
+        //
+      } else if (state == kPit && !oneshot) {
+        y = original_y;
+        if (counter > 1) {
+          y -= 4 * kTerrainStep;
+        }
+      } else if (state == kStump && oneshot) {
+        counter = RandInt(1, 3)(*gen);
+
+      } else if (state == kStairs && oneshot) {
+      } else if (state == kStairs && !oneshot) {
+      }
+      oneshot = false;
+      terrain_y.emplace_back(y);
+      if (--counter == 0) {
+        counter = RandInt(kTerrainGrass / 2, kTerrainGrass)(*gen);
+        if (state == kGrass && hardcore_) {
+          state = RandInt(1, kStates)(*gen);
+        } else {
+          state = kGrass;
+        }
+        oneshot = true;
+      }
+    }
+    for (int i = 0; i < kTerrainLength - 1; ++i) {
+    }
+  }
+}
 
 void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
                                       float action1, float action2,

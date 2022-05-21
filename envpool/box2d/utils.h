@@ -19,7 +19,21 @@
 
 #include <box2d/box2d.h>
 
+#include <random>
+
+namespace box2d {
+
+using RandInt = std::uniform_int_distribution<>;
+using RandUniform = std::uniform_real_distribution<>;
+
 // this function is to pass clang-tidy conversion check
 b2Vec2 Vec2(double x, double y);
+
+template <typename T>
+int Sign(T val) {
+  return (T(0) < val) - (val < T(0));
+}
+
+}  // namespace box2d
 
 #endif  // ENVPOOL_BOX2D_UTILS_H_

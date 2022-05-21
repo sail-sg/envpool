@@ -30,8 +30,6 @@ namespace box2d {
 class LunarLanderContactDetector;
 
 class LunarLanderBox2dEnv {
-  friend class LunarLanderContactDetector;
-
   const double kFPS = 50;
   const double kScale = 30.0;
   const double kMainEnginePower = 13.0;
@@ -50,12 +48,13 @@ class LunarLanderBox2dEnv {
   const double kViewportH = 400;
   static const int kChunks = 11;
 
+  friend class LunarLanderContactDetector;
+
  protected:
   int max_episode_steps_, elapsed_step_;
   float reward_, prev_shaping_;
   bool continuous_, done_;
   std::array<float, 8> obs_;
-  std::uniform_real_distribution<> dist_;
 
   // box2d related
   std::unique_ptr<b2World> world_;
