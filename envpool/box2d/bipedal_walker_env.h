@@ -29,6 +29,15 @@ namespace box2d {
 
 class BipedalWalkerContactDetector;
 
+class BipedalWalkerLidarCallback : public b2RayCastCallback {
+ public:
+  b2Vec2 p2;
+  float fraction;
+
+  float ReportFixture(b2Fixture* fixture, const b2Vec2& point,
+                      const b2Vec2& normal, float fraction) override;
+};
+
 class BipedalWalkerBox2dEnv {
   const double kFPS = 50;
   const double kScale = 30.0;
@@ -53,7 +62,7 @@ class BipedalWalkerBox2dEnv {
   const double kTerrainHeight = kViewportH / kScale / 4;
   const double kTerrainGrass = 10;
   const int kTerrainStartpad = 20;
-  const double kFriction = 2.5;
+  const float kFriction = 2.5;
   static const int kLidarNum = 10;
   static const int kGrass = 0;
   static const int kStump = 1;
@@ -76,6 +85,8 @@ class BipedalWalkerBox2dEnv {
   std::vector<b2Body*> terrain_;
   std::array<b2Body*, 4> legs_;
   std::array<float, 4> ground_contact_;
+  std::array<b2Joint*, 4> joints_;
+  std::vector<BipedalWalkerLidarCallback> lidar_;
   std::unique_ptr<BipedalWalkerContactDetector> listener_;
 
  public:
