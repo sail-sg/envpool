@@ -64,7 +64,6 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
  protected:
   int id_upper_arm_, id_lower_arm_, id_target_, id_tip_, id_shoulder_,
       id_elbow_;
-  std::uniform_real_distribution<> dist_uniform_;
   bool is_sparse_;
 
  public:
@@ -80,7 +79,6 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
         id_tip_(mj_name2id(model_, mjOBJ_SITE, "tip")),
         id_shoulder_(GetQposId(model_, "shoulder")),
         id_elbow_(GetQposId(model_, "elbow")),
-        dist_uniform_(-M_PI, M_PI),
         is_sparse_(spec.config["task_name"_] == "swingup_sparse") {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name != "swingup" && task_name != "swingup_sparse") {
@@ -90,8 +88,8 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
   }
 
   void TaskInitializeEpisode() override {
-    data_->qpos[id_shoulder_] = dist_uniform_(gen_);
-    data_->qpos[id_elbow_] = dist_uniform_(gen_);
+    data_->qpos[id_shoulder_] = RandUniform(-M_PI, M_PI)(gen_);
+    data_->qpos[id_elbow_] = RandUniform(-M_PI, M_PI)(gen_);
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
 #endif
