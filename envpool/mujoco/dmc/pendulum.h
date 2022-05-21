@@ -64,7 +64,6 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public MujocoEnv {
  protected:
   const mjtNum kCosineBound = std::cos(8.0 / 180 * M_PI);
   int id_hinge_, id_pole_;
-  std::uniform_real_distribution<> dist_uniform_;
 
  public:
   PendulumEnv(const Spec& spec, int env_id)
@@ -75,8 +74,7 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public MujocoEnv {
                   spec.config["frame_skip"_],
                   spec.config["max_episode_steps"_]),
         id_hinge_(GetQvelId(model_, "hinge")),
-        id_pole_(mj_name2id(model_, mjOBJ_XBODY, "pole")),
-        dist_uniform_(-M_PI, M_PI) {
+        id_pole_(mj_name2id(model_, mjOBJ_XBODY, "pole")) {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name != "swingup") {
       throw std::runtime_error("Unknown task_name " + task_name +
@@ -85,7 +83,7 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public MujocoEnv {
   }
 
   void TaskInitializeEpisode() override {
-    data_->qpos[0] = dist_uniform_(gen_);
+    data_->qpos[0] = RandUniform(-M_PI, M_PI)(gen_);
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
 #endif

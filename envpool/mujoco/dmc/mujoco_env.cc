@@ -27,9 +27,7 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
     : n_sub_steps_(n_sub_steps),
       max_episode_steps_(max_episode_steps),
       elapsed_step_(max_episode_steps + 1),
-      done_(true),
-      dist_uniform_(0, 1),
-      dist_normal_(0, 1) {
+      done_(true) {
   // initialize vfs from common assets and raw xml
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/mujoco/wrapper/core.py#L158
   // https://github.com/deepmind/mujoco/blob/main/python/mujoco/structs.cc
@@ -169,31 +167,31 @@ void MujocoEnv::RandomizeLimitedAndRotationalJoints(std::mt19937* gen) {
     mjtByte is_limited = model_->jnt_limited[joint_id];
     mjtNum range_min = model_->jnt_range[joint_id * 2 + 0];
     mjtNum range_max = model_->jnt_range[joint_id * 2 + 1];
-    mjtNum range = range_max - range_min;
     int qpos_offset = model_->jnt_qposadr[joint_id];
     if (is_limited != 0) {
       if (joint_type == mjJNT_HINGE || joint_type == mjJNT_SLIDE) {
-        data_->qpos[qpos_offset] = dist_uniform_(*gen) * range + range_min;
+        data_->qpos[qpos_offset] = RandUniform(range_min, range_max)(*gen);
       } else if (joint_type == mjJNT_BALL) {
         // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/utils/randomizers.py#L23
-        std::array<mjtNum, 3> axis = {dist_normal_(*gen), dist_normal_(*gen),
-                                      dist_normal_(*gen)};
+        std::array<mjtNum, 3> axis = {RandNormal(0, 1)(*gen),
+                                      RandNormal(0, 1)(*gen),
+                                      RandNormal(0, 1)(*gen)};
         auto norm = std::sqrt(axis[0] * axis[0] + axis[1] * axis[1] +
                               axis[2] * axis[2]);
         axis = {axis[0] / norm, axis[1] / norm, axis[2] / norm};
-        auto angle = dist_uniform_(*gen) * range_max;
+        auto angle = RandNormal(0, range_max)(*gen);
         mju_axisAngle2Quat(data_->qpos + qpos_offset, axis.begin(), angle);
       }
     } else if (joint_type == mjJNT_HINGE) {
-      data_->qpos[qpos_offset] = dist_uniform_(*gen) * M_PI * 2 - M_PI;
+      data_->qpos[qpos_offset] = RandUniform(-M_PI, M_PI)(*gen);
     } else if (joint_type == mjJNT_BALL || joint_type == mjJNT_FREE) {
       std::array<mjtNum, 4> quat;
       if (joint_type == mjJNT_BALL) {
-        quat = {dist_normal_(*gen), dist_normal_(*gen), dist_normal_(*gen),
-                dist_normal_(*gen)};
+        quat = {RandNormal(0, 1)(*gen), RandNormal(0, 1)(*gen),
+                RandNormal(0, 1)(*gen), RandNormal(0, 1)(*gen)};
       } else {
-        quat = {dist_uniform_(*gen), dist_uniform_(*gen), dist_uniform_(*gen),
-                dist_uniform_(*gen)};
+        quat = {RandUniform(0, 1)(*gen), RandUniform(0, 1)(*gen),
+                RandUniform(0, 1)(*gen), RandUniform(0, 1)(*gen)};
       }
       auto norm = std::sqrt(quat[0] * quat[0] + quat[1] * quat[1] +
                             quat[2] * quat[2] + quat[3] * quat[3]);

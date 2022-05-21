@@ -62,7 +62,6 @@ using BallInCupEnvSpec = EnvSpec<BallInCupEnvFns>;
 class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
  protected:
   int id_target_, id_ball_, id_ball_x_, id_ball_z_;
-  std::uniform_real_distribution<> dist_ball_x_, dist_ball_z_;
 
  public:
   BallInCupEnv(const Spec& spec, int env_id)
@@ -75,9 +74,7 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
         id_target_(mj_name2id(model_, mjOBJ_SITE, "target")),
         id_ball_(mj_name2id(model_, mjOBJ_XBODY, "ball")),
         id_ball_x_(GetQposId(model_, "ball_x")),
-        id_ball_z_(GetQposId(model_, "ball_z")),
-        dist_ball_x_(-0.2, 0.2),
-        dist_ball_z_(0.2, 0.5) {
+        id_ball_z_(GetQposId(model_, "ball_z")) {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name != "catch") {
       throw std::runtime_error("Unknown task_name " + task_name +
@@ -88,8 +85,8 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
   void TaskInitializeEpisode() override {
     while (true) {
       // Assign a random ball position.
-      data_->qpos[id_ball_x_] = dist_ball_x_(gen_);
-      data_->qpos[id_ball_z_] = dist_ball_z_(gen_);
+      data_->qpos[id_ball_x_] = RandUniform(-0.2, 0.2)(gen_);
+      data_->qpos[id_ball_z_] = RandUniform(0.2, 0.5)(gen_);
 #ifdef ENVPOOL_TEST
       std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
 #endif
