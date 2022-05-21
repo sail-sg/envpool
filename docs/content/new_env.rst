@@ -3,12 +3,12 @@ Add New Environment into EnvPool
 
 To add a new environment in C++ that EnvPool will parallelly run, we provide a
 developer interface in `envpool/core/env.h
-<https://github.com/sail-sg/envpool/blob/master/envpool/core/env.h>`_.
+<https://github.com/sail-sg/envpool/blob/main/envpool/core/env.h>`_.
 
 - For a quick and annotated example, please refer to
-  `envpool/dummy/ <https://github.com/sail-sg/envpool/tree/master/envpool/dummy>`_.
+  `envpool/dummy/ <https://github.com/sail-sg/envpool/tree/main/envpool/dummy>`_.
 - `envpool/atari
-  <https://github.com/sail-sg/envpool/tree/master/envpool/atari>`_ serves as
+  <https://github.com/sail-sg/envpool/tree/main/envpool/atari>`_ serves as
   a more complex, real example.
 
 In the following example, we will create an environment ``CartPole``.
@@ -185,7 +185,7 @@ available to see on the python side:
 .. note ::
 
     The common config and common state/action spec are defined in
-    `env_spec.h <https://github.com/sail-sg/envpool/blob/master/envpool/core/env_spec.h>`_.
+    `env_spec.h <https://github.com/sail-sg/envpool/blob/main/envpool/core/env_spec.h>`_.
 
 .. note ::
 
@@ -255,7 +255,7 @@ CartPoleEnv
 ~~~~~~~~~~~
 
 Now we are going to create a class ``CartPoleEnv`` that inherits
-`Env <https://github.com/sail-sg/envpool/blob/master/envpool/core/env.h>`_.
+`Env <https://github.com/sail-sg/envpool/blob/main/envpool/core/env.h>`_.
 
 We have already defined three types ``Spec``, ``State`` and ``Action`` in Env
 class for convenience, which follows the definition of ``CartPoleEnvSpec``.
@@ -271,7 +271,7 @@ The following functions are required to override:
 - ``void Step(const Action& action)``: perform one ``env.step(action)``.
 
 The reference implementation is in `envpool/classic_control/cartpole.h
-<https://github.com/sail-sg/envpool/blob/master/envpool/classic_control/cartpole.h>`_.
+<https://github.com/sail-sg/envpool/blob/main/envpool/classic_control/cartpole.h>`_.
 
 
 Array Read/Write

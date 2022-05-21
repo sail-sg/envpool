@@ -5,17 +5,17 @@
 
 ---
 
-[![PyPI](https://img.shields.io/pypi/v/envpool)](https://pypi.org/project/envpool/) [![Downloads](https://static.pepy.tech/personalized-badge/envpool?period=total&units=international_system&left_color=grey&right_color=orange&left_text=PyPI%20Download)](https://pepy.tech/project/envpool) [![Read the Docs](https://img.shields.io/readthedocs/envpool)](https://envpool.readthedocs.io/) [![Unittest](https://github.com/sail-sg/envpool/workflows/Bazel%20Build%20and%20Test/badge.svg?branch=master)](https://github.com/sail-sg/envpool/actions) [![GitHub issues](https://img.shields.io/github/issues/sail-sg/envpool)](https://github.com/sail-sg/envpool/issues) [![GitHub stars](https://img.shields.io/github/stars/sail-sg/envpool)](https://github.com/sail-sg/envpool/stargazers) [![GitHub forks](https://img.shields.io/github/forks/sail-sg/envpool)](https://github.com/sail-sg/envpool/network) [![GitHub license](https://img.shields.io/github/license/sail-sg/envpool)](https://github.com/sail-sg/envpool/blob/master/LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/envpool)](https://pypi.org/project/envpool/) [![Downloads](https://static.pepy.tech/personalized-badge/envpool?period=total&units=international_system&left_color=grey&right_color=orange&left_text=PyPI%20Download)](https://pepy.tech/project/envpool) [![Read the Docs](https://img.shields.io/readthedocs/envpool)](https://envpool.readthedocs.io/) [![Unittest](https://github.com/sail-sg/envpool/workflows/Bazel%20Build%20and%20Test/badge.svg?branch=main)](https://github.com/sail-sg/envpool/actions) [![GitHub issues](https://img.shields.io/github/issues/sail-sg/envpool)](https://github.com/sail-sg/envpool/issues) [![GitHub stars](https://img.shields.io/github/stars/sail-sg/envpool)](https://github.com/sail-sg/envpool/stargazers) [![GitHub forks](https://img.shields.io/github/forks/sail-sg/envpool)](https://github.com/sail-sg/envpool/network) [![GitHub license](https://img.shields.io/github/license/sail-sg/envpool)](https://github.com/sail-sg/envpool/blob/main/LICENSE)
 
 **EnvPool** is a C++-based batched environment pool with pybind11 and thread pool. It has high performance (\~1M raw FPS with Atari games, \~3M raw FPS with Mujoco simulator on DGX-A100) and compatible APIs (supports both gym and dm\_env, both sync and async, both single and multi player environment). Currently it supports:
 
-- [x] [Atari games](https://envpool.readthedocs.io/en/latest/api/atari.html)
-- [x] [Mujoco (gym)](https://envpool.readthedocs.io/en/latest/api/mujoco.html)
-- [x] [Classic control RL envs](https://envpool.readthedocs.io/en/latest/api/classic.html): CartPole, MountainCar, Pendulum, Acrobot
-- [x] [Toy text RL envs](https://envpool.readthedocs.io/en/latest/api/toy_text.html): Catch, FrozenLake, Taxi, NChain, CliffWalking, Blackjack
-- [x] [ViZDoom single player](https://envpool.readthedocs.io/en/latest/api/vizdoom.html)
-- [ ] [DeepMind Control Suite](https://envpool.readthedocs.io/en/latest/api/dm_control.html)
-- [ ] [Box2D](https://envpool.readthedocs.io/en/latest/api/box2d.html)
+- [x] [Atari games](https://envpool.readthedocs.io/en/latest/env/atari.html)
+- [x] [Mujoco (gym)](https://envpool.readthedocs.io/en/latest/env/mujoco_gym.html)
+- [x] [Classic control RL envs](https://envpool.readthedocs.io/en/latest/env/classic_control.html): CartPole, MountainCar, Pendulum, Acrobot
+- [x] [Toy text RL envs](https://envpool.readthedocs.io/en/latest/env/toy_text.html): Catch, FrozenLake, Taxi, NChain, CliffWalking, Blackjack
+- [x] [ViZDoom single player](https://envpool.readthedocs.io/en/latest/env/vizdoom.html)
+- [x] [DeepMind Control Suite](https://envpool.readthedocs.io/en/latest/env/dm_control.html)
+- [ ] [Box2D](https://envpool.readthedocs.io/en/latest/env/box2d.html)
 - [ ] Procgen
 - [ ] Minigrid
 
@@ -25,15 +25,14 @@ Here are EnvPool's several highlights:
 - Manage a pool of envs, interact with the envs in batched APIs by default;
 - Support both synchronous execution and asynchronous execution;
 - Support both single player and multi-player environment;
-- Easy C++ developer API to add new envs;
+- Easy C++ developer API to add new envs: [Customized C++ environment integration](https://envpool.readthedocs.io/en/latest/content/new_env.html);
 - **1 Million** Atari frames / **3 Million** Mujoco steps per second simulation with 256 CPU cores, **~20x** throughput of Python subprocess-based vector env;
 - **~3x** throughput of Python subprocess-based vector env on low resource setup like 12 CPU cores;
 - Comparing with existing GPU-based solution ([Brax](https://github.com/google/brax) / [Isaac-gym](https://developer.nvidia.com/isaac-gym)), EnvPool is a **general** solution for various kinds of speeding-up RL environment parallelization;
 - Compatible with some existing RL libraries, e.g., [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3), [Tianshou](https://github.com/thu-ml/tianshou), or [CleanRL](https://github.com/vwxyzjn/cleanrl).
-  - Stable-Baselines3 [`Pendulum-v0` example](https://github.com/sail-sg/envpool/blob/master/examples/sb3_examples/ppo.py);
-  - Tianshou [`CartPole` example](https://github.com/sail-sg/envpool/blob/master/examples/tianshou_examples/cartpole_ppo.py), [`Pendulum-v0` example](https://github.com/sail-sg/envpool/blob/master/examples/tianshou_examples/pendulum_ppo.py), [Atari example](https://github.com/thu-ml/tianshou/tree/master/examples/atari#envpool), [Mujoco example](https://github.com/thu-ml/tianshou/tree/master/examples/mujoco#envpool), and [integration guideline](https://tianshou.readthedocs.io/en/master/tutorials/cheatsheet.html#envpool-integration);
-  - CleanRL [`Pong-v5` example](https://github.com/sail-sg/envpool/blob/master/examples/cleanrl_examples/ppo_atari_envpool.py) ([Solving Pong in 5 mins](https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/#solving-pong-in-5-minutes-with-ppo--envpool) ([tracked experiment](https://wandb.ai/costa-huang/cleanRL/runs/opk2dmta)));
-- Support [customized C++ environment integration](https://envpool.readthedocs.io/en/latest/pages/env.html).
+  - Stable-Baselines3 [`Pendulum-v1` example](https://github.com/sail-sg/envpool/blob/main/examples/sb3_examples/ppo.py);
+  - Tianshou [`CartPole` example](https://github.com/sail-sg/envpool/blob/main/examples/tianshou_examples/cartpole_ppo.py), [`Pendulum-v1` example](https://github.com/sail-sg/envpool/blob/main/examples/tianshou_examples/pendulum_ppo.py), [Atari example](https://github.com/thu-ml/tianshou/tree/master/examples/atari#envpool), [Mujoco example](https://github.com/thu-ml/tianshou/tree/master/examples/mujoco#envpool), and [integration guideline](https://tianshou.readthedocs.io/en/master/tutorials/cheatsheet.html#envpool-integration);
+  - CleanRL [`Pong-v5` example](https://github.com/sail-sg/envpool/blob/main/examples/cleanrl_examples/ppo_atari_envpool.py) ([Solving Pong in 5 mins](https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/#solving-pong-in-5-minutes-with-ppo--envpool) ([tracked experiment](https://wandb.ai/costa-huang/cleanRL/runs/opk2dmta))).
 
 ## Installation
 
@@ -58,13 +57,13 @@ If no error occurs, you have successfully installed EnvPool.
 
 ### From Source
 
-Please refer to the [guideline](https://envpool.readthedocs.io/en/latest/pages/build.html).
+Please refer to the [guideline](https://envpool.readthedocs.io/en/latest/content/build.html).
 
 ## Documentation
 
 The tutorials and API documentation are hosted on [envpool.readthedocs.io](https://envpool.readthedocs.io).
 
-The example scripts are under [examples/](https://github.com/sail-sg/envpool/tree/master/examples) folder; benchmark scripts are under [benchmark/](https://github.com/sail-sg/envpool/tree/master/benchmark) folder.
+The example scripts are under [examples/](https://github.com/sail-sg/envpool/tree/main/examples) folder; benchmark scripts are under [benchmark/](https://github.com/sail-sg/envpool/tree/main/benchmark) folder.
 
 ## Benchmark Results
 
@@ -93,11 +92,11 @@ We report EnvPool performance with sync mode, async mode, and NUMA + async mode,
 ![](https://envpool.readthedocs.io/en/latest/_images/throughput.png)
 
 
-Please refer to the [benchmark](https://envpool.readthedocs.io/en/latest/pages/benchmark.html) page for more details.
+Please refer to the [benchmark](https://envpool.readthedocs.io/en/latest/content/benchmark.html) page for more details.
 
 ## API Usage
 
-The following content shows both synchronous and asynchronous API usage of EnvPool. You can also run the full script at [examples/env_step.py](https://github.com/sail-sg/envpool/blob/master/examples/env_step.py)
+The following content shows both synchronous and asynchronous API usage of EnvPool. You can also run the full script at [examples/env_step.py](https://github.com/sail-sg/envpool/blob/main/examples/env_step.py)
 
 ### Synchronous API
 
@@ -163,11 +162,11 @@ Besides `num_envs`, there is one more argument `batch_size`. While `num_envs` de
 envpool.make("Pong-v5", env_type="gym", num_envs=64, batch_size=16)
 ```
 
-There are other configurable arguments with `envpool.make`; please check out [EnvPool Python interface introduction](https://envpool.readthedocs.io/en/latest/pages/interface.html).
+There are other configurable arguments with `envpool.make`; please check out [EnvPool Python interface introduction](https://envpool.readthedocs.io/en/latest/content/python_interface.html).
 
 ## Contributing
 
-EnvPool is still under development. More environments will be added, and we always welcome contributions to help EnvPool better. If you would like to contribute, please check out our [contribution guideline](https://envpool.readthedocs.io/en/latest/pages/contributing.html).
+EnvPool is still under development. More environments will be added, and we always welcome contributions to help EnvPool better. If you would like to contribute, please check out our [contribution guideline](https://envpool.readthedocs.io/en/latest/content/contributing.html).
 
 ## License
 
