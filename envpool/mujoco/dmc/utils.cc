@@ -55,6 +55,21 @@ std::string XMLRemoveByBodyName(const std::string& content,
   return writer.result;
 }
 
+std::string XMLAddPoles(const std::string& content,
+                        int pole_numbers) {
+  pugi::xml_document doc;
+  doc.load_string(content.c_str());
+  if (pole_numbers != 1) {
+    for (const auto& name : body_names) {
+      //add poles not implemented
+      return;
+    }
+  }
+  XMLStringWriter writer;
+  doc.print(writer);
+  return writer.result;
+}
+
 int GetQposId(mjModel* model, const std::string& name) {
   return model->jnt_qposadr[mj_name2id(model, mjOBJ_JOINT, name.c_str())];
 }

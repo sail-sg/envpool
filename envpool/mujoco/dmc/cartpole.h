@@ -23,6 +23,8 @@
 #include <limits>
 #include <memory>
 #include <random>
+#include <regex>
+#include <set>
 #include <string>
 
 #include "envpool/core/async_envpool.h"
@@ -45,10 +47,21 @@ class CartpoleEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs:position"_.Bind(Spec<mjtNum>({3})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({2})),
+    const std::string task_name = conf["task_name"_];
+    int npoles;
+    npoles = 1
+    if (task_name == "two_poles") {
+      npoles = 2;
+    } else if (task_name == "three_poles") {
+      nbody = 3;
+    } else {
+      throw std::runtime_error("Unknown task_name " + task_name +
+                               " for dmc cartpole.");
+    }
+    return MakeDict("obs:position"_.Bind(Spec<mjtNum>({2 * npoles +1})),
+                    "obs:velocity"_.Bind(Spec<mjtNum>({npoles + 1})),
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.Bind(Spec<mjtNum>({2})),
+                    "info:qpos0"_.Bind(Spec<mjtNum>({npoles + 1})),
 #endif
                     "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
   }
@@ -62,10 +75,13 @@ using CartpoleEnvSpec = EnvSpec<CartpoleEnvFns>;
 
 class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
  protected:
-  int id_upper_arm_, id_lower_arm_, id_target_, id_tip_, id_shoulder_,
-      id_elbow_;
+  int id_slider_, id_hinge1_;
+  std::normal_distribution<> dist_normal_;
   std::uniform_real_distribution<> dist_uniform_;
+  int n_poles_;
   bool is_sparse_;
+  bool is_swingup_;
+
 
  public:
   CartpoleEnv(const Spec& spec, int env_id)
@@ -74,24 +90,48 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
             spec.config["base_path"_],
             GetCartpoleXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
-        id_upper_arm_(mj_name2id(model_, mjOBJ_XBODY, "upper_arm")),
-        id_lower_arm_(mj_name2id(model_, mjOBJ_XBODY, "lower_arm")),
-        id_target_(mj_name2id(model_, mjOBJ_SITE, "target")),
-        id_tip_(mj_name2id(model_, mjOBJ_SITE, "tip")),
-        id_shoulder_(GetQposId(model_, "shoulder")),
-        id_elbow_(GetQposId(model_, "elbow")),
-        dist_uniform_(-M_PI, M_PI),
-        is_sparse_(spec.config["task_name"_] == "swingup_sparse") {
+        id_slider_(GetQposId(model_, "slider")),
+        id_hinge1_(GetQposId(model_, "hinge1")),
+
+        dist_normal_(0, 1),
+        dist_uniform_(0, 1),
+        is_swingup_(spec.config["task_name"_] == "swingup" ||
+                    spec.config["task_name"_] == "swingup_sparse" || 
+                    spec.config["task_name"_] == "two_poles" || 
+                    spec.config["task_name"_] == "three_poles"),
+        is_sparse_(spec.config["task_name"_] == "balance_sparse" || spec.config["task_name"_] == "swingup_sparse") {
     const std::string& task_name = spec.config["task_name"_];
-    if (task_name != "swingup" && task_name != "swingup_sparse") {
+    if (task_name == "two_poles"){
+      n_poles_ = 2
+    } else if (task_name == "three_poles"){
+      n_poles_ = 3
+    } else if (task_name == "swingup" ||
+               task_name == "swingup_sparse" ||
+               task_name == "balance" ||
+               task_name == "balance_sparse"){
+      n_poles_ = 1
+    } else {
       throw std::runtime_error("Unknown task_name " + task_name +
-                               " for dmc acrobot.");
+                               " for dmc cartpole.");
     }
   }
 
   void TaskInitializeEpisode() override {
-    data_->qpos[id_shoulder_] = dist_uniform_(gen_);
-    data_->qpos[id_elbow_] = dist_uniform_(gen_);
+    if (is_swingup_) {
+      data_->qpos[id_slider_] = dist_normal_(gen_) * 0.01;
+      data_->qpos[id_hinge1_] = dist_normal_(gen_) * 0.01 + M_PI;
+      for (int i = 2; i < model_->nv; ++i) {
+        data_->qpos[id] = dist_uniform_(gen_) * 0.01;
+      }
+    } else {
+      data_->qpos[id_slider_] = dist_uniform_(gen_) * 0.2 - 0.1;      
+      for (int i = 1; i < model_->nv; ++i) {
+        data_->qpos[i] = dist_uniform_(gen_) * 0.068 - 0.034
+      }
+    }
+    for (int i = 0; i < model_->nv; ++i) {
+      data_->qvel[i] = dist_normal_(gen_)
+    }
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
 #endif
@@ -111,9 +151,25 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
   }
 
   float TaskGetReward() override {
-    mjtNum target_radius = model_->site_size[id_target_];
-    return static_cast<float>(RewardTolerance(ToTarget(), 0.0, target_radius,
-                                              is_sparse_ ? 0.0 : 1.0));
+    if (is_sparse_) {
+      auto cart_in_bounds = RewardTolerance(CartPosition(), -0.25, 0.25);
+      auto angle_in_bounds = RewardTolerance(PoleAngleCosine(), 0.995, 1);
+      // angle in_bounds prod not implemented
+      return static_cast<float>(cart_in_bounds * angle_in_bounds);
+    }
+    auto upright = (PoleAngleCosine() + 1) / 2;
+    // upright mean not implemented
+    auto centered = RewardTolerance(CartPosition(), 0.0, 0.0, 2);
+    centered = (1+centered)/2    
+    auto small_control = RewardTolerance(data_->ctrl[0], 0.0, 0.0, 1.0, 0.0,
+                                       SigmoidType::kQuadratic);
+    small_control = (small_control / model_->nu + 4) / 5;
+
+    auto small_velocity = RewardTolerance(AngularVel(), 0.0, 0.0, 5.0, 0.1,
+                                       SigmoidType::kQuadratic);
+    //smal_velocity min not implemented
+    small_velocity = (small_velocity  + 1) / 2;
+    return static_cast<float>(upright * small_control * small_velocity * centered);
   }
   bool TaskShouldTerminateEpisode() override { return false; }
 
@@ -123,9 +179,9 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
-    const auto& orientations = Orientations();
-    state["obs:orientations"_].Assign(orientations.begin(),
-                                      orientations.size());
+    const auto& position = BoundedPosition();
+    state["obs:position"_].Assign(position.begin(),
+                                  position.size());
     state["obs:velocity"_].Assign(data_->qvel, model_->nv);
     // info for check alignment
 #ifdef ENVPOOL_TEST
@@ -133,34 +189,35 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
 #endif
   }
 
-  std::array<mjtNum, 2> Horizontal() {
-    // return self.named.data.xmat[['upper_arm', 'lower_arm'], 'xz']
-    return {data_->xmat[id_upper_arm_ * 9 + 2],
-            data_->xmat[id_lower_arm_ * 9 + 2]};
+  mjtNum CartPosition() {
+    // return self.named.data.qpos['slider'][0]
+    return data_->qpos[id_slider_];
   }
-  std::array<mjtNum, 2> Vertical() {
-    // return self.named.data.xmat[['upper_arm', 'lower_arm'], 'zz']
-    return {data_->xmat[id_upper_arm_ * 9 + 8],
-            data_->xmat[id_lower_arm_ * 9 + 8]};
+  std::array<mjtNum, n_poles_> AngularVel() {
+    // return self.data.qvel[1:]
+    std::array<mjtNum, n_poles_> angular_vel;
+    for (int i = 0; i < n_poles_; ++i) {
+      angular_vel[i] = data_->qvel[1+i];
+    }
+    return angular_vel;
   }
-  mjtNum ToTarget() {
-    // tip_to_target = (self.named.data.site_xpos['target'] -
-    //                  self.named.data.site_xpos['tip'])
-    // return np.linalg.norm(tip_to_target)
-    std::array<mjtNum, 3> tip_to_target = {
-        data_->site_xpos[id_target_ * 3] - data_->site_xpos[id_tip_ * 3],
-        data_->site_xpos[id_target_ * 3 + 1] -
-            data_->site_xpos[id_tip_ * 3 + 1],
-        data_->site_xpos[id_target_ * 3 + 2] -
-            data_->site_xpos[id_tip_ * 3 + 2]};
-    return std::sqrt(tip_to_target[0] * tip_to_target[0] +
-                     tip_to_target[1] * tip_to_target[1] +
-                     tip_to_target[2] * tip_to_target[2]);
+  std::array<mjtNum, n_poles_> PoleAngleCosine() {
+    // return self.named.data.xmat[2:, 'zz']
+    std::array<mjtNum, n_poles_> pole_angle_cosine;
+    for (int i = 0; i < n_poles_; ++i) {
+      angular_vel[i] = data_->qvel[1+i];
+    }
+    return pole_angle_cosine;
   }
-  std::array<mjtNum, 4> Orientations() {
-    const auto& horizontal = Horizontal();
-    const auto& vertical = Vertical();
-    return {horizontal[0], horizontal[1], vertical[0], vertical[1]};
+  std::array<mjtNum, 2*n_poles_+1> BoundedPosition() {
+    // return self.named.data.xmat[2:, 'zz']
+    std::array<mjtNum, (2 * n_poles_ + 1)> bounded_position;
+    bounded_position[0] = 
+    for (int i = 0; i < n_poles_; ++i) {
+      bounded_position[i *2] = data_->xmat[(2+i) * 9 + 8];
+      bounded_position[i *2+1] = data_->xmat[(2+i) * 9 + 2];
+    }    
+    return bounded_position;
   }
 };
 

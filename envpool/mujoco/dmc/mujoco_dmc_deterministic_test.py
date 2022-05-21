@@ -24,6 +24,8 @@ from envpool.mujoco.dmc import (
   DmcAcrobotEnvSpec,
   DmcBallInCupDMEnvPool,
   DmcBallInCupEnvSpec,
+  DmcCartpoleDMEnvPool,
+  DmcCartpoleEnvSpec,
   DmcCheetahDMEnvPool,
   DmcCheetahEnvSpec,
   DmcFingerDMEnvPool,
@@ -107,6 +109,11 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
         # https://github.com/sail-sg/envpool/pull/124#issuecomment-1127860698
         blacklist=["velocity"],
       )
+
+  def test_cartpole(self) -> None:
+    obs_keys = ["position", "velocity"]
+    for task in ["balance", "balance_sparse", "swingup", "swingup_sparse"]:
+      self.check(DmcCartpoleEnvSpec, DmcCartpoleDMEnvPool, task, obs_keys)
 
   def test_cheetah(self) -> None:
     obs_keys = ["position", "velocity"]
