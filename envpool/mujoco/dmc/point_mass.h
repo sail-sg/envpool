@@ -63,7 +63,6 @@ class PointMassEnv : public Env<PointMassEnvSpec>, public MujocoEnv {
  protected:
   bool randomize_gains_;
   int id_geom_target_, id_geom_pointmass_;
-  std::normal_distribution<> dist_normal_;
 #ifdef ENVPOOL_TEST
   std::unique_ptr<mjtNum> wrap_prm_;
 #endif
@@ -78,8 +77,7 @@ class PointMassEnv : public Env<PointMassEnvSpec>, public MujocoEnv {
                   spec.config["max_episode_steps"_]),
 
         id_geom_target_(mj_name2id(model_, mjOBJ_GEOM, "target")),
-        id_geom_pointmass_(mj_name2id(model_, mjOBJ_GEOM, "pointmass")),
-        dist_normal_(0, 1) {
+        id_geom_pointmass_(mj_name2id(model_, mjOBJ_GEOM, "pointmass")) {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name == "easy") {
       randomize_gains_ = false;
@@ -117,7 +115,8 @@ class PointMassEnv : public Env<PointMassEnvSpec>, public MujocoEnv {
   }
 
   std::array<mjtNum, 2> GetDir() {
-    std::array<mjtNum, 2> dir = {dist_normal_(gen_), dist_normal_(gen_)};
+    std::array<mjtNum, 2> dir = {RandNormal(0, 1)(gen_),
+                                 RandNormal(0, 1)(gen_)};
     mjtNum norm_of_dir = std::sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
     return {dir[0] / norm_of_dir, dir[1] / norm_of_dir};
   }

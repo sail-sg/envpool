@@ -63,7 +63,6 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
  protected:
   const mjtNum kRunSpeed = 10;
   int id_torso_subtreelinvel_;
-  std::uniform_real_distribution<> dist_uniform_;
 
  public:
   CheetahEnv(const Spec& spec, int env_id)
@@ -72,8 +71,7 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
             spec.config["base_path"_],
             GetCheetahXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
-        id_torso_subtreelinvel_(GetSensorId(model_, "torso_subtreelinvel")),
-        dist_uniform_(0, 1) {
+        id_torso_subtreelinvel_(GetSensorId(model_, "torso_subtreelinvel")) {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name != "run") {
       throw std::runtime_error("Unknown task_name " + task_name +
@@ -87,9 +85,8 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
       if (is_limited) {
         mjtNum range_min = model_->jnt_range[id_joint * 2 + 0];
         mjtNum range_max = model_->jnt_range[id_joint * 2 + 1];
-        mjtNum range = range_max - range_min;
         data_->qpos[model_->jnt_qposadr[id_joint]] =
-            dist_uniform_(gen_) * range + range_min;
+            RandUniform(range_min, range_max)(gen_);
       }
     }
 #ifdef ENVPOOL_TEST

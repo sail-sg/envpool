@@ -76,7 +76,6 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
   int id_distal_velocity_, id_hinge_velocity_;
   int id_sensor_tip_, id_sensor_target_;
   int id_spinner_, id_touchtop_, id_touchbottom_;
-  std::uniform_real_distribution<> dist_uniform_;
   mjtNum target_radius_;
   bool is_spin_;
 #ifdef ENVPOOL_TEST
@@ -104,7 +103,6 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
         id_spinner_(GetSensorId(model_, "spinner")),
         id_touchtop_(GetSensorId(model_, "touchtop")),
         id_touchbottom_(GetSensorId(model_, "touchbottom")),
-        dist_uniform_(-M_PI, M_PI),
         is_spin_(spec.config["task_name"_] == "spin") {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name == "turn_easy") {
@@ -133,7 +131,7 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
       // target_z = hinge_z + radius * np.cos(target_angle)
       // physics.named.model.site_pos['target', ['x', 'z']] = target_x, target_z
       // physics.named.model.site_size['target', 0] = self._target_radius
-      mjtNum target_angle = dist_uniform_(gen_);
+      mjtNum target_angle = RandUniform(-M_PI, M_PI)(gen_);
       mjtNum hinge_x = data_->xanchor[id_hinge_ * 3 + 0];
       mjtNum hinge_z = data_->xanchor[id_hinge_ * 3 + 2];
       mjtNum radius = model_->geom_size[id_cap1_ * 3 + 0] +

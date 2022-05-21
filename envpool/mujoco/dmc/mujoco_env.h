@@ -51,10 +51,6 @@ class MujocoEnv {
   std::unique_ptr<mjtNum> qpos0_;
 #endif
 
- private:
-  std::uniform_real_distribution<> dist_uniform_;
-  std::normal_distribution<> dist_normal_;
-
  public:
   MujocoEnv(const std::string& base_path, const std::string& raw_xml,
             int n_sub_steps, int max_episode_steps);

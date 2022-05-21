@@ -20,10 +20,15 @@
 #include <mjxmacro.h>
 #include <mujoco.h>
 
+#include <random>
 #include <string>
 #include <vector>
 
 namespace mujoco_dmc {
+
+using RandInt = std::uniform_int_distribution<>;
+using RandUniform = std::uniform_real_distribution<>;
+using RandNormal = std::normal_distribution<>;
 
 // xml related
 std::string GetFileContent(const std::string& base_path,

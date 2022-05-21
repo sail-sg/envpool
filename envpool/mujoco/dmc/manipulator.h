@@ -97,7 +97,6 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
       "thumbtip_touch"};
 
   bool use_peg_, insert_;
-  std::uniform_real_distribution<> dist_uniform_;
   std::array<mjtNum, 8> random_info_;
   // target_x, target_z, target_angle, init_type, object_x, object_z,
   // object_angle, qvel_objx
@@ -124,7 +123,6 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
                  spec.config["task_name"_] == "insert_peg"),
         insert_(spec.config["task_name"_] == "insert_peg" ||
                 spec.config["task_name"_] == "insert_ball"),
-        dist_uniform_(0, 1),
         id_finger_(GetQposId(model_, "finger")),
         id_thumb_(GetQposId(model_, "thumb")),
         id_body_receptacle_(
@@ -177,18 +175,17 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
         bool is_limited = model_->jnt_limited[id_joint] == 1 ? true : false;
         mjtNum lower = is_limited ? model_->jnt_range[id_joint * 2 + 0] : -M_PI;
         mjtNum upper = is_limited ? model_->jnt_range[id_joint * 2 + 1] : M_PI;
-        data_->qpos[id_arm_qpos_[i]] =
-            dist_uniform_(gen_) * (upper - lower) + lower;
+        data_->qpos[id_arm_qpos_[i]] = RandUniform(lower, upper)(gen_);
       }
       data_->qpos[id_finger_] = data_->qpos[id_thumb_];
 #ifdef ENVPOOL_TEST
       std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
 #endif
-      mjtNum target_x = random_info_[0] = dist_uniform_(gen_) * 0.8 - 0.4;
-      mjtNum target_z = dist_uniform_(gen_) * 0.3 + 0.1;
+      mjtNum target_x = random_info_[0] = RandUniform(-0.4, 0.4)(gen_);
+      mjtNum target_z = RandUniform(0.1, 0.4)(gen_);
       mjtNum target_angle;
       if (insert_) {
-        target_angle = dist_uniform_(gen_) * (M_PI * 2 / 3) - M_PI / 3;
+        target_angle = RandUniform(-M_PI / 3, M_PI / 3)(gen_);
         // model.body_pos[self._receptacle, ['x', 'z']]
         model_->body_pos[id_body_receptacle_ * 3 + 0] = target_x;
         model_->body_pos[id_body_receptacle_ * 3 + 2] = target_z;
@@ -198,7 +195,7 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
         model_->body_quat[id_body_receptacle_ * 4 + 2] =
             std::sin(target_angle / 2);
       } else {
-        target_angle = dist_uniform_(gen_) * 2 * M_PI - M_PI;
+        target_angle = RandUniform(-M_PI, M_PI)(gen_);
       }
       random_info_[0] = target_x;
       random_info_[1] = target_z;
@@ -212,7 +209,7 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
       model_->body_quat[id_body_target_ * 4 + 0] = std::cos(target_angle / 2);
       model_->body_quat[id_body_target_ * 4 + 2] = std::sin(target_angle / 2);
 
-      mjtNum choice = dist_uniform_(gen_);
+      mjtNum choice = RandUniform(0, 1)(gen_);
       mjtNum object_x;
       mjtNum object_z;
       mjtNum object_angle;
@@ -246,11 +243,10 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
         // object_z = uniform(0, .7)
         // object_angle = uniform(0, 2*np.pi)
         // data.qvel[self._object + '_x'] = uniform(-5, 5)
-        object_x = dist_uniform_(gen_) * 1 - 0.5;
-        object_z = dist_uniform_(gen_) * 0.7;
-        object_angle = dist_uniform_(gen_) * 2 * M_PI;
-        data_->qvel[id_object_x_] = random_info_[7] =
-            dist_uniform_(gen_) * 10 - 5;
+        object_x = RandUniform(-0.5, 0.5)(gen_);
+        object_z = RandUniform(0, 0.7)(gen_);
+        object_angle = RandUniform(0, M_PI * 2)(gen_);
+        data_->qvel[id_object_x_] = random_info_[7] = RandUniform(-5, 5)(gen_);
       }
       data_->qpos[id_qpos_object_joints_[0]] = random_info_[4] = object_x;
       data_->qpos[id_qpos_object_joints_[1]] = random_info_[5] = object_z;

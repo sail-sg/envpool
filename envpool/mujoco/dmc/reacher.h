@@ -68,7 +68,6 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
   const mjtNum kSmallTarget = 0.015;
   int id_target_, id_finger_;
   mjtNum target_size_;
-  std::uniform_real_distribution<> dist_angle_, dist_radius_;
 #ifdef ENVPOOL_TEST
   std::array<mjtNum, 2> target_;
 #endif
@@ -81,9 +80,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
             GetReacherXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
         id_target_(mj_name2id(model_, mjOBJ_GEOM, "target")),
-        id_finger_(mj_name2id(model_, mjOBJ_GEOM, "finger")),
-        dist_angle_(0, 2 * M_PI),
-        dist_radius_(0.05, 0.2) {
+        id_finger_(mj_name2id(model_, mjOBJ_GEOM, "finger")) {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name == "easy") {
       target_size_ = kBigTarget;
@@ -98,8 +95,8 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
   void TaskInitializeEpisode() override {
     model_->geom_size[6 * 3] = target_size_;
     RandomizeLimitedAndRotationalJoints(&gen_);
-    mjtNum angle = dist_angle_(gen_);
-    mjtNum radius = dist_radius_(gen_);
+    mjtNum angle = RandUniform(0, M_PI * 2)(gen_);
+    mjtNum radius = RandUniform(0.05, 0.2)(gen_);
     // physics.named.model.geom_pos['target', 'x'] = radius * np.sin(angle)
     // physics.named.model.geom_pos['target', 'y'] = radius * np.cos(angle)
     model_->geom_pos[id_target_ * 3 + 0] = radius * std::sin(angle);
