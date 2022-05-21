@@ -62,6 +62,22 @@ BipedalWalkerBox2dEnv::BipedalWalkerBox2dEnv(bool hardcore,
   }
 }
 
+void BipedalWalkerBox2dEnv::CreateTerrain(std::vector<b2Vec2> poly) {
+  b2BodyDef bd;
+  bd.type = b2_staticBody;
+
+  b2PolygonShape shape;
+  shape.Set(poly.data(), poly.size());
+
+  b2FixtureDef fd;
+  fd.shape = &shape;
+  fd.friction = kFriction;
+
+  auto* t = world_->CreateBody(&bd);
+  t->CreateFixture(&fd);
+  terrain_.emplace_back(t);
+}
+
 void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
   // clean all body in world
   if (hull_ != nullptr) {
@@ -87,6 +103,9 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
     std::vector<double> terrain_x;
     std::vector<double> terrain_y;
     double original_y = 0.0;
+    int stair_steps = 0;
+    int stair_width = 0;
+    int stair_height = 0;
     for (int i = 0; i < kTerrainLength; ++i) {
       double x = i * kTerrainStep;
       terrain_x.emplace_back(x);
@@ -98,7 +117,16 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
         y += velocity;
       } else if (state == kPit && oneshot) {
         counter = RandInt(3, 5)(*gen);
-        //
+        std::vector<b2Vec2> poly{Vec2(x, y), Vec2(x + kTerrainStep, y),
+                                 Vec2(x + kTerrainStep, y - 4 * kTerrainStep),
+                                 Vec2(x, y - 4 * kTerrainStep)};
+        CreateTerrain(poly);
+        for (auto& p : poly) {
+          p = b2Vec2(p.x + kTerrainStep * counter, p.y);
+        }
+        CreateTerrain(poly);
+        counter += 2;
+        original_y = y;
       } else if (state == kPit && !oneshot) {
         y = original_y;
         if (counter > 1) {
@@ -106,9 +134,31 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
         }
       } else if (state == kStump && oneshot) {
         counter = RandInt(1, 3)(*gen);
-
+        auto size = kTerrainStep * counter;
+        std::vector<b2Vec2> poly{Vec2(x, y), Vec2(x + size, y),
+                                 Vec2(x + size, y + size), Vec2(x, y + size)};
+        CreateTerrain(poly);
       } else if (state == kStairs && oneshot) {
+        stair_height = RandUniform(0, 1)(*gen) > 0.5 ? 1 : -1;
+        stair_width = RandInt(4, 5)(*gen);
+        stair_steps = RandInt(3, 5)(*gen);
+        original_y = y;
+        for (int s = 0; s < stair_steps; ++s) {
+          std::vector<b2Vec2> poly{
+              Vec2(x + kTerrainStep * s * stair_width,
+                   y + kTerrainStep * s * stair_height),
+              Vec2(x + kTerrainStep * (1 + s) * stair_width,
+                   y + kTerrainStep * s * stair_height),
+              Vec2(x + kTerrainStep * (1 + s) * stair_width,
+                   y + kTerrainStep * (s * stair_height - 1)),
+              Vec2(x + kTerrainStep * s * stair_width,
+                   y + kTerrainStep * (s * stair_height - 1))};
+          CreateTerrain(poly);
+        }
+        counter = stair_steps * stair_width;
       } else if (state == kStairs && !oneshot) {
+        int s = stair_steps * stair_width - counter - stair_height;
+        y = original_y + kTerrainStep * s / stair_width * stair_height;
       }
       oneshot = false;
       terrain_y.emplace_back(y);
@@ -123,8 +173,25 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
       }
     }
     for (int i = 0; i < kTerrainLength - 1; ++i) {
+      b2BodyDef bd;
+      bd.type = b2_staticBody;
+
+      b2EdgeShape shape;
+      shape.SetTwoSided(Vec2(terrain_x[i], terrain_y[i]),
+                        Vec2(terrain_x[i + 1], terrain_y[i + 1]));
+
+      b2FixtureDef fd;
+      fd.shape = &shape;
+      fd.friction = kFriction;
+      fd.filter.categoryBits = 0x0001;
+
+      auto* t = world_->CreateBody(&bd);
+      t->CreateFixture(&fd);
+      terrain_.emplace_back(t);
     }
   }
+
+  // hull
 }
 
 void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,

@@ -88,6 +88,7 @@ class BipedalWalkerBox2dEnv {
   void ResetBox2d(std::mt19937* gen);
   void StepBox2d(std::mt19937* gen, float action0, float action1, float action2,
                  float action3);
+  void CreateTerrain(std::vector<b2Vec2> poly);
 };
 
 class BipedalWalkerContactDetector : public b2ContactListener {
