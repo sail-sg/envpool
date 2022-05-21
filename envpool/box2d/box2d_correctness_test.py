@@ -21,6 +21,8 @@ from absl import logging
 from absl.testing import absltest
 
 from envpool.box2d import (
+  BipedalWalkerEnvSpec,
+  BipedalWalkerGymEnvPool,
   LunarLanderContinuousEnvSpec,
   LunarLanderContinuousGymEnvPool,
   LunarLanderDiscreteEnvSpec,
@@ -41,6 +43,13 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
       np.testing.assert_allclose(act0.high, act1.high)
     elif isinstance(act0, gym.spaces.Discrete):
       np.testing.assert_allclose(act0.n, act1.n)
+
+  def test_bipedal_walker_space(self) -> None:
+    env0 = gym.make("BipedalWalker-v3")
+    env1 = BipedalWalkerGymEnvPool(
+      BipedalWalkerEnvSpec(BipedalWalkerEnvSpec.gen_config())
+    )
+    self.run_space_check(env0, env1)
 
   def test_lunar_lander_space(self) -> None:
     env0 = gym.make("LunarLander-v2")
