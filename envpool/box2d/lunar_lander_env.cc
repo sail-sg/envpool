@@ -103,8 +103,11 @@ void LunarLanderBox2dEnv::ResetBox2d(std::mt19937* gen) {
     b2EdgeShape shape;
     shape.SetTwoSided(b2Vec2(0, 0), Vec2(w, 0));
 
+    b2FixtureDef fd;
+    fd.shape = &shape;
+
     moon_ = world_->CreateBody(&bd);
-    moon_->CreateFixture(&shape, 0);
+    moon_->CreateFixture(&fd);
   }
   for (int i = 0; i < kChunks - 1; ++i) {
     b2EdgeShape shape;
@@ -128,11 +131,11 @@ void LunarLanderBox2dEnv::ResetBox2d(std::mt19937* gen) {
     bd.position = Vec2(initial_x, initial_y);
     bd.angle = 0.0;
 
-    b2PolygonShape polygon;
-    polygon.Set(lander_poly_.data(), lander_poly_.size());
+    b2PolygonShape shape;
+    shape.Set(lander_poly_.data(), lander_poly_.size());
 
     b2FixtureDef fd;
-    fd.shape = &polygon;
+    fd.shape = &shape;
     fd.density = 5.0;
     fd.friction = 0.1;
     fd.filter.categoryBits = 0x0010;
