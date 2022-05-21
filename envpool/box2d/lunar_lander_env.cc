@@ -53,7 +53,6 @@ LunarLanderBox2dEnv::LunarLanderBox2dEnv(bool continuous, int max_episode_steps)
       elapsed_step_(max_episode_steps + 1),
       continuous_(continuous),
       done_(true),
-      dist_(0, 1),
       world_(new b2World(b2Vec2(0.0, -10.0))),
       moon_(nullptr),
       lander_(nullptr) {
@@ -89,7 +88,7 @@ void LunarLanderBox2dEnv::ResetBox2d(std::mt19937* gen) {
     if (kChunks / 2 - 2 <= i && i <= kChunks / 2 + 2) {
       height[i] = helipad_y;
     } else {
-      height[i] = dist_(*gen) * h / 2;
+      height[i] = RandUniform(0, h / 2)(*gen);
     }
   }
   for (int i = 0; i < kChunks; ++i) {
@@ -142,8 +141,8 @@ void LunarLanderBox2dEnv::ResetBox2d(std::mt19937* gen) {
 
     lander_ = world_->CreateBody(&bd);
     lander_->CreateFixture(&fd);
-    b2Vec2 force = Vec2(dist_(*gen) * 2 * kInitialRandom - kInitialRandom,
-                        dist_(*gen) * 2 * kInitialRandom - kInitialRandom);
+    b2Vec2 force = Vec2(RandUniform(-kInitialRandom, kInitialRandom)(*gen),
+                        RandUniform(-kInitialRandom, kInitialRandom)(*gen));
     lander_->ApplyForceToCenter(force, true);
   }
 
@@ -221,8 +220,8 @@ void LunarLanderBox2dEnv::StepBox2d(std::mt19937* gen, int action,
   tip[1] = std::cos(lander_->GetAngle());
   side[0] = -tip[1];
   side[1] = tip[0];
-  dispersion[0] = (dist_(*gen) * 2 - 1) / kScale;
-  dispersion[1] = (dist_(*gen) * 2 - 1) / kScale;
+  dispersion[0] = RandUniform(-1, 1)(*gen) / kScale;
+  dispersion[1] = RandUniform(-1, 1)(*gen) / kScale;
 
   // main engine
   double m_power = 0.0;
