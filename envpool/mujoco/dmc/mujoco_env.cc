@@ -179,7 +179,7 @@ void MujocoEnv::RandomizeLimitedAndRotationalJoints(std::mt19937* gen) {
         auto norm = std::sqrt(axis[0] * axis[0] + axis[1] * axis[1] +
                               axis[2] * axis[2]);
         axis = {axis[0] / norm, axis[1] / norm, axis[2] / norm};
-        auto angle = RandNormal(0, range_max)(*gen);
+        auto angle = RandUniform(0, range_max)(*gen);
         mju_axisAngle2Quat(data_->qpos + qpos_offset, axis.begin(), angle);
       }
     } else if (joint_type == mjJNT_HINGE) {
