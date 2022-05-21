@@ -30,7 +30,7 @@ using RandUniform = std::uniform_real_distribution<>;
 b2Vec2 Vec2(double x, double y);
 
 template <typename T>
-int Sign(T val) {
+T Sign(T val) {
   return (T(0) < val) - (val < T(0));
 }
 

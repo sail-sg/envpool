@@ -27,7 +27,6 @@ float BipedalWalkerLidarCallback::ReportFixture(b2Fixture* fixture,
   if ((fixture->GetFilterData().categoryBits & 1) == 0) {
     return -1;
   }
-  p2 = point;
   fraction = frac;
   return frac;
 }
@@ -102,7 +101,6 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
     for (auto& l : legs_) {
       world_->DestroyBody(l);
     }
-    lidar_.clear();
   }
   listener_ = std::make_unique<BipedalWalkerContactDetector>(this);
   world_->SetContactListener(listener_.get());
@@ -229,6 +227,7 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
     b2Vec2 force = Vec2(RandUniform(-kInitialRandom, kInitialRandom)(*gen), 0);
     hull_->ApplyForceToCenter(force, true);
   }
+
   // leg
   for (int index = 0; index < 2; ++index) {
     float sign = index == 0 ? -1 : 1;
@@ -261,11 +260,12 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
     rjd.localAnchorB = Vec2(0, kLegH / 2);
     rjd.enableMotor = true;
     rjd.enableLimit = true;
-    rjd.maxMotorTorque = static_cast<float>(kMotorsTorque);
+    rjd.maxMotorTorque = kMotorsTorque;
     rjd.motorSpeed = sign;
     rjd.lowerAngle = -0.8;
     rjd.upperAngle = 1.1;
-    joints_[index * 2] = world_->CreateJoint(&rjd);
+    joints_[index * 2] =
+        static_cast<b2RevoluteJoint*>(world_->CreateJoint(&rjd));
 
     // lower leg
     bd.position = Vec2(init_x, init_y - kLegH * 3 / 2 - kLegDown);
@@ -282,18 +282,73 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
     rjd.motorSpeed = 1;
     rjd.lowerAngle = -1.6;
     rjd.upperAngle = -0.1;
-    joints_[index * 2 + 1] = world_->CreateJoint(&rjd);
-  }
-
-  // lidar
-  for (int i = 0; i < kLidarNum; ++i) {
-    lidar_.emplace_back(BipedalWalkerLidarCallback());
+    joints_[index * 2 + 1] =
+        static_cast<b2RevoluteJoint*>(world_->CreateJoint(&rjd));
   }
 }
 
 void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
                                       float action1, float action2,
                                       float action3) {
+  float clip0 = std::min(std::max(std::abs(action0), 0.0f), 1.0f);
+  float clip1 = std::min(std::max(std::abs(action1), 0.0f), 1.0f);
+  float clip2 = std::min(std::max(std::abs(action2), 0.0f), 1.0f);
+  float clip3 = std::min(std::max(std::abs(action3), 0.0f), 1.0f);
+  joints_[0]->SetMotorSpeed(kSpeedHip * Sign(action0));
+  joints_[1]->SetMotorSpeed(kSpeedKnee * Sign(action1));
+  joints_[2]->SetMotorSpeed(kSpeedHip * Sign(action2));
+  joints_[3]->SetMotorSpeed(kSpeedKnee * Sign(action3));
+  joints_[0]->SetMaxMotorTorque(kMotorsTorque * clip0);
+  joints_[1]->SetMaxMotorTorque(kMotorsTorque * clip1);
+  joints_[2]->SetMaxMotorTorque(kMotorsTorque * clip2);
+  joints_[3]->SetMaxMotorTorque(kMotorsTorque * clip3);
+
+  world_->Step(static_cast<float>(1.0 / kFPS), 6 * 30, 2 * 30);
+
+  auto pos = hull_->GetPosition();
+  auto vel = hull_->GetLinearVelocity();
+
+  for (int i = 0; i < kLidarNum; ++i) {
+    lidar_[i].fraction = 1.0;
+    world_->RayCast(&lidar_[i], pos,
+                    Vec2(pos.x + std::sin(1.5 * i / 10.0) * kLidarRange,
+                         pos.y - std::cos(1.5 * i / 10.0) * kLidarRange));
+  }
+
+  obs_[0] = hull_->GetAngle();
+  obs_[1] = 2.0 * hull_->GetAngularVelocity() / kFPS;
+  obs_[2] = 0.3 * vel.x * kViewportW / kScale / kFPS;
+  obs_[3] = 0.3 * vel.y * kViewportH / kScale / kFPS;
+  obs_[4] = joints_[0]->GetJointAngle();
+  obs_[5] = joints_[0]->GetJointSpeed() / kSpeedHip;
+  obs_[6] = joints_[1]->GetJointAngle() + 1.0;
+  obs_[7] = joints_[1]->GetJointSpeed() / kSpeedKnee;
+  obs_[8] = ground_contact_[1];
+  obs_[9] = joints_[2]->GetJointAngle();
+  obs_[10] = joints_[2]->GetJointSpeed() / kSpeedHip;
+  obs_[11] = joints_[3]->GetJointAngle() + 1.0;
+  obs_[12] = joints_[3]->GetJointSpeed() / kSpeedKnee;
+  obs_[13] = ground_contact_[3];
+  for (int i = 0; i < kLidarNum; ++i) {
+    obs_[14 + i] = lidar_[i].fraction;
+  }
+
+  auto shaping =
+      static_cast<float>(130 * pos.x / kScale - 5 * std::abs(obs_[0]));
+  reward_ = 0;
+  if (elapsed_step_ > 0) {
+    reward_ = shaping - prev_shaping_;
+  }
+  prev_shaping_ = shaping;
+  reward_ -= 0.00035f * kMotorsTorque * (clip0 + clip1 + clip2 + clip3);
+
+  if (done_ || pos.x < 0) {
+    done_ = true;
+    reward_ = -100;
+  }
+  if (pos.x > (kTerrainLength - kTerrainGrass) * kTerrainStep) {
+    done_ = true;
+  }
   if (elapsed_step_ >= max_episode_steps_) {
     done_ = true;
   }
