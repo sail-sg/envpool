@@ -20,6 +20,18 @@
 
 namespace box2d {
 
+float BipedalWalkerLidarCallback::ReportFixture(b2Fixture* fixture,
+                                                const b2Vec2& point,
+                                                const b2Vec2& normal,
+                                                float frac) {
+  if ((fixture->GetFilterData().categoryBits & 1) == 0) {
+    return -1;
+  }
+  p2 = point;
+  fraction = frac;
+  return frac;
+}
+
 BipedalWalkerContactDetector::BipedalWalkerContactDetector(
     BipedalWalkerBox2dEnv* env)
     : env_(env) {}
@@ -90,9 +102,11 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
     for (auto& l : legs_) {
       world_->DestroyBody(l);
     }
+    lidar_.clear();
   }
   listener_ = std::make_unique<BipedalWalkerContactDetector>(this);
   world_->SetContactListener(listener_.get());
+
   // terrain
   {
     int state = kGrass;
@@ -122,7 +136,7 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
                                  Vec2(x, y - 4 * kTerrainStep)};
         CreateTerrain(poly);
         for (auto& p : poly) {
-          p = b2Vec2(p.x + kTerrainStep * counter, p.y);
+          p = Vec2(p.x + kTerrainStep * counter, p.y);
         }
         CreateTerrain(poly);
         counter += 2;
@@ -192,6 +206,89 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
   }
 
   // hull
+  double init_x = kTerrainStep * kTerrainStartpad / 2;
+  double init_y = kTerrainHeight + 2 * kLegH;
+  {
+    b2BodyDef bd;
+    bd.type = b2_dynamicBody;
+    bd.position = Vec2(init_x, init_y);
+
+    b2PolygonShape shape;
+    shape.Set(hull_poly_.data(), hull_poly_.size());
+
+    b2FixtureDef fd;
+    fd.shape = &shape;
+    fd.density = 5.0;
+    fd.friction = 0.1;
+    fd.filter.categoryBits = 0x0020;
+    fd.filter.maskBits = 0x001;
+    fd.restitution = 0.0;
+
+    hull_ = world_->CreateBody(&bd);
+    hull_->CreateFixture(&fd);
+    b2Vec2 force = Vec2(RandUniform(-kInitialRandom, kInitialRandom)(*gen), 0);
+    hull_->ApplyForceToCenter(force, true);
+  }
+  // leg
+  for (int index = 0; index < 2; ++index) {
+    float sign = index == 0 ? -1 : 1;
+
+    // upper leg
+    b2BodyDef bd;
+    bd.type = b2_dynamicBody;
+    bd.position = Vec2(init_x, init_y - kLegH / 2 - kLegDown);
+    bd.angle = sign * 0.05f;
+
+    b2PolygonShape shape;
+    shape.SetAsBox(static_cast<float>(kLegW / 2),
+                   static_cast<float>(kLegH / 2));
+
+    b2FixtureDef fd;
+    fd.shape = &shape;
+    fd.density = 1.0;
+    fd.filter.categoryBits = 0x0020;
+    fd.filter.maskBits = 0x001;
+    fd.restitution = 0.0;
+
+    legs_[index * 2] = world_->CreateBody(&bd);
+    legs_[index * 2]->CreateFixture(&fd);
+    ground_contact_[index * 2] = 0;
+
+    b2RevoluteJointDef rjd;
+    rjd.bodyA = hull_;
+    rjd.bodyB = legs_[index * 2];
+    rjd.localAnchorA = Vec2(0, kLegDown);
+    rjd.localAnchorB = Vec2(0, kLegH / 2);
+    rjd.enableMotor = true;
+    rjd.enableLimit = true;
+    rjd.maxMotorTorque = static_cast<float>(kMotorsTorque);
+    rjd.motorSpeed = sign;
+    rjd.lowerAngle = -0.8;
+    rjd.upperAngle = 1.1;
+    joints_[index * 2] = world_->CreateJoint(&rjd);
+
+    // lower leg
+    bd.position = Vec2(init_x, init_y - kLegH * 3 / 2 - kLegDown);
+    shape.SetAsBox(static_cast<float>(0.8 * kLegW / 2),
+                   static_cast<float>(kLegH / 2));
+    legs_[index * 2 + 1] = world_->CreateBody(&bd);
+    legs_[index * 2 + 1]->CreateFixture(&fd);
+    ground_contact_[index * 2 + 1] = 0;
+
+    rjd.bodyA = legs_[index * 2];
+    rjd.bodyB = legs_[index * 2 + 1];
+    rjd.localAnchorA = Vec2(0, -kLegH / 2);
+    rjd.localAnchorB = Vec2(0, kLegH / 2);
+    rjd.motorSpeed = 1;
+    rjd.lowerAngle = -1.6;
+    rjd.upperAngle = -0.1;
+    joints_[index * 2 + 1] = world_->CreateJoint(&rjd);
+  }
+
+  // lidar
+  for (int i = 0; i < kLidarNum; ++i) {
+    lidar_.emplace_back(BipedalWalkerLidarCallback());
+  }
 }
 
 void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
