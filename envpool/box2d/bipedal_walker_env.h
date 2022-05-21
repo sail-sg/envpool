@@ -31,7 +31,6 @@ class BipedalWalkerContactDetector;
 
 class BipedalWalkerLidarCallback : public b2RayCastCallback {
  public:
-  b2Vec2 p2;
   float fraction;
 
   float ReportFixture(b2Fixture* fixture, const b2Vec2& point,
@@ -41,9 +40,9 @@ class BipedalWalkerLidarCallback : public b2RayCastCallback {
 class BipedalWalkerBox2dEnv {
   const double kFPS = 50;
   const double kScale = 30.0;
-  const double kMotorsTorque = 80;
-  const double kSpeedHip = 4;
-  const double kSpeedKnee = 6;
+  const float kMotorsTorque = 80;
+  const float kSpeedHip = 4;
+  const float kSpeedKnee = 6;
   const double kLidarRange = 160 / kScale;
   const double kInitialRandom = 5;
   const double kHullPoly[5][2] = {  // NOLINT
@@ -85,8 +84,8 @@ class BipedalWalkerBox2dEnv {
   std::vector<b2Body*> terrain_;
   std::array<b2Body*, 4> legs_;
   std::array<float, 4> ground_contact_;
-  std::array<b2Joint*, 4> joints_;
-  std::vector<BipedalWalkerLidarCallback> lidar_;
+  std::array<b2RevoluteJoint*, 4> joints_;
+  std::array<BipedalWalkerLidarCallback, kLidarNum> lidar_;
   std::unique_ptr<BipedalWalkerContactDetector> listener_;
 
  public:
