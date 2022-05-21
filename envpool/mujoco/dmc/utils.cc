@@ -55,13 +55,12 @@ std::string XMLRemoveByBodyName(const std::string& content,
   return writer.result;
 }
 
-std::string XMLAddPoles(const std::string& content,
-                        int pole_numbers) {
+std::string XMLAddPoles(const std::string& content, int pole_numbers) {
   pugi::xml_document doc;
   doc.load_string(content.c_str());
   if (pole_numbers != 1) {
     for (const auto& name : body_names) {
-      //add poles not implemented
+      // add poles not implemented
       return;
     }
   }

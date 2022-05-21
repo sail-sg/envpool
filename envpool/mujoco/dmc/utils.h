@@ -31,7 +31,7 @@ std::string GetFileContent(const std::string& base_path,
 std::string XMLRemoveByBodyName(const std::string& content,
                                 const std::vector<std::string>& body_names);
 std::string XMLAddPoles(const std::string& content,
-                                const std::vector<std::string>& body_names);
+                        const std::vector<std::string>& body_names);
 // the following id is not 1 on 1 mapping
 int GetQposId(mjModel* model, const std::string& name);
 int GetQvelId(mjModel* model, const std::string& name);

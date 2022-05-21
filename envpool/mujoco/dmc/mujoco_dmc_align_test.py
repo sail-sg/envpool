@@ -26,7 +26,7 @@ from envpool.mujoco.dmc import (
   DmcAcrobotEnvSpec,
   DmcBallInCupDMEnvPool,
   DmcBallInCupEnvSpec,
-  DmcCartpoleEnvPool,
+  DmcCartpoleDMEnvPool,
   DmcCartpoleEnvSpec,
   DmcCheetahDMEnvPool,
   DmcCheetahEnvSpec,
@@ -197,7 +197,7 @@ class _MujocoDmcAlignTest(absltest.TestCase):
 
   def test_cartpole(self) -> None:
     self.run_align_check_entry(
-      "cartpole", ["balance", "balance_sparse", "swingup", "swingup_sparse"], 
+      "cartpole", ["balance", "balance_sparse", "swingup", "swingup_sparse"],
       DmcCartpoleEnvSpec, DmcCartpoleDMEnvPool
     )
 
