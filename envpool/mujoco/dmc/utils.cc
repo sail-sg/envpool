@@ -67,15 +67,20 @@ std::string XMLAddPoles(const std::string& content, int pole_numbers) {
       // child = etree.Element('body', name='pole_{}'.format(pole_index),
       // pos='0 0 1', childclass='pole')
       pugi::xml_node childpole = parent.append_child("body");
-      childpole.append_attribute("name") = "pole_" + std::to_string(i);
-      childpole.append_attribute("pos") = "0 0 1";
-      childpole.append_attribute("childclass") = "pole";
+      std::string body_name = "pole_" + std::to_string(i);
+      childpole.append_attribute("name") = name;
+      std::string body_pos = "0 0 1";
+      childpole.append_attribute("pos") = pose;
+      std::string body_pos = "pole";
+      childpole.append_attribute("childclass") = pos;
       // etree.SubElement(child, 'joint', name='hinge_{}'.format(pole_index))
       pugi::xml_node sub1 = childpole.append_child("joint");
-      sub1.append_attribute("name") = "hinge_" + std::to_string(i);
+      std::string sub1_name = "hinge_" + std::to_string(i);
+      sub1.append_attribute("name") = sub1_name;
       // etree.SubElement(child, 'geom', name='pole_{}'.format(pole_index))
-      pugi::xml_node sub1 = childpole.append_child("geom");
-      sub1.append_attribute("name") = "pole_" + std::to_string(i);
+      pugi::xml_node sub2 = childpole.append_child("geom");
+      std::string sub2_name = "pole_" + std::to_string(i);
+      sub2.append_attribute("name") = sub2_name;
       // parent.append(child)
       // parent = child
       parent = childpole;
