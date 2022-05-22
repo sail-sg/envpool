@@ -56,16 +56,23 @@ class CartpoleEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     const std::string task_name = conf["task_name"_];
-    int n_poles = 1;
+    int n_poles;
     if (task_name == "two_poles") {
       n_poles = 2;
     } else if (task_name == "three_poles") {
       n_poles = 3;
+    } else if (task_name == "swingup" || task_name == "swingup_sparse" ||
+               task_name == "balance" || task_name == "balance_sparse") {
+      n_poles = 1;
+    } else {
+      throw std::runtime_error("Unknown task_name " + task_name +
+                               " for dmc cartpole.");
     }
     return MakeDict("obs:position"_.Bind(Spec<mjtNum>({1 + 2 * n_poles})),
                     "obs:velocity"_.Bind(Spec<mjtNum>({1 + n_poles})),
 #ifdef ENVPOOL_TEST
                     "info:qpos0"_.Bind(Spec<mjtNum>({1 + n_poles})),
+                    "info:qvel0"_.Bind(Spec<mjtNum>({1 + n_poles})),
 #endif
                     "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
   }
@@ -80,8 +87,11 @@ using CartpoleEnvSpec = EnvSpec<CartpoleEnvFns>;
 class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
  protected:
   int id_slider_, id_hinge1_;
-  int n_poles_;
   bool is_sparse_, is_swingup_;
+
+#ifdef ENVPOOL_TEST
+  std::unique_ptr<mjtNum> qvel0_;
+#endif
 
  public:
   CartpoleEnv(const Spec& spec, int env_id)
@@ -92,45 +102,37 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
                   spec.config["frame_skip"_],
                   spec.config["max_episode_steps"_]),
         id_slider_(GetQposId(model_, "slider")),
-        id_hinge1_(GetQposId(model_, "hinge1")),
+        id_hinge1_(GetQposId(model_, "hinge_1")),
         is_sparse_(spec.config["task_name"_] == "balance_sparse" ||
                    spec.config["task_name"_] == "swingup_sparse"),
         is_swingup_(spec.config["task_name"_] == "swingup" ||
                     spec.config["task_name"_] == "swingup_sparse" ||
                     spec.config["task_name"_] == "two_poles" ||
                     spec.config["task_name"_] == "three_poles") {
-    const std::string& task_name = spec.config["task_name"_];
-    if (task_name == "two_poles") {
-      n_poles_ = 2;
-    } else if (task_name == "three_poles") {
-      n_poles_ = 3;
-    } else if (task_name == "swingup" || task_name == "swingup_sparse" ||
-               task_name == "balance" || task_name == "balance_sparse") {
-      n_poles_ = 1;
-    } else {
-      throw std::runtime_error("Unknown task_name " + task_name +
-                               " for dmc cartpole.");
-    }
+#ifdef ENVPOOL_TEST
+    qvel0_.reset(new mjtNum[model_->nv]);
+#endif
   }
 
   void TaskInitializeEpisode() override {
     if (is_swingup_) {
       data_->qpos[id_slider_] = RandNormal(0, 0.01)(gen_);
       data_->qpos[id_hinge1_] = RandNormal(M_PI, 0.01)(gen_);
-      for (int i = 2; i < model_->nv; ++i) {
-        data_->qpos[i] = RandUniform(0, 0.01)(gen_);
+      for (int i = 2; i < model_->nq; ++i) {
+        data_->qpos[i] = RandNormal(0, 0.01)(gen_);
       }
     } else {
       data_->qpos[id_slider_] = RandUniform(-0.1, 0.1)(gen_);
-      for (int i = 1; i < model_->nv; ++i) {
+      for (int i = 1; i < model_->nq; ++i) {
         data_->qpos[i] = RandUniform(-0.034, 0.034)(gen_);
       }
     }
     for (int i = 0; i < model_->nv; ++i) {
-      data_->qvel[i] = RandNormal(0, 1)(gen_);
+      data_->qvel[i] = RandNormal(0, 0.01)(gen_);
     }
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
+    std::memcpy(qvel0_.get(), data_->qvel, sizeof(mjtNum) * model_->nv);
 #endif
   }
 
@@ -152,28 +154,27 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
     if (is_sparse_) {
       auto cart_in_bounds = RewardTolerance(CartPosition(), -0.25, 0.25);
       mjtNum angle_in_bounds = 1.0;
-      for (int i = 0; i < n_poles_; ++i) {
-        angle_in_bounds *= RewardTolerance(pole_angle_cosine[i], 0.995, 1);
+      for (auto x : pole_angle_cosine) {
+        angle_in_bounds *= RewardTolerance(x, 0.995, 1);
       }
       return static_cast<float>(cart_in_bounds * angle_in_bounds);
     }
     mjtNum upright = 0.0;
-    for (int i = 0; i < n_poles_; ++i) {
-      upright += pole_angle_cosine[i];
+    for (auto x : pole_angle_cosine) {
+      upright += (x + 1) / 2;
     }
-    upright = (upright / n_poles_ + 1) / 2;
-    auto centered = RewardTolerance(CartPosition(), 0.0, 0.0, 2);
-    centered = (1 + centered) / 2;
+    upright /= pole_angle_cosine.size();
+    auto centered = (1 + RewardTolerance(CartPosition(), 0.0, 0.0, 2)) / 2;
     auto small_control = RewardTolerance(data_->ctrl[0], 0.0, 0.0, 1.0, 0.0,
                                          SigmoidType::kQuadratic);
-    small_control = (small_control / model_->nu + 4) / 5;
-    mjtNum small_velocity;
-    const auto& angular_vel = AngularVel();
-    small_velocity = angular_vel[0];
-    for (int i = 0; i < n_poles_; ++i) {
-      auto x = RewardTolerance(angular_vel[i], 0.0, 0.0, 5.0, 0.1,
-                               SigmoidType::kQuadratic);
-      small_velocity = std::min(x, small_velocity);
+    small_control = (small_control + 4) / 5;
+    auto angular_vel = AngularVel();
+    for (auto& x : angular_vel) {
+      x = RewardTolerance(x, 0.0, 0.0, 5.0);
+    }
+    mjtNum small_velocity = angular_vel[0];
+    for (auto x : angular_vel) {
+      small_velocity = std::min(small_velocity, x);
     }
     small_velocity = (small_velocity + 1) / 2;
     return static_cast<float>(upright * small_control * small_velocity *
@@ -188,11 +189,12 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
     state["discount"_] = discount_;
     // obs
     const auto& position = BoundedPosition();
-    state["obs:position"_].Assign(position.begin(), 1 + 2 * n_poles_);
+    state["obs:position"_].Assign(position.data(), position.size());
     state["obs:velocity"_].Assign(data_->qvel, model_->nv);
     // info for check alignment
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
+    state["info:qvel0"_].Assign(qvel0_.get(), model_->nv);
 #endif
   }
 
@@ -200,38 +202,33 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
     // return self.named.data.qpos['slider'][0]
     return data_->qpos[id_slider_];
   }
-  std::array<mjtNum, 3> AngularVel() {
+  std::vector<mjtNum> AngularVel() {
     // return self.data.qvel[1:]
-    std::array<mjtNum, 3> angular_vel;
-    for (int i = 0; i < n_poles_; ++i) {
-      angular_vel[i] = data_->qvel[1 + i];
+    std::vector<mjtNum> result;
+    for (int i = 1; i < model_->nv; ++i) {
+      result.emplace_back(data_->qvel[i]);
     }
-    for (int i = n_poles_; i < 3; ++i) {
-      angular_vel[i] = std::numeric_limits<double>::infinity();
-    }
-    return angular_vel;
+    return result;
   }
-  std::array<mjtNum, 3> PoleAngleCosine() {
+
+  std::vector<mjtNum> PoleAngleCosine() {
     // return self.named.data.xmat[2:, 'zz']
-    std::array<mjtNum, 3> pole_angle_cosine;
-    for (int i = 0; i < n_poles_; ++i) {
-      pole_angle_cosine[i] = data_->xmat[(2 + i) * 9 + 8];
+    std::vector<mjtNum> result;
+    for (int i = 2; i < model_->nbody; ++i) {
+      result.emplace_back(data_->xmat[i * 9 + 8]);
     }
-    for (int i = n_poles_; i < 3; ++i) {
-      pole_angle_cosine[i] = std::numeric_limits<double>::infinity();
-    }
-    return pole_angle_cosine;
+    return result;
   }
-  std::array<mjtNum, 7> BoundedPosition() {
+
+  std::vector<mjtNum> BoundedPosition() {
     // return np.hstack((self.cart_position(),
     //                   self.named.data.xmat[2:, ['zz', 'xz']].ravel()))
-    std::array<mjtNum, 7> bounded_position;
-    bounded_position[0] = CartPosition();
-    for (int i = 0; i < n_poles_; ++i) {
-      bounded_position[i * 2] = data_->xmat[(2 + i) * 9 + 8];
-      bounded_position[i * 2 + 1] = data_->xmat[(2 + i) * 9 + 2];
+    std::vector<mjtNum> result = {CartPosition()};
+    for (int i = 2; i < model_->nbody; ++i) {
+      result.emplace_back(data_->xmat[i * 9 + 8]);
+      result.emplace_back(data_->xmat[i * 9 + 2]);
     }
-    return bounded_position;
+    return result;
   }
 };
 
