@@ -58,25 +58,24 @@ std::string XMLRemoveByBodyName(const std::string& content,
 std::string XMLAddPoles(const std::string& content, int pole_numbers) {
   pugi::xml_document doc;
   doc.load_string(content.c_str());
-
   if (pole_numbers != 1) {
     //   parent = mjcf.find('./worldbody/body/body')  # Find first pole.
-    std::string xpath = "/worldbody/body/body[@name=pole_1]";
+    std::string xpath = "/mujoco/worldbody/body/body[@name=pole_1]";
     pugi::xml_node parent = doc.select_node(xpath.c_str()).node();
     for (int i = 0; i < n_poles_; ++i) {
       // add poles not implemented
       // child = etree.Element('body', name='pole_{}'.format(pole_index),
       // pos='0 0 1', childclass='pole')
       pugi::xml_node childpole = parent.append_child("body");
-      childpole.append_attribute("name") = "pole" + ToString(i);
+      childpole.append_attribute("name") = "pole" + std::to_string(i);
       childpole.append_attribute("pos") = "0 0 1";
       childpole.append_attribute("childclass") = "pole";
       // etree.SubElement(child, 'joint', name='hinge_{}'.format(pole_index))
       pugi::xml_node sub1 = childpole.append_child("joint");
-      sub1.append_attribute("name") = "hinge" + ToString(i);
+      sub1.append_attribute("name") = "hinge" + std::to_string(i);
       // etree.SubElement(child, 'geom', name='pole_{}'.format(pole_index))
-      pugi::xml_node sub1 = childpole.append_child("joint");
-      sub1.append_attribute("geom") = "pole" + ToString(i);
+      pugi::xml_node sub1 = childpole.append_child("geom");
+      sub1.append_attribute("name") = "pole" + std::to_string(i);
       // parent.append(child)
       // parent = child
       parent = childpole;
@@ -88,19 +87,19 @@ std::string XMLAddPoles(const std::string& content, int pole_numbers) {
     std::string floor_xpath = "/worldbody/geom";
     pugi::xml_node floor = doc.select_node(floor_xpath.c_str()).node();
     pugi::xml_attribute attr = floor.attribute("pos");
-    attr.set_value("0 " + ToString(1 - n_poles_ - 0.05) + " 1");
+    attr.set_value("0 " + std::to_string(1 - n_poles_ - 0.05) + " 1");
     // Move cameras back.
     // cameras = mjcf.findall('./worldbody/camera')
-    std::string camera0_xpath = "/worldbody/camera[@name=fixed]";
-    std::string camera1_xpath = "/worldbody/camera[@name=lookatcart]";
+    std::string camera0_xpath = "/mujoco/worldbody/camera[@name=fixed]";
+    std::string camera1_xpath = "/mujoco/worldbody/camera[@name=lookatcart]";
     // cameras[0].set('pos', '0 {} 1'.format(-1 - 2*n_poles))
     pugi::xml_node camera0 = doc.select_node(camera0_xpath.c_str()).node();
     pugi::xml_attribute camera0_attr = camera0.attribute("pos");
-    camera0_attr.set_value("0 " + ToString(-1 - 2 * n_poles_) + " 1")
+    camera0_attr.set_value("0 " + std::to_string(-1 - 2 * n_poles_) + " 1")
         // cameras[1].set('pos', '0 {} 2'.format(-2*n_poles))
         pugi::xml_node camera1 = doc.select_node(camera1_xpath.c_str()).node();
     pugi::xml_attribute camera1_attr = camera1.attribute("pos");
-    camera1_attr.set_value("0 " + ToString(-1 - 2 * n_poles_) + " 1");
+    camera1_attr.set_value("0 " + std::to_string(-1 - 2 * n_poles_) + " 1");
   }
   XMLStringWriter writer;
   doc.print(writer);
