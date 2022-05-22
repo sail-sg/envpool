@@ -71,8 +71,6 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
  protected:
   int id_mouth_, id_qpos_root_, id_torso_, id_target_;
   std::array<int, 7> id_qpos_joint_, id_qvel_joint_;
-  std::normal_distribution<> dist_normal_;
-  std::uniform_real_distribution<> dist_uniform_;
   bool is_swim_;
 #ifdef ENVPOOL_TEST
   std::array<mjtNum, 3> target0_;
@@ -89,8 +87,6 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
         id_qpos_root_(GetQposId(model_, "root")),
         id_torso_(mj_name2id(model_, mjOBJ_XBODY, "torso")),
         id_target_(mj_name2id(model_, mjOBJ_GEOM, "target")),
-        dist_normal_(0, 1),
-        dist_uniform_(0, 1),
         is_swim_(spec.config["task_name"_] == "swim") {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name != "upright" && task_name != "swim") {
@@ -106,8 +102,9 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
   void TaskInitializeEpisode() override {
     // quat = self.random.randn(4)
     // physics.named.data.qpos['root'][3:7] = quat / np.linalg.norm(quat)
-    std::array<mjtNum, 4> quat = {dist_normal_(gen_), dist_normal_(gen_),
-                                  dist_normal_(gen_), dist_normal_(gen_)};
+    std::array<mjtNum, 4> quat = {
+        RandNormal(0, 1)(gen_), RandNormal(0, 1)(gen_), RandNormal(0, 1)(gen_),
+        RandNormal(0, 1)(gen_)};
     mjtNum quat_norm = std::sqrt(quat[0] * quat[0] + quat[1] * quat[1] +
                                  quat[2] * quat[2] + quat[3] * quat[3]);
     for (int i = 0; i < 4; ++i) {
@@ -116,16 +113,16 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
     // for joint in _JOINTS:
     //   physics.named.data.qpos[joint] = self.random.uniform(-.2, .2)
     for (int id : id_qpos_joint_) {
-      data_->qpos[id] = dist_uniform_(gen_) * 0.4 - 0.2;
+      data_->qpos[id] = RandUniform(-0.2, 0.2)(gen_);
     }
     if (is_swim_) {
       // Randomize target position.
       // physics.named.model.geom_pos['target', 'x'] = uniform(-.4, .4)
       // physics.named.model.geom_pos['target', 'y'] = uniform(-.4, .4)
       // physics.named.model.geom_pos['target', 'z'] = uniform(.1, .3)
-      mjtNum target_x = dist_uniform_(gen_) * 0.8 - 0.4;
-      mjtNum target_y = dist_uniform_(gen_) * 0.8 - 0.4;
-      mjtNum target_z = dist_uniform_(gen_) * 0.2 + 0.1;
+      mjtNum target_x = RandUniform(-0.4, 0.4)(gen_);
+      mjtNum target_y = RandUniform(-0.4, 0.4)(gen_);
+      mjtNum target_z = RandUniform(0.1, 0.3)(gen_);
       model_->geom_pos[id_target_ * 3 + 0] = target_x;
       model_->geom_pos[id_target_ * 3 + 1] = target_y;
       model_->geom_pos[id_target_ * 3 + 2] = target_z;
