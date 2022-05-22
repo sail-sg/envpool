@@ -67,15 +67,15 @@ std::string XMLAddPoles(const std::string& content, int pole_numbers) {
       // child = etree.Element('body', name='pole_{}'.format(pole_index),
       // pos='0 0 1', childclass='pole')
       pugi::xml_node childpole = parent.append_child("body");
-      childpole.append_attribute("name") = "pole" + std::to_string(i);
+      childpole.append_attribute("name") = "pole_" + std::to_string(i);
       childpole.append_attribute("pos") = "0 0 1";
       childpole.append_attribute("childclass") = "pole";
       // etree.SubElement(child, 'joint', name='hinge_{}'.format(pole_index))
       pugi::xml_node sub1 = childpole.append_child("joint");
-      sub1.append_attribute("name") = "hinge" + std::to_string(i);
+      sub1.append_attribute("name") = "hinge_" + std::to_string(i);
       // etree.SubElement(child, 'geom', name='pole_{}'.format(pole_index))
       pugi::xml_node sub1 = childpole.append_child("geom");
-      sub1.append_attribute("name") = "pole" + std::to_string(i);
+      sub1.append_attribute("name") = "pole_" + std::to_string(i);
       // parent.append(child)
       // parent = child
       parent = childpole;
@@ -99,7 +99,7 @@ std::string XMLAddPoles(const std::string& content, int pole_numbers) {
         // cameras[1].set('pos', '0 {} 2'.format(-2*n_poles))
         pugi::xml_node camera1 = doc.select_node(camera1_xpath.c_str()).node();
     pugi::xml_attribute camera1_attr = camera1.attribute("pos");
-    camera1_attr.set_value("0 " + std::to_string(-1 - 2 * n_poles_) + " 1");
+    camera1_attr.set_value("0 " + std::to_string(2 * n_poles_) + " 2");
   }
   XMLStringWriter writer;
   doc.print(writer);
