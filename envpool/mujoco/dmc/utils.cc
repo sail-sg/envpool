@@ -68,11 +68,11 @@ std::string XMLAddPoles(const std::string& content, int pole_numbers) {
       // pos='0 0 1', childclass='pole')
       pugi::xml_node childpole = parent.append_child("body");
       std::string body_name = "pole_" + std::to_string(i);
-      childpole.append_attribute("name") = name;
+      childpole.append_attribute("name") = body_name;
       std::string body_pos = "0 0 1";
-      childpole.append_attribute("pos") = pose;
-      std::string body_pos = "pole";
-      childpole.append_attribute("childclass") = pos;
+      childpole.append_attribute("pos") = body_pos;
+      std::string body_childclass = "pole";
+      childpole.append_attribute("childclass") = body_childclass;
       // etree.SubElement(child, 'joint', name='hinge_{}'.format(pole_index))
       pugi::xml_node sub1 = childpole.append_child("joint");
       std::string sub1_name = "hinge_" + std::to_string(i);
@@ -91,8 +91,8 @@ std::string XMLAddPoles(const std::string& content, int pole_numbers) {
     // floor.set('pos', '0 0 {}'.format(1 - n_poles - .05))
     std::string floor_xpath = "/worldbody/geom";
     pugi::xml_node floor = doc.select_node(floor_xpath.c_str()).node();
-    pugi::xml_attribute attr = floor.attribute("pos");
-    attr.set_value("0 " + std::to_string(1 - pole_numbers - 0.05) + " 1");
+    pugi::xml_attribute floor_attr = floor.attribute("pos");
+    floor_.set_value("0 " + std::to_string(1 - pole_numbers - 0.05) + " 1");
     // Move cameras back.
     // cameras = mjcf.findall('./worldbody/camera')
     std::string camera0_xpath = "/mujoco/worldbody/camera[@name=fixed]";
@@ -100,9 +100,9 @@ std::string XMLAddPoles(const std::string& content, int pole_numbers) {
     // cameras[0].set('pos', '0 {} 1'.format(-1 - 2*n_poles))
     pugi::xml_node camera0 = doc.select_node(camera0_xpath.c_str()).node();
     pugi::xml_attribute camera0_attr = camera0.attribute("pos");
-    camera0_attr.set_value("0 " + std::to_string(-1 - 2 * pole_numbers) + " 1")
-        // cameras[1].set('pos', '0 {} 2'.format(-2*n_poles))
-        pugi::xml_node camera1 = doc.select_node(camera1_xpath.c_str()).node();
+    camera0_attr.set_value("0 " + std::to_string(-1 - 2 * pole_numbers) + " 1");
+    // cameras[1].set('pos', '0 {} 2'.format(-2*n_poles))
+    pugi::xml_node camera1 = doc.select_node(camera1_xpath.c_str()).node();
     pugi::xml_attribute camera1_attr = camera1.attribute("pos");
     camera1_attr.set_value("0 " + std::to_string(2 * pole_numbers) + " 2");
   }
