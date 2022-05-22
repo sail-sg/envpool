@@ -112,7 +112,10 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
 
   def test_cartpole(self) -> None:
     obs_keys = ["position", "velocity"]
-    for task in ["balance", "balance_sparse", "swingup", "swingup_sparse"]:
+    for task in [
+      "balance", "balance_sparse", "swingup", "swingup_sparse", "two_poles",
+      "three_poles"
+    ]:
       self.check(DmcCartpoleEnvSpec, DmcCartpoleDMEnvPool, task, obs_keys)
 
   def test_cheetah(self) -> None:

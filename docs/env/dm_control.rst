@@ -20,7 +20,6 @@ converted into ``DomainNameTaskName-v1`` in envpool, e.g.,
   envpool.make_dm("BallInCupCatch-v1", num_envs=1)
 
 
-
 AcrobotSwingup-v1, AcrobotSwingupSparse-v1
 ------------------------------------------
 
@@ -47,14 +46,15 @@ BallInCupCatch-v1
 - ``max_episode_steps``: 1000;
 
 
-CarpoleBalance-v1, CarpoleBalanceSparse-v1, CarpoleSwingup-v1, CarpoleSwingupSparse-v1
---------------------------------------------------------------------------------------
+CartpoleBalance-v1, CartpoleBalanceSparse-v1, CarpoletSwingup-v1, CartpoleSwingupSparse-v1, CartpoleTwoPoles-v1, CartPoleThreePoles-v1
+--------------------------------------------------------------------------------------------------------------------------------------
 
 `dm_control suite cartpole source code
 <https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/cartpole.py>`_
 
-- Observation spec: a namedtuple with two keys: ``position (3)``,
-  ``velocity (2)``;
+- Observation spec: a namedtuple with two keys: ``position (5 for two_poles, 7
+  for three_poles, 3 for others)``, ``velocity (3 for two_poles, 4 for
+  three_poles, 2 for others)``;
 - Action spec: ``(1)``, with range ``[-1, 1]``;
 - ``frame_skip``: 1;
 - ``max_episode_stes``: 1000;

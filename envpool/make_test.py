@@ -134,6 +134,8 @@ class _MakeTest(absltest.TestCase):
         "CartpoleBalanceSparse-v1",
         "CartpoleSwingup-v1",
         "CartpoleSwingupSparse-v1",
+        "CartpoleTwoPoles-v1",
+        "CartpoleThreePoles-v1",
         "CheetahRun-v1",
         "FingerSpin-v1",
         "FingerTurnEasy-v1",

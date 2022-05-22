@@ -30,6 +30,8 @@ dmc_mujoco_envs = [
   ("cartpole", "balance_sparse"),
   ("cartpole", "swingup"),
   ("cartpole", "swingup_sparse"),
+  ("cartpole", "two_poles"),
+  ("cartpole", "three_poles"),
   ("cheetah", "run"),
   ("finger", "spin"),
   ("finger", "turn_easy"),
