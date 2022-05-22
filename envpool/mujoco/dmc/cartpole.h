@@ -48,23 +48,23 @@ class CartpoleEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    const std::string task_name = conf["task_name"_];
-    int npoles;
-    if (task_name == "two_poles") {
-      npoles = 2;
-    } else if (task_name == "three_poles") {
-      npoles = 3;
-    } else if (task_name == "balance" || task_name == "balance_sparse" ||
-               task_name == "swingup" || task_name == "swingup_sparse") {
-      npoles = 1;
-    } else {
-      throw std::runtime_error("Unknown task_name " + task_name +
-                               " for dmc cartpole.");
-    }
-    return MakeDict("obs:position"_.Bind(Spec<mjtNum>({2 * npoles + 1})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({npoles + 1})),
+    // const std::string task_name = conf["task_name"_];
+    // int npoles;
+    // if (task_name == "two_poles") {
+    //   npoles = 2;
+    // } else if (task_name == "three_poles") {
+    //   npoles = 3;
+    // } else if (task_name == "balance" || task_name == "balance_sparse" ||
+    //            task_name == "swingup" || task_name == "swingup_sparse") {
+    //   npoles = 1;
+    // } else {
+    //   throw std::runtime_error("Unknown task_name " + task_name +
+    //                            " for dmc cartpole.");
+    // }
+    return MakeDict("obs:position"_.Bind(Spec<mjtNum>({3})),
+                    "obs:velocity"_.Bind(Spec<mjtNum>({2})),
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.Bind(Spec<mjtNum>({npoles + 1})),
+                    "info:qpos0"_.Bind(Spec<mjtNum>({2})),
 #endif
                     "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
   }
@@ -93,12 +93,12 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
                   spec.config["max_episode_steps"_]),
         id_slider_(GetQposId(model_, "slider")),
         id_hinge1_(GetQposId(model_, "hinge1")),
+        is_sparse_(spec.config["task_name"_] == "balance_sparse" ||
+                   spec.config["task_name"_] == "swingup_sparse"),
         is_swingup_(spec.config["task_name"_] == "swingup" ||
                     spec.config["task_name"_] == "swingup_sparse" ||
                     spec.config["task_name"_] == "two_poles" ||
-                    spec.config["task_name"_] == "three_poles"),
-        is_sparse_(spec.config["task_name"_] == "balance_sparse" ||
-                   spec.config["task_name"_] == "swingup_sparse") {
+                    spec.config["task_name"_] == "three_poles") {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name == "two_poles") {
       n_poles_ = 2;
