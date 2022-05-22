@@ -62,7 +62,7 @@ std::string XMLAddPoles(const std::string& content, int pole_numbers) {
     //   parent = mjcf.find('./worldbody/body/body')  # Find first pole.
     std::string xpath = "/mujoco/worldbody/body/body[@name=pole_1]";
     pugi::xml_node parent = doc.select_node(xpath.c_str()).node();
-    for (int i = 0; i < n_poles_; ++i) {
+    for (int i = 0; i < pole_numbers; ++i) {
       // add poles not implemented
       // child = etree.Element('body', name='pole_{}'.format(pole_index),
       // pos='0 0 1', childclass='pole')
@@ -87,7 +87,7 @@ std::string XMLAddPoles(const std::string& content, int pole_numbers) {
     std::string floor_xpath = "/worldbody/geom";
     pugi::xml_node floor = doc.select_node(floor_xpath.c_str()).node();
     pugi::xml_attribute attr = floor.attribute("pos");
-    attr.set_value("0 " + std::to_string(1 - n_poles_ - 0.05) + " 1");
+    attr.set_value("0 " + std::to_string(1 - pole_numbers - 0.05) + " 1");
     // Move cameras back.
     // cameras = mjcf.findall('./worldbody/camera')
     std::string camera0_xpath = "/mujoco/worldbody/camera[@name=fixed]";
@@ -95,11 +95,11 @@ std::string XMLAddPoles(const std::string& content, int pole_numbers) {
     // cameras[0].set('pos', '0 {} 1'.format(-1 - 2*n_poles))
     pugi::xml_node camera0 = doc.select_node(camera0_xpath.c_str()).node();
     pugi::xml_attribute camera0_attr = camera0.attribute("pos");
-    camera0_attr.set_value("0 " + std::to_string(-1 - 2 * n_poles_) + " 1")
+    camera0_attr.set_value("0 " + std::to_string(-1 - 2 * pole_numbers) + " 1")
         // cameras[1].set('pos', '0 {} 2'.format(-2*n_poles))
         pugi::xml_node camera1 = doc.select_node(camera1_xpath.c_str()).node();
     pugi::xml_attribute camera1_attr = camera1.attribute("pos");
-    camera1_attr.set_value("0 " + std::to_string(2 * n_poles_) + " 2");
+    camera1_attr.set_value("0 " + std::to_string(2 * pole_numbers) + " 2");
   }
   XMLStringWriter writer;
   doc.print(writer);
