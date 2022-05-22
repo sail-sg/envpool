@@ -37,7 +37,14 @@ namespace mujoco_dmc {
 
 std::string GetCartpoleXML(const std::string& base_path,
                            const std::string& task_name) {
-  return GetFileContent(base_path, "cartpole.xml");
+  auto content = GetFileContent(base_path, "cartpole.xml");
+  if (task_name == "two_poles") {
+    return XMLAddPoles(content, 2);
+  }
+  if (task_name == "three_poles") {
+    return XMLAddPoles(content, 3);
+  }
+  return content;
 }
 
 class CartpoleEnvFns {
@@ -48,23 +55,17 @@ class CartpoleEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    // const std::string task_name = conf["task_name"_];
-    // int npoles;
-    // if (task_name == "two_poles") {
-    //   npoles = 2;
-    // } else if (task_name == "three_poles") {
-    //   npoles = 3;
-    // } else if (task_name == "balance" || task_name == "balance_sparse" ||
-    //            task_name == "swingup" || task_name == "swingup_sparse") {
-    //   npoles = 1;
-    // } else {
-    //   throw std::runtime_error("Unknown task_name " + task_name +
-    //                            " for dmc cartpole.");
-    // }
-    return MakeDict("obs:position"_.Bind(Spec<mjtNum>({3})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({2})),
+    const std::string task_name = conf["task_name"_];
+    int n_poles = 1;
+    if (task_name == "two_poles") {
+      n_poles = 2;
+    } else if (task_name == "three_poles") {
+      n_poles = 3;
+    }
+    return MakeDict("obs:position"_.Bind(Spec<mjtNum>({1 + 2 * n_poles})),
+                    "obs:velocity"_.Bind(Spec<mjtNum>({1 + n_poles})),
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.Bind(Spec<mjtNum>({2})),
+                    "info:qpos0"_.Bind(Spec<mjtNum>({1 + n_poles})),
 #endif
                     "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
   }
@@ -80,8 +81,7 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
  protected:
   int id_slider_, id_hinge1_;
   int n_poles_;
-  bool is_sparse_;
-  bool is_swingup_;
+  bool is_sparse_, is_swingup_;
 
  public:
   CartpoleEnv(const Spec& spec, int env_id)
@@ -115,15 +115,15 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
 
   void TaskInitializeEpisode() override {
     if (is_swingup_) {
-      data_->qpos[id_slider_] = RandNormal(0, 1)(gen_) * 0.01;
-      data_->qpos[id_hinge1_] = RandNormal(0, 1)(gen_) * 0.01 + M_PI;
+      data_->qpos[id_slider_] = RandNormal(0, 0.01)(gen_);
+      data_->qpos[id_hinge1_] = RandNormal(M_PI, 0.01)(gen_);
       for (int i = 2; i < model_->nv; ++i) {
-        data_->qpos[i] = RandUniform(0, 1)(gen_) * 0.01;
+        data_->qpos[i] = RandUniform(0, 0.01)(gen_);
       }
     } else {
-      data_->qpos[id_slider_] = RandUniform(0, 1)(gen_) * 0.2 - 0.1;
+      data_->qpos[id_slider_] = RandUniform(-0.1, 0.1)(gen_);
       for (int i = 1; i < model_->nv; ++i) {
-        data_->qpos[i] = RandUniform(0, 1)(gen_) * 0.068 - 0.034;
+        data_->qpos[i] = RandUniform(-0.034, 0.034)(gen_);
       }
     }
     for (int i = 0; i < model_->nv; ++i) {
@@ -188,7 +188,7 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
     state["discount"_] = discount_;
     // obs
     const auto& position = BoundedPosition();
-    state["obs:position"_].Assign(position.begin(), position.size());
+    state["obs:position"_].Assign(position.begin(), 1 + 2 * n_poles_);
     state["obs:velocity"_].Assign(data_->qvel, model_->nv);
     // info for check alignment
 #ifdef ENVPOOL_TEST
@@ -230,10 +230,6 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
     for (int i = 0; i < n_poles_; ++i) {
       bounded_position[i * 2] = data_->xmat[(2 + i) * 9 + 8];
       bounded_position[i * 2 + 1] = data_->xmat[(2 + i) * 9 + 2];
-    }
-    for (int i = n_poles_; i < 3; ++i) {
-      bounded_position[i * 2] = std::numeric_limits<double>::infinity();
-      bounded_position[i * 2 + 1] = std::numeric_limits<double>::infinity();
     }
     return bounded_position;
   }
