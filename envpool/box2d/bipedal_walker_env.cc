@@ -128,7 +128,7 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
         }
         y += velocity;
       } else if (state == kPit && oneshot) {
-        counter = RandInt(3, 5)(*gen);
+        counter = RandInt(3, 4)(*gen);
         std::vector<b2Vec2> poly{Vec2(x, y), Vec2(x + kTerrainStep, y),
                                  Vec2(x + kTerrainStep, y - 4 * kTerrainStep),
                                  Vec2(x, y - 4 * kTerrainStep)};
@@ -145,15 +145,15 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
           y -= 4 * kTerrainStep;
         }
       } else if (state == kStump && oneshot) {
-        counter = RandInt(1, 3)(*gen);
+        counter = RandInt(1, 2)(*gen);
         auto size = kTerrainStep * counter;
         std::vector<b2Vec2> poly{Vec2(x, y), Vec2(x + size, y),
                                  Vec2(x + size, y + size), Vec2(x, y + size)};
         CreateTerrain(poly);
       } else if (state == kStairs && oneshot) {
         stair_height = RandUniform(0, 1)(*gen) > 0.5 ? 1 : -1;
-        stair_width = RandInt(4, 5)(*gen);
-        stair_steps = RandInt(3, 5)(*gen);
+        stair_width = 4;
+        stair_steps = RandInt(3, 4)(*gen);
         original_y = y;
         for (int s = 0; s < stair_steps; ++s) {
           std::vector<b2Vec2> poly{
@@ -175,16 +175,16 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
       oneshot = false;
       terrain_y.emplace_back(y);
       if (--counter == 0) {
-        counter = RandInt(kTerrainGrass / 2, kTerrainGrass)(*gen);
+        counter = RandInt(kTerrainGrass / 2, kTerrainGrass - 1)(*gen);
         if (state == kGrass && hardcore_) {
-          state = RandInt(1, kStates)(*gen);
+          state = RandInt(1, kStates - 1)(*gen);
         } else {
           state = kGrass;
         }
         oneshot = true;
       }
     }
-    for (int i = 0; i < kTerrainLength - 1; ++i) {
+    for (std::size_t i = 0; i < terrain_x.size() - 1; ++i) {
       b2BodyDef bd;
       bd.type = b2_staticBody;
 
