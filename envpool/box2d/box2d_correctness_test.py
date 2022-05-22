@@ -13,7 +13,7 @@
 # limitations under the License.
 """Unit tests for box2d environments correctness check."""
 
-from typing import Any, no_type_check
+from typing import Any, Dict, Tuple, no_type_check
 
 import gym
 import numpy as np
@@ -64,8 +64,9 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
 
+  @staticmethod
   def heuristic_lunar_lander_policy(
-    self, s: np.ndarray, continuous: bool
+    s: np.ndarray, continuous: bool
   ) -> np.ndarray:
     angle_targ = np.clip(s[0] * 0.5 + s[2] * 1.0, -0.4, 0.4)
     hover_targ = 0.55 * np.abs(s[0])
@@ -130,6 +131,127 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
   def test_lunar_lander_correctness(self, num_envs: int = 30) -> None:
     self.solve_lunar_lander(num_envs, True)
     self.solve_lunar_lander(num_envs, False)
+
+  @staticmethod
+  @no_type_check
+  def heuristic_bipedal_walker_policy(
+    s: np.ndarray, h: Dict[str, float]
+  ) -> Tuple[np.ndarray, Dict[str, float]]:
+    STAY_ON_ONE_LEG, PUT_OTHER_DOWN, PUSH_OFF = 1, 2, 3
+    SPEED = 0.29  # will fall forward on higher speed
+    SUPPORT_KNEE_ANGLE = 0.1
+    state = h["state"]
+    moving_leg = h["moving_leg"]
+    supporting_leg = h["supporting_leg"]
+    supporting_knee_angle = h["supporting_knee_angle"]
+
+    moving_s_base = 4 + 5 * moving_leg
+    supporting_s_base = 4 + 5 * supporting_leg
+
+    hip_targ = [0.0, 0.0]  # -0.8 .. +1.1
+    knee_targ = [0.0, 0.0]  # -0.6 .. +0.9
+    hip_todo = [0.0, 0.0]
+    knee_todo = [0.0, 0.0]
+
+    if state == STAY_ON_ONE_LEG:
+      hip_targ[moving_leg] = 1.1
+      knee_targ[moving_leg] = -0.6
+      supporting_knee_angle += 0.03
+      if s[2] > SPEED:
+        supporting_knee_angle += 0.03
+      supporting_knee_angle = min(supporting_knee_angle, SUPPORT_KNEE_ANGLE)
+      knee_targ[supporting_leg] = supporting_knee_angle
+      if s[supporting_s_base + 0] < 0.10:  # supporting leg is behind
+        state = PUT_OTHER_DOWN
+    if state == PUT_OTHER_DOWN:
+      hip_targ[moving_leg] = 0.1
+      knee_targ[moving_leg] = SUPPORT_KNEE_ANGLE
+      knee_targ[supporting_leg] = supporting_knee_angle
+      if s[moving_s_base + 4]:
+        state = PUSH_OFF
+        supporting_knee_angle = min(s[moving_s_base + 2], SUPPORT_KNEE_ANGLE)
+    if state == PUSH_OFF:
+      knee_targ[moving_leg] = supporting_knee_angle
+      knee_targ[supporting_leg] = 1.0
+      if s[supporting_s_base + 2] > 0.88 or s[2] > 1.2 * SPEED:
+        state = STAY_ON_ONE_LEG
+        moving_leg = 1 - moving_leg
+        supporting_leg = 1 - moving_leg
+
+    if hip_targ[0]:
+      hip_todo[0] = 0.9 * (hip_targ[0] - s[4]) - 0.25 * s[5]
+    if hip_targ[1]:
+      hip_todo[1] = 0.9 * (hip_targ[1] - s[9]) - 0.25 * s[10]
+    if knee_targ[0]:
+      knee_todo[0] = 4.0 * (knee_targ[0] - s[6]) - 0.25 * s[7]
+    if knee_targ[1]:
+      knee_todo[1] = 4.0 * (knee_targ[1] - s[11]) - 0.25 * s[12]
+
+    hip_todo[0] -= 0.9 * (0 - s[0]) - 1.5 * s[1]  # PID to keep head strait
+    hip_todo[1] -= 0.9 * (0 - s[0]) - 1.5 * s[1]
+    knee_todo[0] -= 15.0 * s[3]  # vertical speed, to damp oscillations
+    knee_todo[1] -= 15.0 * s[3]
+
+    a = np.array([hip_todo[0], knee_todo[0], hip_todo[1], knee_todo[1]])
+    a = np.clip(0.5 * a, -1.0, 1.0)
+    return a, {
+      "state": state,
+      "moving_leg": moving_leg,
+      "supporting_leg": supporting_leg,
+      "supporting_knee_angle": supporting_knee_angle,
+    }
+
+  def solve_bipedal_walker(self, num_envs: int, hardcore: bool) -> None:
+    env = BipedalWalkerGymEnvPool(
+      BipedalWalkerEnvSpec(
+        BipedalWalkerEnvSpec.gen_config(
+          num_envs=num_envs,
+          hardcore=hardcore,
+          max_episode_steps=2000 if hardcore else 1600,
+        )
+      )
+    )
+    # each env run two episodes
+    for _ in range(2):
+      hs = np.array(
+        [
+          {
+            "state": 1,
+            "moving_leg": 0,
+            "supporting_leg": 1,
+            "supporting_knee_angle": 0.1,
+          } for _ in range(num_envs)
+        ]
+      )
+      env_id = np.arange(num_envs)
+      done = np.array([False] * num_envs)
+      obs = env.reset(env_id)
+      rewards = np.zeros(num_envs)
+      while not np.all(done):
+        ah = [
+          self.heuristic_bipedal_walker_policy(s, h) for s, h in zip(obs, hs)
+        ]
+        action = np.array([i[0] for i in ah])
+        hs = np.array([i[1] for i in ah])
+        obs, rew, done, info = env.step(action, env_id)
+        env_id = info["env_id"]
+        rewards[env_id] += rew
+        obs = obs[~done]
+        env_id = env_id[~done]
+        hs = hs[~done]
+      mean_reward = np.mean(rewards)
+      logging.info(
+        f"{hardcore}, {np.mean(rewards):.6f} ± {np.std(rewards):.6f}"
+      )
+      # the following number is from gym's 1000 episode mean reward
+      if hardcore:  # -59.219390 ± 25.209768
+        self.assertTrue(abs(mean_reward + 59) < 10, (hardcore, mean_reward))
+      else:  # 102.647320 ± 125.075071
+        self.assertTrue(abs(mean_reward - 103) < 20, (hardcore, mean_reward))
+
+  def test_bipedal_walker_correctness(self, num_envs: int = 30) -> None:
+    self.solve_bipedal_walker(num_envs, True)
+    self.solve_bipedal_walker(num_envs, False)
 
 
 if __name__ == "__main__":
