@@ -100,7 +100,8 @@ std::string XMLRemoveByBodyName(const std::string& content,
 //     // cameras[0].set('pos', '0 {} 1'.format(-1 - 2*n_poles))
 //     pugi::xml_node camera0 = doc.select_node(camera0_xpath.c_str()).node();
 //     pugi::xml_attribute camera0_attr = camera0.attribute("pos");
-//     camera0_attr.set_value("0 " + std::to_string(-1 - 2 * pole_numbers) + " 1");
+//     camera0_attr.set_value("0 " + std::to_string(-1 - 2 * pole_numbers) + "
+//     1");
 //     // cameras[1].set('pos', '0 {} 2'.format(-2*n_poles))
 //     pugi::xml_node camera1 = doc.select_node(camera1_xpath.c_str()).node();
 //     pugi::xml_attribute camera1_attr = camera1.attribute("pos");

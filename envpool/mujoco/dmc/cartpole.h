@@ -54,7 +54,7 @@ class CartpoleEnvFns {
     if (task_name == "two_poles") {
       npoles = 2;
     } else if (task_name == "three_poles") {
-      nbody = 3;
+      npoles = 3;
     } else {
       throw std::runtime_error("Unknown task_name " + task_name +
                                " for dmc cartpole.");
@@ -77,8 +77,6 @@ using CartpoleEnvSpec = EnvSpec<CartpoleEnvFns>;
 class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
  protected:
   int id_slider_, id_hinge1_;
-  std::normal_distribution<> dist_normal_;
-  std::uniform_real_distribution<> dist_uniform_;
   int n_poles_;
   bool is_sparse_;
   bool is_swingup_;
@@ -93,8 +91,8 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
                   spec.config["max_episode_steps"_]),
         id_slider_(GetQposId(model_, "slider")),
         id_hinge1_(GetQposId(model_, "hinge1")),
-        dist_normal_(0, 1),
-        dist_uniform_(0, 1),
+        RandNormal(0, 1),
+        RandUniform(0, 1),
         is_swingup_(spec.config["task_name"_] == "swingup" ||
                     spec.config["task_name"_] == "swingup_sparse" ||
                     spec.config["task_name"_] == "two_poles" ||
@@ -103,12 +101,12 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
                    spec.config["task_name"_] == "swingup_sparse") {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name == "two_poles") {
-      n_poles_ = 2
+      n_poles_ = 2;
     } else if (task_name == "three_poles") {
-      n_poles_ = 3
+      n_poles_ = 3;
     } else if (task_name == "swingup" || task_name == "swingup_sparse" ||
                task_name == "balance" || task_name == "balance_sparse") {
-      n_poles_ = 1
+      n_poles_ = 1;
     } else {
       throw std::runtime_error("Unknown task_name " + task_name +
                                " for dmc cartpole.");
@@ -117,19 +115,19 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
 
   void TaskInitializeEpisode() override {
     if (is_swingup_) {
-      data_->qpos[id_slider_] = dist_normal_(gen_) * 0.01;
-      data_->qpos[id_hinge1_] = dist_normal_(gen_) * 0.01 + M_PI;
+      data_->qpos[id_slider_] = RandNormal(gen_) * 0.01;
+      data_->qpos[id_hinge1_] = RandNormal(gen_) * 0.01 + M_PI;
       for (int i = 2; i < model_->nv; ++i) {
-        data_->qpos[id] = dist_uniform_(gen_) * 0.01;
+        data_->qpos[i] = RandUniform(gen_) * 0.01;
       }
     } else {
-      data_->qpos[id_slider_] = dist_uniform_(gen_) * 0.2 - 0.1;
+      data_->qpos[id_slider_] = RandUniform(gen_) * 0.2 - 0.1;
       for (int i = 1; i < model_->nv; ++i) {
-        data_->qpos[i] = dist_uniform_(gen_) * 0.068 - 0.034
+        data_->qpos[i] = RandUniform(gen_) * 0.068 - 0.034;
       }
     }
     for (int i = 0; i < model_->nv; ++i) {
-      data_->qvel[i] = dist_normal_(gen_)
+      data_->qvel[i] = RandNormal(gen_);
     }
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
@@ -163,7 +161,7 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
     for (int i = 0; i < n_poles_; ++i) {
       upright += pole_angle_cosine[i];
     }
-    mjtNum upright = (upright / n_poles_ + 1) / 2;
+    upright = (upright / n_poles_ + 1) / 2;
     auto centered = RewardTolerance(CartPosition(), 0.0, 0.0, 2);
     centered = (1 + centered) / 2;
     auto small_control = RewardTolerance(data_->ctrl[0], 0.0, 0.0, 1.0, 0.0,
@@ -213,7 +211,7 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
     }
     return angular_vel;
   }
-  std::array<mjtNum, 3_> PoleAngleCosine() {
+  std::array<mjtNum, 3> PoleAngleCosine() {
     // return self.named.data.xmat[2:, 'zz']
     std::array<mjtNum, 3> pole_angle_cosine;
     for (int i = 0; i < n_poles_; ++i) {
