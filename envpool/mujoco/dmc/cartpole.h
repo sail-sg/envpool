@@ -54,10 +54,8 @@ class CartpoleEnvFns {
       npoles = 2;
     } else if (task_name == "three_poles") {
       npoles = 3;
-    } else if (task_name == "balance" ||
-               task_name == "balance_sparse" ||
-               task_name == "swingup" ||
-               task_name == "swingup_sparse" ||) {
+    } else if (task_name == "balance" || task_name == "balance_sparse" ||
+               task_name == "swingup" || task_name == "swingup_sparse" ||) {
       npoles = 1;
     } else {
       throw std::runtime_error("Unknown task_name " + task_name +
