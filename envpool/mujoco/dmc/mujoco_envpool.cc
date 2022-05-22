@@ -15,6 +15,7 @@
 #include "envpool/core/py_envpool.h"
 #include "envpool/mujoco/dmc/acrobot.h"
 #include "envpool/mujoco/dmc/ball_in_cup.h"
+#include "envpool/mujoco/dmc/cartpole.h"
 #include "envpool/mujoco/dmc/cheetah.h"
 #include "envpool/mujoco/dmc/finger.h"
 #include "envpool/mujoco/dmc/fish.h"
@@ -31,6 +32,9 @@ using DmcAcrobotEnvPool = PyEnvPool<mujoco_dmc::AcrobotEnvPool>;
 
 using DmcBallInCupEnvSpec = PyEnvSpec<mujoco_dmc::BallInCupEnvSpec>;
 using DmcBallInCupEnvPool = PyEnvPool<mujoco_dmc::BallInCupEnvPool>;
+
+using DmcCartpoleEnvSpec = PyEnvSpec<mujoco_dmc::CartpoleEnvSpec>;
+using DmcCartpoleEnvPool = PyEnvPool<mujoco_dmc::CartpoleEnvPool>;
 
 using DmcCheetahEnvSpec = PyEnvSpec<mujoco_dmc::CheetahEnvSpec>;
 using DmcCheetahEnvPool = PyEnvPool<mujoco_dmc::CheetahEnvPool>;
@@ -65,6 +69,7 @@ using DmcWalkerEnvPool = PyEnvPool<mujoco_dmc::WalkerEnvPool>;
 PYBIND11_MODULE(mujoco_dmc_envpool, m) {
   REGISTER(m, DmcAcrobotEnvSpec, DmcAcrobotEnvPool)
   REGISTER(m, DmcBallInCupEnvSpec, DmcBallInCupEnvPool)
+  REGISTER(m, DmcCartpoleEnvSpec, DmcCartpoleEnvPool)
   REGISTER(m, DmcCheetahEnvSpec, DmcCheetahEnvPool)
   REGISTER(m, DmcFingerEnvSpec, DmcFingerEnvPool)
   REGISTER(m, DmcFishEnvSpec, DmcFishEnvPool)

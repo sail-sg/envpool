@@ -26,6 +26,8 @@ from envpool.mujoco.dmc import (
   DmcAcrobotEnvSpec,
   DmcBallInCupDMEnvPool,
   DmcBallInCupEnvSpec,
+  DmcCartpoleDMEnvPool,
+  DmcCartpoleEnvSpec,
   DmcCheetahDMEnvPool,
   DmcCheetahEnvSpec,
   DmcFingerDMEnvPool,
@@ -74,6 +76,8 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         for _ in range(200):
           env.physics.step()
         env.physics.data.time = 0
+      elif domain == "cartpole":
+        env.physics.data.qvel = ts.observation.qvel0[0]
       elif domain == "reacher":
         target = ts.observation.target[0]
         env.physics.named.model.geom_pos["target", "x"] = target[0]
@@ -191,6 +195,14 @@ class _MujocoDmcAlignTest(absltest.TestCase):
   def test_ball_in_cup(self) -> None:
     self.run_align_check_entry(
       "ball_in_cup", ["catch"], DmcBallInCupEnvSpec, DmcBallInCupDMEnvPool
+    )
+
+  def test_cartpole(self) -> None:
+    self.run_align_check_entry(
+      "cartpole", [
+        "balance", "balance_sparse", "swingup", "swingup_sparse", "two_poles",
+        "three_poles"
+      ], DmcCartpoleEnvSpec, DmcCartpoleDMEnvPool
     )
 
   def test_cheetah(self) -> None:
