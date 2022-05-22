@@ -258,6 +258,7 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
     rjd.bodyB = legs_[index * 2];
     rjd.localAnchorA = Vec2(0, kLegDown);
     rjd.localAnchorB = Vec2(0, kLegH / 2);
+    rjd.referenceAngle = sign * 0.05f;
     rjd.enableMotor = true;
     rjd.enableLimit = true;
     rjd.maxMotorTorque = kMotorsTorque;
@@ -279,6 +280,7 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
     rjd.bodyB = legs_[index * 2 + 1];
     rjd.localAnchorA = Vec2(0, -kLegH / 2);
     rjd.localAnchorB = Vec2(0, kLegH / 2);
+    rjd.referenceAngle = 0;
     rjd.motorSpeed = 1;
     rjd.lowerAngle = -1.6;
     rjd.upperAngle = -0.1;

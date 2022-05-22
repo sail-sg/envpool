@@ -178,6 +178,7 @@ void LunarLanderBox2dEnv::ResetBox2d(std::mt19937* gen) {
     rjd.bodyB = legs_[index];
     rjd.localAnchorA.SetZero();
     rjd.localAnchorB = Vec2(sign * kLegAway / kScale, kLegDown / kScale);
+    rjd.referenceAngle = sign * 0.05f;
     rjd.enableMotor = true;
     rjd.enableLimit = true;
     rjd.maxMotorTorque = static_cast<float>(kLegSpringTorque);
