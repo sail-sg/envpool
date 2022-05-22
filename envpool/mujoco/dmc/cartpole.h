@@ -26,6 +26,7 @@
 #include <regex>
 #include <set>
 #include <string>
+#include <vector>
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
@@ -92,7 +93,6 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
                   spec.config["max_episode_steps"_]),
         id_slider_(GetQposId(model_, "slider")),
         id_hinge1_(GetQposId(model_, "hinge1")),
-
         dist_normal_(0, 1),
         dist_uniform_(0, 1),
         is_swingup_(spec.config["task_name"_] == "swingup" ||
@@ -150,22 +150,33 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
   }
 
   float TaskGetReward() override {
+    const auto& pole_angle_cosine = PoleAngleCosine();
     if (is_sparse_) {
       auto cart_in_bounds = RewardTolerance(CartPosition(), -0.25, 0.25);
-      auto angle_in_bounds = RewardTolerance(PoleAngleCosine(), 0.995, 1);
-      // angle in_bounds prod not implemented
+      mjtNum angle_in_bounds = 1.0;
+      for (int i = 0; i < n_poles_; ++i) {
+        angle_in_bounds *= RewardTolerance(pole_angle_cosine[i], 0.995, 1);
+      }
       return static_cast<float>(cart_in_bounds * angle_in_bounds);
     }
-    auto upright = (PoleAngleCosine() + 1) / 2;
-    // upright mean not implemented
+    mjtNum upright = 0.0;
+    for (int i = 0; i < n_poles_; ++i) {
+      upright += pole_angle_cosine[i];
+    }
+    mjtNum upright = (upright / n_poles_ + 1) / 2;
     auto centered = RewardTolerance(CartPosition(), 0.0, 0.0, 2);
-    centered = (1 + centered) / 2 auto small_control = RewardTolerance(
-                   data_->ctrl[0], 0.0, 0.0, 1.0, 0.0, SigmoidType::kQuadratic);
+    centered = (1 + centered) / 2;
+    auto small_control = RewardTolerance(data_->ctrl[0], 0.0, 0.0, 1.0, 0.0,
+                                         SigmoidType::kQuadratic);
     small_control = (small_control / model_->nu + 4) / 5;
-
-    auto small_velocity = RewardTolerance(AngularVel(), 0.0, 0.0, 5.0, 0.1,
-                                          SigmoidType::kQuadratic);
-    // smal_velocity min not implemented
+    mjtNum small_velocity;
+    const auto& angular_vel = AngularVel();
+    small_velocity = angular_vel[0];
+    for (int i = 0; i < n_poles_; ++i) {
+      auto x = RewardTolerance(angular_vel[i], 0.0, 0.0, 5.0, 0.1,
+                               SigmoidType::kQuadratic);
+      small_velocity = std::min(x, small_velocity);
+    }
     small_velocity = (small_velocity + 1) / 2;
     return static_cast<float>(upright * small_control * small_velocity *
                               centered);
@@ -191,28 +202,40 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
     // return self.named.data.qpos['slider'][0]
     return data_->qpos[id_slider_];
   }
-  std::array<mjtNum, n_poles_> AngularVel() {
+  std::array<mjtNum, 3> AngularVel() {
     // return self.data.qvel[1:]
-    std::array<mjtNum, n_poles_> angular_vel;
+    std::array<mjtNum, 3> angular_vel;
     for (int i = 0; i < n_poles_; ++i) {
       angular_vel[i] = data_->qvel[1 + i];
+    }
+    for (int i = n_poles_; i < 3; ++i) {
+      angular_vel[i] = std::numeric_limits<double>::infinity();
     }
     return angular_vel;
   }
-  std::array<mjtNum, n_poles_> PoleAngleCosine() {
+  std::array<mjtNum, 3_> PoleAngleCosine() {
     // return self.named.data.xmat[2:, 'zz']
-    std::array<mjtNum, n_poles_> pole_angle_cosine;
+    std::array<mjtNum, 3> pole_angle_cosine;
     for (int i = 0; i < n_poles_; ++i) {
-      angular_vel[i] = data_->qvel[1 + i];
+      pole_angle_cosine[i] = data_->xmat[(2 + i) * 9 + 8];
+    }
+    for (int i = n_poles_; i < 3; ++i) {
+      pole_angle_cosine[i] = std::numeric_limits<double>::infinity();
     }
     return pole_angle_cosine;
   }
-  std::array<mjtNum, 2 * n_poles_ + 1> BoundedPosition() {
-    // return self.named.data.xmat[2:, 'zz']
-    std::array<mjtNum, (2 * n_poles_ + 1)> bounded_position;
-    bounded_position[0] = for (int i = 0; i < n_poles_; ++i) {
+  std::array<mjtNum, 7> BoundedPosition() {
+    // return np.hstack((self.cart_position(),
+    //                   self.named.data.xmat[2:, ['zz', 'xz']].ravel()))
+    std::array<mjtNum, 7> bounded_position;
+    bounded_position[0] = CartPosition();
+    for (int i = 0; i < n_poles_; ++i) {
       bounded_position[i * 2] = data_->xmat[(2 + i) * 9 + 8];
       bounded_position[i * 2 + 1] = data_->xmat[(2 + i) * 9 + 2];
+    }
+    for (int i = n_poles_; i < 3; ++i) {
+      bounded_position[i * 2] = std::numeric_limits<double>::infinity();
+      bounded_position[i * 2 + 1] = std::numeric_limits<double>::infinity();
     }
     return bounded_position;
   }
