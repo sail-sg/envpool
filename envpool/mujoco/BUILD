@@ -69,6 +69,7 @@ cc_library(
     hdrs = [
         "dmc/acrobot.h",
         "dmc/ball_in_cup.h",
+        "dmc/cartpole.h",
         "dmc/cheetah.h",
         "dmc/finger.h",
         "dmc/fish.h",

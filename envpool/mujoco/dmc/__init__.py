@@ -18,6 +18,8 @@ from envpool.mujoco.mujoco_dmc_envpool import (
   _DmcAcrobotEnvSpec,
   _DmcBallInCupEnvPool,
   _DmcBallInCupEnvSpec,
+  _DmcCartpoleEnvPool,
+  _DmcCartpoleEnvSpec,
   _DmcCheetahEnvPool,
   _DmcCheetahEnvSpec,
   _DmcFingerEnvPool,
@@ -46,6 +48,9 @@ DmcAcrobotEnvSpec, DmcAcrobotDMEnvPool, DmcAcrobotGymEnvPool = py_env(
 )
 DmcBallInCupEnvSpec, DmcBallInCupDMEnvPool, DmcBallInCupGymEnvPool = py_env(
   _DmcBallInCupEnvSpec, _DmcBallInCupEnvPool
+)
+DmcCartpoleEnvSpec, DmcCartpoleDMEnvPool, DmcCartpoleGymEnvPool = py_env(
+  _DmcCartpoleEnvSpec, _DmcCartpoleEnvPool
 )
 DmcCheetahEnvSpec, DmcCheetahDMEnvPool, DmcCheetahGymEnvPool = py_env(
   _DmcCheetahEnvSpec, _DmcCheetahEnvPool
@@ -87,6 +92,9 @@ __all__ = [
   "DmcBallInCupEnvSpec",
   "DmcBallInCupDMEnvPool",
   "DmcBallInCupGymEnvPool",
+  "DmcCartpoleEnvSpec",
+  "DmcCartpoleDMEnvPool",
+  "DmcCartpoleGymEnvPool",
   "DmcCheetahEnvSpec",
   "DmcCheetahDMEnvPool",
   "DmcCheetahGymEnvPool",
