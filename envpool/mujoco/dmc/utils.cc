@@ -96,7 +96,7 @@ std::string XMLMakeSwimmer(const std::string& content, int n_joints) {
   doc.load_string(content.c_str());
 
   pugi::xml_node body = doc.select_node("//worldbody/body/body").node();
-  for (int i = 2; i <= n_poles; ++i) {
+  for (int i = 2; i <= n_joints; ++i) {
     pugi::xml_node new_pole = body.append_child("body");
     new_pole.append_attribute("childclass") = "pole";
     new_pole.append_attribute("name") = ("pole_" + std::to_string(i)).c_str();
@@ -110,16 +110,16 @@ std::string XMLMakeSwimmer(const std::string& content, int n_joints) {
 
   pugi::xml_node floor = doc.select_node("//worldbody/geom").node();
   floor.attribute("pos").set_value(
-      ("0 0 " + std::to_string(1 - n_poles - 0.05)).c_str());
+      ("0 0 " + std::to_string(1 - n_joints - 0.05)).c_str());
   pugi::xpath_node_set cameras = doc.select_nodes("//worldbody/camera");
   for (const pugi::xpath_node& c : cameras) {
     std::string name = c.node().attribute("name").value();
     if (name == "fixed") {
       c.node().attribute("pos").set_value(
-          ("0 " + std::to_string(-1 - 2 * n_poles) + " 1").c_str());
+          ("0 " + std::to_string(-1 - 2 * n_joints) + " 1").c_str());
     } else if (name == "lookatcart") {
       c.node().attribute("pos").set_value(
-          ("0 " + std::to_string(-2 * n_poles) + " 2").c_str());
+          ("0 " + std::to_string(-2 * n_joints) + " 2").c_str());
     }
   }
   XMLStringWriter writer;
