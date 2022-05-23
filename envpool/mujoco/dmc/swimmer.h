@@ -36,7 +36,7 @@
 namespace mujoco_dmc {
 
 std::string GetSwimmerXML(const std::string& base_path,
-                          const std::string& task_name_) {
+                          const std::string& task_name) {
   auto content = GetFileContent(base_path, "swimmer.xml");
   if (task_name == "swimmer6") {
     return XMLMakeSwimmer(content, 6);
