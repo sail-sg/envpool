@@ -84,7 +84,7 @@ class SwimmerEnvFns {
       n_joints = 15;
     } else {
       throw std::runtime_error("Unknown task_name " + task_name +
-                               " for dmc cartpole.");
+                               " for dmc swimmer.");
     }
     return MakeDict(
         "action"_.Bind(Spec<mjtNum>({-1, n_joints - 1}, {-1.0, 1.0})));
