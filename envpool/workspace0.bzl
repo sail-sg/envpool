@@ -317,12 +317,72 @@ def workspace():
 
     maybe(
         http_archive,
-        name = "mujoco",
-        sha256 = "3f1804d28833295a310aac23279401936f2558dee63cd3778429577e4ab55dff",
-        strip_prefix = "mujoco-2.1.5",
+        name = "tinyxml2",
+        sha256 = "cc2f1417c308b1f6acc54f88eb70771a0bf65f76282ce5c40e54cfe52952702c",
+        strip_prefix = "tinyxml2-9.0.0",
         urls = [
-            "https://github.com/deepmind/mujoco/releases/download/2.1.5/mujoco-2.1.5-linux-x86_64.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/mujoco/mujoco-2.1.5-linux-x86_64.tar.gz",
+            "https://github.com/leethomason/tinyxml2/archive/refs/tags/9.0.0.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/leethomason/tinyxml2/9.0.0.tar.gz",
+        ],
+        build_file = "//third_party/tinyxml2:tinyxml2.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "lodepng",
+        sha256 = "28a7e91b0476caed45b9b98b42eb765301fa5c9f15146d760c8ded2437ed0dff",
+        strip_prefix = "lodepng-5601b8272a6850b7c5d693dd0c0e16da50be8d8d",
+        urls = [
+            "https://github.com/lvandeve/lodepng/archive/5601b8272a6850b7c5d693dd0c0e16da50be8d8d.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/lvandeve/lodepng/5601b8272a6850b7c5d693dd0c0e16da50be8d8d.tar.gz",
+        ],
+        build_file = "//third_party/lodepng:lodepng.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "tinyobjloader",
+        sha256 = "f9061d790905416a8a6c6f3dbfee77c7665636de0a9dc750ce799b513ddba83c",
+        strip_prefix = "tinyobjloader-2.0.0rc9",
+        urls = [
+            "https://github.com/tinyobjloader/tinyobjloader/archive/refs/tags/v2.0.0rc9.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/tinyobjloader/tinyobjloader/v2.0.0rc9.tar.gz",
+        ],
+        build_file = "//third_party/tinyobjloader:tinyobjloader.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "ccd",
+        sha256 = "542b6c47f522d581fbf39e51df32c7d1256ac0c626e7c2b41f1040d4b9d50d1e",
+        strip_prefix = "libccd-2.1",
+        urls = [
+            "https://github.com/danfis/libccd/archive/refs/tags/v2.1.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/danfis/libccd/v2.1.tar.gz",
+        ],
+        build_file = "//third_party/ccd:ccd.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "qhull",
+        sha256 = "09e5e4c5b2b8a9e617a46876fef5a3d33e70aa1d08a163ff05d37701327c3be7",
+        strip_prefix = "qhull-8.1-alpha1",
+        urls = [
+            "https://github.com/qhull/qhull/archive/refs/tags/v8.1-alpha1.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/qhull/qhull/v8.1-alpha1.tar.gz",
+        ],
+        build_file = "//third_party/qhull:qhull.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "mujoco",
+        sha256 = "5bd3847aca1f53e2467b680f797fe74ce6a1c20870e0fee534cfda38a25ea1d5",
+        strip_prefix = "mujoco-2.2.0",
+        urls = [
+            "https://github.com/deepmind/mujoco/archive/refs/tags/2.2.0.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/mujoco/2.2.0.tar.gz",
         ],
         build_file = "//third_party/mujoco:mujoco.BUILD",
     )
