@@ -110,7 +110,7 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
         id_nose_(mj_name2id(model_, mjOBJ_GEOM, "nose")),
         id_head_(mj_name2id(model_, mjOBJ_XBODY, "head")),
         id_target_(mj_name2id(model_, mjOBJ_GEOM, "target")),
-        id_target_(mj_name2id(model_, mjOBJ_GEOM, "target_light")) {
+        id_target_light_(mj_name2id(model_, mjOBJ_GEOM, "target_light")) {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name != "swimmer6" && task_name != "swimmer15") {
       throw std::runtime_error("Unknown task_name " + task_name +
