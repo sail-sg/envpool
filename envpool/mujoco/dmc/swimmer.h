@@ -202,7 +202,7 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
           nose_to_target_global[1] * data_->geom_xmat[id_head_ * 9 + i + 3] +
           nose_to_target_global[2] * data_->geom_xmat[id_head_ * 9 + i + 6];
     }
-    return nose_to_target;
+    return {nose_to_target[0], nose_to_target[1]};
   }
   mjtNum NoseToTargetDist() {
     // return np.linalg.norm(self.nose_to_target())
