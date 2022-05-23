@@ -132,14 +132,14 @@ std::string XMLMakeSwimmer(const std::string& content, int n_joints) {
     pugi::xml_node site = body.append_child("site");
     site.append_attribute("name") = ("site_" + std::to_string(i)).c_str();
     pugi::xml_node joint = body.append_child("joint");
-    float joint_limit = 360.0 / n_joints;
+    double joint_limit = 360.0 / n_joints;
     joint.append_attribute("name") = ("joint_" + std::to_string(i)).c_str();
     joint.append_attribute("range") =
         (std::to_string(-joint_limit)
-             .substr(0, std::to_string(i).find(".") + 1 + 1) +
+             .substr(0, std::to_string(-joint_limit).find(".") + 1 + 1) +
          " " +
          std::to_string(joint_limit)
-             .substr(0, std::to_string(i).find(".") + 1 + 1))
+             .substr(0, std::to_string(-joint_limit).find(".") + 1 + 1))
             .c_str();
     pugi::xml_node motor = actuator.append_child("motor");
     motor.append_attribute("joint") = ("joint_" + std::to_string(i)).c_str();
@@ -159,7 +159,7 @@ std::string XMLMakeSwimmer(const std::string& content, int n_joints) {
   // floor.attribute("pos").set_value(
   //     ("0 0 " + std::to_string(1 - n_joints - 0.05)).c_str());
   pugi::xpath_node_set cameras = doc.select_nodes("//worldbody/body/camera");
-  float scale = n_joints / 6.0;
+  double scale = n_joints / 6.0;
   for (const pugi::xpath_node& c : cameras) {
     std::string mode = c.node().attribute("mode").value();
     if (mode == "trackcom") {
