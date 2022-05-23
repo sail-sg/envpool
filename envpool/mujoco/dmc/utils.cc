@@ -181,13 +181,19 @@ std::string XMLMakeSwimmer(const std::string& content, int n_joints) {
       }
       c.node().attribute("pos").set_value(
           (std::to_string(std::stof(split_old_pos[0]) * scale)
-               .substr(0, std::to_string(i).find(".") + 1 + 1) +
+               .substr(0, std::to_string(std::stof(split_old_pos[0]) * scale)
+                                  .find(".") +
+                              1 + 1) +
            " " +
            std::to_string(std::stof(split_old_pos[1]) * scale)
-               .substr(0, std::to_string(i).find(".") + 1 + 1) +
+               .substr(0, std::to_string(std::stof(split_old_pos[0]) * scale)
+                                  .find(".") +
+                              1 + 1) +
            " " +
            std::to_string(std::stof(split_old_pos[2]) * scale)
-               .substr(0, std::to_string(i).find(".") + 1 + 1))
+               .substr(0, std::to_string(std::stof(split_old_pos[0]) * scale)
+                                  .find(".") +
+                              1 + 1))
               .c_str());
     }
   }
