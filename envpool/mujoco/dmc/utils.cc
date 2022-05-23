@@ -91,6 +91,42 @@ std::string XMLAddPoles(const std::string& content, int n_poles) {
   return writer.result;
 }
 
+std::string XMLMakeSwimmer(const std::string& content, int n_joints) {
+  pugi::xml_document doc;
+  doc.load_string(content.c_str());
+
+  pugi::xml_node body = doc.select_node("//worldbody/body/body").node();
+  for (int i = 2; i <= n_poles; ++i) {
+    pugi::xml_node new_pole = body.append_child("body");
+    new_pole.append_attribute("childclass") = "pole";
+    new_pole.append_attribute("name") = ("pole_" + std::to_string(i)).c_str();
+    new_pole.append_attribute("pos") = "0 0 1";
+    pugi::xml_node joint = new_pole.append_child("joint");
+    joint.append_attribute("name") = ("hinge_" + std::to_string(i)).c_str();
+    pugi::xml_node geom = new_pole.append_child("geom");
+    geom.append_attribute("name") = ("pole_" + std::to_string(i)).c_str();
+    body = new_pole;
+  }
+
+  pugi::xml_node floor = doc.select_node("//worldbody/geom").node();
+  floor.attribute("pos").set_value(
+      ("0 0 " + std::to_string(1 - n_poles - 0.05)).c_str());
+  pugi::xpath_node_set cameras = doc.select_nodes("//worldbody/camera");
+  for (const pugi::xpath_node& c : cameras) {
+    std::string name = c.node().attribute("name").value();
+    if (name == "fixed") {
+      c.node().attribute("pos").set_value(
+          ("0 " + std::to_string(-1 - 2 * n_poles) + " 1").c_str());
+    } else if (name == "lookatcart") {
+      c.node().attribute("pos").set_value(
+          ("0 " + std::to_string(-2 * n_poles) + " 2").c_str());
+    }
+  }
+  XMLStringWriter writer;
+  doc.print(writer);
+  return writer.result;
+}
+
 int GetQposId(mjModel* model, const std::string& name) {
   return model->jnt_qposadr[mj_name2id(model, mjOBJ_JOINT, name.c_str())];
 }

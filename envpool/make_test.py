@@ -157,6 +157,8 @@ class _MakeTest(absltest.TestCase):
         "PointMassHard-v1",
         "ReacherEasy-v1",
         "ReacherHard-v1",
+        "SwimmerSwimmer6-v1",
+        "SwimmerSwimmer15-v1",
         "WalkerRun-v1",
         "WalkerStand-v1",
         "WalkerWalk-v1",

@@ -13,17 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/fish.py
+// https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/swimmer.py
 
-#ifndef ENVPOOL_MUJOCO_DMC_FISH_H_
-#define ENVPOOL_MUJOCO_DMC_FISH_H_
+#ifndef ENVPOOL_MUJOCO_DMC_SWIMMER_H_
+#define ENVPOOL_MUJOCO_DMC_SWIMMER_H_
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
 #include <memory>
 #include <random>
+#include <regex>
+#include <set>
 #include <string>
+#include <vector>
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
@@ -32,110 +35,110 @@
 
 namespace mujoco_dmc {
 
-std::string GetFishXML(const std::string& base_path,
-                       const std::string& task_name_) {
-  return GetFileContent(base_path, "fish.xml");
+std::string GetSwimmerXML(const std::string& base_path,
+                          const std::string& task_name_) {
+  return GetFileContent(base_path, "swimmer.xml");
+  if (task_name == "swimmer6") {
+    return XMLAddPoles(content, 6);
+  }
+  if (task_name == "swimmer15") {
+    return XMLAddPoles(content, 15);
+  }
 }
 
-class FishEnvFns {
+class SwimmerEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(10),
-                    "task_name"_.Bind(std::string("upright")));
+    return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(15),
+                    "task_name"_.Bind(std::string("swimmer6")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs:joint_angles"_.Bind(Spec<mjtNum>({7})),
-                    "obs:upright"_.Bind(Spec<mjtNum>({})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({13})),
-                    "obs:target"_.Bind(Spec<mjtNum>({3})),
+    const std::string task_name = conf["task_name"_];
+    int n_joints;
+    if (task_name == "swimmer6") {
+      n_joints = 6;
+    } else if (task_name == "swimmer15") {
+      n_joints = 15;
+    } else {
+      throw std::runtime_error("Unknown task_name " + task_name +
+                               " for dmc cartpole.");
+    }
+    return MakeDict("obs:joints"_.Bind(Spec<mjtNum>({n_joints - 1})),
+                    "obs:to_target"_.Bind(Spec<mjtNum>({2})),
+                    "obs:body_velocities"_.Bind(Spec<mjtNum>({3 * n_joints})),
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.Bind(Spec<mjtNum>({14})),
-                    "info:target0"_.Bind(Spec<mjtNum>({3})),
+                    "info:qpos0"_.Bind(Spec<mjtNum>({n_joints + 2})),
+                    "info:target0"_.Bind(Spec<mjtNum>({2})),
 #endif
                     "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.Bind(Spec<mjtNum>({-1, 5}, {-1.0, 1.0})));
+    const std::string task_name = conf["task_name"_];
+    int n_joints;
+    if (task_name == "swimmer6") {
+      n_joints = 6;
+    } else if (task_name == "swimmer15") {
+      n_joints = 15;
+    } else {
+      throw std::runtime_error("Unknown task_name " + task_name +
+                               " for dmc cartpole.");
+    }
+    return MakeDict(
+        "action"_.Bind(Spec<mjtNum>({-1, n_joints - 1}, {-1.0, 1.0})));
   }
 };
 
-using FishEnvSpec = EnvSpec<FishEnvFns>;
+using SwimmerEnvSpec = EnvSpec<SwimmerEnvFns>;
 
-class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
-  const std::array<std::string, 7> kJoints = {
-      "tail1",          "tail_twist",   "tail2",        "finright_roll",
-      "finright_pitch", "finleft_roll", "finleft_pitch"};
-
+class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
  protected:
-  int id_mouth_, id_qpos_root_, id_torso_, id_target_;
-  std::array<int, 7> id_qpos_joint_, id_qvel_joint_;
-  bool is_swim_;
+  int id_nose_, id_head_;
+  int id_target_, id_target_light_;
 #ifdef ENVPOOL_TEST
-  std::array<mjtNum, 3> target0_;
+  std::array<mjtNum, 2> target0_;
 #endif
 
  public:
-  FishEnv(const Spec& spec, int env_id)
-      : Env<FishEnvSpec>(spec, env_id),
+  SwimmerEnv(const Spec& spec, int env_id)
+      : Env<SwimmerEnvSpec>(spec, env_id),
         MujocoEnv(
             spec.config["base_path"_],
-            GetFishXML(spec.config["base_path"_], spec.config["task_name"_]),
+            GetSwimmerXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
-        id_mouth_(mj_name2id(model_, mjOBJ_GEOM, "mouth")),
-        id_qpos_root_(GetQposId(model_, "root")),
-        id_torso_(mj_name2id(model_, mjOBJ_XBODY, "torso")),
+        id_nose_(mj_name2id(model_, mjOBJ_GEOM, "nose")),
+        id_head_(mj_name2id(model_, mjOBJ_XBODY, "head")),
         id_target_(mj_name2id(model_, mjOBJ_GEOM, "target")),
-        is_swim_(spec.config["task_name"_] == "swim") {
+        id_target_(mj_name2id(model_, mjOBJ_GEOM, "target_light")) {
     const std::string& task_name = spec.config["task_name"_];
-    if (task_name != "upright" && task_name != "swim") {
+    if (task_name != "swimmer6" && task_name != "swimmer15") {
       throw std::runtime_error("Unknown task_name " + task_name +
-                               " for dmc fish.");
-    }
-    for (std::size_t i = 0; i < kJoints.size(); ++i) {
-      id_qpos_joint_[i] = GetQposId(model_, kJoints[i]);
-      id_qvel_joint_[i] = GetQvelId(model_, kJoints[i]);
+                               " for dmc swimmer.");
     }
   }
 
   void TaskInitializeEpisode() override {
-    // quat = self.random.randn(4)
-    // physics.named.data.qpos['root'][3:7] = quat / np.linalg.norm(quat)
-    std::array<mjtNum, 4> quat = {
-        RandNormal(0, 1)(gen_), RandNormal(0, 1)(gen_), RandNormal(0, 1)(gen_),
-        RandNormal(0, 1)(gen_)};
-    mjtNum quat_norm = std::sqrt(quat[0] * quat[0] + quat[1] * quat[1] +
-                                 quat[2] * quat[2] + quat[3] * quat[3]);
-    for (int i = 0; i < 4; ++i) {
-      data_->qpos[id_qpos_root_ + 3 + i] = quat[i] / quat_norm;
+    RandomizeLimitedAndRotationalJoints(&gen_);
+    bool close_target = RandNormal(0, 1) < 0.2;
+    mjtNum target_box = 2;
+    if (close_target) {
+      target_box = 0.3;
     }
-    // for joint in _JOINTS:
-    //   physics.named.data.qpos[joint] = self.random.uniform(-.2, .2)
-    for (int id : id_qpos_joint_) {
-      data_->qpos[id] = RandUniform(-0.2, 0.2)(gen_);
-    }
-    if (is_swim_) {
-      // Randomize target position.
-      // physics.named.model.geom_pos['target', 'x'] = uniform(-.4, .4)
-      // physics.named.model.geom_pos['target', 'y'] = uniform(-.4, .4)
-      // physics.named.model.geom_pos['target', 'z'] = uniform(.1, .3)
-      mjtNum target_x = RandUniform(-0.4, 0.4)(gen_);
-      mjtNum target_y = RandUniform(-0.4, 0.4)(gen_);
-      mjtNum target_z = RandUniform(0.1, 0.3)(gen_);
-      model_->geom_pos[id_target_ * 3 + 0] = target_x;
-      model_->geom_pos[id_target_ * 3 + 1] = target_y;
-      model_->geom_pos[id_target_ * 3 + 2] = target_z;
-    } else {
-      // Hide the target. It's irrelevant for this task.
-      // physics.named.model.geom_rgba['target', 3] = 0
-      model_->geom_rgba[id_target_ * 4 + 3] = 0;
-    }
+    mjtNum x_pos = RandUniform(-target_box, target_box)(gen_);
+    mjtNum y_pos = RandUniform(-target_box, target_box)(gen_);
+    // physics.named.model.geom_pos['target', 'x'] = xpos
+    // physics.named.model.geom_pos['target', 'y'] = ypos
+    model_->geom_pos[id_target_ * 3 + 0] = x_pos;
+    model_->geom_pos[id_target_ * 3 + 1] = y_pos;
+    // physics.named.model.light_pos['target_light', 'x'] = xpos
+    // physics.named.model.light_pos['target_light', 'y'] = ypos
+    model_->light_pos[id_target_light_ * 3 + 0] = x_pos;
+    model_->light_pos[id_target_light_ * 3 + 1] = y_pos;
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
     target0_[0] = model_->geom_pos[id_target_ * 3 + 0];
     target0_[1] = model_->geom_pos[id_target_ * 3 + 1];
-    target0_[2] = model_->geom_pos[id_target_ * 3 + 2];
 #endif
   }
 
@@ -153,17 +156,11 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
   }
 
   float TaskGetReward() override {
-    if (!is_swim_) {
-      return static_cast<float>(RewardTolerance(Upright(), 1.0, 1.0, 1.0));
-    }
-    mjtNum radii =
-        model_->geom_size[id_mouth_ * 3] + model_->geom_size[id_target_ * 3];
-    const auto& target = MouthToTarget();
-    auto target_norm = std::sqrt(target[0] * target[0] + target[1] * target[1] +
-                                 target[2] * target[2]);
-    auto in_target = RewardTolerance(target_norm, 0.0, radii, 2 * radii);
-    auto is_upright = 0.5 * (Upright() + 1);
-    return static_cast<float>((7 * in_target + is_upright) / 8);
+    mjtNum target_size = model_->geom_size[id_target_ * 3];
+    // const auto& target_size = NoseToTargetDist();
+    return static_cast<float>(RewardTolerance(NoseToTargetDist(), 0.0,
+                                              target_size, 5 * target_size, 0.1,
+                                              SigmoidType::kLongTail));
   }
 
   bool TaskShouldTerminateEpisode() override { return false; }
@@ -174,15 +171,13 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
-    const auto& joint_angles = JointAngles();
-    state["obs:joint_angles"_].Assign(joint_angles.begin(),
-                                      joint_angles.size());
-    state["obs:upright"_] = Upright();
-    state["obs:velocity"_].Assign(data_->qvel, model_->nv);
-    if (is_swim_) {
-      const auto& target = MouthToTarget();
-      state["obs:target"_].Assign(target.begin(), target.size());
-    }
+    const auto& joints = Joints();
+    state["obs:to_target"_].Assign(joints.data(), joints.size());
+    const auto& to_target = NoseToTarget();
+    state["obs:to_target"_].Assign(to_target.begin(), to_target.size());
+    const auto& body_velocities = BodyVelocities();
+    state["obs:body_velocities"_].Assign(body_velocities.data(),
+                                         body_velocities);
     // info
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
@@ -190,56 +185,54 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
 #endif
   }
 
-  mjtNum Upright() {
-    // return self.named.data.xmat['torso', 'zz']
-    return data_->xmat[id_torso_ * 9 + 8];
+  std::array<mjtNum, 2> NoseToTarget() {
+    // nose_to_target = (self.named.data.geom_xpos['target'] -
+    //                   self.named.data.geom_xpos['nose'])
+    std::array<mjtNum, 3> nose_to_target_global;
+    for (int i = 0; i < 3; i++) {
+      nose_to_target_global[i] = (data_->geom_xpos[id_target_ * 3 + i] -
+                                  data_->geom_xpos[id_nose_ * 3 + i]);
+    }
+    // head_orientation = self.named.data.xmat['head'].reshape(3, 3)
+    // return nose_to_target.dot(head_orientation)[:2]
+    std::array<mjtNum, 3> nose_to_target;
+    for (int i = 0; i < 3; i++) {
+      nose_to_target[i] =
+          nose_to_target_global[0] * data_->geom_xmat[id_head_ * 9 + i + 0] +
+          nose_to_target_global[1] * data_->geom_xmat[id_head_ * 9 + i + 3] +
+          nose_to_target_global[2] * data_->geom_xmat[id_head_ * 9 + i + 6];
+    }
+    return nose_to_target;
   }
-
-  std::array<mjtNum, 6> TorsoVelocity() {
-    // return self.data.sensordata
-    return {data_->sensordata[0], data_->sensordata[1], data_->sensordata[2],
-            data_->sensordata[3], data_->sensordata[4], data_->sensordata[5]};
+  mjtNum NoseToTargetDist() {
+    // return np.linalg.norm(self.nose_to_target())
+    const auto& nose_to_target = NoseToTarget();
+    return std::sqrt(nose_to_target[0] * nose_to_target[0] +
+                     nose_to_target[1] * nose_to_target[1] +
+                     nose_to_target[2] * nose_to_target[2]);
   }
-
-  std::array<mjtNum, 7> JointVelocities() {
-    // return self.named.data.qvel[_JOINTS]
-    std::array<mjtNum, 7> result;
-    for (std::size_t i = 0; i < id_qvel_joint_.size(); ++i) {
-      result[i] = data_->qvel[id_qvel_joint_[i]];
+  std::vector<mjtNum> BodyVelocities() {
+    // returns local body velocities: x,y linear, z rotational.
+    for (int i = 0; i < model_->nbody - 1; ++i) {
+      result.emplace_back(data_->sensordata[i * 6 + 12 + 0]);
+      result.emplace_back(data_->sensordata[i * 6 + 12 + 1]);
+      result.emplace_back(data_->sensordata[i * 6 + 12 + 5]);
     }
     return result;
   }
 
-  std::array<mjtNum, 7> JointAngles() {
-    // return self.named.data.qpos[_JOINTS]
-    std::array<mjtNum, 7> result;
-    for (std::size_t i = 0; i < id_qpos_joint_.size(); ++i) {
-      result[i] = data_->qpos[id_qpos_joint_[i]];
+  std::vector<mjtNum> Joints() {
+    // return self.data.qpos[3:].copy()
+    std::vector<mjtNum> result;
+    for (int i = 3; i < model_->njnt; ++i) {
+      result.emplace_back(data_->qpos[i]);
     }
     return result;
-  }
-
-  std::array<mjtNum, 3> MouthToTarget() {
-    // data.geom_xpos['target'] - data.geom_xpos['mouth']
-    std::array<mjtNum, 3> mouth_to_target_global;
-    for (int i = 0; i < 3; i++) {
-      mouth_to_target_global[i] = (data_->geom_xpos[id_target_ * 3 + i] -
-                                   data_->geom_xpos[id_mouth_ * 3 + i]);
-    }
-    // mouth_to_target_global.dot(data.geom_xmat['mouth'].reshape(3, 3))
-    std::array<mjtNum, 3> mouth_to_target;
-    for (int i = 0; i < 3; i++) {
-      mouth_to_target[i] =
-          mouth_to_target_global[0] * data_->geom_xmat[id_mouth_ * 9 + i + 0] +
-          mouth_to_target_global[1] * data_->geom_xmat[id_mouth_ * 9 + i + 3] +
-          mouth_to_target_global[2] * data_->geom_xmat[id_mouth_ * 9 + i + 6];
-    }
-    return mouth_to_target;
   }
 };
 
-using FishEnvPool = AsyncEnvPool<FishEnv>;
+using SwimmerEnvPool = AsyncEnvPool<SwimmerEnv>;
 
 }  // namespace mujoco_dmc
 
-#endif  // ENVPOOL_MUJOCO_DMC_FISH_H_
+#endif  // ENVPOOL_MUJOCO_DMC_SWIMMER_H_
