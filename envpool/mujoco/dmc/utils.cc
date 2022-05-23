@@ -180,8 +180,8 @@ std::string XMLMakeSwimmer(const std::string& content, int n_joints) {
         (std::to_string(-joint_limit) + " " + std::to_string(joint_limit))
             .c_str();
     pugi::xml_node motor = actuator.append_child("motor");
-    motor.append_attribute("joint") = ("joint_" + std::to_string(i)).c_str();
     motor.append_attribute("name") = ("motor_" + std::to_string(i)).c_str();
+    motor.append_attribute("joint") = ("joint_" + std::to_string(i)).c_str();
     pugi::xml_node velocimeter = sensor.append_child("velocimeter");
     velocimeter.append_attribute("name") =
         ("velocimeter_" + std::to_string(i)).c_str();
