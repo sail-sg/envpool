@@ -154,7 +154,7 @@ std::string XMLMakeSwimmer(const std::string& content, int n_joints) {
   pugi::xml_node actuator = mjcf.append_child("actuator");
   pugi::xml_node sensor = mjcf.append_child("sensor");
   pugi::xml_node parent = head_body;
-  for (int i = 0; i <= n_joints - 1; ++i) {
+  for (int i = 0; i < n_joints - 1; ++i) {
     pugi::xml_node body = parent.append_child("body");
     body.append_attribute("name") = ("segment_" + std::to_string(i)).c_str();
     body.append_attribute("pos") = "0 .1 0";
