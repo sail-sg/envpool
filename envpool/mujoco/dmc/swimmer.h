@@ -108,8 +108,8 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
             spec.config["base_path"_],
             GetSwimmerXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
-        id_nose_(mj_name2id(model_, mjOBJ_GEOM, "nose")),
         id_head_(mj_name2id(model_, mjOBJ_XBODY, "head")),
+        id_nose_(mj_name2id(model_, mjOBJ_GEOM, "nose")),
         id_target_(mj_name2id(model_, mjOBJ_GEOM, "target")),
         id_target_light_(mj_name2id(model_, mjOBJ_GEOM, "target_light")) {
     const std::string& task_name = spec.config["task_name"_];
@@ -213,8 +213,7 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
     // return np.linalg.norm(self.nose_to_target())
     const auto& nose_to_target = NoseToTarget();
     return std::sqrt(nose_to_target[0] * nose_to_target[0] +
-                     nose_to_target[1] * nose_to_target[1] +
-                     nose_to_target[2] * nose_to_target[2]);
+                     nose_to_target[1] * nose_to_target[1]);
   }
   std::vector<mjtNum> BodyVelocities() {
     // returns local body velocities: x,y linear, z rotational.
