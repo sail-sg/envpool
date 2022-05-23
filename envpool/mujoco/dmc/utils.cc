@@ -121,17 +121,15 @@ std::string XMLMakeSwimmer(const std::string& content, int n_joints) {
   pugi::xml_node parent = head_body;
   for (int i = 0; i <= n_joints - 1; ++i) {
     pugi::xml_node body = parent.append_child("body");
-    body.append_attribute("name") = ("segment_" + std::to_string(i))
-                                        .c_str() body.attribute("pos")
-                                        .set_value(("0 .1 0").c_str());
+    body.append_attribute("name") = ("segment_" + std::to_string(i)).c_str();
+    body.attribute("pos").set_value(("0 .1 0").c_str());
     pugi::xml_node geom0 = body.append_child("geom");
     geom0.append_attribute("class") = "visual";
     geom0.append_attribute("name") = ("visual_" + std::to_string(i)).c_str();
     pugi::xml_node geom1 = body.append_child("geom");
     geom1.append_attribute("class") = "inertial";
-    geom1.append_attribute("name") =
-        ("inertial_" + std::to_string(i)).c_str() pugi::xml_node site =
-            body.append_child("site");
+    geom1.append_attribute("name") = ("inertial_" + std::to_string(i)).c_str();
+    pugi::xml_node site = body.append_child("site");
     site.append_attribute("name") = ("site_" + std::to_string(i)).c_str();
     pugi::xml_node joint = body.append_child("joint");
     float joint_limit = 360.0 / n_joints;
@@ -153,9 +151,8 @@ std::string XMLMakeSwimmer(const std::string& content, int n_joints) {
         ("site_" + std::to_string(i)).c_str();
     pugi::xml_node gyro = sensor.append_child("gyro");
     gyro.append_attribute("name") = ("gyro_" + std::to_string(i)).c_str();
-    velocimeter.append_attribute("site") =
-        ("site_" + std::to_string(i)).c_str();
-    gyro = body;
+    gyro.append_attribute("site") = ("site_" + std::to_string(i)).c_str();
+    parent = body;
   }
   // Move tracking cameras further away from the swimmer according to its
   // length. pugi::xml_node floor = doc.select_node("//worldbody/geom").node();
