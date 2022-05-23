@@ -90,37 +90,95 @@ std::string XMLAddPoles(const std::string& content, int n_poles) {
   doc.print(writer);
   return writer.result;
 }
-
+std::vector<std::string> splitString(std::string str, char splitter){
+    std::vector<std::string> result;
+    std::string current = ""; 
+    for(int i = 0; i < str.size(); i++){
+        if(str[i] == splitter){
+            if(current != ""){
+                result.push_back(current);
+                current = "";
+            } 
+            continue;
+        }
+        current += str[i];
+    }
+    if(current.size() != 0)
+        result.push_back(current);
+    return result;
+}
 std::string XMLMakeSwimmer(const std::string& content, int n_joints) {
+    if (n_joints < 3) {
+      throw std::runtime_error("At least 3 bodies required for swimmer. Received " + 
+                               std::to_string(n_joints));
+    }
   pugi::xml_document doc;
   doc.load_string(content.c_str());
-
-  pugi::xml_node body = doc.select_node("//worldbody/body/body").node();
-  for (int i = 2; i <= n_joints; ++i) {
-    pugi::xml_node new_pole = body.append_child("body");
-    new_pole.append_attribute("childclass") = "pole";
-    new_pole.append_attribute("name") = ("pole_" + std::to_string(i)).c_str();
-    new_pole.append_attribute("pos") = "0 0 1";
-    pugi::xml_node joint = new_pole.append_child("joint");
-    joint.append_attribute("name") = ("hinge_" + std::to_string(i)).c_str();
-    pugi::xml_node geom = new_pole.append_child("geom");
-    geom.append_attribute("name") = ("pole_" + std::to_string(i)).c_str();
-    body = new_pole;
+  pugi::xml_node mjcf = doc.document_element();
+  pugi::xml_node head_body = doc.select_node("//worldbody/body").node();
+  pugi::xml_node actuator = mjcf.append_child("actuator");
+  pugi::xml_node sensor = mjcf.append_child("sensor");
+  pugi::xml_node parent = head_body;
+  for (int i = 0; i <= n_joints-1; ++i) {
+    pugi::xml_node body = parent.append_child("body");
+    body.append_attribute("name") = ("segment_" + std::to_string(i)).c_str()
+    body.attribute("pos").set_value(("0 .1 0").c_str());
+    pugi::xml_node geom0 = body.append_child("geom");
+    geom0.append_attribute("class") = "visual";
+    geom0.append_attribute("name") = ("visual_" + std::to_string(i)).c_str();
+    pugi::xml_node geom1 = body.append_child("geom");
+    geom1.append_attribute("class") = "inertial";
+    geom1.append_attribute("name") = ("inertial_" + std::to_string(i)).c_str()    
+    pugi::xml_node site = body.append_child("site");
+    site.append_attribute("name") = ("site_" + std::to_string(i)).c_str();
+    pugi::xml_node joint = body.append_child("joint");
+    float joint_limit = 360.0 / n_joints;
+    joint.append_attribute("name") = ("joint_" + std::to_string(i)).c_str();
+    joint.append_attribute("range") = (std::to_string(-joint_limit).substr(0, std::to_string(i).find(".") + 1 + 1) + 
+                                       " " + 
+                                       std::to_string(joint_limit).substr(0, std::to_string(i).find(".") + 1 + 1)).c_str();
+    pugi::xml_node motor = actuator.append_child("motor");
+    motor.append_attribute("joint") = ("joint_" + std::to_string(i)).c_str();
+    motor.append_attribute("name") = ("motor_" + std::to_string(i)).c_str();
+    pugi::xml_node velocimeter = sensor.append_child("velocimeter");
+    velocimeter.append_attribute("name") = ("velocimeter_" + std::to_string(i)).c_str();
+    velocimeter.append_attribute("site") = ("site_" + std::to_string(i)).c_str();
+    pugi::xml_node gyro = sensor.append_child("gyro");
+    gyro.append_attribute("name") = ("gyro_" + std::to_string(i)).c_str();
+    velocimeter.append_attribute("site") = ("site_" + std::to_string(i)).c_str();
+    gyro = body;
   }
-
-  pugi::xml_node floor = doc.select_node("//worldbody/geom").node();
-  floor.attribute("pos").set_value(
-      ("0 0 " + std::to_string(1 - n_joints - 0.05)).c_str());
-  pugi::xpath_node_set cameras = doc.select_nodes("//worldbody/camera");
+  // Move tracking cameras further away from the swimmer according to its length.
+  // pugi::xml_node floor = doc.select_node("//worldbody/geom").node();
+  // floor.attribute("pos").set_value(
+  //     ("0 0 " + std::to_string(1 - n_joints - 0.05)).c_str());
+  pugi::xpath_node_set cameras = doc.select_nodes("//worldbody/body/camera");
+  float scale = n_joints /6.0;
   for (const pugi::xpath_node& c : cameras) {
-    std::string name = c.node().attribute("name").value();
-    if (name == "fixed") {
+    std::string mode = c.node().attribute("mode").value();
+    if (mode == "trackcom") {
+      std::string old_pos = c.node().attribute("pos").value();
+      std::vector<std::string> split_old_pos;
+      std::string current = ""; 
+      for(int i = 0; i < old_pos.size(); i++){
+          if(old_pos[i] == " "){
+              if(current != ""){
+                  split_old_pos.push_back(current);
+                  current = "";
+              } 
+              continue;
+          }
+          current += old_pos[i];
+      }
+      if(current.size() != 0)
+          split_old_pos.push_back(current);
       c.node().attribute("pos").set_value(
-          ("0 " + std::to_string(-1 - 2 * n_joints) + " 1").c_str());
-    } else if (name == "lookatcart") {
-      c.node().attribute("pos").set_value(
-          ("0 " + std::to_string(-2 * n_joints) + " 2").c_str());
-    }
+          (std::to_string(std::stof(split_old_pos[0]) * scale).substr(0, std::to_string(i).find(".") + 1 + 1) +
+           " " + 
+           std::to_string(std::stof(split_old_pos[1]) * scale).substr(0, std::to_string(i).find(".") + 1 + 1) + 
+           " " +
+           std::to_string(std::stof(split_old_pos[2]) * scale).substr(0, std::to_string(i).find(".") + 1 + 1)).c_str());
+    } 
   }
   XMLStringWriter writer;
   doc.print(writer);

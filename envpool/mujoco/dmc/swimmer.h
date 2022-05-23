@@ -172,12 +172,12 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
     state["discount"_] = discount_;
     // obs
     const auto& joints = Joints();
-    state["obs:to_target"_].Assign(joints.data(), joints.size());
+    state["obs:joints"_].Assign(joints.data(), joints.size());
     const auto& to_target = NoseToTarget();
     state["obs:to_target"_].Assign(to_target.begin(), to_target.size());
     const auto& body_velocities = BodyVelocities();
     state["obs:body_velocities"_].Assign(body_velocities.data(),
-                                         body_velocities);
+                                         body_velocities.size());
     // info
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
@@ -213,6 +213,7 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
   }
   std::vector<mjtNum> BodyVelocities() {
     // returns local body velocities: x,y linear, z rotational.
+    std::vector<mjtNum> result;
     for (int i = 0; i < model_->nbody - 1; ++i) {
       result.emplace_back(data_->sensordata[i * 6 + 12 + 0]);
       result.emplace_back(data_->sensordata[i * 6 + 12 + 1]);
