@@ -157,7 +157,7 @@ std::string XMLMakeSwimmer(const std::string& content, int n_joints) {
   for (int i = 0; i <= n_joints - 1; ++i) {
     pugi::xml_node body = parent.append_child("body");
     body.append_attribute("name") = ("segment_" + std::to_string(i)).c_str();
-    body.attribute("pos").set_value("0 .1 0");
+    body.append_attribute("pos") = "0 .1 0";
     pugi::xml_node geom0 = body.append_child("geom");
     geom0.append_attribute("class") = "visual";
     geom0.append_attribute("name") = ("visual_" + std::to_string(i)).c_str();
