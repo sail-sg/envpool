@@ -227,6 +227,7 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
       done = np.array([False] * num_envs)
       obs = env.reset(env_id)
       rewards = np.zeros(num_envs)
+      action = np.zeros([num_envs, 4])
       while not np.all(done):
         ah = [
           self.heuristic_bipedal_walker_policy(s, h) for s, h in zip(obs, hs)

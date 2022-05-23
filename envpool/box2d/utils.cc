@@ -20,4 +20,14 @@ b2Vec2 Vec2(double x, double y) {
   return b2Vec2(static_cast<float>(x), static_cast<float>(y));
 }
 
+float Sign(float val, float eps) {
+  if (val > eps) {
+    return 1;
+  }
+  if (val < -eps) {
+    return -1;
+  }
+  return 0;
+}
+
 }  // namespace box2d

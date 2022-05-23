@@ -253,8 +253,7 @@ void LunarLanderBox2dEnv::StepBox2d(std::mt19937* gen, int action,
       (!continuous_ && (action == 1 || action == 3))) {
     double direction;
     if (continuous_) {
-      float eps = 1e-8;
-      direction = action1 > eps ? 1 : action1 < -eps ? -1 : 0;
+      direction = Sign(action1);
       s_power = std::min(std::max(std::abs(action1), 0.5f), 1.0f);
     } else {
       direction = action - 2;
