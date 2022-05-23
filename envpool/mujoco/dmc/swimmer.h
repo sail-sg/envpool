@@ -63,7 +63,7 @@ class SwimmerEnvFns {
       n_joints = 15;
     } else {
       throw std::runtime_error("Unknown task_name " + task_name +
-                               " for dmc cartpole.");
+                               " for dmc swimmer.");
     }
     return MakeDict("obs:joints"_.Bind(Spec<mjtNum>({n_joints - 1})),
                     "obs:to_target"_.Bind(Spec<mjtNum>({2})),
@@ -77,17 +77,17 @@ class SwimmerEnvFns {
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
     const std::string task_name = conf["task_name"_];
-    int n_joints;
+    int n_links;
     if (task_name == "swimmer6") {
-      n_joints = 6;
+      n_links = 6;
     } else if (task_name == "swimmer15") {
-      n_joints = 15;
+      n_links = 15;
     } else {
       throw std::runtime_error("Unknown task_name " + task_name +
                                " for dmc swimmer.");
     }
     return MakeDict(
-        "action"_.Bind(Spec<mjtNum>({-1, n_joints - 1}, {-1.0, 1.0})));
+        "action"_.Bind(Spec<mjtNum>({-1, n_links - 1}, {-1.0, 1.0})));
   }
 };
 
