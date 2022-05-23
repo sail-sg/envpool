@@ -102,6 +102,7 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
       world_->DestroyBody(l);
     }
   }
+  scroll_ = 0;
   listener_ = std::make_unique<BipedalWalkerContactDetector>(this);
   world_->SetContactListener(listener_.get());
 
@@ -354,6 +355,55 @@ void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
   if (elapsed_step_ >= max_episode_steps_) {
     done_ = true;
   }
+
+  scroll_ = pos.x - kViewportW / kScale / 5;
+  // info
+#ifdef ENVPOOL_TEST
+  path2_.clear();
+  path4_.clear();
+  path5_.clear();
+  // terrain
+  for (auto* b : terrain_) {
+    b2Fixture& f = b->GetFixtureList()[0];
+    auto trans = f.GetBody()->GetTransform();
+    if (f.GetShape()->GetType() == 1) {
+      auto* shape = static_cast<b2EdgeShape*>(f.GetShape());
+      b2Vec2 v1 = kScale * b2Mul(trans, shape->m_vertex1);
+      b2Vec2 v2 = kScale * b2Mul(trans, shape->m_vertex2);
+      path2_.emplace_back(v1.x);
+      path2_.emplace_back(v1.y);
+      path2_.emplace_back(v2.x);
+      path2_.emplace_back(v2.y);
+    } else {
+      auto* shape = static_cast<b2PolygonShape*>(f.GetShape());
+      for (int i = 0; i < shape->m_count; ++i) {
+        b2Vec2 v = kScale * b2Mul(trans, shape->m_vertices[i]);
+        path4_.emplace_back(v.x);
+        path4_.emplace_back(v.y);
+      }
+    }
+  }
+  // legs
+  for (auto* b : legs_) {
+    b2Fixture& f = b->GetFixtureList()[0];
+    auto trans = f.GetBody()->GetTransform();
+    auto* shape = static_cast<b2PolygonShape*>(f.GetShape());
+    for (int i = 0; i < shape->m_count; ++i) {
+      b2Vec2 v = kScale * b2Mul(trans, shape->m_vertices[i]);
+      path4_.emplace_back(v.x);
+      path4_.emplace_back(v.y);
+    }
+  }
+  // hull
+  b2Fixture& f = hull_->GetFixtureList()[0];
+  auto trans = f.GetBody()->GetTransform();
+  auto* shape = static_cast<b2PolygonShape*>(f.GetShape());
+  for (int i = 0; i < shape->m_count; ++i) {
+    b2Vec2 v = kScale * b2Mul(trans, shape->m_vertices[i]);
+    path5_.emplace_back(v.x);
+    path5_.emplace_back(v.y);
+  }
+#endif
 }
 
 void BipedalWalkerBox2dEnv::BipedalWalkerReset(std::mt19937* gen) {

@@ -31,7 +31,16 @@ class BipedalWalkerEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
+#ifdef ENVPOOL_TEST
+    return MakeDict("obs"_.Bind(Spec<float>({24})),
+                    "info:scroll"_.Bind(Spec<float>({-1})),
+                    "info:path4_len"_.Bind(Spec<int>({-1})),
+                    "info:path2"_.Bind(Spec<float>({199, 2, 2})),
+                    "info:path4"_.Bind(Spec<float>({100, 4, 2})),
+                    "info:path5"_.Bind(Spec<float>({1, 5, 2})));
+#else
     return MakeDict("obs"_.Bind(Spec<float>({24})));
+#endif
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -67,6 +76,13 @@ class BipedalWalkerEnv : public Env<BipedalWalkerEnvSpec>,
     State state = Allocate();
     state["reward"_] = reward_;
     state["obs"_].Assign(obs_.begin(), obs_.size());
+#ifdef ENVPOOL_TEST
+    state["info:scroll"_] = scroll_;
+    state["info:path4_len"_] = path4_.size() / 8;
+    state["info:path2"_].Assign(path2_.data(), path2_.size());
+    state["info:path4"_].Assign(path4_.data(), path4_.size());
+    state["info:path5"_].Assign(path5_.data(), path5_.size());
+#endif
   }
 };
 

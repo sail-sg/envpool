@@ -17,8 +17,10 @@ from typing import Any, Dict, Tuple, no_type_check
 
 import gym
 import numpy as np
+import pygame
 from absl import logging
 from absl.testing import absltest
+from pygame import gfxdraw
 
 from envpool.box2d import (
   BipedalWalkerEnvSpec,
@@ -201,7 +203,9 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
       "supporting_knee_angle": supporting_knee_angle,
     }
 
-  def solve_bipedal_walker(self, num_envs: int, hardcore: bool) -> None:
+  def solve_bipedal_walker(
+    self, num_envs: int, hardcore: bool, render: bool
+  ) -> None:
     env = BipedalWalkerGymEnvPool(
       BipedalWalkerEnvSpec(
         BipedalWalkerEnvSpec.gen_config(
@@ -235,6 +239,8 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
         action = np.array([i[0] for i in ah])
         hs = np.array([i[1] for i in ah])
         obs, rew, done, info = env.step(action, env_id)
+        if render:
+          self.render_bpw(info)
         env_id = info["env_id"]
         rewards[env_id] += rew
         obs = obs[~done]
@@ -250,9 +256,60 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
       else:  # 102.647320 ± 125.075071
         self.assertTrue(abs(mean_reward - 103) < 20, (hardcore, mean_reward))
 
-  def test_bipedal_walker_correctness(self, num_envs: int = 30) -> None:
-    self.solve_bipedal_walker(num_envs, True)
-    self.solve_bipedal_walker(num_envs, False)
+  def render_bpw(self, info) -> None:
+    SCALE = 30.0
+    VIEWPORT_W = 600
+    VIEWPORT_H = 400
+    scroll = info["scroll"][0]
+    surf = pygame.Surface((VIEWPORT_W + scroll * SCALE, VIEWPORT_H))
+    pygame.transform.scale(surf, (SCALE, SCALE))
+    pygame.draw.polygon(
+      surf,
+      color=(215, 215, 255),
+      points=[
+        (scroll * SCALE, 0),
+        (scroll * SCALE + VIEWPORT_W, 0),
+        (scroll * SCALE + VIEWPORT_W, VIEWPORT_H),
+        (scroll * SCALE, VIEWPORT_H),
+      ],
+    )
+    for p in info["path2"][0]:
+      c = (0, 255, 0)
+      pygame.draw.aaline(surf, start_pos=p[0], end_pos=p[1], color=c)
+    for p in info["path4"][0][:info["path4_len"][0]]:
+      c = (255, 255, 255)
+      p = p.tolist()
+      pygame.draw.polygon(surf, color=c, points=p)
+      gfxdraw.aapolygon(surf, p, c)
+      c = (153, 153, 153)
+      p.append(p[0])
+      pygame.draw.polygon(surf, color=c, points=p, width=1)
+      gfxdraw.aapolygon(surf, p, c)
+    for p in info["path5"][0]:
+      c = (127, 51, 229)
+      p = p.tolist()
+      pygame.draw.polygon(surf, color=c, points=p)
+      gfxdraw.aapolygon(surf, p, c)
+      c = (76, 76, 127)
+      p.append(p[0])
+      pygame.draw.polygon(surf, color=c, points=p, width=1)
+      gfxdraw.aapolygon(surf, p, c)
+    surf = pygame.transform.flip(surf, False, True)
+    self.screen.blit(surf, (-scroll * SCALE, 0))
+    pygame.event.pump()
+    self.clock.tick(50)
+    pygame.display.flip()
+
+  def test_bipedal_walker_correctness(
+    self, num_envs: int = 1, render: bool = not False
+  ) -> None:
+    if render:
+      pygame.init()
+      pygame.display.init()
+      self.screen = pygame.display.set_mode((600, 400))
+      self.clock = pygame.time.Clock()
+    self.solve_bipedal_walker(num_envs, True, render)
+    self.solve_bipedal_walker(num_envs, False, render)
 
 
 if __name__ == "__main__":

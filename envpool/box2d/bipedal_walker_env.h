@@ -57,11 +57,11 @@ class BipedalWalkerBox2dEnv {
   const double kViewportW = 600;
   const double kViewportH = 400;
   const double kTerrainStep = 14 / kScale;
-  const double kTerrainLength = 200;
   const double kTerrainHeight = kViewportH / kScale / 4;
-  const double kTerrainGrass = 10;
-  const int kTerrainStartpad = 20;
   const float kFriction = 2.5;
+  static const int kTerrainLength = 200;
+  static const int kTerrainGrass = 10;
+  static const int kTerrainStartpad = 20;
   static const int kLidarNum = 10;
   static const int kGrass = 0;
   static const int kStump = 1;
@@ -76,6 +76,9 @@ class BipedalWalkerBox2dEnv {
   float reward_, prev_shaping_;
   bool hardcore_, done_;
   std::array<float, 24> obs_;
+  // info
+  float scroll_;
+  std::vector<float> path2_, path4_, path5_;
 
   // box2d related
   std::unique_ptr<b2World> world_;
