@@ -56,20 +56,20 @@ class SwimmerEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     const std::string task_name = conf["task_name"_];
-    int n_joints;
+    int n_bodies = 3;
     if (task_name == "swimmer6") {
-      n_joints = 6;
+      n_bodies = 6;
     } else if (task_name == "swimmer15") {
-      n_joints = 15;
+      n_bodies = 15;
     } else {
       throw std::runtime_error("Unknown task_name " + task_name +
                                " for dmc swimmer.");
     }
-    return MakeDict("obs:joints"_.Bind(Spec<mjtNum>({n_joints - 1})),
+    return MakeDict("obs:joints"_.Bind(Spec<mjtNum>({n_bodies - 1})),
                     "obs:to_target"_.Bind(Spec<mjtNum>({2})),
-                    "obs:body_velocities"_.Bind(Spec<mjtNum>({3 * n_joints})),
+                    "obs:body_velocities"_.Bind(Spec<mjtNum>({3 * n_bodies})),
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.Bind(Spec<mjtNum>({n_joints + 2})),
+                    "info:qpos0"_.Bind(Spec<mjtNum>({n_bodies + 2})),
                     "info:target0"_.Bind(Spec<mjtNum>({2})),
 #endif
                     "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
@@ -77,17 +77,14 @@ class SwimmerEnvFns {
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
     const std::string task_name = conf["task_name"_];
-    int n_links;
+    int n_bodies = 3;
     if (task_name == "swimmer6") {
-      n_links = 6;
+      n_bodies = 6;
     } else if (task_name == "swimmer15") {
-      n_links = 15;
-    } else {
-      throw std::runtime_error("Unknown task_name " + task_name +
-                               " for dmc swimmer.");
+      n_bodies = 15;
     }
     return MakeDict(
-        "action"_.Bind(Spec<mjtNum>({-1, n_links - 1}, {-1.0, 1.0})));
+        "action"_.Bind(Spec<mjtNum>({-1, n_bodies - 1}, {-1.0, 1.0})));
   }
 };
 
@@ -95,8 +92,7 @@ using SwimmerEnvSpec = EnvSpec<SwimmerEnvFns>;
 
 class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
  protected:
-  int id_head_, id_nose_;
-  int id_target_, id_target_light_;
+  int id_head_, id_nose_, id_target_, id_target_light_;
 #ifdef ENVPOOL_TEST
   std::array<mjtNum, 2> target0_;
 #endif
@@ -111,39 +107,25 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
         id_head_(mj_name2id(model_, mjOBJ_XBODY, "head")),
         id_nose_(mj_name2id(model_, mjOBJ_GEOM, "nose")),
         id_target_(mj_name2id(model_, mjOBJ_GEOM, "target")),
-        id_target_light_(mj_name2id(model_, mjOBJ_LIGHT, "target_light")) {
-    const std::string& task_name = spec.config["task_name"_];
-    if (task_name != "swimmer6" && task_name != "swimmer15") {
-      throw std::runtime_error("Unknown task_name " + task_name +
-                               " for dmc swimmer.");
-    }
-  }
+        id_target_light_(mj_name2id(model_, mjOBJ_LIGHT, "target_light")) {}
 
   void TaskInitializeEpisode() override {
     RandomizeLimitedAndRotationalJoints(&gen_);
-    bool close_target = false;
-    // mjtNum gen_close_target = RandNormal(0, 1)(gen_);
-    if (RandNormal(0, 1)(gen_) < 0.2) {
-      close_target = true;
-    }
-    mjtNum target_box = 2;
-    if (close_target) {
-      target_box = 0.3;
-    }
-    mjtNum x_pos = RandUniform(-target_box, target_box)(gen_);
-    mjtNum y_pos = RandUniform(-target_box, target_box)(gen_);
+    mjtNum target_box = RandUniform(0, 1)(gen_) < 0.2 ? 0.3 : 2.0;
+    mjtNum xpos = RandUniform(-target_box, target_box)(gen_);
+    mjtNum ypos = RandUniform(-target_box, target_box)(gen_);
     // physics.named.model.geom_pos['target', 'x'] = xpos
     // physics.named.model.geom_pos['target', 'y'] = ypos
-    model_->geom_pos[id_target_ * 3 + 0] = x_pos;
-    model_->geom_pos[id_target_ * 3 + 1] = y_pos;
+    model_->geom_pos[id_target_ * 3 + 0] = xpos;
+    model_->geom_pos[id_target_ * 3 + 1] = ypos;
     // physics.named.model.light_pos['target_light', 'x'] = xpos
     // physics.named.model.light_pos['target_light', 'y'] = ypos
-    model_->light_pos[id_target_light_ * 3 + 0] = x_pos;
-    model_->light_pos[id_target_light_ * 3 + 1] = y_pos;
+    model_->light_pos[id_target_light_ * 3 + 0] = xpos;
+    model_->light_pos[id_target_light_ * 3 + 1] = ypos;
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
-    target0_[0] = model_->geom_pos[id_target_ * 3 + 0];
-    target0_[1] = model_->geom_pos[id_target_ * 3 + 1];
+    target0_[0] = xpos;
+    target0_[1] = ypos;
 #endif
   }
 
@@ -162,7 +144,6 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
 
   float TaskGetReward() override {
     mjtNum target_size = model_->geom_size[id_target_ * 3];
-    // const auto& target_size = NoseToTargetDist();
     return static_cast<float>(RewardTolerance(NoseToTargetDist(), 0.0,
                                               target_size, 5 * target_size, 0.1,
                                               SigmoidType::kLongTail));
@@ -172,15 +153,16 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
 
  private:
   void WriteState() {
+    const auto& joints = Joints();
+    const auto& to_target = NoseToTarget();
+    const auto& body_velocities = BodyVelocities();
+
     State state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
-    const auto& joints = Joints();
     state["obs:joints"_].Assign(joints.data(), joints.size());
-    const auto& to_target = NoseToTarget();
     state["obs:to_target"_].Assign(to_target.begin(), to_target.size());
-    const auto& body_velocities = BodyVelocities();
     state["obs:body_velocities"_].Assign(body_velocities.data(),
                                          body_velocities.size());
     // info
@@ -218,10 +200,10 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
   std::vector<mjtNum> BodyVelocities() {
     // returns local body velocities: x,y linear, z rotational.
     std::vector<mjtNum> result;
-    for (int i = 0; i < model_->nbody - 1; ++i) {
-      result.emplace_back(data_->sensordata[i * 6 + 12 + 0]);
-      result.emplace_back(data_->sensordata[i * 6 + 12 + 1]);
-      result.emplace_back(data_->sensordata[i * 6 + 12 + 5]);
+    for (int i = 2; i < model_->nbody + 1; ++i) {
+      result.emplace_back(data_->sensordata[i * 6 + 0]);
+      result.emplace_back(data_->sensordata[i * 6 + 1]);
+      result.emplace_back(data_->sensordata[i * 6 + 5]);
     }
     return result;
   }
@@ -229,7 +211,7 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
   std::vector<mjtNum> Joints() {
     // return self.data.qpos[3:].copy()
     std::vector<mjtNum> result;
-    for (int i = 3; i < model_->njnt; ++i) {
+    for (int i = 3; i < model_->nq; ++i) {
       result.emplace_back(data_->qpos[i]);
     }
     return result;

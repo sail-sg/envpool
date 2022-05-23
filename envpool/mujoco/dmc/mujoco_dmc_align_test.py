@@ -85,11 +85,11 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         env.physics.named.model.geom_pos["target", "x"] = target[0]
         env.physics.named.model.geom_pos["target", "y"] = target[1]
       elif domain == "swimmer":
-        target = ts.observation.target0[0]
-        env.physics.named.model.geom_pos["target", "x"] = target[0]
-        env.physics.named.model.geom_pos["target", "y"] = target[1]
-        env.physics.named.model.light_pos['target_light', 'x'] = target[0]
-        env.physics.named.model.light_pos['target_light', 'y'] = target[1]
+        xpos, ypos = ts.observation.target0[0]
+        env.physics.named.model.geom_pos["target", "x"] = xpos
+        env.physics.named.model.geom_pos["target", "y"] = ypos
+        env.physics.named.model.light_pos['target_light', 'x'] = xpos
+        env.physics.named.model.light_pos['target_light', 'y'] = ypos
       elif domain == "fish" and task == "swim":
         target = ts.observation.target0[0]
         env.physics.named.model.geom_pos["target", "x"] = target[0]
