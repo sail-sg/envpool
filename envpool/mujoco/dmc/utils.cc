@@ -106,6 +106,41 @@ std::string XMLAddPoles(const std::string& content, int n_poles) {
 //   if (current.size() != 0) result.push_back(current);
 //   return result;
 // }
+//   std::string old_pos = c.node().attribute("pos").value();
+//   std::vector<std::string> split_old_pos;
+//   std::string current = "";
+//   for (int i = 0; i < old_pos.size(); i++) {
+//     if (old_pos[i] == " ") {
+//       if (current != "") {
+//         split_old_pos.push_back(current);
+//         current = "";
+//       }
+//       continue;
+//     }
+//     current += old_pos[i];
+//   }
+//   if (current.size() != 0) {
+//     split_old_pos.push_back(current);
+//   }
+//   c.node().attribute("pos").set_value(
+//       (std::to_string(std::stof(split_old_pos[0]) * scale)
+//            .substr(0, std::to_string(std::stof(split_old_pos[0]) *
+//            scale)
+//                               .find(".") +
+//                           1 + 1) +
+//        " " +
+//        std::to_string(std::stof(split_old_pos[1]) * scale)
+//            .substr(0, std::to_string(std::stof(split_old_pos[1]) *
+//            scale)
+//                               .find(".") +
+//                           1 + 1) +
+//        " " +
+//        std::to_string(std::stof(split_old_pos[2]) * scale)
+//            .substr(0, std::to_string(std::stof(split_old_pos[2]) *
+//            scale)
+//                               .find(".") +
+//                           1 + 1))
+//           .c_str());
 std::string XMLMakeSwimmer(const std::string& content, int n_joints) {
   if (n_joints < 3) {
     throw std::runtime_error(
@@ -178,128 +213,92 @@ std::string XMLMakeSwimmer(const std::string& content, int n_joints) {
                                              " " + std::to_string(scale * 0.15))
                                                 .c_str());
       }
-      //   std::string old_pos = c.node().attribute("pos").value();
-      //   std::vector<std::string> split_old_pos;
-      //   std::string current = "";
-      //   for (int i = 0; i < old_pos.size(); i++) {
-      //     if (old_pos[i] == " ") {
-      //       if (current != "") {
-      //         split_old_pos.push_back(current);
-      //         current = "";
-      //       }
-      //       continue;
-      //     }
-      //     current += old_pos[i];
-      //   }
-      //   if (current.size() != 0) {
-      //     split_old_pos.push_back(current);
-      //   }
-      //   c.node().attribute("pos").set_value(
-      //       (std::to_string(std::stof(split_old_pos[0]) * scale)
-      //            .substr(0, std::to_string(std::stof(split_old_pos[0]) *
-      //            scale)
-      //                               .find(".") +
-      //                           1 + 1) +
-      //        " " +
-      //        std::to_string(std::stof(split_old_pos[1]) * scale)
-      //            .substr(0, std::to_string(std::stof(split_old_pos[1]) *
-      //            scale)
-      //                               .find(".") +
-      //                           1 + 1) +
-      //        " " +
-      //        std::to_string(std::stof(split_old_pos[2]) * scale)
-      //            .substr(0, std::to_string(std::stof(split_old_pos[2]) *
-      //            scale)
-      //                               .find(".") +
-      //                           1 + 1))
-      //           .c_str());
-      // }
     }
-    XMLStringWriter writer;
-    doc.print(writer);
-    return writer.result;
   }
+  XMLStringWriter writer;
+  doc.print(writer);
+  return writer.result;
+}
 
-  int GetQposId(mjModel * model, const std::string& name) {
-    return model->jnt_qposadr[mj_name2id(model, mjOBJ_JOINT, name.c_str())];
+int GetQposId(mjModel* model, const std::string& name) {
+  return model->jnt_qposadr[mj_name2id(model, mjOBJ_JOINT, name.c_str())];
+}
+
+int GetQvelId(mjModel* model, const std::string& name) {
+  return model->jnt_dofadr[mj_name2id(model, mjOBJ_JOINT, name.c_str())];
+}
+
+int GetSensorId(mjModel* model, const std::string& name) {
+  return model->sensor_adr[mj_name2id(model, mjOBJ_SENSOR, name.c_str())];
+}
+
+// rewards
+double RewardTolerance(double x, double bound_min, double bound_max,
+                       double margin, double value_at_margin,
+                       SigmoidType sigmoid_type) {
+  if (bound_min <= x && x <= bound_max) {
+    return 1.0;
   }
-
-  int GetQvelId(mjModel * model, const std::string& name) {
-    return model->jnt_dofadr[mj_name2id(model, mjOBJ_JOINT, name.c_str())];
+  if (margin <= 0.0) {
+    return 0.0;
   }
-
-  int GetSensorId(mjModel * model, const std::string& name) {
-    return model->sensor_adr[mj_name2id(model, mjOBJ_SENSOR, name.c_str())];
+  x = (x < bound_min ? bound_min - x : x - bound_max) / margin;
+  if (sigmoid_type == SigmoidType::kGaussian) {
+    // scale = np.sqrt(-2 * np.log(value_at_1))
+    // return np.exp(-0.5 * (x*scale)**2)
+    double scaled_x = std::sqrt(-2 * std::log(value_at_margin)) * x;
+    return std::exp(-0.5 * scaled_x * scaled_x);
   }
-
-  // rewards
-  double RewardTolerance(double x, double bound_min, double bound_max,
-                         double margin, double value_at_margin,
-                         SigmoidType sigmoid_type) {
-    if (bound_min <= x && x <= bound_max) {
-      return 1.0;
-    }
-    if (margin <= 0.0) {
-      return 0.0;
-    }
-    x = (x < bound_min ? bound_min - x : x - bound_max) / margin;
-    if (sigmoid_type == SigmoidType::kGaussian) {
-      // scale = np.sqrt(-2 * np.log(value_at_1))
-      // return np.exp(-0.5 * (x*scale)**2)
-      double scaled_x = std::sqrt(-2 * std::log(value_at_margin)) * x;
-      return std::exp(-0.5 * scaled_x * scaled_x);
-    }
-    if (sigmoid_type == SigmoidType::kHyperbolic) {
-      // scale = np.arccosh(1/value_at_1)
-      // return 1 / np.cosh(x*scale)
-      double scaled_x = std::acosh(1 / value_at_margin) * x;
-      return 1 / std::cosh(scaled_x);
-    }
-    if (sigmoid_type == SigmoidType::kLongTail) {
-      // scale = np.sqrt(1/value_at_1 - 1)
-      // return 1 / ((x*scale)**2 + 1)
-      double scaled_x = std::sqrt(1 / value_at_margin - 1) * x;
-      return 1 / (scaled_x * scaled_x + 1);
-    }
-    if (sigmoid_type == SigmoidType::kReciprocal) {
-      // scale = 1/value_at_1 - 1
-      // return 1 / (abs(x)*scale + 1)
-      double scale = 1 / value_at_margin - 1;
-      return 1 / (std::abs(x) * scale + 1);
-    }
-    if (sigmoid_type == SigmoidType::kCosine) {
-      // scale = np.arccos(2*value_at_1 - 1) / np.pi
-      // scaled_x = x*scale
-      // with warnings.catch_warnings():
-      //   warnings.filterwarnings(
-      //       action='ignore', message='invalid value encountered in cos')
-      //   cos_pi_scaled_x = np.cos(np.pi*scaled_x)
-      // return np.where(abs(scaled_x) < 1, (1 + cos_pi_scaled_x)/2, 0.0)
-      const double pi = std::acos(-1);
-      double scaled_x = std::acos(2 * value_at_margin - 1) / pi * x;
-      return std::abs(scaled_x) < 1 ? (1 + std::cos(pi * scaled_x)) / 2 : 0.0;
-    }
-    if (sigmoid_type == SigmoidType::kLinear) {
-      // scale = 1-value_at_1
-      // scaled_x = x*scale
-      // return np.where(abs(scaled_x) < 1, 1 - scaled_x, 0.0)
-      double scaled_x = (1 - value_at_margin) * x;
-      return std::abs(scaled_x) < 1 ? 1 - scaled_x : 0.0;
-    }
-    if (sigmoid_type == SigmoidType::kQuadratic) {
-      // scale = np.sqrt(1-value_at_1)
-      // scaled_x = x*scale
-      // return np.where(abs(scaled_x) < 1, 1 - scaled_x**2, 0.0)
-      double scaled_x = std::sqrt(1 - value_at_margin) * x;
-      return std::abs(scaled_x) < 1 ? 1 - scaled_x * scaled_x : 0.0;
-    }
-    if (sigmoid_type == SigmoidType::kTanhSquared) {
-      // scale = np.arctanh(np.sqrt(1-value_at_1))
-      // return 1 - np.tanh(x*scale)**2
-      double scaled_x = std::atanh(std::sqrt(1 - value_at_margin)) * x;
-      return 1 - std::tanh(scaled_x) * std::tanh(scaled_x);
-    }
-    throw std::runtime_error("Unknown sigmoid type for RewardTolerance.");
+  if (sigmoid_type == SigmoidType::kHyperbolic) {
+    // scale = np.arccosh(1/value_at_1)
+    // return 1 / np.cosh(x*scale)
+    double scaled_x = std::acosh(1 / value_at_margin) * x;
+    return 1 / std::cosh(scaled_x);
   }
-
+  if (sigmoid_type == SigmoidType::kLongTail) {
+    // scale = np.sqrt(1/value_at_1 - 1)
+    // return 1 / ((x*scale)**2 + 1)
+    double scaled_x = std::sqrt(1 / value_at_margin - 1) * x;
+    return 1 / (scaled_x * scaled_x + 1);
+  }
+  if (sigmoid_type == SigmoidType::kReciprocal) {
+    // scale = 1/value_at_1 - 1
+    // return 1 / (abs(x)*scale + 1)
+    double scale = 1 / value_at_margin - 1;
+    return 1 / (std::abs(x) * scale + 1);
+  }
+  if (sigmoid_type == SigmoidType::kCosine) {
+    // scale = np.arccos(2*value_at_1 - 1) / np.pi
+    // scaled_x = x*scale
+    // with warnings.catch_warnings():
+    //   warnings.filterwarnings(
+    //       action='ignore', message='invalid value encountered in cos')
+    //   cos_pi_scaled_x = np.cos(np.pi*scaled_x)
+    // return np.where(abs(scaled_x) < 1, (1 + cos_pi_scaled_x)/2, 0.0)
+    const double pi = std::acos(-1);
+    double scaled_x = std::acos(2 * value_at_margin - 1) / pi * x;
+    return std::abs(scaled_x) < 1 ? (1 + std::cos(pi * scaled_x)) / 2 : 0.0;
+  }
+  if (sigmoid_type == SigmoidType::kLinear) {
+    // scale = 1-value_at_1
+    // scaled_x = x*scale
+    // return np.where(abs(scaled_x) < 1, 1 - scaled_x, 0.0)
+    double scaled_x = (1 - value_at_margin) * x;
+    return std::abs(scaled_x) < 1 ? 1 - scaled_x : 0.0;
+  }
+  if (sigmoid_type == SigmoidType::kQuadratic) {
+    // scale = np.sqrt(1-value_at_1)
+    // scaled_x = x*scale
+    // return np.where(abs(scaled_x) < 1, 1 - scaled_x**2, 0.0)
+    double scaled_x = std::sqrt(1 - value_at_margin) * x;
+    return std::abs(scaled_x) < 1 ? 1 - scaled_x * scaled_x : 0.0;
+  }
+  if (sigmoid_type == SigmoidType::kTanhSquared) {
+    // scale = np.arctanh(np.sqrt(1-value_at_1))
+    // return 1 - np.tanh(x*scale)**2
+    double scaled_x = std::atanh(std::sqrt(1 - value_at_margin)) * x;
+    return 1 - std::tanh(scaled_x) * std::tanh(scaled_x);
+  }
+  throw std::runtime_error("Unknown sigmoid type for RewardTolerance.");
+}
 }  // namespace mujoco_dmc
