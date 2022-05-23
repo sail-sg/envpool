@@ -121,8 +121,8 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
   void TaskInitializeEpisode() override {
     RandomizeLimitedAndRotationalJoints(&gen_);
     bool close_target = false;
-    mjtNum gen_close_target = RandNormal(0, 1);
-    if (gen_close_target < 0.2) {
+    //mjtNum gen_close_target = RandNormal(0, 1)(gen_);
+    if (RandNormal(0, 1)(gen_) < 0.2) {
       close_target = true;
     }
     mjtNum target_box = 2;
