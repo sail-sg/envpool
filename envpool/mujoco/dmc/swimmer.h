@@ -95,7 +95,7 @@ using SwimmerEnvSpec = EnvSpec<SwimmerEnvFns>;
 
 class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
  protected:
-  int id_nose_, id_head_;
+  int id_head_, id_nose_;
   int id_target_, id_target_light_;
 #ifdef ENVPOOL_TEST
   std::array<mjtNum, 2> target0_;
@@ -111,7 +111,7 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
         id_head_(mj_name2id(model_, mjOBJ_XBODY, "head")),
         id_nose_(mj_name2id(model_, mjOBJ_GEOM, "nose")),
         id_target_(mj_name2id(model_, mjOBJ_GEOM, "target")),
-        id_target_light_(mj_name2id(model_, mjOBJ_GEOM, "target_light")) {
+        id_target_light_(mj_name2id(model_, mjOBJ_LIGHT, "target_light")) {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name != "swimmer6" && task_name != "swimmer15") {
       throw std::runtime_error("Unknown task_name " + task_name +
@@ -200,8 +200,8 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
     }
     // head_orientation = self.named.data.xmat['head'].reshape(3, 3)
     // return nose_to_target.dot(head_orientation)[:2]
-    std::array<mjtNum, 3> nose_to_target;
-    for (int i = 0; i < 3; i++) {
+    std::array<mjtNum, 2> nose_to_target;
+    for (int i = 0; i < 2; i++) {
       nose_to_target[i] =
           nose_to_target_global[0] * data_->geom_xmat[id_head_ * 9 + i + 0] +
           nose_to_target_global[1] * data_->geom_xmat[id_head_ * 9 + i + 3] +
