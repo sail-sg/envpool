@@ -50,7 +50,10 @@ import envpool
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument(
-    "--env", type=str, default="atari", choices=["atari", "mujoco", "vizdoom"]
+    "--env",
+    type=str,
+    default="atari",
+    choices=["atari", "mujoco", "vizdoom", "box2d"],
   )
   parser.add_argument("--num-envs", type=int, default=645)
   parser.add_argument("--batch-size", type=int, default=248)
@@ -66,6 +69,7 @@ if __name__ == "__main__":
     "atari": "Pong-v5",
     "mujoco": "Ant-v3",
     "vizdoom": "HealthGathering-v1",
+    "box2d": "LunarLander-v2",
   }[args.env]
   kwargs = dict(
     num_envs=args.num_envs,
