@@ -44,6 +44,7 @@ std::string GetSwimmerXML(const std::string& base_path,
   if (task_name == "swimmer15") {
     return XMLMakeSwimmer(content, 15);
   }
+  return content;
 }
 
 class SwimmerEnvFns {
