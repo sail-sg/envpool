@@ -91,6 +91,74 @@ std::string XMLAddPoles(const std::string& content, int n_poles) {
   return writer.result;
 }
 
+std::string XMLMakeSwimmer(const std::string& content, int n_bodies) {
+  pugi::xml_document doc;
+  doc.load_string(content.c_str());
+
+  pugi::xml_node mjc = doc.select_node("/mujoco").node();
+  pugi::xml_node actuator = mjc.append_child("actuator");
+  pugi::xml_node sensor = mjc.append_child("sensor");
+  pugi::xml_node body = doc.select_node("//worldbody/body").node();
+  std::string joint_range = std::to_string(360.0 / n_bodies);
+  joint_range = "-" + joint_range + " " + joint_range;
+
+  for (int i = 0; i < n_bodies - 1; ++i) {
+    std::string id = std::to_string(i);
+    // motor
+    pugi::xml_node motor = actuator.append_child("motor");
+    motor.append_attribute("joint") = ("joint_" + id).c_str();
+    motor.append_attribute("name") = ("motor_" + id).c_str();
+    // velocimeter
+    pugi::xml_node velocimeter = sensor.append_child("velocimeter");
+    velocimeter.append_attribute("name") = ("velocimeter_" + id).c_str();
+    velocimeter.append_attribute("site") = ("site_" + id).c_str();
+    // gyro
+    pugi::xml_node gyro = sensor.append_child("gyro");
+    gyro.append_attribute("name") = ("gyro_" + id).c_str();
+    gyro.append_attribute("site") = ("site_" + id).c_str();
+    // body
+    pugi::xml_node child = body.append_child("body");
+    child.append_attribute("name") = ("segment_" + id).c_str();
+    child.append_attribute("pos") = "0 .1 0";
+    body = child;
+    pugi::xml_node geom = body.append_child("geom");
+    geom.append_attribute("class") = "visual";
+    geom.append_attribute("name") = ("visual_" + id).c_str();
+    geom = body.append_child("geom");
+    geom.append_attribute("class") = "inertial";
+    geom.append_attribute("name") = ("inertial_" + id).c_str();
+    pugi::xml_node site = body.append_child("site");
+    site.append_attribute("name") = ("site_" + id).c_str();
+    pugi::xml_node joint = body.append_child("joint");
+    joint.append_attribute("name") = ("joint_" + id).c_str();
+    joint.append_attribute("range") = joint_range.c_str();
+  }
+
+  double scale = n_bodies / 6.0;
+  pugi::xpath_node_set cameras = doc.select_nodes("//worldbody/body/camera");
+  for (const pugi::xpath_node& c : cameras) {
+    std::string mode = c.node().attribute("mode").value();
+    if (mode != "trackcom") {
+      continue;
+    }
+    std::istringstream in(c.node().attribute("pos").value());
+    std::ostringstream out;
+    for (int i = 0; i < 3; ++i) {
+      double x;
+      in >> x;
+      if (i > 0) {
+        out << " ";
+      }
+      out << x * scale;
+    }
+    c.node().attribute("pos").set_value(out.str().c_str());
+  }
+
+  XMLStringWriter writer;
+  doc.print(writer);
+  return writer.result;
+}
+
 int GetQposId(mjModel* model, const std::string& name) {
   return model->jnt_qposadr[mj_name2id(model, mjOBJ_JOINT, name.c_str())];
 }
