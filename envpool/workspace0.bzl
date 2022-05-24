@@ -318,11 +318,11 @@ def workspace():
     maybe(
         http_archive,
         name = "mujoco",
-        sha256 = "3f1804d28833295a310aac23279401936f2558dee63cd3778429577e4ab55dff",
-        strip_prefix = "mujoco-2.1.5",
+        sha256 = "6313f24218c3ee832c73108e06a050341807166a44160fe3a322c441ec31bd2b",
+        strip_prefix = "mujoco-2.2.0",
         urls = [
-            "https://github.com/deepmind/mujoco/releases/download/2.1.5/mujoco-2.1.5-linux-x86_64.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/mujoco/mujoco-2.1.5-linux-x86_64.tar.gz",
+            "https://github.com/deepmind/mujoco/releases/download/2.2.0/mujoco-2.2.0-linux-x86_64.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/mujoco/mujoco-2.2.0-linux-x86_64.tar.gz",
         ],
         build_file = "//third_party/mujoco:mujoco.BUILD",
     )
@@ -342,11 +342,11 @@ def workspace():
     maybe(
         http_archive,
         name = "mujoco_dmc_xml",
-        sha256 = "f3e481b22758e69453781ad21aa42cb0a667323e1272d5d6ecf83f3481ae143a",
-        strip_prefix = "dm_control-1.0.2/dm_control",
+        sha256 = "74c23e5a56c6575e4f3e422ae6dff8e7e8a4b6959b4b96f9e2f810cb58c266bf",
+        strip_prefix = "dm_control-1.0.3.post1/dm_control",
         urls = [
-            "https://github.com/deepmind/dm_control/archive/refs/tags/1.0.2.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/dm_control/1.0.2.tar.gz",
+            "https://github.com/deepmind/dm_control/archive/refs/tags/1.0.3.post1.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/dm_control/1.0.3.post1.tar.gz",
         ],
         build_file = "//third_party/mujoco_dmc_xml:mujoco_dmc_xml.BUILD",
     )

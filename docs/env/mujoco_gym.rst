@@ -1,8 +1,8 @@
 Mujoco (gym)
 ============
 
-We use ``mujoco==2.1.5`` as the codebase.
-See https://github.com/deepmind/mujoco/tree/2.1.5
+We use ``mujoco==2.2.0`` as the codebase.
+See https://github.com/deepmind/mujoco/tree/2.2.0
 
 The implementation follows OpenAI gym \*-v4 environment, see
 `reference <https://github.com/openai/gym/tree/master/gym/envs/mujoco>`_.
@@ -21,9 +21,11 @@ Ant-v3/v4
 `gym Ant-v4 source code
 <https://github.com/openai/gym/blob/master/gym/envs/mujoco/ant_v4.py>`_
 
-- Observation space: ``(111)``, first 13 elements for ``qpos[2:]``, next 14
-  elements for ``qvel``, other elements for clipped ``cfrc_ext`` (com-based
+- Observation space (v3): ``(111)``, first 13 elements for ``qpos[2:]``, next
+  14 elements for ``qvel``, other elements for clipped ``cfrc_ext`` (com-based
   external force on body, a.k.a. contact force);
+- Observation space (v4): ``(27)``, first 13 elements for ``qpos[2:]``, next
+  14 elements for ``qvel``;
 - Action space: ``(8)``, with range ``[-1, 1]``;
 - ``frame_skip``: 5;
 - ``max_episode_steps``: 1000;

@@ -29,7 +29,7 @@
 #include <utility>
 #include <vector>
 
-std::size_t Prod(const std::size_t* shape, std::size_t ndim) {
+static std::size_t Prod(const std::size_t* shape, std::size_t ndim) {
   return std::accumulate(shape, shape + ndim, static_cast<std::size_t>(1),
                          std::multiplies<>());
 }
