@@ -34,6 +34,7 @@ class AntEnvFns {
     return MakeDict(
         "max_episode_steps"_.Bind(1000), "reward_threshold"_.Bind(6000.0),
         "frame_skip"_.Bind(5), "post_constraint"_.Bind(true),
+        "use_contact_force"_.Bind(false),
         "terminate_when_unhealthy"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
         "forward_reward_weight"_.Bind(1.0), "ctrl_cost_weight"_.Bind(0.5),
@@ -45,22 +46,24 @@ class AntEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
-    bool no_pos = conf["exclude_current_positions_from_observation"_];
-    return MakeDict(
-        "obs"_.Bind(Spec<mjtNum>({no_pos ? 111 : 113}, {-inf, inf})),
+    int obs_n = conf["exclude_current_positions_from_observation"_] ? 27 : 29;
+    if (conf["use_contact_force"_]) {
+      obs_n += 14 * 6;
+    }
+    return MakeDict("obs"_.Bind(Spec<mjtNum>({obs_n}, {-inf, inf})),
 #ifdef ENVPOOL_TEST
-        "info:qpos0"_.Bind(Spec<mjtNum>({15})),
-        "info:qvel0"_.Bind(Spec<mjtNum>({14})),
+                    "info:qpos0"_.Bind(Spec<mjtNum>({15})),
+                    "info:qvel0"_.Bind(Spec<mjtNum>({14})),
 #endif
-        "info:reward_forward"_.Bind(Spec<mjtNum>({-1})),
-        "info:reward_ctrl"_.Bind(Spec<mjtNum>({-1})),
-        "info:reward_contact"_.Bind(Spec<mjtNum>({-1})),
-        "info:reward_survive"_.Bind(Spec<mjtNum>({-1})),
-        "info:x_position"_.Bind(Spec<mjtNum>({-1})),
-        "info:y_position"_.Bind(Spec<mjtNum>({-1})),
-        "info:distance_from_origin"_.Bind(Spec<mjtNum>({-1})),
-        "info:x_velocity"_.Bind(Spec<mjtNum>({-1})),
-        "info:y_velocity"_.Bind(Spec<mjtNum>({-1})));
+                    "info:reward_forward"_.Bind(Spec<mjtNum>({-1})),
+                    "info:reward_ctrl"_.Bind(Spec<mjtNum>({-1})),
+                    "info:reward_contact"_.Bind(Spec<mjtNum>({-1})),
+                    "info:reward_survive"_.Bind(Spec<mjtNum>({-1})),
+                    "info:x_position"_.Bind(Spec<mjtNum>({-1})),
+                    "info:y_position"_.Bind(Spec<mjtNum>({-1})),
+                    "info:distance_from_origin"_.Bind(Spec<mjtNum>({-1})),
+                    "info:x_velocity"_.Bind(Spec<mjtNum>({-1})),
+                    "info:y_velocity"_.Bind(Spec<mjtNum>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -73,7 +76,7 @@ using AntEnvSpec = EnvSpec<AntEnvFns>;
 class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
  protected:
   int id_torso_;
-  bool terminate_when_unhealthy_, no_pos_;
+  bool terminate_when_unhealthy_, no_pos_, use_contact_force_;
   mjtNum ctrl_cost_weight_, contact_cost_weight_;
   mjtNum forward_reward_weight_, healthy_reward_;
   mjtNum healthy_z_min_, healthy_z_max_;
@@ -90,6 +93,7 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
         id_torso_(mj_name2id(model_, mjOBJ_XBODY, "torso")),
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
+        use_contact_force_(spec.config["use_contact_force"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         contact_cost_weight_(spec.config["contact_cost_weight"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
@@ -144,11 +148,13 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
     mjtNum yv = (y_after - y_before) / dt;
     // contact cost
     mjtNum contact_cost = 0.0;
-    for (int i = 0; i < 6 * model_->nbody; ++i) {
-      mjtNum x = data_->cfrc_ext[i];
-      x = std::min(contact_force_max_, x);
-      x = std::max(contact_force_min_, x);
-      contact_cost += contact_cost_weight_ * x * x;
+    if (use_contact_force_) {
+      for (int i = 0; i < 6 * model_->nbody; ++i) {
+        mjtNum x = data_->cfrc_ext[i];
+        x = std::min(contact_force_max_, x);
+        x = std::max(contact_force_min_, x);
+        contact_cost += contact_cost_weight_ * x * x;
+      }
     }
     // reward and done
     mjtNum healthy_reward =
@@ -193,11 +199,12 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
     for (int i = 0; i < model_->nv; ++i) {
       *(obs++) = data_->qvel[i];
     }
-    for (int i = 0; i < 6 * model_->nbody; ++i) {
-      mjtNum x = data_->cfrc_ext[i];
-      x = std::min(contact_force_max_, x);
-      x = std::max(contact_force_min_, x);
-      *(obs++) = x;
+    if (use_contact_force_) {
+      for (int i = 0; i < 6 * model_->nbody; ++i) {
+        mjtNum x = data_->cfrc_ext[i];
+        x = std::min(std::max(x, contact_force_min_), contact_force_max_);
+        *(obs++) = x;
+      }
     }
     // info
     state["info:reward_forward"_] = xv * forward_reward_weight_;

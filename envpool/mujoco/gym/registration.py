@@ -47,6 +47,9 @@ gym_mujoco_envs = [
 ]
 
 for task, version, post_constraint in gym_mujoco_envs:
+  extra_args = {}
+  if task == "Ant" and version == "v3":
+    extra_args["use_contact_force"] = True
   register(
     task_id=f"{task}-{version}",
     import_path="envpool.mujoco.gym",
@@ -55,4 +58,5 @@ for task, version, post_constraint in gym_mujoco_envs:
     gym_cls=f"Gym{task}GymEnvPool",
     base_path=base_path,
     post_constraint=post_constraint,
+    **extra_args,
   )
