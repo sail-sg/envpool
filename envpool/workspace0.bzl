@@ -378,7 +378,7 @@ def workspace():
     maybe(
         http_archive,
         name = "mujoco",
-        sha256 = "5bd3847aca1f53e2467b680f797fe74ce6a1c20870e0fee534cfda38a25ea1d5",
+        sha256 = "98cab2735817456c028e96ba34b2ee2c94cc4fab33ebcae15ab46fcc45a762ad",
         strip_prefix = "mujoco-2.2.0",
         urls = [
             "https://github.com/deepmind/mujoco/archive/refs/tags/2.2.0.tar.gz",
