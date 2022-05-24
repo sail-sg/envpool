@@ -34,9 +34,9 @@ class BipedalWalkerEnvFns {
 #ifdef ENVPOOL_TEST
     return MakeDict("obs"_.Bind(Spec<float>({24})),
                     "info:scroll"_.Bind(Spec<float>({-1})),
-                    "info:path4_len"_.Bind(Spec<int>({-1})),
                     "info:path2"_.Bind(Spec<float>({199, 2, 2})),
-                    "info:path4"_.Bind(Spec<float>({100, 4, 2})),
+                    "info:path4"_.Bind(
+                        Spec<Container<float>>({-1}, Spec<float>({-1, 4, 2}))),
                     "info:path5"_.Bind(Spec<float>({1, 5, 2})));
 #else
     return MakeDict("obs"_.Bind(Spec<float>({24})));
@@ -78,10 +78,13 @@ class BipedalWalkerEnv : public Env<BipedalWalkerEnvSpec>,
     state["obs"_].Assign(obs_.begin(), obs_.size());
 #ifdef ENVPOOL_TEST
     state["info:scroll"_] = scroll_;
-    state["info:path4_len"_] = path4_.size() / 8;
     state["info:path2"_].Assign(path2_.data(), path2_.size());
-    state["info:path4"_].Assign(path4_.data(), path4_.size());
     state["info:path5"_].Assign(path5_.data(), path5_.size());
+
+    Container<float>& path4 = state["info:path4"_];
+    auto* array = new TArray<float>(::Spec<float>({path4_.size() / 8, 4, 2}));
+    array->Assign(path4_.data(), path4_.size());
+    path4.reset(array);
 #endif
   }
 };
