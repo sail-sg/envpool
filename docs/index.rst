@@ -18,6 +18,7 @@ Here are EnvPool's several highlights:
 - Support both synchronous execution and asynchronous execution;
 - Support both single player and multi-player environment;
 - Easy C++ developer API to add new envs;
+- Free **~2x** speedup with only single environment;
 - **1 Million** Atari frames / **3 Million** Mujoco steps per second
   simulation with 256 CPU cores, **~20x** throughput of Python
   subprocess-based vector env;
