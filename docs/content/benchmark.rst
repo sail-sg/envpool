@@ -8,7 +8,7 @@ The following results are generated from four types of machine:
 3. TPU-VM: 96 core ``Intel(R) Xeon(R) CPU @ 2.00GHz``, 2 NUMA core, TPU v3-8
 4. DGX-A100: 256 core ``AMD EPYC 7742 64-Core Processor``, 8 NUMA core, 8x A100
 
-We use ``PongNoFrameskip-v4`` (with environment wrappers from `OpenAI baselines <https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py>`__) and ``Ant-v3`` for Atari/Mujoco environment benchmark test with ``envpool==0.6.0``. Other packages’ versions are all in ``requirements.txt``:
+We use ``PongNoFrameskip-v4`` (with environment wrappers from `OpenAI baselines <https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py>`__) and ``Ant-v3`` for Atari/Mujoco environment benchmark test with ``envpool==0.6.1.post1``. Other packages’ versions are all in ``requirements.txt``:
 
 .. code:: bash
 
