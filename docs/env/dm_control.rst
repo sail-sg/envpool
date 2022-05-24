@@ -199,6 +199,20 @@ ReacherEasy-v1, ReacherHard-v1
 - ``max_episode_steps``: 1000;
 
 
+SwimmerSwimmer6-v1, SwimmerSwimmer15-v1
+---------------------------------------
+
+`dm_control suite swimmer source code
+<https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/swimmer.py>`_
+
+- Observation spec: a namedtuple with three keys: ``joints (5 for swimmer6,
+  14 for swimmer15)``, ``to_target (2)``, and ``body_velocities (18 for
+  swimmer6, 45 for swimmer15)``;
+- Action spec: ``(5 for swimmer6, 14 for swimmer15)``, with range ``[-1, 1]``;
+- ``frame_skip``: 15;
+- ``max_episode_steps``: 1000;
+
+
 WalkerRun-v1, WalkerStand-v1, WalkerWalk-v1
 -------------------------------------------
 
