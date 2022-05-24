@@ -24,29 +24,56 @@ def run(env, num_envs, total_step, async_):
   if env == "atari":
     task_id = "PongNoFrameskip-v4"
     frame_skip = 4
-    env = gym.vector.make(
-      task_id, num_envs, async_, lambda e:
-      wrap_deepmind(e, episode_life=False, clip_rewards=False, frame_stack=4)
-    )
+    if num_envs == 1:
+      env = wrap_deepmind(
+        gym.make(task_id),
+        episode_life=False,
+        clip_rewards=False,
+        frame_stack=4,
+      )
+    else:
+      env = gym.vector.make(
+        task_id, num_envs, async_, lambda e: wrap_deepmind(
+          e, episode_life=False, clip_rewards=False, frame_stack=4
+        )
+      )
   elif env == "mujoco":
     task_id = "Ant-v3"
     frame_skip = 5
-    env = gym.vector.make(task_id, num_envs, async_)
+    if num_envs == 1:
+      env = gym.make(task_id)
+    else:
+      env = gym.vector.make(task_id, num_envs, async_)
+  elif env == "box2d":
+    task_id = "LunarLander-v2"
+    frame_skip = 1
+    if num_envs == 1:
+      env = gym.make(task_id)
+    else:
+      env = gym.vector.make(task_id, num_envs, async_)
   else:
     raise NotImplementedError(f"Unknown env {env}")
   env.seed(0)
   env.reset()
   action = env.action_space.sample()
+  done = False
   t = time.time()
   for _ in tqdm.trange(total_step):
-    env.step(action)
+    if num_envs == 1:
+      if done:
+        done = False
+        env.reset()
+      else:
+        done = env.step(action)[2]
+    else:
+      env.step(action)
   print(f"FPS = {frame_skip * total_step * num_envs / (time.time() - t):.2f}")
 
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument(
-    "--env", type=str, default="atari", choices=["atari", "mujoco"]
+    "--env", type=str, default="atari", choices=["atari", "mujoco", "box2d"]
   )
   parser.add_argument("--async_", action="store_true")
   parser.add_argument("--num-envs", type=int, default=10)
