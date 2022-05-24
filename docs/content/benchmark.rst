@@ -8,7 +8,7 @@ The following results are generated from four types of machine:
 3. TPU-VM: 96 core ``Intel(R) Xeon(R) CPU @ 2.00GHz``, 2 NUMA core, TPU v3-8
 4. DGX-A100: 256 core ``AMD EPYC 7742 64-Core Processor``, 8 NUMA core, 8x A100
 
-We use ``PongNoFrameskip-v4`` (with environment wrappers from `OpenAI baselines <https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py>`__) and ``Ant-v3`` for Atari/Mujoco environment benchmark test with ``envpool==0.5.3.post1``. Other packages’ versions are all in ``requirements.txt``:
+We use ``PongNoFrameskip-v4`` (with environment wrappers from `OpenAI baselines <https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py>`__) and ``Ant-v3`` for Atari/Mujoco environment benchmark test with ``envpool==0.6.0``. Other packages’ versions are all in ``requirements.txt``:
 
 .. code:: bash
 
@@ -180,8 +180,47 @@ Brax and Isaac-gym (Mujoco only)
 
 TODO
 
+Atari and Mujoco Single Environment Tests
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Atari and Mujoco (gym) single env test is the same as above with ``--num-envs 1``.
+
+For dm_control suite environment, we provide another benchmark script:
+
+.. code:: bash
+
+   python3 test_dmc.py --domain cheetah --task run --total-step 200000
+
 Result
 ------
+
+Single Environment Speedup Baseline
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. raw:: html
+
+   <!-- single -->
+
+=========== ======= ============= ============= ======================
+System      Method  Atari Pong-v5 Mujoco Ant-v3 dm_control cheetah run
+=========== ======= ============= ============= ======================
+Laptop      Python  4891.65       12325.95      6235.09
+Laptop      EnvPool 7887.51       15641.44      11636.45
+Laptop      Speedup 1.61x         1.27x         1.87x
+Workstation Python  7739.15       19472.04      9042.64
+Workstation EnvPool 12623.93      25725.25      16691.68
+Workstation Speedup 1.63x         1.32x         1.85x
+TPU-VM      Python  3830.19       9960.98       5369.07
+TPU-VM      EnvPool 7213.41       13706.61      9987.73
+TPU-VM      Speedup 1.88x         1.38x         1.86x
+DGX-A100    Python  4449.38       11018.57      5024.84
+DGX-A100    EnvPool 7723.96       16024.43      10415.87
+DGX-A100    Speedup 1.74x         1.45x         2.07x
+=========== ======= ============= ============= ======================
+
+.. raw:: html
+
+   <!-- single -->
 
 Atari
 ~~~~~
