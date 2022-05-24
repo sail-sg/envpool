@@ -162,7 +162,38 @@ Use `numactl -s` to determine the number of NUMA cores.
 
 TODO
 
+### Atari and Mujoco Single Environment Tests
+
+Atari and Mujoco (gym) single env test is the same as above with `--num-envs 1`.
+
+For dm\_control suite environment, we provide another benchmark script:
+
+```bash
+python3 test_dmc.py --domain cheetah --task run --total-step 200000
+```
+
 ## Result
+
+### Single Environment Speedup Baseline
+
+<!-- single -->
+
+| System      | Method  | Atari Pong-v5 | Mujoco Ant-v3 | dm_control cheetah run |
+| ----------- | ------- | ------------- | ------------- | ---------------------- |
+| Laptop      | Python  | 4891.65       | 12325.95      | 6235.09                |
+| Laptop      | EnvPool | 7887.51       | 15641.44      | 11636.45               |
+| Laptop      | Speedup | 1.61x         | 1.27x         | 1.87x                  |
+| Workstation | Python  | 7739.15       | 19472.04      |                        |
+| Workstation | EnvPool | 12623.93      | 25725.25      |                        |
+| Workstation | Speedup | 1.63x         | 1.32x         |                        |
+| TPU-VM      | Python  | 3830.19       | 9960.98       |                        |
+| TPU-VM      | EnvPool | 7213.41       | 13706.61      |                        |
+| TPU-VM      | Speedup | 1.88x         | 1.38x         |                        |
+| DGX-A100    | Python  | 4449.38       | 11018.57      |                        |
+| DGX-A100    | EnvPool | 7723.96       | 16024.43      |                        |
+| DGX-A100    | Speedup | 1.74x         | 1.45x         |                        |
+
+<!-- single -->
 
 ### Atari
 

@@ -1,7 +1,7 @@
 gym[accept-rom-license]==0.23.1
 ale-py==0.7.5
 mujoco==2.2.0
-envpool==0.6.0
+envpool==0.6.1.post1
 sample-factory==1.123.0
 mujoco_py==2.1.2.14
 tqdm
