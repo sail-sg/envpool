@@ -53,6 +53,8 @@ dmc_mujoco_envs = [
   ("point_mass", "hard"),
   ("reacher", "easy"),
   ("reacher", "hard"),
+  ("swimmer", "swimmer6"),
+  ("swimmer", "swimmer15"),
   ("walker", "run"),
   ("walker", "stand"),
   ("walker", "walk"),

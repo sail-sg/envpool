@@ -80,6 +80,7 @@ cc_library(
         "dmc/pendulum.h",
         "dmc/point_mass.h",
         "dmc/reacher.h",
+        "dmc/swimmer.h",
         "dmc/utils.h",
         "dmc/walker.h",
     ],

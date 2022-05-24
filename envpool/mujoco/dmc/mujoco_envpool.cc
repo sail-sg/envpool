@@ -25,6 +25,7 @@
 #include "envpool/mujoco/dmc/pendulum.h"
 #include "envpool/mujoco/dmc/point_mass.h"
 #include "envpool/mujoco/dmc/reacher.h"
+#include "envpool/mujoco/dmc/swimmer.h"
 #include "envpool/mujoco/dmc/walker.h"
 
 using DmcAcrobotEnvSpec = PyEnvSpec<mujoco_dmc::AcrobotEnvSpec>;
@@ -63,6 +64,9 @@ using DmcPointMassEnvPool = PyEnvPool<mujoco_dmc::PointMassEnvPool>;
 using DmcReacherEnvSpec = PyEnvSpec<mujoco_dmc::ReacherEnvSpec>;
 using DmcReacherEnvPool = PyEnvPool<mujoco_dmc::ReacherEnvPool>;
 
+using DmcSwimmerEnvSpec = PyEnvSpec<mujoco_dmc::SwimmerEnvSpec>;
+using DmcSwimmerEnvPool = PyEnvPool<mujoco_dmc::SwimmerEnvPool>;
+
 using DmcWalkerEnvSpec = PyEnvSpec<mujoco_dmc::WalkerEnvSpec>;
 using DmcWalkerEnvPool = PyEnvPool<mujoco_dmc::WalkerEnvPool>;
 
@@ -79,5 +83,6 @@ PYBIND11_MODULE(mujoco_dmc_envpool, m) {
   REGISTER(m, DmcPendulumEnvSpec, DmcPendulumEnvPool)
   REGISTER(m, DmcPointMassEnvSpec, DmcPointMassEnvPool)
   REGISTER(m, DmcReacherEnvSpec, DmcReacherEnvPool)
+  REGISTER(m, DmcSwimmerEnvSpec, DmcSwimmerEnvPool)
   REGISTER(m, DmcWalkerEnvSpec, DmcWalkerEnvPool)
 }

@@ -46,6 +46,8 @@ from envpool.mujoco.dmc import (
   DmcPointMassEnvSpec,
   DmcReacherDMEnvPool,
   DmcReacherEnvSpec,
+  DmcSwimmerDMEnvPool,
+  DmcSwimmerEnvSpec,
   DmcWalkerDMEnvPool,
   DmcWalkerEnvSpec,
 )
@@ -82,6 +84,12 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         target = ts.observation.target[0]
         env.physics.named.model.geom_pos["target", "x"] = target[0]
         env.physics.named.model.geom_pos["target", "y"] = target[1]
+      elif domain == "swimmer":
+        xpos, ypos = ts.observation.target0[0]
+        env.physics.named.model.geom_pos["target", "x"] = xpos
+        env.physics.named.model.geom_pos["target", "y"] = ypos
+        env.physics.named.model.light_pos['target_light', 'x'] = xpos
+        env.physics.named.model.light_pos['target_light', 'y'] = ypos
       elif domain == "fish" and task == "swim":
         target = ts.observation.target0[0]
         env.physics.named.model.geom_pos["target", "x"] = target[0]
@@ -252,6 +260,12 @@ class _MujocoDmcAlignTest(absltest.TestCase):
   def test_reacher(self) -> None:
     self.run_align_check_entry(
       "reacher", ["easy", "hard"], DmcReacherEnvSpec, DmcReacherDMEnvPool
+    )
+
+  def test_swimmer(self) -> None:
+    self.run_align_check_entry(
+      "swimmer", ["swimmer6", "swimmer15"], DmcSwimmerEnvSpec,
+      DmcSwimmerDMEnvPool
     )
 
   def test_walker(self) -> None:

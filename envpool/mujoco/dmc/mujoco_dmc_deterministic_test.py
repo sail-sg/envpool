@@ -44,6 +44,8 @@ from envpool.mujoco.dmc import (
   DmcPointMassEnvSpec,
   DmcReacherDMEnvPool,
   DmcReacherEnvSpec,
+  DmcSwimmerDMEnvPool,
+  DmcSwimmerEnvSpec,
   DmcWalkerDMEnvPool,
   DmcWalkerEnvSpec,
 )
@@ -188,6 +190,11 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
     obs_keys = ["position", "to_target", "velocity"]
     for task in ["easy", "hard"]:
       self.check(DmcReacherEnvSpec, DmcReacherDMEnvPool, task, obs_keys)
+
+  def test_swimmer(self) -> None:
+    obs_keys = ["joints", "to_target", "body_velocities"]
+    for task in ["swimmer6", "swimmer15"]:
+      self.check(DmcSwimmerEnvSpec, DmcSwimmerDMEnvPool, task, obs_keys)
 
   def test_walker(self) -> None:
     obs_keys = ["orientations", "height", "velocity"]
