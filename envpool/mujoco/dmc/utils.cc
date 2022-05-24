@@ -240,4 +240,5 @@ double RewardTolerance(double x, double bound_min, double bound_max,
   }
   throw std::runtime_error("Unknown sigmoid type for RewardTolerance.");
 }
+
 }  // namespace mujoco_dmc

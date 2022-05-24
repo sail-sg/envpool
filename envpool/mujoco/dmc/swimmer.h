@@ -104,7 +104,7 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
             spec.config["base_path"_],
             GetSwimmerXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
-        id_head_(mj_name2id(model_, mjOBJ_XBODY, "head")),
+        id_head_(mj_name2id(model_, mjOBJ_GEOM, "head")),
         id_nose_(mj_name2id(model_, mjOBJ_GEOM, "nose")),
         id_target_(mj_name2id(model_, mjOBJ_GEOM, "target")),
         id_target_light_(mj_name2id(model_, mjOBJ_LIGHT, "target_light")) {}
