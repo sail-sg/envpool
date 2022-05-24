@@ -256,7 +256,7 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
       else:  # 102.647320 ± 125.075071
         self.assertTrue(abs(mean_reward - 103) < 20, (hardcore, mean_reward))
 
-  def render_bpw(self, info) -> None:
+  def render_bpw(self, info: dict) -> None:
     SCALE = 30.0
     VIEWPORT_W = 600
     VIEWPORT_H = 400
@@ -276,7 +276,7 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
     for p in info["path2"][0]:
       c = (0, 255, 0)
       pygame.draw.aaline(surf, start_pos=p[0], end_pos=p[1], color=c)
-    for p in info["path4"][0][:info["path4_len"][0]]:
+    for p in info["path4"][0]:
       c = (255, 255, 255)
       p = p.tolist()
       pygame.draw.polygon(surf, color=c, points=p)
