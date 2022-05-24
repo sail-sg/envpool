@@ -38,6 +38,8 @@ from envpool.mujoco.mujoco_dmc_envpool import (
   _DmcPointMassEnvSpec,
   _DmcReacherEnvPool,
   _DmcReacherEnvSpec,
+  _DmcSwimmerEnvPool,
+  _DmcSwimmerEnvSpec,
   _DmcWalkerEnvPool,
   _DmcWalkerEnvSpec,
 )
@@ -81,6 +83,9 @@ DmcPointMassEnvSpec, DmcPointMassDMEnvPool, DmcPointMassGymEnvPool = py_env(
 DmcReacherEnvSpec, DmcReacherDMEnvPool, DmcReacherGymEnvPool = py_env(
   _DmcReacherEnvSpec, _DmcReacherEnvPool
 )
+DmcSwimmerEnvSpec, DmcSwimmerDMEnvPool, DmcSwimmerGymEnvPool = py_env(
+  _DmcSwimmerEnvSpec, _DmcSwimmerEnvPool
+)
 DmcWalkerEnvSpec, DmcWalkerDMEnvPool, DmcWalkerGymEnvPool = py_env(
   _DmcWalkerEnvSpec, _DmcWalkerEnvPool
 )
@@ -122,6 +127,9 @@ __all__ = [
   "DmcReacherEnvSpec",
   "DmcReacherDMEnvPool",
   "DmcReacherGymEnvPool",
+  "DmcSwimmerEnvSpec",
+  "DmcSwimmerDMEnvPool",
+  "DmcSwimmerGymEnvPool",
   "DmcWalkerEnvSpec",
   "DmcWalkerDMEnvPool",
   "DmcWalkerGymEnvPool",
