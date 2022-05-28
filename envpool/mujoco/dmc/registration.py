@@ -63,8 +63,8 @@ dmc_mujoco_envs = [
 ]
 
 for domain, task in dmc_mujoco_envs:
-  domain_name = "".join([g.capitalize() for g in domain.split("_")])
-  task_name = "".join([g.capitalize() for g in task.split("_")])
+  domain_name = "".join([g[:1].upper() + g[1:] for g in domain.split("_")])
+  task_name = "".join([g[:1].upper() + g[1:] for g in task.split("_")])
   register(
     task_id=f"{domain_name}{task_name}-v1",
     import_path="envpool.mujoco.dmc",
