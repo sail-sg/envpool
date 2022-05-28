@@ -141,7 +141,7 @@ class HumanoidCMUEnv : public Env<HumanoidCMUEnvSpec>, public MujocoEnv {
     auto standing = RewardTolerance(HeadHeight(), kStandHeight,
                                     std::numeric_limits<double>::infinity(),
                                     kStandHeight / 4);
-    auto upright = RewardTolerance(TorsoUpright(), 0.9,
+    auto upright = RewardTolerance(ThoraxUpright(), 0.9,
                                    std::numeric_limits<double>::infinity(), 1.9,
                                    0.0, SigmoidType::kLinear);
     auto stand_reward = standing * upright;
