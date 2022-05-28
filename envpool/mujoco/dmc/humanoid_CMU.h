@@ -69,7 +69,6 @@ class HumanoidCMUEnv : public Env<HumanoidCMUEnvSpec>, public MujocoEnv {
   // Height of head above which stand reward is 1.
   const mjtNum kStandHeight = 1.4;
   // Horizontal speeds above which move reward is 1.
-  const mjtNum kWalkSpeed = 1;
   const mjtNum kRunSpeed = 10;
   int id_head_;
   int id_lhand_;
@@ -89,18 +88,16 @@ class HumanoidCMUEnv : public Env<HumanoidCMUEnvSpec>, public MujocoEnv {
                   spec.config["frame_skip"_],
                   spec.config["max_episode_steps"_]),
         id_head_(mj_name2id(model_, mjOBJ_XBODY, "head")),
-        id_left_hand_(mj_name2id(model_, mjOBJ_XBODY, "lhand")),
-        id_left_foot_(mj_name2id(model_, mjOBJ_XBODY, "lfoot")),
-        id_right_hand_(mj_name2id(model_, mjOBJ_XBODY, "rhand")),
-        id_right_foot_(mj_name2id(model_, mjOBJ_XBODY, "rfoot")),
+        id_lhand_(mj_name2id(model_, mjOBJ_XBODY, "lhand")),
+        id_lfoot_(mj_name2id(model_, mjOBJ_XBODY, "lfoot")),
+        id_rhand_(mj_name2id(model_, mjOBJ_XBODY, "rhand")),
+        id_rfoot_(mj_name2id(model_, mjOBJ_XBODY, "rfoot")),
         id_thorax_(mj_name2id(model_, mjOBJ_XBODY, "thorax")),
         id_thorax_subtreelinvel_(GetSensorId(model_, "thorax_subtreelinvel")) {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name == "stand") {
       move_speed_ = 0;
-    } else if (task_name == "walk") {
-      move_speed_ = kWalkSpeed;
-    } else if (task_name == "run" || task_name == "run_pure_state") {
+    } else if (task_name == "run") {
       move_speed_ = kRunSpeed;
     } else {
       throw std::runtime_error("Unknown task_name " + task_name +
