@@ -32,7 +32,7 @@
 
 namespace mujoco_dmc {
 
-std::string GetHumanoidCMUCMUXML(const std::string& base_path,
+std::string GetHumanoidCMUXML(const std::string& base_path,
                                  const std::string& task_name) {
   return GetFileContent(base_path, "humanoid_CMU.xml");
 }
