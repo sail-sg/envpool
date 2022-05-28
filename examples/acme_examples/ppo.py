@@ -52,7 +52,7 @@ Array = Union[np.ndarray, jnp.ndarray]
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("env_name", "HalfCheetah-v3", "What environment to run")
+flags.DEFINE_string("env_name", "HalfCheetah-v3", "What environment to run.")
 flags.DEFINE_integer("seed", 0, "Random seed.")
 flags.DEFINE_integer("num_steps", 1_000_000, "Number of env steps to run.")
 flags.DEFINE_integer("eval_every", 50_000, "How often to run evaluation.")
@@ -121,7 +121,6 @@ class EnvPoolWrapper(wrappers.EnvironmentWrapper):
 class AdderWrapper(Adder):
 
   def __init__(self, adders: List[Adder]) -> None:
-    self._num_env = len(adders)
     self._adders: List[Adder] = adders
 
   def reset(self):
@@ -144,7 +143,7 @@ class AdderWrapper(Adder):
     next_timestep: TimeStep,
     extras: types.NestedArray = ...
   ):
-    for i in range(self._num_env):
+    for i, adder in enumerate(self._adders):
       timestep = dm_env.TimeStep(
         step_type=next_timestep.extras["step_type"][i],
         observation=next_timestep.observation[i],
@@ -153,13 +152,13 @@ class AdderWrapper(Adder):
       )
       if extras is not None:
         _extras = tree.map_structure(lambda x: utils.to_numpy(x[i]), extras)
-      self._adders[i].add(action[i], timestep, _extras)
+      adder.add(action[i], timestep, _extras)
 
 
 def batched_feed_forward_with_extras_to_actor_core(
   policy: FeedForwardPolicyWithExtra
 ) -> ActorCore[SimpleActorCoreStateWithExtras, Mapping[str, jnp.ndarray]]:
-  """The adapter allows batched data processing."""
+  """Modified adapter allowing batched data processing."""
 
   def select_action(
     params: networks_lib.Params, observation: networks_lib.Observation,
