@@ -35,7 +35,7 @@ google-auth-oauthlib
 tensorboard-data-server
 typing-extensions
 werkzeug
-protobuf
+protobuf==3.20.1
 rsa
 requests_oauthlib
 idna
