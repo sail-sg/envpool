@@ -169,7 +169,11 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
     ]
     for task in ["stand", "run"]:
       self.check(
-        DmcHumanoidCMUEnvSpec, DmcHumanoidCMUDMEnvPool, task, obs_keys
+        DmcHumanoidCMUEnvSpec,
+        DmcHumanoidCMUDMEnvPool,
+        task,
+        obs_keys,
+        blacklist=["joint_angles"],
       )
 
   def test_manipulator(self) -> None:
