@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/humanoid.py
+// https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/humanoid_CMU.py
 
-#ifndef ENVPOOL_MUJOCO_DMC_HUMANOID_H_
-#define ENVPOOL_MUJOCO_DMC_HUMANOID_H_
+#ifndef ENVPOOL_MUJOCO_DMC_HUMANOID_CMU_H_
+#define ENVPOOL_MUJOCO_DMC_HUMANOID_CMU_H_
 
 #include <algorithm>
 #include <cmath>
@@ -32,40 +32,39 @@
 
 namespace mujoco_dmc {
 
-std::string GetHumanoidXML(const std::string& base_path,
-                           const std::string& task_name) {
-  return GetFileContent(base_path, "humanoid.xml");
+std::string GetHumanoidCMUCMUXML(const std::string& base_path,
+                                 const std::string& task_name) {
+  return GetFileContent(base_path, "humanoid_CMU.xml");
 }
 
-class HumanoidEnvFns {
+class HumanoidCMUEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(5),
+    return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(10),
                     "task_name"_.Bind(std::string("stand")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs:joint_angles"_.Bind(Spec<mjtNum>({21})),
+    return MakeDict("obs:joint_angles"_.Bind(Spec<mjtNum>({56})),
                     "obs:head_height"_.Bind(Spec<mjtNum>({})),
                     "obs:extremities"_.Bind(Spec<mjtNum>({12})),
                     "obs:torso_vertical"_.Bind(Spec<mjtNum>({3})),
                     "obs:com_velocity"_.Bind(Spec<mjtNum>({3})),
-                    "obs:position"_.Bind(Spec<mjtNum>({28})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({27})),
+                    "obs:velocity"_.Bind(Spec<mjtNum>({62})),
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.Bind(Spec<mjtNum>({28})),
+                    "info:qpos0"_.Bind(Spec<mjtNum>({63})),
 #endif
                     "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("action"_.Bind(Spec<mjtNum>({-1, 21}, {-1.0, 1.0})));
+    return MakeDict("action"_.Bind(Spec<mjtNum>({-1, 56}, {-1.0, 1.0})));
   }
 };
 
-using HumanoidEnvSpec = EnvSpec<HumanoidEnvFns>;
+using HumanoidCMUEnvSpec = EnvSpec<HumanoidCMUEnvFns>;
 
-class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
+class HumanoidCMUEnv : public Env<HumanoidCMUEnvSpec>, public MujocoEnv {
  protected:
   // Height of head above which stand reward is 1.
   const mjtNum kStandHeight = 1.4;
@@ -73,31 +72,29 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
   const mjtNum kWalkSpeed = 1;
   const mjtNum kRunSpeed = 10;
   int id_head_;
-  int id_left_hand_;
-  int id_left_foot_;
-  int id_right_hand_;
-  int id_right_foot_;
-  int id_torso_;
-  int id_torso_subtreelinvel_;
+  int id_lhand_;
+  int id_lfoot_;
+  int id_rhand_;
+  int id_rfoot_;
+  int id_thorax_;
+  int id_thorax_subtreelinvel_;
   mjtNum move_speed_;
-  bool is_pure_state_;
 
  public:
-  HumanoidEnv(const Spec& spec, int env_id)
-      : Env<HumanoidEnvSpec>(spec, env_id),
+  HumanoidCMUEnv(const Spec& spec, int env_id)
+      : Env<HumanoidCMUEnvSpec>(spec, env_id),
         MujocoEnv(spec.config["base_path"_],
-                  GetHumanoidXML(spec.config["base_path"_],
-                                 spec.config["task_name"_]),
+                  GetHumanoidCMUXML(spec.config["base_path"_],
+                                    spec.config["task_name"_]),
                   spec.config["frame_skip"_],
                   spec.config["max_episode_steps"_]),
         id_head_(mj_name2id(model_, mjOBJ_XBODY, "head")),
-        id_left_hand_(mj_name2id(model_, mjOBJ_XBODY, "left_hand")),
-        id_left_foot_(mj_name2id(model_, mjOBJ_XBODY, "left_foot")),
-        id_right_hand_(mj_name2id(model_, mjOBJ_XBODY, "right_hand")),
-        id_right_foot_(mj_name2id(model_, mjOBJ_XBODY, "right_foot")),
-        id_torso_(mj_name2id(model_, mjOBJ_XBODY, "torso")),
-        id_torso_subtreelinvel_(GetSensorId(model_, "torso_subtreelinvel")),
-        is_pure_state_(spec.config["task_name"_] == "run_pure_state") {
+        id_left_hand_(mj_name2id(model_, mjOBJ_XBODY, "lhand")),
+        id_left_foot_(mj_name2id(model_, mjOBJ_XBODY, "lfoot")),
+        id_right_hand_(mj_name2id(model_, mjOBJ_XBODY, "rhand")),
+        id_right_foot_(mj_name2id(model_, mjOBJ_XBODY, "rfoot")),
+        id_thorax_(mj_name2id(model_, mjOBJ_XBODY, "thorax")),
+        id_thorax_subtreelinvel_(GetSensorId(model_, "thorax_subtreelinvel")) {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name == "stand") {
       move_speed_ = 0;
@@ -204,95 +201,94 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
 #endif
   }
 
-  mjtNum TorsoUpright() {
-    // return self.named.data.xmat['torso', 'zz']
-    return data_->xmat[id_torso_ * 9 + 8];
+  mjtNum ThoraxUpright() {
+    // return self.named.data.xmat['thorax', 'zy']
+    return data_->xmat[id_thorax_ * 9 + 7];
   }
   mjtNum HeadHeight() {
     // return self.named.data.xpos['head', 'z']
     return data_->xpos[id_head_ * 3 + 2];
   }
   std::array<mjtNum, 3> CenterOfMassPosition() {
-    // return self.named.data.subtree_com['torso'].copy()
+    // return self.named.data.subtree_com['thorax']
     return {
-        data_->subtree_com[id_torso_ * 3],
-        data_->subtree_com[id_torso_ * 3 + 1],
-        data_->subtree_com[id_torso_ * 3 + 2],
+        data_->subtree_com[id_thorax_ * 3],
+        data_->subtree_com[id_thorax_ * 3 + 1],
+        data_->subtree_com[id_thorax_ * 3 + 2],
     };
   }
   std::array<mjtNum, 3> CenterOfMassVelocity() {
-    // return self.named.data.sensordata['torso_subtreelinvel'].copy()
+    // return self.named.data.sensordata['thorax_subtreelinvel'].copy()
     return {
-        data_->sensordata[id_torso_subtreelinvel_ * 3],
-        data_->sensordata[id_torso_subtreelinvel_ * 3 + 1],
-        data_->sensordata[id_torso_subtreelinvel_ * 3 + 2],
+        data_->sensordata[id_thorax_subtreelinvel_ * 3],
+        data_->sensordata[id_thorax_subtreelinvel_ * 3 + 1],
+        data_->sensordata[id_thorax_subtreelinvel_ * 3 + 2],
     };
   }
   std::array<mjtNum, 3> TorsoVerticalOrientation() {
-    // return self.named.data.xmat['torso', ['zx', 'zy', 'zz']]
+    // return self.named.data.xmat['thorax', ['zx', 'zy', 'zz']]
     return {
-        data_->xmat[id_torso_ * 9 + 6],
-        data_->xmat[id_torso_ * 9 + 7],
-        data_->xmat[id_torso_ * 9 + 8],
+        data_->xmat[id_thorax_ * 9 + 6],
+        data_->xmat[id_thorax_ * 9 + 7],
+        data_->xmat[id_thorax_ * 9 + 8],
     };
   }
+  std::array<mjtNum, 56> JointAngles() {
+    // return self.data.qpos[7:].copy()
+    std::array<mjtNum, 56> joint_angles;
+    for (int i = 0; i < 56; i++) {
+      joint_angles[i] = data_->qpos[7 + i];
+    }
+    return joint_angles;
+  }
   std::array<mjtNum, 12> Extremities() {
-    // returns end effector positions in egocentric frame.
-    // torso_frame = self.named.data.xmat['torso'].reshape(3, 3)
-    // torso_pos = self.named.data.xpos['torso']
+    // torso_frame = self.named.data.xmat['thorax'].reshape(3, 3)
+    // torso_pos = self.named.data.xpos['thorax']
     // positions = []
-    // for side in ('left_', 'right_'):
+    // for side in ('l', 'r'):
     //   for limb in ('hand', 'foot'):
     //     torso_to_limb = self.named.data.xpos[side + limb] - torso_pos
     //     positions.append(torso_to_limb.dot(torso_frame))
     // return np.hstack(positions)
     std::array<mjtNum, 9> torso_frame;
     for (int i = 0; i < 9; i++) {
-      torso_frame[i] = data_->xmat[id_torso_ * 9 + i];
+      torso_frame[i] = data_->xmat[id_thorax_ * 9 + i];
     }
     std::array<mjtNum, 3> torso_pos;
     for (int i = 0; i < 3; i++) {
-      torso_pos[i] = data_->xpos[id_torso_ * 3 + i];
+      torso_pos[i] = data_->xpos[id_thorax_ * 3 + i];
     }
     // left hand
     std::array<mjtNum, 3> torso_to_limb_lh;
     for (int i = 0; i < 3; i++) {
       torso_to_limb_lh[i] =
-          (data_->xpos[id_left_hand_ * 3] - torso_pos[0]) * torso_frame[i] +
-          (data_->xpos[id_left_hand_ * 3 + 1] - torso_pos[1]) *
-              torso_frame[i + 3] +
-          (data_->xpos[id_left_hand_ * 3 + 2] - torso_pos[2]) *
-              torso_frame[i + 6];
+          (data_->xpos[id_lhand_ * 3] - torso_pos[0]) * torso_frame[i] +
+          (data_->xpos[id_lhand_ * 3 + 1] - torso_pos[1]) * torso_frame[i + 3] +
+          (data_->xpos[id_lhand_ * 3 + 2] - torso_pos[2]) * torso_frame[i + 6];
     }
     // left foot
     std::array<mjtNum, 3> torso_to_limb_lf;
     for (int i = 0; i < 3; i++) {
       torso_to_limb_lf[i] =
-          (data_->xpos[id_left_foot_ * 3] - torso_pos[0]) * torso_frame[i] +
-          (data_->xpos[id_left_foot_ * 3 + 1] - torso_pos[1]) *
-              torso_frame[i + 3] +
-          (data_->xpos[id_left_foot_ * 3 + 2] - torso_pos[2]) *
-              torso_frame[i + 6];
+          (data_->xpos[id_lfoot_ * 3] - torso_pos[0]) * torso_frame[i] +
+          (data_->xpos[id_lfoot_ * 3 + 1] - torso_pos[1]) * torso_frame[i + 3] +
+          (data_->xpos[id_lfoot_ * 3 + 2] - torso_pos[2]) * torso_frame[i + 6];
     }
     // right hand
     std::array<mjtNum, 3> torso_to_limb_rh;
     for (int i = 0; i < 3; i++) {
       torso_to_limb_rh[i] =
-          (data_->xpos[id_right_hand_ * 3] - torso_pos[0]) * torso_frame[i] +
-          (data_->xpos[id_right_hand_ * 3 + 1] - torso_pos[1]) *
-              torso_frame[i + 3] +
-          (data_->xpos[id_right_hand_ * 3 + 2] - torso_pos[2]) *
-              torso_frame[i + 6];
+          (data_->xpos[id_rhand_ * 3] - torso_pos[0]) * torso_frame[i] +
+          (data_->xpos[id_rhand_ * 3 + 1] - torso_pos[1]) * torso_frame[i + 3] +
+          (data_->xpos[id_rhand_ * 3 + 2] - torso_pos[2]) * torso_frame[i + 6];
     }
     // right foot
     std::array<mjtNum, 3> torso_to_limb_rf;
     for (int i = 0; i < 3; i++) {
       torso_to_limb_rf[i] =
-          (data_->xpos[id_right_foot_ * 3] - torso_pos[0]) * torso_frame[i] +
-          (data_->xpos[id_right_foot_ * 3 + 1] - torso_pos[1]) *
-              torso_frame[i + 3] +
-          (data_->xpos[id_right_foot_ * 3 + 2] - torso_pos[2]) *
-              torso_frame[i + 6];
+          (data_->xpos[id_rfoot_ * 3] - torso_pos[0]) * torso_frame[i] +
+          (data_->xpos[id_rfoot_ * 3 + 1] - torso_pos[1]) * torso_frame[i + 3] +
+          (data_->xpos[id_rfoot_ * 3 + 2] - torso_pos[2]) * torso_frame[i + 6];
     }
     return {
         torso_to_limb_lh[0], torso_to_limb_lh[1], torso_to_limb_lh[2],
@@ -301,18 +297,10 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
         torso_to_limb_rf[0], torso_to_limb_rf[1], torso_to_limb_rf[2],
     };
   }
-  std::array<mjtNum, 21> JointAngles() {
-    // return self.data.qpos[7:].copy()
-    std::array<mjtNum, 21> joint_angles;
-    for (int i = 0; i < 21; i++) {
-      joint_angles[i] = data_->qpos[7 + i];
-    }
-    return joint_angles;
-  }
 };
 
-using HumanoidEnvPool = AsyncEnvPool<HumanoidEnv>;
+using HumanoidCMUEnvPool = AsyncEnvPool<HumanoidCMUEnv>;
 
 }  // namespace mujoco_dmc
 
-#endif  // ENVPOOL_MUJOCO_DMC_HUMANOID_H_
+#endif  // ENVPOOL_MUJOCO_DMC_HUMANOID_CMU_H_

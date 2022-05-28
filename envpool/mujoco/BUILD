@@ -75,6 +75,7 @@ cc_library(
         "dmc/fish.h",
         "dmc/hopper.h",
         "dmc/humanoid.h",
+        "dmc/humanoid_CMU.h",
         "dmc/manipulator.h",
         "dmc/mujoco_env.h",
         "dmc/pendulum.h",

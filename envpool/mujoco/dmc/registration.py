@@ -44,6 +44,8 @@ dmc_mujoco_envs = [
   ("humanoid", "run_pure_state"),
   ("humanoid", "stand"),
   ("humanoid", "walk"),
+  ("humanoid_CMU", "run"),
+  ("humanoid_CMU", "stand"),
   ("manipulator", "bring_ball"),
   ("manipulator", "bring_peg"),
   ("manipulator", "insert_ball"),

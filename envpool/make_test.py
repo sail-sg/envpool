@@ -148,6 +148,8 @@ class _MakeTest(absltest.TestCase):
         "HumanoidRunPureState-v1",
         "HumanoidStand-v1",
         "HumanoidWalk-v1",
+        "HumanoidCMURun-v1",
+        "HumanoidCMUStand-v1",
         "ManipulatorBringBall-v1",
         "ManipulatorBringPeg-v1",
         "ManipulatorInsertBall-v1",
