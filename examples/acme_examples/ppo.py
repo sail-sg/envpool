@@ -20,6 +20,7 @@ We are using the newest master version (344022e), so please make sure you
 install acme using method 4 (https://github.com/deepmind/acme#installation).
 """
 
+import time
 from functools import partial
 from typing import Any, List, Mapping, Optional, Union
 
@@ -44,6 +45,7 @@ from acme.jax import experiments
 from acme.jax import networks as networks_lib
 from acme.jax import utils, variable_utils
 from acme.jax.types import PRNGKey
+from acme.utils import loggers
 
 import envpool
 from envpool.python.protocol import EnvPool
@@ -58,6 +60,8 @@ flags.DEFINE_integer("num_steps", 1_000_000, "Number of env steps to run.")
 flags.DEFINE_integer("eval_every", 50_000, "How often to run evaluation.")
 flags.DEFINE_boolean("use_envpool", False, "Whether to use EnvPool.")
 flags.DEFINE_integer("num_envs", 8, "Number of environment.")
+flags.DEFINE_boolean("use_wb", False, "Whether to use WandB.")
+flags.DEFINE_string("wb_entity", None, "WandB entity name.")
 
 
 class TimeStep(dm_env.TimeStep):
@@ -226,7 +230,11 @@ class BuilderWrapper(ppo.PPOBuilder):
 def make_environment(task: str, use_envpool: bool = False, num_envs: int = 2):
   env_wrappers = []
   if use_envpool:
-    env = envpool.make(task, env_type="dm", num_envs=num_envs)
+    env = envpool.make(
+      task,
+      env_type="dm",
+      num_envs=num_envs,
+    )
   else:
     env = gym.make(task)
     # Make sure the environment obeys the dm_env.Environment interface.
@@ -245,6 +253,8 @@ def build_experiment_config():
   task = FLAGS.env_name
   use_envpool = FLAGS.use_envpool
   num_envs = FLAGS.num_envs if use_envpool else -1
+  num_steps = FLAGS.num_steps // FLAGS.num_envs if \
+     FLAGS.use_envpool else FLAGS.num_steps
 
   config = ppo.PPOConfig(entropy_cost=0, learning_rate=1e-4)
 
@@ -261,17 +271,69 @@ def build_experiment_config():
     ),
     network_factory=lambda spec: ppo.make_networks(spec, layer_sizes),
     policy_network_factory=ppo.make_inference_fn,
-    eval_policy_network_factory=lambda network: ppo.make_inference_fn(
-      network,
-      True,
-    ),
     seed=FLAGS.seed,
-    max_number_of_steps=FLAGS.num_steps
+    max_number_of_steps=num_steps
   )
+
+
+def make_logger(
+  label: str,
+  steps_key: str = 'steps',
+  task_instance: int = 0,
+) -> loggers.Logger:
+
+  import logging
+
+  from acme.utils.loggers import aggregators
+  from acme.utils.loggers import asynchronous as async_logger
+  from acme.utils.loggers import base, csv, filters, terminal
+
+  import wandb
+
+  del steps_key, task_instance
+  print_fn = logging.info
+  terminal_logger = terminal.TerminalLogger(label=label, print_fn=print_fn)
+  loggers = [terminal_logger]
+  loggers.append(csv.CSVLogger(label=label))
+
+  run_name = f"acme_ppo__{FLAGS.env_name}"
+  if FLAGS.use_envpool:
+    run_name += "__envpool"
+  run_name += f"__{FLAGS.seed}__{int(time.time())}"
+
+  class WBLogger(base.Logger):
+
+    def __init__(self, label: str = "") -> None:
+      super().__init__()
+      wandb.init(
+        project="EnvPool",
+        entity=FLAGS.wb_entity,
+        name=run_name,
+        job_type=label,
+      )
+
+    def write(self, data: base.LoggingData) -> None:
+      data = base.to_numpy(data)
+      wandb.log(data)
+
+    def close(self) -> None:
+      wandb.finish()
+
+  if label == "train":
+    loggers.append(WBLogger(label=label))
+
+  # Dispatch to all writers and filter Nones and by time.
+  logger = aggregators.Dispatcher(loggers, base.to_numpy)
+  logger = filters.NoneFilter(logger)
+  logger = filters.TimeFilter(logger, 0.2)
+
+  return logger
 
 
 def main(_):
   config = build_experiment_config()
+  if FLAGS.use_wb:
+    config.logger_factory = make_logger
   # If we enable envpool, we're evaluating on
   # (num_eval_episodes * num_envs) episodes.
   experiments.run_experiment(
