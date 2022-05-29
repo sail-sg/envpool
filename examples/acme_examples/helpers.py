@@ -79,15 +79,6 @@ class EnvPoolWrapper(wrappers.EnvironmentWrapper):
     )
     return new_obs
 
-  def reward_spec(self):
-    return super().reward_spec()
-
-  def discount_spec(self):
-    return super().discount_spec()
-
-  def action_spec(self):
-    return super().action_spec()
-
   def reset(self) -> dm_env.TimeStep:
     self._is_done = False
     ts = super().reset()
