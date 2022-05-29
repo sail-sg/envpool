@@ -112,7 +112,7 @@ class EnvPoolWrapper(wrappers.EnvironmentWrapper):
     ts = TimeStep(
       step_type=dm_env.StepType.LAST if self._is_done else dm_env.StepType.MID,
       observation=ts.observation.obs,
-      reward=np.sum(ts.reward),  # Single value for recording the return.
+      reward=np.mean(ts.reward),  # Single value for recording the return.
       discount=ts.discount,
       extras={
         "step_type": ts.step_type,
@@ -298,7 +298,7 @@ def make_logger(
 
   run_name = f"acme_ppo__{FLAGS.env_name}"
   if FLAGS.use_envpool:
-    run_name += "__envpool"
+    run_name += f"__envpool-{FLAGS.num_envs}"
   run_name += f"__{FLAGS.seed}__{int(time.time())}"
 
   class WBLogger(base.Logger):
