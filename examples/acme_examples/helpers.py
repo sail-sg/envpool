@@ -27,7 +27,9 @@ from acme import types, wrappers
 from acme.adders import Adder
 from acme.agents.jax.actor_core import (
   ActorCore,
+  FeedForwardPolicy,
   FeedForwardPolicyWithExtra,
+  NoneType,
   SimpleActorCoreStateWithExtras,
 )
 from acme.jax import networks as networks_lib
@@ -76,6 +78,15 @@ class EnvPoolWrapper(wrappers.EnvironmentWrapper):
       maximum=obs.maximum,
     )
     return new_obs
+
+  def reward_spec(self):
+    return super().reward_spec()
+
+  def discount_spec(self):
+    return super().discount_spec()
+
+  def action_spec(self):
+    return super().action_spec()
 
   def reset(self) -> dm_env.TimeStep:
     self._is_done = False
@@ -138,9 +149,35 @@ class AdderWrapper(Adder):
         reward=next_timestep.extras["reward"][i],
         discount=next_timestep.discount[i],
       )
+      _extras = None
       if extras is not None:
         _extras = tree.map_structure(lambda x: utils.to_numpy(x[i]), extras)
       adder.add(action[i], timestep, _extras)
+
+
+def batched_feed_forward_to_actor_core(
+  policy: FeedForwardPolicy
+) -> ActorCore[PRNGKey, NoneType]:
+  """Modified adapter allowing batched data processing."""
+
+  def select_action(
+    params: networks_lib.Params, observation: networks_lib.Observation,
+    state: PRNGKey
+  ):
+    rng = state
+    rng1, rng2 = jax.random.split(rng)
+    action = policy(params, rng1, observation)
+    return action, rng2
+
+  def init(rng: PRNGKey) -> PRNGKey:
+    return rng
+
+  def get_extras(unused_rng: PRNGKey) -> NoneType:
+    return None
+
+  return ActorCore(
+    init=init, select_action=select_action, get_extras=get_extras
+  )
 
 
 def batched_feed_forward_with_extras_to_actor_core(
