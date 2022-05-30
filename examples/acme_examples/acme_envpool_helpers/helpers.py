@@ -243,13 +243,12 @@ def make_logger(
 
   class WBLogger(base.Logger):
 
-    def __init__(self, label: str = "") -> None:
+    def __init__(self) -> None:
       super().__init__()
       wandb.init(
         project=FLAGS.wb_project,
         entity=wb_entity,
         name=run_name,
-        job_type=label,
       )
 
     def write(self, data: base.LoggingData) -> None:
@@ -260,7 +259,9 @@ def make_logger(
       wandb.finish()
 
   if label == "train":
-    loggers.append(WBLogger(label=label))
+    label = "actor"
+  if label == "actor":
+    loggers.append(WBLogger())
 
   # Dispatch to all writers and filter Nones and by time.
   logger = aggregators.Dispatcher(loggers, base.to_numpy)

@@ -24,8 +24,8 @@ import time
 from functools import partial
 from typing import Optional
 
-import helpers
-import launchpad as lp
+import acme_envpool_helpers.helpers as helpers
+import acme_envpool_helpers.lp_helpers as lp_helpers
 import reverb
 from absl import app, flags
 from acme import core
@@ -35,7 +35,6 @@ from acme.agents.jax import actors, ppo
 from acme.jax import experiments
 from acme.jax import networks as networks_lib
 from acme.jax import variable_utils
-from acme.utils import lp_utils
 
 FLAGS = flags.FLAGS
 
@@ -142,14 +141,13 @@ def main(_):
     )
 
   if FLAGS.run_distributed:
-    program = experiments.make_distributed_experiment(
+    lp_helpers.run_distributed_experiment(
       experiment=config, num_actors=FLAGS.num_actors
     )
-    lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
-
-  experiments.run_experiment(
-    experiment=config, eval_every=FLAGS.eval_every, num_eval_episodes=10
-  )
+  else:
+    experiments.run_experiment(
+      experiment=config, eval_every=FLAGS.eval_every, num_eval_episodes=10
+    )
 
 
 if __name__ == "__main__":
