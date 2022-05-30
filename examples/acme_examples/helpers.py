@@ -23,6 +23,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import tree
+from absl import flags
 from acme import types, wrappers
 from acme.adders import Adder
 from acme.agents.jax.actor_core import (
@@ -48,6 +49,10 @@ import envpool
 from envpool.python.protocol import EnvPool
 
 Array = Union[np.ndarray, jnp.ndarray]
+
+FLAGS = flags.FLAGS
+
+flags.DEFINE_string("wb_project", "acme", "WandB project name.")
 
 
 class TimeStep(dm_env.TimeStep):
@@ -241,7 +246,7 @@ def make_logger(
     def __init__(self, label: str = "") -> None:
       super().__init__()
       wandb.init(
-        project="EnvPool",
+        project=FLAGS.wb_project,
         entity=wb_entity,
         name=run_name,
         job_type=label,

@@ -53,6 +53,7 @@ flags.DEFINE_boolean("use_envpool", False, "Whether to use EnvPool.")
 flags.DEFINE_integer("num_envs", 8, "Number of environment.")
 flags.DEFINE_boolean("use_wb", False, "Whether to use WandB.")
 flags.DEFINE_string("wb_entity", None, "WandB entity name.")
+flags.DEFINE_string("desc", "", "More description for the run.")
 
 
 class BuilderWrapper(builder.SACBuilder):
@@ -146,11 +147,13 @@ def build_experiment_config():
 def main(_):
   config = build_experiment_config()
   if FLAGS.use_wb:
-    run_name = f"acme_sac__{FLAGS.env_name}"
+    run_name = f"sac__{FLAGS.env_name}"
     if FLAGS.use_envpool:
       run_name += f"__envpool-{FLAGS.num_envs}"
     if FLAGS.run_distributed:
       run_name += f"__dist-{FLAGS.num_actors}"
+    if FLAGS.desc:
+      run_name += f"__{FLAGS.desc}"
     run_name += f"__{FLAGS.seed}__{int(time.time())}"
     config.logger_factory = partial(
       helpers.make_logger, run_name=run_name, wb_entity=FLAGS.wb_entity
