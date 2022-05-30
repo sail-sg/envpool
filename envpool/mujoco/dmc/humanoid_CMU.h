@@ -101,7 +101,7 @@ class HumanoidCMUEnv : public Env<HumanoidCMUEnvSpec>, public MujocoEnv {
       move_speed_ = kRunSpeed;
     } else {
       throw std::runtime_error("Unknown task_name " + task_name +
-                               " for dmc humanoid.");
+                               " for dmc humanoid_CMU.");
     }
   }
 
@@ -179,7 +179,6 @@ class HumanoidCMUEnv : public Env<HumanoidCMUEnvSpec>, public MujocoEnv {
     const auto& extremities = Extremities();
     const auto& com_velocity = CenterOfMassVelocity();
     const auto& torso_vertical = TorsoVerticalOrientation();
-    state["obs:velocity"_].Assign(data_->qvel, model_->nv);
     state["obs:joint_angles"_].Assign(joint_angles.begin(),
                                       joint_angles.size());
     state["obs:head_height"_] = HeadHeight();
@@ -188,7 +187,7 @@ class HumanoidCMUEnv : public Env<HumanoidCMUEnvSpec>, public MujocoEnv {
                                         torso_vertical.size());
     state["obs:com_velocity"_].Assign(com_velocity.begin(),
                                       com_velocity.size());
-
+    state["obs:velocity"_].Assign(data_->qvel, model_->nv);
     // info
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);

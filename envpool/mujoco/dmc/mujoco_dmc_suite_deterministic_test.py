@@ -34,8 +34,6 @@ from envpool.mujoco.dmc import (
   DmcFishEnvSpec,
   DmcHopperDMEnvPool,
   DmcHopperEnvSpec,
-  DmcHumanoidCMUDMEnvPool,
-  DmcHumanoidCMUEnvSpec,
   DmcHumanoidDMEnvPool,
   DmcHumanoidEnvSpec,
   DmcManipulatorDMEnvPool,
@@ -161,16 +159,6 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
     obs_keys = ["position", "velocity"]
     for task in ["run_pure_state"]:
       self.check(DmcHumanoidEnvSpec, DmcHumanoidDMEnvPool, task, obs_keys)
-
-  def test_humanoid_CMU(self) -> None:
-    obs_keys = [
-      "joint_angles", "head_height", "extremities", "torso_vertical",
-      "com_velocity", "velocity"
-    ]
-    for task in ["stand", "run"]:
-      self.check(
-        DmcHumanoidCMUEnvSpec, DmcHumanoidCMUDMEnvPool, task, obs_keys
-      )
 
   def test_manipulator(self) -> None:
     obs_keys = [

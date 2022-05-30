@@ -36,8 +36,6 @@ from envpool.mujoco.dmc import (
   DmcFishEnvSpec,
   DmcHopperDMEnvPool,
   DmcHopperEnvSpec,
-  DmcHumanoidCMUDMEnvPool,
-  DmcHumanoidCMUEnvSpec,
   DmcHumanoidDMEnvPool,
   DmcHumanoidEnvSpec,
   DmcManipulatorDMEnvPool,
@@ -97,7 +95,7 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         env.physics.named.model.geom_pos["target", "x"] = target[0]
         env.physics.named.model.geom_pos["target", "y"] = target[1]
         env.physics.named.model.geom_pos["target", "z"] = target[2]
-      elif domain in ["finger", "ball_in_cup", "humanoid", "humanoid_CMU"]:
+      elif domain in ["finger", "ball_in_cup", "humanoid"]:
         if domain == "finger" and task in ["turn_easy", "turn_hard"]:
           target_angle = ts.observation.target[0][0]
           hinge = env.physics.named.data.xanchor["hinge", ["x", "z"]]
@@ -240,12 +238,6 @@ class _MujocoDmcAlignTest(absltest.TestCase):
     self.run_align_check_entry(
       "humanoid", ["stand", "walk", "run", "run_pure_state"],
       DmcHumanoidEnvSpec, DmcHumanoidDMEnvPool
-    )
-
-  def test_humanoid_CMU(self) -> None:
-    self.run_align_check_entry(
-      "humanoid_CMU", ["stand", "run"], DmcHumanoidCMUEnvSpec,
-      DmcHumanoidCMUDMEnvPool
     )
 
   def test_manipulator(self) -> None:
