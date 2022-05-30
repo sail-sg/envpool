@@ -52,6 +52,15 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
   // create model and data
   model_ = mj_loadXML(model_filename.c_str(), vfs.get(), error_.begin(), 1000);
   data_ = mj_makeData(model_);
+  // create visualization
+  mjv_defaultCamera(&cam);
+  mjv_defaultOption(&opt);
+  mjv_defaultScene(&scn);
+  mjr_defaultContext(&con);
+
+  // create scene and context
+  mjv_makeScene(m, &scn, 2000);
+  mjr_makeContext(m, &con, 200);  
 #ifdef ENVPOOL_TEST
   qpos0_.reset(new mjtNum[model_->nq]);
 #endif
@@ -60,6 +69,8 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
 MujocoEnv::~MujocoEnv() {
   mj_deleteModel(model_);
   mj_deleteData(data_);
+  mjr_freeContext(&con);
+  mjv_freeScene(&scn);
 }
 
 // rl control Environment
@@ -157,6 +168,26 @@ void MujocoEnv::PhysicsStep(int nstep, const mjtNum* action) {
     }
   }
   mj_step1(model_, data_);
+}
+
+// https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/mujoco/engine.py#L165
+void MujocoEnv::PhysicsRender(height = 240, width = 320, camera_id = -1,
+                              overlays = (), depth = False,
+                              segmentation = False, scene_option = None,
+                              render_flag_overrides = None, ) {
+  if (keyframe_id < 0) {
+    mj_resetData(model_, data_);
+  } else {
+    // actually no one steps to this line
+    assert(keyframe_id < model_->nkey);
+    mj_resetDataKeyframe(model_, data_, keyframe_id);
+  }
+
+  // PhysicsAfterReset may be overwritten?
+  int old_flags = model_->opt.disableflags;
+  model_->opt.disableflags |= mjDSBL_ACTUATION;
+  PhysicsForward();
+  model_->opt.disableflags = old_flags;
 }
 
 // randomizer
