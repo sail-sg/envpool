@@ -15,14 +15,13 @@
 
 import logging
 from functools import partial
-from typing import Any, List, Mapping, Optional, Union
+from typing import Any, List, Mapping, Union
 
 import dm_env
 import gym
 import jax
 import jax.numpy as jnp
 import numpy as np
-import tensorflow as tf
 import tree
 from absl import flags
 from acme import types, wrappers
@@ -44,7 +43,6 @@ from acme.utils.loggers import (
   base,
   filters,
   terminal,
-  tf_summary,
 )
 
 import envpool
