@@ -21,11 +21,12 @@ install acme using method 4 (https://github.com/deepmind/acme#installation).
 """
 
 import time
+from dataclasses import asdict
 from functools import partial
 from typing import Optional
 
-import helpers
-import launchpad as lp
+import acme_envpool_helpers.helpers as helpers
+import acme_envpool_helpers.lp_helpers as lp_helpers
 import reverb
 from absl import app, flags
 from acme import core, specs
@@ -36,7 +37,6 @@ from acme.agents.jax.sac import builder
 from acme.jax import experiments
 from acme.jax import networks as networks_lib
 from acme.jax import variable_utils
-from acme.utils import lp_utils
 
 FLAGS = flags.FLAGS
 
@@ -138,14 +138,14 @@ def build_experiment_config():
     ),
     network_factory=network_factory,
     policy_network_factory=sac.apply_policy_and_sample,
-    eval_policy_network_factory=[],
+    evaluator_factories=[],
     seed=FLAGS.seed,
     max_number_of_steps=num_steps
-  )
+  ), config
 
 
 def main(_):
-  config = build_experiment_config()
+  experiment, config = build_experiment_config()
   if FLAGS.use_wb:
     run_name = f"sac__{FLAGS.env_name}"
     if FLAGS.use_envpool:
@@ -155,19 +155,24 @@ def main(_):
     if FLAGS.desc:
       run_name += f"__{FLAGS.desc}"
     run_name += f"__{FLAGS.seed}__{int(time.time())}"
-    config.logger_factory = partial(
-      helpers.make_logger, run_name=run_name, wb_entity=FLAGS.wb_entity
+    cfg = asdict(config)
+    cfg.update(FLAGS.flag_values_dict().items())
+
+    experiment.logger_factory = partial(
+      helpers.make_logger,
+      run_name=run_name,
+      wb_entity=FLAGS.wb_entity,
+      config=cfg
     )
 
   if FLAGS.run_distributed:
-    program = experiments.make_distributed_experiment(
-      experiment=config, num_actors=FLAGS.num_actors
+    lp_helpers.run_distributed_experiment(
+      experiment=experiment, num_actors=FLAGS.num_actors
     )
-    lp.launch(program, xm_resources=lp_utils.make_xm_docker_resources(program))
-
-  experiments.run_experiment(
-    experiment=config, eval_every=FLAGS.eval_every, num_eval_episodes=10
-  )
+  else:
+    experiments.run_experiment(
+      experiment=experiment, eval_every=FLAGS.eval_every, num_eval_episodes=10
+    )
 
 
 if __name__ == "__main__":

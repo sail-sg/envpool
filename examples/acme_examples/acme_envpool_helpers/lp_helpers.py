@@ -123,7 +123,7 @@ def run_distributed_experiment(experiment: config.Config, num_actors: int):
   vm_resource = TPUResourceManager(1)
   actor_resource = vm_resource.get(2, remark="actor")
   replay_resource = vm_resource.get(2, remark="replay")
-  learner_resource = vm_resource.get(2, True, remark="learner")
+  learner_resource = vm_resource.get(4, True, remark="learner")
   resources = {
     "actor": PythonProcess(env=actor_resource),
     "replay": PythonProcess(env=replay_resource),

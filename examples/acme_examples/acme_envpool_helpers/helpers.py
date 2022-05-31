@@ -15,13 +15,14 @@
 
 import logging
 from functools import partial
-from typing import Any, List, Mapping, Union
+from typing import Any, List, Mapping, Optional, Union
 
 import dm_env
 import gym
 import jax
 import jax.numpy as jnp
 import numpy as np
+import tensorflow as tf
 import tree
 from absl import flags
 from acme import types, wrappers
@@ -38,11 +39,12 @@ from acme.jax import utils
 from acme.jax.types import PRNGKey
 from acme.utils.loggers import (
   Logger,
+  LoggingData,
   aggregators,
   base,
-  csv,
   filters,
   terminal,
+  tf_summary,
 )
 
 import envpool
@@ -231,41 +233,47 @@ def make_logger(
   task_instance: int = 0,
   run_name: str = "",
   wb_entity: str = "",
+  config: dict = {},
 ) -> Logger:
+  del task_instance, steps_key
+  num_envs = config["num_envs"] if config["use_envpool"] else 1
 
-  import wandb
-
-  del steps_key, task_instance
   print_fn = logging.info
   terminal_logger = terminal.TerminalLogger(label=label, print_fn=print_fn)
   loggers = [terminal_logger]
-  loggers.append(csv.CSVLogger(label=label))
-
-  class WBLogger(base.Logger):
-
-    def __init__(self) -> None:
-      super().__init__()
-      wandb.init(
-        project=FLAGS.wb_project,
-        entity=wb_entity,
-        name=run_name,
-      )
-
-    def write(self, data: base.LoggingData) -> None:
-      data = base.to_numpy(data)
-      wandb.log(data)
-
-    def close(self) -> None:
-      wandb.finish()
-
   if label == "train":
     label = "actor"
   if label == "actor":
-    loggers.append(WBLogger())
+    import wandb
+    wandb.init(
+      project=FLAGS.wb_project,
+      entity=wb_entity,
+      name=run_name,
+      config=config,
+    )
+
+    class WBLogger(Logger):
+
+      def __init__(self, num_envs) -> None:
+        self._num_envs = num_envs
+
+      def write(self, data: LoggingData) -> None:
+        new_data = {}
+        for key, value in data.items():
+          if key in ["train_steps", "actor_steps"]:
+            key = "global_step"
+            value *= self._num_envs
+          new_data[key] = value
+        wandb.log(new_data)
+
+      def close(self) -> None:
+        wandb.finish()
+
+    loggers.append(WBLogger(num_envs))
 
   # Dispatch to all writers and filter Nones and by time.
   logger = aggregators.Dispatcher(loggers, base.to_numpy)
   logger = filters.NoneFilter(logger)
-  logger = filters.TimeFilter(logger, 0.2)
+  logger = filters.TimeFilter(logger, 0.1)
 
   return logger
