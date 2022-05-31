@@ -52,7 +52,7 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
   // create model and data
   model_ = mj_loadXML(model_filename.c_str(), vfs.get(), error_.begin(), 1000);
   data_ = mj_makeData(model_);
-  // create visualization
+  // init visualization
   mjv_defaultCamera(&cam);
   mjv_defaultOption(&opt);
   mjv_defaultScene(&scn);
@@ -60,7 +60,14 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
 
   // create scene and context
   mjv_makeScene(m, &scn, 2000);
-  mjr_makeContext(m, &con, 200);  
+  mjr_makeContext(m, &con, 200);
+
+  // center and scale view
+  cam.lookat[0] = m->stat.center[0];
+  cam.lookat[1] = m->stat.center[1];
+  cam.lookat[2] = m->stat.center[2];
+  cam.distance = 1.5 * m->stat.extent;
+    
 #ifdef ENVPOOL_TEST
   qpos0_.reset(new mjtNum[model_->nq]);
 #endif
