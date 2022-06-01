@@ -21,8 +21,6 @@ tensorboard
 tianshou
 torch
 tqdm
-types-filelock
-types-protobuf
 numba
 llvmlite
 wheel
