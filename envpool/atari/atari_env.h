@@ -42,7 +42,7 @@ static bool verbosity_off = TurnOffVerbosity();
 std::string GetRomPath(const std::string& base_path, const std::string& task) {
   std::stringstream ss;
   // hardcode path here :(
-  ss << base_path << "/atari/atari_roms/" << task << "/" << task << ".bin";
+  ss << base_path << "/atari/roms/" << task << ".bin";
   return ss.str();
 }
 
