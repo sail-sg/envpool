@@ -14,15 +14,16 @@
 """Helpers for acme experiments."""
 
 import logging
+import sys
 from functools import partial
-from typing import Any, List, Mapping, Union
+from typing import Any, Mapping, Union
 
 import dm_env
 import gym
 import jax
 import jax.numpy as jnp
 import numpy as np
-import tree
+import reverb
 from absl import flags
 from acme import types, wrappers
 from acme.adders import Adder
@@ -34,7 +35,6 @@ from acme.agents.jax.actor_core import (
   SimpleActorCoreStateWithExtras,
 )
 from acme.jax import networks as networks_lib
-from acme.jax import utils
 from acme.jax.types import PRNGKey
 from acme.utils.loggers import (
   Logger,
@@ -44,6 +44,7 @@ from acme.utils.loggers import (
   filters,
   terminal,
 )
+from dm_env import StepType
 
 import envpool
 from envpool.python.protocol import EnvPool
@@ -65,13 +66,16 @@ class TimeStep(dm_env.TimeStep):
     self.extras = extras
     return self
 
+  def last(self) -> bool:
+    """Hack for the EnvironmentLoop episode end checking."""
+    return any(self.step_type == StepType.LAST)
 
-class EnvPoolWrapper(wrappers.EnvironmentWrapper):
+
+class EnvPoolMujocoWrapper(wrappers.EnvironmentWrapper):
 
   def __init__(self, environment: EnvPool):
     super().__init__(environment)
     self._num_envs = len(environment.all_env_ids)
-    self._is_done = False
 
   def observation_spec(self) -> Array:
     obs = self._environment.observation_spec().obs
@@ -84,53 +88,54 @@ class EnvPoolWrapper(wrappers.EnvironmentWrapper):
     )
     return new_obs
 
-  def reset(self) -> dm_env.TimeStep:
-    self._is_done = False
+  def reset(self) -> TimeStep:
     ts = super().reset()
-    return dm_env.TimeStep(
-      step_type=dm_env.StepType.FIRST,
+    return TimeStep(
+      step_type=ts.step_type,
       observation=ts.observation.obs,
       reward=ts.reward,
       discount=ts.discount,
+      extras=None,
     )
 
   def step(self, action) -> TimeStep:
     ts = super().step(action)
-    _is_done = np.sum(ts.step_type == dm_env.StepType.LAST)
-    if _is_done > 0:
-      assert _is_done == self._num_envs, "envs do not finish at the same time."
-      self._is_done = True
     ts = TimeStep(
-      step_type=dm_env.StepType.LAST if self._is_done else dm_env.StepType.MID,
+      step_type=ts.step_type,
       observation=ts.observation.obs,
       reward=ts.reward[0],  # Single value for recording the return.
       discount=ts.discount,
       extras={
-        "step_type": ts.step_type,
+        # "step_type": ts.step_type,
         "reward": ts.reward,
-      }
+      },
     )
     return ts
 
 
 class AdderWrapper(Adder):
 
-  def __init__(self, adders: List[Adder]) -> None:
-    self._adders: List[Adder] = adders
+  def __init__(self, adder: Adder) -> None:
+    self._adder: Adder = adder
 
   def reset(self):
-    for adder in self._adders:
-      adder.reset()
+    self._adder.reset()
 
-  def add_first(self, timestep: dm_env.TimeStep):
-    for i, adder in enumerate(self._adders):
-      ts = dm_env.TimeStep(
-        step_type=timestep.step_type,
-        observation=timestep.observation[i],
-        reward=timestep.reward[i],
-        discount=timestep.discount[i],
+  def add_first(self, timestep: TimeStep):
+    if not any(timestep.first()):
+      raise ValueError(
+        'adder.add_first with an initial timestep (i.e. one for '
+        'which timestep.first() is True'
       )
-      adder.add_first(ts)
+    # Record the next observation but leave the history buffer row open by
+    # passing `partial_step=True`.
+    self._adder._writer.append(
+      dict(
+        observation=timestep.observation, start_of_episode=timestep.first()
+      ),
+      partial_step=True
+    )
+    self._adder._add_first_called = True
 
   def add(
     self,
@@ -138,17 +143,14 @@ class AdderWrapper(Adder):
     next_timestep: TimeStep,
     extras: types.NestedArray = ...
   ):
-    for i, adder in enumerate(self._adders):
-      timestep = dm_env.TimeStep(
-        step_type=next_timestep.extras["step_type"][i],
-        observation=next_timestep.observation[i],
-        reward=next_timestep.extras["reward"][i],
-        discount=next_timestep.discount[i],
-      )
-      _extras = None
-      if extras is not None:
-        _extras = tree.map_structure(lambda x: utils.to_numpy(x[i]), extras)
-      adder.add(action[i], timestep, _extras)
+    next_timestep = TimeStep(
+      step_type=next_timestep.step_type,
+      observation=next_timestep.observation,
+      reward=next_timestep.extras["reward"],
+      discount=next_timestep.discount,
+      extras=None,
+    )
+    self._adder.add(action, next_timestep, extras)
 
 
 def batched_feed_forward_to_actor_core(
@@ -174,6 +176,17 @@ def batched_feed_forward_to_actor_core(
   return ActorCore(
     init=init, select_action=select_action, get_extras=get_extras
   )
+
+
+def disable_insert_blocking(table: reverb.Table):
+  rate_limiter_info = table.info.rate_limiter_info
+  rate_limiter = reverb.rate_limiters.RateLimiter(
+    samples_per_insert=rate_limiter_info.samples_per_insert,
+    min_size_to_sample=rate_limiter_info.min_size_to_sample,
+    min_diff=rate_limiter_info.min_diff,
+    max_diff=sys.float_info.max
+  )
+  return table.replace(rate_limiter=rate_limiter)
 
 
 def batched_feed_forward_with_extras_to_actor_core(
@@ -221,7 +234,7 @@ def make_environment(task: str, use_envpool: bool = False, num_envs: int = 2):
     wrappers.SinglePrecisionWrapper
   ]
   if use_envpool:
-    env_wrappers.append(EnvPoolWrapper)
+    env_wrappers.append(EnvPoolMujocoWrapper)
   return wrappers.wrap_all(env, env_wrappers)
 
 

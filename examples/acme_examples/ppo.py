@@ -21,20 +21,27 @@ install acme using method 4 (https://github.com/deepmind/acme#installation).
 """
 
 import time
+from dataclasses import asdict
 from functools import partial
-from typing import Optional
+from typing import Iterable, Iterator, List, Optional
 
 import acme_envpool_helpers.helpers as helpers
 import acme_envpool_helpers.lp_helpers as lp_helpers
+import jax
+import numpy as np
 import reverb
+import tensorflow as tf
+import tree
 from absl import app, flags
-from acme import core
+from acme import core, specs, types
 from acme.adders import Adder
+from acme.adders.reverb import base as reverb_base
+from acme.adders.reverb import sequence as reverb_sequence
 from acme.agents.jax import actor_core as actor_core_lib
 from acme.agents.jax import actors, ppo
 from acme.jax import experiments
 from acme.jax import networks as networks_lib
-from acme.jax import variable_utils
+from acme.jax import utils, variable_utils
 
 FLAGS = flags.FLAGS
 
@@ -54,22 +61,121 @@ flags.DEFINE_string("wb_entity", None, "WandB entity name.")
 flags.DEFINE_string("desc", "", "More description for the run.")
 
 
+class BatchSequenceAdder(reverb_sequence.SequenceAdder):
+
+  @classmethod
+  def signature(
+    cls,
+    environment_spec: specs.EnvironmentSpec,
+    extras_spec: types.NestedSpec = ...,
+    sequence_length: Optional[int] = None,
+    batch_size: Optional[int] = None
+  ):
+    # Add env batch and time dimension.
+    def add_extra_dim(paths: Iterable[str], spec: tf.TensorSpec):
+      return tf.TensorSpec(
+        shape=(sequence_length, batch_size, *spec.shape),
+        dtype=spec.dtype,
+        name='/'.join(str(p) for p in paths)
+      )
+
+    trajectory_env_spec, trajectory_extras_spec = tree.map_structure_with_path(
+      add_extra_dim, (environment_spec, extras_spec)
+    )
+
+    spec_step = reverb_base.Trajectory(
+      *trajectory_env_spec,
+      start_of_episode=tf.TensorSpec(
+        shape=(sequence_length, batch_size),
+        dtype=tf.bool,
+        name='start_of_episode'
+      ),
+      extras=trajectory_extras_spec
+    )
+
+    return spec_step
+
+
 class BuilderWrapper(ppo.PPOBuilder):
+  """Wrap the PPO algorithm builder for EnvPool."""
 
   def __init__(self, config: ppo.PPOConfig, num_envs: int = -1):
     super().__init__(config)
     self._num_envs = num_envs
     self._use_envpool = num_envs > 0
 
-  def make_adder(self, replay_client: reverb.Client) -> Adder:
+  def make_replay_tables(
+    self, environment_spec: specs.EnvironmentSpec
+  ) -> List[reverb.Table]:
     if not self._use_envpool:
-      return super(BuilderWrapper, self).make_adder(replay_client)
-    return helpers.AdderWrapper(
-      [
-        super(BuilderWrapper, self).make_adder(replay_client)
-        for _ in range(self._num_envs)
-      ]
+      return super(BuilderWrapper, self).make_replay_tables(environment_spec)
+    extra_spec = {
+      'log_prob': np.ones(shape=(), dtype=np.float32),
+    }
+    signature = BatchSequenceAdder.signature(
+      environment_spec,
+      extra_spec,
+      sequence_length=self._sequence_length,
+      batch_size=self._num_envs
     )
+    return [
+      reverb.Table.queue(
+        name=self._config.replay_table_name,
+        max_size=self._config.batch_size,
+        signature=signature
+      )
+    ]
+
+  def make_dataset_iterator(
+    self, replay_client: reverb.Client
+  ) -> Iterator[reverb.ReplaySample]:
+    if not self._use_envpool:
+      return super(BuilderWrapper, self).make_dataset_iterator(replay_client)
+    assert self._config.batch_size % self._num_envs == 0
+    batch_size = self._config.batch_size // self._num_envs
+    dataset = reverb.TrajectoryDataset.from_table_signature(
+      server_address=replay_client.server_address,
+      table=self._config.replay_table_name,
+      max_in_flight_samples_per_worker=2 * batch_size
+    )
+
+    def transpose(sample: reverb.ReplaySample) -> reverb.ReplaySample:
+      data = sample.data
+
+      def _process_rank_4(data):
+        return tf.reshape(
+          tf.transpose(data, [0, 2, 1, 3]),
+          [self._config.batch_size, self._config.unroll_length + 1, -1]
+        )
+
+      def _process_rank_3(data):
+        return tf.reshape(
+          tf.transpose(data, [0, 2, 1]),
+          [self._config.batch_size, self._config.unroll_length + 1]
+        )
+
+      reward = _process_rank_3(data.reward)
+      return reverb.ReplaySample(
+        info=sample.info,
+        data=types.Transition(
+          observation=_process_rank_4(data.observation),
+          action=_process_rank_4(data.action),
+          reward=reward,
+          discount=_process_rank_3(data.discount),
+          next_observation=tf.zeros_like(reward),
+          extras={"log_prob": _process_rank_3(data.extras["log_prob"])}
+        ),
+      )
+
+    # Add batch dimension.
+    dataset = dataset.batch(batch_size, drop_remainder=True).map(transpose)
+    return utils.device_put(dataset.as_numpy_iterator(), jax.devices()[0])
+
+  def make_adder(self, replay_client: reverb.Client) -> Adder:
+    adder = super(BuilderWrapper, self).make_adder(replay_client)
+    if not self._use_envpool:
+      return adder
+    return helpers.AdderWrapper(adder)
 
   def make_actor(
     self,
@@ -122,11 +228,11 @@ def build_experiment_config():
     evaluator_factories=[],
     seed=FLAGS.seed,
     max_number_of_steps=num_steps
-  )
+  ), config
 
 
 def main(_):
-  config = build_experiment_config()
+  experiment, config = build_experiment_config()
   if FLAGS.use_wb:
     run_name = f"ppo__{FLAGS.env_name}"
     if FLAGS.use_envpool:
@@ -136,17 +242,22 @@ def main(_):
     if FLAGS.desc:
       run_name += f"__{FLAGS.desc}"
     run_name += f"__{FLAGS.seed}__{int(time.time())}"
-    config.logger_factory = partial(
-      helpers.make_logger, run_name=run_name, wb_entity=FLAGS.wb_entity
+    cfg = asdict(config)
+    cfg.update(FLAGS.flag_values_dict().items())
+    experiment.logger_factory = partial(
+      helpers.make_logger,
+      run_name=run_name,
+      wb_entity=FLAGS.wb_entity,
+      config=cfg
     )
 
   if FLAGS.run_distributed:
     lp_helpers.run_distributed_experiment(
-      experiment=config, num_actors=FLAGS.num_actors
+      experiment=experiment, num_actors=FLAGS.num_actors
     )
   else:
     experiments.run_experiment(
-      experiment=config, eval_every=FLAGS.eval_every, num_eval_episodes=10
+      experiment=experiment, eval_every=FLAGS.eval_every, num_eval_episodes=10
     )
 
 
