@@ -23,11 +23,21 @@
 namespace mujoco_dmc {
 
 MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
-                     int n_sub_steps, int max_episode_steps)
+                     int n_sub_steps, int max_episode_steps,
+                     int height, int width,
+                     const std::string& camera_id,
+                     bool depth, bool segmentation,
+                     )
     : n_sub_steps_(n_sub_steps),
       max_episode_steps_(max_episode_steps),
       elapsed_step_(max_episode_steps + 1),
-      done_(true) {
+      done_(true),
+      height_(240),
+      width_(320),
+      camera_id_("-1"),
+      depth_(false),
+      segmentation_(false) {
+  initOpenGL();
   // initialize vfs from common assets and raw xml
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/mujoco/wrapper/core.py#L158
   // https://github.com/deepmind/mujoco/blob/main/python/mujoco/structs.cc
@@ -52,21 +62,32 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
   // create model and data
   model_ = mj_loadXML(model_filename.c_str(), vfs.get(), error_.begin(), 1000);
   data_ = mj_makeData(model_);
+  // MuJoCo visualization
+  mjvScene scene_;
+  mjvCamera camera_;
+  mjvOption option_;
+  mjrContext context_;
   // init visualization
-  mjv_defaultCamera(&cam);
-  mjv_defaultOption(&opt);
-  mjv_defaultScene(&scn);
-  mjr_defaultContext(&con);
+  mjv_defaultCamera(&camera_);
+  mjv_defaultOption(&option_);
+  mjv_defaultScene(&scene_);
+  mjr_defaultContext(&context_);
 
   // create scene and context
-  mjv_makeScene(m, &scn, 2000);
-  mjr_makeContext(m, &con, 200);
-
-  // center and scale view
-  cam.lookat[0] = m->stat.center[0];
-  cam.lookat[1] = m->stat.center[1];
-  cam.lookat[2] = m->stat.center[2];
-  cam.distance = 1.5 * m->stat.extent;
+  // void mjv_makeScene(const mjModel* m, mjvScene* scn, int maxgeom);
+  mjv_makeScene(model_, &scene_, 2000);
+  // void mjr_makeContext(const mjModel* m, mjrContext* con, int fontscale);
+  mjr_makeContext(model_, &context_, 200);
+  // set rendering to offscreen buffer
+  mjr_setBuffer(mjFB_OFFSCREEN, &context_);
+  // allocate rgb and depth buffers
+  unsigned char* rgb_array_ = (unsigned char*)std::malloc(3*width_*height_);
+  float* depth_array_ = (float*)std::malloc(sizeof(float)*width_*height_);
+  // camera configuration
+  // cam.lookat[0] = m->stat.center[0];
+  // cam.lookat[1] = m->stat.center[1];
+  // cam.lookat[2] = m->stat.center[2];
+  // cam.distance = 1.5 * m->stat.extent;
     
 #ifdef ENVPOOL_TEST
   qpos0_.reset(new mjtNum[model_->nq]);
@@ -76,8 +97,10 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
 MujocoEnv::~MujocoEnv() {
   mj_deleteModel(model_);
   mj_deleteData(data_);
-  mjr_freeContext(&con);
-  mjv_freeScene(&scn);
+  mjr_freeContext(&context_);
+  mjv_freeScene(&scene_);
+  closeOpenGL();
+
 }
 
 // rl control Environment
@@ -178,23 +201,20 @@ void MujocoEnv::PhysicsStep(int nstep, const mjtNum* action) {
 }
 
 // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/mujoco/engine.py#L165
-void MujocoEnv::PhysicsRender(height = 240, width = 320, camera_id = -1,
-                              overlays = (), depth = False,
-                              segmentation = False, scene_option = None,
-                              render_flag_overrides = None, ) {
-  if (keyframe_id < 0) {
-    mj_resetData(model_, data_);
-  } else {
-    // actually no one steps to this line
-    assert(keyframe_id < model_->nkey);
-    mj_resetDataKeyframe(model_, data_, keyframe_id);
-  }
+void MujocoEnv::PhysicsRender(int height, int width,
+                              const std::string& camera_id,
+                              bool depth, bool segmentation) {
+  // update abstract scene
+  mjv_updateScene(model_, data_, &option_, NULL, &camera_, mjCAT_ALL, &scene_);
+  mjrRect viewport = {0, 0, width_, height_};
+  // render scene in offscreen buffer
+  mjr_render(viewport, &scene_, &context_);
 
-  // PhysicsAfterReset may be overwritten?
-  int old_flags = model_->opt.disableflags;
-  model_->opt.disableflags |= mjDSBL_ACTUATION;
-  PhysicsForward();
-  model_->opt.disableflags = old_flags;
+  // read rgb and depth buffers
+  mjr_readPixels(rgb_array_, depth_array_, viewport, &context_);
+
+  // segmentation results not implemented
+  return {rgb_array_, depth_array_, segmentation_array_}
 }
 
 // randomizer
@@ -241,5 +261,127 @@ void MujocoEnv::RandomizeLimitedAndRotationalJoints(std::mt19937* gen) {
     }
   }
 }
+// create OpenGL context/window
+void initOpenGL(void) {
+  //------------------------ EGL
+#if defined(MJ_EGL)
+  // desired config
+  const EGLint configAttribs[] = {
+    EGL_RED_SIZE,           8,
+    EGL_GREEN_SIZE,         8,
+    EGL_BLUE_SIZE,          8,
+    EGL_ALPHA_SIZE,         8,
+    EGL_DEPTH_SIZE,         24,
+    EGL_STENCIL_SIZE,       8,
+    EGL_COLOR_BUFFER_TYPE,  EGL_RGB_BUFFER,
+    EGL_SURFACE_TYPE,       EGL_PBUFFER_BIT,
+    EGL_RENDERABLE_TYPE,    EGL_OPENGL_BIT,
+    EGL_NONE
+  };
 
+  // get default display
+  EGLDisplay eglDpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+  if (eglDpy==EGL_NO_DISPLAY) {
+    mju_error_i("Could not get EGL display, error 0x%x\n", eglGetError());
+  }
+
+  // initialize
+  EGLint major, minor;
+  if (eglInitialize(eglDpy, &major, &minor)!=EGL_TRUE) {
+    mju_error_i("Could not initialize EGL, error 0x%x\n", eglGetError());
+  }
+
+  // choose config
+  EGLint numConfigs;
+  EGLConfig eglCfg;
+  if (eglChooseConfig(eglDpy, configAttribs, &eglCfg, 1, &numConfigs)!=EGL_TRUE) {
+    mju_error_i("Could not choose EGL config, error 0x%x\n", eglGetError());
+  }
+
+  // bind OpenGL API
+  if (eglBindAPI(EGL_OPENGL_API)!=EGL_TRUE) {
+    mju_error_i("Could not bind EGL OpenGL API, error 0x%x\n", eglGetError());
+  }
+
+  // create context
+  EGLContext eglCtx = eglCreateContext(eglDpy, eglCfg, EGL_NO_CONTEXT, NULL);
+  if (eglCtx==EGL_NO_CONTEXT) {
+    mju_error_i("Could not create EGL context, error 0x%x\n", eglGetError());
+  }
+
+  // make context current, no surface (let OpenGL handle FBO)
+  if (eglMakeCurrent(eglDpy, EGL_NO_SURFACE, EGL_NO_SURFACE, eglCtx)!=EGL_TRUE) {
+    mju_error_i("Could not make EGL context current, error 0x%x\n", eglGetError());
+  }
+
+  //------------------------ OSMESA
+#elif defined(MJ_OSMESA)
+  // create context
+  ctx = OSMesaCreateContextExt(GL_RGBA, 24, 8, 8, 0);
+  if (!ctx) {
+    mju_error("OSMesa context creation failed");
+  }
+
+  // make current
+  if (!OSMesaMakeCurrent(ctx, buffer, GL_UNSIGNED_BYTE, 800, 800)) {
+    mju_error("OSMesa make current failed");
+  }
+
+  //------------------------ GLFW
+#else
+  // init GLFW
+  if (!glfwInit()) {
+    mju_error("Could not initialize GLFW");
+  }
+
+  // create invisible window, single-buffered
+  glfwWindowHint(GLFW_VISIBLE, 0);
+  glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_FALSE);
+  GLFWwindow* window = glfwCreateWindow(800, 800, "Invisible window", NULL, NULL);
+  if (!window) {
+    mju_error("Could not create GLFW window");
+  }
+
+  // make context current
+  glfwMakeContextCurrent(window);
+#endif
+}
+
+
+// close OpenGL context/window
+void closeOpenGL(void) {
+  //------------------------ EGL
+#if defined(MJ_EGL)
+  // get current display
+  EGLDisplay eglDpy = eglGetCurrentDisplay();
+  if (eglDpy==EGL_NO_DISPLAY) {
+    return;
+  }
+
+  // get current context
+  EGLContext eglCtx = eglGetCurrentContext();
+
+  // release context
+  eglMakeCurrent(eglDpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+
+  // destroy context if valid
+  if (eglCtx!=EGL_NO_CONTEXT) {
+    eglDestroyContext(eglDpy, eglCtx);
+  }
+
+  // terminate display
+  eglTerminate(eglDpy);
+
+  //------------------------ OSMESA
+#elif defined(MJ_OSMESA)
+  OSMesaDestroyContext(ctx);
+
+  //------------------------ GLFW
+#else
+  // terminate GLFW (crashes with Linux NVidia drivers)
+  #if defined(__APPLE__) || defined(_WIN32)
+    glfwTerminate();
+  #endif
+#endif
+}
 }  // namespace mujoco_dmc
