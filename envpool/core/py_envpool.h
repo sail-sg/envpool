@@ -218,10 +218,12 @@ class PyEnvPool : public EnvPool {
     if (HasContainerType(EnvPool::spec.state_spec)) {
       throw std::runtime_error(
           "State of this env has dynamic shaped container, xla is disabled");
-    } else if (HasDynamicDim(EnvPool::spec.state_spec)) {
+    }
+    if (HasDynamicDim(EnvPool::spec.state_spec)) {
       throw std::runtime_error(
           "State of this env has dynamic (-1) shape, xla is disabled");
-    } else if (EnvPool::spec.config["max_num_players"_] != 1) {
+    }
+    if (EnvPool::spec.config["max_num_players"_] != 1) {
       throw std::runtime_error(
           "Xla is not available for multiplayer environment.");
     }
