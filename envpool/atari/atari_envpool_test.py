@@ -120,7 +120,7 @@ class _AtariEnvPoolTest(absltest.TestCase):
     spec = AtariEnvSpec(config)
     env = AtariGymEnvPool(spec)
     handle, recv, send, step = env.xla()
-    env.reset()
+    env.async_reset()
     handle, states = recv(handle)
     action = np.ones(5, dtype=np.int32)
     handle = send(handle, action)
@@ -136,6 +136,30 @@ class _AtariEnvPoolTest(absltest.TestCase):
       return lax.fori_loop(0, num_steps, actor_step, handle)
 
     loop(100)
+
+  def test_xla_correctness(self) -> None:
+    num_envs = 10
+    config = AtariEnvSpec.gen_config(
+      task="pong",
+      num_envs=num_envs,
+      batch_size=10,
+      num_threads=2,
+      thread_affinity_offset=0,
+    )
+    spec = AtariEnvSpec(config)
+    env1 = AtariGymEnvPool(spec)
+    env2 = AtariGymEnvPool(spec)
+    handle, recv, send, step = env1.xla()
+    env1.async_reset()
+    env2.async_reset()
+
+    action = np.ones(10, dtype=np.int32)
+    for _ in range(100):
+      handle, states1 = recv(handle)
+      handle = send(handle, action)
+      states2 = env2.recv()
+      env2.send(action)
+      np.testing.assert_allclose(states1[0], states2[0])
 
   @no_type_check
   def test_no_gray_scale(self) -> None:
