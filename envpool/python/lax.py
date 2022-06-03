@@ -57,7 +57,7 @@ def normalize_shape(shape: List[int], batch_size: int,
 
 class XlaMixin(ABC):
   """Mixin to provide XLA for envpool class."""
-  
+
   def _handle_spec(self: EnvPool) -> Tuple[List[int], Any]:
     return [2], dtypes.canonicalize_dtype(np.uint32)
 

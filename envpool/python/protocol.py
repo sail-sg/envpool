@@ -25,15 +25,15 @@ from typing import (
   Union,
 )
 
-try:
-  from typing import Protocol
-except ImportError:
-  from typing_extensions import Protocol  # type: ignore
-
 import dm_env
 import gym
 import numpy as np
 from dm_env import TimeStep
+
+try:
+  from typing import Protocol
+except ImportError:
+  from typing_extensions import Protocol  # type: ignore
 
 
 class EnvSpec(Protocol):
