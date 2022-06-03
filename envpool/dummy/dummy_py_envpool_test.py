@@ -97,8 +97,8 @@ class _DummyEnvPoolTest(absltest.TestCase):
     conf = dict(
       zip(_DummyEnvSpec._config_keys, _DummyEnvSpec._default_config_values)
     )
-    conf["num_envs"] = num_envs = 100
-    conf["batch_size"] = batch = 31
+    conf["num_envs"] = 100
+    conf["batch_size"] = 31
     conf["num_threads"] = os.cpu_count()
     env_spec = _DummyEnvSpec(tuple(conf.values()))
     env = _DummyEnvPool(env_spec)

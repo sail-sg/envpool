@@ -125,14 +125,14 @@ class _AtariEnvPoolTest(absltest.TestCase):
     action = np.ones(5, dtype=np.int32)
     handle = send(handle, action)
 
-    def actor_step(iter, handle):
+    def actor_step(iter: int, handle: jnp.ndarray) -> jnp.ndarray:
       handle, states = recv(handle)
       action = jnp.ones(5, dtype=jnp.int32)
       handle = send(handle, action)
       return handle
 
     @jit
-    def loop(num_steps=100):
+    def loop(num_steps: int = 100) -> jnp.ndarray:
       return lax.fori_loop(0, num_steps, actor_step, handle)
 
     loop(100)
