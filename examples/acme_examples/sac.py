@@ -23,7 +23,7 @@ install acme using method 4 (https://github.com/deepmind/acme#installation).
 import time
 from dataclasses import asdict
 from functools import partial
-from typing import Optional
+from typing import List, Optional
 
 import acme_envpool_helpers.helpers as helpers
 import acme_envpool_helpers.lp_helpers as lp_helpers
@@ -94,6 +94,14 @@ class BuilderWrapper(builder.SACBuilder):
     return actors.GenericActor(
       actor, random_key, variable_client, adder, backend="cpu"
     )
+
+  def make_replay_tables(
+    self, environment_spec: specs.EnvironmentSpec
+  ) -> List[reverb.Table]:
+    return [
+      helpers.disable_insert_blocking(x)
+      for x in super().make_replay_tables(environment_spec)
+    ]
 
 
 def build_experiment_config():

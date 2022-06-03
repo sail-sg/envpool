@@ -53,7 +53,6 @@ flags.DEFINE_integer("num_actors", 1, "Number of actors.")
 flags.DEFINE_string("env_name", "HalfCheetah-v3", "What environment to run.")
 flags.DEFINE_integer("seed", 0, "Random seed.")
 flags.DEFINE_integer("num_steps", 1_000_000, "Number of env steps to run.")
-flags.DEFINE_integer("eval_every", 50_000, "How often to run evaluation.")
 flags.DEFINE_boolean("use_envpool", False, "Whether to use EnvPool.")
 flags.DEFINE_integer("num_envs", 8, "Number of environment.")
 flags.DEFINE_boolean("use_wb", False, "Whether to use WandB.")
@@ -227,7 +226,7 @@ def build_experiment_config():
     policy_network_factory=ppo.make_inference_fn,
     evaluator_factories=[],
     seed=FLAGS.seed,
-    max_number_of_steps=num_steps
+    max_number_of_steps=num_steps - 1
   ), config
 
 
@@ -257,7 +256,8 @@ def main(_):
     )
   else:
     experiments.run_experiment(
-      experiment=experiment, eval_every=FLAGS.eval_every, num_eval_episodes=10
+      experiment=experiment,
+      eval_every=experiment.max_number_of_steps,
     )
 
 
