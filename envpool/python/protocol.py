@@ -232,4 +232,4 @@ class EnvPool(Protocol):
     """Envpool reset interface."""
 
   def xla(self) -> Tuple[Any, Callable, Callable, Callable]:
-    """Get the xla functions"""
+    """Get the xla functions."""
