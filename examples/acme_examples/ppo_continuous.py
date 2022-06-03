@@ -11,16 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Example running PPO on mujoco tasks.
+"""Example running PPO on mujoco tasks."""
 
-Acme has only released v0.4.0 on PyPI for now (22/05/29), which is far behind
-the master codes, where APIs for constructing experiments were added.
-
-We are using the newest master version (344022e), so please make sure you
-install acme using method 4 (https://github.com/deepmind/acme#installation).
-"""
-
+import argparse
 import logging
+import os
 import time
 from dataclasses import asdict
 from functools import partial
@@ -34,7 +29,6 @@ import numpy as np
 import reverb
 import tensorflow as tf
 import tree
-from absl import app, flags
 from acme import core, specs, types, wrappers
 from acme.adders import Adder
 from acme.adders.reverb import base as reverb_base
@@ -50,30 +44,83 @@ from acme.jax import experiments
 from acme.jax import networks as networks_lib
 from acme.jax import utils, variable_utils
 from acme.jax.types import PRNGKey
-from acme.utils.loggers import (
-  Logger,
-  LoggingData,
-  aggregators,
-  base,
-  filters,
-  terminal,
-)
+from acme.utils.loggers import Logger, aggregators, base, filters, terminal
 from dm_env import StepType
 
 import envpool
 from envpool.python.protocol import EnvPool
 
-FLAGS = flags.FLAGS
+logging.getLogger().setLevel(logging.INFO)
 
-flags.DEFINE_string("env_name", "HalfCheetah-v3", "What environment to run.")
-flags.DEFINE_integer("seed", 0, "Random seed.")
-flags.DEFINE_integer("num_steps", 1_000_000, "Number of env steps to run.")
-flags.DEFINE_boolean("use_envpool", False, "Whether to use EnvPool.")
-flags.DEFINE_integer("num_envs", 8, "Number of environment.")
-flags.DEFINE_boolean("use_wb", False, "Whether to use WandB.")
-flags.DEFINE_string("wb_project", "acme", "WandB project name.")
-flags.DEFINE_string("wb_entity", None, "WandB entity name.")
-flags.DEFINE_string("desc", "", "More description for the run.")
+
+def parse_args():
+  # fmt: off
+  parser = argparse.ArgumentParser()
+  parser.add_argument(
+    "--exp-name",
+    type=str,
+    default=os.path.basename(__file__).rstrip(".py"),
+    help="Name of this experiment."
+  )
+  parser.add_argument(
+    "--env-name",
+    type=str,
+    default="HalfCheetah-v3",
+    help="What environment to run."
+  )
+  parser.add_argument(
+    "--use-envpool",
+    type=bool,
+    default=False,
+    nargs="?",
+    const=True,
+    help="Whether to use EnvPool."
+  )
+  parser.add_argument(
+    "--use-launchpad",
+    type=bool,
+    default=False,
+    nargs="?",
+    const=True,
+    help="Whether to use LaunchPad."
+  )
+  parser.add_argument(
+    "--num-envs",
+    type=int,
+    default=8,
+    help="Number of environment (EnvPool) / actor (LaunchPad)."
+  )
+  parser.add_argument("--seed", type=int, default=0, help="Random seed.")
+  parser.add_argument(
+    "--num-steps",
+    type=int,
+    default=1_000_000,
+    help="Number of env steps to run."
+  )
+  parser.add_argument(
+    "--use-wb",
+    type=bool,
+    default=False,
+    nargs="?",
+    const=True,
+    help="Whether to use WandB."
+  )
+  parser.add_argument(
+    "--wb-project", type=str, default="acme", help="W&B project name."
+  )
+  parser.add_argument(
+    "--wb-entity", type=str, default=None, help="W&B entity name."
+  )
+  parser.add_argument(
+    "--use-tpu",
+    type=bool,
+    default=False,
+    nargs="?",
+    const=True,
+    help="Whether to use TPU."
+  )
+  args = parser.parse_args()
+  return args
 
 
 class TimeStep(dm_env.TimeStep):
@@ -202,10 +249,12 @@ class BuilderWrapper(ppo.PPOBuilder):
     self._use_envpool = num_envs > 0
 
   def make_replay_tables(
-    self, environment_spec: specs.EnvironmentSpec
+    self, environment_spec: specs.EnvironmentSpec,
+    policy: actor_core_lib.FeedForwardPolicyWithExtra
   ) -> List[reverb.Table]:
     if not self._use_envpool:
-      return super(BuilderWrapper, self).make_replay_tables(environment_spec)
+      return super(BuilderWrapper,
+                   self).make_replay_tables(environment_spec, policy)
     extra_spec = {
       'log_prob': np.ones(shape=(), dtype=np.float32),
     }
@@ -278,12 +327,13 @@ class BuilderWrapper(ppo.PPOBuilder):
     self,
     random_key: networks_lib.PRNGKey,
     policy_network: actor_core_lib.FeedForwardPolicyWithExtra,
+    environment_spec: specs.EnvironmentSpec,
+    variable_source: Optional[core.VariableSource] = None,
     adder: Optional[Adder] = None,
-    variable_source: Optional[core.VariableSource] = None
   ) -> core.Actor:
     if not self._use_envpool:
       return super().make_actor(
-        random_key, policy_network, adder, variable_source
+        random_key, policy_network, environment_spec, variable_source, adder
       )
     assert variable_source is not None
     variable_client = variable_utils.VariableClient(
@@ -333,7 +383,6 @@ class EnvPoolWrapper(wrappers.EnvironmentWrapper):
       reward=ts.reward[0],  # Single value for recording the return.
       discount=ts.discount,
       extras={
-        # "step_type": ts.step_type,
         "reward": ts.reward,
       },
     )
@@ -362,34 +411,6 @@ def make_environment(task: str, use_envpool: bool = False, num_envs: int = 2):
   return wrappers.wrap_all(env, env_wrappers)
 
 
-def build_experiment_config():
-  task = FLAGS.env_name
-  use_envpool = FLAGS.use_envpool
-  num_envs = FLAGS.num_envs if use_envpool else -1
-  num_steps = FLAGS.num_steps // FLAGS.num_envs if \
-     FLAGS.use_envpool else FLAGS.num_steps
-
-  config = ppo.PPOConfig(entropy_cost=0, learning_rate=1e-4)
-
-  ppo_builder = BuilderWrapper(config, num_envs)
-
-  layer_sizes = (256, 256, 256)
-
-  return experiments.Config(
-    builder=ppo_builder,
-    environment_factory=lambda _: make_environment(
-      task,
-      use_envpool=use_envpool,
-      num_envs=num_envs,
-    ),
-    network_factory=lambda spec: ppo.make_networks(spec, layer_sizes),
-    policy_network_factory=ppo.make_inference_fn,
-    evaluator_factories=[],
-    seed=FLAGS.seed,
-    max_number_of_steps=num_steps - 1
-  ), config
-
-
 def make_logger(
   label: str,
   steps_key: str = "steps",
@@ -404,21 +425,23 @@ def make_logger(
   print_fn = logging.info
   terminal_logger = terminal.TerminalLogger(label=label, print_fn=print_fn)
   loggers = [terminal_logger]
-  if label == "train":
+  if label == "train":  # Non-LaunchPad training uses "train" for actor
+    label = "actor"
+  if label == "actor":
+    from absl import flags
+
     import wandb
-    wandb.init(
-      project=FLAGS.wb_project,
-      entity=wb_entity,
-      name=run_name,
-      config=config,
-    )
+    try:
+      task_id = flags.FLAGS.lp_task_id
+    except AttributeError:
+      task_id = 0
 
     class WBLogger(Logger):
 
       def __init__(self, num_envs) -> None:
         self._num_envs = num_envs
 
-      def write(self, data: LoggingData) -> None:
+      def write(self, data) -> None:
         new_data = {}
         for key, value in data.items():
           if key in ["train_steps", "actor_steps"]:
@@ -430,7 +453,14 @@ def make_logger(
       def close(self) -> None:
         wandb.finish()
 
-    loggers.append(WBLogger(num_envs))
+    if task_id == 0:
+      wandb.init(
+        project=config["wb_project"],
+        entity=wb_entity,
+        name=run_name,
+        config=config,
+      )
+      loggers.append(WBLogger(num_envs))
 
   # Dispatch to all writers and filter Nones and by time.
   logger = aggregators.Dispatcher(loggers, base.to_numpy)
@@ -440,21 +470,69 @@ def make_logger(
   return logger
 
 
-def main(_):
-  experiment, config = build_experiment_config()
+def build_experiment_config(FLAGS):
+  task = FLAGS.env_name
+  use_envpool = FLAGS.use_envpool
+  num_envs = FLAGS.num_envs if use_envpool else -1
+  num_steps = FLAGS.num_steps // FLAGS.num_envs if \
+     FLAGS.use_envpool else FLAGS.num_steps
+
+  # config = ppo.PPOConfig(
+  #   batch_size=64, num_minibatches=1, num_epochs=4, unroll_length=128
+  # )
+  config = ppo.PPOConfig(entropy_cost=0, learning_rate=1e-4)
+  ppo_builder = BuilderWrapper(config, num_envs)
+
+  layer_sizes = (256, 256, 256)
+
+  return experiments.Config(
+    builder=ppo_builder,
+    environment_factory=lambda _: make_environment(
+      task,
+      use_envpool=use_envpool,
+      num_envs=num_envs,
+    ),
+    network_factory=lambda spec: ppo.make_networks(spec, layer_sizes),
+    policy_network_factory=ppo.make_inference_fn,
+    evaluator_factories=[],
+    seed=0,
+    max_number_of_steps=num_steps - 1
+  ), config
+
+
+def main():
+  logging.info(f"Jax Devices: {jax.devices()}")
+  FLAGS = parse_args()
+  experiment, config = build_experiment_config(FLAGS)
   if FLAGS.use_wb:
     run_name = f"acme_ppo__{FLAGS.env_name}"
+    num_actors = 1
+    if FLAGS.use_launchpad:
+      num_actors = FLAGS.num_envs
+      run_name += f"__launchpad"
     if FLAGS.use_envpool:
-      run_name += f"__envpool-{FLAGS.num_envs}"
-    if FLAGS.desc:
-      run_name += f"__{FLAGS.desc}"
+      num_actors = FLAGS.num_envs
+      run_name += f"__envpool"
+    if num_actors > 1:
+      run_name += f"__env{num_actors}"
     run_name += f"__{FLAGS.seed}__{int(time.time())}"
     cfg = asdict(config)
-    cfg.update(FLAGS.flag_values_dict().items())
+    cfg.update(vars(FLAGS))
     experiment.logger_factory = partial(
       make_logger, run_name=run_name, wb_entity=FLAGS.wb_entity, config=cfg
     )
 
+  if FLAGS.use_launchpad:
+    from acme_envpool_utils.lp_utils import run_distributed_experiment
+    num_actors = FLAGS.num_envs if not FLAGS.use_envpool else 1
+    resource_config = {
+      # Resource: [num_actors, use_tpu]
+      "actor": [32, False],
+      "replay": [8, False],
+      "learner": [32, True],
+    } if FLAGS.use_tpu else None
+    run_distributed_experiment(experiment, num_actors, resource_config)
+  else:
     experiments.run_experiment(
       experiment=experiment,
       eval_every=experiment.max_number_of_steps,
@@ -462,4 +540,4 @@ def main(_):
 
 
 if __name__ == "__main__":
-  app.run(main)
+  main()
