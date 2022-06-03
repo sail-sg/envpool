@@ -18,11 +18,11 @@ import time
 from typing import no_type_check
 
 import cv2
-import numpy as np
 import jax.numpy as jnp
-from jax import jit, lax
+import numpy as np
 from absl import logging
 from absl.testing import absltest
+from jax import jit, lax
 
 from envpool.atari import AtariDMEnvPool, AtariEnvSpec, AtariGymEnvPool
 from envpool.atari.atari_envpool import _AtariEnvPool, _AtariEnvSpec
