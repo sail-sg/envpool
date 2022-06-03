@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Provide xla mixin for envpool"""
 
 from abc import ABC
 from functools import partial
@@ -28,12 +29,17 @@ from .protocol import EnvPool
 
 
 def has_dynamic_shape(spec: Tuple) -> bool:
+  """Check whether the shape is dynamic."""
   shape = spec[1]
-  if len(shape) == 0:
+  if len(shape) == 0:  # scalar shape ()
     return False
   if isinstance(shape[0], list):
+    # container shape ((1,2), (-1, 2))
+    # the first element describes how the container is organized
+    # the second describes the shape in each container
     return True
   else:
+    # or, if any dimension has a shape -1
     if any(map(lambda v: v == -1, shape[1:])):
       return True
     else:
@@ -42,6 +48,7 @@ def has_dynamic_shape(spec: Tuple) -> bool:
 
 def normalize_shape(shape: List[int], batch_size: int,
                     max_num_players: int) -> List[int]:
+  """Replace unknown first dim with batch_size/max_num_players."""
   if len(shape) > 0 and shape[0] == -1:
     return [batch_size * max_num_players, *shape[1:]]
   else:
@@ -49,7 +56,7 @@ def normalize_shape(shape: List[int], batch_size: int,
 
 
 class XlaMixin(ABC):
-
+  """Mixin to provide XLA for envpool class."""
   def _handle_spec(self: EnvPool) -> Tuple[List[int], Any]:
     return [2], dtypes.canonicalize_dtype(np.uint32)
 
@@ -168,6 +175,7 @@ class XlaMixin(ABC):
     )
 
   def xla(self: Any) -> Tuple[Any, Callable, Callable, Callable]:
+    """Return the XLA version of send/recv/step functions."""
     if not hasattr(self, "_xla_setup"):
       _handle, _send, _recv = self._xla()
       xla_client.register_cpu_custom_call_target(
