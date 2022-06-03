@@ -22,6 +22,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <exception>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -214,6 +215,16 @@ class PyEnvPool : public EnvPool {
       : EnvPool(py_spec), py_spec(py_spec) {}
 
   std::tuple<py::array, py::capsule, py::capsule> Xla() {
+    if (HasContainerType(EnvPool::spec.state_spec)) {
+      throw std::runtime_error(
+          "State of this env has dynamic shaped container, xla is disabled");
+    } else if (HasDynamicDim(EnvPool::spec.state_spec)) {
+      throw std::runtime_error(
+          "State of this env has dynamic (-1) shape, xla is disabled");
+    } else if (EnvPool::spec.config["max_num_players"_] != 1) {
+      throw std::runtime_error(
+          "Xla is not available for multiplayer environment.");
+    }
     py::array_t<uint32_t> handle(std::vector<int>{2});
     *reinterpret_cast<EnvPool**>(handle.mutable_data()) = this;
     auto send = py::capsule(reinterpret_cast<void*>(XlaSend<EnvPool>),

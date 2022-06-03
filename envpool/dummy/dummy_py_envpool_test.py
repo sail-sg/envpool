@@ -93,6 +93,25 @@ class _DummyEnvPoolTest(absltest.TestCase):
     fps = total * batch / duration
     logging.info(f"FPS = {fps:.6f}")
 
+  def test_xla(self) -> None:
+    conf = dict(
+      zip(_DummyEnvSpec._config_keys, _DummyEnvSpec._default_config_values)
+    )
+    conf["num_envs"] = num_envs = 100
+    conf["batch_size"] = batch = 31
+    conf["num_threads"] = os.cpu_count()
+    env_spec = _DummyEnvSpec(tuple(conf.values()))
+    env = _DummyEnvPool(env_spec)
+    xla_failed = False
+    try:
+      _ = env._xla()
+    except RuntimeError:
+      logging.info(
+        "XLA on Dummy failed because dummy has Container typed state."
+      )
+      xla_failed = True
+    self.assertTrue(xla_failed)
+
 
 if __name__ == "__main__":
   absltest.main()

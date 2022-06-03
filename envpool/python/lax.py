@@ -39,7 +39,7 @@ def has_dynamic_shape(spec: Tuple) -> bool:
     # the second describes the shape in each container
     return True
   else:
-    # or, if any dimension has a shape -1
+    # or, if any dimension other than the first has a shape -1
     if any(map(lambda v: v == -1, shape[1:])):
       return True
     else:

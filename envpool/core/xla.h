@@ -26,6 +26,30 @@
 
 #include "envpool/core/array.h"
 
+template <typename D>
+constexpr bool is_container_v = false;  // NOLINT
+template <typename D>
+constexpr bool is_container_v<Container<D>> = true;  // NOLINT
+template <typename... T>
+constexpr bool HasContainerType(std::tuple<T...>) {
+  return (is_container_v<typename T::dtype> || ...);
+}
+bool HasDynamicDim(const std::vector<int>& shape) {
+  LOG(ERROR) << shape.size();
+  if (shape.size() > 0) {
+    LOG(ERROR) << shape[0] << shape[1];
+  }
+  return std::any_of(shape.begin() + 1, shape.end(),
+                     [](int s) { return s == -1; });
+}
+template <typename... T>
+bool HasDynamicDim(const std::tuple<T...>& state_spec) {
+  bool dyn = false;
+  std::apply([&](auto&&... spec) { dyn = (HasDynamicDim(spec.shape) || ...); },
+             state_spec);
+  return dyn;
+}
+
 template <typename Dtype>
 Array RawBufferToArray(const void* buffer, ::Spec<Dtype> spec, int batch_size,
                        int max_num_players) {
@@ -64,11 +88,14 @@ void XlaSend(void* out, const void** in) {
 template <typename EnvPool>
 void XlaRecv(void* out, const void** in) {
   EnvPool* envpool = *reinterpret_cast<EnvPool**>(const_cast<void*>(in[0]));
+  int batch_size = envpool->spec.config["batch_size"_];
+  int max_num_players = envpool->spec.config["max_num_players"_];
   void** outs = reinterpret_cast<void**>(out);
   *reinterpret_cast<EnvPool**>(outs[0]) = envpool;
   outs = outs + 1;
   std::vector<Array> recv = envpool->Recv();
   for (std::size_t i = 0; i < recv.size(); ++i) {
+    CHECK_LE(recv[i].Shape(0), batch_size * max_num_players);
     std::memcpy(outs[i], recv[i].Data(), recv[i].size * recv[i].element_size);
   }
 }

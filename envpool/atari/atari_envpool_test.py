@@ -19,6 +19,8 @@ from typing import no_type_check
 
 import cv2
 import numpy as np
+import jax.numpy as jnp
+from jax import jit, lax
 from absl import logging
 from absl.testing import absltest
 
@@ -106,7 +108,7 @@ class _AtariEnvPoolTest(absltest.TestCase):
       )[-1]
       assert np.all(info["TimeLimit.truncated"])
 
-  def test_xla_step(self) -> None:
+  def test_xla_api(self) -> None:
     num_envs = 10
     config = AtariEnvSpec.gen_config(
       task="pong",
@@ -121,8 +123,19 @@ class _AtariEnvPoolTest(absltest.TestCase):
     env.reset()
     handle, states = recv(handle)
     action = np.ones(5, dtype=np.int32)
-    print(states)
     handle = send(handle, action)
+
+    def actor_step(iter, handle):
+      handle, states = recv(handle)
+      action = jnp.ones(5, dtype=jnp.int32)
+      handle = send(handle, action)
+      return handle
+
+    @jit
+    def loop(num_steps=100):
+      return lax.fori_loop(0, num_steps, actor_step, handle)
+
+    loop(100)
 
   @no_type_check
   def test_no_gray_scale(self) -> None:
