@@ -203,7 +203,6 @@ class XlaMixin(ABC):
     ) -> Any:
       action = self._from(action, env_id)
       self._check_action(action)
-      print([a.shape for a in action])
       return self._send_prim.bind(handle, *action)
 
     def step(
