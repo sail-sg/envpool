@@ -214,6 +214,7 @@ void MujocoEnv::PhysicsRender(int height, int width,
   mjr_readPixels(rgb_array_, depth_array_, viewport, &context_);
 
   // segmentation results not implemented
+  
   return {rgb_array_, depth_array_, segmentation_array_}
 }
 
