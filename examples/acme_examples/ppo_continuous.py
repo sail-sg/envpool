@@ -16,10 +16,9 @@
 import argparse
 import logging
 import os
-import time
 from dataclasses import asdict
 from functools import partial
-from typing import Any, Iterable, Iterator, List, Mapping, Optional, Union
+from typing import Any, Iterable, Iterator, List, Mapping, Optional
 
 import dm_env
 import gym
@@ -77,14 +76,6 @@ def parse_args():
     help="Whether to use EnvPool."
   )
   parser.add_argument(
-    "--use-launchpad",
-    type=bool,
-    default=False,
-    nargs="?",
-    const=True,
-    help="Whether to use LaunchPad."
-  )
-  parser.add_argument(
     "--num-envs",
     type=int,
     default=8,
@@ -110,14 +101,6 @@ def parse_args():
   )
   parser.add_argument(
     "--wb-entity", type=str, default=None, help="W&B entity name."
-  )
-  parser.add_argument(
-    "--use-tpu",
-    type=bool,
-    default=False,
-    nargs="?",
-    const=True,
-    help="Whether to use TPU."
   )
   args = parser.parse_args()
   return args
@@ -401,11 +384,9 @@ def make_environment(task: str, use_envpool: bool = False, num_envs: int = 2):
     env = gym.make(task)
     # Make sure the environment obeys the dm_env.Environment interface.
     env_wrappers.append(wrappers.GymWrapper)
-  # Clip the action returned by the agent to the environment spec.
-  env_wrappers += [
-    partial(wrappers.CanonicalSpecWrapper, clip=True),
-    wrappers.SinglePrecisionWrapper
-  ]
+    # Clip the action returned by the agent to the environment spec.
+    env_wrappers.append(partial(wrappers.CanonicalSpecWrapper, clip=True))
+  env_wrappers.append(wrappers.SinglePrecisionWrapper)
   if use_envpool:
     env_wrappers.append(EnvPoolWrapper)
   return wrappers.wrap_all(env, env_wrappers)
@@ -425,16 +406,10 @@ def make_logger(
   print_fn = logging.info
   terminal_logger = terminal.TerminalLogger(label=label, print_fn=print_fn)
   loggers = [terminal_logger]
-  if label == "train":  # Non-LaunchPad training uses "train" for actor
-    label = "actor"
-  if label == "actor":
-    from absl import flags
+
+  if label == "train":
 
     import wandb
-    try:
-      task_id = flags.FLAGS.lp_task_id
-    except AttributeError:
-      task_id = 0
 
     class WBLogger(Logger):
 
@@ -453,14 +428,13 @@ def make_logger(
       def close(self) -> None:
         wandb.finish()
 
-    if task_id == 0:
-      wandb.init(
-        project=config["wb_project"],
-        entity=wb_entity,
-        name=run_name,
-        config=config,
-      )
-      loggers.append(WBLogger(num_envs))
+    wandb.init(
+      project=config["wb_project"],
+      entity=wb_entity,
+      name=run_name,
+      config=config,
+    )
+    loggers.append(WBLogger(num_envs))
 
   # Dispatch to all writers and filter Nones and by time.
   logger = aggregators.Dispatcher(loggers, base.to_numpy)
@@ -480,7 +454,7 @@ def build_experiment_config(FLAGS):
   # config = ppo.PPOConfig(
   #   batch_size=64, num_minibatches=1, num_epochs=4, unroll_length=128
   # )
-  config = ppo.PPOConfig(entropy_cost=0, learning_rate=1e-4)
+  config = ppo.PPOConfig()
   ppo_builder = BuilderWrapper(config, num_envs)
 
   layer_sizes = (256, 256, 256)
@@ -506,37 +480,19 @@ def main():
   experiment, config = build_experiment_config(FLAGS)
   if FLAGS.use_wb:
     run_name = f"acme_ppo__{FLAGS.env_name}"
-    num_actors = 1
-    if FLAGS.use_launchpad:
-      num_actors = FLAGS.num_envs
-      run_name += f"__launchpad"
     if FLAGS.use_envpool:
-      num_actors = FLAGS.num_envs
-      run_name += f"__envpool"
-    if num_actors > 1:
-      run_name += f"__env{num_actors}"
-    run_name += f"__{FLAGS.seed}__{int(time.time())}"
+      run_name += f"__envpool-{FLAGS.num_envs}"
+    run_name += f"__seed-{FLAGS.seed}"
     cfg = asdict(config)
     cfg.update(vars(FLAGS))
     experiment.logger_factory = partial(
       make_logger, run_name=run_name, wb_entity=FLAGS.wb_entity, config=cfg
     )
 
-  if FLAGS.use_launchpad:
-    from acme_envpool_utils.lp_utils import run_distributed_experiment
-    num_actors = FLAGS.num_envs if not FLAGS.use_envpool else 1
-    resource_config = {
-      # Resource: [num_actors, use_tpu]
-      "actor": [32, False],
-      "replay": [8, False],
-      "learner": [32, True],
-    } if FLAGS.use_tpu else None
-    run_distributed_experiment(experiment, num_actors, resource_config)
-  else:
-    experiments.run_experiment(
-      experiment=experiment,
-      eval_every=experiment.max_number_of_steps,
-    )
+  experiments.run_experiment(
+    experiment=experiment,
+    eval_every=experiment.max_number_of_steps,
+  )
 
 
 if __name__ == "__main__":
