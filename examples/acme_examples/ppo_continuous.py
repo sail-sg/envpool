@@ -76,6 +76,14 @@ def parse_args():
     help="Whether to use EnvPool."
   )
   parser.add_argument(
+    "--use-vec-env",
+    type=bool,
+    default=False,
+    nargs="?",
+    const=True,
+    help="Whether to use SB3 VecEnv."
+  )
+  parser.add_argument(
     "--num-envs",
     type=int,
     default=8,
@@ -108,16 +116,8 @@ def parse_args():
 
 class TimeStep(dm_env.TimeStep):
 
-  extras: Any
-
-  def __new__(cls, step_type, reward, discount, observation, extras):
-    self = super(TimeStep,
-                 cls).__new__(cls, step_type, reward, discount, observation)
-    self.extras = extras
-    return self
-
   def last(self) -> bool:
-    """Adapt the batch result for EnvironmentLoop episode-end checking."""
+    """Adapt the batch step_type for EnvironmentLoop episode-end checking."""
     return any(self.step_type == StepType.LAST)
 
 
@@ -133,11 +133,12 @@ class BatchSequenceAdder(reverb_sequence.SequenceAdder):
   ):
     # Add env batch and time dimension.
     def add_extra_dim(paths: Iterable[str], spec: tf.TensorSpec):
-      return tf.TensorSpec(
-        shape=(sequence_length, batch_size, *spec.shape),
-        dtype=spec.dtype,
-        name='/'.join(str(p) for p in paths)
-      )
+      name = '/'.join(str(p) for p in paths)
+      if "reward" in name:
+        shape = (sequence_length, *spec.shape)
+      else:
+        shape = (sequence_length, batch_size, *spec.shape)
+      return tf.TensorSpec(shape=shape, dtype=spec.dtype, name=name)
 
     trajectory_env_spec, trajectory_extras_spec = tree.map_structure_with_path(
       add_extra_dim, (environment_spec, extras_spec)
@@ -189,9 +190,8 @@ class AdderWrapper(Adder):
     next_timestep = TimeStep(
       step_type=next_timestep.step_type,
       observation=next_timestep.observation,
-      reward=next_timestep.extras["reward"],
+      reward=next_timestep.reward,
       discount=next_timestep.discount,
-      extras=None,
     )
     self._adder.add(action, next_timestep, extras)
 
@@ -250,7 +250,7 @@ class BuilderWrapper(ppo.PPOBuilder):
     return [
       reverb.Table.queue(
         name=self._config.replay_table_name,
-        max_size=self._config.batch_size,
+        max_size=self._config.batch_size // self._num_envs,
         signature=signature
       )
     ]
@@ -348,6 +348,15 @@ class EnvPoolWrapper(wrappers.EnvironmentWrapper):
     )
     return new_obs
 
+  def reward_spec(self):
+    rew = self._environment.reward_spec()
+    new_rew = dm_env.specs.Array(
+      name=rew.name,
+      shape=[self._num_envs],
+      dtype="float32",
+    )
+    return new_rew
+
   def reset(self) -> TimeStep:
     ts = super().reset()
     return TimeStep(
@@ -355,7 +364,6 @@ class EnvPoolWrapper(wrappers.EnvironmentWrapper):
       observation=ts.observation.obs,
       reward=ts.reward,
       discount=ts.discount,
-      extras=None,
     )
 
   def step(self, action) -> TimeStep:
@@ -363,16 +371,16 @@ class EnvPoolWrapper(wrappers.EnvironmentWrapper):
     ts = TimeStep(
       step_type=ts.step_type,
       observation=ts.observation.obs,
-      reward=ts.reward[0],  # Single value for recording the return.
+      reward=ts.reward,
+      # reward=ts.reward[0],  # Single value for recording the return.
       discount=ts.discount,
-      extras={
-        "reward": ts.reward,
-      },
     )
     return ts
 
 
-def make_environment(task: str, use_envpool: bool = False, num_envs: int = 2):
+def make_environment(
+  task: str, use_envpool: bool = False, use_vec_env=False, num_envs: int = 2
+):
   env_wrappers = []
   if use_envpool:
     env = envpool.make(
@@ -380,6 +388,49 @@ def make_environment(task: str, use_envpool: bool = False, num_envs: int = 2):
       env_type="dm",
       num_envs=num_envs,
     )
+  elif use_vec_env:
+    from stable_baselines3.common.env_util import make_vec_env
+    from stable_baselines3.common.vec_env.dummy_vec_env import DummyVecEnv
+    env = make_vec_env(task, n_envs=num_envs)
+
+    class SB3VecEnvWrapper(dm_env.Environment):
+
+      def __init__(self, environment: DummyVecEnv):
+
+        self._environment = environment
+        self._num_envs = environment.num_envs
+        self._reset_next_step = True
+
+      def reset(self) -> dm_env.TimeStep:
+        self._reset_next_step = False
+        observation = self._environment.reset()
+        return dm_env.TimeStep(
+          step_type=np.full(self._num_envs, StepType.FIRST),
+          reward=np.zeros(self._num_envs),
+          discount=np.ones(self._num_envs),
+          observation=observation
+        )
+
+      def step(self, action: types.NestedArray) -> dm_env.TimeStep:
+        if self._reset_next_step:
+          return self.reset()
+        observation, reward, done, _ = self._environment.step(action)
+        self._reset_next_step = any(done)
+        return dm_env.TimeStep(
+          step_type=done + 1,
+          reward=reward,
+          discount=1 - done,
+          observation=observation
+        )
+
+      def observation_spec(self):
+        return super().observation_spec()
+
+      def action_spec(self):
+        return super().action_spec()
+
+      def close(self):
+        self._environment.close()
   else:
     env = gym.make(task)
     # Make sure the environment obeys the dm_env.Environment interface.
@@ -422,6 +473,8 @@ def make_logger(
           if key in ["train_steps", "actor_steps"]:
             key = "global_step"
             value *= self._num_envs
+          elif key == "episode_return":
+            value = value[0]
           new_data[key] = value
         wandb.log(new_data)
 
@@ -447,13 +500,11 @@ def make_logger(
 def build_experiment_config(FLAGS):
   task = FLAGS.env_name
   use_envpool = FLAGS.use_envpool
+  use_vec_env = not use_envpool and FLAGS.use_vec_env
   num_envs = FLAGS.num_envs if use_envpool else -1
   num_steps = FLAGS.num_steps // FLAGS.num_envs if \
      FLAGS.use_envpool else FLAGS.num_steps
 
-  # config = ppo.PPOConfig(
-  #   batch_size=64, num_minibatches=1, num_epochs=4, unroll_length=128
-  # )
   config = ppo.PPOConfig()
   ppo_builder = BuilderWrapper(config, num_envs)
 
@@ -464,6 +515,7 @@ def build_experiment_config(FLAGS):
     environment_factory=lambda _: make_environment(
       task,
       use_envpool=use_envpool,
+      use_vec_env=use_vec_env,
       num_envs=num_envs,
     ),
     network_factory=lambda spec: ppo.make_networks(spec, layer_sizes),
