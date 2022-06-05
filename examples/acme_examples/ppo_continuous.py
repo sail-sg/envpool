@@ -14,7 +14,6 @@
 """Example running PPO on mujoco tasks."""
 
 import argparse
-import collections
 import logging
 import os
 from dataclasses import asdict
@@ -419,10 +418,7 @@ def make_environment(
     env_wrappers.append(BatchEnvWrapper)
   else:
     env = gym.make(task)
-    # Make sure the environment obeys the dm_env.Environment interface.
     env_wrappers.append(wrappers.GymWrapper)
-    # Clip the action returned by the agent to the environment spec.
-    env_wrappers.append(partial(wrappers.CanonicalSpecWrapper, clip=True))
   env_wrappers.append(wrappers.SinglePrecisionWrapper)
   return wrappers.wrap_all(env, env_wrappers)
 
@@ -457,7 +453,7 @@ def make_logger(
           if key in ["train_steps", "actor_steps"]:
             key = "global_step"
             value *= self._num_envs
-          elif key == "episode_return":
+          elif config["use_batch_env"] and key == "episode_return":
             value = value[0]
           new_data[key] = value
         wandb.log(new_data)
