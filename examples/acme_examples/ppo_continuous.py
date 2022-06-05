@@ -19,7 +19,7 @@ import logging
 import os
 from dataclasses import asdict
 from functools import partial
-from typing import Iterable, Iterator, List, Mapping, Optional
+from typing import Iterable, Iterator, List, Mapping, Optional, Union
 
 import dm_env
 import gym
@@ -46,6 +46,8 @@ from acme.jax import utils, variable_utils
 from acme.jax.types import PRNGKey
 from acme.utils.loggers import Logger, aggregators, base, filters, terminal
 from dm_env import StepType
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env.dummy_vec_env import DummyVecEnv
 
 import envpool
 from envpool.python.protocol import EnvPool
@@ -230,13 +232,13 @@ class BuilderWrapper(ppo.PPOBuilder):
   def __init__(self, config: ppo.PPOConfig, num_envs: int = -1):
     super().__init__(config)
     self._num_envs = num_envs
-    self._use_envpool = num_envs > 0
+    self._batch_env = num_envs > 0
 
   def make_replay_tables(
     self, environment_spec: specs.EnvironmentSpec,
     policy: actor_core_lib.FeedForwardPolicyWithExtra
   ) -> List[reverb.Table]:
-    if not self._use_envpool:
+    if not self._batch_env:
       return super(BuilderWrapper,
                    self).make_replay_tables(environment_spec, policy)
     extra_spec = {
@@ -259,7 +261,7 @@ class BuilderWrapper(ppo.PPOBuilder):
   def make_dataset_iterator(
     self, replay_client: reverb.Client
   ) -> Iterator[reverb.ReplaySample]:
-    if not self._use_envpool:
+    if not self._batch_env:
       return super(BuilderWrapper, self).make_dataset_iterator(replay_client)
     assert self._config.batch_size % self._num_envs == 0
     batch_size = self._config.batch_size // self._num_envs
@@ -303,7 +305,7 @@ class BuilderWrapper(ppo.PPOBuilder):
 
   def make_adder(self, replay_client: reverb.Client) -> Adder:
     adder = super(BuilderWrapper, self).make_adder(replay_client)
-    if not self._use_envpool:
+    if not self._batch_env:
       return adder
     return AdderWrapper(adder)
 
@@ -315,7 +317,7 @@ class BuilderWrapper(ppo.PPOBuilder):
     variable_source: Optional[core.VariableSource] = None,
     adder: Optional[Adder] = None,
   ) -> core.Actor:
-    if not self._use_envpool:
+    if not self._batch_env:
       return super().make_actor(
         random_key, policy_network, environment_spec, variable_source, adder
       )
@@ -332,51 +334,73 @@ class BuilderWrapper(ppo.PPOBuilder):
     )
 
 
-class EnvPoolWrapper(wrappers.EnvironmentWrapper):
+class BatchEnvWrapper(dm_env.Environment):
 
-  def __init__(self, environment: EnvPool):
-    super().__init__(environment)
-    self._num_envs = len(environment.all_env_ids)
+  def __init__(self, environment: Union[DummyVecEnv, EnvPool]):
+    self._environment = environment
+    if not isinstance(environment, DummyVecEnv):
+      self._num_envs = len(environment.all_env_ids)
+      self._use_env_pool = True
+    else:
+      self._num_envs = environment.num_envs
+      self._use_env_pool = False
+    self._reset_next_step = True
 
-  def observation_spec(self) -> dm_env.specs.BoundedArray:
-    obs = self._environment.observation_spec().obs
-    new_obs = dm_env.specs.BoundedArray(
-      name=obs.name,
-      shape=[s for s in obs.shape if s != -1],
-      dtype="float32",
-      minimum=obs.minimum,
-      maximum=obs.maximum,
+  def reset(self) -> TimeStep:
+    self._reset_next_step = False
+    observation = self._environment.reset()
+    return TimeStep(
+      step_type=np.full(self._num_envs, StepType.FIRST, dtype="int32"),
+      reward=np.zeros(self._num_envs, dtype="float32"),
+      discount=np.ones(self._num_envs, dtype="float32"),
+      observation=observation
     )
-    return new_obs
+
+  def step(self, action: types.NestedArray) -> TimeStep:
+    if self._reset_next_step:
+      return self.reset()
+    if self._use_env_pool:
+      observation, reward, done, _ = self._environment.step(action)
+    else:
+      self._environment.step_async(action)
+      observation, reward, done, _ = self._environment.step_wait()
+    self._reset_next_step = any(done)
+    return TimeStep(
+      step_type=(done + 1).astype(np.int32),
+      reward=reward,
+      discount=(1 - done).astype(np.float32),
+      observation=observation
+    )
+
+  def observation_spec(self):
+    space = self._environment.observation_space
+    return specs.BoundedArray(
+      shape=space.shape,
+      dtype=space.dtype,
+      minimum=space.low,
+      maximum=space.high,
+      name="observation"
+    )
+
+  def action_spec(self):
+    space = self._environment.action_space
+    return specs.BoundedArray(
+      shape=space.shape,
+      dtype=space.dtype,
+      minimum=space.low,
+      maximum=space.high,
+      name="action"
+    )
 
   def reward_spec(self):
-    rew = self._environment.reward_spec()
-    new_rew = dm_env.specs.Array(
-      name=rew.name,
+    return specs.Array(
+      name="reward",
       shape=[self._num_envs],
       dtype="float32",
     )
-    return new_rew
 
-  def reset(self) -> TimeStep:
-    ts = super().reset()
-    return TimeStep(
-      step_type=ts.step_type,
-      observation=ts.observation.obs,
-      reward=ts.reward,
-      discount=ts.discount,
-    )
-
-  def step(self, action) -> TimeStep:
-    ts = super().step(action)
-    ts = TimeStep(
-      step_type=ts.step_type,
-      observation=ts.observation.obs,
-      reward=ts.reward,
-      # reward=ts.reward[0],  # Single value for recording the return.
-      discount=ts.discount,
-    )
-    return ts
+  def close(self):
+    self._environment.close()
 
 
 def make_environment(
@@ -386,52 +410,13 @@ def make_environment(
   if use_envpool:
     env = envpool.make(
       task,
-      env_type="dm",
+      env_type="gym",
       num_envs=num_envs,
     )
+    env_wrappers.append(BatchEnvWrapper)
   elif use_vec_env:
-    from stable_baselines3.common.env_util import make_vec_env
-    from stable_baselines3.common.vec_env.dummy_vec_env import DummyVecEnv
     env = make_vec_env(task, n_envs=num_envs)
-
-    class SB3VecEnvWrapper(dm_env.Environment):
-
-      def __init__(self, environment: DummyVecEnv):
-
-        self._environment = environment
-        self._num_envs = environment.num_envs
-        self._reset_next_step = True
-
-      def reset(self) -> dm_env.TimeStep:
-        self._reset_next_step = False
-        observation = self._environment.reset()
-        return dm_env.TimeStep(
-          step_type=np.full(self._num_envs, StepType.FIRST, dtype="int32"),
-          reward=np.zeros(self._num_envs, dtype="float32"),
-          discount=np.ones(self._num_envs, dtype="float32"),
-          observation=observation
-        )
-
-      def step(self, action: types.NestedArray) -> dm_env.TimeStep:
-        if self._reset_next_step:
-          return self.reset()
-        observation, reward, done, _ = self._environment.step(action)
-        self._reset_next_step = any(done)
-        return dm_env.TimeStep(
-          step_type=(done + 1).astype(np.int32),
-          reward=reward,
-          discount=(1 - done).astype(np.float32),
-          observation=observation
-        )
-
-      def observation_spec(self):
-        return super().observation_spec()
-
-      def action_spec(self):
-        return super().action_spec()
-
-      def close(self):
-        self._environment.close()
+    env_wrappers.append(BatchEnvWrapper)
   else:
     env = gym.make(task)
     # Make sure the environment obeys the dm_env.Environment interface.
@@ -439,8 +424,6 @@ def make_environment(
     # Clip the action returned by the agent to the environment spec.
     env_wrappers.append(partial(wrappers.CanonicalSpecWrapper, clip=True))
   env_wrappers.append(wrappers.SinglePrecisionWrapper)
-  if use_envpool:
-    env_wrappers.append(EnvPoolWrapper)
   return wrappers.wrap_all(env, env_wrappers)
 
 
@@ -453,7 +436,7 @@ def make_logger(
   config: dict = {},
 ) -> Logger:
   del task_instance, steps_key
-  num_envs = config["num_envs"] if config["use_envpool"] else 1
+  num_envs = config["num_envs"] if config["use_batch_env"] else 1
 
   print_fn = logging.info
   terminal_logger = terminal.TerminalLogger(label=label, print_fn=print_fn)
@@ -467,7 +450,6 @@ def make_logger(
 
       def __init__(self, num_envs) -> None:
         self._num_envs = num_envs
-        self._avg_return = collections.deque(maxlen=20 * num_envs)
 
       def write(self, data) -> None:
         new_data = {}
@@ -476,12 +458,7 @@ def make_logger(
             key = "global_step"
             value *= self._num_envs
           elif key == "episode_return":
-            if self._num_envs > 1:
-              self._avg_return.extend(value)
-            else:
-              self._avg_return.append(value)
-            avg_return = np.array(self._avg_return)[::self._num_envs]
-            value = np.average(avg_return)
+            value = value[0]
           new_data[key] = value
         wandb.log(new_data)
 
@@ -505,14 +482,20 @@ def make_logger(
 
 def build_experiment_config(FLAGS):
   task = FLAGS.env_name
+
   use_envpool = FLAGS.use_envpool
   use_vec_env = not use_envpool and FLAGS.use_vec_env
-  num_envs = FLAGS.num_envs if use_envpool else -1
+  use_batch_env = use_envpool or use_vec_env
+
+  num_envs = FLAGS.num_envs if use_batch_env else -1
   num_steps = FLAGS.num_steps // FLAGS.num_envs if \
-     FLAGS.use_envpool else FLAGS.num_steps
+     use_batch_env else FLAGS.num_steps
 
   config = ppo.PPOConfig()
   ppo_builder = BuilderWrapper(config, num_envs)
+
+  config = asdict(config)
+  config["use_batch_env"] = use_batch_env
 
   layer_sizes = (256, 256, 256)
 
@@ -540,11 +523,12 @@ def main():
     run_name = f"acme_ppo__{FLAGS.env_name}"
     if FLAGS.use_envpool:
       run_name += f"__envpool-{FLAGS.num_envs}"
+    elif FLAGS.use_vec_env:
+      run_name += f"__vec_env-{FLAGS.num_envs}"
     run_name += f"__seed-{FLAGS.seed}"
-    cfg = asdict(config)
-    cfg.update(vars(FLAGS))
+    config.update(vars(FLAGS))
     experiment.logger_factory = partial(
-      make_logger, run_name=run_name, wb_entity=FLAGS.wb_entity, config=cfg
+      make_logger, run_name=run_name, wb_entity=FLAGS.wb_entity, config=config
     )
 
   experiments.run_experiment(
