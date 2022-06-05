@@ -91,6 +91,7 @@ py_test(
     deps = [
         ":atari",
         requirement("numpy"),
+        requirement("jax"),
         requirement("dm-env"),
         requirement("absl-py"),
         requirement("opencv-python-headless"),
