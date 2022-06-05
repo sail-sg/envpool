@@ -14,11 +14,12 @@
 """Example running PPO on mujoco tasks."""
 
 import argparse
+import collections
 import logging
 import os
 from dataclasses import asdict
 from functools import partial
-from typing import Any, Iterable, Iterator, List, Mapping, Optional
+from typing import Iterable, Iterator, List, Mapping, Optional
 
 import dm_env
 import gym
@@ -405,9 +406,9 @@ def make_environment(
         self._reset_next_step = False
         observation = self._environment.reset()
         return dm_env.TimeStep(
-          step_type=np.full(self._num_envs, StepType.FIRST),
-          reward=np.zeros(self._num_envs),
-          discount=np.ones(self._num_envs),
+          step_type=np.full(self._num_envs, StepType.FIRST, dtype="int32"),
+          reward=np.zeros(self._num_envs, dtype="float32"),
+          discount=np.ones(self._num_envs, dtype="float32"),
           observation=observation
         )
 
@@ -417,9 +418,9 @@ def make_environment(
         observation, reward, done, _ = self._environment.step(action)
         self._reset_next_step = any(done)
         return dm_env.TimeStep(
-          step_type=done + 1,
+          step_type=(done + 1).astype(np.int32),
           reward=reward,
-          discount=1 - done,
+          discount=(1 - done).astype(np.float32),
           observation=observation
         )
 
@@ -466,6 +467,7 @@ def make_logger(
 
       def __init__(self, num_envs) -> None:
         self._num_envs = num_envs
+        self._avg_return = collections.deque(maxlen=20 * num_envs)
 
       def write(self, data) -> None:
         new_data = {}
@@ -474,7 +476,12 @@ def make_logger(
             key = "global_step"
             value *= self._num_envs
           elif key == "episode_return":
-            value = value[0]
+            if self._num_envs > 1:
+              self._avg_return.extend(value)
+            else:
+              self._avg_return.append(value)
+            avg_return = np.array(self._avg_return)[::self._num_envs]
+            value = np.average(avg_return)
           new_data[key] = value
         wandb.log(new_data)
 
@@ -492,7 +499,6 @@ def make_logger(
   # Dispatch to all writers and filter Nones and by time.
   logger = aggregators.Dispatcher(loggers, base.to_numpy)
   logger = filters.NoneFilter(logger)
-  logger = filters.TimeFilter(logger, 0.1)
 
   return logger
 
