@@ -1,12 +1,17 @@
 XLA Interface
 ================
 
-To boost the efficiency of the overall system, we introduce the XLA API for envpool. With this API, we can just-in-time compile the environment and agent steps together, when the agent part is implemented with Jax/Tensorflow.
+To boost the efficiency of the overall system, we introduce the XLA API for envpool.
+With this API, we can just-in-time compile the environment and agent steps together,
+when the agent part is implemented with Jax/Tensorflow.
 
 Stateless functions
 -------------------
 
-The main issue with jitting the environment is that the ``env.step(action) -> state`` (and similarly the ``recv/send``) function is not a pure function, i.e. it changes the state of the underlying ``env``. To overcome this issue, we introduce a pure functional version of ``step`` (``recv/send``).
+The main issue with jitting the environment is that the ``env.step(action) -> state``
+(and similarly the ``recv/send``) function is not a pure function,
+i.e. it changes the state of the underlying ``env``.
+To overcome this issue, we introduce a pure functional version of ``step`` (``recv/send``).
 
 Namely, the XLA version of ``step/recv/send`` has the follow signature:
 ::
