@@ -19,7 +19,6 @@ from typing import Any, Dict, List, Tuple, Union, no_type_check
 import dm_env
 import numpy as np
 import tree
-from absl import logging
 from dm_env import TimeStep
 
 from .data import dm_structure
@@ -51,8 +50,15 @@ class DMEnvPoolMeta(ABCMeta):
         base, DMEnvPoolMixin, EnvPoolMixin, XlaMixin, dm_env.Environment
       )
     except ImportError:
-      logging.warning("XLA is disabled. To enable XLA please install jax.")
+
+      def _xla(self: Any) -> None:
+        raise RuntimeError(
+          "XLA is disabled. To enable XLA please install jax."
+        )
+
+      attrs["xla"] = _xla
       parents = (base, DMEnvPoolMixin, EnvPoolMixin, dm_env.Environment)
+
     state_keys = base._state_keys
     action_keys = base._action_keys
     check_key_duplication(name, "state", state_keys)

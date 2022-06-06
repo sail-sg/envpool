@@ -19,7 +19,6 @@ from typing import Any, Dict, List, Tuple, Union, no_type_check
 import gym
 import numpy as np
 import tree
-from absl import logging
 
 from .data import gym_structure
 from .envpool import EnvPoolMixin
@@ -50,8 +49,15 @@ class GymEnvPoolMeta(ABCMeta):
       from .lax import XlaMixin
       parents = (base, GymEnvPoolMixin, EnvPoolMixin, XlaMixin, gym.Env)
     except ImportError:
-      logging.warning("XLA is disabled. To enable XLA please install jax.")
+
+      def _xla(self: Any) -> None:
+        raise RuntimeError(
+          "XLA is disabled. To enable XLA please install jax."
+        )
+
+      attrs["xla"] = _xla
       parents = (base, GymEnvPoolMixin, EnvPoolMixin, gym.Env)
+
     state_keys = base._state_keys
     action_keys = base._action_keys
     check_key_duplication(name, "state", state_keys)
