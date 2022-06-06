@@ -19,11 +19,11 @@ from typing import Any, Dict, List, Tuple, Union, no_type_check
 import dm_env
 import numpy as np
 import tree
+from absl import logging
 from dm_env import TimeStep
 
 from .data import dm_structure
 from .envpool import EnvPoolMixin
-from .lax import XlaMixin
 from .utils import check_key_duplication
 
 
@@ -45,9 +45,14 @@ class DMEnvPoolMeta(ABCMeta):
   def __new__(cls: Any, name: str, parents: Tuple, attrs: Dict) -> Any:
     """Check internal config and initialize data format convertion."""
     base = parents[0]
-    parents = (
-      base, DMEnvPoolMixin, EnvPoolMixin, XlaMixin, dm_env.Environment
-    )
+    try:
+      from .lax import XlaMixin
+      parents = (
+        base, DMEnvPoolMixin, EnvPoolMixin, XlaMixin, dm_env.Environment
+      )
+    except ImportError:
+      logging.warning("XLA is disabled. To enable XLA please install jax.")
+      parents = (base, DMEnvPoolMixin, EnvPoolMixin, dm_env.Environment)
     state_keys = base._state_keys
     action_keys = base._action_keys
     check_key_duplication(name, "state", state_keys)

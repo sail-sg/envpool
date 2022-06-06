@@ -19,10 +19,10 @@ from typing import Any, Dict, List, Tuple, Union, no_type_check
 import gym
 import numpy as np
 import tree
+from absl import logging
 
 from .data import gym_structure
 from .envpool import EnvPoolMixin
-from .lax import XlaMixin
 from .utils import check_key_duplication
 
 
@@ -46,7 +46,12 @@ class GymEnvPoolMeta(ABCMeta):
   def __new__(cls: Any, name: str, parents: Tuple, attrs: Dict) -> Any:
     """Check internal config and initialize data format convertion."""
     base = parents[0]
-    parents = (base, GymEnvPoolMixin, EnvPoolMixin, XlaMixin, gym.Env)
+    try:
+      from .lax import XlaMixin
+      parents = (base, GymEnvPoolMixin, EnvPoolMixin, XlaMixin, gym.Env)
+    except ImportError:
+      logging.warning("XLA is disabled. To enable XLA please install jax.")
+      parents = (base, GymEnvPoolMixin, EnvPoolMixin, gym.Env)
     state_keys = base._state_keys
     action_keys = base._action_keys
     check_key_duplication(name, "state", state_keys)
