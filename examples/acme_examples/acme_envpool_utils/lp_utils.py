@@ -17,9 +17,10 @@ import os
 import socket
 from typing import Optional
 
-from absl import logging
+import launchpad as lp
 from acme.jax import experiments
 from acme.jax.experiments import config
+from launchpad.nodes.python.local_multi_processing import PythonProcess
 
 ActorId = int
 
@@ -116,15 +117,15 @@ class TPUResourceManager:
 
 
 def run_distributed_experiment(
+  program: lp.Program,
   experiment: config.Config,
   num_actors: int,
   resource_config: Optional[dict] = None
 ):
-  import launchpad as lp
-  from launchpad.nodes.python.local_multi_processing import PythonProcess
-  program = experiments.make_distributed_experiment(
-    experiment=experiment, num_actors=num_actors
-  )
+  if program is None:
+    program = experiments.make_distributed_experiment(
+      experiment=experiment, num_actors=num_actors
+    )
   vm_resource = TPUResourceManager(1)
   if resource_config is not None:
     resources = {}
