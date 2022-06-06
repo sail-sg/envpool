@@ -87,6 +87,7 @@ py_test(
 
 py_test(
     name = "atari_envpool_test",
+    size = "enormous",
     srcs = ["atari_envpool_test.py"],
     deps = [
         ":atari",
