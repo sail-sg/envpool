@@ -150,11 +150,10 @@ class HumanoidCMUEnv : public Env<HumanoidCMUEnvSpec>, public MujocoEnv {
     small_control = (small_control / model_->nu + 4.0) / 5.0;
     auto center_of_mass_velocity = CenterOfMassVelocity();
     if (move_speed_ == 0) {
-      mjtNum dont_move = 0.0;
-      for (int i = 0; i < 2; ++i) {
-        dont_move +=
-            0.5 * RewardTolerance(center_of_mass_velocity[i], 0.0, 0.0, 2.0);
-      }
+      mjtNum dont_move =
+          (RewardTolerance(center_of_mass_velocity[0], 0.0, 0.0, 2.0) +
+           RewardTolerance(center_of_mass_velocity[1], 0.0, 0.0, 2.0)) /
+          2;
       return static_cast<float>(small_control * stand_reward * dont_move);
     }
     auto com_velocity =

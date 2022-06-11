@@ -48,7 +48,7 @@ def run_envpool(env, action, frame_skip, total_step):
   return fps
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("--domain", type=str, default="cheetah")
   parser.add_argument("--task", type=str, default="run")
