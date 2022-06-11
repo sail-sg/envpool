@@ -70,7 +70,7 @@ def run(env, num_envs, total_step, async_):
   print(f"FPS = {frame_skip * total_step * num_envs / (time.time() - t):.2f}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument(
     "--env", type=str, default="atari", choices=["atari", "mujoco", "box2d"]

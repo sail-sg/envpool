@@ -75,6 +75,7 @@ cc_library(
         "dmc/fish.h",
         "dmc/hopper.h",
         "dmc/humanoid.h",
+        "dmc/humanoid_CMU.h",
         "dmc/manipulator.h",
         "dmc/mujoco_env.h",
         "dmc/pendulum.h",
@@ -152,9 +153,9 @@ py_test(
 )
 
 py_test(
-    name = "mujoco_dmc_deterministic_test",
+    name = "mujoco_dmc_suite_deterministic_test",
     size = "enormous",
-    srcs = ["dmc/mujoco_dmc_deterministic_test.py"],
+    srcs = ["dmc/mujoco_dmc_suite_deterministic_test.py"],
     deps = [
         ":mujoco_dmc",
         requirement("numpy"),
@@ -163,9 +164,34 @@ py_test(
 )
 
 py_test(
-    name = "mujoco_dmc_align_test",
+    name = "mujoco_dmc_suite_align_test",
     size = "enormous",
-    srcs = ["dmc/mujoco_dmc_align_test.py"],
+    srcs = ["dmc/mujoco_dmc_suite_align_test.py"],
+    deps = [
+        ":mujoco_dmc",
+        requirement("numpy"),
+        requirement("absl-py"),
+        requirement("mujoco"),
+        requirement("dm-env"),
+        requirement("dm-control"),
+    ],
+)
+
+py_test(
+    name = "mujoco_dmc_suite_ext_deterministic_test",
+    size = "enormous",
+    srcs = ["dmc/mujoco_dmc_suite_ext_deterministic_test.py"],
+    deps = [
+        ":mujoco_dmc",
+        requirement("numpy"),
+        requirement("absl-py"),
+    ],
+)
+
+py_test(
+    name = "mujoco_dmc_suite_ext_align_test",
+    size = "enormous",
+    srcs = ["dmc/mujoco_dmc_suite_ext_align_test.py"],
     deps = [
         ":mujoco_dmc",
         requirement("numpy"),
