@@ -23,11 +23,9 @@
 namespace mujoco_dmc {
 
 MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
-                     int n_sub_steps, int max_episode_steps,
-                     int height, int width,
-                     const std::string& camera_id,
-                     bool depth, bool segmentation,
-                     )
+                     int n_sub_steps, int max_episode_steps, int height,
+                     int width, const std::string& camera_id, bool depth,
+                     bool segmentation, )
     : n_sub_steps_(n_sub_steps),
       max_episode_steps_(max_episode_steps),
       elapsed_step_(max_episode_steps + 1),
@@ -81,14 +79,15 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
   // set rendering to offscreen buffer
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
   // allocate rgb and depth buffers
-  unsigned char* rgb_array_ = (unsigned char*)std::malloc(3*width_*height_);
-  float* depth_array_ = (float*)std::malloc(sizeof(float)*width_*height_);
+  unsigned char* rgb_array_ = (unsigned char*)std::malloc(3 * width_ * height_);
+  auto* depth_array_ =
+      (reinterpret_cast<float*>)std::malloc(sizeof(float) * width_ * height_);
   // camera configuration
   // cam.lookat[0] = m->stat.center[0];
   // cam.lookat[1] = m->stat.center[1];
   // cam.lookat[2] = m->stat.center[2];
   // cam.distance = 1.5 * m->stat.extent;
-    
+
 #ifdef ENVPOOL_TEST
   qpos0_.reset(new mjtNum[model_->nq]);
 #endif
@@ -100,7 +99,6 @@ MujocoEnv::~MujocoEnv() {
   mjr_freeContext(&context_);
   mjv_freeScene(&scene_);
   closeOpenGL();
-
 }
 
 // rl control Environment
@@ -202,8 +200,8 @@ void MujocoEnv::PhysicsStep(int nstep, const mjtNum* action) {
 
 // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/mujoco/engine.py#L165
 void MujocoEnv::PhysicsRender(int height, int width,
-                              const std::string& camera_id,
-                              bool depth, bool segmentation) {
+                              const std::string& camera_id, bool depth,
+                              bool segmentation) {
   // update abstract scene
   mjv_updateScene(model_, data_, &option_, NULL, &camera_, mjCAT_ALL, &scene_);
   mjrRect viewport = {0, 0, width_, height_};
@@ -214,8 +212,8 @@ void MujocoEnv::PhysicsRender(int height, int width,
   mjr_readPixels(rgb_array_, depth_array_, viewport, &context_);
 
   // segmentation results not implemented
-  
-  return {rgb_array_, depth_array_, segmentation_array_}
+
+  return { rgb_array_, depth_array_, segmentation_array_ }
 }
 
 // randomizer
@@ -267,52 +265,62 @@ void initOpenGL(void) {
   //------------------------ EGL
 #if defined(MJ_EGL)
   // desired config
-  const EGLint configAttribs[] = {
-    EGL_RED_SIZE,           8,
-    EGL_GREEN_SIZE,         8,
-    EGL_BLUE_SIZE,          8,
-    EGL_ALPHA_SIZE,         8,
-    EGL_DEPTH_SIZE,         24,
-    EGL_STENCIL_SIZE,       8,
-    EGL_COLOR_BUFFER_TYPE,  EGL_RGB_BUFFER,
-    EGL_SURFACE_TYPE,       EGL_PBUFFER_BIT,
-    EGL_RENDERABLE_TYPE,    EGL_OPENGL_BIT,
-    EGL_NONE
-  };
+  const EGLint configAttribs[] = {EGL_RED_SIZE,
+                                  8,
+                                  EGL_GREEN_SIZE,
+                                  8,
+                                  EGL_BLUE_SIZE,
+                                  8,
+                                  EGL_ALPHA_SIZE,
+                                  8,
+                                  EGL_DEPTH_SIZE,
+                                  24,
+                                  EGL_STENCIL_SIZE,
+                                  8,
+                                  EGL_COLOR_BUFFER_TYPE,
+                                  EGL_RGB_BUFFER,
+                                  EGL_SURFACE_TYPE,
+                                  EGL_PBUFFER_BIT,
+                                  EGL_RENDERABLE_TYPE,
+                                  EGL_OPENGL_BIT,
+                                  EGL_NONE};
 
   // get default display
   EGLDisplay eglDpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-  if (eglDpy==EGL_NO_DISPLAY) {
+  if (eglDpy == EGL_NO_DISPLAY) {
     mju_error_i("Could not get EGL display, error 0x%x\n", eglGetError());
   }
 
   // initialize
   EGLint major, minor;
-  if (eglInitialize(eglDpy, &major, &minor)!=EGL_TRUE) {
+  if (eglInitialize(eglDpy, &major, &minor) != EGL_TRUE) {
     mju_error_i("Could not initialize EGL, error 0x%x\n", eglGetError());
   }
 
   // choose config
   EGLint numConfigs;
   EGLConfig eglCfg;
-  if (eglChooseConfig(eglDpy, configAttribs, &eglCfg, 1, &numConfigs)!=EGL_TRUE) {
+  if (eglChooseConfig(eglDpy, configAttribs, &eglCfg, 1, &numConfigs) !=
+      EGL_TRUE) {
     mju_error_i("Could not choose EGL config, error 0x%x\n", eglGetError());
   }
 
   // bind OpenGL API
-  if (eglBindAPI(EGL_OPENGL_API)!=EGL_TRUE) {
+  if (eglBindAPI(EGL_OPENGL_API) != EGL_TRUE) {
     mju_error_i("Could not bind EGL OpenGL API, error 0x%x\n", eglGetError());
   }
 
   // create context
   EGLContext eglCtx = eglCreateContext(eglDpy, eglCfg, EGL_NO_CONTEXT, NULL);
-  if (eglCtx==EGL_NO_CONTEXT) {
+  if (eglCtx == EGL_NO_CONTEXT) {
     mju_error_i("Could not create EGL context, error 0x%x\n", eglGetError());
   }
 
   // make context current, no surface (let OpenGL handle FBO)
-  if (eglMakeCurrent(eglDpy, EGL_NO_SURFACE, EGL_NO_SURFACE, eglCtx)!=EGL_TRUE) {
-    mju_error_i("Could not make EGL context current, error 0x%x\n", eglGetError());
+  if (eglMakeCurrent(eglDpy, EGL_NO_SURFACE, EGL_NO_SURFACE, eglCtx) !=
+      EGL_TRUE) {
+    mju_error_i("Could not make EGL context current, error 0x%x\n",
+                eglGetError());
   }
 
   //------------------------ OSMESA
@@ -338,7 +346,8 @@ void initOpenGL(void) {
   // create invisible window, single-buffered
   glfwWindowHint(GLFW_VISIBLE, 0);
   glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_FALSE);
-  GLFWwindow* window = glfwCreateWindow(800, 800, "Invisible window", NULL, NULL);
+  GLFWwindow* window =
+      glfwCreateWindow(800, 800, "Invisible window", NULL, NULL);
   if (!window) {
     mju_error("Could not create GLFW window");
   }
@@ -348,14 +357,13 @@ void initOpenGL(void) {
 #endif
 }
 
-
 // close OpenGL context/window
 void closeOpenGL(void) {
   //------------------------ EGL
 #if defined(MJ_EGL)
   // get current display
   EGLDisplay eglDpy = eglGetCurrentDisplay();
-  if (eglDpy==EGL_NO_DISPLAY) {
+  if (eglDpy == EGL_NO_DISPLAY) {
     return;
   }
 
@@ -366,7 +374,7 @@ void closeOpenGL(void) {
   eglMakeCurrent(eglDpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 
   // destroy context if valid
-  if (eglCtx!=EGL_NO_CONTEXT) {
+  if (eglCtx != EGL_NO_CONTEXT) {
     eglDestroyContext(eglDpy, eglCtx);
   }
 
@@ -379,10 +387,10 @@ void closeOpenGL(void) {
 
   //------------------------ GLFW
 #else
-  // terminate GLFW (crashes with Linux NVidia drivers)
-  #if defined(__APPLE__) || defined(_WIN32)
-    glfwTerminate();
-  #endif
+// terminate GLFW (crashes with Linux NVidia drivers)
+#if defined(__APPLE__) || defined(_WIN32)
+  glfwTerminate();
+#endif
 #endif
 }
 }  // namespace mujoco_dmc

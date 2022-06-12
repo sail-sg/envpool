@@ -21,20 +21,20 @@
 #include <mujoco.h>
 // select EGL, OSMESA or GLFW
 #if defined(MJ_EGL)
-  #include <EGL/egl.h>
+#include <EGL/egl.h>
 #elif defined(MJ_OSMESA)
-  #include <GL/osmesa.h>
-  OSMesaContext ctx;
-  unsigned char buffer[10000000];
+#include <GL/osmesa.h>
+OSMesaContext ctx;
+unsigned char buffer[10000000];
 #else
-  #include <GLFW/glfw3.h>
+#include <GLFW/glfw3.h>
 #endif
 
-#include "array_safety.h"
 #include <memory>
 #include <random>
 #include <string>
 
+#include "array_safety.h"
 #include "envpool/mujoco/dmc/utils.h"
 
 namespace mujoco_dmc {
