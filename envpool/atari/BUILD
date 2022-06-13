@@ -6,8 +6,8 @@ package(default_visibility = ["//visibility:public"])
 genrule(
     name = "gen_atari_roms",
     srcs = ["@atari_roms//:roms"],
-    outs = ["atari_roms"],
-    cmd = "cp -r $(SRCS) $(OUTS)",
+    outs = ["roms"],
+    cmd = "mkdir -p $(OUTS) && cp $(SRCS) $(OUTS)",
 )
 
 genrule(

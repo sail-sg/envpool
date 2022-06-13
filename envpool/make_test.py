@@ -43,6 +43,9 @@ class _MakeTest(absltest.TestCase):
     self.assertEqual(spec.action_space.n, 18)
     self.assertEqual(env_gym.action_space.n, 18)
     self.assertEqual(env_dm.action_spec().num_values, 18)
+    # not work for wrong bin, see issue #146
+    for wrong in ["Combat", "Joust", "MazeCraze", "Warlords"]:
+      self.assertRaises(AssertionError, envpool.make_gym, f"{wrong}-v5")
 
   def test_make_vizdoom(self) -> None:
     spec = envpool.make_spec("MyWayHome-v1")
@@ -148,6 +151,8 @@ class _MakeTest(absltest.TestCase):
         "HumanoidRunPureState-v1",
         "HumanoidStand-v1",
         "HumanoidWalk-v1",
+        "HumanoidCMURun-v1",
+        "HumanoidCMUStand-v1",
         "ManipulatorBringBall-v1",
         "ManipulatorBringPeg-v1",
         "ManipulatorInsertBall-v1",
