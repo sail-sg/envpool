@@ -1,5 +1,5 @@
 XLA Interface
-================
+=============
 
 To boost the efficiency of the overall system, we introduce the XLA API for envpool.
 With this API, we can just-in-time compile the environment and agent steps together,
@@ -20,7 +20,8 @@ Namely, the XLA version of ``step/recv/send`` has the follow signature:
     recv(envpool_handle: Handle) -> Tuple[Handle, State]
     send(envpool_handle: Handle, action: Action) -> Handle
 
-These functions can be obtained from the envpool instance which we created from the Python API.
+These functions can be obtained from the envpool instance which we created
+from the Python API.
 ::
 
     env = envpool.make(..., env_type="gym" | "dm")
@@ -78,4 +79,5 @@ It is also possible to overlap ``send`` and ``recv``
     handle, states = recv(handle)
     run_actor_loop(100, (handle, states))
 
-In the above case, ``recv`` is using ``handle0``, which means ``policy`` and ``recv`` will be overlapped in each iteration.
+In the above case, ``recv`` is using ``handle0``, which means ``policy`` and
+``recv`` will be overlapped in each iteration.
