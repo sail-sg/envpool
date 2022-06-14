@@ -78,8 +78,8 @@ def async_step() -> None:
 
   def actor_step(iter, loop_var):
     handle0, states = loop_var
-    action = policy(states)
-    handle1 = send(handle0, action)
+    action = policy(states.observation.obs)
+    handle1 = send(handle0, action, states.observation.env_id)
     handle1, new_states = recv(handle0)
     return (handle1, new_states)
 
@@ -87,6 +87,7 @@ def async_step() -> None:
   def run_actor_loop(num_steps, init_var):
     return lax.fori_loop(0, num_steps, actor_step, init_var)
 
+  env.async_reset()
   handle, states = recv(handle)
   run_actor_loop(100, (handle, states))
 
