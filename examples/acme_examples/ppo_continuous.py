@@ -23,7 +23,7 @@ import jax
 from acme.agents.jax import ppo
 from acme.jax import experiments
 from acme_envpool_utils.helpers import (
-  BuilderWrapper,
+  PPOBuilder,
   make_logger,
   make_mujoco_environment,
 )
@@ -64,7 +64,7 @@ def parse_args():
     "--num-envs",
     type=int,
     default=8,
-    help="Number of environment (EnvPool) / actor (LaunchPad)."
+    help="Number of environments (EnvPool/DummyVecEnv)."
   )
   parser.add_argument("--seed", type=int, default=0, help="Random seed.")
   parser.add_argument(
@@ -103,7 +103,7 @@ def build_experiment_config(FLAGS):
      use_batch_env else FLAGS.num_steps
 
   config = ppo.PPOConfig()
-  ppo_builder = BuilderWrapper(config, num_envs)
+  ppo_builder = PPOBuilder(config, num_envs)
 
   config = asdict(config)
   config["use_batch_env"] = use_batch_env
