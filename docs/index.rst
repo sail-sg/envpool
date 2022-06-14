@@ -24,6 +24,7 @@ Here are EnvPool's several highlights:
   subprocess-based vector env;
 - **~3x** throughput of Python subprocess-based vector env on low resource
   setup like 12 CPU cores;
+- XLA support with Jax jit function;
 - Comparing with the existing GPU-based solution
   (`Brax <https://github.com/google/brax>`_ /
   `Isaac-gym <https://developer.nvidia.com/isaac-gym>`_), EnvPool is a
@@ -68,6 +69,7 @@ stable version through `envpool.readthedocs.io/en/stable/
    content/slides
    content/build
    content/python_interface
+   content/xla_interface
    content/benchmark
    content/new_env
    content/contributing

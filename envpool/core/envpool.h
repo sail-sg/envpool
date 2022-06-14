@@ -27,14 +27,12 @@
  */
 template <typename EnvSpec>
 class EnvPool {
- protected:
-  EnvSpec spec_;
-
  public:
+  EnvSpec spec;
   using Spec = EnvSpec;
   using State = NamedVector<typename EnvSpec::StateKeys, std::vector<Array>>;
   using Action = NamedVector<typename EnvSpec::ActionKeys, std::vector<Array>>;
-  explicit EnvPool(EnvSpec spec) : spec_(std::move(spec)) {}
+  explicit EnvPool(EnvSpec spec) : spec(std::move(spec)) {}
 
  protected:
   virtual void Send(const std::vector<Array>& action) {

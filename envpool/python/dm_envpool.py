@@ -44,7 +44,21 @@ class DMEnvPoolMeta(ABCMeta):
   def __new__(cls: Any, name: str, parents: Tuple, attrs: Dict) -> Any:
     """Check internal config and initialize data format convertion."""
     base = parents[0]
-    parents = (base, DMEnvPoolMixin, EnvPoolMixin, dm_env.Environment)
+    try:
+      from .lax import XlaMixin
+      parents = (
+        base, DMEnvPoolMixin, EnvPoolMixin, XlaMixin, dm_env.Environment
+      )
+    except ImportError:
+
+      def _xla(self: Any) -> None:
+        raise RuntimeError(
+          "XLA is disabled. To enable XLA please install jax."
+        )
+
+      attrs["xla"] = _xla
+      parents = (base, DMEnvPoolMixin, EnvPoolMixin, dm_env.Environment)
+
     state_keys = base._state_keys
     action_keys = base._action_keys
     check_key_duplication(name, "state", state_keys)
@@ -64,9 +78,11 @@ class DMEnvPoolMeta(ABCMeta):
       done = state.done
       elapse = state.elapsed_step
       discount = getattr(state, "discount", (1.0 - done).astype(np.float32))
-      step_type = np.full(done.shape, dm_env.StepType.MID)
-      step_type[(elapse == 0)] = dm_env.StepType.FIRST
-      step_type[done] = dm_env.StepType.LAST
+      step_type = (
+        (elapse == 0) * dm_env.StepType.FIRST +
+        ((elapse > 0) & ~done) * dm_env.StepType.MID +
+        done * dm_env.StepType.LAST
+      )
       timestep = TimeStep(
         step_type=step_type,
         observation=state.State,

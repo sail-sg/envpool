@@ -22,6 +22,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <exception>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -29,6 +30,7 @@
 #include <vector>
 
 #include "envpool/core/envpool.h"
+#include "envpool/core/xla.h"
 
 namespace py = pybind11;
 
@@ -212,6 +214,28 @@ class PyEnvPool : public EnvPool {
   explicit PyEnvPool(const PySpec& py_spec)
       : EnvPool(py_spec), py_spec(py_spec) {}
 
+  std::tuple<py::array, py::capsule, py::capsule> Xla() {
+    if (HasContainerType(EnvPool::spec.state_spec)) {
+      throw std::runtime_error(
+          "State of this env has dynamic shaped container, xla is disabled");
+    }
+    if (HasDynamicDim(EnvPool::spec.state_spec)) {
+      throw std::runtime_error(
+          "State of this env has dynamic (-1) shape, xla is disabled");
+    }
+    if (EnvPool::spec.config["max_num_players"_] != 1) {
+      throw std::runtime_error(
+          "Xla is not available for multiplayer environment.");
+    }
+    py::array_t<uint32_t> handle(std::vector<int>{2});
+    *reinterpret_cast<EnvPool**>(handle.mutable_data()) = this;
+    auto send = py::capsule(reinterpret_cast<void*>(XlaSend<EnvPool>),
+                            "xla._CUSTOM_CALL_TARGET");
+    auto recv = py::capsule(reinterpret_cast<void*>(XlaRecv<EnvPool>),
+                            "xla._CUSTOM_CALL_TARGET");
+    return std::make_tuple(handle, send, recv);
+  }
+
   /**
    * py api
    */
@@ -282,6 +306,7 @@ py::object abc_meta = py::module::import("abc").attr("ABCMeta");
       .def("_send", &ENVPOOL::PySend)                                \
       .def("_reset", &ENVPOOL::PyReset)                              \
       .def_readonly_static("_state_keys", &ENVPOOL::py_state_keys)   \
-      .def_readonly_static("_action_keys", &ENVPOOL::py_action_keys);
+      .def_readonly_static("_action_keys", &ENVPOOL::py_action_keys) \
+      .def("_xla", &ENVPOOL::Xla);
 
 #endif  // ENVPOOL_CORE_PY_ENVPOOL_H_
