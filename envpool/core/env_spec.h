@@ -72,7 +72,8 @@ class EnvSpec {
           "It is required that batch_size <= num_envs, got num_envs = " +
           std::to_string(config["num_envs"_]) +
           ", batch_size = " + std::to_string(config["batch_size"_]));
-    } else if (config["batch_size"_] == 0) {
+    }
+    if (config["batch_size"_] == 0) {
       config["batch_size"_] = config["num_envs"_];
     }
   }
