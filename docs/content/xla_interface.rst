@@ -5,6 +5,9 @@ To boost the efficiency of the overall system, we introduce the XLA API for envp
 With this API, we can just-in-time compile the environment and agent steps together,
 when the agent part is implemented with Jax/Tensorflow.
 
+The full example is at https://github.com/sail-sg/envpool/blob/main/examples/xla_step.py
+
+
 Stateless functions
 -------------------
 
@@ -27,16 +30,20 @@ from the Python API.
     env = envpool.make(..., env_type="gym" | "dm")
     handle, recv, send, step = env.xla()
 
+
 Example of Actor Loop
 ---------------------
 
-We can now write the actor loop as.
+We can now write the actor loop as:
 ::
 
     def actor_step(iter, loop_var):
       handle0, states = loop_var
       action = policy(states)
-      handle1, new_states = step(handle0, action)
+      # for gym
+      handle1, (new_states, rew, done, info) = step(handle0, action)
+      # for dm
+      # handle1, new_states = step(handle0, action)
       return (handle1, new_states)
 
     @jit
@@ -46,36 +53,38 @@ We can now write the actor loop as.
     states = env.reset()
     run_actor_loop(100, (handle, states))
 
-Or, with the asynchronous api,
+Or, with the asynchronous api:
 ::
 
     def actor_step(iter, handle):
       handle0 = handle
       handle1, states = recv(handle0)
-      action = policy(states)
-      handle2 = send(handle1, action)
+      action = policy(states.observation.obs)
+      handle2 = send(handle0, action, states.observation.env_id)
       return handle2
 
     @jit
     def run_actor_loop(num_steps):
       return lax.fori_loop(0, num_steps, actor_step, handle)
 
+    env.async_reset()
     run_actor_loop(100)
 
-It is also possible to overlap ``send`` and ``recv``
+It is also possible to overlap ``send`` and ``recv``:
 ::
 
     def actor_step(iter, loop_var):
       handle0, states = loop_var
-      action = policy(states)
-      handle1 = send(handle0, action)
+      action = policy(states.observation.obs)
+      handle1 = send(handle0, action, states.observation.env_id)
       handle1, new_states = recv(handle0)
-      return (handle1, new_states)
+      return handle1, new_states
 
     @jit
     def run_actor_loop(num_steps, init_var):
       return lax.fori_loop(0, num_steps, actor_step, init_var)
 
+    env.async_reset()
     handle, states = recv(handle)
     run_actor_loop(100, (handle, states))
 
