@@ -146,6 +146,6 @@ def run_distributed_experiment(
   lp.launch(
     program,
     terminal="tmux_session",
-    # launch_type="local_mp",
+    launch_type="local_mp",
     local_resources=resources
   )

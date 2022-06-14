@@ -69,10 +69,8 @@ from acme.utils.loggers import aggregators, base, filters, terminal
 # from acme.agents.jax.impala import types
 from acme.wrappers import observation_action_reward
 from acme.wrappers.observation_action_reward import OAR
-from libcst import Return
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env.dummy_vec_env import DummyVecEnv
-from traitlets import ObserveHandler
 
 import envpool
 from envpool.python.protocol import EnvPool
@@ -463,6 +461,13 @@ class IMPALAActor(acme.Actor):
     action: impala_types.Action,
     next_timestep: dm_env.TimeStep,
   ):
+    # We re-initialize the recurrent state.
+    re_init_idx = np.argwhere(next_timestep.step_type == dm_env.StepType.LAST
+                             ).squeeze(-1)
+    if re_init_idx.size > 0:
+      for i in re_init_idx:
+        self._state = tree.map_structure(lambda x: x.at[i].set(0), self._state)
+
     if not self._adder:
       return
 
@@ -586,7 +591,7 @@ class IMPALABuilder(
         return data
 
       return reverb.ReplaySample(
-        info=sample.info, data=tree.map_structure(_process, _data)
+        info=tf.zeros([8]), data=tree.map_structure(_process, _data)
       )
 
     dataset = dataset.map(transpose)
@@ -842,21 +847,23 @@ class BatchEnvWrapper(dm_env.Environment):
 
 
 class DeepIMPALAAtariNetwork(networks_lib.DeepIMPALAAtariNetwork):
+  pass
+  # def unroll(
+  #   self, inputs: observation_action_reward.OAR, state: hk.LSTMState
+  # ) -> networks_lib.LSTMOutputs:
+  #   print(inputs.observation.shape)
+  #   print(state.hidden.shape)
+  #   embeddings = self._embed(inputs)
+  #   if jnp.ndim(embeddings) == 2:
+  #     # Add batch/time dimension.
+  #     state = tree.map_structure(lambda x: jnp.expand_dims(x, 0), state)
+  #   embeddings = jnp.expand_dims(embeddings, 1)
+  #   embeddings, new_states = hk.static_unroll(
+  #     self._core, embeddings, state, time_major=False
+  #   )
+  #   logits, values = self._head(embeddings)
 
-  def unroll(
-    self, inputs: observation_action_reward.OAR, state: hk.LSTMState
-  ) -> networks_lib.LSTMOutputs:
-    embeddings = self._embed(inputs)
-    if jnp.ndim(embeddings) == 2:
-      # Add batch/time dimension.
-      state = tree.map_structure(lambda x: jnp.expand_dims(x, 0), state)
-    embeddings = jnp.expand_dims(embeddings, 1)
-    embeddings, new_states = hk.static_unroll(
-      self._core, embeddings, state, time_major=False
-    )
-    logits, values = self._head(embeddings)
-
-    return (logits, values), new_states
+  #   return (logits, values), new_states
 
 
 def make_mujoco_environment(

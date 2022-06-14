@@ -119,7 +119,7 @@ def build_distributed_program(FLAGS):
   num_steps = FLAGS.num_steps // FLAGS.num_envs if \
      use_envpool else FLAGS.num_steps
 
-  config = impala.IMPALAConfig(max_queue_size=int(1e6))
+  config = impala.IMPALAConfig(max_queue_size=int(1e6), batch_size=8)
 
   if FLAGS.use_wb:
     run_name = f"acme_ppo__{FLAGS.env_name}"
@@ -207,56 +207,55 @@ def build_distributed_program(FLAGS):
     logger = logger_factory("actor", "actor_steps", actor_id)
     return EnvironmentLoop(environment, actor, counter, logger)
 
-  # program = lp.Program(name="impala_agent")
-  counter = build_counter()
   key = jax.random.PRNGKey(FLAGS.seed)
-  replay_tables = build_replay()
-  replay_server = reverb.Server(replay_tables, port=None)
-  replay_client = reverb.Client(f'localhost:{replay_server.port}')
-  learner = build_learner(key, replay_client, counter)
+  # counter = build_counter()
+  # replay_tables = build_replay()
+  # replay_server = reverb.Server(replay_tables, port=None)
+  # replay_client = reverb.Client(f'localhost:{replay_server.port}')
+  # learner = build_learner(key, replay_client, counter)
+  # actor = build_actor(key, replay_client, learner, counter, 0)
+  # actor.run()
 
-  actor = build_actor(key, replay_client, learner, counter, 0)
-  actor.run()
+  program = lp.Program(name="impala_agent")
+  replay_node = lp.ReverbNode(
+    build_replay,
+    checkpoint_time_delta_minutes=(
+      checkpointing_config.replay_checkpointing_time_delta_minutes
+    )
+  )
+  replay = replay_node.create_handle()
 
-  # replay_node = lp.ReverbNode(
-  #   build_replay,
-  #   checkpoint_time_delta_minutes=(
-  #     checkpointing_config.replay_checkpointing_time_delta_minutes
-  #   )
-  # )
-  # replay = replay_node.create_handle()
+  counter = program.add_node(lp.CourierNode(build_counter), label="counter")
 
-  # counter = program.add_node(lp.CourierNode(build_counter), label="counter")
+  program.add_node(
+    lp.CourierNode(StepsLimiter, counter, num_steps), label="counter"
+  )
 
-  # program.add_node(
-  #   lp.CourierNode(StepsLimiter, counter, num_steps), label="counter"
-  # )
+  learner_key, key = jax.random.split(key)
+  learner_node = lp.CourierNode(build_learner, learner_key, replay, counter)
+  learner = learner_node.create_handle()
+  variable_sources = [learner]
+  program.add_node(replay_node, label="replay")
+  program.add_node(learner_node, label="learner")
 
-  # learner_key, key = jax.random.split(key)
-  # learner_node = lp.CourierNode(build_learner, learner_key, replay, counter)
-  # learner = learner_node.create_handle()
+  with program.group("actor"):
+    *actor_keys, key = jax.random.split(key, FLAGS.num_actors + 1)
+    variable_sources = itertools.cycle(variable_sources)
+    actor_nodes = [
+      lp.CourierNode(build_actor, akey, replay, vsource, counter, aid)
+      for aid, (akey, vsource) in enumerate(zip(actor_keys, variable_sources))
+    ]
+    for actor_node in actor_nodes:
+      program.add_node(actor_node)
 
-  # variable_sources = [learner]
-  # program.add_node(replay_node, label="replay")
-
-  # with program.group("actor"):
-  #   *actor_keys, key = jax.random.split(key, FLAGS.num_actors + 1)
-  #   variable_sources = itertools.cycle(variable_sources)
-  #   actor_nodes = [
-  #     lp.CourierNode(build_actor, akey, replay, vsource, counter, aid)
-  #     for aid, (akey, vsource) in enumerate(zip(actor_keys, variable_sources))
-  #   ]
-  #   for actor_node in actor_nodes:
-  #     program.add_node(actor_node)
-
-  # return program
+  return program
 
 
 def main():
   FLAGS = parse_args()
   program = build_distributed_program(FLAGS)
 
-  # run_distributed_experiment(program, None, None)
+  run_distributed_experiment(program, None, None)
 
 
 def parse_args():
