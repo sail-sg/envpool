@@ -78,9 +78,11 @@ class DMEnvPoolMeta(ABCMeta):
       done = state.done
       elapse = state.elapsed_step
       discount = getattr(state, "discount", (1.0 - done).astype(np.float32))
-      step_type = np.full(done.shape, dm_env.StepType.MID)
-      step_type[(elapse == 0)] = dm_env.StepType.FIRST
-      step_type[done] = dm_env.StepType.LAST
+      step_type = (
+        (elapse == 0) * dm_env.StepType.FIRST +
+        ((elapse > 0) & ~done) * dm_env.StepType.MID +
+        done * dm_env.StepType.LAST
+      )
       timestep = TimeStep(
         step_type=step_type,
         observation=state.State,
