@@ -192,7 +192,7 @@ void ToArray(const std::vector<py::array>& py_arrs,
   std::apply(
       [&](auto&&... spec) {
         (ret->emplace_back(
-             NumpyToArray<typename Spec::dtype>(py_arrs[index++])),
+             NumpyToArrayIncRef<typename Spec::dtype>(py_arrs[index++])),
          ...);
       },
       specs);
@@ -268,7 +268,7 @@ class PyEnvPool : public EnvPool {
    */
   void PyReset(const py::array& env_ids) {
     // PyArray arr = PyArray::From<int>(env_ids);
-    auto arr = NumpyToArray<int>(env_ids);
+    auto arr = NumpyToArrayIncRef<int>(env_ids);
     py::gil_scoped_release release;
     EnvPool::Reset(arr);
   }
