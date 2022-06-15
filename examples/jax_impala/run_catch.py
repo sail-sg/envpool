@@ -14,9 +14,7 @@
 # ==============================================================================
 """Single-process IMPALA wiring."""
 
-import argparse
 import functools
-import os
 import threading
 from typing import List
 
@@ -29,12 +27,22 @@ import jax
 import learner as learner_lib
 import optax
 import util
+from absl import app
 from acme import wrappers
 
 import envpool
 from envpool.python.protocol import EnvPool
 
+USE_ENVPOOL = True
+
+ACTION_REPEAT = 1
+BATCH_SIZE = 16
+DISCOUNT_FACTOR = 0.99
+MAX_ENV_FRAMES = 10_000_000
 NUM_ACTORS = 8
+UNROLL_LENGTH = 20
+
+FRAMES_PER_ITER = ACTION_REPEAT * BATCH_SIZE * UNROLL_LENGTH
 
 
 def run_actor(actor: actor_lib.Actor, stop_signal: List[bool]):
@@ -69,70 +77,50 @@ def make_atari_environment(
   return wrappers.wrap_all(env, wrapper_list)
 
 
-def make_atari_envpool(
-  task: str = "Pong-v5",
-  num_envs: int = 2,
-) -> EnvPool:
+def make_catch_envpool(num_envs: int = 2,) -> EnvPool:
   env = envpool.make(
-    task,
+    "Catch-v0",
     env_type="dm",
     num_envs=num_envs,
-    episodic_life=True,
-    reward_clip=True
   )
   return env
 
 
-def main(FLAGS):
-  cfg_dict = vars(FLAGS)
-  cfg_dict.update(
-    {
-      "action_repeat": 1,
-      "batch_size": FLAGS.batch_size,
-      "discount_factor": FLAGS.discount_factor,
-      "unroll_length": FLAGS.unroll_length,
-    }
-  )
-  run_name = ""
-  if FLAGS.use_wb:
-    run_name += f"jax_impala__{FLAGS.env_name}"
-    if FLAGS.use_envpool:
-      run_name += f"__envpool-{FLAGS.num_envs}"
-    run_name += f"__seed-{FLAGS.seed}"
-  # Environment builder.
+def main(_):
+  # A thunk that builds a new environment.
+  # Substitute your environment here!
   build_env = make_atari_environment
-  if FLAGS.use_envpool:
-    build_env = functools.partial(make_atari_envpool, num_envs=FLAGS.num_envs)
+  if USE_ENVPOOL:
+    build_env = functools.partial(make_catch_envpool, num_envs=BATCH_SIZE)
 
   # Construct the agent. We need a sample environment for its spec.
   env_for_spec = build_env()
   num_actions = env_for_spec.action_spec().num_values
   obs_spec = env_for_spec.observation_spec()
-  if FLAGS.use_envpool:
+  if USE_ENVPOOL:
     obs_spec = obs_spec.obs
   agent = agent_lib.Agent(
     num_actions, obs_spec,
-    functools.partial(haiku_nets.AtariNet, use_resnet=True, use_lstm=False)
+    functools.partial(haiku_nets.CatchNet)
   )
 
   # Construct the optimizer.
-  frames_per_iter = FLAGS.batch_size * FLAGS.unroll_length
-  max_updates = FLAGS.num_steps / frames_per_iter
-  opt = optax.rmsprop(6e-4, decay=0.99, eps=1e-7)
+  max_updates = MAX_ENV_FRAMES / FRAMES_PER_ITER
+  opt = optax.rmsprop(5e-3, decay=0.99, eps=1e-7)
 
   # Construct the learner.
   learner_builder = learner_lib.Learner
-  if FLAGS.use_envpool:
+  if USE_ENVPOOL:
     learner_builder = functools.partial(
-      learner_lib.BatchLearner, num_envs=FLAGS.num_envs
+      learner_lib.BatchLearner, num_envs=BATCH_SIZE
     )
   learner = learner_builder(
     agent=agent,
-    rng_key=jax.random.PRNGKey(FLAGS.seed),
+    rng_key=jax.random.PRNGKey(428),
     opt=opt,
-    batch_size=FLAGS.batch_size,
-    discount_factor=FLAGS.discount_factor,
-    frames_per_iter=frames_per_iter,
+    batch_size=BATCH_SIZE,
+    discount_factor=DISCOUNT_FACTOR,
+    frames_per_iter=FRAMES_PER_ITER,
     max_abs_reward=1.,
     logger=util.AbslLogger(),  # Provide your own logger here.
   )
@@ -142,9 +130,9 @@ def main(FLAGS):
   actor_threads = []
   stop_signal = [False]
   actor_builder = actor_lib.Actor
-  if FLAGS.use_envpool:
+  if USE_ENVPOOL:
     actor_builder = functools.partial(
-      actor_lib.BatchActor, num_envs=FLAGS.num_envs
+      actor_lib.BatchActor, num_envs=BATCH_SIZE
     )
     num_actors = 1
   else:
@@ -153,13 +141,10 @@ def main(FLAGS):
     actor = actor_builder(
       agent=agent,
       env=build_env(),
-      unroll_length=FLAGS.unroll_length,
+      unroll_length=UNROLL_LENGTH,
       learner=learner,
       rng_seed=i,
-      logger=util.WBLogger(
-        cfg_dict["wb_project"], cfg_dict["wb_entity"], run_name, cfg_dict,
-        cfg_dict["use_wb"]
-      ),  # Provide your own logger here.
+      logger=util.AbslLogger(),  # Provide your own logger here.
     )
     args = (actor, stop_signal)
     actor_threads.append(threading.Thread(target=run_actor, args=args))
@@ -175,68 +160,5 @@ def main(FLAGS):
     t.join()
 
 
-def parse_args():
-  # fmt: off
-  parser = argparse.ArgumentParser()
-  parser.add_argument(
-    "--exp-name",
-    type=str,
-    default=os.path.basename(__file__).rstrip(".py"),
-    help="Name of this experiment."
-  )
-  parser.add_argument(
-    "--env-name", type=str, default="Pong-v5", help="What environment to run."
-  )
-  parser.add_argument(
-    "--use-envpool",
-    type=bool,
-    default=False,
-    nargs="?",
-    const=True,
-    help="Whether to use EnvPool."
-  )
-  parser.add_argument(
-    "--num-envs",
-    type=int,
-    default=32,
-    help="Number of environments (EnvPool/DummyVecEnv)."
-  )
-  parser.add_argument(
-    "--batch-size", type=int, default=32, help="Batch size of learner."
-  )
-  parser.add_argument(
-    "--unroll-length",
-    type=int,
-    default=20,
-    help="Unroll length of trajectory."
-  )
-  parser.add_argument(
-    "--discount-factor", type=float, default=0.99, help="Discount factor."
-  )
-  parser.add_argument("--seed", type=int, default=0, help="Random seed.")
-  parser.add_argument(
-    "--num-steps",
-    type=int,
-    default=50_000_000,
-    help="Number of env steps to run."
-  )
-  parser.add_argument(
-    "--use-wb",
-    type=bool,
-    default=False,
-    nargs="?",
-    const=True,
-    help="Whether to use WandB."
-  )
-  parser.add_argument(
-    "--wb-project", type=str, default="acme", help="W&B project name."
-  )
-  parser.add_argument(
-    "--wb-entity", type=str, default=None, help="W&B entity name."
-  )
-  args = parser.parse_args()
-  return args
-
-
 if __name__ == '__main__':
-  main(parse_args())
+  app.run(main)

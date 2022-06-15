@@ -77,23 +77,29 @@ class Agent:
     # We expect that generating the initial_state does not require parameters.
     return self._initial_state_apply_fn(None, batch_size)
 
-  @functools.partial(jax.jit, static_argnums=(0,))
+  @functools.partial(jax.jit, static_argnums=(0, 5))
   def step(
     self,
     rng_key,
     params: hk.Params,
     timestep: dm_env.TimeStep,
     state: Nest,
+    batched: bool = False,
   ) -> Tuple[AgentOutput, Nest]:
     """For a given single-step, unbatched timestep, output the chosen action."""
-    # Pad timestep, state to be [T, B, ...] and [B, ...] respectively.
-    timestep = jax.tree_map(lambda t: t[None, None, ...], timestep)
-    state = jax.tree_map(lambda t: t[None, ...], state)
-
+    if not batched:
+      # Pad timestep, state to be [T, B, ...] and [B, ...] respectively.
+      timestep = jax.tree_map(lambda t: t[None, None, ...], timestep)
+      state = jax.tree_map(lambda t: t[None, ...], state)
+    else:
+      timestep = jax.tree_map(lambda t: t[None, ...], timestep)
     net_out, next_state = self._apply_fn(params, timestep, state)
-    # Remove the padding from above.
-    net_out = jax.tree_map(lambda t: jnp.squeeze(t, axis=(0, 1)), net_out)
-    next_state = jax.tree_map(lambda t: jnp.squeeze(t, axis=0), next_state)
+    if not batched:
+      # Remove the padding from above.
+      net_out = jax.tree_map(lambda t: jnp.squeeze(t, axis=(0, 1)), net_out)
+      next_state = jax.tree_map(lambda t: jnp.squeeze(t, axis=0), next_state)
+    else:
+      net_out = jax.tree_map(lambda t: jnp.squeeze(t, axis=(0)), net_out)
     # Sample an action and return.
     action = hk.multinomial(rng_key, net_out.policy_logits, num_samples=1)
     action = jnp.squeeze(action, axis=-1)

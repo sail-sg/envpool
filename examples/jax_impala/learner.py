@@ -141,7 +141,7 @@ class Learner:
 
     total_loss = pg_loss
     total_loss += 0.5 * baseline_loss
-    total_loss += 0.01 * ent_loss
+    total_loss += 0.001 * ent_loss
 
     logs = {}
     logs['PG_loss'] = pg_loss
@@ -226,3 +226,47 @@ class Learner:
     self._done = True
     self._logger.close()
     transfer_thread.join()
+
+
+class BatchLearner(Learner):
+
+  def __init__(
+    self,
+    agent: agent_lib.Agent,
+    rng_key,
+    opt: optax.GradientTransformation,
+    batch_size: int,
+    num_envs: int,
+    discount_factor: float,
+    frames_per_iter: int,
+    max_abs_reward: float = 0,
+    logger=None
+  ):
+    super().__init__(
+      agent, rng_key, opt, batch_size, discount_factor, frames_per_iter,
+      max_abs_reward, logger
+    )
+    self._num_envs = num_envs
+
+  def host_to_device_worker(self):
+    """Elementary data pipeline."""
+    batch = []
+    assert self._batch_size % self._num_envs == 0
+    while not self._done:
+      # Try to get a batch. Skip the iteration if we couldn't.
+      try:
+        for _ in range(len(batch), self._batch_size // self._num_envs):
+          # As long as possible while keeping learner_test time reasonable.
+          batch.append(self._host_q.get(timeout=10))
+      except queue.Empty:
+        continue
+
+      assert len(batch) == self._batch_size // self._num_envs
+      # Prepare for consumption, then put batch onto device.
+      stacked_batch = jax.tree_map(
+        lambda *xs: np.concatenate(xs, axis=1), *batch
+      )
+      self._device_q.put(jax.device_put(stacked_batch))
+
+      # Clean out the built-up batch.
+      batch = []

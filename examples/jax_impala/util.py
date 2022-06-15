@@ -14,11 +14,15 @@
 # ==============================================================================
 """Util."""
 import collections
+import logging
 
 import dm_env
 import numpy as np
 import tree
-from absl import logging
+
+import wandb
+
+logging.getLogger().setLevel(logging.INFO)
 
 # Can represent either a single transition, a trajectory, or a batch of
 # trajectories.
@@ -40,6 +44,13 @@ def preprocess_step(timestep: dm_env.TimeStep) -> dm_env.TimeStep:
   return tree.map_structure(_preprocess_none, timestep)
 
 
+def preprocess_step_env_pool(timestep: dm_env.TimeStep) -> dm_env.TimeStep:
+  timestep = timestep._replace(
+    observation=timestep.observation.obs.astype(np.float32)
+  )
+  return timestep
+
+
 class NullLogger:
   """Logger that does nothing."""
 
@@ -58,3 +69,28 @@ class AbslLogger:
 
   def close(self):
     pass
+
+
+class WBLogger:
+  """Writes to logging.info and W&B."""
+
+  def __init__(
+    self, wb_project, wb_entity, run_name, config, use_wb=False
+  ) -> None:
+    self._use_wb = use_wb
+    if use_wb:
+      wandb.init(
+        project=wb_project,
+        entity=wb_entity,
+        name=run_name,
+        config=config,
+      )
+
+  def write(self, d):
+    logging.info(d)
+    if self._use_wb:
+      wandb.log(d)
+
+  def close(self):
+    if self._use_wb:
+      wandb.finish()

@@ -13,12 +13,15 @@
 # limitations under the License.
 # ==============================================================================
 """IMPALA actor class."""
+import operator
+
 import agent as agent_lib
 import dm_env
 import haiku as hk
 import jax
 import learner as learner_lib
 import numpy as np
+import tree
 import util
 
 
@@ -108,3 +111,68 @@ class Actor:
 
   def pull_params(self):
     return self._learner.params_for_actor()
+
+
+class BatchActor(Actor):
+
+  def __init__(
+    self,
+    agent: agent_lib.Agent,
+    env: dm_env.Environment,
+    unroll_length: int,
+    learner: learner_lib.Learner,
+    num_envs: int,
+    rng_seed: int = 42,
+    logger=None
+  ):
+    super().__init__(agent, env, unroll_length, learner, rng_seed, logger)
+    self._agent_state = self._agent.initial_state(num_envs)
+    self._episode_return = np.zeros(num_envs, np.float32)
+
+  def unroll(
+    self, rng_key, frame_count: int, params: hk.Params, unroll_length: int
+  ) -> util.Transition:
+    """Unroll trajectories in batched environment."""
+    timestep = self._timestep
+    agent_state = self._agent_state
+    # Unroll one longer if trajectory is empty.
+    num_interactions = unroll_length + int(not self._traj)
+    subkeys = jax.random.split(rng_key, num_interactions)
+    for i in range(num_interactions):
+      timestep = util.preprocess_step_env_pool(timestep)
+      agent_out, next_state = self._agent.step(
+        subkeys[i], params, timestep, agent_state, batched=True
+      )
+      transition = util.Transition(
+        timestep=timestep, agent_out=agent_out, agent_state=agent_state
+      )
+      self._traj.append(transition)
+      agent_state = next_state
+      action = jax.device_get(agent_out.action)
+      timestep = self._env.step(action)
+
+      self._episode_return = tree.map_structure(
+        operator.iadd, self._episode_return, timestep.reward
+      )
+      if any(timestep.last()):
+        last_idx = np.argwhere(timestep.last()).squeeze(-1)
+        for i in last_idx:
+          self._logger.write(
+            {
+              'global_step': frame_count,
+              'episode_return': self._episode_return[i],
+            }
+          )
+          self._episode_return[i] = 0.
+
+      # Elide a manual agent_state reset on step_type.first(), as the ResetCore
+      # already takes care of this for us.
+
+    # Pack the trajectory and reset parent state.
+    trajectory = jax.device_get(self._traj)
+    trajectory = jax.tree_map(lambda *xs: np.stack(xs), *trajectory)
+    self._timestep = timestep
+    self._agent_state = agent_state
+    # Keep the bootstrap timestep for next trajectory.
+    self._traj = self._traj[-1:]
+    return trajectory
