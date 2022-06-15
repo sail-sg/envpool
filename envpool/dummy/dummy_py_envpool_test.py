@@ -85,6 +85,7 @@ class _DummyEnvPoolTest(absltest.TestCase):
       action = {
         "env_id": state["info:env_id"],
         "players.env_id": state["info:players.env_id"],
+        "list_action": np.zeros((batch, 6), dtype=np.float64),
         "players.id": state["info:players.id"],
         "players.action": state["info:players.id"],
       }
