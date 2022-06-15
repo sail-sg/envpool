@@ -97,7 +97,8 @@ class DummyEnvFns {
    */
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    return MakeDict("players.action"_.Bind(Spec<int>({-1})),
+    return MakeDict("list_action"_.Bind(Spec<double>({6})),
+                    "players.action"_.Bind(Spec<int>({-1})),
                     "players.id"_.Bind(Spec<int>({-1})));
   }
 };
@@ -175,10 +176,6 @@ class DummyEnv : public Env<DummyEnvSpec> {
     int num_players =
         max_num_players_ <= 1 ? 1 : state_ % (max_num_players_ - 1) + 1;
 
-    // Ask envpool to allocate a piece of memory where we can write the state
-    // after reset.
-    auto state = Allocate(num_players);
-
     // Parse the action, and execute the env (dummy env has nothing to do)
     int action_num = action["players.env_id"_].Shape(0);
     for (int i = 0; i < action_num; ++i) {
@@ -186,6 +183,18 @@ class DummyEnv : public Env<DummyEnvSpec> {
         action_num = 0;
       }
     }
+
+    // Check if actions can successfully pass into envpool
+    double x = action["list_action"_][0];
+
+    for (int i = 0; i < 6; ++i) {
+      double y = action["list_action"_][i];
+      CHECK_EQ(x, y);
+    }
+
+    // Ask envpool to allocate a piece of memory where we can write the state
+    // after reset.
+    auto state = Allocate(num_players);
 
     // write the information of the next state into the state.
     for (int i = 0; i < num_players; ++i) {

@@ -28,6 +28,8 @@ from envpool.mujoco.mujoco_dmc_envpool import (
   _DmcFishEnvSpec,
   _DmcHopperEnvPool,
   _DmcHopperEnvSpec,
+  _DmcHumanoidCMUEnvPool,
+  _DmcHumanoidCMUEnvSpec,
   _DmcHumanoidEnvPool,
   _DmcHumanoidEnvSpec,
   _DmcManipulatorEnvPool,
@@ -69,6 +71,11 @@ DmcHopperEnvSpec, DmcHopperDMEnvPool, DmcHopperGymEnvPool = py_env(
 DmcHumanoidEnvSpec, DmcHumanoidDMEnvPool, DmcHumanoidGymEnvPool = py_env(
   _DmcHumanoidEnvSpec, _DmcHumanoidEnvPool
 )
+(
+  DmcHumanoidCMUEnvSpec,
+  DmcHumanoidCMUDMEnvPool,
+  DmcHumanoidCMUGymEnvPool,
+) = py_env(_DmcHumanoidCMUEnvSpec, _DmcHumanoidCMUEnvPool)
 (
   DmcManipulatorEnvSpec,
   DmcManipulatorDMEnvPool,
@@ -115,6 +122,9 @@ __all__ = [
   "DmcHumanoidEnvSpec",
   "DmcHumanoidDMEnvPool",
   "DmcHumanoidGymEnvPool",
+  "DmcHumanoidCMUEnvSpec",
+  "DmcHumanoidCMUDMEnvPool",
+  "DmcHumanoidCMUGymEnvPool",
   "DmcManipulatorEnvSpec",
   "DmcManipulatorDMEnvPool",
   "DmcManipulatorGymEnvPool",

@@ -6,8 +6,8 @@ package(default_visibility = ["//visibility:public"])
 genrule(
     name = "gen_atari_roms",
     srcs = ["@atari_roms//:roms"],
-    outs = ["atari_roms"],
-    cmd = "cp -r $(SRCS) $(OUTS)",
+    outs = ["roms"],
+    cmd = "mkdir -p $(OUTS) && cp $(SRCS) $(OUTS)",
 )
 
 genrule(
@@ -87,10 +87,12 @@ py_test(
 
 py_test(
     name = "atari_envpool_test",
+    size = "enormous",
     srcs = ["atari_envpool_test.py"],
     deps = [
         ":atari",
         requirement("numpy"),
+        requirement("jax"),
         requirement("dm-env"),
         requirement("absl-py"),
         requirement("opencv-python-headless"),

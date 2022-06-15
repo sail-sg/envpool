@@ -41,10 +41,14 @@ TEST(DummyEnvPoolTest, SplitZeroAction) {
   auto state_vec = envpool.Recv();
   // construct action
   std::vector<Array> raw_action({Array(Spec<int>({4})), Array(Spec<int>({8})),
+                                 Array(Spec<double>({4, 6})),
                                  Array(Spec<int>({8})), Array(Spec<int>({8}))});
   DummyAction action(&raw_action);
   for (int i = 0; i < 4; ++i) {
     action["env_id"_][i] = i;
+    for (int j = 0; j < 6; ++j) {
+      action["list_action"_][i][j] = 3.0 + i;
+    }
   }
   std::vector<int> player_env_id({1, 2, 0, 2, 0, 1, 1, 2});
   for (int i = 0; i < 8; ++i) {
@@ -131,6 +135,12 @@ void Runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
     all_env_ids[i] = i;
   }
   envpool.Reset(all_env_ids);
+  auto list_action = Array(Spec<double>({num_envs, 6}));
+  for (int i = 0; i < num_envs; ++i) {
+    for (int j = 0; j < 6; ++j) {
+      list_action[i][j] = 5.0 + i;
+    }
+  }
   auto start = std::chrono::system_clock::now();
   for (int i = 0; i < total_iter; ++i) {
     // recv
@@ -195,10 +205,11 @@ void Runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
       }
     }
     // construct action
-    std::vector<Array> raw_action(4);
+    std::vector<Array> raw_action(5);
     DummyAction action(&raw_action);
     action["env_id"_] = env_id;
     action["players.env_id"_] = player_env_id;
+    action["list_action"_] = list_action;
     action["players.action"_] = player_id;
     action["players.id"_] = player_id;
     // send

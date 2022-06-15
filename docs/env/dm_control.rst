@@ -46,7 +46,7 @@ BallInCupCatch-v1
 - ``max_episode_steps``: 1000;
 
 
-CartpoleBalance-v1, CartpoleBalanceSparse-v1, CarpoletSwingup-v1, CartpoleSwingupSparse-v1, CartpoleTwoPoles-v1, CartPoleThreePoles-v1
+CartpoleBalance-v1, CartpoleBalanceSparse-v1, CarpoletSwingup-v1, CartpoleSwingupSparse-v1, CartpoleTwoPoles-v1, CartpoleThreePoles-v1
 --------------------------------------------------------------------------------------------------------------------------------------
 
 `dm_control suite cartpole source code
@@ -160,6 +160,20 @@ HumanoidStand-v1, HumanoidWalk-v1, HumanoidRun-v1, HumanoidRunPureState-v1
     ``HumanoidRunPureState-v1`` tasks.
 
 
+HumanoidCMUStand-v1, HumanoidCMURun-v1
+--------------------------------------
+
+`dm_control suite humanoid-CMU source code
+<https://github.com/deepmind/dm_control/blob/1.0.3.post1/dm_control/suite/humanoid_CMU.py>`_
+
+- Observation spec: a namedtuple with six keys: ``joint_angles (56)``,
+  ``head_height ()``, ``extremities (12)``, ``torso_vertical (3)``,
+  ``com_velocity (3)`` and ``velocity (62)``;
+- Action spec: ``(56)``, with range ``[-1, 1]``;
+- ``frame_skip``: 10;
+- ``max_episode_steps``: 1000;
+
+
 PendulumSwingup-v1
 ------------------
 
@@ -176,7 +190,7 @@ PendulumSwingup-v1
 PointMassEasy-v1, PointMassHard-v1
 ----------------------------------
 
-`dm_control suite point mass source code
+`dm_control suite point-mass source code
 <https://github.com/deepmind/dm_control/blob/1.0.3.post1/dm_control/suite/point_mass.py>`_
 
 - Observation spec: a namedtuple with three keys: ``position (2)``,

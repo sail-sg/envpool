@@ -15,14 +15,12 @@ jinja2
 numpy
 opencv-python-headless
 scipy
-setuptools<=59.5.0
+setuptools
 six
 tensorboard
 tianshou
 torch
 tqdm
-types-filelock
-types-protobuf
 numba
 llvmlite
 wheel
@@ -35,7 +33,7 @@ google-auth-oauthlib
 tensorboard-data-server
 typing-extensions
 werkzeug
-protobuf
+protobuf<=4.20.0
 rsa
 requests_oauthlib
 idna
@@ -48,3 +46,4 @@ oauthlib
 pyasn1
 typed-ast
 typing-extensions
+jax[cpu]

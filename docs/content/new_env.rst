@@ -698,7 +698,7 @@ The dependency string format is ``@<package>`` or ``@<package>//:<name>``.
 For ``genrule()`` and ``data = [...]``, please refer to `Bazel official
 documentation
 <https://docs.bazel.build/versions/main/be/general.html#genrule>`_ or
-`Atari BUILD example <https://github.com/sail-sg/envpool/blob/v0.4.1/envpool/atari/BUILD>`_.
+`Atari BUILD example <https://github.com/sail-sg/envpool/blob/v0.6.1.post1/envpool/atari/BUILD>`_.
 
 
 Register CartPole-v0/1 in EnvPool
@@ -774,7 +774,7 @@ successfully. In ``setup.cfg``:
 
     [options.package_data]
     envpool = atari/*.so
-        atari/atari_roms/*/*.bin
+        atari/roms/*.bin
    +    classic_control/*.so
 
 Now you can run ``envpool.make("CartPole-v0")`` by re-installing EnvPool:

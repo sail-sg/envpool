@@ -73,6 +73,9 @@ class EnvSpec {
           std::to_string(config["num_envs"_]) +
           ", batch_size = " + std::to_string(config["batch_size"_]));
     }
+    if (config["batch_size"_] == 0) {
+      config["batch_size"_] = config["num_envs"_];
+    }
   }
 };
 

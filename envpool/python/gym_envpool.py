@@ -45,7 +45,19 @@ class GymEnvPoolMeta(ABCMeta):
   def __new__(cls: Any, name: str, parents: Tuple, attrs: Dict) -> Any:
     """Check internal config and initialize data format convertion."""
     base = parents[0]
-    parents = (base, GymEnvPoolMixin, EnvPoolMixin, gym.Env)
+    try:
+      from .lax import XlaMixin
+      parents = (base, GymEnvPoolMixin, EnvPoolMixin, XlaMixin, gym.Env)
+    except ImportError:
+
+      def _xla(self: Any) -> None:
+        raise RuntimeError(
+          "XLA is disabled. To enable XLA please install jax."
+        )
+
+      attrs["xla"] = _xla
+      parents = (base, GymEnvPoolMixin, EnvPoolMixin, gym.Env)
+
     state_keys = base._state_keys
     action_keys = base._action_keys
     check_key_duplication(name, "state", state_keys)

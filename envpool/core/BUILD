@@ -171,10 +171,17 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "xla",
+    hdrs = ["xla.h"],
+    deps = [":array"],
+)
+
 pybind_library(
     name = "py_envpool",
     hdrs = ["py_envpool.h"],
     deps = [
         ":envpool",
+        ":xla",
     ],
 )

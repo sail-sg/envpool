@@ -13,17 +13,27 @@
 # limitations under the License.
 """Protocol of C++ EnvPool."""
 
-from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Type, Union
-
-try:
-  from typing import Protocol
-except ImportError:
-  from typing_extensions import Protocol  # type: ignore
+from typing import (
+  Any,
+  Callable,
+  Dict,
+  List,
+  NamedTuple,
+  Optional,
+  Tuple,
+  Type,
+  Union,
+)
 
 import dm_env
 import gym
 import numpy as np
 from dm_env import TimeStep
+
+try:
+  from typing import Protocol
+except ImportError:
+  from typing_extensions import Protocol  # type: ignore
 
 
 class EnvSpec(Protocol):
@@ -220,3 +230,6 @@ class EnvPool(Protocol):
     env_id: Optional[np.ndarray] = None,
   ) -> Union[TimeStep, Tuple]:
     """Envpool reset interface."""
+
+  def xla(self) -> Tuple[Any, Callable, Callable, Callable]:
+    """Get the xla functions."""

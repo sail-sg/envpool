@@ -23,7 +23,7 @@ from envpool.registration import (
   register,
 )
 
-__version__ = "0.6.1.post1"
+__version__ = "0.6.2"
 __all__ = [
   "register",
   "make",
