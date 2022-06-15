@@ -18,6 +18,7 @@ import functools
 import itertools
 import queue
 import threading
+import time
 import warnings
 from typing import Dict, Tuple
 
@@ -67,8 +68,8 @@ class Learner:
   ):
     if jax.device_count() > 1:
       warnings.warn(
-        'Note: the impala example will only take advantage of a '
-        'single accelerator.'
+        "Note: the impala example will only take advantage of a "
+        "single accelerator."
       )
 
     self._agent = agent
@@ -91,6 +92,9 @@ class Learner:
     if logger is None:
       logger = util.NullLogger()
     self._logger = logger
+
+    self._learner_wait_time = 0
+    self._learner_step_time = 0
 
   def _loss(
     self,
@@ -144,10 +148,10 @@ class Learner:
     total_loss += 0.001 * ent_loss
 
     logs = {}
-    logs['PG_loss'] = pg_loss
-    logs['baseline_loss'] = baseline_loss
-    logs['entropy_loss'] = ent_loss
-    logs['total_loss'] = total_loss
+    logs["PG_loss"] = pg_loss
+    logs["baseline_loss"] = baseline_loss
+    logs["entropy_loss"] = ent_loss
+    logs["total_loss"] = total_loss
     return total_loss, logs
 
   @functools.partial(jax.jit, static_argnums=0)
@@ -163,8 +167,8 @@ class Learner:
     weight_norm = optimizers.l2_norm(params)
     logs.update(
       {
-        'grad_norm_unclipped': grad_norm_unclipped,
-        'weight_norm': weight_norm,
+        "grad_norm_unclipped": grad_norm_unclipped,
+        "weight_norm": weight_norm,
       }
     )
     return params, updated_opt_state, logs
@@ -180,14 +184,15 @@ class Learner:
     """Elementary data pipeline."""
     batch = []
     while not self._done:
-      # Try to get a batch. Skip the iteration if we couldn't.
+      # Try to get a batch. Skip the iteration if we couldn"t.
+      st_time = time.time()
       try:
         for _ in range(len(batch), self._batch_size):
           # As long as possible while keeping learner_test time reasonable.
           batch.append(self._host_q.get(timeout=10))
       except queue.Empty:
         continue
-
+      self._learner_wait_time = time.time() - st_time
       assert len(batch) == self._batch_size
       # Prepare for consumption, then put batch onto device.
       stacked_batch = jax.tree_map(lambda *xs: np.stack(xs, axis=1), *batch)
@@ -209,7 +214,9 @@ class Learner:
                  ) if max_iterations != -1 else itertools.count()
     for _ in steps:
       batch = self._device_q.get()
+      st_time = time.time()
       params, opt_state, logs = self.update(params, opt_state, batch)
+      self._learner_step_time = time.time() - st_time
       num_frames += self._frames_per_iter
 
       # Collect parameters to distribute to downstream actors.
@@ -217,9 +224,13 @@ class Learner:
 
       # Collect and write logs out.
       logs = jax.device_get(logs)
-      logs.update({
-        'num_frames': num_frames,
-      })
+      logs.update(
+        {
+          "num_frames": num_frames,
+          "learner_wait_time": self._learner_wait_time,
+          "learner_step_time": self._learner_step_time,
+        }
+      )
       self._logger.write(logs)
 
     # Shut down.
@@ -253,7 +264,7 @@ class BatchLearner(Learner):
     batch = []
     assert self._batch_size % self._num_envs == 0
     while not self._done:
-      # Try to get a batch. Skip the iteration if we couldn't.
+      # Try to get a batch. Skip the iteration if we couldn"t.
       try:
         for _ in range(len(batch), self._batch_size // self._num_envs):
           # As long as possible while keeping learner_test time reasonable.
