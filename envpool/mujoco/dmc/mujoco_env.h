@@ -62,6 +62,8 @@ class MujocoEnv {
   int n_sub_steps_, max_episode_steps_, elapsed_step_;
   float reward_, discount_;
   bool done_;
+  unsigned char* rgb_array_;
+  auto* depth_array_;
 #ifdef ENVPOOL_TEST
   std::unique_ptr<mjtNum> qpos0_;
 #endif

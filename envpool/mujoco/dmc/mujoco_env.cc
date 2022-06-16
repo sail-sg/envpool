@@ -213,7 +213,7 @@ void MujocoEnv::PhysicsRender(int height, int width,
 
   // segmentation results not implemented
 
-  return { rgb_array_, depth_array_, segmentation_array_ }
+  return {rgb_array_, depth_array_, segmentation_array_};
 }
 
 // randomizer
