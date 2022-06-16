@@ -94,8 +94,8 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
 }
 
 MujocoEnv::~MujocoEnv() {
-  mj_deleteModel(model_);
   mj_deleteData(data_);
+  mj_deleteModel(model_);
   mjr_freeContext(&context_);
   mjv_freeScene(&scene_);
   closeOpenGL();
@@ -261,7 +261,7 @@ void MujocoEnv::RandomizeLimitedAndRotationalJoints(std::mt19937* gen) {
   }
 }
 // create OpenGL context/window
-void initOpenGL(void) {
+void MujocoEnv::initOpenGL(void) {
   //------------------------ EGL
 #if defined(MJ_EGL)
   // desired config
@@ -358,7 +358,7 @@ void initOpenGL(void) {
 }
 
 // close OpenGL context/window
-void closeOpenGL(void) {
+void MujocoEnv::closeOpenGL(void) {
   //------------------------ EGL
 #if defined(MJ_EGL)
   // get current display
