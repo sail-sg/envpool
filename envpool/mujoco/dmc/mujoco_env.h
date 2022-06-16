@@ -55,6 +55,10 @@ class MujocoEnv {
  protected:
   mjModel* model_;
   mjData* data_;
+  mjvScene scene_;
+  mjvCamera camera_;
+  mjvOption option_;
+  mjrContext context_;
   int n_sub_steps_, max_episode_steps_, elapsed_step_;
   float reward_, discount_;
   bool done_;
@@ -105,6 +109,10 @@ class MujocoEnv {
   // randomizer
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/utils/randomizers.py#L35
   void RandomizeLimitedAndRotationalJoints(std::mt19937* gen);
+  // create OpenGL context/window
+  void initOpenGL(void);
+  // close OpenGL context/window
+  void closeOpenGL(void);
 };
 
 }  // namespace mujoco_dmc
