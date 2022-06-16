@@ -90,6 +90,8 @@ cc_library(
         "//envpool/core:async_envpool",
         "@mujoco//:mujoco_lib",
         "@pugixml",
+        "@glfw//:glfw",
+
     ],
 )
 

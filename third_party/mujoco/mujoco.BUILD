@@ -10,6 +10,7 @@ cc_library(
     includes = [
         "include",
         "include/mujoco",
+        "sample",
     ],
     linkopts = ["-Wl,-rpath,'$$ORIGIN'"],
     linkstatic = 0,
