@@ -87,10 +87,12 @@ py_test(
 
 py_test(
     name = "atari_envpool_test",
+    size = "enormous",
     srcs = ["atari_envpool_test.py"],
     deps = [
         ":atari",
         requirement("numpy"),
+        requirement("jax"),
         requirement("dm-env"),
         requirement("absl-py"),
         requirement("opencv-python-headless"),

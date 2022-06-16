@@ -128,6 +128,16 @@ py_library(
     deps = ["//envpool/python:api"],
 )
 
+cc_test(
+    name = "mujoco_envpool_test",
+    size = "enormous",
+    srcs = ["gym/mujoco_gym_envpool_test.cc"],
+    deps = [
+        ":mujoco_gym_env",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 py_test(
     name = "mujoco_gym_deterministic_test",
     size = "enormous",
