@@ -66,7 +66,7 @@ class MujocoEnv {
   bool depth_, segmentation_;
   const std::string& camera_id_;
   unsigned char* rgb_array_;
-  auto* depth_array_;
+  float* depth_array_;
 #ifdef ENVPOOL_TEST
   std::unique_ptr<mjtNum> qpos0_;
 #endif
