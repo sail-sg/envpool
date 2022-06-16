@@ -106,6 +106,10 @@ class MujocoEnv {
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/mujoco/engine.py#L146
   void PhysicsStep(int nstep, const mjtNum* action);
 
+  // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/mujoco/engine.py#L165
+  void MujocoEnv::PhysicsRender(int height, int width,
+                                const std::string& camera_id, bool depth,
+                                bool segmentation);
   // randomizer
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/utils/randomizers.py#L35
   void RandomizeLimitedAndRotationalJoints(std::mt19937* gen);
