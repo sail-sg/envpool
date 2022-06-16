@@ -11,6 +11,6 @@ cc_library(
     linkopts = select({
         "@bazel_tools//src/conditions:linux_x86_64": LINUX_LINKOPTS,
     }),
-    deps = [],
     strip_include_prefix = "include",
+    deps = [],
 )

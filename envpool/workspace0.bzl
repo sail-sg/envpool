@@ -18,7 +18,6 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 
-
 def workspace():
     """Load requested packages."""
     maybe(
@@ -316,7 +315,7 @@ def workspace():
         ],
         build_file = "//third_party/vizdoom_extra_maps:vizdoom_extra_maps.BUILD",
     )
-    
+
     new_git_repository(
         name = "glfw",
         remote = "https://github.com/glfw/glfw.git",
