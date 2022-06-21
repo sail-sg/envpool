@@ -96,7 +96,7 @@ def build_experiment_config(FLAGS):
 
   num_envs = FLAGS.num_envs if use_batch_env else -1
   num_steps = FLAGS.num_steps // FLAGS.num_envs if \
-     use_batch_env else FLAGS.num_steps
+    use_batch_env else FLAGS.num_steps
 
   config = ppo.PPOConfig()
   ppo_builder = helpers.PPOBuilder(config, num_envs)
@@ -136,9 +136,9 @@ def main():
     config.update(vars(FLAGS))
     experiment.logger_factory = partial(
       helpers.make_logger,
+      config=config,
       run_name=run_name,
       wb_entity=FLAGS.wb_entity,
-      config=config
     )
 
   experiments.run_experiment(

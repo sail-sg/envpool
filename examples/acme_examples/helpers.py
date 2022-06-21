@@ -360,11 +360,11 @@ def make_mujoco_environment(
 
 def make_logger(
   label: str,
-  steps_key: str = "steps",
-  task_instance: int = 0,
+  config: dict,
   run_name: str = "",
   wb_entity: str = "",
-  config: dict = {},
+  steps_key: str = "steps",
+  task_instance: int = 0,
 ) -> loggers.Logger:
   del task_instance, steps_key
   num_envs = config["num_envs"] if config["use_batch_env"] else 1
