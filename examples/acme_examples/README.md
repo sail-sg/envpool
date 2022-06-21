@@ -1,11 +1,11 @@
 ### Dependency
-* Acme
+* [Acme](https://github.com/deepmind/acme)
 
 Acme has only released v0.4.0 on PyPI for now (22/06/03), which is far behind
 the master codes, where APIs for constructing experiments were added.
 
 We are using a specific master version (84e0923), so please make sure you
-install acme using method 4 (https://github.com/deepmind/acme#installation).
+install acme using [method 4](https://github.com/deepmind/acme#installation).
 
 * Others
 ```bash
@@ -17,4 +17,6 @@ wandb==0.12.17
 
 
 ### Run
-`python examples/acme_examples/ppo_continuous.py --use-envpool`
+```bash
+python examples/acme_examples/ppo_continuous.py --use-envpool
+```
