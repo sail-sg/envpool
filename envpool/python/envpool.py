@@ -61,10 +61,10 @@ class EnvPoolMixin(ABC):
     if isinstance(action, dict):
       adict = {".".join(k): v for k, v in tree.flatten_with_path(action)}
     else:  # only 3 keys in action_keys
-      adict = {
-        self._spec._action_keys[-1]:
-          action.astype(self._spec._action_spec[-1][0], order='C')
-      }
+      if isinstance(action, np.ndarray):
+        # else it could be a jax array, when using xla
+        action = action.astype(self._spec._action_spec[-1][0], order='C')
+      adict = {self._spec._action_keys[-1]: action}
     if env_id is None:
       if "env_id" not in adict:
         adict["env_id"] = self.all_env_ids

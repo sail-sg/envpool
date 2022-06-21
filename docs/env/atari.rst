@@ -96,7 +96,6 @@ related discussions at
 * ``Casino-v5``
 * ``Centipede-v5``
 * ``ChopperCommand-v5``
-* ``Combat-v5``
 * ``CrazyClimber-v5``
 * ``Crossbow-v5``
 * ``Darkchambers-v5``
@@ -124,7 +123,6 @@ related discussions at
 * ``IceHockey-v5``
 * ``Jamesbond-v5``
 * ``JourneyEscape-v5``
-* ``Joust-v5``
 * ``Kaboom-v5``
 * ``Kangaroo-v5``
 * ``KeystoneKapers-v5``
@@ -136,7 +134,6 @@ related discussions at
 * ``LaserGates-v5``
 * ``LostLuggage-v5``
 * ``MarioBros-v5``
-* ``MazeCraze-v5``
 * ``MiniatureGolf-v5``
 * ``MontezumaRevenge-v5``
 * ``MrDo-v5``
@@ -176,7 +173,6 @@ related discussions at
 * ``VideoChess-v5``
 * ``VideoCube-v5``
 * ``VideoPinball-v5``
-* ``Warlords-v5``
 * ``WizardOfWor-v5``
 * ``WordZapper-v5``
 * ``YarsRevenge-v5``
