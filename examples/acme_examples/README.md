@@ -14,3 +14,7 @@ jaxlib==0.3.5
 libtpu-nightly==0.1.dev20220412
 wandb==0.12.17
 ```
+
+
+### Run
+`python examples/acme_examples/ppo_continuous.py --use-envpool`
