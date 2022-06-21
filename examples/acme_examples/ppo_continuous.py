@@ -19,14 +19,10 @@ import os
 from dataclasses import asdict
 from functools import partial
 
+import helpers
 import jax
 from acme.agents.jax import ppo
 from acme.jax import experiments
-from acme_envpool_utils.helpers import (
-  PPOBuilder,
-  make_logger,
-  make_mujoco_environment,
-)
 
 
 def parse_args():
@@ -103,7 +99,7 @@ def build_experiment_config(FLAGS):
      use_batch_env else FLAGS.num_steps
 
   config = ppo.PPOConfig()
-  ppo_builder = PPOBuilder(config, num_envs)
+  ppo_builder = helpers.PPOBuilder(config, num_envs)
 
   config = asdict(config)
   config["use_batch_env"] = use_batch_env
@@ -112,7 +108,7 @@ def build_experiment_config(FLAGS):
 
   return experiments.Config(
     builder=ppo_builder,
-    environment_factory=lambda _: make_mujoco_environment(
+    environment_factory=lambda _: helpers.make_mujoco_environment(
       task,
       use_envpool=use_envpool,
       use_vec_env=use_vec_env,
@@ -139,7 +135,10 @@ def main():
     run_name += f"__seed-{FLAGS.seed}"
     config.update(vars(FLAGS))
     experiment.logger_factory = partial(
-      make_logger, run_name=run_name, wb_entity=FLAGS.wb_entity, config=config
+      helpers.make_logger,
+      run_name=run_name,
+      wb_entity=FLAGS.wb_entity,
+      config=config
     )
 
   experiments.run_experiment(
