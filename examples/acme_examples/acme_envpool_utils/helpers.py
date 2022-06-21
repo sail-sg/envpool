@@ -204,10 +204,7 @@ class AutoResetSequenceAdder(Adder):
       )
     )
     if not first_write and not period_reached:
-      print(self._writer.episode_steps, "return!")
       return
-    print(self._writer.episode_steps)
-    # import pdb;pdb.set_trace()
 
     get_traj = operator.itemgetter(slice(-self._sequence_length, None))
 
@@ -654,7 +651,10 @@ class IMPALABuilder(
   ) -> acme.Actor:
     del environment_spec
     variable_client = variable_utils.VariableClient(
-      client=variable_source, key="network", update_period=1000, device="cpu"
+      client=variable_source,
+      key="network",
+      update_period=1000 // self._num_envs,
+      device="cpu"
     )
     return IMPALAActor(
       forward_fn=policy.forward_fn,
@@ -682,7 +682,6 @@ class EnvironmentLoop(core.Worker):
     self._logger = logger or loggers.make_default_logger(
       label, steps_key=self._counter.get_steps_key()
     )
-    self._select_action = self._actor.select_action
 
   def run(self):
     episode_return = tree.map_structure(
@@ -692,12 +691,9 @@ class EnvironmentLoop(core.Worker):
       _generate_zeros_from_spec, self._environment.reward_spec()
     )
     timestep = self._environment.reset()
-    print("reset")
     self._actor.observe_first(timestep)
-    print("ob first")
     while True:
-      print("step!")
-      action = self._select_action(timestep.observation)
+      action = self._actor.select_action(timestep.observation)
       action = utils.fetch_devicearray(action)
       timestep = self._environment.step(action)
       self._actor.observe(action, next_timestep=timestep)
@@ -714,6 +710,8 @@ class EnvironmentLoop(core.Worker):
           self._logger.write(result)
           episode_length[i] = 0
           episode_return[i] = 0
+      self._actor.update()
+      self._counter.increment(steps=1)
 
 
 class BatchEnvWrapper(dm_env.Environment):
