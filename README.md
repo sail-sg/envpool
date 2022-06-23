@@ -31,11 +31,12 @@ Here are EnvPool's several highlights:
 - **~3x** throughput of Python subprocess-based vector env on low resource setup like 12 CPU cores;
 - Comparing with existing GPU-based solution ([Brax](https://github.com/google/brax) / [Isaac-gym](https://developer.nvidia.com/isaac-gym)), EnvPool is a **general** solution for various kinds of speeding-up RL environment parallelization;
 - XLA support with Jax jit function: [XLA Interface](https://envpool.readthedocs.io/en/latest/content/xla_interface.html);
-- Compatible with some existing RL libraries, e.g., [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3), [Tianshou](https://github.com/thu-ml/tianshou), [ACME](https://github.com/deepmind/acme), or [CleanRL](https://github.com/vwxyzjn/cleanrl).
+- Compatible with some existing RL libraries, e.g., [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3), [Tianshou](https://github.com/thu-ml/tianshou), [ACME](https://github.com/deepmind/acme), [CleanRL](https://github.com/vwxyzjn/cleanrl), or [rl\_games](https://github.com/Denys88/rl_games).
   - Stable-Baselines3 [`Pendulum-v1` example](https://github.com/sail-sg/envpool/blob/main/examples/sb3_examples/ppo.py);
   - Tianshou [`CartPole` example](https://github.com/sail-sg/envpool/blob/main/examples/tianshou_examples/cartpole_ppo.py), [`Pendulum-v1` example](https://github.com/sail-sg/envpool/blob/main/examples/tianshou_examples/pendulum_ppo.py), [Atari example](https://github.com/thu-ml/tianshou/tree/master/examples/atari#envpool), [Mujoco example](https://github.com/thu-ml/tianshou/tree/master/examples/mujoco#envpool), and [integration guideline](https://tianshou.readthedocs.io/en/master/tutorials/cheatsheet.html#envpool-integration);
   - ACME [`HalfCheetah` example](https://github.com/sail-sg/envpool/blob/main/examples/acme_examples/ppo_continuous.py);
-  - CleanRL [`Pong-v5` example](https://github.com/sail-sg/envpool/blob/main/examples/cleanrl_examples/ppo_atari_envpool.py) ([Solving Pong in 5 mins](https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/#solving-pong-in-5-minutes-with-ppo--envpool) ([tracked experiment](https://wandb.ai/costa-huang/cleanRL/runs/opk2dmta))).
+  - CleanRL [`Pong-v5` example](https://github.com/sail-sg/envpool/blob/main/examples/cleanrl_examples/ppo_atari_envpool.py) ([Solving Pong in 5 mins](https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/#solving-pong-in-5-minutes-with-ppo--envpool) ([tracked experiment](https://wandb.ai/costa-huang/cleanRL/runs/opk2dmta)));
+  - rl\_games [Atari example](https://github.com/Denys88/rl_games/blob/master/docs/ATARI_ENVPOOL.md) (2 mins Pong and 15 mins Breakout) and [Mujoco example](https://github.com/Denys88/rl_games/blob/master/docs/MUJOCO_ENVPOOL.md) (5 mins Ant and HalfCheetah).
 
 ## Installation
 
