@@ -37,7 +37,7 @@ Here are EnvPool's several highlights:
   `CleanRL <https://github.com/vwxyzjn/cleanrl>`_
   (`Solving Pong in 5 mins <https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/#solving-pong-in-5-minutes-with-ppo--envpool>`_),
   `rl_games <https://github.com/Denys88/rl_games>`_ (2 mins `Pong <https://colab.research.google.com/drive/1iWFv0g67mWqJONoFKNWUmu3hdxn_qUf8?usp=sharing>`_, 15 mins
-  Breakout, 5 mins `Ant <https://colab.research.google.com/drive/1C9yULxU_ahQ_i6NUHCvOLoeSwJovQjdz?usp=sharing>`_ and HalfCheetah).
+  `Breakout <https://colab.research.google.com/drive/1U_NxL6gSs0yRVhfl0cKl9ttRmcmMCiBS?usp=sharing>`_, 5 mins `Ant <https://colab.research.google.com/drive/1C9yULxU_ahQ_i6NUHCvOLoeSwJovQjdz?usp=sharing>`_ and `HalfCheetah <https://colab.research.google.com/drive/1bser52bpItzmlME00IA0bbmPdp1Xm0fy?usp=sharing>`_).
 
 Installation
 ------------
