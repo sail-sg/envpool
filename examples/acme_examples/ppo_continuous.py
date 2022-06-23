@@ -1,4 +1,4 @@
-# Copyright 2021 Garena Online Private Limited
+# Copyright 2022 Garena Online Private Limited
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,13 +32,13 @@ def parse_args():
     "--exp-name",
     type=str,
     default=os.path.basename(__file__).rstrip(".py"),
-    help="Name of this experiment."
+    help="Name of this experiment.",
   )
   parser.add_argument(
     "--env-name",
     type=str,
     default="HalfCheetah-v3",
-    help="What environment to run."
+    help="What environment to run.",
   )
   parser.add_argument(
     "--use-envpool",
@@ -46,7 +46,7 @@ def parse_args():
     default=False,
     nargs="?",
     const=True,
-    help="Whether to use EnvPool."
+    help="Whether to use EnvPool.",
   )
   parser.add_argument(
     "--use-vec-env",
@@ -54,20 +54,20 @@ def parse_args():
     default=False,
     nargs="?",
     const=True,
-    help="Whether to use SB3 VecEnv."
+    help="Whether to use SB3 VecEnv.",
   )
   parser.add_argument(
     "--num-envs",
     type=int,
     default=8,
-    help="Number of environments (EnvPool/DummyVecEnv)."
+    help="Number of environments (EnvPool/DummyVecEnv).",
   )
   parser.add_argument("--seed", type=int, default=0, help="Random seed.")
   parser.add_argument(
     "--num-steps",
     type=int,
     default=1_000_000,
-    help="Number of env steps to run."
+    help="Number of env steps to run.",
   )
   parser.add_argument(
     "--use-wb",
@@ -75,7 +75,7 @@ def parse_args():
     default=False,
     nargs="?",
     const=True,
-    help="Whether to use WandB."
+    help="Whether to use WandB.",
   )
   parser.add_argument(
     "--wb-project", type=str, default="acme", help="W&B project name."
@@ -118,7 +118,7 @@ def build_experiment_config(FLAGS):
     policy_network_factory=ppo.make_inference_fn,
     evaluator_factories=[],
     seed=0,
-    max_number_of_steps=num_steps - 1
+    max_number_of_steps=num_steps - 1,
   ), config
 
 

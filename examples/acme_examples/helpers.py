@@ -1,4 +1,4 @@
-# Copyright 2021 Garena Online Private Limited
+# Copyright 2022 Garena Online Private Limited
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ class BatchSequenceAdder(reverb_sequence.SequenceAdder):
     environment_spec: specs.EnvironmentSpec,
     extras_spec: types.NestedSpec = ...,
     sequence_length: Optional[int] = None,
-    batch_size: Optional[int] = None
+    batch_size: Optional[int] = None,
   ):
     # Add env batch and time dimension.
     def add_extra_dim(paths: Iterable[str], spec: tf.TensorSpec):
@@ -86,7 +86,7 @@ class BatchSequenceAdder(reverb_sequence.SequenceAdder):
         dtype=tf.bool,
         name="start_of_episode"
       ),
-      extras=trajectory_extras_spec
+      extras=trajectory_extras_spec,
     )
 
     return spec_step
@@ -112,7 +112,7 @@ class AdderWrapper(Adder):
       dict(
         observation=timestep.observation, start_of_episode=timestep.first()
       ),
-      partial_step=True
+      partial_step=True,
     )
     self._adder._add_first_called = True
 
@@ -120,7 +120,7 @@ class AdderWrapper(Adder):
     self,
     action: types.NestedArray,
     next_timestep: TimeStep,
-    extras: types.NestedArray = ...
+    extras: types.NestedArray = ...,
   ):
     next_timestep = TimeStep(
       step_type=next_timestep.step_type,
@@ -137,8 +137,9 @@ def _batched_feed_forward_with_extras_to_actor_core(
   """Modified adapter allowing batched data processing."""
 
   def select_action(
-    params: networks_lib.Params, observation: networks_lib.Observation,
-    state: SimpleActorCoreStateWithExtras
+    params: networks_lib.Params,
+    observation: networks_lib.Observation,
+    state: SimpleActorCoreStateWithExtras,
   ):
     rng = state.rng
     rng1, rng2 = jax.random.split(rng)
@@ -180,13 +181,13 @@ class PPOBuilder(ppo.PPOBuilder):
       environment_spec,
       extra_spec,
       sequence_length=self._sequence_length,
-      batch_size=self._num_envs
+      batch_size=self._num_envs,
     )
     return [
       reverb.Table.queue(
         name=self._config.replay_table_name,
         max_size=self._config.batch_size // self._num_envs,
-        signature=signature
+        signature=signature,
       )
     ]
 
@@ -200,7 +201,7 @@ class PPOBuilder(ppo.PPOBuilder):
     dataset = reverb.TrajectoryDataset.from_table_signature(
       server_address=replay_client.server_address,
       table=self._config.replay_table_name,
-      max_in_flight_samples_per_worker=2 * batch_size
+      max_in_flight_samples_per_worker=2 * batch_size,
     )
 
     def transpose(sample: reverb.ReplaySample) -> reverb.ReplaySample:
@@ -219,7 +220,8 @@ class PPOBuilder(ppo.PPOBuilder):
         return data
 
       return reverb.ReplaySample(
-        info=sample.info, data=tree.map_structure(_process, _data)
+        info=sample.info,
+        data=tree.map_structure(_process, _data),
       )
 
     # Add batch dimension.
@@ -249,7 +251,7 @@ class PPOBuilder(ppo.PPOBuilder):
       variable_source,
       "network",
       device="cpu",
-      update_period=self._config.variable_update_period
+      update_period=self._config.variable_update_period,
     )
     actor = _batched_feed_forward_with_extras_to_actor_core(policy_network)
     return actors.GenericActor(
@@ -279,7 +281,7 @@ class BatchEnvWrapper(dm_env.Environment):
       step_type=np.full(self._num_envs, dm_env.StepType.FIRST, dtype="int32"),
       reward=np.zeros(self._num_envs, dtype="float32"),
       discount=np.ones(self._num_envs, dtype="float32"),
-      observation=observation
+      observation=observation,
     )
     return ts
 
@@ -296,7 +298,7 @@ class BatchEnvWrapper(dm_env.Environment):
       step_type=(done + 1).astype(np.int32),
       reward=reward,
       discount=(1 - done).astype(np.float32),
-      observation=observation
+      observation=observation,
     )
     return ts
 
@@ -307,7 +309,7 @@ class BatchEnvWrapper(dm_env.Environment):
       dtype="float32",
       minimum=space.low,
       maximum=space.high,
-      name="observation"
+      name="observation",
     )
     return obs_spec
 
@@ -323,7 +325,7 @@ class BatchEnvWrapper(dm_env.Environment):
       dtype=space.dtype,
       minimum=space.low,
       maximum=space.high,
-      name="single_action"
+      name="single_action",
     )
 
   def reward_spec(self):

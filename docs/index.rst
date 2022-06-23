@@ -33,6 +33,7 @@ Here are EnvPool's several highlights:
 - Compatible with some existing RL libraries, e.g.,
   `Stable-Baselines3 <https://github.com/DLR-RM/stable-baselines3>`_,
   `Tianshou <https://github.com/thu-ml/tianshou>`_,
+  `ACME <https://github.com/deepmind/acme>`_,
   or `CleanRL <https://github.com/vwxyzjn/cleanrl>`_
   (`Solving Pong in 5 mins <https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/#solving-pong-in-5-minutes-with-ppo--envpool>`_).
 
