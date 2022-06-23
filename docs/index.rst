@@ -36,8 +36,8 @@ Here are EnvPool's several highlights:
   `ACME <https://github.com/deepmind/acme>`_,
   `CleanRL <https://github.com/vwxyzjn/cleanrl>`_
   (`Solving Pong in 5 mins <https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/#solving-pong-in-5-minutes-with-ppo--envpool>`_),
-  `rl_games <https://github.com/Denys88/rl_games>`_ (2 mins Pong, 15 mins
-  Breakout, 5 mins Ant and HalfCheetah).
+  `rl_games <https://github.com/Denys88/rl_games>`_ (2 mins `Pong <https://colab.research.google.com/drive/1iWFv0g67mWqJONoFKNWUmu3hdxn_qUf8?usp=sharing>`_, 15 mins
+  Breakout, 5 mins `Ant <https://colab.research.google.com/drive/1C9yULxU_ahQ_i6NUHCvOLoeSwJovQjdz?usp=sharing>`_ and HalfCheetah).
 
 Installation
 ------------
