@@ -17,7 +17,7 @@ Here are EnvPool's several highlights:
 - Manage a pool of envs, interact with the envs in batched APIs by default;
 - Support both synchronous execution and asynchronous execution;
 - Support both single player and multi-player environment;
-- Easy C++ developer API to add new envs;
+- Easy C++ developer API to add new envs: `Customized C++ environment integration <https://envpool.readthedocs.io/en/latest/content/new_env.html>`_;
 - Free **~2x** speedup with only single environment;
 - **1 Million** Atari frames / **3 Million** Mujoco steps per second
   simulation with 256 CPU cores, **~20x** throughput of Python
