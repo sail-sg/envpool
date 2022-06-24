@@ -31,7 +31,7 @@ class _MujocoDmcSuiteExtDeterministicTest(absltest.TestCase):
     task: str,
     obs_keys: List[str],
     blacklist: Optional[List[str]] = None,
-    num_envs: int = 2,
+    num_envs: int = 4,
   ) -> None:
     np.random.seed(0)
     env0 = envpool_cls(
