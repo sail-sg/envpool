@@ -203,7 +203,7 @@ struct XlaRecv {
       CHECK_LE(recv[i].Shape(0), batch_size * max_num_players);
       cudaMemcpyAsync(out[i], recv[i].Data(),
                       recv[i].size * recv[i].element_size,
-                      cudaMemcpyHostToDevice);
+                      cudaMemcpyHostToDevice, stream);
     }
   }
 };
