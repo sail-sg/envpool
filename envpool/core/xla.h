@@ -17,6 +17,8 @@
 #ifndef ENVPOOL_CORE_XLA_H_
 #define ENVPOOL_CORE_XLA_H_
 
+#include <cuda_runtime_api.h>
+
 #include <cstdint>
 #include <memory>
 #include <numeric>
@@ -25,6 +27,7 @@
 #include <vector>
 
 #include "envpool/core/array.h"
+#include "envpool/core/xla_template.h"
 
 template <typename D>
 constexpr bool is_container_v = false;  // NOLINT
@@ -47,7 +50,7 @@ bool HasDynamicDim(const std::tuple<T...>& state_spec) {
 }
 
 template <typename Dtype>
-Array RawBufferToArray(const void* buffer, ::Spec<Dtype> spec, int batch_size,
+Array CpuBufferToArray(const void* buffer, ::Spec<Dtype> spec, int batch_size,
                        int max_num_players) {
   if (!spec.shape.empty() &&
       spec.shape[0] == -1) {  // If first dim is max_num_players
@@ -60,40 +63,149 @@ Array RawBufferToArray(const void* buffer, ::Spec<Dtype> spec, int batch_size,
   return ret;
 }
 
-template <typename EnvPool>
-void XlaSend(void* out, const void** in) {
-  EnvPool* envpool = *reinterpret_cast<EnvPool**>(const_cast<void*>(in[0]));
-  *reinterpret_cast<EnvPool**>(out) = envpool;
-  in = in + 1;
-  std::vector<Array> action;
-  action.reserve(std::tuple_size_v<typename EnvPool::Action::Keys>);
-  int batch_size = envpool->spec.config["batch_size"_];
-  int max_num_players = envpool->spec.config["max_num_players"_];
-  auto action_spec = envpool->spec.action_spec.AllValues();
-  std::size_t index = 0;
-  std::apply(
-      [&](auto&&... spec) {
-        ((action.emplace_back(
-             RawBufferToArray(in[index++], spec, batch_size, max_num_players))),
-         ...);
-      },
-      action_spec);
-  envpool->Send(action);
+template <typename Dtype>
+Array GpuBufferToArray(cudaStream_t stream, const void* buffer,
+                       ::Spec<Dtype> spec, int batch_size,
+                       int max_num_players) {
+  if (!spec.shape.empty() &&
+      spec.shape[0] == -1) {  // If first dim is max_num_players
+    spec.shape[0] = max_num_players * batch_size;
+  } else {
+    spec = spec.Batch(batch_size);
+  }
+  Array ret(spec);
+  cudaMemcpy(ret.Data(), buffer, ret.size * ret.element_size,
+             cudaMemcpyDeviceToHost);
+  return ret;
+}
+
+template <typename Dtype>
+::Spec<Dtype> NormalizeSpec(const ::Spec<Dtype>& spec, int batch_size,
+                            int max_num_players) {
+  std::vector<int> shape({0});
+  if (spec.shape.size() > 0 && spec.shape[0] == -1) {
+    shape[0] = batch_size * max_num_players;
+    shape.insert(shape.end(), spec.shape.begin() + 1, spec.shape.end());
+  } else {
+    shape[0] = batch_size;
+    shape.insert(shape.end(), spec.shape.begin(), spec.shape.end());
+  }
+  return ::Spec<Dtype>(shape);
+}
+
+/**
+ * If Spec is a container, the xla interface should be disabled.
+ */
+template <typename D>
+::Spec<D> NormalizeSpec(const ::Spec<Container<D>>& spec, int batch_size,
+                        int max_num_players) {
+  std::vector<int> shape({0});
+  if (spec.shape.size() > 0 && spec.shape[0] == -1) {
+    shape[0] = batch_size * max_num_players;
+    shape.insert(shape.end(), spec.shape.begin() + 1, spec.shape.end());
+  } else {
+    shape[0] = batch_size;
+    shape.insert(shape.end(), spec.shape.begin(), spec.shape.end());
+  }
+  return ::Spec<D>(shape);
 }
 
 template <typename EnvPool>
-void XlaRecv(void* out, const void** in) {
-  EnvPool* envpool = *reinterpret_cast<EnvPool**>(const_cast<void*>(in[0]));
-  int batch_size = envpool->spec.config["batch_size"_];
-  int max_num_players = envpool->spec.config["max_num_players"_];
-  void** outs = reinterpret_cast<void**>(out);
-  *reinterpret_cast<EnvPool**>(outs[0]) = envpool;
-  outs = outs + 1;
-  std::vector<Array> recv = envpool->Recv();
-  for (std::size_t i = 0; i < recv.size(); ++i) {
-    CHECK_LE(recv[i].Shape(0), batch_size * max_num_players);
-    std::memcpy(outs[i], recv[i].Data(), recv[i].size * recv[i].element_size);
+struct XlaSend {
+  using In =
+      std::array<void*, std::tuple_size_v<typename EnvPool::Action::Keys>>;
+  using Out = std::array<void*, 0>;
+
+  static decltype(auto) InSpecs(EnvPool* envpool) {
+    int batch_size = envpool->spec.config["batch_size"_];
+    int max_num_players = envpool->spec.config["max_num_players"_];
+    return std::apply(
+        [&](auto&&... s) {
+          return std::make_tuple(
+              NormalizeSpec(s, batch_size, max_num_players)...);
+        },
+        envpool->spec.action_spec.AllValues());
   }
-}
+
+  static decltype(auto) OutSpecs(EnvPool* envpool) { return std::tuple<>(); }
+
+  static void Cpu(EnvPool* envpool, const In& in, const Out& out) {
+    std::vector<Array> action;
+    action.reserve(std::tuple_size_v<typename EnvPool::Action::Keys>);
+    int batch_size = envpool->spec.config["batch_size"_];
+    int max_num_players = envpool->spec.config["max_num_players"_];
+    auto action_spec = envpool->spec.action_spec.AllValues();
+    std::size_t index = 0;
+    std::apply(
+        [&](auto&&... spec) {
+          ((action.emplace_back(CpuBufferToArray(in[index++], spec, batch_size,
+                                                 max_num_players))),
+           ...);
+        },
+        action_spec);
+    envpool->Send(action);
+  }
+
+  static void Gpu(EnvPool* envpool, cudaStream_t stream, const In& in,
+                  const Out& out) {
+    std::vector<Array> action;
+    action.reserve(std::tuple_size_v<typename EnvPool::Action::Keys>);
+    int batch_size = envpool->spec.config["batch_size"_];
+    int max_num_players = envpool->spec.config["max_num_players"_];
+    auto action_spec = envpool->spec.action_spec.AllValues();
+    std::size_t index = 0;
+    std::apply(
+        [&](auto&&... spec) {
+          ((action.emplace_back(GpuBufferToArray(stream, in[index++], spec,
+                                                 batch_size, max_num_players))),
+           ...);
+        },
+        action_spec);
+    envpool->Send(action);
+  }
+};
+
+template <typename EnvPool>
+struct XlaRecv {
+  using In = std::array<void*, 0>;
+  using Out =
+      std::array<void*, std::tuple_size_v<typename EnvPool::State::Keys>>;
+
+  static decltype(auto) InSpecs(EnvPool* envpool) { return std::tuple<>(); }
+
+  static decltype(auto) OutSpecs(EnvPool* envpool) {
+    int batch_size = envpool->spec.config["batch_size"_];
+    int max_num_players = envpool->spec.config["max_num_players"_];
+    return std::apply(
+        [&](auto&&... s) {
+          return std::make_tuple(
+              NormalizeSpec(s, batch_size, max_num_players)...);
+        },
+        envpool->spec.state_spec.AllValues());
+  }
+
+  static void Cpu(EnvPool* envpool, const In& in, const Out& out) {
+    int batch_size = envpool->spec.config["batch_size"_];
+    int max_num_players = envpool->spec.config["max_num_players"_];
+    std::vector<Array> recv = envpool->Recv();
+    for (std::size_t i = 0; i < recv.size(); ++i) {
+      CHECK_LE(recv[i].Shape(0), batch_size * max_num_players);
+      std::memcpy(out[i], recv[i].Data(), recv[i].size * recv[i].element_size);
+    }
+  }
+
+  static void Gpu(EnvPool* envpool, cudaStream_t stream, const In& in,
+                  const Out& out) {
+    int batch_size = envpool->spec.config["batch_size"_];
+    int max_num_players = envpool->spec.config["max_num_players"_];
+    std::vector<Array> recv = envpool->Recv();
+    for (std::size_t i = 0; i < recv.size(); ++i) {
+      CHECK_LE(recv[i].Shape(0), batch_size * max_num_players);
+      cudaMemcpyAsync(out[i], recv[i].Data(),
+                      recv[i].size * recv[i].element_size,
+                      cudaMemcpyHostToDevice);
+    }
+  }
+};
 
 #endif  // ENVPOOL_CORE_XLA_H_

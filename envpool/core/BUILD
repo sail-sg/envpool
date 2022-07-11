@@ -172,9 +172,25 @@ cc_library(
 )
 
 cc_library(
+    name = "xla_template",
+    hdrs = ["xla_template.h"],
+    linkopts = [
+        "-ldl",
+        "-lrt",
+    ],
+    deps = [
+        "@cuda//:cudart_static",
+    ],
+)
+
+cc_library(
     name = "xla",
     hdrs = ["xla.h"],
-    deps = [":array"],
+    deps = [
+        ":array",
+        ":xla_template",
+        "@cuda//:cudart_static",
+    ],
 )
 
 pybind_library(
