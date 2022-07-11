@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""xla template on python side"""
+"""xla template on python side."""
 
 from collections import namedtuple
 from functools import partial
@@ -25,7 +25,7 @@ from jax.interpreters import xla
 from jax.lib import xla_client
 
 
-def shape_with_layout(
+def _shape_with_layout(
   specs: Tuple[Tuple[List[int], Any], ...]
 ) -> Tuple[xla_client.Shape, ...]:
   return tuple(
@@ -36,7 +36,7 @@ def shape_with_layout(
   )
 
 
-def normalize_specs(
+def _normalize_specs(
   specs: Tuple[Tuple[Any, List[int]], ...]
 ) -> Tuple[Tuple[List[int], Any], ...]:
   return tuple(
@@ -44,13 +44,13 @@ def normalize_specs(
   )
 
 
-def make_xla_function(
+def _make_xla_function(
   obj: Any, handle: bytes, name: str, specs: Tuple[Tuple[Any], Tuple[Any]],
   capsules: Tuple[Any, Any]
 ) -> Callable:
   in_specs, out_specs = specs
-  in_specs = normalize_specs(in_specs)
-  out_specs = normalize_specs(out_specs)
+  in_specs = _normalize_specs(in_specs)
+  out_specs = _normalize_specs(out_specs)
   cpu_capsule, gpu_capsule = capsules
   xla_client.register_cpu_custom_call_target(
     f"{type(obj).__name__}_{id(obj)}_{name}_cpu".encode(),
@@ -71,7 +71,7 @@ def make_xla_function(
       return ShapedArray(*out_specs[0])
 
   def translation(c: Any, *args: Any, platform: str = "cpu") -> Any:
-    output_shape_with_layout = shape_with_layout(out_specs)
+    output_shape_with_layout = _shape_with_layout(out_specs)
     if len(out_specs) == 1:
       output_shape = output_shape_with_layout[0]
     else:
@@ -80,7 +80,7 @@ def make_xla_function(
       c,
       f"{type(obj).__name__}_{id(obj)}_{name}_{platform}".encode(),
       operands=args,
-      operand_shapes_with_layout=shape_with_layout(in_specs),
+      operand_shapes_with_layout=_shape_with_layout(in_specs),
       shape_with_layout=output_shape,
       opaque=handle,
       has_side_effect=True,
@@ -104,12 +104,23 @@ def make_xla_function(
 
 
 def make_xla(obj: Any) -> Any:
+  """Return callables that can be jitted in a namedtuple.
+
+  Args:
+    obj: The object that has a `_xla` function.
+      All instances of envpool has a `_xla` function that returns
+      the necessary information for creating jittable send/recv functions.
+
+  Returns:
+    XlaFunctions: A namedtuple, the first element is a handle
+      representing `obj`. The rest of the elements are jittable functions.
+  """
   xla_native = obj._xla()
   method_names = []
   methods = []
   for name, (handle, specs, capsules) in xla_native:
     method_names.append(name)
-    methods.append(make_xla_function(obj, handle, name, specs, capsules))
+    methods.append(_make_xla_function(obj, handle, name, specs, capsules))
   XlaFunctions = namedtuple(  # type: ignore
     "XlaFunctions",
     ["handle", *method_names]
