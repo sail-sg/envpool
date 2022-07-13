@@ -83,7 +83,7 @@ template <typename Dtype>
 ::Spec<Dtype> NormalizeSpec(const ::Spec<Dtype>& spec, int batch_size,
                             int max_num_players) {
   std::vector<int> shape({0});
-  if (spec.shape.size() > 0 && spec.shape[0] == -1) {
+  if (!spec.shape.empty() && spec.shape[0] == -1) {
     shape[0] = batch_size * max_num_players;
     shape.insert(shape.end(), spec.shape.begin() + 1, spec.shape.end());
   } else {
@@ -100,7 +100,7 @@ template <typename D>
 ::Spec<D> NormalizeSpec(const ::Spec<Container<D>>& spec, int batch_size,
                         int max_num_players) {
   std::vector<int> shape({0});
-  if (spec.shape.size() > 0 && spec.shape[0] == -1) {
+  if (!spec.shape.empty() && spec.shape[0] == -1) {
     shape[0] = batch_size * max_num_players;
     shape.insert(shape.end(), spec.shape.begin() + 1, spec.shape.end());
   } else {
