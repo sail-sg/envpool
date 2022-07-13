@@ -14,6 +14,6 @@ pip_workspace()
 
 new_local_repository(
     name = "cuda",
-    path = "/usr/local/cuda-11.2",
+    path = "/usr/local/cuda-11.6",
     build_file = "//third_party/cuda:cuda.BUILD",
 )
