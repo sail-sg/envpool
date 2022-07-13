@@ -147,3 +147,4 @@ train_dir
 log
 _vizdoom*
 MUJOCO_LOG.TXT
+.vscode/
