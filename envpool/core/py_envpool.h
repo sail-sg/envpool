@@ -214,7 +214,10 @@ class PyEnvPool : public EnvPool {
   explicit PyEnvPool(const PySpec& py_spec)
       : EnvPool(py_spec), py_spec(py_spec) {}
 
-  std::tuple<py::array, py::capsule, py::capsule> Xla() {
+  /**
+   * get xla functions
+   */
+  auto Xla() {
     if (HasContainerType(EnvPool::spec.state_spec)) {
       throw std::runtime_error(
           "State of this env has dynamic shaped container, xla is disabled");
@@ -227,13 +230,11 @@ class PyEnvPool : public EnvPool {
       throw std::runtime_error(
           "Xla is not available for multiplayer environment.");
     }
-    py::array_t<uint32_t> handle(std::vector<int>{2});
-    *reinterpret_cast<EnvPool**>(handle.mutable_data()) = this;
-    auto send = py::capsule(reinterpret_cast<void*>(XlaSend<EnvPool>),
-                            "xla._CUSTOM_CALL_TARGET");
-    auto recv = py::capsule(reinterpret_cast<void*>(XlaRecv<EnvPool>),
-                            "xla._CUSTOM_CALL_TARGET");
-    return std::make_tuple(handle, send, recv);
+    return std::make_tuple(
+        std::make_tuple("recv",
+                        CustomCall<EnvPool, XlaRecv<EnvPool>>::Xla(this)),
+        std::make_tuple("send",
+                        CustomCall<EnvPool, XlaSend<EnvPool>>::Xla(this)));
   }
 
   /**
