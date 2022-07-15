@@ -122,13 +122,15 @@ class _AtariEnvPoolTest(absltest.TestCase):
     handle, recv, send, step = env.xla()
     env.async_reset()
     handle, states = recv(handle)
+    info = states[-1]
     action = np.ones(5, dtype=np.int32)
-    handle = send(handle, action)
+    handle = send(handle, action, env_id=info["env_id"])
 
     def actor_step(iter: int, handle: jnp.ndarray) -> jnp.ndarray:
       handle, states = recv(handle)
+      info = states[-1]
       action = jnp.ones(5, dtype=jnp.int32)
-      handle = send(handle, action)
+      handle = send(handle, action, env_id=info["env_id"])
       return handle
 
     @jit

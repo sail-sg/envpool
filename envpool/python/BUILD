@@ -56,6 +56,14 @@ py_library(
 )
 
 py_library(
+    name = "xla_template",
+    srcs = ["xla_template.py"],
+    deps = [
+        requirement("jax"),
+    ],
+)
+
+py_library(
     name = "lax",
     srcs = ["lax.py"],
     deps = [
@@ -64,6 +72,7 @@ py_library(
         requirement("numpy"),
         requirement("absl-py"),
         ":protocol",
+        ":xla_template",
     ],
 )
 
