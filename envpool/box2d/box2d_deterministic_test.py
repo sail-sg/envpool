@@ -19,6 +19,8 @@ import numpy as np
 from absl.testing import absltest
 
 from envpool.box2d import (
+  BipedalWalkerEnvSpec,
+  BipedalWalkerGymEnvPool,
   LunarLanderContinuousEnvSpec,
   LunarLanderContinuousGymEnvPool,
   LunarLanderDiscreteEnvSpec,
@@ -52,6 +54,20 @@ class _Box2dEnvPoolDeterministicTest(absltest.TestCase):
       obs2 = env2.step(action)[0]
       np.testing.assert_allclose(obs0, obs1)
       self.assertFalse(np.allclose(obs0, obs2))
+
+  def test_bipedal_walker(self) -> None:
+    self.run_deterministic_check(
+      BipedalWalkerEnvSpec,
+      BipedalWalkerGymEnvPool,
+      hardcore=False,
+      max_episode_steps=1600,
+    )
+    self.run_deterministic_check(
+      BipedalWalkerEnvSpec,
+      BipedalWalkerGymEnvPool,
+      hardcore=True,
+      max_episode_steps=2000,
+    )
 
   def test_lunar_lander(self) -> None:
     self.run_deterministic_check(

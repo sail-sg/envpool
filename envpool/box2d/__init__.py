@@ -16,10 +16,16 @@
 from envpool.python.api import py_env
 
 from .box2d_envpool import (
+  _BipedalWalkerEnvPool,
+  _BipedalWalkerEnvSpec,
   _LunarLanderContinuousEnvPool,
   _LunarLanderContinuousEnvSpec,
   _LunarLanderDiscreteEnvPool,
   _LunarLanderDiscreteEnvSpec,
+)
+
+BipedalWalkerEnvSpec, BipedalWalkerDMEnvPool, BipedalWalkerGymEnvPool = py_env(
+  _BipedalWalkerEnvSpec, _BipedalWalkerEnvPool
 )
 
 (
@@ -35,6 +41,9 @@ from .box2d_envpool import (
 ) = py_env(_LunarLanderDiscreteEnvSpec, _LunarLanderDiscreteEnvPool)
 
 __all__ = [
+  "BipedalWalkerEnvSpec",
+  "BipedalWalkerDMEnvPool",
+  "BipedalWalkerGymEnvPool",
   "LunarLanderContinuousEnvSpec",
   "LunarLanderContinuousDMEnvPool",
   "LunarLanderContinuousGymEnvPool",
