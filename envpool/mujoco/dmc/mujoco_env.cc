@@ -14,10 +14,12 @@
 
 #include "envpool/mujoco/dmc/mujoco_env.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstring>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace mujoco_dmc {
@@ -139,9 +141,11 @@ void MujocoEnv::ControlStep(const mjtNum* action) {
 void MujocoEnv::TaskBeforeStep(const mjtNum* action) {
   PhysicsSetControl(action);
 }
+
 float MujocoEnv::TaskGetReward() {
   throw std::runtime_error("GetReward not implemented");
 }
+
 float MujocoEnv::TaskGetDiscount() { return 1.0; }
 bool MujocoEnv::TaskShouldTerminateEpisode() { return false; }
 
@@ -261,64 +265,62 @@ void MujocoEnv::RandomizeLimitedAndRotationalJoints(std::mt19937* gen) {
   }
 }
 
-  /**
-   * FrameStack env wrapper implementation.
-   *
-   * The original gray scale image are saved inside maxpool_buf_.
-   * The stacked result is in stack_buf_ where len(stack_buf_) == stack_num_.
-   *
-   * At reset time, we need to clear all data in stack_buf_ with push_all =
-   * true and maxpool = false (there is only one observation); at step time,
-   * we push max(maxpool_buf_[0], maxpool_buf_[1]) at the end of
-   * stack_buf_, and pop the first item in stack_buf_, with push_all = false
-   * and maxpool = true.
-   *
-   * @param push_all whether to use the most recent observation to write all
-   *   of the data in stack_buf_.
-   * @param maxpool whether to perform maxpool operation on the last two
-   *   observation. Maybe there is only one?
-   */
-  void PushStack(bool push_all, bool maxpool) {
-    auto* ptr = static_cast<uint8_t*>(maxpool_buf_[0].Data());
-    if (maxpool) {
-      auto* ptr1 = static_cast<uint8_t*>(maxpool_buf_[1].Data());
-      for (std::size_t i = 0; i < maxpool_buf_[0].size; ++i) {
-        ptr[i] = std::max(ptr[i], ptr1[i]);
-      }
+/**
+ * FrameStack env wrapper implementation.
+ *
+ * The original gray scale image are saved inside maxpool_buf_.
+ * The stacked result is in stack_buf_ where len(stack_buf_) == stack_num_.
+ *
+ * At reset time, we need to clear all data in stack_buf_ with push_all =
+ * true and maxpool = false (there is only one observation); at step time,
+ * we push max(maxpool_buf_[0], maxpool_buf_[1]) at the end of
+ * stack_buf_, and pop the first item in stack_buf_, with push_all = false
+ * and maxpool = true.
+ *
+ * @param push_all whether to use the most recent observation to write all
+ *   of the data in stack_buf_.
+ * @param maxpool whether to perform maxpool operation on the last two
+ *   observation. Maybe there is only one?
+ */
+void MujocoEnv::PushStack(bool push_all, bool maxpool) {
+  auto* ptr = static_cast<uint8_t*>(maxpool_buf_[0].Data());
+  if (maxpool) {
+    auto* ptr1 = static_cast<uint8_t*>(maxpool_buf_[1].Data());
+    for (std::size_t i = 0; i < maxpool_buf_[0].size; ++i) {
+      ptr[i] = std::max(ptr[i], ptr1[i]);
     }
-    Resize(maxpool_buf_[0], &resize_img_, use_inter_area_resize_);
-    Array tgt = std::move(*stack_buf_.begin());
-    ptr = static_cast<uint8_t*>(tgt.Data());
-    stack_buf_.pop_front();
-    if (gray_scale_) {
-      tgt.Assign(resize_img_);
-    } else {
-      auto* ptr1 = static_cast<uint8_t*>(resize_img_.Data());
-      // tgt = resize_img_.transpose(1, 2, 0)
-      // tgt[i, j, k] = resize_img_[j, k, i]
-      std::size_t h = resize_img_.Shape(0);
-      std::size_t w = resize_img_.Shape(1);
-      for (std::size_t j = 0; j < h; ++j) {
-        for (std::size_t k = 0; k < w; ++k) {
-          for (std::size_t i = 0; i < 3; ++i) {
-            ptr[i * h * w + j * w + k] = ptr1[j * w * 3 + k * 3 + i];
-          }
-        }
-      }
-    }
-    std::size_t size = tgt.size;
-    stack_buf_.push_back(std::move(tgt));
-    if (push_all) {
-      for (auto& s : stack_buf_) {
-        auto* ptr_s = static_cast<uint8_t*>(s.Data());
-        if (ptr != ptr_s) {
-          std::memcpy(ptr_s, ptr, size);
+  }
+  Resize(maxpool_buf_[0], &resize_img_, use_inter_area_resize_);
+  Array tgt = std::move(*stack_buf_.begin());
+  ptr = static_cast<uint8_t*>(tgt.Data());
+  stack_buf_.pop_front();
+  if (gray_scale_) {
+    tgt.Assign(resize_img_);
+  } else {
+    auto* ptr1 = static_cast<uint8_t*>(resize_img_.Data());
+    // tgt = resize_img_.transpose(1, 2, 0)
+    // tgt[i, j, k] = resize_img_[j, k, i]
+    std::size_t h = resize_img_.Shape(0);
+    std::size_t w = resize_img_.Shape(1);
+    for (std::size_t j = 0; j < h; ++j) {
+      for (std::size_t k = 0; k < w; ++k) {
+        for (std::size_t i = 0; i < 3; ++i) {
+          ptr[i * h * w + j * w + k] = ptr1[j * w * 3 + k * 3 + i];
         }
       }
     }
   }
-};
-
+  std::size_t size = tgt.size;
+  stack_buf_.push_back(std::move(tgt));
+  if (push_all) {
+    for (auto& s : stack_buf_) {
+      auto* ptr_s = static_cast<uint8_t*>(s.Data());
+      if (ptr != ptr_s) {
+        std::memcpy(ptr_s, ptr, size);
+      }
+    }
+  }
+}
 
 // create OpenGL context/window
 void MujocoEnv::initOpenGL(void) {
