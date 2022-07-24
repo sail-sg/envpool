@@ -65,8 +65,9 @@ class AtariEnvFns {
                          conf["img_height"_], conf["img_width"_]},
                         {0, 255})),
                     "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})),
-                    "info:lives"_.Bind(Spec<int>({-1}, {0, 5})),
-                    "info:reward"_.Bind(Spec<float>({-1})));
+                    "info:lives"_.Bind(Spec<int>({-1})),
+                    "info:reward"_.Bind(Spec<float>({-1})),
+                    "info:terminated"_.Bind(Spec<int>({-1}, {0, 1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -199,7 +200,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
     PushStack(false, skip_id == 0);
     ++elapsed_step_;
     done_ |= (elapsed_step_ >= max_episode_steps_);
-    if (episodic_life_ && env_->lives() < lives_) {
+    if (episodic_life_ && 0 < env_->lives() && env_->lives() < lives_) {
       done_ = true;
     }
     float discount;
@@ -229,6 +230,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
     state["reward"_] = reward;
     state["info:lives"_] = lives_;
     state["info:reward"_] = info_reward;
+    state["info:terminated"_] = env_->game_over();
     for (int i = 0; i < stack_num_; ++i) {
       state["obs"_]
           .Slice(gray_scale_ ? i : i * 3, gray_scale_ ? i + 1 : (i + 1) * 3)
