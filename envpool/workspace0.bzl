@@ -16,6 +16,7 @@
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 load("//third_party/cuda:cuda.bzl", "cuda_configure")
 
 def workspace():
@@ -314,6 +315,13 @@ def workspace():
             "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/isl-org/DirectFuturePrediction/b4757769f167f1bd7fb1ece5fdc6d874409c68a9.zip",
         ],
         build_file = "//third_party/vizdoom_extra_maps:vizdoom_extra_maps.BUILD",
+    )
+
+    new_git_repository(
+        name = "glfw",
+        remote = "https://github.com/glfw/glfw.git",
+        commit = "8d7e5cdb49a1a5247df612157ecffdd8e68923d2",
+        build_file = "@//third_party/glfw:glfw.BUILD",
     )
 
     maybe(

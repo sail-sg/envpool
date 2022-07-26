@@ -88,6 +88,7 @@ cc_library(
     data = [":gen_mujoco_dmc_xml"],
     deps = [
         "//envpool/core:async_envpool",
+        "@glfw",
         "@mujoco//:mujoco_lib",
         "@pugixml",
     ],
