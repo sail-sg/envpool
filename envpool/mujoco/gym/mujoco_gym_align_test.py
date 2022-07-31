@@ -124,7 +124,10 @@ class _MujocoGymAlignTest(absltest.TestCase):
     env0 = mjc_mwe.HalfCheetahEnv()
     env1 = GymHalfCheetahGymEnvPool(
       GymHalfCheetahEnvSpec(
-        GymHalfCheetahEnvSpec.gen_config(gym_reset_return_info=True)
+        GymHalfCheetahEnvSpec.gen_config(
+          gym_reset_return_info=True,
+          max_episode_steps=99,
+        )
       )
     )
     self.run_space_check(env0, env1)
@@ -186,6 +189,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
           terminate_when_unhealthy=False,
           exclude_current_positions_from_observation=False,
           gym_reset_return_info=True,
+          max_episode_steps=999,
         )
       )
     )
