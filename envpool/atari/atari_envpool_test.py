@@ -78,6 +78,51 @@ class _AtariEnvPoolTest(absltest.TestCase):
       np.testing.assert_allclose(obs0, obs1)
       # cv2.imwrite(f"/tmp/log/align{i}.png", obs0[0, 1:].transpose(1, 2, 0))
 
+  def test_reset_life(self) -> None:
+    """Issue 171."""
+    for env_id in [
+      "atlantis", "backgammon", "breakout", "pong", "wizard_of_wor"
+    ]:
+      np.random.seed(0)
+      env = AtariGymEnvPool(
+        AtariEnvSpec(
+          AtariEnvSpec.gen_config(task=env_id, num_envs=1, episodic_life=True)
+        )
+      )
+      action_num = env.action_space.n  # type: ignore
+      env.reset()
+      info = env.step(np.array([0]))[-1]
+      if info["lives"].sum() == 0:
+        # no life in this game
+        continue
+      for _ in range(10000):
+        _, _, done, info = env.step(np.random.randint(0, action_num, 1))
+        if info["lives"][0] == 0:
+          break
+        else:
+          self.assertFalse(info["terminated"][0])
+      if info["lives"][0] > 0:
+        # step too long
+        continue
+      # for normal atari (e.g., breakout)
+      # take an additional step after all lives are exhausted
+      _, _, next_done, next_info = env.step(
+        np.random.randint(0, action_num, 1)
+      )
+      if done[0] and next_info["lives"][0] > 0:
+        self.assertTrue(info["terminated"][0])
+        continue
+      self.assertFalse(done[0])
+      self.assertFalse(info["terminated"][0])
+      while not done[0]:
+        self.assertFalse(info["terminated"][0])
+        _, _, done, info = env.step(np.random.randint(0, action_num, 1))
+      _, _, next_done, next_info = env.step(
+        np.random.randint(0, action_num, 1)
+      )
+      self.assertTrue(next_info["lives"][0] > 0)
+      self.assertTrue(info["terminated"][0])
+
   def test_partial_step(self) -> None:
     num_envs = 5
     max_episode_steps = 10
