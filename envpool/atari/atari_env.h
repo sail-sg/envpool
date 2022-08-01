@@ -231,6 +231,10 @@ class AtariEnv : public Env<AtariEnvSpec> {
     state["info:lives"_] = lives_;
     state["info:reward"_] = info_reward;
     state["info:terminated"_] = env_->game_over();
+    // overwrite current_step to make sure
+    // episodic_life == True behaves correctly
+    // see Issue #179
+    state["elapsed_step"_] = elapsed_step_;
     for (int i = 0; i < stack_num_; ++i) {
       state["obs"_]
           .Slice(gray_scale_ ? i : i * 3, gray_scale_ ? i + 1 : (i + 1) * 3)
