@@ -387,6 +387,16 @@ def workspace():
             "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/erenon/bazel_clang_tidy/783aa523aafb4a6798a538c61e700b6ed27975a7.zip",
         ],
     )
+    
+    maybe(
+        http_archive,
+        name = "football",
+        sha256 = "",
+        urls = [
+            "https://files.pythonhosted.org/packages/98/63/b111538b5db47b8081d8ca82280fadaa145fbd31aa249f49675a01abb8eb/gfootball-2.10.2.tar.gz"
+        ],
+        build_file = "//third_party/gfootball:gfootball.BUILD",
+    )
 
     maybe(
         cuda_configure,
