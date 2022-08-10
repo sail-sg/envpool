@@ -343,11 +343,11 @@ def workspace():
     maybe(
         http_archive,
         name = "mujoco_dmc_xml",
-        sha256 = "74c23e5a56c6575e4f3e422ae6dff8e7e8a4b6959b4b96f9e2f810cb58c266bf",
-        strip_prefix = "dm_control-1.0.3.post1/dm_control",
+        sha256 = "0ede3050a5deec4b81ed8f42805469e291e622b7b3d4bc6721deed899623dcf9",
+        strip_prefix = "dm_control-1.0.5/dm_control",
         urls = [
-            "https://github.com/deepmind/dm_control/archive/refs/tags/1.0.3.post1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/dm_control/1.0.3.post1.tar.gz",
+            "https://github.com/deepmind/dm_control/archive/refs/tags/1.0.5.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/dm_control/1.0.5.tar.gz",
         ],
         build_file = "//third_party/mujoco_dmc_xml:mujoco_dmc_xml.BUILD",
     )
