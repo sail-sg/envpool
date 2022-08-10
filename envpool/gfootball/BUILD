@@ -9,11 +9,27 @@ cc_library(
     deps = [
         "//envpool/core:async_envpool",
         "@gfootball_engine//:game_env",
-        "config.h",
-        "football_action_set.h",
+        "//envpool/football:config",
+        "//envpool/football:football_action_set",
     ],
 )
 
+cc_library(
+    name = "config",
+    hdrs = ["config.h"],
+    deps = [
+        "@gfootball_engine//:game_env",
+    ],
+)
+
+cc_library(
+    name = "football_action_set",
+    hdrs = ["football_action_set.h"],
+    deps = [
+        "//envpool/football:config",
+        "@gfootball_engine//:game_env",
+    ],
+)
 
 pybind_extension(
     name = "football_envpool",
@@ -21,7 +37,7 @@ pybind_extension(
         "football_envpool.cc",
     ],
     deps = [
-        "football_env",
+        "//envpool/football:football_env",
         "//envpool/core:py_envpool",
     ],
 )
@@ -32,21 +48,25 @@ py_library(
     deps = ["//envpool/python:api"]
 )
 
-py_library(
-    name = "football_observation_processor",
-    srcs = ["football_observation_processor.py"],
+py_test(
+    name = "football_envpool_test",
+    size = "enormous",
+    srcs = ["football_envpool_test.py"],
     deps = [
+        ":football",
         requirement("numpy"),
-        requirement("collections"),
-        requirement("datetime"),
-        requirement("os"),
-        requirement("shutil"),
-        requirement("tempfile"),
-        requirement("timeit"),
-        requirement("traceback"),
-        requirement("absl"),
-        requirement("gfootball"),
-        requirement("six"),
+        requirement("jax"),
+        requirement("absl-py"),
+    ],
+)
+
+cc_test(
+    name = "football_env_test",
+    size = "enormous",
+    srcs = ["football_env_test.cc"],
+    deps = [
+        ":football_env",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 
