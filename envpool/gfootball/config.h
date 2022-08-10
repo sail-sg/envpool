@@ -1,6 +1,7 @@
 #include <string>
 #include <vector>
-#include <direct.h>
+#include <stdio.h>
+#include <unistd.h>
 #include "game_env.hpp"
 
 class Config{
@@ -16,7 +17,8 @@ class Config{
         float render_resolution_x = 1280;
         float render_resolution_y = 0.5625 * render_resolution_x;
         bool real_time = false;
-        std::string tracesdir_pre = getcwd(NULL, 0);
+        char* tracesdir_pre_char = getcwd(NULL, 0);
+        std::string tracesdir_pre = tracesdir_pre_char;
         std::string tracesdir = tracesdir_pre + "/dump";
         std::string video_format = "avi";
         int video_quality_level = 0;
