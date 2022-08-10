@@ -1,8 +1,8 @@
 Mujoco (gym)
 ============
 
-We use ``mujoco==2.2.0`` as the codebase.
-See https://github.com/deepmind/mujoco/tree/2.2.0
+We use ``mujoco==2.2.1`` as the codebase.
+See https://github.com/deepmind/mujoco/tree/2.2.1
 
 The implementation follows OpenAI gym \*-v4 environment, see
 `reference <https://github.com/openai/gym/tree/master/gym/envs/mujoco>`_.
