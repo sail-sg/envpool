@@ -390,12 +390,12 @@ def workspace():
     
     maybe(
         http_archive,
-        name = "football",
-        sha256 = "",
+        name = "gfootball_engine",
+        sha256 = "1b0fdcfa78b7fadc3730585ee7f0f412ba825c27e422b2b85ea0cf7ba57800b6",
         urls = [
             "https://files.pythonhosted.org/packages/98/63/b111538b5db47b8081d8ca82280fadaa145fbd31aa249f49675a01abb8eb/gfootball-2.10.2.tar.gz"
         ],
-        build_file = "//third_party/gfootball:gfootball.BUILD",
+        build_file = "//third_party/football:football.BUILD",
     )
 
     maybe(
