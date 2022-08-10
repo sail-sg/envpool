@@ -1,22 +1,23 @@
 #include <string>
-#include <direct.h>
+#include <stdio.h>
+#include <unistd.h>
 #include "game_env.hpp"
 #include "config.h"
 #include "football_action_set.h"
 #include "envpool/core/async_envpool.h"
-#include "envpool/utils/image_process.h"
 #include "envpool/core/env.h"
 
 namespace football{
 
 class FootballEnvFns {
   public:
-    std::string tracesdir_pre = getcwd(NULL, 0);
-    std::string tracesdir = tracesdir_pre + "/dump";
+    static char *tracesdir_pre_char;
+    static std::string tracesdir_pre;
+    static std::string tracesdir;
     static decltype(auto) DefaultConfig(){
       return MakeDict(
-        "action_set"_.Bind(std::string("default")), "custom_display_stats"_.Bind(std::vector<std::string>{}),  "display_game_stats"._Bind(true), 
-        "dump_full_episodes"_.Bind(false), "dump_scores"_.Bind(false), "players"._Bind(std::vector<std::string>{"agent:left_players=1"}), 
+        "action_set"_.Bind(std::string("default")), "custom_display_stats"_.Bind(std::vector<std::string>{}),  "display_game_stats"_.Bind(true), 
+        "dump_full_episodes"_.Bind(false), "dump_scores"_.Bind(false), "players"_.Bind(std::vector<std::string>{"agent:left_players=1"}), 
         "level"_.Bind(std::string("11_vs_11_stochastic")), "physics_steps_per_frame"_.Bind(10), "render_resolution_x"_.Bind(1280), 
         "render_resolution_y"_.Bind(1280 * 0.5625), "real_time"_.Bind(false), "tracesdir"_.Bind(tracesdir), "video_format"_.Bind(std::string("avi")),
         "video_quality_level"_.Bind(0), "write_video"_.Bind(false)
@@ -25,7 +26,7 @@ class FootballEnvFns {
     template <typename Config>
     static decltype(auto) StateSpec(const Config& conf) {
       return MakeDict(
-        "obs"_.Bind(Spec<int>({-1, 72, 96}, {0, 255}),
+        "obs"_.Bind(Spec<int>({-1, 72, 96, 16}, {0, 255}),
         "info:episode_reward"_.Bind(Spec<float>({})),
         "info:score"_.Bind(Spec<int>({2})),
         "info:steps"_.Bind(Spec<int>({})),
@@ -39,6 +40,11 @@ class FootballEnvFns {
       return MakeDict(
         "action"_.Bind(Spec<int>({-1}, {0, 32}))
       );
+    }
+    FootballEnvFns(){
+      tracesdir_pre_char = getcwd(NULL, 0);
+      tracesdir_pre = tracesdir_pre_char;
+      tracesdir = tracesdir_pre + "/dump";
     }
 };
 
@@ -87,15 +93,15 @@ class FootballEnv : public Env<FootballEnvSpec> {
     std::vector<CoreAction> action_set;
     float cumulative_reward = 0;
     using Observation = decltype(MakeDict(
-        "left_team"._Bind(std::vector<float>(22)), "left_team_roles"_.Bind(std::vector<float>(11)), "left_team_direction"._Bind(std::vector<float>(22)),
-        "left_team_tired_factor"._Bind(std::vector<int>(11)), "left_team_yellow_card"._Bind(std::vector<int>(11)), "left_team_active"._Bind(std::vector<int>{0}), 
-        "left_team_designated_player"._Bind(3), "right_team"._Bind(std::vector<float>(22)), "right_team_roles"._Bind(std::vector<float>(11)), 
-        "right_team_direction"._Bind(std::vector<float>(22)), "right_team_tired_factor"._Bind(std::vector<int>(11)), "right_team_yellow_card"._Bind(std::vector<float>(11)), 
-        "right_team_active"._Bind(std::vector<int>{0}), "right_team_designated_player"._Bind(0), "ball"._Bind(std::vector<int>{0 , 0 , 0}), 
-        "ball_direction"._Bind(std::vector<float>(3)), "ball_rotation"._Bind(std::vector<float>(3)), "ball_owned_team"._Bind(0), 
-        "ball_owned_player"._Bind(7), "left_agent_controlled_player"._Bind(std::vector<int>{4}), "right_agent_controlled_player"._Bind(std::vector<int>{6}), 
-        "game_mode"._Bind(0), "left_agent_sticky_actions"._Bind(std::vector<float>(2)), "right_agent_sticky_actions"._Bind(std::vector<float>(2)), 
-        "score"._Bind(std::vector<int>{3, 5}), "steps_left"._Bind(45)
+        "left_team"_.Bind(std::vector<float>(22)), "left_team_roles"_.Bind(std::vector<float>(11)), "left_team_direction"_.Bind(std::vector<float>(22)),
+        "left_team_tired_factor"_.Bind(std::vector<int>(11)), "left_team_yellow_card"_.Bind(std::vector<int>(11)), "left_team_active"_.Bind(std::vector<int>{0}), 
+        "left_team_designated_player"_.Bind(3), "right_team"_.Bind(std::vector<float>(22)), "right_team_roles"_.Bind(std::vector<float>(11)), 
+        "right_team_direction"_.Bind(std::vector<float>(22)), "right_team_tired_factor"_.Bind(std::vector<int>(11)), "right_team_yellow_card"_.Bind(std::vector<float>(11)), 
+        "right_team_active"_.Bind(std::vector<int>{0}), "right_team_designated_player"_.Bind(0), "ball"_.Bind(std::vector<int>{0 , 0 , 0}), 
+        "ball_direction"_.Bind(std::vector<float>(3)), "ball_rotation"_.Bind(std::vector<float>(3)), "ball_owned_team"_.Bind(0), 
+        "ball_owned_player"_.Bind(7), "left_agent_controlled_player"_.Bind(std::vector<int>{4}), "right_agent_controlled_player"_.Bind(std::vector<int>{6}), 
+        "game_mode"_.Bind(0), "left_agent_sticky_actions"_.Bind(std::vector<float>(2)), "right_agent_sticky_actions"_.Bind(std::vector<float>(2)), 
+        "score"_.Bind(std::vector<int>{3, 5}), "steps_left"_.Bind(45)
       ));
     Observation observation;
 
@@ -407,6 +413,5 @@ class FootballEnv : public Env<FootballEnvSpec> {
 
 };
 
-}
-
 using FootballEnvPool = AsyncEnvPool<FootballEnv>;
+}
