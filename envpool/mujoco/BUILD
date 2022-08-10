@@ -20,7 +20,7 @@ genrule(
 genrule(
     name = "gen_mujoco_so",
     srcs = ["@mujoco//:mujoco_so"],
-    outs = ["libmujoco.so.2.2.0"],
+    outs = ["libmujoco.so.2.2.1"],
     cmd = "cp $< $@",
 )
 

@@ -319,11 +319,11 @@ def workspace():
     maybe(
         http_archive,
         name = "mujoco",
-        sha256 = "6313f24218c3ee832c73108e06a050341807166a44160fe3a322c441ec31bd2b",
-        strip_prefix = "mujoco-2.2.0",
+        sha256 = "d1cb3a720546240d894cd315b7fd358a2b96013a1f59b6d718036eca6f6edac2",
+        strip_prefix = "mujoco-2.2.1",
         urls = [
-            "https://github.com/deepmind/mujoco/releases/download/2.2.0/mujoco-2.2.0-linux-x86_64.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/mujoco/mujoco-2.2.0-linux-x86_64.tar.gz",
+            "https://github.com/deepmind/mujoco/releases/download/2.2.1/mujoco-2.2.1-linux-x86_64.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/mujoco/mujoco-2.2.1-linux-x86_64.tar.gz",
         ],
         build_file = "//third_party/mujoco:mujoco.BUILD",
     )
@@ -331,11 +331,11 @@ def workspace():
     maybe(
         http_archive,
         name = "mujoco_gym_xml",
-        sha256 = "94098a9b888bc80fa303571d83dfdda1412762d8b5565d99c52b38a2a93c919a",
-        strip_prefix = "gym-0.23.1/gym/envs/mujoco",
+        sha256 = "7feff9b58b96c0d763429c0670c720d64d7799414cd9a8b70a9eac5b5509a57a",
+        strip_prefix = "gym-0.25.1/gym/envs/mujoco",
         urls = [
-            "https://github.com/openai/gym/archive/refs/tags/0.23.1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/openai/gym/0.23.1.tar.gz",
+            "https://github.com/openai/gym/archive/refs/tags/0.25.1.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/openai/gym/0.25.1.tar.gz",
         ],
         build_file = "//third_party/mujoco_gym_xml:mujoco_gym_xml.BUILD",
     )
