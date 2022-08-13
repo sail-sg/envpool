@@ -17,13 +17,14 @@ Here are EnvPool's several highlights:
 - Manage a pool of envs, interact with the envs in batched APIs by default;
 - Support both synchronous execution and asynchronous execution;
 - Support both single player and multi-player environment;
-- Easy C++ developer API to add new envs;
+- Easy C++ developer API to add new envs: `Customized C++ environment integration <https://envpool.readthedocs.io/en/latest/content/new_env.html>`_;
 - Free **~2x** speedup with only single environment;
 - **1 Million** Atari frames / **3 Million** Mujoco steps per second
   simulation with 256 CPU cores, **~20x** throughput of Python
   subprocess-based vector env;
 - **~3x** throughput of Python subprocess-based vector env on low resource
   setup like 12 CPU cores;
+- XLA support with JAX jit function;
 - Comparing with the existing GPU-based solution
   (`Brax <https://github.com/google/brax>`_ /
   `Isaac-gym <https://developer.nvidia.com/isaac-gym>`_), EnvPool is a
@@ -32,8 +33,15 @@ Here are EnvPool's several highlights:
 - Compatible with some existing RL libraries, e.g.,
   `Stable-Baselines3 <https://github.com/DLR-RM/stable-baselines3>`_,
   `Tianshou <https://github.com/thu-ml/tianshou>`_,
-  or `CleanRL <https://github.com/vwxyzjn/cleanrl>`_
-  (`Solving Pong in 5 mins <https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/#solving-pong-in-5-minutes-with-ppo--envpool>`_).
+  `ACME <https://github.com/deepmind/acme>`_,
+  `CleanRL <https://github.com/vwxyzjn/cleanrl>`_
+  (`Solving Pong in 5 mins <https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/#solving-pong-in-5-minutes-with-ppo--envpool>`_),
+  `rl_games <https://github.com/Denys88/rl_games>`_ (2 mins
+  `Pong <https://colab.research.google.com/drive/1iWFv0g67mWqJONoFKNWUmu3hdxn_qUf8?usp=sharing>`_, 15 mins
+  `Breakout <https://colab.research.google.com/drive/1U_NxL6gSs0yRVhfl0cKl9ttRmcmMCiBS?usp=sharing>`_, 5 mins
+  `Ant <https://colab.research.google.com/drive/1C9yULxU_ahQ_i6NUHCvOLoeSwJovQjdz?usp=sharing>`_ and
+  `HalfCheetah <https://colab.research.google.com/drive/1bser52bpItzmlME00IA0bbmPdp1Xm0fy?usp=sharing>`_).
+
 
 Installation
 ------------
@@ -68,6 +76,7 @@ stable version through `envpool.readthedocs.io/en/stable/
    content/slides
    content/build
    content/python_interface
+   content/xla_interface
    content/benchmark
    content/new_env
    content/contributing

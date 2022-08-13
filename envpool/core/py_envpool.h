@@ -22,6 +22,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <exception>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -29,6 +30,7 @@
 #include <vector>
 
 #include "envpool/core/envpool.h"
+#include "envpool/core/xla.h"
 
 namespace py = pybind11;
 
@@ -190,7 +192,7 @@ void ToArray(const std::vector<py::array>& py_arrs,
   std::apply(
       [&](auto&&... spec) {
         (ret->emplace_back(
-             NumpyToArray<typename Spec::dtype>(py_arrs[index++])),
+             NumpyToArrayIncRef<typename Spec::dtype>(py_arrs[index++])),
          ...);
       },
       specs);
@@ -211,6 +213,29 @@ class PyEnvPool : public EnvPool {
 
   explicit PyEnvPool(const PySpec& py_spec)
       : EnvPool(py_spec), py_spec(py_spec) {}
+
+  /**
+   * get xla functions
+   */
+  auto Xla() {
+    if (HasContainerType(EnvPool::spec.state_spec)) {
+      throw std::runtime_error(
+          "State of this env has dynamic shaped container, xla is disabled");
+    }
+    if (HasDynamicDim(EnvPool::spec.state_spec)) {
+      throw std::runtime_error(
+          "State of this env has dynamic (-1) shape, xla is disabled");
+    }
+    if (EnvPool::spec.config["max_num_players"_] != 1) {
+      throw std::runtime_error(
+          "Xla is not available for multiplayer environment.");
+    }
+    return std::make_tuple(
+        std::make_tuple("recv",
+                        CustomCall<EnvPool, XlaRecv<EnvPool>>::Xla(this)),
+        std::make_tuple("send",
+                        CustomCall<EnvPool, XlaSend<EnvPool>>::Xla(this)));
+  }
 
   /**
    * py api
@@ -244,7 +269,7 @@ class PyEnvPool : public EnvPool {
    */
   void PyReset(const py::array& env_ids) {
     // PyArray arr = PyArray::From<int>(env_ids);
-    auto arr = NumpyToArray<int>(env_ids);
+    auto arr = NumpyToArrayIncRef<int>(env_ids);
     py::gil_scoped_release release;
     EnvPool::Reset(arr);
   }
@@ -282,6 +307,7 @@ py::object abc_meta = py::module::import("abc").attr("ABCMeta");
       .def("_send", &ENVPOOL::PySend)                                \
       .def("_reset", &ENVPOOL::PyReset)                              \
       .def_readonly_static("_state_keys", &ENVPOOL::py_state_keys)   \
-      .def_readonly_static("_action_keys", &ENVPOOL::py_action_keys);
+      .def_readonly_static("_action_keys", &ENVPOOL::py_action_keys) \
+      .def("_xla", &ENVPOOL::Xla);
 
 #endif  // ENVPOOL_CORE_PY_ENVPOOL_H_

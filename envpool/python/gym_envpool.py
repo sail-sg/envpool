@@ -39,13 +39,25 @@ class GymEnvPoolMixin(ABC):
     return self.spec.action_space
 
 
-class GymEnvPoolMeta(ABCMeta):
+class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
   """Additional wrapper for EnvPool gym.Env API."""
 
   def __new__(cls: Any, name: str, parents: Tuple, attrs: Dict) -> Any:
     """Check internal config and initialize data format convertion."""
     base = parents[0]
-    parents = (base, GymEnvPoolMixin, EnvPoolMixin, gym.Env)
+    try:
+      from .lax import XlaMixin
+      parents = (base, GymEnvPoolMixin, EnvPoolMixin, XlaMixin, gym.Env)
+    except ImportError:
+
+      def _xla(self: Any) -> None:
+        raise RuntimeError(
+          "XLA is disabled. To enable XLA please install jax."
+        )
+
+      attrs["xla"] = _xla
+      parents = (base, GymEnvPoolMixin, EnvPoolMixin, gym.Env)
+
     state_keys = base._state_keys
     action_keys = base._action_keys
     check_key_duplication(name, "state", state_keys)
@@ -66,6 +78,7 @@ class GymEnvPoolMeta(ABCMeta):
       max_episode_steps = self.config.get("max_episode_steps", np.inf)
       trunc = (done & (elapse >= max_episode_steps))
       state["info"]["TimeLimit.truncated"] = trunc
+      state["info"]["elapsed_step"] = state["elapsed_step"]
       if reset:
         return state["obs"], state["info"]
       return state["obs"], state["reward"], state["done"], state["info"]

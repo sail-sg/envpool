@@ -87,7 +87,7 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
       f.get();
     }
     if (num_threads_ == 0) {
-      num_threads_ = batch_;
+      num_threads_ = std::min(batch_, processor_count);
     }
     for (std::size_t i = 0; i < num_threads_; ++i) {
       workers_.emplace_back([this] {

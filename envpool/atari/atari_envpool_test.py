@@ -18,9 +18,11 @@ import time
 from typing import no_type_check
 
 import cv2
+import jax.numpy as jnp
 import numpy as np
 from absl import logging
 from absl.testing import absltest
+from jax import jit, lax
 
 from envpool.atari import AtariDMEnvPool, AtariEnvSpec, AtariGymEnvPool
 from envpool.atari.atari_envpool import _AtariEnvPool, _AtariEnvSpec
@@ -76,6 +78,51 @@ class _AtariEnvPoolTest(absltest.TestCase):
       np.testing.assert_allclose(obs0, obs1)
       # cv2.imwrite(f"/tmp/log/align{i}.png", obs0[0, 1:].transpose(1, 2, 0))
 
+  def test_reset_life(self) -> None:
+    """Issue 171."""
+    for env_id in [
+      "atlantis", "backgammon", "breakout", "pong", "wizard_of_wor"
+    ]:
+      np.random.seed(0)
+      env = AtariGymEnvPool(
+        AtariEnvSpec(
+          AtariEnvSpec.gen_config(task=env_id, num_envs=1, episodic_life=True)
+        )
+      )
+      action_num = env.action_space.n  # type: ignore
+      env.reset()
+      info = env.step(np.array([0]))[-1]
+      if info["lives"].sum() == 0:
+        # no life in this game
+        continue
+      for _ in range(10000):
+        _, _, done, info = env.step(np.random.randint(0, action_num, 1))
+        if info["lives"][0] == 0:
+          break
+        else:
+          self.assertFalse(info["terminated"][0])
+      if info["lives"][0] > 0:
+        # step too long
+        continue
+      # for normal atari (e.g., breakout)
+      # take an additional step after all lives are exhausted
+      _, _, next_done, next_info = env.step(
+        np.random.randint(0, action_num, 1)
+      )
+      if done[0] and next_info["lives"][0] > 0:
+        self.assertTrue(info["terminated"][0])
+        continue
+      self.assertFalse(done[0])
+      self.assertFalse(info["terminated"][0])
+      while not done[0]:
+        self.assertFalse(info["terminated"][0])
+        _, _, done, info = env.step(np.random.randint(0, action_num, 1))
+      _, _, next_done, next_info = env.step(
+        np.random.randint(0, action_num, 1)
+      )
+      self.assertTrue(next_info["lives"][0] > 0)
+      self.assertTrue(info["terminated"][0])
+
   def test_partial_step(self) -> None:
     num_envs = 5
     max_episode_steps = 10
@@ -105,6 +152,61 @@ class _AtariEnvPoolTest(absltest.TestCase):
         env_id=partial_ids[0],
       )[-1]
       assert np.all(info["TimeLimit.truncated"])
+
+  def test_xla_api(self) -> None:
+    num_envs = 10
+    config = AtariEnvSpec.gen_config(
+      task="pong",
+      num_envs=num_envs,
+      batch_size=5,
+      num_threads=2,
+      thread_affinity_offset=0,
+    )
+    spec = AtariEnvSpec(config)
+    env = AtariGymEnvPool(spec)
+    handle, recv, send, step = env.xla()
+    env.async_reset()
+    handle, states = recv(handle)
+    info = states[-1]
+    action = np.ones(5, dtype=np.int32)
+    handle = send(handle, action, env_id=info["env_id"])
+
+    def actor_step(iter: int, handle: jnp.ndarray) -> jnp.ndarray:
+      handle, states = recv(handle)
+      info = states[-1]
+      action = jnp.ones(5, dtype=jnp.int32)
+      handle = send(handle, action, env_id=info["env_id"])
+      return handle
+
+    @jit
+    def loop(num_steps: int = 100) -> jnp.ndarray:
+      return lax.fori_loop(0, num_steps, actor_step, handle)
+
+    loop(100)
+
+  def test_xla_correctness(self) -> None:
+    num_envs = 10
+    config = AtariEnvSpec.gen_config(
+      task="pong",
+      num_envs=num_envs,
+      batch_size=10,
+      num_threads=2,
+      thread_affinity_offset=0,
+    )
+    spec = AtariEnvSpec(config)
+    env1 = AtariGymEnvPool(spec)
+    env2 = AtariGymEnvPool(spec)
+    handle, recv, send, step = env1.xla()
+    env1.async_reset()
+    env2.async_reset()
+
+    action = np.ones(10, dtype=np.int32)
+    for _ in range(100):
+      handle, states1 = recv(handle)
+      handle = send(handle, action)
+      states2 = env2.recv()
+      env2.send(action)
+      np.testing.assert_allclose(states1[0], states2[0])
 
   @no_type_check
   def test_no_gray_scale(self) -> None:

@@ -16,6 +16,7 @@
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
+load("//third_party/cuda:cuda.bzl", "cuda_configure")
 
 def workspace():
     """Load requested packages."""
@@ -378,11 +379,11 @@ def workspace():
     maybe(
         http_archive,
         name = "mujoco",
-        sha256 = "98cab2735817456c028e96ba34b2ee2c94cc4fab33ebcae15ab46fcc45a762ad",
-        strip_prefix = "mujoco-2.2.0",
+        sha256 = "e7fa0821c993073b19bd8034df63661e309edcdc2d602101c3f9b28201574ded",
+        strip_prefix = "mujoco-2.2.1",
         urls = [
-            "https://github.com/deepmind/mujoco/archive/refs/tags/2.2.0.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/mujoco/2.2.0.tar.gz",
+			"https://github.com/deepmind/mujoco/archive/refs/tags/2.2.1.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/mujoco/2.2.1.tar.gz",
         ],
         build_file = "//third_party/mujoco:mujoco.BUILD",
     )
@@ -390,11 +391,11 @@ def workspace():
     maybe(
         http_archive,
         name = "mujoco_gym_xml",
-        sha256 = "94098a9b888bc80fa303571d83dfdda1412762d8b5565d99c52b38a2a93c919a",
-        strip_prefix = "gym-0.23.1/gym/envs/mujoco",
+        sha256 = "7feff9b58b96c0d763429c0670c720d64d7799414cd9a8b70a9eac5b5509a57a",
+        strip_prefix = "gym-0.25.1/gym/envs/mujoco",
         urls = [
-            "https://github.com/openai/gym/archive/refs/tags/0.23.1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/openai/gym/0.23.1.tar.gz",
+            "https://github.com/openai/gym/archive/refs/tags/0.25.1.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/openai/gym/0.25.1.tar.gz",
         ],
         build_file = "//third_party/mujoco_gym_xml:mujoco_gym_xml.BUILD",
     )
@@ -402,11 +403,11 @@ def workspace():
     maybe(
         http_archive,
         name = "mujoco_dmc_xml",
-        sha256 = "74c23e5a56c6575e4f3e422ae6dff8e7e8a4b6959b4b96f9e2f810cb58c266bf",
-        strip_prefix = "dm_control-1.0.3.post1/dm_control",
+        sha256 = "0ede3050a5deec4b81ed8f42805469e291e622b7b3d4bc6721deed899623dcf9",
+        strip_prefix = "dm_control-1.0.5/dm_control",
         urls = [
-            "https://github.com/deepmind/dm_control/archive/refs/tags/1.0.3.post1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/dm_control/1.0.3.post1.tar.gz",
+            "https://github.com/deepmind/dm_control/archive/refs/tags/1.0.5.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/dm_control/1.0.5.tar.gz",
         ],
         build_file = "//third_party/mujoco_dmc_xml:mujoco_dmc_xml.BUILD",
     )
@@ -445,6 +446,11 @@ def workspace():
             "https://github.com/erenon/bazel_clang_tidy/archive/783aa523aafb4a6798a538c61e700b6ed27975a7.zip",
             "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/erenon/bazel_clang_tidy/783aa523aafb4a6798a538c61e700b6ed27975a7.zip",
         ],
+    )
+
+    maybe(
+        cuda_configure,
+        name = "cuda",
     )
 
 workspace0 = workspace
