@@ -1,17 +1,17 @@
 name: Release PyPI Wheel
 
-# on: [push, pull_request]
-on:
-  push:
-    branches:
-      - main
+on: [push, pull_request]
+# on:
+#   push:
+#     branches:
+#       - main
 
 jobs:
   release:
     runs-on: ${{ matrix.python-version }}
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9, 3.10]
     steps:
     - name: Cancel previous run
       uses: styfle/cancel-workflow-action@0.9.1
