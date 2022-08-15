@@ -81,8 +81,8 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
   // set rendering to offscreen buffer
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
   // allocate rgb and depth buffers
-  std::vector<unsigned char> rgb_array_({3, width_, height_});
-  std::vector<float> depth_array_({width_, height_});
+  std::vector<unsigned char> rgb_array_(3 * width_ * height_);
+  std::vector<float> depth_array_(width_ * height_);
   // camera configuration
   // cam.lookat[0] = m->stat.center[0];
   // cam.lookat[1] = m->stat.center[1];
