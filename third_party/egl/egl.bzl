@@ -24,15 +24,14 @@ def _impl(rctx):
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-    name = "EGL_headers",
-    srcs = [
+    name = "egl_headers",
+    hdrs = [
         "include/EGL/egl.h",
         "include/EGL/eglext.h",
         "include/EGL/eglplatform.h",
         "include/KHR/khrplatform.h",
     ],
     defines = ["USE_OZONE"],
-    includes = ["."],
 )
 """)
 

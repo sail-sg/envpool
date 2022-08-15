@@ -402,4 +402,9 @@ def workspace():
         name = "cuda",
     )
 
+    maybe(
+        egl_headers,
+        name = "egl",
+    )
+
 workspace0 = workspace
