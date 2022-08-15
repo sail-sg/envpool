@@ -86,9 +86,12 @@ cc_library(
         "dmc/walker.h",
     ],
     data = [":gen_mujoco_dmc_xml"],
+    linkopts = [
+        "-lEGL",
+        "-lGL",
+    ],
     deps = [
         "//envpool/core:async_envpool",
-        "@glfw",
         "@mujoco//:mujoco_lib",
         "@pugixml",
     ],
