@@ -25,9 +25,10 @@
 namespace mujoco_dmc {
 
 MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
-                     int n_sub_steps, int max_episode_steps, const int height,
-                     const int width, const std::string& camera_id, bool depth,
-                     bool segmentation)
+                     int n_sub_steps, int max_episode_steps,
+                     const int height = 240, const int width = 320,
+                     const std::string& camera_id = std::string("-1"),
+                     bool depth = false, bool segmentation = false)
     : n_sub_steps_(n_sub_steps),
       max_episode_steps_(max_episode_steps),
       elapsed_step_(max_episode_steps + 1),
