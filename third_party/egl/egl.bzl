@@ -17,7 +17,7 @@
 _EGL_DIR = "/usr/include"
 
 def _impl(rctx):
-    egl_dir = rctx.os.environ.get(_EGL_DIR, default = "/usr/include")
+    egl_dir = rctx.os.environ.get(_EGL_DIR, default = "/usr")
     rctx.symlink("{}/include".format(egl_dir), "include")
     rctx.file("WORKSPACE")
     rctx.file("BUILD", content = """
