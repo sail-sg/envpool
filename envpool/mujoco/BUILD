@@ -87,12 +87,11 @@ cc_library(
     ],
     data = [":gen_mujoco_dmc_xml"],
     linkopts = [
-        "-lEGL",
         "-lGL",
+        "-lEGL",
     ],
     deps = [
         "//envpool/core:async_envpool",
-        "@egl//:egl_headers",
         "@mujoco//:mujoco_lib",
         "@pugixml",
     ],
