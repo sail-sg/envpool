@@ -78,6 +78,7 @@ class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
       max_episode_steps = self.config.get("max_episode_steps", np.inf)
       trunc = (done & (elapse >= max_episode_steps))
       state["info"]["TimeLimit.truncated"] = trunc
+      state["info"]["elapsed_step"] = state["elapsed_step"]
       if reset:
         return state["obs"], state["info"]
       return state["obs"], state["reward"], state["done"], state["info"]
