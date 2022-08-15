@@ -59,12 +59,12 @@ class MujocoEnv {
   mjvCamera camera_;
   mjvOption option_;
   mjrContext context_;
+  const std::string& camera_id_;
   int n_sub_steps_, max_episode_steps_, elapsed_step_;
   float reward_, discount_;
   bool done_;
   int height_, width_;
   bool depth_, segmentation_;
-  const std::string& camera_id_;
   unsigned char* rgb_array_;
   float* depth_array_;
 #ifdef ENVPOOL_TEST
@@ -122,6 +122,8 @@ class MujocoEnv {
   void initOpenGL(void);
   // close OpenGL context/window
   void closeOpenGL(void);
+
+  void PushStack(bool push_all, bool maxpool);
 };
 
 }  // namespace mujoco_dmc
