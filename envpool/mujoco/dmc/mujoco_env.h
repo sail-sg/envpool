@@ -73,8 +73,10 @@ class MujocoEnv {
 
  public:
   MujocoEnv(const std::string& base_path, const std::string& raw_xml,
-            int n_sub_steps, int max_episode_steps, int height, int width,
-            const std::string& camera_id, bool depth, bool segmentation);
+            int n_sub_steps, int max_episode_steps, const int height = 240,
+            const int width = 320,
+            const std::string& camera_id = std::string("-1"),
+            bool depth = false, bool segmentation = false);
   ~MujocoEnv();
 
   // rl control Environment

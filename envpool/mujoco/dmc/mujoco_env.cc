@@ -417,7 +417,6 @@ void MujocoEnv::initOpenGL(void) {
     mju_error_i("Could not make EGL context current, error 0x%x\n",
                 eglGetError());
   }
-
 #endif
 }
 
@@ -436,7 +435,6 @@ void MujocoEnv::closeOpenGL(void) {
   OSMesaDestroyContext(ctx);
 
   //------------------------ EGL
-
 #else
   // get current display
   EGLDisplay eglDpy = eglGetCurrentDisplay();
@@ -457,7 +455,6 @@ void MujocoEnv::closeOpenGL(void) {
 
   // terminate display
   eglTerminate(eglDpy);
-
 #endif
 }
 }  // namespace mujoco_dmc
