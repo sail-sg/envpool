@@ -21,13 +21,13 @@
 #include <mujoco.h>
 // select EGL, OSMESA or GLFW
 #if defined(MJ_EGL)
-#include <EGL/egl.h>
+#include <GLFW/glfw3.h>
 #elif defined(MJ_OSMESA)
 #include <GL/osmesa.h>
 OSMesaContext ctx;
 unsigned char buffer[10000000];
 #else
-#include <GLFW/glfw3.h>
+#include <EGL/egl.h>
 #endif
 
 #include <memory>
