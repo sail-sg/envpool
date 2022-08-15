@@ -123,7 +123,7 @@ class MujocoEnv {
   // close OpenGL context/window
   void closeOpenGL(void);
 
-  void PushStack(bool push_all, bool maxpool);
+  // void PushStack(bool push_all, bool maxpool);
 };
 
 }  // namespace mujoco_dmc
