@@ -17,7 +17,8 @@
 _EGL_DIR = "/usr/include"
 
 def _impl(rctx):
-    cuda_dir = rctx.os.environ.get(_EGL_DIR, default = "/usr/include")
+    egl_dir = rctx.os.environ.get(_EGL_DIR, default = "/usr/include")
+    rctx.symlink("{}/include".format(egl_dir), "include")
     rctx.file("WORKSPACE")
     rctx.file("BUILD", content = """
 package(default_visibility = ["//visibility:public"])
@@ -25,10 +26,10 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
     name = "EGL_headers",
     srcs = [
-        "EGL/egl.h",
-        "EGL/eglext.h",
-        "EGL/eglplatform.h",
-        "KHR/khrplatform.h",
+        "include/EGL/egl.h",
+        "include/EGL/eglext.h",
+        "include/EGL/eglplatform.h",
+        "include/KHR/khrplatform.h",
     ],
     defines = ["USE_OZONE"],
     includes = ["."],
@@ -38,6 +39,6 @@ cc_library(
 egl_headers = repository_rule(
     implementation = _impl,
     environ = [
-        _CUDA_DIR,
+        _EGL_DIR,
     ],
 )
