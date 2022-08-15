@@ -95,6 +95,7 @@ cc_library(
         "@mujoco//:mujoco_lib",
         "@pugixml",
     ],
+    alwayslink = 1,
 )
 
 pybind_extension(
