@@ -25,8 +25,8 @@
 namespace mujoco_dmc {
 
 MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
-                     int n_sub_steps, int max_episode_steps, int height,
-                     int width, const std::string& camera_id, bool depth,
+                     int n_sub_steps, int max_episode_steps, const int height,
+                     const int width, const std::string& camera_id, bool depth,
                      bool segmentation)
     : n_sub_steps_(n_sub_steps),
       max_episode_steps_(max_episode_steps),
@@ -81,8 +81,8 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
   // set rendering to offscreen buffer
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
   // allocate rgb and depth buffers
-  std::array<float, 3 * width_ * height_> rgb_array_;
-  std::array<float, width_ * height_> depth_array_;
+  std::vector<unsigned char> rgb_array_({3, width_, height_});
+  std::vector<float> depth_array_({width_, height_});
   // camera configuration
   // cam.lookat[0] = m->stat.center[0];
   // cam.lookat[1] = m->stat.center[1];
