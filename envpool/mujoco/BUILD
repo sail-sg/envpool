@@ -92,9 +92,9 @@ cc_library(
     ],
     deps = [
         "//envpool/core:async_envpool",
+        "@egl//:egl_headers",
         "@mujoco//:mujoco_lib",
         "@pugixml",
-        "@egl//:egl_headers",
     ],
     alwayslink = 1,
 )
