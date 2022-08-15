@@ -20,7 +20,7 @@
 #include <mjxmacro.h>
 #include <mujoco.h>
 // select EGL, OSMESA or GLFW
-#if defined(MJ_EGL)
+#if defined(MJ_GLFW)
 #include <GLFW/glfw3.h>
 #elif defined(MJ_OSMESA)
 #include <GL/osmesa.h>

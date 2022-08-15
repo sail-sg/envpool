@@ -324,8 +324,41 @@ void MujocoEnv::PushStack(bool push_all, bool maxpool) {
 
 // create OpenGL context/window
 void MujocoEnv::initOpenGL(void) {
+  //------------------------ GLFW
+
+#if defined(MJ_GLFW)
+  // init GLFW
+  if (!glfwInit()) {
+    mju_error("Could not initialize GLFW");
+  }
+
+  // create invisible window, single-buffered
+  glfwWindowHint(GLFW_VISIBLE, 0);
+  glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_FALSE);
+  GLFWwindow* window =
+      glfwCreateWindow(800, 800, "Invisible window", NULL, NULL);
+  if (!window) {
+    mju_error("Could not create GLFW window");
+  }
+
+  // make context current
+  glfwMakeContextCurrent(window);
+  //------------------------ OSMESA
+#elif defined(MJ_OSMESA)
+  // create context
+  ctx = OSMesaCreateContextExt(GL_RGBA, 24, 8, 8, 0);
+  if (!ctx) {
+    mju_error("OSMesa context creation failed");
+  }
+
+  // make current
+  if (!OSMesaMakeCurrent(ctx, buffer, GL_UNSIGNED_BYTE, 800, 800)) {
+    mju_error("OSMesa make current failed");
+  }
+
   //------------------------ EGL
-#if defined(MJ_EGL)
+
+#else
   // desired config
   const EGLint configAttribs[] = {EGL_RED_SIZE,
                                   8,
@@ -385,44 +418,26 @@ void MujocoEnv::initOpenGL(void) {
                 eglGetError());
   }
 
-  //------------------------ OSMESA
-#elif defined(MJ_OSMESA)
-  // create context
-  ctx = OSMesaCreateContextExt(GL_RGBA, 24, 8, 8, 0);
-  if (!ctx) {
-    mju_error("OSMesa context creation failed");
-  }
-
-  // make current
-  if (!OSMesaMakeCurrent(ctx, buffer, GL_UNSIGNED_BYTE, 800, 800)) {
-    mju_error("OSMesa make current failed");
-  }
-
-  //------------------------ GLFW
-#else
-  // init GLFW
-  if (!glfwInit()) {
-    mju_error("Could not initialize GLFW");
-  }
-
-  // create invisible window, single-buffered
-  glfwWindowHint(GLFW_VISIBLE, 0);
-  glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_FALSE);
-  GLFWwindow* window =
-      glfwCreateWindow(800, 800, "Invisible window", NULL, NULL);
-  if (!window) {
-    mju_error("Could not create GLFW window");
-  }
-
-  // make context current
-  glfwMakeContextCurrent(window);
 #endif
 }
 
 // close OpenGL context/window
 void MujocoEnv::closeOpenGL(void) {
+  //------------------------ GLFW
+
+#if defined(MJ_GLFW)
+// terminate GLFW (crashes with Linux NVidia drivers)
+#if defined(__APPLE__) || defined(_WIN32)
+  glfwTerminate();
+#endif
+
+  //------------------------ OSMESA
+#elif defined(MJ_OSMESA)
+  OSMesaDestroyContext(ctx);
+
   //------------------------ EGL
-#if defined(MJ_EGL)
+
+#else
   // get current display
   EGLDisplay eglDpy = eglGetCurrentDisplay();
   if (eglDpy == EGL_NO_DISPLAY) {
@@ -443,16 +458,6 @@ void MujocoEnv::closeOpenGL(void) {
   // terminate display
   eglTerminate(eglDpy);
 
-  //------------------------ OSMESA
-#elif defined(MJ_OSMESA)
-  OSMesaDestroyContext(ctx);
-
-  //------------------------ GLFW
-#else
-// terminate GLFW (crashes with Linux NVidia drivers)
-#if defined(__APPLE__) || defined(_WIN32)
-  glfwTerminate();
-#endif
 #endif
 }
 }  // namespace mujoco_dmc
