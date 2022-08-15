@@ -188,7 +188,7 @@ If you find EnvPool useful, please cite it in your publications.
 
 ```latex
 @article{envpool,
-  title={EnvPool: A Highly Parallel Reinforcement Learning Environment Execution Engine},
+  title={Env{P}ool: A Highly Parallel Reinforcement Learning Environment Execution Engine},
   author={Weng, Jiayi and Lin, Min and Huang, Shengyi and Liu, Bo and Makoviichuk, Denys and Makoviychuk, Viktor and Liu, Zichen and Song, Yufan and Luo, Ting and Jiang, Yukun and Xu, Zhongwen and Yan, Shuicheng},
   journal={arXiv preprint arXiv:2206.10558},
   year={2022}
