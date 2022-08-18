@@ -387,9 +387,11 @@ void MujocoEnv::initOpenGL(void) {
 
   // initialize
   EGLint major, minor;
-  if (eglInitialize(eglDpy, &major, &minor) != EGL_TRUE) {
-    mju_error_i("Could not initialize EGL, error 0x%x\n", eglGetError());
-  }
+  eglInitialize(eglDpy, &major, &minor);
+
+  // if (eglInitialize(eglDpy, &major, &minor) != EGL_TRUE) {
+  //   mju_error_i("Could not initialize EGL, error 0x%x\n", eglGetError());
+  // }
 
   // choose config
   EGLint numConfigs;
