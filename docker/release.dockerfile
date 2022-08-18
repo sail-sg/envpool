@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y software-properties-common && add-apt-r
 RUN apt-get update \
     && apt-get install -y git curl wget gcc-9 g++-9 build-essential patchelf make libssl-dev zlib1g-dev \
     libbz2-dev libreadline-dev libsqlite3-dev llvm \
-    libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev \
+    libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev swig \
     python3.7 python3.8 python3.9 python3.10 \
     python3.7-dev python3.8-dev python3.9-dev python3.10-dev \
     python3.8-distutils python3.9-distutils python3.10-distutils

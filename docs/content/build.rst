@@ -86,6 +86,11 @@ It also requires **Python version >= 3.7**:
     sudo apt install -y python3-dev python3-pip
     sudo ln -sf /usr/bin/python3 /usr/bin/python
 
+Install CUDA to enable XLA: see https://developer.nvidia.com/cuda-downloads
+
+Install other dependencies: see
+`Dockerfile <https://github.com/sail-sg/envpool/tree/main/docker>`_.
+
 
 Build Wheel
 -----------
