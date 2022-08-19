@@ -45,7 +45,16 @@ pybind_extension(
 py_library(
     name = "football",
     srcs = ["__init__.py"],
-    deps = ["//envpool/python:api"]
+    data = [":football_envpool.so"],
+    deps = ["//envpool/python:api"]，
+)
+
+py_library(
+    name = "football_registration",
+    srcs = ["registration.py"],
+    deps = [
+        "//envpool:registration",
+    ],
 )
 
 py_test(
