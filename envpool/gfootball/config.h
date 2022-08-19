@@ -1,3 +1,6 @@
+#ifndef ENVPOOL_FOOTBALL_CONFIG_H_
+#define ENVPOOL_FOOTBALL_CONFIG_H_
+
 #include <string>
 #include <vector>
 #include <stdio.h>
@@ -27,7 +30,9 @@ class Config{
         Config();
         void NewScenario(int inc = 1){
           this->episode_number += inc;
-          ScenarioConfig scenario_config;
+          auto scenario_config = ScenarioConfig::make();
         };
 
 };
+
+#endif  // ENVPOOL_FOOTBALL_CONFIG_H_
