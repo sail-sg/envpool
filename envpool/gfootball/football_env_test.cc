@@ -21,19 +21,21 @@
 
 using FootballState = football::FootballEnv::State;
 using FootballAction = football::FootballEnv::Action;
-auto config = football::FootballEnvSpec::kDefaultConfig;
-std::size_t batch = 4;
-int num_envs = 4;
-config["num_envs"_] = batch;
-config["batch_size"_] = batch;
-config["seed"_] = 0;
-int total_iter = 10000;
-football::FootballEnvSpec spec(config);
-football::FootballEnvPool envpool(spec);
-Array all_env_ids(Spec<int>({num_envs}));
-for (int i = 0; i < num_envs; ++i) {
-    all_env_ids[i] = i;
+int main(int argc, char** argv){
+    auto config = football::FootballEnvSpec::kDefaultConfig;
+    int batch = 4;
+    int num_envs = 4;
+    config["num_envs"_] = batch;
+    config["batch_size"_] = batch;
+    config["seed"_] = 0;
+    int total_iter = 10000;
+    football::FootballEnvSpec spec(config);
+    football::FootballEnvPool envpool(spec);
+    Array all_env_ids(Spec<int>({num_envs}));
+    for (int i = 0; i < num_envs; ++i) {
+        all_env_ids[i] = i;
+    }
+    envpool.Reset(all_env_ids);
+    auto state_vec = envpool.Recv();
+    FootballState state(&state_vec);
 }
-envpool.Reset(all_env_ids);
-auto state_vec = envpool.Recv();
-FootballState state(&state_vec);
