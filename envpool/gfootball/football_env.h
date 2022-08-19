@@ -148,14 +148,13 @@ class FootballEnv : public Env<FootballEnvSpec> {
       {};
 
 
-
     void Step(const Action& action){
       observation obs;
       step_count += 1;
       int action_index = 0;
       std::vector<int> controlled_players;
       for(int left_team = 1; left_team > 0; left_team++){
-        auto agents = env_.config().left_agents;
+        auto agents = env_.scenario_config.left_agents;
         for(int j = 0; j < agents; j++){
           auto player_action_index = action["action"_][action_index];
           CoreAction player_action = action_idle;
@@ -296,18 +295,18 @@ class FootballEnv : public Env<FootballEnvSpec> {
         }
       }
 
-      if(env_.config().end_episode_on_score){
+      if(env_.scenario_config.end_episode_on_score){
         if(obs.score[0] > 0 || obs.score[1] > 0){
           env_.state = GameState::game_done;
         }
       }
 
-      if(env_.config().end_episode_on_out_of_play && obs.game_mode != int(e_GameMode::e_GameMode_Normal) && previous_game_mode == int(e_GameMode::e_GameMode_Normal)){
+      if(env_.scenario_config.end_episode_on_out_of_play && obs.game_mode != int(e_GameMode::e_GameMode_Normal) && previous_game_mode == int(e_GameMode::e_GameMode_Normal)){
         env_.state = GameState::game_done;
       }
       previous_game_mode = obs.game_mode;
 
-      if(env_.config().end_episode_on_possession_change && 
+      if(env_.scenario_config.end_episode_on_possession_change && 
         obs.ball_owned_team != -1 &&
         prev_ball_owned_team != -1 &&
         obs.ball_owned_team != prev_ball_owned_team){
@@ -329,7 +328,7 @@ class FootballEnv : public Env<FootballEnvSpec> {
       else{
         env_.waiting_for_game_count = 0;
       }
-      if(_step >= env_.config().game_duration){
+      if(_step >= env_.scenario_config.game_duration){
         env_.state = GameState::game_done;
       }
 
