@@ -27,7 +27,7 @@ class Config{
         int video_quality_level = 0;
         bool write_video = false;
         int episode_number = 0;
-        Config();
+        Config(){ };
         void NewScenario(int inc = 1){
           this->episode_number += inc;
           auto scenario_config = ScenarioConfig::make();
