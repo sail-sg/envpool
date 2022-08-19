@@ -1,3 +1,6 @@
+#ifndef ENVPOOL_FOOTBALL_ACTION_SET_H_
+#define ENVPOOL_FOOTBALL_ACTION_SET_H_
+
 #include <string>
 #include "config.h"
 #include "game_env.hpp"
@@ -54,3 +57,5 @@ CoreAction action_release_team_pressure(Action::game_release_team_pressure, "rel
 CoreAction action_release_switch(Action::game_release_switch, "release_switch");
 CoreAction action_release_sprint(Action::game_release_sprint, "release_sprint");
 CoreAction action_release_dribble(Action::game_release_dribble, "release_dribble");
+
+#endif  //ENVPOOL_FOOTBALL_ACTION_SET_H_
