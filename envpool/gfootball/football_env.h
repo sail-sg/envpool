@@ -1,3 +1,6 @@
+#ifndef ENVPOOL_FOOTBALL_ENV_H_
+#define ENVPOOL_FOOTBALL_ENV_H_
+
 #include <string>
 #include <stdio.h>
 #include <unistd.h>
@@ -11,15 +14,17 @@ namespace football{
 
 class FootballEnvFns {
   public:
-    static char *tracesdir_pre_char;
-    static std::string tracesdir_pre;
-    static std::string tracesdir;
+    //static char *tracesdir_pre_char;
+    //static std::string tracesdir_pre;
+    //static std::string tracesdir;
     static decltype(auto) DefaultConfig(){
       return MakeDict(
         "action_set"_.Bind(std::string("default")), "custom_display_stats"_.Bind(std::vector<std::string>{}),  "display_game_stats"_.Bind(true), 
         "dump_full_episodes"_.Bind(false), "dump_scores"_.Bind(false), "players"_.Bind(std::vector<std::string>{"agent:left_players=1"}), 
         "level"_.Bind(std::string("11_vs_11_stochastic")), "physics_steps_per_frame"_.Bind(10), "render_resolution_x"_.Bind(1280), 
-        "render_resolution_y"_.Bind(1280 * 0.5625), "real_time"_.Bind(false), "tracesdir"_.Bind(tracesdir), "video_format"_.Bind(std::string("avi")),
+        "render_resolution_y"_.Bind(1280 * 0.5625), "real_time"_.Bind(false), 
+        //"tracesdir"_.Bind(tracesdir),
+        "video_format"_.Bind(std::string("avi")),
         "video_quality_level"_.Bind(0), "write_video"_.Bind(false)
       );
     }
@@ -42,14 +47,45 @@ class FootballEnvFns {
       );
     }
     FootballEnvFns(){
-      tracesdir_pre_char = getcwd(NULL, 0);
-      tracesdir_pre = tracesdir_pre_char;
-      tracesdir = tracesdir_pre + "/dump";
+      //tracesdir_pre_char = getcwd(NULL, 0);
+      //tracesdir_pre = tracesdir_pre_char;
+      //tracesdir = tracesdir_pre + "/dump";
     }
 };
 
 using FootballEnvSpec = EnvSpec<FootballEnvFns>;
 
+struct observation{
+  int num_players = 11;
+  std::vector<int> left_agent_controlled_player = std::vector<int>(1);
+  std::vector<int> right_agent_controlled_player = std::vector<int>(1);
+  std::vector<float> left_team = std::vector<float>(num_players * 2);
+  std::vector<float> left_team_roles = std::vector<float>(num_players);
+  std::vector<float> left_team_direction = std::vector<float>(num_players * 2);
+  std::vector<float> left_team_tired_factor = std::vector<float>(num_players);
+  std::vector<float> left_team_yellow_card = std::vector<float>(num_players);
+  std::vector<float> left_team_active = std::vector<float>(1);
+  int left_team_designated_player = 0;
+  std::vector<float> right_team = std::vector<float>(num_players * 2);
+  std::vector<float> right_team_roles = std::vector<float>(num_players);
+  std::vector<float> right_team_direction = std::vector<float>(num_players * 2);
+  std::vector<float> right_team_tired_factor = std::vector<float>(num_players);
+  std::vector<float> right_team_yellow_card = std::vector<float>(num_players);
+  std::vector<float> right_team_active = std::vector<float>(1);
+  int right_team_designated_player = 0;
+  std::vector<int> ball = {0, 0, 0};
+  std::vector<float> ball_direction = std::vector<float>(3);
+  std::vector<float> ball_rotation = std::vector<float>(3);
+  int ball_owned_team = 0;
+  int ball_owned_player = 0;
+  int game_mode = 0;
+  std::vector<float> left_agent_sticky_actions = std::vector<float>(num_players);
+  std::vector<float> right_agent_sticky_actions = std::vector<float>(num_players);
+  std::vector<int> score = std::vector<int>(2);
+  int steps_left = 0;
+  observation(){};
+};  
+  
 struct FootballEnvState{
     int previous_score_diff = 0;
     int previous_game_mode = -1;
@@ -63,77 +99,65 @@ class FootballEnv : public Env<FootballEnvSpec> {
     int prev_ball_owned_team = -1;
 
   public:
-    std::string action_set_name;
-    std::string custom_display_stats;
-    bool display_game_stats;
-    bool dump_full_episodes;
-    bool dump_scores;
-    std::vector<std::string>players;
-    std::string level;
-    bool real_time;;
-    std::string tracesdir;
-    std::string video_format;
-    int video_quality_level;
-    bool write_video;
+    std::string action_set_name_;
+    std::string custom_display_stats_;
+    bool display_game_stats_;
+    bool dump_full_episodes_;
+    bool dump_scores_;
+    std::vector<std::string>players_;
+    std::string level_;
+    bool real_time_;
+    //std::string tracesdir_;
+    std::string video_format_;
+    int video_quality_level_;
+    bool write_video_;
     int episode_number = 0;
-    ScenarioConfig scenario_config;
+    boost::shared_ptr<ScenarioConfig> scenario_config = ScenarioConfig::make();
     GameContext* context = nullptr;
-    GameConfig game_config;
+    boost::shared_ptr<GameConfig> game_config = GameConfig::make();
     GameState state = game_created;
     int waiting_for_game_count = 0;
     GameEnv env_;
-    int physics_steps_per_frame;
-    int render_resolution_x;
-    int render_resolution_y;
-    FootballEnvState state;
+    int physics_steps_per_frame_;
+    int render_resolution_x_;
+    int render_resolution_y_;
     int steps_time = 0;
     int step_count = 0;
     int _step = 0;
     clock_t episode_start = clock();
     std::vector<CoreAction> action_set;
     float cumulative_reward = 0;
-    using Observation = decltype(MakeDict(
-        "left_team"_.Bind(std::vector<float>(22)), "left_team_roles"_.Bind(std::vector<float>(11)), "left_team_direction"_.Bind(std::vector<float>(22)),
-        "left_team_tired_factor"_.Bind(std::vector<int>(11)), "left_team_yellow_card"_.Bind(std::vector<int>(11)), "left_team_active"_.Bind(std::vector<int>{0}), 
-        "left_team_designated_player"_.Bind(3), "right_team"_.Bind(std::vector<float>(22)), "right_team_roles"_.Bind(std::vector<float>(11)), 
-        "right_team_direction"_.Bind(std::vector<float>(22)), "right_team_tired_factor"_.Bind(std::vector<int>(11)), "right_team_yellow_card"_.Bind(std::vector<float>(11)), 
-        "right_team_active"_.Bind(std::vector<int>{0}), "right_team_designated_player"_.Bind(0), "ball"_.Bind(std::vector<int>{0 , 0 , 0}), 
-        "ball_direction"_.Bind(std::vector<float>(3)), "ball_rotation"_.Bind(std::vector<float>(3)), "ball_owned_team"_.Bind(0), 
-        "ball_owned_player"_.Bind(7), "left_agent_controlled_player"_.Bind(std::vector<int>{4}), "right_agent_controlled_player"_.Bind(std::vector<int>{6}), 
-        "game_mode"_.Bind(0), "left_agent_sticky_actions"_.Bind(std::vector<float>(2)), "right_agent_sticky_actions"_.Bind(std::vector<float>(2)), 
-        "score"_.Bind(std::vector<int>{3, 5}), "steps_left"_.Bind(45)
-      ));
-    Observation observation;
 
     FootballEnv(const Spec& spec, int env_id) : Env<FootballEnvSpec>(spec, env_id),
       env_(GameEnv::GameEnv()),  
-      action_set_name(spec.config["action_set"]), 
-      physics_steps_per_frame(spec.config["physics_steps_per_frame"]), 
-      render_resolution_x(spec.config["render_resolution_x"]), 
-      render_resolution_y(spec.config["render_resolution_y"]), 
-      custom_display_stats(spec.config["custom_display_stats"]), 
-      display_game_stats(spec.config["display_game_stats"]), 
-      dump_full_episodes(spec.config["dump_full_episodes"]),
-      dump_scores(spec.config["dump_scores"]),
-      players(spec.config["players"]),
-      level(spec.config["level"]),
-      real_time(spec.config["real_time"]),
-      tracesdir(spec.config["tracesdir"]),
-      video_format(spec.config["video_format"]),
-      video_quality_level(spec.config["video_quality_level"]),
-      write_video(spec.config["write_video"])
+      action_set_name(spec.config["action_set"_]), 
+      physics_steps_per_frame(spec.config["physics_steps_per_frame"_]), 
+      render_resolution_x(spec.config["render_resolution_x"_]), 
+      render_resolution_y(spec.config["render_resolution_y"_]), 
+      custom_display_stats(spec.config["custom_display_stats"_]), 
+      display_game_stats(spec.config["display_game_stats"_]), 
+      dump_full_episodes(spec.config["dump_full_episodes"_]),
+      dump_scores(spec.config["dump_scores"_]),
+      players(spec.config["players"_]),
+      level(spec.config["level"_]),
+      real_time(spec.config["real_time"_]),
+      //tracesdir(spec.config["tracesdir"_]),
+      video_format(spec.config["video_format"_]),
+      video_quality_level(spec.config["video_quality_level"_]),
+      write_video(spec.config["write_video"_])
       {};
 
 
 
-    void Step(std::vector<enum Action>action){
+    void Step(const Action& action){
+      observation obs;
       step_count += 1;
       int action_index = 0;
       std::vector<int> controlled_players;
       for(int left_team = 1; left_team > 0; left_team++){
         auto agents = env_.config().left_agents;
         for(int j = 0; j < agents; j++){
-          auto player_action_index = action[action_index];
+          auto player_action_index = action["action"_][action_index];
           CoreAction player_action = action_idle;
           switch (player_action_index)
           {
@@ -245,12 +269,12 @@ class FootballEnv : public Env<FootballEnvSpec> {
           else if(env_.waiting_for_game_count > 20){
             player_action = action_idle;
             if(left_team == 0){
-              controlled_players = observation["left_agent_controlled_player"];
+              controlled_players = obs.left_agent_controlled_player;
             }
             else{
-              controlled_players = observation["right_agent_controlled_player"];
+              controlled_players = obs.right_agent_controlled_player;
             }
-            if (observation["ball_owned_team"] != -1 && controlled_players[j] == observation["ball_owned_player"] && ~(left_team ^ observation["ball_owned_team"])){
+            if (obs.ball_owned_team != -1 && controlled_players[j] == obs.ball_owned_player && !(left_team ^ obs.ball_owned_team)){
               if(bool(env_.waiting_for_game_count < 30) != bool(left_team)){
                 player_action = action_left;
               }
@@ -273,33 +297,33 @@ class FootballEnv : public Env<FootballEnvSpec> {
       }
 
       if(env_.config().end_episode_on_score){
-        if(observation["score"][0] > 0 || observation["score"][1] > 0){
+        if(obs.score[0] > 0 || obs.score[1] > 0){
           env_.state = GameState::game_done;
         }
       }
 
-      if(env_.config().end_episode_on_out_of_play && observation["game_mode"] != int(e_GameMode::e_GameMode_Normal) && previous_game_mode == int(e_GameMode::e_GameMode_Normal)){
+      if(env_.config().end_episode_on_out_of_play && obs.game_mode != int(e_GameMode::e_GameMode_Normal) && previous_game_mode == int(e_GameMode::e_GameMode_Normal)){
         env_.state = GameState::game_done;
       }
-      previous_game_mode = observation["game_mode"];
+      previous_game_mode = obs.game_mode;
 
       if(env_.config().end_episode_on_possession_change && 
-        observation["ball_owned_team"] != -1 &&
+        obs.ball_owned_team != -1 &&
         prev_ball_owned_team != -1 &&
-        observation["ball_owned_team"] != prev_ball_owned_team){
+        obs.ball_owned_team != prev_ball_owned_team){
           env_.state = GameState::game_done;
       }
-      if(observation["ball_owned_team"] != -1){
-        prev_ball_owned_team = observation["ball_owned_team"];
+      if(obs.ball_owned_team != -1){
+        prev_ball_owned_team = obs.ball_owned_team;
       }
 
-      int score_diff = observation["score"][0] - observation["score"][1];
+      int score_diff = obs.score[0] - obs.score[1];
       int reward = score_diff - previous_score_diff;
       previous_score_diff = score_diff;
       if(reward == 1){
 
       }
-      if(observation["game_mode"] != int(e_GameMode::e_GameMode_Normal)){
+      if(obs.game_mode != int(e_GameMode::e_GameMode_Normal)){
         env_.waiting_for_game_count += 1;
       }
       else{
@@ -415,3 +439,5 @@ class FootballEnv : public Env<FootballEnvSpec> {
 
 using FootballEnvPool = AsyncEnvPool<FootballEnv>;
 }
+
+#endif //#ifndef ENVPOOL_FOOTBALL_ENV_H_
