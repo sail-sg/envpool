@@ -72,7 +72,7 @@ class MujocoEnv {
 #endif
 #if defined(MJ_OSMESA)
   OSMesaContext ctx_;
-  unsigned char buffer_[10000000];
+  unsigned char buffer_[100];
 #endif
 
  public:
