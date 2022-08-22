@@ -100,7 +100,7 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
 MujocoEnv::~MujocoEnv() {
   // std::free(rgb_array_);
   // std::free(depth_array_);
-  std::free(buffer_);
+
   mj_deleteData(data_);
   mj_deleteModel(model_);
   mjr_freeContext(&context_);
@@ -440,6 +440,7 @@ void MujocoEnv::closeOpenGL(void) {
   //------------------------ OSMESA
 #elif defined(MJ_OSMESA)
   OSMesaDestroyContext(ctx_);
+  std::free(buffer_);
   //------------------------ EGL
 #else
   // get current display
