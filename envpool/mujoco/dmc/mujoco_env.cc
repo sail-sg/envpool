@@ -84,7 +84,7 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
   mjr_makeContext(model_, &context_, 200);
 
   // default free camera
-  mjv_defaultFreeCamera(model_, &camera_);
+  // mjv_defaultFreeCamera(model_, &camera_);
   // set rendering to offscreen buffer
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
   // allocate rgb and depth buffers
