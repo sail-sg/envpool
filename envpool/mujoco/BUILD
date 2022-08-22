@@ -87,8 +87,8 @@ cc_library(
     ],
     data = [":gen_mujoco_dmc_xml"],
     linkopts = [
-        "-lGL",
-        "-lEGL",
+        "-lOSMesa",
+        "-lrt",
     ],
     deps = [
         "//envpool/core:async_envpool",

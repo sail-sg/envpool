@@ -21,6 +21,10 @@
 #include <stdexcept>
 #include <utility>
 #include <vector>
+#if defined(MJ_OSMESA)
+OSMesaContext ctx;
+unsigned char buffer[10000000];
+#endif
 
 namespace mujoco_dmc {
 
@@ -78,6 +82,9 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
   mjv_makeScene(model_, &scene_, 2000);
   // void mjr_makeContext(const mjModel* m, mjrContext* con, int fontscale);
   mjr_makeContext(model_, &context_, 200);
+
+  // default free camera
+  mjv_defaultFreeCamera(model_, &camera_);
   // set rendering to offscreen buffer
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
   // allocate rgb and depth buffers

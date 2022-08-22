@@ -24,8 +24,8 @@
 #include <GLFW/glfw3.h>
 #elif defined(MJ_OSMESA)
 #include <GL/osmesa.h>
-OSMesaContext ctx;
-unsigned char buffer[10000000];
+// OSMesaContext ctx;
+// unsigned char buffer[10000000];
 #else
 #include <EGL/egl.h>
 #endif

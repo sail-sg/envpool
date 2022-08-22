@@ -3,7 +3,7 @@ build --action_env=BAZEL_LINKOPTS=-static-libgcc
 build --action_env=CUDA_DIR=/usr/local/cuda
 build --incompatible_strict_action_env --cxxopt=-std=c++17 --host_cxxopt=-std=c++17 --client_env=BAZEL_CXXOPTS=-std=c++17
 build:debug --cxxopt=-DENVPOOL_TEST --compilation_mode=dbg -s
-build:test --cxxopt=-DENVPOOL_TEST --copt=-g0 --copt=-O3 --copt=-DNDEBUG --copt=-msse --copt=-msse2 --copt=-mmmx --copt -DMESA_EGL_NO_X11_HEADERS --copt -DEGL_NO_X11
+build:test --cxxopt=-DENVPOOL_TEST --copt=-g0 --copt=-O3 --copt=-DNDEBUG --copt=-msse --copt=-msse2 --copt=-mmmx --copt=-DMESA_EGL_NO_X11_HEADERS --copt=-DEGL_NO_X11 --copt=-DMJ_OSMESA
 build:release --copt=-g0 --copt=-O3 --copt=-DNDEBUG --copt=-msse --copt=-msse2 --copt=-mmmx
 
 build:clang-tidy --aspects @bazel_clang_tidy//clang_tidy:clang_tidy.bzl%clang_tidy_aspect
