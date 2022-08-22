@@ -1,3 +1,4 @@
+build --action_env=DISPLAY=''
 build --action_env=BAZEL_LINKLIBS=-l%:libstdc++.a:-lm
 build --action_env=BAZEL_LINKOPTS=-static-libgcc
 build --action_env=CUDA_DIR=/usr/local/cuda
