@@ -21,10 +21,6 @@
 #include <stdexcept>
 #include <utility>
 #include <vector>
-#if defined(MJ_OSMESA)
-OSMesaContext ctx;
-unsigned char buffer[10000000];
-#endif
 
 namespace mujoco_dmc {
 
@@ -99,14 +95,21 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
 #ifdef ENVPOOL_TEST
   qpos0_.reset(new mjtNum[model_->nq]);
 #endif
+#if defined(MJ_OSMESA)
+  OSMesaContext ctx_;
+  unsigned char buffer_[10000000];
+#endif
 }
 
 MujocoEnv::~MujocoEnv() {
+  std::free(rgb_array_);
+  std::free(depth_array_);
+  std::free(buffer_);
   mj_deleteData(data_);
   mj_deleteModel(model_);
   mjr_freeContext(&context_);
   mjv_freeScene(&scene_);
-  // closeOpenGL();
+  closeOpenGL();
 }
 
 // rl control Environment
@@ -352,13 +355,13 @@ void MujocoEnv::initOpenGL(void) {
   //------------------------ OSMESA
 #elif defined(MJ_OSMESA)
   // create context
-  ctx = OSMesaCreateContextExt(GL_RGBA, 24, 8, 8, 0);
-  if (!ctx) {
+  ctx_ = OSMesaCreateContextExt(GL_RGBA, 24, 8, 8, 0);
+  if (!ctx_) {
     mju_error("OSMesa context creation failed");
   }
 
   // make current
-  if (!OSMesaMakeCurrent(ctx, buffer, GL_UNSIGNED_BYTE, 800, 800)) {
+  if (!OSMesaMakeCurrent(ctx_, buffer_, GL_UNSIGNED_BYTE, 800, 800)) {
     mju_error("OSMesa make current failed");
   }
 
@@ -441,7 +444,6 @@ void MujocoEnv::closeOpenGL(void) {
   //------------------------ OSMESA
 #elif defined(MJ_OSMESA)
   OSMesaDestroyContext(ctx);
-
   //------------------------ EGL
 #else
   // get current display
