@@ -37,6 +37,10 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
       camera_id_("-1"),
       depth_(false),
       segmentation_(false) {
+#if defined(MJ_OSMESA)
+  OSMesaContext ctx_;
+  unsigned char buffer_[10000000];
+#endif
   initOpenGL();
   // initialize vfs from common assets and raw xml
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/mujoco/wrapper/core.py#L158
@@ -94,10 +98,6 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
 
 #ifdef ENVPOOL_TEST
   qpos0_.reset(new mjtNum[model_->nq]);
-#endif
-#if defined(MJ_OSMESA)
-  OSMesaContext ctx_;
-  unsigned char buffer_[10000000];
 #endif
 }
 
