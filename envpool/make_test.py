@@ -126,7 +126,7 @@ class _MakeTest(absltest.TestCase):
         "Walker2d-v4",
       ]
     )
-
+  # make test with GL loading error
   def test_make_mujoco_dmc(self) -> None:
     self.check_step(
       [
