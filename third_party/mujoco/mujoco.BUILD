@@ -12,7 +12,10 @@ cc_library(
         "include/mujoco",
         "sample",
     ],
-    linkopts = ["-Wl,-rpath,'$$ORIGIN'"],
+    linkopts = [
+        "-Wl,-rpath,'$$ORIGIN'",
+        "-lOSMesa",
+    ],
     linkstatic = 0,
 )
 
