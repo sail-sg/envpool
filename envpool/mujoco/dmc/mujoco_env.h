@@ -70,6 +70,10 @@ class MujocoEnv {
 #ifdef ENVPOOL_TEST
   std::unique_ptr<mjtNum> qpos0_;
 #endif
+#if defined(MJ_OSMESA)
+  OSMesaContext ctx_;
+  unsigned char buffer_[10000000];
+#endif
 
  public:
   MujocoEnv(const std::string& base_path, const std::string& raw_xml,
