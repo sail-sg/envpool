@@ -106,7 +106,7 @@ MujocoEnv::~MujocoEnv() {
   mj_deleteModel(model_);
   mjr_freeContext(&context_);
   mjv_freeScene(&scene_);
-  closeOpenGL();
+  // closeOpenGL();
 }
 
 // rl control Environment
