@@ -443,7 +443,7 @@ void MujocoEnv::closeOpenGL(void) {
 
   //------------------------ OSMESA
 #elif defined(MJ_OSMESA)
-  OSMesaDestroyContext(ctx);
+  OSMesaDestroyContext(ctx_);
   //------------------------ EGL
 #else
   // get current display
