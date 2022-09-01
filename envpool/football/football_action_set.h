@@ -8,17 +8,17 @@
 class CoreAction{
   public:
     CoreAction(Action action, std::string name, bool sticky = false, bool directional = false){
-      this->action_ = action;
-      this->name_ = name;
-      this->sticky_ = sticky;
-      this->directional_ = directional;
+      _backend_action = backend_action;
+      _name = name;
+      _sticky = sticky;
+      _directional = directional;
     }
-    bool is_in_actionset(Config config){
+    bool is_in_actionset(Config_football config){
     };
-    Action action_;
-    std::string name_;
-    bool sticky_;
-    bool directional_;
+    Action _backend_action;
+    std::string _name;
+    bool _sticky;
+    bool _directional;
 };
 
 bool T = true;
@@ -57,5 +57,63 @@ CoreAction action_release_team_pressure(Action::game_release_team_pressure, "rel
 CoreAction action_release_switch(Action::game_release_switch, "release_switch");
 CoreAction action_release_sprint(Action::game_release_sprint, "release_sprint");
 CoreAction action_release_dribble(Action::game_release_dribble, "release_dribble");
+
+std::vector<CoreAction> get_action_set(Config_football cfg){
+  std::vector<CoreAction> action_set;
+  if(cfg.action_set == "default"){
+    action_set = {
+      action_idle, action_left, action_top_left, action_top,
+      action_top_right, action_right, action_bottom_right,
+      action_bottom, action_bottom_left, action_long_pass,
+      action_high_pass, action_short_pass, action_shot,
+      action_sprint, action_release_direction, action_release_sprint,
+      action_sliding, action_dribble, action_release_dribble
+    };
+  }
+  else if(cfg.action_set == "v2"){
+    action_set = {
+      action_idle, action_left, action_top_left, action_top,
+      action_top_right, action_right, action_bottom_right,
+      action_bottom, action_bottom_left, action_long_pass,
+      action_high_pass, action_short_pass, action_shot,
+      action_sprint, action_release_direction, action_release_sprint,
+      action_sliding, action_dribble, action_release_dribble, action_builtin_ai
+    };
+  }
+  else if(cfg.action_set == "full"){
+    action_set = {
+      action_idle, action_left, action_top_left, action_top,
+      action_top_right, action_right, action_bottom_right,
+      action_bottom, action_bottom_left, action_long_pass,
+      action_high_pass, action_short_pass, action_shot,
+      action_sprint, action_release_direction, action_release_sprint,
+      action_sliding, action_dribble, action_release_dribble, action_builtin_ai,
+      action_keeper_rush, action_pressure,
+      action_team_pressure, action_switch,
+      action_release_long_pass, action_release_high_pass,
+      action_release_short_pass, action_release_shot,
+      action_release_keeper_rush, action_release_sliding,
+      action_release_pressure, action_release_team_pressure,
+      action_release_switch
+    };
+  }
+  return action_set;
+}
+
+std::vector<CoreAction> get_sticky_actions(Config_football cfg){
+  std::vector<CoreAction> sticky_actions;
+  std::vector<CoreAction> action_set;
+  action_set = get_action_set(cfg);
+  for(int i = 0; i < action_set.size(); i++){
+    if(action_set[i]._sticky){
+      sticky_actions.push_back(action_set[i]);
+    }
+  }
+  return sticky_actions;
+}
+
+CoreAction named_action_from_action_set(std::vector<CoreAction> action_set, int action){
+  return action_set[action];
+}
 
 #endif  //ENVPOOL_FOOTBALL_ACTION_SET_H_
