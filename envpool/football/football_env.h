@@ -29,9 +29,6 @@ namespace football{
 
 class FootballEnvFns {
   public:
-    //static char *tracesdir_pre_char;
-    //static std::string tracesdir_pre;
-    //static std::string tracesdir;
     static decltype(auto) DefaultConfig(){
       return MakeDict(
         "env_name"_.Bind(std::string("")), 
@@ -43,6 +40,7 @@ class FootballEnvFns {
         "render"_.Bind(false), 
         "write_video"_.Bind(false), 
         "dump_frequency"_.Bind(1), 
+        "logdir"_.Bind(std::string("")),
         "extra_players"_.Bind(0), 
         "number_of_left_players_agent_controls"_.Bind(1), 
         "number_of_right_players_agent_controls"_.Bind(0), 
@@ -127,7 +125,7 @@ class FootballEnvFns {
     static decltype(auto) ActionSpec(const Config& conf) {
       Config_football c;
       int num_actions = get_action_set(c).size();
-      int number_of_players_agent_controls = conf.number_of_left_players_agent_controls + conf.number_of_right_players_agent_controls + conf.extra_players;
+      int number_of_players_agent_controls = conf["number_of_left_players_agent_controls"_] + conf["number_of_right_players_agent_controls"_] + conf["extra_players"_];
       if(number_of_players_agent_controls > 1){
         return MakeDict(
           "action"_.Bind(Spec<int>({number_of_players_agent_controls}, {0, num_actions}))
@@ -373,7 +371,7 @@ class FootballEnvCore{
     std::vector<int>sticky_actions_state(bool left_team, int player_id){
       std::vector<int>result;
       for(int a = 0; a < _sticky_actions.size(); a++){
-        result.push_back(int(_env.sticky_actions_state(_sticky_actions[a]._backend_action, left_team, player_id)));
+        result.push_back(int(_env.sticky_action_state(_sticky_actions[a]._backend_action, left_team, player_id)));
       }
       return result;
     }
@@ -486,6 +484,9 @@ class PreFootballEnv{
     std::vector<PlayerFootball> _players;
     FootballEnvCore _env = FootballEnvCore(_config);
     int _num_actions = get_action_set(_config).size();
+    PreFootballEnv(){
+      _players = _construct_players(_config.players, player_index);
+    }
     PreFootballEnv(Config_football cfg){
       _config = cfg;
       _players = _construct_players(cfg.players, player_index);
@@ -561,7 +562,7 @@ class PreFootballEnv{
         for(j = 0; j < _players[i].num_controlled_left_players(); j++){
           actions.push_back(a[j]);
         }
-        for(; j < _players[i].num_controlled_left_players() + _players[i].num_controlled_right_players()){
+        for(; j < _players[i].num_controlled_left_players() + _players[i].num_controlled_right_players(); j++){
           actions.push_back(a[j]);
         }
       }
