@@ -11,13 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Entry point for all envs' registration."""
 
-import envpool.atari.registration  # noqa: F401
-import envpool.box2d.registration  # noqa: F401
-import envpool.classic_control.registration  # noqa: F401
-import envpool.mujoco.dmc.registration  # noqa: F401
-import envpool.mujoco.gym.registration  # noqa: F401
-import envpool.procgen.registration
-import envpool.toy_text.registration  # noqa: F401
-import envpool.vizdoom.registration  # noqa: F401
+from envpool.python.api import py_env
+
+from .procgen_envpool import _ProcgenEnvPool, _ProcgenEnvSpec
+
+ProcgenEnvSpec, ProcgenDMEnvPool, ProcgenGymEnvPool = py_env(
+    _ProcgenEnvSpec, _ProcgenEnvPool
+)
+
+__all__ = [
+    "ProcgenEnvSpec",
+    "ProcgenDMEnvPool",
+    "ProcgenGymEnvPool",
+]

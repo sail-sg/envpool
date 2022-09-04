@@ -379,6 +379,22 @@ def workspace():
 
     maybe(
         http_archive,
+        name = "procgen",
+        sha256 = "8d443b7b8fba44ef051b182e9a87abfa4e05292568e476ca1e5f08f9666a1b72",
+        strip_prefix = "procgen-0.10.7/procgen/src/",
+        urls = [
+            "https://github.com/openai/procgen/archive/refs/tags/0.10.7.zip",
+        ],
+        patches = [
+            "//third_party/procgen:assetgen.patch",
+            "//third_party/procgen:qt-utils.patch",
+            "//third_party/procgen:libenv.patch",
+        ],
+        build_file = "//third_party/procgen:procgen.BUILD",
+    )
+
+    maybe(
+        http_archive,
         name = "bazel_clang_tidy",
         sha256 = "ec8c5bf0c02503b928c2e42edbd15f75e306a05b2cae1f34a7bc84724070b98b",
         strip_prefix = "bazel_clang_tidy-783aa523aafb4a6798a538c61e700b6ed27975a7",

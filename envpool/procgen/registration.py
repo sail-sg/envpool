@@ -11,13 +11,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Entry point for all envs' registration."""
 
-import envpool.atari.registration  # noqa: F401
-import envpool.box2d.registration  # noqa: F401
-import envpool.classic_control.registration  # noqa: F401
-import envpool.mujoco.dmc.registration  # noqa: F401
-import envpool.mujoco.gym.registration  # noqa: F401
-import envpool.procgen.registration
-import envpool.toy_text.registration  # noqa: F401
-import envpool.vizdoom.registration  # noqa: F401
+from envpool.registration import register
+
+# in total 16 games in Procgen
+procgen_games_list = [
+    "bigfish", "bossfight", "caveflyer", "chaser", "climber", "coinrun",
+    "dodgeball", "fruitbot", "heist", "jumper", "leaper", "maze", "miner",
+    "ninja", "plunder", "starpilot"
+]
+
+# Mostly 3 configurable parameters
+# 1. num_levels
+register(
+    task_id="procgen-bigfish",
+    import_path="envpool.procgen",
+    spec_cls="ProcgenEnvSpec",
+    dm_cls="ProcgenDMEnvPool",
+    gym_cls="ProcgenGymEnvPool",
+    game_name="bigfish",
+    num_levels=0,
+    start_level=0,
+    distribution_mode=1
+)
