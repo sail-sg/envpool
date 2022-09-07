@@ -33,5 +33,5 @@
 #include "roomgen.h"
 #include "vecgame.h"
 #include "vecoptions.h"
-
+#include "game_factory.h"
 #endif

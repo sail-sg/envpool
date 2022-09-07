@@ -1,0 +1,19 @@
+--- games/bigfish.cpp
++++ games/bigfish.cpp
+@@ -1,5 +1,7 @@
+ #include "../basic-abstract-game.h"
+ #include "../assetgen.h"
++#include "../game.h"
++#include "game_factory.h"
+ #include <set>
+ #include <queue>
+
+@@ -119,3 +121,8 @@
+ };
+
+ REGISTER_GAME(NAME, BigFish);
++
++std::shared_ptr<Game> make_bigfish(void) {
++    return std::make_shared<BigFish>();
++}
++

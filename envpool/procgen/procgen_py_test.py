@@ -43,8 +43,6 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
             "state_num", "gym_reset_return_info", "timeout", "thread_affinity_offset"
         ]
         default_conf = _ProcgenEnvSpec._default_config_values
-        print("The default_conf key is ")
-        print(_ProcgenEnvSpec._config_keys)
         self.assertTrue(isinstance(default_conf, tuple))
         config_keys = _ProcgenEnvSpec._config_keys
         self.assertTrue(isinstance(config_keys, list))
@@ -52,6 +50,16 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
         self.assertEqual(sorted(config_keys), sorted(ref_config_keys))
         print("Passed the Procgen config test...")
 
+    def test_raw_envpool(self) -> None:
+        # create procgen environment
+        conf = dict(
+            zip(_ProcgenEnvSpec._config_keys, _ProcgenEnvSpec._default_config_values)
+        )
+        conf["num_envs"] = num_envs = 100
+        conf["batch_size"] = batch = 31
+        conf["num_threads"] = os.cpu_count()
+        env_spec = _ProcgenEnvSpec(tuple(conf.values()))
+        env = _ProcgenEnvPool(env_spec)
 
 if __name__ == "__main__":
     absltest.main()

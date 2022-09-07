@@ -1,0 +1,8 @@
++++ game_factory.h
+@@ -0,0 +1,4 @@
+@@ -0,0 +1,5 @@
++#include "game.h"
++#ifndef GLOBAL_GAME_FACTORY_H
++#define GLOBAL_GAME_FACTORY_H
++std::shared_ptr<Game> make_bigfish(void);
++#endif

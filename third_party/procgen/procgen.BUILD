@@ -51,7 +51,8 @@ cc_library(
         "roomgen.h",
         "vecgame.h",
         "vecoptions.h",
-        "libenv.h"
+        "libenv.h",
+        "game_factory.h"
     ],
     copts = [
             '-fpic',
