@@ -1,0 +1,18 @@
+--- games/heist.cpp
++++ games/heist.cpp
+@@ -4,6 +4,7 @@
+ #include <queue>
+ #include "../mazegen.h"
+ #include "../cpp-utils.h"
++#include "game_factory.h"
+
+ const std::string NAME = "heist";
+
+@@ -224,3 +225,7 @@
+ };
+
+ REGISTER_GAME(NAME, HeistGame);
++
++std::shared_ptr<Game> make_heist(void) {
++    return std::make_shared<HeistGame>();
++}

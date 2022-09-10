@@ -1,0 +1,18 @@
+--- games/climber.cpp
++++ games/climber.cpp
+@@ -3,6 +3,7 @@
+ #include <set>
+ #include <queue>
+ #include "../mazegen.h"
++#include "game_factory.h"
+
+ const std::string NAME = "climber";
+
+@@ -341,3 +342,7 @@
+ };
+
+ REGISTER_GAME(NAME, Climber);
++
++std::shared_ptr<Game> make_climber(void) {
++    return std::make_shared<Climber>();
++}

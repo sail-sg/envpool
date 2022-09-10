@@ -1,0 +1,18 @@
+--- games/dodgeball.cpp
++++ games/dodgeball.cpp
+@@ -2,6 +2,7 @@
+ #include "../assetgen.h"
+ #include <set>
+ #include <queue>
++#include "game_factory.h"
+
+ const std::string NAME = "dodgeball";
+
+@@ -467,3 +468,7 @@
+ };
+
+ REGISTER_GAME(NAME, DodgeballGame);
++
++std::shared_ptr<Game> make_dodgeball(void) {
++    return std::make_shared<DodgeballGame>();
++}

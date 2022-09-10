@@ -1,0 +1,17 @@
+--- games/leaper.cpp
++++ games/leaper.cpp
+@@ -1,5 +1,6 @@
+ #include "../basic-abstract-game.h"
+ #include "../qt-utils.h"
++#include "game_factory.h"
+
+ const std::string NAME = "leaper";
+
+@@ -302,3 +303,7 @@
+ };
+
+ REGISTER_GAME(NAME, LeaperGame);
++
++std::shared_ptr<Game> make_leaper(void) {
++    return std::make_shared<LeaperGame>();
++}

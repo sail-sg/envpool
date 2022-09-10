@@ -1,0 +1,19 @@
+--- games/coinrun.cpp
++++ games/coinrun.cpp
+@@ -5,7 +5,7 @@
+ #include "../mazegen.h"
+ #include "../cpp-utils.h"
+ #include "../qt-utils.h"
+-
++#include "game_factory.h"
+ const std::string NAME = "coinrun";
+
+ const float GOAL_REWARD = 10.0f;
+@@ -521,3 +521,7 @@
+ };
+
+ REGISTER_GAME(NAME, CoinRun);
++
++std::shared_ptr<Game> make_coinrun(void) {
++    return std::make_shared<CoinRun>();
++}

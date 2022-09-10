@@ -1,0 +1,18 @@
+--- games/fruitbot.cpp
++++ games/fruitbot.cpp
+@@ -2,6 +2,7 @@
+ #include "../assetgen.h"
+ #include <set>
+ #include <queue>
++#include "game_factory.h"
+
+ const std::string NAME = "fruitbot";
+
+@@ -278,3 +279,7 @@
+ };
+
+ REGISTER_GAME(NAME, FruitBotGame);
++
++std::shared_ptr<Game> make_fruitbot(void) {
++    return std::make_shared<FruitBotGame>();
++}

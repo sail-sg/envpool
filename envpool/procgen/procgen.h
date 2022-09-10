@@ -49,6 +49,46 @@ inline uint32_t hash_str_uint32(const std::string& str) {
   return hash;
 }
 
+/* game factory method */
+std::shared_ptr<Game> make_game(std::string name) {
+    if (name == "bigfish") {
+        return make_bigfish();
+    } else if (name == "bossfight") {
+        return make_bossfight();
+    } else if (name == "caveflyer") {
+        return make_caveflyer();
+    } else if (name == "chaser") {
+        return make_chaser();
+    } else if (name == "climber") {
+        return make_climber();
+    } else if (name == "coinrun") {
+        return make_coinrun();
+    } else if (name == "dodgeball") {
+        return make_dodgeball();
+    } else if (name == "fruitbot") {
+        return make_fruitbot();
+    } else if (name == "heist") {
+        return make_heist();
+    } else if (name == "jumper") {
+        return make_jumper();
+    } else if (name == "leaper") {
+        return make_leaper();
+    } else if (name == "maze") {
+        return make_maze();
+    } else if (name == "miner") {
+        return make_miner();
+    } else if (name == "ninja") {
+        return make_ninja();
+    } else if (name == "plunder") {
+        return make_plunder();
+    } else if (name == "starpilot") {
+        return make_starpilot();
+    } else {
+        // not supposed to be here
+        return make_bigfish();
+    }
+}
+
 class ProcgenEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
@@ -112,7 +152,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
      */
     // the line below leads to nullptr access exception
     // game_ = globalGameRegistry->at(std::string(spec.config["game_name"_]))();
-    game_ = make_bigfish();
+    game_ = make_game(spec.config["game_name"_]);
     game_level_seed_gen_.seed(rand_seed_);
     game_->level_seed_rand_gen.seed(game_level_seed_gen_.randint());
     game_->level_seed_low = spec.config["level_seed_low"_];
@@ -140,7 +180,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     /* procgen game has itself reset method that clears out the internal state
      * of the game */
     done_ = false;
-    game_->game_reset();
+    game_->reset();
     State state = Allocate();
     WriteObs(state);
   }

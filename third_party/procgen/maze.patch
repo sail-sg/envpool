@@ -1,0 +1,17 @@
+--- games/maze.cpp
++++ games/maze.cpp
+@@ -1,5 +1,6 @@
+ #include "../basic-abstract-game.h"
+ #include "../mazegen.h"
++#include "game_factory.h"
+
+ const std::string NAME = "maze";
+
+@@ -136,3 +137,7 @@
+ };
+
+ REGISTER_GAME(NAME, MazeGame);
++
++std::shared_ptr<Game> make_maze(void) {
++    return std::make_shared<MazeGame>();
++}

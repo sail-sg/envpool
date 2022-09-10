@@ -1,0 +1,18 @@
+--- games/plunder.cpp
++++ games/plunder.cpp
+@@ -2,6 +2,7 @@
+ #include "../assetgen.h"
+ #include <set>
+ #include <queue>
++#include "game_factory.h"
+
+ const std::string NAME = "plunder";
+
+@@ -278,3 +279,7 @@
+ };
+
+ REGISTER_GAME(NAME, PlunderGame);
++
++std::shared_ptr<Game> make_plunder(void) {
++    return std::make_shared<PlunderGame>();
++}

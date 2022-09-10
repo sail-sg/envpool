@@ -1,0 +1,18 @@
+--- games/jumper.cpp
++++ games/jumper.cpp
+@@ -5,6 +5,7 @@
+ #include <set>
+ #include <queue>
+ #include <memory>
++#include "game_factory.h"
+
+ const std::string NAME = "jumper";
+
+@@ -469,3 +470,7 @@
+ };
+
+ REGISTER_GAME(NAME, Jumper);
++
++std::shared_ptr<Game> make_jumper(void) {
++    return std::make_shared<Jumper>();
++}
