@@ -51,15 +51,36 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
         print("Passed the Procgen config test...")
 
     def test_raw_envpool(self) -> None:
-        # create procgen environment
+        # refer to : https://github.com/sail-sg/envpool/blob/main/envpool/atari/atari_envpool_test.py#L33
+        # create raw procgen environment and run
         conf = dict(
             zip(_ProcgenEnvSpec._config_keys, _ProcgenEnvSpec._default_config_values)
         )
-        conf["num_envs"] = num_envs = 100
-        conf["batch_size"] = batch = 31
+        conf["num_envs"] = num_envs = 3
+        conf["batch_size"] = batch = 3
         conf["num_threads"] = os.cpu_count()
         env_spec = _ProcgenEnvSpec(tuple(conf.values()))
         env = _ProcgenEnvPool(env_spec)
+        # this line of "_reset" cause "Fatal Python error: Floating point exception"
+        # which currently in under investigation
+        env._reset(np.arange(num_envs, dtype=np.int32))
+        # total = 2000
+        # actions = np.random.randint(15, size=(total, batch))
+        # t = time.time()
+        # for i in range(total):
+        #     state = dict(zip(state_keys, env._recv()))
+        #     action = {
+        #         "env_id": state["info:env_id"],
+        #         "players.env_id": state["info:players.env_id"],
+        #         "action": actions[i],
+        #     }
+        #     env._send(tuple(action.values()))
+        # duration = time.time() - t
+        # fps = total * batch / duration
+        # logging.info(f"Raw envpool Procgen FPS = {fps:.6f}")
+
+    def test_align(self) ->None:
+        pass
 
 if __name__ == "__main__":
     absltest.main()
