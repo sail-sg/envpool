@@ -1,0 +1,10 @@
+--- Box2D/Common/b2Settings.h
++++ Box2D/Common/b2Settings.h
+@@ -23,7 +23,6 @@
+ #include <cmath>
+ 
+ #define B2_NOT_USED(x) ((void)(x))
+-#define USE_EXCEPTIONS
+ 
+ #ifdef USE_EXCEPTIONS
+ #include <Python.h>

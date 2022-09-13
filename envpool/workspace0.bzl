@@ -355,11 +355,13 @@ def workspace():
     maybe(
         http_archive,
         name = "box2d",
-        sha256 = "d6b4650ff897ee1ead27cf77a5933ea197cbeef6705638dd181adc2e816b23c2",
-        strip_prefix = "box2d-2.4.1",
+        sha256 = "b8076f128562ef06afd3e17cb0df6c90b050009aadd54b919eca9e3ee312ac5b",
+        strip_prefix = "box2d-py-2.3.5",
         urls = [
-            "https://github.com/erincatto/box2d/archive/refs/tags/v2.4.1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/erincatto/box2d/v2.4.1.tar.gz",
+            "https://github.com/openai/box2d-py/archive/refs/tags/2.3.5.tar.gz",
+        ],
+        patches = [
+            "//third_party/box2d:exception_remove.patch",
         ],
         build_file = "//third_party/box2d:box2d.BUILD",
     )

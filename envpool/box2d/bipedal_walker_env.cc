@@ -190,7 +190,7 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
       bd.type = b2_staticBody;
 
       b2EdgeShape shape;
-      shape.SetTwoSided(Vec2(terrain_x[i], terrain_y[i]),
+      shape.Set(Vec2(terrain_x[i], terrain_y[i]),
                         Vec2(terrain_x[i + 1], terrain_y[i + 1]));
 
       b2FixtureDef fd;
@@ -202,6 +202,7 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
       t->CreateFixture(&fd);
       terrain_.emplace_back(t);
     }
+    std::reverse(terrain_.begin(), terrain_.end());
   }
 
   // hull
@@ -259,13 +260,14 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
     rjd.bodyB = legs_[index * 2];
     rjd.localAnchorA = Vec2(0, kLegDown);
     rjd.localAnchorB = Vec2(0, kLegH / 2);
-    rjd.referenceAngle = sign * 0.05f;
+    rjd.referenceAngle = rjd.bodyB->GetAngle() - rjd.bodyA->GetAngle();
     rjd.enableMotor = true;
     rjd.enableLimit = true;
     rjd.maxMotorTorque = kMotorsTorque;
     rjd.motorSpeed = sign;
     rjd.lowerAngle = -0.8;
     rjd.upperAngle = 1.1;
+    rjd.type = b2JointType::e_revoluteJoint;
     joints_[index * 2] =
         static_cast<b2RevoluteJoint*>(world_->CreateJoint(&rjd));
 
@@ -281,7 +283,7 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
     rjd.bodyB = legs_[index * 2 + 1];
     rjd.localAnchorA = Vec2(0, -kLegH / 2);
     rjd.localAnchorB = Vec2(0, kLegH / 2);
-    rjd.referenceAngle = 0;
+    rjd.referenceAngle = rjd.bodyB->GetAngle() - rjd.bodyA->GetAngle();
     rjd.motorSpeed = 1;
     rjd.lowerAngle = -1.6;
     rjd.upperAngle = -0.1;

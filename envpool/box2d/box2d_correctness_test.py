@@ -206,55 +206,58 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
   def solve_bipedal_walker(
     self, num_envs: int, hardcore: bool, render: bool
   ) -> None:
+    max_episode_steps = 2000 if hardcore else 1600
     env = BipedalWalkerGymEnvPool(
       BipedalWalkerEnvSpec(
         BipedalWalkerEnvSpec.gen_config(
           num_envs=num_envs,
           hardcore=hardcore,
-          max_episode_steps=2000 if hardcore else 1600,
+          max_episode_steps=max_episode_steps,
         )
       )
     )
-    # each env run two episodes
-    for _ in range(2):
-      hs = np.array(
-        [
-          {
-            "state": 1,
-            "moving_leg": 0,
-            "supporting_leg": 1,
-            "supporting_knee_angle": 0.1,
-          } for _ in range(num_envs)
-        ]
-      )
-      env_id = np.arange(num_envs)
-      done = np.array([False] * num_envs)
-      obs = env.reset(env_id)
-      rewards = np.zeros(num_envs)
-      action = np.zeros([num_envs, 4])
-      while not np.all(done):
-        ah = [
-          self.heuristic_bipedal_walker_policy(s, h) for s, h in zip(obs, hs)
-        ]
-        action = np.array([i[0] for i in ah])
-        hs = np.array([i[1] for i in ah])
-        obs, rew, done, info = env.step(action, env_id)
-        if render:
-          self.render_bpw(info)
-        env_id = info["env_id"]
-        rewards[env_id] += rew
-        obs = obs[~done]
-        env_id = env_id[~done]
-        hs = hs[~done]
-      mean_reward = np.mean(rewards)
-      logging.info(
-        f"{hardcore}, {np.mean(rewards):.6f} ± {np.std(rewards):.6f}"
-      )
-      # the following number is from gym's 1000 episode mean reward
-      if hardcore:  # -59.219390 ± 25.209768
-        self.assertTrue(abs(mean_reward + 59) < 10, (hardcore, mean_reward))
-      else:  # 102.647320 ± 125.075071
-        self.assertTrue(abs(mean_reward - 103) < 20, (hardcore, mean_reward))
+    hs = np.array(
+      [
+        {
+          "state": 1,
+          "moving_leg": 0,
+          "supporting_leg": 1,
+          "supporting_knee_angle": 0.1,
+        } for _ in range(num_envs)
+      ]
+    )
+    env_id = np.arange(num_envs)
+    done = np.array([False] * num_envs)
+    obs = env.reset(env_id)
+    rewards = np.zeros(num_envs)
+    action = np.zeros([num_envs, 4])
+    for _ in range(max_episode_steps):
+      obs, rew, done, info = env.step(action, env_id)
+      if render:
+        self.render_bpw(info)
+      env_id = info["env_id"]
+      rewards[env_id] += rew
+      if np.all(done):
+        break
+      obs = obs[~done]
+      env_id = env_id[~done]
+      hs = hs[~done]
+
+      ah = [
+        self.heuristic_bipedal_walker_policy(s, h) for s, h in zip(obs, hs)
+      ]
+      action = np.array([i[0] for i in ah])
+      hs = np.array([i[1] for i in ah])
+    
+    mean_reward = np.mean(rewards)
+    logging.info(
+      f"{hardcore}, {np.mean(rewards):.6f} ± {np.std(rewards):.6f}"
+    )
+    # the following number is from gym's 1000 episode mean reward
+    if hardcore:  # -59.219390 ± 25.209768
+      self.assertTrue(abs(mean_reward + 59) < 10, (hardcore, mean_reward))
+    else:  # 102.647320 ± 125.075071
+      self.assertTrue(abs(mean_reward - 103) < 20, (hardcore, mean_reward))
 
   def render_bpw(self, info: dict) -> None:
     SCALE = 30.0
@@ -301,7 +304,7 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
     pygame.display.flip()
 
   def test_bipedal_walker_correctness(
-    self, num_envs: int = 1, render: bool = not False
+    self, num_envs: int = 100, render: bool = False
   ) -> None:
     if render:
       pygame.init()
