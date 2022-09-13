@@ -29,7 +29,7 @@ using RandUniform = std::uniform_real_distribution<>;
 // this function is to pass clang-tidy conversion check
 b2Vec2 Vec2(double x, double y);
 
-float Sign(float val, float eps = 1e-8);
+double Sign(double val, double eps = 1e-8);
 
 }  // namespace box2d
 

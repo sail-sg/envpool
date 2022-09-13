@@ -20,7 +20,7 @@ b2Vec2 Vec2(double x, double y) {
   return b2Vec2(static_cast<float>(x), static_cast<float>(y));
 }
 
-float Sign(float val, float eps) {
+double Sign(double val, double eps) {
   if (val > eps) {
     return 1;
   }

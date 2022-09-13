@@ -248,7 +248,7 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
       ]
       action = np.array([i[0] for i in ah])
       hs = np.array([i[1] for i in ah])
-    
+
     mean_reward = np.mean(rewards)
     logging.info(
       f"{hardcore}, {np.mean(rewards):.6f} ± {np.std(rewards):.6f}"
@@ -304,8 +304,7 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
     pygame.display.flip()
 
   def test_bipedal_walker_correctness(
-    self, num_envs: int = 100, render: bool = False
-  ) -> None:
+      self, num_envs: int = 100, render: bool = False) -> None:
     if render:
       pygame.init()
       pygame.display.init()

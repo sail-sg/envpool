@@ -358,7 +358,7 @@ void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
     done_ = true;
   }
 
-  scroll_ = pos.x - kViewportW / kScale / 5;
+  scroll_ = pos.x - static_cast<float>(kViewportW / kScale / 5);
   // info
 #ifdef ENVPOOL_TEST
   path2_.clear();
