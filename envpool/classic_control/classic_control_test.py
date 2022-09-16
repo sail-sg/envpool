@@ -82,7 +82,7 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
       d0 = False
       while not d0:
         a = env0.action_space.sample()
-        o0, r0, d0, _ = env0.step(a)  # type: ignore
+        o0, r0, d0, _ = env0.step(a)
         o1, r1, d1, _ = env1.step(np.array([a]), np.array([0]))
         np.testing.assert_allclose(o0, o1[0], atol=1e-4)
         np.testing.assert_allclose(r0, r1[0])

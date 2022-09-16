@@ -229,7 +229,7 @@ class _ToyTextEnvTest(absltest.TestCase):
       assert env.reset()[0] == ref.reset()
       while len(action) > 0:
         a = action.pop(0)
-        ref_obs, ref_rew, ref_done, ref_info = ref.step(a)  # type: ignore
+        ref_obs, ref_rew, ref_done, ref_info = ref.step(a)
         obs, rew, done, info = env.step(np.array([a], int))
         assert ref_obs == obs[0] and ref_rew == rew[0] and ref_done == done[0]
         if ref_done:
