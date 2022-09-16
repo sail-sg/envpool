@@ -359,6 +359,7 @@ def workspace():
         strip_prefix = "box2d-py-2.3.5",
         urls = [
             "https://github.com/openai/box2d-py/archive/refs/tags/2.3.5.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/openai/box2d-py/2.3.5.tar.gz",
         ],
         patches = [
             "//third_party/box2d:exception_remove.patch",
