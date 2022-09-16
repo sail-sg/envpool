@@ -112,7 +112,7 @@ void LunarLanderBox2dEnv::ResetBox2d(std::mt19937* gen) {
   for (int i = 0; i < kChunks - 1; ++i) {
     b2EdgeShape shape;
     shape.Set(b2Vec2(chunk_x[i], smooth_y[i]),
-                      b2Vec2(chunk_x[i + 1], smooth_y[i + 1]));
+              b2Vec2(chunk_x[i + 1], smooth_y[i + 1]));
 
     b2FixtureDef fd;
     fd.shape = &shape;

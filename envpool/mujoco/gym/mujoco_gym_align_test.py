@@ -86,7 +86,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
         cnt += 1
         a = env0.action_space.sample()
         # logging.info(f"{cnt} {a}")
-        o0, r0, d0, i0 = env0.step(a)
+        o0, r0, d0, i0 = env0.step(a)  # type: ignore
         o1, r1, d1, i1 = env1.step(np.array([a]), np.array([0]))
         np.testing.assert_allclose(o0, o1[0], atol=3e-4)
         np.testing.assert_allclose(r0, r1[0], atol=1e-4)

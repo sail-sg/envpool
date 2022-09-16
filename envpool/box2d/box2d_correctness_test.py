@@ -250,9 +250,7 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
       hs = np.array([i[1] for i in ah])
 
     mean_reward = np.mean(rewards)
-    logging.info(
-      f"{hardcore}, {np.mean(rewards):.6f} ± {np.std(rewards):.6f}"
-    )
+    logging.info(f"{hardcore}, {np.mean(rewards):.6f} ± {np.std(rewards):.6f}")
     # the following number is from gym's 1000 episode mean reward
     if hardcore:  # -59.219390 ± 25.209768
       self.assertTrue(abs(mean_reward + 59) < 10, (hardcore, mean_reward))
@@ -304,7 +302,8 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
     pygame.display.flip()
 
   def test_bipedal_walker_correctness(
-      self, num_envs: int = 100, render: bool = False) -> None:
+    self, num_envs: int = 100, render: bool = False
+  ) -> None:
     if render:
       pygame.init()
       pygame.display.init()

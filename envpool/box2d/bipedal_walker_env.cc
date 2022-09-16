@@ -191,7 +191,7 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
 
       b2EdgeShape shape;
       shape.Set(Vec2(terrain_x[i], terrain_y[i]),
-                        Vec2(terrain_x[i + 1], terrain_y[i + 1]));
+                Vec2(terrain_x[i + 1], terrain_y[i + 1]));
 
       b2FixtureDef fd;
       fd.shape = &shape;

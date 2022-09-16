@@ -82,7 +82,8 @@ class BipedalWalkerEnv : public Env<BipedalWalkerEnvSpec>,
     state["info:path5"_].Assign(path5_.data(), path5_.size());
 
     Container<float>& path4 = state["info:path4"_];
-    auto* array = new TArray<float>(::Spec<float>({path4_.size() / 8, 4, 2}));
+    auto* array = new TArray<float>(
+        ::Spec<float>({static_cast<int>(path4_.size()) / 8, 4, 2}));
     array->Assign(path4_.data(), path4_.size());
     path4.reset(array);
 #endif
