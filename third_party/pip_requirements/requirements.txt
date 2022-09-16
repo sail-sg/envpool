@@ -4,11 +4,11 @@ dm-env
 dm-tree
 dm-control>=1.0.5
 filelock
-gym
+gym<0.26
 pygame
 box2d
 mujoco>=2.2.1
-mjc-mwe>=0.1.1
+mjc-mwe>=0.1.2
 mujoco_py>=2.1.2.14
 h5py
 jinja2
