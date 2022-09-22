@@ -15,10 +15,10 @@
  */
 // https://github.com/openai/gym/blob/0.23.1/gym/envs/box2d/lunar_lander.py
 
-#ifndef ENVPOOL_BOX2D_LUNAR_LANDER_H_
-#define ENVPOOL_BOX2D_LUNAR_LANDER_H_
+#ifndef ENVPOOL_BOX2D_LUNAR_LANDER_ENV_H_
+#define ENVPOOL_BOX2D_LUNAR_LANDER_ENV_H_
 
-#include <box2d/box2d.h>
+#include <Box2D/Box2D.h>
 
 #include <array>
 #include <memory>
@@ -27,9 +27,9 @@
 
 namespace box2d {
 
-class ContactDetector;
+class LunarLanderContactDetector;
 
-class LunarLanderEnv {
+class LunarLanderBox2dEnv {
   const double kFPS = 50;
   const double kScale = 30.0;
   const double kMainEnginePower = 13.0;
@@ -48,7 +48,7 @@ class LunarLanderEnv {
   const double kViewportH = 400;
   static const int kChunks = 11;
 
-  friend class ContactDetector;
+  friend class LunarLanderContactDetector;
 
  protected:
   int max_episode_steps_, elapsed_step_;
@@ -63,11 +63,10 @@ class LunarLanderEnv {
   std::vector<b2Vec2> lander_poly_;
   std::array<b2Body*, 2> legs_;
   std::array<float, 2> ground_contact_;
-  std::unique_ptr<ContactDetector> listener_;
-  std::uniform_real_distribution<> dist_;
+  std::unique_ptr<LunarLanderContactDetector> listener_;
 
  public:
-  LunarLanderEnv(bool continuous, int max_episode_steps);
+  LunarLanderBox2dEnv(bool continuous, int max_episode_steps);
   void LunarLanderReset(std::mt19937* gen);
   // discrete action space: action
   // continuous action space: action0 and action1
@@ -80,15 +79,15 @@ class LunarLanderEnv {
   b2Body* CreateParticle(float mass, b2Vec2 pos);
 };
 
-class ContactDetector : public b2ContactListener {
-  LunarLanderEnv* env_;
+class LunarLanderContactDetector : public b2ContactListener {
+  LunarLanderBox2dEnv* env_;
 
  public:
-  explicit ContactDetector(LunarLanderEnv* env);
+  explicit LunarLanderContactDetector(LunarLanderBox2dEnv* env);
   void BeginContact(b2Contact* contact) override;
   void EndContact(b2Contact* contact) override;
 };
 
 }  // namespace box2d
 
-#endif  // ENVPOOL_BOX2D_LUNAR_LANDER_H_
+#endif  // ENVPOOL_BOX2D_LUNAR_LANDER_ENV_H_
