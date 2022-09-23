@@ -17,7 +17,7 @@
 #ifndef ENVPOOL_BOX2D_UTILS_H_
 #define ENVPOOL_BOX2D_UTILS_H_
 
-#include <Box2D/Box2D.h>
+#include <box2d/box2d.h>
 
 #include <random>
 

@@ -18,7 +18,7 @@
 #ifndef ENVPOOL_BOX2D_BIPEDAL_WALKER_ENV_H_
 #define ENVPOOL_BOX2D_BIPEDAL_WALKER_ENV_H_
 
-#include <Box2D/Box2D.h>
+#include <box2d/box2d.h>
 
 #include <array>
 #include <memory>
