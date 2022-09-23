@@ -39,7 +39,7 @@ class BipedalWalkerLidarCallback : public b2RayCastCallback {
 
 class BipedalWalkerBox2dEnv {
   const float kFPS = 50;
-  const float kScale = 30.0;
+  const double kScale = 30.0;
   const float kMotorsTorque = 80;
   const float kSpeedHip = 4;
   const float kSpeedKnee = 6;
