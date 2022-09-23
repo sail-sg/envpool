@@ -147,3 +147,16 @@ The episode finishes if:
    body is awake and collides with a sleeping body, then the sleeping body
    wakes up. Bodies will also wake up if a joint or contact attached to
    them is destroyed.
+
+
+Notes on Box2D versions
+----------------------------
+
+``box2d_correctness_test.py`` aims to address the correctness of our Box2D implementation.
+
+We ran gym's environments with dependency ``box2d-py==2.3.5``(see https://github.com/openai/box2d-py/tree/2.3.5) 
+for 1000 episode and averaged reward as our threshold.
+
+The current implementation of envpool is based on box2d 2.4.1 version.
+If you want to use box2d==2.3.5 to run the test,
+please checkout commit ``4de47ebb6615052c67fdfbbe9bc3e9b1d5692f99`` and build the wheel.
