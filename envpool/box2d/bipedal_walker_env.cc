@@ -370,8 +370,8 @@ void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
     auto trans = f.GetBody()->GetTransform();
     if (f.GetShape()->GetType() == 1) {
       auto* shape = static_cast<b2EdgeShape*>(f.GetShape());
-      b2Vec2 v1 = kScale * b2Mul(trans, shape->m_vertex1);
-      b2Vec2 v2 = kScale * b2Mul(trans, shape->m_vertex2);
+      b2Vec2 v1 = static_cast<float>(kScale) * b2Mul(trans, shape->m_vertex1);
+      b2Vec2 v2 = static_cast<float>(kScale) * b2Mul(trans, shape->m_vertex2);
       path2_.emplace_back(v1.x);
       path2_.emplace_back(v1.y);
       path2_.emplace_back(v2.x);
@@ -379,7 +379,7 @@ void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
     } else {
       auto* shape = static_cast<b2PolygonShape*>(f.GetShape());
       for (int i = 0; i < shape->m_count; ++i) {
-        b2Vec2 v = static_cast<float>(kScale) * b2Mul(trans, shape->m_vertices[i]);
+        b2Vec2 v = (float)kScale * b2Mul(trans, shape->m_vertices[i]);
         path4_.emplace_back(v.x);
         path4_.emplace_back(v.y);
       }
@@ -391,7 +391,7 @@ void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
     auto trans = f.GetBody()->GetTransform();
     auto* shape = static_cast<b2PolygonShape*>(f.GetShape());
     for (int i = 0; i < shape->m_count; ++i) {
-      b2Vec2 v = static_cast<float>(kScale) * b2Mul(trans, shape->m_vertices[i]);
+      b2Vec2 v = (float)kScale * b2Mul(trans, shape->m_vertices[i]);
       path4_.emplace_back(v.x);
       path4_.emplace_back(v.y);
     }
