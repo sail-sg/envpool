@@ -23,6 +23,7 @@
 #include "entity.h"
 #include "game-registry.h"
 #include "game.h"
+#include "game_factory.h"
 #include "grid.h"
 #include "libenv.h"
 #include "mazegen.h"
@@ -33,5 +34,4 @@
 #include "roomgen.h"
 #include "vecgame.h"
 #include "vecoptions.h"
-#include "game_factory.h"
 #endif

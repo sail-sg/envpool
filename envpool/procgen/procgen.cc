@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "envpool/core/py_envpool.h"
-
 #include "envpool/procgen/procgen.h"
+
+#include "envpool/core/py_envpool.h"
 
 // generate python-side (raw) ProcgenEnvSpec
 typedef PyEnvSpec<procgen::ProcgenEnvSpec> ProcgenEnvSpec;

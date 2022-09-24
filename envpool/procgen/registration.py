@@ -16,21 +16,22 @@ from envpool.registration import register
 
 # in total 16 games in Procgen
 procgen_games_list = [
-    "bigfish", "bossfight", "caveflyer", "chaser", "climber", "coinrun",
-    "dodgeball", "fruitbot", "heist", "jumper", "leaper", "maze", "miner",
-    "ninja", "plunder", "starpilot"
+  "bigfish", "bossfight", "caveflyer", "chaser", "climber", "coinrun",
+  "dodgeball", "fruitbot", "heist", "jumper", "leaper", "maze", "miner",
+  "ninja", "plunder", "starpilot"
 ]
 
 # Mostly 3 configurable parameters
 # 1. num_levels
 register(
-    task_id="procgen-bigfish",
-    import_path="envpool.procgen",
-    spec_cls="ProcgenEnvSpec",
-    dm_cls="ProcgenDMEnvPool",
-    gym_cls="ProcgenGymEnvPool",
-    game_name="bigfish",
-    num_levels=0,
-    start_level=0,
-    distribution_mode=1
+  task_id="procgen-bigfish",
+  task="bigfish",
+  import_path="envpool.procgen",
+  spec_cls="ProcgenEnvSpec",
+  dm_cls="ProcgenDMEnvPool",
+  gym_cls="ProcgenGymEnvPool",
+  game_name="bigfish",
+  num_levels=0,
+  start_level=0,
+  distribution_mode=1
 )

@@ -17,11 +17,11 @@ from envpool.python.api import py_env
 from .procgen_envpool import _ProcgenEnvPool, _ProcgenEnvSpec
 
 ProcgenEnvSpec, ProcgenDMEnvPool, ProcgenGymEnvPool = py_env(
-    _ProcgenEnvSpec, _ProcgenEnvPool
+  _ProcgenEnvSpec, _ProcgenEnvPool
 )
 
 __all__ = [
-    "ProcgenEnvSpec",
-    "ProcgenDMEnvPool",
-    "ProcgenGymEnvPool",
+  "ProcgenEnvSpec",
+  "ProcgenDMEnvPool",
+  "ProcgenGymEnvPool",
 ]

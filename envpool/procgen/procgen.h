@@ -23,70 +23,59 @@
 
 namespace procgen {
 
-/* All the procgen's games have the same observation buffer size, 64 x 64 pixels
- */
-/* there are 15 possible action buttoms and observation is RGB 32 or RGB 888,
- * both available              */
-/* https://github.com/openai/procgen/blob/5e1dbf341d291eff40d1f9e0c0a0d5003643aebf/procgen/src/game.h#L23
+/*
+   All the procgen's games have the same observation buffer size, 64 x 64 pixels
+   x 3 colors (RGB) there are 15 possible action buttoms and observation is RGB
+   32 or RGB 888,
+   https://github.com/openai/procgen/blob/5e1dbf341d291eff40d1f9e0c0a0d5003643aebf/procgen/src/game.h#L23
  */
 static const int RES_W = 64;
 static const int RES_H = 64;
 static const int RGB_FACTOR = 3;
 static const int ACTION_NUM = 15;  // 0 ~ 14 both sides included
 
-/* System independent hashing, identical to the one implemented in Procgen  */
-/* https://github.com/openai/procgen/blob/HEAD/procgen/src/vecgame.cpp#L156 */
-inline uint32_t hash_str_uint32(const std::string& str) {
-  uint32_t hash = 0x811c9dc5;
-  uint32_t prime = 0x1000193;
-
-  for (size_t i = 0; i < str.size(); i++) {
-    uint8_t value = str[i];
-    hash = hash ^ value;
-    hash *= prime;
-  }
-
-  return hash;
-}
-
-/* game factory method */
+/*
+   game factory method for fetching a game instance
+   Notice the inheritance hierarchy is Game > BasicAbstractGame > [detailed 15
+   games]
+*/
 std::shared_ptr<Game> make_game(std::string name) {
-    if (name == "bigfish") {
-        return make_bigfish();
-    } else if (name == "bossfight") {
-        return make_bossfight();
-    } else if (name == "caveflyer") {
-        return make_caveflyer();
-    } else if (name == "chaser") {
-        return make_chaser();
-    } else if (name == "climber") {
-        return make_climber();
-    } else if (name == "coinrun") {
-        return make_coinrun();
-    } else if (name == "dodgeball") {
-        return make_dodgeball();
-    } else if (name == "fruitbot") {
-        return make_fruitbot();
-    } else if (name == "heist") {
-        return make_heist();
-    } else if (name == "jumper") {
-        return make_jumper();
-    } else if (name == "leaper") {
-        return make_leaper();
-    } else if (name == "maze") {
-        return make_maze();
-    } else if (name == "miner") {
-        return make_miner();
-    } else if (name == "ninja") {
-        return make_ninja();
-    } else if (name == "plunder") {
-        return make_plunder();
-    } else if (name == "starpilot") {
-        return make_starpilot();
-    } else {
-        // not supposed to be here
-        return make_bigfish();
-    }
+  if (name == "bigfish") {
+    return make_bigfish();
+  } else if (name == "bossfight") {
+    return make_bossfight();
+  } else if (name == "caveflyer") {
+    return make_caveflyer();
+  } else if (name == "chaser") {
+    return make_chaser();
+  } else if (name == "climber") {
+    return make_climber();
+  } else if (name == "coinrun") {
+    return make_coinrun();
+  } else if (name == "dodgeball") {
+    return make_dodgeball();
+  } else if (name == "fruitbot") {
+    return make_fruitbot();
+  } else if (name == "heist") {
+    return make_heist();
+  } else if (name == "jumper") {
+    return make_jumper();
+  } else if (name == "leaper") {
+    return make_leaper();
+  } else if (name == "maze") {
+    return make_maze();
+  } else if (name == "miner") {
+    return make_miner();
+  } else if (name == "ninja") {
+    return make_ninja();
+  } else if (name == "plunder") {
+    return make_plunder();
+  } else if (name == "starpilot") {
+    return make_starpilot();
+  } else {
+    // not supposed to reach here
+    return make_bigfish();
+  }
 }
 
 class ProcgenEnvFns {
@@ -101,7 +90,7 @@ class ProcgenEnvFns {
         "grid_step"_.Bind(false), "level_seed_low"_.Bind(0),
         "level_seed_high"_.Bind(1), "game_type"_.Bind(0), "game_n"_.Bind(0),
         "game_name"_.Bind(std::string("bigfish")), "rand_seed"_.Bind(0),
-        "action"_.Bind(0), "timeout"_.Bind(1000), "cur_time"_.Bind(0),
+        "action"_.Bind(0), "timeout"_.Bind(10000), "cur_time"_.Bind(0),
         "episodes_remaining"_.Bind(0), "episode_done"_.Bind(false),
         "last_reward"_.Bind(-1), "last_reward_timer"_.Bind(0),
         "default_action"_.Bind(0), "fixed_asset_seed"_.Bind(0),
@@ -114,15 +103,12 @@ class ProcgenEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     /* The observation is RGB 64 x 64 x 3 flattened out into one row plus action
      * taken and if done */
-    return MakeDict(
-        "obs"_.Bind(Spec<int>({-1, conf["state_num"_]})),
-        "action"_.Bind(Spec<int>({-1}, {0, conf["action_num"_] - 1})),
-        "episode_done"_.Bind(Spec<int>({-1}, {0, 1})));
+    return MakeDict("obs:obs"_.Bind(Spec<uint8_t>({-1, conf["state_num"_]})));
   }
 
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    /* 15 action buttoms in total, ranging from 0 to 14 */
+    /* 15 action buttons in total, ranging from 0 to 14 */
     return MakeDict(
         "action"_.Bind(Spec<int>({-1}, {0, conf["action_num"_] - 1})));
   }
@@ -150,8 +136,9 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
      * translate it into single one */
     /* https://github.com/openai/procgen/blob/5e1dbf341d291eff40d1f9e0c0a0d5003643aebf/procgen/src/vecgame.cpp#L312
      */
-    // the line below leads to nullptr access exception
-    // game_ = globalGameRegistry->at(std::string(spec.config["game_name"_]))();
+    /* notice we need to allocate space for some buffer, as specificied here
+       https://github.com/openai/procgen/blob/master/procgen/src/game.h#L101
+    */
     game_ = make_game(spec.config["game_name"_]);
     game_level_seed_gen_.seed(rand_seed_);
     game_->level_seed_rand_gen.seed(game_level_seed_gen_.randint());
@@ -169,18 +156,32 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     game_->options.distribution_mode =
         static_cast<DistributionMode>(spec.config["distribution_mode"_]);
     // allocate space for the game to outwrite observations each step
-    obs_bufs_.resize(RGB_FACTOR * RES_W * RES_H);
-    info_bufs_.resize(info_name_to_offset_.size());
+    game_->action_ptr = new int32_t(0);
+    game_->reward_ptr = new float(0.0);
+    game_->first_ptr = new uint8_t(0);
+    obs_bufs_.resize(RES_W * RES_H);
+    info_bufs_.resize(RES_W * RES_H);
+    for (int i = 0; i < RES_W * RES_H; i++) {
+      obs_bufs_[i] = new int64_t[RES_W * RES_H];
+      info_bufs_[i] = new int64_t[RES_W * RES_H];
+    }
     game_->obs_bufs = obs_bufs_;
     game_->info_bufs = info_bufs_;
+    // if use_generated_assets is not set, it will try load some pictures we
+    // don't have
+    game_->options.use_generated_assets = true;
     game_->game_init();
+    game_->reset();
+    game_->observe();
+    game_->initial_reset_complete = true;
   }
 
   void Reset() override {
     /* procgen game has itself reset method that clears out the internal state
      * of the game */
-    done_ = false;
     game_->reset();
+    done_ = game_->step_data.done;
+    game_->observe();
     State state = Allocate();
     WriteObs(state);
   }
@@ -191,6 +192,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     game_->action = act;
     *(game_->action_ptr) = static_cast<int32_t>(act);
     game_->step();
+    game_->observe();
     done_ = game_->step_data.done;
     State state = Allocate();
     WriteObs(state);
@@ -201,25 +203,23 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
  private:
   void WriteObs(State& state) {
     /* Helper function to output the information to user at current step */
-    /* It includes:
+    /*
+       It includes:
        1. The RGB 64 x 64 frame observation
-       2. The action taken this step
-       3. Current step's reward
+       2. Current step's reward
+       https://github.com/openai/procgen/blob/5e1dbf341d291eff40d1f9e0c0a0d5003643aebf/procgen/src/game.cpp#L8
     */
-    /* https://github.com/openai/procgen/blob/5e1dbf341d291eff40d1f9e0c0a0d5003643aebf/procgen/src/game.cpp#L8
-     */
-    uint8_t* src = (uint8_t*)(void*)obs_bufs_[0];
+
+    uint8_t* src = (uint8_t*)obs_bufs_[0];
     for (int y = 0; y < RES_H; y++) {
       for (int x = 0; x < RES_W; x++) {
         for (int rgb = 0; rgb < RGB_FACTOR; rgb++) {
           int offset = rgb + x * RGB_FACTOR + y * RES_W * RGB_FACTOR;
-          state["obs"_][offset] = static_cast<int>(src[offset]);
+          state["obs:obs"_][0][offset] = static_cast<uint8_t>(src[offset]);
         }
       }
     }
     state["reward"_] = static_cast<float>(*(game_->reward_ptr));
-    state["action"_] = static_cast<int>(game_->action);
-    state["episode_done"_] = static_cast<int>(game_->episode_done);
   }
 };
 
