@@ -18,7 +18,7 @@
 #ifndef ENVPOOL_BOX2D_BIPEDAL_WALKER_ENV_H_
 #define ENVPOOL_BOX2D_BIPEDAL_WALKER_ENV_H_
 
-#include <Box2D/Box2D.h>
+#include <box2d/box2d.h>
 
 #include <array>
 #include <memory>
@@ -38,12 +38,13 @@ class BipedalWalkerLidarCallback : public b2RayCastCallback {
 };
 
 class BipedalWalkerBox2dEnv {
-  const double kFPS = 50;
-  const double kScale = 30.0;
+  const float kFPS = 50;
+  const float kScaleFloat = 30.0;
+  const double kScaleDouble = 30.0;
   const float kMotorsTorque = 80;
   const float kSpeedHip = 4;
   const float kSpeedKnee = 6;
-  const double kLidarRange = 160 / kScale;
+  const double kLidarRange = 160 / kScaleDouble;
   const double kInitialRandom = 5;
   const double kHullPoly[5][2] = {  // NOLINT
       {-30, 9},
@@ -51,13 +52,13 @@ class BipedalWalkerBox2dEnv {
       {34, 1},
       {34, -8},
       {-30, -8}};
-  const double kLegDown = -8 / kScale;
-  const double kLegW = 8 / kScale;
-  const double kLegH = 34 / kScale;
+  const double kLegDown = -8 / kScaleDouble;
+  const double kLegW = 8 / kScaleDouble;
+  const double kLegH = 34 / kScaleDouble;
   const double kViewportW = 600;
   const double kViewportH = 400;
-  const double kTerrainStep = 14 / kScale;
-  const double kTerrainHeight = kViewportH / kScale / 4;
+  const double kTerrainStep = 14 / kScaleDouble;
+  const double kTerrainHeight = kViewportH / kScaleDouble / 4;
   const float kFriction = 2.5;
   static const int kTerrainLength = 200;
   static const int kTerrainGrass = 10;

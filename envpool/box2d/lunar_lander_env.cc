@@ -101,7 +101,7 @@ void LunarLanderBox2dEnv::ResetBox2d(std::mt19937* gen) {
     bd.type = b2_staticBody;
 
     b2EdgeShape shape;
-    shape.Set(b2Vec2(0, 0), Vec2(w, 0));
+    shape.SetTwoSided(b2Vec2(0, 0), Vec2(w, 0));
 
     b2FixtureDef fd;
     fd.shape = &shape;
@@ -111,8 +111,8 @@ void LunarLanderBox2dEnv::ResetBox2d(std::mt19937* gen) {
   }
   for (int i = 0; i < kChunks - 1; ++i) {
     b2EdgeShape shape;
-    shape.Set(b2Vec2(chunk_x[i], smooth_y[i]),
-              b2Vec2(chunk_x[i + 1], smooth_y[i + 1]));
+    shape.SetTwoSided(b2Vec2(chunk_x[i], smooth_y[i]),
+                      b2Vec2(chunk_x[i + 1], smooth_y[i + 1]));
 
     b2FixtureDef fd;
     fd.shape = &shape;
