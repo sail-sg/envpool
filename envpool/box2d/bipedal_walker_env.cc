@@ -69,7 +69,7 @@ BipedalWalkerBox2dEnv::BipedalWalkerBox2dEnv(bool hardcore,
       world_(new b2World(b2Vec2(0.0, -10.0))),
       hull_(nullptr) {
   for (const auto* p : kHullPoly) {
-    hull_poly_.emplace_back(Vec2(p[0] / kScale, p[1] / kScale));
+    hull_poly_.emplace_back(Vec2(p[0] / kScaleDouble, p[1] / kScaleDouble));
   }
 }
 
@@ -125,7 +125,7 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
       if (state == kGrass && !oneshot) {
         velocity = 0.8 * velocity + 0.01 * Sign(kTerrainHeight - y);
         if (i > kTerrainStartpad) {
-          velocity += RandUniform(-1, 1)(*gen) / kScale;
+          velocity += RandUniform(-1, 1)(*gen) / kScaleDouble;
         }
         y += velocity;
       } else if (state == kPit && oneshot) {
@@ -190,8 +190,8 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
       bd.type = b2_staticBody;
 
       b2EdgeShape shape;
-      shape.Set(Vec2(terrain_x[i], terrain_y[i]),
-                Vec2(terrain_x[i + 1], terrain_y[i + 1]));
+      shape.SetTwoSided(Vec2(terrain_x[i], terrain_y[i]),
+                        Vec2(terrain_x[i + 1], terrain_y[i + 1]));
 
       b2FixtureDef fd;
       fd.shape = &shape;
@@ -322,8 +322,8 @@ void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
 
   obs_[0] = hull_->GetAngle();
   obs_[1] = 2.0 * hull_->GetAngularVelocity() / kFPS;
-  obs_[2] = 0.3 * vel.x * kViewportW / kScale / kFPS;
-  obs_[3] = 0.3 * vel.y * kViewportH / kScale / kFPS;
+  obs_[2] = 0.3 * vel.x * kViewportW / kScaleDouble / kFPS;
+  obs_[3] = 0.3 * vel.y * kViewportH / kScaleDouble / kFPS;
   obs_[4] = joints_[0]->GetJointAngle();
   obs_[5] = joints_[0]->GetJointSpeed() / kSpeedHip;
   obs_[6] = joints_[1]->GetJointAngle() + 1.0;
@@ -338,8 +338,7 @@ void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
     obs_[14 + i] = lidar_[i].fraction;
   }
 
-  auto shaping =
-      static_cast<float>(130 * pos.x / kScale - 5 * std::abs(obs_[0]));
+  auto shaping = 130 * pos.x / kScaleFloat - 5 * std::abs(obs_[0]);
   reward_ = 0;
   if (elapsed_step_ > 0) {
     reward_ = shaping - prev_shaping_;
@@ -358,7 +357,7 @@ void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
     done_ = true;
   }
 
-  scroll_ = pos.x - static_cast<float>(kViewportW / kScale / 5);
+  scroll_ = pos.x - static_cast<float>(kViewportW / kScaleDouble / 5);
   // info
 #ifdef ENVPOOL_TEST
   path2_.clear();
@@ -370,8 +369,8 @@ void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
     auto trans = f.GetBody()->GetTransform();
     if (f.GetShape()->GetType() == 1) {
       auto* shape = static_cast<b2EdgeShape*>(f.GetShape());
-      b2Vec2 v1 = kScale * b2Mul(trans, shape->m_vertex1);
-      b2Vec2 v2 = kScale * b2Mul(trans, shape->m_vertex2);
+      b2Vec2 v1 = kScaleFloat * b2Mul(trans, shape->m_vertex1);
+      b2Vec2 v2 = kScaleFloat * b2Mul(trans, shape->m_vertex2);
       path2_.emplace_back(v1.x);
       path2_.emplace_back(v1.y);
       path2_.emplace_back(v2.x);
@@ -379,7 +378,7 @@ void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
     } else {
       auto* shape = static_cast<b2PolygonShape*>(f.GetShape());
       for (int i = 0; i < shape->m_count; ++i) {
-        b2Vec2 v = kScale * b2Mul(trans, shape->m_vertices[i]);
+        b2Vec2 v = kScaleFloat * b2Mul(trans, shape->m_vertices[i]);
         path4_.emplace_back(v.x);
         path4_.emplace_back(v.y);
       }
@@ -391,7 +390,7 @@ void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
     auto trans = f.GetBody()->GetTransform();
     auto* shape = static_cast<b2PolygonShape*>(f.GetShape());
     for (int i = 0; i < shape->m_count; ++i) {
-      b2Vec2 v = kScale * b2Mul(trans, shape->m_vertices[i]);
+      b2Vec2 v = kScaleFloat * b2Mul(trans, shape->m_vertices[i]);
       path4_.emplace_back(v.x);
       path4_.emplace_back(v.y);
     }
@@ -401,7 +400,7 @@ void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
   auto trans = f.GetBody()->GetTransform();
   auto* shape = static_cast<b2PolygonShape*>(f.GetShape());
   for (int i = 0; i < shape->m_count; ++i) {
-    b2Vec2 v = kScale * b2Mul(trans, shape->m_vertices[i]);
+    b2Vec2 v = kScaleFloat * b2Mul(trans, shape->m_vertices[i]);
     path5_.emplace_back(v.x);
     path5_.emplace_back(v.y);
   }
