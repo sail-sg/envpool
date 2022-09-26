@@ -17,6 +17,8 @@
 #ifndef ENVPOOL_PROCGEN_H_
 #define ENVPOOL_PROCGEN_H_
 
+#include <cctype>
+
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
 #include "envpool/procgen/third_party_procgen.h"
@@ -88,9 +90,9 @@ class ProcgenEnvFns {
         "state_num"_.Bind(RES_W * RES_H * RGB_FACTOR),
         "action_num"_.Bind(ACTION_NUM), "initial_reset_complete"_.Bind(false),
         "grid_step"_.Bind(false), "level_seed_low"_.Bind(0),
-        "level_seed_high"_.Bind(1), "game_type"_.Bind(0), "game_n"_.Bind(0),
+        "level_seed_high"_.Bind(1), "game_type"_.Bind(0),
         "game_name"_.Bind(std::string("bigfish")), "rand_seed"_.Bind(0),
-        "action"_.Bind(0), "timeout"_.Bind(10000), "cur_time"_.Bind(0),
+        "action"_.Bind(0), "timeout"_.Bind(1000), "cur_time"_.Bind(0),
         "episodes_remaining"_.Bind(0), "episode_done"_.Bind(false),
         "last_reward"_.Bind(-1), "last_reward_timer"_.Bind(0),
         "default_action"_.Bind(0), "fixed_asset_seed"_.Bind(0),
@@ -119,7 +121,7 @@ typedef class EnvSpec<ProcgenEnvFns> ProcgenEnvSpec;
 class ProcgenEnv : public Env<ProcgenEnvSpec> {
  protected:
   std::shared_ptr<Game> game_;
-  bool done_;
+  bool done_{false};
   RandGen game_level_seed_gen_;
   int rand_seed_;
   std::map<std::string, int> info_name_to_offset_;
@@ -142,10 +144,15 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     game_ = make_game(spec.config["game_name"_]);
     game_level_seed_gen_.seed(rand_seed_);
     game_->level_seed_rand_gen.seed(game_level_seed_gen_.randint());
-    game_->level_seed_low = spec.config["level_seed_low"_];
-    game_->level_seed_high = spec.config["level_seed_high"_];
+    if (spec.config["num_levels"_] <= 0) {
+      game_->level_seed_low = 0;
+      game_->level_seed_high = INT32_MAX;
+    } else {
+      game_->level_seed_low = spec.config["start_level"_];
+      game_->level_seed_high =
+          spec.config["start_level"_] + spec.config["num_levels"_];
+    }
     game_->timeout = spec.config["timeout"_];
-    game_->game_n = spec.config["game_n"_];
     game_->is_waiting_for_step = false;
     info_name_to_offset_["rgb"] = 0;
     info_name_to_offset_["action"] = 1;
@@ -170,6 +177,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     // if use_generated_assets is not set, it will try load some pictures we
     // don't have
     game_->options.use_generated_assets = true;
+    game_->options.use_sequential_levels = true;
     game_->game_init();
     game_->reset();
     game_->observe();
@@ -189,10 +197,9 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
   void Step(const Action& action) override {
     /* Delegate the action to procgen game and let it step */
     int act = action["action"_];
-    game_->action = act;
+    game_->action = static_cast<int32_t>(act);
     *(game_->action_ptr) = static_cast<int32_t>(act);
     game_->step();
-    game_->observe();
     done_ = game_->step_data.done;
     State state = Allocate();
     WriteObs(state);

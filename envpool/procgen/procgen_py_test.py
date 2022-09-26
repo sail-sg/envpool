@@ -26,17 +26,13 @@ from envpool.procgen.procgen_envpool import _ProcgenEnvPool, _ProcgenEnvSpec
 
 class _ProcgenEnvPoolTest(absltest.TestCase):
 
-  def test_dummy(self) -> None:
-    # dummy assertion
-    self.assertTrue(1 == 1)
-
   def test_config(self) -> None:
     ref_config_keys = [
       "action", "action_num", "base_path", "batch_size", "cur_time",
       "current_level_seed", "default_action", "distribution_mode",
-      "episode_done", "episodes_remaining", "fixed_asset_seed", "game_n",
-      "game_name", "game_type", "grid_step", "initial_reset_complete",
-      "last_reward", "last_reward_timer", "level_seed_high", "level_seed_low",
+      "episode_done", "episodes_remaining", "fixed_asset_seed", "game_name",
+      "game_type", "grid_step", "initial_reset_complete", "last_reward",
+      "last_reward_timer", "level_seed_high", "level_seed_low",
       "max_num_players", "num_envs", "num_levels", "num_threads",
       "prev_level_seed", "rand_seed", "reset_count", "seed", "start_level",
       "state_num", "gym_reset_return_info", "timeout", "thread_affinity_offset"
@@ -63,7 +59,7 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
     env = _ProcgenEnvPool(env_spec)
     state_keys = env._state_keys
     env._reset(np.arange(num_envs, dtype=np.int32))
-    total = 50
+    total = 2000
     actions = np.random.randint(15, size=(total, batch))
     t = time.time()
     for i in range(total):
@@ -73,7 +69,8 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
         "players.env_id": state["info:players.env_id"],
         "action": actions[i],
       }
-      print("Pass in action=", actions[i], " Get state=", state)
+      if (i % 100 == 0):
+        print("We passed in action", actions[i], " And get State:", state)
       env._send(tuple(action.values()))
     duration = time.time() - t
     fps = total * batch / duration
