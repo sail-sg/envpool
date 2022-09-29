@@ -188,7 +188,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     /* procgen game has itself reset method that clears out the internal state
      * of the game */
     game_->reset();
-    done_ = game_->step_data.done;
+    done_ = false;
     game_->observe();
     State state = Allocate();
     WriteObs(state);

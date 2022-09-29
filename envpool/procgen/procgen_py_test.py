@@ -27,6 +27,7 @@ from envpool.procgen.procgen_envpool import _ProcgenEnvPool, _ProcgenEnvSpec
 class _ProcgenEnvPoolTest(absltest.TestCase):
 
   def test_config(self) -> None:
+    # test the config key is same as what we expect
     ref_config_keys = [
       "action", "action_num", "base_path", "batch_size", "cur_time",
       "current_level_seed", "default_action", "distribution_mode",
@@ -59,9 +60,11 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
     env = _ProcgenEnvPool(env_spec)
     state_keys = env._state_keys
     env._reset(np.arange(num_envs, dtype=np.int32))
-    total = 2000
-    actions = np.random.randint(15, size=(total, batch))
+    total = 5000
+    actions = np.random.randint(15, size=(total, batch)) # procgen action lies in range 0~14 inclusively
     t = time.time()
+    reset_count = 0
+    total_reward = 0.0
     for i in range(total):
       state = dict(zip(state_keys, env._recv()))
       action = {
@@ -69,16 +72,17 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
         "players.env_id": state["info:players.env_id"],
         "action": actions[i],
       }
-      if (i % 100 == 0):
-        print("We passed in action", actions[i], " And get State:", state)
+      reset_count += int(state["done"][0] == True)
+      total_reward += float(state["reward"][0])
       env._send(tuple(action.values()))
     duration = time.time() - t
     fps = total * batch / duration
+    logging.info(f"Total steps {total} yieds {reset_count} times of reset and total rewards of {total_reward}")
     logging.info(f"Raw envpool Procgen FPS = {fps:.6f}")
 
   def test_align(self) -> None:
     # Make sure gym's envpool and dm_env's envpool generate the same data
-    total = 500
+    total = 1000 
     num_envs = 4
     config = ProcgenEnvSpec.gen_config(num_envs=num_envs)
     spec = ProcgenEnvSpec(config)
