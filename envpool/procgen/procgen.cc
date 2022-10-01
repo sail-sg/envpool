@@ -15,6 +15,7 @@
 #include "envpool/core/py_envpool.h"
 
 #include "envpool/procgen/procgen.h"
+
 // generate python-side (raw) ProcgenEnvSpec
 typedef PyEnvSpec<procgen::ProcgenEnvSpec> ProcgenEnvSpec;
 // generate python-side (raw) ProcgenEnvPool

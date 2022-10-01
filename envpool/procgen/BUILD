@@ -47,6 +47,7 @@ py_test(
         ":procgen",
         requirement("numpy"),
         requirement("absl-py"),
+        requirement("opencv-python-headless"),
     ],
 )
 

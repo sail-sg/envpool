@@ -91,8 +91,8 @@ class ProcgenEnvFns {
         "action_num"_.Bind(ACTION_NUM), "initial_reset_complete"_.Bind(false),
         "grid_step"_.Bind(false), "level_seed_low"_.Bind(0),
         "level_seed_high"_.Bind(1), "game_type"_.Bind(0),
-        "game_name"_.Bind(std::string("bigfish")), "rand_seed"_.Bind(0),
-        "action"_.Bind(0), "timeout"_.Bind(1000), "cur_time"_.Bind(0),
+        "game_name"_.Bind(std::string("bigfish")), "action"_.Bind(0),
+        "timeout"_.Bind(1000), "cur_time"_.Bind(0),
         "episodes_remaining"_.Bind(0), "episode_done"_.Bind(false),
         "last_reward"_.Bind(-1), "last_reward_timer"_.Bind(0),
         "default_action"_.Bind(0), "fixed_asset_seed"_.Bind(0),
@@ -130,8 +130,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
 
  public:
   ProcgenEnv(const Spec& spec, int env_id)
-      : Env<ProcgenEnvSpec>(spec, env_id),
-        rand_seed_(spec.config["rand_seed"_]) {
+      : Env<ProcgenEnvSpec>(spec, env_id), rand_seed_(spec.config["seed"_]) {
     /* Initialize the single game we are holding in this EnvPool environment */
     /* It depends on some default setting along with the config map passed in */
     /* We mostly follow how it's done in the vector environment at Procgen and
