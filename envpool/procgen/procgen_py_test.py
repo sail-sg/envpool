@@ -50,11 +50,17 @@ def rgb_to_picture(state: Dict):
   img = np.zeros((RES_W, RES_H, RGB_FACTOR), np.uint8)
   for h in range(RES_W):
     for w in range(RES_H):
-      for rgb in range(RGB_FACTOR):
-        img[h][w][rgb] = pixels[index]
-        index += 1
-  pic_path = f"img/procgen_{pic_count}.png"
+      red = pixels[index]
+      green = pixels[index+1]
+      blue = pixels[index+2]
+      index += 3
+      # cv2's ordering is BGR
+      img[h][w][0] = blue
+      img[h][w][1] = green
+      img[h][w][2] = red
+  pic_path = f"img/procgen_{pic_count:03d}.png"
   pic_count += 1  # global variable increment
+  print("Outwrite", os.getcwd() + "/" + pic_path)
   cv2.imwrite(pic_path, img)
 
 
@@ -111,8 +117,8 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
         "action": actions[i],
       }
       # TODO: `cv2.imwrite` dumpy the rgb pixels to picture for sanity check
-      # if (i < 50):
-      #   rgb_to_picture(state)
+      if (i < 300):
+        rgb_to_picture(state)
       if (
         prev_state is not None and
         np.allclose(state["obs:obs"], prev_state["obs:obs"])
