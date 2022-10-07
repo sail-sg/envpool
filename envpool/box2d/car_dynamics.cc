@@ -33,7 +33,7 @@ b2PolygonShape GeneratePolygon(const double* array, int size) {
 }
 
 Car::Car(std::shared_ptr<b2World>& world, double init_angle, double init_x, double init_y)
-    : world_(world){
+    : world_(world), hull_(nullptr){
 
   // Create hull
   b2BodyDef bd;
@@ -89,7 +89,8 @@ Car::Car(std::shared_ptr<b2World>& world, double init_angle, double init_x, doub
     rjd.upperAngle = +0.4;
     rjd.type = b2JointType::e_revoluteJoint;
     w.joint = static_cast<b2RevoluteJoint*>(world_->CreateJoint(&rjd));
-    w.body->SetUserData(&w);
+    // w.body->SetUserData(&w);
+    w.body->GetUserData().pointer = reinterpret_cast<uintptr_t>(&w);
     wheels_.push_back(&w);
   }
 }
@@ -154,8 +155,7 @@ void Car::step(double dt) {
     w->phase += w->omega * dt;
 
     auto vr = w->omega * w->wheel_rad;  // rotating wheel speed
-    auto f_force =
-        -vf + vr;  // force direction is direction of speed difference
+    auto f_force = -vf + vr; // force direction is direction of speed difference
     auto p_force = -vs;
 
     // Physically correct is to always apply friction_limit until speed is
@@ -181,8 +181,8 @@ void Car::step(double dt) {
 
     w->body->ApplyForceToCenter(
         {
-            p_force * side.x + f_force * forw.x,
-            p_force * side.y + f_force * forw.y,
+            static_cast<float>(p_force * side.x + f_force * forw.x),
+            static_cast<float>(p_force * side.y + f_force * forw.y),
         },
         true);
   }

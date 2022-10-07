@@ -6,11 +6,16 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
     name = "box2d_env",
     srcs = [
+        "car_dynamics.cc",
+        "car_racing_env.cc",
         "bipedal_walker_env.cc",
         "lunar_lander_env.cc",
         "utils.cc",
     ],
     hdrs = [
+        "car_dynamics.h",
+        "car_racing_env.h",
+        "car_racing.h",
         "bipedal_walker.h",
         "bipedal_walker_env.h",
         "lunar_lander_continuous.h",

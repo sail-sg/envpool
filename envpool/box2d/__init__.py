@@ -16,12 +16,18 @@
 from envpool.python.api import py_env
 
 from .box2d_envpool import (
+  _CarRacingEnvPool,
+  _CarRacingEnvSpec,
   _BipedalWalkerEnvPool,
   _BipedalWalkerEnvSpec,
   _LunarLanderContinuousEnvPool,
   _LunarLanderContinuousEnvSpec,
   _LunarLanderDiscreteEnvPool,
   _LunarLanderDiscreteEnvSpec,
+)
+
+CarRacingEnvSpec, CarRacingDMEnvPool, CarRacingGymEnvPool = py_env(
+  _CarRacingEnvSpec, _CarRacingEnvPool
 )
 
 BipedalWalkerEnvSpec, BipedalWalkerDMEnvPool, BipedalWalkerGymEnvPool = py_env(
@@ -41,6 +47,9 @@ BipedalWalkerEnvSpec, BipedalWalkerDMEnvPool, BipedalWalkerGymEnvPool = py_env(
 ) = py_env(_LunarLanderDiscreteEnvSpec, _LunarLanderDiscreteEnvPool)
 
 __all__ = [
+  "CarRacingEnvSpec",
+  "CarRacingDMEnvPool",
+  "CarRacingGymEnvPool",
   "BipedalWalkerEnvSpec",
   "BipedalWalkerDMEnvPool",
   "BipedalWalkerGymEnvPool",

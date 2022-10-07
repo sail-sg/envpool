@@ -23,6 +23,8 @@ from absl.testing import absltest
 from pygame import gfxdraw
 
 from envpool.box2d import (
+  CarRacingEnvSpec,
+  CarRacingGymEnvPool,
   BipedalWalkerEnvSpec,
   BipedalWalkerGymEnvPool,
   LunarLanderContinuousEnvSpec,

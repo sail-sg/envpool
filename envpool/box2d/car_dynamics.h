@@ -32,8 +32,9 @@ namespace box2d {
 class UserData {
   public: 
     b2Body* body;
-    bool isTile;
-    bool tileRoadVisited;
+    int idx{0};
+    bool isTile{false};
+    bool tileRoadVisited{false};
     double roadFriction;
     std::unordered_set<UserData*> tiles;
 };
@@ -79,8 +80,9 @@ class Car {
   std::shared_ptr<b2World> world_;
   b2Body* hull_;
   std::vector<Wheel*> wheels_;
-  std::vector<b2Fixture*> hullFixtures;
   double fuel_spent{0};
+
+friend class CarRacingBox2dEnv;
 };
 
 }  // namespace box2d
