@@ -16,6 +16,14 @@
 from envpool.registration import register
 
 register(
+  task_id="CarRacing-v2",
+  import_path="envpool.box2d",
+  spec_cls="CarRacingEnvSpec",
+  dm_cls="CarRacingDMEnvPool",
+  gym_cls="CarRacingGymEnvPool",
+)
+
+register(
   task_id="BipedalWalker-v3",
   import_path="envpool.box2d",
   spec_cls="BipedalWalkerEnvSpec",
