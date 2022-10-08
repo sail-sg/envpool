@@ -21,17 +21,21 @@ procgen_games_list = [
   "ninja", "plunder", "starpilot"
 ]
 
-# Mostly 3 configurable parameters
-# 1. num_levels
-register(
-  task_id="procgen-bigfish",
-  task="bigfish",
-  import_path="envpool.procgen",
-  spec_cls="ProcgenEnvSpec",
-  dm_cls="ProcgenDMEnvPool",
-  gym_cls="ProcgenGymEnvPool",
-  game_name="bigfish",
-  num_levels=0,
-  start_level=0,
-  distribution_mode=1
-)
+distribution_name = ["easy", "hard"]
+
+distribution_code = [0, 1]
+
+for game_name in procgen_games_list:
+  for dist_name in distribution_name:
+    for dist_code in distribution_code:
+      register(
+        task_id=f"procgen-{game_name}-{dist_name}",
+        import_path="envpool.procgen",
+        spec_cls="ProcgenEnvSpec",
+        dm_cls="ProcgenDMEnvPool",
+        gym_cls="ProcgenGymEnvPool",
+        game_name=game_name,
+        num_levels=0,
+        start_level=0,
+        distribution_mode=dist_code
+      )

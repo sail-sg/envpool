@@ -86,19 +86,11 @@ class ProcgenEnvFns {
     /* necessary default parameters for procgen games */
     /* https://github.com/openai/procgen/blob/5e1dbf341d291eff40d1f9e0c0a0d5003643aebf/procgen/src/game.h#L69
      */
-    return MakeDict(
-        "state_num"_.Bind(RES_W * RES_H * RGB_FACTOR),
-        "action_num"_.Bind(ACTION_NUM), "initial_reset_complete"_.Bind(false),
-        "grid_step"_.Bind(false), "level_seed_low"_.Bind(0),
-        "level_seed_high"_.Bind(1), "game_type"_.Bind(0),
-        "game_name"_.Bind(std::string("bigfish")), "action"_.Bind(0),
-        "timeout"_.Bind(1000), "cur_time"_.Bind(0),
-        "episodes_remaining"_.Bind(0), "episode_done"_.Bind(false),
-        "last_reward"_.Bind(-1), "last_reward_timer"_.Bind(0),
-        "default_action"_.Bind(0), "fixed_asset_seed"_.Bind(0),
-        "reset_count"_.Bind(0), "current_level_seed"_.Bind(0),
-        "prev_level_seed"_.Bind(0), "num_levels"_.Bind(0),
-        "start_level"_.Bind(0), "distribution_mode"_.Bind(1));
+    return MakeDict("state_num"_.Bind(RES_W * RES_H * RGB_FACTOR),
+                    "action_num"_.Bind(ACTION_NUM),
+                    "game_name"_.Bind(std::string("bigfish")),
+                    "use_sequential_levels"_.Bind(false), "num_levels"_.Bind(0),
+                    "start_level"_.Bind(0), "distribution_mode"_.Bind(1));
   }
 
   template <typename Config>
@@ -151,8 +143,6 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
       game_->level_seed_high =
           spec.config["start_level"_] + spec.config["num_levels"_];
     }
-    game_->timeout = spec.config["timeout"_];
-    game_->is_waiting_for_step = false;
     info_name_to_offset_["rgb"] = 0;
     info_name_to_offset_["action"] = 1;
     info_name_to_offset_["prev_level_seed"] = 2;
@@ -173,20 +163,24 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     }
     game_->obs_bufs = obs_bufs_;
     game_->info_bufs = info_bufs_;
-    // if use_generated_assets is not set, it will try load some pictures we
-    // don't have
+    // if use_generated_assets is not set,
+    // it will try load some pictures we don't have
     game_->options.use_generated_assets = true;
-    game_->options.use_sequential_levels = true;
+    game_->options.use_sequential_levels =
+        spec.config["use_sequential_levels"_];
     game_->game_init();
     game_->reset();
-    game_->observe();
     game_->initial_reset_complete = true;
   }
 
   void Reset() override {
     /* procgen game has itself reset method that clears out the internal state
      * of the game */
-    game_->reset();
+    // no need to call game_->reset()
+    // in game_->step(), if dies, it will reset itself
+    game_->step_data.done = false;
+    game_->step_data.reward = 0.0;
+    game_->step_data.level_complete = false;
     done_ = false;
     game_->observe();
     State state = Allocate();
