@@ -287,7 +287,9 @@ class _GymSyncTest(absltest.TestCase):
     # check shape
     self.assertIsInstance(obs, np.ndarray)
     self.assertEqual(obs.dtype, np.uint8)  # type: ignore
-    obs, rew, terminated, truncated, info = env.step(np.random.randint(6, size=num_envs))
+    obs, rew, terminated, truncated, info = env.step(
+      np.random.randint(6, size=num_envs)
+    )
     done = np.logical_or(terminated, truncated)
     self.assertIsInstance(obs, np.ndarray)
     self.assertEqual(obs.dtype, np.uint8)
@@ -306,9 +308,13 @@ class _GymSyncTest(absltest.TestCase):
     np.testing.assert_allclose(info["players"]["env_id"].shape, (num_envs,))
     np.testing.assert_allclose(truncated.shape, (num_envs,))
     while not np.any(done):
-      obs, rew, terminated, truncated, info = env.step(np.random.randint(6, size=num_envs))
+      obs, rew, terminated, truncated, info = env.step(
+        np.random.randint(6, size=num_envs)
+      )
       done = np.logical_or(terminated, truncated)
-    obs1, rew1, terminated1, truncated1, info1 = env.step(np.random.randint(6, size=num_envs))
+    obs1, rew1, terminated1, truncated1, info1 = env.step(
+      np.random.randint(6, size=num_envs)
+    )
     done1 = np.logical_or(terminated1, truncated1)
     index = np.where(done)[0]
     self.assertTrue(np.all(~done1[index]))
