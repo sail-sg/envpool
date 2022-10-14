@@ -7,3 +7,4 @@ mujoco_py==2.1.2.14
 tqdm
 opencv-python-headless
 dm_control==1.0.3.post1
+packaging
