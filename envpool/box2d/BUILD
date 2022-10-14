@@ -58,7 +58,7 @@ py_test(
     deps = [
         ":box2d",
         requirement("absl-py"),
-        requirement("gym>=0.26.0"),
+        requirement("gym"),
         requirement("box2d"),
         requirement("pygame"),
         requirement("numpy"),

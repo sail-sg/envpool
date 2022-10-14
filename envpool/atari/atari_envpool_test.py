@@ -96,7 +96,9 @@ class _AtariEnvPoolTest(absltest.TestCase):
         # no life in this game
         continue
       for _ in range(10000):
-        _, _, terminated, truncated, info = env.step(np.random.randint(0, action_num, 1))
+        _, _, terminated, truncated, info = env.step(
+          np.random.randint(0, action_num, 1)
+        )
         done = np.logical_or(terminated, truncated)
         if info["lives"][0] == 0:
           break
@@ -110,7 +112,6 @@ class _AtariEnvPoolTest(absltest.TestCase):
       _, _, next_terminated, next_truncated, next_info = env.step(
         np.random.randint(0, action_num, 1)
       )
-      next_done = np.logical_or(next_terminated, next_truncated)
       if done[0] and next_info["lives"][0] > 0:
         self.assertTrue(info["terminated"][0])
         continue
@@ -118,12 +119,13 @@ class _AtariEnvPoolTest(absltest.TestCase):
       self.assertFalse(info["terminated"][0])
       while not done[0]:
         self.assertFalse(info["terminated"][0])
-        _, _, terminated, truncated, info = env.step(np.random.randint(0, action_num, 1))
+        _, _, terminated, truncated, info = env.step(
+          np.random.randint(0, action_num, 1)
+        )
         done = np.logical_or(terminated, truncated)
       _, _, next_terminated, next_truncated, next_info = env.step(
         np.random.randint(0, action_num, 1)
       )
-      next_done = np.logical_or(next_terminated, next_truncated)
       self.assertTrue(next_info["lives"][0] > 0)
       self.assertTrue(info["terminated"][0])
 
