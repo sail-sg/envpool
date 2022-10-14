@@ -144,7 +144,7 @@ py_test(
         ":mujoco_gym",
         requirement("numpy"),
         requirement("absl-py"),
-        requirement("gym"),
+        requirement("gym>=0.26.0"),
     ],
 )
 
@@ -156,7 +156,7 @@ py_test(
         ":mujoco_gym",
         requirement("numpy"),
         requirement("absl-py"),
-        requirement("gym"),
+        requirement("gym>=0.26.0"),
         requirement("mujoco"),
         requirement("mjc_mwe"),
     ],

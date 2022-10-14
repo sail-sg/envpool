@@ -41,7 +41,7 @@ py_test(
         ":classic_control",
         requirement("absl-py"),
         requirement("dm_env"),
-        requirement("gym"),
+        requirement("gym>=0.26.0"),
         requirement("numpy"),
         requirement("pygame"),
     ],

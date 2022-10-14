@@ -81,14 +81,16 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
     )
     env = VizdoomGymEnvPool(VizdoomEnvSpec(conf))
     assert env.action_space.n == 6
-    obs = env.reset().transpose(0, 2, 3, 1)
+    obs, _ = env.reset()
+    obs = obs.transpose(0, 2, 3, 1)
     action_num = env.action_space.n
     env_id = np.arange(num_envs)
     np.random.seed(0)
     for t in range(step):
       assert obs.shape == (num_envs, height, width, 4), obs.shape
       act = np.random.randint(action_num, size=len(env_id))
-      obs_, _, done, info = env.step(act, env_id)
+      obs_, _, terminated, truncated, info = env.step(act, env_id)
+      done = np.logical_or(terminated, truncated)
       env_id = info["env_id"]
       if render:
         obs[env_id] = obs_.transpose(0, 2, 3, 1)
@@ -99,7 +101,7 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
         cv2.imwrite(f"img/{t}.png", obs_all)
       if np.any(done):  # even though .step can auto reset
         done_id = np.array(info["env_id"])[done]
-        obs[done_id] = env.reset(done_id).transpose(0, 2, 3, 1)
+        obs[done_id] = env.reset(done_id)[0].transpose(0, 2, 3, 1)
 
   @no_type_check
   def test_d3_action_space(self) -> None:

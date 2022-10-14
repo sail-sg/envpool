@@ -86,8 +86,10 @@ class _MujocoGymAlignTest(absltest.TestCase):
         cnt += 1
         a = env0.action_space.sample()
         # logging.info(f"{cnt} {a}")
-        o0, r0, d0, i0 = env0.step(a)
-        o1, r1, d1, i1 = env1.step(np.array([a]), np.array([0]))
+        o0, r0, term0, trunc0, i0 = env0.step(a)
+        d0 = np.logical_or(term0, trunc0)
+        o1, r1, term1, trunc1, i1 = env1.step(np.array([a]), np.array([0]))
+        d1 = np.logical_or(term1, trunc1)
         np.testing.assert_allclose(o0, o1[0], atol=3e-4)
         np.testing.assert_allclose(r0, r1[0], atol=1e-4)
         if not no_time_limit:

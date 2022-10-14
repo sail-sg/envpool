@@ -68,7 +68,7 @@ class _AtariEnvPoolTest(absltest.TestCase):
     spec = AtariEnvSpec(config)
     env0 = AtariGymEnvPool(spec)
     env1 = AtariDMEnvPool(spec)
-    obs0 = env0.reset()
+    obs0, _ = env0.reset()
     obs1 = env1.reset().observation.obs  # type: ignore
     np.testing.assert_allclose(obs0, obs1)
     for _ in range(1000):
@@ -96,7 +96,8 @@ class _AtariEnvPoolTest(absltest.TestCase):
         # no life in this game
         continue
       for _ in range(10000):
-        _, _, done, info = env.step(np.random.randint(0, action_num, 1))
+        _, _, terminated, truncated, info = env.step(np.random.randint(0, action_num, 1))
+        done = np.logical_or(terminated, truncated)
         if info["lives"][0] == 0:
           break
         else:
@@ -106,9 +107,10 @@ class _AtariEnvPoolTest(absltest.TestCase):
         continue
       # for normal atari (e.g., breakout)
       # take an additional step after all lives are exhausted
-      _, _, next_done, next_info = env.step(
+      _, _, next_terminated, next_truncated, next_info = env.step(
         np.random.randint(0, action_num, 1)
       )
+      next_done = np.logical_or(next_terminated, next_truncated)
       if done[0] and next_info["lives"][0] > 0:
         self.assertTrue(info["terminated"][0])
         continue
@@ -116,10 +118,12 @@ class _AtariEnvPoolTest(absltest.TestCase):
       self.assertFalse(info["terminated"][0])
       while not done[0]:
         self.assertFalse(info["terminated"][0])
-        _, _, done, info = env.step(np.random.randint(0, action_num, 1))
-      _, _, next_done, next_info = env.step(
+        _, _, terminated, truncated, info = env.step(np.random.randint(0, action_num, 1))
+        done = np.logical_or(terminated, truncated)
+      _, _, next_terminated, next_truncated, next_info = env.step(
         np.random.randint(0, action_num, 1)
       )
+      next_done = np.logical_or(next_terminated, next_truncated)
       self.assertTrue(next_info["lives"][0] > 0)
       self.assertTrue(info["terminated"][0])
 
@@ -137,21 +141,21 @@ class _AtariEnvPoolTest(absltest.TestCase):
       partial_ids = [np.arange(num_envs)[::2], np.arange(num_envs)[1::2]]
       env.step(np.zeros(len(partial_ids[1]), dtype=int), env_id=partial_ids[1])
       for _ in range(max_episode_steps - 2):
-        info = env.step(
+        _, _, _, truncated, info = env.step(
           np.zeros(num_envs, dtype=int), env_id=np.arange(num_envs)
-        )[-1]
-        assert np.all(~info["TimeLimit.truncated"])
-      info = env.step(
+        )
+        assert np.all(~truncated)
+      _, _, _, truncated, info = env.step(
         np.zeros(num_envs, dtype=int), env_id=np.arange(num_envs)
-      )[-1]
+      )
       env_id = np.array(info["env_id"])
-      done_id = np.array(sorted(env_id[info["TimeLimit.truncated"]]))
+      done_id = np.array(sorted(env_id[truncated]))
       assert np.all(done_id == partial_ids[1])
-      info = env.step(
+      _, _, _, truncated, info = env.step(
         np.zeros(len(partial_ids[0]), dtype=int),
         env_id=partial_ids[0],
       )[-1]
-      assert np.all(info["TimeLimit.truncated"])
+      assert np.all(truncated)
 
   def test_xla_api(self) -> None:
     num_envs = 10
@@ -216,7 +220,7 @@ class _AtariEnvPoolTest(absltest.TestCase):
     spec = AtariEnvSpec(config)
     env = AtariGymEnvPool(spec)
     self.assertTrue(env.observation_space.shape, ref_shape)
-    obs = env.reset()
+    obs, _ = env.reset()
     self.assertTrue(obs.shape, ref_shape)
     config = AtariEnvSpec.gen_config(
       task="breakout", gray_scale=False, img_height=210, img_width=160
@@ -224,7 +228,7 @@ class _AtariEnvPoolTest(absltest.TestCase):
     spec = AtariEnvSpec(config)
     env = AtariGymEnvPool(spec)
     self.assertTrue(env.observation_space.shape, raw_shape)
-    obs1 = env.reset()
+    obs1, _ = env.reset()
     self.assertTrue(obs1.shape, raw_shape)
     for i in range(0, 12, 3):
       obs_ = cv2.resize(
