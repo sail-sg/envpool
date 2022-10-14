@@ -51,6 +51,7 @@ py_library(
         requirement("dm-tree"),
         requirement("dm-env"),
         requirement("numpy"),
+        requirement("packaging"),
         ":protocol",
     ],
 )
