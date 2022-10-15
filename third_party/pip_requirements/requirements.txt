@@ -4,7 +4,7 @@ dm-env
 dm-tree
 dm-control>=1.0.5
 filelock
-gym<0.26
+gym
 pygame
 box2d
 mujoco>=2.2.1
