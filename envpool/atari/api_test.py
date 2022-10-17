@@ -286,7 +286,7 @@ class _GymSyncTest(absltest.TestCase):
     obs, _ = env.reset()
     # check shape
     self.assertIsInstance(obs, np.ndarray)
-    self.assertEqual(obs.dtype, np.uint8)  # type: ignore
+    self.assertEqual(obs.dtype, np.uint8)
     obs, rew, terminated, truncated, info = env.step(
       np.random.randint(6, size=num_envs)
     )
