@@ -16,7 +16,6 @@
 from typing import Any, no_type_check
 
 import gym
-import mjc_mwe
 import numpy as np
 from absl import logging
 from absl.testing import absltest
@@ -99,13 +98,13 @@ class _MujocoGymAlignTest(absltest.TestCase):
             np.testing.assert_allclose(i0[k], i1[k][0], atol=1e-4)
 
   def test_ant(self) -> None:
-    env0 = mjc_mwe.AntEnv()
+    env0 = gym.make("Anv-v4")
     env1 = GymAntGymEnvPool(
       GymAntEnvSpec(GymAntEnvSpec.gen_config(gym_reset_return_info=True))
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
-    env0 = mjc_mwe.AntEnv(
+    env0 = gym.make("Ant-v4",
       terminate_when_unhealthy=False,
       exclude_current_positions_from_observation=False,
     )
@@ -123,7 +122,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
     self.run_align_check(env0, env1, no_time_limit=True)
 
   def test_half_cheetah(self) -> None:
-    env0 = mjc_mwe.HalfCheetahEnv()
+    env0 = gym.make("HalfCheetah-v4")
     env1 = GymHalfCheetahGymEnvPool(
       GymHalfCheetahEnvSpec(
         GymHalfCheetahEnvSpec.gen_config(gym_reset_return_info=True)
@@ -131,7 +130,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
-    env0 = mjc_mwe.HalfCheetahEnv(
+    env0 = gym.make("HalfCheetah-v4",
       exclude_current_positions_from_observation=True
     )
     env1 = GymHalfCheetahGymEnvPool(
@@ -145,7 +144,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
     self.run_space_check(env0, env1)
 
   def test_hopper(self) -> None:
-    env0 = mjc_mwe.HopperEnv()
+    env0 = gym.make("Hopper-v4")
     env1 = GymHopperGymEnvPool(
       GymHopperEnvSpec(
         GymHopperEnvSpec.gen_config(gym_reset_return_info=True)
@@ -153,7 +152,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
-    env0 = mjc_mwe.HopperEnv(
+    env0 = gym.make("Hopper-v4",
       terminate_when_unhealthy=False,
       exclude_current_positions_from_observation=False,
     )
@@ -170,7 +169,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
     self.run_align_check(env0, env1, no_time_limit=True)
 
   def test_humanoid(self) -> None:
-    env0 = mjc_mwe.HumanoidEnv()
+    env0 = gym.make("Humanoid-v4")
     env1 = GymHumanoidGymEnvPool(
       GymHumanoidEnvSpec(
         GymHumanoidEnvSpec.gen_config(gym_reset_return_info=True)
@@ -178,7 +177,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
-    env0 = mjc_mwe.HumanoidEnv(
+    env0 = gym.make("Humanoid-v4",
       terminate_when_unhealthy=False,
       exclude_current_positions_from_observation=False,
     )
@@ -195,7 +194,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
     self.run_align_check(env0, env1, no_time_limit=True)
 
   def test_humanoid_standup(self) -> None:
-    env0 = mjc_mwe.HumanoidStandupEnv()
+    env0 = gym.make("HumanoidStandup-v4")
     env1 = GymHumanoidStandupGymEnvPool(
       GymHumanoidStandupEnvSpec(
         GymHumanoidStandupEnvSpec.gen_config(gym_reset_return_info=True)
@@ -205,7 +204,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
     self.run_align_check(env0, env1, no_time_limit=True)
 
   def test_inverted_double_pendulum(self) -> None:
-    env0 = mjc_mwe.InvertedDoublePendulumEnv()
+    env0 = gym.make("InvertedDoublePendulum-v4")
     env1 = GymInvertedDoublePendulumGymEnvPool(
       GymInvertedDoublePendulumEnvSpec(
         GymInvertedDoublePendulumEnvSpec.gen_config(
@@ -217,7 +216,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
     self.run_align_check(env0, env1)
 
   def test_inverted_pendulum(self) -> None:
-    env0 = mjc_mwe.InvertedPendulumEnv()
+    env0 = gym.make("InvertedPendulum-v4")
     env1 = GymInvertedPendulumGymEnvPool(
       GymInvertedPendulumEnvSpec(
         GymInvertedPendulumEnvSpec.gen_config(gym_reset_return_info=True)
@@ -227,7 +226,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
     self.run_align_check(env0, env1)
 
   def test_pusher(self) -> None:
-    env0 = mjc_mwe.PusherEnv()
+    env0 = gym.make("Pusher-v4")
     env1 = GymPusherGymEnvPool(
       GymPusherEnvSpec(
         GymPusherEnvSpec.gen_config(gym_reset_return_info=True)
@@ -237,7 +236,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
     self.run_align_check(env0, env1, no_time_limit=True)
 
   def test_reacher(self) -> None:
-    env0 = mjc_mwe.ReacherEnv()
+    env0 = gym.make("Reacher-v4")
     env1 = GymReacherGymEnvPool(
       GymReacherEnvSpec(
         GymReacherEnvSpec.gen_config(gym_reset_return_info=True)
@@ -247,7 +246,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
     self.run_align_check(env0, env1, no_time_limit=True)
 
   def test_swimmer(self) -> None:
-    env0 = mjc_mwe.SwimmerEnv()
+    env0 = gym.make("Swimmer-v4")
     env1 = GymSwimmerGymEnvPool(
       GymSwimmerEnvSpec(
         GymSwimmerEnvSpec.gen_config(gym_reset_return_info=True)
@@ -255,7 +254,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
-    env0 = mjc_mwe.SwimmerEnv(exclude_current_positions_from_observation=False)
+    env0 = gym.make("Swimmer-v4", exclude_current_positions_from_observation=False)
     env1 = GymSwimmerGymEnvPool(
       GymSwimmerEnvSpec(
         GymSwimmerEnvSpec.gen_config(
@@ -267,7 +266,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
     self.run_space_check(env0, env1)
 
   def test_walker2d(self) -> None:
-    env0 = mjc_mwe.Walker2dEnv()
+    env0 = gym.make("Walker2d-v4")
     env1 = GymWalker2dGymEnvPool(
       GymWalker2dEnvSpec(
         GymWalker2dEnvSpec.gen_config(gym_reset_return_info=True)
@@ -275,7 +274,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
-    env0 = mjc_mwe.Walker2dEnv(
+    env0 = gym.make("Walker2d-v4",
       terminate_when_unhealthy=False,
       exclude_current_positions_from_observation=False,
     )
