@@ -15,6 +15,7 @@
 
 from typing import no_type_check
 
+from packaging import version
 import dm_env
 import gym
 import numpy as np
@@ -277,6 +278,7 @@ class _GymSyncTest(absltest.TestCase):
     self.assertTrue(np.all(~done1[index]))
 
   def test_highlevel_step(self) -> None:
+    assert version.parse(gym.__version__) >= version.parse("0.26.0")
     num_envs = 4
     config = AtariEnvSpec.gen_config(task="pong", num_envs=num_envs)
     spec = AtariEnvSpec(config)

@@ -101,7 +101,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
 
   def test_ant(self) -> None:
     assert version.parse(gym.__version__) >= version.parse("0.26.0")
-    env0 = gym.make("Anv-v4")
+    env0 = gym.make("Ant-v4")
     env1 = GymAntGymEnvPool(
       GymAntEnvSpec(GymAntEnvSpec.gen_config(gym_reset_return_info=True))
     )
