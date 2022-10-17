@@ -121,7 +121,8 @@ class _ToyTextEnvTest(absltest.TestCase):
       elapsed_step = 0
       for _ in range(1000):
         act = np.random.randint(4, size=(1,))
-        obs, rew, done, info = env.step(act)
+        obs, rew, terminated, truncated, info = env.step(act)
+        done = np.logical_or(terminated, truncated)
         flag = False
         for _ in range(50):
           ref.reset()

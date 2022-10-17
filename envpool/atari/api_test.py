@@ -15,12 +15,12 @@
 
 from typing import no_type_check
 
-from packaging import version
 import dm_env
 import gym
 import numpy as np
 from absl import logging
 from absl.testing import absltest
+from packaging import version
 
 from envpool.atari import AtariDMEnvPool, AtariEnvSpec, AtariGymEnvPool
 
@@ -251,7 +251,8 @@ class _GymSyncTest(absltest.TestCase):
     self.assertTrue(isinstance(env, gym.Env))
     logging.info(env)
     env.async_reset()
-    obs, rew, done, info = env.recv()
+    obs, rew, terminated, truncated, info = env.recv()
+    done = np.logical_or(terminated, truncated)
     # check shape
     self.assertIsInstance(obs, np.ndarray)
     self.assertEqual(obs.dtype, np.uint8)
@@ -259,21 +260,24 @@ class _GymSyncTest(absltest.TestCase):
     self.assertEqual(rew.dtype, np.float32)
     np.testing.assert_allclose(done.shape, (num_envs,))
     self.assertEqual(done.dtype, np.bool_)
+    self.assertEqual(terminated.dtype, np.bool_)
+    self.assertEqual(truncated.dtype, np.bool_)
     self.assertIsInstance(info, dict)
     self.assertEqual(len(info), 7)
     self.assertEqual(info["env_id"].dtype, np.int32)
     self.assertEqual(info["lives"].dtype, np.int32)
     self.assertEqual(info["players"]["env_id"].dtype, np.int32)
-    self.assertEqual(info["TimeLimit.truncated"].dtype, np.bool_)
     np.testing.assert_allclose(info["env_id"], np.arange(num_envs))
     np.testing.assert_allclose(info["lives"].shape, (num_envs,))
     np.testing.assert_allclose(info["players"]["env_id"].shape, (num_envs,))
-    np.testing.assert_allclose(info["TimeLimit.truncated"].shape, (num_envs,))
+    np.testing.assert_allclose(truncated, (num_envs,))
     while not np.any(done):
       env.send(np.random.randint(6, size=num_envs))
-      obs, rew, done, info = env.recv()
+      obs, rew, terminated, truncated, info = env.recv()
+      done = np.logical_or(terminated, truncated)
     env.send(np.random.randint(6, size=num_envs))
-    obs1, rew1, done1, info1 = env.recv()
+    obs1, rew1, terminated1, truncated1, info1 = env.recv()
+    done1 = np.logical_or(terminated1, truncated1)
     index = np.where(done)[0]
     self.assertTrue(np.all(~done1[index]))
 

@@ -15,11 +15,11 @@
 
 from typing import Any, no_type_check
 
-from packaging import version
 import gym
 import numpy as np
 from absl import logging
 from absl.testing import absltest
+from packaging import version
 
 from envpool.mujoco.gym import (
   GymAntEnvSpec,
