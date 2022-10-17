@@ -124,7 +124,7 @@ Data Output Format
 |          |  | or an obs dict (multi observation)                                |                                                                  |
 |          |  | or (obs, info) tuple (when ``gym_reset_return_info`` == True)     |                                                                  |
 +----------+----------------------------------------------------------------------+------------------------------------------------------------------+
-|   step   |  (obs, rew, done, info|env_id) or                                    | TimeStep(StepType, obs|info|env_id, rew, discount or 1 - done)   | 
+|   step   |  (obs, rew, done, info|env_id) or                                    | TimeStep(StepType, obs|info|env_id, rew, discount or 1 - done)   |
 |          |  (obs, rew, terminated, truncated, info|env_id) (when Gym >= 0.26.0) |                                                                  |
 +----------+----------------------------------------------------------------------+------------------------------------------------------------------+
 
