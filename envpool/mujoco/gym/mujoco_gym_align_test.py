@@ -15,6 +15,7 @@
 
 from typing import Any, no_type_check
 
+from packaging import version
 import gym
 import numpy as np
 from absl import logging
@@ -50,8 +51,9 @@ class _MujocoGymAlignTest(absltest.TestCase):
 
   @no_type_check
   def run_space_check(self, env0: gym.Env, env1: Any) -> None:
-    """Check observation_space and action space."""
-    obs0, obs1 = env0.observation_space, env1.observation_space
+    """Check observation_space and action space."""export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/ubuntu/.mujoco/mujoco210/bin
+
+
     np.testing.assert_allclose(obs0.low, obs1.low)
     np.testing.assert_allclose(obs0.high, obs1.high)
     act0, act1 = env0.action_space, env1.action_space
@@ -98,6 +100,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
             np.testing.assert_allclose(i0[k], i1[k][0], atol=1e-4)
 
   def test_ant(self) -> None:
+    assert version.parse(gym.__version__) >= version.parse("0.26.0")
     env0 = gym.make("Anv-v4")
     env1 = GymAntGymEnvPool(
       GymAntEnvSpec(GymAntEnvSpec.gen_config(gym_reset_return_info=True))
