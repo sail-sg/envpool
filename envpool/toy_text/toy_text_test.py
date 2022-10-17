@@ -161,7 +161,7 @@ class _ToyTextEnvTest(absltest.TestCase):
     for _ in range(10):
       # random agent
       ref.reset()
-      ref.unwrapped.s = env.reset()[0]
+      ref.unwrapped.s = env.reset()[0][0]
       done = [False]
       while not done[0]:
         act = np.random.randint(6, size=(1,))
