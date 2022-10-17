@@ -300,7 +300,7 @@ class _GymSyncTest(absltest.TestCase):
     np.testing.assert_allclose(done.shape, (num_envs,))
     self.assertEqual(done.dtype, np.bool_)
     self.assertIsInstance(info, dict)
-    self.assertEqual(len(info), 7)
+    self.assertEqual(len(info), 6)
     self.assertEqual(info["env_id"].dtype, np.int32)
     self.assertEqual(info["lives"].dtype, np.int32)
     self.assertEqual(info["players"]["env_id"].dtype, np.int32)

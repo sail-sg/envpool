@@ -52,8 +52,8 @@ class _MujocoGymAlignTest(absltest.TestCase):
   @no_type_check
   def run_space_check(self, env0: gym.Env, env1: Any) -> None:
     """Check observation_space and action space."""
-
-
+    """Check observation_space and action space."""
+    obs0, obs1 = env0.observation_space, env1.observation_space
     np.testing.assert_allclose(obs0.low, obs1.low)
     np.testing.assert_allclose(obs0.high, obs1.high)
     act0, act1 = env0.action_space, env1.action_space

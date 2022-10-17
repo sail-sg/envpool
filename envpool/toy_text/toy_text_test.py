@@ -244,7 +244,7 @@ class _ToyTextEnvTest(absltest.TestCase):
     ref = gym.make("CliffWalking-v0")
     for i in range(12):
       action = [0] * 4 + [1] * i + [2] * 4
-      assert env.reset()[0] == ref.reset()
+      assert env.reset()[0] == ref.reset()[0]
       while len(action) > 0:
         a = action.pop(0)
         ref_obs, ref_rew, ref_terminated, ref_truncated, ref_info = ref.step(a)

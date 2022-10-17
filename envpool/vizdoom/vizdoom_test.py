@@ -44,21 +44,21 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
       partial_ids = [np.arange(num_envs)[::2], np.arange(num_envs)[1::2]]
       env.step(np.zeros(len(partial_ids[1]), dtype=int), env_id=partial_ids[1])
       for _ in range(max_episode_steps - 2):
-        info = env.step(
+        _, _, _, truncated, info = env.step(
           np.zeros(num_envs, dtype=int), env_id=np.arange(num_envs)
-        )[-1]
-        assert np.all(~info["TimeLimit.truncated"])
-      info = env.step(
+        )
+        assert np.all(~truncated)
+      _, _, _, truncated, info = env.step(
         np.zeros(num_envs, dtype=int), env_id=np.arange(num_envs)
-      )[-1]
+      )
       env_id = np.array(info["env_id"])
-      done_id = np.array(sorted(env_id[info["TimeLimit.truncated"]]))
+      done_id = np.array(sorted(env_id[truncated]))
       assert np.all(done_id == partial_ids[1])
-      info = env.step(
+      _, _, _, truncated, info = env.step(
         np.zeros(len(partial_ids[0]), dtype=int),
         env_id=partial_ids[0],
-      )[-1]
-      assert np.all(info["TimeLimit.truncated"])
+      )
+      assert np.all(truncated)
 
   @no_type_check
   def test_hg(

@@ -14,7 +14,6 @@
 """Global env registry."""
 
 import importlib
-import warnings
 from typing import Any, Dict, List, Tuple
 
 import gym
@@ -47,7 +46,7 @@ class EnvRegistry:
     if "gym_reset_return_info" not in kwargs:
       kwargs["gym_reset_return_info"] = new_gym_api
     if new_gym_api and not kwargs["gym_reset_return_info"]:
-      raise AttributeError(
+      raise ValueError(
         "You are using gym>=0.26.0 but passed `gym_reset_return_info=False`. "
         "The new gym API requires environments to return an info dictionary "
         "after resets."

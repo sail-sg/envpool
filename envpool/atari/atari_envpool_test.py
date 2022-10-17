@@ -156,7 +156,7 @@ class _AtariEnvPoolTest(absltest.TestCase):
       _, _, _, truncated, info = env.step(
         np.zeros(len(partial_ids[0]), dtype=int),
         env_id=partial_ids[0],
-      )[-1]
+      )
       assert np.all(truncated)
 
   def test_xla_api(self) -> None:
