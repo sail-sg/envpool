@@ -104,7 +104,8 @@ class _MujocoGymAlignTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
-    env0 = gym.make("Ant-v4",
+    env0 = gym.make(
+      "Ant-v4",
       terminate_when_unhealthy=False,
       exclude_current_positions_from_observation=False,
     )
@@ -130,8 +131,8 @@ class _MujocoGymAlignTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
-    env0 = gym.make("HalfCheetah-v4",
-      exclude_current_positions_from_observation=True
+    env0 = gym.make(
+      "HalfCheetah-v4", exclude_current_positions_from_observation=True
     )
     env1 = GymHalfCheetahGymEnvPool(
       GymHalfCheetahEnvSpec(
@@ -152,7 +153,8 @@ class _MujocoGymAlignTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
-    env0 = gym.make("Hopper-v4",
+    env0 = gym.make(
+      "Hopper-v4",
       terminate_when_unhealthy=False,
       exclude_current_positions_from_observation=False,
     )
@@ -177,7 +179,8 @@ class _MujocoGymAlignTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
-    env0 = gym.make("Humanoid-v4",
+    env0 = gym.make(
+      "Humanoid-v4",
       terminate_when_unhealthy=False,
       exclude_current_positions_from_observation=False,
     )
@@ -254,7 +257,9 @@ class _MujocoGymAlignTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
-    env0 = gym.make("Swimmer-v4", exclude_current_positions_from_observation=False)
+    env0 = gym.make(
+      "Swimmer-v4", exclude_current_positions_from_observation=False
+    )
     env1 = GymSwimmerGymEnvPool(
       GymSwimmerEnvSpec(
         GymSwimmerEnvSpec.gen_config(
@@ -274,7 +279,8 @@ class _MujocoGymAlignTest(absltest.TestCase):
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
-    env0 = gym.make("Walker2d-v4",
+    env0 = gym.make(
+      "Walker2d-v4",
       terminate_when_unhealthy=False,
       exclude_current_positions_from_observation=False,
     )
