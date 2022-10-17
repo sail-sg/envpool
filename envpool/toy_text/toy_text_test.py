@@ -182,7 +182,7 @@ class _ToyTextEnvTest(absltest.TestCase):
     for _ in range(10):
       # 10IQ agent
       ref.reset()
-      obs = ref.unwrapped.s = env.reset()[0]
+      obs = ref.unwrapped.s = env.reset()[0][0]
       x, y, s, t = ref.unwrapped.decode(obs)
       actions = []
       for i, g in [[0, s], [1, t]]:

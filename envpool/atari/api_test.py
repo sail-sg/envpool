@@ -270,7 +270,7 @@ class _GymSyncTest(absltest.TestCase):
     np.testing.assert_allclose(info["env_id"], np.arange(num_envs))
     np.testing.assert_allclose(info["lives"].shape, (num_envs,))
     np.testing.assert_allclose(info["players"]["env_id"].shape, (num_envs,))
-    np.testing.assert_allclose(truncated, (num_envs,))
+    np.testing.assert_allclose(truncated.shape, (num_envs,))
     while not np.any(done):
       env.send(np.random.randint(6, size=num_envs))
       obs, rew, terminated, truncated, info = env.recv()
