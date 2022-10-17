@@ -47,10 +47,10 @@ class EnvRegistry:
     if "gym_reset_return_info" not in kwargs:
       kwargs["gym_reset_return_info"] = new_gym_api
     if new_gym_api and not kwargs["gym_reset_return_info"]:
-      warnings.warn(
+      raise AttributeError(
         "You are using gym>=0.26.0 but passed `gym_reset_return_info=False`. "
         "The new gym API requires environments to return an info dictionary "
-        " after resets."
+        "after resets."
       )
 
     assert task_id in self.specs, \

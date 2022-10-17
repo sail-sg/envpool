@@ -74,7 +74,7 @@ class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
       state = tree.unflatten_as(
         state_structure, [state_values[i] for i in state_idx]
       )
-      if reset and not return_info:
+      if reset and not (return_info or new_gym_api):
         return state["obs"]
       done = state["done"]
       elapse = state["elapsed_step"]
