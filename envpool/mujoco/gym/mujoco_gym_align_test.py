@@ -65,9 +65,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
     self, env: gym.Env, qpos: np.ndarray, qvel: np.ndarray
   ) -> None:
     # manually reset
-    env._mujoco_bindings.mj_resetData(env.model, env.data)
     env.set_state(qpos, qvel)
-    env._mujoco_bindings.mj_forward(env.model, env.data)
 
   def run_align_check(
     self, env0: gym.Env, env1: Any, no_time_limit: bool = False
