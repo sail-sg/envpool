@@ -16,6 +16,7 @@
 from typing import Any, no_type_check
 
 import gym
+import mujoco
 import numpy as np
 from absl import logging
 from absl.testing import absltest
@@ -65,7 +66,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
     self, env: gym.Env, qpos: np.ndarray, qvel: np.ndarray
   ) -> None:
     # manually reset
-    env.unwrapped.__getattribute__("_reset_data")()
+    mujoco.mj_resetData(env.model, env.data)
     env.set_state(qpos, qvel)
 
   def run_align_check(
