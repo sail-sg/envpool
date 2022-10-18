@@ -70,7 +70,8 @@ class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
 
     def _to_gym(
       self: Any, state_values: List[np.ndarray], reset: bool, return_info: bool
-    ) -> Union[Any, Tuple[Any, Any], Tuple[Any, np.ndarray, np.ndarray, Any]]:
+    ) -> Union[Any, Tuple[Any, Any], Tuple[Any, np.ndarray, np.ndarray, Any],
+               Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any]]:
       state = tree.unflatten_as(
         state_structure, [state_values[i] for i in state_idx]
       )
