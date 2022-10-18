@@ -16,6 +16,9 @@
 import importlib
 from typing import Any, Dict, List, Tuple
 
+import gym
+from packaging import version
+
 
 class EnvRegistry:
   """A collection of available envs."""
@@ -39,6 +42,16 @@ class EnvRegistry:
 
   def make(self, task_id: str, env_type: str, **kwargs: Any) -> Any:
     """Make envpool."""
+    new_gym_api = version.parse(gym.__version__) >= version.parse("0.26.0")
+    if "gym_reset_return_info" not in kwargs:
+      kwargs["gym_reset_return_info"] = new_gym_api
+    if new_gym_api and not kwargs["gym_reset_return_info"]:
+      raise ValueError(
+        "You are using gym>=0.26.0 but passed `gym_reset_return_info=False`. "
+        "The new gym API requires environments to return an info dictionary "
+        "after resets."
+      )
+
     assert task_id in self.specs, \
       f"{task_id} is not supported, `envpool.list_all_envs()` may help."
     assert env_type in ["dm", "gym"]

@@ -109,13 +109,14 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
     for _ in range(2):
       env_id = np.arange(num_envs)
       done = np.array([False] * num_envs)
-      obs = env.reset(env_id)
+      obs, _ = env.reset(env_id)
       rewards = np.zeros(num_envs)
       while not np.all(done):
         action = np.array(
           [self.heuristic_lunar_lander_policy(s, continuous) for s in obs]
         )
-        obs, rew, done, info = env.step(action, env_id)
+        obs, rew, terminated, truncated, info = env.step(action, env_id)
+        done = np.logical_or(terminated, truncated)
         env_id = info["env_id"]
         rewards[env_id] += rew
         obs = obs[~done]
@@ -228,11 +229,12 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
     )
     env_id = np.arange(num_envs)
     done = np.array([False] * num_envs)
-    obs = env.reset(env_id)
+    obs, _ = env.reset(env_id)
     rewards = np.zeros(num_envs)
     action = np.zeros([num_envs, 4])
     for _ in range(max_episode_steps):
-      obs, rew, done, info = env.step(action, env_id)
+      obs, rew, terminated, truncated, info = env.step(action, env_id)
+      done = np.logical_or(terminated, truncated)
       if render:
         self.render_bpw(info)
       env_id = info["env_id"]

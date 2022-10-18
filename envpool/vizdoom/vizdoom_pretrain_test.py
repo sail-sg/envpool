@@ -80,13 +80,14 @@ class _VizdoomPretrainTest(absltest.TestCase):
     ids = np.arange(num_envs)
     reward = np.zeros(num_envs)
     length = np.zeros(num_envs)
-    obs = env.reset()
+    obs, _ = env.reset()
     for _ in range(555):
       if np.random.rand() < 0.05:
         act = np.random.randint(action_shape, size=len(ids))
       else:
         act = policy(Batch(obs=obs, info={})).act
-      obs, rew, done, info = env.step(act, ids)
+      obs, rew, terminated, truncated, info = env.step(act, ids)
+      done = np.logical_or(terminated, truncated)
       ids = np.asarray(info["env_id"])
       reward[ids] += rew
       length[ids] += 1

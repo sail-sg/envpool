@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Tuple, Union, no_type_check
 import gym
 import numpy as np
 import tree
+from packaging import version
 
 from .data import gym_structure
 from .envpool import EnvPoolMixin
@@ -65,22 +66,29 @@ class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
 
     state_structure, state_idx = gym_structure(state_keys)
 
+    new_gym_api = version.parse(gym.__version__) >= version.parse("0.26.0")
+
     def _to_gym(
       self: Any, state_values: List[np.ndarray], reset: bool, return_info: bool
-    ) -> Union[Any, Tuple[Any, Any], Tuple[Any, np.ndarray, np.ndarray, Any]]:
+    ) -> Union[Any, Tuple[Any, Any], Tuple[Any, np.ndarray, np.ndarray, Any],
+               Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any]]:
       state = tree.unflatten_as(
         state_structure, [state_values[i] for i in state_idx]
       )
-      if reset and not return_info:
+      if reset and not (return_info or new_gym_api):
         return state["obs"]
       done = state["done"]
       elapse = state["elapsed_step"]
       max_episode_steps = self.config.get("max_episode_steps", np.inf)
       trunc = (done & (elapse >= max_episode_steps))
-      state["info"]["TimeLimit.truncated"] = trunc
+      if not new_gym_api:
+        state["info"]["TimeLimit.truncated"] = trunc
       state["info"]["elapsed_step"] = state["elapsed_step"]
       if reset:
         return state["obs"], state["info"]
+      if new_gym_api:
+        terminated = done & ~trunc
+        return state["obs"], state["reward"], terminated, trunc, state["info"]
       return state["obs"], state["reward"], state["done"], state["info"]
 
     attrs["_to"] = _to_gym
