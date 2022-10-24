@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Tuple, Type
 import dm_env
 import gym
 import numpy as np
-import tree
+import treevalue
 
 from .protocol import ArraySpec
 
@@ -116,14 +116,15 @@ def dm_structure(root_name: str, keys: List[str]) -> Tuple[Tuple, List[int]]:
     key = key.replace("obs:", f"{root_name}:")  # compatible with to_namedtuple
     new_keys.append(key.replace(":", "."))
   dict_tree = to_nested_dict(dict(zip(new_keys, list(range(len(new_keys))))))
-  structure = to_namedtuple(root_name, dict_tree)
-  indice = tree.flatten(structure)
-  return structure, indice
+  tree_pairs = treevalue.flatten(treevalue.TreeValue(dict_tree))
+  indice = list(zip(*tree_pairs))[-1]
+  return tree_pairs, indice
 
 
 def gym_structure(keys: List[str]) -> Tuple[Dict[str, Any], List[int]]:
   """Convert flat keys into tree structure for dict construction."""
   keys = [k.replace(":", ".") for k in keys]
   structure = to_nested_dict(dict(zip(keys, list(range(len(keys))))))
-  indice = tree.flatten(structure)
-  return structure, indice
+  tree_pairs = treevalue.flatten(treevalue.TreeValue(structure))
+  indice = list(zip(*tree_pairs))[-1]
+  return tree_pairs, indice

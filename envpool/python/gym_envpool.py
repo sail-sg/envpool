@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Tuple, Union, no_type_check
 
 import gym
 import numpy as np
-import tree
+import treevalue
 from packaging import version
 
 from .data import gym_structure
@@ -64,7 +64,7 @@ class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
     check_key_duplication(name, "state", state_keys)
     check_key_duplication(name, "action", action_keys)
 
-    state_structure, state_idx = gym_structure(state_keys)
+    tree_pairs, state_idx = gym_structure(state_keys)
 
     new_gym_api = version.parse(gym.__version__) >= version.parse("0.26.0")
 
@@ -72,8 +72,9 @@ class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
       self: Any, state_values: List[np.ndarray], reset: bool, return_info: bool
     ) -> Union[Any, Tuple[Any, Any], Tuple[Any, np.ndarray, np.ndarray, Any],
                Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any]]:
-      state = tree.unflatten_as(
-        state_structure, [state_values[i] for i in state_idx]
+      values = [state_values[i] for i in state_idx]
+      state = treevalue.unflatten(
+        [(path, vi) for (path, _), vi in zip(tree_pairs, values)]
       )
       if reset and not (return_info or new_gym_api):
         return state["obs"]
@@ -85,11 +86,14 @@ class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
         state["info"]["TimeLimit.truncated"] = trunc
       state["info"]["elapsed_step"] = state["elapsed_step"]
       if reset:
-        return state["obs"], state["info"]
+        return state["obs"], treevalue.jsonify(state["info"])
       if new_gym_api:
         terminated = done & ~trunc
-        return state["obs"], state["reward"], terminated, trunc, state["info"]
-      return state["obs"], state["reward"], state["done"], state["info"]
+        return state["obs"], state[
+          "reward"], terminated, trunc, treevalue.jsonify(state["info"])
+      return state["obs"], state["reward"], state["done"], treevalue.jsonify(
+        state["info"]
+      )
 
     attrs["_to"] = _to_gym
     subcls = super().__new__(cls, name, parents, attrs)

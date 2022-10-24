@@ -2,6 +2,7 @@ absl-py
 cloudpickle
 dm-env
 dm-tree
+treevalue>=1.4.1
 dm-control>=1.0.5
 filelock
 gym>=0.26
