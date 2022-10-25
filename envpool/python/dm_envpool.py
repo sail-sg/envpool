@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Tuple, Union, no_type_check
 
 import dm_env
 import numpy as np
-import tree
+import treevalue
 from dm_env import TimeStep
 
 from .data import dm_structure
@@ -64,7 +64,8 @@ class DMEnvPoolMeta(ABCMeta):
     check_key_duplication(name, "state", state_keys)
     check_key_duplication(name, "action", action_keys)
 
-    state_structure, state_idx = dm_structure("State", state_keys)
+    tree_pairs = dm_structure("State", state_keys)
+    state_idx = list(zip(*tree_pairs))[-1]
 
     def _to_dm(
       self: Any,
@@ -72,8 +73,9 @@ class DMEnvPoolMeta(ABCMeta):
       reset: bool,
       return_info: bool,
     ) -> TimeStep:
-      state = tree.unflatten_as(
-        state_structure, [state_values[i] for i in state_idx]
+      values = [state_values[i] for i in state_idx]
+      state = treevalue.unflatten(
+        [(path, vi) for (path, _), vi in zip(tree_pairs, values)]
       )
       done = state.done
       elapse = state.elapsed_step

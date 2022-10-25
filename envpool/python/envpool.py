@@ -19,7 +19,7 @@ from abc import ABC
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-import tree
+import treevalue
 from dm_env import TimeStep
 
 from .protocol import EnvPool, EnvSpec
@@ -59,7 +59,9 @@ class EnvPoolMixin(ABC):
   ) -> List[np.ndarray]:
     """Convert action to C++-acceptable format."""
     if isinstance(action, dict):
-      adict = {".".join(k): v for k, v in tree.flatten_with_path(action)}
+      atree = treevalue.TreeValue(action)
+      alist = treevalue.flatten(atree)
+      adict = {".".join(k): v for k, v in alist}
     else:  # only 3 keys in action_keys
       if isinstance(action, np.ndarray):
         # else it could be a jax array, when using xla

@@ -2,12 +2,13 @@ absl-py
 cloudpickle
 dm-env
 dm-tree
+treevalue>=1.4
 dm-control>=1.0.5
 filelock
 gym>=0.26
 pygame
 box2d
-mujoco>=2.2.1
+mujoco>=2.2.1,<2.3
 mujoco_py>=2.1.2.14
 h5py
 jinja2
