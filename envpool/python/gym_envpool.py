@@ -64,7 +64,8 @@ class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
     check_key_duplication(name, "state", state_keys)
     check_key_duplication(name, "action", action_keys)
 
-    tree_pairs, state_idx = gym_structure(state_keys)
+    tree_pairs = gym_structure(state_keys)
+    state_idx = list(zip(*tree_pairs))[-1]
 
     new_gym_api = version.parse(gym.__version__) >= version.parse("0.26.0")
 

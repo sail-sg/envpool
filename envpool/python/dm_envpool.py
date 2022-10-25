@@ -64,7 +64,8 @@ class DMEnvPoolMeta(ABCMeta):
     check_key_duplication(name, "state", state_keys)
     check_key_duplication(name, "action", action_keys)
 
-    tree_pairs, state_idx = dm_structure("State", state_keys)
+    tree_pairs = dm_structure("State", state_keys)
+    state_idx = list(zip(*tree_pairs))[-1]
 
     def _to_dm(
       self: Any,

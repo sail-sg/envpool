@@ -106,7 +106,8 @@ def gym_spec_transform(
   )
 
 
-def dm_structure(root_name: str, keys: List[str]) -> Tuple[Tuple, List[int]]:
+def dm_structure(root_name: str,
+                 keys: List[str]) -> List[Tuple[List[str], int]]:
   """Convert flat keys into tree structure for namedtuple construction."""
   new_keys = []
   for key in keys:
@@ -117,14 +118,12 @@ def dm_structure(root_name: str, keys: List[str]) -> Tuple[Tuple, List[int]]:
     new_keys.append(key.replace(":", "."))
   dict_tree = to_nested_dict(dict(zip(new_keys, list(range(len(new_keys))))))
   tree_pairs = treevalue.flatten(treevalue.TreeValue(dict_tree))
-  indice = list(zip(*tree_pairs))[-1]
-  return tree_pairs, indice
+  return tree_pairs
 
 
-def gym_structure(keys: List[str]) -> Tuple[Dict[str, Any], List[int]]:
+def gym_structure(keys: List[str]) -> List[Tuple[List[str], int]]:
   """Convert flat keys into tree structure for dict construction."""
   keys = [k.replace(":", ".") for k in keys]
   structure = to_nested_dict(dict(zip(keys, list(range(len(keys))))))
   tree_pairs = treevalue.flatten(treevalue.TreeValue(structure))
-  indice = list(zip(*tree_pairs))[-1]
-  return tree_pairs, indice
+  return tree_pairs
