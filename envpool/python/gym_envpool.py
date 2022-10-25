@@ -83,18 +83,16 @@ class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
       elapse = state["elapsed_step"]
       max_episode_steps = self.config.get("max_episode_steps", np.inf)
       trunc = (done & (elapse >= max_episode_steps))
+      info = treevalue.jsonify(state["info"])
       if not new_gym_api:
-        state["info"]["TimeLimit.truncated"] = trunc
-      state["info"]["elapsed_step"] = state["elapsed_step"]
+        info["TimeLimit.truncated"] = trunc
+      info["elapsed_step"] = state["elapsed_step"]
       if reset:
-        return state["obs"], treevalue.jsonify(state["info"])
+        return state["obs"], info
       if new_gym_api:
         terminated = done & ~trunc
-        return state["obs"], state[
-          "reward"], terminated, trunc, treevalue.jsonify(state["info"])
-      return state["obs"], state["reward"], state["done"], treevalue.jsonify(
-        state["info"]
-      )
+        return state["obs"], state["reward"], terminated, trunc, info
+      return state["obs"], state["reward"], state["done"], info
 
     attrs["_to"] = _to_gym
     subcls = super().__new__(cls, name, parents, attrs)
