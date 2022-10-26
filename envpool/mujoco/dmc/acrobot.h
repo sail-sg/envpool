@@ -51,7 +51,7 @@ class AcrobotEnvFns {
                         ,
                     "info:qpos0"_.Bind(Spec<mjtNum>({2}))
 #endif
-    );
+    );  // NOLINT
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

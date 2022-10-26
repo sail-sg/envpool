@@ -73,7 +73,7 @@ class ManipulatorEnvFns {
                     "info:qpos0"_.Bind(Spec<mjtNum>({11})),
                     "info:random_info"_.Bind(Spec<mjtNum>({8}))
 #endif
-    );
+    );  // NOLINT
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

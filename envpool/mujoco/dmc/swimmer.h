@@ -73,7 +73,7 @@ class SwimmerEnvFns {
                     "info:qpos0"_.Bind(Spec<mjtNum>({n_bodies + 2})),
                     "info:target0"_.Bind(Spec<mjtNum>({2}))
 #endif
-    );
+    );  // NOLINT
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

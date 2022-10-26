@@ -56,7 +56,7 @@ class HumanoidEnvFns {
                         ,
                     "info:qpos0"_.Bind(Spec<mjtNum>({28}))
 #endif
-    );
+    );  // NOLINT
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

@@ -50,7 +50,7 @@ class HopperEnvFns {
                         ,
                     "info:qpos0"_.Bind(Spec<mjtNum>({7}))
 #endif
-    );
+    );  // NOLINT
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

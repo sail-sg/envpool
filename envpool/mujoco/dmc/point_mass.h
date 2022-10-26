@@ -50,7 +50,7 @@ class PointMassEnvFns {
                     "info:qpos0"_.Bind(Spec<mjtNum>({2})),
                     "info:wrap_prm"_.Bind(Spec<mjtNum>({4}))
 #endif
-    );
+    );  // NOLINT
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

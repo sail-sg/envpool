@@ -54,7 +54,7 @@ class FishEnvFns {
                     "info:qpos0"_.Bind(Spec<mjtNum>({14})),
                     "info:target0"_.Bind(Spec<mjtNum>({3}))
 #endif
-    );
+    );  // NOLINT
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

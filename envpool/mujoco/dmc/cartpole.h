@@ -75,7 +75,7 @@ class CartpoleEnvFns {
                     "info:qpos0"_.Bind(Spec<mjtNum>({1 + n_poles})),
                     "info:qvel0"_.Bind(Spec<mjtNum>({1 + n_poles}))
 #endif
-    );
+    );  // NOLINT
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

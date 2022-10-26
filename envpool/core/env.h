@@ -182,7 +182,7 @@ class Env {
     State state(&slice_.arr);
     bool done = IsDone();
     state["done"_] = done;
-    state["discount"_] = static_cast<float>(1.0 - done);
+    state["discount"_] = static_cast<float>(!done);
     // dm_env.StepType.FIRST == 0
     // dm_env.StepType.MID == 1
     // dm_env.StepType.LAST == 2
