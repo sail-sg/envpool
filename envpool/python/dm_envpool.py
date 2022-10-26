@@ -73,7 +73,7 @@ class DMEnvPoolMeta(ABCMeta):
       reset: bool,
       return_info: bool,
     ) -> TimeStep:
-      values = [state_values[i] for i in state_idx]
+      values = map(lambda i: state_values[i], state_idx)
       state = treevalue.unflatten(
         [(path, vi) for (path, _), vi in zip(tree_pairs, values)]
       )
