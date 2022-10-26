@@ -70,8 +70,9 @@ class EnvPoolMixin(ABC):
       if isinstance(action, np.ndarray):
         # else it could be a jax array, when using xla
         action = action.astype(
-          self._last_action_type, order='C'
-        )  # type: ignore
+          self._last_action_type,  # type: ignore
+          order='C',
+        )
       adict = {self._last_action_name: action}  # type: ignore
     if env_id is None:
       if "env_id" not in adict:
