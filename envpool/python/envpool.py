@@ -69,8 +69,10 @@ class EnvPoolMixin(ABC):
         self._last_action_name = self._spec._action_keys[-1]
       if isinstance(action, np.ndarray):
         # else it could be a jax array, when using xla
-        action = action.astype(self._last_action_type, order='C')
-      adict = {self._last_action_name: action}
+        action = action.astype(
+          self._last_action_type, order='C'
+        )  # type: ignore
+      adict = {self._last_action_name: action}  # type: ignore
     if env_id is None:
       if "env_id" not in adict:
         adict["env_id"] = self.all_env_ids
@@ -80,7 +82,7 @@ class EnvPoolMixin(ABC):
       adict["players.env_id"] = adict["env_id"]
     if not hasattr(self, "_action_names"):
       self._action_names = self._spec._action_keys
-    return list(map(lambda k: adict[k], self._action_names))
+    return list(map(lambda k: adict[k], self._action_names))  # type: ignore
 
   def __len__(self: EnvPool) -> int:
     """Return the number of environments."""
@@ -91,7 +93,7 @@ class EnvPoolMixin(ABC):
     """All env_id in numpy ndarray with dtype=np.int32."""
     if not hasattr(self, "_all_env_ids"):
       self._all_env_ids = np.arange(self.config["num_envs"], dtype=np.int32)
-    return self._all_env_ids
+    return self._all_env_ids  # type: ignore
 
   @property
   def is_async(self: EnvPool) -> bool:
