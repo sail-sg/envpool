@@ -48,12 +48,13 @@ class FishEnvFns {
     return MakeDict("obs:joint_angles"_.Bind(Spec<mjtNum>({7})),
                     "obs:upright"_.Bind(Spec<mjtNum>({})),
                     "obs:velocity"_.Bind(Spec<mjtNum>({13})),
-                    "obs:target"_.Bind(Spec<mjtNum>({3})),
+                    "obs:target"_.Bind(Spec<mjtNum>({3}))
 #ifdef ENVPOOL_TEST
+                        ,
                     "info:qpos0"_.Bind(Spec<mjtNum>({14})),
-                    "info:target0"_.Bind(Spec<mjtNum>({3})),
+                    "info:target0"_.Bind(Spec<mjtNum>({3}))
 #endif
-                    "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
+    );
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

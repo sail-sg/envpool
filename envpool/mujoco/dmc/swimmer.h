@@ -67,12 +67,13 @@ class SwimmerEnvFns {
     }
     return MakeDict("obs:joints"_.Bind(Spec<mjtNum>({n_bodies - 1})),
                     "obs:to_target"_.Bind(Spec<mjtNum>({2})),
-                    "obs:body_velocities"_.Bind(Spec<mjtNum>({3 * n_bodies})),
+                    "obs:body_velocities"_.Bind(Spec<mjtNum>({3 * n_bodies}))
 #ifdef ENVPOOL_TEST
+                        ,
                     "info:qpos0"_.Bind(Spec<mjtNum>({n_bodies + 2})),
-                    "info:target0"_.Bind(Spec<mjtNum>({2})),
+                    "info:target0"_.Bind(Spec<mjtNum>({2}))
 #endif
-                    "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
+    );
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

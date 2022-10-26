@@ -47,12 +47,13 @@ class ReacherEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict("obs:position"_.Bind(Spec<mjtNum>({2})),
                     "obs:to_target"_.Bind(Spec<mjtNum>({2})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({2})),
+                    "obs:velocity"_.Bind(Spec<mjtNum>({2}))
 #ifdef ENVPOOL_TEST
+                        ,
                     "info:qpos0"_.Bind(Spec<mjtNum>({2})),
-                    "info:target"_.Bind(Spec<mjtNum>({2})),
+                    "info:target"_.Bind(Spec<mjtNum>({2}))
 #endif
-                    "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
+    );
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

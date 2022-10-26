@@ -180,7 +180,13 @@ class Env {
   State Allocate(int player_num = 1) {
     slice_ = sbq_->Allocate(player_num, order_);
     State state(&slice_.arr);
-    state["done"_] = IsDone();
+    bool done = IsDone();
+    state["done"_] = done;
+    state["discount"_] = static_cast<float>(1.0 - done);
+    // dm_env.StepType.FIRST == 0
+    // dm_env.StepType.MID == 1
+    // dm_env.StepType.LAST == 2
+    state["step_type"_] = current_step_ == 0 ? 0 : done ? 2 : 1;
     state["info:env_id"_] = env_id_;
     state["elapsed_step"_] = current_step_;
     int* player_env_id(static_cast<int*>(state["info:players.env_id"_].Data()));

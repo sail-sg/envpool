@@ -51,11 +51,12 @@ class HumanoidEnvFns {
                     "obs:torso_vertical"_.Bind(Spec<mjtNum>({3})),
                     "obs:com_velocity"_.Bind(Spec<mjtNum>({3})),
                     "obs:position"_.Bind(Spec<mjtNum>({28})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({27})),
+                    "obs:velocity"_.Bind(Spec<mjtNum>({27}))
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.Bind(Spec<mjtNum>({28})),
+                        ,
+                    "info:qpos0"_.Bind(Spec<mjtNum>({28}))
 #endif
-                    "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
+    );
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
