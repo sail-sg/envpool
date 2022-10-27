@@ -32,8 +32,7 @@ namespace toy_text {
 class FrozenLakeEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(100),
-                    "reward_threshold"_.Bind(0.7), "size"_.Bind(4));
+    return MakeDict("reward_threshold"_.Bind(0.7), "size"_.Bind(4));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {

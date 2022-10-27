@@ -32,13 +32,12 @@ class PusherEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
-        "max_episode_steps"_.Bind(100), "reward_threshold"_.Bind(0.0),
-        "frame_skip"_.Bind(5), "post_constraint"_.Bind(true),
-        "ctrl_cost_weight"_.Bind(0.1), "dist_cost_weight"_.Bind(1.0),
-        "near_cost_weight"_.Bind(0.5), "reset_qvel_scale"_.Bind(0.005),
-        "cylinder_x_min"_.Bind(-0.3), "cylinder_x_max"_.Bind(0.0),
-        "cylinder_y_min"_.Bind(-0.2), "cylinder_y_max"_.Bind(0.2),
-        "cylinder_dist_min"_.Bind(0.17));
+        "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(5),
+        "post_constraint"_.Bind(true), "ctrl_cost_weight"_.Bind(0.1),
+        "dist_cost_weight"_.Bind(1.0), "near_cost_weight"_.Bind(0.5),
+        "reset_qvel_scale"_.Bind(0.005), "cylinder_x_min"_.Bind(-0.3),
+        "cylinder_x_max"_.Bind(0.0), "cylinder_y_min"_.Bind(-0.2),
+        "cylinder_y_max"_.Bind(0.2), "cylinder_dist_min"_.Bind(0.17));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {

@@ -40,7 +40,7 @@ std::string GetAcrobotXML(const std::string& base_path,
 class AcrobotEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(1),
+    return MakeDict("frame_skip"_.Bind(1),
                     "task_name"_.Bind(std::string("swingup")));
   }
   template <typename Config>

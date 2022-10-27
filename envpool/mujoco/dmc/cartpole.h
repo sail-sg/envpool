@@ -50,7 +50,7 @@ std::string GetCartpoleXML(const std::string& base_path,
 class CartpoleEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(1),
+    return MakeDict("frame_skip"_.Bind(1),
                     "task_name"_.Bind(std::string("balance")));
   }
   template <typename Config>

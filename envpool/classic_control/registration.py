@@ -42,6 +42,7 @@ register(
   dm_cls="PendulumDMEnvPool",
   gym_cls="PendulumGymEnvPool",
   version=0,
+  max_episode_steps=200,
 )
 
 register(
@@ -51,6 +52,7 @@ register(
   dm_cls="PendulumDMEnvPool",
   gym_cls="PendulumGymEnvPool",
   version=1,
+  max_episode_steps=200,
 )
 
 register(
@@ -59,6 +61,7 @@ register(
   spec_cls="MountainCarEnvSpec",
   dm_cls="MountainCarDMEnvPool",
   gym_cls="MountainCarGymEnvPool",
+  max_episode_steps=200,
 )
 
 register(
@@ -67,6 +70,7 @@ register(
   spec_cls="MountainCarContinuousEnvSpec",
   dm_cls="MountainCarContinuousDMEnvPool",
   gym_cls="MountainCarContinuousGymEnvPool",
+  max_episode_steps=999,
 )
 
 register(
@@ -75,4 +79,5 @@ register(
   spec_cls="AcrobotEnvSpec",
   dm_cls="AcrobotDMEnvPool",
   gym_cls="AcrobotGymEnvPool",
+  max_episode_steps=500,
 )

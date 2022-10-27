@@ -181,12 +181,14 @@ class Env {
     slice_ = sbq_->Allocate(player_num, order_);
     State state(&slice_.arr);
     bool done = IsDone();
+    int max_episode_steps = spec_.config["max_episode_steps"_];
     state["done"_] = done;
     state["discount"_] = static_cast<float>(!done);
     // dm_env.StepType.FIRST == 0
     // dm_env.StepType.MID == 1
     // dm_env.StepType.LAST == 2
     state["step_type"_] = current_step_ == 0 ? 0 : done ? 2 : 1;
+    state["trunc"_] = done & (current_step_ >= max_episode_steps);
     state["info:env_id"_] = env_id_;
     state["elapsed_step"_] = current_step_;
     int* player_env_id(static_cast<int*>(state["info:players.env_id"_].Data()));

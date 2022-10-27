@@ -39,7 +39,7 @@ std::string GetBallInCupXML(const std::string& base_path,
 class BallInCupEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(10),
+    return MakeDict("frame_skip"_.Bind(10),
                     "task_name"_.Bind(std::string("catch")));
   }
   template <typename Config>
