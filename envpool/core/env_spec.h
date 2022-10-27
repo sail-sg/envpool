@@ -17,7 +17,7 @@
 #ifndef ENVPOOL_CORE_ENV_SPEC_H_
 #define ENVPOOL_CORE_ENV_SPEC_H_
 
-#include <numeric>
+#include <limits>
 #include <string>
 
 #include "envpool/core/array.h"
