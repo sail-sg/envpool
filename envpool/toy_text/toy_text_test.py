@@ -151,7 +151,9 @@ class _ToyTextEnvTest(absltest.TestCase):
 
   @no_type_check
   def test_taxi(self) -> None:
-    spec = TaxiEnvSpec(TaxiEnvSpec.gen_config(num_envs=1, max_episode_steps=200))
+    spec = TaxiEnvSpec(
+      TaxiEnvSpec.gen_config(num_envs=1, max_episode_steps=200)
+    )
     env = TaxiGymEnvPool(spec)
     assert isinstance(env.observation_space, gym.spaces.Discrete)
     assert env.observation_space.n == 500
@@ -219,7 +221,9 @@ class _ToyTextEnvTest(absltest.TestCase):
 
   def test_nchain(self) -> None:
     num_envs = 100
-    spec = NChainEnvSpec(NChainEnvSpec.gen_config(num_envs=num_envs, max_episode_steps=1000))
+    spec = NChainEnvSpec(
+      NChainEnvSpec.gen_config(num_envs=num_envs, max_episode_steps=1000)
+    )
     env = NChainGymEnvPool(spec)
     assert isinstance(env.observation_space, gym.spaces.Discrete)
     assert env.observation_space.n == 5
