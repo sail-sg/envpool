@@ -34,7 +34,7 @@ class GymEnvPoolMixin(ABC):
     """Observation space from EnvSpec."""
     if not hasattr(self, "_gym_observation_space"):
       self._gym_observation_space = self.spec.observation_space
-    return self._gym_observation_space  # type: ignore
+    return self._gym_observation_space
 
   @property
   def action_space(self: Any) -> Union[gym.Space, Dict[str, Any]]:
