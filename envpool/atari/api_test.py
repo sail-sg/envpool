@@ -242,6 +242,12 @@ class _GymSyncTest(absltest.TestCase):
       np.testing.assert_allclose(gym_obs_space.high, 255)
       self.assertIsInstance(gym_act_space, gym.spaces.Discrete)
       self.assertEqual(gym_act_space.n, action_num)
+      # Issue 207
+      gym_act_space.seed(1)
+      action0 = gym_act_space.sample()
+      gym_act_space.seed(1)
+      action1 = gym_act_space.sample()
+      self.assertEqual(action0, action1)
 
   def test_lowlevel_step(self) -> None:
     num_envs = 4
