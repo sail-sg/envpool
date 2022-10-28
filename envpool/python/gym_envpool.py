@@ -32,12 +32,16 @@ class GymEnvPoolMixin(ABC):
   @property
   def observation_space(self: Any) -> Union[gym.Space, Dict[str, Any]]:
     """Observation space from EnvSpec."""
-    return self.spec.observation_space
+    if not hasattr(self, "_gym_observation_space"):
+      self._gym_observation_space = self.spec.observation_space
+    return self._gym_observation_space
 
   @property
   def action_space(self: Any) -> Union[gym.Space, Dict[str, Any]]:
     """Action space from EnvSpec."""
-    return self.spec.action_space
+    if not hasattr(self, "_gym_action_space"):
+      self._gym_action_space = self.spec.action_space
+    return self._gym_action_space
 
 
 class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
