@@ -188,7 +188,7 @@ class Env {
     // dm_env.StepType.MID == 1
     // dm_env.StepType.LAST == 2
     state["step_type"_] = current_step_ == 0 ? 0 : done ? 2 : 1;
-    state["trunc"_] = done & (current_step_ >= max_episode_steps);
+    state["trunc"_] = done && (current_step_ >= max_episode_steps);
     state["info:env_id"_] = env_id_;
     state["elapsed_step"_] = current_step_;
     int* player_env_id(static_cast<int*>(state["info:players.env_id"_].Data()));
