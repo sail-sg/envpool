@@ -248,6 +248,11 @@ class _GymSyncTest(absltest.TestCase):
       gym_act_space.seed(1)
       action1 = gym_act_space.sample()
       self.assertEqual(action0, action1)
+      env.action_space.seed(2)
+      action2 = env.action_space.sample()
+      env.action_space.seed(2)
+      action3 = env.action_space.sample()
+      self.assertEqual(action2, action3)
 
   def test_lowlevel_step(self) -> None:
     num_envs = 4
