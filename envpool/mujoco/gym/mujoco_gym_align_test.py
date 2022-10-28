@@ -103,7 +103,11 @@ class _MujocoGymAlignTest(absltest.TestCase):
     assert version.parse(gym.__version__) >= version.parse("0.26.0")
     env0 = gym.make("Ant-v4")
     env1 = GymAntGymEnvPool(
-      GymAntEnvSpec(GymAntEnvSpec.gen_config(gym_reset_return_info=True))
+      GymAntEnvSpec(
+        GymAntEnvSpec.gen_config(
+          gym_reset_return_info=True, max_episode_steps=1000
+        )
+      )
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
@@ -129,7 +133,9 @@ class _MujocoGymAlignTest(absltest.TestCase):
     env0 = gym.make("HalfCheetah-v4")
     env1 = GymHalfCheetahGymEnvPool(
       GymHalfCheetahEnvSpec(
-        GymHalfCheetahEnvSpec.gen_config(gym_reset_return_info=True)
+        GymHalfCheetahEnvSpec.gen_config(
+          gym_reset_return_info=True, max_episode_steps=1000
+        )
       )
     )
     self.run_space_check(env0, env1)
@@ -142,6 +148,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
         GymHalfCheetahEnvSpec.gen_config(
           exclude_current_positions_from_observation=True,
           gym_reset_return_info=True,
+          max_episode_steps=1000,
         )
       )
     )
@@ -151,7 +158,9 @@ class _MujocoGymAlignTest(absltest.TestCase):
     env0 = gym.make("Hopper-v4")
     env1 = GymHopperGymEnvPool(
       GymHopperEnvSpec(
-        GymHopperEnvSpec.gen_config(gym_reset_return_info=True)
+        GymHopperEnvSpec.gen_config(
+          gym_reset_return_info=True, max_episode_steps=1000
+        )
       )
     )
     self.run_space_check(env0, env1)
@@ -167,6 +176,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
           terminate_when_unhealthy=False,
           exclude_current_positions_from_observation=False,
           gym_reset_return_info=True,
+          max_episode_steps=1000,
         )
       )
     )
@@ -177,7 +187,9 @@ class _MujocoGymAlignTest(absltest.TestCase):
     env0 = gym.make("Humanoid-v4")
     env1 = GymHumanoidGymEnvPool(
       GymHumanoidEnvSpec(
-        GymHumanoidEnvSpec.gen_config(gym_reset_return_info=True)
+        GymHumanoidEnvSpec.gen_config(
+          gym_reset_return_info=True, max_episode_steps=1000
+        )
       )
     )
     self.run_space_check(env0, env1)
@@ -193,6 +205,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
           terminate_when_unhealthy=False,
           exclude_current_positions_from_observation=False,
           gym_reset_return_info=True,
+          max_episode_steps=1000,
         )
       )
     )
@@ -203,7 +216,9 @@ class _MujocoGymAlignTest(absltest.TestCase):
     env0 = gym.make("HumanoidStandup-v4")
     env1 = GymHumanoidStandupGymEnvPool(
       GymHumanoidStandupEnvSpec(
-        GymHumanoidStandupEnvSpec.gen_config(gym_reset_return_info=True)
+        GymHumanoidStandupEnvSpec.gen_config(
+          gym_reset_return_info=True, max_episode_steps=1000
+        )
       )
     )
     self.run_space_check(env0, env1)
@@ -214,7 +229,8 @@ class _MujocoGymAlignTest(absltest.TestCase):
     env1 = GymInvertedDoublePendulumGymEnvPool(
       GymInvertedDoublePendulumEnvSpec(
         GymInvertedDoublePendulumEnvSpec.gen_config(
-          gym_reset_return_info=True
+          gym_reset_return_info=True,
+          max_episode_steps=1000,
         )
       )
     )
@@ -225,7 +241,9 @@ class _MujocoGymAlignTest(absltest.TestCase):
     env0 = gym.make("InvertedPendulum-v4")
     env1 = GymInvertedPendulumGymEnvPool(
       GymInvertedPendulumEnvSpec(
-        GymInvertedPendulumEnvSpec.gen_config(gym_reset_return_info=True)
+        GymInvertedPendulumEnvSpec.gen_config(
+          gym_reset_return_info=True, max_episode_steps=1000
+        )
       )
     )
     self.run_space_check(env0, env1)
@@ -235,7 +253,9 @@ class _MujocoGymAlignTest(absltest.TestCase):
     env0 = gym.make("Pusher-v4")
     env1 = GymPusherGymEnvPool(
       GymPusherEnvSpec(
-        GymPusherEnvSpec.gen_config(gym_reset_return_info=True)
+        GymPusherEnvSpec.gen_config(
+          gym_reset_return_info=True, max_episode_steps=100
+        )
       )
     )
     self.run_space_check(env0, env1)
@@ -245,7 +265,9 @@ class _MujocoGymAlignTest(absltest.TestCase):
     env0 = gym.make("Reacher-v4")
     env1 = GymReacherGymEnvPool(
       GymReacherEnvSpec(
-        GymReacherEnvSpec.gen_config(gym_reset_return_info=True)
+        GymReacherEnvSpec.gen_config(
+          gym_reset_return_info=True, max_episode_steps=50
+        )
       )
     )
     self.run_space_check(env0, env1)
@@ -255,7 +277,9 @@ class _MujocoGymAlignTest(absltest.TestCase):
     env0 = gym.make("Swimmer-v4")
     env1 = GymSwimmerGymEnvPool(
       GymSwimmerEnvSpec(
-        GymSwimmerEnvSpec.gen_config(gym_reset_return_info=True)
+        GymSwimmerEnvSpec.gen_config(
+          gym_reset_return_info=True, max_episode_steps=1000
+        )
       )
     )
     self.run_space_check(env0, env1)
@@ -268,6 +292,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
         GymSwimmerEnvSpec.gen_config(
           exclude_current_positions_from_observation=False,
           gym_reset_return_info=True,
+          max_episode_steps=1000,
         )
       )
     )
@@ -277,7 +302,9 @@ class _MujocoGymAlignTest(absltest.TestCase):
     env0 = gym.make("Walker2d-v4")
     env1 = GymWalker2dGymEnvPool(
       GymWalker2dEnvSpec(
-        GymWalker2dEnvSpec.gen_config(gym_reset_return_info=True)
+        GymWalker2dEnvSpec.gen_config(
+          gym_reset_return_info=True, max_episode_steps=1000
+        )
       )
     )
     self.run_space_check(env0, env1)

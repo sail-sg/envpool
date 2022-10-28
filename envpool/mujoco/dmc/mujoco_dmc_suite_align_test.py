@@ -190,7 +190,9 @@ class _MujocoDmcAlignTest(absltest.TestCase):
   ) -> None:
     for task in tasks:
       env0 = suite.load(domain, task)
-      env1 = envpool_cls(spec_cls(spec_cls.gen_config(task_name=task)))
+      env1 = envpool_cls(
+        spec_cls(spec_cls.gen_config(task_name=task, max_episode_steps=1000))
+      )
       self.run_space_check(env0, env1)
       self.run_align_check(env0, env1, domain, task)
 

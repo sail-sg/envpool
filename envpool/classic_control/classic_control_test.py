@@ -117,14 +117,16 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
       env0.unwrapped.state = obs[0]
 
     env0 = gym.make("MountainCar-v0")
-    spec = MountainCarEnvSpec(MountainCarEnvSpec.gen_config())
+    spec = MountainCarEnvSpec(
+      MountainCarEnvSpec.gen_config(max_episode_steps=200)
+    )
     env1 = MountainCarGymEnvPool(spec)
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, reset_fn)
 
     env0 = gym.make("MountainCarContinuous-v0")
     spec = MountainCarContinuousEnvSpec(
-      MountainCarContinuousEnvSpec.gen_config()
+      MountainCarContinuousEnvSpec.gen_config(max_episode_steps=999)
     )
     env1 = MountainCarContinuousGymEnvPool(spec)
     self.run_space_check(env0, env1)

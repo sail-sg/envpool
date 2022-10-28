@@ -37,6 +37,7 @@ class _DummyEnvPoolTest(absltest.TestCase):
       "gym_reset_return_info",
       "state_num",
       "action_num",
+      "max_episode_steps",
     ]
     default_conf = _DummyEnvSpec._default_config_values
     self.assertTrue(isinstance(default_conf, tuple))

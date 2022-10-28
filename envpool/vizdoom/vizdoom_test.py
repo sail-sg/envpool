@@ -78,6 +78,7 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
       use_combined_action=True,
       img_width=width,
       img_height=height,
+      max_episode_steps=525,
     )
     env = VizdoomGymEnvPool(VizdoomEnvSpec(conf))
     assert env.action_space.n == 6
@@ -109,6 +110,7 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
       cfg_path=self.get_path("D3_battle.cfg"),
       wad_path=self.get_path("D3_battle.wad"),
       use_combined_action=True,
+      max_episode_steps=525,
     )
     env = VizdoomGymEnvPool(VizdoomEnvSpec(conf))
     action_num = env.action_space.n
@@ -117,6 +119,7 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
       wad_path=self.get_path("D3_battle.wad"),
       use_combined_action=True,
       force_speed=True,
+      max_episode_steps=525,
     )
     env = VizdoomGymEnvPool(VizdoomEnvSpec(conf))
     assert env.action_space.n * 2 == action_num
@@ -129,6 +132,7 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
           cfg_path=self.get_path("deathmatch.cfg"),
           wad_path=self.get_path("deathmatch.wad"),
           use_combined_action=True,
+          max_episode_steps=525,
         )
       )
     )
@@ -138,6 +142,7 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
           cfg_path=self.get_path("deathmatch.cfg"),
           wad_path=self.get_path("deathmatch.wad"),
           use_combined_action=True,
+          max_episode_steps=525,
           delta_button_config={
             "LOOK_UP_DOWN_DELTA": [11, -10, 10],
           }
@@ -151,6 +156,7 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
           cfg_path=self.get_path("deathmatch.cfg"),
           wad_path=self.get_path("deathmatch.wad"),
           use_combined_action=True,
+          max_episode_steps=525,
           delta_button_config={
             "MOVE_LEFT_RIGHT_DELTA": [11, -10, 10],
             "LOOK_UP_DOWN_DELTA": [11, -10, 10],
@@ -165,6 +171,7 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
           cfg_path=self.get_path("deathmatch.cfg"),
           wad_path=self.get_path("deathmatch.wad"),
           use_combined_action=False,
+          max_episode_steps=525,
           delta_button_config={
             "MOVE_LEFT_RIGHT_DELTA": [11, -10, 10],
             "LOOK_UP_DOWN_DELTA": [11, -10, 10],
@@ -182,6 +189,7 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
           cfg_path=self.get_path("deathmatch.cfg"),
           wad_path=self.get_path("deathmatch.wad"),
           use_combined_action=True,
+          max_episode_steps=525,
         )
       )
     )
@@ -195,6 +203,7 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
           cfg_path=self.get_path("D1_basic.cfg"),
           wad_path=self.get_path("D1_basic.wad"),
           use_combined_action=True,
+          max_episode_steps=525,
         )
       )
     )
