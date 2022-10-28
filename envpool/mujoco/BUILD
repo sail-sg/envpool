@@ -17,13 +17,6 @@ genrule(
     cmd = "mkdir -p $(OUTS) && cp -r $(SRCS) $(OUTS)",
 )
 
-genrule(
-    name = "gen_mujoco_so",
-    srcs = ["@mujoco//:mujoco_so"],
-    outs = ["libmujoco.so.2.2.1"],
-    cmd = "cp $< $@",
-)
-
 cc_library(
     name = "mujoco_gym_env",
     hdrs = [
@@ -109,7 +102,6 @@ py_library(
     srcs = ["dmc/__init__.py"],
     data = [
         ":gen_mujoco_dmc_xml",
-        ":gen_mujoco_so",
         ":mujoco_dmc_envpool.so",
     ],
     deps = ["//envpool/python:api"],
@@ -120,7 +112,6 @@ py_library(
     srcs = ["gym/__init__.py"],
     data = [
         ":gen_mujoco_gym_xml",
-        ":gen_mujoco_so",
         ":mujoco_gym_envpool.so",
     ],
     deps = ["//envpool/python:api"],
