@@ -31,11 +31,15 @@ class DMEnvPoolMixin(ABC):
 
   def observation_spec(self: Any) -> Tuple:
     """Observation spec from EnvSpec."""
-    return self.spec.observation_spec()
+    if not hasattr(self, "_dm_observation_spec"):
+      self._dm_observation_spec = self.spec.observation_spec()
+    return self._dm_observation_spec
 
   def action_spec(self: Any) -> Union[dm_env.specs.Array, Tuple]:
     """Action spec from EnvSpec."""
-    return self.spec.action_spec()
+    if not hasattr(self, "_dm_action_spec"):
+      self._dm_action_spec = self.spec.action_spec()
+    return self._dm_action_spec
 
 
 class DMEnvPoolMeta(ABCMeta):
