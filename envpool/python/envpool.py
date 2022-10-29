@@ -19,7 +19,7 @@ from abc import ABC
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-import tree
+import treevalue
 from dm_env import TimeStep
 
 from .protocol import EnvPool, EnvSpec
@@ -59,12 +59,21 @@ class EnvPoolMixin(ABC):
   ) -> List[np.ndarray]:
     """Convert action to C++-acceptable format."""
     if isinstance(action, dict):
-      adict = {".".join(k): v for k, v in tree.flatten_with_path(action)}
+      atree = treevalue.TreeValue(action)
+      alist = treevalue.flatten(atree)
+      adict = {".".join(k): v for k, v in alist}
     else:  # only 3 keys in action_keys
+      if not hasattr(self, "_last_action_type"):
+        self._last_action_type = self._spec._action_spec[-1][0]
+      if not hasattr(self, "_last_action_name"):
+        self._last_action_name = self._spec._action_keys[-1]
       if isinstance(action, np.ndarray):
         # else it could be a jax array, when using xla
-        action = action.astype(self._spec._action_spec[-1][0], order='C')
-      adict = {self._spec._action_keys[-1]: action}
+        action = action.astype(
+          self._last_action_type,  # type: ignore
+          order='C',
+        )
+      adict = {self._last_action_name: action}  # type: ignore
     if env_id is None:
       if "env_id" not in adict:
         adict["env_id"] = self.all_env_ids
@@ -72,7 +81,9 @@ class EnvPoolMixin(ABC):
       adict["env_id"] = env_id.astype(np.int32)
     if "players.env_id" not in adict:
       adict["players.env_id"] = adict["env_id"]
-    return list(map(lambda k: adict[k], self._spec._action_keys))
+    if not hasattr(self, "_action_names"):
+      self._action_names = self._spec._action_keys
+    return list(map(lambda k: adict[k], self._action_names))  # type: ignore
 
   def __len__(self: EnvPool) -> int:
     """Return the number of environments."""
@@ -81,7 +92,9 @@ class EnvPoolMixin(ABC):
   @property
   def all_env_ids(self: EnvPool) -> np.ndarray:
     """All env_id in numpy ndarray with dtype=np.int32."""
-    return np.arange(self.config["num_envs"], dtype=np.int32)
+    if not hasattr(self, "_all_env_ids"):
+      self._all_env_ids = np.arange(self.config["num_envs"], dtype=np.int32)
+    return self._all_env_ids  # type: ignore
 
   @property
   def is_async(self: EnvPool) -> bool:

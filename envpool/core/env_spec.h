@@ -36,7 +36,9 @@ auto common_state_spec =
     MakeDict("info:env_id"_.Bind(Spec<int>({})),
              "info:players.env_id"_.Bind(Spec<int>({-1})),
              "elapsed_step"_.Bind(Spec<int>({})), "done"_.Bind(Spec<bool>({})),
-             "reward"_.Bind(Spec<float>({-1})));
+             "reward"_.Bind(Spec<float>({-1})),
+             "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})),
+             "step_type"_.Bind(Spec<int>({})));
 
 /**
  * EnvSpec funciton, it constructs the env spec when a Config is passed.

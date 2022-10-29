@@ -69,12 +69,13 @@ class CartpoleEnvFns {
                                " for dmc cartpole.");
     }
     return MakeDict("obs:position"_.Bind(Spec<mjtNum>({1 + 2 * n_poles})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({1 + n_poles})),
+                    "obs:velocity"_.Bind(Spec<mjtNum>({1 + n_poles}))
 #ifdef ENVPOOL_TEST
+                        ,
                     "info:qpos0"_.Bind(Spec<mjtNum>({1 + n_poles})),
-                    "info:qvel0"_.Bind(Spec<mjtNum>({1 + n_poles})),
+                    "info:qvel0"_.Bind(Spec<mjtNum>({1 + n_poles}))
 #endif
-                    "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
+    );  // NOLINT
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

@@ -45,11 +45,12 @@ class CheetahEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict("obs:position"_.Bind(Spec<mjtNum>({8})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({9})),
+                    "obs:velocity"_.Bind(Spec<mjtNum>({9}))
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.Bind(Spec<mjtNum>({9})),
+                        ,
+                    "info:qpos0"_.Bind(Spec<mjtNum>({9}))
 #endif
-                    "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
+    );  // NOLINT
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

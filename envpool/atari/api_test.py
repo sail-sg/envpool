@@ -20,6 +20,7 @@ import gym
 import numpy as np
 from absl import logging
 from absl.testing import absltest
+from packaging import version
 
 from envpool.atari import AtariDMEnvPool, AtariEnvSpec, AtariGymEnvPool
 
@@ -241,6 +242,17 @@ class _GymSyncTest(absltest.TestCase):
       np.testing.assert_allclose(gym_obs_space.high, 255)
       self.assertIsInstance(gym_act_space, gym.spaces.Discrete)
       self.assertEqual(gym_act_space.n, action_num)
+      # Issue 207
+      gym_act_space.seed(1)
+      action0 = gym_act_space.sample()
+      gym_act_space.seed(1)
+      action1 = gym_act_space.sample()
+      self.assertEqual(action0, action1)
+      env.action_space.seed(2)
+      action2 = env.action_space.sample()
+      env.action_space.seed(2)
+      action3 = env.action_space.sample()
+      self.assertEqual(action2, action3)
 
   def test_lowlevel_step(self) -> None:
     num_envs = 4
@@ -250,7 +262,8 @@ class _GymSyncTest(absltest.TestCase):
     self.assertTrue(isinstance(env, gym.Env))
     logging.info(env)
     env.async_reset()
-    obs, rew, done, info = env.recv()
+    obs, rew, terminated, truncated, info = env.recv()
+    done = np.logical_or(terminated, truncated)
     # check shape
     self.assertIsInstance(obs, np.ndarray)
     self.assertEqual(obs.dtype, np.uint8)
@@ -258,36 +271,43 @@ class _GymSyncTest(absltest.TestCase):
     self.assertEqual(rew.dtype, np.float32)
     np.testing.assert_allclose(done.shape, (num_envs,))
     self.assertEqual(done.dtype, np.bool_)
+    self.assertEqual(terminated.dtype, np.bool_)
+    self.assertEqual(truncated.dtype, np.bool_)
     self.assertIsInstance(info, dict)
-    self.assertEqual(len(info), 7)
+    self.assertEqual(len(info), 6)
     self.assertEqual(info["env_id"].dtype, np.int32)
     self.assertEqual(info["lives"].dtype, np.int32)
     self.assertEqual(info["players"]["env_id"].dtype, np.int32)
-    self.assertEqual(info["TimeLimit.truncated"].dtype, np.bool_)
     np.testing.assert_allclose(info["env_id"], np.arange(num_envs))
     np.testing.assert_allclose(info["lives"].shape, (num_envs,))
     np.testing.assert_allclose(info["players"]["env_id"].shape, (num_envs,))
-    np.testing.assert_allclose(info["TimeLimit.truncated"].shape, (num_envs,))
+    np.testing.assert_allclose(truncated.shape, (num_envs,))
     while not np.any(done):
       env.send(np.random.randint(6, size=num_envs))
-      obs, rew, done, info = env.recv()
+      obs, rew, terminated, truncated, info = env.recv()
+      done = np.logical_or(terminated, truncated)
     env.send(np.random.randint(6, size=num_envs))
-    obs1, rew1, done1, info1 = env.recv()
+    obs1, rew1, terminated1, truncated1, info1 = env.recv()
+    done1 = np.logical_or(terminated1, truncated1)
     index = np.where(done)[0]
     self.assertTrue(np.all(~done1[index]))
 
   def test_highlevel_step(self) -> None:
+    assert version.parse(gym.__version__) >= version.parse("0.26.0")
     num_envs = 4
     config = AtariEnvSpec.gen_config(task="pong", num_envs=num_envs)
     spec = AtariEnvSpec(config)
     env = AtariGymEnvPool(spec)
     self.assertTrue(isinstance(env, gym.Env))
     logging.info(env)
-    obs = env.reset()
+    obs, _ = env.reset()
     # check shape
     self.assertIsInstance(obs, np.ndarray)
-    self.assertEqual(obs.dtype, np.uint8)  # type: ignore
-    obs, rew, done, info = env.step(np.random.randint(6, size=num_envs))
+    self.assertEqual(obs.dtype, np.uint8)
+    obs, rew, terminated, truncated, info = env.step(
+      np.random.randint(6, size=num_envs)
+    )
+    done = np.logical_or(terminated, truncated)
     self.assertIsInstance(obs, np.ndarray)
     self.assertEqual(obs.dtype, np.uint8)
     np.testing.assert_allclose(rew.shape, (num_envs,))
@@ -295,18 +315,24 @@ class _GymSyncTest(absltest.TestCase):
     np.testing.assert_allclose(done.shape, (num_envs,))
     self.assertEqual(done.dtype, np.bool_)
     self.assertIsInstance(info, dict)
-    self.assertEqual(len(info), 7)
+    self.assertEqual(len(info), 6)
     self.assertEqual(info["env_id"].dtype, np.int32)
     self.assertEqual(info["lives"].dtype, np.int32)
     self.assertEqual(info["players"]["env_id"].dtype, np.int32)
-    self.assertEqual(info["TimeLimit.truncated"].dtype, np.bool_)
+    self.assertEqual(truncated.dtype, np.bool_)
     np.testing.assert_allclose(info["env_id"], np.arange(num_envs))
     np.testing.assert_allclose(info["lives"].shape, (num_envs,))
     np.testing.assert_allclose(info["players"]["env_id"].shape, (num_envs,))
-    np.testing.assert_allclose(info["TimeLimit.truncated"].shape, (num_envs,))
+    np.testing.assert_allclose(truncated.shape, (num_envs,))
     while not np.any(done):
-      obs, rew, done, info = env.step(np.random.randint(6, size=num_envs))
-    obs1, rew1, done1, info1 = env.step(np.random.randint(6, size=num_envs))
+      obs, rew, terminated, truncated, info = env.step(
+        np.random.randint(6, size=num_envs)
+      )
+      done = np.logical_or(terminated, truncated)
+    obs1, rew1, terminated1, truncated1, info1 = env.step(
+      np.random.randint(6, size=num_envs)
+    )
+    done1 = np.logical_or(terminated1, truncated1)
     index = np.where(done)[0]
     self.assertTrue(np.all(~done1[index]))
 

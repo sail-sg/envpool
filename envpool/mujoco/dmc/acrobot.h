@@ -46,11 +46,12 @@ class AcrobotEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict("obs:orientations"_.Bind(Spec<mjtNum>({4})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({2})),
+                    "obs:velocity"_.Bind(Spec<mjtNum>({2}))
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.Bind(Spec<mjtNum>({2})),
+                        ,
+                    "info:qpos0"_.Bind(Spec<mjtNum>({2}))
 #endif
-                    "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
+    );  // NOLINT
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
