@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef ENVPOOL_PROCGEN_H_
-#define ENVPOOL_PROCGEN_H_
+#ifndef ENVPOOL_PROCGEN_PROCGEN_H_
+#define ENVPOOL_PROCGEN_PROCGEN_H_
 
 #include <cctype>
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
@@ -201,7 +205,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
   bool IsDone() override { return done_; }
 
  private:
-  void WriteObs(State& state) {
+  void WriteObs(State& state) {  // NOLINT
     /* Helper function to output the information to user at current step */
     /*
        It includes:
@@ -210,7 +214,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
        https://github.com/openai/procgen/blob/5e1dbf341d291eff40d1f9e0c0a0d5003643aebf/procgen/src/game.cpp#L8
     */
 
-    uint8_t* src = (uint8_t*)obs_bufs_[0];
+    uint8_t* src = (uint8_t*)obs_bufs_[0];  // NOLINT
     for (int y = 0; y < RES_H; y++) {
       for (int x = 0; x < RES_W; x++) {
         for (int rgb = 0; rgb < RGB_FACTOR; rgb++) {
@@ -227,4 +231,4 @@ typedef AsyncEnvPool<ProcgenEnv> ProcgenEnvPool;
 
 }  // namespace procgen
 
-#endif
+#endif  // ENVPOOL_PROCGEN_PROCGEN_H_

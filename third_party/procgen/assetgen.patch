@@ -1,17 +1,15 @@
 --- assetgen.h
 +++ assetgen.h
-@@ -7,10 +7,10 @@
+@@ -5,9 +5,9 @@
  */
 
  #include "randgen.h"
 -#include <QColor>
 -#include <QImage>
 -#include <QRectF>
--#include <QtGui/QPainter>
-+#include <qt/QtGui/QColor>
-+#include <qt/QtGui/QImage>
-+#include <qt/QtCore/QRectF>
-+#include <qt/QtGui/QPainter>
++#include <QtGui/QColor>
++#include <QtGui/QImage>
++#include <QtCore/QRectF>
+ #include <QtGui/QPainter>
  #include <memory>
 
- struct ColorGen;

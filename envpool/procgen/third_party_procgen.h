@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ENVPOOL_PROCGEN_THIRD_PARTY_H_
-#define ENVPOOL_PROCGEN_THIRD_PARTY_H_
+#ifndef ENVPOOL_PROCGEN_THIRD_PARTY_PROCGEN_H_
+#define ENVPOOL_PROCGEN_THIRD_PARTY_PROCGEN_H_
 #include "assetgen.h"
 #include "basic-abstract-game.h"
 #include "buffer.h"
@@ -34,4 +34,4 @@
 #include "roomgen.h"
 #include "vecgame.h"
 #include "vecoptions.h"
-#endif
+#endif  // ENVPOOL_PROCGEN_THIRD_PARTY_PROCGEN_H_

@@ -14,7 +14,7 @@
 
 import os
 import time
-from typing import Any, Dict, no_type_check
+from typing import Any
 
 import cv2
 import dm_env
@@ -102,7 +102,6 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
     self.assertEqual(sorted(config_keys), sorted(ref_config_keys))
 
   def test_raw_envpool(self) -> None:
-    # refer to : https://github.com/sail-sg/envpool/blob/main/envpool/atari/atari_envpool_test.py#L33
     # create raw procgen environment and run
     conf = dict(
       zip(
@@ -160,7 +159,6 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
     )
     act_space = env0.action_space
     eps = np.finfo(np.float32).eps
-    obs_space = env0.observation_space
     obs_min = 0.0 - eps
     obs_max = 255.0 + eps
     total = 200
@@ -184,7 +182,7 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
   def gym_align_check(self, game_name, spec_cls: Any, envpool_cls: Any):
     logging.info(f"align check for gym {game_name}")
     timeout = procgen_timeout_list[game_name]
-    num_env, batch = 1, 1
+    num_env = 1
     for i in range(5):
       env_gym = envpool_cls(
         spec_cls(
@@ -238,7 +236,7 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
     act_spec = env0.action_spec()
     total = 200
     close, not_close = 0, 0
-    for t in range(total):
+    for _ in range(total):
       action = np.array(
         [
           np.random.uniform(
@@ -259,7 +257,7 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
   def dmc_align_check(self, game_name, spec_cls: Any, envpool_cls: Any):
     logging.info(f"align check for dmc {game_name}")
     timeout = procgen_timeout_list[game_name]
-    num_env, batch = 1, 1
+    num_env = 1
     for i in range(5):
       env_dmc = envpool_cls(
         spec_cls(

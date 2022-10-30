@@ -6,8 +6,8 @@
 
 -#include <QRect>
 -#include <QColor>
-+#include <qt/QtCore/QRect>
-+#include <qt/QtGui/QColor>
++#include <QtCore/QRect>
++#include <QtGui/QColor>
 
  inline QRectF adjust_rect(const QRectF &base_rect, const QRectF &adjusting_rect) {
      QRectF rect = QRectF(base_rect.x() + base_rect.width() * adjusting_rect.x(),
