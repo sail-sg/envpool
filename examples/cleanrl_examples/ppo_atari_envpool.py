@@ -224,7 +224,10 @@ class RecordEpisodeStatistics(gym.Wrapper):
       print("env has lives")
 
   def reset(self, **kwargs):
-    observations, _ = super(RecordEpisodeStatistics, self).reset(**kwargs)
+    if is_legacy_gym:
+      observations, _ = super(RecordEpisodeStatistics, self).reset(**kwargs)
+    else:
+      observations = super(RecordEpisodeStatistics, self).reset(**kwargs)
     self.episode_returns = np.zeros(self.num_envs, dtype=np.float32)
     self.episode_lengths = np.zeros(self.num_envs, dtype=np.int32)
     self.lives = np.zeros(self.num_envs, dtype=np.int32)

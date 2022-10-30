@@ -278,7 +278,10 @@ class BatchEnvWrapper(dm_env.Environment):
 
   def reset(self) -> TimeStep:
     self._reset_next_step = False
-    observation = self._environment.reset()
+    if is_legacy_gym:
+      observation, _ = self._environment.reset()
+    else:
+      observation = self._environment.reset()
     ts = TimeStep(
       step_type=np.full(self._num_envs, dm_env.StepType.FIRST, dtype="int32"),
       reward=np.zeros(self._num_envs, dtype="float32"),

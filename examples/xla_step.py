@@ -49,7 +49,10 @@ def gym_sync_step() -> None:
   def run_actor_loop(num_steps, init_var):
     return lax.fori_loop(0, num_steps, actor_step, init_var)
 
-  states, _ = env.reset()
+  if is_legacy_gym:
+    states = env.reset()
+  else:
+    states, _ = env.reset()
   run_actor_loop(100, (handle, states))
 
 
