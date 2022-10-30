@@ -187,11 +187,13 @@ We do not include their source code and data in this repo.
 If you find EnvPool useful, please cite it in your publications.
 
 ```latex
-@article{envpool,
-  title={Env{P}ool: A Highly Parallel Reinforcement Learning Environment Execution Engine},
-  author={Weng, Jiayi and Lin, Min and Huang, Shengyi and Liu, Bo and Makoviichuk, Denys and Makoviychuk, Viktor and Liu, Zichen and Song, Yufan and Luo, Ting and Jiang, Yukun and Xu, Zhongwen and Yan, Shuicheng},
-  journal={arXiv preprint arXiv:2206.10558},
-  year={2022}
+@inproceedings{
+weng2022envpool,
+title={EnvPool: A Highly Parallel Reinforcement Learning Environment Execution Engine},
+author={Jiayi Weng and Min Lin and Shengyi Huang and Bo Liu and Denys Makoviichuk and Viktor Makoviychuk and Zichen Liu and Yufan Song and Ting Luo and Yukun Jiang and Zhongwen Xu and Shuicheng YAN},
+booktitle={Thirty-sixth Conference on Neural Information Processing Systems Datasets and Benchmarks Track},
+year={2022},
+url={https://openreview.net/forum?id=BubxnHpuMbG}
 }
 ```
 
