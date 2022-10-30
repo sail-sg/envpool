@@ -16,10 +16,14 @@
 See https://envpool.readthedocs.io/en/latest/content/xla_interface.html
 """
 
+import gym
 import jax.numpy as jnp
 from jax import jit, lax
+from packaging import version
 
 import envpool
+
+is_legacy_gym = version.parse(gym.__version__) < version.parse("0.26.0")
 
 
 def policy(states: jnp.ndarray) -> jnp.ndarray:
@@ -35,14 +39,17 @@ def gym_sync_step() -> None:
   def actor_step(iter, loop_var):
     handle0, states = loop_var
     action = policy(states)
-    handle1, (new_states, rew, done, info) = step(handle0, action)
+    if is_legacy_gym:
+      handle1, (new_states, rew, done, info) = step(handle0, action)
+    else:
+      handle1, (new_states, rew, term, trunc, info) = step(handle0, action)
     return (handle1, new_states)
 
   @jit
   def run_actor_loop(num_steps, init_var):
     return lax.fori_loop(0, num_steps, actor_step, init_var)
 
-  states = env.reset()
+  states, _ = env.reset()
   run_actor_loop(100, (handle, states))
 
 

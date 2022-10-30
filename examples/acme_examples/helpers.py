@@ -40,6 +40,7 @@ from acme.jax import utils, variable_utils
 from acme.jax.types import PRNGKey
 from acme.utils import loggers
 from acme.utils.loggers import aggregators, base, filters, terminal
+from packaging import version
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env.dummy_vec_env import DummyVecEnv
 
@@ -47,6 +48,7 @@ import envpool
 from envpool.python.protocol import EnvPool
 
 logging.getLogger().setLevel(logging.INFO)
+is_legacy_gym = version.parse(gym.__version__) < version.parse("0.26.0")
 
 
 class TimeStep(dm_env.TimeStep):
@@ -289,7 +291,11 @@ class BatchEnvWrapper(dm_env.Environment):
     if self._reset_next_step:
       return self.reset()
     if self._use_env_pool:
-      observation, reward, done, _ = self._environment.step(action)
+      if is_legacy_gym:
+        observation, reward, done, _ = self._environment.step(action)
+      else:
+        observation, reward, term, trunc, _ = self._environment.step(action)
+        done = term + trunc
     else:
       self._environment.step_async(action)
       observation, reward, done, _ = self._environment.step_wait()
