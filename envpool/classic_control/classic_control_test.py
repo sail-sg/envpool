@@ -82,11 +82,15 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
       d0 = False
       while not d0:
         a = env0.action_space.sample()
-        o0, r0, d0, _ = env0.step(a)
-        o1, r1, d1, _ = env1.step(np.array([a]), np.array([0]))
+        o0, r0, term0, trunc0, _ = env0.step(a)
+        d0 = np.logical_or(term0, trunc0)
+        o1, r1, term1, trunc1, _ = env1.step(np.array([a]), np.array([0]))
+        d1 = np.logical_or(term1, trunc1)
         np.testing.assert_allclose(o0, o1[0], atol=1e-4)
         np.testing.assert_allclose(r0, r1[0])
         np.testing.assert_allclose(d0, d1[0])
+        np.testing.assert_allclose(term0, term1[0])
+        np.testing.assert_allclose(trunc0, trunc1[0])
 
   def test_cartpole(self) -> None:
     env0 = gym.make("CartPole-v1")
@@ -109,7 +113,7 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
     @no_type_check
     def reset_fn(env0: gym.Env, env1: Any) -> None:
       env0.reset()
-      obs = env1.reset()
+      obs, _ = env1.reset()
       env0.unwrapped.state = obs[0]
 
     env0 = gym.make("MountainCar-v0")

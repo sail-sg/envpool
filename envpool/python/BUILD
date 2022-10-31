@@ -24,7 +24,7 @@ py_library(
     name = "data",
     srcs = ["data.py"],
     deps = [
-        requirement("dm-tree"),
+        requirement("treevalue"),
         requirement("dm-env"),
         requirement("gym"),
         requirement("numpy"),
@@ -48,9 +48,10 @@ py_library(
     name = "envpool",
     srcs = ["envpool.py"],
     deps = [
-        requirement("dm-tree"),
+        requirement("treevalue"),
         requirement("dm-env"),
         requirement("numpy"),
+        requirement("packaging"),
         ":protocol",
     ],
 )
@@ -80,7 +81,7 @@ py_library(
     name = "dm_envpool",
     srcs = ["dm_envpool.py"],
     deps = [
-        requirement("dm-tree"),
+        requirement("treevalue"),
         requirement("dm-env"),
         requirement("numpy"),
         ":data",
@@ -94,7 +95,7 @@ py_library(
     name = "gym_envpool",
     srcs = ["gym_envpool.py"],
     deps = [
-        requirement("dm-tree"),
+        requirement("treevalue"),
         requirement("dm-env"),
         requirement("gym"),
         requirement("numpy"),

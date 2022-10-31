@@ -18,7 +18,8 @@ from typing import Any, Dict, List, Tuple, Union, no_type_check
 
 import gym
 import numpy as np
-import tree
+import treevalue
+from packaging import version
 
 from .data import gym_structure
 from .envpool import EnvPoolMixin
@@ -31,12 +32,16 @@ class GymEnvPoolMixin(ABC):
   @property
   def observation_space(self: Any) -> Union[gym.Space, Dict[str, Any]]:
     """Observation space from EnvSpec."""
-    return self.spec.observation_space
+    if not hasattr(self, "_gym_observation_space"):
+      self._gym_observation_space = self.spec.observation_space
+    return self._gym_observation_space
 
   @property
   def action_space(self: Any) -> Union[gym.Space, Dict[str, Any]]:
     """Action space from EnvSpec."""
-    return self.spec.action_space
+    if not hasattr(self, "_gym_action_space"):
+      self._gym_action_space = self.spec.action_space
+    return self._gym_action_space
 
 
 class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
@@ -63,25 +68,35 @@ class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
     check_key_duplication(name, "state", state_keys)
     check_key_duplication(name, "action", action_keys)
 
-    state_structure, state_idx = gym_structure(state_keys)
+    tree_pairs = gym_structure(state_keys)
+    state_idx = list(zip(*tree_pairs))[-1]
+
+    new_gym_api = version.parse(gym.__version__) >= version.parse("0.26.0")
 
     def _to_gym(
       self: Any, state_values: List[np.ndarray], reset: bool, return_info: bool
-    ) -> Union[Any, Tuple[Any, Any], Tuple[Any, np.ndarray, np.ndarray, Any]]:
-      state = tree.unflatten_as(
-        state_structure, [state_values[i] for i in state_idx]
+    ) -> Union[Any, Tuple[Any, Any], Tuple[Any, np.ndarray, np.ndarray, Any],
+               Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any]]:
+      values = map(lambda i: state_values[i], state_idx)
+      state = treevalue.unflatten(
+        [(path, vi) for (path, _), vi in zip(tree_pairs, values)]
       )
-      if reset and not return_info:
+      if reset and not (return_info or new_gym_api):
         return state["obs"]
       done = state["done"]
       elapse = state["elapsed_step"]
       max_episode_steps = self.config.get("max_episode_steps", np.inf)
       trunc = (done & (elapse >= max_episode_steps))
-      state["info"]["TimeLimit.truncated"] = trunc
-      state["info"]["elapsed_step"] = state["elapsed_step"]
+      info = treevalue.jsonify(state["info"])
+      if not new_gym_api:
+        info["TimeLimit.truncated"] = trunc
+      info["elapsed_step"] = state["elapsed_step"]
       if reset:
-        return state["obs"], state["info"]
-      return state["obs"], state["reward"], state["done"], state["info"]
+        return state["obs"], info
+      if new_gym_api:
+        terminated = done & ~trunc
+        return state["obs"], state["reward"], terminated, trunc, info
+      return state["obs"], state["reward"], state["done"], info
 
     attrs["_to"] = _to_gym
     subcls = super().__new__(cls, name, parents, attrs)

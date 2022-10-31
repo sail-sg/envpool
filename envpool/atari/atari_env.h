@@ -64,7 +64,6 @@ class AtariEnvFns {
                         {conf["stack_num"_] * (conf["gray_scale"_] ? 1 : 3),
                          conf["img_height"_], conf["img_width"_]},
                         {0, 255})),
-                    "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})),
                     "info:lives"_.Bind(Spec<int>({-1})),
                     "info:reward"_.Bind(Spec<float>({-1})),
                     "info:terminated"_.Bind(Spec<int>({-1}, {0, 1})));

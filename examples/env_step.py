@@ -12,27 +12,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import gym
 import numpy as np
+from packaging import version
 
 import envpool
+
+is_legacy_gym = version.parse(gym.__version__) < version.parse("0.26.0")
 
 
 def gym_sync_step() -> None:
   num_envs = 4
   env = envpool.make_gym("Pong-v5", num_envs=num_envs)
   action_num = env.action_space.n
-  obs = env.reset()  # reset all envs
+  if is_legacy_gym:
+    obs = env.reset()  # reset all envs
+  else:
+    obs, _ = env.reset()  # reset all envs
   assert obs.shape == (num_envs, 4, 84, 84)
   for _ in range(1000):
     # autoreset is automatically enabled in envpool
     action = np.random.randint(action_num, size=num_envs)
-    obs, rew, done, info = env.step(action)
+    result = env.step(action)
+    if is_legacy_gym:
+      obs, rew, done, info = env.step(action)
+    else:
+      obs, rew, term, trunc, info = env.step(action)
   # Of course, you can specify env_id to step corresponding envs
-  obs = env.reset(np.array([1, 3]))  # reset env #1 and #3
+  if is_legacy_gym:
+    obs = env.reset(np.array([1, 3]))  # reset env #1 and #3
+  else:
+    obs, _ = env.reset(np.array([1, 3]))  # reset env #1 and #3
   assert obs.shape == (2, 4, 84, 84)
   partial_action = np.array([0, 0, 2])
   env_id = np.array([3, 2, 0])
-  obs, rew, done, info = env.step(partial_action, env_id)
+  result = env.step(partial_action, env_id)
+  obs, info = result[0], result[-1]
   np.testing.assert_allclose(info["env_id"], env_id)
   assert obs.shape == (3, 4, 84, 84)
 
@@ -89,7 +104,8 @@ def async_step() -> None:
   env_id = info["env_id"]
   for _ in range(1000):
     action = np.random.randint(action_num, size=batch_size)
-    obs, rew, done, info = env.step(action, env_id)
+    result = env.step(action, env_id)
+    obs, info = result[0], result[-1]
     env_id = info["env_id"]
     assert len(env_id) == batch_size
     assert obs.shape == (batch_size, 4, 84, 84)
@@ -98,7 +114,8 @@ def async_step() -> None:
   env = envpool.make_gym("Pong-v5", num_envs=num_envs, batch_size=batch_size)
   env.async_reset()  # no return, just send `reset` signal to all envs
   for _ in range(1000):
-    obs, rew, done, info = env.recv()
+    result = env.recv()
+    obs, info = result[0], result[-1]
     env_id = info["env_id"]
     assert len(env_id) == batch_size
     assert obs.shape == (batch_size, 4, 84, 84)

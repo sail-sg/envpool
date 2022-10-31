@@ -50,11 +50,12 @@ class HumanoidCMUEnvFns {
                     "obs:extremities"_.Bind(Spec<mjtNum>({12})),
                     "obs:torso_vertical"_.Bind(Spec<mjtNum>({3})),
                     "obs:com_velocity"_.Bind(Spec<mjtNum>({3})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({62})),
+                    "obs:velocity"_.Bind(Spec<mjtNum>({62}))
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.Bind(Spec<mjtNum>({63})),
+                        ,
+                    "info:qpos0"_.Bind(Spec<mjtNum>({63}))
 #endif
-                    "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
+    );  // NOLINT
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

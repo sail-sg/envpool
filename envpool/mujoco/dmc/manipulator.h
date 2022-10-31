@@ -67,12 +67,13 @@ class ManipulatorEnvFns {
                     "obs:hand_pos"_.Bind(Spec<mjtNum>({4})),
                     "obs:object_pos"_.Bind(Spec<mjtNum>({4})),
                     "obs:object_vel"_.Bind(Spec<mjtNum>({3})),
-                    "obs:target_pos"_.Bind(Spec<mjtNum>({4})),
+                    "obs:target_pos"_.Bind(Spec<mjtNum>({4}))
 #ifdef ENVPOOL_TEST
+                        ,
                     "info:qpos0"_.Bind(Spec<mjtNum>({11})),
-                    "info:random_info"_.Bind(Spec<mjtNum>({8})),
+                    "info:random_info"_.Bind(Spec<mjtNum>({8}))
 #endif
-                    "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
+    );  // NOLINT
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
