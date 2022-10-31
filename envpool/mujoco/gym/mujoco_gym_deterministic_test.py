@@ -13,8 +13,6 @@
 # limitations under the License.
 """Unit tests for Mujoco gym deterministic check."""
 
-from typing import Any
-
 import numpy as np
 from absl.testing import absltest
 

@@ -68,12 +68,12 @@ class _AtariEnvPoolTest(absltest.TestCase):
     env0 = make_gym("SpaceInvaders-v5", num_envs=num_envs)
     env1 = make_dm("SpaceInvaders-v5", num_envs=num_envs)
     obs0, _ = env0.reset()
-    obs1 = env1.reset().observation.obs  # type: ignore
+    obs1 = env1.reset().observation.obs
     np.testing.assert_allclose(obs0, obs1)
     for _ in range(1000):
       action = np.random.randint(6, size=num_envs)
       obs0 = env0.step(action)[0]
-      obs1 = env1.step(action).observation.obs  # type: ignore
+      obs1 = env1.step(action).observation.obs
       np.testing.assert_allclose(obs0, obs1)
       # cv2.imwrite(f"/tmp/log/align{i}.png", obs0[0, 1:].transpose(1, 2, 0))
 
@@ -85,7 +85,7 @@ class _AtariEnvPoolTest(absltest.TestCase):
       np.random.seed(0)
       task_id = "".join([g.capitalize() for g in env_id.split("_")]) + "-v5"
       env = make_gym(task_id, episodic_life=True)
-      action_num = env.action_space.n  # type: ignore
+      action_num = env.action_space.n
       env.reset()
       info = env.step(np.array([0]))[-1]
       if info["lives"].sum() == 0:

@@ -13,7 +13,7 @@
 # limitations under the License.
 """Unit tests for Mujoco dm_control deterministic check."""
 
-from typing import Any, List, Optional
+from typing import List, Optional
 
 import dm_env
 import numpy as np
