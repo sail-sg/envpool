@@ -24,7 +24,9 @@ from tianshou.data import Batch
 from tianshou.policy import C51Policy
 
 from envpool.atari.atari_network import C51
-from envpool.vizdoom import VizdoomEnvSpec, VizdoomGymEnvPool
+
+import envpool.vizdoom.registration  # noqa: F401
+from envpool.registration import make_gym
 
 # try:
 #   import cv2
@@ -47,6 +49,7 @@ class _VizdoomPretrainTest(absltest.TestCase):
     cfg_path: Optional[str] = None,
     reward_config: Optional[dict] = None,
   ) -> Tuple[np.ndarray, np.ndarray]:
+    task_id = "".join([g.capitalize() for g in task.split("_")]) + "-v1"
     kwargs = {
       "num_envs": num_envs,
       "seed": seed,
@@ -59,9 +62,7 @@ class _VizdoomPretrainTest(absltest.TestCase):
       kwargs.update(cfg_path=cfg_path)
     if reward_config is not None:
       kwargs.update(reward_config=reward_config)
-    env = VizdoomGymEnvPool(
-      VizdoomEnvSpec(VizdoomEnvSpec.gen_config(**kwargs))
-    )
+    env = make_gym(task_id, **kwargs)
 
     state_shape = env.observation_space.shape
     action_shape = env.action_space.n
