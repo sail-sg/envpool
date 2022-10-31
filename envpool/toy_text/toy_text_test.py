@@ -34,7 +34,7 @@ class _ToyTextEnvTest(absltest.TestCase):
       e = make("Catch-v0", env_type=env_type, num_envs=num_envs)
       # get a successful trajectory
       if env_type == "dm":
-        obs = e.reset().observation.obs  # type: ignore
+        obs = e.reset().observation.obs
       else:
         obs, _ = e.reset()
       assert obs.shape == (num_envs, row, col)
@@ -58,7 +58,7 @@ class _ToyTextEnvTest(absltest.TestCase):
           assert np.all(rew == 1) and np.all(done)
       # get a failure trajectory
       if env_type == "dm":
-        obs = e.reset().observation.obs  # type: ignore
+        obs = e.reset().observation.obs
       else:
         obs, _ = e.reset()
       assert obs.shape == (num_envs, row, col)

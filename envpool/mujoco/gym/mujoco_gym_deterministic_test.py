@@ -18,44 +18,16 @@ from typing import Any
 import numpy as np
 from absl.testing import absltest
 
-from envpool.mujoco.gym import (
-  GymAntEnvSpec,
-  GymAntGymEnvPool,
-  GymHalfCheetahEnvSpec,
-  GymHalfCheetahGymEnvPool,
-  GymHopperEnvSpec,
-  GymHopperGymEnvPool,
-  GymHumanoidEnvSpec,
-  GymHumanoidGymEnvPool,
-  GymHumanoidStandupEnvSpec,
-  GymHumanoidStandupGymEnvPool,
-  GymInvertedDoublePendulumEnvSpec,
-  GymInvertedDoublePendulumGymEnvPool,
-  GymInvertedPendulumEnvSpec,
-  GymInvertedPendulumGymEnvPool,
-  GymPusherEnvSpec,
-  GymPusherGymEnvPool,
-  GymReacherEnvSpec,
-  GymReacherGymEnvPool,
-  GymSwimmerEnvSpec,
-  GymSwimmerGymEnvPool,
-  GymWalker2dEnvSpec,
-  GymWalker2dGymEnvPool,
-)
+import envpool.mujoco.gym.registration  # noqa: F401
+from envpool.registration import make_gym
 
 
 class _MujocoGymDeterministicTest(absltest.TestCase):
 
-  def check(self, spec_cls: Any, envpool_cls: Any, num_envs: int = 4) -> None:
-    env0 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0))
-    )
-    env1 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0))
-    )
-    env2 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=1))
-    )
+  def check(self, task_id: str, num_envs: int = 4) -> None:
+    env0 = make_gym(task_id, num_envs=num_envs, seed=0)
+    env1 = make_gym(task_id, num_envs=num_envs, seed=0)
+    env2 = make_gym(task_id, num_envs=num_envs, seed=1)
     act_space = env0.action_space
     eps = np.finfo(np.float32).eps
     obs_space = env0.observation_space
@@ -73,39 +45,37 @@ class _MujocoGymDeterministicTest(absltest.TestCase):
       self.assertTrue(np.all(obs2 <= obs_max), obs2)
 
   def test_ant(self) -> None:
-    self.check(GymAntEnvSpec, GymAntGymEnvPool)
+    self.check("Ant-v4")
 
   def test_half_cheetah(self) -> None:
-    self.check(GymHalfCheetahEnvSpec, GymHalfCheetahGymEnvPool)
+    self.check("HalfCheetah-v4")
 
   def test_hopper(self) -> None:
-    self.check(GymHopperEnvSpec, GymHopperGymEnvPool)
+    self.check("Hopper-v4")
 
   def test_humanoid(self) -> None:
-    self.check(GymHumanoidEnvSpec, GymHumanoidGymEnvPool)
+    self.check("Humanoid-v4")
 
   def test_humanoid_standup(self) -> None:
-    self.check(GymHumanoidStandupEnvSpec, GymHumanoidStandupGymEnvPool)
+    self.check("HumanoidStandup-v4")
 
   def test_inverted_double_pendulum(self) -> None:
-    self.check(
-      GymInvertedDoublePendulumEnvSpec, GymInvertedDoublePendulumGymEnvPool
-    )
+    self.check("InvertedPendulum-v4")
 
   def test_inverted_pendulum(self) -> None:
-    self.check(GymInvertedPendulumEnvSpec, GymInvertedPendulumGymEnvPool)
+    self.check("InvertedPendulum-v4")
 
   def test_pusher(self) -> None:
-    self.check(GymPusherEnvSpec, GymPusherGymEnvPool)
+    self.check("Pusher-v4")
 
   def test_reacher(self) -> None:
-    self.check(GymReacherEnvSpec, GymReacherGymEnvPool)
+    self.check("Reacher-v4")
 
   def test_swimmer(self) -> None:
-    self.check(GymSwimmerEnvSpec, GymSwimmerGymEnvPool)
+    self.check("Swimmer-v4")
 
   def test_walker2d(self) -> None:
-    self.check(GymWalker2dEnvSpec, GymWalker2dGymEnvPool)
+    self.check("Walker2d-v4")
 
 
 if __name__ == "__main__":
