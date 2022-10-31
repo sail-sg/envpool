@@ -21,21 +21,8 @@ from absl import logging
 from absl.testing import absltest
 from dm_env import TimeStep
 
-from envpool.toy_text import (
-  BlackjackEnvSpec,
-  BlackjackGymEnvPool,
-  CatchDMEnvPool,
-  CatchEnvSpec,
-  CatchGymEnvPool,
-  CliffWalkingEnvSpec,
-  CliffWalkingGymEnvPool,
-  FrozenLakeEnvSpec,
-  FrozenLakeGymEnvPool,
-  NChainEnvSpec,
-  NChainGymEnvPool,
-  TaxiEnvSpec,
-  TaxiGymEnvPool,
-)
+import envpool.toy_text.registration  # noqa: F401
+from envpool.registration import make, make_gym
 
 
 class _ToyTextEnvTest(absltest.TestCase):
@@ -43,13 +30,8 @@ class _ToyTextEnvTest(absltest.TestCase):
   def test_catch(self) -> None:
     num_envs = 3
     row, col = 10, 5
-    config = CatchEnvSpec.gen_config(num_envs=num_envs)
-    spec = CatchEnvSpec(config)
     for env_type in ["dm", "gym"]:
-      if env_type == "dm":
-        e = CatchDMEnvPool(spec)
-      else:
-        e = CatchGymEnvPool(spec)
+      e = make("Catch-v0", env_type=env_type, num_envs=num_envs)
       # get a successful trajectory
       if env_type == "dm":
         obs = e.reset().observation.obs  # type: ignore
@@ -103,20 +85,17 @@ class _ToyTextEnvTest(absltest.TestCase):
   @no_type_check
   def test_frozen_lake(self) -> None:
     for size in [4, 8]:
-      config = FrozenLakeEnvSpec.gen_config(
-        num_envs=1, size=size, max_episode_steps=size * 25
-      )
-      spec = FrozenLakeEnvSpec(config)
-      env = FrozenLakeGymEnvPool(spec)
+      if size == 4:
+        env = make_gym("FrozenLake-v1")
+        ref = gym.make("FrozenLake-v1")
+      else:
+        env = make_gym("FrozenLake8x8-v1")
+        ref = gym.make("FrozenLake8x8-v1")
       logging.info(env)
       assert isinstance(env.observation_space, gym.spaces.Discrete)
       assert env.observation_space.n == size * size
       assert isinstance(env.action_space, gym.spaces.Discrete)
       assert env.action_space.n == 4
-      if size == 4:
-        ref = gym.make("FrozenLake-v1")
-      else:
-        ref = gym.make("FrozenLake8x8-v1")
       last_obs, _ = env.reset()
       elapsed_step = 0
       for _ in range(1000):
@@ -151,10 +130,7 @@ class _ToyTextEnvTest(absltest.TestCase):
 
   @no_type_check
   def test_taxi(self) -> None:
-    spec = TaxiEnvSpec(
-      TaxiEnvSpec.gen_config(num_envs=1, max_episode_steps=200)
-    )
-    env = TaxiGymEnvPool(spec)
+    env = make_gym("Taxi-v3")
     assert isinstance(env.observation_space, gym.spaces.Discrete)
     assert env.observation_space.n == 500
     assert isinstance(env.action_space, gym.spaces.Discrete)
@@ -167,15 +143,12 @@ class _ToyTextEnvTest(absltest.TestCase):
       done = [False]
       while not done[0]:
         act = np.random.randint(6, size=(1,))
-        obs, rew, terminated, truncated, info = env.step(act)
-        done = np.logical_or(terminated, truncated)
-        ref_obs, ref_rew, ref_terminated, ref_truncated, ref_info = ref.step(
-          int(act[0])
-        )
-        ref_done = np.logical_or(ref_terminated, ref_truncated)
-        assert ref_obs == obs[0] and ref_rew == rew[0] and ref_done == done[
-          0] and ref_terminated == terminated[
-            0] and ref_truncated == truncated[0]
+        obs, rew, term, trunc, info = env.step(act)
+        done = np.logical_or(term, trunc)
+        ref_obs, ref_rew, ref_term, ref_trunc, ref_info = ref.step(int(act[0]))
+        ref_done = np.logical_or(ref_term, ref_trunc)
+        assert ref_obs == obs[0] and ref_rew == rew[0] and ref_done == done[0]
+        assert ref_term == term[0] and ref_trunc == trunc[0]
     locs = ref.unwrapped.locs
     left_point = [(4, 4), (0, 3), (4, 2), (0, 1)]
     right_point = [(0, 0), (4, 1), (0, 2), (4, 3)]
@@ -221,10 +194,7 @@ class _ToyTextEnvTest(absltest.TestCase):
 
   def test_nchain(self) -> None:
     num_envs = 100
-    spec = NChainEnvSpec(
-      NChainEnvSpec.gen_config(num_envs=num_envs, max_episode_steps=1000)
-    )
-    env = NChainGymEnvPool(spec)
+    env = make_gym("NChain-v0", num_envs=num_envs)
     assert isinstance(env.observation_space, gym.spaces.Discrete)
     assert env.observation_space.n == 5
     assert isinstance(env.action_space, gym.spaces.Discrete)
@@ -240,8 +210,7 @@ class _ToyTextEnvTest(absltest.TestCase):
     assert abs(np.mean(reward) - 1310) < 30 and abs(np.std(reward) - 78) < 15
 
   def test_cliffwalking(self) -> None:
-    spec = CliffWalkingEnvSpec(CliffWalkingEnvSpec.gen_config())
-    env = CliffWalkingGymEnvPool(spec)
+    env = make_gym("CliffWalking-v0")
     assert isinstance(env.observation_space, gym.spaces.Discrete)
     assert env.observation_space.n == 48
     assert isinstance(env.action_space, gym.spaces.Discrete)
@@ -264,8 +233,7 @@ class _ToyTextEnvTest(absltest.TestCase):
   def test_blackjack(self) -> None:
     np.random.seed(0)
     num_envs = 100
-    spec = BlackjackEnvSpec(BlackjackEnvSpec.gen_config(num_envs=num_envs))
-    env = BlackjackGymEnvPool(spec)
+    env = make_gym("Blackjack-v1", num_envs=num_envs)
     assert isinstance(env.observation_space, gym.spaces.Box)
     assert env.observation_space.shape == (3,)
     assert isinstance(env.action_space, gym.spaces.Discrete)
