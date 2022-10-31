@@ -126,21 +126,22 @@ except KeyboardInterrupt:
   pass
 
 # Agent trained on envpool version should also perform well on regular Gym env
-test_env = gym.make(env_id)
-
-def legacy_wrap(env):
-  env.reset_fn = env.reset
-  env.step_fn = env.step
-  def legacy_reset():
-    return env.reset_fn()[0]
-  def legacy_step(action):
-    obs, rew, term, trunc, info = env.step_fn(action)
-    return obs, rew, term + trunc, info
-  env.reset = legacy_reset
-  env.step = legacy_step
-  return env
 if not is_legacy_gym:
-  test_env = legacy_wrap(test_env)
+  def legacy_wrap(env):
+    env.reset_fn = env.reset
+    env.step_fn = env.step
+    def legacy_reset():
+      return env.reset_fn()[0]
+    def legacy_step(action):
+      obs, rew, term, trunc, info = env.step_fn(action)
+      return obs, rew, term + trunc, info
+    env.reset = legacy_reset
+    env.step = legacy_step
+    return env
+
+  test_env = legacy_wrap(gym.make(env_id))
+else:
+  test_env = gym.make(env_id)
 
 # Test with EnvPool
 mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=20)
