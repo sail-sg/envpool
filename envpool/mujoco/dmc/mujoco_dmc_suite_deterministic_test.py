@@ -19,59 +19,27 @@ import dm_env
 import numpy as np
 from absl.testing import absltest
 
-from envpool.mujoco.dmc import (
-  DmcAcrobotDMEnvPool,
-  DmcAcrobotEnvSpec,
-  DmcBallInCupDMEnvPool,
-  DmcBallInCupEnvSpec,
-  DmcCartpoleDMEnvPool,
-  DmcCartpoleEnvSpec,
-  DmcCheetahDMEnvPool,
-  DmcCheetahEnvSpec,
-  DmcFingerDMEnvPool,
-  DmcFingerEnvSpec,
-  DmcFishDMEnvPool,
-  DmcFishEnvSpec,
-  DmcHopperDMEnvPool,
-  DmcHopperEnvSpec,
-  DmcHumanoidDMEnvPool,
-  DmcHumanoidEnvSpec,
-  DmcManipulatorDMEnvPool,
-  DmcManipulatorEnvSpec,
-  DmcPendulumDMEnvPool,
-  DmcPendulumEnvSpec,
-  DmcPointMassDMEnvPool,
-  DmcPointMassEnvSpec,
-  DmcReacherDMEnvPool,
-  DmcReacherEnvSpec,
-  DmcSwimmerDMEnvPool,
-  DmcSwimmerEnvSpec,
-  DmcWalkerDMEnvPool,
-  DmcWalkerEnvSpec,
-)
+import envpool.mujoco.dmc.registration  # noqa: F401
+from envpool.registration import make_dm
 
 
 class _MujocoDmcDeterministicTest(absltest.TestCase):
 
   def check(
     self,
-    spec_cls: Any,
-    envpool_cls: Any,
+    domain: str,
     task: str,
     obs_keys: List[str],
     blacklist: Optional[List[str]] = None,
     num_envs: int = 4,
   ) -> None:
+    domain_name = "".join([g[:1].upper() + g[1:] for g in domain.split("_")])
+    task_name = "".join([g[:1].upper() + g[1:] for g in task.split("_")])
+    task_id = f"{domain_name}{task_name}-v1"
     np.random.seed(0)
-    env0 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, task_name=task))
-    )
-    env1 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, task_name=task))
-    )
-    env2 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=1, task_name=task))
-    )
+    env0 = make_dm(task_id, num_envs=num_envs, seed=0)
+    env1 = make_dm(task_id, num_envs=num_envs, seed=0)
+    env2 = make_dm(task_id, num_envs=num_envs, seed=1)
     act_spec = env0.action_spec()
     for t in range(3000):
       action = np.array(
@@ -98,14 +66,13 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
   def test_acrobot(self) -> None:
     obs_keys = ["orientations", "velocity"]
     for task in ["swingup", "swingup_sparse"]:
-      self.check(DmcAcrobotEnvSpec, DmcAcrobotDMEnvPool, task, obs_keys)
+      self.check("acrobot", task, obs_keys)
 
   def test_ball_in_cup(self) -> None:
     obs_keys = ["position", "velocity"]
     for task in ["catch"]:
       self.check(
-        DmcBallInCupEnvSpec,
-        DmcBallInCupDMEnvPool,
+        "ball_in_cup",
         task,
         obs_keys,
         # https://github.com/sail-sg/envpool/pull/124#issuecomment-1127860698
@@ -118,27 +85,26 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
       "balance", "balance_sparse", "swingup", "swingup_sparse", "two_poles",
       "three_poles"
     ]:
-      self.check(DmcCartpoleEnvSpec, DmcCartpoleDMEnvPool, task, obs_keys)
+      self.check("cartpole", task, obs_keys)
 
   def test_cheetah(self) -> None:
     obs_keys = ["position", "velocity"]
     for task in ["run"]:
-      self.check(DmcCheetahEnvSpec, DmcCheetahDMEnvPool, task, obs_keys)
+      self.check("cheetah", task, obs_keys)
 
   def test_finger(self) -> None:
     obs_keys = ["position", "velocity", "touch"]
     for task in ["spin"]:
-      self.check(DmcFingerEnvSpec, DmcFingerDMEnvPool, task, obs_keys)
+      self.check("finger", task, obs_keys)
     obs_keys += ["target_position", "dist_to_target"]
     for task in ["turn_easy", "turn_hard"]:
-      self.check(DmcFingerEnvSpec, DmcFingerDMEnvPool, task, obs_keys)
+      self.check("finger", task, obs_keys)
 
   def test_fish(self) -> None:
     obs_keys = ["joint_angles", "upright", "velocity"]
     for task in ["swim", "upright"]:
       self.check(
-        DmcFishEnvSpec,
-        DmcFishDMEnvPool,
+        "fish",
         task,
         obs_keys + (["target"] if task == "swim" else []),
         blacklist=["joint_angles"],
@@ -147,7 +113,7 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
   def test_hopper(self) -> None:
     obs_keys = ["position", "velocity", "touch"]
     for task in ["stand", "hop"]:
-      self.check(DmcHopperEnvSpec, DmcHopperDMEnvPool, task, obs_keys)
+      self.check("hopper", task, obs_keys)
 
   def test_humanoid(self) -> None:
     obs_keys = [
@@ -155,10 +121,10 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
       "com_velocity", "velocity"
     ]
     for task in ["stand", "walk", "run"]:
-      self.check(DmcHumanoidEnvSpec, DmcHumanoidDMEnvPool, task, obs_keys)
+      self.check("humanoid", task, obs_keys)
     obs_keys = ["position", "velocity"]
     for task in ["run_pure_state"]:
-      self.check(DmcHumanoidEnvSpec, DmcHumanoidDMEnvPool, task, obs_keys)
+      self.check("humanoid", task, obs_keys)
 
   def test_manipulator(self) -> None:
     obs_keys = [
@@ -166,21 +132,18 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
       "target_pos"
     ]
     for task in ["bring_ball", "bring_peg", "insert_ball", "insert_peg"]:
-      self.check(
-        DmcManipulatorEnvSpec, DmcManipulatorDMEnvPool, task, obs_keys
-      )
+      self.check("manipulator", task, obs_keys)
 
   def test_pendulum(self) -> None:
     obs_keys = ["orientation", "velocity"]
     for task in ["swingup"]:
-      self.check(DmcPendulumEnvSpec, DmcPendulumDMEnvPool, task, obs_keys)
+      self.check("pendulum", task, obs_keys)
 
   def test_point_mass(self) -> None:
     obs_keys = ["position", "velocity"]
     for task in ["easy", "hard"]:
       self.check(
-        DmcPointMassEnvSpec,
-        DmcPointMassDMEnvPool,
+        "point_mass",
         task,
         obs_keys,
         blacklist=["velocity"] if task == "easy" else [],
@@ -189,17 +152,17 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
   def test_reacher(self) -> None:
     obs_keys = ["position", "to_target", "velocity"]
     for task in ["easy", "hard"]:
-      self.check(DmcReacherEnvSpec, DmcReacherDMEnvPool, task, obs_keys)
+      self.check("reacher", task, obs_keys)
 
   def test_swimmer(self) -> None:
     obs_keys = ["joints", "to_target", "body_velocities"]
     for task in ["swimmer6", "swimmer15"]:
-      self.check(DmcSwimmerEnvSpec, DmcSwimmerDMEnvPool, task, obs_keys)
+      self.check("swimmer", task, obs_keys)
 
   def test_walker(self) -> None:
     obs_keys = ["orientations", "height", "velocity"]
     for task in ["run", "stand", "walk"]:
-      self.check(DmcWalkerEnvSpec, DmcWalkerDMEnvPool, task, obs_keys)
+      self.check("walker", task, obs_keys)
 
 
 if __name__ == "__main__":

@@ -21,7 +21,8 @@ from absl import logging
 from absl.testing import absltest
 from dm_control import suite
 
-from envpool.mujoco.dmc import DmcHumanoidCMUDMEnvPool, DmcHumanoidCMUEnvSpec
+import envpool.mujoco.dmc.registration  # noqa: F401
+from envpool.registration import make_dm
 
 
 class _MujocoDmcSuiteExtAlignTest(absltest.TestCase):
@@ -83,22 +84,17 @@ class _MujocoDmcSuiteExtAlignTest(absltest.TestCase):
         np.testing.assert_allclose(ts0.reward, ts1.reward[0], atol=1e-8)
         np.testing.assert_allclose(ts0.discount, ts1.discount[0])
 
-  def run_align_check_entry(
-    self, domain: str, tasks: List[str], spec_cls: Any, envpool_cls: Any
-  ) -> None:
+  def run_align_check_entry(self, domain: str, tasks: List[str]) -> None:
+    domain_name = "".join([g[:1].upper() + g[1:] for g in domain.split("_")])
     for task in tasks:
+      task_name = "".join([g[:1].upper() + g[1:] for g in task.split("_")])
       env0 = suite.load(domain, task)
-      env1 = envpool_cls(
-        spec_cls(spec_cls.gen_config(task_name=task, max_episode_steps=1000))
-      )
+      env1 = make_dm(f"{domain_name}{task_name}-v1")
       self.run_space_check(env0, env1)
       self.run_align_check(env0, env1, domain, task)
 
   def test_humanoid_CMU(self) -> None:
-    self.run_align_check_entry(
-      "humanoid_CMU", ["stand", "run"], DmcHumanoidCMUEnvSpec,
-      DmcHumanoidCMUDMEnvPool
-    )
+    self.run_align_check_entry("humanoid_CMU", ["stand", "run"])
 
 
 if __name__ == "__main__":

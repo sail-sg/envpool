@@ -19,30 +19,27 @@ import dm_env
 import numpy as np
 from absl.testing import absltest
 
-from envpool.mujoco.dmc import DmcHumanoidCMUDMEnvPool, DmcHumanoidCMUEnvSpec
+import envpool.mujoco.dmc.registration  # noqa: F401
+from envpool.registration import make_dm
 
 
 class _MujocoDmcSuiteExtDeterministicTest(absltest.TestCase):
 
   def check(
     self,
-    spec_cls: Any,
-    envpool_cls: Any,
+    domain: str,
     task: str,
     obs_keys: List[str],
     blacklist: Optional[List[str]] = None,
     num_envs: int = 4,
   ) -> None:
+    domain_name = "".join([g[:1].upper() + g[1:] for g in domain.split("_")])
+    task_name = "".join([g[:1].upper() + g[1:] for g in task.split("_")])
+    task_id = f"{domain_name}{task_name}-v1"
     np.random.seed(0)
-    env0 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, task_name=task))
-    )
-    env1 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, task_name=task))
-    )
-    env2 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=1, task_name=task))
-    )
+    env0 = make_dm(task_id, num_envs=num_envs, seed=0)
+    env1 = make_dm(task_id, num_envs=num_envs, seed=0)
+    env2 = make_dm(task_id, num_envs=num_envs, seed=1)
     act_spec = env0.action_spec()
     for t in range(3000):
       action = np.array(
@@ -72,9 +69,7 @@ class _MujocoDmcSuiteExtDeterministicTest(absltest.TestCase):
       "com_velocity", "velocity"
     ]
     for task in ["stand", "run"]:
-      self.check(
-        DmcHumanoidCMUEnvSpec, DmcHumanoidCMUDMEnvPool, task, obs_keys
-      )
+      self.check("humanoid_CMU", task, obs_keys)
 
 
 if __name__ == "__main__":
