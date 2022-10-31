@@ -127,14 +127,18 @@ except KeyboardInterrupt:
 
 # Agent trained on envpool version should also perform well on regular Gym env
 if not is_legacy_gym:
+
   def legacy_wrap(env):
     env.reset_fn = env.reset
     env.step_fn = env.step
+
     def legacy_reset():
       return env.reset_fn()[0]
+
     def legacy_step(action):
       obs, rew, term, trunc, info = env.step_fn(action)
       return obs, rew, term + trunc, info
+
     env.reset = legacy_reset
     env.step = legacy_step
     return env
