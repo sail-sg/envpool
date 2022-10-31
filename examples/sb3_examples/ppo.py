@@ -17,6 +17,7 @@ from typing import Optional
 import gym
 import numpy as np
 import torch as th
+from packaging import version
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
@@ -38,6 +39,7 @@ env_id = "Pendulum-v1"  # "CartPole-v1"
 seed = 0
 use_env_pool = True  # whether to use EnvPool or Gym for training
 render = False  # whether to render final policy using Gym
+is_legacy_gym = version.parse(gym.__version__) < version.parse("0.26.0")
 
 
 class VecAdapter(VecEnvWrapper):
@@ -56,14 +58,21 @@ class VecAdapter(VecEnvWrapper):
     self.actions = actions
 
   def reset(self) -> VecEnvObs:
-    return self.venv.reset()
+    if is_legacy_gym:
+      return self.venv.reset()
+    else:
+      return self.venv.reset()[0]
 
   def seed(self, seed: Optional[int] = None) -> None:
     # You can only seed EnvPool env by calling envpool.make()
     pass
 
   def step_wait(self) -> VecEnvStepReturn:
-    obs, rewards, dones, info_dict = self.venv.step(self.actions)
+    if is_legacy_gym:
+      obs, rewards, dones, info_dict = self.venv.step(self.actions)
+    else:
+      obs, rewards, terms, truncs, info_dict = self.venv.step(self.actions)
+      dones = terms + truncs
     infos = []
     # Convert dict to list of dict
     # and add terminal observation
@@ -77,8 +86,10 @@ class VecAdapter(VecEnvWrapper):
       )
       if dones[i]:
         infos[i]["terminal_observation"] = obs[i]
-        obs[i] = self.venv.reset(np.array([i]))
-
+        if is_legacy_gym:
+          obs[i] = self.venv.reset(np.array([i]))
+        else:
+          obs[i] = self.venv.reset(np.array([i]))[0]
     return obs, rewards, dones, infos
 
 
@@ -116,6 +127,20 @@ except KeyboardInterrupt:
 
 # Agent trained on envpool version should also perform well on regular Gym env
 test_env = gym.make(env_id)
+
+def legacy_wrap(env):
+  env.reset_fn = env.reset
+  env.step_fn = env.step
+  def legacy_reset():
+    return env.reset_fn()[0]
+  def legacy_step(action):
+    obs, rew, term, trunc, info = env.step_fn(action)
+    return obs, rew, term + trunc, info
+  env.reset = legacy_reset
+  env.step = legacy_step
+  return env
+if not is_legacy_gym:
+  test_env = legacy_wrap(test_env)
 
 # Test with EnvPool
 mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=20)
