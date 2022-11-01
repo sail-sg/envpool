@@ -13,7 +13,7 @@
 # limitations under the License.
 """Unit tests for Mujoco dm_control suite align check."""
 
-from typing import Any, List, no_type_check
+from typing import Any, List
 
 import dm_env
 import numpy as np
@@ -27,7 +27,6 @@ from envpool.registration import make_dm
 
 class _MujocoDmcSuiteExtAlignTest(absltest.TestCase):
 
-  @no_type_check
   def run_space_check(self, env0: dm_env.Environment, env1: Any) -> None:
     """Check observation_spec() and action_spec()."""
     obs0, obs1 = env0.observation_spec(), env1.observation_spec()
@@ -39,7 +38,6 @@ class _MujocoDmcSuiteExtAlignTest(absltest.TestCase):
     np.testing.assert_allclose(act0.minimum, act1.minimum)
     np.testing.assert_allclose(act0.maximum, act1.maximum)
 
-  @no_type_check
   def reset_state(
     self, env: dm_env.Environment, ts: dm_env.TimeStep, domain: str, task: str
   ) -> None:

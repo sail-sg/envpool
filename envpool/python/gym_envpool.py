@@ -14,7 +14,7 @@
 """EnvPool meta class for gym.Env API."""
 
 from abc import ABC, ABCMeta
-from typing import Any, Dict, List, Tuple, Union, no_type_check
+from typing import Any, Dict, List, Tuple, Union
 
 import gym
 import numpy as np
@@ -97,7 +97,6 @@ class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
     attrs["_to"] = _to_gym
     subcls = super().__new__(cls, name, parents, attrs)
 
-    @no_type_check
     def init(self: Any, spec: Any) -> None:
       """Set self.spec to EnvSpecMeta."""
       super(subcls, self).__init__(spec)

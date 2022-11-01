@@ -28,7 +28,6 @@ from envpool.registration import make_gym
 
 class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
 
-  @no_type_check
   def run_space_check(self, env0: gym.Env, env1: Any) -> None:
     """Check observation_space and action space."""
     obs0, obs1 = env0.observation_space, env1.observation_space

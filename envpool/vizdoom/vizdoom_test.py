@@ -14,7 +14,6 @@
 """Unit tests for vizdoom environments."""
 
 import os
-from typing import no_type_check
 
 import cv2
 import numpy as np
@@ -59,7 +58,6 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
       )
       assert np.all(truncated)
 
-  @no_type_check
   def test_hg(
     self,
     num_envs: int = 10,
@@ -100,14 +98,12 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
         done_id = np.array(info["env_id"])[done]
         obs[done_id] = env.reset(done_id)[0].transpose(0, 2, 3, 1)
 
-  @no_type_check
   def test_d3_action_space(self) -> None:
     env = make_gym("D3Battle-v1", use_combined_action=True)
     action_num = env.action_space.n
     env = make_gym("D3Battle-v1", use_combined_action=True, force_speed=True)
     assert env.action_space.n * 2 == action_num
 
-  @no_type_check
   def test_delta_action_space(self) -> None:
     e = make_gym("Deathmatch-v1", use_combined_action=True)
     e2 = make_gym(
@@ -137,7 +133,6 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
     )
     assert e4.action_space.shape[0] == 20
 
-  @no_type_check
   def test_obs_space(self) -> None:
     e = make_dm(
       "Deathmatch-v1",

@@ -15,7 +15,6 @@
 
 import os
 import time
-from typing import no_type_check
 
 import cv2
 import jax.numpy as jnp
@@ -208,7 +207,6 @@ class _AtariEnvPoolTest(absltest.TestCase):
       env2.send(action)
       np.testing.assert_allclose(states1[0], states2[0])
 
-  @no_type_check
   def test_no_gray_scale(self) -> None:
     ref_shape = (12, 84, 84)
     raw_shape = (12, 210, 160)

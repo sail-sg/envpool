@@ -14,7 +14,7 @@
 """Test Vizdoom env by well-trained RL agents."""
 
 import os
-from typing import Optional, Tuple, no_type_check
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
@@ -38,7 +38,6 @@ class _VizdoomPretrainTest(absltest.TestCase):
   def get_path(self, path: str) -> str:
     return os.path.join("envpool", "vizdoom", "maps", path)
 
-  @no_type_check
   def eval_c51(
     self,
     task: str,
@@ -69,7 +68,7 @@ class _VizdoomPretrainTest(absltest.TestCase):
     np.random.seed(seed)
     torch.manual_seed(seed)
     logging.info(state_shape)
-    net = C51(*state_shape, action_shape, 51, device)
+    net = C51(*state_shape, action_shape, 51, device)  # type: ignore
     optim = torch.optim.Adam(net.parameters(), lr=1e-4)
 
     policy = C51Policy(
