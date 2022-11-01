@@ -39,7 +39,6 @@ void CarRacingFrictionDetector::_Contact(b2Contact* contact, bool begin) {
       return;
     }
 
-
     if (u1->type != WHEEL_TYPE && u1->type != TILE_TYPE) return;
     if (u2->type != WHEEL_TYPE && u2->type != TILE_TYPE) return;
   

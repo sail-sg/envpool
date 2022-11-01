@@ -21,6 +21,7 @@ register(
   spec_cls="CarRacingEnvSpec",
   dm_cls="CarRacingDMEnvPool",
   gym_cls="CarRacingGymEnvPool",
+  max_episode_steps=1000,
 )
 
 register(
@@ -49,6 +50,7 @@ register(
   spec_cls="LunarLanderDiscreteEnvSpec",
   dm_cls="LunarLanderDiscreteDMEnvPool",
   gym_cls="LunarLanderDiscreteGymEnvPool",
+  max_episode_steps=1000,
 )
 
 register(
@@ -57,4 +59,5 @@ register(
   spec_cls="LunarLanderContinuousEnvSpec",
   dm_cls="LunarLanderContinuousDMEnvPool",
   gym_cls="LunarLanderContinuousGymEnvPool",
+  max_episode_steps=1000,
 )

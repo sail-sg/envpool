@@ -28,9 +28,7 @@ namespace classic_control {
 
 class PendulumEnvFns {
  public:
-  static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(200), "version"_.Bind(0));
-  }
+  static decltype(auto) DefaultConfig() { return MakeDict("version"_.Bind(0)); }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict(

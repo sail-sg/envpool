@@ -26,8 +26,7 @@ namespace box2d {
 class BipedalWalkerEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(1600),
-                    "reward_threshold"_.Bind(300.0), "hardcore"_.Bind(false));
+    return MakeDict("reward_threshold"_.Bind(300.0), "hardcore"_.Bind(false));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {

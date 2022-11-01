@@ -50,7 +50,7 @@ std::string GetSwimmerXML(const std::string& base_path,
 class SwimmerEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(15),
+    return MakeDict("frame_skip"_.Bind(15),
                     "task_name"_.Bind(std::string("swimmer6")));
   }
   template <typename Config>
@@ -67,12 +67,13 @@ class SwimmerEnvFns {
     }
     return MakeDict("obs:joints"_.Bind(Spec<mjtNum>({n_bodies - 1})),
                     "obs:to_target"_.Bind(Spec<mjtNum>({2})),
-                    "obs:body_velocities"_.Bind(Spec<mjtNum>({3 * n_bodies})),
+                    "obs:body_velocities"_.Bind(Spec<mjtNum>({3 * n_bodies}))
 #ifdef ENVPOOL_TEST
+                        ,
                     "info:qpos0"_.Bind(Spec<mjtNum>({n_bodies + 2})),
-                    "info:target0"_.Bind(Spec<mjtNum>({2})),
+                    "info:target0"_.Bind(Spec<mjtNum>({2}))
 #endif
-                    "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
+    );  // NOLINT
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

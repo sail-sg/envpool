@@ -40,8 +40,10 @@ We can now write the actor loop as:
     def actor_step(iter, loop_var):
       handle0, states = loop_var
       action = policy(states)
-      # for gym
+      # for gym < 0.26
       handle1, (new_states, rew, done, info) = step(handle0, action)
+      # for gym >= 0.26
+      # handle1, (new_states, rew, term, trunc, info) = step(handle0, action)
       # for dm
       # handle1, new_states = step(handle0, action)
       return (handle1, new_states)

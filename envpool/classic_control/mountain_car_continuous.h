@@ -29,8 +29,7 @@ namespace classic_control {
 class MountainCarContinuousEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(999),
-                    "reward_threshold"_.Bind(90.0));
+    return MakeDict("reward_threshold"_.Bind(90.0));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {

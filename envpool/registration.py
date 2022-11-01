@@ -16,6 +16,9 @@
 import importlib
 from typing import Any, Dict, List, Tuple
 
+import gym
+from packaging import version
+
 
 class EnvRegistry:
   """A collection of available envs."""
@@ -39,9 +42,20 @@ class EnvRegistry:
 
   def make(self, task_id: str, env_type: str, **kwargs: Any) -> Any:
     """Make envpool."""
+    new_gym_api = version.parse(gym.__version__) >= version.parse("0.26.0")
+    if "gym_reset_return_info" not in kwargs:
+      kwargs["gym_reset_return_info"] = new_gym_api
+    if new_gym_api and not kwargs["gym_reset_return_info"]:
+      raise ValueError(
+        "You are using gym>=0.26.0 but passed `gym_reset_return_info=False`. "
+        "The new gym API requires environments to return an info dictionary "
+        "after resets."
+      )
+
     assert task_id in self.specs, \
       f"{task_id} is not supported, `envpool.list_all_envs()` may help."
     assert env_type in ["dm", "gym"]
+
     spec = self.make_spec(task_id, **kwargs)
     import_path, envpool_cls = self.envpools[task_id][env_type]
     return getattr(importlib.import_module(import_path), envpool_cls)(spec)
@@ -58,6 +72,19 @@ class EnvRegistry:
     """Make EnvSpec."""
     import_path, spec_cls, kwargs = self.specs[task_id]
     kwargs = {**kwargs, **make_kwargs}
+
+    # check arguments
+    if "seed" in kwargs:  # Issue 214
+      INT_MAX = 2**31
+      assert -INT_MAX <= kwargs["seed"] < INT_MAX, \
+        f"Seed should be in range of int32, got {kwargs['seed']}"
+    if "num_envs" in kwargs:
+      assert kwargs["num_envs"] >= 1
+    if "batch_size" in kwargs:
+      assert 0 <= kwargs["batch_size"] <= kwargs["num_envs"]
+    if "max_num_players" in kwargs:
+      assert 1 <= kwargs["max_num_players"]
+
     spec_cls = getattr(importlib.import_module(import_path), spec_cls)
     config = spec_cls.gen_config(**kwargs)
     return spec_cls(config)

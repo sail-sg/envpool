@@ -15,7 +15,6 @@
 
 import os
 import time
-from typing import no_type_check
 
 import cv2
 import jax.numpy as jnp
@@ -24,8 +23,9 @@ from absl import logging
 from absl.testing import absltest
 from jax import jit, lax
 
-from envpool.atari import AtariDMEnvPool, AtariEnvSpec, AtariGymEnvPool
+import envpool.atari.registration  # noqa: F401
 from envpool.atari.atari_envpool import _AtariEnvPool, _AtariEnvSpec
+from envpool.registration import make_dm, make_gym
 
 
 class _AtariEnvPoolTest(absltest.TestCase):
@@ -64,17 +64,15 @@ class _AtariEnvPoolTest(absltest.TestCase):
   def test_align(self) -> None:
     """Make sure gym's envpool and dm_env's envpool generate the same data."""
     num_envs = 4
-    config = AtariEnvSpec.gen_config(task="space_invaders", num_envs=num_envs)
-    spec = AtariEnvSpec(config)
-    env0 = AtariGymEnvPool(spec)
-    env1 = AtariDMEnvPool(spec)
-    obs0 = env0.reset()
-    obs1 = env1.reset().observation.obs  # type: ignore
+    env0 = make_gym("SpaceInvaders-v5", num_envs=num_envs)
+    env1 = make_dm("SpaceInvaders-v5", num_envs=num_envs)
+    obs0, _ = env0.reset()
+    obs1 = env1.reset().observation.obs
     np.testing.assert_allclose(obs0, obs1)
     for _ in range(1000):
       action = np.random.randint(6, size=num_envs)
       obs0 = env0.step(action)[0]
-      obs1 = env1.step(action).observation.obs  # type: ignore
+      obs1 = env1.step(action).observation.obs
       np.testing.assert_allclose(obs0, obs1)
       # cv2.imwrite(f"/tmp/log/align{i}.png", obs0[0, 1:].transpose(1, 2, 0))
 
@@ -84,19 +82,19 @@ class _AtariEnvPoolTest(absltest.TestCase):
       "atlantis", "backgammon", "breakout", "pong", "wizard_of_wor"
     ]:
       np.random.seed(0)
-      env = AtariGymEnvPool(
-        AtariEnvSpec(
-          AtariEnvSpec.gen_config(task=env_id, num_envs=1, episodic_life=True)
-        )
-      )
-      action_num = env.action_space.n  # type: ignore
+      task_id = "".join([g.capitalize() for g in env_id.split("_")]) + "-v5"
+      env = make_gym(task_id, episodic_life=True)
+      action_num = env.action_space.n
       env.reset()
       info = env.step(np.array([0]))[-1]
       if info["lives"].sum() == 0:
         # no life in this game
         continue
       for _ in range(10000):
-        _, _, done, info = env.step(np.random.randint(0, action_num, 1))
+        _, _, terminated, truncated, info = env.step(
+          np.random.randint(0, action_num, 1)
+        )
+        done = np.logical_or(terminated, truncated)
         if info["lives"][0] == 0:
           break
         else:
@@ -106,7 +104,7 @@ class _AtariEnvPoolTest(absltest.TestCase):
         continue
       # for normal atari (e.g., breakout)
       # take an additional step after all lives are exhausted
-      _, _, next_done, next_info = env.step(
+      _, _, next_terminated, next_truncated, next_info = env.step(
         np.random.randint(0, action_num, 1)
       )
       if done[0] and next_info["lives"][0] > 0:
@@ -116,8 +114,11 @@ class _AtariEnvPoolTest(absltest.TestCase):
       self.assertFalse(info["terminated"][0])
       while not done[0]:
         self.assertFalse(info["terminated"][0])
-        _, _, done, info = env.step(np.random.randint(0, action_num, 1))
-      _, _, next_done, next_info = env.step(
+        _, _, terminated, truncated, info = env.step(
+          np.random.randint(0, action_num, 1)
+        )
+        done = np.logical_or(terminated, truncated)
+      _, _, next_terminated, next_truncated, next_info = env.step(
         np.random.randint(0, action_num, 1)
       )
       self.assertTrue(next_info["lives"][0] > 0)
@@ -126,44 +127,39 @@ class _AtariEnvPoolTest(absltest.TestCase):
   def test_partial_step(self) -> None:
     num_envs = 5
     max_episode_steps = 10
-    config = AtariEnvSpec.gen_config(
-      task="defender", num_envs=num_envs, max_episode_steps=max_episode_steps
+    env = make_gym(
+      "Defender-v5", num_envs=num_envs, max_episode_steps=max_episode_steps
     )
-    spec = AtariEnvSpec(config)
-    env = AtariGymEnvPool(spec)
     for _ in range(3):
       print(env)
       env.reset()
       partial_ids = [np.arange(num_envs)[::2], np.arange(num_envs)[1::2]]
       env.step(np.zeros(len(partial_ids[1]), dtype=int), env_id=partial_ids[1])
       for _ in range(max_episode_steps - 2):
-        info = env.step(
+        _, _, _, truncated, info = env.step(
           np.zeros(num_envs, dtype=int), env_id=np.arange(num_envs)
-        )[-1]
-        assert np.all(~info["TimeLimit.truncated"])
-      info = env.step(
+        )
+        assert np.all(~truncated)
+      _, _, _, truncated, info = env.step(
         np.zeros(num_envs, dtype=int), env_id=np.arange(num_envs)
-      )[-1]
+      )
       env_id = np.array(info["env_id"])
-      done_id = np.array(sorted(env_id[info["TimeLimit.truncated"]]))
+      done_id = np.array(sorted(env_id[truncated]))
       assert np.all(done_id == partial_ids[1])
-      info = env.step(
+      _, _, _, truncated, info = env.step(
         np.zeros(len(partial_ids[0]), dtype=int),
         env_id=partial_ids[0],
-      )[-1]
-      assert np.all(info["TimeLimit.truncated"])
+      )
+      assert np.all(truncated)
 
   def test_xla_api(self) -> None:
-    num_envs = 10
-    config = AtariEnvSpec.gen_config(
-      task="pong",
-      num_envs=num_envs,
+    env = make_gym(
+      "Pong-v5",
+      num_envs=10,
       batch_size=5,
       num_threads=2,
       thread_affinity_offset=0,
     )
-    spec = AtariEnvSpec(config)
-    env = AtariGymEnvPool(spec)
     handle, recv, send, step = env.xla()
     env.async_reset()
     handle, states = recv(handle)
@@ -185,17 +181,20 @@ class _AtariEnvPoolTest(absltest.TestCase):
     loop(100)
 
   def test_xla_correctness(self) -> None:
-    num_envs = 10
-    config = AtariEnvSpec.gen_config(
-      task="pong",
-      num_envs=num_envs,
+    env1 = make_gym(
+      "Pong-v5",
+      num_envs=10,
       batch_size=10,
       num_threads=2,
       thread_affinity_offset=0,
     )
-    spec = AtariEnvSpec(config)
-    env1 = AtariGymEnvPool(spec)
-    env2 = AtariGymEnvPool(spec)
+    env2 = make_gym(
+      "Pong-v5",
+      num_envs=10,
+      batch_size=10,
+      num_threads=2,
+      thread_affinity_offset=0,
+    )
     handle, recv, send, step = env1.xla()
     env1.async_reset()
     env2.async_reset()
@@ -208,23 +207,18 @@ class _AtariEnvPoolTest(absltest.TestCase):
       env2.send(action)
       np.testing.assert_allclose(states1[0], states2[0])
 
-  @no_type_check
   def test_no_gray_scale(self) -> None:
     ref_shape = (12, 84, 84)
     raw_shape = (12, 210, 160)
-    config = AtariEnvSpec.gen_config(task="breakout", gray_scale=False)
-    spec = AtariEnvSpec(config)
-    env = AtariGymEnvPool(spec)
+    env = make_gym("Breakout-v5", gray_scale=False)
     self.assertTrue(env.observation_space.shape, ref_shape)
-    obs = env.reset()
+    obs, _ = env.reset()
     self.assertTrue(obs.shape, ref_shape)
-    config = AtariEnvSpec.gen_config(
-      task="breakout", gray_scale=False, img_height=210, img_width=160
+    env = make_gym(
+      "Breakout-v5", gray_scale=False, img_height=210, img_width=160
     )
-    spec = AtariEnvSpec(config)
-    env = AtariGymEnvPool(spec)
     self.assertTrue(env.observation_space.shape, raw_shape)
-    obs1 = env.reset()
+    obs1, _ = env.reset()
     self.assertTrue(obs1.shape, raw_shape)
     for i in range(0, 12, 3):
       obs_ = cv2.resize(
@@ -244,15 +238,13 @@ class _AtariEnvPoolTest(absltest.TestCase):
       batch = 3
       num_threads = 3
       total = 1000
-    config = AtariEnvSpec.gen_config(
-      task="pong",
+    env = make_gym(
+      "Pong-v5",
       num_envs=num_envs,
       batch_size=batch,
       num_threads=num_threads,
       thread_affinity_offset=0,
     )
-    spec = AtariEnvSpec(config)
-    env = AtariGymEnvPool(spec)
     env.async_reset()
     action = np.ones(batch, dtype=np.int32)
     t = time.time()

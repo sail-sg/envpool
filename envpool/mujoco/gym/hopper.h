@@ -32,9 +32,8 @@ class HopperEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
-        "max_episode_steps"_.Bind(1000), "reward_threshold"_.Bind(6000.0),
-        "frame_skip"_.Bind(4), "post_constraint"_.Bind(true),
-        "terminate_when_unhealthy"_.Bind(true),
+        "reward_threshold"_.Bind(6000.0), "frame_skip"_.Bind(4),
+        "post_constraint"_.Bind(true), "terminate_when_unhealthy"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
         "ctrl_cost_weight"_.Bind(1e-3), "forward_reward_weight"_.Bind(1.0),
         "healthy_reward"_.Bind(1.0), "velocity_min"_.Bind(-10.0),

@@ -14,11 +14,11 @@
 """EnvPool meta class for dm_env API."""
 
 from abc import ABC, ABCMeta
-from typing import Any, Dict, List, Tuple, Union, no_type_check
+from typing import Any, Dict, List, Tuple, Union
 
 import dm_env
 import numpy as np
-import tree
+import treevalue
 from dm_env import TimeStep
 
 from .data import dm_structure
@@ -31,11 +31,15 @@ class DMEnvPoolMixin(ABC):
 
   def observation_spec(self: Any) -> Tuple:
     """Observation spec from EnvSpec."""
-    return self.spec.observation_spec()
+    if not hasattr(self, "_dm_observation_spec"):
+      self._dm_observation_spec = self.spec.observation_spec()
+    return self._dm_observation_spec
 
   def action_spec(self: Any) -> Union[dm_env.specs.Array, Tuple]:
     """Action spec from EnvSpec."""
-    return self.spec.action_spec()
+    if not hasattr(self, "_dm_action_spec"):
+      self._dm_action_spec = self.spec.action_spec()
+    return self._dm_action_spec
 
 
 class DMEnvPoolMeta(ABCMeta):
@@ -64,7 +68,8 @@ class DMEnvPoolMeta(ABCMeta):
     check_key_duplication(name, "state", state_keys)
     check_key_duplication(name, "action", action_keys)
 
-    state_structure, state_idx = dm_structure("State", state_keys)
+    tree_pairs = dm_structure("State", state_keys)
+    state_idx = list(zip(*tree_pairs))[-1]
 
     def _to_dm(
       self: Any,
@@ -72,29 +77,21 @@ class DMEnvPoolMeta(ABCMeta):
       reset: bool,
       return_info: bool,
     ) -> TimeStep:
-      state = tree.unflatten_as(
-        state_structure, [state_values[i] for i in state_idx]
-      )
-      done = state.done
-      elapse = state.elapsed_step
-      discount = getattr(state, "discount", (1.0 - done).astype(np.float32))
-      step_type = (
-        (elapse == 0) * dm_env.StepType.FIRST +
-        ((elapse > 0) & ~done) * dm_env.StepType.MID +
-        done * dm_env.StepType.LAST
+      values = map(lambda i: state_values[i], state_idx)
+      state = treevalue.unflatten(
+        [(path, vi) for (path, _), vi in zip(tree_pairs, values)]
       )
       timestep = TimeStep(
-        step_type=step_type,
+        step_type=state.step_type,
         observation=state.State,
         reward=state.reward,
-        discount=discount,
+        discount=state.discount,
       )
       return timestep
 
     attrs["_to"] = _to_dm
     subcls = super().__new__(cls, name, parents, attrs)
 
-    @no_type_check
     def init(self: Any, spec: Any) -> None:
       """Set self.spec to EnvSpecMeta."""
       super(subcls, self).__init__(spec)

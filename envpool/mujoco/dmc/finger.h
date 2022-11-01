@@ -40,7 +40,7 @@ std::string GetFingerXML(const std::string& base_path,
 class FingerEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(2),
+    return MakeDict("frame_skip"_.Bind(2),
                     "task_name"_.Bind(std::string("spin")));
   }
   template <typename Config>
@@ -49,12 +49,13 @@ class FingerEnvFns {
                     "obs:velocity"_.Bind(Spec<mjtNum>({3})),
                     "obs:touch"_.Bind(Spec<mjtNum>({2})),
                     "obs:target_position"_.Bind(Spec<mjtNum>({2})),
-                    "obs:dist_to_target"_.Bind(Spec<mjtNum>({})),
+                    "obs:dist_to_target"_.Bind(Spec<mjtNum>({}))
 #ifdef ENVPOOL_TEST
+                        ,
                     "info:qpos0"_.Bind(Spec<mjtNum>({3})),
-                    "info:target"_.Bind(Spec<mjtNum>({1})),
+                    "info:target"_.Bind(Spec<mjtNum>({1}))
 #endif
-                    "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})));
+    );  // NOLINT
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

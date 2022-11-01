@@ -31,8 +31,7 @@ namespace mujoco_gym {
 class HumanoidEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(5),
-                    "post_constraint"_.Bind(true),
+    return MakeDict("frame_skip"_.Bind(5), "post_constraint"_.Bind(true),
                     "forward_reward_weight"_.Bind(1.25),
                     "terminate_when_unhealthy"_.Bind(true),
                     "exclude_current_positions_from_observation"_.Bind(true),

@@ -32,9 +32,8 @@ class AntEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
-        "max_episode_steps"_.Bind(1000), "reward_threshold"_.Bind(6000.0),
-        "frame_skip"_.Bind(5), "post_constraint"_.Bind(true),
-        "use_contact_force"_.Bind(false),
+        "reward_threshold"_.Bind(6000.0), "frame_skip"_.Bind(5),
+        "post_constraint"_.Bind(true), "use_contact_force"_.Bind(false),
         "terminate_when_unhealthy"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
         "forward_reward_weight"_.Bind(1.0), "ctrl_cost_weight"_.Bind(0.5),

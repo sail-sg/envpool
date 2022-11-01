@@ -31,13 +31,13 @@ namespace mujoco_gym {
 class HumanoidStandupEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict(
-        "max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(5),
-        "post_constraint"_.Bind(true), "forward_reward_weight"_.Bind(1.0),
-        "exclude_current_positions_from_observation"_.Bind(true),
-        "ctrl_cost_weight"_.Bind(0.1), "contact_cost_weight"_.Bind(5e-7),
-        "contact_cost_max"_.Bind(10.0), "healthy_reward"_.Bind(1.0),
-        "reset_noise_scale"_.Bind(1e-2));
+    return MakeDict("frame_skip"_.Bind(5), "post_constraint"_.Bind(true),
+                    "forward_reward_weight"_.Bind(1.0),
+                    "exclude_current_positions_from_observation"_.Bind(true),
+                    "ctrl_cost_weight"_.Bind(0.1),
+                    "contact_cost_weight"_.Bind(5e-7),
+                    "contact_cost_max"_.Bind(10.0), "healthy_reward"_.Bind(1.0),
+                    "reset_noise_scale"_.Bind(1e-2));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {

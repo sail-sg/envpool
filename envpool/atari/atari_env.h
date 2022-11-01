@@ -50,8 +50,7 @@ class AtariEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
-        "max_episode_steps"_.Bind(108000), "stack_num"_.Bind(4),
-        "frame_skip"_.Bind(4), "noop_max"_.Bind(30),
+        "stack_num"_.Bind(4), "frame_skip"_.Bind(4), "noop_max"_.Bind(30),
         "zero_discount_on_life_loss"_.Bind(false), "episodic_life"_.Bind(false),
         "reward_clip"_.Bind(false), "img_height"_.Bind(84),
         "img_width"_.Bind(84), "task"_.Bind(std::string("pong")),
@@ -64,7 +63,6 @@ class AtariEnvFns {
                         {conf["stack_num"_] * (conf["gray_scale"_] ? 1 : 3),
                          conf["img_height"_], conf["img_width"_]},
                         {0, 255})),
-                    "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})),
                     "info:lives"_.Bind(Spec<int>({-1})),
                     "info:reward"_.Bind(Spec<float>({-1})),
                     "info:terminated"_.Bind(Spec<int>({-1}, {0, 1})));

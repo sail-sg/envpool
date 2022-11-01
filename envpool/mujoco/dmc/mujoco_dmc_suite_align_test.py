@@ -13,7 +13,7 @@
 # limitations under the License.
 """Unit tests for Mujoco dm_control suite align check."""
 
-from typing import Any, List, no_type_check
+from typing import Any, List
 
 import dm_env
 import numpy as np
@@ -21,41 +21,12 @@ from absl import logging
 from absl.testing import absltest
 from dm_control import suite
 
-from envpool.mujoco.dmc import (
-  DmcAcrobotDMEnvPool,
-  DmcAcrobotEnvSpec,
-  DmcBallInCupDMEnvPool,
-  DmcBallInCupEnvSpec,
-  DmcCartpoleDMEnvPool,
-  DmcCartpoleEnvSpec,
-  DmcCheetahDMEnvPool,
-  DmcCheetahEnvSpec,
-  DmcFingerDMEnvPool,
-  DmcFingerEnvSpec,
-  DmcFishDMEnvPool,
-  DmcFishEnvSpec,
-  DmcHopperDMEnvPool,
-  DmcHopperEnvSpec,
-  DmcHumanoidDMEnvPool,
-  DmcHumanoidEnvSpec,
-  DmcManipulatorDMEnvPool,
-  DmcManipulatorEnvSpec,
-  DmcPendulumDMEnvPool,
-  DmcPendulumEnvSpec,
-  DmcPointMassDMEnvPool,
-  DmcPointMassEnvSpec,
-  DmcReacherDMEnvPool,
-  DmcReacherEnvSpec,
-  DmcSwimmerDMEnvPool,
-  DmcSwimmerEnvSpec,
-  DmcWalkerDMEnvPool,
-  DmcWalkerEnvSpec,
-)
+import envpool.mujoco.dmc.registration  # noqa: F401
+from envpool.registration import make_dm
 
 
 class _MujocoDmcAlignTest(absltest.TestCase):
 
-  @no_type_check
   def run_space_check(self, env0: dm_env.Environment, env1: Any) -> None:
     """Check observation_spec() and action_spec()."""
     obs0, obs1 = env0.observation_spec(), env1.observation_spec()
@@ -67,7 +38,6 @@ class _MujocoDmcAlignTest(absltest.TestCase):
     np.testing.assert_allclose(act0.minimum, act1.minimum)
     np.testing.assert_allclose(act0.maximum, act1.maximum)
 
-  @no_type_check
   def reset_state(
     self, env: dm_env.Environment, ts: dm_env.TimeStep, domain: str, task: str
   ) -> None:
@@ -185,93 +155,65 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         np.testing.assert_allclose(ts0.reward, ts1.reward[0], atol=1e-8)
         np.testing.assert_allclose(ts0.discount, ts1.discount[0])
 
-  def run_align_check_entry(
-    self, domain: str, tasks: List[str], spec_cls: Any, envpool_cls: Any
-  ) -> None:
+  def run_align_check_entry(self, domain: str, tasks: List[str]) -> None:
+    domain_name = "".join([g[:1].upper() + g[1:] for g in domain.split("_")])
     for task in tasks:
+      task_name = "".join([g[:1].upper() + g[1:] for g in task.split("_")])
       env0 = suite.load(domain, task)
-      env1 = envpool_cls(spec_cls(spec_cls.gen_config(task_name=task)))
+      env1 = make_dm(f"{domain_name}{task_name}-v1")
       self.run_space_check(env0, env1)
       self.run_align_check(env0, env1, domain, task)
 
   def test_acrobot(self) -> None:
-    self.run_align_check_entry(
-      "acrobot", ["swingup", "swingup_sparse"], DmcAcrobotEnvSpec,
-      DmcAcrobotDMEnvPool
-    )
+    self.run_align_check_entry("acrobot", ["swingup", "swingup_sparse"])
 
   def test_ball_in_cup(self) -> None:
-    self.run_align_check_entry(
-      "ball_in_cup", ["catch"], DmcBallInCupEnvSpec, DmcBallInCupDMEnvPool
-    )
+    self.run_align_check_entry("ball_in_cup", ["catch"])
 
   def test_cartpole(self) -> None:
     self.run_align_check_entry(
       "cartpole", [
         "balance", "balance_sparse", "swingup", "swingup_sparse", "two_poles",
         "three_poles"
-      ], DmcCartpoleEnvSpec, DmcCartpoleDMEnvPool
+      ]
     )
 
   def test_cheetah(self) -> None:
-    self.run_align_check_entry(
-      "cheetah", ["run"], DmcCheetahEnvSpec, DmcCheetahDMEnvPool
-    )
+    self.run_align_check_entry("cheetah", ["run"])
 
   def test_finger(self) -> None:
-    self.run_align_check_entry(
-      "finger", ["spin", "turn_easy", "turn_hard"], DmcFingerEnvSpec,
-      DmcFingerDMEnvPool
-    )
+    self.run_align_check_entry("finger", ["spin", "turn_easy", "turn_hard"])
 
   def test_fish(self) -> None:
-    self.run_align_check_entry(
-      "fish", ["swim", "upright"], DmcFishEnvSpec, DmcFishDMEnvPool
-    )
+    self.run_align_check_entry("fish", ["swim", "upright"])
 
   def test_hopper(self) -> None:
-    self.run_align_check_entry(
-      "hopper", ["hop", "stand"], DmcHopperEnvSpec, DmcHopperDMEnvPool
-    )
+    self.run_align_check_entry("hopper", ["hop", "stand"])
 
   def test_humanoid(self) -> None:
     self.run_align_check_entry(
-      "humanoid", ["stand", "walk", "run", "run_pure_state"],
-      DmcHumanoidEnvSpec, DmcHumanoidDMEnvPool
+      "humanoid", ["stand", "walk", "run", "run_pure_state"]
     )
 
   def test_manipulator(self) -> None:
     self.run_align_check_entry(
-      "manipulator", ["bring_ball", "bring_peg", "insert_ball", "insert_peg"],
-      DmcManipulatorEnvSpec, DmcManipulatorDMEnvPool
+      "manipulator", ["bring_ball", "bring_peg", "insert_ball", "insert_peg"]
     )
 
   def test_pendulum(self) -> None:
-    self.run_align_check_entry(
-      "pendulum", ["swingup"], DmcPendulumEnvSpec, DmcPendulumDMEnvPool
-    )
+    self.run_align_check_entry("pendulum", ["swingup"])
 
   def test_point_mass(self) -> None:
-    self.run_align_check_entry(
-      "point_mass", ["easy", "hard"], DmcPointMassEnvSpec,
-      DmcPointMassDMEnvPool
-    )
+    self.run_align_check_entry("point_mass", ["easy", "hard"])
 
   def test_reacher(self) -> None:
-    self.run_align_check_entry(
-      "reacher", ["easy", "hard"], DmcReacherEnvSpec, DmcReacherDMEnvPool
-    )
+    self.run_align_check_entry("reacher", ["easy", "hard"])
 
   def test_swimmer(self) -> None:
-    self.run_align_check_entry(
-      "swimmer", ["swimmer6", "swimmer15"], DmcSwimmerEnvSpec,
-      DmcSwimmerDMEnvPool
-    )
+    self.run_align_check_entry("swimmer", ["swimmer6", "swimmer15"])
 
   def test_walker(self) -> None:
-    self.run_align_check_entry(
-      "walker", ["run", "stand", "walk"], DmcWalkerEnvSpec, DmcWalkerDMEnvPool
-    )
+    self.run_align_check_entry("walker", ["run", "stand", "walk"])
 
 
 if __name__ == "__main__":
