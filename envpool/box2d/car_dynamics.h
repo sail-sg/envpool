@@ -29,58 +29,69 @@
 
 namespace box2d {
 
+enum UserDataType {INVALID =1000, WHEEL_TYPE, TILE_TYPE};
+
 class UserData {
   public: 
+    UserDataType type{INVALID};
     b2Body* body;
-    int idx{0};
-    bool isTile{false};
+    int idx{-1};
+};
+
+class Tile: public UserData {
+  public: 
     bool tileRoadVisited{false};
-    double roadFriction;
-    std::unordered_set<UserData*> tiles;
+    float roadFriction;
 };
 
 class Wheel: public UserData {
   public: 
-    double wheel_rad{0};
-    double gas{0};
-    double brake{0};
-    double steer{0};
-    double phase{0};
-    double omega{0};
+    float wheel_rad{0};
+    float gas{0};
+    float brake{0};
+    float steer{0};
+    float phase{0};
+    float omega{0};
     b2RevoluteJoint* joint;
+    std::unordered_set<Tile*> tiles;
   // body will be wheel object
 };
 
-static const double kSize = 0.02;
-static const double kEnginePower = 100000000 * kSize * kSize;
-static const double kWheelMomentOfInertia = 4000 * kSize * kSize;
-static const double kFrictionLimit = 1000000 * kSize * kSize;
-static const double kWheelR = 27;
-static const double kWheelW = 14;
-static const double kWheelPos[8] = {-55, 80, 55, 80, -55, -82, 55, -82};
-static const double kHullPoly1[8] = {-60, 130, 60, 130, 60, 110, -60, 110};
-static const double kHullPoly2[8] = {-15, 120, 15, 120, 20, 20, -20, 20};
-static const double kHullPoly3[16] = {25, 20, 50, -10, 50, -40, 20, -90,
+
+static const float kSize = 0.02;
+static const float kEnginePower = 100000000 * kSize * kSize;
+static const float kWheelMomentOfInertia = 4000 * kSize * kSize;
+static const float kFrictionLimit = 1000000 * kSize * kSize;
+static const float kWheelR = 27;
+static const float kWheelW = 14;
+static const float kWheelPos[8] = {-55, 80, 55, 80, -55, -82, 55, -82};
+static const float kHullPoly1[8] = {-60, 130, 60, 130, 60, 110, -60, 110};
+static const float kHullPoly2[8] = {-15, 120, 15, 120, 20, 20, -20, 20};
+static const float kHullPoly3[16] = {25, 20, 50, -10, 50, -40, 20, -90,
                                       -20, -90, -50, -40, -50, -10, -25, 20};
-static const double kHullPoly4[8] = {-50, -120, 50, -120,50, -90, -50, -90};
-static const double wheelPoly[8] = {-kWheelW, +kWheelR, +kWheelW, +kWheelR,
+static const float kHullPoly4[8] = {-50, -120, 50, -120,50, -90, -50, -90};
+static const float wheelPoly[8] = {-kWheelW, +kWheelR, +kWheelW, +kWheelR,
                               +kWheelW, -kWheelR, -kWheelW, -kWheelR};
 
 
 class Car {
  public:
-  Car(std::shared_ptr<b2World>& world, double init_angle, double init_x, double init_y);
-  void gas(double g);
-  void brake(double b);
-  void steer(double s);
-  void step(double dt);
+  Car(std::shared_ptr<b2World>& world, float init_angle, float init_x, float init_y);
+  void gas(float g);
+  void brake(float b);
+  void steer(float s);
+  void step(float dt);
   void destroy();
+  float GetFuelSpent();
+  std::vector<float> GetGas();
+  std::vector<float> GetSteer();
+  std::vector<float> GetBrake();
 
  protected:
   std::shared_ptr<b2World> world_;
   b2Body* hull_;
   std::vector<Wheel*> wheels_;
-  double fuel_spent{0};
+  float fuel_spent_{0};
 
 friend class CarRacingBox2dEnv;
 };

@@ -20,6 +20,7 @@
 #include <cmath>
 #include <random>
 #include <unordered_set>
+#include <iostream>
 #include <vector>
 
 namespace box2d {
@@ -28,20 +29,30 @@ CarRacingFrictionDetector::CarRacingFrictionDetector(CarRacingBox2dEnv* env)
   : env_(env) {}
 
 void CarRacingFrictionDetector::_Contact(b2Contact* contact, bool begin) {
-    UserData* tile = nullptr;
-    UserData* obj = nullptr;
-    void* u1 = (void*)contact->GetFixtureA()->GetBody()->GetUserData().pointer;
-    void* u2 = (void*)contact->GetFixtureB()->GetBody()->GetUserData().pointer;
+    Tile* tile = nullptr;
+    Wheel* obj = nullptr;
 
-    if (u1 && static_cast<UserData*>(u1)->isTile) {
-      tile = static_cast<UserData*>(u1);
-      obj = static_cast<UserData*>(u2);
+    auto u1 = reinterpret_cast<UserData*>(contact->GetFixtureA()->GetBody()->GetUserData().pointer);
+    auto u2 = reinterpret_cast<UserData*>(contact->GetFixtureB()->GetBody()->GetUserData().pointer);
+
+    if (u1 == nullptr || u2 == nullptr) {
+      return;
     }
-    if (u2 && static_cast<UserData*>(u2)->isTile) {
-      tile = static_cast<UserData*>(u2);
-      obj = static_cast<UserData*>(u1);
+
+
+    if (u1->type != WHEEL_TYPE && u1->type != TILE_TYPE) return;
+    if (u2->type != WHEEL_TYPE && u2->type != TILE_TYPE) return;
+  
+    if (u1->type == TILE_TYPE) {
+      tile = reinterpret_cast<Tile*>(u1);
+      obj = reinterpret_cast<Wheel*>(u2);
+    } 
+    if (u2->type == TILE_TYPE) {
+      tile = reinterpret_cast<Tile*>(u2);
+      obj = reinterpret_cast<Wheel*>(u1);
     }
-    if (tile == nullptr || tile == nullptr) return;
+
+    if (tile->type != TILE_TYPE || obj->type != WHEEL_TYPE) return;
 
     if (begin) {
       obj->tiles.insert(tile);
@@ -76,9 +87,9 @@ bool CarRacingBox2dEnv::CreateTrack() {
   // Create checkpoints
   std::vector<std::array<double, 3>> checkpoints;
   for (int c = 0; c < checkpointInt; c++) {
-    double noise = 2 * M_PI * 1 / checkpointDouble /2; // self.np_random.uniform(0, 2 * M_PI * 1 / checkpointDouble)
+    double noise = 2 * M_PI * 1 / checkpointDouble / 3; // self.np_random.uniform(0, 2 * M_PI * 1 / checkpointDouble)
     double alpha = 2 * M_PI * c / checkpointDouble + noise;
-    double rad = trackRAD / 2; //self.np_random.uniform(trackRAD / 3, trackRAD);
+    double rad = trackRAD / 3 * 2; //self.np_random.uniform(trackRAD / 3, trackRAD);
 
     if (c == 0) {
         alpha = 0;
@@ -114,7 +125,7 @@ bool CarRacingBox2dEnv::CreateTrack() {
     }
     double dest_alpha, dest_x, dest_y;
     while (true) { // Find destination from checkpoints
-      bool failed = false;
+      bool failed = true;
       while (true) {
           dest_alpha = checkpoints[dest_i % checkpoints.size()][0];
           dest_x = checkpoints[dest_i % checkpoints.size()][1];
@@ -182,11 +193,10 @@ bool CarRacingBox2dEnv::CreateTrack() {
     bool pass_through_start = current_track[i][0] > start_alpha_ && current_track[i - 1][0] <= start_alpha_;
     if (pass_through_start && i2 == -1) {
       i2 = i;
-    } else if (pass_through_start and i1 == -1) {
+    } else if (pass_through_start && i1 == -1) {
       i1 = i;
       break;
     }
-
   }
 
   // if self.verbose:
@@ -196,14 +206,13 @@ bool CarRacingBox2dEnv::CreateTrack() {
 
   // todo: check current_track[i1 : i2 - 1]
   current_track = std::vector<std::array<double, 4>>(current_track.begin() + i1, current_track.begin() + i2 - 1);
-
   auto first_beta = current_track[0][1];
   auto first_perp_x =std::cos(first_beta);
   auto first_perp_y =std::sin(first_beta);
   // Length of perpendicular jump to put together head and tail
   auto well_glued_together = std::sqrt(
-      std::pow(first_perp_x * (current_track[0][2] - current_track[-1][2]), 2)
-      + std::pow(first_perp_y * (current_track[0][3] - current_track[-1][3]), 2)
+      std::pow(first_perp_x * (current_track[0][2] - current_track.back()[2]), 2)
+      + std::pow(first_perp_y * (current_track[0][3] - current_track.back()[3]), 2)
   );
   if (well_glued_together > kTrackDetailStep) {
     return false;
@@ -232,7 +241,6 @@ bool CarRacingBox2dEnv::CreateTrack() {
       static_cast<float>(x2 + kTrackWidth *std::cos(beta2)),
       static_cast<float>(y2 + kTrackWidth *std::sin(beta2))
     };
-
     b2Vec2 vertices[4] = {road1_l, road1_r, road2_r, road2_l};
     b2PolygonShape shape;
     shape.Set(vertices, 4); 
@@ -241,18 +249,19 @@ bool CarRacingBox2dEnv::CreateTrack() {
     b2BodyDef bd;
     bd.type = b2_staticBody;
 
-    UserData t;
-    t.body = world_->CreateBody(&bd);
-    t.body->CreateFixture(&fd_tile_);
+    auto* t = new Tile();
+    t->body = world_->CreateBody(&bd);
+    t->body->CreateFixture(&fd_tile_);
 
-    // t.body->SetUserData(&t);
-    t.body->GetUserData().pointer = reinterpret_cast<uintptr_t>(&t);
-    t.isTile = true;
-    t.tileRoadVisited = false;
-    t.roadFriction = 1.0;
-    t.idx = i;
-    t.body->GetFixtureList()[0].SetSensor(true);
-    roads_.push_back(&t);
+    // t->body->SetUserData(t); // recently removed from 2.4.1
+    t->body->GetUserData().pointer = reinterpret_cast<uintptr_t>(t);
+
+    t->type = TILE_TYPE;
+    t->tileRoadVisited = false;
+    t->roadFriction = 1.0;
+    t->idx = i;
+    t->body->GetFixtureList()[0].SetSensor(true);
+    roads_.push_back(t);
   }
   track_ = current_track;
   return true;
@@ -261,9 +270,7 @@ bool CarRacingBox2dEnv::CreateTrack() {
 
 void CarRacingBox2dEnv::CarRacingReset(std::mt19937* gen){
   ResetBox2d(gen);
-  double step_reward;
-  bool terminated, truncated;
-  StepBox2d(gen, 0.0, 0.0, 0.0, false, step_reward, terminated, truncated); // todo
+  StepBox2d(gen, 0.0, 0.0, 0.0, false); // todo
 }
 
 void CarRacingBox2dEnv::ResetBox2d(std::mt19937* gen) {
@@ -277,8 +284,8 @@ void CarRacingBox2dEnv::ResetBox2d(std::mt19937* gen) {
     assert(car_ != nullptr);
     car_->destroy();
   }
-
   listener_ = std::make_unique<CarRacingFrictionDetector>(this);
+  world_->SetContactListener(listener_.get());
   reward_ = 0;
   prev_reward_ = 0;
   tile_visited_count_ = 0;
@@ -291,17 +298,17 @@ void CarRacingBox2dEnv::ResetBox2d(std::mt19937* gen) {
   car_ = std::make_unique<Car>(world_, track_[0][1],track_[0][2], track_[0][3]);
 }
 
-void CarRacingBox2dEnv::CarRacingStep(std::mt19937* gen, double action0, double action1, double action2) {
-
+void CarRacingBox2dEnv::CarRacingStep(std::mt19937* gen, float action0, float action1, float action2) {
+  ++elapsed_step_;
+  StepBox2d(gen, action0, action1, action2, true);
 }
-void CarRacingBox2dEnv::StepBox2d(std::mt19937* gen, double action0, double action1, double action2,
-  bool isAction,
-  double& step_reward, bool& terminated, bool& truncated) {
+void CarRacingBox2dEnv::StepBox2d(std::mt19937* gen, float action0, float action1, float action2,
+  bool isAction) {
   assert(car_ != nullptr);
   assert(-1 <= action0 && action0 <= 1);
   assert(0 <= action1 && action1 <= 1);
   assert(0 <= action2 && action2 <= 1);
-  if (!isAction) {
+  if (isAction) {
     car_->steer(-action0);
     car_->gas(action1);
     car_->brake(action2);
@@ -310,29 +317,31 @@ void CarRacingBox2dEnv::StepBox2d(std::mt19937* gen, double action0, double acti
   car_->step(1.0 / kFps);
   world_->Step(1.0 / kFps, 6*30, 2 * 30);
 
-  step_reward = 0;
-  terminated = false;
-  truncated = false;
-
+  step_reward_ = 0;
+  done_ = false;
   // First step without action, called from reset()
-  if (!isAction) {
+  if (isAction) {
     reward_ -= 0.1;
     // We actually don't want to count fuel spent, we want car to be faster.
-    car_->fuel_spent = 0.0;
-    step_reward = reward_ - prev_reward_;
+    car_->fuel_spent_ = 0.0;
+    step_reward_ = reward_ - prev_reward_;
     prev_reward_ = reward_;
     if (tile_visited_count_ == static_cast<int>(track_.size()) || new_lap_) {
       // Truncation due to finishing lap
       // This should not be treated as a failure
       // but like a timeout
-      truncated = true;
+      // truncated = true;
+      done_ = true;
     }
     float x = car_->hull_->GetPosition().x;
     float y = car_->hull_->GetPosition().y;
+    
     if (abs(x) > kPlayfiled || abs(y) > kPlayfiled) {
-        terminated = true;
-        step_reward = -100;
+        // terminated = true;
+        done_ = true;
+        step_reward_ = -100;
     }
+    printf("x %f y %f step_reward %f\n", x, y, step_reward_);
   }
 }
 

@@ -22,18 +22,19 @@
 
 namespace box2d {
 
-b2PolygonShape GeneratePolygon(const double* array, int size) {
+b2PolygonShape GeneratePolygon(const float* array, int size) {
   b2PolygonShape polygon;
   std::vector<b2Vec2> vertices;
   for (int i = 0; i < size; i += 2) {
     vertices.push_back(b2Vec2(array[i] * kSize, array[i + 1] * kSize));
   }
-  polygon.Set(vertices.data(), size);
+  polygon.Set(vertices.data(), size / 2);
   return polygon;
 }
 
-Car::Car(std::shared_ptr<b2World>& world, double init_angle, double init_x, double init_y)
+Car::Car(std::shared_ptr<b2World>& world, float init_angle, float init_x, float init_y)
     : world_(world), hull_(nullptr){
+  printf("Car constructor %f %f %f\n", init_angle, init_x, init_y);
 
   // Create hull
   b2BodyDef bd;
@@ -55,7 +56,7 @@ Car::Car(std::shared_ptr<b2World>& world, double init_angle, double init_x, doub
   hull_->CreateFixture(&polygon4, 1.f);
 
   for (int i = 0; i < 8; i += 2) {
-    double wx = kWheelPos[i], wy = kWheelPos[i + 1];
+    float wx = kWheelPos[i], wy = kWheelPos[i + 1];
 
     b2BodyDef bd;
     bd.position.Set(init_x + wx * kSize, init_y + wy * kSize);
@@ -70,16 +71,18 @@ Car::Car(std::shared_ptr<b2World>& world, double init_angle, double init_x, doub
     fd.filter.maskBits = 0x001;
     fd.restitution = 0.0;
 
-    Wheel w;
-    w.body = world_->CreateBody(&bd);
-    w.body->CreateFixture(&fd);
-    w.wheel_rad = kWheelR * kSize;
+    auto* w = new Wheel();
+    w->type = WHEEL_TYPE;
+    w->body = world_->CreateBody(&bd);
+    w->body->CreateFixture(&fd);
+    w->wheel_rad = kWheelR * kSize;
 
     b2RevoluteJointDef rjd;
     rjd.bodyA = hull_;
-    rjd.bodyB = w.body;
+    rjd.bodyB = w->body;
     rjd.localAnchorA.Set(wx * kSize, wy * kSize);
     rjd.localAnchorB.Set(0, 0);
+    rjd.referenceAngle = rjd.bodyB->GetAngle() - rjd.bodyA->GetAngle();
     rjd.enableMotor = true;
     rjd.enableLimit = true;
     rjd.maxMotorTorque = 180 * 900 * kSize * kSize;
@@ -88,13 +91,13 @@ Car::Car(std::shared_ptr<b2World>& world, double init_angle, double init_x, doub
     rjd.lowerAngle = -0.4;
     rjd.upperAngle = +0.4;
     rjd.type = b2JointType::e_revoluteJoint;
-    w.joint = static_cast<b2RevoluteJoint*>(world_->CreateJoint(&rjd));
-    // w.body->SetUserData(&w);
-    w.body->GetUserData().pointer = reinterpret_cast<uintptr_t>(&w);
-    wheels_.push_back(&w);
+    w->joint = static_cast<b2RevoluteJoint*>(world_->CreateJoint(&rjd));
+    // w->body->SetUserData(&w);
+    w->body->GetUserData().pointer = reinterpret_cast<uintptr_t>(w);
+    wheels_.push_back(w);
   }
 }
-void Car::gas(double g) {
+void Car::gas(float g) {
   if (g < 0) g = 0;
   if (g > 1) g = 1;
   for (int i = 2; i < 4; i++) {
@@ -104,27 +107,27 @@ void Car::gas(double g) {
     w->gas += diff;
   }
 }
-void Car::brake(double b) {
+
+void Car::brake(float b) {
   for (auto& w : wheels_) {
     w->brake = b;
   }
 }
-void Car::steer(double s) {
+void Car::steer(float s) {
   wheels_[0]->steer = s;
   wheels_[1]->steer = s;
 }
-void Car::step(double dt) {
+void Car::step(float dt) {
   for (auto w : wheels_) {
     // Steer each wheel
-    double dir = (w->steer - w->joint->GetJointAngle() > 0) ? 1 : -1;
-    double val = abs(w->steer - w->joint->GetJointAngle());
+    float dir = (w->steer - w->joint->GetJointAngle() > 0) ? 1 : -1;
+    float val = abs(w->steer - w->joint->GetJointAngle());
     w->joint->SetMotorSpeed(dir * std::min(50.0 * val, 3.0));
     // Position => friction_limit
-    auto friction_limit = kFrictionLimit * 0.6;  // Grass friction if no tile
+    float friction_limit = kFrictionLimit * 0.6;  // Grass friction if no tile
     for (auto t : w->tiles) {
       friction_limit =
-          std::max(friction_limit,
-                   static_cast<double>(kFrictionLimit * t->roadFriction));
+          std::max(friction_limit, kFrictionLimit * t->roadFriction);
     }
     // Force
     auto forw = w->body->GetWorldVector({0, 1});
@@ -139,8 +142,7 @@ void Car::step(double dt) {
     // add small coef not to divide by zero
     w->omega += (dt * kEnginePower * w->gas / kWheelMomentOfInertia /
                  (abs(w->omega) + 5.0));
-    fuel_spent += dt * kEnginePower * w->gas;
-
+    fuel_spent_ += dt * kEnginePower * w->gas;
     if (w->brake >= 0.9) {
       w->omega = 0;
     } else if (w->brake > 0) {
@@ -194,6 +196,22 @@ void Car::destroy() {
     world_->DestroyBody(w->body);
   }
   wheels_.clear();
+}
+
+float Car::GetFuelSpent() {
+  return fuel_spent_;
+}
+
+std::vector<float> Car::GetGas() {
+  return {wheels_[2]->gas, wheels_[3]->gas};
+}
+
+std::vector<float> Car::GetSteer() {
+  return {wheels_[0]->steer, wheels_[1]->steer};
+}
+
+std::vector<float> Car::GetBrake() {
+  return {wheels_[0]->brake, wheels_[1]->brake, wheels_[2]->brake, wheels_[3]->brake};
 }
 
 }  // namespace box2d

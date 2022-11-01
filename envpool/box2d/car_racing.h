@@ -21,6 +21,7 @@
 #include "car_racing_env.h"
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
+#include <iostream> // todo remove
 
 namespace box2d {
 
@@ -32,7 +33,16 @@ class CarRacingEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
+#ifdef ENVPOOL_TEST
+    return MakeDict("obs"_.Bind(Spec<uint8_t>({96, 96, 3}, {0, 255})),
+                    "info:tile_visited_count"_.Bind(Spec<int>({-1})),
+                    "info:car_fuel_spent"_.Bind(Spec<float>({-1})),
+                    "info:car_gas"_.Bind(Spec<float>({-1, 2})),
+                    "info:car_steer"_.Bind(Spec<float>({-1, 2})),
+                    "info:car_brake"_.Bind(Spec<float>({-1, 4})));
+#else
     return MakeDict("obs"_.Bind(Spec<uint8_t>({96, 96, 3}, {0, 255})));
+#endif
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -52,21 +62,33 @@ class CarRacingEnv : public Env<CarRacingEnvSpec>,
   bool IsDone() override { return done_; }
 
   void Reset() override {
+    printf("Env Reset\n");
     CarRacingReset(&gen_);
     WriteState();
   }
 
   void Step(const Action& action) override {
+    printf("Env Step\n");
     CarRacingStep(&gen_, action["action"_][0], action["action"_][1],
                   action["action"_][2]);
+    printf("Env done\n");
     WriteState();
   }
 
  private:
   void WriteState() {
     State state = Allocate();
-    state["reward"_] = reward_;
-    // state["obs"_].Assign(obs_.begin(), obs_.size());
+    state["reward"_] = step_reward_;
+#ifdef ENVPOOL_TEST
+    state["info:tile_visited_count"_] = tile_visited_count_;
+    state["info:car_fuel_spent"_] = car_->GetFuelSpent();
+    auto car_gas = car_->GetGas();
+    auto car_steer = car_->GetSteer();
+    auto car_brake = car_->GetBrake();
+    state["info:car_gas"_].Assign(car_gas.data(), car_gas.size());
+    state["info:car_steer"_].Assign(car_steer.data(), car_steer.size());
+    state["info:car_brake"_].Assign(car_brake.data(), car_brake.size());
+#endif
   }
 };
 

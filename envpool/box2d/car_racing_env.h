@@ -63,8 +63,9 @@ class CarRacingBox2dEnv{
 
  protected:
   int max_episode_steps_, elapsed_step_{0};
-  double reward_{0};
-  double prev_reward_{0};
+  float reward_{0};
+  float prev_reward_{0};
+  float step_reward_{0};
   bool done_{false};
 
   std::unique_ptr<CarRacingFrictionDetector> listener_;
@@ -80,13 +81,13 @@ class CarRacingBox2dEnv{
  public:
   CarRacingBox2dEnv(int max_episode_steps);
   void CarRacingReset(std::mt19937* gen);
-  void CarRacingStep(std::mt19937* gen, double action0, double action1, double action2);
+  void CarRacingStep(std::mt19937* gen, float action0, float action1, float action2);
 
  private:
   bool CreateTrack();
   void ResetBox2d(std::mt19937* gen);
-  void StepBox2d(std::mt19937* gen, double action0, double action1, double action2,
-  bool isAction, double& step_reward, bool& terminated, bool& truncated);
+  void StepBox2d(std::mt19937* gen, float action0, float action1, float action2,
+  bool isAction);
 
 
 };
