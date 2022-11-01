@@ -23,6 +23,7 @@
 #include <memory>
 #include <random>
 #include <string>
+#include <array>
 
 #include "envpool/mujoco/dmc/utils.h"
 

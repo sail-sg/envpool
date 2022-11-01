@@ -33,7 +33,6 @@ cc_library(
     ],
     hdrs = ["zlib.h"],
     copts = [
-        "-Wno-shift-negative-value",
         "-DZ_HAVE_UNISTD_H",
     ],
     includes = ["."],

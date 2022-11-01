@@ -52,7 +52,6 @@ cc_library(
     hdrs = glob(["gdtoa/*.h"]),
     copts = [
         "-Wall",
-        "-Wextra",
         "-DINFNAN_CHECK",
         "-DMULTIPLE_THREADS",
         "-include $(execpath @glibc_version_header//:glibc_2_17)",
@@ -78,7 +77,6 @@ cc_library(
     copts = [
         "-DBZ_NO_STDIO",
         "-Wall",
-        "-Wextra",
         "-fomit-frame-pointer",
         "-include $(execpath @glibc_version_header//:glibc_2_17)",
     ],
@@ -120,7 +118,6 @@ cc_library(
     copts = [
         "-D_7ZIP_ST",
         "-Wall",
-        "-Wextra",
         "-fomit-frame-pointer",
         "-D_7ZIP_PPMD_SUPPPORT",
         "-include $(execpath @glibc_version_header//:glibc_2_17)",
@@ -211,7 +208,6 @@ cc_library(
     copts = [
         "-DNEED_ITOA=1",
         "-Wall",
-        "-Wno-pointer-sign",
         "-Wno-uninitialized",
         "-Wno-unused-but-set-variable",
         "-include $(execpath @glibc_version_header//:glibc_2_17)",
