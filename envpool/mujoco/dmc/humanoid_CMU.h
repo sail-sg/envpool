@@ -40,7 +40,7 @@ std::string GetHumanoidCMUXML(const std::string& base_path,
 class HumanoidCMUEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(10),
+    return MakeDict("frame_skip"_.Bind(10),
                     "task_name"_.Bind(std::string("stand")));
   }
   template <typename Config>

@@ -14,7 +14,7 @@
 """Test Vizdoom env by well-trained RL agents."""
 
 import os
-from typing import Optional, Tuple, no_type_check
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
@@ -23,8 +23,9 @@ from absl.testing import absltest
 from tianshou.data import Batch
 from tianshou.policy import C51Policy
 
+import envpool.vizdoom.registration  # noqa: F401
 from envpool.atari.atari_network import C51
-from envpool.vizdoom import VizdoomEnvSpec, VizdoomGymEnvPool
+from envpool.registration import make_gym
 
 # try:
 #   import cv2
@@ -37,7 +38,6 @@ class _VizdoomPretrainTest(absltest.TestCase):
   def get_path(self, path: str) -> str:
     return os.path.join("envpool", "vizdoom", "maps", path)
 
-  @no_type_check
   def eval_c51(
     self,
     task: str,
@@ -47,6 +47,7 @@ class _VizdoomPretrainTest(absltest.TestCase):
     cfg_path: Optional[str] = None,
     reward_config: Optional[dict] = None,
   ) -> Tuple[np.ndarray, np.ndarray]:
+    task_id = "".join([g.capitalize() for g in task.split("_")]) + "-v1"
     kwargs = {
       "num_envs": num_envs,
       "seed": seed,
@@ -59,9 +60,7 @@ class _VizdoomPretrainTest(absltest.TestCase):
       kwargs.update(cfg_path=cfg_path)
     if reward_config is not None:
       kwargs.update(reward_config=reward_config)
-    env = VizdoomGymEnvPool(
-      VizdoomEnvSpec(VizdoomEnvSpec.gen_config(**kwargs))
-    )
+    env = make_gym(task_id, **kwargs)
 
     state_shape = env.observation_space.shape
     action_shape = env.action_space.n
@@ -69,7 +68,7 @@ class _VizdoomPretrainTest(absltest.TestCase):
     np.random.seed(seed)
     torch.manual_seed(seed)
     logging.info(state_shape)
-    net = C51(*state_shape, action_shape, 51, device)
+    net = C51(*state_shape, action_shape, 51, device)  # type: ignore
     optim = torch.optim.Adam(net.parameters(), lr=1e-4)
 
     policy = C51Policy(

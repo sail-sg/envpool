@@ -22,19 +22,12 @@ from absl import logging
 from absl.testing import absltest
 from pygame import gfxdraw
 
-from envpool.box2d import (
-  BipedalWalkerEnvSpec,
-  BipedalWalkerGymEnvPool,
-  LunarLanderContinuousEnvSpec,
-  LunarLanderContinuousGymEnvPool,
-  LunarLanderDiscreteEnvSpec,
-  LunarLanderDiscreteGymEnvPool,
-)
+import envpool.box2d.registration  # noqa: F401
+from envpool.registration import make_gym
 
 
 class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
 
-  @no_type_check
   def run_space_check(self, env0: gym.Env, env1: Any) -> None:
     """Check observation_space and action space."""
     obs0, obs1 = env0.observation_space, env1.observation_space
@@ -48,22 +41,16 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
 
   def test_bipedal_walker_space(self) -> None:
     env0 = gym.make("BipedalWalker-v3")
-    env1 = BipedalWalkerGymEnvPool(
-      BipedalWalkerEnvSpec(BipedalWalkerEnvSpec.gen_config())
-    )
+    env1 = make_gym("BipedalWalker-v3")
     self.run_space_check(env0, env1)
 
   def test_lunar_lander_space(self) -> None:
     env0 = gym.make("LunarLander-v2")
-    env1 = LunarLanderDiscreteGymEnvPool(
-      LunarLanderDiscreteEnvSpec(LunarLanderDiscreteEnvSpec.gen_config())
-    )
+    env1 = make_gym("LunarLander-v2")
     self.run_space_check(env0, env1)
 
     env0 = gym.make("LunarLanderContinuous-v2")
-    env1 = LunarLanderContinuousGymEnvPool(
-      LunarLanderContinuousEnvSpec(LunarLanderContinuousEnvSpec.gen_config())
-    )
+    env1 = make_gym("LunarLanderContinuous-v2")
     self.run_space_check(env0, env1)
 
   @staticmethod
@@ -94,17 +81,9 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
 
   def solve_lunar_lander(self, num_envs: int, continuous: bool) -> None:
     if continuous:
-      env = LunarLanderContinuousGymEnvPool(
-        LunarLanderContinuousEnvSpec(
-          LunarLanderContinuousEnvSpec.gen_config(num_envs=num_envs)
-        )
-      )
+      env = make_gym("LunarLanderContinuous-v2", num_envs=num_envs)
     else:
-      env = LunarLanderDiscreteGymEnvPool(
-        LunarLanderDiscreteEnvSpec(
-          LunarLanderDiscreteEnvSpec.gen_config(num_envs=num_envs)
-        )
-      )
+      env = make_gym("LunarLander-v2", num_envs=num_envs)
     # each env run two episodes
     for _ in range(2):
       env_id = np.arange(num_envs)
@@ -207,16 +186,11 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
   def solve_bipedal_walker(
     self, num_envs: int, hardcore: bool, render: bool
   ) -> None:
-    max_episode_steps = 2000 if hardcore else 1600
-    env = BipedalWalkerGymEnvPool(
-      BipedalWalkerEnvSpec(
-        BipedalWalkerEnvSpec.gen_config(
-          num_envs=num_envs,
-          hardcore=hardcore,
-          max_episode_steps=max_episode_steps,
-        )
-      )
-    )
+    if hardcore:
+      env = make_gym("BipedalWalkerHardcore-v3", num_envs=num_envs)
+    else:
+      env = make_gym("BipedalWalker-v3", num_envs=num_envs)
+    max_episode_steps = env.spec.config.max_episode_steps
     hs = np.array(
       [
         {

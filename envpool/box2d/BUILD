@@ -40,12 +40,21 @@ py_library(
     deps = ["//envpool/python:api"],
 )
 
+py_library(
+    name = "box2d_registration",
+    srcs = ["registration.py"],
+    deps = [
+        "//envpool:registration",
+    ],
+)
+
 py_test(
     name = "box2d_deterministic_test",
     size = "enormous",
     srcs = ["box2d_deterministic_test.py"],
     deps = [
         ":box2d",
+        ":box2d_registration",
         requirement("absl-py"),
         requirement("numpy"),
     ],
@@ -57,18 +66,11 @@ py_test(
     srcs = ["box2d_correctness_test.py"],
     deps = [
         ":box2d",
+        ":box2d_registration",
         requirement("absl-py"),
         requirement("gym"),
         requirement("box2d"),
         requirement("pygame"),
         requirement("numpy"),
-    ],
-)
-
-py_library(
-    name = "box2d_registration",
-    srcs = ["registration.py"],
-    deps = [
-        "//envpool:registration",
     ],
 )
