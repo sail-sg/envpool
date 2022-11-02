@@ -7,7 +7,7 @@ import numpy as np
 
 import gym
 from gym import spaces
-from gym.envs.box2d.car_dynamics import Car
+from car_dynamics import Car
 from gym.error import DependencyNotInstalled, InvalidAction
 from gym.utils import EzPickle
 
@@ -313,8 +313,10 @@ class CarRacing(gym.Env, EzPickle):
         track = []
         no_freeze = 2500
         visited_other_side = False
+        index = 0
         while True:
             alpha = math.atan2(y, x)
+            index+= 1
             if visited_other_side and alpha > 0:
                 laps += 1
                 visited_other_side = False
@@ -374,6 +376,7 @@ class CarRacing(gym.Env, EzPickle):
             i -= 1
             if i == 0:
                 return False  # Failed
+            
             pass_through_start = (
                 track[i][0] > self.start_alpha and track[i - 1][0] <= self.start_alpha
             )
@@ -384,6 +387,8 @@ class CarRacing(gym.Env, EzPickle):
                 break
         if self.verbose:
             print("Track generation: %i..%i -> %i-tiles track" % (i1, i2, i2 - i1))
+
+
         assert i1 != -1
         assert i2 != -1
 
@@ -404,6 +409,7 @@ class CarRacing(gym.Env, EzPickle):
         # Remove Red-white border on hard turns
  
         # Create tiles
+        print("Create tiles")
         for i in range(len(track)):
             alpha1, beta1, x1, y1 = track[i]
             alpha2, beta2, x2, y2 = track[i - 1]
@@ -425,6 +431,7 @@ class CarRacing(gym.Env, EzPickle):
             )
             vertices = [road1_l, road1_r, road2_r, road2_l]
             self.fd_tile.shape.vertices = vertices
+            print("i", i)
             t = self.world.CreateStaticBody(fixtures=self.fd_tile)
             t.userData = t
             c = 0.01 * (i % 3) * 255
@@ -479,6 +486,7 @@ class CarRacing(gym.Env, EzPickle):
         return self.step(None)[0], {}
 
     def step(self, action: Union[np.ndarray, int]):
+        print("[step]")
         assert self.car is not None
         if action is not None:
             if self.continuous:
@@ -513,6 +521,7 @@ class CarRacing(gym.Env, EzPickle):
                 # This should not be treated as a failure
                 # but like a timeout
                 truncated = True
+                print("truncated")
             x, y = self.car.hull.position
             if abs(x) > PLAYFIELD or abs(y) > PLAYFIELD:
                 terminated = True
@@ -528,22 +537,51 @@ class CarRacing(gym.Env, EzPickle):
 
 
 if __name__ == "__main__":
-    a = np.array([0.0, 1.0, 0.0])
+    actions = np.array([
+        [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, -0.3, 0.0],
+        [0.1, 0.0, 0.0], [0.1, 0.0, 0.0], [0.0, 1.0, 0.0],
+        [0.0, -1.0, 0.0], [0.0, 0.0, 0.3], [0.0, 0.4, 0.0],
+        [0.0, 1.0, 0.0], [0.0, -0.4, 0.0], [0.0, -0.3, 0.0],
+        [1.0, 0.0, 0.0], [0.0, 0.5, 0.0], [0.0, 0.0, 0.4],
+        [0.0, 1.0, 1.0], [0.0, 0.0, 0.0], [0.0, -0.3, 0.0]
+    ])
     env = CarRacing("human")
 
-    isopen = True
-    while isopen:
-        env.reset()
-        total_reward = 0.0
-        steps = 0
-        restart = False
-        while True:
-            s, r, terminated, truncated, info = env.step(a)
-            total_reward += r
-            if steps % 200 == 0 or terminated or truncated:
-                print("\naction " + str([f"{x:+0.2f}" for x in a]))
-                print(f"step {steps} total_reward {total_reward:+0.2f}")
-            steps += 1
-            if terminated or truncated or restart or isopen is False:
-                break
+    # isopen = True
+    # env.reset()
+    # print("Env Reset done!")
+    # while isopen:
+    #     env.reset()
+    #     total_reward = 0.0
+    #     steps = 0
+    #     restart = False
+    #     while True:
+    #         s, r, terminated, truncated, info = env.step(a)
+    #         total_reward += r
+    #         if steps % 200 == 0 or terminated or truncated:
+    #             print("\naction " + str([f"{x:+0.2f}" for x in a]))
+    #             print(f"step {steps} total_reward {total_reward:+0.2f}")
+    #         steps += 1
+    #         if terminated or truncated or restart or isopen is False:
+    #             break
+
+
+    env.reset()
+    total_reward = 0.0
+    steps = 0
+    restart = False
+    while steps < 10:
+        action = actions[steps % actions.shape[0]]
+        print("episode_step", steps)
+        s, r, terminated, truncated, info = env.step(action)
+        total_reward += r
+        print("reward", total_reward, r)
+        print("state", s)
+        print("info", info)
+        if steps % 200 == 0 or terminated or truncated:
+            print("\naction " + str([f"{x:+0.2f}" for x in action]))
+            print(f"step {steps} total_reward {total_reward:+0.2f}")
+        steps += 1
+        if terminated or truncated or restart:
+            break
     env.close()

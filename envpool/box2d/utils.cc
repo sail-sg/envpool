@@ -29,5 +29,8 @@ float Sign(double val, double eps) {
   }
   return 0;
 }
+std::array<float, 2> RotateRad(std::array<float, 2> vec, float angle) {
+  return {std::cos(angle) * vec[0] - std::sin(angle) * vec[1], std::sin(angle) * vec[0] + std::cos(angle) * vec[1]};
+}
 
 }  // namespace box2d

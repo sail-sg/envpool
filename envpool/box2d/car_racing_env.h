@@ -20,6 +20,7 @@
 
 #include <box2d/box2d.h>
 #include "car_dynamics.h"
+#include "utils.h"
 
 #include <cmath>
 #include <random>
@@ -38,9 +39,11 @@ class CarRacingFrictionDetector : public b2ContactListener {
 
  protected:
   CarRacingBox2dEnv* env_;
-  double lap_complete_percent_{0.95};
+  float lap_complete_percent_{0.95};
   void _Contact(b2Contact* contact, bool begin);
 };
+
+enum RenderMode{HUMAN, RGB_ARRAY, STATE_PIXELS};
 
 class CarRacingBox2dEnv{
   const int stateW = 96;
@@ -49,15 +52,18 @@ class CarRacingBox2dEnv{
   const int videoH = 400;
   const int windowW = 1000;
   const int windowH = 800;
-  const double kScale = 6.0;  // Track scale
-  const double kFps = 50; // Frames per second
-  const double trackRAD =
+  const float kScale = 6.0;  // Track scale
+  const float kFps = 50; // Frames per second
+  const float kZoom = 2.7;
+  const float trackRAD =
       900 / kScale;  // Track is heavily morphed circle with this radius
-  const double kPlayfiled = 2000 / kScale;  // Game over boundary
-  const double kTrackTurnRate = 0.31;
-  const double kTrackDetailStep =21 / kScale;
-  const double kTrackWidth = 40 / kScale;
-
+  const float kPlayfiled = 2000 / kScale;  // Game over boundary
+  const float kTrackTurnRate = 0.31;
+  const float kTrackDetailStep =21 / kScale;
+  const float kTrackWidth = 40 / kScale;
+  
+  const float kGrassDim = kPlayfiled / 20;
+  const float kMaxShapeDim = std::max(kGrassDim, std::max(kTrackWidth, kTrackDetailStep)) * 4 * kZoom * kScale;
 
   friend class CarRacingFrictionDetector;
 
@@ -73,13 +79,20 @@ class CarRacingBox2dEnv{
   std::unique_ptr<Car> car_;
   int tile_visited_count_{0};
   float start_alpha_{0};
+  float t_{0};
   bool new_lap_{false};
   b2FixtureDef fd_tile_;
-  std::vector<std::array<double, 4>> track_;
+  std::vector<std::array<float, 4>> track_;
   std::vector<UserData*> roads_;
+  // pair of position and color
+  std::vector<std::pair<std::array<b2Vec2, 4>, std::array<float, 3>>> roads_poly_;
   
  public:
   CarRacingBox2dEnv(int max_episode_steps);
+  void Render(RenderMode mode);
+  void RenderRoad(float zoom, std::array<float, 2>& translation, float angle);
+  void DrawColoredPolygon(std::array<std::array<float, 2>, 4>& field,
+    const int color[3],float zoom, std::array<float, 2>& translation, float angle, bool clip=true);
   void CarRacingReset(std::mt19937* gen);
   void CarRacingStep(std::mt19937* gen, float action0, float action1, float action2);
 

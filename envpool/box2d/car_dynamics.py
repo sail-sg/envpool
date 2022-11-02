@@ -48,6 +48,7 @@ WHEEL_WHITE = (77, 77, 77)
 
 class Car:
     def __init__(self, world, init_angle, init_x, init_y):
+        print("Car constructor", init_angle, init_x, init_y)
         self.world: Box2D.b2World = world
         self.hull: Box2D.b2Body = self.world.CreateDynamicBody(
             position=(init_x, init_y),
@@ -161,6 +162,7 @@ class Car:
         self.wheels[1].steer = s
 
     def step(self, dt):
+        print("car step!!!!")
         for w in self.wheels:
             # Steer each wheel
             dir = np.sign(w.steer - w.joint.angle)

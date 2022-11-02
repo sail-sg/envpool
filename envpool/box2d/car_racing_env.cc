@@ -53,6 +53,8 @@ void CarRacingFrictionDetector::_Contact(b2Contact* contact, bool begin) {
 
     if (tile->type != TILE_TYPE || obj->type != WHEEL_TYPE) return;
 
+    tile->RoadColor = {kRoadColor[0]/255, kRoadColor[1]/255, kRoadColor[2]/255};
+    
     if (begin) {
       obj->tiles.insert(tile);
       if (!tile->tileRoadVisited) {
@@ -72,8 +74,6 @@ void CarRacingFrictionDetector::_Contact(b2Contact* contact, bool begin) {
 CarRacingBox2dEnv::CarRacingBox2dEnv(int max_episode_steps)
       : max_episode_steps_(max_episode_steps),
         world_(new b2World(b2Vec2(0.0, 0.0))) {
-       world_->SetContactListener(listener_.get());
-
   b2PolygonShape shape;
   b2Vec2 vertices[4] = {b2Vec2(0, 0), b2Vec2(1, 0), b2Vec2(1, -1), b2Vec2(0, -1)};
   shape.Set(vertices, 4); 
@@ -82,38 +82,38 @@ CarRacingBox2dEnv::CarRacingBox2dEnv(int max_episode_steps)
 
 bool CarRacingBox2dEnv::CreateTrack() {
   int checkpointInt = 12;
-  double checkpointDouble = 12;
+  float checkpointFloat = 12;
   // Create checkpoints
-  std::vector<std::array<double, 3>> checkpoints;
+  std::vector<std::array<float, 3>> checkpoints;
   for (int c = 0; c < checkpointInt; c++) {
-    double noise = 2 * M_PI * 1 / checkpointDouble / 3; // self.np_random.uniform(0, 2 * M_PI * 1 / checkpointDouble)
-    double alpha = 2 * M_PI * c / checkpointDouble + noise;
-    double rad = trackRAD / 3 * 2; //self.np_random.uniform(trackRAD / 3, trackRAD);
+    float noise = 2 * M_PI * 1 / checkpointFloat / 3; // self.np_random.uniform(0, 2 * M_PI * 1 / checkpointFloat)
+    float alpha = 2 * M_PI * c / checkpointFloat + noise;
+    float rad = trackRAD / 3 * 2; //self.np_random.uniform(trackRAD / 3, trackRAD);
 
     if (c == 0) {
         alpha = 0;
         rad = 1.5 * trackRAD;
     }
     if (c == checkpointInt - 1) {
-        alpha = 2 * M_PI * c / checkpointDouble;
-        start_alpha_ = 2 * M_PI * (-0.5) / checkpointDouble;
+        alpha = 2 * M_PI * c / checkpointFloat;
+        start_alpha_ = 2 * M_PI * (-0.5) / checkpointFloat;
         rad = 1.5 * trackRAD;
     }
-    std::array<double, 3> cp = {alpha, rad *std::cos(alpha), rad * std::sin(alpha)};
+    std::array<float, 3> cp = {alpha, rad *std::cos(alpha), rad * std::sin(alpha)};
     checkpoints.emplace_back(cp);
   }
   roads_.clear();
   // Go from one checkpoint to another to create track
-  double x = 1.5 * trackRAD;
-  double y = 0;
-  double beta = 0;
+  float x = 1.5 * trackRAD;
+  float y = 0;
+  float beta = 0;
   int dest_i = 0;
   int laps = 0;
-  std::vector<std::array<double, 4>> current_track;
+  std::vector<std::array<float, 4>> current_track;
   int no_freeze = 2500;
   bool visited_other_side = false;
   while (true) {
-    double alpha = std::atan2(y, x);
+    float alpha = std::atan2(y, x);
     if (visited_other_side && alpha > 0) {
         laps++;
         visited_other_side = false;
@@ -122,7 +122,7 @@ bool CarRacingBox2dEnv::CreateTrack() {
       visited_other_side = true;
       alpha += 2 * M_PI;
     }
-    double dest_alpha, dest_x, dest_y;
+    float dest_alpha, dest_x, dest_y;
     while (true) { // Find destination from checkpoints
       bool failed = true;
       while (true) {
@@ -145,31 +145,31 @@ bool CarRacingBox2dEnv::CreateTrack() {
       alpha -= 2 * M_PI;
       continue;
     }
-    double r1x =std::cos(beta);
-    double r1y =std::sin(beta);
-    double p1x = -r1y;
-    double p1y = r1x;
-    double dest_dx = dest_x - x;  // vector towards destination
-    double dest_dy = dest_y - y;
+    float r1x =std::cos(beta);
+    float r1y =std::sin(beta);
+    float p1x = -r1y;
+    float p1y = r1x;
+    float dest_dx = dest_x - x;  // vector towards destination
+    float dest_dy = dest_y - y;
     // destination vector projected on rad:
-    double proj = r1x * dest_dx + r1y * dest_dy;
+    float proj = r1x * dest_dx + r1y * dest_dy;
     while (beta - alpha > 1.5 * M_PI) {
       beta -= 2 * M_PI;
     }
     while (beta - alpha < -1.5 * M_PI) {
       beta += 2 * M_PI;
     }
-    double prev_beta = beta;
+    float prev_beta = beta;
     proj *= kScale;
     if (proj > 0.3) {
-      beta -= std::min(kTrackTurnRate, abs(0.001 * proj));
+      beta -= std::min(kTrackTurnRate, abs(0.001f * proj));
     }
     if (proj < -0.3) {
-      beta += std::min(kTrackTurnRate, abs(0.001 * proj));
+      beta += std::min(kTrackTurnRate, abs(0.001f * proj));
     } 
     x += p1x * kTrackDetailStep;
     y += p1y * kTrackDetailStep;
-    std::array<double, 4> track = {alpha, prev_beta * 0.5 + beta * 0.5, x, y};
+    std::array<float, 4> track = {alpha, prev_beta * 0.5f + beta * 0.5f, x, y};
     current_track.emplace_back(track);
     if (laps > 4) {
       break;
@@ -204,7 +204,7 @@ bool CarRacingBox2dEnv::CreateTrack() {
   assert(i2 != -1);
 
   // todo: check current_track[i1 : i2 - 1]
-  current_track = std::vector<std::array<double, 4>>(current_track.begin() + i1, current_track.begin() + i2 - 1);
+  current_track = std::vector<std::array<float, 4>>(current_track.begin() + i1, current_track.begin() + i2 - 1);
   auto first_beta = current_track[0][1];
   auto first_perp_x =std::cos(first_beta);
   auto first_perp_y =std::sin(first_beta);
@@ -241,6 +241,7 @@ bool CarRacingBox2dEnv::CreateTrack() {
       static_cast<float>(y2 + kTrackWidth *std::sin(beta2))
     };
     b2Vec2 vertices[4] = {road1_l, road1_r, road2_r, road2_l};
+    std::array<b2Vec2, 4> roads_vertices = {road1_l, road1_r, road2_r, road2_l};
     b2PolygonShape shape;
     shape.Set(vertices, 4); 
     fd_tile_.shape = &shape;
@@ -255,12 +256,16 @@ bool CarRacingBox2dEnv::CreateTrack() {
     // t->body->SetUserData(t); // recently removed from 2.4.1
     t->body->GetUserData().pointer = reinterpret_cast<uintptr_t>(t);
 
+    float c = 0.01 * (i % 3) * 255;
+    t->RoadColor = {kRoadColor[0] + c, kRoadColor[1] + c, kRoadColor[2] + c};
+
     t->type = TILE_TYPE;
     t->tileRoadVisited = false;
     t->roadFriction = 1.0;
     t->idx = i;
     t->body->GetFixtureList()[0].SetSensor(true);
     roads_.push_back(t);
+    roads_poly_.emplace_back(std::make_pair(roads_vertices, t->RoadColor));
   }
   track_ = current_track;
   return true;
@@ -289,6 +294,8 @@ void CarRacingBox2dEnv::ResetBox2d(std::mt19937* gen) {
   prev_reward_ = 0;
   tile_visited_count_ = 0;
   new_lap_ = false;
+  t_ = 0;
+  roads_poly_.clear();
 
   bool success = false;
   while (!success) {
@@ -315,6 +322,7 @@ void CarRacingBox2dEnv::StepBox2d(std::mt19937* gen, float action0, float action
 
   car_->step(1.0 / kFps);
   world_->Step(1.0 / kFps, 6*30, 2 * 30);
+  t_ += 1.0 / kFps;
 
   step_reward_ = 0;
   done_ = false;
@@ -342,6 +350,128 @@ void CarRacingBox2dEnv::StepBox2d(std::mt19937* gen, float action0, float action
     }
     printf("x %f y %f step_reward %f\n", x, y, step_reward_);
   }
+  Render(HUMAN);
 }
 
+void CarRacingBox2dEnv::DrawColoredPolygon(std::array<std::array<float, 2>, 4>& field,
+                                           const int  color[3],
+                                           float zoom, std::array<float, 2>& translation, float angle, bool clip) {
+
+  // This checks if the polygon is out of bounds of the screen, and we skip drawing if so.
+  // Instead of calculating exactly if the polygon and screen overlap,
+  // we simply check if the polygon is in a larger bounding box whose dimension
+  // is greater than the screen by MAX_SHAPE_DIM, which is the maximum
+  // diagonal length of an environment object
+  
+  bool exist = false;
+  for (int i = 0; i < 4; i++) {
+    field[i] = RotateRad(field[i], angle);
+    field[i] = {field[i][0] * zoom + translation[0], field[i][1] * zoom + translation[1]};
+    if (-kMaxShapeDim <= field[i][0] && field[i][0] <= windowW + kMaxShapeDim &&
+        -kMaxShapeDim <= field[i][1] && field[i][1] <= windowH + kMaxShapeDim) {
+      exist = true;
+    }
+  }
+
+  if (!clip || exist) {
+    // gfxdraw.aapolygon(self.surf, poly, color)
+    // gfxdraw.filled_polygon(self.surf, poly, color)
+  }
+
+}
+
+void CarRacingBox2dEnv::RenderRoad(float zoom, std::array<float, 2>& translation, float angle) {
+  std::array<std::array<float, 2>, 4> field;
+  field[0] = {kPlayfiled, kPlayfiled};
+  field[1] = {kPlayfiled, -kPlayfiled};
+  field[2] = {-kPlayfiled, -kPlayfiled};
+  field[3] = {-kPlayfiled, kPlayfiled};
+
+  // draw background
+  DrawColoredPolygon(field, kBgColor, zoom, translation, angle, false);
+
+  // draw grass patches
+  std::vector<std::array<std::array<float, 2>, 4>> grass;
+  for (int x = -20; x < 20; x += 2) {
+    for (int y = -20; y < 20; y += 2) {
+      std::array<std::array<float, 2>, 4> grass;
+
+      grass[0] = {kGrassDim * x + kGrassDim, kGrassDim * y + 0};
+      grass[1] = {kGrassDim * x + 0, kGrassDim * y + 0};
+      grass[2] = {kGrassDim * x + 0, kGrassDim * y + kGrassDim};
+      grass[3] = {kGrassDim * x + kGrassDim, kGrassDim * y + kGrassDim};
+      DrawColoredPolygon(grass, kGrassColor, zoom, translation, angle);
+    }
+  }
+
+  // draw road
+  for (auto& [poly, color]: roads_poly_) {
+    std::array<std::array<float, 2>, 4> field;
+    field[0] = {poly[0].x, poly[0].y};
+    field[1] = {poly[1].x, poly[1].y};
+    field[2] = {poly[2].x, poly[2].y};
+    field[3] = {poly[3].x, poly[3].y};
+
+    const int c[3] = {static_cast<int>(color[0]), static_cast<int>(color[1]), static_cast<int>(color[2])};
+    DrawColoredPolygon(field, c, zoom, translation, angle);
+  }
+}
+void CarRacingBox2dEnv::Render(RenderMode mode){
+
+  // if self.screen is None and mode == "human":
+  //     pygame.init()
+  //     pygame.display.init()
+  //     self.screen = pygame.display.set_mode((WINDOW_W, WINDOW_H))
+  // if self.clock is None:
+  //     self.clock = pygame.time.Clock()
+
+  // if "t" not in self.__dict__:
+  //     return  # reset() not called yet
+
+  // self.surf = pygame.Surface((WINDOW_W, WINDOW_H))
+
+  assert(car_ != nullptr);
+  // computing transformations
+  float angle = -car_->hull_->GetAngle();
+  printf("angle %f\n", angle);
+  // # Animating first second zoom.
+  float zoom = 0.1 * kScale * std::max(1 - t_, 0.f) + kZoom * kScale * std::min(t_, 1.f);
+  printf("zoom %f\n", zoom);
+  float scroll_x = -car_->hull_->GetPosition().x * zoom;
+  float scroll_y = -car_->hull_->GetPosition().y * zoom;
+
+  // trans = pygame.math.Vector2((scroll_x, scroll_y)).rotate_rad(angle)
+  std::array<float, 2> trans = RotateRad({scroll_x, scroll_y}, angle);
+  trans = {windowW / 2 + trans[0], windowH / 4 + trans[1]};
+
+  RenderRoad(zoom, trans, angle);
+  // self.car.draw(
+  //     self.surf,
+  //     zoom,
+  //     trans,
+  //     angle,
+  //     mode not in ["state_pixels_list", "state_pixels"],
+  // )
+
+  // self.surf = pygame.transform.flip(self.surf, False, True)
+
+  // # showing stats
+
+
+  // if mode == "human":
+  //     pygame.event.pump()
+  //     self.clock.tick(self.metadata["render_fps"])
+  //     assert self.screen is not None
+  //     self.screen.fill(0)
+  //     self.screen.blit(self.surf, (0, 0))
+  //     pygame.display.flip()
+
+  // if mode == "rgb_array":
+  //     return self._create_image_array(self.surf, (VIDEO_W, VIDEO_H))
+  // elif mode == "state_pixels":
+  //     return self._create_image_array(self.surf, (STATE_W, STATE_H))
+  // else:
+  //     return self.isopen
+
+  }
 }  // namespace box2d

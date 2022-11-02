@@ -25,7 +25,6 @@ from pygame import gfxdraw
 import envpool.box2d.registration  # noqa: F401
 from envpool.registration import make_gym
 
-
 class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
 
   def run_space_check(self, env0: gym.Env, env1: Any) -> None:
@@ -39,12 +38,12 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
     elif isinstance(act0, gym.spaces.Discrete):
       np.testing.assert_allclose(act0.n, act1.n)
 
-  def test_bipedal_walker_space(self) -> None:
+  def bipedal_walker_space(self) -> None:
     env0 = gym.make("BipedalWalker-v3")
     env1 = make_gym("BipedalWalker-v3")
     self.run_space_check(env0, env1)
 
-  def test_lunar_lander_space(self) -> None:
+  def lunar_lander_space(self) -> None:
     env0 = gym.make("LunarLander-v2")
     env1 = make_gym("LunarLander-v2")
     self.run_space_check(env0, env1)
@@ -110,9 +109,80 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
       else:  # 236.898334 ± 105.832610
         self.assertTrue(abs(mean_reward - 237) < 20, (continuous, mean_reward))
 
-  def test_lunar_lander_correctness(self, num_envs: int = 30) -> None:
+  def lunar_lander_correctness(self, num_envs: int = 30) -> None:
     self.solve_lunar_lander(num_envs, True)
     self.solve_lunar_lander(num_envs, False)
+
+  # @staticmethod
+  # def heuristic_car_racing_policy(
+  #   s: np.ndarray
+  # ) -> np.ndarray:
+  #   angle_targ = np.clip(s[0] * 0.5 + s[2] * 1.0, -0.4, 0.4)
+  #   hover_targ = 0.55 * np.abs(s[0])
+  #   angle_todo = (angle_targ - s[4]) * 0.5 - s[5] * 1.0
+  #   hover_todo = (hover_targ - s[1]) * 0.5 - s[3] * 0.5
+
+  #   if s[6] or s[7]:
+  #     angle_todo = 0
+  #     hover_todo = -(s[3]) * 0.5
+
+  #   if continuous:
+  #     a = np.array([hover_todo * 20 - 1, -angle_todo * 20])
+  #     a = np.clip(a, -1, 1)
+  #   else:
+  #     a = 0
+  #     if hover_todo > np.abs(angle_todo) and hover_todo > 0.05:
+  #       a = 2
+  #     elif angle_todo < -0.05:
+  #       a = 3
+  #     elif angle_todo > 0.05:
+  #       a = 1
+  #   return a
+
+
+  def solve_car_racing(
+    self, num_envs: int, render: bool
+  ) -> None:
+    print("solve_car_racing")
+    env = make_gym("CarRacing-v2", num_envs=num_envs)
+    max_episode_steps = 100# env.spec.config.max_episode_steps
+
+    env_id = np.arange(num_envs)
+    done = np.array([False] * num_envs)
+    obs = env.reset(env_id)
+    rewards = np.zeros(num_envs)
+    action = np.tile([0, 1, 0], (num_envs, 1))
+    for i in range(max_episode_steps):
+      print("\n\nstep", i)
+      obs, rew, terminated, truncated, info = env.step(action, env_id)
+      if render:
+        self.render_bpw(info)
+      env_id = info["env_id"]
+      rewards[env_id] += rew
+      print("reward", rewards[env_id], rew)
+      if np.all(done):
+        break
+      obs = obs[~done]
+      env_id = env_id[~done]
+
+    # mean_reward = np.mean(rewards)
+    # logging.info(f"Car Racing, {np.mean(rewards):.6f} ± {np.std(rewards):.6f}")
+    # # the following number is from gym's 1000 episode mean reward
+    # if hardcore:  # -59.219390 ± 25.209768
+    #   self.assertTrue(abs(mean_reward + 59) < 10, (hardcore, mean_reward))
+    # else:  # 102.647320 ± 125.075071
+    #   self.assertTrue(abs(mean_reward - 103) < 20, (hardcore, mean_reward))
+
+  def test_car_racing_correctness(
+    self, num_envs: int = 1, render: bool = False
+  ) -> None:
+    if render:
+      pygame.init()
+      pygame.display.init()
+      self.screen = pygame.display.set_mode((600, 400))
+      self.clock = pygame.time.Clock()
+    self.solve_car_racing(num_envs, render)
+
 
   @staticmethod
   @no_type_check
@@ -277,7 +347,7 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
     self.clock.tick(50)
     pygame.display.flip()
 
-  def test_bipedal_walker_correctness(
+  def bipedal_walker_correctness(
     self, num_envs: int = 100, render: bool = False
   ) -> None:
     if render:

@@ -29,35 +29,6 @@
 
 namespace box2d {
 
-enum UserDataType {INVALID =1000, WHEEL_TYPE, TILE_TYPE};
-
-class UserData {
-  public: 
-    UserDataType type{INVALID};
-    b2Body* body;
-    int idx{-1};
-};
-
-class Tile: public UserData {
-  public: 
-    bool tileRoadVisited{false};
-    float roadFriction;
-};
-
-class Wheel: public UserData {
-  public: 
-    float wheel_rad{0};
-    float gas{0};
-    float brake{0};
-    float steer{0};
-    float phase{0};
-    float omega{0};
-    b2RevoluteJoint* joint;
-    std::unordered_set<Tile*> tiles;
-  // body will be wheel object
-};
-
-
 static const float kSize = 0.02;
 static const float kEnginePower = 100000000 * kSize * kSize;
 static const float kWheelMomentOfInertia = 4000 * kSize * kSize;
@@ -73,6 +44,39 @@ static const float kHullPoly4[8] = {-50, -120, 50, -120,50, -90, -50, -90};
 static const float wheelPoly[8] = {-kWheelW, +kWheelR, +kWheelW, +kWheelR,
                               +kWheelW, -kWheelR, -kWheelW, -kWheelR};
 
+static const float kRoadColor[3] = {102, 102, 102};
+static const int kBgColor[3] = {102, 204, 102};
+static const int kGrassColor[3] = {102, 230, 102};
+
+
+enum UserDataType {INVALID =1000, WHEEL_TYPE, TILE_TYPE};
+
+class UserData {
+  public: 
+    UserDataType type{INVALID};
+    b2Body* body;
+    int idx{-1};
+};
+
+class Tile: public UserData {
+  public: 
+    bool tileRoadVisited{false};
+    float roadFriction;
+    std::array<float, 3> RoadColor;
+};
+
+class Wheel: public UserData {
+  public: 
+    float wheel_rad{0};
+    float gas{0};
+    float brake{0};
+    float steer{0};
+    float phase{0};
+    float omega{0};
+    b2RevoluteJoint* joint;
+    std::unordered_set<Tile*> tiles;
+  // body will be wheel object
+};
 
 class Car {
  public:

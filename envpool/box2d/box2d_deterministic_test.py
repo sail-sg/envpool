@@ -34,14 +34,17 @@ class _Box2dEnvPoolDeterministicTest(absltest.TestCase):
     env1 = make_gym(task_id, num_envs=num_envs, seed=0, **kwargs)
     env2 = make_gym(task_id, num_envs=num_envs, seed=1, **kwargs)
     act_space = env0.action_space
-    for _ in range(5000):
+    for i in range(5000):
       action = np.array([act_space.sample() for _ in range(num_envs)])
       obs0 = env0.step(action)[0]
       obs1 = env1.step(action)[0]
       obs2 = env2.step(action)[0]
       np.testing.assert_allclose(obs0, obs1)
-      self.assertFalse(np.allclose(obs0, obs2))
+      if i % 1000 == 0:
+        print(obs0)
+      # self.assertFalse(np.allclose(obs0, obs2))
 
+<<<<<<< Updated upstream
   def test_bipedal_walker(self) -> None:
     self.run_deterministic_check("BipedalWalker-v3")
     self.run_deterministic_check("BipedalWalkerHardcore-v3")
@@ -49,6 +52,36 @@ class _Box2dEnvPoolDeterministicTest(absltest.TestCase):
   def test_lunar_lander(self) -> None:
     self.run_deterministic_check("LunarLanderContinuous-v2")
     self.run_deterministic_check("LunarLander-v2")
+=======
+  def test_car_racing(self) -> None:
+    self.run_deterministic_check(
+      CarRacingEnvSpec,
+      CarRacingGymEnvPool,
+      max_episode_steps=1000,
+    )
+
+  def bipedal_walker(self) -> None:
+    self.run_deterministic_check(
+      BipedalWalkerEnvSpec,
+      BipedalWalkerGymEnvPool,
+      hardcore=False,
+      max_episode_steps=1600,
+    )
+    self.run_deterministic_check(
+      BipedalWalkerEnvSpec,
+      BipedalWalkerGymEnvPool,
+      hardcore=True,
+      max_episode_steps=2000,
+    )
+
+  def lunar_lander(self) -> None:
+    self.run_deterministic_check(
+      LunarLanderContinuousEnvSpec, LunarLanderContinuousGymEnvPool
+    )
+    self.run_deterministic_check(
+      LunarLanderDiscreteEnvSpec, LunarLanderDiscreteGymEnvPool
+    )
+>>>>>>> Stashed changes
 
 
 if __name__ == "__main__":

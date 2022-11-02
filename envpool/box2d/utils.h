@@ -18,7 +18,7 @@
 #define ENVPOOL_BOX2D_UTILS_H_
 
 #include <box2d/box2d.h>
-
+#include <array>
 #include <random>
 
 namespace box2d {
@@ -30,6 +30,8 @@ using RandUniform = std::uniform_real_distribution<>;
 b2Vec2 Vec2(double x, double y);
 
 float Sign(double val, double eps = 1e-8);
+
+std::array<float, 2> RotateRad(std::array<float, 2> vec, float angle);
 
 }  // namespace box2d
 
