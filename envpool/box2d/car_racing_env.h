@@ -74,6 +74,8 @@ class CarRacingBox2dEnv{
   float step_reward_{0};
   bool done_{false};
 
+  cv::Mat surf_;
+
   std::unique_ptr<CarRacingFrictionDetector> listener_;
   std::shared_ptr<b2World> world_;
   std::unique_ptr<Car> car_;
@@ -92,9 +94,10 @@ class CarRacingBox2dEnv{
   void Render(RenderMode mode);
   void RenderRoad(float zoom, std::array<float, 2>& translation, float angle);
   void DrawColoredPolygon(std::array<std::array<float, 2>, 4>& field,
-    const int color[3],float zoom, std::array<float, 2>& translation, float angle, bool clip=true);
+    cv::Scalar color,float zoom, std::array<float, 2>& translation, float angle, bool clip=true);
   void CarRacingReset(std::mt19937* gen);
   void CarRacingStep(std::mt19937* gen, float action0, float action1, float action2);
+  cv::Mat CreateImageArray();
 
  private:
   bool CreateTrack();

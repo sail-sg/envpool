@@ -78,6 +78,8 @@ class CarRacingEnv : public Env<CarRacingEnvSpec>,
   void WriteState() {
     State state = Allocate();
     state["reward"_] = step_reward_;
+    auto img = CreateImageArray();
+    state["obs"_].Assign(img.data, 96 * 96 * 3);
 #ifdef ENVPOOL_TEST
     state["info:tile_visited_count"_] = tile_visited_count_;
     state["info:car_fuel_spent"_] = car_->GetFuelSpent();

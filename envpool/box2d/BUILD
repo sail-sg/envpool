@@ -26,6 +26,7 @@ cc_library(
     deps = [
         "//envpool/core:async_envpool",
         "@box2d",
+        "@opencv"
     ],
 )
 

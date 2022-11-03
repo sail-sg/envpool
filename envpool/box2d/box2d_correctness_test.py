@@ -139,6 +139,14 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
   #       a = 1
   #   return a
 
+  def render_cr(self, surf) -> None:
+    print(surf.shape)
+    surf = np.transpose(surf, axes=(1, 0, 2))
+    surf = pygame.surfarray.make_surface(surf)
+    self.screen.blit(surf, (0, 0))
+    pygame.event.pump()
+    self.clock.tick(50)
+    pygame.display.flip()
 
   def solve_car_racing(
     self, num_envs: int, render: bool
@@ -151,12 +159,13 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
     done = np.array([False] * num_envs)
     obs = env.reset(env_id)
     rewards = np.zeros(num_envs)
-    action = np.tile([0, 1, 0], (num_envs, 1))
+    action = np.tile([0.0, 0.5, 0], (num_envs, 1))
     for i in range(max_episode_steps):
       print("\n\nstep", i)
       obs, rew, terminated, truncated, info = env.step(action, env_id)
+      print("sum", obs.sum())
       if render:
-        self.render_bpw(info)
+        self.render_cr(obs[0])
       env_id = info["env_id"]
       rewards[env_id] += rew
       print("reward", rewards[env_id], rew)
@@ -164,7 +173,7 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
         break
       obs = obs[~done]
       env_id = env_id[~done]
-
+    print(obs)
     # mean_reward = np.mean(rewards)
     # logging.info(f"Car Racing, {np.mean(rewards):.6f} ± {np.std(rewards):.6f}")
     # # the following number is from gym's 1000 episode mean reward

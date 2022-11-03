@@ -32,7 +32,9 @@ b2Vec2 Vec2(double x, double y);
 float Sign(double val, double eps = 1e-8);
 
 std::array<float, 2> RotateRad(std::array<float, 2> vec, float angle);
+b2Vec2 RotateRad(b2Vec2& v, float angle);
 
+b2Vec2 Multiply(b2Transform& trans, b2Vec2& v);
 }  // namespace box2d
 
 #endif  // ENVPOOL_BOX2D_UTILS_H_

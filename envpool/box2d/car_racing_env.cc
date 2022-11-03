@@ -353,8 +353,13 @@ void CarRacingBox2dEnv::StepBox2d(std::mt19937* gen, float action0, float action
   Render(HUMAN);
 }
 
+cv::Mat CarRacingBox2dEnv::CreateImageArray() {
+  cv::Mat state;
+  cv::resize(surf_, state, cv::Size(stateW, stateH));
+  return state;
+}
 void CarRacingBox2dEnv::DrawColoredPolygon(std::array<std::array<float, 2>, 4>& field,
-                                           const int  color[3],
+                                           cv::Scalar  color,
                                            float zoom, std::array<float, 2>& translation, float angle, bool clip) {
 
   // This checks if the polygon is out of bounds of the screen, and we skip drawing if so.
@@ -364,9 +369,11 @@ void CarRacingBox2dEnv::DrawColoredPolygon(std::array<std::array<float, 2>, 4>& 
   // diagonal length of an environment object
   
   bool exist = false;
+  std::vector<cv::Point> poly;
   for (int i = 0; i < 4; i++) {
     field[i] = RotateRad(field[i], angle);
     field[i] = {field[i][0] * zoom + translation[0], field[i][1] * zoom + translation[1]};
+    poly.push_back(cv::Point(field[i][0],field[i][1]));
     if (-kMaxShapeDim <= field[i][0] && field[i][0] <= windowW + kMaxShapeDim &&
         -kMaxShapeDim <= field[i][1] && field[i][1] <= windowH + kMaxShapeDim) {
       exist = true;
@@ -374,6 +381,7 @@ void CarRacingBox2dEnv::DrawColoredPolygon(std::array<std::array<float, 2>, 4>& 
   }
 
   if (!clip || exist) {
+    cv::fillPoly(surf_, poly, color);
     // gfxdraw.aapolygon(self.surf, poly, color)
     // gfxdraw.filled_polygon(self.surf, poly, color)
   }
@@ -412,31 +420,19 @@ void CarRacingBox2dEnv::RenderRoad(float zoom, std::array<float, 2>& translation
     field[2] = {poly[2].x, poly[2].y};
     field[3] = {poly[3].x, poly[3].y};
 
-    const int c[3] = {static_cast<int>(color[0]), static_cast<int>(color[1]), static_cast<int>(color[2])};
+    cv::Scalar c(static_cast<int>(color[0]), static_cast<int>(color[1]), static_cast<int>(color[2]));
     DrawColoredPolygon(field, c, zoom, translation, angle);
   }
 }
 void CarRacingBox2dEnv::Render(RenderMode mode){
-
-  // if self.screen is None and mode == "human":
-  //     pygame.init()
-  //     pygame.display.init()
-  //     self.screen = pygame.display.set_mode((WINDOW_W, WINDOW_H))
-  // if self.clock is None:
-  //     self.clock = pygame.time.Clock()
-
-  // if "t" not in self.__dict__:
-  //     return  # reset() not called yet
-
+  surf_ = cv::Mat(windowH, windowW,  CV_8UC3);
   // self.surf = pygame.Surface((WINDOW_W, WINDOW_H))
 
   assert(car_ != nullptr);
   // computing transformations
   float angle = -car_->hull_->GetAngle();
-  printf("angle %f\n", angle);
-  // # Animating first second zoom.
+  // Animating first second zoom.
   float zoom = 0.1 * kScale * std::max(1 - t_, 0.f) + kZoom * kScale * std::min(t_, 1.f);
-  printf("zoom %f\n", zoom);
   float scroll_x = -car_->hull_->GetPosition().x * zoom;
   float scroll_y = -car_->hull_->GetPosition().y * zoom;
 
@@ -445,18 +441,9 @@ void CarRacingBox2dEnv::Render(RenderMode mode){
   trans = {windowW / 2 + trans[0], windowH / 4 + trans[1]};
 
   RenderRoad(zoom, trans, angle);
-  // self.car.draw(
-  //     self.surf,
-  //     zoom,
-  //     trans,
-  //     angle,
-  //     mode not in ["state_pixels_list", "state_pixels"],
-  // )
+  car_->draw(surf_, zoom, trans, angle);
 
-  // self.surf = pygame.transform.flip(self.surf, False, True)
-
-  // # showing stats
-
+  cv::flip(surf_, surf_, 0);
 
   // if mode == "human":
   //     pygame.event.pump()

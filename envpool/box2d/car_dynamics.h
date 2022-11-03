@@ -19,6 +19,8 @@
 #define ENVPOOL_BOX2D_CAR_DYNAMICS_H_
 
 #include <box2d/box2d.h>
+#include <opencv2/opencv.hpp>
+#include "utils.h"
 
 #include <cmath>
 #include <random>
@@ -45,8 +47,8 @@ static const float wheelPoly[8] = {-kWheelW, +kWheelR, +kWheelW, +kWheelR,
                               +kWheelW, -kWheelR, -kWheelW, -kWheelR};
 
 static const float kRoadColor[3] = {102, 102, 102};
-static const int kBgColor[3] = {102, 204, 102};
-static const int kGrassColor[3] = {102, 230, 102};
+static const cv::Scalar kBgColor(102, 204, 102);
+static const cv::Scalar kGrassColor(102, 230, 102);
 
 
 enum UserDataType {INVALID =1000, WHEEL_TYPE, TILE_TYPE};
@@ -85,6 +87,7 @@ class Car {
   void brake(float b);
   void steer(float s);
   void step(float dt);
+  void draw(cv::Mat& surf, float zoom, std::array<float, 2>& translation, float angle);
   void destroy();
   float GetFuelSpent();
   std::vector<float> GetGas();
@@ -92,6 +95,7 @@ class Car {
   std::vector<float> GetBrake();
 
  protected:
+  std::vector<b2Body*> drawlist_;
   std::shared_ptr<b2World> world_;
   b2Body* hull_;
   std::vector<Wheel*> wheels_;
