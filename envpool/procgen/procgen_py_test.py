@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+"""Unit tests for Procgen environments alignment & deterministic check."""
 import os
 import time
 from typing import Any
@@ -64,6 +64,7 @@ procgen_timeout_list = {
 def rgb_to_picture(
   pixels: Any, count: int = pic_count, prefix_name: str = "procgen"
 ) -> None:
+  """Helper function to covert pixel matrix to a picture by cv2"""
   # convert a state's rgb 64x64x3 game observation into picture by cv2
   # for sanity check if the game is running correctly
   # state is ordered in y -> x -> rgb in one dimension array
@@ -87,23 +88,7 @@ def rgb_to_picture(
 
 
 class _ProcgenEnvPoolTest(absltest.TestCase):
-
-  def test_config(self) -> None:
-    # test the config key is same as what we expect
-    ref_config_keys = [
-      "action_num", "base_path", "batch_size", "distribution_mode",
-      "game_name", "use_sequential_levels", "max_episode_steps",
-      "max_num_players", "num_envs", "num_levels", "num_threads", "seed",
-      "start_level", "state_num", "gym_reset_return_info",
-      "thread_affinity_offset"
-    ]
-    default_conf = _ProcgenEnvSpec._default_config_values
-    self.assertTrue(isinstance(default_conf, tuple))
-    config_keys = _ProcgenEnvSpec._config_keys
-    self.assertTrue(isinstance(config_keys, list))
-    self.assertEqual(len(default_conf), len(config_keys))
-    self.assertEqual(sorted(config_keys), sorted(ref_config_keys))
-
+  """The testing class for Procgen"""
   def test_raw_envpool(self) -> None:
     # create raw procgen environment and run
     conf = dict(
