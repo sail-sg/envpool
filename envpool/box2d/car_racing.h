@@ -18,10 +18,11 @@
 #ifndef ENVPOOL_BOX2D_CAR_RACING_H_
 #define ENVPOOL_BOX2D_CAR_RACING_H_
 
+#include <iostream>  // todo remove
+
 #include "car_racing_env.h"
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
-#include <iostream> // todo remove
 
 namespace box2d {
 
@@ -33,14 +34,14 @@ class CarRacingEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
 #ifdef ENVPOOL_TEST
-    return MakeDict("obs"_.Bind(Spec<uint8_t>({96, 96, 3}, {0, 255})),
+    return MakeDict("obs"_.Bind(Spec<uint8_t>({800, 1000, 3}, {0, 255})),
                     "info:tile_visited_count"_.Bind(Spec<int>({-1})),
                     "info:car_fuel_spent"_.Bind(Spec<float>({-1})),
                     "info:car_gas"_.Bind(Spec<float>({-1, 2})),
                     "info:car_steer"_.Bind(Spec<float>({-1, 2})),
                     "info:car_brake"_.Bind(Spec<float>({-1, 4})));
 #else
-    return MakeDict("obs"_.Bind(Spec<uint8_t>({96, 96, 3}, {0, 255})));
+    return MakeDict("obs"_.Bind(Spec<uint8_t>({1000, 800, 3}, {0, 255})));
 #endif
   }
   template <typename Config>
@@ -51,12 +52,11 @@ class CarRacingEnvFns {
 
 using CarRacingEnvSpec = EnvSpec<CarRacingEnvFns>;
 
-class CarRacingEnv : public Env<CarRacingEnvSpec>,
-                     public CarRacingBox2dEnv {
+class CarRacingEnv : public Env<CarRacingEnvSpec>, public CarRacingBox2dEnv {
  public:
   CarRacingEnv(const Spec& spec, int env_id)
       : Env<CarRacingEnvSpec>(spec, env_id),
-        CarRacingBox2dEnv(spec.config["max_episode_steps"_]){}
+        CarRacingBox2dEnv(spec.config["max_episode_steps"_]) {}
 
   bool IsDone() override { return done_; }
 
@@ -67,10 +67,8 @@ class CarRacingEnv : public Env<CarRacingEnvSpec>,
   }
 
   void Step(const Action& action) override {
-    printf("Env Step\n");
     CarRacingStep(&gen_, action["action"_][0], action["action"_][1],
                   action["action"_][2]);
-    printf("Env done\n");
     WriteState();
   }
 
@@ -78,8 +76,9 @@ class CarRacingEnv : public Env<CarRacingEnvSpec>,
   void WriteState() {
     State state = Allocate();
     state["reward"_] = step_reward_;
-    auto img = CreateImageArray();
-    state["obs"_].Assign(img.data, 96 * 96 * 3);
+    // auto img = CreateImageArray();
+    // state["obs"_].Assign(img.data, 96 * 96 * 3);
+    state["obs"_].Assign(surf_.data, 1000 * 800 * 3);
 #ifdef ENVPOOL_TEST
     state["info:tile_visited_count"_] = tile_visited_count_;
     state["info:car_fuel_spent"_] = car_->GetFuelSpent();

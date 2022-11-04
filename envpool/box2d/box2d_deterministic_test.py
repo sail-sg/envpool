@@ -44,7 +44,6 @@ class _Box2dEnvPoolDeterministicTest(absltest.TestCase):
         print(obs0)
       # self.assertFalse(np.allclose(obs0, obs2))
 
-<<<<<<< Updated upstream
   def test_bipedal_walker(self) -> None:
     self.run_deterministic_check("BipedalWalker-v3")
     self.run_deterministic_check("BipedalWalkerHardcore-v3")
@@ -52,36 +51,6 @@ class _Box2dEnvPoolDeterministicTest(absltest.TestCase):
   def test_lunar_lander(self) -> None:
     self.run_deterministic_check("LunarLanderContinuous-v2")
     self.run_deterministic_check("LunarLander-v2")
-=======
-  def test_car_racing(self) -> None:
-    self.run_deterministic_check(
-      CarRacingEnvSpec,
-      CarRacingGymEnvPool,
-      max_episode_steps=1000,
-    )
-
-  def bipedal_walker(self) -> None:
-    self.run_deterministic_check(
-      BipedalWalkerEnvSpec,
-      BipedalWalkerGymEnvPool,
-      hardcore=False,
-      max_episode_steps=1600,
-    )
-    self.run_deterministic_check(
-      BipedalWalkerEnvSpec,
-      BipedalWalkerGymEnvPool,
-      hardcore=True,
-      max_episode_steps=2000,
-    )
-
-  def lunar_lander(self) -> None:
-    self.run_deterministic_check(
-      LunarLanderContinuousEnvSpec, LunarLanderContinuousGymEnvPool
-    )
-    self.run_deterministic_check(
-      LunarLanderDiscreteEnvSpec, LunarLanderDiscreteGymEnvPool
-    )
->>>>>>> Stashed changes
 
 
 if __name__ == "__main__":

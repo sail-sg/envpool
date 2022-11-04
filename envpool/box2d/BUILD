@@ -6,18 +6,18 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
     name = "box2d_env",
     srcs = [
+        "bipedal_walker_env.cc",
         "car_dynamics.cc",
         "car_racing_env.cc",
-        "bipedal_walker_env.cc",
         "lunar_lander_env.cc",
         "utils.cc",
     ],
     hdrs = [
-        "car_dynamics.h",
-        "car_racing_env.h",
-        "car_racing.h",
         "bipedal_walker.h",
         "bipedal_walker_env.h",
+        "car_dynamics.h",
+        "car_racing.h",
+        "car_racing_env.h",
         "lunar_lander_continuous.h",
         "lunar_lander_discrete.h",
         "lunar_lander_env.h",
@@ -26,7 +26,7 @@ cc_library(
     deps = [
         "//envpool/core:async_envpool",
         "@box2d",
-        "@opencv"
+        "@opencv",
     ],
 )
 
@@ -77,6 +77,7 @@ py_test(
         requirement("gym"),
         requirement("box2d"),
         requirement("pygame"),
+        requirement("opencv-python-headless"),
         requirement("numpy"),
     ],
 )

@@ -16,10 +16,10 @@
 from envpool.python.api import py_env
 
 from .box2d_envpool import (
-  _CarRacingEnvPool,
-  _CarRacingEnvSpec,
   _BipedalWalkerEnvPool,
   _BipedalWalkerEnvSpec,
+  _CarRacingEnvPool,
+  _CarRacingEnvSpec,
   _LunarLanderContinuousEnvPool,
   _LunarLanderContinuousEnvSpec,
   _LunarLanderDiscreteEnvPool,

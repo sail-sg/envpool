@@ -19,13 +19,14 @@
 #define ENVPOOL_BOX2D_CAR_RACING_ENV_H_
 
 #include <box2d/box2d.h>
-#include "car_dynamics.h"
-#include "utils.h"
 
 #include <cmath>
 #include <random>
 #include <unordered_set>
 #include <vector>
+
+#include "car_dynamics.h"
+#include "utils.h"
 
 namespace box2d {
 
@@ -43,9 +44,9 @@ class CarRacingFrictionDetector : public b2ContactListener {
   void _Contact(b2Contact* contact, bool begin);
 };
 
-enum RenderMode{HUMAN, RGB_ARRAY, STATE_PIXELS};
+enum RenderMode { HUMAN, RGB_ARRAY, STATE_PIXELS };
 
-class CarRacingBox2dEnv{
+class CarRacingBox2dEnv {
   const int stateW = 96;
   const int stateH = 96;
   const int videoW = 600;
@@ -53,17 +54,19 @@ class CarRacingBox2dEnv{
   const int windowW = 1000;
   const int windowH = 800;
   const float kScale = 6.0;  // Track scale
-  const float kFps = 50; // Frames per second
+  const float kFps = 50;     // Frames per second
   const float kZoom = 2.7;
   const float trackRAD =
       900 / kScale;  // Track is heavily morphed circle with this radius
   const float kPlayfiled = 2000 / kScale;  // Game over boundary
   const float kTrackTurnRate = 0.31;
-  const float kTrackDetailStep =21 / kScale;
+  const float kTrackDetailStep = 21 / kScale;
   const float kTrackWidth = 40 / kScale;
-  
+
   const float kGrassDim = kPlayfiled / 20;
-  const float kMaxShapeDim = std::max(kGrassDim, std::max(kTrackWidth, kTrackDetailStep)) * 4 * kZoom * kScale;
+  const float kMaxShapeDim =
+      std::max(kGrassDim, std::max(kTrackWidth, kTrackDetailStep)) * 4 * kZoom *
+      kScale;
 
   friend class CarRacingFrictionDetector;
 
@@ -87,25 +90,31 @@ class CarRacingBox2dEnv{
   std::vector<std::array<float, 4>> track_;
   std::vector<UserData*> roads_;
   // pair of position and color
-  std::vector<std::pair<std::array<b2Vec2, 4>, std::array<float, 3>>> roads_poly_;
-  
+  std::vector<std::pair<std::array<b2Vec2, 4>, std::array<float, 3>>>
+      roads_poly_;
+
  public:
   CarRacingBox2dEnv(int max_episode_steps);
   void Render(RenderMode mode);
   void RenderRoad(float zoom, std::array<float, 2>& translation, float angle);
+  void RenderIndicators();
   void DrawColoredPolygon(std::array<std::array<float, 2>, 4>& field,
-    cv::Scalar color,float zoom, std::array<float, 2>& translation, float angle, bool clip=true);
+                          cv::Scalar color, float zoom,
+                          std::array<float, 2>& translation, float angle,
+                          bool clip = true);
   void CarRacingReset(std::mt19937* gen);
-  void CarRacingStep(std::mt19937* gen, float action0, float action1, float action2);
+  void CarRacingStep(std::mt19937* gen, float action0, float action1,
+                     float action2);
   cv::Mat CreateImageArray();
 
  private:
+  std::vector<cv::Point>VerticalInd(int place, int s, int h, float val);
+  std::vector<cv::Point>HorizInd(int place, int s, int h, float val);
+  void RenderIfMin(float value, std::vector<cv::Point> points, cv::Scalar color);
   bool CreateTrack();
   void ResetBox2d(std::mt19937* gen);
   void StepBox2d(std::mt19937* gen, float action0, float action1, float action2,
-  bool isAction);
-
-
+                 bool isAction);
 };
 
 }  // namespace box2d

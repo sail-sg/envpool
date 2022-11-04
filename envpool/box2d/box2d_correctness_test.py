@@ -15,6 +15,7 @@
 
 from typing import Any, Dict, Tuple, no_type_check
 
+import cv2
 import gym
 import numpy as np
 import pygame
@@ -24,6 +25,7 @@ from pygame import gfxdraw
 
 import envpool.box2d.registration  # noqa: F401
 from envpool.registration import make_gym
+
 
 class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
 
@@ -148,18 +150,16 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
     self.clock.tick(50)
     pygame.display.flip()
 
-  def solve_car_racing(
-    self, num_envs: int, render: bool
-  ) -> None:
+  def solve_car_racing(self, num_envs: int, render: bool) -> None:
     print("solve_car_racing")
     env = make_gym("CarRacing-v2", num_envs=num_envs)
-    max_episode_steps = 100# env.spec.config.max_episode_steps
+    max_episode_steps = 100  # env.spec.config.max_episode_steps
 
     env_id = np.arange(num_envs)
     done = np.array([False] * num_envs)
     obs = env.reset(env_id)
     rewards = np.zeros(num_envs)
-    action = np.tile([0.0, 0.5, 0], (num_envs, 1))
+    action = np.tile([0.2, 0.5, 0], (num_envs, 1))
     for i in range(max_episode_steps):
       print("\n\nstep", i)
       obs, rew, terminated, truncated, info = env.step(action, env_id)
@@ -168,6 +168,13 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
         self.render_cr(obs[0])
       env_id = info["env_id"]
       rewards[env_id] += rew
+      print(obs.shape, info)
+      # print(cv2.imwrite("test.jpg", obs))
+      print(
+        cv2.imwrite(
+          "/home/ting/envpool/images/original_{}.jpg".format(i), obs[0]
+        )
+      )
       print("reward", rewards[env_id], rew)
       if np.all(done):
         break
@@ -191,7 +198,6 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
       self.screen = pygame.display.set_mode((600, 400))
       self.clock = pygame.time.Clock()
     self.solve_car_racing(num_envs, render)
-
 
   @staticmethod
   @no_type_check

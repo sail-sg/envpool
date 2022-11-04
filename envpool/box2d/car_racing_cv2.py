@@ -17,9 +17,10 @@ __credits__ = ["Andrea PIERRÉ"]
 import math
 from typing import Optional, Union
 
+import cv2
 import gym
 import numpy as np
-from car_dynamics import Car
+from car_dynamics_cv2 import Car
 from gym import spaces
 from gym.error import DependencyNotInstalled, InvalidAction
 from gym.utils import EzPickle
@@ -95,7 +96,7 @@ class FrictionDetector(contactListener):
       return
 
     # inherit tile color from env
-    # tile.color = self.env.road_color / 255
+    tile.color = self.env.road_color / 255
     if not obj or "tiles" not in obj.__dict__:
       return
     if begin:
@@ -221,7 +222,7 @@ class CarRacing(gym.Env, EzPickle):
     self.continuous = continuous
     self.domain_randomize = domain_randomize
     self.lap_complete_percent = lap_complete_percent
-    # self._init_colors()
+    self._init_colors()
 
     self.contactListener_keepref = FrictionDetector(
       self, self.lap_complete_percent
@@ -271,6 +272,37 @@ class CarRacing(gym.Env, EzPickle):
     assert self.car is not None
     self.car.destroy()
 
+  def _init_colors(self):
+    if self.domain_randomize:
+      # domain randomize the bg and grass colour
+      self.road_color = self.np_random.uniform(0, 210, size=3)
+
+      self.bg_color = self.np_random.uniform(0, 210, size=3)
+
+      self.grass_color = np.copy(self.bg_color)
+      idx = self.np_random.integers(3)
+      self.grass_color[idx] += 20
+    else:
+      # default colours
+      self.road_color = np.array([102, 102, 102])
+      self.bg_color = np.array([102, 204, 102])
+      self.grass_color = np.array([102, 230, 102])
+
+  def _reinit_colors(self, randomize):
+    assert (
+      self.domain_randomize
+    ), "domain_randomize must be True to use this function."
+
+    if randomize:
+      # domain randomize the bg and grass colour
+      self.road_color = self.np_random.uniform(0, 210, size=3)
+
+      self.bg_color = self.np_random.uniform(0, 210, size=3)
+
+      self.grass_color = np.copy(self.bg_color)
+      idx = self.np_random.integers(3)
+      self.grass_color[idx] += 20
+
   def _create_track(self):
     CHECKPOINTS = 12
 
@@ -299,21 +331,14 @@ class CarRacing(gym.Env, EzPickle):
     track = []
     no_freeze = 2500
     visited_other_side = False
-    index = 0
     while True:
       alpha = math.atan2(y, x)
-      if index == 1191:
-        print("y =", y, ", x =", x)
-      print(index, "visited_other_side", visited_other_side, "alpha", alpha)
-      index += 1
       if visited_other_side and alpha > 0:
-        print("laps=", laps)
         laps += 1
         visited_other_side = False
       if alpha < 0:
         visited_other_side = True
         alpha += 2 * math.pi
-        print("alpha += 2 * math.pi", alpha)
 
       while True:  # Find destination from checkpoints
         failed = True
@@ -367,7 +392,6 @@ class CarRacing(gym.Env, EzPickle):
       i -= 1
       if i == 0:
         return False  # Failed
-
       pass_through_start = (
         track[i][0] > self.start_alpha and track[i - 1][0] <= self.start_alpha
       )
@@ -378,13 +402,10 @@ class CarRacing(gym.Env, EzPickle):
         break
     if self.verbose:
       print("Track generation: %i..%i -> %i-tiles track" % (i1, i2, i2 - i1))
-
-    print("-------------------%", i)
     assert i1 != -1
     assert i2 != -1
 
     track = track[i1:i2 - 1]
-    print("current_track", len(track))
 
     first_beta = track[0][1]
     first_perp_x = math.cos(first_beta)
@@ -397,11 +418,23 @@ class CarRacing(gym.Env, EzPickle):
     if well_glued_together > TRACK_DETAIL_STEP:
       return False
 
-    ##########################################3
-    # Remove Red-white border on hard turns
+    # # Red-white border on hard turns
+    # border = [False] * len(track)
+    # for i in range(len(track)):
+    #     good = True
+    #     oneside = 0
+    #     for neg in range(BORDER_MIN_COUNT):
+    #         beta1 = track[i - neg - 0][1]
+    #         beta2 = track[i - neg - 1][1]
+    #         good &= abs(beta1 - beta2) > TRACK_TURN_RATE * 0.2
+    #         oneside += np.sign(beta1 - beta2)
+    #     good &= abs(oneside) == BORDER_MIN_COUNT
+    #     border[i] = good
+    # for i in range(len(track)):
+    #     for neg in range(BORDER_MIN_COUNT):
+    #         border[i - neg] |= border[i]
 
     # Create tiles
-    print("Create tiles")
     for i in range(len(track)):
       alpha1, beta1, x1, y1 = track[i]
       alpha2, beta2, x2, y2 = track[i - 1]
@@ -423,16 +456,40 @@ class CarRacing(gym.Env, EzPickle):
       )
       vertices = [road1_l, road1_r, road2_r, road2_l]
       self.fd_tile.shape.vertices = vertices
-      print("i", i)
       t = self.world.CreateStaticBody(fixtures=self.fd_tile)
       t.userData = t
       c = 0.01 * (i % 3) * 255
+      t.color = self.road_color + c
       t.road_visited = False
       t.road_friction = 1.0
       t.idx = i
       t.fixtures[0].sensor = True
-      self.road.append(t)  # does not affect
-
+      self.road_poly.append(([road1_l, road1_r, road2_r, road2_l], t.color))
+      self.road.append(t)
+      # if border[i]:
+      #     side = np.sign(beta2 - beta1)
+      #     b1_l = (
+      #         x1 + side * TRACK_WIDTH * math.cos(beta1),
+      #         y1 + side * TRACK_WIDTH * math.sin(beta1),
+      #     )
+      #     b1_r = (
+      #         x1 + side * (TRACK_WIDTH + BORDER) * math.cos(beta1),
+      #         y1 + side * (TRACK_WIDTH + BORDER) * math.sin(beta1),
+      #     )
+      #     b2_l = (
+      #         x2 + side * TRACK_WIDTH * math.cos(beta2),
+      #         y2 + side * TRACK_WIDTH * math.sin(beta2),
+      #     )
+      #     b2_r = (
+      #         x2 + side * (TRACK_WIDTH + BORDER) * math.cos(beta2),
+      #         y2 + side * (TRACK_WIDTH + BORDER) * math.sin(beta2),
+      #     )
+      #     self.road_poly.append(
+      #         (
+      #             [b1_l, b1_r, b2_r, b2_l],
+      #             (255, 255, 255) if i % 2 == 0 else (255, 0, 0),
+      #         )
+      #     )
     self.track = track
     return True
 
@@ -451,8 +508,9 @@ class CarRacing(gym.Env, EzPickle):
     self.reward = 0.0
     self.prev_reward = 0.0
     self.tile_visited_count = 0
+    self.t = 0.0
     self.new_lap = False
-    # self.road_poly = []
+    self.road_poly = []
 
     if self.domain_randomize:
       randomize = True
@@ -460,7 +518,7 @@ class CarRacing(gym.Env, EzPickle):
         if "randomize" in options:
           randomize = options["randomize"]
 
-      # self._reinit_colors(randomize)
+      self._reinit_colors(randomize)
 
     while True:
       success = self._create_track()
@@ -473,12 +531,11 @@ class CarRacing(gym.Env, EzPickle):
         )
     self.car = Car(self.world, *self.track[0][1:4])
 
-    # if self.render_mode == "human":
-    #     self.render()
+    if self.render_mode == "human":
+      self.render()
     return self.step(None)[0], {}
 
   def step(self, action: Union[np.ndarray, int]):
-    print("[step]")
     assert self.car is not None
     if action is not None:
       if self.continuous:
@@ -497,6 +554,10 @@ class CarRacing(gym.Env, EzPickle):
 
     self.car.step(1.0 / FPS)
     self.world.Step(1.0 / FPS, 6 * 30, 2 * 30)
+    self.t += 1.0 / FPS
+
+    self.state = self._render("state_pixels")
+    print("sum", self.state.sum())
 
     step_reward = 0
     terminated = False
@@ -513,13 +574,165 @@ class CarRacing(gym.Env, EzPickle):
         # This should not be treated as a failure
         # but like a timeout
         truncated = True
-        print("truncated")
       x, y = self.car.hull.position
       if abs(x) > PLAYFIELD or abs(y) > PLAYFIELD:
         terminated = True
         step_reward = -100
-      print("x", x, "y", y, "step_reward", step_reward)
-    return None, step_reward, terminated, truncated, {}
+
+    if self.render_mode == "human":
+      self.render()
+    return self.state, step_reward, terminated, truncated, {}
+
+  def render(self):
+    return self._render(self.render_mode)
+
+  def _render(self, mode: str):
+    assert mode in self.metadata["render_modes"]
+
+    if self.screen is None and mode == "human":
+      pygame.init()
+      pygame.display.init()
+      self.screen = pygame.display.set_mode((WINDOW_W, WINDOW_H))
+    if self.clock is None:
+      self.clock = pygame.time.Clock()
+
+    if "t" not in self.__dict__:
+      return  # reset() not called yet
+
+    # self.surf = pygame.Surface((WINDOW_W, WINDOW_H))
+    # self.surf = np.ones((WINDOW_W, WINDOW_H, 3))
+    self.surf = np.ones((WINDOW_H, WINDOW_W, 3))
+
+    # pygame.Surface((WINDOW_W, WINDOW_H))
+
+    assert self.car is not None
+    # computing transformations
+    angle = -self.car.hull.angle
+    print("angle", angle)
+    # Animating first second zoom.
+    zoom = 0.1 * SCALE * max(1 - self.t, 0) + ZOOM * SCALE * min(self.t, 1)
+    print("zoom", zoom)
+    scroll_x = -(self.car.hull.position[0]) * zoom
+    scroll_y = -(self.car.hull.position[1]) * zoom
+    trans = pygame.math.Vector2((scroll_x, scroll_y)).rotate_rad(angle)
+    print("trans1", trans)
+    trans = (WINDOW_W / 2 + trans[0], WINDOW_H / 4 + trans[1])
+    print("trans2", trans)
+
+    self._render_road(zoom, trans, angle)
+    self.car.draw(
+      self.surf,
+      zoom,
+      trans,
+      angle,
+      mode not in ["state_pixels_list", "state_pixels"],
+    )
+
+    self.surf = cv2.flip(self.surf, 0)  # horizontal flip
+    # self.surf = cv2.flip(self.surf, 0) # vertical flip
+    # self.surf = cv2.flip(self.surf, 0) # vertical flip
+
+    # # showing stats
+    # self.surf = pygame.transform.flip(self.surf, False, True)
+
+    if mode == "human":
+      pygame.event.pump()
+      self.clock.tick(self.metadata["render_fps"])
+      assert self.screen is not None
+      self.screen.fill(0)
+      # self.screen.blit(self.surf, (0, 0))
+      # self.surf = np.ascontiguousarray(pygame.surfarray.array3d(self.surf), dtype=np.int32)
+      # self.surf = cv2.flip(self.surf, 0) # both vertical and horizontal
+      # self.surf = cv2.rotate(self.surf, cv2.ROTATE_90_CLOCKWISE) # horizontal flip
+      self.surf = np.transpose(self.surf, axes=(1, 0, 2))
+      self.surf = pygame.surfarray.make_surface(self.surf)
+      self.screen.blit(self.surf, (0, 0))
+      pygame.display.update()
+
+    if mode == "rgb_array":
+      return self._create_image_array(self.surf, (VIDEO_W, VIDEO_H))
+    elif mode == "state_pixels":
+      return self._create_image_array(self.surf, (STATE_W, STATE_H))
+    else:
+      return self.isopen
+
+  def _render_road(self, zoom, translation, angle):
+    bounds = PLAYFIELD
+    field = [
+      (bounds, bounds),
+      (bounds, -bounds),
+      (-bounds, -bounds),
+      (-bounds, bounds),
+    ]
+
+    # draw background
+    self._draw_colored_polygon(
+      self.surf, field, self.bg_color, zoom, translation, angle, clip=False
+    )
+
+    # draw grass patches
+    grass = []
+    for x in range(-20, 20, 2):
+      for y in range(-20, 20, 2):
+        grass.append(
+          [
+            (GRASS_DIM * x + GRASS_DIM, GRASS_DIM * y + 0),
+            (GRASS_DIM * x + 0, GRASS_DIM * y + 0),
+            (GRASS_DIM * x + 0, GRASS_DIM * y + GRASS_DIM),
+            (GRASS_DIM * x + GRASS_DIM, GRASS_DIM * y + GRASS_DIM),
+          ]
+        )
+    for poly in grass:
+      self._draw_colored_polygon(
+        self.surf, poly, self.grass_color, zoom, translation, angle
+      )
+
+    # draw road
+    for poly, color in self.road_poly:
+      # converting to pixel coordinates
+      poly = [(p[0], p[1]) for p in poly]
+      color = [int(c) for c in color]
+      self._draw_colored_polygon(
+        self.surf, poly, color, zoom, translation, angle
+      )
+
+  def _draw_colored_polygon(
+    self, surface, poly, color, zoom, translation, angle, clip=True
+  ):
+    poly = [pygame.math.Vector2(c).rotate_rad(angle) for c in poly]
+    poly = [
+      (c[0] * zoom + translation[0], c[1] * zoom + translation[1])
+      for c in poly
+    ]
+    # This checks if the polygon is out of bounds of the screen, and we skip drawing if so.
+    # Instead of calculating exactly if the polygon and screen overlap,
+    # we simply check if the polygon is in a larger bounding box whose dimension
+    # is greater than the screen by MAX_SHAPE_DIM, which is the maximum
+    # diagonal length of an environment object
+    if not clip or any(
+      (-MAX_SHAPE_DIM <= coord[0] <= WINDOW_W + MAX_SHAPE_DIM) and
+      (-MAX_SHAPE_DIM <= coord[1] <= WINDOW_H + MAX_SHAPE_DIM)
+      for coord in poly
+    ):
+      # gfxdraw.aapolygon(self.surf, poly, color)
+      # gfxdraw.filled_polygon(self.surf, poly, color)
+
+      # array = np.ascontiguousarray(pygame.surfarray.array3d(self.surf), dtype=np.int32)
+      poly = np.array([poly]).astype(int)
+      print(type(color), color)
+      if isinstance(color, np.ndarray):
+        color = color.tolist()
+      cv2.fillPoly(self.surf, poly, color=color)
+
+  def _create_image_array(self, screen, size):
+    array = cv2.resize(self.surf, size, interpolation=cv2.INTER_CUBIC)
+    print("size", size, self.surf.shape, array.shape)
+    return np.transpose(array, axes=(1, 0, 2))
+
+    # scaled_screen = pygame.transform.smoothscale(screen, size)
+    # return np.transpose(
+    #     np.array(pygame.surfarray.pixels3d(scaled_screen)), axes=(1, 0, 2)
+    # )
 
   def close(self):
     if self.screen is not None:
@@ -529,50 +742,74 @@ class CarRacing(gym.Env, EzPickle):
 
 
 if __name__ == "__main__":
-  # actions = np.array([
-  #     [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, -0.3, 0.0],
-  #     [0.1, 0.0, 0.0], [0.1, 0.0, 0.0], [0.0, 1.0, 0.0],
-  #     [0.0, -1.0, 0.0], [0.0, 0.0, 0.3], [0.0, 0.4, 0.0],
-  #     [0.0, 1.0, 0.0], [0.0, -0.4, 0.0], [0.0, -0.3, 0.0],
-  #     [1.0, 0.0, 0.0], [0.0, 0.5, 0.0], [0.0, 0.0, 0.4],
-  #     [0.0, 1.0, 1.0], [0.0, 0.0, 0.0], [0.0, -0.3, 0.0]
-  # ])
+  # a = np.array([0.0, 1.0, 0.0])
+  # env = CarRacing("human")
+  # env.render()
 
-  actions = np.array([[0.0, 1.0, 0.0]])
-  env = CarRacing("human")
-
-  env.reset()
-  total_reward = 0.0
-  steps = 0
-  restart = False
-  while steps < 100:
-    print("\n\nstep", steps)
-    action = actions[steps % actions.shape[0]]
-    s, r, terminated, truncated, info = env.step(action)
-    total_reward += r
-
-    print("\naction " + str([f"{x:+0.2f}" for x in action]))
-    print(f"step {steps} total_reward {total_reward:+0.2f}")
-    steps += 1
-    if terminated or truncated or restart:
-      break
-
-  # env.reset()
-  # total_reward = 0.0
-  # steps = 0
-  # restart = False
-  # while steps < 10:
-  #     action = actions[steps % actions.shape[0]]
-  #     print("episode_step", steps)
-  #     s, r, terminated, truncated, info = env.step(action)
-  #     total_reward += r
-  #     print("reward", total_reward, r)
-  #     print("state", s)
-  #     print("info", info)
-  #     if steps % 200 == 0 or terminated or truncated:
-  #         print("\naction " + str([f"{x:+0.2f}" for x in action]))
-  #         print(f"step {steps} total_reward {total_reward:+0.2f}")
-  #     steps += 1
-  #     if terminated or truncated or restart:
-  #         break
+  # isopen = True
+  # while isopen:
+  #     env.reset()
+  #     total_reward = 0.0
+  #     steps = 0
+  #     restart = False
+  #     while steps < 100:
+  #         s, r, terminated, truncated, info = env.step(a)
+  #         total_reward += r
+  #         if steps % 1 == 0 or terminated or truncated:
+  #             print("\naction " + str([f"{x:+0.2f}" for x in a]))
+  #             print(f"step {steps} total_reward {total_reward:+0.2f}")
+  #         steps += 1
+  #         isopen = env.render()
+  #         if terminated or truncated or restart or isopen is False:
+  #             break
   # env.close()
+
+  a = np.array([0.0, 0.0, 0.0])
+
+  def register_input():
+    for event in pygame.event.get():
+      if event.type == pygame.KEYDOWN:
+        if event.key == pygame.K_LEFT:
+          a[0] = -1.0
+        if event.key == pygame.K_RIGHT:
+          a[0] = +1.0
+        if event.key == pygame.K_UP:
+          a[1] = +1.0
+        if event.key == pygame.K_DOWN:
+          a[2] = +0.8  # set 1.0 for wheels to block to zero rotation
+        if event.key == pygame.K_RETURN:
+          global restart
+          restart = True
+
+      if event.type == pygame.KEYUP:
+        if event.key == pygame.K_LEFT:
+          a[0] = 0
+        if event.key == pygame.K_RIGHT:
+          a[0] = 0
+        if event.key == pygame.K_UP:
+          a[1] = 0
+        if event.key == pygame.K_DOWN:
+          a[2] = 0
+
+  env = CarRacing("human")
+  env.render()
+
+  isopen = True
+  while isopen:
+    env.reset()
+    total_reward = 0.0
+    steps = 0
+    restart = False
+    while True:
+      register_input()
+      s, r, terminated, truncated, info = env.step(a)
+      total_reward += r
+      if steps % 20 == 0 or terminated or truncated:
+        print("s", s)
+        print("\naction " + str([f"{x:+0.2f}" for x in a]))
+        print(f"step {steps} total_reward {total_reward:+0.2f}")
+      steps += 1
+      isopen = env.render()
+      if terminated or truncated or restart or isopen is False:
+        break
+  env.close()

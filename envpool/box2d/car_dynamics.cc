@@ -33,8 +33,9 @@ b2PolygonShape GeneratePolygon(const float* array, int size) {
   return polygon;
 }
 
-Car::Car(std::shared_ptr<b2World>& world, float init_angle, float init_x, float init_y)
-    : world_(world), hull_(nullptr){
+Car::Car(std::shared_ptr<b2World>& world, float init_angle, float init_x,
+         float init_y)
+    : world_(world), hull_(nullptr) {
   printf("Car constructor %f %f %f\n", init_angle, init_x, init_y);
 
   // Create hull
@@ -48,7 +49,7 @@ Car::Car(std::shared_ptr<b2World>& world, float init_angle, float init_x, float 
 
   b2PolygonShape polygon1 = GeneratePolygon(kHullPoly1, 8);
   hull_->CreateFixture(&polygon1, 1.f);
-  
+
   b2PolygonShape polygon2 = GeneratePolygon(kHullPoly2, 8);
   hull_->CreateFixture(&polygon2, 1.f);
 
@@ -65,7 +66,7 @@ Car::Car(std::shared_ptr<b2World>& world, float init_angle, float init_x, float 
     bd.position.Set(init_x + wx * kSize, init_y + wy * kSize);
     bd.angle = init_angle;
     bd.type = b2_dynamicBody;
-  
+
     b2PolygonShape polygon = GeneratePolygon(wheelPoly, 8);
     b2FixtureDef fd;
     fd.shape = &polygon;
@@ -77,7 +78,7 @@ Car::Car(std::shared_ptr<b2World>& world, float init_angle, float init_x, float 
     auto* w = new Wheel();
     w->type = WHEEL_TYPE;
     w->body = world_->CreateBody(&bd);
-  
+
     drawlist_.push_back(w->body);
 
     w->body->CreateFixture(&fd);
@@ -163,7 +164,8 @@ void Car::step(float dt) {
     w->phase += w->omega * dt;
 
     auto vr = w->omega * w->wheel_rad;  // rotating wheel speed
-    auto f_force = -vf + vr; // force direction is direction of speed difference
+    auto f_force =
+        -vf + vr;  // force direction is direction of speed difference
     auto p_force = -vs;
 
     // Physically correct is to always apply friction_limit until speed is
@@ -175,7 +177,6 @@ void Car::step(float dt) {
     f_force *= 205000 * kSize * kSize;
     p_force *= 205000 * kSize * kSize;
     auto force = sqrt(pow(f_force, 2) + pow(p_force, 2));
-
 
     if (abs(force) > friction_limit) {
       f_force /= force;
@@ -196,14 +197,15 @@ void Car::step(float dt) {
   }
 }
 
-void Car::draw(cv::Mat& surf, float zoom, std::array<float, 2>& translation, float angle) {
-  for (int i = 0; i < drawlist_.size(); i++) {
+void Car::draw(cv::Mat& surf, float zoom, std::array<float, 2>& translation,
+               float angle) {
+  for (size_t i = 0; i < drawlist_.size(); i++) {
     auto body = drawlist_[i];
     cv::Scalar color;
     if (i == 0) {
-      color = cv::Scalar(204, 0, 0); // hull.color = (0.8, 0.0, 0.0) * 255
+      color = cv::Scalar(0, 0, 204);  // hull.color = (0.8, 0.0, 0.0) * 255
     } else {
-      color = cv::Scalar(0, 0, 0); // wheel.color = (0, 0, 0)
+      color = cv::Scalar(0, 0, 0);  // wheel.color = (0, 0, 0)
     }
     for (b2Fixture* f = body->GetFixtureList(); f; f = f->GetNext()) {
       b2PolygonShape* shape = static_cast<b2PolygonShape*>(f->GetShape());
@@ -212,10 +214,10 @@ void Car::draw(cv::Mat& surf, float zoom, std::array<float, 2>& translation, flo
         auto trans = body->GetTransform();
         auto vec_tmp = Multiply(trans, shape->m_vertices[j]);
         auto v = RotateRad(vec_tmp, angle);
-        poly.push_back(cv::Point(v.x * zoom + translation[0], v.y * zoom + translation[1]));
+        poly.push_back(cv::Point(v.x * zoom + translation[0],
+                                 v.y * zoom + translation[1]));
         cv::fillPoly(surf, poly, color);
       }
-      
     }
   }
 }
@@ -229,20 +231,17 @@ void Car::destroy() {
   wheels_.clear();
 }
 
-float Car::GetFuelSpent() {
-  return fuel_spent_;
-}
+float Car::GetFuelSpent() { return fuel_spent_; }
 
-std::vector<float> Car::GetGas() {
-  return {wheels_[2]->gas, wheels_[3]->gas};
-}
+std::vector<float> Car::GetGas() { return {wheels_[2]->gas, wheels_[3]->gas}; }
 
 std::vector<float> Car::GetSteer() {
   return {wheels_[0]->steer, wheels_[1]->steer};
 }
 
 std::vector<float> Car::GetBrake() {
-  return {wheels_[0]->brake, wheels_[1]->brake, wheels_[2]->brake, wheels_[3]->brake};
+  return {wheels_[0]->brake, wheels_[1]->brake, wheels_[2]->brake,
+          wheels_[3]->brake};
 }
 
 }  // namespace box2d

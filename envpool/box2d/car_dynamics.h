@@ -19,15 +19,16 @@
 #define ENVPOOL_BOX2D_CAR_DYNAMICS_H_
 
 #include <box2d/box2d.h>
-#include <opencv2/opencv.hpp>
-#include "utils.h"
 
 #include <cmath>
+#include <memory>
+#include <opencv2/opencv.hpp>
 #include <random>
 #include <tuple>
 #include <unordered_set>
 #include <vector>
-#include <memory>
+
+#include "utils.h"
 
 namespace box2d {
 
@@ -40,54 +41,55 @@ static const float kWheelW = 14;
 static const float kWheelPos[8] = {-55, 80, 55, 80, -55, -82, 55, -82};
 static const float kHullPoly1[8] = {-60, 130, 60, 130, 60, 110, -60, 110};
 static const float kHullPoly2[8] = {-15, 120, 15, 120, 20, 20, -20, 20};
-static const float kHullPoly3[16] = {25, 20, 50, -10, 50, -40, 20, -90,
-                                      -20, -90, -50, -40, -50, -10, -25, 20};
-static const float kHullPoly4[8] = {-50, -120, 50, -120,50, -90, -50, -90};
+static const float kHullPoly3[16] = {25,  20,  50,  -10, 50,  -40, 20,  -90,
+                                     -20, -90, -50, -40, -50, -10, -25, 20};
+static const float kHullPoly4[8] = {-50, -120, 50, -120, 50, -90, -50, -90};
 static const float wheelPoly[8] = {-kWheelW, +kWheelR, +kWheelW, +kWheelR,
-                              +kWheelW, -kWheelR, -kWheelW, -kWheelR};
+                                   +kWheelW, -kWheelR, -kWheelW, -kWheelR};
 
 static const float kRoadColor[3] = {102, 102, 102};
 static const cv::Scalar kBgColor(102, 204, 102);
 static const cv::Scalar kGrassColor(102, 230, 102);
 
-
-enum UserDataType {INVALID =1000, WHEEL_TYPE, TILE_TYPE};
+enum UserDataType { INVALID = 1000, WHEEL_TYPE, TILE_TYPE };
 
 class UserData {
-  public: 
-    UserDataType type{INVALID};
-    b2Body* body;
-    int idx{-1};
+ public:
+  UserDataType type{INVALID};
+  b2Body* body;
+  int idx{-1};
 };
 
-class Tile: public UserData {
-  public: 
-    bool tileRoadVisited{false};
-    float roadFriction;
-    std::array<float, 3> RoadColor;
+class Tile : public UserData {
+ public:
+  bool tileRoadVisited{false};
+  float roadFriction;
+  std::array<float, 3> RoadColor;
 };
 
-class Wheel: public UserData {
-  public: 
-    float wheel_rad{0};
-    float gas{0};
-    float brake{0};
-    float steer{0};
-    float phase{0};
-    float omega{0};
-    b2RevoluteJoint* joint;
-    std::unordered_set<Tile*> tiles;
+class Wheel : public UserData {
+ public:
+  float wheel_rad{0};
+  float gas{0};
+  float brake{0};
+  float steer{0};
+  float phase{0};
+  float omega{0};
+  b2RevoluteJoint* joint;
+  std::unordered_set<Tile*> tiles;
   // body will be wheel object
 };
 
 class Car {
  public:
-  Car(std::shared_ptr<b2World>& world, float init_angle, float init_x, float init_y);
+  Car(std::shared_ptr<b2World>& world, float init_angle, float init_x,
+      float init_y);
   void gas(float g);
   void brake(float b);
   void steer(float s);
   void step(float dt);
-  void draw(cv::Mat& surf, float zoom, std::array<float, 2>& translation, float angle);
+  void draw(cv::Mat& surf, float zoom, std::array<float, 2>& translation,
+            float angle);
   void destroy();
   float GetFuelSpent();
   std::vector<float> GetGas();
@@ -101,7 +103,7 @@ class Car {
   std::vector<Wheel*> wheels_;
   float fuel_spent_{0};
 
-friend class CarRacingBox2dEnv;
+  friend class CarRacingBox2dEnv;
 };
 
 }  // namespace box2d
