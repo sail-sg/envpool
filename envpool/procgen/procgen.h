@@ -33,55 +33,72 @@ namespace procgen {
    All the procgen's games have the same observation buffer size, 64 x 64 pixels
    x 3 colors (RGB) there are 15 possible action buttoms and observation is RGB
    32 or RGB 888,
+   QT library build needs:
+   sudo apt update && sudo apt install qt5-default && sudo apt-get install
+   qtdeclarative5-dev
    https://github.com/openai/procgen/blob/5e1dbf341d291eff40d1f9e0c0a0d5003643aebf/procgen/src/game.h#L23
  */
-static const int RES_W = 64;
-static const int RES_H = 64;
-static const int RGB_FACTOR = 3;
-static const int ACTION_NUM = 15;  // 0 ~ 14 both sides included
+static const int kResW = 64;
+static const int kResH = 64;
+static const int kRgbFactor = 3;
+static const int kActionNum = 15;  // 0 ~ 14 both sides included
 
 /*
    game factory method for fetching a game instance
    Notice the inheritance hierarchy is Game > BasicAbstractGame > [detailed 15
    games]
 */
-std::shared_ptr<Game> make_game(std::string name) {
+std::shared_ptr<Game> MakeGame(const std::string& name) {
   if (name == "bigfish") {
     return make_bigfish();
-  } else if (name == "bossfight") {
-    return make_bossfight();
-  } else if (name == "caveflyer") {
-    return make_caveflyer();
-  } else if (name == "chaser") {
-    return make_chaser();
-  } else if (name == "climber") {
-    return make_climber();
-  } else if (name == "coinrun") {
-    return make_coinrun();
-  } else if (name == "dodgeball") {
-    return make_dodgeball();
-  } else if (name == "fruitbot") {
-    return make_fruitbot();
-  } else if (name == "heist") {
-    return make_heist();
-  } else if (name == "jumper") {
-    return make_jumper();
-  } else if (name == "leaper") {
-    return make_leaper();
-  } else if (name == "maze") {
-    return make_maze();
-  } else if (name == "miner") {
-    return make_miner();
-  } else if (name == "ninja") {
-    return make_ninja();
-  } else if (name == "plunder") {
-    return make_plunder();
-  } else if (name == "starpilot") {
-    return make_starpilot();
-  } else {
-    // not supposed to reach here
-    return make_bigfish();
   }
+  if (name == "bossfight") {
+    return make_bossfight();
+  }
+  if (name == "caveflyer") {
+    return make_caveflyer();
+  }
+  if (name == "chaser") {
+    return make_chaser();
+  }
+  if (name == "climber") {
+    return make_climber();
+  }
+  if (name == "coinrun") {
+    return make_coinrun();
+  }
+  if (name == "dodgeball") {
+    return make_dodgeball();
+  }
+  if (name == "fruitbot") {
+    return make_fruitbot();
+  }
+  if (name == "heist") {
+    return make_heist();
+  }
+  if (name == "jumper") {
+    return make_jumper();
+  }
+  if (name == "leaper") {
+    return make_leaper();
+  }
+  if (name == "maze") {
+    return make_maze();
+  }
+  if (name == "miner") {
+    return make_miner();
+  }
+  if (name == "ninja") {
+    return make_ninja();
+  }
+  if (name == "plunder") {
+    return make_plunder();
+  }
+  if (name == "starpilot") {
+    return make_starpilot();
+  }
+  // not supposed to reach here
+  return make_bigfish();
 }
 
 class ProcgenEnvFns {
@@ -90,8 +107,8 @@ class ProcgenEnvFns {
     /* necessary default parameters for procgen games */
     /* https://github.com/openai/procgen/blob/5e1dbf341d291eff40d1f9e0c0a0d5003643aebf/procgen/src/game.h#L69
      */
-    return MakeDict("state_num"_.Bind(RES_W * RES_H * RGB_FACTOR),
-                    "action_num"_.Bind(ACTION_NUM),
+    return MakeDict("state_num"_.Bind(kResW * kResH * kRgbFactor),
+                    "action_num"_.Bind(kActionNum),
                     "game_name"_.Bind(std::string("bigfish")),
                     "use_sequential_levels"_.Bind(false), "num_levels"_.Bind(0),
                     "start_level"_.Bind(0), "distribution_mode"_.Bind(1));
@@ -136,7 +153,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     /* notice we need to allocate space for some buffer, as specificied here
        https://github.com/openai/procgen/blob/master/procgen/src/game.h#L101
     */
-    game_ = make_game(spec.config["game_name"_]);
+    game_ = MakeGame(spec.config["game_name"_]);
     game_level_seed_gen_.seed(rand_seed_);
     game_->level_seed_rand_gen.seed(game_level_seed_gen_.randint());
     if (spec.config["num_levels"_] <= 0) {
@@ -159,11 +176,11 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     game_->action_ptr = new int32_t(0);
     game_->reward_ptr = new float(0.0);
     game_->first_ptr = new uint8_t(0);
-    obs_bufs_.resize(RES_W * RES_H);
-    info_bufs_.resize(RES_W * RES_H);
-    for (int i = 0; i < RES_W * RES_H; i++) {
-      obs_bufs_[i] = new int64_t[RES_W * RES_H];
-      info_bufs_[i] = new int64_t[RES_W * RES_H];
+    obs_bufs_.resize(kResW * kResH);
+    info_bufs_.resize(kResW * kResH);
+    for (int i = 0; i < kResW * kResH; i++) {
+      obs_bufs_[i] = new int64_t[kResW * kResH];
+      info_bufs_[i] = new int64_t[kResW * kResH];
     }
     game_->obs_bufs = obs_bufs_;
     game_->info_bufs = info_bufs_;
@@ -215,10 +232,10 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     */
 
     uint8_t* src = (uint8_t*)obs_bufs_[0];  // NOLINT
-    for (int y = 0; y < RES_H; y++) {
-      for (int x = 0; x < RES_W; x++) {
-        for (int rgb = 0; rgb < RGB_FACTOR; rgb++) {
-          int offset = rgb + x * RGB_FACTOR + y * RES_W * RGB_FACTOR;
+    for (int y = 0; y < kResH; y++) {
+      for (int x = 0; x < kResW; x++) {
+        for (int rgb = 0; rgb < kRgbFactor; rgb++) {
+          int offset = rgb + x * kRgbFactor + y * kResW * kRgbFactor;
           state["obs:obs"_][0][offset] = static_cast<uint8_t>(src[offset]);
         }
       }
@@ -227,7 +244,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
   }
 };
 
-typedef AsyncEnvPool<ProcgenEnv> ProcgenEnvPool;
+using ProcgenEnvPool = AsyncEnvPool<ProcgenEnv>;
 
 }  // namespace procgen
 

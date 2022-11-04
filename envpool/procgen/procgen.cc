@@ -17,9 +17,9 @@
 #include "envpool/procgen/procgen.h"
 // clang-format on
 // generate python-side (raw) ProcgenEnvSpec
-typedef PyEnvSpec<procgen::ProcgenEnvSpec> ProcgenEnvSpec;
+using ProcgenEnvSpec = PyEnvSpec<procgen::ProcgenEnvSpec>;
 // generate python-side (raw) ProcgenEnvPool
-typedef PyEnvPool<procgen::ProcgenEnvPool> ProcgenEnvPool;
+using ProcgenEnvPool = PyEnvPool<procgen::ProcgenEnvPool>;
 // generate procgen.so
 PYBIND11_MODULE(procgen_envpool, m) {
   REGISTER(m, ProcgenEnvSpec, ProcgenEnvPool)
