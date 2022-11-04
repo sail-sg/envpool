@@ -64,7 +64,7 @@ procgen_timeout_list = {
 def rgb_to_picture(
   pixels: Any, count: int = pic_count, prefix_name: str = "procgen"
 ) -> None:
-  """Helper function to covert pixel matrix to a picture by cv2"""
+  """Helper function to covert pixel matrix to a picture by cv2."""
   # convert a state's rgb 64x64x3 game observation into picture by cv2
   # for sanity check if the game is running correctly
   # state is ordered in y -> x -> rgb in one dimension array
@@ -88,7 +88,7 @@ def rgb_to_picture(
 
 
 class _ProcgenEnvPoolTest(absltest.TestCase):
-  """The testing class for Procgen"""
+  """The testing class for Procgen."""
 
   def test_raw_envpool(self) -> None:
     # create raw procgen environment and run
