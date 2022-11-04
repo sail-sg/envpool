@@ -185,7 +185,7 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
     logging.info(f"align check for gym {game_name}")
     timeout = procgen_timeout_list[game_name]
     num_env = 1
-    for i in range(3):
+    for i in range(2):
       env_gym = envpool_cls(
         spec_cls(
           spec_cls.gen_config(num_envs=num_env, seed=i, game_name=game_name)
@@ -264,7 +264,7 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
     logging.info(f"align check for dmc {game_name}")
     timeout = procgen_timeout_list[game_name]
     num_env = 1
-    for i in range(3):
+    for i in range(2):
       env_dmc = envpool_cls(
         spec_cls(
           spec_cls.gen_config(num_envs=num_env, seed=i, game_name=game_name)
