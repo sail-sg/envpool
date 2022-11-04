@@ -31,8 +31,7 @@ namespace mujoco_gym {
 class InvertedPendulumEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(1000),
-                    "reward_threshold"_.Bind(950.0), "frame_skip"_.Bind(2),
+    return MakeDict("reward_threshold"_.Bind(950.0), "frame_skip"_.Bind(2),
                     "post_constraint"_.Bind(true), "healthy_reward"_.Bind(1.0),
                     "healthy_z_min"_.Bind(-0.2), "healthy_z_max"_.Bind(0.2),
                     "reset_noise_scale"_.Bind(0.01));

@@ -36,24 +36,25 @@ py_library(
     deps = ["//envpool/python:api"],
 )
 
+py_library(
+    name = "toy_text_registration",
+    srcs = ["registration.py"],
+    deps = [
+        "//envpool:registration",
+    ],
+)
+
 py_test(
     name = "toy_text_test",
     srcs = ["toy_text_test.py"],
     deps = [
         ":toy_text",
+        ":toy_text_registration",
         requirement("absl-py"),
         requirement("dm_env"),
         requirement("gym"),
         requirement("numpy"),
         requirement("scipy"),
         requirement("pygame"),
-    ],
-)
-
-py_library(
-    name = "toy_text_registration",
-    srcs = ["registration.py"],
-    deps = [
-        "//envpool:registration",
     ],
 )

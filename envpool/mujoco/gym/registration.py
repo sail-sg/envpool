@@ -22,31 +22,31 @@ base_path = os.path.abspath(
 )
 
 gym_mujoco_envs = [
-  ("Ant", "v3", False),
-  ("Ant", "v4", True),
-  ("HalfCheetah", "v3", False),
-  ("HalfCheetah", "v4", True),
-  ("Hopper", "v3", False),
-  ("Hopper", "v4", True),
-  ("Humanoid", "v3", False),
-  ("Humanoid", "v4", True),
-  ("HumanoidStandup", "v2", False),
-  ("HumanoidStandup", "v4", True),
-  ("InvertedDoublePendulum", "v2", False),
-  ("InvertedDoublePendulum", "v4", True),
-  ("InvertedPendulum", "v2", False),
-  ("InvertedPendulum", "v4", True),
-  ("Pusher", "v2", False),
-  ("Pusher", "v4", True),
-  ("Reacher", "v2", False),
-  ("Reacher", "v4", True),
-  ("Swimmer", "v3", False),
-  ("Swimmer", "v4", True),
-  ("Walker2d", "v3", False),
-  ("Walker2d", "v4", True),
+  ("Ant", "v3", False, 1000),
+  ("Ant", "v4", True, 1000),
+  ("HalfCheetah", "v3", False, 1000),
+  ("HalfCheetah", "v4", True, 1000),
+  ("Hopper", "v3", False, 1000),
+  ("Hopper", "v4", True, 1000),
+  ("Humanoid", "v3", False, 1000),
+  ("Humanoid", "v4", True, 1000),
+  ("HumanoidStandup", "v2", False, 1000),
+  ("HumanoidStandup", "v4", True, 1000),
+  ("InvertedDoublePendulum", "v2", False, 1000),
+  ("InvertedDoublePendulum", "v4", True, 1000),
+  ("InvertedPendulum", "v2", False, 1000),
+  ("InvertedPendulum", "v4", True, 1000),
+  ("Pusher", "v2", False, 100),
+  ("Pusher", "v4", True, 100),
+  ("Reacher", "v2", False, 50),
+  ("Reacher", "v4", True, 50),
+  ("Swimmer", "v3", False, 1000),
+  ("Swimmer", "v4", True, 1000),
+  ("Walker2d", "v3", False, 1000),
+  ("Walker2d", "v4", True, 1000),
 ]
 
-for task, version, post_constraint in gym_mujoco_envs:
+for task, version, post_constraint, max_episode_steps in gym_mujoco_envs:
   extra_args = {}
   if task == "Ant" and version == "v3":
     extra_args["use_contact_force"] = True
@@ -58,5 +58,6 @@ for task, version, post_constraint in gym_mujoco_envs:
     gym_cls=f"Gym{task}GymEnvPool",
     base_path=base_path,
     post_constraint=post_constraint,
+    max_episode_steps=max_episode_steps,
     **extra_args,
   )

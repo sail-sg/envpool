@@ -46,6 +46,8 @@ class _MakeTest(absltest.TestCase):
     # not work for wrong bin, see issue #146
     for wrong in ["Combat", "Joust", "MazeCraze", "Warlords"]:
       self.assertRaises(AssertionError, envpool.make_gym, f"{wrong}-v5")
+    # invalid argument will raise AssertionError, see issue #214
+    self.assertRaises(AssertionError, envpool.make_gym, "Pong-v5", seed=2**31)
 
   def test_make_vizdoom(self) -> None:
     spec = envpool.make_spec("MyWayHome-v1")
@@ -94,10 +96,14 @@ class _MakeTest(absltest.TestCase):
     )
 
   def test_make_box2d(self) -> None:
-    self.check_step([
-      "LunarLander-v2",
-      "LunarLanderContinuous-v2",
-    ])
+    self.check_step(
+      [
+        "BipedalWalker-v3",
+        "BipedalWalkerHardcore-v3",
+        "LunarLander-v2",
+        "LunarLanderContinuous-v2",
+      ]
+    )
 
   def test_make_mujoco_gym(self) -> None:
     self.check_step(

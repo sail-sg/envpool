@@ -16,41 +16,21 @@
 from typing import Any, no_type_check
 
 import gym
-import mjc_mwe
+import mujoco
 import numpy as np
 from absl import logging
 from absl.testing import absltest
+from packaging import version
 
-from envpool.mujoco.gym import (
-  GymAntEnvSpec,
-  GymAntGymEnvPool,
-  GymHalfCheetahEnvSpec,
-  GymHalfCheetahGymEnvPool,
-  GymHopperEnvSpec,
-  GymHopperGymEnvPool,
-  GymHumanoidEnvSpec,
-  GymHumanoidGymEnvPool,
-  GymHumanoidStandupEnvSpec,
-  GymHumanoidStandupGymEnvPool,
-  GymInvertedDoublePendulumEnvSpec,
-  GymInvertedDoublePendulumGymEnvPool,
-  GymInvertedPendulumEnvSpec,
-  GymInvertedPendulumGymEnvPool,
-  GymPusherEnvSpec,
-  GymPusherGymEnvPool,
-  GymReacherEnvSpec,
-  GymReacherGymEnvPool,
-  GymSwimmerEnvSpec,
-  GymSwimmerGymEnvPool,
-  GymWalker2dEnvSpec,
-  GymWalker2dGymEnvPool,
-)
+import envpool.mujoco.gym.registration  # noqa: F401
+from envpool.registration import make_gym
 
 
 class _MujocoGymAlignTest(absltest.TestCase):
 
   @no_type_check
   def run_space_check(self, env0: gym.Env, env1: Any) -> None:
+    """Check observation_space and action space."""
     """Check observation_space and action space."""
     obs0, obs1 = env0.observation_space, env1.observation_space
     np.testing.assert_allclose(obs0.low, obs1.low)
@@ -64,9 +44,8 @@ class _MujocoGymAlignTest(absltest.TestCase):
     self, env: gym.Env, qpos: np.ndarray, qvel: np.ndarray
   ) -> None:
     # manually reset
-    env._mujoco_bindings.mj_resetData(env.model, env.data)
+    mujoco.mj_resetData(env.model, env.data)
     env.set_state(qpos, qvel)
-    env._mujoco_bindings.mj_forward(env.model, env.data)
 
   def run_align_check(
     self, env0: gym.Env, env1: Any, no_time_limit: bool = False
@@ -86,8 +65,10 @@ class _MujocoGymAlignTest(absltest.TestCase):
         cnt += 1
         a = env0.action_space.sample()
         # logging.info(f"{cnt} {a}")
-        o0, r0, d0, i0 = env0.step(a)
-        o1, r1, d1, i1 = env1.step(np.array([a]), np.array([0]))
+        o0, r0, term0, trunc0, i0 = env0.step(a)
+        d0 = np.logical_or(term0, trunc0)
+        o1, r1, term1, trunc1, i1 = env1.step(np.array([a]), np.array([0]))
+        d1 = np.logical_or(term1, trunc1)
         np.testing.assert_allclose(o0, o1[0], atol=3e-4)
         np.testing.assert_allclose(r0, r1[0], atol=1e-4)
         if not no_time_limit:
@@ -97,195 +78,134 @@ class _MujocoGymAlignTest(absltest.TestCase):
             np.testing.assert_allclose(i0[k], i1[k][0], atol=1e-4)
 
   def test_ant(self) -> None:
-    env0 = mjc_mwe.AntEnv()
-    env1 = GymAntGymEnvPool(
-      GymAntEnvSpec(GymAntEnvSpec.gen_config(gym_reset_return_info=True))
-    )
+    assert version.parse(gym.__version__) >= version.parse("0.26.0")
+    env0 = gym.make("Ant-v4")
+    env1 = make_gym("Ant-v4")
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
-    env0 = mjc_mwe.AntEnv(
+    env0 = gym.make(
+      "Ant-v4",
       terminate_when_unhealthy=False,
       exclude_current_positions_from_observation=False,
     )
-    env1 = GymAntGymEnvPool(
-      GymAntEnvSpec(
-        GymAntEnvSpec.gen_config(
-          terminate_when_unhealthy=False,
-          exclude_current_positions_from_observation=False,
-          max_episode_steps=100,
-          gym_reset_return_info=True,
-        )
-      )
+    env1 = make_gym(
+      "Ant-v4",
+      terminate_when_unhealthy=False,
+      exclude_current_positions_from_observation=False,
+      max_episode_steps=100,
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
 
   def test_half_cheetah(self) -> None:
-    env0 = mjc_mwe.HalfCheetahEnv()
-    env1 = GymHalfCheetahGymEnvPool(
-      GymHalfCheetahEnvSpec(
-        GymHalfCheetahEnvSpec.gen_config(gym_reset_return_info=True)
-      )
-    )
+    env0 = gym.make("HalfCheetah-v4")
+    env1 = make_gym("HalfCheetah-v4")
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
-    env0 = mjc_mwe.HalfCheetahEnv(
-      exclude_current_positions_from_observation=True
+    env0 = gym.make(
+      "HalfCheetah-v4", exclude_current_positions_from_observation=True
     )
-    env1 = GymHalfCheetahGymEnvPool(
-      GymHalfCheetahEnvSpec(
-        GymHalfCheetahEnvSpec.gen_config(
-          exclude_current_positions_from_observation=True,
-          gym_reset_return_info=True,
-        )
-      )
+    env1 = make_gym(
+      "HalfCheetah-v4",
+      exclude_current_positions_from_observation=True,
     )
     self.run_space_check(env0, env1)
 
   def test_hopper(self) -> None:
-    env0 = mjc_mwe.HopperEnv()
-    env1 = GymHopperGymEnvPool(
-      GymHopperEnvSpec(
-        GymHopperEnvSpec.gen_config(gym_reset_return_info=True)
-      )
-    )
+    env0 = gym.make("Hopper-v4")
+    env1 = make_gym("Hopper-v4")
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
-    env0 = mjc_mwe.HopperEnv(
+    env0 = gym.make(
+      "Hopper-v4",
       terminate_when_unhealthy=False,
       exclude_current_positions_from_observation=False,
     )
-    env1 = GymHopperGymEnvPool(
-      GymHopperEnvSpec(
-        GymHopperEnvSpec.gen_config(
-          terminate_when_unhealthy=False,
-          exclude_current_positions_from_observation=False,
-          gym_reset_return_info=True,
-        )
-      )
+    env1 = make_gym(
+      "Hopper-v4",
+      terminate_when_unhealthy=False,
+      exclude_current_positions_from_observation=False,
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
 
   def test_humanoid(self) -> None:
-    env0 = mjc_mwe.HumanoidEnv()
-    env1 = GymHumanoidGymEnvPool(
-      GymHumanoidEnvSpec(
-        GymHumanoidEnvSpec.gen_config(gym_reset_return_info=True)
-      )
-    )
+    env0 = gym.make("Humanoid-v4")
+    env1 = make_gym("Humanoid-v4")
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
-    env0 = mjc_mwe.HumanoidEnv(
+    env0 = gym.make(
+      "Humanoid-v4",
       terminate_when_unhealthy=False,
       exclude_current_positions_from_observation=False,
     )
-    env1 = GymHumanoidGymEnvPool(
-      GymHumanoidEnvSpec(
-        GymHumanoidEnvSpec.gen_config(
-          terminate_when_unhealthy=False,
-          exclude_current_positions_from_observation=False,
-          gym_reset_return_info=True,
-        )
-      )
+    env1 = make_gym(
+      "Humanoid-v4",
+      terminate_when_unhealthy=False,
+      exclude_current_positions_from_observation=False,
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
 
   def test_humanoid_standup(self) -> None:
-    env0 = mjc_mwe.HumanoidStandupEnv()
-    env1 = GymHumanoidStandupGymEnvPool(
-      GymHumanoidStandupEnvSpec(
-        GymHumanoidStandupEnvSpec.gen_config(gym_reset_return_info=True)
-      )
-    )
+    env0 = gym.make("HumanoidStandup-v4")
+    env1 = make_gym("HumanoidStandup-v4")
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
 
   def test_inverted_double_pendulum(self) -> None:
-    env0 = mjc_mwe.InvertedDoublePendulumEnv()
-    env1 = GymInvertedDoublePendulumGymEnvPool(
-      GymInvertedDoublePendulumEnvSpec(
-        GymInvertedDoublePendulumEnvSpec.gen_config(
-          gym_reset_return_info=True
-        )
-      )
-    )
+    env0 = gym.make("InvertedDoublePendulum-v4")
+    env1 = make_gym("InvertedDoublePendulum-v4",)
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
 
   def test_inverted_pendulum(self) -> None:
-    env0 = mjc_mwe.InvertedPendulumEnv()
-    env1 = GymInvertedPendulumGymEnvPool(
-      GymInvertedPendulumEnvSpec(
-        GymInvertedPendulumEnvSpec.gen_config(gym_reset_return_info=True)
-      )
-    )
+    env0 = gym.make("InvertedPendulum-v4")
+    env1 = make_gym("InvertedPendulum-v4",)
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
 
   def test_pusher(self) -> None:
-    env0 = mjc_mwe.PusherEnv()
-    env1 = GymPusherGymEnvPool(
-      GymPusherEnvSpec(
-        GymPusherEnvSpec.gen_config(gym_reset_return_info=True)
-      )
-    )
+    env0 = gym.make("Pusher-v4")
+    env1 = make_gym("Pusher-v4")
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
 
   def test_reacher(self) -> None:
-    env0 = mjc_mwe.ReacherEnv()
-    env1 = GymReacherGymEnvPool(
-      GymReacherEnvSpec(
-        GymReacherEnvSpec.gen_config(gym_reset_return_info=True)
-      )
-    )
+    env0 = gym.make("Reacher-v4")
+    env1 = make_gym("Reacher-v4")
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
 
   def test_swimmer(self) -> None:
-    env0 = mjc_mwe.SwimmerEnv()
-    env1 = GymSwimmerGymEnvPool(
-      GymSwimmerEnvSpec(
-        GymSwimmerEnvSpec.gen_config(gym_reset_return_info=True)
-      )
-    )
+    env0 = gym.make("Swimmer-v4")
+    env1 = make_gym("Swimmer-v4")
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)
-    env0 = mjc_mwe.SwimmerEnv(exclude_current_positions_from_observation=False)
-    env1 = GymSwimmerGymEnvPool(
-      GymSwimmerEnvSpec(
-        GymSwimmerEnvSpec.gen_config(
-          exclude_current_positions_from_observation=False,
-          gym_reset_return_info=True,
-        )
-      )
+    env0 = gym.make(
+      "Swimmer-v4", exclude_current_positions_from_observation=False
+    )
+    env1 = make_gym(
+      "Swimmer-v4",
+      exclude_current_positions_from_observation=False,
     )
     self.run_space_check(env0, env1)
 
   def test_walker2d(self) -> None:
-    env0 = mjc_mwe.Walker2dEnv()
-    env1 = GymWalker2dGymEnvPool(
-      GymWalker2dEnvSpec(
-        GymWalker2dEnvSpec.gen_config(gym_reset_return_info=True)
-      )
-    )
+    env0 = gym.make("Walker2d-v4")
+    env1 = make_gym("Walker2d-v4")
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1)
-    env0 = mjc_mwe.Walker2dEnv(
+    env0 = gym.make(
+      "Walker2d-v4",
       terminate_when_unhealthy=False,
       exclude_current_positions_from_observation=False,
     )
-    env1 = GymWalker2dGymEnvPool(
-      GymWalker2dEnvSpec(
-        GymWalker2dEnvSpec.gen_config(
-          terminate_when_unhealthy=False,
-          exclude_current_positions_from_observation=False,
-          max_episode_steps=100,
-          gym_reset_return_info=True,
-        )
-      )
+    env1 = make_gym(
+      "Walker2d-v4",
+      terminate_when_unhealthy=False,
+      exclude_current_positions_from_observation=False,
+      max_episode_steps=100,
     )
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, no_time_limit=True)

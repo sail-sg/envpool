@@ -32,11 +32,10 @@ class ReacherEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
-        "max_episode_steps"_.Bind(50), "reward_threshold"_.Bind(-3.75),
-        "frame_skip"_.Bind(2), "post_constraint"_.Bind(true),
-        "ctrl_cost_weight"_.Bind(1.0), "dist_cost_weight"_.Bind(1.0),
-        "reset_qpos_scale"_.Bind(0.1), "reset_qvel_scale"_.Bind(0.005),
-        "reset_goal_scale"_.Bind(0.2));
+        "reward_threshold"_.Bind(-3.75), "frame_skip"_.Bind(2),
+        "post_constraint"_.Bind(true), "ctrl_cost_weight"_.Bind(1.0),
+        "dist_cost_weight"_.Bind(1.0), "reset_qpos_scale"_.Bind(0.1),
+        "reset_qvel_scale"_.Bind(0.005), "reset_goal_scale"_.Bind(0.2));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {

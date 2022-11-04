@@ -19,18 +19,8 @@ import gym
 import numpy as np
 from absl.testing import absltest
 
-from envpool.classic_control import (
-  AcrobotEnvSpec,
-  AcrobotGymEnvPool,
-  CartPoleEnvSpec,
-  CartPoleGymEnvPool,
-  MountainCarContinuousEnvSpec,
-  MountainCarContinuousGymEnvPool,
-  MountainCarEnvSpec,
-  MountainCarGymEnvPool,
-  PendulumEnvSpec,
-  PendulumGymEnvPool,
-)
+import envpool.classic_control.registration  # noqa: F401
+from envpool.registration import make_gym
 
 
 class _ClassicControlEnvPoolTest(absltest.TestCase):
@@ -44,20 +34,13 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
 
   def run_deterministic_check(
     self,
-    spec_cls: Any,
-    envpool_cls: Any,
+    task_id: str,
     num_envs: int = 4,
     **kwargs: Any,
   ) -> None:
-    env0 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, **kwargs))
-    )
-    env1 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, **kwargs))
-    )
-    env2 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=1, **kwargs))
-    )
+    env0 = make_gym(task_id, num_envs=num_envs, seed=0, **kwargs)
+    env1 = make_gym(task_id, num_envs=num_envs, seed=0, **kwargs)
+    env2 = make_gym(task_id, num_envs=num_envs, seed=1, **kwargs)
     act_space = env0.action_space
     eps = np.finfo(np.float32).eps
     obs_space = env0.observation_space
@@ -82,52 +65,50 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
       d0 = False
       while not d0:
         a = env0.action_space.sample()
-        o0, r0, d0, _ = env0.step(a)
-        o1, r1, d1, _ = env1.step(np.array([a]), np.array([0]))
+        o0, r0, term0, trunc0, _ = env0.step(a)
+        d0 = np.logical_or(term0, trunc0)
+        o1, r1, term1, trunc1, _ = env1.step(np.array([a]), np.array([0]))
+        d1 = np.logical_or(term1, trunc1)
         np.testing.assert_allclose(o0, o1[0], atol=1e-4)
         np.testing.assert_allclose(r0, r1[0])
         np.testing.assert_allclose(d0, d1[0])
+        np.testing.assert_allclose(term0, term1[0])
+        np.testing.assert_allclose(trunc0, trunc1[0])
 
   def test_cartpole(self) -> None:
     env0 = gym.make("CartPole-v1")
-    env1 = CartPoleGymEnvPool(CartPoleEnvSpec(CartPoleEnvSpec.gen_config()))
+    env1 = make_gym("CartPole-v1")
     self.run_space_check(env0, env1)
-    self.run_deterministic_check(CartPoleEnvSpec, CartPoleGymEnvPool)
+    self.run_deterministic_check("CartPole-v1")
 
   def test_pendulum(self) -> None:
     env0 = gym.make("Pendulum-v1")
-    env1 = PendulumGymEnvPool(PendulumEnvSpec(PendulumEnvSpec.gen_config()))
+    env1 = make_gym("Pendulum-v1")
     self.run_space_check(env0, env1)
-    self.run_deterministic_check(PendulumEnvSpec, PendulumGymEnvPool)
+    self.run_deterministic_check("Pendulum-v1")
 
   def test_mountain_car(self) -> None:
-    self.run_deterministic_check(MountainCarEnvSpec, MountainCarGymEnvPool)
-    self.run_deterministic_check(
-      MountainCarContinuousEnvSpec, MountainCarContinuousGymEnvPool
-    )
+    self.run_deterministic_check("MountainCar-v0")
+    self.run_deterministic_check("MountainCarContinuous-v0")
 
     @no_type_check
     def reset_fn(env0: gym.Env, env1: Any) -> None:
       env0.reset()
-      obs = env1.reset()
+      obs, _ = env1.reset()
       env0.unwrapped.state = obs[0]
 
     env0 = gym.make("MountainCar-v0")
-    spec = MountainCarEnvSpec(MountainCarEnvSpec.gen_config())
-    env1 = MountainCarGymEnvPool(spec)
+    env1 = make_gym("MountainCar-v0")
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, reset_fn)
 
     env0 = gym.make("MountainCarContinuous-v0")
-    spec = MountainCarContinuousEnvSpec(
-      MountainCarContinuousEnvSpec.gen_config()
-    )
-    env1 = MountainCarContinuousGymEnvPool(spec)
+    env1 = make_gym("MountainCarContinuous-v0")
     self.run_space_check(env0, env1)
     self.run_align_check(env0, env1, reset_fn)
 
   def test_acrobot(self) -> None:
-    self.run_deterministic_check(AcrobotEnvSpec, AcrobotGymEnvPool)
+    self.run_deterministic_check("Acrobot-v1")
 
     # in envpool we use float64 but gym use float32
 
@@ -138,8 +119,7 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
     #   print(env0.unwrapped.state)
 
     env0 = gym.make("Acrobot-v1")
-    spec = AcrobotEnvSpec(AcrobotEnvSpec.gen_config())
-    env1 = AcrobotGymEnvPool(spec)
+    env1 = make_gym("Acrobot-v1")
     self.run_space_check(env0, env1)
     # self.run_align_check(env0, env1, reset_fn)
 

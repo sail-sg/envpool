@@ -6,6 +6,50 @@ https://github.com/erincatto/box2d/tree/v2.4.1 and
 https://github.com/openai/gym/tree/v0.23.1/gym/envs/box2d
 
 
+BipedalWalker-v3, BipedalWalkerHardcore-v3
+------------------------------------------
+
+This is a simple 4-joint walker robot environment. There are two versions:
+- Normal, with slightly uneven terrain;
+- Hardcore, with ladders, stumps, pitfalls.
+
+To solve the normal version, you need to get 300 points in 1600 time steps.
+To solve the hardcore version, you need 300 points in 2000 time steps.
+
+Action Space
+~~~~~~~~~~~~
+
+Actions are motor speed values in the ``[-1, 1]`` range for each of the
+4 joints at both hips and knees.
+
+Observation Space
+~~~~~~~~~~~~~~~~~
+
+State consists of hull angle speed, angular velocity, horizontal speed,
+vertical speed, position of joints and joints angular speed, legs contact
+with ground, and 10 lidar rangefinder measurements. There are no coordinates
+in the state vector.
+
+Rewards
+~~~~~~~
+
+Reward is given for moving forward, totaling 300+ points up to the far end.
+If the robot falls, it gets -100. Applying motor torque costs a small
+amount of points. A more optimal agent will get a better score.
+
+Starting State
+~~~~~~~~~~~~~~
+
+The walker starts standing at the left end of the terrain with the hull
+horizontal, and both legs in the same position with a slight knee angle.
+
+Episode Termination
+~~~~~~~~~~~~~~~~~~~
+
+The episode will terminate if the hull gets in contact with the ground or
+if the walker exceeds the right end of the terrain length.
+
+
 CarRacing-v1
 ------------
 
@@ -103,3 +147,18 @@ The episode finishes if:
    body is awake and collides with a sleeping body, then the sleeping body
    wakes up. Bodies will also wake up if a joint or contact attached to
    them is destroyed.
+
+
+Notes on Box2D versions
+-----------------------
+
+``box2d_correctness_test.py`` aims to address the correctness of our Box2D
+implementation.
+
+We ran gym's environments with dependency ``box2d-py==2.3.5`` (see
+https://github.com/openai/box2d-py/tree/2.3.5) for 1000 episode and averaged
+reward as our threshold.
+
+The current implementation of envpool is based on box2d 2.4.1 version.
+If you want to use box2d==2.3.5 to run the test, please checkout commit
+``4de47ebb6615052c67fdfbbe9bc3e9b1d5692f99`` and build the wheel.

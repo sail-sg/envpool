@@ -32,8 +32,7 @@ namespace toy_text {
 class TaxiEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(200),
-                    "reward_threshold"_.Bind(8.0));
+    return MakeDict("reward_threshold"_.Bind(8.0));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {

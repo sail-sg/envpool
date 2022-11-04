@@ -47,4 +47,5 @@ for game in _vizdoom_game_list() + ["vizdoom_custom"]:
     base_path=base_path,
     cfg_path=cfg_path,
     wad_path=wad_path,
+    max_episode_steps=525,
   )

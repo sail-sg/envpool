@@ -67,3 +67,4 @@ jitting
 api
 jit
 mins
+lidar

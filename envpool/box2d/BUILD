@@ -5,11 +5,18 @@ package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "box2d_env",
-    srcs = ["lunar_lander.cc"],
+    srcs = [
+        "bipedal_walker_env.cc",
+        "lunar_lander_env.cc",
+        "utils.cc",
+    ],
     hdrs = [
-        "lunar_lander.h",
+        "bipedal_walker.h",
+        "bipedal_walker_env.h",
         "lunar_lander_continuous.h",
         "lunar_lander_discrete.h",
+        "lunar_lander_env.h",
+        "utils.h",
     ],
     deps = [
         "//envpool/core:async_envpool",
@@ -33,12 +40,21 @@ py_library(
     deps = ["//envpool/python:api"],
 )
 
+py_library(
+    name = "box2d_registration",
+    srcs = ["registration.py"],
+    deps = [
+        "//envpool:registration",
+    ],
+)
+
 py_test(
     name = "box2d_deterministic_test",
     size = "enormous",
     srcs = ["box2d_deterministic_test.py"],
     deps = [
         ":box2d",
+        ":box2d_registration",
         requirement("absl-py"),
         requirement("numpy"),
     ],
@@ -50,18 +66,11 @@ py_test(
     srcs = ["box2d_correctness_test.py"],
     deps = [
         ":box2d",
+        ":box2d_registration",
         requirement("absl-py"),
         requirement("gym"),
         requirement("box2d"),
         requirement("pygame"),
         requirement("numpy"),
-    ],
-)
-
-py_library(
-    name = "box2d_registration",
-    srcs = ["registration.py"],
-    deps = [
-        "//envpool:registration",
     ],
 )

@@ -18,32 +18,21 @@ from typing import Any
 import numpy as np
 from absl.testing import absltest
 
-from envpool.box2d import (
-  LunarLanderContinuousEnvSpec,
-  LunarLanderContinuousGymEnvPool,
-  LunarLanderDiscreteEnvSpec,
-  LunarLanderDiscreteGymEnvPool,
-)
+import envpool.box2d.registration  # noqa: F401
+from envpool.registration import make_gym
 
 
 class _Box2dEnvPoolDeterministicTest(absltest.TestCase):
 
   def run_deterministic_check(
     self,
-    spec_cls: Any,
-    envpool_cls: Any,
+    task_id: str,
     num_envs: int = 4,
     **kwargs: Any,
   ) -> None:
-    env0 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, **kwargs))
-    )
-    env1 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=0, **kwargs))
-    )
-    env2 = envpool_cls(
-      spec_cls(spec_cls.gen_config(num_envs=num_envs, seed=1, **kwargs))
-    )
+    env0 = make_gym(task_id, num_envs=num_envs, seed=0, **kwargs)
+    env1 = make_gym(task_id, num_envs=num_envs, seed=0, **kwargs)
+    env2 = make_gym(task_id, num_envs=num_envs, seed=1, **kwargs)
     act_space = env0.action_space
     for _ in range(5000):
       action = np.array([act_space.sample() for _ in range(num_envs)])
@@ -53,13 +42,13 @@ class _Box2dEnvPoolDeterministicTest(absltest.TestCase):
       np.testing.assert_allclose(obs0, obs1)
       self.assertFalse(np.allclose(obs0, obs2))
 
+  def test_bipedal_walker(self) -> None:
+    self.run_deterministic_check("BipedalWalker-v3")
+    self.run_deterministic_check("BipedalWalkerHardcore-v3")
+
   def test_lunar_lander(self) -> None:
-    self.run_deterministic_check(
-      LunarLanderContinuousEnvSpec, LunarLanderContinuousGymEnvPool
-    )
-    self.run_deterministic_check(
-      LunarLanderDiscreteEnvSpec, LunarLanderDiscreteGymEnvPool
-    )
+    self.run_deterministic_check("LunarLanderContinuous-v2")
+    self.run_deterministic_check("LunarLander-v2")
 
 
 if __name__ == "__main__":

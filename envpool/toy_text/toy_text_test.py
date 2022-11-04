@@ -21,21 +21,8 @@ from absl import logging
 from absl.testing import absltest
 from dm_env import TimeStep
 
-from envpool.toy_text import (
-  BlackjackEnvSpec,
-  BlackjackGymEnvPool,
-  CatchDMEnvPool,
-  CatchEnvSpec,
-  CatchGymEnvPool,
-  CliffWalkingEnvSpec,
-  CliffWalkingGymEnvPool,
-  FrozenLakeEnvSpec,
-  FrozenLakeGymEnvPool,
-  NChainEnvSpec,
-  NChainGymEnvPool,
-  TaxiEnvSpec,
-  TaxiGymEnvPool,
-)
+import envpool.toy_text.registration  # noqa: F401
+from envpool.registration import make, make_gym
 
 
 class _ToyTextEnvTest(absltest.TestCase):
@@ -43,18 +30,13 @@ class _ToyTextEnvTest(absltest.TestCase):
   def test_catch(self) -> None:
     num_envs = 3
     row, col = 10, 5
-    config = CatchEnvSpec.gen_config(num_envs=num_envs)
-    spec = CatchEnvSpec(config)
     for env_type in ["dm", "gym"]:
-      if env_type == "dm":
-        e = CatchDMEnvPool(spec)
-      else:
-        e = CatchGymEnvPool(spec)
+      e = make("Catch-v0", env_type=env_type, num_envs=num_envs)
       # get a successful trajectory
       if env_type == "dm":
-        obs = e.reset().observation.obs  # type: ignore
+        obs = e.reset().observation.obs
       else:
-        obs = e.reset()
+        obs, _ = e.reset()
       assert obs.shape == (num_envs, row, col)
       ball_pos = np.where(obs[:, 0] == 1)[1]
       paddle_pos = np.where(obs[:, -1] == 1)[1]
@@ -64,7 +46,10 @@ class _ToyTextEnvTest(absltest.TestCase):
           ts: TimeStep = e.step(action, np.arange(num_envs))
           obs, rew, done = ts.observation.obs, ts.reward, ts.last()
         else:
-          obs, rew, done, _ = e.step(action, np.arange(num_envs))
+          obs, rew, terminated, truncated, _ = e.step(
+            action, np.arange(num_envs)
+          )
+          done = np.logical_or(terminated, truncated)
         assert obs.shape == (num_envs, row, col)
         paddle_pos = np.where(obs[:, -1] == 1)[1]
         if t != row - 2:
@@ -73,9 +58,9 @@ class _ToyTextEnvTest(absltest.TestCase):
           assert np.all(rew == 1) and np.all(done)
       # get a failure trajectory
       if env_type == "dm":
-        obs = e.reset().observation.obs  # type: ignore
+        obs = e.reset().observation.obs
       else:
-        obs = e.reset()
+        obs, _ = e.reset()
       assert obs.shape == (num_envs, row, col)
       ball_pos = np.where(obs[:, 0] == 1)[1]
       paddle_pos = np.where(obs[:, -1] == 1)[1]
@@ -86,7 +71,10 @@ class _ToyTextEnvTest(absltest.TestCase):
           ts = e.step(action, np.arange(num_envs))
           obs, rew, done = ts.observation.obs, ts.reward, ts.last()
         else:
-          obs, rew, done, _ = e.step(action, np.arange(num_envs))
+          obs, rew, terminated, truncated, _ = e.step(
+            action, np.arange(num_envs)
+          )
+          done = np.logical_or(terminated, truncated)
         assert obs.shape == (num_envs, row, col)
         paddle_pos = np.where(obs[:, -1] == 1)[1]
         if t != row - 2:
@@ -97,31 +85,32 @@ class _ToyTextEnvTest(absltest.TestCase):
   @no_type_check
   def test_frozen_lake(self) -> None:
     for size in [4, 8]:
-      config = FrozenLakeEnvSpec.gen_config(
-        num_envs=1, size=size, max_episode_steps=size * 25
-      )
-      spec = FrozenLakeEnvSpec(config)
-      env = FrozenLakeGymEnvPool(spec)
+      if size == 4:
+        env = make_gym("FrozenLake-v1")
+        ref = gym.make("FrozenLake-v1")
+      else:
+        env = make_gym("FrozenLake8x8-v1")
+        ref = gym.make("FrozenLake8x8-v1")
       logging.info(env)
       assert isinstance(env.observation_space, gym.spaces.Discrete)
       assert env.observation_space.n == size * size
       assert isinstance(env.action_space, gym.spaces.Discrete)
       assert env.action_space.n == 4
-      if size == 4:
-        ref = gym.make("FrozenLake-v1")
-      else:
-        ref = gym.make("FrozenLake8x8-v1")
-      last_obs = env.reset()
+      last_obs, _ = env.reset()
       elapsed_step = 0
       for _ in range(1000):
         act = np.random.randint(4, size=(1,))
-        obs, rew, done, info = env.step(act)
+        obs, rew, terminated, truncated, info = env.step(act)
+        done = np.logical_or(terminated, truncated)
         flag = False
         for _ in range(50):
           ref.reset()
           ref._elapsed_steps = elapsed_step
           ref.unwrapped.s = int(last_obs[0])
-          ref_obs, ref_rew, ref_done, ref_info = ref.step(int(act[0]))
+          ref_obs, ref_rew, ref_terminated, ref_truncated, ref_info = ref.step(
+            int(act[0])
+          )
+          ref_done = np.logical_or(ref_terminated, ref_truncated)
           if ref_obs == obs[0]:
             if ref_rew == rew[0] and ref_done == done[0]:
               flag = True
@@ -137,12 +126,11 @@ class _ToyTextEnvTest(absltest.TestCase):
         elapsed_step += 1
         if done:
           elapsed_step = 0
-          last_obs = env.reset()
+          last_obs, _ = env.reset()
 
   @no_type_check
   def test_taxi(self) -> None:
-    spec = TaxiEnvSpec(TaxiEnvSpec.gen_config(num_envs=1))
-    env = TaxiGymEnvPool(spec)
+    env = make_gym("Taxi-v3")
     assert isinstance(env.observation_space, gym.spaces.Discrete)
     assert env.observation_space.n == 500
     assert isinstance(env.action_space, gym.spaces.Discrete)
@@ -151,13 +139,16 @@ class _ToyTextEnvTest(absltest.TestCase):
     for _ in range(10):
       # random agent
       ref.reset()
-      ref.unwrapped.s = env.reset()[0]
+      ref.unwrapped.s = env.reset()[0][0]
       done = [False]
       while not done[0]:
         act = np.random.randint(6, size=(1,))
-        obs, rew, done, info = env.step(act)
-        ref_obs, ref_rew, ref_done, ref_info = ref.step(int(act[0]))
+        obs, rew, term, trunc, info = env.step(act)
+        done = np.logical_or(term, trunc)
+        ref_obs, ref_rew, ref_term, ref_trunc, ref_info = ref.step(int(act[0]))
+        ref_done = np.logical_or(ref_term, ref_trunc)
         assert ref_obs == obs[0] and ref_rew == rew[0] and ref_done == done[0]
+        assert ref_term == term[0] and ref_trunc == trunc[0]
     locs = ref.unwrapped.locs
     left_point = [(4, 4), (0, 3), (4, 2), (0, 1)]
     right_point = [(0, 0), (4, 1), (0, 2), (4, 3)]
@@ -166,7 +157,7 @@ class _ToyTextEnvTest(absltest.TestCase):
     for _ in range(10):
       # 10IQ agent
       ref.reset()
-      obs = ref.unwrapped.s = env.reset()[0]
+      obs = ref.unwrapped.s = env.reset()[0][0]
       x, y, s, t = ref.unwrapped.decode(obs)
       actions = []
       for i, g in [[0, s], [1, t]]:
@@ -194,15 +185,16 @@ class _ToyTextEnvTest(absltest.TestCase):
               break
       while len(actions):
         a = actions.pop(0)
-        ref_obs, ref_rew, ref_done, ref_info = ref.step(a)
-        obs, rew, done, info = env.step(np.array([a], int))
-        assert ref_obs == obs[0] and ref_rew == rew[0] and ref_done == done[0]
+        ref_obs, ref_rew, ref_terminated, ref_truncated, ref_info = ref.step(a)
+        obs, rew, terminated, truncated, info = env.step(np.array([a], int))
+        assert ref_obs == obs[0] and ref_rew == rew[
+          0] and ref_terminated == terminated[
+            0] and ref_truncated == truncated[0]
       assert ref_rew == 20 and ref_done
 
   def test_nchain(self) -> None:
     num_envs = 100
-    spec = NChainEnvSpec(NChainEnvSpec.gen_config(num_envs=num_envs))
-    env = NChainGymEnvPool(spec)
+    env = make_gym("NChain-v0", num_envs=num_envs)
     assert isinstance(env.observation_space, gym.spaces.Discrete)
     assert env.observation_space.n == 5
     assert isinstance(env.action_space, gym.spaces.Discrete)
@@ -212,13 +204,13 @@ class _ToyTextEnvTest(absltest.TestCase):
     reward = 0
     while not done[0]:
       actions = np.random.randint(2, size=(num_envs,))
-      obs, rew, done, info = env.step(actions)
+      obs, rew, terminated, truncated, info = env.step(actions)
+      done = np.logical_or(terminated, truncated)
       reward += rew
     assert abs(np.mean(reward) - 1310) < 30 and abs(np.std(reward) - 78) < 15
 
   def test_cliffwalking(self) -> None:
-    spec = CliffWalkingEnvSpec(CliffWalkingEnvSpec.gen_config())
-    env = CliffWalkingGymEnvPool(spec)
+    env = make_gym("CliffWalking-v0")
     assert isinstance(env.observation_space, gym.spaces.Discrete)
     assert env.observation_space.n == 48
     assert isinstance(env.action_space, gym.spaces.Discrete)
@@ -226,27 +218,32 @@ class _ToyTextEnvTest(absltest.TestCase):
     ref = gym.make("CliffWalking-v0")
     for i in range(12):
       action = [0] * 4 + [1] * i + [2] * 4
-      assert env.reset()[0] == ref.reset()
+      assert env.reset()[0] == ref.reset()[0]
       while len(action) > 0:
         a = action.pop(0)
-        ref_obs, ref_rew, ref_done, ref_info = ref.step(a)
-        obs, rew, done, info = env.step(np.array([a], int))
-        assert ref_obs == obs[0] and ref_rew == rew[0] and ref_done == done[0]
+        ref_obs, ref_rew, ref_terminated, ref_truncated, ref_info = ref.step(a)
+        ref_done = np.logical_or(ref_terminated, ref_truncated)
+        obs, rew, terminated, truncated, info = env.step(np.array([a], int))
+        assert ref_obs == obs[0] and ref_rew == rew[
+          0] and ref_terminated == terminated[
+            0] and ref_truncated == truncated[0]
         if ref_done:
           break
 
   def test_blackjack(self) -> None:
     np.random.seed(0)
     num_envs = 100
-    spec = BlackjackEnvSpec(BlackjackEnvSpec.gen_config(num_envs=num_envs))
-    env = BlackjackGymEnvPool(spec)
+    env = make_gym("Blackjack-v1", num_envs=num_envs)
     assert isinstance(env.observation_space, gym.spaces.Box)
     assert env.observation_space.shape == (3,)
     assert isinstance(env.action_space, gym.spaces.Discrete)
     assert env.action_space.n == 2
     reward, rewards = np.zeros(num_envs), []
     for _ in range(1000):
-      obs, rew, done, info = env.step(np.random.randint(2, size=(num_envs,)))
+      obs, rew, terminated, truncated, info = env.step(
+        np.random.randint(2, size=(num_envs,))
+      )
+      done = np.logical_or(terminated, truncated)
       reward += rew
       if np.any(done):
         rewards += reward[done].tolist()

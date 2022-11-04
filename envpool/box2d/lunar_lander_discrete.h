@@ -17,7 +17,7 @@
 #ifndef ENVPOOL_BOX2D_LUNAR_LANDER_DISCRETE_H_
 #define ENVPOOL_BOX2D_LUNAR_LANDER_DISCRETE_H_
 
-#include "envpool/box2d/lunar_lander.h"
+#include "envpool/box2d/lunar_lander_env.h"
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
 
@@ -26,8 +26,7 @@ namespace box2d {
 class LunarLanderDiscreteEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(1000),
-                    "reward_threshold"_.Bind(200.0));
+    return MakeDict("reward_threshold"_.Bind(200.0));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -42,11 +41,11 @@ class LunarLanderDiscreteEnvFns {
 using LunarLanderDiscreteEnvSpec = EnvSpec<LunarLanderDiscreteEnvFns>;
 
 class LunarLanderDiscreteEnv : public Env<LunarLanderDiscreteEnvSpec>,
-                               public LunarLanderEnv {
+                               public LunarLanderBox2dEnv {
  public:
   LunarLanderDiscreteEnv(const Spec& spec, int env_id)
       : Env<LunarLanderDiscreteEnvSpec>(spec, env_id),
-        LunarLanderEnv(false, spec.config["max_episode_steps"_]) {}
+        LunarLanderBox2dEnv(false, spec.config["max_episode_steps"_]) {}
 
   bool IsDone() override { return done_; }
 

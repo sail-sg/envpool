@@ -12,20 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "envpool/box2d/lunar_lander.h"
+#include "envpool/box2d/lunar_lander_env.h"
 
 #include <algorithm>
 
+#include "envpool/box2d/utils.h"
+
 namespace box2d {
 
-// this function is to pass clang-tidy conversion check
-static b2Vec2 Vec2(double x, double y) {
-  return b2Vec2(static_cast<float>(x), static_cast<float>(y));
-}
+LunarLanderContactDetector::LunarLanderContactDetector(LunarLanderBox2dEnv* env)
+    : env_(env) {}
 
-ContactDetector::ContactDetector(LunarLanderEnv* env) : env_(env) {}
-
-void ContactDetector::BeginContact(b2Contact* contact) {
+void LunarLanderContactDetector::BeginContact(b2Contact* contact) {
   b2Body* body_a = contact->GetFixtureA()->GetBody();
   b2Body* body_b = contact->GetFixtureB()->GetBody();
   if (env_->lander_ == body_a || env_->lander_ == body_b) {
@@ -39,7 +37,7 @@ void ContactDetector::BeginContact(b2Contact* contact) {
   }
 }
 
-void ContactDetector::EndContact(b2Contact* contact) {
+void LunarLanderContactDetector::EndContact(b2Contact* contact) {
   b2Body* body_a = contact->GetFixtureA()->GetBody();
   b2Body* body_b = contact->GetFixtureB()->GetBody();
   if (env_->legs_[0] == body_a || env_->legs_[0] == body_b) {
@@ -50,21 +48,20 @@ void ContactDetector::EndContact(b2Contact* contact) {
   }
 }
 
-LunarLanderEnv::LunarLanderEnv(bool continuous, int max_episode_steps)
+LunarLanderBox2dEnv::LunarLanderBox2dEnv(bool continuous, int max_episode_steps)
     : max_episode_steps_(max_episode_steps),
       elapsed_step_(max_episode_steps + 1),
       continuous_(continuous),
       done_(true),
       world_(new b2World(b2Vec2(0.0, -10.0))),
       moon_(nullptr),
-      lander_(nullptr),
-      dist_(0, 1) {
+      lander_(nullptr) {
   for (const auto* p : kLanderPoly) {
     lander_poly_.emplace_back(Vec2(p[0] / kScale, p[1] / kScale));
   }
 }
 
-void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
+void LunarLanderBox2dEnv::ResetBox2d(std::mt19937* gen) {
   // clean all body in world
   if (moon_ != nullptr) {
     world_->SetContactListener(nullptr);
@@ -77,7 +74,7 @@ void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
     world_->DestroyBody(legs_[0]);
     world_->DestroyBody(legs_[1]);
   }
-  listener_ = std::make_unique<ContactDetector>(this);
+  listener_ = std::make_unique<LunarLanderContactDetector>(this);
   world_->SetContactListener(listener_.get());
   double w = kViewportW / kScale;
   double h = kViewportH / kScale;
@@ -91,7 +88,7 @@ void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
     if (kChunks / 2 - 2 <= i && i <= kChunks / 2 + 2) {
       height[i] = helipad_y;
     } else {
-      height[i] = dist_(*gen) * h / 2;
+      height[i] = RandUniform(0, h / 2)(*gen);
     }
   }
   for (int i = 0; i < kChunks; ++i) {
@@ -106,8 +103,11 @@ void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
     b2EdgeShape shape;
     shape.SetTwoSided(b2Vec2(0, 0), Vec2(w, 0));
 
+    b2FixtureDef fd;
+    fd.shape = &shape;
+
     moon_ = world_->CreateBody(&bd);
-    moon_->CreateFixture(&shape, 0);
+    moon_->CreateFixture(&fd);
   }
   for (int i = 0; i < kChunks - 1; ++i) {
     b2EdgeShape shape;
@@ -131,11 +131,11 @@ void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
     bd.position = Vec2(initial_x, initial_y);
     bd.angle = 0.0;
 
-    b2PolygonShape polygon;
-    polygon.Set(lander_poly_.data(), lander_poly_.size());
+    b2PolygonShape shape;
+    shape.Set(lander_poly_.data(), lander_poly_.size());
 
     b2FixtureDef fd;
-    fd.shape = &polygon;
+    fd.shape = &shape;
     fd.density = 5.0;
     fd.friction = 0.1;
     fd.filter.categoryBits = 0x0010;
@@ -144,8 +144,8 @@ void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
 
     lander_ = world_->CreateBody(&bd);
     lander_->CreateFixture(&fd);
-    b2Vec2 force = Vec2(dist_(*gen) * 2 * kInitialRandom - kInitialRandom,
-                        dist_(*gen) * 2 * kInitialRandom - kInitialRandom);
+    b2Vec2 force = Vec2(RandUniform(-kInitialRandom, kInitialRandom)(*gen),
+                        RandUniform(-kInitialRandom, kInitialRandom)(*gen));
     lander_->ApplyForceToCenter(force, true);
   }
 
@@ -178,6 +178,7 @@ void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
     rjd.bodyB = legs_[index];
     rjd.localAnchorA.SetZero();
     rjd.localAnchorB = Vec2(sign * kLegAway / kScale, kLegDown / kScale);
+    rjd.referenceAngle = sign * 0.05f;
     rjd.enableMotor = true;
     rjd.enableLimit = true;
     rjd.maxMotorTorque = static_cast<float>(kLegSpringTorque);
@@ -188,7 +189,7 @@ void LunarLanderEnv::ResetBox2d(std::mt19937* gen) {
   }
 }
 
-b2Body* LunarLanderEnv::CreateParticle(float mass, b2Vec2 pos) {
+b2Body* LunarLanderBox2dEnv::CreateParticle(float mass, b2Vec2 pos) {
   b2BodyDef bd;
   bd.type = b2_dynamicBody;
   bd.position = pos;
@@ -212,8 +213,8 @@ b2Body* LunarLanderEnv::CreateParticle(float mass, b2Vec2 pos) {
   return p;
 }
 
-void LunarLanderEnv::StepBox2d(std::mt19937* gen, int action, float action0,
-                               float action1) {
+void LunarLanderBox2dEnv::StepBox2d(std::mt19937* gen, int action,
+                                    float action0, float action1) {
   action0 = std::min(std::max(action0, -1.0f), 1.0f);
   action1 = std::min(std::max(action1, -1.0f), 1.0f);
   std::array<double, 2> tip;
@@ -223,8 +224,8 @@ void LunarLanderEnv::StepBox2d(std::mt19937* gen, int action, float action0,
   tip[1] = std::cos(lander_->GetAngle());
   side[0] = -tip[1];
   side[1] = tip[0];
-  dispersion[0] = (dist_(*gen) * 2 - 1) / kScale;
-  dispersion[1] = (dist_(*gen) * 2 - 1) / kScale;
+  dispersion[0] = RandUniform(-1, 1)(*gen) / kScale;
+  dispersion[1] = RandUniform(-1, 1)(*gen) / kScale;
 
   // main engine
   double m_power = 0.0;
@@ -252,8 +253,7 @@ void LunarLanderEnv::StepBox2d(std::mt19937* gen, int action, float action0,
       (!continuous_ && (action == 1 || action == 3))) {
     double direction;
     if (continuous_) {
-      float eps = 1e-8;
-      direction = action1 > eps ? 1 : action1 < -eps ? -1 : 0;
+      direction = Sign(action1);
       s_power = std::min(std::max(std::abs(action1), 0.5f), 1.0f);
     } else {
       direction = action - 2;
@@ -310,15 +310,15 @@ void LunarLanderEnv::StepBox2d(std::mt19937* gen, int action, float action0,
   }
 }
 
-void LunarLanderEnv::LunarLanderReset(std::mt19937* gen) {
-  elapsed_step_ = -1;  // because of the step(0)
+void LunarLanderBox2dEnv::LunarLanderReset(std::mt19937* gen) {
+  elapsed_step_ = 0;
   done_ = false;
   ResetBox2d(gen);
-  LunarLanderStep(gen, 0, 0, 0);
+  StepBox2d(gen, 0, 0, 0);
 }
 
-void LunarLanderEnv::LunarLanderStep(std::mt19937* gen, int action,
-                                     float action0, float action1) {
+void LunarLanderBox2dEnv::LunarLanderStep(std::mt19937* gen, int action,
+                                          float action0, float action1) {
   ++elapsed_step_;
   StepBox2d(gen, action, action0, action1);
 }
