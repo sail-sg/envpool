@@ -61,7 +61,9 @@ procgen_timeout_list = {
 }
 
 
-def rgb_to_picture(pixels, count=pic_count, prefix_name="procgen") -> None:
+def rgb_to_picture(
+  pixels: Any, count: int = pic_count, prefix_name: str = "procgen"
+) -> None:
   # convert a state's rgb 64x64x3 game observation into picture by cv2
   # for sanity check if the game is running correctly
   # state is ordered in y -> x -> rgb in one dimension array
@@ -90,9 +92,10 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
     # test the config key is same as what we expect
     ref_config_keys = [
       "action_num", "base_path", "batch_size", "distribution_mode",
-      "game_name", "use_sequential_levels", "max_num_players", "num_envs",
-      "num_levels", "num_threads", "seed", "start_level", "state_num",
-      "gym_reset_return_info", "thread_affinity_offset"
+      "game_name", "use_sequential_levels", "max_episode_steps",
+      "max_num_players", "num_envs", "num_levels", "num_threads", "seed",
+      "start_level", "state_num", "gym_reset_return_info",
+      "thread_affinity_offset"
     ]
     default_conf = _ProcgenEnvSpec._default_config_values
     self.assertTrue(isinstance(default_conf, tuple))
@@ -180,7 +183,7 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
       self.assertTrue(np.all(obs2 <= obs_max), obs2)
 
   def gym_align_check(
-    self, game_name, spec_cls: Any, envpool_cls: Any
+    self, game_name: str, spec_cls: Any, envpool_cls: Any
   ) -> None:
     logging.info(f"align check for gym {game_name}")
     timeout = procgen_timeout_list[game_name]
@@ -208,14 +211,14 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
         step_info = env_gym.step(action)
         envpool_reward, envpool_done = step_info[1], step_info[2]
         envpool_reward = envpool_reward[0]
-        envpool_done = envpool_done[0]  # pylint: disable=index
+        envpool_done = envpool_done[0]  # type: ignore
         # must die and earn reward same time aligned
         self.assertTrue(envpool_reward == raw_reward)
         self.assertTrue(raw_done == envpool_done)
 
   def dmc_deterministic_check(
     self,
-    game_name,
+    game_name: str,
     spec_cls: Any,
     envpool_cls: Any,
     num_envs: int = 4,
@@ -259,7 +262,7 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
       self.assertFalse(np.allclose(obs0, obs2))
 
   def dmc_align_check(
-    self, game_name, spec_cls: Any, envpool_cls: Any
+    self, game_name: str, spec_cls: Any, envpool_cls: Any
   ) -> None:
     logging.info(f"align check for dmc {game_name}")
     timeout = procgen_timeout_list[game_name]
