@@ -61,7 +61,7 @@ procgen_timeout_list = {
 }
 
 
-def rgb_to_picture(pixels, count=pic_count, prefix_name="procgen"):
+def rgb_to_picture(pixels, count=pic_count, prefix_name="procgen") -> None:
   # convert a state's rgb 64x64x3 game observation into picture by cv2
   # for sanity check if the game is running correctly
   # state is ordered in y -> x -> rgb in one dimension array
@@ -179,7 +179,9 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
       self.assertTrue(np.all(obs0 <= obs_max), obs0)
       self.assertTrue(np.all(obs2 <= obs_max), obs2)
 
-  def gym_align_check(self, game_name, spec_cls: Any, envpool_cls: Any):
+  def gym_align_check(
+    self, game_name, spec_cls: Any, envpool_cls: Any
+  ) -> None:
     logging.info(f"align check for gym {game_name}")
     timeout = procgen_timeout_list[game_name]
     num_env = 1
@@ -204,7 +206,8 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
         action = np.array([act_space.sample() for _ in range(num_env)])
         _, raw_reward, raw_done, _ = env_procgen.step(action[0])
         _, envpool_reward, envpool_done, _, = env_gym.step(action)
-        envpool_reward, envpool_done = envpool_reward[0], envpool_done[0]
+        envpool_reward = envpool_reward[0]
+        envpool_done = envpool_done[0]  # pylint: disable=index
         # must die and earn reward same time aligned
         self.assertTrue(envpool_reward == raw_reward)
         self.assertTrue(raw_done == envpool_done)
@@ -254,7 +257,9 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
       np.testing.assert_allclose(obs0, obs1)
       self.assertFalse(np.allclose(obs0, obs2))
 
-  def dmc_align_check(self, game_name, spec_cls: Any, envpool_cls: Any):
+  def dmc_align_check(
+    self, game_name, spec_cls: Any, envpool_cls: Any
+  ) -> None:
     logging.info(f"align check for dmc {game_name}")
     timeout = procgen_timeout_list[game_name]
     num_env = 1
