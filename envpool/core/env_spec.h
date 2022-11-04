@@ -17,6 +17,7 @@
 #ifndef ENVPOOL_CORE_ENV_SPEC_H_
 #define ENVPOOL_CORE_ENV_SPEC_H_
 
+#include <limits>
 #include <string>
 
 #include "envpool/core/array.h"
@@ -26,7 +27,8 @@ auto common_config =
     MakeDict("num_envs"_.Bind(1), "batch_size"_.Bind(0), "num_threads"_.Bind(0),
              "max_num_players"_.Bind(1), "thread_affinity_offset"_.Bind(-1),
              "base_path"_.Bind(std::string("envpool")), "seed"_.Bind(42),
-             "gym_reset_return_info"_.Bind(false));
+             "gym_reset_return_info"_.Bind(false),
+             "max_episode_steps"_.Bind(std::numeric_limits<int>::max()));
 // Note: this action order is hardcoded in async_envpool Send function
 // and env ParseAction function for performance
 auto common_action_spec = MakeDict("env_id"_.Bind(Spec<int>({})),
@@ -38,7 +40,7 @@ auto common_state_spec =
              "elapsed_step"_.Bind(Spec<int>({})), "done"_.Bind(Spec<bool>({})),
              "reward"_.Bind(Spec<float>({-1})),
              "discount"_.Bind(Spec<float>({-1}, {0.0, 1.0})),
-             "step_type"_.Bind(Spec<int>({})));
+             "step_type"_.Bind(Spec<int>({})), "trunc"_.Bind(Spec<bool>({})));
 
 /**
  * EnvSpec funciton, it constructs the env spec when a Config is passed.

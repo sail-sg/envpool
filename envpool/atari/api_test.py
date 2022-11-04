@@ -22,7 +22,9 @@ from absl import logging
 from absl.testing import absltest
 from packaging import version
 
-from envpool.atari import AtariDMEnvPool, AtariEnvSpec, AtariGymEnvPool
+import envpool.atari.registration  # noqa: F401
+from envpool.atari import AtariEnvSpec
+from envpool.registration import make_dm, make_gym, make_spec
 
 
 class _SpecTest(absltest.TestCase):
@@ -32,8 +34,7 @@ class _SpecTest(absltest.TestCase):
     action_nums = {"pong": 6, "breakout": 4}
     for task in ["pong", "breakout"]:
       action_num = action_nums[task]
-      config = AtariEnvSpec.gen_config(task=task)
-      spec = AtariEnvSpec(config)
+      spec = make_spec(task.capitalize() + "-v5")
       logging.info(spec)
       self.assertEqual(
         spec.action_array_spec["action"].maximum + 1, action_num
@@ -59,12 +60,10 @@ class _SpecTest(absltest.TestCase):
 
   def test_seed_warning(self) -> None:
     num_envs = 4
-    config = AtariEnvSpec.gen_config(task="pong", num_envs=num_envs)
-    spec = AtariEnvSpec(config)
-    env = AtariDMEnvPool(spec)
+    env = make_dm("Pong-v5", num_envs=num_envs)
     with self.assertWarns(UserWarning):
       env.seed(1)
-    env = AtariGymEnvPool(spec)
+    env = make_gym("Pong-v5", num_envs=num_envs)
     with self.assertWarns(UserWarning):
       env.seed()
 
@@ -78,18 +77,12 @@ class _SpecTest(absltest.TestCase):
 
   def test_metadata(self) -> None:
     num_envs = 4
-    config = AtariEnvSpec.gen_config(task="pong", num_envs=num_envs)
-    spec = AtariEnvSpec(config)
-    env = AtariGymEnvPool(spec)
+    env = make_gym("Pong-v5", num_envs=num_envs)
     self.assertEqual(len(env), num_envs)
     self.assertFalse(env.is_async)
     num_envs = 8
     batch_size = 4
-    config = AtariEnvSpec.gen_config(
-      task="pong", num_envs=num_envs, batch_size=batch_size
-    )
-    spec = AtariEnvSpec(config)
-    env = AtariGymEnvPool(spec)
+    env = make_gym("Pong-v5", num_envs=num_envs, batch_size=batch_size)
     self.assertEqual(len(env), num_envs)
     self.assertTrue(env.is_async)
     self.assertIsNone(env.spec.reward_threshold)
@@ -102,9 +95,7 @@ class _DMSyncTest(absltest.TestCase):
     action_nums = {"pong": 6, "breakout": 4}
     for task in ["pong", "breakout"]:
       action_num = action_nums[task]
-      config = AtariEnvSpec.gen_config(task=task)
-      spec = AtariEnvSpec(config)
-      env = AtariDMEnvPool(spec)
+      env = make_dm(task.capitalize() + "-v5")
       self.assertIsInstance(env, dm_env.Environment)
       logging.info(env)
       # check dm spec
@@ -118,9 +109,7 @@ class _DMSyncTest(absltest.TestCase):
 
   def test_lowlevel_step(self) -> None:
     num_envs = 4
-    config = AtariEnvSpec.gen_config(task="pong", num_envs=num_envs)
-    spec = AtariEnvSpec(config)
-    env = AtariDMEnvPool(spec)
+    env = make_dm("Pong-v5", num_envs=num_envs)
     logging.info(env)
     env.async_reset()
     ts: dm_env.TimeStep = env.recv()
@@ -173,9 +162,7 @@ class _DMSyncTest(absltest.TestCase):
   def test_highlevel_step(self) -> None:
     num_envs = 4
     # defender game hangs infinitely in gym.make("Defender-v0")
-    config = AtariEnvSpec.gen_config(task="defender", num_envs=num_envs)
-    spec = AtariEnvSpec(config)
-    env = AtariDMEnvPool(spec)
+    env = make_dm("Defender-v5", num_envs=num_envs)
     logging.info(env)
     ts: dm_env.TimeStep = env.reset()
     # check ts structure
@@ -228,15 +215,13 @@ class _GymSyncTest(absltest.TestCase):
     action_nums = {"pong": 6, "breakout": 4}
     for task in ["pong", "breakout"]:
       action_num = action_nums[task]
-      config = AtariEnvSpec.gen_config(task=task)
-      spec = AtariEnvSpec(config)
-      env = AtariGymEnvPool(spec)
+      env = make_gym(task.capitalize() + "-v5")
       self.assertIsInstance(env, gym.Env)
       logging.info(env)
       # check gym space
       gym_obs_space: gym.spaces.Box = env.observation_space
       gym_act_space: gym.spaces.Discrete = env.action_space
-      self.assertEqual(len(spec.action_array_spec), 3)
+      self.assertEqual(len(env.spec.action_array_spec), 3)
       self.assertIsInstance(gym_obs_space, gym.spaces.Box)
       self.assertEqual(gym_obs_space.dtype, np.uint8)
       np.testing.assert_allclose(gym_obs_space.high, 255)
@@ -256,9 +241,7 @@ class _GymSyncTest(absltest.TestCase):
 
   def test_lowlevel_step(self) -> None:
     num_envs = 4
-    config = AtariEnvSpec.gen_config(task="breakout", num_envs=num_envs)
-    spec = AtariEnvSpec(config)
-    env = AtariGymEnvPool(spec)
+    env = make_gym("Breakout-v5", num_envs=num_envs)
     self.assertTrue(isinstance(env, gym.Env))
     logging.info(env)
     env.async_reset()
@@ -295,9 +278,7 @@ class _GymSyncTest(absltest.TestCase):
   def test_highlevel_step(self) -> None:
     assert version.parse(gym.__version__) >= version.parse("0.26.0")
     num_envs = 4
-    config = AtariEnvSpec.gen_config(task="pong", num_envs=num_envs)
-    spec = AtariEnvSpec(config)
-    env = AtariGymEnvPool(spec)
+    env = make_gym("Pong-v5", num_envs=num_envs)
     self.assertTrue(isinstance(env, gym.Env))
     logging.info(env)
     obs, _ = env.reset()

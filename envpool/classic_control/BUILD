@@ -33,24 +33,25 @@ py_library(
     deps = ["//envpool/python:api"],
 )
 
+py_library(
+    name = "classic_control_registration",
+    srcs = ["registration.py"],
+    deps = [
+        "//envpool:registration",
+    ],
+)
+
 py_test(
     name = "classic_control_test",
     size = "enormous",
     srcs = ["classic_control_test.py"],
     deps = [
         ":classic_control",
+        ":classic_control_registration",
         requirement("absl-py"),
         requirement("dm_env"),
         requirement("gym"),
         requirement("numpy"),
         requirement("pygame"),
-    ],
-)
-
-py_library(
-    name = "classic_control_registration",
-    srcs = ["registration.py"],
-    deps = [
-        "//envpool:registration",
     ],
 )

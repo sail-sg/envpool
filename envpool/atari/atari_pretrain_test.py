@@ -22,8 +22,9 @@ from absl.testing import absltest
 from tianshou.data import Batch
 from tianshou.policy import QRDQNPolicy
 
-from envpool.atari import AtariEnvSpec, AtariGymEnvPool
+import envpool.atari.registration  # noqa: F401
 from envpool.atari.atari_network import QRDQN
+from envpool.registration import make_gym
 
 # try:
 #   import cv2
@@ -41,11 +42,9 @@ class _AtariPretrainTest(absltest.TestCase):
     seed: int = 0,
     target_reward: float = 0.0,
   ) -> None:
-    config = AtariEnvSpec.gen_config(task=task, num_envs=num_envs, seed=seed)
-    spec = AtariEnvSpec(config)
-    env = AtariGymEnvPool(spec)
-    state_shape = env.observation_space.shape  # type: ignore
-    action_shape = env.action_space.n  # type: ignore
+    env = make_gym(task.capitalize() + "-v5", num_envs=num_envs, seed=seed)
+    state_shape = env.observation_space.shape
+    action_shape = env.action_space.n
     device = "cuda" if torch.cuda.is_available() else "cpu"
     np.random.seed(seed)
     torch.manual_seed(seed)

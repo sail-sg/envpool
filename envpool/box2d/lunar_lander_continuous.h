@@ -26,8 +26,7 @@ namespace box2d {
 class LunarLanderContinuousEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(1000),
-                    "reward_threshold"_.Bind(200.0));
+    return MakeDict("reward_threshold"_.Bind(200.0));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {

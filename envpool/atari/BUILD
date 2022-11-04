@@ -75,11 +75,20 @@ pybind_extension(
     ],
 )
 
+py_library(
+    name = "atari_registration",
+    srcs = ["registration.py"],
+    deps = [
+        "//envpool:registration",
+    ],
+)
+
 py_test(
     name = "api_test",
     srcs = ["api_test.py"],
     deps = [
         ":atari",
+        ":atari_registration",
         "//envpool/python",
         requirement("numpy"),
     ],
@@ -91,6 +100,7 @@ py_test(
     srcs = ["atari_envpool_test.py"],
     deps = [
         ":atari",
+        ":atari_registration",
         requirement("numpy"),
         requirement("jax"),
         requirement("dm-env"),
@@ -109,18 +119,11 @@ py_test(
     deps = [
         ":atari",
         ":atari_network",
+        ":atari_registration",
         requirement("numpy"),
         requirement("absl-py"),
         requirement("tianshou"),
         requirement("tqdm"),
         requirement("torch"),
-    ],
-)
-
-py_library(
-    name = "atari_registration",
-    srcs = ["registration.py"],
-    deps = [
-        "//envpool:registration",
     ],
 )
