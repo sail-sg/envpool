@@ -89,6 +89,7 @@ def rgb_to_picture(
 
 class _ProcgenEnvPoolTest(absltest.TestCase):
   """The testing class for Procgen"""
+
   def test_raw_envpool(self) -> None:
     # create raw procgen environment and run
     conf = dict(

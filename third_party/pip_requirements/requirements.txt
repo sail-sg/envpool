@@ -48,3 +48,4 @@ typed-ast
 typing-extensions
 jax[cpu]
 packaging
+procgen
