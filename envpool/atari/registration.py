@@ -34,4 +34,5 @@ for game in atari_game_list:
     gym_cls="AtariGymEnvPool",
     task=game,
     base_path=base_path,
+    max_episode_steps=108000,
   )

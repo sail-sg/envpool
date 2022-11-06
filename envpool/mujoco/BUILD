@@ -140,12 +140,25 @@ cc_test(
     ],
 )
 
+py_library(
+    name = "mujoco_dmc_registration",
+    srcs = ["dmc/registration.py"],
+    deps = ["//envpool:registration"],
+)
+
+py_library(
+    name = "mujoco_gym_registration",
+    srcs = ["gym/registration.py"],
+    deps = ["//envpool:registration"],
+)
+
 py_test(
     name = "mujoco_gym_deterministic_test",
     size = "enormous",
     srcs = ["gym/mujoco_gym_deterministic_test.py"],
     deps = [
         ":mujoco_gym",
+        ":mujoco_gym_registration",
         requirement("numpy"),
         requirement("absl-py"),
         requirement("gym"),
@@ -158,6 +171,7 @@ py_test(
     srcs = ["gym/mujoco_gym_align_test.py"],
     deps = [
         ":mujoco_gym",
+        ":mujoco_gym_registration",
         requirement("numpy"),
         requirement("absl-py"),
         requirement("gym"),
@@ -171,6 +185,7 @@ py_test(
     srcs = ["dmc/mujoco_dmc_suite_deterministic_test.py"],
     deps = [
         ":mujoco_dmc",
+        ":mujoco_dmc_registration",
         requirement("numpy"),
         requirement("absl-py"),
     ],
@@ -182,6 +197,7 @@ py_test(
     srcs = ["dmc/mujoco_dmc_suite_align_test.py"],
     deps = [
         ":mujoco_dmc",
+        ":mujoco_dmc_registration",
         requirement("numpy"),
         requirement("absl-py"),
         requirement("mujoco"),
@@ -196,6 +212,7 @@ py_test(
     srcs = ["dmc/mujoco_dmc_suite_ext_deterministic_test.py"],
     deps = [
         ":mujoco_dmc",
+        ":mujoco_dmc_registration",
         requirement("numpy"),
         requirement("absl-py"),
     ],
@@ -207,22 +224,11 @@ py_test(
     srcs = ["dmc/mujoco_dmc_suite_ext_align_test.py"],
     deps = [
         ":mujoco_dmc",
+        ":mujoco_dmc_registration",
         requirement("numpy"),
         requirement("absl-py"),
         requirement("mujoco"),
         requirement("dm-env"),
         requirement("dm-control"),
     ],
-)
-
-py_library(
-    name = "mujoco_dmc_registration",
-    srcs = ["dmc/registration.py"],
-    deps = ["//envpool:registration"],
-)
-
-py_library(
-    name = "mujoco_gym_registration",
-    srcs = ["gym/registration.py"],
-    deps = ["//envpool:registration"],
 )

@@ -29,8 +29,7 @@ namespace classic_control {
 class AcrobotEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("max_episode_steps"_.Bind(500),
-                    "reward_threshold"_.Bind(-100.0));
+    return MakeDict("reward_threshold"_.Bind(-100.0));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {

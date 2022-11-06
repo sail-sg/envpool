@@ -44,11 +44,11 @@ class VizdoomEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
-        "max_episode_steps"_.Bind(525), "img_height"_.Bind(84),
-        "img_width"_.Bind(84), "stack_num"_.Bind(4), "frame_skip"_.Bind(4),
-        "lmp_save_dir"_.Bind(std::string("")), "episodic_life"_.Bind(false),
-        "force_speed"_.Bind(false), "use_combined_action"_.Bind(false),
-        "use_inter_area_resize"_.Bind(true), "weapon_duration"_.Bind(5),
+        "img_height"_.Bind(84), "img_width"_.Bind(84), "stack_num"_.Bind(4),
+        "frame_skip"_.Bind(4), "lmp_save_dir"_.Bind(std::string("")),
+        "episodic_life"_.Bind(false), "force_speed"_.Bind(false),
+        "use_combined_action"_.Bind(false), "use_inter_area_resize"_.Bind(true),
+        "weapon_duration"_.Bind(5),
         "reward_config"_.Bind(std::map<std::string, std::tuple<float, float>>(
             {{"FRAGCOUNT", {1, -1.5}},         {"KILLCOUNT", {1, 0}},
              {"DEATHCOUNT", {-0.75, 0.75}},    {"HITCOUNT", {0.01, -0.01}},

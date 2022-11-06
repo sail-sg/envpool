@@ -32,9 +32,8 @@ class Walker2dEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
-        "max_episode_steps"_.Bind(1000), "frame_skip"_.Bind(4),
-        "post_constraint"_.Bind(true), "ctrl_cost_weight"_.Bind(0.001),
-        "terminate_when_unhealthy"_.Bind(true),
+        "frame_skip"_.Bind(4), "post_constraint"_.Bind(true),
+        "ctrl_cost_weight"_.Bind(0.001), "terminate_when_unhealthy"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
         "forward_reward_weight"_.Bind(1.0), "healthy_reward"_.Bind(1.0),
         "healthy_z_min"_.Bind(0.8), "healthy_z_max"_.Bind(2.0),

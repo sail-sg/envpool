@@ -14,13 +14,13 @@
 """Unit tests for vizdoom environments."""
 
 import os
-from typing import no_type_check
 
 import cv2
 import numpy as np
 from absl.testing import absltest
 
-from envpool.vizdoom import VizdoomDMEnvPool, VizdoomEnvSpec, VizdoomGymEnvPool
+import envpool.vizdoom.registration  # noqa: F401
+from envpool.registration import make_dm, make_gym
 
 
 class _VizdoomEnvPoolBasicTest(absltest.TestCase):
@@ -31,14 +31,12 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
   def test_timelimit(
     self, num_envs: int = 5, max_episode_steps: int = 10
   ) -> None:
-    conf = VizdoomEnvSpec.gen_config(
+    env = make_gym(
+      "D1Basic-v1",
       num_envs=num_envs,
       max_episode_steps=max_episode_steps,
-      cfg_path=self.get_path("D1_basic.cfg"),
-      wad_path=self.get_path("D1_basic.wad"),
-      use_combined_action=True,
+      use_combined_action=True
     )
-    env = VizdoomGymEnvPool(VizdoomEnvSpec(conf))
     for _ in range(3):
       env.reset()
       partial_ids = [np.arange(num_envs)[::2], np.arange(num_envs)[1::2]]
@@ -60,7 +58,6 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
       )
       assert np.all(truncated)
 
-  @no_type_check
   def test_hg(
     self,
     num_envs: int = 10,
@@ -71,15 +68,13 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
   ) -> None:
     if render:
       os.makedirs("img", exist_ok=True)
-    conf = VizdoomEnvSpec.gen_config(
+    env = make_gym(
+      "D1Basic-v1",
       num_envs=num_envs,
-      cfg_path=self.get_path("D1_basic.cfg"),
-      wad_path=self.get_path("D1_basic.wad"),
       use_combined_action=True,
       img_width=width,
-      img_height=height,
+      img_height=height
     )
-    env = VizdoomGymEnvPool(VizdoomEnvSpec(conf))
     assert env.action_space.n == 6
     obs, _ = env.reset()
     obs = obs.transpose(0, 2, 3, 1)
@@ -103,101 +98,51 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
         done_id = np.array(info["env_id"])[done]
         obs[done_id] = env.reset(done_id)[0].transpose(0, 2, 3, 1)
 
-  @no_type_check
   def test_d3_action_space(self) -> None:
-    conf = VizdoomEnvSpec.gen_config(
-      cfg_path=self.get_path("D3_battle.cfg"),
-      wad_path=self.get_path("D3_battle.wad"),
-      use_combined_action=True,
-    )
-    env = VizdoomGymEnvPool(VizdoomEnvSpec(conf))
+    env = make_gym("D3Battle-v1", use_combined_action=True)
     action_num = env.action_space.n
-    conf = VizdoomEnvSpec.gen_config(
-      cfg_path=self.get_path("D3_battle.cfg"),
-      wad_path=self.get_path("D3_battle.wad"),
-      use_combined_action=True,
-      force_speed=True,
-    )
-    env = VizdoomGymEnvPool(VizdoomEnvSpec(conf))
+    env = make_gym("D3Battle-v1", use_combined_action=True, force_speed=True)
     assert env.action_space.n * 2 == action_num
 
-  @no_type_check
   def test_delta_action_space(self) -> None:
-    e = VizdoomGymEnvPool(
-      VizdoomEnvSpec(
-        VizdoomEnvSpec.gen_config(
-          cfg_path=self.get_path("deathmatch.cfg"),
-          wad_path=self.get_path("deathmatch.wad"),
-          use_combined_action=True,
-        )
-      )
-    )
-    e2 = VizdoomGymEnvPool(
-      VizdoomEnvSpec(
-        VizdoomEnvSpec.gen_config(
-          cfg_path=self.get_path("deathmatch.cfg"),
-          wad_path=self.get_path("deathmatch.wad"),
-          use_combined_action=True,
-          delta_button_config={
-            "LOOK_UP_DOWN_DELTA": [11, -10, 10],
-          }
-        )
-      )
+    e = make_gym("Deathmatch-v1", use_combined_action=True)
+    e2 = make_gym(
+      "Deathmatch-v1",
+      use_combined_action=True,
+      delta_button_config={
+        "LOOK_UP_DOWN_DELTA": [11, -10, 10],
+      }
     )
     assert e2.action_space.n == 11 * e.action_space.n
-    e3 = VizdoomGymEnvPool(
-      VizdoomEnvSpec(
-        VizdoomEnvSpec.gen_config(
-          cfg_path=self.get_path("deathmatch.cfg"),
-          wad_path=self.get_path("deathmatch.wad"),
-          use_combined_action=True,
-          delta_button_config={
-            "MOVE_LEFT_RIGHT_DELTA": [11, -10, 10],
-            "LOOK_UP_DOWN_DELTA": [11, -10, 10],
-          }
-        )
-      )
+    e3 = make_gym(
+      "Deathmatch-v1",
+      use_combined_action=True,
+      delta_button_config={
+        "MOVE_LEFT_RIGHT_DELTA": [11, -10, 10],
+        "LOOK_UP_DOWN_DELTA": [11, -10, 10],
+      }
     )
     assert e3.action_space.n == 121 * e.action_space.n
-    e4 = VizdoomGymEnvPool(
-      VizdoomEnvSpec(
-        VizdoomEnvSpec.gen_config(
-          cfg_path=self.get_path("deathmatch.cfg"),
-          wad_path=self.get_path("deathmatch.wad"),
-          use_combined_action=False,
-          delta_button_config={
-            "MOVE_LEFT_RIGHT_DELTA": [11, -10, 10],
-            "LOOK_UP_DOWN_DELTA": [11, -10, 10],
-          }
-        )
-      )
+    e4 = make_gym(
+      "Deathmatch-v1",
+      use_combined_action=False,
+      delta_button_config={
+        "MOVE_LEFT_RIGHT_DELTA": [11, -10, 10],
+        "LOOK_UP_DOWN_DELTA": [11, -10, 10],
+      }
     )
     assert e4.action_space.shape[0] == 20
 
-  @no_type_check
   def test_obs_space(self) -> None:
-    e = VizdoomDMEnvPool(
-      VizdoomEnvSpec(
-        VizdoomEnvSpec.gen_config(
-          cfg_path=self.get_path("deathmatch.cfg"),
-          wad_path=self.get_path("deathmatch.wad"),
-          use_combined_action=True,
-        )
-      )
+    e = make_dm(
+      "Deathmatch-v1",
+      use_combined_action=True,
     )
     assert e.observation_spec().obs.shape[0] == 3 * 4
     e.reset()
     assert e.step(np.array([0]),
                   np.array([0])).observation.obs.shape[1] == 3 * 4
-    e = VizdoomDMEnvPool(
-      VizdoomEnvSpec(
-        VizdoomEnvSpec.gen_config(
-          cfg_path=self.get_path("D1_basic.cfg"),
-          wad_path=self.get_path("D1_basic.wad"),
-          use_combined_action=True,
-        )
-      )
-    )
+    e = make_dm("D1Basic-v1", use_combined_action=True)
     assert e.observation_spec().obs.shape[0] == 1 * 4
     e.reset()
     assert e.step(np.array([0]),

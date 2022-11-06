@@ -31,12 +31,12 @@ namespace mujoco_gym {
 class HalfCheetahEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict(
-        "max_episode_steps"_.Bind(1000), "reward_threshold"_.Bind(4800.0),
-        "frame_skip"_.Bind(5), "post_constraint"_.Bind(true),
-        "exclude_current_positions_from_observation"_.Bind(true),
-        "ctrl_cost_weight"_.Bind(0.1), "forward_reward_weight"_.Bind(1.0),
-        "reset_noise_scale"_.Bind(0.1));
+    return MakeDict("reward_threshold"_.Bind(4800.0), "frame_skip"_.Bind(5),
+                    "post_constraint"_.Bind(true),
+                    "exclude_current_positions_from_observation"_.Bind(true),
+                    "ctrl_cost_weight"_.Bind(0.1),
+                    "forward_reward_weight"_.Bind(1.0),
+                    "reset_noise_scale"_.Bind(0.1));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {

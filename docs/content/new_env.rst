@@ -81,8 +81,7 @@ state space, and action space. Create a class ``CartPoleEnvFns``:
     class CartPoleEnvFns {
      public:
       static decltype(auto) DefaultConfig() {
-        return MakeDict("max_episode_steps"_.Bind(200),
-                        "reward_threshold"_.Bind(195.0));
+        return MakeDict("reward_threshold"_.Bind(195.0));
       }
       template <typename Config>
       static decltype(auto) StateSpec(const Config& conf) {
@@ -114,12 +113,12 @@ available to see on the python side:
     >>> import envpool
     >>> spec = envpool.make_spec("CartPole-v0")
     >>> spec
-    CartPoleEnvSpec(num_envs=1, batch_size=0, num_threads=0, max_num_players=1, thread_affinity_offset=-1, base_path='envpool', seed=42, max_episode_steps=200, reward_threshold=195.0)
+    CartPoleEnvSpec(num_envs=1, batch_size=1, num_threads=0, max_num_players=1, thread_affinity_offset=-1, base_path='envpool', seed=42, gym_reset_return_info=False, max_episode_steps=200, reward_threshold=195.0)
 
     >>> # if we change a config value
     >>> env = envpool.make_gym("CartPole-v0", reward_threshold=666)
     >>> env
-    CartPoleGymEnvPool(num_envs=1, batch_size=0, num_threads=0, max_num_players=1, thread_affinity_offset=-1, base_path='envpool', seed=42, max_episode_steps=200, reward_threshold=666.0)
+    CartPoleGymEnvPool(num_envs=1, batch_size=1, num_threads=0, max_num_players=1, thread_affinity_offset=-1, base_path='envpool', seed=42, gym_reset_return_info=True, max_episode_steps=200, reward_threshold=666.0)
 
     >>> # observation space and action space
     >>> env.observation_space
@@ -421,7 +420,8 @@ Miscellaneous
     .. code-block:: c++
 
         #ifdef ENVPOOL_TEST
-            fprintf(stderr, "here");
+            fprintf(stderr, "here\n");
+            LOG(INFO) << "another error log print method.";
         #endif
 
 
@@ -470,6 +470,48 @@ instantiate ``CartPoleEnvSpec``, ``CartPoleDMEnvPool``, and
       "CartPoleDMEnvPool",
       "CartPoleGymEnvPool",
     ]
+
+
+Register CartPole-v0/1 in EnvPool
+---------------------------------
+
+To register a task in EnvPool, you need to call ``register`` function in
+``envpool.registration``. Here is ``registration.py``:
+::
+
+    from envpool.registration import register
+
+    register(
+      task_id="CartPole-v0",
+      import_path="envpool.classic_control",
+      spec_cls="CartPoleEnvSpec",
+      dm_cls="CartPoleDMEnvPool",
+      gym_cls="CartPoleGymEnvPool",
+      max_episode_steps=200,
+      reward_threshold=195.0,
+    )
+
+    register(
+      task_id="CartPole-v1",
+      import_path="envpool.classic_control",
+      spec_cls="CartPoleEnvSpec",
+      dm_cls="CartPoleDMEnvPool",
+      gym_cls="CartPoleGymEnvPool",
+      max_episode_steps=500,
+      reward_threshold=475.0,
+    )
+
+``task_id``, ``import_path``, ``spec_cls``, ``dm_cls``, and ``gym_cls`` are
+required arguments. Other arguments such as ``max_episode_steps`` and
+``reward_threshold`` are env-specific. For example, if someone use
+``envpool.make("CartPole-v1")``, the ``reward_threshold`` will be set to 475.0
+at ``CartPoleEnvPool`` initialization.
+
+Finally, it is crucial to let the top-level module import this file. In
+``envpool/entry.py``, add the following line:
+::
+
+    import envpool.classic_control.registration  # noqa: F401
 
 
 Write Bazel BUILD File
@@ -556,16 +598,6 @@ Let's first take a look at ``BUILD`` file in ``classic_control``:
         deps = ["//envpool/python:api"],
     )
 
-    py_test(
-        name = "classic_control_test",
-        srcs = ["classic_control_test.py"],
-        deps = [
-            ":classic_control",
-            requirement("numpy"),
-            requirement("absl-py"),
-        ],
-    )
-
     py_library(
         name = "classic_control_registration",
         srcs = ["registration.py"],
@@ -574,6 +606,16 @@ Let's first take a look at ``BUILD`` file in ``classic_control``:
         ],
     )
 
+    py_test(
+        name = "classic_control_test",
+        srcs = ["classic_control_test.py"],
+        deps = [
+            ":classic_control",
+            ":classic_control_registration",
+            requirement("numpy"),
+            requirement("absl-py"),
+        ],
+    )
 
 We have several ways for dependency declaration:
 
@@ -583,6 +625,50 @@ We have several ways for dependency declaration:
 3. python dependency: ``requirement("numpy")`` means this file use NumPy as
    runtime dependencies;
 4. third-party dependency (not shown above): will explain in the next section.
+
+And don't forget to modify the top-level Bazel BUILD dependency:
+
+.. code-block:: diff
+
+    py_library(
+        name = "entry",
+        srcs = ["entry.py"],
+        deps = [
+            "//envpool/atari:atari_registration",
+   +        "//envpool/classic_control:classic_control_registration",
+        ],
+    )
+
+    py_library(
+        name = "envpool",
+        srcs = ["__init__.py"],
+        deps = [
+            ":entry",
+            ":registration",
+            "//envpool/atari",
+   +        "//envpool/classic_control",
+            "//envpool/python",
+        ],
+    )
+
+Also, pay attention to check if ``.so`` file is packed into ``.whl``
+successfully. In ``setup.cfg``:
+
+.. code-block:: diff
+
+    [options.package_data]
+    envpool = atari/*.so
+        atari/roms/*.bin
+   +    classic_control/*.so
+
+Now you can run ``envpool.make("CartPole-v0")`` by re-installing EnvPool:
+
+.. code-block:: bash
+
+    # generate .whl file
+    make bazel-build
+    # install .whl
+    pip install dist/envpool-<version>-*.whl
 
 
 Testing
@@ -700,91 +786,6 @@ documentation
 <https://docs.bazel.build/versions/main/be/general.html#genrule>`_ or
 `Atari BUILD example <https://github.com/sail-sg/envpool/blob/v0.6.1.post1/envpool/atari/BUILD>`_.
 
-
-Register CartPole-v0/1 in EnvPool
----------------------------------
-
-To register a task in EnvPool, you need to call ``register`` function in
-``envpool.registration``. Here is ``registration.py``:
-::
-
-    from envpool.registration import register
-
-    register(
-      task_id="CartPole-v0",
-      import_path="envpool.classic_control",
-      spec_cls="CartPoleEnvSpec",
-      dm_cls="CartPoleDMEnvPool",
-      gym_cls="CartPoleGymEnvPool",
-      max_episode_steps=200,
-      reward_threshold=195.0,
-    )
-
-    register(
-      task_id="CartPole-v1",
-      import_path="envpool.classic_control",
-      spec_cls="CartPoleEnvSpec",
-      dm_cls="CartPoleDMEnvPool",
-      gym_cls="CartPoleGymEnvPool",
-      max_episode_steps=500,
-      reward_threshold=475.0,
-    )
-
-``task_id``, ``import_path``, ``spec_cls``, ``dm_cls``, and ``gym_cls`` are
-required arguments. Other arguments such as ``max_episode_steps`` and
-``reward_threshold`` are env-specific. For example, if someone use
-``envpool.make("CartPole-v1")``, the ``reward_threshold`` will be set to 475.0
-at ``CartPoleEnvPool`` initialization.
-
-Finally, it is crucial to let the top-level module import this file. In
-``envpool/entry.py``, add the following line:
-::
-
-    import envpool.classic_control.registration
-
-And don't forget to modify the Bazel BUILD dependency:
-
-.. code-block:: diff
-
-    py_library(
-        name = "entry",
-        srcs = ["entry.py"],
-        deps = [
-            "//envpool/atari:atari_registration",
-   +        "//envpool/classic_control:classic_control_registration",
-        ],
-    )
-
-    py_library(
-        name = "envpool",
-        srcs = ["__init__.py"],
-        deps = [
-            ":entry",
-            ":registration",
-            "//envpool/atari",
-   +        "//envpool/classic_control",
-            "//envpool/python",
-        ],
-    )
-
-Also, pay attention to check if ``.so`` file is packed into ``.whl``
-successfully. In ``setup.cfg``:
-
-.. code-block:: diff
-
-    [options.package_data]
-    envpool = atari/*.so
-        atari/roms/*.bin
-   +    classic_control/*.so
-
-Now you can run ``envpool.make("CartPole-v0")`` by re-installing EnvPool:
-
-.. code-block:: bash
-
-    # generate .whl file
-    make bazel-build
-    # install .whl
-    pip install dist/envpool-<version>-*.whl
 
 
 Add Unit Test for CartPoleEnv
