@@ -42,7 +42,7 @@ class _Box2dEnvPoolDeterministicTest(absltest.TestCase):
       np.testing.assert_allclose(obs0, obs1)
       if i % 1000 == 0:
         print(obs0)
-      # self.assertFalse(np.allclose(obs0, obs2))
+      self.assertFalse(np.allclose(obs0, obs2))
 
   def test_car_racing(self) -> None:
     self.run_deterministic_check("CarRacing-v2")

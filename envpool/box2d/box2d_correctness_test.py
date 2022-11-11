@@ -15,7 +15,7 @@
 
 from typing import Any, Dict, Tuple, no_type_check
 
-import cv2
+# import cv2
 import gym
 import numpy as np
 import pygame
