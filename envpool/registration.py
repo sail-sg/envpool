@@ -33,7 +33,7 @@ class EnvRegistry:
     gym_cls: str, **kwargs: Any
   ) -> None:
     """Register EnvSpec and EnvPool in global EnvRegistry."""
-    assert task_id not in self.specs
+    # assert task_id not in self.specs
     self.specs[task_id] = (import_path, spec_cls, kwargs)
     self.envpools[task_id] = {
       "dm": (import_path, dm_cls),

@@ -21,7 +21,7 @@ procgen_games_list = [
   "ninja", "plunder", "starpilot"
 ]
 
-distribution_name = ["easy", "hard"]
+distribution_name = ["Easy", "Hard"]
 
 distribution_code = [0, 1]
 
@@ -29,7 +29,7 @@ for game_name in procgen_games_list:
   for dist_name in distribution_name:
     for dist_code in distribution_code:
       register(
-        task_id=f"procgen-{game_name}-{dist_name}",
+        task_id=f"{game_name.capitalize()}{dist_name}-v0",
         import_path="envpool.procgen",
         spec_cls="ProcgenEnvSpec",
         dm_cls="ProcgenDMEnvPool",

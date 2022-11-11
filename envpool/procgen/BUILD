@@ -48,6 +48,8 @@ py_test(
         requirement("numpy"),
         requirement("absl-py"),
         requirement("opencv-python-headless"),
+        requirement("procgen"),
+        requirement("gym"),
     ],
 )
 
