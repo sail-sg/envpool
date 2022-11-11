@@ -34,14 +34,12 @@ class _Box2dEnvPoolDeterministicTest(absltest.TestCase):
     env1 = make_gym(task_id, num_envs=num_envs, seed=0, **kwargs)
     env2 = make_gym(task_id, num_envs=num_envs, seed=1, **kwargs)
     act_space = env0.action_space
-    for i in range(5000):
+    for _ in range(5000):
       action = np.array([act_space.sample() for _ in range(num_envs)])
       obs0 = env0.step(action)[0]
       obs1 = env1.step(action)[0]
       obs2 = env2.step(action)[0]
       np.testing.assert_allclose(obs0, obs1)
-      if i % 1000 == 0:
-        print(obs0)
       self.assertFalse(np.allclose(obs0, obs2))
 
   def test_car_racing(self) -> None:

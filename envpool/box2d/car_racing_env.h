@@ -20,9 +20,12 @@
 
 #include <box2d/box2d.h>
 
+#include <algorithm>
 #include <cmath>
+#include <memory>
 #include <random>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "car_dynamics.h"
@@ -97,11 +100,13 @@ class CarRacingBox2dEnv {
  public:
   CarRacingBox2dEnv(int max_episode_steps, float lap_complete_percent);
   void Render(RenderMode mode);
-  void RenderRoad(float zoom, std::array<float, 2>& translation, float angle);
+
+  void RenderRoad(float zoom, const std::array<float, 2>& translation,
+                  float angle);
   void RenderIndicators();
-  void DrawColoredPolygon(std::array<std::array<float, 2>, 4>& field,
+  void DrawColoredPolygon(const std::array<std::array<float, 2>, 4>& field,
                           cv::Scalar color, float zoom,
-                          std::array<float, 2>& translation, float angle,
+                          const std::array<float, 2>& translation, float angle,
                           bool clip = true);
   void CarRacingReset(std::mt19937* gen);
   void CarRacingStep(std::mt19937* gen, float action0, float action1,

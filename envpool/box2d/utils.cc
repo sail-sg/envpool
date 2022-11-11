@@ -29,17 +29,18 @@ float Sign(double val, double eps) {
   }
   return 0;
 }
-std::array<float, 2> RotateRad(std::array<float, 2> vec, float angle) {
+
+std::array<float, 2> RotateRad(const std::array<float, 2>& vec, float angle) {
   return {std::cos(angle) * vec[0] - std::sin(angle) * vec[1],
           std::sin(angle) * vec[0] + std::cos(angle) * vec[1]};
 }
 
-b2Vec2 RotateRad(b2Vec2& v, float angle) {
+b2Vec2 RotateRad(const b2Vec2& v, float angle) {
   return {std::cos(angle) * v.x - std::sin(angle) * v.y,
           std::sin(angle) * v.x + std::cos(angle) * v.y};
 }
 
-b2Vec2 Multiply(b2Transform& trans, b2Vec2& v) {
+b2Vec2 Multiply(const b2Transform& trans, const b2Vec2& v) {
   float x = (trans.q.c * v.x - trans.q.s * v.y) + trans.p.x;
   float y = (trans.q.s * v.x + trans.q.c * v.y) + trans.p.y;
   return b2Vec2(x, y);

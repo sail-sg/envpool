@@ -33,7 +33,7 @@ b2PolygonShape GeneratePolygon(const float* array, int size) {
   return polygon;
 }
 
-Car::Car(std::shared_ptr<b2World>& world, float init_angle, float init_x,
+Car::Car(const std::shared_ptr<b2World>& world, float init_angle, float init_x,
          float init_y)
     : world_(world), hull_(nullptr) {
   // Create hull
@@ -195,8 +195,8 @@ void Car::step(float dt) {
   }
 }
 
-void Car::draw(cv::Mat& surf, float zoom, std::array<float, 2>& translation,
-               float angle) {
+void Car::draw(const cv::Mat& surf, float zoom,
+               const std::array<float, 2>& translation, float angle) {
   for (size_t i = 0; i < drawlist_.size(); i++) {
     auto body = drawlist_[i];
     cv::Scalar color;

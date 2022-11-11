@@ -82,14 +82,14 @@ class Wheel : public UserData {
 
 class Car {
  public:
-  Car(std::shared_ptr<b2World>& world, float init_angle, float init_x,
+  Car(const std::shared_ptr<b2World>& world, float init_angle, float init_x,
       float init_y);
   void gas(float g);
   void brake(float b);
   void steer(float s);
   void step(float dt);
-  void draw(cv::Mat& surf, float zoom, std::array<float, 2>& translation,
-            float angle);
+  void draw(const cv::Mat& surf, float zoom,
+            const std::array<float, 2>& translation, float angle);
   void destroy();
   float GetFuelSpent();
   std::vector<float> GetGas();

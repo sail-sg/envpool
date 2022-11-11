@@ -40,18 +40,23 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
     elif isinstance(act0, gym.spaces.Discrete):
       np.testing.assert_allclose(act0.n, act1.n)
 
-  def bipedal_walker_space(self) -> None:
+  def test_bipedal_walker_space(self) -> None:
     env0 = gym.make("BipedalWalker-v3")
     env1 = make_gym("BipedalWalker-v3")
     self.run_space_check(env0, env1)
 
-  def lunar_lander_space(self) -> None:
+  def test_lunar_lander_space(self) -> None:
     env0 = gym.make("LunarLander-v2")
     env1 = make_gym("LunarLander-v2")
     self.run_space_check(env0, env1)
 
     env0 = gym.make("LunarLanderContinuous-v2")
     env1 = make_gym("LunarLanderContinuous-v2")
+    self.run_space_check(env0, env1)
+
+  def test_car_racing_space(self) -> None:
+    env0 = gym.make("CarRacing-v2")
+    env1 = make_gym("CarRacing-v2")
     self.run_space_check(env0, env1)
 
   @staticmethod
@@ -124,7 +129,7 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
     obs = env.reset(env_id)
     rewards = np.zeros(num_envs)
     action = np.tile(action, (num_envs, 1))
-    for i in range(max_episode_steps):
+    for _ in range(max_episode_steps):
       obs, rew, terminated, truncated, info = env.step(action, env_id)
       env_id = info["env_id"]
       rewards[env_id] += rew
@@ -135,7 +140,6 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
       env_id = env_id[~done]
     mean_reward = np.mean(rewards)
     logging.info(f"{np.mean(rewards):.6f} ± {np.std(rewards):.6f}")
-    print(f"{np.mean(rewards):.6f} ± {np.std(rewards):.6f}")
 
     self.assertTrue(abs(target_reward - mean_reward) < 10, (mean_reward))
 

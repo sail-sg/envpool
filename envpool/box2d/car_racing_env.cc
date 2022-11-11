@@ -17,8 +17,11 @@
 
 #include "car_racing_env.h"
 
+#include <algorithm>
 #include <cmath>
+#include <memory>
 #include <random>
+#include <utility>
 #include <vector>
 
 namespace box2d {
@@ -357,8 +360,9 @@ void CarRacingBox2dEnv::CreateImageArray() {
 }
 
 void CarRacingBox2dEnv::DrawColoredPolygon(
-    std::array<std::array<float, 2>, 4>& field, cv::Scalar color, float zoom,
-    std::array<float, 2>& translation, float angle, bool clip) {
+    const std::array<std::array<float, 2>, 4>& field, cv::Scalar color,
+    float zoom, const std::array<float, 2>& translation, float angle,
+    bool clip) {
   // This checks if the polygon is out of bounds of the screen, and we skip
   // drawing if so. Instead of calculating exactly if the polygon and screen
   // overlap, we simply check if the polygon is in a larger bounding box whose
@@ -367,26 +371,24 @@ void CarRacingBox2dEnv::DrawColoredPolygon(
 
   bool exist = false;
   std::vector<cv::Point> poly;
-  for (int i = 0; i < 4; i++) {
-    field[i] = RotateRad(field[i], angle);
-    field[i] = {field[i][0] * zoom + translation[0],
-                field[i][1] * zoom + translation[1]};
-    poly.push_back(cv::Point(field[i][0], field[i][1]));
-    if (-kMaxShapeDim <= field[i][0] && field[i][0] <= windowW + kMaxShapeDim &&
-        -kMaxShapeDim <= field[i][1] && field[i][1] <= windowH + kMaxShapeDim) {
+  for (const auto& f : field) {
+    auto f_roated = RotateRad(f, angle);
+    f_roated = {f_roated[0] * zoom + translation[0],
+                f_roated[1] * zoom + translation[1]};
+    poly.push_back(cv::Point(f_roated[0], f_roated[1]));
+    if (-kMaxShapeDim <= f_roated[0] && f_roated[0] <= windowW + kMaxShapeDim &&
+        -kMaxShapeDim <= f_roated[1] && f_roated[1] <= windowH + kMaxShapeDim) {
       exist = true;
     }
   }
 
   if (!clip || exist) {
     cv::fillPoly(surf_, poly, color);
-    // gfxdraw.aapolygon(self.surf, poly, color)
-    // gfxdraw.filled_polygon(self.surf, poly, color)
   }
 }
 
 void CarRacingBox2dEnv::RenderRoad(float zoom,
-                                   std::array<float, 2>& translation,
+                                   const std::array<float, 2>& translation,
                                    float angle) {
   std::array<std::array<float, 2>, 4> field;
   field[0] = {kPlayfiled, kPlayfiled};
@@ -502,8 +504,8 @@ void CarRacingBox2dEnv::Render(RenderMode mode) {
   float scroll_x = -car_->hull_->GetPosition().x * zoom;
   float scroll_y = -car_->hull_->GetPosition().y * zoom;
 
-  // trans = pygame.math.Vector2((scroll_x, scroll_y)).rotate_rad(angle)
-  std::array<float, 2> trans = RotateRad({scroll_x, scroll_y}, angle);
+  std::array<float, 2> scroll = {scroll_x, scroll_y};
+  std::array<float, 2> trans = RotateRad(scroll, angle);
   trans = {windowW / 2 + trans[0], windowH / 4 + trans[1]};
 
   RenderRoad(zoom, trans, angle);
