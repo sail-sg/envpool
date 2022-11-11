@@ -44,12 +44,11 @@ py_test(
     srcs = ["procgen_py_test.py"],
     data = [":procgen_envpool.so"],
     deps = [
-        ":procgen",
         requirement("numpy"),
         requirement("absl-py"),
         requirement("opencv-python-headless"),
-        requirement("procgen"),
         requirement("gym"),
+        ":procgen",
     ],
 )
 
