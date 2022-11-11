@@ -26,6 +26,7 @@ pybind_extension(
     deps = [
         ":toy_text_env",
         "//envpool/core:py_envpool",
+        "//envpool/core:xla",
     ],
 )
 

@@ -17,16 +17,18 @@
 _CUDA_DIR = "CUDA_DIR"
 
 def _impl(rctx):
-    cuda_dir = rctx.os.environ.get(_CUDA_DIR, default = "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.7")
-    """ rctx.symlink("{}/include".format(cuda_dir), "include")
-    rctx.symlink("{}/lib64".format(cuda_dir), "lib64") """
+    cuda_dir = "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.7"
+    print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    # rctx.os.environ.get(_CUDA_DIR, default = "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.7")
+    rctx.symlink("{}/include".format(cuda_dir), "include")
+    rctx.symlink("{}/lib".format(cuda_dir), "lib")
     rctx.file("WORKSPACE")
     rctx.file("BUILD", content = """
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "cudart_static",
-    srcs = ["lib64/libcudart_static.a"],
+    srcs = ["lib/x64/cudart_static.lib"],
     hdrs = glob([
         "include/*.h",
         "include/**/*.h",

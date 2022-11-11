@@ -171,6 +171,7 @@ cc_library(
     ],
 )
 
+# if windows, makes up a dummy xla without cuda dependency
 cc_library(
     name = "xla_template",
     hdrs = ["xla_template.h"],
@@ -182,6 +183,7 @@ cc_library(
         "@cuda//:cudart_static",
     ],
 )
+
 
 cc_library(
     name = "xla",
@@ -198,6 +200,6 @@ pybind_library(
     hdrs = ["py_envpool.h"],
     deps = [
         ":envpool",
-        ":xla",
+        ":xla"
     ],
 )

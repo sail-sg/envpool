@@ -17,7 +17,7 @@
 #ifndef ENVPOOL_CORE_XLA_TEMPLATE_H_
 #define ENVPOOL_CORE_XLA_TEMPLATE_H_
 
-#include <cuda_runtime_api.h>
+#include "cuda_runtime_api.h"
 #include <pybind11/functional.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
@@ -109,6 +109,7 @@ struct CustomCall {
     return std::make_tuple(
         py::capsule(reinterpret_cast<void*>(Cpu), "xla._CUSTOM_CALL_TARGET"),
         py::capsule(reinterpret_cast<void*>(Gpu), "xla._CUSTOM_CALL_TARGET"));
+        
   }
 
   static auto Xla(Class* obj) {

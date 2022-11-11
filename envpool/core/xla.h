@@ -17,7 +17,9 @@
 #ifndef ENVPOOL_CORE_XLA_H_
 #define ENVPOOL_CORE_XLA_H_
 
-#include <cuda_runtime_api.h>
+#include "envpool/core/array.h"
+#include "envpool/core/xla_template.h"
+#include "cuda_runtime_api.h"
 
 #include <cstdint>
 #include <memory>
@@ -26,8 +28,8 @@
 #include <tuple>
 #include <vector>
 
-#include "envpool/core/array.h"
-#include "envpool/core/xla_template.h"
+
+
 
 template <typename D>
 constexpr bool is_container_v = false;  // NOLINT
