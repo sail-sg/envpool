@@ -37,6 +37,7 @@ std::array<float, 2> RotateRad(const std::array<float, 2>& vec, float angle);
 b2Vec2 RotateRad(const b2Vec2& v, float angle);
 
 b2Vec2 Multiply(const b2Transform& trans, const b2Vec2& v);
+
 }  // namespace box2d
 
 #endif  // ENVPOOL_BOX2D_UTILS_H_

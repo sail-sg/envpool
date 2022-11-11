@@ -271,6 +271,8 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
 }
 
 void CarRacingBox2dEnv::CarRacingReset(std::mt19937* gen) {
+  elapsed_step_ = 0;
+  done_ = false;
   ResetBox2d(gen);
   StepBox2d(gen, 0.0, 0.0, 0.0, false);
 }
@@ -349,6 +351,10 @@ void CarRacingBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
       // terminated = true;
       done_ = true;
       step_reward_ = -100;
+    }
+
+    if (elapsed_step_ >= max_episode_steps_) {
+      done_ = true;
     }
   }
   Render(HUMAN);
@@ -519,4 +525,5 @@ void CarRacingBox2dEnv::Render(RenderMode mode) {
               cv::Point(20, windowH - windowH * 2 / 40.0),
               cv::FONT_HERSHEY_COMPLEX, 1, cv::Scalar(255, 255, 255), 2, false);
 }
+
 }  // namespace box2d

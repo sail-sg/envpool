@@ -122,7 +122,7 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
 
   def solve_car_racing(self, num_envs: int, action, target_reward) -> None:
     env = make_gym("CarRacing-v2", num_envs=num_envs)
-    max_episode_steps = 100  # env.spec.config.max_episode_steps
+    max_episode_steps = 100
 
     env_id = np.arange(num_envs)
     done = np.array([False] * num_envs)
@@ -141,7 +141,7 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
     mean_reward = np.mean(rewards)
     logging.info(f"{np.mean(rewards):.6f} ± {np.std(rewards):.6f}")
 
-    self.assertTrue(abs(target_reward - mean_reward) < 10, (mean_reward))
+    self.assertTrue(abs(target_reward - mean_reward) < 1, (mean_reward))
 
   def test_car_racing_correctness(
     self, num_envs: int = 100, render: bool = False

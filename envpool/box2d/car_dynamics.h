@@ -22,12 +22,12 @@
 
 #include <cmath>
 #include <memory>
-#include <opencv2/opencv.hpp>
 #include <random>
 #include <tuple>
 #include <unordered_set>
 #include <vector>
 
+#include "opencv2/opencv.hpp"
 #include "utils.h"
 
 namespace box2d {
