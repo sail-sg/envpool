@@ -13,7 +13,7 @@
 # limitations under the License.
 """Unit tests for box2d environments correctness check."""
 
-from typing import Any, Dict, Tuple, no_type_check
+from typing import Any, Dict, List, Tuple, no_type_check
 
 # import cv2
 import gym
@@ -120,7 +120,9 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
     self.solve_lunar_lander(num_envs, True)
     self.solve_lunar_lander(num_envs, False)
 
-  def solve_car_racing(self, num_envs: int, action, target_reward) -> None:
+  def solve_car_racing(
+    self, num_envs: int, action: List[float], target_reward: float
+  ) -> None:
     env = make_gym("CarRacing-v2", num_envs=num_envs)
     max_episode_steps = 100
 
