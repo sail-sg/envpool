@@ -79,6 +79,7 @@ CarRacingBox2dEnv::CarRacingBox2dEnv(int max_episode_steps,
                                      float lap_complete_percent)
     : lap_complete_percent_(lap_complete_percent),
       max_episode_steps_(max_episode_steps),
+      elapsed_step_(max_episode_steps + 1),
       world_(new b2World(b2Vec2(0.0, 0.0))) {
   b2PolygonShape shape;
   b2Vec2 vertices[4] = {b2Vec2(0, 0), b2Vec2(1, 0), b2Vec2(1, -1),
