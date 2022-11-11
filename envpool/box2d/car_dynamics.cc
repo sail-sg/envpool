@@ -36,8 +36,6 @@ b2PolygonShape GeneratePolygon(const float* array, int size) {
 Car::Car(std::shared_ptr<b2World>& world, float init_angle, float init_x,
          float init_y)
     : world_(world), hull_(nullptr) {
-  printf("Car constructor %f %f %f\n", init_angle, init_x, init_y);
-
   // Create hull
   b2BodyDef bd;
   bd.position.Set(init_x, init_y);

@@ -18,15 +18,14 @@
 #include "car_racing_env.h"
 
 #include <cmath>
-#include <iostream>
 #include <random>
-#include <unordered_set>
 #include <vector>
 
 namespace box2d {
 
-CarRacingFrictionDetector::CarRacingFrictionDetector(CarRacingBox2dEnv* env)
-    : env_(env) {}
+CarRacingFrictionDetector::CarRacingFrictionDetector(CarRacingBox2dEnv* env,
+                                                     float lap_complete_percent)
+    : env_(env), lap_complete_percent_(lap_complete_percent) {}
 
 void CarRacingFrictionDetector::_Contact(b2Contact* contact, bool begin) {
   Tile* tile = nullptr;
@@ -55,9 +54,7 @@ void CarRacingFrictionDetector::_Contact(b2Contact* contact, bool begin) {
 
   if (tile->type != TILE_TYPE || obj->type != WHEEL_TYPE) return;
 
-  tile->RoadColor = {kRoadColor[0] / 255, kRoadColor[1] / 255,
-                     kRoadColor[2] / 255};
-
+  tile->RoadColor = {kRoadColor[0], kRoadColor[1], kRoadColor[2]};
   if (begin) {
     obj->tiles.insert(tile);
     if (!tile->tileRoadVisited) {
@@ -75,8 +72,10 @@ void CarRacingFrictionDetector::_Contact(b2Contact* contact, bool begin) {
   }
 }
 
-CarRacingBox2dEnv::CarRacingBox2dEnv(int max_episode_steps)
-    : max_episode_steps_(max_episode_steps),
+CarRacingBox2dEnv::CarRacingBox2dEnv(int max_episode_steps,
+                                     float lap_complete_percent)
+    : lap_complete_percent_(lap_complete_percent),
+      max_episode_steps_(max_episode_steps),
       world_(new b2World(b2Vec2(0.0, 0.0))) {
   b2PolygonShape shape;
   b2Vec2 vertices[4] = {b2Vec2(0, 0), b2Vec2(1, 0), b2Vec2(1, -1),
@@ -85,18 +84,15 @@ CarRacingBox2dEnv::CarRacingBox2dEnv(int max_episode_steps)
   fd_tile_.shape = &shape;
 }
 
-bool CarRacingBox2dEnv::CreateTrack() {
+bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
   int checkpointInt = 12;
   float checkpointFloat = 12;
   // Create checkpoints
   std::vector<std::array<float, 3>> checkpoints;
   for (int c = 0; c < checkpointInt; c++) {
-    float noise =
-        2 * M_PI * 1 / checkpointFloat /
-        3;  // self.np_random.uniform(0, 2 * M_PI * 1 / checkpointFloat)
+    float noise = RandUniform(0, 2 * M_PI * 1 / checkpointFloat)(*gen);
     float alpha = 2 * M_PI * c / checkpointFloat + noise;
-    float rad =
-        trackRAD / 3 * 2;  // self.np_random.uniform(trackRAD / 3, trackRAD);
+    float rad = RandUniform(trackRAD / 3, trackRAD)(*gen);
 
     if (c == 0) {
       alpha = 0;
@@ -207,12 +203,9 @@ bool CarRacingBox2dEnv::CreateTrack() {
     }
   }
 
-  // if self.verbose:
-  //     print("Track generation: %i..%i -> %i-tiles track" % (i1, i2, i2 - i1))
   assert(i1 != -1);
   assert(i2 != -1);
 
-  // todo: check current_track[i1 : i2 - 1]
   current_track = std::vector<std::array<float, 4>>(
       current_track.begin() + i1, current_track.begin() + i2 - 1);
   auto first_beta = current_track[0][1];
@@ -276,7 +269,7 @@ bool CarRacingBox2dEnv::CreateTrack() {
 
 void CarRacingBox2dEnv::CarRacingReset(std::mt19937* gen) {
   ResetBox2d(gen);
-  StepBox2d(gen, 0.0, 0.0, 0.0, false);  // todo
+  StepBox2d(gen, 0.0, 0.0, 0.0, false);
 }
 
 void CarRacingBox2dEnv::ResetBox2d(std::mt19937* gen) {
@@ -290,7 +283,8 @@ void CarRacingBox2dEnv::ResetBox2d(std::mt19937* gen) {
     assert(car_ != nullptr);
     car_->destroy();
   }
-  listener_ = std::make_unique<CarRacingFrictionDetector>(this);
+  listener_ =
+      std::make_unique<CarRacingFrictionDetector>(this, lap_complete_percent_);
   world_->SetContactListener(listener_.get());
   reward_ = 0;
   prev_reward_ = 0;
@@ -301,7 +295,7 @@ void CarRacingBox2dEnv::ResetBox2d(std::mt19937* gen) {
 
   bool success = false;
   while (!success) {
-    success = CreateTrack();
+    success = CreateTrack(gen);
   }
   car_ =
       std::make_unique<Car>(world_, track_[0][1], track_[0][2], track_[0][3]);
@@ -312,6 +306,7 @@ void CarRacingBox2dEnv::CarRacingStep(std::mt19937* gen, float action0,
   ++elapsed_step_;
   StepBox2d(gen, action0, action1, action2, true);
 }
+
 void CarRacingBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
                                   float action1, float action2, bool isAction) {
   assert(car_ != nullptr);
@@ -352,16 +347,15 @@ void CarRacingBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
       done_ = true;
       step_reward_ = -100;
     }
-    printf("x %f y %f step_reward %f\n", x, y, step_reward_);
   }
   Render(HUMAN);
 }
 
-cv::Mat CarRacingBox2dEnv::CreateImageArray() {
-  cv::Mat state;
-  cv::resize(surf_, state, cv::Size(stateW, stateH));
-  return state;
+void CarRacingBox2dEnv::CreateImageArray() {
+  cv::resize(surf_, img_array_, cv::Size(stateW, stateH));
+  cv::cvtColor(img_array_, img_array_, cv::COLOR_BGR2RGB);
 }
+
 void CarRacingBox2dEnv::DrawColoredPolygon(
     std::array<std::array<float, 2>, 4>& field, cv::Scalar color, float zoom,
     std::array<float, 2>& translation, float angle, bool clip) {
@@ -431,17 +425,18 @@ void CarRacingBox2dEnv::RenderRoad(float zoom,
   }
 }
 
-std::vector<cv::Point>CarRacingBox2dEnv::VerticalInd(int place, int s, int h,
-                                               float val) {
+std::vector<cv::Point> CarRacingBox2dEnv::VerticalInd(int place, int s, int h,
+                                                      float val) {
   return {
-    cv::Point(place * s, windowH - static_cast<int>(h + h * val)),
-        cv::Point((place + 1) * s, windowH - static_cast<int>(h + h * val)),
-        cv::Point((place + 1) * s, windowH - h),
-        cv::Point((place + 0) * s, windowH - h),
+      cv::Point(place * s, windowH - static_cast<int>(h + h * val)),
+      cv::Point((place + 1) * s, windowH - static_cast<int>(h + h * val)),
+      cv::Point((place + 1) * s, windowH - h),
+      cv::Point((place + 0) * s, windowH - h),
   };
 }
-std::vector<cv::Point>CarRacingBox2dEnv::HorizInd(int place, int s, int h,
-                                            float val) {
+
+std::vector<cv::Point> CarRacingBox2dEnv::HorizInd(int place, int s, int h,
+                                                   float val) {
   return {
       cv::Point((place + 0) * s, windowH - 4 * h),
       cv::Point((place + val) * s, windowH - 4 * h),
@@ -449,6 +444,7 @@ std::vector<cv::Point>CarRacingBox2dEnv::HorizInd(int place, int s, int h,
       cv::Point((place + 0) * s, windowH - 2 * h),
   };
 }
+
 void CarRacingBox2dEnv::RenderIfMin(float value, std::vector<cv::Point> points,
                                     cv::Scalar color) {
   if (abs(value) > 1e-4) {
@@ -469,7 +465,8 @@ void CarRacingBox2dEnv::RenderIndicators() {
   float true_speed = std::sqrt(std::pow(car_->hull_->GetLinearVelocity().x, 2) +
                                std::pow(car_->hull_->GetLinearVelocity().y, 2));
 
-  RenderIfMin(true_speed, VerticalInd(5, s, h, 0.02f * true_speed), cv::Scalar(255, 255, 255));
+  RenderIfMin(true_speed, VerticalInd(5, s, h, 0.02f * true_speed),
+              cv::Scalar(255, 255, 255));
   // ABS sensors
   RenderIfMin(car_->wheels_[0]->omega,
               VerticalInd(7, s, h, 0.01 * car_->wheels_[0]->omega),
@@ -484,9 +481,10 @@ void CarRacingBox2dEnv::RenderIndicators() {
               VerticalInd(10, s, h, 0.01 * car_->wheels_[3]->omega),
               cv::Scalar(255, 0, 51));
 
-  RenderIfMin(car_->wheels_[0]->joint->GetJointAngle(),
-              HorizInd(20, s, h, -10.0 * car_->wheels_[0]->joint->GetJointAngle()),
-              cv::Scalar(0, 255, 0));
+  RenderIfMin(
+      car_->wheels_[0]->joint->GetJointAngle(),
+      HorizInd(20, s, h, -10.0 * car_->wheels_[0]->joint->GetJointAngle()),
+      cv::Scalar(0, 255, 0));
   RenderIfMin(car_->hull_->GetAngularVelocity(),
               HorizInd(30, s, h, -0.8f * car_->hull_->GetAngularVelocity()),
               cv::Scalar(0, 0, 255));

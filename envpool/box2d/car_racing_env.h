@@ -34,13 +34,14 @@ class CarRacingBox2dEnv;
 
 class CarRacingFrictionDetector : public b2ContactListener {
  public:
-  explicit CarRacingFrictionDetector(CarRacingBox2dEnv* _env);
+  explicit CarRacingFrictionDetector(CarRacingBox2dEnv* _env,
+                                     float lap_complete_percent);
   void BeginContact(b2Contact* contact) override { _Contact(contact, true); }
   void EndContact(b2Contact* contact) override { _Contact(contact, false); }
 
  protected:
   CarRacingBox2dEnv* env_;
-  float lap_complete_percent_{0.95};
+  float lap_complete_percent_;
   void _Contact(b2Contact* contact, bool begin);
 };
 
@@ -49,8 +50,6 @@ enum RenderMode { HUMAN, RGB_ARRAY, STATE_PIXELS };
 class CarRacingBox2dEnv {
   const int stateW = 96;
   const int stateH = 96;
-  const int videoW = 600;
-  const int videoH = 400;
   const int windowW = 1000;
   const int windowH = 800;
   const float kScale = 6.0;  // Track scale
@@ -71,6 +70,7 @@ class CarRacingBox2dEnv {
   friend class CarRacingFrictionDetector;
 
  protected:
+  float lap_complete_percent_;
   int max_episode_steps_, elapsed_step_{0};
   float reward_{0};
   float prev_reward_{0};
@@ -78,6 +78,7 @@ class CarRacingBox2dEnv {
   bool done_{false};
 
   cv::Mat surf_;
+  cv::Mat img_array_;
 
   std::unique_ptr<CarRacingFrictionDetector> listener_;
   std::shared_ptr<b2World> world_;
@@ -94,7 +95,7 @@ class CarRacingBox2dEnv {
       roads_poly_;
 
  public:
-  CarRacingBox2dEnv(int max_episode_steps);
+  CarRacingBox2dEnv(int max_episode_steps, float lap_complete_percent);
   void Render(RenderMode mode);
   void RenderRoad(float zoom, std::array<float, 2>& translation, float angle);
   void RenderIndicators();
@@ -105,13 +106,14 @@ class CarRacingBox2dEnv {
   void CarRacingReset(std::mt19937* gen);
   void CarRacingStep(std::mt19937* gen, float action0, float action1,
                      float action2);
-  cv::Mat CreateImageArray();
+  void CreateImageArray();
 
  private:
-  std::vector<cv::Point>VerticalInd(int place, int s, int h, float val);
-  std::vector<cv::Point>HorizInd(int place, int s, int h, float val);
-  void RenderIfMin(float value, std::vector<cv::Point> points, cv::Scalar color);
-  bool CreateTrack();
+  std::vector<cv::Point> VerticalInd(int place, int s, int h, float val);
+  std::vector<cv::Point> HorizInd(int place, int s, int h, float val);
+  void RenderIfMin(float value, std::vector<cv::Point> points,
+                   cv::Scalar color);
+  bool CreateTrack(std::mt19937* gen);
   void ResetBox2d(std::mt19937* gen);
   void StepBox2d(std::mt19937* gen, float action0, float action1, float action2,
                  bool isAction);

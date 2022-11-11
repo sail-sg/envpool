@@ -18,8 +18,6 @@
 #ifndef ENVPOOL_BOX2D_CAR_RACING_H_
 #define ENVPOOL_BOX2D_CAR_RACING_H_
 
-#include <iostream>  // todo remove
-
 #include "car_racing_env.h"
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
@@ -29,19 +27,20 @@ namespace box2d {
 class CarRacingEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("reward_threshold"_.Bind(900.0));
+    return MakeDict("reward_threshold"_.Bind(900.0),
+                    "lap_complete_percent"_.Bind(0.95));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
 #ifdef ENVPOOL_TEST
-    return MakeDict("obs"_.Bind(Spec<uint8_t>({800, 1000, 3}, {0, 255})),
+    return MakeDict("obs"_.Bind(Spec<uint8_t>({96, 96, 3}, {0, 255})),
                     "info:tile_visited_count"_.Bind(Spec<int>({-1})),
                     "info:car_fuel_spent"_.Bind(Spec<float>({-1})),
                     "info:car_gas"_.Bind(Spec<float>({-1, 2})),
                     "info:car_steer"_.Bind(Spec<float>({-1, 2})),
                     "info:car_brake"_.Bind(Spec<float>({-1, 4})));
 #else
-    return MakeDict("obs"_.Bind(Spec<uint8_t>({1000, 800, 3}, {0, 255})));
+    return MakeDict("obs"_.Bind(Spec<uint8_t>({96, 96, 3}, {0, 255})));
 #endif
   }
   template <typename Config>
@@ -56,12 +55,12 @@ class CarRacingEnv : public Env<CarRacingEnvSpec>, public CarRacingBox2dEnv {
  public:
   CarRacingEnv(const Spec& spec, int env_id)
       : Env<CarRacingEnvSpec>(spec, env_id),
-        CarRacingBox2dEnv(spec.config["max_episode_steps"_]) {}
+        CarRacingBox2dEnv(spec.config["max_episode_steps"_],
+                          spec.config["lap_complete_percent"_]) {}
 
   bool IsDone() override { return done_; }
 
   void Reset() override {
-    printf("Env Reset\n");
     CarRacingReset(&gen_);
     WriteState();
   }
@@ -76,9 +75,8 @@ class CarRacingEnv : public Env<CarRacingEnvSpec>, public CarRacingBox2dEnv {
   void WriteState() {
     State state = Allocate();
     state["reward"_] = step_reward_;
-    // auto img = CreateImageArray();
-    // state["obs"_].Assign(img.data, 96 * 96 * 3);
-    state["obs"_].Assign(surf_.data, 1000 * 800 * 3);
+    CreateImageArray();
+    state["obs"_].Assign(img_array_.data, 96 * 96 * 3);
 #ifdef ENVPOOL_TEST
     state["info:tile_visited_count"_] = tile_visited_count_;
     state["info:car_fuel_spent"_] = car_->GetFuelSpent();

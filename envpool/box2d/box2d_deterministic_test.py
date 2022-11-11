@@ -44,6 +44,9 @@ class _Box2dEnvPoolDeterministicTest(absltest.TestCase):
         print(obs0)
       # self.assertFalse(np.allclose(obs0, obs2))
 
+  def test_car_racing(self) -> None:
+    self.run_deterministic_check("CarRacing-v2")
+
   def test_bipedal_walker(self) -> None:
     self.run_deterministic_check("BipedalWalker-v3")
     self.run_deterministic_check("BipedalWalkerHardcore-v3")

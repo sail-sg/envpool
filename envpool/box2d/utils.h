@@ -18,6 +18,7 @@
 #define ENVPOOL_BOX2D_UTILS_H_
 
 #include <box2d/box2d.h>
+
 #include <array>
 #include <random>
 
