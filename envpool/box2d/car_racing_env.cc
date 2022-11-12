@@ -257,7 +257,7 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
     t->body->GetUserData().pointer = reinterpret_cast<uintptr_t>(t);
 
     float c = 0.01 * (i % 3) * 255;
-    t->RoadColor = {kRoadColor[0] + c, kRoadColor[1] + c, kRoadColor[2] + c};
+    t->road_color = {kRoadColor[0] + c, kRoadColor[1] + c, kRoadColor[2] + c};
 
     t->type = TILE_TYPE;
     t->tile_road_visited = false;
