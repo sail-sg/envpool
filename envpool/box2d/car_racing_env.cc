@@ -57,11 +57,11 @@ void CarRacingFrictionDetector::_Contact(b2Contact* contact, bool begin) {
 
   if (tile->type != TILE_TYPE || obj->type != WHEEL_TYPE) return;
 
-  tile->RoadColor = {kRoadColor[0], kRoadColor[1], kRoadColor[2]};
+  tile->road_color = {kRoadColor[0], kRoadColor[1], kRoadColor[2]};
   if (begin) {
     obj->tiles.insert(tile);
-    if (!tile->tileRoadVisited) {
-      tile->tileRoadVisited = true;
+    if (!tile->tile_road_visited) {
+      tile->tile_road_visited = true;
       env_->reward_ += 1000.0 / env_->track_.size();
       env_->tile_visited_count_ += 1;
       // Lap is considered completed if enough % of the track was covered
@@ -260,12 +260,12 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
     t->RoadColor = {kRoadColor[0] + c, kRoadColor[1] + c, kRoadColor[2] + c};
 
     t->type = TILE_TYPE;
-    t->tileRoadVisited = false;
-    t->roadFriction = 1.0;
+    t->tile_road_visited = false;
+    t->road_friction = 1.0;
     t->idx = i;
     t->body->GetFixtureList()[0].SetSensor(true);
     roads_.push_back(t);
-    roads_poly_.emplace_back(std::make_pair(roads_vertices, t->RoadColor));
+    roads_poly_.emplace_back(std::make_pair(roads_vertices, t->road_color));
   }
   track_ = current_track;
   return true;
@@ -287,7 +287,7 @@ void CarRacingBox2dEnv::ResetBox2d(std::mt19937* gen) {
     }
     roads_.clear();
     assert(car_ != nullptr);
-    car_->destroy();
+    car_->Destroy();
   }
   listener_ =
       std::make_unique<CarRacingFrictionDetector>(this, lap_complete_percent_);
@@ -320,12 +320,12 @@ void CarRacingBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
   assert(0 <= action1 && action1 <= 1);
   assert(0 <= action2 && action2 <= 1);
   if (isAction) {
-    car_->steer(-action0);
-    car_->gas(action1);
-    car_->brake(action2);
+    car_->Steer(-action0);
+    car_->Gas(action1);
+    car_->Brake(action2);
   }
 
-  car_->step(1.0 / kFps);
+  car_->Step(1.0 / kFps);
   world_->Step(1.0 / kFps, 6 * 30, 2 * 30);
   t_ += 1.0 / kFps;
 
@@ -516,7 +516,7 @@ void CarRacingBox2dEnv::Render(RenderMode mode) {
   trans = {windowW / 2 + trans[0], windowH / 4 + trans[1]};
 
   RenderRoad(zoom, trans, angle);
-  car_->draw(surf_, zoom, trans, angle);
+  car_->Draw(surf_, zoom, trans, angle);
 
   cv::flip(surf_, surf_, 0);
   RenderIndicators();
