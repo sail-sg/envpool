@@ -33,9 +33,9 @@
 namespace box2d {
 
 static const float kSize = 0.02;
-static const float kEnginePower = 100000000.0 * kSize * kSize;
-static const float kWheelMomentOfInertia = 4000.0 * kSize * kSize;
-static const float kFrictionLimit = 1000000.0 * kSize * kSize;
+static const float kEnginePower = 100000000.0f * kSize * kSize;
+static const float kWheelMomentOfInertia = 4000.0f * kSize * kSize;
+static const float kFrictionLimit = 1000000.0f * kSize * kSize;
 static const float kWheelR = 27;
 static const float kWheelW = 14;
 static const float kWheelPos[4][2] = {  // NOLINT
@@ -102,7 +102,7 @@ class Wheel : public UserData {
 
 class Car {
  public:
-  Car(const std::shared_ptr<b2World>& world, float init_angle, float init_x,
+  Car(std::shared_ptr<b2World> world, float init_angle, float init_x,
       float init_y);
   void Gas(float g);
   void Brake(float b);
@@ -111,7 +111,7 @@ class Car {
   void Draw(const cv::Mat& surf, float zoom,
             const std::array<float, 2>& translation, float angle);
   void Destroy();
-  float GetFuelSpent() const;
+  [[nodiscard]] float GetFuelSpent() const;
   std::vector<float> GetGas();
   std::vector<float> GetSteer();
   std::vector<float> GetBrake();

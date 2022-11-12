@@ -34,7 +34,7 @@ b2PolygonShape GeneratePolygon(const float (*poly)[2], int size) {
 
 Car::Car(std::shared_ptr<b2World> world, float init_angle, float init_x,
          float init_y)
-    : world_(world), hull_(nullptr) {
+    : world_(std::move(world)), hull_(nullptr) {
   // Create hull
   b2BodyDef bd;
   bd.position.Set(init_x, init_y);
@@ -138,7 +138,7 @@ void Car::Step(float dt) {
     float friction_limit = kFrictionLimit * 0.6;  // Grass friction if no tile
     for (auto* t : w->tiles) {
       friction_limit =
-          std::max(friction_limit, kFrictionLimit * t->roadFriction);
+          std::max(friction_limit, kFrictionLimit * t->road_friction);
     }
     // Force
     auto forw = w->body->GetWorldVector({0, 1});
@@ -230,7 +230,7 @@ void Car::Draw(const cv::Mat& surf, float zoom,
 void Car::Destroy() {
   world_->DestroyBody(hull_);
   hull_ = nullptr;
-  for (auto w : wheels_) {
+  for (auto* w : wheels_) {
     world_->DestroyBody(w->body);
   }
   wheels_.clear();
