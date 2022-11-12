@@ -80,6 +80,7 @@ CarRacingBox2dEnv::CarRacingBox2dEnv(int max_episode_steps,
     : lap_complete_percent_(lap_complete_percent),
       max_episode_steps_(max_episode_steps),
       elapsed_step_(max_episode_steps + 1),
+      done_(true),
       world_(new b2World(b2Vec2(0.0, 0.0))) {
   b2PolygonShape shape;
   b2Vec2 vertices[4] = {b2Vec2(0, 0), b2Vec2(1, 0), b2Vec2(1, -1),
@@ -362,6 +363,8 @@ void CarRacingBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
 }
 
 void CarRacingBox2dEnv::CreateImageArray() {
+  // cv::resize(surf_, img_array_, cv::Size(stateW, stateH), 0, 0,
+  // cv::INTER_AREA);
   cv::resize(surf_, img_array_, cv::Size(stateW, stateH));
   cv::cvtColor(img_array_, img_array_, cv::COLOR_BGR2RGB);
 }
