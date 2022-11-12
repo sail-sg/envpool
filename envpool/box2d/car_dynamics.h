@@ -33,26 +33,39 @@
 namespace box2d {
 
 static const float kSize = 0.02;
-static const float kEnginePower = 100000000 * kSize * kSize;
-static const float kWheelMomentOfInertia = 4000 * kSize * kSize;
-static const float kFrictionLimit = 1000000 * kSize * kSize;
+static const float kEnginePower = 100000000.0 * kSize * kSize;
+static const float kWheelMomentOfInertia = 4000.0 * kSize * kSize;
+static const float kFrictionLimit = 1000000.0 * kSize * kSize;
 static const float kWheelR = 27;
 static const float kWheelW = 14;
-static const float kWheelPos[4][2] = {
-    {-55, 80}, {55, 80}, {-55, -82}, {55, -82}};
-static const float kHullPoly1[4][2] = {
-    {-60, 130}, {60, 130}, {60, 110}, {-60, 110}};
-static const float kHullPoly2[4][2] = {
-    {-15, 120}, {15, 120}, {20, 20}, {-20, 20}};
-static const float kHullPoly3[8][2] = {{25, 20},   {50, -10},  {50, -40},
-                                       {20, -90},  {-20, -90}, {-50, -40},
-                                       {-50, -10}, {-25, 20}};
-static const float kHullPoly4[4][2] = {
-    {-50, -120}, {50, -120}, {50, -90}, {-50, -90}};
-static const float kWheelPoly[4][2] = {{-kWheelW, +kWheelR},
-                                       {+kWheelW, +kWheelR},
-                                       {+kWheelW, -kWheelR},
-                                       {-kWheelW, -kWheelR}};
+static const float kWheelPos[4][2] = {  // NOLINT
+    {-55, 80},
+    {55, 80},
+    {-55, -82},
+    {55, -82}};
+static const float kHullPoly1[4][2] = {  // NOLINT
+    {-60, 130},
+    {60, 130},
+    {60, 110},
+    {-60, 110}};
+static const float kHullPoly2[4][2] = {  // NOLINT
+    {-15, 120},
+    {15, 120},
+    {20, 20},
+    {-20, 20}};
+static const float kHullPoly3[8][2] = {  // NOLINT
+    {25, 20},   {50, -10},  {50, -40},  {20, -90},
+    {-20, -90}, {-50, -40}, {-50, -10}, {-25, 20}};
+static const float kHullPoly4[4][2] = {  // NOLINT
+    {-50, -120},
+    {50, -120},
+    {50, -90},
+    {-50, -90}};
+static const float kWheelPoly[4][2] = {  // NOLINT
+    {-kWheelW, +kWheelR},
+    {+kWheelW, +kWheelR},
+    {+kWheelW, -kWheelR},
+    {-kWheelW, -kWheelR}};
 
 static const float kRoadColor[3] = {102, 102, 102};
 static const cv::Scalar kBgColor(102, 204, 102);
@@ -69,9 +82,9 @@ class UserData {
 
 class Tile : public UserData {
  public:
-  bool tileRoadVisited{false};
-  float roadFriction;
-  std::array<float, 3> RoadColor;
+  bool tile_road_visited{false};
+  float road_friction;
+  std::array<float, 3> road_color;
 };
 
 class Wheel : public UserData {
@@ -91,14 +104,14 @@ class Car {
  public:
   Car(const std::shared_ptr<b2World>& world, float init_angle, float init_x,
       float init_y);
-  void gas(float g);
-  void brake(float b);
-  void steer(float s);
-  void step(float dt);
-  void draw(const cv::Mat& surf, float zoom,
+  void Gas(float g);
+  void Brake(float b);
+  void Steer(float s);
+  void Step(float dt);
+  void Draw(const cv::Mat& surf, float zoom,
             const std::array<float, 2>& translation, float angle);
-  void destroy();
-  float GetFuelSpent();
+  void Destroy();
+  float GetFuelSpent() const;
   std::vector<float> GetGas();
   std::vector<float> GetSteer();
   std::vector<float> GetBrake();

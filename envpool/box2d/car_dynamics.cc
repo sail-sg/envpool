@@ -25,14 +25,14 @@ namespace box2d {
 b2PolygonShape GeneratePolygon(const float (*poly)[2], int size) {
   std::vector<b2Vec2> vec_list;
   for (int i = 0; i < size; ++i) {
-    vec_list.push_back(b2Vec2(poly[i][0] * kSize, poly[i][1] * kSize));
+    vec_list.emplace_back(b2Vec2(poly[i][0] * kSize, poly[i][1] * kSize));
   }
   b2PolygonShape polygon;
   polygon.Set(vec_list.data(), vec_list.size());
   return polygon;
 }
 
-Car::Car(const std::shared_ptr<b2World>& world, float init_angle, float init_x,
+Car::Car(std::shared_ptr<b2World> world, float init_angle, float init_x,
          float init_y)
     : world_(world), hull_(nullptr) {
   // Create hull
@@ -57,7 +57,8 @@ Car::Car(const std::shared_ptr<b2World>& world, float init_angle, float init_x,
   hull_->CreateFixture(&polygon4, 1.f);
 
   for (const auto* p : kWheelPos) {
-    float wx = p[0], wy = p[1];
+    float wx = p[0];
+    float wy = p[1];
 
     b2BodyDef bd;
     bd.position.Set(init_x + wx * kSize, init_y + wy * kSize);
@@ -101,35 +102,41 @@ Car::Car(const std::shared_ptr<b2World>& world, float init_angle, float init_x,
     wheels_.push_back(w);
   }
 }
-void Car::gas(float g) {
-  if (g < 0) g = 0;
-  if (g > 1) g = 1;
+void Car::Gas(float g) {
+  if (g < 0) {
+    g = 0;
+  }
+  if (g > 1) {
+    g = 1;
+  }
   for (int i = 2; i < 4; i++) {
-    auto w = wheels_[i];
+    auto* w = wheels_[i];
     auto diff = g - w->gas;
-    if (diff > 0.1) diff = 0.1;
+    if (diff > 0.1) {
+      diff = 0.1;
+    }
     w->gas += diff;
   }
 }
 
-void Car::brake(float b) {
+void Car::Brake(float b) {
   for (auto& w : wheels_) {
     w->brake = b;
   }
 }
-void Car::steer(float s) {
+void Car::Steer(float s) {
   wheels_[0]->steer = s;
   wheels_[1]->steer = s;
 }
-void Car::step(float dt) {
-  for (auto w : wheels_) {
+void Car::Step(float dt) {
+  for (auto* w : wheels_) {
     // Steer each wheel
     float dir = (w->steer - w->joint->GetJointAngle() > 0) ? 1 : -1;
     float val = abs(w->steer - w->joint->GetJointAngle());
     w->joint->SetMotorSpeed(dir * std::min(50.0 * val, 3.0));
     // Position => friction_limit
     float friction_limit = kFrictionLimit * 0.6;  // Grass friction if no tile
-    for (auto t : w->tiles) {
+    for (auto* t : w->tiles) {
       friction_limit =
           std::max(friction_limit, kFrictionLimit * t->roadFriction);
     }
@@ -194,32 +201,33 @@ void Car::step(float dt) {
   }
 }
 
-void Car::draw(const cv::Mat& surf, float zoom,
+void Car::Draw(const cv::Mat& surf, float zoom,
                const std::array<float, 2>& translation, float angle) {
   for (size_t i = 0; i < drawlist_.size(); i++) {
-    auto body = drawlist_[i];
+    auto* body = drawlist_[i];
     cv::Scalar color;
     if (i == 0) {
       color = cv::Scalar(0, 0, 204);  // hull.color = (0.8, 0.0, 0.0) * 255
     } else {
       color = cv::Scalar(0, 0, 0);  // wheel.color = (0, 0, 0)
     }
-    for (b2Fixture* f = body->GetFixtureList(); f; f = f->GetNext()) {
-      b2PolygonShape* shape = static_cast<b2PolygonShape*>(f->GetShape());
+    for (b2Fixture* f = body->GetFixtureList(); f != nullptr;
+         f = f->GetNext()) {
+      auto* shape = static_cast<b2PolygonShape*>(f->GetShape());
       std::vector<cv::Point> poly;
       for (int j = 0; j < shape->m_count; j++) {
         auto trans = body->GetTransform();
         auto vec_tmp = Multiply(trans, shape->m_vertices[j]);
         auto v = RotateRad(vec_tmp, angle);
-        poly.push_back(cv::Point(v.x * zoom + translation[0],
-                                 v.y * zoom + translation[1]));
+        poly.emplace_back(cv::Point(v.x * zoom + translation[0],
+                                    v.y * zoom + translation[1]));
         cv::fillPoly(surf, poly, color);
       }
     }
   }
 }
 
-void Car::destroy() {
+void Car::Destroy() {
   world_->DestroyBody(hull_);
   hull_ = nullptr;
   for (auto w : wheels_) {
@@ -228,7 +236,7 @@ void Car::destroy() {
   wheels_.clear();
 }
 
-float Car::GetFuelSpent() { return fuel_spent_; }
+float Car::GetFuelSpent() const { return fuel_spent_; }
 
 std::vector<float> Car::GetGas() { return {wheels_[2]->gas, wheels_[3]->gas}; }
 
