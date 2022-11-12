@@ -38,14 +38,21 @@ static const float kWheelMomentOfInertia = 4000 * kSize * kSize;
 static const float kFrictionLimit = 1000000 * kSize * kSize;
 static const float kWheelR = 27;
 static const float kWheelW = 14;
-static const float kWheelPos[8] = {-55, 80, 55, 80, -55, -82, 55, -82};
-static const float kHullPoly1[8] = {-60, 130, 60, 130, 60, 110, -60, 110};
-static const float kHullPoly2[8] = {-15, 120, 15, 120, 20, 20, -20, 20};
-static const float kHullPoly3[16] = {25,  20,  50,  -10, 50,  -40, 20,  -90,
-                                     -20, -90, -50, -40, -50, -10, -25, 20};
-static const float kHullPoly4[8] = {-50, -120, 50, -120, 50, -90, -50, -90};
-static const float wheelPoly[8] = {-kWheelW, +kWheelR, +kWheelW, +kWheelR,
-                                   +kWheelW, -kWheelR, -kWheelW, -kWheelR};
+static const float kWheelPos[4][2] = {
+    {-55, 80}, {55, 80}, {-55, -82}, {55, -82}};
+static const float kHullPoly1[4][2] = {
+    {-60, 130}, {60, 130}, {60, 110}, {-60, 110}};
+static const float kHullPoly2[4][2] = {
+    {-15, 120}, {15, 120}, {20, 20}, {-20, 20}};
+static const float kHullPoly3[8][2] = {{25, 20},   {50, -10},  {50, -40},
+                                       {20, -90},  {-20, -90}, {-50, -40},
+                                       {-50, -10}, {-25, 20}};
+static const float kHullPoly4[4][2] = {
+    {-50, -120}, {50, -120}, {50, -90}, {-50, -90}};
+static const float kWheelPoly[4][2] = {{-kWheelW, +kWheelR},
+                                       {+kWheelW, +kWheelR},
+                                       {+kWheelW, -kWheelR},
+                                       {-kWheelW, -kWheelR}};
 
 static const float kRoadColor[3] = {102, 102, 102};
 static const cv::Scalar kBgColor(102, 204, 102);
