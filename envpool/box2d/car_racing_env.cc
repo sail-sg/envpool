@@ -90,23 +90,21 @@ CarRacingBox2dEnv::CarRacingBox2dEnv(int max_episode_steps,
 }
 
 bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
-  int checkpointInt = 12;
-  float checkpointFloat = 12;
   // Create checkpoints
   std::vector<std::array<float, 3>> checkpoints;
   for (int c = 0; c < checkpointInt; c++) {
     float noise = RandUniform(0, 2 * M_PI * 1 / checkpointFloat)(*gen);
     float alpha = 2 * M_PI * c / checkpointFloat + noise;
-    float rad = RandUniform(trackRAD / 3, trackRAD)(*gen);
+    float rad = RandUniform(kTrackRad / 3, kTrackRad)(*gen);
 
     if (c == 0) {
       alpha = 0;
-      rad = 1.5 * trackRAD;
+      rad = 1.5 * kTrackRad;
     }
     if (c == checkpointInt - 1) {
       alpha = 2 * M_PI * c / checkpointFloat;
-      start_alpha_ = 2 * M_PI * (-0.5) / checkpointFloat;
-      rad = 1.5 * trackRAD;
+      start_alpha_ = -M_PI / checkpointFloat;
+      rad = 1.5 * kTrackRad;
     }
     std::array<float, 3> cp = {alpha, rad * std::cos(alpha),
                                rad * std::sin(alpha)};
@@ -114,7 +112,7 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
   }
   roads_.clear();
   // Go from one checkpoint to another to create track
-  float x = 1.5 * trackRAD;
+  float x = 1.5 * kTrackRad;
   float y = 0;
   float beta = 0;
   int dest_i = 0;

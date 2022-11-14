@@ -38,6 +38,7 @@ static const float kWheelMomentOfInertia = 4000.0f * kSize * kSize;
 static const float kFrictionLimit = 1000000.0f * kSize * kSize;
 static const float kWheelR = 27;
 static const float kWheelW = 14;
+static const float kBrakeForce = 15;    // radians per second
 static const float kWheelPos[4][2] = {  // NOLINT
     {-55, 80},
     {55, 80},
@@ -121,7 +122,7 @@ class Car {
   std::shared_ptr<b2World> world_;
   b2Body* hull_;
   std::vector<Wheel*> wheels_;
-  float fuel_spent_{0};
+  float fuel_spent_;
 
   friend class CarRacingBox2dEnv;
 };

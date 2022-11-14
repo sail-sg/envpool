@@ -35,7 +35,7 @@ b2PolygonShape GeneratePolygon(const float (*poly)[2], int size) {
 
 Car::Car(std::shared_ptr<b2World> world, float init_angle, float init_x,
          float init_y)
-    : world_(std::move(world)), hull_(nullptr) {
+    : world_(std::move(world)), hull_(nullptr), fuel_spent_(0) {
   // Create hull
   b2BodyDef bd;
   bd.position.Set(init_x, init_y);
@@ -158,9 +158,8 @@ void Car::Step(float dt) {
     if (w->brake >= 0.9) {
       w->omega = 0;
     } else if (w->brake > 0) {
-      auto brake_force = 15;          // radians per second
-      dir = (w->omega > 0) ? -1 : 1;  // -np.sign(w.omega)
-      val = brake_force * w->brake;
+      dir = -Sign(w->omega);  // -np.sign(w.omega)
+      val = kBrakeForce * w->brake;
       if (abs(val) > abs(w->omega)) {
         val = abs(w->omega);  // low speed => same as = 0
       }

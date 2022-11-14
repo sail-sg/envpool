@@ -58,7 +58,7 @@ class CarRacingBox2dEnv {
   const float kScale = 6.0;  // Track scale
   const float kFps = 50;     // Frames per second
   const float kZoom = 2.7;
-  const float trackRAD =
+  const float kTrackRad =
       900 / kScale;  // Track is heavily morphed circle with this radius
   const float kPlayfiled = 2000 / kScale;  // Game over boundary
   const float kTrackTurnRate = 0.31;
@@ -67,8 +67,10 @@ class CarRacingBox2dEnv {
 
   const float kGrassDim = kPlayfiled / 20;
   const float kMaxShapeDim =
-      std::max(kGrassDim, std::max(kTrackWidth, kTrackDetailStep)) * 4 * kZoom *
-      kScale;
+      std::max(kGrassDim, std::max(kTrackWidth, kTrackDetailStep)) * sqrt(2.f) *
+      kZoom * kScale;
+  const int checkpointInt = 12;
+  const float checkpointFloat = 12;
 
   friend class CarRacingFrictionDetector;
 
