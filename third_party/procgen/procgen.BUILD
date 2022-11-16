@@ -41,7 +41,7 @@ cc_library(
         "entity.h",
         "game.h",
         "game-registry.h",
-        "game_factory.h",
+        "games/game_factory.h",
         "grid.h",
         "libenv.h",
         "mazegen.h",

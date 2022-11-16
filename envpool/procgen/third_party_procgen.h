@@ -23,7 +23,7 @@
 #include "entity.h"
 #include "game-registry.h"
 #include "game.h"
-#include "game_factory.h"
+#include "games/game_factory.h"
 #include "grid.h"
 #include "libenv.h"
 #include "mazegen.h"
