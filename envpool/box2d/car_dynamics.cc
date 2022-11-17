@@ -316,6 +316,8 @@ void Car::Destroy() {
   hull_ = nullptr;
   for (auto* w : wheels_) {
     world_->DestroyBody(w->body);
+    delete w;
+    w = nullptr;
   }
   wheels_.clear();
 }

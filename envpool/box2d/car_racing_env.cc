@@ -110,6 +110,9 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
                                rad * std::sin(alpha)};
     checkpoints.emplace_back(cp);
   }
+  // according to the implementation logic,
+  // `roads_` is empty for sure.
+  // keep this line for consistency with gym's version.
   roads_.clear();
   // Go from one checkpoint to another to create track
   float x = 1.5 * kTrackRad;
@@ -330,6 +333,8 @@ void CarRacingBox2dEnv::ResetBox2d(std::mt19937* gen) {
     world_->SetContactListener(nullptr);
     for (auto& t : roads_) {
       world_->DestroyBody(t->body);
+      delete t;
+      t = nullptr;
     }
     roads_.clear();
     assert(car_ != nullptr);
