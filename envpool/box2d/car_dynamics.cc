@@ -135,11 +135,14 @@ void Car::Step(float dt) {
     float dir = (w->steer - w->joint->GetJointAngle() > 0) ? 1 : -1;
     float val = abs(w->steer - w->joint->GetJointAngle());
     w->joint->SetMotorSpeed(dir * std::min(50.0 * val, 3.0));
+
     // Position => friction_limit
+    bool grass = true;
     float friction_limit = kFrictionLimit * 0.6;  // Grass friction if no tile
     for (auto* t : w->tiles) {
       friction_limit =
           std::max(friction_limit, kFrictionLimit * t->road_friction);
+      grass = false;
     }
     // Force
     auto forw = w->body->GetWorldVector({0, 1});
@@ -182,6 +185,25 @@ void Car::Step(float dt) {
     p_force *= 205000 * kSize * kSize;
     auto force = sqrt(pow(f_force, 2) + pow(p_force, 2));
 
+    // Skid trace
+    if (abs(force) > 2.0 * friction_limit) {
+      if (w->skid_particle && w->skid_particle->grass == grass &&
+          w->skid_particle->poly.size() < 30) {
+        w->skid_particle->poly.emplace_back(
+            Vec2(w->body->GetPosition().x, w->body->GetPosition().y));
+      } else if (w->skid_start == nullptr) {
+        w->skid_start = std::make_unique<b2Vec2>(w->body->GetPosition());
+      } else {
+        w->skid_particle =
+            CreateParticle(*w->skid_start.get(), w->body->GetPosition(), grass);
+        w->skid_start = nullptr;
+      }
+
+    } else {
+      w->skid_start = nullptr;
+      w->skid_particle = nullptr;
+    }
+
     if (abs(force) > friction_limit) {
       f_force /= force;
       p_force /= force;
@@ -201,28 +223,90 @@ void Car::Step(float dt) {
   }
 }
 
+std::shared_ptr<Particle> Car::CreateParticle(b2Vec2 point1, b2Vec2 point2,
+                                              bool grass) {
+  cv::Scalar color = (grass) ? kMudColor : kWheelColor;
+  auto p = std::make_shared<Particle>(point1, point2, grass, color);
+  particles_.emplace_back(p);
+  while (particles_.size() > 30) {
+    particles_.pop_front();
+  }
+  return p;
+}
+
 void Car::Draw(const cv::Mat& surf, float zoom,
-               const std::array<float, 2>& translation, float angle) {
+               const std::array<float, 2>& translation, float angle,
+               bool draw_particles) {
+  if (draw_particles) {
+    std::vector<cv::Point> poly;
+    for (const auto& p : particles_) {
+      poly.clear();
+      for (const auto& vec_tmp : p->poly) {
+        auto v = RotateRad(vec_tmp, angle);
+        poly.emplace_back(cv::Point(v.x * zoom + translation[0],
+                                    v.y * zoom + translation[1]));
+      }
+      cv::polylines(surf, poly, false, p->color, 2);
+    }
+  }
   for (size_t i = 0; i < drawlist_.size(); i++) {
     auto* body = drawlist_[i];
+    auto trans = body->GetTransform();
     cv::Scalar color;
     if (i == 0) {
       color = cv::Scalar(0, 0, 204);  // hull.color = (0.8, 0.0, 0.0) * 255
     } else {
       color = cv::Scalar(0, 0, 0);  // wheel.color = (0, 0, 0)
     }
+    std::vector<cv::Point> poly;
     for (b2Fixture* f = body->GetFixtureList(); f != nullptr;
          f = f->GetNext()) {
       auto* shape = static_cast<b2PolygonShape*>(f->GetShape());
-      std::vector<cv::Point> poly;
+      poly.clear();
       for (int j = 0; j < shape->m_count; j++) {
-        auto trans = body->GetTransform();
         auto vec_tmp = Multiply(trans, shape->m_vertices[j]);
         auto v = RotateRad(vec_tmp, angle);
         poly.emplace_back(cv::Point(v.x * zoom + translation[0],
                                     v.y * zoom + translation[1]));
-        cv::fillPoly(surf, poly, color);
       }
+      cv::fillPoly(surf, poly, color);
+
+      auto user_data = reinterpret_cast<UserData*>(body->GetUserData().pointer);
+      if (user_data == nullptr || user_data->type != WHEEL_TYPE) {
+        continue;
+      }
+      Wheel* obj = reinterpret_cast<Wheel*>(user_data);
+
+      auto a1 = obj->phase;
+      auto a2 = obj->phase + 1.2f;  // radians
+      auto s1 = std::sin(a1);
+      auto s2 = std::sin(a2);
+      auto c1 = std::cos(a1);
+      auto c2 = std::cos(a2);
+      if (s1 > 0 && s2 > 0) {
+        continue;
+      }
+      if (s1 > 0) {
+        c1 = Sign(c1);
+      }
+      if (s2 > 0) {
+        c2 = Sign(c2);
+      }
+
+      poly.clear();
+      std::vector<b2Vec2> white_poly = {
+          Vec2(-kWheelW * kSize, +kWheelR * c1 * kSize),
+          Vec2(+kWheelW * kSize, +kWheelR * c1 * kSize),
+          Vec2(+kWheelW * kSize, +kWheelR * c2 * kSize),
+          Vec2(-kWheelW * kSize, +kWheelR * c2 * kSize),
+      };
+      for (const auto& vec : white_poly) {
+        auto vec_tmp = Multiply(trans, vec);
+        auto v = RotateRad(vec_tmp, angle);
+        poly.emplace_back(cv::Point(v.x * zoom + translation[0],
+                                    v.y * zoom + translation[1]));
+      }
+      cv::fillPoly(surf, poly, kWheelWhite);
     }
   }
 }

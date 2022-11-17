@@ -48,13 +48,11 @@ class CarRacingFrictionDetector : public b2ContactListener {
   void _Contact(b2Contact* contact, bool begin);
 };
 
-enum RenderMode { HUMAN, RGB_ARRAY, STATE_PIXELS };
-
 class CarRacingBox2dEnv {
-  const int stateW = 96;
-  const int stateH = 96;
-  const int windowW = 1000;
-  const int windowH = 800;
+  const int kStateW = 96;
+  const int kStateH = 96;
+  const int kWindowW = 1000;
+  const int kWindowH = 800;
   const float kScale = 6.0;  // Track scale
   const float kFps = 50;     // Frames per second
   const float kZoom = 2.7;
@@ -65,12 +63,14 @@ class CarRacingBox2dEnv {
   const float kTrackDetailStep = 21 / kScale;
   const float kTrackWidth = 40 / kScale;
 
+  const float kBorder = 8.f / kScale;
+  const int kBorderMinCount = 4;
+
   const float kGrassDim = kPlayfiled / 20;
   const float kMaxShapeDim =
       std::max(kGrassDim, std::max(kTrackWidth, kTrackDetailStep)) * sqrt(2.f) *
       kZoom * kScale;
-  const int checkpointInt = 12;
-  const float checkpointFloat = 12;
+  const float kCheckPoint = 12;
 
   friend class CarRacingFrictionDetector;
 
@@ -96,12 +96,11 @@ class CarRacingBox2dEnv {
   std::vector<std::array<float, 4>> track_;
   std::vector<UserData*> roads_;
   // pair of position and color
-  std::vector<std::pair<std::array<b2Vec2, 4>, std::array<float, 3>>>
-      roads_poly_;
+  std::vector<std::pair<std::array<b2Vec2, 4>, cv::Scalar>> roads_poly_;
 
  public:
   CarRacingBox2dEnv(int max_episode_steps, float lap_complete_percent);
-  void Render(RenderMode mode);
+  void Render();
 
   void RenderRoad(float zoom, const std::array<float, 2>& translation,
                   float angle);

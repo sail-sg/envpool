@@ -21,6 +21,7 @@
 #include <box2d/box2d.h>
 
 #include <cmath>
+#include <deque>
 #include <memory>
 #include <random>
 #include <tuple>
@@ -68,11 +69,25 @@ static const float kWheelPoly[4][2] = {  // NOLINT
     {+kWheelW, -kWheelR},
     {-kWheelW, -kWheelR}};
 
-static const float kRoadColor[3] = {102, 102, 102};
+static const cv::Scalar kRoadColor(102, 102, 102);
 static const cv::Scalar kBgColor(102, 204, 102);
 static const cv::Scalar kGrassColor(102, 230, 102);
+static const cv::Scalar kWheelColor(0, 0, 0);
+static const cv::Scalar kWheelWhite(77, 77, 77);
+static const cv::Scalar kMudColor(0, 102, 102);
 
 enum UserDataType { INVALID = 1000, WHEEL_TYPE, TILE_TYPE };
+
+class Particle {
+ public:
+  bool grass;
+  cv::Scalar color;
+  std::vector<b2Vec2> poly;
+  Particle(b2Vec2 p1, b2Vec2 p2, bool g, cv::Scalar c) : grass(g), color(c) {
+    poly.emplace_back(p1);
+    poly.emplace_back(p2);
+  }
+};
 
 class UserData {
  public:
@@ -85,7 +100,7 @@ class Tile : public UserData {
  public:
   bool tile_road_visited{false};
   float road_friction;
-  std::array<float, 3> road_color;
+  cv::Scalar road_color;
 };
 
 class Wheel : public UserData {
@@ -98,7 +113,9 @@ class Wheel : public UserData {
   float omega{0};
   b2RevoluteJoint* joint;
   std::unordered_set<Tile*> tiles;
-  // body will be wheel object
+
+  std::unique_ptr<b2Vec2> skid_start;
+  std::shared_ptr<Particle> skid_particle;
 };
 
 class Car {
@@ -110,7 +127,8 @@ class Car {
   void Steer(float s);
   void Step(float dt);
   void Draw(const cv::Mat& surf, float zoom,
-            const std::array<float, 2>& translation, float angle);
+            const std::array<float, 2>& translation, float angle,
+            bool draw_particles = true);
   void Destroy();
   [[nodiscard]] float GetFuelSpent() const;
   std::vector<float> GetGas();
@@ -118,11 +136,15 @@ class Car {
   std::vector<float> GetBrake();
 
  protected:
+  std::deque<std::shared_ptr<Particle>> particles_;
   std::vector<b2Body*> drawlist_;
   std::shared_ptr<b2World> world_;
   b2Body* hull_;
   std::vector<Wheel*> wheels_;
   float fuel_spent_;
+
+  std::shared_ptr<Particle> CreateParticle(b2Vec2 point1, b2Vec2 point2,
+                                           bool grass);
 
   friend class CarRacingBox2dEnv;
 };

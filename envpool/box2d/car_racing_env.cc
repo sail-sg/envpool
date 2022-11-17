@@ -57,7 +57,7 @@ void CarRacingFrictionDetector::_Contact(b2Contact* contact, bool begin) {
 
   if (tile->type != TILE_TYPE || obj->type != WHEEL_TYPE) return;
 
-  tile->road_color = {kRoadColor[0], kRoadColor[1], kRoadColor[2]};
+  tile->road_color = kRoadColor;
   if (begin) {
     obj->tiles.insert(tile);
     if (!tile->tile_road_visited) {
@@ -92,18 +92,18 @@ CarRacingBox2dEnv::CarRacingBox2dEnv(int max_episode_steps,
 bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
   // Create checkpoints
   std::vector<std::array<float, 3>> checkpoints;
-  for (int c = 0; c < checkpointInt; c++) {
-    float noise = RandUniform(0, 2 * M_PI * 1 / checkpointFloat)(*gen);
-    float alpha = 2 * M_PI * c / checkpointFloat + noise;
+  for (float c = 0; c < kCheckPoint; c += 1.f) {
+    float noise = RandUniform(0, 2 * M_PI * 1 / kCheckPoint)(*gen);
+    float alpha = 2 * M_PI * c / kCheckPoint + noise;
     float rad = RandUniform(kTrackRad / 3, kTrackRad)(*gen);
 
     if (c == 0) {
       alpha = 0;
       rad = 1.5 * kTrackRad;
     }
-    if (c == checkpointInt - 1) {
-      alpha = 2 * M_PI * c / checkpointFloat;
-      start_alpha_ = -M_PI / checkpointFloat;
+    if (c == kCheckPoint - 1) {
+      alpha = 2 * M_PI * c / kCheckPoint;
+      start_alpha_ = -M_PI / kCheckPoint;
       rad = 1.5 * kTrackRad;
     }
     std::array<float, 3> cp = {alpha, rad * std::cos(alpha),
@@ -223,8 +223,33 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
   if (well_glued_together > kTrackDetailStep) {
     return false;
   }
+
+  // Red-white border on hard turns
+  int track_size = static_cast<int>(current_track.size());
+  std::vector<bool> border(track_size, false);
+  for (int i = 0; i < track_size; i++) {
+    bool good = true;
+    int oneside = 0;
+    for (int neg = 0; neg < kBorderMinCount; neg++) {
+      int idx1 = (i - neg - 0) >= 0 ? i - neg : i - neg + track_size;
+      int idx2 = (i - neg - 1) >= 0 ? i - neg - 1 : i - neg - 1 + track_size;
+      auto beta1 = current_track[idx1][1];
+      auto beta2 = current_track[idx2][1];
+      good &= abs(beta1 - beta2) > (kTrackTurnRate * 0.2f);
+      oneside += Sign(beta1 - beta2);
+    }
+    good &= (abs(oneside) == kBorderMinCount);
+    border[i] = good;
+  }
+  for (int i = 0; i < track_size; i++) {
+    for (int neg = 0; neg < kBorderMinCount; neg++) {
+      int idx = (i - neg >= 0) ? i - neg : i - neg + track_size;
+      border[idx] = (border[idx] | border[i]);
+    }
+  }
+
   // Create tiles
-  for (int i = 0; i < static_cast<int>(current_track.size()); i++) {
+  for (int i = 0; i < track_size; i++) {
     auto [alpha1, beta1, x1, y1] = current_track[i];
     int last_i = i - 1;
     if (last_i < 0) {
@@ -265,6 +290,28 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
     t->body->GetFixtureList()[0].SetSensor(true);
     roads_.push_back(t);
     roads_poly_.emplace_back(std::make_pair(roads_vertices, t->road_color));
+
+    if (border[i]) {
+      auto side = Sign(beta2 - beta1);
+      b2Vec2 b1_l{
+          static_cast<float>(x1 + side * kTrackWidth * std::cos(beta1)),
+          static_cast<float>(y1 + side * kTrackWidth * std::sin(beta1))};
+      b2Vec2 b1_r{static_cast<float>(x1 + side * (kTrackWidth + kBorder) *
+                                              std::cos(beta1)),
+                  static_cast<float>(y1 + side * (kTrackWidth + kBorder) *
+                                              std::sin(beta1))};
+      b2Vec2 b2_l{
+          static_cast<float>(x2 + side * kTrackWidth * std::cos(beta2)),
+          static_cast<float>(y2 + side * kTrackWidth * std::sin(beta2))};
+      b2Vec2 b2_r{static_cast<float>(x2 + side * (kTrackWidth + kBorder) *
+                                              std::cos(beta2)),
+                  static_cast<float>(y2 + side * (kTrackWidth + kBorder) *
+                                              std::sin(beta2))};
+      std::array<b2Vec2, 4> border_vertices = {b1_l, b1_r, b2_r, b2_l};
+      cv::Scalar border_color =
+          (i % 2 == 0) ? cv::Scalar(255, 255, 255) : cv::Scalar(0, 0, 255);
+      roads_poly_.emplace_back(std::make_pair(border_vertices, border_color));
+    }
   }
   track_ = current_track;
   return true;
@@ -357,13 +404,13 @@ void CarRacingBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
       done_ = true;
     }
   }
-  Render(HUMAN);
+  Render();
 }
 
 void CarRacingBox2dEnv::CreateImageArray() {
-  // cv::resize(surf_, img_array_, cv::Size(stateW, stateH), 0, 0,
+  // cv::resize(surf_, img_array_, cv::Size(kStateW, kStateH), 0, 0,
   // cv::INTER_AREA);
-  cv::resize(surf_, img_array_, cv::Size(stateW, stateH));
+  cv::resize(surf_, img_array_, cv::Size(kStateW, kStateH));
   cv::cvtColor(img_array_, img_array_, cv::COLOR_BGR2RGB);
 }
 
@@ -384,8 +431,10 @@ void CarRacingBox2dEnv::DrawColoredPolygon(
     f_roated = {f_roated[0] * zoom + translation[0],
                 f_roated[1] * zoom + translation[1]};
     poly.push_back(cv::Point(f_roated[0], f_roated[1]));
-    if (-kMaxShapeDim <= f_roated[0] && f_roated[0] <= windowW + kMaxShapeDim &&
-        -kMaxShapeDim <= f_roated[1] && f_roated[1] <= windowH + kMaxShapeDim) {
+    if (-kMaxShapeDim <= f_roated[0] &&
+        f_roated[0] <= kWindowW + kMaxShapeDim &&
+        -kMaxShapeDim <= f_roated[1] &&
+        f_roated[1] <= kWindowH + kMaxShapeDim) {
       exist = true;
     }
   }
@@ -429,29 +478,27 @@ void CarRacingBox2dEnv::RenderRoad(float zoom,
     field[2] = {poly[2].x, poly[2].y};
     field[3] = {poly[3].x, poly[3].y};
 
-    cv::Scalar c(static_cast<int>(color[0]), static_cast<int>(color[1]),
-                 static_cast<int>(color[2]));
-    DrawColoredPolygon(field, c, zoom, translation, angle);
+    DrawColoredPolygon(field, color, zoom, translation, angle);
   }
 }
 
 std::vector<cv::Point> CarRacingBox2dEnv::VerticalInd(int place, int s, int h,
                                                       float val) {
   return {
-      cv::Point(place * s, windowH - static_cast<int>(h + h * val)),
-      cv::Point((place + 1) * s, windowH - static_cast<int>(h + h * val)),
-      cv::Point((place + 1) * s, windowH - h),
-      cv::Point((place + 0) * s, windowH - h),
+      cv::Point(place * s, kWindowH - static_cast<int>(h + h * val)),
+      cv::Point((place + 1) * s, kWindowH - static_cast<int>(h + h * val)),
+      cv::Point((place + 1) * s, kWindowH - h),
+      cv::Point((place + 0) * s, kWindowH - h),
   };
 }
 
 std::vector<cv::Point> CarRacingBox2dEnv::HorizInd(int place, int s, int h,
                                                    float val) {
   return {
-      cv::Point((place + 0) * s, windowH - 4 * h),
-      cv::Point((place + val) * s, windowH - 4 * h),
-      cv::Point((place + val) * s, windowH - 2 * h),
-      cv::Point((place + 0) * s, windowH - 2 * h),
+      cv::Point((place + 0) * s, kWindowH - 4 * h),
+      cv::Point((place + val) * s, kWindowH - 4 * h),
+      cv::Point((place + val) * s, kWindowH - 2 * h),
+      cv::Point((place + 0) * s, kWindowH - 2 * h),
   };
 }
 
@@ -463,11 +510,11 @@ void CarRacingBox2dEnv::RenderIfMin(float value, std::vector<cv::Point> points,
 }
 
 void CarRacingBox2dEnv::RenderIndicators() {
-  int h = windowH / 40;
-  int s = windowW / 40;
+  int h = kWindowH / 40;
+  int s = kWindowW / 40;
   std::vector<cv::Point> poly = {
-      cv::Point(windowW, windowH), cv::Point(windowW, windowH - 5 * h),
-      cv::Point(0, windowH - 5 * h), cv::Point(0, windowH)};
+      cv::Point(kWindowW, kWindowH), cv::Point(kWindowW, kWindowH - 5 * h),
+      cv::Point(0, kWindowH - 5 * h), cv::Point(0, kWindowH)};
   cv::fillPoly(surf_, poly, cv::Scalar(0, 0, 0));
 
   assert(car_ != nullptr);
@@ -500,8 +547,9 @@ void CarRacingBox2dEnv::RenderIndicators() {
               cv::Scalar(0, 0, 255));
 }
 
-void CarRacingBox2dEnv::Render(RenderMode mode) {
-  surf_ = cv::Mat(windowH, windowW, CV_8UC3);
+void CarRacingBox2dEnv::Render() {
+  cv::Scalar black(0, 0, 0);
+  surf_ = cv::Mat(kWindowH, kWindowW, CV_8UC3, black);
 
   assert(car_ != nullptr);
   // computing transformations
@@ -514,7 +562,7 @@ void CarRacingBox2dEnv::Render(RenderMode mode) {
 
   std::array<float, 2> scroll = {scroll_x, scroll_y};
   std::array<float, 2> trans = RotateRad(scroll, angle);
-  trans = {windowW / 2 + trans[0], windowH / 4 + trans[1]};
+  trans = {kWindowW / 2 + trans[0], kWindowH / 4 + trans[1]};
 
   RenderRoad(zoom, trans, angle);
   car_->Draw(surf_, zoom, trans, angle);
@@ -524,7 +572,7 @@ void CarRacingBox2dEnv::Render(RenderMode mode) {
 
   auto reward = static_cast<int>(reward_);
   cv::putText(surf_, cv::format("%04d", reward),
-              cv::Point(20, windowH - windowH * 2 / 40.0),
+              cv::Point(20, kWindowH - kWindowH * 2 / 40.0),
               cv::FONT_HERSHEY_COMPLEX, 1, cv::Scalar(255, 255, 255), 2, false);
 }
 
