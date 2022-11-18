@@ -34,7 +34,6 @@ class _Box2dEnvPoolDeterministicTest(absltest.TestCase):
     env1 = make_gym(task_id, num_envs=num_envs, seed=0, **kwargs)
     env2 = make_gym(task_id, num_envs=num_envs, seed=1, **kwargs)
     act_space = env0.action_space
-    max_episode_steps = env0.spec.config.max_episode_steps
     for _ in range(5000):
       action = np.array([act_space.sample() for _ in range(num_envs)])
       obs0, rew0, terminated, truncated, info0 = env0.step(action)
