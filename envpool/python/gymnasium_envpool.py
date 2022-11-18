@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""EnvPool meta class for gym.Env API."""
+"""EnvPool meta class for gymnasium.Env API."""
 
 from abc import ABC, ABCMeta
 from typing import Any, Dict, List, Tuple, Union
@@ -29,14 +29,14 @@ class GymnasiumEnvPoolMixin(ABC):
   """Special treatment for gymnasim API."""
 
   @property
-  def observation_space(self: Any) -> Union[gym.Space, Dict[str, Any]]:
+  def observation_space(self: Any) -> Union[gymnasium.Space, Dict[str, Any]]:
     """Observation space from EnvSpec."""
     if not hasattr(self, "_gym_observation_space"):
       self._gym_observation_space = self.spec.observation_space
     return self._gym_observation_space
 
   @property
-  def action_space(self: Any) -> Union[gym.Space, Dict[str, Any]]:
+  def action_space(self: Any) -> Union[gymnasium.Space, Dict[str, Any]]:
     """Action space from EnvSpec."""
     if not hasattr(self, "_gym_action_space"):
       self._gym_action_space = self.spec.action_space
@@ -51,7 +51,7 @@ class GymnasiumEnvPoolMeta(ABCMeta, gymnasium.Env.__class__):
     base = parents[0]
     try:
       from .lax import XlaMixin
-      parents = (base, GymnasiumEnvPoolMixin, EnvPoolMixin, XlaMixin, gym.Env)
+      parents = (base, GymnasiumEnvPoolMixin, EnvPoolMixin, XlaMixin, gymnasium.Env)
     except ImportError:
 
       def _xla(self: Any) -> None:
@@ -60,7 +60,7 @@ class GymnasiumEnvPoolMeta(ABCMeta, gymnasium.Env.__class__):
         )
 
       attrs["xla"] = _xla
-      parents = (base, GymnasiumEnvPoolMixin, EnvPoolMixin, gym.Env)
+      parents = (base, GymnasiumEnvPoolMixin, EnvPoolMixin, gymnasium.Env)
 
     state_keys = base._state_keys
     action_keys = base._action_keys
