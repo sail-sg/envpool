@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+# define M_PI  3.14159265358979323846 //GNU extension is not loaded on MinGW
 #ifndef ENVPOOL_MUJOCO_DMC_MUJOCO_ENV_H_
 #define ENVPOOL_MUJOCO_DMC_MUJOCO_ENV_H_
 
