@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+# define M_PI  3.14159265358979323846 //GNU extension is not loaded on MinGW
 #include "envpool/mujoco/dmc/mujoco_env.h"
 
 #include <cassert>
@@ -50,7 +51,7 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
     std::memcpy(vfs->filedata[vfs->nfile - 1], content.c_str(), content.size());
   }
   // create model and data
-  model_ = mj_loadXML(model_filename.c_str(), vfs.get(), error_.begin(), 1000);
+  model_ = mj_loadXML(model_filename.c_str(), vfs.get(), &error_[0] , 1000); // change error to bypass compiler error
   data_ = mj_makeData(model_);
 #ifdef ENVPOOL_TEST
   qpos0_.reset(new mjtNum[model_->nq]);
@@ -180,7 +181,7 @@ void MujocoEnv::RandomizeLimitedAndRotationalJoints(std::mt19937* gen) {
                               axis[2] * axis[2]);
         axis = {axis[0] / norm, axis[1] / norm, axis[2] / norm};
         auto angle = RandUniform(0, range_max)(*gen);
-        mju_axisAngle2Quat(data_->qpos + qpos_offset, axis.begin(), angle);
+        mju_axisAngle2Quat(data_->qpos + qpos_offset, &axis[0], angle); // bypass compiler error
       }
     } else if (joint_type == mjJNT_HINGE) {
       data_->qpos[qpos_offset] = RandUniform(-M_PI, M_PI)(*gen);

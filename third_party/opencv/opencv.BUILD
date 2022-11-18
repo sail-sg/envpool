@@ -65,10 +65,10 @@ cmake(
     ],
     out_include_dir = "include/opencv4",
     out_static_libs = [
-        "libopencv_imgproc.a",
-        "libopencv_features2d.a",
-        "libopencv_flann.a",
-        "libopencv_core.a",
+        "libopencv_imgproc.lib",
+        "libopencv_features2d.lib",
+        "libopencv_flann.lib",
+        "libopencv_core.lib",
     ],
     visibility = ["//visibility:public"],
 )

@@ -18,7 +18,7 @@ _CUDA_DIR = "CUDA_DIR"
 
 def _impl(rctx):
     cuda_dir = "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.7"
-    print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    print("Need to fix this")
     # rctx.os.environ.get(_CUDA_DIR, default = "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.7")
     rctx.symlink("{}/include".format(cuda_dir), "include")
     rctx.symlink("{}/lib".format(cuda_dir), "lib")
