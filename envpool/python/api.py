@@ -18,6 +18,7 @@ from typing import Tuple, Type
 from .dm_envpool import DMEnvPoolMeta
 from .env_spec import EnvSpecMeta
 from .gym_envpool import GymEnvPoolMeta
+from .gymnasium_envpool import GymnasiumEnvPoolMeta
 from .protocol import EnvPool, EnvSpec
 
 
@@ -32,4 +33,7 @@ def py_env(
     EnvSpecMeta(spec_name, (envspec,), {}),  # type: ignore[return-value]
     DMEnvPoolMeta(pool_name.replace("EnvPool", "DMEnvPool"), (envpool,), {}),
     GymEnvPoolMeta(pool_name.replace("EnvPool", "GymEnvPool"), (envpool,), {}),
+    GymnasiumEnvPoolMeta(
+      pool_name.replace("EnvPool", "GymnasiumEnvPool"), (envpool,), {}
+    ),
   )

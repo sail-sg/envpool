@@ -24,30 +24,47 @@ from .box2d_envpool import (
   _LunarLanderDiscreteEnvSpec,
 )
 
-BipedalWalkerEnvSpec, BipedalWalkerDMEnvPool, BipedalWalkerGymEnvPool = py_env(
-  _BipedalWalkerEnvSpec, _BipedalWalkerEnvPool
+(
+  BipedalWalkerEnvSpec,
+  BipedalWalkerDMEnvPool,
+  BipedalWalkerGymEnvPool,
+  BipedalWalkerGymnasiumEnvPool
+) = py_env(
+  _BipedalWalkerEnvSpec,
+  _BipedalWalkerEnvPool
 )
 
 (
   LunarLanderContinuousEnvSpec,
   LunarLanderContinuousDMEnvPool,
   LunarLanderContinuousGymEnvPool,
-) = py_env(_LunarLanderContinuousEnvSpec, _LunarLanderContinuousEnvPool)
+  LunarLanderContinuousGymnasiumEnvPool,
+) = py_env(
+  _LunarLanderContinuousEnvSpec,
+  _LunarLanderContinuousEnvPool
+)
 
 (
   LunarLanderDiscreteEnvSpec,
   LunarLanderDiscreteDMEnvPool,
   LunarLanderDiscreteGymEnvPool,
-) = py_env(_LunarLanderDiscreteEnvSpec, _LunarLanderDiscreteEnvPool)
+  LunarLanderDiscreteGymnasiumEnvPool,
+) = py_env(
+  _LunarLanderDiscreteEnvSpec,
+  _LunarLanderDiscreteEnvPool
+)
 
 __all__ = [
   "BipedalWalkerEnvSpec",
   "BipedalWalkerDMEnvPool",
   "BipedalWalkerGymEnvPool",
+  "BipedalWalkerGymnasiumEnvPool",
   "LunarLanderContinuousEnvSpec",
   "LunarLanderContinuousDMEnvPool",
   "LunarLanderContinuousGymEnvPool",
+  "LunarLanderContinuousGymnasiumEnvPool",
   "LunarLanderDiscreteEnvSpec",
   "LunarLanderDiscreteDMEnvPool",
   "LunarLanderDiscreteGymEnvPool",
+  "LunarLanderDiscreteGymnasiumEnvPool",
 ]

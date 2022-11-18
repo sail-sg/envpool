@@ -56,6 +56,7 @@ for task, version, post_constraint, max_episode_steps in gym_mujoco_envs:
     spec_cls=f"Gym{task}EnvSpec",
     dm_cls=f"Gym{task}DMEnvPool",
     gym_cls=f"Gym{task}GymEnvPool",
+    gymnasium_cls=f"Gym{task}GymnasiumEnvPool",
     base_path=base_path,
     post_constraint=post_constraint,
     max_episode_steps=max_episode_steps,
