@@ -48,140 +48,67 @@ from envpool.mujoco.mujoco_dmc_envpool import (
 from envpool.python.api import py_env
 
 (
-  DmcAcrobotEnvSpec,
-  DmcAcrobotDMEnvPool,
-  DmcAcrobotGymEnvPool,
+  DmcAcrobotEnvSpec, DmcAcrobotDMEnvPool, DmcAcrobotGymEnvPool,
   DmcAcrobotGymnasiumEnvPool
-) = py_env(
-  _DmcAcrobotEnvSpec,
-  _DmcAcrobotEnvPool
-)
+) = py_env(_DmcAcrobotEnvSpec, _DmcAcrobotEnvPool)
 (
-  DmcBallInCupEnvSpec,
-  DmcBallInCupDMEnvPool,
-  DmcBallInCupGymEnvPool,
+  DmcBallInCupEnvSpec, DmcBallInCupDMEnvPool, DmcBallInCupGymEnvPool,
   DmcBallInCupGymnasiumEnvPool
-) = py_env(
-  _DmcBallInCupEnvSpec,
-  _DmcBallInCupEnvPool
-)
+) = py_env(_DmcBallInCupEnvSpec, _DmcBallInCupEnvPool)
 (
-  DmcCartpoleEnvSpec,
-  DmcCartpoleDMEnvPool,
-  DmcCartpoleGymEnvPool,
+  DmcCartpoleEnvSpec, DmcCartpoleDMEnvPool, DmcCartpoleGymEnvPool,
   DmcCartpoleGymnasiumEnvPool
-) = py_env(
-  _DmcCartpoleEnvSpec,
-  _DmcCartpoleEnvPool
-)
+) = py_env(_DmcCartpoleEnvSpec, _DmcCartpoleEnvPool)
 (
-  DmcCheetahEnvSpec,
-  DmcCheetahDMEnvPool,
-  DmcCheetahGymEnvPool,
+  DmcCheetahEnvSpec, DmcCheetahDMEnvPool, DmcCheetahGymEnvPool,
   DmcCheetahGymnasiumEnvPool
-) = py_env(
-  _DmcCheetahEnvSpec,
-  _DmcCheetahEnvPool
-)
+) = py_env(_DmcCheetahEnvSpec, _DmcCheetahEnvPool)
 (
-  DmcFingerEnvSpec,
-  DmcFingerDMEnvPool,
-  DmcFingerGymEnvPool,
+  DmcFingerEnvSpec, DmcFingerDMEnvPool, DmcFingerGymEnvPool,
   DmcFingerGymnasiumEnvPool
-) = py_env(
-  _DmcFingerEnvSpec,
-  _DmcFingerEnvPool
-)
+) = py_env(_DmcFingerEnvSpec, _DmcFingerEnvPool)
+(DmcFishEnvSpec, DmcFishDMEnvPool, DmcFishGymEnvPool,
+ DmcFishGymnasiumEnvPool) = py_env(_DmcFishEnvSpec, _DmcFishEnvPool)
 (
-  DmcFishEnvSpec,
-  DmcFishDMEnvPool,
-  DmcFishGymEnvPool,
-  DmcFishGymnasiumEnvPool
-) = py_env(
-  _DmcFishEnvSpec,
-  _DmcFishEnvPool
-)
-(
-  DmcHopperEnvSpec,
-  DmcHopperDMEnvPool,
-  DmcHopperGymEnvPool,
+  DmcHopperEnvSpec, DmcHopperDMEnvPool, DmcHopperGymEnvPool,
   DmcHopperGymnasiumEnvPool
-) = py_env(
-  _DmcHopperEnvSpec,
-  _DmcHopperEnvPool
-)
+) = py_env(_DmcHopperEnvSpec, _DmcHopperEnvPool)
 (
-  DmcHumanoidEnvSpec,
-  DmcHumanoidDMEnvPool,
-  DmcHumanoidGymEnvPool,
+  DmcHumanoidEnvSpec, DmcHumanoidDMEnvPool, DmcHumanoidGymEnvPool,
   DmcHumanoidGymnasiumEnvPool
-) = py_env(
-  _DmcHumanoidEnvSpec,
-  _DmcHumanoidEnvPool
-)
+) = py_env(_DmcHumanoidEnvSpec, _DmcHumanoidEnvPool)
 (
   DmcHumanoidCMUEnvSpec,
   DmcHumanoidCMUDMEnvPool,
   DmcHumanoidCMUGymEnvPool,
   DmcHumanoidCMUGymnasiumEnvPool,
-) = py_env(
-  _DmcHumanoidCMUEnvSpec,
-  _DmcHumanoidCMUEnvPool
-)
+) = py_env(_DmcHumanoidCMUEnvSpec, _DmcHumanoidCMUEnvPool)
 (
   DmcManipulatorEnvSpec,
   DmcManipulatorDMEnvPool,
   DmcManipulatorGymEnvPool,
   DmcManipulatorGymnasiumEnvPool,
-) = py_env(
-  _DmcManipulatorEnvSpec,
-  _DmcManipulatorEnvPool
-)
+) = py_env(_DmcManipulatorEnvSpec, _DmcManipulatorEnvPool)
 (
-  DmcPendulumEnvSpec,
-  DmcPendulumDMEnvPool,
-  DmcPendulumGymEnvPool,
+  DmcPendulumEnvSpec, DmcPendulumDMEnvPool, DmcPendulumGymEnvPool,
   DmcPendulumGymnasiumEnvPool
-) = py_env(
-  _DmcPendulumEnvSpec,
-  _DmcPendulumEnvPool
-)
+) = py_env(_DmcPendulumEnvSpec, _DmcPendulumEnvPool)
 (
-  DmcPointMassEnvSpec,
-  DmcPointMassDMEnvPool,
-  DmcPointMassGymEnvPool,
+  DmcPointMassEnvSpec, DmcPointMassDMEnvPool, DmcPointMassGymEnvPool,
   DmcPointMassGymnasiumEnvPool
-) = py_env(
-  _DmcPointMassEnvSpec,
-  _DmcPointMassEnvPool
-)
+) = py_env(_DmcPointMassEnvSpec, _DmcPointMassEnvPool)
 (
-  DmcReacherEnvSpec,
-  DmcReacherDMEnvPool,
-  DmcReacherGymEnvPool,
+  DmcReacherEnvSpec, DmcReacherDMEnvPool, DmcReacherGymEnvPool,
   DmcReacherGymnasiumEnvPool
-) = py_env(
-  _DmcReacherEnvSpec,
-  _DmcReacherEnvPool
-)
+) = py_env(_DmcReacherEnvSpec, _DmcReacherEnvPool)
 (
-  DmcSwimmerEnvSpec,
-  DmcSwimmerDMEnvPool,
-  DmcSwimmerGymEnvPool,
+  DmcSwimmerEnvSpec, DmcSwimmerDMEnvPool, DmcSwimmerGymEnvPool,
   DmcSwimmerGymnasiumEnvPool
-) = py_env(
-  _DmcSwimmerEnvSpec,
-  _DmcSwimmerEnvPool
-)
+) = py_env(_DmcSwimmerEnvSpec, _DmcSwimmerEnvPool)
 (
-  DmcWalkerEnvSpec,
-  DmcWalkerDMEnvPool,
-  DmcWalkerGymEnvPool,
+  DmcWalkerEnvSpec, DmcWalkerDMEnvPool, DmcWalkerGymEnvPool,
   DmcWalkerGymnasiumEnvPool
-) = py_env(
-  _DmcWalkerEnvSpec,
-  _DmcWalkerEnvPool
-)
+) = py_env(_DmcWalkerEnvSpec, _DmcWalkerEnvPool)
 
 __all__ = [
   "DmcAcrobotEnvSpec",

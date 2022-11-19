@@ -51,7 +51,9 @@ class GymnasiumEnvPoolMeta(ABCMeta, gymnasium.Env.__class__):
     base = parents[0]
     try:
       from .lax import XlaMixin
-      parents = (base, GymnasiumEnvPoolMixin, EnvPoolMixin, XlaMixin, gymnasium.Env)
+      parents = (
+        base, GymnasiumEnvPoolMixin, EnvPoolMixin, XlaMixin, gymnasium.Env
+      )
     except ImportError:
 
       def _xla(self: Any) -> None:

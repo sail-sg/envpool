@@ -106,6 +106,7 @@ def gym_spec_transform(
     high=spec.maximum,
   )
 
+
 def gymnasium_spec_transform(
   name: str, spec: ArraySpec, spec_type: str
 ) -> gymnasium.Space:
@@ -144,5 +145,6 @@ def gym_structure(keys: List[str]) -> List[Tuple[List[str], int]]:
   structure = to_nested_dict(dict(zip(keys, list(range(len(keys))))))
   tree_pairs = treevalue.flatten(treevalue.TreeValue(structure))
   return tree_pairs
+
 
 gymnasium_structure = gym_structure

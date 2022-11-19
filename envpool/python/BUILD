@@ -27,6 +27,7 @@ py_library(
         requirement("treevalue"),
         requirement("dm-env"),
         requirement("gym"),
+        requirement("gymnasium"),
         requirement("numpy"),
         ":protocol",
     ],
