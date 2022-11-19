@@ -20,7 +20,7 @@ import gymnasium
 import numpy as np
 import treevalue
 
-from .data import gym_structure
+from .data import gymnasium_structure
 from .envpool import EnvPoolMixin
 from .utils import check_key_duplication
 
@@ -67,7 +67,7 @@ class GymnasiumEnvPoolMeta(ABCMeta, gymnasium.Env.__class__):
     check_key_duplication(name, "state", state_keys)
     check_key_duplication(name, "action", action_keys)
 
-    tree_pairs = gym_structure(state_keys)
+    tree_pairs = gymnasium_structure(state_keys)
     state_idx = list(zip(*tree_pairs))[-1]
 
     def _to_gym(

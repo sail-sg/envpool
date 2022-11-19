@@ -107,6 +107,21 @@ py_library(
 )
 
 py_library(
+    name = "gymnasium_envpool",
+    srcs = ["gymnasium_envpool.py"],
+    deps = [
+        requirement("treevalue"),
+        requirement("dm-env"),
+        requirement("gymnasium"),
+        requirement("numpy"),
+        ":data",
+        ":envpool",
+        ":lax",
+        ":utils",
+    ],
+)
+
+py_library(
     name = "api",
     srcs = ["api.py"],
     deps = [
