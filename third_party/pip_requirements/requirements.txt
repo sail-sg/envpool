@@ -48,5 +48,5 @@ typed-ast
 typing-extensions
 jax[cpu]
 packaging
-gym3
-procgen @ https://github.com/YukunJ/procgen/archive/refs/heads/master.zip
+gym3>=0.3.3,<1.0.0
+procgen@git+https://github.com/YukunJ/procgen.git
