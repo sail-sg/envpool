@@ -19,6 +19,7 @@ from typing import Any
 import cv2
 import dm_env
 import gym
+import procgen
 import numpy as np
 from absl import logging
 from absl.testing import absltest
