@@ -83,10 +83,8 @@ class Particle {
   bool grass;
   cv::Scalar color;
   std::vector<b2Vec2> poly;
-  Particle(b2Vec2 p1, b2Vec2 p2, bool g, cv::Scalar c) : grass(g), color(c) {
-    poly.emplace_back(p1);
-    poly.emplace_back(p2);
-  }
+  Particle(b2Vec2 p1, b2Vec2 p2, bool g, cv::Scalar c)
+      : grass(g), color(std::move(c)), poly({p1, p2}) {}
 };
 
 class UserData {

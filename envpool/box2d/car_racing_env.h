@@ -39,13 +39,13 @@ class CarRacingFrictionDetector : public b2ContactListener {
  public:
   explicit CarRacingFrictionDetector(CarRacingBox2dEnv* _env,
                                      float lap_complete_percent);
-  void BeginContact(b2Contact* contact) override { _Contact(contact, true); }
-  void EndContact(b2Contact* contact) override { _Contact(contact, false); }
+  void BeginContact(b2Contact* contact) override { Contact(contact, true); }
+  void EndContact(b2Contact* contact) override { Contact(contact, false); }
 
  protected:
   CarRacingBox2dEnv* env_;
   float lap_complete_percent_;
-  void _Contact(b2Contact* contact, bool begin);
+  void Contact(b2Contact* contact, bool begin);
 };
 
 class CarRacingBox2dEnv {
@@ -70,7 +70,7 @@ class CarRacingBox2dEnv {
   const float kMaxShapeDim =
       std::max(kGrassDim, std::max(kTrackWidth, kTrackDetailStep)) * sqrt(2.f) *
       kZoom * kScale;
-  const float kCheckPoint = 12;
+  const int kCheckPoint = 12;
 
   friend class CarRacingFrictionDetector;
 
@@ -106,7 +106,7 @@ class CarRacingBox2dEnv {
                   float angle);
   void RenderIndicators();
   void DrawColoredPolygon(const std::array<std::array<float, 2>, 4>& field,
-                          cv::Scalar color, float zoom,
+                          const cv::Scalar& color, float zoom,
                           const std::array<float, 2>& translation, float angle,
                           bool clip = true);
   void CarRacingReset(std::mt19937* gen);
@@ -115,10 +115,12 @@ class CarRacingBox2dEnv {
   void CreateImageArray();
 
  private:
-  std::vector<cv::Point> VerticalInd(int place, int s, int h, float val);
-  std::vector<cv::Point> HorizInd(int place, int s, int h, float val);
-  void RenderIfMin(float value, std::vector<cv::Point> points,
-                   cv::Scalar color);
+  [[nodiscard]] std::vector<cv::Point> VerticalInd(int place, int s, int h,
+                                                   float val) const;
+  [[nodiscard]] std::vector<cv::Point> HorizInd(int place, int s, int h,
+                                                float val) const;
+  void RenderIfMin(float value, const std::vector<cv::Point>& points,
+                   const cv::Scalar& color);
   bool CreateTrack(std::mt19937* gen);
   void ResetBox2d(std::mt19937* gen);
   void StepBox2d(std::mt19937* gen, float action0, float action1, float action2,

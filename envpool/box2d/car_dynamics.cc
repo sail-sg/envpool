@@ -23,10 +23,11 @@
 
 namespace box2d {
 
-b2PolygonShape GeneratePolygon(const float (*poly)[2], int size) {
+b2PolygonShape GeneratePolygon(const float (*poly)[2], int size) {  // NOLINT
   std::vector<b2Vec2> vec_list;
+  vec_list.resize(size);
   for (int i = 0; i < size; ++i) {
-    vec_list.emplace_back(b2Vec2(poly[i][0] * kSize, poly[i][1] * kSize));
+    vec_list[i] = b2Vec2(poly[i][0] * kSize, poly[i][1] * kSize);
   }
   b2PolygonShape polygon;
   polygon.Set(vec_list.data(), vec_list.size());
@@ -134,11 +135,11 @@ void Car::Step(float dt) {
     // Steer each wheel
     float dir = (w->steer - w->joint->GetJointAngle() > 0) ? 1 : -1;
     float val = abs(w->steer - w->joint->GetJointAngle());
-    w->joint->SetMotorSpeed(dir * std::min(50.0 * val, 3.0));
+    w->joint->SetMotorSpeed(dir * std::min(50.0f * val, 3.0f));
 
     // Position => friction_limit
     bool grass = true;
-    float friction_limit = kFrictionLimit * 0.6;  // Grass friction if no tile
+    float friction_limit = kFrictionLimit * 0.6f;  // Grass friction if no tile
     for (auto* t : w->tiles) {
       friction_limit =
           std::max(friction_limit, kFrictionLimit * t->road_friction);
@@ -156,7 +157,7 @@ void Car::Step(float dt) {
 
     // add small coef not to divide by zero
     w->omega += (dt * kEnginePower * w->gas / kWheelMomentOfInertia /
-                 (abs(w->omega) + 5.0));
+                 (abs(w->omega) + 5.0f));
     fuel_spent_ += dt * kEnginePower * w->gas;
     if (w->brake >= 0.9) {
       w->omega = 0;
@@ -194,8 +195,8 @@ void Car::Step(float dt) {
       } else if (w->skid_start == nullptr) {
         w->skid_start = std::make_unique<b2Vec2>(w->body->GetPosition());
       } else {
-        w->skid_particle =
-            CreateParticle(*w->skid_start.get(), w->body->GetPosition(), grass);
+        w->skid_particle = CreateParticle(*(w->skid_start.get()),
+                                          w->body->GetPosition(), grass);
         w->skid_start = nullptr;
       }
 
@@ -271,11 +272,12 @@ void Car::Draw(const cv::Mat& surf, float zoom,
       }
       cv::fillPoly(surf, poly, color);
 
-      auto user_data = reinterpret_cast<UserData*>(body->GetUserData().pointer);
+      auto* user_data =
+          reinterpret_cast<UserData*>(body->GetUserData().pointer);
       if (user_data == nullptr || user_data->type != WHEEL_TYPE) {
         continue;
       }
-      Wheel* obj = reinterpret_cast<Wheel*>(user_data);
+      auto* obj = reinterpret_cast<Wheel*>(user_data);
 
       auto a1 = obj->phase;
       auto a2 = obj->phase + 1.2f;  // radians
