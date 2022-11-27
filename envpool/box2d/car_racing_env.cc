@@ -107,7 +107,7 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
     }
     if (c == kCheckPoint - 1) {
       alpha = 2 * M_PI * c / kCheckPoint;
-      start_alpha_ = -M_PI / kCheckPoint;
+      start_alpha_ = static_cast<float>(-M_PI / kCheckPoint);
       rad = 1.5 * kTrackRad;
     }
     std::array<float, 3> cp = {static_cast<float>(alpha),
@@ -442,9 +442,9 @@ void CarRacingBox2dEnv::DrawColoredPolygon(
                 f_roated[1] * zoom + translation[1]};
     poly.emplace_back(cv::Point(f_roated[0], f_roated[1]));
     if (-kMaxShapeDim <= f_roated[0] &&
-        f_roated[0] <= kWindowW + kMaxShapeDim &&
+        f_roated[0] <= static_cast<float>(kWindowW) + kMaxShapeDim &&
         -kMaxShapeDim <= f_roated[1] &&
-        f_roated[1] <= kWindowH + kMaxShapeDim) {
+        f_roated[1] <= static_cast<float>(kWindowH) + kMaxShapeDim) {
       exist = true;
     }
   }
@@ -469,13 +469,14 @@ void CarRacingBox2dEnv::RenderRoad(float zoom,
   // draw grass patches
   std::vector<std::array<std::array<float, 2>, 4>> grass;
   for (int x = -20; x < 20; x += 2) {
+    auto fx = static_cast<float>(x);
     for (int y = -20; y < 20; y += 2) {
+      auto fy = static_cast<float>(y);
       std::array<std::array<float, 2>, 4> grass;
-
-      grass[0] = {kGrassDim * x + kGrassDim, kGrassDim * y + 0};
-      grass[1] = {kGrassDim * x + 0, kGrassDim * y + 0};
-      grass[2] = {kGrassDim * x + 0, kGrassDim * y + kGrassDim};
-      grass[3] = {kGrassDim * x + kGrassDim, kGrassDim * y + kGrassDim};
+      grass[0] = {kGrassDim * fx + kGrassDim, kGrassDim * fy + 0};
+      grass[1] = {kGrassDim * fx + 0, kGrassDim * fy + 0};
+      grass[2] = {kGrassDim * fx + 0, kGrassDim * fy + kGrassDim};
+      grass[3] = {kGrassDim * fx + kGrassDim, kGrassDim * fy + kGrassDim};
       DrawColoredPolygon(grass, kGrassColor, zoom, translation, angle);
     }
   }
@@ -574,7 +575,8 @@ void CarRacingBox2dEnv::Render() {
 
   std::array<float, 2> scroll = {scroll_x, scroll_y};
   std::array<float, 2> trans = RotateRad(scroll, angle);
-  trans = {kWindowW / 2.0f + trans[0], kWindowH / 4.0f + trans[1]};
+  trans = {static_cast<float>(kWindowW) / 2.0f + trans[0],
+           static_cast<float>(kWindowH) / 4.0f + trans[1]};
 
   RenderRoad(zoom, trans, angle);
   car_->Draw(surf_, zoom, trans, angle);
