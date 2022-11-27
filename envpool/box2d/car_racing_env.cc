@@ -97,15 +97,14 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
   // Create checkpoints
   std::vector<std::array<float, 3>> checkpoints;
   for (int c = 0; c < kCheckPoint; ++c) {
-    auto noise = RandUniform(0, 2 * M_PI * 1 / kCheckPoint)(*gen);
+    auto noise = RandUniform(0, 2.0 * M_PI / kCheckPoint)(*gen);
     auto alpha = 2.0 * M_PI * c / kCheckPoint + noise;
     auto rad = RandUniform(kTrackRad / 3, kTrackRad)(*gen);
 
     if (c == 0) {
       alpha = 0;
       rad = 1.5 * kTrackRad;
-    }
-    if (c == kCheckPoint - 1) {
+    } else if (c == kCheckPoint - 1) {
       alpha = 2 * M_PI * c / kCheckPoint;
       start_alpha_ = static_cast<float>(-M_PI / kCheckPoint);
       rad = 1.5 * kTrackRad;
@@ -244,7 +243,7 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
       int idx2 = (i - neg - 1) >= 0 ? i - neg - 1 : i - neg - 1 + track_size;
       auto beta1 = current_track[idx1][1];
       auto beta2 = current_track[idx2][1];
-      good &= abs(beta1 - beta2) > (kTrackTurnRate * 0.2f);
+      good &= (abs(beta1 - beta2) > (kTrackTurnRate * 0.2f));
       oneside += static_cast<int>(Sign(beta1 - beta2));
     }
     good &= (abs(oneside) == kBorderMinCount);
@@ -265,8 +264,8 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
       last_i = static_cast<int>(current_track.size()) - 1;
     }
     auto [alpha2, beta2, x2, y2] = current_track[last_i];
-    b2Vec2 road1_l{static_cast<float>(x1 - kTrackWidth * std::cos(beta1)),
-                   static_cast<float>(y1 - kTrackWidth * std::sin(beta1))};
+    b2Vec2 road1_l = {static_cast<float>(x1 - kTrackWidth * std::cos(beta1)),
+                      static_cast<float>(y1 - kTrackWidth * std::sin(beta1))};
     b2Vec2 road1_r = {static_cast<float>(x1 + kTrackWidth * std::cos(beta1)),
                       static_cast<float>(y1 + kTrackWidth * std::sin(beta1))};
     b2Vec2 road2_l = {static_cast<float>(x2 - kTrackWidth * std::cos(beta2)),
@@ -275,7 +274,7 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
                       static_cast<float>(y2 + kTrackWidth * std::sin(beta2))};
     std::array<b2Vec2, 4> roads_vertices = {road1_l, road1_r, road2_r, road2_l};
     b2PolygonShape shape;
-    shape.Set(roads_vertices.data(), 4);
+    shape.Set(roads_vertices.data(), roads_vertices.size());
     fd_tile_.shape = &shape;
 
     b2BodyDef bd;
@@ -564,6 +563,7 @@ void CarRacingBox2dEnv::RenderIndicators() {
 }
 
 void CarRacingBox2dEnv::Render() {
+  // render mode == "state_pixels"
   cv::Scalar black(0, 0, 0);
   surf_ = cv::Mat(kWindowH, kWindowW, CV_8UC3, black);
 

@@ -105,19 +105,10 @@ Car::Car(std::shared_ptr<b2World> world, float init_angle, float init_x,
   }
 }
 void Car::Gas(float g) {
-  if (g < 0) {
-    g = 0;
-  }
-  if (g > 1) {
-    g = 1;
-  }
+  g = std::min(std::max(g, 0.0f), 1.0f);
   for (int i = 2; i < 4; i++) {
     auto* w = wheels_[i];
-    auto diff = g - w->gas;
-    if (diff > 0.1) {
-      diff = 0.1;
-    }
-    w->gas += diff;
+    w->gas += std::min(g - w->gas, 0.1f);
   }
 }
 
@@ -133,7 +124,7 @@ void Car::Steer(float s) {
 void Car::Step(float dt) {
   for (auto* w : wheels_) {
     // Steer each wheel
-    float dir = (w->steer - w->joint->GetJointAngle() > 0) ? 1 : -1;
+    float dir = Sign(w->steer - w->joint->GetJointAngle());
     float val = abs(w->steer - w->joint->GetJointAngle());
     w->joint->SetMotorSpeed(dir * std::min(50.0f * val, 3.0f));
 
@@ -162,7 +153,7 @@ void Car::Step(float dt) {
     if (w->brake >= 0.9) {
       w->omega = 0;
     } else if (w->brake > 0) {
-      dir = -Sign(w->omega);  // -np.sign(w.omega)
+      dir = -Sign(w->omega);
       val = kBrakeForce * w->brake;
       if (abs(val) > abs(w->omega)) {
         val = abs(w->omega);  // low speed => same as = 0
@@ -172,8 +163,8 @@ void Car::Step(float dt) {
     w->phase += w->omega * dt;
 
     auto vr = w->omega * w->wheel_rad;  // rotating wheel speed
-    auto f_force =
-        -vf + vr;  // force direction is direction of speed difference
+    // force direction is direction of speed difference
+    auto f_force = -vf + vr;
     auto p_force = -vs;
 
     // Physically correct is to always apply friction_limit until speed is
@@ -184,7 +175,7 @@ void Car::Step(float dt) {
     // friction_limit)
     f_force *= 205000 * kSize * kSize;
     p_force *= 205000 * kSize * kSize;
-    auto force = sqrt(pow(f_force, 2) + pow(p_force, 2));
+    auto force = sqrt(f_force * f_force + p_force * p_force);
 
     // Skid trace
     if (abs(force) > 2.0 * friction_limit) {
@@ -226,7 +217,7 @@ void Car::Step(float dt) {
 
 std::shared_ptr<Particle> Car::CreateParticle(b2Vec2 point1, b2Vec2 point2,
                                               bool grass) {
-  cv::Scalar color = (grass) ? kMudColor : kWheelColor;
+  cv::Scalar color = grass ? kMudColor : kWheelColor;
   auto p = std::make_shared<Particle>(point1, point2, grass, color);
   particles_.emplace_back(p);
   while (particles_.size() > 30) {
