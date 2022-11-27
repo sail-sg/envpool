@@ -198,9 +198,7 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
   // Find closed loop range i1..i2, first loop should be ignored, second is OK
   int i1 = -1;
   int i2 = -1;
-  int i = static_cast<int>(current_track.size());
-  while (true) {
-    i--;
+  for (int i = static_cast<int>(current_track.size()) - 1;; --i) {
     if (i == 0) {
       return false;  // failed
     }
@@ -214,8 +212,7 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
     }
   }
 
-  assert(i1 != -1);
-  assert(i2 != -1);
+  assert(i1 != -1 && i2 != -1);
 
   current_track = std::vector<std::array<float, 4>>(
       current_track.begin() + i1, current_track.begin() + i2 - 1);
@@ -472,9 +469,9 @@ void CarRacingBox2dEnv::RenderRoad(float zoom,
     for (int y = -20; y < 20; y += 2) {
       auto fy = static_cast<float>(y);
       std::array<std::array<float, 2>, 4> grass;
-      grass[0] = {kGrassDim * fx + kGrassDim, kGrassDim * fy + 0};
-      grass[1] = {kGrassDim * fx + 0, kGrassDim * fy + 0};
-      grass[2] = {kGrassDim * fx + 0, kGrassDim * fy + kGrassDim};
+      grass[0] = {kGrassDim * fx + kGrassDim, kGrassDim * fy};
+      grass[1] = {kGrassDim * fx, kGrassDim * fy};
+      grass[2] = {kGrassDim * fx, kGrassDim * fy + kGrassDim};
       grass[3] = {kGrassDim * fx + kGrassDim, kGrassDim * fy + kGrassDim};
       DrawColoredPolygon(grass, kGrassColor, zoom, translation, angle);
     }
