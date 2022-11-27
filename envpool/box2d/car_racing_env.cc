@@ -495,21 +495,24 @@ void CarRacingBox2dEnv::RenderRoad(float zoom,
 
 std::vector<cv::Point> CarRacingBox2dEnv::VerticalInd(int place, int s, int h,
                                                       float val) const {
+  auto wh = static_cast<float>(kWindowH);
+  auto fh = static_cast<float>(h);
   return {
-      cv::Point(place * s, kWindowH - static_cast<int>(h + h * val)),
-      cv::Point((place + 1) * s, kWindowH - static_cast<int>(h + h * val)),
-      cv::Point((place + 1) * s, kWindowH - h),
-      cv::Point((place + 0) * s, kWindowH - h),
+      cv::Point(place * s, wh - (fh + fh * val)),
+      cv::Point((place + 1) * s, wh - (fh + fh * val)),
+      cv::Point((place + 1) * s, wh - fh),
+      cv::Point(place * s, wh - fh),
   };
 }
 
 std::vector<cv::Point> CarRacingBox2dEnv::HorizInd(int place, int s, int h,
                                                    float val) const {
+  auto new_ind = (static_cast<float>(place) + val) * static_cast<float>(s);
   return {
-      cv::Point((place + 0) * s, kWindowH - 4 * h),
-      cv::Point((place + val) * s, kWindowH - 4 * h),
-      cv::Point((place + val) * s, kWindowH - 2 * h),
-      cv::Point((place + 0) * s, kWindowH - 2 * h),
+      cv::Point(place * s, kWindowH - 4 * h),
+      cv::Point(new_ind, kWindowH - 4 * h),
+      cv::Point(new_ind, kWindowH - 2 * h),
+      cv::Point(place * s, kWindowH - 2 * h),
   };
 }
 

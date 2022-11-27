@@ -28,7 +28,7 @@ class CarRacingEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict("reward_threshold"_.Bind(900.0),
-                    "lap_complete_percent"_.Bind(0.95));
+                    "lap_complete_percent"_.Bind(0.95f));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
