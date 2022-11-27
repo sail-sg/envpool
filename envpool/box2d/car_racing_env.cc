@@ -110,8 +110,9 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
       start_alpha_ = -M_PI / kCheckPoint;
       rad = 1.5 * kTrackRad;
     }
-    std::array<float, 3> cp = {alpha, rad * std::cos(alpha),
-                               rad * std::sin(alpha)};
+    std::array<float, 3> cp = {static_cast<float>(alpha),
+                               static_cast<float>(rad * std::cos(alpha)),
+                               static_cast<float>(rad * std::sin(alpha))};
     checkpoints.emplace_back(cp);
   }
   // according to the implementation logic,
@@ -252,7 +253,7 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
   for (int i = 0; i < track_size; i++) {
     for (int neg = 0; neg < kBorderMinCount; neg++) {
       int idx = (i - neg >= 0) ? i - neg : i - neg + track_size;
-      border[idx] = (border[idx] | border[i]);
+      border[idx] = border[idx] || border[i];
     }
   }
 
@@ -287,7 +288,7 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
     // t->body->SetUserData(t); // recently removed from 2.4.1
     t->body->GetUserData().pointer = reinterpret_cast<uintptr_t>(t);
 
-    float c = 0.01f * (i % 3) * 255;
+    float c = 2.55f * static_cast<float>(i % 3);
     t->road_color = {kRoadColor[0] + c, kRoadColor[1] + c, kRoadColor[2] + c};
 
     t->type = TILE_TYPE;
