@@ -50,6 +50,9 @@ Options
   result);
 * ``use_inter_area_resize (bool)``: whether to use ``cv::INTER_AREA`` for
   image resize, default to ``True``.
+* ``use_fire_reset (bool)``: whether to use ``fire-reset`` wrapper, default to
+  ``True``.
+
 
 Observation Space
 -----------------

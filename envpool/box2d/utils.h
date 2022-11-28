@@ -19,6 +19,7 @@
 
 #include <box2d/box2d.h>
 
+#include <array>
 #include <random>
 
 namespace box2d {
@@ -30,6 +31,12 @@ using RandUniform = std::uniform_real_distribution<>;
 b2Vec2 Vec2(double x, double y);
 
 float Sign(double val, double eps = 1e-8);
+
+std::array<float, 2> RotateRad(const std::array<float, 2>& vec, float angle);
+
+b2Vec2 RotateRad(const b2Vec2& v, float angle);
+
+b2Vec2 Multiply(const b2Transform& trans, const b2Vec2& v);
 
 }  // namespace box2d
 

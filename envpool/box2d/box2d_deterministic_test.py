@@ -36,11 +36,15 @@ class _Box2dEnvPoolDeterministicTest(absltest.TestCase):
     act_space = env0.action_space
     for _ in range(5000):
       action = np.array([act_space.sample() for _ in range(num_envs)])
-      obs0 = env0.step(action)[0]
-      obs1 = env1.step(action)[0]
-      obs2 = env2.step(action)[0]
+      obs0, rew0, terminated, truncated, info0 = env0.step(action)
+      obs1, rew1, terminated, truncated, info1 = env1.step(action)
+      obs2, rew2, terminated, truncated, info2 = env2.step(action)
       np.testing.assert_allclose(obs0, obs1)
       self.assertFalse(np.allclose(obs0, obs2))
+
+  def test_car_racing(self) -> None:
+    self.run_deterministic_check("CarRacing-v2")
+    self.run_deterministic_check("CarRacing-v2", max_episode_steps=3)
 
   def test_bipedal_walker(self) -> None:
     self.run_deterministic_check("BipedalWalker-v3")
