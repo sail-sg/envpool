@@ -52,8 +52,9 @@ class AtariEnvFns {
     return MakeDict(
         "stack_num"_.Bind(4), "frame_skip"_.Bind(4), "noop_max"_.Bind(30),
         "zero_discount_on_life_loss"_.Bind(false), "episodic_life"_.Bind(false),
-        "reward_clip"_.Bind(false), "img_height"_.Bind(84),
-        "img_width"_.Bind(84), "task"_.Bind(std::string("pong")),
+        "reward_clip"_.Bind(false), "use_fire_reset"_.Bind(true),
+        "img_height"_.Bind(84), "img_width"_.Bind(84),
+        "task"_.Bind(std::string("pong")),
         "repeat_action_probability"_.Bind(0.0f),
         "use_inter_area_resize"_.Bind(true), "gray_scale"_.Bind(true));
   }
@@ -126,9 +127,12 @@ class AtariEnv : public Env<AtariEnvSpec> {
     env_->setInt("random_seed", seed_);
     env_->loadROM(rom_path_);
     action_set_ = env_->getMinimalActionSet();
-    for (auto a : action_set_) {
-      if (a == 1) {
-        fire_reset_ = true;
+    if (spec.config["use_fire_reset"_]) {
+      // https://github.com/sail-sg/envpool/issues/221
+      for (auto a : action_set_) {
+        if (a == 1) {
+          fire_reset_ = true;
+        }
       }
     }
     // init buf
