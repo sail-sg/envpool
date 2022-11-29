@@ -168,7 +168,9 @@ class EnvSpecMixin(ABC):
     return to_nested_dict(spec, gym.spaces.Dict)
 
   @property
-  def gymnasium_observation_space(self: EnvSpec) -> Union[gymnasium.Space, Dict[str, Any]]:
+  def gymnasium_observation_space(
+    self: EnvSpec
+  ) -> Union[gymnasium.Space, Dict[str, Any]]:
     """Convert internal state_spec to gymnasium.Env compatible format.
 
     Returns:
@@ -191,7 +193,9 @@ class EnvSpecMixin(ABC):
     return to_nested_dict(spec, gymnasium.spaces.Dict)
 
   @property
-  def gymnasium_action_space(self: EnvSpec) -> Union[gymnasium.Space, Dict[str, Any]]:
+  def gymnasium_action_space(
+    self: EnvSpec
+  ) -> Union[gymnasium.Space, Dict[str, Any]]:
     """Convert internal action_spec to gymnasium.Env compatible format.
 
     Returns:
