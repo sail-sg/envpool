@@ -117,7 +117,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+    WriteState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
   }
 
   void Step(const Action& action) override {
@@ -155,7 +155,8 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     ++elapsed_step_;
     done_ = (terminate_when_unhealthy_ ? !IsHealthy() : false) ||
             (elapsed_step_ >= max_episode_steps_);
-    WriteState(reward, xv, yv, ctrl_cost, after[0], after[1], healthy_reward);
+    WriteState(reward, xv, yv, ctrl_cost, contact_cost, after[0], after[1],
+               healthy_reward);
   }
 
  private:
@@ -177,7 +178,8 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
   }
 
   void WriteState(float reward, mjtNum xv, mjtNum yv, mjtNum ctrl_cost,
-                  mjtNum x_after, mjtNum y_after, mjtNum healthy_reward) {
+                  mjtNum contact_cost, mjtNum x_after, mjtNum y_after,
+                  mjtNum healthy_reward) {
     State state = Allocate();
     state["reward"_] = reward;
     // obs
@@ -204,6 +206,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     state["info:reward_linvel"_] = xv * forward_reward_weight_;
     state["info:reward_quadctrl"_] = -ctrl_cost;
     state["info:reward_alive"_] = healthy_reward;
+    state["info:reward_impact"_] = -contact_cost;
     state["info:x_position"_] = x_after;
     state["info:y_position"_] = y_after;
     state["info:distance_from_origin"_] =
