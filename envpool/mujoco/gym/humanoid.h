@@ -31,13 +31,16 @@ namespace mujoco_gym {
 class HumanoidEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("frame_skip"_.Bind(5), "post_constraint"_.Bind(true),
-                    "forward_reward_weight"_.Bind(1.25),
-                    "terminate_when_unhealthy"_.Bind(true),
-                    "exclude_current_positions_from_observation"_.Bind(true),
-                    "ctrl_cost_weight"_.Bind(0.1), "healthy_reward"_.Bind(5.0),
-                    "healthy_z_min"_.Bind(1.0), "healthy_z_max"_.Bind(2.0),
-                    "reset_noise_scale"_.Bind(1e-2));
+    return MakeDict(
+        "frame_skip"_.Bind(5), "post_constraint"_.Bind(true),
+        "use_contact_force"_.Bind(false), "forward_reward_weight"_.Bind(1.25),
+        "terminate_when_unhealthy"_.Bind(true),
+        "exclude_current_positions_from_observation"_.Bind(true),
+        "ctrl_cost_weight"_.Bind(0.1), "healthy_reward"_.Bind(5.0),
+        "healthy_z_min"_.Bind(1.0), "healthy_z_max"_.Bind(2.0),
+        "contact_cost_weight"_.Bind(5e-7),
+        "contact_force_min"_.Bind(-std::numeric_limits<mjtNum>::infinity()),
+        "contact_force_max"_.Bind(10.0), "reset_noise_scale"_.Bind(1e-2));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -72,6 +75,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
   bool terminate_when_unhealthy_, no_pos_;
   mjtNum ctrl_cost_weight_, forward_reward_weight_, healthy_reward_;
   mjtNum healthy_z_min_, healthy_z_max_;
+  mjtNum contact_cost_weight_, contact_force_min_, contact_force_max_;
   std::uniform_real_distribution<> dist_;
 
  public:
@@ -82,11 +86,15 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
                   spec.config["max_episode_steps"_]),
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
+        use_contact_force_(spec.config["use_contact_force"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
         healthy_z_min_(spec.config["healthy_z_min"_]),
         healthy_z_max_(spec.config["healthy_z_max"_]),
+        contact_cost_weight_(spec.config["contact_cost_weight"_]),
+        contact_force_min_(spec.config["contact_force_min"_]),
+        contact_force_max_(spec.config["contact_force_max"_]),
         dist_(-spec.config["reset_noise_scale"_],
               spec.config["reset_noise_scale"_]) {}
 
@@ -128,12 +136,22 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     mjtNum dt = frame_skip_ * model_->opt.timestep;
     mjtNum xv = (after[0] - before[0]) / dt;
     mjtNum yv = (after[1] - before[1]) / dt;
+    // contact cost
+    mjtNum contact_cost = 0.0;
+    if (use_contact_force_) {
+      for (int i = 0; i < 6 * model_->nbody; ++i) {
+        mjtNum x = data_->cfrc_ext[i];
+        x = std::min(contact_force_max_, x);
+        x = std::max(contact_force_min_, x);
+        contact_cost += contact_cost_weight_ * x * x;
+      }
+    }
 
     // reward and done
     mjtNum healthy_reward =
         terminate_when_unhealthy_ || IsHealthy() ? healthy_reward_ : 0.0;
     auto reward = static_cast<float>(xv * forward_reward_weight_ +
-                                     healthy_reward - ctrl_cost);
+                                     healthy_reward - ctrl_cost - contact_cost);
     ++elapsed_step_;
     done_ = (terminate_when_unhealthy_ ? !IsHealthy() : false) ||
             (elapsed_step_ >= max_episode_steps_);
