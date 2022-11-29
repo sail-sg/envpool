@@ -19,6 +19,7 @@ from envpool.registration import (
   make,
   make_dm,
   make_gym,
+  make_gymnasium,
   make_spec,
   register,
 )
