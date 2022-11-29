@@ -21,6 +21,7 @@ register(
   spec_cls="CarRacingEnvSpec",
   dm_cls="CarRacingDMEnvPool",
   gym_cls="CarRacingGymEnvPool",
+  gymnasium_cls="CarRacingGymnasiumEnvPool",
   max_episode_steps=1000,
 )
 

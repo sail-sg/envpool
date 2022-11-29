@@ -30,7 +30,7 @@ class EnvRegistry:
 
   def register(
     self, task_id: str, import_path: str, spec_cls: str, dm_cls: str,
-    gym_cls: str, gymnasium_cls, **kwargs: Any
+    gym_cls: str, gymnasium_cls: str, **kwargs: Any
   ) -> None:
     """Register EnvSpec and EnvPool in global EnvRegistry."""
     assert task_id not in self.specs

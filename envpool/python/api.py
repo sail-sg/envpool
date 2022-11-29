@@ -24,7 +24,7 @@ from .protocol import EnvPool, EnvSpec
 
 def py_env(
   envspec: Type[EnvSpec], envpool: Type[EnvPool]
-) -> Tuple[Type[EnvSpec], Type[EnvPool], Type[EnvPool]]:
+) -> Tuple[Type[EnvSpec], Type[EnvPool], Type[EnvPool], Type[EnvPool]]:
   """Initialize EnvPool for users."""
   # remove the _ prefix added when registering cpp class via pybind
   spec_name = envspec.__name__[1:]
