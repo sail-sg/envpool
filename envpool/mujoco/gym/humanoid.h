@@ -38,9 +38,8 @@ class HumanoidEnvFns {
         "exclude_current_positions_from_observation"_.Bind(true),
         "ctrl_cost_weight"_.Bind(0.1), "healthy_reward"_.Bind(5.0),
         "healthy_z_min"_.Bind(1.0), "healthy_z_max"_.Bind(2.0),
-        "contact_cost_weight"_.Bind(5e-7),
-        "contact_force_min"_.Bind(-std::numeric_limits<mjtNum>::infinity()),
-        "contact_force_max"_.Bind(10.0), "reset_noise_scale"_.Bind(1e-2));
+        "contact_cost_weight"_.Bind(5e-7), "contact_cost_max"_.Bind(10.0),
+        "reset_noise_scale"_.Bind(1e-2));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -93,8 +92,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
         healthy_z_min_(spec.config["healthy_z_min"_]),
         healthy_z_max_(spec.config["healthy_z_max"_]),
         contact_cost_weight_(spec.config["contact_cost_weight"_]),
-        contact_force_min_(spec.config["contact_force_min"_]),
-        contact_force_max_(spec.config["contact_force_max"_]),
+        contact_cost_max_(spec.config["contact_cost_max"_]),
         dist_(-spec.config["reset_noise_scale"_],
               spec.config["reset_noise_scale"_]) {}
 
@@ -141,10 +139,9 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     if (use_contact_force_) {
       for (int i = 0; i < 6 * model_->nbody; ++i) {
         mjtNum x = data_->cfrc_ext[i];
-        x = std::min(contact_force_max_, x);
-        x = std::max(contact_force_min_, x);
         contact_cost += contact_cost_weight_ * x * x;
       }
+      contact_cost = std::min(contact_cost, contact_cost_max_);
     }
 
     // reward and done
