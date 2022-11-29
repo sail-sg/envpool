@@ -53,6 +53,7 @@ py_library(
     deps = [
         requirement("dm-env"),
         requirement("gym"),
+        requirement("gymnasium"),
         ":data",
         ":protocol",
         ":utils",
@@ -143,6 +144,7 @@ py_library(
         ":dm_envpool",
         ":env_spec",
         ":gym_envpool",
+        ":gymnasium_envpool",
         ":protocol",
     ],
 )

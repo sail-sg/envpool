@@ -20,10 +20,12 @@ from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Type, Union
 
 import dm_env
 import gym
+import gymnasium
 
 from .data import (
   dm_spec_transform,
   gym_spec_transform,
+  gymnasium_spec_transform,
   to_namedtuple,
   to_nested_dict,
 )
@@ -164,6 +166,57 @@ class EnvSpecMixin(ABC):
       for k, v in spec.items()
     }
     return to_nested_dict(spec, gym.spaces.Dict)
+
+  @property
+  def gymnasium_observation_space(self: EnvSpec) -> Union[gymnasium.Space, Dict[str, Any]]:
+    """Convert internal state_spec to gymnasium.Env compatible format.
+
+    Returns:
+      observation_space: A dict (maybe nested) that contains all keys
+        that start with ``obs`` with their corresponding specs.
+
+    Note:
+      If only one key starts with ``obs``, it returns that space instead of
+        all for simplicity.
+    """
+    spec = self.state_array_spec
+    spec = {
+      k.replace("obs:", ""):
+      gymnasium_spec_transform(k.replace(":", ".").split(".")[-1], v, "obs")
+      for k, v in spec.items()
+      if k.startswith("obs")
+    }
+    if len(spec) == 1:
+      return list(spec.values())[0]
+    return to_nested_dict(spec, gymnasium.spaces.Dict)
+
+  @property
+  def gymnasium_action_space(self: EnvSpec) -> Union[gymnasium.Space, Dict[str, Any]]:
+    """Convert internal action_spec to gymnasium.Env compatible format.
+
+    Returns:
+      action_space: A dict (maybe nested) that contains key-value paired
+        corresponding specs.
+
+    Note:
+      If the original action_spec has a length of 3 ("env_id",
+        "players.env_id", *), it returns the last space instead of all for
+        simplicity.
+    """
+    spec = self.action_array_spec
+    if len(spec) == 3:
+      # only env_id, players.env_id, action
+      spec.pop("env_id")
+      spec.pop("players.env_id")
+      return gymnasium_spec_transform(
+        list(spec.keys())[0],
+        list(spec.values())[0], "act"
+      )
+    spec = {
+      k: gymnasium_spec_transform(k.split(".")[-1], v, "act")
+      for k, v in spec.items()
+    }
+    return to_nested_dict(spec, gymnasium.spaces.Dict)
 
   def __repr__(self: EnvSpec) -> str:
     """Prettify debug info."""
