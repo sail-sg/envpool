@@ -74,7 +74,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
   bool terminate_when_unhealthy_, no_pos_, use_contact_force_;
   mjtNum ctrl_cost_weight_, forward_reward_weight_, healthy_reward_;
   mjtNum healthy_z_min_, healthy_z_max_;
-  mjtNum contact_cost_weight_, contact_force_min_, contact_force_max_;
+  mjtNum contact_cost_weight_, contact_cost_max_;
   std::uniform_real_distribution<> dist_;
 
  public:
