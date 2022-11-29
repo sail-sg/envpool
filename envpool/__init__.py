@@ -29,6 +29,7 @@ __all__ = [
   "make",
   "make_dm",
   "make_gym",
+  "make_gymnasium",
   "make_spec",
   "list_all_envs",
 ]
