@@ -70,6 +70,7 @@ class EnvRegistry:
     return self.make(task_id, "gym", **kwargs)
 
   def make_gymnasium(self, task_id: str, **kwargs: Any) -> Any:
+    """Make gymnasium.Env compatible envpool."""
     return self.make(task_id, "gymnasium", **kwargs)
 
   def make_spec(self, task_id: str, **make_kwargs: Any) -> Any:
