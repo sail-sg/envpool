@@ -67,7 +67,7 @@ register(
   spec_cls="NChainEnvSpec",
   dm_cls="NChainDMEnvPool",
   gym_cls="NChainGymEnvPool",
-  gymnasium_cls="NChainGynasiummEnvPool",
+  gymnasium_cls="NChainGymnasiumEnvPool",
   max_episode_steps=1000,
 )
 
