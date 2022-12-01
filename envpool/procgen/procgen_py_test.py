@@ -58,7 +58,7 @@ procgen_timeout_list = {
   "miner": 1000,
   "ninja": 1000,
   "plunder": 4000,
-  "starpilot": 1000
+  "starpilot": 1000,
 }
 
 
