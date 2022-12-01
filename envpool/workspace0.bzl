@@ -317,6 +317,8 @@ def workspace():
         build_file = "//third_party/vizdoom_extra_maps:vizdoom_extra_maps.BUILD",
     )
 
+    # mujoco linux
+    
     maybe(
         http_archive,
         name = "mujoco_linux",
@@ -329,13 +331,16 @@ def workspace():
         build_file = "//third_party/mujoco:mujoco.BUILD",
     )
 
+
+    # mujoco windows
     maybe(
         http_archive,
-        name = "mujoco",
+        name = "mujoco_windows",
         sha256 = "e0068d25fdb00ec3afa53e429b5eff438d222455603bafa080086abaf11fe16f",
         urls = ["https://github.com/deepmind/mujoco/releases/download/2.2.1/mujoco-2.2.1-windows-x86_64.zip"],
         build_file = "//third_party/mujoco:mujoco.BUILD",
     )
+    
 
     maybe(
         http_archive,

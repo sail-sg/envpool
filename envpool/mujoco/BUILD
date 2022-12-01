@@ -24,6 +24,8 @@ genrule(
     cmd = "cp $< $@",
 )
 
+
+
 cc_library(
     name = "mujoco_gym_env",
     hdrs = [
@@ -86,11 +88,10 @@ cc_library(
         "dmc/walker.h",
     ],
     data = [":gen_mujoco_dmc_xml"],
-    deps = [
-        "//envpool/core:async_envpool",
-        "@mujoco//:mujoco_lib",
-        "@pugixml",
-    ],
+    deps = ["//envpool/core:async_envpool", "@pugixml"] + select({
+        "@bazel_tools//src/conditions:linux": ["@mujoco_linux//:mujoco_lib"],
+        "@bazel_tools//src/conditions:windows": ["@mujoco_windows//:mujoco_lib"],
+    })
 )
 
 pybind_extension(
