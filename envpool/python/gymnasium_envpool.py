@@ -51,6 +51,7 @@ class GymnasiumEnvPoolMeta(ABCMeta, gymnasium.Env.__class__):
     base = parents[0]
     try:
       from .lax import XlaMixin
+
       parents = (
         base, GymnasiumEnvPoolMixin, EnvPoolMixin, XlaMixin, gymnasium.Env
       )
@@ -72,10 +73,10 @@ class GymnasiumEnvPoolMeta(ABCMeta, gymnasium.Env.__class__):
     tree_pairs = gymnasium_structure(state_keys)
     state_idx = list(zip(*tree_pairs))[-1]
 
-    def _to_gym(
+    def _to_gymnasium(
       self: Any, state_values: List[np.ndarray], reset: bool, return_info: bool
     ) -> Union[Any, Tuple[Any, Any], Tuple[Any, np.ndarray, np.ndarray, Any],
-               Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any]]:
+               Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any],]:
       values = map(lambda i: state_values[i], state_idx)
       state = treevalue.unflatten(
         [(path, vi) for (path, _), vi in zip(tree_pairs, values)]
@@ -87,7 +88,7 @@ class GymnasiumEnvPoolMeta(ABCMeta, gymnasium.Env.__class__):
       terminated = state.done & ~state.trunc
       return state.obs, state.reward, terminated, state.trunc, info
 
-    attrs["_to"] = _to_gym
+    attrs["_to"] = _to_gymnasium
     subcls = super().__new__(cls, name, parents, attrs)
 
     def init(self: Any, spec: Any) -> None:
