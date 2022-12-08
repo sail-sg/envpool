@@ -98,6 +98,7 @@ class _MakeTest(absltest.TestCase):
   def test_make_box2d(self) -> None:
     self.check_step(
       [
+        "CarRacing-v2",
         "BipedalWalker-v3",
         "BipedalWalkerHardcore-v3",
         "LunarLander-v2",

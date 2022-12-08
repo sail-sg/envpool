@@ -13,8 +13,9 @@
 # limitations under the License.
 """Unit tests for box2d environments correctness check."""
 
-from typing import Any, Dict, Tuple, no_type_check
+from typing import Any, Dict, List, Tuple, no_type_check
 
+# import cv2
 import gym
 import numpy as np
 import pygame
@@ -51,6 +52,11 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
 
     env0 = gym.make("LunarLanderContinuous-v2")
     env1 = make_gym("LunarLanderContinuous-v2")
+    self.run_space_check(env0, env1)
+
+  def test_car_racing_space(self) -> None:
+    env0 = gym.make("CarRacing-v2")
+    env1 = make_gym("CarRacing-v2")
     self.run_space_check(env0, env1)
 
   @staticmethod
@@ -113,6 +119,43 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
   def test_lunar_lander_correctness(self, num_envs: int = 30) -> None:
     self.solve_lunar_lander(num_envs, True)
     self.solve_lunar_lander(num_envs, False)
+
+  def solve_car_racing(
+    self, num_envs: int, action: List[float], target_reward: float
+  ) -> None:
+    env = make_gym("CarRacing-v2", num_envs=num_envs)
+    max_episode_steps = 100
+
+    env_id = np.arange(num_envs)
+    done = np.array([False] * num_envs)
+    obs = env.reset(env_id)
+    rewards = np.zeros(num_envs)
+    action = np.tile(action, (num_envs, 1))
+    for _ in range(max_episode_steps):
+      obs, rew, terminated, truncated, info = env.step(action, env_id)
+      env_id = info["env_id"]
+      rewards[env_id] += rew
+      # cv2.imwrite("/tmp/car_racing-{}.jpg".format(i), obs[0])
+      if np.all(done):
+        break
+      obs = obs[~done]
+      env_id = env_id[~done]
+    mean_reward = np.mean(rewards)
+    logging.info(f"{np.mean(rewards):.6f} ± {np.std(rewards):.6f}")
+
+    self.assertTrue(abs(target_reward - mean_reward) < 1, (mean_reward))
+
+  def test_car_racing_correctness(
+    self, num_envs: int = 100, render: bool = False
+  ) -> None:
+    if render:
+      pygame.init()
+      pygame.display.init()
+      self.screen = pygame.display.set_mode((600, 400))
+      self.clock = pygame.time.Clock()
+    self.solve_car_racing(num_envs, [0, 0.5, 0], 65)
+    self.solve_car_racing(num_envs, [0.1, 0.3, 0], 18.5)
+    self.solve_car_racing(num_envs, [0, 0.7, 0.1], 42.7)
 
   @staticmethod
   @no_type_check
