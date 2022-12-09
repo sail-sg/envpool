@@ -34,6 +34,7 @@ for game_name in procgen_games_list:
         spec_cls="ProcgenEnvSpec",
         dm_cls="ProcgenDMEnvPool",
         gym_cls="ProcgenGymEnvPool",
+        gymnasium_cls="ProcgenGymnasiumEnvPool",
         game_name=game_name,
         num_levels=0,
         start_level=0,

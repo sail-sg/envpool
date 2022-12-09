@@ -16,6 +16,7 @@ import os
 import time
 from typing import Any
 
+# import procgen # type: ignore
 import cv2
 import dm_env
 import gym
@@ -148,9 +149,6 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
       )
     )
     act_space = env0.action_space
-    # eps = np.finfo(np.float32).eps
-    # obs_min = 0.0 - eps
-    # obs_max = 255.0 + eps
     total = 200
     close, not_close = 0, 0
     for _ in range(total):
@@ -281,10 +279,10 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
     for game in procgen_games_list:
       self.gym_deterministic_check(game, ProcgenEnvSpec, ProcgenGymEnvPool)
 
-  def test_gym_align(self) -> None:
-    # iterate over all procgen games to test Gym align
-    for game in procgen_games_list:
-      self.gym_align_check(game, ProcgenEnvSpec, ProcgenGymEnvPool)
+  # def test_gym_align(self) -> None:
+  #   # iterate over all procgen games to test Gym align
+  #   for game in procgen_games_list:
+  #     self.gym_align_check(game, ProcgenEnvSpec, ProcgenGymEnvPool)
 
   def test_dmc_deterministic(self) -> None:
     # iterate over all procgen games to test DMC deterministic
