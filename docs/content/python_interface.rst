@@ -11,7 +11,7 @@ batched environments:
 * ``task_id (str)``: task id, use ``envpool.list_all_envs()`` to see all
   support tasks;
 * ``env_type (str)``: generate with ``gym.Env`` or ``dm_env.Environment``
-  interface, available options are ``dm`` and ``gym``;
+  interface, available options are ``dm``, ``gym``, and ``gymnasium``;
 * ``num_envs (int)``: how many envs are in the envpool, default to ``1``;
 * ``batch_size (int)``: async configuration, see the last section, default
   to ``num_envs``;
@@ -43,8 +43,9 @@ The observation space and action space of resulted environment are
 observation/action's first dimension is always equal to ``num_envs``
 (sync mode) or equal to ``batch_size`` (async mode).
 
-``envpool.make_gym`` and ``envpool.make_dm`` are shortcuts for
-``envpool.make(..., env_type="gym" | "dm")``, respectively.
+``envpool.make_gym``, ``envpool.make_dm``, and ``envpool.make_gymnasium`` are
+shortcuts for ``envpool.make(..., env_type="gym" | "dm" | "gymnasium")``,
+respectively.
 
 envpool.make_spec
 -----------------
@@ -117,7 +118,7 @@ Data Output Format
 ------------------
 
 +----------+----------------------------------------------------------------------+------------------------------------------------------------------+
-| function |   gym                                                                | dm                                                               |
+| function |   gym & gymnasium                                                    | dm                                                               |
 |          |                                                                      |                                                                  |
 +==========+======================================================================+==================================================================+
 |   reset  |  | env_id -> obs array (single observation)                          | env_id -> TimeStep(FIRST, obs|info|env_id, rew=0, discount or 1) |

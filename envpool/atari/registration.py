@@ -32,6 +32,7 @@ for game in atari_game_list:
     spec_cls="AtariEnvSpec",
     dm_cls="AtariDMEnvPool",
     gym_cls="AtariGymEnvPool",
+    gymnasium_cls="AtariGymnasiumEnvPool",
     task=game,
     base_path=base_path,
     max_episode_steps=108000,

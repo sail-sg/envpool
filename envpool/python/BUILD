@@ -41,6 +41,7 @@ py_library(
         requirement("treevalue"),
         requirement("dm-env"),
         requirement("gym"),
+        requirement("gymnasium"),
         requirement("numpy"),
         ":protocol",
     ],
@@ -52,6 +53,7 @@ py_library(
     deps = [
         requirement("dm-env"),
         requirement("gym"),
+        requirement("gymnasium"),
         ":data",
         ":protocol",
         ":utils",
@@ -121,12 +123,28 @@ py_library(
 )
 
 py_library(
+    name = "gymnasium_envpool",
+    srcs = ["gymnasium_envpool.py"],
+    deps = [
+        requirement("treevalue"),
+        requirement("dm-env"),
+        requirement("gymnasium"),
+        requirement("numpy"),
+        ":data",
+        ":envpool",
+        ":lax",
+        ":utils",
+    ],
+)
+
+py_library(
     name = "api",
     srcs = ["api.py"],
     deps = [
         ":dm_envpool",
         ":env_spec",
         ":gym_envpool",
+        ":gymnasium_envpool",
         ":protocol",
     ],
 )
