@@ -49,7 +49,7 @@ py_test(
         requirement("absl-py"),
         requirement("opencv-python-headless"),
         requirement("gym"),
-        requirement("procgen"),
+        requirement("procgen_yukun"),
     ],
 )
 
