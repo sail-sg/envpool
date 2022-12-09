@@ -15,13 +15,13 @@
 - [x] [Toy text RL envs](https://envpool.readthedocs.io/en/latest/env/toy_text.html): Catch, FrozenLake, Taxi, NChain, CliffWalking, Blackjack
 - [x] [ViZDoom single player](https://envpool.readthedocs.io/en/latest/env/vizdoom.html)
 - [x] [DeepMind Control Suite](https://envpool.readthedocs.io/en/latest/env/dm_control.html)
-- [ ] [Box2D](https://envpool.readthedocs.io/en/latest/env/box2d.html)
+- [x] [Box2D](https://envpool.readthedocs.io/en/latest/env/box2d.html)
 - [ ] Procgen
 - [ ] Minigrid
 
 Here are EnvPool's several highlights:
 
-- Compatible with OpenAI `gym` APIs and DeepMind `dm_env` APIs;
+- Compatible with OpenAI `gym` APIs, DeepMind `dm_env` APIs, and [`gymnasium`](https://github.com/Farama-Foundation/Gymnasium) APIs;
 - Manage a pool of envs, interact with the envs in batched APIs by default;
 - Support both synchronous execution and asynchronous execution;
 - Support both single player and multi-player environment;

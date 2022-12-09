@@ -13,9 +13,13 @@
 // limitations under the License.
 
 #include "envpool/box2d/bipedal_walker.h"
+#include "envpool/box2d/car_racing.h"
 #include "envpool/box2d/lunar_lander_continuous.h"
 #include "envpool/box2d/lunar_lander_discrete.h"
 #include "envpool/core/py_envpool.h"
+
+using CarRacingEnvSpec = PyEnvSpec<box2d::CarRacingEnvSpec>;
+using CarRacingEnvPool = PyEnvPool<box2d::CarRacingEnvPool>;
 
 using BipedalWalkerEnvSpec = PyEnvSpec<box2d::BipedalWalkerEnvSpec>;
 using BipedalWalkerEnvPool = PyEnvPool<box2d::BipedalWalkerEnvPool>;
@@ -29,6 +33,7 @@ using LunarLanderDiscreteEnvSpec = PyEnvSpec<box2d::LunarLanderDiscreteEnvSpec>;
 using LunarLanderDiscreteEnvPool = PyEnvPool<box2d::LunarLanderDiscreteEnvPool>;
 
 PYBIND11_MODULE(box2d_envpool, m) {
+  REGISTER(m, CarRacingEnvSpec, CarRacingEnvPool)
   REGISTER(m, BipedalWalkerEnvSpec, BipedalWalkerEnvPool)
   REGISTER(m, LunarLanderContinuousEnvSpec, LunarLanderContinuousEnvPool)
   REGISTER(m, LunarLanderDiscreteEnvSpec, LunarLanderDiscreteEnvPool)

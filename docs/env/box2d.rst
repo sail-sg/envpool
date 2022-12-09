@@ -50,7 +50,7 @@ The episode will terminate if the hull gets in contact with the ground or
 if the walker exceeds the right end of the terrain length.
 
 
-CarRacing-v1
+CarRacing-v2
 ------------
 
 The easiest control task to learn from pixels - a top-down racing environment.

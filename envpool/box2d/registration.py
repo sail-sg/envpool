@@ -16,11 +16,22 @@
 from envpool.registration import register
 
 register(
+  task_id="CarRacing-v2",
+  import_path="envpool.box2d",
+  spec_cls="CarRacingEnvSpec",
+  dm_cls="CarRacingDMEnvPool",
+  gym_cls="CarRacingGymEnvPool",
+  gymnasium_cls="CarRacingGymnasiumEnvPool",
+  max_episode_steps=1000,
+)
+
+register(
   task_id="BipedalWalker-v3",
   import_path="envpool.box2d",
   spec_cls="BipedalWalkerEnvSpec",
   dm_cls="BipedalWalkerDMEnvPool",
   gym_cls="BipedalWalkerGymEnvPool",
+  gymnasium_cls="BipedalWalkerGymnasiumEnvPool",
   hardcore=False,
   max_episode_steps=1600,
 )
@@ -31,6 +42,7 @@ register(
   spec_cls="BipedalWalkerEnvSpec",
   dm_cls="BipedalWalkerDMEnvPool",
   gym_cls="BipedalWalkerGymEnvPool",
+  gymnasium_cls="BipedalWalkerGymnasiumEnvPool",
   hardcore=True,
   max_episode_steps=2000,
 )
@@ -41,6 +53,7 @@ register(
   spec_cls="LunarLanderDiscreteEnvSpec",
   dm_cls="LunarLanderDiscreteDMEnvPool",
   gym_cls="LunarLanderDiscreteGymEnvPool",
+  gymnasium_cls="LunarLanderDiscreteGymnasiumEnvPool",
   max_episode_steps=1000,
 )
 
@@ -50,5 +63,6 @@ register(
   spec_cls="LunarLanderContinuousEnvSpec",
   dm_cls="LunarLanderContinuousDMEnvPool",
   gym_cls="LunarLanderContinuousGymEnvPool",
+  gymnasium_cls="LunarLanderContinuousGymnasiumEnvPool",
   max_episode_steps=1000,
 )

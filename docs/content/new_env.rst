@@ -452,8 +452,8 @@ After that, you can import ``_CartPoleEnvSpec`` and ``_CartPoleEnvPool`` from
 
 The next step is to apply python-side wrapper (gym/dm_env APIs) to raw classes.
 In ``envpool/classic_control/__init__.py``, use ``py_env`` function to
-instantiate ``CartPoleEnvSpec``, ``CartPoleDMEnvPool``, and
-``CartPoleGymEnvPool``.
+instantiate ``CartPoleEnvSpec``, ``CartPoleDMEnvPool``,
+``CartPoleGymEnvPool`` and ``CartPoleGymnasiumEnvPool``.
 
 ::
 
@@ -461,14 +461,18 @@ instantiate ``CartPoleEnvSpec``, ``CartPoleDMEnvPool``, and
 
     from .classic_control_envpool import _CartPoleEnvPool, _CartPoleEnvSpec
 
-    CartPoleEnvSpec, CartPoleDMEnvPool, CartPoleGymEnvPool = py_env(
-      _CartPoleEnvSpec, _CartPoleEnvPool
-    )
+    (
+      CartPoleEnvSpec,
+      CartPoleDMEnvPool,
+      CartPoleGymEnvPool,
+      CartPoleGymnasiumEnvPool,
+    ) = py_env(_CartPoleEnvSpec, _CartPoleEnvPool)
 
     __all__ = [
       "CartPoleEnvSpec",
       "CartPoleDMEnvPool",
       "CartPoleGymEnvPool",
+      "CartPoleGymnasiumEnvPool",
     ]
 
 
@@ -487,6 +491,7 @@ To register a task in EnvPool, you need to call ``register`` function in
       spec_cls="CartPoleEnvSpec",
       dm_cls="CartPoleDMEnvPool",
       gym_cls="CartPoleGymEnvPool",
+      gymnasium_cls="CartPoleGymnasiumEnvPool",
       max_episode_steps=200,
       reward_threshold=195.0,
     )
@@ -497,15 +502,16 @@ To register a task in EnvPool, you need to call ``register`` function in
       spec_cls="CartPoleEnvSpec",
       dm_cls="CartPoleDMEnvPool",
       gym_cls="CartPoleGymEnvPool",
+      gymnasium_cls="CartPoleGymnasiumEnvPool",
       max_episode_steps=500,
       reward_threshold=475.0,
     )
 
-``task_id``, ``import_path``, ``spec_cls``, ``dm_cls``, and ``gym_cls`` are
-required arguments. Other arguments such as ``max_episode_steps`` and
-``reward_threshold`` are env-specific. For example, if someone use
-``envpool.make("CartPole-v1")``, the ``reward_threshold`` will be set to 475.0
-at ``CartPoleEnvPool`` initialization.
+``task_id``, ``import_path``, ``spec_cls``, ``dm_cls``, ``gym_cls`` and
+``gymnasium_cls`` are required arguments. Other arguments such as
+``max_episode_steps`` and ``reward_threshold`` are env-specific. For example,
+if someone use ``envpool.make("CartPole-v1")``, the ``reward_threshold`` will
+be set to 475.0 at ``CartPoleEnvPool`` initialization.
 
 Finally, it is crucial to let the top-level module import this file. In
 ``envpool/entry.py``, add the following line:

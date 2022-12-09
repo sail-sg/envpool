@@ -30,14 +30,15 @@ class EnvRegistry:
 
   def register(
     self, task_id: str, import_path: str, spec_cls: str, dm_cls: str,
-    gym_cls: str, **kwargs: Any
+    gym_cls: str, gymnasium_cls: str, **kwargs: Any
   ) -> None:
     """Register EnvSpec and EnvPool in global EnvRegistry."""
     # assert task_id not in self.specs
     self.specs[task_id] = (import_path, spec_cls, kwargs)
     self.envpools[task_id] = {
       "dm": (import_path, dm_cls),
-      "gym": (import_path, gym_cls)
+      "gym": (import_path, gym_cls),
+      "gymnasium": (import_path, gymnasium_cls)
     }
 
   def make(self, task_id: str, env_type: str, **kwargs: Any) -> Any:
@@ -54,7 +55,7 @@ class EnvRegistry:
 
     assert task_id in self.specs, \
       f"{task_id} is not supported, `envpool.list_all_envs()` may help."
-    assert env_type in ["dm", "gym"]
+    assert env_type in ["dm", "gym", "gymnasium"]
 
     spec = self.make_spec(task_id, **kwargs)
     import_path, envpool_cls = self.envpools[task_id][env_type]
@@ -67,6 +68,10 @@ class EnvRegistry:
   def make_gym(self, task_id: str, **kwargs: Any) -> Any:
     """Make gym.Env compatible envpool."""
     return self.make(task_id, "gym", **kwargs)
+
+  def make_gymnasium(self, task_id: str, **kwargs: Any) -> Any:
+    """Make gymnasium.Env compatible envpool."""
+    return self.make(task_id, "gymnasium", **kwargs)
 
   def make_spec(self, task_id: str, **make_kwargs: Any) -> Any:
     """Make EnvSpec."""
@@ -100,5 +105,6 @@ register = registry.register
 make = registry.make
 make_dm = registry.make_dm
 make_gym = registry.make_gym
+make_gymnasium = registry.make_gymnasium
 make_spec = registry.make_spec
 list_all_envs = registry.list_all_envs

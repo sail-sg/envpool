@@ -21,6 +21,7 @@ register(
   spec_cls="CartPoleEnvSpec",
   dm_cls="CartPoleDMEnvPool",
   gym_cls="CartPoleGymEnvPool",
+  gymnasium_cls="CartPoleGymnasiumEnvPool",
   max_episode_steps=200,
   reward_threshold=195.0,
 )
@@ -31,6 +32,7 @@ register(
   spec_cls="CartPoleEnvSpec",
   dm_cls="CartPoleDMEnvPool",
   gym_cls="CartPoleGymEnvPool",
+  gymnasium_cls="CartPoleGymnasiumEnvPool",
   max_episode_steps=500,
   reward_threshold=475.0,
 )
@@ -41,6 +43,7 @@ register(
   spec_cls="PendulumEnvSpec",
   dm_cls="PendulumDMEnvPool",
   gym_cls="PendulumGymEnvPool",
+  gymnasium_cls="PendulumGymnasiumEnvPool",
   version=0,
   max_episode_steps=200,
 )
@@ -51,6 +54,7 @@ register(
   spec_cls="PendulumEnvSpec",
   dm_cls="PendulumDMEnvPool",
   gym_cls="PendulumGymEnvPool",
+  gymnasium_cls="PendulumGymnasiumEnvPool",
   version=1,
   max_episode_steps=200,
 )
@@ -61,6 +65,7 @@ register(
   spec_cls="MountainCarEnvSpec",
   dm_cls="MountainCarDMEnvPool",
   gym_cls="MountainCarGymEnvPool",
+  gymnasium_cls="MountainCarGymnasiumEnvPool",
   max_episode_steps=200,
 )
 
@@ -70,6 +75,7 @@ register(
   spec_cls="MountainCarContinuousEnvSpec",
   dm_cls="MountainCarContinuousDMEnvPool",
   gym_cls="MountainCarContinuousGymEnvPool",
+  gymnasium_cls="MountainCarContinuousGymnasiumEnvPool",
   max_episode_steps=999,
 )
 
@@ -79,5 +85,6 @@ register(
   spec_cls="AcrobotEnvSpec",
   dm_cls="AcrobotDMEnvPool",
   gym_cls="AcrobotGymEnvPool",
+  gymnasium_cls="AcrobotGymnasiumEnvPool",
   max_episode_steps=500,
 )

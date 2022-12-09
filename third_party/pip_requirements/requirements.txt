@@ -6,6 +6,7 @@ treevalue>=1.4
 dm-control>=1.0.5
 filelock
 gym>=0.26
+gymnasium>=0.26
 pygame
 box2d
 mujoco>=2.2.1,<2.3

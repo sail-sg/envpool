@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Tuple, Type
 
 import dm_env
 import gym
+import gymnasium
 import numpy as np
 import treevalue
 
@@ -106,6 +107,23 @@ def gym_spec_transform(
   )
 
 
+def gymnasium_spec_transform(
+  name: str, spec: ArraySpec, spec_type: str
+) -> gymnasium.Space:
+  """Transform ArraySpec to gymnasium.Env compatible spaces."""
+  if np.prod(np.abs(spec.shape)) == 1 and \
+      np.isclose(spec.minimum, 0) and spec.maximum < ACTION_THRESHOLD:
+    # special treatment for discrete action space
+    discrete_range = int(spec.maximum - spec.minimum + 1)
+    return gymnasium.spaces.Discrete(n=discrete_range, start=int(spec.minimum))
+  return gymnasium.spaces.Box(
+    shape=[s for s in spec.shape if s != -1],
+    dtype=spec.dtype,
+    low=spec.minimum,
+    high=spec.maximum,
+  )
+
+
 def dm_structure(root_name: str,
                  keys: List[str]) -> List[Tuple[List[str], int]]:
   """Convert flat keys into tree structure for namedtuple construction."""
@@ -127,3 +145,6 @@ def gym_structure(keys: List[str]) -> List[Tuple[List[str], int]]:
   structure = to_nested_dict(dict(zip(keys, list(range(len(keys))))))
   tree_pairs = treevalue.flatten(treevalue.TreeValue(structure))
   return tree_pairs
+
+
+gymnasium_structure = gym_structure
