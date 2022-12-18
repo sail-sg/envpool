@@ -9,9 +9,9 @@ build:test --cxxopt=-DENVPOOL_TEST --copt=-g0 --copt=-O3 --copt=-DNDEBUG --copt=
 build:release --copt=-g0 --copt=-O3 --copt=-DNDEBUG --copt=-msse --copt=-msse2 --copt=-mmmx 
 
 # modified for win32
-build:debug_win32 --cxxopt=-DENVPOOL_TEST --compilation_mode=dbg -s --cxxopt=/std:c++17 --host_cxxopt=/std:c++17 --client_env=BAZEL_CXXOPTS=/std:c++17 --compiler=clang-cl
-build:test_win32 --cxxopt=-DENVPOOL_TEST --copt=-g0 --copt=-O3 --copt=-DNDEBUG --copt=-msse --copt=-msse2 --copt=-mmmx --cxxopt=/std:c++17 --host_cxxopt=/std:c++17 --client_env=BAZEL_CXXOPTS=/std:c++17 --compiler=clang-cl
-build:release_win32 --copt=-g0 --copt=-O3 --copt=-DNDEBUG --copt=-msse --copt=-msse2 --copt=-mmmx --cxxopt=/std:c++17 --host_cxxopt=/std:c++17 --client_env=BAZEL_CXXOPTS=/std:c++17 --compiler=clang-cl
+build:debug_win32 --cxxopt=-DENVPOOL_TEST --compilation_mode=dbg -s --cxxopt=/std:c++17 --host_cxxopt=/std:c++17 --client_env=BAZEL_CXXOPTS=/std:c++17 --compiler=clang-cl --copt=-DWIN32
+build:test_win32 --cxxopt=-DENVPOOL_TEST --copt=-g0 --copt=-O3 --copt=-DNDEBUG --copt=-msse --copt=-msse2 --copt=-mmmx --cxxopt=/std:c++17 --host_cxxopt=/std:c++17 --client_env=BAZEL_CXXOPTS=/std:c++17 --compiler=clang-cl --copt=-DWIN32
+build:release_win32 --copt=-g0 --copt=-O3 --copt=-DNDEBUG --copt=-msse --copt=-msse2 --copt=-mmmx --cxxopt=/std:c++17 --host_cxxopt=/std:c++17 --client_env=BAZEL_CXXOPTS=/std:c++17 --compiler=clang-cl --copt=-DWIN32
 
 build:clang-tidy --aspects @bazel_clang_tidy//clang_tidy:clang_tidy.bzl%clang_tidy_aspect
 build:clang-tidy --@bazel_clang_tidy//:clang_tidy_config=//:clang_tidy_config
