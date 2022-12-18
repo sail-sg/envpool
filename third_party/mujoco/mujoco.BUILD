@@ -14,5 +14,8 @@ cc_library(
 
 filegroup(
     name = "mujoco_so",
-    srcs = ["lib/mujoco.lib"],
+    srcs = select({
+        "@bazel_tools//src/conditions:linux": ["lib/libmujoco.so.2.2.1"],
+        "@bazel_tools//src/conditions:windows": ["lib/mujoco.lib"],
+    }),
 )
