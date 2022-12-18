@@ -64,11 +64,19 @@ cmake(
         "-ldl",
     ],
     out_include_dir = "include/opencv4",
-    out_static_libs = [
-        "libopencv_imgproc.lib",
-        "libopencv_features2d.lib",
-        "libopencv_flann.lib",
-        "libopencv_core.lib",
-    ],
+    out_static_libs = select({
+        "@bazel_tools//src/conditions:linux": [
+            "libopencv_imgproc.lib",
+            "libopencv_features2d.lib",
+            "libopencv_flann.lib",
+            "libopencv_core.lib",
+        ],
+        "@bazel_tools//src/conditions:windows": [
+            "libopencv_imgproc.a",
+            "libopencv_features2d.a",
+            "libopencv_flann.a",
+            "libopencv_core.a",
+        ],
+    }),
     visibility = ["//visibility:public"],
 )
