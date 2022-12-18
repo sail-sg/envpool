@@ -18,7 +18,7 @@
 #define ENVPOOL_CORE_XLA_H_
 
 
-#include "cuda_runtime_api.h"
+#include <cuda_runtime_api.h>
 
 #include <cstdint>
 #include <memory>
