@@ -18,6 +18,7 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 load("//third_party/cuda:cuda.bzl", "cuda_configure")
 
+
 def workspace():
     """Load requested packages."""
     maybe(
@@ -316,17 +317,30 @@ def workspace():
         build_file = "//third_party/vizdoom_extra_maps:vizdoom_extra_maps.BUILD",
     )
 
+    # mujoco linux
+    
     maybe(
         http_archive,
-        name = "mujoco",
+        name = "mujoco_linux",
         sha256 = "d1cb3a720546240d894cd315b7fd358a2b96013a1f59b6d718036eca6f6edac2",
         strip_prefix = "mujoco-2.2.1",
         urls = [
-            "https://github.com/deepmind/mujoco/releases/download/2.2.1/mujoco-2.2.1-linux-x86_64.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/mujoco/mujoco-2.2.1-linux-x86_64.tar.gz",
-        ],
+                "https://github.com/deepmind/mujoco/releases/download/2.2.1/mujoco-2.2.1-linux-x86_64.tar.gz",
+                "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/mujoco/mujoco-2.2.1-linux-x86_64.tar.gz",
+            ],
         build_file = "//third_party/mujoco:mujoco.BUILD",
     )
+
+
+    # mujoco windows
+    maybe(
+        http_archive,
+        name = "mujoco_windows",
+        sha256 = "e0068d25fdb00ec3afa53e429b5eff438d222455603bafa080086abaf11fe16f",
+        urls = ["https://github.com/deepmind/mujoco/releases/download/2.2.1/mujoco-2.2.1-windows-x86_64.zip"],
+        build_file = "//third_party/mujoco:mujoco.BUILD",
+    )
+    
 
     maybe(
         http_archive,

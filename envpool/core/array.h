@@ -156,10 +156,10 @@ class Array {
    * memory of this Array.
    */
   template <typename T>
-  void Assign(const T* buff, std::size_t sz) const {
+  void Assign(const T buff, std::size_t sz) const {
     DCHECK_EQ(sz, size) << " assignment size mismatch";
     DCHECK_EQ(sizeof(T), element_size) << " element size mismatch";
-    std::memcpy(ptr_.get(), buff, sz * sizeof(T));
+    std::memcpy(ptr_.get(), &buff, sz * sizeof(T));
   }
 
   /**

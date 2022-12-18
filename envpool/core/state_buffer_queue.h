@@ -83,7 +83,10 @@ class StateBufferQueue {
     }
     std::size_t processor_count = std::thread::hardware_concurrency();
     // hardcode here :(
-    std::size_t create_buffer_thread_num = std::max(1UL, processor_count / 64);
+    std::size_t create_buffer_thread_num = 1;
+    if (processor_count / 64 > create_buffer_thread_num){
+      create_buffer_thread_num = processor_count / 64;
+    }
     for (std::size_t i = 0; i < create_buffer_thread_num; ++i) {
       create_buffer_thread_.emplace_back(std::thread([&]() {
         while (true) {

@@ -43,7 +43,7 @@ class MujocoEnv {
  public:
   MujocoEnv(const std::string& xml, int frame_skip, bool post_constraint,
             int max_episode_steps)
-      : model_(mj_loadXML(xml.c_str(), nullptr, error_.begin(), 1000)),
+      : model_(mj_loadXML(xml.c_str(), nullptr, &error_[0], 1000)),
         data_(mj_makeData(model_)),
         init_qpos_(new mjtNum[model_->nq]),
         init_qvel_(new mjtNum[model_->nv]),

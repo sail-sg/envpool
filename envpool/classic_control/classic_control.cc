@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+# define M_PI  3.14159265358979323846 //GNU extension is not loaded on MinGW
 #include "envpool/classic_control/acrobot.h"
 #include "envpool/classic_control/cartpole.h"
 #include "envpool/classic_control/mountain_car.h"

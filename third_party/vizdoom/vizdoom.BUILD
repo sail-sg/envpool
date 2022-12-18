@@ -211,7 +211,6 @@ cc_library(
     copts = [
         "-DNEED_ITOA=1",
         "-Wall",
-        "-Wno-pointer-sign",
         "-Wno-uninitialized",
         "-Wno-unused-but-set-variable",
         "-include $(execpath @glibc_version_header//:glibc_2_17)",

@@ -106,14 +106,16 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
     if (spec.config["thread_affinity_offset"_] >= 0) {
       std::size_t thread_affinity_offset =
           spec.config["thread_affinity_offset"_];
-      for (std::size_t tid = 0; tid < num_threads_; ++tid) {
-        cpu_set_t cpuset;
-        CPU_ZERO(&cpuset);
-        std::size_t cid = (thread_affinity_offset + tid) % processor_count;
-        CPU_SET(cid, &cpuset);
-        pthread_setaffinity_np(workers_[tid].native_handle(), sizeof(cpu_set_t),
-                               &cpuset);
-      }
+
+      // The following does not work under Windows. Need to find alternatives.
+      // for (std::size_t tid = 0; tid < num_threads_; ++tid) {
+      //   cpu_set_t cpuset;
+      //   CPU_ZERO(&cpuset);
+      //   std::size_t cid = (thread_affinity_offset + tid) % processor_count;
+      //   CPU_SET(cid, &cpuset);
+      //   pthread_setaffinity_np(workers_[tid].native_handle(), sizeof(cpu_set_t),
+      //                          &cpuset);
+      // }
     }
   }
 
