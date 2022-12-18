@@ -19,7 +19,11 @@ genrule(
 
 genrule(
     name = "gen_mujoco_so",
-    srcs = ["@mujoco//:mujoco_so"],
+    srcs = select({
+        "@bazel_tools//src/conditions:linux": ["@mujoco_linux//:mujoco_so"],
+        "@bazel_tools//src/conditions:windows": ["@mujoco_windows//:mujoco_so"],
+    }),
+    
     outs = ["libmujoco.so.2.2.1"],
     cmd = "cp $< $@",
 )
@@ -46,9 +50,12 @@ cc_library(
         ":gen_mujoco_gym_xml",
     ],
     deps = [
-        "//envpool/core:async_envpool",
-        "@mujoco//:mujoco_lib",
-    ],
+        "//envpool/core:async_envpool", 
+    ] + select({
+        "@bazel_tools//src/conditions:linux": ["@mujoco_linux//:mujoco_lib"],
+        "@bazel_tools//src/conditions:windows": ["@mujoco_windows//:mujoco_lib"],
+    }),
+
 )
 
 pybind_extension(
