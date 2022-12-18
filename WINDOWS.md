@@ -20,21 +20,25 @@ Note that this merge request only intends to work on Windows. I haven't write co
 
 
 
-## Can build
+## Run Tests
 -  Dummy  
-```bazel build --test_output=all //envpool/dummy:dummy --config=debug_win32 ```  
-```bazel build --test_output=all //envpool/dummy:dummy_envpool_test --config=debug_win32```  
+```bazel build --test_output=all //envpool/dummy:dummy --config=debug --config=win32 ```  
+```bazel build --test_output=all //envpool/dummy:dummy_envpool_test --config=debug --config=win32```  
 
 - Utils
 - Box2d  
-```bazel build --test_output=all //envpool/box2d:box2d_deterministic_test --config=debug_win32```
+```bazel build --test_output=all //envpool/box2d:box2d --config=debug --config=win32```  
+```bazel build --test_output=all //envpool/box2d:box2d_deterministic_test --config=debug --config=win32```
 - Classic Control
 - Toy_text 
-- Mujoco
+- Mujoco  
+```bazel build --test_output=all //envpool/mujoco:mujoco_dmc_env --config=debug --config=win32```  
+```bazel build --test_output=all //envpool/mujoco:mujoco_dmc --config=debug a--config=win32```  
+```bazel build --test_output=all //envpool/mujoco:mujoco_gym_env --config=debug --config=win32```  
+```bazel build --test_output=all //envpool/mujoco:mujoco_gym --config=debug --config=win32```  
 - Atari:atari_env
 
 
 ## TODO
 - Atari:atari (Stuck on building opencv)
-- Minor Format and Bug fix
-- Windows/Linux Integration and submit (Working on this)
+- Make a windows docker
