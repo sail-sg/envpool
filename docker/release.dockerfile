@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM nvidia/cuda:11.3.1-cudnn8-devel-ubuntu16.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG HOME=/root
