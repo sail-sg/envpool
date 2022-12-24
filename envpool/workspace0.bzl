@@ -45,11 +45,11 @@ def workspace():
     maybe(
         http_archive,
         name = "pybind11_bazel",
-        sha256 = "fec6281e4109115c5157ca720b8fe20c8f655f773172290b03f57353c11869c2",
-        strip_prefix = "pybind11_bazel-72cbbf1fbc830e487e3012862b7b720001b70672",
+        sha256 = "a185aa68c93b9f62c80fcb3aadc3c83c763854750dc3f38be1dadcb7be223837",
+        strip_prefix = "pybind11_bazel-faf56fb3df11287f26dbc66fdedf60a2fc2c6631",
         urls = [
-            "https://github.com/pybind/pybind11_bazel/archive/72cbbf1fbc830e487e3012862b7b720001b70672.zip",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pybind/pybind11_bazel/72cbbf1fbc830e487e3012862b7b720001b70672.zip",
+            "https://github.com/pybind/pybind11_bazel/archive/faf56fb3df11287f26dbc66fdedf60a2fc2c6631.zip",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pybind/pybind11_bazel/faf56fb3df11287f26dbc66fdedf60a2fc2c6631.zip",
         ],
     )
 
@@ -57,11 +57,11 @@ def workspace():
         http_archive,
         name = "pybind11",
         build_file = "@pybind11_bazel//:pybind11.BUILD",
-        sha256 = "6bd528c4dbe2276635dc787b6b1f2e5316cf6b49ee3e150264e455a0d68d19c1",
-        strip_prefix = "pybind11-2.9.2",
+        sha256 = "93bd1e625e43e03028a3ea7389bba5d3f9f2596abc074b068e70f4ef9b1314ae",
+        strip_prefix = "pybind11-2.10.2",
         urls = [
-            "https://github.com/pybind/pybind11/archive/refs/tags/v2.9.2.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pybind/pybind11/v2.9.2.tar.gz",
+            "https://github.com/pybind/pybind11/archive/refs/tags/v2.10.2.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pybind/pybind11/v2.10.2.tar.gz",
         ],
     )
 
