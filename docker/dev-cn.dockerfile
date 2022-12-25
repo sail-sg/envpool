@@ -18,7 +18,8 @@ RUN chmod +x bazel-6.0.0-linux-x86_64
 RUN mkdir -p $HOME/go/bin
 RUN mv bazel-6.0.0-linux-x86_64 $HOME/go/bin/bazel
 RUN go install github.com/bazelbuild/buildtools/buildifier@latest
-RUN pip3 install --upgrade pip isort yapf cpplint flake8 flake8_bugbear mypy && rm -rf ~/.pip/cache
+RUN bazel info
+RUN pip3 install --upgrade pip isort yapf cpplint flake8 flake8_bugbear mypy
 
 WORKDIR /app
 COPY . .
