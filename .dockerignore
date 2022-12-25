@@ -151,4 +151,3 @@ MUJOCO_LOG.TXT
 
 # docker image build special
 docker/
-Makefile
