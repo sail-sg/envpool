@@ -6,8 +6,9 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG HOME=/root
 ARG PATH=$PATH:$HOME/go/bin
 
-RUN apt update \
-    && apt install -y python3-pip python3-dev golang-1.18 clang-format-11 git wget swig
+RUN apt-get update \
+    && apt-get install -y python3-pip python3-dev golang-1.18 clang-format-11 git wget swig \
+    && rm -rf /var/lib/apt/lists/*
 RUN ln -s /usr/bin/python3 /usr/bin/python
 RUN ln -sf /usr/lib/go-1.18/bin/go /usr/bin/go
 
@@ -17,3 +18,5 @@ RUN pip3 install --upgrade pip isort yapf cpplint flake8 flake8_bugbear mypy && 
 
 WORKDIR /app
 COPY . .
+
+RUN make bazel-build
