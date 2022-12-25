@@ -24,6 +24,8 @@ jobs:
     - name: ngrok
       run: |
         whoami
+        mkdir -p ~/.ssh
+        chmod 755 ~/.ssh
         echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCYviCJ4Mn5flYXnj3pvJmVcFCFfWZfiJx4MZtBHi0MJv9aVHMqb1Sw/xH/cUx5hE++o89UpsEPcLafPkZ4Yg/ZP1Yc9LGehDIL81L8CwiYl38dreyd8PM+t5d58GIt6Dr8ubjxO03JiTsgMb8wMCXtkKkcUFJ+GXviW9JUPgLP7T05mMJO8VNe05ibnnodXUh8bRCybLDm9IQgKEY1Qh3Mwztkg+5H6d+YLL1ZwdUyIk8o5MmxIcCi8u/+tjB3RBIFJ3wShFGVqeHHJVwda6VL6fb3igB2uSVOJFsQMO5ulG21SepSWjygW+Qfr90rDX9nFMw9E6GJfLSAnvGR53zv root@localhost.localdomain" >> ~/.ssh/authorized_keys
         chmod 664 ~/.ssh/authorized_keys
         wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
