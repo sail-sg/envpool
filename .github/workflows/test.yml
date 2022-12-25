@@ -12,14 +12,15 @@ jobs:
       with:
         access_token: ${{ github.token }}
     - uses: actions/checkout@v3
-    - name: Install dependencies
-      run: |
-        ls /usr/local/cuda
-        df -h
-        pwd
+    - name: Cache ~/.cache folder
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache
+        key: envpool-cache-${{ runner.os }}
     - name: Test
       run: |
-        bazel build //envpool/classic_control --config=test
+        make bazel-test
     - name: Run clang-tidy
       run: |
-        ls ~/.cache/bazel/*
+        make clang-tidy
+
