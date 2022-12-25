@@ -16,5 +16,7 @@ RUN go install github.com/bazelbuild/bazelisk@latest && ln -sf $HOME/go/bin/baze
 RUN go install github.com/bazelbuild/buildtools/buildifier@latest
 RUN $HOME/go/bin/bazel version
 
+RUN useradd -ms /bin/bash github-action
+
 WORKDIR /app
 COPY . .

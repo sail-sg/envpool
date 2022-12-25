@@ -8,14 +8,15 @@ WORKDIR $HOME
 
 # install base dependencies
 
-RUN apt-get update && apt-get install -y software-properties-common && add-apt-repository ppa:ubuntu-toolchain-r/test && add-apt-repository ppa:deadsnakes/ppa
+RUN apt-get update && apt-get install -y software-properties-common && add-apt-repository ppa:ubuntu-toolchain-r/test
+
 RUN apt-get update \
     && apt-get install -y git curl wget gcc-9 g++-9 build-essential patchelf make libssl-dev zlib1g-dev \
     libbz2-dev libreadline-dev libsqlite3-dev llvm \
-    libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev swig \
-    python3.7 python3.8 python3.9 python3.10 \
-    python3.7-dev python3.8-dev python3.9-dev python3.10-dev \
-    python3.8-distutils python3.9-distutils python3.10-distutils
+    libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev swig
+
+RUN curl https://pyenv.run | sh
+
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
 

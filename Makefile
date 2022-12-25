@@ -1,15 +1,16 @@
-SHELL           = /bin/bash
-PROJECT_NAME    = envpool
-PROJECT_FOLDER  = $(PROJECT_NAME) third_party examples benchmark
-PYTHON_FILES    = $(shell find . -type f -name "*.py")
-CPP_FILES       = $(shell find $(PROJECT_NAME) -type f -name "*.h" -o -name "*.cc")
-BAZEL_FILES     = $(shell find . -type f -name "*BUILD" -o -name "*.bzl")
-COMMIT_HASH     = $(shell git log -1 --format=%h)
-COPYRIGHT       = "Garena Online Private Limited"
-BAZELOPT        =
-DATE            = $(shell date "+%Y-%m-%d")
-DOCKER_TAG      = $(DATE)-$(COMMIT_HASH)
-PATH            := $(HOME)/go/bin:$(PATH)
+SHELL          = /bin/bash
+PROJECT_NAME   = envpool
+PROJECT_FOLDER = $(PROJECT_NAME) third_party examples benchmark
+PYTHON_FILES   = $(shell find . -type f -name "*.py")
+CPP_FILES      = $(shell find $(PROJECT_NAME) -type f -name "*.h" -o -name "*.cc")
+BAZEL_FILES    = $(shell find . -type f -name "*BUILD" -o -name "*.bzl")
+COMMIT_HASH    = $(shell git log -1 --format=%h)
+COPYRIGHT      = "Garena Online Private Limited"
+BAZELOPT       =
+DATE           = $(shell date "+%Y-%m-%d")
+DOCKER_TAG     = $(DATE)-$(COMMIT_HASH)
+DOCKER_USER    = "trinkle23897"
+PATH           := $(HOME)/go/bin:$(PATH)
 
 # installation
 
@@ -149,8 +150,11 @@ docker-ci:
 	echo successfully build docker image with tag $(PROJECT_NAME):$(DOCKER_TAG)
 
 docker-ci-push: docker-ci
-	docker tag $(PROJECT_NAME):$(DOCKER_TAG) trinkle23897/$(PROJECT_NAME):$(DOCKER_TAG)
-	docker push trinkle23897/$(PROJECT_NAME):$(DOCKER_TAG)
+	docker tag $(PROJECT_NAME):$(DOCKER_TAG) $(DOCKER_USER)/$(PROJECT_NAME):$(DOCKER_TAG)
+	docker push $(DOCKER_USER)/$(PROJECT_NAME):$(DOCKER_TAG)
+
+docker-ci-launch: docker-ci
+	docker run --network=host -v /home/github-action:/home/github-action -it $(PROJECT_NAME):$(DOCKER_TAG) bash
 
 docker-dev: docker-ci
 	docker run --network=host -v /:/host -it $(PROJECT_NAME):$(DOCKER_TAG) bash

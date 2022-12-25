@@ -20,5 +20,7 @@ RUN mv bazel-6.0.0-linux-x86_64 $HOME/go/bin/bazel
 RUN go install github.com/bazelbuild/buildtools/buildifier@latest
 RUN $HOME/go/bin/bazel version
 
+RUN useradd -ms /bin/bash github-action
+
 WORKDIR /app
 COPY . .
