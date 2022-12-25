@@ -1,15 +1,15 @@
-SHELL          = /bin/bash
-PROJECT_NAME   = envpool
-PROJECT_FOLDER = $(PROJECT_NAME) third_party examples benchmark
-PYTHON_FILES   = $(shell find . -type f -name "*.py")
-CPP_FILES      = $(shell find $(PROJECT_NAME) -type f -name "*.h" -o -name "*.cc")
-BAZEL_FILES    = $(shell find . -type f -name "*BUILD" -o -name "*.bzl")
-COMMIT_HASH    = $(shell git log -1 --format=%h)
-COPYRIGHT      = "Garena Online Private Limited"
-BAZELOPT       =
-DATE           = $(shell date "+%Y-%m-%d")
-DOCKER_TAG     = $(DATE)-$(COMMIT_HASH)
-PATH           := $(HOME)/go/bin:$(PATH)
+SHELL           = /bin/bash
+PROJECT_NAME    = envpool
+PROJECT_FOLDER  = $(PROJECT_NAME) third_party examples benchmark
+PYTHON_FILES    = $(shell find . -type f -name "*.py")
+CPP_FILES       = $(shell find $(PROJECT_NAME) -type f -name "*.h" -o -name "*.cc")
+BAZEL_FILES     = $(shell find . -type f -name "*BUILD" -o -name "*.bzl")
+COMMIT_HASH     = $(shell git log -1 --format=%h)
+COPYRIGHT       = "Garena Online Private Limited"
+BAZELOPT        =
+DATE            = $(shell date "+%Y-%m-%d")
+DOCKER_TAG      = $(DATE)-$(COMMIT_HASH)
+PATH            := $(HOME)/go/bin:$(PATH)
 
 # installation
 
@@ -147,6 +147,10 @@ format: py-format-install clang-format-install buildifier-install addlicense-ins
 docker-ci:
 	docker build --network=host -t $(PROJECT_NAME):$(DOCKER_TAG) -f docker/dev.dockerfile .
 	echo successfully build docker image with tag $(PROJECT_NAME):$(DOCKER_TAG)
+
+docker-ci-push: docker-ci
+	docker tag $(PROJECT_NAME):$(DOCKER_TAG) trinkle23897/$(PROJECT_NAME):$(DOCKER_TAG)
+	docker push trinkle23897/$(PROJECT_NAME):$(DOCKER_TAG)
 
 docker-dev: docker-ci
 	docker run --network=host -v /:/host -it $(PROJECT_NAME):$(DOCKER_TAG) bash
