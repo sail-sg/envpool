@@ -8,6 +8,7 @@ COMMIT_HASH    = $(shell git log -1 --format=%h)
 COPYRIGHT      = "Garena Online Private Limited"
 BAZELOPT       =
 DATE           = $(shell date "+%Y-%m-%d")
+DOCKER_TAG     = $(DATE)-$(COMMIT_HASH)
 PATH           := $(HOME)/go/bin:$(PATH)
 
 # installation
@@ -143,25 +144,24 @@ format: py-format-install clang-format-install buildifier-install addlicense-ins
 
 # Build docker images
 
-docker-dev:
-	docker build --network=host -t $(PROJECT_NAME):$(DATE)-$(COMMIT_HASH) -f docker/dev.dockerfile .
-	docker run --network=host -v /:/host -it $(PROJECT_NAME):$(COMMIT_HASH) bash
-	echo successfully build docker image with tag $(PROJECT_NAME):$(COMMIT_HASH)
+docker-ci:
+	docker build --network=host -t $(PROJECT_NAME):$(DOCKER_TAG) -f docker/dev.dockerfile .
+	echo successfully build docker image with tag $(PROJECT_NAME):$(DOCKER_TAG)
+
+docker-dev: docker-ci
+	docker run --network=host -v /:/host -it $(PROJECT_NAME):$(DOCKER_TAG) bash
 
 # for mainland China
 docker-dev-cn:
-	docker build --network=host -t $(PROJECT_NAME):$(DATE)-$(COMMIT_HASH) -f docker/dev-cn.dockerfile .
-	docker run --network=host -v /:/host -it $(PROJECT_NAME):$(COMMIT_HASH) bash
-	echo successfully build docker image with tag $(PROJECT_NAME):$(COMMIT_HASH)
+	docker build --network=host -t $(PROJECT_NAME):$(DOCKER_TAG) -f docker/dev-cn.dockerfile .
+	echo successfully build docker image with tag $(PROJECT_NAME):$(DOCKER_TAG)
+	docker run --network=host -v /:/host -it $(PROJECT_NAME):$(DOCKER_TAG) bash
 
 docker-release:
-	docker build --network=host -t $(PROJECT_NAME)-release:$(DATE)-$(COMMIT_HASH) -f docker/release.dockerfile .
+	docker build --network=host -t $(PROJECT_NAME)-release:$(DOCKER_TAG) -f docker/release.dockerfile .
+	echo successfully build docker image with tag $(PROJECT_NAME)-release:$(DOCKER_TAG)
 	mkdir -p wheelhouse
-	docker run --network=host -v `pwd`/wheelhouse:/whl -it $(PROJECT_NAME)-release:$(COMMIT_HASH) bash -c "cp wheelhouse/* /whl"
-	echo successfully build docker image with tag $(PROJECT_NAME)-release:$(COMMIT_HASH)
-
-docker-ci:
-	docker build --network=host -t $(PROJECT_NAME):$(DATE)-$(COMMIT_HASH) -f docker/dev.dockerfile .
+	docker run --network=host -v `pwd`/wheelhouse:/whl -it $(PROJECT_NAME)-release:$(DOCKER_TAG) bash -c "cp wheelhouse/* /whl"
 
 pypi-wheel: auditwheel-install bazel-release
 	ls dist/*.whl -Art | tail -n 1 | xargs auditwheel repair --plat manylinux_2_17_x86_64
