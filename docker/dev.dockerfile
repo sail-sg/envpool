@@ -14,7 +14,7 @@ RUN ln -sf /usr/lib/go-1.18/bin/go /usr/bin/go
 
 RUN go install github.com/bazelbuild/bazelisk@latest && ln -sf $HOME/go/bin/bazelisk $HOME/go/bin/bazel
 RUN go install github.com/bazelbuild/buildtools/buildifier@latest
-RUN bazel info
+RUN $HOME/go/bin/bazel info
 RUN pip3 install --upgrade pip isort yapf cpplint flake8 flake8_bugbear mypy
 
 WORKDIR /app
