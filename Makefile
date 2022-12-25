@@ -7,6 +7,7 @@ BAZEL_FILES    = $(shell find . -type f -name "*BUILD" -o -name "*.bzl")
 COMMIT_HASH    = $(shell git log -1 --format=%h)
 COPYRIGHT      = "Garena Online Private Limited"
 BAZELOPT       =
+DATE           = $(shell date "+%Y-%m-%d")
 PATH           := $(HOME)/go/bin:$(PATH)
 
 # installation
@@ -143,21 +144,24 @@ format: py-format-install clang-format-install buildifier-install addlicense-ins
 # Build docker images
 
 docker-dev:
-	docker build --network=host -t $(PROJECT_NAME):$(COMMIT_HASH) -f docker/dev.dockerfile .
+	docker build --network=host -t $(PROJECT_NAME):$(DATE)-$(COMMIT_HASH) -f docker/dev.dockerfile .
 	docker run --network=host -v /:/host -it $(PROJECT_NAME):$(COMMIT_HASH) bash
 	echo successfully build docker image with tag $(PROJECT_NAME):$(COMMIT_HASH)
 
 # for mainland China
 docker-dev-cn:
-	docker build --network=host -t $(PROJECT_NAME):$(COMMIT_HASH) -f docker/dev-cn.dockerfile .
+	docker build --network=host -t $(PROJECT_NAME):$(DATE)-$(COMMIT_HASH) -f docker/dev-cn.dockerfile .
 	docker run --network=host -v /:/host -it $(PROJECT_NAME):$(COMMIT_HASH) bash
 	echo successfully build docker image with tag $(PROJECT_NAME):$(COMMIT_HASH)
 
 docker-release:
-	docker build --network=host -t $(PROJECT_NAME)-release:$(COMMIT_HASH) -f docker/release.dockerfile .
+	docker build --network=host -t $(PROJECT_NAME)-release:$(DATE)-$(COMMIT_HASH) -f docker/release.dockerfile .
 	mkdir -p wheelhouse
 	docker run --network=host -v `pwd`/wheelhouse:/whl -it $(PROJECT_NAME)-release:$(COMMIT_HASH) bash -c "cp wheelhouse/* /whl"
 	echo successfully build docker image with tag $(PROJECT_NAME)-release:$(COMMIT_HASH)
+
+docker-ci:
+	docker build --network=host -t $(PROJECT_NAME):$(DATE)-$(COMMIT_HASH) -f docker/dev.dockerfile .
 
 pypi-wheel: auditwheel-install bazel-release
 	ls dist/*.whl -Art | tail -n 1 | xargs auditwheel repair --plat manylinux_2_17_x86_64

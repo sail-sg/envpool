@@ -22,5 +22,3 @@ RUN pip3 install --upgrade pip isort yapf cpplint flake8 flake8_bugbear mypy && 
 
 WORKDIR /app
 COPY . .
-
-RUN make bazel-build
