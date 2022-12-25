@@ -154,7 +154,7 @@ docker-ci-push: docker-ci
 	docker push $(DOCKER_USER)/$(PROJECT_NAME):$(DOCKER_TAG)
 
 docker-ci-launch: docker-ci
-	docker run --network=host -v /home/github-action:/home/github-action -it $(PROJECT_NAME):$(DOCKER_TAG) bash
+	docker run --network=host -v /home/ubuntu:/home/github-action -it $(PROJECT_NAME):$(DOCKER_TAG) bash
 
 docker-dev: docker-ci
 	docker run --network=host -v /:/host -it $(PROJECT_NAME):$(DOCKER_TAG) bash
