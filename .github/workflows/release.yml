@@ -9,10 +9,11 @@ on: [push, pull_request]
 jobs:
   release:
     runs-on: ubuntu-latest
-    container: trinkle23897/envpool-release:py${{ matrix.python-version }}-2022-12-26-c00ae05
+    container: trinkle23897/envpool-release:py${{ matrix.python-version }}-2022-12-26-91769ca
     strategy:
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10']
+        python-version: ['3.7']
+        # python-version: ['3.7', '3.8', '3.9', '3.10']
     steps:
     - name: Cancel previous run
       uses: styfle/cancel-workflow-action@0.11.0
