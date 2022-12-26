@@ -35,7 +35,7 @@ RUN bazel version
 
 RUN wget https://www.openssl.org/source/openssl-1.1.1s.tar.gz
 RUN tar xf openssl-1.1.1s.tar.gz
-RUN cd openssl-1.1.1s
+WORKDIR $HOME/openssl-1.1.1s
 RUN ./config no-shared
 RUN make -j
 RUN make install
