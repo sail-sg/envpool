@@ -2,7 +2,6 @@ FROM nvidia/cuda:11.3.1-cudnn8-devel-ubuntu16.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG HOME=/root
-ARG PYVERSION
 ENV PATH=$HOME/go/bin:$HOME/.pyenv/shims:$HOME/.pyenv/bin:$PATH
 
 WORKDIR $HOME
@@ -33,6 +32,8 @@ RUN go install github.com/bazelbuild/bazelisk@latest && ln -sf $HOME/go/bin/baze
 RUN bazel version
 
 # install python
+
+ARG PYVERSION
 
 RUN pyenv install $PYVERSION-dev
 RUN pyenv global $PYVERSION-dev
