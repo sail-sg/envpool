@@ -172,29 +172,29 @@ docker-release:
 	docker run --network=host -v `pwd`/wheelhouse:/whl -it $(PROJECT_NAME)-release:$(DOCKER_TAG) bash -c "cp wheelhouse/* /whl"
 
 docker-release-py37:
-	docker build --build-arg PYVERSION=3.7 --network=host -t $(PROJECT_NAME)-release:py37-$(DOCKER_TAG) -f docker/release.dockerfile .
-	docker tag $(PROJECT_NAME)-release:py37-$(DOCKER_TAG) $(DOCKER_USER)/$(PROJECT_NAME)-release:py37-$(DOCKER_TAG)
-	docker push $(DOCKER_USER)/$(PROJECT_NAME)-release:py37-$(DOCKER_TAG)
+	docker build --build-arg PYVERSION=3.7 --network=host -t $(PROJECT_NAME)-release:py3.7-$(DOCKER_TAG) -f docker/release.dockerfile .
+	docker tag $(PROJECT_NAME)-release:py3.7-$(DOCKER_TAG) $(DOCKER_USER)/$(PROJECT_NAME)-release:py3.7-$(DOCKER_TAG)
+	docker push $(DOCKER_USER)/$(PROJECT_NAME)-release:py3.7-$(DOCKER_TAG)
 
 docker-release-py38:
-	docker build --build-arg PYVERSION=3.8 --network=host -t $(PROJECT_NAME)-release:py38-$(DOCKER_TAG) -f docker/release.dockerfile .
-	docker tag $(PROJECT_NAME)-release:py38-$(DOCKER_TAG) $(DOCKER_USER)/$(PROJECT_NAME)-release:py38-$(DOCKER_TAG)
-	docker push $(DOCKER_USER)/$(PROJECT_NAME)-release:py38-$(DOCKER_TAG)
+	docker build --build-arg PYVERSION=3.8 --network=host -t $(PROJECT_NAME)-release:py3.8-$(DOCKER_TAG) -f docker/release.dockerfile .
+	docker tag $(PROJECT_NAME)-release:py3.8-$(DOCKER_TAG) $(DOCKER_USER)/$(PROJECT_NAME)-release:py3.8-$(DOCKER_TAG)
+	docker push $(DOCKER_USER)/$(PROJECT_NAME)-release:py3.8-$(DOCKER_TAG)
 
 docker-release-py39:
-	docker build --build-arg PYVERSION=3.9 --network=host -t $(PROJECT_NAME)-release:py39-$(DOCKER_TAG) -f docker/release.dockerfile .
-	docker tag $(PROJECT_NAME)-release:py39-$(DOCKER_TAG) $(DOCKER_USER)/$(PROJECT_NAME)-release:py39-$(DOCKER_TAG)
-	docker push $(DOCKER_USER)/$(PROJECT_NAME)-release:py39-$(DOCKER_TAG)
+	docker build --build-arg PYVERSION=3.9 --network=host -t $(PROJECT_NAME)-release:py3.9-$(DOCKER_TAG) -f docker/release.dockerfile .
+	docker tag $(PROJECT_NAME)-release:py3.9-$(DOCKER_TAG) $(DOCKER_USER)/$(PROJECT_NAME)-release:py3.9-$(DOCKER_TAG)
+	docker push $(DOCKER_USER)/$(PROJECT_NAME)-release:py3.9-$(DOCKER_TAG)
 
 docker-release-py310:
-	docker build --build-arg PYVERSION=3.10 --network=host -t $(PROJECT_NAME)-release:py310-$(DOCKER_TAG) -f docker/release.dockerfile .
-	docker tag $(PROJECT_NAME)-release:py310-$(DOCKER_TAG) $(DOCKER_USER)/$(PROJECT_NAME)-release:py310-$(DOCKER_TAG)
-	docker push $(DOCKER_USER)/$(PROJECT_NAME)-release:py310-$(DOCKER_TAG)
+	docker build --build-arg PYVERSION=3.10 --network=host -t $(PROJECT_NAME)-release:py3.10-$(DOCKER_TAG) -f docker/release.dockerfile .
+	docker tag $(PROJECT_NAME)-release:py3.10-$(DOCKER_TAG) $(DOCKER_USER)/$(PROJECT_NAME)-release:py3.10-$(DOCKER_TAG)
+	docker push $(DOCKER_USER)/$(PROJECT_NAME)-release:py3.10-$(DOCKER_TAG)
 
 docker-release-py311:
-	docker build --build-arg PYVERSION=3.11 --network=host -t $(PROJECT_NAME)-release:py311-$(DOCKER_TAG) -f docker/release.dockerfile .
-	docker tag $(PROJECT_NAME)-release:py311-$(DOCKER_TAG) $(DOCKER_USER)/$(PROJECT_NAME)-release:py311-$(DOCKER_TAG)
-	docker push $(DOCKER_USER)/$(PROJECT_NAME)-release:py311-$(DOCKER_TAG)
+	docker build --build-arg PYVERSION=3.11 --network=host -t $(PROJECT_NAME)-release:py3.11-$(DOCKER_TAG) -f docker/release.dockerfile .
+	docker tag $(PROJECT_NAME)-release:py3.11-$(DOCKER_TAG) $(DOCKER_USER)/$(PROJECT_NAME)-release:py3.11-$(DOCKER_TAG)
+	docker push $(DOCKER_USER)/$(PROJECT_NAME)-release:py3.11-$(DOCKER_TAG)
 
 docker-release-push: docker-release-py37 docker-release-py38 docker-release-py39 docker-release-py310 docker-release-py311
 
