@@ -2,7 +2,7 @@ FROM nvidia/cuda:11.3.1-cudnn8-devel-ubuntu16.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG HOME=/root
-ENV PATH=$HOME/go/bin:$HOME/.pyenv/bin:$PATH
+ENV PATH=$HOME/go/bin:$PATH
 
 WORKDIR $HOME
 
@@ -33,6 +33,9 @@ RUN bazel version
 
 # install python
 
+RUN echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
+RUN echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
+RUN echo 'eval "$(pyenv init -)"' >> ~/.bashrc
 RUN pyenv install 3.7-dev
 RUN pyenv global 3.7-dev
 
