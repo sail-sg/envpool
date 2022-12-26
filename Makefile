@@ -172,7 +172,7 @@ docker-release:
 	docker run --network=host -v `pwd`/wheelhouse:/whl -it $(PROJECT_NAME)-release:$(DOCKER_TAG) bash -c "cp wheelhouse/* /whl"
 
 docker-release-py37:
-	PYVERSION=7 docker build --network=host -t $(PROJECT_NAME)-release:py37-$(DOCKER_TAG) -f docker/release.dockerfile .
+	docker build --build-arg PYVERSION=7 --network=host -t $(PROJECT_NAME)-release:py37-$(DOCKER_TAG) -f docker/release.dockerfile .
 	echo successfully build docker image with tag $(PROJECT_NAME)-release:py37-$(DOCKER_TAG)
 	mkdir -p wheelhouse
 	docker run --network=host -v `pwd`/wheelhouse:/whl -it $(PROJECT_NAME)-release:py37-$(DOCKER_TAG) bash -c "cp wheelhouse/* /whl"
