@@ -37,7 +37,9 @@ RUN bazel version
 RUN pyenv install $PYVERSION-dev
 RUN pyenv global $PYVERSION-dev
 
-WORKDIR /app
+# workdir is github action container's path
+
+WORKDIR /__w/envpool/envpool/
 COPY . .
 
 # compile and test release wheels
