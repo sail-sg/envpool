@@ -36,7 +36,6 @@ RUN bazel version
 RUN echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
 RUN echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
 RUN echo 'eval "$(pyenv init -)"' >> ~/.bashrc
-RUN source ~/.bashrc
 RUN pyenv install 3.7-dev
 RUN pyenv global 3.7-dev
 
