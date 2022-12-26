@@ -58,7 +58,7 @@ doc-install:
 	$(call check_install_extra, sphinxcontrib.spelling, sphinxcontrib.spelling pyenchant)
 
 auditwheel-install:
-	$(call check_install_extra, auditwheel, auditwheel typed-ast)
+	$(call check_install_extra, auditwheel, auditwheel typed-ast patchelf)
 
 # python linter
 
@@ -170,6 +170,12 @@ docker-release:
 	echo successfully build docker image with tag $(PROJECT_NAME)-release:$(DOCKER_TAG)
 	mkdir -p wheelhouse
 	docker run --network=host -v `pwd`/wheelhouse:/whl -it $(PROJECT_NAME)-release:$(DOCKER_TAG) bash -c "cp wheelhouse/* /whl"
+
+docker-release-py37:
+	PYVERSION=7 docker build --network=host -t $(PROJECT_NAME)-release:py37-$(DOCKER_TAG) -f docker/release.dockerfile .
+	echo successfully build docker image with tag $(PROJECT_NAME)-release:py37-$(DOCKER_TAG)
+	mkdir -p wheelhouse
+	docker run --network=host -v `pwd`/wheelhouse:/whl -it $(PROJECT_NAME)-release:py37-$(DOCKER_TAG) bash -c "cp wheelhouse/* /whl"
 
 pypi-wheel: auditwheel-install bazel-release
 	ls dist/*.whl -Art | tail -n 1 | xargs auditwheel repair --plat manylinux_2_17_x86_64

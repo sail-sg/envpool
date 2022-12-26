@@ -11,9 +11,9 @@ WORKDIR $HOME
 RUN apt-get update && apt-get install -y software-properties-common && add-apt-repository ppa:ubuntu-toolchain-r/test
 
 RUN apt-get update \
-    && apt-get install -y git curl wget gcc-9 g++-9 build-essential patchelf make libssl-dev zlib1g-dev \
+    && apt-get install -y git curl wget gcc-9 g++-9 build-essential swig make libssl-dev zlib1g-dev \
     libbz2-dev libreadline-dev libsqlite3-dev llvm \
-    libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev swig
+    libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
 
 RUN curl https://pyenv.run | sh
 
@@ -33,17 +33,15 @@ RUN bazel version
 
 # install python
 
-RUN echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
-RUN echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
-RUN echo 'eval "$(pyenv init -)"' >> ~/.bashrc
-RUN pyenv install 3.7-dev
-RUN pyenv global 3.7-dev
+RUN pyenv install 3.$PYVERSION-dev
+RUN pyenv global 3.$PYVERSION-dev
 
 WORKDIR /app
 COPY . .
 
 # compile and test release wheels
 
+RUN make bazel-release
 RUN make pypi-wheel
-RUN pip3 install wheelhouse/*cp3$i*.whl
+RUN pip3 install wheelhouse/*cp3*.whl
 RUN make release-test
