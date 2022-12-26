@@ -31,11 +31,20 @@ RUN go install github.com/bazelbuild/bazelisk@latest && ln -sf $HOME/go/bin/baze
 
 RUN bazel version
 
+# install newest openssl (for py3.10 and py3.11)
+
+RUN wget https://www.openssl.org/source/openssl-1.1.1s.tar.gz
+RUN tar xf openssl-1.1.1s.tar.gz
+RUN cd openssl-1.1.1s
+RUN ./config no-shared
+RUN make -j
+RUN make install
+
 # install python
 
 ARG PYVERSION
 
-RUN pyenv install $PYVERSION-dev
+RUN CPPFLAGS=-I$(pwd)/include LDFLAGS=-L$(pwd)/lib pyenv install $PYVERSION-dev
 RUN pyenv global $PYVERSION-dev
 
 # workdir is github action container's path
