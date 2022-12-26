@@ -2,7 +2,7 @@ FROM nvidia/cuda:11.3.1-cudnn8-devel-ubuntu16.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG HOME=/root
-ENV PATH=$HOME/go/bin:$PATH
+ENV PATH=$HOME/go/bin:$HOME/.pyenv/bin:$PATH
 
 WORKDIR $HOME
 
