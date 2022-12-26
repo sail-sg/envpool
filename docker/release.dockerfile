@@ -47,8 +47,12 @@ ARG PYVERSION
 RUN CPPFLAGS=-I$(pwd)/include LDFLAGS=-L$(pwd)/lib pyenv install $PYVERSION-dev
 RUN pyenv global $PYVERSION-dev
 
+# github action specific setting
+# /github/home is container's HOME
 # workdir is github action container's path
 
+RUN mkdir -p /github
+RUN ln -sf /root /github/home
 WORKDIR /__w/envpool/envpool/
 COPY . .
 
