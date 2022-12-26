@@ -26,6 +26,17 @@ Checks:     '
             -readability-magic-numbers,
             -readability-static-accessed-through-instance,
             -readability-uppercase-literal-suffix,
+            -bugprone-easily-swappable-parameters,
+            -bugprone-implicit-widening-of-multiplication-result,
+            -bugprone-narrowing-conversions,
+            -google-readability-casting,
+            -modernize-return-braced-init-list,
+            -modernize-use-default-member-init,
+            -performance-no-int-to-ptr,
+            -readability-function-cognitive-complexity,
+            -readability-identifier-length,
+            -readability-redundant-smartptr-get,
+            -readability-simplify-boolean-expr,
             '
 CheckOptions:
   - { key: readability-identifier-naming.ClassCase,             value: CamelCase  }
