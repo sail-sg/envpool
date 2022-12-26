@@ -37,6 +37,10 @@ RUN bazel version
 RUN pyenv install $PYVERSION-dev
 RUN pyenv global $PYVERSION-dev
 
+# install big wheel
+
+RUN pip install torch
+
 # workdir is github action container's path
 
 WORKDIR /__w/envpool/envpool/
