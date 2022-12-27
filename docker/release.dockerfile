@@ -42,11 +42,12 @@ RUN make install
 
 # install python
 
-RUN CPPFLAGS=-I$(pwd)/include LDFLAGS=-L$(pwd)/lib pyenv install 3.10-dev
-RUN CPPFLAGS=-I$(pwd)/include LDFLAGS=-L$(pwd)/lib pyenv install 3.9-dev
-RUN CPPFLAGS=-I$(pwd)/include LDFLAGS=-L$(pwd)/lib pyenv install 3.8-dev
-RUN CPPFLAGS=-I$(pwd)/include LDFLAGS=-L$(pwd)/lib pyenv install 3.7-dev
-
 RUN echo 'export PYENV_ROOT="$HOME/.pyenv"' >> /etc/profile
 RUN echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> /etc/profile
 RUN echo 'eval "$(pyenv init -)"' >> /etc/profile
+
+RUN LDFLAGS="-Wl,-rpath,/root/openssl-1.1.1s/lib" CONFIGURE_OPTS="-with-openssl=/root/openssl-1.1.1s" pyenv install -v 3.11-dev
+RUN LDFLAGS="-Wl,-rpath,/root/openssl-1.1.1s/lib" CONFIGURE_OPTS="-with-openssl=/root/openssl-1.1.1s" pyenv install -v 3.10-dev
+RUN LDFLAGS="-Wl,-rpath,/root/openssl-1.1.1s/lib" CONFIGURE_OPTS="-with-openssl=/root/openssl-1.1.1s" pyenv install -v 3.9-dev
+RUN LDFLAGS="-Wl,-rpath,/root/openssl-1.1.1s/lib" CONFIGURE_OPTS="-with-openssl=/root/openssl-1.1.1s" pyenv install -v 3.8-dev
+RUN LDFLAGS="-Wl,-rpath,/root/openssl-1.1.1s/lib" CONFIGURE_OPTS="-with-openssl=/root/openssl-1.1.1s" pyenv install -v 3.7-dev
