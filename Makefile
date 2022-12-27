@@ -168,8 +168,13 @@ docker-dev-cn:
 docker-release:
 	docker build --network=host -t $(PROJECT_NAME)-release:$(DOCKER_TAG) -f docker/release.dockerfile .
 	echo successfully build docker image with tag $(PROJECT_NAME)-release:$(DOCKER_TAG)
+
+docker-release-push: docker-release
 	docker tag $(PROJECT_NAME)-release:$(DOCKER_TAG) $(DOCKER_USER)/$(PROJECT_NAME)-release:$(DOCKER_TAG)
 	docker push $(DOCKER_USER)/$(PROJECT_NAME)-release:$(DOCKER_TAG)
+
+docker-release-launch: docker-release
+	docker run --network=host -v /:/host -it $(PROJECT_NAME)-release:$(DOCKER_TAG) bash
 
 pypi-wheel: auditwheel-install bazel-release
 	ls dist/*.whl -Art | tail -n 1 | xargs auditwheel repair --plat manylinux_2_17_x86_64
