@@ -1,25 +1,27 @@
 name: Release PyPI Wheel
 
-on: [push, pull_request]
-# on:
-#   push:
-#     branches:
-#       - main
+# on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   release:
     runs-on: ubuntu-latest
-    container: trinkle23897/envpool-release:py${{ matrix.python-version }}-2022-12-26-91769ca
+    container: trinkle23897/envpool-release:2022-12-26-91769ca
     strategy:
       matrix:
-        python-version: ['3.7']
-        # python-version: ['3.7', '3.8', '3.9', '3.10']
+        python-version: ['3.7', '3.8', '3.9', '3.10']
     steps:
     - name: Cancel previous run
       uses: styfle/cancel-workflow-action@0.11.0
       with:
         access_token: ${{ github.token }}
     - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      run: |
+        pyenv global ${{ matrix.python-version }}-dev
     - name: Build
       run: |
         make pypi-wheel
