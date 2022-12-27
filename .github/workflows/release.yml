@@ -1,15 +1,15 @@
 name: Release PyPI Wheel
 
-# on: [push, pull_request]
-on:
-  push:
-    branches:
-      - main
+on: [push, pull_request]
+# on:
+#   push:
+#     branches:
+#       - main
 
 jobs:
   release:
     runs-on: ubuntu-latest
-    container: trinkle23897/envpool-release:2022-12-26-91769ca
+    container: trinkle23897/envpool-release:2022-12-27-09dd660
     strategy:
       matrix:
         python-version: ['3.7', '3.8', '3.9', '3.10']
