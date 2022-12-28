@@ -15,6 +15,7 @@ RUN apt-get update \
     && apt-get install -y git curl wget gcc-9 g++-9 build-essential swig make \
     zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev libncursesw5-dev libffi-dev liblzma-dev \
     llvm xz-utils tk-dev libxml2-dev libxmlsec1-dev
+# use self-compiled openssl instead of system provided (1.0.2)
 RUN apt-get remove -y libssl-dev
 
 RUN curl https://pyenv.run | sh
