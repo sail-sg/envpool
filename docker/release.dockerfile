@@ -61,3 +61,4 @@ COPY . .
 # cache opencv build
 
 RUN bazel build //envpool/utils:image_process_test --config=release
+RUN bazel build //envpool/vizdoom/bin:vizdoom_bin --config=release
