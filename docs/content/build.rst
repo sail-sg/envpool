@@ -99,6 +99,7 @@ To build a release version, type:
 
 .. code-block:: bash
 
+    cp third_party/pip_requirements/requirements-release.txt third_party/pip_requirements/requirements.txt
     bazel run --config=release //:setup -- bdist_wheel
 
 This creates a wheel under ``bazel-bin/setup.runfiles/envpool/dist``.
@@ -141,6 +142,9 @@ We provide several shortcuts to make things easier.
 
     # This will automatically run the tests
     make bazel-test
+
+    # This will build a wheel for release
+    make bazel-release
 
 
 Use Docker to Create Develop Environment
