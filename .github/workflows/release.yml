@@ -25,6 +25,8 @@ jobs:
         env
         whereis pyenv
         which pyenv
+        ls /root/.pyenv/versions
+        ls /root/.pyenv/shims
         /root/.pyenv/bin/pyenv global ${{ matrix.python-version }}-dev
         env
         whereis pyenv

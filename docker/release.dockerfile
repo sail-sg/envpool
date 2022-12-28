@@ -3,6 +3,7 @@ FROM nvidia/cuda:11.3.1-cudnn8-devel-ubuntu16.04
 ARG DEBIAN_FRONTEND=noninteractive
 ARG HOME=/root
 ENV PATH=$HOME/go/bin:$HOME/.pyenv/shims:$HOME/.pyenv/bin:$PATH
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 
 WORKDIR $HOME
 
@@ -36,7 +37,7 @@ RUN bazel version
 RUN wget https://www.openssl.org/source/openssl-1.1.1s.tar.gz
 RUN tar xf openssl-1.1.1s.tar.gz
 WORKDIR $HOME/openssl-1.1.1s
-RUN ./config no-shared
+RUN ./config
 RUN make -j
 RUN make install
 
