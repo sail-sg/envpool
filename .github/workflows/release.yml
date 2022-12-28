@@ -9,10 +9,10 @@ on: [push, pull_request]
 jobs:
   release:
     runs-on: ubuntu-latest
-    container: trinkle23897/envpool-release:2022-12-27-24e7aef
+    container: trinkle23897/envpool-release:2022-12-28-f23b657
     strategy:
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10']
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
     steps:
     - name: Cancel previous run
       uses: styfle/cancel-workflow-action@0.11.0
@@ -22,26 +22,7 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       run: |
         ln -sf /root/.pyenv $HOME/.pyenv
-        pwd
-        env
-        whereis pyenv
-        which pyenv
-        echo "=== /root/.pyenv/versions"
-        ls /root/.pyenv/versions
-        echo "=== /root/.pyenv/shims"
-        ls /root/.pyenv/shims
-        echo "=== /github/home/.pyenv"
-        ls /github/home/.pyenv
-        echo "=== /github/home/.pyenv/versions"
-        ls /github/home/.pyenv/versions
-        echo "=== /github/home/.pyenv/shims"
-        ls /github/home/.pyenv/shims
-
-        PYENV_DEBUG=1 /root/.pyenv/bin/pyenv global ${{ matrix.python-version }}-dev
-        echo "==="
-        env
-        whereis pyenv
-        which pyenv
+        pyenv global ${{ matrix.python-version }}-dev
     - name: Build
       run: |
         make pypi-wheel
