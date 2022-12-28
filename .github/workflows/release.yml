@@ -25,10 +25,17 @@ jobs:
         env
         whereis pyenv
         which pyenv
+        echo "=== /root/.pyenv/versions"
         ls /root/.pyenv/versions
-        echo "==="
+        echo "=== /root/.pyenv/shims"
         ls /root/.pyenv/shims
-        echo "==="
+        echo "=== /github/home/.pyenv"
+        ls /github/home/.pyenv
+        echo "=== /github/home/.pyenv/versions"
+        ls /github/home/.pyenv/versions
+        echo "=== /github/home/.pyenv/shims"
+        ls /github/home/.pyenv/shims
+
         PYENV_DEBUG=1 /root/.pyenv/bin/pyenv global ${{ matrix.python-version }}-dev
         echo "==="
         env
