@@ -12,8 +12,8 @@ WORKDIR $HOME
 RUN apt-get update && apt-get install -y software-properties-common && add-apt-repository ppa:ubuntu-toolchain-r/test
 
 RUN apt-get update \
-    && apt-get install -y git curl wget gcc-9 g++-9 build-essential swig make libssl-dev zlib1g-dev \
-    libbz2-dev libreadline-dev libsqlite3-dev llvm \
+    && apt-get install -y git curl wget gcc-9 g++-9 build-essential swig make \
+    zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev llvm \
     libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
 
 RUN curl https://pyenv.run | sh
