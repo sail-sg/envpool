@@ -32,7 +32,6 @@ grpcio
 tensorboard-plugin-wit
 google-auth-oauthlib
 tensorboard-data-server
-typing-extensions
 werkzeug
 protobuf<=4.20.0
 rsa

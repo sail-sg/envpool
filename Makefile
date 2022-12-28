@@ -86,28 +86,31 @@ buildifier: buildifier-install
 
 # bazel build/test
 
-clang-tidy: clang-tidy-install
+bazel-pip-requirement-dev:
+	cp third_party/pip_requirements/requirements-dev.txt third_party/pip_requirements/requirements.txt
+
+bazel-pip-requirement-release:
+	cp third_party/pip_requirements/requirements-release.txt third_party/pip_requirements/requirements.txt
+
+clang-tidy: clang-tidy-install bazel-pip-requirement-dev
 	bazel build $(BAZELOPT) //... --config=clang-tidy --config=test
 
-bazel-debug: bazel-install
-	bazel build $(BAZELOPT) //... --config=debug
+bazel-debug: bazel-install bazel-pip-requirement-dev
 	bazel run $(BAZELOPT) //:setup --config=debug -- bdist_wheel
 	mkdir -p dist
 	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
-bazel-build: bazel-install
-	bazel build $(BAZELOPT) //... --config=test
+bazel-build: bazel-install bazel-pip-requirement-dev
 	bazel run $(BAZELOPT) //:setup --config=test -- bdist_wheel
 	mkdir -p dist
 	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
-bazel-release: bazel-install
-	bazel build $(BAZELOPT) //... --config=release
+bazel-release: bazel-install bazel-pip-requirement-release
 	bazel run $(BAZELOPT) //:setup --config=release -- bdist_wheel
 	mkdir -p dist
 	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
-bazel-test: bazel-install
+bazel-test: bazel-install bazel-pip-requirement-dev
 	bazel test --test_output=all $(BAZELOPT) //... --config=test --spawn_strategy=local --color=yes
 
 bazel-clean: bazel-install
