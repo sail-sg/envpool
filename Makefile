@@ -7,6 +7,9 @@ BAZEL_FILES    = $(shell find . -type f -name "*BUILD" -o -name "*.bzl")
 COMMIT_HASH    = $(shell git log -1 --format=%h)
 COPYRIGHT      = "Garena Online Private Limited"
 BAZELOPT       =
+DATE           = $(shell date "+%Y-%m-%d")
+DOCKER_TAG     = $(DATE)-$(COMMIT_HASH)
+DOCKER_USER    = trinkle23897
 PATH           := $(HOME)/go/bin:$(PATH)
 
 # installation
@@ -36,7 +39,7 @@ clang-tidy-install:
 
 go-install:
 	# requires go >= 1.16
-	command -v go || (sudo apt-get install -y golang-1.16 && sudo ln -sf /usr/lib/go-1.16/bin/go /usr/bin/go)
+	command -v go || (sudo apt-get install -y golang-1.18 && sudo ln -sf /usr/lib/go-1.18/bin/go /usr/bin/go)
 
 bazel-install: go-install
 	command -v bazel || (go install github.com/bazelbuild/bazelisk@latest && ln -sf $(HOME)/go/bin/bazelisk $(HOME)/go/bin/bazel)
@@ -55,7 +58,7 @@ doc-install:
 	$(call check_install_extra, sphinxcontrib.spelling, sphinxcontrib.spelling pyenchant)
 
 auditwheel-install:
-	$(call check_install_extra, auditwheel, auditwheel typed-ast)
+	$(call check_install_extra, auditwheel, auditwheel typed-ast patchelf)
 
 # python linter
 
@@ -83,28 +86,31 @@ buildifier: buildifier-install
 
 # bazel build/test
 
-clang-tidy: clang-tidy-install
+bazel-pip-requirement-dev:
+	cp third_party/pip_requirements/requirements-dev.txt third_party/pip_requirements/requirements.txt
+
+bazel-pip-requirement-release:
+	cp third_party/pip_requirements/requirements-release.txt third_party/pip_requirements/requirements.txt
+
+clang-tidy: clang-tidy-install bazel-pip-requirement-dev
 	bazel build $(BAZELOPT) //... --config=clang-tidy --config=test
 
-bazel-debug: bazel-install
-	bazel build $(BAZELOPT) //... --config=debug
+bazel-debug: bazel-install bazel-pip-requirement-dev
 	bazel run $(BAZELOPT) //:setup --config=debug -- bdist_wheel
 	mkdir -p dist
 	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
-bazel-build: bazel-install
-	bazel build $(BAZELOPT) //... --config=test
+bazel-build: bazel-install bazel-pip-requirement-dev
 	bazel run $(BAZELOPT) //:setup --config=test -- bdist_wheel
 	mkdir -p dist
 	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
-bazel-release: bazel-install
-	bazel build $(BAZELOPT) //... --config=release
+bazel-release: bazel-install bazel-pip-requirement-release
 	bazel run $(BAZELOPT) //:setup --config=release -- bdist_wheel
 	mkdir -p dist
 	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
-bazel-test: bazel-install
+bazel-test: bazel-install bazel-pip-requirement-dev
 	bazel test --test_output=all $(BAZELOPT) //... --config=test --spawn_strategy=local --color=yes
 
 bazel-clean: bazel-install
@@ -113,7 +119,7 @@ bazel-clean: bazel-install
 # documentation
 
 addlicense: addlicense-install
-	addlicense -c $(COPYRIGHT) -l apache -y 2022 -check $(PROJECT_FOLDER)
+	addlicense -c $(COPYRIGHT) -l apache -y 2023 -check $(PROJECT_FOLDER)
 
 docstyle: doc-install
 	pydocstyle $(PROJECT_NAME) && doc8 docs && cd docs && make html SPHINXOPTS="-W"
@@ -138,26 +144,40 @@ format: py-format-install clang-format-install buildifier-install addlicense-ins
 	yapf -ir $(PYTHON_FILES)
 	clang-format-11 -style=file -i $(CPP_FILES)
 	buildifier -r -lint=fix $(BAZEL_FILES)
-	addlicense -c $(COPYRIGHT) -l apache -y 2022 $(PROJECT_FOLDER)
+	addlicense -c $(COPYRIGHT) -l apache -y 2023 $(PROJECT_FOLDER)
 
 # Build docker images
 
-docker-dev:
-	docker build --network=host -t $(PROJECT_NAME):$(COMMIT_HASH) -f docker/dev.dockerfile .
-	docker run --network=host -v /:/host -it $(PROJECT_NAME):$(COMMIT_HASH) bash
-	echo successfully build docker image with tag $(PROJECT_NAME):$(COMMIT_HASH)
+docker-ci:
+	docker build --network=host -t $(PROJECT_NAME):$(DOCKER_TAG) -f docker/dev.dockerfile .
+	echo successfully build docker image with tag $(PROJECT_NAME):$(DOCKER_TAG)
+
+docker-ci-push: docker-ci
+	docker tag $(PROJECT_NAME):$(DOCKER_TAG) $(DOCKER_USER)/$(PROJECT_NAME):$(DOCKER_TAG)
+	docker push $(DOCKER_USER)/$(PROJECT_NAME):$(DOCKER_TAG)
+
+docker-ci-launch: docker-ci
+	docker run --network=host -v /home/ubuntu:/home/github-action -it $(PROJECT_NAME):$(DOCKER_TAG) bash
+
+docker-dev: docker-ci
+	docker run --network=host -v /:/host -it $(PROJECT_NAME):$(DOCKER_TAG) bash
 
 # for mainland China
 docker-dev-cn:
-	docker build --network=host -t $(PROJECT_NAME):$(COMMIT_HASH) -f docker/dev-cn.dockerfile .
-	docker run --network=host -v /:/host -it $(PROJECT_NAME):$(COMMIT_HASH) bash
-	echo successfully build docker image with tag $(PROJECT_NAME):$(COMMIT_HASH)
+	docker build --network=host -t $(PROJECT_NAME):$(DOCKER_TAG) -f docker/dev-cn.dockerfile .
+	echo successfully build docker image with tag $(PROJECT_NAME):$(DOCKER_TAG)
+	docker run --network=host -v /:/host -it $(PROJECT_NAME):$(DOCKER_TAG) bash
 
 docker-release:
-	docker build --network=host -t $(PROJECT_NAME)-release:$(COMMIT_HASH) -f docker/release.dockerfile .
-	mkdir -p wheelhouse
-	docker run --network=host -v `pwd`/wheelhouse:/whl -it $(PROJECT_NAME)-release:$(COMMIT_HASH) bash -c "cp wheelhouse/* /whl"
-	echo successfully build docker image with tag $(PROJECT_NAME)-release:$(COMMIT_HASH)
+	docker build --network=host -t $(PROJECT_NAME)-release:$(DOCKER_TAG) -f docker/release.dockerfile .
+	echo successfully build docker image with tag $(PROJECT_NAME)-release:$(DOCKER_TAG)
+
+docker-release-push: docker-release
+	docker tag $(PROJECT_NAME)-release:$(DOCKER_TAG) $(DOCKER_USER)/$(PROJECT_NAME)-release:$(DOCKER_TAG)
+	docker push $(DOCKER_USER)/$(PROJECT_NAME)-release:$(DOCKER_TAG)
+
+docker-release-launch: docker-release
+	docker run --network=host -v /:/host -it $(PROJECT_NAME)-release:$(DOCKER_TAG) bash
 
 pypi-wheel: auditwheel-install bazel-release
 	ls dist/*.whl -Art | tail -n 1 | xargs auditwheel repair --plat manylinux_2_17_x86_64

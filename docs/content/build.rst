@@ -1,7 +1,7 @@
 Build From Source
 =================
 
-We recommend building EnvPool on Ubuntu 20.04 environment.
+We recommend building EnvPool on Ubuntu 22.04 environment.
 
 We use `bazel <https://bazel.build/>`_ to build EnvPool. Comparing with
 `pip <https://pip.pypa.io/>`_, using Bazel to build python package with C++ .so
@@ -50,10 +50,10 @@ or `golang <https://golang.org/doc/install>`_ with version >= 1.16:
         # then follow the instructions on golang official website
         go env -w GOPROXY=https://goproxy.cn
 
-        wget https://mirrors.huaweicloud.com/bazel/5.1.1/bazel-5.1.1-linux-x86_64
-        chmod +x bazel-5.1.1-linux-x86_64
+        wget https://mirrors.huaweicloud.com/bazel/6.0.0/bazel-6.0.0-linux-x86_64
+        chmod +x bazel-6.0.0-linux-x86_64
         mkdir -p $HOME/go/bin
-        mv bazel-5.1.1-linux-x86_64 $HOME/go/bin/bazel
+        mv bazel-6.0.0-linux-x86_64 $HOME/go/bin/bazel
 
         export PATH=$PATH:$HOME/go/bin  # or write to .bashrc / .zshrc
 
@@ -99,6 +99,7 @@ To build a release version, type:
 
 .. code-block:: bash
 
+    cp third_party/pip_requirements/requirements-release.txt third_party/pip_requirements/requirements.txt
     bazel run --config=release //:setup -- bdist_wheel
 
 This creates a wheel under ``bazel-bin/setup.runfiles/envpool/dist``.
@@ -141,6 +142,9 @@ We provide several shortcuts to make things easier.
 
     # This will automatically run the tests
     make bazel-test
+
+    # This will build a wheel for release
+    make bazel-release
 
 
 Use Docker to Create Develop Environment

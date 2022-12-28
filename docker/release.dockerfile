@@ -1,48 +1,64 @@
-FROM ubuntu:16.04
+FROM nvidia/cuda:11.3.1-cudnn8-devel-ubuntu16.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG HOME=/root
-ENV PATH=$HOME/go/bin:$PATH
+ENV PATH=$HOME/go/bin:$HOME/.pyenv/shims:$HOME/.pyenv/bin:$PATH
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 
 WORKDIR $HOME
 
 # install base dependencies
 
-RUN apt-get update && apt-get install -y software-properties-common && add-apt-repository ppa:ubuntu-toolchain-r/test && add-apt-repository ppa:deadsnakes/ppa
+RUN apt-get update && apt-get install -y software-properties-common && add-apt-repository ppa:ubuntu-toolchain-r/test
+
 RUN apt-get update \
-    && apt-get install -y git curl wget gcc-9 g++-9 build-essential patchelf make libssl-dev zlib1g-dev \
-    libbz2-dev libreadline-dev libsqlite3-dev llvm \
-    libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev swig \
-    python3.7 python3.8 python3.9 python3.10 \
-    python3.7-dev python3.8-dev python3.9-dev python3.10-dev \
-    python3.8-distutils python3.9-distutils python3.10-distutils
-RUN ln -sf /usr/bin/python3 /usr/bin/python
+    && apt-get install -y git curl wget gcc-9 g++-9 build-essential swig make \
+    zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev libncursesw5-dev libffi-dev liblzma-dev \
+    llvm xz-utils tk-dev libxml2-dev libxmlsec1-dev
+# use self-compiled openssl instead of system provided (1.0.2)
+RUN apt-get remove -y libssl-dev
+
+RUN curl https://pyenv.run | sh
+
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
-
-# install pip
-
-RUN wget https://bootstrap.pypa.io/get-pip.py
-RUN for i in 7 8 9 10; do ln -sf /usr/bin/python3.$i /usr/bin/python3; python3 get-pip.py; done
 
 # install go from source
 
-RUN wget https://golang.org/dl/go1.17.3.linux-amd64.tar.gz
-RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.17.3.linux-amd64.tar.gz
+RUN wget https://golang.org/dl/go1.19.4.linux-amd64.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.19.4.linux-amd64.tar.gz
 RUN ln -sf /usr/local/go/bin/go /usr/bin/go
 
 # install bazel
 
 RUN go install github.com/bazelbuild/bazelisk@latest && ln -sf $HOME/go/bin/bazelisk $HOME/go/bin/bazel
 
-# install big wheels
-
-RUN for i in 7 8 9 10; do ln -sf /usr/bin/python3.$i /usr/bin/python3; pip3 install torch opencv-python-headless; done
-
 RUN bazel version
 
-WORKDIR /app
+# install newest openssl (for py3.10 and py3.11)
+
+RUN wget https://www.openssl.org/source/openssl-1.1.1s.tar.gz
+RUN tar xf openssl-1.1.1s.tar.gz
+WORKDIR $HOME/openssl-1.1.1s
+RUN ./config
+RUN make -j
+RUN make install
+
+# install python
+
+RUN echo 'export PYENV_ROOT="$HOME/.pyenv"' >> /etc/profile
+RUN echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> /etc/profile
+RUN echo 'eval "$(pyenv init -)"' >> /etc/profile
+
+RUN LDFLAGS="-Wl,-rpath,/root/openssl-1.1.1s/lib" CONFIGURE_OPTS="-with-openssl=/root/openssl-1.1.1s" pyenv install -v 3.11-dev
+RUN LDFLAGS="-Wl,-rpath,/root/openssl-1.1.1s/lib" CONFIGURE_OPTS="-with-openssl=/root/openssl-1.1.1s" pyenv install -v 3.10-dev
+RUN LDFLAGS="-Wl,-rpath,/root/openssl-1.1.1s/lib" CONFIGURE_OPTS="-with-openssl=/root/openssl-1.1.1s" pyenv install -v 3.9-dev
+RUN LDFLAGS="-Wl,-rpath,/root/openssl-1.1.1s/lib" CONFIGURE_OPTS="-with-openssl=/root/openssl-1.1.1s" pyenv install -v 3.8-dev
+RUN LDFLAGS="-Wl,-rpath,/root/openssl-1.1.1s/lib" CONFIGURE_OPTS="-with-openssl=/root/openssl-1.1.1s" pyenv install -v 3.7-dev
+
+WORKDIR /__w/envpool/envpool
 COPY . .
 
-# compile and test release wheels
+# cache bazel build (cpp only)
 
-RUN for i in 7 8 9 10; do ln -sf /usr/bin/python3.$i /usr/bin/python3; make pypi-wheel BAZELOPT="--remote_cache=http://bazel-cache.sail:8080"; pip3 install wheelhouse/*cp3$i*.whl; rm dist/*.whl; make release-test; done
+RUN bazel build //envpool/utils:image_process_test --config=release
+RUN bazel build //envpool/vizdoom/bin:vizdoom_bin --config=release
