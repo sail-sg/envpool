@@ -7,7 +7,7 @@ dm-control>=1.0.5
 filelock
 gym>=0.26
 gymnasium>=0.26,!=0.27.0
-pygame
+pygame==2.1.3.dev8
 box2d-py
 mujoco>=2.2.1,<2.3
 mujoco_py>=2.1.2.14
