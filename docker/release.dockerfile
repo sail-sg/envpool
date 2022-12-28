@@ -58,7 +58,7 @@ RUN LDFLAGS="-Wl,-rpath,/root/openssl-1.1.1s/lib" CONFIGURE_OPTS="-with-openssl=
 WORKDIR /__w/envpool/envpool
 COPY . .
 
-# cache opencv build
+# cache bazel build (cpp only)
 
 RUN bazel build //envpool/utils:image_process_test --config=release
 RUN bazel build //envpool/vizdoom/bin:vizdoom_bin --config=release
