@@ -21,6 +21,7 @@ jobs:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
       run: |
+        ln -sf /root/.cache $HOME/.cache
         ln -sf /root/.pyenv $HOME/.pyenv
         pyenv global ${{ matrix.python-version }}-dev
     - name: Build

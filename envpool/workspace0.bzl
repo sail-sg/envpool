@@ -161,11 +161,11 @@ def workspace():
         http_archive,
         name = "opencv",
         urls = [
-            "https://github.com/opencv/opencv/archive/refs/tags/4.5.5.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/opencv/opencv/4.5.5.tar.gz",
+            "https://github.com/opencv/opencv/archive/refs/tags/4.7.0.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/opencv/opencv/4.7.0.tar.gz",
         ],
-        sha256 = "a1cfdcf6619387ca9e232687504da996aaa9f7b5689986b8331ec02cb61d28ad",
-        strip_prefix = "opencv-4.5.5",
+        sha256 = "8df0079cdbe179748a18d44731af62a245a45ebf5085223dc03133954c662973",
+        strip_prefix = "opencv-4.7.0",
         build_file = "//third_party/opencv:opencv.BUILD",
     )
 
@@ -244,11 +244,11 @@ def workspace():
     maybe(
         http_archive,
         name = "com_github_nelhage_rules_boost",
-        sha256 = "ce95d0705592e51eda91b38870e847c303f65219871683f7c34233caad150b0b",
-        strip_prefix = "rules_boost-32164a62e2472077320f48f52b8077207cd0c9c8",
+        sha256 = "6ded3e8c064054c92b79aeadde2d78821c889598e634c595133da0ea8f0f0b85",
+        strip_prefix = "rules_boost-f1065639e6f33741abe2a6a78fa79dd1a07bbf5d",
         urls = [
-            "https://github.com/nelhage/rules_boost/archive/32164a62e2472077320f48f52b8077207cd0c9c8.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/nelhage/rules_boost/32164a62e2472077320f48f52b8077207cd0c9c8.tar.gz",
+            "https://github.com/nelhage/rules_boost/archive/f1065639e6f33741abe2a6a78fa79dd1a07bbf5d.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/nelhage/rules_boost/f1065639e6f33741abe2a6a78fa79dd1a07bbf5d.tar.gz",
         ],
     )
 
@@ -257,11 +257,11 @@ def workspace():
         name = "boost",
         build_file = "@com_github_nelhage_rules_boost//:BUILD.boost",
         patch_cmds = ["rm -f doc/pdf/BUILD"],
-        sha256 = "475d589d51a7f8b3ba2ba4eda022b170e562ca3b760ee922c146b6c65856ef39",
-        strip_prefix = "boost_1_79_0",
+        sha256 = "71feeed900fbccca04a3b4f2f84a7c217186f28a940ed8b7ed4725986baf99fa",
+        strip_prefix = "boost_1_81_0",
         urls = [
-            "https://boostorg.jfrog.io/artifactory/main/release/1.79.0/source/boost_1_79_0.tar.bz2",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/boost/boost_1_79_0.tar.bz2",
+            "https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.bz2",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/boost/boost_1_81_0.tar.bz2",
         ],
     )
 
