@@ -44,7 +44,7 @@ class ShapeSpec {
   [[nodiscard]] ShapeSpec Batch(int batch_size) const {
     std::vector<int> new_shape = {batch_size};
     new_shape.insert(new_shape.end(), shape.begin(), shape.end());
-    return ShapeSpec(element_size, std::move(new_shape));
+    return {element_size, std::move(new_shape)};
   }
   [[nodiscard]] std::vector<std::size_t> Shape() const {
     auto s = std::vector<std::size_t>(shape.size());

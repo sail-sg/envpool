@@ -51,15 +51,14 @@ class BlackjackEnv : public Env<BlackjackEnvSpec> {
   bool natural_, sab_;
   std::vector<int> player_, dealer_;
   std::uniform_int_distribution<> dist_;
-  bool done_;
+  bool done_{true};
 
  public:
   BlackjackEnv(const Spec& spec, int env_id)
       : Env<BlackjackEnvSpec>(spec, env_id),
         natural_(spec.config["natural"_]),
         sab_(spec.config["sab"_]),
-        dist_(1, 13),
-        done_(true) {}
+        dist_(1, 13) {}
 
   bool IsDone() override { return done_; }
 

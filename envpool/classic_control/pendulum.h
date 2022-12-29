@@ -53,7 +53,7 @@ class PendulumEnv : public Env<PendulumEnvSpec> {
   int version_;
   double theta_, theta_dot_;
   std::uniform_real_distribution<> dist_, dist_dot_;
-  bool done_;
+  bool done_{true};
 
  public:
   PendulumEnv(const Spec& spec, int env_id)
@@ -62,8 +62,7 @@ class PendulumEnv : public Env<PendulumEnvSpec> {
         elapsed_step_(max_episode_steps_ + 1),
         version_(spec.config["version"_]),
         dist_(-M_PI, M_PI),
-        dist_dot_(-1, 1),
-        done_(true) {}
+        dist_dot_(-1, 1) {}
 
   bool IsDone() override { return done_; }
 

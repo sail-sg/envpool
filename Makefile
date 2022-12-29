@@ -32,7 +32,7 @@ cpplint-install:
 	$(call check_install, cpplint)
 
 clang-format-install:
-	command -v clang-format-11 || sudo apt-get install -y clang-format-11
+	command -v clang-format || sudo apt-get install -y clang-format
 
 clang-tidy-install:
 	command -v clang-tidy || sudo apt-get install -y clang-tidy
@@ -77,7 +77,7 @@ cpplint: cpplint-install
 	cpplint $(CPP_FILES)
 
 clang-format: clang-format-install
-	clang-format-11 --style=file -i $(CPP_FILES) -n --Werror
+	clang-format --style=file -i $(CPP_FILES) -n --Werror
 
 # bazel file linter
 
@@ -87,10 +87,10 @@ buildifier: buildifier-install
 # bazel build/test
 
 bazel-pip-requirement-dev:
-	cp third_party/pip_requirements/requirements-dev.txt third_party/pip_requirements/requirements.txt
+	cd third_party/pip_requirements && (cmp requirements.txt requirements-dev.txt || ln -sf requirements-dev.txt requirements.txt)
 
 bazel-pip-requirement-release:
-	cp third_party/pip_requirements/requirements-release.txt third_party/pip_requirements/requirements.txt
+	cd third_party/pip_requirements && (cmp requirements.txt requirements-release.txt || ln -sf requirements-release.txt requirements.txt)
 
 clang-tidy: clang-tidy-install bazel-pip-requirement-dev
 	bazel build $(BAZELOPT) //... --config=clang-tidy --config=test
@@ -142,7 +142,7 @@ lint: buildifier flake8 py-format clang-format cpplint clang-tidy mypy docstyle 
 format: py-format-install clang-format-install buildifier-install addlicense-install
 	isort $(PYTHON_FILES)
 	yapf -ir $(PYTHON_FILES)
-	clang-format-11 -style=file -i $(CPP_FILES)
+	clang-format -style=file -i $(CPP_FILES)
 	buildifier -r -lint=fix $(BAZEL_FILES)
 	addlicense -c $(COPYRIGHT) -l apache -y 2023 $(PROJECT_FOLDER)
 
@@ -157,16 +157,16 @@ docker-ci-push: docker-ci
 	docker push $(DOCKER_USER)/$(PROJECT_NAME):$(DOCKER_TAG)
 
 docker-ci-launch: docker-ci
-	docker run --network=host -v /home/ubuntu:/home/github-action -it $(PROJECT_NAME):$(DOCKER_TAG) bash
+	docker run --network=host -v /home/ubuntu:/home/github-action --shm-size=4gb -it $(PROJECT_NAME):$(DOCKER_TAG) bash
 
 docker-dev: docker-ci
-	docker run --network=host -v /:/host -it $(PROJECT_NAME):$(DOCKER_TAG) bash
+	docker run --network=host -v /:/host --shm-size=4gb -it $(PROJECT_NAME):$(DOCKER_TAG) bash
 
 # for mainland China
 docker-dev-cn:
 	docker build --network=host -t $(PROJECT_NAME):$(DOCKER_TAG) -f docker/dev-cn.dockerfile .
 	echo successfully build docker image with tag $(PROJECT_NAME):$(DOCKER_TAG)
-	docker run --network=host -v /:/host -it $(PROJECT_NAME):$(DOCKER_TAG) bash
+	docker run --network=host -v /:/host --shm-size=4gb -it $(PROJECT_NAME):$(DOCKER_TAG) bash
 
 docker-release:
 	docker build --network=host -t $(PROJECT_NAME)-release:$(DOCKER_TAG) -f docker/release.dockerfile .
@@ -177,7 +177,7 @@ docker-release-push: docker-release
 	docker push $(DOCKER_USER)/$(PROJECT_NAME)-release:$(DOCKER_TAG)
 
 docker-release-launch: docker-release
-	docker run --network=host -v /:/host -it $(PROJECT_NAME)-release:$(DOCKER_TAG) bash
+	docker run --network=host -v /:/host --shm-size=4gb -it $(PROJECT_NAME)-release:$(DOCKER_TAG) bash
 
 pypi-wheel: auditwheel-install bazel-release
 	ls dist/*.whl -Art | tail -n 1 | xargs auditwheel repair --plat manylinux_2_17_x86_64

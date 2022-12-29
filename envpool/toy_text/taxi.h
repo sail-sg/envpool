@@ -50,7 +50,7 @@ class TaxiEnv : public Env<TaxiEnvSpec> {
  protected:
   int x_, y_, s_, t_, max_episode_steps_, elapsed_step_;
   std::uniform_int_distribution<> dist_car_, dist_loc_;
-  bool done_;
+  bool done_{true};
   std::vector<std::vector<int>> loc_;
   std::vector<std::string> map_, loc_map_;
 
@@ -60,7 +60,6 @@ class TaxiEnv : public Env<TaxiEnvSpec> {
         max_episode_steps_(spec.config["max_episode_steps"_]),
         dist_car_(0, 3),
         dist_loc_(0, 4),
-        done_(true),
         loc_({{0, 0}, {0, 4}, {4, 0}, {4, 3}}),
         map_({"|:|::|", "|:|::|", "|::::|", "||:|:|", "||:|:|"}),
         loc_map_({"0   1", "     ", "     ", "     ", "2  3 "}) {}

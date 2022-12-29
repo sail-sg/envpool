@@ -17,7 +17,7 @@
 namespace box2d {
 
 b2Vec2 Vec2(double x, double y) {
-  return b2Vec2(static_cast<float>(x), static_cast<float>(y));
+  return {static_cast<float>(x), static_cast<float>(y)};
 }
 
 float Sign(double val, double eps) {
@@ -43,7 +43,7 @@ b2Vec2 RotateRad(const b2Vec2& v, float angle) {
 b2Vec2 Multiply(const b2Transform& trans, const b2Vec2& v) {
   float x = (trans.q.c * v.x - trans.q.s * v.y) + trans.p.x;
   float y = (trans.q.s * v.x + trans.q.c * v.y) + trans.p.y;
-  return b2Vec2(x, y);
+  return {x, y};
 }
 
 }  // namespace box2d

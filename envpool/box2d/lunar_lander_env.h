@@ -53,12 +53,12 @@ class LunarLanderBox2dEnv {
  protected:
   int max_episode_steps_, elapsed_step_;
   float reward_, prev_shaping_;
-  bool continuous_, done_;
+  bool continuous_, done_{true};
   std::array<float, 8> obs_;
 
   // box2d related
   std::unique_ptr<b2World> world_;
-  b2Body *moon_, *lander_;
+  b2Body *moon_{nullptr}, *lander_{nullptr};
   std::vector<b2Body*> particles_;
   std::vector<b2Vec2> lander_poly_;
   std::array<b2Body*, 2> legs_;
