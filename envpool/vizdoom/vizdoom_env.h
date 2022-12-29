@@ -153,8 +153,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
   std::vector<Button> button_list_;
   std::vector<GameVariable> gv_list_;
   std::vector<int> gv_info_index_;
-  std::vector<double> gvs_, last_gvs_, pos_reward_, neg_reward_,
-      weapon_reward_;
+  std::vector<double> gvs_, last_gvs_, pos_reward_, neg_reward_, weapon_reward_;
 
  public:
   VizdoomEnv(const Spec& spec, int env_id)
