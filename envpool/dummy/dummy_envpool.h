@@ -115,15 +115,14 @@ using DummyEnvSpec = EnvSpec<DummyEnvFns>;
  */
 class DummyEnv : public Env<DummyEnvSpec> {
  protected:
-  int state_;
+  int state_{0};
 
  public:
   /**
    * Initilize the env, in this function we perform tasks like loading the game
    * rom etc.
    */
-  DummyEnv(const Spec& spec, int env_id)
-      : Env<DummyEnvSpec>(spec, env_id), state_(0) {
+  DummyEnv(const Spec& spec, int env_id) : Env<DummyEnvSpec>(spec, env_id) {
     if (seed_ < 1) {
       seed_ = 1;
     }

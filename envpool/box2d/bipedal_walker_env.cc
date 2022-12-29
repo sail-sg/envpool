@@ -65,9 +65,7 @@ BipedalWalkerBox2dEnv::BipedalWalkerBox2dEnv(bool hardcore,
     : max_episode_steps_(max_episode_steps),
       elapsed_step_(max_episode_steps + 1),
       hardcore_(hardcore),
-      done_(true),
-      world_(new b2World(b2Vec2(0.0, -10.0))),
-      hull_(nullptr) {
+      world_(new b2World(b2Vec2(0.0, -10.0))) {
   for (const auto* p : kHullPoly) {
     hull_poly_.emplace_back(Vec2(p[0] / kScaleDouble, p[1] / kScaleDouble));
   }

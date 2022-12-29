@@ -32,14 +32,14 @@
 
 namespace atari {
 
-bool TurnOffVerbosity() {
+auto TurnOffVerbosity() {
   ale::Logger::setMode(ale::Logger::Error);
   return true;
 }
 
 static bool verbosity_off = TurnOffVerbosity();
 
-std::string GetRomPath(const std::string& base_path, const std::string& task) {
+auto GetRomPath(const std::string& base_path, const std::string& task) {
   std::stringstream ss;
   // hardcode path here :(
   ss << base_path << "/atari/roms/" << task << ".bin";
@@ -88,9 +88,9 @@ class AtariEnv : public Env<AtariEnvSpec> {
   std::unique_ptr<ale::ALEInterface> env_;
   ale::ActionVect action_set_;
   int max_episode_steps_, elapsed_step_, stack_num_, frame_skip_;
-  bool fire_reset_, reward_clip_, zero_discount_on_life_loss_;
+  bool fire_reset_{false}, reward_clip_, zero_discount_on_life_loss_;
   bool gray_scale_, episodic_life_, use_inter_area_resize_;
-  bool done_;
+  bool done_{true};
   int lives_;
   FrameSpec raw_spec_, resize_spec_, transpose_spec_;
   std::deque<Array> stack_buf_;
@@ -107,13 +107,11 @@ class AtariEnv : public Env<AtariEnvSpec> {
         elapsed_step_(max_episode_steps_ + 1),
         stack_num_(spec.config["stack_num"_]),
         frame_skip_(spec.config["frame_skip"_]),
-        fire_reset_(false),
         reward_clip_(spec.config["reward_clip"_]),
         zero_discount_on_life_loss_(spec.config["zero_discount_on_life_loss"_]),
         gray_scale_(spec.config["gray_scale"_]),
         episodic_life_(spec.config["episodic_life"_]),
         use_inter_area_resize_(spec.config["use_inter_area_resize"_]),
-        done_(true),
         raw_spec_({kRawHeight, kRawWidth, gray_scale_ ? 1 : 3}),
         resize_spec_({spec.config["img_height"_], spec.config["img_width"_],
                       gray_scale_ ? 1 : 3}),

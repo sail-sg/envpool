@@ -138,9 +138,9 @@ class Car {
   std::deque<std::shared_ptr<Particle>> particles_;
   std::vector<b2Body*> drawlist_;
   std::shared_ptr<b2World> world_;
-  b2Body* hull_;
+  b2Body* hull_{nullptr};
   std::vector<Wheel*> wheels_;
-  float fuel_spent_;
+  float fuel_spent_{0};
 
   std::shared_ptr<Particle> CreateParticle(b2Vec2 point1, b2Vec2 point2,
                                            bool grass);
