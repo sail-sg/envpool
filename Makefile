@@ -32,7 +32,7 @@ cpplint-install:
 	$(call check_install, cpplint)
 
 clang-format-install:
-	command -v clang-format-11 || sudo apt-get install -y clang-format-11
+	command -v clang-format || sudo apt-get install -y clang-format
 
 clang-tidy-install:
 	command -v clang-tidy || sudo apt-get install -y clang-tidy
@@ -77,7 +77,7 @@ cpplint: cpplint-install
 	cpplint $(CPP_FILES)
 
 clang-format: clang-format-install
-	clang-format-11 --style=file -i $(CPP_FILES) -n --Werror
+	clang-format --style=file -i $(CPP_FILES) -n --Werror
 
 # bazel file linter
 
@@ -142,7 +142,7 @@ lint: buildifier flake8 py-format clang-format cpplint clang-tidy mypy docstyle 
 format: py-format-install clang-format-install buildifier-install addlicense-install
 	isort $(PYTHON_FILES)
 	yapf -ir $(PYTHON_FILES)
-	clang-format-11 -style=file -i $(CPP_FILES)
+	clang-format -style=file -i $(CPP_FILES)
 	buildifier -r -lint=fix $(BAZEL_FILES)
 	addlicense -c $(COPYRIGHT) -l apache -y 2023 $(PROJECT_FOLDER)
 
