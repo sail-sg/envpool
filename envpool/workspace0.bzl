@@ -208,11 +208,11 @@ def workspace():
     maybe(
         http_archive,
         name = "libjpeg_turbo",
-        sha256 = "a78b05c0d8427a90eb5b4eb08af25309770c8379592bb0b8a863373128e6143f",
-        strip_prefix = "libjpeg-turbo-2.1.4",
+        sha256 = "b3090cd37b5a8b3e4dbd30a1311b3989a894e5d3c668f14cbc6739d77c9402b7",
+        strip_prefix = "libjpeg-turbo-2.0.5",
         urls = [
-            "https://github.com/libjpeg-turbo/libjpeg-turbo/archive/2.1.4.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/libjpeg-turbo/libjpeg-turbo/2.1.4.tar.gz",
+            "https://github.com/libjpeg-turbo/libjpeg-turbo/archive/2.0.5.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/libjpeg-turbo/libjpeg-turbo/2.0.5.tar.gz",
         ],
         build_file = "//third_party/jpeg:jpeg.BUILD",
     )
