@@ -143,17 +143,18 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
   std::deque<Array> stack_buf_;
   std::string lmp_dir_;
   bool save_lmp_, episodic_life_, use_combined_action_, use_inter_area_resize_;
-  bool done_;
+  bool done_{true};
   int max_episode_steps_, elapsed_step_, stack_num_, frame_skip_,
-      episode_count_, channel_;
+      episode_count_{0}, channel_;
   int deathcount_idx_, hitcount_idx_, damagecount_idx_;  // bugged var
-  double last_deathcount_, last_hitcount_, last_damagecount_;
+  double last_deathcount_{0}, last_hitcount_{0}, last_damagecount_{0};
   int selected_weapon_, selected_weapon_count_, weapon_duration_;
   std::vector<VzdActT> action_set_;
   std::vector<Button> button_list_;
   std::vector<GameVariable> gv_list_;
   std::vector<int> gv_info_index_;
-  std::vector<double> gvs_, last_gvs_, pos_reward_, neg_reward_, weapon_reward_;
+  std::vector<double> gvs_, last_gvs_, pos_reward_, neg_reward_,
+      weapon_reward_{10};
 
  public:
   VizdoomEnv(const Spec& spec, int env_id)
@@ -165,17 +166,11 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
         episodic_life_(spec.config["episodic_life"_]),
         use_combined_action_(spec.config["use_combined_action"_]),
         use_inter_area_resize_(spec.config["use_inter_area_resize"_]),
-        done_(true),
         max_episode_steps_(spec.config["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
         stack_num_(spec.config["stack_num"_]),
         frame_skip_(spec.config["frame_skip"_]),
-        episode_count_(0),
-        last_deathcount_(0),
-        last_hitcount_(0),
-        last_damagecount_(0),
-        weapon_duration_(spec.config["weapon_duration"_]),
-        weapon_reward_(10) {
+        weapon_duration_(spec.config["weapon_duration"_]) {
     if (save_lmp_) {
       lmp_dir_ =
           spec.config["lmp_save_dir"_] + "/env_" + std::to_string(env_id) + "_";
@@ -274,7 +269,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     dg_->init();
   }
 
-  ~VizdoomEnv() { dg_->close(); }
+  ~VizdoomEnv() override { dg_->close(); }
 
   bool IsDone() override { return done_; }
 

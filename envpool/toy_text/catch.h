@@ -48,15 +48,14 @@ class CatchEnv : public Env<CatchEnvSpec> {
  protected:
   int x_, y_, height_, width_, paddle_;
   std::uniform_int_distribution<> dist_;
-  bool done_;
+  bool done_{true};
 
  public:
   CatchEnv(const Spec& spec, int env_id)
       : Env<CatchEnvSpec>(spec, env_id),
         height_(spec.config["height"_]),
         width_(spec.config["width"_]),
-        dist_(0, width_ - 1),
-        done_(true) {}
+        dist_(0, width_ - 1) {}
 
   bool IsDone() override { return done_; }
 

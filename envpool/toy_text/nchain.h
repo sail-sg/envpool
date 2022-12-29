@@ -48,14 +48,13 @@ class NChainEnv : public Env<NChainEnvSpec> {
  protected:
   int s_, max_episode_steps_, elapsed_step_;
   std::uniform_real_distribution<> dist_;
-  bool done_;
+  bool done_{true};
 
  public:
   NChainEnv(const Spec& spec, int env_id)
       : Env<NChainEnvSpec>(spec, env_id),
         max_episode_steps_(spec.config["max_episode_steps"_]),
-        dist_(0, 1),
-        done_(true) {}
+        dist_(0, 1) {}
 
   bool IsDone() override { return done_; }
 

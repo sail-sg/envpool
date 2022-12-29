@@ -53,10 +53,10 @@ class AcrobotEnv : public Env<AcrobotEnvSpec> {
     V5(double s0, double s1, double s2, double s3, double s4)
         : s0(s0), s1(s1), s2(s2), s3(s3), s4(s4) {}
     V5 operator+(const V5& v) const {
-      return V5(s0 + v.s0, s1 + v.s1, s2 + v.s2, s3 + v.s3, s4 + v.s4);
+      return {s0 + v.s0, s1 + v.s1, s2 + v.s2, s3 + v.s3, s4 + v.s4};
     }
     V5 operator*(double v) const {
-      return V5(s0 * v, s1 * v, s2 * v, s3 * v, s4 * v);
+      return {s0 * v, s1 * v, s2 * v, s3 * v, s4 * v};
     }
   };
 
@@ -74,15 +74,14 @@ class AcrobotEnv : public Env<AcrobotEnvSpec> {
   int max_episode_steps_, elapsed_step_;
   V5 s_;
   std::uniform_real_distribution<> dist_;
-  bool done_;
+  bool done_{true};
 
  public:
   AcrobotEnv(const Spec& spec, int env_id)
       : Env<AcrobotEnvSpec>(spec, env_id),
         max_episode_steps_(spec.config["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
-        dist_(-kInitRange, kInitRange),
-        done_(true) {}
+        dist_(-kInitRange, kInitRange) {}
 
   bool IsDone() override { return done_; }
 
@@ -164,7 +163,7 @@ class AcrobotEnv : public Env<AcrobotEnvSpec> {
          kM * kL * kLC * dtheta1 * dtheta1 * std::sin(theta2) - phi2) /
         (kM * kLC * kLC + kI - d2 * d2 / d1);
     double ddtheta1 = -(d2 * ddtheta2 + phi1) / d1;
-    return V5(dtheta1, dtheta2, ddtheta1, ddtheta2, 0);
+    return {dtheta1, dtheta2, ddtheta1, ddtheta2, 0};
   }
 
   void WriteState(float reward) {

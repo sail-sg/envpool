@@ -117,7 +117,7 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
     }
   }
 
-  ~AsyncEnvPool() {
+  ~AsyncEnvPool() override {
     stop_ = 1;
     // LOG(INFO) << "envpool send: " << dur_send_.count();
     // LOG(INFO) << "envpool recv: " << dur_recv_.count();

@@ -51,7 +51,7 @@ class FrozenLakeEnv : public Env<FrozenLakeEnvSpec> {
  protected:
   int x_, y_, size_, max_episode_steps_, elapsed_step_;
   std::uniform_int_distribution<> dist_;
-  bool done_;
+  bool done_{true};
   std::vector<std::string> map_;
 
  public:
@@ -59,8 +59,7 @@ class FrozenLakeEnv : public Env<FrozenLakeEnvSpec> {
       : Env<FrozenLakeEnvSpec>(spec, env_id),
         size_(spec.config["size"_]),
         max_episode_steps_(spec.config["max_episode_steps"_]),
-        dist_(-1, 1),
-        done_(true) {
+        dist_(-1, 1) {
     if (size_ != 8) {
       map_ = std::vector<std::string>({"SFFF", "FHFH", "FFFH", "HFFG"});
     } else {
