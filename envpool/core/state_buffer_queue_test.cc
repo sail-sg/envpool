@@ -42,7 +42,7 @@ TEST(StateBufferQueueTest, Basic) {
     size += num_players;
   }
   std::vector<Array> out = queue.Wait();
-  LOG(INFO) << i << " " << "finish wait";
+  LOG(INFO) << "finish wait";
   EXPECT_EQ(out[0].Shape(0), size);
   EXPECT_EQ(out[1].Shape(0), size);
   EXPECT_EQ(batch, size);
