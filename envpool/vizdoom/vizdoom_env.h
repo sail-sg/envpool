@@ -154,7 +154,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
   std::vector<GameVariable> gv_list_;
   std::vector<int> gv_info_index_;
   std::vector<double> gvs_, last_gvs_, pos_reward_, neg_reward_,
-      weapon_reward_{10};
+      weapon_reward_;
 
  public:
   VizdoomEnv(const Spec& spec, int env_id)
@@ -170,7 +170,8 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
         elapsed_step_(max_episode_steps_ + 1),
         stack_num_(spec.config["stack_num"_]),
         frame_skip_(spec.config["frame_skip"_]),
-        weapon_duration_(spec.config["weapon_duration"_]) {
+        weapon_duration_(spec.config["weapon_duration"_]),
+        weapon_reward_(10) {
     if (save_lmp_) {
       lmp_dir_ =
           spec.config["lmp_save_dir"_] + "/env_" + std::to_string(env_id) + "_";
