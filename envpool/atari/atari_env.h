@@ -54,7 +54,7 @@ class AtariEnvFns {
         "zero_discount_on_life_loss"_.Bind(false), "episodic_life"_.Bind(false),
         "reward_clip"_.Bind(false), "use_fire_reset"_.Bind(true),
         "img_height"_.Bind(84), "img_width"_.Bind(84),
-        "task"_.Bind(std::string("pong")),
+        "task"_.Bind(std::string("pong")), "full_action_space"_.Bind(false),
         "repeat_action_probability"_.Bind(0.0f),
         "use_inter_area_resize"_.Bind(true), "gray_scale"_.Bind(true));
   }
@@ -72,7 +72,9 @@ class AtariEnvFns {
   static decltype(auto) ActionSpec(const Config& conf) {
     ale::ALEInterface env;
     env.loadROM(GetRomPath(conf["base_path"_], conf["task"_]));
-    int action_size = env.getMinimalActionSet().size();
+    int action_size = conf["full_action_space"_]
+                          ? env.getLegalActionSet().size()
+                          : env.getMinimalActionSet().size();
     return MakeDict("action"_.Bind(Spec<int>({-1}, {0, action_size - 1})));
   }
 };
@@ -124,7 +126,11 @@ class AtariEnv : public Env<AtariEnvSpec> {
                    spec.config["repeat_action_probability"_]);
     env_->setInt("random_seed", seed_);
     env_->loadROM(rom_path_);
-    action_set_ = env_->getMinimalActionSet();
+    if (spec.config["full_action_space"_]) {
+      action_set_ = env_->getLegalActionSet();
+    } else {
+      action_set_ = env_->getMinimalActionSet();
+    }
     if (spec.config["use_fire_reset"_]) {
       // https://github.com/sail-sg/envpool/issues/221
       for (auto a : action_set_) {

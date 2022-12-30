@@ -52,6 +52,8 @@ Options
   image resize, default to ``True``.
 * ``use_fire_reset (bool)``: whether to use ``fire-reset`` wrapper, default to
   ``True``.
+* ``full_action_space (bool)``: whether to use full action space of ALE of 18
+  actions, default to ``False``.
 
 
 Observation Space
