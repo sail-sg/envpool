@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Garena Online Private Limited
+ * Copyright 2023 Garena Online Private Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ENVPOOL_PROCGEN_PROCGEN_H_
-#define ENVPOOL_PROCGEN_PROCGEN_H_
+#ifndef ENVPOOL_PROCGEN_PROCGEN_ENV_H_
+#define ENVPOOL_PROCGEN_PROCGEN_ENV_H_
 
 #include <cctype>
 #include <map>
@@ -34,14 +34,10 @@ namespace procgen {
    x 3 colors (RGB) there are 15 possible action buttoms and observation is RGB
    32 or RGB 888,
    QT library build needs:
-   sudo apt update && sudo apt install qt5-default && sudo apt-get install
-   qtdeclarative5-dev
-   https://github.com/openai/procgen/blob/5e1dbf341d291eff40d1f9e0c0a0d5003643aebf/procgen/src/game.h#L23
+   sudo apt update && sudo apt install qt5-default qtdeclarative5-dev
  */
 static const int kResW = 64;
 static const int kResH = 64;
-static const int kRgbFactor = 3;
-static const int kActionNum = 15;  // 0 ~ 14 both sides included
 
 /*
    game factory method for fetching a game instance
@@ -104,37 +100,38 @@ std::shared_ptr<Game> MakeGame(const std::string& name) {
 class ProcgenEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    /* necessary default parameters for procgen games */
-    /* https://github.com/openai/procgen/blob/5e1dbf341d291eff40d1f9e0c0a0d5003643aebf/procgen/src/game.h#L69
-     */
-    return MakeDict("state_num"_.Bind(kResW * kResH * kRgbFactor),
-                    "action_num"_.Bind(kActionNum),
-                    "game_name"_.Bind(std::string("bigfish")),
-                    "use_sequential_levels"_.Bind(false), "num_levels"_.Bind(0),
-                    "start_level"_.Bind(0), "distribution_mode"_.Bind(1));
+    return MakeDict(
+        "env_name"_.Bind(std::string("bigfish")), "num_levels"_.Bind(0),
+        "start_level"_.Bind(0), "use_sequential_levels"_.Bind(false),
+        "center_agent"_.Bind(true), "use_backgrounds"_.Bind(true),
+        "use_monochrome_assets"_.Bind(false), "restrict_themes"_.Bind(false),
+        "use_generated_assets"_.Bind(false), "paint_vel_info"_.Bind(false),
+        "distribution_mode"_.Bind(1));
   }
 
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     /* The observation is RGB 64 x 64 x 3 flattened out into one row plus action
      * taken and if done */
-    return MakeDict("obs:obs"_.Bind(Spec<uint8_t>({-1, conf["state_num"_]})));
+    return MakeDict("obs"_.Bind(Spec<uint8_t>({kResH, kResW, 3}, {0, 255})),
+                    "info:prev_level_seed"_.Bind(Spec<int>({-1})),
+                    "info:prev_level_complete"_.Bind(Spec<int>({-1})),
+                    "info:level_seed"_.Bind(Spec<int>({-1})));
   }
 
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
     /* 15 action buttons in total, ranging from 0 to 14 */
-    return MakeDict(
-        "action"_.Bind(Spec<int>({-1}, {0, conf["action_num"_] - 1})));
+    return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 14})));
   }
 };
 
-typedef class EnvSpec<ProcgenEnvFns> ProcgenEnvSpec;
+using ProcgenEnvSpec = EnvSpec<ProcgenEnvFns>;
 
 class ProcgenEnv : public Env<ProcgenEnvSpec> {
  protected:
   std::shared_ptr<Game> game_;
-  bool done_{false};
+  bool done_{true};
   RandGen game_level_seed_gen_;
   int rand_seed_;
   std::map<std::string, int> info_name_to_offset_;
@@ -153,7 +150,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     /* notice we need to allocate space for some buffer, as specificied here
        https://github.com/openai/procgen/blob/master/procgen/src/game.h#L101
     */
-    game_ = MakeGame(spec.config["game_name"_]);
+    game_ = MakeGame(spec.config["env_name"_]);
     game_level_seed_gen_.seed(rand_seed_);
     game_->level_seed_rand_gen.seed(game_level_seed_gen_.randint());
     if (spec.config["num_levels"_] <= 0) {
@@ -204,8 +201,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     game_->step_data.level_complete = false;
     done_ = false;
     game_->observe();
-    State state = Allocate();
-    WriteObs(state);
+    WriteObs();
   }
 
   void Step(const Action& action) override {
@@ -215,14 +211,13 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     *(game_->action_ptr) = static_cast<int32_t>(act);
     game_->step();
     done_ = game_->step_data.done;
-    State state = Allocate();
-    WriteObs(state);
+    WriteObs();
   }
 
   bool IsDone() override { return done_; }
 
  private:
-  void WriteObs(State& state) {  // NOLINT
+  void WriteObs() {
     /* Helper function to output the information to user at current step */
     /*
        It includes:
@@ -230,16 +225,8 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
        2. Current step's reward
        https://github.com/openai/procgen/blob/5e1dbf341d291eff40d1f9e0c0a0d5003643aebf/procgen/src/game.cpp#L8
     */
-
-    uint8_t* src = (uint8_t*)obs_bufs_[0];  // NOLINT
-    for (int y = 0; y < kResH; y++) {
-      for (int x = 0; x < kResW; x++) {
-        for (int rgb = 0; rgb < kRgbFactor; rgb++) {
-          int offset = rgb + x * kRgbFactor + y * kResW * kRgbFactor;
-          state["obs:obs"_][0][offset] = static_cast<uint8_t>(src[offset]);
-        }
-      }
-    }
+    State state = Allocate();
+    state["obs"_].Assign(obs_bufs_[0]);
     state["reward"_] = static_cast<float>(*(game_->reward_ptr));
   }
 };
@@ -248,4 +235,4 @@ using ProcgenEnvPool = AsyncEnvPool<ProcgenEnv>;
 
 }  // namespace procgen
 
-#endif  // ENVPOOL_PROCGEN_PROCGEN_H_
+#endif  // ENVPOOL_PROCGEN_PROCGEN_ENV_H_

@@ -76,7 +76,7 @@ class GymnasiumEnvPoolMeta(ABCMeta, gymnasium.Env.__class__):
     def _to_gymnasium(
       self: Any, state_values: List[np.ndarray], reset: bool, return_info: bool
     ) -> Union[Any, Tuple[Any, Any], Tuple[Any, np.ndarray, np.ndarray, Any],
-               Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any],]:
+               Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any]]:
       values = map(lambda i: state_values[i], state_idx)
       state = treevalue.unflatten(
         [(path, vi) for (path, _), vi in zip(tree_pairs, values)]

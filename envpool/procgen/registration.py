@@ -1,4 +1,4 @@
-# Copyright 2021 Garena Online Private Limited
+# Copyright 2023 Garena Online Private Limited
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,5 +38,5 @@ for game_name in procgen_games_list:
         game_name=game_name,
         num_levels=0,
         start_level=0,
-        distribution_mode=dist_code
+        distribution_mode=dist_code,
       )
