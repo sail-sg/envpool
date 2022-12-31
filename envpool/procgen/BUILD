@@ -25,18 +25,9 @@ py_library(
 )
 
 cc_library(
-    name = "third_party_procgen",
-    hdrs = ["third_party_procgen.h"],
-    deps = [
-        "@procgen",
-    ],
-)
-
-cc_library(
     name = "procgen_env",
     hdrs = ["procgen_env.h"],
     deps = [
-        ":third_party_procgen",
         "//envpool/core:async_envpool",
         "//envpool/core:env",
         "//envpool/core:env_spec",

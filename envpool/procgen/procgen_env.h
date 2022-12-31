@@ -25,7 +25,7 @@
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
-#include "envpool/procgen/third_party_procgen.h"
+#include "game.h"
 
 namespace procgen {
 
@@ -38,64 +38,6 @@ namespace procgen {
  */
 static const int kResW = 64;
 static const int kResH = 64;
-
-/*
-   game factory method for fetching a game instance
-   Notice the inheritance hierarchy is Game > BasicAbstractGame > [detailed 15
-   games]
-*/
-std::shared_ptr<Game> MakeGame(const std::string& name) {
-  if (name == "bigfish") {
-    return make_bigfish();
-  }
-  if (name == "bossfight") {
-    return make_bossfight();
-  }
-  if (name == "caveflyer") {
-    return make_caveflyer();
-  }
-  if (name == "chaser") {
-    return make_chaser();
-  }
-  if (name == "climber") {
-    return make_climber();
-  }
-  if (name == "coinrun") {
-    return make_coinrun();
-  }
-  if (name == "dodgeball") {
-    return make_dodgeball();
-  }
-  if (name == "fruitbot") {
-    return make_fruitbot();
-  }
-  if (name == "heist") {
-    return make_heist();
-  }
-  if (name == "jumper") {
-    return make_jumper();
-  }
-  if (name == "leaper") {
-    return make_leaper();
-  }
-  if (name == "maze") {
-    return make_maze();
-  }
-  if (name == "miner") {
-    return make_miner();
-  }
-  if (name == "ninja") {
-    return make_ninja();
-  }
-  if (name == "plunder") {
-    return make_plunder();
-  }
-  if (name == "starpilot") {
-    return make_starpilot();
-  }
-  // not supposed to reach here
-  return make_bigfish();
-}
 
 class ProcgenEnvFns {
  public:
@@ -150,7 +92,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     /* notice we need to allocate space for some buffer, as specificied here
        https://github.com/openai/procgen/blob/master/procgen/src/game.h#L101
     */
-    game_ = MakeGame(spec.config["env_name"_]);
+    game_ = globalGameRegistry->at(spec.config["env_name"_])();
     game_level_seed_gen_.seed(rand_seed_);
     game_->level_seed_rand_gen.seed(game_level_seed_gen_.randint());
     if (spec.config["num_levels"_] <= 0) {
@@ -226,7 +168,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
        https://github.com/openai/procgen/blob/5e1dbf341d291eff40d1f9e0c0a0d5003643aebf/procgen/src/game.cpp#L8
     */
     State state = Allocate();
-    state["obs"_].Assign(obs_bufs_[0]);
+    // state["obs"_].Assign(obs_bufs_[0]);
     state["reward"_] = static_cast<float>(*(game_->reward_ptr));
   }
 };

@@ -380,11 +380,27 @@ def workspace():
     maybe(
         http_archive,
         name = "procgen",
-        strip_prefix = "procgen-master/procgen/src/",
+        sha256 = "22940ad0f1fdb4ad1eab3303ce23d3a0ea536700bb1d7c299bee64dbc7c57e9b",
+        strip_prefix = "procgen-0.10.7/procgen/src",
         urls = [
-            "https://github.com/YukunJ/procgen/archive/refs/heads/master.zip",
+            "https://github.com/openai/procgen/archive/refs/tags/0.10.7.tar.gz",
         ],
         build_file = "//third_party/procgen:procgen.BUILD",
+        patches = [
+            "//third_party/procgen:assetgen.patch",
+            "//third_party/procgen:qt-utils.patch",
+        ],
+    )
+
+    maybe(
+        http_archive,
+        name = "gym3_libenv",
+        sha256 = "9a764d79d4215609c2612b2c84fec8bcea6609941bdcb7051f3335ed4576b8ef",
+        strip_prefix = "gym3-4c3824680eaf9dd04dce224ee3d4856429878226/gym3",
+        urls = [
+            "https://github.com/openai/gym3/archive/4c3824680eaf9dd04dce224ee3d4856429878226.zip",
+        ],
+        build_file = "//third_party/gym3_libenv:gym3_libenv.BUILD",
     )
 
     maybe(
