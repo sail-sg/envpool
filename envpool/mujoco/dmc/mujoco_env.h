@@ -46,7 +46,7 @@ class MujocoEnv {
   mjData* data_;
   int n_sub_steps_, max_episode_steps_, elapsed_step_;
   float reward_, discount_;
-  bool done_;
+  bool done_{true};
 #ifdef ENVPOOL_TEST
   std::unique_ptr<mjtNum> qpos0_;
 #endif

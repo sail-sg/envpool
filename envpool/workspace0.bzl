@@ -23,33 +23,33 @@ def workspace():
     maybe(
         http_archive,
         name = "rules_python",
-        sha256 = "9fcf91dbcc31fde6d1edb15f117246d912c33c36f44cf681976bd886538deba6",
-        strip_prefix = "rules_python-0.8.0",
+        sha256 = "b593d13bb43c94ce94b483c2858e53a9b811f6f10e1e0eedc61073bd90e58d9c",
+        strip_prefix = "rules_python-0.12.0",
         urls = [
-            "https://github.com/bazelbuild/rules_python/archive/refs/tags/0.8.0.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/bazelbuild/rules_python/0.8.0.tar.gz",
+            "https://github.com/bazelbuild/rules_python/archive/refs/tags/0.12.0.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/bazelbuild/rules_python/0.12.0.tar.gz",
         ],
     )
 
     maybe(
         http_archive,
         name = "rules_foreign_cc",
-        sha256 = "6041f1374ff32ba711564374ad8e007aef77f71561a7ce784123b9b4b88614fc",
-        strip_prefix = "rules_foreign_cc-0.8.0",
+        sha256 = "2a4d07cd64b0719b39a7c12218a3e507672b82a97b98c6a89d38565894cf7c51",
+        strip_prefix = "rules_foreign_cc-0.9.0",
         urls = [
-            "https://github.com/bazelbuild/rules_foreign_cc/archive/0.8.0.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/bazelbuild/rules_foreign_cc/0.8.0.tar.gz",
+            "https://github.com/bazelbuild/rules_foreign_cc/archive/0.9.0.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/bazelbuild/rules_foreign_cc/0.9.0.tar.gz",
         ],
     )
 
     maybe(
         http_archive,
         name = "pybind11_bazel",
-        sha256 = "fec6281e4109115c5157ca720b8fe20c8f655f773172290b03f57353c11869c2",
-        strip_prefix = "pybind11_bazel-72cbbf1fbc830e487e3012862b7b720001b70672",
+        sha256 = "a185aa68c93b9f62c80fcb3aadc3c83c763854750dc3f38be1dadcb7be223837",
+        strip_prefix = "pybind11_bazel-faf56fb3df11287f26dbc66fdedf60a2fc2c6631",
         urls = [
-            "https://github.com/pybind/pybind11_bazel/archive/72cbbf1fbc830e487e3012862b7b720001b70672.zip",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pybind/pybind11_bazel/72cbbf1fbc830e487e3012862b7b720001b70672.zip",
+            "https://github.com/pybind/pybind11_bazel/archive/faf56fb3df11287f26dbc66fdedf60a2fc2c6631.zip",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pybind/pybind11_bazel/faf56fb3df11287f26dbc66fdedf60a2fc2c6631.zip",
         ],
     )
 
@@ -57,22 +57,22 @@ def workspace():
         http_archive,
         name = "pybind11",
         build_file = "@pybind11_bazel//:pybind11.BUILD",
-        sha256 = "6bd528c4dbe2276635dc787b6b1f2e5316cf6b49ee3e150264e455a0d68d19c1",
-        strip_prefix = "pybind11-2.9.2",
+        sha256 = "93bd1e625e43e03028a3ea7389bba5d3f9f2596abc074b068e70f4ef9b1314ae",
+        strip_prefix = "pybind11-2.10.2",
         urls = [
-            "https://github.com/pybind/pybind11/archive/refs/tags/v2.9.2.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pybind/pybind11/v2.9.2.tar.gz",
+            "https://github.com/pybind/pybind11/archive/refs/tags/v2.10.2.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pybind/pybind11/v2.10.2.tar.gz",
         ],
     )
 
     maybe(
         http_archive,
         name = "com_google_absl",
-        sha256 = "dcf71b9cba8dc0ca9940c4b316a0c796be8fab42b070bb6b7cab62b48f0e66c4",
-        strip_prefix = "abseil-cpp-20211102.0",
+        sha256 = "91ac87d30cc6d79f9ab974c51874a704de9c2647c40f6932597329a282217ba8",
+        strip_prefix = "abseil-cpp-20220623.1",
         urls = [
-            "https://github.com/abseil/abseil-cpp/archive/refs/tags/20211102.0.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/abseil/abseil-cpp/20211102.0.tar.gz",
+            "https://github.com/abseil/abseil-cpp/archive/refs/tags/20220623.1.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/abseil/abseil-cpp/20220623.1.tar.gz",
         ],
     )
 
@@ -101,11 +101,11 @@ def workspace():
     maybe(
         http_archive,
         name = "com_google_googletest",
-        sha256 = "b4870bf121ff7795ba20d20bcdd8627b8e088f2d1dab299a031c1034eddc93d5",
-        strip_prefix = "googletest-release-1.11.0",
+        sha256 = "81964fe578e9bd7c94dfdb09c8e4d6e6759e19967e397dbea48d1c10e45d0df2",
+        strip_prefix = "googletest-release-1.12.1",
         urls = [
-            "https://github.com/google/googletest/archive/refs/tags/release-1.11.0.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/google/googletest/release-1.11.0.tar.gz",
+            "https://github.com/google/googletest/archive/refs/tags/release-1.12.1.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/google/googletest/release-1.12.1.tar.gz",
         ],
     )
 
@@ -148,11 +148,11 @@ def workspace():
     maybe(
         http_archive,
         name = "zlib",
-        sha256 = "d8688496ea40fb61787500e863cc63c9afcbc524468cedeb478068924eb54932",
-        strip_prefix = "zlib-1.2.12",
+        sha256 = "b3a24de97a8fdbc835b9833169501030b8977031bcb54b3b3ac13740f846ab30",
+        strip_prefix = "zlib-1.2.13",
         urls = [
-            "https://github.com/madler/zlib/archive/refs/tags/v1.2.12.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/madler/zlib/v1.2.12.tar.gz",
+            "https://github.com/madler/zlib/releases/download/v1.2.13/zlib-1.2.13.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/madler/zlib/zlib-1.2.13.tar.gz",
         ],
         build_file = "//third_party/zlib:zlib.BUILD",
     )
@@ -160,35 +160,35 @@ def workspace():
     maybe(
         http_archive,
         name = "opencv",
+        sha256 = "8df0079cdbe179748a18d44731af62a245a45ebf5085223dc03133954c662973",
+        strip_prefix = "opencv-4.7.0",
         urls = [
-            "https://github.com/opencv/opencv/archive/refs/tags/4.5.5.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/opencv/opencv/4.5.5.tar.gz",
+            "https://github.com/opencv/opencv/archive/refs/tags/4.7.0.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/opencv/opencv/4.7.0.tar.gz",
         ],
-        sha256 = "a1cfdcf6619387ca9e232687504da996aaa9f7b5689986b8331ec02cb61d28ad",
-        strip_prefix = "opencv-4.5.5",
         build_file = "//third_party/opencv:opencv.BUILD",
     )
 
     maybe(
         http_archive,
         name = "pugixml",
+        sha256 = "40c0b3914ec131485640fa57e55bf1136446026b41db91c1bef678186a12abbe",
+        strip_prefix = "pugixml-1.13/src",
         urls = [
-            "https://github.com/zeux/pugixml/releases/download/v1.12.1/pugixml-1.12.1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/zeux/pugixml/pugixml-1.12.1.tar.gz",
+            "https://github.com/zeux/pugixml/releases/download/v1.13/pugixml-1.13.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/zeux/pugixml/pugixml-1.13.tar.gz",
         ],
-        sha256 = "dcf671a919cc4051210f08ffd3edf9e4247f79ad583c61577a13ee93af33afc7",
-        strip_prefix = "pugixml-1.12/src",
         build_file = "//third_party/pugixml:pugixml.BUILD",
     )
 
     maybe(
         http_archive,
         name = "ale",
-        sha256 = "31ff9a51187a1237b683c7a5eff232b294f0bd48ca078ab57eabc9e3564ff1c1",
-        strip_prefix = "Arcade-Learning-Environment-0.7.5",
+        sha256 = "9a9f1ad6cd61dfb26895314d409ba69da038b7def295b509964e579027fefd99",
+        strip_prefix = "Arcade-Learning-Environment-0.8.0",
         urls = [
-            "https://github.com/mgbellemare/Arcade-Learning-Environment/archive/refs/tags/v0.7.5.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/mgbellemare/Arcade-Learning-Environment/v0.7.5.tar.gz",
+            "https://github.com/mgbellemare/Arcade-Learning-Environment/archive/refs/tags/v0.8.0.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/mgbellemare/Arcade-Learning-Environment/v0.8.0.tar.gz",
         ],
         build_file = "//third_party/ale:ale.BUILD",
     )
@@ -232,11 +232,11 @@ def workspace():
     maybe(
         http_archive,
         name = "sdl2",
-        sha256 = "c56aba1d7b5b0e7e999e4a7698c70b63a3394ff9704b5f6e1c57e0c16f04dd06",
-        strip_prefix = "SDL2-2.0.20",
+        sha256 = "02537cc7ebd74071631038b237ec4bfbb3f4830ba019e569434da33f42373e04",
+        strip_prefix = "SDL2-2.26.1",
         urls = [
-            "https://www.libsdl.org/release/SDL2-2.0.20.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/libsdl/SDL2-2.0.20.tar.gz",
+            "https://www.libsdl.org/release/SDL2-2.26.1.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/libsdl/SDL2-2.26.1.tar.gz",
         ],
         build_file = "//third_party/sdl2:sdl2.BUILD",
     )
@@ -244,11 +244,11 @@ def workspace():
     maybe(
         http_archive,
         name = "com_github_nelhage_rules_boost",
-        sha256 = "ce95d0705592e51eda91b38870e847c303f65219871683f7c34233caad150b0b",
-        strip_prefix = "rules_boost-32164a62e2472077320f48f52b8077207cd0c9c8",
+        sha256 = "6ded3e8c064054c92b79aeadde2d78821c889598e634c595133da0ea8f0f0b85",
+        strip_prefix = "rules_boost-f1065639e6f33741abe2a6a78fa79dd1a07bbf5d",
         urls = [
-            "https://github.com/nelhage/rules_boost/archive/32164a62e2472077320f48f52b8077207cd0c9c8.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/nelhage/rules_boost/32164a62e2472077320f48f52b8077207cd0c9c8.tar.gz",
+            "https://github.com/nelhage/rules_boost/archive/f1065639e6f33741abe2a6a78fa79dd1a07bbf5d.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/nelhage/rules_boost/f1065639e6f33741abe2a6a78fa79dd1a07bbf5d.tar.gz",
         ],
     )
 
@@ -257,11 +257,11 @@ def workspace():
         name = "boost",
         build_file = "@com_github_nelhage_rules_boost//:BUILD.boost",
         patch_cmds = ["rm -f doc/pdf/BUILD"],
-        sha256 = "475d589d51a7f8b3ba2ba4eda022b170e562ca3b760ee922c146b6c65856ef39",
-        strip_prefix = "boost_1_79_0",
+        sha256 = "71feeed900fbccca04a3b4f2f84a7c217186f28a940ed8b7ed4725986baf99fa",
+        strip_prefix = "boost_1_81_0",
         urls = [
-            "https://boostorg.jfrog.io/artifactory/main/release/1.79.0/source/boost_1_79_0.tar.bz2",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/boost/boost_1_79_0.tar.bz2",
+            "https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.bz2",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/boost/boost_1_81_0.tar.bz2",
         ],
     )
 
@@ -331,11 +331,11 @@ def workspace():
     maybe(
         http_archive,
         name = "mujoco_gym_xml",
-        sha256 = "7feff9b58b96c0d763429c0670c720d64d7799414cd9a8b70a9eac5b5509a57a",
-        strip_prefix = "gym-0.25.1/gym/envs/mujoco",
+        sha256 = "96a5fc8345bd92b73a15fc25112d53a294f86fcace1c5e4ef7f0e052b5e1bdf4",
+        strip_prefix = "gym-0.26.2/gym/envs/mujoco",
         urls = [
-            "https://github.com/openai/gym/archive/refs/tags/0.25.1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/openai/gym/0.25.1.tar.gz",
+            "https://github.com/openai/gym/archive/refs/tags/0.26.2.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/openai/gym/0.26.2.tar.gz",
         ],
         build_file = "//third_party/mujoco_gym_xml:mujoco_gym_xml.BUILD",
     )
@@ -343,11 +343,11 @@ def workspace():
     maybe(
         http_archive,
         name = "mujoco_dmc_xml",
-        sha256 = "0ede3050a5deec4b81ed8f42805469e291e622b7b3d4bc6721deed899623dcf9",
-        strip_prefix = "dm_control-1.0.5/dm_control",
+        sha256 = "fb8d57cbeb92bebe56a992dab8401bc00b3bff61b62526eb563854adf3dfb595",
+        strip_prefix = "dm_control-1.0.9/dm_control",
         urls = [
-            "https://github.com/deepmind/dm_control/archive/refs/tags/1.0.5.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/dm_control/1.0.5.tar.gz",
+            "https://github.com/deepmind/dm_control/archive/refs/tags/1.0.9.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/dm_control/1.0.9.tar.gz",
         ],
         build_file = "//third_party/mujoco_dmc_xml:mujoco_dmc_xml.BUILD",
     )

@@ -36,7 +36,7 @@ b2PolygonShape GeneratePolygon(const float (*poly)[2], int size) {  // NOLINT
 
 Car::Car(std::shared_ptr<b2World> world, float init_angle, float init_x,
          float init_y)
-    : world_(std::move(world)), hull_(nullptr), fuel_spent_(0) {
+    : world_(std::move(world)) {
   // Create hull
   b2BodyDef bd;
   bd.position.Set(init_x, init_y);
@@ -186,7 +186,7 @@ void Car::Step(float dt) {
       } else if (w->skid_start == nullptr) {
         w->skid_start = std::make_unique<b2Vec2>(w->body->GetPosition());
       } else {
-        w->skid_particle = CreateParticle(*(w->skid_start.get()),
+        w->skid_particle = CreateParticle(*(w->skid_start.get()),  // NOLINT
                                           w->body->GetPosition(), grass);
         w->skid_start = nullptr;
       }
@@ -264,7 +264,7 @@ void Car::Draw(const cv::Mat& surf, float zoom,
       cv::fillPoly(surf, poly, color);
 
       auto* user_data =
-          reinterpret_cast<UserData*>(body->GetUserData().pointer);
+          reinterpret_cast<UserData*>(body->GetUserData().pointer);  // NOLINT
       if (user_data == nullptr || user_data->type != WHEEL_TYPE) {
         continue;
       }

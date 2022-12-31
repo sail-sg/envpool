@@ -89,7 +89,7 @@ py_test(
         ":box2d_registration",
         requirement("absl-py"),
         requirement("gym"),
-        requirement("box2d"),
+        requirement("box2d-py"),
         requirement("pygame"),
         requirement("opencv-python-headless"),
         requirement("numpy"),

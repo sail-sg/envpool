@@ -34,9 +34,9 @@ void CarRacingFrictionDetector::Contact(b2Contact* contact, bool begin) {
   Tile* tile = nullptr;
   Wheel* obj = nullptr;
 
-  auto* u1 = reinterpret_cast<UserData*>(
+  auto* u1 = reinterpret_cast<UserData*>(  // NOLINT
       contact->GetFixtureA()->GetBody()->GetUserData().pointer);
-  auto* u2 = reinterpret_cast<UserData*>(
+  auto* u2 = reinterpret_cast<UserData*>(  // NOLINT
       contact->GetFixtureB()->GetBody()->GetUserData().pointer);
 
   if (u1 == nullptr || u2 == nullptr) {
@@ -84,7 +84,6 @@ CarRacingBox2dEnv::CarRacingBox2dEnv(int max_episode_steps,
     : lap_complete_percent_(lap_complete_percent),
       max_episode_steps_(max_episode_steps),
       elapsed_step_(max_episode_steps + 1),
-      done_(true),
       world_(new b2World(b2Vec2(0.0, 0.0))) {
   b2PolygonShape shape;
   std::array<b2Vec2, 4> vertices = {b2Vec2(0, 0), b2Vec2(1, 0), b2Vec2(1, -1),

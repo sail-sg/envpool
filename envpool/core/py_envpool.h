@@ -72,8 +72,8 @@ struct ArrayToNumpyHelper<Container<dtype>> {
                       reinterpret_cast<dtype*>((*inner_ptr)->Data()), capsule);
       }
     }
-    return py::array(py::dtype("object"), a.Shape(),
-                     reinterpret_cast<py::object*>(ptr->get()), capsule);
+    return {py::dtype("object"), a.Shape(),
+            reinterpret_cast<py::object*>(ptr->get()), capsule};
   }
 };
 
@@ -83,7 +83,7 @@ Array NumpyToArray(const py::array& arr) {
   ArrayT arr_t(arr);
   ShapeSpec spec(arr_t.itemsize(),
                  std::vector<int>(arr_t.shape(), arr_t.shape() + arr_t.ndim()));
-  return Array(spec, reinterpret_cast<char*>(arr_t.mutable_data()));
+  return {spec, reinterpret_cast<char*>(arr_t.mutable_data())};
 }
 
 template <typename dtype>

@@ -63,15 +63,14 @@ class CartPoleEnv : public Env<CartPoleEnvSpec> {
   int max_episode_steps_, elapsed_step_;
   double x_, x_dot_, theta_, theta_dot_;
   std::uniform_real_distribution<> dist_;
-  bool done_;
+  bool done_{true};
 
  public:
   CartPoleEnv(const Spec& spec, int env_id)
       : Env<CartPoleEnvSpec>(spec, env_id),
         max_episode_steps_(spec.config["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
-        dist_(-kInitRange, kInitRange),
-        done_(true) {}
+        dist_(-kInitRange, kInitRange) {}
 
   bool IsDone() override { return done_; }
 

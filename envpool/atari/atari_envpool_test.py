@@ -61,6 +61,12 @@ class _AtariEnvPoolTest(absltest.TestCase):
     fps = total * batch / duration * 4
     logging.info(f"Raw envpool FPS = {fps:.6f}")
 
+  def test_full_action_space(self) -> None:
+    env = make_gym("Pong-v5", full_action_space=True)
+    self.assertEqual(env.action_space.n, 18)
+    env = make_gym("Breakout-v5", full_action_space=True)
+    self.assertEqual(env.action_space.n, 18)
+
   def test_align(self) -> None:
     """Make sure gym's envpool and dm_env's envpool generate the same data."""
     num_envs = 4

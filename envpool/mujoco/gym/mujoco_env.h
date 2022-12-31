@@ -38,7 +38,7 @@ class MujocoEnv {
   int frame_skip_;
   bool post_constraint_;
   int max_episode_steps_, elapsed_step_;
-  bool done_;
+  bool done_{true};
 
  public:
   MujocoEnv(const std::string& xml, int frame_skip, bool post_constraint,
@@ -54,8 +54,7 @@ class MujocoEnv {
         frame_skip_(frame_skip),
         post_constraint_(post_constraint),
         max_episode_steps_(max_episode_steps),
-        elapsed_step_(max_episode_steps + 1),
-        done_(true) {
+        elapsed_step_(max_episode_steps + 1) {
     std::memcpy(init_qpos_, data_->qpos, sizeof(mjtNum) * model_->nq);
     std::memcpy(init_qvel_, data_->qvel, sizeof(mjtNum) * model_->nv);
   }

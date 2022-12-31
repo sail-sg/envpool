@@ -33,6 +33,7 @@ class EnvPool {
   using State = NamedVector<typename EnvSpec::StateKeys, std::vector<Array>>;
   using Action = NamedVector<typename EnvSpec::ActionKeys, std::vector<Array>>;
   explicit EnvPool(EnvSpec spec) : spec(std::move(spec)) {}
+  virtual ~EnvPool() = default;
 
  protected:
   virtual void Send(const std::vector<Array>& action) {
