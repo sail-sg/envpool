@@ -33,8 +33,7 @@ namespace procgen {
    All the procgen's games have the same observation buffer size, 64 x 64 pixels
    x 3 colors (RGB) there are 15 possible action buttoms and observation is RGB
    32 or RGB 888,
-   QT library build needs:
-   sudo apt update && sudo apt install qtdeclarative5-dev
+   QT build needs: sudo apt update && sudo apt install qtdeclarative5-dev
  */
 static const int kResW = 64;
 static const int kResH = 64;
@@ -72,8 +71,7 @@ class ProcgenEnvFns {
 
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    /* The observation is RGB 64 x 64 x 3 flattened out into one row plus action
-     * taken and if done */
+    // The observation is RGB 64 x 64 x 3
     return MakeDict("obs"_.Bind(Spec<uint8_t>({kResH, kResW, 3}, {0, 255})),
                     "info:prev_level_seed"_.Bind(Spec<int>({-1})),
                     "info:prev_level_complete"_.Bind(Spec<int>({-1})),
@@ -82,7 +80,7 @@ class ProcgenEnvFns {
 
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
-    /* 15 action buttons in total, ranging from 0 to 14 */
+    // 15 action buttons in total, ranging from 0 to 14
     return MakeDict("action"_.Bind(Spec<int>({-1}, {0, 14})));
   }
 };
@@ -112,9 +110,6 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
      * We mostly follow how it's done in the vector environment at Procgen and
      * translate it into single one.
      * https://github.com/openai/procgen/blob/0.10.7/procgen/src/vecgame.cpp#L312
-     *
-     * notice we need to allocate space for some buffer, as specificied here
-     * https://github.com/openai/procgen/blob/0.10.7/procgen/src/game.h#L101
      */
     std::call_once(procgen_global_init_flag, ProcgenGlobalInit,
                    spec.config["base_path"_] + "/procgen/assets/");
@@ -145,8 +140,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     game_->info_name_to_offset["level_seed"] = 0;
     game_->info_name_to_offset["prev_level_seed"] = 1;
     game_->info_name_to_offset["prev_level_complete"] = 2;
-    // if use_generated_assets is not set,
-    // it will try load some pictures we don't have
+    // game options
     game_->options.use_easy_jump = spec.config["use_easy_jump"_];
     game_->options.paint_vel_info = spec.config["paint_vel_info"_];
     game_->options.use_generated_assets = spec.config["use_generated_assets"_];
