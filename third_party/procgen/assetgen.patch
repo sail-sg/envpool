@@ -1,5 +1,5 @@
---- assetgen.h
-+++ assetgen.h
+--- src/assetgen.h
++++ src/assetgen.h
 @@ -5,9 +5,9 @@
  */
 

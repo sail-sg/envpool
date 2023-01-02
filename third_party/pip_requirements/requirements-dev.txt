@@ -18,5 +18,3 @@ dm-control>=1.0.5
 mujoco>=2.2.1,<2.3
 mujoco_py>=2.1.2.14
 pygame
-gym3
-procgen

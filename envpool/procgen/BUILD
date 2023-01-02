@@ -17,16 +17,19 @@ load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 
 package(default_visibility = ["//visibility:public"])
 
-py_library(
-    name = "procgen",
-    srcs = ["__init__.py"],
-    data = [":procgen_envpool.so"],
-    deps = ["//envpool/python:api"],
+genrule(
+    name = "gen_procgen_assets",
+    srcs = ["@procgen//:procgen_assets"],
+    outs = ["assets"],
+    cmd = "mkdir -p $(OUTS) && cp -r $(SRCS) $(OUTS)",
 )
 
 cc_library(
     name = "procgen_env",
     hdrs = ["procgen_env.h"],
+    data = [
+        ":gen_procgen_assets",
+    ],
     deps = [
         "//envpool/core:async_envpool",
         "//envpool/core:env",
@@ -44,28 +47,6 @@ cc_test(
     ],
 )
 
-py_test(
-    name = "procgen_test",
-    srcs = ["procgen_test.py"],
-    data = [":procgen_envpool.so"],
-    deps = [
-        ":procgen",
-        requirement("numpy"),
-        requirement("absl-py"),
-        requirement("opencv-python-headless"),
-        requirement("gym"),
-        requirement("procgen"),
-    ],
-)
-
-py_library(
-    name = "procgen_registration",
-    srcs = ["registration.py"],
-    deps = [
-        "//envpool:registration",
-    ],
-)
-
 pybind_extension(
     name = "procgen_envpool",
     srcs = ["procgen_envpool.cc"],
@@ -76,5 +57,31 @@ pybind_extension(
         ":procgen_env",
         "//envpool/core:py_envpool",
         "@procgen",
+    ],
+)
+
+py_library(
+    name = "procgen",
+    srcs = ["__init__.py"],
+    data = [":procgen_envpool.so"],
+    deps = ["//envpool/python:api"],
+)
+
+py_library(
+    name = "procgen_registration",
+    srcs = ["registration.py"],
+    deps = [
+        "//envpool:registration",
+    ],
+)
+
+py_test(
+    name = "procgen_test",
+    srcs = ["procgen_test.py"],
+    data = [":procgen_envpool.so"],
+    deps = [
+        ":procgen",
+        requirement("numpy"),
+        requirement("absl-py"),
     ],
 )

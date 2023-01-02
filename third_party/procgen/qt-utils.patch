@@ -1,5 +1,5 @@
---- qt-utils.h
-+++ qt-utils.h
+--- src/qt-utils.h
++++ src/qt-utils.h
 @@ -6,8 +6,8 @@
 
  */

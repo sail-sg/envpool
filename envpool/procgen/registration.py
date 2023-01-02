@@ -15,28 +15,41 @@
 from envpool.registration import register
 
 # in total 16 games in Procgen
-procgen_games_list = [
-  "bigfish", "bossfight", "caveflyer", "chaser", "climber", "coinrun",
-  "dodgeball", "fruitbot", "heist", "jumper", "leaper", "maze", "miner",
-  "ninja", "plunder", "starpilot"
-]
+# 16 games has different timeout settings on their own
+procgen_timeout_list = {
+  "bigfish": 6000,
+  "bossfight": 4000,
+  "caveflyer": 1000,
+  "chaser": 1000,
+  "climber": 1000,
+  "coinrun": 1000,
+  "dodgeball": 1000,
+  "fruitbot": 1000,
+  "heist": 1000,
+  "jumper": 1000,
+  "leaper": 500,
+  "maze": 500,
+  "miner": 1000,
+  "ninja": 1000,
+  "plunder": 4000,
+  "starpilot": 1000,
+}
 
 distribution_name = ["Easy", "Hard"]
 
 distribution_code = [0, 1]
 
-for game_name in procgen_games_list:
+for env_name, timeout in procgen_timeout_list.items():
   for dist_name in distribution_name:
     for dist_code in distribution_code:
       register(
-        task_id=f"{game_name.capitalize()}{dist_name}-v0",
+        task_id=f"{env_name.capitalize()}{dist_name}-v0",
         import_path="envpool.procgen",
         spec_cls="ProcgenEnvSpec",
         dm_cls="ProcgenDMEnvPool",
         gym_cls="ProcgenGymEnvPool",
         gymnasium_cls="ProcgenGymnasiumEnvPool",
-        game_name=game_name,
-        num_levels=0,
-        start_level=0,
+        env_name=env_name,
         distribution_mode=dist_code,
+        max_episode_steps=timeout,
       )

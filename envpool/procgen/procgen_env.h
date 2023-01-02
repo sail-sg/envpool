@@ -20,6 +20,7 @@
 #include <cctype>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -34,10 +35,30 @@ namespace procgen {
    x 3 colors (RGB) there are 15 possible action buttoms and observation is RGB
    32 or RGB 888,
    QT library build needs:
-   sudo apt update && sudo apt install qt5-default qtdeclarative5-dev
+   sudo apt update && sudo apt install qtdeclarative5-dev
  */
 static const int kResW = 64;
 static const int kResH = 64;
+static std::once_flag procgen_global_init_flag;
+
+void procgen_global_init(std::string path) {
+  if (global_resource_root.empty()) {
+    global_resource_root = path;
+    images_load();
+  }
+}
+
+// https://github.com/openai/procgen/blob/0.10.7/procgen/src/vecgame.cpp#L156
+std::size_t HashStrUint32(const std::string &str) {
+  std::size_t hash = 0x811c9dc5;
+  std::size_t prime = 0x1000193;
+  for (std::size_t i = 0; i < str.size(); i++) {
+    uint8_t value = str[i];
+    hash ^= value;
+    hash *= prime;
+  }
+  return hash;
+}
 
 class ProcgenEnvFns {
  public:
@@ -48,7 +69,7 @@ class ProcgenEnvFns {
         "center_agent"_.Bind(true), "use_backgrounds"_.Bind(true),
         "use_monochrome_assets"_.Bind(false), "restrict_themes"_.Bind(false),
         "use_generated_assets"_.Bind(false), "paint_vel_info"_.Bind(false),
-        "distribution_mode"_.Bind(1));
+        "use_easy_jump"_.Bind(false), "distribution_mode"_.Bind(1));
   }
 
   template <typename Config>
@@ -69,65 +90,74 @@ class ProcgenEnvFns {
 };
 
 using ProcgenEnvSpec = EnvSpec<ProcgenEnvFns>;
+using FrameSpec = Spec<uint8_t>;
 
 class ProcgenEnv : public Env<ProcgenEnvSpec> {
  protected:
   std::shared_ptr<Game> game_;
-  bool done_{true};
-  RandGen game_level_seed_gen_;
-  int rand_seed_;
-  std::map<std::string, int> info_name_to_offset_;
-  std::vector<void*> obs_bufs_;
-  std::vector<void*> info_bufs_;
+  std::string env_name_;
+  // buffer used by game
+  FrameSpec obs_spec_;
+  Array obs_;
+  float reward_;
+  int level_seed_, prev_level_seed_;
+  uint8_t done_{1}, prev_level_complete_;
 
  public:
   ProcgenEnv(const Spec& spec, int env_id)
-      : Env<ProcgenEnvSpec>(spec, env_id), rand_seed_(spec.config["seed"_]) {
-    /* Initialize the single game we are holding in this EnvPool environment */
-    /* It depends on some default setting along with the config map passed in */
-    /* We mostly follow how it's done in the vector environment at Procgen and
-     * translate it into single one */
-    /* https://github.com/openai/procgen/blob/5e1dbf341d291eff40d1f9e0c0a0d5003643aebf/procgen/src/vecgame.cpp#L312
+      : Env<ProcgenEnvSpec>(spec, env_id),
+        env_name_(spec.config["env_name"_]),
+        obs_spec_({kResH, kResW, 3}),
+        obs_(obs_spec_) {
+    /* Initialize the single game we are holding in this EnvPool environment
+     * It depends on some default setting along with the config map passed in
+     * We mostly follow how it's done in the vector environment at Procgen and
+     * translate it into single one.
+     * https://github.com/openai/procgen/blob/0.10.7/procgen/src/vecgame.cpp#L312
+     *
+     * notice we need to allocate space for some buffer, as specificied here
+     * https://github.com/openai/procgen/blob/0.10.7/procgen/src/game.h#L101
      */
-    /* notice we need to allocate space for some buffer, as specificied here
-       https://github.com/openai/procgen/blob/master/procgen/src/game.h#L101
-    */
-    game_ = globalGameRegistry->at(spec.config["env_name"_])();
-    game_level_seed_gen_.seed(rand_seed_);
-    game_->level_seed_rand_gen.seed(game_level_seed_gen_.randint());
-    if (spec.config["num_levels"_] <= 0) {
+    std::call_once(procgen_global_init_flag, procgen_global_init, spec.config["base_path"_] + "/procgen/assets/");
+    game_ = globalGameRegistry->at(env_name_)();
+    DCHECK_EQ(game_->game_name, env_name_);
+    game_->level_seed_rand_gen.seed(seed_);
+    int num_levels = spec.config["num_levels"_];
+    int start_level = spec.config["start_level"_];
+    if (num_levels <= 0) {
       game_->level_seed_low = 0;
-      game_->level_seed_high = INT32_MAX;
+      game_->level_seed_high = std::numeric_limits<int>::max();
     } else {
-      game_->level_seed_low = spec.config["start_level"_];
-      game_->level_seed_high =
-          spec.config["start_level"_] + spec.config["num_levels"_];
+      game_->level_seed_low = start_level;
+      game_->level_seed_high = start_level + num_levels;
     }
-    info_name_to_offset_["rgb"] = 0;
-    info_name_to_offset_["action"] = 1;
-    info_name_to_offset_["prev_level_seed"] = 2;
-    info_name_to_offset_["prev_level_complete"] = 3;
-    info_name_to_offset_["level_seed"] = 4;
-    game_->info_name_to_offset = info_name_to_offset_;
-    game_->options.distribution_mode =
-        static_cast<DistributionMode>(spec.config["distribution_mode"_]);
-    // allocate space for the game to outwrite observations each step
-    game_->action_ptr = new int32_t(0);
-    game_->reward_ptr = new float(0.0);
-    game_->first_ptr = new uint8_t(0);
-    obs_bufs_.resize(kResW * kResH);
-    info_bufs_.resize(kResW * kResH);
-    for (int i = 0; i < kResW * kResH; i++) {
-      obs_bufs_[i] = new int64_t[kResW * kResH];
-      info_bufs_[i] = new int64_t[kResW * kResH];
+    game_->game_n = env_id;
+    game_->info_name_to_offset["level_seed"] = 0;
+    game_->info_name_to_offset["prev_level_seed"] = 1;
+    game_->info_name_to_offset["prev_level_complete"] = 2;
+    if (game_->fixed_asset_seed == 0) {
+      game_->fixed_asset_seed = static_cast<int>(HashStrUint32(env_name_));
     }
-    game_->obs_bufs = obs_bufs_;
-    game_->info_bufs = info_bufs_;
+
+    // buffers for the game to outwrite observations each step
+    game_->reward_ptr = &reward_;
+    game_->first_ptr = &done_;
+    game_->obs_bufs.emplace_back(static_cast<void*>(obs_.Data()));
+    game_->info_bufs.emplace_back(static_cast<void*>(&level_seed_));
+    game_->info_bufs.emplace_back(static_cast<void*>(&prev_level_seed_));
+    game_->info_bufs.emplace_back(static_cast<void*>(&prev_level_complete_));
     // if use_generated_assets is not set,
     // it will try load some pictures we don't have
-    game_->options.use_generated_assets = true;
-    game_->options.use_sequential_levels =
-        spec.config["use_sequential_levels"_];
+    game_->options.use_easy_jump = spec.config["use_easy_jump"_];
+    game_->options.paint_vel_info = spec.config["paint_vel_info"_];
+    game_->options.use_generated_assets = spec.config["use_generated_assets"_];
+    game_->options.use_monochrome_assets = spec.config["use_monochrome_assets"_];
+    game_->options.restrict_themes = spec.config["restrict_themes"_];
+    game_->options.use_backgrounds = spec.config["use_backgrounds"_];
+    game_->options.center_agent = spec.config["center_agent"_];
+    game_->options.use_sequential_levels = spec.config["use_sequential_levels"_];
+    game_->options.distribution_mode =
+        static_cast<DistributionMode>(spec.config["distribution_mode"_]);
     game_->game_init();
     game_->reset();
     game_->initial_reset_complete = true;
@@ -156,7 +186,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     WriteObs();
   }
 
-  bool IsDone() override { return done_; }
+  bool IsDone() override { return done_ != 0; }
 
  private:
   void WriteObs() {

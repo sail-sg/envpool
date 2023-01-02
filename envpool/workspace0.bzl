@@ -392,7 +392,7 @@ def workspace():
         http_archive,
         name = "procgen",
         sha256 = "22940ad0f1fdb4ad1eab3303ce23d3a0ea536700bb1d7c299bee64dbc7c57e9b",
-        strip_prefix = "procgen-0.10.7/procgen/src",
+        strip_prefix = "procgen-0.10.7/procgen",
         urls = [
             "https://github.com/openai/procgen/archive/refs/tags/0.10.7.tar.gz",
             "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/openai/procgen/0.10.7.tar.gz",
