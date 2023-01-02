@@ -14,34 +14,37 @@
 """Procgen env registration."""
 from envpool.registration import register
 
-# in total 16 games in Procgen
-# 16 games has different timeout settings on their own
-procgen_timeout_list = {
-  "bigfish": 6000,
-  "bossfight": 4000,
-  "caveflyer": 1000,
-  "chaser": 1000,
-  "climber": 1000,
-  "coinrun": 1000,
-  "dodgeball": 1000,
-  "fruitbot": 1000,
-  "heist": 1000,
-  "jumper": 1000,
-  "leaper": 500,
-  "maze": 500,
-  "miner": 1000,
-  "ninja": 1000,
-  "plunder": 4000,
-  "starpilot": 1000,
-}
+# 16 games in Procgen
+# https://github.com/openai/procgen/blob/0.10.7/procgen/src/game.cpp#L56-L66
+procgen_game_config = [
+  ("bigfish", 6000, [0, 1]),
+  ("bossfight", 4000, [0, 1]),
+  ("caveflyer", 1000, [0, 1, 10]),
+  ("chaser", 1000, [0, 1, 2]),
+  ("climber", 1000, [0, 1]),
+  ("coinrun", 1000, [0, 1]),
+  ("dodgeball", 1000, [0, 1, 2, 10]),
+  ("fruitbot", 1000, [0, 1]),
+  ("heist", 1000, [0, 1, 10]),
+  ("jumper", 1000, [0, 1, 10]),
+  ("leaper", 500, [0, 1, 2]),
+  ("maze", 500, [0, 1, 10]),
+  ("miner", 1000, [0, 1, 10]),
+  ("ninja", 1000, [0, 1]),
+  ("plunder", 4000, [0, 1]),
+  ("starpilot", 1000, [0, 1, 2]),
+]
 
 distribution = {
-  "Easy": 0,
-  "Hard": 1,
+  0: "Easy",
+  1: "Hard",
+  2: "Extreme",
+  10: "Memory",
 }
 
-for env_name, timeout in procgen_timeout_list.items():
-  for dist_name, dist_value in distribution.items():
+for env_name, timeout, dist_mode in procgen_game_config:
+  for dist_value in dist_mode:
+    dist_name = distribution[dist_value]
     register(
       task_id=f"{env_name.capitalize()}{dist_name}-v0",
       import_path="envpool.procgen",

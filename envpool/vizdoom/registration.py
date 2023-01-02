@@ -16,9 +16,8 @@
 import os
 from typing import List
 
-from envpool.registration import register
+from envpool.registration import base_path, register
 
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 maps_path = os.path.join(base_path, "vizdoom", "maps")
 
 
@@ -45,7 +44,6 @@ for game in _vizdoom_game_list() + ["vizdoom_custom"]:
     dm_cls="VizdoomDMEnvPool",
     gym_cls="VizdoomGymEnvPool",
     gymnasium_cls="VizdoomGymnasiumEnvPool",
-    base_path=base_path,
     cfg_path=cfg_path,
     wad_path=wad_path,
     max_episode_steps=525,

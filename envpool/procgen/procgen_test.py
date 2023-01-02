@@ -19,13 +19,15 @@ import numpy as np
 from absl import logging
 from absl.testing import absltest
 
-from envpool.procgen.registration import procgen_timeout_list
+from envpool.procgen.registration import procgen_game_config
 from envpool.registration import make_gym
 
 
 class _ProcgenEnvPoolTest(absltest.TestCase):
 
-  def gym_deterministic_check(self, task_id: str, num_envs: int = 4) -> None:
+  def gym_deterministic_check(
+    self, task_id: str, num_envs: int = 4, total: int = 10000
+  ) -> None:
     print("here")
     env0 = make_gym(task_id, num_envs=num_envs, seed=0)
     print("here")
@@ -34,7 +36,7 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
     env2 = make_gym(task_id, num_envs=num_envs, seed=1)
     print("here")
     act_space = env0.action_space
-    for _ in range(10000):
+    for _ in range(total):
       action = np.array([act_space.sample() for _ in range(num_envs)])
       obs0 = env0.step(action)[0]
       obs1 = env1.step(action)[0]
@@ -46,7 +48,6 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
     self, game_name: str, spec_cls: Any, envpool_cls: Any
   ) -> None:
     logging.info(f"align check for gym {game_name}")
-    timeout = procgen_timeout_list[game_name]
     num_env = 1
     for i in range(2):
       env_gym = envpool_cls(
@@ -64,7 +65,7 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
       act_space = env_procgen.action_space
       envpool_done = False
       cnt = 1
-      while (not envpool_done and cnt < timeout):
+      while not envpool_done:
         cnt += 1
         action = np.array([act_space.sample() for _ in range(num_env)])
         _, raw_reward, raw_done, _ = env_procgen.step(action[0])
@@ -78,7 +79,8 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
 
   def test_gym_deterministic(self) -> None:
     # iterate over all procgen games to test Gym deterministic
-    for env_name in procgen_timeout_list.keys():
+    for env_config in procgen_game_config:
+      env_name = env_config[0]
       task_id = f"{env_name.capitalize()}Hard-v0"
       self.gym_deterministic_check(task_id)
 

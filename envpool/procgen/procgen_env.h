@@ -17,11 +17,10 @@
 #ifndef ENVPOOL_PROCGEN_PROCGEN_ENV_H_
 #define ENVPOOL_PROCGEN_PROCGEN_ENV_H_
 
-#include <cctype>
-#include <map>
+#include <limits>
 #include <memory>
-#include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "envpool/core/async_envpool.h"
@@ -41,9 +40,9 @@ static const int kResW = 64;
 static const int kResH = 64;
 static std::once_flag procgen_global_init_flag;
 
-void procgen_global_init(std::string path) {
+void ProcgenGlobalInit(std::string path) {
   if (global_resource_root.empty()) {
-    global_resource_root = path;
+    global_resource_root = std::move(path);
     images_load();
   }
 }
@@ -52,8 +51,7 @@ void procgen_global_init(std::string path) {
 std::size_t HashStrUint32(const std::string& str) {
   std::size_t hash = 0x811c9dc5;
   std::size_t prime = 0x1000193;
-  for (std::size_t i = 0; i < str.size(); i++) {
-    uint8_t value = str[i];
+  for (uint8_t value : str) {
     hash ^= value;
     hash *= prime;
   }
@@ -118,7 +116,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
      * notice we need to allocate space for some buffer, as specificied here
      * https://github.com/openai/procgen/blob/0.10.7/procgen/src/game.h#L101
      */
-    std::call_once(procgen_global_init_flag, procgen_global_init,
+    std::call_once(procgen_global_init_flag, ProcgenGlobalInit,
                    spec.config["base_path"_] + "/procgen/assets/");
     game_ = globalGameRegistry->at(env_name_)();
     DCHECK_EQ(game_->game_name, env_name_);

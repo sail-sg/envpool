@@ -14,10 +14,13 @@
 """Global env registry."""
 
 import importlib
+import os
 from typing import Any, Dict, List, Tuple
 
 import gym
 from packaging import version
+
+base_path = os.path.abspath(os.path.dirname(__file__))
 
 
 class EnvRegistry:
@@ -33,7 +36,9 @@ class EnvRegistry:
     gym_cls: str, gymnasium_cls: str, **kwargs: Any
   ) -> None:
     """Register EnvSpec and EnvPool in global EnvRegistry."""
-    # assert task_id not in self.specs
+    assert task_id not in self.specs
+    if "base_path" not in kwargs:
+      kwargs["base_path"] = base_path
     self.specs[task_id] = (import_path, spec_cls, kwargs)
     self.envpools[task_id] = {
       "dm": (import_path, dm_cls),
