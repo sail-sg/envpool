@@ -391,7 +391,7 @@ def workspace():
     maybe(
         http_archive,
         name = "procgen",
-        sha256 = "aa811bef597efecd0c901d521938d82a996d744beced9d260b1f338e0bd4c457",
+        sha256 = "796360404ea33d6156bc58c16ed5f2760f7dd50ef7f47ca67ac04122203fdeaa",
         strip_prefix = "procgen-0.10.8/procgen",
         urls = [
             "https://github.com/Trinkle23897/procgen/archive/refs/tags/0.10.8.tar.gz",
