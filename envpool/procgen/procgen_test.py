@@ -26,8 +26,9 @@ from envpool.registration import make_gym
 class _ProcgenEnvPoolTest(absltest.TestCase):
 
   def gym_deterministic_check(
-    self, task_id: str, num_envs: int = 4, total: int = 100
+    self, task_id: str, num_envs: int = 4, total: int = 300
   ) -> None:
+    logging.info(f"deterministic check for {task_id}")
     env0 = make_gym(task_id, num_envs=num_envs, seed=0)
     env1 = make_gym(task_id, num_envs=num_envs, seed=0)
     env2 = make_gym(task_id, num_envs=num_envs, seed=1)
