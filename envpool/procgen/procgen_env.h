@@ -49,7 +49,7 @@ void procgen_global_init(std::string path) {
 }
 
 // https://github.com/openai/procgen/blob/0.10.7/procgen/src/vecgame.cpp#L156
-std::size_t HashStrUint32(const std::string &str) {
+std::size_t HashStrUint32(const std::string& str) {
   std::size_t hash = 0x811c9dc5;
   std::size_t prime = 0x1000193;
   for (std::size_t i = 0; i < str.size(); i++) {
@@ -118,7 +118,8 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
      * notice we need to allocate space for some buffer, as specificied here
      * https://github.com/openai/procgen/blob/0.10.7/procgen/src/game.h#L101
      */
-    std::call_once(procgen_global_init_flag, procgen_global_init, spec.config["base_path"_] + "/procgen/assets/");
+    std::call_once(procgen_global_init_flag, procgen_global_init,
+                   spec.config["base_path"_] + "/procgen/assets/");
     game_ = globalGameRegistry->at(env_name_)();
     DCHECK_EQ(game_->game_name, env_name_);
     game_->level_seed_rand_gen.seed(seed_);
@@ -132,9 +133,6 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
       game_->level_seed_high = start_level + num_levels;
     }
     game_->game_n = env_id;
-    game_->info_name_to_offset["level_seed"] = 0;
-    game_->info_name_to_offset["prev_level_seed"] = 1;
-    game_->info_name_to_offset["prev_level_complete"] = 2;
     if (game_->fixed_asset_seed == 0) {
       game_->fixed_asset_seed = static_cast<int>(HashStrUint32(env_name_));
     }
@@ -146,20 +144,26 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     game_->info_bufs.emplace_back(static_cast<void*>(&level_seed_));
     game_->info_bufs.emplace_back(static_cast<void*>(&prev_level_seed_));
     game_->info_bufs.emplace_back(static_cast<void*>(&prev_level_complete_));
+    game_->info_name_to_offset["level_seed"] = 0;
+    game_->info_name_to_offset["prev_level_seed"] = 1;
+    game_->info_name_to_offset["prev_level_complete"] = 2;
     // if use_generated_assets is not set,
     // it will try load some pictures we don't have
     game_->options.use_easy_jump = spec.config["use_easy_jump"_];
     game_->options.paint_vel_info = spec.config["paint_vel_info"_];
     game_->options.use_generated_assets = spec.config["use_generated_assets"_];
-    game_->options.use_monochrome_assets = spec.config["use_monochrome_assets"_];
+    game_->options.use_monochrome_assets =
+        spec.config["use_monochrome_assets"_];
     game_->options.restrict_themes = spec.config["restrict_themes"_];
     game_->options.use_backgrounds = spec.config["use_backgrounds"_];
     game_->options.center_agent = spec.config["center_agent"_];
-    game_->options.use_sequential_levels = spec.config["use_sequential_levels"_];
+    game_->options.use_sequential_levels =
+        spec.config["use_sequential_levels"_];
     game_->options.distribution_mode =
         static_cast<DistributionMode>(spec.config["distribution_mode"_]);
     game_->game_init();
     game_->reset();
+    game_->observe();
     game_->initial_reset_complete = true;
   }
 
@@ -171,18 +175,14 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     game_->step_data.done = false;
     game_->step_data.reward = 0.0;
     game_->step_data.level_complete = false;
-    done_ = false;
     game_->observe();
     WriteObs();
   }
 
   void Step(const Action& action) override {
     /* Delegate the action to procgen game and let it step */
-    int act = action["action"_];
-    game_->action = static_cast<int32_t>(act);
-    *(game_->action_ptr) = static_cast<int32_t>(act);
+    game_->action = action["action"_];
     game_->step();
-    done_ = game_->step_data.done;
     WriteObs();
   }
 
@@ -190,16 +190,12 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
 
  private:
   void WriteObs() {
-    /* Helper function to output the information to user at current step */
-    /*
-       It includes:
-       1. The RGB 64 x 64 frame observation
-       2. Current step's reward
-       https://github.com/openai/procgen/blob/5e1dbf341d291eff40d1f9e0c0a0d5003643aebf/procgen/src/game.cpp#L8
-    */
     State state = Allocate();
-    // state["obs"_].Assign(obs_bufs_[0]);
-    state["reward"_] = static_cast<float>(*(game_->reward_ptr));
+    state["obs"_].Assign(obs_);
+    state["reward"_] = reward_;
+    state["info:prev_level_seed"_] = prev_level_seed_;
+    state["info:prev_level_complete"_] = prev_level_complete_;
+    state["info:level_seed"_] = level_seed_;
   }
 };
 

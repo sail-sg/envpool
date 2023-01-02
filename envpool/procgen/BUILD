@@ -81,7 +81,9 @@ py_test(
     data = [":procgen_envpool.so"],
     deps = [
         ":procgen",
+        ":procgen_registration",
         requirement("numpy"),
         requirement("absl-py"),
+        requirement("gym"),
     ],
 )

@@ -35,21 +35,21 @@ procgen_timeout_list = {
   "starpilot": 1000,
 }
 
-distribution_name = ["Easy", "Hard"]
-
-distribution_code = [0, 1]
+distribution = {
+  "Easy": 0,
+  "Hard": 1,
+}
 
 for env_name, timeout in procgen_timeout_list.items():
-  for dist_name in distribution_name:
-    for dist_code in distribution_code:
-      register(
-        task_id=f"{env_name.capitalize()}{dist_name}-v0",
-        import_path="envpool.procgen",
-        spec_cls="ProcgenEnvSpec",
-        dm_cls="ProcgenDMEnvPool",
-        gym_cls="ProcgenGymEnvPool",
-        gymnasium_cls="ProcgenGymnasiumEnvPool",
-        env_name=env_name,
-        distribution_mode=dist_code,
-        max_episode_steps=timeout,
-      )
+  for dist_name, dist_value in distribution.items():
+    register(
+      task_id=f"{env_name.capitalize()}{dist_name}-v0",
+      import_path="envpool.procgen",
+      spec_cls="ProcgenEnvSpec",
+      dm_cls="ProcgenDMEnvPool",
+      gym_cls="ProcgenGymEnvPool",
+      gymnasium_cls="ProcgenGymnasiumEnvPool",
+      env_name=env_name,
+      distribution_mode=dist_value,
+      max_episode_steps=timeout,
+    )

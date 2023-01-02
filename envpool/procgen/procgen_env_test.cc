@@ -29,6 +29,7 @@ TEST(PRocgenEnvTest, BasicStep) {
   config["num_envs"_] = batch;
   config["batch_size"_] = batch;
   config["seed"_] = 0;
+  config["env_name"_] = "coinrun";
   int total_iter = 10000;
   procgen::ProcgenEnvSpec spec(config);
   procgen::ProcgenEnvPool envpool(spec);
@@ -36,9 +37,7 @@ TEST(PRocgenEnvTest, BasicStep) {
   for (std::size_t i = 0; i < batch; ++i) {
     all_env_ids[i] = i;
   }
-  LOG(INFO) << "init done";
   envpool.Reset(all_env_ids);
-  LOG(INFO) << "init done";
   std::vector<Array> raw_action(3);
   ProcgenAction action(&raw_action);
   for (int i = 0; i < total_iter; ++i) {

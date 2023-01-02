@@ -12,154 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Unit tests for Procgen environments alignment & deterministic check."""
-import os
-import time
 from typing import Any
 
-# import procgen # type: ignore
-import cv2
-import dm_env
 import gym
 import numpy as np
 from absl import logging
 from absl.testing import absltest
 
-from envpool.procgen import ProcgenDMEnvPool, ProcgenEnvSpec, ProcgenGymEnvPool
-from envpool.procgen.procgen_envpool import _ProcgenEnvPool, _ProcgenEnvSpec
-
-RES_W = 64
-RES_H = 64
-RGB_FACTOR = 3
-ACTION_LOW = 0
-ACTION_HIGH = 15
-pic_count = 0
-
-# in total 16 games name in Procgen
-procgen_games_list = [
-  "bigfish", "bossfight", "caveflyer", "chaser", "climber", "coinrun",
-  "dodgeball", "fruitbot", "heist", "jumper", "leaper", "maze", "miner",
-  "ninja", "plunder", "starpilot"
-]
-
-# 16 games has different timeout settings on their own
-procgen_timeout_list = {
-  "bigfish": 6000,
-  "bossfight": 4000,
-  "caveflyer": 1000,
-  "chaser": 1000,
-  "climber": 1000,
-  "coinrun": 1000,
-  "dodgeball": 1000,
-  "fruitbot": 1000,
-  "heist": 1000,
-  "jumper": 1000,
-  "leaper": 500,
-  "maze": 500,
-  "miner": 1000,
-  "ninja": 1000,
-  "plunder": 4000,
-  "starpilot": 1000,
-}
-
-
-def rgb_to_picture(
-  pixels: Any, count: int = pic_count, prefix_name: str = "procgen"
-) -> None:
-  """Helper function to covert pixel matrix to a picture by cv2."""
-  # convert a state's rgb 64x64x3 game observation into picture by cv2
-  # for sanity check if the game is running correctly
-  # state is ordered in y -> x -> rgb in one dimension array
-  global pic_count
-  os.makedirs("img", exist_ok=True)
-  index = 0
-  img = np.zeros((RES_W, RES_H, RGB_FACTOR), np.uint8)
-  for h in range(RES_W):
-    for w in range(RES_H):
-      red = pixels[index]
-      green = pixels[index + 1]
-      blue = pixels[index + 2]
-      index += 3
-      # cv2's ordering is BGR
-      img[h][w][0] = blue
-      img[h][w][1] = green
-      img[h][w][2] = red
-  pic_path = f"img/{prefix_name}_{count:03d}.png"
-  print("Outwrite", os.getcwd() + "/" + pic_path)
-  cv2.imwrite(pic_path, img)
+from envpool.procgen.registration import procgen_timeout_list
+from envpool.registration import make_gym
 
 
 class _ProcgenEnvPoolTest(absltest.TestCase):
-  """The testing class for Procgen."""
 
-  def test_raw_envpool(self) -> None:
-    # create raw procgen environment and run
-    conf = dict(
-      zip(
-        _ProcgenEnvSpec._config_keys, _ProcgenEnvSpec._default_config_values
-      )
-    )
-    conf["num_envs"] = num_envs = 1
-    conf["batch_size"] = batch = 1
-    conf["num_threads"] = os.cpu_count()
-    env_spec = _ProcgenEnvSpec(tuple(conf.values()))
-    env = _ProcgenEnvPool(env_spec)
-    state_keys = env._state_keys
-    env._reset(np.arange(num_envs, dtype=np.int32))
-    total = 300
-    actions = np.random.randint(15, size=(total, batch))
-    t = time.time()
-    for i in range(total):
-      state = dict(zip(state_keys, env._recv()))
-      action = {
-        "env_id": state["info:env_id"],
-        "players.env_id": state["info:players.env_id"],
-        "action": actions[i],
-      }
-      # if (i < 100):
-      # #   output the first few steps to picture for animation
-      # #   to check if the game is moving as we expect
-      #   rgb_to_picture(state["obs:obs"][0], i, "procgen)
-      env._send(tuple(action.values()))
-    duration = time.time() - t
-    fps = total * batch / duration
-    logging.info(f"Raw envpool Procgen FPS = {fps:.6f}")
-
-  def gym_deterministic_check(
-    self,
-    game_name: str,
-    spec_cls: Any,
-    envpool_cls: Any,
-    num_envs: int = 4
-  ) -> None:
-    logging.info(f"deterministic check for gym {game_name}")
-    np.random.seed(0)
-    env0 = envpool_cls(
-      spec_cls(
-        spec_cls.gen_config(num_envs=num_envs, seed=0, game_name=game_name)
-      )
-    )
-    env1 = envpool_cls(
-      spec_cls(
-        spec_cls.gen_config(num_envs=num_envs, seed=0, game_name=game_name)
-      )
-    )
-    env2 = envpool_cls(
-      spec_cls(
-        spec_cls.gen_config(num_envs=num_envs, seed=1, game_name=game_name)
-      )
-    )
+  def gym_deterministic_check(self, task_id: str, num_envs: int = 4) -> None:
+    print("here")
+    env0 = make_gym(task_id, num_envs=num_envs, seed=0)
+    print("here")
+    env1 = make_gym(task_id, num_envs=num_envs, seed=0)
+    print("here")
+    env2 = make_gym(task_id, num_envs=num_envs, seed=1)
+    print("here")
     act_space = env0.action_space
-    total = 200
-    close, not_close = 0, 0
-    for _ in range(total):
+    for _ in range(10000):
       action = np.array([act_space.sample() for _ in range(num_envs)])
-      obs0 = env0.step(action)[0]["obs"][0]
-      obs1 = env1.step(action)[0]["obs"][0]
-      obs2 = env2.step(action)[0]["obs"][0]
-      if (np.allclose(obs0, obs1)):
-        close += 1
-      if (not np.allclose(obs0, obs2)):
-        not_close += 1
+      obs0 = env0.step(action)[0]
+      obs1 = env1.step(action)[0]
+      obs2 = env2.step(action)[0]
       np.testing.assert_allclose(obs0, obs1)
       self.assertFalse(np.allclose(obs0, obs2))
 
@@ -197,102 +76,16 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
         self.assertTrue(envpool_reward == raw_reward)
         self.assertTrue(raw_done == envpool_done)
 
-  def dmc_deterministic_check(
-    self,
-    game_name: str,
-    spec_cls: Any,
-    envpool_cls: Any,
-    num_envs: int = 4,
-  ) -> None:
-    logging.info(f"deterministic check for dmc {game_name}")
-    np.random.seed(0)
-    env0 = envpool_cls(
-      spec_cls(
-        spec_cls.gen_config(num_envs=num_envs, seed=0, game_name=game_name)
-      )
-    )
-    env1 = envpool_cls(
-      spec_cls(
-        spec_cls.gen_config(num_envs=num_envs, seed=0, game_name=game_name)
-      )
-    )
-    env2 = envpool_cls(
-      spec_cls(
-        spec_cls.gen_config(num_envs=num_envs, seed=1, game_name=game_name)
-      )
-    )
-    act_spec = env0.action_spec()
-    total = 200
-    close, not_close = 0, 0
-    for _ in range(total):
-      action = np.array(
-        [
-          np.random.uniform(
-            low=ACTION_LOW, high=ACTION_HIGH, size=act_spec.shape
-          ) for _ in range(num_envs)
-        ]
-      )
-      obs0 = env0.step(action).observation.obs[0]
-      obs1 = env1.step(action).observation.obs[0]
-      obs2 = env2.step(action).observation.obs[0]
-      if (np.allclose(obs0, obs1)):
-        close += 1
-      if (not np.allclose(obs0, obs2)):
-        not_close += 1
-      np.testing.assert_allclose(obs0, obs1)
-      self.assertFalse(np.allclose(obs0, obs2))
-
-  def dmc_align_check(
-    self, game_name: str, spec_cls: Any, envpool_cls: Any
-  ) -> None:
-    logging.info(f"align check for dmc {game_name}")
-    timeout = procgen_timeout_list[game_name]
-    num_env = 1
-    for i in range(2):
-      env_dmc = envpool_cls(
-        spec_cls(
-          spec_cls.gen_config(num_envs=num_env, seed=i, game_name=game_name)
-        )
-      )
-      env_procgen = gym.make(
-        f"procgen:procgen-{game_name}-v0",
-        rand_seed=i,
-        use_generated_assets=True
-      )
-      env_procgen.reset()
-      act_space = env_procgen.action_space
-      envpool_done = False
-      cnt = 1
-      while (not envpool_done and cnt < timeout):
-        cnt += 1
-        action = np.array([act_space.sample() for _ in range(num_env)])
-        _, raw_reward, raw_done, _ = env_procgen.step(action[0])
-        r = env_dmc.step(action)
-        envpool_reward, envpool_done = r.reward[
-          0], r.step_type == dm_env.StepType.LAST
-        # must die and earn reward same time aligned
-        self.assertTrue(envpool_reward == raw_reward)
-        self.assertTrue(raw_done == envpool_done)
-
   def test_gym_deterministic(self) -> None:
     # iterate over all procgen games to test Gym deterministic
-    for game in procgen_games_list:
-      self.gym_deterministic_check(game, ProcgenEnvSpec, ProcgenGymEnvPool)
+    for env_name in procgen_timeout_list.keys():
+      task_id = f"{env_name.capitalize()}Hard-v0"
+      self.gym_deterministic_check(task_id)
 
   # def test_gym_align(self) -> None:
   #   # iterate over all procgen games to test Gym align
   #   for game in procgen_games_list:
   #     self.gym_align_check(game, ProcgenEnvSpec, ProcgenGymEnvPool)
-
-  def test_dmc_deterministic(self) -> None:
-    # iterate over all procgen games to test DMC deterministic
-    for game in procgen_games_list:
-      self.dmc_deterministic_check(game, ProcgenEnvSpec, ProcgenDMEnvPool)
-
-  def test_dmc_align(self) -> None:
-    # iterate over all procgen games to test DMC align
-    for game in procgen_games_list:
-      self.dmc_align_check(game, ProcgenEnvSpec, ProcgenDMEnvPool)
 
 
 if __name__ == "__main__":

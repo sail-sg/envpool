@@ -22,10 +22,10 @@ cc_library(
     copts = [
         "-fpic",
     ],
+    strip_include_prefix = "src",
     deps = [
         "@gym3_libenv//:gym3_libenv_header",
         "@qt//:qt_core",
         "@qt//:qt_gui",
     ],
-    strip_include_prefix = "src",
 )
