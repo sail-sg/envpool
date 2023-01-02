@@ -113,8 +113,9 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
      */
     std::call_once(procgen_global_init_flag, ProcgenGlobalInit,
                    spec.config["base_path"_] + "/procgen/assets/");
+    CHECK_NE(globalGameRegistry, nullptr);
     game_ = globalGameRegistry->at(env_name_)();
-    DCHECK_EQ(game_->game_name, env_name_);
+    CHECK_EQ(game_->game_name, env_name_);
     game_->level_seed_rand_gen.seed(seed_);
     int num_levels = spec.config["num_levels"_];
     int start_level = spec.config["start_level"_];

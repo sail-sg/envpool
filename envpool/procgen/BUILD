@@ -32,8 +32,6 @@ cc_library(
     ],
     deps = [
         "//envpool/core:async_envpool",
-        "//envpool/core:env",
-        "//envpool/core:env_spec",
         "@procgen",
     ],
 )
@@ -56,7 +54,6 @@ pybind_extension(
     deps = [
         ":procgen_env",
         "//envpool/core:py_envpool",
-        "@procgen",
     ],
 )
 
@@ -78,7 +75,6 @@ py_library(
 py_test(
     name = "procgen_test",
     srcs = ["procgen_test.py"],
-    data = [":procgen_envpool.so"],
     deps = [
         ":procgen",
         ":procgen_registration",

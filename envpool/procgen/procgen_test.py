@@ -28,13 +28,9 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
   def gym_deterministic_check(
     self, task_id: str, num_envs: int = 4, total: int = 10000
   ) -> None:
-    print("here")
     env0 = make_gym(task_id, num_envs=num_envs, seed=0)
-    print("here")
     env1 = make_gym(task_id, num_envs=num_envs, seed=0)
-    print("here")
     env2 = make_gym(task_id, num_envs=num_envs, seed=1)
-    print("here")
     act_space = env0.action_space
     for _ in range(total):
       action = np.array([act_space.sample() for _ in range(num_envs)])
@@ -78,7 +74,6 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
         self.assertTrue(raw_done == envpool_done)
 
   def test_gym_deterministic(self) -> None:
-    # iterate over all procgen games to test Gym deterministic
     for env_config in procgen_game_config:
       env_name = env_config[0]
       task_id = f"{env_name.capitalize()}Hard-v0"

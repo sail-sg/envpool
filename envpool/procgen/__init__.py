@@ -16,8 +16,12 @@ from envpool.python.api import py_env
 
 from .procgen_envpool import _ProcgenEnvPool, _ProcgenEnvSpec
 
-(ProcgenEnvSpec, ProcgenDMEnvPool, ProcgenGymEnvPool,
- ProcgenGymnasiumEnvPool) = py_env(_ProcgenEnvSpec, _ProcgenEnvPool)
+(
+  ProcgenEnvSpec,
+  ProcgenDMEnvPool,
+  ProcgenGymEnvPool,
+  ProcgenGymnasiumEnvPool,
+) = py_env(_ProcgenEnvSpec, _ProcgenEnvPool)
 
 __all__ = [
   "ProcgenEnvSpec",
