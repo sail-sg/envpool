@@ -27,7 +27,7 @@ These functions can be obtained from the envpool instance which we created
 from the Python API.
 ::
 
-    env = envpool.make(..., env_type="gym" | "dm")
+    env = envpool.make(..., env_type="gym" | "dm" | "gymnasium")
     handle, recv, send, step = env.xla()
 
 
