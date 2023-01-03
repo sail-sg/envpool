@@ -32,7 +32,7 @@ cc_library(
     ],
     deps = [
         "//envpool/core:async_envpool",
-        "@procgen//:procgen",
+        "@procgen",
     ],
 )
 

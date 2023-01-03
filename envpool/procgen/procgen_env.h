@@ -35,8 +35,7 @@ namespace procgen {
    32 or RGB 888,
    QT build needs: sudo apt update && sudo apt install qtdeclarative5-dev
  */
-static const int kResW = 64;
-static const int kResH = 64;
+static const int kRes = 64;
 static std::once_flag procgen_global_init_flag;
 
 void ProcgenGlobalInit(std::string path) {
@@ -72,7 +71,7 @@ class ProcgenEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     // The observation is RGB 64 x 64 x 3
-    return MakeDict("obs"_.Bind(Spec<uint8_t>({kResH, kResW, 3}, {0, 255})),
+    return MakeDict("obs"_.Bind(Spec<uint8_t>({kRes, kRes, 3}, {0, 255})),
                     "info:prev_level_seed"_.Bind(Spec<int>({-1})),
                     "info:prev_level_complete"_.Bind(Spec<int>({-1})),
                     "info:level_seed"_.Bind(Spec<int>({-1})));
@@ -103,7 +102,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
   ProcgenEnv(const Spec& spec, int env_id)
       : Env<ProcgenEnvSpec>(spec, env_id),
         env_name_(spec.config["env_name"_]),
-        obs_spec_({kResH, kResW, 3}),
+        obs_spec_({kRes, kRes, 3}),
         obs_(obs_spec_) {
     /* Initialize the single game we are holding in this EnvPool environment
      * It depends on some default setting along with the config map passed in
@@ -156,25 +155,18 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     game_->options.distribution_mode =
         static_cast<DistributionMode>(spec.config["distribution_mode"_]);
     game_->game_init();
-    game_->reset();
-    game_->observe();
-    game_->initial_reset_complete = true;
   }
 
   void Reset() override {
-    /* procgen game has itself reset method that clears out the internal state
-     * of the game */
-    // no need to call game_->reset()
-    // in game_->step(), if dies, it will reset itself
     game_->step_data.done = false;
     game_->step_data.reward = 0.0;
     game_->step_data.level_complete = false;
+    game_->reset();
     game_->observe();
     WriteObs();
   }
 
   void Step(const Action& action) override {
-    /* Delegate the action to procgen game and let it step */
     game_->action = action["action"_];
     game_->step();
     WriteObs();

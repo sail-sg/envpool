@@ -12,21 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Unit tests for Procgen environments alignment & deterministic check."""
-from typing import Any
 
-import gym
+# import cv2
 import numpy as np
 from absl import logging
 from absl.testing import absltest
 
-from envpool.procgen.registration import procgen_game_config
+from envpool.procgen.registration import distribution, procgen_game_config
 from envpool.registration import make_gym
 
 
 class _ProcgenEnvPoolTest(absltest.TestCase):
 
-  def gym_deterministic_check(
-    self, task_id: str, num_envs: int = 4, total: int = 300
+  def deterministic_check(
+    self, task_id: str, num_envs: int = 4, total: int = 200
   ) -> None:
     logging.info(f"deterministic check for {task_id}")
     env0 = make_gym(task_id, num_envs=num_envs, seed=0)
@@ -41,49 +40,36 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
       np.testing.assert_allclose(obs0, obs1)
       self.assertFalse(np.allclose(obs0, obs2))
 
-  def gym_align_check(
-    self, game_name: str, spec_cls: Any, envpool_cls: Any
-  ) -> None:
-    logging.info(f"align check for gym {game_name}")
-    num_env = 1
-    for i in range(2):
-      env_gym = envpool_cls(
-        spec_cls(
-          spec_cls.gen_config(num_envs=num_env, seed=i, game_name=game_name)
-        )
-      )
-      env_procgen = gym.make(
-        f"procgen:procgen-{game_name}-v0",
-        rand_seed=i,
-        use_generated_assets=True
-      )
-      env_gym.reset(np.arange(num_env, dtype=np.int32))
-      env_procgen.reset()
-      act_space = env_procgen.action_space
-      envpool_done = False
-      cnt = 1
-      while not envpool_done:
-        cnt += 1
-        action = np.array([act_space.sample() for _ in range(num_env)])
-        _, raw_reward, raw_done, _ = env_procgen.step(action[0])
-        step_info = env_gym.step(action)
-        envpool_reward, envpool_done = step_info[1], step_info[2]
-        envpool_reward = envpool_reward[0]
-        envpool_done = envpool_done[0]  # type: ignore
-        # must die and earn reward same time aligned
-        self.assertTrue(envpool_reward == raw_reward)
-        self.assertTrue(raw_done == envpool_done)
+  def test_deterministic(self) -> None:
+    for env_name, _, dist_mode in procgen_game_config:
+      for dist_value in dist_mode:
+        task_id = f"{env_name.capitalize()}{distribution[dist_value]}-v0"
+        self.deterministic_check(task_id)
 
-  def test_gym_deterministic(self) -> None:
-    for env_config in procgen_game_config:
-      env_name = env_config[0]
-      task_id = f"{env_name.capitalize()}Hard-v0"
-      self.gym_deterministic_check(task_id)
-
-  # def test_gym_align(self) -> None:
-  #   # iterate over all procgen games to test Gym align
-  #   for game in procgen_games_list:
-  #     self.gym_align_check(game, ProcgenEnvSpec, ProcgenGymEnvPool)
+  def test_align(self) -> None:
+    task_id = "CoinrunHard-v0"
+    seed = 0
+    env = make_gym(task_id, seed=seed)
+    env.action_space.seed(seed)
+    done = [False]
+    cnt = sum_reward = sum_obs = 0
+    while not done[0]:
+      cnt += 1
+      act = env.action_space.sample()
+      obs, rew, term, trunc, info = env.step(np.array([act]))
+      sum_obs = obs[0].astype(int) + sum_obs
+      done = term | trunc
+      sum_reward += rew[0]
+      # cv2.imwrite(f"/tmp/envpool/{cnt}.png", obs[0])
+      # print(f"{cnt=} {obs.sum()=} {done=} {rew=} {info=}")
+    self.assertEqual(sum_reward, 10)
+    self.assertEqual(rew[0], 10)
+    self.assertEqual(cnt, 645)
+    self.assertEqual(info["level_seed"][0], 209652397)
+    self.assertEqual(info["prev_level_complete"][0], 1)
+    pixel_mean_ref = [196.86093636, 144.85448235, 95.27605529]
+    pixel_mean = (sum_obs / cnt).mean(axis=0).mean(axis=0)  # type: ignore
+    np.testing.assert_allclose(pixel_mean, pixel_mean_ref)
 
 
 if __name__ == "__main__":
