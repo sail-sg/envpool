@@ -91,6 +91,7 @@ stable version through `envpool.readthedocs.io/en/stable/
    env/classic_control
    env/dm_control
    env/mujoco_gym
+   env/procgen
    env/toy_text
    env/vizdoom
 

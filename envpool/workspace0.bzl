@@ -111,6 +111,17 @@ def workspace():
 
     maybe(
         http_archive,
+        name = "com_justbuchanan_rules_qt",
+        sha256 = "6b42a58f062b3eea10ada5340cd8f63b47feb986d16794b0f8e0fde750838348",
+        strip_prefix = "bazel_rules_qt-3196fcf2e6ee81cf3a2e2b272af3d4259b84fcf9",
+        urls = [
+            "https://github.com/justbuchanan/bazel_rules_qt/archive/3196fcf2e6ee81cf3a2e2b272af3d4259b84fcf9.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/justbuchanan/bazel_rules_qt/3196fcf2e6ee81cf3a2e2b272af3d4259b84fcf9.tar.gz",
+        ],
+    )
+
+    maybe(
+        http_archive,
         name = "glibc_version_header",
         sha256 = "57db74f933b7a9ea5c653498640431ce0e52aaef190d6bb586711ec4f8aa2b9e",
         strip_prefix = "glibc_version_header-0.1/version_headers/",
@@ -375,6 +386,30 @@ def workspace():
             "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pretrain.tar.gz",
         ],
         build_file = "//third_party/pretrain_weight:pretrain_weight.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "procgen",
+        sha256 = "d5620394418b885f9028f98759189a5f78bc4ba71fb6605f910ae22fca870c8e",
+        strip_prefix = "procgen-0.10.8/procgen",
+        urls = [
+            "https://github.com/Trinkle23897/procgen/archive/refs/tags/0.10.8.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/Trinkle23897/procgen/0.10.8.tar.gz",
+        ],
+        build_file = "//third_party/procgen:procgen.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "gym3_libenv",
+        sha256 = "9a764d79d4215609c2612b2c84fec8bcea6609941bdcb7051f3335ed4576b8ef",
+        strip_prefix = "gym3-4c3824680eaf9dd04dce224ee3d4856429878226/gym3",
+        urls = [
+            "https://github.com/openai/gym3/archive/4c3824680eaf9dd04dce224ee3d4856429878226.zip",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/openai/gym3/4c3824680eaf9dd04dce224ee3d4856429878226.zip",
+        ],
+        build_file = "//third_party/gym3_libenv:gym3_libenv.BUILD",
     )
 
     maybe(

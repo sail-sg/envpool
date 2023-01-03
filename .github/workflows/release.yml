@@ -9,7 +9,7 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    container: trinkle23897/envpool-release:2022-12-29-03c3d95
+    container: trinkle23897/envpool-release:2023-01-02-5f1a5fd
     strategy:
       matrix:
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
@@ -27,7 +27,7 @@ jobs:
     - name: Build
       run: |
         make pypi-wheel
-        pip3 install wheelhouse/*.whl --force-reinstall
+        pip3 install dist/*.whl --force-reinstall
     - name: Test
       run: |
         make release-test

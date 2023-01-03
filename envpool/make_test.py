@@ -194,6 +194,54 @@ class _MakeTest(absltest.TestCase):
       ]
     )
 
+  def test_make_procgen(self) -> None:
+    self.check_step(
+      [
+        "BigfishEasy-v0",
+        "BigfishHard-v0",
+        "BossfightEasy-v0",
+        "BossfightHard-v0",
+        "CaveflyerEasy-v0",
+        "CaveflyerHard-v0",
+        "CaveflyerMemory-v0",
+        "ChaserEasy-v0",
+        "ChaserHard-v0",
+        "ChaserExtreme-v0",
+        "ClimberEasy-v0",
+        "ClimberHard-v0",
+        "CoinrunEasy-v0",
+        "CoinrunHard-v0",
+        "DodgeballEasy-v0",
+        "DodgeballHard-v0",
+        "DodgeballExtreme-v0",
+        "DodgeballMemory-v0",
+        "FruitbotEasy-v0",
+        "FruitbotHard-v0",
+        "HeistEasy-v0",
+        "HeistHard-v0",
+        "HeistMemory-v0",
+        "JumperEasy-v0",
+        "JumperHard-v0",
+        "JumperMemory-v0",
+        "LeaperEasy-v0",
+        "LeaperHard-v0",
+        "LeaperExtreme-v0",
+        "MazeEasy-v0",
+        "MazeHard-v0",
+        "MazeMemory-v0",
+        "MinerEasy-v0",
+        "MinerHard-v0",
+        "MinerMemory-v0",
+        "NinjaEasy-v0",
+        "NinjaHard-v0",
+        "PlunderEasy-v0",
+        "PlunderHard-v0",
+        "StarpilotEasy-v0",
+        "StarpilotHard-v0",
+        "StarpilotExtreme-v0",
+      ]
+    )
+
 
 if __name__ == "__main__":
   absltest.main()

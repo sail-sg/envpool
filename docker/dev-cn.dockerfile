@@ -7,7 +7,7 @@ ARG HOME=/root
 ARG PATH=$PATH:$HOME/go/bin
 
 RUN apt-get update \
-    && apt-get install -y python3-pip python3-dev golang-1.18 clang-format-11 git wget swig tmux clang-tidy vim \
+    && apt-get install -y python3-pip python3-dev golang-1.18 clang-format-11 git wget swig tmux clang-tidy vim qtdeclarative5-dev \
     && rm -rf /var/lib/apt/lists/*
 RUN ln -s /usr/bin/python3 /usr/bin/python
 RUN ln -sf /usr/lib/go-1.18/bin/go /usr/bin/go
