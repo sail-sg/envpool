@@ -33,7 +33,9 @@ Options
   stands for memory mode. The default value is determined by ``task_id``.
 
 Note: arguments after ``env_name`` are provided by procgen environment itself.
-We keep the default value as-is.
+We keep the default value as-is. We haven't tested the setting of
+``use_sequential_levels == True``, and have no promise it is aligned with the
+original version of procgen (PRs for fixing this issue are highly welcome).
 
 
 Observation Space
