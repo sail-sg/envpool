@@ -160,13 +160,13 @@ docker-ci-launch: docker-ci
 	docker run --network=host -v /home/ubuntu:/home/github-action --shm-size=4gb -it $(PROJECT_NAME):$(DOCKER_TAG) bash
 
 docker-dev: docker-ci
-	docker run --network=host -v /:/host --shm-size=4gb -it $(PROJECT_NAME):$(DOCKER_TAG) bash
+	docker run --network=host -v /:/host -v $(shell pwd):/app -v $(HOME)/.cache:/root/.cache --shm-size=4gb -it $(PROJECT_NAME):$(DOCKER_TAG) zsh
 
 # for mainland China
 docker-dev-cn:
 	docker build --network=host -t $(PROJECT_NAME):$(DOCKER_TAG) -f docker/dev-cn.dockerfile .
 	echo successfully build docker image with tag $(PROJECT_NAME):$(DOCKER_TAG)
-	docker run --network=host -v /:/host --shm-size=4gb -it $(PROJECT_NAME):$(DOCKER_TAG) bash
+	docker run --network=host -v /:/host -v $(shell pwd):/app -v $(HOME)/.cache:/root/.cache --shm-size=4gb -it $(PROJECT_NAME):$(DOCKER_TAG) zsh
 
 docker-release:
 	docker build --network=host -t $(PROJECT_NAME)-release:$(DOCKER_TAG) -f docker/release.dockerfile .
@@ -177,7 +177,7 @@ docker-release-push: docker-release
 	docker push $(DOCKER_USER)/$(PROJECT_NAME)-release:$(DOCKER_TAG)
 
 docker-release-launch: docker-release
-	docker run --network=host -v /:/host --shm-size=4gb -it $(PROJECT_NAME)-release:$(DOCKER_TAG) bash
+	docker run --network=host -v /:/host -v $(shell pwd):/app -v $(HOME)/.cache:/root/.cache --shm-size=4gb -it $(PROJECT_NAME)-release:$(DOCKER_TAG) zsh
 
 pypi-wheel: auditwheel-install bazel-release
 	ls dist/*.whl -Art | tail -n 1 | xargs auditwheel repair --plat manylinux_2_24_x86_64

@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit tests for Procgen environments alignment & deterministic check."""
+"""Unit tests for Procgen environments."""
 
 # import cv2
 import numpy as np
@@ -49,7 +49,7 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
   def test_align(self) -> None:
     task_id = "CoinrunHard-v0"
     seed = 0
-    env = make_gym(task_id, seed=seed)
+    env = make_gym(task_id, seed=seed, channel_first=False)
     env.action_space.seed(seed)
     done = [False]
     cnt = sum_reward = sum_obs = 0
@@ -70,6 +70,24 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
     pixel_mean_ref = [196.86093636, 144.85448235, 95.27605529]
     pixel_mean = (sum_obs / cnt).mean(axis=0).mean(axis=0)  # type: ignore
     np.testing.assert_allclose(pixel_mean, pixel_mean_ref)
+
+  def test_channel_first(
+    self,
+    task_id: str = "CoinrunHard-v0",
+    seed: int = 0,
+    total: int = 1000,
+  ) -> None:
+    env1 = make_gym(task_id, seed=seed, channel_first=True)
+    env2 = make_gym(task_id, seed=seed, channel_first=False)
+    self.assertEqual(env1.observation_space.shape, (3, 64, 64))
+    self.assertEqual(env2.observation_space.shape, (64, 64, 3))
+    for _ in range(total):
+      act = env1.action_space.sample()
+      obs1 = env1.step(np.array([act]))[0][0]
+      obs2 = env2.step(np.array([act]))[0][0]
+      self.assertEqual(obs1.shape, (3, 64, 64))
+      self.assertEqual(obs2.shape, (64, 64, 3))
+      np.testing.assert_allclose(obs1, obs2.transpose(2, 0, 1))
 
 
 if __name__ == "__main__":

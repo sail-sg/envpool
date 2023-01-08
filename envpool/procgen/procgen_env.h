@@ -60,21 +60,26 @@ class ProcgenEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
-        "env_name"_.Bind(std::string("bigfish")), "num_levels"_.Bind(0),
-        "start_level"_.Bind(0), "use_sequential_levels"_.Bind(false),
-        "center_agent"_.Bind(true), "use_backgrounds"_.Bind(true),
-        "use_monochrome_assets"_.Bind(false), "restrict_themes"_.Bind(false),
-        "use_generated_assets"_.Bind(false), "paint_vel_info"_.Bind(false),
-        "use_easy_jump"_.Bind(false), "distribution_mode"_.Bind(1));
+        "env_name"_.Bind(std::string("bigfish")), "channel_first"_.Bind(true),
+        "num_levels"_.Bind(0), "start_level"_.Bind(0),
+        "use_sequential_levels"_.Bind(false), "center_agent"_.Bind(true),
+        "use_backgrounds"_.Bind(true), "use_monochrome_assets"_.Bind(false),
+        "restrict_themes"_.Bind(false), "use_generated_assets"_.Bind(false),
+        "paint_vel_info"_.Bind(false), "use_easy_jump"_.Bind(false),
+        "distribution_mode"_.Bind(1));
   }
 
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     // The observation is RGB 64 x 64 x 3
-    return MakeDict("obs"_.Bind(Spec<uint8_t>({kRes, kRes, 3}, {0, 255})),
-                    "info:prev_level_seed"_.Bind(Spec<int>({-1})),
-                    "info:prev_level_complete"_.Bind(Spec<int>({-1})),
-                    "info:level_seed"_.Bind(Spec<int>({-1})));
+    return MakeDict(
+        "obs"_.Bind(Spec<uint8_t>(conf["channel_first"_]
+                                      ? std::vector<int>{3, kRes, kRes}
+                                      : std::vector<int>{kRes, kRes, 3},
+                                  {0, 255})),
+        "info:prev_level_seed"_.Bind(Spec<int>({-1})),
+        "info:prev_level_complete"_.Bind(Spec<int>({-1})),
+        "info:level_seed"_.Bind(Spec<int>({-1})));
   }
 
   template <typename Config>
@@ -91,6 +96,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
  protected:
   std::shared_ptr<Game> game_;
   std::string env_name_;
+  bool channel_first_;
   // buffer used by game
   FrameSpec obs_spec_;
   Array obs_;
@@ -102,6 +108,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
   ProcgenEnv(const Spec& spec, int env_id)
       : Env<ProcgenEnvSpec>(spec, env_id),
         env_name_(spec.config["env_name"_]),
+        channel_first_(spec.config["channel_first"_]),
         obs_spec_({kRes, kRes, 3}),
         obs_(obs_spec_) {
     /* Initialize the single game we are holding in this EnvPool environment
@@ -177,7 +184,21 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
  private:
   void WriteObs() {
     State state = Allocate();
-    state["obs"_].Assign(obs_);
+    if (channel_first_) {
+      // convert from HWC to CHW
+      auto* data = static_cast<uint8_t*>(state["obs"_].Data());
+      auto* buffer = static_cast<uint8_t*>(obs_.Data());
+      for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < kRes; ++j) {
+          for (int k = 0; k < kRes; ++k) {
+            data[i * kRes * kRes + j * kRes + k] =
+                buffer[j * kRes * 3 + k * 3 + i];
+          }
+        }
+      }
+    } else {
+      state["obs"_].Assign(obs_);
+    }
     state["reward"_] = reward_;
     state["info:prev_level_seed"_] = prev_level_seed_;
     state["info:prev_level_complete"_] = prev_level_complete_;
