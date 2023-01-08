@@ -44,7 +44,7 @@ Observation Space
 -----------------
 
 The observation image shape is ``(3, 64, 64)`` when ``channel_first`` is
-``True``, ``(64, 64, 3)`` when ``channel_first`` is ``False``.
+``True`` (default), ``(64, 64, 3)`` when ``channel_first`` is ``False``.
 
 
 Action Space
