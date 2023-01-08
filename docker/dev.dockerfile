@@ -18,6 +18,7 @@ RUN ln -s -f .tmux/.tmux.conf
 RUN cp .tmux/.tmux.conf.local .
 RUN echo "set-option -g default-shell /bin/zsh" >> .tmux.conf.local
 RUN echo "set-option -g history-limit 10000" >> .tmux.conf.local
+RUN echo "export PATH=$PATH:$HOME/go/bin" >> .zshrc
 
 RUN go install github.com/bazelbuild/bazelisk@latest && ln -sf $HOME/go/bin/bazelisk $HOME/go/bin/bazel
 RUN go install github.com/bazelbuild/buildtools/buildifier@latest

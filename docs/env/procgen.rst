@@ -17,6 +17,8 @@ Options
 * ``seed (int)``: the environment seed, default to ``42``;
 * ``max_episode_steps (int)``: the maximum number of steps for one episode,
   each procgen game has different timeout value;
+* ``channel_first (bool)``: whether to transpose the observation image to
+  ``(3, 64, 64)``, default to ``True``;
 * ``env_name (str)``: one of 16 procgen env name;
 * ``num_levels (int)``: default to ``0``;
 * ``start_level (int)``: default to ``0``;
@@ -41,7 +43,8 @@ original version of procgen (PRs for fixing this issue are highly welcome).
 Observation Space
 -----------------
 
-The observation image size is ``(64, 64, 3)``.
+The observation image shape is ``(3, 64, 64)`` when ``channel_first`` is
+``True``, ``(64, 64, 3)`` when ``channel_first`` is ``False``.
 
 
 Action Space
