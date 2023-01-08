@@ -44,7 +44,7 @@ TEST(PRocgenEnvTest, BasicStep) {
     auto state_vec = envpool.Recv();
     ProcgenState state(&state_vec);
     EXPECT_EQ(state["obs"_].Shape(),
-              std::vector<std::size_t>({batch, 64, 64, 3}));
+              std::vector<std::size_t>({batch, 3, 64, 64}));
     uint8_t* data = static_cast<uint8_t*>(state["obs"_].Data());
     int index = 0;
     for (std::size_t j = 0; j < batch; ++j) {
