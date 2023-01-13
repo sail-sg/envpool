@@ -422,7 +422,81 @@ def workspace():
             "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/erenon/bazel_clang_tidy/783aa523aafb4a6798a538c61e700b6ed27975a7.zip",
         ],
     )
+    
+    maybe(
+        http_archive,
+        name = "gfootball_engine",
+        sha256 = "1b0fdcfa78b7fadc3730585ee7f0f412ba825c27e422b2b85ea0cf7ba57800b6",
+        urls = [
+            "https://files.pythonhosted.org/packages/98/63/b111538b5db47b8081d8ca82280fadaa145fbd31aa249f49675a01abb8eb/gfootball-2.10.2.tar.gz"
+        ],
+        build_file = "//third_party/football:football.BUILD",
+        strip_prefix = "gfootball-2.10.2",
+    )
 
+    maybe(
+        http_archive,
+        name = "sdl",
+        urls = ["https://github.com/libsdl-org/SDL/archive/refs/heads/main.zip"],
+        build_file = "//third_party/sdl:sdl.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "sdl2_ttf",
+        urls = [
+            "https://github.com/libsdl-org/SDL_ttf/archive/refs/heads/main.zip"
+        ],
+        sha256 = "ba680c595f971046920fda5f16d6501e945f21d53854075d88dd6f75bd83beec",
+        build_file = "//third_party/sdl2_ttf:sdl2_ttf.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "ft2build",
+        sha256 = "e0b8460820ee9048720dc5932b0433ed3e08d6537bec075c290a2d3184534919",
+        urls = [
+            "https://github.com/LuaDist/freetype/archive/refs/heads/master.zip"
+        ],
+        build_file = "//third_party/freetype:freetype.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "egl",
+        sha256 = "72bccd67ff05479b74246df3cb499610410b9f7fe8cb5214ca7f9bf31b37f499",
+        urls = [
+            "https://github.com/McNopper/EGL/archive/refs/heads/master.zip",
+        ],
+        build_file = "//third_party/egl:egl.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "gl",
+        sha256 = "2700383d4de2455f06114fbaf872684f15529d4bdc5cdea69b5fb0e9aa7763f1",
+        urls = [
+            "https://sourceforge.net/projects/glew/files/glew/2.1.0/glew-2.1.0.zip",
+        ],
+        build_file = "//third_party/gl:gl.BUILD",
+        strip_prefix = "glew-2.1.0",
+    )
+
+    maybe(
+        http_archive,
+        name = "sdl2_gfx",
+        sha256 = "83980d159f96e35813f8c1699a648de701585c7061f54319021d3534e48f3a3e",
+        urls = [
+            "https://github.com/RobLoach/sdl2_gfx/archive/refs/heads/master.zip"
+        ],
+        build_file = "//third_party/sdl2_gfx:sdl2_gfx.BUILD",
+    )
+
+    maybe(
+        cuda_configure,
+        name = "cuda",
+    )
+    
     maybe(
         cuda_configure,
         name = "cuda",

@@ -38,6 +38,7 @@ py_library(
         "//envpool/procgen:procgen_registration",
         "//envpool/toy_text:toy_text_registration",
         "//envpool/vizdoom:vizdoom_registration",
+        "//envpool/football:football_registration",
     ],
 )
 
@@ -50,6 +51,7 @@ py_library(
         "//envpool/atari",
         "//envpool/box2d",
         "//envpool/classic_control",
+        "//envpool/football",
         "//envpool/mujoco:mujoco_dmc",
         "//envpool/mujoco:mujoco_gym",
         "//envpool/procgen",
