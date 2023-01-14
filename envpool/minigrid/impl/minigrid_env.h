@@ -40,16 +40,15 @@ class MiniGridEnv {
   int agent_dir_;
   std::mt19937* gen_ref_;
   std::vector<std::vector<WorldObj>> grid_;
-  Array obs_;
   WorldObj carrying_;
 
  public:
-  MiniGridEnv() { carrying_ = WorldObj(); };
+  MiniGridEnv() { carrying_ = WorldObj(kEmpty); }
   void MiniGridReset();
   void PlaceAgent(int start_x = 0, int start_y = 0, int end_x = -1,
                   int end_y = -1);
-  void GenImage();
-  virtual void GenGrid();
+  void GenImage(Array& obs);
+  virtual void GenGrid(){}
 };
 
 }  // namespace minigrid

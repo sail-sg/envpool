@@ -23,4 +23,5 @@ register(
   gym_cls="EmptyGymEnvPool",
   gymnasium_cls="EmptyGymnasiumEnvPool",
   max_episode_steps=100,
+  size=5,
 )

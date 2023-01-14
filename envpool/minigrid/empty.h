@@ -53,7 +53,6 @@ class EmptyEnv : public Env<EmptyEnvSpec>, public MiniGridEmptyEnv {
                          spec.config["agent_start_dir"_],
                          spec.config["max_episode_steps"_]) {
     gen_ref_ = &gen_;
-    obs_ = Array(FrameSpec({7, 7, 3}));
   }
 
   bool IsDone() override { return done_; }
@@ -68,9 +67,9 @@ class EmptyEnv : public Env<EmptyEnvSpec>, public MiniGridEmptyEnv {
  private:
   void WriteState(float reward) {
     State state = Allocate();
-    GenImage();
+    // Array obs = Array(FrameSpec({agent_view_size_, agent_view_size_, 3}));
+    GenImage(state["obs:image"_]);
     state["obs:direction"_] = agent_dir_;
-    state["obs:image"_].Assign(obs_);
     state["reward"_] = reward;
   }
 };

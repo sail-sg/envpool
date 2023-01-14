@@ -22,7 +22,7 @@ void MiniGridEnv::MiniGridReset() {
   CHECK(agent_pos_.first >= 0 && agent_pos_.second >= 0);
   CHECK(agent_dir_ >= 0);
   CHECK(grid_[agent_pos_.second][agent_pos_.first].GetType() == kEmpty);
-  carrying_ = WorldObj();
+  carrying_ = WorldObj(kEmpty);
 }
 
 void MiniGridEnv::PlaceAgent(int start_x, int start_y, int end_x, int end_y) {
@@ -47,8 +47,7 @@ void MiniGridEnv::PlaceAgent(int start_x, int start_y, int end_x, int end_y) {
   }
 }
 
-void MiniGridEnv::GenImage() {
-  obs_.Fill(0);
+void MiniGridEnv::GenImage(Array& obs) {
   // Get the extents of the square set of tiles visible to the agent
   // Note: the bottom extent indices are not include in the set
   int topX, topY;
@@ -113,9 +112,9 @@ void MiniGridEnv::GenImage() {
   for (int y = 0; y < agent_view_size_; ++y) {
     for (int x = 0; x < agent_view_size_; ++x) {
       if (vis_mask[y * agent_view_size_ + x] == true) {
-        obs_(y, x, 0) = agent_view_grid[y][x].GetType();
-        obs_(y, x, 1) = agent_view_grid[y][x].GetColor();
-        obs_(y, x, 2) = agent_view_grid[y][x].GetState();
+        obs(y, x, 0) = static_cast<uint8_t>(agent_view_grid[y][x].GetType());
+        obs(y, x, 1) = static_cast<uint8_t>(agent_view_grid[y][x].GetColor());
+        obs(y, x, 2) = static_cast<uint8_t>(agent_view_grid[y][x].GetState());
       }
     }
   }

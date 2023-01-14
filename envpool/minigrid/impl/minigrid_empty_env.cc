@@ -32,7 +32,7 @@ void MiniGridEmptyEnv::GenGrid() {
   for (int i = 0; i < height_; ++i) {
     std::vector<WorldObj> temp_vec;
     for (int j = 0; j < width_; ++j) {
-      temp_vec.emplace_back(WorldObj());
+      temp_vec.emplace_back(WorldObj(kEmpty));
     }
     grid_.emplace_back(temp_vec);
   }

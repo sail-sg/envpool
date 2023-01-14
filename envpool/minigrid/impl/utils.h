@@ -101,6 +101,7 @@ class WorldObj {
           break;
         default:
           CHECK(false);
+          break;
       }
     } else {
       color_ = color;
