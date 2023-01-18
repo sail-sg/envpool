@@ -45,6 +45,7 @@ class MiniGridEnv {
  public:
   MiniGridEnv() { carrying_ = WorldObj(kEmpty); }
   void MiniGridReset();
+  float MiniGridStep(Act act);
   void PlaceAgent(int start_x = 0, int start_y = 0, int end_x = -1,
                   int end_y = -1);
   void GenImage(Array& obs);

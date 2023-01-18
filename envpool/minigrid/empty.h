@@ -65,7 +65,10 @@ class EmptyEnv : public Env<EmptyEnvSpec>, public MiniGridEmptyEnv {
     WriteState(0.0);
   }
 
-  void Step(const Action& action) override {}
+  void Step(const Action& action) override {
+    int act = action["action"_];
+    WriteState(MiniGridStep(static_cast<Act>(act)));
+  }
 
  private:
   void WriteState(float reward) {

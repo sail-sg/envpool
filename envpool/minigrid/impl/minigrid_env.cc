@@ -25,6 +25,82 @@ void MiniGridEnv::MiniGridReset() {
   carrying_ = WorldObj(kEmpty);
 }
 
+float MiniGridEnv::MiniGridStep(Act act) {
+  step_count_ += 1;
+  float reward = 0.0;
+  // Get the position in front of the agent
+  std::pair<int, int> fwd_pos = agent_pos_;
+  switch(agent_dir_) {
+    case 0:
+      fwd_pos.first += 1;
+      break;
+    case 1: 
+      fwd_pos.second += 1;
+      break;
+    case 2:
+      fwd_pos.first -= 1;
+      break;
+    case 3:
+      fwd_pos.second -= 1;
+      break;
+    default: 
+      CHECK(false);
+      break;
+  }
+  CHECK(fwd_pos.first >= 0 );
+  CHECK(fwd_pos.first < width_);
+  CHECK(fwd_pos.second >= 0);
+  CHECK(fwd_pos.second < height_);
+  // Get the forward cell object
+  if (act == kLeft) {
+    agent_dir_ -= 1;
+    if (agent_dir_ < 0)
+      agent_dir_ += 4;
+  } else if (act == kRight) {
+    agent_dir_ = (agent_dir_ + 1) % 4;
+  } else if (act == kForward) {
+    if (grid_[fwd_pos.second][fwd_pos.first].CanOverlap()) {
+      agent_pos_ = fwd_pos;
+    }
+    if (grid_[fwd_pos.second][fwd_pos.first].GetType() == kGoal) {
+      done_ = true;
+      reward = 1 - 0.9 * ((float)step_count_ / max_steps_);
+    } else if (grid_[fwd_pos.second][fwd_pos.first].GetType() == kLava) {
+      done_ = true;
+    }
+  } else if (act == kPickup) {
+    if (carrying_.GetType() == kEmpty && grid_[fwd_pos.second][fwd_pos.first].CanPickup()) {
+        carrying_ = grid_[fwd_pos.second][fwd_pos.first];
+        grid_[fwd_pos.second][fwd_pos.first] = WorldObj(kEmpty);
+    }
+  } else if (act == kDrop) {
+    if (carrying_.GetType() != kEmpty && grid_[fwd_pos.second][fwd_pos.first].GetType() == kEmpty) {
+      grid_[fwd_pos.second][fwd_pos.first] = carrying_;
+      carrying_ = WorldObj(kEmpty);
+    }
+  } else if (act == kToggle) {
+    WorldObj obj = grid_[fwd_pos.second][fwd_pos.first];
+    if (obj.GetType() == kDoor) {
+      if (obj.GetDoorLocked()) {
+        // If the agent has the right key to open the door
+        if (carrying_.GetType() == kKey && carrying_.GetColor() == obj.GetColor()) {
+          grid_[fwd_pos.second][fwd_pos.first].SetDoorOpen(true);
+        }
+      } else {
+        grid_[fwd_pos.second][fwd_pos.first].SetDoorOpen(!obj.GetDoorOpen());
+      }
+    } else if (obj.GetType() == kBox) {
+      // TODO: box
+    }
+  } else if (act != kDone) {
+    CHECK(false);
+  }  
+  if (step_count_ >= max_steps_) {
+    done_ = true;
+  }
+  return reward;
+}
+
 void MiniGridEnv::PlaceAgent(int start_x, int start_y, int end_x, int end_y) {
   // Place an object at an empty position in the grid
   end_x = (end_x == -1) ? width_ - 1 : end_x;
@@ -99,20 +175,19 @@ void MiniGridEnv::GenImage(Array& obs) {
   int agent_pos_y = agent_view_size_ - 1;
   bool vis_mask[agent_view_size_ * agent_view_size_];
   if (!see_through_walls_) {
-    // TODO: process_vis
+    // TODO: Process_vis
     memset(vis_mask, 0, sizeof(vis_mask));
-
+    vis_mask[agent_pos_y * agent_view_size_ + agent_pos_x] = true;
   } else {
     memset(vis_mask, 1, sizeof(vis_mask));
   }
   // Let the agent see what it's carrying
   if (carrying_.GetType() != kEmpty)
     agent_view_grid[agent_pos_y][agent_pos_x] = carrying_;
-  // TODO: Transpose the partially observable view into obs_
   for (int y = 0; y < agent_view_size_; ++y) {
     for (int x = 0; x < agent_view_size_; ++x) {
       if (vis_mask[y * agent_view_size_ + x] == true) {
-        // Turn over to align with the python library
+        // Transpose to align with the python library
         obs(x, y, 0) = static_cast<uint8_t>(agent_view_grid[y][x].GetType());
         obs(x, y, 1) = static_cast<uint8_t>(agent_view_grid[y][x].GetColor());
         obs(x, y, 2) = static_cast<uint8_t>(agent_view_grid[y][x].GetState());

@@ -21,7 +21,7 @@
 
 namespace minigrid {
 
-enum Action {
+enum Act {
   // Turn left, turn right, move forward
   kLeft = 0,
   kRight = 1,
@@ -63,7 +63,14 @@ enum Type {
 // constants
 static const int TILE_PIXELS = 32;
 static const std::unordered_map<Type, bool> CAN_SEE_BEHIND{
-    {kEmpty, true}, {kWall, false}, {kGoal, true}};
+  {kEmpty, true}, {kWall, false}, {kGoal, true}, {kFloor, true}, {kLava, true}, 
+  {kKey, true}, {kBall, true}, {kDoor, true}, {kBox, true}};
+static const std::unordered_map<Type, bool> CAN_OVERLAP{
+  {kEmpty, true}, {kWall, false}, {kGoal, true}, {kFloor, true}, {kLava, true}, 
+  {kKey, false}, {kBall, false}, {kDoor, true}, {kBox, false}};
+static const std::unordered_map<Type, bool> CAN_PICKUP {
+  {kEmpty, false}, {kWall, false}, {kGoal, false}, {kFloor, false}, {kLava, false}, 
+  {kKey, true}, {kBall, true}, {kDoor, false}, {kBox, true}};
 
 // object class
 
@@ -72,7 +79,7 @@ class WorldObj {
   Type type_;
   Color color_;
   bool door_open_{true};  // this variable only makes sence when type_ == kDoor
-  bool door_locked_{false};
+  bool door_locked_{false};  // this variable only makes sence when type_ == kDoor
 
  public:
   WorldObj(Type type = kEmpty, Color color = kUnassigned) : type_(type) {
@@ -108,8 +115,12 @@ class WorldObj {
     }
   }
   bool CanSeeBehind() const { return door_open_ && CAN_SEE_BEHIND.at(type_); }
+  bool CanOverlap() const { return door_open_ && CAN_OVERLAP.at(type_); }
+  bool CanPickup() const { return CAN_PICKUP.at(type_); }
   bool GetDoorOpen() { return door_open_; }
   void SetDoorOpen(bool flag) { door_open_ = flag; }
+  bool GetDoorLocked() { return door_locked_; }
+  void SetDoorLocker(bool flag) { door_locked_ = flag; }
   Type GetType() { return type_; }
   Color GetColor() { return color_; }
   int GetState() {
