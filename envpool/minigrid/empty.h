@@ -29,12 +29,14 @@ class EmptyEnvFns {
   static decltype(auto) DefaultConfig() {
     return MakeDict("size"_.Bind(8),
                     "agent_start_pos"_.Bind(std::pair<int, int>(1, 1)),
-                    "agent_start_dir"_.Bind(0));
+                    "agent_start_dir"_.Bind(0),
+                    "agent_view_size"_.Bind(7));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
+    int agent_view_size = conf["agent_view_size"_];
     return MakeDict("obs:direction"_.Bind(Spec<int>({-1}, {0, 3})),
-                    "obs:image"_.Bind(Spec<uint8_t>({7, 7, 3}, {0, 255})));
+                    "obs:image"_.Bind(Spec<uint8_t>({agent_view_size, agent_view_size, 3}, {0, 255})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -51,7 +53,8 @@ class EmptyEnv : public Env<EmptyEnvSpec>, public MiniGridEmptyEnv {
       : Env<EmptyEnvSpec>(spec, env_id),
         MiniGridEmptyEnv(spec.config["size"_], spec.config["agent_start_pos"_],
                          spec.config["agent_start_dir"_],
-                         spec.config["max_episode_steps"_]) {
+                         spec.config["max_episode_steps"_],
+                         spec.config["agent_view_size"_]) {
     gen_ref_ = &gen_;
   }
 

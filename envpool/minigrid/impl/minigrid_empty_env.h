@@ -24,7 +24,7 @@ namespace minigrid {
 class MiniGridEmptyEnv : public MiniGridEnv {
  public:
   MiniGridEmptyEnv(int size, std::pair<int, int> agent_start_pos,
-                   int agent_start_dir, int max_steps);
+                   int agent_start_dir, int max_steps, int agent_view_size);
   void GenGrid() override;
 };
 

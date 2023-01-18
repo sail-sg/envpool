@@ -17,14 +17,15 @@
 namespace minigrid {
 
 MiniGridEmptyEnv::MiniGridEmptyEnv(int size,
-                                   std::pair<int, int> agent_start_pos,
-                                   int agent_start_dir, int max_steps) {
+                                   std::pair<int, int> agent_start_pos, int agent_start_dir,
+                                   int max_steps, int agent_view_size) {
   width_ = size;
   height_ = size;
   agent_start_pos_ = agent_start_pos;
   agent_start_dir_ = agent_start_dir;
   see_through_walls_ = true;
   max_steps_ = max_steps;
+  agent_view_size_ = agent_view_size;
 }
 
 void MiniGridEmptyEnv::GenGrid() {
