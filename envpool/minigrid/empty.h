@@ -29,7 +29,7 @@ class EmptyEnvFns {
   static decltype(auto) DefaultConfig() {
     return MakeDict("size"_.Bind(8),
                     "agent_start_pos"_.Bind(std::pair<int, int>(1, 1)),
-                    "agent_start_dir"_.Bind(1));
+                    "agent_start_dir"_.Bind(0));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -67,7 +67,6 @@ class EmptyEnv : public Env<EmptyEnvSpec>, public MiniGridEmptyEnv {
  private:
   void WriteState(float reward) {
     State state = Allocate();
-    // Array obs = Array(FrameSpec({agent_view_size_, agent_view_size_, 3}));
     GenImage(state["obs:image"_]);
     state["obs:direction"_] = agent_dir_;
     state["reward"_] = reward;

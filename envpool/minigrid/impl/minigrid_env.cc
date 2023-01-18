@@ -112,9 +112,10 @@ void MiniGridEnv::GenImage(Array& obs) {
   for (int y = 0; y < agent_view_size_; ++y) {
     for (int x = 0; x < agent_view_size_; ++x) {
       if (vis_mask[y * agent_view_size_ + x] == true) {
-        obs(y, x, 0) = static_cast<uint8_t>(agent_view_grid[y][x].GetType());
-        obs(y, x, 1) = static_cast<uint8_t>(agent_view_grid[y][x].GetColor());
-        obs(y, x, 2) = static_cast<uint8_t>(agent_view_grid[y][x].GetState());
+        // Turn over to align with the python library
+        obs(x, y, 0) = static_cast<uint8_t>(agent_view_grid[y][x].GetType());
+        obs(x, y, 1) = static_cast<uint8_t>(agent_view_grid[y][x].GetColor());
+        obs(x, y, 2) = static_cast<uint8_t>(agent_view_grid[y][x].GetState());
       }
     }
   }
