@@ -19,6 +19,7 @@ namespace minigrid {
 void MiniGridEnv::MiniGridReset() {
   GenGrid();
   step_count_ = 0;
+  done_ = false;
   CHECK(agent_pos_.first >= 0 && agent_pos_.second >= 0);
   CHECK(agent_dir_ >= 0);
   CHECK(grid_[agent_pos_.second][agent_pos_.first].GetType() == kEmpty);
@@ -54,8 +55,9 @@ float MiniGridEnv::MiniGridStep(Act act) {
   // Get the forward cell object
   if (act == kLeft) {
     agent_dir_ -= 1;
-    if (agent_dir_ < 0)
+    if (agent_dir_ < 0) {
       agent_dir_ += 4;
+    }
   } else if (act == kRight) {
     agent_dir_ = (agent_dir_ + 1) % 4;
   } else if (act == kForward) {
@@ -182,8 +184,11 @@ void MiniGridEnv::GenImage(Array& obs) {
     memset(vis_mask, 1, sizeof(vis_mask));
   }
   // Let the agent see what it's carrying
-  if (carrying_.GetType() != kEmpty)
+  if (carrying_.GetType() != kEmpty) {
     agent_view_grid[agent_pos_y][agent_pos_x] = carrying_;
+  } else {
+    agent_view_grid[agent_pos_y][agent_pos_x] = WorldObj(kEmpty);
+  }
   for (int y = 0; y < agent_view_size_; ++y) {
     for (int x = 0; x < agent_view_size_; ++x) {
       if (vis_mask[y * agent_view_size_ + x] == true) {
