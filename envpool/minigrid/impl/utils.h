@@ -61,16 +61,18 @@ enum Type {
 };
 
 // constants
-static const int TILE_PIXELS = 32;
-static const std::unordered_map<Type, bool> CAN_SEE_BEHIND{
-  {kEmpty, true}, {kWall, false}, {kGoal, true}, {kFloor, true}, {kLava, true}, 
-  {kKey, true}, {kBall, true}, {kDoor, true}, {kBox, true}};
-static const std::unordered_map<Type, bool> CAN_OVERLAP{
-  {kEmpty, true}, {kWall, false}, {kGoal, true}, {kFloor, true}, {kLava, true}, 
-  {kKey, false}, {kBall, false}, {kDoor, true}, {kBox, false}};
-static const std::unordered_map<Type, bool> CAN_PICKUP {
-  {kEmpty, false}, {kWall, false}, {kGoal, false}, {kFloor, false}, {kLava, false}, 
-  {kKey, true}, {kBall, true}, {kDoor, false}, {kBox, true}};
+static const std::unordered_map<Type, bool> kCanSeeBehind{
+    {kEmpty, true}, {kWall, false}, {kGoal, true},
+    {kFloor, true}, {kLava, true},  {kKey, true},
+    {kBall, true},  {kDoor, true},  {kBox, true}};
+static const std::unordered_map<Type, bool> kCanOverlap{
+    {kEmpty, true}, {kWall, false}, {kGoal, true},
+    {kFloor, true}, {kLava, true},  {kKey, false},
+    {kBall, false}, {kDoor, true},  {kBox, false}};
+static const std::unordered_map<Type, bool> kCanPickup{
+    {kEmpty, false}, {kWall, false}, {kGoal, false},
+    {kFloor, false}, {kLava, false}, {kKey, true},
+    {kBall, true},   {kDoor, false}, {kBox, true}};
 
 // object class
 
@@ -79,13 +81,16 @@ class WorldObj {
   Type type_;
   Color color_;
   bool door_open_{true};  // this variable only makes sence when type_ == kDoor
-  bool door_locked_{false};  // this variable only makes sence when type_ == kDoor
+  bool door_locked_{
+      false};  // this variable only makes sence when type_ == kDoor
 
  public:
-  WorldObj(Type type = kEmpty, Color color = kUnassigned) : type_(type) {
+  explicit WorldObj(Type type = kEmpty, Color color = kUnassigned)
+      : type_(type) {
     if (color == kUnassigned) {
       switch (type) {
         case kEmpty:
+        case kLava:
           color_ = kRed;
           break;
         case kWall:
@@ -94,16 +99,9 @@ class WorldObj {
         case kGoal:
           color_ = kGreen;
           break;
-        case kFloor:
-          color_ = kBlue;
-          break;
-        case kLava:
-          color_ = kRed;
-          break;
         case kKey:
-          color_ = kBlue;
-          break;
         case kBall:
+        case kFloor:
           color_ = kBlue;
           break;
         default:
@@ -114,26 +112,33 @@ class WorldObj {
       color_ = color;
     }
   }
-  bool CanSeeBehind() const { return door_open_ && CAN_SEE_BEHIND.at(type_); }
-  bool CanOverlap() const { return door_open_ && CAN_OVERLAP.at(type_); }
-  bool CanPickup() const { return CAN_PICKUP.at(type_); }
-  bool GetDoorOpen() { return door_open_; }
+  [[nodiscard]] bool CanSeeBehind() const {
+    return door_open_ && kCanSeeBehind.at(type_);
+  }
+  [[nodiscard]] bool CanOverlap() const {
+    return door_open_ && kCanOverlap.at(type_);
+  }
+  [[nodiscard]] bool CanPickup() const { return kCanPickup.at(type_); }
+  [[nodiscard]] bool GetDoorOpen() const { return door_open_; }
   void SetDoorOpen(bool flag) { door_open_ = flag; }
-  bool GetDoorLocked() { return door_locked_; }
+  [[nodiscard]] bool GetDoorLocked() const { return door_locked_; }
   void SetDoorLocker(bool flag) { door_locked_ = flag; }
   Type GetType() { return type_; }
   Color GetColor() { return color_; }
   int GetState() {
     if (type_ != kDoor) {
       return 0;
-    } else {
-      if (door_locked_) return 2;
-      if (door_open_) return 0;
-      return 1;
     }
+    if (door_locked_) {
+      return 2;
+    }
+    if (door_open_) {
+      return 0;
+    }
+    return 1;
   }
 };
 
 }  // namespace minigrid
 
-#endif  // ENDPOOL_MINIGRID_IMPL_UTILS_H_
+#endif  // ENVPOOL_MINIGRID_IMPL_UTILS_H_

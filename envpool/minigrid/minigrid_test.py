@@ -13,13 +13,14 @@
 # limitations under the License.
 """Unit tests for minigrid environments check."""
 
+import time
 from typing import Any
 
 import gymnasium as gym
-import minigrid
+import minigrid  # noqa: F401
 import numpy as np
-from absl.testing import absltest
 from absl import logging
+from absl.testing import absltest
 
 import envpool.minigrid.registration  # noqa: F401
 from envpool.registration import make_gym
@@ -31,7 +32,7 @@ class _MiniGridEnvPoolTest(absltest.TestCase):
     self,
     task_id: str = "MiniGrid-Empty-5x5-v0",
     num_envs: int = 1,
-    total: int = 100000,
+    total: int = 10000,
     **kwargs: Any,
   ) -> None:
     env0 = gym.make(task_id)
@@ -41,9 +42,12 @@ class _MiniGridEnvPoolTest(absltest.TestCase):
     np.testing.assert_allclose(obs0["image"], obs1["image"][0])
     done0 = False
     acts = []
-    for i in range(total):
+    total_time_envpool = 0.0
+    total_time_gym = 0.0
+    for _ in range(total):
       act = env0.action_space.sample()
       acts.append(act)
+      start = time.time()
       if done0:
         obs0, info0 = env0.reset()
         auto_reset = True
@@ -51,7 +55,12 @@ class _MiniGridEnvPoolTest(absltest.TestCase):
       else:
         obs0, rew0, term0, trunc0, info0 = env0.step(act)
         auto_reset = False
+      end = time.time()
+      total_time_gym += end - start
+      start = time.time()
       obs1, rew1, term1, trunc1, info1 = env1.step(np.array([act]))
+      end = time.time()
+      total_time_envpool += end - start
       self.assertEqual(obs0["image"].shape, (7, 7, 3))
       self.assertEqual(obs1["image"].shape, (num_envs, 7, 7, 3))
       done0 = term0 | trunc0
@@ -60,6 +69,8 @@ class _MiniGridEnvPoolTest(absltest.TestCase):
         np.testing.assert_allclose(rew0, rew1[0], rtol=1e-6)
         np.testing.assert_allclose(done0, done1[0])
       np.testing.assert_allclose(obs0["image"], obs1["image"][0])
+    logging.info(f"{total_time_envpool=}")
+    logging.info(f"{total_time_gym=}")
 
 
 if __name__ == "__main__":

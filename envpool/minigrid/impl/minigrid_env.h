@@ -18,6 +18,7 @@
 #define ENVPOOL_MINIGRID_IMPL_MINIGRID_ENV_H_
 
 #include <random>
+#include <utility>
 #include <vector>
 
 #include "envpool/core/array.h"
@@ -48,8 +49,8 @@ class MiniGridEnv {
   float MiniGridStep(Act act);
   void PlaceAgent(int start_x = 0, int start_y = 0, int end_x = -1,
                   int end_y = -1);
-  void GenImage(Array& obs);
-  virtual void GenGrid(){}
+  void GenImage(const Array& obs);
+  virtual void GenGrid() {}
 };
 
 }  // namespace minigrid

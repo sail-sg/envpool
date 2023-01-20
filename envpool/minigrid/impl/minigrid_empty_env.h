@@ -17,6 +17,8 @@
 #ifndef ENVPOOL_MINIGRID_IMPL_MINIGRID_EMPTY_ENV_H_
 #define ENVPOOL_MINIGRID_IMPL_MINIGRID_EMPTY_ENV_H_
 
+#include <utility>
+
 #include "envpool/minigrid/impl/minigrid_env.h"
 
 namespace minigrid {

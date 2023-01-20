@@ -17,6 +17,8 @@
 #ifndef ENVPOOL_MINIGRID_EMPTY_H_
 #define ENVPOOL_MINIGRID_EMPTY_H_
 
+#include <utility>
+
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
 #include "envpool/minigrid/impl/minigrid_empty_env.h"
@@ -29,14 +31,14 @@ class EmptyEnvFns {
   static decltype(auto) DefaultConfig() {
     return MakeDict("size"_.Bind(8),
                     "agent_start_pos"_.Bind(std::pair<int, int>(1, 1)),
-                    "agent_start_dir"_.Bind(0),
-                    "agent_view_size"_.Bind(7));
+                    "agent_start_dir"_.Bind(0), "agent_view_size"_.Bind(7));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     int agent_view_size = conf["agent_view_size"_];
     return MakeDict("obs:direction"_.Bind(Spec<int>({-1}, {0, 3})),
-                    "obs:image"_.Bind(Spec<uint8_t>({agent_view_size, agent_view_size, 3}, {0, 255})));
+                    "obs:image"_.Bind(Spec<uint8_t>(
+                        {agent_view_size, agent_view_size, 3}, {0, 255})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

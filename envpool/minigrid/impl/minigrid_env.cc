@@ -14,14 +14,17 @@
 
 #include "envpool/minigrid/impl/minigrid_env.h"
 
+#include <utility>
+
 namespace minigrid {
 
 void MiniGridEnv::MiniGridReset() {
   GenGrid();
   step_count_ = 0;
   done_ = false;
-  CHECK(agent_pos_.first >= 0 && agent_pos_.second >= 0);
-  CHECK(agent_dir_ >= 0);
+  CHECK_GE(agent_pos_.first, 0);
+  CHECK_GE(agent_pos_.second, 0);
+  CHECK_GE(agent_dir_, 0);
   CHECK(grid_[agent_pos_.second][agent_pos_.first].GetType() == kEmpty);
   carrying_ = WorldObj(kEmpty);
 }
@@ -31,11 +34,11 @@ float MiniGridEnv::MiniGridStep(Act act) {
   float reward = 0.0;
   // Get the position in front of the agent
   std::pair<int, int> fwd_pos = agent_pos_;
-  switch(agent_dir_) {
+  switch (agent_dir_) {
     case 0:
       fwd_pos.first += 1;
       break;
-    case 1: 
+    case 1:
       fwd_pos.second += 1;
       break;
     case 2:
@@ -44,13 +47,13 @@ float MiniGridEnv::MiniGridStep(Act act) {
     case 3:
       fwd_pos.second -= 1;
       break;
-    default: 
+    default:
       CHECK(false);
       break;
   }
-  CHECK(fwd_pos.first >= 0 );
+  CHECK_GE(fwd_pos.first, 0);
   CHECK(fwd_pos.first < width_);
-  CHECK(fwd_pos.second >= 0);
+  CHECK_GE(fwd_pos.second, 0);
   CHECK(fwd_pos.second < height_);
   // Get the forward cell object
   if (act == kLeft) {
@@ -66,17 +69,19 @@ float MiniGridEnv::MiniGridStep(Act act) {
     }
     if (grid_[fwd_pos.second][fwd_pos.first].GetType() == kGoal) {
       done_ = true;
-      reward = 1 - 0.9 * ((float)step_count_ / max_steps_);
+      reward = 1 - 0.9 * (static_cast<float>(step_count_) / max_steps_);
     } else if (grid_[fwd_pos.second][fwd_pos.first].GetType() == kLava) {
       done_ = true;
     }
   } else if (act == kPickup) {
-    if (carrying_.GetType() == kEmpty && grid_[fwd_pos.second][fwd_pos.first].CanPickup()) {
-        carrying_ = grid_[fwd_pos.second][fwd_pos.first];
-        grid_[fwd_pos.second][fwd_pos.first] = WorldObj(kEmpty);
+    if (carrying_.GetType() == kEmpty &&
+        grid_[fwd_pos.second][fwd_pos.first].CanPickup()) {
+      carrying_ = grid_[fwd_pos.second][fwd_pos.first];
+      grid_[fwd_pos.second][fwd_pos.first] = WorldObj(kEmpty);
     }
   } else if (act == kDrop) {
-    if (carrying_.GetType() != kEmpty && grid_[fwd_pos.second][fwd_pos.first].GetType() == kEmpty) {
+    if (carrying_.GetType() != kEmpty &&
+        grid_[fwd_pos.second][fwd_pos.first].GetType() == kEmpty) {
       grid_[fwd_pos.second][fwd_pos.first] = carrying_;
       carrying_ = WorldObj(kEmpty);
     }
@@ -85,18 +90,19 @@ float MiniGridEnv::MiniGridStep(Act act) {
     if (obj.GetType() == kDoor) {
       if (obj.GetDoorLocked()) {
         // If the agent has the right key to open the door
-        if (carrying_.GetType() == kKey && carrying_.GetColor() == obj.GetColor()) {
+        if (carrying_.GetType() == kKey &&
+            carrying_.GetColor() == obj.GetColor()) {
           grid_[fwd_pos.second][fwd_pos.first].SetDoorOpen(true);
         }
       } else {
         grid_[fwd_pos.second][fwd_pos.first].SetDoorOpen(!obj.GetDoorOpen());
       }
     } else if (obj.GetType() == kBox) {
-      // TODO: box
+      // TODO(siping): box
     }
   } else if (act != kDone) {
     CHECK(false);
-  }  
+  }
   if (step_count_ >= max_steps_) {
     done_ = true;
   }
@@ -113,7 +119,9 @@ void MiniGridEnv::PlaceAgent(int start_x, int start_y, int end_x, int end_y) {
   while (true) {
     int x = x_dist(*gen_ref_);
     int y = y_dist(*gen_ref_);
-    if (grid_[y][x].GetType() != kEmpty) continue;
+    if (grid_[y][x].GetType() != kEmpty) {
+      continue;
+    }
     agent_pos_.first = x;
     agent_pos_.second = y;
     break;
@@ -125,32 +133,34 @@ void MiniGridEnv::PlaceAgent(int start_x, int start_y, int end_x, int end_y) {
   }
 }
 
-void MiniGridEnv::GenImage(Array& obs) {
+void MiniGridEnv::GenImage(const Array& obs) {
   // Get the extents of the square set of tiles visible to the agent
   // Note: the bottom extent indices are not include in the set
-  int topX, topY;
+  int top_x;
+  int top_y;
   if (agent_dir_ == 0) {
-    topX = agent_pos_.first;
-    topY = agent_pos_.second - (agent_view_size_ / 2);
+    top_x = agent_pos_.first;
+    top_y = agent_pos_.second - (agent_view_size_ / 2);
   } else if (agent_dir_ == 1) {
-    topX = agent_pos_.first - (agent_view_size_ / 2);
-    topY = agent_pos_.second;
+    top_x = agent_pos_.first - (agent_view_size_ / 2);
+    top_y = agent_pos_.second;
   } else if (agent_dir_ == 2) {
-    topX = agent_pos_.first - agent_view_size_ + 1;
-    topY = agent_pos_.second - (agent_view_size_ / 2);
+    top_x = agent_pos_.first - agent_view_size_ + 1;
+    top_y = agent_pos_.second - (agent_view_size_ / 2);
   } else if (agent_dir_ == 3) {
-    topX = agent_pos_.first - (agent_view_size_ / 2);
-    topY = agent_pos_.second - agent_view_size_ + 1;
-  } else
+    top_x = agent_pos_.first - (agent_view_size_ / 2);
+    top_y = agent_pos_.second - agent_view_size_ + 1;
+  } else {
     CHECK(false);
+  }
 
   // Generate the sub-grid observed by the agent
   std::vector<std::vector<WorldObj>> agent_view_grid;
   for (int i = 0; i < agent_view_size_; ++i) {
     std::vector<WorldObj> temp_vec;
     for (int j = 0; j < agent_view_size_; ++j) {
-      int x = topX + j;
-      int y = topY + i;
+      int x = top_x + j;
+      int y = top_y + i;
       if (x >= 0 && x < width_ && y >= 0 && y < height_) {
         temp_vec.emplace_back(WorldObj(grid_[y][x].GetType()));
       } else {
@@ -175,13 +185,18 @@ void MiniGridEnv::GenImage(Array& obs) {
   // Note that this incurs some performance cost
   int agent_pos_x = agent_view_size_ / 2;
   int agent_pos_y = agent_view_size_ - 1;
-  bool vis_mask[agent_view_size_ * agent_view_size_];
+  std::vector<std::vector<bool>> vis_mask(agent_view_size_,
+                                          std::vector<bool>(agent_view_size_));
+  for (auto& row : vis_mask) {
+    std::fill(row.begin(), row.end(), 0);
+  }
   if (!see_through_walls_) {
-    // TODO: Process_vis
-    memset(vis_mask, 0, sizeof(vis_mask));
-    vis_mask[agent_pos_y * agent_view_size_ + agent_pos_x] = true;
+    // TODO(siping): Process_vis
+    vis_mask[agent_pos_y][agent_pos_x] = true;
   } else {
-    memset(vis_mask, 1, sizeof(vis_mask));
+    for (auto& row : vis_mask) {
+      std::fill(row.begin(), row.end(), 1);
+    }
   }
   // Let the agent see what it's carrying
   if (carrying_.GetType() != kEmpty) {
@@ -191,7 +206,7 @@ void MiniGridEnv::GenImage(Array& obs) {
   }
   for (int y = 0; y < agent_view_size_; ++y) {
     for (int x = 0; x < agent_view_size_; ++x) {
-      if (vis_mask[y * agent_view_size_ + x] == true) {
+      if (vis_mask[y][x]) {
         // Transpose to align with the python library
         obs(x, y, 0) = static_cast<uint8_t>(agent_view_grid[y][x].GetType());
         obs(x, y, 1) = static_cast<uint8_t>(agent_view_grid[y][x].GetColor());

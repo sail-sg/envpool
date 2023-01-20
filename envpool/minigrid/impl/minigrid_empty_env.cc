@@ -14,11 +14,15 @@
 
 #include "envpool/minigrid/impl/minigrid_empty_env.h"
 
+#include <utility>
+#include <vector>
+
 namespace minigrid {
 
 MiniGridEmptyEnv::MiniGridEmptyEnv(int size,
-                                   std::pair<int, int> agent_start_pos, int agent_start_dir,
-                                   int max_steps, int agent_view_size) {
+                                   std::pair<int, int> agent_start_pos,
+                                   int agent_start_dir, int max_steps,
+                                   int agent_view_size) {
   width_ = size;
   height_ = size;
   agent_start_pos_ = agent_start_pos;
@@ -31,9 +35,9 @@ MiniGridEmptyEnv::MiniGridEmptyEnv(int size,
 void MiniGridEmptyEnv::GenGrid() {
   grid_.clear();
   for (int i = 0; i < height_; ++i) {
-    std::vector<WorldObj> temp_vec;
+    std::vector<WorldObj> temp_vec(width_);
     for (int j = 0; j < width_; ++j) {
-      temp_vec.emplace_back(WorldObj(kEmpty));
+      temp_vec[j] = WorldObj(kEmpty);
     }
     grid_.emplace_back(temp_vec);
   }
