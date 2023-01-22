@@ -59,16 +59,28 @@ py_library(
 )
 
 py_test(
-    name = "minigrid_test",
+    name = "minigrid_align_test",
     size = "enormous",
-    srcs = ["minigrid_test.py"],
+    srcs = ["minigrid_align_test.py"],
     deps = [
         ":minigrid",
         ":minigrid_registration",
         requirement("absl-py"),
-        requirement("dm_env"),
         requirement("gym"),
         requirement("numpy"),
         requirement("minigrid"),
+    ],
+)
+
+py_test(
+    name = "minigrid_deterministic_test",
+    size = "enormous",
+    srcs = ["minigrid_deterministic_test.py"],
+    deps = [
+        ":minigrid",
+        ":minigrid_registration",
+        requirement("absl-py"),
+        requirement("gym"),
+        requirement("numpy"),
     ],
 )

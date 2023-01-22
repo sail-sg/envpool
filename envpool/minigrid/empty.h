@@ -36,9 +36,11 @@ class EmptyEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     int agent_view_size = conf["agent_view_size"_];
+    int size = conf["size"_];
     return MakeDict("obs:direction"_.Bind(Spec<int>({-1}, {0, 3})),
                     "obs:image"_.Bind(Spec<uint8_t>(
-                        {agent_view_size, agent_view_size, 3}, {0, 255})));
+                        {agent_view_size, agent_view_size, 3}, {0, 255})),
+                    "info:agent_pos"_.Bind(Spec<int>({2}, {0, size})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -78,6 +80,8 @@ class EmptyEnv : public Env<EmptyEnvSpec>, public MiniGridEmptyEnv {
     GenImage(state["obs:image"_]);
     state["obs:direction"_] = agent_dir_;
     state["reward"_] = reward;
+    state["info:agent_pos"_](0) = agent_pos_.first;
+    state["info:agent_pos"_](1) = agent_pos_.second;
   }
 };
 

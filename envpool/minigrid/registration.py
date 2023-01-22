@@ -35,6 +35,7 @@ register(
   gymnasium_cls="EmptyGymnasiumEnvPool",
   max_episode_steps=100,
   size=5,
+  agent_start_pos=(-1, -1),
   agent_start_dir=-1,
 )
 
@@ -58,6 +59,7 @@ register(
   gymnasium_cls="EmptyGymnasiumEnvPool",
   max_episode_steps=144,
   size=6,
+  agent_start_pos=(-1, -1),
   agent_start_dir=-1,
 )
 

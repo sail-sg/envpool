@@ -114,8 +114,8 @@ void MiniGridEnv::PlaceAgent(int start_x, int start_y, int end_x, int end_y) {
   end_x = (end_x == -1) ? width_ - 1 : end_x;
   end_y = (end_y == -1) ? height_ - 1 : end_y;
   CHECK(start_x <= end_x && start_y <= end_y);
-  std::uniform_int_distribution<> x_dist(start_x, end_x + 1);
-  std::uniform_int_distribution<> y_dist(start_y, end_y + 1);
+  std::uniform_int_distribution<> x_dist(start_x, end_x);
+  std::uniform_int_distribution<> y_dist(start_y, end_y);
   while (true) {
     int x = x_dist(*gen_ref_);
     int y = y_dist(*gen_ref_);
@@ -128,7 +128,7 @@ void MiniGridEnv::PlaceAgent(int start_x, int start_y, int end_x, int end_y) {
   }
   // Randomly select a direction
   if (agent_start_dir_ == -1) {
-    std::uniform_int_distribution<> dir_dist(0, 4);
+    std::uniform_int_distribution<> dir_dist(0, 3);
     agent_dir_ = dir_dist(*gen_ref_);
   }
 }
