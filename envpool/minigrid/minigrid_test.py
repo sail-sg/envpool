@@ -28,9 +28,9 @@ from envpool.registration import make_gym
 
 class _MiniGridEnvPoolTest(absltest.TestCase):
 
-  def test_deterministic_check(
+  def run_align_check(
     self,
-    task_id: str = "MiniGrid-Empty-5x5-v0",
+    task_id: str,
     num_envs: int = 1,
     total: int = 10000,
     **kwargs: Any,
@@ -65,12 +65,18 @@ class _MiniGridEnvPoolTest(absltest.TestCase):
       self.assertEqual(obs1["image"].shape, (num_envs, 7, 7, 3))
       done0 = term0 | trunc0
       done1 = term1 | trunc1
+      np.testing.assert_allclose(obs0["image"], obs1["image"][0])
       if not auto_reset:
         np.testing.assert_allclose(rew0, rew1[0], rtol=1e-6)
         np.testing.assert_allclose(done0, done1[0])
-      np.testing.assert_allclose(obs0["image"], obs1["image"][0])
     logging.info(f"{total_time_envpool=}")
     logging.info(f"{total_time_gym=}")
+  
+  def test_empty(self) -> None: 
+    self.run_align_check("MiniGrid-Empty-5x5-v0")
+    self.run_align_check("MiniGrid-Empty-6x6-v0")
+    self.run_align_check("MiniGrid-Empty-8x8-v0")
+    self.run_align_check("MiniGrid-Empty-16x16-v0")
 
 
 if __name__ == "__main__":

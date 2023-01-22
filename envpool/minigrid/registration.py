@@ -25,3 +25,60 @@ register(
   max_episode_steps=100,
   size=5,
 )
+
+register(
+  task_id="MiniGrid-Empty-Random-5x5-v0",
+  import_path="envpool.minigrid",
+  spec_cls="EmptyEnvSpec",
+  dm_cls="EmptyDMEnvPool",
+  gym_cls="EmptyGymEnvPool",
+  gymnasium_cls="EmptyGymnasiumEnvPool",
+  max_episode_steps=100,
+  size=5,
+  agent_start_dir=-1,
+)
+
+register(
+  task_id="MiniGrid-Empty-6x6-v0",
+  import_path="envpool.minigrid",
+  spec_cls="EmptyEnvSpec",
+  dm_cls="EmptyDMEnvPool",
+  gym_cls="EmptyGymEnvPool",
+  gymnasium_cls="EmptyGymnasiumEnvPool",
+  max_episode_steps=144,
+  size=6,
+)
+
+register(
+  task_id="MiniGrid-Empty-Random-6x6-v0",
+  import_path="envpool.minigrid",
+  spec_cls="EmptyEnvSpec",
+  dm_cls="EmptyDMEnvPool",
+  gym_cls="EmptyGymEnvPool",
+  gymnasium_cls="EmptyGymnasiumEnvPool",
+  max_episode_steps=144,
+  size=6,
+  agent_start_dir=-1,
+)
+
+register(
+  task_id="MiniGrid-Empty-8x8-v0",
+  import_path="envpool.minigrid",
+  spec_cls="EmptyEnvSpec",
+  dm_cls="EmptyDMEnvPool",
+  gym_cls="EmptyGymEnvPool",
+  gymnasium_cls="EmptyGymnasiumEnvPool",
+  max_episode_steps=256,
+  size=8,
+)
+
+register(
+  task_id="MiniGrid-Empty-16x16-v0",
+  import_path="envpool.minigrid",
+  spec_cls="EmptyEnvSpec",
+  dm_cls="EmptyDMEnvPool",
+  gym_cls="EmptyGymEnvPool",
+  gymnasium_cls="EmptyGymnasiumEnvPool",
+  max_episode_steps=1024,
+  size=16,
+)
