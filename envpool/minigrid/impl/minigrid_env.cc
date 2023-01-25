@@ -12,6 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/**
+ * Note:
+ * The grid layout for this implementation is:
+ *
+ *  0 -------------> x (width_)
+ *  |
+ *  |    grid[y][x] -> (x, y)
+ *  |
+ *  v
+ *  y (height_)
+ */
+
 #include "envpool/minigrid/impl/minigrid_env.h"
 
 #include <utility>
@@ -25,7 +37,7 @@ void MiniGridEnv::MiniGridReset() {
   CHECK_GE(agent_pos_.first, 0);
   CHECK_GE(agent_pos_.second, 0);
   CHECK_GE(agent_dir_, 0);
-  CHECK(grid_[agent_pos_.second][agent_pos_.first].GetType() == kEmpty);
+  CHECK(grid_[agent_pos_.second][agent_pos_.first].CanOverlap());
   carrying_ = WorldObj(kEmpty);
 }
 
@@ -98,7 +110,12 @@ float MiniGridEnv::MiniGridStep(Act act) {
         grid_[fwd_pos.second][fwd_pos.first].SetDoorOpen(!obj.GetDoorOpen());
       }
     } else if (obj.GetType() == kBox) {
-      // TODO(siping): box
+      // WARNING: this is MESSY!!!
+      auto* contains = grid_[fwd_pos.second][fwd_pos.first].GetContains();
+      grid_[fwd_pos.second][fwd_pos.first] = *contains;
+      grid_[fwd_pos.second][fwd_pos.first].SetContains(contains->GetContains());
+      contains->SetContains(nullptr);
+      delete contains;
     }
   } else if (act != kDone) {
     CHECK(false);

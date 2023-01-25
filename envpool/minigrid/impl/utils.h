@@ -80,13 +80,15 @@ class WorldObj {
  private:
   Type type_;
   Color color_;
+  WorldObj* contains_;
   bool door_open_{true};  // this variable only makes sence when type_ == kDoor
   bool door_locked_{
       false};  // this variable only makes sence when type_ == kDoor
 
  public:
-  explicit WorldObj(Type type = kEmpty, Color color = kUnassigned)
-      : type_(type) {
+  explicit WorldObj(Type type = kEmpty, Color color = kUnassigned,
+                    WorldObj* contains = nullptr)
+      : type_(type), contains_(contains) {
     if (color == kUnassigned) {
       switch (type) {
         case kEmpty:
@@ -112,6 +114,7 @@ class WorldObj {
       color_ = color;
     }
   }
+  ~WorldObj() { delete contains_; }
   [[nodiscard]] bool CanSeeBehind() const {
     return door_open_ && kCanSeeBehind.at(type_);
   }
@@ -136,6 +139,13 @@ class WorldObj {
       return 0;
     }
     return 1;
+  }
+  WorldObj* GetContains() { return contains_; }
+  void SetContains(WorldObj* contains) {
+    if (contains != nullptr && type_ != kBox) {
+      CHECK(false);
+    }
+    contains_ = contains;
   }
 };
 
