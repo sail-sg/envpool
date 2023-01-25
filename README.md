@@ -17,7 +17,7 @@
 - [x] [DeepMind Control Suite](https://envpool.readthedocs.io/en/latest/env/dm_control.html)
 - [x] [Box2D](https://envpool.readthedocs.io/en/latest/env/box2d.html)
 - [x] [Procgen](https://envpool.readthedocs.io/en/latest/env/procgen.html)
-- [ ] Minigrid
+- [x] [Minigrid](https://envpool.readthedocs.io/en/latest/env/minigrid.html)
 
 Here are EnvPool's several highlights:
 
