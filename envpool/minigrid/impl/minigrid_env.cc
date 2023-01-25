@@ -112,10 +112,15 @@ float MiniGridEnv::MiniGridStep(Act act) {
     } else if (obj.GetType() == kBox) {
       // WARNING: this is MESSY!!!
       auto* contains = grid_[fwd_pos.second][fwd_pos.first].GetContains();
-      grid_[fwd_pos.second][fwd_pos.first] = *contains;
-      grid_[fwd_pos.second][fwd_pos.first].SetContains(contains->GetContains());
-      contains->SetContains(nullptr);
-      delete contains;
+      if (contains != nullptr) {
+        grid_[fwd_pos.second][fwd_pos.first] = *contains;
+        grid_[fwd_pos.second][fwd_pos.first].SetContains(
+            contains->GetContains());
+        contains->SetContains(nullptr);
+        delete contains;
+      } else {
+        grid_[fwd_pos.second][fwd_pos.first] = WorldObj(kEmpty);
+      }
     }
   } else if (act != kDone) {
     CHECK(false);
