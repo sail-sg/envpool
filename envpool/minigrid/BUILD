@@ -20,11 +20,14 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
     name = "minigrid_env",
     srcs = [
+        "impl/minigrid_doorkey_env.cc",
         "impl/minigrid_empty_env.cc",
         "impl/minigrid_env.cc",
     ],
     hdrs = [
+        "doorkey.h",
         "empty.h",
+        "impl/minigrid_doorkey_env.h",
         "impl/minigrid_empty_env.h",
         "impl/minigrid_env.h",
         "impl/utils.h",

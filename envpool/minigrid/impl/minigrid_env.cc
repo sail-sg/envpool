@@ -136,23 +136,41 @@ void MiniGridEnv::PlaceAgent(int start_x, int start_y, int end_x, int end_y) {
   end_x = (end_x == -1) ? width_ - 1 : end_x;
   end_y = (end_y == -1) ? height_ - 1 : end_y;
   CHECK(start_x <= end_x && start_y <= end_y);
-  std::uniform_int_distribution<> x_dist(start_x, end_x);
-  std::uniform_int_distribution<> y_dist(start_y, end_y);
-  while (true) {
-    int x = x_dist(*gen_ref_);
-    int y = y_dist(*gen_ref_);
-    if (grid_[y][x].GetType() != kEmpty) {
-      continue;
-    }
-    agent_pos_.first = x;
-    agent_pos_.second = y;
-    break;
-  }
+  agent_pos_.first = -1;
+  agent_pos_.second = -1;
+  auto pos = PlaceObject(start_x, start_y, end_x, end_y);
+  agent_pos_.first = pos.first;
+  agent_pos_.second = pos.second;
   // Randomly select a direction
   if (agent_start_dir_ == -1) {
     std::uniform_int_distribution<> dir_dist(0, 3);
     agent_dir_ = dir_dist(*gen_ref_);
   }
+}
+
+// place an object where x-index in [start_x, end_x] and y-index in [start_y,
+// end_y] return the desired position (x, y)
+std::pair<int, int> MiniGridEnv::PlaceObject(int start_x, int start_y,
+                                             int end_x, int end_y) {
+  std::pair<int, int> result;
+  std::uniform_int_distribution<> x_dist(start_x, end_x);
+  std::uniform_int_distribution<> y_dist(start_y, end_y);
+  while (true) {
+    int x = x_dist(*gen_ref_);
+    int y = y_dist(*gen_ref_);
+    // don't place the objwct on top of another object
+    if (grid_[y][x].GetType() != kEmpty) {
+      continue;
+    }
+    // don't place the object where the agent is
+    if (agent_pos_.first == x && agent_pos_.second == y) {
+      continue;
+    }
+    result.first = x;
+    result.second = y;
+    break;
+  }
+  return result;
 }
 
 void MiniGridEnv::GenImage(const Array& obs) {
@@ -213,8 +231,44 @@ void MiniGridEnv::GenImage(const Array& obs) {
     std::fill(row.begin(), row.end(), 0);
   }
   if (!see_through_walls_) {
-    // TODO(siping): Process_vis
     vis_mask[agent_pos_y][agent_pos_x] = true;
+    for (int j = agent_view_size_ - 1; j >= 0; --j) {
+      // left -> right
+      for (int i = 0; i <= agent_view_size_ - 2; ++i) {
+        if (!vis_mask[j][i]) {
+          continue;
+        }
+        if (!agent_view_grid[j][i].CanSeeBehind()) {
+          continue;
+        }
+        vis_mask[j][i + 1] = true;
+        if (j > 0) {
+          vis_mask[j - 1][i + 1] = true;
+          vis_mask[j - 1][i] = true;
+        }
+      }
+      // right -> left
+      for (int i = agent_view_size_ - 1; i >= 1; --i) {
+        if (!vis_mask[j][i]) {
+          continue;
+        }
+        if (!agent_view_grid[j][i].CanSeeBehind()) {
+          continue;
+        }
+        vis_mask[j][i - 1] = true;
+        if (j > 0) {
+          vis_mask[j - 1][i - 1] = true;
+          vis_mask[j - 1][i] = true;
+        }
+      }
+    }
+    for (int j = 0; j < agent_view_size_; ++j) {
+      for (int i = 0; i < agent_view_size_; ++i) {
+        if (!vis_mask[j][i]) {
+          agent_view_grid[j][i] = WorldObj(kEmpty);
+        }
+      }
+    }
   } else {
     for (auto& row : vis_mask) {
       std::fill(row.begin(), row.end(), 1);

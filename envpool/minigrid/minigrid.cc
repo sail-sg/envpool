@@ -13,9 +13,16 @@
 // limitations under the License.
 
 #include "envpool/core/py_envpool.h"
+#include "envpool/minigrid/doorkey.h"
 #include "envpool/minigrid/empty.h"
 
 using EmptyEnvSpec = PyEnvSpec<minigrid::EmptyEnvSpec>;
 using EmptyEnvPool = PyEnvPool<minigrid::EmptyEnvPool>;
 
-PYBIND11_MODULE(minigrid_envpool, m) { REGISTER(m, EmptyEnvSpec, EmptyEnvPool) }
+using DoorKeyEnvSpec = PyEnvSpec<minigrid::DoorKeyEnvSpec>;
+using DoorKeyEnvPool = PyEnvPool<minigrid::DoorKeyEnvPool>;
+
+PYBIND11_MODULE(minigrid_envpool, m) {
+  REGISTER(m, EmptyEnvSpec, EmptyEnvPool)
+  REGISTER(m, DoorKeyEnvSpec, DoorKeyEnvPool)
+}
