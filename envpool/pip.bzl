@@ -25,5 +25,5 @@ def workspace():
             python_interpreter = "python3",
             quiet = False,
             requirements = "@envpool//third_party/pip_requirements:requirements.txt",
-            # extra_pip_args = ["--extra-index-url", "https://mirrors.aliyun.com/pypi/simple"],
+            extra_pip_args = ["--extra-index-url", "https://pypi.tuna.tsinghua.edu.cn/simple"],
         )
