@@ -20,7 +20,7 @@ import dm_env
 import gym
 import gymnasium
 import numpy as np
-import treevalue
+import optree
 
 from .protocol import ArraySpec
 
@@ -135,7 +135,7 @@ def dm_structure(root_name: str,
     key = key.replace("obs:", f"{root_name}:")  # compatible with to_namedtuple
     new_keys.append(key.replace(":", "."))
   dict_tree = to_nested_dict(dict(zip(new_keys, list(range(len(new_keys))))))
-  tree_pairs = treevalue.flatten(treevalue.TreeValue(dict_tree))
+  tree_pairs = optree.flatten(optree.optree(dict_tree))
   return tree_pairs
 
 
@@ -143,7 +143,7 @@ def gym_structure(keys: List[str]) -> List[Tuple[List[str], int]]:
   """Convert flat keys into tree structure for dict construction."""
   keys = [k.replace(":", ".") for k in keys]
   structure = to_nested_dict(dict(zip(keys, list(range(len(keys))))))
-  tree_pairs = treevalue.flatten(treevalue.TreeValue(structure))
+  tree_pairs = optree.flatten(optree.optree(structure))
   return tree_pairs
 
 

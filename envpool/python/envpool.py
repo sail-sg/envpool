@@ -19,7 +19,7 @@ from abc import ABC
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-import treevalue
+import optree
 from dm_env import TimeStep
 
 from .protocol import EnvPool, EnvSpec
@@ -59,8 +59,8 @@ class EnvPoolMixin(ABC):
   ) -> List[np.ndarray]:
     """Convert action to C++-acceptable format."""
     if isinstance(action, dict):
-      atree = treevalue.TreeValue(action)
-      alist = treevalue.flatten(atree)
+      atree = optree.optree(action)
+      alist = optree.flatten(atree)
       adict = {".".join(k): v for k, v in alist}
     else:  # only 3 keys in action_keys
       if not hasattr(self, "_last_action_type"):

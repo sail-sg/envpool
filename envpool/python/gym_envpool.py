@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Tuple, Union
 
 import gym
 import numpy as np
-import treevalue
+import optree
 from packaging import version
 
 from .data import gym_structure
@@ -78,12 +78,12 @@ class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
     ) -> Union[Any, Tuple[Any, Any], Tuple[Any, np.ndarray, np.ndarray, Any],
                Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any]]:
       values = map(lambda i: state_values[i], state_idx)
-      state = treevalue.unflatten(
+      state = optree.unflatten(
         [(path, vi) for (path, _), vi in zip(tree_pairs, values)]
       )
       if reset and not (return_info or new_gym_api):
         return state.obs
-      info = treevalue.jsonify(state.info)
+      info = optree.jsonify(state.info)
       if not new_gym_api:
         info["TimeLimit.truncated"] = state.trunc
       info["elapsed_step"] = state.elapsed_step

@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Tuple, Union
 
 import gymnasium
 import numpy as np
-import treevalue
+import optree
 
 from .data import gymnasium_structure
 from .envpool import EnvPoolMixin
@@ -78,10 +78,10 @@ class GymnasiumEnvPoolMeta(ABCMeta, gymnasium.Env.__class__):
     ) -> Union[Any, Tuple[Any, Any], Tuple[Any, np.ndarray, np.ndarray, Any],
                Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any]]:
       values = map(lambda i: state_values[i], state_idx)
-      state = treevalue.unflatten(
+      state = optree.unflatten(
         [(path, vi) for (path, _), vi in zip(tree_pairs, values)]
       )
-      info = treevalue.jsonify(state.info)
+      info = optree.jsonify(state.info)
       info["elapsed_step"] = state.elapsed_step
       if reset:
         return state.obs, info

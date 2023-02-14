@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Tuple, Union
 
 import dm_env
 import numpy as np
-import treevalue
+import optree
 from dm_env import TimeStep
 
 from .data import dm_structure
@@ -78,7 +78,7 @@ class DMEnvPoolMeta(ABCMeta):
       return_info: bool,
     ) -> TimeStep:
       values = map(lambda i: state_values[i], state_idx)
-      state = treevalue.unflatten(
+      state = optree.unflatten(
         [(path, vi) for (path, _), vi in zip(tree_pairs, values)]
       )
       timestep = TimeStep(
