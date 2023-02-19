@@ -21,6 +21,7 @@ import gym
 import gymnasium
 import numpy as np
 import optree
+from optree import PyTreeSpec
 
 from .protocol import ArraySpec
 
@@ -124,8 +125,7 @@ def gymnasium_spec_transform(
   )
 
 
-def dm_structure(root_name: str,
-                 keys: List[str]) -> List[Tuple[List[str], int]]:
+def dm_structure(root_name: str, keys: List[str]) -> PyTreeSpec:
   """Convert flat keys into tree structure for namedtuple construction."""
   new_keys = []
   for key in keys:
@@ -135,16 +135,25 @@ def dm_structure(root_name: str,
     key = key.replace("obs:", f"{root_name}:")  # compatible with to_namedtuple
     new_keys.append(key.replace(":", "."))
   dict_tree = to_nested_dict(dict(zip(new_keys, list(range(len(new_keys))))))
-  tree_pairs = optree.flatten(optree.optree(dict_tree))
-  return tree_pairs
+  paths, indices, treespec = optree.tree_flatten_with_path(dict_tree)
+  return paths, indices, treespec
+  # dict_tree = to_nested_dict(dict(zip(new_keys, list(range(len(new_keys))))))
+  # tree_pairs = optree.flatten(optree.optree(dict_tree))
+  # tree_pairs = list(zip(new_keys, range(len(keys))))
+  # return tree_pairs
 
 
-def gym_structure(keys: List[str]) -> List[Tuple[List[str], int]]:
+def gym_structure(
+  keys: List[str]
+) -> Tuple[List[Tuple[str, ...]], List[int], PyTreeSpec]:
   """Convert flat keys into tree structure for dict construction."""
   keys = [k.replace(":", ".") for k in keys]
-  structure = to_nested_dict(dict(zip(keys, list(range(len(keys))))))
-  tree_pairs = optree.flatten(optree.optree(structure))
-  return tree_pairs
+  dict_tree = to_nested_dict(dict(zip(keys, list(range(len(keys))))))
+  paths, indices, treespec = optree.tree_flatten_with_path(dict_tree)
+  return paths, indices, treespec
+  # tree_pairs = optree.flatten(optree.optree(structure))
+  # tree_pairs = list(zip(keys, range(len(keys))))
+  # return tree_pairs
 
 
 gymnasium_structure = gym_structure

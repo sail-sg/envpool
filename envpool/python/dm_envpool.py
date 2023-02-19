@@ -21,7 +21,7 @@ import numpy as np
 import optree
 from dm_env import TimeStep
 
-from .data import dm_structure
+from .data import dm_structure, to_namedtuple
 from .envpool import EnvPoolMixin
 from .utils import check_key_duplication
 
@@ -68,8 +68,9 @@ class DMEnvPoolMeta(ABCMeta):
     check_key_duplication(name, "state", state_keys)
     check_key_duplication(name, "action", action_keys)
 
-    tree_pairs = dm_structure("State", state_keys)
-    state_idx = list(zip(*tree_pairs))[-1]
+    state_paths, state_idx, treepsec = dm_structure("State", state_keys)
+
+    # state_idx = list(zip(*tree_pairs))[-1]
 
     def _to_dm(
       self: Any,
@@ -77,10 +78,9 @@ class DMEnvPoolMeta(ABCMeta):
       reset: bool,
       return_info: bool,
     ) -> TimeStep:
-      values = map(lambda i: state_values[i], state_idx)
-      state = optree.unflatten(
-        [(path, vi) for (path, _), vi in zip(tree_pairs, values)]
-      )
+      values = (state_values[i] for i in state_idx)
+      state = optree.tree_unflatten(treepsec, values)
+      state = to_namedtuple("State", state)
       timestep = TimeStep(
         step_type=state.step_type,
         observation=state.State,
