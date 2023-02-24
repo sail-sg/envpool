@@ -135,7 +135,8 @@ def dm_structure(root_name: str, keys: List[str]) -> PyTreeSpec:
     key = key.replace("obs:", f"{root_name}:")  # compatible with to_namedtuple
     new_keys.append(key.replace(":", "."))
   dict_tree = to_nested_dict(dict(zip(new_keys, list(range(len(new_keys))))))
-  paths, indices, treespec = optree.tree_flatten_with_path(dict_tree)
+  structure = to_namedtuple(root_name, dict_tree)
+  paths, indices, treespec = optree.tree_flatten_with_path(structure)
   return paths, indices, treespec
   # dict_tree = to_nested_dict(dict(zip(new_keys, list(range(len(new_keys))))))
   # tree_pairs = optree.flatten(optree.optree(dict_tree))

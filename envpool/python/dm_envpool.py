@@ -80,7 +80,7 @@ class DMEnvPoolMeta(ABCMeta):
     ) -> TimeStep:
       values = (state_values[i] for i in state_idx)
       state = optree.tree_unflatten(treepsec, values)
-      state = to_namedtuple("State", state)
+      # state = to_namedtuple("State", state)
       timestep = TimeStep(
         step_type=state.step_type,
         observation=state.State,
