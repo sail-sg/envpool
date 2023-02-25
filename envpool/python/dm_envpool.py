@@ -21,7 +21,7 @@ import numpy as np
 import optree
 from dm_env import TimeStep
 
-from .data import dm_structure, to_namedtuple
+from .data import dm_structure
 from .envpool import EnvPoolMixin
 from .utils import check_key_duplication
 
