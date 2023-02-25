@@ -138,10 +138,6 @@ def dm_structure(root_name: str, keys: List[str]) -> PyTreeSpec:
   structure = to_namedtuple(root_name, dict_tree)
   paths, indices, treespec = optree.tree_flatten_with_path(structure)
   return paths, indices, treespec
-  # dict_tree = to_nested_dict(dict(zip(new_keys, list(range(len(new_keys))))))
-  # tree_pairs = optree.flatten(optree.optree(dict_tree))
-  # tree_pairs = list(zip(new_keys, range(len(keys))))
-  # return tree_pairs
 
 
 def gym_structure(
@@ -152,9 +148,6 @@ def gym_structure(
   dict_tree = to_nested_dict(dict(zip(keys, list(range(len(keys))))))
   paths, indices, treespec = optree.tree_flatten_with_path(dict_tree)
   return paths, indices, treespec
-  # tree_pairs = optree.flatten(optree.optree(structure))
-  # tree_pairs = list(zip(keys, range(len(keys))))
-  # return tree_pairs
 
 
 gymnasium_structure = gym_structure

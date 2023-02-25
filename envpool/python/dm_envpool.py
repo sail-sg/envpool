@@ -70,8 +70,6 @@ class DMEnvPoolMeta(ABCMeta):
 
     state_paths, state_idx, treepsec = dm_structure("State", state_keys)
 
-    # state_idx = list(zip(*tree_pairs))[-1]
-
     def _to_dm(
       self: Any,
       state_values: List[np.ndarray],
@@ -80,7 +78,6 @@ class DMEnvPoolMeta(ABCMeta):
     ) -> TimeStep:
       values = (state_values[i] for i in state_idx)
       state = optree.tree_unflatten(treepsec, values)
-      # state = to_namedtuple("State", state)
       timestep = TimeStep(
         step_type=state.step_type,
         observation=state.State,

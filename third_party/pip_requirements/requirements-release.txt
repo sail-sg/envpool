@@ -1,6 +1,6 @@
 setuptools
 wheel
-numpy<=1.21.4
+numpy
 dm-env
 gym>=0.26
 gymnasium>=0.26,!=0.27.0

@@ -59,7 +59,6 @@ class EnvPoolMixin(ABC):
   ) -> List[np.ndarray]:
     """Convert action to C++-acceptable format."""
     if isinstance(action, dict):
-      # atree = optree.optree(action)
       paths, values, _ = optree.tree_flatten_with_path(action)
       adict = {'.'.join(p): v for p, v in zip(paths, values)}
     else:  # only 3 keys in action_keys
