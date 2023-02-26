@@ -72,8 +72,6 @@ class GymnasiumEnvPoolMeta(ABCMeta, gymnasium.Env.__class__):
 
     state_paths, state_idx, treepsec = gymnasium_structure(state_keys)
 
-    # state_idx = list(zip(*tree_pairs))[-1]
-
     def _to_gymnasium(
       self: Any, state_values: List[np.ndarray], reset: bool, return_info: bool
     ) -> Union[Any, Tuple[Any, Any], Tuple[Any, np.ndarray, np.ndarray, Any],
