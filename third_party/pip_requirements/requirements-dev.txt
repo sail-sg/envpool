@@ -4,7 +4,7 @@ numpy
 dm-env
 gym>=0.26
 gymnasium>=0.26,!=0.27.0
-optree>=0.7.0
+optree>=0.6.0
 jax[cpu]
 absl-py
 packaging
