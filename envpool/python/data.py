@@ -125,7 +125,10 @@ def gymnasium_spec_transform(
   )
 
 
-def dm_structure(root_name: str, keys: List[str]) -> PyTreeSpec:
+def dm_structure(
+  root_name: str,
+  keys: List[str],
+) -> Tuple[List[Tuple[int, ...]], List[int], PyTreeSpec]:
   """Convert flat keys into tree structure for namedtuple construction."""
   new_keys = []
   for key in keys:
