@@ -23,6 +23,8 @@ def workspace():
         pip_install(
             name = "pip_requirements",
             python_interpreter = "python3",
+            # default timeout value is 600, change it if you failed.
+            # timeout = 3600,
             quiet = False,
             requirements = "@envpool//third_party/pip_requirements:requirements.txt",
             # extra_pip_args = ["--extra-index-url", "https://mirrors.aliyun.com/pypi/simple"],
