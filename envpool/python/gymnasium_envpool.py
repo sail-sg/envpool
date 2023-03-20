@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Tuple, Union
 
 import gymnasium
 import numpy as np
-import treevalue
+import optree
 
 from .data import gymnasium_structure
 from .envpool import EnvPoolMixin
@@ -70,23 +70,20 @@ class GymnasiumEnvPoolMeta(ABCMeta, gymnasium.Env.__class__):
     check_key_duplication(name, "state", state_keys)
     check_key_duplication(name, "action", action_keys)
 
-    tree_pairs = gymnasium_structure(state_keys)
-    state_idx = list(zip(*tree_pairs))[-1]
+    state_paths, state_idx, treepsec = gymnasium_structure(state_keys)
 
     def _to_gymnasium(
       self: Any, state_values: List[np.ndarray], reset: bool, return_info: bool
     ) -> Union[Any, Tuple[Any, Any], Tuple[Any, np.ndarray, np.ndarray, Any],
-               Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any]]:
-      values = map(lambda i: state_values[i], state_idx)
-      state = treevalue.unflatten(
-        [(path, vi) for (path, _), vi in zip(tree_pairs, values)]
-      )
-      info = treevalue.jsonify(state.info)
-      info["elapsed_step"] = state.elapsed_step
+               Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any],]:
+      values = (state_values[i] for i in state_idx)
+      state = optree.tree_unflatten(treepsec, values)
+      info = state["info"]
+      info["elapsed_step"] = state["elapsed_step"]
       if reset:
-        return state.obs, info
-      terminated = state.done & ~state.trunc
-      return state.obs, state.reward, terminated, state.trunc, info
+        return state["obs"], info
+      terminated = state["done"] & ~state["trunc"]
+      return state["obs"], state["reward"], terminated, state["trunc"], info
 
     attrs["_to"] = _to_gymnasium
     subcls = super().__new__(cls, name, parents, attrs)
