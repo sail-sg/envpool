@@ -4,13 +4,13 @@ numpy
 dm-env
 gym>=0.26
 gymnasium>=0.26,!=0.27.0
-treevalue>=1.4
+treevalue>=1.4.7
 jax[cpu]
 absl-py
 packaging
 tqdm
 protobuf<=4.20.0
-torch
+torch!=2.0.0
 tianshou>=0.4.10
 opencv-python-headless
 box2d-py
