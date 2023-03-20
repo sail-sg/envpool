@@ -32,5 +32,5 @@ for game in atari_game_list:
     gym_cls="AtariGymEnvPool",
     gymnasium_cls="AtariGymnasiumEnvPool",
     task=game,
-    max_episode_steps=108000,
+    max_episode_steps=27000,
   )
