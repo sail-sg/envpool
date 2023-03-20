@@ -50,6 +50,7 @@ class DMEnvPoolMeta(ABCMeta):
     base = parents[0]
     try:
       from .lax import XlaMixin
+
       parents = (
         base, DMEnvPoolMixin, EnvPoolMixin, XlaMixin, dm_env.Environment
       )
