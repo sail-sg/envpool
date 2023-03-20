@@ -33,4 +33,8 @@ RUN apt-get update \
     && apt-get install -y clang-format clang-tidy swig qtdeclarative5-dev \
     && rm -rf /var/lib/apt/lists/*
 
+RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+RUN sed -i "s@http://.*archive.ubuntu.com@https://mirrors.tuna.tsinghua.edu.cn@g" /etc/apt/sources.list
+RUN sed -i "s@http://.*security.ubuntu.com@https://mirrors.tuna.tsinghua.edu.cn@g" /etc/apt/sources.list
+
 WORKDIR /app

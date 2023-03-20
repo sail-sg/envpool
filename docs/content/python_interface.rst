@@ -20,7 +20,8 @@ batched environments:
 * ``seed (int)``: set seed over all environments. The i-th environment seed
   will be set with i+seed, default to ``42``;
 * ``max_episode_steps (int)``: set the max steps in one episode. This value is
-  env-specific (108000 in Atari for example);
+  env-specific (27000 steps or 27000 * 4 = 108000 frames in Atari for
+  example);
 * ``max_num_players (int)``: the maximum number of player in one env, useful
   in multi-agent env. In single agent environment, it is always ``1``;
 * ``thread_affinity_offset (int)``: the start id of binding thread. ``-1``

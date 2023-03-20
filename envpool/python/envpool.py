@@ -108,7 +108,8 @@ class EnvPoolMixin(ABC):
     """Set the seed for all environments (abandoned)."""
     warnings.warn(
       "The `seed` function in envpool is abandoned. "
-      "You can set seed by envpool.make(..., seed=seed) instead."
+      "You can set seed by envpool.make(..., seed=seed) instead.",
+      stacklevel=2
     )
 
   def send(
