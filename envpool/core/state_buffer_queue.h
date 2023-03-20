@@ -101,7 +101,7 @@ class StateBufferQueue {
     // stop the thread
     quit_ = true;
     for (std::size_t i = 0; i < create_buffer_thread_.size(); ++i) {
-      stock_buffer_.Put(nullptr);
+      stock_buffer_.Get();
     }
     for (auto& t : create_buffer_thread_) {
       t.join();
