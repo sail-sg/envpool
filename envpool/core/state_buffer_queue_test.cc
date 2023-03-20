@@ -22,6 +22,7 @@
 #include "ThreadPool.h"
 
 TEST(StateBufferQueueTest, Basic) {
+  LOG(INFO) << "Basic";
   std::vector<ShapeSpec> specs{ShapeSpec(1, {10, 2, 4}),
                                ShapeSpec(4, {1, 2, 2})};
   std::size_t batch = 32;
@@ -49,6 +50,7 @@ TEST(StateBufferQueueTest, Basic) {
 }
 
 TEST(StateBufferQueueTest, SinglePlayerSync) {
+  LOG(INFO) << "SinglePlayerSync";
   std::vector<ShapeSpec> specs{ShapeSpec(4, {-1}), ShapeSpec(4, {1, 2, 2})};
   std::size_t batch = 256;
   std::size_t num_envs = 256;
@@ -97,6 +99,7 @@ TEST(StateBufferQueueTest, SinglePlayerSync) {
 }
 
 TEST(StateBufferQueueTest, NumPlayers) {
+  LOG(INFO) << "NumPlayers";
   std::vector<ShapeSpec> specs{ShapeSpec(1, {-1, 2, 4}),
                                ShapeSpec(4, {1, 2, 2})};
   std::size_t batch = 32;
@@ -119,6 +122,7 @@ TEST(StateBufferQueueTest, NumPlayers) {
 }
 
 TEST(StateBufferQueueTest, MultipleTimes) {
+  LOG(INFO) << "MultipleTimes";
   std::vector<ShapeSpec> specs{ShapeSpec(1, {-1, 2, 4}),
                                ShapeSpec(4, {1, 2, 2})};
   std::size_t batch = 32;
@@ -144,6 +148,7 @@ TEST(StateBufferQueueTest, MultipleTimes) {
 }
 
 TEST(StateBufferQueueTest, ConcurrentSinglePlayer) {
+  LOG(INFO) << "ConcurrentSinglePlayer";
   std::vector<ShapeSpec> specs{ShapeSpec(8, {-1, 2, 4}),
                                ShapeSpec(4, {1, 2, 2})};
   std::size_t batch = 31;
@@ -175,6 +180,7 @@ TEST(StateBufferQueueTest, ConcurrentSinglePlayer) {
 }
 
 TEST(StateBufferQueueTest, ConcurrentMultiPlayer) {
+  LOG(INFO) << "ConcurrentMultiPlayer";
   std::vector<ShapeSpec> specs{ShapeSpec(8, {-1, 2, 4}),
                                ShapeSpec(4, {1, 2, 2})};
   std::size_t batch = 256;
