@@ -25,7 +25,7 @@ Options
   ``env.step``, default to ``batch_size``;
 * ``seed (int)``: the environment seed, default to ``42``;
 * ``max_episode_steps (int)``: the maximum number of steps for one episode,
-  default to ``108000``;
+  default to ``27000``;
 * ``img_height (int)``: the desired observation image height, default to
   ``84``;
 * ``img_width (int)``: the desired observation image width, default to ``84``;
