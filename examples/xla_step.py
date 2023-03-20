@@ -40,7 +40,7 @@ def gym_sync_step() -> None:
     handle0, states = loop_var
     action = policy(states)
     if is_legacy_gym:
-      handle1, (new_states, rew, done, info, _) = step(handle0, action)
+      handle1, (new_states, rew, done, info) = step(handle0, action)
     else:
       handle1, (new_states, rew, term, trunc, info) = step(handle0, action)
     return (handle1, new_states)
