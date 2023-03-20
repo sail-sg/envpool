@@ -136,7 +136,6 @@ void MiniGridEnv::PlaceAgent(int start_x, int start_y, int end_x, int end_y) {
   end_x = (end_x == -1) ? width_ - 1 : end_x;
   end_y = (end_y == -1) ? height_ - 1 : end_y;
   CHECK(start_x <= end_x && start_y <= end_y);
-<<<<<<< HEAD
   agent_pos_.first = -1;
   agent_pos_.second = -1;
   auto pos = PlaceObject(start_x, start_y, end_x, end_y);
@@ -154,14 +153,11 @@ void MiniGridEnv::PlaceAgent(int start_x, int start_y, int end_x, int end_y) {
 std::pair<int, int> MiniGridEnv::PlaceObject(int start_x, int start_y,
                                              int end_x, int end_y) {
   std::pair<int, int> result;
-=======
->>>>>>> origin/main
   std::uniform_int_distribution<> x_dist(start_x, end_x);
   std::uniform_int_distribution<> y_dist(start_y, end_y);
   while (true) {
     int x = x_dist(*gen_ref_);
     int y = y_dist(*gen_ref_);
-<<<<<<< HEAD
     // don't place the objwct on top of another object
     if (grid_[y][x].GetType() != kEmpty) {
       continue;
@@ -175,20 +171,6 @@ std::pair<int, int> MiniGridEnv::PlaceObject(int start_x, int start_y,
     break;
   }
   return result;
-=======
-    if (grid_[y][x].GetType() != kEmpty) {
-      continue;
-    }
-    agent_pos_.first = x;
-    agent_pos_.second = y;
-    break;
-  }
-  // Randomly select a direction
-  if (agent_start_dir_ == -1) {
-    std::uniform_int_distribution<> dir_dist(0, 3);
-    agent_dir_ = dir_dist(*gen_ref_);
-  }
->>>>>>> origin/main
 }
 
 void MiniGridEnv::GenImage(const Array& obs) {
