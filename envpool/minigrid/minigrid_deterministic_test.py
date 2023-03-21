@@ -29,13 +29,14 @@ class _MiniGridEnvPoolDeterministicTest(absltest.TestCase):
     task_id: str,
     num_envs: int = 4,
     total: int = 5000,
+    seed: int = 1,
     **kwargs: Any,
   ) -> None:
     env0 = make_gym(task_id, num_envs=num_envs, seed=0, **kwargs)
     env1 = make_gym(task_id, num_envs=num_envs, seed=0, **kwargs)
     env2 = make_gym(task_id, num_envs=num_envs, seed=1, **kwargs)
     act_space = env0.action_space
-    act_space.seed(0)
+    act_space.seed(seed)
     same_count = 0
     for _ in range(total):
       action = np.array([act_space.sample() for _ in range(num_envs)])
