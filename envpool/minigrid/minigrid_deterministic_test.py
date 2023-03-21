@@ -35,6 +35,7 @@ class _MiniGridEnvPoolDeterministicTest(absltest.TestCase):
     env1 = make_gym(task_id, num_envs=num_envs, seed=0, **kwargs)
     env2 = make_gym(task_id, num_envs=num_envs, seed=1, **kwargs)
     act_space = env0.action_space
+    act_space.seed(0)
     same_count = 0
     for _ in range(total):
       action = np.array([act_space.sample() for _ in range(num_envs)])
@@ -48,7 +49,7 @@ class _MiniGridEnvPoolDeterministicTest(absltest.TestCase):
       same_count += np.allclose(obs0["image"], obs2["image"]) and np.allclose(
         obs0["direction"], obs2["direction"]
       )
-    self.assertLess(same_count, total * 0.1)
+    assert same_count == 0, f"{same_count=}"
 
   def test_empty(self) -> None:
     self.run_deterministic_check("MiniGrid-Empty-Random-5x5-v0")
