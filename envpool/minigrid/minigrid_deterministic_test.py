@@ -28,13 +28,17 @@ class _MiniGridEnvPoolDeterministicTest(absltest.TestCase):
     self,
     task_id: str,
     num_envs: int = 4,
+    total: int = 5000,
+    seed: int = 1,
     **kwargs: Any,
   ) -> None:
     env0 = make_gym(task_id, num_envs=num_envs, seed=0, **kwargs)
     env1 = make_gym(task_id, num_envs=num_envs, seed=0, **kwargs)
     env2 = make_gym(task_id, num_envs=num_envs, seed=1, **kwargs)
     act_space = env0.action_space
-    for _ in range(5000):
+    act_space.seed(seed)
+    same_count = 0
+    for _ in range(total):
       action = np.array([act_space.sample() for _ in range(num_envs)])
       obs0, rew0, terminated, truncated, info0 = env0.step(action)
       obs1, rew1, terminated, truncated, info1 = env1.step(action)
@@ -43,10 +47,10 @@ class _MiniGridEnvPoolDeterministicTest(absltest.TestCase):
       np.testing.assert_allclose(obs0["direction"], obs1["direction"])
       # TODO: this may fail because the available state in minigrid env
       # is limited
-      self.assertFalse(
-        np.allclose(obs0["image"], obs2["image"]) and
-        np.allclose(obs0["direction"], obs2["direction"])
+      same_count += np.allclose(obs0["image"], obs2["image"]) and np.allclose(
+        obs0["direction"], obs2["direction"]
       )
+    assert same_count == 0, f"{same_count=}"
 
   def test_empty(self) -> None:
     self.run_deterministic_check("MiniGrid-Empty-Random-5x5-v0")
