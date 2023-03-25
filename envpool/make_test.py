@@ -18,6 +18,7 @@ from typing import List
 
 import dm_env
 import gym
+import gymnasium
 from absl.testing import absltest
 
 import envpool
@@ -36,38 +37,54 @@ class _MakeTest(absltest.TestCase):
     spec = envpool.make_spec("Defender-v5")
     env_gym = envpool.make_gym("Defender-v5")
     env_dm = envpool.make_dm("Defender-v5")
+    env_gymnasium = envpool.make_gymnasium("Defender-v5")
     print(env_dm)
     print(env_gym)
+    print(env_gym)
+    self.assertIsInstance(env_gymnasium, gymnasium.Env)
     self.assertIsInstance(env_gym, gym.Env)
     self.assertIsInstance(env_dm, dm_env.Environment)
     self.assertEqual(spec.action_space.n, 18)
     self.assertEqual(env_gym.action_space.n, 18)
     self.assertEqual(env_dm.action_spec().num_values, 18)
+    self.assertEqual(env_gymnasium.action_space.n, 18)
     # not work for wrong bin, see issue #146
     for wrong in ["Combat", "Joust", "MazeCraze", "Warlords"]:
       self.assertRaises(AssertionError, envpool.make_gym, f"{wrong}-v5")
+      self.assertRaises(AssertionError, envpool.make_gymnasium, f"{wrong}-v5")
     # invalid argument will raise AssertionError, see issue #214
     self.assertRaises(AssertionError, envpool.make_gym, "Pong-v5", seed=2**31)
+    self.assertRaises(
+      AssertionError, envpool.make_gymnasium, "Pong-v5", seed=2**31
+    )
 
   def test_make_vizdoom(self) -> None:
     spec = envpool.make_spec("MyWayHome-v1")
     print(spec)
-    env = envpool.make_gym("MyWayHome-v1")
-    print(env)
-    self.assertIsInstance(env, gym.Env)
-    env.reset()
+    env0 = envpool.make_gym("MyWayHome-v1")
+    env1 = envpool.make_gymnasium("MyWayHome-v1")
+    print(env0)
+    print(env1)
+    self.assertIsInstance(env0, gym.Env)
+    self.assertIsInstance(env1, gymnasium.Env)
+    env0.reset()
+    env1.reset()
 
   def check_step(self, env_list: List[str]) -> None:
     for task_id in env_list:
       envpool.make_spec(task_id)
       env_gym = envpool.make_gym(task_id)
       env_dm = envpool.make_dm(task_id)
+      env_gymnasium = envpool.make_gymnasium(task_id)
       print(env_dm)
       print(env_gym)
+      print(env_gymnasium)
       self.assertIsInstance(env_gym, gym.Env)
       self.assertIsInstance(env_dm, dm_env.Environment)
+      self.assertIsInstance(env_gymnasium, gymnasium.Env)
       env_dm.reset()
       env_gym.reset()
+      env_gymnasium.reset()
 
   def test_make_classic(self) -> None:
     self.check_step(
@@ -175,6 +192,54 @@ class _MakeTest(absltest.TestCase):
         "WalkerRun-v1",
         "WalkerStand-v1",
         "WalkerWalk-v1",
+      ]
+    )
+
+  def test_make_procgen(self) -> None:
+    self.check_step(
+      [
+        "BigfishEasy-v0",
+        "BigfishHard-v0",
+        "BossfightEasy-v0",
+        "BossfightHard-v0",
+        "CaveflyerEasy-v0",
+        "CaveflyerHard-v0",
+        "CaveflyerMemory-v0",
+        "ChaserEasy-v0",
+        "ChaserHard-v0",
+        "ChaserExtreme-v0",
+        "ClimberEasy-v0",
+        "ClimberHard-v0",
+        "CoinrunEasy-v0",
+        "CoinrunHard-v0",
+        "DodgeballEasy-v0",
+        "DodgeballHard-v0",
+        "DodgeballExtreme-v0",
+        "DodgeballMemory-v0",
+        "FruitbotEasy-v0",
+        "FruitbotHard-v0",
+        "HeistEasy-v0",
+        "HeistHard-v0",
+        "HeistMemory-v0",
+        "JumperEasy-v0",
+        "JumperHard-v0",
+        "JumperMemory-v0",
+        "LeaperEasy-v0",
+        "LeaperHard-v0",
+        "LeaperExtreme-v0",
+        "MazeEasy-v0",
+        "MazeHard-v0",
+        "MazeMemory-v0",
+        "MinerEasy-v0",
+        "MinerHard-v0",
+        "MinerMemory-v0",
+        "NinjaEasy-v0",
+        "NinjaHard-v0",
+        "PlunderEasy-v0",
+        "PlunderHard-v0",
+        "StarpilotEasy-v0",
+        "StarpilotHard-v0",
+        "StarpilotExtreme-v0",
       ]
     )
 

@@ -30,14 +30,7 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
                      bool segmentation)
     : n_sub_steps_(n_sub_steps),
       max_episode_steps_(max_episode_steps),
-      elapsed_step_(max_episode_steps + 1),
-      done_(true),
-      height_(240),
-      width_(320),
-      camera_id_("-1"),
-      depth_(false),
-      segmentation_(false) {
-  initOpenGL();
+      elapsed_step_(max_episode_steps + 1) {
   // initialize vfs from common assets and raw xml
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/mujoco/wrapper/core.py#L158
   // https://github.com/deepmind/mujoco/blob/main/python/mujoco/structs.cc
