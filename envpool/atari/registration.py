@@ -15,9 +15,7 @@
 
 import os
 
-from envpool.registration import register
-
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+from envpool.registration import base_path, register
 
 atari_rom_path = os.path.join(base_path, "atari", "roms")
 atari_game_list = sorted(
@@ -32,7 +30,7 @@ for game in atari_game_list:
     spec_cls="AtariEnvSpec",
     dm_cls="AtariDMEnvPool",
     gym_cls="AtariGymEnvPool",
+    gymnasium_cls="AtariGymnasiumEnvPool",
     task=game,
-    base_path=base_path,
-    max_episode_steps=108000,
+    max_episode_steps=27000,
   )

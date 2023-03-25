@@ -116,8 +116,8 @@ class Array {
     if (shape_[0] > 0) {
       offset = start * size / shape_[0];
     }
-    return Array(ptr_.get() + offset * element_size, std::move(new_shape),
-                 element_size, [](char* p) {});
+    return {ptr_.get() + offset * element_size, std::move(new_shape),
+            element_size, [](char* p) {}};
   }
 
   /**

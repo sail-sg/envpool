@@ -58,7 +58,7 @@ class Env {
 
  private:
   StateBufferQueue* sbq_;
-  int order_, current_step_;
+  int order_, current_step_{-1};
   bool is_single_player_;
   StateBuffer::WritableSlice slice_;
   // for parsing single env action from input action batch
@@ -79,7 +79,6 @@ class Env {
         env_id_(env_id),
         seed_(spec.config["seed"_] + env_id),
         gen_(seed_),
-        current_step_(-1),
         is_single_player_(max_num_players_ == 1),
         action_specs_(spec.action_spec.template AllValues<ShapeSpec>()),
         is_player_action_(Transform(action_specs_, [](const ShapeSpec& s) {
@@ -87,6 +86,8 @@ class Env {
         })) {
     slice_.done_write = [] { LOG(INFO) << "Use `Allocate` to write state."; };
   }
+
+  virtual ~Env() = default;
 
   void SetAction(std::shared_ptr<std::vector<Array>> action_batch,
                  int env_index) {

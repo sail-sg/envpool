@@ -19,7 +19,7 @@ from abc import ABC
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-import treevalue
+import optree
 from dm_env import TimeStep
 
 from .protocol import EnvPool, EnvSpec
@@ -59,9 +59,8 @@ class EnvPoolMixin(ABC):
   ) -> List[np.ndarray]:
     """Convert action to C++-acceptable format."""
     if isinstance(action, dict):
-      atree = treevalue.TreeValue(action)
-      alist = treevalue.flatten(atree)
-      adict = {".".join(k): v for k, v in alist}
+      paths, values, _ = optree.tree_flatten_with_path(action)
+      adict = {'.'.join(p): v for p, v in zip(paths, values)}
     else:  # only 3 keys in action_keys
       if not hasattr(self, "_last_action_type"):
         self._last_action_type = self._spec._action_spec[-1][0]
@@ -108,7 +107,8 @@ class EnvPoolMixin(ABC):
     """Set the seed for all environments (abandoned)."""
     warnings.warn(
       "The `seed` function in envpool is abandoned. "
-      "You can set seed by envpool.make(..., seed=seed) instead."
+      "You can set seed by envpool.make(..., seed=seed) instead.",
+      stacklevel=2
     )
 
   def send(

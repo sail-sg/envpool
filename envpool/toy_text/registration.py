@@ -21,6 +21,7 @@ register(
   spec_cls="CatchEnvSpec",
   dm_cls="CatchDMEnvPool",
   gym_cls="CatchGymEnvPool",
+  gymnasium_cls="CatchGymnasiumEnvPool",
   height=10,
   width=5,
 )
@@ -31,6 +32,7 @@ register(
   spec_cls="FrozenLakeEnvSpec",
   dm_cls="FrozenLakeDMEnvPool",
   gym_cls="FrozenLakeGymEnvPool",
+  gymnasium_cls="FrozenLakeGymnasiumEnvPool",
   size=4,
   max_episode_steps=100,
   reward_threshold=0.7,
@@ -42,6 +44,7 @@ register(
   spec_cls="FrozenLakeEnvSpec",
   dm_cls="FrozenLakeDMEnvPool",
   gym_cls="FrozenLakeGymEnvPool",
+  gymnasium_cls="FrozenLakeGymnasiumEnvPool",
   size=8,
   max_episode_steps=200,
   reward_threshold=0.85,
@@ -53,6 +56,7 @@ register(
   spec_cls="TaxiEnvSpec",
   dm_cls="TaxiDMEnvPool",
   gym_cls="TaxiGymEnvPool",
+  gymnasium_cls="TaxiGymnasiumEnvPool",
   max_episode_steps=200,
   reward_threshold=8.0,
 )
@@ -63,6 +67,7 @@ register(
   spec_cls="NChainEnvSpec",
   dm_cls="NChainDMEnvPool",
   gym_cls="NChainGymEnvPool",
+  gymnasium_cls="NChainGymnasiumEnvPool",
   max_episode_steps=1000,
 )
 
@@ -72,6 +77,7 @@ register(
   spec_cls="CliffWalkingEnvSpec",
   dm_cls="CliffWalkingDMEnvPool",
   gym_cls="CliffWalkingGymEnvPool",
+  gymnasium_cls="CliffWalkingGymnasiumEnvPool",
 )
 
 register(
@@ -80,6 +86,7 @@ register(
   spec_cls="BlackjackEnvSpec",
   dm_cls="BlackjackDMEnvPool",
   gym_cls="BlackjackGymEnvPool",
+  gymnasium_cls="BlackjackGymnasiumEnvPool",
   sab=True,
   natural=False,
 )

@@ -25,7 +25,9 @@ Options
   ``env.step``, default to ``batch_size``;
 * ``seed (int)``: the environment seed, default to ``42``;
 * ``max_episode_steps (int)``: the maximum number of steps for one episode,
-  default to ``108000``;
+  default to ``27000``, which corresponds to 108000 frames or roughly 30
+  minutes of game-play (`Hessel et al. 2018, Table 3
+  <https://arxiv.org/pdf/1710.02298.pdf>`_) because of the 4 skipped frames;
 * ``img_height (int)``: the desired observation image height, default to
   ``84``;
 * ``img_width (int)``: the desired observation image width, default to ``84``;
@@ -52,6 +54,8 @@ Options
   image resize, default to ``True``.
 * ``use_fire_reset (bool)``: whether to use ``fire-reset`` wrapper, default to
   ``True``.
+* ``full_action_space (bool)``: whether to use full action space of ALE of 18
+  actions, default to ``False``.
 
 
 Observation Space

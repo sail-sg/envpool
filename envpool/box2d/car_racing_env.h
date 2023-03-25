@@ -80,7 +80,7 @@ class CarRacingBox2dEnv {
   float reward_{0};
   float prev_reward_{0};
   float step_reward_{0};
-  bool done_;
+  bool done_{true};
 
   cv::Mat surf_;
   cv::Mat img_array_;

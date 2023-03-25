@@ -13,13 +13,7 @@
 # limitations under the License.
 """Mujoco gym env registration."""
 
-import os
-
 from envpool.registration import register
-
-base_path = os.path.abspath(
-  os.path.join(os.path.dirname(__file__), "..", "..")
-)
 
 gym_mujoco_envs = [
   ("Ant", "v3", False, 1000),
@@ -56,7 +50,7 @@ for task, version, post_constraint, max_episode_steps in gym_mujoco_envs:
     spec_cls=f"Gym{task}EnvSpec",
     dm_cls=f"Gym{task}DMEnvPool",
     gym_cls=f"Gym{task}GymEnvPool",
-    base_path=base_path,
+    gymnasium_cls=f"Gym{task}GymnasiumEnvPool",
     post_constraint=post_constraint,
     max_episode_steps=max_episode_steps,
     **extra_args,

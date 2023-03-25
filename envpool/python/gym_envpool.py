@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Tuple, Union
 
 import gym
 import numpy as np
-import treevalue
+import optree
 from packaging import version
 
 from .data import gym_structure
@@ -52,6 +52,7 @@ class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
     base = parents[0]
     try:
       from .lax import XlaMixin
+
       parents = (base, GymEnvPoolMixin, EnvPoolMixin, XlaMixin, gym.Env)
     except ImportError:
 
@@ -68,31 +69,28 @@ class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
     check_key_duplication(name, "state", state_keys)
     check_key_duplication(name, "action", action_keys)
 
-    tree_pairs = gym_structure(state_keys)
-    state_idx = list(zip(*tree_pairs))[-1]
+    state_paths, state_idx, treepsec = gym_structure(state_keys)
 
     new_gym_api = version.parse(gym.__version__) >= version.parse("0.26.0")
 
     def _to_gym(
       self: Any, state_values: List[np.ndarray], reset: bool, return_info: bool
     ) -> Union[Any, Tuple[Any, Any], Tuple[Any, np.ndarray, np.ndarray, Any],
-               Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any]]:
-      values = map(lambda i: state_values[i], state_idx)
-      state = treevalue.unflatten(
-        [(path, vi) for (path, _), vi in zip(tree_pairs, values)]
-      )
+               Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any],]:
+      values = (state_values[i] for i in state_idx)
+      state = optree.tree_unflatten(treepsec, values)
       if reset and not (return_info or new_gym_api):
-        return state.obs
-      info = treevalue.jsonify(state.info)
+        return state["obs"]
+      info = state["info"]
       if not new_gym_api:
-        info["TimeLimit.truncated"] = state.trunc
-      info["elapsed_step"] = state.elapsed_step
+        info["TimeLimit.truncated"] = state["trunc"]
+      info["elapsed_step"] = state["elapsed_step"]
       if reset:
-        return state.obs, info
+        return state["obs"], info
       if new_gym_api:
-        terminated = state.done & ~state.trunc
-        return state.obs, state.reward, terminated, state.trunc, info
-      return state.obs, state.reward, state.done, info
+        terminated = state["done"] & ~state["trunc"]
+        return state["obs"], state["reward"], terminated, state["trunc"], info
+      return state["obs"], state["reward"], state["done"], state["trunc"], info
 
     attrs["_to"] = _to_gym
     subcls = super().__new__(cls, name, parents, attrs)

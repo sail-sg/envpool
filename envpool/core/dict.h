@@ -205,8 +205,11 @@ class Dict : public std::decay_t<TupleOrVector> {
             std::enable_if_t<all_convertible<Type, Values>::value, bool> = true>
   [[nodiscard]] std::vector<Type> AllValues() const {
     std::vector<Type> rets;
-    std::apply([&](auto&&... value) { (rets.push_back(Type(value)), ...); },
-               *static_cast<const Values*>(this));
+    std::apply(
+        [&](auto&&... value) {
+          (rets.push_back(static_cast<Type>(value)), ...);
+        },
+        *static_cast<const Values*>(this));
     return rets;
   }
 
@@ -297,7 +300,7 @@ std::vector<Array> MakeArray(const std::tuple<Spec...>& specs) {
  * Takes a vector of `ShapeSpec`.
  */
 std::vector<Array> MakeArray(const std::vector<ShapeSpec>& specs) {
-  return std::vector<Array>(specs.begin(), specs.end());
+  return {specs.begin(), specs.end()};
 }
 
 #endif  // ENVPOOL_CORE_DICT_H_

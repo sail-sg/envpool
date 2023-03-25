@@ -16,12 +16,12 @@
 - [x] [ViZDoom single player](https://envpool.readthedocs.io/en/latest/env/vizdoom.html)
 - [x] [DeepMind Control Suite](https://envpool.readthedocs.io/en/latest/env/dm_control.html)
 - [x] [Box2D](https://envpool.readthedocs.io/en/latest/env/box2d.html)
-- [ ] Procgen
-- [ ] Minigrid
+- [x] [Procgen](https://envpool.readthedocs.io/en/latest/env/procgen.html)
+- [x] [Minigrid](https://envpool.readthedocs.io/en/latest/env/minigrid.html)
 
 Here are EnvPool's several highlights:
 
-- Compatible with OpenAI `gym` APIs and DeepMind `dm_env` APIs;
+- Compatible with OpenAI `gym` APIs, DeepMind `dm_env` APIs, and [`gymnasium`](https://github.com/Farama-Foundation/Gymnasium) APIs;
 - Manage a pool of envs, interact with the envs in batched APIs by default;
 - Support both synchronous execution and asynchronous execution;
 - Support both single player and multi-player environment;
@@ -115,7 +115,7 @@ env = envpool.make("Pong-v5", env_type="gym", num_envs=100)
 # or use envpool.make_gym(...)
 obs = env.reset()  # should be (100, 4, 84, 84)
 act = np.zeros(100, dtype=int)
-obs, rew, done, info = env.step(act)
+obs, rew, term, trunc, info = env.step(act)
 ```
 
 Under the synchronous mode, `envpool` closely resembles `openai-gym`/`dm-env`. It has the `reset` and `step` functions with the same meaning. However, there is one exception in `envpool`: batch interaction is the default. Therefore, during the creation of the envpool, there is a `num_envs` argument that denotes how many envs you like to run in parallel.
@@ -145,7 +145,7 @@ env = envpool.make("Pong-v5", env_type="gym", num_envs=num_envs, batch_size=batc
 action_num = env.action_space.n
 env.async_reset()  # send the initial reset signal to all envs
 while True:
-    obs, rew, done, info = env.recv()
+    obs, rew, term, trunc, info = env.recv()
     env_id = info["env_id"]
     action = np.random.randint(action_num, size=batch_size)
     env.send(action, env_id)

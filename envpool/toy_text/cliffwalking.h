@@ -47,11 +47,11 @@ using CliffWalkingEnvSpec = EnvSpec<CliffWalkingEnvFns>;
 class CliffWalkingEnv : public Env<CliffWalkingEnvSpec> {
  protected:
   int x_, y_;
-  bool done_;
+  bool done_{true};
 
  public:
   CliffWalkingEnv(const Spec& spec, int env_id)
-      : Env<CliffWalkingEnvSpec>(spec, env_id), done_(true) {}
+      : Env<CliffWalkingEnvSpec>(spec, env_id) {}
 
   bool IsDone() override { return done_; }
 

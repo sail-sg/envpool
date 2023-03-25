@@ -173,7 +173,7 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
     while (penetrating) {
       for (std::size_t i = 0; i < kArmJoints.size(); ++i) {
         int id_joint = id_arm_joints_[i];
-        bool is_limited = model_->jnt_limited[id_joint] == 1 ? true : false;
+        bool is_limited = model_->jnt_limited[id_joint] == 1;
         mjtNum lower = is_limited ? model_->jnt_range[id_joint * 2 + 0] : -M_PI;
         mjtNum upper = is_limited ? model_->jnt_range[id_joint * 2 + 1] : M_PI;
         data_->qpos[id_arm_qpos_[i]] = RandUniform(lower, upper)(gen_);

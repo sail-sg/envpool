@@ -51,8 +51,8 @@ class EnvSpec {
   using Config = decltype(ConcatDict(common_config, EnvFns::DefaultConfig()));
   using ConfigKeys = typename Config::Keys;
   using ConfigValues = typename Config::Values;
-  using StateSpec = decltype(
-      ConcatDict(common_state_spec, EnvFns::StateSpec(std::declval<Config>())));
+  using StateSpec = decltype(ConcatDict(
+      common_state_spec, EnvFns::StateSpec(std::declval<Config>())));
   using ActionSpec = decltype(ConcatDict(
       common_action_spec, EnvFns::ActionSpec(std::declval<Config>())));
   using StateKeys = typename StateSpec::Keys;

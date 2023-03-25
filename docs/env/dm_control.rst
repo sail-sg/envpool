@@ -46,7 +46,7 @@ BallInCupCatch-v1
 - ``max_episode_steps``: 1000;
 
 
-CartpoleBalance-v1, CartpoleBalanceSparse-v1, CarpoletSwingup-v1, CartpoleSwingupSparse-v1, CartpoleTwoPoles-v1, CartpoleThreePoles-v1
+CartpoleBalance-v1, CartpoleBalanceSparse-v1, CartpoleSwingup-v1, CartpoleSwingupSparse-v1, CartpoleTwoPoles-v1, CartpoleThreePoles-v1
 --------------------------------------------------------------------------------------------------------------------------------------
 
 `dm_control suite cartpole source code

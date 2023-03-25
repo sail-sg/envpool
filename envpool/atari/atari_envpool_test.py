@@ -25,7 +25,7 @@ from jax import jit, lax
 
 import envpool.atari.registration  # noqa: F401
 from envpool.atari.atari_envpool import _AtariEnvPool, _AtariEnvSpec
-from envpool.registration import make_dm, make_gym
+from envpool.registration import make_dm, make_gym, make_gymnasium
 
 
 class _AtariEnvPoolTest(absltest.TestCase):
@@ -61,19 +61,30 @@ class _AtariEnvPoolTest(absltest.TestCase):
     fps = total * batch / duration * 4
     logging.info(f"Raw envpool FPS = {fps:.6f}")
 
+  def test_full_action_space(self) -> None:
+    env = make_gym("Pong-v5", full_action_space=True)
+    self.assertEqual(env.action_space.n, 18)
+    env = make_gym("Breakout-v5", full_action_space=True)
+    self.assertEqual(env.action_space.n, 18)
+
   def test_align(self) -> None:
     """Make sure gym's envpool and dm_env's envpool generate the same data."""
     num_envs = 4
     env0 = make_gym("SpaceInvaders-v5", num_envs=num_envs)
     env1 = make_dm("SpaceInvaders-v5", num_envs=num_envs)
+    env2 = make_gymnasium("SpaceInvaders-v5", num_envs=num_envs)
     obs0, _ = env0.reset()
     obs1 = env1.reset().observation.obs
+    obs2, _ = env2.reset()
     np.testing.assert_allclose(obs0, obs1)
+    np.testing.assert_allclose(obs1, obs2)
     for _ in range(1000):
       action = np.random.randint(6, size=num_envs)
       obs0 = env0.step(action)[0]
       obs1 = env1.step(action).observation.obs
+      obs2 = env2.step(action)[0]
       np.testing.assert_allclose(obs0, obs1)
+      np.testing.assert_allclose(obs1, obs2)
       # cv2.imwrite(f"/tmp/log/align{i}.png", obs0[0, 1:].transpose(1, 2, 0))
 
   def test_reset_life(self) -> None:

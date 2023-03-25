@@ -56,15 +56,14 @@ class MountainCarEnv : public Env<MountainCarEnvSpec> {
   int max_episode_steps_, elapsed_step_;
   double pos_, vel_;
   std::uniform_real_distribution<> dist_;
-  bool done_;
+  bool done_{true};
 
  public:
   MountainCarEnv(const Spec& spec, int env_id)
       : Env<MountainCarEnvSpec>(spec, env_id),
         max_episode_steps_(spec.config["max_episode_steps"_]),
         elapsed_step_(max_episode_steps_ + 1),
-        dist_(-0.6, -0.4),
-        done_(true) {}
+        dist_(-0.6, -0.4) {}
 
   bool IsDone() override { return done_; }
 

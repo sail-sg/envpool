@@ -75,7 +75,7 @@ class BipedalWalkerBox2dEnv {
  protected:
   int max_episode_steps_, elapsed_step_;
   float reward_, prev_shaping_;
-  bool hardcore_, done_;
+  bool hardcore_, done_{true};
   std::array<float, 24> obs_;
   // info
   float scroll_;
@@ -83,7 +83,7 @@ class BipedalWalkerBox2dEnv {
 
   // box2d related
   std::unique_ptr<b2World> world_;
-  b2Body* hull_;
+  b2Body* hull_{nullptr};
   std::vector<b2Vec2> hull_poly_;
   std::vector<b2Body*> terrain_;
   std::array<b2Body*, 4> legs_;

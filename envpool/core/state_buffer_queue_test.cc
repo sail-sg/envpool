@@ -31,14 +31,18 @@ TEST(StateBufferQueueTest, Basic) {
   std::srand(std::time(nullptr));
   std::size_t size = 0;
   for (std::size_t i = 0; i < batch; ++i) {
+    LOG(INFO) << i << " start";
     std::size_t num_players = 1;
     auto slice = queue.Allocate(num_players);
+    LOG(INFO) << i << " allocate";
     slice.done_write();
+    LOG(INFO) << i << " done_write";
     EXPECT_EQ(slice.arr[0].Shape(0), 10);
     EXPECT_EQ(slice.arr[1].Shape(0), 1);
     size += num_players;
   }
   std::vector<Array> out = queue.Wait();
+  LOG(INFO) << "finish wait";
   EXPECT_EQ(out[0].Shape(0), size);
   EXPECT_EQ(out[1].Shape(0), size);
   EXPECT_EQ(batch, size);

@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Tuple, Union
 
 import dm_env
 import numpy as np
-import treevalue
+import optree
 from dm_env import TimeStep
 
 from .data import dm_structure
@@ -50,6 +50,7 @@ class DMEnvPoolMeta(ABCMeta):
     base = parents[0]
     try:
       from .lax import XlaMixin
+
       parents = (
         base, DMEnvPoolMixin, EnvPoolMixin, XlaMixin, dm_env.Environment
       )
@@ -68,8 +69,7 @@ class DMEnvPoolMeta(ABCMeta):
     check_key_duplication(name, "state", state_keys)
     check_key_duplication(name, "action", action_keys)
 
-    tree_pairs = dm_structure("State", state_keys)
-    state_idx = list(zip(*tree_pairs))[-1]
+    state_paths, state_idx, treepsec = dm_structure("State", state_keys)
 
     def _to_dm(
       self: Any,
@@ -77,10 +77,8 @@ class DMEnvPoolMeta(ABCMeta):
       reset: bool,
       return_info: bool,
     ) -> TimeStep:
-      values = map(lambda i: state_values[i], state_idx)
-      state = treevalue.unflatten(
-        [(path, vi) for (path, _), vi in zip(tree_pairs, values)]
-      )
+      values = (state_values[i] for i in state_idx)
+      state = optree.tree_unflatten(treepsec, values)
       timestep = TimeStep(
         step_type=state.step_type,
         observation=state.State,

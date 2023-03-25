@@ -19,16 +19,18 @@ from envpool.registration import (
   make,
   make_dm,
   make_gym,
+  make_gymnasium,
   make_spec,
   register,
 )
 
-__version__ = "0.6.6"
+__version__ = "0.8.2"
 __all__ = [
   "register",
   "make",
   "make_dm",
   "make_gym",
+  "make_gymnasium",
   "make_spec",
   "list_all_envs",
 ]

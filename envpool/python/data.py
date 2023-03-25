@@ -18,8 +18,10 @@ from typing import Any, Dict, List, Tuple, Type
 
 import dm_env
 import gym
+import gymnasium
 import numpy as np
-import treevalue
+import optree
+from optree import PyTreeSpec
 
 from .protocol import ArraySpec
 
@@ -106,8 +108,27 @@ def gym_spec_transform(
   )
 
 
-def dm_structure(root_name: str,
-                 keys: List[str]) -> List[Tuple[List[str], int]]:
+def gymnasium_spec_transform(
+  name: str, spec: ArraySpec, spec_type: str
+) -> gymnasium.Space:
+  """Transform ArraySpec to gymnasium.Env compatible spaces."""
+  if np.prod(np.abs(spec.shape)) == 1 and \
+      np.isclose(spec.minimum, 0) and spec.maximum < ACTION_THRESHOLD:
+    # special treatment for discrete action space
+    discrete_range = int(spec.maximum - spec.minimum + 1)
+    return gymnasium.spaces.Discrete(n=discrete_range, start=int(spec.minimum))
+  return gymnasium.spaces.Box(
+    shape=[s for s in spec.shape if s != -1],
+    dtype=spec.dtype,
+    low=spec.minimum,
+    high=spec.maximum,
+  )
+
+
+def dm_structure(
+  root_name: str,
+  keys: List[str],
+) -> Tuple[List[Tuple[int, ...]], List[int], PyTreeSpec]:
   """Convert flat keys into tree structure for namedtuple construction."""
   new_keys = []
   for key in keys:
@@ -117,13 +138,19 @@ def dm_structure(root_name: str,
     key = key.replace("obs:", f"{root_name}:")  # compatible with to_namedtuple
     new_keys.append(key.replace(":", "."))
   dict_tree = to_nested_dict(dict(zip(new_keys, list(range(len(new_keys))))))
-  tree_pairs = treevalue.flatten(treevalue.TreeValue(dict_tree))
-  return tree_pairs
+  structure = to_namedtuple(root_name, dict_tree)
+  paths, indices, treespec = optree.tree_flatten_with_path(structure)
+  return paths, indices, treespec
 
 
-def gym_structure(keys: List[str]) -> List[Tuple[List[str], int]]:
+def gym_structure(
+  keys: List[str]
+) -> Tuple[List[Tuple[str, ...]], List[int], PyTreeSpec]:
   """Convert flat keys into tree structure for dict construction."""
   keys = [k.replace(":", ".") for k in keys]
-  structure = to_nested_dict(dict(zip(keys, list(range(len(keys))))))
-  tree_pairs = treevalue.flatten(treevalue.TreeValue(structure))
-  return tree_pairs
+  dict_tree = to_nested_dict(dict(zip(keys, list(range(len(keys))))))
+  paths, indices, treespec = optree.tree_flatten_with_path(dict_tree)
+  return paths, indices, treespec
+
+
+gymnasium_structure = gym_structure
