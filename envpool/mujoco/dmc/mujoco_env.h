@@ -62,15 +62,12 @@ class MujocoEnv {
   const std::string& camera_id_;
   int n_sub_steps_, max_episode_steps_, elapsed_step_;
   float reward_, discount_;
-<<<<<<< HEAD
   bool done_;
   int height_, width_;
   bool depth_, segmentation_;
   unsigned char* rgb_array_;
   float* depth_array_;
-=======
   bool done_{true};
->>>>>>> upstream/main
 #ifdef ENVPOOL_TEST
   std::unique_ptr<mjtNum> qpos0_;
 #endif
