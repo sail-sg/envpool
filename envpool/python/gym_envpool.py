@@ -90,7 +90,7 @@ class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
       if new_gym_api:
         terminated = state["done"] & ~state["trunc"]
         return state["obs"], state["reward"], terminated, state["trunc"], info
-      return state["obs"], state["reward"], state["done"], state["trunc"], info
+      return state["obs"], state["reward"], state["done"], info
 
     attrs["_to"] = _to_gym
     subcls = super().__new__(cls, name, parents, attrs)
