@@ -233,6 +233,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
   void WriteState(float reward, float discount, float info_reward) {
     State state = Allocate();
     state["discount"_] = discount;
+    state["trunc"_] = done_ && (elapsed_step_ >= max_episode_steps_);
     state["reward"_] = reward;
     state["info:lives"_] = lives_;
     state["info:reward"_] = info_reward;
