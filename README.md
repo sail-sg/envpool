@@ -193,7 +193,7 @@ If you find EnvPool useful, please cite it in your publications.
  editor = {S. Koyejo and S. Mohamed and A. Agarwal and D. Belgrave and K. Cho and A. Oh},
  pages = {22409--22421},
  publisher = {Curran Associates, Inc.},
- title = {EnvPool: A Highly Parallel Reinforcement Learning Environment Execution Engine},
+ title = {Env{P}ool: A Highly Parallel Reinforcement Learning Environment Execution Engine},
  url = {https://proceedings.neurips.cc/paper_files/paper/2022/file/8caaf08e49ddbad6694fae067442ee21-Paper-Datasets_and_Benchmarks.pdf},
  volume = {35},
  year = {2022}
