@@ -48,6 +48,7 @@ auto common_state_spec =
 template <typename EnvFns>
 class EnvSpec {
  public:
+  using EnvFnsType = EnvFns;
   using Config = decltype(ConcatDict(common_config, EnvFns::DefaultConfig()));
   using ConfigKeys = typename Config::Keys;
   using ConfigValues = typename Config::Values;
