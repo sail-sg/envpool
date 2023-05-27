@@ -158,8 +158,8 @@ class Dict : public std::decay_t<TupleOrVector> {
   template <typename V, typename V2 = Values,
             std::enable_if_t<is_vector_v<std::decay_t<V>>, bool> = true,
             std::enable_if_t<is_tuple_v<V2>, bool> = true>
-  explicit Dict(V&& values)
-      : Dict(tuple_from_vector<Values>(std::forward<V>(values))) {}
+  explicit Dict(V&& values)  // NOLINT
+      : Dict(TupleFromVector<Values>(std::forward<V>(values))) {}
 
   /**
    * Gives the values a [index] based accessor

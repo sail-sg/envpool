@@ -49,20 +49,20 @@ template <typename... T>
 using tuple_cat_t = decltype(std::tuple_cat(std::declval<T>()...));  // NOLINT
 
 template <typename TupleType, typename T, std::size_t... Is>
-decltype(auto) tuple_from_vector_impl(std::index_sequence<Is...>,
-                                      const std::vector<T>& arguments) {
+decltype(auto) TupleFromVectorImpl(std::index_sequence<Is...> /*unused*/,
+                                   const std::vector<T>& arguments) {
   return TupleType(arguments[Is]...);
 }
 
 template <typename TupleType, typename T, std::size_t... Is>
-decltype(auto) tuple_from_vector_impl(std::index_sequence<Is...>,
-                                      std::vector<T>&& arguments) {
+decltype(auto) TupleFromVectorImpl(std::index_sequence<Is...> /*unused*/,
+                                   std::vector<T>&& arguments) {
   return TupleType(std::move(arguments[Is])...);
 }
 
 template <typename TupleType, typename V>
-decltype(auto) tuple_from_vector(V&& arguments) {
-  return tuple_from_vector_impl<TupleType>(
+decltype(auto) TupleFromVector(V&& arguments) {
+  return TupleFromVectorImpl<TupleType>(
       std::make_index_sequence<std::tuple_size_v<TupleType>>{},
       std::forward<V>(arguments));
 }

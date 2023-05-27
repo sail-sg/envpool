@@ -205,17 +205,19 @@ class TArray : public Array {
       : Array(ptr, shape, element_size, deleter) {}
 
   template <class Shape>
-  TArray(std::shared_ptr<char> ptr, Shape&& shape, std::size_t element_size)
+  TArray(const std::shared_ptr<char>& ptr, Shape&& shape,
+         std::size_t element_size)
       : Array(ptr, shape, element_size) {}
 
  public:
   TArray() = default;
   explicit TArray(const Spec<Dtype>& spec) : Array(spec) {}
-  explicit TArray(const Spec<Dtype>& spec, char* data) : Array(spec, data) {}
+  explicit TArray(const Spec<Dtype>& spec, const char* data)
+      : Array(spec, data) {}
 
   template <typename A, std::enable_if_t<std::is_same_v<std::decay_t<A>, Array>,
                                          bool> = true>
-  explicit TArray(A&& array) : Array(std::forward<A>(array)) {
+  explicit TArray(A&& array) : Array(std::forward<A>(array)) {  // NOLINT
     DCHECK_EQ(array.element_size, sizeof(Dtype));
   }
 
@@ -261,7 +263,7 @@ class TArray : public Array {
    */
   template <typename T>
   void Fill(const T& value) const {
-    Dtype* data = reinterpret_cast<Dtype*>(ptr_.get());
+    auto data = reinterpret_cast<Dtype*>(ptr_.get());
     std::fill(data, data + size, static_cast<Dtype>(value));
   }
 
@@ -273,14 +275,16 @@ class TArray : public Array {
     std::memcpy(ptr_.get(), buff, sz * sizeof(Dtype));
   }
 
-  operator Dtype&() const { return *reinterpret_cast<Dtype*>(ptr_.get()); }
+  operator Dtype&() const {  // NOLINT
+    return *reinterpret_cast<Dtype*>(ptr_.get());
+  }
 
   /**
    * Cast the Array to a scalar value of type `T`. This Array needs to have a
    * scalar shape.
    */
   template <typename T,
-            std::enable_if_t<std::is_same_v<T, Dtype>, bool> = false>
+            std::enable_if_t<!std::is_same_v<T, Dtype>, bool> = true>
   operator T() const {  // NOLINT
     DCHECK_EQ(size, (std::size_t)1)
         << " Array with a non-scalar shape can't be used as a scalar";

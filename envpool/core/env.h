@@ -52,7 +52,7 @@ struct SpecToTArray;
 
 template <typename... Args>
 struct SpecToTArray<std::tuple<Args...>> {
-  using type = std::tuple<TArray<typename Args::dtype>...>;
+  using Type = std::tuple<TArray<typename Args::dtype>...>;
 };
 
 /**
@@ -82,10 +82,10 @@ class Env {
   using Spec = EnvSpec;
   using State =
       Dict<typename EnvSpec::StateKeys,
-           typename SpecToTArray<typename EnvSpec::StateSpec::Values>::type>;
+           typename SpecToTArray<typename EnvSpec::StateSpec::Values>::Type>;
   using Action =
       Dict<typename EnvSpec::ActionKeys,
-           typename SpecToTArray<typename EnvSpec::ActionSpec::Values>::type>;
+           typename SpecToTArray<typename EnvSpec::ActionSpec::Values>::Type>;
 
   Env(const EnvSpec& spec, int env_id)
       : max_num_players_(spec.config["max_num_players"_]),
