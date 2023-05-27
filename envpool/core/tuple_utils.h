@@ -21,6 +21,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 template <class T, class Tuple>
 struct Index;
@@ -46,5 +47,24 @@ decltype(auto) ApplyZip(F&& f, K&& k, V&& v,
 
 template <typename... T>
 using tuple_cat_t = decltype(std::tuple_cat(std::declval<T>()...));  // NOLINT
+
+template <typename TupleType, typename T, std::size_t... Is>
+decltype(auto) tuple_from_vector_impl(std::index_sequence<Is...>,
+                                      const std::vector<T>& arguments) {
+  return TupleType(arguments[Is]...);
+}
+
+template <typename TupleType, typename T, std::size_t... Is>
+decltype(auto) tuple_from_vector_impl(std::index_sequence<Is...>,
+                                      std::vector<T>&& arguments) {
+  return TupleType(std::move(arguments[Is])...);
+}
+
+template <typename TupleType, typename V>
+decltype(auto) tuple_from_vector(V&& arguments) {
+  return tuple_from_vector_impl<TupleType>(
+      std::make_index_sequence<std::tuple_size_v<TupleType>>{},
+      std::forward<V>(arguments));
+}
 
 #endif  // ENVPOOL_CORE_TUPLE_UTILS_H_

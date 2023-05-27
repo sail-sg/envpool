@@ -135,6 +135,8 @@ class Dict : public std::decay_t<TupleOrVector> {
         << "Size must match";
   }
 
+  Dict() = default;
+
   /**
    * Constructor, makes a dict from keys and values
    */
@@ -152,6 +154,12 @@ class Dict : public std::decay_t<TupleOrVector> {
   explicit Dict(TupleOrVector&& values) : Values(std::move(values)) { Check(); }
 
   explicit Dict(const TupleOrVector& values) : Values(values) { Check(); }
+
+  template <typename V, typename V2 = Values,
+            std::enable_if_t<is_vector_v<std::decay_t<V>>, bool> = true,
+            std::enable_if_t<is_tuple_v<V2>, bool> = true>
+  explicit Dict(V&& values)
+      : Dict(tuple_from_vector<Values>(std::forward<V>(values))) {}
 
   /**
    * Gives the values a [index] based accessor
