@@ -422,7 +422,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
 
   void WriteState(float reward) {
     State state = Allocate();
-    std::vector<Array> state_array(state);
+    auto state_array = state.AllValues<Array>();
     state["reward"_] = reward;
     for (int i = 0; i < stack_num_; ++i) {
       state["obs"_]

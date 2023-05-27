@@ -43,7 +43,7 @@ TEST(DummyEnvPoolTest, SplitZeroAction) {
   std::vector<Array> raw_action({Array(Spec<int>({4})), Array(Spec<int>({8})),
                                  Array(Spec<double>({4, 6})),
                                  Array(Spec<int>({8})), Array(Spec<int>({8}))});
-  DummyAction action(&raw_action);
+  DummyAction action(raw_action);
   for (int i = 0; i < 4; ++i) {
     action["env_id"_][i] = i;
     for (int j = 0; j < 6; ++j) {
@@ -56,8 +56,7 @@ TEST(DummyEnvPoolTest, SplitZeroAction) {
   }
   // send
   envpool.Send(action);
-  state_vec = envpool.Recv();
-  DummyState state(&state_vec);
+  DummyState state(envpool.Recv());
   EXPECT_EQ(action["env_id"_].Shape(0), state["info:env_id"_].Shape(0));
   EXPECT_EQ(state["info:players.env_id"_].Shape(0), 8);
   for (int i = 0; i < 4; ++i) {
@@ -87,8 +86,7 @@ TEST(DummyEnvPoolTest, SplitZeroAction) {
   }
   // send
   envpool.Send(action);
-  state_vec = envpool.Recv();
-  state = DummyState(&state_vec);
+  state = DummyState(envpool.Recv());
   EXPECT_EQ(action["env_id"_].Shape(0), state["info:env_id"_].Shape(0));
   EXPECT_EQ(state["info:players.env_id"_].Shape(0), 8);
   for (int i = 0; i < 4; ++i) {
@@ -130,12 +128,12 @@ void Runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
   }
   dummy::DummyEnvSpec spec(config);
   dummy::DummyEnvPool envpool(spec);
-  Array all_env_ids(Spec<int>({num_envs}));
+  TArray all_env_ids(Spec<int>({num_envs}));
   for (int i = 0; i < num_envs; ++i) {
     all_env_ids[i] = i;
   }
   envpool.Reset(all_env_ids);
-  auto list_action = Array(Spec<double>({num_envs, 6}));
+  auto list_action = TArray(Spec<double>({num_envs, 6}));
   for (int i = 0; i < num_envs; ++i) {
     for (int j = 0; j < 6; ++j) {
       list_action[i][j] = 5.0 + i;
@@ -144,8 +142,7 @@ void Runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
   auto start = std::chrono::system_clock::now();
   for (int i = 0; i < total_iter; ++i) {
     // recv
-    auto state_vec = envpool.Recv();
-    DummyState state(&state_vec);
+    DummyState state(envpool.Recv());
     // check state
     auto env_id = state["info:env_id"_];
     auto player_env_id = state["info:players.env_id"_];
@@ -205,8 +202,7 @@ void Runner(int num_envs, int batch, int seed, int total_iter, int num_threads,
       }
     }
     // construct action
-    std::vector<Array> raw_action(5);
-    DummyAction action(&raw_action);
+    DummyAction action;
     action["env_id"_] = env_id;
     action["players.env_id"_] = player_env_id;
     action["list_action"_] = list_action;

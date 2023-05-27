@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <random>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -45,6 +46,14 @@ void InplaceInitialize(const Spec& spec, Array* arr) {
   InitializeHelper<typename Spec::dtype>::Init(arr);
 }
 
+template <typename SpecTuple>
+struct SpecToTArray;
+
+template <typename... Args>
+struct SpecToTArray<std::tuple<Args...>> {
+  using type = std::tuple<TArray<typename Args::dtype>...>;
+};
+
 /**
  * Single RL environment abstraction.
  */
@@ -70,8 +79,12 @@ class Env {
 
  public:
   using Spec = EnvSpec;
-  using State = NamedVector<typename EnvSpec::StateKeys, std::vector<Array>>;
-  using Action = NamedVector<typename EnvSpec::ActionKeys, std::vector<Array>>;
+  using State =
+      Dict<typename EnvSpec::StateKeys,
+           typename SpecToTArray<typename EnvSpec::StateSpec::Values>::type>;
+  using Action =
+      Dict<typename EnvSpec::ActionKeys,
+           typename SpecToTArray<typename EnvSpec::ActionSpec::Values>::type>;
 
   Env(const EnvSpec& spec, int env_id)
       : max_num_players_(spec.config["max_num_players"_]),
@@ -151,7 +164,8 @@ class Env {
       Reset();
     } else {
       ParseAction();
-      Step(Action(&raw_action_));
+      Step(Action(std::move(raw_action_)));
+      raw_action_.clear();
     }
     PostProcess();
   }
@@ -180,7 +194,7 @@ class Env {
 
   State Allocate(int player_num = 1) {
     slice_ = sbq_->Allocate(player_num, order_);
-    State state(&slice_.arr);
+    State state(slice_.arr);
     bool done = IsDone();
     int max_episode_steps = spec_.config["max_episode_steps"_];
     state["done"_] = done;

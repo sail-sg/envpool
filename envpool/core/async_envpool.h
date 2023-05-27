@@ -154,6 +154,8 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
     }
   }
 
+  void Send(const Action& action) {
+    SendImpl(action.template AllValues<Array>());
   }
   void Send(const std::vector<Array>& action) override { SendImpl(action); }
   void Send(std::vector<Array>&& action) override { SendImpl(action); }
@@ -173,11 +175,12 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
   }
 
   void Reset(const Array& env_ids) override {
-    int shared_offset = env_ids.Shape(0);
+    TArray<int> env_ids_(env_ids);
+    int shared_offset = env_ids_.Shape(0);
     std::vector<ActionSlice> actions(shared_offset);
     for (int i = 0; i < shared_offset; ++i) {
       actions[i].force_reset = true;
-      actions[i].env_id = env_ids[i];
+      actions[i].env_id = env_ids_[i];
       actions[i].order = is_sync_ ? i : -1;
     }
     if (is_sync_) {

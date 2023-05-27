@@ -39,7 +39,7 @@ TEST(MjcEnvPoolTest, CheckAction) {
   std::vector<Array> raw_action({Array(Spec<int>({num_envs})),
                                  Array(Spec<int>({num_envs})),
                                  Array(Spec<double>({num_envs, 6}))});
-  MjcAction action(&raw_action);
+  MjcAction action(raw_action);
   for (int i = 0; i < num_envs; ++i) {
     action["env_id"_][i] = i;
     action["players.env_id"_][i] = i;
