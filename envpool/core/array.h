@@ -134,7 +134,8 @@ class Array {
    * Assign to this Array a scalar value. This Array needs to have a scalar
    * shape.
    */
-  template <typename T>
+  template <typename T,
+            std::enable_if_t<!std::is_same_v<T, Array>, bool> = true>
   void operator=(const T& value) const {
     DCHECK_EQ(element_size, sizeof(T)) << " element size doesn't match";
     DCHECK_EQ(size, (std::size_t)1) << " assigning scalar to non-scalar array";
