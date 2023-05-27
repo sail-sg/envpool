@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <random>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
