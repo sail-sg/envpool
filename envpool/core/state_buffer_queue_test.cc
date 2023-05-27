@@ -113,7 +113,7 @@ TEST(StateBufferQueueTest, NumPlayers) {
     EXPECT_EQ(slice.arr[1].Shape(0), 1);
     size += num_players;
   }
-  std::vector<Array> out = queue.Wait();
+  std::vector<Array> out = queue.Wait(batch * max_num_players - size);
   EXPECT_EQ(out[0].Shape(0), size);
   EXPECT_EQ(out[1].Shape(0), batch);
 }
