@@ -83,8 +83,7 @@ TEST(StateBufferTest, Truncate) {
                      std::vector<bool>({false, true}));
   auto r = buffer.Allocate(player_num);
   r.done_write();
-  buffer.Done(batch - 1);
-  auto bs = buffer.Wait();
+  auto bs = buffer.Wait(batch - 1);
   EXPECT_EQ(bs[0].Shape(), std::vector<std::size_t>({1, 10, 2, 2}));
   EXPECT_EQ(bs[1].Shape(), std::vector<std::size_t>(
                                {static_cast<std::size_t>(player_num), 2, 2}));
