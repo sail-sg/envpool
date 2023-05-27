@@ -55,6 +55,31 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
   std::vector<std::atomic<int>> stepping_env_;
   std::chrono::duration<double> dur_send_, dur_recv_, dur_send_all_;
 
+  template <typename V>
+  void SendImpl(V&& action) {
+    int* env_id = static_cast<int*>(action[0].Data());
+    int shared_offset = action[0].Shape(0);
+    std::vector<ActionSlice> actions;
+    std::shared_ptr<std::vector<Array>> action_batch =
+        std::make_shared<std::vector<Array>>(std::forward<V>(action));
+    for (int i = 0; i < shared_offset; ++i) {
+      int eid = env_id[i];
+      envs_[eid]->SetAction(action_batch, i);
+      actions.emplace_back(ActionSlice{
+          .env_id = eid,
+          .order = is_sync_ ? i : -1,
+          .force_reset = false,
+      });
+    }
+    if (is_sync_) {
+      stepping_env_num_ += shared_offset;
+    }
+    // add to abq
+    auto start = std::chrono::system_clock::now();
+    action_buffer_queue_->EnqueueBulk(actions);
+    dur_send_ += std::chrono::system_clock::now() - start;
+  }
+
  public:
   using Spec = typename Env::Spec;
   using Action = typename Env::Action;
@@ -129,29 +154,9 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
     }
   }
 
-  void Send(const std::vector<Array>& action) override {
-    int* env_id = static_cast<int*>(action[0].Data());
-    int shared_offset = action[0].Shape(0);
-    std::vector<ActionSlice> actions;
-    std::shared_ptr<std::vector<Array>> action_batch =
-        std::make_shared<std::vector<Array>>(action);
-    for (int i = 0; i < shared_offset; ++i) {
-      int eid = env_id[i];
-      envs_[eid]->SetAction(action_batch, i);
-      actions.emplace_back(ActionSlice{
-          .env_id = eid,
-          .order = is_sync_ ? i : -1,
-          .force_reset = false,
-      });
-    }
-    if (is_sync_) {
-      stepping_env_num_ += shared_offset;
-    }
-    // add to abq
-    auto start = std::chrono::system_clock::now();
-    action_buffer_queue_->EnqueueBulk(actions);
-    dur_send_ += std::chrono::system_clock::now() - start;
   }
+  void Send(const std::vector<Array>& action) override { SendImpl(action); }
+  void Send(std::vector<Array>&& action) override { SendImpl(action); }
 
   std::vector<Array> Recv() override {
     int additional_wait = 0;
