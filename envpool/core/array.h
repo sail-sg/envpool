@@ -232,9 +232,7 @@ class TArray : public Array {
   /**
    * Index operator of array, takes the index along the first axis.
    */
-  inline TArray operator[](int index) const {
-    return TArray(this->operator()(index));
-  }
+  inline TArray operator[](int index) const { return this->operator()(index); }
 
   /**
    * Take a slice at the first axis of the Array.
