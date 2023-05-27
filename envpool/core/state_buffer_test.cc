@@ -62,7 +62,7 @@ TEST(StateBufferTest, SinglePlayerSync) {
     EXPECT_EQ(std::get<0>(offset), std::get<1>(offset));
     EXPECT_EQ(r.arr[0].Shape(), std::vector<std::size_t>({10, 2, 2}));
     EXPECT_EQ(r.arr[1].Shape(), std::vector<std::size_t>({1, 2, 2}));
-    r.arr[1] = i;  // only the first element is modified
+    r.arr[1](0, 0, 0) = i;  // only the first element is modified
     r.done_write();
   }
   auto bs = buffer.Wait();
