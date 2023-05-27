@@ -30,9 +30,9 @@ def _shape_with_layout(
 ) -> Tuple[xla_client.Shape, ...]:
   return tuple(
     xla_client.Shape
-    .array_shape(dtype, shape, tuple(range(len(shape) - 1, -1, -1)))
-    if len(shape) > 0 else xla_client.Shape.scalar_shape(dtype)
-    for shape, dtype in specs
+    .array_shape(dtype, shape, tuple(range(len(shape) -
+                                           1, -1, -1))) if len(shape) >
+    0 else xla_client.Shape.scalar_shape(dtype) for shape, dtype in specs
   )
 
 

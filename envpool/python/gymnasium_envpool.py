@@ -74,8 +74,12 @@ class GymnasiumEnvPoolMeta(ABCMeta, gymnasium.Env.__class__):
 
     def _to_gymnasium(
       self: Any, state_values: List[np.ndarray], reset: bool, return_info: bool
-    ) -> Union[Any, Tuple[Any, Any], Tuple[Any, np.ndarray, np.ndarray, Any],
-               Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any],]:
+    ) -> Union[
+      Any,
+      Tuple[Any, Any],
+      Tuple[Any, np.ndarray, np.ndarray, Any],
+      Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any],
+    ]:
       values = (state_values[i] for i in state_idx)
       state = optree.tree_unflatten(treepsec, values)
       info = state["info"]
