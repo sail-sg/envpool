@@ -35,9 +35,9 @@ TEST(AtariEnvTest, GrayScaleMaxPoolOrder) {
       ptr1[i * n + j] = j;
     }
   }
-  Array col0(Spec<uint8_t>({n, n, 3}));
-  Array col1(Spec<uint8_t>({n, n, 3}));
-  Array result(Spec<uint8_t>({n, n, 1}));
+  TArray col0(Spec<uint8_t>({n, n, 3}));
+  TArray col1(Spec<uint8_t>({n, n, 3}));
+  TArray result(Spec<uint8_t>({n, n, 1}));
   auto* col0_ptr = static_cast<uint8_t*>(col0.Data());
   auto* col1_ptr = static_cast<uint8_t*>(col1.Data());
   auto* result_ptr = static_cast<uint8_t*>(result.Data());
@@ -97,19 +97,17 @@ TEST(AtariEnvTest, Seed) {
   atari::AtariEnvSpec spec(config);
   atari::AtariEnvPool envpool0(spec);
   atari::AtariEnvPool envpool1(spec);
-  Array all_env_ids(Spec<int>({static_cast<int>(batch)}));
+  TArray all_env_ids(Spec<int>({static_cast<int>(batch)}));
   for (std::size_t i = 0; i < batch; ++i) {
     all_env_ids[i] = i;
   }
   envpool0.Reset(all_env_ids);
   envpool1.Reset(all_env_ids);
-  std::vector<Array> raw_action(3);
-  AtariAction action(&raw_action);
+
+  AtariAction action;
   for (int i = 0; i < total_iter; ++i) {
-    auto state_vec0 = envpool0.Recv();
-    auto state_vec1 = envpool1.Recv();
-    AtariState state0(&state_vec0);
-    AtariState state1(&state_vec1);
+    AtariState state0(envpool0.Recv());
+    AtariState state1(envpool1.Recv());
     EXPECT_EQ(state0["obs"_].Shape(),
               std::vector<std::size_t>({batch, 4, 84, 84}));
     EXPECT_EQ(state1["obs"_].Shape(),
@@ -128,7 +126,7 @@ TEST(AtariEnvTest, Seed) {
     }
     action["env_id"_] = state0["info:env_id"_];
     action["players.env_id"_] = state0["info:env_id"_];
-    action["action"_] = Array(Spec<int>({static_cast<int>(batch)}));
+    action["action"_] = TArray(Spec<int>({static_cast<int>(batch)}));
     for (std::size_t j = 0; j < batch; ++j) {
       action["action"_][j] = std::rand() % 6;
     }
@@ -149,17 +147,15 @@ TEST(AtariEnvTest, MaxEpisodeSteps) {
   int total_iter = 100;
   atari::AtariEnvSpec spec(config);
   atari::AtariEnvPool envpool(spec);
-  Array all_env_ids(Spec<int>({batch}));
+  TArray all_env_ids(Spec<int>({batch}));
   for (int i = 0; i < batch; ++i) {
     all_env_ids[i] = i;
   }
   envpool.Reset(all_env_ids);
-  std::vector<Array> raw_action(3);
-  AtariAction action(&raw_action);
+  AtariAction action;
   int count = 0;
   for (int i = 0; i < total_iter; ++i) {
-    auto state_vec = envpool.Recv();
-    AtariState state(&state_vec);
+    AtariState state(envpool.Recv());
     auto elapsed_step = state["elapsed_step"_];
     for (int j = 0; j < batch; ++j) {
       EXPECT_EQ(count, static_cast<int>(elapsed_step[j]));
@@ -169,7 +165,7 @@ TEST(AtariEnvTest, MaxEpisodeSteps) {
     }
     action["env_id"_] = state["info:env_id"_];
     action["players.env_id"_] = state["info:env_id"_];
-    action["action"_] = Array(Spec<int>({batch}));
+    action["action"_] = TArray(Spec<int>({batch}));
     for (int j = 0; j < batch; ++j) {
       action["action"_][j] = 0;
     }
@@ -188,18 +184,16 @@ TEST(AtariEnvTest, EpisodicLife) {
   config["task"_] = "pong";
   atari::AtariEnvSpec spec(config);
   atari::AtariEnvPool envpool(spec);
-  Array all_env_ids(Spec<int>({batch}));
+  TArray all_env_ids(Spec<int>({batch}));
   for (int i = 0; i < batch; ++i) {
     all_env_ids[i] = i;
   }
   envpool.Reset(all_env_ids);
-  std::vector<Array> raw_action(3);
-  AtariAction action(&raw_action);
+  AtariAction action;
   std::vector<bool> last_done(batch);
   std::vector<int> last_lives(batch);
   for (int i = 0; i < total_iter; ++i) {
-    auto state_vec = envpool.Recv();
-    AtariState state(&state_vec);
+    AtariState state(envpool.Recv());
     auto done = state["done"_];
     auto lives = state["info:lives"_];
     for (int j = 0; j < batch; ++j) {
@@ -211,7 +205,7 @@ TEST(AtariEnvTest, EpisodicLife) {
     }
     action["env_id"_] = state["info:env_id"_];
     action["players.env_id"_] = state["info:env_id"_];
-    action["action"_] = Array(Spec<int>({batch}));
+    action["action"_] = TArray(Spec<int>({batch}));
     for (int j = 0; j < batch; ++j) {
       action["action"_][j] = std::rand() % 6;
     }
@@ -225,8 +219,7 @@ TEST(AtariEnvTest, EpisodicLife) {
   last_lives = std::vector<int>(4);
   last_done = std::vector<bool>(4, true);
   for (int i = 0; i < total_iter; ++i) {
-    auto state_vec = envpool2.Recv();
-    AtariState state(&state_vec);
+    AtariState state(envpool2.Recv());
     auto done = state["done"_];
     auto lives = state["info:lives"_];
     for (int j = 0; j < batch; ++j) {
@@ -250,7 +243,7 @@ TEST(AtariEnvTest, EpisodicLife) {
     }
     action["env_id"_] = state["info:env_id"_];
     action["players.env_id"_] = state["info:env_id"_];
-    action["action"_] = Array(Spec<int>({batch}));
+    action["action"_] = TArray(Spec<int>({batch}));
     for (int j = 0; j < batch; ++j) {
       action["action"_][j] = i % 4;
     }
@@ -271,22 +264,18 @@ TEST(AtariEnvTest, ZeroDiscountOnLifeLoss) {
   config["zero_discount_on_life_loss"_] = true;
   atari::AtariEnvSpec spec2(config);
   atari::AtariEnvPool envpool2(spec2);
-  Array all_env_ids(Spec<int>({batch}));
+  TArray all_env_ids(Spec<int>({batch}));
   for (int i = 0; i < batch; ++i) {
     all_env_ids[i] = i;
   }
   envpool.Reset(all_env_ids);
   envpool2.Reset(all_env_ids);
-  std::vector<Array> raw_action(3);
-  AtariAction action(&raw_action);
+  AtariAction action;
   std::vector<bool> last_done(batch, true);
   std::vector<int> last_lives(batch);
   for (int i = 0; i < total_iter; ++i) {
-    auto state_vec = envpool.Recv();
-    auto state_vec2 = envpool2.Recv();
-    AtariState state(&state_vec);
-    AtariState state2(&state_vec2);
-
+    AtariState state(envpool.Recv());
+    AtariState state2(envpool2.Recv());
     auto done = state["done"_];
     auto lives = state["info:lives"_];
     auto discount = state["discount"_];
@@ -326,7 +315,7 @@ TEST(AtariEnvTest, ZeroDiscountOnLifeLoss) {
     }
     action["env_id"_] = state["info:env_id"_];
     action["players.env_id"_] = state["info:env_id"_];
-    action["action"_] = Array(Spec<int>({batch}));
+    action["action"_] = TArray(Spec<int>({batch}));
     for (int j = 0; j < batch; ++j) {
       action["action"_][j] = i % 4;
     }
@@ -351,22 +340,20 @@ TEST(AtariEnvSpeedTest, Benchmark) {
   config["thread_affinity_offset"_] = 0;
   atari::AtariEnvSpec spec(config);
   atari::AtariEnvPool envpool(spec);
-  Array all_env_ids(Spec<int>({num_envs}));
+  TArray all_env_ids(Spec<int>({num_envs}));
   for (int i = 0; i < num_envs; ++i) {
     all_env_ids[i] = i;
   }
   envpool.Reset(all_env_ids);
-  std::vector<Array> raw_action(3);
-  AtariAction action(&raw_action);
-  action["action"_] = Array(Spec<int>({batch}));
+  AtariAction action;
+  action["action"_] = TArray(Spec<int>({batch}));
   for (int j = 0; j < batch; ++j) {
     action["action"_][j] = 1;
   }
   auto start = std::chrono::system_clock::now();
   for (int i = 0; i < total_iter; ++i) {
     // recv
-    auto state_vec = envpool.Recv();
-    AtariState state(&state_vec);
+    AtariState state(envpool.Recv());
     auto env_id = state["info:env_id"_];
     // EXPECT_EQ(env_id.Shape(),
     // std::vector<std::size_t>({(std::size_t)batch}));

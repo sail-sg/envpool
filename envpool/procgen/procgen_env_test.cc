@@ -33,16 +33,14 @@ TEST(PRocgenEnvTest, BasicStep) {
   int total_iter = 10000;
   procgen::ProcgenEnvSpec spec(config);
   procgen::ProcgenEnvPool envpool(spec);
-  Array all_env_ids(Spec<int>({static_cast<int>(batch)}));
+  TArray all_env_ids(Spec<int>({static_cast<int>(batch)}));
   for (std::size_t i = 0; i < batch; ++i) {
     all_env_ids[i] = i;
   }
   envpool.Reset(all_env_ids);
-  std::vector<Array> raw_action(3);
-  ProcgenAction action(&raw_action);
+  ProcgenAction action;
   for (int i = 0; i < total_iter; ++i) {
-    auto state_vec = envpool.Recv();
-    ProcgenState state(&state_vec);
+    ProcgenState state(envpool.Recv());
     EXPECT_EQ(state["obs"_].Shape(),
               std::vector<std::size_t>({batch, 3, 64, 64}));
     uint8_t* data = static_cast<uint8_t*>(state["obs"_].Data());
@@ -57,7 +55,7 @@ TEST(PRocgenEnvTest, BasicStep) {
     }
     action["env_id"_] = state["info:env_id"_];
     action["players.env_id"_] = state["info:env_id"_];
-    action["action"_] = Array(Spec<int>({static_cast<int>(batch)}));
+    action["action"_] = TArray(Spec<int>({static_cast<int>(batch)}));
     for (std::size_t j = 0; j < batch; ++j) {
       action["action"_][j] = std::rand() % 15;
     }

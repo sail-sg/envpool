@@ -144,9 +144,7 @@ class StateBuffer {
     uint64_t offsets = offsets_;
     uint32_t player_offset = (offsets >> 32);
     uint32_t shared_offset = offsets;
-    DCHECK_EQ((std::size_t)shared_offset, batch_)
-        << "When this StateBuffer is ready, the shared state arrays should "
-           "be used up.";
+    DCHECK_EQ((std::size_t)shared_offset, batch_ - additional_done_count);
     std::vector<Array> ret;
     ret.reserve(arrays_.size());
     for (std::size_t i = 0; i < arrays_.size(); ++i) {

@@ -134,7 +134,8 @@ class Array {
    * Assign to this Array a scalar value. This Array needs to have a scalar
    * shape.
    */
-  template <typename T>
+  template <typename T,
+            std::enable_if_t<!std::is_same_v<T, Array>, bool> = true>
   void operator=(const T& value) const {
     DCHECK_EQ(element_size, sizeof(T)) << " element size doesn't match";
     DCHECK_EQ(size, (std::size_t)1) << " assigning scalar to non-scalar array";
@@ -160,30 +161,6 @@ class Array {
     DCHECK_EQ(sz, size) << " assignment size mismatch";
     DCHECK_EQ(sizeof(T), element_size) << " element size mismatch";
     std::memcpy(ptr_.get(), buff, sz * sizeof(T));
-  }
-
-  /**
-   * Cast the Array to a scalar value of type `T`. This Array needs to have a
-   * scalar shape.
-   */
-  template <typename T>
-  operator const T&() const {  // NOLINT
-    DCHECK_EQ(element_size, sizeof(T)) << " there could be a type mismatch";
-    DCHECK_EQ(size, (std::size_t)1)
-        << " Array with a shape can't be used as a scalar";
-    return *reinterpret_cast<T*>(ptr_.get());
-  }
-
-  /**
-   * Cast the Array to a scalar value of type `T`. This Array needs to have a
-   * scalar shape.
-   */
-  template <typename T>
-  operator T&() {  // NOLINT
-    DCHECK_EQ(element_size, sizeof(T)) << " there could be a type mismatch";
-    DCHECK_EQ(size, (std::size_t)1)
-        << " Array with a shape can't be used as a scalar";
-    return *reinterpret_cast<T*>(ptr_.get());
   }
 
   /**
@@ -222,8 +199,106 @@ class Array {
 
 template <typename Dtype>
 class TArray : public Array {
+  template <class Shape, class Deleter>
+  TArray(char* ptr, Shape&& shape, std::size_t element_size,  // NOLINT
+         Deleter&& deleter)
+      : Array(ptr, shape, element_size, deleter) {}
+
+  template <class Shape>
+  TArray(const std::shared_ptr<char>& ptr, Shape&& shape,
+         std::size_t element_size)
+      : Array(ptr, shape, element_size) {}
+
  public:
+  TArray() = default;
   explicit TArray(const Spec<Dtype>& spec) : Array(spec) {}
+  explicit TArray(const Spec<Dtype>& spec, const char* data)
+      : Array(spec, data) {}
+
+  template <typename A, std::enable_if_t<std::is_same_v<std::decay_t<A>, Array>,
+                                         bool> = true>
+  explicit TArray(A&& array) : Array(std::forward<A>(array)) {  // NOLINT
+    DCHECK_EQ(array.element_size, sizeof(Dtype));
+  }
+
+  /**
+   * Take multidimensional index into the Array.
+   */
+  template <typename... Index>
+  inline TArray operator()(Index... index) const {
+    return TArray(Array::operator()(index...));
+  }
+
+  /**
+   * Index operator of array, takes the index along the first axis.
+   */
+  inline TArray operator[](int index) const { return this->operator()(index); }
+
+  /**
+   * Take a slice at the first axis of the Array.
+   */
+  [[nodiscard]] TArray Slice(std::size_t start, std::size_t end) const {
+    return TArray(Array::Slice(start, end));
+  }
+
+  /**
+   * Copy the content of another Array to this Array.
+   */
+  void Assign(const TArray& value) const { Array::Assign(value); }
+  void Assign(const Array& value) const { Array::Assign(value); }
+
+  /**
+   * Assign a scalar value.
+   */
+  template <typename T,
+            std::enable_if_t<!std::is_same_v<T, TArray>, bool> = true>
+  void operator=(const T& value) const {
+    *reinterpret_cast<Dtype*>(ptr_.get()) = static_cast<Dtype>(value);
+  }
+
+  /**
+   * Fills this array with a scalar value of type T.
+   */
+  template <typename T>
+  void Fill(const T& value) const {
+    auto data = reinterpret_cast<Dtype*>(ptr_.get());
+    std::fill(data, data + size, static_cast<Dtype>(value));
+  }
+
+  /**
+   * Copy the memory starting at `raw.first`, to `raw.first + raw.second` to the
+   * memory of this Array.
+   */
+  void Assign(const Dtype* buff, std::size_t sz) const {
+    std::memcpy(ptr_.get(), buff, sz * sizeof(Dtype));
+  }
+
+  operator Dtype&() const {  // NOLINT
+    return *reinterpret_cast<Dtype*>(ptr_.get());
+  }
+
+  /**
+   * Cast the Array to a scalar value of type `T`. This Array needs to have a
+   * scalar shape.
+   */
+  template <typename T,
+            std::enable_if_t<!std::is_same_v<T, Dtype>, bool> = true>
+  operator T() const {  // NOLINT
+    DCHECK_EQ(size, (std::size_t)1)
+        << " Array with a non-scalar shape can't be used as a scalar";
+    return static_cast<T>(*reinterpret_cast<Dtype*>(ptr_.get()));
+  }
+
+  /**
+   * Truncate the Array. Return a new Array that shares the same memory
+   * location but with a truncated shape.
+   */
+  [[nodiscard]] TArray Truncate(std::size_t end) const {
+    auto new_shape = std::vector<std::size_t>(shape_);
+    new_shape[0] = end;
+    TArray ret(ptr_, std::move(new_shape), element_size);
+    return ret;
+  }
 };
 
 #endif  // ENVPOOL_CORE_ARRAY_H_

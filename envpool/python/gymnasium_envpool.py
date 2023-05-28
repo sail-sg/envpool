@@ -58,9 +58,7 @@ class GymnasiumEnvPoolMeta(ABCMeta, gymnasium.Env.__class__):
     except ImportError:
 
       def _xla(self: Any) -> None:
-        raise RuntimeError(
-          "XLA is disabled. To enable XLA please install jax."
-        )
+        raise RuntimeError("XLA is disabled. To enable XLA please install jax.")
 
       attrs["xla"] = _xla
       parents = (base, GymnasiumEnvPoolMixin, EnvPoolMixin, gymnasium.Env)
@@ -74,8 +72,12 @@ class GymnasiumEnvPoolMeta(ABCMeta, gymnasium.Env.__class__):
 
     def _to_gymnasium(
       self: Any, state_values: List[np.ndarray], reset: bool, return_info: bool
-    ) -> Union[Any, Tuple[Any, Any], Tuple[Any, np.ndarray, np.ndarray, Any],
-               Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any],]:
+    ) -> Union[
+      Any,
+      Tuple[Any, Any],
+      Tuple[Any, np.ndarray, np.ndarray, Any],
+      Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any],
+    ]:
       values = (state_values[i] for i in state_idx)
       state = optree.tree_unflatten(treepsec, values)
       info = state["info"]

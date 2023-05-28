@@ -62,7 +62,7 @@ TEST(StateBufferTest, SinglePlayerSync) {
     EXPECT_EQ(std::get<0>(offset), std::get<1>(offset));
     EXPECT_EQ(r.arr[0].Shape(), std::vector<std::size_t>({10, 2, 2}));
     EXPECT_EQ(r.arr[1].Shape(), std::vector<std::size_t>({1, 2, 2}));
-    r.arr[1] = i;  // only the first element is modified
+    r.arr[1](0, 0, 0) = i;  // only the first element is modified
     r.done_write();
   }
   auto bs = buffer.Wait();
@@ -83,8 +83,7 @@ TEST(StateBufferTest, Truncate) {
                      std::vector<bool>({false, true}));
   auto r = buffer.Allocate(player_num);
   r.done_write();
-  buffer.Done(batch - 1);
-  auto bs = buffer.Wait();
+  auto bs = buffer.Wait(batch - 1);
   EXPECT_EQ(bs[0].Shape(), std::vector<std::size_t>({1, 10, 2, 2}));
   EXPECT_EQ(bs[1].Shape(), std::vector<std::size_t>(
                                {static_cast<std::size_t>(player_num), 2, 2}));

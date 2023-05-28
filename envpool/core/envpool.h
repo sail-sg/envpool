@@ -39,6 +39,9 @@ class EnvPool {
   virtual void Send(const std::vector<Array>& action) {
     throw std::runtime_error("send not implemented");
   }
+  virtual void Send(std::vector<Array>&& action) {
+    throw std::runtime_error("send not implemented");
+  }
   virtual std::vector<Array> Recv() {
     throw std::runtime_error("recv not implemented");
   }

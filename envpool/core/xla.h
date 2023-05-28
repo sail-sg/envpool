@@ -189,7 +189,7 @@ struct XlaRecv {
     int max_num_players = envpool->spec.config["max_num_players"_];
     std::vector<Array> recv = envpool->Recv();
     for (std::size_t i = 0; i < recv.size(); ++i) {
-      CHECK_LE(recv[i].Shape(0), batch_size * max_num_players);
+      CHECK_LE(recv[i].Shape(0), (std::size_t)batch_size * max_num_players);
       std::memcpy(out[i], recv[i].Data(), recv[i].size * recv[i].element_size);
     }
   }
@@ -200,7 +200,7 @@ struct XlaRecv {
     int max_num_players = envpool->spec.config["max_num_players"_];
     std::vector<Array> recv = envpool->Recv();
     for (std::size_t i = 0; i < recv.size(); ++i) {
-      CHECK_LE(recv[i].Shape(0), batch_size * max_num_players);
+      CHECK_LE(recv[i].Shape(0), (std::size_t)batch_size * max_num_players);
       cudaMemcpyAsync(out[i], recv[i].Data(),
                       recv[i].size * recv[i].element_size,
                       cudaMemcpyHostToDevice, stream);

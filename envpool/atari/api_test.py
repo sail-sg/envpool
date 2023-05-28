@@ -36,9 +36,7 @@ class _SpecTest(absltest.TestCase):
       action_num = action_nums[task]
       spec = make_spec(task.capitalize() + "-v5")
       logging.info(spec)
-      self.assertEqual(
-        spec.action_array_spec["action"].maximum + 1, action_num
-      )
+      self.assertEqual(spec.action_array_spec["action"].maximum + 1, action_num)
       # check dm spec
       dm_obs_spec = spec.observation_spec().obs
       dm_act_spec = spec.action_spec()
@@ -126,9 +124,7 @@ class _DMSyncTest(absltest.TestCase):
     self.assertEqual(ts.observation.lives.dtype, np.int32)
     np.testing.assert_allclose(ts.observation.env_id, np.arange(num_envs))
     self.assertEqual(ts.observation.env_id.dtype, np.int32)
-    np.testing.assert_allclose(
-      ts.observation.players.env_id.shape, (num_envs,)
-    )
+    np.testing.assert_allclose(ts.observation.players.env_id.shape, (num_envs,))
     self.assertEqual(ts.observation.players.env_id.dtype, np.int32)
     action = {
       "env_id": np.arange(num_envs),
@@ -178,9 +174,7 @@ class _DMSyncTest(absltest.TestCase):
     self.assertEqual(ts.observation.lives.dtype, np.int32)
     np.testing.assert_allclose(ts.observation.env_id, np.arange(num_envs))
     self.assertEqual(ts.observation.env_id.dtype, np.int32)
-    np.testing.assert_allclose(
-      ts.observation.players.env_id.shape, (num_envs,)
-    )
+    np.testing.assert_allclose(ts.observation.players.env_id.shape, (num_envs,))
     self.assertEqual(ts.observation.players.env_id.dtype, np.int32)
     action = {
       "env_id": np.arange(num_envs),

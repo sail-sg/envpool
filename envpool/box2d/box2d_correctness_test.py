@@ -262,9 +262,7 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
       env_id = env_id[~done]
       hs = hs[~done]
 
-      ah = [
-        self.heuristic_bipedal_walker_policy(s, h) for s, h in zip(obs, hs)
-      ]
+      ah = [self.heuristic_bipedal_walker_policy(s, h) for s, h in zip(obs, hs)]
       action = np.array([i[0] for i in ah])
       hs = np.array([i[1] for i in ah])
 

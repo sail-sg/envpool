@@ -88,9 +88,7 @@ def dm_spec_transform(
   )
 
 
-def gym_spec_transform(
-  name: str, spec: ArraySpec, spec_type: str
-) -> gym.Space:
+def gym_spec_transform(name: str, spec: ArraySpec, spec_type: str) -> gym.Space:
   """Transform ArraySpec to gym.Env compatible spaces."""
   if np.prod(np.abs(spec.shape)) == 1 and \
       np.isclose(spec.minimum, 0) and spec.maximum < ACTION_THRESHOLD:

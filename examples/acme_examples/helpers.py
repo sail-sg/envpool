@@ -111,9 +111,7 @@ class AdderWrapper(Adder):
     # Record the next observation but leave the history buffer row open by
     # passing `partial_step=True`.
     self._adder._writer.append(
-      dict(
-        observation=timestep.observation, start_of_episode=timestep.first()
-      ),
+      dict(observation=timestep.observation, start_of_episode=timestep.first()),
       partial_step=True,
     )
     self._adder._add_first_called = True
@@ -211,13 +209,10 @@ class PPOBuilder(ppo.PPOBuilder):
 
       def _process(data):
         shape = data.shape
-        data = tf.transpose(
-          data, (0, 2, 1, *[i for i in range(3, len(shape))])
-        )
+        data = tf.transpose(data, (0, 2, 1, *[i for i in range(3, len(shape))]))
         data = tf.reshape(
-          data, (
-            self._config.batch_size, self._config.unroll_length + 1, *shape[3:]
-          )
+          data,
+          (self._config.batch_size, self._config.unroll_length + 1, *shape[3:])
         )
         return data
 

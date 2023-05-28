@@ -101,9 +101,7 @@ class EnvPoolMixin(ABC):
     return self.config["batch_size"] > 0 and self.config[
       "num_envs"] != self.config["batch_size"]
 
-  def seed(
-    self: EnvPool, seed: Optional[Union[int, List[int]]] = None
-  ) -> None:
+  def seed(self: EnvPool, seed: Optional[Union[int, List[int]]] = None) -> None:
     """Set the seed for all environments (abandoned)."""
     warnings.warn(
       "The `seed` function in envpool is abandoned. "

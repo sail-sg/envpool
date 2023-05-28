@@ -83,7 +83,7 @@ class EnvSpecMixin(ABC):
     spec = self.state_array_spec
     spec = {
       k.replace("obs:", "").replace("info:", ""):
-      dm_spec_transform(k.replace(":", ".").split(".")[-1], v, "obs")
+        dm_spec_transform(k.replace(":", ".").split(".")[-1], v, "obs")
       for k, v in spec.items()
       if k.startswith("obs") or k.startswith("info")
     }
@@ -131,7 +131,7 @@ class EnvSpecMixin(ABC):
     spec = self.state_array_spec
     spec = {
       k.replace("obs:", ""):
-      gym_spec_transform(k.replace(":", ".").split(".")[-1], v, "obs")
+        gym_spec_transform(k.replace(":", ".").split(".")[-1], v, "obs")
       for k, v in spec.items()
       if k.startswith("obs")
     }
@@ -162,8 +162,7 @@ class EnvSpecMixin(ABC):
         list(spec.values())[0], "act"
       )
     spec = {
-      k: gym_spec_transform(k.split(".")[-1], v, "act")
-      for k, v in spec.items()
+      k: gym_spec_transform(k.split(".")[-1], v, "act") for k, v in spec.items()
     }
     return to_nested_dict(spec, gym.spaces.Dict)
 
@@ -184,7 +183,7 @@ class EnvSpecMixin(ABC):
     spec = self.state_array_spec
     spec = {
       k.replace("obs:", ""):
-      gymnasium_spec_transform(k.replace(":", ".").split(".")[-1], v, "obs")
+        gymnasium_spec_transform(k.replace(":", ".").split(".")[-1], v, "obs")
       for k, v in spec.items()
       if k.startswith("obs")
     }
