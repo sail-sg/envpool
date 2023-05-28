@@ -33,9 +33,8 @@ def run(env, num_envs, total_step, async_):
       )
     else:
       env = gym.vector.make(
-        task_id, num_envs, async_, lambda e: wrap_deepmind(
-          e, episode_life=False, clip_rewards=False, frame_stack=4
-        )
+        task_id, num_envs, async_, lambda e:
+        wrap_deepmind(e, episode_life=False, clip_rewards=False, frame_stack=4)
       )
   elif env == "mujoco":
     task_id = "Ant-v3"

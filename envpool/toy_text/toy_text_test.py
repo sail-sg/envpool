@@ -188,8 +188,8 @@ class _ToyTextEnvTest(absltest.TestCase):
         ref_obs, ref_rew, ref_terminated, ref_truncated, ref_info = ref.step(a)
         obs, rew, terminated, truncated, info = env.step(np.array([a], int))
         assert ref_obs == obs[0] and ref_rew == rew[
-          0] and ref_terminated == terminated[
-            0] and ref_truncated == truncated[0]
+          0] and ref_terminated == terminated[0] and ref_truncated == truncated[
+            0]
       assert ref_rew == 20 and ref_done
 
   def test_nchain(self) -> None:
@@ -225,8 +225,8 @@ class _ToyTextEnvTest(absltest.TestCase):
         ref_done = np.logical_or(ref_terminated, ref_truncated)
         obs, rew, terminated, truncated, info = env.step(np.array([a], int))
         assert ref_obs == obs[0] and ref_rew == rew[
-          0] and ref_terminated == terminated[
-            0] and ref_truncated == truncated[0]
+          0] and ref_terminated == terminated[0] and ref_truncated == truncated[
+            0]
         if ref_done:
           break
 

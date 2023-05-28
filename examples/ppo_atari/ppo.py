@@ -226,9 +226,7 @@ class Actor:
     stat = MovAvg()
     episodic_reward = 0
     for epoch in range(1, 1 + self.config.epoch):
-      with tqdm.trange(
-        self.config.step_per_epoch, desc=f'Epoch #{epoch}'
-      ) as t:
+      with tqdm.trange(self.config.step_per_epoch, desc=f'Epoch #{epoch}') as t:
         while t.n < self.config.step_per_epoch:
           # collect
           for _ in range(self.config.step_per_collect // self.config.waitnum):

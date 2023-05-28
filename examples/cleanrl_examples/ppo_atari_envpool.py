@@ -530,9 +530,7 @@ if __name__ == "__main__":
     writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
     writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
     writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
-    writer.add_scalar(
-      "losses/old_approx_kl", old_approx_kl.item(), global_step
-    )
+    writer.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
     writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
     writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
     writer.add_scalar("losses/explained_variance", explained_var, global_step)

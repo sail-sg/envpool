@@ -82,9 +82,7 @@ if __name__ == "__main__":
   env = envpool.make_gym(task_id, **kwargs)
   env.async_reset()
   env.action_space.seed(args.seed)
-  action = np.array(
-    [env.action_space.sample() for _ in range(args.batch_size)]
-  )
+  action = np.array([env.action_space.sample() for _ in range(args.batch_size)])
   t = time.time()
   for _ in tqdm.trange(args.total_step):
     info = env.recv()[-1]

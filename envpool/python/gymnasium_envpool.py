@@ -58,9 +58,7 @@ class GymnasiumEnvPoolMeta(ABCMeta, gymnasium.Env.__class__):
     except ImportError:
 
       def _xla(self: Any) -> None:
-        raise RuntimeError(
-          "XLA is disabled. To enable XLA please install jax."
-        )
+        raise RuntimeError("XLA is disabled. To enable XLA please install jax.")
 
       attrs["xla"] = _xla
       parents = (base, GymnasiumEnvPoolMixin, EnvPoolMixin, gymnasium.Env)
