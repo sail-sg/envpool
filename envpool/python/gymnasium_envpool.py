@@ -14,7 +14,7 @@
 """EnvPool meta class for gymnasium.Env API."""
 
 from abc import ABC, ABCMeta
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import gymnasium
 import numpy as np
@@ -90,9 +90,9 @@ class GymnasiumEnvPoolMeta(ABCMeta, gymnasium.Env.__class__):
     attrs["_to"] = _to_gymnasium
     subcls = super().__new__(cls, name, parents, attrs)
 
-    def init(self: Any, spec: Any) -> None:
+    def init(self: Any, spec: Any, thread_pool: Optional[Any] = None) -> None:
       """Set self.spec to EnvSpecMeta."""
-      super(subcls, self).__init__(spec)
+      super(subcls, self).__init__(spec, thread_pool)
       self.spec = spec
 
     setattr(subcls, "__init__", init)  # noqa: B010

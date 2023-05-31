@@ -30,6 +30,7 @@
 #include <vector>
 
 #include "envpool/core/envpool.h"
+#include "envpool/core/shared_thread_pool.h"
 #include "envpool/core/xla.h"
 
 namespace py = pybind11;
@@ -211,8 +212,9 @@ class PyEnvPool : public EnvPool {
   static std::vector<std::string> py_state_keys;
   static std::vector<std::string> py_action_keys;
 
-  explicit PyEnvPool(const PySpec& py_spec)
-      : EnvPool(py_spec), py_spec(py_spec) {}
+  explicit PyEnvPool(const PySpec& py_spec,
+                     const std::shared_ptr<SharedThreadPool>& tp = nullptr)
+      : EnvPool(py_spec, tp), py_spec(py_spec) {}
 
   /**
    * get xla functions
@@ -289,25 +291,26 @@ py::object abc_meta = py::module::import("abc").attr("ABCMeta");
  * It will register the envpool instance to the registry.
  * The static bool status is local to the translation unit.
  */
-#define REGISTER(MODULE, SPEC, ENVPOOL)                              \
-  py::class_<SPEC>(MODULE, "_" #SPEC, py::metaclass(abc_meta))       \
-      .def(py::init<const typename SPEC::ConfigValues&>())           \
-      .def_readonly("_config_values", &SPEC::py_config_values)       \
-      .def_readonly("_state_spec", &SPEC::py_state_spec)             \
-      .def_readonly("_action_spec", &SPEC::py_action_spec)           \
-      .def_readonly_static("_state_keys", &SPEC::py_state_keys)      \
-      .def_readonly_static("_action_keys", &SPEC::py_action_keys)    \
-      .def_readonly_static("_config_keys", &SPEC::py_config_keys)    \
-      .def_readonly_static("_default_config_values",                 \
-                           &SPEC::py_default_config_values);         \
-  py::class_<ENVPOOL>(MODULE, "_" #ENVPOOL, py::metaclass(abc_meta)) \
-      .def(py::init<const SPEC&>())                                  \
-      .def_readonly("_spec", &ENVPOOL::py_spec)                      \
-      .def("_recv", &ENVPOOL::PyRecv)                                \
-      .def("_send", &ENVPOOL::PySend)                                \
-      .def("_reset", &ENVPOOL::PyReset)                              \
-      .def_readonly_static("_state_keys", &ENVPOOL::py_state_keys)   \
-      .def_readonly_static("_action_keys", &ENVPOOL::py_action_keys) \
+#define REGISTER(MODULE, SPEC, ENVPOOL)                                \
+  py::class_<SPEC>(MODULE, "_" #SPEC, py::metaclass(abc_meta))         \
+      .def(py::init<const typename SPEC::ConfigValues&>())             \
+      .def_readonly("_config_values", &SPEC::py_config_values)         \
+      .def_readonly("_state_spec", &SPEC::py_state_spec)               \
+      .def_readonly("_action_spec", &SPEC::py_action_spec)             \
+      .def_readonly_static("_state_keys", &SPEC::py_state_keys)        \
+      .def_readonly_static("_action_keys", &SPEC::py_action_keys)      \
+      .def_readonly_static("_config_keys", &SPEC::py_config_keys)      \
+      .def_readonly_static("_default_config_values",                   \
+                           &SPEC::py_default_config_values);           \
+  py::class_<ENVPOOL>(MODULE, "_" #ENVPOOL, py::metaclass(abc_meta))   \
+      .def(py::init<const SPEC&, std::shared_ptr<SharedThreadPool>>()) \
+      .def(py::init<const SPEC&>())                                    \
+      .def_readonly("_spec", &ENVPOOL::py_spec)                        \
+      .def("_recv", &ENVPOOL::PyRecv)                                  \
+      .def("_send", &ENVPOOL::PySend)                                  \
+      .def("_reset", &ENVPOOL::PyReset)                                \
+      .def_readonly_static("_state_keys", &ENVPOOL::py_state_keys)     \
+      .def_readonly_static("_action_keys", &ENVPOOL::py_action_keys)   \
       .def("_xla", &ENVPOOL::Xla);
 
 #endif  // ENVPOOL_CORE_PY_ENVPOOL_H_

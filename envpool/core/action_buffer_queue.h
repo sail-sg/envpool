@@ -23,6 +23,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <iostream>
 #include <utility>
 #include <vector>
 
@@ -33,17 +34,10 @@
  * Lock-free action buffer queue.
  */
 class ActionBufferQueue {
- public:
-  struct ActionSlice {
-    int env_id;
-    int order;
-    bool force_reset;
-  };
-
  protected:
   std::atomic<uint64_t> alloc_ptr_, done_ptr_;
   std::size_t queue_size_;
-  std::vector<ActionSlice> queue_;
+  std::vector<std::function<void()>> queue_;
   moodycamel::LightweightSemaphore sem_, sem_enqueue_, sem_dequeue_;
 
  public:
@@ -56,7 +50,7 @@ class ActionBufferQueue {
         sem_enqueue_(1),
         sem_dequeue_(1) {}
 
-  void EnqueueBulk(const std::vector<ActionSlice>& action) {
+  void EnqueueBulk(const std::vector<std::function<void()>>& action) {
     // ensure only one enqueue_bulk happens at any time
     while (!sem_enqueue_.wait()) {
     }
@@ -68,7 +62,7 @@ class ActionBufferQueue {
     sem_enqueue_.signal(1);
   }
 
-  ActionSlice Dequeue() {
+  std::function<void()> Dequeue() {
     while (!sem_.wait()) {
     }
     while (!sem_dequeue_.wait()) {

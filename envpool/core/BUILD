@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@pybind11_bazel//:build_defs.bzl", "pybind_library")
+load("@pybind11_bazel//:build_defs.bzl", "pybind_extension", "pybind_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -172,6 +172,12 @@ cc_library(
 )
 
 cc_library(
+    name = "shared_thread_pool_h",
+    hdrs = ["shared_thread_pool.h"],
+    deps = [":action_buffer_queue"],
+)
+
+cc_library(
     name = "async_envpool",
     hdrs = ["async_envpool.h"],
     deps = [
@@ -179,6 +185,7 @@ cc_library(
         ":array",
         ":env",
         ":envpool",
+        ":shared_thread_pool_h",
         ":spec",
         ":state_buffer_queue",
         "@threadpool",
@@ -212,6 +219,21 @@ pybind_library(
     hdrs = ["py_envpool.h"],
     deps = [
         ":envpool",
+        ":shared_thread_pool_h",
         ":xla",
     ],
+)
+
+pybind_extension(
+    name = "shared_thread_pool",
+    srcs = ["shared_thread_pool.cc"],
+    deps = [
+        ":shared_thread_pool_h",
+    ],
+)
+
+py_library(
+    name = "core",
+    srcs = ["__init__.py"],
+    data = [":shared_thread_pool.so"],
 )

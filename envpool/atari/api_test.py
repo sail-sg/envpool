@@ -24,7 +24,7 @@ from packaging import version
 
 import envpool.atari.registration  # noqa: F401
 from envpool.atari import AtariEnvSpec
-from envpool.registration import make_dm, make_gym, make_spec
+from envpool.registration import make_dm, make_gym, make_spec, make_thread_pool
 
 
 class _SpecTest(absltest.TestCase):
@@ -310,6 +310,34 @@ class _GymSyncTest(absltest.TestCase):
     done1 = np.logical_or(terminated1, truncated1)
     index = np.where(done)[0]
     self.assertTrue(np.all(~done1[index]))
+
+
+class _SharedThreadPoolTest(absltest.TestCase):
+
+  def test_capacity(self) -> None:
+    num_envs = 4
+    thread_pool = make_thread_pool(num_envs_capacity=11)
+    _ = make_gym("Pong-v5", num_envs=num_envs, thread_pool=thread_pool)
+    _ = make_gym("Defender-v5", num_envs=num_envs, thread_pool=thread_pool)
+    try:
+      _ = make_gym("Breakout-v5", num_envs=num_envs, thread_pool=thread_pool)
+    except RuntimeError:
+      return
+    self.fail("Expected RuntimeError when capacity exceeds")
+
+  def test_stepping(self) -> None:
+    num_envs = 4
+    thread_pool = make_thread_pool(num_envs_capacity=12)
+    env1 = make_gym("Pong-v5", num_envs=num_envs, thread_pool=thread_pool)
+    env2 = make_gym("Defender-v5", num_envs=num_envs, thread_pool=thread_pool)
+    env3 = make_gym("Breakout-v5", num_envs=num_envs, thread_pool=thread_pool)
+    envs = [env1, env2, env3]
+    obs = [env.reset()[0] for env in envs]
+    for _ in range(100):
+      for env in envs:
+        obs, rew, terminated, truncated, info = env.step(
+          np.random.randint(6, size=num_envs)
+        )
 
 
 if __name__ == "__main__":

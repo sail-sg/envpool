@@ -26,18 +26,15 @@
 #include "envpool/core/dict.h"
 #include "envpool/core/spec.h"
 
-using ActionSlice = typename ActionBufferQueue::ActionSlice;
-
 TEST(ActionBufferQueueTest, Concurrent) {
   std::size_t num_envs = 1000;
   ActionBufferQueue queue(num_envs);
   std::srand(std::time(nullptr));
   std::size_t mul = 2000;
-  std::vector<ActionSlice> actions;
+  std::vector<std::function<void()>> actions;
   // enqueue all envs
   for (std::size_t i = 0; i < num_envs; ++i) {
-    actions.push_back(ActionSlice{
-        .env_id = static_cast<int>(i), .order = -1, .force_reset = false});
+    actions.emplace_back([]() {});
   }
   queue.EnqueueBulk(actions);
   std::vector<std::atomic<std::size_t>> flag(mul);
@@ -53,8 +50,7 @@ TEST(ActionBufferQueueTest, Concurrent) {
       }
       actions.clear();
       for (std::size_t i = 0; i < env_num[m]; ++i) {
-        actions.push_back(ActionSlice{
-            .env_id = static_cast<int>(i), .order = -1, .force_reset = false});
+        actions.emplace_back([]() {});
       }
       queue.EnqueueBulk(actions);
     }

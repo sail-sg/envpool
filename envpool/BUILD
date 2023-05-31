@@ -24,6 +24,7 @@ exports_files([
 py_library(
     name = "registration",
     srcs = ["registration.py"],
+    deps = ["//envpool/core"],
 )
 
 py_library(
@@ -50,6 +51,7 @@ py_library(
         "//envpool/atari",
         "//envpool/box2d",
         "//envpool/classic_control",
+        "//envpool/core",
         "//envpool/mujoco:mujoco_dmc",
         "//envpool/mujoco:mujoco_gym",
         "//envpool/procgen",
