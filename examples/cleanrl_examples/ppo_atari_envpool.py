@@ -146,10 +146,7 @@ def parse_args():
     help="the lambda for the general advantage estimation"
   )
   parser.add_argument(
-    "--num-minibatches",
-    type=int,
-    default=4,
-    help="the number of mini-batches"
+    "--num-minibatches", type=int, default=4, help="the number of mini-batches"
   )
   parser.add_argument(
     "--update-epochs",
