@@ -10,7 +10,7 @@ absl-py
 packaging
 tqdm
 protobuf<=4.20.0
-torch!=2.0.0
+torch!=2.0.0,!=2.0.1
 tianshou>=0.4.10
 opencv-python-headless
 box2d-py
