@@ -2,7 +2,6 @@
   <a href="http://envpool.readthedocs.io"><img width="666px" height="auto" src="https://envpool.readthedocs.io/en/latest/_static/envpool-logo.png"></a>
 </div>
 
-
 ---
 
 [![PyPI](https://img.shields.io/pypi/v/envpool)](https://pypi.org/project/envpool/) [![Downloads](https://static.pepy.tech/personalized-badge/envpool?period=total&units=international_system&left_color=grey&right_color=orange&left_text=PyPI%20Download)](https://pepy.tech/project/envpool) [![arXiv](https://img.shields.io/badge/arXiv-2206.10558-b31b1b.svg)](https://arxiv.org/abs/2206.10558) [![Read the Docs](https://img.shields.io/readthedocs/envpool)](https://envpool.readthedocs.io/) [![Unittest](https://github.com/sail-sg/envpool/workflows/Bazel%20Build%20and%20Test/badge.svg?branch=main)](https://github.com/sail-sg/envpool/actions) [![GitHub issues](https://img.shields.io/github/issues/sail-sg/envpool)](https://github.com/sail-sg/envpool/issues) [![GitHub stars](https://img.shields.io/github/stars/sail-sg/envpool)](https://github.com/sail-sg/envpool/stargazers) [![GitHub forks](https://img.shields.io/github/forks/sail-sg/envpool)](https://github.com/sail-sg/envpool/network) [![GitHub license](https://img.shields.io/github/license/sail-sg/envpool)](https://github.com/sail-sg/envpool/blob/main/LICENSE)
