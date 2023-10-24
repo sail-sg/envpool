@@ -20,7 +20,7 @@ from typing import Any, Callable, List, Tuple, Union
 import numpy as np
 from jax import core, dtypes
 from jax import numpy as jnp
-from jax.abstract_arrays import ShapedArray
+from jax.core import ShapedArray
 from jax.interpreters import xla
 from jax.lib import xla_client
 
@@ -52,9 +52,10 @@ def _make_xla_function(
   in_specs = _normalize_specs(in_specs)
   out_specs = _normalize_specs(out_specs)
   cpu_capsule, gpu_capsule = capsules
-  xla_client.register_cpu_custom_call_target(
+  xla_client.register_custom_call_target(
     f"{type(obj).__name__}_{id(obj)}_{name}_cpu".encode(),
     cpu_capsule,
+    platform="cpu"
   )
   xla_client.register_custom_call_target(
     f"{type(obj).__name__}_{id(obj)}_{name}_gpu".encode(),
