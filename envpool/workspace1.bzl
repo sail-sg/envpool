@@ -14,6 +14,7 @@
 
 """EnvPool workspace initialization, load after workspace0."""
 
+load("@rules_python//python:repositories.bzl", "py_repositories")
 load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
 load("@com_justbuchanan_rules_qt//:qt_configure.bzl", "qt_configure")
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
@@ -21,6 +22,8 @@ load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_depende
 
 def workspace():
     """Configure pip requirements."""
+    py_repositories()
+
     python_configure(
         name = "local_config_python",
         python_version = "3",
