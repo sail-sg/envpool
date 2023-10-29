@@ -23,33 +23,33 @@ def workspace():
     maybe(
         http_archive,
         name = "rules_python",
-        sha256 = "9d04041ac92a0985e344235f5d946f71ac543f1b1565f2cdbc9a2aaee8adf55b",
-        strip_prefix = "rules_python-0.26.0",
+        sha256 = "b593d13bb43c94ce94b483c2858e53a9b811f6f10e1e0eedc61073bd90e58d9c",
+        strip_prefix = "rules_python-0.12.0",
         urls = [
-            "https://github.com/bazelbuild/rules_python/archive/refs/tags/0.26.0.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/bazelbuild/rules_python/0.26.0.tar.gz",
+            "https://github.com/bazelbuild/rules_python/archive/refs/tags/0.12.0.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/bazelbuild/rules_python/0.12.0.tar.gz",
         ],
     )
 
     maybe(
         http_archive,
         name = "rules_foreign_cc",
-        sha256 = "476303bd0f1b04cc311fc258f1708a5f6ef82d3091e53fd1977fa20383425a6a",
-        strip_prefix = "rules_foreign_cc-0.10.1",
+        sha256 = "2a4d07cd64b0719b39a7c12218a3e507672b82a97b98c6a89d38565894cf7c51",
+        strip_prefix = "rules_foreign_cc-0.9.0",
         urls = [
-            "https://github.com/bazelbuild/rules_foreign_cc/archive/0.10.1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/bazelbuild/rules_foreign_cc/0.10.1.tar.gz",
+            "https://github.com/bazelbuild/rules_foreign_cc/archive/0.9.0.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/bazelbuild/rules_foreign_cc/0.9.0.tar.gz",
         ],
     )
 
     maybe(
         http_archive,
         name = "pybind11_bazel",
-        sha256 = "2c466c9b3cca7852b47e0785003128984fcf0d5d61a1a2e4c5aceefd935ac220",
-        strip_prefix = "pybind11_bazel-2.11.1",
+        sha256 = "a185aa68c93b9f62c80fcb3aadc3c83c763854750dc3f38be1dadcb7be223837",
+        strip_prefix = "pybind11_bazel-faf56fb3df11287f26dbc66fdedf60a2fc2c6631",
         urls = [
-            "https://github.com/pybind/pybind11_bazel/archive/refs/tags/v2.11.1.zip",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pybind/pybind11_bazel/v2.11.1.zip",
+            "https://github.com/pybind/pybind11_bazel/archive/faf56fb3df11287f26dbc66fdedf60a2fc2c6631.zip",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pybind/pybind11_bazel/faf56fb3df11287f26dbc66fdedf60a2fc2c6631.zip",
         ],
     )
 
@@ -57,11 +57,11 @@ def workspace():
         http_archive,
         name = "pybind11",
         build_file = "@pybind11_bazel//:pybind11.BUILD",
-        sha256 = "d475978da0cdc2d43b73f30910786759d593a9d8ee05b1b6846d1eb16c6d2e0c",
-        strip_prefix = "pybind11-2.11.1",
+        sha256 = "93bd1e625e43e03028a3ea7389bba5d3f9f2596abc074b068e70f4ef9b1314ae",
+        strip_prefix = "pybind11-2.10.2",
         urls = [
-            "https://github.com/pybind/pybind11/archive/refs/tags/v2.11.1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pybind/pybind11/v2.11.1.tar.gz",
+            "https://github.com/pybind/pybind11/archive/refs/tags/v2.10.2.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pybind/pybind11/v2.10.2.tar.gz",
         ],
     )
 
