@@ -20,6 +20,7 @@ load("//third_party/cuda:cuda.bzl", "cuda_configure")
 
 def workspace():
     """Load requested packages."""
+    # we cannot upgrade rules_python because it requires requirements_lock.txt after 0.13.0
     maybe(
         http_archive,
         name = "rules_python",
@@ -68,11 +69,11 @@ def workspace():
     maybe(
         http_archive,
         name = "com_google_absl",
-        sha256 = "91ac87d30cc6d79f9ab974c51874a704de9c2647c40f6932597329a282217ba8",
-        strip_prefix = "abseil-cpp-20220623.1",
+        sha256 = "497ebdc3a4885d9209b9bd416e8c3f71e7a1fb8af249f6c2a80b7cbeefcd7e21",
+        strip_prefix = "abseil-cpp-20230802.1",
         urls = [
-            "https://github.com/abseil/abseil-cpp/archive/refs/tags/20220623.1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/abseil/abseil-cpp/20220623.1.tar.gz",
+            "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/abseil/abseil-cpp/20230802.1.zip",
         ],
     )
 
@@ -101,11 +102,11 @@ def workspace():
     maybe(
         http_archive,
         name = "com_google_googletest",
-        sha256 = "81964fe578e9bd7c94dfdb09c8e4d6e6759e19967e397dbea48d1c10e45d0df2",
-        strip_prefix = "googletest-release-1.12.1",
+        sha256 = "8ad598c73ad796e0d8280b082cebd82a630d73e73cd3c70057938a6501bba5d7",
+        strip_prefix = "googletest-1.14.0",
         urls = [
-            "https://github.com/google/googletest/archive/refs/tags/release-1.12.1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/google/googletest/release-1.12.1.tar.gz",
+            "https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/google/googletest/v1.14.0.tar.gz",
         ],
     )
 
@@ -135,11 +136,11 @@ def workspace():
     maybe(
         http_archive,
         name = "concurrentqueue",
-        sha256 = "eb37336bf9ae59aca7b954db3350d9b30d1cab24b96c7676f36040aa76e915e8",
-        strip_prefix = "concurrentqueue-1.0.3",
+        sha256 = "87fbc9884d60d0d4bf3462c18f4c0ee0a9311d0519341cac7cbd361c885e5281",
+        strip_prefix = "concurrentqueue-1.0.4",
         urls = [
-            "https://github.com/cameron314/concurrentqueue/archive/refs/tags/v1.0.3.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/cameron314/concurrentqueue/v1.0.3.tar.gz",
+            "https://github.com/cameron314/concurrentqueue/archive/refs/tags/v1.0.4.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/cameron314/concurrentqueue/v1.0.4.tar.gz",
         ],
         build_file = "//third_party/concurrentqueue:concurrentqueue.BUILD",
     )
@@ -159,11 +160,11 @@ def workspace():
     maybe(
         http_archive,
         name = "zlib",
-        sha256 = "b3a24de97a8fdbc835b9833169501030b8977031bcb54b3b3ac13740f846ab30",
-        strip_prefix = "zlib-1.2.13",
+        sha256 = "ff0ba4c292013dbc27530b3a81e1f9a813cd39de01ca5e0f8bf355702efa593e",
+        strip_prefix = "zlib-1.3",
         urls = [
-            "https://github.com/madler/zlib/releases/download/v1.2.13/zlib-1.2.13.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/madler/zlib/zlib-1.2.13.tar.gz",
+            "https://github.com/madler/zlib/releases/download/v1.3/zlib-1.3.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/madler/zlib/zlib-1.3.tar.gz",
         ],
         build_file = "//third_party/zlib:zlib.BUILD",
     )
@@ -171,11 +172,11 @@ def workspace():
     maybe(
         http_archive,
         name = "opencv",
-        sha256 = "8df0079cdbe179748a18d44731af62a245a45ebf5085223dc03133954c662973",
-        strip_prefix = "opencv-4.7.0",
+        sha256 = "62f650467a60a38794d681ae7e66e3e8cfba38f445e0bf87867e2f2cdc8be9d5",
+        strip_prefix = "opencv-4.8.1",
         urls = [
-            "https://github.com/opencv/opencv/archive/refs/tags/4.7.0.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/opencv/opencv/4.7.0.tar.gz",
+            "https://github.com/opencv/opencv/archive/refs/tags/4.8.1.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/opencv/opencv/4.8.1.tar.gz",
         ],
         build_file = "//third_party/opencv:opencv.BUILD",
     )
@@ -183,11 +184,11 @@ def workspace():
     maybe(
         http_archive,
         name = "pugixml",
-        sha256 = "40c0b3914ec131485640fa57e55bf1136446026b41db91c1bef678186a12abbe",
-        strip_prefix = "pugixml-1.13/src",
+        sha256 = "610f98375424b5614754a6f34a491adbddaaec074e9044577d965160ec103d2e",
+        strip_prefix = "pugixml-1.14/src",
         urls = [
-            "https://github.com/zeux/pugixml/releases/download/v1.13/pugixml-1.13.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/zeux/pugixml/pugixml-1.13.tar.gz",
+            "https://github.com/zeux/pugixml/archive/refs/tags/v1.14.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/zeux/pugixml/v1.14.tar.gz",
         ],
         build_file = "//third_party/pugixml:pugixml.BUILD",
     )
@@ -195,11 +196,11 @@ def workspace():
     maybe(
         http_archive,
         name = "ale",
-        sha256 = "9a9f1ad6cd61dfb26895314d409ba69da038b7def295b509964e579027fefd99",
-        strip_prefix = "Arcade-Learning-Environment-0.8.0",
+        sha256 = "28960616cd89c18925ced7bbdeec01ab0b2ebd2d8ce5b7c88930e97381b4c3b5",
+        strip_prefix = "Arcade-Learning-Environment-0.8.1",
         urls = [
-            "https://github.com/mgbellemare/Arcade-Learning-Environment/archive/refs/tags/v0.8.0.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/mgbellemare/Arcade-Learning-Environment/v0.8.0.tar.gz",
+            "https://github.com/mgbellemare/Arcade-Learning-Environment/archive/refs/tags/v0.8.1.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/mgbellemare/Arcade-Learning-Environment/v0.8.1.tar.gz",
         ],
         build_file = "//third_party/ale:ale.BUILD",
     )
