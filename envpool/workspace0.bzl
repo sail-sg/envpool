@@ -220,11 +220,11 @@ def workspace():
     maybe(
         http_archive,
         name = "libjpeg_turbo",
-        sha256 = "b3090cd37b5a8b3e4dbd30a1311b3989a894e5d3c668f14cbc6739d77c9402b7",
-        strip_prefix = "libjpeg-turbo-2.0.5",
+        sha256 = "5b9bbca2b2a87c6632c821799438d358e27004ab528abf798533c15d50b39f82",
+        strip_prefix = "libjpeg-turbo-3.0.1",
         urls = [
-            "https://github.com/libjpeg-turbo/libjpeg-turbo/archive/2.0.5.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/libjpeg-turbo/libjpeg-turbo/2.0.5.tar.gz",
+            "https://github.com/libjpeg-turbo/libjpeg-turbo/archive/refs/tags/3.0.1.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/libjpeg-turbo/libjpeg-turbo/3.0.1.tar.gz",
         ],
         build_file = "//third_party/jpeg:jpeg.BUILD",
     )
@@ -244,11 +244,11 @@ def workspace():
     maybe(
         http_archive,
         name = "sdl2",
-        sha256 = "02537cc7ebd74071631038b237ec4bfbb3f4830ba019e569434da33f42373e04",
-        strip_prefix = "SDL2-2.26.1",
+        sha256 = "888b8c39f36ae2035d023d1b14ab0191eb1d26403c3cf4d4d5ede30e66a4942c",
+        strip_prefix = "SDL2-2.28.4",
         urls = [
-            "https://www.libsdl.org/release/SDL2-2.26.1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/libsdl/SDL2-2.26.1.tar.gz",
+            "https://www.libsdl.org/release/SDL2-2.28.4.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/libsdl/SDL2-2.28.4.tar.gz",
         ],
         build_file = "//third_party/sdl2:sdl2.BUILD",
     )
@@ -256,11 +256,11 @@ def workspace():
     maybe(
         http_archive,
         name = "com_github_nelhage_rules_boost",
-        sha256 = "6ded3e8c064054c92b79aeadde2d78821c889598e634c595133da0ea8f0f0b85",
-        strip_prefix = "rules_boost-f1065639e6f33741abe2a6a78fa79dd1a07bbf5d",
+        sha256 = "2215e6910eb763a971b1f63f53c45c0f2b7607df38c96287666d94d954da8cdc",
+        strip_prefix = "rules_boost-4ab574f9a84b42b1809978114a4664184716f4bf",
         urls = [
-            "https://github.com/nelhage/rules_boost/archive/f1065639e6f33741abe2a6a78fa79dd1a07bbf5d.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/nelhage/rules_boost/f1065639e6f33741abe2a6a78fa79dd1a07bbf5d.tar.gz",
+            "https://github.com/nelhage/rules_boost/archive/4ab574f9a84b42b1809978114a4664184716f4bf.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/nelhage/rules_boost/4ab574f9a84b42b1809978114a4664184716f4bf.tar.gz",
         ],
     )
 
@@ -269,11 +269,11 @@ def workspace():
         name = "boost",
         build_file = "@com_github_nelhage_rules_boost//:BUILD.boost",
         patch_cmds = ["rm -f doc/pdf/BUILD"],
-        sha256 = "71feeed900fbccca04a3b4f2f84a7c217186f28a940ed8b7ed4725986baf99fa",
-        strip_prefix = "boost_1_81_0",
+        sha256 = "6478edfe2f3305127cffe8caf73ea0176c53769f4bf1585be237eb30798c3b8e",
+        strip_prefix = "boost_1_83_0",
         urls = [
-            "https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.bz2",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/boost/boost_1_81_0.tar.bz2",
+            "https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/boost/boost_1_83_0.tar.bz2",
         ],
     )
 
@@ -292,11 +292,11 @@ def workspace():
     maybe(
         http_archive,
         name = "vizdoom",
-        sha256 = "e379a242ada7e1028b7a635da672b0936d99da3702781b76a4400b83602d78c4",
-        strip_prefix = "ViZDoom-1.1.13/src/vizdoom/",
+        sha256 = "3a5ab2836b4e35a0b3fca16d65380f3aa99278cfb155538909ca1cf4e4f66794",
+        strip_prefix = "ViZDoom-1.2.2/src/vizdoom/",
         urls = [
-            "https://github.com/mwydmuch/ViZDoom/archive/refs/tags/1.1.13.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/mwydmuch/ViZDoom/1.1.13.tar.gz",
+            "https://github.com/Farama-Foundation/ViZDoom/archive/refs/tags/1.2.2.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/Farama-Foundation/ViZDoom/1.2.2.tar.gz",
         ],
         build_file = "//third_party/vizdoom:vizdoom.BUILD",
         patches = [
@@ -307,11 +307,11 @@ def workspace():
     maybe(
         http_archive,
         name = "vizdoom_lib",
-        sha256 = "e379a242ada7e1028b7a635da672b0936d99da3702781b76a4400b83602d78c4",
-        strip_prefix = "ViZDoom-1.1.13/",
+        sha256 = "3a5ab2836b4e35a0b3fca16d65380f3aa99278cfb155538909ca1cf4e4f66794",
+        strip_prefix = "ViZDoom-1.2.2/",
         urls = [
-            "https://github.com/mwydmuch/ViZDoom/archive/refs/tags/1.1.13.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/mwydmuch/ViZDoom/1.1.13.tar.gz",
+            "https://github.com/Farama-Foundation/ViZDoom/archive/refs/tags/1.2.2.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/Farama-Foundation/ViZDoom/1.2.2.tar.gz",
         ],
         build_file = "//third_party/vizdoom_lib:vizdoom_lib.BUILD",
     )
@@ -416,11 +416,11 @@ def workspace():
     maybe(
         http_archive,
         name = "bazel_clang_tidy",
-        sha256 = "ec8c5bf0c02503b928c2e42edbd15f75e306a05b2cae1f34a7bc84724070b98b",
-        strip_prefix = "bazel_clang_tidy-783aa523aafb4a6798a538c61e700b6ed27975a7",
+        sha256 = "6b78c4098cf0b324b3a70fe476fd98d796e60af24c5fe31198c09e0ba65f409e",
+        strip_prefix = "bazel_clang_tidy-11541864afa832ff6721e479c44794e9c9497ae8",
         urls = [
-            "https://github.com/erenon/bazel_clang_tidy/archive/783aa523aafb4a6798a538c61e700b6ed27975a7.zip",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/erenon/bazel_clang_tidy/783aa523aafb4a6798a538c61e700b6ed27975a7.zip",
+            "https://github.com/erenon/bazel_clang_tidy/archive/11541864afa832ff6721e479c44794e9c9497ae8.zip",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/erenon/bazel_clang_tidy/11541864afa832ff6721e479c44794e9c9497ae8.zip",
         ],
     )
 
