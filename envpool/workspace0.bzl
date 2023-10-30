@@ -20,6 +20,7 @@ load("//third_party/cuda:cuda.bzl", "cuda_configure")
 
 def workspace():
     """Load requested packages."""
+    # we cannot upgrade rules_python because it requires requirements_lock.txt after 0.13.0
     maybe(
         http_archive,
         name = "rules_python",
@@ -34,22 +35,22 @@ def workspace():
     maybe(
         http_archive,
         name = "rules_foreign_cc",
-        sha256 = "2a4d07cd64b0719b39a7c12218a3e507672b82a97b98c6a89d38565894cf7c51",
-        strip_prefix = "rules_foreign_cc-0.9.0",
+        sha256 = "476303bd0f1b04cc311fc258f1708a5f6ef82d3091e53fd1977fa20383425a6a",
+        strip_prefix = "rules_foreign_cc-0.10.1",
         urls = [
-            "https://github.com/bazelbuild/rules_foreign_cc/archive/0.9.0.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/bazelbuild/rules_foreign_cc/0.9.0.tar.gz",
+            "https://github.com/bazelbuild/rules_foreign_cc/archive/0.10.1.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/bazelbuild/rules_foreign_cc/0.10.1.tar.gz",
         ],
     )
 
     maybe(
         http_archive,
         name = "pybind11_bazel",
-        sha256 = "a185aa68c93b9f62c80fcb3aadc3c83c763854750dc3f38be1dadcb7be223837",
-        strip_prefix = "pybind11_bazel-faf56fb3df11287f26dbc66fdedf60a2fc2c6631",
+        sha256 = "2c466c9b3cca7852b47e0785003128984fcf0d5d61a1a2e4c5aceefd935ac220",
+        strip_prefix = "pybind11_bazel-2.11.1",
         urls = [
-            "https://github.com/pybind/pybind11_bazel/archive/faf56fb3df11287f26dbc66fdedf60a2fc2c6631.zip",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pybind/pybind11_bazel/faf56fb3df11287f26dbc66fdedf60a2fc2c6631.zip",
+            "https://github.com/pybind/pybind11_bazel/archive/refs/tags/v2.11.1.zip",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pybind/pybind11_bazel/v2.11.1.zip",
         ],
     )
 
@@ -57,22 +58,22 @@ def workspace():
         http_archive,
         name = "pybind11",
         build_file = "@pybind11_bazel//:pybind11.BUILD",
-        sha256 = "93bd1e625e43e03028a3ea7389bba5d3f9f2596abc074b068e70f4ef9b1314ae",
-        strip_prefix = "pybind11-2.10.2",
+        sha256 = "d475978da0cdc2d43b73f30910786759d593a9d8ee05b1b6846d1eb16c6d2e0c",
+        strip_prefix = "pybind11-2.11.1",
         urls = [
-            "https://github.com/pybind/pybind11/archive/refs/tags/v2.10.2.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pybind/pybind11/v2.10.2.tar.gz",
+            "https://github.com/pybind/pybind11/archive/refs/tags/v2.11.1.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pybind/pybind11/v2.11.1.tar.gz",
         ],
     )
 
     maybe(
         http_archive,
         name = "com_google_absl",
-        sha256 = "91ac87d30cc6d79f9ab974c51874a704de9c2647c40f6932597329a282217ba8",
-        strip_prefix = "abseil-cpp-20220623.1",
+        sha256 = "497ebdc3a4885d9209b9bd416e8c3f71e7a1fb8af249f6c2a80b7cbeefcd7e21",
+        strip_prefix = "abseil-cpp-20230802.1",
         urls = [
-            "https://github.com/abseil/abseil-cpp/archive/refs/tags/20220623.1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/abseil/abseil-cpp/20220623.1.tar.gz",
+            "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/abseil/abseil-cpp/20230802.1.zip",
         ],
     )
 
@@ -101,11 +102,11 @@ def workspace():
     maybe(
         http_archive,
         name = "com_google_googletest",
-        sha256 = "81964fe578e9bd7c94dfdb09c8e4d6e6759e19967e397dbea48d1c10e45d0df2",
-        strip_prefix = "googletest-release-1.12.1",
+        sha256 = "8ad598c73ad796e0d8280b082cebd82a630d73e73cd3c70057938a6501bba5d7",
+        strip_prefix = "googletest-1.14.0",
         urls = [
-            "https://github.com/google/googletest/archive/refs/tags/release-1.12.1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/google/googletest/release-1.12.1.tar.gz",
+            "https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/google/googletest/v1.14.0.tar.gz",
         ],
     )
 
@@ -135,11 +136,11 @@ def workspace():
     maybe(
         http_archive,
         name = "concurrentqueue",
-        sha256 = "eb37336bf9ae59aca7b954db3350d9b30d1cab24b96c7676f36040aa76e915e8",
-        strip_prefix = "concurrentqueue-1.0.3",
+        sha256 = "87fbc9884d60d0d4bf3462c18f4c0ee0a9311d0519341cac7cbd361c885e5281",
+        strip_prefix = "concurrentqueue-1.0.4",
         urls = [
-            "https://github.com/cameron314/concurrentqueue/archive/refs/tags/v1.0.3.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/cameron314/concurrentqueue/v1.0.3.tar.gz",
+            "https://github.com/cameron314/concurrentqueue/archive/refs/tags/v1.0.4.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/cameron314/concurrentqueue/v1.0.4.tar.gz",
         ],
         build_file = "//third_party/concurrentqueue:concurrentqueue.BUILD",
     )
@@ -159,11 +160,11 @@ def workspace():
     maybe(
         http_archive,
         name = "zlib",
-        sha256 = "b3a24de97a8fdbc835b9833169501030b8977031bcb54b3b3ac13740f846ab30",
-        strip_prefix = "zlib-1.2.13",
+        sha256 = "ff0ba4c292013dbc27530b3a81e1f9a813cd39de01ca5e0f8bf355702efa593e",
+        strip_prefix = "zlib-1.3",
         urls = [
-            "https://github.com/madler/zlib/releases/download/v1.2.13/zlib-1.2.13.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/madler/zlib/zlib-1.2.13.tar.gz",
+            "https://github.com/madler/zlib/releases/download/v1.3/zlib-1.3.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/madler/zlib/zlib-1.3.tar.gz",
         ],
         build_file = "//third_party/zlib:zlib.BUILD",
     )
@@ -171,11 +172,11 @@ def workspace():
     maybe(
         http_archive,
         name = "opencv",
-        sha256 = "8df0079cdbe179748a18d44731af62a245a45ebf5085223dc03133954c662973",
-        strip_prefix = "opencv-4.7.0",
+        sha256 = "62f650467a60a38794d681ae7e66e3e8cfba38f445e0bf87867e2f2cdc8be9d5",
+        strip_prefix = "opencv-4.8.1",
         urls = [
-            "https://github.com/opencv/opencv/archive/refs/tags/4.7.0.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/opencv/opencv/4.7.0.tar.gz",
+            "https://github.com/opencv/opencv/archive/refs/tags/4.8.1.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/opencv/opencv/4.8.1.tar.gz",
         ],
         build_file = "//third_party/opencv:opencv.BUILD",
     )
@@ -183,11 +184,11 @@ def workspace():
     maybe(
         http_archive,
         name = "pugixml",
-        sha256 = "40c0b3914ec131485640fa57e55bf1136446026b41db91c1bef678186a12abbe",
-        strip_prefix = "pugixml-1.13/src",
+        sha256 = "610f98375424b5614754a6f34a491adbddaaec074e9044577d965160ec103d2e",
+        strip_prefix = "pugixml-1.14/src",
         urls = [
-            "https://github.com/zeux/pugixml/releases/download/v1.13/pugixml-1.13.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/zeux/pugixml/pugixml-1.13.tar.gz",
+            "https://github.com/zeux/pugixml/archive/refs/tags/v1.14.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/zeux/pugixml/v1.14.tar.gz",
         ],
         build_file = "//third_party/pugixml:pugixml.BUILD",
     )
@@ -195,11 +196,11 @@ def workspace():
     maybe(
         http_archive,
         name = "ale",
-        sha256 = "9a9f1ad6cd61dfb26895314d409ba69da038b7def295b509964e579027fefd99",
-        strip_prefix = "Arcade-Learning-Environment-0.8.0",
+        sha256 = "28960616cd89c18925ced7bbdeec01ab0b2ebd2d8ce5b7c88930e97381b4c3b5",
+        strip_prefix = "Arcade-Learning-Environment-0.8.1",
         urls = [
-            "https://github.com/mgbellemare/Arcade-Learning-Environment/archive/refs/tags/v0.8.0.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/mgbellemare/Arcade-Learning-Environment/v0.8.0.tar.gz",
+            "https://github.com/mgbellemare/Arcade-Learning-Environment/archive/refs/tags/v0.8.1.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/mgbellemare/Arcade-Learning-Environment/v0.8.1.tar.gz",
         ],
         build_file = "//third_party/ale:ale.BUILD",
     )
@@ -243,11 +244,11 @@ def workspace():
     maybe(
         http_archive,
         name = "sdl2",
-        sha256 = "02537cc7ebd74071631038b237ec4bfbb3f4830ba019e569434da33f42373e04",
-        strip_prefix = "SDL2-2.26.1",
+        sha256 = "888b8c39f36ae2035d023d1b14ab0191eb1d26403c3cf4d4d5ede30e66a4942c",
+        strip_prefix = "SDL2-2.28.4",
         urls = [
-            "https://www.libsdl.org/release/SDL2-2.26.1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/libsdl/SDL2-2.26.1.tar.gz",
+            "https://www.libsdl.org/release/SDL2-2.28.4.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/libsdl/SDL2-2.28.4.tar.gz",
         ],
         build_file = "//third_party/sdl2:sdl2.BUILD",
     )
@@ -255,24 +256,24 @@ def workspace():
     maybe(
         http_archive,
         name = "com_github_nelhage_rules_boost",
-        sha256 = "6ded3e8c064054c92b79aeadde2d78821c889598e634c595133da0ea8f0f0b85",
-        strip_prefix = "rules_boost-f1065639e6f33741abe2a6a78fa79dd1a07bbf5d",
+        # sha256 = "2215e6910eb763a971b1f63f53c45c0f2b7607df38c96287666d94d954da8cdc",
+        strip_prefix = "rules_boost-e60cf50996da9fe769b6e7a31b88c54966ecb191",
         urls = [
-            "https://github.com/nelhage/rules_boost/archive/f1065639e6f33741abe2a6a78fa79dd1a07bbf5d.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/nelhage/rules_boost/f1065639e6f33741abe2a6a78fa79dd1a07bbf5d.tar.gz",
+            "https://github.com/nelhage/rules_boost/archive/e60cf50996da9fe769b6e7a31b88c54966ecb191.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/nelhage/rules_boost/e60cf50996da9fe769b6e7a31b88c54966ecb191.tar.gz",
         ],
     )
 
     maybe(
         http_archive,
         name = "boost",
-        build_file = "@com_github_nelhage_rules_boost//:BUILD.boost",
+        build_file = "@com_github_nelhage_rules_boost//:boost.BUILD",
         patch_cmds = ["rm -f doc/pdf/BUILD"],
-        sha256 = "71feeed900fbccca04a3b4f2f84a7c217186f28a940ed8b7ed4725986baf99fa",
-        strip_prefix = "boost_1_81_0",
+        sha256 = "6478edfe2f3305127cffe8caf73ea0176c53769f4bf1585be237eb30798c3b8e",
+        strip_prefix = "boost_1_83_0",
         urls = [
-            "https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.bz2",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/boost/boost_1_81_0.tar.bz2",
+            "https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/boost/boost_1_83_0.tar.bz2",
         ],
     )
 
@@ -294,8 +295,8 @@ def workspace():
         sha256 = "e379a242ada7e1028b7a635da672b0936d99da3702781b76a4400b83602d78c4",
         strip_prefix = "ViZDoom-1.1.13/src/vizdoom/",
         urls = [
-            "https://github.com/mwydmuch/ViZDoom/archive/refs/tags/1.1.13.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/mwydmuch/ViZDoom/1.1.13.tar.gz",
+            "https://github.com/Farama-Foundation/ViZDoom/archive/refs/tags/1.1.13.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/Farama-Foundation/ViZDoom/1.1.13.tar.gz",
         ],
         build_file = "//third_party/vizdoom:vizdoom.BUILD",
         patches = [
@@ -309,8 +310,8 @@ def workspace():
         sha256 = "e379a242ada7e1028b7a635da672b0936d99da3702781b76a4400b83602d78c4",
         strip_prefix = "ViZDoom-1.1.13/",
         urls = [
-            "https://github.com/mwydmuch/ViZDoom/archive/refs/tags/1.1.13.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/mwydmuch/ViZDoom/1.1.13.tar.gz",
+            "https://github.com/Farama-Foundation/ViZDoom/archive/refs/tags/1.1.13.tar.gz",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/Farama-Foundation/ViZDoom/1.1.13.tar.gz",
         ],
         build_file = "//third_party/vizdoom_lib:vizdoom_lib.BUILD",
     )

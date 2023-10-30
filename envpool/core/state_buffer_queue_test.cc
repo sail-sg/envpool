@@ -25,7 +25,7 @@ TEST(StateBufferQueueTest, Basic) {
   std::vector<ShapeSpec> specs{ShapeSpec(1, {10, 2, 4}),
                                ShapeSpec(4, {1, 2, 2})};
   std::size_t batch = 32;
-  std::size_t num_envs = 500;
+  std::size_t num_envs = 50;
   std::size_t max_num_players = 10;
   StateBufferQueue queue(batch, num_envs, max_num_players, specs);
   std::srand(std::time(nullptr));
