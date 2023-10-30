@@ -416,11 +416,11 @@ def workspace():
     maybe(
         http_archive,
         name = "bazel_clang_tidy",
-        sha256 = "6b78c4098cf0b324b3a70fe476fd98d796e60af24c5fe31198c09e0ba65f409e",
-        strip_prefix = "bazel_clang_tidy-11541864afa832ff6721e479c44794e9c9497ae8",
+        sha256 = "ec8c5bf0c02503b928c2e42edbd15f75e306a05b2cae1f34a7bc84724070b98b",
+        strip_prefix = "bazel_clang_tidy-783aa523aafb4a6798a538c61e700b6ed27975a7",
         urls = [
-            "https://github.com/erenon/bazel_clang_tidy/archive/11541864afa832ff6721e479c44794e9c9497ae8.zip",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/erenon/bazel_clang_tidy/11541864afa832ff6721e479c44794e9c9497ae8.zip",
+            "https://github.com/erenon/bazel_clang_tidy/archive/783aa523aafb4a6798a538c61e700b6ed27975a7.zip",
+            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/erenon/bazel_clang_tidy/783aa523aafb4a6798a538c61e700b6ed27975a7.zip",
         ],
     )
 
