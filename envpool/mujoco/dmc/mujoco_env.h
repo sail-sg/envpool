@@ -19,11 +19,22 @@
 
 #include <mjxmacro.h>
 #include <mujoco.h>
+// select EGL, OSMESA or GLFW
+#if defined(MJ_GLFW)
+#include <GLFW/glfw3.h>
+#elif defined(MJ_OSMESA)
+#include <GL/osmesa.h>
+// OSMesaContext ctx;
+// unsigned char buffer[10000000];
+#else
+#include <EGL/egl.h>
+#endif
 
 #include <memory>
 #include <random>
 #include <string>
 
+#include "array_safety.h"
 #include "envpool/mujoco/dmc/utils.h"
 
 namespace mujoco_dmc {
@@ -44,16 +55,33 @@ class MujocoEnv {
  protected:
   mjModel* model_;
   mjData* data_;
+  mjvScene scene_;
+  mjvCamera camera_;
+  mjvOption option_;
+  mjrContext context_;
+  const std::string& camera_id_;
   int n_sub_steps_, max_episode_steps_, elapsed_step_;
   float reward_, discount_;
+  bool done_;
+  int height_, width_;
+  bool depth_, segmentation_;
+  unsigned char* rgb_array_;
+  float* depth_array_;
   bool done_{true};
 #ifdef ENVPOOL_TEST
   std::unique_ptr<mjtNum> qpos0_;
 #endif
+#if defined(MJ_OSMESA)
+  OSMesaContext ctx_;
+  unsigned char buffer_[100];
+#endif
 
  public:
   MujocoEnv(const std::string& base_path, const std::string& raw_xml,
-            int n_sub_steps, int max_episode_steps);
+            int n_sub_steps, int max_episode_steps, const int height = 240,
+            const int width = 320,
+            const std::string& camera_id = std::string("-1"),
+            bool depth = false, bool segmentation = false);
   ~MujocoEnv();
 
   // rl control Environment
@@ -91,9 +119,18 @@ class MujocoEnv {
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/mujoco/engine.py#L146
   void PhysicsStep(int nstep, const mjtNum* action);
 
+  // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/mujoco/engine.py#L165
+  void PhysicsRender(int height, int width, const std::string& camera_id,
+                     bool depth, bool segmentation);
   // randomizer
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/utils/randomizers.py#L35
   void RandomizeLimitedAndRotationalJoints(std::mt19937* gen);
+  // create OpenGL context/window
+  void initOpenGL(void);
+  // close OpenGL context/window
+  void closeOpenGL(void);
+
+  // void PushStack(bool push_all, bool maxpool);
 };
 
 }  // namespace mujoco_dmc

@@ -100,11 +100,15 @@ cc_library(
         "dmc/walker.h",
     ],
     data = [":gen_mujoco_dmc_xml"],
+    linkopts = [
+        "-lOSMesa",
+    ],
     deps = [
         "//envpool/core:async_envpool",
         "@mujoco//:mujoco_lib",
         "@pugixml",
     ],
+    alwayslink = 1,
 )
 
 pybind_extension(
