@@ -125,7 +125,7 @@ class WorldObj {
   [[nodiscard]] bool GetDoorOpen() const { return door_open_; }
   void SetDoorOpen(bool flag) { door_open_ = flag; }
   [[nodiscard]] bool GetDoorLocked() const { return door_locked_; }
-  void SetDoorLocker(bool flag) { door_locked_ = flag; }
+  void SetDoorLocked(bool flag) { door_locked_ = flag; }
   Type GetType() { return type_; }
   Color GetColor() { return color_; }
   int GetState() {
