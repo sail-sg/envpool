@@ -151,6 +151,7 @@ class _MakeTest(absltest.TestCase):
       ]
     )
 
+  # make test with GL loading error
   def test_make_mujoco_dmc(self) -> None:
     self.check_step(
       [
