@@ -34,6 +34,7 @@ class HopperEnvFns {
     return MakeDict(
         "reward_threshold"_.Bind(6000.0), "frame_skip"_.Bind(4),
         "post_constraint"_.Bind(true), "terminate_when_unhealthy"_.Bind(true),
+        "legacy_healthy_reward"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
         "ctrl_cost_weight"_.Bind(1e-3), "forward_reward_weight"_.Bind(1.0),
         "healthy_reward"_.Bind(1.0), "velocity_min"_.Bind(-10.0),
@@ -65,6 +66,7 @@ using HopperEnvSpec = EnvSpec<HopperEnvFns>;
 class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
  protected:
   bool terminate_when_unhealthy_, no_pos_;
+  bool legacy_healthy_reward_;
   mjtNum ctrl_cost_weight_, forward_reward_weight_;
   mjtNum healthy_reward_, healthy_z_min_;
   mjtNum velocity_min_, velocity_max_;
@@ -79,6 +81,7 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
+        legacy_healthy_reward_(spec.config["legacy_healthy_reward"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
@@ -131,12 +134,16 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
     mjtNum dt = frame_skip_ * model_->opt.timestep;
     mjtNum xv = (x_after - x_before) / dt;
     // reward and done
+    bool is_healthy = IsHealthy();
     mjtNum healthy_reward =
-        terminate_when_unhealthy_ || IsHealthy() ? healthy_reward_ : 0.0;
+        (legacy_healthy_reward_ ? (terminate_when_unhealthy_ || is_healthy)
+                                : is_healthy)
+            ? healthy_reward_
+            : 0.0;
     auto reward = static_cast<float>(xv * forward_reward_weight_ +
                                      healthy_reward - ctrl_cost);
     ++elapsed_step_;
-    done_ = (terminate_when_unhealthy_ ? !IsHealthy() : false) ||
+    done_ = (terminate_when_unhealthy_ ? !is_healthy : false) ||
             (elapsed_step_ >= max_episode_steps_);
     WriteState(reward, xv, x_after);
   }

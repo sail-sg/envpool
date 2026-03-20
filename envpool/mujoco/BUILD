@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@pip_requirements//:requirements.bzl", "requirement")
+load("//envpool:requirements.bzl", "requirement")
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load("@rules_python//python:defs.bzl", "py_library", "py_test")
@@ -21,9 +21,16 @@ package(default_visibility = ["//visibility:public"])
 
 genrule(
     name = "gen_mujoco_gym_xml",
-    srcs = ["@mujoco_gym_xml"],
+    srcs = [
+        "@mujoco_gym_xml",
+        "//third_party/mujoco_gym_xml_patches:patches",
+    ],
     outs = ["assets_gym"],
-    cmd = "mkdir -p $(OUTS) && cp -r $(SRCS) $(OUTS)",
+    cmd = """
+mkdir -p $(OUTS)
+cp -r $(locations @mujoco_gym_xml) $(OUTS)
+cp -r $(locations //third_party/mujoco_gym_xml_patches:patches) $(OUTS)
+""",
 )
 
 genrule(
@@ -36,7 +43,7 @@ genrule(
 genrule(
     name = "gen_mujoco_so",
     srcs = ["@mujoco//:mujoco_so"],
-    outs = ["libmujoco.so.2.2.1"],
+    outs = ["libmujoco.so.3.3.4"],
     cmd = "cp $< $@",
 )
 
@@ -187,6 +194,8 @@ py_test(
         requirement("numpy"),
         requirement("absl-py"),
         requirement("gym"),
+        requirement("gymnasium"),
+        requirement("imageio"),
         requirement("mujoco"),
     ],
 )

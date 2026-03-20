@@ -20,6 +20,7 @@
 #include <mjxmacro.h>
 #include <mujoco.h>
 
+#include <stdexcept>
 #include <string>
 
 namespace mujoco_gym {
@@ -44,17 +45,27 @@ class MujocoEnv {
   MujocoEnv(const std::string& xml, int frame_skip, bool post_constraint,
             int max_episode_steps)
       : model_(mj_loadXML(xml.c_str(), nullptr, error_.begin(), 1000)),
-        data_(mj_makeData(model_)),
-        init_qpos_(new mjtNum[model_->nq]),
-        init_qvel_(new mjtNum[model_->nv]),
+        data_(nullptr),
+        init_qpos_(nullptr),
+        init_qvel_(nullptr),
 #ifdef ENVPOOL_TEST
-        qpos0_(new mjtNum[model_->nq]),
-        qvel0_(new mjtNum[model_->nv]),
+        qpos0_(nullptr),
+        qvel0_(nullptr),
 #endif
         frame_skip_(frame_skip),
         post_constraint_(post_constraint),
         max_episode_steps_(max_episode_steps),
         elapsed_step_(max_episode_steps + 1) {
+    if (!model_) {
+      throw std::runtime_error(error_.data());
+    }
+    data_ = mj_makeData(model_);
+    init_qpos_ = new mjtNum[model_->nq];
+    init_qvel_ = new mjtNum[model_->nv];
+#ifdef ENVPOOL_TEST
+    qpos0_ = new mjtNum[model_->nq];
+    qvel0_ = new mjtNum[model_->nv];
+#endif
     std::memcpy(init_qpos_, data_->qpos, sizeof(mjtNum) * model_->nq);
     std::memcpy(init_qvel_, data_->qvel, sizeof(mjtNum) * model_->nv);
   }

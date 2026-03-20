@@ -34,6 +34,8 @@ class AntEnvFns {
     return MakeDict(
         "reward_threshold"_.Bind(6000.0), "frame_skip"_.Bind(5),
         "post_constraint"_.Bind(true), "use_contact_force"_.Bind(false),
+        "legacy_healthy_reward"_.Bind(true),
+        "exclude_worldbody_contact_forces"_.Bind(false),
         "terminate_when_unhealthy"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
         "forward_reward_weight"_.Bind(1.0), "ctrl_cost_weight"_.Bind(0.5),
@@ -47,7 +49,7 @@ class AntEnvFns {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
     int obs_n = conf["exclude_current_positions_from_observation"_] ? 27 : 29;
     if (conf["use_contact_force"_]) {
-      obs_n += 14 * 6;
+      obs_n += conf["exclude_worldbody_contact_forces"_] ? 13 * 6 : 14 * 6;
     }
     return MakeDict("obs"_.Bind(Spec<mjtNum>({obs_n}, {-inf, inf})),
 #ifdef ENVPOOL_TEST
@@ -76,6 +78,7 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
  protected:
   int id_torso_;
   bool terminate_when_unhealthy_, no_pos_, use_contact_force_;
+  bool legacy_healthy_reward_, exclude_worldbody_contact_forces_;
   mjtNum ctrl_cost_weight_, contact_cost_weight_;
   mjtNum forward_reward_weight_, healthy_reward_;
   mjtNum healthy_z_min_, healthy_z_max_;
@@ -93,6 +96,9 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         use_contact_force_(spec.config["use_contact_force"_]),
+        legacy_healthy_reward_(spec.config["legacy_healthy_reward"_]),
+        exclude_worldbody_contact_forces_(
+            spec.config["exclude_worldbody_contact_forces"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         contact_cost_weight_(spec.config["contact_cost_weight"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
@@ -148,20 +154,27 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
     // contact cost
     mjtNum contact_cost = 0.0;
     if (use_contact_force_) {
-      for (int i = 0; i < 6 * model_->nbody; ++i) {
-        mjtNum x = data_->cfrc_ext[i];
-        x = std::min(contact_force_max_, x);
-        x = std::max(contact_force_min_, x);
-        contact_cost += contact_cost_weight_ * x * x;
+      int start_body = exclude_worldbody_contact_forces_ ? 1 : 0;
+      for (int i = start_body; i < model_->nbody; ++i) {
+        for (int j = 0; j < 6; ++j) {
+          mjtNum x = data_->cfrc_ext[i * 6 + j];
+          x = std::min(contact_force_max_, x);
+          x = std::max(contact_force_min_, x);
+          contact_cost += contact_cost_weight_ * x * x;
+        }
       }
     }
     // reward and done
+    bool is_healthy = IsHealthy();
     mjtNum healthy_reward =
-        terminate_when_unhealthy_ || IsHealthy() ? healthy_reward_ : 0.0;
+        (legacy_healthy_reward_ ? (terminate_when_unhealthy_ || is_healthy)
+                                : is_healthy)
+            ? healthy_reward_
+            : 0.0;
     auto reward = static_cast<float>(xv * forward_reward_weight_ +
                                      healthy_reward - ctrl_cost - contact_cost);
     ++elapsed_step_;
-    done_ = (terminate_when_unhealthy_ ? !IsHealthy() : false) ||
+    done_ = (terminate_when_unhealthy_ ? !is_healthy : false) ||
             (elapsed_step_ >= max_episode_steps_);
     WriteState(reward, xv, yv, ctrl_cost, contact_cost, x_after, y_after,
                healthy_reward);
@@ -199,10 +212,13 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
       *(obs++) = data_->qvel[i];
     }
     if (use_contact_force_) {
-      for (int i = 0; i < 6 * model_->nbody; ++i) {
-        mjtNum x = data_->cfrc_ext[i];
-        x = std::min(std::max(x, contact_force_min_), contact_force_max_);
-        *(obs++) = x;
+      int start_body = exclude_worldbody_contact_forces_ ? 1 : 0;
+      for (int i = start_body; i < model_->nbody; ++i) {
+        for (int j = 0; j < 6; ++j) {
+          mjtNum x = data_->cfrc_ext[i * 6 + j];
+          x = std::min(std::max(x, contact_force_min_), contact_force_max_);
+          *(obs++) = x;
+        }
       }
     }
     // info

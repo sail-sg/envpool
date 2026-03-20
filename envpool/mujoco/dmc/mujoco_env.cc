@@ -40,18 +40,21 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
   mj_defaultVFS(vfs.get());
   // save raw_xml into vfs
   std::string model_filename("model_.xml");
-  mj_makeEmptyFileVFS(vfs.get(), model_filename.c_str(), raw_xml.size());
-  std::memcpy(vfs->filedata[vfs->nfile - 1], raw_xml.c_str(), raw_xml.size());
+  mj_addBufferVFS(vfs.get(), model_filename.c_str(), raw_xml.data(),
+                  raw_xml.size());
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/common/__init__.py#L28
   std::vector<std::string> common_assets_name(
       {"./common/materials.xml", "./common/skybox.xml", "./common/visual.xml"});
   for (const auto& asset_name : common_assets_name) {
     std::string content = GetFileContent(base_path, asset_name);
-    mj_makeEmptyFileVFS(vfs.get(), asset_name.c_str(), content.size());
-    std::memcpy(vfs->filedata[vfs->nfile - 1], content.c_str(), content.size());
+    mj_addBufferVFS(vfs.get(), asset_name.c_str(), content.data(),
+                    content.size());
   }
   // create model and data
   model_ = mj_loadXML(model_filename.c_str(), vfs.get(), error_.begin(), 1000);
+  if (!model_) {
+    throw std::runtime_error(error_.data());
+  }
   data_ = mj_makeData(model_);
 #ifdef ENVPOOL_TEST
   qpos0_.reset(new mjtNum[model_->nq]);

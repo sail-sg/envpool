@@ -14,18 +14,18 @@
 
 """EnvPool pip requirements initialization, this is loaded in WORKSPACE."""
 
-load("@rules_python//python:pip.bzl", "pip_install")
+load("@rules_python//python:pip.bzl", "pip_parse")
 
 def workspace():
     """Configure pip requirements."""
 
     if "pip_requirements" not in native.existing_rules().keys():
-        pip_install(
+        pip_parse(
             name = "pip_requirements",
-            python_interpreter_target = "@python3_10_x86_64-unknown-linux-gnu//:bin/python3",
+            python_interpreter_target = "@python3_12_x86_64-unknown-linux-gnu//:bin/python3",
             # default timeout value is 600, change it if you failed.
             # timeout = 3600,
             quiet = False,
-            requirements = "@envpool//third_party/pip_requirements:requirements.txt",
+            requirements_lock = "@envpool//third_party/pip_requirements:requirements.txt",
             # extra_pip_args = ["--extra-index-url", "https://mirrors.aliyun.com/pypi/simple"],
         )

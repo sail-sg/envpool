@@ -33,6 +33,9 @@ class HumanoidEnvFns {
   static decltype(auto) DefaultConfig() {
     return MakeDict(
         "frame_skip"_.Bind(5), "post_constraint"_.Bind(true),
+        "legacy_healthy_reward"_.Bind(true),
+        "exclude_worldbody_observations"_.Bind(false),
+        "exclude_root_actuator_forces"_.Bind(false),
         "use_contact_force"_.Bind(false), "forward_reward_weight"_.Bind(1.25),
         "terminate_when_unhealthy"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
@@ -45,8 +48,15 @@ class HumanoidEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
     bool no_pos = conf["exclude_current_positions_from_observation"_];
+    int obs_n = no_pos ? 376 : 378;
+    if (conf["exclude_worldbody_observations"_]) {
+      obs_n -= 10 + 6 + 6;
+    }
+    if (conf["exclude_root_actuator_forces"_]) {
+      obs_n -= 6;
+    }
     return MakeDict(
-        "obs"_.Bind(Spec<mjtNum>({no_pos ? 376 : 378}, {-inf, inf})),
+        "obs"_.Bind(Spec<mjtNum>({obs_n}, {-inf, inf})),
 #ifdef ENVPOOL_TEST
         "info:qpos0"_.Bind(Spec<mjtNum>({24})),
         "info:qvel0"_.Bind(Spec<mjtNum>({23})),
@@ -72,6 +82,8 @@ using HumanoidEnvSpec = EnvSpec<HumanoidEnvFns>;
 class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
  protected:
   bool terminate_when_unhealthy_, no_pos_, use_contact_force_;
+  bool legacy_healthy_reward_, exclude_worldbody_observations_;
+  bool exclude_root_actuator_forces_;
   mjtNum ctrl_cost_weight_, forward_reward_weight_, healthy_reward_;
   mjtNum healthy_z_min_, healthy_z_max_;
   mjtNum contact_cost_weight_, contact_cost_max_;
@@ -86,6 +98,11 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         use_contact_force_(spec.config["use_contact_force"_]),
+        legacy_healthy_reward_(spec.config["legacy_healthy_reward"_]),
+        exclude_worldbody_observations_(
+            spec.config["exclude_worldbody_observations"_]),
+        exclude_root_actuator_forces_(
+            spec.config["exclude_root_actuator_forces"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
@@ -145,12 +162,16 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     }
 
     // reward and done
+    bool is_healthy = IsHealthy();
     mjtNum healthy_reward =
-        terminate_when_unhealthy_ || IsHealthy() ? healthy_reward_ : 0.0;
+        (legacy_healthy_reward_ ? (terminate_when_unhealthy_ || is_healthy)
+                                : is_healthy)
+            ? healthy_reward_
+            : 0.0;
     auto reward = static_cast<float>(xv * forward_reward_weight_ +
                                      healthy_reward - ctrl_cost - contact_cost);
     ++elapsed_step_;
-    done_ = (terminate_when_unhealthy_ ? !IsHealthy() : false) ||
+    done_ = (terminate_when_unhealthy_ ? !is_healthy : false) ||
             (elapsed_step_ >= max_episode_steps_);
     WriteState(reward, xv, yv, ctrl_cost, contact_cost, after[0], after[1],
                healthy_reward);
@@ -187,17 +208,24 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     for (int i = 0; i < model_->nv; ++i) {
       *(obs++) = data_->qvel[i];
     }
-    for (int i = 0; i < 10 * model_->nbody; ++i) {
-      *(obs++) = data_->cinert[i];
+    int start_body = exclude_worldbody_observations_ ? 1 : 0;
+    for (int i = start_body; i < model_->nbody; ++i) {
+      for (int j = 0; j < 10; ++j) {
+        *(obs++) = data_->cinert[i * 10 + j];
+      }
     }
-    for (int i = 0; i < 6 * model_->nbody; ++i) {
-      *(obs++) = data_->cvel[i];
+    for (int i = start_body; i < model_->nbody; ++i) {
+      for (int j = 0; j < 6; ++j) {
+        *(obs++) = data_->cvel[i * 6 + j];
+      }
     }
-    for (int i = 0; i < model_->nv; ++i) {
+    for (int i = exclude_root_actuator_forces_ ? 6 : 0; i < model_->nv; ++i) {
       *(obs++) = data_->qfrc_actuator[i];
     }
-    for (int i = 0; i < 6 * model_->nbody; ++i) {
-      *(obs++) = data_->cfrc_ext[i];
+    for (int i = start_body; i < model_->nbody; ++i) {
+      for (int j = 0; j < 6; ++j) {
+        *(obs++) = data_->cfrc_ext[i * 6 + j];
+      }
     }
     // info
     state["info:reward_linvel"_] = xv * forward_reward_weight_;

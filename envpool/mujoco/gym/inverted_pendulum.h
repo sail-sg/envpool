@@ -33,6 +33,7 @@ class InvertedPendulumEnvFns {
   static decltype(auto) DefaultConfig() {
     return MakeDict("reward_threshold"_.Bind(950.0), "frame_skip"_.Bind(2),
                     "post_constraint"_.Bind(true), "healthy_reward"_.Bind(1.0),
+                    "reward_if_not_terminated"_.Bind(false),
                     "healthy_z_min"_.Bind(-0.2), "healthy_z_max"_.Bind(0.2),
                     "reset_noise_scale"_.Bind(0.01));
   }
@@ -58,6 +59,7 @@ using InvertedPendulumEnvSpec = EnvSpec<InvertedPendulumEnvFns>;
 class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
                             public MujocoEnv {
  protected:
+  bool reward_if_not_terminated_;
   mjtNum healthy_reward_, healthy_z_min_, healthy_z_max_;
   std::uniform_real_distribution<> dist_;
 
@@ -68,6 +70,7 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
                       "/mujoco/assets_gym/inverted_pendulum.xml",
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
+        reward_if_not_terminated_(spec.config["reward_if_not_terminated"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
         healthy_z_min_(spec.config["healthy_z_min"_]),
         healthy_z_max_(spec.config["healthy_z_max"_]),
@@ -101,9 +104,10 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
     MujocoStep(static_cast<mjtNum*>(action["action"_].Data()));
 
     // reward and done
+    bool terminated = !IsHealthy();
     ++elapsed_step_;
-    done_ = !IsHealthy() || (elapsed_step_ >= max_episode_steps_);
-    WriteState(1.0);
+    done_ = terminated || (elapsed_step_ >= max_episode_steps_);
+    WriteState(reward_if_not_terminated_ ? static_cast<float>(!terminated) : 1.0);
   }
 
  private:

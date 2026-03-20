@@ -35,6 +35,8 @@ class Walker2dEnvFns {
         "frame_skip"_.Bind(4), "post_constraint"_.Bind(true),
         "ctrl_cost_weight"_.Bind(0.001), "terminate_when_unhealthy"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
+        "legacy_healthy_reward"_.Bind(true),
+        "xml_file"_.Bind(std::string("walker2d.xml")),
         "forward_reward_weight"_.Bind(1.0), "healthy_reward"_.Bind(1.0),
         "healthy_z_min"_.Bind(0.8), "healthy_z_max"_.Bind(2.0),
         "healthy_angle_min"_.Bind(-1.0), "healthy_angle_max"_.Bind(1.0),
@@ -64,6 +66,7 @@ using Walker2dEnvSpec = EnvSpec<Walker2dEnvFns>;
 class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
  protected:
   bool terminate_when_unhealthy_, no_pos_;
+  bool legacy_healthy_reward_;
   mjtNum ctrl_cost_weight_, forward_reward_weight_;
   mjtNum healthy_reward_, healthy_z_min_, healthy_z_max_;
   mjtNum healthy_angle_min_, healthy_angle_max_;
@@ -73,10 +76,13 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
  public:
   Walker2dEnv(const Spec& spec, int env_id)
       : Env<Walker2dEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets_gym/walker2d.xml",
+        MujocoEnv(std::string(spec.config["base_path"_]) +
+                      "/mujoco/assets_gym/" +
+                      std::string(spec.config["xml_file"_]),
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
+        legacy_healthy_reward_(spec.config["legacy_healthy_reward"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
@@ -128,12 +134,16 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
     mjtNum dt = frame_skip_ * model_->opt.timestep;
     mjtNum xv = (x_after - x_before) / dt;
     // reward and done
+    bool is_healthy = IsHealthy();
     mjtNum healthy_reward =
-        terminate_when_unhealthy_ || IsHealthy() ? healthy_reward_ : 0.0;
+        (legacy_healthy_reward_ ? (terminate_when_unhealthy_ || is_healthy)
+                                : is_healthy)
+            ? healthy_reward_
+            : 0.0;
     auto reward = static_cast<float>(xv * forward_reward_weight_ +
                                      healthy_reward - ctrl_cost);
     ++elapsed_step_;
-    done_ = (terminate_when_unhealthy_ ? !IsHealthy() : false) ||
+    done_ = (terminate_when_unhealthy_ ? !is_healthy : false) ||
             (elapsed_step_ >= max_episode_steps_);
     WriteState(reward, xv, x_after);
   }
