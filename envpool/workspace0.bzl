@@ -39,7 +39,6 @@ def workspace():
         strip_prefix = "rules_foreign_cc-0.10.1",
         urls = [
             "https://github.com/bazelbuild/rules_foreign_cc/archive/0.10.1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/bazelbuild/rules_foreign_cc/0.10.1.tar.gz",
         ],
     )
 
@@ -50,7 +49,6 @@ def workspace():
         strip_prefix = "pybind11_bazel-2.11.1",
         urls = [
             "https://github.com/pybind/pybind11_bazel/archive/refs/tags/v2.11.1.zip",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pybind/pybind11_bazel/v2.11.1.zip",
         ],
     )
 
@@ -58,11 +56,10 @@ def workspace():
         http_archive,
         name = "pybind11",
         build_file = "@pybind11_bazel//:pybind11.BUILD",
-        sha256 = "d475978da0cdc2d43b73f30910786759d593a9d8ee05b1b6846d1eb16c6d2e0c",
-        strip_prefix = "pybind11-2.11.1",
+        sha256 = "e08cb87f4773da97fa7b5f035de8763abc656d87d5773e62f6da0587d1f0ec20",
+        strip_prefix = "pybind11-2.13.6",
         urls = [
-            "https://github.com/pybind/pybind11/archive/refs/tags/v2.11.1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pybind/pybind11/v2.11.1.tar.gz",
+            "https://github.com/pybind/pybind11/archive/refs/tags/v2.13.6.tar.gz",
         ],
     )
 
@@ -73,7 +70,6 @@ def workspace():
         strip_prefix = "abseil-cpp-20230802.1",
         urls = [
             "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/abseil/abseil-cpp/20230802.1.zip",
         ],
     )
 
@@ -84,29 +80,26 @@ def workspace():
         strip_prefix = "gflags-2.2.2",
         urls = [
             "https://github.com/gflags/gflags/archive/v2.2.2.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/gflags/gflags/v2.2.2.tar.gz",
         ],
     )
 
     maybe(
         http_archive,
         name = "com_github_google_glog",
-        sha256 = "122fb6b712808ef43fbf80f75c52a21c9760683dae470154f02bddfc61135022",
-        strip_prefix = "glog-0.6.0",
+        sha256 = "c17d85c03ad9630006ef32c7be7c65656aba2e7e2fbfc82226b7e680c771fc88",
+        strip_prefix = "glog-0.7.1",
         urls = [
-            "https://github.com/google/glog/archive/v0.6.0.zip",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/google/glog/v0.6.0.zip",
+            "https://github.com/google/glog/archive/v0.7.1.zip",
         ],
     )
 
     maybe(
         http_archive,
         name = "com_google_googletest",
-        sha256 = "8ad598c73ad796e0d8280b082cebd82a630d73e73cd3c70057938a6501bba5d7",
-        strip_prefix = "googletest-1.14.0",
+        sha256 = "65fab701d9829d38cb77c14acdc431d2108bfdbf8979e40eb8ae567edf10b27c",
+        strip_prefix = "googletest-1.17.0",
         urls = [
-            "https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/google/googletest/v1.14.0.tar.gz",
+            "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz",
         ],
     )
 
@@ -117,7 +110,6 @@ def workspace():
         strip_prefix = "bazel_rules_qt-3196fcf2e6ee81cf3a2e2b272af3d4259b84fcf9",
         urls = [
             "https://github.com/justbuchanan/bazel_rules_qt/archive/3196fcf2e6ee81cf3a2e2b272af3d4259b84fcf9.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/justbuchanan/bazel_rules_qt/3196fcf2e6ee81cf3a2e2b272af3d4259b84fcf9.tar.gz",
         ],
     )
 
@@ -128,7 +120,6 @@ def workspace():
         strip_prefix = "glibc_version_header-0.1/version_headers/",
         urls = [
             "https://github.com/wheybags/glibc_version_header/archive/refs/tags/0.1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/wheybags/glibc_version_header/0.1.tar.gz",
         ],
         build_file = "//third_party/glibc_version_header:glibc_version_header.BUILD",
     )
@@ -140,7 +131,6 @@ def workspace():
         strip_prefix = "concurrentqueue-1.0.4",
         urls = [
             "https://github.com/cameron314/concurrentqueue/archive/refs/tags/v1.0.4.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/cameron314/concurrentqueue/v1.0.4.tar.gz",
         ],
         build_file = "//third_party/concurrentqueue:concurrentqueue.BUILD",
     )
@@ -152,7 +142,6 @@ def workspace():
         strip_prefix = "ThreadPool-9a42ec1329f259a5f4881a291db1dcb8f2ad9040",
         urls = [
             "https://github.com/progschj/ThreadPool/archive/9a42ec1329f259a5f4881a291db1dcb8f2ad9040.zip",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/progschj/ThreadPool/9a42ec1329f259a5f4881a291db1dcb8f2ad9040.zip",
         ],
         build_file = "//third_party/threadpool:threadpool.BUILD",
     )
@@ -160,11 +149,10 @@ def workspace():
     maybe(
         http_archive,
         name = "zlib",
-        sha256 = "ff0ba4c292013dbc27530b3a81e1f9a813cd39de01ca5e0f8bf355702efa593e",
-        strip_prefix = "zlib-1.3",
+        sha256 = "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
+        strip_prefix = "zlib-1.3.2",
         urls = [
-            "https://github.com/madler/zlib/releases/download/v1.3/zlib-1.3.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/madler/zlib/zlib-1.3.tar.gz",
+            "https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz",
         ],
         build_file = "//third_party/zlib:zlib.BUILD",
     )
@@ -176,7 +164,6 @@ def workspace():
         strip_prefix = "opencv-4.8.1",
         urls = [
             "https://github.com/opencv/opencv/archive/refs/tags/4.8.1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/opencv/opencv/4.8.1.tar.gz",
         ],
         build_file = "//third_party/opencv:opencv.BUILD",
     )
@@ -188,7 +175,6 @@ def workspace():
         strip_prefix = "pugixml-1.14/src",
         urls = [
             "https://github.com/zeux/pugixml/archive/refs/tags/v1.14.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/zeux/pugixml/v1.14.tar.gz",
         ],
         build_file = "//third_party/pugixml:pugixml.BUILD",
     )
@@ -200,7 +186,6 @@ def workspace():
         strip_prefix = "Arcade-Learning-Environment-0.8.1",
         urls = [
             "https://github.com/mgbellemare/Arcade-Learning-Environment/archive/refs/tags/v0.8.1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/mgbellemare/Arcade-Learning-Environment/v0.8.1.tar.gz",
         ],
         build_file = "//third_party/ale:ale.BUILD",
     )
@@ -212,7 +197,6 @@ def workspace():
         urls = [
             "https://roms8.s3.us-east-2.amazonaws.com/Roms.tar.gz",
             "https://cdn.sail.sea.com/sail/Roms.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/atari/Roms.tar.gz",
         ],
         build_file = "//third_party/atari_roms:atari_roms.BUILD",
     )
@@ -224,7 +208,6 @@ def workspace():
         strip_prefix = "libjpeg-turbo-2.0.5",
         urls = [
             "https://github.com/libjpeg-turbo/libjpeg-turbo/archive/2.0.5.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/libjpeg-turbo/libjpeg-turbo/2.0.5.tar.gz",
         ],
         build_file = "//third_party/jpeg:jpeg.BUILD",
     )
@@ -236,7 +219,6 @@ def workspace():
         strip_prefix = "nasm-2.13.03",
         urls = [
             "https://www.nasm.us/pub/nasm/releasebuilds/2.13.03/nasm-2.13.03.tar.bz2",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/nasm/nasm-2.13.03.tar.bz2",
         ],
         build_file = "//third_party/nasm:nasm.BUILD",
     )
@@ -249,7 +231,6 @@ def workspace():
         urls = [
             "https://www.libsdl.org/release/SDL2-2.28.4.tar.gz",
             "https://github.com/libsdl-org/SDL/releases/download/release-2.28.4/SDL2-2.28.4.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/libsdl/SDL2-2.28.4.tar.gz",
         ],
         build_file = "//third_party/sdl2:sdl2.BUILD",
     )
@@ -261,7 +242,6 @@ def workspace():
         strip_prefix = "rules_boost-e60cf50996da9fe769b6e7a31b88c54966ecb191",
         urls = [
             "https://github.com/nelhage/rules_boost/archive/e60cf50996da9fe769b6e7a31b88c54966ecb191.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/nelhage/rules_boost/e60cf50996da9fe769b6e7a31b88c54966ecb191.tar.gz",
         ],
     )
 
@@ -274,7 +254,6 @@ def workspace():
         strip_prefix = "boost_1_83_0",
         urls = [
             "https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/boost/boost_1_83_0.tar.bz2",
         ],
     )
 
@@ -285,7 +264,6 @@ def workspace():
         strip_prefix = "freedoom-0.12.1/",
         urls = [
             "https://github.com/freedoom/freedoom/releases/download/v0.12.1/freedoom-0.12.1.zip",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/freedoom/freedoom/freedoom-0.12.1.zip",
         ],
         build_file = "//third_party/freedoom:freedoom.BUILD",
     )
@@ -297,7 +275,6 @@ def workspace():
         strip_prefix = "ViZDoom-1.1.13/src/vizdoom/",
         urls = [
             "https://github.com/Farama-Foundation/ViZDoom/archive/refs/tags/1.1.13.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/Farama-Foundation/ViZDoom/1.1.13.tar.gz",
         ],
         build_file = "//third_party/vizdoom:vizdoom.BUILD",
         patches = [
@@ -312,7 +289,6 @@ def workspace():
         strip_prefix = "ViZDoom-1.1.13/",
         urls = [
             "https://github.com/Farama-Foundation/ViZDoom/archive/refs/tags/1.1.13.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/Farama-Foundation/ViZDoom/1.1.13.tar.gz",
         ],
         build_file = "//third_party/vizdoom_lib:vizdoom_lib.BUILD",
     )
@@ -324,7 +300,6 @@ def workspace():
         strip_prefix = "DirectFuturePrediction-b4757769f167f1bd7fb1ece5fdc6d874409c68a9/",
         urls = [
             "https://github.com/isl-org/DirectFuturePrediction/archive/b4757769f167f1bd7fb1ece5fdc6d874409c68a9.zip",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/isl-org/DirectFuturePrediction/b4757769f167f1bd7fb1ece5fdc6d874409c68a9.zip",
         ],
         build_file = "//third_party/vizdoom_extra_maps:vizdoom_extra_maps.BUILD",
     )
@@ -332,10 +307,10 @@ def workspace():
     maybe(
         http_archive,
         name = "mujoco",
-        sha256 = "ecf1a17459a342badf2b4f32dd4677a6a0e5fd393c5143993eb3e81b8e44609b",
-        strip_prefix = "mujoco-3.3.4",
+        sha256 = "74e4104affeb6cd03627938c0e9b19a7af3c1149b55618490c94ff718d55bad8",
+        strip_prefix = "mujoco-3.6.0",
         urls = [
-            "https://github.com/google-deepmind/mujoco/releases/download/3.3.4/mujoco-3.3.4-linux-x86_64.tar.gz",
+            "https://github.com/google-deepmind/mujoco/releases/download/3.6.0/mujoco-3.6.0-linux-x86_64.tar.gz",
         ],
         build_file = "//third_party/mujoco:mujoco.BUILD",
     )
@@ -347,7 +322,6 @@ def workspace():
         strip_prefix = "gym-0.26.2/gym/envs/mujoco",
         urls = [
             "https://github.com/openai/gym/archive/refs/tags/0.26.2.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/openai/gym/0.26.2.tar.gz",
         ],
         build_file = "//third_party/mujoco_gym_xml:mujoco_gym_xml.BUILD",
     )
@@ -355,11 +329,10 @@ def workspace():
     maybe(
         http_archive,
         name = "mujoco_dmc_xml",
-        sha256 = "fb8d57cbeb92bebe56a992dab8401bc00b3bff61b62526eb563854adf3dfb595",
-        strip_prefix = "dm_control-1.0.9/dm_control",
+        sha256 = "23e86e28ef6ba9d2fec95103d45bd2061cfed35c8b0012b1ac5ee41b080d56c6",
+        strip_prefix = "dm_control-1.0.38/dm_control",
         urls = [
-            "https://github.com/deepmind/dm_control/archive/refs/tags/1.0.9.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/dm_control/1.0.9.tar.gz",
+            "https://github.com/deepmind/dm_control/archive/refs/tags/1.0.38.tar.gz",
         ],
         build_file = "//third_party/mujoco_dmc_xml:mujoco_dmc_xml.BUILD",
     )
@@ -371,7 +344,6 @@ def workspace():
         strip_prefix = "box2d-2.4.1",
         urls = [
             "https://github.com/erincatto/box2d/archive/refs/tags/v2.4.1.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/erincatto/box2d/v2.4.1.tar.gz",
         ],
         build_file = "//third_party/box2d:box2d.BUILD",
     )
@@ -384,7 +356,6 @@ def workspace():
         sha256 = "b1b64e0db84cf7317c2a96b27f549147dfcb4074ed2d799334c23a067075ac1c",
         urls = [
             "https://cdn.sail.sea.com/sail/pretrain.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/pretrain.tar.gz",
         ],
         build_file = "//third_party/pretrain_weight:pretrain_weight.BUILD",
     )
@@ -396,7 +367,6 @@ def workspace():
         strip_prefix = "procgen-0.10.8/procgen",
         urls = [
             "https://github.com/Trinkle23897/procgen/archive/refs/tags/0.10.8.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/Trinkle23897/procgen/0.10.8.tar.gz",
         ],
         build_file = "//third_party/procgen:procgen.BUILD",
     )
@@ -408,7 +378,6 @@ def workspace():
         strip_prefix = "gym3-4c3824680eaf9dd04dce224ee3d4856429878226/gym3",
         urls = [
             "https://github.com/openai/gym3/archive/4c3824680eaf9dd04dce224ee3d4856429878226.zip",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/openai/gym3/4c3824680eaf9dd04dce224ee3d4856429878226.zip",
         ],
         build_file = "//third_party/gym3_libenv:gym3_libenv.BUILD",
     )
@@ -420,7 +389,6 @@ def workspace():
         strip_prefix = "bazel_clang_tidy-783aa523aafb4a6798a538c61e700b6ed27975a7",
         urls = [
             "https://github.com/erenon/bazel_clang_tidy/archive/783aa523aafb4a6798a538c61e700b6ed27975a7.zip",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/erenon/bazel_clang_tidy/783aa523aafb4a6798a538c61e700b6ed27975a7.zip",
         ],
     )
 

@@ -1,8 +1,8 @@
 Mujoco (gym)
 ============
 
-We use ``mujoco==3.3.4`` as the codebase.
-See https://github.com/google-deepmind/mujoco/tree/3.3.4
+We use ``mujoco==3.6.0`` as the codebase.
+See https://github.com/google-deepmind/mujoco/tree/3.6.0
 
 The implementation follows Gymnasium \*-v5 environment, see
 `reference <https://github.com/Farama-Foundation/Gymnasium/tree/v1.2.3/gymnasium/envs/mujoco>`_.

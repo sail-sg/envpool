@@ -43,7 +43,7 @@ genrule(
 genrule(
     name = "gen_mujoco_so",
     srcs = ["@mujoco//:mujoco_so"],
-    outs = ["libmujoco.so.3.3.4"],
+    outs = ["libmujoco.so.3.6.0"],
     cmd = "cp $< $@",
 )
 
