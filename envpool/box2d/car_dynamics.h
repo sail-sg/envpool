@@ -40,6 +40,7 @@ static const float kWheelMomentOfInertia = 4000.0f * kSize * kSize;
 static const float kFrictionLimit = 1000000.0f * kSize * kSize;
 static const float kWheelR = 27;
 static const float kWheelW = 14;
+// clang-format off
 static const float kBrakeForce = 15;    // radians per second
 static const float kWheelPos[4][2] = {  // NOLINT
 {-55, 80},
@@ -69,6 +70,7 @@ static const float kWheelPoly[4][2] = {  // NOLINT
 {+kWheelW, +kWheelR},
 {+kWheelW, -kWheelR},
 {-kWheelW, -kWheelR}};
+// clang-format on
 
 static const cv::Scalar kRoadColor(102, 102, 102);
 static const cv::Scalar kBgColor(102, 204, 102);

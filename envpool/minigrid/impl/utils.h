@@ -61,6 +61,7 @@ enum Type {
 };
 
 // constants
+// clang-format off
 static const std::unordered_map<Type, bool> kCanSeeBehind{
 {kEmpty, true}, {kWall, false}, {kGoal, true},
 {kFloor, true}, {kLava, true},  {kKey, true},
@@ -73,6 +74,7 @@ static const std::unordered_map<Type, bool> kCanPickup{
 {kEmpty, false}, {kWall, false}, {kGoal, false},
 {kFloor, false}, {kLava, false}, {kKey, true},
 {kBall, true},   {kDoor, false}, {kBox, true}};
+// clang-format on
 
 // object class
 
