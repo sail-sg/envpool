@@ -62,17 +62,17 @@ enum Type {
 
 // constants
 static const std::unordered_map<Type, bool> kCanSeeBehind{
-    {kEmpty, true}, {kWall, false}, {kGoal, true},
-    {kFloor, true}, {kLava, true},  {kKey, true},
-    {kBall, true},  {kDoor, true},  {kBox, true}};
+{kEmpty, true}, {kWall, false}, {kGoal, true},
+{kFloor, true}, {kLava, true},  {kKey, true},
+{kBall, true},  {kDoor, true},  {kBox, true}};
 static const std::unordered_map<Type, bool> kCanOverlap{
-    {kEmpty, true}, {kWall, false}, {kGoal, true},
-    {kFloor, true}, {kLava, true},  {kKey, false},
-    {kBall, false}, {kDoor, true},  {kBox, false}};
+{kEmpty, true}, {kWall, false}, {kGoal, true},
+{kFloor, true}, {kLava, true},  {kKey, false},
+{kBall, false}, {kDoor, true},  {kBox, false}};
 static const std::unordered_map<Type, bool> kCanPickup{
-    {kEmpty, false}, {kWall, false}, {kGoal, false},
-    {kFloor, false}, {kLava, false}, {kKey, true},
-    {kBall, true},   {kDoor, false}, {kBox, true}};
+{kEmpty, false}, {kWall, false}, {kGoal, false},
+{kFloor, false}, {kLava, false}, {kKey, true},
+{kBall, true},   {kDoor, false}, {kBox, true}};
 
 // object class
 

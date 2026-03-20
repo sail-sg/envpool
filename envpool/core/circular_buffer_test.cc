@@ -19,6 +19,7 @@
 
 #include <random>
 #include <thread>
+#include <vector>
 
 TEST(CircularBufferTest, Basic) {
   CircularBuffer<int> cb(100);

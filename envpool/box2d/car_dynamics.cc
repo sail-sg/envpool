@@ -19,7 +19,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
 #include <utility>
+#include <vector>
 
 namespace box2d {
 

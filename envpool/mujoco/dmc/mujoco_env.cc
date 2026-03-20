@@ -17,7 +17,9 @@
 #include <cassert>
 #include <cmath>
 #include <cstring>
+#include <memory>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace mujoco_dmc {
