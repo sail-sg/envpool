@@ -32,20 +32,8 @@ _MUJOCO_V3 = version.parse(mujoco.__version__) >= version.parse("3.0.0")
 class _MujocoDmcAlignTest(absltest.TestCase):
 
   def observation_atol(self, domain: str, task: str) -> float:
-    if not _MUJOCO_V3:
-      return 1e-6
-    return {
-      ("ball_in_cup", "catch"): 2e-3,
-      ("hopper", "hop"): 1.5e-5,
-      ("hopper", "stand"): 1.5e-5,
-      ("humanoid", "stand"): 1e-5,
-      ("humanoid", "walk"): 1e-5,
-      ("humanoid", "run"): 1e-5,
-      ("humanoid", "run_pure_state"): 1e-5,
-      ("walker", "run"): 3e-3,
-      ("walker", "stand"): 3e-3,
-      ("walker", "walk"): 3e-3,
-    }.get((domain, task), 1e-6)
+    del domain, task
+    return 1e-6
 
   def run_space_check(self, env0: dm_env.Environment, env1: Any) -> None:
     """Check observation_spec() and action_spec()."""

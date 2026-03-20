@@ -33,7 +33,7 @@ class _MujocoDmcSuiteExtAlignTest(absltest.TestCase):
 
   @property
   def observation_atol(self) -> float:
-    return 5e-4 if _MUJOCO_V3 else 0.0
+    return 1e-6 if _MUJOCO_V3 else 0.0
 
   def run_space_check(self, env0: dm_env.Environment, env1: Any) -> None:
     """Check observation_spec() and action_spec()."""

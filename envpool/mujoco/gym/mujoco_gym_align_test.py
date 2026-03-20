@@ -33,18 +33,14 @@ class _MujocoGymAlignTest(absltest.TestCase):
   def observation_atol(self, env_id: str) -> float:
     if not _MUJOCO_V3:
       return 3e-4
-    return {
-      "Ant-v5": 1e-3,
-      "HalfCheetah-v5": 4e-3,
-      "Humanoid-v5": 7e-3,
-    }.get(env_id, 3e-4)
+    del env_id
+    return 1e-6
 
   def reward_atol(self, env_id: str) -> float:
     if not _MUJOCO_V3:
       return 1e-4
-    return {
-      "Pusher-v5": 3e-3,
-    }.get(env_id, 1e-3)
+    del env_id
+    return 5e-7
 
   def check_info_alignment(self, env_id: str) -> bool:
     if not _MUJOCO_V3:
