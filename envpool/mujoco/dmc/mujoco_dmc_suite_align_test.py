@@ -15,8 +15,8 @@
 
 from typing import Any, List
 
-import mujoco
 import dm_env
+import mujoco
 import numpy as np
 from absl import logging
 from absl.testing import absltest
