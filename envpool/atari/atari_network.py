@@ -45,15 +45,17 @@ class DQN(nn.Module):
       nn.Flatten(),
     )
     with torch.no_grad():
-      self.output_dim = np.prod(self.net(torch.zeros(1, c, h, w)).shape[1:])
+      self.output_dim = int(
+        np.prod(self.net(torch.zeros(1, c, h, w)).shape[1:])
+      )
     if not features_only:
       self.net = nn.Sequential(
         self.net,
         nn.Linear(self.output_dim, 512),
         nn.ReLU(inplace=True),
-        nn.Linear(512, np.prod(action_shape)),
+        nn.Linear(512, int(np.prod(action_shape))),
       )
-      self.output_dim = np.prod(action_shape)
+      self.output_dim = int(np.prod(action_shape))
 
   @no_type_check
   def forward(
@@ -80,7 +82,7 @@ class C51(DQN):
     device: Union[str, int, torch.device] = "cpu",
   ) -> None:
     """Constructor of C51."""
-    self.action_num = np.prod(action_shape)
+    self.action_num = int(np.prod(action_shape))
     super().__init__(c, h, w, [self.action_num * num_atoms], device)
     self.num_atoms = num_atoms
 
@@ -111,7 +113,7 @@ class QRDQN(DQN):
     device: Union[str, int, torch.device] = "cpu",
   ) -> None:
     """Constructor of QRDQN."""
-    self.action_num = np.prod(action_shape)
+    self.action_num = int(np.prod(action_shape))
     super().__init__(c, h, w, [self.action_num * num_quantiles], device)
     self.num_quantiles = num_quantiles
 

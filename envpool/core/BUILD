@@ -13,6 +13,7 @@
 # limitations under the License.
 
 load("@pybind11_bazel//:build_defs.bzl", "pybind_library")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
 package(default_visibility = ["//visibility:public"])
 

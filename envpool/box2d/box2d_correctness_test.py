@@ -60,9 +60,7 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
     self.run_space_check(env0, env1)
 
   @staticmethod
-  def heuristic_lunar_lander_policy(
-    s: np.ndarray, continuous: bool
-  ) -> np.ndarray:
+  def heuristic_lunar_lander_policy(s: np.ndarray, continuous: bool) -> Any:
     angle_targ = np.clip(s[0] * 0.5 + s[2] * 1.0, -0.4, 0.4)
     hover_targ = 0.55 * np.abs(s[0])
     angle_todo = (angle_targ - s[4]) * 0.5 - s[5] * 1.0
@@ -73,17 +71,15 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
       hover_todo = -(s[3]) * 0.5
 
     if continuous:
-      a = np.array([hover_todo * 20 - 1, -angle_todo * 20])
-      a = np.clip(a, -1, 1)
-    else:
-      a = 0
-      if hover_todo > np.abs(angle_todo) and hover_todo > 0.05:
-        a = 2
-      elif angle_todo < -0.05:
-        a = 3
-      elif angle_todo > 0.05:
-        a = 1
-    return a
+      action = np.array([hover_todo * 20 - 1, -angle_todo * 20])
+      return np.clip(action, -1, 1)
+    if hover_todo > np.abs(angle_todo) and hover_todo > 0.05:
+      return 2
+    if angle_todo < -0.05:
+      return 3
+    if angle_todo > 0.05:
+      return 1
+    return 0
 
   def solve_lunar_lander(self, num_envs: int, continuous: bool) -> None:
     if continuous:

@@ -15,14 +15,17 @@
 
 from collections import namedtuple
 from functools import partial
-from typing import Any, Callable, List, Tuple, Union
+from typing import Any, Callable, List, Tuple, Union, cast
 
 import numpy as np
 from jax import core, dtypes
 from jax import numpy as jnp
 from jax.core import ShapedArray
 from jax.interpreters import xla
-from jax.lib import xla_client
+from jax.lib import xla_client  # type: ignore[attr-defined,unused-ignore]
+
+_core = cast(Any, core)
+_xla = cast(Any, xla)
 
 
 def _shape_with_layout(
@@ -45,8 +48,11 @@ def _normalize_specs(
 
 
 def _make_xla_function(
-  obj: Any, handle: bytes, name: str, specs: Tuple[Tuple[Any], Tuple[Any]],
-  capsules: Tuple[Any, Any]
+  obj: Any,
+  handle: bytes,
+  name: str,
+  specs: Tuple[Tuple[Any, ...], Tuple[Any, ...]],
+  capsules: Tuple[Any, Any],
 ) -> Callable:
   in_specs, out_specs = specs
   in_specs = _normalize_specs(in_specs)
@@ -87,14 +93,14 @@ def _make_xla_function(
       has_side_effect=True,
     )
 
-  prim = core.Primitive(f"{type(obj).__name__}_{id(obj)}_{name}")
+  prim = _core.Primitive(f"{type(obj).__name__}_{id(obj)}_{name}")
   prim.multiple_results = (len(out_specs) > 1)
   prim.def_impl(partial(xla.apply_primitive, prim))
   prim.def_abstract_eval(abstract)
-  xla.backend_specific_translations["cpu"][prim] = partial(
+  _xla.backend_specific_translations["cpu"][prim] = partial(
     translation, platform="cpu"
   )
-  xla.backend_specific_translations["gpu"][prim] = partial(
+  _xla.backend_specific_translations["gpu"][prim] = partial(
     translation, platform="gpu"
   )
 

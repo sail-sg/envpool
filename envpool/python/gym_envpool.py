@@ -14,7 +14,7 @@
 """EnvPool meta class for gym.Env API."""
 
 from abc import ABC, ABCMeta
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union, cast
 
 import gym
 import numpy as np
@@ -80,18 +80,20 @@ class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
       Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any],
     ]:
       values = (state_values[i] for i in state_idx)
-      state = optree.tree_unflatten(treepsec, values)
+      state = cast(Dict[str, Any], optree.tree_unflatten(treepsec, values))
       if reset and not (return_info or new_gym_api):
         return state["obs"]
-      info = state["info"]
+      info = cast(Dict[str, Any], state["info"])
       if not new_gym_api:
         info["TimeLimit.truncated"] = state["trunc"]
       info["elapsed_step"] = state["elapsed_step"]
       if reset:
         return state["obs"], info
       if new_gym_api:
-        terminated = state["done"] & ~state["trunc"]
-        return state["obs"], state["reward"], terminated, state["trunc"], info
+        done = cast(np.ndarray, state["done"])
+        trunc = cast(np.ndarray, state["trunc"])
+        terminated = done & ~trunc
+        return state["obs"], state["reward"], terminated, trunc, info
       return state["obs"], state["reward"], state["done"], info
 
     attrs["_to"] = _to_gym

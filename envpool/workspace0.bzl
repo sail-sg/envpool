@@ -20,6 +20,7 @@ load("//third_party/cuda:cuda.bzl", "cuda_configure")
 
 def workspace():
     """Load requested packages."""
+
     # we cannot upgrade rules_python because it requires requirements_lock.txt after 0.13.0
     maybe(
         http_archive,
