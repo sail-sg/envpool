@@ -14,7 +14,7 @@
 """EnvPool meta class for gymnasium.Env API."""
 
 from abc import ABC, ABCMeta
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union, cast
 
 import gymnasium
 import numpy as np
@@ -43,7 +43,10 @@ class GymnasiumEnvPoolMixin(ABC):
     return self._gym_action_space
 
 
-class GymnasiumEnvPoolMeta(ABCMeta, gymnasium.Env.__class__):
+class GymnasiumEnvPoolMeta(
+  ABCMeta,
+  gymnasium.Env.__class__,  # type: ignore[valid-type,misc,unused-ignore]
+):
   """Additional wrapper for EnvPool gymnasium.Env API."""
 
   def __new__(cls: Any, name: str, parents: Tuple, attrs: Dict) -> Any:
@@ -79,13 +82,15 @@ class GymnasiumEnvPoolMeta(ABCMeta, gymnasium.Env.__class__):
       Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any],
     ]:
       values = (state_values[i] for i in state_idx)
-      state = optree.tree_unflatten(treepsec, values)
-      info = state["info"]
+      state = cast(Dict[str, Any], optree.tree_unflatten(treepsec, values))
+      info = cast(Dict[str, Any], state["info"])
       info["elapsed_step"] = state["elapsed_step"]
       if reset:
         return state["obs"], info
-      terminated = state["done"] & ~state["trunc"]
-      return state["obs"], state["reward"], terminated, state["trunc"], info
+      done = cast(np.ndarray, state["done"])
+      trunc = cast(np.ndarray, state["trunc"])
+      terminated = done & ~trunc
+      return state["obs"], state["reward"], terminated, trunc, info
 
     attrs["_to"] = _to_gymnasium
     subcls = super().__new__(cls, name, parents, attrs)

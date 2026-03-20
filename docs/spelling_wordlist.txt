@@ -13,6 +13,8 @@ bazel
 bazelisk
 buildifier
 addlicense
+isort
+yapf
 envpool
 th
 rew

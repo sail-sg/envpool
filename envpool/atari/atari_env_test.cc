@@ -17,7 +17,10 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <random>
+#include <string>
+#include <vector>
 
 using AtariState = atari::AtariEnv::State;
 using AtariAction = atari::AtariEnv::Action;

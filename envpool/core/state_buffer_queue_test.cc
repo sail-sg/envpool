@@ -18,6 +18,7 @@
 #include <gtest/gtest.h>
 
 #include <random>
+#include <vector>
 
 #include "ThreadPool.h"
 

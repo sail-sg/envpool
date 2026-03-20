@@ -17,6 +17,8 @@
 #include <cmath>
 #include <fstream>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include "pugixml.hpp"
 

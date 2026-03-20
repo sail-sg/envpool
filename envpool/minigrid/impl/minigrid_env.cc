@@ -27,6 +27,7 @@
 #include "envpool/minigrid/impl/minigrid_env.h"
 
 #include <utility>
+#include <vector>
 
 namespace minigrid {
 

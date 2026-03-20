@@ -14,7 +14,7 @@
 """Helper function for data convertion."""
 
 from collections import namedtuple
-from typing import Any, Dict, List, Tuple, Type
+from typing import Any, Dict, List, Tuple, Type, cast
 
 import dm_env
 import gym
@@ -137,7 +137,9 @@ def dm_structure(
     new_keys.append(key.replace(":", "."))
   dict_tree = to_nested_dict(dict(zip(new_keys, list(range(len(new_keys))))))
   structure = to_namedtuple(root_name, dict_tree)
-  paths, indices, treespec = optree.tree_flatten_with_path(structure)
+  paths: List[Tuple[int, ...]]
+  indices: List[int]
+  paths, indices, treespec = optree.tree_flatten_with_path(cast(Any, structure))
   return paths, indices, treespec
 
 
@@ -147,7 +149,9 @@ def gym_structure(
   """Convert flat keys into tree structure for dict construction."""
   keys = [k.replace(":", ".") for k in keys]
   dict_tree = to_nested_dict(dict(zip(keys, list(range(len(keys))))))
-  paths, indices, treespec = optree.tree_flatten_with_path(dict_tree)
+  paths: List[Tuple[str, ...]]
+  indices: List[int]
+  paths, indices, treespec = optree.tree_flatten_with_path(cast(Any, dict_tree))
   return paths, indices, treespec
 
 

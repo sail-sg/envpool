@@ -18,6 +18,7 @@
 #include <gtest/gtest.h>
 
 #include <random>
+#include <vector>
 
 using ProcgenState = procgen::ProcgenEnv::State;
 using ProcgenAction = procgen::ProcgenEnv::Action;

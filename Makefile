@@ -53,9 +53,21 @@ addlicense-install: go-install
 doc-install:
 	$(call check_install, pydocstyle)
 	$(call check_install_extra, doc8, "doc8<1")
+	$(call check_install, setuptools)
+	$(call check_install, pbr)
 	$(call check_install, sphinx)
 	$(call check_install, sphinx_rtd_theme)
 	$(call check_install_extra, sphinxcontrib.spelling, sphinxcontrib.spelling pyenchant)
+
+spelling-system-install:
+	python3 -c "import ctypes.util, sys; sys.exit(0 if ctypes.util.find_library('enchant-2') or ctypes.util.find_library('enchant') else 1)" || \
+	([ "$$(uname -s)" = "Linux" ] && \
+	if command -v sudo >/dev/null 2>&1; then \
+	  sudo apt-get update && sudo apt-get install -y libenchant-2-dev; \
+	else \
+	  apt-get update && apt-get install -y libenchant-2-dev; \
+	fi && \
+	python3 -c "import ctypes.util, sys; sys.exit(0 if ctypes.util.find_library('enchant-2') or ctypes.util.find_library('enchant') else 1)")
 
 auditwheel-install:
 	$(call check_install_extra, auditwheel, auditwheel typed-ast patchelf)
@@ -119,7 +131,7 @@ bazel-clean: bazel-install
 # documentation
 
 addlicense: addlicense-install
-	addlicense -c $(COPYRIGHT) -l apache -y 2023 -check $(PROJECT_FOLDER)
+	addlicense -c $(COPYRIGHT) -l apache -y 2026 -check $(PROJECT_FOLDER)
 
 docstyle: doc-install
 	pydocstyle $(PROJECT_NAME) && doc8 docs && cd docs && make html SPHINXOPTS="-W"
@@ -127,7 +139,7 @@ docstyle: doc-install
 doc: doc-install
 	cd docs && make html && cd _build/html && python3 -m http.server
 
-spelling: doc-install
+spelling: doc-install spelling-system-install
 	cd docs && make spelling SPHINXOPTS="-W"
 
 doc-clean:
@@ -144,7 +156,7 @@ format: py-format-install clang-format-install buildifier-install addlicense-ins
 	yapf -ir $(PYTHON_FILES)
 	clang-format -style=file -i $(CPP_FILES)
 	buildifier -r -lint=fix $(BAZEL_FILES)
-	addlicense -c $(COPYRIGHT) -l apache -y 2023 $(PROJECT_FOLDER)
+	addlicense -c $(COPYRIGHT) -l apache -y 2026 $(PROJECT_FOLDER)
 
 # Build docker images
 

@@ -14,7 +14,7 @@
 """Unit tests for minigrid environments check."""
 
 import time
-from typing import Any
+from typing import Any, cast
 
 import gymnasium as gym
 import minigrid  # noqa: F401
@@ -33,8 +33,10 @@ class _MiniGridEnvPoolAlignTest(absltest.TestCase):
   ) -> None:
     self.assertEqual(spec0.dtype, spec1.dtype)
     if isinstance(spec0, gym.spaces.Discrete):
+      assert isinstance(spec1, gym.spaces.Discrete)
       self.assertEqual(spec0.n, spec1.n)
     elif isinstance(spec0, gym.spaces.Box):
+      assert isinstance(spec1, gym.spaces.Box)
       np.testing.assert_allclose(spec0.low, spec1.low)
       np.testing.assert_allclose(spec0.high, spec1.high)
 
@@ -47,12 +49,11 @@ class _MiniGridEnvPoolAlignTest(absltest.TestCase):
   ) -> None:
     env0 = gym.make(task_id)
     env1 = make_gym(task_id, num_envs=num_envs, seed=0, **kwargs)
+    obs_space0 = cast(Any, env0.observation_space)
     self.check_spec(
-      env0.observation_space["direction"], env1.observation_space["direction"]
+      obs_space0["direction"], env1.observation_space["direction"]
     )
-    self.check_spec(
-      env0.observation_space["image"], env1.observation_space["image"]
-    )
+    self.check_spec(obs_space0["image"], env1.observation_space["image"])
     self.check_spec(env0.action_space, env1.action_space)
     done0 = True
     acts = []
@@ -70,8 +71,9 @@ class _MiniGridEnvPoolAlignTest(absltest.TestCase):
         obs0, info0 = env0.reset()
         auto_reset = True
         term0 = trunc0 = False
-        env0.unwrapped.agent_pos = info1["agent_pos"][0]
-        env0.unwrapped.agent_dir = obs1["direction"][0]
+        unwrapped = cast(Any, env0.unwrapped)
+        unwrapped.agent_pos = info1["agent_pos"][0]
+        unwrapped.agent_dir = obs1["direction"][0]
       else:
         obs0, rew0, term0, trunc0, info0 = env0.step(act)
         auto_reset = False
@@ -84,10 +86,10 @@ class _MiniGridEnvPoolAlignTest(absltest.TestCase):
       if not auto_reset:
         np.testing.assert_allclose(obs0["direction"], obs1["direction"][0])
         np.testing.assert_allclose(obs0["image"], obs1["image"][0])
-        np.testing.assert_allclose(rew0, rew1[0], rtol=1e-6)
+        np.testing.assert_allclose(float(rew0), float(rew1[0]), rtol=1e-6)
         np.testing.assert_allclose(done0, done1[0])
         np.testing.assert_allclose(
-          env0.unwrapped.agent_pos, info1["agent_pos"][0]
+          cast(Any, env0.unwrapped).agent_pos, info1["agent_pos"][0]
         )
     logging.info(f"{total_time_envpool=}")
     logging.info(f"{total_time_gym=}")

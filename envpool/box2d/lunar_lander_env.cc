@@ -15,6 +15,7 @@
 #include "envpool/box2d/lunar_lander_env.h"
 
 #include <algorithm>
+#include <memory>
 
 #include "envpool/box2d/utils.h"
 

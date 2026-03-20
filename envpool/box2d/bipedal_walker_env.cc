@@ -15,6 +15,8 @@
 #include "envpool/box2d/bipedal_walker_env.h"
 
 #include <algorithm>
+#include <memory>
+#include <vector>
 
 #include "envpool/box2d/utils.h"
 

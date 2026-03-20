@@ -21,6 +21,7 @@
 #include <random>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include "ThreadPool.h"
 #include "envpool/core/dict.h"

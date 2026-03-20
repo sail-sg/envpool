@@ -1,4 +1,5 @@
 load("@pip_requirements//:requirements.bzl", "requirement")
+load("@rules_python//python:defs.bzl", "py_binary")
 
 filegroup(
     name = "clang_tidy_config",
