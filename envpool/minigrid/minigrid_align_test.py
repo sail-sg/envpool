@@ -23,7 +23,7 @@ from absl import logging
 from absl.testing import absltest
 
 import envpool.minigrid.registration  # noqa: F401
-from envpool.registration import make_gym
+from envpool.registration import make_gymnasium
 
 
 class _MiniGridEnvPoolAlignTest(absltest.TestCase):
@@ -48,7 +48,7 @@ class _MiniGridEnvPoolAlignTest(absltest.TestCase):
     **kwargs: Any,
   ) -> None:
     env0 = gym.make(task_id)
-    env1 = make_gym(task_id, num_envs=num_envs, seed=0, **kwargs)
+    env1 = make_gymnasium(task_id, num_envs=num_envs, seed=0, **kwargs)
     obs_space0 = cast(Any, env0.observation_space)
     self.check_spec(
       obs_space0["direction"], env1.observation_space["direction"]

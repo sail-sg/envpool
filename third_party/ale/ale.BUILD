@@ -40,6 +40,10 @@ template_rule(
 
 cc_library(
     name = "ale_interface",
+    copts = [
+        "-include",
+        "cstdint",
+    ],
     srcs = glob(
         [
             "src/**/*.h",

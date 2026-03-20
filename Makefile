@@ -7,6 +7,9 @@ BAZEL_FILES    = $(shell find . -type f -name "*BUILD" -o -name "*.bzl")
 COMMIT_HASH    = $(shell git log -1 --format=%h)
 COPYRIGHT      = "Garena Online Private Limited"
 BAZELOPT       =
+BAZELISK_BIN   = $(shell command -v bazelisk 2>/dev/null || echo $(HOME)/go/bin/bazelisk)
+BAZEL_VERSION  = 6.0.0
+BAZEL          = USE_BAZEL_VERSION=$(BAZEL_VERSION) $(BAZELISK_BIN)
 DATE           = $(shell date "+%Y-%m-%d")
 DOCKER_TAG     = $(DATE)-$(COMMIT_HASH)
 DOCKER_USER    = trinkle23897
@@ -42,7 +45,7 @@ go-install:
 	command -v go || (sudo apt-get install -y golang-1.18 && sudo ln -sf /usr/lib/go-1.18/bin/go /usr/bin/go)
 
 bazel-install: go-install
-	command -v bazel || (go install github.com/bazelbuild/bazelisk@latest && ln -sf $(HOME)/go/bin/bazelisk $(HOME)/go/bin/bazel)
+	command -v bazelisk || go install github.com/bazelbuild/bazelisk@latest
 
 buildifier-install: go-install
 	command -v buildifier || go install github.com/bazelbuild/buildtools/buildifier@latest
@@ -105,28 +108,28 @@ bazel-pip-requirement-release:
 	cd third_party/pip_requirements && (cmp requirements.txt requirements-release.txt || ln -sf requirements-release.txt requirements.txt)
 
 clang-tidy: clang-tidy-install bazel-pip-requirement-dev
-	bazel build $(BAZELOPT) //... --config=clang-tidy --config=test
+	$(BAZEL) build $(BAZELOPT) //... --config=clang-tidy --config=test
 
 bazel-debug: bazel-install bazel-pip-requirement-dev
-	bazel run $(BAZELOPT) //:setup --config=debug -- bdist_wheel
+	$(BAZEL) run $(BAZELOPT) //:setup --config=debug -- bdist_wheel
 	mkdir -p dist
 	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-build: bazel-install bazel-pip-requirement-dev
-	bazel run $(BAZELOPT) //:setup --config=test -- bdist_wheel
+	$(BAZEL) run $(BAZELOPT) //:setup --config=test -- bdist_wheel
 	mkdir -p dist
 	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-release: bazel-install bazel-pip-requirement-release
-	bazel run $(BAZELOPT) //:setup --config=release -- bdist_wheel
+	$(BAZEL) run $(BAZELOPT) //:setup --config=release -- bdist_wheel
 	mkdir -p dist
 	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-test: bazel-install bazel-pip-requirement-dev
-	bazel test --test_output=all $(BAZELOPT) //... --config=test --spawn_strategy=local --color=yes
+	$(BAZEL) test --test_output=all $(BAZELOPT) //... --config=test --spawn_strategy=local --color=yes
 
 bazel-clean: bazel-install
-	bazel clean --expunge
+	$(BAZEL) clean --expunge
 
 # documentation
 

@@ -14,6 +14,7 @@
 """Test Vizdoom env by well-trained RL agents."""
 
 import os
+import shutil
 from typing import Optional, Tuple
 
 import numpy as np
@@ -38,6 +39,12 @@ class _VizdoomPretrainTest(absltest.TestCase):
   def get_path(self, path: str) -> str:
     return os.path.join("envpool", "vizdoom", "maps", path)
 
+  def cleanup_runtime_dir(self) -> None:
+    if os.path.isdir("_vizdoom"):
+      shutil.rmtree("_vizdoom")
+    elif os.path.exists("_vizdoom"):
+      os.remove("_vizdoom")
+
   def eval_c51(
     self,
     task: str,
@@ -60,6 +67,7 @@ class _VizdoomPretrainTest(absltest.TestCase):
       kwargs.update(cfg_path=cfg_path)
     if reward_config is not None:
       kwargs.update(reward_config=reward_config)
+    self.cleanup_runtime_dir()
     env = make_gym(task_id, **kwargs)
 
     state_shape = env.observation_space.shape
@@ -102,6 +110,8 @@ class _VizdoomPretrainTest(absltest.TestCase):
 
     logging.info(f"Mean reward of {task}: {reward.mean()} ± {reward.std()}")
     logging.info(f"Mean length of {task}: {length.mean()} ± {length.std()}")
+    env.close()
+    self.cleanup_runtime_dir()
     return reward, length
 
   def test_d1(self) -> None:

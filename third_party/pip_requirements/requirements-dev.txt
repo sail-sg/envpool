@@ -1,11 +1,11 @@
 setuptools
 wheel
-numpy
+numpy<2
 dm-env
 gym>=0.26
 gymnasium>=0.26,!=0.27.0
 optree>=0.6.0
-jax[cpu]
+jax[cpu]<0.5
 absl-py
 packaging
 tqdm

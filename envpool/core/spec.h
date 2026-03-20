@@ -72,6 +72,24 @@ class Spec : public ShapeSpec {
       : ShapeSpec(sizeof(dtype), std::move(shape)), bounds(std::move(bounds)) {}
   Spec(const std::vector<int>& shape, const std::tuple<dtype, dtype>& bounds)
       : ShapeSpec(sizeof(dtype), shape), bounds(bounds) {}
+  Spec(std::vector<int>&& shape, std::initializer_list<dtype> bounds)
+      : ShapeSpec(sizeof(dtype), std::move(shape)) {
+    CHECK_EQ(bounds.size(), 2);
+    auto it = bounds.begin();
+    this->bounds = {it[0], it[1]};
+  }
+  Spec(const std::vector<int>& shape, std::initializer_list<dtype> bounds)
+      : ShapeSpec(sizeof(dtype), shape) {
+    CHECK_EQ(bounds.size(), 2);
+    auto it = bounds.begin();
+    this->bounds = {it[0], it[1]};
+  }
+  Spec(std::initializer_list<int> shape, std::initializer_list<dtype> bounds)
+      : ShapeSpec(sizeof(dtype), std::vector<int>(shape)) {
+    CHECK_EQ(bounds.size(), 2);
+    auto it = bounds.begin();
+    this->bounds = {it[0], it[1]};
+  }
 
   /* init with elementwise bounds */
   Spec(std::vector<int>&& shape,

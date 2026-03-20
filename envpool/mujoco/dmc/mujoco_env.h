@@ -20,6 +20,7 @@
 #include <mjxmacro.h>
 #include <mujoco.h>
 
+#include <array>
 #include <memory>
 #include <random>
 #include <string>
