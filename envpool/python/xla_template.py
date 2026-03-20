@@ -45,8 +45,8 @@ def _normalize_specs(
 
 
 def _make_xla_function(
-  obj: Any, handle: bytes, name: str, specs: Tuple[Tuple[Any], Tuple[Any]],
-  capsules: Tuple[Any, Any]
+  obj: Any, handle: bytes, name: str,
+  specs: Tuple[Tuple[Any, ...], Tuple[Any, ...]], capsules: Tuple[Any, Any]
 ) -> Callable:
   in_specs, out_specs = specs
   in_specs = _normalize_specs(in_specs)

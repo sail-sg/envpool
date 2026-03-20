@@ -13,6 +13,7 @@
 # limitations under the License.
 """Protocol of C++ EnvPool."""
 
+import sys
 from typing import (
   Any,
   Callable,
@@ -30,10 +31,10 @@ import gym
 import numpy as np
 from dm_env import TimeStep
 
-try:
+if sys.version_info >= (3, 8):
   from typing import Protocol
-except ImportError:
-  from typing_extensions import Protocol  # type: ignore
+else:
+  from typing_extensions import Protocol
 
 
 class EnvSpec(Protocol):
