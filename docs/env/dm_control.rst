@@ -1,9 +1,9 @@
 DeepMind Control Suite
 ======================
 
-We use ``dm_control==1.0.5`` and ``mujoco==2.2.1`` as the codebase.
+We use ``dm_control==1.0.5`` and ``mujoco==3.3.4`` as the codebase.
 See https://github.com/deepmind/dm_control/tree/1.0.5 and
-https://github.com/deepmind/mujoco/tree/2.2.1
+https://github.com/google-deepmind/mujoco/tree/3.3.4
 
 The ``domain_name`` and ``task_name`` for ``suite.load`` function are
 converted into ``DomainNameTaskName-v1`` in envpool, e.g.,

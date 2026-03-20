@@ -12,23 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_cc//cc:defs.bzl", "cc_library")
-
-package(default_visibility = ["//visibility:public"])
-
-cc_library(
-    name = "mujoco_lib",
-    srcs = glob(["lib/*"]),
-    hdrs = glob(["include/mujoco/*.h"]),
-    includes = [
-        "include",
-        "include/mujoco",
-    ],
-    linkopts = ["-Wl,-rpath,'$$ORIGIN'"],
-    linkstatic = 0,
-)
-
 filegroup(
-    name = "mujoco_so",
-    srcs = ["lib/libmujoco.so.3.3.4"],
+    name = "patches",
+    srcs = glob(["*.xml"]),
+    visibility = ["//visibility:public"],
 )

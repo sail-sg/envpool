@@ -40,10 +40,6 @@ template_rule(
 
 cc_library(
     name = "ale_interface",
-    copts = [
-        "-include",
-        "cstdint",
-    ],
     srcs = glob(
         [
             "src/**/*.h",
@@ -60,6 +56,10 @@ cc_library(
         ":ale_version",
     ],
     hdrs = ["src/ale_interface.hpp"],
+    copts = [
+        "-include",
+        "cstdint",
+    ],
     includes = [
         "src",
         "src/common",

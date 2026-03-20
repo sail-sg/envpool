@@ -34,6 +34,8 @@ class HumanoidStandupEnvFns {
     return MakeDict("frame_skip"_.Bind(5), "post_constraint"_.Bind(true),
                     "forward_reward_weight"_.Bind(1.0),
                     "exclude_current_positions_from_observation"_.Bind(true),
+                    "exclude_worldbody_observations"_.Bind(false),
+                    "exclude_root_actuator_forces"_.Bind(false),
                     "ctrl_cost_weight"_.Bind(0.1),
                     "contact_cost_weight"_.Bind(5e-7),
                     "contact_cost_max"_.Bind(10.0), "healthy_reward"_.Bind(1.0),
@@ -43,12 +45,19 @@ class HumanoidStandupEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
     bool no_pos = conf["exclude_current_positions_from_observation"_];
+    int obs_n = no_pos ? 376 : 378;
+    if (conf["exclude_worldbody_observations"_]) {
+      obs_n -= 10 + 6 + 6;
+    }
+    if (conf["exclude_root_actuator_forces"_]) {
+      obs_n -= 6;
+    }
     return MakeDict(
 #ifdef ENVPOOL_TEST
         "info:qpos0"_.Bind(Spec<mjtNum>({24})),
         "info:qvel0"_.Bind(Spec<mjtNum>({23})),
 #endif
-        "obs"_.Bind(Spec<mjtNum>({no_pos ? 376 : 378}, {-inf, inf})),
+        "obs"_.Bind(Spec<mjtNum>({obs_n}, {-inf, inf})),
         "info:reward_linup"_.Bind(Spec<mjtNum>({-1})),
         "info:reward_quadctrl"_.Bind(Spec<mjtNum>({-1})),
         "info:reward_alive"_.Bind(Spec<mjtNum>({-1})),
@@ -66,6 +75,7 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
                            public MujocoEnv {
  protected:
   bool no_pos_;
+  bool exclude_worldbody_observations_, exclude_root_actuator_forces_;
   mjtNum ctrl_cost_weight_, contact_cost_weight_, contact_cost_max_;
   mjtNum forward_reward_weight_, healthy_reward_;
   std::uniform_real_distribution<> dist_;
@@ -78,6 +88,10 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
+        exclude_worldbody_observations_(
+            spec.config["exclude_worldbody_observations"_]),
+        exclude_root_actuator_forces_(
+            spec.config["exclude_root_actuator_forces"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         contact_cost_weight_(spec.config["contact_cost_weight"_]),
         contact_cost_max_(spec.config["contact_cost_max"_]),
@@ -149,17 +163,24 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
     for (int i = 0; i < model_->nv; ++i) {
       *(obs++) = data_->qvel[i];
     }
-    for (int i = 0; i < 10 * model_->nbody; ++i) {
-      *(obs++) = data_->cinert[i];
+    int start_body = exclude_worldbody_observations_ ? 1 : 0;
+    for (int i = start_body; i < model_->nbody; ++i) {
+      for (int j = 0; j < 10; ++j) {
+        *(obs++) = data_->cinert[i * 10 + j];
+      }
     }
-    for (int i = 0; i < 6 * model_->nbody; ++i) {
-      *(obs++) = data_->cvel[i];
+    for (int i = start_body; i < model_->nbody; ++i) {
+      for (int j = 0; j < 6; ++j) {
+        *(obs++) = data_->cvel[i * 6 + j];
+      }
     }
-    for (int i = 0; i < model_->nv; ++i) {
+    for (int i = exclude_root_actuator_forces_ ? 6 : 0; i < model_->nv; ++i) {
       *(obs++) = data_->qfrc_actuator[i];
     }
-    for (int i = 0; i < 6 * model_->nbody; ++i) {
-      *(obs++) = data_->cfrc_ext[i];
+    for (int i = start_body; i < model_->nbody; ++i) {
+      for (int j = 0; j < 6; ++j) {
+        *(obs++) = data_->cfrc_ext[i * 6 + j];
+      }
     }
     // info
     state["info:reward_linup"_] = xv * forward_reward_weight_;

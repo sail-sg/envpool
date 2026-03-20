@@ -34,19 +34,22 @@ class ReacherEnvFns {
     return MakeDict(
         "reward_threshold"_.Bind(-3.75), "frame_skip"_.Bind(2),
         "post_constraint"_.Bind(true), "ctrl_cost_weight"_.Bind(1.0),
+        "reward_after_step"_.Bind(false), "obs_include_z_distance"_.Bind(true),
         "dist_cost_weight"_.Bind(1.0), "reset_qpos_scale"_.Bind(0.1),
         "reset_qvel_scale"_.Bind(0.005), "reset_goal_scale"_.Bind(0.2));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
-    return MakeDict("obs"_.Bind(Spec<mjtNum>({11}, {-inf, inf})),
+    return MakeDict(
+        "obs"_.Bind(Spec<mjtNum>({conf["obs_include_z_distance"_] ? 11 : 10},
+                                 {-inf, inf})),
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.Bind(Spec<mjtNum>({4})),
-                    "info:qvel0"_.Bind(Spec<mjtNum>({4})),
+        "info:qpos0"_.Bind(Spec<mjtNum>({4})),
+        "info:qvel0"_.Bind(Spec<mjtNum>({4})),
 #endif
-                    "info:reward_dist"_.Bind(Spec<mjtNum>({-1})),
-                    "info:reward_ctrl"_.Bind(Spec<mjtNum>({-1})));
+        "info:reward_dist"_.Bind(Spec<mjtNum>({-1})),
+        "info:reward_ctrl"_.Bind(Spec<mjtNum>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -59,6 +62,7 @@ using ReacherEnvSpec = EnvSpec<ReacherEnvFns>;
 class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
  protected:
   int id_fingertip_, id_target_;
+  bool reward_after_step_, obs_include_z_distance_;
   mjtNum ctrl_cost_weight_, dist_cost_weight_, reset_goal_scale_;
   std::uniform_real_distribution<> dist_qpos_, dist_qvel_, dist_goal_;
 
@@ -70,6 +74,8 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
                   spec.config["max_episode_steps"_]),
         id_fingertip_(mj_name2id(model_, mjOBJ_XBODY, "fingertip")),
         id_target_(mj_name2id(model_, mjOBJ_XBODY, "target")),
+        reward_after_step_(spec.config["reward_after_step"_]),
+        obs_include_z_distance_(spec.config["obs_include_z_distance"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         dist_cost_weight_(spec.config["dist_cost_weight"_]),
         reset_goal_scale_(spec.config["reset_goal_scale"_]),
@@ -115,8 +121,14 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
   void Step(const Action& action) override {
     // step
     mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
-    const auto& dist = GetDist();
+    std::array<mjtNum, 3> dist = {0.0, 0.0, 0.0};
+    if (!reward_after_step_) {
+      dist = GetDist();
+    }
     MujocoStep(act);
+    if (reward_after_step_) {
+      dist = GetDist();
+    }
 
     // dist_cost
     mjtNum dist_cost =
@@ -161,7 +173,9 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     const auto& dist = GetDist();
     *(obs++) = dist[0];
     *(obs++) = dist[1];
-    *(obs++) = dist[2];
+    if (obs_include_z_distance_) {
+      *(obs++) = dist[2];
+    }
     // info
     state["info:reward_dist"_] = -dist_cost;
     state["info:reward_ctrl"_] = -ctrl_cost;

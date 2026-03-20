@@ -4,6 +4,10 @@ load("//envpool:workspace0.bzl", workspace0 = "workspace")
 
 workspace0()
 
+load("@rules_python//python:repositories.bzl", "py_repositories")
+
+py_repositories()
+
 load("//envpool:workspace1.bzl", workspace1 = "workspace")
 
 workspace1()
@@ -25,3 +29,7 @@ register_qt_toolchains()
 load("//envpool:pip.bzl", pip_workspace = "workspace")
 
 pip_workspace()
+
+load("@pip_requirements//:requirements.bzl", "install_deps")
+
+install_deps()

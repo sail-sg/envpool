@@ -12,23 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_cc//cc:defs.bzl", "cc_library")
+"""Thin wrapper around rules_python requirement labels."""
 
-package(default_visibility = ["//visibility:public"])
+load("@pip_requirements//:requirements.bzl", _requirement = "requirement")
 
-cc_library(
-    name = "mujoco_lib",
-    srcs = glob(["lib/*"]),
-    hdrs = glob(["include/mujoco/*.h"]),
-    includes = [
-        "include",
-        "include/mujoco",
-    ],
-    linkopts = ["-Wl,-rpath,'$$ORIGIN'"],
-    linkstatic = 0,
-)
-
-filegroup(
-    name = "mujoco_so",
-    srcs = ["lib/libmujoco.so.3.3.4"],
-)
+def requirement(name):
+    return _requirement(name)

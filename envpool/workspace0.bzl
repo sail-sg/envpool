@@ -21,15 +21,14 @@ load("//third_party/cuda:cuda.bzl", "cuda_configure")
 def workspace():
     """Load requested packages."""
 
-    # we cannot upgrade rules_python because it requires requirements_lock.txt after 0.13.0
+    # Keep a WORKSPACE-compatible rules_python release that supports Python 3.12.
     maybe(
         http_archive,
         name = "rules_python",
-        sha256 = "b593d13bb43c94ce94b483c2858e53a9b811f6f10e1e0eedc61073bd90e58d9c",
-        strip_prefix = "rules_python-0.12.0",
+        sha256 = "9acc0944c94adb23fba1c9988b48768b1bacc6583b52a2586895c5b7491e2e31",
+        strip_prefix = "rules_python-0.27.0",
         urls = [
-            "https://github.com/bazelbuild/rules_python/archive/refs/tags/0.12.0.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/bazelbuild/rules_python/0.12.0.tar.gz",
+            "https://github.com/bazelbuild/rules_python/archive/refs/tags/0.27.0.tar.gz",
         ],
     )
 
@@ -333,11 +332,10 @@ def workspace():
     maybe(
         http_archive,
         name = "mujoco",
-        sha256 = "d1cb3a720546240d894cd315b7fd358a2b96013a1f59b6d718036eca6f6edac2",
-        strip_prefix = "mujoco-2.2.1",
+        sha256 = "ecf1a17459a342badf2b4f32dd4677a6a0e5fd393c5143993eb3e81b8e44609b",
+        strip_prefix = "mujoco-3.3.4",
         urls = [
-            "https://github.com/deepmind/mujoco/releases/download/2.2.1/mujoco-2.2.1-linux-x86_64.tar.gz",
-            "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/deepmind/mujoco/mujoco-2.2.1-linux-x86_64.tar.gz",
+            "https://github.com/google-deepmind/mujoco/releases/download/3.3.4/mujoco-3.3.4-linux-x86_64.tar.gz",
         ],
         build_file = "//third_party/mujoco:mujoco.BUILD",
     )

@@ -16,16 +16,24 @@
 from typing import Any, List
 
 import dm_env
+import mujoco
 import numpy as np
 from absl import logging
 from absl.testing import absltest
 from dm_control import suite
+from packaging import version
 
 import envpool.mujoco.dmc.registration  # noqa: F401
 from envpool.registration import make_dm
 
+_MUJOCO_V3 = version.parse(mujoco.__version__) >= version.parse("3.0.0")
+
 
 class _MujocoDmcAlignTest(absltest.TestCase):
+
+  def observation_atol(self, domain: str, task: str) -> float:
+    del domain, task
+    return 1e-6
 
   def run_space_check(self, env0: dm_env.Environment, env1: Any) -> None:
     """Check observation_spec() and action_spec()."""
@@ -131,6 +139,7 @@ class _MujocoDmcAlignTest(absltest.TestCase):
     self, env0: dm_env.Environment, env1: Any, domain: str, task: str
   ) -> None:
     logging.info(f"align check for {domain} {task}")
+    obs_atol = self.observation_atol(domain, task)
     obs_spec, action_spec = env0.observation_spec(), env0.action_spec()
     for i in range(3):
       np.random.seed(i)
@@ -150,7 +159,7 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         done = ts0.step_type == dm_env.StepType.LAST
         o0, o1 = ts0.observation, ts1.observation
         for k in obs_spec:
-          np.testing.assert_allclose(o0[k], getattr(o1, k)[0], atol=1e-6)
+          np.testing.assert_allclose(o0[k], getattr(o1, k)[0], atol=obs_atol)
         np.testing.assert_allclose(ts0.step_type, ts1.step_type[0])
         np.testing.assert_allclose(ts0.reward, ts1.reward[0], atol=1e-8)
         np.testing.assert_allclose(ts0.discount, ts1.discount[0])

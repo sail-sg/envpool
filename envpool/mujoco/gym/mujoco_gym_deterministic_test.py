@@ -43,37 +43,37 @@ class _MujocoGymDeterministicTest(absltest.TestCase):
       self.assertTrue(np.all(obs2 <= obs_max), obs2)
 
   def test_ant(self) -> None:
-    self.check("Ant-v4")
+    self.check("Ant-v5")
 
   def test_half_cheetah(self) -> None:
-    self.check("HalfCheetah-v4")
+    self.check("HalfCheetah-v5")
 
   def test_hopper(self) -> None:
-    self.check("Hopper-v4")
+    self.check("Hopper-v5")
 
   def test_humanoid(self) -> None:
-    self.check("Humanoid-v4")
+    self.check("Humanoid-v5")
 
   def test_humanoid_standup(self) -> None:
-    self.check("HumanoidStandup-v4")
+    self.check("HumanoidStandup-v5")
 
   def test_inverted_double_pendulum(self) -> None:
-    self.check("InvertedPendulum-v4")
+    self.check("InvertedDoublePendulum-v5")
 
   def test_inverted_pendulum(self) -> None:
-    self.check("InvertedPendulum-v4")
+    self.check("InvertedPendulum-v5")
 
   def test_pusher(self) -> None:
-    self.check("Pusher-v4")
+    self.check("Pusher-v5")
 
   def test_reacher(self) -> None:
-    self.check("Reacher-v4")
+    self.check("Reacher-v5")
 
   def test_swimmer(self) -> None:
-    self.check("Swimmer-v4")
+    self.check("Swimmer-v5")
 
   def test_walker2d(self) -> None:
-    self.check("Walker2d-v4")
+    self.check("Walker2d-v5")
 
 
 if __name__ == "__main__":

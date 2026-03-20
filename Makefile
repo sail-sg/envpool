@@ -102,10 +102,10 @@ buildifier: buildifier-install
 # bazel build/test
 
 bazel-pip-requirement-dev:
-	cd third_party/pip_requirements && (cmp requirements.txt requirements-dev.txt || ln -sf requirements-dev.txt requirements.txt)
+	cd third_party/pip_requirements && (cmp requirements.txt requirements-dev-lock.txt || ln -sf requirements-dev-lock.txt requirements.txt)
 
 bazel-pip-requirement-release:
-	cd third_party/pip_requirements && (cmp requirements.txt requirements-release.txt || ln -sf requirements-release.txt requirements.txt)
+	cd third_party/pip_requirements && (cmp requirements.txt requirements-release-lock.txt || ln -sf requirements-release-lock.txt requirements.txt)
 
 clang-tidy: clang-tidy-install bazel-pip-requirement-dev
 	$(BAZEL) build $(BAZELOPT) //... --config=clang-tidy --config=test

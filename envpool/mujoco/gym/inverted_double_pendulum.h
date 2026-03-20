@@ -31,21 +31,23 @@ namespace mujoco_gym {
 class InvertedDoublePendulumEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("reward_threshold"_.Bind(9100.0), "frame_skip"_.Bind(5),
-                    "post_constraint"_.Bind(true), "healthy_reward"_.Bind(10.0),
-                    "healthy_z_max"_.Bind(1.0), "observation_min"_.Bind(-10.0),
-                    "observation_max"_.Bind(10.0),
-                    "reset_noise_scale"_.Bind(0.1));
+    return MakeDict(
+        "reward_threshold"_.Bind(9100.0), "frame_skip"_.Bind(5),
+        "post_constraint"_.Bind(true), "healthy_reward"_.Bind(10.0),
+        "reward_if_not_terminated"_.Bind(false), "constraint_obs_dim"_.Bind(3),
+        "healthy_z_max"_.Bind(1.0), "observation_min"_.Bind(-10.0),
+        "observation_max"_.Bind(10.0), "reset_noise_scale"_.Bind(0.1));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
+    int obs_n = 1 + 2 + 2 + 3 + conf["constraint_obs_dim"_];
 #ifdef ENVPOOL_TEST
-    return MakeDict("obs"_.Bind(Spec<mjtNum>({11}, {-inf, inf})),
+    return MakeDict("obs"_.Bind(Spec<mjtNum>({obs_n}, {-inf, inf})),
                     "info:qpos0"_.Bind(Spec<mjtNum>({3})),
                     "info:qvel0"_.Bind(Spec<mjtNum>({3})));
 #else
-    return MakeDict("obs"_.Bind(Spec<mjtNum>({11}, {-inf, inf})));
+    return MakeDict("obs"_.Bind(Spec<mjtNum>({obs_n}, {-inf, inf})));
 #endif
   }
   template <typename Config>
@@ -59,6 +61,8 @@ using InvertedDoublePendulumEnvSpec = EnvSpec<InvertedDoublePendulumEnvFns>;
 class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
                                   public MujocoEnv {
  protected:
+  bool reward_if_not_terminated_;
+  int constraint_obs_dim_;
   mjtNum healthy_reward_, healthy_z_max_;
   mjtNum observation_min_, observation_max_;
   std::uniform_real_distribution<> dist_qpos_;
@@ -71,6 +75,8 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
                       "/mujoco/assets_gym/inverted_double_pendulum.xml",
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
+        reward_if_not_terminated_(spec.config["reward_if_not_terminated"_]),
+        constraint_obs_dim_(spec.config["constraint_obs_dim"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
         healthy_z_max_(spec.config["healthy_z_max"_]),
         observation_min_(spec.config["observation_min"_]),
@@ -114,10 +120,13 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
     mjtNum v2 = data_->qvel[2];
     mjtNum vel_penalty = 1e-3 * v1 * v1 + 5e-3 * v2 * v2;
     // reward and done
-    auto reward =
-        static_cast<float>(healthy_reward_ - dist_penalty - vel_penalty);
+    bool terminated = !IsHealthy();
+    mjtNum alive_bonus = reward_if_not_terminated_
+                             ? healthy_reward_ * static_cast<int>(!terminated)
+                             : healthy_reward_;
+    auto reward = static_cast<float>(alive_bonus - dist_penalty - vel_penalty);
     ++elapsed_step_;
-    done_ = !IsHealthy() || (elapsed_step_ >= max_episode_steps_);
+    done_ = terminated || (elapsed_step_ >= max_episode_steps_);
     WriteState(reward);
   }
 
@@ -140,7 +149,7 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
       x = std::max(observation_min_, x);
       *(obs++) = x;
     }
-    for (int i = 0; i < model_->nv; ++i) {
+    for (int i = 0; i < constraint_obs_dim_; ++i) {
       mjtNum x = data_->qfrc_constraint[i];
       x = std::min(observation_max_, x);
       x = std::max(observation_min_, x);
