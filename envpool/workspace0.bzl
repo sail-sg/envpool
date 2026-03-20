@@ -249,6 +249,7 @@ def workspace():
         strip_prefix = "SDL2-2.28.4",
         urls = [
             "https://www.libsdl.org/release/SDL2-2.28.4.tar.gz",
+            "https://github.com/libsdl-org/SDL/releases/download/release-2.28.4/SDL2-2.28.4.tar.gz",
             "https://ml.cs.tsinghua.edu.cn/~jiayi/envpool/libsdl/SDL2-2.28.4.tar.gz",
         ],
         build_file = "//third_party/sdl2:sdl2.BUILD",

@@ -18,15 +18,24 @@ load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
 load("@com_justbuchanan_rules_qt//:qt_configure.bzl", "qt_configure")
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
+load("@rules_python//python:repositories.bzl", "python_register_toolchains")
 
 def workspace():
     """Configure pip requirements."""
-    python_configure(
-        name = "local_config_python",
-        python_version = "3",
+    python_register_toolchains(
+        name = "python3_10",
+        python_version = "3.10",
+        ignore_root_user_error = True,
     )
 
-    rules_foreign_cc_dependencies()
+    python_configure(
+        name = "local_config_python",
+        python_interpreter_target = "@python3_10_x86_64-unknown-linux-gnu//:bin/python3",
+    )
+
+    rules_foreign_cc_dependencies(
+        register_built_pkgconfig_toolchain = False,
+    )
 
     boost_deps()
 

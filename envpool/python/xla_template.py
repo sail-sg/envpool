@@ -54,6 +54,11 @@ def _make_xla_function(
   specs: Tuple[Tuple[Any, ...], Tuple[Any, ...]],
   capsules: Tuple[Any, Any],
 ) -> Callable:
+  if not hasattr(_xla, "backend_specific_translations"):
+    raise RuntimeError(
+      "XLA is unavailable because this JAX version removed the legacy "
+      "backend translation API used by envpool."
+    )
   in_specs, out_specs = specs
   in_specs = _normalize_specs(in_specs)
   out_specs = _normalize_specs(out_specs)

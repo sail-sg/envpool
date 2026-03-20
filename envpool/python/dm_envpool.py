@@ -54,10 +54,12 @@ class DMEnvPoolMeta(ABCMeta):
       parents = (
         base, DMEnvPoolMixin, EnvPoolMixin, XlaMixin, dm_env.Environment
       )
-    except ImportError:
+    except (ImportError, AttributeError):
 
       def _xla(self: Any) -> None:
-        raise RuntimeError("XLA is disabled. To enable XLA please install jax.")
+        raise RuntimeError(
+          "XLA is unavailable. To enable XLA please install a compatible jax."
+        )
 
       attrs["xla"] = _xla
       parents = (base, DMEnvPoolMixin, EnvPoolMixin, dm_env.Environment)
