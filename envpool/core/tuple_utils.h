@@ -17,7 +17,6 @@
 #ifndef ENVPOOL_CORE_TUPLE_UTILS_H_
 #define ENVPOOL_CORE_TUPLE_UTILS_H_
 
-#include <array>
 #include <functional>
 #include <tuple>
 #include <type_traits>
@@ -29,16 +28,23 @@ struct Index;
 
 template <class T, class... Types>
 struct Index<T, std::tuple<Types...>> {
-  static constexpr std::size_t kValue = [] {
-    constexpr std::array<bool, sizeof...(Types)> kMatches{
-        std::is_same_v<T, Types>...};
-    for (std::size_t i = 0; i < kMatches.size(); ++i) {
-      if (kMatches[i]) {
-        return i;
-      }
+ private:
+  template <std::size_t I>
+  static constexpr std::size_t FindIndex() {
+    return I;
+  }
+
+  template <std::size_t I, class Head, class... Tail>
+  static constexpr std::size_t FindIndex() {
+    if constexpr (std::is_same_v<T, Head>) {
+      return I;
+    } else {
+      return FindIndex<I + 1, Tail...>();
     }
-    return kMatches.size();
-  }();
+  }
+
+ public:
+  static constexpr std::size_t kValue = FindIndex<0, Types...>();
   static_assert(kValue < sizeof...(Types), "Type not found in tuple");
 };
 
