@@ -84,3 +84,14 @@ register(
   max_episode_steps=1024,
   size=16,
 )
+
+register(
+  task_id="MiniGrid-DoorKey-5x5-v0",
+  import_path="envpool.minigrid",
+  spec_cls="DoorKeyEnvSpec",
+  dm_cls="DoorKeyDMEnvPool",
+  gym_cls="DoorKeyGymEnvPool",
+  gymnasium_cls="DoorKeyGymnasiumEnvPool",
+  max_episode_steps=250,
+  size=5,
+)

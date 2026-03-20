@@ -49,6 +49,8 @@ class MiniGridEnv {
   float MiniGridStep(Act act);
   void PlaceAgent(int start_x = 0, int start_y = 0, int end_x = -1,
                   int end_y = -1);
+  std::pair<int, int> PlaceObject(int start_x, int start_y, int end_x,
+                                  int end_y);
   void GenImage(const Array& obs);
   virtual void GenGrid() {}
 };
