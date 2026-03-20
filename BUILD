@@ -1,5 +1,5 @@
-load("//envpool:requirements.bzl", "requirement")
 load("@rules_python//python:defs.bzl", "py_binary")
+load("//envpool:requirements.bzl", "requirement")
 
 filegroup(
     name = "clang_tidy_config",

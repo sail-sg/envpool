@@ -34,8 +34,7 @@ class ReacherEnvFns {
     return MakeDict(
         "reward_threshold"_.Bind(-3.75), "frame_skip"_.Bind(2),
         "post_constraint"_.Bind(true), "ctrl_cost_weight"_.Bind(1.0),
-        "reward_after_step"_.Bind(false),
-        "obs_include_z_distance"_.Bind(true),
+        "reward_after_step"_.Bind(false), "obs_include_z_distance"_.Bind(true),
         "dist_cost_weight"_.Bind(1.0), "reset_qpos_scale"_.Bind(0.1),
         "reset_qvel_scale"_.Bind(0.005), "reset_goal_scale"_.Bind(0.2));
   }
@@ -43,13 +42,14 @@ class ReacherEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
     return MakeDict(
-                    "obs"_.Bind(Spec<mjtNum>({conf["obs_include_z_distance"_] ? 11 : 10}, {-inf, inf})),
+        "obs"_.Bind(Spec<mjtNum>({conf["obs_include_z_distance"_] ? 11 : 10},
+                                 {-inf, inf})),
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.Bind(Spec<mjtNum>({4})),
-                    "info:qvel0"_.Bind(Spec<mjtNum>({4})),
+        "info:qpos0"_.Bind(Spec<mjtNum>({4})),
+        "info:qvel0"_.Bind(Spec<mjtNum>({4})),
 #endif
-                    "info:reward_dist"_.Bind(Spec<mjtNum>({-1})),
-                    "info:reward_ctrl"_.Bind(Spec<mjtNum>({-1})));
+        "info:reward_dist"_.Bind(Spec<mjtNum>({-1})),
+        "info:reward_ctrl"_.Bind(Spec<mjtNum>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -168,7 +168,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
       *(obs++) = data_->qpos[i];
     }
     for (int i = 0; i < 2; ++i) {
-    *(obs++) = data_->qvel[i];
+      *(obs++) = data_->qvel[i];
     }
     const auto& dist = GetDist();
     *(obs++) = dist[0];

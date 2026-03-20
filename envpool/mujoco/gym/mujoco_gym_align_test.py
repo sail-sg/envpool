@@ -99,7 +99,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
         o1, r1, term1, trunc1, i1 = env1.step(np.array([a]), np.array([0]))
         d1 = np.logical_or(term1, trunc1)
         np.testing.assert_allclose(o0, o1[0], atol=obs_atol)
-        np.testing.assert_allclose(r0, r1[0], atol=reward_atol)
+        np.testing.assert_allclose(float(r0), float(r1[0]), atol=reward_atol)
         if not no_time_limit:
           np.testing.assert_allclose(d0, d1[0])
         if self.check_info_alignment(env_id):

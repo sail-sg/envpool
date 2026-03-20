@@ -31,13 +31,12 @@ namespace mujoco_gym {
 class InvertedDoublePendulumEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("reward_threshold"_.Bind(9100.0), "frame_skip"_.Bind(5),
-                    "post_constraint"_.Bind(true), "healthy_reward"_.Bind(10.0),
-                    "reward_if_not_terminated"_.Bind(false),
-                    "constraint_obs_dim"_.Bind(3),
-                    "healthy_z_max"_.Bind(1.0), "observation_min"_.Bind(-10.0),
-                    "observation_max"_.Bind(10.0),
-                    "reset_noise_scale"_.Bind(0.1));
+    return MakeDict(
+        "reward_threshold"_.Bind(9100.0), "frame_skip"_.Bind(5),
+        "post_constraint"_.Bind(true), "healthy_reward"_.Bind(10.0),
+        "reward_if_not_terminated"_.Bind(false), "constraint_obs_dim"_.Bind(3),
+        "healthy_z_max"_.Bind(1.0), "observation_min"_.Bind(-10.0),
+        "observation_max"_.Bind(10.0), "reset_noise_scale"_.Bind(0.1));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -122,11 +121,10 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
     mjtNum vel_penalty = 1e-3 * v1 * v1 + 5e-3 * v2 * v2;
     // reward and done
     bool terminated = !IsHealthy();
-    mjtNum alive_bonus =
-        reward_if_not_terminated_ ? healthy_reward_ * static_cast<int>(!terminated)
-                                  : healthy_reward_;
-    auto reward =
-        static_cast<float>(alive_bonus - dist_penalty - vel_penalty);
+    mjtNum alive_bonus = reward_if_not_terminated_
+                             ? healthy_reward_ * static_cast<int>(!terminated)
+                             : healthy_reward_;
+    auto reward = static_cast<float>(alive_bonus - dist_penalty - vel_penalty);
     ++elapsed_step_;
     done_ = terminated || (elapsed_step_ >= max_episode_steps_);
     WriteState(reward);

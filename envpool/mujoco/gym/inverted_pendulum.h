@@ -107,7 +107,8 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
     bool terminated = !IsHealthy();
     ++elapsed_step_;
     done_ = terminated || (elapsed_step_ >= max_episode_steps_);
-    WriteState(reward_if_not_terminated_ ? static_cast<float>(!terminated) : 1.0);
+    WriteState(reward_if_not_terminated_ ? static_cast<float>(!terminated)
+                                         : 1.0);
   }
 
  private:

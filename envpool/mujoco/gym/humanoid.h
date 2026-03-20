@@ -55,21 +55,20 @@ class HumanoidEnvFns {
     if (conf["exclude_root_actuator_forces"_]) {
       obs_n -= 6;
     }
-    return MakeDict(
-        "obs"_.Bind(Spec<mjtNum>({obs_n}, {-inf, inf})),
+    return MakeDict("obs"_.Bind(Spec<mjtNum>({obs_n}, {-inf, inf})),
 #ifdef ENVPOOL_TEST
-        "info:qpos0"_.Bind(Spec<mjtNum>({24})),
-        "info:qvel0"_.Bind(Spec<mjtNum>({23})),
+                    "info:qpos0"_.Bind(Spec<mjtNum>({24})),
+                    "info:qvel0"_.Bind(Spec<mjtNum>({23})),
 #endif
-        "info:reward_linvel"_.Bind(Spec<mjtNum>({-1})),
-        "info:reward_quadctrl"_.Bind(Spec<mjtNum>({-1})),
-        "info:reward_alive"_.Bind(Spec<mjtNum>({-1})),
-        "info:reward_impact"_.Bind(Spec<mjtNum>({-1})),
-        "info:x_position"_.Bind(Spec<mjtNum>({-1})),
-        "info:y_position"_.Bind(Spec<mjtNum>({-1})),
-        "info:distance_from_origin"_.Bind(Spec<mjtNum>({-1})),
-        "info:x_velocity"_.Bind(Spec<mjtNum>({-1})),
-        "info:y_velocity"_.Bind(Spec<mjtNum>({-1})));
+                    "info:reward_linvel"_.Bind(Spec<mjtNum>({-1})),
+                    "info:reward_quadctrl"_.Bind(Spec<mjtNum>({-1})),
+                    "info:reward_alive"_.Bind(Spec<mjtNum>({-1})),
+                    "info:reward_impact"_.Bind(Spec<mjtNum>({-1})),
+                    "info:x_position"_.Bind(Spec<mjtNum>({-1})),
+                    "info:y_position"_.Bind(Spec<mjtNum>({-1})),
+                    "info:distance_from_origin"_.Bind(Spec<mjtNum>({-1})),
+                    "info:x_velocity"_.Bind(Spec<mjtNum>({-1})),
+                    "info:y_velocity"_.Bind(Spec<mjtNum>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

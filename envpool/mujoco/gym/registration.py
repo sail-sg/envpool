@@ -13,6 +13,8 @@
 # limitations under the License.
 """Mujoco gym env registration."""
 
+from typing import Any
+
 from envpool.registration import register
 
 gym_mujoco_envs = [
@@ -41,7 +43,7 @@ gym_mujoco_envs = [
 ]
 
 for task, version, post_constraint, max_episode_steps in gym_mujoco_envs:
-  extra_args = {}
+  extra_args: dict[str, Any] = {}
   if task in ["Ant", "Humanoid"] and version == "v3":
     extra_args["use_contact_force"] = True
   if task == "Ant" and version == "v5":

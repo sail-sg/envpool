@@ -36,8 +36,7 @@ class PusherEnvFns {
         "post_constraint"_.Bind(true), "ctrl_cost_weight"_.Bind(0.1),
         "dist_cost_weight"_.Bind(1.0), "near_cost_weight"_.Bind(0.5),
         "xml_file"_.Bind(std::string("pusher.xml")),
-        "reward_after_step"_.Bind(false),
-        "weighted_reward_info"_.Bind(false),
+        "reward_after_step"_.Bind(false), "weighted_reward_info"_.Bind(false),
         "reset_qvel_scale"_.Bind(0.005), "cylinder_x_min"_.Bind(-0.3),
         "cylinder_x_max"_.Bind(0.0), "cylinder_y_min"_.Bind(-0.2),
         "cylinder_y_max"_.Bind(0.2), "cylinder_dist_min"_.Bind(0.17));
@@ -151,9 +150,9 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
     mjtNum weighted_ctrl_cost = ctrl_cost * ctrl_cost_weight_;
 
     // reward and done
-    auto reward = static_cast<float>(-weighted_ctrl_cost -
-                                     dist_cost * dist_cost_weight_ -
-                                     near_cost * near_cost_weight_);
+    auto reward =
+        static_cast<float>(-weighted_ctrl_cost - dist_cost * dist_cost_weight_ -
+                           near_cost * near_cost_weight_);
     done_ = (++elapsed_step_ >= max_episode_steps_);
     WriteState(reward, ctrl_cost, dist_cost, near_cost);
   }
