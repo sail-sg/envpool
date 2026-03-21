@@ -19,13 +19,16 @@ load("@rules_cc//cc:defs.bzl", "cc_binary")
 
 licenses(["notice"])  # BSD 2-clause
 
-exports_files(["LICENSE"])
+exports_files([
+    "LICENSE",
+    "config.h",
+])
 
 genrule(
     name = "config_h",
-    srcs = ["config.h"],
+    srcs = ["@//third_party/nasm:config.h"],
     outs = ["config/config.h"],
-    cmd = "cp $(location config.h) $@",
+    cmd = "cp $(location @//third_party/nasm:config.h) $@",
 )
 
 cc_binary(
