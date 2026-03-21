@@ -20,9 +20,9 @@ from typing import Any, Callable, List, Tuple, Union, cast
 import numpy as np
 from jax import core, dtypes
 from jax import numpy as jnp
+from jax._src.lib import xla_client
 from jax.core import ShapedArray
 from jax.interpreters import xla
-from jax._src.lib import xla_client
 
 _core = cast(Any, core)
 _xla = cast(Any, xla)
