@@ -66,20 +66,23 @@ def workspace():
     maybe(
         http_archive,
         name = "com_google_absl",
-        sha256 = "497ebdc3a4885d9209b9bd416e8c3f71e7a1fb8af249f6c2a80b7cbeefcd7e21",
-        strip_prefix = "abseil-cpp-20230802.1",
+        sha256 = "05597c3c532197690a31ebad50a7c9c3fb682d3c5a681b20eb03655ffb4e9483",
+        strip_prefix = "abseil-cpp-20260107.1",
         urls = [
-            "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.zip",
+            "https://github.com/abseil/abseil-cpp/archive/refs/tags/20260107.1.zip",
         ],
     )
 
     maybe(
         http_archive,
         name = "com_github_gflags_gflags",
-        sha256 = "34af2f15cf7367513b352bdcd2493ab14ce43692d2dcd9dfc499492966c64dcf",
-        strip_prefix = "gflags-2.2.2",
+        sha256 = "f619a51371f41c0ad6837b2a98af9d4643b3371015d873887f7e8d3237320b2f",
+        strip_prefix = "gflags-2.3.0",
         urls = [
-            "https://github.com/gflags/gflags/archive/v2.2.2.tar.gz",
+            "https://github.com/gflags/gflags/archive/v2.3.0.tar.gz",
+        ],
+        patches = [
+            "//third_party/gflags:rules_cc_defs.patch",
         ],
     )
 
