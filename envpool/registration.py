@@ -18,9 +18,14 @@ import os
 from typing import Any, Dict, List, Tuple
 
 import gym
+import numpy as np
 from packaging import version
 
 base_path = os.path.abspath(os.path.dirname(__file__))
+
+# Gym 0.26 still references np.bool8, which NumPy 2 removed.
+if not hasattr(np, "bool8"):
+  np.bool8 = np.bool_  # type: ignore[attr-defined]
 
 
 class EnvRegistry:

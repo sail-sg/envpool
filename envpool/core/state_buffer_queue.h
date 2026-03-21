@@ -140,6 +140,10 @@ class StateBufferQueue {
    */
   std::vector<Array> Wait(std::size_t additional_done_count = 0) {
     std::unique_ptr<StateBuffer> newbuf = stock_buffer_.Get();
+    if (newbuf == nullptr) {
+      newbuf = std::make_unique<StateBuffer>(batch_, max_num_players_, specs_,
+                                             is_player_state_);
+    }
     std::size_t pos = done_ptr_.fetch_add(1);
     std::size_t offset = pos % queue_size_;
     auto arr = queue_[offset]->Wait(additional_done_count);

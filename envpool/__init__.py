@@ -13,6 +13,8 @@
 # limitations under the License.
 """EnvPool package for efficient RL environment simulation."""
 
+import numpy as np
+
 import envpool.entry  # noqa: F401
 from envpool.registration import (
   list_all_envs,
@@ -24,7 +26,11 @@ from envpool.registration import (
   register,
 )
 
-__version__ = "0.8.4"
+# Gym 0.26 still references np.bool8, which NumPy 2 removed.
+if not hasattr(np, "bool8"):
+  np.bool8 = np.bool_  # type: ignore[attr-defined]
+
+__version__ = "0.9.0"
 __all__ = [
   "register",
   "make",

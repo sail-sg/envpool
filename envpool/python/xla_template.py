@@ -22,7 +22,7 @@ from jax import core, dtypes
 from jax import numpy as jnp
 from jax.core import ShapedArray
 from jax.interpreters import xla
-from jax.lib import xla_client  # type: ignore[attr-defined,unused-ignore]
+from jax._src.lib import xla_client
 
 _core = cast(Any, core)
 _xla = cast(Any, xla)
@@ -54,10 +54,13 @@ def _make_xla_function(
   specs: Tuple[Tuple[Any, ...], Tuple[Any, ...]],
   capsules: Tuple[Any, Any],
 ) -> Callable:
-  if not hasattr(_xla, "backend_specific_translations"):
+  if not (
+    hasattr(_core, "Primitive") and
+    hasattr(_xla, "backend_specific_translations")
+  ):
     raise RuntimeError(
       "XLA is unavailable because this JAX version removed the legacy "
-      "backend translation API used by envpool."
+      "primitive/translation APIs used by envpool."
     )
   in_specs, out_specs = specs
   in_specs = _normalize_specs(in_specs)
