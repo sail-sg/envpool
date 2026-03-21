@@ -160,10 +160,10 @@ def workspace():
     maybe(
         http_archive,
         name = "opencv",
-        sha256 = "62f650467a60a38794d681ae7e66e3e8cfba38f445e0bf87867e2f2cdc8be9d5",
-        strip_prefix = "opencv-4.8.1",
+        sha256 = "1d40ca017ea51c533cf9fd5cbde5b5fe7ae248291ddf2af99d4c17cf8e13017d",
+        strip_prefix = "opencv-4.13.0",
         urls = [
-            "https://github.com/opencv/opencv/archive/refs/tags/4.8.1.tar.gz",
+            "https://github.com/opencv/opencv/archive/refs/tags/4.13.0.tar.gz",
         ],
         build_file = "//third_party/opencv:opencv.BUILD",
     )
@@ -171,10 +171,10 @@ def workspace():
     maybe(
         http_archive,
         name = "pugixml",
-        sha256 = "610f98375424b5614754a6f34a491adbddaaec074e9044577d965160ec103d2e",
-        strip_prefix = "pugixml-1.14/src",
+        sha256 = "b39647064d9e28297a34278bfb897092bf33b7c487906ddfc094c9e8868bddcb",
+        strip_prefix = "pugixml-1.15/src",
         urls = [
-            "https://github.com/zeux/pugixml/archive/refs/tags/v1.14.tar.gz",
+            "https://github.com/zeux/pugixml/archive/refs/tags/v1.15.tar.gz",
         ],
         build_file = "//third_party/pugixml:pugixml.BUILD",
     )
@@ -182,10 +182,10 @@ def workspace():
     maybe(
         http_archive,
         name = "ale",
-        sha256 = "28960616cd89c18925ced7bbdeec01ab0b2ebd2d8ce5b7c88930e97381b4c3b5",
-        strip_prefix = "Arcade-Learning-Environment-0.8.1",
+        sha256 = "d6ac9406690bb3533b37a99253bdfc59bc27779c5e1b6855c763d0b367bcbf96",
+        strip_prefix = "Arcade-Learning-Environment-0.11.2",
         urls = [
-            "https://github.com/mgbellemare/Arcade-Learning-Environment/archive/refs/tags/v0.8.1.tar.gz",
+            "https://github.com/Farama-Foundation/Arcade-Learning-Environment/archive/refs/tags/v0.11.2.tar.gz",
         ],
         build_file = "//third_party/ale:ale.BUILD",
     )
@@ -226,11 +226,11 @@ def workspace():
     maybe(
         http_archive,
         name = "sdl2",
-        sha256 = "888b8c39f36ae2035d023d1b14ab0191eb1d26403c3cf4d4d5ede30e66a4942c",
-        strip_prefix = "SDL2-2.28.4",
+        sha256 = "5f5993c530f084535c65a6879e9b26ad441169b3e25d789d83287040a9ca5165",
+        strip_prefix = "SDL2-2.32.10",
         urls = [
-            "https://www.libsdl.org/release/SDL2-2.28.4.tar.gz",
-            "https://github.com/libsdl-org/SDL/releases/download/release-2.28.4/SDL2-2.28.4.tar.gz",
+            "https://www.libsdl.org/release/SDL2-2.32.10.tar.gz",
+            "https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.tar.gz",
         ],
         build_file = "//third_party/sdl2:sdl2.BUILD",
     )
@@ -271,10 +271,10 @@ def workspace():
     maybe(
         http_archive,
         name = "vizdoom",
-        sha256 = "e379a242ada7e1028b7a635da672b0936d99da3702781b76a4400b83602d78c4",
-        strip_prefix = "ViZDoom-1.1.13/src/vizdoom/",
+        sha256 = "76ddf186d7f093ef85cbcb0e7e387757d60e45190eb5da6d075aab31ffc316ed",
+        strip_prefix = "ViZDoom-1.3.0/src/vizdoom/",
         urls = [
-            "https://github.com/Farama-Foundation/ViZDoom/archive/refs/tags/1.1.13.tar.gz",
+            "https://github.com/Farama-Foundation/ViZDoom/archive/refs/tags/1.3.0.tar.gz",
         ],
         build_file = "//third_party/vizdoom:vizdoom.BUILD",
         patches = [
@@ -285,10 +285,10 @@ def workspace():
     maybe(
         http_archive,
         name = "vizdoom_lib",
-        sha256 = "e379a242ada7e1028b7a635da672b0936d99da3702781b76a4400b83602d78c4",
-        strip_prefix = "ViZDoom-1.1.13/",
+        sha256 = "76ddf186d7f093ef85cbcb0e7e387757d60e45190eb5da6d075aab31ffc316ed",
+        strip_prefix = "ViZDoom-1.3.0/",
         urls = [
-            "https://github.com/Farama-Foundation/ViZDoom/archive/refs/tags/1.1.13.tar.gz",
+            "https://github.com/Farama-Foundation/ViZDoom/archive/refs/tags/1.3.0.tar.gz",
         ],
         build_file = "//third_party/vizdoom_lib:vizdoom_lib.BUILD",
     )
@@ -340,10 +340,10 @@ def workspace():
     maybe(
         http_archive,
         name = "box2d",
-        sha256 = "d6b4650ff897ee1ead27cf77a5933ea197cbeef6705638dd181adc2e816b23c2",
-        strip_prefix = "box2d-2.4.1",
+        sha256 = "85b9b104d256c985e6e244b4227d447897fac429071cc114e5cc819dae848852",
+        strip_prefix = "box2d-2.4.2",
         urls = [
-            "https://github.com/erincatto/box2d/archive/refs/tags/v2.4.1.tar.gz",
+            "https://github.com/erincatto/box2d/archive/refs/tags/v2.4.2.tar.gz",
         ],
         build_file = "//third_party/box2d:box2d.BUILD",
     )
