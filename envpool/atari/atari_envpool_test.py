@@ -171,10 +171,7 @@ class _AtariEnvPoolTest(absltest.TestCase):
       num_threads=2,
       thread_affinity_offset=0,
     )
-    try:
-      handle, recv, send, step = env.xla()
-    except RuntimeError as exc:
-      self.skipTest(str(exc))
+    handle, recv, send, step = env.xla()
     env.async_reset()
     handle, states = recv(handle)
     info = states[-1]
@@ -209,10 +206,7 @@ class _AtariEnvPoolTest(absltest.TestCase):
       num_threads=2,
       thread_affinity_offset=0,
     )
-    try:
-      handle, recv, send, step = env1.xla()
-    except RuntimeError as exc:
-      self.skipTest(str(exc))
+    handle, recv, send, step = env1.xla()
     env1.async_reset()
     env2.async_reset()
 
