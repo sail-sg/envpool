@@ -28,7 +28,7 @@ from envpool.registration import (
 
 # Gym 0.26 still references np.bool8, which NumPy 2 removed.
 if not hasattr(np, "bool8"):
-  setattr(np, "bool8", np.bool_)
+  np.__dict__["bool8"] = np.bool_
 
 __version__ = "0.9.0"
 __all__ = [
