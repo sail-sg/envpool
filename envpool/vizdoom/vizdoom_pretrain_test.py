@@ -177,7 +177,9 @@ class _VizdoomPretrainTest(absltest.TestCase):
           "D3_battle",
           model_path,
           "d3.cfg",
-          {"KILLCOUNT": [1, 0]},
+          {
+            "KILLCOUNT": [1, 0]
+          },
         ),
       )
       proc.start()
