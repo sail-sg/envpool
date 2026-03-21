@@ -49,4 +49,3 @@ CheckOptions:
   - { key: readability-identifier-naming.VariableCase,          value: lower_case }
 WarningsAsErrors: '*'
 HeaderFilterRegex: '/envpool/'
-AnalyzeTemporaryDtors: true

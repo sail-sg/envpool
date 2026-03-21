@@ -141,7 +141,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
     // buffers for the game to outwrite observations each step
     game_->reward_ptr = &reward_;
     game_->first_ptr = &done_;
-    game_->obs_bufs.emplace_back(static_cast<void*>(obs_.Data()));
+    game_->obs_bufs.emplace_back(obs_.Data());
     game_->info_bufs.emplace_back(static_cast<void*>(&level_seed_));
     game_->info_bufs.emplace_back(static_cast<void*>(&prev_level_seed_));
     game_->info_bufs.emplace_back(static_cast<void*>(&prev_level_complete_));

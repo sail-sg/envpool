@@ -44,14 +44,14 @@ class Value {
 template <char... C>
 class Key {
  public:
-  static constexpr const inline char kStr[sizeof...(C) + 1]{C...,  // NOLINT
-                                                            '\0'};
-  static constexpr const inline std::string_view kStrView{kStr, sizeof...(C)};
+  static constexpr const char kStr[sizeof...(C) + 1]{C...,  // NOLINT
+                                                     '\0'};
+  static constexpr const std::string_view kStrView{kStr, sizeof...(C)};
   template <typename Type>
-  static constexpr inline auto Bind(Type&& v) {
+  static constexpr auto Bind(Type&& v) {
     return Value<Key, Type>(std::forward<Type>(v));
   }
-  static inline std::string Str() { return {kStrView.data(), kStrView.size()}; }
+  static std::string Str() { return {kStrView.data(), kStrView.size()}; }
 };
 
 template <class CharT, CharT... CS>
@@ -88,7 +88,7 @@ class NamedVector {
   NamedVector(const Keys& keys, Vector* values) : values_(values) {}
   template <typename Key,
             std::enable_if_t<any_match<Key, Keys>::value, bool> = true>
-  inline decltype(auto) operator[](const Key& key) const {
+  decltype(auto) operator[](const Key& key) const {
     return Take<Key, Keys, Vector&>(key, *values_);
   }
 
@@ -169,12 +169,12 @@ class Dict : public std::decay_t<TupleOrVector> {
    */
   template <typename Key,
             std::enable_if_t<any_match<Key, Keys>::value, bool> = true>
-  inline decltype(auto) operator[](const Key& key) {
+  decltype(auto) operator[](const Key& key) {
     return Take<Key, Keys, Values&>(key, *this);
   }
   template <typename Key,
             std::enable_if_t<any_match<Key, Keys>::value, bool> = true>
-  inline decltype(auto) operator[](const Key& key) const {
+  decltype(auto) operator[](const Key& key) const {
     return Take<Key, Keys, const Values&>(key, *this);
   }
 

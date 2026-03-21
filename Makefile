@@ -13,7 +13,10 @@ BAZEL          = USE_BAZEL_VERSION=$(BAZEL_VERSION) $(BAZELISK_BIN)
 DATE           = $(shell date "+%Y-%m-%d")
 DOCKER_TAG     = $(DATE)-$(COMMIT_HASH)
 DOCKER_USER    = trinkle23897
-PATH           := $(HOME)/go/bin:$(PATH)
+CLANG_TIDY_MAJOR = 18
+CLANG_TIDY_BIN = clang-tidy-$(CLANG_TIDY_MAJOR)
+CLANG_TIDY_WRAPPER_DIR = $(HOME)/.cache/$(PROJECT_NAME)/bin
+PATH           := $(CLANG_TIDY_WRAPPER_DIR):$(HOME)/go/bin:$(PATH)
 
 # installation
 
@@ -38,7 +41,9 @@ clang-format-install:
 	command -v clang-format || sudo apt-get install -y clang-format
 
 clang-tidy-install:
-	command -v clang-tidy || sudo apt-get install -y clang-tidy
+	command -v $(CLANG_TIDY_BIN) || sudo apt-get install -y $(CLANG_TIDY_BIN)
+	mkdir -p $(CLANG_TIDY_WRAPPER_DIR)
+	ln -sf $$(command -v $(CLANG_TIDY_BIN)) $(CLANG_TIDY_WRAPPER_DIR)/clang-tidy
 
 go-install:
 	# requires go >= 1.16

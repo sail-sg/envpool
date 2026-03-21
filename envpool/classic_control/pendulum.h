@@ -77,9 +77,12 @@ class PendulumEnv : public Env<PendulumEnvSpec> {
   void Step(const Action& action) override {
     done_ = (++elapsed_step_ >= max_episode_steps_);
     float act = action["action"_];
-    double u = act < -kMaxTorque  ? -kMaxTorque
-               : act > kMaxTorque ? kMaxTorque
-                                  : act;
+    double u = act;
+    if (act < -kMaxTorque) {
+      u = -kMaxTorque;
+    } else if (act > kMaxTorque) {
+      u = kMaxTorque;
+    }
     double cost =
         theta_ * theta_ + 0.1 * theta_dot_ * theta_dot_ + 0.001 * u * u;
     double new_theta_dot =
@@ -87,9 +90,12 @@ class PendulumEnv : public Env<PendulumEnvSpec> {
     if (version_ == 0) {
       theta_ += new_theta_dot * kDt;
     }
-    theta_dot_ = new_theta_dot < -kMaxSpeed  ? -kMaxSpeed
-                 : new_theta_dot > kMaxSpeed ? kMaxSpeed
-                                             : new_theta_dot;
+    theta_dot_ = new_theta_dot;
+    if (new_theta_dot < -kMaxSpeed) {
+      theta_dot_ = -kMaxSpeed;
+    } else if (new_theta_dot > kMaxSpeed) {
+      theta_dot_ = kMaxSpeed;
+    }
     if (version_ == 1) {
       theta_ += new_theta_dot * kDt;
     }

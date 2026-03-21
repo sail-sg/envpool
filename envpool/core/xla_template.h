@@ -23,6 +23,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <cstring>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -49,10 +50,8 @@ void ToArray(void** raw, std::array<void*, N>* array) {
 
 template <typename Class, typename CC>
 struct CustomCall {
-  using InSpecs =
-      typename std::invoke_result<decltype(CC::InSpecs), Class*>::type;
-  using OutSpecs =
-      typename std::invoke_result<decltype(CC::OutSpecs), Class*>::type;
+  using InSpecs = std::invoke_result_t<decltype(CC::InSpecs), Class*>;
+  using OutSpecs = std::invoke_result_t<decltype(CC::OutSpecs), Class*>;
   using In = std::array<void*, std::tuple_size_v<InSpecs>>;
   using Out = std::array<void*, std::tuple_size_v<OutSpecs>>;
 
@@ -62,16 +61,17 @@ struct CustomCall {
   }
 
   static void Cpu(void* out, const void** in) {
-    Class* obj = *reinterpret_cast<Class**>(const_cast<void*>(in[0]));
+    Class* obj = nullptr;
+    std::memcpy(reinterpret_cast<void*>(&obj), in[0], sizeof(Class*));
     in += 1;
     In in_arr;
     Out out_arr;
     ToArray(in, &in_arr);
     if (std::tuple_size<Out>::value == 0) {
-      std::memcpy(out, &obj, sizeof(Class*));
+      std::memcpy(out, reinterpret_cast<const void*>(&obj), sizeof(Class*));
     } else {
       void** outs = reinterpret_cast<void**>(out);
-      std::memcpy(outs[0], &obj, sizeof(Class*));
+      std::memcpy(outs[0], reinterpret_cast<const void*>(&obj), sizeof(Class*));
       ToArray(outs + 1, &out_arr);
     }
     CC::Cpu(obj, in_arr, out_arr);
@@ -79,7 +79,8 @@ struct CustomCall {
 
   static void Gpu(cudaStream_t stream, void** buffers, const char* opaque,
                   std::size_t opaque_len) {
-    Class* obj = *reinterpret_cast<Class**>(const_cast<char*>(opaque));
+    Class* obj = nullptr;
+    std::memcpy(reinterpret_cast<void*>(&obj), opaque, sizeof(Class*));
     buffers += 1;
     In in_arr;
     Out out_arr;

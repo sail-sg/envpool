@@ -17,6 +17,7 @@
 #ifndef ENVPOOL_CORE_TUPLE_UTILS_H_
 #define ENVPOOL_CORE_TUPLE_UTILS_H_
 
+#include <array>
 #include <functional>
 #include <tuple>
 #include <type_traits>
@@ -30,8 +31,12 @@ template <class T, class... Types>
 struct Index<T, std::tuple<Types...>> {
   static_assert((std::is_same_v<T, Types> || ...), "Type not found in tuple");
   static constexpr std::size_t kValue = [] {
+    constexpr std::array<bool, sizeof...(Types)> k_matches{
+        std::is_same_v<T, Types>...};
     std::size_t i = 0;
-    ((std::is_same_v<T, Types> ? false : (++i, true)) && ...);
+    while (!k_matches[i]) {
+      ++i;
+    }
     return i;
   }();
 };

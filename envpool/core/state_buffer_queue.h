@@ -85,7 +85,7 @@ class StateBufferQueue {
     // hardcode here :(
     std::size_t create_buffer_thread_num = std::max(1UL, processor_count / 64);
     for (std::size_t i = 0; i < create_buffer_thread_num; ++i) {
-      create_buffer_thread_.emplace_back(std::thread([&]() {
+      create_buffer_thread_.emplace_back([&]() {
         while (true) {
           stock_buffer_.Put(std::make_unique<StateBuffer>(
               batch_, max_num_players_, specs_, is_player_state_));
@@ -93,7 +93,7 @@ class StateBufferQueue {
             break;
           }
         }
-      }));
+      });
     }
   }
 

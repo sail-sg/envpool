@@ -48,10 +48,12 @@ cc_binary(
         "stdlib/*.c",
         "x86/*.c",
         "x86/*.h",
-        "version.h",
         "zlib/*.c",
         "zlib/*.h",
-    ]) + [":config_h"] + select({
+    ]) + [
+        "version.h",
+        ":config_h",
+    ] + select({
         ":windows": ["config/msvc.h"],
         "//conditions:default": [],
     }),

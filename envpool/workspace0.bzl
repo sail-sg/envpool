@@ -147,6 +147,9 @@ def workspace():
             "https://github.com/progschj/ThreadPool/archive/9a42ec1329f259a5f4881a291db1dcb8f2ad9040.zip",
         ],
         build_file = "//third_party/threadpool:threadpool.BUILD",
+        patches = [
+            "//third_party/threadpool:invoke_result.patch",
+        ],
     )
 
     maybe(
@@ -207,10 +210,10 @@ def workspace():
     maybe(
         http_archive,
         name = "libjpeg_turbo",
-        sha256 = "b3090cd37b5a8b3e4dbd30a1311b3989a894e5d3c668f14cbc6739d77c9402b7",
-        strip_prefix = "libjpeg-turbo-2.0.5",
+        sha256 = "075920b826834ac4ddf97661cc73491047855859affd671d52079c6867c1c6c0",
+        strip_prefix = "libjpeg-turbo-3.1.3",
         urls = [
-            "https://github.com/libjpeg-turbo/libjpeg-turbo/archive/2.0.5.tar.gz",
+            "https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.1.3/libjpeg-turbo-3.1.3.tar.gz",
         ],
         build_file = "//third_party/jpeg:jpeg.BUILD",
     )
@@ -282,10 +285,10 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         name = "boost",
         build_file = "@com_github_nelhage_rules_boost//:boost.BUILD",
         patch_cmds = ["rm -f doc/pdf/BUILD"],
-        sha256 = "6478edfe2f3305127cffe8caf73ea0176c53769f4bf1585be237eb30798c3b8e",
-        strip_prefix = "boost_1_83_0",
+        sha256 = "e848446c6fec62d8a96b44ed7352238b3de040b8b9facd4d6963b32f541e00f5",
+        strip_prefix = "boost-1.90.0",
         urls = [
-            "https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2",
+            "https://github.com/boostorg/boost/releases/download/boost-1.90.0/boost-1.90.0-b2-nodocs.tar.gz",
         ],
     )
 
