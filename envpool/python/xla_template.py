@@ -14,11 +14,10 @@
 """xla template on python side."""
 
 from collections import namedtuple
-from typing import Any, Callable, List, Tuple, Union, cast
+from typing import Any, Callable, List, Tuple, cast
 
 import numpy as np
 from jax import ShapeDtypeStruct, dtypes, ffi
-from jax import numpy as jnp
 
 
 def _normalize_specs(
@@ -71,7 +70,9 @@ def _make_xla_function(
       tuple(_layout(shape) for shape, _ in out_specs)
       if len(out_specs) > 1 else _layout(out_specs[0][0])
     ),
-    custom_call_api_version=0,
+    # JAX target registration uses api_version=0 for the legacy untyped
+    # handler, but StableHLO custom_call uses API_VERSION_ORIGINAL == 1.
+    custom_call_api_version=1,
     legacy_backend_config=cast(Any, handle),
   )
 
