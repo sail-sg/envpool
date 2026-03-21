@@ -14,37 +14,26 @@
 """xla template on python side."""
 
 from collections import namedtuple
-from functools import partial
-from typing import Any, Callable, List, Tuple, Union, cast
+from typing import Any, Callable, List, Tuple, cast
 
 import numpy as np
-from jax import core, dtypes
-from jax import numpy as jnp
-from jax.core import ShapedArray
-from jax.interpreters import xla
-from jax.lib import xla_client  # type: ignore[attr-defined,unused-ignore]
-
-_core = cast(Any, core)
-_xla = cast(Any, xla)
-
-
-def _shape_with_layout(
-  specs: Tuple[Tuple[List[int], Any], ...]
-) -> Tuple[xla_client.Shape, ...]:
-  return tuple(
-    xla_client.Shape
-    .array_shape(dtype, shape, tuple(range(len(shape) -
-                                           1, -1, -1))) if len(shape) >
-    0 else xla_client.Shape.scalar_shape(dtype) for shape, dtype in specs
-  )
+from jax import ShapeDtypeStruct, dtypes, ffi
 
 
 def _normalize_specs(
   specs: Tuple[Tuple[Any, List[int]], ...]
-) -> Tuple[Tuple[List[int], Any], ...]:
+) -> Tuple[Tuple[Tuple[int, ...], Any], ...]:
   return tuple(
-    (shape, dtypes.canonicalize_dtype(dtype)) for dtype, shape in specs
+    (tuple(shape), dtypes.canonicalize_dtype(dtype)) for dtype, shape in specs
   )
+
+
+def _shape_dtype_struct(shape: Tuple[int, ...], dtype: Any) -> ShapeDtypeStruct:
+  return ShapeDtypeStruct(shape, dtype)
+
+
+def _layout(shape: Tuple[int, ...]) -> Tuple[int, ...]:
+  return tuple(range(len(shape)))
 
 
 def _make_xla_function(
@@ -54,63 +43,41 @@ def _make_xla_function(
   specs: Tuple[Tuple[Any, ...], Tuple[Any, ...]],
   capsules: Tuple[Any, Any],
 ) -> Callable:
-  if not hasattr(_xla, "backend_specific_translations"):
-    raise RuntimeError(
-      "XLA is unavailable because this JAX version removed the legacy "
-      "backend translation API used by envpool."
-    )
   in_specs, out_specs = specs
   in_specs = _normalize_specs(in_specs)
   out_specs = _normalize_specs(out_specs)
   cpu_capsule, gpu_capsule = capsules
-  xla_client.register_custom_call_target(
-    f"{type(obj).__name__}_{id(obj)}_{name}_cpu".encode(),
+  call_target_name = f"{type(obj).__name__}_{id(obj)}_{name}"
+  ffi.register_ffi_target(
+    call_target_name,
     cpu_capsule,
-    platform="cpu"
+    platform="cpu",
+    api_version=0,
   )
-  xla_client.register_custom_call_target(
-    f"{type(obj).__name__}_{id(obj)}_{name}_gpu".encode(),
+  ffi.register_ffi_target(
+    call_target_name,
     gpu_capsule,
     platform="gpu",
+    api_version=0,
   )
-
-  def abstract(
-    *args: List[jnp.ndarray]
-  ) -> Union[ShapedArray, Tuple[ShapedArray, ...]]:
-    if len(out_specs) > 1:
-      return tuple(ShapedArray(*spec) for spec in out_specs)
-    else:
-      return ShapedArray(*out_specs[0])
-
-  def translation(c: Any, *args: Any, platform: str = "cpu") -> Any:
-    output_shape_with_layout = _shape_with_layout(out_specs)
-    if len(out_specs) == 1:
-      output_shape = output_shape_with_layout[0]
-    else:
-      output_shape = xla_client.Shape.tuple_shape(output_shape_with_layout)
-    return xla_client.ops.CustomCallWithLayout(
-      c,
-      f"{type(obj).__name__}_{id(obj)}_{name}_{platform}".encode(),
-      operands=args,
-      operand_shapes_with_layout=_shape_with_layout(in_specs),
-      shape_with_layout=output_shape,
-      opaque=handle,
-      has_side_effect=True,
-    )
-
-  prim = _core.Primitive(f"{type(obj).__name__}_{id(obj)}_{name}")
-  prim.multiple_results = (len(out_specs) > 1)
-  prim.def_impl(partial(xla.apply_primitive, prim))
-  prim.def_abstract_eval(abstract)
-  _xla.backend_specific_translations["cpu"][prim] = partial(
-    translation, platform="cpu"
-  )
-  _xla.backend_specific_translations["gpu"][prim] = partial(
-    translation, platform="gpu"
+  result_specs = tuple(_shape_dtype_struct(*spec) for spec in out_specs)
+  xla_func = ffi.ffi_call(
+    call_target_name,
+    result_specs if len(result_specs) > 1 else result_specs[0],
+    has_side_effect=True,
+    input_layouts=tuple(_layout(shape) for shape, _ in in_specs),
+    output_layouts=(
+      tuple(_layout(shape) for shape, _ in out_specs)
+      if len(out_specs) > 1 else _layout(out_specs[0][0])
+    ),
+    # JAX target registration uses api_version=0 for the legacy untyped
+    # handler, but StableHLO custom_call uses API_VERSION_ORIGINAL == 1.
+    custom_call_api_version=1,
+    legacy_backend_config=cast(Any, handle),
   )
 
   def call(*args: Any) -> Any:
-    return prim.bind(*args)
+    return xla_func(*args)
 
   return call
 

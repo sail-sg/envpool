@@ -24,8 +24,8 @@ gymnasium==1.2.3
 h5py==3.16.0
 idna==3.11
 imageio==2.37.3
-jax==0.4.38
-jaxlib==0.4.38
+jax==0.9.2
+jaxlib==0.9.2
 jinja2==3.1.6
 labmaze==1.0.6
 llvmlite==0.46.0
@@ -39,7 +39,7 @@ mujoco==3.6.0
 mujoco-py==2.1.2.14
 networkx==3.6.1
 numba==0.64.0
-numpy==1.26.4
+numpy==2.2.6
 nvidia-cublas-cu12==12.8.4.1
 nvidia-cuda-cupti-cu12==12.8.90
 nvidia-cuda-nvrtc-cu12==12.8.93
@@ -55,7 +55,7 @@ nvidia-nccl-cu12==2.27.5
 nvidia-nvjitlink-cu12==12.8.93
 nvidia-nvshmem-cu12==3.4.5
 nvidia-nvtx-cu12==12.8.90
-opencv-python-headless==4.11.0.86
+opencv-python-headless==4.12.0.88
 opt-einsum==3.4.0
 optree==0.19.0
 packaging==26.0

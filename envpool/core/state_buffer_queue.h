@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <list>
 #include <memory>
+#include <mutex>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -43,6 +44,7 @@ class StateBufferQueue {
 
   // Create stock statebuffers in a background thread
   CircularBuffer<std::unique_ptr<StateBuffer>> stock_buffer_;
+  std::mutex stock_buffer_put_mu_;
   std::vector<std::thread> create_buffer_thread_;
   std::atomic<bool> quit_;
 
@@ -87,8 +89,12 @@ class StateBufferQueue {
     for (std::size_t i = 0; i < create_buffer_thread_num; ++i) {
       create_buffer_thread_.emplace_back([&]() {
         while (true) {
-          stock_buffer_.Put(std::make_unique<StateBuffer>(
-              batch_, max_num_players_, specs_, is_player_state_));
+          auto buffer = std::make_unique<StateBuffer>(batch_, max_num_players_,
+                                                      specs_, is_player_state_);
+          {
+            std::lock_guard<std::mutex> lock(stock_buffer_put_mu_);
+            stock_buffer_.Put(std::move(buffer));
+          }
           if (quit_) {
             break;
           }
@@ -140,6 +146,10 @@ class StateBufferQueue {
    */
   std::vector<Array> Wait(std::size_t additional_done_count = 0) {
     std::unique_ptr<StateBuffer> newbuf = stock_buffer_.Get();
+    if (newbuf == nullptr) {
+      newbuf = std::make_unique<StateBuffer>(batch_, max_num_players_, specs_,
+                                             is_player_state_);
+    }
     std::size_t pos = done_ptr_.fetch_add(1);
     std::size_t offset = pos % queue_size_;
     auto arr = queue_[offset]->Wait(additional_done_count);

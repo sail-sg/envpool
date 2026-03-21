@@ -716,7 +716,7 @@ If we want to add ``tianshou`` as a build dependency, in ``setup.cfg``:
 
     [options]
     packages = find:
-    python_requires = >=3.10
+    python_requires = >=3.11
     install_requires =
         dm-env>=1.4
         gym>=0.18
