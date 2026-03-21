@@ -148,3 +148,4 @@ log
 _vizdoom*
 MUJOCO_LOG.TXT
 .vscode/
+plan.md

@@ -218,11 +218,40 @@ def workspace():
     maybe(
         http_archive,
         name = "nasm",
-        sha256 = "63ec86477ad3f0f6292325fd89e1d93aea2e2fd490070863f17d48f7cd387011",
-        strip_prefix = "nasm-2.13.03",
+        sha256 = "af2f241ecc061205d73ba4f781f075d025dabaeab020b676b7db144bf7015d6d",
+        strip_prefix = "nasm-nasm-3.01",
         urls = [
-            "https://www.nasm.us/pub/nasm/releasebuilds/2.13.03/nasm-2.13.03.tar.bz2",
+            "https://github.com/netwide-assembler/nasm/archive/refs/tags/nasm-3.01.tar.gz",
         ],
+        patch_cmds = ["""
+set -eux
+perl -Iperllib -I. x86/preinsns.pl x86/insns.dat x86/insns.xda
+perl -Iperllib -I. x86/insns.pl -fc x86/insns.xda x86/iflag.c
+perl -Iperllib -I. x86/insns.pl -fh x86/insns.xda x86/iflaggen.h
+perl -Iperllib -I. x86/insns.pl -b x86/insns.xda x86/insnsb.c
+perl -Iperllib -I. x86/insns.pl -a x86/insns.xda x86/insnsa.c
+perl -Iperllib -I. x86/insns.pl -d x86/insns.xda x86/insnsd.c
+perl -Iperllib -I. x86/insns.pl -i x86/insns.xda x86/insnsi.h
+perl -Iperllib -I. x86/insns.pl -n x86/insns.xda x86/insnsn.c
+perl -Iperllib -I. version.pl h < version > version.h
+perl -Iperllib -I. version.pl mac < version > version.mac
+perl -Iperllib -I. x86/regs.pl c x86/regs.dat > x86/regs.c
+perl -Iperllib -I. x86/regs.pl fc x86/regs.dat > x86/regflags.c
+perl -Iperllib -I. x86/regs.pl dc x86/regs.dat > x86/regdis.c
+perl -Iperllib -I. x86/regs.pl dh x86/regs.dat > x86/regdis.h
+perl -Iperllib -I. x86/regs.pl vc x86/regs.dat > x86/regvals.c
+perl -Iperllib -I. x86/regs.pl h x86/regs.dat > x86/regs.h
+perl -Iperllib -I. asm/tokhash.pl c x86/insnsn.c x86/regs.dat asm/tokens.dat > asm/tokhash.c
+perl -Iperllib -I. asm/tokhash.pl h x86/insnsn.c x86/regs.dat asm/tokens.dat > asm/tokens.h
+perl -Iperllib -I. asm/pptok.pl h asm/pptok.dat asm/pptok.h
+perl -Iperllib -I. asm/pptok.pl c asm/pptok.dat asm/pptok.c
+perl -Iperllib -I. asm/pptok.pl ph asm/pptok.dat asm/pptok.ph
+perl -Iperllib -I. nasmlib/perfhash.pl h asm/directiv.dat asm/directiv.h
+perl -Iperllib -I. nasmlib/perfhash.pl c asm/directiv.dat asm/directbl.c
+perl -Iperllib -I. asm/warnings.pl c asm/warnings_c.h asm/warnings.dat
+perl -Iperllib -I. asm/warnings.pl h include/warnings.h asm/warnings.dat
+perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
+"""],
         build_file = "//third_party/nasm:nasm.BUILD",
     )
 
