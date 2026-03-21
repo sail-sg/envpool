@@ -26,6 +26,7 @@ from jax.interpreters import xla
 
 _core = cast(Any, core)
 _xla = cast(Any, xla)
+_xla_client = cast(Any, xla_client)
 
 
 def _shape_with_layout(
@@ -66,12 +67,12 @@ def _make_xla_function(
   in_specs = _normalize_specs(in_specs)
   out_specs = _normalize_specs(out_specs)
   cpu_capsule, gpu_capsule = capsules
-  xla_client.register_custom_call_target(
+  _xla_client.register_custom_call_target(
     f"{type(obj).__name__}_{id(obj)}_{name}_cpu".encode(),
     cpu_capsule,
     platform="cpu"
   )
-  xla_client.register_custom_call_target(
+  _xla_client.register_custom_call_target(
     f"{type(obj).__name__}_{id(obj)}_{name}_gpu".encode(),
     gpu_capsule,
     platform="gpu",
@@ -91,7 +92,7 @@ def _make_xla_function(
       output_shape = output_shape_with_layout[0]
     else:
       output_shape = xla_client.Shape.tuple_shape(output_shape_with_layout)
-    return xla_client.ops.CustomCallWithLayout(
+    return _xla_client.ops.CustomCallWithLayout(
       c,
       f"{type(obj).__name__}_{id(obj)}_{name}_{platform}".encode(),
       operands=args,
