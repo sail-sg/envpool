@@ -1,8 +1,8 @@
 ViZDoom
 =======
 
-We use ``vizdoom==1.1.13`` as the codebase. See
-https://github.com/mwydmuch/ViZDoom/tree/1.1.13
+We use ``vizdoom==1.3.0`` as the codebase. See
+https://github.com/Farama-Foundation/ViZDoom/tree/1.3.0
 
 
 Env Wrappers
@@ -51,10 +51,10 @@ Options
 * ``iwad_path (str)``: the rendering resource package path, default to
   ``vizdoom/bin/freedoom2``;
 * ``map_id (str)``: the vizdoom map id, see `setDoomMap
-  <https://github.com/mwydmuch/ViZDoom/blob/master/doc/DoomGame.md#setDoomMap>`_,
+  <https://github.com/Farama-Foundation/ViZDoom/blob/1.3.0/doc/DoomGame.md#setDoomMap>`_,
   available options are ``"map01", "map02", ...``, default to ``"map01"``;
 * ``game_args (str)``: the args string for vizdoom game, see `addGameArgs
-  <https://github.com/mwydmuch/ViZDoom/blob/master/doc/DoomGame.md#addGameArgs>`_,
+  <https://github.com/Farama-Foundation/ViZDoom/blob/1.3.0/doc/DoomGame.md#addGameArgs>`_,
   default to ``""``;
 * ``reward_config (Dict[str, Tuple[float, float]])``: how to calculate the
   reward (see below), default to ``{"FRAGCOUNT": [1, -1.5], "KILLCOUNT": [1, 0],
