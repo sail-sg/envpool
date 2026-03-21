@@ -1,8 +1,8 @@
 Minigrid
 ========
 
-We use ``minigrid==2.1.0`` as the codebase.
-See https://github.com/Farama-Foundation/Minigrid/tree/v2.1.0
+We use ``minigrid==3.0.0`` as the codebase.
+See https://github.com/Farama-Foundation/Minigrid/tree/v3.0.0
 
 
 Empty
