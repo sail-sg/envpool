@@ -81,8 +81,8 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
-        legacy_healthy_reward_(spec.config["legacy_healthy_reward"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
+        legacy_healthy_reward_(spec.config["legacy_healthy_reward"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
@@ -135,11 +135,11 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
     mjtNum xv = (x_after - x_before) / dt;
     // reward and done
     bool is_healthy = IsHealthy();
-    mjtNum healthy_reward =
-        (legacy_healthy_reward_ ? (terminate_when_unhealthy_ || is_healthy)
-                                : is_healthy)
-            ? healthy_reward_
-            : 0.0;
+    bool give_healthy_reward = is_healthy;
+    if (legacy_healthy_reward_) {
+      give_healthy_reward = terminate_when_unhealthy_ || is_healthy;
+    }
+    mjtNum healthy_reward = give_healthy_reward ? healthy_reward_ : 0.0;
     auto reward = static_cast<float>(xv * forward_reward_weight_ +
                                      healthy_reward - ctrl_cost);
     ++elapsed_step_;

@@ -147,6 +147,9 @@ def workspace():
             "https://github.com/progschj/ThreadPool/archive/9a42ec1329f259a5f4881a291db1dcb8f2ad9040.zip",
         ],
         build_file = "//third_party/threadpool:threadpool.BUILD",
+        patches = [
+            "//third_party/threadpool:invoke_result.patch",
+        ],
     )
 
     maybe(
@@ -207,10 +210,10 @@ def workspace():
     maybe(
         http_archive,
         name = "libjpeg_turbo",
-        sha256 = "b3090cd37b5a8b3e4dbd30a1311b3989a894e5d3c668f14cbc6739d77c9402b7",
-        strip_prefix = "libjpeg-turbo-2.0.5",
+        sha256 = "075920b826834ac4ddf97661cc73491047855859affd671d52079c6867c1c6c0",
+        strip_prefix = "libjpeg-turbo-3.1.3",
         urls = [
-            "https://github.com/libjpeg-turbo/libjpeg-turbo/archive/2.0.5.tar.gz",
+            "https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.1.3/libjpeg-turbo-3.1.3.tar.gz",
         ],
         build_file = "//third_party/jpeg:jpeg.BUILD",
     )
@@ -218,11 +221,40 @@ def workspace():
     maybe(
         http_archive,
         name = "nasm",
-        sha256 = "63ec86477ad3f0f6292325fd89e1d93aea2e2fd490070863f17d48f7cd387011",
-        strip_prefix = "nasm-2.13.03",
+        sha256 = "af2f241ecc061205d73ba4f781f075d025dabaeab020b676b7db144bf7015d6d",
+        strip_prefix = "nasm-nasm-3.01",
         urls = [
-            "https://www.nasm.us/pub/nasm/releasebuilds/2.13.03/nasm-2.13.03.tar.bz2",
+            "https://github.com/netwide-assembler/nasm/archive/refs/tags/nasm-3.01.tar.gz",
         ],
+        patch_cmds = ["""
+set -eux
+perl -Iperllib -I. x86/preinsns.pl x86/insns.dat x86/insns.xda
+perl -Iperllib -I. x86/insns.pl -fc x86/insns.xda x86/iflag.c
+perl -Iperllib -I. x86/insns.pl -fh x86/insns.xda x86/iflaggen.h
+perl -Iperllib -I. x86/insns.pl -b x86/insns.xda x86/insnsb.c
+perl -Iperllib -I. x86/insns.pl -a x86/insns.xda x86/insnsa.c
+perl -Iperllib -I. x86/insns.pl -d x86/insns.xda x86/insnsd.c
+perl -Iperllib -I. x86/insns.pl -i x86/insns.xda x86/insnsi.h
+perl -Iperllib -I. x86/insns.pl -n x86/insns.xda x86/insnsn.c
+perl -Iperllib -I. version.pl h < version > version.h
+perl -Iperllib -I. version.pl mac < version > version.mac
+perl -Iperllib -I. x86/regs.pl c x86/regs.dat > x86/regs.c
+perl -Iperllib -I. x86/regs.pl fc x86/regs.dat > x86/regflags.c
+perl -Iperllib -I. x86/regs.pl dc x86/regs.dat > x86/regdis.c
+perl -Iperllib -I. x86/regs.pl dh x86/regs.dat > x86/regdis.h
+perl -Iperllib -I. x86/regs.pl vc x86/regs.dat > x86/regvals.c
+perl -Iperllib -I. x86/regs.pl h x86/regs.dat > x86/regs.h
+perl -Iperllib -I. asm/tokhash.pl c x86/insnsn.c x86/regs.dat asm/tokens.dat > asm/tokhash.c
+perl -Iperllib -I. asm/tokhash.pl h x86/insnsn.c x86/regs.dat asm/tokens.dat > asm/tokens.h
+perl -Iperllib -I. asm/pptok.pl h asm/pptok.dat asm/pptok.h
+perl -Iperllib -I. asm/pptok.pl c asm/pptok.dat asm/pptok.c
+perl -Iperllib -I. asm/pptok.pl ph asm/pptok.dat asm/pptok.ph
+perl -Iperllib -I. nasmlib/perfhash.pl h asm/directiv.dat asm/directiv.h
+perl -Iperllib -I. nasmlib/perfhash.pl c asm/directiv.dat asm/directbl.c
+perl -Iperllib -I. asm/warnings.pl c asm/warnings_c.h asm/warnings.dat
+perl -Iperllib -I. asm/warnings.pl h include/warnings.h asm/warnings.dat
+perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
+"""],
         build_file = "//third_party/nasm:nasm.BUILD",
     )
 
@@ -253,10 +285,10 @@ def workspace():
         name = "boost",
         build_file = "@com_github_nelhage_rules_boost//:boost.BUILD",
         patch_cmds = ["rm -f doc/pdf/BUILD"],
-        sha256 = "6478edfe2f3305127cffe8caf73ea0176c53769f4bf1585be237eb30798c3b8e",
-        strip_prefix = "boost_1_83_0",
+        sha256 = "e848446c6fec62d8a96b44ed7352238b3de040b8b9facd4d6963b32f541e00f5",
+        strip_prefix = "boost-1.90.0",
         urls = [
-            "https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2",
+            "https://github.com/boostorg/boost/releases/download/boost-1.90.0/boost-1.90.0-b2-nodocs.tar.gz",
         ],
     )
 

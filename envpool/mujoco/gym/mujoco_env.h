@@ -31,10 +31,10 @@ class MujocoEnv {
 
  protected:
   mjModel* model_;
-  mjData* data_;
-  mjtNum *init_qpos_, *init_qvel_;
+  mjData* data_{nullptr};
+  mjtNum *init_qpos_{nullptr}, *init_qvel_{nullptr};
 #ifdef ENVPOOL_TEST
-  mjtNum *qpos0_, *qvel0_;  // for align check
+  mjtNum *qpos0_{nullptr}, *qvel0_{nullptr};  // for align check
 #endif
   int frame_skip_;
   bool post_constraint_;
@@ -45,18 +45,11 @@ class MujocoEnv {
   MujocoEnv(const std::string& xml, int frame_skip, bool post_constraint,
             int max_episode_steps)
       : model_(mj_loadXML(xml.c_str(), nullptr, error_.begin(), 1000)),
-        data_(nullptr),
-        init_qpos_(nullptr),
-        init_qvel_(nullptr),
-#ifdef ENVPOOL_TEST
-        qpos0_(nullptr),
-        qvel0_(nullptr),
-#endif
         frame_skip_(frame_skip),
         post_constraint_(post_constraint),
         max_episode_steps_(max_episode_steps),
         elapsed_step_(max_episode_steps + 1) {
-    if (!model_) {
+    if (model_ == nullptr) {
       throw std::runtime_error(error_.data());
     }
     data_ = mj_makeData(model_);

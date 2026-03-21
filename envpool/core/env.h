@@ -203,7 +203,13 @@ class Env {
     // dm_env.StepType.FIRST == 0
     // dm_env.StepType.MID == 1
     // dm_env.StepType.LAST == 2
-    state["step_type"_] = current_step_ == 0 ? 0 : done ? 2 : 1;
+    int step_type = 1;
+    if (current_step_ == 0) {
+      step_type = 0;
+    } else if (done) {
+      step_type = 2;
+    }
+    state["step_type"_] = step_type;
     state["trunc"_] = done && (current_step_ >= max_episode_steps);
     state["info:env_id"_] = env_id_;
     state["elapsed_step"_] = current_step_;

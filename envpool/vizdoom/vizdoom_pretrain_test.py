@@ -184,7 +184,9 @@ class _VizdoomPretrainTest(absltest.TestCase):
       )
       proc.start()
       try:
-        reward, length = result_queue.get(timeout=120)
+        # Full bazel runs may overlap this spawned evaluation with other
+        # long-running pretrain tests on shared devbox CPUs.
+        reward, length = result_queue.get(timeout=240)
       except queue.Empty:
         proc.terminate()
         proc.join(timeout=5)

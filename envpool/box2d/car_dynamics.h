@@ -21,6 +21,7 @@
 #include <box2d/box2d.h>
 
 #include <cmath>
+#include <cstdint>
 #include <deque>
 #include <memory>
 #include <random>
@@ -79,7 +80,7 @@ static const cv::Scalar kWheelColor(0, 0, 0);
 static const cv::Scalar kWheelWhite(77, 77, 77);
 static const cv::Scalar kMudColor(0, 102, 102);
 
-enum UserDataType { INVALID = 1000, WHEEL_TYPE, TILE_TYPE };
+enum UserDataType : std::uint16_t { INVALID = 1000, WHEEL_TYPE, TILE_TYPE };
 
 class Particle {
  public:

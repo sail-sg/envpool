@@ -20,6 +20,7 @@
 #include <mjxmacro.h>
 #include <mujoco.h>
 
+#include <cstdint>
 #include <random>
 #include <string>
 #include <vector>
@@ -44,7 +45,7 @@ int GetQvelId(mjModel* model, const std::string& name);
 int GetSensorId(mjModel* model, const std::string& name);
 
 // rewards
-enum class SigmoidType {
+enum class SigmoidType : std::uint8_t {
   kGaussian,
   kHyperbolic,
   kLongTail,

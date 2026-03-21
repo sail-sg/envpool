@@ -292,7 +292,7 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
     t->idx = i;
     t->body->GetFixtureList()[0].SetSensor(true);
     roads_.push_back(t);
-    roads_poly_.emplace_back(std::make_pair(roads_vertices, t->road_color));
+    roads_poly_.emplace_back(roads_vertices, t->road_color);
 
     if (border[i]) {
       auto side = Sign(beta2 - beta1);
@@ -313,7 +313,7 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
       std::array<b2Vec2, 4> border_vertices = {b1_l, b1_r, b2_r, b2_l};
       cv::Scalar border_color =
           (i % 2 == 0) ? cv::Scalar(255, 255, 255) : cv::Scalar(0, 0, 255);
-      roads_poly_.emplace_back(std::make_pair(border_vertices, border_color));
+      roads_poly_.emplace_back(border_vertices, border_color);
     }
   }
   track_ = current_track;
@@ -435,7 +435,7 @@ void CarRacingBox2dEnv::DrawColoredPolygon(
     auto f_roated = RotateRad(f, angle);
     f_roated = {f_roated[0] * zoom + translation[0],
                 f_roated[1] * zoom + translation[1]};
-    poly.emplace_back(cv::Point(f_roated[0], f_roated[1]));
+    poly.emplace_back(f_roated[0], f_roated[1]);
     if (-kMaxShapeDim <= f_roated[0] &&
         f_roated[0] <= static_cast<float>(kWindowW) + kMaxShapeDim &&
         -kMaxShapeDim <= f_roated[1] &&

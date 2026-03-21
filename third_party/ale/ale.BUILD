@@ -28,7 +28,7 @@ cc_library(
 template_rule(
     name = "ale_version",
     src = "src/ale/version.hpp.in",
-    out = "src/ale/version.hpp",
+    out = "version.hpp",
     substitutions = {
         "@ALE_VERSION@": "0.11.2",
         "@ALE_VERSION_MAJOR@": "0",
@@ -52,10 +52,11 @@ cc_library(
         exclude = [
             "src/ale/python/**",
         ],
-    ) + [
+    ),
+    hdrs = [
+        "src/ale/ale_interface.hpp",
         ":ale_version",
     ],
-    hdrs = ["src/ale/ale_interface.hpp"],
     copts = [
         "-include",
         "cstdint",

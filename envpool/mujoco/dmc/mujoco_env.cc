@@ -52,7 +52,7 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
   }
   // create model and data
   model_ = mj_loadXML(model_filename.c_str(), vfs.get(), error_.begin(), 1000);
-  if (!model_) {
+  if (model_ == nullptr) {
     throw std::runtime_error(error_.data());
   }
   data_ = mj_makeData(model_);

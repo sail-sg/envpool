@@ -17,11 +17,12 @@
 #ifndef ENVPOOL_MINIGRID_IMPL_UTILS_H_
 #define ENVPOOL_MINIGRID_IMPL_UTILS_H_
 
+#include <cstdint>
 #include <unordered_map>
 
 namespace minigrid {
 
-enum Act {
+enum Act : std::uint8_t {
   // Turn left, turn right, move forward
   kLeft = 0,
   kRight = 1,
@@ -36,7 +37,7 @@ enum Act {
   kDone = 6
 };
 
-enum Color {
+enum Color : std::uint8_t {
   kRed = 0,
   kGreen = 1,
   kBlue = 2,
@@ -46,7 +47,7 @@ enum Color {
   kUnassigned = 6
 };
 
-enum Type {
+enum Type : std::uint8_t {
   kUnseen = 0,
   kEmpty = 1,
   kWall = 2,

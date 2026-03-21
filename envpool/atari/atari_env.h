@@ -141,10 +141,10 @@ class AtariEnv : public Env<AtariEnvSpec> {
     }
     // init buf
     for (int i = 0; i < 2; ++i) {
-      maxpool_buf_.emplace_back(Array(raw_spec_));
+      maxpool_buf_.emplace_back(raw_spec_);
     }
     for (int i = 0; i < stack_num_; ++i) {
-      stack_buf_.emplace_back(Array(transpose_spec_));
+      stack_buf_.emplace_back(transpose_spec_);
     }
   }
 

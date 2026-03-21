@@ -210,8 +210,8 @@ void Car::Step(float dt) {
 
     w->body->ApplyForceToCenter(
         {
-            static_cast<float>(p_force * side.x + f_force * forw.x),
-            static_cast<float>(p_force * side.y + f_force * forw.y),
+            p_force * side.x + f_force * forw.x,
+            p_force * side.y + f_force * forw.y,
         },
         true);
   }
@@ -237,8 +237,8 @@ void Car::Draw(const cv::Mat& surf, float zoom,
       poly.clear();
       for (const auto& vec_tmp : p->poly) {
         auto v = RotateRad(vec_tmp, angle);
-        poly.emplace_back(cv::Point(v.x * zoom + translation[0],
-                                    v.y * zoom + translation[1]));
+        poly.emplace_back(v.x * zoom + translation[0],
+                          v.y * zoom + translation[1]);
       }
       cv::polylines(surf, poly, false, p->color, 2);
     }
@@ -260,8 +260,8 @@ void Car::Draw(const cv::Mat& surf, float zoom,
       for (int j = 0; j < shape->m_count; j++) {
         auto vec_tmp = Multiply(trans, shape->m_vertices[j]);
         auto v = RotateRad(vec_tmp, angle);
-        poly.emplace_back(cv::Point(v.x * zoom + translation[0],
-                                    v.y * zoom + translation[1]));
+        poly.emplace_back(v.x * zoom + translation[0],
+                          v.y * zoom + translation[1]);
       }
       cv::fillPoly(surf, poly, color);
 
@@ -298,8 +298,8 @@ void Car::Draw(const cv::Mat& surf, float zoom,
       for (const auto& vec : white_poly) {
         auto vec_tmp = Multiply(trans, vec);
         auto v = RotateRad(vec_tmp, angle);
-        poly.emplace_back(cv::Point(v.x * zoom + translation[0],
-                                    v.y * zoom + translation[1]));
+        poly.emplace_back(v.x * zoom + translation[0],
+                          v.y * zoom + translation[1]);
       }
       cv::fillPoly(surf, poly, kWheelWhite);
     }

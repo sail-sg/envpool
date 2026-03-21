@@ -57,86 +57,61 @@ libjpegturbo_copts = select({
 cc_library(
     name = "jpeg",
     srcs = [
-        "jaricom.c",
-        "jcapimin.c",
-        "jcapistd.c",
-        "jcarith.c",
-        "jccoefct.c",
-        "jccolor.c",
-        "jcdctmgr.c",
-        "jchuff.c",
-        "jchuff.h",
-        "jcinit.c",
-        "jcmainct.c",
-        "jcmarker.c",
-        "jcmaster.c",
-        "jcomapi.c",
+        "src/jaricom.c",
+        "src/jcapimin.c",
+        "src/jcarith.c",
+        "src/jchuff.c",
+        "src/jcicc.c",
+        "src/jcinit.c",
+        "src/jclhuff.c",
+        "src/jcmarker.c",
+        "src/jcmaster.c",
+        "src/jcomapi.c",
+        "src/jcparam.c",
+        "src/jcphuff.c",
+        "src/jctrans.c",
+        "src/jdapimin.c",
+        "src/jdarith.c",
+        "src/jdatadst.c",
+        "src/jdatasrc.c",
+        "src/jdhuff.c",
+        "src/jdicc.c",
+        "src/jdinput.c",
+        "src/jdlhuff.c",
+        "src/jdmarker.c",
+        "src/jdmaster.c",
+        "src/jdphuff.c",
+        "src/jdtrans.c",
+        "src/jerror.c",
+        "src/jfdctflt.c",
+        "src/jmemmgr.c",
+        "src/jmemnobs.c",
+        "src/jpeg_nbits.c",
+    ] + glob(
+        ["src/wrapper/*.c"],
+        exclude = [
+            "src/wrapper/rdcolmap-*.c",
+            "src/wrapper/rdppm-*.c",
+            "src/wrapper/template.c",
+            "src/wrapper/wrgif-*.c",
+            "src/wrapper/wrppm-*.c",
+        ],
+    ) + [
         "jconfig.h",
         "jconfigint.h",
-        "jcparam.c",
-        "jcphuff.c",
-        "jcprepct.c",
-        "jcsample.c",
-        "jctrans.c",
-        "jdapimin.c",
-        "jdapistd.c",
-        "jdarith.c",
-        "jdatadst.c",
-        "jdatasrc.c",
-        "jdcoefct.c",
-        "jdcoefct.h",
-        "jdcolor.c",
-        "jdct.h",
-        "jddctmgr.c",
-        "jdhuff.c",
-        "jdhuff.h",
-        "jdinput.c",
-        "jdmainct.c",
-        "jdmainct.h",
-        "jdmarker.c",
-        "jdmaster.c",
-        "jdmaster.h",
-        "jdmerge.c",
-        "jdphuff.c",
-        "jdpostct.c",
-        "jdsample.c",
-        "jdsample.h",
-        "jdtrans.c",
-        "jerror.c",
-        "jfdctflt.c",
-        "jfdctfst.c",
-        "jfdctint.c",
-        "jidctflt.c",
-        "jidctfst.c",
-        "jidctint.c",
-        "jidctred.c",
-        "jinclude.h",
-        "jmemmgr.c",
-        "jmemnobs.c",
-        "jmemsys.h",
-        "jpeg_nbits_table.h",
-        "jpegcomp.h",
-        "jquant1.c",
-        "jquant2.c",
-        "jutils.c",
         "jversion.h",
     ],
-    hdrs = [
-        "jccolext.c",  # should have been named .inc
-        "jdcol565.c",  # should have been named .inc
-        "jdcolext.c",  # should have been named .inc
-        "jdmrg565.c",  # should have been named .inc
-        "jdmrgext.c",  # should have been named .inc
-        "jerror.h",
-        "jmorecfg.h",
-        "jpegint.h",
-        "jpeglib.h",
-        "jstdhuff.c",  # should have been named .inc
+    hdrs = glob(["src/*.h"]) + [
+        "jconfig.h",
+        "jconfigint.h",
+        "jversion.h",
     ],
     copts = libjpegturbo_copts,
     includes = [
         ".",
+        "src",
     ],
+    textual_hdrs = glob(["src/*.c"]),
     visibility = ["//visibility:public"],
     deps = select({
         ":k8": [":simd_x86_64"],
@@ -150,9 +125,8 @@ cc_library(
 
 cc_library(
     name = "simd_altivec",
-    srcs = [
+    srcs = ["src/" + path for path in [
         "jchuff.h",
-        "jconfig.h",
         "jdct.h",
         "jerror.h",
         "jinclude.h",
@@ -161,6 +135,8 @@ cc_library(
         "jpeglib.h",
         "jsimd.h",
         "jsimddct.h",
+    ]] + [
+        "jconfig.h",
         "simd/jsimd.h",
         "simd/powerpc/jccolor-altivec.c",
         "simd/powerpc/jcgray-altivec.c",
@@ -175,7 +151,7 @@ cc_library(
         "simd/powerpc/jquanti-altivec.c",
         "simd/powerpc/jsimd.c",
     ],
-    hdrs = [
+    hdrs = glob(["src/*.h"]) + [
         "simd/powerpc/jccolext-altivec.c",
         "simd/powerpc/jcgryext-altivec.c",
         "simd/powerpc/jcsample.h",
@@ -184,14 +160,16 @@ cc_library(
         "simd/powerpc/jsimd_altivec.h",
     ],
     copts = libjpegturbo_copts,
+    includes = [
+        ".",
+        "src",
+    ],
 )
 
 cc_library(
     name = "simd_x86_64",
-    srcs = [
+    srcs = ["src/" + path for path in [
         "jchuff.h",
-        "jconfig.h",
-        "jconfigint.h",
         "jdct.h",
         "jerror.h",
         "jinclude.h",
@@ -200,6 +178,9 @@ cc_library(
         "jpeglib.h",
         "jsimd.h",
         "jsimddct.h",
+    ]] + [
+        "jconfig.h",
+        "jconfigint.h",
         "simd/jsimd.h",
         "simd/x86_64/jccolor-avx2.o",
         "simd/x86_64/jccolor-sse2.o",
@@ -230,7 +211,15 @@ cc_library(
         "simd/x86_64/jsimd.c",
         "simd/x86_64/jsimdcpu.o",
     ],
+    hdrs = glob(["src/*.h"]) + [
+        "jconfig.h",
+        "jconfigint.h",
+    ],
     copts = libjpegturbo_copts,
+    includes = [
+        ".",
+        "src",
+    ],
     linkstatic = 1,
 )
 
@@ -276,7 +265,6 @@ genrule(
         "simd/x86_64/jsimdcpu.asm",
         "simd/nasm/jcolsamp.inc",
         "simd/nasm/jdct.inc",
-        "simd/nasm/jpeg_nbits_table.inc",
         "simd/nasm/jsimdcfg.inc",
         "simd/nasm/jsimdcfg.inc.h",
         "simd/nasm/jsimdext.inc",
@@ -325,9 +313,8 @@ genrule(
 
 cc_library(
     name = "simd_armv7a",
-    srcs = [
+    srcs = ["src/" + path for path in [
         "jchuff.h",
-        "jconfig.h",
         "jdct.h",
         "jerror.h",
         "jinclude.h",
@@ -336,18 +323,24 @@ cc_library(
         "jpeglib.h",
         "jsimd.h",
         "jsimddct.h",
-        "simd/arm/jsimd.c",
-        "simd/arm/jsimd_neon.S",
+    ]] + [
+        "jconfig.h",
+        "simd/arm/aarch32/jsimd.c",
+        "simd/arm/aarch32/jsimd_neon.S",
         "simd/jsimd.h",
     ],
+    hdrs = glob(["src/*.h"]) + ["jconfig.h"],
     copts = libjpegturbo_copts,
+    includes = [
+        ".",
+        "src",
+    ],
 )
 
 cc_library(
     name = "simd_armv8a",
-    srcs = [
+    srcs = ["src/" + path for path in [
         "jchuff.h",
-        "jconfig.h",
         "jdct.h",
         "jerror.h",
         "jinclude.h",
@@ -356,19 +349,24 @@ cc_library(
         "jpeglib.h",
         "jsimd.h",
         "jsimddct.h",
-        "simd/arm64/jsimd.c",
-        "simd/arm64/jsimd_neon.S",
+    ]] + [
+        "jconfig.h",
+        "simd/arm/aarch64/jsimd.c",
+        "simd/arm/aarch64/jsimd_neon.S",
         "simd/jsimd.h",
     ],
+    hdrs = glob(["src/*.h"]) + ["jconfig.h"],
     copts = libjpegturbo_copts,
+    includes = [
+        ".",
+        "src",
+    ],
 )
 
 cc_library(
     name = "simd_win_x86_64",
-    srcs = [
+    srcs = ["src/" + path for path in [
         "jchuff.h",
-        "jconfig.h",
-        "jconfigint.h",
         "jdct.h",
         "jerror.h",
         "jinclude.h",
@@ -377,6 +375,9 @@ cc_library(
         "jpeglib.h",
         "jsimd.h",
         "jsimddct.h",
+    ]] + [
+        "jconfig.h",
+        "jconfigint.h",
         "simd/jsimd.h",
         "simd/x86_64/jccolor-avx2.obj",
         "simd/x86_64/jccolor-sse2.obj",
@@ -407,7 +408,15 @@ cc_library(
         "simd/x86_64/jsimd.c",
         "simd/x86_64/jsimdcpu.obj",
     ],
+    hdrs = glob(["src/*.h"]) + [
+        "jconfig.h",
+        "jconfigint.h",
+    ],
     copts = libjpegturbo_copts,
+    includes = [
+        ".",
+        "src",
+    ],
 )
 
 genrule(
@@ -452,7 +461,6 @@ genrule(
         "simd/x86_64/jsimdcpu.asm",
         "simd/nasm/jcolsamp.inc",
         "simd/nasm/jdct.inc",
-        "simd/nasm/jpeg_nbits_table.inc",
         "simd/nasm/jsimdcfg.inc",
         "simd/nasm/jsimdcfg.inc.h",
         "simd/nasm/jsimdext.inc",
@@ -499,9 +507,8 @@ genrule(
 
 cc_library(
     name = "simd_none",
-    srcs = [
+    srcs = ["src/" + path for path in [
         "jchuff.h",
-        "jconfig.h",
         "jdct.h",
         "jerror.h",
         "jinclude.h",
@@ -511,46 +518,38 @@ cc_library(
         "jsimd.h",
         "jsimd_none.c",
         "jsimddct.h",
+    ]] + [
+        "jconfig.h",
     ],
+    hdrs = glob(["src/*.h"]) + ["jconfig.h"],
     copts = libjpegturbo_copts,
+    includes = [
+        ".",
+        "src",
+    ],
 )
 
 template_rule(
     name = "jconfig_win",
-    src = "win/jconfig.h.in",
+    src = "src/jconfig.h.in",
     out = "jconfig_win.h",
     substitutions = {
         "@JPEG_LIB_VERSION@": "62",
-        "@VERSION@": "2.0.0",
-        "@LIBJPEG_TURBO_VERSION_NUMBER@": "2000000",
-        "@BITS_IN_JSAMPLE@": "8",
-        "#cmakedefine C_ARITH_CODING_SUPPORTED": "#define C_ARITH_CODING_SUPPORTED",
-        "#cmakedefine D_ARITH_CODING_SUPPORTED": "#define D_ARITH_CODING_SUPPORTED",
-        "#cmakedefine MEM_SRCDST_SUPPORTED": "#define MEM_SRCDST_SUPPORTED",
-        "#cmakedefine WITH_SIMD": "",
+        "@VERSION@": "3.1.3",
+        "@LIBJPEG_TURBO_VERSION_NUMBER@": "3001003",
+        "#cmakedefine C_ARITH_CODING_SUPPORTED 1": "#define C_ARITH_CODING_SUPPORTED 1",
+        "#cmakedefine D_ARITH_CODING_SUPPORTED 1": "#define D_ARITH_CODING_SUPPORTED 1",
+        "#cmakedefine WITH_SIMD 1": "#define WITH_SIMD 1",
     },
 )
 
 JCONFIG_NOWIN_COMMON_SUBSTITUTIONS = {
     "@JPEG_LIB_VERSION@": "62",
-    "@VERSION@": "2.0.0",
-    "@LIBJPEG_TURBO_VERSION_NUMBER@": "2000000",
+    "@VERSION@": "3.1.3",
+    "@LIBJPEG_TURBO_VERSION_NUMBER@": "3001003",
     "#cmakedefine C_ARITH_CODING_SUPPORTED 1": "#define C_ARITH_CODING_SUPPORTED 1",
     "#cmakedefine D_ARITH_CODING_SUPPORTED 1": "#define D_ARITH_CODING_SUPPORTED 1",
-    "#cmakedefine MEM_SRCDST_SUPPORTED 1": "#define MEM_SRCDST_SUPPORTED 1",
-    "@BITS_IN_JSAMPLE@": "8",
-    "#cmakedefine HAVE_LOCALE_H 1": "#define HAVE_LOCALE_H 1",
-    "#cmakedefine HAVE_STDDEF_H 1": "#define HAVE_STDDEF_H 1",
-    "#cmakedefine HAVE_STDLIB_H 1": "#define HAVE_STDLIB_H 1",
-    "#cmakedefine NEED_SYS_TYPES_H 1": "#define NEED_SYS_TYPES_H 1",
-    "#cmakedefine NEED_BSD_STRINGS 1": "",
-    "#cmakedefine HAVE_UNSIGNED_CHAR 1": "#define HAVE_UNSIGNED_CHAR 1",
-    "#cmakedefine HAVE_UNSIGNED_SHORT 1": "#define HAVE_UNSIGNED_SHORT 1",
-    "#cmakedefine INCOMPLETE_TYPES_BROKEN 1": "",
     "#cmakedefine RIGHT_SHIFT_IS_UNSIGNED 1": "",
-    "#cmakedefine __CHAR_UNSIGNED__ 1": "",
-    "#undef const": "",
-    "#undef size_t": "",
 }
 
 JCONFIG_NOWIN_SIMD_SUBSTITUTIONS = {
@@ -567,37 +566,43 @@ JCONFIG_NOWIN_NOSIMD_SUBSTITUTIONS.update(JCONFIG_NOWIN_COMMON_SUBSTITUTIONS)
 
 template_rule(
     name = "jconfig_nowin_nosimd",
-    src = "jconfig.h.in",
+    src = "src/jconfig.h.in",
     out = "jconfig_nowin_nosimd.h",
     substitutions = JCONFIG_NOWIN_NOSIMD_SUBSTITUTIONS,
 )
 
 template_rule(
     name = "jconfig_nowin_simd",
-    src = "jconfig.h.in",
+    src = "src/jconfig.h.in",
     out = "jconfig_nowin_simd.h",
     substitutions = JCONFIG_NOWIN_SIMD_SUBSTITUTIONS,
 )
 
 JCONFIGINT_COMMON_SUBSTITUTIONS = {
-    "@BUILD@": "20180831",
-    "@VERSION@": "2.0.0",
+    "@BUILD@": "20251210",
+    "@VERSION@": "3.1.3",
     "@CMAKE_PROJECT_NAME@": "libjpeg-turbo",
     "#undef inline": "",
-    "#cmakedefine HAVE_INTRIN_H": "",
+    "#cmakedefine C_ARITH_CODING_SUPPORTED 1": "#define C_ARITH_CODING_SUPPORTED 1",
+    "#cmakedefine D_ARITH_CODING_SUPPORTED 1": "#define D_ARITH_CODING_SUPPORTED 1",
 }
 
-JCONFIGINT_NOWIN_SUBSTITUTIONS = {
+JCONFIGINT_NOWIN_COMMON_SUBSTITUTIONS = {
+    "@HIDDEN@": "__attribute__((visibility(\"hidden\")))",
+    "@THREAD_LOCAL@": "__thread",
     "#cmakedefine HAVE_BUILTIN_CTZL": "#define HAVE_BUILTIN_CTZL",
-    "@INLINE@": "inline __attribute__((always_inline))",
+    "@INLINE@": "__inline__ __attribute__((always_inline))",
     "#define SIZEOF_SIZE_T  @SIZE_T@": "#if (__WORDSIZE==64 && !defined(__native_client__))\n" +
                                        "#define SIZEOF_SIZE_T 8\n" +
                                        "#else\n" +
                                        "#define SIZEOF_SIZE_T 4\n" +
                                        "#endif\n",
+    "#cmakedefine HAVE_INTRIN_H": "",
 }
 
 JCONFIGINT_WIN_SUBSTITUTIONS = {
+    "@HIDDEN@": "",
+    "@THREAD_LOCAL@": "__declspec(thread)",
     "#cmakedefine HAVE_BUILTIN_CTZL": "",
     "#define INLINE  @INLINE@": "#if defined(__GNUC__)\n" +
                                 "#define INLINE inline __attribute__((always_inline))\n" +
@@ -611,24 +616,53 @@ JCONFIGINT_WIN_SUBSTITUTIONS = {
                                        "#else\n" +
                                        "#define SIZEOF_SIZE_T 4\n" +
                                        "#endif\n",
+    "#cmakedefine HAVE_INTRIN_H": "#define HAVE_INTRIN_H",
 }
 
-JCONFIGINT_NOWIN_SUBSTITUTIONS.update(JCONFIGINT_COMMON_SUBSTITUTIONS)
+JCONFIGINT_NOWIN_SIMD_SUBSTITUTIONS = {
+    "#cmakedefine WITH_SIMD 1": "#define WITH_SIMD 1",
+}
+
+JCONFIGINT_NOWIN_NOSIMD_SUBSTITUTIONS = {
+    "#cmakedefine WITH_SIMD 1": "",
+}
+
+JCONFIGINT_NOWIN_COMMON_SUBSTITUTIONS.update(JCONFIGINT_COMMON_SUBSTITUTIONS)
+
+JCONFIGINT_NOWIN_SIMD_SUBSTITUTIONS.update(JCONFIGINT_NOWIN_COMMON_SUBSTITUTIONS)
+
+JCONFIGINT_NOWIN_NOSIMD_SUBSTITUTIONS.update(JCONFIGINT_NOWIN_COMMON_SUBSTITUTIONS)
 
 JCONFIGINT_WIN_SUBSTITUTIONS.update(JCONFIGINT_COMMON_SUBSTITUTIONS)
 
 template_rule(
-    name = "jconfigint_nowin",
-    src = "jconfigint.h.in",
-    out = "jconfigint_nowin.h",
-    substitutions = JCONFIGINT_NOWIN_SUBSTITUTIONS,
+    name = "jconfigint_nowin_nosimd",
+    src = "src/jconfigint.h.in",
+    out = "jconfigint_nowin_nosimd.h",
+    substitutions = JCONFIGINT_NOWIN_NOSIMD_SUBSTITUTIONS,
 )
 
 template_rule(
     name = "jconfigint_win",
-    src = "jconfigint.h.in",
+    src = "src/jconfigint.h.in",
     out = "jconfigint_win.h",
     substitutions = JCONFIGINT_WIN_SUBSTITUTIONS,
+)
+
+template_rule(
+    name = "jconfigint_nowin_simd",
+    src = "src/jconfigint.h.in",
+    out = "jconfigint_nowin_simd.h",
+    substitutions = JCONFIGINT_NOWIN_SIMD_SUBSTITUTIONS,
+)
+
+template_rule(
+    name = "jversion",
+    src = "src/jversion.h.in",
+    out = "jversion.h",
+    substitutions = {
+        "@COPYRIGHT_YEAR@": "1991-2025",
+    },
 )
 
 genrule(
@@ -653,12 +687,17 @@ genrule(
     name = "configure_internal",
     srcs = [
         "jconfigint_win.h",
-        "jconfigint_nowin.h",
+        "jconfigint_nowin_nosimd.h",
+        "jconfigint_nowin_simd.h",
     ],
     outs = ["jconfigint.h"],
     cmd = select({
         ":windows": "cp $(location jconfigint_win.h) $@",
-        "//conditions:default": "cp $(location jconfigint_nowin.h) $@",
+        ":k8": "cp $(location jconfigint_nowin_simd.h) $@",
+        ":armeabi-v7a": "cp $(location jconfigint_nowin_simd.h) $@",
+        ":arm64-v8a": "cp $(location jconfigint_nowin_simd.h) $@",
+        ":linux_ppc64le": "cp $(location jconfigint_nowin_simd.h) $@",
+        "//conditions:default": "cp $(location jconfigint_nowin_nosimd.h) $@",
     }),
 )
 

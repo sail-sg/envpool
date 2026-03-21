@@ -76,15 +76,15 @@ class Array {
    */
   explicit Array(const ShapeSpec& spec)
       : Array(spec, nullptr, [](char* /*unused*/) {}) {
-    ptr_.reset(new char[size * element_size](),
-               [](const char* p) { delete[] p; });
+    auto buffer = std::make_shared<std::vector<char>>(size * element_size);
+    ptr_ = std::shared_ptr<char>(buffer, buffer->data());
   }
 
   /**
    * Take multidimensional index into the Array.
    */
   template <typename... Index>
-  inline Array operator()(Index... index) const {
+  Array operator()(Index... index) const {
     constexpr std::size_t num_index = sizeof...(Index);
     DCHECK_GE(ndim, num_index);
     std::size_t offset = 0;
@@ -101,7 +101,7 @@ class Array {
   /**
    * Index operator of array, takes the index along the first axis.
    */
-  inline Array operator[](int index) const { return this->operator()(index); }
+  Array operator[](int index) const { return this->operator()(index); }
 
   /**
    * Take a slice at the first axis of the Array.
@@ -166,21 +166,17 @@ class Array {
   /**
    * Size of axis `dim`.
    */
-  [[nodiscard]] inline std::size_t Shape(std::size_t dim) const {
-    return shape_[dim];
-  }
+  [[nodiscard]] std::size_t Shape(std::size_t dim) const { return shape_[dim]; }
 
   /**
    * Shape
    */
-  [[nodiscard]] inline const std::vector<std::size_t>& Shape() const {
-    return shape_;
-  }
+  [[nodiscard]] const std::vector<std::size_t>& Shape() const { return shape_; }
 
   /**
    * Pointer to the raw memory.
    */
-  [[nodiscard]] inline void* Data() const { return ptr_.get(); }
+  [[nodiscard]] void* Data() const { return ptr_.get(); }
 
   /**
    * Truncate the Array. Return a new Array that shares the same memory
@@ -225,14 +221,14 @@ class TArray : public Array {
    * Take multidimensional index into the Array.
    */
   template <typename... Index>
-  inline TArray operator()(Index... index) const {
+  TArray operator()(Index... index) const {
     return TArray(Array::operator()(index...));
   }
 
   /**
    * Index operator of array, takes the index along the first axis.
    */
-  inline TArray operator[](int index) const { return this->operator()(index); }
+  TArray operator[](int index) const { return this->operator()(index); }
 
   /**
    * Take a slice at the first axis of the Array.

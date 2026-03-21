@@ -161,7 +161,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
         info_index_({19, 20, 21, 22, 23, 24, 10, 7, 4, 3, 9, 5, 0, 15, 16, 73}),
         dg_(new DoomGame()),
         lmp_dir_(spec.config["lmp_save_dir"_]),
-        save_lmp_(lmp_dir_.length() > 0),
+        save_lmp_(!lmp_dir_.empty()),
         episodic_life_(spec.config["episodic_life"_]),
         use_combined_action_(spec.config["use_combined_action"_]),
         use_inter_area_resize_(spec.config["use_inter_area_resize"_]),
@@ -194,8 +194,8 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     raw_buf_ =
         Array(FrameSpec({dg_->getScreenHeight(), dg_->getScreenWidth(), 1}));
     for (int i = 0; i < stack_num_; ++i) {
-      stack_buf_.emplace_back(Array(FrameSpec(
-          {channel_, spec.config["img_height"_], spec.config["img_width"_]})));
+      stack_buf_.emplace_back(FrameSpec(
+          {channel_, spec.config["img_height"_], spec.config["img_width"_]}));
     }
     for (auto i : info_index_) {
       dg_->addAvailableGameVariable(static_cast<GameVariable>(i));

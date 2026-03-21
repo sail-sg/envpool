@@ -136,7 +136,8 @@ void MiniGridEnv::PlaceAgent(int start_x, int start_y, int end_x, int end_y) {
   // Place an object at an empty position in the grid
   end_x = (end_x == -1) ? width_ - 1 : end_x;
   end_y = (end_y == -1) ? height_ - 1 : end_y;
-  CHECK(start_x <= end_x && start_y <= end_y);
+  CHECK_LE(start_x, end_x);
+  CHECK_LE(start_y, end_y);
   std::uniform_int_distribution<> x_dist(start_x, end_x);
   std::uniform_int_distribution<> y_dist(start_y, end_y);
   while (true) {
@@ -185,9 +186,9 @@ void MiniGridEnv::GenImage(const Array& obs) {
       int x = top_x + j;
       int y = top_y + i;
       if (x >= 0 && x < width_ && y >= 0 && y < height_) {
-        temp_vec.emplace_back(WorldObj(grid_[y][x].GetType()));
+        temp_vec.emplace_back(grid_[y][x].GetType());
       } else {
-        temp_vec.emplace_back(WorldObj(kWall));
+        temp_vec.emplace_back(kWall);
       }
     }
     agent_view_grid.emplace_back(temp_vec);
