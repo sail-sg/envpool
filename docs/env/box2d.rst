@@ -1,8 +1,8 @@
 Box2D
 =====
 
-We use ``box2d==2.4.1`` and ``gym==0.23.1`` as the codebase. See
-https://github.com/erincatto/box2d/tree/v2.4.1 and
+We use ``box2d==2.4.2`` and ``gym==0.23.1`` as the codebase. See
+https://github.com/erincatto/box2d/tree/v2.4.2 and
 https://github.com/openai/gym/tree/v0.23.1/gym/envs/box2d
 
 
@@ -159,6 +159,6 @@ We ran gym's environments with dependency ``box2d-py==2.3.5`` (see
 https://github.com/openai/box2d-py/tree/2.3.5) for 1000 episode and averaged
 reward as our threshold.
 
-The current implementation of envpool is based on box2d 2.4.1 version.
+The current implementation of envpool is based on box2d 2.4.2 version.
 If you want to use box2d==2.3.5 to run the test, please checkout commit
 ``4de47ebb6615052c67fdfbbe9bc3e9b1d5692f99`` and build the wheel.

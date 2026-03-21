@@ -15,6 +15,7 @@
 
 import multiprocessing as mp
 import os
+import queue
 import shutil
 from typing import Optional, Tuple
 
@@ -111,7 +112,7 @@ def _eval_c51_impl(
 
 
 def _eval_c51_subprocess(
-  queue: mp.Queue,
+  result_queue: mp.Queue,
   task: str,
   resume_path: str,
   cfg_path: Optional[str],
@@ -123,7 +124,7 @@ def _eval_c51_subprocess(
     cfg_path=cfg_path,
     reward_config=reward_config,
   )
-  queue.put((reward, length))
+  result_queue.put((reward, length))
 
 
 class _VizdoomPretrainTest(absltest.TestCase):
@@ -168,23 +169,32 @@ class _VizdoomPretrainTest(absltest.TestCase):
       f.write(cfg.replace("hud = false", "hud = true"))
     try:
       ctx = mp.get_context("spawn")
-      queue: mp.Queue = ctx.Queue()
+      result_queue: mp.Queue = ctx.Queue()
       proc = ctx.Process(
         target=_eval_c51_subprocess,
         args=(
-          queue,
+          result_queue,
           "D3_battle",
           model_path,
           "d3.cfg",
-          {
-            "KILLCOUNT": [1, 0]
-          },
+          {"KILLCOUNT": [1, 0]},
         ),
       )
       proc.start()
-      proc.join()
+      try:
+        reward, length = result_queue.get(timeout=120)
+      except queue.Empty:
+        proc.terminate()
+        proc.join(timeout=5)
+        self.fail("Timed out waiting for D3 subprocess result")
+      proc.join(timeout=30)
+      if proc.is_alive():
+        proc.terminate()
+        proc.join(timeout=5)
+        self.fail("D3 subprocess did not exit after producing a result")
       self.assertEqual(proc.exitcode, 0)
-      reward, length = queue.get_nowait()
+      result_queue.close()
+      result_queue.join_thread()
     finally:
       if os.path.exists("d3.cfg"):
         os.remove("d3.cfg")
