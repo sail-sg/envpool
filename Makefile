@@ -13,6 +13,8 @@ BAZEL          = USE_BAZEL_VERSION=$(BAZEL_VERSION) $(BAZELISK_BIN)
 DATE           = $(shell date "+%Y-%m-%d")
 DOCKER_TAG     = $(DATE)-$(COMMIT_HASH)
 DOCKER_USER    = trinkle23897
+RELEASE_PYTHON ?= $(shell python3 -c 'import sys; print("{}.{}".format(sys.version_info[0], sys.version_info[1]))')
+RELEASE_SETUP_TARGET = //:setup_py$(subst .,,$(RELEASE_PYTHON))
 CLANG_TIDY_MAJOR = 18
 CLANG_TIDY_BIN = clang-tidy-$(CLANG_TIDY_MAJOR)
 CLANG_TIDY_WRAPPER_DIR = $(HOME)/.cache/$(PROJECT_NAME)/bin
@@ -132,9 +134,9 @@ bazel-build: bazel-install bazel-pip-requirement-dev
 	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-release: bazel-install bazel-pip-requirement-release release-system-install
-	$(BAZEL) run $(BAZELOPT) //:setup --config=release -- bdist_wheel
+	$(BAZEL) run $(BAZELOPT) $(RELEASE_SETUP_TARGET) --config=release -- bdist_wheel
 	mkdir -p dist
-	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
+	cp bazel-bin/$(subst //:,,$(RELEASE_SETUP_TARGET)).runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-test: bazel-install bazel-pip-requirement-dev
 	$(BAZEL) test --test_output=all $(BAZELOPT) //... --config=test --spawn_strategy=local --color=yes

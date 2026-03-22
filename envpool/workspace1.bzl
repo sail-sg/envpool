@@ -17,15 +17,17 @@
 load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
 load("@com_justbuchanan_rules_qt//:qt_configure.bzl", "qt_configure")
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
-load("@rules_python//python:repositories.bzl", "python_register_toolchains")
-load("//envpool:python_tool_versions.bzl", "PYTHON_TOOL_VERSIONS")
+load("@rules_python//python:repositories.bzl", "python_register_multi_toolchains")
+load("//envpool:python_tool_versions.bzl", "PYTHON_MINOR_MAPPING", "PYTHON_TOOL_VERSIONS")
 
 def workspace():
     """Configure pip requirements."""
-    python_register_toolchains(
-        name = "python3_12",
-        python_version = "3.12.7",
+    python_register_multi_toolchains(
+        name = "python_versions",
+        python_versions = ["3.11", "3.12", "3.13"],
+        default_version = "3.12",
         ignore_root_user_error = True,
+        minor_mapping = PYTHON_MINOR_MAPPING,
         tool_versions = PYTHON_TOOL_VERSIONS,
     )
 
