@@ -192,6 +192,7 @@ py_test(
         requirement("absl-py"),
         requirement("gym"),
         requirement("gymnasium"),
+        requirement("imageio"),
         requirement("mujoco"),
     ],
 )
