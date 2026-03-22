@@ -3,6 +3,6 @@ gym>=0.26.2
 ale-py==0.11.2
 mujoco==3.6.0
 tqdm
-opencv-python-headless>=4.11.0.86,<4.13
+opencv-python-headless>=4.13.0.92
 dm_control==1.0.38
 packaging

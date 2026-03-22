@@ -15,8 +15,7 @@
 
 from typing import Any, Dict, List, Tuple, no_type_check
 
-# import cv2
-import gym
+import gymnasium as gym
 import numpy as np
 import pygame
 from absl import logging
