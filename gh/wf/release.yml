@@ -11,17 +11,31 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    container: trinkle23897/envpool-release:2023-01-02-5f1a5fd
+    container: quay.io/pypa/manylinux_2_28_x86_64
     strategy:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Install build dependencies
         run: |
-          ln -sf /root/.cache $HOME/.cache
-          ln -sf /root/.pyenv $HOME/.pyenv
-          pyenv global ${{ matrix.python-version }}-dev
+          dnf install -y git curl wget zsh gcc gcc-c++ make tmux golang java-17-openjdk-devel qt5-qtbase-devel qt5-qtdeclarative-devel
+          dnf clean all
+          ln -sf "$(qmake-qt5 -query QT_INSTALL_HEADERS)" /usr/include/qt
+          go install github.com/bazelbuild/bazelisk@latest
+          ln -sf /root/go/bin/bazelisk /usr/local/bin/bazelisk
+          ln -sf /root/go/bin/bazelisk /usr/local/bin/bazel
+      - name: Set up Python ${{ matrix.python-version }}
+        shell: bash
+        run: |
+          case "${{ matrix.python-version }}" in
+            3.11) PYBIN=/opt/python/cp311-cp311/bin ;;
+            3.12) PYBIN=/opt/python/cp312-cp312/bin ;;
+            3.13) PYBIN=/opt/python/cp313-cp313/bin ;;
+            *) echo "unsupported python version: ${{ matrix.python-version }}" >&2; exit 1 ;;
+          esac
+          echo "$PYBIN" >> "$GITHUB_PATH"
+          "$PYBIN/python3" --version
       - name: Build
         run: |
           make pypi-wheel

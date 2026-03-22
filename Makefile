@@ -194,7 +194,7 @@ docker-release-launch: docker-release
 	docker run --network=host -v /:/host -v $(shell pwd):/app -v $(HOME)/.cache:/root/.cache --shm-size=4gb -it $(PROJECT_NAME)-release:$(DOCKER_TAG) zsh
 
 pypi-wheel: auditwheel-install bazel-release
-	ls dist/*.whl -Art | tail -n 1 | xargs auditwheel repair --plat manylinux_2_24_x86_64
+	ls dist/*.whl -Art | tail -n 1 | xargs auditwheel repair --plat manylinux_2_28_x86_64
 
 release-test1:
 	cd envpool && python3 make_test.py
