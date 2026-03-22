@@ -145,8 +145,8 @@ class StateBufferQueue {
    * time of each state buffer is in the same order as the allocation time.
    */
   std::vector<Array> Wait(std::size_t additional_done_count = 0) {
-    std::unique_ptr<StateBuffer> newbuf = stock_buffer_.Get();
-    if (newbuf == nullptr) {
+    std::unique_ptr<StateBuffer> newbuf;
+    if (!stock_buffer_.TryGet(&newbuf) || newbuf == nullptr) {
       newbuf = std::make_unique<StateBuffer>(batch_, max_num_players_, specs_,
                                              is_player_state_);
     }
