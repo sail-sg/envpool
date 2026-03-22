@@ -212,7 +212,7 @@
 
 /* Define to 1 if you have the declaration of 'strlcpy', and to 0 if you
    don't. */
-#define HAVE_DECL_STRLCPY 1
+/* #undef HAVE_DECL_STRLCPY */
 
 /* Define to 1 if you have the declaration of 'strncasecmp', and to 0 if you
    don't. */
@@ -483,7 +483,7 @@
 #define HAVE_STRING_H 1
 
 /* Define to 1 if you have the 'strlcpy' function. */
-#define HAVE_STRLCPY 1
+/* #undef HAVE_STRLCPY */
 
 /* Define to 1 if you have the 'strncasecmp' function. */
 #define HAVE_STRNCASECMP 1
