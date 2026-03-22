@@ -15,8 +15,8 @@
 """EnvPool workspace initialization, load after workspace0."""
 
 load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
+load("@bazel_features//:deps.bzl", "bazel_features_deps")
 load("@com_justbuchanan_rules_qt//:qt_configure.bzl", "qt_configure")
-load("@pybind11_bazel//:python_configure.bzl", "python_configure")
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
 load("@rules_python//python:repositories.bzl", "python_register_toolchains")
 load("//envpool:python_tool_versions.bzl", "PYTHON_TOOL_VERSIONS")
@@ -30,14 +30,11 @@ def workspace():
         tool_versions = PYTHON_TOOL_VERSIONS,
     )
 
-    python_configure(
-        name = "local_config_python",
-        python_interpreter_target = "@python3_12_x86_64-unknown-linux-gnu//:bin/python3",
-    )
-
     rules_foreign_cc_dependencies(
         register_built_pkgconfig_toolchain = False,
     )
+
+    bazel_features_deps()
 
     boost_deps()
 

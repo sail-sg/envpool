@@ -21,45 +21,59 @@ load("//third_party/cuda:cuda.bzl", "cuda_configure")
 def workspace():
     """Load requested packages."""
 
-    # Keep a WORKSPACE-compatible rules_python release that supports Python 3.12.
+    # Keep a WORKSPACE-compatible stable rules_python release.
     maybe(
         http_archive,
         name = "rules_python",
-        sha256 = "9acc0944c94adb23fba1c9988b48768b1bacc6583b52a2586895c5b7491e2e31",
-        strip_prefix = "rules_python-0.27.0",
+        sha256 = "690e0141724abb568267e003c7b6d9a54925df40c275a870a4d934161dc9dd53",
+        strip_prefix = "rules_python-0.40.0",
         urls = [
-            "https://github.com/bazelbuild/rules_python/archive/refs/tags/0.27.0.tar.gz",
+            "https://github.com/bazelbuild/rules_python/releases/download/0.40.0/rules_python-0.40.0.tar.gz",
         ],
     )
 
     maybe(
         http_archive,
         name = "rules_foreign_cc",
-        sha256 = "476303bd0f1b04cc311fc258f1708a5f6ef82d3091e53fd1977fa20383425a6a",
-        strip_prefix = "rules_foreign_cc-0.10.1",
+        sha256 = "a2e6fb56e649c1ee79703e99aa0c9d13c6cc53c8d7a0cbb8797ab2888bbc99a3",
+        strip_prefix = "rules_foreign_cc-0.12.0",
         urls = [
-            "https://github.com/bazelbuild/rules_foreign_cc/archive/0.10.1.tar.gz",
+            "https://github.com/bazelbuild/rules_foreign_cc/releases/download/0.12.0/rules_foreign_cc-0.12.0.tar.gz",
+        ],
+    )
+
+    maybe(
+        http_archive,
+        name = "bazel_features",
+        sha256 = "ba1282c1aa1d1fffdcf994ab32131d7c7551a9bc960fbf05f42d55a1b930cbfb",
+        strip_prefix = "bazel_features-1.15.0",
+        urls = [
+            "https://github.com/bazel-contrib/bazel_features/releases/download/v1.15.0/bazel_features-v1.15.0.tar.gz",
         ],
     )
 
     maybe(
         http_archive,
         name = "pybind11_bazel",
-        sha256 = "2c466c9b3cca7852b47e0785003128984fcf0d5d61a1a2e4c5aceefd935ac220",
-        strip_prefix = "pybind11_bazel-2.11.1",
+        patches = [
+            "//third_party/pybind11_bazel:build_defs_rules_cc_defs.patch",
+            "//third_party/pybind11_bazel:pybind11_build_rules_cc_defs.patch",
+        ],
+        sha256 = "4a8983811b562a02ef9ccc545c93dc275e23054ac8996170b8975fa387afa890",
+        strip_prefix = "pybind11_bazel-3.0.1",
         urls = [
-            "https://github.com/pybind/pybind11_bazel/archive/refs/tags/v2.11.1.zip",
+            "https://github.com/pybind/pybind11_bazel/archive/refs/tags/v3.0.1.tar.gz",
         ],
     )
 
     maybe(
         http_archive,
         name = "pybind11",
-        build_file = "@pybind11_bazel//:pybind11.BUILD",
-        sha256 = "e08cb87f4773da97fa7b5f035de8763abc656d87d5773e62f6da0587d1f0ec20",
-        strip_prefix = "pybind11-2.13.6",
+        build_file = "@pybind11_bazel//:pybind11-BUILD.bazel",
+        sha256 = "2f20a0af0b921815e0e169ea7fec63909869323581b89d7de1553468553f6a2d",
+        strip_prefix = "pybind11-3.0.2",
         urls = [
-            "https://github.com/pybind/pybind11/archive/refs/tags/v2.13.6.tar.gz",
+            "https://github.com/pybind/pybind11/archive/refs/tags/v3.0.2.tar.gz",
         ],
     )
 
@@ -277,6 +291,9 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         strip_prefix = "rules_boost-e60cf50996da9fe769b6e7a31b88c54966ecb191",
         urls = [
             "https://github.com/nelhage/rules_boost/archive/e60cf50996da9fe769b6e7a31b88c54966ecb191.tar.gz",
+        ],
+        patches = [
+            "//third_party/boost:filesystem_scope_headers.patch",
         ],
     )
 
