@@ -80,6 +80,12 @@ spelling-system-install:
 auditwheel-install:
 	$(call check_install_extra, auditwheel, auditwheel patchelf)
 
+release-system-install:
+	if command -v dnf >/dev/null 2>&1; then \
+		perl -MCompress::Zlib -e1 >/dev/null 2>&1 || \
+			(dnf install -y perl-IO-Compress && dnf clean all); \
+	fi
+
 # python linter
 
 flake8: flake8-install
@@ -125,7 +131,7 @@ bazel-build: bazel-install bazel-pip-requirement-dev
 	mkdir -p dist
 	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
-bazel-release: bazel-install bazel-pip-requirement-release
+bazel-release: bazel-install bazel-pip-requirement-release release-system-install
 	$(BAZEL) run $(BAZELOPT) //:setup --config=release -- bdist_wheel
 	mkdir -p dist
 	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
