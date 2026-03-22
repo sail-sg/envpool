@@ -14,6 +14,7 @@ bazel
 bazelisk
 buildifier
 addlicense
+ruff
 isort
 yapf
 envpool

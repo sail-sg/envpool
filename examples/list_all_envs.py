@@ -17,4 +17,4 @@ import pprint
 import envpool
 
 if __name__ == "__main__":
-  pprint.pprint(envpool.list_all_envs())
+    pprint.pprint(envpool.list_all_envs())

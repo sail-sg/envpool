@@ -17,12 +17,13 @@ from envpool.python.api import py_env
 
 from .minigrid_envpool import _EmptyEnvPool, _EmptyEnvSpec
 
-(EmptyEnvSpec, EmptyDMEnvPool, EmptyGymEnvPool,
- EmptyGymnasiumEnvPool) = py_env(_EmptyEnvSpec, _EmptyEnvPool)
+(EmptyEnvSpec, EmptyDMEnvPool, EmptyGymEnvPool, EmptyGymnasiumEnvPool) = py_env(
+    _EmptyEnvSpec, _EmptyEnvPool
+)
 
 __all__ = [
-  "EmptyEmvSpec",
-  "EmptyDMEnvPool",
-  "EmptyGymEnvPool",
-  "EmptyGymnasiumEnvPool",
+    "EmptyEmvSpec",
+    "EmptyDMEnvPool",
+    "EmptyGymEnvPool",
+    "EmptyGymnasiumEnvPool",
 ]

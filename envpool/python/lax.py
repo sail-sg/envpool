@@ -23,32 +23,34 @@ from .xla_template import make_xla
 
 
 class XlaMixin(ABC):
-  """Mixin to provide XLA for envpool class."""
+    """Mixin to provide XLA for envpool class."""
 
-  def xla(self: Any) -> Tuple[Any, Callable, Callable, Callable]:
-    """Return the XLA version of send/recv/step functions."""
-    _handle, _recv, _send = make_xla(self)
+    def xla(self: Any) -> Tuple[Any, Callable, Callable, Callable]:
+        """Return the XLA version of send/recv/step functions."""
+        _handle, _recv, _send = make_xla(self)
 
-    def recv(handle: jnp.ndarray) -> Union[TimeStep, Tuple]:
-      ret = _recv(handle)
-      new_handle = ret[0]
-      state_list = ret[1:]
-      return new_handle, self._to(state_list, reset=False, return_info=True)
+        def recv(handle: jnp.ndarray) -> Union[TimeStep, Tuple]:
+            ret = _recv(handle)
+            new_handle = ret[0]
+            state_list = ret[1:]
+            return new_handle, self._to(
+                state_list, reset=False, return_info=True
+            )
 
-    def send(
-      handle: jnp.ndarray,
-      action: Union[Dict[str, Any], jnp.ndarray],
-      env_id: Optional[jnp.ndarray] = None
-    ) -> Any:
-      action = self._from(action, env_id)
-      self._check_action(action)
-      return _send(handle, *action)
+        def send(
+            handle: jnp.ndarray,
+            action: Union[Dict[str, Any], jnp.ndarray],
+            env_id: Optional[jnp.ndarray] = None,
+        ) -> Any:
+            action = self._from(action, env_id)
+            self._check_action(action)
+            return _send(handle, *action)
 
-    def step(
-      handle: jnp.ndarray,
-      action: Union[Dict[str, Any], jnp.ndarray],
-      env_id: Optional[jnp.ndarray] = None
-    ) -> Any:
-      return recv(send(handle, action, env_id))
+        def step(
+            handle: jnp.ndarray,
+            action: Union[Dict[str, Any], jnp.ndarray],
+            env_id: Optional[jnp.ndarray] = None,
+        ) -> Any:
+            return recv(send(handle, action, env_id))
 
-    return _handle, recv, send, step
+        return _handle, recv, send, step

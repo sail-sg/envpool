@@ -19,7 +19,7 @@ Lint Check
 
 We use several tools to secure code quality, including
 
-- PEP8 code style: flake8, yapf, isort;
+- PEP8 code style and formatting: ruff;
 - Type check: mypy;
 - C++ Google-style: cpplint, clang-format, clang-tidy;
 - Bazel build file: buildifier;

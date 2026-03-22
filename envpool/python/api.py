@@ -23,17 +23,21 @@ from .protocol import EnvPool, EnvSpec
 
 
 def py_env(
-  envspec: Type[EnvSpec], envpool: Type[EnvPool]
+    envspec: Type[EnvSpec], envpool: Type[EnvPool]
 ) -> Tuple[Type[EnvSpec], Type[EnvPool], Type[EnvPool], Type[EnvPool]]:
-  """Initialize EnvPool for users."""
-  # remove the _ prefix added when registering cpp class via pybind
-  spec_name = envspec.__name__[1:]
-  pool_name = envpool.__name__[1:]
-  return (
-    EnvSpecMeta(spec_name, (envspec,), {}),  # type: ignore[return-value]
-    DMEnvPoolMeta(pool_name.replace("EnvPool", "DMEnvPool"), (envpool,), {}),
-    GymEnvPoolMeta(pool_name.replace("EnvPool", "GymEnvPool"), (envpool,), {}),
-    GymnasiumEnvPoolMeta(
-      pool_name.replace("EnvPool", "GymnasiumEnvPool"), (envpool,), {}
-    ),
-  )
+    """Initialize EnvPool for users."""
+    # remove the _ prefix added when registering cpp class via pybind
+    spec_name = envspec.__name__[1:]
+    pool_name = envpool.__name__[1:]
+    return (
+        EnvSpecMeta(spec_name, (envspec,), {}),  # type: ignore[return-value]
+        DMEnvPoolMeta(
+            pool_name.replace("EnvPool", "DMEnvPool"), (envpool,), {}
+        ),
+        GymEnvPoolMeta(
+            pool_name.replace("EnvPool", "GymEnvPool"), (envpool,), {}
+        ),
+        GymnasiumEnvPoolMeta(
+            pool_name.replace("EnvPool", "GymnasiumEnvPool"), (envpool,), {}
+        ),
+    )
