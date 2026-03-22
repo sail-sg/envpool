@@ -77,8 +77,7 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
  public:
   HopperEnv(const Spec& spec, int env_id)
       : Env<HopperEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] +
-                      "/mujoco/assets_gym/hopper_envpool.xml",
+        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets_gym/hopper.xml",
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),

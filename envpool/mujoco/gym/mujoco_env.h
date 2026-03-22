@@ -20,6 +20,7 @@
 #include <mjxmacro.h>
 #include <mujoco.h>
 
+#include <fstream>
 #include <stdexcept>
 #include <string>
 
@@ -28,6 +29,17 @@ namespace mujoco_gym {
 class MujocoEnv {
  private:
   std::array<char, 1000> error_;
+  std::string xml_path_;
+
+  static std::string ResolveXMLPath(const std::string& xml) {
+    auto ext = xml.rfind(".xml");
+    if (ext == std::string::npos) {
+      return xml;
+    }
+    std::string patched = xml.substr(0, ext) + "_envpool.xml";
+    std::ifstream stream(patched);
+    return stream.good() ? patched : xml;
+  }
 
  protected:
   mjModel* model_;
@@ -44,7 +56,8 @@ class MujocoEnv {
  public:
   MujocoEnv(const std::string& xml, int frame_skip, bool post_constraint,
             int max_episode_steps)
-      : model_(mj_loadXML(xml.c_str(), nullptr, error_.begin(), 1000)),
+      : xml_path_(ResolveXMLPath(xml)),
+        model_(mj_loadXML(xml_path_.c_str(), nullptr, error_.begin(), 1000)),
         frame_skip_(frame_skip),
         post_constraint_(post_constraint),
         max_episode_steps_(max_episode_steps),

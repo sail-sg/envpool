@@ -36,7 +36,7 @@ class Walker2dEnvFns {
         "ctrl_cost_weight"_.Bind(0.001), "terminate_when_unhealthy"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
         "legacy_healthy_reward"_.Bind(true),
-        "xml_file"_.Bind(std::string("walker2d_envpool.xml")),
+        "xml_file"_.Bind(std::string("walker2d.xml")),
         "forward_reward_weight"_.Bind(1.0), "healthy_reward"_.Bind(1.0),
         "healthy_z_min"_.Bind(0.8), "healthy_z_max"_.Bind(2.0),
         "healthy_angle_min"_.Bind(-1.0), "healthy_angle_max"_.Bind(1.0),
