@@ -155,7 +155,7 @@ Notes on Box2D versions
 ``box2d_correctness_test.py`` aims to address the correctness of our Box2D
 implementation.
 
-We ran gym's environments with dependency ``box2d-py==2.3.5`` (see
+We used gym's historical baseline with dependency ``box2d-py==2.3.5`` (see
 https://github.com/openai/box2d-py/tree/2.3.5) for 1000 episode and averaged
 reward as our threshold.
 
