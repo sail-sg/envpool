@@ -24,8 +24,8 @@ copy_to_directory(
     name = "gen_atari_roms",
     srcs = ["@atari_roms//:roms"],
     out = "roms",
-    strip_prefix = "ROM/",
     flatten = True,
+    strip_prefix = "ROM/",
 )
 
 genrule(

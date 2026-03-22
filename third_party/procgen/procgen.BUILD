@@ -35,7 +35,6 @@ cc_library(
     name = "procgen",
     srcs = glob(["src/**/*.cpp"]) + glob(["src/*.h"]),
     hdrs = glob(["src/*.h"]),
-    alwayslink = True,
     copts = [
         "-fpic",
     ],
@@ -45,4 +44,5 @@ cc_library(
         "@qt//:qt_core",
         "@qt//:qt_gui",
     ],
+    alwayslink = True,
 )
