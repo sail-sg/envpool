@@ -25,6 +25,7 @@ cmake(
     name = "opencv",
     generate_args = [
         "-GNinja",
+        "-DCMAKE_INSTALL_LIBDIR=lib",
         "-DBUILD_SHARED_LIBS=OFF",
         "-DBUILD_EXAMPLES=OFF",
         "-DBUILD_opencv_apps=OFF",
