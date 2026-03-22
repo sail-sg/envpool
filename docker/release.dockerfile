@@ -9,7 +9,7 @@ WORKDIR $HOME
 
 RUN dnf install -y \
     git curl wget zsh gcc gcc-c++ make tmux golang java-17-openjdk-devel \
-    qt5-qtbase-devel qt5-qtdeclarative-devel \
+    qt5-qtbase-devel qt5-qtdeclarative-devel perl-IO-Compress \
     && dnf clean all
 RUN ln -sf "$(qmake-qt5 -query QT_INSTALL_HEADERS)" /usr/include/qt
 

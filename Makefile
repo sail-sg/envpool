@@ -13,6 +13,8 @@ BAZEL          = USE_BAZEL_VERSION=$(BAZEL_VERSION) $(BAZELISK_BIN)
 DATE           = $(shell date "+%Y-%m-%d")
 DOCKER_TAG     = $(DATE)-$(COMMIT_HASH)
 DOCKER_USER    = trinkle23897
+RELEASE_PYTHON ?= $(shell python3 -c 'import sys; print("{}.{}".format(sys.version_info[0], sys.version_info[1]))')
+RELEASE_SETUP_TARGET = //:setup_py$(subst .,,$(RELEASE_PYTHON))
 CLANG_TIDY_MAJOR = 18
 CLANG_TIDY_BIN = clang-tidy-$(CLANG_TIDY_MAJOR)
 CLANG_TIDY_WRAPPER_DIR = $(HOME)/.cache/$(PROJECT_NAME)/bin
@@ -78,7 +80,13 @@ spelling-system-install:
 	python3 -c "import ctypes.util, sys; sys.exit(0 if ctypes.util.find_library('enchant-2') or ctypes.util.find_library('enchant') else 1)")
 
 auditwheel-install:
-	$(call check_install_extra, auditwheel, auditwheel typed-ast patchelf)
+	$(call check_install_extra, auditwheel, auditwheel patchelf)
+
+release-system-install:
+	if command -v dnf >/dev/null 2>&1; then \
+		perl -MCompress::Zlib -e1 >/dev/null 2>&1 || \
+			(dnf install -y perl-IO-Compress && dnf clean all); \
+	fi
 
 # python linter
 
@@ -125,10 +133,10 @@ bazel-build: bazel-install bazel-pip-requirement-dev
 	mkdir -p dist
 	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
-bazel-release: bazel-install bazel-pip-requirement-release
-	$(BAZEL) run $(BAZELOPT) //:setup --config=release -- bdist_wheel
+bazel-release: bazel-install bazel-pip-requirement-release release-system-install
+	$(BAZEL) run $(BAZELOPT) $(RELEASE_SETUP_TARGET) --config=release -- bdist_wheel
 	mkdir -p dist
-	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
+	cp bazel-bin/$(subst //:,,$(RELEASE_SETUP_TARGET)).runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-test: bazel-install bazel-pip-requirement-dev
 	$(BAZEL) test --test_output=all $(BAZELOPT) //... --config=test --spawn_strategy=local --color=yes
@@ -194,7 +202,9 @@ docker-release-launch: docker-release
 	docker run --network=host -v /:/host -v $(shell pwd):/app -v $(HOME)/.cache:/root/.cache --shm-size=4gb -it $(PROJECT_NAME)-release:$(DOCKER_TAG) zsh
 
 pypi-wheel: auditwheel-install bazel-release
-	ls dist/*.whl -Art | tail -n 1 | xargs auditwheel repair --plat manylinux_2_28_x86_64
+	rm -rf wheelhouse
+	CURRENT_WHEEL=$$(ls dist/*.whl -Art | tail -n 1); \
+	python3 -m auditwheel repair --plat manylinux_2_28_x86_64 "$$CURRENT_WHEEL"
 
 release-test1:
 	cd envpool && python3 make_test.py

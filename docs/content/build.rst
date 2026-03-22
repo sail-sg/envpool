@@ -1,7 +1,8 @@
 Build From Source
 =================
 
-We recommend building EnvPool on Ubuntu 22.04 environment.
+We recommend developing EnvPool on Ubuntu 24.04. Release wheels are built in a
+``manylinux_2_28_x86_64`` environment.
 
 We use `bazel <https://bazel.build/>`_ to build EnvPool. Comparing with
 `pip <https://pip.pypa.io/>`_, using Bazel to build python package with C++ .so
@@ -30,7 +31,7 @@ or `golang <https://golang.org/doc/install>`_ with version >= 1.16:
 
 .. code-block:: bash
 
-    sudo apt install -y golang
+    sudo apt install -y golang-go
     export PATH=$HOME/go/bin:$PATH
     go install github.com/bazelbuild/bazelisk@latest
     ln -sf $HOME/go/bin/bazelisk $HOME/go/bin/bazel
@@ -66,25 +67,25 @@ or `golang <https://golang.org/doc/install>`_ with version >= 1.16:
 Install Other Dependencies
 --------------------------
 
-EnvPool requires **GCC/G++ version >= 9.0** to build the source code. To install:
+EnvPool currently builds with the system GCC/G++ toolchain on Ubuntu 24.04. To
+install the required development packages:
 
 .. code-block:: bash
 
-    # optional
-    sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+    sudo apt install -y build-essential python3-dev python3-pip \
+      python-is-python3 golang-go qtbase5-dev qtdeclarative5-dev
 
-    # install
-    sudo apt install -y gcc-9 g++-9 build-essential
-
-    # to change the default cc to gcc-9:
-    sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
+    # Some Bazel Qt rules still look for this legacy include path.
+    sudo ln -sf /usr/include/x86_64-linux-gnu/qt5 /usr/include/qt
 
 It also requires **Python version >= 3.11**:
 
 .. code-block:: bash
 
-    sudo apt install -y python3-dev python3-pip
-    sudo ln -sf /usr/bin/python3 /usr/bin/python
+    python3 --version
+
+The default build and test shortcuts in this repo use **Bazel 8.6.0** via
+``bazelisk``.
 
 Install CUDA to enable XLA: see https://developer.nvidia.com/cuda-downloads
 

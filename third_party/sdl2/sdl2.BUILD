@@ -26,6 +26,7 @@ cmake(
     generate_args = [
         "-GNinja",
         "-DCMAKE_BUILD_TYPE=Release",  # always compile for release
+        "-DCMAKE_INSTALL_LIBDIR=lib",
         "-DSDL_STATIC=ON",
         "-DSDL_STATIC_LIB=ON",
         "-DSDL_DLOPEN=ON",
