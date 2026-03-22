@@ -78,7 +78,7 @@ spelling-system-install:
 	python3 -c "import ctypes.util, sys; sys.exit(0 if ctypes.util.find_library('enchant-2') or ctypes.util.find_library('enchant') else 1)")
 
 auditwheel-install:
-	$(call check_install_extra, auditwheel, auditwheel typed-ast patchelf)
+	$(call check_install_extra, auditwheel, auditwheel patchelf)
 
 # python linter
 
