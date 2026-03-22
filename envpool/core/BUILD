@@ -197,7 +197,7 @@ cc_library(
     deps = [
         ":spec",
         "@cuda//:cudart_static",
-        "@pybind11//:pybind11",
+        "@pybind11",
     ],
 )
 
