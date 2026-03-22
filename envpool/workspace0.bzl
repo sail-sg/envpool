@@ -21,27 +21,64 @@ load("//third_party/cuda:cuda.bzl", "cuda_configure")
 def workspace():
     """Load requested packages."""
 
-    # Keep a WORKSPACE-compatible stable rules_python release.
+    maybe(
+        http_archive,
+        name = "rules_cc",
+        sha256 = "283fa1cdaaf172337898749cf4b9b1ef5ea269da59540954e51fba0e7b8f277a",
+        strip_prefix = "rules_cc-0.2.17",
+        urls = [
+            "https://github.com/bazelbuild/rules_cc/releases/download/0.2.17/rules_cc-0.2.17.tar.gz",
+        ],
+    )
+
+    maybe(
+        http_archive,
+        name = "rules_java",
+        sha256 = "9de4e178c2c4f98d32aafe5194c3f2b717ae10405caa11bdcb460ac2a6f61516",
+        urls = [
+            "https://github.com/bazelbuild/rules_java/releases/download/9.6.1/rules_java-9.6.1.tar.gz",
+        ],
+    )
+
+    # Keep both repo names while this WORKSPACE still mixes legacy rules_python
+    # and newer rules_cc/rules_java consumers.
+    maybe(
+        http_archive,
+        name = "protobuf",
+        sha256 = "9f0933ad12abb0a8957b3b64aefc34774ccbe57f77f890c66cb4067519bb83c1",
+        strip_prefix = "protobuf-34.1",
+        urls = [
+            "https://github.com/protocolbuffers/protobuf/releases/download/v34.1/protobuf-34.1.bazel.tar.gz",
+        ],
+    )
+
+    maybe(
+        http_archive,
+        name = "com_google_protobuf",
+        sha256 = "9f0933ad12abb0a8957b3b64aefc34774ccbe57f77f890c66cb4067519bb83c1",
+        strip_prefix = "protobuf-34.1",
+        urls = [
+            "https://github.com/protocolbuffers/protobuf/releases/download/v34.1/protobuf-34.1.bazel.tar.gz",
+        ],
+    )
+
     maybe(
         http_archive,
         name = "rules_python",
-        patches = [
-            "//third_party/rules_python:py_repositories_protobuf34.patch",
-        ],
-        sha256 = "690e0141724abb568267e003c7b6d9a54925df40c275a870a4d934161dc9dd53",
-        strip_prefix = "rules_python-0.40.0",
+        sha256 = "2f5c284fbb4e86045c2632d3573fc006facbca5d1fa02976e89dc0cd5488b590",
+        strip_prefix = "rules_python-1.6.3",
         urls = [
-            "https://github.com/bazelbuild/rules_python/releases/download/0.40.0/rules_python-0.40.0.tar.gz",
+            "https://github.com/bazelbuild/rules_python/releases/download/1.6.3/rules_python-1.6.3.tar.gz",
         ],
     )
 
     maybe(
         http_archive,
         name = "rules_foreign_cc",
-        sha256 = "a2e6fb56e649c1ee79703e99aa0c9d13c6cc53c8d7a0cbb8797ab2888bbc99a3",
-        strip_prefix = "rules_foreign_cc-0.12.0",
+        sha256 = "32759728913c376ba45b0116869b71b68b1c2ebf8f2bcf7b41222bc07b773d73",
+        strip_prefix = "rules_foreign_cc-0.15.1",
         urls = [
-            "https://github.com/bazelbuild/rules_foreign_cc/releases/download/0.12.0/rules_foreign_cc-0.12.0.tar.gz",
+            "https://github.com/bazel-contrib/rules_foreign_cc/releases/download/0.15.1/rules_foreign_cc-0.15.1.tar.gz",
         ],
     )
 
