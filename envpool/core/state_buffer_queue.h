@@ -145,17 +145,17 @@ class StateBufferQueue {
    * time of each state buffer is in the same order as the allocation time.
    */
   std::vector<Array> Wait(std::size_t additional_done_count = 0) {
-    std::unique_ptr<StateBuffer> newbuf;
-    if (!stock_buffer_.TryGet(&newbuf) || newbuf == nullptr) {
-      newbuf = std::make_unique<StateBuffer>(batch_, max_num_players_, specs_,
-                                             is_player_state_);
-    }
     std::size_t pos = done_ptr_.fetch_add(1);
     std::size_t offset = pos % queue_size_;
     auto arr = queue_[offset]->Wait(additional_done_count);
     if (additional_done_count > 0) {
       // move pointer to the next block
       alloc_count_.fetch_add(additional_done_count);
+    }
+    std::unique_ptr<StateBuffer> newbuf;
+    if (!stock_buffer_.TryGet(&newbuf) || newbuf == nullptr) {
+      newbuf = std::make_unique<StateBuffer>(batch_, max_num_players_, specs_,
+                                             is_player_state_);
     }
     std::swap(queue_[offset], newbuf);
     return arr;

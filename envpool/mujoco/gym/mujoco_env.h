@@ -20,6 +20,8 @@
 #include <mjxmacro.h>
 #include <mujoco.h>
 
+#include <array>
+#include <cstring>
 #include <fstream>
 #include <stdexcept>
 #include <string>

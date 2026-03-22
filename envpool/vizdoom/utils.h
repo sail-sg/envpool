@@ -17,6 +17,9 @@
 #ifndef ENVPOOL_VIZDOOM_UTILS_H_
 #define ENVPOOL_VIZDOOM_UTILS_H_
 
+#include <algorithm>
+#include <array>
+#include <cassert>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -121,8 +124,8 @@ std::vector<VzdActT> BuildActionSet(
   std::vector<VzdActT> result;
   std::array<int, 43> button_index;
   std::array<double, 43> current_result;
-  memset(button_index.begin(), -1, sizeof(int) * 43);
-  memset(current_result.begin(), 0, sizeof(double) * 43);
+  std::fill(button_index.begin(), button_index.end(), -1);
+  std::fill(current_result.begin(), current_result.end(), 0.0);
   for (std::size_t i = 0; i < button_list.size(); ++i) {
     button_index[button_list[i]] = i;
   }

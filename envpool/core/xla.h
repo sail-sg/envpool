@@ -19,7 +19,9 @@
 
 #include <cuda_runtime_api.h>
 
+#include <algorithm>
 #include <cstdint>
+#include <cstring>
 #include <memory>
 #include <numeric>
 #include <string>
@@ -27,6 +29,7 @@
 #include <vector>
 
 #include "envpool/core/array.h"
+#include "envpool/core/dict.h"
 #include "envpool/core/xla_template.h"
 
 template <typename D>

@@ -17,6 +17,8 @@
 #ifndef ENVPOOL_MINIGRID_IMPL_UTILS_H_
 #define ENVPOOL_MINIGRID_IMPL_UTILS_H_
 
+#include <glog/logging.h>
+
 #include <cstdint>
 #include <unordered_map>
 
