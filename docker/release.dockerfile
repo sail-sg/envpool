@@ -4,6 +4,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG HOME=/root
 ENV PATH=$HOME/go/bin:$HOME/.pyenv/shims:$HOME/.pyenv/bin:$PATH
 ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+ENV USE_BAZEL_VERSION=8.6.0
 
 WORKDIR $HOME
 
@@ -47,7 +48,7 @@ RUN apt-get update \
 # use self-compiled openssl instead of system provided (1.0.2)
 RUN apt-get remove -y libssl-dev
 
-# install newest openssl (for py3.10 through py3.13)
+# install newest openssl (for py3.11 through py3.13)
 
 RUN wget https://www.openssl.org/source/openssl-1.1.1s.tar.gz
 RUN tar xf openssl-1.1.1s.tar.gz
@@ -62,7 +63,6 @@ RUN echo 'export PYENV_ROOT="$HOME/.pyenv"' >> /etc/profile
 RUN echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> /etc/profile
 RUN echo 'eval "$(pyenv init -)"' >> /etc/profile
 
-RUN LDFLAGS="-Wl,-rpath,/root/openssl-1.1.1s/lib" CONFIGURE_OPTS="-with-openssl=/root/openssl-1.1.1s" pyenv install -v 3.10-dev
 RUN LDFLAGS="-Wl,-rpath,/root/openssl-1.1.1s/lib" CONFIGURE_OPTS="-with-openssl=/root/openssl-1.1.1s" pyenv install -v 3.11-dev
 RUN LDFLAGS="-Wl,-rpath,/root/openssl-1.1.1s/lib" CONFIGURE_OPTS="-with-openssl=/root/openssl-1.1.1s" pyenv install -v 3.12-dev
 RUN LDFLAGS="-Wl,-rpath,/root/openssl-1.1.1s/lib" CONFIGURE_OPTS="-with-openssl=/root/openssl-1.1.1s" pyenv install -v 3.13-dev

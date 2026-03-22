@@ -159,13 +159,3 @@ develop environment, run
 
 The code is under ``/app``, and you can communicate with the host machine file
 system via ``/host``.
-
-.. note ::
-
-    For users in mainland China:
-
-    .. code-block:: bash
-
-        make docker-dev-cn
-
-    See `Issue #87 <https://github.com/sail-sg/envpool/issues/87>`_.
