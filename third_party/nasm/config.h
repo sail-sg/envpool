@@ -447,7 +447,7 @@
 #define HAVE_STDARG_H 1
 
 /* Define to 1 if you have the <stdbit.h> header file. */
-#define HAVE_STDBIT_H 1
+/* #undef HAVE_STDBIT_H */
 
 /* Define to 1 if stdbool.h conforms to C99. */
 #define HAVE_STDBOOL_H 1
@@ -456,7 +456,7 @@
 #define HAVE_STDC_INLINE 1
 
 /* "Define to 1 if you have the `stdc_leading_zeros' intrinsic function." */
-#define HAVE_STDC_LEADING_ZEROS 1
+/* #undef HAVE_STDC_LEADING_ZEROS */
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1
