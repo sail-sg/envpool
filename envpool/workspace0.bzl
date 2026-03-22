@@ -25,6 +25,9 @@ def workspace():
     maybe(
         http_archive,
         name = "rules_python",
+        patches = [
+            "//third_party/rules_python:py_repositories_protobuf34.patch",
+        ],
         sha256 = "690e0141724abb568267e003c7b6d9a54925df40c275a870a4d934161dc9dd53",
         strip_prefix = "rules_python-0.40.0",
         urls = [
@@ -45,10 +48,10 @@ def workspace():
     maybe(
         http_archive,
         name = "bazel_features",
-        sha256 = "ba1282c1aa1d1fffdcf994ab32131d7c7551a9bc960fbf05f42d55a1b930cbfb",
-        strip_prefix = "bazel_features-1.15.0",
+        sha256 = "c26b4e69cf02fea24511a108d158188b9d8174426311aac59ce803a78d107648",
+        strip_prefix = "bazel_features-1.43.0",
         urls = [
-            "https://github.com/bazel-contrib/bazel_features/releases/download/v1.15.0/bazel_features-v1.15.0.tar.gz",
+            "https://github.com/bazel-contrib/bazel_features/releases/download/v1.43.0/bazel_features-v1.43.0.tar.gz",
         ],
     )
 
