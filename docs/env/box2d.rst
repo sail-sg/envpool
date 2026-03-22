@@ -1,9 +1,9 @@
 Box2D
 =====
 
-We use ``box2d==2.4.2`` and ``gym==0.23.1`` as the codebase. See
-https://github.com/erincatto/box2d/tree/v2.4.2 and
-https://github.com/openai/gym/tree/v0.23.1/gym/envs/box2d
+EnvPool's Box2D implementation follows ``box2d==2.4.2``. The current Python
+baseline checks compare against Gymnasium ``1.2.3`` Box2D environments backed
+by the ``box2d`` wheel.
 
 
 BipedalWalker-v3, BipedalWalkerHardcore-v3
@@ -50,7 +50,7 @@ The episode will terminate if the hull gets in contact with the ground or
 if the walker exceeds the right end of the terrain length.
 
 
-CarRacing-v2
+CarRacing-v3
 ------------
 
 The easiest control task to learn from pixels - a top-down racing environment.
@@ -86,7 +86,7 @@ The episode finishes when all of the tiles are visited. The car can also go
 outside of the playfield - that is, far off the track, in which case it will
 receive -100 reward and die.
 
-LunarLander-v2, LunarLanderContinuous-v2
+LunarLander-v3, LunarLanderContinuous-v3
 ----------------------------------------
 
 This environment is a classic rocket trajectory optimization problem.
@@ -152,13 +152,11 @@ The episode finishes if:
 Notes on Box2D versions
 -----------------------
 
-``box2d_correctness_test.py`` aims to address the correctness of our Box2D
-implementation.
+``box2d_correctness_test.py`` checks EnvPool against the current Gymnasium
+``v3`` Box2D baselines.
 
-We used gym's historical baseline with dependency ``box2d-py==2.3.5`` (see
-https://github.com/openai/box2d-py/tree/2.3.5) for 1000 episode and averaged
-reward as our threshold.
-
-The current implementation of envpool is based on box2d 2.4.2 version.
-If you want to use box2d==2.3.5 to run the test, please checkout commit
-``4de47ebb6615052c67fdfbbe9bc3e9b1d5692f99`` and build the wheel.
+Older EnvPool releases used Gym's historical baseline with dependency
+``box2d-py==2.3.5`` (see
+https://github.com/openai/box2d-py/tree/2.3.5) for these comparisons. If you
+need to reproduce that historical setup, please checkout commit
+``4de47ebb6615052c67fdfbbe9bc3e9b1d5692f99`` and build the wheel from there.
