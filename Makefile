@@ -15,6 +15,7 @@ DOCKER_TAG     = $(DATE)-$(COMMIT_HASH)
 DOCKER_USER    = trinkle23897
 RELEASE_PYTHON ?= $(shell python3 -c 'import sys; print("{}.{}".format(sys.version_info[0], sys.version_info[1]))')
 RELEASE_SETUP_TARGET = //:setup_py$(subst .,,$(RELEASE_PYTHON))
+RELEASE_ARTIFACT_LEADER ?= 3.11
 CLANG_TIDY_MAJOR = 18
 CLANG_TIDY_BIN = clang-tidy-$(CLANG_TIDY_MAJOR)
 CLANG_TIDY_WRAPPER_DIR = $(HOME)/.cache/$(PROJECT_NAME)/bin
@@ -202,7 +203,20 @@ docker-release-launch: docker-release
 	docker run --network=host -v /:/host -v $(shell pwd):/app -v $(HOME)/.cache:/root/.cache --shm-size=4gb -it $(PROJECT_NAME)-release:$(DOCKER_TAG) zsh
 
 pypi-wheel: auditwheel-install bazel-release
-	ls dist/*.whl -Art | tail -n 1 | xargs auditwheel repair --plat manylinux_2_28_x86_64
+	rm -rf wheelhouse
+	CURRENT_WHEEL=$$(ls dist/*.whl -Art | tail -n 1); \
+	auditwheel repair --plat manylinux_2_28_x86_64 "$$CURRENT_WHEEL"; \
+	if [ "$(GITHUB_ACTIONS)" = "true" ] && [ "$(RELEASE_PYTHON)" = "$(RELEASE_ARTIFACT_LEADER)" ]; then \
+		for py in 3.12 3.13; do \
+			if [ "$$py" = "$(RELEASE_PYTHON)" ]; then \
+				continue; \
+			fi; \
+			$(MAKE) bazel-release RELEASE_PYTHON=$$py; \
+			EXTRA_WHEEL=$$(ls dist/*.whl -Art | tail -n 1); \
+			auditwheel repair --plat manylinux_2_28_x86_64 "$$EXTRA_WHEEL"; \
+			rm -f "$$EXTRA_WHEEL"; \
+		done; \
+	fi
 
 release-test1:
 	cd envpool && python3 make_test.py
@@ -211,3 +225,6 @@ release-test2:
 	cd examples && python3 make_env.py && python3 env_step.py
 
 release-test: release-test1 release-test2
+	if [ "$(GITHUB_ACTIONS)" = "true" ] && [ "$(RELEASE_PYTHON)" != "$(RELEASE_ARTIFACT_LEADER)" ]; then \
+		rm -rf wheelhouse; \
+	fi
