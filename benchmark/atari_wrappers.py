@@ -19,7 +19,7 @@ https://github.com/thu-ml/tianshou/blob/master/examples/atari/atari_wrapper.py
 from collections import deque
 
 import cv2
-import gym
+import gymnasium as gym
 import numpy as np
 
 
@@ -38,14 +38,14 @@ class NoopResetEnv(gym.Wrapper):
     self.noop_action = 0
     assert env.unwrapped.get_action_meanings()[0] == "NOOP"
 
-  def reset(self):
-    self.env.reset()
+  def reset(self, *, seed=None, options=None):
+    obs, info = self.env.reset(seed=seed, options=options)
     noops = self.unwrapped.np_random.integers(1, self.noop_max + 1)
     for _ in range(noops):
-      obs, _, done, _ = self.env.step(self.noop_action)
-      if done:
-        obs = self.env.reset()
-    return obs
+      obs, _, terminated, truncated, info = self.env.step(self.noop_action)
+      if terminated or truncated:
+        obs, info = self.env.reset()
+    return obs, info
 
 
 class MaxAndSkipEnv(gym.Wrapper):
@@ -65,15 +65,15 @@ class MaxAndSkipEnv(gym.Wrapper):
 
     Repeat action, sum reward, and max over last observations.
     """
-    obs_list, total_reward, done = [], 0., False
+    obs_list, total_reward = [], 0.
     for _ in range(self._skip):
-      obs, reward, done, info = self.env.step(action)
+      obs, reward, terminated, truncated, info = self.env.step(action)
       obs_list.append(obs)
       total_reward += reward
-      if done:
+      if terminated or truncated:
         break
     max_frame = np.max(obs_list[-2:], axis=0)
-    return max_frame, total_reward, done, info
+    return max_frame, total_reward, terminated, truncated, info
 
 
 class EpisodicLifeEnv(gym.Wrapper):
@@ -90,8 +90,8 @@ class EpisodicLifeEnv(gym.Wrapper):
     self.was_real_done = True
 
   def step(self, action):
-    obs, reward, done, info = self.env.step(action)
-    self.was_real_done = done
+    obs, reward, terminated, truncated, info = self.env.step(action)
+    self.was_real_done = terminated or truncated
     # check current lives, make loss of life terminal, then update lives to
     # handle bonus lives
     lives = self.env.unwrapped.ale.lives()
@@ -99,23 +99,25 @@ class EpisodicLifeEnv(gym.Wrapper):
       # for Qbert sometimes we stay in lives == 0 condition for a few
       # frames, so its important to keep lives > 0, so that we only reset
       # once the environment is actually done.
-      done = True
+      terminated = True
     self.lives = lives
-    return obs, reward, done, info
+    return obs, reward, terminated, truncated, info
 
-  def reset(self):
+  def reset(self, *, seed=None, options=None):
     """Calls the Gym environment reset, only when lives are exhausted.
 
     This way all states are still reachable even though lives are episodic,
     and the learner need not know about any of this behind-the-scenes.
     """
     if self.was_real_done:
-      obs = self.env.reset()
+      obs, info = self.env.reset(seed=seed, options=options)
     else:
       # no-op step to advance from terminal/lost life state
-      obs = self.env.step(0)[0]
+      obs, _, terminated, truncated, info = self.env.step(0)
+      if terminated or truncated:
+        obs, info = self.env.reset(seed=seed, options=options)
     self.lives = self.env.unwrapped.ale.lives()
-    return obs
+    return obs, info
 
 
 class FireResetEnv(gym.Wrapper):
@@ -131,9 +133,12 @@ class FireResetEnv(gym.Wrapper):
     assert env.unwrapped.get_action_meanings()[1] == "FIRE"
     assert len(env.unwrapped.get_action_meanings()) >= 3
 
-  def reset(self):
-    self.env.reset()
-    return self.env.step(1)[0]
+  def reset(self, *, seed=None, options=None):
+    self.env.reset(seed=seed, options=options)
+    obs, _, terminated, truncated, info = self.env.step(1)
+    if terminated or truncated:
+      obs, info = self.env.reset()
+    return obs, info
 
 
 class WarpFrame(gym.ObservationWrapper):
@@ -214,16 +219,16 @@ class FrameStack(gym.Wrapper):
       dtype=env.observation_space.dtype
     )
 
-  def reset(self):
-    obs = self.env.reset()
+  def reset(self, *, seed=None, options=None):
+    obs, info = self.env.reset(seed=seed, options=options)
     for _ in range(self.n_frames):
       self.frames.append(obs)
-    return self._get_ob()
+    return self._get_ob(), info
 
   def step(self, action):
-    obs, reward, done, info = self.env.step(action)
+    obs, reward, terminated, truncated, info = self.env.step(action)
     self.frames.append(obs)
-    return self._get_ob(), reward, done, info
+    return self._get_ob(), reward, terminated, truncated, info
 
   def _get_ob(self):
     # the original wrapper use `LazyFrames` but since we use np buffer,
@@ -251,7 +256,11 @@ def wrap_deepmind(
   :param bool warp_frame: wrap the grayscale + resize observation wrapper.
   :return: the wrapped atari environment.
   """
-  assert "NoFrameskip" in env.spec.id
+  assert env.spec is not None
+  assert (
+    "NoFrameskip" in env.spec.id or
+    (env.spec.id.startswith("ALE/") and env.spec.id.endswith("-v5"))
+  )
   env = NoopResetEnv(env, noop_max=30)
   env = MaxAndSkipEnv(env, skip=4)
   if episode_life:

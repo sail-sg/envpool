@@ -15,57 +15,74 @@
 import argparse
 import time
 
-import gym
+import ale_py
+import gymnasium as gym
 import tqdm
 from atari_wrappers import wrap_deepmind
 
 
+def make_vector_env(num_envs, async_, make_env):
+  if async_:
+    vector_env_cls = gym.vector.AsyncVectorEnv
+  else:
+    vector_env_cls = gym.vector.SyncVectorEnv
+  return vector_env_cls([make_env for _ in range(num_envs)])
+
+
 def run(env, num_envs, total_step, async_):
   if env == "atari":
-    task_id = "PongNoFrameskip-v4"
+    gym.register_envs(ale_py)
+    task_id = "ALE/Pong-v5"
     frame_skip = 4
+    make_kwargs = {"frameskip": 1}
     if num_envs == 1:
       env = wrap_deepmind(
-        gym.make(task_id),
+        gym.make(task_id, **make_kwargs),
         episode_life=False,
         clip_rewards=False,
         frame_stack=4,
       )
     else:
-      env = gym.vector.make(
-        task_id, num_envs, async_, lambda e:
-        wrap_deepmind(e, episode_life=False, clip_rewards=False, frame_stack=4)
+      env = make_vector_env(
+        num_envs,
+        async_,
+        lambda: wrap_deepmind(
+          gym.make(task_id, **make_kwargs),
+          episode_life=False,
+          clip_rewards=False,
+          frame_stack=4,
+        ),
       )
   elif env == "mujoco":
-    task_id = "Ant-v3"
+    task_id = "Ant-v5"
     frame_skip = 5
     if num_envs == 1:
       env = gym.make(task_id)
     else:
-      env = gym.vector.make(task_id, num_envs, async_)
+      env = make_vector_env(num_envs, async_, lambda: gym.make(task_id))
   elif env == "box2d":
-    task_id = "LunarLander-v2"
+    task_id = "LunarLander-v3"
     frame_skip = 1
     if num_envs == 1:
       env = gym.make(task_id)
     else:
-      env = gym.vector.make(task_id, num_envs, async_)
+      env = make_vector_env(num_envs, async_, lambda: gym.make(task_id))
   else:
     raise NotImplementedError(f"Unknown env {env}")
-  env.seed(0)
-  env.reset()
+  env.reset(seed=0)
   action = env.action_space.sample()
-  done = False
+  terminated = truncated = False
   t = time.time()
   for _ in tqdm.trange(total_step):
     if num_envs == 1:
-      if done:
-        done = False
+      if terminated or truncated:
+        terminated = truncated = False
         env.reset()
       else:
-        done = env.step(action)[2]
+        _, _, terminated, truncated, _ = env.step(action)
     else:
       env.step(action)
+  env.close()
   print(f"FPS = {frame_skip * total_step * num_envs / (time.time() - t):.2f}")
 
 

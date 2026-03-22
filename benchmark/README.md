@@ -7,13 +7,22 @@ The following results are generated from four types of machine:
 3. TPU-VM: 96 core ``Intel(R) Xeon(R) CPU @ 2.00GHz``, 2 NUMA core, TPU v3-8
 4. DGX-A100: 256 core ``AMD EPYC 7742 64-Core Processor``, 8 NUMA core, 8x A100
 
-We use `PongNoFrameskip-v4` (with environment wrappers from [OpenAI baselines](https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py)) and `Ant-v3` for Atari/Mujoco environment benchmark test with `envpool==0.6.1.post1`. Other packages' versions are all in `requirements.txt`:
+The historical numbers below were produced with `PongNoFrameskip-v4` and
+`Ant-v3` on `envpool==0.6.1.post1`. The current benchmark scripts in this
+directory use Gymnasium's `ALE/Pong-v5` and `Ant-v5`, and the baseline
+dependencies plus shared benchmark tooling are installed from
+`requirements.txt`:
 
 ```bash
 $ pip install -r requirements.txt
 ```
 
-To align with other baseline results, FPS is multiplied with `frame_skip` (4 for `PongNoFrameskip-v4` and 5 for `Ant-v3`).
+`test_gym.py` uses only the packages above. `test_envpool.py` additionally
+expects an installed EnvPool build with native modules, so install the
+EnvPool wheel you want to benchmark separately before running it.
+
+To align with other baseline results, FPS is multiplied with `frame_skip` (4
+for Atari and 5 for Mujoco).
 
 ## Highest FPS Overview
 
@@ -53,7 +62,7 @@ python3 test_gym.py --env atari --num-envs 12 --total-step 6000
 python3 test_gym.py --env mujoco --num-envs 12 --total-step 12000
 ```
 
-### Subprocess (gym.vector_env)
+### Subprocess (gymnasium.vector)
 
 Command to run:
 
@@ -66,18 +75,10 @@ python3 test_gym.py --env mujoco --async_ --num-envs 10 --total-step 50000
 
 ### Sample Factory
 
-To run with Ant-v3 in Sample Factory, add one line in `sample_factory/envs/mujoco/mujoco_utils.py`:
-
-```diff
- MUJOCO_ENVS = [
-+    MujocoSpec('mujoco_ant', 'Ant-v3'),
-     MujocoSpec('mujoco_hopper', 'Hopper-v2'),
-     MujocoSpec('mujoco_halfcheetah', 'HalfCheetah-v2'),
-     MujocoSpec('mujoco_humanoid', 'Humanoid-v2'),
- ]
-```
-
-and finally use FPS \* 5 as the result.
+Sample Factory remains a historical reference for now. The latest upstream
+release still depends on `gymnasium<1.0`, `numpy<2`, and an older `ale-py`
+build that is not available in the current devbox package mirror, so it is not
+included in `requirements.txt`.
 
 Command to run:
 
@@ -107,6 +108,9 @@ for i in num_workers:
 -->
 
 ### EnvPool
+
+Install an EnvPool wheel for the version you want to benchmark before running
+the commands below.
 
 <!--
 

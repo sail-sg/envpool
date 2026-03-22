@@ -1,0 +1,53 @@
+--- src/assetgen.h
++++ src/assetgen.h
+@@ -7,9 +7,9 @@
+ */
+ 
+ #include "randgen.h"
+-#include <QColor>
+-#include <QImage>
+-#include <QRectF>
++#include <QtCore/QRectF>
++#include <QtGui/QColor>
++#include <QtGui/QImage>
+ #include <QtGui/QPainter>
+ #include <memory>
+ 
+
+--- src/qt-utils.h
++++ src/qt-utils.h
+@@ -6,8 +6,8 @@
+ 
+ */
+ 
+-#include <QRect>
+-#include <QColor>
++#include <QtCore/QRect>
++#include <QtGui/QColor>
+ 
+ inline QRectF adjust_rect(const QRectF &base_rect, const QRectF &adjusting_rect) {
+     QRectF rect = QRectF(base_rect.x() + base_rect.width() * adjusting_rect.x(),
+
+--- src/game.cpp
++++ src/game.cpp
+@@ -141,13 +141,14 @@
+ 
+     prev_level_seed = current_level_seed;
+ 
+-    if (step_data.done) {
+-        reset();
+-    }
++    // disable auto-reset for envpool
++    // if (step_data.done) {
++    //     reset();
++    // }
+ 
+-    if (options.use_sequential_levels && step_data.level_complete) {
+-        step_data.done = false;
+-    }
++    // if (options.use_sequential_levels && step_data.level_complete) {
++    //     step_data.done = false;
++    // }
+ 
+     episode_done = step_data.done;
+ 
