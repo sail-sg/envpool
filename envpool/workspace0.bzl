@@ -162,16 +162,6 @@ def workspace():
 
     maybe(
         http_archive,
-        name = "com_justbuchanan_rules_qt",
-        sha256 = "29c1bf65369195d038eb5d3c923499fd229fa7ba947524dbdd9c48c91e1ee740",
-        strip_prefix = "bazel_rules_qt-89290cc7962d697c31b361a0f62141ca13d062d2",
-        urls = [
-            "https://github.com/justbuchanan/bazel_rules_qt/archive/89290cc7962d697c31b361a0f62141ca13d062d2.tar.gz",
-        ],
-    )
-
-    maybe(
-        http_archive,
         name = "glibc_version_header",
         sha256 = "57db74f933b7a9ea5c653498640431ce0e52aaef190d6bb586711ec4f8aa2b9e",
         strip_prefix = "glibc_version_header-0.1/version_headers/",
