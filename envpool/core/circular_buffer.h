@@ -64,6 +64,17 @@ class CircularBuffer {
     sem_put_.signal();
     return v;
   }
+
+  bool TryGet(V* out) {
+    if (!sem_get_.tryWait()) {
+      return false;
+    }
+    uint64_t head = head_.fetch_add(1);
+    auto offset = head % size_;
+    *out = std::move(buffer_[offset]);
+    sem_put_.signal();
+    return true;
+  }
 };
 
 #endif  // ENVPOOL_CORE_CIRCULAR_BUFFER_H_

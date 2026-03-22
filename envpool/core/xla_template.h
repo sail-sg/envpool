@@ -23,10 +23,16 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <array>
+#include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <vector>
+
+#include "envpool/core/spec.h"
 
 namespace py = pybind11;
 

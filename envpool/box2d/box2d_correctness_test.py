@@ -15,8 +15,7 @@
 
 from typing import Any, Dict, List, Tuple, no_type_check
 
-# import cv2
-import gym
+import gymnasium as gym
 import numpy as np
 import pygame
 from absl import logging
@@ -46,16 +45,16 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
     self.run_space_check(env0, env1)
 
   def test_lunar_lander_space(self) -> None:
-    env0 = gym.make("LunarLander-v2")
+    env0 = gym.make("LunarLander-v3")
     env1 = make_gym("LunarLander-v2")
     self.run_space_check(env0, env1)
 
-    env0 = gym.make("LunarLanderContinuous-v2")
+    env0 = gym.make("LunarLanderContinuous-v3")
     env1 = make_gym("LunarLanderContinuous-v2")
     self.run_space_check(env0, env1)
 
   def test_car_racing_space(self) -> None:
-    env0 = gym.make("CarRacing-v2")
+    env0 = gym.make("CarRacing-v3")
     env1 = make_gym("CarRacing-v2")
     self.run_space_check(env0, env1)
 

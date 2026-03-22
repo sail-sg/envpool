@@ -90,10 +90,9 @@ py_test(
         ":box2d",
         ":box2d_registration",
         requirement("absl-py"),
-        requirement("gym"),
-        requirement("box2d-py"),
+        requirement("box2d"),
+        requirement("gymnasium"),
         requirement("pygame"),
-        requirement("opencv-python-headless"),
         requirement("numpy"),
     ],
 )

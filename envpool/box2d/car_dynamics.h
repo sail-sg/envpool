@@ -35,14 +35,14 @@
 
 namespace box2d {
 
-static const float kSize = 0.02;
-static const float kEnginePower = 100000000.0f * kSize * kSize;
-static const float kWheelMomentOfInertia = 4000.0f * kSize * kSize;
-static const float kFrictionLimit = 1000000.0f * kSize * kSize;
+inline constexpr float kSize = 0.02f;
+inline constexpr float kEnginePower = 100000000.0f * kSize * kSize;
+inline constexpr float kWheelMomentOfInertia = 4000.0f * kSize * kSize;
+inline constexpr float kFrictionLimit = 1000000.0f * kSize * kSize;
 static const float kWheelR = 27;
 static const float kWheelW = 14;
 // clang-format off
-static const float kBrakeForce = 15;    // radians per second
+inline constexpr float kBrakeForce = 15;  // radians per second
 static const float kWheelPos[4][2] = {  // NOLINT
 {-55, 80},
 {55, 80},

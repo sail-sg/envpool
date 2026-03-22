@@ -163,10 +163,10 @@ def workspace():
     maybe(
         http_archive,
         name = "com_justbuchanan_rules_qt",
-        sha256 = "6b42a58f062b3eea10ada5340cd8f63b47feb986d16794b0f8e0fde750838348",
-        strip_prefix = "bazel_rules_qt-3196fcf2e6ee81cf3a2e2b272af3d4259b84fcf9",
+        sha256 = "29c1bf65369195d038eb5d3c923499fd229fa7ba947524dbdd9c48c91e1ee740",
+        strip_prefix = "bazel_rules_qt-89290cc7962d697c31b361a0f62141ca13d062d2",
         urls = [
-            "https://github.com/justbuchanan/bazel_rules_qt/archive/3196fcf2e6ee81cf3a2e2b272af3d4259b84fcf9.tar.gz",
+            "https://github.com/justbuchanan/bazel_rules_qt/archive/89290cc7962d697c31b361a0f62141ca13d062d2.tar.gz",
         ],
     )
 
@@ -480,10 +480,10 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "bazel_clang_tidy",
-        sha256 = "ec8c5bf0c02503b928c2e42edbd15f75e306a05b2cae1f34a7bc84724070b98b",
-        strip_prefix = "bazel_clang_tidy-783aa523aafb4a6798a538c61e700b6ed27975a7",
+        sha256 = "fdc45b36544abca36c2fcb85c951915c4e6cb986b2be2977582f18f5b70b99ec",
+        strip_prefix = "bazel_clang_tidy-c4d35e0d0b838309358e57a2efed831780f85cd0",
         urls = [
-            "https://github.com/erenon/bazel_clang_tidy/archive/783aa523aafb4a6798a538c61e700b6ed27975a7.zip",
+            "https://github.com/erenon/bazel_clang_tidy/archive/c4d35e0d0b838309358e57a2efed831780f85cd0.zip",
         ],
     )
 

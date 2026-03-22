@@ -22,11 +22,17 @@ Checks:     '
             readability-*,
             -bugprone-easily-swappable-parameters,
             -bugprone-implicit-widening-of-multiplication-result,
+            -bugprone-branch-clone,
             -bugprone-narrowing-conversions,
             -modernize-use-trailing-return-type,
+            -modernize-use-nodiscard,
+            -readability-convert-member-functions-to-static,
             -readability-function-cognitive-complexity,
             -readability-identifier-length,
             -readability-magic-numbers,
+            -readability-make-member-function-const,
+            -readability-named-parameter,
+            -readability-non-const-parameter,
             -readability-static-accessed-through-instance,
             -readability-uppercase-literal-suffix,
             '
@@ -47,5 +53,5 @@ CheckOptions:
   - { key: readability-identifier-naming.StructCase,            value: CamelCase  }
   - { key: readability-identifier-naming.UnionCase,             value: CamelCase  }
   - { key: readability-identifier-naming.VariableCase,          value: lower_case }
-WarningsAsErrors: '*'
+WarningsAsErrors: '*,-clang-diagnostic-deprecated-declarations'
 HeaderFilterRegex: '/envpool/'

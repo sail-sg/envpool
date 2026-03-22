@@ -159,6 +159,7 @@ cc_library(
     name = "env",
     hdrs = ["env.h"],
     deps = [
+        ":env_spec",
         ":spec",
         ":state_buffer_queue",
     ],
@@ -194,7 +195,9 @@ cc_library(
         "-lrt",
     ],
     deps = [
+        ":spec",
         "@cuda//:cudart_static",
+        "@pybind11",
     ],
 )
 
@@ -203,6 +206,7 @@ cc_library(
     hdrs = ["xla.h"],
     deps = [
         ":array",
+        ":dict",
         ":xla_template",
         "@cuda//:cudart_static",
     ],
