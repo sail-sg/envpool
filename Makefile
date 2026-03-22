@@ -205,7 +205,7 @@ docker-release-launch: docker-release
 pypi-wheel: auditwheel-install bazel-release
 	rm -rf wheelhouse
 	CURRENT_WHEEL=$$(ls dist/*.whl -Art | tail -n 1); \
-	auditwheel repair --plat manylinux_2_28_x86_64 "$$CURRENT_WHEEL"; \
+	python3 -m auditwheel repair --plat manylinux_2_28_x86_64 "$$CURRENT_WHEEL"; \
 	if [ "$(GITHUB_ACTIONS)" = "true" ] && [ "$(RELEASE_PYTHON)" = "$(RELEASE_ARTIFACT_LEADER)" ]; then \
 		for py in 3.12 3.13; do \
 			if [ "$$py" = "$(RELEASE_PYTHON)" ]; then \
@@ -213,7 +213,7 @@ pypi-wheel: auditwheel-install bazel-release
 			fi; \
 			$(MAKE) bazel-release RELEASE_PYTHON=$$py; \
 			EXTRA_WHEEL=$$(ls dist/*.whl -Art | tail -n 1); \
-			auditwheel repair --plat manylinux_2_28_x86_64 "$$EXTRA_WHEEL"; \
+			python3 -m auditwheel repair --plat manylinux_2_28_x86_64 "$$EXTRA_WHEEL"; \
 			rm -f "$$EXTRA_WHEEL"; \
 		done; \
 	fi
