@@ -398,12 +398,15 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "procgen",
-        sha256 = "d5620394418b885f9028f98759189a5f78bc4ba71fb6605f910ae22fca870c8e",
-        strip_prefix = "procgen-0.10.8/procgen",
+        sha256 = "22940ad0f1fdb4ad1eab3303ce23d3a0ea536700bb1d7c299bee64dbc7c57e9b",
+        strip_prefix = "procgen-0.10.7/procgen",
         urls = [
-            "https://github.com/Trinkle23897/procgen/archive/refs/tags/0.10.8.tar.gz",
+            "https://github.com/openai/procgen/archive/refs/tags/0.10.7.tar.gz",
         ],
         build_file = "//third_party/procgen:procgen.BUILD",
+        patches = [
+            "//third_party/procgen:envpool.patch",
+        ],
     )
 
     maybe(

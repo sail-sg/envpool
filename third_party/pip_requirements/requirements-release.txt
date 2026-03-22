@@ -1,4 +1,4 @@
-setuptools
+setuptools==70.3.0
 wheel
 numpy>=2,<3
 dm-env>=1.6

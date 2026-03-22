@@ -13,6 +13,11 @@
 # limitations under the License.
 """EnvPool python benchmark script.
 
+This script expects an installed EnvPool build with native modules available.
+Baseline dependencies for the other benchmark scripts live in
+``benchmark/requirements.txt``; install the EnvPool wheel you want to
+benchmark separately before running this script.
+
 Single Python Thread
 ====================
 
@@ -56,7 +61,7 @@ if __name__ == "__main__":
     choices=["atari", "mujoco", "vizdoom", "box2d"],
   )
   parser.add_argument("--num-envs", type=int, default=645)
-  parser.add_argument("--batch-size", type=int, default=248)
+  parser.add_argument("--batch-size", type=int, default=None)
   # num_threads == 0 means to let envpool itself determine
   parser.add_argument("--num-threads", type=int, default=0)
   # thread_affinity_offset == -1 means no thread affinity
@@ -64,10 +69,14 @@ if __name__ == "__main__":
   parser.add_argument("--total-step", type=int, default=50000)
   parser.add_argument("--seed", type=int, default=0)
   args = parser.parse_args()
+  if args.batch_size is None:
+    args.batch_size = min(248, args.num_envs)
+  elif args.batch_size > args.num_envs:
+    raise ValueError("--batch-size must be less than or equal to --num-envs")
   print(args)
   task_id = {
     "atari": "Pong-v5",
-    "mujoco": "Ant-v3",
+    "mujoco": "Ant-v5",
     "vizdoom": "HealthGathering-v1",
     "box2d": "LunarLander-v2",
   }[args.env]
