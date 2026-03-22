@@ -21,7 +21,7 @@ _SETUP_DEPS = [
 
 filegroup(
     name = "clang_tidy_config",
-    data = [".clang-tidy"],
+    srcs = [".clang-tidy"],
 )
 
 py_binary(
