@@ -1,18 +1,21 @@
 name: Release PyPI Wheel
 
-# on: [push, pull_request]
 on:
   push:
     branches:
       - main
     tags:
       - v*
+  pull_request:
+    branches:
+      - main
 
 jobs:
   release:
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux_2_28_x86_64
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
