@@ -31,13 +31,13 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
   def run_space_check(self, env0: gym.Env, env1: Any) -> None:
     """Check observation_space and action space."""
     obs0, obs1 = env0.observation_space, env1.observation_space
-    np.testing.assert_allclose(obs0.shape, obs1.shape)
+    self.assertEqual(obs0.shape, obs1.shape)
     act0, act1 = env0.action_space, env1.action_space
     if isinstance(act0, gym.spaces.Box):
       np.testing.assert_allclose(act0.low, act1.low)
       np.testing.assert_allclose(act0.high, act1.high)
     elif isinstance(act0, gym.spaces.Discrete):
-      np.testing.assert_allclose(act0.n, act1.n)
+      self.assertEqual(act0.n, act1.n)
 
   def test_bipedal_walker_space(self) -> None:
     env0 = gym.make("BipedalWalker-v3")
