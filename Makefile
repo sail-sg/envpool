@@ -8,7 +8,7 @@ COMMIT_HASH    = $(shell git log -1 --format=%h)
 COPYRIGHT      = "Garena Online Private Limited"
 BAZELOPT       =
 BAZELISK_BIN   = $(shell command -v bazelisk 2>/dev/null || echo $(HOME)/go/bin/bazelisk)
-BAZEL_VERSION  = 6.0.0
+BAZEL_VERSION  = 8.6.0
 BAZEL          = USE_BAZEL_VERSION=$(BAZEL_VERSION) $(BAZELISK_BIN)
 DATE           = $(shell date "+%Y-%m-%d")
 DOCKER_TAG     = $(DATE)-$(COMMIT_HASH)
@@ -182,12 +182,6 @@ docker-ci-launch: docker-ci
 docker-dev: docker-ci
 	docker run --network=host -v /:/host -v $(shell pwd):/app -v $(HOME)/.cache:/root/.cache --shm-size=4gb -it $(PROJECT_NAME):$(DOCKER_TAG) zsh
 
-# for mainland China
-docker-dev-cn:
-	docker build --network=host -t $(PROJECT_NAME):$(DOCKER_TAG) -f docker/dev-cn.dockerfile .
-	echo successfully build docker image with tag $(PROJECT_NAME):$(DOCKER_TAG)
-	docker run --network=host -v /:/host -v $(shell pwd):/app -v $(HOME)/.cache:/root/.cache --shm-size=4gb -it $(PROJECT_NAME):$(DOCKER_TAG) zsh
-
 docker-release:
 	docker build --network=host -t $(PROJECT_NAME)-release:$(DOCKER_TAG) -f docker/release.dockerfile .
 	echo successfully build docker image with tag $(PROJECT_NAME)-release:$(DOCKER_TAG)
@@ -200,7 +194,7 @@ docker-release-launch: docker-release
 	docker run --network=host -v /:/host -v $(shell pwd):/app -v $(HOME)/.cache:/root/.cache --shm-size=4gb -it $(PROJECT_NAME)-release:$(DOCKER_TAG) zsh
 
 pypi-wheel: auditwheel-install bazel-release
-	ls dist/*.whl -Art | tail -n 1 | xargs auditwheel repair --plat manylinux_2_24_x86_64
+	ls dist/*.whl -Art | tail -n 1 | xargs auditwheel repair --plat manylinux_2_28_x86_64
 
 release-test1:
 	cd envpool && python3 make_test.py

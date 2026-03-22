@@ -1,0 +1,13 @@
+--- boost.BUILD
++++ boost.BUILD
+@@ -866,6 +866,10 @@
+ 
+ boost_library(
+     name = "filesystem",
++    hdrs = glob([
++        "boost/scope/**/*.h",
++        "boost/scope/**/*.hpp",
++    ]),
+     copts = _w_no_deprecated,
+     defines = [
+         "BOOST_FILESYSTEM_NO_CXX20_ATOMIC_REF",

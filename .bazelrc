@@ -1,3 +1,7 @@
+common --enable_workspace
+common --noenable_bzlmod
+common --noincompatible_disallow_empty_glob
+
 build --action_env=BAZEL_LINKLIBS=-l%:libstdc++.a:-lm
 build --action_env=BAZEL_LINKOPTS=-static-libgcc
 build --action_env=CUDA_DIR=/usr/local/cuda

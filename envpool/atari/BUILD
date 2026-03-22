@@ -16,14 +16,16 @@ load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("//envpool:requirements.bzl", "requirement")
+load("//third_party:common.bzl", "copy_to_directory")
 
 package(default_visibility = ["//visibility:public"])
 
-genrule(
+copy_to_directory(
     name = "gen_atari_roms",
     srcs = ["@atari_roms//:roms"],
-    outs = ["roms"],
-    cmd = "mkdir -p $(OUTS) && cp $(SRCS) $(OUTS)",
+    out = "roms",
+    flatten = True,
+    strip_prefix = "ROM/",
 )
 
 genrule(

@@ -50,10 +50,10 @@ or `golang <https://golang.org/doc/install>`_ with version >= 1.16:
         # then follow the instructions on golang official website
         go env -w GOPROXY=https://goproxy.cn
 
-        wget https://mirrors.huaweicloud.com/bazel/6.0.0/bazel-6.0.0-linux-x86_64
-        chmod +x bazel-6.0.0-linux-x86_64
+        wget https://mirrors.huaweicloud.com/bazel/8.6.0/bazel-8.6.0-linux-x86_64
+        chmod +x bazel-8.6.0-linux-x86_64
         mkdir -p $HOME/go/bin
-        mv bazel-6.0.0-linux-x86_64 $HOME/go/bin/bazel
+        mv bazel-8.6.0-linux-x86_64 $HOME/go/bin/bazel
 
         export PATH=$PATH:$HOME/go/bin  # or write to .bashrc / .zshrc
 
@@ -159,13 +159,3 @@ develop environment, run
 
 The code is under ``/app``, and you can communicate with the host machine file
 system via ``/host``.
-
-.. note ::
-
-    For users in mainland China:
-
-    .. code-block:: bash
-
-        make docker-dev-cn
-
-    See `Issue #87 <https://github.com/sail-sg/envpool/issues/87>`_.

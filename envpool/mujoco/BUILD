@@ -16,28 +16,25 @@ load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("//envpool:requirements.bzl", "requirement")
+load("//third_party:common.bzl", "copy_to_directory")
 
 package(default_visibility = ["//visibility:public"])
 
-genrule(
+copy_to_directory(
     name = "gen_mujoco_gym_xml",
     srcs = [
-        "@mujoco_gym_xml",
         "//third_party/mujoco_gym_xml_patches:patches",
+        "@mujoco_gym_xml",
     ],
-    outs = ["assets_gym"],
-    cmd = """
-mkdir -p $(OUTS)
-cp -r $(locations @mujoco_gym_xml) $(OUTS)
-cp -r $(locations //third_party/mujoco_gym_xml_patches:patches) $(OUTS)
-""",
+    out = "assets_gym",
+    strip_prefix = "assets/",
 )
 
-genrule(
+copy_to_directory(
     name = "gen_mujoco_dmc_xml",
     srcs = ["@mujoco_dmc_xml"],
-    outs = ["assets_dmc"],
-    cmd = "mkdir -p $(OUTS) && cp -r $(SRCS) $(OUTS)",
+    out = "assets_dmc",
+    strip_prefix = "suite/",
 )
 
 genrule(

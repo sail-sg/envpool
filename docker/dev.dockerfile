@@ -1,16 +1,15 @@
 # Need docker >= 20.10.9, see https://stackoverflow.com/questions/71941032/why-i-cannot-run-apt-update-inside-a-fresh-ubuntu22-04
 
-FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04
+FROM nvidia/cuda:13.1.1-cudnn-devel-ubuntu24.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG HOME=/root
-ARG PATH=$PATH:$HOME/go/bin
+ENV PATH=$HOME/go/bin:$PATH
+ENV USE_BAZEL_VERSION=8.6.0
 
 RUN apt-get update \
-    && apt-get install -y python3-pip python3-dev golang-1.18 git wget curl zsh tmux vim \
+    && apt-get install -y python3-pip python3-dev python-is-python3 golang-go git wget curl zsh tmux vim \
     && rm -rf /var/lib/apt/lists/*
-RUN ln -s /usr/bin/python3 /usr/bin/python
-RUN ln -sf /usr/lib/go-1.18/bin/go /usr/bin/go
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 WORKDIR $HOME
 RUN git clone https://github.com/gpakosz/.tmux.git
@@ -27,7 +26,8 @@ RUN $HOME/go/bin/bazel version
 RUN useradd -ms /bin/zsh github-action
 
 RUN apt-get update \
-    && apt-get install -y clang-format clang-tidy swig qtdeclarative5-dev \
+    && apt-get install -y clang-format clang-tidy swig qtbase5-dev qtdeclarative5-dev \
     && rm -rf /var/lib/apt/lists/*
+RUN ln -sf /usr/include/x86_64-linux-gnu/qt5 /usr/include/qt
 
 WORKDIR /app

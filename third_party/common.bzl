@@ -59,3 +59,63 @@ template_rule = rule(
     output_to_genfiles = True,
     implementation = template_rule_impl,
 )
+
+def _copy_to_directory_impl(ctx):
+    out = ctx.actions.declare_directory(ctx.attr.out)
+    strip_prefix = ctx.attr.strip_prefix
+    flatten = "1" if ctx.attr.flatten else "0"
+
+    args = ctx.actions.args()
+    args.add(out.path)
+    args.add(strip_prefix)
+    args.add(flatten)
+    args.add_all([src.path for src in ctx.files.srcs])
+
+    ctx.actions.run_shell(
+        inputs = ctx.files.srcs,
+        outputs = [out],
+        arguments = [args],
+        command = """
+set -eu
+
+out="$1"
+strip_prefix="$2"
+flatten="$3"
+shift 3
+
+mkdir -p "$out"
+for src in "$@"; do
+  if [ "$flatten" = "1" ]; then
+    rel="$(basename "$src")"
+  else
+    rel="${src#*${strip_prefix}}"
+    if [ "$rel" = "$src" ]; then
+      rel="$(basename "$src")"
+    fi
+  fi
+  dst="$out/$rel"
+  mkdir -p "$(dirname "$dst")"
+  cp -R "$src" "$dst"
+done
+""",
+    )
+
+    return [
+        DefaultInfo(
+            files = depset([out]),
+            runfiles = ctx.runfiles(files = [out]),
+        ),
+    ]
+
+copy_to_directory = rule(
+    implementation = _copy_to_directory_impl,
+    attrs = {
+        "srcs": attr.label_list(
+            allow_files = True,
+            mandatory = True,
+        ),
+        "out": attr.string(mandatory = True),
+        "strip_prefix": attr.string(mandatory = True),
+        "flatten": attr.bool(default = False),
+    },
+)
