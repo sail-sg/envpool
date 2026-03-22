@@ -23,8 +23,8 @@ package(default_visibility = ["//visibility:public"])
 copy_to_directory(
     name = "gen_mujoco_gym_xml",
     srcs = [
-        "@mujoco_gym_xml",
         "//third_party/mujoco_gym_xml_patches:patches",
+        "@mujoco_gym_xml",
     ],
     out = "assets_gym",
     strip_prefix = "assets/",

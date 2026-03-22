@@ -99,7 +99,7 @@ for task, version, post_constraint, max_episode_steps in gym_mujoco_envs:
   if task == "Walker2d" and version == "v5":
     extra_args.update(
       {
-        "xml_file": "walker2d_v5.xml",
+        "xml_file": "walker2d_v5_envpool.xml",
         "legacy_healthy_reward": False,
       }
     )
