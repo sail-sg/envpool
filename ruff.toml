@@ -2,7 +2,7 @@ target-version = "py310"
 line-length = 80
 preview = true
 force-exclude = true
-extend-exclude = ["docs/_build"]
+extend-exclude = ["build", "docs/_build"]
 
 [lint]
 select = [
