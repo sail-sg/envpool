@@ -88,11 +88,22 @@ class Env {
       Dict<typename EnvSpec::ActionKeys,
            typename SpecToTArray<typename EnvSpec::ActionSpec::Values>::Type>;
 
+  static int ResolveSeed(const EnvSpec& spec, int env_id) {
+    const auto& env_seed = spec.config["env_seed"_];
+    if (!env_seed.empty()) {
+      CHECK_EQ(env_seed.size(),
+               static_cast<std::size_t>(spec.config["num_envs"_]))
+          << "`env_seed` must contain exactly one seed for each env";
+      return env_seed.at(env_id);
+    }
+    return spec.config["seed"_] + env_id;
+  }
+
   Env(const EnvSpec& spec, int env_id)
       : max_num_players_(spec.config["max_num_players"_]),
         spec_(spec),
         env_id_(env_id),
-        seed_(spec.config["seed"_] + env_id),
+        seed_(ResolveSeed(spec, env_id)),
         gen_(seed_),
         is_single_player_(max_num_players_ == 1),
         action_specs_(spec.action_spec.template AllValues<ShapeSpec>()),

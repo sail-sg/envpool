@@ -44,7 +44,10 @@ class GymEnvPoolMixin:
         return self._gym_action_space
 
 
-class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
+class GymEnvPoolMeta(
+    ABCMeta,
+    gym.Env.__class__,  # type: ignore[valid-type,misc,unused-ignore]
+):
     """Additional wrapper for EnvPool gym.Env API."""
 
     def __new__(cls: Any, name: str, parents: tuple, attrs: dict) -> Any:

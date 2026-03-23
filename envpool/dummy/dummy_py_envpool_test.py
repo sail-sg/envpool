@@ -65,6 +65,7 @@ class _DummyEnvPoolTest(absltest.TestCase):
             "thread_affinity_offset",
             "base_path",
             "seed",
+            "env_seed",
             "gym_reset_return_info",
             "state_num",
             "action_num",
@@ -152,6 +153,48 @@ class _DummyEnvPoolTest(absltest.TestCase):
             )
             xla_failed = True
         self.assertTrue(xla_failed)
+
+    def test_env_seed_overrides_sequential_seeding(self) -> None:
+        conf = dict(
+            zip(
+                _DummyEnvSpec._config_keys,
+                _DummyEnvSpec._default_config_values,
+                strict=False,
+            )
+        )
+        conf["num_envs"] = 3
+        conf["batch_size"] = 3
+        conf["max_num_players"] = 1
+        conf["env_seed"] = [1, 3, 5]
+        env = _DummyEnvPool(_DummyEnvSpec(tuple(conf.values())))
+        env._reset(np.arange(3, dtype=np.int32))
+
+        action = (
+            np.arange(3, dtype=np.int32),
+            np.arange(3, dtype=np.int32),
+            np.zeros((3, 6), dtype=np.float64),
+            np.zeros((3,), dtype=np.int32),
+            np.zeros((3,), dtype=np.int32),
+        )
+
+        env._recv()  # consume reset output
+
+        env._send(action)
+        state = dict(zip(env._state_keys, env._recv(), strict=False))
+        np.testing.assert_array_equal(
+            state["done"],
+            np.array([True, False, False]),
+        )
+
+        env._send(action)
+        _ = env._recv()
+
+        env._send(action)
+        state = dict(zip(env._state_keys, env._recv(), strict=False))
+        np.testing.assert_array_equal(
+            state["done"],
+            np.array([True, True, False]),
+        )
 
 
 class _EnvPoolMixinRegressionTest(absltest.TestCase):

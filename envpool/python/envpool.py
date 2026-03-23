@@ -25,6 +25,19 @@ from dm_env import TimeStep
 from .protocol import EnvPool, EnvSpec
 
 
+def _normalize_env_id(env_id: Any) -> Any:
+    """Normalize env_id while preserving traced arrays for XLA send paths."""
+    if isinstance(env_id, np.ndarray):
+        env_id = env_id.astype(np.int32, copy=False)
+    elif hasattr(env_id, "astype"):
+        env_id = env_id.astype(np.int32)
+    else:
+        env_id = np.asarray(env_id, dtype=np.int32)
+    if getattr(env_id, "ndim", 0) == 0:
+        env_id = env_id.reshape(1)
+    return env_id
+
+
 class EnvPoolMixin(ABC):
     """Mixin class for EnvPool, exposed to EnvPoolMeta."""
 
@@ -75,11 +88,10 @@ class EnvPoolMixin(ABC):
         self: EnvPool, adict: dict[str, Any]
     ) -> np.ndarray:
         """Fill in players.env_id for the simplified multiplayer API."""
-        env_id = np.asarray(adict["env_id"], dtype=np.int32)
-        if env_id.ndim == 0:
-            env_id = env_id.reshape(1)
+        env_id = _normalize_env_id(adict["env_id"])
         if self.config.get("max_num_players", 1) == 1:
             return env_id
+        env_id = np.asarray(env_id, dtype=np.int32)
         player_count = self._player_action_count(adict)
         if player_count is None or player_count == env_id.shape[0]:
             return env_id
