@@ -17,8 +17,10 @@ batched environments:
   to ``num_envs``;
 * ``num_threads (int)``: the maximum thread number for executing the actual
   ``env.step``, default to ``batch_size``;
-* ``seed (int)``: set seed over all environments. The i-th environment seed
-  will be set with i+seed, default to ``42``;
+* ``seed (int | Sequence[int])``: set seed over all environments. If an int is
+  provided, the i-th environment seed will be set with i+seed. If a sequence
+  is provided, it must contain exactly one seed per environment. The default is
+  ``42``;
 * ``max_episode_steps (int)``: set the max steps in one episode. This value is
   env-specific (27000 steps or 27000 * 4 = 108000 frames in Atari for
   example);

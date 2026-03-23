@@ -187,7 +187,7 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     if (!spec.config["wad_path"_].empty()) {
       dg_->setDoomScenarioPath(spec.config["wad_path"_]);
     }
-    dg_->setSeed(spec.config["seed"_]);
+    dg_->setSeed(seed_);
     dg_->setDoomMap(spec.config["map_id"_]);
 
     channel_ = dg_->getScreenChannels();

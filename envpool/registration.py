@@ -15,6 +15,7 @@
 
 import importlib
 import os
+from collections.abc import Sequence
 from typing import Any
 
 import gym
@@ -97,9 +98,22 @@ class EnvRegistry:
 
         # check arguments
         if "seed" in kwargs:  # Issue 214
-            INT_MAX = 2**31
-            assert -INT_MAX <= kwargs["seed"] < INT_MAX, (
-                f"Seed should be in range of int32, got {kwargs['seed']}"
+            if self._is_env_seed_sequence(kwargs["seed"]):
+                assert "env_seed" not in kwargs, (
+                    "Pass either `seed` as an int or seed list, or "
+                    "`env_seed`, but not both."
+                )
+                kwargs["env_seed"] = self._normalize_env_seed(
+                    kwargs["seed"],
+                    kwargs.get("num_envs", 1),
+                )
+                kwargs["seed"] = 0
+            else:
+                self._assert_int32_seed(kwargs["seed"])
+        if "env_seed" in kwargs:
+            kwargs["env_seed"] = self._normalize_env_seed(
+                kwargs["env_seed"],
+                kwargs.get("num_envs", 1),
             )
         if "num_envs" in kwargs:
             assert kwargs["num_envs"] >= 1
@@ -111,6 +125,37 @@ class EnvRegistry:
         spec_cls = getattr(importlib.import_module(import_path), spec_cls)
         config = spec_cls.gen_config(**kwargs)
         return spec_cls(config)
+
+    @staticmethod
+    def _assert_int32_seed(seed: Any) -> None:
+        INT_MAX = 2**31
+        assert -INT_MAX <= seed < INT_MAX, (
+            f"Seed should be in range of int32, got {seed}"
+        )
+
+    @staticmethod
+    def _is_env_seed_sequence(seed: Any) -> bool:
+        return (
+            isinstance(seed, Sequence) and not isinstance(seed, str | bytes)
+        ) or isinstance(seed, np.ndarray)
+
+    def _normalize_env_seed(self, seed: Any, num_envs: int) -> list[int]:
+        if isinstance(seed, np.ndarray):
+            assert seed.ndim == 1, (
+                "`seed` as an array must be 1-dimensional, "
+                f"got shape {seed.shape}"
+            )
+            seed = seed.tolist()
+        else:
+            seed = list(seed)
+        assert len(seed) == num_envs, (
+            "When `seed` is a sequence, its length must match `num_envs`, "
+            f"got len(seed) = {len(seed)} and num_envs = {num_envs}"
+        )
+        normalized_seed = [int(s) for s in seed]
+        for s in normalized_seed:
+            self._assert_int32_seed(s)
+        return normalized_seed
 
     def list_all_envs(self) -> list[str]:
         """Return all available task_id."""
