@@ -17,26 +17,26 @@ import numpy as np
 
 import envpool.entry  # noqa: F401
 from envpool.registration import (
-  list_all_envs,
-  make,
-  make_dm,
-  make_gym,
-  make_gymnasium,
-  make_spec,
-  register,
+    list_all_envs,
+    make,
+    make_dm,
+    make_gym,
+    make_gymnasium,
+    make_spec,
+    register,
 )
 
 # Gym 0.26 still references np.bool8, which NumPy 2 removed.
 if not hasattr(np, "bool8"):
-  np.__dict__["bool8"] = np.bool_
+    np.__dict__["bool8"] = np.bool_
 
 __version__ = "0.9.0"
 __all__ = [
-  "register",
-  "make",
-  "make_dm",
-  "make_gym",
-  "make_gymnasium",
-  "make_spec",
-  "list_all_envs",
+    "register",
+    "make",
+    "make_dm",
+    "make_gym",
+    "make_gymnasium",
+    "make_spec",
+    "list_all_envs",
 ]

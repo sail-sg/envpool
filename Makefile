@@ -25,13 +25,11 @@ PATH           := $(CLANG_TIDY_WRAPPER_DIR):$(HOME)/go/bin:$(PATH)
 check_install = python3 -c "import $(1)" || (cd && pip3 install $(1) --upgrade && cd -)
 check_install_extra = python3 -c "import $(1)" || (cd && pip3 install $(2) --upgrade && cd -)
 
-flake8-install:
-	$(call check_install, flake8)
-	$(call check_install_extra, bugbear, flake8_bugbear)
+ruff-install:
+	$(call check_install, ruff)
 
 py-format-install:
-	$(call check_install, isort)
-	$(call check_install, yapf)
+	$(call check_install, ruff)
 
 mypy-install:
 	$(call check_install, mypy)
@@ -61,12 +59,13 @@ addlicense-install: go-install
 	command -v addlicense || go install github.com/google/addlicense@latest
 
 doc-install:
-	$(call check_install, pydocstyle)
 	$(call check_install_extra, doc8, "doc8<1")
 	$(call check_install, setuptools)
 	$(call check_install, pbr)
 	$(call check_install, sphinx)
 	$(call check_install, sphinx_rtd_theme)
+
+spelling-install: doc-install spelling-system-install
 	$(call check_install_extra, sphinxcontrib.spelling, sphinxcontrib.spelling pyenchant)
 
 spelling-system-install:
@@ -88,13 +87,13 @@ release-system-install:
 			(dnf install -y perl-IO-Compress && dnf clean all); \
 	fi
 
-# python linter
+# python style / lint
 
-flake8: flake8-install
-	flake8 $(PYTHON_FILES) --count --show-source --statistics
+ruff: ruff-install
+	ruff check $(PYTHON_FILES)
 
 py-format: py-format-install
-	isort --check $(PYTHON_FILES) && yapf -r -d $(PYTHON_FILES)
+	ruff format --check $(PYTHON_FILES)
 
 mypy: mypy-install
 	mypy $(PROJECT_NAME)
@@ -150,12 +149,12 @@ addlicense: addlicense-install
 	addlicense -c $(COPYRIGHT) -l apache -y 2026 -check $(PROJECT_FOLDER)
 
 docstyle: doc-install
-	pydocstyle $(PROJECT_NAME) && doc8 docs && cd docs && make html SPHINXOPTS="-W"
+	doc8 docs && cd docs && make html SPHINXOPTS="-W"
 
 doc: doc-install
 	cd docs && make html && cd _build/html && python3 -m http.server
 
-spelling: doc-install spelling-system-install
+spelling: spelling-install
 	cd docs && make spelling SPHINXOPTS="-W"
 
 doc-clean:
@@ -165,11 +164,11 @@ doc-benchmark:
 	pandoc benchmark/README.md --from markdown --to rst -s -o docs/content/benchmark.rst --columns 1000
 	cd benchmark && ./plot.py --suffix png && mv *.png ../docs/_static/images/throughput
 
-lint: buildifier flake8 py-format clang-format cpplint clang-tidy mypy docstyle spelling
+lint: buildifier ruff py-format clang-format cpplint clang-tidy mypy docstyle spelling
 
 format: py-format-install clang-format-install buildifier-install addlicense-install
-	isort $(PYTHON_FILES)
-	yapf -ir $(PYTHON_FILES)
+	ruff check --fix $(PYTHON_FILES)
+	ruff format $(PYTHON_FILES)
 	clang-format -style=file -i $(CPP_FILES)
 	buildifier -r -lint=fix $(BAZEL_FILES)
 	addlicense -c $(COPYRIGHT) -l apache -y 2026 $(PROJECT_FOLDER)

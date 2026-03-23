@@ -27,82 +27,88 @@ is_legacy_gym = version.parse(gym.__version__) < version.parse("0.26.0")
 
 
 def policy(states: jnp.ndarray) -> jnp.ndarray:
-  return jnp.zeros(states.shape[0], dtype=jnp.int32)
+    """Compute greedy actions from the policy logits."""
+    return jnp.zeros(states.shape[0], dtype=jnp.int32)
 
 
 def gym_sync_step() -> None:
-  num_envs = 4
-  env = envpool.make_gym("Pong-v5", num_envs=num_envs)
+    """Run the XLA-compiled synchronous Gym stepping example."""
+    num_envs = 4
+    env = envpool.make_gym("Pong-v5", num_envs=num_envs)
 
-  handle, recv, send, step = env.xla()
+    handle, recv, send, step = env.xla()
 
-  def actor_step(iter, loop_var):
-    handle0, states = loop_var
-    action = policy(states)
+    def actor_step(iter, loop_var):
+        handle0, states = loop_var
+        action = policy(states)
+        if is_legacy_gym:
+            handle1, (new_states, rew, done, info) = step(handle0, action)
+        else:
+            handle1, (new_states, rew, term, trunc, info) = step(
+                handle0, action
+            )
+        return (handle1, new_states)
+
+    @jit
+    def run_actor_loop(num_steps, init_var):
+        return lax.fori_loop(0, num_steps, actor_step, init_var)
+
     if is_legacy_gym:
-      handle1, (new_states, rew, done, info) = step(handle0, action)
+        states = env.reset()
     else:
-      handle1, (new_states, rew, term, trunc, info) = step(handle0, action)
-    return (handle1, new_states)
-
-  @jit
-  def run_actor_loop(num_steps, init_var):
-    return lax.fori_loop(0, num_steps, actor_step, init_var)
-
-  if is_legacy_gym:
-    states = env.reset()
-  else:
-    states, _ = env.reset()
-  run_actor_loop(100, (handle, states))
+        states, _ = env.reset()
+    run_actor_loop(100, (handle, states))
 
 
 def dm_sync_step() -> None:
-  num_envs = 4
-  env = envpool.make_dm("Pong-v5", num_envs=num_envs)
+    """Run the XLA-compiled synchronous DM Env stepping example."""
+    num_envs = 4
+    env = envpool.make_dm("Pong-v5", num_envs=num_envs)
 
-  handle, recv, send, step = env.xla()
+    handle, recv, send, step = env.xla()
 
-  def actor_step(iter, loop_var):
-    handle0, states = loop_var
-    action = policy(states.observation.obs)
-    handle1, new_states = step(handle0, action)
-    return (handle1, new_states)
+    def actor_step(iter, loop_var):
+        handle0, states = loop_var
+        action = policy(states.observation.obs)
+        handle1, new_states = step(handle0, action)
+        return (handle1, new_states)
 
-  @jit
-  def run_actor_loop(num_steps, init_var):
-    return lax.fori_loop(0, num_steps, actor_step, init_var)
+    @jit
+    def run_actor_loop(num_steps, init_var):
+        return lax.fori_loop(0, num_steps, actor_step, init_var)
 
-  states = env.reset()
-  run_actor_loop(100, (handle, states))
+    states = env.reset()
+    run_actor_loop(100, (handle, states))
 
 
 def async_step() -> None:
-  num_envs = 8
-  batch_size = 4
+    """Run the XLA-compiled asynchronous stepping example."""
+    num_envs = 8
+    batch_size = 4
 
-  # Create an envpool that each step only 4 of 8 result will be out,
-  # and left other "slow step" envs execute at background.
-  env = envpool.make_dm("Pong-v5", num_envs=num_envs, batch_size=batch_size)
+    # Create an envpool that each step only 4 of 8 result will be out,
+    # and left other "slow step" envs execute at background.
+    env = envpool.make_dm("Pong-v5", num_envs=num_envs, batch_size=batch_size)
 
-  handle, recv, send, step = env.xla()
+    handle, recv, send, step = env.xla()
 
-  def actor_step(iter, loop_var):
-    handle0, states = loop_var
-    action = policy(states.observation.obs)
-    handle1 = send(handle0, action, states.observation.env_id)
-    handle1, new_states = recv(handle0)
-    return (handle1, new_states)
+    def actor_step(iter, loop_var):
+        handle0, states = loop_var
+        action = policy(states.observation.obs)
+        handle1 = send(handle0, action, states.observation.env_id)
+        handle1, new_states = recv(handle0)
+        return (handle1, new_states)
 
-  @jit
-  def run_actor_loop(num_steps, init_var):
-    return lax.fori_loop(0, num_steps, actor_step, init_var)
+    @jit
+    def run_actor_loop(num_steps, init_var):
+        return lax.fori_loop(0, num_steps, actor_step, init_var)
 
-  env.async_reset()
-  handle, states = recv(handle)
-  run_actor_loop(100, (handle, states))
+    env.async_reset()
+    handle, states = recv(handle)
+    run_actor_loop(100, (handle, states))
 
 
 if __name__ == "__main__":
-  gym_sync_step()
-  dm_sync_step()
-  async_step()
+    gym_sync_step()
+    dm_sync_step()
+    async_step()

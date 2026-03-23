@@ -13,17 +13,17 @@
 # limitations under the License.
 """Helper function for Python API."""
 
-from typing import Any, List
+from typing import Any
 
 import numpy as np
 
 
-def check_key_duplication(cls: Any, keytype: str, keys: List[str]) -> None:
-  """Check if there's any duplicated keys in ``keys``."""
-  ukeys, counts = np.unique(keys, return_counts=True)
-  if not np.all(counts == 1):
-    dup_keys = ukeys[counts > 1]
-    raise SystemError(
-      f"{cls} c++ code error. {keytype} keys {list(dup_keys)} are duplicated. "
-      f"Please report to the author of {cls}."
-    )
+def check_key_duplication(cls: Any, keytype: str, keys: list[str]) -> None:
+    """Check if there's any duplicated keys in ``keys``."""
+    ukeys, counts = np.unique(keys, return_counts=True)
+    if not np.all(counts == 1):
+        dup_keys = ukeys[counts > 1]
+        raise SystemError(
+            f"{cls} c++ code error. {keytype} keys {list(dup_keys)} are duplicated. "
+            f"Please report to the author of {cls}."
+        )

@@ -33,65 +33,64 @@ from envpool.registration import make_gym
 
 
 class _AtariPretrainTest(absltest.TestCase):
+    def eval_qrdqn(
+        self,
+        task: str,
+        resume_path: str,
+        num_envs: int = 10,
+        seed: int = 0,
+        target_reward: float = 0.0,
+    ) -> None:
+        env = make_gym(task.capitalize() + "-v5", num_envs=num_envs, seed=seed)
+        state_shape = env.observation_space.shape
+        action_shape = env.action_space.n
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        logging.info(state_shape)
+        net = QRDQN(*state_shape, action_shape, 200, device)  # type: ignore
+        optim = torch.optim.Adam(net.parameters(), lr=1e-4)
+        policy = QRDQNPolicy(
+            net, optim, 0.99, 200, 3, target_update_freq=500
+        ).to(device)
+        policy.load_state_dict(torch.load(resume_path, map_location=device))
+        policy.eval()
+        ids = np.arange(num_envs)
+        reward = np.zeros(num_envs)
+        obs, _ = env.reset()
+        for _ in range(25000):
+            if np.random.rand() < 5e-3:
+                act = np.random.randint(action_shape, size=len(ids))
+            else:
+                act = policy(Batch(obs=obs, info={})).act
+            obs, rew, terminated, truncated, info = env.step(act, ids)
+            done = np.logical_or(terminated, truncated)
+            ids = np.asarray(info["env_id"])
+            reward[ids] += rew
+            obs = obs[~done]
+            ids = ids[~done]
+            if len(ids) == 0:
+                break
+            # if cv2 is not None:
+            #   obs_all = np.zeros((84, 84 * num_envs, 3), np.uint8)
+            #   for i, j in enumerate(ids):
+            #     obs_all[:, 84 * j:84 * (j + 1)] = obs[i, 1:].transpose(1, 2, 0)
+            #   cv2.imwrite(f"/tmp/{task}-{t}.png", obs_all)
 
-  def eval_qrdqn(
-    self,
-    task: str,
-    resume_path: str,
-    num_envs: int = 10,
-    seed: int = 0,
-    target_reward: float = 0.0,
-  ) -> None:
-    env = make_gym(task.capitalize() + "-v5", num_envs=num_envs, seed=seed)
-    state_shape = env.observation_space.shape
-    action_shape = env.action_space.n
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    logging.info(state_shape)
-    net = QRDQN(*state_shape, action_shape, 200, device)  # type: ignore
-    optim = torch.optim.Adam(net.parameters(), lr=1e-4)
-    policy = QRDQNPolicy(
-      net, optim, 0.99, 200, 3, target_update_freq=500
-    ).to(device)
-    policy.load_state_dict(torch.load(resume_path, map_location=device))
-    policy.eval()
-    ids = np.arange(num_envs)
-    reward = np.zeros(num_envs)
-    obs, _ = env.reset()
-    for _ in range(25000):
-      if np.random.rand() < 5e-3:
-        act = np.random.randint(action_shape, size=len(ids))
-      else:
-        act = policy(Batch(obs=obs, info={})).act
-      obs, rew, terminated, truncated, info = env.step(act, ids)
-      done = np.logical_or(terminated, truncated)
-      ids = np.asarray(info["env_id"])
-      reward[ids] += rew
-      obs = obs[~done]
-      ids = ids[~done]
-      if len(ids) == 0:
-        break
-      # if cv2 is not None:
-      #   obs_all = np.zeros((84, 84 * num_envs, 3), np.uint8)
-      #   for i, j in enumerate(ids):
-      #     obs_all[:, 84 * j:84 * (j + 1)] = obs[i, 1:].transpose(1, 2, 0)
-      #   cv2.imwrite(f"/tmp/{task}-{t}.png", obs_all)
+        rew = reward.mean()
+        logging.info(f"Mean reward of {task}: {rew}")
+        self.assertAlmostEqual(rew, target_reward)
 
-    rew = reward.mean()
-    logging.info(f"Mean reward of {task}: {rew}")
-    self.assertAlmostEqual(rew, target_reward)
+    def test_pong(self) -> None:
+        model_path = os.path.join("envpool", "atari", "policy-pong.pth")
+        self.assertTrue(os.path.exists(model_path))
+        self.eval_qrdqn("pong", model_path, target_reward=20.6)
 
-  def test_pong(self) -> None:
-    model_path = os.path.join("envpool", "atari", "policy-pong.pth")
-    self.assertTrue(os.path.exists(model_path))
-    self.eval_qrdqn("pong", model_path, target_reward=20.6)
-
-  def test_breakout(self) -> None:
-    model_path = os.path.join("envpool", "atari", "policy-breakout.pth")
-    self.assertTrue(os.path.exists(model_path))
-    self.eval_qrdqn("breakout", model_path, target_reward=367.8)
+    def test_breakout(self) -> None:
+        model_path = os.path.join("envpool", "atari", "policy-breakout.pth")
+        self.assertTrue(os.path.exists(model_path))
+        self.eval_qrdqn("breakout", model_path, target_reward=367.8)
 
 
 if __name__ == "__main__":
-  absltest.main()
+    absltest.main()
