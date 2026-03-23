@@ -200,7 +200,9 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
             if changed_key is not None:
                 break
 
-        self.assertIsNotNone(changed_key)
+        assert changed_key is not None
+        assert baseline_value is not None
+        assert changed_value is not None
         _, reset_info = env.reset()
         self.assertEqual(
             scalar(reset_info, changed_key),
