@@ -177,9 +177,12 @@ struct CustomCall {
                                .RemainingArgs()
                                .RemainingRets()
                                .Attrs<xla_ffi::Dictionary>());
+    // NOLINTNEXTLINE(bugprone-casting-through-void)
+    auto* cpu_handler_ptr = reinterpret_cast<void*>(cpu_handler);
+    // NOLINTNEXTLINE(bugprone-casting-through-void)
+    auto* gpu_handler_ptr = reinterpret_cast<void*>(gpu_handler);
     return std::make_tuple(
-        py::capsule(reinterpret_cast<void*>(cpu_handler)),  // NOLINT(bugprone-casting-through-void)
-        py::capsule(reinterpret_cast<void*>(gpu_handler)));  // NOLINT(bugprone-casting-through-void)
+        py::capsule(cpu_handler_ptr), py::capsule(gpu_handler_ptr));
   }
 
   static auto Xla(Class* obj) {
