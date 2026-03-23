@@ -121,7 +121,14 @@ class EnvPool(Protocol):
     """Cpp PyEnvpool class interface."""
 
     _state_keys: list[str]
+    _state_names: list[str]
     _action_keys: list[str]
+    _action_names: list[str]
+    _check_action_finished: bool
+    _all_env_ids: np.ndarray
+    _last_action_name: str
+    _last_action_type: Any
+    _last_players_env_id: np.ndarray
     spec: Any
 
     def __init__(self, spec: EnvSpec):
@@ -140,6 +147,17 @@ class EnvPool(Protocol):
 
     def _check_action(self, actions: list) -> None:
         """Check action shapes."""
+
+    def _player_action_count(self, adict: dict[str, Any]) -> int | None:
+        """Infer the leading player-action dimension."""
+
+    def _cached_players_env_id(
+        self, env_id: np.ndarray, player_count: int
+    ) -> np.ndarray | None:
+        """Reuse cached player-to-env mapping when available."""
+
+    def _infer_players_env_id(self, adict: dict[str, Any]) -> np.ndarray:
+        """Infer players.env_id for simplified multiplayer actions."""
 
     def _recv(self) -> list[np.ndarray]:
         """Cpp private _recv method."""

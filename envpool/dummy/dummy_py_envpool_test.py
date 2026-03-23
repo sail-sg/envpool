@@ -15,6 +15,7 @@
 
 import os
 import time
+from typing import Any
 
 import numpy as np
 from absl import logging
@@ -22,33 +23,35 @@ from absl.testing import absltest
 from envpool.dummy.dummy_envpool import _DummyEnvPool, _DummyEnvSpec
 
 from envpool.python.api import py_env
+from envpool.python.protocol import EnvPool
 
-DummyEnvSpec, DummyDMEnvPool, _, _ = py_env(_DummyEnvSpec, _DummyEnvPool)
+DummyEnvSpec, _DummyDMEnvPool, _, _ = py_env(_DummyEnvSpec, _DummyEnvPool)
 
 
-def _make_dummy_dm_env() -> DummyDMEnvPool:
+def _make_dummy_dm_env() -> EnvPool:
     config = DummyEnvSpec.gen_config(
         num_envs=2,
         batch_size=2,
         max_num_players=4,
     )
-    return DummyDMEnvPool(DummyEnvSpec(config))
+    return _DummyDMEnvPool(DummyEnvSpec(config))
 
 
 def _make_multiplayer_action(
     player_count: int,
     players_env_id: np.ndarray | None = None,
 ) -> dict[str, object]:
-    action = {
+    players: dict[str, np.ndarray] = {
+        "id": np.arange(player_count, dtype=np.int32),
+        "action": np.arange(player_count, dtype=np.int32),
+    }
+    action: dict[str, Any] = {
         "env_id": np.array([0, 1], dtype=np.int32),
         "list_action": np.zeros((2, 6), dtype=np.float64),
-        "players": {
-            "id": np.arange(player_count, dtype=np.int32),
-            "action": np.arange(player_count, dtype=np.int32),
-        },
+        "players": players,
     }
     if players_env_id is not None:
-        action["players"]["env_id"] = players_env_id
+        players["env_id"] = players_env_id
     return action
 
 
