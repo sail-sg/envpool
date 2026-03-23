@@ -119,6 +119,17 @@ def workspace():
 
     maybe(
         http_archive,
+        name = "openxla_ffi_headers",
+        build_file = "//third_party/openxla_ffi:ffi_api.BUILD",
+        sha256 = "753df38eab0d430da20e614316401663bcfca433905b976745a6e59998635ce8",
+        strip_prefix = "xla-187a5eb58277a85847d1516bd1e20b7faf03d5ef/xla/ffi/api",
+        urls = [
+            "https://github.com/openxla/xla/archive/187a5eb58277a85847d1516bd1e20b7faf03d5ef.tar.gz",
+        ],
+    )
+
+    maybe(
+        http_archive,
         name = "com_google_absl",
         sha256 = "05597c3c532197690a31ebad50a7c9c3fb682d3c5a681b20eb03655ffb4e9483",
         strip_prefix = "abseil-cpp-20260107.1",

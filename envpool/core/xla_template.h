@@ -22,6 +22,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <xla/ffi/api/ffi.h>
 
 #include <array>
 #include <cstddef>
@@ -35,23 +36,11 @@
 #include "envpool/core/spec.h"
 
 namespace py = pybind11;
+namespace xla_ffi = xla::ffi;
 
 template <typename Spec>
 static auto SpecToTuple(const Spec& spec) {
   return std::make_tuple(py::dtype::of<typename Spec::dtype>(), spec.shape);
-}
-
-template <std::size_t N>
-void ToArray(const void** raw, std::array<void*, N>* array) {
-  int i = 0;
-  std::apply([&](auto&&... a) { ((a = const_cast<void*>(raw[i++])), ...); },
-             *array);
-}
-
-template <std::size_t N>
-void ToArray(void** raw, std::array<void*, N>* array) {
-  int i = 0;
-  std::apply([&](auto&&... a) { ((a = raw[i++]), ...); }, *array);
 }
 
 template <typename Class, typename CC>
@@ -66,35 +55,99 @@ struct CustomCall {
         std::string(reinterpret_cast<const char*>(&obj), sizeof(Class*)));
   }
 
-  static void Cpu(void* out, const void** in) {
-    Class* obj = nullptr;
-    std::memcpy(reinterpret_cast<void*>(&obj), in[0], sizeof(Class*));
-    in += 1;
-    In in_arr;
-    Out out_arr;
-    ToArray(in, &in_arr);
-    if (std::tuple_size<Out>::value == 0) {
-      std::memcpy(out, reinterpret_cast<const void*>(&obj), sizeof(Class*));
-    } else {
-      void** outs = reinterpret_cast<void**>(out);
-      std::memcpy(outs[0], reinterpret_cast<const void*>(&obj), sizeof(Class*));
-      ToArray(outs + 1, &out_arr);
+  static xla_ffi::ErrorOr<Class*> ResolveHandle(xla_ffi::Dictionary attrs) {
+    auto handle = attrs.get<std::int64_t>("handle");
+    if (!handle) {
+      return xla_ffi::Unexpected(handle.error());
     }
-    CC::Cpu(obj, in_arr, out_arr);
+    return reinterpret_cast<Class*>(
+        static_cast<std::uintptr_t>(static_cast<std::int64_t>(*handle)));
   }
 
-  static void Gpu(cudaStream_t stream, void** buffers, const char* opaque,
-                  std::size_t opaque_len) {
-    Class* obj = nullptr;
-    std::memcpy(reinterpret_cast<void*>(&obj), opaque, sizeof(Class*));
-    buffers += 1;
-    In in_arr;
-    Out out_arr;
-    ToArray(buffers, &in_arr);
-    buffers += std::tuple_size<In>::value;
-    buffers += 1;
-    ToArray(buffers, &out_arr);
-    CC::Gpu(obj, stream, in_arr, out_arr);
+  static xla_ffi::Error ValidateArity(xla_ffi::RemainingArgs args,
+                                      xla_ffi::RemainingRets rets) {
+    constexpr std::size_t kExpectedArgs = std::tuple_size_v<In> + 1;
+    constexpr std::size_t kExpectedRets = std::tuple_size_v<Out> + 1;
+    if (args.size() != kExpectedArgs) {
+      return xla_ffi::Error::InvalidArgument(
+          "Expected " + std::to_string(kExpectedArgs) + " buffers, got " +
+          std::to_string(args.size()));
+    }
+    if (rets.size() != kExpectedRets) {
+      return xla_ffi::Error::InvalidArgument(
+          "Expected " + std::to_string(kExpectedRets) + " results, got " +
+          std::to_string(rets.size()));
+    }
+    return xla_ffi::Error();
+  }
+
+  static xla_ffi::Error PopulateInBuffers(xla_ffi::RemainingArgs args,
+                                          In* in_arr) {
+    for (std::size_t i = 0; i < in_arr->size(); ++i) {
+      auto buffer = args.get<xla_ffi::AnyBuffer>(i + 1);
+      if (!buffer) {
+        return buffer.error();
+      }
+      (*in_arr)[i] = (*buffer).untyped_data();
+    }
+    return xla_ffi::Error();
+  }
+
+  static xla_ffi::Error PopulateOutBuffers(xla_ffi::RemainingRets rets,
+                                           Out* out_arr) {
+    for (std::size_t i = 0; i < out_arr->size(); ++i) {
+      auto buffer = rets.get<xla_ffi::AnyBuffer>(i + 1);
+      if (!buffer) {
+        return buffer.error();
+      }
+      (*out_arr)[i] = (*buffer)->untyped_data();
+    }
+    return xla_ffi::Error();
+  }
+
+  static xla_ffi::Error CpuExecute(xla_ffi::RemainingArgs args,
+                                   xla_ffi::RemainingRets rets,
+                                   xla_ffi::Dictionary attrs) {
+    if (auto err = ValidateArity(args, rets); err.failure()) {
+      return err;
+    }
+    auto obj = ResolveHandle(attrs);
+    if (!obj) {
+      return obj.error();
+    }
+    In in_arr{};
+    Out out_arr{};
+    if (auto err = PopulateInBuffers(args, &in_arr); err.failure()) {
+      return err;
+    }
+    if (auto err = PopulateOutBuffers(rets, &out_arr); err.failure()) {
+      return err;
+    }
+    CC::Cpu(*obj, in_arr, out_arr);
+    return xla_ffi::Error();
+  }
+
+  static xla_ffi::Error GpuExecute(cudaStream_t stream,
+                                   xla_ffi::RemainingArgs args,
+                                   xla_ffi::RemainingRets rets,
+                                   xla_ffi::Dictionary attrs) {
+    if (auto err = ValidateArity(args, rets); err.failure()) {
+      return err;
+    }
+    auto obj = ResolveHandle(attrs);
+    if (!obj) {
+      return obj.error();
+    }
+    In in_arr{};
+    Out out_arr{};
+    if (auto err = PopulateInBuffers(args, &in_arr); err.failure()) {
+      return err;
+    }
+    if (auto err = PopulateOutBuffers(rets, &out_arr); err.failure()) {
+      return err;
+    }
+    CC::Gpu(*obj, stream, in_arr, out_arr);
+    return xla_ffi::Error();
   }
 
   static auto Specs(Class* obj) {
@@ -113,9 +166,19 @@ struct CustomCall {
   }
 
   static auto Capsules() {
-    return std::make_tuple(
-        py::capsule(reinterpret_cast<void*>(Cpu), "xla._CUSTOM_CALL_TARGET"),
-        py::capsule(reinterpret_cast<void*>(Gpu), "xla._CUSTOM_CALL_TARGET"));
+    XLA_FFI_DEFINE_HANDLER(cpu_handler, CpuExecute,
+                           xla_ffi::Ffi::Bind()
+                               .RemainingArgs()
+                               .RemainingRets()
+                               .Attrs<xla_ffi::Dictionary>());
+    XLA_FFI_DEFINE_HANDLER(gpu_handler, GpuExecute,
+                           xla_ffi::Ffi::Bind()
+                               .Ctx<xla_ffi::PlatformStream<cudaStream_t>>()
+                               .RemainingArgs()
+                               .RemainingRets()
+                               .Attrs<xla_ffi::Dictionary>());
+    return std::make_tuple(py::capsule(reinterpret_cast<void*>(cpu_handler)),
+                           py::capsule(reinterpret_cast<void*>(gpu_handler)));
   }
 
   static auto Xla(Class* obj) {

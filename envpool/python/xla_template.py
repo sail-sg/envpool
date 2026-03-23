@@ -13,8 +13,9 @@
 # limitations under the License.
 """xla template on python side."""
 
+import sys
 from collections import namedtuple
-from typing import Any, Callable, cast
+from typing import Any, Callable
 
 import numpy as np
 from jax import ShapeDtypeStruct, dtypes, ffi
@@ -53,13 +54,13 @@ def _make_xla_function(
         call_target_name,
         cpu_capsule,
         platform="cpu",
-        api_version=0,
+        api_version=1,
     )
     ffi.register_ffi_target(
         call_target_name,
         gpu_capsule,
         platform="gpu",
-        api_version=0,
+        api_version=1,
     )
     result_specs = tuple(_shape_dtype_struct(*spec) for spec in out_specs)
     xla_func = ffi.ffi_call(
@@ -72,14 +73,12 @@ def _make_xla_function(
             if len(out_specs) > 1
             else _layout(out_specs[0][0])
         ),
-        # JAX target registration uses api_version=0 for the legacy untyped
-        # handler, but StableHLO custom_call uses API_VERSION_ORIGINAL == 1.
-        custom_call_api_version=1,
-        legacy_backend_config=cast(Any, handle),
+        input_output_aliases={0: 0},
     )
+    handle_value = int.from_bytes(handle, byteorder=sys.byteorder, signed=False)
 
     def call(*args: Any) -> Any:
-        return xla_func(*args)
+        return xla_func(*args, handle=handle_value)
 
     return call
 
