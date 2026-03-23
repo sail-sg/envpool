@@ -65,7 +65,7 @@ doc-install:
 	$(call check_install, sphinx)
 	$(call check_install, sphinx_rtd_theme)
 
-spelling-install: doc-install
+spelling-install: doc-install spelling-system-install
 	$(call check_install_extra, sphinxcontrib.spelling, sphinxcontrib.spelling pyenchant)
 
 spelling-system-install:
@@ -91,8 +91,6 @@ release-system-install:
 
 ruff: ruff-install
 	ruff check $(PYTHON_FILES)
-
-flake8: ruff
 
 py-format: py-format-install
 	ruff format --check $(PYTHON_FILES)
@@ -156,7 +154,7 @@ docstyle: doc-install
 doc: doc-install
 	cd docs && make html && cd _build/html && python3 -m http.server
 
-spelling: spelling-install spelling-system-install
+spelling: spelling-install
 	cd docs && make spelling SPHINXOPTS="-W"
 
 doc-clean:

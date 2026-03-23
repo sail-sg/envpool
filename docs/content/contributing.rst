@@ -19,14 +19,21 @@ Lint Check
 
 We use several tools to secure code quality, including
 
-- PEP8 code style and formatting: ruff;
+- Python lint and formatting: ruff;
 - Type check: mypy;
 - C++ Google-style: cpplint, clang-format, clang-tidy;
 - Bazel build file: buildifier;
 - License: addlicense;
-- Documentation: doc8.
+- Documentation: doc8, Sphinx warning checks, and spelling.
 
-To make things easier, we create several shortcuts as follows.
+The most common shortcuts are:
+
+.. code-block:: bash
+
+    make ruff        # Python lint
+    make py-format   # Python formatting check
+    make docstyle    # doc8 + Sphinx warnings
+    make spelling    # Documentation spelling check
 
 To automatically format the code, run:
 

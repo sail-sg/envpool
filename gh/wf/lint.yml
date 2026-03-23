@@ -1,0 +1,50 @@
+name: Lint
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel previous run
+        uses: styfle/cancel-workflow-action@0.11.0
+        with:
+          access_token: ${{ github.token }}
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ">=1.16.0"
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - name: Upgrade pip
+        run: |
+          python -m pip install --upgrade pip
+      - name: ruff check
+        run: |
+          make ruff
+      - name: ruff format
+        run: |
+          make py-format
+      - name: cpplint
+        run: |
+          make cpplint
+      - name: clang-format
+        run: |
+          make clang-format
+      - name: buildifier
+        run: |
+          make buildifier
+      - name: addlicense
+        run: |
+          make addlicense
+      - name: mypy
+        run: |
+          make mypy
+      - name: docstyle
+        run: |
+          make docstyle
+      - name: spelling
+        run: |
+          make spelling
