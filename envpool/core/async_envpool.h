@@ -124,9 +124,8 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
           int env_id = raw_action.env_id;
           int order = raw_action.order;
           bool reset = raw_action.force_reset || envs_[env_id]->IsDone();
-          envs_[env_id]->EnvStep(
-              state_buffer_queue_.get(), order, reset,
-              raw_action.force_reset);
+          envs_[env_id]->EnvStep(state_buffer_queue_.get(), order, reset,
+                                 raw_action.force_reset);
         }
       });
     }

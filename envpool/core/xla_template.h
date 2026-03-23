@@ -181,8 +181,8 @@ struct CustomCall {
     auto* cpu_handler_ptr = reinterpret_cast<void*>(cpu_handler);
     // NOLINTNEXTLINE(bugprone-casting-through-void)
     auto* gpu_handler_ptr = reinterpret_cast<void*>(gpu_handler);
-    return std::make_tuple(
-        py::capsule(cpu_handler_ptr), py::capsule(gpu_handler_ptr));
+    return std::make_tuple(py::capsule(cpu_handler_ptr),
+                           py::capsule(gpu_handler_ptr));
   }
 
   static auto Xla(Class* obj) {
