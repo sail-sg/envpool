@@ -196,6 +196,7 @@ cc_library(
     ],
     deps = [
         ":spec",
+        "@openxla_ffi_headers//:headers",
         "@cuda//:cudart_static",
         "@pybind11",
     ],
