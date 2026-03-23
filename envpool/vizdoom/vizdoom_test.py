@@ -155,6 +155,64 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
             == 1 * 4
         )
 
+    def test_explicit_reset_with_episodic_life_gymnasium(self) -> None:
+        env = make_gym(
+            "D1Basic-v1",
+            num_envs=1,
+            seed=42,
+            episodic_life=True,
+            use_combined_action=True,
+        )
+        env.reset()
+        tracked_keys = [
+            "AMMO2",
+            "HEALTH",
+            "HITCOUNT",
+            "KILLCOUNT",
+            "SELECTED_WEAPON_AMMO",
+        ]
+
+        def scalar(info: dict, key: str) -> float:
+            return float(np.asarray(info[key]).reshape(-1)[0])
+
+        action_id = None
+        changed_key = None
+        baseline_value = None
+        changed_value = None
+
+        for candidate in range(env.action_space.n):
+            _, baseline_info = env.reset()
+            for _ in range(64):
+                _, _, terminated, truncated, info = env.step(
+                    np.array([candidate], dtype=int)
+                )
+                for key in tracked_keys:
+                    current = scalar(info, key)
+                    baseline = scalar(baseline_info, key)
+                    if current != baseline:
+                        action_id = candidate
+                        changed_key = key
+                        baseline_value = baseline
+                        changed_value = current
+                        break
+                if changed_key is not None or terminated[0] or truncated[0]:
+                    break
+            if changed_key is not None:
+                break
+
+        assert changed_key is not None
+        assert baseline_value is not None
+        assert changed_value is not None
+        _, reset_info = env.reset()
+        self.assertEqual(
+            scalar(reset_info, changed_key),
+            baseline_value,
+            msg=(
+                f"action={action_id}, key={changed_key}, "
+                f"changed={changed_value}, baseline={baseline_value}"
+            ),
+        )
+
 
 if __name__ == "__main__":
     absltest.main()

@@ -144,6 +144,22 @@ class _AtariEnvPoolTest(absltest.TestCase):
             self.assertTrue(next_info["lives"][0] > 0)
             self.assertTrue(info["terminated"][0])
 
+    def test_explicit_reset_with_episodic_life_gymnasium(self) -> None:
+        """Issue 301."""
+        env = make_gymnasium(
+            "Breakout-v5",
+            num_envs=1,
+            seed=42,
+            episodic_life=True,
+        )
+        for i in range(20):
+            _, info = env.reset()
+            self.assertEqual(
+                int(info["lives"][0]),
+                5,
+                msg=f"reset #{i} returned lives={info['lives']}",
+            )
+
     def test_partial_step(self) -> None:
         num_envs = 5
         max_episode_steps = 10
