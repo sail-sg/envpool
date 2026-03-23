@@ -16,13 +16,7 @@
 from typing import (
     Any,
     Callable,
-    Dict,
-    List,
     NamedTuple,
-    Optional,
-    Tuple,
-    Type,
-    Union,
 )
 
 import dm_env
@@ -35,31 +29,31 @@ from typing_extensions import Protocol
 class EnvSpec(Protocol):
     """Cpp EnvSpec class."""
 
-    _config_keys: List[str]
-    _default_config_values: Tuple
-    gen_config: Type
+    _config_keys: list[str]
+    _default_config_values: tuple
+    gen_config: type
 
-    def __init__(self, config: Tuple):
+    def __init__(self, config: tuple):
         """Protocol for constructor of EnvSpec."""
 
     @property
-    def _state_spec(self) -> Tuple:
+    def _state_spec(self) -> tuple:
         """Cpp private _state_spec."""
 
     @property
-    def _action_spec(self) -> Tuple:
+    def _action_spec(self) -> tuple:
         """Cpp private _action_spec."""
 
     @property
-    def _state_keys(self) -> List:
+    def _state_keys(self) -> list:
         """Cpp private _state_keys."""
 
     @property
-    def _action_keys(self) -> List:
+    def _action_keys(self) -> list:
         """Cpp private _action_keys."""
 
     @property
-    def _config_values(self) -> Tuple:
+    def _config_values(self) -> tuple:
         """Cpp private _config_values."""
 
     @property
@@ -67,41 +61,41 @@ class EnvSpec(Protocol):
         """Configuration used to create the current EnvSpec."""
 
     @property
-    def state_array_spec(self) -> Dict[str, Any]:
+    def state_array_spec(self) -> dict[str, Any]:
         """Specs of the states of the environment in ArraySpec format."""
 
     @property
-    def action_array_spec(self) -> Dict[str, Any]:
+    def action_array_spec(self) -> dict[str, Any]:
         """Specs of the actions of the environment in ArraySpec format."""
 
-    def observation_spec(self) -> Dict[str, Any]:
+    def observation_spec(self) -> dict[str, Any]:
         """Specs of the observations of the environment in dm_env format."""
 
-    def action_spec(self) -> Union[dm_env.specs.Array, Dict[str, Any]]:
+    def action_spec(self) -> dm_env.specs.Array | dict[str, Any]:
         """Specs of the actions of the environment in dm_env format."""
 
     @property
-    def observation_space(self) -> Dict[str, Any]:
+    def observation_space(self) -> dict[str, Any]:
         """Specs of the observations of the environment in gym.Env format."""
 
     @property
-    def action_space(self) -> Union[gym.Space, Dict[str, Any]]:
+    def action_space(self) -> gym.Space | dict[str, Any]:
         """Specs of the actions of the environment in gym.Env format."""
 
     @property
-    def reward_threshold(self) -> Optional[float]:
+    def reward_threshold(self) -> float | None:
         """Reward threshold, None for no threshold."""
 
 
-class ArraySpec(object):
+class ArraySpec:
     """Spec of numpy array."""
 
     def __init__(
         self,
-        dtype: Type,
-        shape: List[int],
-        bounds: Tuple[Any, Any],
-        element_wise_bounds: Tuple[Any, Any],
+        dtype: type,
+        shape: list[int],
+        bounds: tuple[Any, Any],
+        element_wise_bounds: tuple[Any, Any],
     ):
         """Constructor of ArraySpec."""
         self.dtype = dtype
@@ -126,8 +120,8 @@ class ArraySpec(object):
 class EnvPool(Protocol):
     """Cpp PyEnvpool class interface."""
 
-    _state_keys: List[str]
-    _action_keys: List[str]
+    _state_keys: list[str]
+    _action_keys: list[str]
     spec: Any
 
     def __init__(self, spec: EnvSpec):
@@ -141,16 +135,16 @@ class EnvPool(Protocol):
         """Cpp env spec."""
 
     @property
-    def _action_spec(self) -> List:
+    def _action_spec(self) -> list:
         """Cpp action spec."""
 
-    def _check_action(self, actions: List) -> None:
+    def _check_action(self, actions: list) -> None:
         """Check action shapes."""
 
-    def _recv(self) -> List[np.ndarray]:
+    def _recv(self) -> list[np.ndarray]:
         """Cpp private _recv method."""
 
-    def _send(self, action: List[np.ndarray]) -> None:
+    def _send(self, action: list[np.ndarray]) -> None:
         """Cpp private _send method."""
 
     def _reset(self, env_id: np.ndarray) -> None:
@@ -158,17 +152,17 @@ class EnvPool(Protocol):
 
     def _from(
         self,
-        action: Union[Dict[str, Any], np.ndarray],
-        env_id: Optional[np.ndarray] = None,
-    ) -> List[np.ndarray]:
+        action: dict[str, Any] | np.ndarray,
+        env_id: np.ndarray | None = None,
+    ) -> list[np.ndarray]:
         """Convertion for input action."""
 
     def _to(
         self,
-        state: List[np.ndarray],
+        state: list[np.ndarray],
         reset: bool,
         return_info: bool,
-    ) -> Union[TimeStep, Tuple]:
+    ) -> TimeStep | tuple:
         """A switch of to_dm and to_gym for output state."""
 
     @property
@@ -180,30 +174,30 @@ class EnvPool(Protocol):
         """Return if this env is in sync mode or async mode."""
 
     @property
-    def observation_space(self) -> Union[gym.Space, Dict[str, Any]]:
+    def observation_space(self) -> gym.Space | dict[str, Any]:
         """Gym observation space."""
 
     @property
-    def action_space(self) -> Union[gym.Space, Dict[str, Any]]:
+    def action_space(self) -> gym.Space | dict[str, Any]:
         """Gym action space."""
 
-    def observation_spec(self) -> Tuple:
+    def observation_spec(self) -> tuple:
         """Dm observation spec."""
 
-    def action_spec(self) -> Union[dm_env.specs.Array, Tuple]:
+    def action_spec(self) -> dm_env.specs.Array | tuple:
         """Dm action spec."""
 
-    def seed(self, seed: Optional[Union[int, List[int]]] = None) -> None:
+    def seed(self, seed: int | list[int] | None = None) -> None:
         """Set the seed for all environments."""
 
     @property
-    def config(self) -> Dict[str, Any]:
+    def config(self) -> dict[str, Any]:
         """Envpool config."""
 
     def send(
         self,
-        action: Union[Dict[str, Any], np.ndarray],
-        env_id: Optional[np.ndarray] = None,
+        action: dict[str, Any] | np.ndarray,
+        env_id: np.ndarray | None = None,
     ) -> None:
         """Envpool send wrapper."""
 
@@ -211,7 +205,7 @@ class EnvPool(Protocol):
         self,
         reset: bool = False,
         return_info: bool = True,
-    ) -> Union[TimeStep, Tuple]:
+    ) -> TimeStep | tuple:
         """Envpool recv wrapper."""
 
     def async_reset(self) -> None:
@@ -219,16 +213,16 @@ class EnvPool(Protocol):
 
     def step(
         self,
-        action: Union[Dict[str, Any], np.ndarray],
-        env_id: Optional[np.ndarray] = None,
-    ) -> Union[TimeStep, Tuple]:
+        action: dict[str, Any] | np.ndarray,
+        env_id: np.ndarray | None = None,
+    ) -> TimeStep | tuple:
         """Envpool step interface that performs send/recv."""
 
     def reset(
         self,
-        env_id: Optional[np.ndarray] = None,
-    ) -> Union[TimeStep, Tuple]:
+        env_id: np.ndarray | None = None,
+    ) -> TimeStep | tuple:
         """Envpool reset interface."""
 
-    def xla(self) -> Tuple[Any, Callable, Callable, Callable]:
+    def xla(self) -> tuple[Any, Callable, Callable, Callable]:
         """Get the xla functions."""

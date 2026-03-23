@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import argparse
-from typing import Any, Dict, Tuple, Type
+from typing import Any
 
 import gym
 import numpy as np
@@ -53,7 +53,7 @@ class CnnActorCritic(nn.Module):
                 nn.init.orthogonal_(m.weight)
                 nn.init.zeros_(m.bias)
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         feature = self.net(x / 255.0)
         return F.softmax(self.actor(feature), dim=-1), self.critic(feature)
 
@@ -76,7 +76,7 @@ class MlpActorCritic(nn.Module):
                 nn.init.orthogonal_(m.weight)
                 nn.init.zeros_(m.bias)
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         feature = self.net(x)
         return F.softmax(self.actor(feature), dim=-1), self.critic(feature)
 
@@ -86,7 +86,7 @@ class DiscretePPO:
         self,
         actor_critic: nn.Module,
         optim: torch.optim.Optimizer,
-        dist_fn: Type[torch.distributions.Distribution],
+        dist_fn: type[torch.distributions.Distribution],
         lr_scheduler: torch.optim.lr_scheduler.LambdaLR,
         config: argparse.Namespace,
     ):
@@ -119,7 +119,7 @@ class DiscretePPO:
         env_id: np.ndarray,
         log_prob: torch.Tensor,
         value: torch.Tensor,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         # compute GAE
         T, B = rew.shape
         N = T * B
@@ -149,20 +149,11 @@ class DiscretePPO:
                 ratio = (b_dist.log_prob(act[i]) - log_prob[i]).exp().float()
                 ratio = ratio.reshape(ratio.shape[0], -1).transpose(0, 1)
                 surr1 = ratio * b_adv
-                surr2 = (
-                    ratio.clamp(
-                        1.0 - self.config.eps_clip, 1.0 + self.config.eps_clip
-                    )
-                    * b_adv
-                )
+                surr2 = ratio.clamp(1.0 - self.config.eps_clip, 1.0 + self.config.eps_clip) * b_adv
                 clip_loss = -torch.min(surr1, surr2).mean()
                 vf_loss = (returns[i] - b_value.flatten()).pow(2).mean()
                 ent_loss = b_dist.entropy().mean()
-                loss = (
-                    clip_loss
-                    + self.config.vf_coef * vf_loss
-                    - self.config.ent_coef * ent_loss
-                )
+                loss = clip_loss + self.config.vf_coef * vf_loss - self.config.ent_coef * ent_loss
                 # update param
                 self.optim.zero_grad()
                 loss.backward()
@@ -228,14 +219,10 @@ class Actor:
         stat = MovAvg()
         episodic_reward = 0
         for epoch in range(1, 1 + self.config.epoch):
-            with tqdm.trange(
-                self.config.step_per_epoch, desc=f"Epoch #{epoch}"
-            ) as t:
+            with tqdm.trange(self.config.step_per_epoch, desc=f"Epoch #{epoch}") as t:
                 while t.n < self.config.step_per_epoch:
                     # collect
-                    for _ in range(
-                        self.config.step_per_collect // self.config.waitnum
-                    ):
+                    for _ in range(self.config.step_per_collect // self.config.waitnum):
                         if is_legacy_gym:
                             obs, rew, done, info = self.train_envs.recv()
                         else:
@@ -286,9 +273,7 @@ class Actor:
                     self.logprob_batch = []
                     t.set_postfix(**result)
                     for k, v in result.items():
-                        self.writer.add_scalar(
-                            f"train/{k}", v, global_step=env_step
-                        )
+                        self.writer.add_scalar(f"train/{k}", v, global_step=env_step)
 
 
 if __name__ == "__main__":
@@ -349,9 +334,7 @@ if __name__ == "__main__":
     # actor_critic = nn.DataParallel(MlpActorCritic(state_n, action_n).cuda())
     optim = torch.optim.Adam(actor_critic.parameters(), lr=args.lr)
     # decay learning rate to 0 linearly
-    max_update_num = (
-        np.ceil(args.step_per_epoch / args.step_per_collect) * args.epoch
-    )
+    max_update_num = np.ceil(args.step_per_epoch / args.step_per_collect) * args.epoch
 
     lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
         optim, lr_lambda=lambda epoch: 1 - epoch / max_update_num

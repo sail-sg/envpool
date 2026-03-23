@@ -15,7 +15,7 @@
 
 import importlib
 import os
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import gym
 import numpy as np
@@ -33,8 +33,8 @@ class EnvRegistry:
 
     def __init__(self) -> None:
         """Constructor of EnvRegistry."""
-        self.specs: Dict[str, Tuple[str, str, Dict[str, Any]]] = {}
-        self.envpools: Dict[str, Dict[str, Tuple[str, str]]] = {}
+        self.specs: dict[str, tuple[str, str, dict[str, Any]]] = {}
+        self.envpools: dict[str, dict[str, tuple[str, str]]] = {}
 
     def register(
         self,
@@ -112,7 +112,7 @@ class EnvRegistry:
         config = spec_cls.gen_config(**kwargs)
         return spec_cls(config)
 
-    def list_all_envs(self) -> List[str]:
+    def list_all_envs(self) -> list[str]:
         """Return all available task_id."""
         return list(self.specs.keys())
 

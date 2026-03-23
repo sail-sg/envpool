@@ -88,9 +88,7 @@ def run(env, num_envs, total_step, async_):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--env", type=str, default="atari", choices=["atari", "mujoco", "box2d"]
-    )
+    parser.add_argument("--env", type=str, default="atari", choices=["atari", "mujoco", "box2d"])
     parser.add_argument("--async_", action="store_true")
     parser.add_argument("--num-envs", type=int, default=10)
     parser.add_argument("--total-step", type=int, default=5000)

@@ -14,26 +14,23 @@
 """xla template on python side."""
 
 from collections import namedtuple
-from typing import Any, Callable, List, Tuple, cast
+from typing import Any, Callable, cast
 
 import numpy as np
 from jax import ShapeDtypeStruct, dtypes, ffi
 
 
 def _normalize_specs(
-    specs: Tuple[Tuple[Any, List[int]], ...],
-) -> Tuple[Tuple[Tuple[int, ...], Any], ...]:
-    return tuple(
-        (tuple(shape), dtypes.canonicalize_dtype(dtype))
-        for dtype, shape in specs
-    )
+    specs: tuple[tuple[Any, list[int]], ...],
+) -> tuple[tuple[tuple[int, ...], Any], ...]:
+    return tuple((tuple(shape), dtypes.canonicalize_dtype(dtype)) for dtype, shape in specs)
 
 
-def _shape_dtype_struct(shape: Tuple[int, ...], dtype: Any) -> ShapeDtypeStruct:
+def _shape_dtype_struct(shape: tuple[int, ...], dtype: Any) -> ShapeDtypeStruct:
     return ShapeDtypeStruct(shape, dtype)
 
 
-def _layout(shape: Tuple[int, ...]) -> Tuple[int, ...]:
+def _layout(shape: tuple[int, ...]) -> tuple[int, ...]:
     return tuple(range(len(shape)))
 
 
@@ -41,8 +38,8 @@ def _make_xla_function(
     obj: Any,
     handle: bytes,
     name: str,
-    specs: Tuple[Tuple[Any, ...], Tuple[Any, ...]],
-    capsules: Tuple[Any, Any],
+    specs: tuple[tuple[Any, ...], tuple[Any, ...]],
+    capsules: tuple[Any, Any],
 ) -> Callable:
     in_specs, out_specs = specs
     in_specs = _normalize_specs(in_specs)

@@ -95,9 +95,7 @@ def build_experiment_config(FLAGS):
     use_batch_env = use_envpool or use_vec_env
 
     num_envs = FLAGS.num_envs if use_batch_env else -1
-    num_steps = (
-        FLAGS.num_steps // FLAGS.num_envs if use_batch_env else FLAGS.num_steps
-    )
+    num_steps = FLAGS.num_steps // FLAGS.num_envs if use_batch_env else FLAGS.num_steps
 
     config = ppo.PPOConfig()
     ppo_builder = helpers.PPOBuilder(config, num_envs)

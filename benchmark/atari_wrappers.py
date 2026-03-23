@@ -42,9 +42,7 @@ class NoopResetEnv(gym.Wrapper):
         obs, info = self.env.reset(seed=seed, options=options)
         noops = self.unwrapped.np_random.integers(1, self.noop_max + 1)
         for _ in range(noops):
-            obs, _, terminated, truncated, info = self.env.step(
-                self.noop_action
-            )
+            obs, _, terminated, truncated, info = self.env.step(self.noop_action)
             if terminated or truncated:
                 obs, info = self.env.reset()
         return obs, info
@@ -162,9 +160,7 @@ class WarpFrame(gym.ObservationWrapper):
     def observation(self, frame):
         """Returns the current observation from a frame"""
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-        return cv2.resize(
-            frame, (self.size, self.size), interpolation=cv2.INTER_AREA
-        )
+        return cv2.resize(frame, (self.size, self.size), interpolation=cv2.INTER_AREA)
 
 
 class ScaledFloatFrame(gym.ObservationWrapper):

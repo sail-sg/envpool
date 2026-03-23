@@ -19,7 +19,6 @@ import time
 import numpy as np
 from absl import logging
 from absl.testing import absltest
-
 from envpool.dummy.dummy_envpool import _DummyEnvPool, _DummyEnvSpec
 
 
@@ -68,11 +67,7 @@ class _DummyEnvPoolTest(absltest.TestCase):
         self.assertEqual(state_spec["obs:raw"][1][-1], 666)
 
     def test_envpool(self) -> None:
-        conf = dict(
-            zip(
-                _DummyEnvSpec._config_keys, _DummyEnvSpec._default_config_values
-            )
-        )
+        conf = dict(zip(_DummyEnvSpec._config_keys, _DummyEnvSpec._default_config_values))
         conf["num_envs"] = num_envs = 100
         conf["batch_size"] = batch = 31
         conf["num_threads"] = os.cpu_count()
@@ -97,11 +92,7 @@ class _DummyEnvPoolTest(absltest.TestCase):
         logging.info(f"FPS = {fps:.6f}")
 
     def test_xla(self) -> None:
-        conf = dict(
-            zip(
-                _DummyEnvSpec._config_keys, _DummyEnvSpec._default_config_values
-            )
-        )
+        conf = dict(zip(_DummyEnvSpec._config_keys, _DummyEnvSpec._default_config_values))
         conf["num_envs"] = 100
         conf["batch_size"] = 31
         conf["num_threads"] = os.cpu_count()
@@ -111,9 +102,7 @@ class _DummyEnvPoolTest(absltest.TestCase):
         try:
             _ = env._xla()
         except RuntimeError:
-            logging.info(
-                "XLA on Dummy failed because dummy has Container typed state."
-            )
+            logging.info("XLA on Dummy failed because dummy has Container typed state.")
             xla_failed = True
         self.assertTrue(xla_failed)
 

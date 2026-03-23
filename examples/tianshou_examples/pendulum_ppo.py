@@ -92,16 +92,12 @@ def run_ppo(args):
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     # model
-    net = Net(
-        args.state_shape, hidden_sizes=args.hidden_sizes, device=args.device
+    net = Net(args.state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
+    actor = ActorProb(net, args.action_shape, max_action=args.max_action, device=args.device).to(
+        args.device
     )
-    actor = ActorProb(
-        net, args.action_shape, max_action=args.max_action, device=args.device
-    ).to(args.device)
     critic = Critic(
-        Net(
-            args.state_shape, hidden_sizes=args.hidden_sizes, device=args.device
-        ),
+        Net(args.state_shape, hidden_sizes=args.hidden_sizes, device=args.device),
         device=args.device,
     ).to(args.device)
     actor_critic = ActorCritic(actor, critic)
@@ -156,9 +152,7 @@ def run_ppo(args):
 
     def watch():
         # Let"s watch its performance!
-        env = DummyVectorEnv(
-            [lambda: gym.make(args.task) for _ in range(args.test_num)]
-        )
+        env = DummyVectorEnv([lambda: gym.make(args.task) for _ in range(args.test_num)])
         env.seed(args.seed)
         policy.eval()
         collector = Collector(policy, env)

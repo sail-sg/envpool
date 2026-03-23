@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from timeit import timeit
-from typing import Tuple
 
 import numpy as np
 from numba import njit
@@ -28,7 +27,7 @@ def compute_gae(
     done: np.ndarray,
     env_id: np.ndarray,
     numenv: int,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     # shape of array: [T, B]
     # return returns, advantange, mask
     T, B = value.shape
@@ -40,11 +39,7 @@ def compute_gae(
     adv = np.zeros((T, B))
     for t in range(T - 1, -1, -1):
         eid = env_id[t]
-        adv[t] = (
-            delta[t]
-            + gamma * value_tp1[eid] * (1 - done[t])
-            + mask[t] * gae_tp1[eid]
-        )
+        adv[t] = delta[t] + gamma * value_tp1[eid] * (1 - done[t]) + mask[t] * gae_tp1[eid]
         mask[t] = done[t] | (index_tp1[eid] != -1)
         gae_tp1[eid] = adv[t]
         value_tp1[eid] = value[t]
@@ -128,18 +123,10 @@ def test_episodic_returns():
     ref_mask = np.ones([7, 1])
     assert np.allclose(ref_mask, mask)
 
-    done = (
-        np.array([0, 0, 0, 1.0, 0, 0, 0, 1, 0, 0, 0, 1])
-        .reshape([12, 1])
-        .astype(bool)
-    )
-    rew = np.array(
-        [101, 102, 103.0, 200, 104, 105, 106, 201, 107, 108, 109, 202]
-    )
+    done = np.array([0, 0, 0, 1.0, 0, 0, 0, 1, 0, 0, 0, 1]).reshape([12, 1]).astype(bool)
+    rew = np.array([101, 102, 103.0, 200, 104, 105, 106, 201, 107, 108, 109, 202])
     rew = rew.reshape([12, 1])
-    value = np.array(
-        [1000, 2.0, 3.0, 4, -1, 5.0, 6.0, 7, -2, 8.0, 9.0, 10]
-    ).reshape([12, 1])
+    value = np.array([1000, 2.0, 3.0, 4, -1, 5.0, 6.0, 7, -2, 8.0, 9.0, 10]).reshape([12, 1])
     env_id = np.zeros([12, 1], int)
     returns, adv, mask = compute_gae(
         gamma=0.99,
@@ -150,22 +137,20 @@ def test_episodic_returns():
         env_id=env_id,
         numenv=1,
     )
-    ans = np.array(
-        [
-            454.8344,
-            376.1143,
-            291.298,
-            200.0,
-            464.5610,
-            383.1085,
-            295.387,
-            201.0,
-            474.2876,
-            390.1027,
-            299.476,
-            202.0,
-        ]
-    ).reshape([12, 1])
+    ans = np.array([
+        454.8344,
+        376.1143,
+        291.298,
+        200.0,
+        464.5610,
+        383.1085,
+        295.387,
+        201.0,
+        474.2876,
+        390.1027,
+        299.476,
+        202.0,
+    ]).reshape([12, 1])
     assert np.allclose(returns, ans), (returns, adv)
     ref_mask = np.ones([12, 1])
     assert np.allclose(ref_mask, mask)
@@ -173,12 +158,8 @@ def test_episodic_returns():
     done = np.zeros([4, 3], bool)
     done[-1] = 1
     env_id = np.array([[0, 1, 2, 1], [1, 0, 1, 2], [2, 2, 0, 0]]).transpose()
-    value = np.array(
-        [[-1000, 5, 9, 7], [-1000, 2, 6, 10], [-1000, 8.0, 3, 4]]
-    ).transpose()
-    rew = np.array(
-        [[101, 105, 109, 201], [104, 102, 106, 202], [107, 108, 103, 200.0]]
-    ).transpose()
+    value = np.array([[-1000, 5, 9, 7], [-1000, 2, 6, 10], [-1000, 8.0, 3, 4]]).transpose()
+    rew = np.array([[101, 105, 109, 201], [104, 102, 106, 202], [107, 108, 103, 200.0]]).transpose()
     returns, adv, mask = compute_gae(
         gamma=0.99,
         gae_lambda=0.95,
@@ -188,13 +169,11 @@ def test_episodic_returns():
         env_id=env_id,
         numenv=3,
     )
-    ans = np.array(
-        [
-            [454.8344, 383.1085, 299.476, 201.0],
-            [464.5610, 376.1143, 295.387, 202.0],
-            [474.2876, 390.1027, 291.298, 200.0],
-        ]
-    ).transpose()
+    ans = np.array([
+        [454.8344, 383.1085, 299.476, 201.0],
+        [464.5610, 376.1143, 295.387, 202.0],
+        [474.2876, 390.1027, 291.298, 200.0],
+    ]).transpose()
     assert np.allclose(returns, ans), returns
     assert np.allclose(mask, 1)
 

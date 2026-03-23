@@ -45,6 +45,7 @@ from envpool.mujoco.mujoco_dmc_envpool import (
     _DmcWalkerEnvPool,
     _DmcWalkerEnvSpec,
 )
+
 from envpool.python.api import py_env
 
 (

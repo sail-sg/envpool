@@ -13,7 +13,7 @@
 # limitations under the License.
 """Atari Network from tianshou repo."""
 
-from typing import Any, Dict, Optional, Sequence, Tuple, Union, no_type_check
+from typing import Any, Sequence, no_type_check
 
 import numpy as np
 import torch
@@ -29,7 +29,7 @@ class DQN(nn.Module):
         h: int,
         w: int,
         action_shape: Sequence[int],
-        device: Union[str, int, torch.device] = "cpu",
+        device: str | int | torch.device = "cpu",
         features_only: bool = False,
     ) -> None:
         """Constructor of DQN."""
@@ -45,9 +45,7 @@ class DQN(nn.Module):
             nn.Flatten(),
         )
         with torch.no_grad():
-            self.output_dim = int(
-                np.prod(self.net(torch.zeros(1, c, h, w)).shape[1:])
-            )
+            self.output_dim = int(np.prod(self.net(torch.zeros(1, c, h, w)).shape[1:]))
         if not features_only:
             self.net = nn.Sequential(
                 self.net,
@@ -60,10 +58,10 @@ class DQN(nn.Module):
     @no_type_check
     def forward(
         self,
-        x: Union[np.ndarray, torch.Tensor],
-        state: Optional[Any] = None,
-        info: Optional[Dict[str, Any]] = None,
-    ) -> Tuple[torch.Tensor, Any]:
+        x: np.ndarray | torch.Tensor,
+        state: Any | None = None,
+        info: dict[str, Any] | None = None,
+    ) -> tuple[torch.Tensor, Any]:
         r"""Mapping: x -> Q(x, \*)."""
         x = torch.as_tensor(x, device=self.device, dtype=torch.float32)
         return self.net(x), state
@@ -79,7 +77,7 @@ class C51(DQN):
         w: int,
         action_shape: Sequence[int],
         num_atoms: int = 51,
-        device: Union[str, int, torch.device] = "cpu",
+        device: str | int | torch.device = "cpu",
     ) -> None:
         """Constructor of C51."""
         self.action_num = int(np.prod(action_shape))
@@ -88,10 +86,10 @@ class C51(DQN):
 
     def forward(
         self,
-        x: Union[np.ndarray, torch.Tensor],
-        state: Optional[Any] = None,
-        info: Optional[Dict[str, Any]] = None,
-    ) -> Tuple[torch.Tensor, Any]:
+        x: np.ndarray | torch.Tensor,
+        state: Any | None = None,
+        info: dict[str, Any] | None = None,
+    ) -> tuple[torch.Tensor, Any]:
         r"""Mapping: x -> Z(x, \*)."""
         x, state = super().forward(x)
         x = x.view(-1, self.num_atoms).softmax(dim=-1)
@@ -110,7 +108,7 @@ class QRDQN(DQN):
         w: int,
         action_shape: Sequence[int],
         num_quantiles: int = 200,
-        device: Union[str, int, torch.device] = "cpu",
+        device: str | int | torch.device = "cpu",
     ) -> None:
         """Constructor of QRDQN."""
         self.action_num = int(np.prod(action_shape))
@@ -119,10 +117,10 @@ class QRDQN(DQN):
 
     def forward(
         self,
-        x: Union[np.ndarray, torch.Tensor],
-        state: Optional[Any] = None,
-        info: Optional[Dict[str, Any]] = None,
-    ) -> Tuple[torch.Tensor, Any]:
+        x: np.ndarray | torch.Tensor,
+        state: Any | None = None,
+        info: dict[str, Any] | None = None,
+    ) -> tuple[torch.Tensor, Any]:
         r"""Mapping: x -> Z(x, \*)."""
         x, state = super().forward(x)
         x = x.view(-1, self.action_num, self.num_quantiles)

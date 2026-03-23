@@ -61,9 +61,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
         np.testing.assert_allclose(act0.high, act1.high)
 
     @no_type_check
-    def reset_state(
-        self, env: gym.Env, qpos: np.ndarray, qvel: np.ndarray
-    ) -> None:
+    def reset_state(self, env: gym.Env, qpos: np.ndarray, qvel: np.ndarray) -> None:
         # manually reset
         base_env = env.unwrapped
         mujoco.mj_resetData(base_env.model, base_env.data)
@@ -95,22 +93,16 @@ class _MujocoGymAlignTest(absltest.TestCase):
                 # logging.info(f"{cnt} {a}")
                 o0, r0, term0, trunc0, i0 = env0.step(a)
                 d0 = np.logical_or(term0, trunc0)
-                o1, r1, term1, trunc1, i1 = env1.step(
-                    np.array([a]), np.array([0])
-                )
+                o1, r1, term1, trunc1, i1 = env1.step(np.array([a]), np.array([0]))
                 d1 = np.logical_or(term1, trunc1)
                 np.testing.assert_allclose(o0, o1[0], atol=obs_atol)
-                np.testing.assert_allclose(
-                    float(r0), float(r1[0]), atol=reward_atol
-                )
+                np.testing.assert_allclose(float(r0), float(r1[0]), atol=reward_atol)
                 if not no_time_limit:
                     np.testing.assert_allclose(d0, d1[0])
                 if self.check_info_alignment(env_id):
                     for k in i0:
                         if k in i1:
-                            np.testing.assert_allclose(
-                                i0[k], i1[k][0], atol=1e-4
-                            )
+                            np.testing.assert_allclose(i0[k], i1[k][0], atol=1e-4)
 
     def test_ant(self) -> None:
         assert version.parse(gym.__version__) >= version.parse("0.26.0")
@@ -187,9 +179,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
         env0 = gym.make("HumanoidStandup-v5")
         env1 = make_gymnasium("HumanoidStandup-v5")
         self.run_space_check(env0, env1)
-        self.run_align_check(
-            "HumanoidStandup-v5", env0, env1, no_time_limit=True
-        )
+        self.run_align_check("HumanoidStandup-v5", env0, env1, no_time_limit=True)
 
     def test_inverted_double_pendulum(self) -> None:
         env0 = gym.make("InvertedDoublePendulum-v5")

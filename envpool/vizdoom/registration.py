@@ -14,21 +14,18 @@
 """Vizdoom env registration."""
 
 import os
-from typing import List
 
 from envpool.registration import base_path, register
 
 maps_path = os.path.join(base_path, "vizdoom", "maps")
 
 
-def _vizdoom_game_list() -> List[str]:
+def _vizdoom_game_list() -> list[str]:
     return [
         game.replace(".cfg", "")
         for game in sorted(os.listdir(maps_path))
         if game.endswith(".cfg")
-        and os.path.exists(
-            os.path.join(maps_path, game.replace(".cfg", ".wad"))
-        )
+        and os.path.exists(os.path.join(maps_path, game.replace(".cfg", ".wad")))
     ]
 
 

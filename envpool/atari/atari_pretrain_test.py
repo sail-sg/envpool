@@ -50,9 +50,7 @@ class _AtariPretrainTest(absltest.TestCase):
         logging.info(state_shape)
         net = QRDQN(*state_shape, action_shape, 200, device)  # type: ignore
         optim = torch.optim.Adam(net.parameters(), lr=1e-4)
-        policy = QRDQNPolicy(
-            net, optim, 0.99, 200, 3, target_update_freq=500
-        ).to(device)
+        policy = QRDQNPolicy(net, optim, 0.99, 200, 3, target_update_freq=500).to(device)
         policy.load_state_dict(torch.load(resume_path, map_location=device))
         policy.eval()
         ids = np.arange(num_envs)

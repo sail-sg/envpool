@@ -55,9 +55,7 @@ def parse_table(env: str, system: str, suffix: str) -> None:
                 d["System"].append(system)
                 d["Method"].append(method)
     d = pd.DataFrame(private_copy)
-    plot = sns.lineplot(
-        x="Num. Workers", y="FPS", hue="Method", data=d, marker="o"
-    )
+    plot = sns.lineplot(x="Num. Workers", y="FPS", hue="Method", data=d, marker="o")
     plot.xaxis.set_major_formatter(ticker.EngFormatter())
     plot.yaxis.set_major_formatter(ticker.EngFormatter())
     plot.legend(fontsize=9)

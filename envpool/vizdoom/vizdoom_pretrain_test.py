@@ -17,7 +17,6 @@ import multiprocessing as mp
 import os
 import queue
 import shutil
-from typing import Optional, Tuple
 
 import numpy as np
 import torch
@@ -52,9 +51,9 @@ def _eval_c51_impl(
     resume_path: str,
     num_envs: int = 10,
     seed: int = 0,
-    cfg_path: Optional[str] = None,
-    reward_config: Optional[dict] = None,
-) -> Tuple[np.ndarray, np.ndarray]:
+    cfg_path: str | None = None,
+    reward_config: dict | None = None,
+) -> tuple[np.ndarray, np.ndarray]:
     task_id = "".join([g.capitalize() for g in task.split("_")]) + "-v1"
     kwargs = {
         "num_envs": num_envs,
@@ -80,9 +79,7 @@ def _eval_c51_impl(
     net = C51(*state_shape, action_shape, 51, device)  # type: ignore
     optim = torch.optim.Adam(net.parameters(), lr=1e-4)
 
-    policy = C51Policy(
-        net, optim, 0.99, 51, -10, 10, 3, target_update_freq=500
-    ).to(device)
+    policy = C51Policy(net, optim, 0.99, 51, -10, 10, 3, target_update_freq=500).to(device)
     policy.load_state_dict(torch.load(resume_path, map_location=device))
     policy.eval()
     ids = np.arange(num_envs)
@@ -115,8 +112,8 @@ def _eval_c51_subprocess(
     result_queue: mp.Queue,
     task: str,
     resume_path: str,
-    cfg_path: Optional[str],
-    reward_config: Optional[dict],
+    cfg_path: str | None,
+    reward_config: dict | None,
 ) -> None:
     reward, length = _eval_c51_impl(
         task,
@@ -140,9 +137,9 @@ class _VizdoomPretrainTest(absltest.TestCase):
         resume_path: str,
         num_envs: int = 10,
         seed: int = 0,
-        cfg_path: Optional[str] = None,
-        reward_config: Optional[dict] = None,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        cfg_path: str | None = None,
+        reward_config: dict | None = None,
+    ) -> tuple[np.ndarray, np.ndarray]:
         return _eval_c51_impl(
             task,
             resume_path,

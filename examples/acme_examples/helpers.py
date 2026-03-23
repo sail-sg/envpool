@@ -14,7 +14,7 @@
 """Helpers functions and wrappers."""
 
 import logging
-from typing import Iterable, Iterator, List, Mapping, Optional, Union
+from typing import Iterable, Iterator, Mapping
 
 import dm_env
 import gym
@@ -63,8 +63,8 @@ class BatchSequenceAdder(reverb_sequence.SequenceAdder):
         cls,
         environment_spec: specs.EnvironmentSpec,
         extras_spec: types.NestedSpec = ...,
-        sequence_length: Optional[int] = None,
-        batch_size: Optional[int] = None,
+        sequence_length: int | None = None,
+        batch_size: int | None = None,
     ):
         # Add env batch and time dimension.
         def add_extra_dim(paths: Iterable[str], spec: tf.TensorSpec):
@@ -75,10 +75,8 @@ class BatchSequenceAdder(reverb_sequence.SequenceAdder):
                 shape = (sequence_length, batch_size, *spec.shape)
             return tf.TensorSpec(shape=shape, dtype=spec.dtype, name=name)
 
-        trajectory_env_spec, trajectory_extras_spec = (
-            tree.map_structure_with_path(
-                add_extra_dim, (environment_spec, extras_spec)
-            )
+        trajectory_env_spec, trajectory_extras_spec = tree.map_structure_with_path(
+            add_extra_dim, (environment_spec, extras_spec)
         )
 
         spec_step = reverb_base.Trajectory(
@@ -156,9 +154,7 @@ def _batched_feed_forward_with_extras_to_actor_core(
     ) -> Mapping[str, jnp.ndarray]:
         return state.extras
 
-    return ActorCore(
-        init=init, select_action=select_action, get_extras=get_extras
-    )
+    return ActorCore(init=init, select_action=select_action, get_extras=get_extras)
 
 
 class PPOBuilder(ppo.PPOBuilder):
@@ -173,11 +169,9 @@ class PPOBuilder(ppo.PPOBuilder):
         self,
         environment_spec: specs.EnvironmentSpec,
         policy: actor_core_lib.FeedForwardPolicyWithExtra,
-    ) -> List[reverb.Table]:
+    ) -> list[reverb.Table]:
         if not self._batch_env:
-            return super(PPOBuilder, self).make_replay_tables(
-                environment_spec, policy
-            )
+            return super(PPOBuilder, self).make_replay_tables(environment_spec, policy)
         extra_spec = {
             "log_prob": np.ones(shape=(), dtype=np.float32),
         }
@@ -195,9 +189,7 @@ class PPOBuilder(ppo.PPOBuilder):
             )
         ]
 
-    def make_dataset_iterator(
-        self, replay_client: reverb.Client
-    ) -> Iterator[reverb.ReplaySample]:
+    def make_dataset_iterator(self, replay_client: reverb.Client) -> Iterator[reverb.ReplaySample]:
         if not self._batch_env:
             return super(PPOBuilder, self).make_dataset_iterator(replay_client)
         assert self._config.batch_size % self._num_envs == 0
@@ -213,9 +205,7 @@ class PPOBuilder(ppo.PPOBuilder):
 
             def _process(data):
                 shape = data.shape
-                data = tf.transpose(
-                    data, (0, 2, 1, *[i for i in range(3, len(shape))])
-                )
+                data = tf.transpose(data, (0, 2, 1, *list(range(3, len(shape)))))
                 data = tf.reshape(
                     data,
                     (
@@ -246,8 +236,8 @@ class PPOBuilder(ppo.PPOBuilder):
         random_key: networks_lib.PRNGKey,
         policy_network: actor_core_lib.FeedForwardPolicyWithExtra,
         environment_spec: specs.EnvironmentSpec,
-        variable_source: Optional[core.VariableSource] = None,
-        adder: Optional[Adder] = None,
+        variable_source: core.VariableSource | None = None,
+        adder: Adder | None = None,
     ) -> core.Actor:
         if not self._batch_env:
             return super().make_actor(
@@ -265,15 +255,13 @@ class PPOBuilder(ppo.PPOBuilder):
             update_period=self._config.variable_update_period,
         )
         actor = _batched_feed_forward_with_extras_to_actor_core(policy_network)
-        return actors.GenericActor(
-            actor, random_key, variable_client, adder, backend="cpu"
-        )
+        return actors.GenericActor(actor, random_key, variable_client, adder, backend="cpu")
 
 
 class BatchEnvWrapper(dm_env.Environment):
     def __init__(
         self,
-        environment: Union[DummyVecEnv, EnvPool],
+        environment: DummyVecEnv | EnvPool,
     ):
         self._environment = environment
         if not isinstance(environment, DummyVecEnv):
@@ -291,9 +279,7 @@ class BatchEnvWrapper(dm_env.Environment):
         else:
             observation, _ = self._environment.reset()
         ts = TimeStep(
-            step_type=np.full(
-                self._num_envs, dm_env.StepType.FIRST, dtype="int32"
-            ),
+            step_type=np.full(self._num_envs, dm_env.StepType.FIRST, dtype="int32"),
             reward=np.zeros(self._num_envs, dtype="float32"),
             discount=np.ones(self._num_envs, dtype="float32"),
             observation=observation,
@@ -307,9 +293,7 @@ class BatchEnvWrapper(dm_env.Environment):
             if is_legacy_gym:
                 observation, reward, done, _ = self._environment.step(action)
             else:
-                observation, reward, term, trunc, _ = self._environment.step(
-                    action
-                )
+                observation, reward, term, trunc, _ = self._environment.step(action)
                 done = term + trunc
         else:
             self._environment.step_async(action)
@@ -337,9 +321,7 @@ class BatchEnvWrapper(dm_env.Environment):
     def action_spec(self):
         space = self._environment.action_space
         if isinstance(space, gym.spaces.Discrete):
-            act_spec = specs.DiscreteArray(
-                num_values=space.n, dtype=space.dtype, name="action"
-            )
+            act_spec = specs.DiscreteArray(num_values=space.n, dtype=space.dtype, name="action")
             return act_spec
         return specs.BoundedArray(
             shape=space.shape,

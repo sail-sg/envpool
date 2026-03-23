@@ -13,8 +13,8 @@
 # limitations under the License.
 """EnvPool meta class for gym.Env API."""
 
-from abc import ABC, ABCMeta
-from typing import Any, Dict, List, Tuple, Union, cast
+from abc import ABCMeta
+from typing import Any, cast
 
 import gym
 import numpy as np
@@ -26,18 +26,18 @@ from .envpool import EnvPoolMixin
 from .utils import check_key_duplication
 
 
-class GymEnvPoolMixin(ABC):
+class GymEnvPoolMixin:
     """Special treatment for gym API."""
 
     @property
-    def observation_space(self: Any) -> Union[gym.Space, Dict[str, Any]]:
+    def observation_space(self: Any) -> gym.Space | dict[str, Any]:
         """Observation space from EnvSpec."""
         if not hasattr(self, "_gym_observation_space"):
             self._gym_observation_space = self.spec.observation_space
         return self._gym_observation_space
 
     @property
-    def action_space(self: Any) -> Union[gym.Space, Dict[str, Any]]:
+    def action_space(self: Any) -> gym.Space | dict[str, Any]:
         """Action space from EnvSpec."""
         if not hasattr(self, "_gym_action_space"):
             self._gym_action_space = self.spec.action_space
@@ -47,7 +47,7 @@ class GymEnvPoolMixin(ABC):
 class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
     """Additional wrapper for EnvPool gym.Env API."""
 
-    def __new__(cls: Any, name: str, parents: Tuple, attrs: Dict) -> Any:
+    def __new__(cls: Any, name: str, parents: tuple, attrs: dict) -> Any:
         """Check internal config and initialize data format convertion."""
         base = parents[0]
         try:
@@ -75,22 +75,20 @@ class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
 
         def _to_gym(
             self: Any,
-            state_values: List[np.ndarray],
+            state_values: list[np.ndarray],
             reset: bool,
             return_info: bool,
-        ) -> Union[
-            Any,
-            Tuple[Any, Any],
-            Tuple[Any, np.ndarray, np.ndarray, Any],
-            Tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any],
-        ]:
+        ) -> (
+            Any
+            | tuple[Any, Any]
+            | tuple[Any, np.ndarray, np.ndarray, Any]
+            | tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any]
+        ):
             values = (state_values[i] for i in state_idx)
-            state = cast(
-                Dict[str, Any], optree.tree_unflatten(treepsec, values)
-            )
+            state = cast(dict[str, Any], optree.tree_unflatten(treepsec, values))
             if reset and not (return_info or new_gym_api):
                 return state["obs"]
-            info = cast(Dict[str, Any], state["info"])
+            info = cast(dict[str, Any], state["info"])
             if not new_gym_api:
                 info["TimeLimit.truncated"] = state["trunc"]
             info["elapsed_step"] = state["elapsed_step"]

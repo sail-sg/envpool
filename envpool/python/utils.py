@@ -13,12 +13,12 @@
 # limitations under the License.
 """Helper function for Python API."""
 
-from typing import Any, List
+from typing import Any
 
 import numpy as np
 
 
-def check_key_duplication(cls: Any, keytype: str, keys: List[str]) -> None:
+def check_key_duplication(cls: Any, keytype: str, keys: list[str]) -> None:
     """Check if there's any duplicated keys in ``keys``."""
     ukeys, counts = np.unique(keys, return_counts=True)
     if not np.all(counts == 1):

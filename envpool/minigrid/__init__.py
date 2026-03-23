@@ -22,7 +22,7 @@ from .minigrid_envpool import _EmptyEnvPool, _EmptyEnvSpec
 )
 
 __all__ = [
-    "EmptyEmvSpec",
+    "EmptyEnvSpec",
     "EmptyDMEnvPool",
     "EmptyGymEnvPool",
     "EmptyGymnasiumEnvPool",

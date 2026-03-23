@@ -46,9 +46,9 @@ class _MiniGridEnvPoolDeterministicTest(absltest.TestCase):
             np.testing.assert_allclose(obs0["direction"], obs1["direction"])
             # TODO: this may fail because the available state in minigrid env
             # is limited
-            same_count += np.allclose(
-                obs0["image"], obs2["image"]
-            ) and np.allclose(obs0["direction"], obs2["direction"])
+            same_count += np.allclose(obs0["image"], obs2["image"]) and np.allclose(
+                obs0["direction"], obs2["direction"]
+            )
         assert same_count == 0, f"{same_count=}"
 
     def test_empty(self) -> None:

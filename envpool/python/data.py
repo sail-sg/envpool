@@ -14,7 +14,7 @@
 """Helper function for data convertion."""
 
 from collections import namedtuple
-from typing import Any, Dict, List, Tuple, Type, cast
+from typing import Any, cast
 
 import dm_env
 import gym
@@ -28,9 +28,7 @@ from .protocol import ArraySpec
 ACTION_THRESHOLD = 2**20
 
 
-def to_nested_dict(
-    flatten_dict: Dict[str, Any], generator: Type = dict
-) -> Dict[str, Any]:
+def to_nested_dict(flatten_dict: dict[str, Any], generator: type = dict) -> dict[str, Any]:
     """Convert a flat dict to a hierarchical dict.
 
     The input dict's hierarchy is denoted by ``.``.
@@ -46,7 +44,7 @@ def to_nested_dict(
         representation.
       generator: a type of mapping. Default to ``dict``.
     """
-    ret: Dict[str, Any] = generator()
+    ret: dict[str, Any] = generator()
     for k, v in flatten_dict.items():
         segments = k.split(".")
         ptr = ret
@@ -58,19 +56,14 @@ def to_nested_dict(
     return ret
 
 
-def to_namedtuple(name: str, hdict: Dict) -> Tuple:
+def to_namedtuple(name: str, hdict: dict) -> tuple:
     """Convert a hierarchical dict to namedtuple."""
-    return namedtuple(name, hdict.keys())(
-        *[
-            to_namedtuple(k, v) if isinstance(v, Dict) else v
-            for k, v in hdict.items()
-        ]
-    )
+    return namedtuple(name, hdict.keys())(*[
+        to_namedtuple(k, v) if isinstance(v, dict) else v for k, v in hdict.items()
+    ])
 
 
-def dm_spec_transform(
-    name: str, spec: ArraySpec, spec_type: str
-) -> dm_env.specs.Array:
+def dm_spec_transform(name: str, spec: ArraySpec, spec_type: str) -> dm_env.specs.Array:
     """Transform ArraySpec to dm_env compatible specs."""
     if (
         np.prod(np.abs(spec.shape)) == 1
@@ -102,9 +95,7 @@ def gym_spec_transform(name: str, spec: ArraySpec, spec_type: str) -> gym.Space:
         # special treatment for discrete action space
         discrete_range = int(spec.maximum - spec.minimum + 1)
         try:
-            return gym.spaces.Discrete(
-                n=discrete_range, start=int(spec.minimum)
-            )
+            return gym.spaces.Discrete(n=discrete_range, start=int(spec.minimum))
         except TypeError:  # old gym version doesn't have `start`
             return gym.spaces.Discrete(n=discrete_range)
     return gym.spaces.Box(
@@ -115,9 +106,7 @@ def gym_spec_transform(name: str, spec: ArraySpec, spec_type: str) -> gym.Space:
     )
 
 
-def gymnasium_spec_transform(
-    name: str, spec: ArraySpec, spec_type: str
-) -> gymnasium.Space:
+def gymnasium_spec_transform(name: str, spec: ArraySpec, spec_type: str) -> gymnasium.Space:
     """Transform ArraySpec to gymnasium.Env compatible spaces."""
     if (
         np.prod(np.abs(spec.shape)) == 1
@@ -126,9 +115,7 @@ def gymnasium_spec_transform(
     ):
         # special treatment for discrete action space
         discrete_range = int(spec.maximum - spec.minimum + 1)
-        return gymnasium.spaces.Discrete(
-            n=discrete_range, start=int(spec.minimum)
-        )
+        return gymnasium.spaces.Discrete(n=discrete_range, start=int(spec.minimum))
     return gymnasium.spaces.Box(
         shape=[s for s in spec.shape if s != -1],
         dtype=spec.dtype,
@@ -139,39 +126,33 @@ def gymnasium_spec_transform(
 
 def dm_structure(
     root_name: str,
-    keys: List[str],
-) -> Tuple[List[Tuple[int, ...]], List[int], PyTreeSpec]:
+    keys: list[str],
+) -> tuple[list[tuple[int, ...]], list[int], PyTreeSpec]:
     """Convert flat keys into tree structure for namedtuple construction."""
     new_keys = []
     for key in keys:
         if key in ["obs", "info"]:  # special treatment for single-node obs/info
             key = f"obs:{key}"
         key = key.replace("info:", "obs:")  # merge obs and info together
-        key = key.replace(
-            "obs:", f"{root_name}:"
-        )  # compatible with to_namedtuple
+        key = key.replace("obs:", f"{root_name}:")  # compatible with to_namedtuple
         new_keys.append(key.replace(":", "."))
     dict_tree = to_nested_dict(dict(zip(new_keys, list(range(len(new_keys))))))
     structure = to_namedtuple(root_name, dict_tree)
-    paths: List[Tuple[int, ...]]
-    indices: List[int]
-    paths, indices, treespec = optree.tree_flatten_with_path(
-        cast(Any, structure)
-    )
+    paths: list[tuple[int, ...]]
+    indices: list[int]
+    paths, indices, treespec = optree.tree_flatten_with_path(cast(Any, structure))
     return paths, indices, treespec
 
 
 def gym_structure(
-    keys: List[str],
-) -> Tuple[List[Tuple[str, ...]], List[int], PyTreeSpec]:
+    keys: list[str],
+) -> tuple[list[tuple[str, ...]], list[int], PyTreeSpec]:
     """Convert flat keys into tree structure for dict construction."""
     keys = [k.replace(":", ".") for k in keys]
     dict_tree = to_nested_dict(dict(zip(keys, list(range(len(keys))))))
-    paths: List[Tuple[str, ...]]
-    indices: List[int]
-    paths, indices, treespec = optree.tree_flatten_with_path(
-        cast(Any, dict_tree)
-    )
+    paths: list[tuple[str, ...]]
+    indices: list[int]
+    paths, indices, treespec = optree.tree_flatten_with_path(cast(Any, dict_tree))
     return paths, indices, treespec
 
 

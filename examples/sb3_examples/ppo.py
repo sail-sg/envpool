@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
 
 import gym
 import numpy as np
@@ -63,7 +62,7 @@ class VecAdapter(VecEnvWrapper):
         else:
             return self.venv.reset()[0]
 
-    def seed(self, seed: Optional[int] = None) -> None:
+    def seed(self, seed: int | None = None) -> None:
         # You can only seed EnvPool env by calling envpool.make()
         pass
 
@@ -71,21 +70,17 @@ class VecAdapter(VecEnvWrapper):
         if is_legacy_gym:
             obs, rewards, dones, info_dict = self.venv.step(self.actions)
         else:
-            obs, rewards, terms, truncs, info_dict = self.venv.step(
-                self.actions
-            )
+            obs, rewards, terms, truncs, info_dict = self.venv.step(self.actions)
             dones = terms + truncs
         infos = []
         # Convert dict to list of dict
         # and add terminal observation
         for i in range(self.num_envs):
-            infos.append(
-                {
-                    key: info_dict[key][i]
-                    for key in info_dict.keys()
-                    if isinstance(info_dict[key], np.ndarray)
-                }
-            )
+            infos.append({
+                key: info_dict[key][i]
+                for key in info_dict.keys()
+                if isinstance(info_dict[key], np.ndarray)
+            })
             if dones[i]:
                 infos[i]["terminal_observation"] = obs[i]
                 if is_legacy_gym:

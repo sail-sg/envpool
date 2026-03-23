@@ -1,6 +1,60 @@
-line-length = 80
-target-version = "py311"
+target-version = "py312"
+required-version = ">=0.14.11"
+extend-exclude = [
+    "**/x/**",
+    "**/*_pb2*.{py,pyi}",
+    "*.ipynb",
+    "**/proto/",
+    "vendor_imports/**/*",
+]
+line-length = 100
+preview = true
 
 [lint]
-select = ["B", "E", "F", "I"]
-ignore = ["B024", "B905", "E501"]
+select = [
+    "E", "F", "W", "B", "C4", "PIE", "NPY", "PLE", "I",
+    "DTZ003", "DTZ004",
+    "G010",
+    "PLW0120", "PLW0129", "PLW0211", "PLW0711", "PLW1509", "PLW2101",
+    "SIM101", "SIM110", "SIM201", "SIM202", "SIM210", "SIM211", "SIM222", "SIM223",
+    "S506",
+    "RET501", "RET502",
+    "RUF006", "RUF007", "RUF008", "RUF013", "RUF016", "RUF017", "RUF030", "RUF055", "RUF061",
+    "RUF102", "RUF200",
+    "COM818", "COM819",
+    "PYI016", "PYI018", "PYI025", "PYI030",
+    "PERF102",
+    "PGH005",
+    "RUF024",
+    "YTT201", "YTT203", "YTT204",
+    "UP001", "UP003", "UP004", "UP006", "UP007", "UP028", "UP034", "UP045", "UP018",
+    "FURB132", "FURB148", "FURB162", "FURB163", "FURB171", "FURB181", "FURB192",
+    "ISC004",
+    "ASYNC210", "ASYNC212", "ASYNC251",
+    "TID251",
+    "PT008", "PT012", "PT010", "PT014",
+    "TC005",
+]
+ignore = [
+    "B905",
+    "E2", "E3", "E402", "E501", "E701", "E711", "E731", "E741",
+    "B011", "B903",
+    "C408", "C409", "C419", "C420",
+    "UP035",
+    "NPY002",
+    "PIE790",
+    "SIM108",
+    "ASYNC109", "ASYNC230",
+]
+extend-safe-fixes = ["ALL"]
+extend-unsafe-fixes = ["F601", "F602", "B018", "SIM222", "SIM223", "ISC004"]
+unfixable = ["F841"]
+external = ["WPS", "R50", "ASYNC101", "TOR901", "SC", "FKM", "CCM", "FTH", "W0212"]
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401", "F403"]
+"conftest.py" = ["F811"]
+"**/test_*.py" = ["F811"]
+
+[lint.isort]
+detect-same-package = false

@@ -13,8 +13,8 @@
 # limitations under the License.
 """EnvPool meta class for dm_env API."""
 
-from abc import ABC, ABCMeta
-from typing import Any, Dict, List, Tuple, Union
+from abc import ABCMeta
+from typing import Any
 
 import dm_env
 import numpy as np
@@ -26,16 +26,16 @@ from .envpool import EnvPoolMixin
 from .utils import check_key_duplication
 
 
-class DMEnvPoolMixin(ABC):
+class DMEnvPoolMixin:
     """Special treatment for dm_env API."""
 
-    def observation_spec(self: Any) -> Tuple:
+    def observation_spec(self: Any) -> tuple:
         """Observation spec from EnvSpec."""
         if not hasattr(self, "_dm_observation_spec"):
             self._dm_observation_spec = self.spec.observation_spec()
         return self._dm_observation_spec
 
-    def action_spec(self: Any) -> Union[dm_env.specs.Array, Tuple]:
+    def action_spec(self: Any) -> dm_env.specs.Array | tuple:
         """Action spec from EnvSpec."""
         if not hasattr(self, "_dm_action_spec"):
             self._dm_action_spec = self.spec.action_spec()
@@ -45,7 +45,7 @@ class DMEnvPoolMixin(ABC):
 class DMEnvPoolMeta(ABCMeta):
     """Additional wrapper for EnvPool dm_env API."""
 
-    def __new__(cls: Any, name: str, parents: Tuple, attrs: Dict) -> Any:
+    def __new__(cls: Any, name: str, parents: tuple, attrs: dict) -> Any:
         """Check internal config and initialize data format convertion."""
         base = parents[0]
         try:
@@ -77,7 +77,7 @@ class DMEnvPoolMeta(ABCMeta):
 
         def _to_dm(
             self: Any,
-            state_values: List[np.ndarray],
+            state_values: list[np.ndarray],
             reset: bool,
             return_info: bool,
         ) -> TimeStep:
