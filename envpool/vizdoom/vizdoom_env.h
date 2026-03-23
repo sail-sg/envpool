@@ -274,7 +274,8 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
   bool IsDone() override { return done_; }
 
   void Reset() override {
-    if (dg_->isEpisodeFinished() || elapsed_step_ >= max_episode_steps_) {
+    if (force_reset_ || dg_->isEpisodeFinished() ||
+        elapsed_step_ >= max_episode_steps_) {
       elapsed_step_ = 0;
       if (episode_count_ > 0) {  // NewEpisode at beginning may hang on MAEnv
         if (save_lmp_) {

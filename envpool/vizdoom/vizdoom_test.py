@@ -13,6 +13,7 @@
 # limitations under the License.
 """Unit tests for vizdoom environments."""
 
+import hashlib
 import os
 
 import cv2
@@ -154,6 +155,35 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
             e.step(np.array([0]), np.array([0])).observation.obs.shape[1]
             == 1 * 4
         )
+
+    def test_explicit_reset_with_episodic_life_gymnasium(self) -> None:
+        env = make_gym(
+            "D1Basic-v1",
+            num_envs=1,
+            seed=42,
+            episodic_life=True,
+            use_combined_action=True,
+        )
+        env.reset()
+        baseline_obs, baseline_info = env.reset()
+        baseline_obs = np.asarray(baseline_obs)
+        baseline_hash = hashlib.sha256(baseline_obs.tobytes()).hexdigest()[:16]
+        baseline_health = float(
+            np.asarray(baseline_info["HEALTH"]).reshape(-1)[0]
+        )
+        for i in range(5):
+            obs, info = env.reset()
+            obs = np.asarray(obs)
+            obs_hash = hashlib.sha256(obs.tobytes()).hexdigest()[:16]
+            health = float(np.asarray(info["HEALTH"]).reshape(-1)[0])
+            self.assertTrue(
+                np.array_equal(obs, baseline_obs),
+                msg=(
+                    f"reset #{i} changed obs: baseline={baseline_hash}, "
+                    f"got={obs_hash}, health={health}, "
+                    f"baseline_health={baseline_health}"
+                ),
+            )
 
 
 if __name__ == "__main__":
