@@ -98,8 +98,7 @@ class C51(DQN):
 
 
 class QRDQN(DQN):
-    """Reference: Distributional Reinforcement Learning with Quantile \
-  Regression."""
+    """Reference: Distributional Reinforcement Learning with Quantile Regression."""
 
     def __init__(
         self,

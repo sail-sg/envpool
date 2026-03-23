@@ -59,12 +59,13 @@ addlicense-install: go-install
 	command -v addlicense || go install github.com/google/addlicense@latest
 
 doc-install:
-	$(call check_install, pydocstyle)
 	$(call check_install_extra, doc8, "doc8<1")
 	$(call check_install, setuptools)
 	$(call check_install, pbr)
 	$(call check_install, sphinx)
 	$(call check_install, sphinx_rtd_theme)
+
+spelling-install: doc-install
 	$(call check_install_extra, sphinxcontrib.spelling, sphinxcontrib.spelling pyenchant)
 
 spelling-system-install:
@@ -150,12 +151,12 @@ addlicense: addlicense-install
 	addlicense -c $(COPYRIGHT) -l apache -y 2026 -check $(PROJECT_FOLDER)
 
 docstyle: doc-install
-	pydocstyle $(PROJECT_NAME) && doc8 docs && cd docs && make html SPHINXOPTS="-W"
+	ruff check $(PROJECT_NAME) --select D && doc8 docs && cd docs && make html SPHINXOPTS="-W"
 
 doc: doc-install
 	cd docs && make html && cd _build/html && python3 -m http.server
 
-spelling: doc-install spelling-system-install
+spelling: spelling-install spelling-system-install
 	cd docs && make spelling SPHINXOPTS="-W"
 
 doc-clean:
