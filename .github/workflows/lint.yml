@@ -21,10 +21,10 @@ jobs:
       - name: Upgrade pip
         run: |
           python -m pip install --upgrade pip
-      - name: flake8
+      - name: ruff check
         run: |
-          make flake8
-      - name: isort and yapf
+          make ruff
+      - name: ruff format
         run: |
           make py-format
       - name: cpplint
