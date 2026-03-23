@@ -119,6 +119,10 @@ class _MakeTest(absltest.TestCase):
             "LunarLanderContinuous-v2",
         ])
 
+    def test_make_minigrid(self) -> None:
+        self.assertIn("MiniGrid-Empty-5x5-v0", envpool.list_all_envs())
+        self.check_step(["MiniGrid-Empty-5x5-v0"])
+
     def test_make_mujoco_gym(self) -> None:
         self.check_step([
             "Ant-v3",

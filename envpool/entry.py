@@ -44,6 +44,11 @@ except ImportError:
     pass
 
 try:
+    import envpool.minigrid.registration  # noqa: F401
+except ImportError:
+    pass
+
+try:
     import envpool.toy_text.registration  # noqa: F401
 except ImportError:
     pass
