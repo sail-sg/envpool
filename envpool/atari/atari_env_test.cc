@@ -254,6 +254,26 @@ TEST(AtariEnvTest, EpisodicLife) {
   }
 }
 
+TEST(AtariEnvTest, ExplicitResetWithEpisodicLife) {
+  auto config = atari::AtariEnvSpec::kDefaultConfig;
+  config["num_envs"_] = 1;
+  config["batch_size"_] = 1;
+  config["seed"_] = 42;
+  config["episodic_life"_] = true;
+  config["task"_] = "breakout";
+  atari::AtariEnvSpec spec(config);
+  atari::AtariEnvPool envpool(spec);
+  TArray all_env_ids(Spec<int>({1}));
+  all_env_ids[0] = 0;
+  for (int i = 0; i < 20; ++i) {
+    envpool.Reset(all_env_ids);
+    AtariState state(envpool.Recv());
+    auto lives = state["info:lives"_];
+    int live = lives[0];
+    EXPECT_EQ(live, 5) << "reset #" << i;
+  }
+}
+
 TEST(AtariEnvTest, ZeroDiscountOnLifeLoss) {
   std::srand(std::time(nullptr));
   int batch = 4;

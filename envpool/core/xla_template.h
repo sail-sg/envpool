@@ -66,19 +66,19 @@ struct CustomCall {
 
   static xla_ffi::Error ValidateArity(xla_ffi::RemainingArgs args,
                                       xla_ffi::RemainingRets rets) {
-    constexpr std::size_t kExpectedArgs = std::tuple_size_v<In> + 1;
-    constexpr std::size_t kExpectedRets = std::tuple_size_v<Out> + 1;
-    if (args.size() != kExpectedArgs) {
+    constexpr std::size_t expected_args = std::tuple_size_v<In> + 1;
+    constexpr std::size_t expected_rets = std::tuple_size_v<Out> + 1;
+    if (args.size() != expected_args) {
       return xla_ffi::Error::InvalidArgument(
-          "Expected " + std::to_string(kExpectedArgs) + " buffers, got " +
+          "Expected " + std::to_string(expected_args) + " buffers, got " +
           std::to_string(args.size()));
     }
-    if (rets.size() != kExpectedRets) {
+    if (rets.size() != expected_rets) {
       return xla_ffi::Error::InvalidArgument(
-          "Expected " + std::to_string(kExpectedRets) + " results, got " +
+          "Expected " + std::to_string(expected_rets) + " results, got " +
           std::to_string(rets.size()));
     }
-    return xla_ffi::Error();
+    return {};
   }
 
   static xla_ffi::Error PopulateInBuffers(xla_ffi::RemainingArgs args,
@@ -90,7 +90,7 @@ struct CustomCall {
       }
       (*in_arr)[i] = (*buffer).untyped_data();
     }
-    return xla_ffi::Error();
+    return {};
   }
 
   static xla_ffi::Error PopulateOutBuffers(xla_ffi::RemainingRets rets,
@@ -102,7 +102,7 @@ struct CustomCall {
       }
       (*out_arr)[i] = (*buffer)->untyped_data();
     }
-    return xla_ffi::Error();
+    return {};
   }
 
   static xla_ffi::Error CpuExecute(xla_ffi::RemainingArgs args,
@@ -124,7 +124,7 @@ struct CustomCall {
       return err;
     }
     CC::Cpu(*obj, in_arr, out_arr);
-    return xla_ffi::Error();
+    return {};
   }
 
   static xla_ffi::Error GpuExecute(cudaStream_t stream,
@@ -147,7 +147,7 @@ struct CustomCall {
       return err;
     }
     CC::Gpu(*obj, stream, in_arr, out_arr);
-    return xla_ffi::Error();
+    return {};
   }
 
   static auto Specs(Class* obj) {
@@ -177,8 +177,9 @@ struct CustomCall {
                                .RemainingArgs()
                                .RemainingRets()
                                .Attrs<xla_ffi::Dictionary>());
-    return std::make_tuple(py::capsule(reinterpret_cast<void*>(cpu_handler)),
-                           py::capsule(reinterpret_cast<void*>(gpu_handler)));
+    return std::make_tuple(
+        py::capsule(reinterpret_cast<void*>(cpu_handler)),  // NOLINT(bugprone-casting-through-void)
+        py::capsule(reinterpret_cast<void*>(gpu_handler)));  // NOLINT(bugprone-casting-through-void)
   }
 
   static auto Xla(Class* obj) {

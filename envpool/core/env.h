@@ -65,6 +65,7 @@ class Env {
   EnvSpec spec_;
   int env_id_, seed_;
   std::mt19937 gen_;
+  bool force_reset_{false};
 
  private:
   StateBufferQueue* sbq_;
@@ -159,8 +160,8 @@ class Env {
     }
   }
 
-  void EnvStep(StateBufferQueue* sbq, int order, bool reset) {
-    PreProcess(sbq, order, reset);
+  void EnvStep(StateBufferQueue* sbq, int order, bool reset, bool force_reset) {
+    PreProcess(sbq, order, reset, force_reset);
     if (reset) {
       Reset();
     } else {
@@ -178,9 +179,11 @@ class Env {
   virtual bool IsDone() { throw std::runtime_error("is_done not implemented"); }
 
  protected:
-  void PreProcess(StateBufferQueue* sbq, int order, bool reset) {
+  void PreProcess(StateBufferQueue* sbq, int order, bool reset,
+                  bool force_reset) {
     sbq_ = sbq;
     order_ = order;
+    force_reset_ = force_reset;
     if (reset) {
       current_step_ = 0;
     } else {
