@@ -52,12 +52,16 @@ is_legacy_gym = version.parse(gym.__version__) < version.parse("0.26.0")
 
 
 class TimeStep(dm_env.TimeStep):
+    """Batched `dm_env.TimeStep` with vectorized terminal detection."""
+
     def last(self) -> bool:
         """Adapt the batch step_type for EnvironmentLoop episode-end checking."""
         return any(self.step_type == dm_env.StepType.LAST)
 
 
 class BatchSequenceAdder(reverb_sequence.SequenceAdder):
+    """Sequence adder that preserves batch and time dimensions."""
+
     @classmethod
     def signature(
         cls,
@@ -67,6 +71,8 @@ class BatchSequenceAdder(reverb_sequence.SequenceAdder):
         batch_size: int | None = None,
     ):
         # Add env batch and time dimension.
+        """Build the replay signature for batched sequence data."""
+
         def add_extra_dim(paths: Iterable[str], spec: tf.TensorSpec):
             name = "/".join(str(p) for p in paths)
             if "rewards" in name:
@@ -75,8 +81,10 @@ class BatchSequenceAdder(reverb_sequence.SequenceAdder):
                 shape = (sequence_length, batch_size, *spec.shape)
             return tf.TensorSpec(shape=shape, dtype=spec.dtype, name=name)
 
-        trajectory_env_spec, trajectory_extras_spec = tree.map_structure_with_path(
-            add_extra_dim, (environment_spec, extras_spec)
+        trajectory_env_spec, trajectory_extras_spec = (
+            tree.map_structure_with_path(
+                add_extra_dim, (environment_spec, extras_spec)
+            )
         )
 
         spec_step = reverb_base.Trajectory(
@@ -93,13 +101,18 @@ class BatchSequenceAdder(reverb_sequence.SequenceAdder):
 
 
 class AdderWrapper(Adder):
+    """Adapter that feeds batched timesteps into an Acme adder."""
+
     def __init__(self, adder: Adder) -> None:
+        """Initialize the wrapper with the underlying adder."""
         self._adder: Adder = adder
 
     def reset(self):
+        """Reset the wrapped adder state."""
         self._adder.reset()
 
     def add_first(self, timestep: TimeStep):
+        """Record the first batched timestep in the wrapped adder."""
         if not any(timestep.first()):
             raise ValueError(
                 "adder.add_first with an initial timestep (i.e. one for "
@@ -122,6 +135,7 @@ class AdderWrapper(Adder):
         next_timestep: TimeStep,
         extras: types.NestedArray = ...,
     ):
+        """Add a transition to the wrapped adder."""
         next_timestep = TimeStep(
             step_type=next_timestep.step_type,
             observation=next_timestep.observation,
@@ -154,13 +168,16 @@ def _batched_feed_forward_with_extras_to_actor_core(
     ) -> Mapping[str, jnp.ndarray]:
         return state.extras
 
-    return ActorCore(init=init, select_action=select_action, get_extras=get_extras)
+    return ActorCore(
+        init=init, select_action=select_action, get_extras=get_extras
+    )
 
 
 class PPOBuilder(ppo.PPOBuilder):
     """Wrap the PPO algorithm builder for EnvPool."""
 
     def __init__(self, config: ppo.PPOConfig, num_envs: int = -1):
+        """Initialize the builder for batched or unbatched PPO."""
         super().__init__(config)
         self._num_envs = num_envs
         self._batch_env = num_envs > 0
@@ -170,8 +187,11 @@ class PPOBuilder(ppo.PPOBuilder):
         environment_spec: specs.EnvironmentSpec,
         policy: actor_core_lib.FeedForwardPolicyWithExtra,
     ) -> list[reverb.Table]:
+        """Create replay tables for batched or unbatched PPO data."""
         if not self._batch_env:
-            return super(PPOBuilder, self).make_replay_tables(environment_spec, policy)
+            return super(PPOBuilder, self).make_replay_tables(
+                environment_spec, policy
+            )
         extra_spec = {
             "log_prob": np.ones(shape=(), dtype=np.float32),
         }
@@ -189,7 +209,10 @@ class PPOBuilder(ppo.PPOBuilder):
             )
         ]
 
-    def make_dataset_iterator(self, replay_client: reverb.Client) -> Iterator[reverb.ReplaySample]:
+    def make_dataset_iterator(
+        self, replay_client: reverb.Client
+    ) -> Iterator[reverb.ReplaySample]:
+        """Create the replay dataset iterator."""
         if not self._batch_env:
             return super(PPOBuilder, self).make_dataset_iterator(replay_client)
         assert self._config.batch_size % self._num_envs == 0
@@ -205,7 +228,9 @@ class PPOBuilder(ppo.PPOBuilder):
 
             def _process(data):
                 shape = data.shape
-                data = tf.transpose(data, (0, 2, 1, *list(range(3, len(shape)))))
+                data = tf.transpose(
+                    data, (0, 2, 1, *list(range(3, len(shape))))
+                )
                 data = tf.reshape(
                     data,
                     (
@@ -226,6 +251,7 @@ class PPOBuilder(ppo.PPOBuilder):
         return utils.device_put(dataset.as_numpy_iterator(), jax.devices()[0])
 
     def make_adder(self, replay_client: reverb.Client) -> Adder:
+        """Create the replay adder."""
         adder = super(PPOBuilder, self).make_adder(replay_client)
         if not self._batch_env:
             return adder
@@ -239,6 +265,7 @@ class PPOBuilder(ppo.PPOBuilder):
         variable_source: core.VariableSource | None = None,
         adder: Adder | None = None,
     ) -> core.Actor:
+        """Create the actor for PPO execution."""
         if not self._batch_env:
             return super().make_actor(
                 random_key,
@@ -255,14 +282,19 @@ class PPOBuilder(ppo.PPOBuilder):
             update_period=self._config.variable_update_period,
         )
         actor = _batched_feed_forward_with_extras_to_actor_core(policy_network)
-        return actors.GenericActor(actor, random_key, variable_client, adder, backend="cpu")
+        return actors.GenericActor(
+            actor, random_key, variable_client, adder, backend="cpu"
+        )
 
 
 class BatchEnvWrapper(dm_env.Environment):
+    """Adapt vector environments to the `dm_env.Environment` API."""
+
     def __init__(
         self,
         environment: DummyVecEnv | EnvPool,
     ):
+        """Initialize the wrapper around a vectorized environment."""
         self._environment = environment
         if not isinstance(environment, DummyVecEnv):
             self._num_envs = len(environment.all_env_ids)
@@ -273,13 +305,16 @@ class BatchEnvWrapper(dm_env.Environment):
         self._reset_next_step = True
 
     def reset(self) -> TimeStep:
+        """Reset the wrapped environment and return the first timestep."""
         self._reset_next_step = False
         if is_legacy_gym:
             observation = self._environment.reset()
         else:
             observation, _ = self._environment.reset()
         ts = TimeStep(
-            step_type=np.full(self._num_envs, dm_env.StepType.FIRST, dtype="int32"),
+            step_type=np.full(
+                self._num_envs, dm_env.StepType.FIRST, dtype="int32"
+            ),
             reward=np.zeros(self._num_envs, dtype="float32"),
             discount=np.ones(self._num_envs, dtype="float32"),
             observation=observation,
@@ -287,13 +322,16 @@ class BatchEnvWrapper(dm_env.Environment):
         return ts
 
     def step(self, action: types.NestedArray) -> TimeStep:
+        """Step the wrapped environment and return a batched timestep."""
         if self._reset_next_step:
             return self.reset()
         if self._use_env_pool:
             if is_legacy_gym:
                 observation, reward, done, _ = self._environment.step(action)
             else:
-                observation, reward, term, trunc, _ = self._environment.step(action)
+                observation, reward, term, trunc, _ = self._environment.step(
+                    action
+                )
                 done = term + trunc
         else:
             self._environment.step_async(action)
@@ -308,6 +346,7 @@ class BatchEnvWrapper(dm_env.Environment):
         return ts
 
     def observation_spec(self):
+        """Return the observation spec."""
         space = self._environment.observation_space
         obs_spec = specs.BoundedArray(
             shape=space.shape,
@@ -319,9 +358,12 @@ class BatchEnvWrapper(dm_env.Environment):
         return obs_spec
 
     def action_spec(self):
+        """Return the action spec."""
         space = self._environment.action_space
         if isinstance(space, gym.spaces.Discrete):
-            act_spec = specs.DiscreteArray(num_values=space.n, dtype=space.dtype, name="action")
+            act_spec = specs.DiscreteArray(
+                num_values=space.n, dtype=space.dtype, name="action"
+            )
             return act_spec
         return specs.BoundedArray(
             shape=space.shape,
@@ -332,6 +374,7 @@ class BatchEnvWrapper(dm_env.Environment):
         )
 
     def reward_spec(self):
+        """Return the reward spec."""
         return specs.Array(
             name="reward",
             shape=[self._num_envs],
@@ -339,12 +382,14 @@ class BatchEnvWrapper(dm_env.Environment):
         )
 
     def close(self):
+        """Close the wrapped environment."""
         self._environment.close()
 
 
 def make_mujoco_environment(
     task: str, use_envpool: bool = False, use_vec_env=False, num_envs: int = 2
 ):
+    """Create a MuJoCo environment for Acme examples."""
     env_wrappers = []
     if use_envpool:
         env = envpool.make(
@@ -371,6 +416,7 @@ def make_logger(
     steps_key: str = "steps",
     task_instance: int = 0,
 ) -> loggers.Logger:
+    """Create the logger stack for the Acme PPO example."""
     del task_instance, steps_key
     num_envs = config["num_envs"] if config["use_batch_env"] else 1
 

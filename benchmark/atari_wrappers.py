@@ -33,30 +33,34 @@ class NoopResetEnv(gym.Wrapper):
     """
 
     def __init__(self, env, noop_max=30):
+        """Initialize the no-op reset wrapper."""
         super().__init__(env)
         self.noop_max = noop_max
         self.noop_action = 0
         assert env.unwrapped.get_action_meanings()[0] == "NOOP"
 
     def reset(self, *, seed=None, options=None):
+        """Reset the environment after a random number of no-op actions."""
         obs, info = self.env.reset(seed=seed, options=options)
         noops = self.unwrapped.np_random.integers(1, self.noop_max + 1)
         for _ in range(noops):
-            obs, _, terminated, truncated, info = self.env.step(self.noop_action)
+            obs, _, terminated, truncated, info = self.env.step(
+                self.noop_action
+            )
             if terminated or truncated:
                 obs, info = self.env.reset()
         return obs, info
 
 
 class MaxAndSkipEnv(gym.Wrapper):
-    """Return only every `skip`-th frame (frameskipping) using most recent raw
-    observations (for max pooling across time steps)
+    """Return every `skip`-th frame with max pooling over recent frames.
 
     :param gym.Env env: the environment to wrap.
     :param int skip: number of `skip`-th frame.
     """
 
     def __init__(self, env, skip=4):
+        """Initialize the instance."""
         super().__init__(env)
         self._skip = skip
 
@@ -85,11 +89,13 @@ class EpisodicLifeEnv(gym.Wrapper):
     """
 
     def __init__(self, env):
+        """Initialize episodic-life tracking."""
         super().__init__(env)
         self.lives = 0
         self.was_real_done = True
 
     def step(self, action):
+        """Step the environment and treat life loss as episode end."""
         obs, reward, terminated, truncated, info = self.env.step(action)
         self.was_real_done = terminated or truncated
         # check current lives, make loss of life terminal, then update lives to
@@ -129,11 +135,13 @@ class FireResetEnv(gym.Wrapper):
     """
 
     def __init__(self, env):
+        """Initialize the fire-reset wrapper."""
         super().__init__(env)
         assert env.unwrapped.get_action_meanings()[1] == "FIRE"
         assert len(env.unwrapped.get_action_meanings()) >= 3
 
     def reset(self, *, seed=None, options=None):
+        """Reset the environment and apply the fire action."""
         self.env.reset(seed=seed, options=options)
         obs, _, terminated, truncated, info = self.env.step(1)
         if terminated or truncated:
@@ -148,6 +156,7 @@ class WarpFrame(gym.ObservationWrapper):
     """
 
     def __init__(self, env):
+        """Initialize grayscale frame warping."""
         super().__init__(env)
         self.size = 84
         self.observation_space = gym.spaces.Box(
@@ -158,9 +167,11 @@ class WarpFrame(gym.ObservationWrapper):
         )
 
     def observation(self, frame):
-        """Returns the current observation from a frame"""
+        """Returns the current observation from a frame."""
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-        return cv2.resize(frame, (self.size, self.size), interpolation=cv2.INTER_AREA)
+        return cv2.resize(
+            frame, (self.size, self.size), interpolation=cv2.INTER_AREA
+        )
 
 
 class ScaledFloatFrame(gym.ObservationWrapper):
@@ -170,6 +181,7 @@ class ScaledFloatFrame(gym.ObservationWrapper):
     """
 
     def __init__(self, env):
+        """Initialize the instance."""
         super().__init__(env)
         low = np.min(env.observation_space.low)
         high = np.max(env.observation_space.high)
@@ -183,6 +195,7 @@ class ScaledFloatFrame(gym.ObservationWrapper):
         )
 
     def observation(self, observation):
+        """Scale an observation to the [0, 1] range."""
         return (observation - self.bias) / self.scale
 
 
@@ -193,6 +206,7 @@ class ClipRewardEnv(gym.RewardWrapper):
     """
 
     def __init__(self, env):
+        """Initialize reward clipping."""
         super().__init__(env)
         self.reward_range = (-1, 1)
 
@@ -209,6 +223,7 @@ class FrameStack(gym.Wrapper):
     """
 
     def __init__(self, env, n_frames):
+        """Initialize the frame stack buffer."""
         super().__init__(env)
         self.n_frames = n_frames
         self.frames = deque([], maxlen=n_frames)
@@ -221,12 +236,14 @@ class FrameStack(gym.Wrapper):
         )
 
     def reset(self, *, seed=None, options=None):
+        """Reset the environment and refill the frame stack."""
         obs, info = self.env.reset(seed=seed, options=options)
         for _ in range(self.n_frames):
             self.frames.append(obs)
         return self._get_ob(), info
 
     def step(self, action):
+        """Step the environment and append the latest frame."""
         obs, reward, terminated, truncated, info = self.env.step(action)
         self.frames.append(obs)
         return self._get_ob(), reward, terminated, truncated, info

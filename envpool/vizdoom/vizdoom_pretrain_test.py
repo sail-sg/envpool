@@ -79,7 +79,9 @@ def _eval_c51_impl(
     net = C51(*state_shape, action_shape, 51, device)  # type: ignore
     optim = torch.optim.Adam(net.parameters(), lr=1e-4)
 
-    policy = C51Policy(net, optim, 0.99, 51, -10, 10, 3, target_update_freq=500).to(device)
+    policy = C51Policy(
+        net, optim, 0.99, 51, -10, 10, 3, target_update_freq=500
+    ).to(device)
     policy.load_state_dict(torch.load(resume_path, map_location=device))
     policy.eval()
     ids = np.arange(num_envs)

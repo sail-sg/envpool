@@ -34,13 +34,19 @@ class EnvPoolMixin(ABC):
         if hasattr(self, "_check_action_finished"):  # only check once
             return
         self._check_action_finished = True
-        for a, (k, v) in zip(actions, self.spec.action_array_spec.items()):
+        for a, (k, v) in zip(
+            actions, self.spec.action_array_spec.items(), strict=False
+        ):
             if v.dtype != a.dtype:
-                raise RuntimeError(f'Expected dtype {v.dtype} with action "{k}", got {a.dtype}')
+                raise RuntimeError(
+                    f'Expected dtype {v.dtype} with action "{k}", got {a.dtype}'
+                )
             shape = tuple(v.shape)
             if len(shape) > 0 and shape[0] == -1:
                 if a.shape[1:] != shape[1:]:
-                    raise RuntimeError(f'Expected shape {shape} with action "{k}", got {a.shape}')
+                    raise RuntimeError(
+                        f'Expected shape {shape} with action "{k}", got {a.shape}'
+                    )
             else:
                 if len(a.shape) == 0 or a.shape[1:] != shape:
                     raise RuntimeError(
@@ -57,7 +63,9 @@ class EnvPoolMixin(ABC):
             paths: list[tuple[str, ...]]
             values: list[Any]
             paths, values, _ = optree.tree_flatten_with_path(cast(Any, action))
-            adict = {".".join(p): v for p, v in zip(paths, values)}
+            adict = {
+                ".".join(p): v for p, v in zip(paths, values, strict=False)
+            }
         else:  # only 3 keys in action_keys
             if not hasattr(self, "_last_action_type"):
                 self._last_action_type = self._spec._action_spec[-1][0]
@@ -89,14 +97,17 @@ class EnvPoolMixin(ABC):
     def all_env_ids(self: EnvPool) -> np.ndarray:
         """All env_id in numpy ndarray with dtype=np.int32."""
         if not hasattr(self, "_all_env_ids"):
-            self._all_env_ids = np.arange(self.config["num_envs"], dtype=np.int32)
+            self._all_env_ids = np.arange(
+                self.config["num_envs"], dtype=np.int32
+            )
         return self._all_env_ids  # type: ignore
 
     @property
     def is_async(self: EnvPool) -> bool:
         """Return if this env is in sync mode or async mode."""
         return (
-            self.config["batch_size"] > 0 and self.config["num_envs"] != self.config["batch_size"]
+            self.config["batch_size"] > 0
+            and self.config["num_envs"] != self.config["batch_size"]
         )
 
     def seed(self: EnvPool, seed: int | list[int] | None = None) -> None:
@@ -150,17 +161,25 @@ class EnvPoolMixin(ABC):
         if env_id is None:
             env_id = self.all_env_ids
         self._reset(env_id)
-        return self.recv(reset=True, return_info=self.config["gym_reset_return_info"])
+        return self.recv(
+            reset=True, return_info=self.config["gym_reset_return_info"]
+        )
 
     @property
     def config(self: EnvPool) -> dict[str, Any]:
         """Config dict of this class."""
-        return dict(zip(self._spec._config_keys, self._spec._config_values))
+        return dict(
+            zip(
+                self._spec._config_keys, self._spec._config_values, strict=False
+            )
+        )
 
     def __repr__(self: EnvPool) -> str:
         """Prettify the debug information."""
         config = self.config
-        config_str = ", ".join([f"{k}={pprint.pformat(v)}" for k, v in config.items()])
+        config_str = ", ".join([
+            f"{k}={pprint.pformat(v)}" for k, v in config.items()
+        ])
         return f"{self.__class__.__name__}({config_str})"
 
     def __str__(self: EnvPool) -> str:

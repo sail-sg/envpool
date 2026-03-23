@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Run step-through examples for EnvPool environments."""
+
 import gym
 import numpy as np
 from packaging import version
@@ -22,6 +24,7 @@ is_legacy_gym = version.parse(gym.__version__) < version.parse("0.26.0")
 
 
 def gym_sync_step() -> None:
+    """Run the synchronous Gym stepping example."""
     num_envs = 4
     env = envpool.make_gym("Pong-v5", num_envs=num_envs)
     action_num = env.action_space.n
@@ -53,6 +56,7 @@ def gym_sync_step() -> None:
 
 
 def dm_sync_step() -> None:
+    """Run the synchronous DM Env stepping example."""
     num_envs = 4
     env = envpool.make_dm("Pong-v5", num_envs=num_envs)
     action_num = env.action_spec().num_values
@@ -75,6 +79,7 @@ def dm_sync_step() -> None:
 
 
 def async_step() -> None:
+    """Run the asynchronous stepping example."""
     num_envs = 8
     batch_size = 4
 

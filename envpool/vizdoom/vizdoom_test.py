@@ -27,7 +27,9 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
     def get_path(self, path: str) -> str:
         return os.path.join("envpool", "vizdoom", "maps", path)
 
-    def test_timelimit(self, num_envs: int = 5, max_episode_steps: int = 10) -> None:
+    def test_timelimit(
+        self, num_envs: int = 5, max_episode_steps: int = 10
+    ) -> None:
         env = make_gym(
             "D1Basic-v1",
             num_envs=num_envs,
@@ -37,7 +39,9 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
         for _ in range(3):
             env.reset()
             partial_ids = [np.arange(num_envs)[::2], np.arange(num_envs)[1::2]]
-            env.step(np.zeros(len(partial_ids[1]), dtype=int), env_id=partial_ids[1])
+            env.step(
+                np.zeros(len(partial_ids[1]), dtype=int), env_id=partial_ids[1]
+            )
             for _ in range(max_episode_steps - 2):
                 _, _, _, truncated, info = env.step(
                     np.zeros(num_envs, dtype=int), env_id=np.arange(num_envs)
@@ -98,7 +102,9 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
     def test_d3_action_space(self) -> None:
         env = make_gym("D3Battle-v1", use_combined_action=True)
         action_num = env.action_space.n
-        env = make_gym("D3Battle-v1", use_combined_action=True, force_speed=True)
+        env = make_gym(
+            "D3Battle-v1", use_combined_action=True, force_speed=True
+        )
         assert env.action_space.n * 2 == action_num
 
     def test_delta_action_space(self) -> None:
@@ -137,11 +143,17 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
         )
         assert e.observation_spec().obs.shape[0] == 3 * 4
         e.reset()
-        assert e.step(np.array([0]), np.array([0])).observation.obs.shape[1] == 3 * 4
+        assert (
+            e.step(np.array([0]), np.array([0])).observation.obs.shape[1]
+            == 3 * 4
+        )
         e = make_dm("D1Basic-v1", use_combined_action=True)
         assert e.observation_spec().obs.shape[0] == 1 * 4
         e.reset()
-        assert e.step(np.array([0]), np.array([0])).observation.obs.shape[1] == 1 * 4
+        assert (
+            e.step(np.array([0]), np.array([0])).observation.obs.shape[1]
+            == 1 * 4
+        )
 
 
 if __name__ == "__main__":

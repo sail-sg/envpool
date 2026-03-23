@@ -45,8 +45,8 @@ from .toy_text_envpool import (
     _TaxiEnvSpec, _TaxiEnvPool
 )
 
-(NChainEnvSpec, NChainDMEnvPool, NChainGymEnvPool, NChainGymnasiumEnvPool) = py_env(
-    _NChainEnvSpec, _NChainEnvPool
+(NChainEnvSpec, NChainDMEnvPool, NChainGymEnvPool, NChainGymnasiumEnvPool) = (
+    py_env(_NChainEnvSpec, _NChainEnvPool)
 )
 
 (

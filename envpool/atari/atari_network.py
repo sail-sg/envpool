@@ -45,7 +45,9 @@ class DQN(nn.Module):
             nn.Flatten(),
         )
         with torch.no_grad():
-            self.output_dim = int(np.prod(self.net(torch.zeros(1, c, h, w)).shape[1:]))
+            self.output_dim = int(
+                np.prod(self.net(torch.zeros(1, c, h, w)).shape[1:])
+            )
         if not features_only:
             self.net = nn.Sequential(
                 self.net,

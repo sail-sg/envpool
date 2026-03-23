@@ -11,9 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-https://github.com/vwxyzjn/cleanrl/pull/100
-CleanRL: Solve Pong in about 5 mins by PPO:
+"""CleanRL Atari PPO example adapted for EnvPool.
+
+Original reference: https://github.com/vwxyzjn/cleanrl/pull/100
 
 python3 ppo_atari_envpool.py --clip-coef=0.2 --num-envs=16 \
   --num-minibatches=8 --num-steps=128 --update-epochs=3
@@ -24,13 +24,13 @@ import os
 import random
 import time
 from collections import deque
+from distutils.util import strtobool
 
 import gym
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from distutils.util import strtobool
 from packaging import version
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
@@ -42,6 +42,7 @@ is_legacy_gym = version.parse(gym.__version__) < version.parse("0.26.0")
 
 def parse_args():
     # fmt: off
+    """Parse the command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
     "--exp-name",
@@ -206,7 +207,10 @@ def parse_args():
 
 
 class RecordEpisodeStatistics(gym.Wrapper):
+    """Track episodic returns and lengths across vector environments."""
+
     def __init__(self, env, deque_size=100):
+        """Initialize episode statistics tracking."""
         super(RecordEpisodeStatistics, self).__init__(env)
         self.num_envs = getattr(env, "num_envs", 1)
         self.episode_returns = None
@@ -220,24 +224,32 @@ class RecordEpisodeStatistics(gym.Wrapper):
             print("env has lives")
 
     def reset(self, **kwargs):
+        """Reset the environment and tracked episode statistics."""
         if is_legacy_gym:
             observations = super(RecordEpisodeStatistics, self).reset(**kwargs)
         else:
-            observations, _ = super(RecordEpisodeStatistics, self).reset(**kwargs)
+            observations, _ = super(RecordEpisodeStatistics, self).reset(
+                **kwargs
+            )
         self.episode_returns = np.zeros(self.num_envs, dtype=np.float32)
         self.episode_lengths = np.zeros(self.num_envs, dtype=np.int32)
         self.lives = np.zeros(self.num_envs, dtype=np.int32)
-        self.returned_episode_returns = np.zeros(self.num_envs, dtype=np.float32)
+        self.returned_episode_returns = np.zeros(
+            self.num_envs, dtype=np.float32
+        )
         self.returned_episode_lengths = np.zeros(self.num_envs, dtype=np.int32)
         return observations
 
     def step(self, action):
+        """Step the environment and update episode statistics."""
         if is_legacy_gym:
-            observations, rewards, dones, infos = super(RecordEpisodeStatistics, self).step(action)
+            observations, rewards, dones, infos = super(
+                RecordEpisodeStatistics, self
+            ).step(action)
         else:
-            observations, rewards, term, trunc, infos = super(RecordEpisodeStatistics, self).step(
-                action
-            )
+            observations, rewards, term, trunc, infos = super(
+                RecordEpisodeStatistics, self
+            ).step(action)
             dones = term + trunc
         self.episode_returns += infos["reward"]
         self.episode_lengths += 1
@@ -261,13 +273,17 @@ class RecordEpisodeStatistics(gym.Wrapper):
 
 
 def layer_init(layer, std=2**0.5, bias_const=0.0):
+    """Initialize a layer with orthogonal weights."""
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
 
 
 class Agent(nn.Module):
+    """Convolutional PPO agent used by the CleanRL Atari example."""
+
     def __init__(self, envs):
+        """Initialize the PPO agent network."""
         super(Agent, self).__init__()
         self.network = nn.Sequential(
             layer_init(nn.Conv2d(4, 32, 8, stride=4)),
@@ -280,13 +296,17 @@ class Agent(nn.Module):
             layer_init(nn.Linear(64 * 7 * 7, 512)),
             nn.ReLU(),
         )
-        self.actor = layer_init(nn.Linear(512, envs.single_action_space.n), std=0.01)
+        self.actor = layer_init(
+            nn.Linear(512, envs.single_action_space.n), std=0.01
+        )
         self.critic = layer_init(nn.Linear(512, 1), std=1)
 
     def get_value(self, x):
+        """Estimate state values for a batch of observations."""
         return self.critic(self.network(x / 255.0))
 
     def get_action_and_value(self, x, action=None):
+        """Sample actions and return their values and log-probabilities."""
         hidden = self.network(x / 255.0)
         logits = self.actor(hidden)
         probs = Categorical(logits=logits)
@@ -302,7 +322,9 @@ class Agent(nn.Module):
 
 if __name__ == "__main__":
     args = parse_args()
-    run_name = f"{args.gym_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    run_name = (
+        f"{args.gym_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    )
     if args.track:
         import wandb
 
@@ -319,7 +341,9 @@ if __name__ == "__main__":
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s"
-        % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
+        % (
+            "\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])
+        ),
     )
 
     # TRY NOT TO MODIFY: seeding
@@ -328,7 +352,9 @@ if __name__ == "__main__":
     torch.manual_seed(args.seed)
     torch.backends.cudnn.deterministic = args.torch_deterministic
 
-    device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
+    device = torch.device(
+        "cuda" if torch.cuda.is_available() and args.cuda else "cpu"
+    )
 
     # env setup
     envs = envpool.make(
@@ -350,12 +376,12 @@ if __name__ == "__main__":
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
-    obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(
-        device
-    )
-    actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(
-        device
-    )
+    obs = torch.zeros(
+        (args.num_steps, args.num_envs) + envs.single_observation_space.shape
+    ).to(device)
+    actions = torch.zeros(
+        (args.num_steps, args.num_envs) + envs.single_action_space.shape
+    ).to(device)
     logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
     rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
     dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
@@ -398,15 +424,21 @@ if __name__ == "__main__":
 
             for idx, d in enumerate(done):
                 if d and info["lives"][idx] == 0:
-                    print(f"global_step={global_step}, episodic_return={info['r'][idx]}")
+                    print(
+                        f"global_step={global_step}, episodic_return={info['r'][idx]}"
+                    )
                     avg_returns.append(info["r"][idx])
                     writer.add_scalar(
                         "charts/avg_episodic_return",
                         np.average(avg_returns),
                         global_step,
                     )
-                    writer.add_scalar("charts/episodic_return", info["r"][idx], global_step)
-                    writer.add_scalar("charts/episodic_length", info["l"][idx], global_step)
+                    writer.add_scalar(
+                        "charts/episodic_return", info["r"][idx], global_step
+                    )
+                    writer.add_scalar(
+                        "charts/episodic_length", info["l"][idx], global_step
+                    )
 
         # bootstrap value if not done
         with torch.no_grad():
@@ -421,9 +453,17 @@ if __name__ == "__main__":
                     else:
                         nextnonterminal = 1.0 - dones[t + 1]
                         nextvalues = values[t + 1]
-                    delta = rewards[t] + args.gamma * nextvalues * nextnonterminal - values[t]
+                    delta = (
+                        rewards[t]
+                        + args.gamma * nextvalues * nextnonterminal
+                        - values[t]
+                    )
                     advantages[t] = lastgaelam = (
-                        delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam
+                        delta
+                        + args.gamma
+                        * args.gae_lambda
+                        * nextnonterminal
+                        * lastgaelam
                     )
                 returns = advantages + values
             else:
@@ -435,7 +475,9 @@ if __name__ == "__main__":
                     else:
                         nextnonterminal = 1.0 - dones[t + 1]
                         next_return = returns[t + 1]
-                    returns[t] = rewards[t] + args.gamma * nextnonterminal * next_return
+                    returns[t] = (
+                        rewards[t] + args.gamma * nextnonterminal * next_return
+                    )
                 advantages = returns - values
 
         # flatten the batch
@@ -465,7 +507,12 @@ if __name__ == "__main__":
                     # calculate approx_kl http://joschu.net/blog/kl-approx.html
                     old_approx_kl = (-logratio).mean()
                     approx_kl = ((ratio - 1) - logratio).mean()
-                    clipfracs += [((ratio - 1.0).abs() > args.clip_coef).float().mean().item()]
+                    clipfracs += [
+                        ((ratio - 1.0).abs() > args.clip_coef)
+                        .float()
+                        .mean()
+                        .item()
+                    ]
 
                 mb_advantages = b_advantages[mb_inds]
                 if args.norm_adv:
@@ -496,7 +543,11 @@ if __name__ == "__main__":
                     v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
 
                 entropy_loss = entropy.mean()
-                loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
+                loss = (
+                    pg_loss
+                    - args.ent_coef * entropy_loss
+                    + v_loss * args.vf_coef
+                )
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -509,17 +560,25 @@ if __name__ == "__main__":
 
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
         var_y = np.var(y_true)
-        explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
+        explained_var = (
+            np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
+        )
 
         # TRY NOT TO MODIFY: record rewards for plotting purposes
-        writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
+        writer.add_scalar(
+            "charts/learning_rate", optimizer.param_groups[0]["lr"], global_step
+        )
         writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
         writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
         writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
-        writer.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
+        writer.add_scalar(
+            "losses/old_approx_kl", old_approx_kl.item(), global_step
+        )
         writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
         writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
-        writer.add_scalar("losses/explained_variance", explained_var, global_step)
+        writer.add_scalar(
+            "losses/explained_variance", explained_var, global_step
+        )
         print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar(
             "charts/SPS",

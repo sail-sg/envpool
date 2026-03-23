@@ -27,10 +27,12 @@ is_legacy_gym = version.parse(gym.__version__) < version.parse("0.26.0")
 
 
 def policy(states: jnp.ndarray) -> jnp.ndarray:
+    """Compute greedy actions from the policy logits."""
     return jnp.zeros(states.shape[0], dtype=jnp.int32)
 
 
 def gym_sync_step() -> None:
+    """Run the XLA-compiled synchronous Gym stepping example."""
     num_envs = 4
     env = envpool.make_gym("Pong-v5", num_envs=num_envs)
 
@@ -42,7 +44,9 @@ def gym_sync_step() -> None:
         if is_legacy_gym:
             handle1, (new_states, rew, done, info) = step(handle0, action)
         else:
-            handle1, (new_states, rew, term, trunc, info) = step(handle0, action)
+            handle1, (new_states, rew, term, trunc, info) = step(
+                handle0, action
+            )
         return (handle1, new_states)
 
     @jit
@@ -57,6 +61,7 @@ def gym_sync_step() -> None:
 
 
 def dm_sync_step() -> None:
+    """Run the XLA-compiled synchronous DM Env stepping example."""
     num_envs = 4
     env = envpool.make_dm("Pong-v5", num_envs=num_envs)
 
@@ -77,6 +82,7 @@ def dm_sync_step() -> None:
 
 
 def async_step() -> None:
+    """Run the XLA-compiled asynchronous stepping example."""
     num_envs = 8
     batch_size = 4
 

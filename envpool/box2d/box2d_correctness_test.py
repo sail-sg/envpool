@@ -91,7 +91,10 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
             obs, _ = env.reset(env_id)
             rewards = np.zeros(num_envs)
             while not np.all(done):
-                action = np.array([self.heuristic_lunar_lander_policy(s, continuous) for s in obs])
+                action = np.array([
+                    self.heuristic_lunar_lander_policy(s, continuous)
+                    for s in obs
+                ])
                 obs, rew, terminated, truncated, info = env.step(action, env_id)
                 done = np.logical_or(terminated, truncated)
                 env_id = info["env_id"]
@@ -99,18 +102,26 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
                 obs = obs[~done]
                 env_id = env_id[~done]
             mean_reward = np.mean(rewards)
-            logging.info(f"{continuous}, {np.mean(rewards):.6f} ± {np.std(rewards):.6f}")
+            logging.info(
+                f"{continuous}, {np.mean(rewards):.6f} ± {np.std(rewards):.6f}"
+            )
             # the following number is from gym's 1000 episode mean reward
             if continuous:  # 283.872619 ± 18.881830
-                self.assertTrue(abs(mean_reward - 284) < 10, (continuous, mean_reward))
+                self.assertTrue(
+                    abs(mean_reward - 284) < 10, (continuous, mean_reward)
+                )
             else:  # 236.898334 ± 105.832610
-                self.assertTrue(abs(mean_reward - 237) < 20, (continuous, mean_reward))
+                self.assertTrue(
+                    abs(mean_reward - 237) < 20, (continuous, mean_reward)
+                )
 
     def test_lunar_lander_correctness(self, num_envs: int = 30) -> None:
         self.solve_lunar_lander(num_envs, True)
         self.solve_lunar_lander(num_envs, False)
 
-    def solve_car_racing(self, num_envs: int, action: list[float], target_reward: float) -> None:
+    def solve_car_racing(
+        self, num_envs: int, action: list[float], target_reward: float
+    ) -> None:
         env = make_gym("CarRacing-v2", num_envs=num_envs)
         max_episode_steps = 100
 
@@ -133,7 +144,9 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
 
         self.assertTrue(abs(target_reward - mean_reward) < 1, (mean_reward))
 
-    def test_car_racing_correctness(self, num_envs: int = 100, render: bool = False) -> None:
+    def test_car_racing_correctness(
+        self, num_envs: int = 100, render: bool = False
+    ) -> None:
         if render:
             pygame.init()
             pygame.display.init()
@@ -170,7 +183,9 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
             supporting_knee_angle += 0.03
             if s[2] > SPEED:
                 supporting_knee_angle += 0.03
-            supporting_knee_angle = min(supporting_knee_angle, SUPPORT_KNEE_ANGLE)
+            supporting_knee_angle = min(
+                supporting_knee_angle, SUPPORT_KNEE_ANGLE
+            )
             knee_targ[supporting_leg] = supporting_knee_angle
             if s[supporting_s_base + 0] < 0.10:  # supporting leg is behind
                 state = PUT_OTHER_DOWN
@@ -180,7 +195,9 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
             knee_targ[supporting_leg] = supporting_knee_angle
             if s[moving_s_base + 4]:
                 state = PUSH_OFF
-                supporting_knee_angle = min(s[moving_s_base + 2], SUPPORT_KNEE_ANGLE)
+                supporting_knee_angle = min(
+                    s[moving_s_base + 2], SUPPORT_KNEE_ANGLE
+                )
         if state == PUSH_OFF:
             knee_targ[moving_leg] = supporting_knee_angle
             knee_targ[supporting_leg] = 1.0
@@ -212,23 +229,23 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
             "supporting_knee_angle": supporting_knee_angle,
         }
 
-    def solve_bipedal_walker(self, num_envs: int, hardcore: bool, render: bool) -> None:
+    def solve_bipedal_walker(
+        self, num_envs: int, hardcore: bool, render: bool
+    ) -> None:
         if hardcore:
             env = make_gym("BipedalWalkerHardcore-v3", num_envs=num_envs)
         else:
             env = make_gym("BipedalWalker-v3", num_envs=num_envs)
         max_episode_steps = env.spec.config.max_episode_steps
-        hs = np.array(
-            [
-                {
-                    "state": 1,
-                    "moving_leg": 0,
-                    "supporting_leg": 1,
-                    "supporting_knee_angle": 0.1,
-                }
-                for _ in range(num_envs)
-            ]
-        )
+        hs = np.array([
+            {
+                "state": 1,
+                "moving_leg": 0,
+                "supporting_leg": 1,
+                "supporting_knee_angle": 0.1,
+            }
+            for _ in range(num_envs)
+        ])
         env_id = np.arange(num_envs)
         done = np.array([False] * num_envs)
         obs, _ = env.reset(env_id)
@@ -247,17 +264,24 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
             env_id = env_id[~done]
             hs = hs[~done]
 
-            ah = [self.heuristic_bipedal_walker_policy(s, h) for s, h in zip(obs, hs)]
+            ah = [
+                self.heuristic_bipedal_walker_policy(s, h)
+                for s, h in zip(obs, hs, strict=False)
+            ]
             action = np.array([i[0] for i in ah])
             hs = np.array([i[1] for i in ah])
 
         mean_reward = np.mean(rewards)
-        logging.info(f"{hardcore}, {np.mean(rewards):.6f} ± {np.std(rewards):.6f}")
+        logging.info(
+            f"{hardcore}, {np.mean(rewards):.6f} ± {np.std(rewards):.6f}"
+        )
         # the following number is from gym's 1000 episode mean reward
         if hardcore:  # -59.219390 ± 25.209768
             self.assertTrue(abs(mean_reward + 59) < 10, (hardcore, mean_reward))
         else:  # 145.318979 ± 126.231202 on box2d 2.4.2
-            self.assertTrue(abs(mean_reward - 145) < 20, (hardcore, mean_reward))
+            self.assertTrue(
+                abs(mean_reward - 145) < 20, (hardcore, mean_reward)
+            )
 
     def render_bpw(self, info: dict) -> None:
         SCALE = 30.0
@@ -303,7 +327,9 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
         self.clock.tick(50)
         pygame.display.flip()
 
-    def test_bipedal_walker_correctness(self, num_envs: int = 100, render: bool = False) -> None:
+    def test_bipedal_walker_correctness(
+        self, num_envs: int = 100, render: bool = False
+    ) -> None:
         if render:
             pygame.init()
             pygame.display.init()

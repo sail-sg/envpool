@@ -85,7 +85,9 @@ class GymEnvPoolMeta(ABCMeta, gym.Env.__class__):
             | tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any]
         ):
             values = (state_values[i] for i in state_idx)
-            state = cast(dict[str, Any], optree.tree_unflatten(treepsec, values))
+            state = cast(
+                dict[str, Any], optree.tree_unflatten(treepsec, values)
+            )
             if reset and not (return_info or new_gym_api):
                 return state["obs"]
             info = cast(dict[str, Any], state["info"])

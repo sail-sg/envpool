@@ -35,7 +35,9 @@ class _SpecTest(absltest.TestCase):
             action_num = action_nums[task]
             spec = make_spec(task.capitalize() + "-v5")
             logging.info(spec)
-            self.assertEqual(spec.action_array_spec["action"].maximum + 1, action_num)
+            self.assertEqual(
+                spec.action_array_spec["action"].maximum + 1, action_num
+            )
             # check dm spec
             dm_obs_spec = spec.observation_spec().obs
             dm_act_spec = spec.action_spec()
@@ -67,7 +69,9 @@ class _SpecTest(absltest.TestCase):
     def test_invalid_batch_size(self) -> None:
         num_envs = 4
         batch_size = 5
-        config = AtariEnvSpec.gen_config(task="pong", num_envs=num_envs, batch_size=batch_size)
+        config = AtariEnvSpec.gen_config(
+            task="pong", num_envs=num_envs, batch_size=batch_size
+        )
         self.assertRaises(ValueError, AtariEnvSpec, config)
 
     def test_metadata(self) -> None:
@@ -114,13 +118,17 @@ class _DMSyncTest(absltest.TestCase):
         self.assertEqual(ts.reward.dtype, np.float32)
         np.testing.assert_allclose(ts.discount.shape, (num_envs,))
         self.assertEqual(ts.discount.dtype, np.float32)
-        np.testing.assert_allclose(ts.observation.obs.shape, (num_envs, 4, 84, 84))
+        np.testing.assert_allclose(
+            ts.observation.obs.shape, (num_envs, 4, 84, 84)
+        )
         self.assertEqual(ts.observation.obs.dtype, np.uint8)
         np.testing.assert_allclose(ts.observation.lives.shape, (num_envs,))
         self.assertEqual(ts.observation.lives.dtype, np.int32)
         np.testing.assert_allclose(ts.observation.env_id, np.arange(num_envs))
         self.assertEqual(ts.observation.env_id.dtype, np.int32)
-        np.testing.assert_allclose(ts.observation.players.env_id.shape, (num_envs,))
+        np.testing.assert_allclose(
+            ts.observation.players.env_id.shape, (num_envs,)
+        )
         self.assertEqual(ts.observation.players.env_id.dtype, np.int32)
         action = {
             "env_id": np.arange(num_envs),
@@ -164,13 +172,17 @@ class _DMSyncTest(absltest.TestCase):
         self.assertEqual(ts.reward.dtype, np.float32)
         np.testing.assert_allclose(ts.discount.shape, (num_envs,))
         self.assertEqual(ts.discount.dtype, np.float32)
-        np.testing.assert_allclose(ts.observation.obs.shape, (num_envs, 4, 84, 84))
+        np.testing.assert_allclose(
+            ts.observation.obs.shape, (num_envs, 4, 84, 84)
+        )
         self.assertEqual(ts.observation.obs.dtype, np.uint8)
         np.testing.assert_allclose(ts.observation.lives.shape, (num_envs,))
         self.assertEqual(ts.observation.lives.dtype, np.int32)
         np.testing.assert_allclose(ts.observation.env_id, np.arange(num_envs))
         self.assertEqual(ts.observation.env_id.dtype, np.int32)
-        np.testing.assert_allclose(ts.observation.players.env_id.shape, (num_envs,))
+        np.testing.assert_allclose(
+            ts.observation.players.env_id.shape, (num_envs,)
+        )
         self.assertEqual(ts.observation.players.env_id.dtype, np.int32)
         action = {
             "env_id": np.arange(num_envs),
@@ -274,7 +286,9 @@ class _GymSyncTest(absltest.TestCase):
         # check shape
         self.assertIsInstance(obs, np.ndarray)
         self.assertEqual(obs.dtype, np.uint8)
-        obs, rew, terminated, truncated, info = env.step(np.random.randint(6, size=num_envs))
+        obs, rew, terminated, truncated, info = env.step(
+            np.random.randint(6, size=num_envs)
+        )
         done = np.logical_or(terminated, truncated)
         self.assertIsInstance(obs, np.ndarray)
         self.assertEqual(obs.dtype, np.uint8)
@@ -293,9 +307,13 @@ class _GymSyncTest(absltest.TestCase):
         np.testing.assert_allclose(info["players"]["env_id"].shape, (num_envs,))
         np.testing.assert_allclose(truncated.shape, (num_envs,))
         while not np.any(done):
-            obs, rew, terminated, truncated, info = env.step(np.random.randint(6, size=num_envs))
+            obs, rew, terminated, truncated, info = env.step(
+                np.random.randint(6, size=num_envs)
+            )
             done = np.logical_or(terminated, truncated)
-        obs1, rew1, terminated1, truncated1, info1 = env.step(np.random.randint(6, size=num_envs))
+        obs1, rew1, terminated1, truncated1, info1 = env.step(
+            np.random.randint(6, size=num_envs)
+        )
         done1 = np.logical_or(terminated1, truncated1)
         index = np.where(done)[0]
         self.assertTrue(np.all(~done1[index]))

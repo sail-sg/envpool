@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Create example EnvPool environments and specs."""
+
 import numpy as np
 
 import envpool
@@ -21,6 +23,7 @@ def make_env() -> None:
     # EnvPool now supports gym and dm_env API.
     # You need to manually specify which API you want to make.
     # For example, make dm_env:
+    """Create example environments with different APIs."""
     env_dm = envpool.make("Pong-v5", env_type="dm")
     # it is the same as
     env_dm0 = envpool.make_dm("Pong-v5")
@@ -45,6 +48,7 @@ def make_spec() -> None:
     # and action space.
     # But in envpool, you can do this by `make_spec`.
     # It can accept the same kwargs as `make`.
+    """Print example observation and action specs."""
     spec = envpool.make_spec("Pong-v5", num_envs=4)
     print(spec)
     # You can get both observation and action space from spec
@@ -59,6 +63,7 @@ def make_spec() -> None:
 
 
 def check_info_optim() -> None:
+    """Check the optimized info-dict mode."""
     env = envpool.make_gym("Ant-v3")
     info = env.step(np.array([env.action_space.sample()]), np.array([0]))[-1]
     assert "qpos0" not in info and "qvel0" not in info

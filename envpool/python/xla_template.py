@@ -23,7 +23,10 @@ from jax import ShapeDtypeStruct, dtypes, ffi
 def _normalize_specs(
     specs: tuple[tuple[Any, list[int]], ...],
 ) -> tuple[tuple[tuple[int, ...], Any], ...]:
-    return tuple((tuple(shape), dtypes.canonicalize_dtype(dtype)) for dtype, shape in specs)
+    return tuple(
+        (tuple(shape), dtypes.canonicalize_dtype(dtype))
+        for dtype, shape in specs
+    )
 
 
 def _shape_dtype_struct(shape: tuple[int, ...], dtype: Any) -> ShapeDtypeStruct:

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Train Atari agents with PPO."""
+
 import argparse
 from typing import Any
 
@@ -31,7 +33,10 @@ is_legacy_gym = version.parse(gym.__version__) < version.parse("0.26.0")
 
 
 class CnnActorCritic(nn.Module):
+    """Convolutional actor-critic network for Atari observations."""
+
     def __init__(self, action_size: int):
+        """Initialize the convolutional actor-critic network."""
         super().__init__()
         layers = [
             nn.Conv2d(4, 32, kernel_size=8, stride=4),
@@ -54,12 +59,16 @@ class CnnActorCritic(nn.Module):
                 nn.init.zeros_(m.bias)
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Compute action probabilities and value estimates."""
         feature = self.net(x / 255.0)
         return F.softmax(self.actor(feature), dim=-1), self.critic(feature)
 
 
 class MlpActorCritic(nn.Module):
+    """MLP actor-critic network for vector observations."""
+
     def __init__(self, state_size: int, action_size: int):
+        """Initialize the MLP actor-critic network."""
         super().__init__()
         layers = [
             nn.Linear(state_size, 64),
@@ -77,11 +86,14 @@ class MlpActorCritic(nn.Module):
                 nn.init.zeros_(m.bias)
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Compute action probabilities and value estimates."""
         feature = self.net(x)
         return F.softmax(self.actor(feature), dim=-1), self.critic(feature)
 
 
 class DiscretePPO:
+    """PPO policy and update logic for discrete-action environments."""
+
     def __init__(
         self,
         actor_critic: nn.Module,
@@ -90,6 +102,7 @@ class DiscretePPO:
         lr_scheduler: torch.optim.lr_scheduler.LambdaLR,
         config: argparse.Namespace,
     ):
+        """Initialize the PPO trainer state."""
         self.actor_critic = actor_critic
         self.optim = optim
         self.dist_fn = dist_fn
@@ -99,6 +112,7 @@ class DiscretePPO:
         self.lr_scheduler = lr_scheduler
 
     def predictor(self, obs: torch.Tensor) -> torch.Tensor:
+        """Sample actions and value estimates for a batch of observations."""
         logits, value = self.actor_critic(obs)
         if not self.training:
             action = logits.argmax(-1)
@@ -121,6 +135,7 @@ class DiscretePPO:
         value: torch.Tensor,
     ) -> dict[str, float]:
         # compute GAE
+        """Update the policy from a batch of collected trajectories."""
         T, B = rew.shape
         N = T * B
         returns, advantage, mask = compute_gae(
@@ -149,11 +164,20 @@ class DiscretePPO:
                 ratio = (b_dist.log_prob(act[i]) - log_prob[i]).exp().float()
                 ratio = ratio.reshape(ratio.shape[0], -1).transpose(0, 1)
                 surr1 = ratio * b_adv
-                surr2 = ratio.clamp(1.0 - self.config.eps_clip, 1.0 + self.config.eps_clip) * b_adv
+                surr2 = (
+                    ratio.clamp(
+                        1.0 - self.config.eps_clip, 1.0 + self.config.eps_clip
+                    )
+                    * b_adv
+                )
                 clip_loss = -torch.min(surr1, surr2).mean()
                 vf_loss = (returns[i] - b_value.flatten()).pow(2).mean()
                 ent_loss = b_dist.entropy().mean()
-                loss = clip_loss + self.config.vf_coef * vf_loss - self.config.ent_coef * ent_loss
+                loss = (
+                    clip_loss
+                    + self.config.vf_coef * vf_loss
+                    - self.config.ent_coef * ent_loss
+                )
                 # update param
                 self.optim.zero_grad()
                 loss.backward()
@@ -178,11 +202,15 @@ class DiscretePPO:
 
 
 class MovAvg:
+    """Moving average tracker for episodic rewards."""
+
     def __init__(self, size: int = 100):
+        """Initialize the moving-average window."""
         self.size = size
         self.cache = []
 
     def add_bulk(self, x: np.ndarray) -> float:
+        """Append a batch of values and return the current average."""
         self.cache += x.tolist()
         if len(self.cache) > self.size:
             self.cache = self.cache[-self.size :]
@@ -190,6 +218,8 @@ class MovAvg:
 
 
 class Actor:
+    """Actor loop that collects data and trains the PPO policy."""
+
     def __init__(
         self,
         policy: DiscretePPO,
@@ -198,6 +228,7 @@ class Actor:
         writer: SummaryWriter,
         config: argparse.Namespace,
     ):
+        """Initialize the actor loop state."""
         self.policy = policy
         self.train_envs = train_envs
         self.test_envs = test_envs
@@ -215,14 +246,19 @@ class Actor:
         test_envs.async_reset()
 
     def run(self) -> None:
+        """Run the collection and training loop."""
         env_step = 0
         stat = MovAvg()
         episodic_reward = 0
         for epoch in range(1, 1 + self.config.epoch):
-            with tqdm.trange(self.config.step_per_epoch, desc=f"Epoch #{epoch}") as t:
+            with tqdm.trange(
+                self.config.step_per_epoch, desc=f"Epoch #{epoch}"
+            ) as t:
                 while t.n < self.config.step_per_epoch:
                     # collect
-                    for _ in range(self.config.step_per_collect // self.config.waitnum):
+                    for _ in range(
+                        self.config.step_per_collect // self.config.waitnum
+                    ):
                         if is_legacy_gym:
                             obs, rew, done, info = self.train_envs.recv()
                         else:
@@ -273,7 +309,9 @@ class Actor:
                     self.logprob_batch = []
                     t.set_postfix(**result)
                     for k, v in result.items():
-                        self.writer.add_scalar(f"train/{k}", v, global_step=env_step)
+                        self.writer.add_scalar(
+                            f"train/{k}", v, global_step=env_step
+                        )
 
 
 if __name__ == "__main__":
@@ -334,7 +372,9 @@ if __name__ == "__main__":
     # actor_critic = nn.DataParallel(MlpActorCritic(state_n, action_n).cuda())
     optim = torch.optim.Adam(actor_critic.parameters(), lr=args.lr)
     # decay learning rate to 0 linearly
-    max_update_num = np.ceil(args.step_per_epoch / args.step_per_collect) * args.epoch
+    max_update_num = (
+        np.ceil(args.step_per_epoch / args.step_per_collect) * args.epoch
+    )
 
     lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
         optim, lr_lambda=lambda epoch: 1 - epoch / max_update_num

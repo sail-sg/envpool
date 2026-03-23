@@ -30,7 +30,13 @@ from envpool.registration import make_dm, make_gym, make_gymnasium
 
 class _AtariEnvPoolTest(absltest.TestCase):
     def test_raw_envpool(self) -> None:
-        conf = dict(zip(_AtariEnvSpec._config_keys, _AtariEnvSpec._default_config_values))
+        conf = dict(
+            zip(
+                _AtariEnvSpec._config_keys,
+                _AtariEnvSpec._default_config_values,
+                strict=False,
+            )
+        )
         conf["task"] = b"pong"
         conf["num_envs"] = num_envs = 3
         conf["batch_size"] = batch = 3
@@ -45,7 +51,7 @@ class _AtariEnvPoolTest(absltest.TestCase):
         actions = np.random.randint(6, size=(total, batch))
         t = time.time()
         for i in range(total):
-            state = dict(zip(state_keys, env._recv()))
+            state = dict(zip(state_keys, env._recv(), strict=False))
             # obs = state["obs"]
             # cv2.imwrite(f"/tmp/log/raw{i}.png", obs[0, 1:].transpose(1, 2, 0))
             action = {
@@ -94,7 +100,9 @@ class _AtariEnvPoolTest(absltest.TestCase):
             "wizard_of_wor",
         ]:
             np.random.seed(0)
-            task_id = "".join([g.capitalize() for g in env_id.split("_")]) + "-v5"
+            task_id = (
+                "".join([g.capitalize() for g in env_id.split("_")]) + "-v5"
+            )
             env = make_gym(task_id, episodic_life=True)
             action_num = env.action_space.n
             env.reset()
@@ -103,7 +111,9 @@ class _AtariEnvPoolTest(absltest.TestCase):
                 # no life in this game
                 continue
             for _ in range(10000):
-                _, _, terminated, truncated, info = env.step(np.random.randint(0, action_num, 1))
+                _, _, terminated, truncated, info = env.step(
+                    np.random.randint(0, action_num, 1)
+                )
                 done = np.logical_or(terminated, truncated)
                 if info["lives"][0] == 0:
                     break
@@ -124,7 +134,9 @@ class _AtariEnvPoolTest(absltest.TestCase):
             self.assertFalse(info["terminated"][0])
             while not done[0]:
                 self.assertFalse(info["terminated"][0])
-                _, _, terminated, truncated, info = env.step(np.random.randint(0, action_num, 1))
+                _, _, terminated, truncated, info = env.step(
+                    np.random.randint(0, action_num, 1)
+                )
                 done = np.logical_or(terminated, truncated)
             _, _, next_terminated, next_truncated, next_info = env.step(
                 np.random.randint(0, action_num, 1)
@@ -144,7 +156,9 @@ class _AtariEnvPoolTest(absltest.TestCase):
             print(env)
             env.reset()
             partial_ids = [np.arange(num_envs)[::2], np.arange(num_envs)[1::2]]
-            env.step(np.zeros(len(partial_ids[1]), dtype=int), env_id=partial_ids[1])
+            env.step(
+                np.zeros(len(partial_ids[1]), dtype=int), env_id=partial_ids[1]
+            )
             for _ in range(max_episode_steps - 2):
                 _, _, _, truncated, info = env.step(
                     np.zeros(num_envs, dtype=int), env_id=np.arange(num_envs)
@@ -224,7 +238,9 @@ class _AtariEnvPoolTest(absltest.TestCase):
         self.assertTrue(env.observation_space.shape, ref_shape)
         obs, _ = env.reset()
         self.assertTrue(obs.shape, ref_shape)
-        env = make_gym("Breakout-v5", gray_scale=False, img_height=210, img_width=160)
+        env = make_gym(
+            "Breakout-v5", gray_scale=False, img_height=210, img_width=160
+        )
         self.assertTrue(env.observation_space.shape, raw_shape)
         obs1, _ = env.reset()
         self.assertTrue(obs1.shape, raw_shape)
@@ -234,7 +250,9 @@ class _AtariEnvPoolTest(absltest.TestCase):
                 (84, 84),
                 interpolation=cv2.INTER_AREA,
             )
-            np.testing.assert_allclose(obs_, obs[0, i : i + 3].transpose(1, 2, 0))
+            np.testing.assert_allclose(
+                obs_, obs[0, i : i + 3].transpose(1, 2, 0)
+            )
 
     def test_benchmark(self) -> None:
         if os.cpu_count() == 256:

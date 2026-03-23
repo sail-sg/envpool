@@ -139,7 +139,8 @@ class _MujocoDmcAlignTest(absltest.TestCase):
                     grasp_direction = p.data.site_xmat["grasp", ["xx", "zx"]]
                     np.testing.assert_allclose(
                         object_angle,
-                        np.pi - np.arctan2(grasp_direction[1], grasp_direction[0]),
+                        np.pi
+                        - np.arctan2(grasp_direction[1], grasp_direction[0]),
                     )
                 else:
                     p.data.qvel[obj + "_x"] = qvel_objx
@@ -153,7 +154,9 @@ class _MujocoDmcAlignTest(absltest.TestCase):
             size=action_spec.shape,
         )
 
-    def run_align_check(self, env0: dm_env.Environment, env1: Any, domain: str, task: str) -> None:
+    def run_align_check(
+        self, env0: dm_env.Environment, env1: Any, domain: str, task: str
+    ) -> None:
         logging.info(f"align check for {domain} {task}")
         obs_atol = self.observation_atol(domain, task)
         obs_spec, action_spec = env0.observation_spec(), env0.action_spec()
@@ -175,15 +178,21 @@ class _MujocoDmcAlignTest(absltest.TestCase):
                 done = ts0.step_type == dm_env.StepType.LAST
                 o0, o1 = ts0.observation, ts1.observation
                 for k in obs_spec:
-                    np.testing.assert_allclose(o0[k], getattr(o1, k)[0], atol=obs_atol)
+                    np.testing.assert_allclose(
+                        o0[k], getattr(o1, k)[0], atol=obs_atol
+                    )
                 np.testing.assert_allclose(ts0.step_type, ts1.step_type[0])
                 np.testing.assert_allclose(ts0.reward, ts1.reward[0], atol=1e-8)
                 np.testing.assert_allclose(ts0.discount, ts1.discount[0])
 
     def run_align_check_entry(self, domain: str, tasks: list[str]) -> None:
-        domain_name = "".join([g[:1].upper() + g[1:] for g in domain.split("_")])
+        domain_name = "".join([
+            g[:1].upper() + g[1:] for g in domain.split("_")
+        ])
         for task in tasks:
-            task_name = "".join([g[:1].upper() + g[1:] for g in task.split("_")])
+            task_name = "".join([
+                g[:1].upper() + g[1:] for g in task.split("_")
+            ])
             env0 = suite.load(domain, task)
             env1 = make_dm(f"{domain_name}{task_name}-v1")
             self.run_space_check(env0, env1)
@@ -221,7 +230,9 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         self.run_align_check_entry("hopper", ["hop", "stand"])
 
     def test_humanoid(self) -> None:
-        self.run_align_check_entry("humanoid", ["stand", "walk", "run", "run_pure_state"])
+        self.run_align_check_entry(
+            "humanoid", ["stand", "walk", "run", "run_pure_state"]
+        )
 
     def test_manipulator(self) -> None:
         self.run_align_check_entry(

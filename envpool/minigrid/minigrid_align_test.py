@@ -27,7 +27,9 @@ from envpool.registration import make_gymnasium
 
 
 class _MiniGridEnvPoolAlignTest(absltest.TestCase):
-    def check_spec(self, spec0: gym.spaces.Space, spec1: gym.spaces.Space) -> None:
+    def check_spec(
+        self, spec0: gym.spaces.Space, spec1: gym.spaces.Space
+    ) -> None:
         self.assertEqual(spec0.dtype, spec1.dtype)
         if isinstance(spec0, gym.spaces.Discrete):
             assert isinstance(spec1, gym.spaces.Discrete)
@@ -47,7 +49,9 @@ class _MiniGridEnvPoolAlignTest(absltest.TestCase):
         env0 = gym.make(task_id)
         env1 = make_gymnasium(task_id, num_envs=num_envs, seed=0, **kwargs)
         obs_space0 = cast(Any, env0.observation_space)
-        self.check_spec(obs_space0["direction"], env1.observation_space["direction"])
+        self.check_spec(
+            obs_space0["direction"], env1.observation_space["direction"]
+        )
         self.check_spec(obs_space0["image"], env1.observation_space["image"])
         self.check_spec(env0.action_space, env1.action_space)
         done0 = True
@@ -79,9 +83,13 @@ class _MiniGridEnvPoolAlignTest(absltest.TestCase):
             done0 = term0 | trunc0
             done1 = term1 | trunc1
             if not auto_reset:
-                np.testing.assert_allclose(obs0["direction"], obs1["direction"][0])
+                np.testing.assert_allclose(
+                    obs0["direction"], obs1["direction"][0]
+                )
                 np.testing.assert_allclose(obs0["image"], obs1["image"][0])
-                np.testing.assert_allclose(float(rew0), float(rew1[0]), rtol=1e-6)
+                np.testing.assert_allclose(
+                    float(rew0), float(rew1[0]), rtol=1e-6
+                )
                 np.testing.assert_allclose(done0, done1[0])
                 np.testing.assert_allclose(
                     cast(Any, env0.unwrapped).agent_pos, info1["agent_pos"][0]

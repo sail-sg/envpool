@@ -49,10 +49,16 @@ class _MakeTest(absltest.TestCase):
         # not work for wrong bin, see issue #146
         for wrong in ["Combat", "Joust", "MazeCraze", "Warlords"]:
             self.assertRaises(AssertionError, envpool.make_gym, f"{wrong}-v5")
-            self.assertRaises(AssertionError, envpool.make_gymnasium, f"{wrong}-v5")
+            self.assertRaises(
+                AssertionError, envpool.make_gymnasium, f"{wrong}-v5"
+            )
         # invalid argument will raise AssertionError, see issue #214
-        self.assertRaises(AssertionError, envpool.make_gym, "Pong-v5", seed=2**31)
-        self.assertRaises(AssertionError, envpool.make_gymnasium, "Pong-v5", seed=2**31)
+        self.assertRaises(
+            AssertionError, envpool.make_gym, "Pong-v5", seed=2**31
+        )
+        self.assertRaises(
+            AssertionError, envpool.make_gymnasium, "Pong-v5", seed=2**31
+        )
 
     def test_make_vizdoom(self) -> None:
         spec = envpool.make_spec("MyWayHome-v1")
@@ -83,160 +89,148 @@ class _MakeTest(absltest.TestCase):
             env_gymnasium.reset()
 
     def test_make_classic(self) -> None:
-        self.check_step(
-            [
-                "CartPole-v0",
-                "CartPole-v1",
-                "Pendulum-v0",
-                "Pendulum-v1",
-                "MountainCar-v0",
-                "MountainCarContinuous-v0",
-                "Acrobot-v1",
-            ]
-        )
+        self.check_step([
+            "CartPole-v0",
+            "CartPole-v1",
+            "Pendulum-v0",
+            "Pendulum-v1",
+            "MountainCar-v0",
+            "MountainCarContinuous-v0",
+            "Acrobot-v1",
+        ])
 
     def test_make_toytext(self) -> None:
-        self.check_step(
-            [
-                "Catch-v0",
-                "FrozenLake-v1",
-                "FrozenLake8x8-v1",
-                "Taxi-v3",
-                "NChain-v0",
-                "CliffWalking-v0",
-                "Blackjack-v1",
-            ]
-        )
+        self.check_step([
+            "Catch-v0",
+            "FrozenLake-v1",
+            "FrozenLake8x8-v1",
+            "Taxi-v3",
+            "NChain-v0",
+            "CliffWalking-v0",
+            "Blackjack-v1",
+        ])
 
     def test_make_box2d(self) -> None:
-        self.check_step(
-            [
-                "CarRacing-v2",
-                "BipedalWalker-v3",
-                "BipedalWalkerHardcore-v3",
-                "LunarLander-v2",
-                "LunarLanderContinuous-v2",
-            ]
-        )
+        self.check_step([
+            "CarRacing-v2",
+            "BipedalWalker-v3",
+            "BipedalWalkerHardcore-v3",
+            "LunarLander-v2",
+            "LunarLanderContinuous-v2",
+        ])
 
     def test_make_mujoco_gym(self) -> None:
-        self.check_step(
-            [
-                "Ant-v3",
-                "Ant-v5",
-                "HalfCheetah-v3",
-                "HalfCheetah-v5",
-                "Hopper-v3",
-                "Hopper-v5",
-                "Humanoid-v3",
-                "Humanoid-v5",
-                "HumanoidStandup-v2",
-                "HumanoidStandup-v5",
-                "InvertedDoublePendulum-v2",
-                "InvertedDoublePendulum-v5",
-                "InvertedPendulum-v2",
-                "InvertedPendulum-v5",
-                "Pusher-v2",
-                "Pusher-v5",
-                "Reacher-v2",
-                "Reacher-v5",
-                "Swimmer-v3",
-                "Swimmer-v5",
-                "Walker2d-v3",
-                "Walker2d-v5",
-            ]
-        )
+        self.check_step([
+            "Ant-v3",
+            "Ant-v5",
+            "HalfCheetah-v3",
+            "HalfCheetah-v5",
+            "Hopper-v3",
+            "Hopper-v5",
+            "Humanoid-v3",
+            "Humanoid-v5",
+            "HumanoidStandup-v2",
+            "HumanoidStandup-v5",
+            "InvertedDoublePendulum-v2",
+            "InvertedDoublePendulum-v5",
+            "InvertedPendulum-v2",
+            "InvertedPendulum-v5",
+            "Pusher-v2",
+            "Pusher-v5",
+            "Reacher-v2",
+            "Reacher-v5",
+            "Swimmer-v3",
+            "Swimmer-v5",
+            "Walker2d-v3",
+            "Walker2d-v5",
+        ])
 
     def test_make_mujoco_dmc(self) -> None:
-        self.check_step(
-            [
-                "AcrobotSwingup-v1",
-                "AcrobotSwingupSparse-v1",
-                "BallInCupCatch-v1",
-                "CartpoleBalance-v1",
-                "CartpoleBalanceSparse-v1",
-                "CartpoleSwingup-v1",
-                "CartpoleSwingupSparse-v1",
-                "CartpoleThreePoles-v1",
-                "CartpoleTwoPoles-v1",
-                "CheetahRun-v1",
-                "FingerSpin-v1",
-                "FingerTurnEasy-v1",
-                "FingerTurnHard-v1",
-                "FishSwim-v1",
-                "FishUpright-v1",
-                "HopperHop-v1",
-                "HopperStand-v1",
-                "HumanoidRun-v1",
-                "HumanoidRunPureState-v1",
-                "HumanoidStand-v1",
-                "HumanoidWalk-v1",
-                "HumanoidCMURun-v1",
-                "HumanoidCMUStand-v1",
-                "ManipulatorBringBall-v1",
-                "ManipulatorBringPeg-v1",
-                "ManipulatorInsertBall-v1",
-                "ManipulatorInsertPeg-v1",
-                "PendulumSwingup-v1",
-                "PointMassEasy-v1",
-                "PointMassHard-v1",
-                "ReacherEasy-v1",
-                "ReacherHard-v1",
-                "SwimmerSwimmer6-v1",
-                "SwimmerSwimmer15-v1",
-                "WalkerRun-v1",
-                "WalkerStand-v1",
-                "WalkerWalk-v1",
-            ]
-        )
+        self.check_step([
+            "AcrobotSwingup-v1",
+            "AcrobotSwingupSparse-v1",
+            "BallInCupCatch-v1",
+            "CartpoleBalance-v1",
+            "CartpoleBalanceSparse-v1",
+            "CartpoleSwingup-v1",
+            "CartpoleSwingupSparse-v1",
+            "CartpoleThreePoles-v1",
+            "CartpoleTwoPoles-v1",
+            "CheetahRun-v1",
+            "FingerSpin-v1",
+            "FingerTurnEasy-v1",
+            "FingerTurnHard-v1",
+            "FishSwim-v1",
+            "FishUpright-v1",
+            "HopperHop-v1",
+            "HopperStand-v1",
+            "HumanoidRun-v1",
+            "HumanoidRunPureState-v1",
+            "HumanoidStand-v1",
+            "HumanoidWalk-v1",
+            "HumanoidCMURun-v1",
+            "HumanoidCMUStand-v1",
+            "ManipulatorBringBall-v1",
+            "ManipulatorBringPeg-v1",
+            "ManipulatorInsertBall-v1",
+            "ManipulatorInsertPeg-v1",
+            "PendulumSwingup-v1",
+            "PointMassEasy-v1",
+            "PointMassHard-v1",
+            "ReacherEasy-v1",
+            "ReacherHard-v1",
+            "SwimmerSwimmer6-v1",
+            "SwimmerSwimmer15-v1",
+            "WalkerRun-v1",
+            "WalkerStand-v1",
+            "WalkerWalk-v1",
+        ])
 
     def test_make_procgen(self) -> None:
-        self.check_step(
-            [
-                "BigfishEasy-v0",
-                "BigfishHard-v0",
-                "BossfightEasy-v0",
-                "BossfightHard-v0",
-                "CaveflyerEasy-v0",
-                "CaveflyerHard-v0",
-                "CaveflyerMemory-v0",
-                "ChaserEasy-v0",
-                "ChaserHard-v0",
-                "ChaserExtreme-v0",
-                "ClimberEasy-v0",
-                "ClimberHard-v0",
-                "CoinrunEasy-v0",
-                "CoinrunHard-v0",
-                "DodgeballEasy-v0",
-                "DodgeballHard-v0",
-                "DodgeballExtreme-v0",
-                "DodgeballMemory-v0",
-                "FruitbotEasy-v0",
-                "FruitbotHard-v0",
-                "HeistEasy-v0",
-                "HeistHard-v0",
-                "HeistMemory-v0",
-                "JumperEasy-v0",
-                "JumperHard-v0",
-                "JumperMemory-v0",
-                "LeaperEasy-v0",
-                "LeaperHard-v0",
-                "LeaperExtreme-v0",
-                "MazeEasy-v0",
-                "MazeHard-v0",
-                "MazeMemory-v0",
-                "MinerEasy-v0",
-                "MinerHard-v0",
-                "MinerMemory-v0",
-                "NinjaEasy-v0",
-                "NinjaHard-v0",
-                "PlunderEasy-v0",
-                "PlunderHard-v0",
-                "StarpilotEasy-v0",
-                "StarpilotHard-v0",
-                "StarpilotExtreme-v0",
-            ]
-        )
+        self.check_step([
+            "BigfishEasy-v0",
+            "BigfishHard-v0",
+            "BossfightEasy-v0",
+            "BossfightHard-v0",
+            "CaveflyerEasy-v0",
+            "CaveflyerHard-v0",
+            "CaveflyerMemory-v0",
+            "ChaserEasy-v0",
+            "ChaserHard-v0",
+            "ChaserExtreme-v0",
+            "ClimberEasy-v0",
+            "ClimberHard-v0",
+            "CoinrunEasy-v0",
+            "CoinrunHard-v0",
+            "DodgeballEasy-v0",
+            "DodgeballHard-v0",
+            "DodgeballExtreme-v0",
+            "DodgeballMemory-v0",
+            "FruitbotEasy-v0",
+            "FruitbotHard-v0",
+            "HeistEasy-v0",
+            "HeistHard-v0",
+            "HeistMemory-v0",
+            "JumperEasy-v0",
+            "JumperHard-v0",
+            "JumperMemory-v0",
+            "LeaperEasy-v0",
+            "LeaperHard-v0",
+            "LeaperExtreme-v0",
+            "MazeEasy-v0",
+            "MazeHard-v0",
+            "MazeMemory-v0",
+            "MinerEasy-v0",
+            "MinerHard-v0",
+            "MinerMemory-v0",
+            "NinjaEasy-v0",
+            "NinjaHard-v0",
+            "PlunderEasy-v0",
+            "PlunderHard-v0",
+            "StarpilotEasy-v0",
+            "StarpilotHard-v0",
+            "StarpilotExtreme-v0",
+        ])
 
 
 if __name__ == "__main__":

@@ -27,6 +27,7 @@ from acme.jax import experiments
 
 def parse_args():
     # fmt: off
+    """Parse the command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
     "--exp-name",
@@ -88,6 +89,7 @@ def parse_args():
 
 
 def build_experiment_config(FLAGS):
+    """Build the experiment configuration."""
     task = FLAGS.env_name
 
     use_envpool = FLAGS.use_envpool
@@ -95,7 +97,9 @@ def build_experiment_config(FLAGS):
     use_batch_env = use_envpool or use_vec_env
 
     num_envs = FLAGS.num_envs if use_batch_env else -1
-    num_steps = FLAGS.num_steps // FLAGS.num_envs if use_batch_env else FLAGS.num_steps
+    num_steps = (
+        FLAGS.num_steps // FLAGS.num_envs if use_batch_env else FLAGS.num_steps
+    )
 
     config = ppo.PPOConfig()
     ppo_builder = helpers.PPOBuilder(config, num_envs)
@@ -122,6 +126,7 @@ def build_experiment_config(FLAGS):
 
 
 def main():
+    """Run the continuous-control PPO example."""
     logging.info(f"Jax Devices: {jax.devices()}")
     FLAGS = parse_args()
     experiment, config = build_experiment_config(FLAGS)

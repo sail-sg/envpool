@@ -60,7 +60,7 @@ class EnvSpecMixin(ABC):
             its values is a tuple of (dtype, shape).
         """
         state_spec = [ArraySpec(*s) for s in self._state_spec]
-        return dict(zip(self._state_keys, state_spec))
+        return dict(zip(self._state_keys, state_spec, strict=False))
 
     @property
     def action_array_spec(self: EnvSpec) -> dict[str, Any]:
@@ -71,7 +71,7 @@ class EnvSpecMixin(ABC):
             its values is a tuple of (dtype, shape).
         """
         action_spec = [ArraySpec(*s) for s in self._action_spec]
-        return dict(zip(self._action_keys, action_spec))
+        return dict(zip(self._action_keys, action_spec, strict=False))
 
     def observation_spec(self: EnvSpec) -> tuple:
         """Convert internal state_spec to dm_env compatible format.
@@ -108,8 +108,13 @@ class EnvSpecMixin(ABC):
             # only env_id, players.env_id, action
             spec.pop("env_id")
             spec.pop("players.env_id")
-            return dm_spec_transform(list(spec.keys())[0], list(spec.values())[0], "act")
-        spec = {k: dm_spec_transform(k.split(".")[-1], v, "act") for k, v in spec.items()}
+            return dm_spec_transform(
+                list(spec.keys())[0], list(spec.values())[0], "act"
+            )
+        spec = {
+            k: dm_spec_transform(k.split(".")[-1], v, "act")
+            for k, v in spec.items()
+        }
         return to_namedtuple("Action", to_nested_dict(spec))
 
     @property
@@ -126,7 +131,9 @@ class EnvSpecMixin(ABC):
         """
         spec = self.state_array_spec
         spec = {
-            k.replace("obs:", ""): gym_spec_transform(k.replace(":", ".").split(".")[-1], v, "obs")
+            k.replace("obs:", ""): gym_spec_transform(
+                k.replace(":", ".").split(".")[-1], v, "obs"
+            )
             for k, v in spec.items()
             if k.startswith("obs")
         }
@@ -152,8 +159,13 @@ class EnvSpecMixin(ABC):
             # only env_id, players.env_id, action
             spec.pop("env_id")
             spec.pop("players.env_id")
-            return gym_spec_transform(list(spec.keys())[0], list(spec.values())[0], "act")
-        spec = {k: gym_spec_transform(k.split(".")[-1], v, "act") for k, v in spec.items()}
+            return gym_spec_transform(
+                list(spec.keys())[0], list(spec.values())[0], "act"
+            )
+        spec = {
+            k: gym_spec_transform(k.split(".")[-1], v, "act")
+            for k, v in spec.items()
+        }
         return to_nested_dict(spec, gym.spaces.Dict)
 
     @property
@@ -202,8 +214,13 @@ class EnvSpecMixin(ABC):
             # only env_id, players.env_id, action
             spec.pop("env_id")
             spec.pop("players.env_id")
-            return gymnasium_spec_transform(list(spec.keys())[0], list(spec.values())[0], "act")
-        spec = {k: gymnasium_spec_transform(k.split(".")[-1], v, "act") for k, v in spec.items()}
+            return gymnasium_spec_transform(
+                list(spec.keys())[0], list(spec.values())[0], "act"
+            )
+        spec = {
+            k: gymnasium_spec_transform(k.split(".")[-1], v, "act")
+            for k, v in spec.items()
+        }
         return to_nested_dict(spec, gymnasium.spaces.Dict)
 
     def __repr__(self: EnvSpec) -> str:
@@ -223,5 +240,7 @@ class EnvSpecMeta(ABCMeta):
         check_key_duplication(name, "config", config_keys)
         config_keys: list[str] = [s.replace(".", "_") for s in config_keys]
         defaults: tuple = base._default_config_values
-        attrs["gen_config"] = namedtuple("Config", config_keys, defaults=defaults)
+        attrs["gen_config"] = namedtuple(
+            "Config", config_keys, defaults=defaults
+        )
         return super().__new__(cls, name, parents, attrs)

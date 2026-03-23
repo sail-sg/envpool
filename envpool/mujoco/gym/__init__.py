@@ -40,8 +40,8 @@ from envpool.mujoco.mujoco_gym_envpool import (
 
 from envpool.python.api import py_env
 
-(GymAntEnvSpec, GymAntDMEnvPool, GymAntGymEnvPool, GymAntGymnasiumEnvPool) = py_env(
-    _GymAntEnvSpec, _GymAntEnvPool
+(GymAntEnvSpec, GymAntDMEnvPool, GymAntGymEnvPool, GymAntGymnasiumEnvPool) = (
+    py_env(_GymAntEnvSpec, _GymAntEnvPool)
 )
 (
     GymHalfCheetahEnvSpec,

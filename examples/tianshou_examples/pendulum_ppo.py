@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Train Pendulum with Tianshou PPO and EnvPool."""
+
 import argparse
 import os
 import pprint
@@ -33,6 +35,7 @@ import envpool
 
 
 def get_args():
+    """Parse the command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--task", type=str, default="Pendulum-v1")
     parser.add_argument("--seed", type=int, default=1)
@@ -69,6 +72,7 @@ def get_args():
 
 
 def run_ppo(args):
+    """Run PPO training and evaluation on Pendulum."""
     env = gym.make(args.task)
     if args.task == "Pendulum-v1":
         env.spec.reward_threshold = -250
@@ -92,12 +96,16 @@ def run_ppo(args):
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     # model
-    net = Net(args.state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
-    actor = ActorProb(net, args.action_shape, max_action=args.max_action, device=args.device).to(
-        args.device
+    net = Net(
+        args.state_shape, hidden_sizes=args.hidden_sizes, device=args.device
     )
+    actor = ActorProb(
+        net, args.action_shape, max_action=args.max_action, device=args.device
+    ).to(args.device)
     critic = Critic(
-        Net(args.state_shape, hidden_sizes=args.hidden_sizes, device=args.device),
+        Net(
+            args.state_shape, hidden_sizes=args.hidden_sizes, device=args.device
+        ),
         device=args.device,
     ).to(args.device)
     actor_critic = ActorCritic(actor, critic)
@@ -152,7 +160,9 @@ def run_ppo(args):
 
     def watch():
         # Let"s watch its performance!
-        env = DummyVectorEnv([lambda: gym.make(args.task) for _ in range(args.test_num)])
+        env = DummyVectorEnv([
+            lambda: gym.make(args.task) for _ in range(args.test_num)
+        ])
         env.seed(args.seed)
         policy.eval()
         collector = Collector(policy, env)

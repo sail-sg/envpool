@@ -1,18 +1,12 @@
-target-version = "py312"
-required-version = ">=0.14.11"
-extend-exclude = [
-    "**/x/**",
-    "**/*_pb2*.{py,pyi}",
-    "*.ipynb",
-    "**/proto/",
-    "vendor_imports/**/*",
-]
-line-length = 100
+target-version = "py310"
+line-length = 80
+preview = true
+force-exclude = true
+extend-exclude = ["docs/_build"]
 
 [lint]
-preview = true
 select = [
-    "E", "F", "W", "B", "C4", "PIE", "NPY", "PLE", "I",
+    "D", "E", "F", "W", "B", "C4", "PIE", "NPY", "PLE", "I",
     "DTZ003", "DTZ004",
     "G010",
     "PLW0120", "PLW0129", "PLW0211", "PLW0711", "PLW1509", "PLW2101",
@@ -22,7 +16,6 @@ select = [
     "RUF006", "RUF007", "RUF008", "RUF013", "RUF016", "RUF017", "RUF030", "RUF055", "RUF061",
     "RUF102", "RUF200",
     "COM818", "COM819",
-    "PYI016", "PYI018", "PYI025", "PYI030",
     "PERF102",
     "PGH005",
     "RUF024",
@@ -32,11 +25,8 @@ select = [
     "ISC004",
     "ASYNC210", "ASYNC212", "ASYNC251",
     "TID251",
-    "PT008", "PT012", "PT010", "PT014",
-    "TC005",
 ]
 ignore = [
-    "B905",
     "E2", "E3", "E402", "E501", "E701", "E711", "E731", "E741",
     "B011", "B903",
     "C408", "C409", "C419", "C420",
@@ -47,14 +37,14 @@ ignore = [
     "ASYNC109", "ASYNC230",
 ]
 extend-safe-fixes = ["ALL"]
-extend-unsafe-fixes = ["F601", "F602", "B018", "SIM222", "SIM223", "ISC004"]
-unfixable = ["F841"]
-external = ["WPS", "R50", "ASYNC101", "TOR901", "SC", "FKM", "CCM", "FTH", "W0212"]
 
 [lint.per-file-ignores]
 "__init__.py" = ["F401", "F403"]
-"conftest.py" = ["F811"]
 "**/test_*.py" = ["F811"]
+"conftest.py" = ["F811"]
+
+[lint.pydocstyle]
+convention = "google"
 
 [lint.isort]
 detect-same-package = false

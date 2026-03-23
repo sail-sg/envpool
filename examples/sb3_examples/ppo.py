@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+"""Run Stable-Baselines3 PPO with EnvPool."""
+
 import gym
 import numpy as np
 import torch as th
@@ -42,21 +44,23 @@ is_legacy_gym = version.parse(gym.__version__) < version.parse("0.26.0")
 
 
 class VecAdapter(VecEnvWrapper):
-    """
-    Convert EnvPool object to a Stable-Baselines3 (SB3) VecEnv.
+    """Convert EnvPool object to a Stable-Baselines3 (SB3) VecEnv.
 
     :param venv: The envpool object.
     """
 
     def __init__(self, venv: EnvPool):
         # Retrieve the number of environments from the config
+        """Initialize the adapter around an EnvPool vector env."""
         venv.num_envs = venv.spec.config.num_envs
         super().__init__(venv=venv)
 
     def step_async(self, actions: np.ndarray) -> None:
+        """Store the actions for the next environment step."""
         self.actions = actions
 
     def reset(self) -> VecEnvObs:
+        """Reset the wrapped vector environment."""
         if is_legacy_gym:
             return self.venv.reset()
         else:
@@ -64,25 +68,27 @@ class VecAdapter(VecEnvWrapper):
 
     def seed(self, seed: int | None = None) -> None:
         # You can only seed EnvPool env by calling envpool.make()
+        """Document that seeding happens when the environment is created."""
         pass
 
     def step_wait(self) -> VecEnvStepReturn:
+        """Step the wrapped environment and adapt the returned info."""
         if is_legacy_gym:
             obs, rewards, dones, info_dict = self.venv.step(self.actions)
         else:
-            obs, rewards, terms, truncs, info_dict = self.venv.step(self.actions)
+            obs, rewards, terms, truncs, info_dict = self.venv.step(
+                self.actions
+            )
             dones = terms + truncs
         infos = []
         # Convert dict to list of dict
         # and add terminal observation
         for i in range(self.num_envs):
-            infos.append(
-                {
-                    key: info_dict[key][i]
-                    for key in info_dict.keys()
-                    if isinstance(info_dict[key], np.ndarray)
-                }
-            )
+            infos.append({
+                key: info_dict[key][i]
+                for key in info_dict.keys()
+                if isinstance(info_dict[key], np.ndarray)
+            })
             if dones[i]:
                 infos[i]["terminal_observation"] = obs[i]
                 if is_legacy_gym:
@@ -128,6 +134,7 @@ except KeyboardInterrupt:
 if not is_legacy_gym:
 
     def legacy_wrap(env):
+        """Adapt the Gym API expected by Stable-Baselines3."""
         env.reset_fn = env.reset
         env.step_fn = env.step
 

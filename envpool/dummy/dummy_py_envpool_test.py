@@ -53,21 +53,27 @@ class _DummyEnvPoolTest(absltest.TestCase):
         action_keys = env_spec._action_keys
         self.assertTrue(isinstance(state_spec, tuple))
         self.assertTrue(isinstance(action_spec, tuple))
-        state_spec = dict(zip(state_keys, state_spec))
-        action_spec = dict(zip(action_keys, action_spec))
+        state_spec = dict(zip(state_keys, state_spec, strict=False))
+        action_spec = dict(zip(action_keys, action_spec, strict=False))
         # default value of state_num is 10
         self.assertEqual(state_spec["obs:raw"][1][-1], 10)
         self.assertEqual(state_spec["obs:dyn"][1][1][-1], 10)
         # change conf and see if it can successfully change state_spec
         # directly send dict or expose config as dict?
-        conf = dict(zip(_DummyEnvSpec._config_keys, conf))
+        conf = dict(zip(_DummyEnvSpec._config_keys, conf, strict=False))
         conf["state_num"] = 666
         env_spec = _DummyEnvSpec(tuple(conf.values()))
-        state_spec = dict(zip(state_keys, env_spec._state_spec))
+        state_spec = dict(zip(state_keys, env_spec._state_spec, strict=False))
         self.assertEqual(state_spec["obs:raw"][1][-1], 666)
 
     def test_envpool(self) -> None:
-        conf = dict(zip(_DummyEnvSpec._config_keys, _DummyEnvSpec._default_config_values))
+        conf = dict(
+            zip(
+                _DummyEnvSpec._config_keys,
+                _DummyEnvSpec._default_config_values,
+                strict=False,
+            )
+        )
         conf["num_envs"] = num_envs = 100
         conf["batch_size"] = batch = 31
         conf["num_threads"] = os.cpu_count()
@@ -78,7 +84,7 @@ class _DummyEnvPoolTest(absltest.TestCase):
         env._reset(np.arange(num_envs, dtype=np.int32))
         t = time.time()
         for _ in range(total):
-            state = dict(zip(state_keys, env._recv()))
+            state = dict(zip(state_keys, env._recv(), strict=False))
             action = {
                 "env_id": state["info:env_id"],
                 "players.env_id": state["info:players.env_id"],
@@ -92,7 +98,13 @@ class _DummyEnvPoolTest(absltest.TestCase):
         logging.info(f"FPS = {fps:.6f}")
 
     def test_xla(self) -> None:
-        conf = dict(zip(_DummyEnvSpec._config_keys, _DummyEnvSpec._default_config_values))
+        conf = dict(
+            zip(
+                _DummyEnvSpec._config_keys,
+                _DummyEnvSpec._default_config_values,
+                strict=False,
+            )
+        )
         conf["num_envs"] = 100
         conf["batch_size"] = 31
         conf["num_threads"] = os.cpu_count()
@@ -102,7 +114,9 @@ class _DummyEnvPoolTest(absltest.TestCase):
         try:
             _ = env._xla()
         except RuntimeError:
-            logging.info("XLA on Dummy failed because dummy has Container typed state.")
+            logging.info(
+                "XLA on Dummy failed because dummy has Container typed state."
+            )
             xla_failed = True
         self.assertTrue(xla_failed)
 

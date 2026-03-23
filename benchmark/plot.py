@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Plot benchmark results."""
+
 import argparse
 
 import matplotlib.ticker as ticker
@@ -23,6 +25,7 @@ data = {}
 
 
 def reset_data() -> None:
+    """Reset the benchmark data accumulators."""
     global data
     data = {
         "Num. Workers": [],
@@ -34,6 +37,7 @@ def reset_data() -> None:
 
 
 def parse_table(env: str, system: str, suffix: str) -> None:
+    """Parse a benchmark table from a markdown report."""
     private_copy = {
         "Num. Workers": [],
         "FPS": [],
@@ -47,7 +51,7 @@ def parse_table(env: str, system: str, suffix: str) -> None:
     for line in raw[2:]:
         line = line.split("|")[1:-1]
         method = line.pop(0).strip()
-        for w, f in zip(worker_num, line):
+        for w, f in zip(worker_num, line, strict=False):
             for d in [data, private_copy]:
                 d["Num. Workers"].append(w)
                 d["FPS"].append(None if f.strip() == "/" else float(f))
@@ -55,7 +59,9 @@ def parse_table(env: str, system: str, suffix: str) -> None:
                 d["System"].append(system)
                 d["Method"].append(method)
     d = pd.DataFrame(private_copy)
-    plot = sns.lineplot(x="Num. Workers", y="FPS", hue="Method", data=d, marker="o")
+    plot = sns.lineplot(
+        x="Num. Workers", y="FPS", hue="Method", data=d, marker="o"
+    )
     plot.xaxis.set_major_formatter(ticker.EngFormatter())
     plot.yaxis.set_major_formatter(ticker.EngFormatter())
     plot.legend(fontsize=9)
@@ -68,6 +74,7 @@ def parse_table(env: str, system: str, suffix: str) -> None:
 
 
 def benchmark(suffix: str) -> None:
+    """Generate throughput plots for benchmark results."""
     global data
     reset_data()
     for env in ["Atari", "Mujoco"]:
@@ -95,7 +102,7 @@ def benchmark(suffix: str) -> None:
     g.add_legend(bbox_to_anchor=(0.52, 1.02), ncol=6)
     axes = g.axes.flatten()
     alphabet = "abcdefgh"
-    for ax, i in zip(axes, alphabet):
+    for ax, i in zip(axes, alphabet, strict=False):
         env, system = ax.get_title().split("|")
         env = env.split("=")[-1].strip()
         system = system.split("=")[-1].strip()

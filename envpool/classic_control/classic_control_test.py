@@ -66,7 +66,9 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
                 a = env0.action_space.sample()
                 o0, r0, term0, trunc0, _ = env0.step(a)
                 d0 = np.logical_or(term0, trunc0)
-                o1, r1, term1, trunc1, _ = env1.step(np.array([a]), np.array([0]))
+                o1, r1, term1, trunc1, _ = env1.step(
+                    np.array([a]), np.array([0])
+                )
                 d1 = np.logical_or(term1, trunc1)
                 np.testing.assert_allclose(o0, o1[0], atol=1e-4)
                 np.testing.assert_allclose(r0, r1[0])

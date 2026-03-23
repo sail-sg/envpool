@@ -91,7 +91,9 @@ class GymnasiumEnvPoolMeta(
             | tuple[Any, np.ndarray, np.ndarray, np.ndarray, Any]
         ):
             values = (state_values[i] for i in state_idx)
-            state = cast(dict[str, Any], optree.tree_unflatten(treepsec, values))
+            state = cast(
+                dict[str, Any], optree.tree_unflatten(treepsec, values)
+            )
             info = cast(dict[str, Any], state["info"])
             info["elapsed_step"] = state["elapsed_step"]
             if reset:

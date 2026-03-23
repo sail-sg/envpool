@@ -45,7 +45,9 @@ class _ToyTextEnvTest(absltest.TestCase):
                     ts: TimeStep = e.step(action, np.arange(num_envs))
                     obs, rew, done = ts.observation.obs, ts.reward, ts.last()
                 else:
-                    obs, rew, terminated, truncated, _ = e.step(action, np.arange(num_envs))
+                    obs, rew, terminated, truncated, _ = e.step(
+                        action, np.arange(num_envs)
+                    )
                     done = np.logical_or(terminated, truncated)
                 assert obs.shape == (num_envs, row, col)
                 paddle_pos = np.where(obs[:, -1] == 1)[1]
@@ -68,7 +70,9 @@ class _ToyTextEnvTest(absltest.TestCase):
                     ts = e.step(action, np.arange(num_envs))
                     obs, rew, done = ts.observation.obs, ts.reward, ts.last()
                 else:
-                    obs, rew, terminated, truncated, _ = e.step(action, np.arange(num_envs))
+                    obs, rew, terminated, truncated, _ = e.step(
+                        action, np.arange(num_envs)
+                    )
                     done = np.logical_or(terminated, truncated)
                 assert obs.shape == (num_envs, row, col)
                 paddle_pos = np.where(obs[:, -1] == 1)[1]
@@ -144,9 +148,15 @@ class _ToyTextEnvTest(absltest.TestCase):
                 act = np.random.randint(6, size=(1,))
                 obs, rew, term, trunc, info = env.step(act)
                 done = np.logical_or(term, trunc)
-                ref_obs, ref_rew, ref_term, ref_trunc, ref_info = ref.step(int(act[0]))
+                ref_obs, ref_rew, ref_term, ref_trunc, ref_info = ref.step(
+                    int(act[0])
+                )
                 ref_done = np.logical_or(ref_term, ref_trunc)
-                assert ref_obs == obs[0] and ref_rew == rew[0] and ref_done == done[0]
+                assert (
+                    ref_obs == obs[0]
+                    and ref_rew == rew[0]
+                    and ref_done == done[0]
+                )
                 assert ref_term == term[0] and ref_trunc == trunc[0]
         locs = ref.unwrapped.locs
         left_point = [(4, 4), (0, 3), (4, 2), (0, 1)]
@@ -184,8 +194,12 @@ class _ToyTextEnvTest(absltest.TestCase):
                             break
             while len(actions):
                 a = actions.pop(0)
-                ref_obs, ref_rew, ref_terminated, ref_truncated, ref_info = ref.step(a)
-                obs, rew, terminated, truncated, info = env.step(np.array([a], int))
+                ref_obs, ref_rew, ref_terminated, ref_truncated, ref_info = (
+                    ref.step(a)
+                )
+                obs, rew, terminated, truncated, info = env.step(
+                    np.array([a], int)
+                )
                 assert (
                     ref_obs == obs[0]
                     and ref_rew == rew[0]
@@ -209,7 +223,9 @@ class _ToyTextEnvTest(absltest.TestCase):
             obs, rew, terminated, truncated, info = env.step(actions)
             done = np.logical_or(terminated, truncated)
             reward += rew
-        assert abs(np.mean(reward) - 1310) < 30 and abs(np.std(reward) - 78) < 15
+        assert (
+            abs(np.mean(reward) - 1310) < 30 and abs(np.std(reward) - 78) < 15
+        )
 
     def test_cliffwalking(self) -> None:
         env = make_gym("CliffWalking-v0")
@@ -223,9 +239,13 @@ class _ToyTextEnvTest(absltest.TestCase):
             assert env.reset()[0] == ref.reset()[0]
             while len(action) > 0:
                 a = action.pop(0)
-                ref_obs, ref_rew, ref_terminated, ref_truncated, ref_info = ref.step(a)
+                ref_obs, ref_rew, ref_terminated, ref_truncated, ref_info = (
+                    ref.step(a)
+                )
                 ref_done = np.logical_or(ref_terminated, ref_truncated)
-                obs, rew, terminated, truncated, info = env.step(np.array([a], int))
+                obs, rew, terminated, truncated, info = env.step(
+                    np.array([a], int)
+                )
                 assert (
                     ref_obs == obs[0]
                     and ref_rew == rew[0]
@@ -245,7 +265,9 @@ class _ToyTextEnvTest(absltest.TestCase):
         assert env.action_space.n == 2
         reward, rewards = np.zeros(num_envs), []
         for _ in range(1000):
-            obs, rew, terminated, truncated, info = env.step(np.random.randint(2, size=(num_envs,)))
+            obs, rew, terminated, truncated, info = env.step(
+                np.random.randint(2, size=(num_envs,))
+            )
             done = np.logical_or(terminated, truncated)
             reward += rew
             if np.any(done):

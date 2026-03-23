@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Benchmark EnvPool against Gym vector environments."""
+
 import argparse
 import time
 
@@ -22,6 +24,7 @@ from atari_wrappers import wrap_deepmind
 
 
 def make_vector_env(num_envs, async_, make_env):
+    """Create a Gym vector environment."""
     if async_:
         vector_env_cls = gym.vector.AsyncVectorEnv
     else:
@@ -30,6 +33,7 @@ def make_vector_env(num_envs, async_, make_env):
 
 
 def run(env, num_envs, total_step, async_):
+    """Benchmark a vectorized environment."""
     if env == "atari":
         gym.register_envs(ale_py)
         task_id = "ALE/Pong-v5"
@@ -88,7 +92,9 @@ def run(env, num_envs, total_step, async_):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--env", type=str, default="atari", choices=["atari", "mujoco", "box2d"])
+    parser.add_argument(
+        "--env", type=str, default="atari", choices=["atari", "mujoco", "box2d"]
+    )
     parser.add_argument("--async_", action="store_true")
     parser.add_argument("--num-envs", type=int, default=10)
     parser.add_argument("--total-step", type=int, default=5000)

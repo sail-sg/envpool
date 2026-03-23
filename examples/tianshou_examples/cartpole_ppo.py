@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Train CartPole with Tianshou PPO and EnvPool."""
+
 import argparse
 import os
 import pprint
@@ -32,6 +34,7 @@ import envpool
 
 
 def get_args():
+    """Parse the command-line arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--task", type=str, default="CartPole-v1")
     parser.add_argument("--seed", type=int, default=0)
@@ -66,13 +69,16 @@ def get_args():
 
 
 def run_ppo(args):
+    """Run PPO training and evaluation on CartPole."""
     env = gym.make(args.task)
     if args.task == "CartPole-v0":
         env.spec.reward_threshold = 200
     elif args.task == "CartPole-v1":
         env.spec.reward_threshold = 500
 
-    train_envs = envpool.make(args.task, num_envs=args.training_num, env_type="gym")
+    train_envs = envpool.make(
+        args.task, num_envs=args.training_num, env_type="gym"
+    )
     test_envs = envpool.make(args.task, num_envs=args.test_num, env_type="gym")
     args.state_shape = env.observation_space.shape or env.observation_space.n
     args.action_shape = env.action_space.shape or env.action_space.n
@@ -85,7 +91,9 @@ def run_ppo(args):
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     # model
-    net = Net(args.state_shape, hidden_sizes=args.hidden_sizes, device=args.device)
+    net = Net(
+        args.state_shape, hidden_sizes=args.hidden_sizes, device=args.device
+    )
     actor = Actor(net, args.action_shape, device=args.device).to(args.device)
     critic = Critic(net, device=args.device).to(args.device)
     actor_critic = ActorCritic(actor, critic)
@@ -133,7 +141,9 @@ def run_ppo(args):
 
     def watch():
         # Let's watch its performance!
-        env = DummyVectorEnv([lambda: gym.make(args.task) for _ in range(args.test_num)])
+        env = DummyVectorEnv([
+            lambda: gym.make(args.task) for _ in range(args.test_num)
+        ])
         env.seed(args.seed)
         policy.eval()
         collector = Collector(policy, env)

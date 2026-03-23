@@ -29,7 +29,13 @@ def py_env(
     pool_name = envpool.__name__[1:]
     return (
         EnvSpecMeta(spec_name, (envspec,), {}),  # type: ignore[return-value]
-        DMEnvPoolMeta(pool_name.replace("EnvPool", "DMEnvPool"), (envpool,), {}),
-        GymEnvPoolMeta(pool_name.replace("EnvPool", "GymEnvPool"), (envpool,), {}),
-        GymnasiumEnvPoolMeta(pool_name.replace("EnvPool", "GymnasiumEnvPool"), (envpool,), {}),
+        DMEnvPoolMeta(
+            pool_name.replace("EnvPool", "DMEnvPool"), (envpool,), {}
+        ),
+        GymEnvPoolMeta(
+            pool_name.replace("EnvPool", "GymEnvPool"), (envpool,), {}
+        ),
+        GymnasiumEnvPoolMeta(
+            pool_name.replace("EnvPool", "GymnasiumEnvPool"), (envpool,), {}
+        ),
     )

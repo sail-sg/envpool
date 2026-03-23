@@ -4,6 +4,8 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+"""Sphinx configuration for the EnvPool docs."""
+
 # -- Path setup --------------------------------------------------------------
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -19,6 +21,7 @@ import os
 
 def get_version() -> str:
     # https://packaging.python.org/guides/single-sourcing-package-version/
+    """Return the project version from the package metadata."""
     with open(os.path.join("..", "envpool", "__init__.py"), "r") as f:
         init = f.read().split()
     return init[init.index("__version__") + 2][1:-1]
@@ -71,6 +74,7 @@ html_logo = "_static/images/envpool-logo.png"
 
 
 def setup(app):
+    """Register the Sphinx configuration hooks."""
     app.add_js_file("js/copybutton.js")
     app.add_css_file("css/style.css")
 

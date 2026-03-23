@@ -32,7 +32,9 @@ class XlaMixin:
             ret = _recv(handle)
             new_handle = ret[0]
             state_list = ret[1:]
-            return new_handle, self._to(state_list, reset=False, return_info=True)
+            return new_handle, self._to(
+                state_list, reset=False, return_info=True
+            )
 
         def send(
             handle: jnp.ndarray,

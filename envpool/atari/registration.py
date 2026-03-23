@@ -18,7 +18,9 @@ import os
 from envpool.registration import base_path, register
 
 atari_rom_path = os.path.join(base_path, "atari", "roms")
-atari_game_list = sorted([i.replace(".bin", "") for i in os.listdir(atari_rom_path)])
+atari_game_list = sorted([
+    i.replace(".bin", "") for i in os.listdir(atari_rom_path)
+])
 
 for game in atari_game_list:
     name = "".join([g.capitalize() for g in game.split("_")])

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Benchmark EnvPool against DeepMind Control."""
+
 import argparse
 import time
 
@@ -23,6 +25,7 @@ import envpool
 
 
 def run_dmc(env, action, frame_skip, total_step):
+    """Benchmark a DeepMind Control environment."""
     ts = env.reset()
     t = time.time()
     for i in tqdm.trange(total_step):
@@ -36,6 +39,7 @@ def run_dmc(env, action, frame_skip, total_step):
 
 
 def run_envpool(env, action, frame_skip, total_step):
+    """Benchmark an EnvPool DeepMind Control environment."""
     ts = env.reset()
     t = time.time()
     for i in tqdm.trange(total_step):
@@ -61,9 +65,10 @@ if __name__ == "__main__":
     env = suite.load(args.domain, args.task, {"random": args.seed})
     np.random.seed(args.seed)
     minimum, maximum = env.action_spec().minimum, env.action_spec().maximum
-    action = np.array(
-        [np.random.uniform(low=minimum, high=maximum) for _ in range(args.total_step)]
-    )
+    action = np.array([
+        np.random.uniform(low=minimum, high=maximum)
+        for _ in range(args.total_step)
+    ])
     frame_skip = env._n_sub_steps
 
     fps_dmc = run_dmc(env, action, frame_skip, args.total_step)

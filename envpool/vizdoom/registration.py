@@ -25,7 +25,9 @@ def _vizdoom_game_list() -> list[str]:
         game.replace(".cfg", "")
         for game in sorted(os.listdir(maps_path))
         if game.endswith(".cfg")
-        and os.path.exists(os.path.join(maps_path, game.replace(".cfg", ".wad")))
+        and os.path.exists(
+            os.path.join(maps_path, game.replace(".cfg", ".wad"))
+        )
     ]
 
 
