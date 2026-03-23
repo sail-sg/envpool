@@ -121,12 +121,7 @@ class _MakeTest(absltest.TestCase):
 
     def test_make_minigrid(self) -> None:
         self.assertIn("MiniGrid-Empty-5x5-v0", envpool.list_all_envs())
-        spec = envpool.make_spec("MiniGrid-Empty-5x5-v0")
-        env = envpool.make_gymnasium("MiniGrid-Empty-5x5-v0")
-        print(spec)
-        print(env)
-        self.assertIsInstance(env, gymnasium.Env)
-        env.reset()
+        self.check_step(["MiniGrid-Empty-5x5-v0"])
 
     def test_make_mujoco_gym(self) -> None:
         self.check_step([
