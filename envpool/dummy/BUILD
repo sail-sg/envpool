@@ -51,6 +51,7 @@ py_test(
     deps = [
         requirement("numpy"),
         requirement("absl-py"),
+        "//envpool/python:api",
     ],
 )
 

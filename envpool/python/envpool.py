@@ -30,6 +30,76 @@ class EnvPoolMixin(ABC):
 
     _spec: EnvSpec
 
+    def _player_action_count(
+        self: EnvPool, adict: dict[str, Any]
+    ) -> int | None:
+        """Infer how many player actions are present in the current input."""
+        player_count = None
+        for key, spec in self.spec.action_array_spec.items():
+            if key in ("env_id", "players.env_id") or key not in adict:
+                continue
+            shape = tuple(spec.shape)
+            if len(shape) == 0 or shape[0] != -1:
+                continue
+            value_shape = np.shape(adict[key])
+            count = 1 if len(value_shape) == 0 else int(value_shape[0])
+            if player_count is None:
+                player_count = count
+            elif player_count != count:
+                raise RuntimeError(
+                    "Inconsistent leading dimensions across player actions."
+                )
+        return player_count
+
+    def _cached_players_env_id(
+        self: EnvPool, env_id: np.ndarray, player_count: int
+    ) -> np.ndarray | None:
+        """Reuse the last recv/reset mapping when player counts vary by env."""
+        if not hasattr(self, "_last_players_env_id"):
+            return None
+        cached = np.asarray(self._last_players_env_id, dtype=np.int32)
+        segments = []
+        for eid in env_id.tolist():
+            matches = cached[cached == eid]
+            if matches.size == 0:
+                return None
+            segments.append(matches)
+        if not segments:
+            return np.empty(0, dtype=np.int32)
+        players_env_id = np.concatenate(segments)
+        if players_env_id.shape[0] != player_count:
+            return None
+        return players_env_id
+
+    def _infer_players_env_id(
+        self: EnvPool, adict: dict[str, Any]
+    ) -> np.ndarray:
+        """Fill in players.env_id for the simplified multiplayer API."""
+        env_id = np.asarray(adict["env_id"], dtype=np.int32)
+        if env_id.ndim == 0:
+            env_id = env_id.reshape(1)
+        if self.config.get("max_num_players", 1) == 1:
+            return env_id
+        player_count = self._player_action_count(adict)
+        if player_count is None or player_count == env_id.shape[0]:
+            return env_id
+        cached = self._cached_players_env_id(env_id, player_count)
+        if cached is not None:
+            return cached
+        if env_id.shape[0] == 0 or player_count % env_id.shape[0] != 0:
+            raise RuntimeError(
+                "Cannot infer players.env_id for multiplayer action; "
+                "pass a dict action with explicit players.env_id."
+            )
+        players_per_env = player_count // env_id.shape[0]
+        max_num_players = self.config.get("max_num_players", 1)
+        if players_per_env > max_num_players:
+            raise RuntimeError(
+                "Cannot infer players.env_id for multiplayer action; "
+                "per-env player count exceeds max_num_players."
+            )
+        return np.repeat(env_id, players_per_env).astype(np.int32, copy=False)
+
     def _check_action(self: EnvPool, actions: list[np.ndarray]) -> None:
         if hasattr(self, "_check_action_finished"):  # only check once
             return
@@ -74,20 +144,20 @@ class EnvPoolMixin(ABC):
             if isinstance(action, np.ndarray):
                 # else it could be a jax array, when using xla
                 action = action.astype(
-                    self._last_action_type,  # type: ignore
+                    self._last_action_type,
                     order="C",
                 )
-            adict = {self._last_action_name: action}  # type: ignore
+            adict = {self._last_action_name: action}
         if env_id is None:
             if "env_id" not in adict:
                 adict["env_id"] = self.all_env_ids
         else:
             adict["env_id"] = env_id.astype(np.int32)
         if "players.env_id" not in adict:
-            adict["players.env_id"] = adict["env_id"]
+            adict["players.env_id"] = self._infer_players_env_id(adict)
         if not hasattr(self, "_action_names"):
             self._action_names = self._spec._action_keys
-        return [adict[k] for k in self._action_names]  # type: ignore
+        return [adict[k] for k in self._action_names]
 
     def __len__(self: EnvPool) -> int:
         """Return the number of environments."""
@@ -100,7 +170,7 @@ class EnvPoolMixin(ABC):
             self._all_env_ids = np.arange(
                 self.config["num_envs"], dtype=np.int32
             )
-        return self._all_env_ids  # type: ignore
+        return self._all_env_ids
 
     @property
     def is_async(self: EnvPool) -> bool:
@@ -135,6 +205,13 @@ class EnvPoolMixin(ABC):
     ) -> TimeStep | tuple:
         """Recv a batch state from EnvPool."""
         state_list = self._recv()
+        if not hasattr(self, "_state_names"):
+            self._state_names = self._state_keys
+        state = dict(zip(self._state_names, state_list, strict=False))
+        if "info:players.env_id" in state:
+            self._last_players_env_id = np.array(
+                state["info:players.env_id"], copy=True
+            )
         return self._to(state_list, reset, return_info)
 
     def async_reset(self: EnvPool) -> None:
