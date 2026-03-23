@@ -13,8 +13,8 @@
 # limitations under the License.
 """xla template on python side."""
 
-from collections import namedtuple
 import sys
+from collections import namedtuple
 from typing import Any, Callable
 
 import numpy as np
