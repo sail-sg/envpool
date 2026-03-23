@@ -127,9 +127,10 @@ struct CustomCall {
     return xla_ffi::Error();
   }
 
-  static xla_ffi::Error GpuExecute(
-      cudaStream_t stream, xla_ffi::RemainingArgs args,
-      xla_ffi::RemainingRets rets, xla_ffi::Dictionary attrs) {
+  static xla_ffi::Error GpuExecute(cudaStream_t stream,
+                                   xla_ffi::RemainingArgs args,
+                                   xla_ffi::RemainingRets rets,
+                                   xla_ffi::Dictionary attrs) {
     if (auto err = ValidateArity(args, rets); err.failure()) {
       return err;
     }
@@ -165,22 +166,19 @@ struct CustomCall {
   }
 
   static auto Capsules() {
-    XLA_FFI_DEFINE_HANDLER(
-        cpu_handler, CpuExecute,
-        xla_ffi::Ffi::Bind()
-            .RemainingArgs()
-            .RemainingRets()
-            .Attrs<xla_ffi::Dictionary>());
-    XLA_FFI_DEFINE_HANDLER(
-        gpu_handler, GpuExecute,
-        xla_ffi::Ffi::Bind()
-            .Ctx<xla_ffi::PlatformStream<cudaStream_t>>()
-            .RemainingArgs()
-            .RemainingRets()
-            .Attrs<xla_ffi::Dictionary>());
-    return std::make_tuple(
-        py::capsule(reinterpret_cast<void*>(cpu_handler)),
-        py::capsule(reinterpret_cast<void*>(gpu_handler)));
+    XLA_FFI_DEFINE_HANDLER(cpu_handler, CpuExecute,
+                           xla_ffi::Ffi::Bind()
+                               .RemainingArgs()
+                               .RemainingRets()
+                               .Attrs<xla_ffi::Dictionary>());
+    XLA_FFI_DEFINE_HANDLER(gpu_handler, GpuExecute,
+                           xla_ffi::Ffi::Bind()
+                               .Ctx<xla_ffi::PlatformStream<cudaStream_t>>()
+                               .RemainingArgs()
+                               .RemainingRets()
+                               .Attrs<xla_ffi::Dictionary>());
+    return std::make_tuple(py::capsule(reinterpret_cast<void*>(cpu_handler)),
+                           py::capsule(reinterpret_cast<void*>(gpu_handler)));
   }
 
   static auto Xla(Class* obj) {
