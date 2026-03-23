@@ -246,6 +246,8 @@ class RecordEpisodeStatistics(gym.Wrapper):
             observations, rewards, dones, infos = super(
                 RecordEpisodeStatistics, self
             ).step(action)
+            term = infos["terminated"]
+            trunc = infos["TimeLimit.truncated"]
         else:
             observations, rewards, term, trunc, infos = super(
                 RecordEpisodeStatistics, self
@@ -255,10 +257,10 @@ class RecordEpisodeStatistics(gym.Wrapper):
         self.episode_lengths += 1
         self.returned_episode_returns[:] = self.episode_returns
         self.returned_episode_lengths[:] = self.episode_lengths
-        all_lives_exhausted = infos["lives"] == 0
         if self.has_lives:
-            self.episode_returns *= 1 - all_lives_exhausted
-            self.episode_lengths *= 1 - all_lives_exhausted
+            episode_done = term + trunc
+            self.episode_returns *= 1 - episode_done
+            self.episode_lengths *= 1 - episode_done
         else:
             self.episode_returns *= 1 - dones
             self.episode_lengths *= 1 - dones
