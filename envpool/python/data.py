@@ -58,9 +58,9 @@ def to_nested_dict(flatten_dict: dict[str, Any], generator: type = dict) -> dict
 
 def to_namedtuple(name: str, hdict: dict) -> tuple:
     """Convert a hierarchical dict to namedtuple."""
-    return namedtuple(name, hdict.keys())(*[
-        to_namedtuple(k, v) if isinstance(v, dict) else v for k, v in hdict.items()
-    ])
+    return namedtuple(name, hdict.keys())(
+        *[to_namedtuple(k, v) if isinstance(v, dict) else v for k, v in hdict.items()]
+    )
 
 
 def dm_spec_transform(name: str, spec: ArraySpec, spec_type: str) -> dm_env.specs.Array:

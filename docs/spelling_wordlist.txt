@@ -15,7 +15,6 @@ bazelisk
 buildifier
 addlicense
 ruff
-docstring
 isort
 yapf
 envpool

@@ -24,7 +24,7 @@ We use several tools to secure code quality, including
 - C++ Google-style: cpplint, clang-format, clang-tidy;
 - Bazel build file: buildifier;
 - License: addlicense;
-- Documentation: Ruff docstring rules, doc8.
+- Documentation: doc8.
 
 To make things easier, we create several shortcuts as follows.
 

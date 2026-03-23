@@ -218,15 +218,17 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
         else:
             env = make_gym("BipedalWalker-v3", num_envs=num_envs)
         max_episode_steps = env.spec.config.max_episode_steps
-        hs = np.array([
-            {
-                "state": 1,
-                "moving_leg": 0,
-                "supporting_leg": 1,
-                "supporting_knee_angle": 0.1,
-            }
-            for _ in range(num_envs)
-        ])
+        hs = np.array(
+            [
+                {
+                    "state": 1,
+                    "moving_leg": 0,
+                    "supporting_leg": 1,
+                    "supporting_knee_angle": 0.1,
+                }
+                for _ in range(num_envs)
+            ]
+        )
         env_id = np.arange(num_envs)
         done = np.array([False] * num_envs)
         obs, _ = env.reset(env_id)

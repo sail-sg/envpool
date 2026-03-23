@@ -76,11 +76,13 @@ class VecAdapter(VecEnvWrapper):
         # Convert dict to list of dict
         # and add terminal observation
         for i in range(self.num_envs):
-            infos.append({
-                key: info_dict[key][i]
-                for key in info_dict.keys()
-                if isinstance(info_dict[key], np.ndarray)
-            })
+            infos.append(
+                {
+                    key: info_dict[key][i]
+                    for key in info_dict.keys()
+                    if isinstance(info_dict[key], np.ndarray)
+                }
+            )
             if dones[i]:
                 infos[i]["terminal_observation"] = obs[i]
                 if is_legacy_gym:

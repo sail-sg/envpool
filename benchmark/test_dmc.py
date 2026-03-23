@@ -61,9 +61,9 @@ if __name__ == "__main__":
     env = suite.load(args.domain, args.task, {"random": args.seed})
     np.random.seed(args.seed)
     minimum, maximum = env.action_spec().minimum, env.action_spec().maximum
-    action = np.array([
-        np.random.uniform(low=minimum, high=maximum) for _ in range(args.total_step)
-    ])
+    action = np.array(
+        [np.random.uniform(low=minimum, high=maximum) for _ in range(args.total_step)]
+    )
     frame_skip = env._n_sub_steps
 
     fps_dmc = run_dmc(env, action, frame_skip, args.total_step)

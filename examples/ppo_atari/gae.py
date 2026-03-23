@@ -137,20 +137,22 @@ def test_episodic_returns():
         env_id=env_id,
         numenv=1,
     )
-    ans = np.array([
-        454.8344,
-        376.1143,
-        291.298,
-        200.0,
-        464.5610,
-        383.1085,
-        295.387,
-        201.0,
-        474.2876,
-        390.1027,
-        299.476,
-        202.0,
-    ]).reshape([12, 1])
+    ans = np.array(
+        [
+            454.8344,
+            376.1143,
+            291.298,
+            200.0,
+            464.5610,
+            383.1085,
+            295.387,
+            201.0,
+            474.2876,
+            390.1027,
+            299.476,
+            202.0,
+        ]
+    ).reshape([12, 1])
     assert np.allclose(returns, ans), (returns, adv)
     ref_mask = np.ones([12, 1])
     assert np.allclose(ref_mask, mask)
@@ -169,11 +171,13 @@ def test_episodic_returns():
         env_id=env_id,
         numenv=3,
     )
-    ans = np.array([
-        [454.8344, 383.1085, 299.476, 201.0],
-        [464.5610, 376.1143, 295.387, 202.0],
-        [474.2876, 390.1027, 291.298, 200.0],
-    ]).transpose()
+    ans = np.array(
+        [
+            [454.8344, 383.1085, 299.476, 201.0],
+            [464.5610, 376.1143, 295.387, 202.0],
+            [474.2876, 390.1027, 291.298, 200.0],
+        ]
+    ).transpose()
     assert np.allclose(returns, ans), returns
     assert np.allclose(mask, 1)
 

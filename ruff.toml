@@ -8,9 +8,9 @@ extend-exclude = [
     "vendor_imports/**/*",
 ]
 line-length = 100
-preview = true
 
 [lint]
+preview = true
 select = [
     "E", "F", "W", "B", "C4", "PIE", "NPY", "PLE", "I",
     "DTZ003", "DTZ004",
@@ -58,6 +58,3 @@ external = ["WPS", "R50", "ASYNC101", "TOR901", "SC", "FKM", "CCM", "FTH", "W021
 
 [lint.isort]
 detect-same-package = false
-
-[lint.pydocstyle]
-convention = "google"

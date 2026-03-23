@@ -39,14 +39,16 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
         env2 = make_dm(task_id, num_envs=num_envs, seed=1)
         act_spec = env0.action_spec()
         for t in range(3000):
-            action = np.array([
-                np.random.uniform(
-                    low=act_spec.minimum,
-                    high=act_spec.maximum,
-                    size=act_spec.shape,
-                )
-                for _ in range(num_envs)
-            ])
+            action = np.array(
+                [
+                    np.random.uniform(
+                        low=act_spec.minimum,
+                        high=act_spec.maximum,
+                        size=act_spec.shape,
+                    )
+                    for _ in range(num_envs)
+                ]
+            )
             ts0 = env0.step(action)
             obs0 = ts0.observation
             obs1 = env1.step(action).observation

@@ -151,7 +151,7 @@ addlicense: addlicense-install
 	addlicense -c $(COPYRIGHT) -l apache -y 2026 -check $(PROJECT_FOLDER)
 
 docstyle: doc-install
-	ruff check $(PROJECT_NAME) --select D && doc8 docs && cd docs && make html SPHINXOPTS="-W"
+	doc8 docs && cd docs && make html SPHINXOPTS="-W"
 
 doc: doc-install
 	cd docs && make html && cd _build/html && python3 -m http.server
