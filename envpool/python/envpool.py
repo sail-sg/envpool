@@ -78,6 +78,8 @@ class EnvPoolMixin(ABC):
         env_id = np.asarray(adict["env_id"], dtype=np.int32)
         if env_id.ndim == 0:
             env_id = env_id.reshape(1)
+        if self.config.get("max_num_players", 1) == 1:
+            return env_id
         player_count = self._player_action_count(adict)
         if player_count is None or player_count == env_id.shape[0]:
             return env_id
