@@ -20,6 +20,7 @@ import numpy as np
 from absl import logging
 from absl.testing import absltest
 from envpool.dummy.dummy_envpool import _DummyEnvPool, _DummyEnvSpec
+
 from envpool.python.api import py_env
 
 DummyEnvSpec, DummyDMEnvPool, _, _ = py_env(_DummyEnvSpec, _DummyEnvPool)
