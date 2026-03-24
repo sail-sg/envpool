@@ -160,6 +160,30 @@ class _AtariEnvPoolTest(absltest.TestCase):
                 msg=f"reset #{i} returned lives={info['lives']}",
             )
 
+    def test_ram_info(self) -> None:
+        env = make_gym("Pong-v5", num_envs=2, seed=0)
+        self.assertEqual(env.spec.state_array_spec["info:ram"].dtype, np.uint8)
+        self.assertEqual(env.spec.state_array_spec["info:ram"].shape, [128])
+
+        _, info = env.reset()
+        ram = info["ram"]
+        self.assertEqual(ram.dtype, np.uint8)
+        np.testing.assert_allclose(ram.shape, (2, 128))
+
+        changed = False
+        previous_ram = ram.copy()
+        for _ in range(64):
+            _, _, _, _, info = env.step(np.ones(2, dtype=np.int32))
+            ram = info["ram"]
+            self.assertEqual(ram.dtype, np.uint8)
+            np.testing.assert_allclose(ram.shape, (2, 128))
+            if np.any(ram != previous_ram):
+                changed = True
+                break
+            previous_ram = ram.copy()
+
+        self.assertTrue(changed)
+
     def test_partial_step(self) -> None:
         num_envs = 5
         max_episode_steps = 10

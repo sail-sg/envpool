@@ -66,7 +66,8 @@ class AtariEnvFns {
                         {0, 255})),
                     "info:lives"_.Bind(Spec<int>({-1})),
                     "info:reward"_.Bind(Spec<float>({-1})),
-                    "info:terminated"_.Bind(Spec<int>({-1}, {0, 1})));
+                    "info:terminated"_.Bind(Spec<int>({-1}, {0, 1})),
+                    "info:ram"_.Bind(Spec<uint8_t>({128}, {0, 255})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -238,6 +239,8 @@ class AtariEnv : public Env<AtariEnvSpec> {
     state["info:lives"_] = lives_;
     state["info:reward"_] = info_reward;
     state["info:terminated"_] = env_->game_over();
+    const auto& ram = env_->getRAM();
+    state["info:ram"_].Assign(ram.array(), ram.size());
     // overwrite current_step to make sure
     // episodic_life == True behaves correctly
     // see Issue #179
