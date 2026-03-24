@@ -20,7 +20,6 @@ import os
 import shutil
 import subprocess
 
-
 CPP_API_HEADERS = [
     "envpool/core/array.h",
     "envpool/core/spec.h",
