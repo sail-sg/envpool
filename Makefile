@@ -64,6 +64,8 @@ doc-install:
 	$(call check_install, pbr)
 	$(call check_install, sphinx)
 	$(call check_install, sphinx_rtd_theme)
+	$(call check_install, breathe)
+	command -v doxygen || (if command -v sudo >/dev/null 2>&1; then sudo apt-get update && sudo apt-get install -y doxygen; else apt-get update && apt-get install -y doxygen; fi)
 
 spelling-install: doc-install spelling-system-install
 	$(call check_install_extra, sphinxcontrib.spelling, sphinxcontrib.spelling pyenchant)
