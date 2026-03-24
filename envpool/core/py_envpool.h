@@ -104,7 +104,8 @@ template <typename Spec>
 struct SpecTupleHelper {
   static decltype(auto) Make(const Spec& spec) {
     return std::make_tuple(py::dtype::of<typename Spec::dtype>(), spec.shape,
-                           spec.bounds, spec.elementwise_bounds);
+                           spec.bounds, spec.elementwise_bounds,
+                           spec.is_discrete);
   }
 };
 
@@ -121,7 +122,8 @@ struct SpecTupleHelper<Spec<Container<dtype>>> {
     return std::make_tuple(py::dtype::of<dtype>(),
                            std::make_tuple(spec.shape, spec.inner_spec.shape),
                            spec.inner_spec.bounds,
-                           spec.inner_spec.elementwise_bounds);
+                           spec.inner_spec.elementwise_bounds,
+                           spec.inner_spec.is_discrete);
   }
 };
 

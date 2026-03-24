@@ -28,6 +28,34 @@ from .protocol import ArraySpec
 ACTION_THRESHOLD = 2**20
 
 
+def _maybe_scalar_int(value: Any) -> int | None:
+    arr = np.asarray(value)
+    if arr.size != 1:
+        return None
+    scalar = arr.item()
+    integer = int(scalar)
+    if not np.isclose(scalar, integer):
+        return None
+    return integer
+
+
+def _maybe_discrete_range(
+    spec: ArraySpec, spec_type: str
+) -> tuple[int, int] | None:
+    if np.prod(np.abs(spec.shape)) != 1:
+        return None
+    minimum = _maybe_scalar_int(spec.minimum)
+    maximum = _maybe_scalar_int(spec.maximum)
+    if minimum is None or maximum is None or maximum >= ACTION_THRESHOLD:
+        return None
+    if spec_type == "act":
+        if not (spec.is_discrete or np.issubdtype(spec.dtype, np.integer)):
+            return None
+    elif not np.issubdtype(spec.dtype, np.integer):
+        return None
+    return minimum, maximum - minimum + 1
+
+
 def to_nested_dict(
     flatten_dict: dict[str, Any], generator: type = dict
 ) -> dict[str, Any]:
@@ -70,16 +98,15 @@ def dm_spec_transform(
     name: str, spec: ArraySpec, spec_type: str
 ) -> dm_env.specs.Array:
     """Transform ArraySpec to dm_env compatible specs."""
-    if (
-        np.prod(np.abs(spec.shape)) == 1
-        and np.isclose(spec.minimum, 0)
-        and spec.maximum < ACTION_THRESHOLD
-    ):
-        # special treatment for discrete action space
+    discrete_range = _maybe_discrete_range(spec, spec_type)
+    if discrete_range is not None and discrete_range[0] == 0:
+        # dm_env only supports zero-based discrete arrays.
         return dm_env.specs.DiscreteArray(
             name=name,
-            dtype=spec.dtype,
-            num_values=int(spec.maximum - spec.minimum + 1),
+            dtype=spec.dtype
+            if np.issubdtype(spec.dtype, np.integer)
+            else np.int32,
+            num_values=discrete_range[1],
         )
     return dm_env.specs.BoundedArray(
         name=name,
@@ -92,19 +119,13 @@ def dm_spec_transform(
 
 def gym_spec_transform(name: str, spec: ArraySpec, spec_type: str) -> gym.Space:
     """Transform ArraySpec to gym.Env compatible spaces."""
-    if (
-        np.prod(np.abs(spec.shape)) == 1
-        and np.isclose(spec.minimum, 0)
-        and spec.maximum < ACTION_THRESHOLD
-    ):
-        # special treatment for discrete action space
-        discrete_range = int(spec.maximum - spec.minimum + 1)
+    discrete_range = _maybe_discrete_range(spec, spec_type)
+    if discrete_range is not None:
+        start, num_values = discrete_range
         try:
-            return gym.spaces.Discrete(
-                n=discrete_range, start=int(spec.minimum)
-            )
+            return gym.spaces.Discrete(n=num_values, start=start)
         except TypeError:  # old gym version doesn't have `start`
-            return gym.spaces.Discrete(n=discrete_range)
+            return gym.spaces.Discrete(n=num_values)
     return gym.spaces.Box(
         shape=[s for s in spec.shape if s != -1],
         dtype=spec.dtype,
@@ -117,16 +138,10 @@ def gymnasium_spec_transform(
     name: str, spec: ArraySpec, spec_type: str
 ) -> gymnasium.Space:
     """Transform ArraySpec to gymnasium.Env compatible spaces."""
-    if (
-        np.prod(np.abs(spec.shape)) == 1
-        and np.isclose(spec.minimum, 0)
-        and spec.maximum < ACTION_THRESHOLD
-    ):
-        # special treatment for discrete action space
-        discrete_range = int(spec.maximum - spec.minimum + 1)
-        return gymnasium.spaces.Discrete(
-            n=discrete_range, start=int(spec.minimum)
-        )
+    discrete_range = _maybe_discrete_range(spec, spec_type)
+    if discrete_range is not None:
+        start, num_values = discrete_range
+        return gymnasium.spaces.Discrete(n=num_values, start=start)
     return gymnasium.spaces.Box(
         shape=[s for s in spec.shape if s != -1],
         dtype=spec.dtype,
