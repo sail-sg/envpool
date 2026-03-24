@@ -399,11 +399,77 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
 
     maybe(
         http_archive,
+        name = "tinyxml2",
+        sha256 = "ab1a6700074ab4d468e46535545bb33aa4a74d794ab514fac64cc297fc7a2545",
+        strip_prefix = "tinyxml2-e6caeae85799003f4ca74ff26ee16a789bc2af48",
+        urls = [
+            "https://github.com/leethomason/tinyxml2/archive/e6caeae85799003f4ca74ff26ee16a789bc2af48.tar.gz",
+        ],
+        build_file = "//third_party/tinyxml2:tinyxml2.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "lodepng",
+        sha256 = "83d828c5478ffe7bad0e8ed80678ef826206becbd8cf70097b6cc4d29549389b",
+        strip_prefix = "lodepng-17d08dd26cac4d63f43af217ebd70318bfb8189c",
+        urls = [
+            "https://github.com/lvandeve/lodepng/archive/17d08dd26cac4d63f43af217ebd70318bfb8189c.tar.gz",
+        ],
+        build_file = "//third_party/lodepng:lodepng.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "tinyobjloader",
+        sha256 = "e334b2900380efdc19a0ea42e5e966a6a6a04831dd830dd42a80e28ce6d1e9be",
+        strip_prefix = "tinyobjloader-1421a10d6ed9742f5b2c1766d22faa6cfbc56248",
+        urls = [
+            "https://github.com/tinyobjloader/tinyobjloader/archive/1421a10d6ed9742f5b2c1766d22faa6cfbc56248.tar.gz",
+        ],
+        build_file = "//third_party/tinyobjloader:tinyobjloader.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "marchingcubecpp",
+        sha256 = "227c10b2cffe886454b92a0e9ef9f0c9e8e001d00ea156cc37c8fc43055c9ca6",
+        strip_prefix = "MarchingCubeCpp-f03a1b3ec29b1d7d865691ca8aea4f1eb2c2873d",
+        urls = [
+            "https://github.com/aparis69/MarchingCubeCpp/archive/f03a1b3ec29b1d7d865691ca8aea4f1eb2c2873d.tar.gz",
+        ],
+        build_file = "//third_party/marchingcubecpp:marchingcubecpp.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "ccd",
+        sha256 = "479994a86d32e2effcaad64204142000ee6b6b291fd1859ac6710aee8d00a482",
+        strip_prefix = "libccd-7931e764a19ef6b21b443376c699bbc9c6d4fba8",
+        urls = [
+            "https://github.com/danfis/libccd/archive/7931e764a19ef6b21b443376c699bbc9c6d4fba8.tar.gz",
+        ],
+        build_file = "//third_party/ccd:ccd.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "qhull",
+        sha256 = "78029ba5d4276fab14df5ef54dd8b72a3c835ef400db022373b3488999bb6c38",
+        strip_prefix = "qhull-62ccc56af071eaa478bef6ed41fd7a55d3bb2d80",
+        urls = [
+            "https://github.com/qhull/qhull/archive/62ccc56af071eaa478bef6ed41fd7a55d3bb2d80.tar.gz",
+        ],
+        build_file = "//third_party/qhull:qhull.BUILD",
+    )
+
+    maybe(
+        http_archive,
         name = "mujoco",
-        sha256 = "74e4104affeb6cd03627938c0e9b19a7af3c1149b55618490c94ff718d55bad8",
+        sha256 = "0d6bb25612da5d1c398d21cf5b039367d4deef15c064b049c3127043d613b539",
         strip_prefix = "mujoco-3.6.0",
         urls = [
-            "https://github.com/google-deepmind/mujoco/releases/download/3.6.0/mujoco-3.6.0-linux-x86_64.tar.gz",
+            "https://github.com/google-deepmind/mujoco/archive/refs/tags/3.6.0.tar.gz",
         ],
         build_file = "//third_party/mujoco:mujoco.BUILD",
     )

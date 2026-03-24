@@ -18,17 +18,52 @@ package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "mujoco_lib",
-    srcs = glob(["lib/*"]),
-    hdrs = glob(["include/mujoco/*.h"]),
+    srcs = (
+        glob(["src/cc/*.h"]) + glob([
+            "src/engine/*.c",
+            "src/engine/*.cc",
+            "src/engine/*.h",
+        ]) + glob([
+            "src/thread/*.c",
+            "src/thread/*.cc",
+            "src/thread/*.h",
+        ]) + glob([
+            "src/user/*.c",
+            "src/user/*.cc",
+            "src/user/*.h",
+        ]) + glob([
+            "src/xml/*.c",
+            "src/xml/*.cc",
+            "src/xml/*.h",
+        ])
+    ),
+    hdrs = glob([
+        "include/mujoco/*.h",
+        "include/mujoco/experimental/**/*.h",
+    ]),
+    copts = [
+        "-DCCD_STATIC_DEFINE",
+        "-D_GNU_SOURCE",
+        "-Wno-int-in-bool-context",
+        "-Wno-maybe-uninitialized",
+        "-Wno-sign-compare",
+        "-Wno-stringop-overflow",
+        "-Wno-stringop-truncation",
+    ],
+    cxxopts = ["-std=c++20"],
+    defines = ["MJ_STATIC"],
     includes = [
         "include",
         "include/mujoco",
+        "src",
     ],
-    linkopts = ["-Wl,-rpath,'$$ORIGIN'"],
-    linkstatic = 0,
-)
-
-filegroup(
-    name = "mujoco_so",
-    srcs = ["lib/libmujoco.so.3.6.0"],
+    linkstatic = 1,
+    deps = [
+        "@ccd",
+        "@lodepng",
+        "@marchingcubecpp",
+        "@qhull",
+        "@tinyobjloader",
+        "@tinyxml2",
+    ],
 )
