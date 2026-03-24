@@ -38,6 +38,7 @@ class AntEnvFns {
         "exclude_worldbody_contact_forces"_.Bind(false),
         "terminate_when_unhealthy"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
+        "xml_file"_.Bind(std::string("ant.xml")),
         "forward_reward_weight"_.Bind(1.0), "ctrl_cost_weight"_.Bind(0.5),
         "contact_cost_weight"_.Bind(5e-4), "healthy_reward"_.Bind(1.0),
         "healthy_z_min"_.Bind(0.2), "healthy_z_max"_.Bind(1.0),
@@ -89,7 +90,9 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
  public:
   AntEnv(const Spec& spec, int env_id)
       : Env<AntEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets_gym/ant.xml",
+        MujocoEnv(std::string(spec.config["base_path"_]) +
+                      "/mujoco/assets_gym/" +
+                      std::string(spec.config["xml_file"_]),
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
         id_torso_(mj_name2id(model_, mjOBJ_XBODY, "torso")),

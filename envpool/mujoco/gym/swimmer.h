@@ -34,6 +34,7 @@ class SwimmerEnvFns {
     return MakeDict("reward_threshold"_.Bind(360.0), "frame_skip"_.Bind(4),
                     "post_constraint"_.Bind(true),
                     "exclude_current_positions_from_observation"_.Bind(true),
+                    "xml_file"_.Bind(std::string("swimmer.xml")),
                     "forward_reward_weight"_.Bind(1.0),
                     "ctrl_cost_weight"_.Bind(1e-4),
                     "reset_noise_scale"_.Bind(0.1));
@@ -72,7 +73,9 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
  public:
   SwimmerEnv(const Spec& spec, int env_id)
       : Env<SwimmerEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets_gym/swimmer.xml",
+        MujocoEnv(std::string(spec.config["base_path"_]) +
+                      "/mujoco/assets_gym/" +
+                      std::string(spec.config["xml_file"_]),
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),

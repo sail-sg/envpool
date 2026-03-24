@@ -17,7 +17,7 @@ import numpy as np
 from absl.testing import absltest
 
 import envpool.mujoco.gym.registration  # noqa: F401
-from envpool.registration import make_gym
+from envpool.registration import make, make_gym, make_spec
 
 
 class _MujocoGymDeterministicTest(absltest.TestCase):
@@ -40,6 +40,15 @@ class _MujocoGymDeterministicTest(absltest.TestCase):
             self.assertTrue(np.all(obs_min <= obs2), obs2)
             self.assertTrue(np.all(obs0 <= obs_max), obs0)
             self.assertTrue(np.all(obs2 <= obs_max), obs2)
+
+    def test_half_cheetah_supports_xml_file(self) -> None:
+        xml_file = "half_cheetah_envpool.xml"
+        spec = make_spec("HalfCheetah-v5", xml_file=xml_file)
+        self.assertEqual(spec.config.xml_file, xml_file)
+
+        env = make("HalfCheetah-v5", env_type="gym", xml_file=xml_file)
+        env.reset()
+        env.close()
 
     def test_ant(self) -> None:
         self.check("Ant-v5")

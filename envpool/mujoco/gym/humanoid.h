@@ -39,6 +39,7 @@ class HumanoidEnvFns {
         "use_contact_force"_.Bind(false), "forward_reward_weight"_.Bind(1.25),
         "terminate_when_unhealthy"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
+        "xml_file"_.Bind(std::string("humanoid.xml")),
         "ctrl_cost_weight"_.Bind(0.1), "healthy_reward"_.Bind(5.0),
         "healthy_z_min"_.Bind(1.0), "healthy_z_max"_.Bind(2.0),
         "contact_cost_weight"_.Bind(5e-7), "contact_cost_max"_.Bind(10.0),
@@ -91,7 +92,9 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
  public:
   HumanoidEnv(const Spec& spec, int env_id)
       : Env<HumanoidEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets_gym/humanoid.xml",
+        MujocoEnv(std::string(spec.config["base_path"_]) +
+                      "/mujoco/assets_gym/" +
+                      std::string(spec.config["xml_file"_]),
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),

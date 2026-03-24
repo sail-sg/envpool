@@ -34,6 +34,7 @@ class HalfCheetahEnvFns {
     return MakeDict("reward_threshold"_.Bind(4800.0), "frame_skip"_.Bind(5),
                     "post_constraint"_.Bind(true),
                     "exclude_current_positions_from_observation"_.Bind(true),
+                    "xml_file"_.Bind(std::string("half_cheetah.xml")),
                     "ctrl_cost_weight"_.Bind(0.1),
                     "forward_reward_weight"_.Bind(1.0),
                     "reset_noise_scale"_.Bind(0.1));
@@ -70,10 +71,11 @@ class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
  public:
   HalfCheetahEnv(const Spec& spec, int env_id)
       : Env<HalfCheetahEnvSpec>(spec, env_id),
-        MujocoEnv(
-            spec.config["base_path"_] + "/mujoco/assets_gym/half_cheetah.xml",
-            spec.config["frame_skip"_], spec.config["post_constraint"_],
-            spec.config["max_episode_steps"_]),
+        MujocoEnv(std::string(spec.config["base_path"_]) +
+                      "/mujoco/assets_gym/" +
+                      std::string(spec.config["xml_file"_]),
+                  spec.config["frame_skip"_], spec.config["post_constraint"_],
+                  spec.config["max_episode_steps"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),

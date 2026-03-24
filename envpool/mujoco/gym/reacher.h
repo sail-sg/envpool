@@ -35,8 +35,10 @@ class ReacherEnvFns {
         "reward_threshold"_.Bind(-3.75), "frame_skip"_.Bind(2),
         "post_constraint"_.Bind(true), "ctrl_cost_weight"_.Bind(1.0),
         "reward_after_step"_.Bind(false), "obs_include_z_distance"_.Bind(true),
-        "dist_cost_weight"_.Bind(1.0), "reset_qpos_scale"_.Bind(0.1),
-        "reset_qvel_scale"_.Bind(0.005), "reset_goal_scale"_.Bind(0.2));
+        "dist_cost_weight"_.Bind(1.0),
+        "xml_file"_.Bind(std::string("reacher.xml")),
+        "reset_qpos_scale"_.Bind(0.1), "reset_qvel_scale"_.Bind(0.005),
+        "reset_goal_scale"_.Bind(0.2));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -69,7 +71,9 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
  public:
   ReacherEnv(const Spec& spec, int env_id)
       : Env<ReacherEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets_gym/reacher.xml",
+        MujocoEnv(std::string(spec.config["base_path"_]) +
+                      "/mujoco/assets_gym/" +
+                      std::string(spec.config["xml_file"_]),
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
         id_fingertip_(mj_name2id(model_, mjOBJ_XBODY, "fingertip")),

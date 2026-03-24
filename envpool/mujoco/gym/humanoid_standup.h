@@ -36,6 +36,7 @@ class HumanoidStandupEnvFns {
                     "exclude_current_positions_from_observation"_.Bind(true),
                     "exclude_worldbody_observations"_.Bind(false),
                     "exclude_root_actuator_forces"_.Bind(false),
+                    "xml_file"_.Bind(std::string("humanoidstandup.xml")),
                     "ctrl_cost_weight"_.Bind(0.1),
                     "contact_cost_weight"_.Bind(5e-7),
                     "contact_cost_max"_.Bind(10.0), "healthy_reward"_.Bind(1.0),
@@ -83,8 +84,9 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
  public:
   HumanoidStandupEnv(const Spec& spec, int env_id)
       : Env<HumanoidStandupEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] +
-                      "/mujoco/assets_gym/humanoidstandup.xml",
+        MujocoEnv(std::string(spec.config["base_path"_]) +
+                      "/mujoco/assets_gym/" +
+                      std::string(spec.config["xml_file"_]),
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
