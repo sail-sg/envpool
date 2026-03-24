@@ -76,6 +76,7 @@ stable version through `envpool.readthedocs.io/en/stable/
    content/slides
    content/build
    content/python_interface
+   content/cpp_interface
    content/xla_interface
    content/benchmark
    content/new_env
