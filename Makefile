@@ -19,6 +19,7 @@ CLANG_TIDY_MAJOR = 18
 CLANG_TIDY_BIN = clang-tidy-$(CLANG_TIDY_MAJOR)
 CLANG_TIDY_WRAPPER_DIR = $(HOME)/.cache/$(PROJECT_NAME)/bin
 PATH           := $(CLANG_TIDY_WRAPPER_DIR):$(HOME)/go/bin:$(PATH)
+CLANG_TIDY_TARGET_RESOLVER = python3 scripts/clang_tidy_targets.py
 
 # installation
 
@@ -124,7 +125,13 @@ bazel-pip-requirement-release:
 	cd third_party/pip_requirements && (cmp requirements.txt requirements-release-lock.txt || ln -sf requirements-release-lock.txt requirements.txt)
 
 clang-tidy: clang-tidy-install bazel-pip-requirement-dev
-	$(BAZEL) build $(BAZELOPT) //... --config=clang-tidy --config=test
+	targets="$${CLANG_TIDY_TARGETS:-$$($(CLANG_TIDY_TARGET_RESOLVER) | tr '\n' ' ')}"; \
+	if [ -z "$$targets" ]; then \
+		echo "No clang-tidy-relevant C++ changes detected; skipping."; \
+		exit 0; \
+	fi; \
+	echo "Running clang-tidy on: $$targets"; \
+	$(BAZEL) build $(BAZELOPT) $$targets --config=clang-tidy --config=test
 
 bazel-debug: bazel-install bazel-pip-requirement-dev
 	$(BAZEL) run $(BAZELOPT) //:setup --config=debug -- bdist_wheel
