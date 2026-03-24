@@ -34,6 +34,7 @@ class InvertedPendulumEnvFns {
     return MakeDict("reward_threshold"_.Bind(950.0), "frame_skip"_.Bind(2),
                     "post_constraint"_.Bind(true), "healthy_reward"_.Bind(1.0),
                     "reward_if_not_terminated"_.Bind(false),
+                    "xml_file"_.Bind(std::string("inverted_pendulum.xml")),
                     "healthy_z_min"_.Bind(-0.2), "healthy_z_max"_.Bind(0.2),
                     "reset_noise_scale"_.Bind(0.01));
   }
@@ -66,8 +67,9 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
  public:
   InvertedPendulumEnv(const Spec& spec, int env_id)
       : Env<InvertedPendulumEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] +
-                      "/mujoco/assets_gym/inverted_pendulum.xml",
+        MujocoEnv(std::string(spec.config["base_path"_]) +
+                      "/mujoco/assets_gym/" +
+                      std::string(spec.config["xml_file"_]),
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
         reward_if_not_terminated_(spec.config["reward_if_not_terminated"_]),

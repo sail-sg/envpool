@@ -36,6 +36,7 @@ class HopperEnvFns {
         "post_constraint"_.Bind(true), "terminate_when_unhealthy"_.Bind(true),
         "legacy_healthy_reward"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
+        "xml_file"_.Bind(std::string("hopper.xml")),
         "ctrl_cost_weight"_.Bind(1e-3), "forward_reward_weight"_.Bind(1.0),
         "healthy_reward"_.Bind(1.0), "velocity_min"_.Bind(-10.0),
         "velocity_max"_.Bind(10.0), "healthy_state_min"_.Bind(-100.0),
@@ -77,7 +78,9 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
  public:
   HopperEnv(const Spec& spec, int env_id)
       : Env<HopperEnvSpec>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_] + "/mujoco/assets_gym/hopper.xml",
+        MujocoEnv(std::string(spec.config["base_path"_]) +
+                      "/mujoco/assets_gym/" +
+                      std::string(spec.config["xml_file"_]),
                   spec.config["frame_skip"_], spec.config["post_constraint"_],
                   spec.config["max_episode_steps"_]),
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
