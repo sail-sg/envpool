@@ -59,6 +59,7 @@ template <typename D>
 class Spec : public ShapeSpec {
  public:
   using dtype = D;  // NOLINT
+  bool is_discrete{false};
   std::tuple<dtype, dtype> bounds = {std::numeric_limits<dtype>::min(),
                                      std::numeric_limits<dtype>::max()};
   std::tuple<std::vector<dtype>, std::vector<dtype>> elementwise_bounds;
@@ -108,6 +109,12 @@ class Spec : public ShapeSpec {
     return Spec(std::move(new_shape));
   }
 };
+
+template <typename D>
+Spec<D> MarkDiscrete(Spec<D> spec) {
+  spec.is_discrete = true;
+  return spec;
+}
 
 template <typename dtype>
 class TArray;

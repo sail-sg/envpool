@@ -96,10 +96,12 @@ class ArraySpec:
         shape: list[int],
         bounds: tuple[Any, Any],
         element_wise_bounds: tuple[Any, Any],
+        is_discrete: bool = False,
     ):
         """Constructor of ArraySpec."""
         self.dtype = dtype
         self.shape = shape
+        self.is_discrete = is_discrete
         if element_wise_bounds[0]:
             self.minimum = np.array(element_wise_bounds[0])
         else:

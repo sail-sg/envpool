@@ -123,8 +123,8 @@ class VizdoomEnvFns {
     }
     auto action_set =
         BuildActionSet(button_list, conf["force_speed"_], delta_config);
-    return MakeDict(
-        "action"_.Bind(Spec<double>({-1}, {0.0, action_set.size() - 1.0})));
+    return MakeDict("action"_.Bind(
+        MarkDiscrete(Spec<double>({-1}, {0.0, action_set.size() - 1.0}))));
   }
 };
 

@@ -20,7 +20,7 @@ import numpy as np
 from absl.testing import absltest
 
 import envpool.vizdoom.registration  # noqa: F401
-from envpool.registration import make_dm, make_gym
+from envpool.registration import make_dm, make_gym, make_spec
 
 
 class _VizdoomEnvPoolBasicTest(absltest.TestCase):
@@ -154,6 +154,12 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
             e.step(np.array([0]), np.array([0])).observation.obs.shape[1]
             == 1 * 4
         )
+
+    def test_action_spec(self) -> None:
+        spec = make_spec("D1Basic-v1", use_combined_action=True)
+        action_spec = spec.action_spec()
+        assert action_spec.num_values == 6
+        assert np.issubdtype(action_spec.dtype, np.integer)
 
     def test_explicit_reset_with_episodic_life_gymnasium(self) -> None:
         env = make_gym(
