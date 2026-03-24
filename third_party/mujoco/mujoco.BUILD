@@ -19,11 +19,23 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
     name = "mujoco_lib",
     srcs = (
-        glob(["src/cc/*.h"]) +
-        glob(["src/engine/*.c", "src/engine/*.cc", "src/engine/*.h"]) +
-        glob(["src/thread/*.c", "src/thread/*.cc", "src/thread/*.h"]) +
-        glob(["src/user/*.c", "src/user/*.cc", "src/user/*.h"]) +
-        glob(["src/xml/*.c", "src/xml/*.cc", "src/xml/*.h"])
+        glob(["src/cc/*.h"]) + glob([
+            "src/engine/*.c",
+            "src/engine/*.cc",
+            "src/engine/*.h",
+        ]) + glob([
+            "src/thread/*.c",
+            "src/thread/*.cc",
+            "src/thread/*.h",
+        ]) + glob([
+            "src/user/*.c",
+            "src/user/*.cc",
+            "src/user/*.h",
+        ]) + glob([
+            "src/xml/*.c",
+            "src/xml/*.cc",
+            "src/xml/*.h",
+        ])
     ),
     hdrs = glob([
         "include/mujoco/*.h",
@@ -47,11 +59,11 @@ cc_library(
     ],
     linkstatic = 1,
     deps = [
-        "@ccd//:ccd",
-        "@lodepng//:lodepng",
-        "@marchingcubecpp//:marchingcubecpp",
-        "@qhull//:qhull",
-        "@tinyobjloader//:tinyobjloader",
-        "@tinyxml2//:tinyxml2",
+        "@ccd",
+        "@lodepng",
+        "@marchingcubecpp",
+        "@qhull",
+        "@tinyobjloader",
+        "@tinyxml2",
     ],
 )

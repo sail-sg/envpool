@@ -1,8 +1,13 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "qhull",
-    srcs = glob(["src/libqhull_r/*.c", "src/libqhull_r/*.h"]),
+    srcs = glob([
+        "src/libqhull_r/*.c",
+        "src/libqhull_r/*.h",
+    ]),
     hdrs = glob(["src/libqhull_r/*.h"]),
     includes = ["src/libqhull_r"],
 )

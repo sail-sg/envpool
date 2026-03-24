@@ -1,4 +1,5 @@
 load("@envpool//third_party:common.bzl", "template_rule")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -14,7 +15,10 @@ template_rule(
 
 cc_library(
     name = "ccd",
-    srcs = glob(["src/*.c", "src/*.h"]) + [":ccd_config"],
+    srcs = glob([
+        "src/*.c",
+        "src/*.h",
+    ]) + [":ccd_config"],
     hdrs = glob(["src/ccd/*.h"]),
     includes = ["src"],
 )
