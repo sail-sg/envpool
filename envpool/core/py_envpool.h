@@ -201,8 +201,8 @@ void ToArray(const std::vector<py::array>& py_arrs,
 }
 
 /**
- * Templated subclass of EnvPool,
- * to be overrided by the real EnvPool.
+ * Template subclass of EnvPool,
+ * to be overridden by the real EnvPool.
  */
 template <typename EnvPool>
 class PyEnvPool : public EnvPool {
@@ -217,16 +217,16 @@ class PyEnvPool : public EnvPool {
       : EnvPool(py_spec), py_spec(py_spec) {}
 
   /**
-   * get xla functions
+   * Get XLA functions.
    */
   auto Xla() {
     if (HasContainerType(EnvPool::spec.state_spec)) {
       throw std::runtime_error(
-          "State of this env has dynamic shaped container, xla is disabled");
+          "State of this env has dynamic shaped container, XLA is disabled");
     }
     if (HasDynamicDim(EnvPool::spec.state_spec)) {
       throw std::runtime_error(
-          "State of this env has dynamic (-1) shape, xla is disabled");
+          "State of this env has dynamic (-1) shape, XLA is disabled");
     }
     if (EnvPool::spec.config["max_num_players"_] != 1) {
       throw std::runtime_error(

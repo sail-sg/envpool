@@ -4,6 +4,8 @@ Add New Environment into EnvPool
 To add a new environment in C++ that EnvPool will parallelly run, we provide a
 developer interface in `envpool/core/env.h
 <https://github.com/sail-sg/envpool/blob/main/envpool/core/env.h>`_.
+The generated reference for the core headers used below is available in
+:doc:`cpp_interface`.
 
 - For a quick and annotated example, please refer to
   `envpool/dummy/ <https://github.com/sail-sg/envpool/tree/main/envpool/dummy>`_.
