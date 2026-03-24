@@ -3,7 +3,7 @@ C++ API Reference
 
 This reference is generated from the curated ``envpool/core`` headers used by
 the :doc:`new_env` integration guide. It is meant to make the C++ extension
-surface available on Read the Docs alongside the narrative walkthrough.
+surface available on Read the Docs alongside the narrative guide.
 
 
 Core Data Structures

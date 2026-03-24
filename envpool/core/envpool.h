@@ -23,7 +23,7 @@
 #include "envpool/core/env_spec.h"
 
 /**
- * Templated subclass of EnvPool, to be overrided by the real EnvPool.
+ * Template subclass of EnvPool, to be overridden by the real EnvPool.
  */
 template <typename EnvSpec>
 class EnvPool {

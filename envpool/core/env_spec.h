@@ -43,7 +43,7 @@ auto common_state_spec =
              "step_type"_.Bind(Spec<int>({})), "trunc"_.Bind(Spec<bool>({})));
 
 /**
- * EnvSpec funciton, it constructs the env spec when a Config is passed.
+ * EnvSpec function, it constructs the env spec when a Config is passed.
  */
 template <typename EnvFns>
 class EnvSpec {
