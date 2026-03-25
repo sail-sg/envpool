@@ -9,7 +9,7 @@ on:
   pull_request:
 
 jobs:
-  macos-wheel-smoke:
+  macos-wheel:
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: macos-14
     timeout-minutes: 60
@@ -46,7 +46,7 @@ jobs:
         run: |
           rm -rf dist
           make RELEASE_PYTHON=${{ matrix.python-version }} bazel-release
-      - name: Smoke install wheel
+      - name: Verify wheel install
         run: |
           python3 -m pip install dist/*.whl --force-reinstall
           tmpdir="$(mktemp -d)"
