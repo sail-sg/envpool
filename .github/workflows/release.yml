@@ -42,24 +42,14 @@ jobs:
         run: |
           go install github.com/bazelbuild/bazelisk@latest
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
-      - name: Build macOS wheel
+      - name: Build
         run: |
           rm -rf dist
           make RELEASE_PYTHON=${{ matrix.python-version }} bazel-release
-      - name: Verify wheel install
+          pip3 install dist/*.whl --force-reinstall
+      - name: Test
         run: |
-          python3 -m pip install dist/*.whl --force-reinstall
-          tmpdir="$(mktemp -d)"
-          cd "$tmpdir"
-          python3 - <<'PY'
-          import envpool
-
-          env = envpool.make("CartPole-v1", env_type="gym", num_envs=1)
-          obs, info = env.reset()
-          print(envpool.__version__)
-          print(type(obs).__name__, getattr(obs, "shape", None))
-          print(sorted(info.keys()))
-          PY
+          make release-test
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
