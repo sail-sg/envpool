@@ -422,8 +422,8 @@ cc_library(
     ],
     includes = [
         ".",
-        "src",
         "simd/arm",
+        "src",
     ],
     alwayslink = 1,
 )

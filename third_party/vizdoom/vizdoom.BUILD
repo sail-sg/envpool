@@ -440,14 +440,14 @@ generated_dir=$$(dirname "$(execpath :viz_version)")
 cc_library(
     name = "vizdoom_osx",
     srcs = [
-        ":iwadpicker_cocoa_o",
         ":i_system_mm_o",
+        ":iwadpicker_cocoa_o",
     ],
-    alwayslink = 1,
     target_compatible_with = select({
         ":darwin": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
+    alwayslink = 1,
 )
 
 cc_binary(
