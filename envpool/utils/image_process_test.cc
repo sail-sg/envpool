@@ -15,6 +15,7 @@
 #include "envpool/utils/image_process.h"
 
 #include <gtest/gtest.h>
+
 #include <vector>
 
 #include "absl/log/check.h"

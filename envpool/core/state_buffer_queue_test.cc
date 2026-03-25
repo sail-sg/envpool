@@ -15,13 +15,13 @@
 #include "envpool/core/state_buffer_queue.h"
 
 #include <gtest/gtest.h>
+
 #include <random>
 #include <vector>
 
+#include "ThreadPool.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
-
-#include "ThreadPool.h"
 
 TEST(StateBufferQueueTest, Basic) {
   std::vector<ShapeSpec> specs{ShapeSpec(1, {10, 2, 4}),

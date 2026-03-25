@@ -13,12 +13,12 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
+
 #include <random>
 #include <vector>
 
 #include "absl/log/check.h"
 #include "absl/log/log.h"
-
 #include "envpool/mujoco/gym/half_cheetah.h"
 
 using MjcAction = typename mujoco_gym::HalfCheetahEnv::Action;

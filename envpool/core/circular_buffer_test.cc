@@ -15,6 +15,7 @@
 #include "circular_buffer.h"
 
 #include <gtest/gtest.h>
+
 #include <random>
 #include <thread>
 #include <vector>

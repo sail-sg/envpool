@@ -15,6 +15,7 @@
 #include "envpool/procgen/procgen_env.h"
 
 #include <gtest/gtest.h>
+
 #include <random>
 #include <vector>
 

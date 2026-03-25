@@ -15,6 +15,7 @@
 #include "envpool/dummy/dummy_envpool.h"
 
 #include <gtest/gtest.h>
+
 #include <random>
 #include <vector>
 
