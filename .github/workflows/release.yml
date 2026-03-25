@@ -6,14 +6,11 @@ on:
       - main
     tags:
       - v*
-  workflow_dispatch:
 
 jobs:
   release:
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux_2_28_x86_64
-    env:
-      BAZELOPT: --repository_cache=/root/.cache/envpool-bazel-repo --disk_cache=/root/.cache/envpool-bazel-disk
     strategy:
       fail-fast: false
       matrix:
