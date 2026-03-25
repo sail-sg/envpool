@@ -14,32 +14,12 @@ jobs:
     container: quay.io/pypa/manylinux_2_28_x86_64
     env:
       BAZELOPT: --repository_cache=/root/.cache/envpool-bazel-repo --disk_cache=/root/.cache/envpool-bazel-disk
-      CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
-      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v3
-      - name: Restore Bazel common caches
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            /root/.cache/bazelisk
-            /root/.cache/envpool-bazel-repo
-          key: release-common-v2-manylinux_2_28_x86_64-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}
-          restore-keys: |
-            release-common-v2-manylinux_2_28_x86_64-${{ hashFiles('.bazelversion') }}-${{ env.DEFAULT_BRANCH }}-
-            release-common-v2-manylinux_2_28_x86_64-${{ hashFiles('.bazelversion') }}-
-      - name: Restore Bazel disk cache
-        uses: actions/cache/restore@v4
-        with:
-          path: /root/.cache/envpool-bazel-disk
-          key: release-disk-v2-manylinux_2_28_x86_64-py${{ matrix.python-version }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}
-          restore-keys: |
-            release-disk-v2-manylinux_2_28_x86_64-py${{ matrix.python-version }}-${{ hashFiles('.bazelversion') }}-${{ env.DEFAULT_BRANCH }}-
-            release-disk-v2-manylinux_2_28_x86_64-py${{ matrix.python-version }}-${{ hashFiles('.bazelversion') }}-
       - name: Install build dependencies
         run: |
           dnf install -y git curl wget zsh gcc gcc-c++ make tmux golang java-17-openjdk-devel qt5-qtbase-devel qt5-qtdeclarative-devel
@@ -72,20 +52,6 @@ jobs:
           name: wheel-${{ matrix.python-version }}
           path: wheelhouse/
           if-no-files-found: error
-      - name: Save Bazel common caches
-        if: ${{ always() && !cancelled() }}
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            /root/.cache/bazelisk
-            /root/.cache/envpool-bazel-repo
-          key: release-common-v2-manylinux_2_28_x86_64-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-py${{ matrix.python-version }}-${{ github.run_id }}
-      - name: Save Bazel disk cache
-        if: ${{ always() && !cancelled() }}
-        uses: actions/cache/save@v4
-        with:
-          path: /root/.cache/envpool-bazel-disk
-          key: release-disk-v2-manylinux_2_28_x86_64-py${{ matrix.python-version }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
 
   publish:
     runs-on: ubuntu-latest
