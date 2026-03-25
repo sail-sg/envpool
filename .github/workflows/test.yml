@@ -39,9 +39,10 @@ jobs:
             ~/.cache/bazelisk
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
-          key: ${{ runner.os }}-bazel-test-${{ hashFiles('.bazelversion', '.bazelrc', 'WORKSPACE', 'BUILD', 'envpool/workspace0.bzl', 'envpool/workspace1.bzl', 'envpool/pip.bzl', 'third_party/pip_requirements/requirements-dev-lock.txt') }}
+          key: ${{ runner.os }}-bazel-test-v2-${{ hashFiles('.bazelversion') }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-bazel-test-
+            ${{ runner.os }}-bazel-test-v2-${{ hashFiles('.bazelversion') }}-
+            ${{ runner.os }}-bazel-test-v2-
       - name: Install bazelisk
         run: |
           go install github.com/bazelbuild/bazelisk@latest
