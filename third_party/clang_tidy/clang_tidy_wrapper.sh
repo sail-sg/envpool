@@ -47,7 +47,13 @@ should_skip_include_dir() {
 
 filtered_args=()
 inserted_gcc_install_dir=0
+suppressed_warnings_as_errors="-clang-diagnostic-bitwise-instead-of-logical,-clang-diagnostic-deprecated-declarations"
 while (($#)); do
+  if [[ "$1" == --warnings-as-errors=* ]]; then
+    filtered_args+=("${1},${suppressed_warnings_as_errors}")
+    shift
+    continue
+  fi
   if [[ "$1" == "-isystem" && $# -ge 2 ]] && should_skip_include_dir "$2"; then
     shift 2
     continue

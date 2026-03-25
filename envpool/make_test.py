@@ -21,6 +21,7 @@ import gymnasium
 from absl.testing import absltest
 
 import envpool
+import envpool.minigrid.registration  # noqa: F401
 
 
 class _MakeTest(absltest.TestCase):
@@ -120,8 +121,13 @@ class _MakeTest(absltest.TestCase):
         ])
 
     def test_make_minigrid(self) -> None:
-        self.assertIn("MiniGrid-Empty-5x5-v0", envpool.list_all_envs())
-        self.check_step(["MiniGrid-Empty-5x5-v0"])
+        task_ids = sorted(
+            task_id
+            for task_id in envpool.list_all_envs()
+            if task_id.startswith("MiniGrid-")
+        )
+        self.assertLen(task_ids, 75)
+        self.check_step(task_ids)
 
     def test_make_mujoco_gym(self) -> None:
         self.check_step([
