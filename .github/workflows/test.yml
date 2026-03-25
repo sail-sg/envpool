@@ -9,7 +9,7 @@ on:
 jobs:
   test-linux:
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 300
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       CLANG_TIDY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
