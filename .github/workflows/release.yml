@@ -6,17 +6,31 @@ on:
       - main
     tags:
       - v*
+  workflow_dispatch:
 
 jobs:
   release:
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux_2_28_x86_64
+    env:
+      BAZELOPT: --repository_cache=/root/.cache/envpool-bazel-repo --disk_cache=/root/.cache/envpool-bazel-disk
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v3
+      - name: Restore Bazel caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            /root/.cache/bazelisk
+            /root/.cache/envpool-bazel-repo
+            /root/.cache/envpool-bazel-disk
+          key: ${{ runner.os }}-release-bazel-v1-${{ hashFiles('.bazelversion') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-release-bazel-v1-${{ hashFiles('.bazelversion') }}-
+            ${{ runner.os }}-release-bazel-v1-
       - name: Install build dependencies
         run: |
           dnf install -y git curl wget zsh gcc gcc-c++ make tmux golang java-17-openjdk-devel qt5-qtbase-devel qt5-qtdeclarative-devel
