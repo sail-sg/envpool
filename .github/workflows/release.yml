@@ -67,7 +67,7 @@ jobs:
           path: dist/*.whl
           if-no-files-found: error
 
-  release:
+  release-linux:
     if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux_2_28_x86_64
@@ -112,7 +112,7 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
-    needs: [release, release-macos]
+    needs: [release-linux, release-macos]
     steps:
       - uses: actions/download-artifact@v8
         with:
