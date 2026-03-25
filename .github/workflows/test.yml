@@ -4,16 +4,51 @@ on: [push, pull_request]
 
 jobs:
   test:
-    runs-on: [self-hosted, Linux, X64, Test]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      CLANG_TIDY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+      CLANG_TIDY_HEAD_SHA: ${{ github.sha }}
     steps:
       - name: Cancel previous run
         uses: styfle/cancel-workflow-action@0.11.0
         with:
           access_token: ${{ github.token }}
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-tidy-18 swig qtbase5-dev qtdeclarative5-dev
+      - name: Restore Bazel caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/bazelisk
+            ~/.cache/envpool-bazel-repo
+            ~/.cache/envpool-bazel-disk
+          key: ${{ runner.os }}-bazel-test-${{ hashFiles('.bazelversion', '.bazelrc', 'WORKSPACE', 'BUILD', 'envpool/workspace0.bzl', 'envpool/workspace1.bzl', 'envpool/pip.bzl', 'third_party/pip_requirements/requirements-dev-lock.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-bazel-test-
+      - name: Install bazelisk
+        run: |
+          go install github.com/bazelbuild/bazelisk@latest
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Test
         run: |
-          make bazel-test
+          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" bazel-test
       - name: Run clang-tidy
         run: |
-          make clang-tidy
+          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" clang-tidy
