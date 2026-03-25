@@ -117,6 +117,7 @@ cc_library(
         ":k8": [":simd_x86_64"],
         ":armeabi-v7a": [":simd_armv7a"],
         ":arm64-v8a": [":simd_armv8a"],
+        ":darwin_arm64": [":simd_armv8a"],
         ":linux_ppc64le": [":simd_altivec"],
         ":windows": [":simd_win_x86_64"],
         "//conditions:default": [":simd_none"],
@@ -351,11 +352,15 @@ cc_library(
         "jsimddct.h",
     ]] + [
         "jconfig.h",
+        "jconfigint.h",
         "simd/arm/aarch64/jsimd.c",
         "simd/arm/aarch64/jsimd_neon.S",
         "simd/jsimd.h",
     ],
-    hdrs = glob(["src/*.h"]) + ["jconfig.h"],
+    hdrs = glob(["src/*.h"]) + [
+        "jconfig.h",
+        "jconfigint.h",
+    ],
     copts = libjpegturbo_copts,
     includes = [
         ".",
@@ -678,6 +683,7 @@ genrule(
         ":k8": "cp $(location jconfig_nowin_simd.h) $@",
         ":armeabi-v7a": "cp $(location jconfig_nowin_simd.h) $@",
         ":arm64-v8a": "cp $(location jconfig_nowin_simd.h) $@",
+        ":darwin_arm64": "cp $(location jconfig_nowin_simd.h) $@",
         ":linux_ppc64le": "cp $(location jconfig_nowin_simd.h) $@",
         "//conditions:default": "cp $(location jconfig_nowin_nosimd.h) $@",
     }),
@@ -696,6 +702,7 @@ genrule(
         ":k8": "cp $(location jconfigint_nowin_simd.h) $@",
         ":armeabi-v7a": "cp $(location jconfigint_nowin_simd.h) $@",
         ":arm64-v8a": "cp $(location jconfigint_nowin_simd.h) $@",
+        ":darwin_arm64": "cp $(location jconfigint_nowin_simd.h) $@",
         ":linux_ppc64le": "cp $(location jconfigint_nowin_simd.h) $@",
         "//conditions:default": "cp $(location jconfigint_nowin_nosimd.h) $@",
     }),
@@ -789,6 +796,14 @@ config_setting(
 config_setting(
     name = "arm64-v8a",
     values = {"cpu": "arm64-v8a"},
+)
+
+config_setting(
+    name = "darwin_arm64",
+    constraint_values = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:macos",
+    ],
 )
 
 config_setting(
