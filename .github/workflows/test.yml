@@ -1,6 +1,6 @@
 name: Bazel Build and Test
 
-on: [push, pull_request]
+on: push
 
 jobs:
   test:
