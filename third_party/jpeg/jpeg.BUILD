@@ -414,7 +414,13 @@ cc_library(
     hdrs = glob(["src/*.h"]) + [
         "jconfig.h",
         "jconfigint.h",
+        "simd/arm/aarch32/jccolext-neon.c",
+        "simd/arm/aarch64/jccolext-neon.c",
         "simd/arm/align.h",
+        "simd/arm/jcgryext-neon.c",
+        "simd/arm/jchuff.h",
+        "simd/arm/jdcolext-neon.c",
+        "simd/arm/jdmrgext-neon.c",
         ":simd_arm_neon_compat",
     ],
     copts = libjpegturbo_copts + [
