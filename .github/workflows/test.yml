@@ -30,6 +30,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Restore pip cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-test-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('third_party/pip_requirements/requirements-dev-lock.txt') }}
+          restore-keys: |
+            pip-test-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('third_party/pip_requirements/requirements-dev-lock.txt') }}-
+            pip-test-v1-${{ runner.os }}-${{ runner.arch }}-
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
@@ -65,3 +73,9 @@ jobs:
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+      - name: Save pip cache
+        if: ${{ always() && !cancelled() }}
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-test-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('third_party/pip_requirements/requirements-dev-lock.txt') }}-${{ github.run_id }}
