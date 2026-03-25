@@ -12,10 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "envpool/core/py_envpool.h"
-#include "envpool/minigrid/empty.h"
+#include "envpool/minigrid/minigrid.h"
 
-using EmptyEnvSpec = PyEnvSpec<minigrid::EmptyEnvSpec>;
-using EmptyEnvPool = PyEnvPool<minigrid::EmptyEnvPool>;
+#include <pybind11/pybind11.h>
 
-PYBIND11_MODULE(minigrid_envpool, m) { REGISTER(m, EmptyEnvSpec, EmptyEnvPool) }
+namespace py = pybind11;
+
+namespace minigrid {
+
+void BindMiniGrid(py::module_& m);
+
+}  // namespace minigrid
+
+PYBIND11_MODULE(minigrid_envpool, m) { minigrid::BindMiniGrid(m); }

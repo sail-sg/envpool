@@ -307,7 +307,7 @@ std::vector<Array> MakeArray(const std::tuple<Spec...>& specs) {
  * Dynamic version of MakeArray.
  * Takes a vector of `ShapeSpec`.
  */
-std::vector<Array> MakeArray(const std::vector<ShapeSpec>& specs) {
+inline std::vector<Array> MakeArray(const std::vector<ShapeSpec>& specs) {
   return {specs.begin(), specs.end()};
 }
 

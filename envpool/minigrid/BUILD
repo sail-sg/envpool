@@ -22,17 +22,16 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
     name = "minigrid_env",
     srcs = [
-        "impl/minigrid_empty_env.cc",
         "impl/minigrid_env.cc",
     ],
     hdrs = [
-        "empty.h",
-        "impl/minigrid_empty_env.h",
+        "minigrid.h",
         "impl/minigrid_env.h",
         "impl/utils.h",
     ],
     deps = [
         "//envpool/core:async_envpool",
+        "//envpool/core:py_envpool",
     ],
 )
 
@@ -49,7 +48,10 @@ py_library(
     name = "minigrid",
     srcs = ["__init__.py"],
     data = [":minigrid_envpool.so"],
-    deps = ["//envpool/python:api"],
+    deps = [
+        "//envpool/python:api",
+        requirement("numpy"),
+    ],
 )
 
 py_library(

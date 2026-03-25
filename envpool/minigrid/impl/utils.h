@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Garena Online Private Limited
+ * Copyright 2026 Garena Online Private Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,23 +19,22 @@
 
 #include <glog/logging.h>
 
+#include <array>
 #include <cstdint>
-#include <unordered_map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace minigrid {
 
 enum Act : std::uint8_t {
-  // Turn left, turn right, move forward
   kLeft = 0,
   kRight = 1,
   kForward = 2,
-  // Pick up an object
   kPickup = 3,
-  // Drop an object
   kDrop = 4,
-  // Toggle/activate an object
   kToggle = 5,
-  // Done completing task
   kDone = 6
 };
 
@@ -63,96 +62,225 @@ enum Type : std::uint8_t {
   kAgent = 10
 };
 
-// constants
-// clang-format off
-static const std::unordered_map<Type, bool> kCanSeeBehind{
-{kEmpty, true}, {kWall, false}, {kGoal, true},
-{kFloor, true}, {kLava, true},  {kKey, true},
-{kBall, true},  {kDoor, true},  {kBox, true}};
-static const std::unordered_map<Type, bool> kCanOverlap{
-{kEmpty, true}, {kWall, false}, {kGoal, true},
-{kFloor, true}, {kLava, true},  {kKey, false},
-{kBall, false}, {kDoor, true},  {kBox, false}};
-static const std::unordered_map<Type, bool> kCanPickup{
-{kEmpty, false}, {kWall, false}, {kGoal, false},
-{kFloor, false}, {kLava, false}, {kKey, true},
-{kBall, true},   {kDoor, false}, {kBox, true}};
-// clang-format on
+using Pos = std::pair<int, int>;
 
-// object class
+inline constexpr int kMissionBytes = 96;
+inline constexpr std::array<Color, 6> kColors = {
+    kRed,    kGreen,  kBlue,
+    kPurple, kYellow, kGrey};  // NOLINT(whitespace/indent_namespace)
+inline constexpr std::array<Type, 3> kObjectTypes = {kKey, kBall, kBox};
+
+inline std::string ColorName(Color color) {
+  static const std::array<const char*, 6> k_names = {
+      "red", "green", "blue", "purple", "yellow", "grey"};
+  CHECK_NE(color, kUnassigned);
+  return k_names[static_cast<int>(color)];
+}
+
+inline std::string TypeName(Type type) {
+  static const std::array<const char*, 11> k_names = {
+      "unseen", "empty", "wall", "floor", "door", "key",
+      "ball",   "box",   "goal", "lava",  "agent"};
+  return k_names[static_cast<int>(type)];
+}
+
+inline Color ParseColor(const std::string& color) {
+  if (color == "red") {
+    return kRed;
+  }
+  if (color == "green") {
+    return kGreen;
+  }
+  if (color == "blue") {
+    return kBlue;
+  }
+  if (color == "purple") {
+    return kPurple;
+  }
+  if (color == "yellow") {
+    return kYellow;
+  }
+  if (color == "grey") {
+    return kGrey;
+  }
+  LOG(FATAL) << "Unknown color: " << color;
+}
+
+inline Type ParseType(const std::string& type) {
+  if (type == "empty") {
+    return kEmpty;
+  }
+  if (type == "wall") {
+    return kWall;
+  }
+  if (type == "floor") {
+    return kFloor;
+  }
+  if (type == "door") {
+    return kDoor;
+  }
+  if (type == "key") {
+    return kKey;
+  }
+  if (type == "ball") {
+    return kBall;
+  }
+  if (type == "box") {
+    return kBox;
+  }
+  if (type == "goal") {
+    return kGoal;
+  }
+  if (type == "lava") {
+    return kLava;
+  }
+  if (type == "agent") {
+    return kAgent;
+  }
+  LOG(FATAL) << "Unknown type: " << type;
+}
+
+inline Color DefaultColor(Type type) {
+  switch (type) {
+    case kEmpty:
+    case kLava:
+      return kRed;
+    case kWall:
+      return kGrey;
+    case kGoal:
+      return kGreen;
+    case kKey:
+    case kBall:
+    case kFloor:
+      return kBlue;
+    default:
+      LOG(FATAL) << "Type " << static_cast<int>(type)
+                 << " requires an explicit color";
+  }
+}
 
 class WorldObj {
- private:
-  Type type_;
-  Color color_;
-  WorldObj* contains_;
-  bool door_open_{true};  // this variable only makes sence when type_ == kDoor
-  bool door_locked_{
-      false};  // this variable only makes sence when type_ == kDoor
-
  public:
   explicit WorldObj(Type type = kEmpty, Color color = kUnassigned,
-                    WorldObj* contains = nullptr)
-      : type_(type), contains_(contains) {
-    if (color == kUnassigned) {
-      switch (type) {
-        case kEmpty:
-        case kLava:
-          color_ = kRed;
-          break;
-        case kWall:
-          color_ = kGrey;
-          break;
-        case kGoal:
-          color_ = kGreen;
-          break;
-        case kKey:
-        case kBall:
-        case kFloor:
-          color_ = kBlue;
-          break;
-        default:
-          CHECK(false);
-          break;
-      }
-    } else {
-      color_ = color;
+                    bool door_open = false, bool door_locked = false)
+      : type_(type),
+        color_(color == kUnassigned ? DefaultColor(type) : color),
+        door_open_(door_open),
+        door_locked_(door_locked) {}
+
+  WorldObj(const WorldObj& other)
+      : type_(other.type_),
+        color_(other.color_),
+        door_open_(other.door_open_),
+        door_locked_(other.door_locked_) {
+    if (other.contains_ != nullptr) {
+      contains_ = std::make_unique<WorldObj>(*other.contains_);
     }
   }
-  ~WorldObj() { delete contains_; }
-  [[nodiscard]] bool CanSeeBehind() const {
-    return door_open_ && kCanSeeBehind.at(type_);
+
+  WorldObj(WorldObj&&) noexcept = default;
+  WorldObj& operator=(WorldObj&&) noexcept = default;
+
+  WorldObj& operator=(const WorldObj& other) {
+    if (this == &other) {
+      return *this;
+    }
+    type_ = other.type_;
+    color_ = other.color_;
+    door_open_ = other.door_open_;
+    door_locked_ = other.door_locked_;
+    contains_.reset();
+    if (other.contains_ != nullptr) {
+      contains_ = std::make_unique<WorldObj>(*other.contains_);
+    }
+    return *this;
   }
-  [[nodiscard]] bool CanOverlap() const {
-    return door_open_ && kCanOverlap.at(type_);
-  }
-  [[nodiscard]] bool CanPickup() const { return kCanPickup.at(type_); }
+
+  [[nodiscard]] Type GetType() const { return type_; }
+  [[nodiscard]] Color GetColor() const { return color_; }
   [[nodiscard]] bool GetDoorOpen() const { return door_open_; }
-  void SetDoorOpen(bool flag) { door_open_ = flag; }
   [[nodiscard]] bool GetDoorLocked() const { return door_locked_; }
-  void SetDoorLocker(bool flag) { door_locked_ = flag; }
-  Type GetType() { return type_; }
-  Color GetColor() { return color_; }
-  int GetState() {
+  void SetDoorOpen(bool open) { door_open_ = open; }
+  void SetDoorLocked(bool locked) { door_locked_ = locked; }
+
+  [[nodiscard]] bool CanSeeBehind() const {
+    if (type_ == kDoor) {
+      return door_open_;
+    }
+    switch (type_) {
+      case kWall:
+        return false;
+      default:
+        return true;
+    }
+  }
+
+  [[nodiscard]] bool CanOverlap() const {
+    if (type_ == kDoor) {
+      return door_open_;
+    }
+    switch (type_) {
+      case kWall:
+      case kKey:
+      case kBall:
+      case kBox:
+        return false;
+      default:
+        return true;
+    }
+  }
+
+  [[nodiscard]] bool CanPickup() const {
+    return type_ == kKey || type_ == kBall || type_ == kBox;
+  }
+
+  [[nodiscard]] int GetState() const {
     if (type_ != kDoor) {
       return 0;
     }
     if (door_locked_) {
       return 2;
     }
-    if (door_open_) {
-      return 0;
-    }
-    return 1;
+    return door_open_ ? 0 : 1;
   }
-  WorldObj* GetContains() { return contains_; }
-  void SetContains(WorldObj* contains) {
-    if (contains != nullptr && type_ != kBox) {
-      CHECK(false);
+
+  [[nodiscard]] const WorldObj* GetContains() const { return contains_.get(); }
+  WorldObj* GetContains() { return contains_.get(); }
+
+  void SetContains(std::unique_ptr<WorldObj> contains) {
+    if (contains != nullptr) {
+      CHECK_EQ(type_, kBox);
     }
-    contains_ = contains;
+    contains_ = std::move(contains);
   }
+
+  std::unique_ptr<WorldObj> ReleaseContains() { return std::move(contains_); }
+
+  [[nodiscard]] std::array<uint8_t, 3> Encode() const {
+    return {static_cast<uint8_t>(type_), static_cast<uint8_t>(color_),
+            static_cast<uint8_t>(GetState())};
+  }
+
+  [[nodiscard]] bool operator==(const WorldObj& other) const {
+    return type_ == other.type_ && color_ == other.color_ &&
+           door_open_ == other.door_open_ && door_locked_ == other.door_locked_;
+  }
+
+ private:
+  Type type_;
+  Color color_;
+  std::unique_ptr<WorldObj> contains_{nullptr};
+  bool door_open_{false};
+  bool door_locked_{false};
 };
+
+inline WorldObj MakeObj(Type type, Color color = kUnassigned) {
+  return WorldObj(type, color);
+}
+
+inline WorldObj MakeDoor(Color color, bool locked = false, bool open = false) {
+  return WorldObj(kDoor, color, open, locked);
+}
 
 }  // namespace minigrid
 

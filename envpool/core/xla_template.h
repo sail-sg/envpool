@@ -60,6 +60,7 @@ struct CustomCall {
     if (!handle) {
       return xla_ffi::Unexpected(handle.error());
     }
+    // NOLINTNEXTLINE(performance-no-int-to-ptr)
     return reinterpret_cast<Class*>(
         static_cast<std::uintptr_t>(static_cast<std::int64_t>(*handle)));
   }
