@@ -53,6 +53,7 @@ jobs:
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" bazel-test
       - name: Run clang-tidy
+        if: ${{ runner.os == 'Linux' }}
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" clang-tidy
       - name: Save Bazel caches
