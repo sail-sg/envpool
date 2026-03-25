@@ -132,6 +132,7 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
     if (spec.config["thread_affinity_offset"_] >= 0) {
       std::size_t thread_affinity_offset =
           spec.config["thread_affinity_offset"_];
+#ifdef __linux__
       for (std::size_t tid = 0; tid < num_threads_; ++tid) {
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
@@ -140,6 +141,9 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
         pthread_setaffinity_np(workers_[tid].native_handle(), sizeof(cpu_set_t),
                                &cpuset);
       }
+#else
+      (void)thread_affinity_offset;
+#endif
     }
   }
 

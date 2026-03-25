@@ -12,8 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+exports_files(
+    ["noop.h"],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "linux",
+    constraint_values = ["@platforms//os:linux"],
+)
+
 filegroup(
     name = "glibc_2_17",
-    srcs = ["force_link_glibc_2.17.h"],
+    srcs = select({
+        ":linux": ["force_link_glibc_2.17.h"],
+        "//conditions:default": ["@envpool//third_party/glibc_version_header:noop.h"],
+    }),
     visibility = ["//visibility:public"],
 )

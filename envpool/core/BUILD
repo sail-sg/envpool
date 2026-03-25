@@ -17,6 +17,11 @@ load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
 package(default_visibility = ["//visibility:public"])
 
+config_setting(
+    name = "linux",
+    constraint_values = ["@platforms//os:linux"],
+)
+
 cc_library(
     name = "type_utils",
     hdrs = ["type_utils.h"],
@@ -190,10 +195,13 @@ cc_library(
 cc_library(
     name = "xla_template",
     hdrs = ["xla_template.h"],
-    linkopts = [
-        "-ldl",
-        "-lrt",
-    ],
+    linkopts = select({
+        ":linux": [
+            "-ldl",
+            "-lrt",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [
         ":spec",
         "@cuda//:cudart_static",
