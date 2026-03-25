@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
 
 config_setting(
@@ -55,7 +56,6 @@ cmake(
 
 cc_library(
     name = "sdl2",
-    deps = [":sdl2_static"],
     linkopts = select({
         ":darwin": [
             "-framework CoreVideo",
@@ -78,4 +78,5 @@ cc_library(
         "//conditions:default": [],
     }),
     visibility = ["//visibility:public"],
+    deps = [":sdl2_static"],
 )
