@@ -23,7 +23,8 @@
 #include <utility>
 #include <vector>
 
-#include "envpool/core/logging.h"
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "envpool/core/spec.h"
 
 class Array {

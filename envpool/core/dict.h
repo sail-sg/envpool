@@ -25,8 +25,10 @@
 #include <utility>
 #include <vector>
 
+#include "absl/log/check.h"
+#include "absl/log/log.h"
+
 #include "envpool/core/array.h"
-#include "envpool/core/logging.h"
 #include "envpool/core/spec.h"
 #include "envpool/core/tuple_utils.h"
 #include "envpool/core/type_utils.h"

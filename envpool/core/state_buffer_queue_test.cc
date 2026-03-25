@@ -14,11 +14,12 @@
 
 #include "envpool/core/state_buffer_queue.h"
 
-#include "envpool/core/logging.h"
 #include <gtest/gtest.h>
-
 #include <random>
 #include <vector>
+
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 
 #include "ThreadPool.h"
 

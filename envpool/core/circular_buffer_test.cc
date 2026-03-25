@@ -14,12 +14,13 @@
 
 #include "circular_buffer.h"
 
-#include "envpool/core/logging.h"
 #include <gtest/gtest.h>
-
 #include <random>
 #include <thread>
 #include <vector>
+
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 
 TEST(CircularBufferTest, Basic) {
   CircularBuffer<int> cb(100);
