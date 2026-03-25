@@ -40,6 +40,7 @@ cc_test(
     srcs = ["dummy_envpool_test.cc"],
     deps = [
         ":dummy_envpool_h",
+        "//envpool/core:logging",
         "@com_google_googletest//:gtest_main",
     ],
 )

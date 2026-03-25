@@ -19,6 +19,7 @@ build:linux --copt=-mmmx
 build:macos --action_env=MACOSX_DEPLOYMENT_TARGET=10.15
 build:macos --copt=-mmacosx-version-min=10.15
 build:macos --linkopt=-mmacosx-version-min=10.15
+test:macos --test_env=PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
 build:clang-tidy --aspects @bazel_clang_tidy//clang_tidy:clang_tidy.bzl%clang_tidy_aspect
 build:clang-tidy --@bazel_clang_tidy//:clang_tidy_config=//:clang_tidy_config

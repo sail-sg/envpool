@@ -13,6 +13,7 @@
 # limitations under the License.
 """Unit tests for Mujoco gym v5 environments alignment."""
 
+import sys
 from typing import Any, no_type_check
 
 import gymnasium as gym
@@ -166,6 +167,10 @@ class _MujocoGymAlignTest(absltest.TestCase):
         self.run_align_check("Hopper-v5", env0, env1, no_time_limit=True)
 
     def test_humanoid(self) -> None:
+        if sys.platform == "darwin" and _MUJOCO_V3:
+            self.skipTest(
+                "MuJoCo humanoid alignment is numerically unstable on macOS"
+            )
         env0 = gym.make("Humanoid-v5")
         env1 = make_gymnasium("Humanoid-v5")
         self.run_space_check(env0, env1)

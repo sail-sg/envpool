@@ -13,6 +13,7 @@
 # limitations under the License.
 """Provide xla mixin for envpool."""
 
+import sys
 from typing import Any, Callable
 
 from dm_env import TimeStep
@@ -26,6 +27,10 @@ class XlaMixin:
 
     def xla(self: Any) -> tuple[Any, Callable, Callable, Callable]:
         """Return the XLA version of send/recv/step functions."""
+        if sys.platform == "darwin":
+            raise RuntimeError(
+                "EnvPool XLA is currently unavailable on macOS."
+            )
         _handle, _recv, _send = make_xla(self)
 
         def recv(handle: jnp.ndarray) -> TimeStep | tuple:

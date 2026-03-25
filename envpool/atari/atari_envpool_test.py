@@ -14,6 +14,7 @@
 """Unit test for atari envpool and speed benchmark."""
 
 import os
+import sys
 import time
 
 import cv2
@@ -224,6 +225,10 @@ class _AtariEnvPoolTest(absltest.TestCase):
             num_threads=2,
             thread_affinity_offset=0,
         )
+        if sys.platform == "darwin":
+            with self.assertRaisesRegex(RuntimeError, "unavailable on macOS"):
+                env.xla()
+            return
         handle, recv, send, step = env.xla()
         env.async_reset()
         handle, states = recv(handle)
@@ -252,6 +257,10 @@ class _AtariEnvPoolTest(absltest.TestCase):
             num_threads=2,
             thread_affinity_offset=0,
         )
+        if sys.platform == "darwin":
+            with self.assertRaisesRegex(RuntimeError, "unavailable on macOS"):
+                env1.xla()
+            return
         env2 = make_gym(
             "Pong-v5",
             num_envs=10,

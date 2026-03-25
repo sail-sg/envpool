@@ -31,6 +31,7 @@ cc_library(
     ],
     deps = [
         "//envpool/core:async_envpool",
+        "//envpool/core:logging",
         "//envpool/core:py_envpool",
     ],
 )

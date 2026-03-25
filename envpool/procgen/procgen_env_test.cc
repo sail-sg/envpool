@@ -14,7 +14,7 @@
 
 #include "envpool/procgen/procgen_env.h"
 
-#include <glog/logging.h>
+#include "envpool/core/logging.h"
 #include <gtest/gtest.h>
 
 #include <random>

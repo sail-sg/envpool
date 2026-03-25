@@ -1,0 +1,13 @@
+--- zlib.BUILD
++++ zlib.BUILD
+@@ -50,5 +50,10 @@
+ # For OSs that bundle libz
+ cc_library(
+     name = "zlib_system",
++    hdrs = [
++        "zconf.h",
++        "zlib.h",
++    ],
++    includes = ["."],
+     linkopts = ["-lz"],
+ )

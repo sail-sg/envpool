@@ -14,7 +14,7 @@
 
 #include "envpool/utils/image_process.h"
 
-#include <glog/logging.h>
+#include "envpool/core/logging.h"
 #include <gtest/gtest.h>
 
 #include <vector>

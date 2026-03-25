@@ -117,7 +117,7 @@ cc_library(
         ":k8": [":simd_x86_64"],
         ":armeabi-v7a": [":simd_armv7a"],
         ":arm64-v8a": [":simd_armv8a"],
-        ":darwin_arm64": [":simd_armv8a"],
+        ":darwin_arm64": [":simd_armv8a_darwin"],
         ":linux_ppc64le": [":simd_altivec"],
         ":windows": [":simd_win_x86_64"],
         "//conditions:default": [":simd_none"],
@@ -366,6 +366,66 @@ cc_library(
         ".",
         "src",
     ],
+)
+
+template_rule(
+    name = "simd_arm_neon_compat",
+    src = "simd/arm/neon-compat.h.in",
+    out = "simd/arm/neon-compat.h",
+    substitutions = {
+        "#cmakedefine HAVE_VLD1Q_U8_X4": "#define HAVE_VLD1Q_U8_X4",
+        "#cmakedefine HAVE_VLD1_S16_X3": "#define HAVE_VLD1_S16_X3",
+        "#cmakedefine HAVE_VLD1_U16_X2": "#define HAVE_VLD1_U16_X2",
+    },
+)
+
+cc_library(
+    name = "simd_armv8a_darwin",
+    srcs = ["src/" + path for path in [
+        "jchuff.h",
+        "jdct.h",
+        "jerror.h",
+        "jinclude.h",
+        "jmorecfg.h",
+        "jpegint.h",
+        "jpeglib.h",
+        "jsimd.h",
+        "jsimddct.h",
+    ]] + [
+        "jconfig.h",
+        "jconfigint.h",
+        "simd/arm/aarch64/jchuff-neon.c",
+        "simd/arm/aarch64/jsimd.c",
+        "simd/arm/jccolor-neon.c",
+        "simd/arm/jcgray-neon.c",
+        "simd/arm/jcphuff-neon.c",
+        "simd/arm/jcsample-neon.c",
+        "simd/arm/jdcolor-neon.c",
+        "simd/arm/jdmerge-neon.c",
+        "simd/arm/jdsample-neon.c",
+        "simd/arm/jfdctfst-neon.c",
+        "simd/arm/jfdctint-neon.c",
+        "simd/arm/jidctfst-neon.c",
+        "simd/arm/jidctint-neon.c",
+        "simd/arm/jidctred-neon.c",
+        "simd/arm/jquanti-neon.c",
+        "simd/jsimd.h",
+    ],
+    hdrs = glob(["src/*.h"]) + [
+        "jconfig.h",
+        "jconfigint.h",
+        "simd/arm/align.h",
+        ":simd_arm_neon_compat",
+    ],
+    copts = libjpegturbo_copts + [
+        "-DNEON_INTRINSICS",
+    ],
+    includes = [
+        ".",
+        "src",
+        "simd/arm",
+    ],
+    alwayslink = 1,
 )
 
 cc_library(

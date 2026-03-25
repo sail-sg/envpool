@@ -84,6 +84,10 @@ cmake(
         "libopencv_features2d.a",
         "libopencv_flann.a",
         "libopencv_core.a",
+        "opencv4/3rdparty/libkleidicv_hal.a",
+        "opencv4/3rdparty/libkleidicv_thread.a",
+        "opencv4/3rdparty/libkleidicv.a",
+        "opencv4/3rdparty/libtegra_hal.a",
     ],
     visibility = ["//visibility:public"],
 )

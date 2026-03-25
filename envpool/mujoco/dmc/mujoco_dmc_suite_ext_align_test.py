@@ -13,6 +13,7 @@
 # limitations under the License.
 """Unit tests for Mujoco dm_control suite align check."""
 
+import sys
 from typing import Any
 
 import dm_env
@@ -109,6 +110,10 @@ class _MujocoDmcSuiteExtAlignTest(absltest.TestCase):
             self.run_align_check(env0, env1, domain, task)
 
     def test_humanoid_CMU(self) -> None:
+        if sys.platform == "darwin" and _MUJOCO_V3:
+            self.skipTest(
+                "MuJoCo humanoid alignment is numerically unstable on macOS"
+            )
         self.run_align_check_entry("humanoid_CMU", ["stand", "run"])
 
 

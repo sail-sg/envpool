@@ -15,6 +15,11 @@
 load("@envpool//third_party:common.bzl", "template_rule")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
+config_setting(
+    name = "darwin",
+    constraint_values = ["@platforms//os:macos"],
+)
+
 cc_binary(
     name = "arithchk",
     srcs = [
@@ -351,13 +356,98 @@ cc_library(
     copts = [
         "-Dstricmp=strcasecmp",
         "-Dstrnicmp=strncasecmp",
-        "-fno-tree-dominator-opts",
-        "-fno-tree-fre",
         "-include $(execpath @glibc_version_header//:glibc_2_17)",
-    ],
+    ] + select({
+        ":darwin": [],
+        "//conditions:default": [
+            "-fno-tree-dominator-opts",
+            "-fno-tree-fre",
+        ],
+    }),
     includes = [
         "src",
     ],
+)
+
+genrule(
+    name = "iwadpicker_cocoa_o",
+    srcs = glob(["src/**"]) + [
+        ":viz_version",
+        "@glibc_version_header//:glibc_2_17",
+        "@sdl2//:srcs",
+    ],
+    outs = ["iwadpicker_cocoa.o"],
+    cmd = """
+generated_dir=$$(dirname "$(execpath :viz_version)")
+/usr/bin/xcrun --sdk macosx clang++ -c -x objective-c++ -std=c++17 \
+  -Dstricmp=strcasecmp \
+  -Dstrnicmp=strncasecmp \
+  -DNO_GTK=1 \
+  -DNO_FMOD=1 \
+  -DNO_OPENAL=1 \
+  -D__forceinline=inline \
+  -fPIC \
+  -fomit-frame-pointer \
+  -Iexternal/vizdoom/src \
+  -Iexternal/vizdoom/src/posix \
+  -Iexternal/vizdoom/src/posix/sdl \
+  -Iexternal/sdl2/include \
+  -I"$${generated_dir}" \
+  -include "$(execpath @glibc_version_header//:glibc_2_17)" \
+  "$(location src/posix/osx/iwadpicker_cocoa.mm)" \
+  -o "$@"
+""",
+    target_compatible_with = select({
+        ":darwin": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+genrule(
+    name = "i_system_mm_o",
+    srcs = glob(["src/**"]) + [
+        ":viz_version",
+        "@glibc_version_header//:glibc_2_17",
+        "@sdl2//:srcs",
+    ],
+    outs = ["i_system.mm.o"],
+    cmd = """
+generated_dir=$$(dirname "$(execpath :viz_version)")
+/usr/bin/xcrun --sdk macosx clang++ -c -x objective-c++ -std=c++17 \
+  -Dstricmp=strcasecmp \
+  -Dstrnicmp=strncasecmp \
+  -DNO_GTK=1 \
+  -DNO_FMOD=1 \
+  -DNO_OPENAL=1 \
+  -D__forceinline=inline \
+  -fPIC \
+  -fomit-frame-pointer \
+  -Iexternal/vizdoom/src \
+  -Iexternal/vizdoom/src/posix \
+  -Iexternal/vizdoom/src/posix/sdl \
+  -Iexternal/sdl2/include \
+  -I"$${generated_dir}" \
+  -include "$(execpath @glibc_version_header//:glibc_2_17)" \
+  "$(location src/posix/sdl/i_system.mm)" \
+  -o "$@"
+""",
+    target_compatible_with = select({
+        ":darwin": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+cc_library(
+    name = "vizdoom_osx",
+    srcs = [
+        ":iwadpicker_cocoa_o",
+        ":i_system_mm_o",
+    ],
+    alwayslink = 1,
+    target_compatible_with = select({
+        ":darwin": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 cc_binary(
@@ -762,11 +852,15 @@ cc_binary(
         "-Wno-stringop-truncation",
         "-Wno-cast-function-type",
         "-DBACKPATCH",
-        "-msse",
-        "-msse2",
-        "-mmmx",
         "-include $(execpath @glibc_version_header//:glibc_2_17)",
-    ],
+    ] + select({
+        ":darwin": [],
+        "//conditions:default": [
+            "-msse",
+            "-msse2",
+            "-mmmx",
+        ],
+    }),
     data = [
         ":vizdoom_pk3",
     ],
@@ -784,11 +878,19 @@ cc_binary(
         "src/thingdef",
         "src/xlat",
     ],
-    linkopts = [
-        "-lpthread",
-        "-lrt",
-        "-ldl",
-    ],
+    linkopts = select({
+        ":darwin": [
+            "-framework Carbon",
+            "-framework Cocoa",
+            "-framework IOKit",
+            "-framework OpenGL",
+        ],
+        "//conditions:default": [
+            "-lpthread",
+            "-lrt",
+            "-ldl",
+        ],
+    }),
     linkstatic = 1,
     visibility = ["//visibility:public"],
     deps = [
@@ -805,5 +907,8 @@ cc_binary(
         "@libjpeg_turbo//:jpeg",
         "@sdl2",
         "@zlib",
-    ],
+    ] + select({
+        ":darwin": [":vizdoom_osx"],
+        "//conditions:default": [],
+    }),
 )

@@ -14,7 +14,7 @@
 
 #include "envpool/atari/atari_env.h"
 
-#include <glog/logging.h>
+#include "envpool/core/logging.h"
 #include <gtest/gtest.h>
 
 #include <algorithm>

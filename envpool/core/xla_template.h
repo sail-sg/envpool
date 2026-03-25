@@ -172,6 +172,12 @@ struct CustomCall {
                                .RemainingArgs()
                                .RemainingRets()
                                .Attrs<xla_ffi::Dictionary>());
+    // NOLINTNEXTLINE(bugprone-casting-through-void)
+    auto* cpu_handler_ptr = reinterpret_cast<void*>(cpu_handler);
+#if defined(__APPLE__)
+    // CUDA is not available on macOS, so only expose the CPU FFI target.
+    return std::make_tuple(py::capsule(cpu_handler_ptr), py::none());
+#else
     XLA_FFI_DEFINE_HANDLER(gpu_handler, GpuExecute,
                            xla_ffi::Ffi::Bind()
                                .Ctx<xla_ffi::PlatformStream<cudaStream_t>>()
@@ -179,11 +185,10 @@ struct CustomCall {
                                .RemainingRets()
                                .Attrs<xla_ffi::Dictionary>());
     // NOLINTNEXTLINE(bugprone-casting-through-void)
-    auto* cpu_handler_ptr = reinterpret_cast<void*>(cpu_handler);
-    // NOLINTNEXTLINE(bugprone-casting-through-void)
     auto* gpu_handler_ptr = reinterpret_cast<void*>(gpu_handler);
     return std::make_tuple(py::capsule(cpu_handler_ptr),
                            py::capsule(gpu_handler_ptr));
+#endif
   }
 
   static auto Xla(Class* obj) {

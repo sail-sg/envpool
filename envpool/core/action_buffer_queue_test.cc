@@ -14,7 +14,7 @@
 
 #include "envpool/core/action_buffer_queue.h"
 
-#include <glog/logging.h>
+#include "envpool/core/logging.h"
 #include <gtest/gtest.h>
 
 #include <queue>

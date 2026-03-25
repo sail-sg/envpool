@@ -14,7 +14,7 @@
 
 #include "envpool/dummy/dummy_envpool.h"
 
-#include <glog/logging.h>
+#include "envpool/core/logging.h"
 #include <gtest/gtest.h>
 
 #include <random>

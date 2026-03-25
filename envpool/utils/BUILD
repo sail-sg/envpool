@@ -30,6 +30,7 @@ cc_test(
     srcs = ["image_process_test.cc"],
     deps = [
         ":image_process",
+        "//envpool/core:logging",
         "@com_google_googletest//:gtest_main",
     ],
 )

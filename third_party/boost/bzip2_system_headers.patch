@@ -1,0 +1,12 @@
+--- bzip2.BUILD
++++ bzip2.BUILD
+@@ -28,5 +28,9 @@
+ # For OSs that bundle bz2lib
+ cc_library(
+     name = "bz2lib_system",
++    hdrs = [
++        "bzlib.h",
++    ],
++    includes = ["."],
+     linkopts = ["-lbz2"],
+ )
