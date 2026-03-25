@@ -44,6 +44,9 @@ def _resolve_qt_lib_dir(repository_ctx, raw_path, include_dir):
             return str(repository_ctx.path(candidate))
     return None
 
+def _has_qt_framework(repository_ctx, lib_dir, framework):
+    return _path_exists(repository_ctx, lib_dir + "/%s.framework" % framework)
+
 def _generate_build_file(linkopts):
     return """load("@rules_cc//cc:defs.bzl", "cc_library")
 
@@ -122,16 +125,30 @@ def _qt_autoconf_impl(repository_ctx):
         linkopts["qt_core"] = ["-lQt5Core"]
         linkopts["qt_gui"] = ["-lQt5Gui"]
     elif include_dir and lib_dir:
-        qt_core_linkopts = [
-            "-L%s" % lib_dir,
-            "-Wl,-rpath,%s" % lib_dir,
-            "-lQt5Core",
-        ]
-        qt_gui_linkopts = [
-            "-L%s" % lib_dir,
-            "-Wl,-rpath,%s" % lib_dir,
-            "-lQt5Gui",
-        ]
+        if _has_qt_framework(repository_ctx, lib_dir, "QtCore") and _has_qt_framework(repository_ctx, lib_dir, "QtGui"):
+            qt_core_linkopts = [
+                "-F%s" % lib_dir,
+                "-Wl,-rpath,%s" % lib_dir,
+                "-framework",
+                "QtCore",
+            ]
+            qt_gui_linkopts = [
+                "-F%s" % lib_dir,
+                "-Wl,-rpath,%s" % lib_dir,
+                "-framework",
+                "QtGui",
+            ]
+        else:
+            qt_core_linkopts = [
+                "-L%s" % lib_dir,
+                "-Wl,-rpath,%s" % lib_dir,
+                "-lQt5Core",
+            ]
+            qt_gui_linkopts = [
+                "-L%s" % lib_dir,
+                "-Wl,-rpath,%s" % lib_dir,
+                "-lQt5Gui",
+            ]
         linkopts["qt_core"] = qt_core_linkopts
         linkopts["qt_gui"] = qt_gui_linkopts
 
