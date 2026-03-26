@@ -1,3 +1,9 @@
+--- src/win32/i_main.cpp
++++ src/win32/i_main.cpp
+@@ -784 +784 @@
+-	while ((bRet = GetMessage(&msg, NULL, 0, 0)) != 0)
++	while ((bRet = GetMessageW(&msg, NULL, 0, 0)) != 0)
+
 --- src/c_console.cpp
 +++ src/c_console.cpp
 @@ -32,6 +32,30 @@
