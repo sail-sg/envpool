@@ -4,6 +4,14 @@
 -	while ((bRet = GetMessage(&msg, NULL, 0, 0)) != 0)
 +	while ((bRet = GetMessageW(&msg, NULL, 0, 0)) != 0)
 
+--- src/viz_main.cpp
++++ src/viz_main.cpp
+@@ -23,0 +24,4 @@
++
++#ifdef _WIN32
++#define USE_WINDOWS_DWORD
++#endif
+
 --- src/c_console.cpp
 +++ src/c_console.cpp
 @@ -32,6 +32,30 @@
