@@ -57,10 +57,21 @@ cc_library(
         "src/ale/ale_interface.hpp",
         ":ale_version",
     ],
-    copts = [
-        "-include",
-        "cstdint",
-    ],
+    copts = select({
+        "@envpool//:windows": [
+            "/FIcstdint",
+        ],
+        "//conditions:default": [
+            "-include",
+            "cstdint",
+        ],
+    }),
+    defines = select({
+        "@envpool//:windows": [
+            "WIN32",
+        ],
+        "//conditions:default": [],
+    }),
     includes = [
         "src",
         "src/ale",

@@ -114,7 +114,7 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     env:
-      BAZEL_SH: C:/Program Files/Git/bin/bash.exe
+      BAZEL_SH: C:/Program Files/Git/usr/bin/bash.exe
       MSYS2_ARG_CONV_EXCL: "*"
       MSYS_NO_PATHCONV: "1"
       USE_BAZEL_VERSION: "8.6.0"
@@ -152,6 +152,7 @@ jobs:
         shell: pwsh
         run: |
           Add-Content -Path $env:GITHUB_ENV -Value "BAZEL_RULES_QT_DIR=$env:QT_ROOT_DIR"
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files\Git\usr\bin"
       - name: Install bazelisk
         shell: pwsh
         run: |

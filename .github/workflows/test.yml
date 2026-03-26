@@ -156,7 +156,7 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 120
     env:
-      BAZEL_SH: C:/Program Files/Git/bin/bash.exe
+      BAZEL_SH: C:/Program Files/Git/usr/bin/bash.exe
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
       MSYS2_ARG_CONV_EXCL: "*"
@@ -204,6 +204,7 @@ jobs:
         shell: pwsh
         run: |
           Add-Content -Path $env:GITHUB_ENV -Value "BAZEL_RULES_QT_DIR=$env:QT_ROOT_DIR"
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files\Git\usr\bin"
       - name: Restore Bazel caches
         uses: actions/cache/restore@v4
         with:
