@@ -3,7 +3,7 @@
 @@ -32,6 +32,30 @@
  **
  */
- 
+
 +#ifdef _WIN32
 +#if defined(_M_X64) && !defined(_AMD64_)
 +#define _AMD64_
@@ -32,9 +32,9 @@
  #include "p_setup.h"
  #include <stdarg.h>
 @@ -72,6 +96,15 @@
- 
+
  //VIZDOOM_CODE
- #include "viz_game.h" 
+ #include "viz_game.h"
 +
 +#ifdef _WIN32
 +#ifdef DrawText
@@ -44,33 +44,44 @@
 +#undef GetCharWidth
 +#endif
 +#endif
- 
+
  #define LEFTMARGIN 8
  #define RIGHTMARGIN 8
 --- src/fragglescript/t_func.cpp
 +++ src/fragglescript/t_func.cpp
 @@ -2053,7 +2053,7 @@
- 		
+
  		t_return.type = svt_string;
  		FTexture * tex = TexMan[sector->GetTexture(sector_t::floor)];
 -		t_return.string = tex? tex->Name : "";
 +		t_return.string = tex ? tex->Name : FString("");
  	}
  }
- 
+
 @@ -2143,7 +2143,7 @@
- 		
+
  		t_return.type = svt_string;
  		FTexture * tex = TexMan[sector->GetTexture(sector_t::ceiling)];
 -		t_return.string = tex? tex->Name : "";
 +		t_return.string = tex ? tex->Name : FString("");
  	}
  }
- 
+
 --- src/g_level.cpp
 +++ src/g_level.cpp
+@@ -32,6 +32,10 @@
+ **
+ */
+
++#ifdef _WIN32
++#define USE_WINDOWS_DWORD
++#endif
++
+ #include <assert.h>
+ #include "templates.h"
+ #include "d_main.h"
 @@ -87,6 +87,12 @@
- 
+
  //VIZDOOM_CODE
  #include "viz_game.h"
 +
@@ -79,7 +90,7 @@
 +#undef GetMessage
 +#endif
 +#endif
- 
+
  void STAT_StartNewGame(const char *lev);
  void STAT_ChangeLevel(const char *newl);
 --- src/s_sound.h
@@ -98,7 +109,7 @@
 @@ -21,8 +21,12 @@
   THE SOFTWARE.
  */
- 
+
 -#include "d_main.h"
 +#ifdef _WIN32
 +#define USE_WINDOWS_DWORD
@@ -114,7 +125,7 @@
 @@ -21,6 +21,10 @@
   THE SOFTWARE.
  */
- 
+
 +#ifdef _WIN32
 +#define USE_WINDOWS_DWORD
 +#endif
@@ -127,7 +138,7 @@
 @@ -89,6 +89,15 @@
  //VIZDOOM_CODE
  #include "viz_main.h"
- 
+
 +void *I_GetOptionalWin32ProcAddress(const char* module, const char* function)
 +{
 +	HMODULE hmodule = GetModuleHandleA(module);
@@ -138,7 +149,7 @@
 +}
 +
  // MACROS ------------------------------------------------------------------
- 
+
  #ifdef _MSC_VER
 @@ -1309,7 +1318,7 @@
  	HDC dc = GetDC(NULL);
@@ -152,9 +163,9 @@
 --- src/win32/i_system.h
 +++ src/win32/i_system.h
 @@ -51,6 +51,8 @@
- 
+
  extern os_t OSPlatform;
- 
+
 +void *I_GetOptionalWin32ProcAddress(const char* module, const char* function);
 +
  // Helper template so that we can access newer Win32 functions with a single static
@@ -171,5 +182,5 @@
 -		return (Proto)GetProcAddress(hmodule, function);
 +		return (Proto)I_GetOptionalWin32ProcAddress(module, function);
  	}
- 
+
  public:
