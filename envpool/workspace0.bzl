@@ -17,6 +17,7 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 load("//third_party/cuda:cuda.bzl", "cuda_configure")
+load("//third_party/vizdoom:repo.bzl", "vizdoom_archive")
 
 def workspace():
     """Load requested packages."""
@@ -413,7 +414,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     )
 
     maybe(
-        http_archive,
+        vizdoom_archive,
         name = "vizdoom",
         patch_args = [
             "-p0",
