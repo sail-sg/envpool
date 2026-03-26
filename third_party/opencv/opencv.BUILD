@@ -48,13 +48,16 @@ cmake(
         "-GNinja",
         "-DCMAKE_INSTALL_LIBDIR=lib",
         "-DBUILD_SHARED_LIBS=OFF",
+        # Prefer OpenCV's upstream module whitelist over manually carrying
+        # unused modules like gapi into envpool's build.
+        "-DBUILD_LIST=core,features2d,flann,imgproc",
         "-DBUILD_EXAMPLES=OFF",
         "-DBUILD_opencv_apps=OFF",
         "-DBUILD_opencv_calib3d=OFF",
         "-DBUILD_opencv_core=ON",
         "-DBUILD_opencv_features2d=ON",
         "-DBUILD_opencv_flann=ON",
-        "-DBUILD_opencv_gapi=ON",
+        "-DBUILD_opencv_gapi=OFF",
         "-DBUILD_opencv_highgui=OFF",
         "-DBUILD_opencv_imgcodecs=OFF",
         "-DBUILD_opencv_imgproc=ON",

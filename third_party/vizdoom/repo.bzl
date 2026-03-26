@@ -20,6 +20,7 @@ _VIZDOOM_PATCH_TARGETS = [
     "src/c_console.cpp",
     "src/fragglescript/t_func.cpp",
     "src/g_level.cpp",
+    "src/r_data/r_translate.cpp",
     "src/s_sound.h",
     "src/viz_message_queue.cpp",
     "src/viz_shared_memory.cpp",

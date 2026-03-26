@@ -234,6 +234,11 @@
 
  #include "c_dispatch.h"
  #include "d_netinf.h"
+--- src/r_data/r_translate.cpp
++++ src/r_data/r_translate.cpp
+@@ -582 +582 @@
+-		if (*this == *translationtables[TRANSLATION_Decorate][i])
++		if (this->operator==(*translationtables[TRANSLATION_Decorate][i]))
 --- src/win32/i_system.cpp
 +++ src/win32/i_system.cpp
 @@ -89,6 +89,15 @@
