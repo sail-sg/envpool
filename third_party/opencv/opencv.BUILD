@@ -100,6 +100,7 @@ cmake(
         ],
         "@envpool//:windows": [
             "-DCMAKE_SYSTEM_PROCESSOR=AMD64",
+            "-DCPU_BASELINE=SSE2",
             "-DCV_DISABLE_OPTIMIZATION=ON",
             "-DOPENCV_WORKAROUND_CMAKE_20989=ON",
             "-DOPENCV_EXTRA_CXX_FLAGS=/EHsc",
