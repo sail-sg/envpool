@@ -222,13 +222,9 @@ jobs:
           go install github.com/bazelbuild/bazelisk@latest
           Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $HOME "go/bin")
       - name: Test
-        shell: pwsh
+        shell: bash
         run: |
-          $env:PATH = "C:\Program Files\Git\usr\bin;$env:PATH"
-          Copy-Item third_party/pip_requirements/requirements-dev-lock.txt third_party/pip_requirements/requirements.txt -Force
-          $repoCache = Join-Path $HOME ".cache/envpool-bazel-repo"
-          $diskCache = Join-Path $HOME ".cache/envpool-bazel-disk"
-          bazelisk test --test_output=all --repository_cache=$repoCache --disk_cache=$diskCache //... --config=test --spawn_strategy=local --color=yes
+          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" bazel-test
       - name: Save Bazel caches
         if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4

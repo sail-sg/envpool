@@ -23,7 +23,23 @@ def workspace():
 
     maybe(
         http_archive,
+        name = "rules_shell",
+        patches = [
+            "//third_party/rules_shell:bazel_sh_environ.patch",
+        ],
+        sha256 = "410e8ff32e018b9efd2743507e7595c26e2628567c42224411ff533b57d27c28",
+        strip_prefix = "rules_shell-0.2.0",
+        urls = [
+            "https://github.com/bazelbuild/rules_shell/releases/download/v0.2.0/rules_shell-v0.2.0.tar.gz",
+        ],
+    )
+
+    maybe(
+        http_archive,
         name = "rules_cc",
+        patches = [
+            "//third_party/rules_cc:rules_shell_bazel_sh.patch",
+        ],
         sha256 = "283fa1cdaaf172337898749cf4b9b1ef5ea269da59540954e51fba0e7b8f277a",
         strip_prefix = "rules_cc-0.2.17",
         urls = [

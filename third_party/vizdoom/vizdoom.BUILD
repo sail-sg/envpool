@@ -67,15 +67,21 @@ cc_library(
         "gdtoa/misc.c",
         ":arith.h",
         ":gd_qnan.h",
-        "@glibc_version_header//:glibc_2_17",
-    ],
+    ] + select({
+        "@envpool//:windows": [],
+        "//conditions:default": ["@glibc_version_header//:glibc_2_17"],
+    }),
     hdrs = glob(["gdtoa/*.h"]),
-    copts = [
-        "-Wall",
-        "-Wextra",
+    copts = select({
+        "@envpool//:windows": [],
+        "//conditions:default": [
+            "-Wall",
+            "-Wextra",
+            "-include $(execpath @glibc_version_header//:glibc_2_17)",
+        ],
+    }) + [
         "-DINFNAN_CHECK",
         "-DMULTIPLE_THREADS",
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
     ],
     strip_include_prefix = "gdtoa",
 )
@@ -90,18 +96,24 @@ cc_library(
         "bzip2/decompress.c",
         "bzip2/huffman.c",
         "bzip2/randtable.c",
-        "@glibc_version_header//:glibc_2_17",
-    ],
+    ] + select({
+        "@envpool//:windows": [],
+        "//conditions:default": ["@glibc_version_header//:glibc_2_17"],
+    }),
     hdrs = glob([
         "bzip2/*.h",
     ]),
     copts = [
         "-DBZ_NO_STDIO",
-        "-Wall",
-        "-Wextra",
-        "-fomit-frame-pointer",
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
-    ],
+    ] + select({
+        "@envpool//:windows": [],
+        "//conditions:default": [
+            "-Wall",
+            "-Wextra",
+            "-fomit-frame-pointer",
+            "-include $(execpath @glibc_version_header//:glibc_2_17)",
+        ],
+    }),
     strip_include_prefix = "bzip2",
 )
 
@@ -125,26 +137,28 @@ cc_library(
             "lzma/C/Threads.c",
             "lzma/C/LzFindMt.c",
         ],
-    ) + [
-        "@glibc_version_header//:glibc_2_17",
-    ],
-    hdrs = glob(
-        [
-            "lzma/C/*.h",
+    ) + select({
+        "@envpool//:windows": [
+            "lzma/C/LzFindMt.c",
+            "lzma/C/Threads.c",
         ],
-        exclude = [
-            "lzma/C/Threads.h",
-            "lzma/C/LzFindMt.h",
-        ],
-    ),
+        "//conditions:default": ["@glibc_version_header//:glibc_2_17"],
+    }),
+    hdrs = glob([
+        "lzma/C/*.h",
+    ]),
     copts = [
-        "-D_7ZIP_ST",
-        "-Wall",
-        "-Wextra",
-        "-fomit-frame-pointer",
         "-D_7ZIP_PPMD_SUPPPORT",
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
-    ],
+    ] + select({
+        "@envpool//:windows": [],
+        "//conditions:default": [
+            "-D_7ZIP_ST",
+            "-Wall",
+            "-Wextra",
+            "-fomit-frame-pointer",
+            "-include $(execpath @glibc_version_header//:glibc_2_17)",
+        ],
+    }),
     strip_include_prefix = "lzma/C",
 )
 
@@ -222,20 +236,25 @@ cc_library(
         "dumb/**/*.h",
         "dumb/**/*.c",
         "dumb/**/*.inc",
-    ]) + [
-        "@glibc_version_header//:glibc_2_17",
-    ],
+    ]) + select({
+        "@envpool//:windows": [],
+        "//conditions:default": ["@glibc_version_header//:glibc_2_17"],
+    }),
     hdrs = glob([
         "dumb/include/*.h",
     ]),
     copts = [
         "-DNEED_ITOA=1",
-        "-Wall",
-        "-Wno-pointer-sign",
-        "-Wno-uninitialized",
-        "-Wno-unused-but-set-variable",
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
-    ],
+    ] + select({
+        "@envpool//:windows": [],
+        "//conditions:default": [
+            "-Wall",
+            "-Wno-pointer-sign",
+            "-Wno-uninitialized",
+            "-Wno-unused-but-set-variable",
+            "-include $(execpath @glibc_version_header//:glibc_2_17)",
+        ],
+    }),
     includes = [
         "dumb/include",
     ],
@@ -246,18 +265,23 @@ cc_library(
     srcs = glob([
         "game-music-emu/gme/*.cpp",
         "game-music-emu/gme/*.h",
-    ]) + [
-        "@glibc_version_header//:glibc_2_17",
-    ],
+    ]) + select({
+        "@envpool//:windows": [],
+        "//conditions:default": ["@glibc_version_header//:glibc_2_17"],
+    }),
     hdrs = [
         "game-music-emu/gme/gme.h",
     ],
     copts = [
         "-DLIBGME_VISIBILITY",
-        "-fvisibility=hidden",
-        "-fvisibility-inlines-hidden",
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
-    ],
+    ] + select({
+        "@envpool//:windows": [],
+        "//conditions:default": [
+            "-fvisibility=hidden",
+            "-fvisibility-inlines-hidden",
+            "-include $(execpath @glibc_version_header//:glibc_2_17)",
+        ],
+    }),
     strip_include_prefix = "game-music-emu",
 )
 
@@ -351,13 +375,19 @@ cc_library(
         "src/*.h",
     ]) + [
         "src/oplsynth/fmopl.cpp",
-        "@glibc_version_header//:glibc_2_17",
-    ],
-    copts = [
-        "-Dstricmp=strcasecmp",
-        "-Dstrnicmp=strncasecmp",
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
     ] + select({
+        "@envpool//:windows": [],
+        "//conditions:default": ["@glibc_version_header//:glibc_2_17"],
+    }),
+    copts = select({
+        "@envpool//:windows": [],
+        "//conditions:default": [
+            "-Dstricmp=strcasecmp",
+            "-Dstrnicmp=strncasecmp",
+            "-include $(execpath @glibc_version_header//:glibc_2_17)",
+        ],
+    }) + select({
+        "@envpool//:windows": [],
         ":darwin": [],
         "//conditions:default": [
             "-fno-tree-dominator-opts",
@@ -454,11 +484,14 @@ cc_binary(
     name = "zipdir",
     srcs = [
         "tools/zipdir/zipdir.c",
-        "@glibc_version_header//:glibc_2_17",
-    ],
-    copts = [
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
-    ],
+    ] + select({
+        "@envpool//:windows": [],
+        "//conditions:default": ["@glibc_version_header//:glibc_2_17"],
+    }),
+    copts = select({
+        "@envpool//:windows": [],
+        "//conditions:default": ["-include $(execpath @glibc_version_header//:glibc_2_17)"],
+    }),
     deps = [
         ":bzip2",
         ":lzma",
@@ -828,32 +861,39 @@ cc_binary(
         "src/zzautozend.cpp",
         ":sc_man_scanner",
         ":viz_version",
-        "@glibc_version_header//:glibc_2_17",
-    ],
+    ] + select({
+        "@envpool//:windows": [],
+        "//conditions:default": ["@glibc_version_header//:glibc_2_17"],
+    }),
     copts = [
-        "-Dstricmp=strcasecmp",
-        "-Dstrnicmp=strncasecmp",
         "-DNO_GTK=1",
         "-DNO_FMOD=1",
         "-DNO_OPENAL=1",
-        "-fPIC",
-        "-fomit-frame-pointer",
-        "-D__forceinline=inline",
-        "-Wno-unused-result",
-        "-Wall",
-        "-Wno-unused",
-        "-Wno-unused-parameter",
-        "-Wno-missing-field-initializers",
-        "-Wno-class-memaccess",
-        "-Wno-misleading-indentation",
-        "-Wno-implicit-fallthrough",
-        "-Wno-conversion-null",
-        "-Wno-deprecated-copy",
-        "-Wno-stringop-truncation",
-        "-Wno-cast-function-type",
         "-DBACKPATCH",
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
     ] + select({
+        "@envpool//:windows": [],
+        "//conditions:default": [
+            "-Dstricmp=strcasecmp",
+            "-Dstrnicmp=strncasecmp",
+            "-fPIC",
+            "-fomit-frame-pointer",
+            "-D__forceinline=inline",
+            "-Wno-unused-result",
+            "-Wall",
+            "-Wno-unused",
+            "-Wno-unused-parameter",
+            "-Wno-missing-field-initializers",
+            "-Wno-class-memaccess",
+            "-Wno-misleading-indentation",
+            "-Wno-implicit-fallthrough",
+            "-Wno-conversion-null",
+            "-Wno-deprecated-copy",
+            "-Wno-stringop-truncation",
+            "-Wno-cast-function-type",
+            "-include $(execpath @glibc_version_header//:glibc_2_17)",
+        ],
+    }) + select({
+        "@envpool//:windows": [],
         ":darwin": [],
         "//conditions:default": [
             "-msse",

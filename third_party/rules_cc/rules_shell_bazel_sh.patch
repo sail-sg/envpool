@@ -1,0 +1,19 @@
+--- WORKSPACE.orig
++++ WORKSPACE
+@@ -1,5 +1,6 @@
+ workspace(name = "rules_cc")
+ 
+ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
++load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
+ 
+ http_archive(
+@@ -24,7 +25,8 @@
+ 
+ bazel_skylib_workspace()
+ 
+-http_archive(
++maybe(
++    http_archive,
+     name = "rules_shell",
+     sha256 = "410e8ff32e018b9efd2743507e7595c26e2628567c42224411ff533b57d27c28",
+     strip_prefix = "rules_shell-0.2.0",

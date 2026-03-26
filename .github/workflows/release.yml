@@ -159,27 +159,15 @@ jobs:
           go install github.com/bazelbuild/bazelisk@latest
           Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $HOME "go/bin")
       - name: Build
-        shell: pwsh
+        shell: bash
         run: |
-          $env:PATH = "C:\Program Files\Git\usr\bin;$env:PATH"
-          Copy-Item third_party/pip_requirements/requirements-release-lock.txt third_party/pip_requirements/requirements.txt -Force
-          Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
-          $releasePython = "${{ matrix.python-version }}"
-          $releaseSetupTarget = "//:setup_py$($releasePython.Replace('.', ''))"
-          bazelisk run $releaseSetupTarget --config=release -- bdist_wheel
-          New-Item -ItemType Directory -Force -Path dist | Out-Null
-          Copy-Item "bazel-bin/$($releaseSetupTarget.Substring(3)).runfiles/envpool/dist/*.whl" dist/
-          pip3 install (Get-ChildItem dist/*.whl | Select-Object -ExpandProperty FullName) --force-reinstall
+          rm -rf dist
+          make RELEASE_PYTHON=${{ matrix.python-version }} bazel-release
+          pip3 install dist/*.whl --force-reinstall
       - name: Test
-        shell: pwsh
+        shell: bash
         run: |
-          Push-Location envpool
-          python3 make_test.py
-          Pop-Location
-          Push-Location examples
-          python3 make_env.py
-          python3 env_step.py
-          Pop-Location
+          make release-test
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
