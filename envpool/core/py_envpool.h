@@ -301,7 +301,7 @@ std::vector<std::string> PyEnvPool<EnvPool>::py_action_keys =
       .def_readonly_static("_config_keys", &SPEC::py_config_keys)              \
       .def_readonly_static("_default_config_values",                           \
                            &SPEC::py_default_config_values);                   \
-  py::class_<ENVPOOL>(                                                          \
+  py::class_<ENVPOOL>(                                                   \
       MODULE, "_" #ENVPOOL,                                                    \
       py::metaclass(py::module_::import("abc").attr("ABCMeta")))               \
       .def(py::init<const SPEC&>())                                            \
