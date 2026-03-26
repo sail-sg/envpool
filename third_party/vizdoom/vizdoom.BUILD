@@ -272,11 +272,10 @@ cc_library(
     hdrs = [
         "game-music-emu/gme/gme.h",
     ],
-    copts = [
-        "-DLIBGME_VISIBILITY",
-    ] + select({
+    copts = select({
         "@envpool//:windows": [],
         "//conditions:default": [
+            "-DLIBGME_VISIBILITY",
             "-fvisibility=hidden",
             "-fvisibility-inlines-hidden",
             "-include $(execpath @glibc_version_header//:glibc_2_17)",
