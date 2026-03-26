@@ -151,14 +151,14 @@
  #include "viz_main.h"
 --- src/viz_message_queue.h
 +++ src/viz_message_queue.h
-@@ -24,8 +24,9 @@
+@@ -24,7 +24,8 @@
  #ifndef __VIZ_MESSAGE_QUEUE_H__
  #define __VIZ_MESSAGE_QUEUE_H__
 
 -#include <boost/interprocess/ipc/message_queue.hpp>
 +#include <stdint.h>
++#include <boost/interprocess/interprocess_fwd.hpp>
 
-+namespace boost { namespace interprocess { class message_queue; } }
  namespace bip = boost::interprocess;
 
  extern bip::message_queue *vizMQController;
@@ -187,10 +187,32 @@
 -#include <boost/interprocess/shared_memory_object.hpp>
 -#include <boost/interprocess/mapped_region.hpp>
 +#include <stddef.h>
++#include <boost/interprocess/interprocess_fwd.hpp>
 
-+namespace boost { namespace interprocess { class shared_memory_object; class mapped_region; } }
  #define VIZ_SM_NAME_BASE "ViZDoomSM"
  #define VIZ_SM_REGION_COUNT 7
+--- src/viz_input.cpp
++++ src/viz_input.cpp
+@@ -26,6 +26,8 @@
+ #include "viz_defines.h"
+ #include "viz_message_queue.h"
+ #include "viz_shared_memory.h"
++
++#include <boost/interprocess/exceptions.hpp>
+
+ #include "d_main.h"
+ #include "g_game.h"
+--- src/viz_game.cpp
++++ src/viz_game.cpp
+@@ -37,6 +37,8 @@
+ #include "viz_shared_memory.h"
+ #include "viz_version.h"
+ #include "viz_doom_classes.h"
++
++#include <boost/interprocess/exceptions.hpp>
+
+ #include "c_dispatch.h"
+ #include "d_netinf.h"
 --- src/win32/i_system.cpp
 +++ src/win32/i_system.cpp
 @@ -89,6 +89,15 @@
