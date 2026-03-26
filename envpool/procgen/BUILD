@@ -64,7 +64,7 @@ pybind_extension(
 py_library(
     name = "procgen",
     srcs = ["__init__.py"],
-    data = [":procgen_envpool.so"],
+    data = [":procgen_envpool"],
     deps = ["//envpool/python:api"],
 )
 

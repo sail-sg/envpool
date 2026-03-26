@@ -122,7 +122,7 @@ py_library(
     srcs = ["dmc/__init__.py"],
     data = [
         ":gen_mujoco_dmc_xml",
-        ":mujoco_dmc_envpool.so",
+        ":mujoco_dmc_envpool",
     ],
     deps = ["//envpool/python:api"],
 )
@@ -132,7 +132,7 @@ py_library(
     srcs = ["gym/__init__.py"],
     data = [
         ":gen_mujoco_gym_xml",
-        ":mujoco_gym_envpool.so",
+        ":mujoco_gym_envpool",
     ],
     deps = ["//envpool/python:api"],
 )

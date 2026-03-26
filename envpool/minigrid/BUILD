@@ -48,7 +48,7 @@ pybind_extension(
 py_library(
     name = "minigrid",
     srcs = ["__init__.py"],
-    data = [":minigrid_envpool.so"],
+    data = [":minigrid_envpool"],
     deps = [
         "//envpool/python:api",
         requirement("numpy"),

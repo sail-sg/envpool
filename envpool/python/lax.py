@@ -29,6 +29,8 @@ class XlaMixin:
         """Return the XLA version of send/recv/step functions."""
         if sys.platform == "darwin":
             raise RuntimeError("EnvPool XLA is currently unavailable on macOS.")
+        if sys.platform == "win32":
+            raise RuntimeError("EnvPool XLA is currently unavailable on Windows.")
         _handle, _recv, _send = make_xla(self)
 
         def recv(handle: jnp.ndarray) -> TimeStep | tuple:

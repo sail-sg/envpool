@@ -102,6 +102,9 @@ def _qt_autoconf_impl(repository_ctx):
             "/opt/homebrew/opt/qt",
             "/usr/local/opt/qt",
         ])
+    elif "windows" in os_name:
+        if env_qt_path:
+            qt_candidates.append(env_qt_path)
     else:
         fail("EnvPool Qt configure does not support %s" % repository_ctx.os.name)
 

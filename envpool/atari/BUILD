@@ -43,7 +43,7 @@ genrule(
 py_library(
     name = "atari",
     srcs = ["__init__.py"],
-    data = [":atari_envpool.so"],
+    data = [":atari_envpool"],
     deps = ["//envpool/python:api"],
 )
 

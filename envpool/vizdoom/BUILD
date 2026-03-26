@@ -129,7 +129,7 @@ py_library(
     srcs = ["__init__.py"],
     data = [
         ":gen_vizdoom_maps",
-        ":vizdoom_envpool.so",
+        ":vizdoom_envpool",
         "//envpool/vizdoom/bin:freedoom",
         "//envpool/vizdoom/bin:vizdoom_bin",
         "//envpool/vizdoom/bin:vizdoom_pk3",
