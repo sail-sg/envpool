@@ -103,6 +103,7 @@ cmake(
             "-DCMAKE_OBJECT_PATH_MAX=200",
             "-DCV_DISABLE_OPTIMIZATION=ON",
             "-DOPENCV_WORKAROUND_CMAKE_20989=ON",
+            "-DOPENCV_GAPI_MSMF=OFF",
             "-DOPENCV_PYTHON_SKIP_DETECTION=ON",
             "-DWITH_PTHREADS_PF=OFF",
         ],
