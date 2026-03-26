@@ -1,0 +1,65 @@
+--- src/lib/ViZDoomController.h
++++ src/lib/ViZDoomController.h
+@@ -29,0 +30,2 @@
++#else
++    #include "boost/process.hpp"
+@@ -35 +36,0 @@
+-#include "boost/process.hpp"
+@@ -52,0 +54 @@
++#ifndef _WIN32
+@@ -54,0 +57 @@
++#endif
+--- src/lib/ViZDoomController.cpp
++++ src/lib/ViZDoomController.cpp
+@@ -33,0 +34 @@
++#include <stdexcept>
+@@ -36,0 +38,28 @@
++
++#ifdef OS_WIN
++    namespace {
++        std::string quoteCommandArg(const std::string &arg) {
++            if (arg.empty()) return "\"\"";
++            if (arg.find_first_of(" \t\"") == std::string::npos) return arg;
++
++            std::string quoted = "\"";
++            size_t backslashes = 0;
++            for (char ch : arg) {
++                if (ch == '\\') {
++                    ++backslashes;
++                } else if (ch == '"') {
++                    quoted.append(backslashes * 2 + 1, '\\');
++                    quoted.push_back('"');
++                    backslashes = 0;
++                } else {
++                    quoted.append(backslashes, '\\');
++                    backslashes = 0;
++                    quoted.push_back(ch);
++                }
++            }
++            quoted.append(backslashes * 2, '\\');
++            quoted.push_back('"');
++            return quoted;
++        }
++    }
++#endif
+@@ -1473,0 +1503,18 @@
++#ifdef OS_WIN
++            std::string commandLine;
++            for (size_t i = 0; i < this->doomArgs.size(); ++i) {
++                if (i != 0) commandLine += " ";
++                commandLine += quoteCommandArg(this->doomArgs[i]);
++            }
++
++            STARTUPINFOA startupInfo = { sizeof(startupInfo) };
++            PROCESS_INFORMATION processInfo = {};
++            std::vector<char> commandLineBuffer(commandLine.begin(), commandLine.end());
++            commandLineBuffer.push_back('\0');
++
++            if (!CreateProcessA(NULL, commandLineBuffer.data(), NULL, NULL, FALSE, 0, NULL, NULL, &startupInfo, &processInfo))
++                throw std::runtime_error("Failed to launch ViZDoom process.");
++            WaitForSingleObject(processInfo.hProcess, INFINITE);
++            CloseHandle(processInfo.hThread);
++            CloseHandle(processInfo.hProcess);
++#else
+@@ -1478,0 +1526 @@
++#endif
