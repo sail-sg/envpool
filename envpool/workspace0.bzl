@@ -391,12 +391,6 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "vizdoom",
-        patch_args = [
-            "-p0",
-            "-l",
-            "--binary",
-        ],
-        patch_tool = "patch",
         sha256 = "76ddf186d7f093ef85cbcb0e7e387757d60e45190eb5da6d075aab31ffc316ed",
         strip_prefix = "ViZDoom-1.3.0/src/vizdoom/",
         urls = [
@@ -405,9 +399,41 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         build_file = "//third_party/vizdoom:vizdoom.BUILD",
         patches = [
             "//third_party/vizdoom:sdl_thread.patch",
-            "//third_party/vizdoom:msvc_fstring_ternary.patch",
-            "//third_party/vizdoom:windows_headers.patch",
         ],
+        patch_cmds = ["""python - <<'PY'
+from pathlib import Path
+
+
+def replace_with_eol(path_str: str, old_lf: bytes, new_lf: bytes) -> None:
+    path = Path(path_str)
+    data = path.read_bytes()
+    for eol in (b"\\r\\n", b"\\n"):
+        old = old_lf.replace(b"\\n", eol)
+        new = new_lf.replace(b"\\n", eol)
+        if new in data:
+            return
+        if old in data:
+            path.write_bytes(data.replace(old, new, 1))
+            return
+    raise SystemExit(f"expected pattern not found in {path_str}")
+
+
+replace_with_eol(
+    "src/s_sound.h",
+    b'\\t\\treturn ID ? S_sfx[ID].name : "";\\n',
+    b'\\t\\treturn ID ? S_sfx[ID].name : FString("");\\n',
+)
+replace_with_eol(
+    "src/win32/i_system.h",
+    b'#define __I_SYSTEM__\\n\\n#include "doomtype.h"\\n',
+    b'#define __I_SYSTEM__\\n\\n#define USE_WINDOWS_DWORD\\n#define WIN32_LEAN_AND_MEAN\\n#include <windows.h>\\n\\n#include "doomtype.h"\\n',
+)
+replace_with_eol(
+    "src/win32/i_system.cpp",
+    b'\\tHDC dc = GetDC(NULL);\\n\\tif (dc == NULL)\\n\\t{\\n\\t\\treturn false;\\n\\t}\\n',
+    b'\\tHDC dc = GetDC(NULL);\\n\\tif (dc == NULL)\\n\\t{\\n\\t\\treturn NULL;\\n\\t}\\n',
+)
+PY"""],
     )
 
     maybe(
