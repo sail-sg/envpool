@@ -179,14 +179,12 @@ class HumanoidCMUEnv : public Env<HumanoidCMUEnvSpec>, public MujocoEnv {
     const auto& extremities = Extremities();
     const auto& com_velocity = CenterOfMassVelocity();
     const auto& torso_vertical = TorsoVerticalOrientation();
-    state["obs:joint_angles"_].Assign(joint_angles.data(),
-                                      joint_angles.size());
+    state["obs:joint_angles"_].Assign(joint_angles.data(), joint_angles.size());
     state["obs:head_height"_] = HeadHeight();
     state["obs:extremities"_].Assign(extremities.data(), extremities.size());
     state["obs:torso_vertical"_].Assign(torso_vertical.data(),
                                         torso_vertical.size());
-    state["obs:com_velocity"_].Assign(com_velocity.data(),
-                                      com_velocity.size());
+    state["obs:com_velocity"_].Assign(com_velocity.data(), com_velocity.size());
     state["obs:velocity"_].Assign(data_->qvel, model_->nv);
     // info
 #ifdef ENVPOOL_TEST

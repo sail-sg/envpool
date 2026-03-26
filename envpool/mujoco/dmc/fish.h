@@ -176,8 +176,7 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
     state["discount"_] = discount_;
     // obs
     const auto& joint_angles = JointAngles();
-    state["obs:joint_angles"_].Assign(joint_angles.data(),
-                                      joint_angles.size());
+    state["obs:joint_angles"_].Assign(joint_angles.data(), joint_angles.size());
     state["obs:upright"_] = Upright();
     state["obs:velocity"_].Assign(data_->qvel, model_->nv);
     if (is_swim_) {

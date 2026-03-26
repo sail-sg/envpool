@@ -371,8 +371,7 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
     state["obs:touch"_].Assign(touch.data(), touch.size());
     state["obs:hand_pos"_].Assign(hand_pos.data(), hand_pos.size());
     state["obs:object_pos"_].Assign(object_pos.data(), object_pos.size());
-    state["obs:object_vel"_].Assign(joint_vel_obj.data(),
-                                    joint_vel_obj.size());
+    state["obs:object_vel"_].Assign(joint_vel_obj.data(), joint_vel_obj.size());
     state["obs:target_pos"_].Assign(target_pos.data(), target_pos.size());
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);

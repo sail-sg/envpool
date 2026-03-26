@@ -63,8 +63,8 @@ template <FixedKeyString S>
 class Key {
  public:
   static constexpr auto kStr = S;
-  static constexpr std::string_view kStrView{
-      kStr.value, sizeof(kStr.value) - 1};
+  static constexpr std::string_view kStrView{kStr.value,
+                                             sizeof(kStr.value) - 1};
   template <typename Type>
   static constexpr auto Bind(Type&& v) {
     return Value<Key, Type>(std::forward<Type>(v));
