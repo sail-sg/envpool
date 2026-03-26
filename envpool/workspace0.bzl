@@ -486,6 +486,10 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "mujoco",
+        patch_args = ["-p1"],
+        patches = [
+            "//third_party/mujoco:windows_msvc_compat.patch",
+        ],
         sha256 = "0d6bb25612da5d1c398d21cf5b039367d4deef15c064b049c3127043d613b539",
         strip_prefix = "mujoco-3.6.0",
         urls = [

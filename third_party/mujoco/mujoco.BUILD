@@ -54,7 +54,10 @@ cc_library(
             "-Wno-stringop-truncation",
         ],
     }),
-    cxxopts = ["-std=c++20"],
+    cxxopts = select({
+        "@envpool//:windows": ["/std:c++20"],
+        "//conditions:default": ["-std=c++20"],
+    }),
     defines = ["MJ_STATIC"],
     includes = [
         "include",
