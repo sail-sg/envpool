@@ -105,6 +105,8 @@ cmake(
             "-DCMAKE_SYSTEM_PROCESSOR=AMD64",
             "-DCMAKE_OBJECT_PATH_MAX=200",
             "-DCV_DISABLE_OPTIMIZATION=ON",
+            "-DOpenCV_ARCH=x64",
+            "-DOpenCV_RUNTIME=vc17",
             "-DOPENCV_WORKAROUND_CMAKE_20989=ON",
             "-DOPENCV_GAPI_MSMF=OFF",
             "-DOPENCV_PYTHON_SKIP_DETECTION=ON",
@@ -124,13 +126,18 @@ cmake(
             "-ldl",
         ],
     }),
-    out_include_dir = "include/opencv4",
+    out_include_dir = select({
+        "@envpool//:windows": "include",
+        "//conditions:default": "include/opencv4",
+    }),
     out_static_libs = select({
         "@envpool//:windows": [
-            "opencv_imgproc4130.lib",
-            "opencv_features2d4130.lib",
-            "opencv_flann4130.lib",
-            "opencv_core4130.lib",
+            # Match OpenCV's upstream static Windows install layout instead of
+            # forcing the Unix-style lib/ prefix used on macOS/Linux.
+            "x64/vc17/staticlib/opencv_imgproc4130.lib",
+            "x64/vc17/staticlib/opencv_features2d4130.lib",
+            "x64/vc17/staticlib/opencv_flann4130.lib",
+            "x64/vc17/staticlib/opencv_core4130.lib",
         ],
         "//conditions:default": [
             "libopencv_imgproc.a",
