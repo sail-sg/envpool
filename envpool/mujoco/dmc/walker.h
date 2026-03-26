@@ -137,7 +137,7 @@ class WalkerEnv : public Env<WalkerEnvSpec>, public MujocoEnv {
     state["discount"_] = discount_;
     // obs
     const auto& orient = Orientations();
-    state["obs:orientations"_].Assign(orient.begin(), orient.size());
+    state["obs:orientations"_].Assign(orient.data(), orient.size());
     state["obs:height"_] = TorsoHeight();
     state["obs:velocity"_].Assign(data_->qvel, model_->nv);
     // info for check alignment

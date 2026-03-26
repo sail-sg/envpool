@@ -190,13 +190,13 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     if (is_pure_state_) {
       state["obs:position"_].Assign(data_->qpos, model_->nq);
     } else {
-      state["obs:joint_angles"_].Assign(joint_angles.begin(),
+      state["obs:joint_angles"_].Assign(joint_angles.data(),
                                         joint_angles.size());
       state["obs:head_height"_] = HeadHeight();
-      state["obs:extremities"_].Assign(extremities.begin(), extremities.size());
-      state["obs:torso_vertical"_].Assign(torso_vertical.begin(),
+      state["obs:extremities"_].Assign(extremities.data(), extremities.size());
+      state["obs:torso_vertical"_].Assign(torso_vertical.data(),
                                           torso_vertical.size());
-      state["obs:com_velocity"_].Assign(com_velocity.begin(),
+      state["obs:com_velocity"_].Assign(com_velocity.data(),
                                         com_velocity.size());
     }
     // info

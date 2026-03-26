@@ -17,6 +17,6 @@ exports_files([
     "bzip2_system_headers.patch",
     "filesystem_scope_headers.patch",
     "lzma_windows_copts.patch",
-    "process_windows_defines.patch",
+    "windows_common_defines.patch",
     "zlib_system_headers.patch",
 ])

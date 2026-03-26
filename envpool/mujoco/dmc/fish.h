@@ -176,18 +176,18 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
     state["discount"_] = discount_;
     // obs
     const auto& joint_angles = JointAngles();
-    state["obs:joint_angles"_].Assign(joint_angles.begin(),
+    state["obs:joint_angles"_].Assign(joint_angles.data(),
                                       joint_angles.size());
     state["obs:upright"_] = Upright();
     state["obs:velocity"_].Assign(data_->qvel, model_->nv);
     if (is_swim_) {
       const auto& target = MouthToTarget();
-      state["obs:target"_].Assign(target.begin(), target.size());
+      state["obs:target"_].Assign(target.data(), target.size());
     }
     // info
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    state["info:target0"_].Assign(target0_.begin(), target0_.size());
+    state["info:target0"_].Assign(target0_.data(), target0_.size());
 #endif
   }
 
