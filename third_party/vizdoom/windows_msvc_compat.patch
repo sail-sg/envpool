@@ -69,30 +69,44 @@
 
 --- src/g_level.cpp
 +++ src/g_level.cpp
-@@ -32,6 +32,10 @@
+@@ -31,6 +31,24 @@
+ **---------------------------------------------------------------------------
  **
  */
-
-+#ifdef _WIN32
-+#define USE_WINDOWS_DWORD
-+#endif
 +
++#ifdef _WIN32
++#if defined(_M_X64) && !defined(_AMD64_)
++#define _AMD64_
++#elif defined(_M_IX86) && !defined(_X86_)
++#define _X86_
++#elif defined(_M_ARM64) && !defined(_ARM64_)
++#define _ARM64_
++#endif
++#define USE_WINDOWS_DWORD
++#ifndef WIN32_LEAN_AND_MEAN
++#define WIN32_LEAN_AND_MEAN
++#endif
++#ifndef NOMINMAX
++#define NOMINMAX
++#endif
++#include <windows.h>
++#endif
+
  #include <assert.h>
  #include "templates.h"
- #include "d_main.h"
-@@ -87,6 +87,12 @@
-
+@@ -91,6 +109,12 @@
  //VIZDOOM_CODE
  #include "viz_game.h"
-+
+
 +#ifdef _WIN32
 +#ifdef GetMessage
 +#undef GetMessage
 +#endif
 +#endif
-
++
  void STAT_StartNewGame(const char *lev);
  void STAT_ChangeLevel(const char *newl);
+
 --- src/s_sound.h
 +++ src/s_sound.h
 @@ -129,7 +129,7 @@
