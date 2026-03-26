@@ -553,11 +553,13 @@ _VIZDOOM_POSIX_SRCS = [
 ]
 
 _VIZDOOM_WINDOWS_LINKOPTS = [
+    "/SUBSYSTEM:WINDOWS",
     "wsock32.lib",
     "winmm.lib",
     "dxguid.lib",
     "dinput8.lib",
     "ole32.lib",
+    "shell32.lib",
     "user32.lib",
     "gdi32.lib",
     "comctl32.lib",

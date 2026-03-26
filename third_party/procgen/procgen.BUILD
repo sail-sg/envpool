@@ -20,7 +20,6 @@ filegroup(
     name = "procgen_assets",
     srcs = [
         "data/assets/kenney",
-        "data/assets/kenney-abstract",
         "data/assets/misc_assets",
         "data/assets/platform_backgrounds",
         "data/assets/platform_backgrounds_2",
