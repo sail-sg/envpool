@@ -425,8 +425,13 @@ replace_with_eol(
 )
 replace_with_eol(
     "src/win32/i_system.h",
-    b'#define __I_SYSTEM__\\n\\n#include "doomtype.h"\\n',
-    b'#define __I_SYSTEM__\\n\\n#define USE_WINDOWS_DWORD\\n#define WIN32_LEAN_AND_MEAN\\n#include <windows.h>\\n\\n#include "doomtype.h"\\n',
+    b'// Helper template so that we can access newer Win32 functions with a single static\\n// variable declaration. If this were C++11 it could be totally transparent.\\ntemplate<typename Proto>\\nclass TOptWin32Proc\\n{\\n\\tstatic Proto GetOptionalWin32Proc(const char* module, const char* function)\\n\\t{\\n\\t\\tHMODULE hmodule = GetModuleHandle(module);\\n\\t\\tif (hmodule == NULL)\\n\\t\\t\\treturn NULL;\\n\\n\\t\\treturn (Proto)GetProcAddress(hmodule, function);\\n\\t}\\n',
+    b'void *I_GetOptionalWin32ProcAddress(const char* module, const char* function);\\n\\n// Helper template so that we can access newer Win32 functions with a single static\\n// variable declaration. If this were C++11 it could be totally transparent.\\ntemplate<typename Proto>\\nclass TOptWin32Proc\\n{\\n\\tstatic Proto GetOptionalWin32Proc(const char* module, const char* function)\\n\\t{\\n\\t\\treturn (Proto)I_GetOptionalWin32ProcAddress(module, function);\\n\\t}\\n',
+)
+replace_with_eol(
+    "src/win32/i_system.cpp",
+    b'//VIZDOOM_CODE\\n#include "viz_main.h"\\n',
+    b'//VIZDOOM_CODE\\n#include "viz_main.h"\\n\\nvoid *I_GetOptionalWin32ProcAddress(const char* module, const char* function)\\n{\\n\\tHMODULE hmodule = GetModuleHandleA(module);\\n\\tif (hmodule == NULL)\\n\\t\\treturn NULL;\\n\\n\\treturn (void *)GetProcAddress(hmodule, function);\\n}\\n',
 )
 replace_with_eol(
     "src/win32/i_system.cpp",
@@ -446,6 +451,30 @@ PY"""],
         patches = [
             "//third_party/vizdoom_lib:windows_create_process.patch",
         ],
+        patch_cmds = ["""python - <<'PY'
+from pathlib import Path
+
+
+def replace_with_eol(path_str: str, old_lf: bytes, new_lf: bytes) -> None:
+    path = Path(path_str)
+    data = path.read_bytes()
+    for eol in (b"\\r\\n", b"\\n"):
+        old = old_lf.replace(b"\\n", eol)
+        new = new_lf.replace(b"\\n", eol)
+        if new in data:
+            return
+        if old in data:
+            path.write_bytes(data.replace(old, new, 1))
+            return
+    raise SystemExit(f"expected pattern not found in {path_str}")
+
+
+replace_with_eol(
+    "src/lib/ViZDoomController.cpp",
+    b'#include <boost/algorithm/string.hpp>\\n#include <boost/chrono.hpp>\\n#include <boost/lexical_cast.hpp>\\n#include <stdexcept>\\n',
+    b'#include <boost/algorithm/string.hpp>\\n#include <boost/chrono.hpp>\\n#include <boost/filesystem.hpp>\\n#include <boost/lexical_cast.hpp>\\n#include <stdexcept>\\n',
+)
+PY"""],
         sha256 = "76ddf186d7f093ef85cbcb0e7e387757d60e45190eb5da6d075aab31ffc316ed",
         strip_prefix = "ViZDoom-1.3.0/",
         urls = [
