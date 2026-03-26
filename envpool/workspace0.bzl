@@ -443,9 +443,29 @@ def replace_with_eol(path_str: str, old_lf: bytes, new_lf: bytes) -> None:
 
 
 replace_with_eol(
+    "src/c_console.cpp",
+    b'#include "templates.h"\\n',
+    b'#ifdef _WIN32\\n#define WIN32_LEAN_AND_MEAN\\n#define USE_WINDOWS_DWORD\\n#include <windows.h>\\n#endif\\n\\n#include "templates.h"\\n',
+)
+replace_with_eol(
+    "src/c_console.cpp",
+    b'//VIZDOOM_CODE\\n#include "viz_game.h" \\n',
+    b'//VIZDOOM_CODE\\n#include "viz_game.h" \\n\\n#ifdef _WIN32\\n#ifdef DrawText\\n#undef DrawText\\n#endif\\n#ifdef GetCharWidth\\n#undef GetCharWidth\\n#endif\\n#endif\\n',
+)
+replace_with_eol(
     "src/s_sound.h",
     b'\\t\\treturn ID ? S_sfx[ID].name : "";\\n',
     b'\\t\\treturn ID ? S_sfx[ID].name : FString("");\\n',
+)
+replace_with_eol(
+    "src/fragglescript/t_func.cpp",
+    b'\\t\\tt_return.string = tex? tex->Name : "";\\n',
+    b'\\t\\tt_return.string = tex ? tex->Name : FString("");\\n',
+)
+replace_with_eol(
+    "src/fragglescript/t_func.cpp",
+    b'\\t\\tFTexture * tex = TexMan[sector->GetTexture(sector_t::ceiling)];\\n\\t\\tt_return.string = tex? tex->Name : "";\\n',
+    b'\\t\\tFTexture * tex = TexMan[sector->GetTexture(sector_t::ceiling)];\\n\\t\\tt_return.string = tex ? tex->Name : FString("");\\n',
 )
 replace_with_eol(
     "src/win32/i_system.h",
