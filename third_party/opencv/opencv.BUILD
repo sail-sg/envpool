@@ -105,6 +105,7 @@ cmake(
         "@envpool//:windows": [
             "-DCMAKE_SYSTEM_PROCESSOR=AMD64",
             "-DCMAKE_OBJECT_PATH_MAX=200",
+            "-DBUILD_WITH_STATIC_CRT=OFF",
             "-DCV_DISABLE_OPTIMIZATION=ON",
             "-DOpenCV_ARCH=x64",
             "-DOpenCV_RUNTIME=vc17",
@@ -122,7 +123,9 @@ cmake(
     }),
     lib_source = ":srcs",
     linkopts = select({
-        "@envpool//:windows": [],
+        "@envpool//:windows": [
+            "ole32.lib",
+        ],
         "//conditions:default": [
             "-ldl",
         ],
@@ -137,6 +140,7 @@ cmake(
     }),
     out_static_libs = select({
         "@envpool//:windows": [
+            "zlib.lib",
             "opencv_imgproc4130.lib",
             "opencv_features2d4130.lib",
             "opencv_flann4130.lib",
