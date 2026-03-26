@@ -353,6 +353,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
             "//third_party/boost:filesystem_scope_headers.patch",
             "//third_party/boost:atomic_windows_build.patch",
             "//third_party/boost:lzma_windows_copts.patch",
+            "//third_party/boost:process_windows_defines.patch",
             "//third_party/boost:bzip2_system_headers.patch",
             "//third_party/boost:zlib_system_headers.patch",
         ],
@@ -489,6 +490,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         patch_args = ["-p1"],
         patches = [
             "//third_party/mujoco:windows_msvc_compat.patch",
+            "//third_party/mujoco:windows_msvc_c11_compat.patch",
         ],
         sha256 = "0d6bb25612da5d1c398d21cf5b039367d4deef15c064b049c3127043d613b539",
         strip_prefix = "mujoco-3.6.0",

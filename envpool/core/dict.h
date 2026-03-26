@@ -18,8 +18,10 @@
 #define ENVPOOL_CORE_DICT_H_
 
 #include <algorithm>
+#include <cstddef>
 #include <functional>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -41,6 +43,38 @@ class Value {
   Type v;
 };
 
+#ifdef _MSC_VER
+template <std::size_t N>
+struct FixedKeyString {
+  char value[N];
+
+  constexpr FixedKeyString(const char (&str)[N]) : value{} {
+    for (std::size_t i = 0; i < N; ++i) {
+      value[i] = str[i];
+    }
+  }
+};
+
+template <std::size_t N>
+FixedKeyString(const char (&)[N]) -> FixedKeyString<N>;
+
+template <FixedKeyString S>
+class Key {
+ public:
+  static constexpr auto kStr = S;
+  static constexpr std::string_view kStrView{kStr.value, sizeof(kStr.value) - 1};
+  template <typename Type>
+  static constexpr auto Bind(Type&& v) {
+    return Value<Key, Type>(std::forward<Type>(v));
+  }
+  static std::string Str() { return {kStrView.data(), kStrView.size()}; }
+};
+
+template <FixedKeyString S>
+inline constexpr auto operator""_() {  // NOLINT
+  return Key<S>{};
+}
+#else
 template <char... C>
 class Key {
  public:
@@ -58,6 +92,7 @@ template <class CharT, CharT... CS>
 inline constexpr auto operator""_() {  // NOLINT
   return Key<CS...>{};
 }
+#endif
 
 template <
     typename Key, typename Keys, typename TupleOrVector,

@@ -1,0 +1,129 @@
+diff --git a/src/engine/engine_array_safety.h b/src/engine/engine_array_safety.h
+--- a/src/engine/engine_array_safety.h
++++ b/src/engine/engine_array_safety.h
+@@ -22,9 +22,13 @@
+ #include <stdio.h>
+ #include <string.h>
+ 
++#ifdef _MSC_VER
++#define mjSIZEOFARRAY(arr) sizeof(arr)
++#else
+ // Evaluates to sizeof(arr) if arr is a char array, and emits a compiler error
+ // otherwise. In particular, emits a compiler error if arr is a char*.
+ #define mjSIZEOFARRAY(arr) _Generic(&(arr), char(*)[sizeof(arr)]: sizeof(arr))
++#endif
+ 
+ #define mjSNPRINTF(dest, ...) snprintf(dest, mjSIZEOFARRAY(dest), __VA_ARGS__)
+ 
+diff --git a/src/engine/engine_print.c b/src/engine/engine_print.c
+--- a/src/engine/engine_print.c
++++ b/src/engine/engine_print.c
+@@ -45,6 +45,17 @@
+ #define INT_FORMAT " %d"
+ #define SIZE_FORMAT " %" PRId64
+ #define NAME_FORMAT "%-21s"
++
++#define PRINT_FORMAT_FOR_TYPE(type) PRINT_FORMAT_FOR_TYPE_##type
++#define PRINT_FORMAT_FOR_TYPE_mjtNum float_format
++#define PRINT_FORMAT_FOR_TYPE_float float_format
++#define PRINT_FORMAT_FOR_TYPE_double float_format
++#define PRINT_FORMAT_FOR_TYPE_int INT_FORMAT
++#define PRINT_FORMAT_FOR_TYPE_mjtByte INT_FORMAT
++#define PRINT_FORMAT_FOR_TYPE_mjtSize SIZE_FORMAT
++#define PRINT_FORMAT_FOR_TYPE_char NULL
++#define PRINT_FORMAT_FOR_TYPE_size_t NULL
++#define PRINT_FORMAT_FOR_TYPE_uintptr_t NULL
+ 
+ 
+ 
+@@ -588,10 +599,7 @@
+   fprintf(fp, "SIZES\n");
+ #define X( name )                                 \
+   if (m->name) {                                  \
+-    const char* format = _Generic(                \
+-        m->name,                                  \
+-        mjtSize : SIZE_FORMAT,                    \
+-        default : INT_FORMAT);                    \
++    const char* format = SIZE_FORMAT;             \
+     fprintf(fp, NAME_FORMAT, "  " #name);         \
+     fprintf(fp, format, m->name);                 \
+     fprintf(fp, "\n");                            \
+@@ -606,16 +614,14 @@
+ #define X(type, name, sz)                                             \
+   fprintf(fp, NAME_FORMAT, "  " #name);                               \
+   {                                                                   \
+-    const char* format =                                              \
+-        _Generic(m->opt.name, mjtNum: float_format, int: INT_FORMAT); \
++    const char* format = PRINT_FORMAT_FOR_TYPE(type);                 \
+     fprintf(fp, format, m->opt.name);                                 \
+   }                                                                   \
+   fprintf(fp, "\n");
+ #define XVEC(type, name, sz)                                             \
+   fprintf(fp, NAME_FORMAT, "  " #name);                                  \
+   {                                                                      \
+-    const char* format =                                                 \
+-        _Generic(m->opt.name[0], mjtNum: float_format, int: INT_FORMAT); \
++    const char* format = PRINT_FORMAT_FOR_TYPE(type);                    \
+     for (int i = 0; i < sz; i++) {                                       \
+       fprintf(fp, format, m->opt.name[i]);                               \
+     }                                                                    \
+@@ -634,8 +640,7 @@
+ #define X(type, name)                                                       \
+   fprintf(fp, NAME_FORMAT, "    " #name);                                   \
+   {                                                                         \
+-    const char* format =                                                    \
+-        _Generic(m->vis.global.name, float: float_format, int: INT_FORMAT); \
++    const char* format = PRINT_FORMAT_FOR_TYPE(type);                       \
+     fprintf(fp, format, m->vis.global.name);                                \
+   }                                                                         \
+   fprintf(fp, "\n");
+@@ -656,18 +661,14 @@
+ #define X(type, name, sz)                                                      \
+   fprintf(fp, NAME_FORMAT, "    " #name);                                      \
+   {                                                                            \
+-    const char* format =                                                       \
+-        _Generic(m->vis.headlight.name, float: float_format, int: INT_FORMAT); \
++    const char* format = PRINT_FORMAT_FOR_TYPE(type);                          \
+     fprintf(fp, format, m->vis.headlight.name);                                \
+   }                                                                            \
+   fprintf(fp, "\n");
+ #define XVEC(type, name, sz)                                \
+   fprintf(fp, NAME_FORMAT, "    " #name);                   \
+   {                                                         \
+-    const char* format = _Generic(                          \
+-        m->vis.headlight.name[0],                           \
+-        float: float_format,                                \
+-        int: INT_FORMAT);                                   \
++    const char* format = PRINT_FORMAT_FOR_TYPE(type);       \
+     for (int i = 0; i < sz; i++) {                          \
+       fprintf(fp, format, m->vis.headlight.name[i]);        \
+     }                                                       \
+@@ -761,13 +762,7 @@
+ 
+ #define X(type, name, num, sz)                                              \
+   if (&m->num == object_class && sz > 0) {                                  \
+-    const char* format = _Generic(*m->name,                                 \
+-                                  double:  float_format,                    \
+-                                  float:   float_format,                    \
+-                                  int:     INT_FORMAT,                      \
+-                                  mjtByte: INT_FORMAT,                      \
+-                                  mjtSize: SIZE_FORMAT,                     \
+-                                  default: NULL);                           \
++    const char* format = PRINT_FORMAT_FOR_TYPE(type);                       \
+     if (format) {                                                           \
+       fprintf(fp, "  ");                                                    \
+       fprintf(fp, NAME_FORMAT, #name);                                      \
+@@ -1266,12 +1261,7 @@
+       strcmp(#name, "pbase") != 0 &&                                          \
+       strcmp(#name, "parena") != 0 &&                                         \
+       strcmp(#name, "threadpool") != 0) {                                     \
+-    const char* format = _Generic(                                            \
+-        d->name,                                                              \
+-        int : INT_FORMAT,                                                     \
+-        mjtSize : SIZE_FORMAT,                                                \
+-        mjtByte : INT_FORMAT,                                                 \
+-        default : NULL);                                                      \
++    const char* format = PRINT_FORMAT_FOR_TYPE(type);                         \
+     if (format) {                                                             \
+       fprintf(fp, "  ");                                                      \
+       fprintf(fp, NAME_FORMAT, #name);                                        \
