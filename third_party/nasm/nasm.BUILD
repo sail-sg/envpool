@@ -53,10 +53,7 @@ cc_binary(
     ]) + [
         "version.h",
         ":config_h",
-    ] + select({
-        ":windows": ["config/msvc.h"],
-        "//conditions:default": [],
-    }),
+    ],
     copts = select({
         ":windows": [],
         "//conditions:default": [
