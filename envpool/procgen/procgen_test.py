@@ -70,7 +70,13 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
         self.assertEqual(info["prev_level_complete"][0], 1)
         pixel_mean_ref = [196.86093636, 144.85448235, 95.27605529]
         pixel_mean = (sum_obs / cnt).mean(axis=0).mean(axis=0)  # type: ignore
-        np.testing.assert_allclose(pixel_mean, pixel_mean_ref)
+        # Apple Silicon renders the same trajectory with sub-1e-3 pixel drift.
+        np.testing.assert_allclose(
+            pixel_mean,
+            pixel_mean_ref,
+            rtol=1e-5,
+            atol=1e-3,
+        )
 
     def test_channel_first(
         self,

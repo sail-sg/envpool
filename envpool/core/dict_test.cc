@@ -14,11 +14,13 @@
 
 #include "envpool/core/dict.h"
 
-#include <glog/logging.h>
 #include <gtest/gtest.h>
 
 #include <algorithm>
 #include <iostream>
+
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 
 TEST(DictTest, Keys) {
   auto d = MakeDict("abc"_.Bind(0.), "xyz"_.Bind(0.), "ijk"_.Bind(1));

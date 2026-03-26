@@ -56,12 +56,13 @@ def _make_xla_function(
         platform="cpu",
         api_version=1,
     )
-    ffi.register_ffi_target(
-        call_target_name,
-        gpu_capsule,
-        platform="gpu",
-        api_version=1,
-    )
+    if gpu_capsule is not None:
+        ffi.register_ffi_target(
+            call_target_name,
+            gpu_capsule,
+            platform="gpu",
+            api_version=1,
+        )
     result_specs = tuple(_shape_dtype_struct(*spec) for spec in out_specs)
     xla_func = ffi.ffi_call(
         call_target_name,

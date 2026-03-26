@@ -145,6 +145,7 @@ py_library(
 
 py_test(
     name = "vizdoom_test",
+    size = "enormous",
     srcs = ["vizdoom_test.py"],
     deps = [
         ":vizdoom",

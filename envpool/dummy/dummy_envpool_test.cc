@@ -14,11 +14,13 @@
 
 #include "envpool/dummy/dummy_envpool.h"
 
-#include <glog/logging.h>
 #include <gtest/gtest.h>
 
 #include <random>
 #include <vector>
+
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 
 using DummyAction = typename dummy::DummyEnv::Action;
 using DummyState = typename dummy::DummyEnv::State;

@@ -14,6 +14,27 @@
 
 load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
 
+config_setting(
+    name = "darwin",
+    constraint_values = ["@platforms//os:macos"],
+)
+
+config_setting(
+    name = "darwin_arm64",
+    constraint_values = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:macos",
+    ],
+)
+
+config_setting(
+    name = "linux_arm64",
+    constraint_values = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:linux",
+    ],
+)
+
 filegroup(
     name = "srcs",
     srcs = glob(["**"]),
@@ -73,7 +94,13 @@ cmake(
         "-DWITH_QT=OFF",
         "-DWITH_TBB=OFF",
         "-DWITH_TIFF=OFF",
-    ],
+    ] + select({
+        ":darwin": [
+            # Avoid build-time KleidiCV downloads inside the Bazel sandbox on macOS.
+            "-DWITH_KLEIDICV=OFF",
+        ],
+        "//conditions:default": [],
+    }),
     lib_source = ":srcs",
     linkopts = [
         "-ldl",
@@ -84,6 +111,17 @@ cmake(
         "libopencv_features2d.a",
         "libopencv_flann.a",
         "libopencv_core.a",
-    ],
+    ] + select({
+        ":darwin_arm64": [
+            "opencv4/3rdparty/libtegra_hal.a",
+        ],
+        ":linux_arm64": [
+            "opencv4/3rdparty/libkleidicv_hal.a",
+            "opencv4/3rdparty/libkleidicv_thread.a",
+            "opencv4/3rdparty/libkleidicv.a",
+            "opencv4/3rdparty/libtegra_hal.a",
+        ],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
 )

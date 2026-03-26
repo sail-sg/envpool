@@ -14,10 +14,12 @@
 
 #include "envpool/utils/image_process.h"
 
-#include <glog/logging.h>
 #include <gtest/gtest.h>
 
 #include <vector>
+
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 
 TEST(ImageProcessTest, Resize) {
   // shape

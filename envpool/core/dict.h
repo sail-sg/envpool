@@ -17,8 +17,6 @@
 #ifndef ENVPOOL_CORE_DICT_H_
 #define ENVPOOL_CORE_DICT_H_
 
-#include <glog/logging.h>
-
 #include <algorithm>
 #include <functional>
 #include <string>
@@ -27,6 +25,8 @@
 #include <utility>
 #include <vector>
 
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "envpool/core/array.h"
 #include "envpool/core/spec.h"
 #include "envpool/core/tuple_utils.h"

@@ -117,6 +117,7 @@ cc_library(
         ":k8": [":simd_x86_64"],
         ":armeabi-v7a": [":simd_armv7a"],
         ":arm64-v8a": [":simd_armv8a"],
+        ":darwin_arm64": [":simd_armv8a_darwin"],
         ":linux_ppc64le": [":simd_altivec"],
         ":windows": [":simd_win_x86_64"],
         "//conditions:default": [":simd_none"],
@@ -351,16 +352,86 @@ cc_library(
         "jsimddct.h",
     ]] + [
         "jconfig.h",
+        "jconfigint.h",
         "simd/arm/aarch64/jsimd.c",
         "simd/arm/aarch64/jsimd_neon.S",
         "simd/jsimd.h",
     ],
-    hdrs = glob(["src/*.h"]) + ["jconfig.h"],
+    hdrs = glob(["src/*.h"]) + [
+        "jconfig.h",
+        "jconfigint.h",
+    ],
     copts = libjpegturbo_copts,
     includes = [
         ".",
         "src",
     ],
+)
+
+template_rule(
+    name = "simd_arm_neon_compat",
+    src = "simd/arm/neon-compat.h.in",
+    out = "simd/arm/neon-compat.h",
+    substitutions = {
+        "#cmakedefine HAVE_VLD1Q_U8_X4": "#define HAVE_VLD1Q_U8_X4",
+        "#cmakedefine HAVE_VLD1_S16_X3": "#define HAVE_VLD1_S16_X3",
+        "#cmakedefine HAVE_VLD1_U16_X2": "#define HAVE_VLD1_U16_X2",
+    },
+)
+
+cc_library(
+    name = "simd_armv8a_darwin",
+    srcs = ["src/" + path for path in [
+        "jchuff.h",
+        "jdct.h",
+        "jerror.h",
+        "jinclude.h",
+        "jmorecfg.h",
+        "jpegint.h",
+        "jpeglib.h",
+        "jsimd.h",
+        "jsimddct.h",
+    ]] + [
+        "jconfig.h",
+        "jconfigint.h",
+        "simd/arm/aarch64/jchuff-neon.c",
+        "simd/arm/aarch64/jsimd.c",
+        "simd/arm/jccolor-neon.c",
+        "simd/arm/jcgray-neon.c",
+        "simd/arm/jcphuff-neon.c",
+        "simd/arm/jcsample-neon.c",
+        "simd/arm/jdcolor-neon.c",
+        "simd/arm/jdmerge-neon.c",
+        "simd/arm/jdsample-neon.c",
+        "simd/arm/jfdctfst-neon.c",
+        "simd/arm/jfdctint-neon.c",
+        "simd/arm/jidctfst-neon.c",
+        "simd/arm/jidctint-neon.c",
+        "simd/arm/jidctred-neon.c",
+        "simd/arm/jquanti-neon.c",
+        "simd/jsimd.h",
+    ],
+    hdrs = glob(["src/*.h"]) + [
+        "jconfig.h",
+        "jconfigint.h",
+        "simd/arm/aarch32/jccolext-neon.c",
+        "simd/arm/aarch64/jccolext-neon.c",
+        "simd/arm/align.h",
+        "simd/arm/jcgryext-neon.c",
+        "simd/arm/jchuff.h",
+        "simd/arm/jdcolext-neon.c",
+        "simd/arm/jdmrgext-neon.c",
+        ":simd_arm_neon_compat",
+    ],
+    copts = libjpegturbo_copts + [
+        "-DNEON_INTRINSICS",
+    ],
+    includes = [
+        ".",
+        "simd/arm",
+        "src",
+    ],
+    alwayslink = 1,
 )
 
 cc_library(
@@ -678,6 +749,7 @@ genrule(
         ":k8": "cp $(location jconfig_nowin_simd.h) $@",
         ":armeabi-v7a": "cp $(location jconfig_nowin_simd.h) $@",
         ":arm64-v8a": "cp $(location jconfig_nowin_simd.h) $@",
+        ":darwin_arm64": "cp $(location jconfig_nowin_simd.h) $@",
         ":linux_ppc64le": "cp $(location jconfig_nowin_simd.h) $@",
         "//conditions:default": "cp $(location jconfig_nowin_nosimd.h) $@",
     }),
@@ -696,6 +768,7 @@ genrule(
         ":k8": "cp $(location jconfigint_nowin_simd.h) $@",
         ":armeabi-v7a": "cp $(location jconfigint_nowin_simd.h) $@",
         ":arm64-v8a": "cp $(location jconfigint_nowin_simd.h) $@",
+        ":darwin_arm64": "cp $(location jconfigint_nowin_simd.h) $@",
         ":linux_ppc64le": "cp $(location jconfigint_nowin_simd.h) $@",
         "//conditions:default": "cp $(location jconfigint_nowin_nosimd.h) $@",
     }),
@@ -789,6 +862,14 @@ config_setting(
 config_setting(
     name = "arm64-v8a",
     values = {"cpu": "arm64-v8a"},
+)
+
+config_setting(
+    name = "darwin_arm64",
+    constraint_values = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:macos",
+    ],
 )
 
 config_setting(

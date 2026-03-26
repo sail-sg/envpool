@@ -17,8 +17,6 @@
 #ifndef ENVPOOL_CORE_SPEC_H_
 #define ENVPOOL_CORE_SPEC_H_
 
-#include <glog/logging.h>
-
 #include <cstddef>
 #include <functional>
 #include <limits>
@@ -28,6 +26,9 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 
 inline std::size_t Prod(const std::size_t* shape, std::size_t ndim) {
   return std::accumulate(shape, shape + ndim, static_cast<std::size_t>(1),

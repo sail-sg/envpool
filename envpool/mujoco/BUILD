@@ -143,6 +143,7 @@ cc_test(
     srcs = ["gym/mujoco_gym_envpool_test.cc"],
     deps = [
         ":mujoco_gym_env",
+        "//envpool/core:logging",
         "@com_google_googletest//:gtest_main",
     ],
 )

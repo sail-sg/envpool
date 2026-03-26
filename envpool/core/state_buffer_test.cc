@@ -14,12 +14,13 @@
 
 #include "envpool/core/state_buffer.h"
 
-#include <glog/logging.h>
 #include <gtest/gtest.h>
 
 #include <cstdint>
 #include <vector>
 
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "envpool/core/spec.h"
 
 TEST(StateBufferTest, Basic) {

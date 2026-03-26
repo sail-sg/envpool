@@ -44,6 +44,7 @@ cc_test(
     srcs = ["procgen_env_test.cc"],
     deps = [
         ":procgen_env",
+        "//envpool/core:logging",
         "@com_google_googletest//:gtest_main",
     ],
 )

@@ -14,11 +14,13 @@
 
 #include "envpool/procgen/procgen_env.h"
 
-#include <glog/logging.h>
 #include <gtest/gtest.h>
 
 #include <random>
 #include <vector>
+
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 
 using ProcgenState = procgen::ProcgenEnv::State;
 using ProcgenAction = procgen::ProcgenEnv::Action;

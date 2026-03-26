@@ -14,13 +14,15 @@
 
 #include "envpool/atari/atari_env.h"
 
-#include <glog/logging.h>
 #include <gtest/gtest.h>
 
 #include <algorithm>
 #include <random>
 #include <string>
 #include <vector>
+
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 
 using AtariState = atari::AtariEnv::State;
 using AtariAction = atari::AtariEnv::Action;

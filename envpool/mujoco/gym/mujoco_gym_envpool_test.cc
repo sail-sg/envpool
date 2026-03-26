@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <glog/logging.h>
 #include <gtest/gtest.h>
 
 #include <random>
 #include <vector>
 
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "envpool/mujoco/gym/half_cheetah.h"
 
 using MjcAction = typename mujoco_gym::HalfCheetahEnv::Action;

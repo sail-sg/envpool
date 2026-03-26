@@ -17,6 +17,11 @@ load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
 package(default_visibility = ["//visibility:public"])
 
+config_setting(
+    name = "linux",
+    constraint_values = ["@platforms//os:linux"],
+)
+
 cc_library(
     name = "type_utils",
     hdrs = ["type_utils.h"],
@@ -28,19 +33,25 @@ cc_library(
 )
 
 cc_library(
+    name = "logging",
+    deps = [
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+    ],
+)
+
+cc_library(
     name = "spec",
     hdrs = ["spec.h"],
-    deps = [
-        "@com_github_google_glog//:glog",
-    ],
+    deps = [":logging"],
 )
 
 cc_library(
     name = "array",
     hdrs = ["array.h"],
     deps = [
+        ":logging",
         ":spec",
-        "@com_github_google_glog//:glog",
     ],
 )
 
@@ -49,10 +60,10 @@ cc_library(
     hdrs = ["dict.h"],
     deps = [
         ":array",
+        ":logging",
         ":spec",
         ":tuple_utils",
         ":type_utils",
-        "@com_github_google_glog//:glog",
     ],
 )
 
@@ -61,6 +72,7 @@ cc_test(
     srcs = ["dict_test.cc"],
     deps = [
         ":dict",
+        ":logging",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -82,6 +94,7 @@ cc_test(
         "state_buffer_test.cc",
     ],
     deps = [
+        ":logging",
         ":state_buffer",
         "@com_google_googletest//:gtest_main",
     ],
@@ -100,7 +113,7 @@ cc_test(
     srcs = ["circular_buffer_test.cc"],
     deps = [
         ":circular_buffer",
-        "@com_github_google_glog//:glog",
+        ":logging",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -119,6 +132,7 @@ cc_test(
     name = "state_buffer_queue_test",
     srcs = ["state_buffer_queue_test.cc"],
     deps = [
+        ":logging",
         ":state_buffer_queue",
         "@com_google_googletest//:gtest_main",
         "@threadpool",
@@ -140,6 +154,7 @@ cc_test(
     deps = [
         ":action_buffer_queue",
         ":dict",
+        ":logging",
         ":spec",
         "@com_google_googletest//:gtest_main",
         "@threadpool",
@@ -190,10 +205,13 @@ cc_library(
 cc_library(
     name = "xla_template",
     hdrs = ["xla_template.h"],
-    linkopts = [
-        "-ldl",
-        "-lrt",
-    ],
+    linkopts = select({
+        ":linux": [
+            "-ldl",
+            "-lrt",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [
         ":spec",
         "@cuda//:cudart_static",

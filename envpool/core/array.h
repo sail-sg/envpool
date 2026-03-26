@@ -17,14 +17,14 @@
 #ifndef ENVPOOL_CORE_ARRAY_H_
 #define ENVPOOL_CORE_ARRAY_H_
 
-#include <glog/logging.h>
-
 #include <cstddef>
 #include <cstring>
 #include <memory>
 #include <utility>
 #include <vector>
 
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "envpool/core/spec.h"
 
 class Array {

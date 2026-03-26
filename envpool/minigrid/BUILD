@@ -25,12 +25,13 @@ cc_library(
         "impl/minigrid_env.cc",
     ],
     hdrs = [
-        "minigrid.h",
         "impl/minigrid_env.h",
         "impl/utils.h",
+        "minigrid.h",
     ],
     deps = [
         "//envpool/core:async_envpool",
+        "//envpool/core:logging",
         "//envpool/core:py_envpool",
     ],
 )

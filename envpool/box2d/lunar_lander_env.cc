@@ -60,18 +60,12 @@ LunarLanderBox2dEnv::LunarLanderBox2dEnv(bool continuous, int max_episode_steps)
 }
 
 void LunarLanderBox2dEnv::ResetBox2d(std::mt19937* gen) {
-  // clean all body in world
-  if (moon_ != nullptr) {
-    world_->SetContactListener(nullptr);
-    for (auto& p : particles_) {
-      world_->DestroyBody(p);
-    }
-    particles_.clear();
-    world_->DestroyBody(moon_);
-    world_->DestroyBody(lander_);
-    world_->DestroyBody(legs_[0]);
-    world_->DestroyBody(legs_[1]);
-  }
+  // Gymnasium recreates the Box2D world on every reset because fully
+  // tearing down the prior world can still leave stale state behind.
+  world_ = std::make_unique<b2World>(b2Vec2(0.0, -10.0));
+  moon_ = nullptr;
+  lander_ = nullptr;
+  particles_.clear();
   listener_ = std::make_unique<LunarLanderContactDetector>(this);
   world_->SetContactListener(listener_.get());
   double w = kViewportW / kScale;
@@ -238,10 +232,8 @@ void LunarLanderBox2dEnv::StepBox2d(std::mt19937* gen, int action,
     double oy = -tip[1] * tmp - side[1] * dispersion[1];
     auto impulse_pos = Vec2(ox, oy);
     impulse_pos += lander_->GetPosition();
-    auto* p = CreateParticle(3.5, impulse_pos);
     auto impulse =
         Vec2(ox * kMainEnginePower * m_power, oy * kMainEnginePower * m_power);
-    p->ApplyLinearImpulse(impulse, impulse_pos, true);
     lander_->ApplyLinearImpulse(-impulse, impulse_pos, true);
   }
 
@@ -263,10 +255,8 @@ void LunarLanderBox2dEnv::StepBox2d(std::mt19937* gen, int action,
     auto impulse_pos = Vec2(ox - tip[0] * 17 / kScale,
                             oy + tip[1] * kSideEngineHeight / kScale);
     impulse_pos += lander_->GetPosition();
-    auto* p = CreateParticle(0.7, impulse_pos);
     auto impulse =
         Vec2(ox * kSideEnginePower * s_power, oy * kSideEnginePower * s_power);
-    p->ApplyLinearImpulse(impulse, impulse_pos, true);
     lander_->ApplyLinearImpulse(-impulse, impulse_pos, true);
   }
 

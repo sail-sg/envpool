@@ -17,14 +17,15 @@
 #ifndef ENVPOOL_MINIGRID_IMPL_UTILS_H_
 #define ENVPOOL_MINIGRID_IMPL_UTILS_H_
 
-#include <glog/logging.h>
-
 #include <array>
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 
 namespace minigrid {
 

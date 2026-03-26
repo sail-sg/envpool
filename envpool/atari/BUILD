@@ -66,6 +66,7 @@ cc_test(
     srcs = ["atari_env_test.cc"],
     deps = [
         ":atari_env",
+        "//envpool/core:logging",
         "@com_google_googletest//:gtest_main",
     ],
 )

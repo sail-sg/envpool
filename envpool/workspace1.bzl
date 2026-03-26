@@ -34,6 +34,6 @@ def workspace():
 
     boost_deps()
 
-    qt_configure()
+    qt_configure(name = "qt")
 
 workspace1 = workspace

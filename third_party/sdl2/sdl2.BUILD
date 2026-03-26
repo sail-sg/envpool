@@ -12,7 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
+
+config_setting(
+    name = "darwin",
+    constraint_values = ["@platforms//os:macos"],
+)
 
 filegroup(
     name = "srcs",
@@ -22,7 +28,7 @@ filegroup(
 
 # https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=sdl2-static
 cmake(
-    name = "sdl2",
+    name = "sdl2_static",
     generate_args = [
         "-GNinja",
         "-DCMAKE_BUILD_TYPE=Release",  # always compile for release
@@ -46,4 +52,31 @@ cmake(
     out_include_dir = "include",
     out_static_libs = ["libSDL2.a"],
     visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "sdl2",
+    linkopts = select({
+        ":darwin": [
+            "-framework CoreVideo",
+            "-framework Cocoa",
+            "-framework IOKit",
+            "-framework ForceFeedback",
+            "-framework Carbon",
+            "-framework CoreAudio",
+            "-framework AudioToolbox",
+            "-framework AVFoundation",
+            "-framework CoreBluetooth",
+            "-framework CoreGraphics",
+            "-framework Foundation",
+            "-framework CoreServices",
+            "-weak_framework GameController",
+            "-weak_framework Metal",
+            "-weak_framework QuartzCore",
+            "-weak_framework CoreHaptics",
+        ],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [":sdl2_static"],
 )
