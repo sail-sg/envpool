@@ -19,11 +19,6 @@ load("//envpool:requirements.bzl", "requirement")
 
 package(default_visibility = ["//visibility:public"])
 
-config_setting(
-    name = "windows",
-    constraint_values = ["@platforms//os:windows"],
-)
-
 genrule(
     name = "gen_pretrain_weight",
     srcs = [
@@ -121,7 +116,7 @@ pybind_extension(
     name = "vizdoom_envpool",
     srcs = ["vizdoom_envpool.cc"],
     linkopts = select({
-        ":windows": [],
+        "//:windows": [],
         "//conditions:default": [
             "-ldl",
         ],

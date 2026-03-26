@@ -17,11 +17,6 @@ load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("//envpool:requirements.bzl", "requirement")
 
-config_setting(
-    name = "windows",
-    constraint_values = ["@platforms//os:windows"],
-)
-
 py_library(
     name = "dummy",
     srcs = ["__init__.py"],
@@ -67,7 +62,7 @@ pybind_extension(
         "dummy_envpool.cc",
     ],
     linkopts = select({
-        ":windows": [],
+        "//:windows": [],
         "//conditions:default": [
             "-ldl",
         ],

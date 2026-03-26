@@ -17,11 +17,6 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
 
-config_setting(
-    name = "windows",
-    constraint_values = ["@platforms//os:windows"],
-)
-
 template_rule(
     name = "vizdoom_version",
     src = "src/lib/ViZDoomVersion.h.in",
@@ -50,7 +45,7 @@ cc_library(
         "src/lib",
     ],
     linkopts = select({
-        ":windows": [],
+        "@envpool//:windows": [],
         "//conditions:default": ["-ldl"],
     }),
     deps = [

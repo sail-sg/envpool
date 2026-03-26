@@ -4,6 +4,16 @@ load("@python_versions//3.13:defs.bzl", py_binary_313 = "py_binary")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//envpool:requirements.bzl", "requirement")
 
+config_setting(
+    name = "linux",
+    constraint_values = ["@platforms//os:linux"],
+)
+
+config_setting(
+    name = "windows",
+    constraint_values = ["@platforms//os:windows"],
+)
+
 _SETUP_SRCS = [
     "setup.py",
 ]

@@ -35,11 +35,6 @@ config_setting(
     ],
 )
 
-config_setting(
-    name = "windows",
-    constraint_values = ["@platforms//os:windows"],
-)
-
 filegroup(
     name = "srcs",
     srcs = glob(["**"]),
@@ -103,19 +98,19 @@ cmake(
             # Avoid build-time KleidiCV downloads inside the Bazel sandbox on macOS.
             "-DWITH_KLEIDICV=OFF",
         ],
-        ":windows": [
+        "@envpool//:windows": [
             "-DWITH_PTHREADS_PF=OFF",
         ],
         "//conditions:default": [],
     }) + select({
-        ":windows": [],
+        "@envpool//:windows": [],
         "//conditions:default": [
             "-DWITH_PTHREADS_PF=ON",
         ],
     }),
     lib_source = ":srcs",
     linkopts = select({
-        ":windows": [],
+        "@envpool//:windows": [],
         "//conditions:default": [
             "-ldl",
         ],
