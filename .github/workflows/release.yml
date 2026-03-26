@@ -162,7 +162,8 @@ jobs:
         run: |
           Copy-Item third_party/pip_requirements/requirements-release-lock.txt third_party/pip_requirements/requirements.txt -Force
           Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
-          $releaseSetupTarget = "//:setup_py${{ replace(matrix.python-version, '.', '') }}"
+          $releasePython = "${{ matrix.python-version }}"
+          $releaseSetupTarget = "//:setup_py$($releasePython.Replace('.', ''))"
           bazelisk run $releaseSetupTarget --config=release -- bdist_wheel
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item "bazel-bin/$($releaseSetupTarget.Substring(3)).runfiles/envpool/dist/*.whl" dist/
