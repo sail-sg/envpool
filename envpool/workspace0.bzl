@@ -117,8 +117,9 @@ def workspace():
         ],
         sha256 = "4a8983811b562a02ef9ccc545c93dc275e23054ac8996170b8975fa387afa890",
         strip_prefix = "pybind11_bazel-3.0.1",
+        type = "tar.gz",
         urls = [
-            "https://github.com/pybind/pybind11_bazel/archive/refs/tags/v3.0.1.tar.gz",
+            "https://codeload.github.com/pybind/pybind11_bazel/tar.gz/refs/tags/v3.0.1",
         ],
     )
 
@@ -128,8 +129,9 @@ def workspace():
         build_file = "@pybind11_bazel//:pybind11-BUILD.bazel",
         sha256 = "2f20a0af0b921815e0e169ea7fec63909869323581b89d7de1553468553f6a2d",
         strip_prefix = "pybind11-3.0.2",
+        type = "tar.gz",
         urls = [
-            "https://github.com/pybind/pybind11/archive/refs/tags/v3.0.2.tar.gz",
+            "https://codeload.github.com/pybind/pybind11/tar.gz/refs/tags/v3.0.2",
         ],
     )
 
