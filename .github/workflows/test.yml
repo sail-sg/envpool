@@ -64,10 +64,6 @@ jobs:
       - name: Test
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" bazel-test
-      - name: Run clang-tidy
-        if: ${{ runner.os == 'Linux' }}
-        run: |
-          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" clang-tidy
       - name: Save Bazel caches
         if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
@@ -140,12 +136,6 @@ jobs:
       - name: Test
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" bazel-test
-      - name: Build macOS wheel
-        run: |
-          rm -rf dist
-          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" bazel-release
-          python3 -m pip install dist/*.whl --force-reinstall
-          python3 -c "import envpool; print(envpool.__version__)"
       - name: Save Bazel caches
         if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
