@@ -48,7 +48,8 @@ template <std::size_t N>
 struct FixedKeyString {
   char value[N];
 
-  constexpr FixedKeyString(const char (&str)[N]) : value{} {
+  constexpr FixedKeyString(const char (&str)[N])  // NOLINT(runtime/explicit)
+      : value{} {
     for (std::size_t i = 0; i < N; ++i) {
       value[i] = str[i];
     }
@@ -62,7 +63,8 @@ template <FixedKeyString S>
 class Key {
  public:
   static constexpr auto kStr = S;
-  static constexpr std::string_view kStrView{kStr.value, sizeof(kStr.value) - 1};
+  static constexpr std::string_view kStrView{
+      kStr.value, sizeof(kStr.value) - 1};
   template <typename Type>
   static constexpr auto Bind(Type&& v) {
     return Value<Key, Type>(std::forward<Type>(v));
