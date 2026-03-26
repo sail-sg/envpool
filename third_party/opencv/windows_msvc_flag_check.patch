@@ -1,20 +1,27 @@
-diff --git a/cmake/OpenCVUtils.cmake b/cmake/OpenCVUtils.cmake
 --- a/cmake/OpenCVUtils.cmake
 +++ b/cmake/OpenCVUtils.cmake
-@@ -448,8 +448,15 @@ set(OCV_COMPILER_FAIL_REGEX
-     "command option .* is not recognized"       # XL
-     "not supported in this configuration, ignored"       # AIX (';' is replaced with ',')
-     "File with unknown suffix passed to linker" # PGI
-     "WARNING: unknown flag:"                    # Open64
-   )
-+
+@@ -454,0 +455,7 @@
 +if(MSVC AND DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "crosstool_bazel")
 +  # Bazel's Windows toolchain forwards a few GNU-style optimization flags into
 +  # try_compile() checks. MSVC warns about them (D9002), but the probed flag
 +  # itself may still be valid, so don't treat those warnings as hard failures.
 +  list(REMOVE_ITEM OCV_COMPILER_FAIL_REGEX "ignoring unknown option" "warning D9002")
 +endif()
- 
- MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
-   set(_fname "${ARGN}")
-   if(NOT DEFINED ${RESULT})
++
+@@ -500,0 +508,16 @@
++      if(MSVC AND DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "crosstool_bazel")
++        foreach(__bazel_flag_var
++            CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_C_FLAGS_MINSIZEREL
++            CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_MINSIZEREL)
++          if(DEFINED ${__bazel_flag_var})
++            set(__sanitized_flag_value "${${__bazel_flag_var}}")
++            foreach(__bad_flag "-g0" "-O3")
++              string(REPLACE "${__bad_flag}" "" __sanitized_flag_value "${__sanitized_flag_value}")
++            endforeach()
++            string(REGEX REPLACE "(^| )-include +[^ ]+" " " __sanitized_flag_value "${__sanitized_flag_value}")
++            string(STRIP "${__sanitized_flag_value}" __sanitized_flag_value)
++            list(APPEND __cmake_flags "-D${__bazel_flag_var}=${__sanitized_flag_value}")
++          endif()
++        endforeach()
++      endif()
++

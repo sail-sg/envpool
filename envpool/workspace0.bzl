@@ -399,6 +399,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         build_file = "//third_party/vizdoom:vizdoom.BUILD",
         patches = [
             "//third_party/vizdoom:sdl_thread.patch",
+            "//third_party/vizdoom:msvc_fstring_ternary.patch",
         ],
     )
 

@@ -1,0 +1,10 @@
+--- src/s_sound.h
++++ src/s_sound.h
+@@ -129,6 +129,6 @@
+ 	operator FString() const
+ 	{
+-		return ID ? S_sfx[ID].name : "";
++		return ID ? S_sfx[ID].name : FString("");
+ 	}
+ 	operator const char *() const
+ 	{
