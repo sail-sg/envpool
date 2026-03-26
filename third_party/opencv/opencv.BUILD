@@ -35,6 +35,11 @@ config_setting(
     ],
 )
 
+config_setting(
+    name = "windows",
+    constraint_values = ["@platforms//os:windows"],
+)
+
 filegroup(
     name = "srcs",
     srcs = glob(["**"]),
@@ -90,7 +95,6 @@ cmake(
         "-DWITH_PLAIDML=OFF",
         "-DWITH_PNG=OFF",
         "-DWITH_PROTOBUF=OFF",
-        "-DWITH_PTHREADS_PF=ON",
         "-DWITH_QT=OFF",
         "-DWITH_TBB=OFF",
         "-DWITH_TIFF=OFF",
@@ -99,12 +103,23 @@ cmake(
             # Avoid build-time KleidiCV downloads inside the Bazel sandbox on macOS.
             "-DWITH_KLEIDICV=OFF",
         ],
+        ":windows": [
+            "-DWITH_PTHREADS_PF=OFF",
+        ],
         "//conditions:default": [],
+    }) + select({
+        ":windows": [],
+        "//conditions:default": [
+            "-DWITH_PTHREADS_PF=ON",
+        ],
     }),
     lib_source = ":srcs",
-    linkopts = [
-        "-ldl",
-    ],
+    linkopts = select({
+        ":windows": [],
+        "//conditions:default": [
+            "-ldl",
+        ],
+    }),
     out_include_dir = "include/opencv4",
     out_static_libs = [
         "libopencv_imgproc.a",

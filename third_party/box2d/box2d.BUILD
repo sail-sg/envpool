@@ -14,6 +14,11 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
+config_setting(
+    name = "windows",
+    constraint_values = ["@platforms//os:windows"],
+)
+
 cc_library(
     name = "box2d",
     srcs = glob(["include/box2d/*.h"]) + [
@@ -77,9 +82,12 @@ cc_library(
         "include",
         "src",
     ],
-    linkopts = [
-        "-ldl",
-    ],
+    linkopts = select({
+        ":windows": [],
+        "//conditions:default": [
+            "-ldl",
+        ],
+    }),
     linkstatic = 1,
     visibility = ["//visibility:public"],
 )

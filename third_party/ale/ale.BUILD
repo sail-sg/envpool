@@ -17,6 +17,11 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
 
+config_setting(
+    name = "windows",
+    constraint_values = ["@platforms//os:windows"],
+)
+
 cc_library(
     name = "irregular_files",
     hdrs = glob([
@@ -65,9 +70,12 @@ cc_library(
         "src",
         "src/ale",
     ],
-    linkopts = [
-        "-ldl",
-    ],
+    linkopts = select({
+        ":windows": [],
+        "//conditions:default": [
+            "-ldl",
+        ],
+    }),
     linkstatic = 0,
     deps = [
         ":irregular_files",

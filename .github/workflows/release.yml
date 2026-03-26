@@ -1,6 +1,7 @@
 name: Release PyPI Wheel
 
 on:
+  pull_request:
   push:
     branches:
       - main
@@ -9,7 +10,6 @@ on:
 
 jobs:
   release-macos:
-    if: ${{ github.event_name == 'push' }}
     runs-on: macos-14
     timeout-minutes: 60
     strategy:
@@ -61,7 +61,6 @@ jobs:
           if-no-files-found: error
 
   release-linux:
-    if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux_2_28_x86_64
     strategy:
@@ -107,9 +106,77 @@ jobs:
           path: wheelhouse/
           if-no-files-found: error
 
+  release-windows:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    env:
+      BAZEL_SH: C:/Program Files/Git/bin/bash.exe
+      MSYS2_ARG_CONV_EXCL: "*"
+      MSYS_NO_PATHCONV: "1"
+    steps:
+      - name: Cancel previous run
+        uses: styfle/cancel-workflow-action@0.11.0
+        with:
+          access_token: ${{ github.token }}
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Windows dependencies
+        shell: bash
+        run: |
+          choco install -y make ninja strawberryperl swig
+      - name: Install Qt 5
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "5.15.2"
+          arch: "win64_msvc2019_64"
+          set-env: "true"
+      - name: Export Qt location
+        shell: bash
+        run: |
+          echo "BAZEL_RULES_QT_DIR=${QT_ROOT_DIR}" >> "$GITHUB_ENV"
+      - name: Install bazelisk
+        shell: bash
+        run: |
+          go install github.com/bazelbuild/bazelisk@latest
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      - name: Build
+        shell: bash
+        run: |
+          rm -rf dist
+          make RELEASE_PYTHON=${{ matrix.python-version }} bazel-release
+          pip3 install dist/*.whl --force-reinstall
+      - name: Test
+        shell: bash
+        run: |
+          make release-test
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: wheel-windows-${{ matrix.python-version }}
+          path: dist/*.whl
+          if-no-files-found: error
+
   publish:
+    if: startsWith(github.ref, 'refs/tags')
     runs-on: ubuntu-latest
-    needs: [release-linux, release-macos]
+    needs: [release-linux, release-macos, release-windows]
     steps:
       - uses: actions/download-artifact@v8
         with:
@@ -121,7 +188,6 @@ jobs:
           mkdir dist && mv artifact/* dist/
           ls dist/
       - name: Publish distribution to PyPI
-        if: startsWith(github.ref, 'refs/tags')
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}

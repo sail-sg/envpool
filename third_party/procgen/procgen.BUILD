@@ -16,6 +16,11 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
 
+config_setting(
+    name = "windows",
+    constraint_values = ["@platforms//os:windows"],
+)
+
 filegroup(
     name = "procgen_assets",
     srcs = [
@@ -35,9 +40,12 @@ cc_library(
     name = "procgen",
     srcs = glob(["src/**/*.cpp"]) + glob(["src/*.h"]),
     hdrs = glob(["src/*.h"]),
-    copts = [
-        "-fpic",
-    ],
+    copts = select({
+        ":windows": [],
+        "//conditions:default": [
+            "-fpic",
+        ],
+    }),
     strip_include_prefix = "src",
     deps = [
         "@gym3_libenv//:gym3_libenv_header",

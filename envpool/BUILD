@@ -17,11 +17,6 @@ load("//envpool:requirements.bzl", "requirement")
 
 package(default_visibility = ["//visibility:public"])
 
-config_setting(
-    name = "windows",
-    constraint_values = ["@platforms//os:windows"],
-)
-
 exports_files([
     "workspace0.bzl",
     "workspace1.bzl",
@@ -35,53 +30,36 @@ py_library(
 py_library(
     name = "entry",
     srcs = ["entry.py"],
-    deps = select({
-        ":windows": [
-            "//envpool/classic_control:classic_control_registration",
-            "//envpool/minigrid:minigrid_registration",
-            "//envpool/toy_text:toy_text_registration",
-        ],
-        "//conditions:default": [
-            "//envpool/atari:atari_registration",
-            "//envpool/box2d:box2d_registration",
-            "//envpool/classic_control:classic_control_registration",
-            "//envpool/minigrid:minigrid_registration",
-            "//envpool/mujoco:mujoco_dmc_registration",
-            "//envpool/mujoco:mujoco_gym_registration",
-            "//envpool/procgen:procgen_registration",
-            "//envpool/toy_text:toy_text_registration",
-            "//envpool/vizdoom:vizdoom_registration",
-        ],
-    }),
+    deps = [
+        "//envpool/atari:atari_registration",
+        "//envpool/box2d:box2d_registration",
+        "//envpool/classic_control:classic_control_registration",
+        "//envpool/minigrid:minigrid_registration",
+        "//envpool/mujoco:mujoco_dmc_registration",
+        "//envpool/mujoco:mujoco_gym_registration",
+        "//envpool/procgen:procgen_registration",
+        "//envpool/toy_text:toy_text_registration",
+        "//envpool/vizdoom:vizdoom_registration",
+    ],
 )
 
 py_library(
     name = "envpool",
     srcs = ["__init__.py"],
-    deps = select({
-        ":windows": [
-            ":entry",
-            ":registration",
-            "//envpool/classic_control",
-            "//envpool/minigrid",
-            "//envpool/python",
-            "//envpool/toy_text",
-        ],
-        "//conditions:default": [
-            ":entry",
-            ":registration",
-            "//envpool/atari",
-            "//envpool/box2d",
-            "//envpool/classic_control",
-            "//envpool/minigrid",
-            "//envpool/mujoco:mujoco_dmc",
-            "//envpool/mujoco:mujoco_gym",
-            "//envpool/procgen",
-            "//envpool/python",
-            "//envpool/toy_text",
-            "//envpool/vizdoom",
-        ],
-    }),
+    deps = [
+        ":entry",
+        ":registration",
+        "//envpool/atari",
+        "//envpool/box2d",
+        "//envpool/classic_control",
+        "//envpool/minigrid",
+        "//envpool/mujoco:mujoco_dmc",
+        "//envpool/mujoco:mujoco_gym",
+        "//envpool/procgen",
+        "//envpool/python",
+        "//envpool/toy_text",
+        "//envpool/vizdoom",
+    ],
 )
 
 py_test(

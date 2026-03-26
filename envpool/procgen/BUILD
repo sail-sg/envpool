@@ -20,6 +20,11 @@ load("//third_party:common.bzl", "copy_to_directory")
 
 package(default_visibility = ["//visibility:public"])
 
+config_setting(
+    name = "windows",
+    constraint_values = ["@platforms//os:windows"],
+)
+
 copy_to_directory(
     name = "gen_procgen_assets",
     srcs = ["@procgen//:procgen_assets"],
@@ -52,9 +57,12 @@ cc_test(
 pybind_extension(
     name = "procgen_envpool",
     srcs = ["procgen_envpool.cc"],
-    linkopts = [
-        "-ldl",
-    ],
+    linkopts = select({
+        ":windows": [],
+        "//conditions:default": [
+            "-ldl",
+        ],
+    }),
     deps = [
         ":procgen_env",
         "//envpool/core:py_envpool",

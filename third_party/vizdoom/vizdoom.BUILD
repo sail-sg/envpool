@@ -20,6 +20,11 @@ config_setting(
     constraint_values = ["@platforms//os:macos"],
 )
 
+config_setting(
+    name = "windows",
+    constraint_values = ["@platforms//os:windows"],
+)
+
 cc_binary(
     name = "arithchk",
     srcs = [
@@ -885,6 +890,7 @@ cc_binary(
             "-framework IOKit",
             "-framework OpenGL",
         ],
+        ":windows": [],
         "//conditions:default": [
             "-lpthread",
             "-lrt",

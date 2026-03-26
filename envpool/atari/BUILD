@@ -20,6 +20,11 @@ load("//third_party:common.bzl", "copy_to_directory")
 
 package(default_visibility = ["//visibility:public"])
 
+config_setting(
+    name = "windows",
+    constraint_values = ["@platforms//os:windows"],
+)
+
 copy_to_directory(
     name = "gen_atari_roms",
     srcs = ["@atari_roms//:roms"],
@@ -85,9 +90,12 @@ pybind_extension(
     srcs = [
         "atari_envpool.cc",
     ],
-    linkopts = [
-        "-ldl",
-    ],
+    linkopts = select({
+        ":windows": [],
+        "//conditions:default": [
+            "-ldl",
+        ],
+    }),
     deps = [
         ":atari_env",
         "//envpool/core:py_envpool",
