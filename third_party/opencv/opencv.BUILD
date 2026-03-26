@@ -95,6 +95,7 @@ cmake(
         "-DWITH_PROTOBUF=OFF",
         "-DWITH_QT=OFF",
         "-DWITH_TBB=OFF",
+        "-DWITH_ADE=OFF",
         "-DWITH_TIFF=OFF",
     ] + select({
         ":darwin": [

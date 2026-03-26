@@ -65,7 +65,7 @@ class LunarLanderContinuousEnv : public Env<LunarLanderContinuousEnvSpec>,
   void WriteState() {
     auto state = Allocate();
     state["reward"_] = reward_;
-    state["obs"_].Assign(obs_.begin(), obs_.size());
+    state["obs"_].Assign(obs_.data(), obs_.size());
   }
 };
 
