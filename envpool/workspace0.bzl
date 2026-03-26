@@ -239,6 +239,10 @@ def workspace():
     maybe(
         http_archive,
         name = "opencv",
+        patch_args = ["-p1"],
+        patches = [
+            "//third_party/opencv:windows_msvc_flag_check.patch",
+        ],
         sha256 = "1d40ca017ea51c533cf9fd5cbde5b5fe7ae248291ddf2af99d4c17cf8e13017d",
         strip_prefix = "opencv-4.13.0",
         urls = [

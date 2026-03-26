@@ -53,7 +53,6 @@ cc_library(
         "@boost//:filesystem",
         "@boost//:interprocess",
         "@boost//:iostreams",
-        "@boost//:process",
         "@boost//:random",
         "@boost//:thread",
     ],
