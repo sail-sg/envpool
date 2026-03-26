@@ -222,7 +222,9 @@ jobs:
       - name: Test
         shell: bash
         run: |
-          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" bazel-test
+          repo_cache="$(cygpath -m "$HOME/.cache/envpool-bazel-repo")"
+          disk_cache="$(cygpath -m "$HOME/.cache/envpool-bazel-disk")"
+          make BAZELOPT="--repository_cache=${repo_cache} --disk_cache=${disk_cache}" bazel-test
       - name: Save Bazel caches
         if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
