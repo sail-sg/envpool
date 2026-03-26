@@ -264,7 +264,7 @@ def replace_with_eol(path_str: str, old_lf: bytes, new_lf: bytes) -> None:
 replace_with_eol(
     "cmake/OpenCVCompilerOptimizations.cmake",
     b'  ocv_check_compiler_flag(CXX "${__flags}" HAVE_CPU_BASELINE_FLAGS)\\n',
-    b'  ocv_check_compiler_flag(CXX "${__flags}" HAVE_CPU_BASELINE_FLAGS)\\n  if(NOT HAVE_CPU_BASELINE_FLAGS AND MSVC AND DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "crosstool_bazel" AND "${CPU_BASELINE_FLAGS}" STREQUAL "")\\n    set(HAVE_CPU_BASELINE_FLAGS 1)\\n  endif()\\n',
+    b'  ocv_check_compiler_flag(CXX "${__flags}" HAVE_CPU_BASELINE_FLAGS)\\n  if(NOT HAVE_CPU_BASELINE_FLAGS AND MSVC)\\n    set(HAVE_CPU_BASELINE_FLAGS 1)\\n    set(CPU_BASELINE_FLAGS "")\\n  endif()\\n',
 )
 PY"""],
         sha256 = "1d40ca017ea51c533cf9fd5cbde5b5fe7ae248291ddf2af99d4c17cf8e13017d",
