@@ -335,6 +335,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         ],
         patches = [
             "//third_party/boost:filesystem_scope_headers.patch",
+            "//third_party/boost:atomic_windows_build.patch",
             "//third_party/boost:bzip2_system_headers.patch",
             "//third_party/boost:zlib_system_headers.patch",
         ],
