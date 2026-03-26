@@ -4,20 +4,6 @@
 -	while ((bRet = GetMessage(&msg, NULL, 0, 0)) != 0)
 +	while ((bRet = GetMessageW(&msg, NULL, 0, 0)) != 0)
 
---- src/basictypes.h
-+++ src/basictypes.h
-@@ -33,7 +33,9 @@
- // you are aware that those files have a different DWORD than the rest
- // of the source.
-
--#ifndef USE_WINDOWS_DWORD
-+#if defined(_WIN32)
-+typedef unsigned long			DWORD;
-+#elif !defined(USE_WINDOWS_DWORD)
- typedef uint32					DWORD;
- #endif
- typedef uint32					BITFIELD;
-
 --- src/c_console.cpp
 +++ src/c_console.cpp
 @@ -32,6 +32,30 @@
@@ -147,8 +133,8 @@
  	{
 --- src/viz_message_queue.cpp
 +++ src/viz_message_queue.cpp
-@@ -21,8 +21,12 @@
-  THE SOFTWARE.
+@@ -21,8 +21,14 @@
+ THE SOFTWARE.
  */
 
 -#include "d_main.h"
@@ -156,24 +142,55 @@
 +#define USE_WINDOWS_DWORD
 +#endif
 +
++#include <boost/interprocess/ipc/message_queue.hpp>
++
  #include "viz_message_queue.h"
 +#include "d_main.h"
  #include "viz_input.h"
  #include "viz_game.h"
  #include "viz_main.h"
+--- src/viz_message_queue.h
++++ src/viz_message_queue.h
+@@ -24,8 +24,9 @@
+ #ifndef __VIZ_MESSAGE_QUEUE_H__
+ #define __VIZ_MESSAGE_QUEUE_H__
+
+-#include <boost/interprocess/ipc/message_queue.hpp>
++#include <stdint.h>
+
++namespace boost { namespace interprocess { class message_queue; } }
+ namespace bip = boost::interprocess;
+
+ extern bip::message_queue *vizMQController;
 --- src/viz_shared_memory.cpp
 +++ src/viz_shared_memory.cpp
-@@ -21,6 +21,10 @@
-  THE SOFTWARE.
+@@ -21,6 +21,13 @@
+ THE SOFTWARE.
  */
 
 +#ifdef _WIN32
 +#define USE_WINDOWS_DWORD
 +#endif
 +
++#include <boost/interprocess/shared_memory_object.hpp>
++#include <boost/interprocess/mapped_region.hpp>
++
  #include "viz_shared_memory.h"
  #include "viz_defines.h"
  #include "viz_game.h"
+--- src/viz_shared_memory.h
++++ src/viz_shared_memory.h
+@@ -24,8 +24,8 @@
+ #ifndef __VIZ_SHARED_MEMORY_H__
+ #define __VIZ_SHARED_MEMORY_H__
+
+-#include <boost/interprocess/shared_memory_object.hpp>
+-#include <boost/interprocess/mapped_region.hpp>
++#include <stddef.h>
+
++namespace boost { namespace interprocess { class shared_memory_object; class mapped_region; } }
+ #define VIZ_SM_NAME_BASE "ViZDoomSM"
+ #define VIZ_SM_REGION_COUNT 7
 --- src/win32/i_system.cpp
 +++ src/win32/i_system.cpp
 @@ -89,6 +89,15 @@
