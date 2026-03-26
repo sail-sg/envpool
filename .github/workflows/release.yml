@@ -161,6 +161,7 @@ jobs:
       - name: Build
         shell: pwsh
         run: |
+          $env:PATH = "C:\Program Files\Git\usr\bin;$env:PATH"
           Copy-Item third_party/pip_requirements/requirements-release-lock.txt third_party/pip_requirements/requirements.txt -Force
           Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
           $releasePython = "${{ matrix.python-version }}"

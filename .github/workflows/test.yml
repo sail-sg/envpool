@@ -224,6 +224,7 @@ jobs:
       - name: Test
         shell: pwsh
         run: |
+          $env:PATH = "C:\Program Files\Git\usr\bin;$env:PATH"
           Copy-Item third_party/pip_requirements/requirements-dev-lock.txt third_party/pip_requirements/requirements.txt -Force
           $repoCache = Join-Path $HOME ".cache/envpool-bazel-repo"
           $diskCache = Join-Path $HOME ".cache/envpool-bazel-disk"
