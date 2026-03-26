@@ -193,47 +193,22 @@
  #define VIZ_SM_REGION_COUNT 7
 --- src/viz_input.cpp
 +++ src/viz_input.cpp
-@@ -20,12 +20,18 @@
-  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-  THE SOFTWARE.
- */
-+
-+#ifdef _WIN32
-+#define USE_WINDOWS_DWORD
-+#endif
-
- #include "viz_input.h"
- #include "viz_main.h"
- #include "viz_defines.h"
- #include "viz_message_queue.h"
- #include "viz_shared_memory.h"
-+
-+#include <boost/interprocess/exceptions.hpp>
-
- #include "d_main.h"
- #include "g_game.h"
+@@ -328,4 +328,4 @@
+         VIZ_DebugMsg(1, VIZ_FUNC, "inputOffset: %zu, inputSize: %zu", inputRegion->offset, sizeof(VIZInputState));
+     }
+-    catch (bip::interprocess_exception &ex) {
++    catch (...) {  // bip::interprocess_exception
+         VIZ_Error(VIZ_FUNC, "Failed to create input.");
+     }
 --- src/viz_game.cpp
 +++ src/viz_game.cpp
-@@ -21,6 +21,10 @@
-  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-  THE SOFTWARE.
- */
-+
-+#ifdef _WIN32
-+#define USE_WINDOWS_DWORD
-+#endif
-
- #include <algorithm>
- #include <cstring>
-@@ -37,6 +41,8 @@
- #include "viz_shared_memory.h"
- #include "viz_version.h"
- #include "viz_doom_classes.h"
-+
-+#include <boost/interprocess/exceptions.hpp>
-
- #include "c_dispatch.h"
- #include "d_netinf.h"
+@@ -269,4 +269,4 @@
+                      sizeof(VIZGameState));
+     }
+-    catch(bip::interprocess_exception &ex){
++    catch(...){ // bip::interprocess_exception
+         VIZ_Error(VIZ_FUNC, "Failed to create game state.");
+     }
 --- src/r_data/r_translate.cpp
 +++ src/r_data/r_translate.cpp
 @@ -582 +582 @@
