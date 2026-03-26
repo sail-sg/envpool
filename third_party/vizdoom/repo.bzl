@@ -23,6 +23,7 @@ _VIZDOOM_PATCH_TARGETS = [
     "src/s_sound.h",
     "src/viz_message_queue.cpp",
     "src/viz_shared_memory.cpp",
+    "src/win32/i_main.cpp",
     "src/win32/i_system.cpp",
     "src/win32/i_system.h",
 ]
