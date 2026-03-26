@@ -1,20 +1,44 @@
 --- src/lib/ViZDoomController.h
 +++ src/lib/ViZDoomController.h
-@@ -29,0 +30,2 @@
+@@ -27,12 +27,13 @@
+
+ #if _WIN32
+     #include <winsock2.h>
 +#else
 +    #include "boost/process.hpp"
-@@ -35 +36,0 @@
+ #endif
+
+ #include "ViZDoomTypes.h"
+ #include "ViZDoomMessageQueue.h"
+ #include "ViZDoomSharedMemory.h"
 -#include "boost/process.hpp"
-@@ -52,0 +54 @@
+
+ #include <boost/asio.hpp>
+ #include <boost/random.hpp>
+@@ -50,8 +51,10 @@
+     namespace ba        = boost::asio;
+     namespace bip       = boost::interprocess;
+     namespace br        = boost::random;
 +#ifndef _WIN32
-@@ -54,0 +57 @@
+     namespace bpr       = boost::process;
+     namespace bpri      = boost::process::initializers;
 +#endif
+
+
+ #define INSTANCE_ID_LENGTH 10
 --- src/lib/ViZDoomController.cpp
 +++ src/lib/ViZDoomController.cpp
-@@ -33,0 +34 @@
+@@ -30,11 +30,41 @@
+
+ #include <boost/algorithm/string.hpp>
+ #include <boost/chrono.hpp>
++#include <boost/filesystem.hpp>
+ #include <boost/lexical_cast.hpp>
 +#include <stdexcept>
-@@ -36,0 +38,28 @@
-+
+
+
+ namespace vizdoom {
+
 +#ifdef OS_WIN
 +    namespace {
 +        std::string quoteCommandArg(const std::string &arg) {
@@ -42,7 +66,14 @@
 +        }
 +    }
 +#endif
-@@ -1473,0 +1503,18 @@
++
+     namespace bal       = boost::algorithm;
+     namespace bc        = boost::chrono;
+     namespace bfs       = boost::filesystem;
+@@ -1471,11 +1501,30 @@
+
+     void DoomController::launchDoom() {
+         try {
 +#ifdef OS_WIN
 +            std::string commandLine;
 +            for (size_t i = 0; i < this->doomArgs.size(); ++i) {
@@ -61,5 +92,12 @@
 +            CloseHandle(processInfo.hThread);
 +            CloseHandle(processInfo.hProcess);
 +#else
-@@ -1478,0 +1526 @@
+             bpr::child doomProcess = bpr::execute(bpri::set_args(this->doomArgs), bpri::inherit_env());
+             #ifdef OS_POSIX
+                 this->doomProcessPid = doomProcess.pid;
+             #endif
+             bpr::wait_for_exit(doomProcess);
 +#endif
+         }
+         catch (...) {
+             this->MQController->send(MSG_CODE_DOOM_ERROR, "Unexpected ViZDoom instance crash.");

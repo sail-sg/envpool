@@ -1,0 +1,175 @@
+--- src/c_console.cpp
++++ src/c_console.cpp
+@@ -32,6 +32,30 @@
+ **
+ */
+ 
++#ifdef _WIN32
++#if defined(_M_X64) && !defined(_AMD64_)
++#define _AMD64_
++#elif defined(_M_IX86) && !defined(_X86_)
++#define _X86_
++#elif defined(_M_ARM64) && !defined(_ARM64_)
++#define _ARM64_
++#endif
++#define USE_WINDOWS_DWORD
++#ifndef WIN32_LEAN_AND_MEAN
++#define WIN32_LEAN_AND_MEAN
++#endif
++#ifndef NOMINMAX
++#define NOMINMAX
++#endif
++#include <windows.h>
++#ifdef DrawText
++#undef DrawText
++#endif
++#ifdef GetCharWidth
++#undef GetCharWidth
++#endif
++#endif
++
+ #include "templates.h"
+ #include "p_setup.h"
+ #include <stdarg.h>
+@@ -72,6 +96,15 @@
+ 
+ //VIZDOOM_CODE
+ #include "viz_game.h" 
++
++#ifdef _WIN32
++#ifdef DrawText
++#undef DrawText
++#endif
++#ifdef GetCharWidth
++#undef GetCharWidth
++#endif
++#endif
+ 
+ #define LEFTMARGIN 8
+ #define RIGHTMARGIN 8
+--- src/fragglescript/t_func.cpp
++++ src/fragglescript/t_func.cpp
+@@ -2053,7 +2053,7 @@
+ 		
+ 		t_return.type = svt_string;
+ 		FTexture * tex = TexMan[sector->GetTexture(sector_t::floor)];
+-		t_return.string = tex? tex->Name : "";
++		t_return.string = tex ? tex->Name : FString("");
+ 	}
+ }
+ 
+@@ -2143,7 +2143,7 @@
+ 		
+ 		t_return.type = svt_string;
+ 		FTexture * tex = TexMan[sector->GetTexture(sector_t::ceiling)];
+-		t_return.string = tex? tex->Name : "";
++		t_return.string = tex ? tex->Name : FString("");
+ 	}
+ }
+ 
+--- src/g_level.cpp
++++ src/g_level.cpp
+@@ -87,6 +87,12 @@
+ 
+ //VIZDOOM_CODE
+ #include "viz_game.h"
++
++#ifdef _WIN32
++#ifdef GetMessage
++#undef GetMessage
++#endif
++#endif
+ 
+ void STAT_StartNewGame(const char *lev);
+ void STAT_ChangeLevel(const char *newl);
+--- src/s_sound.h
++++ src/s_sound.h
+@@ -129,7 +129,7 @@
+ 	}
+ 	operator FString() const
+ 	{
+-		return ID ? S_sfx[ID].name : "";
++		return ID ? S_sfx[ID].name : FString("");
+ 	}
+ 	operator const char *() const
+ 	{
+--- src/viz_message_queue.cpp
++++ src/viz_message_queue.cpp
+@@ -21,8 +21,12 @@
+  THE SOFTWARE.
+ */
+ 
+-#include "d_main.h"
++#ifdef _WIN32
++#define USE_WINDOWS_DWORD
++#endif
++
+ #include "viz_message_queue.h"
++#include "d_main.h"
+ #include "viz_input.h"
+ #include "viz_game.h"
+ #include "viz_main.h"
+--- src/viz_shared_memory.cpp
++++ src/viz_shared_memory.cpp
+@@ -21,6 +21,10 @@
+  THE SOFTWARE.
+ */
+ 
++#ifdef _WIN32
++#define USE_WINDOWS_DWORD
++#endif
++
+ #include "viz_shared_memory.h"
+ #include "viz_defines.h"
+ #include "viz_game.h"
+--- src/win32/i_system.cpp
++++ src/win32/i_system.cpp
+@@ -89,6 +89,15 @@
+ //VIZDOOM_CODE
+ #include "viz_main.h"
+ 
++void *I_GetOptionalWin32ProcAddress(const char* module, const char* function)
++{
++	HMODULE hmodule = GetModuleHandleA(module);
++	if (hmodule == NULL)
++		return NULL;
++
++	return (void *)GetProcAddress(hmodule, function);
++}
++
+ // MACROS ------------------------------------------------------------------
+ 
+ #ifdef _MSC_VER
+@@ -1309,7 +1318,7 @@
+ 	HDC dc = GetDC(NULL);
+ 	if (dc == NULL)
+ 	{
+-		return false;
++		return NULL;
+ 	}
+ 	HDC and_mask_dc = CreateCompatibleDC(dc);
+ 	HDC xor_mask_dc = CreateCompatibleDC(dc);
+--- src/win32/i_system.h
++++ src/win32/i_system.h
+@@ -51,6 +51,8 @@
+ 
+ extern os_t OSPlatform;
+ 
++void *I_GetOptionalWin32ProcAddress(const char* module, const char* function);
++
+ // Helper template so that we can access newer Win32 functions with a single static
+ // variable declaration. If this were C++11 it could be totally transparent.
+ template<typename Proto>
+@@ -58,11 +60,7 @@
+ {
+ 	static Proto GetOptionalWin32Proc(const char* module, const char* function)
+ 	{
+-		HMODULE hmodule = GetModuleHandle(module);
+-		if (hmodule == NULL)
+-			return NULL;
+-
+-		return (Proto)GetProcAddress(hmodule, function);
++		return (Proto)I_GetOptionalWin32ProcAddress(module, function);
+ 	}
+ 
+ public:
