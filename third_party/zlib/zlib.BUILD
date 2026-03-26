@@ -18,6 +18,11 @@ package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])  # BSD/MIT-like license (for zlib)
 
+config_setting(
+    name = "windows",
+    values = {"cpu": "x64_windows"},
+)
+
 cc_library(
     name = "zlib",
     srcs = [
@@ -48,9 +53,12 @@ cc_library(
         "zutil.h",
     ],
     hdrs = ["zlib.h"],
-    copts = [
-        "-Wno-shift-negative-value",
-        "-DZ_HAVE_UNISTD_H",
-    ],
+    copts = select({
+        ":windows": [],
+        "//conditions:default": [
+            "-Wno-shift-negative-value",
+            "-DZ_HAVE_UNISTD_H",
+        ],
+    }),
     includes = ["."],
 )

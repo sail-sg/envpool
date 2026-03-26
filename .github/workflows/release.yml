@@ -117,6 +117,7 @@ jobs:
       BAZEL_SH: C:/Program Files/Git/bin/bash.exe
       MSYS2_ARG_CONV_EXCL: "*"
       MSYS_NO_PATHCONV: "1"
+      USE_BAZEL_VERSION: "8.6.0"
     steps:
       - name: Cancel previous run
         uses: styfle/cancel-workflow-action@0.11.0
@@ -138,7 +139,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install Windows dependencies
-        shell: bash
+        shell: pwsh
         run: |
           choco install -y make ninja strawberryperl swig
       - name: Install Qt 5
@@ -148,24 +149,34 @@ jobs:
           arch: "win64_msvc2019_64"
           set-env: "true"
       - name: Export Qt location
-        shell: bash
+        shell: pwsh
         run: |
-          echo "BAZEL_RULES_QT_DIR=${QT_ROOT_DIR}" >> "$GITHUB_ENV"
+          Add-Content -Path $env:GITHUB_ENV -Value "BAZEL_RULES_QT_DIR=$env:QT_ROOT_DIR"
       - name: Install bazelisk
-        shell: bash
+        shell: pwsh
         run: |
           go install github.com/bazelbuild/bazelisk@latest
-          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+          Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $HOME "go/bin")
       - name: Build
-        shell: bash
+        shell: pwsh
         run: |
-          rm -rf dist
-          make RELEASE_PYTHON=${{ matrix.python-version }} bazel-release
-          pip3 install dist/*.whl --force-reinstall
+          Copy-Item third_party/pip_requirements/requirements-release-lock.txt third_party/pip_requirements/requirements.txt -Force
+          Remove-Item dist -Recurse -Force -ErrorAction SilentlyContinue
+          $releaseSetupTarget = "//:setup_py${{ replace(matrix.python-version, '.', '') }}"
+          bazelisk run $releaseSetupTarget --config=release -- bdist_wheel
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item "bazel-bin/$($releaseSetupTarget.Substring(3)).runfiles/envpool/dist/*.whl" dist/
+          pip3 install (Get-ChildItem dist/*.whl | Select-Object -ExpandProperty FullName) --force-reinstall
       - name: Test
-        shell: bash
+        shell: pwsh
         run: |
-          make release-test
+          Push-Location envpool
+          python3 make_test.py
+          Pop-Location
+          Push-Location examples
+          python3 make_env.py
+          python3 env_step.py
+          Pop-Location
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
