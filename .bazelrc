@@ -29,7 +29,6 @@ test:macos --test_env=PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/s
 
 build:windows --cxxopt=/std:c++20
 build:windows --host_cxxopt=/std:c++20
-build:windows --client_env=BAZEL_CXXOPTS=/std:c++20
 build:windows --action_env=BAZEL_SH
 build:windows --repo_env=BAZEL_SH
 build:windows --enable_runfiles

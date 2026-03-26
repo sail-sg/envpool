@@ -54,7 +54,10 @@ cmake(
     }),
     lib_source = ":srcs",
     out_include_dir = "include",
-    out_static_libs = ["libSDL2.a"],
+    out_static_libs = select({
+        "@envpool//:windows": ["SDL2-static.lib"],
+        "//conditions:default": ["libSDL2.a"],
+    }),
     visibility = ["//visibility:public"],
 )
 

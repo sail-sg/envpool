@@ -116,12 +116,20 @@ cmake(
         ],
     }),
     out_include_dir = "include/opencv4",
-    out_static_libs = [
-        "libopencv_imgproc.a",
-        "libopencv_features2d.a",
-        "libopencv_flann.a",
-        "libopencv_core.a",
-    ] + select({
+    out_static_libs = select({
+        "@envpool//:windows": [
+            "opencv_imgproc4130.lib",
+            "opencv_features2d4130.lib",
+            "opencv_flann4130.lib",
+            "opencv_core4130.lib",
+        ],
+        "//conditions:default": [
+            "libopencv_imgproc.a",
+            "libopencv_features2d.a",
+            "libopencv_flann.a",
+            "libopencv_core.a",
+        ],
+    }) + select({
         ":darwin_arm64": [
             "opencv4/3rdparty/libtegra_hal.a",
         ],
