@@ -103,7 +103,6 @@ cmake(
             "-DCPU_BASELINE=SSE2",
             "-DCV_DISABLE_OPTIMIZATION=ON",
             "-DOPENCV_WORKAROUND_CMAKE_20989=ON",
-            "-DOPENCV_EXTRA_CXX_FLAGS=/EHsc",
             "-DOPENCV_PYTHON_SKIP_DETECTION=ON",
             "-DWITH_PTHREADS_PF=OFF",
         ],

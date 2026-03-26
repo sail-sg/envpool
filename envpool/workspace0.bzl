@@ -391,6 +391,10 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "vizdoom",
+        patch_args = [
+            "-p0",
+            "-l",
+        ],
         sha256 = "76ddf186d7f093ef85cbcb0e7e387757d60e45190eb5da6d075aab31ffc316ed",
         strip_prefix = "ViZDoom-1.3.0/src/vizdoom/",
         urls = [
@@ -400,6 +404,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         patches = [
             "//third_party/vizdoom:sdl_thread.patch",
             "//third_party/vizdoom:msvc_fstring_ternary.patch",
+            "//third_party/vizdoom:windows_headers.patch",
         ],
     )
 
