@@ -4,6 +4,20 @@
 -	while ((bRet = GetMessage(&msg, NULL, 0, 0)) != 0)
 +	while ((bRet = GetMessageW(&msg, NULL, 0, 0)) != 0)
 
+--- src/basictypes.h
++++ src/basictypes.h
+@@ -33,7 +33,9 @@
+ // you are aware that those files have a different DWORD than the rest
+ // of the source.
+
+-#ifndef USE_WINDOWS_DWORD
++#if defined(_WIN32)
++typedef unsigned long			DWORD;
++#elif !defined(USE_WINDOWS_DWORD)
+ typedef uint32					DWORD;
+ #endif
+ typedef uint32					BITFIELD;
+
 --- src/c_console.cpp
 +++ src/c_console.cpp
 @@ -32,6 +32,30 @@

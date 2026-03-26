@@ -914,9 +914,7 @@ cc_binary(
         "-DNO_OPENAL=1",
         "-DBACKPATCH",
     ] + select({
-        "@envpool//:windows": [
-            "-DUSE_WINDOWS_DWORD",
-        ],
+        "@envpool//:windows": [],
         "//conditions:default": [
             "-Dstricmp=strcasecmp",
             "-Dstrnicmp=strncasecmp",

@@ -17,6 +17,7 @@
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "patch", "workspace_and_buildfile")
 
 _VIZDOOM_PATCH_TARGETS = [
+    "src/basictypes.h",
     "src/c_console.cpp",
     "src/fragglescript/t_func.cpp",
     "src/g_level.cpp",
