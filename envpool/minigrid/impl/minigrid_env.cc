@@ -1898,7 +1898,9 @@ void BindMiniGrid(py::module_& m) {
       .def_readonly("failure_pos", &MiniGridDebugState::failure_pos)
       .def_readonly("goal_pos", &MiniGridDebugState::goal_pos);
 
-  py::class_<PyMiniGridEnvSpec>(m, "_MiniGridEnvSpec")
+  py::class_<PyMiniGridEnvSpec>(
+      m, "_MiniGridEnvSpec",
+      py::metaclass(py::module_::import("abc").attr("ABCMeta")))
       .def(py::init<const PyMiniGridEnvSpec::ConfigValues&>())
       .def_readonly("_config_values", &PyMiniGridEnvSpec::py_config_values)
       .def_readonly("_state_spec", &PyMiniGridEnvSpec::py_state_spec)
@@ -1909,7 +1911,9 @@ void BindMiniGrid(py::module_& m) {
       .def_readonly_static("_default_config_values",
                            &PyMiniGridEnvSpec::py_default_config_values);
 
-  py::class_<PyMiniGridEnvPool>(m, "_MiniGridEnvPool")
+  py::class_<PyMiniGridEnvPool>(
+      m, "_MiniGridEnvPool",
+      py::metaclass(py::module_::import("abc").attr("ABCMeta")))
       .def(py::init<const PyMiniGridEnvSpec&>())
       .def_readonly("_spec", &PyMiniGridEnvPool::py_spec)
       .def("_recv", &PyMiniGridEnvPool::PyRecv)

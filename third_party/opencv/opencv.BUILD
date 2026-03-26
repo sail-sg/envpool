@@ -99,6 +99,8 @@ cmake(
             "-DWITH_KLEIDICV=OFF",
         ],
         "@envpool//:windows": [
+            "-DCMAKE_SYSTEM_PROCESSOR=AMD64",
+            "-DOPENCV_PYTHON_SKIP_DETECTION=ON",
             "-DWITH_PTHREADS_PF=OFF",
         ],
         "//conditions:default": [],
