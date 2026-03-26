@@ -445,7 +445,7 @@ def replace_with_eol(path_str: str, old_lf: bytes, new_lf: bytes) -> None:
 replace_with_eol(
     "src/c_console.cpp",
     b'#include "templates.h"\\n',
-    b'#ifdef _WIN32\\n#define USE_WINDOWS_DWORD\\ntypedef unsigned long DWORD;\\n#endif\\n\\n#include "templates.h"\\n',
+    b'#ifdef _WIN32\\n#if defined(_M_X64) && !defined(_AMD64_)\\n#define _AMD64_\\n#elif defined(_M_IX86) && !defined(_X86_)\\n#define _X86_\\n#elif defined(_M_ARM64) && !defined(_ARM64_)\\n#define _ARM64_\\n#endif\\n#define USE_WINDOWS_DWORD\\n#ifndef WIN32_LEAN_AND_MEAN\\n#define WIN32_LEAN_AND_MEAN\\n#endif\\n#ifndef NOMINMAX\\n#define NOMINMAX\\n#endif\\n#include <windows.h>\\n#endif\\n\\n#include "templates.h"\\n',
 )
 replace_with_eol(
     "src/c_console.cpp",
