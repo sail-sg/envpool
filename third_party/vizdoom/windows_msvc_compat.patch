@@ -193,10 +193,14 @@
  #define VIZ_SM_REGION_COUNT 7
 --- src/viz_input.cpp
 +++ src/viz_input.cpp
-@@ -26,6 +26,8 @@
+@@ -26,6 +26,12 @@
  #include "viz_defines.h"
  #include "viz_message_queue.h"
  #include "viz_shared_memory.h"
++
++#ifdef _WIN32
++#define USE_WINDOWS_DWORD
++#endif
 +
 +#include <boost/interprocess/exceptions.hpp>
 
@@ -204,10 +208,14 @@
  #include "g_game.h"
 --- src/viz_game.cpp
 +++ src/viz_game.cpp
-@@ -37,6 +37,8 @@
+@@ -37,6 +37,12 @@
  #include "viz_shared_memory.h"
  #include "viz_version.h"
  #include "viz_doom_classes.h"
++
++#ifdef _WIN32
++#define USE_WINDOWS_DWORD
++#endif
 +
 +#include <boost/interprocess/exceptions.hpp>
 
