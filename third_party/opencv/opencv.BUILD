@@ -100,6 +100,7 @@ cmake(
         ],
         "@envpool//:windows": [
             "-DCMAKE_SYSTEM_PROCESSOR=AMD64",
+            "-DOPENCV_WORKAROUND_CMAKE_20989=ON",
             "-DOPENCV_PYTHON_SKIP_DETECTION=ON",
             "-DWITH_PTHREADS_PF=OFF",
         ],
