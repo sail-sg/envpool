@@ -167,7 +167,7 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
 
   void WriteState(float reward, mjtNum ctrl_cost, mjtNum dist_cost,
                   mjtNum near_cost) {
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward;
     // obs
     mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());

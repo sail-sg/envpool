@@ -128,7 +128,7 @@ class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
 
  private:
   void WriteState(float reward, mjtNum xv, mjtNum ctrl_cost, mjtNum x_after) {
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward;
     // obs
     mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());

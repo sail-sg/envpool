@@ -158,7 +158,7 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
     const auto& to_target = NoseToTarget();
     const auto& body_velocities = BodyVelocities();
 
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs

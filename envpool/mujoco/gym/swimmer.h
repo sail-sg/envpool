@@ -134,7 +134,7 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
  private:
   void WriteState(float reward, mjtNum xv, mjtNum yv, mjtNum ctrl_cost,
                   mjtNum x_after, mjtNum y_after) {
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward;
     // obs
     mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());

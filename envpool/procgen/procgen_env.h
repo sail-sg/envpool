@@ -182,7 +182,7 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
 
  private:
   void WriteObs() {
-    State state = Allocate();
+    auto state = Allocate();
     if (channel_first_) {
       // convert from HWC to CHW
       auto* data = static_cast<uint8_t*>(state["obs"_].Data());

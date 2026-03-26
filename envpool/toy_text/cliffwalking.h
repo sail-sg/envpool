@@ -89,7 +89,7 @@ class CliffWalkingEnv : public Env<CliffWalkingEnvSpec> {
 
  private:
   void WriteState(float reward) {
-    State state = Allocate();
+    auto state = Allocate();
     state["obs"_] = x_ * 12 + y_;
     state["reward"_] = reward;
   }

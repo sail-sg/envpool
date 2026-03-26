@@ -361,7 +361,7 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
     const auto& joint_vel_obj = JointVelObj();
     const auto& target_pos = Body2dPose(id_xbody_target_);
 
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs

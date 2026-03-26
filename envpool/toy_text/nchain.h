@@ -85,7 +85,7 @@ class NChainEnv : public Env<NChainEnvSpec> {
 
  private:
   void WriteState(float reward) {
-    State state = Allocate();
+    auto state = Allocate();
     state["obs"_] = s_;
     state["reward"_] = reward;
   }

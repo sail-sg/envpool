@@ -1839,7 +1839,7 @@ MiniGridDebugState MiniGridEnv::DebugState() const {
 }
 
 void MiniGridEnv::WriteState(float reward) {
-  State state = Allocate();
+  auto state = Allocate();
   task_->GenImage(state["obs:image"_]);
   task_->WriteMission(state["obs:mission"_]);
   state["obs:direction"_] = task_->AgentDir();
@@ -1898,7 +1898,7 @@ void BindMiniGrid(py::module_& m) {
       .def_readonly("failure_pos", &MiniGridDebugState::failure_pos)
       .def_readonly("goal_pos", &MiniGridDebugState::goal_pos);
 
-  py::class_<PyMiniGridEnvSpec>(m, "_MiniGridEnvSpec", py::metaclass(abc_meta))
+  py::class_<PyMiniGridEnvSpec>(m, "_MiniGridEnvSpec")
       .def(py::init<const PyMiniGridEnvSpec::ConfigValues&>())
       .def_readonly("_config_values", &PyMiniGridEnvSpec::py_config_values)
       .def_readonly("_state_spec", &PyMiniGridEnvSpec::py_state_spec)
@@ -1909,7 +1909,7 @@ void BindMiniGrid(py::module_& m) {
       .def_readonly_static("_default_config_values",
                            &PyMiniGridEnvSpec::py_default_config_values);
 
-  py::class_<PyMiniGridEnvPool>(m, "_MiniGridEnvPool", py::metaclass(abc_meta))
+  py::class_<PyMiniGridEnvPool>(m, "_MiniGridEnvPool")
       .def(py::init<const PyMiniGridEnvSpec&>())
       .def_readonly("_spec", &PyMiniGridEnvPool::py_spec)
       .def("_recv", &PyMiniGridEnvPool::PyRecv)

@@ -102,7 +102,7 @@ class BlackjackEnv : public Env<BlackjackEnvSpec> {
 
  private:
   void WriteState(float reward) {
-    State state = Allocate();
+    auto state = Allocate();
     state["obs"_][0] = SumHand(player_);
     state["obs"_][1] = dealer_[0];
     state["obs"_][2] = UsableAce(player_);

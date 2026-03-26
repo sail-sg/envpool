@@ -170,7 +170,7 @@ class PointMassEnv : public Env<PointMassEnvSpec>, public MujocoEnv {
   }
 
   void WriteState() {
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs

@@ -111,7 +111,7 @@ class CartPoleEnv : public Env<CartPoleEnvSpec> {
 
  private:
   void WriteState(float reward) {
-    State state = Allocate();
+    auto state = Allocate();
     state["obs"_][0] = static_cast<float>(x_);
     state["obs"_][1] = static_cast<float>(x_dot_);
     state["obs"_][2] = static_cast<float>(theta_);

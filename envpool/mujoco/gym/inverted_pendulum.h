@@ -132,7 +132,7 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
   }
 
   void WriteState(float reward) {
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward;
     // obs
     mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());

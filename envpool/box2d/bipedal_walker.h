@@ -72,7 +72,7 @@ class BipedalWalkerEnv : public Env<BipedalWalkerEnvSpec>,
 
  private:
   void WriteState() {
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward_;
     state["obs"_].Assign(obs_.begin(), obs_.size());
 #ifdef ENVPOOL_TEST

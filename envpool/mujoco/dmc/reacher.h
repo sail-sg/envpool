@@ -131,7 +131,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
 
  private:
   void WriteState() {
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs

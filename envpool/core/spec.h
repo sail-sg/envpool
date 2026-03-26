@@ -30,6 +30,10 @@
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 inline std::size_t Prod(const std::size_t* shape, std::size_t ndim) {
   return std::accumulate(shape, shape + ndim, static_cast<std::size_t>(1),
                          std::multiplies<>());

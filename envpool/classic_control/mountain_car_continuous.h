@@ -108,7 +108,7 @@ class MountainCarContinuousEnv : public Env<MountainCarContinuousEnvSpec> {
 
  private:
   void WriteState(float reward) {
-    State state = Allocate();
+    auto state = Allocate();
     state["obs"_][0] = static_cast<float>(pos_);
     state["obs"_][1] = static_cast<float>(vel_);
     state["reward"_] = reward;
