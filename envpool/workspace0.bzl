@@ -445,12 +445,7 @@ def replace_with_eol(path_str: str, old_lf: bytes, new_lf: bytes) -> None:
 replace_with_eol(
     "src/c_console.cpp",
     b'#include "templates.h"\\n',
-    b'#ifdef _WIN32\\n#define WIN32_LEAN_AND_MEAN\\n#define USE_WINDOWS_DWORD\\n#include <windows.h>\\n#endif\\n\\n#include "templates.h"\\n',
-)
-replace_with_eol(
-    "src/c_console.cpp",
-    b'//VIZDOOM_CODE\\n#include "viz_game.h" \\n',
-    b'//VIZDOOM_CODE\\n#include "viz_game.h" \\n\\n#ifdef _WIN32\\n#ifdef DrawText\\n#undef DrawText\\n#endif\\n#ifdef GetCharWidth\\n#undef GetCharWidth\\n#endif\\n#endif\\n',
+    b'#ifdef _WIN32\\n#define USE_WINDOWS_DWORD\\ntypedef unsigned long DWORD;\\n#endif\\n\\n#include "templates.h"\\n',
 )
 replace_with_eol(
     "src/s_sound.h",
