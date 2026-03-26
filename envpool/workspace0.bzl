@@ -458,6 +458,16 @@ replace_with_eol(
     b'#ifdef _WIN32\\n#define USE_WINDOWS_DWORD\\n#endif\\n\\n#include "viz_shared_memory.h"\\n',
 )
 replace_with_eol(
+    "src/viz_message_queue.cpp",
+    b'#include "d_main.h"\\n#include "viz_message_queue.h"\\n',
+    b'#ifdef _WIN32\\n#define USE_WINDOWS_DWORD\\n#endif\\n\\n#include "viz_message_queue.h"\\n#include "d_main.h"\\n',
+)
+replace_with_eol(
+    "src/g_level.cpp",
+    b'#include "menu/menu.h"\\n',
+    b'#include "menu/menu.h"\\n\\n#ifdef _WIN32\\n#ifdef GetMessage\\n#undef GetMessage\\n#endif\\n#endif\\n',
+)
+replace_with_eol(
     "src/s_sound.h",
     b'\\t\\treturn ID ? S_sfx[ID].name : "";\\n',
     b'\\t\\treturn ID ? S_sfx[ID].name : FString("");\\n',
