@@ -246,31 +246,8 @@ def workspace():
         patch_args = ["-p1"],
         patches = [
             "//third_party/opencv:windows_msvc_flag_check.patch",
+            "//third_party/opencv:windows_cpu_baseline_flags.patch",
         ],
-        patch_cmds = ["""python - <<'PY'
-from pathlib import Path
-
-
-def replace_with_eol(path_str: str, old_lf: bytes, new_lf: bytes) -> None:
-    path = Path(path_str)
-    data = path.read_bytes()
-    for eol in (b"\\r\\n", b"\\n"):
-        old = old_lf.replace(b"\\n", eol)
-        new = new_lf.replace(b"\\n", eol)
-        if new in data:
-            return
-        if old in data:
-            path.write_bytes(data.replace(old, new, 1))
-            return
-    raise SystemExit(f"expected pattern not found in {path_str}")
-
-
-replace_with_eol(
-    "cmake/OpenCVCompilerOptimizations.cmake",
-    b'  ocv_check_compiler_flag(CXX "${__flags}" HAVE_CPU_BASELINE_FLAGS)\\n',
-    b'  ocv_check_compiler_flag(CXX "${__flags}" HAVE_CPU_BASELINE_FLAGS)\\n  if(NOT HAVE_CPU_BASELINE_FLAGS AND MSVC)\\n    set(HAVE_CPU_BASELINE_FLAGS 1)\\n    set(CPU_BASELINE_FLAGS "")\\n  endif()\\n',
-)
-PY"""],
         sha256 = "1d40ca017ea51c533cf9fd5cbde5b5fe7ae248291ddf2af99d4c17cf8e13017d",
         strip_prefix = "opencv-4.13.0",
         urls = [
