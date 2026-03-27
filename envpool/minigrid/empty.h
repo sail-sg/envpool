@@ -76,7 +76,7 @@ class EmptyEnv : public Env<EmptyEnvSpec>, public MiniGridEmptyEnv {
 
  private:
   void WriteState(float reward) {
-    State state = Allocate();
+    auto state = Allocate();
     GenImage(state["obs:image"_]);
     state["obs:direction"_] = agent_dir_;
     state["reward"_] = reward;

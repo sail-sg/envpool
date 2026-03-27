@@ -110,12 +110,12 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public MujocoEnv {
 
  private:
   void WriteState() {
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
     const auto& pole_orient = PoleOrientation();
-    state["obs:orientation"_].Assign(pole_orient.begin(), pole_orient.size());
+    state["obs:orientation"_].Assign(pole_orient.data(), pole_orient.size());
     state["obs:velocity"_] = AngularVelocity();
     // info for check alignment
 #ifdef ENVPOOL_TEST

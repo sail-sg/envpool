@@ -1,0 +1,20 @@
+--- python/private/py_executable.bzl
++++ python/private/py_executable.bzl
+@@ -908,11 +908,12 @@
+     manifest.set_param_file_format("multiline")
+ 
+     manifest.add("__main__.py={}".format(zip_main.path))
+     manifest.add("__init__.py=")
+-    manifest.add(
+-        "{}=".format(
+-            _get_zip_runfiles_path("__init__.py", workspace_name, legacy_external_runfiles),
+-        ),
+-    )
++    if _should_create_init_files(ctx):
++        manifest.add(
++            "{}=".format(
++                _get_zip_runfiles_path("__init__.py", workspace_name, legacy_external_runfiles),
++            ),
++        )
+     for path in runfiles.empty_filenames.to_list():
+         manifest.add("{}=".format(_get_zip_runfiles_path(path, workspace_name, legacy_external_runfiles)))

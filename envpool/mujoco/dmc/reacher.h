@@ -131,18 +131,18 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
 
  private:
   void WriteState() {
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
     state["obs:position"_].Assign(data_->qpos, model_->nq);
     const auto& finger = FingerToTarget();
-    state["obs:to_target"_].Assign(finger.begin(), finger.size());
+    state["obs:to_target"_].Assign(finger.data(), finger.size());
     state["obs:velocity"_].Assign(data_->qvel, model_->nv);
     // info for check alignment
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    state["info:target"_].Assign(target_.begin(), target_.size());
+    state["info:target"_].Assign(target_.data(), target_.size());
 #endif
   }
 

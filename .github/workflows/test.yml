@@ -34,14 +34,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Restore pip cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ~/.cache/pip
-          key: pip-test-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('third_party/pip_requirements/requirements-dev-lock.txt') }}
-          restore-keys: |
-            pip-test-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('third_party/pip_requirements/requirements-dev-lock.txt') }}-
-            pip-test-v1-${{ runner.os }}-${{ runner.arch }}-
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
@@ -73,13 +65,6 @@ jobs:
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
-      - name: Save pip cache
-        if: ${{ always() && !cancelled() }}
-        uses: actions/cache/save@v4
-        with:
-          path: ~/.cache/pip
-          key: pip-test-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('third_party/pip_requirements/requirements-dev-lock.txt') }}-${{ github.run_id }}
-
   test-macos:
     runs-on: macos-14
     timeout-minutes: 120
@@ -106,14 +91,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Restore pip cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ~/Library/Caches/pip
-          key: pip-test-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('third_party/pip_requirements/requirements-dev-lock.txt') }}
-          restore-keys: |
-            pip-test-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('third_party/pip_requirements/requirements-dev-lock.txt') }}-
-            pip-test-v1-${{ runner.os }}-${{ runner.arch }}-
       - name: Install macOS dependencies
         run: |
           brew install swig qt@5
@@ -145,9 +122,80 @@ jobs:
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
-      - name: Save pip cache
+  test-windows:
+    runs-on: windows-2022
+    timeout-minutes: 120
+    env:
+      BAZEL_SH: C:/Program Files/Git/usr/bin/bash.exe
+      CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      MSYS2_ARG_CONV_EXCL: "*"
+      MSYS_NO_PATHCONV: "1"
+      USE_BAZEL_VERSION: "8.6.0"
+    steps:
+      - name: Cancel previous run
+        uses: styfle/cancel-workflow-action@0.11.0
+        with:
+          access_token: ${{ github.token }}
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install Windows dependencies
+        shell: pwsh
+        run: |
+          choco install -y make ninja strawberryperl swig
+      - name: Install Qt 5
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "5.15.2"
+          arch: "win64_msvc2019_64"
+          set-env: "true"
+      - name: Export Qt location
+        shell: pwsh
+        run: |
+          Add-Content -Path $env:GITHUB_ENV -Value "BAZEL_RULES_QT_DIR=$env:QT_ROOT_DIR"
+          Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $env:QT_ROOT_DIR "bin")
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files\Git\usr\bin"
+      - name: Restore Bazel caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache/bazelisk
+            ~/.cache/envpool-bazel-repo
+            ~/.cache/envpool-bazel-disk
+          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}
+          restore-keys: |
+            bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.DEFAULT_BRANCH }}-
+            bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-
+      - name: Install bazelisk
+        shell: pwsh
+        run: |
+          go install github.com/bazelbuild/bazelisk@latest
+          Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $HOME "go/bin")
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test
+        shell: bash
+        run: |
+          repo_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-repo")
+          disk_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-disk")
+          make BAZELOPT="--repository_cache=$repo_cache --disk_cache=$disk_cache" bazel-test
+      - name: Save Bazel caches
         if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
-          path: ~/Library/Caches/pip
-          key: pip-test-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('third_party/pip_requirements/requirements-dev-lock.txt') }}-${{ github.run_id }}
+          path: |
+            ~/.cache/bazelisk
+            ~/.cache/envpool-bazel-repo
+            ~/.cache/envpool-bazel-disk
+          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}

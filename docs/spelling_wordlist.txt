@@ -57,6 +57,8 @@ Reacher
 golang
 uncomment
 Brax
+Homebrew
+macOS
 Procgen
 Minigrid
 Garena
@@ -68,6 +70,7 @@ booleans
 viewport
 Tensorflow
 Jax
+Xcode
 jitting
 api
 jit

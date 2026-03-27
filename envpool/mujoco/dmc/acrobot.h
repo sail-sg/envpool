@@ -118,13 +118,12 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
 
  private:
   void WriteState() {
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
     const auto& orientations = Orientations();
-    state["obs:orientations"_].Assign(orientations.begin(),
-                                      orientations.size());
+    state["obs:orientations"_].Assign(orientations.data(), orientations.size());
     state["obs:velocity"_].Assign(data_->qvel, model_->nv);
     // info for check alignment
 #ifdef ENVPOOL_TEST

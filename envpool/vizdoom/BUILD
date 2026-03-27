@@ -115,9 +115,12 @@ cc_library(
 pybind_extension(
     name = "vizdoom_envpool",
     srcs = ["vizdoom_envpool.cc"],
-    linkopts = [
-        "-ldl",
-    ],
+    linkopts = select({
+        "//:windows": [],
+        "//conditions:default": [
+            "-ldl",
+        ],
+    }),
     deps = [
         ":vizdoom_env",
         "//envpool/core:py_envpool",
@@ -127,9 +130,10 @@ pybind_extension(
 py_library(
     name = "vizdoom",
     srcs = ["__init__.py"],
+    imports = ["../.."],
     data = [
         ":gen_vizdoom_maps",
-        ":vizdoom_envpool.so",
+        ":vizdoom_envpool",
         "//envpool/vizdoom/bin:freedoom",
         "//envpool/vizdoom/bin:vizdoom_bin",
         "//envpool/vizdoom/bin:vizdoom_pk3",
@@ -140,6 +144,7 @@ py_library(
 py_library(
     name = "vizdoom_registration",
     srcs = ["registration.py"],
+    imports = ["../.."],
     deps = ["//envpool:registration"],
 )
 
@@ -147,6 +152,7 @@ py_test(
     name = "vizdoom_test",
     size = "enormous",
     srcs = ["vizdoom_test.py"],
+    imports = ["../.."],
     deps = [
         ":vizdoom",
         ":vizdoom_registration",
@@ -160,6 +166,7 @@ py_test(
     name = "vizdoom_pretrain_test",
     size = "enormous",
     srcs = ["vizdoom_pretrain_test.py"],
+    imports = ["../.."],
     data = [":gen_pretrain_weight"],
     deps = [
         ":vizdoom",

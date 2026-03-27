@@ -19,5 +19,9 @@ licenses(["notice"])
 sh_binary(
     name = "clang_tidy_executable",
     srcs = ["clang_tidy_wrapper.sh"],
+    target_compatible_with = select({
+        "//:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
 )

@@ -103,7 +103,7 @@ class FrozenLakeEnv : public Env<FrozenLakeEnvSpec> {
 
  private:
   void WriteState(float reward) {
-    State state = Allocate();
+    auto state = Allocate();
     state["obs"_] = x_ * size_ + y_;
     state["reward"_] = reward;
   }

@@ -59,7 +59,7 @@ class MujocoEnv {
   MujocoEnv(const std::string& xml, int frame_skip, bool post_constraint,
             int max_episode_steps)
       : xml_path_(ResolveXMLPath(xml)),
-        model_(mj_loadXML(xml_path_.c_str(), nullptr, error_.begin(), 1000)),
+        model_(mj_loadXML(xml_path_.c_str(), nullptr, error_.data(), 1000)),
         frame_skip_(frame_skip),
         post_constraint_(post_constraint),
         max_episode_steps_(max_episode_steps),

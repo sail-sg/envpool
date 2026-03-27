@@ -3,11 +3,15 @@ common --noenable_bzlmod
 common --noincompatible_disallow_empty_glob
 common --enable_platform_specific_config
 
-build --incompatible_strict_action_env --cxxopt=-std=c++17 --host_cxxopt=-std=c++17 --client_env=BAZEL_CXXOPTS=-std=c++17
+build --incompatible_strict_action_env
+build --incompatible_default_to_explicit_init_py
 build:debug --cxxopt=-DENVPOOL_TEST --compilation_mode=dbg -s
 build:test --cxxopt=-DENVPOOL_TEST --copt=-g0 --copt=-O3 --copt=-DNDEBUG
 build:release --copt=-g0 --copt=-O3 --copt=-DNDEBUG
 
+build:linux --cxxopt=-std=c++17
+build:linux --host_cxxopt=-std=c++17
+build:linux --client_env=BAZEL_CXXOPTS=-std=c++17
 build:linux --action_env=BAZEL_LINKLIBS=-l%:libstdc++.a:-lm
 build:linux --action_env=BAZEL_LINKOPTS=-static-libgcc
 build:linux --action_env=CUDA_DIR=/usr/local/cuda
@@ -16,10 +20,25 @@ build:linux --copt=-msse
 build:linux --copt=-msse2
 build:linux --copt=-mmmx
 
+build:macos --cxxopt=-std=c++17
+build:macos --host_cxxopt=-std=c++17
+build:macos --client_env=BAZEL_CXXOPTS=-std=c++17
 build:macos --action_env=MACOSX_DEPLOYMENT_TARGET=10.15
 build:macos --copt=-mmacosx-version-min=10.15
 build:macos --linkopt=-mmacosx-version-min=10.15
 test:macos --test_env=PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+
+build:windows --cxxopt=/std:c++20
+build:windows --host_cxxopt=/std:c++20
+build:windows --action_env=BAZEL_SH
+build:windows --repo_env=BAZEL_SH
+build:windows --@rules_python//python/config_settings:bootstrap_impl=script
+build:windows --build_python_zip=false
+build:windows --@rules_python//python/config_settings:venvs_use_declare_symlink=no
+build:windows --enable_runfiles
+test:windows --test_env=BAZEL_RULES_QT_DIR
+test:windows --test_env=QT_ROOT_DIR
+test:windows --test_env=PATH
 
 build:clang-tidy --aspects @bazel_clang_tidy//clang_tidy:clang_tidy.bzl%clang_tidy_aspect
 build:clang-tidy --@bazel_clang_tidy//:clang_tidy_config=//:clang_tidy_config

@@ -1,0 +1,253 @@
+--- src/win32/i_main.cpp
++++ src/win32/i_main.cpp
+@@ -784 +784 @@
+-	while ((bRet = GetMessage(&msg, NULL, 0, 0)) != 0)
++	while ((bRet = GetMessageW(&msg, NULL, 0, 0)) != 0)
+
+--- src/c_console.cpp
++++ src/c_console.cpp
+@@ -32,6 +32,30 @@
+ **
+ */
+
++#ifdef _WIN32
++#if defined(_M_X64) && !defined(_AMD64_)
++#define _AMD64_
++#elif defined(_M_IX86) && !defined(_X86_)
++#define _X86_
++#elif defined(_M_ARM64) && !defined(_ARM64_)
++#define _ARM64_
++#endif
++#define USE_WINDOWS_DWORD
++#ifndef WIN32_LEAN_AND_MEAN
++#define WIN32_LEAN_AND_MEAN
++#endif
++#ifndef NOMINMAX
++#define NOMINMAX
++#endif
++#include <windows.h>
++#ifdef DrawText
++#undef DrawText
++#endif
++#ifdef GetCharWidth
++#undef GetCharWidth
++#endif
++#endif
++
+ #include "templates.h"
+ #include "p_setup.h"
+ #include <stdarg.h>
+@@ -72,6 +96,15 @@
+
+ //VIZDOOM_CODE
+ #include "viz_game.h"
++
++#ifdef _WIN32
++#ifdef DrawText
++#undef DrawText
++#endif
++#ifdef GetCharWidth
++#undef GetCharWidth
++#endif
++#endif
+
+ #define LEFTMARGIN 8
+ #define RIGHTMARGIN 8
+--- src/fragglescript/t_func.cpp
++++ src/fragglescript/t_func.cpp
+@@ -2053,7 +2053,7 @@
+
+ 		t_return.type = svt_string;
+ 		FTexture * tex = TexMan[sector->GetTexture(sector_t::floor)];
+-		t_return.string = tex? tex->Name : "";
++		t_return.string = tex ? tex->Name : FString("");
+ 	}
+ }
+
+@@ -2143,7 +2143,7 @@
+
+ 		t_return.type = svt_string;
+ 		FTexture * tex = TexMan[sector->GetTexture(sector_t::ceiling)];
+-		t_return.string = tex? tex->Name : "";
++		t_return.string = tex ? tex->Name : FString("");
+ 	}
+ }
+
+--- src/doomerrors.h
++++ src/doomerrors.h
+@@ -39,0 +40,4 @@
++
++#ifdef GetMessage
++#undef GetMessage
++#endif
+--- src/g_level.cpp
++++ src/g_level.cpp
+@@ -31,6 +31,10 @@
+ **---------------------------------------------------------------------------
+ **
+ */
++
++#ifdef GetMessage
++#undef GetMessage
++#endif
+
+ #include <assert.h>
+ #include "templates.h"
+@@ -91,6 +109,12 @@
+ //VIZDOOM_CODE
+ #include "viz_game.h"
+
++#ifdef _WIN32
++#ifdef GetMessage
++#undef GetMessage
++#endif
++#endif
++
+ void STAT_StartNewGame(const char *lev);
+ void STAT_ChangeLevel(const char *newl);
+
+--- src/s_sound.h
++++ src/s_sound.h
+@@ -129,7 +129,7 @@
+ 	}
+ 	operator FString() const
+ 	{
+-		return ID ? S_sfx[ID].name : "";
++		return ID ? S_sfx[ID].name : FString("");
+ 	}
+ 	operator const char *() const
+ 	{
+--- src/viz_message_queue.cpp
++++ src/viz_message_queue.cpp
+@@ -21,8 +21,14 @@
+ THE SOFTWARE.
+ */
+
+-#include "d_main.h"
++#ifdef _WIN32
++#define USE_WINDOWS_DWORD
++#endif
++
++#include <boost/interprocess/ipc/message_queue.hpp>
++
+ #include "viz_message_queue.h"
++#include "d_main.h"
+ #include "viz_input.h"
+ #include "viz_game.h"
+ #include "viz_main.h"
+--- src/viz_message_queue.h
++++ src/viz_message_queue.h
+@@ -24,7 +24,8 @@
+ #ifndef __VIZ_MESSAGE_QUEUE_H__
+ #define __VIZ_MESSAGE_QUEUE_H__
+
+-#include <boost/interprocess/ipc/message_queue.hpp>
++#include <stdint.h>
++#include <boost/interprocess/interprocess_fwd.hpp>
+
+ namespace bip = boost::interprocess;
+
+ extern bip::message_queue *vizMQController;
+--- src/viz_shared_memory.cpp
++++ src/viz_shared_memory.cpp
+@@ -21,6 +21,13 @@
+ THE SOFTWARE.
+ */
+
++#ifdef _WIN32
++#define USE_WINDOWS_DWORD
++#endif
++
++#include <boost/interprocess/shared_memory_object.hpp>
++#include <boost/interprocess/mapped_region.hpp>
++
+ #include "viz_shared_memory.h"
+ #include "viz_defines.h"
+ #include "viz_game.h"
+--- src/viz_shared_memory.h
++++ src/viz_shared_memory.h
+@@ -24,8 +24,8 @@
+ #ifndef __VIZ_SHARED_MEMORY_H__
+ #define __VIZ_SHARED_MEMORY_H__
+
+-#include <boost/interprocess/shared_memory_object.hpp>
+-#include <boost/interprocess/mapped_region.hpp>
++#include <stddef.h>
++#include <boost/interprocess/interprocess_fwd.hpp>
+
+ #define VIZ_SM_NAME_BASE "ViZDoomSM"
+ #define VIZ_SM_REGION_COUNT 7
+--- src/viz_input.cpp
++++ src/viz_input.cpp
+@@ -328,4 +328,4 @@
+         VIZ_DebugMsg(1, VIZ_FUNC, "inputOffset: %zu, inputSize: %zu", inputRegion->offset, sizeof(VIZInputState));
+     }
+-    catch (bip::interprocess_exception &ex) {
++    catch (...) {  // bip::interprocess_exception
+         VIZ_Error(VIZ_FUNC, "Failed to create input.");
+     }
+--- src/viz_game.cpp
++++ src/viz_game.cpp
+@@ -269,4 +269,4 @@
+                      sizeof(VIZGameState));
+     }
+-    catch(bip::interprocess_exception &ex){
++    catch(...){ // bip::interprocess_exception
+         VIZ_Error(VIZ_FUNC, "Failed to create game state.");
+     }
+--- src/r_data/r_translate.cpp
++++ src/r_data/r_translate.cpp
+@@ -582 +582 @@
+-		if (*this == *translationtables[TRANSLATION_Decorate][i])
++		if (this->operator==(*translationtables[TRANSLATION_Decorate][i]))
+--- src/win32/i_system.cpp
++++ src/win32/i_system.cpp
+@@ -89,6 +89,15 @@
+ //VIZDOOM_CODE
+ #include "viz_main.h"
+
++void *I_GetOptionalWin32ProcAddress(const char* module, const char* function)
++{
++	HMODULE hmodule = GetModuleHandleA(module);
++	if (hmodule == NULL)
++		return NULL;
++
++	return (void *)GetProcAddress(hmodule, function);
++}
++
+ // MACROS ------------------------------------------------------------------
+
+ #ifdef _MSC_VER
+@@ -1309,7 +1318,7 @@
+ 	HDC dc = GetDC(NULL);
+ 	if (dc == NULL)
+ 	{
+-		return false;
++		return NULL;
+ 	}
+ 	HDC and_mask_dc = CreateCompatibleDC(dc);
+ 	HDC xor_mask_dc = CreateCompatibleDC(dc);
+--- src/win32/i_system.h
++++ src/win32/i_system.h
+@@ -51,6 +51,8 @@
+
+ extern os_t OSPlatform;
+
++void *I_GetOptionalWin32ProcAddress(const char* module, const char* function);
++
+ // Helper template so that we can access newer Win32 functions with a single static
+ // variable declaration. If this were C++11 it could be totally transparent.
+ template<typename Proto>
+@@ -58,11 +60,7 @@
+ {
+ 	static Proto GetOptionalWin32Proc(const char* module, const char* function)
+ 	{
+-		HMODULE hmodule = GetModuleHandle(module);
+-		if (hmodule == NULL)
+-			return NULL;
+-
+-		return (Proto)GetProcAddress(hmodule, function);
++		return (Proto)I_GetOptionalWin32ProcAddress(module, function);
+ 	}
+
+ public:

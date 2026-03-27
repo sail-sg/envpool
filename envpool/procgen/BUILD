@@ -52,9 +52,12 @@ cc_test(
 pybind_extension(
     name = "procgen_envpool",
     srcs = ["procgen_envpool.cc"],
-    linkopts = [
-        "-ldl",
-    ],
+    linkopts = select({
+        "//:windows": [],
+        "//conditions:default": [
+            "-ldl",
+        ],
+    }),
     deps = [
         ":procgen_env",
         "//envpool/core:py_envpool",
@@ -64,13 +67,18 @@ pybind_extension(
 py_library(
     name = "procgen",
     srcs = ["__init__.py"],
-    data = [":procgen_envpool.so"],
+    imports = ["../.."],
+    data = [
+        ":gen_procgen_assets",
+        ":procgen_envpool",
+    ],
     deps = ["//envpool/python:api"],
 )
 
 py_library(
     name = "procgen_registration",
     srcs = ["registration.py"],
+    imports = ["../.."],
     deps = [
         "//envpool:registration",
     ],
@@ -79,6 +87,7 @@ py_library(
 py_test(
     name = "procgen_test",
     srcs = ["procgen_test.py"],
+    imports = ["../.."],
     deps = [
         ":procgen",
         ":procgen_registration",

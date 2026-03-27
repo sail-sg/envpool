@@ -62,9 +62,9 @@ class LunarLanderDiscreteEnv : public Env<LunarLanderDiscreteEnvSpec>,
 
  private:
   void WriteState() {
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward_;
-    state["obs"_].Assign(obs_.begin(), obs_.size());
+    state["obs"_].Assign(obs_.data(), obs_.size());
   }
 };
 

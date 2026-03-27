@@ -1,0 +1,29 @@
+diff --git a/src/engine/engine_io.c b/src/engine/engine_io.c
+index c196ec1..0a72765 100644
+--- a/src/engine/engine_io.c
++++ b/src/engine/engine_io.c
+@@ -69,7 +69,7 @@ static const int ID = 54321;
+ static int getnsize(void) {
+   int cnt = 0;
+ 
+-#define X(name) cnt += _Generic(MJMODEL_MEMBER(name), mjtSize: 1, default: 0);
++#define X(name) cnt++;
+   MJMODEL_SIZES
+ #undef X
+ 
+diff --git a/src/xml/xml.cc b/src/xml/xml.cc
+index ddb1db9..ddb5ef0 100644
+--- a/src/xml/xml.cc
++++ b/src/xml/xml.cc
+@@ -361,8 +361,8 @@ mjSpec* ParseXML(const char* filename, const mjVFS* vfs, char* error,
+   int ndir = 0;
+   mju_getResourceDir(resource, &dir, &ndir);
+   std::string_view directory(dir, ndir);
+ 
+-  mjSpec* spec = SpecFromXML({xml, xml + buffer_size}, directory,
+-                             filename, vfs, error, nerror);
++  mjSpec* spec = SpecFromXML(std::string_view(xml, buffer_size), directory,
++                             filename, vfs, error, nerror);
+ 
+   mju_closeResource(resource);
+   return spec;

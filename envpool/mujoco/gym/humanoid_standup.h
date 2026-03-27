@@ -155,7 +155,7 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
  private:
   void WriteState(float reward, mjtNum xv, mjtNum ctrl_cost,
                   mjtNum contact_cost) {
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward;
     // obs
     mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());

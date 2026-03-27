@@ -86,7 +86,7 @@ class CatchEnv : public Env<CatchEnvSpec> {
 
  private:
   void WriteState(float reward) {
-    State state = Allocate();
+    auto state = Allocate();
     state["obs"_](x_, y_) = 1.0f;
     state["obs"_](height_ - 1, paddle_) = 1.0f;
     state["reward"_] = reward;

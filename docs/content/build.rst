@@ -2,7 +2,8 @@ Build From Source
 =================
 
 We recommend developing EnvPool on Ubuntu 24.04. Release wheels are built in a
-``manylinux_2_28_x86_64`` environment.
+``manylinux_2_28_x86_64`` environment for Linux, on ``macos-14`` for macOS,
+and on ``windows-2022`` for Windows.
 
 We use `bazel <https://bazel.build/>`_ to build EnvPool. Comparing with
 `pip <https://pip.pypa.io/>`_, using Bazel to build python package with C++ .so
@@ -67,25 +68,80 @@ or `golang <https://golang.org/doc/install>`_ with version >= 1.16:
 Install Other Dependencies
 --------------------------
 
+EnvPool source builds share a few common requirements across platforms:
+
+- **Python >= 3.11**
+- **Java 17**
+- **Go >= 1.22** plus ``bazelisk`` / ``bazel``
+- **SWIG**
+- **Qt 5**
+
+The default build and test shortcuts in this repo use **Bazel 8.6.0** via
+``bazelisk``.
+
+Linux (Ubuntu 24.04)
+^^^^^^^^^^^^^^^^^^^^
+
 EnvPool currently builds with the system GCC/G++ toolchain on Ubuntu 24.04. To
 install the required development packages:
 
 .. code-block:: bash
 
-    sudo apt install -y build-essential python3-dev python3-pip \
-      python-is-python3 golang-go qtbase5-dev qtdeclarative5-dev
+    sudo apt install -y build-essential openjdk-17-jdk python3-dev \
+      python3-pip python-is-python3 golang-go swig qtbase5-dev \
+      qtdeclarative5-dev
 
     # Some Bazel Qt rules still look for this legacy include path.
     sudo ln -sf /usr/include/x86_64-linux-gnu/qt5 /usr/include/qt
 
-It also requires **Python version >= 3.11**:
+macOS
+^^^^^
+
+Install the Xcode Command Line Tools first, then install the user-space
+dependencies with Homebrew:
 
 .. code-block:: bash
 
-    python3 --version
+    xcode-select --install
+    brew install go openjdk@17 swig qt@5
 
-The default build and test shortcuts in this repo use **Bazel 8.6.0** via
-``bazelisk``.
+    export PATH="$(brew --prefix openjdk@17)/bin:$PATH"
+    export BAZEL_RULES_QT_DIR="$(brew --prefix qt@5)"
+
+Windows
+^^^^^^^
+
+Install the following before building from source:
+
+- Visual Studio 2022 (or Build Tools 2022) with the **Desktop development with
+  C++** workload
+- Git for Windows
+- Java 17
+- Go 1.22+
+- Qt 5.15.2 with the ``msvc2019_64`` toolchain
+
+Then install the remaining command-line dependencies and export the Bazel / Qt
+environment variables:
+
+.. code-block:: powershell
+
+    choco install -y make ninja strawberryperl swig
+    $env:BAZEL_SH = "C:/Program Files/Git/usr/bin/bash.exe"
+    $env:QT_ROOT_DIR = "C:/Qt/5.15.2/msvc2019_64"
+    $env:BAZEL_RULES_QT_DIR = $env:QT_ROOT_DIR
+    $env:PATH = "$env:QT_ROOT_DIR\\bin;$env:PATH"
+
+Qt runtime in wheels
+^^^^^^^^^^^^^^^^^^^^
+
+Windows release wheels currently bundle the Qt runtime DLLs required by
+Procgen (``Qt5Core.dll`` and ``Qt5Gui.dll``) directly next to
+``procgen_envpool.pyd``. End users installing the wheel do **not** need a
+separate Qt installation at runtime.
+
+Source builds still require a local Qt 5 installation so Bazel can compile and
+link against Qt. Linux and macOS continue to rely on system Qt packages at
+build time.
 
 Install CUDA to enable XLA: see https://developer.nvidia.com/cuda-downloads
 

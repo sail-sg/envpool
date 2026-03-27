@@ -44,13 +44,15 @@ cc_library(
         "include",
         "src/lib",
     ],
-    linkopts = ["-ldl"],
+    linkopts = select({
+        "@envpool//:windows": [],
+        "//conditions:default": ["-ldl"],
+    }),
     deps = [
         "@boost//:asio",
         "@boost//:filesystem",
         "@boost//:interprocess",
         "@boost//:iostreams",
-        "@boost//:process",
         "@boost//:random",
         "@boost//:thread",
     ],

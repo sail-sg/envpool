@@ -20,7 +20,6 @@ filegroup(
     name = "procgen_assets",
     srcs = [
         "data/assets/kenney",
-        "data/assets/kenney-abstract",
         "data/assets/misc_assets",
         "data/assets/platform_backgrounds",
         "data/assets/platform_backgrounds_2",
@@ -35,9 +34,12 @@ cc_library(
     name = "procgen",
     srcs = glob(["src/**/*.cpp"]) + glob(["src/*.h"]),
     hdrs = glob(["src/*.h"]),
-    copts = [
-        "-fpic",
-    ],
+    copts = select({
+        "@envpool//:windows": [],
+        "//conditions:default": [
+            "-fpic",
+        ],
+    }),
     strip_include_prefix = "src",
     deps = [
         "@gym3_libenv//:gym3_libenv_header",

@@ -175,7 +175,7 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
   }
 
   void WriteState(float reward, mjtNum xv, mjtNum x_after) {
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward;
     // obs
     mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());

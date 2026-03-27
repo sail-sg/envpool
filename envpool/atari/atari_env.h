@@ -232,7 +232,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
 
  private:
   void WriteState(float reward, float discount, float info_reward) {
-    State state = Allocate();
+    auto state = Allocate();
     state["discount"_] = discount;
     state["trunc"_] = done_ && (elapsed_step_ >= max_episode_steps_);
     state["reward"_] = reward;

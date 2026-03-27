@@ -73,7 +73,7 @@ class CarRacingEnv : public Env<CarRacingEnvSpec>, public CarRacingBox2dEnv {
 
  private:
   void WriteState() {
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = step_reward_;
     CreateImageArray();
     state["obs"_].Assign(img_array_.data, 96 * 96 * 3);

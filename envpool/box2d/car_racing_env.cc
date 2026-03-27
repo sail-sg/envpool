@@ -96,16 +96,16 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
   // Create checkpoints
   std::vector<std::array<float, 3>> checkpoints;
   for (int c = 0; c < kCheckPoint; ++c) {
-    auto noise = RandUniform(0, 2.0 * M_PI / kCheckPoint)(*gen);
-    auto alpha = 2.0 * M_PI * c / kCheckPoint + noise;
+    auto noise = RandUniform(0, 2.0 * b2_pi / kCheckPoint)(*gen);
+    auto alpha = 2.0 * b2_pi * c / kCheckPoint + noise;
     auto rad = RandUniform(kTrackRad / 3, kTrackRad)(*gen);
 
     if (c == 0) {
       alpha = 0;
       rad = 1.5 * kTrackRad;
     } else if (c == kCheckPoint - 1) {
-      alpha = 2 * M_PI * c / kCheckPoint;
-      start_alpha_ = static_cast<float>(-M_PI / kCheckPoint);
+      alpha = 2 * b2_pi * c / kCheckPoint;
+      start_alpha_ = static_cast<float>(-b2_pi / kCheckPoint);
       rad = 1.5 * kTrackRad;
     }
     std::array<float, 3> cp = {static_cast<float>(alpha),
@@ -134,7 +134,7 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
     }
     if (alpha < 0) {
       visited_other_side = true;
-      alpha += 2 * M_PI;
+      alpha += 2 * b2_pi;
     }
     float dest_alpha;
     float dest_x;
@@ -157,7 +157,7 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
       if (!failed) {
         break;
       }
-      alpha -= 2 * M_PI;
+      alpha -= 2 * b2_pi;
     }
     float r1x = std::cos(beta);
     float r1y = std::sin(beta);
@@ -167,11 +167,11 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
     float dest_dy = dest_y - y;
     // destination vector projected on rad:
     float proj = r1x * dest_dx + r1y * dest_dy;
-    while (beta - alpha > 1.5 * M_PI) {
-      beta -= 2 * M_PI;
+    while (beta - alpha > 1.5 * b2_pi) {
+      beta -= 2 * b2_pi;
     }
-    while (beta - alpha < -1.5 * M_PI) {
-      beta += 2 * M_PI;
+    while (beta - alpha < -1.5 * b2_pi) {
+      beta += 2 * b2_pi;
     }
     float prev_beta = beta;
     proj *= kScale;

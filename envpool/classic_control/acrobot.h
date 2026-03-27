@@ -167,7 +167,7 @@ class AcrobotEnv : public Env<AcrobotEnvSpec> {
   }
 
   void WriteState(float reward) {
-    State state = Allocate();
+    auto state = Allocate();
     state["obs"_][0] = static_cast<float>(std::cos(s_.s0));
     state["obs"_][1] = static_cast<float>(std::sin(s_.s0));
     state["obs"_][2] = static_cast<float>(std::cos(s_.s1));

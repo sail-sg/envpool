@@ -43,14 +43,21 @@ cc_library(
     ]),
     copts = [
         "-DCCD_STATIC_DEFINE",
-        "-D_GNU_SOURCE",
-        "-Wno-int-in-bool-context",
-        "-Wno-maybe-uninitialized",
-        "-Wno-sign-compare",
-        "-Wno-stringop-overflow",
-        "-Wno-stringop-truncation",
-    ],
-    cxxopts = ["-std=c++20"],
+    ] + select({
+        "@envpool//:windows": [],
+        "//conditions:default": [
+            "-D_GNU_SOURCE",
+            "-Wno-int-in-bool-context",
+            "-Wno-maybe-uninitialized",
+            "-Wno-sign-compare",
+            "-Wno-stringop-overflow",
+            "-Wno-stringop-truncation",
+        ],
+    }),
+    cxxopts = select({
+        "@envpool//:windows": ["/std:c++20"],
+        "//conditions:default": ["-std=c++20"],
+    }),
     defines = ["MJ_STATIC"],
     includes = [
         "include",

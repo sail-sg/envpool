@@ -77,9 +77,12 @@ cc_library(
         "include",
         "src",
     ],
-    linkopts = [
-        "-ldl",
-    ],
+    linkopts = select({
+        "@envpool//:windows": [],
+        "//conditions:default": [
+            "-ldl",
+        ],
+    }),
     linkstatic = 1,
     visibility = ["//visibility:public"],
 )

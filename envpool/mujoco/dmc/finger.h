@@ -174,19 +174,19 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
 
  private:
   void WriteState() {
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
     const auto& bound_pos = BoundedPosition();
     const auto& velocity = Velocity();
     const auto& touch = Touch();
-    state["obs:position"_].Assign(bound_pos.begin(), bound_pos.size());
-    state["obs:velocity"_].Assign(velocity.begin(), velocity.size());
-    state["obs:touch"_].Assign(touch.begin(), touch.size());
+    state["obs:position"_].Assign(bound_pos.data(), bound_pos.size());
+    state["obs:velocity"_].Assign(velocity.data(), velocity.size());
+    state["obs:touch"_].Assign(touch.data(), touch.size());
     if (!is_spin_) {
       const auto& target_position = TargetPosition();
-      state["obs:target_position"_].Assign(target_position.begin(),
+      state["obs:target_position"_].Assign(target_position.data(),
                                            target_position.size());
       state["obs:dist_to_target"_] = DistToTarget();
     }

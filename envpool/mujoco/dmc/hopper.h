@@ -150,14 +150,14 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
   }
 
   void WriteState() {
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
     state["obs:position"_].Assign(data_->qpos + 1, model_->nq - 1);
     state["obs:velocity"_].Assign(data_->qvel, model_->nv);
     const auto& touch = Touch();
-    state["obs:touch"_].Assign(touch.begin(), 2);
+    state["obs:touch"_].Assign(touch.data(), 2);
     // info for check alignment
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);

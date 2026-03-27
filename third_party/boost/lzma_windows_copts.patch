@@ -1,0 +1,51 @@
+--- lzma.BUILD.orig
++++ lzma.BUILD
+@@ -67,21 +67,33 @@
+     ),
+     hdrs = glob(["src/liblzma/api/**/*.h"]),
+     copts = select({
+-        "@platforms//os:windows": [],
+-        "//conditions:default": ["-std=c99"],
+-    }) + [
+-        # Replace with local_includes if it's ever added https://github.com/bazelbuild/bazel/issues/16472
+-        "-I external/org_lzma_lzma/src/common",
+-        "-I external/org_lzma_lzma/src/liblzma",
+-        "-I external/org_lzma_lzma/src/liblzma/api",
+-        "-I external/org_lzma_lzma/src/liblzma/common",
+-        "-I external/org_lzma_lzma/src/liblzma/check",
+-        "-I external/org_lzma_lzma/src/liblzma/delta",
+-        "-I external/org_lzma_lzma/src/liblzma/lz",
+-        "-I external/org_lzma_lzma/src/liblzma/lzma",
+-        "-I external/org_lzma_lzma/src/liblzma/rangecoder",
+-        "-I external/org_lzma_lzma/src/liblzma/simple",
+-    ],
++        "@platforms//os:windows": [
++            "/Iexternal/org_lzma_lzma/src/common",
++            "/Iexternal/org_lzma_lzma/src/liblzma",
++            "/Iexternal/org_lzma_lzma/src/liblzma/api",
++            "/Iexternal/org_lzma_lzma/src/liblzma/common",
++            "/Iexternal/org_lzma_lzma/src/liblzma/check",
++            "/Iexternal/org_lzma_lzma/src/liblzma/delta",
++            "/Iexternal/org_lzma_lzma/src/liblzma/lz",
++            "/Iexternal/org_lzma_lzma/src/liblzma/lzma",
++            "/Iexternal/org_lzma_lzma/src/liblzma/rangecoder",
++            "/Iexternal/org_lzma_lzma/src/liblzma/simple",
++        ],
++        "//conditions:default": [
++            "-std=c99",
++            # Replace with local_includes if it's ever added https://github.com/bazelbuild/bazel/issues/16472
++            "-I external/org_lzma_lzma/src/common",
++            "-I external/org_lzma_lzma/src/liblzma",
++            "-I external/org_lzma_lzma/src/liblzma/api",
++            "-I external/org_lzma_lzma/src/liblzma/common",
++            "-I external/org_lzma_lzma/src/liblzma/check",
++            "-I external/org_lzma_lzma/src/liblzma/delta",
++            "-I external/org_lzma_lzma/src/liblzma/lz",
++            "-I external/org_lzma_lzma/src/liblzma/lzma",
++            "-I external/org_lzma_lzma/src/liblzma/rangecoder",
++            "-I external/org_lzma_lzma/src/liblzma/simple",
++        ],
++    }),
+     defines = select({
+         "@platforms//os:windows": ["LZMA_API_STATIC"],
+         "//conditions:default": [],

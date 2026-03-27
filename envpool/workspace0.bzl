@@ -17,13 +17,30 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 load("//third_party/cuda:cuda.bzl", "cuda_configure")
+load("//third_party/vizdoom:repo.bzl", "vizdoom_archive")
 
 def workspace():
     """Load requested packages."""
 
     maybe(
         http_archive,
+        name = "rules_shell",
+        patches = [
+            "//third_party/rules_shell:bazel_sh_environ.patch",
+        ],
+        sha256 = "410e8ff32e018b9efd2743507e7595c26e2628567c42224411ff533b57d27c28",
+        strip_prefix = "rules_shell-0.2.0",
+        urls = [
+            "https://github.com/bazelbuild/rules_shell/releases/download/v0.2.0/rules_shell-v0.2.0.tar.gz",
+        ],
+    )
+
+    maybe(
+        http_archive,
         name = "rules_cc",
+        patches = [
+            "//third_party/rules_cc:rules_shell_bazel_sh.patch",
+        ],
         sha256 = "283fa1cdaaf172337898749cf4b9b1ef5ea269da59540954e51fba0e7b8f277a",
         strip_prefix = "rules_cc-0.2.17",
         urls = [
@@ -65,6 +82,9 @@ def workspace():
     maybe(
         http_archive,
         name = "rules_python",
+        patches = [
+            "//third_party/rules_python:zipapp_explicit_init.patch",
+        ],
         sha256 = "2f5c284fbb4e86045c2632d3573fc006facbca5d1fa02976e89dc0cd5488b590",
         strip_prefix = "rules_python-1.6.3",
         urls = [
@@ -101,8 +121,9 @@ def workspace():
         ],
         sha256 = "4a8983811b562a02ef9ccc545c93dc275e23054ac8996170b8975fa387afa890",
         strip_prefix = "pybind11_bazel-3.0.1",
+        type = "tar.gz",
         urls = [
-            "https://github.com/pybind/pybind11_bazel/archive/refs/tags/v3.0.1.tar.gz",
+            "https://codeload.github.com/pybind/pybind11_bazel/tar.gz/refs/tags/v3.0.1",
         ],
     )
 
@@ -112,8 +133,9 @@ def workspace():
         build_file = "@pybind11_bazel//:pybind11-BUILD.bazel",
         sha256 = "2f20a0af0b921815e0e169ea7fec63909869323581b89d7de1553468553f6a2d",
         strip_prefix = "pybind11-3.0.2",
+        type = "tar.gz",
         urls = [
-            "https://github.com/pybind/pybind11/archive/refs/tags/v3.0.2.tar.gz",
+            "https://codeload.github.com/pybind/pybind11/tar.gz/refs/tags/v3.0.2",
         ],
     )
 
@@ -221,6 +243,11 @@ def workspace():
     maybe(
         http_archive,
         name = "opencv",
+        patch_args = ["-p1"],
+        patches = [
+            "//third_party/opencv:windows_msvc_flag_check.patch",
+            "//third_party/opencv:windows_cpu_baseline_flags.patch",
+        ],
         sha256 = "1d40ca017ea51c533cf9fd5cbde5b5fe7ae248291ddf2af99d4c17cf8e13017d",
         strip_prefix = "opencv-4.13.0",
         urls = [
@@ -335,6 +362,9 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         ],
         patches = [
             "//third_party/boost:filesystem_scope_headers.patch",
+            "//third_party/boost:atomic_windows_build.patch",
+            "//third_party/boost:lzma_windows_copts.patch",
+            "//third_party/boost:windows_common_defines.patch",
             "//third_party/boost:bzip2_system_headers.patch",
             "//third_party/boost:zlib_system_headers.patch",
         ],
@@ -364,8 +394,13 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     )
 
     maybe(
-        http_archive,
+        vizdoom_archive,
         name = "vizdoom",
+        patch_args = [
+            "-p0",
+            "-l",
+        ],
+        patch_tool = "patch",
         sha256 = "76ddf186d7f093ef85cbcb0e7e387757d60e45190eb5da6d075aab31ffc316ed",
         strip_prefix = "ViZDoom-1.3.0/src/vizdoom/",
         urls = [
@@ -374,12 +409,20 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         build_file = "//third_party/vizdoom:vizdoom.BUILD",
         patches = [
             "//third_party/vizdoom:sdl_thread.patch",
+            "//third_party/vizdoom:windows_msvc_compat.patch",
         ],
     )
 
     maybe(
         http_archive,
         name = "vizdoom_lib",
+        patch_args = [
+            "-p0",
+            "-l",
+        ],
+        patches = [
+            "//third_party/vizdoom_lib:windows_create_process.patch",
+        ],
         sha256 = "76ddf186d7f093ef85cbcb0e7e387757d60e45190eb5da6d075aab31ffc316ed",
         strip_prefix = "ViZDoom-1.3.0/",
         urls = [
@@ -468,6 +511,11 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "mujoco",
+        patch_args = ["-p1"],
+        patches = [
+            "//third_party/mujoco:windows_msvc_compat.patch",
+            "//third_party/mujoco:windows_msvc_c11_compat.patch",
+        ],
         sha256 = "0d6bb25612da5d1c398d21cf5b039367d4deef15c064b049c3127043d613b539",
         strip_prefix = "mujoco-3.6.0",
         urls = [

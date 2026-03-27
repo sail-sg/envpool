@@ -136,7 +136,7 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
   bool IsHealthy() { return data_->site_xpos[2] > healthy_z_max_; }
 
   void WriteState(float reward) {
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward;
     // obs
     mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());

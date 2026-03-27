@@ -675,6 +675,7 @@ JCONFIGINT_WIN_SUBSTITUTIONS = {
     "@HIDDEN@": "",
     "@THREAD_LOCAL@": "__declspec(thread)",
     "#cmakedefine HAVE_BUILTIN_CTZL": "",
+    "#cmakedefine WITH_SIMD 1": "#define WITH_SIMD 1",
     "#define INLINE  @INLINE@": "#if defined(__GNUC__)\n" +
                                 "#define INLINE inline __attribute__((always_inline))\n" +
                                 "#elif defined(_MSC_VER)\n" +

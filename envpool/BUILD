@@ -25,11 +25,13 @@ exports_files([
 py_library(
     name = "registration",
     srcs = ["registration.py"],
+    imports = [".."],
 )
 
 py_library(
     name = "entry",
     srcs = ["entry.py"],
+    imports = [".."],
     deps = [
         "//envpool/atari:atari_registration",
         "//envpool/box2d:box2d_registration",
@@ -46,6 +48,7 @@ py_library(
 py_library(
     name = "envpool",
     srcs = ["__init__.py"],
+    imports = [".."],
     deps = [
         ":entry",
         ":registration",
@@ -53,8 +56,7 @@ py_library(
         "//envpool/box2d",
         "//envpool/classic_control",
         "//envpool/minigrid",
-        "//envpool/mujoco:mujoco_dmc",
-        "//envpool/mujoco:mujoco_gym",
+        "//envpool/mujoco",
         "//envpool/procgen",
         "//envpool/python",
         "//envpool/toy_text",
@@ -65,6 +67,7 @@ py_library(
 py_test(
     name = "make_test",
     srcs = ["make_test.py"],
+    imports = [".."],
     deps = [
         ":envpool",
         requirement("absl-py"),

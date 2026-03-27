@@ -158,18 +158,18 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
     const auto& to_target = NoseToTarget();
     const auto& body_velocities = BodyVelocities();
 
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
     state["obs:joints"_].Assign(joints.data(), joints.size());
-    state["obs:to_target"_].Assign(to_target.begin(), to_target.size());
+    state["obs:to_target"_].Assign(to_target.data(), to_target.size());
     state["obs:body_velocities"_].Assign(body_velocities.data(),
                                          body_velocities.size());
     // info
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    state["info:target0"_].Assign(target0_.begin(), target0_.size());
+    state["info:target0"_].Assign(target0_.data(), target0_.size());
 #endif
   }
 

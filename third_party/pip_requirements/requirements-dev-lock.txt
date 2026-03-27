@@ -4,6 +4,7 @@ box2d==2.3.10
 certifi==2026.2.25
 charset-normalizer==3.4.6
 cloudpickle==3.1.2
+colorama==0.4.6
 cuda-bindings==12.9.4
 cuda-pathfinder==1.4.3
 dm-control==1.0.38

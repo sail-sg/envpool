@@ -44,10 +44,20 @@ def _resolve_qt_lib_dir(repository_ctx, raw_path, include_dir):
             return str(repository_ctx.path(candidate))
     return None
 
+def _resolve_qt_dll_dir(repository_ctx, raw_path, lib_dir):
+    candidates = [
+        raw_path + "/bin",
+        lib_dir + "/../bin",
+    ]
+    for candidate in candidates:
+        if _path_exists(repository_ctx, candidate):
+            return str(repository_ctx.path(candidate))
+    return None
+
 def _has_qt_framework(repository_ctx, lib_dir, framework):
     return _path_exists(repository_ctx, lib_dir + "/%s.framework" % framework)
 
-def _generate_build_file(linkopts):
+def _generate_unix_build_file(linkopts):
     return """load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
@@ -77,10 +87,57 @@ cc_library(
         qt_gui_linkopts = repr(linkopts["qt_gui"]),
     )
 
+def _generate_windows_build_file():
+    return """load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_import(
+    name = "qt_core_import",
+    interface_library = "Qt5Core.lib",
+    shared_library = "Qt5Core.dll",
+)
+
+cc_import(
+    name = "qt_gui_import",
+    interface_library = "Qt5Gui.lib",
+    shared_library = "Qt5Gui.dll",
+)
+
+cc_library(
+    name = "qt_core",
+    hdrs = glob(
+        ["QtCore/**"],
+        allow_empty = True,
+    ),
+    includes = ["."],
+    deps = [":qt_core_import"],
+)
+
+cc_library(
+    name = "qt_gui",
+    hdrs = glob(
+        ["QtGui/**"],
+        allow_empty = True,
+    ),
+    includes = ["."],
+    deps = [
+        ":qt_core",
+        ":qt_gui_import",
+    ],
+)
+"""
+
 def _symlink_tree(repository_ctx, include_dir):
     include_path = repository_ctx.path(include_dir)
     for entry in include_path.readdir():
         repository_ctx.symlink(entry, entry.basename)
+
+def _symlink_if_exists(repository_ctx, source, destination):
+    if _path_exists(repository_ctx, source):
+        repository_ctx.symlink(source, destination)
+        return True
+    return False
 
 def _qt_autoconf_impl(repository_ctx):
     os_name = repository_ctx.os.name.lower()
@@ -102,19 +159,40 @@ def _qt_autoconf_impl(repository_ctx):
             "/opt/homebrew/opt/qt",
             "/usr/local/opt/qt",
         ])
+    elif "windows" in os_name:
+        if env_qt_path:
+            qt_candidates.append(env_qt_path)
     else:
         fail("EnvPool Qt configure does not support %s" % repository_ctx.os.name)
 
     include_dir = None
     lib_dir = None
+    dll_dir = None
     for candidate in qt_candidates:
         include_dir = _resolve_qt_include_dir(repository_ctx, candidate)
         if include_dir:
             lib_dir = _resolve_qt_lib_dir(repository_ctx, candidate, include_dir)
+            if "windows" in os_name and lib_dir:
+                dll_dir = _resolve_qt_dll_dir(repository_ctx, candidate, lib_dir)
             break
 
     if include_dir:
         _symlink_tree(repository_ctx, include_dir)
+
+    if "windows" in os_name:
+        if not include_dir or not lib_dir or not dll_dir:
+            fail("Unable to locate a Qt 5 MSVC install. Set BAZEL_RULES_QT_DIR to a Qt root like C:/Qt/5.15.2/msvc2019_64.")
+        required_files = [
+            ("{}/Qt5Core.lib".format(lib_dir), "Qt5Core.lib"),
+            ("{}/Qt5Gui.lib".format(lib_dir), "Qt5Gui.lib"),
+            ("{}/Qt5Core.dll".format(dll_dir), "Qt5Core.dll"),
+            ("{}/Qt5Gui.dll".format(dll_dir), "Qt5Gui.dll"),
+        ]
+        for source, destination in required_files:
+            if not _symlink_if_exists(repository_ctx, source, destination):
+                fail("Unable to locate {}".format(source))
+        repository_ctx.file("BUILD.bazel", _generate_windows_build_file())
+        return
 
     linkopts = {
         "qt_core": [],
@@ -155,7 +233,7 @@ def _qt_autoconf_impl(repository_ctx):
     if "linux" in os_name and not include_dir:
         fail("Unable to locate Qt headers. Set BAZEL_RULES_QT_DIR or install qtbase5-dev.")
 
-    repository_ctx.file("BUILD.bazel", _generate_build_file(linkopts))
+    repository_ctx.file("BUILD.bazel", _generate_unix_build_file(linkopts))
 
 qt_autoconf = repository_rule(
     implementation = _qt_autoconf_impl,

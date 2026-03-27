@@ -110,7 +110,7 @@ class PendulumEnv : public Env<PendulumEnvSpec> {
 
  private:
   void WriteState(float reward) {
-    State state = Allocate();
+    auto state = Allocate();
     state["obs"_][0] = static_cast<float>(std::cos(theta_));
     state["obs"_][1] = static_cast<float>(std::sin(theta_));
     state["obs"_][2] = static_cast<float>(theta_dot_);

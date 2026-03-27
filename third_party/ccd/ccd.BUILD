@@ -34,5 +34,6 @@ cc_library(
         "src/*.h",
     ]) + [":ccd_config"],
     hdrs = glob(["src/ccd/*.h"]),
+    copts = ["-DCCD_STATIC_DEFINE"],
     includes = ["src"],
 )

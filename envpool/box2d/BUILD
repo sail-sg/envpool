@@ -58,13 +58,15 @@ pybind_extension(
 py_library(
     name = "box2d",
     srcs = ["__init__.py"],
-    data = [":box2d_envpool.so"],
+    imports = ["../.."],
+    data = [":box2d_envpool"],
     deps = ["//envpool/python:api"],
 )
 
 py_library(
     name = "box2d_registration",
     srcs = ["registration.py"],
+    imports = ["../.."],
     deps = [
         "//envpool:registration",
     ],
@@ -74,6 +76,7 @@ py_test(
     name = "box2d_deterministic_test",
     size = "enormous",
     srcs = ["box2d_deterministic_test.py"],
+    imports = ["../.."],
     deps = [
         ":box2d",
         ":box2d_registration",
@@ -86,6 +89,7 @@ py_test(
     name = "box2d_correctness_test",
     size = "enormous",
     srcs = ["box2d_correctness_test.py"],
+    imports = ["../.."],
     deps = [
         ":box2d",
         ":box2d_registration",

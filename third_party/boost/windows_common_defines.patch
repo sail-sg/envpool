@@ -1,0 +1,15 @@
+--- boost/boost.bzl.orig
++++ boost/boost.bzl
+@@ -24,4 +24,11 @@
+ default_defines = select({
+-    ":windows_x86_64": ["BOOST_ALL_NO_LIB"],  # Turn auto_link off in MSVC compiler
++    ":windows_x86_64": [
++        "BOOST_ALL_NO_LIB",  # Turn auto_link off in MSVC compiler
++        "BOOST_USE_WINDOWS_H",
++        "WIN32_LEAN_AND_MEAN",
++        "NOMINMAX",
++        "_WIN32_WINNT=0x0602",
++        "WINVER=0x0602",
++    ],
+     "//conditions:default": [],
+ })

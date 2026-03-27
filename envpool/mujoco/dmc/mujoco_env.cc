@@ -51,7 +51,7 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
                     content.size());
   }
   // create model and data
-  model_ = mj_loadXML(model_filename.c_str(), vfs.get(), error_.begin(), 1000);
+  model_ = mj_loadXML(model_filename.c_str(), vfs.get(), error_.data(), 1000);
   if (model_ == nullptr) {
     throw std::runtime_error(error_.data());
   }
@@ -184,7 +184,7 @@ void MujocoEnv::RandomizeLimitedAndRotationalJoints(std::mt19937* gen) {
                               axis[2] * axis[2]);
         axis = {axis[0] / norm, axis[1] / norm, axis[2] / norm};
         auto angle = RandUniform(0, range_max)(*gen);
-        mju_axisAngle2Quat(data_->qpos + qpos_offset, axis.begin(), angle);
+        mju_axisAngle2Quat(data_->qpos + qpos_offset, axis.data(), angle);
       }
     } else if (joint_type == mjJNT_HINGE) {
       data_->qpos[qpos_offset] = RandUniform(-M_PI, M_PI)(*gen);

@@ -20,6 +20,7 @@ package(default_visibility = ["//visibility:public"])
 py_library(
     name = "protocol",
     srcs = ["protocol.py"],
+    imports = ["../.."],
     deps = [
         requirement("dm-env"),
         requirement("gym"),
@@ -30,6 +31,7 @@ py_library(
 py_library(
     name = "utils",
     srcs = ["utils.py"],
+    imports = ["../.."],
     deps = [
         requirement("numpy"),
     ],
@@ -38,6 +40,7 @@ py_library(
 py_library(
     name = "data",
     srcs = ["data.py"],
+    imports = ["../.."],
     deps = [
         requirement("optree"),
         requirement("dm-env"),
@@ -51,6 +54,7 @@ py_library(
 py_library(
     name = "env_spec",
     srcs = ["env_spec.py"],
+    imports = ["../.."],
     deps = [
         requirement("dm-env"),
         requirement("gym"),
@@ -64,6 +68,7 @@ py_library(
 py_library(
     name = "envpool",
     srcs = ["envpool.py"],
+    imports = ["../.."],
     deps = [
         requirement("optree"),
         requirement("dm-env"),
@@ -76,6 +81,7 @@ py_library(
 py_library(
     name = "xla_template",
     srcs = ["xla_template.py"],
+    imports = ["../.."],
     deps = [
         requirement("jax"),
     ],
@@ -84,6 +90,7 @@ py_library(
 py_library(
     name = "lax",
     srcs = ["lax.py"],
+    imports = ["../.."],
     deps = [
         requirement("jax"),
         requirement("dm-env"),
@@ -97,6 +104,7 @@ py_library(
 py_library(
     name = "dm_envpool",
     srcs = ["dm_envpool.py"],
+    imports = ["../.."],
     deps = [
         requirement("optree"),
         requirement("dm-env"),
@@ -111,6 +119,7 @@ py_library(
 py_library(
     name = "gym_envpool",
     srcs = ["gym_envpool.py"],
+    imports = ["../.."],
     deps = [
         requirement("optree"),
         requirement("dm-env"),
@@ -126,6 +135,7 @@ py_library(
 py_library(
     name = "gymnasium_envpool",
     srcs = ["gymnasium_envpool.py"],
+    imports = ["../.."],
     deps = [
         requirement("optree"),
         requirement("dm-env"),
@@ -141,6 +151,7 @@ py_library(
 py_library(
     name = "api",
     srcs = ["api.py"],
+    imports = ["../.."],
     deps = [
         ":dm_envpool",
         ":env_spec",
@@ -153,6 +164,7 @@ py_library(
 py_library(
     name = "python",
     srcs = ["__init__.py"],
+    imports = ["../.."],
     deps = [
         ":api",
     ],

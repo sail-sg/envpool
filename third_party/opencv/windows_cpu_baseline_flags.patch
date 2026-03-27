@@ -1,0 +1,13 @@
+--- a/cmake/OpenCVCompilerOptimizations.cmake
++++ b/cmake/OpenCVCompilerOptimizations.cmake
+@@ -652,6 +652,10 @@
+     ocv_clear_vars(HAVE_CPU_BASELINE_FLAGS)
+   endif()
+   ocv_check_compiler_flag(CXX "${__flags}" HAVE_CPU_BASELINE_FLAGS)
++  if(NOT HAVE_CPU_BASELINE_FLAGS AND MSVC)
++    set(HAVE_CPU_BASELINE_FLAGS 1)
++    set(CPU_BASELINE_FLAGS "")
++  endif()
+   if(NOT HAVE_CPU_BASELINE_FLAGS)
+     message(FATAL_ERROR "Compiler doesn't support baseline optimization flags: ${CPU_BASELINE_FLAGS}")
+   endif()

@@ -20,6 +20,16 @@ load("//third_party:common.bzl", "copy_to_directory")
 
 package(default_visibility = ["//visibility:public"])
 
+py_library(
+    name = "mujoco",
+    srcs = ["__init__.py"],
+    imports = ["../.."],
+    deps = [
+        ":mujoco_dmc",
+        ":mujoco_gym",
+    ],
+)
+
 copy_to_directory(
     name = "gen_mujoco_gym_xml",
     srcs = [
@@ -120,9 +130,10 @@ pybind_extension(
 py_library(
     name = "mujoco_dmc",
     srcs = ["dmc/__init__.py"],
+    imports = ["../.."],
     data = [
         ":gen_mujoco_dmc_xml",
-        ":mujoco_dmc_envpool.so",
+        ":mujoco_dmc_envpool",
     ],
     deps = ["//envpool/python:api"],
 )
@@ -130,9 +141,10 @@ py_library(
 py_library(
     name = "mujoco_gym",
     srcs = ["gym/__init__.py"],
+    imports = ["../.."],
     data = [
         ":gen_mujoco_gym_xml",
-        ":mujoco_gym_envpool.so",
+        ":mujoco_gym_envpool",
     ],
     deps = ["//envpool/python:api"],
 )
@@ -151,12 +163,14 @@ cc_test(
 py_library(
     name = "mujoco_dmc_registration",
     srcs = ["dmc/registration.py"],
+    imports = ["../.."],
     deps = ["//envpool:registration"],
 )
 
 py_library(
     name = "mujoco_gym_registration",
     srcs = ["gym/registration.py"],
+    imports = ["../.."],
     deps = ["//envpool:registration"],
 )
 
@@ -164,6 +178,7 @@ py_test(
     name = "mujoco_gym_deterministic_test",
     size = "enormous",
     srcs = ["gym/mujoco_gym_deterministic_test.py"],
+    imports = ["../.."],
     deps = [
         ":mujoco_gym",
         ":mujoco_gym_registration",
@@ -177,6 +192,7 @@ py_test(
     name = "mujoco_gym_align_test",
     size = "enormous",
     srcs = ["gym/mujoco_gym_align_test.py"],
+    imports = ["../.."],
     deps = [
         ":mujoco_gym",
         ":mujoco_gym_registration",
@@ -193,6 +209,7 @@ py_test(
     name = "mujoco_dmc_suite_deterministic_test",
     size = "enormous",
     srcs = ["dmc/mujoco_dmc_suite_deterministic_test.py"],
+    imports = ["../.."],
     deps = [
         ":mujoco_dmc",
         ":mujoco_dmc_registration",
@@ -205,6 +222,7 @@ py_test(
     name = "mujoco_dmc_suite_align_test",
     size = "enormous",
     srcs = ["dmc/mujoco_dmc_suite_align_test.py"],
+    imports = ["../.."],
     deps = [
         ":mujoco_dmc",
         ":mujoco_dmc_registration",
@@ -220,6 +238,7 @@ py_test(
     name = "mujoco_dmc_suite_ext_deterministic_test",
     size = "enormous",
     srcs = ["dmc/mujoco_dmc_suite_ext_deterministic_test.py"],
+    imports = ["../.."],
     deps = [
         ":mujoco_dmc",
         ":mujoco_dmc_registration",
@@ -232,6 +251,7 @@ py_test(
     name = "mujoco_dmc_suite_ext_align_test",
     size = "enormous",
     srcs = ["dmc/mujoco_dmc_suite_ext_align_test.py"],
+    imports = ["../.."],
     deps = [
         ":mujoco_dmc",
         ":mujoco_dmc_registration",

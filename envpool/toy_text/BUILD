@@ -48,13 +48,15 @@ pybind_extension(
 py_library(
     name = "toy_text",
     srcs = ["__init__.py"],
-    data = [":toy_text_envpool.so"],
+    imports = ["../.."],
+    data = [":toy_text_envpool"],
     deps = ["//envpool/python:api"],
 )
 
 py_library(
     name = "toy_text_registration",
     srcs = ["registration.py"],
+    imports = ["../.."],
     deps = [
         "//envpool:registration",
     ],
@@ -63,6 +65,7 @@ py_library(
 py_test(
     name = "toy_text_test",
     srcs = ["toy_text_test.py"],
+    imports = ["../.."],
     deps = [
         ":toy_text",
         ":toy_text_registration",

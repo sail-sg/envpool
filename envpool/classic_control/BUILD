@@ -45,13 +45,15 @@ pybind_extension(
 py_library(
     name = "classic_control",
     srcs = ["__init__.py"],
-    data = [":classic_control_envpool.so"],
+    imports = ["../.."],
+    data = [":classic_control_envpool"],
     deps = ["//envpool/python:api"],
 )
 
 py_library(
     name = "classic_control_registration",
     srcs = ["registration.py"],
+    imports = ["../.."],
     deps = [
         "//envpool:registration",
     ],
@@ -61,6 +63,7 @@ py_test(
     name = "classic_control_test",
     size = "enormous",
     srcs = ["classic_control_test.py"],
+    imports = ["../.."],
     deps = [
         ":classic_control",
         ":classic_control_registration",

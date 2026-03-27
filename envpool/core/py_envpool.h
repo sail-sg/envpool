@@ -284,32 +284,35 @@ template <typename EnvPool>
 std::vector<std::string> PyEnvPool<EnvPool>::py_action_keys =
     PyEnvPool<EnvPool>::PySpec::py_action_keys;
 
-py::object abc_meta = py::module::import("abc").attr("ABCMeta");
-
 /**
  * Call this macro in the translation unit of each envpool instance
  * It will register the envpool instance to the registry.
  * The static bool status is local to the translation unit.
  */
-#define REGISTER(MODULE, SPEC, ENVPOOL)                              \
-  py::class_<SPEC>(MODULE, "_" #SPEC, py::metaclass(abc_meta))       \
-      .def(py::init<const typename SPEC::ConfigValues&>())           \
-      .def_readonly("_config_values", &SPEC::py_config_values)       \
-      .def_readonly("_state_spec", &SPEC::py_state_spec)             \
-      .def_readonly("_action_spec", &SPEC::py_action_spec)           \
-      .def_readonly_static("_state_keys", &SPEC::py_state_keys)      \
-      .def_readonly_static("_action_keys", &SPEC::py_action_keys)    \
-      .def_readonly_static("_config_keys", &SPEC::py_config_keys)    \
-      .def_readonly_static("_default_config_values",                 \
-                           &SPEC::py_default_config_values);         \
-  py::class_<ENVPOOL>(MODULE, "_" #ENVPOOL, py::metaclass(abc_meta)) \
-      .def(py::init<const SPEC&>())                                  \
-      .def_readonly("_spec", &ENVPOOL::py_spec)                      \
-      .def("_recv", &ENVPOOL::PyRecv)                                \
-      .def("_send", &ENVPOOL::PySend)                                \
-      .def("_reset", &ENVPOOL::PyReset)                              \
-      .def_readonly_static("_state_keys", &ENVPOOL::py_state_keys)   \
-      .def_readonly_static("_action_keys", &ENVPOOL::py_action_keys) \
+// clang-format off
+#define REGISTER(MODULE, SPEC, ENVPOOL)                                       \
+  py::class_<SPEC>(MODULE, "_" #SPEC,                                         \
+                   py::metaclass(py::module_::import("abc").attr("ABCMeta"))) \
+      .def(py::init<const typename SPEC::ConfigValues&>())                    \
+      .def_readonly("_config_values", &SPEC::py_config_values)                \
+      .def_readonly("_state_spec", &SPEC::py_state_spec)                      \
+      .def_readonly("_action_spec", &SPEC::py_action_spec)                    \
+      .def_readonly_static("_state_keys", &SPEC::py_state_keys)               \
+      .def_readonly_static("_action_keys", &SPEC::py_action_keys)             \
+      .def_readonly_static("_config_keys", &SPEC::py_config_keys)             \
+      .def_readonly_static("_default_config_values",                          \
+                           &SPEC::py_default_config_values);                  \
+  py::class_<ENVPOOL>(                                                        \
+      MODULE, "_" #ENVPOOL,                                                   \
+      py::metaclass(py::module_::import("abc").attr("ABCMeta")))              \
+      .def(py::init<const SPEC&>())                                           \
+      .def_readonly("_spec", &ENVPOOL::py_spec)                               \
+      .def("_recv", &ENVPOOL::PyRecv)                                         \
+      .def("_send", &ENVPOOL::PySend)                                         \
+      .def("_reset", &ENVPOOL::PyReset)                                       \
+      .def_readonly_static("_state_keys", &ENVPOOL::py_state_keys)            \
+      .def_readonly_static("_action_keys", &ENVPOOL::py_action_keys)          \
       .def("_xla", &ENVPOOL::Xla);
+// clang-format on
 
 #endif  // ENVPOOL_CORE_PY_ENVPOOL_H_

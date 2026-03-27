@@ -120,7 +120,7 @@ class TaxiEnv : public Env<TaxiEnvSpec> {
 
  private:
   void WriteState(float reward) {
-    State state = Allocate();
+    auto state = Allocate();
     state["obs"_] = ((x_ * 5 + y_) * 5 + s_) * 4 + t_;
     state["reward"_] = reward;
   }

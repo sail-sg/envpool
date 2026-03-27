@@ -129,8 +129,8 @@ std::vector<VzdActT> BuildActionSet(
   for (std::size_t i = 0; i < button_list.size(); ++i) {
     button_index[button_list[i]] = i;
   }
-  BuildActionSetImpl(button_list.size(), delta_config, button_index.begin(),
-                     force_speed, 0, current_result.begin(), &result);
+  BuildActionSetImpl(button_list.size(), delta_config, button_index.data(),
+                     force_speed, 0, current_result.data(), &result);
   return result;
 }
 

@@ -31,6 +31,7 @@
 #include <string>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "envpool/core/spec.h"
@@ -45,8 +46,8 @@ static auto SpecToTuple(const Spec& spec) {
 
 template <typename Class, typename CC>
 struct CustomCall {
-  using InSpecs = std::invoke_result_t<decltype(CC::InSpecs), Class*>;
-  using OutSpecs = std::invoke_result_t<decltype(CC::OutSpecs), Class*>;
+  using InSpecs = decltype(CC::InSpecs(std::declval<Class*>()));
+  using OutSpecs = decltype(CC::OutSpecs(std::declval<Class*>()));
   using In = std::array<void*, std::tuple_size_v<InSpecs>>;
   using Out = std::array<void*, std::tuple_size_v<OutSpecs>>;
 

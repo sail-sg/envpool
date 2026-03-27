@@ -12,4 +12,11 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 
-exports_files(["filesystem_scope_headers.patch"])
+exports_files([
+    "atomic_windows_build.patch",
+    "bzip2_system_headers.patch",
+    "filesystem_scope_headers.patch",
+    "lzma_windows_copts.patch",
+    "windows_common_defines.patch",
+    "zlib_system_headers.patch",
+])

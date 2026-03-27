@@ -361,22 +361,21 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
     const auto& joint_vel_obj = JointVelObj();
     const auto& target_pos = Body2dPose(id_xbody_target_);
 
-    State state = Allocate();
+    auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
-    state["obs:arm_pos"_].Assign(bounded_joint_pos.begin(),
+    state["obs:arm_pos"_].Assign(bounded_joint_pos.data(),
                                  bounded_joint_pos.size());
-    state["obs:arm_vel"_].Assign(joint_vel_arm.begin(), joint_vel_arm.size());
-    state["obs:touch"_].Assign(touch.begin(), touch.size());
-    state["obs:hand_pos"_].Assign(hand_pos.begin(), hand_pos.size());
-    state["obs:object_pos"_].Assign(object_pos.begin(), object_pos.size());
-    state["obs:object_vel"_].Assign(joint_vel_obj.begin(),
-                                    joint_vel_obj.size());
-    state["obs:target_pos"_].Assign(target_pos.begin(), target_pos.size());
+    state["obs:arm_vel"_].Assign(joint_vel_arm.data(), joint_vel_arm.size());
+    state["obs:touch"_].Assign(touch.data(), touch.size());
+    state["obs:hand_pos"_].Assign(hand_pos.data(), hand_pos.size());
+    state["obs:object_pos"_].Assign(object_pos.data(), object_pos.size());
+    state["obs:object_vel"_].Assign(joint_vel_obj.data(), joint_vel_obj.size());
+    state["obs:target_pos"_].Assign(target_pos.data(), target_pos.size());
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    state["info:random_info"_].Assign(random_info_.begin(), 8);
+    state["info:random_info"_].Assign(random_info_.data(), 8);
 #endif
   }
 };
