@@ -36,6 +36,7 @@ class BuildPy(build_py):
     """Normalize Windows Bazel pybind outputs to importable `.pyd` files."""
 
     def run(self) -> None:
+        """Rename copied Windows pybind artifacts to Python import suffixes."""
         super().run()
         for dll_path in Path(self.build_lib).rglob("*_envpool.pyd.dll"):
             dll_path.rename(dll_path.with_suffix(""))
