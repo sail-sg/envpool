@@ -20,6 +20,16 @@ load("//third_party:common.bzl", "copy_to_directory")
 
 package(default_visibility = ["//visibility:public"])
 
+py_library(
+    name = "mujoco",
+    srcs = ["__init__.py"],
+    imports = ["../.."],
+    deps = [
+        ":mujoco_dmc",
+        ":mujoco_gym",
+    ],
+)
+
 copy_to_directory(
     name = "gen_mujoco_gym_xml",
     srcs = [
