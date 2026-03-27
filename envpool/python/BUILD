@@ -141,6 +141,7 @@ py_library(
 py_library(
     name = "api",
     srcs = ["api.py"],
+    imports = ["../.."],
     deps = [
         ":dm_envpool",
         ":env_spec",
@@ -153,6 +154,7 @@ py_library(
 py_library(
     name = "python",
     srcs = ["__init__.py"],
+    imports = ["../.."],
     deps = [
         ":api",
     ],

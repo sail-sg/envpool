@@ -25,6 +25,7 @@ exports_files([
 py_library(
     name = "registration",
     srcs = ["registration.py"],
+    imports = [".."],
 )
 
 py_library(
@@ -46,6 +47,7 @@ py_library(
 py_library(
     name = "envpool",
     srcs = ["__init__.py"],
+    imports = [".."],
     deps = [
         ":entry",
         ":registration",
