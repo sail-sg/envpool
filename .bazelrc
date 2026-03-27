@@ -4,6 +4,7 @@ common --noincompatible_disallow_empty_glob
 common --enable_platform_specific_config
 
 build --incompatible_strict_action_env
+build --incompatible_default_to_explicit_init_py
 build:debug --cxxopt=-DENVPOOL_TEST --compilation_mode=dbg -s
 build:test --cxxopt=-DENVPOOL_TEST --copt=-g0 --copt=-O3 --copt=-DNDEBUG
 build:release --copt=-g0 --copt=-O3 --copt=-DNDEBUG

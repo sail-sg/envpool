@@ -82,6 +82,9 @@ def workspace():
     maybe(
         http_archive,
         name = "rules_python",
+        patches = [
+            "//third_party/rules_python:zipapp_explicit_init.patch",
+        ],
         sha256 = "2f5c284fbb4e86045c2632d3573fc006facbca5d1fa02976e89dc0cd5488b590",
         strip_prefix = "rules_python-1.6.3",
         urls = [
