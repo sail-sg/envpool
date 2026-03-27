@@ -44,7 +44,10 @@ py_library(
     name = "atari",
     srcs = ["__init__.py"],
     imports = ["../.."],
-    data = [":atari_envpool"],
+    data = [
+        ":atari_envpool",
+        ":gen_atari_roms",
+    ],
     deps = ["//envpool/python:api"],
 )
 

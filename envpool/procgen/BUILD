@@ -68,7 +68,10 @@ py_library(
     name = "procgen",
     srcs = ["__init__.py"],
     imports = ["../.."],
-    data = [":procgen_envpool"],
+    data = [
+        ":gen_procgen_assets",
+        ":procgen_envpool",
+    ],
     deps = ["//envpool/python:api"],
 )
 
