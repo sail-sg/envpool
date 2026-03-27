@@ -43,7 +43,7 @@ Check out our [arXiv paper](https://arxiv.org/abs/2206.10558) for more details!
 
 ### PyPI
 
-EnvPool is currently hosted on [PyPI](https://pypi.org/project/envpool/). It supports Python 3.11-3.13.
+EnvPool is currently hosted on [PyPI](https://pypi.org/project/envpool/). It supports Python 3.11-3.13 on Linux, macOS, and Windows.
 
 You can simply install EnvPool with the following command:
 
@@ -59,6 +59,15 @@ print(envpool.__version__)
 ```
 
 If no error occurs, you have successfully installed EnvPool.
+
+Platform notes:
+
+- PyPI wheels do not require a separate Qt installation at runtime.
+- Windows Procgen wheels bundle the required Qt runtime DLLs (`Qt5Core.dll`
+  and `Qt5Gui.dll`) next to the extension module.
+- Building from source still requires platform-local build dependencies,
+  including Qt 5. The full per-platform setup is documented in
+  [Build From Source](https://envpool.readthedocs.io/en/latest/content/build.html).
 
 ### From Source
 
