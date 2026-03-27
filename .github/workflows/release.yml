@@ -49,7 +49,7 @@ jobs:
         run: |
           rm -rf dist
           make RELEASE_PYTHON=${{ matrix.python-version }} bazel-release
-          pip3 install dist/*.whl --force-reinstall
+          python -m pip install dist/*.whl --force-reinstall
       - name: Test
         run: |
           make release-test
@@ -95,7 +95,7 @@ jobs:
       - name: Build
         run: |
           make pypi-wheel
-          pip3 install dist/*.whl --force-reinstall
+          python -m pip install dist/*.whl --force-reinstall
       - name: Test
         run: |
           make release-test
@@ -163,7 +163,7 @@ jobs:
         run: |
           rm -rf dist
           make RELEASE_PYTHON=${{ matrix.python-version }} bazel-release
-          pip3 install dist/*.whl --force-reinstall
+          python -m pip install dist/*.whl --force-reinstall
       - name: Test
         shell: bash
         run: |
