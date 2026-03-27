@@ -25,13 +25,4 @@
 +        endforeach()
 +      endif()
 +
---- a/cmake/OpenCVCompilerOptimizations.cmake
-+++ b/cmake/OpenCVCompilerOptimizations.cmake
-@@ -654,1 +654,5 @@
--  ocv_check_compiler_flag(CXX "${__flags}" HAVE_CPU_BASELINE_FLAGS)
-+  ocv_check_compiler_flag(CXX "${__flags}" HAVE_CPU_BASELINE_FLAGS)
-+  if(NOT HAVE_CPU_BASELINE_FLAGS AND MSVC)
-+    set(HAVE_CPU_BASELINE_FLAGS 1)
-+    set(CPU_BASELINE_FLAGS "")
-+  endif()
 +
