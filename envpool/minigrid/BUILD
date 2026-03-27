@@ -48,6 +48,7 @@ pybind_extension(
 py_library(
     name = "minigrid",
     srcs = ["__init__.py"],
+    imports = ["../.."],
     data = [":minigrid_envpool"],
     deps = [
         "//envpool/python:api",
@@ -58,6 +59,7 @@ py_library(
 py_library(
     name = "minigrid_registration",
     srcs = ["registration.py"],
+    imports = ["../.."],
     deps = [
         "//envpool:registration",
     ],
@@ -67,6 +69,7 @@ py_test(
     name = "minigrid_align_test",
     size = "enormous",
     srcs = ["minigrid_align_test.py"],
+    imports = ["../.."],
     deps = [
         ":minigrid",
         ":minigrid_registration",
@@ -81,6 +84,7 @@ py_test(
     name = "minigrid_deterministic_test",
     size = "enormous",
     srcs = ["minigrid_deterministic_test.py"],
+    imports = ["../.."],
     deps = [
         ":minigrid",
         ":minigrid_registration",

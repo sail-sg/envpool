@@ -31,6 +31,7 @@ py_library(
 py_library(
     name = "entry",
     srcs = ["entry.py"],
+    imports = [".."],
     deps = [
         "//envpool/atari:atari_registration",
         "//envpool/box2d:box2d_registration",
@@ -67,6 +68,7 @@ py_library(
 py_test(
     name = "make_test",
     srcs = ["make_test.py"],
+    imports = [".."],
     deps = [
         ":envpool",
         requirement("absl-py"),

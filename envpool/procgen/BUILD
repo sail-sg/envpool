@@ -67,6 +67,7 @@ pybind_extension(
 py_library(
     name = "procgen",
     srcs = ["__init__.py"],
+    imports = ["../.."],
     data = [":procgen_envpool"],
     deps = ["//envpool/python:api"],
 )
@@ -74,6 +75,7 @@ py_library(
 py_library(
     name = "procgen_registration",
     srcs = ["registration.py"],
+    imports = ["../.."],
     deps = [
         "//envpool:registration",
     ],
@@ -82,6 +84,7 @@ py_library(
 py_test(
     name = "procgen_test",
     srcs = ["procgen_test.py"],
+    imports = ["../.."],
     deps = [
         ":procgen",
         ":procgen_registration",

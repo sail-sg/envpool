@@ -43,6 +43,7 @@ genrule(
 py_library(
     name = "atari",
     srcs = ["__init__.py"],
+    imports = ["../.."],
     data = [":atari_envpool"],
     deps = ["//envpool/python:api"],
 )
@@ -74,6 +75,7 @@ cc_test(
 py_library(
     name = "atari_network",
     srcs = ["atari_network.py"],
+    imports = ["../.."],
     deps = [
         requirement("numpy"),
         requirement("torch"),
@@ -100,6 +102,7 @@ pybind_extension(
 py_library(
     name = "atari_registration",
     srcs = ["registration.py"],
+    imports = ["../.."],
     deps = [
         "//envpool:registration",
     ],
@@ -108,6 +111,7 @@ py_library(
 py_test(
     name = "api_test",
     srcs = ["api_test.py"],
+    imports = ["../.."],
     deps = [
         ":atari",
         ":atari_registration",
@@ -120,6 +124,7 @@ py_test(
     name = "atari_envpool_test",
     size = "enormous",
     srcs = ["atari_envpool_test.py"],
+    imports = ["../.."],
     deps = [
         ":atari",
         ":atari_registration",
@@ -135,6 +140,7 @@ py_test(
     name = "atari_pretrain_test",
     size = "enormous",
     srcs = ["atari_pretrain_test.py"],
+    imports = ["../.."],
     data = [
         ":gen_pretrain_weight",
     ],
