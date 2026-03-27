@@ -56,13 +56,13 @@ TEST(DictTest, Lookup) {
 TEST(DictTest, Modification) {
   auto d = MakeDict("abc"_.Bind(0.), "xyz"_.Bind("123"), "ijk"_.Bind(1));
   EXPECT_EQ(d["abc"_], 0.);
-  EXPECT_EQ(d["xyz"_], "123");
+  EXPECT_EQ(std::string_view(d["xyz"_]), "123");
   EXPECT_EQ(d["ijk"_], 1);
   d["abc"_] = 1;
   d["xyz"_] = "456";
   // force convert to int
   d["ijk"_] = 0.5;  // NOLINT
   EXPECT_EQ(d["abc"_], 1);
-  EXPECT_EQ(d["xyz"_], "456");
+  EXPECT_EQ(std::string_view(d["xyz"_]), "456");
   EXPECT_EQ(d["ijk"_], 0);
 }

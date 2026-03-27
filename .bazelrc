@@ -31,6 +31,8 @@ build:windows --cxxopt=/std:c++20
 build:windows --host_cxxopt=/std:c++20
 build:windows --action_env=BAZEL_SH
 build:windows --repo_env=BAZEL_SH
+build:windows --@rules_python//python/config_settings:bootstrap_impl=script
+build:windows --@rules_python//python/config_settings:venvs_use_declare_symlink=no
 build:windows --enable_runfiles
 test:windows --test_env=PATH
 
