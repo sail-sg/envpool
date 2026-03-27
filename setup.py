@@ -2,7 +2,10 @@
 
 """Package configuration for EnvPool."""
 
+from pathlib import Path
+
 from setuptools import setup
+from setuptools.command.build_py import build_py
 from setuptools.command.install import install
 from setuptools.dist import Distribution
 
@@ -29,5 +32,17 @@ class BinaryDistribution(Distribution):
         return True
 
 
+class BuildPy(build_py):
+    """Normalize Windows Bazel pybind outputs to importable `.pyd` files."""
+
+    def run(self) -> None:
+        super().run()
+        for dll_path in Path(self.build_lib).rglob("*_envpool.pyd.dll"):
+            dll_path.rename(dll_path.with_suffix(""))
+
+
 if __name__ == "__main__":
-    setup(distclass=BinaryDistribution, cmdclass={"install": InstallPlatlib})
+    setup(
+        distclass=BinaryDistribution,
+        cmdclass={"build_py": BuildPy, "install": InstallPlatlib},
+    )
