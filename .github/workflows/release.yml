@@ -134,10 +134,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
       - name: Install Windows dependencies
         shell: pwsh
         run: |
@@ -158,6 +154,10 @@ jobs:
         run: |
           go install github.com/bazelbuild/bazelisk@latest
           Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $HOME "go/bin")
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
       - name: Build
         shell: bash
         run: |
