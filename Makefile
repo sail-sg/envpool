@@ -20,6 +20,11 @@ CLANG_TIDY_BIN = clang-tidy-$(CLANG_TIDY_MAJOR)
 CLANG_TIDY_WRAPPER_DIR = $(HOME)/.cache/$(PROJECT_NAME)/bin
 PATH           := $(CLANG_TIDY_WRAPPER_DIR):$(HOME)/go/bin:$(PATH)
 CLANG_TIDY_TARGET_RESOLVER = python3 scripts/clang_tidy_targets.py
+ifeq ($(OS),Windows_NT)
+BAZEL_RUNFILES_SUFFIX = .exe.runfiles
+else
+BAZEL_RUNFILES_SUFFIX = .runfiles
+endif
 
 # installation
 
@@ -136,17 +141,17 @@ clang-tidy: clang-tidy-install bazel-pip-requirement-dev
 bazel-debug: bazel-install bazel-pip-requirement-dev
 	$(BAZEL) run $(BAZELOPT) //:setup --config=debug -- bdist_wheel
 	mkdir -p dist
-	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
+	cp bazel-bin/setup$(BAZEL_RUNFILES_SUFFIX)/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-build: bazel-install bazel-pip-requirement-dev
 	$(BAZEL) run $(BAZELOPT) //:setup --config=test -- bdist_wheel
 	mkdir -p dist
-	cp bazel-bin/setup.runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
+	cp bazel-bin/setup$(BAZEL_RUNFILES_SUFFIX)/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-release: bazel-install bazel-pip-requirement-release release-system-install
 	$(BAZEL) run $(BAZELOPT) $(RELEASE_SETUP_TARGET) --config=release -- bdist_wheel
 	mkdir -p dist
-	cp bazel-bin/$(subst //:,,$(RELEASE_SETUP_TARGET)).runfiles/$(PROJECT_NAME)/dist/*.whl ./dist
+	cp bazel-bin/$(subst //:,,$(RELEASE_SETUP_TARGET))$(BAZEL_RUNFILES_SUFFIX)/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-test: bazel-install bazel-pip-requirement-dev
 	$(BAZEL) test --test_output=all $(BAZELOPT) //... --config=test --spawn_strategy=local --color=yes
