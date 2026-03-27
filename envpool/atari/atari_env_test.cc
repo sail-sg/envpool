@@ -49,22 +49,22 @@ TEST(AtariEnvTest, GrayScaleMaxPoolOrder) {
   ale::ALEInterface env;
   env.loadROM(rom_path);
   // color mapping from pixel_t to RGB
-  env.theOSystem->colourPalette().applyPaletteRGB(col0_ptr, ptr0.begin(),
-                                                  n * n);
-  env.theOSystem->colourPalette().applyPaletteRGB(col1_ptr, ptr1.begin(),
-                                                  n * n);
+  env.theOSystem->colourPalette().applyPaletteRGB(col0_ptr, ptr0.data(), n * n);
+  env.theOSystem->colourPalette().applyPaletteRGB(col1_ptr, ptr1.data(), n * n);
   // maxpool RGB
   for (int i = 0; i < n * n * 3; ++i) {
     col0_ptr[i] = std::max(col0_ptr[i], col1_ptr[i]);
   }
   // gray scale
   GrayScale(col0, &result);
-  std::memcpy(arr.begin(), result_ptr, sizeof arr);
+  std::memcpy(arr.data(), result_ptr, sizeof arr);
   // ref
-  env.theOSystem->colourPalette().applyPaletteGrayscale(col0_ptr, ptr0.begin(),
-                                                        n * n);
-  env.theOSystem->colourPalette().applyPaletteGrayscale(col1_ptr, ptr1.begin(),
-                                                        n * n);
+  env.theOSystem->colourPalette().applyPaletteGrayscale(
+      col0_ptr, ptr0.data(), n * n
+  );
+  env.theOSystem->colourPalette().applyPaletteGrayscale(
+      col1_ptr, ptr1.data(), n * n
+  );
   // maxpool
   for (int i = 0; i < n * n; ++i) {
     arr_ref[i] = std::max(col0_ptr[i], col1_ptr[i]);
