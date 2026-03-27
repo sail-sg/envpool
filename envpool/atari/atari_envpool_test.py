@@ -225,8 +225,13 @@ class _AtariEnvPoolTest(absltest.TestCase):
             num_threads=2,
             thread_affinity_offset=0,
         )
-        if sys.platform == "darwin":
-            with self.assertRaisesRegex(RuntimeError, "unavailable on macOS"):
+        if sys.platform in ("darwin", "win32"):
+            unavailable_platform = (
+                "macOS" if sys.platform == "darwin" else "Windows"
+            )
+            with self.assertRaisesRegex(
+                RuntimeError, f"unavailable on {unavailable_platform}"
+            ):
                 env.xla()
             return
         handle, recv, send, step = env.xla()
@@ -257,8 +262,13 @@ class _AtariEnvPoolTest(absltest.TestCase):
             num_threads=2,
             thread_affinity_offset=0,
         )
-        if sys.platform == "darwin":
-            with self.assertRaisesRegex(RuntimeError, "unavailable on macOS"):
+        if sys.platform in ("darwin", "win32"):
+            unavailable_platform = (
+                "macOS" if sys.platform == "darwin" else "Windows"
+            )
+            with self.assertRaisesRegex(
+                RuntimeError, f"unavailable on {unavailable_platform}"
+            ):
                 env1.xla()
             return
         env2 = make_gym(

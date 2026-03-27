@@ -148,6 +148,7 @@ jobs:
         shell: pwsh
         run: |
           Add-Content -Path $env:GITHUB_ENV -Value "BAZEL_RULES_QT_DIR=$env:QT_ROOT_DIR"
+          Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $env:QT_ROOT_DIR "bin")
           Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files\Git\usr\bin"
       - name: Install bazelisk
         shell: pwsh
