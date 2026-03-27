@@ -36,6 +36,8 @@ build:windows --@rules_python//python/config_settings:bootstrap_impl=script
 build:windows --build_python_zip=false
 build:windows --@rules_python//python/config_settings:venvs_use_declare_symlink=no
 build:windows --enable_runfiles
+test:windows --test_env=BAZEL_RULES_QT_DIR
+test:windows --test_env=QT_ROOT_DIR
 test:windows --test_env=PATH
 
 build:clang-tidy --aspects @bazel_clang_tidy//clang_tidy:clang_tidy.bzl%clang_tidy_aspect
