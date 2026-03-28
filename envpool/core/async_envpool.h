@@ -119,9 +119,9 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
   using Action = typename Env::Action;
   using State = typename Env::State;
 
-  explicit AsyncEnvPool(const Spec& spec,
-                        std::shared_ptr<SharedThreadPool> shared_thread_pool =
-                            nullptr)
+  explicit AsyncEnvPool(
+      const Spec& spec,
+      std::shared_ptr<SharedThreadPool> shared_thread_pool = nullptr)
       : EnvPool<Spec>(spec),
         num_envs_(spec.config["num_envs"_]),
         batch_(spec.config["batch_size"_] <= 0 ? num_envs_
@@ -138,8 +138,8 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
         shared_thread_pool_(std::move(shared_thread_pool)),
         pending_tasks_(0),
         claimed_capacity_(false) {
-    std::size_t processor_count = std::max<std::size_t>(
-        1, std::thread::hardware_concurrency());
+    std::size_t processor_count =
+        std::max<std::size_t>(1, std::thread::hardware_concurrency());
     if (num_threads_ == 0) {
       num_threads_ = std::min(batch_, processor_count);
     }

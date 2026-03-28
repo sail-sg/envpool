@@ -43,10 +43,9 @@ class SharedThreadPool {
   explicit SharedThreadPool(std::size_t num_threads,
                             std::size_t num_envs_capacity,
                             int thread_affinity_offset)
-      : num_threads_(num_threads),
-        num_envs_capacity_(num_envs_capacity) {
-    std::size_t processor_count = std::max<std::size_t>(
-        1, std::thread::hardware_concurrency());
+      : num_threads_(num_threads), num_envs_capacity_(num_envs_capacity) {
+    std::size_t processor_count =
+        std::max<std::size_t>(1, std::thread::hardware_concurrency());
     if (num_threads_ == 0) {
       num_threads_ = std::min(processor_count, num_envs_capacity);
     }
