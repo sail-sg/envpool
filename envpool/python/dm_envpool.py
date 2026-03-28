@@ -14,7 +14,7 @@
 """EnvPool meta class for dm_env API."""
 
 from abc import ABCMeta
-from typing import Any, Optional
+from typing import Any
 
 import dm_env
 import numpy as np
@@ -94,7 +94,7 @@ class DMEnvPoolMeta(ABCMeta):
         attrs["_to"] = _to_dm
         subcls = super().__new__(cls, name, parents, attrs)
 
-        def init(self: Any, spec: Any, thread_pool: Optional[Any] = None) -> None:
+        def init(self: Any, spec: Any, thread_pool: Any | None = None) -> None:
             """Set self.spec to EnvSpecMeta."""
             super(subcls, self).__init__(spec, thread_pool)
             self.spec = spec
