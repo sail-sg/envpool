@@ -60,7 +60,7 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
   std::atomic<std::size_t> pending_tasks_;
   std::mutex pending_tasks_mutex_;
   std::condition_variable pending_tasks_cv_;
-  bool claimed_capacity_;
+  bool claimed_capacity_ = false;
 
   void FinishTask() {
     if (pending_tasks_.fetch_sub(1) == 1) {
@@ -136,8 +136,7 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
             spec.state_spec.template AllValues<ShapeSpec>())),
         envs_(num_envs_),
         shared_thread_pool_(std::move(shared_thread_pool)),
-        pending_tasks_(0),
-        claimed_capacity_(false) {
+        pending_tasks_(0) {
     std::size_t processor_count =
         std::max<std::size_t>(1, std::thread::hardware_concurrency());
     if (num_threads_ == 0) {
@@ -168,9 +167,12 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
 
   ~AsyncEnvPool() override {
     stop_ = 1;
-    WaitForPendingTasks();
-    if (claimed_capacity_) {
-      shared_thread_pool_->ReleaseCapacity(num_envs_);
+    try {
+      WaitForPendingTasks();
+      if (claimed_capacity_) {
+        shared_thread_pool_->ReleaseCapacity(num_envs_);
+      }
+    } catch (...) {
     }
     // LOG(INFO) << "envpool send: " << dur_send_.count();
     // LOG(INFO) << "envpool recv: " << dur_recv_.count();
