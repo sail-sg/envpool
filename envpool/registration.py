@@ -22,6 +22,8 @@ import gym
 import numpy as np
 from packaging import version
 
+from .core import SharedThreadPool
+
 base_path = os.path.abspath(os.path.dirname(__file__))
 
 # Gym 0.26 still references np.bool8, which NumPy 2 removed.
@@ -58,6 +60,17 @@ class EnvRegistry:
             "gymnasium": (import_path, gymnasium_cls),
         }
 
+    def make_thread_pool(
+        self,
+        num_envs_capacity: int,
+        num_threads: int = 0,
+        thread_affinity_offset: int = -1,
+    ) -> SharedThreadPool:
+        """Create a thread pool that can be shared across envpool instances."""
+        return SharedThreadPool(
+            num_threads, num_envs_capacity, thread_affinity_offset
+        )
+
     def make(self, task_id: str, env_type: str, **kwargs: Any) -> Any:
         """Make envpool."""
         new_gym_api = version.parse(gym.__version__) >= version.parse("0.26.0")
@@ -75,9 +88,12 @@ class EnvRegistry:
         )
         assert env_type in ["dm", "gym", "gymnasium"]
 
+        thread_pool = kwargs.pop("thread_pool", None)
         spec = self.make_spec(task_id, **kwargs)
         import_path, envpool_cls = self.envpools[task_id][env_type]
-        return getattr(importlib.import_module(import_path), envpool_cls)(spec)
+        return getattr(importlib.import_module(import_path), envpool_cls)(
+            spec, thread_pool
+        )
 
     def make_dm(self, task_id: str, **kwargs: Any) -> Any:
         """Make dm_env compatible envpool."""
@@ -166,6 +182,7 @@ class EnvRegistry:
 registry = EnvRegistry()
 register = registry.register
 make = registry.make
+make_thread_pool = registry.make_thread_pool
 make_dm = registry.make_dm
 make_gym = registry.make_gym
 make_gymnasium = registry.make_gymnasium

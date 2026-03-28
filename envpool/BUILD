@@ -26,6 +26,7 @@ py_library(
     name = "registration",
     srcs = ["registration.py"],
     imports = [".."],
+    deps = ["//envpool/core"],
 )
 
 py_library(
@@ -55,6 +56,7 @@ py_library(
         "//envpool/atari",
         "//envpool/box2d",
         "//envpool/classic_control",
+        "//envpool/core",
         "//envpool/minigrid",
         "//envpool/mujoco",
         "//envpool/procgen",
