@@ -21,6 +21,9 @@
 #define MOODYCAMEL_DELETE_FUNCTION = delete
 #endif
 
+#include <errno.h>
+#include <time.h>
+
 #include <atomic>
 #include <cassert>
 #include <cstdint>
