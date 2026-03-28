@@ -98,9 +98,9 @@ class CliffWalkingEnv : public Env<CliffWalkingEnvSpec> {
     if (!is_slippery_) {
       return intended_action;
     }
-    static constexpr std::array<int, 3> kOffsets = {-1, 0, 1};
-    std::uniform_int_distribution<int> dist(0, kOffsets.size() - 1);
-    return (intended_action + kOffsets[dist(gen_)] + 4) % 4;
+    static constexpr std::array<int, 3> k_offsets = {-1, 0, 1};
+    std::uniform_int_distribution<int> dist(0, k_offsets.size() - 1);
+    return (intended_action + k_offsets[dist(gen_)] + 4) % 4;
   }
 
   void WriteState(float reward, float prob) {
