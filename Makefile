@@ -7,6 +7,9 @@ BAZEL_FILES    = $(shell find . -type f -name "*BUILD" -o -name "*.bzl")
 COMMIT_HASH    = $(shell git log -1 --format=%h)
 COPYRIGHT      = "Garena Online Private Limited"
 BAZELOPT       =
+# MSVC expects /D for preprocessor defines, so Bazel test/debug builds need an
+# extra Windows-only define to expose ENVPOOL_TEST-gated alignment state.
+WINDOWS_ENVPOOL_TEST_DEFINE = $(if $(filter Windows_NT,$(OS)),--cxxopt=/DENVPOOL_TEST,)
 BAZELISK_BIN   = $(shell command -v bazelisk 2>/dev/null || echo $(HOME)/go/bin/bazelisk)
 BAZEL_VERSION  = 8.6.0
 BAZEL          = USE_BAZEL_VERSION=$(BAZEL_VERSION) $(BAZELISK_BIN)
@@ -136,15 +139,15 @@ clang-tidy: clang-tidy-install bazel-pip-requirement-dev
 		exit 0; \
 	fi; \
 	echo "Running clang-tidy on: $$targets"; \
-	$(BAZEL) build $(BAZELOPT) $$targets --config=clang-tidy --config=test
+	$(BAZEL) build $(BAZELOPT) $(WINDOWS_ENVPOOL_TEST_DEFINE) $$targets --config=clang-tidy --config=test
 
 bazel-debug: bazel-install bazel-pip-requirement-dev
-	$(BAZEL) run $(BAZELOPT) //:setup --config=debug -- bdist_wheel
+	$(BAZEL) run $(BAZELOPT) $(WINDOWS_ENVPOOL_TEST_DEFINE) //:setup --config=debug -- bdist_wheel
 	mkdir -p dist
 	cp bazel-bin/setup$(BAZEL_RUNFILES_SUFFIX)/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-build: bazel-install bazel-pip-requirement-dev
-	$(BAZEL) run $(BAZELOPT) //:setup --config=test -- bdist_wheel
+	$(BAZEL) run $(BAZELOPT) $(WINDOWS_ENVPOOL_TEST_DEFINE) //:setup --config=test -- bdist_wheel
 	mkdir -p dist
 	cp bazel-bin/setup$(BAZEL_RUNFILES_SUFFIX)/$(PROJECT_NAME)/dist/*.whl ./dist
 
@@ -154,7 +157,7 @@ bazel-release: bazel-install bazel-pip-requirement-release release-system-instal
 	cp bazel-bin/$(subst //:,,$(RELEASE_SETUP_TARGET))$(BAZEL_RUNFILES_SUFFIX)/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-test: bazel-install bazel-pip-requirement-dev
-	$(BAZEL) test --test_output=all $(BAZELOPT) //... --config=test --spawn_strategy=local --color=yes
+	$(BAZEL) test --test_output=all $(BAZELOPT) $(WINDOWS_ENVPOOL_TEST_DEFINE) //... --config=test --spawn_strategy=local --color=yes
 
 bazel-clean: bazel-install
 	$(BAZEL) clean --expunge
