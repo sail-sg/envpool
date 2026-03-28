@@ -18,8 +18,8 @@
 #ifndef ENVPOOL_TOY_TEXT_CLIFFWALKING_H_
 #define ENVPOOL_TOY_TEXT_CLIFFWALKING_H_
 
-#include <array>
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <random>
 #include <string>
