@@ -38,6 +38,8 @@ class SharedThreadPool {
   std::atomic_bool stop_ = false;
 
  public:
+  using Ptr = std::shared_ptr<SharedThreadPool>;
+
   explicit SharedThreadPool(std::size_t num_threads,
                             std::size_t num_envs_capacity,
                             int thread_affinity_offset)

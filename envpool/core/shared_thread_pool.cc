@@ -21,7 +21,6 @@
 namespace py = pybind11;
 
 PYBIND11_MODULE(shared_thread_pool, m) {
-  py::class_<SharedThreadPool, std::shared_ptr<SharedThreadPool>>(
-      m, "_SharedThreadPool")
+  py::class_<SharedThreadPool, SharedThreadPool::Ptr>(m, "_SharedThreadPool")
       .def(py::init<std::size_t, std::size_t, int>());
 }
