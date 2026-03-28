@@ -72,12 +72,33 @@ register(
 )
 
 register(
+    task_id="CliffWalking-v1",
+    import_path="envpool.toy_text",
+    spec_cls="CliffWalkingEnvSpec",
+    dm_cls="CliffWalkingDMEnvPool",
+    gym_cls="CliffWalkingGymEnvPool",
+    gymnasium_cls="CliffWalkingGymnasiumEnvPool",
+    is_slippery=False,
+)
+
+register(
+    task_id="CliffWalkingSlippery-v1",
+    import_path="envpool.toy_text",
+    spec_cls="CliffWalkingEnvSpec",
+    dm_cls="CliffWalkingDMEnvPool",
+    gym_cls="CliffWalkingGymEnvPool",
+    gymnasium_cls="CliffWalkingGymnasiumEnvPool",
+    is_slippery=True,
+)
+
+register(
     task_id="CliffWalking-v0",
     import_path="envpool.toy_text",
     spec_cls="CliffWalkingEnvSpec",
     dm_cls="CliffWalkingDMEnvPool",
     gym_cls="CliffWalkingGymEnvPool",
     gymnasium_cls="CliffWalkingGymnasiumEnvPool",
+    is_slippery=False,
 )
 
 register(

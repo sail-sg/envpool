@@ -19,6 +19,11 @@ converted into ``DomainNameTaskName-v1`` in envpool, e.g.,
   # equal to
   envpool.make_dm("BallInCupCatch-v1", num_envs=1)
 
+EnvPool currently implements the task set documented below. Upstream
+``dm_control==1.0.38`` also ships ``dog-*``, ``lqr-*``, ``quadruped-*``,
+``stacker-*`` and ``HumanoidCMUWalk-v1`` tasks, which are not implemented in
+EnvPool today.
+
 
 AcrobotSwingup-v1, AcrobotSwingupSparse-v1
 ------------------------------------------

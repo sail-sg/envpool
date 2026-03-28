@@ -71,7 +71,7 @@ py_test(
         ":toy_text_registration",
         requirement("absl-py"),
         requirement("dm_env"),
-        requirement("gym"),
+        requirement("gymnasium"),
         requirement("numpy"),
         requirement("scipy"),
         requirement("pygame"),

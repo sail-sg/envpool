@@ -107,16 +107,21 @@ class _MakeTest(absltest.TestCase):
             "FrozenLake8x8-v1",
             "Taxi-v3",
             "NChain-v0",
+            "CliffWalking-v1",
+            "CliffWalkingSlippery-v1",
             "CliffWalking-v0",
             "Blackjack-v1",
         ])
 
     def test_make_box2d(self) -> None:
         self.check_step([
+            "CarRacing-v3",
             "CarRacing-v2",
             "BipedalWalker-v3",
             "BipedalWalkerHardcore-v3",
+            "LunarLander-v3",
             "LunarLander-v2",
+            "LunarLanderContinuous-v3",
             "LunarLanderContinuous-v2",
         ])
 
@@ -132,26 +137,37 @@ class _MakeTest(absltest.TestCase):
     def test_make_mujoco_gym(self) -> None:
         self.check_step([
             "Ant-v3",
+            "Ant-v4",
             "Ant-v5",
             "HalfCheetah-v3",
+            "HalfCheetah-v4",
             "HalfCheetah-v5",
             "Hopper-v3",
+            "Hopper-v4",
             "Hopper-v5",
             "Humanoid-v3",
+            "Humanoid-v4",
             "Humanoid-v5",
             "HumanoidStandup-v2",
+            "HumanoidStandup-v4",
             "HumanoidStandup-v5",
             "InvertedDoublePendulum-v2",
+            "InvertedDoublePendulum-v4",
             "InvertedDoublePendulum-v5",
             "InvertedPendulum-v2",
+            "InvertedPendulum-v4",
             "InvertedPendulum-v5",
             "Pusher-v2",
+            "Pusher-v4",
             "Pusher-v5",
             "Reacher-v2",
+            "Reacher-v4",
             "Reacher-v5",
             "Swimmer-v3",
+            "Swimmer-v4",
             "Swimmer-v5",
             "Walker2d-v3",
+            "Walker2d-v4",
             "Walker2d-v5",
         ])
 

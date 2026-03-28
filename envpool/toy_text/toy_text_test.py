@@ -15,14 +15,14 @@
 
 from typing import no_type_check
 
-import gym
+import gymnasium as gym
 import numpy as np
 from absl import logging
 from absl.testing import absltest
 from dm_env import TimeStep
 
 import envpool.toy_text.registration  # noqa: F401
-from envpool.registration import make, make_gym
+from envpool.registration import make, make_gymnasium
 
 
 class _ToyTextEnvTest(absltest.TestCase):
@@ -85,10 +85,10 @@ class _ToyTextEnvTest(absltest.TestCase):
     def test_frozen_lake(self) -> None:
         for size in [4, 8]:
             if size == 4:
-                env = make_gym("FrozenLake-v1")
+                env = make_gymnasium("FrozenLake-v1")
                 ref = gym.make("FrozenLake-v1")
             else:
-                env = make_gym("FrozenLake8x8-v1")
+                env = make_gymnasium("FrozenLake8x8-v1")
                 ref = gym.make("FrozenLake8x8-v1")
             logging.info(env)
             assert isinstance(env.observation_space, gym.spaces.Discrete)
@@ -133,7 +133,7 @@ class _ToyTextEnvTest(absltest.TestCase):
 
     @no_type_check
     def test_taxi(self) -> None:
-        env = make_gym("Taxi-v3")
+        env = make_gymnasium("Taxi-v3")
         assert isinstance(env.observation_space, gym.spaces.Discrete)
         assert env.observation_space.n == 500
         assert isinstance(env.action_space, gym.spaces.Discrete)
@@ -210,7 +210,7 @@ class _ToyTextEnvTest(absltest.TestCase):
 
     def test_nchain(self) -> None:
         num_envs = 100
-        env = make_gym("NChain-v0", num_envs=num_envs)
+        env = make_gymnasium("NChain-v0", num_envs=num_envs)
         assert isinstance(env.observation_space, gym.spaces.Discrete)
         assert env.observation_space.n == 5
         assert isinstance(env.action_space, gym.spaces.Discrete)
@@ -228,15 +228,19 @@ class _ToyTextEnvTest(absltest.TestCase):
         )
 
     def test_cliffwalking(self) -> None:
-        env = make_gym("CliffWalking-v0")
+        env = make_gymnasium("CliffWalking-v1")
         assert isinstance(env.observation_space, gym.spaces.Discrete)
         assert env.observation_space.n == 48
         assert isinstance(env.action_space, gym.spaces.Discrete)
         assert env.action_space.n == 4
-        ref = gym.make("CliffWalking-v0")
+        ref = gym.make("CliffWalking-v1")
         for i in range(12):
             action = [0] * 4 + [1] * i + [2] * 4
-            assert env.reset()[0] == ref.reset()[0]
+            obs, info = env.reset()
+            ref_obs, ref_info = ref.reset()
+            assert obs[0] == ref_obs
+            np.testing.assert_allclose(info["prob"], 1.0)
+            assert ref_info["prob"] == 1.0
             while len(action) > 0:
                 a = action.pop(0)
                 ref_obs, ref_rew, ref_terminated, ref_truncated, ref_info = (
@@ -252,13 +256,50 @@ class _ToyTextEnvTest(absltest.TestCase):
                     and ref_terminated == terminated[0]
                     and ref_truncated == truncated[0]
                 )
+                np.testing.assert_allclose(info["prob"], 1.0)
+                assert ref_info["prob"] == 1.0
                 if ref_done:
                     break
+
+    def test_cliffwalking_slippery(self) -> None:
+        env = make_gymnasium("CliffWalkingSlippery-v1", seed=0)
+        ref = gym.make("CliffWalkingSlippery-v1")
+        obs, info = env.reset()
+        np.testing.assert_allclose(info["prob"], 1.0)
+        current_state = int(obs[0])
+        actions = np.random.default_rng(0).integers(0, 4, size=200)
+        for action in actions:
+            obs, rew, terminated, truncated, info = env.step(
+                np.array([action], dtype=np.int32)
+            )
+            transition = (
+                round(float(info["prob"][0]), 6),
+                int(obs[0]),
+                float(rew[0]),
+                bool(terminated[0]),
+                bool(truncated[0]),
+            )
+            valid = {
+                (round(prob, 6), next_state, reward, terminated_flag, False)
+                for prob, next_state, reward, terminated_flag in ref.unwrapped.P[
+                    current_state
+                ][action]
+            }
+            assert transition in valid, (
+                current_state,
+                action,
+                transition,
+                sorted(valid),
+            )
+            if transition[3] or transition[4]:
+                obs, info = env.reset()
+                np.testing.assert_allclose(info["prob"], 1.0)
+            current_state = int(obs[0])
 
     def test_blackjack(self) -> None:
         np.random.seed(0)
         num_envs = 100
-        env = make_gym("Blackjack-v1", num_envs=num_envs)
+        env = make_gymnasium("Blackjack-v1", num_envs=num_envs)
         assert isinstance(env.observation_space, gym.spaces.Box)
         assert env.observation_space.shape == (3,)
         assert isinstance(env.action_space, gym.spaces.Discrete)

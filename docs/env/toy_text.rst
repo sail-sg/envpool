@@ -66,11 +66,11 @@ opposite transition is instead taken.
 The observed state is the current state in the chain (0 to n-1).
 
 
-CliffWalking-v0
----------------
+CliffWalking-v1, CliffWalkingSlippery-v1
+----------------------------------------
 
-`gym CliffWalking-v0 source code
-<https://github.com/openai/gym/blob/master/gym/envs/toy_text/cliffwalking.py>`_
+`gymnasium CliffWalking-v1 source code
+<https://github.com/Farama-Foundation/Gymnasium/blob/v1.2.3/gymnasium/envs/toy_text/cliffwalking.py>`_
 
 The board is a 4x12 matrix, with (using NumPy matrix indexing):
 
@@ -81,6 +81,11 @@ The board is a 4x12 matrix, with (using NumPy matrix indexing):
 Each time step incurs -1 reward, and stepping into the cliff incurs -100
 reward and a reset to the start. An episode terminates when the agent reaches
 the goal.
+
+``CliffWalkingSlippery-v1`` follows Gymnasium's optional slippery dynamics:
+each action samples uniformly from the intended direction and its two
+perpendicular alternatives. ``CliffWalking-v0`` is retained as a legacy alias
+for the non-slippery ``CliffWalking-v1`` task.
 
 
 Blackjack-v1
