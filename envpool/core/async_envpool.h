@@ -173,6 +173,7 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
         shared_thread_pool_->ReleaseCapacity(num_envs_);
       }
     } catch (...) {
+      claimed_capacity_ = false;
     }
     // LOG(INFO) << "envpool send: " << dur_send_.count();
     // LOG(INFO) << "envpool recv: " << dur_recv_.count();
