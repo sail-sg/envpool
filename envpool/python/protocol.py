@@ -92,9 +92,11 @@ if TYPE_CHECKING:
     from envpool.core import SharedThreadPool
 
     ThreadPoolArg: TypeAlias = SharedThreadPool | None
+    EnvPoolInitNoThreadPool: TypeAlias = Callable[[EnvSpec], None]
     EnvPoolInit: TypeAlias = Callable[[EnvSpec, ThreadPoolArg], None]
 else:
     ThreadPoolArg: TypeAlias = Any
+    EnvPoolInitNoThreadPool: TypeAlias = Callable[..., None]
     EnvPoolInit: TypeAlias = Callable[..., None]
 
 

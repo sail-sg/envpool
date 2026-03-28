@@ -22,7 +22,12 @@ import optree
 
 from .data import gymnasium_structure
 from .envpool import EnvPoolMixin
-from .protocol import EnvPoolInit, EnvSpec, ThreadPoolArg
+from .protocol import (
+    EnvPoolInit,
+    EnvPoolInitNoThreadPool,
+    EnvSpec,
+    ThreadPoolArg,
+)
 from .utils import check_key_duplication
 
 
@@ -111,11 +116,14 @@ class GymnasiumEnvPoolMeta(
             self: Any, spec: EnvSpec, thread_pool: ThreadPoolArg = None
         ) -> None:
             """Run the bound C++ constructor and cache the Python spec."""
-            bound_init = cast(EnvPoolInit, super(subcls, self).__init__)
             if thread_pool is None:
-                bound_init(spec)
+                cast(EnvPoolInitNoThreadPool, super(subcls, self).__init__)(
+                    spec
+                )
             else:
-                bound_init(spec, thread_pool)
+                cast(EnvPoolInit, super(subcls, self).__init__)(
+                    spec, thread_pool
+                )
             self.spec = spec
 
         setattr(subcls, "__init__", init)  # noqa: B010
