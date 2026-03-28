@@ -23,6 +23,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <cstdint>
 #include <functional>
 #include <utility>
 #include <vector>
@@ -34,7 +35,7 @@
  */
 class ActionBufferQueue {
  protected:
-  std::atomic<uint64_t> alloc_ptr_, done_ptr_;
+  std::atomic<std::uint64_t> alloc_ptr_, done_ptr_;
   std::size_t queue_size_;
   std::vector<std::function<void()>> queue_;
   moodycamel::LightweightSemaphore sem_, sem_enqueue_, sem_dequeue_;
@@ -53,7 +54,7 @@ class ActionBufferQueue {
     // Ensure only one bulk enqueue happens at any time.
     while (!sem_enqueue_.wait()) {
     }
-    uint64_t pos = alloc_ptr_.fetch_add(action.size());
+    std::uint64_t pos = alloc_ptr_.fetch_add(action.size());
     for (std::size_t i = 0; i < action.size(); ++i) {
       queue_[(pos + i) % queue_size_] = action[i];
     }
