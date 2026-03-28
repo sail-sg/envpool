@@ -43,9 +43,13 @@ class BuildPy(build_py):
         super().run()
         if sys.platform != "win32":
             return
-        for dll_path in Path(self.build_lib).rglob("*_envpool.pyd.dll"):
-            dll_path.rename(dll_path.with_suffix(""))
+        self._rename_windows_extension_modules()
         self._copy_windows_procgen_runtime_dlls()
+
+    def _rename_windows_extension_modules(self) -> None:
+        """Strip Bazel's trailing `.dll` from copied Windows extension modules."""
+        for dll_path in Path(self.build_lib).rglob("*.pyd.dll"):
+            dll_path.rename(dll_path.with_suffix(""))
 
     def _copy_windows_procgen_runtime_dlls(self) -> None:
         procgen_dir = Path(self.build_lib) / "envpool" / "procgen"

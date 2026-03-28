@@ -14,7 +14,7 @@
 """EnvPool meta class for dm_env API."""
 
 from abc import ABCMeta
-from typing import Any
+from typing import Any, cast
 
 import dm_env
 import numpy as np
@@ -23,6 +23,12 @@ from dm_env import TimeStep
 
 from .data import dm_structure
 from .envpool import EnvPoolMixin
+from .protocol import (
+    EnvPoolInit,
+    EnvPoolInitNoThreadPool,
+    EnvSpec,
+    ThreadPoolArg,
+)
 from .utils import check_key_duplication
 
 
@@ -94,9 +100,18 @@ class DMEnvPoolMeta(ABCMeta):
         attrs["_to"] = _to_dm
         subcls = super().__new__(cls, name, parents, attrs)
 
-        def init(self: Any, spec: Any) -> None:
-            """Set self.spec to EnvSpecMeta."""
-            super(subcls, self).__init__(spec)
+        def init(
+            self: Any, spec: EnvSpec, thread_pool: ThreadPoolArg = None
+        ) -> None:
+            """Run the bound C++ constructor and cache the Python spec."""
+            if thread_pool is None:
+                cast(EnvPoolInitNoThreadPool, super(subcls, self).__init__)(
+                    spec
+                )
+            else:
+                cast(EnvPoolInit, super(subcls, self).__init__)(
+                    spec, thread_pool
+                )
             self.spec = spec
 
         setattr(subcls, "__init__", init)  # noqa: B010

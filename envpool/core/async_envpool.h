@@ -19,7 +19,10 @@
 
 #include <algorithm>
 #include <atomic>
+#include <condition_variable>
+#include <functional>
 #include <memory>
+#include <mutex>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -28,6 +31,7 @@
 #include "envpool/core/action_buffer_queue.h"
 #include "envpool/core/array.h"
 #include "envpool/core/envpool.h"
+#include "envpool/core/shared_thread_pool.h"
 #include "envpool/core/spec.h"
 #include "envpool/core/state_buffer_queue.h"
 /**
@@ -48,35 +52,75 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
   bool is_sync_;
   std::atomic<int> stop_;
   std::atomic<std::size_t> stepping_env_num_;
-  std::vector<std::thread> workers_;
-  std::unique_ptr<ActionBufferQueue> action_buffer_queue_;
   std::unique_ptr<StateBufferQueue> state_buffer_queue_;
   std::vector<std::unique_ptr<Env>> envs_;
   std::vector<std::atomic<int>> stepping_env_;
   std::chrono::duration<double> dur_send_, dur_recv_, dur_send_all_;
+  std::shared_ptr<SharedThreadPool> shared_thread_pool_;
+  // Guard pending-task accounting with the same mutex used by teardown waits
+  // so the final completion notification cannot be missed.
+  std::size_t pending_tasks_ = 0;
+  std::mutex pending_tasks_mutex_;
+  std::condition_variable pending_tasks_cv_;
+  bool claimed_capacity_ = false;
+
+  void FinishTask() {
+    bool notify = false;
+    {
+      std::lock_guard<std::mutex> lock(pending_tasks_mutex_);
+      notify = --pending_tasks_ == 0;
+    }
+    if (notify) {
+      pending_tasks_cv_.notify_all();
+    }
+  }
+
+  template <typename Fn>
+  std::function<void()> WrapTask(Fn&& fn) {
+    {
+      std::lock_guard<std::mutex> lock(pending_tasks_mutex_);
+      ++pending_tasks_;
+    }
+    return [this, task = std::forward<Fn>(fn)]() mutable {
+      struct TaskGuard {
+        AsyncEnvPool* pool;
+
+        ~TaskGuard() { pool->FinishTask(); }
+      } guard{this};
+      if (this->stop_ == 1) {
+        return;
+      }
+      task();
+    };
+  }
+
+  void WaitForPendingTasks() {
+    std::unique_lock<std::mutex> lock(pending_tasks_mutex_);
+    pending_tasks_cv_.wait(lock, [this] { return pending_tasks_ == 0; });
+  }
 
   template <typename V>
   void SendImpl(V&& action) {
     int* env_id = static_cast<int*>(action[0].Data());
     int shared_offset = action[0].Shape(0);
-    std::vector<ActionSlice> actions;
+    std::vector<std::function<void()>> actions;
+    actions.reserve(shared_offset);
     std::shared_ptr<std::vector<Array>> action_batch =
         std::make_shared<std::vector<Array>>(std::forward<V>(action));
     for (int i = 0; i < shared_offset; ++i) {
       int eid = env_id[i];
       envs_[eid]->SetAction(action_batch, i);
-      actions.emplace_back(ActionSlice{
-          .env_id = eid,
-          .order = is_sync_ ? i : -1,
-          .force_reset = false,
-      });
+      actions.emplace_back(WrapTask([this, eid, i] {
+        int order = is_sync_ ? i : -1;
+        bool reset = envs_[eid]->IsDone();
+        envs_[eid]->EnvStep(state_buffer_queue_.get(), order, reset, false);
+      }));
     }
     if (is_sync_) {
       stepping_env_num_ += shared_offset;
     }
-    // add to abq
     auto start = std::chrono::system_clock::now();
-    action_buffer_queue_->EnqueueBulk(actions);
+    shared_thread_pool_->EnqueueBulk(actions);
     dur_send_ += std::chrono::system_clock::now() - start;
   }
 
@@ -84,9 +128,10 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
   using Spec = typename Env::Spec;
   using Action = typename Env::Action;
   using State = typename Env::State;
-  using ActionSlice = typename ActionBufferQueue::ActionSlice;
 
-  explicit AsyncEnvPool(const Spec& spec)
+  explicit AsyncEnvPool(
+      const Spec& spec,
+      std::shared_ptr<SharedThreadPool> shared_thread_pool = nullptr)
       : EnvPool<Spec>(spec),
         num_envs_(spec.config["num_envs"_]),
         batch_(spec.config["batch_size"_] <= 0 ? num_envs_
@@ -96,67 +141,51 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
         is_sync_(batch_ == num_envs_ && max_num_players_ == 1),
         stop_(0),
         stepping_env_num_(0),
-        action_buffer_queue_(new ActionBufferQueue(num_envs_)),
         state_buffer_queue_(new StateBufferQueue(
             batch_, num_envs_, max_num_players_,
             spec.state_spec.template AllValues<ShapeSpec>())),
-        envs_(num_envs_) {
-    std::size_t processor_count = std::thread::hardware_concurrency();
-    ThreadPool init_pool(std::min(processor_count, num_envs_));
-    std::vector<std::future<void>> result;
-    for (std::size_t i = 0; i < num_envs_; ++i) {
-      result.emplace_back(init_pool.enqueue(
-          [i, spec, this] { envs_[i].reset(new Env(spec, i)); }));
-    }
-    for (auto& f : result) {
-      f.get();
-    }
+        envs_(num_envs_),
+        shared_thread_pool_(std::move(shared_thread_pool)) {
+    std::size_t processor_count =
+        std::max<std::size_t>(1, std::thread::hardware_concurrency());
     if (num_threads_ == 0) {
       num_threads_ = std::min(batch_, processor_count);
     }
-    for (std::size_t i = 0; i < num_threads_; ++i) {
-      workers_.emplace_back([this] {
-        for (;;) {
-          ActionSlice raw_action = action_buffer_queue_->Dequeue();
-          if (stop_ == 1) {
-            break;
-          }
-          int env_id = raw_action.env_id;
-          int order = raw_action.order;
-          bool reset = raw_action.force_reset || envs_[env_id]->IsDone();
-          envs_[env_id]->EnvStep(state_buffer_queue_.get(), order, reset,
-                                 raw_action.force_reset);
-        }
-      });
+    if (shared_thread_pool_ == nullptr) {
+      shared_thread_pool_ = std::make_shared<SharedThreadPool>(
+          num_threads_, num_envs_, spec.config["thread_affinity_offset"_]);
     }
-    if (spec.config["thread_affinity_offset"_] >= 0) {
-      std::size_t thread_affinity_offset =
-          spec.config["thread_affinity_offset"_];
-#ifdef __linux__
-      for (std::size_t tid = 0; tid < num_threads_; ++tid) {
-        cpu_set_t cpuset;
-        CPU_ZERO(&cpuset);
-        std::size_t cid = (thread_affinity_offset + tid) % processor_count;
-        CPU_SET(cid, &cpuset);
-        pthread_setaffinity_np(workers_[tid].native_handle(), sizeof(cpu_set_t),
-                               &cpuset);
+    shared_thread_pool_->ClaimCapacity(num_envs_);
+    claimed_capacity_ = true;
+    try {
+      ThreadPool init_pool(std::min(processor_count, num_envs_));
+      std::vector<std::future<void>> result;
+      for (std::size_t i = 0; i < num_envs_; ++i) {
+        result.emplace_back(init_pool.enqueue(
+            [i, spec, this] { envs_[i].reset(new Env(spec, i)); }));
       }
-#else
-      (void)thread_affinity_offset;
-#endif
+      for (auto& f : result) {
+        f.get();
+      }
+    } catch (...) {
+      shared_thread_pool_->ReleaseCapacity(num_envs_);
+      claimed_capacity_ = false;
+      throw;
     }
   }
 
   ~AsyncEnvPool() override {
     stop_ = 1;
+    try {
+      WaitForPendingTasks();
+      if (claimed_capacity_) {
+        shared_thread_pool_->ReleaseCapacity(num_envs_);
+      }
+    } catch (...) {
+      claimed_capacity_ = false;
+    }
     // LOG(INFO) << "envpool send: " << dur_send_.count();
     // LOG(INFO) << "envpool recv: " << dur_recv_.count();
-    // send n actions to clear threadpool
-    std::vector<ActionSlice> empty_actions(workers_.size());
-    action_buffer_queue_->EnqueueBulk(empty_actions);
-    for (auto& worker : workers_) {
-      worker.join();
-    }
   }
 
   void Send(const Action& action) {
@@ -182,16 +211,19 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
   void Reset(const Array& env_ids) override {
     TArray<int> tenv_ids(env_ids);
     int shared_offset = tenv_ids.Shape(0);
-    std::vector<ActionSlice> actions(shared_offset);
+    std::vector<std::function<void()>> actions;
+    actions.reserve(shared_offset);
     for (int i = 0; i < shared_offset; ++i) {
-      actions[i].force_reset = true;
-      actions[i].env_id = tenv_ids[i];
-      actions[i].order = is_sync_ ? i : -1;
+      int eid = tenv_ids[i];
+      actions.emplace_back(WrapTask([this, eid, i] {
+        int order = is_sync_ ? i : -1;
+        envs_[eid]->EnvStep(state_buffer_queue_.get(), order, true, true);
+      }));
     }
     if (is_sync_) {
       stepping_env_num_ += shared_offset;
     }
-    action_buffer_queue_->EnqueueBulk(actions);
+    shared_thread_pool_->EnqueueBulk(actions);
   }
 };
 

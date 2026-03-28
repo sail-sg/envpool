@@ -23,6 +23,7 @@ from envpool.registration import (
     make_gym,
     make_gymnasium,
     make_spec,
+    make_thread_pool,
     register,
 )
 
@@ -33,6 +34,7 @@ if not hasattr(np, "bool8"):
 __version__ = "1.0.0"
 __all__ = [
     "register",
+    "make_thread_pool",
     "make",
     "make_dm",
     "make_gym",

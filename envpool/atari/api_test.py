@@ -13,6 +13,7 @@
 # limitations under the License.
 """Unit test for atari envpool and speed benchmark."""
 
+import gc
 from typing import no_type_check
 
 import dm_env
@@ -24,7 +25,7 @@ from packaging import version
 
 import envpool.atari.registration  # noqa: F401
 from envpool.atari import AtariEnvSpec
-from envpool.registration import make_dm, make_gym, make_spec
+from envpool.registration import make_dm, make_gym, make_spec, make_thread_pool
 
 
 class _SpecTest(absltest.TestCase):
@@ -321,6 +322,50 @@ class _GymSyncTest(absltest.TestCase):
         done1 = np.logical_or(terminated1, truncated1)
         index = np.where(done)[0]
         self.assertTrue(np.all(~done1[index]))
+
+
+class _SharedThreadPoolTest(absltest.TestCase):
+    def test_capacity(self) -> None:
+        num_envs = 4
+        thread_pool = make_thread_pool(num_envs_capacity=11)
+        envs = [
+            make_gym("Pong-v5", num_envs=num_envs, thread_pool=thread_pool),
+            make_gym("Defender-v5", num_envs=num_envs, thread_pool=thread_pool),
+        ]
+        with self.assertRaises(RuntimeError):
+            _ = make_gym(
+                "Breakout-v5", num_envs=num_envs, thread_pool=thread_pool
+            )
+        self.assertLen(envs, 2)
+
+    def test_capacity_released_after_close(self) -> None:
+        num_envs = 4
+        thread_pool = make_thread_pool(num_envs_capacity=num_envs)
+        env = make_gym("Pong-v5", num_envs=num_envs, thread_pool=thread_pool)
+        env.reset()
+        del env
+        gc.collect()
+        env = make_gym(
+            "Breakout-v5", num_envs=num_envs, thread_pool=thread_pool
+        )
+        env.reset()
+
+    def test_stepping(self) -> None:
+        num_envs = 4
+        thread_pool = make_thread_pool(num_envs_capacity=12, num_threads=2)
+        env1 = make_gym("Pong-v5", num_envs=num_envs, thread_pool=thread_pool)
+        env2 = make_gym(
+            "Defender-v5", num_envs=num_envs, thread_pool=thread_pool
+        )
+        env3 = make_gym(
+            "Breakout-v5", num_envs=num_envs, thread_pool=thread_pool
+        )
+        envs = [env1, env2, env3]
+        for env in envs:
+            env.reset()
+        for _ in range(100):
+            for env in envs:
+                env.step(np.random.randint(6, size=num_envs))
 
 
 if __name__ == "__main__":
