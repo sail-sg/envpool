@@ -111,9 +111,7 @@ class GymnasiumEnvPoolMeta(
             self: Any, spec: EnvSpec, thread_pool: ThreadPoolArg = None
         ) -> None:
             """Run the bound C++ constructor and cache the Python spec."""
-            cast(EnvPoolInit, super(subcls, self).__init__)(
-                spec, thread_pool
-            )
+            cast(EnvPoolInit, super(subcls, self).__init__)(spec, thread_pool)
             self.spec = spec
 
         setattr(subcls, "__init__", init)  # noqa: B010
