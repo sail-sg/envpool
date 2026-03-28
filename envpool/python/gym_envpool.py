@@ -111,7 +111,7 @@ class GymEnvPoolMeta(
 
         def init(self: Any, spec: Any, thread_pool: Any | None = None) -> None:
             """Set self.spec to EnvSpecMeta."""
-            super(subcls, self).__init__(spec, thread_pool)
+            cast(Any, super(subcls, self)).__init__(spec, thread_pool)
             self.spec = spec
 
         setattr(subcls, "__init__", init)  # noqa: B010
