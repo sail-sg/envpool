@@ -330,9 +330,7 @@ class _SharedThreadPoolTest(absltest.TestCase):
         thread_pool = make_thread_pool(num_envs_capacity=11)
         envs = [
             make_gym("Pong-v5", num_envs=num_envs, thread_pool=thread_pool),
-            make_gym(
-                "Defender-v5", num_envs=num_envs, thread_pool=thread_pool
-            ),
+            make_gym("Defender-v5", num_envs=num_envs, thread_pool=thread_pool),
         ]
         with self.assertRaises(RuntimeError):
             _ = make_gym(
@@ -347,7 +345,9 @@ class _SharedThreadPoolTest(absltest.TestCase):
         env.reset()
         del env
         gc.collect()
-        env = make_gym("Breakout-v5", num_envs=num_envs, thread_pool=thread_pool)
+        env = make_gym(
+            "Breakout-v5", num_envs=num_envs, thread_pool=thread_pool
+        )
         env.reset()
 
     def test_stepping(self) -> None:
