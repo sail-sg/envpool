@@ -57,20 +57,30 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
   std::vector<std::atomic<int>> stepping_env_;
   std::chrono::duration<double> dur_send_, dur_recv_, dur_send_all_;
   std::shared_ptr<SharedThreadPool> shared_thread_pool_;
-  std::atomic<std::size_t> pending_tasks_;
+  // Guard pending-task accounting with the same mutex used by teardown waits
+  // so the final completion notification cannot be missed.
+  std::size_t pending_tasks_ = 0;
   std::mutex pending_tasks_mutex_;
   std::condition_variable pending_tasks_cv_;
   bool claimed_capacity_ = false;
 
   void FinishTask() {
-    if (pending_tasks_.fetch_sub(1) == 1) {
+    bool notify = false;
+    {
+      std::lock_guard<std::mutex> lock(pending_tasks_mutex_);
+      notify = --pending_tasks_ == 0;
+    }
+    if (notify) {
       pending_tasks_cv_.notify_all();
     }
   }
 
   template <typename Fn>
   std::function<void()> WrapTask(Fn&& fn) {
-    pending_tasks_.fetch_add(1);
+    {
+      std::lock_guard<std::mutex> lock(pending_tasks_mutex_);
+      ++pending_tasks_;
+    }
     return [this, task = std::forward<Fn>(fn)]() mutable {
       struct TaskGuard {
         AsyncEnvPool* pool;
@@ -86,7 +96,7 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
 
   void WaitForPendingTasks() {
     std::unique_lock<std::mutex> lock(pending_tasks_mutex_);
-    pending_tasks_cv_.wait(lock, [this] { return pending_tasks_.load() == 0; });
+    pending_tasks_cv_.wait(lock, [this] { return pending_tasks_ == 0; });
   }
 
   template <typename V>
@@ -135,8 +145,7 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
             batch_, num_envs_, max_num_players_,
             spec.state_spec.template AllValues<ShapeSpec>())),
         envs_(num_envs_),
-        shared_thread_pool_(std::move(shared_thread_pool)),
-        pending_tasks_(0) {
+        shared_thread_pool_(std::move(shared_thread_pool)) {
     std::size_t processor_count =
         std::max<std::size_t>(1, std::thread::hardware_concurrency());
     if (num_threads_ == 0) {

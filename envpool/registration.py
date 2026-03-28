@@ -66,7 +66,14 @@ class EnvRegistry:
         num_threads: int = 0,
         thread_affinity_offset: int = -1,
     ) -> SharedThreadPool:
-        """Create a thread pool that can be shared across envpool instances."""
+        """Create a shared worker pool for multiple envpool instances.
+
+        `num_envs_capacity` is the total number of env slots that may be alive
+        across all envpools using this pool at the same time. `num_threads=0`
+        follows EnvPool's default thread selection, and
+        `thread_affinity_offset` keeps the shared pool aligned with the same
+        CPU-affinity behavior used by per-envpool workers.
+        """
         return SharedThreadPool(
             num_threads, num_envs_capacity, thread_affinity_offset
         )

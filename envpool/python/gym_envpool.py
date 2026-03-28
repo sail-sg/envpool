@@ -23,6 +23,7 @@ from packaging import version
 
 from .data import gym_structure
 from .envpool import EnvPoolMixin
+from .protocol import EnvPoolInit, EnvSpec, ThreadPoolArg
 from .utils import check_key_duplication
 
 
@@ -109,9 +110,13 @@ class GymEnvPoolMeta(
         attrs["_to"] = _to_gym
         subcls = super().__new__(cls, name, parents, attrs)
 
-        def init(self: Any, spec: Any, thread_pool: Any | None = None) -> None:
-            """Set self.spec to EnvSpecMeta."""
-            cast(Any, super(subcls, self)).__init__(spec, thread_pool)
+        def init(
+            self: Any, spec: EnvSpec, thread_pool: ThreadPoolArg = None
+        ) -> None:
+            """Run the bound C++ constructor and cache the Python spec."""
+            cast(EnvPoolInit, super(subcls, self).__init__)(
+                spec, thread_pool
+            )
             self.spec = spec
 
         setattr(subcls, "__init__", init)  # noqa: B010
