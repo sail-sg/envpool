@@ -19,6 +19,7 @@
 #define ENVPOOL_TOY_TEXT_CLIFFWALKING_H_
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <random>
 #include <string>
@@ -31,10 +32,13 @@ namespace toy_text {
 
 class CliffWalkingEnvFns {
  public:
-  static decltype(auto) DefaultConfig() { return MakeDict(); }
+  static decltype(auto) DefaultConfig() {
+    return MakeDict("is_slippery"_.Bind(false));
+  }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs"_.Bind(Spec<int>({-1}, {0, 47})));
+    return MakeDict("obs"_.Bind(Spec<int>({-1}, {0, 47})),
+                    "info:prob"_.Bind(Spec<float>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -47,11 +51,13 @@ using CliffWalkingEnvSpec = EnvSpec<CliffWalkingEnvFns>;
 class CliffWalkingEnv : public Env<CliffWalkingEnvSpec> {
  protected:
   int x_, y_;
+  bool is_slippery_;
   bool done_{true};
 
  public:
   CliffWalkingEnv(const Spec& spec, int env_id)
-      : Env<CliffWalkingEnvSpec>(spec, env_id) {}
+      : Env<CliffWalkingEnvSpec>(spec, env_id),
+        is_slippery_(spec.config["is_slippery"_]) {}
 
   bool IsDone() override { return done_; }
 
@@ -59,11 +65,11 @@ class CliffWalkingEnv : public Env<CliffWalkingEnvSpec> {
     x_ = 3;
     y_ = 0;
     done_ = false;
-    WriteState(0.0);
+    WriteState(0.0, 1.0f);
   }
 
   void Step(const Action& action) override {
-    int act = action["action"_];
+    int act = SampleAction(action["action"_]);
     float reward = -1.0;
     if (act == 0) {
       --x_;
@@ -84,14 +90,24 @@ class CliffWalkingEnv : public Env<CliffWalkingEnvSpec> {
     if (x_ == 3 && y_ == 11) {
       done_ = true;
     }
-    WriteState(reward);
+    WriteState(reward, is_slippery_ ? 1.0f / 3.0f : 1.0f);
   }
 
  private:
-  void WriteState(float reward) {
+  int SampleAction(int intended_action) {
+    if (!is_slippery_) {
+      return intended_action;
+    }
+    static constexpr std::array<int, 3> k_offsets = {-1, 0, 1};
+    std::uniform_int_distribution<int> dist(0, k_offsets.size() - 1);
+    return (intended_action + k_offsets[dist(gen_)] + 4) % 4;
+  }
+
+  void WriteState(float reward, float prob) {
     auto state = Allocate();
     state["obs"_] = x_ * 12 + y_;
     state["reward"_] = reward;
+    state["info:prob"_] = prob;
   }
 };
 

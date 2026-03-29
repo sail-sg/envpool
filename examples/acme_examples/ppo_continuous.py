@@ -38,7 +38,7 @@ def parse_args():
     parser.add_argument(
     "--env-name",
     type=str,
-    default="HalfCheetah-v3",
+    default="HalfCheetah-v4",
     help="What environment to run.",
   )
     parser.add_argument(

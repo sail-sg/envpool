@@ -80,7 +80,7 @@ if __name__ == "__main__":
         "atari": "Pong-v5",
         "mujoco": "Ant-v5",
         "vizdoom": "HealthGathering-v1",
-        "box2d": "LunarLander-v2",
+        "box2d": "LunarLander-v3",
     }[args.env]
     kwargs = dict(
         num_envs=args.num_envs,

@@ -42,16 +42,16 @@ class _Box2dEnvPoolDeterministicTest(absltest.TestCase):
             self.assertFalse(np.allclose(obs0, obs2))
 
     def test_car_racing(self) -> None:
-        self.run_deterministic_check("CarRacing-v2")
-        self.run_deterministic_check("CarRacing-v2", max_episode_steps=3)
+        self.run_deterministic_check("CarRacing-v3")
+        self.run_deterministic_check("CarRacing-v3", max_episode_steps=3)
 
     def test_bipedal_walker(self) -> None:
         self.run_deterministic_check("BipedalWalker-v3")
         self.run_deterministic_check("BipedalWalkerHardcore-v3")
 
     def test_lunar_lander(self) -> None:
-        self.run_deterministic_check("LunarLanderContinuous-v2")
-        self.run_deterministic_check("LunarLander-v2")
+        self.run_deterministic_check("LunarLanderContinuous-v3")
+        self.run_deterministic_check("LunarLander-v3")
 
 
 if __name__ == "__main__":

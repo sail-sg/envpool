@@ -46,16 +46,16 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
 
     def test_lunar_lander_space(self) -> None:
         env0 = gym.make("LunarLander-v3")
-        env1 = make_gym("LunarLander-v2")
+        env1 = make_gym("LunarLander-v3")
         self.run_space_check(env0, env1)
 
         env0 = gym.make("LunarLanderContinuous-v3")
-        env1 = make_gym("LunarLanderContinuous-v2")
+        env1 = make_gym("LunarLanderContinuous-v3")
         self.run_space_check(env0, env1)
 
     def test_car_racing_space(self) -> None:
         env0 = gym.make("CarRacing-v3")
-        env1 = make_gym("CarRacing-v2")
+        env1 = make_gym("CarRacing-v3")
         self.run_space_check(env0, env1)
 
     @staticmethod
@@ -82,9 +82,9 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
 
     def solve_lunar_lander(self, num_envs: int, continuous: bool) -> None:
         if continuous:
-            env = make_gym("LunarLanderContinuous-v2", num_envs=num_envs)
+            env = make_gym("LunarLanderContinuous-v3", num_envs=num_envs)
         else:
-            env = make_gym("LunarLander-v2", num_envs=num_envs)
+            env = make_gym("LunarLander-v3", num_envs=num_envs)
         # each env run two episodes
         for _ in range(2):
             env_id = np.arange(num_envs)
@@ -135,7 +135,7 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
     def solve_car_racing(
         self, num_envs: int, action: list[float], target_reward: float
     ) -> None:
-        env = make_gym("CarRacing-v2", num_envs=num_envs)
+        env = make_gym("CarRacing-v3", num_envs=num_envs)
         max_episode_steps = 100
 
         env_id = np.arange(num_envs)

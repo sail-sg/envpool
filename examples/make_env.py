@@ -64,7 +64,7 @@ def make_spec() -> None:
 
 def check_info_optim() -> None:
     """Check the optimized info-dict mode."""
-    env = envpool.make_gym("Ant-v3")
+    env = envpool.make_gym("Ant-v4")
     info = env.step(np.array([env.action_space.sample()]), np.array([0]))[-1]
     assert "qpos0" not in info and "qvel0" not in info
 
