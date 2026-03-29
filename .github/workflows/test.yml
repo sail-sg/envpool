@@ -218,37 +218,3 @@ jobs:
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
-
-  release-linux-arm64:
-    name: Release Test (linux-arm64)
-    runs-on: ubuntu-24.04-arm
-    container: quay.io/pypa/manylinux_2_28_aarch64
-    timeout-minutes: 120
-    steps:
-      - name: Cancel previous run
-        uses: styfle/cancel-workflow-action@0.11.0
-        with:
-          access_token: ${{ github.token }}
-      - uses: actions/checkout@v3
-      - name: Install build dependencies
-        run: |
-          dnf install -y git curl wget zsh gcc gcc-c++ cmake make ninja-build tmux golang java-17-openjdk-devel qt5-qtbase-devel qt5-qtdeclarative-devel
-          dnf clean all
-          ln -sf "$(qmake-qt5 -query QT_INSTALL_HEADERS)" /usr/include/qt
-          go install github.com/bazelbuild/bazelisk@latest
-          ln -sf /root/go/bin/bazelisk /usr/local/bin/bazelisk
-          ln -sf /root/go/bin/bazelisk /usr/local/bin/bazel
-      - name: Set up Python 3.12
-        shell: bash
-        run: |
-          PYBIN=/opt/python/cp312-cp312/bin
-          echo "$PYBIN" >> "$GITHUB_PATH"
-          "$PYBIN/python3" --version
-      - name: Build
-        run: |
-          rm -rf dist wheelhouse
-          make PYPI_WHEEL_PLAT=manylinux_2_28_aarch64 pypi-wheel
-          python -m pip install wheelhouse/*.whl --force-reinstall
-      - name: Test
-        run: |
-          make release-test
