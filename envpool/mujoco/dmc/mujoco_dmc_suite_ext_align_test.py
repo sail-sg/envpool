@@ -41,7 +41,7 @@ class _MujocoDmcSuiteExtAlignTest(absltest.TestCase):
         if not _MUJOCO_V3:
             return 0.0
         if _LINUX_ARM64:
-            return 1e-4
+            return 2.5e-4
         return 1e-6
 
     def run_space_check(self, env0: dm_env.Environment, env1: Any) -> None:

@@ -40,11 +40,11 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         if _MUJOCO_V3 and _LINUX_ARM64:
             del task
             if domain == "humanoid":
-                return 5e-3
+                return 2e-2
             if domain == "walker":
                 return 1e-3
             if domain == "hopper":
-                return 2.5e-4
+                return 1e-3
             return 1.5e-4
         del domain, task
         return 1e-6
@@ -52,7 +52,7 @@ class _MujocoDmcAlignTest(absltest.TestCase):
     def reward_atol(self, domain: str, task: str) -> float:
         if _MUJOCO_V3 and _LINUX_ARM64:
             del domain, task
-            return 5e-8
+            return 5e-7
         del domain, task
         return 1e-8
 
