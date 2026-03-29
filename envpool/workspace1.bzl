@@ -29,6 +29,7 @@ def workspace():
     )
 
     rules_foreign_cc_dependencies(
+        register_default_tools = False,
         register_built_pkgconfig_toolchain = False,
     )
 

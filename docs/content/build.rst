@@ -88,7 +88,7 @@ install the required development packages:
 .. code-block:: bash
 
     sudo apt install -y build-essential openjdk-17-jdk python3-dev \
-      python3-pip python-is-python3 golang-go swig qtbase5-dev \
+      python3-pip python-is-python3 golang-go cmake ninja-build swig qtbase5-dev \
       qtdeclarative5-dev
 
     # Some Bazel Qt rules still look for this legacy include path.
@@ -103,7 +103,7 @@ dependencies with Homebrew:
 .. code-block:: bash
 
     xcode-select --install
-    brew install go openjdk@17 swig qt@5
+    brew install go openjdk@17 cmake ninja swig qt@5
 
     export PATH="$(brew --prefix openjdk@17)/bin:$PATH"
     export BAZEL_RULES_QT_DIR="$(brew --prefix qt@5)"
@@ -125,7 +125,7 @@ environment variables:
 
 .. code-block:: powershell
 
-    choco install -y make ninja strawberryperl swig
+    choco install -y cmake make ninja strawberryperl swig
     $env:BAZEL_SH = "C:/Program Files/Git/usr/bin/bash.exe"
     $env:QT_ROOT_DIR = "C:/Qt/5.15.2/msvc2019_64"
     $env:BAZEL_RULES_QT_DIR = $env:QT_ROOT_DIR
