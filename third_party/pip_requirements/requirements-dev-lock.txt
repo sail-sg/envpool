@@ -1,7 +1,7 @@
 absl-py==2.4.0
 attrs==26.1.0
-box2d==2.3.10 ; platform_machine != "aarch64" and platform_machine != "arm64"
-box2d==2.3.2 ; platform_machine == "aarch64" or platform_machine == "arm64"
+box2d==2.3.10 ; sys_platform != "linux" or (platform_machine != "aarch64" and platform_machine != "arm64")
+box2d==2.3.2 ; sys_platform == "linux" and (platform_machine == "aarch64" or platform_machine == "arm64")
 certifi==2026.2.25
 charset-normalizer==3.4.6
 cloudpickle==3.1.2

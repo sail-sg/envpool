@@ -4,8 +4,8 @@ numpy>=2,<3
 dm-env>=1.6
 gym>=0.26.2
 gymnasium>=1.2.3
-box2d==2.3.10; platform_machine != "aarch64" and platform_machine != "arm64"
-box2d==2.3.2; platform_machine == "aarch64" or platform_machine == "arm64"
+box2d==2.3.10; sys_platform != "linux" or (platform_machine != "aarch64" and platform_machine != "arm64")
+box2d==2.3.2; sys_platform == "linux" and (platform_machine == "aarch64" or platform_machine == "arm64")
 colorama
 optree>=0.19.0
 jax[cpu]>=0.9.2,<0.10
