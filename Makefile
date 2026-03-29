@@ -13,11 +13,13 @@ WINDOWS_ENVPOOL_TEST_DEFINE = $(if $(filter Windows_NT,$(OS)),--cxxopt=/DENVPOOL
 BAZELISK_BIN   = $(shell command -v bazelisk 2>/dev/null || echo $(HOME)/go/bin/bazelisk)
 BAZEL_VERSION  = 8.6.0
 BAZEL          = USE_BAZEL_VERSION=$(BAZEL_VERSION) $(BAZELISK_BIN)
+BAZEL_TEST_TARGETS ?= //...
 DATE           = $(shell date "+%Y-%m-%d")
 DOCKER_TAG     = $(DATE)-$(COMMIT_HASH)
 DOCKER_USER    = trinkle23897
 RELEASE_PYTHON ?= $(shell python3 -c 'import sys; print("{}.{}".format(sys.version_info[0], sys.version_info[1]))')
 RELEASE_SETUP_TARGET = //:setup_py$(subst .,,$(RELEASE_PYTHON))
+PYPI_WHEEL_PLAT ?= manylinux_2_28_x86_64
 CLANG_TIDY_MAJOR = 18
 CLANG_TIDY_BIN = clang-tidy-$(CLANG_TIDY_MAJOR)
 CLANG_TIDY_WRAPPER_DIR = $(HOME)/.cache/$(PROJECT_NAME)/bin
@@ -157,7 +159,7 @@ bazel-release: bazel-install bazel-pip-requirement-release release-system-instal
 	cp bazel-bin/$(subst //:,,$(RELEASE_SETUP_TARGET))$(BAZEL_RUNFILES_SUFFIX)/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-test: bazel-install bazel-pip-requirement-dev
-	$(BAZEL) test --test_output=all $(BAZELOPT) $(WINDOWS_ENVPOOL_TEST_DEFINE) //... --config=test --spawn_strategy=local --color=yes
+	$(BAZEL) test --test_output=all $(BAZELOPT) $(WINDOWS_ENVPOOL_TEST_DEFINE) --config=test --spawn_strategy=local --color=yes -- $(BAZEL_TEST_TARGETS)
 
 bazel-clean: bazel-install
 	$(BAZEL) clean --expunge
@@ -222,7 +224,7 @@ docker-release-launch: docker-release
 pypi-wheel: auditwheel-install bazel-release
 	rm -rf wheelhouse
 	CURRENT_WHEEL=$$(ls dist/*.whl -Art | tail -n 1); \
-	python3 -m auditwheel repair --plat manylinux_2_28_x86_64 "$$CURRENT_WHEEL"
+	python3 -m auditwheel repair --plat $(PYPI_WHEEL_PLAT) "$$CURRENT_WHEEL"
 
 release-test1:
 	cd envpool && python3 make_test.py

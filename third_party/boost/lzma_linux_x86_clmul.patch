@@ -1,0 +1,15 @@
+--- config.lzma-linux.h
++++ config.lzma-linux.h
+@@ -56,2 +56,4 @@
+ /* Define to 1 if you have the <cpuid.h> header file. */
+-#define HAVE_CPUID_H 1
++#if defined(__i386__) || defined(__x86_64__)
++#define HAVE_CPUID_H 1
++#endif
+@@ -311,3 +313,5 @@
+ /* Define to 1 if _mm_clmulepi64_si128 is usable. See configure.ac for
+    details. */
+-#define HAVE_USABLE_CLMUL 1
++#if defined(__i386__) || defined(__x86_64__)
++#define HAVE_USABLE_CLMUL 1
++#endif

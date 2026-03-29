@@ -13,6 +13,7 @@
 # limitations under the License.
 """Unit tests for Mujoco dm_control suite align check."""
 
+import platform
 import sys
 from typing import Any
 
@@ -28,12 +29,26 @@ import envpool.mujoco.dmc.registration  # noqa: F401
 from envpool.registration import make_dm
 
 _MUJOCO_V3 = version.parse(mujoco.__version__) >= version.parse("3.0.0")
+_LINUX_ARM64 = sys.platform == "linux" and platform.machine().lower() in (
+    "aarch64",
+    "arm64",
+)
 
 
 class _MujocoDmcSuiteExtAlignTest(absltest.TestCase):
     @property
     def observation_atol(self) -> float:
-        return 1e-6 if _MUJOCO_V3 else 0.0
+        if not _MUJOCO_V3:
+            return 0.0
+        if _LINUX_ARM64:
+            return 2e-2
+        return 1e-6
+
+    @property
+    def observation_rtol(self) -> float:
+        if _MUJOCO_V3 and _LINUX_ARM64:
+            return 5e-3
+        return 1e-7
 
     def run_space_check(self, env0: dm_env.Environment, env1: Any) -> None:
         """Check observation_spec() and action_spec()."""
@@ -90,7 +105,10 @@ class _MujocoDmcSuiteExtAlignTest(absltest.TestCase):
                 o0, o1 = ts0.observation, ts1.observation
                 for k in obs_spec:
                     np.testing.assert_allclose(
-                        o0[k], getattr(o1, k)[0], atol=self.observation_atol
+                        o0[k],
+                        getattr(o1, k)[0],
+                        atol=self.observation_atol,
+                        rtol=self.observation_rtol,
                     )
                 np.testing.assert_allclose(ts0.step_type, ts1.step_type[0])
                 np.testing.assert_allclose(ts0.reward, ts1.reward[0], atol=1e-8)

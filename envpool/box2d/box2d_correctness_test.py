@@ -13,7 +13,13 @@
 # limitations under the License.
 """Unit tests for box2d environments correctness check."""
 
+import importlib.machinery
+import importlib.util
+import platform
+import re
 import sys
+import types
+from pathlib import Path
 from typing import Any, no_type_check
 
 import gymnasium as gym
@@ -25,6 +31,76 @@ from pygame import gfxdraw
 
 import envpool.box2d.registration  # noqa: F401
 from envpool.registration import make_gym
+
+_LINUX_ARM64 = sys.platform == "linux" and platform.machine().lower() in (
+    "aarch64",
+    "arm64",
+)
+_BOX2D_SWIGCONSTANT_RE = re.compile(r"_Box2D\.(\w+_swigconstant)\(")
+
+
+def _patch_box2d_swigconstant_shims(module: Any, pathname: str) -> None:
+    wrapper_path = Path(pathname).with_name("Box2D.py")
+    try:
+        names = set(_BOX2D_SWIGCONSTANT_RE.findall(wrapper_path.read_text()))
+    except OSError:
+        return
+    for attr in names:
+        if not hasattr(module, attr):
+            # Box2D 2.3.2 ships a stale Python wrapper on Linux arm64, while
+            # the source build regenerates only the C extension with modern
+            # SWIG. The newer extension already exposes the constants
+            # directly, so the legacy *_swigconstant hooks can be harmless
+            # no-ops.
+            setattr(module, attr, lambda _target, _attr=attr: None)
+
+
+def _install_imp_compat() -> None:
+    try:
+        import imp  # noqa: F401
+
+        return
+    except ModuleNotFoundError:
+        pass
+
+    compat_imp: Any = types.ModuleType("imp")
+    compat_imp.C_EXTENSION = 3
+
+    def find_module(
+        name: str, path: Any = None
+    ) -> tuple[Any, str, tuple[str, str, int]]:
+        spec = importlib.machinery.PathFinder.find_spec(name, path)
+        if spec is None or spec.origin is None:
+            raise ImportError(name)
+        return (
+            open(spec.origin, "rb"),
+            spec.origin,
+            ("", "rb", compat_imp.C_EXTENSION),
+        )
+
+    def load_module(
+        name: str, file: Any, pathname: str, description: Any
+    ) -> Any:
+        del file, description
+        module = sys.modules.get(name)
+        if module is not None:
+            return module
+        spec = importlib.util.spec_from_file_location(name, pathname)
+        if spec is None or spec.loader is None:
+            raise ImportError(pathname)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+        if name == "_Box2D":
+            _patch_box2d_swigconstant_shims(module, pathname)
+        return module
+
+    compat_imp.find_module = find_module
+    compat_imp.load_module = load_module
+    sys.modules["imp"] = compat_imp
+
+
+_install_imp_compat()
 
 
 class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
@@ -108,9 +184,10 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
             )
             # the following number is from gym's 1000 episode mean reward
             if continuous:  # 283.872619 ± 18.881830
-                if sys.platform == "darwin":
+                if sys.platform == "darwin" or _LINUX_ARM64:
                     # Gymnasium's current macOS Box2D stack lands a bit lower
-                    # than the historical Linux-derived baseline.
+                    # than the historical Linux-derived baseline, and Linux
+                    # arm64 exhibits the same drift under the heuristic policy.
                     self.assertTrue(
                         abs(mean_reward - 282) < 15, (continuous, mean_reward)
                     )
@@ -119,7 +196,7 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
                         abs(mean_reward - 284) < 10, (continuous, mean_reward)
                     )
             else:  # 236.898334 ± 105.832610
-                if sys.platform == "darwin":
+                if sys.platform == "darwin" or _LINUX_ARM64:
                     self.assertTrue(
                         abs(mean_reward - 221) < 25, (continuous, mean_reward)
                     )
@@ -292,10 +369,10 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
         if hardcore:  # -59.219390 ± 25.209768
             self.assertTrue(abs(mean_reward + 59) < 10, (hardcore, mean_reward))
         else:  # 145.318979 ± 126.231202 on box2d 2.4.2
-            if sys.platform in ("darwin", "win32"):
+            if sys.platform in ("darwin", "win32") or _LINUX_ARM64:
                 # Gymnasium's current macOS and Windows Box2D stacks land
                 # below the historical Linux baseline for this heuristic
-                # policy.
+                # policy, and Linux arm64 lands in the same range.
                 self.assertTrue(
                     abs(mean_reward - 110) < 30, (hardcore, mean_reward)
                 )

@@ -1,4 +1,5 @@
-FROM quay.io/pypa/manylinux_2_28_x86_64
+ARG MANYLINUX_IMAGE=quay.io/pypa/manylinux_2_28_x86_64
+FROM ${MANYLINUX_IMAGE}
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG HOME=/root

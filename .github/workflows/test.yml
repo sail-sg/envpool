@@ -8,7 +8,18 @@ on:
 
 jobs:
   test-linux:
-    runs-on: ubuntu-24.04
+    name: Test (${{ matrix.name }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x64
+            runner: ubuntu-24.04
+            bazel-test-targets: //...
+          - name: linux-arm64
+            runner: ubuntu-24.04-arm
+            bazel-test-targets: //...
     timeout-minutes: 120
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
@@ -37,7 +48,10 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-tidy-18 swig qtbase5-dev qtdeclarative5-dev
+          sudo apt-get install -y clang-tidy-18 cmake ninja-build swig qtbase5-dev qtdeclarative5-dev
+          qmake_bin="$(command -v qmake-qt5 || command -v qmake)"
+          qt_include_dir="$("$qmake_bin" -query QT_INSTALL_HEADERS)"
+          sudo ln -sfn "$qt_include_dir" /usr/include/qt
       - name: Restore Bazel caches
         uses: actions/cache/restore@v4
         with:
@@ -55,7 +69,8 @@ jobs:
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Test
         run: |
-          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" bazel-test
+          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" \
+            BAZEL_TEST_TARGETS="${{ matrix.bazel-test-targets }}" bazel-test
       - name: Save Bazel caches
         if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
@@ -66,6 +81,7 @@ jobs:
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
   test-macos:
+    name: Test (macos)
     runs-on: macos-14
     timeout-minutes: 120
     env:
@@ -93,7 +109,9 @@ jobs:
           python-version: "3.12"
       - name: Install macOS dependencies
         run: |
-          brew install swig qt@5
+          brew install cmake ninja swig qt@5
+          sudo ln -sfn "$(brew --prefix cmake)/bin/cmake" /usr/local/bin/cmake
+          sudo ln -sfn "$(brew --prefix ninja)/bin/ninja" /usr/local/bin/ninja
           echo "BAZEL_RULES_QT_DIR=$(brew --prefix qt@5)" >> "$GITHUB_ENV"
       - name: Restore Bazel caches
         uses: actions/cache/restore@v4
@@ -123,6 +141,7 @@ jobs:
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
   test-windows:
+    name: Test (windows)
     runs-on: windows-2022
     timeout-minutes: 120
     env:
@@ -151,7 +170,7 @@ jobs:
       - name: Install Windows dependencies
         shell: pwsh
         run: |
-          choco install -y make ninja strawberryperl swig
+          choco install -y cmake make ninja strawberryperl swig
       - name: Install Qt 5
         uses: jurplel/install-qt-action@v4
         with:

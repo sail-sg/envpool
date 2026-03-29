@@ -1,9 +1,9 @@
 Build From Source
 =================
 
-We recommend developing EnvPool on Ubuntu 24.04. Release wheels are built in a
-``manylinux_2_28_x86_64`` environment for Linux, on ``macos-14`` for macOS,
-and on ``windows-2022`` for Windows.
+We recommend developing EnvPool on Ubuntu 24.04. Release wheels are built in
+``manylinux_2_28_x86_64`` and ``manylinux_2_28_aarch64`` environments for
+Linux, on ``macos-14`` for macOS, and on ``windows-2022`` for Windows.
 
 We use `bazel <https://bazel.build/>`_ to build EnvPool. Comparing with
 `pip <https://pip.pypa.io/>`_, using Bazel to build python package with C++ .so
@@ -88,11 +88,11 @@ install the required development packages:
 .. code-block:: bash
 
     sudo apt install -y build-essential openjdk-17-jdk python3-dev \
-      python3-pip python-is-python3 golang-go swig qtbase5-dev \
+      python3-pip python-is-python3 golang-go cmake ninja-build swig qtbase5-dev \
       qtdeclarative5-dev
 
     # Some Bazel Qt rules still look for this legacy include path.
-    sudo ln -sf /usr/include/x86_64-linux-gnu/qt5 /usr/include/qt
+    sudo ln -sf "$(qmake -query QT_INSTALL_HEADERS)" /usr/include/qt
 
 macOS
 ^^^^^
@@ -103,7 +103,9 @@ dependencies with Homebrew:
 .. code-block:: bash
 
     xcode-select --install
-    brew install go openjdk@17 swig qt@5
+    brew install go openjdk@17 cmake ninja swig qt@5
+    sudo ln -sf "$(brew --prefix cmake)/bin/cmake" /usr/local/bin/cmake
+    sudo ln -sf "$(brew --prefix ninja)/bin/ninja" /usr/local/bin/ninja
 
     export PATH="$(brew --prefix openjdk@17)/bin:$PATH"
     export BAZEL_RULES_QT_DIR="$(brew --prefix qt@5)"
@@ -125,7 +127,7 @@ environment variables:
 
 .. code-block:: powershell
 
-    choco install -y make ninja strawberryperl swig
+    choco install -y cmake make ninja strawberryperl swig
     $env:BAZEL_SH = "C:/Program Files/Git/usr/bin/bash.exe"
     $env:QT_ROOT_DIR = "C:/Qt/5.15.2/msvc2019_64"
     $env:BAZEL_RULES_QT_DIR = $env:QT_ROOT_DIR
