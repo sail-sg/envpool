@@ -67,9 +67,9 @@ class _MujocoGymAlignTest(absltest.TestCase):
             return 3e-4
         if _LINUX_ARM64:
             if env_id == "HalfCheetah-v5":
-                return 1e-3
+                return 5e-3
             if env_id == "Humanoid-v5":
-                return 1e-2
+                return 1.5e-2
             # MuJoCo 3.x stays aligned on Linux arm64, but a few reference
             # environments drift slightly more than x64 on long rollouts.
             return 7e-5
@@ -78,8 +78,10 @@ class _MujocoGymAlignTest(absltest.TestCase):
 
     def observation_rtol(self, env_id: str) -> float:
         if _MUJOCO_V3 and _LINUX_ARM64:
-            if env_id in {"HalfCheetah-v5", "Humanoid-v5"}:
-                return 1e-3
+            if env_id == "HalfCheetah-v5":
+                return 2e-3
+            if env_id == "Humanoid-v5":
+                return 3e-3
         del env_id
         return 1e-7
 

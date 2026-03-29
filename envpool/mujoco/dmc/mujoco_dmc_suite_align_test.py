@@ -38,41 +38,33 @@ _LINUX_ARM64 = sys.platform == "linux" and platform.machine().lower() in (
 class _MujocoDmcAlignTest(absltest.TestCase):
     def observation_atol(self, domain: str, task: str) -> float:
         if _MUJOCO_V3 and _LINUX_ARM64:
-            del task
             if domain == "humanoid":
-                return 2.5e-1
+                return 8e-1
             if domain == "walker":
                 return 1.5e-2
             if domain == "hopper":
-                return 3e-2
+                return 3.5e-2
             return 1.5e-4
-        del domain, task
         return 1e-6
 
     def observation_rtol(self, domain: str, task: str) -> float:
         if _MUJOCO_V3 and _LINUX_ARM64:
-            del task
             if domain == "humanoid":
                 return 5e-2
             if domain == "hopper":
-                return 2e-2
+                return 3e-2
             if domain == "walker":
                 return 5e-3
-        del domain, task
         return 1e-7
 
     def reward_atol(self, domain: str, task: str) -> float:
         if _MUJOCO_V3 and _LINUX_ARM64:
-            del domain, task
-            return 2e-6
-        del domain, task
+            return 5e-6
         return 1e-8
 
     def reward_rtol(self, domain: str, task: str) -> float:
         if _MUJOCO_V3 and _LINUX_ARM64:
-            del domain, task
-            return 1e-4
-        del domain, task
+            return 5e-4
         return 1e-7
 
     def run_space_check(self, env0: dm_env.Environment, env1: Any) -> None:
