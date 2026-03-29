@@ -39,6 +39,8 @@ jobs:
       - name: Install macOS dependencies
         run: |
           brew install cmake ninja swig qt@5
+          sudo ln -sfn "$(brew --prefix cmake)/bin/cmake" /usr/local/bin/cmake
+          sudo ln -sfn "$(brew --prefix ninja)/bin/ninja" /usr/local/bin/ninja
           echo "BAZEL_RULES_QT_DIR=$(brew --prefix qt@5)" >> "$GITHUB_ENV"
       - name: Install bazelisk
         run: |

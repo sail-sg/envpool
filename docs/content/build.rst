@@ -104,6 +104,8 @@ dependencies with Homebrew:
 
     xcode-select --install
     brew install go openjdk@17 cmake ninja swig qt@5
+    sudo ln -sf "$(brew --prefix cmake)/bin/cmake" /usr/local/bin/cmake
+    sudo ln -sf "$(brew --prefix ninja)/bin/ninja" /usr/local/bin/ninja
 
     export PATH="$(brew --prefix openjdk@17)/bin:$PATH"
     export BAZEL_RULES_QT_DIR="$(brew --prefix qt@5)"
