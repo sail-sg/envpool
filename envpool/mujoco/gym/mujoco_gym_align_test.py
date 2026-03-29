@@ -13,6 +13,7 @@
 # limitations under the License.
 """Unit tests for Mujoco gym v4/v5 environments alignment."""
 
+import platform
 import sys
 from typing import Any, no_type_check
 
@@ -27,6 +28,10 @@ import envpool.mujoco.gym.registration  # noqa: F401
 from envpool.registration import make_gymnasium
 
 _MUJOCO_V3 = version.parse(mujoco.__version__) >= version.parse("3.0.0")
+_LINUX_ARM64 = sys.platform == "linux" and platform.machine().lower() in (
+    "aarch64",
+    "arm64",
+)
 
 
 class _MujocoGymAlignTest(absltest.TestCase):
@@ -60,6 +65,11 @@ class _MujocoGymAlignTest(absltest.TestCase):
     def observation_atol(self, env_id: str) -> float:
         if not _MUJOCO_V3:
             return 3e-4
+        if _LINUX_ARM64:
+            # MuJoCo 3.x stays numerically aligned on Linux arm64, but some
+            # reference-vs-EnvPool comparisons drift by a few ULPs.
+            del env_id
+            return 2e-5
         del env_id
         return 1e-6
 

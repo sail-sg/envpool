@@ -20,6 +20,14 @@ config_setting(
     constraint_values = ["@platforms//os:macos"],
 )
 
+config_setting(
+    name = "linux_x86_64",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+)
+
 cc_binary(
     name = "arithchk",
     srcs = [
@@ -939,12 +947,12 @@ cc_binary(
         ],
     }) + select({
         "@envpool//:windows": [],
-        ":darwin": [],
-        "//conditions:default": [
+        ":linux_x86_64": [
             "-msse",
             "-msse2",
             "-mmmx",
         ],
+        "//conditions:default": [],
     }),
     data = [
         ":vizdoom_pk3",

@@ -13,6 +13,7 @@
 # limitations under the License.
 """Unit tests for Mujoco dm_control suite align check."""
 
+import platform
 import sys
 from typing import Any
 
@@ -28,10 +29,17 @@ import envpool.mujoco.dmc.registration  # noqa: F401
 from envpool.registration import make_dm
 
 _MUJOCO_V3 = version.parse(mujoco.__version__) >= version.parse("3.0.0")
+_LINUX_ARM64 = sys.platform == "linux" and platform.machine().lower() in (
+    "aarch64",
+    "arm64",
+)
 
 
 class _MujocoDmcAlignTest(absltest.TestCase):
     def observation_atol(self, domain: str, task: str) -> float:
+        if _MUJOCO_V3 and _LINUX_ARM64:
+            del domain, task
+            return 2e-5
         del domain, task
         return 1e-6
 

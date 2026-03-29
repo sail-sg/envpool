@@ -17,12 +17,9 @@ jobs:
           - name: linux-x64
             runner: ubuntu-24.04
             bazel-test-targets: //...
-          # Linux arm64 still has known gaps in Gymnasium Box2D and VizDoom's
-          # third-party x86 SIMD setup, plus MuJoCo alignment drift versus the
-          # x86 reference envs, so keep the rest of the Bazel suite on.
           - name: linux-arm64
             runner: ubuntu-24.04-arm
-            bazel-test-targets: //envpool/atari/... //envpool/box2d/... //envpool/classic_control/... //envpool/core/... //envpool/dummy/... //envpool/minigrid/... //envpool/mujoco/... //envpool/procgen/... //envpool/toy_text/... //envpool/utils/... -//envpool/box2d:box2d_correctness_test -//envpool/mujoco:mujoco_dmc_suite_align_test -//envpool/mujoco:mujoco_dmc_suite_ext_align_test -//envpool/mujoco:mujoco_gym_align_test
+            bazel-test-targets: //...
     timeout-minutes: 120
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}

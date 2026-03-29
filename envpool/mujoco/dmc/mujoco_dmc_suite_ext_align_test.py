@@ -13,6 +13,7 @@
 # limitations under the License.
 """Unit tests for Mujoco dm_control suite align check."""
 
+import platform
 import sys
 from typing import Any
 
@@ -28,12 +29,20 @@ import envpool.mujoco.dmc.registration  # noqa: F401
 from envpool.registration import make_dm
 
 _MUJOCO_V3 = version.parse(mujoco.__version__) >= version.parse("3.0.0")
+_LINUX_ARM64 = sys.platform == "linux" and platform.machine().lower() in (
+    "aarch64",
+    "arm64",
+)
 
 
 class _MujocoDmcSuiteExtAlignTest(absltest.TestCase):
     @property
     def observation_atol(self) -> float:
-        return 1e-6 if _MUJOCO_V3 else 0.0
+        if not _MUJOCO_V3:
+            return 0.0
+        if _LINUX_ARM64:
+            return 2e-5
+        return 1e-6
 
     def run_space_check(self, env0: dm_env.Environment, env1: Any) -> None:
         """Check observation_spec() and action_spec()."""

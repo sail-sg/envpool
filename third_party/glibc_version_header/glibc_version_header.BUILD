@@ -18,14 +18,17 @@ exports_files(
 )
 
 config_setting(
-    name = "linux",
-    constraint_values = ["@platforms//os:linux"],
+    name = "linux_x86_64",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
 )
 
 filegroup(
     name = "glibc_2_17",
     srcs = select({
-        ":linux": ["force_link_glibc_2.17.h"],
+        ":linux_x86_64": ["force_link_glibc_2.17.h"],
         "//conditions:default": ["@envpool//third_party/glibc_version_header:noop.h"],
     }),
     visibility = ["//visibility:public"],
