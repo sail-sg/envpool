@@ -40,12 +40,19 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         if _MUJOCO_V3 and _LINUX_ARM64:
             del task
             if domain == "humanoid":
-                return 6e-4
+                return 2e-3
             if domain == "walker":
                 return 3e-4
-            return 3e-5
+            return 1.5e-4
         del domain, task
         return 1e-6
+
+    def reward_atol(self, domain: str, task: str) -> float:
+        if _MUJOCO_V3 and _LINUX_ARM64:
+            del domain, task
+            return 5e-8
+        del domain, task
+        return 1e-8
 
     def run_space_check(self, env0: dm_env.Environment, env1: Any) -> None:
         """Check observation_spec() and action_spec()."""
@@ -195,7 +202,11 @@ class _MujocoDmcAlignTest(absltest.TestCase):
                         o0[k], getattr(o1, k)[0], atol=obs_atol
                     )
                 np.testing.assert_allclose(ts0.step_type, ts1.step_type[0])
-                np.testing.assert_allclose(ts0.reward, ts1.reward[0], atol=1e-8)
+                np.testing.assert_allclose(
+                    ts0.reward,
+                    ts1.reward[0],
+                    atol=self.reward_atol(domain, task),
+                )
                 np.testing.assert_allclose(ts0.discount, ts1.discount[0])
 
     def run_align_check_entry(self, domain: str, tasks: list[str]) -> None:

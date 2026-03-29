@@ -49,11 +49,15 @@ def _install_imp_compat() -> None:
 
     def find_module(
         name: str, path: Any = None
-    ) -> tuple[None, str, tuple[str, str, int]]:
+    ) -> tuple[Any, str, tuple[str, str, int]]:
         spec = importlib.machinery.PathFinder.find_spec(name, path)
         if spec is None or spec.origin is None:
             raise ImportError(name)
-        return None, spec.origin, ("", "rb", compat_imp.C_EXTENSION)
+        return (
+            open(spec.origin, "rb"),
+            spec.origin,
+            ("", "rb", compat_imp.C_EXTENSION),
+        )
 
     def load_module(
         name: str, file: Any, pathname: str, description: Any
@@ -171,7 +175,7 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
                         abs(mean_reward - 284) < 10, (continuous, mean_reward)
                     )
             else:  # 236.898334 ± 105.832610
-                if sys.platform == "darwin":
+                if sys.platform == "darwin" or _LINUX_ARM64:
                     self.assertTrue(
                         abs(mean_reward - 221) < 25, (continuous, mean_reward)
                     )

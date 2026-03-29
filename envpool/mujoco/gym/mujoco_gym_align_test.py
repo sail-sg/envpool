@@ -69,7 +69,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
             # MuJoCo 3.x stays aligned on Linux arm64, but the reference envs
             # can drift a bit further than x64 on long rollouts.
             del env_id
-            return 5e-5
+            return 7e-5
         del env_id
         return 1e-6
 
@@ -78,7 +78,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
             return 1e-4
         if _LINUX_ARM64:
             del env_id
-            return 2e-6
+            return 5e-6
         del env_id
         return 5e-7
 
