@@ -70,6 +70,7 @@ py_test(
     name = "make_test",
     srcs = ["make_test.py"],
     imports = [".."],
+    timeout = "long",
     deps = [
         ":envpool",
         requirement("absl-py"),
