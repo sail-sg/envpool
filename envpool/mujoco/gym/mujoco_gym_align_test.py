@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Unit tests for Mujoco gym v4/v5 environments alignment."""
+
 import sys
 from typing import Any, no_type_check
 
