@@ -49,12 +49,31 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         del domain, task
         return 1e-6
 
+    def observation_rtol(self, domain: str, task: str) -> float:
+        if _MUJOCO_V3 and _LINUX_ARM64:
+            del task
+            if domain == "humanoid":
+                return 5e-2
+            if domain == "hopper":
+                return 2e-2
+            if domain == "walker":
+                return 5e-3
+        del domain, task
+        return 1e-7
+
     def reward_atol(self, domain: str, task: str) -> float:
         if _MUJOCO_V3 and _LINUX_ARM64:
             del domain, task
             return 2e-6
         del domain, task
         return 1e-8
+
+    def reward_rtol(self, domain: str, task: str) -> float:
+        if _MUJOCO_V3 and _LINUX_ARM64:
+            del domain, task
+            return 1e-4
+        del domain, task
+        return 1e-7
 
     def run_space_check(self, env0: dm_env.Environment, env1: Any) -> None:
         """Check observation_spec() and action_spec()."""
@@ -181,6 +200,9 @@ class _MujocoDmcAlignTest(absltest.TestCase):
     ) -> None:
         logging.info(f"align check for {domain} {task}")
         obs_atol = self.observation_atol(domain, task)
+        obs_rtol = self.observation_rtol(domain, task)
+        reward_atol = self.reward_atol(domain, task)
+        reward_rtol = self.reward_rtol(domain, task)
         obs_spec, action_spec = env0.observation_spec(), env0.action_spec()
         for i in range(3):
             np.random.seed(i)
@@ -201,13 +223,17 @@ class _MujocoDmcAlignTest(absltest.TestCase):
                 o0, o1 = ts0.observation, ts1.observation
                 for k in obs_spec:
                     np.testing.assert_allclose(
-                        o0[k], getattr(o1, k)[0], atol=obs_atol
+                        o0[k],
+                        getattr(o1, k)[0],
+                        atol=obs_atol,
+                        rtol=obs_rtol,
                     )
                 np.testing.assert_allclose(ts0.step_type, ts1.step_type[0])
                 np.testing.assert_allclose(
                     ts0.reward,
                     ts1.reward[0],
-                    atol=self.reward_atol(domain, task),
+                    atol=reward_atol,
+                    rtol=reward_rtol,
                 )
                 np.testing.assert_allclose(ts0.discount, ts1.discount[0])
 

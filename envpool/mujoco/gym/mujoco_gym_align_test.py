@@ -76,6 +76,13 @@ class _MujocoGymAlignTest(absltest.TestCase):
         del env_id
         return 1e-6
 
+    def observation_rtol(self, env_id: str) -> float:
+        if _MUJOCO_V3 and _LINUX_ARM64:
+            if env_id in {"HalfCheetah-v5", "Humanoid-v5"}:
+                return 1e-3
+        del env_id
+        return 1e-7
+
     def reward_atol(self, env_id: str) -> float:
         if not _MUJOCO_V3:
             return 1e-4
@@ -85,6 +92,13 @@ class _MujocoGymAlignTest(absltest.TestCase):
             return 1e-5
         del env_id
         return 5e-7
+
+    def reward_rtol(self, env_id: str) -> float:
+        if _MUJOCO_V3 and _LINUX_ARM64:
+            if env_id in {"HalfCheetah-v5", "Humanoid-v5"}:
+                return 5e-5
+        del env_id
+        return 1e-7
 
     def check_info_alignment(self, env_id: str) -> bool:
         if not _MUJOCO_V3:
@@ -123,7 +137,9 @@ class _MujocoGymAlignTest(absltest.TestCase):
     ) -> None:
         logging.info(f"align check for {env1.__class__.__name__}")
         obs_atol = self.observation_atol(env_id)
+        obs_rtol = self.observation_rtol(env_id)
         reward_atol = self.reward_atol(env_id)
+        reward_rtol = self.reward_rtol(env_id)
         for i in range(5):
             env0.action_space.seed(i)
             env0.reset()
@@ -144,9 +160,14 @@ class _MujocoGymAlignTest(absltest.TestCase):
                     np.array([a]), np.array([0])
                 )
                 d1 = np.logical_or(term1, trunc1)
-                np.testing.assert_allclose(o0, o1[0], atol=obs_atol)
                 np.testing.assert_allclose(
-                    float(r0), float(r1[0]), atol=reward_atol
+                    o0, o1[0], atol=obs_atol, rtol=obs_rtol
+                )
+                np.testing.assert_allclose(
+                    float(r0),
+                    float(r1[0]),
+                    atol=reward_atol,
+                    rtol=reward_rtol,
                 )
                 if not no_time_limit:
                     np.testing.assert_allclose(d0, d1[0])

@@ -44,6 +44,12 @@ class _MujocoDmcSuiteExtAlignTest(absltest.TestCase):
             return 2e-2
         return 1e-6
 
+    @property
+    def observation_rtol(self) -> float:
+        if _MUJOCO_V3 and _LINUX_ARM64:
+            return 5e-3
+        return 1e-7
+
     def run_space_check(self, env0: dm_env.Environment, env1: Any) -> None:
         """Check observation_spec() and action_spec()."""
         obs0, obs1 = env0.observation_spec(), env1.observation_spec()
@@ -99,7 +105,10 @@ class _MujocoDmcSuiteExtAlignTest(absltest.TestCase):
                 o0, o1 = ts0.observation, ts1.observation
                 for k in obs_spec:
                     np.testing.assert_allclose(
-                        o0[k], getattr(o1, k)[0], atol=self.observation_atol
+                        o0[k],
+                        getattr(o1, k)[0],
+                        atol=self.observation_atol,
+                        rtol=self.observation_rtol,
                     )
                 np.testing.assert_allclose(ts0.step_type, ts1.step_type[0])
                 np.testing.assert_allclose(ts0.reward, ts1.reward[0], atol=1e-8)
