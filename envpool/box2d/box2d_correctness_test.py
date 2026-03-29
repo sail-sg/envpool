@@ -44,8 +44,8 @@ def _install_imp_compat() -> None:
     except ModuleNotFoundError:
         pass
 
-    imp = types.ModuleType("imp")
-    imp.C_EXTENSION = 3
+    compat_imp: Any = types.ModuleType("imp")
+    compat_imp.C_EXTENSION = 3
 
     def find_module(
         name: str, path: Any = None
@@ -53,7 +53,7 @@ def _install_imp_compat() -> None:
         spec = importlib.machinery.PathFinder.find_spec(name, path)
         if spec is None or spec.origin is None:
             raise ImportError(name)
-        return None, spec.origin, ("", "rb", imp.C_EXTENSION)
+        return None, spec.origin, ("", "rb", compat_imp.C_EXTENSION)
 
     def load_module(
         name: str, file: Any, pathname: str, description: Any
@@ -70,9 +70,9 @@ def _install_imp_compat() -> None:
         spec.loader.exec_module(module)
         return module
 
-    imp.find_module = find_module
-    imp.load_module = load_module
-    sys.modules["imp"] = imp
+    compat_imp.find_module = find_module
+    compat_imp.load_module = load_module
+    sys.modules["imp"] = compat_imp
 
 
 _install_imp_compat()
