@@ -115,17 +115,12 @@ class _MujocoGymAlignTest(absltest.TestCase):
         return False
 
     def max_align_steps(self, env_id: str) -> int | None:
-        if (
-            _MUJOCO_V3
-            and _LINUX_ARM64
-            and env_id
-            in {
-                "HalfCheetah-v5",
-                "Humanoid-v5",
-            }
-        ):
+        if _MUJOCO_V3 and _LINUX_ARM64:
             # Long rollouts accumulate small physics drift on Linux arm64.
-            return 128
+            if env_id == "HalfCheetah-v5":
+                return 64
+            if env_id == "Humanoid-v5":
+                return 128
         del env_id
         return None
 
