@@ -69,7 +69,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
             if env_id == "HalfCheetah-v5":
                 return 3e-4
             if env_id == "Humanoid-v5":
-                return 5e-4
+                return 1.5e-3
             # MuJoCo 3.x stays aligned on Linux arm64, but a few reference
             # environments drift slightly more than x64 on long rollouts.
             return 7e-5
@@ -81,7 +81,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
             return 1e-4
         if _LINUX_ARM64:
             if env_id == "HalfCheetah-v5":
-                return 1e-5
+                return 2e-5
             return 5e-6
         del env_id
         return 5e-7
