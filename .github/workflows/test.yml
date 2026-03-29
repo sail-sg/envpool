@@ -8,7 +8,16 @@ on:
 
 jobs:
   test-linux:
-    runs-on: ubuntu-24.04
+    name: Test (${{ matrix.name }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x64
+            runner: ubuntu-24.04
+          - name: linux-arm64
+            runner: ubuntu-24.04-arm
     timeout-minutes: 120
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
@@ -38,6 +47,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y clang-tidy-18 swig qtbase5-dev qtdeclarative5-dev
+          qmake_bin="$(command -v qmake-qt5 || command -v qmake)"
+          qt_include_dir="$("$qmake_bin" -query QT_INSTALL_HEADERS)"
+          sudo ln -sfn "$qt_include_dir" /usr/include/qt
       - name: Restore Bazel caches
         uses: actions/cache/restore@v4
         with:
