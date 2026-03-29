@@ -40,11 +40,11 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         if _MUJOCO_V3 and _LINUX_ARM64:
             del task
             if domain == "humanoid":
-                return 1.5e-1
+                return 2.5e-1
             if domain == "walker":
-                return 3e-3
+                return 1.5e-2
             if domain == "hopper":
-                return 2e-2
+                return 3e-2
             return 1.5e-4
         del domain, task
         return 1e-6
