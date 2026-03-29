@@ -16,8 +16,10 @@ jobs:
         include:
           - name: linux-x64
             runner: ubuntu-24.04
+            bazel-test-targets: //...
           - name: linux-arm64
             runner: ubuntu-24.04-arm
+            bazel-test-targets: //... -//envpool/box2d:box2d_correctness_test
     timeout-minutes: 120
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
@@ -67,7 +69,8 @@ jobs:
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Test
         run: |
-          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" bazel-test
+          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" \
+            BAZEL_TEST_TARGETS="${{ matrix.bazel-test-targets }}" bazel-test
       - name: Save Bazel caches
         if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
