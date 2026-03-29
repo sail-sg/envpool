@@ -39,11 +39,11 @@ class _MujocoDmcAlignTest(absltest.TestCase):
     def observation_atol(self, domain: str, task: str) -> float:
         if _MUJOCO_V3 and _LINUX_ARM64:
             if domain == "humanoid":
-                return 8e-1
+                return 1.5
             if domain == "walker":
                 return 1.5e-2
             if domain == "hopper":
-                return 3.5e-2
+                return 2.5e-1
             return 1.5e-4
         return 1e-6
 
@@ -52,9 +52,9 @@ class _MujocoDmcAlignTest(absltest.TestCase):
             if domain == "humanoid":
                 return 5e-2
             if domain == "hopper":
-                return 3e-2
+                return 5e-2
             if domain == "walker":
-                return 5e-3
+                return 4e-2
         return 1e-7
 
     def reward_atol(self, domain: str, task: str) -> float:

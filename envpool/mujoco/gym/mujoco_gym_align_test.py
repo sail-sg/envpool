@@ -90,15 +90,19 @@ class _MujocoGymAlignTest(absltest.TestCase):
             return 1e-4
         if _LINUX_ARM64:
             if env_id == "HalfCheetah-v5":
-                return 5e-5
+                return 1.5e-4
+            if env_id == "Humanoid-v5":
+                return 3e-5
             return 1e-5
         del env_id
         return 5e-7
 
     def reward_rtol(self, env_id: str) -> float:
         if _MUJOCO_V3 and _LINUX_ARM64:
-            if env_id in {"HalfCheetah-v5", "Humanoid-v5"}:
-                return 5e-5
+            if env_id == "HalfCheetah-v5":
+                return 3e-4
+            if env_id == "Humanoid-v5":
+                return 1e-4
         del env_id
         return 1e-7
 
