@@ -55,7 +55,9 @@ def _install_imp_compat() -> None:
             raise ImportError(name)
         return None, spec.origin, ("", "rb", imp.C_EXTENSION)
 
-    def load_module(name: str, file: Any, pathname: str, description: Any) -> Any:
+    def load_module(
+        name: str, file: Any, pathname: str, description: Any
+    ) -> Any:
         del file, description
         module = sys.modules.get(name)
         if module is not None:
