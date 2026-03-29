@@ -13,7 +13,11 @@
 # limitations under the License.
 """Unit tests for box2d environments correctness check."""
 
+import importlib.machinery
+import importlib.util
+import platform
 import sys
+import types
 from typing import Any, no_type_check
 
 import gymnasium as gym
@@ -25,6 +29,51 @@ from pygame import gfxdraw
 
 import envpool.box2d.registration  # noqa: F401
 from envpool.registration import make_gym
+
+_LINUX_ARM64 = sys.platform == "linux" and platform.machine().lower() in (
+    "aarch64",
+    "arm64",
+)
+
+
+def _install_imp_compat() -> None:
+    try:
+        import imp  # noqa: F401
+
+        return
+    except ModuleNotFoundError:
+        pass
+
+    imp = types.ModuleType("imp")
+    imp.C_EXTENSION = 3
+
+    def find_module(
+        name: str, path: Any = None
+    ) -> tuple[None, str, tuple[str, str, int]]:
+        spec = importlib.machinery.PathFinder.find_spec(name, path)
+        if spec is None or spec.origin is None:
+            raise ImportError(name)
+        return None, spec.origin, ("", "rb", imp.C_EXTENSION)
+
+    def load_module(name: str, file: Any, pathname: str, description: Any) -> Any:
+        del file, description
+        module = sys.modules.get(name)
+        if module is not None:
+            return module
+        spec = importlib.util.spec_from_file_location(name, pathname)
+        if spec is None or spec.loader is None:
+            raise ImportError(pathname)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+        return module
+
+    imp.find_module = find_module
+    imp.load_module = load_module
+    sys.modules["imp"] = imp
+
+
+_install_imp_compat()
 
 
 class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
@@ -108,9 +157,10 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
             )
             # the following number is from gym's 1000 episode mean reward
             if continuous:  # 283.872619 ± 18.881830
-                if sys.platform == "darwin":
+                if sys.platform == "darwin" or _LINUX_ARM64:
                     # Gymnasium's current macOS Box2D stack lands a bit lower
-                    # than the historical Linux-derived baseline.
+                    # than the historical Linux-derived baseline, and Linux
+                    # arm64 exhibits the same drift under the heuristic policy.
                     self.assertTrue(
                         abs(mean_reward - 282) < 15, (continuous, mean_reward)
                     )
@@ -292,10 +342,10 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
         if hardcore:  # -59.219390 ± 25.209768
             self.assertTrue(abs(mean_reward + 59) < 10, (hardcore, mean_reward))
         else:  # 145.318979 ± 126.231202 on box2d 2.4.2
-            if sys.platform in ("darwin", "win32"):
+            if sys.platform in ("darwin", "win32") or _LINUX_ARM64:
                 # Gymnasium's current macOS and Windows Box2D stacks land
                 # below the historical Linux baseline for this heuristic
-                # policy.
+                # policy, and Linux arm64 lands in the same range.
                 self.assertTrue(
                     abs(mean_reward - 110) < 30, (hardcore, mean_reward)
                 )

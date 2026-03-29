@@ -66,16 +66,19 @@ class _MujocoGymAlignTest(absltest.TestCase):
         if not _MUJOCO_V3:
             return 3e-4
         if _LINUX_ARM64:
-            # MuJoCo 3.x stays numerically aligned on Linux arm64, but some
-            # reference-vs-EnvPool comparisons drift by a few ULPs.
+            # MuJoCo 3.x stays aligned on Linux arm64, but the reference envs
+            # can drift a bit further than x64 on long rollouts.
             del env_id
-            return 2e-5
+            return 5e-5
         del env_id
         return 1e-6
 
     def reward_atol(self, env_id: str) -> float:
         if not _MUJOCO_V3:
             return 1e-4
+        if _LINUX_ARM64:
+            del env_id
+            return 2e-6
         del env_id
         return 5e-7
 

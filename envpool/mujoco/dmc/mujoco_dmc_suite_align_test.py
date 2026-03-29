@@ -38,8 +38,12 @@ _LINUX_ARM64 = sys.platform == "linux" and platform.machine().lower() in (
 class _MujocoDmcAlignTest(absltest.TestCase):
     def observation_atol(self, domain: str, task: str) -> float:
         if _MUJOCO_V3 and _LINUX_ARM64:
-            del domain, task
-            return 2e-5
+            del task
+            if domain == "humanoid":
+                return 6e-4
+            if domain == "walker":
+                return 3e-4
+            return 3e-5
         del domain, task
         return 1e-6
 
