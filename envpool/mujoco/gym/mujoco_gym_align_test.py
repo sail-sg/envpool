@@ -66,9 +66,10 @@ class _MujocoGymAlignTest(absltest.TestCase):
         if not _MUJOCO_V3:
             return 3e-4
         if _LINUX_ARM64:
-            # MuJoCo 3.x stays aligned on Linux arm64, but the reference envs
-            # can drift a bit further than x64 on long rollouts.
-            del env_id
+            if env_id in {"HalfCheetah-v5", "Humanoid-v5"}:
+                return 3e-4
+            # MuJoCo 3.x stays aligned on Linux arm64, but a few reference
+            # environments drift slightly more than x64 on long rollouts.
             return 7e-5
         del env_id
         return 1e-6

@@ -16,8 +16,10 @@
 import importlib.machinery
 import importlib.util
 import platform
+import re
 import sys
 import types
+from pathlib import Path
 from typing import Any, no_type_check
 
 import gymnasium as gym
@@ -34,6 +36,23 @@ _LINUX_ARM64 = sys.platform == "linux" and platform.machine().lower() in (
     "aarch64",
     "arm64",
 )
+_BOX2D_SWIGCONSTANT_RE = re.compile(r"_Box2D\.(\w+_swigconstant)\(")
+
+
+def _patch_box2d_swigconstant_shims(module: Any, pathname: str) -> None:
+    wrapper_path = Path(pathname).with_name("Box2D.py")
+    try:
+        names = set(_BOX2D_SWIGCONSTANT_RE.findall(wrapper_path.read_text()))
+    except OSError:
+        return
+    for attr in names:
+        if not hasattr(module, attr):
+            # Box2D 2.3.2 ships a stale Python wrapper on Linux arm64, while
+            # the source build regenerates only the C extension with modern
+            # SWIG. The newer extension already exposes the constants
+            # directly, so the legacy *_swigconstant hooks can be harmless
+            # no-ops.
+            setattr(module, attr, lambda _target, _attr=attr: None)
 
 
 def _install_imp_compat() -> None:
@@ -72,6 +91,8 @@ def _install_imp_compat() -> None:
         module = importlib.util.module_from_spec(spec)
         sys.modules[name] = module
         spec.loader.exec_module(module)
+        if name == "_Box2D":
+            _patch_box2d_swigconstant_shims(module, pathname)
         return module
 
     compat_imp.find_module = find_module
