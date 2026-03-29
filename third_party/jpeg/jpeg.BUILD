@@ -117,7 +117,8 @@ cc_library(
         ":k8": [":simd_x86_64"],
         ":armeabi-v7a": [":simd_armv7a"],
         ":arm64-v8a": [":simd_armv8a"],
-        ":darwin_arm64": [":simd_armv8a_darwin"],
+        ":darwin_arm64": [":simd_armv8a_intrinsics"],
+        ":linux_arm64": [":simd_armv8a_intrinsics"],
         ":linux_ppc64le": [":simd_altivec"],
         ":windows": [":simd_win_x86_64"],
         "//conditions:default": [":simd_none"],
@@ -380,7 +381,7 @@ template_rule(
 )
 
 cc_library(
-    name = "simd_armv8a_darwin",
+    name = "simd_armv8a_intrinsics",
     srcs = ["src/" + path for path in [
         "jchuff.h",
         "jdct.h",
@@ -751,6 +752,7 @@ genrule(
         ":armeabi-v7a": "cp $(location jconfig_nowin_simd.h) $@",
         ":arm64-v8a": "cp $(location jconfig_nowin_simd.h) $@",
         ":darwin_arm64": "cp $(location jconfig_nowin_simd.h) $@",
+        ":linux_arm64": "cp $(location jconfig_nowin_simd.h) $@",
         ":linux_ppc64le": "cp $(location jconfig_nowin_simd.h) $@",
         "//conditions:default": "cp $(location jconfig_nowin_nosimd.h) $@",
     }),
@@ -770,6 +772,7 @@ genrule(
         ":armeabi-v7a": "cp $(location jconfigint_nowin_simd.h) $@",
         ":arm64-v8a": "cp $(location jconfigint_nowin_simd.h) $@",
         ":darwin_arm64": "cp $(location jconfigint_nowin_simd.h) $@",
+        ":linux_arm64": "cp $(location jconfigint_nowin_simd.h) $@",
         ":linux_ppc64le": "cp $(location jconfigint_nowin_simd.h) $@",
         "//conditions:default": "cp $(location jconfigint_nowin_nosimd.h) $@",
     }),
@@ -870,6 +873,14 @@ config_setting(
     constraint_values = [
         "@platforms//cpu:arm64",
         "@platforms//os:macos",
+    ],
+)
+
+config_setting(
+    name = "linux_arm64",
+    constraint_values = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:linux",
     ],
 )
 
