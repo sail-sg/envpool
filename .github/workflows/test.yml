@@ -21,7 +21,7 @@ jobs:
           # third-party x86 SIMD setup, so keep the rest of the Bazel suite on.
           - name: linux-arm64
             runner: ubuntu-24.04-arm
-            bazel-test-targets: //... -//envpool/box2d:box2d_correctness_test -//envpool:entry -//envpool:envpool -//envpool:make_test -//envpool/vizdoom/...
+            bazel-test-targets: //envpool/atari/... //envpool/box2d/... //envpool/classic_control/... //envpool/core/... //envpool/dummy/... //envpool/minigrid/... //envpool/mujoco/... //envpool/procgen/... //envpool/toy_text/... //envpool/utils/... -//envpool/box2d:box2d_correctness_test
     timeout-minutes: 120
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
