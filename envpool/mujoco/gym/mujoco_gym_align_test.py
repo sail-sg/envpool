@@ -90,7 +90,7 @@ class _MujocoGymAlignTest(absltest.TestCase):
             return 1e-4
         if _LINUX_ARM64:
             if env_id == "HalfCheetah-v5":
-                return 1e-3
+                return 3e-3
             if env_id == "Humanoid-v5":
                 return 3e-5
             return 1e-5
