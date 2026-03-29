@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Unit tests for Mujoco gym v4/v5 environments alignment."""
-
-import platform
 import sys
 from typing import Any, no_type_check
 
@@ -28,7 +26,6 @@ import envpool.mujoco.gym.registration  # noqa: F401
 from envpool.registration import make_gymnasium
 
 _MUJOCO_V3 = version.parse(mujoco.__version__) >= version.parse("3.0.0")
-_ARM64 = platform.machine().lower() in ("aarch64", "arm64")
 
 
 class _MujocoGymAlignTest(absltest.TestCase):
@@ -63,8 +60,6 @@ class _MujocoGymAlignTest(absltest.TestCase):
         if not _MUJOCO_V3:
             return 3e-4
         del env_id
-        if _ARM64:
-            return 1e-5
         return 1e-6
 
     def reward_atol(self, env_id: str) -> float:
