@@ -158,7 +158,7 @@ bazel-release: bazel-install bazel-pip-requirement-release release-system-instal
 	cp bazel-bin/$(subst //:,,$(RELEASE_SETUP_TARGET))$(BAZEL_RUNFILES_SUFFIX)/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-test: bazel-install bazel-pip-requirement-dev
-	$(BAZEL) test --test_output=all $(BAZELOPT) $(WINDOWS_ENVPOOL_TEST_DEFINE) $(BAZEL_TEST_TARGETS) --config=test --spawn_strategy=local --color=yes
+	$(BAZEL) test --test_output=all $(BAZELOPT) $(WINDOWS_ENVPOOL_TEST_DEFINE) --config=test --spawn_strategy=local --color=yes -- $(BAZEL_TEST_TARGETS)
 
 bazel-clean: bazel-install
 	$(BAZEL) clean --expunge
