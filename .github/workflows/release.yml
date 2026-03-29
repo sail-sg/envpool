@@ -60,12 +60,44 @@ jobs:
           if-no-files-found: error
 
   release-linux:
-    runs-on: ubuntu-latest
-    container: quay.io/pypa/manylinux_2_28_x86_64
+    name: release-linux (${{ matrix.arch }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+            container: quay.io/pypa/manylinux_2_28_x86_64
+            auditwheel-plat: manylinux_2_28_x86_64
+            python-version: "3.11"
+          - arch: x86_64
+            runner: ubuntu-24.04
+            container: quay.io/pypa/manylinux_2_28_x86_64
+            auditwheel-plat: manylinux_2_28_x86_64
+            python-version: "3.12"
+          - arch: x86_64
+            runner: ubuntu-24.04
+            container: quay.io/pypa/manylinux_2_28_x86_64
+            auditwheel-plat: manylinux_2_28_x86_64
+            python-version: "3.13"
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            container: quay.io/pypa/manylinux_2_28_aarch64
+            auditwheel-plat: manylinux_2_28_aarch64
+            python-version: "3.11"
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            container: quay.io/pypa/manylinux_2_28_aarch64
+            auditwheel-plat: manylinux_2_28_aarch64
+            python-version: "3.12"
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            container: quay.io/pypa/manylinux_2_28_aarch64
+            auditwheel-plat: manylinux_2_28_aarch64
+            python-version: "3.13"
     steps:
       - name: Cancel previous run
         uses: styfle/cancel-workflow-action@0.11.0
@@ -93,15 +125,16 @@ jobs:
           "$PYBIN/python3" --version
       - name: Build
         run: |
-          make pypi-wheel
-          python -m pip install dist/*.whl --force-reinstall
+          rm -rf dist wheelhouse
+          make PYPI_WHEEL_PLAT=${{ matrix.auditwheel-plat }} pypi-wheel
+          python -m pip install wheelhouse/*.whl --force-reinstall
       - name: Test
         run: |
           make release-test
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: wheel-linux-${{ matrix.python-version }}
+          name: wheel-linux-${{ matrix.arch }}-${{ matrix.python-version }}
           path: wheelhouse/
           if-no-files-found: error
 

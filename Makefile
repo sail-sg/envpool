@@ -19,6 +19,7 @@ DOCKER_TAG     = $(DATE)-$(COMMIT_HASH)
 DOCKER_USER    = trinkle23897
 RELEASE_PYTHON ?= $(shell python3 -c 'import sys; print("{}.{}".format(sys.version_info[0], sys.version_info[1]))')
 RELEASE_SETUP_TARGET = //:setup_py$(subst .,,$(RELEASE_PYTHON))
+PYPI_WHEEL_PLAT ?= manylinux_2_28_x86_64
 CLANG_TIDY_MAJOR = 18
 CLANG_TIDY_BIN = clang-tidy-$(CLANG_TIDY_MAJOR)
 CLANG_TIDY_WRAPPER_DIR = $(HOME)/.cache/$(PROJECT_NAME)/bin
@@ -223,7 +224,7 @@ docker-release-launch: docker-release
 pypi-wheel: auditwheel-install bazel-release
 	rm -rf wheelhouse
 	CURRENT_WHEEL=$$(ls dist/*.whl -Art | tail -n 1); \
-	python3 -m auditwheel repair --plat manylinux_2_28_x86_64 "$$CURRENT_WHEEL"
+	python3 -m auditwheel repair --plat $(PYPI_WHEEL_PLAT) "$$CURRENT_WHEEL"
 
 release-test1:
 	cd envpool && python3 make_test.py

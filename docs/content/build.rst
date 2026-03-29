@@ -1,9 +1,9 @@
 Build From Source
 =================
 
-We recommend developing EnvPool on Ubuntu 24.04. Release wheels are built in a
-``manylinux_2_28_x86_64`` environment for Linux, on ``macos-14`` for macOS,
-and on ``windows-2022`` for Windows.
+We recommend developing EnvPool on Ubuntu 24.04. Release wheels are built in
+``manylinux_2_28_x86_64`` and ``manylinux_2_28_aarch64`` environments for
+Linux, on ``macos-14`` for macOS, and on ``windows-2022`` for Windows.
 
 We use `bazel <https://bazel.build/>`_ to build EnvPool. Comparing with
 `pip <https://pip.pypa.io/>`_, using Bazel to build python package with C++ .so
@@ -92,7 +92,7 @@ install the required development packages:
       qtdeclarative5-dev
 
     # Some Bazel Qt rules still look for this legacy include path.
-    sudo ln -sf /usr/include/x86_64-linux-gnu/qt5 /usr/include/qt
+    sudo ln -sf "$(qmake -query QT_INSTALL_HEADERS)" /usr/include/qt
 
 macOS
 ^^^^^
