@@ -38,6 +38,24 @@ def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
     return cast(np.ndarray, frame)
 
 
+def _maybe_skip_render_error(
+    testcase: absltest.TestCase, exc: RuntimeError
+) -> None:
+    message = str(exc)
+    if any(
+        needle in message
+        for needle in (
+            "failed to initialize EGL",
+            "failed to get EGL display",
+            "unsupported on this platform/build",
+            "failed to create CGL",
+            "failed to create EGL",
+        )
+    ):
+        testcase.skipTest(message)
+    raise exc
+
+
 class MujocoDmcRenderTest(absltest.TestCase):
     """Render regression tests for dm_control-backed MuJoCo tasks."""
 
@@ -53,10 +71,13 @@ class MujocoDmcRenderTest(absltest.TestCase):
         )
         try:
             env.reset()
-            frame0 = _render_array(env)
-            frame1 = _render_array(env, env_ids=1)
-            frames = _render_array(env, env_ids=[0, 1])
-            frame0_again = _render_array(env)
+            try:
+                frame0 = _render_array(env)
+                frame1 = _render_array(env, env_ids=1)
+                frames = _render_array(env, env_ids=[0, 1])
+                frame0_again = _render_array(env)
+            except RuntimeError as exc:
+                _maybe_skip_render_error(self, exc)
             self.assertEqual(frame0.shape, (1, 72, 96, 3))
             self.assertEqual(frame1.shape, (1, 72, 96, 3))
             self.assertEqual(frames.shape, (2, 72, 96, 3))
@@ -84,7 +105,10 @@ class MujocoDmcRenderTest(absltest.TestCase):
                 try:
                     env.reset()
                     oracle.reset()
-                    frame = _render_array(env)[0].astype(np.int16)
+                    try:
+                        frame = _render_array(env)[0].astype(np.int16)
+                    except RuntimeError as exc:
+                        _maybe_skip_render_error(self, exc)
                     expected = np.asarray(
                         oracle.physics.render(
                             height=frame.shape[0],

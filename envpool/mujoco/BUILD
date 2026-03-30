@@ -28,6 +28,7 @@ cc_library(
         "//:linux": [
             "-lEGL",
         ],
+        "//:windows": [],
         "//conditions:default": [
             "-framework OpenGL",
         ],
