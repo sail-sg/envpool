@@ -24,6 +24,7 @@
 #include <memory>
 #include <random>
 #include <string>
+#include <utility>
 
 #include "envpool/core/env.h"
 #include "envpool/mujoco/offscreen_renderer.h"

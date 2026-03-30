@@ -18,6 +18,7 @@
 #include <cmath>
 #include <memory>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 #include "envpool/box2d/utils.h"
@@ -481,7 +482,8 @@ void BipedalWalkerBox2dEnv::Render(int width, int height, int /*camera_id*/,
     if (cloud.x2 < scroll_ / 2) {
       continue;
     }
-    if (cloud.x1 > scroll_ / 2 + static_cast<float>(kViewportW / kScaleDouble)) {
+    if (cloud.x1 >
+        scroll_ / 2 + static_cast<float>(kViewportW / kScaleDouble)) {
       continue;
     }
     std::vector<cv::Point> polygon;

@@ -18,6 +18,8 @@
 #include <cmath>
 #include <memory>
 #include <stdexcept>
+#include <utility>
+#include <vector>
 
 #include "envpool/box2d/utils.h"
 #include <opencv2/opencv.hpp>
@@ -358,8 +360,8 @@ void LunarLanderBox2dEnv::Render(int width, int height, int /*camera_id*/,
     }
     auto* edge = static_cast<b2EdgeShape*>(fixture->GetShape());
     cv::line(surf, to_point(edge->m_vertex1.x, edge->m_vertex1.y),
-             to_point(edge->m_vertex2.x, edge->m_vertex2.y), cv::Scalar(0, 0, 0),
-             1, cv::LINE_AA);
+             to_point(edge->m_vertex2.x, edge->m_vertex2.y),
+             cv::Scalar(0, 0, 0), 1, cv::LINE_AA);
   }
 
   auto draw_body = [&](b2Body* body, const cv::Scalar& fill,

@@ -21,6 +21,7 @@
 #include <cmath>
 #include <limits>
 #include <random>
+#include <utility>
 
 #include "envpool/classic_control/render_utils.h"
 #include "envpool/core/async_envpool.h"

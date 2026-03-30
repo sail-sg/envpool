@@ -15,6 +15,7 @@
 #include "envpool/mujoco/offscreen_renderer.h"
 
 #include <algorithm>
+#include <array>
 #include <cstring>
 #include <memory>
 #include <stdexcept>
@@ -35,7 +36,7 @@ namespace envpool::mujoco {
 class CglContext final : public GlContext {
  public:
   CglContext() {
-    CGLPixelFormatAttribute attribs[] = {
+    const std::array<CGLPixelFormatAttribute, 13> attribs = {
         kCGLPFAOpenGLProfile,
         static_cast<CGLPixelFormatAttribute>(kCGLOGLPVersion_Legacy),
         kCGLPFAColorSize,
@@ -50,8 +51,7 @@ class CglContext final : public GlContext {
         static_cast<CGLPixelFormatAttribute>(0),
     };
     GLint npix = 0;
-    CGLError err =
-        CGLChoosePixelFormat(attribs, &pixel_format_, &npix);
+    CGLError err = CGLChoosePixelFormat(attribs.data(), &pixel_format_, &npix);
     if (err != kCGLNoError || pixel_format_ == nullptr || npix == 0) {
       throw std::runtime_error("failed to create CGL pixel format");
     }
@@ -90,7 +90,7 @@ class CglContext final : public GlContext {
 class EglContext final : public GlContext {
  public:
   EglContext() {
-    const EGLint config_attribs[] = {
+    const std::array<EGLint, 17> config_attribs = {
         EGL_RED_SIZE,          8, EGL_GREEN_SIZE,        8,
         EGL_BLUE_SIZE,         8, EGL_ALPHA_SIZE,        8,
         EGL_DEPTH_SIZE,       24, EGL_STENCIL_SIZE,      8,
@@ -110,7 +110,8 @@ class EglContext final : public GlContext {
     }
     EGLConfig config = nullptr;
     EGLint num_configs = 0;
-    if (eglChooseConfig(display_, config_attribs, &config, 1, &num_configs) !=
+    if (eglChooseConfig(display_, config_attribs.data(), &config, 1,
+                        &num_configs) !=
             EGL_TRUE ||
         num_configs < 1) {
       eglTerminate(display_);

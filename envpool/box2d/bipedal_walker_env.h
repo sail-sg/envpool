@@ -23,6 +23,7 @@
 #include <array>
 #include <memory>
 #include <random>
+#include <utility>
 #include <vector>
 
 #include "envpool/core/env.h"

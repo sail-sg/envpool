@@ -41,7 +41,8 @@ std::unique_ptr<GlContext> CreateGlContext();
 
 class OffscreenRenderer {
  public:
-  explicit OffscreenRenderer(CameraPolicy camera_policy = CameraPolicy::kGymLike);
+  explicit OffscreenRenderer(
+      CameraPolicy camera_policy = CameraPolicy::kGymLike);
   ~OffscreenRenderer();
 
   void Render(const mjModel* model, mjData* data, int width, int height,

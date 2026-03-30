@@ -17,6 +17,8 @@
 #ifndef ENVPOOL_BOX2D_BIPEDAL_WALKER_H_
 #define ENVPOOL_BOX2D_BIPEDAL_WALKER_H_
 
+#include <vector>
+
 #include "envpool/box2d/bipedal_walker_env.h"
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"

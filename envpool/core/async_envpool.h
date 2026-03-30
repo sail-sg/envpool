@@ -218,16 +218,19 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
     if (batch <= 0) {
       throw std::invalid_argument("render env_ids must not be empty");
     }
-    auto* first_renderable = dynamic_cast<RenderableEnv*>(envs_[tenv_ids[0]].get());
+    auto* first_renderable =
+        dynamic_cast<RenderableEnv*>(envs_[tenv_ids[0]].get());
     if (first_renderable == nullptr) {
       throw std::runtime_error("render not implemented for this environment");
     }
     auto [render_width, render_height] =
         first_renderable->RenderSize(width, height);
     if (render_width <= 0 || render_height <= 0) {
-      throw std::invalid_argument("resolved render width and height must be positive");
+      throw std::invalid_argument(
+          "resolved render width and height must be positive");
     }
-    ShapeSpec spec(sizeof(unsigned char), {batch, render_height, render_width, 3});
+    ShapeSpec spec(
+        sizeof(unsigned char), {batch, render_height, render_width, 3});
     Array rendered(spec);
     auto* rgb = static_cast<unsigned char*>(rendered.Data());
     std::size_t frame_size =
@@ -241,7 +244,8 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
       }
       auto [env_width, env_height] = renderable->RenderSize(width, height);
       if (env_width != render_width || env_height != render_height) {
-        throw std::runtime_error("render size must be consistent across env_ids");
+        throw std::runtime_error(
+            "render size must be consistent across env_ids");
       }
       renderable->Render(render_width, render_height, camera_id,
                          rgb + static_cast<std::size_t>(i) * frame_size);

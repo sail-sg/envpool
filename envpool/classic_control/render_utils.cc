@@ -97,8 +97,8 @@ void RenderCartPole(double x, double theta, int width, int height,
   cv::circle(surf, ToPoint(cart_x, kCartY + kAxleOffset),
              static_cast<int>(kPoleWidth / 2.0), cv::Scalar(129, 132, 203),
              cv::FILLED, cv::LINE_AA);
-  cv::line(surf, ToPoint(0, kCartY), ToPoint(width, kCartY), cv::Scalar(0, 0, 0),
-           1, cv::LINE_AA);
+  cv::line(surf, ToPoint(0, kCartY), ToPoint(width, kCartY),
+           cv::Scalar(0, 0, 0), 1, cv::LINE_AA);
 
   FinalizeRgbFrame(&surf, rgb);
 }
@@ -137,10 +137,10 @@ void RenderPendulum(double theta, bool has_last_u, double last_u, int width,
   if (has_last_u && std::abs(last_u) > 1e-6) {
     const double arrow_scale = scale * std::abs(last_u) / 2.0;
     const double direction = last_u > 0.0 ? 1.0 : -1.0;
-    const cv::Point arrow_start =
-        ToPoint(offset_x - direction * 0.35 * arrow_scale, offset_y - 0.3 * scale);
-    const cv::Point arrow_end =
-        ToPoint(offset_x + direction * 0.35 * arrow_scale, offset_y - 0.3 * scale);
+    const cv::Point arrow_start = ToPoint(
+        offset_x - direction * 0.35 * arrow_scale, offset_y - 0.3 * scale);
+    const cv::Point arrow_end = ToPoint(
+        offset_x + direction * 0.35 * arrow_scale, offset_y - 0.3 * scale);
     cv::arrowedLine(surf, arrow_start, arrow_end, cv::Scalar(0, 0, 0), 2,
                     cv::LINE_AA, 0, 0.35);
   }

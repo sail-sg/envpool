@@ -194,11 +194,12 @@ class VizdoomEnv : public Env<VizdoomEnvSpec>, public RenderableEnv {
     if (!spec.config["wad_path"_].empty()) {
       dg_->setDoomScenarioPath(spec.config["wad_path"_]);
     }
-        dg_->setSeed(seed_);
+    dg_->setSeed(seed_);
     dg_->setDoomMap(spec.config["map_id"_]);
 
     channel_ = dg_->getScreenChannels();
-    raw_buf_ = Array(FrameSpec({dg_->getScreenHeight(), dg_->getScreenWidth(), 1}));
+    raw_buf_ = Array(
+        FrameSpec({dg_->getScreenHeight(), dg_->getScreenWidth(), 1}));
     render_img_ =
         Array(FrameSpec({dg_->getScreenHeight(), dg_->getScreenWidth(), 3}));
     for (int i = 0; i < stack_num_; ++i) {

@@ -102,9 +102,18 @@ constexpr int kTileSubdivs = 3;
 constexpr Rgb kGridColor = {100, 100, 100};
 constexpr Rgb kAgentColor = {255, 0, 0};
 constexpr Rgb kLavaColor = {255, 128, 0};
-constexpr std::array<Rgb, 6> kObjectColors = {
-    Rgb{255, 0, 0},   Rgb{0, 255, 0},   Rgb{0, 0, 255},
-    Rgb{112, 39, 195}, Rgb{255, 255, 0}, Rgb{100, 100, 100}};
+constexpr std::array<Rgb, 6> MakeObjectColors() {
+  return {
+      Rgb{255, 0, 0},
+      Rgb{0, 255, 0},
+      Rgb{0, 0, 255},
+      Rgb{112, 39, 195},
+      Rgb{255, 255, 0},
+      Rgb{100, 100, 100},
+  };
+}
+
+constexpr std::array<Rgb, 6> kObjectColors = MakeObjectColors();
 
 Rgb ColorValue(Color color) { return kObjectColors[static_cast<int>(color)]; }
 
@@ -269,7 +278,8 @@ void RenderWorldObj(const WorldObj& obj, std::vector<uint8_t>* img, int width,
                    Rgb{0, 0, 0});
         return;
       }
-      FillCoords(img, width, height, PointInRect(0.0f, 1.0f, 0.0f, 1.0f), color);
+      FillCoords(img, width, height, PointInRect(0.0f, 1.0f, 0.0f, 1.0f),
+                 color);
       if (obj.GetDoorLocked()) {
         FillCoords(img, width, height, PointInRect(0.06f, 0.94f, 0.06f, 0.94f),
                    ScaleColor(color, 0.45f));
