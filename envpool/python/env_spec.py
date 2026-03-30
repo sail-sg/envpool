@@ -18,7 +18,7 @@ from abc import ABC, ABCMeta
 from collections import namedtuple
 from typing import Any, NamedTuple
 
-import dm_env  # type: ignore[import-untyped,unused-ignore]
+import dm_env
 import gym
 import gymnasium
 

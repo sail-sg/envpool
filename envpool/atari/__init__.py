@@ -16,7 +16,7 @@
 
 from envpool.python.api import py_env
 
-from .atari_envpool import (  # type: ignore[import-untyped,unused-ignore]
+from .atari_envpool import (
     _AtariEnvPool,
     _AtariEnvSpec,
 )

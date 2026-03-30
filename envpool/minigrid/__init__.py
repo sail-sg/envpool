@@ -21,7 +21,7 @@ import numpy as np
 
 from envpool.python.api import py_env
 
-from .minigrid_envpool import (  # type: ignore[import-untyped,unused-ignore]
+from .minigrid_envpool import (
     _MiniGridDebugState,
     _MiniGridEnvPool,
     _MiniGridEnvSpec,

@@ -20,7 +20,7 @@ from typing import Any, cast
 
 import numpy as np
 import optree
-from dm_env import TimeStep  # type: ignore[import-untyped,unused-ignore]
+from dm_env import TimeStep
 
 from .protocol import EnvPool, EnvSpec
 

@@ -15,7 +15,7 @@
 
 from envpool.python.api import py_env
 
-from .box2d_envpool import (  # type: ignore[import-untyped,unused-ignore]
+from .box2d_envpool import (
     _BipedalWalkerEnvPool,
     _BipedalWalkerEnvSpec,
     _CarRacingEnvPool,

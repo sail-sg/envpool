@@ -22,7 +22,7 @@ from typing import (
 )
 
 import numpy as np
-from dm_env import TimeStep  # type: ignore[import-untyped,unused-ignore]
+from dm_env import TimeStep
 from typing_extensions import Protocol, TypeAlias
 
 ObsType: TypeAlias = Any

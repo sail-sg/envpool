@@ -16,7 +16,7 @@
 
 from envpool.python.api import py_env
 
-from .dummy_envpool import (  # type: ignore[import-untyped,unused-ignore]
+from .dummy_envpool import (
     _DummyEnvPool,
     _DummyEnvSpec,
 )

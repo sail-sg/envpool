@@ -13,7 +13,7 @@
 # limitations under the License.
 """Mujoco dm_control suite env in EnvPool."""
 
-from envpool.mujoco.mujoco_dmc_envpool import (  # type: ignore[import-untyped,unused-ignore]
+from envpool.mujoco.mujoco_dmc_envpool import (
     _DmcAcrobotEnvPool,
     _DmcAcrobotEnvSpec,
     _DmcBallInCupEnvPool,

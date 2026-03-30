@@ -16,10 +16,10 @@
 from abc import ABCMeta
 from typing import Any, cast
 
-import dm_env  # type: ignore[import-untyped,unused-ignore]
+import dm_env
 import numpy as np
 import optree
-from dm_env import TimeStep  # type: ignore[import-untyped,unused-ignore]
+from dm_env import TimeStep
 
 from .data import dm_structure
 from .envpool import EnvPoolMixin

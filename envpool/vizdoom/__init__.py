@@ -15,7 +15,7 @@
 
 from envpool.python.api import py_env
 
-from .vizdoom_envpool import (  # type: ignore[import-untyped,unused-ignore]
+from .vizdoom_envpool import (
     _VizdoomEnvPool,
     _VizdoomEnvSpec,
 )
