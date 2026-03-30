@@ -25,6 +25,8 @@
 #include <random>
 #include <vector>
 
+#include "envpool/core/env.h"
+
 namespace box2d {
 
 class BipedalWalkerContactDetector;
@@ -37,7 +39,7 @@ class BipedalWalkerLidarCallback : public b2RayCastCallback {
                       const b2Vec2& normal, float fraction) override;
 };
 
-class BipedalWalkerBox2dEnv {
+class BipedalWalkerBox2dEnv : public RenderableEnv {
   const float kFPS = 50;
   const float kScaleFloat = 30.0;
   const double kScaleDouble = 30.0;
@@ -97,6 +99,9 @@ class BipedalWalkerBox2dEnv {
   void BipedalWalkerReset(std::mt19937* gen);
   void BipedalWalkerStep(std::mt19937* gen, float action0, float action1,
                          float action2, float action3);
+  std::pair<int, int> RenderSize(int width, int height) const override;
+  void Render(int width, int height, int camera_id,
+              unsigned char* rgb) override;
 
  private:
   void ResetBox2d(std::mt19937* gen);

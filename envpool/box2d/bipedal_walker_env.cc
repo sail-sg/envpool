@@ -15,10 +15,13 @@
 #include "envpool/box2d/bipedal_walker_env.h"
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
+#include <stdexcept>
 #include <vector>
 
 #include "envpool/box2d/utils.h"
+#include <opencv2/opencv.hpp>
 
 namespace box2d {
 
@@ -71,6 +74,12 @@ BipedalWalkerBox2dEnv::BipedalWalkerBox2dEnv(bool hardcore,
   for (const auto* p : kHullPoly) {
     hull_poly_.emplace_back(Vec2(p[0] / kScaleDouble, p[1] / kScaleDouble));
   }
+}
+
+std::pair<int, int> BipedalWalkerBox2dEnv::RenderSize(int width,
+                                                       int height) const {
+  return {width > 0 ? width : static_cast<int>(kViewportW),
+          height > 0 ? height : static_cast<int>(kViewportH)};
 }
 
 void BipedalWalkerBox2dEnv::CreateTerrain(std::vector<b2Vec2> poly) {
@@ -359,7 +368,6 @@ void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
 
   scroll_ = pos.x - static_cast<float>(kViewportW / kScaleDouble / 5);
   // info
-#ifdef ENVPOOL_TEST
   path2_.clear();
   path4_.clear();
   path5_.clear();
@@ -404,7 +412,6 @@ void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
     path5_.emplace_back(v.x);
     path5_.emplace_back(v.y);
   }
-#endif
 }
 
 void BipedalWalkerBox2dEnv::BipedalWalkerReset(std::mt19937* gen) {
@@ -419,6 +426,83 @@ void BipedalWalkerBox2dEnv::BipedalWalkerStep(std::mt19937* gen, float action0,
                                               float action3) {
   ++elapsed_step_;
   StepBox2d(gen, action0, action1, action2, action3);
+}
+
+void BipedalWalkerBox2dEnv::Render(int width, int height, int /*camera_id*/,
+                                   unsigned char* rgb) {
+  if (hull_ == nullptr) {
+    throw std::runtime_error("render called before BipedalWalker reset");
+  }
+
+  auto to_point = [](float x, float y) {
+    return cv::Point(static_cast<int>(std::lround(x)),
+                     static_cast<int>(std::lround(y)));
+  };
+
+  int scroll_px = static_cast<int>(std::lround(scroll_ * kScaleFloat));
+  int viewport_w = static_cast<int>(kViewportW);
+  int viewport_h = static_cast<int>(kViewportH);
+  int surf_width = std::max(viewport_w, viewport_w + std::max(scroll_px, 0));
+
+  cv::Mat surf(
+      viewport_h, surf_width, CV_8UC3,
+      cv::Scalar(255, 215, 215));
+
+  std::vector<cv::Point> background = {
+      to_point(static_cast<float>(scroll_px), 0.0f),
+      to_point(static_cast<float>(scroll_px + viewport_w), 0.0f),
+      to_point(static_cast<float>(scroll_px + viewport_w),
+               static_cast<float>(viewport_h)),
+      to_point(static_cast<float>(scroll_px), static_cast<float>(viewport_h)),
+  };
+  cv::fillConvexPoly(surf, background, cv::Scalar(255, 215, 215));
+
+  for (std::size_t i = 0; i + 3 < path2_.size(); i += 4) {
+    cv::line(surf, to_point(path2_[i], path2_[i + 1]),
+             to_point(path2_[i + 2], path2_[i + 3]), cv::Scalar(0, 255, 0), 1,
+             cv::LINE_AA);
+  }
+
+  for (std::size_t i = 0; i + 7 < path4_.size(); i += 8) {
+    std::vector<cv::Point> polygon;
+    polygon.reserve(4);
+    for (std::size_t j = 0; j < 8; j += 2) {
+      polygon.push_back(to_point(path4_[i + j], path4_[i + j + 1]));
+    }
+    cv::fillConvexPoly(surf, polygon, cv::Scalar(255, 255, 255));
+    cv::polylines(surf, polygon, true, cv::Scalar(153, 153, 153), 1,
+                  cv::LINE_AA);
+  }
+
+  if (!path5_.empty()) {
+    std::vector<cv::Point> hull;
+    hull.reserve(path5_.size() / 2);
+    for (std::size_t i = 0; i + 1 < path5_.size(); i += 2) {
+      hull.push_back(to_point(path5_[i], path5_[i + 1]));
+    }
+    cv::fillConvexPoly(surf, hull, cv::Scalar(229, 51, 127));
+    cv::polylines(surf, hull, true, cv::Scalar(127, 76, 76), 1, cv::LINE_AA);
+  }
+
+  cv::flip(surf, surf, 0);
+
+  cv::Mat view(viewport_h, viewport_w, CV_8UC3, cv::Scalar(255, 215, 215));
+  int src_x = std::max(scroll_px, 0);
+  int dst_x = std::max(-scroll_px, 0);
+  int copy_width = std::min(surf.cols - src_x, viewport_w - dst_x);
+  if (copy_width > 0) {
+    surf(cv::Rect(src_x, 0, copy_width, viewport_h))
+        .copyTo(view(cv::Rect(dst_x, 0, copy_width, viewport_h)));
+  }
+
+  cv::Mat output(height, width, CV_8UC3, rgb);
+  if (width == viewport_w && height == viewport_h) {
+    cv::cvtColor(view, output, cv::COLOR_BGR2RGB);
+    return;
+  }
+  cv::Mat resized;
+  cv::resize(view, resized, cv::Size(width, height));
+  cv::cvtColor(resized, output, cv::COLOR_BGR2RGB);
 }
 
 }  // namespace box2d

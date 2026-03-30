@@ -25,11 +25,13 @@
 #include <random>
 #include <vector>
 
+#include "envpool/core/env.h"
+
 namespace box2d {
 
 class LunarLanderContactDetector;
 
-class LunarLanderBox2dEnv {
+class LunarLanderBox2dEnv : public RenderableEnv {
   const double kFPS = 50;
   const double kScale = 30.0;
   const double kMainEnginePower = 13.0;
@@ -64,6 +66,10 @@ class LunarLanderBox2dEnv {
   std::array<b2Body*, 2> legs_;
   std::array<float, 2> ground_contact_;
   std::unique_ptr<LunarLanderContactDetector> listener_;
+  double helipad_x1_{0};
+  double helipad_x2_{0};
+  double helipad_y_{0};
+  std::vector<std::array<b2Vec2, 4>> sky_polys_;
 
  public:
   LunarLanderBox2dEnv(bool continuous, int max_episode_steps);
@@ -72,6 +78,9 @@ class LunarLanderBox2dEnv {
   // continuous action space: action0 and action1
   void LunarLanderStep(std::mt19937* gen, int action, float action0,
                        float action1);
+  std::pair<int, int> RenderSize(int width, int height) const override;
+  void Render(int width, int height, int camera_id,
+              unsigned char* rgb) override;
 
  private:
   void ResetBox2d(std::mt19937* gen);

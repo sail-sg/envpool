@@ -66,6 +66,31 @@ class EnvRegistry:
             "gymnasium": (import_path, gymnasium_cls),
         }
 
+    @staticmethod
+    def _extract_wrapper_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
+        wrapper_keys = {
+            "render_mode",
+            "render_env_id",
+            "render_width",
+            "render_height",
+            "render_camera_id",
+        }
+        wrapper_kwargs = {
+            key: kwargs.pop(key) for key in list(kwargs) if key in wrapper_keys
+        }
+        render_mode = wrapper_kwargs.get("render_mode")
+        if render_mode not in {None, "rgb_array", "human"}:
+            raise ValueError(
+                "render_mode must be one of None, 'rgb_array', or 'human'"
+            )
+        return wrapper_kwargs
+
+    @staticmethod
+    def _apply_wrapper_kwargs(env: Any, wrapper_kwargs: dict[str, Any]) -> Any:
+        for key, value in wrapper_kwargs.items():
+            setattr(env, f"_{key}", value)
+        return env
+
     def make_thread_pool(
         self,
         num_envs_capacity: int,
@@ -108,6 +133,7 @@ class EnvRegistry:
         self, task_id: str, env_type: str, **kwargs: Any
     ) -> DMEnvPool | GymEnvPool | GymnasiumEnvPool:
         """Make envpool."""
+        wrapper_kwargs = self._extract_wrapper_kwargs(kwargs)
         new_gym_api = version.parse(gym.__version__) >= version.parse("0.26.0")
         if "gym_reset_return_info" not in kwargs:
             kwargs["gym_reset_return_info"] = new_gym_api
@@ -126,9 +152,10 @@ class EnvRegistry:
         thread_pool = kwargs.pop("thread_pool", None)
         spec = self.make_spec(task_id, **kwargs)
         import_path, envpool_cls = self.envpools[task_id][env_type]
-        return getattr(importlib.import_module(import_path), envpool_cls)(
+        env = getattr(importlib.import_module(import_path), envpool_cls)(
             spec, thread_pool
         )
+        return self._apply_wrapper_kwargs(env, wrapper_kwargs)
 
     def make_dm(self, task_id: str, **kwargs: Any) -> DMEnvPool:
         """Make dm_env compatible envpool."""
@@ -144,6 +171,7 @@ class EnvRegistry:
 
     def make_spec(self, task_id: str, **make_kwargs: Any) -> EnvSpec:
         """Make EnvSpec."""
+        self._extract_wrapper_kwargs(make_kwargs)
         import_path, spec_cls, kwargs = self.specs[task_id]
         kwargs = {**kwargs, **make_kwargs}
 

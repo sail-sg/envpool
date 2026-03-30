@@ -27,6 +27,16 @@
 #include "envpool/core/env_spec.h"
 #include "envpool/core/state_buffer_queue.h"
 
+class RenderableEnv {
+ public:
+  virtual ~RenderableEnv() = default;
+
+  virtual std::pair<int, int> RenderSize(int width, int height) const = 0;
+
+  virtual void Render(int width, int height, int camera_id,
+                      unsigned char* rgb) = 0;
+};
+
 template <typename Dtype>
 struct InitializeHelper {
   static void Init(Array* arr) {}

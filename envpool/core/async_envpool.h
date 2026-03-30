@@ -30,6 +30,7 @@
 #include "ThreadPool.h"
 #include "envpool/core/action_buffer_queue.h"
 #include "envpool/core/array.h"
+#include "envpool/core/env.h"
 #include "envpool/core/envpool.h"
 #include "envpool/core/shared_thread_pool.h"
 #include "envpool/core/spec.h"
@@ -206,6 +207,46 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
       stepping_env_num_ -= ret[0].Shape(0);
     }
     return ret;
+  }
+
+  Array Render(const Array& env_ids, int width, int height,
+               int camera_id) override {
+    WaitForPendingTasks();
+
+    TArray<int> tenv_ids(env_ids);
+    int batch = tenv_ids.Shape(0);
+    if (batch <= 0) {
+      throw std::invalid_argument("render env_ids must not be empty");
+    }
+    auto* first_renderable = dynamic_cast<RenderableEnv*>(envs_[tenv_ids[0]].get());
+    if (first_renderable == nullptr) {
+      throw std::runtime_error("render not implemented for this environment");
+    }
+    auto [render_width, render_height] =
+        first_renderable->RenderSize(width, height);
+    if (render_width <= 0 || render_height <= 0) {
+      throw std::invalid_argument("resolved render width and height must be positive");
+    }
+    ShapeSpec spec(sizeof(unsigned char), {batch, render_height, render_width, 3});
+    Array rendered(spec);
+    auto* rgb = static_cast<unsigned char*>(rendered.Data());
+    std::size_t frame_size =
+        static_cast<std::size_t>(render_width) * render_height * 3 *
+        sizeof(unsigned char);
+    for (int i = 0; i < batch; ++i) {
+      int eid = tenv_ids[i];
+      auto* renderable = dynamic_cast<RenderableEnv*>(envs_[eid].get());
+      if (renderable == nullptr) {
+        throw std::runtime_error("render not implemented for this environment");
+      }
+      auto [env_width, env_height] = renderable->RenderSize(width, height);
+      if (env_width != render_width || env_height != render_height) {
+        throw std::runtime_error("render size must be consistent across env_ids");
+      }
+      renderable->Render(render_width, render_height, camera_id,
+                         rgb + static_cast<std::size_t>(i) * frame_size);
+    }
+    return rendered;
   }
 
   void Reset(const Array& env_ids) override {

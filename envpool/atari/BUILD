@@ -124,6 +124,18 @@ py_test(
 )
 
 py_test(
+    name = "atari_render_test",
+    srcs = ["atari_render_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":atari",
+        ":atari_registration",
+        requirement("numpy"),
+        requirement("absl-py"),
+    ],
+)
+
+py_test(
     name = "atari_envpool_test",
     size = "enormous",
     srcs = ["atari_envpool_test.py"],

@@ -34,6 +34,8 @@ from .utils import check_key_duplication
 class GymnasiumEnvPoolMixin:
     """Special treatment for gymnasim API."""
 
+    metadata = {"render_modes": ["rgb_array", "human"]}
+
     @property
     def observation_space(self: Any) -> gymnasium.Space | dict[str, Any]:
         """Observation space from EnvSpec."""
@@ -47,6 +49,10 @@ class GymnasiumEnvPoolMixin:
         if not hasattr(self, "_gym_action_space"):
             self._gym_action_space = self.spec.gymnasium_action_space
         return self._gym_action_space
+
+    @property
+    def render_mode(self: Any) -> str | None:
+        return getattr(self, "_render_mode", None)
 
 
 class GymnasiumEnvPoolMeta(
