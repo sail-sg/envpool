@@ -62,42 +62,42 @@ void FinalizeRgbFrame(cv::Mat* surf, std::uint8_t* rgb) {
 
 void RenderCartPole(double x, double theta, int width, int height,
                     std::uint8_t* rgb) {
-  constexpr double kXThreshold = 2.4;
-  constexpr double kPoleLength = 1.0;
-  constexpr double kPoleWidth = 10.0;
-  constexpr double kCartWidth = 50.0;
-  constexpr double kCartHeight = 30.0;
-  constexpr double kCartY = 100.0;
-  constexpr double kAxleOffset = kCartHeight / 4.0;
+  constexpr double k_x_threshold = 2.4;
+  constexpr double k_pole_length = 1.0;
+  constexpr double k_pole_width = 10.0;
+  constexpr double k_cart_width = 50.0;
+  constexpr double k_cart_height = 30.0;
+  constexpr double k_cart_y = 100.0;
+  constexpr double k_axle_offset = k_cart_height / 4.0;
 
   cv::Mat surf(height, width, CV_8UC3, cv::Scalar(255, 255, 255));
-  const double scale = static_cast<double>(width) / (2.0 * kXThreshold);
+  const double scale = static_cast<double>(width) / (2.0 * k_x_threshold);
   const double cart_x = x * scale + static_cast<double>(width) / 2.0;
 
   const std::vector<cv::Point2d> cart = {
-      {-kCartWidth / 2.0, -kCartHeight / 2.0},
-      {-kCartWidth / 2.0, kCartHeight / 2.0},
-      {kCartWidth / 2.0, kCartHeight / 2.0},
-      {kCartWidth / 2.0, -kCartHeight / 2.0},
+      {-k_cart_width / 2.0, -k_cart_height / 2.0},
+      {-k_cart_width / 2.0, k_cart_height / 2.0},
+      {k_cart_width / 2.0, k_cart_height / 2.0},
+      {k_cart_width / 2.0, -k_cart_height / 2.0},
   };
   const std::vector<cv::Point> cart_poly =
-      TransformPolygonPoints(cart, cart_x, kCartY, 0.0);
+      TransformPolygonPoints(cart, cart_x, k_cart_y, 0.0);
   cv::fillConvexPoly(surf, cart_poly, cv::Scalar(0, 0, 0), cv::LINE_AA);
 
-  const double pole_len = scale * kPoleLength;
+  const double pole_len = scale * k_pole_length;
   const std::vector<cv::Point2d> pole = {
-      {-kPoleWidth / 2.0, -kPoleWidth / 2.0},
-      {-kPoleWidth / 2.0, pole_len - kPoleWidth / 2.0},
-      {kPoleWidth / 2.0, pole_len - kPoleWidth / 2.0},
-      {kPoleWidth / 2.0, -kPoleWidth / 2.0},
+      {-k_pole_width / 2.0, -k_pole_width / 2.0},
+      {-k_pole_width / 2.0, pole_len - k_pole_width / 2.0},
+      {k_pole_width / 2.0, pole_len - k_pole_width / 2.0},
+      {k_pole_width / 2.0, -k_pole_width / 2.0},
   };
   const std::vector<cv::Point> pole_poly =
-      TransformPolygonPoints(pole, cart_x, kCartY + kAxleOffset, -theta);
+      TransformPolygonPoints(pole, cart_x, k_cart_y + k_axle_offset, -theta);
   cv::fillConvexPoly(surf, pole_poly, cv::Scalar(202, 152, 101), cv::LINE_AA);
-  cv::circle(surf, ToPoint(cart_x, kCartY + kAxleOffset),
-             static_cast<int>(kPoleWidth / 2.0), cv::Scalar(129, 132, 203),
+  cv::circle(surf, ToPoint(cart_x, k_cart_y + k_axle_offset),
+             static_cast<int>(k_pole_width / 2.0), cv::Scalar(129, 132, 203),
              cv::FILLED, cv::LINE_AA);
-  cv::line(surf, ToPoint(0, kCartY), ToPoint(width, kCartY),
+  cv::line(surf, ToPoint(0, k_cart_y), ToPoint(width, k_cart_y),
            cv::Scalar(0, 0, 0), 1, cv::LINE_AA);
 
   FinalizeRgbFrame(&surf, rgb);
@@ -150,47 +150,47 @@ void RenderPendulum(double theta, bool has_last_u, double last_u, int width,
 
 void RenderMountainCar(double pos, double goal_pos, int width, int height,
                        std::uint8_t* rgb) {
-  constexpr double kMinPos = -1.2;
-  constexpr double kMaxPos = 0.6;
-  constexpr double kCarWidth = 40.0;
-  constexpr double kCarHeight = 20.0;
-  constexpr double kClearance = 10.0;
+  constexpr double k_min_pos = -1.2;
+  constexpr double k_max_pos = 0.6;
+  constexpr double k_car_width = 40.0;
+  constexpr double k_car_height = 20.0;
+  constexpr double k_clearance = 10.0;
 
   cv::Mat surf(height, width, CV_8UC3, cv::Scalar(255, 255, 255));
-  const double scale = static_cast<double>(width) / (kMaxPos - kMinPos);
+  const double scale = static_cast<double>(width) / (k_max_pos - k_min_pos);
 
   std::vector<cv::Point> path;
   path.reserve(100);
   for (int i = 0; i < 100; ++i) {
     const double x =
-        kMinPos + (kMaxPos - kMinPos) * static_cast<double>(i) / 99.0;
+        k_min_pos + (k_max_pos - k_min_pos) * static_cast<double>(i) / 99.0;
     const double y = MountainHeight(x);
-    path.push_back(ToPoint((x - kMinPos) * scale, y * scale));
+    path.push_back(ToPoint((x - k_min_pos) * scale, y * scale));
   }
   cv::polylines(surf, path, false, cv::Scalar(0, 0, 0), 1, cv::LINE_AA);
 
   const double angle = std::cos(3.0 * pos);
   const std::vector<cv::Point2d> car = {
-      {-kCarWidth / 2.0, 0.0},
-      {-kCarWidth / 2.0, kCarHeight},
-      {kCarWidth / 2.0, kCarHeight},
-      {kCarWidth / 2.0, 0.0},
+      {-k_car_width / 2.0, 0.0},
+      {-k_car_width / 2.0, k_car_height},
+      {k_car_width / 2.0, k_car_height},
+      {k_car_width / 2.0, 0.0},
   };
-  const double car_x = (pos - kMinPos) * scale;
-  const double car_y = kClearance + MountainHeight(pos) * scale;
+  const double car_x = (pos - k_min_pos) * scale;
+  const double car_y = k_clearance + MountainHeight(pos) * scale;
   const std::vector<cv::Point> car_poly =
       TransformPolygonPoints(car, car_x, car_y, angle);
   cv::fillConvexPoly(surf, car_poly, cv::Scalar(0, 0, 0), cv::LINE_AA);
 
-  for (double wheel_offset : {kCarWidth / 4.0, -kCarWidth / 4.0}) {
+  for (double wheel_offset : {k_car_width / 4.0, -k_car_width / 4.0}) {
     const cv::Point2d rotated = RotatePoint({wheel_offset, 0.0}, angle);
     cv::circle(surf, ToPoint(rotated.x + car_x, rotated.y + car_y),
-               static_cast<int>(std::lround(kCarHeight / 2.5)),
+               static_cast<int>(std::lround(k_car_height / 2.5)),
                cv::Scalar(128, 128, 128), cv::FILLED, cv::LINE_AA);
   }
 
   const int flag_x =
-      static_cast<int>(std::lround((goal_pos - kMinPos) * scale));
+      static_cast<int>(std::lround((goal_pos - k_min_pos) * scale));
   const int flag_y1 =
       static_cast<int>(std::lround(MountainHeight(goal_pos) * scale));
   const int flag_y2 = flag_y1 + 50;
@@ -208,21 +208,21 @@ void RenderMountainCar(double pos, double goal_pos, int width, int height,
 
 void RenderAcrobot(double theta1, double theta2, int width, int height,
                    std::uint8_t* rgb) {
-  constexpr double kLinkLength1 = 1.0;
-  constexpr double kLinkLength2 = 1.0;
+  constexpr double k_link_length1 = 1.0;
+  constexpr double k_link_length2 = 1.0;
 
   cv::Mat surf(height, width, CV_8UC3, cv::Scalar(255, 255, 255));
-  const double bound = kLinkLength1 + kLinkLength2 + 0.2;
+  const double bound = k_link_length1 + k_link_length2 + 0.2;
   const double scale = static_cast<double>(width) / (bound * 2.0);
   const double offset = static_cast<double>(width) / 2.0;
 
   const cv::Point2d p1 = {
-      kLinkLength1 * std::sin(theta1) * scale,
-      -kLinkLength1 * std::cos(theta1) * scale,
+      k_link_length1 * std::sin(theta1) * scale,
+      -k_link_length1 * std::cos(theta1) * scale,
   };
   const cv::Point2d p2 = {
-      p1.x + kLinkLength2 * std::sin(theta1 + theta2) * scale,
-      p1.y - kLinkLength2 * std::cos(theta1 + theta2) * scale,
+      p1.x + k_link_length2 * std::sin(theta1 + theta2) * scale,
+      p1.y - k_link_length2 * std::cos(theta1 + theta2) * scale,
   };
 
   cv::line(surf, ToPoint(-2.2 * scale + offset, scale + offset),
@@ -230,8 +230,8 @@ void RenderAcrobot(double theta1, double theta2, int width, int height,
            1, cv::LINE_AA);
 
   const std::array<cv::Point2d, 3> joints = {cv::Point2d(0.0, 0.0), p1, p2};
-  const std::array<double, 2> link_lengths = {kLinkLength1 * scale,
-                                              kLinkLength2 * scale};
+  const std::array<double, 2> link_lengths = {k_link_length1 * scale,
+                                              k_link_length2 * scale};
   const std::array<double, 2> link_thetas = {theta1 - kPi / 2.0,
                                              theta1 + theta2 - kPi / 2.0};
   for (int i = 0; i < 2; ++i) {

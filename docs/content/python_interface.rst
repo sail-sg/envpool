@@ -103,7 +103,7 @@ Rendering
 
 EnvPool exposes rendering through the Python wrapper. When creating an env with
 ``render_mode="rgb_array"``, calling ``render()`` returns a batch of RGB frames
-with shape ``(B, H, W, 3)`` and dtype ``uint8``. Even a single env render keeps
+with shape ``(B, H, W, 3)`` and data type ``uint8``. Even a single env render keeps
 the batch dimension, so ``env.render()`` returns ``(1, H, W, 3)`` by default.
 
 ``render_mode="human"`` uses the same renderer, but displays the frame through
@@ -143,7 +143,7 @@ Example:
     viewer.reset()
     viewer.render()
 
-Some render outputs compared against the corresponding upstream renderers
+Some render outputs compared against the corresponding upstream implementations
 (EnvPool on the left, upstream on the right):
 
 .. image:: ../_static/render_samples/box2d_official_compare_contact_sheet.png
