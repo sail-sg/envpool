@@ -241,9 +241,13 @@ class EnvPoolMixin(ABC):
         camera_id: int | None = None,
     ) -> np.ndarray | None:
         """Render one or more environments using the configured render mode."""
-        render_mode, default_env_id, default_width, default_height, default_cam = (
-            self._render_config()
-        )
+        (
+            render_mode,
+            default_env_id,
+            default_width,
+            default_height,
+            default_cam,
+        ) = self._render_config()
         if render_mode not in {"rgb_array", "human"}:
             raise RuntimeError(
                 "render_mode must be set to 'rgb_array' or 'human' when creating this env"

@@ -57,7 +57,9 @@ class Box2DRenderTest(absltest.TestCase):
         """BipedalWalker should support consistent batched rendering."""
         self._assert_batch_consistent_render("BipedalWalker-v3")
 
-    def test_bipedal_walker_render_matches_official_ground_profile(self) -> None:
+    def test_bipedal_walker_render_matches_official_ground_profile(
+        self,
+    ) -> None:
         """BipedalWalker renders should preserve the official ground profile."""
         for task_id in ("BipedalWalker-v3", "BipedalWalkerHardcore-v3"):
             with self.subTest(task_id=task_id):
@@ -76,8 +78,12 @@ class Box2DRenderTest(absltest.TestCase):
                     frame = env.render()[0].astype(np.int16)
                     expected = np.asarray(oracle.render(), dtype=np.int16)
                     lower_band = slice(-96, None)
-                    diff = np.abs(frame[lower_band] - expected[lower_band]).mean()
-                    agent_crop = np.abs(frame[100:320, :220] - expected[100:320, :220]).mean()
+                    diff = np.abs(
+                        frame[lower_band] - expected[lower_band]
+                    ).mean()
+                    agent_crop = np.abs(
+                        frame[100:320, :220] - expected[100:320, :220]
+                    ).mean()
                     self.assertLess(diff, 40.0)
                     self.assertLess(agent_crop, 15.0)
                 finally:

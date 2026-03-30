@@ -54,12 +54,10 @@ def _sync_oracle_state(
     elif task_id in {"MountainCar-v0", "MountainCarContinuous-v0"}:
         oracle.unwrapped.state = np.asarray(obs, dtype=np.float64).copy()
     elif task_id == "Acrobot-v1":
-        oracle.unwrapped.state = np.concatenate(
-            [
-                np.asarray(info["state"][0], dtype=np.float64),
-                np.asarray(obs[-2:], dtype=np.float64),
-            ]
-        )
+        oracle.unwrapped.state = np.concatenate([
+            np.asarray(info["state"][0], dtype=np.float64),
+            np.asarray(obs[-2:], dtype=np.float64),
+        ])
     else:
         raise KeyError(task_id)
 
@@ -96,7 +94,9 @@ class ClassicControlRenderTest(absltest.TestCase):
                     stepped_frames = env.render(env_ids=[0, 1])
                     stepped0_again = env.render()
 
-                    np.testing.assert_array_equal(stepped0[0], stepped_frames[0])
+                    np.testing.assert_array_equal(
+                        stepped0[0], stepped_frames[0]
+                    )
                     np.testing.assert_array_equal(stepped0, stepped0_again)
                 finally:
                     env.close()
@@ -112,7 +112,9 @@ class ClassicControlRenderTest(absltest.TestCase):
                 try:
                     obs, info = env.reset()
                     oracle.reset(seed=0)
-                    _sync_oracle_state(task_id, oracle, np.asarray(obs[0]), info)
+                    _sync_oracle_state(
+                        task_id, oracle, np.asarray(obs[0]), info
+                    )
 
                     frame = env.render()[0].astype(np.int16)
                     expected = np.asarray(oracle.render(), dtype=np.int16)

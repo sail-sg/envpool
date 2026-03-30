@@ -53,14 +53,18 @@ _REPRESENTATIVE_TASK_IDS = (
     "MiniGrid-BlockedUnlockPickup-v0",
 )
 _TASK_IDS = tuple(
-    sorted(task_id for task_id in list_all_envs() if task_id.startswith("MiniGrid-"))
+    sorted(
+        task_id
+        for task_id in list_all_envs()
+        if task_id.startswith("MiniGrid-")
+    )
 )
 
 
 def _debug_state(env: Any, env_id: int = 0) -> Any:
-    debug_states = cast(
-        Any, env
-    )._debug_states(np.asarray([env_id], dtype=np.int32))
+    debug_states = cast(Any, env)._debug_states(
+        np.asarray([env_id], dtype=np.int32)
+    )
     return debug_states[0]
 
 
@@ -163,7 +167,9 @@ def _patch_env_state(env: Any, debug_state: Any, elapsed_step: int) -> None:
 class MiniGridRenderTest(absltest.TestCase):
     """Render regression tests for MiniGrid environments."""
 
-    def _oracle_frame(self, task_id: str, debug_state: Any, step_count: int) -> np.ndarray:
+    def _oracle_frame(
+        self, task_id: str, debug_state: Any, step_count: int
+    ) -> np.ndarray:
         oracle = gym.make(task_id, render_mode="rgb_array")
         try:
             oracle.reset(seed=0)
@@ -179,15 +185,21 @@ class MiniGridRenderTest(absltest.TestCase):
         finally:
             oracle.close()
 
-    def test_render_matches_upstream_oracle_first_frame_for_all_tasks(self) -> None:
+    def test_render_matches_upstream_oracle_first_frame_for_all_tasks(
+        self,
+    ) -> None:
         """The first rendered frame should match the upstream MiniGrid oracle."""
         for task_id in _TASK_IDS:
             with self.subTest(task_id=task_id):
-                env = make_gymnasium(task_id, num_envs=1, render_mode="rgb_array")
+                env = make_gymnasium(
+                    task_id, num_envs=1, render_mode="rgb_array"
+                )
                 try:
                     env.reset()
                     frame = env.render()
-                    expected = self._oracle_frame(task_id, _debug_state(env, 0), 0)
+                    expected = self._oracle_frame(
+                        task_id, _debug_state(env, 0), 0
+                    )
 
                     self.assertEqual(frame.shape, (1,) + expected.shape)
                     self.assertEqual(frame.dtype, np.uint8)
@@ -199,7 +211,9 @@ class MiniGridRenderTest(absltest.TestCase):
         """Rendering should be batch-consistent and free of side effects."""
         for task_id in _REPRESENTATIVE_TASK_IDS:
             with self.subTest(task_id=task_id):
-                env = make_gymnasium(task_id, num_envs=2, render_mode="rgb_array")
+                env = make_gymnasium(
+                    task_id, num_envs=2, render_mode="rgb_array"
+                )
                 try:
                     env.reset()
                     frame0 = env.render()
@@ -207,7 +221,9 @@ class MiniGridRenderTest(absltest.TestCase):
                     frames = env.render(env_ids=[0, 1])
                     frame0_again = env.render()
 
-                    expected0 = self._oracle_frame(task_id, _debug_state(env, 0), 0)
+                    expected0 = self._oracle_frame(
+                        task_id, _debug_state(env, 0), 0
+                    )
 
                     self.assertEqual(frame0.shape, (1,) + expected0.shape)
                     self.assertEqual(frame1.shape, (1,) + expected0.shape)
@@ -228,7 +244,9 @@ class MiniGridRenderTest(absltest.TestCase):
                     )
 
                     np.testing.assert_array_equal(stepped0[0], expected_after)
-                    np.testing.assert_array_equal(stepped0[0], stepped_frames[0])
+                    np.testing.assert_array_equal(
+                        stepped0[0], stepped_frames[0]
+                    )
                     np.testing.assert_array_equal(stepped0, stepped0_again)
                 finally:
                     env.close()

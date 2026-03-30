@@ -20,7 +20,9 @@ import envpool.mujoco.gym.registration  # noqa: F401
 from envpool.registration import make_gym
 
 
-def _maybe_skip_render_error(testcase: absltest.TestCase, exc: RuntimeError) -> None:
+def _maybe_skip_render_error(
+    testcase: absltest.TestCase, exc: RuntimeError
+) -> None:
     message = str(exc)
     if any(
         needle in message
@@ -39,7 +41,9 @@ def _maybe_skip_render_error(testcase: absltest.TestCase, exc: RuntimeError) -> 
 class MujocoRenderTest(absltest.TestCase):
     """Render regression tests for Gym-style MuJoCo tasks."""
 
-    def test_rgb_array_render_is_batch_consistent_and_state_invariant(self) -> None:
+    def test_rgb_array_render_is_batch_consistent_and_state_invariant(
+        self,
+    ) -> None:
         """RGB renders should be batch-consistent and free of side effects."""
         env = make_gym(
             "Ant-v5",

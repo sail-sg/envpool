@@ -19,11 +19,13 @@ from absl.testing import absltest
 import envpool.procgen.registration as reg
 from envpool.registration import make_gym
 
-_TASK_IDS = tuple(sorted([
-    f"{env_name.capitalize()}{reg.distribution[dist_mode]}-v0"
-    for env_name, _, dist_modes in reg.procgen_game_config
-    for dist_mode in dist_modes
-]))
+_TASK_IDS = tuple(
+    sorted([
+        f"{env_name.capitalize()}{reg.distribution[dist_mode]}-v0"
+        for env_name, _, dist_modes in reg.procgen_game_config
+        for dist_mode in dist_modes
+    ])
+)
 
 
 class ProcgenRenderTest(absltest.TestCase):

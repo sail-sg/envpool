@@ -27,12 +27,14 @@ _UNSTABLE_TASK_IDS = {
     "MultiDuel-v1",
     "VizdoomCustom-v1",
 }
-_TASK_IDS = tuple(sorted(
-    f"{''.join(piece.capitalize() for piece in game.split('_'))}-v1"
-    for game in reg._vizdoom_game_list()
-    if f"{''.join(piece.capitalize() for piece in game.split('_'))}-v1"
-    not in _UNSTABLE_TASK_IDS
-))
+_TASK_IDS = tuple(
+    sorted(
+        f"{''.join(piece.capitalize() for piece in game.split('_'))}-v1"
+        for game in reg._vizdoom_game_list()
+        if f"{''.join(piece.capitalize() for piece in game.split('_'))}-v1"
+        not in _UNSTABLE_TASK_IDS
+    )
+)
 
 
 class VizdoomRenderTest(absltest.TestCase):
@@ -44,7 +46,9 @@ class VizdoomRenderTest(absltest.TestCase):
             return np.repeat(gray[:, :, np.newaxis], 3, axis=2)
         return obs.transpose(1, 2, 0)
 
-    def test_render_matches_screen_buffer_first_frame_for_stable_tasks(self) -> None:
+    def test_render_matches_screen_buffer_first_frame_for_stable_tasks(
+        self,
+    ) -> None:
         """Stable scenarios should render the same pixels as their screen buffer."""
         for task_id in _TASK_IDS:
             with self.subTest(task_id=task_id):
