@@ -218,7 +218,7 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
   cloud_poly_.clear();
   for (int i = 0; i < kTerrainLength / 20; ++i) {
     float x = RandUniform(0, kTerrainLength)(*gen) * kTerrainStep;
-    float y = static_cast<float>(kViewportH / kScaleDouble * 3 / 4);
+    auto y = static_cast<float>(kViewportH / kScaleDouble * 3 / 4);
     BipedalWalkerCloudPoly cloud;
     cloud.x1 = x;
     cloud.x2 = x;
@@ -548,8 +548,8 @@ void BipedalWalkerBox2dEnv::Render(int width, int height, int /*camera_id*/,
     cv::polylines(surf, hull, true, cv::Scalar(127, 76, 76), 1, cv::LINE_AA);
   }
 
-  float flag_x = static_cast<float>(kTerrainStep * 3 * kScaleFloat);
-  float flag_y1 = static_cast<float>(kTerrainHeight * kScaleFloat);
+  auto flag_x = static_cast<float>(kTerrainStep * 3 * kScaleFloat);
+  auto flag_y1 = static_cast<float>(kTerrainHeight * kScaleFloat);
   float flag_y2 = flag_y1 + 50.0f;
   cv::line(surf, to_point(flag_x, flag_y1), to_point(flag_x, flag_y2),
            cv::Scalar(0, 0, 0), 1, cv::LINE_AA);
