@@ -55,12 +55,12 @@ class BipedalWalkerBox2dEnv : public RenderableEnv {
   const float kSpeedKnee = 6;
   const double kLidarRange = 160 / kScaleDouble;
   const double kInitialRandom = 5;
-  const double kHullPoly[5][2] = {  // NOLINT
-      {-30, 9},
-      {6, 9},
-      {34, 1},
-      {34, -8},
-      {-30, -8}};
+  const double kHullPoly[5][2] = {// NOLINT
+                                  {-30, 9},
+                                  {6, 9},
+                                  {34, 1},
+                                  {34, -8},
+                                  {-30, -8}};
   const double kLegDown = -8 / kScaleDouble;
   const double kLegW = 8 / kScaleDouble;
   const double kLegH = 34 / kScaleDouble;

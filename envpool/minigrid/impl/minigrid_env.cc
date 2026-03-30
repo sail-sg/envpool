@@ -27,7 +27,7 @@
 
 #include "envpool/core/py_envpool.h"
 #include "envpool/minigrid/minigrid.h"
-#include <opencv2/opencv.hpp>
+#include "opencv2/opencv.hpp"
 
 namespace minigrid {
 namespace {
@@ -104,12 +104,8 @@ constexpr Rgb kAgentColor = {255, 0, 0};
 constexpr Rgb kLavaColor = {255, 128, 0};
 constexpr std::array<Rgb, 6> MakeObjectColors() {
   return {
-      Rgb{255, 0, 0},
-      Rgb{0, 255, 0},
-      Rgb{0, 0, 255},
-      Rgb{112, 39, 195},
-      Rgb{255, 255, 0},
-      Rgb{100, 100, 100},
+      Rgb{255, 0, 0},    Rgb{0, 255, 0},   Rgb{0, 0, 255},
+      Rgb{112, 39, 195}, Rgb{255, 255, 0}, Rgb{100, 100, 100},
   };
 }
 
@@ -185,8 +181,7 @@ CoordFn PointInLine(float x0, float y0, float x1, float y1, float r) {
       return false;
     }
     const std::array<float, 2> pq = {x - p0[0], y - p0[1]};
-    const float a =
-        std::clamp(pq[0] * unit[0] + pq[1] * unit[1], 0.0f, dist);
+    const float a = std::clamp(pq[0] * unit[0] + pq[1] * unit[1], 0.0f, dist);
     const std::array<float, 2> proj = {p0[0] + a * unit[0],
                                        p0[1] + a * unit[1]};
     const float dx = x - proj[0];
@@ -334,8 +329,8 @@ std::vector<uint8_t> RenderTile(const WorldObj* obj, int agent_dir) {
     RenderWorldObj(*obj, &img, hi_width, hi_height);
   }
   if (agent_dir >= 0) {
-    CoordFn tri = PointInTriangle({0.12f, 0.19f}, {0.87f, 0.50f},
-                                  {0.12f, 0.81f});
+    CoordFn tri =
+        PointInTriangle({0.12f, 0.19f}, {0.87f, 0.50f}, {0.12f, 0.81f});
     tri = RotateFn(std::move(tri), 0.5f, 0.5f,
                    0.5f * static_cast<float>(M_PI) * agent_dir);
     FillCoords(&img, hi_width, hi_height, tri, kAgentColor);
@@ -735,8 +730,7 @@ void MiniGridTask::Render(int width, int height, unsigned char* rgb) const {
   for (int y = 0; y < height_; ++y) {
     for (int x = 0; x < width_; ++x) {
       const WorldObj& cell = grid_[y][x];
-      const WorldObj* cell_ptr =
-          cell.GetType() == kEmpty ? nullptr : &cell;
+      const WorldObj* cell_ptr = cell.GetType() == kEmpty ? nullptr : &cell;
       const int agent_dir =
           agent_pos_.first == x && agent_pos_.second == y ? agent_dir_ : -1;
       const std::vector<uint8_t> tile = RenderTile(cell_ptr, agent_dir);

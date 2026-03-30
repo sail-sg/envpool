@@ -22,7 +22,7 @@
 #include <vector>
 
 #include "envpool/box2d/utils.h"
-#include <opencv2/opencv.hpp>
+#include "opencv2/opencv.hpp"
 
 namespace box2d {
 
@@ -78,7 +78,7 @@ BipedalWalkerBox2dEnv::BipedalWalkerBox2dEnv(bool hardcore,
 }
 
 std::pair<int, int> BipedalWalkerBox2dEnv::RenderSize(int width,
-                                                       int height) const {
+                                                      int height) const {
   return {width > 0 ? width : static_cast<int>(kViewportW),
           height > 0 ? height : static_cast<int>(kViewportH)};
 }
@@ -465,9 +465,7 @@ void BipedalWalkerBox2dEnv::Render(int width, int height, int /*camera_id*/,
   int viewport_h = static_cast<int>(kViewportH);
   int surf_width = std::max(viewport_w, viewport_w + std::max(scroll_px, 0));
 
-  cv::Mat surf(
-      viewport_h, surf_width, CV_8UC3,
-      cv::Scalar(255, 215, 215));
+  cv::Mat surf(viewport_h, surf_width, CV_8UC3, cv::Scalar(255, 215, 215));
 
   std::vector<cv::Point> background = {
       to_point(static_cast<float>(scroll_px), 0.0f),
@@ -514,8 +512,8 @@ void BipedalWalkerBox2dEnv::Render(int width, int height, int /*camera_id*/,
     std::vector<cv::Point> polygon;
     polygon.reserve(4);
     for (std::size_t j = 0; j < 8; j += 2) {
-      polygon.push_back(to_point(terrain_poly_path4_[i + j],
-                                 terrain_poly_path4_[i + j + 1]));
+      polygon.push_back(
+          to_point(terrain_poly_path4_[i + j], terrain_poly_path4_[i + j + 1]));
     }
     cv::fillConvexPoly(surf, polygon, cv::Scalar(255, 255, 255));
     cv::polylines(surf, polygon, true, cv::Scalar(153, 153, 153), 1,
@@ -537,8 +535,7 @@ void BipedalWalkerBox2dEnv::Render(int width, int height, int /*camera_id*/,
     int leg_index = static_cast<int>(i / 8);
     int sign = leg_index < 2 ? -1 : 1;
     cv::fillConvexPoly(surf, polygon, leg_fill_color(sign));
-    cv::polylines(surf, polygon, true, leg_outline_color(sign), 1,
-                  cv::LINE_AA);
+    cv::polylines(surf, polygon, true, leg_outline_color(sign), 1, cv::LINE_AA);
   }
 
   if (!hull_path5_.empty()) {

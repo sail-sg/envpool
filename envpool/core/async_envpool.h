@@ -229,13 +229,12 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
       throw std::invalid_argument(
           "resolved render width and height must be positive");
     }
-    ShapeSpec spec(
-        sizeof(unsigned char), {batch, render_height, render_width, 3});
+    ShapeSpec spec(sizeof(unsigned char),
+                   {batch, render_height, render_width, 3});
     Array rendered(spec);
     auto* rgb = static_cast<unsigned char*>(rendered.Data());
-    std::size_t frame_size =
-        static_cast<std::size_t>(render_width) * render_height * 3 *
-        sizeof(unsigned char);
+    std::size_t frame_size = static_cast<std::size_t>(render_width) *
+                             render_height * 3 * sizeof(unsigned char);
     for (int i = 0; i < batch; ++i) {
       int eid = tenv_ids[i];
       auto* renderable = dynamic_cast<RenderableEnv*>(envs_[eid].get());

@@ -27,8 +27,8 @@
 #include <utility>
 
 #include "envpool/core/env.h"
-#include "envpool/mujoco/offscreen_renderer.h"
 #include "envpool/mujoco/dmc/utils.h"
+#include "envpool/mujoco/offscreen_renderer.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846

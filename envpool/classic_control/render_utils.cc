@@ -20,7 +20,7 @@
 #include <cstdint>
 #include <vector>
 
-#include <opencv2/opencv.hpp>
+#include "opencv2/opencv.hpp"
 
 namespace classic_control {
 namespace rendering {
@@ -229,8 +229,7 @@ void RenderAcrobot(double theta1, double theta2, int width, int height,
            ToPoint(2.2 * scale + offset, scale + offset), cv::Scalar(0, 0, 0),
            1, cv::LINE_AA);
 
-  const std::array<cv::Point2d, 3> joints = {
-      cv::Point2d(0.0, 0.0), p1, p2};
+  const std::array<cv::Point2d, 3> joints = {cv::Point2d(0.0, 0.0), p1, p2};
   const std::array<double, 2> link_lengths = {kLinkLength1 * scale,
                                               kLinkLength2 * scale};
   const std::array<double, 2> link_thetas = {theta1 - kPi / 2.0,
@@ -243,9 +242,8 @@ void RenderAcrobot(double theta1, double theta2, int width, int height,
         {link_lengths[i], 0.1 * scale},
         {link_lengths[i], -0.1 * scale},
     };
-    const std::vector<cv::Point> link_poly =
-        TransformPolygonPoints(link, joint.x + offset, joint.y + offset,
-                               link_thetas[i]);
+    const std::vector<cv::Point> link_poly = TransformPolygonPoints(
+        link, joint.x + offset, joint.y + offset, link_thetas[i]);
     cv::fillConvexPoly(surf, link_poly, cv::Scalar(0, 204, 204), cv::LINE_AA);
     cv::circle(surf, ToPoint(joint.x + offset, joint.y + offset),
                static_cast<int>(std::lround(0.1 * scale)),

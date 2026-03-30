@@ -22,7 +22,7 @@
 #include <vector>
 
 #include "envpool/box2d/utils.h"
-#include <opencv2/opencv.hpp>
+#include "opencv2/opencv.hpp"
 
 namespace box2d {
 
@@ -117,9 +117,9 @@ void LunarLanderBox2dEnv::ResetBox2d(std::mt19937* gen) {
     moon_->CreateFixture(&fd);
   }
   for (int i = 0; i < kChunks - 1; ++i) {
-    sky_polys_.push_back(
-        {Vec2(chunk_x[i], smooth_y[i]), Vec2(chunk_x[i + 1], smooth_y[i + 1]),
-         Vec2(chunk_x[i + 1], h), Vec2(chunk_x[i], h)});
+    sky_polys_.push_back({Vec2(chunk_x[i], smooth_y[i]),
+                          Vec2(chunk_x[i + 1], smooth_y[i + 1]),
+                          Vec2(chunk_x[i + 1], h), Vec2(chunk_x[i], h)});
     b2EdgeShape shape;
     shape.SetTwoSided(b2Vec2(chunk_x[i], smooth_y[i]),
                       b2Vec2(chunk_x[i + 1], smooth_y[i + 1]));
@@ -383,8 +383,8 @@ void LunarLanderBox2dEnv::Render(int width, int height, int /*camera_id*/,
         auto* shape = static_cast<b2CircleShape*>(fixture->GetShape());
         b2Vec2 center = b2Mul(fixture->GetBody()->GetTransform(), shape->m_p);
         int radius = static_cast<int>(std::lround(shape->m_radius * kScale));
-        cv::circle(surf, to_point(center.x, center.y), radius, fill,
-                   cv::FILLED, cv::LINE_AA);
+        cv::circle(surf, to_point(center.x, center.y), radius, fill, cv::FILLED,
+                   cv::LINE_AA);
         cv::circle(surf, to_point(center.x, center.y), radius, outline, 1,
                    cv::LINE_AA);
       }
