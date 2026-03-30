@@ -30,13 +30,7 @@ config_setting(
 
 cc_binary(
     name = "arithchk",
-    srcs = [
-        "gdtoa/arithchk.c",
-        "@glibc_version_header//:glibc_2_17",
-    ],
-    copts = [
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
-    ],
+    srcs = ["gdtoa/arithchk.c"],
 )
 
 genrule(
@@ -52,10 +46,6 @@ cc_binary(
     srcs = [
         "gdtoa/qnan.c",
         ":arith.h",
-        "@glibc_version_header//:glibc_2_17",
-    ],
-    copts = [
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
     ],
 )
 
@@ -75,17 +65,13 @@ cc_library(
         "gdtoa/misc.c",
         ":arith.h",
         ":gd_qnan.h",
-    ] + select({
-        "@envpool//:windows": [],
-        "//conditions:default": ["@glibc_version_header//:glibc_2_17"],
-    }),
+    ],
     hdrs = glob(["gdtoa/*.h"]),
     copts = select({
         "@envpool//:windows": [],
         "//conditions:default": [
             "-Wall",
             "-Wextra",
-            "-include $(execpath @glibc_version_header//:glibc_2_17)",
         ],
     }) + [
         "-DINFNAN_CHECK",
@@ -104,10 +90,7 @@ cc_library(
         "bzip2/decompress.c",
         "bzip2/huffman.c",
         "bzip2/randtable.c",
-    ] + select({
-        "@envpool//:windows": [],
-        "//conditions:default": ["@glibc_version_header//:glibc_2_17"],
-    }),
+    ],
     hdrs = glob([
         "bzip2/*.h",
     ]),
@@ -119,7 +102,6 @@ cc_library(
             "-Wall",
             "-Wextra",
             "-fomit-frame-pointer",
-            "-include $(execpath @glibc_version_header//:glibc_2_17)",
         ],
     }),
     strip_include_prefix = "bzip2",
@@ -150,7 +132,7 @@ cc_library(
             "lzma/C/LzFindMt.c",
             "lzma/C/Threads.c",
         ],
-        "//conditions:default": ["@glibc_version_header//:glibc_2_17"],
+        "//conditions:default": [],
     }),
     hdrs = glob([
         "lzma/C/*.h",
@@ -164,7 +146,6 @@ cc_library(
             "-Wall",
             "-Wextra",
             "-fomit-frame-pointer",
-            "-include $(execpath @glibc_version_header//:glibc_2_17)",
         ],
     }),
     strip_include_prefix = "lzma/C",
@@ -182,23 +163,13 @@ cc_binary(
         "tools/re2c/scanner.cc",
         "tools/re2c/substr.cc",
         "tools/re2c/translate.cc",
-        "@glibc_version_header//:glibc_2_17",
     ] + glob(["tools/re2c/*.h"]),
-    copts = [
-        "-DHAVE_CONFIG_H",
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
-    ],
+    copts = ["-DHAVE_CONFIG_H"],
 )
 
 cc_binary(
     name = "lemon",
-    srcs = [
-        "tools/lemon/lemon.c",
-        "@glibc_version_header//:glibc_2_17",
-    ],
-    copts = [
-        "-include $(execpath @glibc_version_header//:glibc_2_17)",
-    ],
+    srcs = ["tools/lemon/lemon.c"],
 )
 
 genrule(
@@ -244,10 +215,7 @@ cc_library(
         "dumb/**/*.h",
         "dumb/**/*.c",
         "dumb/**/*.inc",
-    ]) + select({
-        "@envpool//:windows": [],
-        "//conditions:default": ["@glibc_version_header//:glibc_2_17"],
-    }),
+    ]),
     hdrs = glob([
         "dumb/include/*.h",
     ]),
@@ -260,7 +228,6 @@ cc_library(
             "-Wno-pointer-sign",
             "-Wno-uninitialized",
             "-Wno-unused-but-set-variable",
-            "-include $(execpath @glibc_version_header//:glibc_2_17)",
         ],
     }),
     includes = [
@@ -273,10 +240,7 @@ cc_library(
     srcs = glob([
         "game-music-emu/gme/*.cpp",
         "game-music-emu/gme/*.h",
-    ]) + select({
-        "@envpool//:windows": [],
-        "//conditions:default": ["@glibc_version_header//:glibc_2_17"],
-    }),
+    ]),
     hdrs = [
         "game-music-emu/gme/gme.h",
     ],
@@ -286,7 +250,6 @@ cc_library(
             "-DLIBGME_VISIBILITY",
             "-fvisibility=hidden",
             "-fvisibility-inlines-hidden",
-            "-include $(execpath @glibc_version_header//:glibc_2_17)",
         ],
     }),
     strip_include_prefix = "game-music-emu",
@@ -382,16 +345,12 @@ cc_library(
         "src/*.h",
     ]) + [
         "src/oplsynth/fmopl.cpp",
-    ] + select({
-        "@envpool//:windows": [],
-        "//conditions:default": ["@glibc_version_header//:glibc_2_17"],
-    }),
+    ],
     copts = select({
         "@envpool//:windows": [],
         "//conditions:default": [
             "-Dstricmp=strcasecmp",
             "-Dstrnicmp=strncasecmp",
-            "-include $(execpath @glibc_version_header//:glibc_2_17)",
         ],
     }) + select({
         "@envpool//:windows": [],
@@ -410,7 +369,6 @@ genrule(
     name = "iwadpicker_cocoa_o",
     srcs = glob(["src/**"]) + [
         ":viz_version",
-        "@glibc_version_header//:glibc_2_17",
         "@sdl2//:srcs",
     ],
     outs = ["iwadpicker_cocoa.o"],
@@ -430,7 +388,6 @@ generated_dir=$$(dirname "$(execpath :viz_version)")
   -Iexternal/vizdoom/src/posix/sdl \
   -Iexternal/sdl2/include \
   -I"$${generated_dir}" \
-  -include "$(execpath @glibc_version_header//:glibc_2_17)" \
   "$(location src/posix/osx/iwadpicker_cocoa.mm)" \
   -o "$@"
 """,
@@ -444,7 +401,6 @@ genrule(
     name = "i_system_mm_o",
     srcs = glob(["src/**"]) + [
         ":viz_version",
-        "@glibc_version_header//:glibc_2_17",
         "@sdl2//:srcs",
     ],
     outs = ["i_system.mm.o"],
@@ -464,7 +420,6 @@ generated_dir=$$(dirname "$(execpath :viz_version)")
   -Iexternal/vizdoom/src/posix/sdl \
   -Iexternal/sdl2/include \
   -I"$${generated_dir}" \
-  -include "$(execpath @glibc_version_header//:glibc_2_17)" \
   "$(location src/posix/sdl/i_system.mm)" \
   -o "$@"
 """,
@@ -491,14 +446,7 @@ cc_binary(
     name = "zipdir",
     srcs = [
         "tools/zipdir/zipdir.c",
-    ] + select({
-        "@envpool//:windows": [],
-        "//conditions:default": ["@glibc_version_header//:glibc_2_17"],
-    }),
-    copts = select({
-        "@envpool//:windows": [],
-        "//conditions:default": ["-include $(execpath @glibc_version_header//:glibc_2_17)"],
-    }),
+    ],
     deps = [
         ":bzip2",
         ":lzma",
@@ -914,9 +862,6 @@ cc_binary(
     ] + select({
         "@envpool//:windows": _VIZDOOM_WINDOWS_SRCS,
         "//conditions:default": _VIZDOOM_POSIX_SRCS,
-    }) + select({
-        "@envpool//:windows": [],
-        "//conditions:default": ["@glibc_version_header//:glibc_2_17"],
     }),
     copts = [
         "-DNO_GTK=1",
@@ -943,7 +888,6 @@ cc_binary(
             "-Wno-deprecated-copy",
             "-Wno-stringop-truncation",
             "-Wno-cast-function-type",
-            "-include $(execpath @glibc_version_header//:glibc_2_17)",
         ],
     }) + select({
         "@envpool//:windows": [],
