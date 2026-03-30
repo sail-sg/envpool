@@ -15,7 +15,7 @@
 
 from envpool.python.api import py_env
 
-from .toy_text_envpool import (
+from .toy_text_envpool import (  # type: ignore[import-untyped,unused-ignore]
     _BlackjackEnvPool,
     _BlackjackEnvSpec,
     _CatchEnvPool,

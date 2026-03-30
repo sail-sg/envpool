@@ -17,6 +17,7 @@ import multiprocessing as mp
 import os
 import queue
 import shutil
+from typing import Any, cast
 
 import numpy as np
 import torch
@@ -84,7 +85,7 @@ def _eval_c51_impl(
     ).to(device)
     policy.load_state_dict(torch.load(resume_path, map_location=device))
     policy.eval()
-    ids = np.arange(num_envs)
+    ids = cast(Any, np.arange(num_envs))
     reward = np.zeros(num_envs)
     length = np.zeros(num_envs)
     obs, _ = env.reset()
@@ -95,7 +96,7 @@ def _eval_c51_impl(
             act = policy(Batch(obs=obs, info={})).act
         obs, rew, terminated, truncated, info = env.step(act, ids)
         done = np.logical_or(terminated, truncated)
-        ids = np.asarray(info["env_id"])
+        ids = cast(Any, np.asarray(info["env_id"]))
         reward[ids] += rew
         length[ids] += 1
         obs = obs[~done]

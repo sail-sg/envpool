@@ -20,7 +20,7 @@ from typing import Any, cast
 
 import numpy as np
 import optree
-from dm_env import TimeStep
+from dm_env import TimeStep  # type: ignore[import-untyped,unused-ignore]
 
 from .protocol import EnvPool, EnvSpec
 
@@ -206,9 +206,9 @@ class EnvPoolMixin(ABC):
         env_id: np.ndarray | None = None,
     ) -> None:
         """Send actions into EnvPool."""
-        action = self._from(action, env_id)
-        self._check_action(action)
-        self._send(action)
+        converted_action = self._from(action, env_id)
+        self._check_action(converted_action)
+        self._send(converted_action)
 
     def recv(
         self: EnvPool,

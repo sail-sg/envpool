@@ -13,7 +13,7 @@
 # limitations under the License.
 """Mujoco gym env in EnvPool."""
 
-from envpool.mujoco.mujoco_gym_envpool import (
+from envpool.mujoco.mujoco_gym_envpool import (  # type: ignore[import-untyped,unused-ignore]
     _GymAntEnvPool,
     _GymAntEnvSpec,
     _GymHalfCheetahEnvPool,

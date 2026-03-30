@@ -24,6 +24,7 @@ py_library(
     deps = [
         requirement("dm-env"),
         requirement("gym"),
+        requirement("gymnasium"),
         requirement("numpy"),
     ],
 )

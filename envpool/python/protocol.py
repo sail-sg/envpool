@@ -17,14 +17,21 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    NamedTuple,
+    Literal,
+    overload,
 )
 
-import dm_env
-import gym
 import numpy as np
-from dm_env import TimeStep
+from dm_env import TimeStep  # type: ignore[import-untyped,unused-ignore]
 from typing_extensions import Protocol, TypeAlias
+
+ObsType: TypeAlias = Any
+InfoDict: TypeAlias = dict[str, Any]
+ActionInput: TypeAlias = dict[str, Any] | np.ndarray
+GymResetReturn: TypeAlias = tuple[ObsType, InfoDict]
+GymStepReturn: TypeAlias = tuple[ObsType, Any, Any, Any, InfoDict]
+GymnasiumResetReturn: TypeAlias = tuple[ObsType, InfoDict]
+GymnasiumStepReturn: TypeAlias = tuple[ObsType, Any, Any, Any, InfoDict]
 
 
 class EnvSpec(Protocol):
@@ -58,7 +65,7 @@ class EnvSpec(Protocol):
         """Cpp private _config_values."""
 
     @property
-    def config(self) -> NamedTuple:
+    def config(self) -> Any:
         """Configuration used to create the current EnvSpec."""
 
     @property
@@ -69,19 +76,31 @@ class EnvSpec(Protocol):
     def action_array_spec(self) -> dict[str, Any]:
         """Specs of the actions of the environment in ArraySpec format."""
 
-    def observation_spec(self) -> dict[str, Any]:
+    def observation_spec(self) -> Any:
         """Specs of the observations of the environment in dm_env format."""
 
-    def action_spec(self) -> dm_env.specs.Array | dict[str, Any]:
+    def action_spec(self) -> Any:
         """Specs of the actions of the environment in dm_env format."""
 
     @property
-    def observation_space(self) -> dict[str, Any]:
+    def observation_space(self) -> Any:
         """Specs of the observations of the environment in gym.Env format."""
 
     @property
-    def action_space(self) -> gym.Space | dict[str, Any]:
+    def action_space(self) -> Any:
         """Specs of the actions of the environment in gym.Env format."""
+
+    @property
+    def gymnasium_observation_space(
+        self,
+    ) -> Any:
+        """Specs of the observations of the environment in gymnasium format."""
+
+    @property
+    def gymnasium_action_space(
+        self,
+    ) -> Any:
+        """Specs of the actions of the environment in gymnasium format."""
 
     @property
     def reward_threshold(self) -> float | None:
@@ -197,7 +216,7 @@ class EnvPool(Protocol):
         state: list[np.ndarray],
         reset: bool,
         return_info: bool,
-    ) -> TimeStep | tuple:
+    ) -> Any:
         """A switch of to_dm and to_gym for output state."""
 
     @property
@@ -209,17 +228,17 @@ class EnvPool(Protocol):
         """Return if this env is in sync mode or async mode."""
 
     @property
-    def observation_space(self) -> gym.Space | dict[str, Any]:
+    def observation_space(self) -> Any:
         """Gym observation space."""
 
     @property
-    def action_space(self) -> gym.Space | dict[str, Any]:
+    def action_space(self) -> Any:
         """Gym action space."""
 
-    def observation_spec(self) -> tuple:
+    def observation_spec(self) -> Any:
         """Dm observation spec."""
 
-    def action_spec(self) -> dm_env.specs.Array | tuple:
+    def action_spec(self) -> Any:
         """Dm action spec."""
 
     def seed(self, seed: int | list[int] | None = None) -> None:
@@ -231,16 +250,30 @@ class EnvPool(Protocol):
 
     def send(
         self,
-        action: dict[str, Any] | np.ndarray,
+        action: ActionInput,
         env_id: np.ndarray | None = None,
     ) -> None:
         """Envpool send wrapper."""
+
+    @overload
+    def recv(
+        self,
+        reset: Literal[False] = False,
+        return_info: bool = True,
+    ) -> Any: ...
+
+    @overload
+    def recv(
+        self,
+        reset: Literal[True],
+        return_info: bool = True,
+    ) -> Any: ...
 
     def recv(
         self,
         reset: bool = False,
         return_info: bool = True,
-    ) -> TimeStep | tuple:
+    ) -> Any:
         """Envpool recv wrapper."""
 
     def async_reset(self) -> None:
@@ -248,16 +281,155 @@ class EnvPool(Protocol):
 
     def step(
         self,
-        action: dict[str, Any] | np.ndarray,
+        action: ActionInput,
         env_id: np.ndarray | None = None,
-    ) -> TimeStep | tuple:
+    ) -> Any:
         """Envpool step interface that performs send/recv."""
 
     def reset(
         self,
         env_id: np.ndarray | None = None,
-    ) -> TimeStep | tuple:
+    ) -> Any:
         """Envpool reset interface."""
+
+    def close(self) -> None:
+        """Close the underlying environment."""
 
     def xla(self) -> tuple[Any, Callable, Callable, Callable]:
         """Get the xla functions."""
+
+
+class DMEnvPool(EnvPool, Protocol):
+    """dm_env-compatible EnvPool interface."""
+
+    def observation_spec(self) -> Any:
+        """Dm observation spec."""
+
+    def action_spec(self) -> Any:
+        """Dm action spec."""
+
+    def recv(
+        self,
+        reset: bool = False,
+        return_info: bool = True,
+    ) -> TimeStep:
+        """Recv a dm_env timestep."""
+
+    def step(
+        self,
+        action: ActionInput,
+        env_id: np.ndarray | None = None,
+    ) -> TimeStep:
+        """Step the dm_env-compatible envpool."""
+
+    def reset(
+        self,
+        env_id: np.ndarray | None = None,
+    ) -> TimeStep:
+        """Reset the dm_env-compatible envpool."""
+
+
+class GymEnvPool(EnvPool, Protocol):
+    """gym-compatible EnvPool interface."""
+
+    @property
+    def observation_space(self) -> Any:
+        """Gym observation space."""
+
+    @property
+    def action_space(self) -> Any:
+        """Gym action space."""
+
+    @overload
+    def recv(
+        self,
+        reset: Literal[False] = False,
+        return_info: bool = True,
+    ) -> GymStepReturn: ...
+
+    @overload
+    def recv(
+        self,
+        reset: Literal[True],
+        return_info: bool = True,
+    ) -> GymResetReturn: ...
+
+    @overload
+    def recv(
+        self,
+        reset: bool = False,
+        return_info: bool = True,
+    ) -> GymResetReturn | GymStepReturn: ...
+
+    def recv(
+        self,
+        reset: bool = False,
+        return_info: bool = True,
+    ) -> GymResetReturn | GymStepReturn:
+        """Recv a gym observation/reset tuple."""
+
+    def step(
+        self,
+        action: ActionInput,
+        env_id: np.ndarray | None = None,
+    ) -> GymStepReturn:
+        """Step the gym-compatible envpool."""
+
+    def reset(
+        self,
+        env_id: np.ndarray | None = None,
+    ) -> GymResetReturn:
+        """Reset the gym-compatible envpool."""
+
+
+class GymnasiumEnvPool(EnvPool, Protocol):
+    """gymnasium-compatible EnvPool interface."""
+
+    @property
+    def observation_space(self) -> Any:
+        """Gymnasium observation space."""
+
+    @property
+    def action_space(self) -> Any:
+        """Gymnasium action space."""
+
+    @overload
+    def recv(
+        self,
+        reset: Literal[False] = False,
+        return_info: bool = True,
+    ) -> GymnasiumStepReturn: ...
+
+    @overload
+    def recv(
+        self,
+        reset: Literal[True],
+        return_info: bool = True,
+    ) -> GymnasiumResetReturn: ...
+
+    @overload
+    def recv(
+        self,
+        reset: bool = False,
+        return_info: bool = True,
+    ) -> GymnasiumResetReturn | GymnasiumStepReturn: ...
+
+    def recv(
+        self,
+        reset: bool = False,
+        return_info: bool = True,
+    ) -> GymnasiumResetReturn | GymnasiumStepReturn:
+        """Recv a gymnasium observation/reset tuple."""
+
+    def step(
+        self,
+        action: ActionInput,
+        env_id: np.ndarray | None = None,
+    ) -> GymnasiumStepReturn:
+        """Step the gymnasium-compatible envpool."""
+
+    def reset(
+        self,
+        env_id: np.ndarray | None = None,
+    ) -> GymnasiumResetReturn:
+        """Reset the gymnasium-compatible envpool."""

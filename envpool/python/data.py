@@ -16,7 +16,7 @@
 from collections import namedtuple
 from typing import Any, cast
 
-import dm_env
+import dm_env  # type: ignore[import-untyped,unused-ignore]
 import gym
 import gymnasium
 import numpy as np

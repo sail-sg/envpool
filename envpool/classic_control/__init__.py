@@ -15,7 +15,7 @@
 
 from envpool.python.api import py_env
 
-from .classic_control_envpool import (
+from .classic_control_envpool import (  # type: ignore[import-untyped,unused-ignore]
     _AcrobotEnvPool,
     _AcrobotEnvSpec,
     _CartPoleEnvPool,

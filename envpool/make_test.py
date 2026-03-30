@@ -14,6 +14,8 @@
 """Test for envpool.make."""
 
 import pprint
+from pathlib import Path
+from typing import get_type_hints
 
 import dm_env
 import gym
@@ -22,11 +24,43 @@ from absl.testing import absltest
 
 import envpool
 import envpool.minigrid.registration  # noqa: F401
+from envpool.python.protocol import (
+    DMEnvPool,
+    EnvPool,
+    EnvSpec,
+    GymEnvPool,
+    GymnasiumEnvPool,
+)
 
 
 class _MakeTest(absltest.TestCase):
     def test_version(self) -> None:
         print(envpool.__version__)
+
+    def test_public_typing_interface(self) -> None:
+        self.assertTrue(Path(envpool.__file__).with_name("py.typed").is_file())
+        self.assertContainsSubsequence(
+            envpool.__all__,
+            [
+                "EnvSpec",
+                "EnvPool",
+                "DMEnvPool",
+                "GymEnvPool",
+                "GymnasiumEnvPool",
+            ],
+        )
+        self.assertIs(envpool.EnvSpec, EnvSpec)
+        self.assertIs(envpool.EnvPool, EnvPool)
+        self.assertIs(envpool.DMEnvPool, DMEnvPool)
+        self.assertIs(envpool.GymEnvPool, GymEnvPool)
+        self.assertIs(envpool.GymnasiumEnvPool, GymnasiumEnvPool)
+        self.assertIs(get_type_hints(envpool.make_spec)["return"], EnvSpec)
+        self.assertIs(get_type_hints(envpool.make_dm)["return"], DMEnvPool)
+        self.assertIs(get_type_hints(envpool.make_gym)["return"], GymEnvPool)
+        self.assertIs(
+            get_type_hints(envpool.make_gymnasium)["return"],
+            GymnasiumEnvPool,
+        )
 
     def test_list_all_envs(self) -> None:
         pprint.pprint(envpool.list_all_envs())
