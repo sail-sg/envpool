@@ -202,7 +202,7 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
   // Find closed loop range i1..i2, first loop should be ignored, second is OK
   int i1 = -1;
   int i2 = -1;
-  for (int i = static_cast<int>(current_track.size()) - 1;; --i) {
+  for (auto i = static_cast<int>(current_track.size()) - 1;; --i) {
     if (i == 0) {
       return false;  // failed
     }
@@ -234,7 +234,7 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
   }
 
   // Red-white border on hard turns
-  int track_size = static_cast<int>(current_track.size());
+  const auto track_size = static_cast<int>(current_track.size());
   std::vector<bool> border(track_size, false);
   for (int i = 0; i < track_size; i++) {
     bool good = true;

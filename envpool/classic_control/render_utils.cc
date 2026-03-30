@@ -70,8 +70,8 @@ void RenderCartPole(double x, double theta, int width, int height,
   constexpr double k_axle_offset = k_cart_height / 4.0;
 
   cv::Mat surf(height, width, CV_8UC3, cv::Scalar(255, 255, 255));
-  const double scale = static_cast<double>(width) / (2.0 * k_x_threshold);
-  const double cart_x = x * scale + static_cast<double>(width) / 2.0;
+  const auto scale = static_cast<double>(width) / (2.0 * k_x_threshold);
+  const auto cart_x = x * scale + static_cast<double>(width) / 2.0;
 
   const std::vector<cv::Point2d> cart = {
       {-k_cart_width / 2.0, -k_cart_height / 2.0},
@@ -106,9 +106,9 @@ void RenderPendulum(double theta, bool has_last_u, double last_u, int width,
                     int height, std::uint8_t* rgb) {
   cv::Mat surf(height, width, CV_8UC3, cv::Scalar(255, 255, 255));
   const double bound = 2.2;
-  const double scale = static_cast<double>(width) / (bound * 2.0);
-  const double offset_x = static_cast<double>(width) / 2.0;
-  const double offset_y = static_cast<double>(height) / 2.0;
+  const auto scale = static_cast<double>(width) / (bound * 2.0);
+  const auto offset_x = static_cast<double>(width) / 2.0;
+  const auto offset_y = static_cast<double>(height) / 2.0;
   const double rod_length = scale;
   const double rod_width = 0.2 * scale;
 
@@ -156,7 +156,7 @@ void RenderMountainCar(double pos, double goal_pos, int width, int height,
   constexpr double k_clearance = 10.0;
 
   cv::Mat surf(height, width, CV_8UC3, cv::Scalar(255, 255, 255));
-  const double scale = static_cast<double>(width) / (k_max_pos - k_min_pos);
+  const auto scale = static_cast<double>(width) / (k_max_pos - k_min_pos);
 
   std::vector<cv::Point> path;
   path.reserve(100);
@@ -212,8 +212,8 @@ void RenderAcrobot(double theta1, double theta2, int width, int height,
 
   cv::Mat surf(height, width, CV_8UC3, cv::Scalar(255, 255, 255));
   const double bound = k_link_length1 + k_link_length2 + 0.2;
-  const double scale = static_cast<double>(width) / (bound * 2.0);
-  const double offset = static_cast<double>(width) / 2.0;
+  const auto scale = static_cast<double>(width) / (bound * 2.0);
+  const auto offset = static_cast<double>(width) / 2.0;
 
   const cv::Point2d p1 = {
       k_link_length1 * std::sin(theta1) * scale,

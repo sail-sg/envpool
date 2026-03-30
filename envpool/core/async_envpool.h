@@ -233,8 +233,8 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
                    {batch, render_height, render_width, 3});
     Array rendered(spec);
     auto* rgb = static_cast<unsigned char*>(rendered.Data());
-    std::size_t frame_size = static_cast<std::size_t>(render_width) *
-                             render_height * 3 * sizeof(unsigned char);
+    const auto frame_size = static_cast<std::size_t>(render_width) *
+                            render_height * 3 * sizeof(unsigned char);
     for (int i = 0; i < batch; ++i) {
       int eid = tenv_ids[i];
       auto* renderable = dynamic_cast<RenderableEnv*>(envs_[eid].get());

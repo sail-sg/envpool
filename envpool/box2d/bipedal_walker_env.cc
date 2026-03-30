@@ -460,9 +460,9 @@ void BipedalWalkerBox2dEnv::Render(int width, int height, int /*camera_id*/,
                      static_cast<int>(std::lround(y)));
   };
 
-  int scroll_px = static_cast<int>(std::lround(scroll_ * kScaleFloat));
-  int viewport_w = static_cast<int>(kViewportW);
-  int viewport_h = static_cast<int>(kViewportH);
+  const auto scroll_px = static_cast<int>(std::lround(scroll_ * kScaleFloat));
+  const auto viewport_w = static_cast<int>(kViewportW);
+  const auto viewport_h = static_cast<int>(kViewportH);
   int surf_width = std::max(viewport_w, viewport_w + std::max(scroll_px, 0));
 
   cv::Mat surf(viewport_h, surf_width, CV_8UC3, cv::Scalar(255, 215, 215));
@@ -532,7 +532,7 @@ void BipedalWalkerBox2dEnv::Render(int width, int height, int /*camera_id*/,
     for (std::size_t j = 0; j < 8; j += 2) {
       polygon.push_back(to_point(leg_path4_[i + j], leg_path4_[i + j + 1]));
     }
-    int leg_index = static_cast<int>(i / 8);
+    const auto leg_index = static_cast<int>(i / 8);
     int sign = leg_index < 2 ? -1 : 1;
     cv::fillConvexPoly(surf, polygon, leg_fill_color(sign));
     cv::polylines(surf, polygon, true, leg_outline_color(sign), 1, cv::LINE_AA);

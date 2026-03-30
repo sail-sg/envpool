@@ -340,8 +340,8 @@ void LunarLanderBox2dEnv::Render(int width, int height, int /*camera_id*/,
                      static_cast<int>(std::lround(y * kScale)));
   };
 
-  int viewport_w = static_cast<int>(kViewportW);
-  int viewport_h = static_cast<int>(kViewportH);
+  const auto viewport_w = static_cast<int>(kViewportW);
+  const auto viewport_h = static_cast<int>(kViewportH);
   cv::Mat surf(viewport_h, viewport_w, CV_8UC3, cv::Scalar(255, 255, 255));
 
   for (const auto& poly : sky_polys_) {
@@ -382,7 +382,7 @@ void LunarLanderBox2dEnv::Render(int width, int height, int /*camera_id*/,
       } else if (fixture->GetShape()->GetType() == b2Shape::e_circle) {
         auto* shape = static_cast<b2CircleShape*>(fixture->GetShape());
         b2Vec2 center = b2Mul(fixture->GetBody()->GetTransform(), shape->m_p);
-        int radius = static_cast<int>(std::lround(shape->m_radius * kScale));
+        const auto radius = static_cast<int>(std::lround(shape->m_radius * kScale));
         cv::circle(surf, to_point(center.x, center.y), radius, fill, cv::FILLED,
                    cv::LINE_AA);
         cv::circle(surf, to_point(center.x, center.y), radius, outline, 1,
@@ -396,8 +396,8 @@ void LunarLanderBox2dEnv::Render(int width, int height, int /*camera_id*/,
   draw_body(legs_[1], cv::Scalar(230, 102, 128), cv::Scalar(128, 77, 77));
 
   for (double x : {helipad_x1_, helipad_x2_}) {
-    int px = static_cast<int>(std::lround(x * kScale));
-    int flag_y1 = static_cast<int>(std::lround(helipad_y_ * kScale));
+    const auto px = static_cast<int>(std::lround(x * kScale));
+    const auto flag_y1 = static_cast<int>(std::lround(helipad_y_ * kScale));
     int flag_y2 = flag_y1 + 50;
     cv::line(surf, cv::Point(px, flag_y1), cv::Point(px, flag_y2),
              cv::Scalar(255, 255, 255), 1, cv::LINE_AA);

@@ -194,8 +194,8 @@ void FillCoords(std::vector<uint8_t>* img, int width, int height,
                 const CoordFn& fn, const Rgb& color) {
   for (int y = 0; y < height; ++y) {
     for (int x = 0; x < width; ++x) {
-      const float yf = static_cast<float>(y + 0.5f) / height;
-      const float xf = static_cast<float>(x + 0.5f) / width;
+      const auto yf = static_cast<float>(y + 0.5f) / height;
+      const auto xf = static_cast<float>(x + 0.5f) / width;
       if (!fn(xf, yf)) {
         continue;
       }
