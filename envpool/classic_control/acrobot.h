@@ -21,6 +21,7 @@
 #include <cmath>
 #include <random>
 
+#include "envpool/classic_control/render_utils.h"
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
 
@@ -46,7 +47,7 @@ class AcrobotEnvFns {
 
 using AcrobotEnvSpec = EnvSpec<AcrobotEnvFns>;
 
-class AcrobotEnv : public Env<AcrobotEnvSpec> {
+class AcrobotEnv : public Env<AcrobotEnvSpec>, public RenderableEnv {
   struct V5 {
     double s0{0}, s1{0}, s2{0}, s3{0}, s4{0};
     V5() = default;
@@ -84,6 +85,10 @@ class AcrobotEnv : public Env<AcrobotEnvSpec> {
         dist_(-kInitRange, kInitRange) {}
 
   bool IsDone() override { return done_; }
+
+  std::pair<int, int> RenderSize(int width, int height) const override {
+    return {width > 0 ? width : 500, height > 0 ? height : 500};
+  }
 
   void Reset() override {
     s_.s0 = dist_(gen_);
@@ -133,6 +138,11 @@ class AcrobotEnv : public Env<AcrobotEnvSpec> {
     }
 
     WriteState(reward);
+  }
+
+  void Render(int width, int height, int /*camera_id*/,
+              unsigned char* rgb) override {
+    rendering::RenderAcrobot(s_.s0, s_.s1, width, height, rgb);
   }
 
  private:

@@ -109,6 +109,8 @@ class MiniGridTask {
   void GenImage(const Array& obs) const;
   void WriteMission(const Array& obs) const;
   [[nodiscard]] virtual MiniGridDebugState DebugState() const;
+  [[nodiscard]] std::pair<int, int> RenderSize(int width, int height) const;
+  void Render(int width, int height, unsigned char* rgb) const;
 
  protected:
   virtual void GenGrid() = 0;
