@@ -16,6 +16,13 @@
 import numpy as np
 
 import envpool.entry  # noqa: F401
+from envpool.python.protocol import (
+    DMEnvPool,
+    EnvPool,
+    EnvSpec,
+    GymEnvPool,
+    GymnasiumEnvPool,
+)
 from envpool.registration import (
     list_all_envs,
     make,
@@ -41,4 +48,9 @@ __all__ = [
     "make_gymnasium",
     "make_spec",
     "list_all_envs",
+    "EnvSpec",
+    "EnvPool",
+    "DMEnvPool",
+    "GymEnvPool",
+    "GymnasiumEnvPool",
 ]

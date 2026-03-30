@@ -15,6 +15,7 @@
 
 import os
 import sys
+from typing import Any, cast
 
 import numpy as np
 import torch
@@ -57,7 +58,7 @@ class _AtariPretrainTest(absltest.TestCase):
         ).to(device)
         policy.load_state_dict(torch.load(resume_path, map_location=device))
         policy.eval()
-        ids = np.arange(num_envs)
+        ids = cast(Any, np.arange(num_envs))
         reward = np.zeros(num_envs)
         obs, _ = env.reset()
         for _ in range(25000):
@@ -67,7 +68,7 @@ class _AtariPretrainTest(absltest.TestCase):
                 act = policy(Batch(obs=obs, info={})).act
             obs, rew, terminated, truncated, info = env.step(act, ids)
             done = np.logical_or(terminated, truncated)
-            ids = np.asarray(info["env_id"])
+            ids = cast(Any, np.asarray(info["env_id"]))
             reward[ids] += rew
             obs = obs[~done]
             ids = ids[~done]

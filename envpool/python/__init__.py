@@ -12,3 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Python interface for EnvPool."""
+
+from .protocol import DMEnvPool, EnvPool, EnvSpec, GymEnvPool, GymnasiumEnvPool
+
+__all__ = [
+    "DMEnvPool",
+    "EnvPool",
+    "EnvSpec",
+    "GymEnvPool",
+    "GymnasiumEnvPool",
+]

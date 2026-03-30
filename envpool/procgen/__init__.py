@@ -32,7 +32,10 @@ if sys.platform == "win32" and hasattr(os, "add_dll_directory"):
             _WINDOWS_DLL_DIR_HANDLES.append(os.add_dll_directory(qt_bin))
             break
 
-from .procgen_envpool import _ProcgenEnvPool, _ProcgenEnvSpec
+from .procgen_envpool import (
+    _ProcgenEnvPool,
+    _ProcgenEnvSpec,
+)
 
 (
     ProcgenEnvSpec,

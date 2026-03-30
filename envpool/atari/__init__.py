@@ -16,7 +16,10 @@
 
 from envpool.python.api import py_env
 
-from .atari_envpool import _AtariEnvPool, _AtariEnvSpec
+from .atari_envpool import (
+    _AtariEnvPool,
+    _AtariEnvSpec,
+)
 
 AtariEnvSpec, AtariDMEnvPool, AtariGymEnvPool, AtariGymnasiumEnvPool = py_env(
     _AtariEnvSpec, _AtariEnvPool

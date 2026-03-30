@@ -49,6 +49,7 @@ py_library(
 py_library(
     name = "envpool",
     srcs = ["__init__.py"],
+    data = ["py.typed"],
     imports = [".."],
     deps = [
         ":entry",

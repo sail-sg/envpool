@@ -16,13 +16,19 @@
 import importlib
 import os
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, Literal, overload
 
 import gym
 import numpy as np
 from packaging import version
 
 from .core import SharedThreadPool
+from .python.protocol import (
+    DMEnvPool,
+    EnvSpec,
+    GymEnvPool,
+    GymnasiumEnvPool,
+)
 
 base_path = os.path.abspath(os.path.dirname(__file__))
 
@@ -78,7 +84,29 @@ class EnvRegistry:
             num_threads, num_envs_capacity, thread_affinity_offset
         )
 
-    def make(self, task_id: str, env_type: str, **kwargs: Any) -> Any:
+    @overload
+    def make(
+        self, task_id: str, env_type: Literal["dm"], **kwargs: Any
+    ) -> DMEnvPool: ...
+
+    @overload
+    def make(
+        self, task_id: str, env_type: Literal["gym"], **kwargs: Any
+    ) -> GymEnvPool: ...
+
+    @overload
+    def make(
+        self, task_id: str, env_type: Literal["gymnasium"], **kwargs: Any
+    ) -> GymnasiumEnvPool: ...
+
+    @overload
+    def make(
+        self, task_id: str, env_type: str, **kwargs: Any
+    ) -> DMEnvPool | GymEnvPool | GymnasiumEnvPool: ...
+
+    def make(
+        self, task_id: str, env_type: str, **kwargs: Any
+    ) -> DMEnvPool | GymEnvPool | GymnasiumEnvPool:
         """Make envpool."""
         new_gym_api = version.parse(gym.__version__) >= version.parse("0.26.0")
         if "gym_reset_return_info" not in kwargs:
@@ -102,19 +130,19 @@ class EnvRegistry:
             spec, thread_pool
         )
 
-    def make_dm(self, task_id: str, **kwargs: Any) -> Any:
+    def make_dm(self, task_id: str, **kwargs: Any) -> DMEnvPool:
         """Make dm_env compatible envpool."""
         return self.make(task_id, "dm", **kwargs)
 
-    def make_gym(self, task_id: str, **kwargs: Any) -> Any:
+    def make_gym(self, task_id: str, **kwargs: Any) -> GymEnvPool:
         """Make gym.Env compatible envpool."""
         return self.make(task_id, "gym", **kwargs)
 
-    def make_gymnasium(self, task_id: str, **kwargs: Any) -> Any:
+    def make_gymnasium(self, task_id: str, **kwargs: Any) -> GymnasiumEnvPool:
         """Make gymnasium.Env compatible envpool."""
         return self.make(task_id, "gymnasium", **kwargs)
 
-    def make_spec(self, task_id: str, **make_kwargs: Any) -> Any:
+    def make_spec(self, task_id: str, **make_kwargs: Any) -> EnvSpec:
         """Make EnvSpec."""
         import_path, spec_cls, kwargs = self.specs[task_id]
         kwargs = {**kwargs, **make_kwargs}
@@ -188,10 +216,76 @@ class EnvRegistry:
 # use a global EnvRegistry
 registry = EnvRegistry()
 register = registry.register
-make = registry.make
-make_thread_pool = registry.make_thread_pool
-make_dm = registry.make_dm
-make_gym = registry.make_gym
-make_gymnasium = registry.make_gymnasium
-make_spec = registry.make_spec
-list_all_envs = registry.list_all_envs
+
+
+@overload
+def make(task_id: str, env_type: Literal["dm"], **kwargs: Any) -> DMEnvPool: ...
+
+
+@overload
+def make(
+    task_id: str, env_type: Literal["gym"], **kwargs: Any
+) -> GymEnvPool: ...
+
+
+@overload
+def make(
+    task_id: str, env_type: Literal["gymnasium"], **kwargs: Any
+) -> GymnasiumEnvPool: ...
+
+
+@overload
+def make(
+    task_id: str, env_type: str, **kwargs: Any
+) -> DMEnvPool | GymEnvPool | GymnasiumEnvPool: ...
+
+
+def make(
+    task_id: str, env_type: str, **kwargs: Any
+) -> DMEnvPool | GymEnvPool | GymnasiumEnvPool:
+    """Make an EnvPool with a public, typed interface."""
+    if env_type == "dm":
+        return registry.make(task_id, "dm", **kwargs)
+    if env_type == "gym":
+        return registry.make(task_id, "gym", **kwargs)
+    if env_type == "gymnasium":
+        return registry.make(task_id, "gymnasium", **kwargs)
+    raise AssertionError(
+        "env_type should be one of 'dm', 'gym', or 'gymnasium'."
+    )
+
+
+def make_thread_pool(
+    num_envs_capacity: int,
+    num_threads: int = 0,
+    thread_affinity_offset: int = -1,
+) -> SharedThreadPool:
+    """Create a shared worker pool for multiple envpool instances."""
+    return registry.make_thread_pool(
+        num_envs_capacity, num_threads, thread_affinity_offset
+    )
+
+
+def make_dm(task_id: str, **kwargs: Any) -> DMEnvPool:
+    """Make dm_env compatible envpool."""
+    return registry.make_dm(task_id, **kwargs)
+
+
+def make_gym(task_id: str, **kwargs: Any) -> GymEnvPool:
+    """Make gym.Env compatible envpool."""
+    return registry.make_gym(task_id, **kwargs)
+
+
+def make_gymnasium(task_id: str, **kwargs: Any) -> GymnasiumEnvPool:
+    """Make gymnasium.Env compatible envpool."""
+    return registry.make_gymnasium(task_id, **kwargs)
+
+
+def make_spec(task_id: str, **kwargs: Any) -> EnvSpec:
+    """Make an EnvSpec with a typed public interface."""
+    return registry.make_spec(task_id, **kwargs)
+
+
+def list_all_envs() -> list[str]:
+    """Return all registered environment ids."""
+    return registry.list_all_envs()
