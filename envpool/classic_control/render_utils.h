@@ -17,8 +17,7 @@
 
 #include <cstdint>
 
-namespace classic_control {
-namespace rendering {
+namespace classic_control::rendering {
 
 void RenderCartPole(double x, double theta, int width, int height,
                     std::uint8_t* rgb);
@@ -32,7 +31,6 @@ void RenderMountainCar(double pos, double goal_pos, int width, int height,
 void RenderAcrobot(double theta1, double theta2, int width, int height,
                    std::uint8_t* rgb);
 
-}  // namespace rendering
-}  // namespace classic_control
+}  // namespace classic_control::rendering
 
 #endif  // ENVPOOL_CLASSIC_CONTROL_RENDER_UTILS_H_
