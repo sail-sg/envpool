@@ -13,6 +13,8 @@
 # limitations under the License.
 """Render tests for Atari environments."""
 
+from typing import Any, cast
+
 import numpy as np
 from absl.testing import absltest
 
@@ -23,6 +25,12 @@ _TASK_IDS = tuple(
     f"{''.join(piece.capitalize() for piece in game.split('_'))}-v5"
     for game in reg.atari_game_list
 )
+
+
+def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
+    frame = env.render(env_ids=env_ids)
+    assert frame is not None
+    return cast(np.ndarray, frame)
 
 
 class AtariRenderTest(absltest.TestCase):
@@ -44,7 +52,7 @@ class AtariRenderTest(absltest.TestCase):
                 )
                 try:
                     obs, _ = env.reset()
-                    frame = env.render()
+                    frame = _render_array(env)
 
                     expected = obs[0].transpose(1, 2, 0)
 
@@ -68,10 +76,10 @@ class AtariRenderTest(absltest.TestCase):
         )
         try:
             obs, _ = env.reset()
-            frame0 = env.render()
-            frame1 = env.render(env_ids=1)
-            frames = env.render(env_ids=[0, 1])
-            frame0_again = env.render()
+            frame0 = _render_array(env)
+            frame1 = _render_array(env, env_ids=1)
+            frames = _render_array(env, env_ids=[0, 1])
+            frame0_again = _render_array(env)
 
             expected0 = obs[0].transpose(1, 2, 0)
             expected1 = obs[1].transpose(1, 2, 0)

@@ -13,6 +13,8 @@
 # limitations under the License.
 """Render tests for Procgen environments."""
 
+from typing import Any, cast
+
 import numpy as np
 from absl.testing import absltest
 
@@ -26,6 +28,12 @@ _TASK_IDS = tuple(
         for dist_mode in dist_modes
     ])
 )
+
+
+def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
+    frame = env.render(env_ids=env_ids)
+    assert frame is not None
+    return cast(np.ndarray, frame)
 
 
 class ProcgenRenderTest(absltest.TestCase):
@@ -43,7 +51,7 @@ class ProcgenRenderTest(absltest.TestCase):
                 )
                 try:
                     obs, _ = env.reset()
-                    frame = env.render()
+                    frame = _render_array(env)
 
                     self.assertEqual(frame.shape, (1, 64, 64, 3))
                     self.assertEqual(frame.dtype, np.uint8)
@@ -61,10 +69,10 @@ class ProcgenRenderTest(absltest.TestCase):
         )
         try:
             obs, _ = env.reset()
-            frame0 = env.render()
-            frame1 = env.render(env_ids=1)
-            frames = env.render(env_ids=[0, 1])
-            frame0_again = env.render()
+            frame0 = _render_array(env)
+            frame1 = _render_array(env, env_ids=1)
+            frames = _render_array(env, env_ids=[0, 1])
+            frame0_again = _render_array(env)
 
             self.assertEqual(frame0.shape, (1, 64, 64, 3))
             self.assertEqual(frame1.shape, (1, 64, 64, 3))

@@ -90,7 +90,7 @@ class CglContext final : public GlContext {
 class EglContext final : public GlContext {
  public:
   EglContext() {
-    const std::array<EGLint, 17> config_attribs = {
+    const std::array<EGLint, 19> config_attribs = {
         EGL_RED_SIZE,
         8,
         EGL_GREEN_SIZE,

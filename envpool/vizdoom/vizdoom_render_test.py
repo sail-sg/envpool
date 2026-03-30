@@ -13,6 +13,8 @@
 # limitations under the License.
 """Render tests for VizDoom environments."""
 
+from typing import Any, cast
+
 import numpy as np
 from absl.testing import absltest
 
@@ -35,6 +37,12 @@ _TASK_IDS = tuple(
         not in _UNSTABLE_TASK_IDS
     )
 )
+
+
+def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
+    frame = env.render(env_ids=env_ids)
+    assert frame is not None
+    return cast(np.ndarray, frame)
 
 
 class VizdoomRenderTest(absltest.TestCase):
@@ -63,7 +71,7 @@ class VizdoomRenderTest(absltest.TestCase):
                 )
                 try:
                     obs, _ = env.reset()
-                    frame = env.render()
+                    frame = _render_array(env)
                     expected = self._expected_frame(obs[0])
 
                     self.assertEqual(frame.shape, (1, 240, 320, 3))
@@ -85,10 +93,10 @@ class VizdoomRenderTest(absltest.TestCase):
         )
         try:
             obs, _ = env.reset()
-            frame0 = env.render()
-            frame1 = env.render(env_ids=1)
-            frames = env.render(env_ids=[0, 1])
-            frame0_again = env.render()
+            frame0 = _render_array(env)
+            frame1 = _render_array(env, env_ids=1)
+            frames = _render_array(env, env_ids=[0, 1])
+            frame0_again = _render_array(env)
 
             gray0 = obs[0, 0]
             gray1 = obs[1, 0]

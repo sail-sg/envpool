@@ -215,6 +215,15 @@ class EnvPool(Protocol):
     ) -> np.ndarray:
         """Cpp private _render method."""
 
+    def _render_config(self) -> tuple[str | None, int, int, int, int]:
+        """Normalized render config."""
+
+    def _show_human_frame(self, frame: np.ndarray) -> None:
+        """Display a rendered frame in a Python viewer."""
+
+    _render_window_name: str
+    _render_window_open: bool
+
     def _from(
         self,
         action: dict[str, Any] | np.ndarray,

@@ -13,6 +13,8 @@
 # limitations under the License.
 """Tests for the batched MuJoCo render API."""
 
+from typing import Any, cast
+
 import numpy as np
 from absl.testing import absltest
 
@@ -38,6 +40,12 @@ def _maybe_skip_render_error(
     raise exc
 
 
+def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
+    frame = env.render(env_ids=env_ids)
+    assert frame is not None
+    return cast(np.ndarray, frame)
+
+
 class MujocoRenderTest(absltest.TestCase):
     """Render regression tests for Gym-style MuJoCo tasks."""
 
@@ -55,10 +63,10 @@ class MujocoRenderTest(absltest.TestCase):
         try:
             env.reset()
             try:
-                frame0 = env.render()
-                frame1 = env.render(env_ids=1)
-                frames = env.render(env_ids=[0, 1])
-                frame0_again = env.render()
+                frame0 = _render_array(env)
+                frame1 = _render_array(env, env_ids=1)
+                frames = _render_array(env, env_ids=[0, 1])
+                frame0_again = _render_array(env)
             except RuntimeError as exc:
                 _maybe_skip_render_error(self, exc)
 
@@ -83,7 +91,9 @@ class MujocoRenderTest(absltest.TestCase):
             render_height=24,
         )
         shown: list[np.ndarray] = []
-        env._show_human_frame = lambda frame: shown.append(np.array(frame))  # type: ignore[method-assign]
+        cast(Any, env)._show_human_frame = lambda frame: shown.append(
+            np.array(frame)
+        )
         try:
             env.reset()
             try:

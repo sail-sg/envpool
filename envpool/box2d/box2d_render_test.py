@@ -13,12 +13,20 @@
 # limitations under the License.
 """Render tests for Box2D environments."""
 
+from typing import Any, cast
+
 import gymnasium as gym
 import numpy as np
 from absl.testing import absltest
 
 import envpool.box2d.registration  # noqa: F401
 from envpool.registration import make_gym
+
+
+def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
+    frame = env.render(env_ids=env_ids)
+    assert frame is not None
+    return cast(np.ndarray, frame)
 
 
 class Box2DRenderTest(absltest.TestCase):
@@ -34,10 +42,10 @@ class Box2DRenderTest(absltest.TestCase):
         )
         try:
             env.reset()
-            frame0 = env.render()
-            frame1 = env.render(env_ids=1)
-            frames = env.render(env_ids=[0, 1])
-            frame0_again = env.render()
+            frame0 = _render_array(env)
+            frame1 = _render_array(env, env_ids=1)
+            frames = _render_array(env, env_ids=[0, 1])
+            frame0_again = _render_array(env)
             self.assertEqual(frame0.shape, (1, 48, 64, 3))
             self.assertEqual(frame1.shape, (1, 48, 64, 3))
             self.assertEqual(frames.shape, (2, 48, 64, 3))
@@ -75,7 +83,7 @@ class Box2DRenderTest(absltest.TestCase):
                 try:
                     env.reset()
                     oracle.reset(seed=0)
-                    frame = env.render()[0].astype(np.int16)
+                    frame = _render_array(env)[0].astype(np.int16)
                     expected = np.asarray(oracle.render(), dtype=np.int16)
                     lower_band = slice(-96, None)
                     diff = np.abs(
@@ -109,7 +117,7 @@ class Box2DRenderTest(absltest.TestCase):
                 try:
                     env.reset()
                     oracle.reset(seed=0)
-                    frame = env.render()[0].astype(np.int16)
+                    frame = _render_array(env)[0].astype(np.int16)
                     expected = np.asarray(oracle.render(), dtype=np.int16)
                     self.assertEqual(frame.shape, expected.shape)
                     self.assertLess(np.abs(frame - expected).mean(), threshold)

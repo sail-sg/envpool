@@ -13,6 +13,8 @@
 # limitations under the License.
 """Tests for the dm_control render path."""
 
+from typing import Any, cast
+
 import numpy as np
 from absl.testing import absltest
 from dm_control import suite
@@ -30,6 +32,12 @@ def _task_map() -> dict[str, tuple[str, str]]:
     return result
 
 
+def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
+    frame = env.render(env_ids=env_ids)
+    assert frame is not None
+    return cast(np.ndarray, frame)
+
+
 class MujocoDmcRenderTest(absltest.TestCase):
     """Render regression tests for dm_control-backed MuJoCo tasks."""
 
@@ -45,10 +53,10 @@ class MujocoDmcRenderTest(absltest.TestCase):
         )
         try:
             env.reset()
-            frame0 = env.render()
-            frame1 = env.render(env_ids=1)
-            frames = env.render(env_ids=[0, 1])
-            frame0_again = env.render()
+            frame0 = _render_array(env)
+            frame1 = _render_array(env, env_ids=1)
+            frames = _render_array(env, env_ids=[0, 1])
+            frame0_again = _render_array(env)
             self.assertEqual(frame0.shape, (1, 72, 96, 3))
             self.assertEqual(frame1.shape, (1, 72, 96, 3))
             self.assertEqual(frames.shape, (2, 72, 96, 3))
@@ -76,7 +84,7 @@ class MujocoDmcRenderTest(absltest.TestCase):
                 try:
                     env.reset()
                     oracle.reset()
-                    frame = env.render()[0].astype(np.int16)
+                    frame = _render_array(env)[0].astype(np.int16)
                     expected = np.asarray(
                         oracle.physics.render(
                             height=frame.shape[0],

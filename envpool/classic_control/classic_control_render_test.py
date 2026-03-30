@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import gymnasium as gym
 import numpy as np
@@ -42,19 +42,26 @@ def _batched_action(space: Any, num_envs: int) -> np.ndarray:
     return np.repeat(sample_arr[np.newaxis, ...], num_envs, axis=0)
 
 
+def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
+    frame = env.render(env_ids=env_ids)
+    assert frame is not None
+    return cast(np.ndarray, frame)
+
+
 def _sync_oracle_state(
     task_id: str, oracle: gym.Env, obs: np.ndarray, info: dict[str, Any]
 ) -> None:
+    unwrapped = cast(Any, oracle.unwrapped)
     if task_id == "CartPole-v1":
-        oracle.unwrapped.state = np.asarray(obs, dtype=np.float64).copy()
+        unwrapped.state = np.asarray(obs, dtype=np.float64).copy()
     elif task_id == "Pendulum-v1":
         theta = float(np.arctan2(obs[1], obs[0]))
-        oracle.unwrapped.state = np.asarray([theta, obs[2]], dtype=np.float64)
-        oracle.unwrapped.last_u = None
+        unwrapped.state = np.asarray([theta, obs[2]], dtype=np.float64)
+        unwrapped.last_u = None
     elif task_id in {"MountainCar-v0", "MountainCarContinuous-v0"}:
-        oracle.unwrapped.state = np.asarray(obs, dtype=np.float64).copy()
+        unwrapped.state = np.asarray(obs, dtype=np.float64).copy()
     elif task_id == "Acrobot-v1":
-        oracle.unwrapped.state = np.concatenate([
+        unwrapped.state = np.concatenate([
             np.asarray(info["state"][0], dtype=np.float64),
             np.asarray(obs[-2:], dtype=np.float64),
         ])
@@ -74,10 +81,10 @@ class ClassicControlRenderTest(absltest.TestCase):
                 )
                 try:
                     env.reset()
-                    frame0 = env.render()
-                    frame1 = env.render(env_ids=1)
-                    frames = env.render(env_ids=[0, 1])
-                    frame0_again = env.render()
+                    frame0 = _render_array(env)
+                    frame1 = _render_array(env, env_ids=1)
+                    frames = _render_array(env, env_ids=[0, 1])
+                    frame0_again = _render_array(env)
 
                     self.assertEqual(frame0.shape, (1, height, width, 3))
                     self.assertEqual(frame1.shape, (1, height, width, 3))
@@ -90,9 +97,9 @@ class ClassicControlRenderTest(absltest.TestCase):
 
                     action = _batched_action(env.action_space, 2)
                     env.step(action)
-                    stepped0 = env.render()
-                    stepped_frames = env.render(env_ids=[0, 1])
-                    stepped0_again = env.render()
+                    stepped0 = _render_array(env)
+                    stepped_frames = _render_array(env, env_ids=[0, 1])
+                    stepped0_again = _render_array(env)
 
                     np.testing.assert_array_equal(
                         stepped0[0], stepped_frames[0]
@@ -116,7 +123,7 @@ class ClassicControlRenderTest(absltest.TestCase):
                         task_id, oracle, np.asarray(obs[0]), info
                     )
 
-                    frame = env.render()[0].astype(np.int16)
+                    frame = _render_array(env)[0].astype(np.int16)
                     expected = np.asarray(oracle.render(), dtype=np.int16)
 
                     self.assertEqual(frame.shape, (height, width, 3))

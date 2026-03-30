@@ -68,6 +68,12 @@ def _debug_state(env: Any, env_id: int = 0) -> Any:
     return debug_states[0]
 
 
+def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
+    frame = env.render(env_ids=env_ids)
+    assert frame is not None
+    return cast(np.ndarray, frame)
+
+
 def _decode_obj(type_idx: int, color_idx: int, state: int) -> WorldObj | None:
     return WorldObj.decode(int(type_idx), int(color_idx), int(state))
 
@@ -176,7 +182,7 @@ class MiniGridRenderTest(absltest.TestCase):
             _patch_env_state(oracle.unwrapped, debug_state, step_count)
             return cast(
                 np.ndarray,
-                oracle.unwrapped.get_frame(
+                cast(Any, oracle.unwrapped).get_frame(
                     highlight=False,
                     tile_size=32,
                     agent_pov=False,
@@ -196,7 +202,7 @@ class MiniGridRenderTest(absltest.TestCase):
                 )
                 try:
                     env.reset()
-                    frame = env.render()
+                    frame = _render_array(env)
                     expected = self._oracle_frame(
                         task_id, _debug_state(env, 0), 0
                     )
@@ -216,10 +222,10 @@ class MiniGridRenderTest(absltest.TestCase):
                 )
                 try:
                     env.reset()
-                    frame0 = env.render()
-                    frame1 = env.render(env_ids=1)
-                    frames = env.render(env_ids=[0, 1])
-                    frame0_again = env.render()
+                    frame0 = _render_array(env)
+                    frame1 = _render_array(env, env_ids=1)
+                    frames = _render_array(env, env_ids=[0, 1])
+                    frame0_again = _render_array(env)
 
                     expected0 = self._oracle_frame(
                         task_id, _debug_state(env, 0), 0
@@ -236,9 +242,9 @@ class MiniGridRenderTest(absltest.TestCase):
                     np.testing.assert_array_equal(frame0, frame0_again)
 
                     env.step(np.asarray([0, 0], dtype=np.int32))
-                    stepped0 = env.render()
-                    stepped_frames = env.render(env_ids=[0, 1])
-                    stepped0_again = env.render()
+                    stepped0 = _render_array(env)
+                    stepped_frames = _render_array(env, env_ids=[0, 1])
+                    stepped0_again = _render_array(env)
                     expected_after = self._oracle_frame(
                         task_id, _debug_state(env, 0), 1
                     )

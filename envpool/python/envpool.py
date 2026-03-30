@@ -257,9 +257,7 @@ class EnvPoolMixin(ABC):
         width = default_width
         height = default_height
         camera_id = default_cam if camera_id is None else int(camera_id)
-        frames = cast(
-            np.ndarray, self._render(env_ids_arr, width, height, camera_id)
-        )
+        frames = self._render(env_ids_arr, width, height, camera_id)
         if render_mode == "human":
             if env_ids_arr.shape[0] != 1:
                 raise ValueError(
