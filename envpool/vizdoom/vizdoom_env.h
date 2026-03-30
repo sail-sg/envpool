@@ -205,9 +205,8 @@ class VizdoomEnv : public Env<VizdoomEnvSpec>, public RenderableEnv {
     channel_ = dg_->getScreenChannels();
     raw_buf_ =
         Array(FrameSpec({dg_->getScreenHeight(), dg_->getScreenWidth(), 1}));
-    resize_screen_buffer_ =
-        native_screen_width_ != dg_->getScreenWidth() ||
-        native_screen_height_ != dg_->getScreenHeight();
+    resize_screen_buffer_ = native_screen_width_ != dg_->getScreenWidth() ||
+                            native_screen_height_ != dg_->getScreenHeight();
     native_buf_ =
         Array(FrameSpec({native_screen_height_, native_screen_width_, 1}));
     render_img_ =
