@@ -84,7 +84,7 @@ class MujocoEnv : public RenderableEnv {
     std::memcpy(init_qvel_, data_->qvel, sizeof(mjtNum) * model_->nv);
   }
 
-  ~MujocoEnv() {
+  ~MujocoEnv() override {
     mj_deleteData(data_);
     mj_deleteModel(model_);
     delete[] init_qpos_;
