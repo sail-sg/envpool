@@ -22,8 +22,7 @@
 
 #include "opencv2/opencv.hpp"
 
-namespace classic_control {
-namespace rendering {
+namespace classic_control::rendering {
 namespace {
 
 constexpr double kPi = 3.14159265358979323846;
@@ -253,5 +252,4 @@ void RenderAcrobot(double theta1, double theta2, int width, int height,
   FinalizeRgbFrame(&surf, rgb);
 }
 
-}  // namespace rendering
-}  // namespace classic_control
+}  // namespace classic_control::rendering
