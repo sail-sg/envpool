@@ -176,7 +176,9 @@ class _VizdoomPretrainTest(absltest.TestCase):
         if proc.is_alive():
             proc.terminate()
             proc.join(timeout=5)
-            self.fail(f"{task} subprocess did not exit after producing a result")
+            self.fail(
+                f"{task} subprocess did not exit after producing a result"
+            )
         self.assertEqual(proc.exitcode, 0)
         result_queue.close()
         result_queue.join_thread()
