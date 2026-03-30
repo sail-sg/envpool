@@ -64,7 +64,10 @@ class _TempWorkingDir:
 
     def __exit__(self, *args: Any) -> None:
         os.chdir(self._prev_cwd)
-        self._tempdir.cleanup()
+        try:
+            self._tempdir.cleanup()
+        except PermissionError:
+            pass
 
 
 def _eval_c51_impl(
