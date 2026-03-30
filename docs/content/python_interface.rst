@@ -143,14 +143,17 @@ Example:
     viewer.reset()
     viewer.render()
 
-Some render outputs compared against the corresponding upstream implementations
-(EnvPool on the left, upstream on the right):
+Representative render outputs from supported EnvPool families:
 
-.. image:: ../_static/render_samples/box2d_official_compare_contact_sheet.png
+.. image:: ../_static/render_samples/atari_render_samples.png
     :width: 900px
     :align: center
 
-.. image:: ../_static/render_samples/mujoco_official_compare_contact_sheet.png
+.. image:: ../_static/render_samples/box2d_render_samples.png
+    :width: 900px
+    :align: center
+
+.. image:: ../_static/render_samples/mujoco_gym_render_samples.png
     :width: 900px
     :align: center
 
