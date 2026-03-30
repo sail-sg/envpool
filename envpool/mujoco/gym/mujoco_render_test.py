@@ -37,7 +37,10 @@ def _maybe_skip_render_error(testcase: absltest.TestCase, exc: RuntimeError) -> 
 
 
 class MujocoRenderTest(absltest.TestCase):
+    """Render regression tests for Gym-style MuJoCo tasks."""
+
     def test_rgb_array_render_is_batch_consistent_and_state_invariant(self) -> None:
+        """RGB renders should be batch-consistent and free of side effects."""
         env = make_gym(
             "Ant-v5",
             num_envs=2,
@@ -67,6 +70,7 @@ class MujocoRenderTest(absltest.TestCase):
             env.close()
 
     def test_human_render_uses_python_viewer(self) -> None:
+        """Human mode should route rendered frames through the Python viewer."""
         env = make_gym(
             "Ant-v5",
             num_envs=1,
