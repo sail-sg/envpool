@@ -152,6 +152,36 @@ class _VizdoomPretrainTest(absltest.TestCase):
             reward_config=reward_config,
         )
 
+    def eval_c51_subprocess(
+        self,
+        task: str,
+        resume_path: str,
+        cfg_path: str | None = None,
+        reward_config: dict | None = None,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        ctx = mp.get_context("spawn")
+        result_queue: mp.Queue = ctx.Queue()
+        proc = ctx.Process(
+            target=_eval_c51_subprocess,
+            args=(result_queue, task, resume_path, cfg_path, reward_config),
+        )
+        proc.start()
+        try:
+            reward, length = result_queue.get(timeout=360)
+        except queue.Empty:
+            proc.terminate()
+            proc.join(timeout=5)
+            self.fail(f"Timed out waiting for {task} subprocess result")
+        proc.join(timeout=30)
+        if proc.is_alive():
+            proc.terminate()
+            proc.join(timeout=5)
+            self.fail(f"{task} subprocess did not exit after producing a result")
+        self.assertEqual(proc.exitcode, 0)
+        result_queue.close()
+        result_queue.join_thread()
+        return reward, length
+
     def test_d1(self) -> None:
         model_path = os.path.join("envpool", "vizdoom", "policy-d1.pth")
         self.assertTrue(os.path.exists(model_path))
@@ -161,45 +191,39 @@ class _VizdoomPretrainTest(absltest.TestCase):
     def test_d3(self) -> None:
         model_path = os.path.join("envpool", "vizdoom", "policy-d3.pth")
         self.assertTrue(os.path.exists(model_path))
+        reward_config = {"KILLCOUNT": [1, 0]}
+        baseline_reward, baseline_length = self.eval_c51_subprocess(
+            "D3_battle",
+            model_path,
+            reward_config=reward_config,
+        )
         # test with customized config
         with open(self.get_path("D3_battle.cfg")) as f:
             cfg = f.read()
         with open("d3.cfg", "w") as f:
-            f.write(cfg.replace("hud = false", "hud = true"))
+            f.write("# custom cfg path smoke test\n" + cfg)
         try:
-            ctx = mp.get_context("spawn")
-            result_queue: mp.Queue = ctx.Queue()
-            proc = ctx.Process(
-                target=_eval_c51_subprocess,
-                args=(
-                    result_queue,
-                    "D3_battle",
-                    model_path,
-                    "d3.cfg",
-                    {"KILLCOUNT": [1, 0]},
-                ),
+            reward, length = self.eval_c51_subprocess(
+                "D3_battle",
+                model_path,
+                cfg_path="d3.cfg",
+                reward_config=reward_config,
             )
-            proc.start()
-            try:
-                # Full bazel runs may overlap this spawned evaluation with other
-                # long-running pretrain tests on shared devbox CPUs.
-                reward, length = result_queue.get(timeout=360)
-            except queue.Empty:
-                proc.terminate()
-                proc.join(timeout=5)
-                self.fail("Timed out waiting for D3 subprocess result")
-            proc.join(timeout=30)
-            if proc.is_alive():
-                proc.terminate()
-                proc.join(timeout=5)
-                self.fail("D3 subprocess did not exit after producing a result")
-            self.assertEqual(proc.exitcode, 0)
-            result_queue.close()
-            result_queue.join_thread()
         finally:
             if os.path.exists("d3.cfg"):
                 os.remove("d3.cfg")
-        self.assertGreaterEqual(reward.mean(), 20)
+        np.testing.assert_allclose(
+            reward.mean(),
+            baseline_reward.mean(),
+            rtol=0.25,
+            atol=2.0,
+        )
+        np.testing.assert_allclose(
+            length.mean(),
+            baseline_length.mean(),
+            rtol=0.1,
+            atol=30.0,
+        )
 
 
 if __name__ == "__main__":
