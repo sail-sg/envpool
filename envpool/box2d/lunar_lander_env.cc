@@ -382,7 +382,8 @@ void LunarLanderBox2dEnv::Render(int width, int height, int /*camera_id*/,
       } else if (fixture->GetShape()->GetType() == b2Shape::e_circle) {
         auto* shape = static_cast<b2CircleShape*>(fixture->GetShape());
         b2Vec2 center = b2Mul(fixture->GetBody()->GetTransform(), shape->m_p);
-        const auto radius = static_cast<int>(std::lround(shape->m_radius * kScale));
+        const auto radius =
+            static_cast<int>(std::lround(shape->m_radius * kScale));
         cv::circle(surf, to_point(center.x, center.y), radius, fill, cv::FILLED,
                    cv::LINE_AA);
         cv::circle(surf, to_point(center.x, center.y), radius, outline, 1,
