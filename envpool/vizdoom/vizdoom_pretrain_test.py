@@ -17,6 +17,7 @@ import multiprocessing as mp
 import os
 import queue
 import shutil
+import tempfile
 from typing import Any, cast
 
 import numpy as np
@@ -36,8 +37,15 @@ from envpool.registration import make_gym
 #   cv2 = None
 
 
+_PACKAGE_DIR = os.path.dirname(__file__)
+
+
 def _get_map_path(path: str) -> str:
-    return os.path.join("envpool", "vizdoom", "maps", path)
+    return os.path.join(_PACKAGE_DIR, "maps", path)
+
+
+def _get_package_path(path: str) -> str:
+    return os.path.join(_PACKAGE_DIR, path)
 
 
 def _cleanup_runtime_dir() -> None:
@@ -45,6 +53,18 @@ def _cleanup_runtime_dir() -> None:
         shutil.rmtree("_vizdoom")
     elif os.path.exists("_vizdoom"):
         os.remove("_vizdoom")
+
+
+class _TempWorkingDir:
+    def __enter__(self) -> "_TempWorkingDir":
+        self._prev_cwd = os.getcwd()
+        self._tempdir = tempfile.TemporaryDirectory(prefix="vizdoom-runtime-")
+        os.chdir(self._tempdir.name)
+        return self
+
+    def __exit__(self, *args: Any) -> None:
+        os.chdir(self._prev_cwd)
+        self._tempdir.cleanup()
 
 
 def _eval_c51_impl(
@@ -56,59 +76,67 @@ def _eval_c51_impl(
     reward_config: dict | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     task_id = "".join([g.capitalize() for g in task.split("_")]) + "-v1"
+    if cfg_path is None:
+        cfg_path = _get_map_path(task + ".cfg")
+    else:
+        cfg_path = os.path.abspath(cfg_path)
+    resume_path = os.path.abspath(resume_path)
     kwargs = {
         "num_envs": num_envs,
         "seed": seed,
         "wad_path": _get_map_path(task + ".wad"),
+        "cfg_path": cfg_path,
         "use_combined_action": True,
     }
-    if cfg_path is None:
-        kwargs.update(cfg_path=_get_map_path(task + ".cfg"))
-    else:
-        kwargs.update(cfg_path=cfg_path)
     if reward_config is not None:
         kwargs.update(reward_config=reward_config)
-    _cleanup_runtime_dir()
-    env = make_gym(task_id, **kwargs)
+    with _TempWorkingDir():
+        _cleanup_runtime_dir()
+        env = make_gym(task_id, **kwargs)
+        try:
+            state_shape = env.observation_space.shape
+            action_shape = env.action_space.n
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            np.random.seed(seed)
+            torch.manual_seed(seed)
+            logging.info(state_shape)
+            net = C51(*state_shape, action_shape, 51, device)  # type: ignore
+            optim = torch.optim.Adam(net.parameters(), lr=1e-4)
 
-    state_shape = env.observation_space.shape
-    action_shape = env.action_space.n
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    logging.info(state_shape)
-    net = C51(*state_shape, action_shape, 51, device)  # type: ignore
-    optim = torch.optim.Adam(net.parameters(), lr=1e-4)
+            policy = C51Policy(
+                net, optim, 0.99, 51, -10, 10, 3, target_update_freq=500
+            ).to(device)
+            policy.load_state_dict(torch.load(resume_path, map_location=device))
+            policy.eval()
+            ids = cast(Any, np.arange(num_envs))
+            reward = np.zeros(num_envs)
+            length = np.zeros(num_envs)
+            obs, _ = env.reset()
+            for _ in range(555):
+                if np.random.rand() < 0.05:
+                    act = np.random.randint(action_shape, size=len(ids))
+                else:
+                    act = policy(Batch(obs=obs, info={})).act
+                obs, rew, terminated, truncated, info = env.step(act, ids)
+                done = np.logical_or(terminated, truncated)
+                ids = cast(Any, np.asarray(info["env_id"]))
+                reward[ids] += rew
+                length[ids] += 1
+                obs = obs[~done]
+                ids = ids[~done]
+                if len(ids) == 0:
+                    break
 
-    policy = C51Policy(
-        net, optim, 0.99, 51, -10, 10, 3, target_update_freq=500
-    ).to(device)
-    policy.load_state_dict(torch.load(resume_path, map_location=device))
-    policy.eval()
-    ids = cast(Any, np.arange(num_envs))
-    reward = np.zeros(num_envs)
-    length = np.zeros(num_envs)
-    obs, _ = env.reset()
-    for _ in range(555):
-        if np.random.rand() < 0.05:
-            act = np.random.randint(action_shape, size=len(ids))
-        else:
-            act = policy(Batch(obs=obs, info={})).act
-        obs, rew, terminated, truncated, info = env.step(act, ids)
-        done = np.logical_or(terminated, truncated)
-        ids = cast(Any, np.asarray(info["env_id"]))
-        reward[ids] += rew
-        length[ids] += 1
-        obs = obs[~done]
-        ids = ids[~done]
-        if len(ids) == 0:
-            break
-
-    logging.info(f"Mean reward of {task}: {reward.mean()} ± {reward.std()}")
-    logging.info(f"Mean length of {task}: {length.mean()} ± {length.std()}")
-    env.close()
-    _cleanup_runtime_dir()
-    return reward, length
+            logging.info(
+                f"Mean reward of {task}: {reward.mean()} ± {reward.std()}"
+            )
+            logging.info(
+                f"Mean length of {task}: {length.mean()} ± {length.std()}"
+            )
+            return reward, length
+        finally:
+            env.close()
+            _cleanup_runtime_dir()
 
 
 def _eval_c51_subprocess(
@@ -128,11 +156,11 @@ def _eval_c51_subprocess(
 
 
 class _VizdoomPretrainTest(absltest.TestCase):
-    def get_path(self, path: str) -> str:
+    def get_map_path(self, path: str) -> str:
         return _get_map_path(path)
 
-    def cleanup_runtime_dir(self) -> None:
-        _cleanup_runtime_dir()
+    def get_package_path(self, path: str) -> str:
+        return _get_package_path(path)
 
     def eval_c51(
         self,
@@ -166,32 +194,28 @@ class _VizdoomPretrainTest(absltest.TestCase):
             args=(result_queue, task, resume_path, cfg_path, reward_config),
         )
         proc.start()
-        try:
-            reward, length = result_queue.get(timeout=360)
-        except queue.Empty:
-            proc.terminate()
-            proc.join(timeout=5)
-            self.fail(f"Timed out waiting for {task} subprocess result")
-        proc.join(timeout=30)
+        proc.join(timeout=360)
         if proc.is_alive():
             proc.terminate()
             proc.join(timeout=5)
-            self.fail(
-                f"{task} subprocess did not exit after producing a result"
-            )
+            self.fail(f"Timed out waiting for {task} subprocess result")
         self.assertEqual(proc.exitcode, 0)
+        try:
+            reward, length = result_queue.get_nowait()
+        except queue.Empty:
+            self.fail(f"{task} subprocess exited without producing a result")
         result_queue.close()
         result_queue.join_thread()
         return reward, length
 
     def test_d1(self) -> None:
-        model_path = os.path.join("envpool", "vizdoom", "policy-d1.pth")
+        model_path = self.get_package_path("policy-d1.pth")
         self.assertTrue(os.path.exists(model_path))
-        _, length = self.eval_c51("D1_basic", model_path)
+        _, length = self.eval_c51_subprocess("D1_basic", model_path)
         self.assertGreaterEqual(length.mean(), 500)
 
     def test_d3(self) -> None:
-        model_path = os.path.join("envpool", "vizdoom", "policy-d3.pth")
+        model_path = self.get_package_path("policy-d3.pth")
         self.assertTrue(os.path.exists(model_path))
         reward_config = {"KILLCOUNT": [1, 0]}
         baseline_reward, baseline_length = self.eval_c51_subprocess(
@@ -200,20 +224,23 @@ class _VizdoomPretrainTest(absltest.TestCase):
             reward_config=reward_config,
         )
         # test with customized config
-        with open(self.get_path("D3_battle.cfg")) as f:
+        with open(self.get_map_path("D3_battle.cfg")) as f:
             cfg = f.read()
-        with open("d3.cfg", "w") as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".cfg", prefix="d3-", delete=False
+        ) as f:
+            custom_cfg_path = f.name
             f.write("# custom cfg path smoke test\n" + cfg)
         try:
             reward, length = self.eval_c51_subprocess(
                 "D3_battle",
                 model_path,
-                cfg_path="d3.cfg",
+                cfg_path=custom_cfg_path,
                 reward_config=reward_config,
             )
         finally:
-            if os.path.exists("d3.cfg"):
-                os.remove("d3.cfg")
+            if os.path.exists(custom_cfg_path):
+                os.remove(custom_cfg_path)
         np.testing.assert_allclose(
             reward.mean(),
             baseline_reward.mean(),
