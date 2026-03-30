@@ -63,7 +63,7 @@ class MujocoEnv : public RenderableEnv {
  public:
   MujocoEnv(const std::string& base_path, const std::string& raw_xml,
             int n_sub_steps, int max_episode_steps);
-  ~MujocoEnv();
+  ~MujocoEnv() override;
 
   // rl control Environment
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/rl/control.py#L77
