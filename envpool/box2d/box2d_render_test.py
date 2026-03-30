@@ -79,6 +79,32 @@ class Box2DRenderTest(absltest.TestCase):
                     env.close()
                     oracle.close()
 
+    def test_render_matches_official_first_frame(self) -> None:
+        thresholds = {
+            "CarRacing-v3": 15.0,
+            "LunarLander-v3": 30.0,
+            "LunarLanderContinuous-v3": 30.0,
+        }
+        for task_id, threshold in thresholds.items():
+            with self.subTest(task_id=task_id):
+                env = make_gym(
+                    task_id,
+                    num_envs=1,
+                    seed=0,
+                    render_mode="rgb_array",
+                )
+                oracle = gym.make(task_id, render_mode="rgb_array")
+                try:
+                    env.reset()
+                    oracle.reset(seed=0)
+                    frame = env.render()[0].astype(np.int16)
+                    expected = np.asarray(oracle.render(), dtype=np.int16)
+                    self.assertEqual(frame.shape, expected.shape)
+                    self.assertLess(np.abs(frame - expected).mean(), threshold)
+                finally:
+                    env.close()
+                    oracle.close()
+
     def test_lunar_lander_render(self) -> None:
         self._assert_batch_consistent_render("LunarLander-v3")
 

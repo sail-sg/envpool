@@ -25,7 +25,7 @@ from minigrid.core.grid import Grid
 from minigrid.core.world_object import WorldObj
 
 import envpool.minigrid.registration  # noqa: F401
-from envpool.registration import make_gymnasium
+from envpool.registration import list_all_envs, make_gymnasium
 
 _TYPE_NAMES = {
     0: "unseen",
@@ -48,9 +48,12 @@ _COLOR_NAMES = {
     4: "yellow",
     5: "grey",
 }
-_TASK_IDS = (
+_REPRESENTATIVE_TASK_IDS = (
     "MiniGrid-DoorKey-8x8-v0",
     "MiniGrid-BlockedUnlockPickup-v0",
+)
+_TASK_IDS = tuple(
+    sorted(task_id for task_id in list_all_envs() if task_id.startswith("MiniGrid-"))
 )
 
 
@@ -174,8 +177,23 @@ class MiniGridRenderTest(absltest.TestCase):
         finally:
             oracle.close()
 
-    def test_render_matches_upstream_oracle_and_is_batch_consistent(self) -> None:
+    def test_render_matches_upstream_oracle_first_frame_for_all_tasks(self) -> None:
         for task_id in _TASK_IDS:
+            with self.subTest(task_id=task_id):
+                env = make_gymnasium(task_id, num_envs=1, render_mode="rgb_array")
+                try:
+                    env.reset()
+                    frame = env.render()
+                    expected = self._oracle_frame(task_id, _debug_state(env, 0), 0)
+
+                    self.assertEqual(frame.shape, (1,) + expected.shape)
+                    self.assertEqual(frame.dtype, np.uint8)
+                    np.testing.assert_array_equal(frame[0], expected)
+                finally:
+                    env.close()
+
+    def test_render_is_batch_consistent_and_state_invariant(self) -> None:
+        for task_id in _REPRESENTATIVE_TASK_IDS:
             with self.subTest(task_id=task_id):
                 env = make_gymnasium(task_id, num_envs=2, render_mode="rgb_array")
                 try:

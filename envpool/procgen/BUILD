@@ -87,6 +87,7 @@ py_library(
 
 py_test(
     name = "procgen_render_test",
+    size = "enormous",
     srcs = ["procgen_render_test.py"],
     imports = ["../.."],
     deps = [

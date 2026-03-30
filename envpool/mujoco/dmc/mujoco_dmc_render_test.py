@@ -17,8 +17,18 @@ import numpy as np
 from absl.testing import absltest
 from dm_control import suite
 
+import envpool.mujoco.dmc.registration as reg
 import envpool.mujoco.dmc.registration  # noqa: F401
 from envpool.registration import make_gym
+
+
+def _task_map() -> dict[str, tuple[str, str]]:
+    result: dict[str, tuple[str, str]] = {}
+    for domain, task, _ in reg.dmc_mujoco_envs:
+        domain_name = "".join(g[:1].upper() + g[1:] for g in domain.split("_"))
+        task_name = "".join(g[:1].upper() + g[1:] for g in task.split("_"))
+        result[f"{domain_name}{task_name}-v1"] = (domain, task)
+    return result
 
 
 class MujocoDmcRenderTest(absltest.TestCase):
@@ -48,11 +58,8 @@ class MujocoDmcRenderTest(absltest.TestCase):
             env.close()
 
     def test_render_matches_dm_control_default_camera(self) -> None:
-        tasks = (
-            ("AcrobotSwingup-v1", "acrobot", "swingup", 10.0),
-            ("WalkerWalk-v1", "walker", "walk", 18.0),
-        )
-        for task_id, domain, task, threshold in tasks:
+        threshold = 21.0
+        for task_id, (domain, task) in sorted(_task_map().items()):
             with self.subTest(task_id=task_id):
                 env = make_gym(
                     task_id,

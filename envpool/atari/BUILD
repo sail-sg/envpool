@@ -125,6 +125,7 @@ py_test(
 
 py_test(
     name = "atari_render_test",
+    size = "enormous",
     srcs = ["atari_render_test.py"],
     imports = ["../.."],
     deps = [

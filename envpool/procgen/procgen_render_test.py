@@ -16,12 +16,38 @@
 import numpy as np
 from absl.testing import absltest
 
+import envpool.procgen.registration as reg
 import envpool.procgen.registration  # noqa: F401
 from envpool.registration import make_gym
 
+_TASK_IDS = tuple(sorted([
+    f"{env_name.capitalize()}{reg.distribution[dist_mode]}-v0"
+    for env_name, _, dist_modes in reg.procgen_game_config
+    for dist_mode in dist_modes
+]))
+
 
 class ProcgenRenderTest(absltest.TestCase):
-    def test_render_matches_obs_and_is_batch_consistent(self) -> None:
+    def test_render_matches_obs_first_frame_for_all_tasks(self) -> None:
+        for task_id in _TASK_IDS:
+            with self.subTest(task_id=task_id):
+                env = make_gym(
+                    task_id,
+                    num_envs=1,
+                    render_mode="rgb_array",
+                    channel_first=False,
+                )
+                try:
+                    obs, _ = env.reset()
+                    frame = env.render()
+
+                    self.assertEqual(frame.shape, (1, 64, 64, 3))
+                    self.assertEqual(frame.dtype, np.uint8)
+                    np.testing.assert_array_equal(frame[0], obs[0])
+                finally:
+                    env.close()
+
+    def test_render_is_batch_consistent_for_representative_task(self) -> None:
         env = make_gym(
             "CoinrunHard-v0",
             num_envs=2,

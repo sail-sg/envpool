@@ -16,12 +16,43 @@
 import numpy as np
 from absl.testing import absltest
 
+import envpool.atari.registration as reg
 import envpool.atari.registration  # noqa: F401
 from envpool.registration import make_gym
 
+_TASK_IDS = tuple(
+    f"{''.join(piece.capitalize() for piece in game.split('_'))}-v5"
+    for game in reg.atari_game_list
+)
+
 
 class AtariRenderTest(absltest.TestCase):
-    def test_render_matches_raw_rgb_obs_and_is_batch_consistent(self) -> None:
+    def test_render_matches_raw_rgb_obs_first_frame_for_all_tasks(self) -> None:
+        for task_id in _TASK_IDS:
+            with self.subTest(task_id=task_id):
+                env = make_gym(
+                    task_id,
+                    num_envs=1,
+                    render_mode="rgb_array",
+                    gray_scale=False,
+                    stack_num=1,
+                    img_height=210,
+                    img_width=160,
+                    use_inter_area_resize=False,
+                )
+                try:
+                    obs, _ = env.reset()
+                    frame = env.render()
+
+                    expected = obs[0].transpose(1, 2, 0)
+
+                    self.assertEqual(frame.shape, (1, 210, 160, 3))
+                    self.assertEqual(frame.dtype, np.uint8)
+                    np.testing.assert_array_equal(frame[0], expected)
+                finally:
+                    env.close()
+
+    def test_render_is_batch_consistent_for_representative_task(self) -> None:
         env = make_gym(
             "Pong-v5",
             num_envs=2,

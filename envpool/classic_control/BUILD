@@ -87,6 +87,8 @@ py_test(
         ":classic_control",
         ":classic_control_registration",
         requirement("absl-py"),
+        requirement("gymnasium"),
         requirement("numpy"),
+        requirement("pygame"),
     ],
 )
