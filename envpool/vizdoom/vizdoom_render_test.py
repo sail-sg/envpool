@@ -17,7 +17,6 @@ import numpy as np
 from absl.testing import absltest
 
 import envpool.vizdoom.registration as reg
-import envpool.vizdoom.registration  # noqa: F401
 from envpool.registration import make_gym
 
 _UNSTABLE_TASK_IDS = {
@@ -37,6 +36,8 @@ _TASK_IDS = tuple(sorted(
 
 
 class VizdoomRenderTest(absltest.TestCase):
+    """Render regression tests for VizDoom environments."""
+
     def _expected_frame(self, obs: np.ndarray) -> np.ndarray:
         if obs.shape[0] == 1:
             gray = obs[0]
@@ -44,6 +45,7 @@ class VizdoomRenderTest(absltest.TestCase):
         return obs.transpose(1, 2, 0)
 
     def test_render_matches_screen_buffer_first_frame_for_stable_tasks(self) -> None:
+        """Stable scenarios should render the same pixels as their screen buffer."""
         for task_id in _TASK_IDS:
             with self.subTest(task_id=task_id):
                 env = make_gym(
@@ -67,6 +69,7 @@ class VizdoomRenderTest(absltest.TestCase):
                     env.close()
 
     def test_render_is_batch_consistent_for_representative_task(self) -> None:
+        """Batch render output should match per-env renders for D1Basic."""
         env = make_gym(
             "D1Basic-v1",
             num_envs=2,

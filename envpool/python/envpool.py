@@ -240,6 +240,7 @@ class EnvPoolMixin(ABC):
         env_ids: Any = None,
         camera_id: int | None = None,
     ) -> np.ndarray | None:
+        """Render one or more environments using the configured render mode."""
         render_mode, default_env_id, default_width, default_height, default_cam = (
             self._render_config()
         )
@@ -319,6 +320,7 @@ class EnvPoolMixin(ABC):
         )
 
     def close(self: EnvPool) -> None:
+        """Close viewer resources and delegate to the parent implementation."""
         if getattr(self, "_render_window_open", False):
             try:
                 import cv2

@@ -17,7 +17,6 @@ import numpy as np
 from absl.testing import absltest
 
 import envpool.procgen.registration as reg
-import envpool.procgen.registration  # noqa: F401
 from envpool.registration import make_gym
 
 _TASK_IDS = tuple(sorted([
@@ -28,7 +27,10 @@ _TASK_IDS = tuple(sorted([
 
 
 class ProcgenRenderTest(absltest.TestCase):
+    """Render regression tests for Procgen environments."""
+
     def test_render_matches_obs_first_frame_for_all_tasks(self) -> None:
+        """The first rendered frame should match the channel-last observation."""
         for task_id in _TASK_IDS:
             with self.subTest(task_id=task_id):
                 env = make_gym(
@@ -48,6 +50,7 @@ class ProcgenRenderTest(absltest.TestCase):
                     env.close()
 
     def test_render_is_batch_consistent_for_representative_task(self) -> None:
+        """Batch render output should match per-env renders for CoinRun."""
         env = make_gym(
             "CoinrunHard-v0",
             num_envs=2,

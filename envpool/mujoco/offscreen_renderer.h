@@ -19,12 +19,13 @@
 
 #include <mujoco.h>
 
+#include <cstdint>
 #include <memory>
 #include <vector>
 
 namespace envpool::mujoco {
 
-enum class CameraPolicy {
+enum class CameraPolicy : std::uint8_t {
   kGymLike,
   kDmControl,
 };

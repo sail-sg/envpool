@@ -22,6 +22,8 @@ from envpool.registration import make_gym
 
 
 class Box2DRenderTest(absltest.TestCase):
+    """Render regression tests for Box2D environments."""
+
     def _assert_batch_consistent_render(self, task_id: str) -> None:
         env = make_gym(
             task_id,
@@ -48,12 +50,15 @@ class Box2DRenderTest(absltest.TestCase):
             env.close()
 
     def test_car_racing_render(self) -> None:
+        """CarRacing should support consistent batched rendering."""
         self._assert_batch_consistent_render("CarRacing-v3")
 
     def test_bipedal_walker_render(self) -> None:
+        """BipedalWalker should support consistent batched rendering."""
         self._assert_batch_consistent_render("BipedalWalker-v3")
 
     def test_bipedal_walker_render_matches_official_ground_profile(self) -> None:
+        """BipedalWalker renders should preserve the official ground profile."""
         for task_id in ("BipedalWalker-v3", "BipedalWalkerHardcore-v3"):
             with self.subTest(task_id=task_id):
                 env = make_gym(
@@ -80,6 +85,7 @@ class Box2DRenderTest(absltest.TestCase):
                     oracle.close()
 
     def test_render_matches_official_first_frame(self) -> None:
+        """Representative Box2D renders should stay close to Gymnasium."""
         thresholds = {
             "CarRacing-v3": 15.0,
             "LunarLander-v3": 30.0,
@@ -106,6 +112,7 @@ class Box2DRenderTest(absltest.TestCase):
                     oracle.close()
 
     def test_lunar_lander_render(self) -> None:
+        """LunarLander should support consistent batched rendering."""
         self._assert_batch_consistent_render("LunarLander-v3")
 
 

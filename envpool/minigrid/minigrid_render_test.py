@@ -161,6 +161,8 @@ def _patch_env_state(env: Any, debug_state: Any, elapsed_step: int) -> None:
 
 
 class MiniGridRenderTest(absltest.TestCase):
+    """Render regression tests for MiniGrid environments."""
+
     def _oracle_frame(self, task_id: str, debug_state: Any, step_count: int) -> np.ndarray:
         oracle = gym.make(task_id, render_mode="rgb_array")
         try:
@@ -178,6 +180,7 @@ class MiniGridRenderTest(absltest.TestCase):
             oracle.close()
 
     def test_render_matches_upstream_oracle_first_frame_for_all_tasks(self) -> None:
+        """The first rendered frame should match the upstream MiniGrid oracle."""
         for task_id in _TASK_IDS:
             with self.subTest(task_id=task_id):
                 env = make_gymnasium(task_id, num_envs=1, render_mode="rgb_array")
@@ -193,6 +196,7 @@ class MiniGridRenderTest(absltest.TestCase):
                     env.close()
 
     def test_render_is_batch_consistent_and_state_invariant(self) -> None:
+        """Rendering should be batch-consistent and free of side effects."""
         for task_id in _REPRESENTATIVE_TASK_IDS:
             with self.subTest(task_id=task_id):
                 env = make_gymnasium(task_id, num_envs=2, render_mode="rgb_array")

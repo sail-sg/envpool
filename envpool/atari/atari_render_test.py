@@ -17,7 +17,6 @@ import numpy as np
 from absl.testing import absltest
 
 import envpool.atari.registration as reg
-import envpool.atari.registration  # noqa: F401
 from envpool.registration import make_gym
 
 _TASK_IDS = tuple(
@@ -27,7 +26,10 @@ _TASK_IDS = tuple(
 
 
 class AtariRenderTest(absltest.TestCase):
+    """Render regression tests for Atari environments."""
+
     def test_render_matches_raw_rgb_obs_first_frame_for_all_tasks(self) -> None:
+        """The first rendered frame should match the raw RGB observation."""
         for task_id in _TASK_IDS:
             with self.subTest(task_id=task_id):
                 env = make_gym(
@@ -53,6 +55,7 @@ class AtariRenderTest(absltest.TestCase):
                     env.close()
 
     def test_render_is_batch_consistent_for_representative_task(self) -> None:
+        """Batch render output should match per-env renders for Pong."""
         env = make_gym(
             "Pong-v5",
             num_envs=2,

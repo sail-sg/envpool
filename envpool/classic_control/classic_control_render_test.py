@@ -24,7 +24,6 @@ from absl.testing import absltest
 import envpool.classic_control.registration  # noqa: F401
 from envpool.registration import make_gymnasium
 
-
 _TASK_SIZES = {
     "CartPole-v1": (400, 600),
     "Pendulum-v1": (500, 500),
@@ -66,7 +65,10 @@ def _sync_oracle_state(
 
 
 class ClassicControlRenderTest(absltest.TestCase):
+    """Render regression tests for classic control environments."""
+
     def test_render_is_batch_consistent_and_state_invariant(self) -> None:
+        """Rendering should be batch-consistent and free of side effects."""
         for task_id, (height, width) in _TASK_SIZES.items():
             with self.subTest(task_id=task_id):
                 env = make_gymnasium(
@@ -100,6 +102,7 @@ class ClassicControlRenderTest(absltest.TestCase):
                     env.close()
 
     def test_render_matches_upstream_first_frame(self) -> None:
+        """The first rendered frame should stay close to Gymnasium output."""
         for task_id, (height, width) in _TASK_SIZES.items():
             with self.subTest(task_id=task_id):
                 env = make_gymnasium(

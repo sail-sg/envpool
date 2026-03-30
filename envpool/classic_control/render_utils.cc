@@ -26,23 +26,25 @@ namespace classic_control {
 namespace rendering {
 namespace {
 
+constexpr double kPi = 3.14159265358979323846;
+
 cv::Point ToPoint(double x, double y) {
   return {static_cast<int>(std::lround(x)), static_cast<int>(std::lround(y))};
 }
 
-cv::Point2d Rotate(const cv::Point2d& point, double theta) {
+cv::Point2d RotatePoint(const cv::Point2d& point, double theta) {
   const double c = std::cos(theta);
   const double s = std::sin(theta);
   return {point.x * c - point.y * s, point.x * s + point.y * c};
 }
 
-std::vector<cv::Point> TransformPolygon(const std::vector<cv::Point2d>& points,
-                                        double origin_x, double origin_y,
-                                        double theta) {
+std::vector<cv::Point> TransformPolygonPoints(
+    const std::vector<cv::Point2d>& points, double origin_x, double origin_y,
+    double theta) {
   std::vector<cv::Point> polygon;
   polygon.reserve(points.size());
   for (const auto& point : points) {
-    const cv::Point2d rotated = Rotate(point, theta);
+    const cv::Point2d rotated = RotatePoint(point, theta);
     polygon.push_back(ToPoint(rotated.x + origin_x, rotated.y + origin_y));
   }
   return polygon;
@@ -79,7 +81,7 @@ void RenderCartPole(double x, double theta, int width, int height,
       {kCartWidth / 2.0, -kCartHeight / 2.0},
   };
   const std::vector<cv::Point> cart_poly =
-      TransformPolygon(cart, cart_x, kCartY, 0.0);
+      TransformPolygonPoints(cart, cart_x, kCartY, 0.0);
   cv::fillConvexPoly(surf, cart_poly, cv::Scalar(0, 0, 0), cv::LINE_AA);
 
   const double pole_len = scale * kPoleLength;
@@ -90,7 +92,7 @@ void RenderCartPole(double x, double theta, int width, int height,
       {kPoleWidth / 2.0, -kPoleWidth / 2.0},
   };
   const std::vector<cv::Point> pole_poly =
-      TransformPolygon(pole, cart_x, kCartY + kAxleOffset, -theta);
+      TransformPolygonPoints(pole, cart_x, kCartY + kAxleOffset, -theta);
   cv::fillConvexPoly(surf, pole_poly, cv::Scalar(202, 152, 101), cv::LINE_AA);
   cv::circle(surf, ToPoint(cart_x, kCartY + kAxleOffset),
              static_cast<int>(kPoleWidth / 2.0), cv::Scalar(129, 132, 203),
@@ -118,13 +120,13 @@ void RenderPendulum(double theta, bool has_last_u, double last_u, int width,
       {rod_length, -rod_width / 2.0},
   };
   const std::vector<cv::Point> rod_poly =
-      TransformPolygon(rod, offset_x, offset_y, theta + M_PI / 2.0);
+      TransformPolygonPoints(rod, offset_x, offset_y, theta + kPi / 2.0);
   cv::fillConvexPoly(surf, rod_poly, cv::Scalar(204, 77, 77), cv::LINE_AA);
   cv::circle(surf, ToPoint(offset_x, offset_y),
              static_cast<int>(std::lround(rod_width / 2.0)),
              cv::Scalar(204, 77, 77), cv::FILLED, cv::LINE_AA);
   const cv::Point2d rod_end =
-      Rotate(cv::Point2d(rod_length, 0.0), theta + M_PI / 2.0);
+      RotatePoint(cv::Point2d(rod_length, 0.0), theta + kPi / 2.0);
   cv::circle(surf, ToPoint(rod_end.x + offset_x, rod_end.y + offset_y),
              static_cast<int>(std::lround(rod_width / 2.0)),
              cv::Scalar(204, 77, 77), cv::FILLED, cv::LINE_AA);
@@ -177,11 +179,11 @@ void RenderMountainCar(double pos, double goal_pos, int width, int height,
   const double car_x = (pos - kMinPos) * scale;
   const double car_y = kClearance + MountainHeight(pos) * scale;
   const std::vector<cv::Point> car_poly =
-      TransformPolygon(car, car_x, car_y, angle);
+      TransformPolygonPoints(car, car_x, car_y, angle);
   cv::fillConvexPoly(surf, car_poly, cv::Scalar(0, 0, 0), cv::LINE_AA);
 
   for (double wheel_offset : {kCarWidth / 4.0, -kCarWidth / 4.0}) {
-    const cv::Point2d rotated = Rotate({wheel_offset, 0.0}, angle);
+    const cv::Point2d rotated = RotatePoint({wheel_offset, 0.0}, angle);
     cv::circle(surf, ToPoint(rotated.x + car_x, rotated.y + car_y),
                static_cast<int>(std::lround(kCarHeight / 2.5)),
                cv::Scalar(128, 128, 128), cv::FILLED, cv::LINE_AA);
@@ -231,8 +233,8 @@ void RenderAcrobot(double theta1, double theta2, int width, int height,
       cv::Point2d(0.0, 0.0), p1, p2};
   const std::array<double, 2> link_lengths = {kLinkLength1 * scale,
                                               kLinkLength2 * scale};
-  const std::array<double, 2> link_thetas = {theta1 - M_PI / 2.0,
-                                             theta1 + theta2 - M_PI / 2.0};
+  const std::array<double, 2> link_thetas = {theta1 - kPi / 2.0,
+                                             theta1 + theta2 - kPi / 2.0};
   for (int i = 0; i < 2; ++i) {
     const cv::Point2d joint = joints[i];
     const std::vector<cv::Point2d> link = {
@@ -242,7 +244,8 @@ void RenderAcrobot(double theta1, double theta2, int width, int height,
         {link_lengths[i], -0.1 * scale},
     };
     const std::vector<cv::Point> link_poly =
-        TransformPolygon(link, joint.x + offset, joint.y + offset, link_thetas[i]);
+        TransformPolygonPoints(link, joint.x + offset, joint.y + offset,
+                               link_thetas[i]);
     cv::fillConvexPoly(surf, link_poly, cv::Scalar(0, 204, 204), cv::LINE_AA);
     cv::circle(surf, ToPoint(joint.x + offset, joint.y + offset),
                static_cast<int>(std::lround(0.1 * scale)),

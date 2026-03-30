@@ -18,7 +18,6 @@ from absl.testing import absltest
 from dm_control import suite
 
 import envpool.mujoco.dmc.registration as reg
-import envpool.mujoco.dmc.registration  # noqa: F401
 from envpool.registration import make_gym
 
 
@@ -32,7 +31,10 @@ def _task_map() -> dict[str, tuple[str, str]]:
 
 
 class MujocoDmcRenderTest(absltest.TestCase):
+    """Render regression tests for dm_control-backed MuJoCo tasks."""
+
     def test_rgb_array_render_is_batch_consistent(self) -> None:
+        """Batch render output should match per-env renders for WalkerWalk."""
         env = make_gym(
             "WalkerWalk-v1",
             num_envs=2,
@@ -58,6 +60,7 @@ class MujocoDmcRenderTest(absltest.TestCase):
             env.close()
 
     def test_render_matches_dm_control_default_camera(self) -> None:
+        """Default-camera renders should stay close to dm_control output."""
         threshold = 21.0
         for task_id, (domain, task) in sorted(_task_map().items()):
             with self.subTest(task_id=task_id):

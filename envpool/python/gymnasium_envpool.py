@@ -52,6 +52,7 @@ class GymnasiumEnvPoolMixin:
 
     @property
     def render_mode(self: Any) -> str | None:
+        """Render mode configured at construction time."""
         return getattr(self, "_render_mode", None)
 
 
