@@ -166,7 +166,8 @@ std::unique_ptr<GlContext> CreateGlContext() {
 #endif
 }
 
-OffscreenRenderer::OffscreenRenderer() {
+OffscreenRenderer::OffscreenRenderer(CameraPolicy camera_policy)
+    : camera_policy_(camera_policy) {
   mjv_defaultScene(&scene_);
   mjv_defaultCamera(&camera_);
   mjv_defaultOption(&option_);
@@ -197,7 +198,7 @@ void OffscreenRenderer::UpdateCamera(const mjModel* model, const mjData* data,
   if (camera_id < -1 || camera_id >= model->ncam) {
     throw std::out_of_range("camera_id is out of range");
   }
-  if (camera_id == -1) {
+  if (camera_id == -1 && camera_policy_ == CameraPolicy::kGymLike) {
     int track_camera_id = mj_name2id(model, mjOBJ_CAMERA, "track");
     if (track_camera_id >= 0) {
       camera_.type = mjCAMERA_FIXED;
@@ -217,6 +218,13 @@ void OffscreenRenderer::UpdateCamera(const mjModel* model, const mjData* data,
         camera_.lookat[axis] = *mid;
       }
       camera_.distance = model->stat.extent;
+      free_camera_initialized_ = true;
+    }
+  } else if (camera_id == -1) {
+    camera_.type = mjCAMERA_FREE;
+    camera_.fixedcamid = -1;
+    if (!free_camera_initialized_) {
+      mjv_defaultFreeCamera(model, &camera_);
       free_camera_initialized_ = true;
     }
   } else {

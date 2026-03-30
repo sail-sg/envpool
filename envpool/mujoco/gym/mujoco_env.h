@@ -119,7 +119,8 @@ class MujocoEnv : public RenderableEnv {
   void Render(int width, int height, int camera_id,
               unsigned char* rgb) override {
     if (renderer_ == nullptr) {
-      renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>();
+      renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
+          envpool::mujoco::CameraPolicy::kGymLike);
     }
     renderer_->Render(model_, data_, width, height, camera_id, rgb);
   }

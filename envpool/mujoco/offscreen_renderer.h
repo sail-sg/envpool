@@ -24,6 +24,11 @@
 
 namespace envpool::mujoco {
 
+enum class CameraPolicy {
+  kGymLike,
+  kDmControl,
+};
+
 class GlContext {
  public:
   virtual ~GlContext() = default;
@@ -35,7 +40,7 @@ std::unique_ptr<GlContext> CreateGlContext();
 
 class OffscreenRenderer {
  public:
-  OffscreenRenderer();
+  explicit OffscreenRenderer(CameraPolicy camera_policy = CameraPolicy::kGymLike);
   ~OffscreenRenderer();
 
   void Render(const mjModel* model, mjData* data, int width, int height,
@@ -51,6 +56,7 @@ class OffscreenRenderer {
   mjvOption option_;
   mjrContext context_;
   std::vector<unsigned char> scratch_;
+  CameraPolicy camera_policy_;
   bool initialized_{false};
   bool free_camera_initialized_{false};
 };

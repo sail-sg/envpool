@@ -31,6 +31,12 @@ namespace box2d {
 
 class BipedalWalkerContactDetector;
 
+struct BipedalWalkerCloudPoly {
+  std::array<b2Vec2, 5> points;
+  float x1;
+  float x2;
+};
+
 class BipedalWalkerLidarCallback : public b2RayCastCallback {
  public:
   float fraction;
@@ -81,7 +87,9 @@ class BipedalWalkerBox2dEnv : public RenderableEnv {
   std::array<float, 24> obs_;
   // info
   float scroll_;
-  std::vector<float> path2_, path4_, path5_;
+  std::vector<float> terrain_edge_path2_, terrain_poly_path4_, leg_path4_,
+      hull_path5_;
+  std::vector<BipedalWalkerCloudPoly> cloud_poly_;
 
   // box2d related
   std::unique_ptr<b2World> world_;

@@ -13,6 +13,7 @@
 # limitations under the License.
 """Render tests for Box2D environments."""
 
+import gymnasium as gym
 import numpy as np
 from absl.testing import absltest
 
@@ -51,6 +52,32 @@ class Box2DRenderTest(absltest.TestCase):
 
     def test_bipedal_walker_render(self) -> None:
         self._assert_batch_consistent_render("BipedalWalker-v3")
+
+    def test_bipedal_walker_render_matches_official_ground_profile(self) -> None:
+        for task_id in ("BipedalWalker-v3", "BipedalWalkerHardcore-v3"):
+            with self.subTest(task_id=task_id):
+                env = make_gym(
+                    task_id,
+                    num_envs=1,
+                    seed=0,
+                    render_mode="rgb_array",
+                    render_width=600,
+                    render_height=400,
+                )
+                oracle = gym.make(task_id, render_mode="rgb_array")
+                try:
+                    env.reset()
+                    oracle.reset(seed=0)
+                    frame = env.render()[0].astype(np.int16)
+                    expected = np.asarray(oracle.render(), dtype=np.int16)
+                    lower_band = slice(-96, None)
+                    diff = np.abs(frame[lower_band] - expected[lower_band]).mean()
+                    agent_crop = np.abs(frame[100:320, :220] - expected[100:320, :220]).mean()
+                    self.assertLess(diff, 40.0)
+                    self.assertLess(agent_crop, 15.0)
+                finally:
+                    env.close()
+                    oracle.close()
 
     def test_lunar_lander_render(self) -> None:
         self._assert_batch_consistent_render("LunarLander-v3")

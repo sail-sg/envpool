@@ -190,6 +190,49 @@ envpool.make("Pong-v5", env_type="gym", num_envs=64, batch_size=16)
 
 There are other configurable arguments with `envpool.make`; please check out [EnvPool Python interface introduction](https://envpool.readthedocs.io/en/latest/content/python_interface.html).
 
+### Rendering
+
+EnvPool exposes rendering through the Python wrapper. Create the env with
+`render_mode="rgb_array"` to get batched RGB output, or
+`render_mode="human"` to display a single env through OpenCV.
+
+```python
+import envpool
+
+env = envpool.make(
+    "Ant-v5",
+    env_type="gymnasium",
+    num_envs=4,
+    render_mode="rgb_array",
+    render_width=480,
+    render_height=480,
+)
+env.reset()
+frames = env.render(env_ids=[0, 2])
+assert frames.shape == (2, 480, 480, 3)
+```
+
+`render()` is batch-first, so even a single render keeps the batch dimension:
+`env.render().shape == (1, H, W, 3)`. If `env_ids` is omitted, EnvPool renders
+`render_env_id` (default `0`). `camera_id` can be overridden per call, while
+the output size is fixed at env creation time via `render_width` and
+`render_height`.
+
+```python
+viewer = envpool.make(
+    "WalkerWalk-v1",
+    env_type="gymnasium",
+    num_envs=1,
+    render_mode="human",
+    render_env_id=0,
+)
+viewer.reset()
+viewer.render()
+```
+
+`render_mode="human"` returns `None` and currently supports a single env id per
+call. It also requires `opencv-python` to be installed.
+
 ## Contributing
 
 EnvPool is still under development. More environments will be added, and we always welcome contributions to help EnvPool better. If you would like to contribute, please check out our [contribution guideline](https://envpool.readthedocs.io/en/latest/content/contributing.html).

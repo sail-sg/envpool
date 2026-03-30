@@ -208,6 +208,21 @@ py_test(
 )
 
 py_test(
+    name = "mujoco_dmc_render_test",
+    size = "enormous",
+    srcs = ["dmc/mujoco_dmc_render_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":mujoco_dmc",
+        ":mujoco_dmc_registration",
+        requirement("numpy"),
+        requirement("absl-py"),
+        requirement("dm-control"),
+        requirement("gym"),
+    ],
+)
+
+py_test(
     name = "mujoco_gym_deterministic_test",
     size = "enormous",
     srcs = ["gym/mujoco_gym_deterministic_test.py"],
