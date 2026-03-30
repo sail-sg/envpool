@@ -25,10 +25,12 @@
 
 namespace box2d {
 
-b2PolygonShape GeneratePolygon(const float (*poly)[2], int size) {  // NOLINT
+template <std::size_t N>
+b2PolygonShape GeneratePolygon(
+    const std::array<std::array<float, 2>, N>& poly) {
   std::vector<b2Vec2> vec_list;
-  vec_list.resize(size);
-  for (int i = 0; i < size; ++i) {
+  vec_list.resize(poly.size());
+  for (std::size_t i = 0; i < poly.size(); ++i) {
     vec_list[i] = b2Vec2(poly[i][0] * kSize, poly[i][1] * kSize);
   }
   b2PolygonShape polygon;
@@ -48,19 +50,19 @@ Car::Car(std::shared_ptr<b2World> world, float init_angle, float init_x,
   hull_ = world_->CreateBody(&bd);
   drawlist_.push_back(hull_);
 
-  b2PolygonShape polygon1 = GeneratePolygon(kHullPoly1, 4);
+  b2PolygonShape polygon1 = GeneratePolygon(kHullPoly1);
   hull_->CreateFixture(&polygon1, 1.f);
 
-  b2PolygonShape polygon2 = GeneratePolygon(kHullPoly2, 4);
+  b2PolygonShape polygon2 = GeneratePolygon(kHullPoly2);
   hull_->CreateFixture(&polygon2, 1.f);
 
-  b2PolygonShape polygon3 = GeneratePolygon(kHullPoly3, 8);
+  b2PolygonShape polygon3 = GeneratePolygon(kHullPoly3);
   hull_->CreateFixture(&polygon3, 1.f);
 
-  b2PolygonShape polygon4 = GeneratePolygon(kHullPoly4, 4);
+  b2PolygonShape polygon4 = GeneratePolygon(kHullPoly4);
   hull_->CreateFixture(&polygon4, 1.f);
 
-  for (const auto* p : kWheelPos) {
+  for (const auto& p : kWheelPos) {
     float wx = p[0];
     float wy = p[1];
 
@@ -69,7 +71,7 @@ Car::Car(std::shared_ptr<b2World> world, float init_angle, float init_x,
     bd.angle = init_angle;
     bd.type = b2_dynamicBody;
 
-    b2PolygonShape polygon = GeneratePolygon(kWheelPoly, 4);
+    b2PolygonShape polygon = GeneratePolygon(kWheelPoly);
     b2FixtureDef fd;
     fd.shape = &polygon;
     fd.density = 0.1;

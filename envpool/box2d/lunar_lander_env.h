@@ -38,9 +38,14 @@ class LunarLanderBox2dEnv : public RenderableEnv {
   const double kMainEnginePower = 13.0;
   const double kSideEnginePower = 0.6;
   const double kInitialRandom = 1000.0;
-  const double kLanderPoly[6][2] = {
-      // NOLINT
-      {-14, 17}, {-17, 0}, {-17, -10}, {17, -10}, {17, 0}, {14, 17}};
+  const std::array<std::array<double, 2>, 6> kLanderPoly = {{
+      {-14, 17},
+      {-17, 0},
+      {-17, -10},
+      {17, -10},
+      {17, 0},
+      {14, 17},
+  }};
   const double kLegAway = 20;
   const double kLegDown = 18;
   const double kLegW = 2;
