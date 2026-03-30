@@ -206,9 +206,9 @@ class EnvPoolMixin(ABC):
         env_id: np.ndarray | None = None,
     ) -> None:
         """Send actions into EnvPool."""
-        action = self._from(action, env_id)
-        self._check_action(action)
-        self._send(action)
+        converted_action = self._from(action, env_id)
+        self._check_action(converted_action)
+        self._send(converted_action)
 
     def recv(
         self: EnvPool,

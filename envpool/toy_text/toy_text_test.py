@@ -13,7 +13,7 @@
 # limitations under the License.
 """Unit tests for classic control environments."""
 
-from typing import no_type_check
+from typing import Any, cast, no_type_check
 
 import gymnasium as gym
 import numpy as np
@@ -22,6 +22,7 @@ from absl.testing import absltest
 from dm_env import TimeStep
 
 import envpool.toy_text.registration  # noqa: F401
+from envpool.python.protocol import DMEnvPool, GymEnvPool
 from envpool.registration import make, make_gymnasium
 
 
@@ -30,11 +31,19 @@ class _ToyTextEnvTest(absltest.TestCase):
         num_envs = 3
         row, col = 10, 5
         for env_type in ["dm", "gym"]:
-            e = make("Catch-v0", env_type=env_type, num_envs=num_envs)
+            e: Any
             # get a successful trajectory
             if env_type == "dm":
+                e = cast(
+                    DMEnvPool,
+                    make("Catch-v0", env_type=env_type, num_envs=num_envs),
+                )
                 obs = e.reset().observation.obs
             else:
+                e = cast(
+                    GymEnvPool,
+                    make("Catch-v0", env_type=env_type, num_envs=num_envs),
+                )
                 obs, _ = e.reset()
             assert obs.shape == (num_envs, row, col)
             ball_pos = np.where(obs[:, 0] == 1)[1]
@@ -281,9 +290,9 @@ class _ToyTextEnvTest(absltest.TestCase):
             )
             valid = {
                 (round(prob, 6), next_state, reward, terminated_flag, False)
-                for prob, next_state, reward, terminated_flag in ref.unwrapped.P[
-                    current_state
-                ][action]
+                for prob, next_state, reward, terminated_flag in cast(
+                    Any, ref.unwrapped
+                ).P[current_state][action]
             }
             assert transition in valid, (
                 current_state,

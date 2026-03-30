@@ -47,7 +47,7 @@ class EnvSpecMixin(ABC):
     def reward_threshold(self: EnvSpec) -> float | None:
         """Reward threshold, None for no threshold."""
         try:
-            return self.config.reward_threshold  # type: ignore
+            return self.config.reward_threshold
         except AttributeError:
             return None
 
@@ -236,9 +236,9 @@ class EnvSpecMeta(ABCMeta):
         """Check keys and initialize namedtuple config."""
         base = parents[0]
         parents = (base, EnvSpecMixin)
-        config_keys = base._config_keys
-        check_key_duplication(name, "config", config_keys)
-        config_keys: list[str] = [s.replace(".", "_") for s in config_keys]
+        raw_config_keys = base._config_keys
+        check_key_duplication(name, "config", raw_config_keys)
+        config_keys = [s.replace(".", "_") for s in raw_config_keys]
         defaults: tuple = base._default_config_values
         attrs["gen_config"] = namedtuple(
             "Config", config_keys, defaults=defaults

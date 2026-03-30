@@ -322,7 +322,7 @@ class _MiniGridEnvPoolAlignTest(absltest.TestCase):
                     cast(Any, env0.unwrapped), pre_state, post_state, act
                 )
             else:
-                obs0, rew0, term0, trunc0, _ = env0.step(act)
+                obs0, rew0, term0, trunc0, _ = cast(Any, env0.step(act))
             np.testing.assert_array_equal(
                 obs0["direction"], obs1["direction"][0]
             )

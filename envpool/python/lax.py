@@ -27,12 +27,12 @@ class XlaMixin:
 
     def xla(self: Any) -> tuple[Any, Callable, Callable, Callable]:
         """Return the XLA version of send/recv/step functions."""
-        if sys.platform == "darwin":
-            raise RuntimeError("EnvPool XLA is currently unavailable on macOS.")
-        if sys.platform == "win32":
-            raise RuntimeError(
-                "EnvPool XLA is currently unavailable on Windows."
-            )
+        unsupported_message = {
+            "darwin": "EnvPool XLA is currently unavailable on macOS.",
+            "win32": "EnvPool XLA is currently unavailable on Windows.",
+        }.get(sys.platform)
+        if unsupported_message is not None:
+            raise RuntimeError(unsupported_message)
         _handle, _recv, _send = make_xla(self)
 
         def recv(handle: jnp.ndarray) -> TimeStep | tuple:

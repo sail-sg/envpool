@@ -17,12 +17,17 @@ from .dm_envpool import DMEnvPoolMeta
 from .env_spec import EnvSpecMeta
 from .gym_envpool import GymEnvPoolMeta
 from .gymnasium_envpool import GymnasiumEnvPoolMeta
-from .protocol import EnvPool, EnvSpec
+from .protocol import DMEnvPool, EnvPool, EnvSpec, GymEnvPool, GymnasiumEnvPool
 
 
 def py_env(
     envspec: type[EnvSpec], envpool: type[EnvPool]
-) -> tuple[type[EnvSpec], type[EnvPool], type[EnvPool], type[EnvPool]]:
+) -> tuple[
+    type[EnvSpec],
+    type[DMEnvPool],
+    type[GymEnvPool],
+    type[GymnasiumEnvPool],
+]:
     """Initialize EnvPool for users."""
     # remove the _ prefix added when registering cpp class via pybind
     spec_name = envspec.__name__[1:]
