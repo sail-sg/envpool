@@ -331,8 +331,8 @@ std::vector<uint8_t> RenderTile(const WorldObj* obj, int agent_dir) {
   if (agent_dir >= 0) {
     CoordFn tri =
         PointInTriangle({0.12f, 0.19f}, {0.87f, 0.50f}, {0.12f, 0.81f});
-    tri = RotateFn(tri, 0.5f, 0.5f,
-                   0.5f * static_cast<float>(M_PI) * agent_dir);
+    tri =
+        RotateFn(tri, 0.5f, 0.5f, 0.5f * static_cast<float>(M_PI) * agent_dir);
     FillCoords(&img, hi_width, hi_height, tri, kAgentColor);
   }
   return Downsample(img, hi_width, hi_height, kTileSubdivs);
