@@ -31,7 +31,7 @@ jobs:
         uses: styfle/cancel-workflow-action@0.11.0
         with:
           access_token: ${{ github.token }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/setup-go@v5
@@ -93,7 +93,7 @@ jobs:
         uses: styfle/cancel-workflow-action@0.11.0
         with:
           access_token: ${{ github.token }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/setup-go@v5
@@ -109,8 +109,13 @@ jobs:
           python-version: "3.12"
       - name: Install macOS dependencies
         run: |
-          brew install cmake ninja swig qt@5
-          sudo ln -sfn "$(brew --prefix cmake)/bin/cmake" /usr/local/bin/cmake
+          brew install ninja swig qt@5
+          python -m pip install "cmake<4"
+          CMAKE_BIN_DIR="$(python -c "import cmake; print(cmake.CMAKE_BIN_DIR)")"
+          CMAKE_BIN="$CMAKE_BIN_DIR/cmake"
+          echo "$CMAKE_BIN_DIR" >> "$GITHUB_PATH"
+          sudo ln -sfn "$CMAKE_BIN" /usr/local/bin/cmake
+          PATH="$CMAKE_BIN_DIR:$PATH" cmake --version
           sudo ln -sfn "$(brew --prefix ninja)/bin/ninja" /usr/local/bin/ninja
           echo "BAZEL_RULES_QT_DIR=$(brew --prefix qt@5)" >> "$GITHUB_ENV"
       - name: Restore Bazel caches
@@ -156,7 +161,7 @@ jobs:
         uses: styfle/cancel-workflow-action@0.11.0
         with:
           access_token: ${{ github.token }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/setup-go@v5

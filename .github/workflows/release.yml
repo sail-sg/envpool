@@ -23,7 +23,7 @@ jobs:
         uses: styfle/cancel-workflow-action@0.11.0
         with:
           access_token: ${{ github.token }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/setup-go@v5
@@ -49,6 +49,10 @@ jobs:
       - name: Install macOS dependencies
         run: |
           brew install ninja swig qt@5
+          if [ "${{ matrix.python-version }}" != "3.14" ]; then
+            brew install cmake
+            sudo ln -sfn "$(brew --prefix cmake)/bin/cmake" /usr/local/bin/cmake
+          fi
           sudo ln -sfn "$(brew --prefix ninja)/bin/ninja" /usr/local/bin/ninja
           echo "BAZEL_RULES_QT_DIR=$(brew --prefix qt@5)" >> "$GITHUB_ENV"
       - name: Install bazelisk
@@ -124,7 +128,7 @@ jobs:
         uses: styfle/cancel-workflow-action@0.11.0
         with:
           access_token: ${{ github.token }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install build dependencies
         run: |
           dnf install -y git curl wget zsh gcc gcc-c++ cmake make ninja-build tmux golang java-17-openjdk-devel qt5-qtbase-devel qt5-qtdeclarative-devel
@@ -187,7 +191,7 @@ jobs:
         uses: styfle/cancel-workflow-action@0.11.0
         with:
           access_token: ${{ github.token }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/setup-go@v5
