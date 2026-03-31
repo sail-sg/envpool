@@ -40,13 +40,7 @@ jobs:
       - name: Pin CMake 3
         run: |
           python -m pip install "cmake<4"
-          CMAKE_BIN="$(python - <<'PY'
-import os
-import sysconfig
-
-print(os.path.join(sysconfig.get_path("scripts"), "cmake"))
-PY
-)"
+          CMAKE_BIN="$(python -c "import os, sysconfig; print(os.path.join(sysconfig.get_path('scripts'), 'cmake'))")"
           sudo ln -sfn "$CMAKE_BIN" /usr/local/bin/cmake
       - name: Install macOS dependencies
         run: |
@@ -151,13 +145,7 @@ PY
         shell: bash
         run: |
           python3 -m pip install "cmake<4"
-          CMAKE_BIN="$(python3 - <<'PY'
-import os
-import sysconfig
-
-print(os.path.join(sysconfig.get_path("scripts"), "cmake"))
-PY
-)"
+          CMAKE_BIN="$(python3 -c "import os, sysconfig; print(os.path.join(sysconfig.get_path('scripts'), 'cmake'))")"
           ln -sfn "$CMAKE_BIN" /usr/local/bin/cmake
       - name: Build
         run: |
