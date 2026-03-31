@@ -23,7 +23,7 @@ def workspace():
     """Configure pip requirements."""
     python_register_multi_toolchains(
         name = "python_versions",
-        python_versions = ["3.11", "3.12", "3.13"],
+        python_versions = ["3.11", "3.12", "3.13", "3.14"],
         default_version = "3.12",
         ignore_root_user_error = True,
     )

@@ -47,7 +47,7 @@ Installation
 ------------
 
 EnvPool is currently hosted on `PyPI <https://pypi.org/project/envpool/>`_.
-It supports Python 3.11-3.13.
+It supports Python 3.11-3.14.
 
 You can install EnvPool with the following command:
 

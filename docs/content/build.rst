@@ -1,9 +1,10 @@
 Build From Source
 =================
 
-We recommend developing EnvPool on Ubuntu 24.04. Release wheels are built in
-``manylinux_2_28_x86_64`` and ``manylinux_2_28_aarch64`` environments for
-Linux, on ``macos-14`` for macOS, and on ``windows-2022`` for Windows.
+We recommend developing EnvPool on Ubuntu 24.04. Release wheels are built for
+Python 3.11-3.14 in ``manylinux_2_28_x86_64`` and
+``manylinux_2_28_aarch64`` environments for Linux, on ``macos-14`` for
+macOS, and on ``windows-2022`` for Windows.
 
 We use `bazel <https://bazel.build/>`_ to build EnvPool. Comparing with
 `pip <https://pip.pypa.io/>`_, using Bazel to build python package with C++ .so

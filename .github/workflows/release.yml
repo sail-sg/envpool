@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     env:
       HOMEBREW_NO_AUTO_UPDATE: "1"
     steps:
@@ -22,7 +22,7 @@ jobs:
         uses: styfle/cancel-workflow-action@0.11.0
         with:
           access_token: ${{ github.token }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/setup-go@v5
@@ -36,10 +36,22 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Pin CMake 3
+        if: matrix.python-version == '3.14'
+        run: |
+          python -m pip install "cmake<4"
+          CMAKE_BIN_DIR="$(python -c "import cmake; print(cmake.CMAKE_BIN_DIR)")"
+          CMAKE_BIN="$CMAKE_BIN_DIR/cmake"
+          echo "$CMAKE_BIN_DIR" >> "$GITHUB_PATH"
+          sudo ln -sfn "$CMAKE_BIN" /usr/local/bin/cmake
+          PATH="$CMAKE_BIN_DIR:$PATH" cmake --version
       - name: Install macOS dependencies
         run: |
-          brew install cmake ninja swig qt@5
-          sudo ln -sfn "$(brew --prefix cmake)/bin/cmake" /usr/local/bin/cmake
+          brew install ninja swig qt@5
+          if [ "${{ matrix.python-version }}" != "3.14" ]; then
+            brew install cmake
+            sudo ln -sfn "$(brew --prefix cmake)/bin/cmake" /usr/local/bin/cmake
+          fi
           sudo ln -sfn "$(brew --prefix ninja)/bin/ninja" /usr/local/bin/ninja
           echo "BAZEL_RULES_QT_DIR=$(brew --prefix qt@5)" >> "$GITHUB_ENV"
       - name: Install bazelisk
@@ -85,6 +97,11 @@ jobs:
             container: quay.io/pypa/manylinux_2_28_x86_64
             auditwheel-plat: manylinux_2_28_x86_64
             python-version: "3.13"
+          - arch: x86_64
+            runner: ubuntu-24.04
+            container: quay.io/pypa/manylinux_2_28_x86_64
+            auditwheel-plat: manylinux_2_28_x86_64
+            python-version: "3.14"
           - arch: aarch64
             runner: ubuntu-24.04-arm
             container: quay.io/pypa/manylinux_2_28_aarch64
@@ -100,12 +117,17 @@ jobs:
             container: quay.io/pypa/manylinux_2_28_aarch64
             auditwheel-plat: manylinux_2_28_aarch64
             python-version: "3.13"
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            container: quay.io/pypa/manylinux_2_28_aarch64
+            auditwheel-plat: manylinux_2_28_aarch64
+            python-version: "3.14"
     steps:
       - name: Cancel previous run
         uses: styfle/cancel-workflow-action@0.11.0
         with:
           access_token: ${{ github.token }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install build dependencies
         run: |
           dnf install -y git curl wget zsh gcc gcc-c++ cmake make ninja-build tmux golang java-17-openjdk-devel qt5-qtbase-devel qt5-qtdeclarative-devel
@@ -121,10 +143,21 @@ jobs:
             3.11) PYBIN=/opt/python/cp311-cp311/bin ;;
             3.12) PYBIN=/opt/python/cp312-cp312/bin ;;
             3.13) PYBIN=/opt/python/cp313-cp313/bin ;;
+            3.14) PYBIN=/opt/python/cp314-cp314/bin ;;
             *) echo "unsupported python version: ${{ matrix.python-version }}" >&2; exit 1 ;;
           esac
           echo "$PYBIN" >> "$GITHUB_PATH"
           "$PYBIN/python3" --version
+      - name: Pin CMake 3
+        if: matrix.python-version == '3.14'
+        shell: bash
+        run: |
+          python -m pip install "cmake<4"
+          CMAKE_BIN_DIR="$(python -c "import cmake; print(cmake.CMAKE_BIN_DIR)")"
+          CMAKE_BIN="$CMAKE_BIN_DIR/cmake"
+          echo "$CMAKE_BIN_DIR" >> "$GITHUB_PATH"
+          ln -sfn "$CMAKE_BIN" /usr/local/bin/cmake
+          PATH="$CMAKE_BIN_DIR:$PATH" cmake --version
       - name: Build
         run: |
           rm -rf dist wheelhouse
@@ -146,7 +179,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     env:
       BAZEL_SH: C:/Program Files/Git/usr/bin/bash.exe
       MSYS2_ARG_CONV_EXCL: "*"
@@ -157,7 +190,7 @@ jobs:
         uses: styfle/cancel-workflow-action@0.11.0
         with:
           access_token: ${{ github.token }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/setup-go@v5
@@ -168,6 +201,13 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - name: Shorten temp path
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path C:\tmp -Force | Out-Null
+          Add-Content -Path $env:GITHUB_ENV -Value "TMP=C:\tmp"
+          Add-Content -Path $env:GITHUB_ENV -Value "TEMP=C:\tmp"
+          Add-Content -Path $env:GITHUB_ENV -Value "TMPDIR=C:\tmp"
       - name: Install Windows dependencies
         shell: pwsh
         run: |
@@ -193,6 +233,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Pin CMake 3
+        if: matrix.python-version == '3.14'
+        shell: pwsh
+        run: |
+          python -m pip install "cmake<4"
+          $cmakeBinDir = python -c "import cmake; print(cmake.CMAKE_BIN_DIR)"
+          Add-Content -Path $env:GITHUB_PATH -Value $cmakeBinDir
+          & (Join-Path $cmakeBinDir "cmake.exe") --version
       - name: Build
         shell: bash
         run: |
