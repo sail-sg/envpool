@@ -8,9 +8,9 @@ See https://github.com/mgbellemare/Arcade-Learning-Environment/tree/v0.7.5
 Render Compare
 --------------
 
-Representative first-frame compares for renderable Atari tasks. In each panel,
-EnvPool is on the left and the exact raw-RGB oracle used by the test suite is
-on the right.
+Representative first-frame compares for Atari tasks that support rendering. In
+each panel, EnvPool is on the left and the exact raw-RGB oracle used by the
+test suite is on the right.
 
 .. image:: ../_static/render_samples/atari_oracle_compare.png
     :width: 900px

@@ -28,9 +28,9 @@ EnvPool today.
 Render Compare
 --------------
 
-Representative first-frame compares for renderable DeepMind Control Suite
-tasks. In each panel, EnvPool is on the left and upstream ``dm_control`` is on
-the right.
+Representative first-frame compares for DeepMind Control Suite tasks that
+support rendering. In each panel, EnvPool is on the left and upstream
+``dm_control`` is on the right.
 
 .. image:: ../_static/render_samples/mujoco_dmc_official_compare.png
     :width: 900px

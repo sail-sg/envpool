@@ -8,9 +8,9 @@ All of the environments in classic control borrow from `Gym
 Render Compare
 --------------
 
-Representative first-frame compares for the renderable classic control tasks.
-In each panel, EnvPool is on the left and the Gymnasium reference renderer is
-on the right.
+Representative first-frame compares for classic control tasks that support
+rendering. In each panel, EnvPool is on the left and the Gymnasium reference
+renderer is on the right.
 
 .. image:: ../_static/render_samples/classic_control_official_compare.png
     :width: 900px

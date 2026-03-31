@@ -17,9 +17,9 @@ applicable.
 Render Compare
 --------------
 
-Representative first-frame compares for renderable MuJoCo gym tasks. In each
-panel, EnvPool is on the left and the Gymnasium reference renderer is on the
-right.
+Representative first-frame compares for MuJoCo gym tasks that support
+rendering. In each panel, EnvPool is on the left and the Gymnasium reference
+renderer is on the right.
 
 .. image:: ../_static/render_samples/mujoco_gym_official_compare.png
     :width: 900px

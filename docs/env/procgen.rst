@@ -8,9 +8,9 @@ See https://github.com/openai/procgen/tree/0.10.7
 Render Compare
 --------------
 
-Representative first-frame compares for renderable Procgen tasks. In each
-panel, EnvPool is on the left and the exact channel-last observation oracle
-used by the test suite is on the right.
+Representative first-frame compares for Procgen tasks that support rendering.
+In each panel, EnvPool is on the left and the exact channel-last observation
+oracle used by the test suite is on the right.
 
 .. image:: ../_static/render_samples/procgen_oracle_compare.png
     :width: 900px

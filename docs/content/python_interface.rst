@@ -143,7 +143,8 @@ Example:
     viewer.reset()
     viewer.render()
 
-Representative first-frame compares for renderable EnvPool families. In each
+Representative first-frame compares for EnvPool families that support
+rendering. In each
 panel, EnvPool is on the left and the reference output is on the right. For
 Box2D, Classic Control, MiniGrid, and MuJoCo, the reference is the upstream
 Python renderer. For Atari, Procgen, and VizDoom, the reference is the exact

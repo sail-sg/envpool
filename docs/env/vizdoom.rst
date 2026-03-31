@@ -10,8 +10,8 @@ Render Compare
 
 Representative first-frame compares for VizDoom tasks. In each panel, EnvPool
 is on the left and the exact screen-buffer oracle used by the test suite is on
-the right. Scenarios that are not stably renderable in the current local setup
-are shown as placeholders.
+the right. Scenarios that cannot be rendered stably in the current local test
+setup are shown as placeholders.
 
 .. image:: ../_static/render_samples/vizdoom_oracle_compare.png
     :width: 900px

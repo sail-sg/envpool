@@ -9,9 +9,9 @@ by the ``box2d`` wheel.
 Render Compare
 --------------
 
-Representative first-frame compares for the renderable Box2D tasks. In each
-panel, EnvPool is on the left and the Gymnasium reference renderer is on the
-right.
+Representative first-frame compares for Box2D tasks that support rendering. In
+each panel, EnvPool is on the left and the Gymnasium reference renderer is on
+the right.
 
 .. image:: ../_static/render_samples/box2d_official_compare.png
     :width: 900px
