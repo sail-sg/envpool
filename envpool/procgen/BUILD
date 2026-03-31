@@ -35,6 +35,7 @@ cc_library(
     ],
     deps = [
         "//envpool/core:async_envpool",
+        "//envpool/utils:image_process",
         "@procgen",
     ],
 )
@@ -81,6 +82,19 @@ py_library(
     imports = ["../.."],
     deps = [
         "//envpool:registration",
+    ],
+)
+
+py_test(
+    name = "procgen_render_test",
+    size = "enormous",
+    srcs = ["procgen_render_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":procgen",
+        ":procgen_registration",
+        requirement("numpy"),
+        requirement("absl-py"),
     ],
 )
 

@@ -83,7 +83,7 @@ class AtariEnvFns {
 using AtariEnvSpec = EnvSpec<AtariEnvFns>;
 using FrameSpec = Spec<uint8_t>;
 
-class AtariEnv : public Env<AtariEnvSpec> {
+class AtariEnv : public Env<AtariEnvSpec>, public RenderableEnv {
  protected:
   const int kRawHeight = 210;
   const int kRawWidth = 160;
@@ -99,6 +99,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
   std::deque<Array> stack_buf_;
   std::vector<Array> maxpool_buf_;
   Array resize_img_;
+  Array render_img_;
   std::uniform_int_distribution<> dist_noop_;
   std::string rom_path_;
 
@@ -121,6 +122,7 @@ class AtariEnv : public Env<AtariEnvSpec> {
         transpose_spec_({gray_scale_ ? 1 : 3, spec.config["img_height"_],
                          spec.config["img_width"_]}),
         resize_img_(resize_spec_),
+        render_img_(FrameSpec({kRawHeight, kRawWidth, 3})),
         dist_noop_(0, spec.config["noop_max"_] - 1),
         rom_path_(GetRomPath(spec.config["base_path"_], spec.config["task"_])) {
     env_->setFloat("repeat_action_probability",
@@ -229,6 +231,24 @@ class AtariEnv : public Env<AtariEnvSpec> {
   }
 
   bool IsDone() override { return done_; }
+
+  std::pair<int, int> RenderSize(int width, int height) const override {
+    return {width > 0 ? width : kRawWidth, height > 0 ? height : kRawHeight};
+  }
+
+  void Render(int width, int height, int /*camera_id*/,
+              unsigned char* rgb) override {
+    uint8_t* ale_screen_data = env_->getScreen().getArray();
+    auto* ptr = static_cast<uint8_t*>(render_img_.Data());
+    env_->theOSystem->colourPalette().applyPaletteRGB(ptr, ale_screen_data,
+                                                      kRawSize);
+    Array output(FrameSpec({height, width, 3}), reinterpret_cast<char*>(rgb));
+    if (width == kRawWidth && height == kRawHeight) {
+      output.Assign(render_img_);
+    } else {
+      Resize(render_img_, &output, use_inter_area_resize_);
+    }
+  }
 
  private:
   void WriteState(float reward, float discount, float info_reward) {

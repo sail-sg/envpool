@@ -25,6 +25,7 @@
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
+#include "envpool/utils/image_process.h"
 #include "game.h"
 
 namespace procgen {
@@ -92,7 +93,7 @@ class ProcgenEnvFns {
 using ProcgenEnvSpec = EnvSpec<ProcgenEnvFns>;
 using FrameSpec = Spec<uint8_t>;
 
-class ProcgenEnv : public Env<ProcgenEnvSpec> {
+class ProcgenEnv : public Env<ProcgenEnvSpec>, public RenderableEnv {
  protected:
   std::shared_ptr<Game> game_;
   std::string env_name_;
@@ -179,6 +180,20 @@ class ProcgenEnv : public Env<ProcgenEnvSpec> {
   }
 
   bool IsDone() override { return done_ != 0; }
+
+  std::pair<int, int> RenderSize(int width, int height) const override {
+    return {width > 0 ? width : kRes, height > 0 ? height : kRes};
+  }
+
+  void Render(int width, int height, int /*camera_id*/,
+              unsigned char* rgb) override {
+    Array output(FrameSpec({height, width, 3}), reinterpret_cast<char*>(rgb));
+    if (width == kRes && height == kRes) {
+      output.Assign(obs_);
+    } else {
+      Resize(obs_, &output, false);
+    }
+  }
 
  private:
   void WriteObs() {

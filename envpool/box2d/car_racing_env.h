@@ -29,6 +29,7 @@
 #include <vector>
 
 #include "car_dynamics.h"
+#include "envpool/core/env.h"
 #include "utils.h"
 
 namespace box2d {
@@ -48,7 +49,7 @@ class CarRacingFrictionDetector : public b2ContactListener {
   void Contact(b2Contact* contact, bool begin);
 };
 
-class CarRacingBox2dEnv {
+class CarRacingBox2dEnv : public RenderableEnv {
   const int kStateW = 96;
   const int kStateH = 96;
   const int kWindowW = 1000;
@@ -100,7 +101,10 @@ class CarRacingBox2dEnv {
 
  public:
   CarRacingBox2dEnv(int max_episode_steps, float lap_complete_percent);
+  std::pair<int, int> RenderSize(int width, int height) const override;
   void Render();
+  void Render(int width, int height, int camera_id,
+              unsigned char* rgb) override;
 
   void RenderRoad(float zoom, const std::array<float, 2>& translation,
                   float angle);

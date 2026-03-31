@@ -277,6 +277,17 @@ class PyEnvPool : public EnvPool {
     py::gil_scoped_release release;
     EnvPool::Reset(arr);
   }
+
+  py::array PyRender(const py::array& env_ids, int width, int height,
+                     int camera_id) {
+    Array rendered;
+    {
+      auto arr = NumpyToArrayIncRef<int>(env_ids);
+      py::gil_scoped_release release;
+      rendered = EnvPool::Render(arr, width, height, camera_id);
+    }
+    return ArrayToNumpyHelper<unsigned char>::Convert(rendered);
+  }
 };
 
 template <typename EnvPool>
@@ -313,6 +324,7 @@ std::vector<std::string> PyEnvPool<EnvPool>::py_action_keys =
       .def("_recv", &ENVPOOL::PyRecv)                                         \
       .def("_send", &ENVPOOL::PySend)                                         \
       .def("_reset", &ENVPOOL::PyReset)                                       \
+      .def("_render", &ENVPOOL::PyRender)                                     \
       .def_readonly_static("_state_keys", &ENVPOOL::py_state_keys)            \
       .def_readonly_static("_action_keys", &ENVPOOL::py_action_keys)          \
       .def("_xla", &ENVPOOL::Xla);

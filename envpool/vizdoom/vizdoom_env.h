@@ -131,7 +131,7 @@ class VizdoomEnvFns {
 using VizdoomEnvSpec = EnvSpec<VizdoomEnvFns>;
 using FrameSpec = Spec<uint8_t>;
 
-class VizdoomEnv : public Env<VizdoomEnvSpec> {
+class VizdoomEnv : public Env<VizdoomEnvSpec>, public RenderableEnv {
  protected:
   std::vector<int> info_index_;
   // ({19, 20, 21, 22, 23, 24, 10, 7, 4, 3, 9, 5, 0, 15, 16, 73});
@@ -140,12 +140,16 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
   //  "KILLCOUNT", "SELECTED_WEAPON", "SELECTED_WEAPON_AMMO", "USER2"});
   std::unique_ptr<DoomGame> dg_;
   Array raw_buf_;
+  Array native_buf_;
+  Array render_img_;
   std::deque<Array> stack_buf_;
   std::string lmp_dir_;
   bool save_lmp_, episodic_life_, use_combined_action_, use_inter_area_resize_;
+  bool resize_screen_buffer_{false};
   bool done_{true};
   int max_episode_steps_, elapsed_step_, stack_num_, frame_skip_,
       episode_count_{0}, channel_;
+  int native_screen_height_{0}, native_screen_width_{0};
   int deathcount_idx_, hitcount_idx_, damagecount_idx_;  // bugged var
   double last_deathcount_{0}, last_hitcount_{0}, last_damagecount_{0};
   int selected_weapon_, selected_weapon_count_, weapon_duration_;
@@ -180,6 +184,14 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     dg_->setDoomGamePath(
         MergePath(spec.config["base_path"_], spec.config["iwad_path"_]));
     dg_->loadConfig(spec.config["cfg_path"_]);
+    native_screen_width_ = dg_->getScreenWidth();
+    native_screen_height_ = dg_->getScreenHeight();
+    // Recent ViZDoom builds assert that the clean width is at least 320.
+    // Keep the engine at a supported resolution, then downsample back to the
+    // config-defined screen size for observations and native renders.
+    if (native_screen_width_ < 320) {
+      dg_->setScreenResolution(RES_320X240);
+    }
     dg_->setWindowVisible(false);
     dg_->addGameArgs(spec.config["game_args"_]);
     dg_->setMode(PLAYER);
@@ -193,6 +205,12 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
     channel_ = dg_->getScreenChannels();
     raw_buf_ =
         Array(FrameSpec({dg_->getScreenHeight(), dg_->getScreenWidth(), 1}));
+    resize_screen_buffer_ = native_screen_width_ != dg_->getScreenWidth() ||
+                            native_screen_height_ != dg_->getScreenHeight();
+    native_buf_ =
+        Array(FrameSpec({native_screen_height_, native_screen_width_, 1}));
+    render_img_ =
+        Array(FrameSpec({native_screen_height_, native_screen_width_, 3}));
     for (int i = 0; i < stack_num_; ++i) {
       stack_buf_.emplace_back(FrameSpec(
           {channel_, spec.config["img_height"_], spec.config["img_width"_]}));
@@ -272,6 +290,22 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
   ~VizdoomEnv() override { dg_->close(); }
 
   bool IsDone() override { return done_; }
+
+  std::pair<int, int> RenderSize(int width, int height) const override {
+    return {width > 0 ? width : static_cast<int>(render_img_.Shape(1)),
+            height > 0 ? height : static_cast<int>(render_img_.Shape(0))};
+  }
+
+  void Render(int width, int height, int /*camera_id*/,
+              unsigned char* rgb) override {
+    Array output(FrameSpec({height, width, 3}), reinterpret_cast<char*>(rgb));
+    if (width == static_cast<int>(render_img_.Shape(1)) &&
+        height == static_cast<int>(render_img_.Shape(0))) {
+      output.Assign(render_img_);
+    } else {
+      Resize(render_img_, &output, use_inter_area_resize_);
+    }
+  }
 
   void Reset() override {
     if (force_reset_ || dg_->isEpisodeFinished() ||
@@ -401,12 +435,33 @@ class VizdoomEnv : public Env<VizdoomEnvSpec> {
 
     // get screen
     auto* raw_ptr = static_cast<uint8_t*>(raw_buf_.Data());
+    auto* native_ptr = static_cast<uint8_t*>(native_buf_.Data());
+    auto* render_ptr = static_cast<uint8_t*>(render_img_.Data());
+    int render_width = render_img_.Shape(1);
+    int render_height = render_img_.Shape(0);
     std::size_t size = raw_buf_.size;
     for (int c = 0; c < channel_; ++c) {
       // gamestate->screenBuffer is channel-first image
       std::memcpy(raw_ptr, gamestate->screenBuffer->data() + c * size, size);
+      Array& screen = resize_screen_buffer_ ? native_buf_ : raw_buf_;
+      uint8_t* screen_ptr = resize_screen_buffer_ ? native_ptr : raw_ptr;
+      if (resize_screen_buffer_) {
+        Resize(raw_buf_, &native_buf_, use_inter_area_resize_);
+      }
       auto slice = tgt[c];
-      Resize(raw_buf_, &slice, use_inter_area_resize_);
+      Resize(screen, &slice, use_inter_area_resize_);
+      if (channel_ == 1) {
+        for (int i = 0; i < render_width * render_height; ++i) {
+          uint8_t value = screen_ptr[i];
+          render_ptr[i * 3 + 0] = value;
+          render_ptr[i * 3 + 1] = value;
+          render_ptr[i * 3 + 2] = value;
+        }
+      } else if (channel_ == 3) {
+        for (int i = 0; i < render_width * render_height; ++i) {
+          render_ptr[i * 3 + c] = screen_ptr[i];
+        }
+      }
     }
     size = tgt.size;
     stack_buf_.emplace_back(tgt);

@@ -24,8 +24,11 @@
 #include <memory>
 #include <random>
 #include <string>
+#include <utility>
 
+#include "envpool/core/env.h"
 #include "envpool/mujoco/dmc/utils.h"
+#include "envpool/mujoco/offscreen_renderer.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -42,7 +45,7 @@ namespace mujoco_dmc {
  * https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/composer/task.py
  * https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/composer/environment.py
  */
-class MujocoEnv {
+class MujocoEnv : public RenderableEnv {
  private:
   std::array<char, 1000> error_;
 
@@ -55,11 +58,12 @@ class MujocoEnv {
 #ifdef ENVPOOL_TEST
   std::unique_ptr<mjtNum> qpos0_;
 #endif
+  std::unique_ptr<envpool::mujoco::OffscreenRenderer> renderer_;
 
  public:
   MujocoEnv(const std::string& base_path, const std::string& raw_xml,
             int n_sub_steps, int max_episode_steps);
-  ~MujocoEnv();
+  ~MujocoEnv() override;
 
   // rl control Environment
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/rl/control.py#L77
@@ -99,6 +103,19 @@ class MujocoEnv {
   // randomizer
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/utils/randomizers.py#L35
   void RandomizeLimitedAndRotationalJoints(std::mt19937* gen);
+
+  void Render(int width, int height, int camera_id,
+              unsigned char* rgb) override {
+    if (renderer_ == nullptr) {
+      renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
+          envpool::mujoco::CameraPolicy::kDmControl);
+    }
+    renderer_->Render(model_, data_, width, height, camera_id, rgb);
+  }
+
+  std::pair<int, int> RenderSize(int width, int height) const override {
+    return {width > 0 ? width : 480, height > 0 ? height : 480};
+  }
 };
 
 }  // namespace mujoco_dmc

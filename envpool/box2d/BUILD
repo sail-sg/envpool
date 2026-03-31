@@ -86,6 +86,22 @@ py_test(
 )
 
 py_test(
+    name = "box2d_render_test",
+    size = "enormous",
+    srcs = ["box2d_render_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":box2d",
+        ":box2d_registration",
+        requirement("absl-py"),
+        requirement("box2d"),
+        requirement("gymnasium"),
+        requirement("numpy"),
+        requirement("pygame"),
+    ],
+)
+
+py_test(
     name = "box2d_correctness_test",
     size = "enormous",
     srcs = ["box2d_correctness_test.py"],

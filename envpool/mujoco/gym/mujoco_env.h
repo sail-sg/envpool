@@ -23,12 +23,17 @@
 #include <array>
 #include <cstring>
 #include <fstream>
+#include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
+
+#include "envpool/core/env.h"
+#include "envpool/mujoco/offscreen_renderer.h"
 
 namespace mujoco_gym {
 
-class MujocoEnv {
+class MujocoEnv : public RenderableEnv {
  private:
   std::array<char, 1000> error_;
   std::string xml_path_;
@@ -54,6 +59,7 @@ class MujocoEnv {
   bool post_constraint_;
   int max_episode_steps_, elapsed_step_;
   bool done_{true};
+  std::unique_ptr<envpool::mujoco::OffscreenRenderer> renderer_;
 
  public:
   MujocoEnv(const std::string& xml, int frame_skip, bool post_constraint,
@@ -78,7 +84,7 @@ class MujocoEnv {
     std::memcpy(init_qvel_, data_->qvel, sizeof(mjtNum) * model_->nv);
   }
 
-  ~MujocoEnv() {
+  ~MujocoEnv() override {
     mj_deleteData(data_);
     mj_deleteModel(model_);
     delete[] init_qpos_;
@@ -109,6 +115,19 @@ class MujocoEnv {
     if (post_constraint_) {
       mj_rnePostConstraint(model_, data_);
     }
+  }
+
+  void Render(int width, int height, int camera_id,
+              unsigned char* rgb) override {
+    if (renderer_ == nullptr) {
+      renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
+          envpool::mujoco::CameraPolicy::kGymLike);
+    }
+    renderer_->Render(model_, data_, width, height, camera_id, rgb);
+  }
+
+  std::pair<int, int> RenderSize(int width, int height) const override {
+    return {width > 0 ? width : 480, height > 0 ? height : 480};
   }
 };
 

@@ -15,9 +15,14 @@
 #include "envpool/box2d/lunar_lander_env.h"
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
+#include <stdexcept>
+#include <utility>
+#include <vector>
 
 #include "envpool/box2d/utils.h"
+#include "opencv2/opencv.hpp"
 
 namespace box2d {
 
@@ -54,9 +59,15 @@ LunarLanderBox2dEnv::LunarLanderBox2dEnv(bool continuous, int max_episode_steps)
       elapsed_step_(max_episode_steps + 1),
       continuous_(continuous),
       world_(new b2World(b2Vec2(0.0, -10.0))) {
-  for (const auto* p : kLanderPoly) {
+  for (const auto& p : kLanderPoly) {
     lander_poly_.emplace_back(Vec2(p[0] / kScale, p[1] / kScale));
   }
+}
+
+std::pair<int, int> LunarLanderBox2dEnv::RenderSize(int width,
+                                                    int height) const {
+  return {width > 0 ? width : static_cast<int>(kViewportW),
+          height > 0 ? height : static_cast<int>(kViewportH)};
 }
 
 void LunarLanderBox2dEnv::ResetBox2d(std::mt19937* gen) {
@@ -70,6 +81,7 @@ void LunarLanderBox2dEnv::ResetBox2d(std::mt19937* gen) {
   world_->SetContactListener(listener_.get());
   double w = kViewportW / kScale;
   double h = kViewportH / kScale;
+  sky_polys_.clear();
 
   // moon
   std::array<double, kChunks + 1> height;
@@ -88,6 +100,9 @@ void LunarLanderBox2dEnv::ResetBox2d(std::mt19937* gen) {
     smooth_y[i] =
         (height[i == 0 ? kChunks : i - 1] + height[i] + height[i + 1]) / 3;
   }
+  helipad_x1_ = chunk_x[kChunks / 2 - 1];
+  helipad_x2_ = chunk_x[kChunks / 2 + 1];
+  helipad_y_ = helipad_y;
   {
     b2BodyDef bd;
     bd.type = b2_staticBody;
@@ -102,6 +117,9 @@ void LunarLanderBox2dEnv::ResetBox2d(std::mt19937* gen) {
     moon_->CreateFixture(&fd);
   }
   for (int i = 0; i < kChunks - 1; ++i) {
+    sky_polys_.push_back({Vec2(chunk_x[i], smooth_y[i]),
+                          Vec2(chunk_x[i + 1], smooth_y[i + 1]),
+                          Vec2(chunk_x[i + 1], h), Vec2(chunk_x[i], h)});
     b2EdgeShape shape;
     shape.SetTwoSided(b2Vec2(chunk_x[i], smooth_y[i]),
                       b2Vec2(chunk_x[i + 1], smooth_y[i + 1]));
@@ -309,6 +327,99 @@ void LunarLanderBox2dEnv::LunarLanderStep(std::mt19937* gen, int action,
                                           float action0, float action1) {
   ++elapsed_step_;
   StepBox2d(gen, action, action0, action1);
+}
+
+void LunarLanderBox2dEnv::Render(int width, int height, int /*camera_id*/,
+                                 unsigned char* rgb) {
+  if (lander_ == nullptr || moon_ == nullptr) {
+    throw std::runtime_error("render called before LunarLander reset");
+  }
+
+  auto to_point = [this](float x, float y) {
+    return cv::Point(static_cast<int>(std::lround(x * kScale)),
+                     static_cast<int>(std::lround(y * kScale)));
+  };
+
+  const auto viewport_w = static_cast<int>(kViewportW);
+  const auto viewport_h = static_cast<int>(kViewportH);
+  cv::Mat surf(viewport_h, viewport_w, CV_8UC3, cv::Scalar(255, 255, 255));
+
+  for (const auto& poly : sky_polys_) {
+    std::vector<cv::Point> points;
+    points.reserve(poly.size());
+    for (const auto& vertex : poly) {
+      points.push_back(to_point(vertex.x, vertex.y));
+    }
+    cv::fillConvexPoly(surf, points, cv::Scalar(0, 0, 0));
+  }
+
+  for (b2Fixture* fixture = moon_->GetFixtureList(); fixture != nullptr;
+       fixture = fixture->GetNext()) {
+    if (fixture->GetShape()->GetType() != b2Shape::e_edge) {
+      continue;
+    }
+    auto* edge = static_cast<b2EdgeShape*>(fixture->GetShape());
+    cv::line(surf, to_point(edge->m_vertex1.x, edge->m_vertex1.y),
+             to_point(edge->m_vertex2.x, edge->m_vertex2.y),
+             cv::Scalar(0, 0, 0), 1, cv::LINE_AA);
+  }
+
+  auto draw_body = [&](b2Body* body, const cv::Scalar& fill,
+                       const cv::Scalar& outline) {
+    for (b2Fixture* fixture = body->GetFixtureList(); fixture != nullptr;
+         fixture = fixture->GetNext()) {
+      if (fixture->GetShape()->GetType() == b2Shape::e_polygon) {
+        auto* shape = static_cast<b2PolygonShape*>(fixture->GetShape());
+        auto transform = fixture->GetBody()->GetTransform();
+        std::vector<cv::Point> polygon;
+        polygon.reserve(shape->m_count);
+        for (int i = 0; i < shape->m_count; ++i) {
+          b2Vec2 vertex = b2Mul(transform, shape->m_vertices[i]);
+          polygon.push_back(to_point(vertex.x, vertex.y));
+        }
+        cv::fillConvexPoly(surf, polygon, fill);
+        cv::polylines(surf, polygon, true, outline, 1, cv::LINE_AA);
+      } else if (fixture->GetShape()->GetType() == b2Shape::e_circle) {
+        auto* shape = static_cast<b2CircleShape*>(fixture->GetShape());
+        b2Vec2 center = b2Mul(fixture->GetBody()->GetTransform(), shape->m_p);
+        const auto radius =
+            static_cast<int>(std::lround(shape->m_radius * kScale));
+        cv::circle(surf, to_point(center.x, center.y), radius, fill, cv::FILLED,
+                   cv::LINE_AA);
+        cv::circle(surf, to_point(center.x, center.y), radius, outline, 1,
+                   cv::LINE_AA);
+      }
+    }
+  };
+
+  draw_body(lander_, cv::Scalar(230, 102, 128), cv::Scalar(128, 77, 77));
+  draw_body(legs_[0], cv::Scalar(230, 102, 128), cv::Scalar(128, 77, 77));
+  draw_body(legs_[1], cv::Scalar(230, 102, 128), cv::Scalar(128, 77, 77));
+
+  for (double x : {helipad_x1_, helipad_x2_}) {
+    const auto px = static_cast<int>(std::lround(x * kScale));
+    const auto flag_y1 = static_cast<int>(std::lround(helipad_y_ * kScale));
+    int flag_y2 = flag_y1 + 50;
+    cv::line(surf, cv::Point(px, flag_y1), cv::Point(px, flag_y2),
+             cv::Scalar(255, 255, 255), 1, cv::LINE_AA);
+    std::vector<cv::Point> flag = {
+        cv::Point(px, flag_y2),
+        cv::Point(px, flag_y2 - 10),
+        cv::Point(px + 25, flag_y2 - 5),
+    };
+    cv::fillConvexPoly(surf, flag, cv::Scalar(0, 204, 204));
+  }
+
+  cv::flip(surf, surf, 0);
+
+  cv::Mat output(height, width, CV_8UC3, rgb);
+  if (width == viewport_w && height == viewport_h) {
+    cv::cvtColor(surf, output, cv::COLOR_BGR2RGB);
+    return;
+  }
+  cv::Mat resized;
+  cv::resize(surf, resized, cv::Size(width, height));
+  cv::cvtColor(resized, output, cv::COLOR_BGR2RGB);
 }
 
 }  // namespace box2d

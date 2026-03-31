@@ -20,6 +20,22 @@ load("//third_party:common.bzl", "copy_to_directory")
 
 package(default_visibility = ["//visibility:public"])
 
+cc_library(
+    name = "mujoco_render",
+    srcs = ["offscreen_renderer.cc"],
+    hdrs = ["offscreen_renderer.h"],
+    linkopts = select({
+        "//:linux": [
+            "-lEGL",
+        ],
+        "//:windows": [],
+        "//conditions:default": [
+            "-framework OpenGL",
+        ],
+    }),
+    deps = ["@mujoco//:mujoco_lib"],
+)
+
 py_library(
     name = "mujoco",
     srcs = ["__init__.py"],
@@ -58,6 +74,7 @@ cc_library(
         "gym/inverted_double_pendulum.h",
         "gym/inverted_pendulum.h",
         "gym/mujoco_env.h",
+        "offscreen_renderer.h",
         "gym/pusher.h",
         "gym/reacher.h",
         "gym/swimmer.h",
@@ -68,6 +85,7 @@ cc_library(
     ],
     deps = [
         "//envpool/core:async_envpool",
+        ":mujoco_render",
         "@mujoco//:mujoco_lib",
     ],
 )
@@ -101,6 +119,7 @@ cc_library(
         "dmc/humanoid_CMU.h",
         "dmc/manipulator.h",
         "dmc/mujoco_env.h",
+        "offscreen_renderer.h",
         "dmc/pendulum.h",
         "dmc/point_mass.h",
         "dmc/reacher.h",
@@ -111,6 +130,7 @@ cc_library(
     data = [":gen_mujoco_dmc_xml"],
     deps = [
         "//envpool/core:async_envpool",
+        ":mujoco_render",
         "@mujoco//:mujoco_lib",
         "@pugixml",
     ],
@@ -172,6 +192,35 @@ py_library(
     srcs = ["gym/registration.py"],
     imports = ["../.."],
     deps = ["//envpool:registration"],
+)
+
+py_test(
+    name = "mujoco_render_test",
+    size = "enormous",
+    srcs = ["gym/mujoco_render_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":mujoco_gym",
+        ":mujoco_gym_registration",
+        requirement("numpy"),
+        requirement("absl-py"),
+        requirement("gym"),
+    ],
+)
+
+py_test(
+    name = "mujoco_dmc_render_test",
+    size = "enormous",
+    srcs = ["dmc/mujoco_dmc_render_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":mujoco_dmc",
+        ":mujoco_dmc_registration",
+        requirement("numpy"),
+        requirement("absl-py"),
+        requirement("dm-control"),
+        requirement("gym"),
+    ],
 )
 
 py_test(

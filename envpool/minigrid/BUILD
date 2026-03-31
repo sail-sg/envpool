@@ -33,6 +33,7 @@ cc_library(
         "//envpool/core:async_envpool",
         "//envpool/core:logging",
         "//envpool/core:py_envpool",
+        "@opencv",
     ],
 )
 
@@ -91,5 +92,20 @@ py_test(
         requirement("absl-py"),
         requirement("gym"),
         requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "minigrid_render_test",
+    size = "enormous",
+    srcs = ["minigrid_render_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":minigrid",
+        ":minigrid_registration",
+        requirement("absl-py"),
+        requirement("gym"),
+        requirement("numpy"),
+        requirement("minigrid"),
     ],
 )

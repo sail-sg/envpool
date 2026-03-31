@@ -9,6 +9,17 @@ upstream ``minigrid==3.0.0``. That is 75 task IDs in total. ``BabyAI-*``
 environments are not implemented.
 
 
+Render Compare
+--------------
+
+Representative first-frame compares for the supported MiniGrid tasks. In each
+panel, EnvPool is on the left and upstream ``minigrid`` is on the right.
+
+.. image:: ../_static/render_samples/minigrid_official_compare.png
+    :width: 900px
+    :align: center
+
+
 Options
 -------
 

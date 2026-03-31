@@ -17,6 +17,8 @@
 #ifndef ENVPOOL_BOX2D_BIPEDAL_WALKER_H_
 #define ENVPOOL_BOX2D_BIPEDAL_WALKER_H_
 
+#include <vector>
+
 #include "envpool/box2d/bipedal_walker_env.h"
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
@@ -77,13 +79,19 @@ class BipedalWalkerEnv : public Env<BipedalWalkerEnvSpec>,
     state["obs"_].Assign(obs_.data(), obs_.size());
 #ifdef ENVPOOL_TEST
     state["info:scroll"_] = scroll_;
-    state["info:path2"_].Assign(path2_.data(), path2_.size());
-    state["info:path5"_].Assign(path5_.data(), path5_.size());
+    state["info:path2"_].Assign(terrain_edge_path2_.data(),
+                                terrain_edge_path2_.size());
+    state["info:path5"_].Assign(hull_path5_.data(), hull_path5_.size());
 
     Container<float>& path4 = state["info:path4"_];
-    auto* array = new TArray<float>(
-        ::Spec<float>({static_cast<int>(path4_.size()) / 8, 4, 2}));
-    array->Assign(path4_.data(), path4_.size());
+    std::vector<float> path4_data;
+    path4_data.reserve(terrain_poly_path4_.size() + leg_path4_.size());
+    path4_data.insert(path4_data.end(), terrain_poly_path4_.begin(),
+                      terrain_poly_path4_.end());
+    path4_data.insert(path4_data.end(), leg_path4_.begin(), leg_path4_.end());
+    auto* array = new TArray<float>(::Spec<float>(
+        std::vector<int>{static_cast<int>(path4_data.size()) / 8, 4, 2}));
+    array->Assign(path4_data.data(), path4_data.size());
     path4.reset(array);
 #endif
   }

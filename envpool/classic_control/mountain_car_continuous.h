@@ -20,7 +20,9 @@
 
 #include <cmath>
 #include <random>
+#include <utility>
 
+#include "envpool/classic_control/render_utils.h"
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
 
@@ -44,7 +46,8 @@ class MountainCarContinuousEnvFns {
 
 using MountainCarContinuousEnvSpec = EnvSpec<MountainCarContinuousEnvFns>;
 
-class MountainCarContinuousEnv : public Env<MountainCarContinuousEnvSpec> {
+class MountainCarContinuousEnv : public Env<MountainCarContinuousEnvSpec>,
+                                 public RenderableEnv {
  protected:
   const double kMinPos = -1.2;
   const double kMaxPos = 0.6;
@@ -66,6 +69,10 @@ class MountainCarContinuousEnv : public Env<MountainCarContinuousEnvSpec> {
         dist_(-0.6, -0.4) {}
 
   bool IsDone() override { return done_; }
+
+  std::pair<int, int> RenderSize(int width, int height) const override {
+    return {width > 0 ? width : 600, height > 0 ? height : 400};
+  }
 
   void Reset() override {
     pos_ = dist_(gen_);
@@ -104,6 +111,11 @@ class MountainCarContinuousEnv : public Env<MountainCarContinuousEnvSpec> {
       reward += 100;
     }
     WriteState(static_cast<float>(reward));
+  }
+
+  void Render(int width, int height, int /*camera_id*/,
+              unsigned char* rgb) override {
+    rendering::RenderMountainCar(pos_, kGoalPos, width, height, rgb);
   }
 
  private:

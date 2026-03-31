@@ -21,7 +21,9 @@
 #include <cmath>
 #include <limits>
 #include <random>
+#include <utility>
 
+#include "envpool/classic_control/render_utils.h"
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
 
@@ -47,7 +49,7 @@ class CartPoleEnvFns {
 
 using CartPoleEnvSpec = EnvSpec<CartPoleEnvFns>;
 
-class CartPoleEnv : public Env<CartPoleEnvSpec> {
+class CartPoleEnv : public Env<CartPoleEnvSpec>, public RenderableEnv {
  protected:
   const double kGravity = 9.8;
   const double kMassCart = 1.0;
@@ -73,6 +75,10 @@ class CartPoleEnv : public Env<CartPoleEnvSpec> {
         dist_(-kInitRange, kInitRange) {}
 
   bool IsDone() override { return done_; }
+
+  std::pair<int, int> RenderSize(int width, int height) const override {
+    return {width > 0 ? width : 600, height > 0 ? height : 400};
+  }
 
   void Reset() override {
     x_ = dist_(gen_);
@@ -107,6 +113,11 @@ class CartPoleEnv : public Env<CartPoleEnvSpec> {
       done_ = true;
     }
     WriteState(1.0);
+  }
+
+  void Render(int width, int height, int /*camera_id*/,
+              unsigned char* rgb) override {
+    rendering::RenderCartPole(x_, theta_, width, height, rgb);
   }
 
  private:

@@ -69,13 +69,17 @@ class MiniGridEnvFns {
 
 using MiniGridEnvSpec = EnvSpec<MiniGridEnvFns>;
 
-class MiniGridEnv : public Env<MiniGridEnvSpec> {
+class MiniGridEnv : public Env<MiniGridEnvSpec>, public RenderableEnv {
  public:
   MiniGridEnv(const Spec& spec, int env_id);
 
   bool IsDone() override;
   void Reset() override;
   void Step(const Action& action) override;
+  [[nodiscard]] std::pair<int, int> RenderSize(int width,
+                                               int height) const override;
+  void Render(int width, int height, int camera_id,
+              unsigned char* rgb) override;
 
   [[nodiscard]] MiniGridDebugState DebugState() const;
 

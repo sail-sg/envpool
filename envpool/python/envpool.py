@@ -38,6 +38,16 @@ def _normalize_env_id(env_id: Any) -> Any:
     return env_id
 
 
+def _normalize_render_env_ids(env_ids: Any, default_env_id: int) -> np.ndarray:
+    if env_ids is None:
+        env_ids = np.asarray([default_env_id], dtype=np.int32)
+    elif isinstance(env_ids, (int, np.integer)):
+        env_ids = np.asarray([env_ids], dtype=np.int32)
+    else:
+        env_ids = _normalize_env_id(env_ids)
+    return np.asarray(env_ids, dtype=np.int32)
+
+
 class EnvPoolMixin(ABC):
     """Mixin class for EnvPool, exposed to EnvPoolMeta."""
 
@@ -200,6 +210,63 @@ class EnvPoolMixin(ABC):
             stacklevel=2,
         )
 
+    def _render_config(self: EnvPool) -> tuple[str | None, int, int, int, int]:
+        return (
+            cast(str | None, getattr(self, "_render_mode", None)),
+            int(getattr(self, "_render_env_id", 0)),
+            int(getattr(self, "_render_width", 0)),
+            int(getattr(self, "_render_height", 0)),
+            int(getattr(self, "_render_camera_id", -1)),
+        )
+
+    def _show_human_frame(self: EnvPool, frame: np.ndarray) -> None:
+        try:
+            import cv2
+        except ImportError as exc:
+            raise RuntimeError(
+                "render_mode='human' requires opencv-python to be installed"
+            ) from exc
+
+        window_name = getattr(
+            self, "_render_window_name", f"{self.__class__.__name__}-render"
+        )
+        cv2.imshow(window_name, np.ascontiguousarray(frame[:, :, ::-1]))
+        cv2.waitKey(1)
+        self._render_window_name = window_name
+        self._render_window_open = True
+
+    def render(
+        self: EnvPool,
+        env_ids: Any = None,
+        camera_id: int | None = None,
+    ) -> np.ndarray | None:
+        """Render one or more environments using the configured render mode."""
+        (
+            render_mode,
+            default_env_id,
+            default_width,
+            default_height,
+            default_cam,
+        ) = self._render_config()
+        if render_mode not in {"rgb_array", "human"}:
+            raise RuntimeError(
+                "render_mode must be set to 'rgb_array' or 'human' when creating this env"
+            )
+
+        env_ids_arr = _normalize_render_env_ids(env_ids, default_env_id)
+        width = default_width
+        height = default_height
+        camera_id = default_cam if camera_id is None else int(camera_id)
+        frames = self._render(env_ids_arr, width, height, camera_id)
+        if render_mode == "human":
+            if env_ids_arr.shape[0] != 1:
+                raise ValueError(
+                    "render_mode='human' only supports a single env_id"
+                )
+            self._show_human_frame(frames[0])
+            return None
+        return frames
+
     def send(
         self: EnvPool,
         action: dict[str, Any] | np.ndarray,
@@ -253,6 +320,20 @@ class EnvPoolMixin(ABC):
         return self.recv(
             reset=True, return_info=self.config["gym_reset_return_info"]
         )
+
+    def close(self: EnvPool) -> None:
+        """Close viewer resources and delegate to the parent implementation."""
+        if getattr(self, "_render_window_open", False):
+            try:
+                import cv2
+
+                cv2.destroyWindow(self._render_window_name)
+            except Exception:
+                pass
+            self._render_window_open = False
+        close = getattr(super(), "close", None)
+        if close is not None:
+            close()
 
     @property
     def config(self: EnvPool) -> dict[str, Any]:

@@ -37,6 +37,14 @@ batched environments:
   defaults to ``False`` if you are using Gym<0.26.0, otherwise it defaults
   to ``True``; this option is to adapt the newest version of gym's
   interface;
+* ``render_mode (str | None)``: render behavior exposed by the Python wrapper.
+  Available options are ``None`` (default), ``"rgb_array"``, and ``"human"``;
+* ``render_env_id (int)``: default env id used by ``env.render()`` when
+  ``env_ids`` is omitted, default to ``0``;
+* ``render_width`` / ``render_height``: fixed output size for ``render()``.
+  If omitted, the environment-specific default render size is used;
+* ``render_camera_id (int)``: default camera id used by ``render()``, default
+  to ``-1``;
 * other configurations such as ``img_height`` / ``img_width`` / ``stack_num``
   / ``frame_skip`` / ``noop_max`` in Atari env, ``reward_metric`` /
   ``lmp_save_dir`` in ViZDoom env, please refer to the corresponding pages.
@@ -88,6 +96,91 @@ add another two primitives ``send`` and ``recv``:
   result that finished stepping.
 
 In short, ``step(action, env_id)`` == ``send(action, env_id); return recv()``
+
+
+Rendering
+---------
+
+EnvPool exposes rendering through the Python wrapper. When creating an env with
+``render_mode="rgb_array"``, calling ``render()`` returns a batch of RGB frames
+with shape ``(B, H, W, 3)`` and data type ``uint8``. Even a single env render keeps
+the batch dimension, so ``env.render()`` returns ``(1, H, W, 3)`` by default.
+
+``render_mode="human"`` uses the same renderer, but displays the frame through
+OpenCV in Python and returns ``None``. Human mode currently supports only a
+single env id per call.
+
+The render API is:
+
+* ``render(env_ids: int | Sequence[int] | None = None, camera_id: int | None = None)``
+
+If ``env_ids`` is omitted, EnvPool renders ``render_env_id``. The output size
+is fixed when the env is created via ``render_width`` / ``render_height``;
+``render()`` itself does not take a runtime resize argument.
+
+Example:
+::
+
+    env = envpool.make(
+        "Ant-v5",
+        env_type="gymnasium",
+        num_envs=4,
+        render_mode="rgb_array",
+        render_width=480,
+        render_height=480,
+    )
+    env.reset()
+    frames = env.render(env_ids=[0, 2])
+    assert frames.shape == (2, 480, 480, 3)
+
+    viewer = envpool.make(
+        "WalkerWalk-v1",
+        env_type="gymnasium",
+        num_envs=1,
+        render_mode="human",
+        render_env_id=0,
+    )
+    viewer.reset()
+    viewer.render()
+
+Representative first-frame compares for EnvPool families that support
+rendering. In each
+panel, EnvPool is on the left and the reference output is on the right. For
+Box2D, Classic Control, MiniGrid, and MuJoCo, the reference is the upstream
+Python renderer. For Atari, Procgen, and VizDoom, the reference is the exact
+in-tree render oracle used by the test suite.
+
+.. image:: ../_static/render_samples/atari_oracle_compare.png
+    :width: 900px
+    :align: center
+
+.. image:: ../_static/render_samples/box2d_official_compare.png
+    :width: 900px
+    :align: center
+
+.. image:: ../_static/render_samples/classic_control_official_compare.png
+    :width: 900px
+    :align: center
+
+.. image:: ../_static/render_samples/minigrid_official_compare.png
+    :width: 900px
+    :align: center
+
+.. image:: ../_static/render_samples/procgen_oracle_compare.png
+    :width: 900px
+    :align: center
+
+.. image:: ../_static/render_samples/mujoco_gym_official_compare.png
+    :width: 900px
+    :align: center
+
+.. image:: ../_static/render_samples/mujoco_dmc_official_compare.png
+    :width: 900px
+    :align: center
+
+.. image:: ../_static/render_samples/vizdoom_oracle_compare.png
+    :width: 900px
+    :align: center
 
 
 Action Input Format

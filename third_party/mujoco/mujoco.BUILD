@@ -28,6 +28,12 @@ cc_library(
             "src/thread/*.cc",
             "src/thread/*.h",
         ]) + glob([
+            "src/render/classic/*.c",
+            "src/render/classic/*.cc",
+            "src/render/classic/*.h",
+        ]) + glob([
+            "src/render/classic/glad/*",
+        ]) + glob([
             "src/user/*.c",
             "src/user/*.cc",
             "src/user/*.h",
@@ -40,6 +46,8 @@ cc_library(
     hdrs = glob([
         "include/mujoco/*.h",
         "include/mujoco/experimental/**/*.h",
+        "src/render/classic/**/*.h",
+        "src/render/classic/**/*.inc",
     ]),
     copts = [
         "-DCCD_STATIC_DEFINE",
@@ -65,6 +73,12 @@ cc_library(
         "src",
     ],
     linkstatic = 1,
+    linkopts = select({
+        "@envpool//:linux": [
+            "-ldl",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [
         "@ccd",
         "@lodepng",

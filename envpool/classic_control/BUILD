@@ -21,15 +21,18 @@ package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "classic_control_env",
+    srcs = ["render_utils.cc"],
     hdrs = [
         "acrobot.h",
         "cartpole.h",
         "mountain_car.h",
         "mountain_car_continuous.h",
         "pendulum.h",
+        "render_utils.h",
     ],
     deps = [
         "//envpool/core:async_envpool",
+        "@opencv",
     ],
 )
 
@@ -70,6 +73,21 @@ py_test(
         requirement("absl-py"),
         requirement("dm_env"),
         requirement("gym"),
+        requirement("numpy"),
+        requirement("pygame"),
+    ],
+)
+
+py_test(
+    name = "classic_control_render_test",
+    size = "enormous",
+    srcs = ["classic_control_render_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":classic_control",
+        ":classic_control_registration",
+        requirement("absl-py"),
+        requirement("gymnasium"),
         requirement("numpy"),
         requirement("pygame"),
     ],

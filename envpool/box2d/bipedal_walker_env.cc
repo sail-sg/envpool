@@ -15,10 +15,14 @@
 #include "envpool/box2d/bipedal_walker_env.h"
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
+#include <stdexcept>
+#include <utility>
 #include <vector>
 
 #include "envpool/box2d/utils.h"
+#include "opencv2/opencv.hpp"
 
 namespace box2d {
 
@@ -68,9 +72,15 @@ BipedalWalkerBox2dEnv::BipedalWalkerBox2dEnv(bool hardcore,
       elapsed_step_(max_episode_steps + 1),
       hardcore_(hardcore),
       world_(new b2World(b2Vec2(0.0, -10.0))) {
-  for (const auto* p : kHullPoly) {
+  for (const auto& p : kHullPoly) {
     hull_poly_.emplace_back(Vec2(p[0] / kScaleDouble, p[1] / kScaleDouble));
   }
+}
+
+std::pair<int, int> BipedalWalkerBox2dEnv::RenderSize(int width,
+                                                      int height) const {
+  return {width > 0 ? width : static_cast<int>(kViewportW),
+          height > 0 ? height : static_cast<int>(kViewportH)};
 }
 
 void BipedalWalkerBox2dEnv::CreateTerrain(std::vector<b2Vec2> poly) {
@@ -203,6 +213,25 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
       terrain_.emplace_back(t);
     }
     std::reverse(terrain_.begin(), terrain_.end());
+  }
+
+  cloud_poly_.clear();
+  for (int i = 0; i < kTerrainLength / 20; ++i) {
+    float x = RandUniform(0, kTerrainLength)(*gen) * kTerrainStep;
+    auto y = static_cast<float>(kViewportH / kScaleDouble * 3 / 4);
+    BipedalWalkerCloudPoly cloud;
+    cloud.x1 = x;
+    cloud.x2 = x;
+    for (int a = 0; a < 5; ++a) {
+      float px = x + 15 * kTerrainStep * std::sin(3.14f * 2 * a / 5) +
+                 RandUniform(0, 5 * kTerrainStep)(*gen);
+      float py = y + 5 * kTerrainStep * std::cos(3.14f * 2 * a / 5) +
+                 RandUniform(0, 5 * kTerrainStep)(*gen);
+      cloud.points[a] = Vec2(px, py);
+      cloud.x1 = std::min(cloud.x1, px);
+      cloud.x2 = std::max(cloud.x2, px);
+    }
+    cloud_poly_.emplace_back(cloud);
   }
 
   // hull
@@ -359,10 +388,10 @@ void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
 
   scroll_ = pos.x - static_cast<float>(kViewportW / kScaleDouble / 5);
   // info
-#ifdef ENVPOOL_TEST
-  path2_.clear();
-  path4_.clear();
-  path5_.clear();
+  terrain_edge_path2_.clear();
+  terrain_poly_path4_.clear();
+  leg_path4_.clear();
+  hull_path5_.clear();
   // terrain
   for (auto* b : terrain_) {
     b2Fixture& f = b->GetFixtureList()[0];
@@ -371,16 +400,16 @@ void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
       auto* shape = static_cast<b2EdgeShape*>(f.GetShape());
       b2Vec2 v1 = kScaleFloat * b2Mul(trans, shape->m_vertex1);
       b2Vec2 v2 = kScaleFloat * b2Mul(trans, shape->m_vertex2);
-      path2_.emplace_back(v1.x);
-      path2_.emplace_back(v1.y);
-      path2_.emplace_back(v2.x);
-      path2_.emplace_back(v2.y);
+      terrain_edge_path2_.emplace_back(v1.x);
+      terrain_edge_path2_.emplace_back(v1.y);
+      terrain_edge_path2_.emplace_back(v2.x);
+      terrain_edge_path2_.emplace_back(v2.y);
     } else {
       auto* shape = static_cast<b2PolygonShape*>(f.GetShape());
       for (int i = 0; i < shape->m_count; ++i) {
         b2Vec2 v = kScaleFloat * b2Mul(trans, shape->m_vertices[i]);
-        path4_.emplace_back(v.x);
-        path4_.emplace_back(v.y);
+        terrain_poly_path4_.emplace_back(v.x);
+        terrain_poly_path4_.emplace_back(v.y);
       }
     }
   }
@@ -391,8 +420,8 @@ void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
     auto* shape = static_cast<b2PolygonShape*>(f.GetShape());
     for (int i = 0; i < shape->m_count; ++i) {
       b2Vec2 v = kScaleFloat * b2Mul(trans, shape->m_vertices[i]);
-      path4_.emplace_back(v.x);
-      path4_.emplace_back(v.y);
+      leg_path4_.emplace_back(v.x);
+      leg_path4_.emplace_back(v.y);
     }
   }
   // hull
@@ -401,10 +430,9 @@ void BipedalWalkerBox2dEnv::StepBox2d(std::mt19937* gen, float action0,
   auto* shape = static_cast<b2PolygonShape*>(f.GetShape());
   for (int i = 0; i < shape->m_count; ++i) {
     b2Vec2 v = kScaleFloat * b2Mul(trans, shape->m_vertices[i]);
-    path5_.emplace_back(v.x);
-    path5_.emplace_back(v.y);
+    hull_path5_.emplace_back(v.x);
+    hull_path5_.emplace_back(v.y);
   }
-#endif
 }
 
 void BipedalWalkerBox2dEnv::BipedalWalkerReset(std::mt19937* gen) {
@@ -419,6 +447,139 @@ void BipedalWalkerBox2dEnv::BipedalWalkerStep(std::mt19937* gen, float action0,
                                               float action3) {
   ++elapsed_step_;
   StepBox2d(gen, action0, action1, action2, action3);
+}
+
+void BipedalWalkerBox2dEnv::Render(int width, int height, int /*camera_id*/,
+                                   unsigned char* rgb) {
+  if (hull_ == nullptr) {
+    throw std::runtime_error("render called before BipedalWalker reset");
+  }
+
+  auto to_point = [](float x, float y) {
+    return cv::Point(static_cast<int>(std::lround(x)),
+                     static_cast<int>(std::lround(y)));
+  };
+
+  const auto scroll_px = static_cast<int>(std::lround(scroll_ * kScaleFloat));
+  const auto viewport_w = static_cast<int>(kViewportW);
+  const auto viewport_h = static_cast<int>(kViewportH);
+  int surf_width = std::max(viewport_w, viewport_w + std::max(scroll_px, 0));
+
+  cv::Mat surf(viewport_h, surf_width, CV_8UC3, cv::Scalar(255, 215, 215));
+
+  std::vector<cv::Point> background = {
+      to_point(static_cast<float>(scroll_px), 0.0f),
+      to_point(static_cast<float>(scroll_px + viewport_w), 0.0f),
+      to_point(static_cast<float>(scroll_px + viewport_w),
+               static_cast<float>(viewport_h)),
+      to_point(static_cast<float>(scroll_px), static_cast<float>(viewport_h)),
+  };
+  cv::fillConvexPoly(surf, background, cv::Scalar(255, 215, 215));
+
+  for (const auto& cloud : cloud_poly_) {
+    if (cloud.x2 < scroll_ / 2) {
+      continue;
+    }
+    if (cloud.x1 >
+        scroll_ / 2 + static_cast<float>(kViewportW / kScaleDouble)) {
+      continue;
+    }
+    std::vector<cv::Point> polygon;
+    polygon.reserve(cloud.points.size());
+    for (const auto& point : cloud.points) {
+      polygon.push_back(to_point(point.x * kScaleFloat + scroll_px / 2.0f,
+                                 point.y * kScaleFloat));
+    }
+    cv::fillConvexPoly(surf, polygon, cv::Scalar(255, 255, 255));
+    cv::polylines(surf, polygon, true, cv::Scalar(255, 255, 255), 1,
+                  cv::LINE_AA);
+  }
+
+  for (std::size_t i = 0; i + 3 < terrain_edge_path2_.size(); i += 4) {
+    std::vector<cv::Point> polygon = {
+        to_point(terrain_edge_path2_[i], terrain_edge_path2_[i + 1]),
+        to_point(terrain_edge_path2_[i + 2], terrain_edge_path2_[i + 3]),
+        to_point(terrain_edge_path2_[i + 2], 0.0f),
+        to_point(terrain_edge_path2_[i], 0.0f),
+    };
+    cv::fillConvexPoly(surf, polygon, cv::Scalar(76, 153, 102));
+    cv::line(surf, to_point(terrain_edge_path2_[i], terrain_edge_path2_[i + 1]),
+             to_point(terrain_edge_path2_[i + 2], terrain_edge_path2_[i + 3]),
+             cv::Scalar(0, 255, 0), 1, cv::LINE_AA);
+  }
+
+  for (std::size_t i = 0; i + 7 < terrain_poly_path4_.size(); i += 8) {
+    std::vector<cv::Point> polygon;
+    polygon.reserve(4);
+    for (std::size_t j = 0; j < 8; j += 2) {
+      polygon.push_back(
+          to_point(terrain_poly_path4_[i + j], terrain_poly_path4_[i + j + 1]));
+    }
+    cv::fillConvexPoly(surf, polygon, cv::Scalar(255, 255, 255));
+    cv::polylines(surf, polygon, true, cv::Scalar(153, 153, 153), 1,
+                  cv::LINE_AA);
+  }
+
+  auto leg_fill_color = [](int sign) {
+    return cv::Scalar(127 - sign * 25, 76 - sign * 25, 153 - sign * 25);
+  };
+  auto leg_outline_color = [](int sign) {
+    return cv::Scalar(76 - sign * 25, 51 - sign * 25, 102 - sign * 25);
+  };
+  for (std::size_t i = 0; i + 7 < leg_path4_.size(); i += 8) {
+    std::vector<cv::Point> polygon;
+    polygon.reserve(4);
+    for (std::size_t j = 0; j < 8; j += 2) {
+      polygon.push_back(to_point(leg_path4_[i + j], leg_path4_[i + j + 1]));
+    }
+    const auto leg_index = static_cast<int>(i / 8);
+    int sign = leg_index < 2 ? -1 : 1;
+    cv::fillConvexPoly(surf, polygon, leg_fill_color(sign));
+    cv::polylines(surf, polygon, true, leg_outline_color(sign), 1, cv::LINE_AA);
+  }
+
+  if (!hull_path5_.empty()) {
+    std::vector<cv::Point> hull;
+    hull.reserve(hull_path5_.size() / 2);
+    for (std::size_t i = 0; i + 1 < hull_path5_.size(); i += 2) {
+      hull.push_back(to_point(hull_path5_[i], hull_path5_[i + 1]));
+    }
+    cv::fillConvexPoly(surf, hull, cv::Scalar(229, 51, 127));
+    cv::polylines(surf, hull, true, cv::Scalar(127, 76, 76), 1, cv::LINE_AA);
+  }
+
+  auto flag_x = static_cast<float>(kTerrainStep * 3 * kScaleFloat);
+  auto flag_y1 = static_cast<float>(kTerrainHeight * kScaleFloat);
+  float flag_y2 = flag_y1 + 50.0f;
+  cv::line(surf, to_point(flag_x, flag_y1), to_point(flag_x, flag_y2),
+           cv::Scalar(0, 0, 0), 1, cv::LINE_AA);
+  std::vector<cv::Point> flag = {
+      to_point(flag_x, flag_y2),
+      to_point(flag_x, flag_y2 - 10.0f),
+      to_point(flag_x + 25.0f, flag_y2 - 5.0f),
+  };
+  cv::fillConvexPoly(surf, flag, cv::Scalar(0, 51, 230));
+  cv::polylines(surf, flag, true, cv::Scalar(0, 0, 0), 1, cv::LINE_AA);
+
+  cv::flip(surf, surf, 0);
+
+  cv::Mat view(viewport_h, viewport_w, CV_8UC3, cv::Scalar(255, 215, 215));
+  int src_x = std::max(scroll_px, 0);
+  int dst_x = std::max(-scroll_px, 0);
+  int copy_width = std::min(surf.cols - src_x, viewport_w - dst_x);
+  if (copy_width > 0) {
+    surf(cv::Rect(src_x, 0, copy_width, viewport_h))
+        .copyTo(view(cv::Rect(dst_x, 0, copy_width, viewport_h)));
+  }
+
+  cv::Mat output(height, width, CV_8UC3, rgb);
+  if (width == viewport_w && height == viewport_h) {
+    cv::cvtColor(view, output, cv::COLOR_BGR2RGB);
+    return;
+  }
+  cv::Mat resized;
+  cv::resize(view, resized, cv::Size(width, height));
+  cv::cvtColor(resized, output, cv::COLOR_BGR2RGB);
 }
 
 }  // namespace box2d

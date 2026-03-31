@@ -149,6 +149,19 @@ py_library(
 )
 
 py_test(
+    name = "vizdoom_render_test",
+    size = "enormous",
+    srcs = ["vizdoom_render_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":vizdoom",
+        ":vizdoom_registration",
+        requirement("numpy"),
+        requirement("absl-py"),
+    ],
+)
+
+py_test(
     name = "vizdoom_test",
     size = "enormous",
     srcs = ["vizdoom_test.py"],

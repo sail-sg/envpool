@@ -21,6 +21,7 @@
 #include <cmath>
 #include <memory>
 #include <random>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -90,6 +91,10 @@ CarRacingBox2dEnv::CarRacingBox2dEnv(int max_episode_steps,
                                     b2Vec2(0, -1)};
   shape.Set(vertices.data(), vertices.size());
   fd_tile_.shape = &shape;
+}
+
+std::pair<int, int> CarRacingBox2dEnv::RenderSize(int width, int height) const {
+  return {width > 0 ? width : 600, height > 0 ? height : 400};
 }
 
 bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
@@ -197,7 +202,7 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
   // Find closed loop range i1..i2, first loop should be ignored, second is OK
   int i1 = -1;
   int i2 = -1;
-  for (int i = static_cast<int>(current_track.size()) - 1;; --i) {
+  for (auto i = static_cast<int>(current_track.size()) - 1;; --i) {
     if (i == 0) {
       return false;  // failed
     }
@@ -229,7 +234,7 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
   }
 
   // Red-white border on hard turns
-  int track_size = static_cast<int>(current_track.size());
+  const auto track_size = static_cast<int>(current_track.size());
   std::vector<bool> border(track_size, false);
   for (int i = 0; i < track_size; i++) {
     bool good = true;
@@ -587,6 +592,21 @@ void CarRacingBox2dEnv::Render() {
   cv::putText(surf_, cv::format("%04d", reward),
               cv::Point(20, kWindowH - kWindowH * 2 / 40.0),
               cv::FONT_HERSHEY_COMPLEX, 1, cv::Scalar(255, 255, 255), 2, 0);
+}
+
+void CarRacingBox2dEnv::Render(int width, int height, int /*camera_id*/,
+                               unsigned char* rgb) {
+  if (surf_.empty()) {
+    throw std::runtime_error("render called before CarRacing reset");
+  }
+  cv::Mat output(height, width, CV_8UC3, rgb);
+  if (width == surf_.cols && height == surf_.rows) {
+    cv::cvtColor(surf_, output, cv::COLOR_BGR2RGB);
+    return;
+  }
+  cv::Mat resized;
+  cv::resize(surf_, resized, cv::Size(width, height));
+  cv::cvtColor(resized, output, cv::COLOR_BGR2RGB);
 }
 
 }  // namespace box2d

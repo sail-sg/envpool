@@ -18,6 +18,7 @@ from typing import (
     Any,
     Callable,
     Literal,
+    Sequence,
     overload,
 )
 
@@ -28,6 +29,7 @@ from typing_extensions import Protocol, TypeAlias
 ObsType: TypeAlias = Any
 InfoDict: TypeAlias = dict[str, Any]
 ActionInput: TypeAlias = dict[str, Any] | np.ndarray
+RenderEnvId: TypeAlias = int | Sequence[int] | np.ndarray | None
 GymResetReturn: TypeAlias = tuple[ObsType, InfoDict]
 GymStepReturn: TypeAlias = tuple[ObsType, Any, Any, Any, InfoDict]
 GymnasiumResetReturn: TypeAlias = tuple[ObsType, InfoDict]
@@ -204,6 +206,24 @@ class EnvPool(Protocol):
     def _reset(self, env_id: np.ndarray) -> None:
         """Cpp private _reset method."""
 
+    def _render(
+        self,
+        env_ids: np.ndarray,
+        width: int,
+        height: int,
+        camera_id: int,
+    ) -> np.ndarray:
+        """Cpp private _render method."""
+
+    def _render_config(self) -> tuple[str | None, int, int, int, int]:
+        """Normalized render config."""
+
+    def _show_human_frame(self, frame: np.ndarray) -> None:
+        """Display a rendered frame in a Python viewer."""
+
+    _render_window_name: str
+    _render_window_open: bool
+
     def _from(
         self,
         action: dict[str, Any] | np.ndarray,
@@ -291,6 +311,13 @@ class EnvPool(Protocol):
         env_id: np.ndarray | None = None,
     ) -> Any:
         """Envpool reset interface."""
+
+    def render(
+        self,
+        env_ids: RenderEnvId = None,
+        camera_id: int | None = None,
+    ) -> np.ndarray | None:
+        """Render one or more envs."""
 
     def close(self) -> None:
         """Close the underlying environment."""
