@@ -5,6 +5,18 @@ All of the environments in classic control borrow from `Gym
 <https://github.com/openai/gym/tree/master/gym/envs/classic_control>`_.
 
 
+Render Compare
+--------------
+
+Representative first-frame compares for the renderable classic control tasks.
+In each panel, EnvPool is on the left and the Gymnasium reference renderer is
+on the right.
+
+.. image:: ../_static/render_samples/classic_control_official_compare.png
+    :width: 900px
+    :align: center
+
+
 CartPole-v0/1
 -------------
 

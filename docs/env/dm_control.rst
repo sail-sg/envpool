@@ -25,6 +25,18 @@ EnvPool currently implements the task set documented below. Upstream
 EnvPool today.
 
 
+Render Compare
+--------------
+
+Representative first-frame compares for renderable DeepMind Control Suite
+tasks. In each panel, EnvPool is on the left and upstream ``dm_control`` is on
+the right.
+
+.. image:: ../_static/render_samples/mujoco_dmc_official_compare.png
+    :width: 900px
+    :align: center
+
+
 AcrobotSwingup-v1, AcrobotSwingupSparse-v1
 ------------------------------------------
 

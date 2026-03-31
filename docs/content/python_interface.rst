@@ -143,17 +143,27 @@ Example:
     viewer.reset()
     viewer.render()
 
-Representative render outputs from supported EnvPool families:
+Representative first-frame compares for families with an upstream oracle in the
+test dependencies. In each panel, EnvPool is on the left and the upstream
+reference renderer is on the right.
 
-.. image:: ../_static/render_samples/atari_render_samples.png
+.. image:: ../_static/render_samples/box2d_official_compare.png
     :width: 900px
     :align: center
 
-.. image:: ../_static/render_samples/box2d_render_samples.png
+.. image:: ../_static/render_samples/classic_control_official_compare.png
     :width: 900px
     :align: center
 
-.. image:: ../_static/render_samples/mujoco_gym_render_samples.png
+.. image:: ../_static/render_samples/minigrid_official_compare.png
+    :width: 900px
+    :align: center
+
+.. image:: ../_static/render_samples/mujoco_gym_official_compare.png
+    :width: 900px
+    :align: center
+
+.. image:: ../_static/render_samples/mujoco_dmc_official_compare.png
     :width: 900px
     :align: center
 
