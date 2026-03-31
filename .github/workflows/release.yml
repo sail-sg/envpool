@@ -202,6 +202,13 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - name: Shorten temp path
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path C:\tmp -Force | Out-Null
+          Add-Content -Path $env:GITHUB_ENV -Value "TMP=C:\tmp"
+          Add-Content -Path $env:GITHUB_ENV -Value "TEMP=C:\tmp"
+          Add-Content -Path $env:GITHUB_ENV -Value "TMPDIR=C:\tmp"
       - name: Install Windows dependencies
         shell: pwsh
         run: |
