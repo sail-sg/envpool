@@ -41,8 +41,9 @@ jobs:
         if: matrix.python-version == '3.14'
         run: |
           python -m pip install "cmake<4"
-          CMAKE_BIN="$(python -c "import cmake, os; print(os.path.join(cmake.CMAKE_BIN_DIR, 'cmake'))")"
-          sudo ln -sfn "$CMAKE_BIN" /usr/local/bin/cmake
+          CMAKE_BIN_DIR="$(python -c "import cmake; print(cmake.CMAKE_BIN_DIR)")"
+          echo "$CMAKE_BIN_DIR" >> "$GITHUB_PATH"
+          PATH="$CMAKE_BIN_DIR:$PATH" cmake --version
       - name: Install macOS dependencies
         run: |
           brew install ninja swig qt@5
@@ -147,8 +148,9 @@ jobs:
         shell: bash
         run: |
           python -m pip install "cmake<4"
-          CMAKE_BIN="$(python -c "import cmake, os; print(os.path.join(cmake.CMAKE_BIN_DIR, 'cmake'))")"
-          ln -sfn "$CMAKE_BIN" /usr/local/bin/cmake
+          CMAKE_BIN_DIR="$(python -c "import cmake; print(cmake.CMAKE_BIN_DIR)")"
+          echo "$CMAKE_BIN_DIR" >> "$GITHUB_PATH"
+          PATH="$CMAKE_BIN_DIR:$PATH" cmake --version
       - name: Build
         run: |
           rm -rf dist wheelhouse
@@ -224,6 +226,7 @@ jobs:
           python -m pip install "cmake<4"
           $cmakeBinDir = python -c "import cmake; print(cmake.CMAKE_BIN_DIR)"
           Add-Content -Path $env:GITHUB_PATH -Value $cmakeBinDir
+          & (Join-Path $cmakeBinDir "cmake.exe") --version
       - name: Build
         shell: bash
         run: |
