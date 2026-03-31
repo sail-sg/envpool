@@ -6,6 +6,7 @@ on:
       - main
     tags:
       - v*
+  pull_request:
 
 jobs:
   release-macos:
@@ -36,10 +37,20 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Pin CMake 3
+        run: |
+          python -m pip install "cmake<4"
+          CMAKE_BIN="$(python - <<'PY'
+import os
+import sysconfig
+
+print(os.path.join(sysconfig.get_path("scripts"), "cmake"))
+PY
+)"
+          sudo ln -sfn "$CMAKE_BIN" /usr/local/bin/cmake
       - name: Install macOS dependencies
         run: |
-          brew install cmake ninja swig qt@5
-          sudo ln -sfn "$(brew --prefix cmake)/bin/cmake" /usr/local/bin/cmake
+          brew install ninja swig qt@5
           sudo ln -sfn "$(brew --prefix ninja)/bin/ninja" /usr/local/bin/ninja
           echo "BAZEL_RULES_QT_DIR=$(brew --prefix qt@5)" >> "$GITHUB_ENV"
       - name: Install bazelisk
@@ -136,6 +147,18 @@ jobs:
           esac
           echo "$PYBIN" >> "$GITHUB_PATH"
           "$PYBIN/python3" --version
+      - name: Pin CMake 3
+        shell: bash
+        run: |
+          python3 -m pip install "cmake<4"
+          CMAKE_BIN="$(python3 - <<'PY'
+import os
+import sysconfig
+
+print(os.path.join(sysconfig.get_path("scripts"), "cmake"))
+PY
+)"
+          ln -sfn "$CMAKE_BIN" /usr/local/bin/cmake
       - name: Build
         run: |
           rm -rf dist wheelhouse
@@ -204,6 +227,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Pin CMake 3
+        shell: pwsh
+        run: |
+          python -m pip install "cmake<4"
+          $scripts = python -c "import sysconfig; print(sysconfig.get_path('scripts'))"
+          Add-Content -Path $env:GITHUB_PATH -Value $scripts
       - name: Build
         shell: bash
         run: |
