@@ -6,6 +6,9 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test-linux:
     name: Test (${{ matrix.name }})
@@ -17,9 +20,11 @@ jobs:
           - name: linux-x64
             runner: ubuntu-24.04
             bazel-test-targets: //...
+            collect_coverage: true
           - name: linux-arm64
             runner: ubuntu-24.04-arm
             bazel-test-targets: //...
+            collect_coverage: false
     timeout-minutes: 120
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
@@ -48,7 +53,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-tidy-18 cmake ninja-build swig qtbase5-dev qtdeclarative5-dev
+          sudo apt-get install -y clang-tidy-18 cmake lcov ninja-build swig qtbase5-dev qtdeclarative5-dev
           qmake_bin="$(command -v qmake-qt5 || command -v qmake)"
           qt_include_dir="$("$qmake_bin" -query QT_INSTALL_HEADERS)"
           sudo ln -sfn "$qt_include_dir" /usr/include/qt
@@ -67,7 +72,42 @@ jobs:
         run: |
           go install github.com/bazelbuild/bazelisk@latest
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      - name: Coverage
+        if: ${{ matrix.collect_coverage }}
+        run: |
+          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" \
+            BAZEL_TEST_TARGETS="${{ matrix.bazel-test-targets }}" bazel-coverage
+          mkdir -p coverage
+          cp bazel-out/_coverage/_coverage_report.dat coverage/lcov.info
+          python3 scripts/coverage_summary.py \
+            --lcov coverage/lcov.info \
+            --output-dir coverage \
+            --summary-file coverage/summary.md
+      - name: Publish coverage summary
+        if: ${{ matrix.collect_coverage }}
+        run: cat coverage/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Build coverage site
+        if: ${{ matrix.collect_coverage }}
+        run: |
+          genhtml coverage/lcov.info \
+            --branch-coverage \
+            --legend \
+            --output-directory coverage/site \
+            --title "EnvPool coverage report"
+      - name: Upload coverage artifacts
+        if: ${{ always() && !cancelled() && matrix.collect_coverage }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ matrix.name }}-${{ github.sha }}
+          path: coverage
+          if-no-files-found: warn
+      - name: Upload coverage Pages artifact
+        if: ${{ matrix.collect_coverage && github.event_name == 'push' }}
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: coverage/site
       - name: Test
+        if: ${{ !matrix.collect_coverage }}
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" \
             BAZEL_TEST_TARGETS="${{ matrix.bazel-test-targets }}" bazel-test
@@ -80,6 +120,25 @@ jobs:
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+  deploy-coverage-pages:
+    name: Deploy coverage page
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-24.04
+    needs:
+      - test-linux
+      - test-macos
+      - test-windows
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
   test-macos:
     name: Test (macos)
     runs-on: macos-14

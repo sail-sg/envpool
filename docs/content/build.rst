@@ -203,6 +203,9 @@ We provide several shortcuts to make things easier.
     # This will automatically run the tests
     make bazel-test
 
+    # This will generate a merged Python + C/C++ LCOV report
+    make bazel-coverage
+
     # This will build a wheel for release
     make bazel-release
 

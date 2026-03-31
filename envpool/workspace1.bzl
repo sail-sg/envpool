@@ -26,6 +26,7 @@ def workspace():
         python_versions = ["3.11", "3.12", "3.13", "3.14"],
         default_version = "3.12",
         ignore_root_user_error = True,
+        register_coverage_tool = True,
     )
 
     rules_foreign_cc_dependencies(
