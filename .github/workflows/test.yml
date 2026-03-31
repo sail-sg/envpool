@@ -208,6 +208,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Pin CMake 3
+        shell: pwsh
+        run: |
+          python -m pip install "cmake<4"
+          $cmakeBinDir = python -c "import cmake; print(cmake.CMAKE_BIN_DIR)"
+          Add-Content -Path $env:GITHUB_PATH -Value $cmakeBinDir
+          & (Join-Path $cmakeBinDir "cmake.exe") --version
       - name: Test
         shell: bash
         run: |
