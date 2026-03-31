@@ -38,9 +38,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Pin CMake 3
+        if: matrix.python-version == '3.14'
         run: |
           python -m pip install "cmake<4"
-          CMAKE_BIN="$(python -c "import os, sysconfig; print(os.path.join(sysconfig.get_path('scripts'), 'cmake'))")"
+          CMAKE_BIN="$(python -c "import cmake, os; print(os.path.join(cmake.CMAKE_BIN_DIR, 'cmake'))")"
           sudo ln -sfn "$CMAKE_BIN" /usr/local/bin/cmake
       - name: Install macOS dependencies
         run: |
@@ -142,10 +143,11 @@ jobs:
           echo "$PYBIN" >> "$GITHUB_PATH"
           "$PYBIN/python3" --version
       - name: Pin CMake 3
+        if: matrix.python-version == '3.14'
         shell: bash
         run: |
-          python3 -m pip install "cmake<4"
-          CMAKE_BIN="$(python3 -c "import os, sysconfig; print(os.path.join(sysconfig.get_path('scripts'), 'cmake'))")"
+          python -m pip install "cmake<4"
+          CMAKE_BIN="$(python -c "import cmake, os; print(os.path.join(cmake.CMAKE_BIN_DIR, 'cmake'))")"
           ln -sfn "$CMAKE_BIN" /usr/local/bin/cmake
       - name: Build
         run: |
@@ -216,11 +218,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Pin CMake 3
+        if: matrix.python-version == '3.14'
         shell: pwsh
         run: |
           python -m pip install "cmake<4"
-          $scripts = python -c "import sysconfig; print(sysconfig.get_path('scripts'))"
-          Add-Content -Path $env:GITHUB_PATH -Value $scripts
+          $cmakeBinDir = python -c "import cmake; print(cmake.CMAKE_BIN_DIR)"
+          Add-Content -Path $env:GITHUB_PATH -Value $cmakeBinDir
       - name: Build
         shell: bash
         run: |
