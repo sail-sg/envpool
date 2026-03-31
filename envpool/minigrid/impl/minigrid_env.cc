@@ -154,7 +154,7 @@ CoordFn PointInTriangle(const std::array<float, 2>& a,
   };
 }
 
-CoordFn RotateFn(CoordFn fn, float cx, float cy, float theta) {
+CoordFn RotateFn(const CoordFn& fn, float cx, float cy, float theta) {
   return [=](float x, float y) {
     const float centered_x = x - cx;
     const float centered_y = y - cy;
