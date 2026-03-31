@@ -1,6 +1,7 @@
 load("@python_versions//3.11:defs.bzl", py_binary_311 = "py_binary")
 load("@python_versions//3.12:defs.bzl", py_binary_312 = "py_binary")
 load("@python_versions//3.13:defs.bzl", py_binary_313 = "py_binary")
+load("@python_versions//3.14:defs.bzl", py_binary_314 = "py_binary")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//envpool:requirements.bzl", "requirement")
 
@@ -61,6 +62,14 @@ py_binary_312(
 
 py_binary_313(
     name = "setup_py313",
+    srcs = _SETUP_SRCS,
+    data = _SETUP_DATA,
+    main = "setup.py",
+    deps = _SETUP_DEPS,
+)
+
+py_binary_314(
+    name = "setup_py314",
     srcs = _SETUP_SRCS,
     data = _SETUP_DATA,
     main = "setup.py",

@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     env:
       HOMEBREW_NO_AUTO_UPDATE: "1"
     steps:
@@ -85,6 +85,11 @@ jobs:
             container: quay.io/pypa/manylinux_2_28_x86_64
             auditwheel-plat: manylinux_2_28_x86_64
             python-version: "3.13"
+          - arch: x86_64
+            runner: ubuntu-24.04
+            container: quay.io/pypa/manylinux_2_28_x86_64
+            auditwheel-plat: manylinux_2_28_x86_64
+            python-version: "3.14"
           - arch: aarch64
             runner: ubuntu-24.04-arm
             container: quay.io/pypa/manylinux_2_28_aarch64
@@ -100,6 +105,11 @@ jobs:
             container: quay.io/pypa/manylinux_2_28_aarch64
             auditwheel-plat: manylinux_2_28_aarch64
             python-version: "3.13"
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            container: quay.io/pypa/manylinux_2_28_aarch64
+            auditwheel-plat: manylinux_2_28_aarch64
+            python-version: "3.14"
     steps:
       - name: Cancel previous run
         uses: styfle/cancel-workflow-action@0.11.0
@@ -121,6 +131,7 @@ jobs:
             3.11) PYBIN=/opt/python/cp311-cp311/bin ;;
             3.12) PYBIN=/opt/python/cp312-cp312/bin ;;
             3.13) PYBIN=/opt/python/cp313-cp313/bin ;;
+            3.14) PYBIN=/opt/python/cp314-cp314/bin ;;
             *) echo "unsupported python version: ${{ matrix.python-version }}" >&2; exit 1 ;;
           esac
           echo "$PYBIN" >> "$GITHUB_PATH"
@@ -146,7 +157,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     env:
       BAZEL_SH: C:/Program Files/Git/usr/bin/bash.exe
       MSYS2_ARG_CONV_EXCL: "*"
