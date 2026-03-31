@@ -143,9 +143,15 @@ Example:
     viewer.reset()
     viewer.render()
 
-Representative first-frame compares for families with an upstream oracle in the
-test dependencies. In each panel, EnvPool is on the left and the upstream
-reference renderer is on the right.
+Representative first-frame compares for renderable EnvPool families. In each
+panel, EnvPool is on the left and the reference output is on the right. For
+Box2D, Classic Control, MiniGrid, and MuJoCo, the reference is the upstream
+Python renderer. For Atari, Procgen, and VizDoom, the reference is the exact
+in-tree render oracle used by the test suite.
+
+.. image:: ../_static/render_samples/atari_oracle_compare.png
+    :width: 900px
+    :align: center
 
 .. image:: ../_static/render_samples/box2d_official_compare.png
     :width: 900px
@@ -159,11 +165,19 @@ reference renderer is on the right.
     :width: 900px
     :align: center
 
+.. image:: ../_static/render_samples/procgen_oracle_compare.png
+    :width: 900px
+    :align: center
+
 .. image:: ../_static/render_samples/mujoco_gym_official_compare.png
     :width: 900px
     :align: center
 
 .. image:: ../_static/render_samples/mujoco_dmc_official_compare.png
+    :width: 900px
+    :align: center
+
+.. image:: ../_static/render_samples/vizdoom_oracle_compare.png
     :width: 900px
     :align: center
 
