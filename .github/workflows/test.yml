@@ -92,6 +92,7 @@ jobs:
         run: |
           genhtml coverage/lcov.info \
             --branch-coverage \
+            --ignore-errors negative \
             --legend \
             --output-directory coverage/site \
             --title "EnvPool coverage report"
