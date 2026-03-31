@@ -42,7 +42,9 @@ jobs:
         run: |
           python -m pip install "cmake<4"
           CMAKE_BIN_DIR="$(python -c "import cmake; print(cmake.CMAKE_BIN_DIR)")"
+          CMAKE_BIN="$CMAKE_BIN_DIR/cmake"
           echo "$CMAKE_BIN_DIR" >> "$GITHUB_PATH"
+          sudo ln -sfn "$CMAKE_BIN" /usr/local/bin/cmake
           PATH="$CMAKE_BIN_DIR:$PATH" cmake --version
       - name: Install macOS dependencies
         run: |
@@ -149,7 +151,9 @@ jobs:
         run: |
           python -m pip install "cmake<4"
           CMAKE_BIN_DIR="$(python -c "import cmake; print(cmake.CMAKE_BIN_DIR)")"
+          CMAKE_BIN="$CMAKE_BIN_DIR/cmake"
           echo "$CMAKE_BIN_DIR" >> "$GITHUB_PATH"
+          ln -sfn "$CMAKE_BIN" /usr/local/bin/cmake
           PATH="$CMAKE_BIN_DIR:$PATH" cmake --version
       - name: Build
         run: |
