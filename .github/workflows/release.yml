@@ -83,6 +83,8 @@ jobs:
       MUJOCO_GL: egl
       EGL_PLATFORM: surfaceless
       LIBGL_ALWAYS_SOFTWARE: "1"
+      MESA_LOADER_DRIVER_OVERRIDE: llvmpipe
+      GALLIUM_DRIVER: llvmpipe
     strategy:
       fail-fast: false
       matrix:
