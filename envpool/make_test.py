@@ -20,7 +20,7 @@ import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import get_type_hints
+from typing import Callable, Protocol, get_type_hints
 
 import dm_env
 import gym
@@ -39,6 +39,15 @@ from envpool.python.protocol import (
 _SKIP_MUJOCO_RENDER_SMOKE = (
     os.environ.get("ENVPOOL_SKIP_MUJOCO_RENDER_SMOKE") == "1"
 )
+
+
+class _RenderableEnv(Protocol):
+    def reset(self) -> object: ...
+    def render(self) -> object: ...
+    def close(self) -> None: ...
+
+
+_RenderFactory = Callable[..., _RenderableEnv]
 
 
 @contextmanager
@@ -65,7 +74,7 @@ def _emit_github_error(message: str) -> None:
 
 class _MakeTest(absltest.TestCase):
     def check_render(self, task_id: str, **kwargs: object) -> None:
-        def render_once(factory: object) -> None:
+        def render_once(factory: _RenderFactory) -> None:
             env = factory(task_id, render_mode="rgb_array", **kwargs)
             try:
                 env.reset()

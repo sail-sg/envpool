@@ -13,8 +13,8 @@
 # limitations under the License.
 """EnvPool Mixin class for meta class definition."""
 
+import platform
 import pprint
-import sys
 import warnings
 from abc import ABC
 from typing import Any, cast
@@ -55,8 +55,8 @@ class EnvPoolMixin(ABC):
 
     _spec: EnvSpec
 
-    def _requires_windows_glfw_context(self: EnvPool) -> bool:
-        if sys.platform != "win32":
+    def _requires_windows_glfw_context(self) -> bool:
+        if platform.system() != "Windows":
             return False
         # Dynamic wrapper classes are created in envpool.python.api, so detect
         # MuJoCo by scanning the MRO for the underlying pybind base module.
@@ -65,9 +65,7 @@ class EnvPoolMixin(ABC):
             for base in type(self).__mro__
         )
 
-    def _ensure_platform_render_context(
-        self: EnvPool, width: int, height: int
-    ) -> None:
+    def _ensure_platform_render_context(self, width: int, height: int) -> None:
         if self._requires_windows_glfw_context():
             ensure_mujoco_glfw_context(width or 640, height or 480)
 
