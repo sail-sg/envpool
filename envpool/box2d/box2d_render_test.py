@@ -108,7 +108,7 @@ def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
 
 
 def _make_oracle_env(task_id: str) -> gym.Env[Any, Any]:
-    return cast(gym.Env[Any, Any], gym.make(task_id, render_mode="rgb_array"))
+    return gym.make(task_id, render_mode="rgb_array")
 
 
 def _zero_action(space: Any, num_envs: int) -> np.ndarray:
