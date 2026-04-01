@@ -20,7 +20,7 @@ from absl.testing import absltest
 
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
-preload_windows_gl_dlls()
+preload_windows_gl_dlls(strict=True)
 
 import envpool.mujoco.gym.registration as reg
 from envpool.registration import make_gym
