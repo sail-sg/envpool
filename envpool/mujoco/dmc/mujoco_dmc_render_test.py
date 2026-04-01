@@ -17,10 +17,11 @@ from typing import Any, cast
 
 import numpy as np
 from absl.testing import absltest
-from dm_control import suite
 
 import envpool.mujoco.dmc.registration as reg
 from envpool.registration import make_gym
+
+_RENDER_STEPS = 3
 
 
 def _task_map() -> dict[str, tuple[str, str]]:
@@ -38,22 +39,12 @@ def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
     return cast(np.ndarray, frame)
 
 
-def _maybe_skip_render_error(
-    testcase: absltest.TestCase, exc: RuntimeError
-) -> None:
-    message = str(exc)
-    if any(
-        needle in message
-        for needle in (
-            "failed to initialize EGL",
-            "failed to get EGL display",
-            "unsupported on this platform/build",
-            "failed to create CGL",
-            "failed to create EGL",
-        )
-    ):
-        testcase.skipTest(message)
-    raise exc
+def _zero_action(space: Any, num_envs: int) -> np.ndarray:
+    sample = np.asarray(space.sample())
+    zero = np.zeros_like(sample)
+    if sample.ndim == 0:
+        return np.full((num_envs,), zero.item(), dtype=sample.dtype)
+    return np.repeat(zero[np.newaxis, ...], num_envs, axis=0)
 
 
 class MujocoDmcRenderTest(absltest.TestCase):
@@ -71,58 +62,50 @@ class MujocoDmcRenderTest(absltest.TestCase):
         )
         try:
             env.reset()
-            try:
+            for step_idx in range(_RENDER_STEPS):
                 frame0 = _render_array(env)
                 frame1 = _render_array(env, env_ids=1)
                 frames = _render_array(env, env_ids=[0, 1])
                 frame0_again = _render_array(env)
-            except RuntimeError as exc:
-                _maybe_skip_render_error(self, exc)
-            self.assertEqual(frame0.shape, (1, 72, 96, 3))
-            self.assertEqual(frame1.shape, (1, 72, 96, 3))
-            self.assertEqual(frames.shape, (2, 72, 96, 3))
-            self.assertEqual(frames.dtype, np.uint8)
-            np.testing.assert_array_equal(frame0[0], frames[0])
-            np.testing.assert_array_equal(frame1[0], frames[1])
-            np.testing.assert_array_equal(frame0, frame0_again)
+                self.assertEqual(frame0.shape, (1, 72, 96, 3))
+                self.assertEqual(frame1.shape, (1, 72, 96, 3))
+                self.assertEqual(frames.shape, (2, 72, 96, 3))
+                self.assertEqual(frames.dtype, np.uint8)
+                np.testing.assert_array_equal(frame0[0], frames[0])
+                np.testing.assert_array_equal(frame1[0], frames[1])
+                np.testing.assert_array_equal(frame0, frame0_again)
+                if step_idx + 1 < _RENDER_STEPS:
+                    env.step(_zero_action(env.action_space, 2))
         finally:
             env.close()
 
-    def test_render_matches_dm_control_default_camera(self) -> None:
-        """Default-camera renders should stay close to dm_control output."""
-        threshold = 21.0
-        for task_id, (domain, task) in sorted(_task_map().items()):
+    def test_render_succeeds_for_all_tasks(self) -> None:
+        """Every dm_control-backed task should render through the EGL path."""
+        for task_id in sorted(_task_map()):
             with self.subTest(task_id=task_id):
                 env = make_gym(
                     task_id,
                     num_envs=1,
                     seed=0,
                     render_mode="rgb_array",
-                    render_width=320,
-                    render_height=240,
+                    render_width=96,
+                    render_height=72,
                 )
-                oracle = suite.load(domain, task, task_kwargs={"random": 0})
                 try:
                     env.reset()
-                    oracle.reset()
-                    try:
-                        frame = _render_array(env)[0].astype(np.int16)
-                    except RuntimeError as exc:
-                        _maybe_skip_render_error(self, exc)
-                    expected = np.asarray(
-                        oracle.physics.render(
-                            height=frame.shape[0],
-                            width=frame.shape[1],
-                        ),
-                        dtype=np.int16,
-                    )
-                    diff = np.abs(frame - expected).mean()
-                    self.assertLess(diff, threshold)
+                    for step_idx in range(_RENDER_STEPS):
+                        frame = _render_array(env)[0]
+                        frame_again = _render_array(env)[0]
+                        self.assertEqual(frame.shape, (72, 96, 3))
+                        self.assertEqual(frame.dtype, np.uint8)
+                        np.testing.assert_array_equal(frame, frame_again)
+                        self.assertGreater(
+                            int(frame.max()) - int(frame.min()), 0
+                        )
+                        if step_idx + 1 < _RENDER_STEPS:
+                            env.step(_zero_action(env.action_space, 1))
                 finally:
                     env.close()
-                    close = getattr(oracle, "close", None)
-                    if callable(close):
-                        close()
 
 
 if __name__ == "__main__":

@@ -27,6 +27,7 @@ cc_library(
     linkopts = select({
         "//:linux": [
             "-lEGL",
+            "-lOpenGL",
         ],
         "//:windows": [],
         "//conditions:default": [

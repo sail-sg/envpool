@@ -34,6 +34,10 @@ from envpool.python.protocol import (
 
 
 class _MakeTest(absltest.TestCase):
+    def assert_renders(self, env: gym.Env | gymnasium.Env) -> None:
+        frame = env.render()
+        self.assertIsNotNone(frame)
+
     def test_version(self) -> None:
         print(envpool.__version__)
 
@@ -68,9 +72,11 @@ class _MakeTest(absltest.TestCase):
     def test_make_atari(self) -> None:
         self.assertRaises(TypeError, envpool.make, "Pong-v5")
         spec = envpool.make_spec("Defender-v5")
-        env_gym = envpool.make_gym("Defender-v5")
+        env_gym = envpool.make_gym("Defender-v5", render_mode="rgb_array")
         env_dm = envpool.make_dm("Defender-v5")
-        env_gymnasium = envpool.make_gymnasium("Defender-v5")
+        env_gymnasium = envpool.make_gymnasium(
+            "Defender-v5", render_mode="rgb_array"
+        )
         print(env_dm)
         print(env_gym)
         print(env_gym)
@@ -81,6 +87,10 @@ class _MakeTest(absltest.TestCase):
         self.assertEqual(env_gym.action_space.n, 18)
         self.assertEqual(env_dm.action_spec().num_values, 18)
         self.assertEqual(env_gymnasium.action_space.n, 18)
+        env_gym.reset()
+        env_gymnasium.reset()
+        self.assert_renders(env_gym)
+        self.assert_renders(env_gymnasium)
         # not work for wrong bin, see issue #146
         for wrong in ["Combat", "Joust", "MazeCraze", "Warlords"]:
             self.assertRaises(AssertionError, envpool.make_gym, f"{wrong}-v5")
@@ -98,21 +108,27 @@ class _MakeTest(absltest.TestCase):
     def test_make_vizdoom(self) -> None:
         spec = envpool.make_spec("MyWayHome-v1")
         print(spec)
-        env0 = envpool.make_gym("MyWayHome-v1")
-        env1 = envpool.make_gymnasium("MyWayHome-v1")
+        env0 = envpool.make_gym("MyWayHome-v1", render_mode="rgb_array")
+        env1 = envpool.make_gymnasium(
+            "MyWayHome-v1", render_mode="rgb_array"
+        )
         print(env0)
         print(env1)
         self.assertIsInstance(env0, gym.Env)
         self.assertIsInstance(env1, gymnasium.Env)
         env0.reset()
         env1.reset()
+        self.assert_renders(env0)
+        self.assert_renders(env1)
 
     def check_step(self, env_list: list[str]) -> None:
         for task_id in env_list:
             envpool.make_spec(task_id)
-            env_gym = envpool.make_gym(task_id)
+            env_gym = envpool.make_gym(task_id, render_mode="rgb_array")
             env_dm = envpool.make_dm(task_id)
-            env_gymnasium = envpool.make_gymnasium(task_id)
+            env_gymnasium = envpool.make_gymnasium(
+                task_id, render_mode="rgb_array"
+            )
             print(env_dm)
             print(env_gym)
             print(env_gymnasium)
@@ -122,6 +138,8 @@ class _MakeTest(absltest.TestCase):
             env_dm.reset()
             env_gym.reset()
             env_gymnasium.reset()
+            self.assert_renders(env_gym)
+            self.assert_renders(env_gymnasium)
 
     def test_make_classic(self) -> None:
         self.check_step([

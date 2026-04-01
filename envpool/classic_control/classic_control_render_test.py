@@ -32,20 +32,21 @@ _TASK_SIZES = {
     "Acrobot-v1": (500, 500),
 }
 _FIRST_FRAME_MEAN_DIFF_THRESHOLD = 4.0
-
-
-def _batched_action(space: Any, num_envs: int) -> np.ndarray:
-    sample = space.sample()
-    sample_arr = np.asarray(sample)
-    if sample_arr.ndim == 0:
-        return np.full((num_envs,), sample, dtype=sample_arr.dtype)
-    return np.repeat(sample_arr[np.newaxis, ...], num_envs, axis=0)
+_RENDER_STEPS = 3
 
 
 def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
     frame = env.render(env_ids=env_ids)
     assert frame is not None
     return cast(np.ndarray, frame)
+
+
+def _zero_action(space: Any, num_envs: int) -> np.ndarray:
+    sample = np.asarray(space.sample())
+    zero = np.zeros_like(sample)
+    if sample.ndim == 0:
+        return np.full((num_envs,), zero.item(), dtype=sample.dtype)
+    return np.repeat(zero[np.newaxis, ...], num_envs, axis=0)
 
 
 def _sync_oracle_state(
@@ -81,35 +82,28 @@ class ClassicControlRenderTest(absltest.TestCase):
                 )
                 try:
                     env.reset()
-                    frame0 = _render_array(env)
-                    frame1 = _render_array(env, env_ids=1)
-                    frames = _render_array(env, env_ids=[0, 1])
-                    frame0_again = _render_array(env)
+                    for step_idx in range(_RENDER_STEPS):
+                        frame0 = _render_array(env)
+                        frame1 = _render_array(env, env_ids=1)
+                        frames = _render_array(env, env_ids=[0, 1])
+                        frame0_again = _render_array(env)
 
-                    self.assertEqual(frame0.shape, (1, height, width, 3))
-                    self.assertEqual(frame1.shape, (1, height, width, 3))
-                    self.assertEqual(frames.shape, (2, height, width, 3))
-                    self.assertEqual(frame0.dtype, np.uint8)
-                    self.assertEqual(frames.dtype, np.uint8)
-                    np.testing.assert_array_equal(frame0[0], frames[0])
-                    np.testing.assert_array_equal(frame1[0], frames[1])
-                    np.testing.assert_array_equal(frame0, frame0_again)
+                        self.assertEqual(frame0.shape, (1, height, width, 3))
+                        self.assertEqual(frame1.shape, (1, height, width, 3))
+                        self.assertEqual(frames.shape, (2, height, width, 3))
+                        self.assertEqual(frame0.dtype, np.uint8)
+                        self.assertEqual(frames.dtype, np.uint8)
+                        np.testing.assert_array_equal(frame0[0], frames[0])
+                        np.testing.assert_array_equal(frame1[0], frames[1])
+                        np.testing.assert_array_equal(frame0, frame0_again)
 
-                    action = _batched_action(env.action_space, 2)
-                    env.step(action)
-                    stepped0 = _render_array(env)
-                    stepped_frames = _render_array(env, env_ids=[0, 1])
-                    stepped0_again = _render_array(env)
-
-                    np.testing.assert_array_equal(
-                        stepped0[0], stepped_frames[0]
-                    )
-                    np.testing.assert_array_equal(stepped0, stepped0_again)
+                        if step_idx + 1 < _RENDER_STEPS:
+                            env.step(_zero_action(env.action_space, 2))
                 finally:
                     env.close()
 
-    def test_render_matches_upstream_first_frame(self) -> None:
-        """The first rendered frame should stay close to Gymnasium output."""
+    def test_render_matches_upstream_for_multiple_steps(self) -> None:
+        """Rendered frames should stay close to Gymnasium across steps."""
         for task_id, (height, width) in _TASK_SIZES.items():
             with self.subTest(task_id=task_id):
                 env = make_gymnasium(
@@ -119,20 +113,27 @@ class ClassicControlRenderTest(absltest.TestCase):
                 try:
                     obs, info = env.reset()
                     oracle.reset(seed=0)
-                    _sync_oracle_state(
-                        task_id, oracle, np.asarray(obs[0]), info
-                    )
+                    for step_idx in range(_RENDER_STEPS):
+                        _sync_oracle_state(
+                            task_id, oracle, np.asarray(obs[0]), info
+                        )
 
-                    frame = _render_array(env)[0].astype(np.int16)
-                    expected = np.asarray(oracle.render(), dtype=np.int16)
+                        frame = _render_array(env)[0].astype(np.int16)
+                        frame_again = _render_array(env)[0].astype(np.int16)
+                        expected = np.asarray(oracle.render(), dtype=np.int16)
 
-                    self.assertEqual(frame.shape, (height, width, 3))
-                    self.assertEqual(frame.dtype, np.int16)
-                    self.assertEqual(expected.shape, (height, width, 3))
-                    self.assertLess(
-                        np.abs(frame - expected).mean(),
-                        _FIRST_FRAME_MEAN_DIFF_THRESHOLD,
-                    )
+                        self.assertEqual(frame.shape, (height, width, 3))
+                        self.assertEqual(frame.dtype, np.int16)
+                        self.assertEqual(expected.shape, (height, width, 3))
+                        np.testing.assert_array_equal(frame, frame_again)
+                        self.assertLess(
+                            np.abs(frame - expected).mean(),
+                            _FIRST_FRAME_MEAN_DIFF_THRESHOLD,
+                        )
+                        if step_idx + 1 < _RENDER_STEPS:
+                            obs, _, _, _, info = env.step(
+                                _zero_action(env.action_space, 1)
+                            )
                 finally:
                     env.close()
                     oracle.close()

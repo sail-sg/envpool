@@ -25,6 +25,7 @@ _TASK_IDS = tuple(
     f"{''.join(piece.capitalize() for piece in game.split('_'))}-v5"
     for game in reg.atari_game_list
 )
+_RENDER_STEPS = 3
 
 
 def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
@@ -33,11 +34,21 @@ def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
     return cast(np.ndarray, frame)
 
 
+def _zero_action(space: Any, num_envs: int) -> np.ndarray:
+    sample = np.asarray(space.sample())
+    zero = np.zeros_like(sample)
+    if sample.ndim == 0:
+        return np.full((num_envs,), zero.item(), dtype=sample.dtype)
+    return np.repeat(zero[np.newaxis, ...], num_envs, axis=0)
+
+
 class AtariRenderTest(absltest.TestCase):
     """Render regression tests for Atari environments."""
 
-    def test_render_matches_raw_rgb_obs_first_frame_for_all_tasks(self) -> None:
-        """The first rendered frame should match the raw RGB observation."""
+    def test_render_matches_raw_rgb_obs_for_multiple_steps_for_all_tasks(
+        self,
+    ) -> None:
+        """Rendered frames should match the raw RGB observation across steps."""
         for task_id in _TASK_IDS:
             with self.subTest(task_id=task_id):
                 env = make_gym(
@@ -52,13 +63,19 @@ class AtariRenderTest(absltest.TestCase):
                 )
                 try:
                     obs, _ = env.reset()
-                    frame = _render_array(env)
+                    for step_idx in range(_RENDER_STEPS):
+                        frame = _render_array(env)
+                        frame_again = _render_array(env)
+                        expected = obs[0].transpose(1, 2, 0)
 
-                    expected = obs[0].transpose(1, 2, 0)
-
-                    self.assertEqual(frame.shape, (1, 210, 160, 3))
-                    self.assertEqual(frame.dtype, np.uint8)
-                    np.testing.assert_array_equal(frame[0], expected)
+                        self.assertEqual(frame.shape, (1, 210, 160, 3))
+                        self.assertEqual(frame.dtype, np.uint8)
+                        np.testing.assert_array_equal(frame[0], expected)
+                        np.testing.assert_array_equal(frame, frame_again)
+                        if step_idx + 1 < _RENDER_STEPS:
+                            obs, _, _, _, _ = env.step(
+                                _zero_action(env.action_space, 1)
+                            )
                 finally:
                     env.close()
 
@@ -76,24 +93,27 @@ class AtariRenderTest(absltest.TestCase):
         )
         try:
             obs, _ = env.reset()
-            frame0 = _render_array(env)
-            frame1 = _render_array(env, env_ids=1)
-            frames = _render_array(env, env_ids=[0, 1])
-            frame0_again = _render_array(env)
+            for step_idx in range(_RENDER_STEPS):
+                frame0 = _render_array(env)
+                frame1 = _render_array(env, env_ids=1)
+                frames = _render_array(env, env_ids=[0, 1])
+                frame0_again = _render_array(env)
 
-            expected0 = obs[0].transpose(1, 2, 0)
-            expected1 = obs[1].transpose(1, 2, 0)
+                expected0 = obs[0].transpose(1, 2, 0)
+                expected1 = obs[1].transpose(1, 2, 0)
 
-            self.assertEqual(frame0.shape, (1, 210, 160, 3))
-            self.assertEqual(frame1.shape, (1, 210, 160, 3))
-            self.assertEqual(frames.shape, (2, 210, 160, 3))
-            self.assertEqual(frame0.dtype, np.uint8)
-            self.assertEqual(frames.dtype, np.uint8)
-            np.testing.assert_array_equal(frame0[0], expected0)
-            np.testing.assert_array_equal(frame1[0], expected1)
-            np.testing.assert_array_equal(frame0[0], frames[0])
-            np.testing.assert_array_equal(frame1[0], frames[1])
-            np.testing.assert_array_equal(frame0, frame0_again)
+                self.assertEqual(frame0.shape, (1, 210, 160, 3))
+                self.assertEqual(frame1.shape, (1, 210, 160, 3))
+                self.assertEqual(frames.shape, (2, 210, 160, 3))
+                self.assertEqual(frame0.dtype, np.uint8)
+                self.assertEqual(frames.dtype, np.uint8)
+                np.testing.assert_array_equal(frame0[0], expected0)
+                np.testing.assert_array_equal(frame1[0], expected1)
+                np.testing.assert_array_equal(frame0[0], frames[0])
+                np.testing.assert_array_equal(frame1[0], frames[1])
+                np.testing.assert_array_equal(frame0, frame0_again)
+                if step_idx + 1 < _RENDER_STEPS:
+                    obs, _, _, _, _ = env.step(_zero_action(env.action_space, 2))
         finally:
             env.close()
 

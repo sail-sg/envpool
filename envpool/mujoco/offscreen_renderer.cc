@@ -16,7 +16,10 @@
 
 #include <algorithm>
 #include <array>
+#include <cerrno>
+#include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <vector>
@@ -26,6 +29,10 @@
 #define ENVPOOL_HAS_CGL 1
 #elif defined(__linux__) && __has_include(<EGL/egl.h>)
 #include <EGL/egl.h>
+#if __has_include(<EGL/eglext.h>)
+#include <EGL/eglext.h>
+#define ENVPOOL_HAS_EGL_DEVICE_EXT 1
+#endif
 #define ENVPOOL_HAS_EGL 1
 #endif
 
@@ -80,6 +87,13 @@ class CglContext final : public GlContext {
     }
   }
 
+  void ClearCurrent() override {
+    CGLError err = CGLSetCurrentContext(nullptr);
+    if (err != kCGLNoError) {
+      throw std::runtime_error("failed to clear CGL context");
+    }
+  }
+
  private:
   CGLPixelFormatObj pixel_format_{nullptr};
   CGLContextObj context_{nullptr};
@@ -111,17 +125,15 @@ class EglContext final : public GlContext {
         EGL_OPENGL_BIT,
         EGL_NONE,
     };
+    const std::array<EGLint, 5> pbuffer_attribs = {
+        EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE,
+    };
 
-    display_ = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    display_ = CreateDisplay();
     if (display_ == EGL_NO_DISPLAY) {
-      throw std::runtime_error("failed to get EGL display");
-    }
-    EGLint major = 0;
-    EGLint minor = 0;
-    if (eglInitialize(display_, &major, &minor) != EGL_TRUE) {
-      display_ = EGL_NO_DISPLAY;
       throw std::runtime_error("failed to initialize EGL");
     }
+    eglReleaseThread();
     EGLConfig config = nullptr;
     EGLint num_configs = 0;
     if (eglChooseConfig(display_, config_attribs.data(), &config, 1,
@@ -136,8 +148,17 @@ class EglContext final : public GlContext {
       display_ = EGL_NO_DISPLAY;
       throw std::runtime_error("failed to bind EGL OpenGL API");
     }
+    surface_ =
+        eglCreatePbufferSurface(display_, config, pbuffer_attribs.data());
+    if (surface_ == EGL_NO_SURFACE) {
+      eglTerminate(display_);
+      display_ = EGL_NO_DISPLAY;
+      throw std::runtime_error("failed to create EGL pbuffer surface");
+    }
     context_ = eglCreateContext(display_, config, EGL_NO_CONTEXT, nullptr);
     if (context_ == EGL_NO_CONTEXT) {
+      eglDestroySurface(display_, surface_);
+      surface_ = EGL_NO_SURFACE;
       eglTerminate(display_);
       display_ = EGL_NO_DISPLAY;
       throw std::runtime_error("failed to create EGL context");
@@ -150,30 +171,127 @@ class EglContext final : public GlContext {
       if (context_ != EGL_NO_CONTEXT) {
         eglDestroyContext(display_, context_);
       }
+      if (surface_ != EGL_NO_SURFACE) {
+        eglDestroySurface(display_, surface_);
+      }
       eglTerminate(display_);
       eglReleaseThread();
     }
   }
 
   void MakeCurrent() override {
-    if (eglMakeCurrent(display_, EGL_NO_SURFACE, EGL_NO_SURFACE, context_) !=
-        EGL_TRUE) {
+    if (eglMakeCurrent(display_, surface_, surface_, context_) != EGL_TRUE) {
       throw std::runtime_error("failed to make EGL context current");
     }
   }
 
+  void ClearCurrent() override {
+    if (eglMakeCurrent(display_, EGL_NO_SURFACE, EGL_NO_SURFACE,
+                       EGL_NO_CONTEXT) != EGL_TRUE) {
+      throw std::runtime_error("failed to clear EGL context");
+    }
+    eglReleaseThread();
+  }
+
  private:
+  static EGLDisplay TryInitializeDisplay(EGLDisplay display) {
+    if (display == EGL_NO_DISPLAY) {
+      return EGL_NO_DISPLAY;
+    }
+    EGLint major = 0;
+    EGLint minor = 0;
+    if (eglInitialize(display, &major, &minor) == EGL_TRUE) {
+      return display;
+    }
+    return EGL_NO_DISPLAY;
+  }
+
+#if defined(ENVPOOL_HAS_EGL_DEVICE_EXT)
+  static int ParseSelectedDevice() {
+    const char* selected_device = std::getenv("MUJOCO_EGL_DEVICE_ID");
+    if (selected_device == nullptr) {
+      return -1;
+    }
+    char* end = nullptr;
+    errno = 0;
+    long device_idx = std::strtol(selected_device, &end, 10);
+    if (errno != 0 || end == selected_device || *end != '\0' ||
+        device_idx < 0 || device_idx > std::numeric_limits<int>::max()) {
+      throw std::runtime_error(
+          "MUJOCO_EGL_DEVICE_ID must be a non-negative integer");
+    }
+    return static_cast<int>(device_idx);
+  }
+
+  static EGLDisplay TryInitializeDeviceDisplay() {
+    auto* query_devices = reinterpret_cast<PFNEGLQUERYDEVICESEXTPROC>(
+        eglGetProcAddress("eglQueryDevicesEXT"));
+    auto* get_platform_display =
+        reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(
+            eglGetProcAddress("eglGetPlatformDisplayEXT"));
+    if (query_devices == nullptr || get_platform_display == nullptr) {
+      return EGL_NO_DISPLAY;
+    }
+    constexpr EGLint kMaxDevices = 16;
+    std::array<EGLDeviceEXT, kMaxDevices> devices = {};
+    EGLint num_devices = 0;
+    if (query_devices(kMaxDevices, devices.data(), &num_devices) != EGL_TRUE ||
+        num_devices < 1) {
+      return EGL_NO_DISPLAY;
+    }
+
+    int begin = 0;
+    int end = num_devices;
+    int selected_device = ParseSelectedDevice();
+    if (selected_device >= 0) {
+      if (selected_device >= num_devices) {
+        throw std::runtime_error("MUJOCO_EGL_DEVICE_ID is out of range");
+      }
+      begin = selected_device;
+      end = selected_device + 1;
+    }
+
+    for (int device_idx = begin; device_idx < end; ++device_idx) {
+      EGLDisplay display = get_platform_display(EGL_PLATFORM_DEVICE_EXT,
+                                                devices[device_idx], nullptr);
+      if (display == EGL_NO_DISPLAY || eglGetError() != EGL_SUCCESS) {
+        continue;
+      }
+      display = TryInitializeDisplay(display);
+      if (display != EGL_NO_DISPLAY && eglGetError() == EGL_SUCCESS) {
+        return display;
+      }
+    }
+    return EGL_NO_DISPLAY;
+  }
+#endif
+
+  static EGLDisplay CreateDisplay() {
+#if defined(ENVPOOL_HAS_EGL_DEVICE_EXT)
+    EGLDisplay display = TryInitializeDeviceDisplay();
+    if (display != EGL_NO_DISPLAY) {
+      return display;
+    }
+#endif
+    return TryInitializeDisplay(eglGetDisplay(EGL_DEFAULT_DISPLAY));
+  }
+
   EGLDisplay display_{EGL_NO_DISPLAY};
   EGLContext context_{EGL_NO_CONTEXT};
+  EGLSurface surface_{EGL_NO_SURFACE};
 };
 
 #endif
 
-std::unique_ptr<GlContext> CreateGlContext() {
+std::shared_ptr<GlContext> CreateGlContext() {
 #if defined(ENVPOOL_HAS_CGL)
-  return std::make_unique<CglContext>();
+  thread_local std::shared_ptr<GlContext> context =
+      std::make_shared<CglContext>();
+  return context;
 #elif defined(ENVPOOL_HAS_EGL)
-  return std::make_unique<EglContext>();
+  thread_local std::shared_ptr<GlContext> context =
+      std::make_shared<EglContext>();
+  return context;
 #else
   throw std::runtime_error(
       "MuJoCo rendering is unsupported on this platform/build");
@@ -277,6 +395,7 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
         scratch_.data() + static_cast<std::size_t>(height - 1 - y) * row_bytes;
     std::memcpy(rgb + static_cast<std::size_t>(y) * row_bytes, src, row_bytes);
   }
+  gl_context_->ClearCurrent();
 }
 
 }  // namespace envpool::mujoco

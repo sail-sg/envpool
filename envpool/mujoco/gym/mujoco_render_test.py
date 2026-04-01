@@ -18,32 +18,31 @@ from typing import Any, cast
 import numpy as np
 from absl.testing import absltest
 
-import envpool.mujoco.gym.registration  # noqa: F401
+import envpool.mujoco.gym.registration as reg
 from envpool.registration import make_gym
 
-
-def _maybe_skip_render_error(
-    testcase: absltest.TestCase, exc: RuntimeError
-) -> None:
-    message = str(exc)
-    if any(
-        needle in message
-        for needle in (
-            "failed to initialize EGL",
-            "failed to get EGL display",
-            "unsupported on this platform/build",
-            "failed to create CGL",
-            "failed to create EGL",
-        )
-    ):
-        testcase.skipTest(message)
-    raise exc
+_RENDER_STEPS = 3
+_TASK_IDS = tuple(
+    sorted(
+        f"{task}-{version}"
+        for task, versions, _ in reg.gym_mujoco_envs
+        for version in versions
+    )
+)
 
 
 def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
     frame = env.render(env_ids=env_ids)
     assert frame is not None
     return cast(np.ndarray, frame)
+
+
+def _zero_action(space: Any, num_envs: int) -> np.ndarray:
+    sample = np.asarray(space.sample())
+    zero = np.zeros_like(sample)
+    if sample.ndim == 0:
+        return np.full((num_envs,), zero.item(), dtype=sample.dtype)
+    return np.repeat(zero[np.newaxis, ...], num_envs, axis=0)
 
 
 class MujocoRenderTest(absltest.TestCase):
@@ -62,24 +61,52 @@ class MujocoRenderTest(absltest.TestCase):
         )
         try:
             env.reset()
-            try:
+            for step_idx in range(_RENDER_STEPS):
                 frame0 = _render_array(env)
                 frame1 = _render_array(env, env_ids=1)
                 frames = _render_array(env, env_ids=[0, 1])
                 frame0_again = _render_array(env)
-            except RuntimeError as exc:
-                _maybe_skip_render_error(self, exc)
 
-            self.assertEqual(frame0.shape, (1, 48, 64, 3))
-            self.assertEqual(frame1.shape, (1, 48, 64, 3))
-            self.assertEqual(frame0.dtype, np.uint8)
-            self.assertEqual(frames.shape, (2, 48, 64, 3))
-            self.assertEqual(frames.dtype, np.uint8)
-            np.testing.assert_array_equal(frame0[0], frames[0])
-            np.testing.assert_array_equal(frame1[0], frames[1])
-            np.testing.assert_array_equal(frame0, frame0_again)
+                self.assertEqual(frame0.shape, (1, 48, 64, 3))
+                self.assertEqual(frame1.shape, (1, 48, 64, 3))
+                self.assertEqual(frame0.dtype, np.uint8)
+                self.assertEqual(frames.shape, (2, 48, 64, 3))
+                self.assertEqual(frames.dtype, np.uint8)
+                np.testing.assert_array_equal(frame0[0], frames[0])
+                np.testing.assert_array_equal(frame1[0], frames[1])
+                np.testing.assert_array_equal(frame0, frame0_again)
+                if step_idx + 1 < _RENDER_STEPS:
+                    env.step(_zero_action(env.action_space, 2))
         finally:
             env.close()
+
+    def test_render_succeeds_for_multiple_steps_for_all_tasks(self) -> None:
+        """Every Gym-style MuJoCo task should render repeatedly."""
+        for task_id in _TASK_IDS:
+            with self.subTest(task_id=task_id):
+                env = make_gym(
+                    task_id,
+                    num_envs=1,
+                    seed=0,
+                    render_mode="rgb_array",
+                    render_width=96,
+                    render_height=72,
+                )
+                try:
+                    env.reset()
+                    for step_idx in range(_RENDER_STEPS):
+                        frame = _render_array(env)[0]
+                        frame_again = _render_array(env)[0]
+                        self.assertEqual(frame.shape, (72, 96, 3))
+                        self.assertEqual(frame.dtype, np.uint8)
+                        np.testing.assert_array_equal(frame, frame_again)
+                        self.assertGreater(
+                            int(frame.max()) - int(frame.min()), 0
+                        )
+                        if step_idx + 1 < _RENDER_STEPS:
+                            env.step(_zero_action(env.action_space, 1))
+                finally:
+                    env.close()
 
     def test_human_render_uses_python_viewer(self) -> None:
         """Human mode should route rendered frames through the Python viewer."""
@@ -96,10 +123,7 @@ class MujocoRenderTest(absltest.TestCase):
         )
         try:
             env.reset()
-            try:
-                result = env.render()
-            except RuntimeError as exc:
-                _maybe_skip_render_error(self, exc)
+            result = env.render()
 
             self.assertIsNone(result)
             self.assertLen(shown, 1)

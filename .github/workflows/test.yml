@@ -17,6 +17,8 @@ jobs:
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      MUJOCO_GL: egl
+      EGL_PLATFORM: surfaceless
     steps:
       - name: Cancel previous run
         uses: styfle/cancel-workflow-action@0.11.0
@@ -39,7 +41,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-tidy-18 cmake lcov ninja-build swig qtbase5-dev qtdeclarative5-dev
+          sudo apt-get install -y clang-tidy-18 cmake lcov ninja-build swig qtbase5-dev qtdeclarative5-dev libegl1-mesa-dev libopengl-dev
           qmake_bin="$(command -v qmake-qt5 || command -v qmake)"
           qt_include_dir="$("$qmake_bin" -query QT_INSTALL_HEADERS)"
           sudo ln -sfn "$qt_include_dir" /usr/include/qt
@@ -111,6 +113,8 @@ jobs:
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      MUJOCO_GL: egl
+      EGL_PLATFORM: surfaceless
     steps:
       - name: Cancel previous run
         uses: styfle/cancel-workflow-action@0.11.0
@@ -133,7 +137,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-tidy-18 cmake lcov ninja-build swig qtbase5-dev qtdeclarative5-dev
+          sudo apt-get install -y clang-tidy-18 cmake lcov ninja-build swig qtbase5-dev qtdeclarative5-dev libegl1-mesa-dev libopengl-dev
           qmake_bin="$(command -v qmake-qt5 || command -v qmake)"
           qt_include_dir="$("$qmake_bin" -query QT_INSTALL_HEADERS)"
           sudo ln -sfn "$qt_include_dir" /usr/include/qt

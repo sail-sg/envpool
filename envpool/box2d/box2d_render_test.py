@@ -23,6 +23,18 @@ from gymnasium import error as gym_error
 import envpool.box2d.registration  # noqa: F401
 from envpool.registration import make_gym
 
+_RENDER_STEPS = 3
+_TASK_IDS = (
+    "CarRacing-v2",
+    "CarRacing-v3",
+    "BipedalWalker-v3",
+    "BipedalWalkerHardcore-v3",
+    "LunarLander-v2",
+    "LunarLander-v3",
+    "LunarLanderContinuous-v2",
+    "LunarLanderContinuous-v3",
+)
+
 
 def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
     frame = env.render(env_ids=env_ids)
@@ -45,6 +57,14 @@ def _make_oracle_env(
         raise
 
 
+def _zero_action(space: Any, num_envs: int) -> np.ndarray:
+    sample = np.asarray(space.sample())
+    zero = np.zeros_like(sample)
+    if sample.ndim == 0:
+        return np.full((num_envs,), zero.item(), dtype=sample.dtype)
+    return np.repeat(zero[np.newaxis, ...], num_envs, axis=0)
+
+
 class Box2DRenderTest(absltest.TestCase):
     """Render regression tests for Box2D environments."""
 
@@ -58,20 +78,50 @@ class Box2DRenderTest(absltest.TestCase):
         )
         try:
             env.reset()
-            frame0 = _render_array(env)
-            frame1 = _render_array(env, env_ids=1)
-            frames = _render_array(env, env_ids=[0, 1])
-            frame0_again = _render_array(env)
-            self.assertEqual(frame0.shape, (1, 48, 64, 3))
-            self.assertEqual(frame1.shape, (1, 48, 64, 3))
-            self.assertEqual(frames.shape, (2, 48, 64, 3))
-            self.assertEqual(frame0.dtype, np.uint8)
-            self.assertEqual(frames.dtype, np.uint8)
-            np.testing.assert_array_equal(frame0[0], frames[0])
-            np.testing.assert_array_equal(frame1[0], frames[1])
-            np.testing.assert_array_equal(frame0, frame0_again)
+            for step_idx in range(_RENDER_STEPS):
+                frame0 = _render_array(env)
+                frame1 = _render_array(env, env_ids=1)
+                frames = _render_array(env, env_ids=[0, 1])
+                frame0_again = _render_array(env)
+                self.assertEqual(frame0.shape, (1, 48, 64, 3))
+                self.assertEqual(frame1.shape, (1, 48, 64, 3))
+                self.assertEqual(frames.shape, (2, 48, 64, 3))
+                self.assertEqual(frame0.dtype, np.uint8)
+                self.assertEqual(frames.dtype, np.uint8)
+                np.testing.assert_array_equal(frame0[0], frames[0])
+                np.testing.assert_array_equal(frame1[0], frames[1])
+                np.testing.assert_array_equal(frame0, frame0_again)
+                if step_idx + 1 < _RENDER_STEPS:
+                    env.step(_zero_action(env.action_space, 2))
         finally:
             env.close()
+
+    def test_render_succeeds_for_multiple_steps_for_all_tasks(self) -> None:
+        """Every Box2D task should render repeatedly across several steps."""
+        for task_id in _TASK_IDS:
+            with self.subTest(task_id=task_id):
+                env = make_gym(
+                    task_id,
+                    num_envs=1,
+                    seed=0,
+                    render_mode="rgb_array",
+                )
+                try:
+                    env.reset()
+                    for step_idx in range(_RENDER_STEPS):
+                        frame = _render_array(env)[0]
+                        frame_again = _render_array(env)[0]
+                        self.assertEqual(frame.dtype, np.uint8)
+                        self.assertEqual(frame.ndim, 3)
+                        self.assertEqual(frame.shape[-1], 3)
+                        np.testing.assert_array_equal(frame, frame_again)
+                        self.assertGreater(
+                            int(frame.max()) - int(frame.min()), 0
+                        )
+                        if step_idx + 1 < _RENDER_STEPS:
+                            env.step(_zero_action(env.action_space, 1))
+                finally:
+                    env.close()
 
     def test_car_racing_render(self) -> None:
         """CarRacing should support consistent batched rendering."""

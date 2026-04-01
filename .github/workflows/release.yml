@@ -6,6 +6,7 @@ on:
       - main
     tags:
       - v*
+  pull_request:
 
 jobs:
   release-macos:
@@ -78,6 +79,9 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container: ${{ matrix.container }}
     timeout-minutes: 120
+    env:
+      MUJOCO_GL: egl
+      EGL_PLATFORM: surfaceless
     strategy:
       fail-fast: false
       matrix:
@@ -130,7 +134,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install build dependencies
         run: |
-          dnf install -y git curl wget zsh gcc gcc-c++ cmake make ninja-build tmux golang java-17-openjdk-devel qt5-qtbase-devel qt5-qtdeclarative-devel
+          dnf install -y git curl wget zsh gcc gcc-c++ cmake make ninja-build tmux golang java-17-openjdk-devel qt5-qtbase-devel qt5-qtdeclarative-devel mesa-libEGL-devel libglvnd-devel mesa-dri-drivers
           dnf clean all
           ln -sf "$(qmake-qt5 -query QT_INSTALL_HEADERS)" /usr/include/qt
           go install github.com/bazelbuild/bazelisk@latest
