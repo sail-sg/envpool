@@ -242,6 +242,7 @@ jobs:
       BAZEL_SH: C:/Program Files/Git/usr/bin/bash.exe
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      MESA_GL_VERSION_OVERRIDE: 4.5COMPAT
       MSYS2_ARG_CONV_EXCL: "*"
       MSYS_NO_PATHCONV: "1"
       USE_BAZEL_VERSION: "8.6.0"
@@ -284,6 +285,7 @@ jobs:
         shell: pwsh
         run: |
           Add-Content -Path $env:GITHUB_ENV -Value "ENVPOOL_DLL_DIR=$env:GITHUB_WORKSPACE\.mesa"
+          Add-Content -Path $env:GITHUB_PATH -Value "$env:GITHUB_WORKSPACE\.mesa"
       - name: Install Qt 5
         uses: jurplel/install-qt-action@v4
         with:
