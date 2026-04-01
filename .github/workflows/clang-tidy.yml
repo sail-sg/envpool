@@ -61,6 +61,7 @@ jobs:
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" clang-tidy
       - name: Save Bazel caches
+        id: save-bazel-caches
         if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
@@ -70,7 +71,7 @@ jobs:
             ~/.cache/envpool-bazel-disk
           key: bazel-clang-tidy-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
       - name: Prune older Bazel caches
-        if: ${{ always() && !cancelled() }}
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
