@@ -16,6 +16,8 @@
 import os
 import shutil
 import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any, cast
 
 import numpy as np
@@ -64,19 +66,15 @@ def _cleanup_runtime_dir() -> None:
         os.remove("_vizdoom")
 
 
-class _TempWorkingDir:
-    def __enter__(self) -> "_TempWorkingDir":
-        self._prev_cwd = os.getcwd()
-        self._tempdir = tempfile.TemporaryDirectory(prefix="vizdoom-render-")
-        os.chdir(self._tempdir.name)
-        return self
-
-    def __exit__(self, *args: Any) -> None:
-        os.chdir(self._prev_cwd)
+@contextmanager
+def _temporary_workdir() -> Iterator[None]:
+    prev_cwd = os.getcwd()
+    with tempfile.TemporaryDirectory(prefix="vizdoom-render-") as tempdir:
+        os.chdir(tempdir)
         try:
-            self._tempdir.cleanup()
-        except PermissionError:
-            pass
+            yield
+        finally:
+            os.chdir(prev_cwd)
 
 
 class VizdoomRenderTest(absltest.TestCase):
@@ -94,7 +92,7 @@ class VizdoomRenderTest(absltest.TestCase):
         """Stable scenarios should render the same pixels across steps."""
         for task_id in _TASK_IDS:
             with self.subTest(task_id=task_id):
-                with _TempWorkingDir():
+                with _temporary_workdir():
                     _cleanup_runtime_dir()
                     env = make_gym(
                         task_id,

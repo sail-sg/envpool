@@ -20,7 +20,7 @@ import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, Protocol, get_type_hints
+from typing import Callable, get_type_hints
 
 import dm_env
 import gym
@@ -40,29 +40,18 @@ _SKIP_MUJOCO_RENDER_SMOKE = (
     os.environ.get("ENVPOOL_SKIP_MUJOCO_RENDER_SMOKE") == "1"
 )
 
-
-class _RenderableEnv(Protocol):
-    def reset(self) -> object: ...
-    def render(self) -> object: ...
-    def close(self) -> None: ...
-
-
-_RenderFactory = Callable[..., _RenderableEnv]
+_RenderFactory = Callable[..., GymEnvPool | GymnasiumEnvPool]
 
 
 @contextmanager
 def _temporary_workdir(prefix: str) -> Iterator[str]:
     prev_cwd = os.getcwd()
-    tempdir = tempfile.TemporaryDirectory(prefix=prefix)
-    os.chdir(tempdir.name)
-    try:
-        yield tempdir.name
-    finally:
-        os.chdir(prev_cwd)
+    with tempfile.TemporaryDirectory(prefix=prefix) as tempdir:
+        os.chdir(tempdir)
         try:
-            tempdir.cleanup()
-        except PermissionError:
-            pass
+            yield tempdir
+        finally:
+            os.chdir(prev_cwd)
 
 
 def _emit_github_error(message: str) -> None:
