@@ -67,7 +67,8 @@ jobs:
           python3 scripts/coverage_summary.py \
             --lcov coverage/lcov.info \
             --output-dir coverage \
-            --summary-file coverage/summary.md
+            --summary-file coverage/summary.md \
+            --badge-file coverage/coverage-badge.svg
       - name: Publish coverage summary
         run: cat coverage/summary.md >> "$GITHUB_STEP_SUMMARY"
       - name: Build coverage site
@@ -78,6 +79,7 @@ jobs:
             --legend \
             --output-directory coverage/site \
             --title "EnvPool coverage report"
+          cp coverage/coverage-badge.svg coverage/site/coverage-badge.svg
       - name: Upload coverage artifacts
         if: ${{ always() && !cancelled() }}
         uses: actions/upload-artifact@v4
