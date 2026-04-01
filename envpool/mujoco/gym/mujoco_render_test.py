@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Tests for the batched MuJoCo render API."""
-
-import sys
 from typing import Any, cast
 
 import numpy as np
@@ -23,7 +21,6 @@ import envpool.mujoco.gym.registration as reg
 from envpool.registration import make_gym
 
 _RENDER_STEPS = 3
-_WINDOWS_RENDER_ERROR = "MuJoCo rendering is unsupported on this platform/build"
 _TASK_IDS = tuple(
     sorted(
         f"{task}-{version}"
@@ -90,12 +87,6 @@ class MujocoRenderTest(absltest.TestCase):
         )
         try:
             env.reset()
-            if sys.platform == "win32":
-                with self.assertRaisesRegex(
-                    RuntimeError, _WINDOWS_RENDER_ERROR
-                ):
-                    env.render()
-                return
             for step_idx in range(_RENDER_STEPS):
                 frame0 = _render_array(env)
                 frame1 = _render_array(env, env_ids=1)
@@ -129,12 +120,6 @@ class MujocoRenderTest(absltest.TestCase):
                 )
                 try:
                     env.reset()
-                    if sys.platform == "win32":
-                        with self.assertRaisesRegex(
-                            RuntimeError, _WINDOWS_RENDER_ERROR
-                        ):
-                            env.render()
-                        continue
                     for step_idx in range(_RENDER_STEPS):
                         frame = _render_array(env)[0]
                         frame_again = _render_array(env)[0]
@@ -164,13 +149,6 @@ class MujocoRenderTest(absltest.TestCase):
         )
         try:
             env.reset()
-            if sys.platform == "win32":
-                with self.assertRaisesRegex(
-                    RuntimeError, _WINDOWS_RENDER_ERROR
-                ):
-                    env.render()
-                self.assertEmpty(shown)
-                return
             result = env.render()
 
             self.assertIsNone(result)

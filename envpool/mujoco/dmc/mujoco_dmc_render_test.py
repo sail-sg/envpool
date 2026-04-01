@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Tests for the dm_control render path."""
-
-import sys
 from typing import Any, cast
 
 import numpy as np
@@ -23,7 +21,6 @@ import envpool.mujoco.dmc.registration as reg
 from envpool.registration import make_gym
 
 _RENDER_STEPS = 3
-_WINDOWS_RENDER_ERROR = "MuJoCo rendering is unsupported on this platform/build"
 
 
 def _task_map() -> dict[str, tuple[str, str]]:
@@ -91,12 +88,6 @@ class MujocoDmcRenderTest(absltest.TestCase):
         )
         try:
             env.reset()
-            if sys.platform == "win32":
-                with self.assertRaisesRegex(
-                    RuntimeError, _WINDOWS_RENDER_ERROR
-                ):
-                    env.render()
-                return
             for step_idx in range(_RENDER_STEPS):
                 frame0 = _render_array(env)
                 frame1 = _render_array(env, env_ids=1)
@@ -128,12 +119,6 @@ class MujocoDmcRenderTest(absltest.TestCase):
                 )
                 try:
                     env.reset()
-                    if sys.platform == "win32":
-                        with self.assertRaisesRegex(
-                            RuntimeError, _WINDOWS_RENDER_ERROR
-                        ):
-                            env.render()
-                        continue
                     for step_idx in range(_RENDER_STEPS):
                         frame = _render_array(env)[0]
                         frame_again = _render_array(env)[0]

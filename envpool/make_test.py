@@ -14,7 +14,6 @@
 """Test for envpool.make."""
 
 import pprint
-import sys
 from pathlib import Path
 from typing import get_type_hints
 
@@ -39,12 +38,6 @@ class _MakeTest(absltest.TestCase):
         frame = env.render()
         self.assertIsNotNone(frame)
 
-    def assert_render_unsupported(
-        self, env: gym.Env | gymnasium.Env, error: str
-    ) -> None:
-        with self.assertRaisesRegex(RuntimeError, error):
-            env.render()
-
     def check_render(self, task_id: str, **kwargs: object) -> None:
         env_gym = envpool.make_gym(task_id, render_mode="rgb_array", **kwargs)
         env_gymnasium = envpool.make_gymnasium(
@@ -55,22 +48,6 @@ class _MakeTest(absltest.TestCase):
             env_gymnasium.reset()
             self.assert_renders(env_gym)
             self.assert_renders(env_gymnasium)
-        finally:
-            env_gym.close()
-            env_gymnasium.close()
-
-    def check_render_unsupported(
-        self, task_id: str, error: str, **kwargs: object
-    ) -> None:
-        env_gym = envpool.make_gym(task_id, render_mode="rgb_array", **kwargs)
-        env_gymnasium = envpool.make_gymnasium(
-            task_id, render_mode="rgb_array", **kwargs
-        )
-        try:
-            env_gym.reset()
-            env_gymnasium.reset()
-            self.assert_render_unsupported(env_gym, error)
-            self.assert_render_unsupported(env_gymnasium, error)
         finally:
             env_gym.close()
             env_gymnasium.close()
@@ -308,13 +285,8 @@ class _MakeTest(absltest.TestCase):
         )
         self.check_render("MyWayHome-v1")
         self.check_render("CoinrunHard-v0")
-        if sys.platform == "win32":
-            error = "MuJoCo rendering is unsupported on this platform/build"
-            self.check_render_unsupported("Ant-v5", error)
-            self.check_render_unsupported("WalkerWalk-v1", error)
-        else:
-            self.check_render("Ant-v5")
-            self.check_render("WalkerWalk-v1")
+        self.check_render("Ant-v5")
+        self.check_render("WalkerWalk-v1")
 
     def test_make_procgen(self) -> None:
         self.check_step([

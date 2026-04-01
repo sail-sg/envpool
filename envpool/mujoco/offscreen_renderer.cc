@@ -22,12 +22,20 @@
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <vector>
 
 #if defined(__APPLE__) && __has_include(<OpenGL/OpenGL.h>)
 #include <OpenGL/OpenGL.h>
 #define ENVPOOL_HAS_CGL 1
+#elif defined(_WIN32) && __has_include(<windows.h>) && __has_include(<GL/gl.h>)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <GL/gl.h>
+#include <windows.h>
+#define ENVPOOL_HAS_WGL 1
 #elif defined(__linux__) && __has_include(<EGL/egl.h>)
 #include <EGL/egl.h>
 #if __has_include(<EGL/eglext.h>)
@@ -98,6 +106,107 @@ class CglContext final : public GlContext {
  private:
   CGLPixelFormatObj pixel_format_{nullptr};
   CGLContextObj context_{nullptr};
+};
+
+#elif defined(ENVPOOL_HAS_WGL)
+
+namespace {
+
+constexpr char kWindowClassName[] = "EnvPoolMuJoCoOffscreenWindow";
+
+void EnsureWindowClassRegistered() {
+  static std::once_flag registered;
+  std::call_once(registered, [] {
+    WNDCLASSA window_class = {};
+    window_class.style = CS_OWNDC;
+    window_class.lpfnWndProc = DefWindowProcA;
+    window_class.hInstance = GetModuleHandleA(nullptr);
+    window_class.lpszClassName = kWindowClassName;
+    if (RegisterClassA(&window_class) == 0 &&
+        GetLastError() != ERROR_CLASS_ALREADY_EXISTS) {
+      throw std::runtime_error("failed to register WGL window class");
+    }
+  });
+}
+
+}  // namespace
+
+class WglContext final : public GlContext {
+ public:
+  WglContext() {
+    EnsureWindowClassRegistered();
+    window_ = CreateWindowExA(0, kWindowClassName, "EnvPoolMuJoCoOffscreen",
+                              WS_OVERLAPPEDWINDOW, 0, 0, 1, 1, nullptr, nullptr,
+                              GetModuleHandleA(nullptr), nullptr);
+    if (window_ == nullptr) {
+      throw std::runtime_error("failed to create WGL window");
+    }
+    device_context_ = GetDC(window_);
+    if (device_context_ == nullptr) {
+      DestroyWindow(window_);
+      window_ = nullptr;
+      throw std::runtime_error("failed to acquire WGL device context");
+    }
+
+    PIXELFORMATDESCRIPTOR pixel_format = {};
+    pixel_format.nSize = sizeof(pixel_format);
+    pixel_format.nVersion = 1;
+    pixel_format.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL;
+    pixel_format.iPixelType = PFD_TYPE_RGBA;
+    pixel_format.cColorBits = 24;
+    pixel_format.cAlphaBits = 8;
+    pixel_format.cDepthBits = 24;
+    pixel_format.cStencilBits = 8;
+    pixel_format.iLayerType = PFD_MAIN_PLANE;
+    int format_id = ChoosePixelFormat(device_context_, &pixel_format);
+    if (format_id == 0 ||
+        SetPixelFormat(device_context_, format_id, &pixel_format) == FALSE) {
+      ReleaseDC(window_, device_context_);
+      device_context_ = nullptr;
+      DestroyWindow(window_);
+      window_ = nullptr;
+      throw std::runtime_error("failed to configure WGL pixel format");
+    }
+
+    context_ = wglCreateContext(device_context_);
+    if (context_ == nullptr) {
+      ReleaseDC(window_, device_context_);
+      device_context_ = nullptr;
+      DestroyWindow(window_);
+      window_ = nullptr;
+      throw std::runtime_error("failed to create WGL context");
+    }
+  }
+
+  ~WglContext() override {
+    if (context_ != nullptr) {
+      wglMakeCurrent(nullptr, nullptr);
+      wglDeleteContext(context_);
+    }
+    if (window_ != nullptr && device_context_ != nullptr) {
+      ReleaseDC(window_, device_context_);
+    }
+    if (window_ != nullptr) {
+      DestroyWindow(window_);
+    }
+  }
+
+  void MakeCurrent() override {
+    if (wglMakeCurrent(device_context_, context_) == FALSE) {
+      throw std::runtime_error("failed to make WGL context current");
+    }
+  }
+
+  void ClearCurrent() override {
+    if (wglMakeCurrent(nullptr, nullptr) == FALSE) {
+      throw std::runtime_error("failed to clear WGL context");
+    }
+  }
+
+ private:
+  HWND window_{nullptr};
+  HDC device_context_{nullptr};
+  HGLRC context_{nullptr};
 };
 
 #elif defined(ENVPOOL_HAS_EGL)
@@ -289,6 +398,10 @@ std::shared_ptr<GlContext> CreateGlContext() {
 #if defined(ENVPOOL_HAS_CGL)
   thread_local std::shared_ptr<GlContext> context =
       std::make_shared<CglContext>();
+  return context;
+#elif defined(ENVPOOL_HAS_WGL)
+  thread_local std::shared_ptr<GlContext> context =
+      std::make_shared<WglContext>();
   return context;
 #elif defined(ENVPOOL_HAS_EGL)
   thread_local std::shared_ptr<GlContext> context =
