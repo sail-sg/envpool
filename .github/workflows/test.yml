@@ -68,12 +68,15 @@ jobs:
             --lcov coverage/lcov.info \
             --output-dir coverage \
             --summary-file coverage/summary.md \
-            --badge-file coverage/coverage-badge.svg
+            --badge-file coverage/coverage-badge.svg \
+            --genhtml-lcov-file coverage/lcov.genhtml.info \
+            --repo-root "$GITHUB_WORKSPACE"
       - name: Publish coverage summary
         run: cat coverage/summary.md >> "$GITHUB_STEP_SUMMARY"
       - name: Build coverage site
         run: |
-          genhtml coverage/lcov.info \
+          genhtml coverage/lcov.genhtml.info \
+            --prefix "$GITHUB_WORKSPACE" \
             --branch-coverage \
             --ignore-errors negative,category \
             --legend \

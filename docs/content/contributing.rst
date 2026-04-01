@@ -63,7 +63,14 @@ To collect a merged Python + C/C++ LCOV report locally, run:
 
     make bazel-coverage
     python3 scripts/coverage_summary.py \
-      --lcov bazel-out/_coverage/_coverage_report.dat
+      --lcov bazel-out/_coverage/_coverage_report.dat \
+      --genhtml-lcov-file coverage/lcov.genhtml.info \
+      --repo-root "$PWD"
+    genhtml coverage/lcov.genhtml.info \
+      --prefix "$PWD" \
+      --branch-coverage \
+      --legend \
+      --output-directory coverage/site
 
 The merged LCOV file is written to ``bazel-out/_coverage/_coverage_report.dat``.
 

@@ -206,6 +206,12 @@ We provide several shortcuts to make things easier.
     # This will generate a merged Python + C/C++ LCOV report
     make bazel-coverage
 
+    # Normalize LCOV source paths before rendering HTML with genhtml
+    python3 scripts/coverage_summary.py \
+      --lcov bazel-out/_coverage/_coverage_report.dat \
+      --genhtml-lcov-file coverage/lcov.genhtml.info \
+      --repo-root "$PWD"
+
     # This will build a wheel for release
     make bazel-release
 

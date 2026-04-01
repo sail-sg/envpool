@@ -73,6 +73,29 @@ class CoverageTotals:
         return self.lines_hit / self.lines_found
 
 
+def _rewrite_record_source_file(
+    record: LcovRecord, source_file: str
+) -> LcovRecord:
+    lines = []
+    rewritten = False
+    for line in record.raw.splitlines():
+        if line.startswith("SF:") and not rewritten:
+            lines.append(f"SF:{source_file}")
+            rewritten = True
+        else:
+            lines.append(line)
+    if not rewritten:
+        raise ValueError("LCOV record is missing an SF entry")
+    return LcovRecord(
+        source_file=source_file,
+        lines_found=record.lines_found,
+        lines_hit=record.lines_hit,
+        branches_found=record.branches_found,
+        branches_hit=record.branches_hit,
+        raw="\n".join(lines) + "\n",
+    )
+
+
 def _classify_language(source_file: str) -> str:
     suffix = Path(source_file).suffix.lower()
     if suffix == ".py":
@@ -263,6 +286,33 @@ def write_split_reports(records: list[LcovRecord], output_dir: Path) -> None:
         )
 
 
+def normalize_records_for_genhtml(
+    records: list[LcovRecord], repo_root: Path
+) -> list[LcovRecord]:
+    """Rewrite SF entries to absolute paths so genhtml can strip a fixed prefix."""
+    resolved_root = repo_root.resolve()
+    normalized = []
+    for record in records:
+        source_path = Path(record.source_file)
+        if not source_path.is_absolute():
+            source_path = resolved_root / source_path
+        normalized.append(
+            _rewrite_record_source_file(
+                record, source_path.resolve().as_posix()
+            )
+        )
+    return normalized
+
+
+def write_lcov(records: list[LcovRecord], output_path: Path) -> None:
+    """Write LCOV records back to disk."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        "".join(record.raw for record in records),
+        encoding="utf-8",
+    )
+
+
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -284,6 +334,17 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help="Optional file path for a static SVG badge.",
     )
+    parser.add_argument(
+        "--genhtml-lcov-file",
+        type=Path,
+        help="Optional file path for an LCOV copy with absolute SF paths for genhtml.",
+    )
+    parser.add_argument(
+        "--repo-root",
+        type=Path,
+        default=Path.cwd(),
+        help="Repository root used when normalizing relative SF paths. Defaults to the current working directory.",
+    )
     return parser.parse_args()
 
 
@@ -300,6 +361,11 @@ def main() -> int:
     if args.badge_file is not None:
         args.badge_file.parent.mkdir(parents=True, exist_ok=True)
         args.badge_file.write_text(build_badge(records), encoding="utf-8")
+    if args.genhtml_lcov_file is not None:
+        write_lcov(
+            normalize_records_for_genhtml(records, args.repo_root),
+            args.genhtml_lcov_file,
+        )
     print(summary, end="")
     return 0
 
