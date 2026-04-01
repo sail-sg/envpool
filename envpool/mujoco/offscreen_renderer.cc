@@ -29,11 +29,10 @@
 #if defined(__APPLE__) && __has_include(<OpenGL/OpenGL.h>)
 #include <OpenGL/OpenGL.h>
 #define ENVPOOL_HAS_CGL 1
-#elif defined(_WIN32) && __has_include(<windows.h>) && __has_include(<GL/gl.h>)
+#elif defined(_WIN32) && __has_include(<windows.h>)
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <GL/gl.h>
 #include <windows.h>
 #define ENVPOOL_HAS_WGL 1
 #elif defined(__linux__) && __has_include(<EGL/egl.h>)

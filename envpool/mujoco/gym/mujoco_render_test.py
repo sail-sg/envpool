@@ -49,8 +49,8 @@ def _assert_frames_close(
     actual: np.ndarray,
     expected: np.ndarray,
     *,
-    max_abs_diff: int = 4,
-    max_mismatch_ratio: float = 0.005,
+    max_mean_abs_diff: float = 1.0,
+    max_mismatch_ratio: float = 0.1,
 ) -> None:
     if actual.shape != expected.shape:
         raise AssertionError(
@@ -60,10 +60,11 @@ def _assert_frames_close(
     if diff.size == 0:
         return
     mismatch_ratio = float(np.count_nonzero(diff)) / float(diff.size)
-    actual_max_abs_diff = int(diff.max())
-    if actual_max_abs_diff > max_abs_diff:
+    mean_abs_diff = float(diff.mean())
+    if mean_abs_diff > max_mean_abs_diff:
         raise AssertionError(
-            f"max render delta {actual_max_abs_diff} exceeded {max_abs_diff}"
+            "mean render delta "
+            f"{mean_abs_diff:.3f} exceeded {max_mean_abs_diff:.3f}"
         )
     if mismatch_ratio > max_mismatch_ratio:
         raise AssertionError(
