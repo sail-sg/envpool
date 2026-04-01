@@ -14,6 +14,8 @@
 """Unit tests for vizdoom environments."""
 
 import os
+from contextlib import contextmanager
+from typing import Any, Iterator
 
 import cv2
 import numpy as np
@@ -24,40 +26,54 @@ from envpool.registration import make_dm, make_gym, make_spec
 
 
 class _VizdoomEnvPoolBasicTest(absltest.TestCase):
+    @contextmanager
+    def _managed_env(self, env: Any) -> Iterator[Any]:
+        try:
+            yield env
+        finally:
+            env.close()
+
     def get_path(self, path: str) -> str:
         return os.path.join("envpool", "vizdoom", "maps", path)
 
     def test_timelimit(
         self, num_envs: int = 5, max_episode_steps: int = 10
     ) -> None:
-        env = make_gym(
-            "D1Basic-v1",
-            num_envs=num_envs,
-            max_episode_steps=max_episode_steps,
-            use_combined_action=True,
-        )
-        for _ in range(3):
-            env.reset()
-            partial_ids = [np.arange(num_envs)[::2], np.arange(num_envs)[1::2]]
-            env.step(
-                np.zeros(len(partial_ids[1]), dtype=int), env_id=partial_ids[1]
+        with self._managed_env(
+            make_gym(
+                "D1Basic-v1",
+                num_envs=num_envs,
+                max_episode_steps=max_episode_steps,
+                use_combined_action=True,
             )
-            for _ in range(max_episode_steps - 2):
+        ) as env:
+            for _ in range(3):
+                env.reset()
+                partial_ids = [
+                    np.arange(num_envs)[::2],
+                    np.arange(num_envs)[1::2],
+                ]
+                _, _, _, truncated, info = env.step(
+                    np.zeros(len(partial_ids[1]), dtype=int),
+                    env_id=partial_ids[1],
+                )
+                for _ in range(max_episode_steps - 2):
+                    _, _, _, truncated, info = env.step(
+                        np.zeros(num_envs, dtype=int),
+                        env_id=np.arange(num_envs),
+                    )
+                    assert np.all(~truncated)
                 _, _, _, truncated, info = env.step(
                     np.zeros(num_envs, dtype=int), env_id=np.arange(num_envs)
                 )
-                assert np.all(~truncated)
-            _, _, _, truncated, info = env.step(
-                np.zeros(num_envs, dtype=int), env_id=np.arange(num_envs)
-            )
-            env_id = np.array(info["env_id"])
-            done_id = np.array(sorted(env_id[truncated]))
-            assert np.all(done_id == partial_ids[1])
-            _, _, _, truncated, info = env.step(
-                np.zeros(len(partial_ids[0]), dtype=int),
-                env_id=partial_ids[0],
-            )
-            assert np.all(truncated)
+                env_id = np.array(info["env_id"])
+                done_id = np.array(sorted(env_id[truncated]))
+                assert np.all(done_id == partial_ids[1])
+                _, _, _, truncated, info = env.step(
+                    np.zeros(len(partial_ids[0]), dtype=int),
+                    env_id=partial_ids[0],
+                )
+                assert np.all(truncated)
 
     def test_hg(
         self,
@@ -69,91 +85,112 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
     ) -> None:
         if render:
             os.makedirs("img", exist_ok=True)
-        env = make_gym(
-            "D1Basic-v1",
-            num_envs=num_envs,
-            use_combined_action=True,
-            img_width=width,
-            img_height=height,
-        )
-        assert env.action_space.n == 6
-        obs, _ = env.reset()
-        obs = obs.transpose(0, 2, 3, 1)
-        action_num = env.action_space.n
-        env_id = np.arange(num_envs)
-        np.random.seed(0)
-        for t in range(step):
-            assert obs.shape == (num_envs, height, width, 4), obs.shape
-            act = np.random.randint(action_num, size=len(env_id))
-            obs_, _, terminated, truncated, info = env.step(act, env_id)
-            done = np.logical_or(terminated, truncated)
-            env_id = info["env_id"]
-            if render:
-                obs[env_id] = obs_.transpose(0, 2, 3, 1)
-                obs[env_id[done]] = 255
-                obs_all = np.zeros((height, width * num_envs, 3), np.uint8)
-                for j in range(num_envs):
-                    obs_all[:, width * j : width * (j + 1)] = obs[j, ..., :-1]
-                cv2.imwrite(f"img/{t}.png", obs_all)
-            if np.any(done):  # even though .step can auto reset
-                done_id = np.array(info["env_id"])[done]
-                obs[done_id] = env.reset(done_id)[0].transpose(0, 2, 3, 1)
+        with self._managed_env(
+            make_gym(
+                "D1Basic-v1",
+                num_envs=num_envs,
+                use_combined_action=True,
+                img_width=width,
+                img_height=height,
+            )
+        ) as env:
+            assert env.action_space.n == 6
+            obs, _ = env.reset()
+            obs = obs.transpose(0, 2, 3, 1)
+            action_num = env.action_space.n
+            env_id = np.arange(num_envs)
+            np.random.seed(0)
+            for t in range(step):
+                assert obs.shape == (num_envs, height, width, 4), obs.shape
+                act = np.random.randint(action_num, size=len(env_id))
+                obs_, _, terminated, truncated, info = env.step(act, env_id)
+                done = np.logical_or(terminated, truncated)
+                env_id = info["env_id"]
+                if render:
+                    obs[env_id] = obs_.transpose(0, 2, 3, 1)
+                    obs[env_id[done]] = 255
+                    obs_all = np.zeros((height, width * num_envs, 3), np.uint8)
+                    for j in range(num_envs):
+                        obs_all[:, width * j : width * (j + 1)] = (
+                            obs[j, ..., :-1]
+                        )
+                    cv2.imwrite(f"img/{t}.png", obs_all)
+                if np.any(done):  # even though .step can auto reset
+                    done_id = np.array(info["env_id"])[done]
+                    obs[done_id] = env.reset(done_id)[0].transpose(
+                        0, 2, 3, 1
+                    )
 
     def test_d3_action_space(self) -> None:
-        env = make_gym("D3Battle-v1", use_combined_action=True)
-        action_num = env.action_space.n
-        env = make_gym(
-            "D3Battle-v1", use_combined_action=True, force_speed=True
-        )
-        assert env.action_space.n * 2 == action_num
+        with self._managed_env(
+            make_gym("D3Battle-v1", use_combined_action=True)
+        ) as env:
+            action_num = env.action_space.n
+        with self._managed_env(
+            make_gym("D3Battle-v1", use_combined_action=True, force_speed=True)
+        ) as env:
+            assert env.action_space.n * 2 == action_num
 
     def test_delta_action_space(self) -> None:
-        e = make_gym("Deathmatch-v1", use_combined_action=True)
-        e2 = make_gym(
-            "Deathmatch-v1",
-            use_combined_action=True,
-            delta_button_config={
-                "LOOK_UP_DOWN_DELTA": [11, -10, 10],
-            },
-        )
-        assert e2.action_space.n == 11 * e.action_space.n
-        e3 = make_gym(
-            "Deathmatch-v1",
-            use_combined_action=True,
-            delta_button_config={
-                "MOVE_LEFT_RIGHT_DELTA": [11, -10, 10],
-                "LOOK_UP_DOWN_DELTA": [11, -10, 10],
-            },
-        )
-        assert e3.action_space.n == 121 * e.action_space.n
-        e4 = make_gym(
-            "Deathmatch-v1",
-            use_combined_action=False,
-            delta_button_config={
-                "MOVE_LEFT_RIGHT_DELTA": [11, -10, 10],
-                "LOOK_UP_DOWN_DELTA": [11, -10, 10],
-            },
-        )
-        assert e4.action_space.shape[0] == 20
+        with self._managed_env(
+            make_gym("Deathmatch-v1", use_combined_action=True)
+        ) as env:
+            action_num = env.action_space.n
+        with self._managed_env(
+            make_gym(
+                "Deathmatch-v1",
+                use_combined_action=True,
+                delta_button_config={
+                    "LOOK_UP_DOWN_DELTA": [11, -10, 10],
+                },
+            )
+        ) as env:
+            assert env.action_space.n == 11 * action_num
+        with self._managed_env(
+            make_gym(
+                "Deathmatch-v1",
+                use_combined_action=True,
+                delta_button_config={
+                    "MOVE_LEFT_RIGHT_DELTA": [11, -10, 10],
+                    "LOOK_UP_DOWN_DELTA": [11, -10, 10],
+                },
+            )
+        ) as env:
+            assert env.action_space.n == 121 * action_num
+        with self._managed_env(
+            make_gym(
+                "Deathmatch-v1",
+                use_combined_action=False,
+                delta_button_config={
+                    "MOVE_LEFT_RIGHT_DELTA": [11, -10, 10],
+                    "LOOK_UP_DOWN_DELTA": [11, -10, 10],
+                },
+            )
+        ) as env:
+            assert env.action_space.shape[0] == 20
 
     def test_obs_space(self) -> None:
-        e = make_dm(
-            "Deathmatch-v1",
-            use_combined_action=True,
-        )
-        assert e.observation_spec().obs.shape[0] == 3 * 4
-        e.reset()
-        assert (
-            e.step(np.array([0]), np.array([0])).observation.obs.shape[1]
-            == 3 * 4
-        )
-        e = make_dm("D1Basic-v1", use_combined_action=True)
-        assert e.observation_spec().obs.shape[0] == 1 * 4
-        e.reset()
-        assert (
-            e.step(np.array([0]), np.array([0])).observation.obs.shape[1]
-            == 1 * 4
-        )
+        with self._managed_env(
+            make_dm(
+                "Deathmatch-v1",
+                use_combined_action=True,
+            )
+        ) as env:
+            assert env.observation_spec().obs.shape[0] == 3 * 4
+            env.reset()
+            assert (
+                env.step(np.array([0]), np.array([0])).observation.obs.shape[1]
+                == 3 * 4
+            )
+        with self._managed_env(
+            make_dm("D1Basic-v1", use_combined_action=True)
+        ) as env:
+            assert env.observation_spec().obs.shape[0] == 1 * 4
+            env.reset()
+            assert (
+                env.step(np.array([0]), np.array([0])).observation.obs.shape[1]
+                == 1 * 4
+            )
 
     def test_action_spec(self) -> None:
         spec = make_spec("D1Basic-v1", use_combined_action=True)
@@ -162,62 +199,64 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
         assert np.issubdtype(action_spec.dtype, np.integer)
 
     def test_explicit_reset_with_episodic_life_gymnasium(self) -> None:
-        env = make_gym(
-            "D1Basic-v1",
-            num_envs=1,
-            seed=42,
-            episodic_life=True,
-            use_combined_action=True,
-        )
-        env.reset()
-        tracked_keys = [
-            "AMMO2",
-            "HEALTH",
-            "HITCOUNT",
-            "KILLCOUNT",
-            "SELECTED_WEAPON_AMMO",
-        ]
+        with self._managed_env(
+            make_gym(
+                "D1Basic-v1",
+                num_envs=1,
+                seed=42,
+                episodic_life=True,
+                use_combined_action=True,
+            )
+        ) as env:
+            env.reset()
+            tracked_keys = [
+                "AMMO2",
+                "HEALTH",
+                "HITCOUNT",
+                "KILLCOUNT",
+                "SELECTED_WEAPON_AMMO",
+            ]
 
-        def scalar(info: dict, key: str) -> float:
-            return float(np.asarray(info[key]).reshape(-1)[0])
+            def scalar(info: dict, key: str) -> float:
+                return float(np.asarray(info[key]).reshape(-1)[0])
 
-        action_id = None
-        changed_key = None
-        baseline_value = None
-        changed_value = None
+            action_id = None
+            changed_key = None
+            baseline_value = None
+            changed_value = None
 
-        for candidate in range(env.action_space.n):
-            _, baseline_info = env.reset()
-            for _ in range(64):
-                _, _, terminated, truncated, info = env.step(
-                    np.array([candidate], dtype=int)
-                )
-                for key in tracked_keys:
-                    current = scalar(info, key)
-                    baseline = scalar(baseline_info, key)
-                    if current != baseline:
-                        action_id = candidate
-                        changed_key = key
-                        baseline_value = baseline
-                        changed_value = current
+            for candidate in range(env.action_space.n):
+                _, baseline_info = env.reset()
+                for _ in range(64):
+                    _, _, terminated, truncated, info = env.step(
+                        np.array([candidate], dtype=int)
+                    )
+                    for key in tracked_keys:
+                        current = scalar(info, key)
+                        baseline = scalar(baseline_info, key)
+                        if current != baseline:
+                            action_id = candidate
+                            changed_key = key
+                            baseline_value = baseline
+                            changed_value = current
+                            break
+                    if changed_key is not None or terminated[0] or truncated[0]:
                         break
-                if changed_key is not None or terminated[0] or truncated[0]:
+                if changed_key is not None:
                     break
-            if changed_key is not None:
-                break
 
-        assert changed_key is not None
-        assert baseline_value is not None
-        assert changed_value is not None
-        _, reset_info = env.reset()
-        self.assertEqual(
-            scalar(reset_info, changed_key),
-            baseline_value,
-            msg=(
-                f"action={action_id}, key={changed_key}, "
-                f"changed={changed_value}, baseline={baseline_value}"
-            ),
-        )
+            assert changed_key is not None
+            assert baseline_value is not None
+            assert changed_value is not None
+            _, reset_info = env.reset()
+            self.assertEqual(
+                scalar(reset_info, changed_key),
+                baseline_value,
+                msg=(
+                    f"action={action_id}, key={changed_key}, "
+                    f"changed={changed_value}, baseline={baseline_value}"
+                ),
+            )
 
 
 if __name__ == "__main__":

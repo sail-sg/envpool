@@ -208,6 +208,32 @@ class WglContext final : public GlContext {
   HGLRC context_{nullptr};
 };
 
+class BorrowedWglContext final : public GlContext {
+ public:
+  BorrowedWglContext()
+      : device_context_(wglGetCurrentDC()), context_(wglGetCurrentContext()) {
+    if (device_context_ == nullptr || context_ == nullptr) {
+      throw std::runtime_error("failed to capture current WGL context");
+    }
+  }
+
+  void MakeCurrent() override {
+    if (wglMakeCurrent(device_context_, context_) == FALSE) {
+      throw std::runtime_error("failed to make borrowed WGL context current");
+    }
+  }
+
+  void ClearCurrent() override {
+    if (wglMakeCurrent(nullptr, nullptr) == FALSE) {
+      throw std::runtime_error("failed to clear borrowed WGL context");
+    }
+  }
+
+ private:
+  HDC device_context_{nullptr};
+  HGLRC context_{nullptr};
+};
+
 #elif defined(ENVPOOL_HAS_EGL)
 
 class EglContext final : public GlContext {
@@ -399,8 +425,12 @@ std::shared_ptr<GlContext> CreateGlContext() {
       std::make_shared<CglContext>();
   return context;
 #elif defined(ENVPOOL_HAS_WGL)
-  thread_local std::shared_ptr<GlContext> context =
-      std::make_shared<WglContext>();
+  thread_local std::shared_ptr<GlContext> context = [] {
+    if (wglGetCurrentContext() != nullptr && wglGetCurrentDC() != nullptr) {
+      return std::shared_ptr<GlContext>(std::make_shared<BorrowedWglContext>());
+    }
+    return std::shared_ptr<GlContext>(std::make_shared<WglContext>());
+  }();
   return context;
 #elif defined(ENVPOOL_HAS_EGL)
   thread_local std::shared_ptr<GlContext> context =

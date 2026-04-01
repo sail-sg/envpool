@@ -67,10 +67,20 @@ py_library(
 )
 
 py_library(
+    name = "glfw_context",
+    srcs = ["glfw_context.py"],
+    imports = ["../.."],
+    deps = [
+        requirement("glfw"),
+    ],
+)
+
+py_library(
     name = "envpool",
     srcs = ["envpool.py"],
     imports = ["../.."],
     deps = [
+        ":glfw_context",
         requirement("optree"),
         requirement("dm-env"),
         requirement("numpy"),
