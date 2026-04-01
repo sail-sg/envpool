@@ -205,6 +205,7 @@ py_test(
     srcs = ["gym/mujoco_render_test.py"],
     imports = ["../.."],
     deps = [
+        "//envpool:envpool",
         ":mujoco_gym",
         ":mujoco_gym_registration",
         requirement("numpy"),
@@ -219,6 +220,7 @@ py_test(
     srcs = ["dmc/mujoco_dmc_render_test.py"],
     imports = ["../.."],
     deps = [
+        "//envpool:envpool",
         ":mujoco_dmc",
         ":mujoco_dmc_registration",
         requirement("numpy"),
