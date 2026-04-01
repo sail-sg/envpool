@@ -14,9 +14,13 @@
 """Test for envpool.make."""
 
 import json
+import os
 import pprint
 import subprocess
 import sys
+import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import get_type_hints
 
@@ -62,13 +66,35 @@ finally:
 """
 
 
+@contextmanager
+def _temporary_workdir(prefix: str) -> Iterator[str]:
+    prev_cwd = os.getcwd()
+    with tempfile.TemporaryDirectory(prefix=prefix) as workdir:
+        os.chdir(workdir)
+        try:
+            yield workdir
+        finally:
+            os.chdir(prev_cwd)
+
+
 class _MakeTest(absltest.TestCase):
     def check_render(self, task_id: str, **kwargs: object) -> None:
         payload = json.dumps({"task_id": task_id, "kwargs": kwargs})
-        subprocess.run(
-            [sys.executable, "-c", _RENDER_SMOKE_SCRIPT, payload],
-            check=True,
-        )
+        with tempfile.TemporaryDirectory(
+            prefix="envpool-render-smoke-"
+        ) as workdir:
+            result = subprocess.run(
+                [sys.executable, "-c", _RENDER_SMOKE_SCRIPT, payload],
+                capture_output=True,
+                cwd=workdir,
+                text=True,
+            )
+        if result.returncode != 0:
+            raise AssertionError(
+                f"{task_id} render smoke failed with exit code "
+                f"{result.returncode}\nstdout:\n{result.stdout}\n"
+                f"stderr:\n{result.stderr}"
+            )
 
     def test_version(self) -> None:
         print(envpool.__version__)
@@ -141,20 +167,23 @@ class _MakeTest(absltest.TestCase):
             env_gymnasium.close()
 
     def test_make_vizdoom(self) -> None:
-        spec = envpool.make_spec("MyWayHome-v1")
-        print(spec)
-        env0 = envpool.make_gym("MyWayHome-v1", render_mode="rgb_array")
-        env1 = envpool.make_gymnasium("MyWayHome-v1", render_mode="rgb_array")
-        try:
-            print(env0)
-            print(env1)
-            self.assertIsInstance(env0, gym.Env)
-            self.assertIsInstance(env1, gymnasium.Env)
-            env0.reset()
-            env1.reset()
-        finally:
-            env0.close()
-            env1.close()
+        with _temporary_workdir(prefix="envpool-vizdoom-smoke-"):
+            spec = envpool.make_spec("MyWayHome-v1")
+            print(spec)
+            env0 = envpool.make_gym("MyWayHome-v1", render_mode="rgb_array")
+            env1 = envpool.make_gymnasium(
+                "MyWayHome-v1", render_mode="rgb_array"
+            )
+            try:
+                print(env0)
+                print(env1)
+                self.assertIsInstance(env0, gym.Env)
+                self.assertIsInstance(env1, gymnasium.Env)
+                env0.reset()
+                env1.reset()
+            finally:
+                env0.close()
+                env1.close()
 
     def check_step(self, env_list: list[str]) -> None:
         for task_id in env_list:
