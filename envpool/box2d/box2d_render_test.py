@@ -13,6 +13,12 @@
 # limitations under the License.
 """Render tests for Box2D environments."""
 
+import importlib.machinery
+import importlib.util
+import re
+import sys
+import types
+from pathlib import Path
 from typing import Any, cast
 
 import gymnasium as gym
@@ -33,6 +39,66 @@ _TASK_IDS = (
     "LunarLanderContinuous-v2",
     "LunarLanderContinuous-v3",
 )
+_BOX2D_SWIGCONSTANT_RE = re.compile(r"_Box2D\.(\w+_swigconstant)\(")
+
+
+def _patch_box2d_swigconstant_shims(module: Any, pathname: str) -> None:
+    wrapper_path = Path(pathname).with_name("Box2D.py")
+    try:
+        names = set(_BOX2D_SWIGCONSTANT_RE.findall(wrapper_path.read_text()))
+    except OSError:
+        return
+    for attr in names:
+        if not hasattr(module, attr):
+            setattr(module, attr, lambda _target, _attr=attr: None)
+
+
+def _install_imp_compat() -> None:
+    try:
+        import imp  # noqa: F401
+
+        return
+    except ModuleNotFoundError:
+        pass
+
+    compat_imp: Any = types.ModuleType("imp")
+    compat_imp.C_EXTENSION = 3
+
+    def find_module(
+        name: str, path: Any = None
+    ) -> tuple[Any, str, tuple[str, str, int]]:
+        spec = importlib.machinery.PathFinder.find_spec(name, path)
+        if spec is None or spec.origin is None:
+            raise ImportError(name)
+        return (
+            open(spec.origin, "rb"),
+            spec.origin,
+            ("", "rb", compat_imp.C_EXTENSION),
+        )
+
+    def load_module(
+        name: str, file: Any, pathname: str, description: Any
+    ) -> Any:
+        del file, description
+        module = sys.modules.get(name)
+        if module is not None:
+            return module
+        spec = importlib.util.spec_from_file_location(name, pathname)
+        if spec is None or spec.loader is None:
+            raise ImportError(pathname)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+        if name == "_Box2D":
+            _patch_box2d_swigconstant_shims(module, pathname)
+        return module
+
+    compat_imp.find_module = find_module
+    compat_imp.load_module = load_module
+    sys.modules["imp"] = compat_imp
+
+
+_install_imp_compat()
 
 
 def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
