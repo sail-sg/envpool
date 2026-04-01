@@ -236,9 +236,9 @@ class EglContext final : public GlContext {
     constexpr EGLint k_max_devices = 16;
     std::array<EGLDeviceEXT, k_max_devices> devices = {};
     EGLint num_devices = 0;
-    if (query_devices(
-            k_max_devices, devices.data(), &num_devices) != EGL_TRUE ||
-        num_devices < 1) {
+    const EGLBoolean query_ok =
+        query_devices(k_max_devices, devices.data(), &num_devices);
+    if (query_ok != EGL_TRUE || num_devices < 1) {
       return EGL_NO_DISPLAY;
     }
 
