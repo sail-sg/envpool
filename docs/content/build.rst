@@ -143,7 +143,7 @@ Mesa software OpenGL as well and export:
     $env:GALLIUM_DRIVER = "llvmpipe"
     $env:MESA_GL_VERSION_OVERRIDE = "4.5COMPAT"
 
-EnvPool preloads ``libglapi.dll``, ``libgallium_wgl.dll``, and
+EnvPool loads ``libglapi.dll``, ``libgallium_wgl.dll``, and
 ``opengl32.dll`` from ``ENVPOOL_DLL_DIR`` before the Windows MuJoCo render
 tests and before the GLFW-backed render path.
 
