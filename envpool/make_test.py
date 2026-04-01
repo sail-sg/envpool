@@ -39,6 +39,10 @@ from envpool.python.protocol import (
     GymnasiumEnvPool,
 )
 
+_SKIP_MUJOCO_RENDER_SMOKE = (
+    os.environ.get("ENVPOOL_SKIP_MUJOCO_RENDER_SMOKE") == "1"
+)
+
 _RENDER_SMOKE_SCRIPT = """
 import gc
 import json
@@ -361,8 +365,9 @@ class _MakeTest(absltest.TestCase):
         )
         self.check_render("MyWayHome-v1")
         self.check_render("CoinrunHard-v0")
-        self.check_render("Ant-v5")
-        self.check_render("WalkerWalk-v1")
+        if not _SKIP_MUJOCO_RENDER_SMOKE:
+            self.check_render("Ant-v5")
+            self.check_render("WalkerWalk-v1")
 
     def test_make_procgen(self) -> None:
         self.check_step([

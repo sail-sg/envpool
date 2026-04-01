@@ -85,6 +85,7 @@ jobs:
       LIBGL_ALWAYS_SOFTWARE: "1"
       MESA_LOADER_DRIVER_OVERRIDE: llvmpipe
       GALLIUM_DRIVER: llvmpipe
+      ENVPOOL_SKIP_MUJOCO_RENDER_SMOKE: "1"
     strategy:
       fail-fast: false
       matrix:
