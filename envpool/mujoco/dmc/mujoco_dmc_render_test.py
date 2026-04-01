@@ -13,10 +13,37 @@
 # limitations under the License.
 """Tests for the dm_control render path."""
 
+import ctypes
+import os
+from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
 from absl.testing import absltest
+
+_WINDOWS_DLL_HANDLES: list[object] = []
+
+
+def _configure_windows_test_dll_search_path() -> None:
+    if os.name != "nt" or not hasattr(os, "add_dll_directory"):
+        return
+    dll_dir = os.environ.get("ENVPOOL_DLL_DIR")
+    if not dll_dir:
+        return
+    resolved_dir = Path(dll_dir).expanduser().resolve()
+    if not resolved_dir.is_dir():
+        return
+    _WINDOWS_DLL_HANDLES.append(os.add_dll_directory(str(resolved_dir)))
+    win_dll = getattr(ctypes, "WinDLL", None)
+    if win_dll is None:
+        return
+    for dll_name in ("libglapi.dll", "libgallium_wgl.dll", "opengl32.dll"):
+        dll_path = resolved_dir / dll_name
+        if dll_path.is_file():
+            _WINDOWS_DLL_HANDLES.append(win_dll(str(dll_path)))
+
+
+_configure_windows_test_dll_search_path()
 
 import envpool.mujoco.dmc.registration as reg
 from envpool.registration import make_gym
