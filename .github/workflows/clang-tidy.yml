@@ -6,6 +6,10 @@ on:
       - main
   pull_request:
 
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   clang-tidy:
     runs-on: ubuntu-24.04
@@ -65,3 +69,12 @@ jobs:
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
           key: bazel-clang-tidy-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+      - name: Prune older Bazel caches
+        if: ${{ always() && !cancelled() }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/prune_actions_caches.py \
+            --repo "${{ github.repository }}" \
+            --prefix "bazel-clang-tidy-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"

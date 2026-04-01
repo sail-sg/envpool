@@ -7,6 +7,7 @@ on:
   pull_request:
 
 permissions:
+  actions: write
   contents: read
 
 jobs:
@@ -98,7 +99,7 @@ jobs:
         with:
           path: coverage/site
       - name: Save Bazel caches
-        if: ${{ always() && !cancelled() && runner.os == 'Linux' && runner.arch == 'X64' }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
           path: |
@@ -106,6 +107,15 @@ jobs:
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+      - name: Prune older Bazel caches
+        if: ${{ always() && !cancelled() }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/prune_actions_caches.py \
+            --repo "${{ github.repository }}" \
+            --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
   test-linux-arm64:
     name: Test (linux-arm64)
     runs-on: ubuntu-24.04-arm
@@ -161,7 +171,7 @@ jobs:
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" \
             BAZEL_TEST_TARGETS="//..." bazel-test
       - name: Save Bazel caches
-        if: ${{ always() && !cancelled() && runner.os == 'Linux' && runner.arch == 'X64' }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
           path: |
@@ -169,6 +179,15 @@ jobs:
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+      - name: Prune older Bazel caches
+        if: ${{ always() && !cancelled() }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/prune_actions_caches.py \
+            --repo "${{ github.repository }}" \
+            --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
   test-macos:
     name: Test (macos)
     runs-on: macos-14
@@ -226,7 +245,7 @@ jobs:
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" bazel-test
       - name: Save Bazel caches
-        if: ${{ always() && !cancelled() && runner.os == 'Linux' && runner.arch == 'X64' }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
           path: |
@@ -234,6 +253,15 @@ jobs:
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+      - name: Prune older Bazel caches
+        if: ${{ always() && !cancelled() }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/prune_actions_caches.py \
+            --repo "${{ github.repository }}" \
+            --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
   test-windows:
     name: Test (windows)
     runs-on: windows-2022
@@ -332,7 +360,7 @@ jobs:
           disk_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-disk")
           make BAZELOPT="--repository_cache=$repo_cache --disk_cache=$disk_cache" bazel-test
       - name: Save Bazel caches
-        if: ${{ always() && !cancelled() && runner.os == 'Linux' && runner.arch == 'X64' }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
           path: |
@@ -340,6 +368,15 @@ jobs:
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+      - name: Prune older Bazel caches
+        if: ${{ always() && !cancelled() }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/prune_actions_caches.py \
+            --repo "${{ github.repository }}" \
+            --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
   deploy-coverage-pages:
     name: Deploy coverage page
     if: ${{ github.event_name == 'push' }}
