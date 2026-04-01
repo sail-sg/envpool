@@ -55,12 +55,20 @@ class EnvPoolMixin(ABC):
 
     _spec: EnvSpec
 
+    def _requires_windows_glfw_context(self: EnvPool) -> bool:
+        if sys.platform != "win32":
+            return False
+        # Dynamic wrapper classes are created in envpool.python.api, so detect
+        # MuJoCo by scanning the MRO for the underlying pybind base module.
+        return any(
+            base.__module__.startswith(("envpool.mujoco", "mujoco_"))
+            for base in type(self).__mro__
+        )
+
     def _ensure_platform_render_context(
         self: EnvPool, width: int, height: int
     ) -> None:
-        if sys.platform == "win32" and self.__class__.__module__.startswith(
-            "envpool.mujoco"
-        ):
+        if self._requires_windows_glfw_context():
             ensure_mujoco_glfw_context(width or 640, height or 480)
 
     def _player_action_count(
