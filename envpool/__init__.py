@@ -14,7 +14,6 @@
 """EnvPool package for efficient RL environment simulation."""
 
 import os
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -23,7 +22,7 @@ _WINDOWS_DLL_HANDLES: list[object] = []
 
 
 def _configure_windows_dll_search_path() -> None:
-    if sys.platform != "win32" or not hasattr(os, "add_dll_directory"):
+    if not hasattr(os, "add_dll_directory"):
         return
     dll_dir = os.environ.get("ENVPOOL_DLL_DIR")
     if not dll_dir:
