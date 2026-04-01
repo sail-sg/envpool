@@ -275,7 +275,11 @@ jobs:
       - name: Install Mesa software OpenGL
         uses: f3d-app/install-mesa-windows-action@v1
         with:
-          path: C:\Windows\System32
+          path: ${{ github.workspace }}\.mesa
+      - name: Export Mesa location
+        shell: pwsh
+        run: |
+          Add-Content -Path $env:GITHUB_ENV -Value "ENVPOOL_DLL_DIR=$env:GITHUB_WORKSPACE\.mesa"
       - name: Install Qt 5
         uses: jurplel/install-qt-action@v4
         with:

@@ -36,6 +36,8 @@ build:windows --enable_runfiles
 test:windows --test_env=BAZEL_RULES_QT_DIR
 test:windows --test_env=QT_ROOT_DIR
 test:windows --test_env=PATH
+test:windows --test_env=ENVPOOL_DLL_DIR
+test:windows --test_env=GALLIUM_DRIVER
 
 build:clang-tidy --aspects @bazel_clang_tidy//clang_tidy:clang_tidy.bzl%clang_tidy_aspect
 build:clang-tidy --@bazel_clang_tidy//:clang_tidy_config=//:clang_tidy_config
