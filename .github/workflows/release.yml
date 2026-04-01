@@ -165,6 +165,10 @@ jobs:
           echo "$CMAKE_BIN_DIR" >> "$GITHUB_PATH"
           ln -sfn "$CMAKE_BIN" /usr/local/bin/cmake
           PATH="$CMAKE_BIN_DIR:$PATH" cmake --version
+      - name: Prefer system libstdc++ for Mesa
+        shell: bash
+        run: |
+          echo "LD_PRELOAD=$(g++ -print-file-name=libstdc++.so.6)" >> "$GITHUB_ENV"
       - name: Build
         run: |
           rm -rf dist wheelhouse
