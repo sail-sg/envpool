@@ -91,41 +91,50 @@ class _MakeTest(absltest.TestCase):
         env_gymnasium = envpool.make_gymnasium(
             "Defender-v5", render_mode="rgb_array"
         )
-        print(env_dm)
-        print(env_gym)
-        print(env_gym)
-        self.assertIsInstance(env_gymnasium, gymnasium.Env)
-        self.assertIsInstance(env_gym, gym.Env)
-        self.assertIsInstance(env_dm, dm_env.Environment)
-        self.assertEqual(spec.action_space.n, 18)
-        self.assertEqual(env_gym.action_space.n, 18)
-        self.assertEqual(env_dm.action_spec().num_values, 18)
-        self.assertEqual(env_gymnasium.action_space.n, 18)
-        # not work for wrong bin, see issue #146
-        for wrong in ["Combat", "Joust", "MazeCraze", "Warlords"]:
-            self.assertRaises(AssertionError, envpool.make_gym, f"{wrong}-v5")
+        try:
+            print(env_dm)
+            print(env_gym)
+            print(env_gym)
+            self.assertIsInstance(env_gymnasium, gymnasium.Env)
+            self.assertIsInstance(env_gym, gym.Env)
+            self.assertIsInstance(env_dm, dm_env.Environment)
+            self.assertEqual(spec.action_space.n, 18)
+            self.assertEqual(env_gym.action_space.n, 18)
+            self.assertEqual(env_dm.action_spec().num_values, 18)
+            self.assertEqual(env_gymnasium.action_space.n, 18)
+            # not work for wrong bin, see issue #146
+            for wrong in ["Combat", "Joust", "MazeCraze", "Warlords"]:
+                self.assertRaises(AssertionError, envpool.make_gym, f"{wrong}-v5")
+                self.assertRaises(
+                    AssertionError, envpool.make_gymnasium, f"{wrong}-v5"
+                )
+            # invalid argument will raise AssertionError, see issue #214
             self.assertRaises(
-                AssertionError, envpool.make_gymnasium, f"{wrong}-v5"
+                AssertionError, envpool.make_gym, "Pong-v5", seed=2**31
             )
-        # invalid argument will raise AssertionError, see issue #214
-        self.assertRaises(
-            AssertionError, envpool.make_gym, "Pong-v5", seed=2**31
-        )
-        self.assertRaises(
-            AssertionError, envpool.make_gymnasium, "Pong-v5", seed=2**31
-        )
+            self.assertRaises(
+                AssertionError, envpool.make_gymnasium, "Pong-v5", seed=2**31
+            )
+        finally:
+            env_dm.close()
+            env_gym.close()
+            env_gymnasium.close()
 
     def test_make_vizdoom(self) -> None:
         spec = envpool.make_spec("MyWayHome-v1")
         print(spec)
         env0 = envpool.make_gym("MyWayHome-v1", render_mode="rgb_array")
         env1 = envpool.make_gymnasium("MyWayHome-v1", render_mode="rgb_array")
-        print(env0)
-        print(env1)
-        self.assertIsInstance(env0, gym.Env)
-        self.assertIsInstance(env1, gymnasium.Env)
-        env0.reset()
-        env1.reset()
+        try:
+            print(env0)
+            print(env1)
+            self.assertIsInstance(env0, gym.Env)
+            self.assertIsInstance(env1, gymnasium.Env)
+            env0.reset()
+            env1.reset()
+        finally:
+            env0.close()
+            env1.close()
 
     def check_step(self, env_list: list[str]) -> None:
         for task_id in env_list:
