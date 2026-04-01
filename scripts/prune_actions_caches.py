@@ -11,7 +11,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 
@@ -92,7 +92,10 @@ def _list_matching_caches(
 
 def _sort_key(entry: dict[str, Any]) -> tuple[datetime, int]:
     created_at = entry.get("created_at") or "1970-01-01T00:00:00Z"
-    timestamp = datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%SZ")
+    try:
+        timestamp = datetime.fromisoformat(created_at)
+    except ValueError:
+        timestamp = datetime(1970, 1, 1, tzinfo=timezone.utc)
     return timestamp, int(entry["id"])
 
 
