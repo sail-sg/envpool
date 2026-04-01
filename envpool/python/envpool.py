@@ -23,7 +23,7 @@ import numpy as np
 import optree
 from dm_env import TimeStep
 
-from .glfw_context import ensure_mujoco_glfw_context
+from .glfw_context import try_ensure_mujoco_glfw_context
 from .protocol import EnvPool, EnvSpec
 
 
@@ -67,7 +67,7 @@ class EnvPoolMixin(ABC):
 
     def _ensure_platform_render_context(self, width: int, height: int) -> None:
         if self._requires_windows_glfw_context():
-            ensure_mujoco_glfw_context(width or 640, height or 480)
+            try_ensure_mujoco_glfw_context(width or 640, height or 480)
 
     def _player_action_count(
         self: EnvPool, adict: dict[str, Any]
