@@ -13,6 +13,7 @@
 # limitations under the License.
 """EnvPool package for efficient RL environment simulation."""
 
+import ctypes
 import os
 from pathlib import Path
 
@@ -33,6 +34,13 @@ def _configure_windows_dll_search_path() -> None:
             f"ENVPOOL_DLL_DIR does not exist: {resolved_dir}"
         )
     _WINDOWS_DLL_HANDLES.append(os.add_dll_directory(str(resolved_dir)))
+    # Bazel's Windows test runners still occasionally resolve the system
+    # opengl32.dll ahead of Mesa, so preload the Mesa stack explicitly when
+    # the directory is available.
+    for dll_name in ("libglapi.dll", "libgallium_wgl.dll", "opengl32.dll"):
+        dll_path = resolved_dir / dll_name
+        if dll_path.is_file():
+            _WINDOWS_DLL_HANDLES.append(ctypes.WinDLL(str(dll_path)))
 
 
 _configure_windows_dll_search_path()
