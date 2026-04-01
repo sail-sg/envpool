@@ -40,6 +40,7 @@ _SKIP_MUJOCO_RENDER_SMOKE = (
     os.environ.get("ENVPOOL_SKIP_MUJOCO_RENDER_SMOKE") == "1"
 )
 
+
 @contextmanager
 def _temporary_workdir(prefix: str) -> Iterator[str]:
     prev_cwd = os.getcwd()
