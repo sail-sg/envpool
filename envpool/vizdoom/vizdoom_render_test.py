@@ -126,5 +126,6 @@ class VizdoomRenderTest(absltest.TestCase):
                         env.close()
                         _cleanup_runtime_dir()
 
+
 if __name__ == "__main__":
     absltest.main()

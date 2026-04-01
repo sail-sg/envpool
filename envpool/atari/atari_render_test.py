@@ -113,7 +113,9 @@ class AtariRenderTest(absltest.TestCase):
                 np.testing.assert_array_equal(frame1[0], frames[1])
                 np.testing.assert_array_equal(frame0, frame0_again)
                 if step_idx + 1 < _RENDER_STEPS:
-                    obs, _, _, _, _ = env.step(_zero_action(env.action_space, 2))
+                    obs, _, _, _, _ = env.step(
+                        _zero_action(env.action_space, 2)
+                    )
         finally:
             env.close()
 

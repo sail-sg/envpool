@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <array>
 #include <cerrno>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <limits>
@@ -43,7 +44,7 @@ namespace envpool::mujoco {
 class CglContext final : public GlContext {
  public:
   CglContext() {
-    const std::array<CGLPixelFormatAttribute, 13> attribs = {
+    const std::array<CGLPixelFormatAttribute, 12> attribs = {
         kCGLPFAOpenGLProfile,
         static_cast<CGLPixelFormatAttribute>(kCGLOGLPVersion_Legacy),
         kCGLPFAColorSize,
@@ -54,7 +55,7 @@ class CglContext final : public GlContext {
         static_cast<CGLPixelFormatAttribute>(24),
         kCGLPFAStencilSize,
         static_cast<CGLPixelFormatAttribute>(8),
-        kCGLPFAAccelerated,
+        kCGLPFAAllowOfflineRenderers,
         static_cast<CGLPixelFormatAttribute>(0),
     };
     GLint npix = 0;
@@ -214,7 +215,7 @@ class EglContext final : public GlContext {
     }
     char* end = nullptr;
     errno = 0;
-    long device_idx = std::strtol(selected_device, &end, 10);
+    int64_t device_idx = std::strtoll(selected_device, &end, 10);
     if (errno != 0 || end == selected_device || *end != '\0' ||
         device_idx < 0 || device_idx > std::numeric_limits<int>::max()) {
       throw std::runtime_error(
@@ -232,10 +233,10 @@ class EglContext final : public GlContext {
     if (query_devices == nullptr || get_platform_display == nullptr) {
       return EGL_NO_DISPLAY;
     }
-    constexpr EGLint kMaxDevices = 16;
-    std::array<EGLDeviceEXT, kMaxDevices> devices = {};
+    constexpr EGLint k_max_devices = 16;
+    std::array<EGLDeviceEXT, k_max_devices> devices = {};
     EGLint num_devices = 0;
-    if (query_devices(kMaxDevices, devices.data(), &num_devices) != EGL_TRUE ||
+    if (query_devices(k_max_devices, devices.data(), &num_devices) != EGL_TRUE ||
         num_devices < 1) {
       return EGL_NO_DISPLAY;
     }

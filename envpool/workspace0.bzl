@@ -532,6 +532,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         strip_prefix = "dm_control-1.0.38/dm_control",
         urls = [
             "https://github.com/deepmind/dm_control/archive/refs/tags/1.0.38.tar.gz",
+            "https://codeload.github.com/deepmind/dm_control/tar.gz/refs/tags/1.0.38",
         ],
         build_file = "//third_party/mujoco_dmc_xml:mujoco_dmc_xml.BUILD",
     )

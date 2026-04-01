@@ -38,6 +38,20 @@ class _MakeTest(absltest.TestCase):
         frame = env.render()
         self.assertIsNotNone(frame)
 
+    def check_render(self, task_id: str, **kwargs: object) -> None:
+        env_gym = envpool.make_gym(task_id, render_mode="rgb_array", **kwargs)
+        env_gymnasium = envpool.make_gymnasium(
+            task_id, render_mode="rgb_array", **kwargs
+        )
+        try:
+            env_gym.reset()
+            env_gymnasium.reset()
+            self.assert_renders(env_gym)
+            self.assert_renders(env_gymnasium)
+        finally:
+            env_gym.close()
+            env_gymnasium.close()
+
     def test_version(self) -> None:
         print(envpool.__version__)
 
@@ -87,10 +101,6 @@ class _MakeTest(absltest.TestCase):
         self.assertEqual(env_gym.action_space.n, 18)
         self.assertEqual(env_dm.action_spec().num_values, 18)
         self.assertEqual(env_gymnasium.action_space.n, 18)
-        env_gym.reset()
-        env_gymnasium.reset()
-        self.assert_renders(env_gym)
-        self.assert_renders(env_gymnasium)
         # not work for wrong bin, see issue #146
         for wrong in ["Combat", "Joust", "MazeCraze", "Warlords"]:
             self.assertRaises(AssertionError, envpool.make_gym, f"{wrong}-v5")
@@ -109,37 +119,34 @@ class _MakeTest(absltest.TestCase):
         spec = envpool.make_spec("MyWayHome-v1")
         print(spec)
         env0 = envpool.make_gym("MyWayHome-v1", render_mode="rgb_array")
-        env1 = envpool.make_gymnasium(
-            "MyWayHome-v1", render_mode="rgb_array"
-        )
+        env1 = envpool.make_gymnasium("MyWayHome-v1", render_mode="rgb_array")
         print(env0)
         print(env1)
         self.assertIsInstance(env0, gym.Env)
         self.assertIsInstance(env1, gymnasium.Env)
         env0.reset()
         env1.reset()
-        self.assert_renders(env0)
-        self.assert_renders(env1)
 
     def check_step(self, env_list: list[str]) -> None:
         for task_id in env_list:
             envpool.make_spec(task_id)
-            env_gym = envpool.make_gym(task_id, render_mode="rgb_array")
+            env_gym = envpool.make_gym(task_id)
             env_dm = envpool.make_dm(task_id)
-            env_gymnasium = envpool.make_gymnasium(
-                task_id, render_mode="rgb_array"
-            )
-            print(env_dm)
-            print(env_gym)
-            print(env_gymnasium)
-            self.assertIsInstance(env_gym, gym.Env)
-            self.assertIsInstance(env_dm, dm_env.Environment)
-            self.assertIsInstance(env_gymnasium, gymnasium.Env)
-            env_dm.reset()
-            env_gym.reset()
-            env_gymnasium.reset()
-            self.assert_renders(env_gym)
-            self.assert_renders(env_gymnasium)
+            env_gymnasium = envpool.make_gymnasium(task_id)
+            try:
+                print(env_dm)
+                print(env_gym)
+                print(env_gymnasium)
+                self.assertIsInstance(env_gym, gym.Env)
+                self.assertIsInstance(env_dm, dm_env.Environment)
+                self.assertIsInstance(env_gymnasium, gymnasium.Env)
+                env_dm.reset()
+                env_gym.reset()
+                env_gymnasium.reset()
+            finally:
+                env_dm.close()
+                env_gym.close()
+                env_gymnasium.close()
 
     def test_make_classic(self) -> None:
         self.check_step([
@@ -263,6 +270,14 @@ class _MakeTest(absltest.TestCase):
             "WalkerStand-v1",
             "WalkerWalk-v1",
         ])
+
+    def test_render_smoke(self) -> None:
+        self.check_render("CartPole-v1")
+        self.check_render("LunarLander-v3")
+        self.check_render("MiniGrid-DoorKey-8x8-v0")
+        self.check_render("CoinrunHard-v0")
+        self.check_render("Ant-v5")
+        self.check_render("WalkerWalk-v1")
 
     def test_make_procgen(self) -> None:
         self.check_step([
