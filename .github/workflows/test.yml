@@ -98,7 +98,7 @@ jobs:
         with:
           path: coverage/site
       - name: Save Bazel caches
-        if: ${{ always() && !cancelled() }}
+        if: ${{ always() && !cancelled() && runner.os == 'Linux' && runner.arch == 'X64' }}
         uses: actions/cache/save@v4
         with:
           path: |
@@ -161,7 +161,7 @@ jobs:
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" \
             BAZEL_TEST_TARGETS="//..." bazel-test
       - name: Save Bazel caches
-        if: ${{ always() && !cancelled() }}
+        if: ${{ always() && !cancelled() && runner.os == 'Linux' && runner.arch == 'X64' }}
         uses: actions/cache/save@v4
         with:
           path: |
@@ -226,7 +226,7 @@ jobs:
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" bazel-test
       - name: Save Bazel caches
-        if: ${{ always() && !cancelled() }}
+        if: ${{ always() && !cancelled() && runner.os == 'Linux' && runner.arch == 'X64' }}
         uses: actions/cache/save@v4
         with:
           path: |
@@ -332,7 +332,7 @@ jobs:
           disk_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-disk")
           make BAZELOPT="--repository_cache=$repo_cache --disk_cache=$disk_cache" bazel-test
       - name: Save Bazel caches
-        if: ${{ always() && !cancelled() }}
+        if: ${{ always() && !cancelled() && runner.os == 'Linux' && runner.arch == 'X64' }}
         uses: actions/cache/save@v4
         with:
           path: |
