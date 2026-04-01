@@ -272,6 +272,10 @@ jobs:
         shell: pwsh
         run: |
           choco install -y cmake make ninja strawberryperl swig
+      - name: Install Mesa software OpenGL
+        uses: f3d-app/install-mesa-windows-action@v1
+        with:
+          path: C:\Windows\System32
       - name: Install Qt 5
         uses: jurplel/install-qt-action@v4
         with:
