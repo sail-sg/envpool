@@ -129,7 +129,9 @@ def _format_ratio(hit: int, found: int) -> str:
     return f"{hit / found:.2%} ({hit}/{found})"
 
 
-def _build_grouped_totals(records: list[LcovRecord]) -> dict[str, CoverageTotals]:
+def _build_grouped_totals(
+    records: list[LcovRecord],
+) -> dict[str, CoverageTotals]:
     grouped = {
         "overall": CoverageTotals(),
         "python": CoverageTotals(),
