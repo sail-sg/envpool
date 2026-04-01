@@ -111,15 +111,13 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
                     obs[env_id[done]] = 255
                     obs_all = np.zeros((height, width * num_envs, 3), np.uint8)
                     for j in range(num_envs):
-                        obs_all[:, width * j : width * (j + 1)] = (
-                            obs[j, ..., :-1]
-                        )
+                        obs_all[:, width * j : width * (j + 1)] = obs[
+                            j, ..., :-1
+                        ]
                     cv2.imwrite(f"img/{t}.png", obs_all)
                 if np.any(done):  # even though .step can auto reset
                     done_id = np.array(info["env_id"])[done]
-                    obs[done_id] = env.reset(done_id)[0].transpose(
-                        0, 2, 3, 1
-                    )
+                    obs[done_id] = env.reset(done_id)[0].transpose(0, 2, 3, 1)
 
     def test_d3_action_space(self) -> None:
         with self._managed_env(

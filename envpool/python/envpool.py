@@ -58,9 +58,8 @@ class EnvPoolMixin(ABC):
     def _ensure_platform_render_context(
         self: EnvPool, width: int, height: int
     ) -> None:
-        if (
-            sys.platform == "win32"
-            and self.__class__.__module__.startswith("envpool.mujoco")
+        if sys.platform == "win32" and self.__class__.__module__.startswith(
+            "envpool.mujoco"
         ):
             ensure_mujoco_glfw_context(width or 640, height or 480)
 
