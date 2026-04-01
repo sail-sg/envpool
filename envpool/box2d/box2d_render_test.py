@@ -18,7 +18,6 @@ from typing import Any, cast
 import gymnasium as gym
 import numpy as np
 from absl.testing import absltest
-from gymnasium import error as gym_error
 
 import envpool.box2d.registration  # noqa: F401
 from envpool.registration import make_gym
@@ -42,19 +41,8 @@ def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
     return cast(np.ndarray, frame)
 
 
-def _make_oracle_env(
-    testcase: absltest.TestCase, task_id: str
-) -> gym.Env[Any, Any]:
-    try:
-        return cast(
-            gym.Env[Any, Any], gym.make(task_id, render_mode="rgb_array")
-        )
-    except gym_error.DependencyNotInstalled as exc:
-        testcase.skipTest(str(exc))
-    except ModuleNotFoundError as exc:
-        if exc.name == "Box2D":
-            testcase.skipTest(str(exc))
-        raise
+def _make_oracle_env(task_id: str) -> gym.Env[Any, Any]:
+    return cast(gym.Env[Any, Any], gym.make(task_id, render_mode="rgb_array"))
 
 
 def _zero_action(space: Any, num_envs: int) -> np.ndarray:
@@ -145,7 +133,7 @@ class Box2DRenderTest(absltest.TestCase):
                     render_width=600,
                     render_height=400,
                 )
-                oracle = _make_oracle_env(self, task_id)
+                oracle = _make_oracle_env(task_id)
                 try:
                     env.reset()
                     oracle.reset(seed=0)
@@ -179,7 +167,7 @@ class Box2DRenderTest(absltest.TestCase):
                     seed=0,
                     render_mode="rgb_array",
                 )
-                oracle = _make_oracle_env(self, task_id)
+                oracle = _make_oracle_env(task_id)
                 try:
                     env.reset()
                     oracle.reset(seed=0)
