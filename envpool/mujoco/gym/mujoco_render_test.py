@@ -91,7 +91,9 @@ class MujocoRenderTest(absltest.TestCase):
         try:
             env.reset()
             if sys.platform == "win32":
-                with self.assertRaisesRegex(RuntimeError, _WINDOWS_RENDER_ERROR):
+                with self.assertRaisesRegex(
+                    RuntimeError, _WINDOWS_RENDER_ERROR
+                ):
                     env.render()
                 return
             for step_idx in range(_RENDER_STEPS):
@@ -163,7 +165,9 @@ class MujocoRenderTest(absltest.TestCase):
         try:
             env.reset()
             if sys.platform == "win32":
-                with self.assertRaisesRegex(RuntimeError, _WINDOWS_RENDER_ERROR):
+                with self.assertRaisesRegex(
+                    RuntimeError, _WINDOWS_RENDER_ERROR
+                ):
                     env.render()
                 self.assertEmpty(shown)
                 return

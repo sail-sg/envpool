@@ -69,9 +69,7 @@ class AtariRenderTest(absltest.TestCase):
                         self.assertEqual(frame.dtype, np.uint8)
                         np.testing.assert_array_equal(frame, frame_again)
                         if step_idx + 1 < _RENDER_STEPS:
-                            env.step(
-                                _zero_action(env.action_space, 1)
-                            )
+                            env.step(_zero_action(env.action_space, 1))
                 finally:
                     env.close()
 
@@ -104,9 +102,7 @@ class AtariRenderTest(absltest.TestCase):
                 np.testing.assert_array_equal(frame1[0], frames[1])
                 np.testing.assert_array_equal(frame0, frame0_again)
                 if step_idx + 1 < _RENDER_STEPS:
-                    env.step(
-                        _zero_action(env.action_space, 2)
-                    )
+                    env.step(_zero_action(env.action_space, 2))
         finally:
             env.close()
 
