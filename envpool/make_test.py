@@ -30,7 +30,6 @@ import gymnasium
 from absl.testing import absltest
 
 import envpool
-import envpool.minigrid.registration  # noqa: F401
 from envpool.python.protocol import (
     DMEnvPool,
     EnvPool,
@@ -49,7 +48,6 @@ import json
 import sys
 
 import envpool
-import envpool.minigrid.registration  # noqa: F401
 
 payload = json.loads(sys.argv[1])
 task_id = payload["task_id"]
