@@ -77,6 +77,15 @@ def _temporary_workdir(prefix: str) -> Iterator[str]:
             os.chdir(prev_cwd)
 
 
+def _emit_github_error(message: str) -> None:
+    escaped = (
+        message.replace("%", "%25")
+        .replace("\r", "%0D")
+        .replace("\n", "%0A")
+    )
+    print(f"::error::{escaped}")
+
+
 class _MakeTest(absltest.TestCase):
     def check_render(self, task_id: str, **kwargs: object) -> None:
         payload = json.dumps({"task_id": task_id, "kwargs": kwargs})
@@ -90,11 +99,15 @@ class _MakeTest(absltest.TestCase):
                 text=True,
             )
         if result.returncode != 0:
-            raise AssertionError(
+            stderr_tail = "\n".join(result.stderr.splitlines()[-20:])
+            stdout_tail = "\n".join(result.stdout.splitlines()[-20:])
+            message = (
                 f"{task_id} render smoke failed with exit code "
-                f"{result.returncode}\nstdout:\n{result.stdout}\n"
-                f"stderr:\n{result.stderr}"
+                f"{result.returncode}\nstdout tail:\n{stdout_tail}\n"
+                f"stderr tail:\n{stderr_tail}"
             )
+            _emit_github_error(message)
+            raise AssertionError(message)
 
     def test_version(self) -> None:
         print(envpool.__version__)
@@ -167,23 +180,27 @@ class _MakeTest(absltest.TestCase):
             env_gymnasium.close()
 
     def test_make_vizdoom(self) -> None:
-        with _temporary_workdir(prefix="envpool-vizdoom-smoke-"):
-            spec = envpool.make_spec("MyWayHome-v1")
-            print(spec)
-            env0 = envpool.make_gym("MyWayHome-v1", render_mode="rgb_array")
-            env1 = envpool.make_gymnasium(
-                "MyWayHome-v1", render_mode="rgb_array"
-            )
-            try:
-                print(env0)
-                print(env1)
-                self.assertIsInstance(env0, gym.Env)
-                self.assertIsInstance(env1, gymnasium.Env)
-                env0.reset()
-                env1.reset()
-            finally:
-                env0.close()
-                env1.close()
+        try:
+            with _temporary_workdir(prefix="envpool-vizdoom-smoke-"):
+                spec = envpool.make_spec("MyWayHome-v1")
+                print(spec)
+                env0 = envpool.make_gym("MyWayHome-v1", render_mode="rgb_array")
+                env1 = envpool.make_gymnasium(
+                    "MyWayHome-v1", render_mode="rgb_array"
+                )
+                try:
+                    print(env0)
+                    print(env1)
+                    self.assertIsInstance(env0, gym.Env)
+                    self.assertIsInstance(env1, gymnasium.Env)
+                    env0.reset()
+                    env1.reset()
+                finally:
+                    env0.close()
+                    env1.close()
+        except Exception as exc:
+            _emit_github_error(f"MyWayHome-v1 make/reset failed: {exc}")
+            raise
 
     def check_step(self, env_list: list[str]) -> None:
         for task_id in env_list:
