@@ -10,6 +10,10 @@ BAZELOPT       =
 # MSVC expects /D for preprocessor defines, so Bazel test/debug builds need an
 # extra Windows-only define to expose ENVPOOL_TEST-gated alignment state.
 WINDOWS_ENVPOOL_TEST_DEFINE = $(if $(filter Windows_NT,$(OS)),--cxxopt=/DENVPOOL_TEST,)
+# Bazel's Windows test sandbox drops custom environment variables unless they
+# are explicitly forwarded, which prevents MuJoCo render tests from seeing the
+# Mesa DLL directory configured by CI/local shells.
+WINDOWS_BAZEL_TEST_ENV = $(if $(filter Windows_NT,$(OS)),--test_env=ENVPOOL_DLL_DIR --test_env=MESA_GL_VERSION_OVERRIDE --test_env=GALLIUM_DRIVER --test_env=PATH,)
 BAZELISK_BIN   = $(shell command -v bazelisk 2>/dev/null || echo $(HOME)/go/bin/bazelisk)
 BAZEL_VERSION  = 8.6.0
 BAZEL          = USE_BAZEL_VERSION=$(BAZEL_VERSION) $(BAZELISK_BIN)
@@ -159,7 +163,7 @@ bazel-release: bazel-install bazel-pip-requirement-release release-system-instal
 	cp bazel-bin/$(subst //:,,$(RELEASE_SETUP_TARGET))$(BAZEL_RUNFILES_SUFFIX)/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-test: bazel-install bazel-pip-requirement-dev
-	$(BAZEL) test --test_output=all $(BAZELOPT) $(WINDOWS_ENVPOOL_TEST_DEFINE) --config=test --spawn_strategy=local --color=yes -- $(BAZEL_TEST_TARGETS)
+	$(BAZEL) test --test_output=all $(BAZELOPT) $(WINDOWS_ENVPOOL_TEST_DEFINE) $(WINDOWS_BAZEL_TEST_ENV) --config=test --spawn_strategy=local --color=yes -- $(BAZEL_TEST_TARGETS)
 
 bazel-coverage: bazel-install bazel-pip-requirement-dev
 	$(BAZEL) coverage --combined_report=lcov --instrument_test_targets --test_output=errors $(BAZELOPT) $(WINDOWS_ENVPOOL_TEST_DEFINE) --config=test --spawn_strategy=local --color=yes -- $(BAZEL_TEST_TARGETS)
