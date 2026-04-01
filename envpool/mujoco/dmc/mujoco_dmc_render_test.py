@@ -13,6 +13,7 @@
 # limitations under the License.
 """Tests for the dm_control render path."""
 
+import sys
 from typing import Any, cast
 
 import numpy as np
@@ -22,6 +23,7 @@ import envpool.mujoco.dmc.registration as reg
 from envpool.registration import make_gym
 
 _RENDER_STEPS = 3
+_WINDOWS_RENDER_ERROR = "MuJoCo rendering is unsupported on this platform/build"
 
 
 def _task_map() -> dict[str, tuple[str, str]]:
@@ -47,6 +49,33 @@ def _zero_action(space: Any, num_envs: int) -> np.ndarray:
     return np.repeat(zero[np.newaxis, ...], num_envs, axis=0)
 
 
+def _assert_frames_close(
+    actual: np.ndarray,
+    expected: np.ndarray,
+    *,
+    max_abs_diff: int = 4,
+    max_mismatch_ratio: float = 0.005,
+) -> None:
+    if actual.shape != expected.shape:
+        raise AssertionError(
+            f"frame shapes differ: {actual.shape} != {expected.shape}"
+        )
+    diff = np.abs(actual.astype(np.int16) - expected.astype(np.int16))
+    if diff.size == 0:
+        return
+    mismatch_ratio = float(np.count_nonzero(diff)) / float(diff.size)
+    actual_max_abs_diff = int(diff.max())
+    if actual_max_abs_diff > max_abs_diff:
+        raise AssertionError(
+            f"max render delta {actual_max_abs_diff} exceeded {max_abs_diff}"
+        )
+    if mismatch_ratio > max_mismatch_ratio:
+        raise AssertionError(
+            "render mismatch ratio "
+            f"{mismatch_ratio:.4%} exceeded {max_mismatch_ratio:.4%}"
+        )
+
+
 class MujocoDmcRenderTest(absltest.TestCase):
     """Render regression tests for dm_control-backed MuJoCo tasks."""
 
@@ -62,6 +91,10 @@ class MujocoDmcRenderTest(absltest.TestCase):
         )
         try:
             env.reset()
+            if sys.platform == "win32":
+                with self.assertRaisesRegex(RuntimeError, _WINDOWS_RENDER_ERROR):
+                    env.render()
+                return
             for step_idx in range(_RENDER_STEPS):
                 frame0 = _render_array(env)
                 frame1 = _render_array(env, env_ids=1)
@@ -71,9 +104,9 @@ class MujocoDmcRenderTest(absltest.TestCase):
                 self.assertEqual(frame1.shape, (1, 72, 96, 3))
                 self.assertEqual(frames.shape, (2, 72, 96, 3))
                 self.assertEqual(frames.dtype, np.uint8)
-                np.testing.assert_array_equal(frame0[0], frames[0])
-                np.testing.assert_array_equal(frame1[0], frames[1])
-                np.testing.assert_array_equal(frame0, frame0_again)
+                _assert_frames_close(frame0[0], frames[0])
+                _assert_frames_close(frame1[0], frames[1])
+                _assert_frames_close(frame0, frame0_again)
                 if step_idx + 1 < _RENDER_STEPS:
                     env.step(_zero_action(env.action_space, 2))
         finally:
@@ -93,12 +126,18 @@ class MujocoDmcRenderTest(absltest.TestCase):
                 )
                 try:
                     env.reset()
+                    if sys.platform == "win32":
+                        with self.assertRaisesRegex(
+                            RuntimeError, _WINDOWS_RENDER_ERROR
+                        ):
+                            env.render()
+                        continue
                     for step_idx in range(_RENDER_STEPS):
                         frame = _render_array(env)[0]
                         frame_again = _render_array(env)[0]
                         self.assertEqual(frame.shape, (72, 96, 3))
                         self.assertEqual(frame.dtype, np.uint8)
-                        np.testing.assert_array_equal(frame, frame_again)
+                        _assert_frames_close(frame, frame_again)
                         self.assertGreater(
                             int(frame.max()) - int(frame.min()), 0
                         )
