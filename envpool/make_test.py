@@ -50,31 +50,36 @@ import envpool.minigrid.registration  # noqa: F401
 payload = json.loads(sys.argv[1])
 task_id = payload["task_id"]
 kwargs = payload["kwargs"]
-env_gym = envpool.make_gym(task_id, render_mode="rgb_array", **kwargs)
-env_gymnasium = envpool.make_gymnasium(task_id, render_mode="rgb_array", **kwargs)
-try:
-    env_gym.reset()
-    env_gymnasium.reset()
-    assert env_gym.render() is not None
-    assert env_gymnasium.render() is not None
-finally:
-    env_gym.close()
-    env_gymnasium.close()
-    del env_gym
-    del env_gymnasium
-    gc.collect()
+
+def render_once(factory):
+    env = factory(task_id, render_mode="rgb_array", **kwargs)
+    try:
+        env.reset()
+        assert env.render() is not None
+    finally:
+        env.close()
+        del env
+        gc.collect()
+
+
+render_once(envpool.make_gym)
+render_once(envpool.make_gymnasium)
 """
 
 
 @contextmanager
 def _temporary_workdir(prefix: str) -> Iterator[str]:
     prev_cwd = os.getcwd()
-    with tempfile.TemporaryDirectory(prefix=prefix) as workdir:
-        os.chdir(workdir)
+    tempdir = tempfile.TemporaryDirectory(prefix=prefix)
+    os.chdir(tempdir.name)
+    try:
+        yield tempdir.name
+    finally:
+        os.chdir(prev_cwd)
         try:
-            yield workdir
-        finally:
-            os.chdir(prev_cwd)
+            tempdir.cleanup()
+        except PermissionError:
+            pass
 
 
 def _emit_github_error(message: str) -> None:
@@ -87,9 +92,7 @@ def _emit_github_error(message: str) -> None:
 class _MakeTest(absltest.TestCase):
     def check_render(self, task_id: str, **kwargs: object) -> None:
         payload = json.dumps({"task_id": task_id, "kwargs": kwargs})
-        with tempfile.TemporaryDirectory(
-            prefix="envpool-render-smoke-"
-        ) as workdir:
+        with _temporary_workdir(prefix="envpool-render-smoke-") as workdir:
             result = subprocess.run(
                 [sys.executable, "-c", _RENDER_SMOKE_SCRIPT, payload],
                 capture_output=True,
