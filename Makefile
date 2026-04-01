@@ -161,6 +161,9 @@ bazel-release: bazel-install bazel-pip-requirement-release release-system-instal
 bazel-test: bazel-install bazel-pip-requirement-dev
 	$(BAZEL) test --test_output=all $(BAZELOPT) $(WINDOWS_ENVPOOL_TEST_DEFINE) --config=test --spawn_strategy=local --color=yes -- $(BAZEL_TEST_TARGETS)
 
+bazel-coverage: bazel-install bazel-pip-requirement-dev
+	$(BAZEL) coverage --combined_report=lcov --instrument_test_targets --test_output=errors $(BAZELOPT) $(WINDOWS_ENVPOOL_TEST_DEFINE) --config=test --spawn_strategy=local --color=yes -- $(BAZEL_TEST_TARGETS)
+
 bazel-clean: bazel-install
 	$(BAZEL) clean --expunge
 
