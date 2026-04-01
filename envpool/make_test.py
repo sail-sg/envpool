@@ -13,7 +13,10 @@
 # limitations under the License.
 """Test for envpool.make."""
 
+import json
 import pprint
+import subprocess
+import sys
 from pathlib import Path
 from typing import get_type_hints
 
@@ -32,25 +35,40 @@ from envpool.python.protocol import (
     GymnasiumEnvPool,
 )
 
+_RENDER_SMOKE_SCRIPT = """
+import gc
+import json
+import sys
+
+import envpool
+import envpool.minigrid.registration  # noqa: F401
+
+payload = json.loads(sys.argv[1])
+task_id = payload["task_id"]
+kwargs = payload["kwargs"]
+env_gym = envpool.make_gym(task_id, render_mode="rgb_array", **kwargs)
+env_gymnasium = envpool.make_gymnasium(task_id, render_mode="rgb_array", **kwargs)
+try:
+    env_gym.reset()
+    env_gymnasium.reset()
+    assert env_gym.render() is not None
+    assert env_gymnasium.render() is not None
+finally:
+    env_gym.close()
+    env_gymnasium.close()
+    del env_gym
+    del env_gymnasium
+    gc.collect()
+"""
+
 
 class _MakeTest(absltest.TestCase):
-    def assert_renders(self, env: gym.Env | gymnasium.Env) -> None:
-        frame = env.render()
-        self.assertIsNotNone(frame)
-
     def check_render(self, task_id: str, **kwargs: object) -> None:
-        env_gym = envpool.make_gym(task_id, render_mode="rgb_array", **kwargs)
-        env_gymnasium = envpool.make_gymnasium(
-            task_id, render_mode="rgb_array", **kwargs
+        payload = json.dumps({"task_id": task_id, "kwargs": kwargs})
+        subprocess.run(
+            [sys.executable, "-c", _RENDER_SMOKE_SCRIPT, payload],
+            check=True,
         )
-        try:
-            env_gym.reset()
-            env_gymnasium.reset()
-            self.assert_renders(env_gym)
-            self.assert_renders(env_gymnasium)
-        finally:
-            env_gym.close()
-            env_gymnasium.close()
 
     def test_version(self) -> None:
         print(envpool.__version__)
