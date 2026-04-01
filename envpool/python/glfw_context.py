@@ -50,9 +50,10 @@ def preload_windows_gl_dlls(
         path_entries = os.environ.get("PATH", "").split(os.pathsep)
         if resolved_str not in path_entries:
             filtered_entries = [entry for entry in path_entries if entry]
-            os.environ["PATH"] = os.pathsep.join(
-                [resolved_str, *filtered_entries]
-            )
+            os.environ["PATH"] = os.pathsep.join([
+                resolved_str,
+                *filtered_entries,
+            ])
     if resolved_str not in _REGISTERED_DLL_DIRS:
         _WINDOWS_DLL_HANDLES.append(os.add_dll_directory(resolved_str))
         _REGISTERED_DLL_DIRS.add(resolved_str)

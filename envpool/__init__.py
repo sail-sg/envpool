@@ -15,14 +15,9 @@
 
 import numpy as np
 
+from envpool.python.glfw_context import preload_windows_gl_dlls
 
-def _configure_windows_gl_dlls() -> None:
-    from envpool.python.glfw_context import preload_windows_gl_dlls
-
-    preload_windows_gl_dlls(prepend_path=False, strict=True)
-
-
-_configure_windows_gl_dlls()
+preload_windows_gl_dlls(prepend_path=False, strict=True)
 
 import envpool.entry  # noqa: F401
 from envpool.python.protocol import (
