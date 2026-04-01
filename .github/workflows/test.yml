@@ -272,6 +272,10 @@ jobs:
         shell: pwsh
         run: |
           choco install -y cmake make ninja strawberryperl swig
+      - name: Create Mesa directory
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path (Join-Path $env:GITHUB_WORKSPACE ".mesa") -Force | Out-Null
       - name: Install Mesa software OpenGL
         uses: f3d-app/install-mesa-windows-action@v1
         with:
