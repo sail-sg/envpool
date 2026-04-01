@@ -79,9 +79,7 @@ def _temporary_workdir(prefix: str) -> Iterator[str]:
 
 def _emit_github_error(message: str) -> None:
     escaped = (
-        message.replace("%", "%25")
-        .replace("\r", "%0D")
-        .replace("\n", "%0A")
+        message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
     )
     print(f"::error::{escaped}")
 
