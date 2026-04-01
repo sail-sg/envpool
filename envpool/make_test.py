@@ -104,7 +104,9 @@ class _MakeTest(absltest.TestCase):
             self.assertEqual(env_gymnasium.action_space.n, 18)
             # not work for wrong bin, see issue #146
             for wrong in ["Combat", "Joust", "MazeCraze", "Warlords"]:
-                self.assertRaises(AssertionError, envpool.make_gym, f"{wrong}-v5")
+                self.assertRaises(
+                    AssertionError, envpool.make_gym, f"{wrong}-v5"
+                )
                 self.assertRaises(
                     AssertionError, envpool.make_gymnasium, f"{wrong}-v5"
                 )
