@@ -13,40 +13,16 @@
 # limitations under the License.
 """EnvPool package for efficient RL environment simulation."""
 
-import ctypes
-import os
-from pathlib import Path
-
 import numpy as np
 
-_WINDOWS_DLL_HANDLES: list[object] = []
+
+def _configure_windows_gl_dlls() -> None:
+    from envpool.python.glfw_context import preload_windows_gl_dlls
+
+    preload_windows_gl_dlls(prepend_path=False, strict=True)
 
 
-def _configure_windows_dll_search_path() -> None:
-    if not hasattr(os, "add_dll_directory"):
-        return
-    dll_dir = os.environ.get("ENVPOOL_DLL_DIR")
-    if not dll_dir:
-        return
-    resolved_dir = Path(dll_dir).expanduser().resolve()
-    if not resolved_dir.is_dir():
-        raise FileNotFoundError(
-            f"ENVPOOL_DLL_DIR does not exist: {resolved_dir}"
-        )
-    _WINDOWS_DLL_HANDLES.append(os.add_dll_directory(str(resolved_dir)))
-    # Bazel's Windows test runners still occasionally resolve the system
-    # opengl32.dll ahead of Mesa, so preload the Mesa stack explicitly when
-    # the directory is available.
-    win_dll = getattr(ctypes, "WinDLL", None)
-    if win_dll is None:
-        return
-    for dll_name in ("libglapi.dll", "libgallium_wgl.dll", "opengl32.dll"):
-        dll_path = resolved_dir / dll_name
-        if dll_path.is_file():
-            _WINDOWS_DLL_HANDLES.append(win_dll(str(dll_path)))
-
-
-_configure_windows_dll_search_path()
+_configure_windows_gl_dlls()
 
 import envpool.entry  # noqa: F401
 from envpool.python.protocol import (

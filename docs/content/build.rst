@@ -134,6 +134,19 @@ environment variables:
     $env:BAZEL_RULES_QT_DIR = $env:QT_ROOT_DIR
     $env:PATH = "$env:QT_ROOT_DIR\\bin;$env:PATH"
 
+If you want to reproduce the Windows MuJoCo render validation from CI, install
+Mesa software OpenGL as well and export:
+
+.. code-block:: powershell
+
+    $env:ENVPOOL_DLL_DIR = "C:/mesa"
+    $env:GALLIUM_DRIVER = "llvmpipe"
+    $env:MESA_GL_VERSION_OVERRIDE = "4.5COMPAT"
+
+EnvPool preloads ``libglapi.dll``, ``libgallium_wgl.dll``, and
+``opengl32.dll`` from ``ENVPOOL_DLL_DIR`` before the Windows MuJoCo render
+tests and before the GLFW-backed render path.
+
 Qt runtime in wheels
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -203,6 +216,9 @@ We provide several shortcuts to make things easier.
     # This will automatically run the tests
     make bazel-test
 
+    # On Windows, export ENVPOOL_DLL_DIR/GALLIUM_DRIVER/
+    # MESA_GL_VERSION_OVERRIDE first if you want MuJoCo render to use Mesa.
+
     # This will generate a merged Python + C/C++ LCOV report
     make bazel-coverage
 
@@ -214,6 +230,10 @@ We provide several shortcuts to make things easier.
 
     # This will build a wheel for release
     make bazel-release
+
+    # This will install the built wheel and run the release smoke, including
+    # one render() call after reset() for the wheel smoke envs.
+    make release-test
 
 
 Use Docker to Create Develop Environment

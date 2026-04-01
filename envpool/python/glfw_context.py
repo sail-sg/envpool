@@ -25,9 +25,14 @@ _CONTEXT_LOCK = threading.Lock()
 _GLFW_CONTEXT: "_GlfwContext | None" = None
 _GLFW_FAILURE_REASON: str | None = None
 _WINDOWS_DLL_HANDLES: list[object] = []
+_REGISTERED_DLL_DIRS: set[str] = set()
+_PRELOADED_DLL_PATHS: set[str] = set()
 
 
-def _configure_windows_glfw_dll_search_path() -> None:
+def preload_windows_gl_dlls(
+    *, prepend_path: bool = True, strict: bool = False
+) -> None:
+    """Preload a Windows OpenGL userspace stack from ``ENVPOOL_DLL_DIR``."""
     if not hasattr(os, "add_dll_directory"):
         return
     dll_dir = os.environ.get("ENVPOOL_DLL_DIR")
@@ -35,20 +40,31 @@ def _configure_windows_glfw_dll_search_path() -> None:
         return
     resolved_dir = Path(dll_dir).expanduser().resolve()
     if not resolved_dir.is_dir():
+        if strict:
+            raise FileNotFoundError(
+                f"ENVPOOL_DLL_DIR does not exist: {resolved_dir}"
+            )
         return
     resolved_str = str(resolved_dir)
-    path_entries = os.environ.get("PATH", "").split(os.pathsep)
-    if resolved_str not in path_entries:
-        filtered_entries = [entry for entry in path_entries if entry]
-        os.environ["PATH"] = os.pathsep.join([resolved_str, *filtered_entries])
-    _WINDOWS_DLL_HANDLES.append(os.add_dll_directory(resolved_str))
+    if prepend_path:
+        path_entries = os.environ.get("PATH", "").split(os.pathsep)
+        if resolved_str not in path_entries:
+            filtered_entries = [entry for entry in path_entries if entry]
+            os.environ["PATH"] = os.pathsep.join(
+                [resolved_str, *filtered_entries]
+            )
+    if resolved_str not in _REGISTERED_DLL_DIRS:
+        _WINDOWS_DLL_HANDLES.append(os.add_dll_directory(resolved_str))
+        _REGISTERED_DLL_DIRS.add(resolved_str)
     win_dll = getattr(ctypes, "WinDLL", None)
     if win_dll is None:
         return
     for dll_name in ("libglapi.dll", "libgallium_wgl.dll", "opengl32.dll"):
         dll_path = resolved_dir / dll_name
-        if dll_path.is_file():
+        dll_path_str = str(dll_path)
+        if dll_path.is_file() and dll_path_str not in _PRELOADED_DLL_PATHS:
             _WINDOWS_DLL_HANDLES.append(win_dll(str(dll_path)))
+            _PRELOADED_DLL_PATHS.add(dll_path_str)
 
 
 def _glfw_error_details(glfw: object) -> str:
@@ -77,7 +93,7 @@ class _GlfwContext:
     """Hidden GLFW window aligned with MuJoCo's upstream Windows backend."""
 
     def __init__(self, width: int, height: int) -> None:
-        _configure_windows_glfw_dll_search_path()
+        preload_windows_gl_dlls()
         try:
             import glfw
         except ImportError as exc:
