@@ -13,11 +13,9 @@
 # limitations under the License.
 """Test for envpool.make."""
 
-import json
+import gc
 import os
 import pprint
-import subprocess
-import sys
 import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -41,33 +39,6 @@ from envpool.python.protocol import (
 _SKIP_MUJOCO_RENDER_SMOKE = (
     os.environ.get("ENVPOOL_SKIP_MUJOCO_RENDER_SMOKE") == "1"
 )
-
-_RENDER_SMOKE_SCRIPT = """
-import gc
-import json
-import sys
-
-import envpool
-
-payload = json.loads(sys.argv[1])
-task_id = payload["task_id"]
-kwargs = payload["kwargs"]
-
-def render_once(factory):
-    env = factory(task_id, render_mode="rgb_array", **kwargs)
-    try:
-        env.reset()
-        assert env.render() is not None
-    finally:
-        env.close()
-        del env
-        gc.collect()
-
-
-render_once(envpool.make_gym)
-render_once(envpool.make_gymnasium)
-"""
-
 
 @contextmanager
 def _temporary_workdir(prefix: str) -> Iterator[str]:
@@ -93,24 +64,22 @@ def _emit_github_error(message: str) -> None:
 
 class _MakeTest(absltest.TestCase):
     def check_render(self, task_id: str, **kwargs: object) -> None:
-        payload = json.dumps({"task_id": task_id, "kwargs": kwargs})
-        with _temporary_workdir(prefix="envpool-render-smoke-") as workdir:
-            result = subprocess.run(
-                [sys.executable, "-c", _RENDER_SMOKE_SCRIPT, payload],
-                capture_output=True,
-                cwd=workdir,
-                text=True,
-            )
-        if result.returncode != 0:
-            stderr_tail = "\n".join(result.stderr.splitlines()[-20:])
-            stdout_tail = "\n".join(result.stdout.splitlines()[-20:])
-            message = (
-                f"{task_id} render smoke failed with exit code "
-                f"{result.returncode}\nstdout tail:\n{stdout_tail}\n"
-                f"stderr tail:\n{stderr_tail}"
-            )
-            _emit_github_error(message)
-            raise AssertionError(message)
+        def render_once(factory: object) -> None:
+            env = factory(task_id, render_mode="rgb_array", **kwargs)
+            try:
+                env.reset()
+                self.assertIsNotNone(env.render())
+            finally:
+                env.close()
+                del env
+                gc.collect()
+
+        try:
+            render_once(envpool.make_gym)
+            render_once(envpool.make_gymnasium)
+        except Exception as exc:
+            _emit_github_error(f"{task_id} render smoke failed: {exc}")
+            raise
 
     def test_version(self) -> None:
         print(envpool.__version__)

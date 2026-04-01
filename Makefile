@@ -230,7 +230,8 @@ pypi-wheel: auditwheel-install bazel-release
 	python3 -m auditwheel repair --plat $(PYPI_WHEEL_PLAT) "$$CURRENT_WHEEL"
 
 release-test1:
-	cd envpool && python3 make_test.py
+	tmpdir=$$(python3 -c 'import tempfile; print(tempfile.mkdtemp(prefix="envpool-release-test-"))'); \
+	cd "$$tmpdir" && PYTHONPATH= python3 -m envpool.make_test
 
 release-test2:
 	cd examples && python3 make_env.py && python3 env_step.py
