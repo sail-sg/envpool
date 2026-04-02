@@ -23,6 +23,13 @@ FULL_RUN_FILES = {
 FULL_RUN_PREFIXES = ("third_party/",)
 CPP_SUFFIXES = (".cc", ".h")
 CC_RULE_KIND = "cc_(library|test)"
+SKIP_TARGETS = frozenset((
+    "//envpool/minigrid_bindings:minigrid_bindings",
+))
+
+
+def _filter_targets(targets: list[str]) -> list[str]:
+    return sorted(target for target in targets if target not in SKIP_TARGETS)
 
 
 def _git(*args: str) -> str:
@@ -86,7 +93,7 @@ def _resolve_targets(changed_files: list[str]) -> list[str]:
     for path in changed_files:
         if path in FULL_RUN_FILES or path.startswith(FULL_RUN_PREFIXES):
             query = _bazel("query", f'kind("{CC_RULE_KIND}", //...)')
-            return [line for line in query.splitlines() if line]
+            return _filter_targets([line for line in query.splitlines() if line])
 
     package_patterns: set[str] = set()
     for path in changed_files:
@@ -105,7 +112,7 @@ def _resolve_targets(changed_files: list[str]) -> list[str]:
     for pattern in sorted(package_patterns):
         query = _bazel("query", f'kind("{CC_RULE_KIND}", {pattern})')
         targets.update(line for line in query.splitlines() if line)
-    return sorted(targets)
+    return _filter_targets(list(targets))
 
 
 def _main() -> int:
