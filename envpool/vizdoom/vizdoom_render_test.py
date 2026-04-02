@@ -13,6 +13,7 @@
 # limitations under the License.
 """Render tests for VizDoom environments."""
 
+import gc
 import os
 import shutil
 import tempfile
@@ -122,6 +123,8 @@ class VizdoomRenderTest(absltest.TestCase):
                                 )
                     finally:
                         env.close()
+                        del env
+                        gc.collect()
                         _cleanup_runtime_dir()
 
 

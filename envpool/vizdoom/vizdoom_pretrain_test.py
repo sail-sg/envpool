@@ -13,6 +13,7 @@
 # limitations under the License.
 """Test Vizdoom env by well-trained RL agents."""
 
+import gc
 import multiprocessing as mp
 import os
 import queue
@@ -137,6 +138,8 @@ def _eval_c51_impl(
             return reward, length
         finally:
             env.close()
+            del env
+            gc.collect()
             _cleanup_runtime_dir()
 
 
