@@ -190,12 +190,14 @@ class AtariEnv : public Env<AtariEnvSpec>, public RenderableEnv {
     done_ = false;
     int act = action["action"_];
     int skip_id = frame_skip_;
+    int pooled_frame_count = std::min(frame_skip_, 2);
     for (; skip_id > 0 && !done_; --skip_id) {
       reward += env_->act(action_set_[act]);
       done_ = env_->game_over();
-      if (skip_id <= 2) {  // put final two frames in to maxpool buffer
+      if (skip_id <= pooled_frame_count) {
         uint8_t* ale_screen_data = env_->getScreen().getArray();
-        auto* ptr = static_cast<uint8_t*>(maxpool_buf_[2 - skip_id].Data());
+        auto* ptr = static_cast<uint8_t*>(
+            maxpool_buf_[pooled_frame_count - skip_id].Data());
         if (gray_scale_) {
           env_->theOSystem->colourPalette().applyPaletteGrayscale(
               ptr, ale_screen_data, kRawSize);
@@ -206,7 +208,7 @@ class AtariEnv : public Env<AtariEnvSpec>, public RenderableEnv {
       }
     }
     // push the maxpool outcome to the stack_buf
-    PushStack(false, skip_id == 0);
+    PushStack(false, frame_skip_ > 1 && skip_id == 0);
     ++elapsed_step_;
     done_ |= (elapsed_step_ >= max_episode_steps_);
     if (episodic_life_ && 0 < env_->lives() && env_->lives() < lives_) {
