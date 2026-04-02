@@ -145,7 +145,7 @@ def _rebuild_carrying(debug_state: Any) -> WorldObj | None:
         if contains is not None:
             carrying.contains = contains
     carrying.init_pos = None
-    carrying.cur_pos = None
+    carrying.cur_pos = np.array([-1, -1])
     return carrying
 
 

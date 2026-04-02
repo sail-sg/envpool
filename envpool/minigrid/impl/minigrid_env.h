@@ -38,6 +38,7 @@ struct MiniGridDebugState {
   int width{0};
   int height{0};
   int action_max{6};
+  int max_steps{0};
   std::vector<uint8_t> grid;
   std::vector<uint8_t> grid_contains;
   std::vector<int> obstacle_positions;
@@ -72,6 +73,7 @@ class MiniGridTask {
   int action_max_{6};
   int step_count_{0};
   int agent_view_size_{7};
+  int mission_bytes_{kMissionBytes};
   bool see_through_walls_{false};
   bool done_{true};
   std::string env_name_;
@@ -94,7 +96,8 @@ class MiniGridTask {
 
  public:
   MiniGridTask(std::string env_name, int max_steps, int agent_view_size,
-               bool see_through_walls, int action_max = 6);
+               bool see_through_walls, int action_max = 6,
+               int mission_bytes = kMissionBytes);
   virtual ~MiniGridTask() = default;
 
   void SetGenerator(std::mt19937* gen_ref) { gen_ref_ = gen_ref; }
@@ -106,6 +109,7 @@ class MiniGridTask {
   [[nodiscard]] const std::string& Mission() const { return mission_; }
   [[nodiscard]] int MissionId() const { return mission_id_; }
   [[nodiscard]] int ActionMax() const { return action_max_; }
+  [[nodiscard]] int MaxSteps() const { return max_steps_; }
   void GenImage(const Array& obs) const;
   void WriteMission(const Array& obs) const;
   [[nodiscard]] virtual MiniGridDebugState DebugState() const;
@@ -146,6 +150,7 @@ class MiniGridTask {
                  int max_tries = std::numeric_limits<int>::max());
   [[nodiscard]] int RandInt(int low, int high);
   [[nodiscard]] bool RandBool();
+  [[nodiscard]] float RandFloat(float low, float high);
   template <typename T>
   const T& RandElem(const std::vector<T>& values) {
     CHECK(!values.empty());
@@ -165,8 +170,14 @@ class MiniGridTask {
   [[nodiscard]] Color RandColor() {
     return RandElem(std::vector<Color>(kColors.begin(), kColors.end()));
   }
+  [[nodiscard]] Pos FrontPos() const;
   [[nodiscard]] Pos DirVec() const;
   [[nodiscard]] Pos RightVec() const;
+  [[nodiscard]] float SuccessReward() const;
+
+ private:
+  int next_uid_{1};
+  WorldObj PrepareObj(const WorldObj& obj);
 };
 
 struct Room {
@@ -180,6 +191,11 @@ struct Room {
                                Pos{-1, -1}};
   bool locked{false};
   std::vector<std::pair<Type, Color>> objs;
+
+  [[nodiscard]] bool PosInside(int x, int y) const {
+    return x >= top.first && y >= top.second && x < top.first + size.first &&
+           y < top.second + size.second;
+  }
 };
 
 class RoomGridTask : public MiniGridTask {
@@ -191,21 +207,30 @@ class RoomGridTask : public MiniGridTask {
 
  public:
   RoomGridTask(std::string env_name, int room_size, int num_rows, int num_cols,
-               int max_steps, int agent_view_size = 7);
+               int max_steps, int agent_view_size = 7,
+               int mission_bytes = kMissionBytes);
 
  protected:
   void GenGrid() override;
   Room& GetRoom(int i, int j);
   const Room& GetRoom(int i, int j) const;
   Room& RoomFromPos(int x, int y);
+  const Room& RoomFromPos(int x, int y) const;
   std::pair<Pos, std::pair<Type, Color>> AddObject(int i, int j,
                                                    Type type = kEmpty,
                                                    Color color = kUnassigned);
+  std::vector<std::pair<Pos, std::pair<Type, Color>>> AddDistractors(
+      int i = -1, int j = -1, int num_distractors = 10, bool all_unique = true);
   Pos AddDoor(int i, int j, int door_idx = -1, Color color = kUnassigned,
               bool locked = false);
   void RemoveWall(int i, int j, int wall_idx);
   Pos PlaceAgentInRoom(int i = -1, int j = -1, bool rand_dir = true);
+  [[nodiscard]] bool TryConnectAll(const std::vector<Color>& door_colors =
+                                       std::vector<Color>(kColors.begin(),
+                                                          kColors.end()),
+                                   int max_itrs = 5000);
   void ConnectAll();
+  [[nodiscard]] bool CheckObjsReachable() const;
 };
 
 class EmptyTask : public MiniGridTask {

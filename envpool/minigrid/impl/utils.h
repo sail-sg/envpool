@@ -163,17 +163,20 @@ inline Color DefaultColor(Type type) {
 class WorldObj {
  public:
   explicit WorldObj(Type type = kEmpty, Color color = kUnassigned,
-                    bool door_open = false, bool door_locked = false)
+                    bool door_open = false, bool door_locked = false,
+                    int uid = -1)
       : type_(type),
         color_(color == kUnassigned ? DefaultColor(type) : color),
         door_open_(door_open),
-        door_locked_(door_locked) {}
+        door_locked_(door_locked),
+        uid_(uid) {}
 
   WorldObj(const WorldObj& other)
       : type_(other.type_),
         color_(other.color_),
         door_open_(other.door_open_),
-        door_locked_(other.door_locked_) {
+        door_locked_(other.door_locked_),
+        uid_(other.uid_) {
     if (other.contains_ != nullptr) {
       contains_ = std::make_unique<WorldObj>(*other.contains_);
     }
@@ -190,6 +193,7 @@ class WorldObj {
     color_ = other.color_;
     door_open_ = other.door_open_;
     door_locked_ = other.door_locked_;
+    uid_ = other.uid_;
     contains_.reset();
     if (other.contains_ != nullptr) {
       contains_ = std::make_unique<WorldObj>(*other.contains_);
@@ -248,6 +252,9 @@ class WorldObj {
   [[nodiscard]] const WorldObj* GetContains() const { return contains_.get(); }
   WorldObj* GetContains() { return contains_.get(); }
 
+  [[nodiscard]] int GetUid() const { return uid_; }
+  void SetUid(int uid) { uid_ = uid; }
+
   void SetContains(std::unique_ptr<WorldObj> contains) {
     if (contains != nullptr) {
       CHECK_EQ(type_, kBox);
@@ -273,6 +280,7 @@ class WorldObj {
   std::unique_ptr<WorldObj> contains_{nullptr};
   bool door_open_{false};
   bool door_locked_{false};
+  int uid_{-1};
 };
 
 inline WorldObj MakeObj(Type type, Color color = kUnassigned) {

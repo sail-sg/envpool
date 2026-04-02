@@ -4,18 +4,22 @@ Minigrid
 We use ``minigrid==3.0.0`` as the codebase.
 See https://github.com/Farama-Foundation/Minigrid/tree/v3.0.0
 
-EnvPool supports all non-BabyAI ``MiniGrid-*`` environments registered by
-upstream ``minigrid==3.0.0``. That is 75 task IDs in total. ``BabyAI-*``
-environments are not implemented.
+EnvPool supports all 75 non-BabyAI ``MiniGrid-*`` environments and all 96
+``BabyAI-*`` environments registered by upstream ``minigrid==3.0.0``.
 
 
 Render Compare
 --------------
 
-Representative first-frame compares for the supported MiniGrid tasks. In each
-panel, EnvPool is on the left and upstream ``minigrid`` is on the right.
+Representative first-frame compares for the supported MiniGrid and BabyAI
+tasks. In each panel, EnvPool is on the left and upstream ``minigrid`` is on
+the right.
 
 .. image:: ../_static/render_samples/minigrid_official_compare.png
+    :width: 900px
+    :align: center
+
+.. image:: ../_static/render_samples/babyai_official_compare.png
     :width: 900px
     :align: center
 
@@ -45,7 +49,8 @@ Each MiniGrid observation contains:
 * ``obs["image"]``: a ``(agent_view_size, agent_view_size, 3)`` uint8 tensor
   using the standard MiniGrid object/color/state encoding;
 * ``obs["direction"]``: the agent direction in ``[0, 3]``;
-* ``obs["mission"]``: a fixed-size uint8 byte buffer with length 96;
+* ``obs["mission"]``: a fixed-size uint8 byte buffer with length 96 for
+  ``MiniGrid-*`` tasks and 512 for ``BabyAI-*`` tasks;
 * ``info["agent_pos"]``: the agent position in the full grid;
 * ``info["mission_id"]``: a stable integer ID when the mission comes from a
   finite canonical set, otherwise ``-1``.
@@ -83,6 +88,9 @@ subset ``[0, 2]``.
 
 Available Tasks
 ---------------
+
+All upstream ``BabyAI-*`` task IDs from ``minigrid==3.0.0`` are available in
+addition to the ``MiniGrid-*`` task IDs listed below.
 
 Empty
 ~~~~~

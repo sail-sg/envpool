@@ -22,17 +22,34 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
     name = "minigrid_env",
     srcs = [
+        "impl/babyai_core.cc",
+        "impl/babyai_env.cc",
+        "impl/babyai_goto_tasks.cc",
+        "impl/babyai_instr.cc",
+        "impl/babyai_open_tasks.cc",
+        "impl/babyai_pickup_tasks.cc",
+        "impl/babyai_tasks.cc",
+        "impl/babyai_unlock_tasks.cc",
+        "impl/minigrid_core.cc",
         "impl/minigrid_env.cc",
+        "impl/minigrid_render.cc",
+        "impl/minigrid_room_tasks.cc",
+        "impl/minigrid_task_factory.cc",
+        "impl/minigrid_tasks.cc",
     ],
     hdrs = [
+        "impl/babyai_core.h",
+        "impl/babyai_env.h",
+        "impl/babyai_task_factory.h",
         "impl/minigrid_env.h",
+        "impl/minigrid_task_utils.h",
+        "impl/minigrid_task_factory.h",
         "impl/utils.h",
         "minigrid.h",
     ],
     deps = [
         "//envpool/core:async_envpool",
         "//envpool/core:logging",
-        "//envpool/core:py_envpool",
         "@opencv",
     ],
 )
@@ -41,8 +58,7 @@ pybind_extension(
     name = "minigrid_envpool",
     srcs = ["minigrid.cc"],
     deps = [
-        ":minigrid_env",
-        "//envpool/core:py_envpool",
+        "//envpool/minigrid_bindings:minigrid_bindings",
     ],
 )
 
@@ -63,6 +79,60 @@ py_library(
     imports = ["../.."],
     deps = [
         "//envpool:registration",
+    ],
+)
+
+py_test(
+    name = "babyai_align_test",
+    size = "enormous",
+    srcs = [
+        "babyai_align_test.py",
+        "babyai_test_utils.py",
+    ],
+    imports = ["../.."],
+    deps = [
+        ":minigrid",
+        ":minigrid_registration",
+        requirement("absl-py"),
+        requirement("gym"),
+        requirement("numpy"),
+        requirement("minigrid"),
+    ],
+)
+
+py_test(
+    name = "babyai_deterministic_test",
+    size = "enormous",
+    srcs = [
+        "babyai_deterministic_test.py",
+        "babyai_test_utils.py",
+    ],
+    imports = ["../.."],
+    deps = [
+        ":minigrid",
+        ":minigrid_registration",
+        requirement("absl-py"),
+        requirement("gym"),
+        requirement("numpy"),
+        requirement("minigrid"),
+    ],
+)
+
+py_test(
+    name = "babyai_render_test",
+    size = "enormous",
+    srcs = [
+        "babyai_render_test.py",
+        "babyai_test_utils.py",
+    ],
+    imports = ["../.."],
+    deps = [
+        ":minigrid",
+        ":minigrid_registration",
+        requirement("absl-py"),
+        requirement("gym"),
+        requirement("numpy"),
+        requirement("minigrid"),
     ],
 )
 

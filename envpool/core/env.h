@@ -200,6 +200,10 @@ class Env {
   virtual bool IsDone() { throw std::runtime_error("is_done not implemented"); }
 
  protected:
+  virtual int CurrentMaxEpisodeSteps() const {
+    return spec_.config["max_episode_steps"_];
+  }
+
   void PreProcess(StateBufferQueue* sbq, int order, bool reset,
                   bool force_reset) {
     sbq_ = sbq;
@@ -221,7 +225,7 @@ class Env {
     slice_ = sbq_->Allocate(player_num, order_);
     State state(slice_.arr);
     bool done = IsDone();
-    int max_episode_steps = spec_.config["max_episode_steps"_];
+    int max_episode_steps = CurrentMaxEpisodeSteps();
     state["done"_] = done;
     state["discount"_] = static_cast<float>(!done);
     // dm_env.StepType.FIRST == 0
