@@ -14,6 +14,10 @@
 
 #include "envpool/minigrid/impl/babyai_core.h"
 
+#include <memory>
+#include <utility>
+#include <vector>
+
 namespace minigrid {
 namespace {
 

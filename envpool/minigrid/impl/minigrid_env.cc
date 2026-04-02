@@ -15,6 +15,7 @@
 #include "envpool/minigrid/impl/minigrid_env.h"
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "envpool/minigrid/impl/minigrid_task_factory.h"

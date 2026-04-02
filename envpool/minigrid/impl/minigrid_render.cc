@@ -16,6 +16,7 @@
 #include <array>
 #include <cmath>
 #include <cstring>
+#include <utility>
 #include <vector>
 
 #include "envpool/minigrid/impl/minigrid_env.h"

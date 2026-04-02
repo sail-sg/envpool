@@ -33,7 +33,7 @@ BabyAILevelTask::BabyAILevelTask(std::string env_name, int room_size,
                                  int mission_bytes)
     : RoomGridTask(std::move(env_name), room_size, num_rows, num_cols,
                    max_steps, 7, mission_bytes),
-      fixed_max_steps_(max_steps > 0) {}
+      fixed_max_steps_(max_steps > 0) {}  // NOLINT(whitespace/indent_namespace)
 
 std::pair<Pos, std::pair<Type, Color>> BabyAILevelTask::AddExistingObject(
     int i, int j, const WorldObj& obj) {

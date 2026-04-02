@@ -14,6 +14,8 @@
 
 #include "envpool/minigrid/impl/babyai_task_factory.h"
 
+#include <memory>
+
 namespace minigrid {
 
 std::unique_ptr<MiniGridTask> MakeBabyAITask(const BabyAITaskConfig& config) {

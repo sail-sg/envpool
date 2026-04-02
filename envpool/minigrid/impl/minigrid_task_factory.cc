@@ -26,8 +26,8 @@ namespace minigrid {
 namespace {
 
 using Config = MiniGridEnvSpec::Config;
-using MiniGridTaskFactory =
-    std::function<std::unique_ptr<MiniGridTask>(const Config&)>;
+using MiniGridTaskFactory = std::function<std::unique_ptr<MiniGridTask>(
+    const Config&)>;  // NOLINT(whitespace/indent_namespace)
 
 BabyAITaskConfig MakeBabyAIConfig(const Config& conf) {
   BabyAITaskConfig config;
@@ -69,8 +69,8 @@ std::unique_ptr<MiniGridTask> MakeObstructedMazeTask(const Config& conf) {
 
 const std::unordered_map<std::string, MiniGridTaskFactory>&
 MiniGridTaskFactories() {
-  static const std::unordered_map<std::string, MiniGridTaskFactory> factories =
-      {
+  static const std::unordered_map<std::string, MiniGridTaskFactory>
+      factories = {
           {"empty",
            [](const Config& conf) {
              return std::make_unique<EmptyTask>(
