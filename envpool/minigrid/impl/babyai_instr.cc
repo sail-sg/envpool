@@ -358,7 +358,8 @@ int BabyAIPutNextInstr::NumNavsNeeded() const { return 2; }
 
 BabyAIStatus BabyAIPutNextInstr::VerifyAction(const BabyAILevelTask& env,
                                               Act action,
-                                              const WorldObj& /*pre_carrying*/) {
+                                              const WorldObj&
+                                              /*pre_carrying*/) {
   const WorldObj pre_carrying = pre_carrying_;
   pre_carrying_ = env.Carrying();
   if (strict_ && action == kPickup && env.Carrying().GetType() != kEmpty) {
