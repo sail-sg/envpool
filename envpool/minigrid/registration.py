@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from envpool.registration import register
 
 _IMPORT_PATH = "envpool.minigrid"
@@ -40,7 +42,7 @@ def _register(task_id: str, max_episode_steps: int, **kwargs: object) -> None:
 
 
 def _register_babyai(task_id: str, **kwargs: object) -> None:
-    config = {
+    config: dict[str, object] = {
         "room_size": 8,
         "num_rows": 3,
         "num_cols": 3,
@@ -50,6 +52,14 @@ def _register_babyai(task_id: str, **kwargs: object) -> None:
     }
     config.update(kwargs)
     _register(task_id, 0, **config)
+
+
+def _register_babyai_variants(
+    env_name: str,
+    variants: tuple[tuple[str, Mapping[str, object]], ...],
+) -> None:
+    for task_id, config in variants:
+        _register_babyai(task_id, env_name=env_name, **config)
 
 
 for size in (5, 6, 8, 16):
@@ -427,24 +437,26 @@ for task_id, room_size in (
         room_size=room_size,
     )
 
-for task_id, config in (
-    ("BabyAI-GoTo-v0", {}),
-    ("BabyAI-GoToOpen-v0", {"doors_open": True}),
-    ("BabyAI-GoToObjMaze-v0", {"doors_open": False, "num_dists": 1}),
+_register_babyai_variants(
+    "babyai_goto",
     (
-        "BabyAI-GoToObjMazeOpen-v0",
-        {"doors_open": True, "num_dists": 1},
+        ("BabyAI-GoTo-v0", {}),
+        ("BabyAI-GoToOpen-v0", {"doors_open": True}),
+        ("BabyAI-GoToObjMaze-v0", {"doors_open": False, "num_dists": 1}),
+        (
+            "BabyAI-GoToObjMazeOpen-v0",
+            {"doors_open": True, "num_dists": 1},
+        ),
+        ("BabyAI-GoToObjMazeS4-v0", {"num_dists": 1, "room_size": 4}),
+        (
+            "BabyAI-GoToObjMazeS4R2-v0",
+            {"num_cols": 2, "num_dists": 1, "num_rows": 2, "room_size": 4},
+        ),
+        ("BabyAI-GoToObjMazeS5-v0", {"num_dists": 1, "room_size": 5}),
+        ("BabyAI-GoToObjMazeS6-v0", {"num_dists": 1, "room_size": 6}),
+        ("BabyAI-GoToObjMazeS7-v0", {"num_dists": 1, "room_size": 7}),
     ),
-    ("BabyAI-GoToObjMazeS4-v0", {"num_dists": 1, "room_size": 4}),
-    (
-        "BabyAI-GoToObjMazeS4R2-v0",
-        {"num_cols": 2, "num_dists": 1, "num_rows": 2, "room_size": 4},
-    ),
-    ("BabyAI-GoToObjMazeS5-v0", {"num_dists": 1, "room_size": 5}),
-    ("BabyAI-GoToObjMazeS6-v0", {"num_dists": 1, "room_size": 6}),
-    ("BabyAI-GoToObjMazeS7-v0", {"num_dists": 1, "room_size": 7}),
-):
-    _register_babyai(task_id, env_name="babyai_goto", **config)
+)
 
 _register_babyai("BabyAI-GoToDoor-v0", env_name="babyai_goto_door")
 _register_babyai(
@@ -452,29 +464,33 @@ _register_babyai(
     env_name="babyai_goto_imp_unlock",
 )
 
-for task_id, config in (
-    ("BabyAI-GoToLocal-v0", {"num_dists": 8}),
-    ("BabyAI-GoToLocalS5N2-v0", {"num_dists": 2, "room_size": 5}),
-    ("BabyAI-GoToLocalS6N2-v0", {"num_dists": 2, "room_size": 6}),
-    ("BabyAI-GoToLocalS6N3-v0", {"num_dists": 3, "room_size": 6}),
-    ("BabyAI-GoToLocalS6N4-v0", {"num_dists": 4, "room_size": 6}),
-    ("BabyAI-GoToLocalS7N4-v0", {"num_dists": 4, "room_size": 7}),
-    ("BabyAI-GoToLocalS7N5-v0", {"num_dists": 5, "room_size": 7}),
-    ("BabyAI-GoToLocalS8N2-v0", {"num_dists": 2, "room_size": 8}),
-    ("BabyAI-GoToLocalS8N3-v0", {"num_dists": 3, "room_size": 8}),
-    ("BabyAI-GoToLocalS8N4-v0", {"num_dists": 4, "room_size": 8}),
-    ("BabyAI-GoToLocalS8N5-v0", {"num_dists": 5, "room_size": 8}),
-    ("BabyAI-GoToLocalS8N6-v0", {"num_dists": 6, "room_size": 8}),
-    ("BabyAI-GoToLocalS8N7-v0", {"num_dists": 7, "room_size": 8}),
-):
-    _register_babyai(task_id, env_name="babyai_goto_local", **config)
+_register_babyai_variants(
+    "babyai_goto_local",
+    (
+        ("BabyAI-GoToLocal-v0", {"num_dists": 8}),
+        ("BabyAI-GoToLocalS5N2-v0", {"num_dists": 2, "room_size": 5}),
+        ("BabyAI-GoToLocalS6N2-v0", {"num_dists": 2, "room_size": 6}),
+        ("BabyAI-GoToLocalS6N3-v0", {"num_dists": 3, "room_size": 6}),
+        ("BabyAI-GoToLocalS6N4-v0", {"num_dists": 4, "room_size": 6}),
+        ("BabyAI-GoToLocalS7N4-v0", {"num_dists": 4, "room_size": 7}),
+        ("BabyAI-GoToLocalS7N5-v0", {"num_dists": 5, "room_size": 7}),
+        ("BabyAI-GoToLocalS8N2-v0", {"num_dists": 2, "room_size": 8}),
+        ("BabyAI-GoToLocalS8N3-v0", {"num_dists": 3, "room_size": 8}),
+        ("BabyAI-GoToLocalS8N4-v0", {"num_dists": 4, "room_size": 8}),
+        ("BabyAI-GoToLocalS8N5-v0", {"num_dists": 5, "room_size": 8}),
+        ("BabyAI-GoToLocalS8N6-v0", {"num_dists": 6, "room_size": 8}),
+        ("BabyAI-GoToLocalS8N7-v0", {"num_dists": 7, "room_size": 8}),
+    ),
+)
 
-for task_id, config in (
-    ("BabyAI-GoToObj-v0", {}),
-    ("BabyAI-GoToObjS4-v0", {"room_size": 4}),
-    ("BabyAI-GoToObjS6-v1", {"room_size": 6}),
-):
-    _register_babyai(task_id, env_name="babyai_goto_obj", **config)
+_register_babyai_variants(
+    "babyai_goto_obj",
+    (
+        ("BabyAI-GoToObj-v0", {}),
+        ("BabyAI-GoToObjS4-v0", {"room_size": 4}),
+        ("BabyAI-GoToObjS6-v1", {"room_size": 6}),
+    ),
+)
 
 _register_babyai(
     "BabyAI-GoToObjDoor-v0",
@@ -501,25 +517,29 @@ _register_babyai(
     num_dists=7,
 )
 
-for task_id, config in (
-    ("BabyAI-GoToSeq-v0", {}),
+_register_babyai_variants(
+    "babyai_goto_seq",
     (
-        "BabyAI-GoToSeqS5R2-v0",
-        {"num_cols": 2, "num_dists": 4, "num_rows": 2, "room_size": 5},
+        ("BabyAI-GoToSeq-v0", {}),
+        (
+            "BabyAI-GoToSeqS5R2-v0",
+            {"num_cols": 2, "num_dists": 4, "num_rows": 2, "room_size": 5},
+        ),
     ),
-):
-    _register_babyai(task_id, env_name="babyai_goto_seq", **config)
+)
 
-for task_id, config in (
-    ("BabyAI-KeyCorridor-v0", {"room_size": 6}),
-    ("BabyAI-KeyCorridorS3R1-v0", {"num_rows": 1, "room_size": 3}),
-    ("BabyAI-KeyCorridorS3R2-v0", {"num_rows": 2, "room_size": 3}),
-    ("BabyAI-KeyCorridorS3R3-v0", {"num_rows": 3, "room_size": 3}),
-    ("BabyAI-KeyCorridorS4R3-v0", {"num_rows": 3, "room_size": 4}),
-    ("BabyAI-KeyCorridorS5R3-v0", {"num_rows": 3, "room_size": 5}),
-    ("BabyAI-KeyCorridorS6R3-v0", {"num_rows": 3, "room_size": 6}),
-):
-    _register_babyai(task_id, env_name="babyai_key_corridor", **config)
+_register_babyai_variants(
+    "babyai_key_corridor",
+    (
+        ("BabyAI-KeyCorridor-v0", {"room_size": 6}),
+        ("BabyAI-KeyCorridorS3R1-v0", {"num_rows": 1, "room_size": 3}),
+        ("BabyAI-KeyCorridorS3R2-v0", {"num_rows": 2, "room_size": 3}),
+        ("BabyAI-KeyCorridorS3R3-v0", {"num_rows": 3, "room_size": 3}),
+        ("BabyAI-KeyCorridorS4R3-v0", {"num_rows": 3, "room_size": 4}),
+        ("BabyAI-KeyCorridorS5R3-v0", {"num_rows": 3, "room_size": 5}),
+        ("BabyAI-KeyCorridorS6R3-v0", {"num_rows": 3, "room_size": 6}),
+    ),
+)
 
 _register_babyai("BabyAI-KeyInBox-v0", env_name="babyai_key_in_box")
 _register_babyai(
@@ -527,37 +547,45 @@ _register_babyai(
     env_name="babyai_mini_boss_level",
 )
 
-for task_id, config in (
-    ("BabyAI-MoveTwoAcrossS5N2-v0", {"objs_per_room": 2, "room_size": 5}),
-    ("BabyAI-MoveTwoAcrossS8N9-v0", {"objs_per_room": 9, "room_size": 8}),
-):
-    _register_babyai(task_id, env_name="babyai_move_two_across", **config)
+_register_babyai_variants(
+    "babyai_move_two_across",
+    (
+        ("BabyAI-MoveTwoAcrossS5N2-v0", {"objs_per_room": 2, "room_size": 5}),
+        ("BabyAI-MoveTwoAcrossS8N9-v0", {"objs_per_room": 9, "room_size": 8}),
+    ),
+)
 
-for task_id, config in (
-    ("BabyAI-OneRoomS8-v0", {}),
-    ("BabyAI-OneRoomS12-v0", {"room_size": 12}),
-    ("BabyAI-OneRoomS16-v0", {"room_size": 16}),
-    ("BabyAI-OneRoomS20-v0", {"room_size": 20}),
-):
-    _register_babyai(task_id, env_name="babyai_one_room", **config)
+_register_babyai_variants(
+    "babyai_one_room",
+    (
+        ("BabyAI-OneRoomS8-v0", {}),
+        ("BabyAI-OneRoomS12-v0", {"room_size": 12}),
+        ("BabyAI-OneRoomS16-v0", {"room_size": 16}),
+        ("BabyAI-OneRoomS20-v0", {"room_size": 20}),
+    ),
+)
 
 _register_babyai("BabyAI-Open-v0", env_name="babyai_open")
 
-for task_id, config in (
-    ("BabyAI-OpenDoor-v0", {}),
-    ("BabyAI-OpenDoorColor-v0", {"select_by": "color"}),
-    ("BabyAI-OpenDoorDebug-v0", {"debug": True, "select_by": ""}),
-    ("BabyAI-OpenDoorLoc-v0", {"select_by": "loc"}),
-):
-    _register_babyai(task_id, env_name="babyai_open_door", **config)
+_register_babyai_variants(
+    "babyai_open_door",
+    (
+        ("BabyAI-OpenDoor-v0", {}),
+        ("BabyAI-OpenDoorColor-v0", {"select_by": "color"}),
+        ("BabyAI-OpenDoorDebug-v0", {"debug": True, "select_by": ""}),
+        ("BabyAI-OpenDoorLoc-v0", {"select_by": "loc"}),
+    ),
+)
 
-for task_id, config in (
-    ("BabyAI-OpenDoorsOrderN2-v0", {"num_doors": 2}),
-    ("BabyAI-OpenDoorsOrderN2Debug-v0", {"debug": True, "num_doors": 2}),
-    ("BabyAI-OpenDoorsOrderN4-v0", {"num_doors": 4}),
-    ("BabyAI-OpenDoorsOrderN4Debug-v0", {"debug": True, "num_doors": 4}),
-):
-    _register_babyai(task_id, env_name="babyai_open_doors_order", **config)
+_register_babyai_variants(
+    "babyai_open_doors_order",
+    (
+        ("BabyAI-OpenDoorsOrderN2-v0", {"num_doors": 2}),
+        ("BabyAI-OpenDoorsOrderN2Debug-v0", {"debug": True, "num_doors": 2}),
+        ("BabyAI-OpenDoorsOrderN4-v0", {"num_doors": 4}),
+        ("BabyAI-OpenDoorsOrderN4Debug-v0", {"debug": True, "num_doors": 4}),
+    ),
+)
 
 _register_babyai(
     "BabyAI-OpenRedBlueDoors-v0",
@@ -594,33 +622,37 @@ _register_babyai(
 )
 _register_babyai("BabyAI-PickupLoc-v0", env_name="babyai_pickup_loc")
 
-for task_id, config in (
-    ("BabyAI-PutNextLocal-v0", {}),
-    ("BabyAI-PutNextLocalS5N3-v0", {"num_objs": 3, "room_size": 5}),
-    ("BabyAI-PutNextLocalS6N4-v0", {"num_objs": 4, "room_size": 6}),
-):
-    _register_babyai(task_id, env_name="babyai_put_next_local", **config)
+_register_babyai_variants(
+    "babyai_put_next_local",
+    (
+        ("BabyAI-PutNextLocal-v0", {}),
+        ("BabyAI-PutNextLocalS5N3-v0", {"num_objs": 3, "room_size": 5}),
+        ("BabyAI-PutNextLocalS6N4-v0", {"num_objs": 4, "room_size": 6}),
+    ),
+)
 
-for task_id, config in (
-    ("BabyAI-PutNextS4N1-v0", {"objs_per_room": 1, "room_size": 4}),
-    ("BabyAI-PutNextS5N1-v0", {"objs_per_room": 1, "room_size": 5}),
-    ("BabyAI-PutNextS5N2-v0", {"objs_per_room": 2, "room_size": 5}),
+_register_babyai_variants(
+    "babyai_put_next",
     (
-        "BabyAI-PutNextS5N2Carrying-v0",
-        {"objs_per_room": 2, "room_size": 5, "start_carrying": True},
+        ("BabyAI-PutNextS4N1-v0", {"objs_per_room": 1, "room_size": 4}),
+        ("BabyAI-PutNextS5N1-v0", {"objs_per_room": 1, "room_size": 5}),
+        ("BabyAI-PutNextS5N2-v0", {"objs_per_room": 2, "room_size": 5}),
+        (
+            "BabyAI-PutNextS5N2Carrying-v0",
+            {"objs_per_room": 2, "room_size": 5, "start_carrying": True},
+        ),
+        ("BabyAI-PutNextS6N3-v0", {"objs_per_room": 3, "room_size": 6}),
+        (
+            "BabyAI-PutNextS6N3Carrying-v0",
+            {"objs_per_room": 3, "room_size": 6, "start_carrying": True},
+        ),
+        ("BabyAI-PutNextS7N4-v0", {"objs_per_room": 4, "room_size": 7}),
+        (
+            "BabyAI-PutNextS7N4Carrying-v0",
+            {"objs_per_room": 4, "room_size": 7, "start_carrying": True},
+        ),
     ),
-    ("BabyAI-PutNextS6N3-v0", {"objs_per_room": 3, "room_size": 6}),
-    (
-        "BabyAI-PutNextS6N3Carrying-v0",
-        {"objs_per_room": 3, "room_size": 6, "start_carrying": True},
-    ),
-    ("BabyAI-PutNextS7N4-v0", {"objs_per_room": 4, "room_size": 7}),
-    (
-        "BabyAI-PutNextS7N4Carrying-v0",
-        {"objs_per_room": 4, "room_size": 7, "start_carrying": True},
-    ),
-):
-    _register_babyai(task_id, env_name="babyai_put_next", **config)
+)
 
 _register_babyai("BabyAI-Synth-v0", env_name="babyai_synth")
 _register_babyai("BabyAI-SynthLoc-v0", env_name="babyai_synth_loc")
