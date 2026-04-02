@@ -10,8 +10,9 @@ batched environments:
 
 * ``task_id (str)``: task id, use ``envpool.list_all_envs()`` to see all
   support tasks;
-* ``env_type (str)``: generate with ``gym.Env`` or ``dm_env.Environment``
-  interface, available options are ``dm``, ``gym``, and ``gymnasium``;
+* ``env_type (str)``: generate with the Gymnasium-compatible wrapper or
+  ``dm_env.Environment`` interface, available options are ``dm``, ``gym``, and
+  ``gymnasium``;
 * ``num_envs (int)``: how many envs are in the envpool, default to ``1``;
 * ``batch_size (int)``: async configuration, see the last section, default
   to ``num_envs``;
@@ -30,13 +31,11 @@ batched environments:
   means not to use thread affinity in thread pool, and this is the default
   behavior;
 * ``reward_threshold (float)``: the reward threshold for solving this
-  environment; this option comes from ``env.spec.reward_threshold`` in
-  ``gym.Env``, while some environments may not have such an option;
-* ``gym_reset_return_info (bool)``: whether to return a tuple of
-  ``(obs, info)`` instead of only ``obs`` when calling reset in ``gym.Env``,
-  defaults to ``False`` if you are using Gym<0.26.0, otherwise it defaults
-  to ``True``; this option is to adapt the newest version of gym's
-  interface;
+  environment; this option comes from ``env.spec.reward_threshold`` in the
+  Gymnasium API, while some environments may not have such an option;
+* ``gym_reset_return_info (bool)``: a deprecated compatibility flag kept in the
+  config schema. EnvPool's ``gym`` wrapper follows Gymnasium reset semantics and
+  always returns ``(obs, info)``; passing ``False`` raises ``ValueError``;
 * ``render_mode (str | None)``: render behavior exposed by the Python wrapper.
   Available options are ``None`` (default), ``"rgb_array"``, and ``"human"``;
 * ``render_env_id (int)``: default env id used by ``env.render()`` when
@@ -87,7 +86,8 @@ add another two primitives ``send`` and ``recv``:
   be numpy array (single observation) or a dict (multiple observations);
 * ``recv() -> Union[TimeStep, Tuple[Any, np.ndarray, np.ndarray, np.ndarray]]``
   : receive the finished env ids (in ``timestep.observation.obs.env_id`` (dm)
-  or ``info["env_id"]`` (gym)) and corresponding result from executor;
+  or ``info["env_id"]`` (gym / gymnasium)) and corresponding result from
+  executor;
 * ``step(action: Any, env_id: Optional[np.ndarray] = None) -> Union[TimeStep,
   Tuple[Any, np.ndarray, np.ndarray, Any]]``: given an action, an env (maybe
   with player) id list where ``len(action) == len(env_id)``, the envpool will
@@ -213,17 +213,16 @@ third case, use ``env.step(action)`` where action is a dictionary.
 Data Output Format
 ------------------
 
-+----------+----------------------------------------------------------------------+------------------------------------------------------------------+
-| function |   gym & gymnasium                                                    | dm                                                               |
-|          |                                                                      |                                                                  |
-+==========+======================================================================+==================================================================+
-|   reset  |  | env_id -> obs array (single observation)                          | env_id -> TimeStep(FIRST, obs|info|env_id, rew=0, discount or 1) |
-|          |  | or an obs dict (multi observation)                                |                                                                  |
-|          |  | or (obs, info) tuple (when ``gym_reset_return_info`` == True)     |                                                                  |
-+----------+----------------------------------------------------------------------+------------------------------------------------------------------+
-|   step   |  (obs, rew, done, info|env_id) or                                    | TimeStep(StepType, obs|info|env_id, rew, discount or 1 - done)   |
-|          |  (obs, rew, terminated, truncated, info|env_id) (when Gym >= 0.26.0) |                                                                  |
-+----------+----------------------------------------------------------------------+------------------------------------------------------------------+
++----------+------------------------------------------------------------------+------------------------------------------------------------------+
+| function | gym / gymnasium                                                  | dm                                                               |
+|          |                                                                  |                                                                  |
++==========+==================================================================+==================================================================+
+|   reset  | ``(obs, info)`` where ``obs`` is an obs array or dict and       | env_id -> TimeStep(FIRST, obs|info|env_id, rew=0, discount or 1) |
+|          | ``info["env_id"]`` stores the finished env ids                  |                                                                  |
++----------+------------------------------------------------------------------+------------------------------------------------------------------+
+|   step   | ``(obs, rew, terminated, truncated, info)`` where               | TimeStep(StepType, obs|info|env_id, rew, discount or 1 - done)   |
+|          | ``info["env_id"]`` stores the finished env ids                  |                                                                  |
++----------+------------------------------------------------------------------+------------------------------------------------------------------+
 
 Note: ``gym.reset()`` doesn't support async step setting because it cannot get
 ``env_id`` from ``reset()`` function, so it's better to use low-level APIs such
@@ -257,8 +256,7 @@ times, the following would happen:
 2. the second call would trigger ``env.step(action)`` and elapsed step is 1;
 3. the third call would trigger ``env.step(action)`` and elapsed step is 2;
 4. the fourth call would trigger ``env.step(action)`` and elapsed step is 3.
-   At this time it returns ``done = True`` and (if using gym)
-   ``info["TimeLimit.truncated"] = True``;
+   At this time it returns ``truncated = True``;
 5. the fifth call would trigger ``env.reset()`` since the last episode has
    finished, and return with ``done = False`` and ``reward = 0``, i.e., the
    action will be discarded.

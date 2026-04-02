@@ -18,7 +18,7 @@ import argparse
 import os
 import pprint
 
-import gym
+import gymnasium as gym
 import numpy as np
 import torch
 from tianshou.data import Collector, VectorReplayBuffer

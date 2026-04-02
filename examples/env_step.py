@@ -14,13 +14,9 @@
 
 """Run step-through examples for EnvPool environments."""
 
-import gym
 import numpy as np
-from packaging import version
 
 import envpool
-
-is_legacy_gym = version.parse(gym.__version__) < version.parse("0.26.0")
 
 
 def gym_sync_step() -> None:
@@ -28,24 +24,14 @@ def gym_sync_step() -> None:
     num_envs = 4
     env = envpool.make_gym("Pong-v5", num_envs=num_envs)
     action_num = env.action_space.n
-    if is_legacy_gym:
-        obs = env.reset()  # reset all envs
-    else:
-        obs, _ = env.reset()  # reset all envs
+    obs, _ = env.reset()  # reset all envs
     assert obs.shape == (num_envs, 4, 84, 84)
     for _ in range(1000):
         # autoreset is automatically enabled in envpool
         action = np.random.randint(action_num, size=num_envs)
-        result = env.step(action)
-        if is_legacy_gym:
-            obs, rew, done, info = env.step(action)
-        else:
-            obs, rew, term, trunc, info = env.step(action)
+        obs, rew, term, trunc, info = env.step(action)
     # Of course, you can specify env_id to step corresponding envs
-    if is_legacy_gym:
-        obs = env.reset(np.array([1, 3]))  # reset env #1 and #3
-    else:
-        obs, _ = env.reset(np.array([1, 3]))  # reset env #1 and #3
+    obs, _ = env.reset(np.array([1, 3]))  # reset env #1 and #3
     assert obs.shape == (2, 4, 84, 84)
     partial_action = np.array([0, 0, 2])
     env_id = np.array([3, 2, 0])
@@ -100,10 +86,8 @@ def async_step() -> None:
         "Pong-v5",
         num_envs=num_envs,
         batch_size=batch_size,
-        gym_reset_return_info=True,
     )
-    # If you want gym's reset() API return env_id,
-    # just set gym_reset_return_info=True
+    # Gymnasium-style reset() always returns (obs, info).
     obs, info = env.reset()
     assert obs.shape == (batch_size, 4, 84, 84)
     env_id = info["env_id"]

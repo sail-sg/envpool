@@ -209,7 +209,7 @@ py_test(
         ":mujoco_gym_registration",
         requirement("numpy"),
         requirement("absl-py"),
-        requirement("gym"),
+        requirement("gymnasium"),
     ],
 )
 
@@ -224,7 +224,7 @@ py_test(
         requirement("numpy"),
         requirement("absl-py"),
         requirement("dm-control"),
-        requirement("gym"),
+        requirement("gymnasium"),
     ],
 )
 
@@ -238,7 +238,7 @@ py_test(
         ":mujoco_gym_registration",
         requirement("numpy"),
         requirement("absl-py"),
-        requirement("gym"),
+        requirement("gymnasium"),
     ],
 )
 
@@ -252,7 +252,6 @@ py_test(
         ":mujoco_gym_registration",
         requirement("numpy"),
         requirement("absl-py"),
-        requirement("gym"),
         requirement("gymnasium"),
         requirement("imageio"),
         requirement("mujoco"),

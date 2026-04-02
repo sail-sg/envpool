@@ -16,10 +16,9 @@
 from abc import ABCMeta
 from typing import Any, cast
 
-import gym
+import gymnasium as gym
 import numpy as np
 import optree
-from packaging import version
 
 from .data import gym_structure
 from .envpool import EnvPoolMixin
@@ -87,8 +86,6 @@ class GymEnvPoolMeta(
 
         state_paths, state_idx, treepsec = gym_structure(state_keys)
 
-        new_gym_api = version.parse(gym.__version__) >= version.parse("0.26.0")
-
         def _to_gym(
             self: Any,
             state_values: list[np.ndarray],
@@ -104,20 +101,16 @@ class GymEnvPoolMeta(
             state = cast(
                 dict[str, Any], optree.tree_unflatten(treepsec, values)
             )
-            if reset and not (return_info or new_gym_api):
+            if reset and not return_info:
                 return state["obs"]
             info = cast(dict[str, Any], state["info"])
-            if not new_gym_api:
-                info["TimeLimit.truncated"] = state["trunc"]
             info["elapsed_step"] = state["elapsed_step"]
             if reset:
                 return state["obs"], info
-            if new_gym_api:
-                done = cast(np.ndarray, state["done"])
-                trunc = cast(np.ndarray, state["trunc"])
-                terminated = done & ~trunc
-                return state["obs"], state["reward"], terminated, trunc, info
-            return state["obs"], state["reward"], state["done"], info
+            done = cast(np.ndarray, state["done"])
+            trunc = cast(np.ndarray, state["trunc"])
+            terminated = done & ~trunc
+            return state["obs"], state["reward"], terminated, trunc, info
 
         attrs["_to"] = _to_gym
         subcls = super().__new__(cls, name, parents, attrs)

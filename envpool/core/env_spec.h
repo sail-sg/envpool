@@ -27,7 +27,7 @@ inline auto common_config = MakeDict(
     "num_envs"_.Bind(1), "batch_size"_.Bind(0), "num_threads"_.Bind(0),
     "max_num_players"_.Bind(1), "thread_affinity_offset"_.Bind(-1),
     "base_path"_.Bind(std::string("envpool")), "seed"_.Bind(42),
-    "env_seed"_.Bind(std::vector<int>{}), "gym_reset_return_info"_.Bind(false),
+    "env_seed"_.Bind(std::vector<int>{}), "gym_reset_return_info"_.Bind(true),
     "max_episode_steps"_.Bind(std::numeric_limits<int>::max()));
 // Note: this action order is hardcoded in async_envpool Send function
 // and env ParseAction function for performance

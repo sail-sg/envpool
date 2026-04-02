@@ -15,10 +15,9 @@
 
 """Run Stable-Baselines3 PPO with EnvPool."""
 
-import gym
+import gymnasium as gym
 import numpy as np
 import torch as th
-from packaging import version
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
@@ -38,9 +37,8 @@ th.set_num_threads(1)
 num_envs = 4
 env_id = "Pendulum-v1"  # "CartPole-v1"
 seed = 0
-use_env_pool = True  # whether to use EnvPool or Gym for training
-render = False  # whether to render final policy using Gym
-is_legacy_gym = version.parse(gym.__version__) < version.parse("0.26.0")
+use_env_pool = True  # whether to use EnvPool or Gymnasium for training
+render = False  # whether to render final policy using Gymnasium
 
 
 class VecAdapter(VecEnvWrapper):
@@ -61,10 +59,7 @@ class VecAdapter(VecEnvWrapper):
 
     def reset(self) -> VecEnvObs:
         """Reset the wrapped vector environment."""
-        if is_legacy_gym:
-            return self.venv.reset()
-        else:
-            return self.venv.reset()[0]
+        return self.venv.reset()[0]
 
     def seed(self, seed: int | None = None) -> None:
         # You can only seed EnvPool env by calling envpool.make()
@@ -73,13 +68,8 @@ class VecAdapter(VecEnvWrapper):
 
     def step_wait(self) -> VecEnvStepReturn:
         """Step the wrapped environment and adapt the returned info."""
-        if is_legacy_gym:
-            obs, rewards, dones, info_dict = self.venv.step(self.actions)
-        else:
-            obs, rewards, terms, truncs, info_dict = self.venv.step(
-                self.actions
-            )
-            dones = terms + truncs
+        obs, rewards, terms, truncs, info_dict = self.venv.step(self.actions)
+        dones = terms + truncs
         infos = []
         # Convert dict to list of dict
         # and add terminal observation
@@ -91,10 +81,7 @@ class VecAdapter(VecEnvWrapper):
             })
             if dones[i]:
                 infos[i]["terminal_observation"] = obs[i]
-                if is_legacy_gym:
-                    obs[i] = self.venv.reset(np.array([i]))
-                else:
-                    obs[i] = self.venv.reset(np.array([i]))[0]
+                obs[i] = self.venv.reset(np.array([i]))[0]
         return obs, rewards, dones, infos
 
 
@@ -130,28 +117,8 @@ try:
 except KeyboardInterrupt:
     pass
 
-# Agent trained on envpool version should also perform well on regular Gym env
-if not is_legacy_gym:
-
-    def legacy_wrap(env):
-        """Adapt the Gym API expected by Stable-Baselines3."""
-        env.reset_fn = env.reset
-        env.step_fn = env.step
-
-        def legacy_reset():
-            return env.reset_fn()[0]
-
-        def legacy_step(action):
-            obs, rew, term, trunc, info = env.step_fn(action)
-            return obs, rew, term + trunc, info
-
-        env.reset = legacy_reset
-        env.step = legacy_step
-        return env
-
-    test_env = legacy_wrap(gym.make(env_id))
-else:
-    test_env = gym.make(env_id)
+# Agent trained on envpool version should also perform well on regular Gymnasium env.
+test_env = gym.make(env_id)
 
 # Test with EnvPool
 mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=20)
@@ -166,5 +133,5 @@ mean_reward, std_reward = evaluate_policy(
     warn=False,
     render=render,
 )
-print(f"Gym - {env_id}")
+print(f"Gymnasium - {env_id}")
 print(f"Mean Reward: {mean_reward:.2f} +/- {std_reward:.2f}")

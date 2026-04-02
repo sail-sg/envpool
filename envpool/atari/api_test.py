@@ -17,11 +17,10 @@ import gc
 from typing import no_type_check
 
 import dm_env
-import gym
+import gymnasium as gym
 import numpy as np
 from absl import logging
 from absl.testing import absltest
-from packaging import version
 
 import envpool.atari.registration  # noqa: F401
 from envpool.atari import AtariEnvSpec
@@ -280,7 +279,6 @@ class _GymSyncTest(absltest.TestCase):
         self.assertTrue(np.all(~done1[index]))
 
     def test_highlevel_step(self) -> None:
-        assert version.parse(gym.__version__) >= version.parse("0.26.0")
         num_envs = 4
         env = make_gym("Pong-v5", num_envs=num_envs)
         self.assertTrue(isinstance(env, gym.Env))

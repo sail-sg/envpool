@@ -26,18 +26,15 @@ import time
 from collections import deque
 from distutils.util import strtobool
 
-import gym
+import gymnasium as gym
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from packaging import version
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
 import envpool
-
-is_legacy_gym = version.parse(gym.__version__) < version.parse("0.26.0")
 
 
 def parse_args():
@@ -225,12 +222,7 @@ class RecordEpisodeStatistics(gym.Wrapper):
 
     def reset(self, **kwargs):
         """Reset the environment and tracked episode statistics."""
-        if is_legacy_gym:
-            observations = super(RecordEpisodeStatistics, self).reset(**kwargs)
-        else:
-            observations, _ = super(RecordEpisodeStatistics, self).reset(
-                **kwargs
-            )
+        observations, _ = super(RecordEpisodeStatistics, self).reset(**kwargs)
         self.episode_returns = np.zeros(self.num_envs, dtype=np.float32)
         self.episode_lengths = np.zeros(self.num_envs, dtype=np.int32)
         self.lives = np.zeros(self.num_envs, dtype=np.int32)
@@ -242,17 +234,10 @@ class RecordEpisodeStatistics(gym.Wrapper):
 
     def step(self, action):
         """Step the environment and update episode statistics."""
-        if is_legacy_gym:
-            observations, rewards, dones, infos = super(
-                RecordEpisodeStatistics, self
-            ).step(action)
-            term = infos["terminated"]
-            trunc = infos["TimeLimit.truncated"]
-        else:
-            observations, rewards, term, trunc, infos = super(
-                RecordEpisodeStatistics, self
-            ).step(action)
-            dones = term + trunc
+        observations, rewards, term, trunc, infos = super(
+            RecordEpisodeStatistics, self
+        ).step(action)
+        dones = term + trunc
         self.episode_returns += infos["reward"]
         self.episode_lengths += 1
         self.returned_episode_returns[:] = self.episode_returns

@@ -107,6 +107,6 @@ py_test(
         ":procgen_registration",
         requirement("numpy"),
         requirement("absl-py"),
-        requirement("gym"),
+        requirement("gymnasium"),
     ],
 )

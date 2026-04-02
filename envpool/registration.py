@@ -18,9 +18,7 @@ import os
 from collections.abc import Sequence
 from typing import Any, Literal, overload
 
-import gym
 import numpy as np
-from packaging import version
 
 from .core import SharedThreadPool
 from .python.protocol import (
@@ -31,11 +29,6 @@ from .python.protocol import (
 )
 
 base_path = os.path.abspath(os.path.dirname(__file__))
-
-# Gym 0.26 still references np.bool8, which NumPy 2 removed.
-if not hasattr(np, "bool8"):
-    np.__dict__["bool8"] = np.bool_
-
 
 class EnvRegistry:
     """A collection of available envs."""
@@ -134,13 +127,12 @@ class EnvRegistry:
     ) -> DMEnvPool | GymEnvPool | GymnasiumEnvPool:
         """Make envpool."""
         wrapper_kwargs = self._extract_wrapper_kwargs(kwargs)
-        new_gym_api = version.parse(gym.__version__) >= version.parse("0.26.0")
         if "gym_reset_return_info" not in kwargs:
-            kwargs["gym_reset_return_info"] = new_gym_api
-        if new_gym_api and not kwargs["gym_reset_return_info"]:
+            kwargs["gym_reset_return_info"] = True
+        if not kwargs["gym_reset_return_info"]:
             raise ValueError(
-                "You are using gym>=0.26.0 but passed `gym_reset_return_info=False`. "
-                "The new gym API requires environments to return an info dictionary "
+                "EnvPool's gym API now follows gymnasium reset semantics and "
+                "always returns an info dictionary "
                 "after resets."
             )
 

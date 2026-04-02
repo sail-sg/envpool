@@ -15,7 +15,7 @@
 
 from typing import Any, no_type_check
 
-import gym
+import gymnasium as gym
 import numpy as np
 from absl.testing import absltest
 

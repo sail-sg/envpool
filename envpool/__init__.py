@@ -13,8 +13,6 @@
 # limitations under the License.
 """EnvPool package for efficient RL environment simulation."""
 
-import numpy as np
-
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
 preload_windows_gl_dlls(prepend_path=False)
@@ -37,10 +35,6 @@ from envpool.registration import (
     make_thread_pool,
     register,
 )
-
-# Gym 0.26 still references np.bool8, which NumPy 2 removed.
-if not hasattr(np, "bool8"):
-    np.__dict__["bool8"] = np.bool_
 
 __version__ = "1.0.1"
 __all__ = [
