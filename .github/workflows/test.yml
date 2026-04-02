@@ -113,10 +113,7 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          python scripts/prune_actions_caches.py \
-            --repo "${{ github.repository }}" \
-            --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
+        run: python scripts/prune_actions_caches.py --repo "${{ github.repository }}" --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
   test-linux-arm64:
     name: Test (linux-arm64)
     runs-on: ubuntu-24.04-arm
@@ -186,10 +183,7 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          python scripts/prune_actions_caches.py \
-            --repo "${{ github.repository }}" \
-            --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
+        run: python scripts/prune_actions_caches.py --repo "${{ github.repository }}" --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
   test-macos:
     name: Test (macos)
     runs-on: macos-14
@@ -261,10 +255,7 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          python scripts/prune_actions_caches.py \
-            --repo "${{ github.repository }}" \
-            --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
+        run: python scripts/prune_actions_caches.py --repo "${{ github.repository }}" --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
   test-windows:
     name: Test (windows)
     runs-on: windows-2022
@@ -377,10 +368,7 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          python scripts/prune_actions_caches.py \
-            --repo "${{ github.repository }}" \
-            --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
+        run: python scripts/prune_actions_caches.py --repo "${{ github.repository }}" --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
   deploy-coverage-pages:
     name: Deploy coverage page
     if: ${{ github.event_name == 'push' }}
