@@ -23,9 +23,13 @@ cc_library(
     name = "minigrid_env",
     srcs = [
         "impl/babyai_env.cc",
+        "impl/babyai_tasks.cc",
+        "impl/minigrid_core.cc",
         "impl/minigrid_env.cc",
+        "impl/minigrid_tasks.cc",
     ],
     hdrs = [
+        "impl/babyai_core.h",
         "impl/babyai_env.h",
         "impl/minigrid_env.h",
         "impl/utils.h",
