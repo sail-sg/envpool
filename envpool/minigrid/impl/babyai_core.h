@@ -220,6 +220,7 @@ class BabyAIPutNextInstr : public BabyAIActionInstr {
 
   BabyAIObjDesc desc_move_;
   BabyAIObjDesc desc_fixed_;
+  WorldObj pre_carrying_;
 };
 
 class BabyAISeqInstr : public BabyAIInstr {

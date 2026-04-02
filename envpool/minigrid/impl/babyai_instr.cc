@@ -322,6 +322,7 @@ std::string BabyAIPutNextInstr::Surface(const BabyAILevelTask& env) {
 
 void BabyAIPutNextInstr::ResetVerifier(const BabyAILevelTask& env) {
   BabyAIActionInstr::ResetVerifier(env);
+  pre_carrying_ = WorldObj();
   desc_move_.FindMatchingObjs(env);
   desc_fixed_.FindMatchingObjs(env);
 }
@@ -357,7 +358,9 @@ int BabyAIPutNextInstr::NumNavsNeeded() const { return 2; }
 
 BabyAIStatus BabyAIPutNextInstr::VerifyAction(const BabyAILevelTask& env,
                                               Act action,
-                                              const WorldObj& pre_carrying) {
+                                              const WorldObj& /*pre_carrying*/) {
+  const WorldObj pre_carrying = pre_carrying_;
+  pre_carrying_ = env.Carrying();
   if (strict_ && action == kPickup && env.Carrying().GetType() != kEmpty) {
     return BabyAIStatus::kFailure;
   }
