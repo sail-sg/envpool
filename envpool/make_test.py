@@ -242,6 +242,15 @@ class _MakeTest(absltest.TestCase):
         self.assertLen(task_ids, 75)
         self.check_step(task_ids)
 
+    def test_make_babyai(self) -> None:
+        task_ids = sorted(
+            task_id
+            for task_id in envpool.list_all_envs()
+            if task_id.startswith("BabyAI-")
+        )
+        self.assertLen(task_ids, 96)
+        self.check_step(task_ids)
+
     def test_make_mujoco_gym(self) -> None:
         self.check_step([
             "Ant-v3",
@@ -323,6 +332,7 @@ class _MakeTest(absltest.TestCase):
     def test_render_smoke(self) -> None:
         self.check_render("CartPole-v1")
         self.check_render("LunarLander-v3")
+        self.check_render("BabyAI-GoToObj-v0")
         self.check_render("MiniGrid-DoorKey-8x8-v0")
         self.check_render(
             "Defender-v5",

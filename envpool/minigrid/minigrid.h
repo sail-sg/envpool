@@ -37,15 +37,25 @@ class MiniGridEnvFns {
         "width"_.Bind(9), "height"_.Bind(7),
         "agent_start_pos"_.Bind(std::pair<int, int>(1, 1)),
         "agent_start_dir"_.Bind(0), "agent_view_size"_.Bind(7),
-        "action_max"_.Bind(6), "num_crossings"_.Bind(1),
-        "obstacle_type"_.Bind(std::string("lava")), "strip2_row"_.Bind(2),
-        "n_obstacles"_.Bind(4), "num_objs"_.Bind(3),
+        "mission_bytes"_.Bind(kMissionBytes), "action_max"_.Bind(6),
+        "num_crossings"_.Bind(1), "obstacle_type"_.Bind(std::string("lava")),
+        "strip2_row"_.Bind(2), "n_obstacles"_.Bind(4), "num_objs"_.Bind(3),
         "random_length"_.Bind(false), "room_size"_.Bind(6), "num_rows"_.Bind(3),
         "num_cols"_.Bind(3), "obj_type"_.Bind(std::string("ball")),
         "min_num_rooms"_.Bind(2), "max_num_rooms"_.Bind(6),
         "max_room_size"_.Bind(10), "key_in_box"_.Bind(true),
         "blocked"_.Bind(true), "agent_room"_.Bind(std::pair<int, int>(1, 1)),
-        "num_quarters"_.Bind(4), "num_rooms_visited"_.Bind(25));
+        "num_quarters"_.Bind(4), "num_rooms_visited"_.Bind(25),
+        "num_dists"_.Bind(18), "locked_room_prob"_.Bind(0.5f),
+        "locations"_.Bind(true), "unblocking"_.Bind(true),
+        "implicit_unlock"_.Bind(true),
+        "action_kinds"_.Bind(std::string("goto,pickup,open,putnext")),
+        "instr_kinds"_.Bind(std::string("action,and,seq")),
+        "doors_open"_.Bind(false), "debug"_.Bind(false),
+        "select_by"_.Bind(std::string()), "first_color"_.Bind(std::string()),
+        "second_color"_.Bind(std::string()), "strict"_.Bind(false),
+        "num_doors"_.Bind(2), "objs_per_room"_.Bind(4),
+        "start_carrying"_.Bind(false), "distractors"_.Bind(false));
   }
 
   template <typename Config>
@@ -56,7 +66,7 @@ class MiniGridEnvFns {
         "obs:direction"_.Bind(Spec<int>({-1}, {0, 3})),
         "obs:image"_.Bind(
             Spec<uint8_t>({agent_view_size, agent_view_size, 3}, {0, 255})),
-        "obs:mission"_.Bind(Spec<uint8_t>({kMissionBytes}, {0, 255})),
+        "obs:mission"_.Bind(Spec<uint8_t>({conf["mission_bytes"_]}, {0, 255})),
         "info:agent_pos"_.Bind(Spec<int>({2}, {0, bound})),
         "info:mission_id"_.Bind(Spec<int>({-1}, {-1, 1024})));
   }
@@ -82,6 +92,9 @@ class MiniGridEnv : public Env<MiniGridEnvSpec>, public RenderableEnv {
               unsigned char* rgb) override;
 
   [[nodiscard]] MiniGridDebugState DebugState() const;
+
+ protected:
+  [[nodiscard]] int CurrentMaxEpisodeSteps() const override;
 
  private:
   std::unique_ptr<MiniGridTask> task_;

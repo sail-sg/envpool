@@ -21,11 +21,13 @@
 #include <memory>
 #include <queue>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "envpool/core/py_envpool.h"
+#include "envpool/minigrid/impl/babyai_env.h"
 #include "envpool/minigrid/minigrid.h"
 #include "opencv2/opencv.hpp"
 
@@ -342,10 +344,11 @@ std::vector<uint8_t> RenderTile(const WorldObj* obj, int agent_dir) {
 
 MiniGridTask::MiniGridTask(std::string env_name, int max_steps,
                            int agent_view_size, bool see_through_walls,
-                           int action_max)
+                           int action_max, int mission_bytes)
     : max_steps_(max_steps),
       action_max_(action_max),
       agent_view_size_(agent_view_size),
+      mission_bytes_(mission_bytes),
       see_through_walls_(see_through_walls),
       env_name_(std::move(env_name)),
       carrying_(kEmpty) {}  // NOLINT(whitespace/indent_namespace)
@@ -354,6 +357,7 @@ void MiniGridTask::Reset() {
   CHECK(gen_ref_ != nullptr);
   step_count_ = 0;
   done_ = false;
+  next_uid_ = 1;
   carrying_ = WorldObj(kEmpty);
   target_pos_ = {-1, -1};
   target_type_ = kEmpty;
@@ -500,7 +504,20 @@ void MiniGridTask::WallRect(int x, int y, int width, int height) {
 }
 
 void MiniGridTask::PutObj(const WorldObj& obj, int x, int y) {
-  SetCell(x, y, obj);
+  SetCell(x, y, PrepareObj(obj));
+}
+
+WorldObj MiniGridTask::PrepareObj(const WorldObj& obj) {
+  WorldObj copy = obj;
+  if (copy.GetType() != kEmpty && copy.GetUid() < 0) {
+    copy.SetUid(next_uid_++);
+  }
+  if (WorldObj* contains = copy.GetContains(); contains != nullptr &&
+                                               contains->GetType() != kEmpty &&
+                                               contains->GetUid() < 0) {
+    contains->SetUid(next_uid_++);
+  }
+  return copy;
 }
 
 Pos MiniGridTask::PlaceObj(const WorldObj& obj, int top_x, int top_y,
@@ -517,7 +534,9 @@ Pos MiniGridTask::PlaceObj(const WorldObj& obj, int top_x, int top_y,
 
   int num_tries = 0;
   while (true) {
-    CHECK_LE(num_tries, max_tries) << "rejection sampling failed";
+    if (num_tries > max_tries) {
+      throw std::runtime_error("rejection sampling failed");
+    }
     ++num_tries;
     int x = RandInt(top_x, std::min(top_x + size_x, width_));
     int y = RandInt(top_y, std::min(top_y + size_y, height_));
@@ -555,6 +574,17 @@ int MiniGridTask::RandInt(int low, int high) {
 }
 
 bool MiniGridTask::RandBool() { return RandInt(0, 2) == 0; }
+
+float MiniGridTask::RandFloat(float low, float high) {
+  CHECK_LT(low, high);
+  std::uniform_real_distribution<float> dist(low, high);
+  return dist(*gen_ref_);
+}
+
+Pos MiniGridTask::FrontPos() const {
+  const Pos dir = DirVec();
+  return {agent_pos_.first + dir.first, agent_pos_.second + dir.second};
+}
 
 Pos MiniGridTask::DirVec() const { return kDirToVec[agent_dir_]; }
 
@@ -663,7 +693,7 @@ void MiniGridTask::GenImage(const Array& obs) const {
 void MiniGridTask::WriteMission(const Array& obs) const {
   obs.Zero();
   auto* data = reinterpret_cast<uint8_t*>(obs.Data());
-  int n = std::min(static_cast<int>(mission_.size()), kMissionBytes - 1);
+  int n = std::min(static_cast<int>(mission_.size()), mission_bytes_ - 1);
   std::memcpy(data, mission_.data(), n);
 }
 
@@ -675,6 +705,7 @@ MiniGridDebugState MiniGridTask::DebugState() const {
   state.width = width_;
   state.height = height_;
   state.action_max = action_max_;
+  state.max_steps = max_steps_;
   state.grid.resize(width_ * height_ * 3);
   state.grid_contains.resize(width_ * height_ * 3, 0);
   for (int x = 0; x < width_; ++x) {
@@ -756,8 +787,10 @@ void MiniGridTask::Render(int width, int height, unsigned char* rgb) const {
 }
 
 RoomGridTask::RoomGridTask(std::string env_name, int room_size, int num_rows,
-                           int num_cols, int max_steps, int agent_view_size)
-    : MiniGridTask(std::move(env_name), max_steps, agent_view_size, false, 6),
+                           int num_cols, int max_steps, int agent_view_size,
+                           int mission_bytes)
+    : MiniGridTask(std::move(env_name), max_steps, agent_view_size, false, 6,
+                   mission_bytes),
       room_size_(room_size),
       num_rows_(num_rows),
       num_cols_(num_cols) {}  // NOLINT(whitespace/indent_namespace)
@@ -831,6 +864,10 @@ Room& RoomGridTask::RoomFromPos(int x, int y) {
   return GetRoom(x / (room_size_ - 1), y / (room_size_ - 1));
 }
 
+const Room& RoomGridTask::RoomFromPos(int x, int y) const {
+  return GetRoom(x / (room_size_ - 1), y / (room_size_ - 1));
+}
+
 std::pair<Pos, std::pair<Type, Color>> RoomGridTask::AddObject(int i, int j,
                                                                Type type,
                                                                Color color) {
@@ -850,6 +887,33 @@ std::pair<Pos, std::pair<Type, Color>> RoomGridTask::AddObject(int i, int j,
       1000);
   GetRoom(i, j).objs.emplace_back(type, color);
   return {pos, {type, color}};
+}
+
+std::vector<std::pair<Pos, std::pair<Type, Color>>>
+RoomGridTask::AddDistractors(int i, int j, int num_distractors,
+                             bool all_unique) {
+  std::vector<std::pair<Type, Color>> objs;
+  for (const auto& row : room_grid_) {
+    for (const Room& room : row) {
+      objs.insert(objs.end(), room.objs.begin(), room.objs.end());
+    }
+  }
+  std::vector<std::pair<Pos, std::pair<Type, Color>>> dists;
+  dists.reserve(num_distractors);
+  while (static_cast<int>(dists.size()) < num_distractors) {
+    Type type =
+        RandElem(std::vector<Type>(kObjectTypes.begin(), kObjectTypes.end()));
+    Color color = RandColor();
+    std::pair<Type, Color> obj = {type, color};
+    if (all_unique && std::find(objs.begin(), objs.end(), obj) != objs.end()) {
+      continue;
+    }
+    int room_i = i >= 0 ? i : RandInt(0, num_cols_);
+    int room_j = j >= 0 ? j : RandInt(0, num_rows_);
+    dists.push_back(AddObject(room_i, room_j, type, color));
+    objs.push_back(obj);
+  }
+  return dists;
 }
 
 Pos RoomGridTask::AddDoor(int i, int j, int door_idx, Color color,
@@ -926,7 +990,9 @@ Pos RoomGridTask::PlaceAgentInRoom(int i, int j, bool rand_dir) {
   }
 }
 
-void RoomGridTask::ConnectAll() {
+bool RoomGridTask::TryConnectAll(const std::vector<Color>& door_colors,
+                                 int max_itrs) {
+  CHECK(!door_colors.empty());
   auto reachable = [&]() {
     std::vector<std::vector<bool>> seen(num_rows_,
                                         std::vector<bool>(num_cols_, false));
@@ -951,14 +1017,14 @@ void RoomGridTask::ConnectAll() {
     return seen;
   };
 
-  for (int itr = 0; itr <= 5000; ++itr) {
+  for (int itr = 0; itr <= max_itrs; ++itr) {
     auto seen = reachable();
     int count = 0;
     for (const auto& row : seen) {
       count += std::count(row.begin(), row.end(), true);
     }
     if (count == num_rows_ * num_cols_) {
-      return;
+      return true;
     }
     int i = RandInt(0, num_cols_);
     int j = RandInt(0, num_rows_);
@@ -971,9 +1037,45 @@ void RoomGridTask::ConnectAll() {
     if (room.locked || GetRoom(nb.first, nb.second).locked) {
       continue;
     }
-    AddDoor(i, j, k, RandColor(), false);
+    AddDoor(i, j, k, RandElem(door_colors), false);
   }
-  LOG(FATAL) << "connect_all failed";
+  return false;
+}
+
+void RoomGridTask::ConnectAll() {
+  CHECK(TryConnectAll()) << "connect_all failed";
+}
+
+bool RoomGridTask::CheckObjsReachable() const {
+  std::set<Pos> reachable;
+  std::vector<Pos> stack = {agent_pos_};
+  while (!stack.empty()) {
+    Pos pos = stack.back();
+    stack.pop_back();
+    if (!InBounds(pos.first, pos.second) ||
+        reachable.find(pos) != reachable.end()) {
+      continue;
+    }
+    reachable.insert(pos);
+    const WorldObj cell = GetCell(pos.first, pos.second);
+    if (cell.GetType() != kEmpty && cell.GetType() != kDoor) {
+      continue;
+    }
+    stack.push_back({pos.first + 1, pos.second});
+    stack.push_back({pos.first - 1, pos.second});
+    stack.push_back({pos.first, pos.second + 1});
+    stack.push_back({pos.first, pos.second - 1});
+  }
+  for (int x = 0; x < width_; ++x) {
+    for (int y = 0; y < height_; ++y) {
+      Type type = GetCell(x, y).GetType();
+      if ((type != kEmpty && type != kWall) &&
+          reachable.find({x, y}) == reachable.end()) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 EmptyTask::EmptyTask(int size, Pos agent_start_pos, int agent_start_dir,
@@ -2092,6 +2194,35 @@ MiniGridEnv::MiniGridEnv(const Spec& spec, int env_id)
     task_ = std::make_unique<KeyCorridorTask>(
         conf["num_rows"_], conf["room_size"_], ParseType(conf["obj_type"_]),
         conf["max_episode_steps"_]);
+  } else if (env_name.rfind("babyai_", 0) == 0) {
+    BabyAITaskConfig config;
+    config.env_name = env_name;
+    config.room_size = conf["room_size"_];
+    config.num_rows = conf["num_rows"_];
+    config.num_cols = conf["num_cols"_];
+    config.num_dists = conf["num_dists"_];
+    config.locked_room_prob = conf["locked_room_prob"_];
+    config.locations = conf["locations"_];
+    config.unblocking = conf["unblocking"_];
+    config.implicit_unlock = conf["implicit_unlock"_];
+    config.action_kinds = conf["action_kinds"_];
+    config.instr_kinds = conf["instr_kinds"_];
+    config.doors_open = conf["doors_open"_];
+    config.debug = conf["debug"_];
+    config.select_by = conf["select_by"_];
+    config.first_color = conf["first_color"_];
+    config.second_color = conf["second_color"_];
+    config.strict = conf["strict"_];
+    config.num_doors = conf["num_doors"_];
+    config.num_objs = conf["num_objs"_];
+    config.objs_per_room = conf["objs_per_room"_];
+    config.start_carrying = conf["start_carrying"_];
+    config.distractors = conf["distractors"_];
+    config.obj_type = ParseType(conf["obj_type"_]);
+    config.max_steps = conf["max_episode_steps"_];
+    config.mission_bytes = conf["mission_bytes"_];
+    task_ = MakeBabyAITask(config);
+    CHECK(task_ != nullptr) << "Unknown BabyAI env_name: " << env_name;
   } else {
     CHECK(env_name == "obstructed_maze_1dlhb" ||
           env_name == "obstructed_maze_full" ||
@@ -2130,6 +2261,8 @@ MiniGridDebugState MiniGridEnv::DebugState() const {
   return task_->DebugState();
 }
 
+int MiniGridEnv::CurrentMaxEpisodeSteps() const { return task_->MaxSteps(); }
+
 void MiniGridEnv::WriteState(float reward) {
   auto state = Allocate();
   task_->GenImage(state["obs:image"_]);
@@ -2162,6 +2295,7 @@ void BindMiniGrid(py::module_& m) {
       .def_readonly("width", &MiniGridDebugState::width)
       .def_readonly("height", &MiniGridDebugState::height)
       .def_readonly("action_max", &MiniGridDebugState::action_max)
+      .def_readonly("max_steps", &MiniGridDebugState::max_steps)
       .def_readonly("grid", &MiniGridDebugState::grid)
       .def_readonly("grid_contains", &MiniGridDebugState::grid_contains)
       .def_readonly("obstacle_positions",

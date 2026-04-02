@@ -22,9 +22,11 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
     name = "minigrid_env",
     srcs = [
+        "impl/babyai_env.cc",
         "impl/minigrid_env.cc",
     ],
     hdrs = [
+        "impl/babyai_env.h",
         "impl/minigrid_env.h",
         "impl/utils.h",
         "minigrid.h",
@@ -63,6 +65,60 @@ py_library(
     imports = ["../.."],
     deps = [
         "//envpool:registration",
+    ],
+)
+
+py_test(
+    name = "babyai_align_test",
+    size = "enormous",
+    srcs = [
+        "babyai_align_test.py",
+        "babyai_test_utils.py",
+    ],
+    imports = ["../.."],
+    deps = [
+        ":minigrid",
+        ":minigrid_registration",
+        requirement("absl-py"),
+        requirement("gym"),
+        requirement("numpy"),
+        requirement("minigrid"),
+    ],
+)
+
+py_test(
+    name = "babyai_deterministic_test",
+    size = "enormous",
+    srcs = [
+        "babyai_deterministic_test.py",
+        "babyai_test_utils.py",
+    ],
+    imports = ["../.."],
+    deps = [
+        ":minigrid",
+        ":minigrid_registration",
+        requirement("absl-py"),
+        requirement("gym"),
+        requirement("numpy"),
+        requirement("minigrid"),
+    ],
+)
+
+py_test(
+    name = "babyai_render_test",
+    size = "enormous",
+    srcs = [
+        "babyai_render_test.py",
+        "babyai_test_utils.py",
+    ],
+    imports = ["../.."],
+    deps = [
+        ":minigrid",
+        ":minigrid_registration",
+        requirement("absl-py"),
+        requirement("gym"),
+        requirement("numpy"),
+        requirement("minigrid"),
     ],
 )
 
