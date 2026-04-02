@@ -213,16 +213,20 @@ third case, use ``env.step(action)`` where action is a dictionary.
 Data Output Format
 ------------------
 
-+----------+------------------------------------------------------------------+------------------------------------------------------------------+
-| function | gym / gymnasium                                                  | dm                                                               |
-|          |                                                                  |                                                                  |
-+==========+==================================================================+==================================================================+
-|   reset  | ``(obs, info)`` where ``obs`` is an obs array or dict and       | env_id -> TimeStep(FIRST, obs|info|env_id, rew=0, discount or 1) |
-|          | ``info["env_id"]`` stores the finished env ids                  |                                                                  |
-+----------+------------------------------------------------------------------+------------------------------------------------------------------+
-|   step   | ``(obs, rew, terminated, truncated, info)`` where               | TimeStep(StepType, obs|info|env_id, rew, discount or 1 - done)   |
-|          | ``info["env_id"]`` stores the finished env ids                  |                                                                  |
-+----------+------------------------------------------------------------------+------------------------------------------------------------------+
+.. list-table::
+   :header-rows: 1
+
+   * - function
+     - gym / gymnasium
+     - dm
+   * - reset
+     - ``(obs, info)`` where ``obs`` is an obs array or dict and
+       ``info["env_id"]`` stores the finished env ids
+     - env_id -> TimeStep(FIRST, obs|info|env_id, rew=0, discount or 1)
+   * - step
+     - ``(obs, rew, terminated, truncated, info)`` where
+       ``info["env_id"]`` stores the finished env ids
+     - TimeStep(StepType, obs|info|env_id, rew, discount or 1 - done)
 
 Note: ``gym.reset()`` doesn't support async step setting because it cannot get
 ``env_id`` from ``reset()`` function, so it's better to use low-level APIs such
