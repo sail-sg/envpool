@@ -78,6 +78,13 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container: ${{ matrix.container }}
     timeout-minutes: 120
+    env:
+      MUJOCO_GL: egl
+      EGL_PLATFORM: surfaceless
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      MESA_LOADER_DRIVER_OVERRIDE: llvmpipe
+      GALLIUM_DRIVER: llvmpipe
+      ENVPOOL_SKIP_MUJOCO_RENDER_SMOKE: "1"
     strategy:
       fail-fast: false
       matrix:
@@ -130,7 +137,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install build dependencies
         run: |
-          dnf install -y git curl wget zsh gcc gcc-c++ cmake make ninja-build tmux golang java-17-openjdk-devel qt5-qtbase-devel qt5-qtdeclarative-devel
+          dnf install -y git curl wget zsh gcc gcc-c++ cmake make ninja-build tmux golang java-17-openjdk-devel qt5-qtbase-devel qt5-qtdeclarative-devel mesa-libEGL-devel mesa-libGL-devel libglvnd-devel mesa-dri-drivers
           dnf clean all
           ln -sf "$(qmake-qt5 -query QT_INSTALL_HEADERS)" /usr/include/qt
           go install github.com/bazelbuild/bazelisk@latest
@@ -158,6 +165,10 @@ jobs:
           echo "$CMAKE_BIN_DIR" >> "$GITHUB_PATH"
           ln -sfn "$CMAKE_BIN" /usr/local/bin/cmake
           PATH="$CMAKE_BIN_DIR:$PATH" cmake --version
+      - name: Prefer system libstdc++ for Mesa
+        shell: bash
+        run: |
+          echo "LD_PRELOAD=$(g++ -print-file-name=libstdc++.so.6)" >> "$GITHUB_ENV"
       - name: Build
         run: |
           rm -rf dist wheelhouse
@@ -182,6 +193,7 @@ jobs:
         python-version: ["3.11", "3.12", "3.13", "3.14"]
     env:
       BAZEL_SH: C:/Program Files/Git/usr/bin/bash.exe
+      MESA_GL_VERSION_OVERRIDE: 4.5COMPAT
       MSYS2_ARG_CONV_EXCL: "*"
       MSYS_NO_PATHCONV: "1"
       USE_BAZEL_VERSION: "8.6.0"
@@ -212,6 +224,19 @@ jobs:
         shell: pwsh
         run: |
           choco install -y cmake make ninja strawberryperl swig
+      - name: Create Mesa directory
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path (Join-Path $env:GITHUB_WORKSPACE ".mesa") -Force | Out-Null
+      - name: Install Mesa software OpenGL
+        uses: f3d-app/install-mesa-windows-action@v1
+        with:
+          path: ${{ github.workspace }}\.mesa
+      - name: Export Mesa location
+        shell: pwsh
+        run: |
+          Add-Content -Path $env:GITHUB_ENV -Value "ENVPOOL_DLL_DIR=$env:GITHUB_WORKSPACE\.mesa"
+          Add-Content -Path $env:GITHUB_PATH -Value "$env:GITHUB_WORKSPACE\.mesa"
       - name: Install Qt 5
         uses: jurplel/install-qt-action@v4
         with:

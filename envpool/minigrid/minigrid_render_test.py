@@ -52,6 +52,7 @@ _REPRESENTATIVE_TASK_IDS = (
     "MiniGrid-DoorKey-8x8-v0",
     "MiniGrid-BlockedUnlockPickup-v0",
 )
+_RENDER_STEPS = 3
 _TASK_IDS = tuple(
     sorted(
         task_id
@@ -72,6 +73,10 @@ def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
     frame = env.render(env_ids=env_ids)
     assert frame is not None
     return cast(np.ndarray, frame)
+
+
+def _zero_action(num_envs: int) -> np.ndarray:
+    return np.zeros((num_envs,), dtype=np.int32)
 
 
 def _decode_obj(type_idx: int, color_idx: int, state: int) -> WorldObj | None:
@@ -191,10 +196,10 @@ class MiniGridRenderTest(absltest.TestCase):
         finally:
             oracle.close()
 
-    def test_render_matches_upstream_oracle_first_frame_for_all_tasks(
+    def test_render_matches_upstream_oracle_for_multiple_steps_for_all_tasks(
         self,
     ) -> None:
-        """The first rendered frame should match the upstream MiniGrid oracle."""
+        """Rendered frames should match the upstream MiniGrid oracle."""
         for task_id in _TASK_IDS:
             with self.subTest(task_id=task_id):
                 env = make_gymnasium(
@@ -202,14 +207,21 @@ class MiniGridRenderTest(absltest.TestCase):
                 )
                 try:
                     env.reset()
-                    frame = _render_array(env)
-                    expected = self._oracle_frame(
-                        task_id, _debug_state(env, 0), 0
-                    )
+                    step_count = 0
+                    for step_idx in range(_RENDER_STEPS):
+                        frame = _render_array(env)
+                        frame_again = _render_array(env)
+                        expected = self._oracle_frame(
+                            task_id, _debug_state(env, 0), step_count
+                        )
 
-                    self.assertEqual(frame.shape, (1,) + expected.shape)
-                    self.assertEqual(frame.dtype, np.uint8)
-                    np.testing.assert_array_equal(frame[0], expected)
+                        self.assertEqual(frame.shape, (1,) + expected.shape)
+                        self.assertEqual(frame.dtype, np.uint8)
+                        np.testing.assert_array_equal(frame[0], expected)
+                        np.testing.assert_array_equal(frame, frame_again)
+                        if step_idx + 1 < _RENDER_STEPS:
+                            env.step(_zero_action(1))
+                            step_count += 1
                 finally:
                     env.close()
 
@@ -222,38 +234,33 @@ class MiniGridRenderTest(absltest.TestCase):
                 )
                 try:
                     env.reset()
-                    frame0 = _render_array(env)
-                    frame1 = _render_array(env, env_ids=1)
-                    frames = _render_array(env, env_ids=[0, 1])
-                    frame0_again = _render_array(env)
+                    step_count = 0
+                    for step_idx in range(_RENDER_STEPS):
+                        frame0 = _render_array(env)
+                        frame1 = _render_array(env, env_ids=1)
+                        frames = _render_array(env, env_ids=[0, 1])
+                        frame0_again = _render_array(env)
 
-                    expected0 = self._oracle_frame(
-                        task_id, _debug_state(env, 0), 0
-                    )
+                        expected0 = self._oracle_frame(
+                            task_id, _debug_state(env, 0), step_count
+                        )
+                        expected1 = self._oracle_frame(
+                            task_id, _debug_state(env, 1), step_count
+                        )
 
-                    self.assertEqual(frame0.shape, (1,) + expected0.shape)
-                    self.assertEqual(frame1.shape, (1,) + expected0.shape)
-                    self.assertEqual(frames.shape, (2,) + expected0.shape)
-                    self.assertEqual(frame0.dtype, np.uint8)
-                    self.assertEqual(frames.dtype, np.uint8)
-                    np.testing.assert_array_equal(frame0[0], expected0)
-                    np.testing.assert_array_equal(frame0[0], frames[0])
-                    np.testing.assert_array_equal(frame1[0], frames[1])
-                    np.testing.assert_array_equal(frame0, frame0_again)
-
-                    env.step(np.asarray([0, 0], dtype=np.int32))
-                    stepped0 = _render_array(env)
-                    stepped_frames = _render_array(env, env_ids=[0, 1])
-                    stepped0_again = _render_array(env)
-                    expected_after = self._oracle_frame(
-                        task_id, _debug_state(env, 0), 1
-                    )
-
-                    np.testing.assert_array_equal(stepped0[0], expected_after)
-                    np.testing.assert_array_equal(
-                        stepped0[0], stepped_frames[0]
-                    )
-                    np.testing.assert_array_equal(stepped0, stepped0_again)
+                        self.assertEqual(frame0.shape, (1,) + expected0.shape)
+                        self.assertEqual(frame1.shape, (1,) + expected1.shape)
+                        self.assertEqual(frames.shape, (2,) + expected0.shape)
+                        self.assertEqual(frame0.dtype, np.uint8)
+                        self.assertEqual(frames.dtype, np.uint8)
+                        np.testing.assert_array_equal(frame0[0], expected0)
+                        np.testing.assert_array_equal(frame1[0], expected1)
+                        np.testing.assert_array_equal(frame0[0], frames[0])
+                        np.testing.assert_array_equal(frame1[0], frames[1])
+                        np.testing.assert_array_equal(frame0, frame0_again)
+                        if step_idx + 1 < _RENDER_STEPS:
+                            env.step(_zero_action(2))
+                            step_count += 1
                 finally:
                     env.close()
 

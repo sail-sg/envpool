@@ -7,6 +7,7 @@ on:
   pull_request:
 
 permissions:
+  actions: write
   contents: read
 
 jobs:
@@ -17,6 +18,8 @@ jobs:
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      MUJOCO_GL: egl
+      EGL_PLATFORM: surfaceless
     steps:
       - name: Cancel previous run
         uses: styfle/cancel-workflow-action@0.11.0
@@ -39,7 +42,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-tidy-18 cmake lcov ninja-build swig qtbase5-dev qtdeclarative5-dev
+          sudo apt-get install -y clang-tidy-18 cmake lcov ninja-build swig qtbase5-dev qtdeclarative5-dev libegl1-mesa-dev libopengl-dev
           qmake_bin="$(command -v qmake-qt5 || command -v qmake)"
           qt_include_dir="$("$qmake_bin" -query QT_INSTALL_HEADERS)"
           sudo ln -sfn "$qt_include_dir" /usr/include/qt
@@ -96,6 +99,7 @@ jobs:
         with:
           path: coverage/site
       - name: Save Bazel caches
+        id: save-bazel-caches
         if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
@@ -104,6 +108,12 @@ jobs:
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+      - name: Prune older Bazel caches
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/prune_actions_caches.py --repo "${{ github.repository }}" --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
   test-linux-arm64:
     name: Test (linux-arm64)
     runs-on: ubuntu-24.04-arm
@@ -111,6 +121,8 @@ jobs:
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      MUJOCO_GL: egl
+      EGL_PLATFORM: surfaceless
     steps:
       - name: Cancel previous run
         uses: styfle/cancel-workflow-action@0.11.0
@@ -133,7 +145,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-tidy-18 cmake lcov ninja-build swig qtbase5-dev qtdeclarative5-dev
+          sudo apt-get install -y clang-tidy-18 cmake lcov ninja-build swig qtbase5-dev qtdeclarative5-dev libegl1-mesa-dev libopengl-dev
           qmake_bin="$(command -v qmake-qt5 || command -v qmake)"
           qt_include_dir="$("$qmake_bin" -query QT_INSTALL_HEADERS)"
           sudo ln -sfn "$qt_include_dir" /usr/include/qt
@@ -157,6 +169,7 @@ jobs:
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" \
             BAZEL_TEST_TARGETS="//..." bazel-test
       - name: Save Bazel caches
+        id: save-bazel-caches
         if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
@@ -165,6 +178,12 @@ jobs:
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+      - name: Prune older Bazel caches
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/prune_actions_caches.py --repo "${{ github.repository }}" --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
   test-macos:
     name: Test (macos)
     runs-on: macos-14
@@ -222,6 +241,7 @@ jobs:
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" bazel-test
       - name: Save Bazel caches
+        id: save-bazel-caches
         if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
@@ -230,6 +250,12 @@ jobs:
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+      - name: Prune older Bazel caches
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/prune_actions_caches.py --repo "${{ github.repository }}" --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
   test-windows:
     name: Test (windows)
     runs-on: windows-2022
@@ -238,6 +264,7 @@ jobs:
       BAZEL_SH: C:/Program Files/Git/usr/bin/bash.exe
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      MESA_GL_VERSION_OVERRIDE: 4.5COMPAT
       MSYS2_ARG_CONV_EXCL: "*"
       MSYS_NO_PATHCONV: "1"
       USE_BAZEL_VERSION: "8.6.0"
@@ -268,6 +295,19 @@ jobs:
         shell: pwsh
         run: |
           choco install -y cmake make ninja strawberryperl swig
+      - name: Create Mesa directory
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path (Join-Path $env:GITHUB_WORKSPACE ".mesa") -Force | Out-Null
+      - name: Install Mesa software OpenGL
+        uses: f3d-app/install-mesa-windows-action@v1
+        with:
+          path: ${{ github.workspace }}\.mesa
+      - name: Export Mesa location
+        shell: pwsh
+        run: |
+          Add-Content -Path $env:GITHUB_ENV -Value "ENVPOOL_DLL_DIR=$env:GITHUB_WORKSPACE\.mesa"
+          Add-Content -Path $env:GITHUB_PATH -Value "$env:GITHUB_WORKSPACE\.mesa"
       - name: Install Qt 5
         uses: jurplel/install-qt-action@v4
         with:
@@ -314,6 +354,7 @@ jobs:
           disk_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-disk")
           make BAZELOPT="--repository_cache=$repo_cache --disk_cache=$disk_cache" bazel-test
       - name: Save Bazel caches
+        id: save-bazel-caches
         if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
@@ -322,6 +363,12 @@ jobs:
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+      - name: Prune older Bazel caches
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/prune_actions_caches.py --repo "${{ github.repository }}" --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
   deploy-coverage-pages:
     name: Deploy coverage page
     if: ${{ github.event_name == 'push' }}

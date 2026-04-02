@@ -13,9 +13,14 @@
 # limitations under the License.
 """Test for envpool.make."""
 
+import gc
+import os
 import pprint
+import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
-from typing import get_type_hints
+from typing import Callable, get_type_hints
 
 import dm_env
 import gym
@@ -23,7 +28,6 @@ import gymnasium
 from absl.testing import absltest
 
 import envpool
-import envpool.minigrid.registration  # noqa: F401
 from envpool.python.protocol import (
     DMEnvPool,
     EnvPool,
@@ -32,8 +36,50 @@ from envpool.python.protocol import (
     GymnasiumEnvPool,
 )
 
+_SKIP_MUJOCO_RENDER_SMOKE = (
+    os.environ.get("ENVPOOL_SKIP_MUJOCO_RENDER_SMOKE") == "1"
+)
+
+_RenderFactory = Callable[..., GymEnvPool | GymnasiumEnvPool]
+
+
+@contextmanager
+def _temporary_workdir(prefix: str) -> Iterator[str]:
+    prev_cwd = os.getcwd()
+    with tempfile.TemporaryDirectory(prefix=prefix) as tempdir:
+        os.chdir(tempdir)
+        try:
+            yield tempdir
+        finally:
+            os.chdir(prev_cwd)
+
+
+def _emit_github_error(message: str) -> None:
+    escaped = (
+        message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+    )
+    print(f"::error::{escaped}")
+
 
 class _MakeTest(absltest.TestCase):
+    def check_render(self, task_id: str, **kwargs: object) -> None:
+        def render_once(factory: _RenderFactory) -> None:
+            env = factory(task_id, render_mode="rgb_array", **kwargs)
+            try:
+                env.reset()
+                self.assertIsNotNone(env.render())
+            finally:
+                env.close()
+                del env
+                gc.collect()
+
+        try:
+            render_once(envpool.make_gym)
+            render_once(envpool.make_gymnasium)
+        except Exception as exc:
+            _emit_github_error(f"{task_id} render smoke failed: {exc}")
+            raise
+
     def test_version(self) -> None:
         print(envpool.__version__)
 
@@ -68,44 +114,67 @@ class _MakeTest(absltest.TestCase):
     def test_make_atari(self) -> None:
         self.assertRaises(TypeError, envpool.make, "Pong-v5")
         spec = envpool.make_spec("Defender-v5")
-        env_gym = envpool.make_gym("Defender-v5")
+        env_gym = envpool.make_gym("Defender-v5", render_mode="rgb_array")
         env_dm = envpool.make_dm("Defender-v5")
-        env_gymnasium = envpool.make_gymnasium("Defender-v5")
-        print(env_dm)
-        print(env_gym)
-        print(env_gym)
-        self.assertIsInstance(env_gymnasium, gymnasium.Env)
-        self.assertIsInstance(env_gym, gym.Env)
-        self.assertIsInstance(env_dm, dm_env.Environment)
-        self.assertEqual(spec.action_space.n, 18)
-        self.assertEqual(env_gym.action_space.n, 18)
-        self.assertEqual(env_dm.action_spec().num_values, 18)
-        self.assertEqual(env_gymnasium.action_space.n, 18)
-        # not work for wrong bin, see issue #146
-        for wrong in ["Combat", "Joust", "MazeCraze", "Warlords"]:
-            self.assertRaises(AssertionError, envpool.make_gym, f"{wrong}-v5")
+        env_gymnasium = envpool.make_gymnasium(
+            "Defender-v5", render_mode="rgb_array"
+        )
+        try:
+            print(env_dm)
+            print(env_gym)
+            print(env_gym)
+            self.assertIsInstance(env_gymnasium, gymnasium.Env)
+            self.assertIsInstance(env_gym, gym.Env)
+            self.assertIsInstance(env_dm, dm_env.Environment)
+            self.assertEqual(spec.action_space.n, 18)
+            self.assertEqual(env_gym.action_space.n, 18)
+            self.assertEqual(env_dm.action_spec().num_values, 18)
+            self.assertEqual(env_gymnasium.action_space.n, 18)
+            # not work for wrong bin, see issue #146
+            for wrong in ["Combat", "Joust", "MazeCraze", "Warlords"]:
+                self.assertRaises(
+                    AssertionError, envpool.make_gym, f"{wrong}-v5"
+                )
+                self.assertRaises(
+                    AssertionError, envpool.make_gymnasium, f"{wrong}-v5"
+                )
+            # invalid argument will raise AssertionError, see issue #214
             self.assertRaises(
-                AssertionError, envpool.make_gymnasium, f"{wrong}-v5"
+                AssertionError, envpool.make_gym, "Pong-v5", seed=2**31
             )
-        # invalid argument will raise AssertionError, see issue #214
-        self.assertRaises(
-            AssertionError, envpool.make_gym, "Pong-v5", seed=2**31
-        )
-        self.assertRaises(
-            AssertionError, envpool.make_gymnasium, "Pong-v5", seed=2**31
-        )
+            self.assertRaises(
+                AssertionError, envpool.make_gymnasium, "Pong-v5", seed=2**31
+            )
+        finally:
+            env_dm.close()
+            env_gym.close()
+            env_gymnasium.close()
 
     def test_make_vizdoom(self) -> None:
-        spec = envpool.make_spec("MyWayHome-v1")
-        print(spec)
-        env0 = envpool.make_gym("MyWayHome-v1")
-        env1 = envpool.make_gymnasium("MyWayHome-v1")
-        print(env0)
-        print(env1)
-        self.assertIsInstance(env0, gym.Env)
-        self.assertIsInstance(env1, gymnasium.Env)
-        env0.reset()
-        env1.reset()
+        try:
+            with _temporary_workdir(prefix="envpool-vizdoom-smoke-"):
+                spec = envpool.make_spec("MyWayHome-v1")
+                print(spec)
+                env0 = envpool.make_gym("MyWayHome-v1", render_mode="rgb_array")
+                env1 = envpool.make_gymnasium(
+                    "MyWayHome-v1", render_mode="rgb_array"
+                )
+                try:
+                    print(env0)
+                    print(env1)
+                    self.assertIsInstance(env0, gym.Env)
+                    self.assertIsInstance(env1, gymnasium.Env)
+                    env0.reset()
+                    env1.reset()
+                finally:
+                    env0.close()
+                    env1.close()
+                    del env0
+                    del env1
+                    gc.collect()
+        except Exception as exc:
+            _emit_github_error(f"MyWayHome-v1 make/reset failed: {exc}")
+            raise
 
     def check_step(self, env_list: list[str]) -> None:
         for task_id in env_list:
@@ -113,15 +182,20 @@ class _MakeTest(absltest.TestCase):
             env_gym = envpool.make_gym(task_id)
             env_dm = envpool.make_dm(task_id)
             env_gymnasium = envpool.make_gymnasium(task_id)
-            print(env_dm)
-            print(env_gym)
-            print(env_gymnasium)
-            self.assertIsInstance(env_gym, gym.Env)
-            self.assertIsInstance(env_dm, dm_env.Environment)
-            self.assertIsInstance(env_gymnasium, gymnasium.Env)
-            env_dm.reset()
-            env_gym.reset()
-            env_gymnasium.reset()
+            try:
+                print(env_dm)
+                print(env_gym)
+                print(env_gymnasium)
+                self.assertIsInstance(env_gym, gym.Env)
+                self.assertIsInstance(env_dm, dm_env.Environment)
+                self.assertIsInstance(env_gymnasium, gymnasium.Env)
+                env_dm.reset()
+                env_gym.reset()
+                env_gymnasium.reset()
+            finally:
+                env_dm.close()
+                env_gym.close()
+                env_gymnasium.close()
 
     def test_make_classic(self) -> None:
         self.check_step([
@@ -245,6 +319,24 @@ class _MakeTest(absltest.TestCase):
             "WalkerStand-v1",
             "WalkerWalk-v1",
         ])
+
+    def test_render_smoke(self) -> None:
+        self.check_render("CartPole-v1")
+        self.check_render("LunarLander-v3")
+        self.check_render("MiniGrid-DoorKey-8x8-v0")
+        self.check_render(
+            "Defender-v5",
+            gray_scale=False,
+            stack_num=1,
+            img_height=210,
+            img_width=160,
+            use_inter_area_resize=False,
+        )
+        self.check_render("MyWayHome-v1")
+        self.check_render("CoinrunHard-v0")
+        if not _SKIP_MUJOCO_RENDER_SMOKE:
+            self.check_render("Ant-v5")
+            self.check_render("WalkerWalk-v1")
 
     def test_make_procgen(self) -> None:
         self.check_step([

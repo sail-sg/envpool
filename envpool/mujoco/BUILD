@@ -27,8 +27,13 @@ cc_library(
     linkopts = select({
         "//:linux": [
             "-lEGL",
+            "-lOpenGL",
         ],
-        "//:windows": [],
+        "//:windows": [
+            "gdi32.lib",
+            "opengl32.lib",
+            "user32.lib",
+        ],
         "//conditions:default": [
             "-framework OpenGL",
         ],

@@ -35,9 +35,10 @@ class GlContext {
   virtual ~GlContext() = default;
 
   virtual void MakeCurrent() = 0;
+  virtual void ClearCurrent() = 0;
 };
 
-std::unique_ptr<GlContext> CreateGlContext();
+std::shared_ptr<GlContext> CreateGlContext();
 
 class OffscreenRenderer {
  public:
@@ -52,7 +53,7 @@ class OffscreenRenderer {
   void Initialize(const mjModel* model);
   void UpdateCamera(const mjModel* model, const mjData* data, int camera_id);
 
-  std::unique_ptr<GlContext> gl_context_;
+  std::shared_ptr<GlContext> gl_context_;
   mjvScene scene_;
   mjvCamera camera_;
   mjvOption option_;

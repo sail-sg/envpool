@@ -13,6 +13,7 @@
 # limitations under the License.
 """EnvPool Mixin class for meta class definition."""
 
+import platform
 import pprint
 import warnings
 from abc import ABC
@@ -22,6 +23,7 @@ import numpy as np
 import optree
 from dm_env import TimeStep
 
+from .glfw_context import try_ensure_mujoco_glfw_context
 from .protocol import EnvPool, EnvSpec
 
 
@@ -52,6 +54,20 @@ class EnvPoolMixin(ABC):
     """Mixin class for EnvPool, exposed to EnvPoolMeta."""
 
     _spec: EnvSpec
+
+    def _requires_windows_glfw_context(self) -> bool:
+        if platform.system() != "Windows":
+            return False
+        # Dynamic wrapper classes are created in envpool.python.api, so detect
+        # MuJoCo by scanning the MRO for the underlying pybind base module.
+        return any(
+            base.__module__.startswith(("envpool.mujoco", "mujoco_"))
+            for base in type(self).__mro__
+        )
+
+    def _ensure_platform_render_context(self, width: int, height: int) -> None:
+        if self._requires_windows_glfw_context():
+            try_ensure_mujoco_glfw_context(width or 640, height or 480)
 
     def _player_action_count(
         self: EnvPool, adict: dict[str, Any]
@@ -257,6 +273,7 @@ class EnvPoolMixin(ABC):
         width = default_width
         height = default_height
         camera_id = default_cam if camera_id is None else int(camera_id)
+        self._ensure_platform_render_context(width, height)
         frames = self._render(env_ids_arr, width, height, camera_id)
         if render_mode == "human":
             if env_ids_arr.shape[0] != 1:

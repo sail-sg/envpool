@@ -65,6 +65,10 @@ Platform notes:
 - PyPI wheels do not require a separate Qt installation at runtime.
 - Windows Procgen wheels bundle the required Qt runtime DLLs (`Qt5Core.dll`
   and `Qt5Gui.dll`) next to the extension module.
+- Windows source/release CI validates MuJoCo rendering with Mesa software
+  OpenGL. To reproduce that setup locally, point `ENVPOOL_DLL_DIR` at a Mesa
+  DLL directory and set `GALLIUM_DRIVER=llvmpipe` plus
+  `MESA_GL_VERSION_OVERRIDE=4.5COMPAT`.
 - Building from source still requires platform-local build dependencies,
   including Qt 5. The full per-platform setup is documented in
   [Build From Source](https://envpool.readthedocs.io/en/latest/content/build.html).
@@ -217,6 +221,12 @@ assert frames.shape == (2, 480, 480, 3)
 `render_env_id` (default `0`). `camera_id` can be overridden per call, while
 the output size is fixed at env creation time via `render_width` and
 `render_height`.
+
+The repo test suite also exercises rendering. `make bazel-test` runs repeated
+render checks for every render-capable env family, and `make release-test`
+includes a wheel smoke that calls `render()` after `reset()`. On Windows, the
+MuJoCo render tests use the same `ENVPOOL_DLL_DIR` Mesa preload hook described
+above when you want software OpenGL instead of the system driver.
 
 ```python
 viewer = envpool.make(

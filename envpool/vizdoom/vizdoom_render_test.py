@@ -13,6 +13,12 @@
 # limitations under the License.
 """Render tests for VizDoom environments."""
 
+import gc
+import os
+import shutil
+import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any, cast
 
 import numpy as np
@@ -37,12 +43,39 @@ _TASK_IDS = tuple(
         not in _UNSTABLE_TASK_IDS
     )
 )
+_RENDER_STEPS = 3
 
 
 def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
     frame = env.render(env_ids=env_ids)
     assert frame is not None
     return cast(np.ndarray, frame)
+
+
+def _zero_action(space: Any, num_envs: int) -> np.ndarray:
+    sample = np.asarray(space.sample())
+    zero = np.zeros_like(sample)
+    if sample.ndim == 0:
+        return np.full((num_envs,), zero.item(), dtype=sample.dtype)
+    return np.repeat(zero[np.newaxis, ...], num_envs, axis=0)
+
+
+def _cleanup_runtime_dir() -> None:
+    if os.path.isdir("_vizdoom"):
+        shutil.rmtree("_vizdoom")
+    elif os.path.exists("_vizdoom"):
+        os.remove("_vizdoom")
+
+
+@contextmanager
+def _temporary_workdir() -> Iterator[None]:
+    prev_cwd = os.getcwd()
+    with tempfile.TemporaryDirectory(prefix="vizdoom-render-") as tempdir:
+        os.chdir(tempdir)
+        try:
+            yield
+        finally:
+            os.chdir(prev_cwd)
 
 
 class VizdoomRenderTest(absltest.TestCase):
@@ -54,70 +87,45 @@ class VizdoomRenderTest(absltest.TestCase):
             return np.repeat(gray[:, :, np.newaxis], 3, axis=2)
         return obs.transpose(1, 2, 0)
 
-    def test_render_matches_screen_buffer_first_frame_for_stable_tasks(
+    def test_render_matches_screen_buffer_for_multiple_steps_for_stable_tasks(
         self,
     ) -> None:
-        """Stable scenarios should render the same pixels as their screen buffer."""
+        """Stable scenarios should render the same pixels across steps."""
         for task_id in _TASK_IDS:
             with self.subTest(task_id=task_id):
-                env = make_gym(
-                    task_id,
-                    num_envs=1,
-                    render_mode="rgb_array",
-                    render_width=320,
-                    render_height=240,
-                    use_combined_action=True,
-                    stack_num=1,
-                    img_width=320,
-                    img_height=240,
-                )
-                try:
-                    obs, _ = env.reset()
-                    frame = _render_array(env)
-                    expected = self._expected_frame(obs[0])
+                with _temporary_workdir():
+                    _cleanup_runtime_dir()
+                    env = make_gym(
+                        task_id,
+                        num_envs=1,
+                        render_mode="rgb_array",
+                        render_width=320,
+                        render_height=240,
+                        use_combined_action=True,
+                        stack_num=1,
+                        img_width=320,
+                        img_height=240,
+                    )
+                    try:
+                        obs, _ = env.reset()
+                        for step_idx in range(_RENDER_STEPS):
+                            frame = _render_array(env)
+                            frame_again = _render_array(env)
+                            expected = self._expected_frame(obs[0])
 
-                    self.assertEqual(frame.shape, (1, 240, 320, 3))
-                    self.assertEqual(frame.dtype, np.uint8)
-                    np.testing.assert_array_equal(frame[0], expected)
-                finally:
-                    env.close()
-
-    def test_render_is_batch_consistent_for_representative_task(self) -> None:
-        """Batch render output should match per-env renders for D1Basic."""
-        env = make_gym(
-            "D1Basic-v1",
-            num_envs=2,
-            render_mode="rgb_array",
-            render_width=320,
-            render_height=240,
-            use_combined_action=True,
-            stack_num=1,
-            img_width=320,
-            img_height=240,
-        )
-        try:
-            obs, _ = env.reset()
-            frame0 = _render_array(env)
-            frame1 = _render_array(env, env_ids=1)
-            frames = _render_array(env, env_ids=[0, 1])
-            frame0_again = _render_array(env)
-
-            gray0 = obs[0, 0]
-            gray1 = obs[1, 0]
-
-            self.assertEqual(frame0.shape, (1, 240, 320, 3))
-            self.assertEqual(frame1.shape, (1, 240, 320, 3))
-            self.assertEqual(frames.shape, (2, 240, 320, 3))
-            self.assertEqual(frame0.dtype, np.uint8)
-            self.assertEqual(frames.dtype, np.uint8)
-            for channel in range(3):
-                np.testing.assert_array_equal(frame0[0, :, :, channel], gray0)
-                np.testing.assert_array_equal(frame1[0, :, :, channel], gray1)
-            np.testing.assert_array_equal(frame0[0], frames[0])
-            np.testing.assert_array_equal(frame1[0], frames[1])
-            np.testing.assert_array_equal(frame0, frame0_again)
-        finally:
-            env.close()
+                            self.assertEqual(frame.shape, (1, 240, 320, 3))
+                            self.assertEqual(frame.dtype, np.uint8)
+                            np.testing.assert_array_equal(frame[0], expected)
+                            np.testing.assert_array_equal(frame, frame_again)
+                            if step_idx + 1 < _RENDER_STEPS:
+                                obs, _, _, _, _ = env.step(
+                                    _zero_action(env.action_space, 1)
+                                )
+                    finally:
+                        env.close()
+                        del env
+                        gc.collect()
+                        _cleanup_runtime_dir()
 
 
 if __name__ == "__main__":

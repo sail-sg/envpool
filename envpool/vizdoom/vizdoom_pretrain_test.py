@@ -13,11 +13,14 @@
 # limitations under the License.
 """Test Vizdoom env by well-trained RL agents."""
 
+import gc
 import multiprocessing as mp
 import os
 import queue
 import shutil
 import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any, cast
 
 import numpy as np
@@ -55,19 +58,15 @@ def _cleanup_runtime_dir() -> None:
         os.remove("_vizdoom")
 
 
-class _TempWorkingDir:
-    def __enter__(self) -> "_TempWorkingDir":
-        self._prev_cwd = os.getcwd()
-        self._tempdir = tempfile.TemporaryDirectory(prefix="vizdoom-runtime-")
-        os.chdir(self._tempdir.name)
-        return self
-
-    def __exit__(self, *args: Any) -> None:
-        os.chdir(self._prev_cwd)
+@contextmanager
+def _temporary_workdir() -> Iterator[None]:
+    prev_cwd = os.getcwd()
+    with tempfile.TemporaryDirectory(prefix="vizdoom-runtime-") as tempdir:
+        os.chdir(tempdir)
         try:
-            self._tempdir.cleanup()
-        except PermissionError:
-            pass
+            yield
+        finally:
+            os.chdir(prev_cwd)
 
 
 def _eval_c51_impl(
@@ -93,7 +92,7 @@ def _eval_c51_impl(
     }
     if reward_config is not None:
         kwargs.update(reward_config=reward_config)
-    with _TempWorkingDir():
+    with _temporary_workdir():
         _cleanup_runtime_dir()
         env = make_gym(task_id, **kwargs)
         try:
@@ -139,6 +138,8 @@ def _eval_c51_impl(
             return reward, length
         finally:
             env.close()
+            del env
+            gc.collect()
             _cleanup_runtime_dir()
 
 

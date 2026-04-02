@@ -4,6 +4,7 @@ cloudpickle==3.1.2
 dm-env==1.6
 dm-tree==0.1.9
 farama-notifications==0.0.4
+glfw==2.10.0
 gym==0.26.2
 gym-notices==0.1.0
 gymnasium==1.2.3
