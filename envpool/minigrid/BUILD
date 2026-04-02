@@ -54,20 +54,11 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "minigrid_bindings",
-    srcs = ["impl/minigrid_bindings.cc"],
-    deps = [
-        ":minigrid_env",
-        "//envpool/core:py_envpool",
-    ],
-)
-
 pybind_extension(
     name = "minigrid_envpool",
     srcs = ["minigrid.cc"],
     deps = [
-        ":minigrid_bindings",
+        "//envpool/minigrid_bindings:minigrid_bindings",
     ],
 )
 
