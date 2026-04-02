@@ -69,8 +69,9 @@ std::unique_ptr<MiniGridTask> MakeObstructedMazeTask(const Config& conf) {
 
 const std::unordered_map<std::string, MiniGridTaskFactory>&
 MiniGridTaskFactories() {
-  static const std::unordered_map<std::string, MiniGridTaskFactory>
-      factories = {
+  static const std::unordered_map<std::string, MiniGridTaskFactory> factories =
+      // NOLINTNEXTLINE(whitespace/braces)
+      {
           {"empty",
            [](const Config& conf) {
              return std::make_unique<EmptyTask>(

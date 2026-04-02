@@ -312,8 +312,8 @@ BabyAIPutNextInstr::BabyAIPutNextInstr(BabyAIObjDesc desc_move,
                                        BabyAIObjDesc desc_fixed, bool strict)
     : BabyAIActionInstr(strict),
       desc_move_(std::move(desc_move)),
-      desc_fixed_(
-          std::move(desc_fixed)) {}  // NOLINT(whitespace/indent_namespace)
+      desc_fixed_(std::move(desc_fixed)) {
+}  // NOLINT(whitespace/indent_namespace)
 
 std::string BabyAIPutNextInstr::Surface(const BabyAILevelTask& env) {
   return "put " + desc_move_.Surface(env) + " next to " +

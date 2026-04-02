@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "envpool/minigrid/impl/babyai_task_factory.h"
-
 #include <memory>
+
+#include "envpool/minigrid/impl/babyai_task_factory.h"
 
 namespace minigrid {
 

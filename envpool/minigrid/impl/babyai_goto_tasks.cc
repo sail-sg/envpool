@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "envpool/minigrid/impl/babyai_core.h"
-
 #include <memory>
 #include <utility>
 #include <vector>
+
+#include "envpool/minigrid/impl/babyai_core.h"
 
 namespace minigrid {
 namespace {
