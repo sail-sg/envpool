@@ -254,6 +254,7 @@ def _attach_carrying_to_put_next(
     if carrying is None:
         return
     if isinstance(instr, PutNextInstr):
+        instr.preCarrying = carrying
         if _matches_obj_desc(carrying, instr.desc_move):
             if carrying not in instr.desc_move.obj_set:
                 instr.desc_move.obj_set.append(carrying)
