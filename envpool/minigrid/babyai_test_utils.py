@@ -33,7 +33,6 @@ from minigrid.envs.babyai.core.verifier import (
     PutNextInstr,
 )
 
-import envpool.minigrid.registration  # noqa: F401
 from envpool.minigrid import decode_mission
 from envpool.registration import list_all_envs
 
@@ -56,22 +55,8 @@ _FIRST_OPEN_STRICT_TASK_IDS = frozenset((
     "BabyAI-OpenRedBlueDoorsDebug-v0",
 ))
 
-_TYPE_NAMES = {
-    0: "unseen",
-    1: "empty",
-    2: "wall",
-    3: "floor",
-    4: "door",
-    5: "key",
-    6: "ball",
-    7: "box",
-    8: "goal",
-    9: "lava",
-    10: "agent",
-}
-
-
 def babyai_task_ids() -> list[str]:
+    """Return the full set of registered BabyAI task ids."""
     task_ids = sorted(
         task_id
         for task_id in list_all_envs()
@@ -85,6 +70,7 @@ def babyai_task_ids() -> list[str]:
 
 
 def mission_from_obs(obs: dict[str, np.ndarray]) -> str:
+    """Decode the first mission string from an EnvPool BabyAI observation."""
     mission = obs["mission"]
     arr = np.asarray(mission)
     if arr.ndim == 1:
@@ -94,6 +80,7 @@ def mission_from_obs(obs: dict[str, np.ndarray]) -> str:
 
 
 def debug_state(env: Any, env_id: int = 0) -> Any:
+    """Fetch one C++ debug-state snapshot from an EnvPool BabyAI env."""
     debug_states = cast(Any, env)._debug_states(
         np.asarray([env_id], dtype=np.int32)
     )
@@ -101,6 +88,7 @@ def debug_state(env: Any, env_id: int = 0) -> Any:
 
 
 def patch_render_state(env: Any, debug_state: Any, elapsed_step: int) -> None:
+    """Patch an upstream BabyAI env into the provided render state."""
     env.grid = _rebuild_grid(debug_state)
     env.agent_pos = tuple(debug_state.agent_pos)
     env.agent_dir = int(debug_state.agent_dir)
@@ -116,6 +104,7 @@ def patch_verifier_state(
     debug_state: Any,
     elapsed_step: int,
 ) -> None:
+    """Patch an upstream BabyAI env into the provided verifier state."""
     patch_render_state(env, debug_state, elapsed_step)
     env.instrs = _parse_instr(task_id, env.mission)
     env.instrs.reset_verifier(env)

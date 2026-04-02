@@ -20,12 +20,15 @@ from typing import Any
 import numpy as np
 from absl.testing import absltest
 
+import envpool.minigrid.registration  # noqa: F401
 from envpool.minigrid.babyai_test_utils import babyai_task_ids
 from envpool.registration import make_gym
 
 
 class BabyAIEnvPoolDeterministicTest(absltest.TestCase):
-    def obs_from_reset(
+    """Determinism checks for same-seed and different-seed BabyAI rollouts."""
+
+    def _obs_from_reset(
         self,
         reset_out: tuple[dict[str, np.ndarray], dict[str, np.ndarray]]
         | dict[str, np.ndarray],
@@ -34,7 +37,7 @@ class BabyAIEnvPoolDeterministicTest(absltest.TestCase):
             return reset_out[0]
         return reset_out
 
-    def assert_obs_equal(
+    def _assert_obs_equal(
         self,
         obs0: dict[str, np.ndarray],
         obs1: dict[str, np.ndarray],
@@ -46,7 +49,7 @@ class BabyAIEnvPoolDeterministicTest(absltest.TestCase):
                 err_msg=f"obs[{key}]",
             )
 
-    def run_deterministic_check(
+    def _run_deterministic_check(
         self,
         task_id: str,
         num_envs: int = 4,
@@ -59,21 +62,24 @@ class BabyAIEnvPoolDeterministicTest(absltest.TestCase):
         act_space = env0.action_space
         act_space.seed(action_seed)
         try:
-            self.assert_obs_equal(
-                self.obs_from_reset(env0.reset()),
-                self.obs_from_reset(env1.reset()),
+            self._assert_obs_equal(
+                self._obs_from_reset(env0.reset()),
+                self._obs_from_reset(env1.reset()),
             )
             for _ in range(total):
                 action = np.array([
                     act_space.sample()
                     for _ in range(num_envs)
                 ])
-                self.assert_obs_equal(env0.step(action)[0], env1.step(action)[0])
+                self._assert_obs_equal(
+                    env0.step(action)[0],
+                    env1.step(action)[0],
+                )
         finally:
             env0.close()
             env1.close()
 
-    def run_different_seed_check(
+    def _run_different_seed_check(
         self,
         task_id: str,
         num_envs: int = 4,
@@ -86,8 +92,8 @@ class BabyAIEnvPoolDeterministicTest(absltest.TestCase):
         act_space = env0.action_space
         act_space.seed(action_seed)
         try:
-            obs0 = self.obs_from_reset(env0.reset())
-            obs1 = self.obs_from_reset(env1.reset())
+            obs0 = self._obs_from_reset(env0.reset())
+            obs1 = self._obs_from_reset(env1.reset())
             differs = any(
                 not np.array_equal(obs0[key], obs1[key])
                 for key in obs0
@@ -114,12 +120,14 @@ class BabyAIEnvPoolDeterministicTest(absltest.TestCase):
             env1.close()
 
     def test_registered_babyai_envs_same_seed(self) -> None:
+        """Same seed should produce identical rollouts for all BabyAI tasks."""
         for task_id in babyai_task_ids():
             with self.subTest(task_id=task_id):
                 print(f"deterministic {task_id}", flush=True)
-                self.run_deterministic_check(task_id)
+                self._run_deterministic_check(task_id)
 
     def test_randomized_envs_different_seed(self) -> None:
+        """Different seeds should eventually diverge for randomized tasks."""
         for task_id in [
             "BabyAI-BossLevel-v0",
             "BabyAI-GoToObj-v0",
@@ -133,7 +141,7 @@ class BabyAIEnvPoolDeterministicTest(absltest.TestCase):
             "BabyAI-UnlockToUnlock-v0",
         ]:
             with self.subTest(task_id=task_id):
-                self.run_different_seed_check(task_id)
+                self._run_different_seed_check(task_id)
 
 
 if __name__ == "__main__":

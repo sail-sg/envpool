@@ -18,10 +18,10 @@ from __future__ import annotations
 from typing import Any, cast
 
 import gymnasium as gym
-import minigrid  # noqa: F401
 import numpy as np
 from absl.testing import absltest
 
+import envpool.minigrid.registration  # noqa: F401
 from envpool.minigrid.babyai_test_utils import (
     babyai_task_ids,
     debug_state,
@@ -47,6 +47,8 @@ def _zero_action(num_envs: int) -> np.ndarray:
 
 
 class BabyAIRenderTest(absltest.TestCase):
+    """Render regression tests for BabyAI environments."""
+
     def _oracle_frame(
         self,
         task_id: str,
@@ -71,6 +73,7 @@ class BabyAIRenderTest(absltest.TestCase):
     def test_render_matches_upstream_oracle_for_multiple_steps_for_all_tasks(
         self,
     ) -> None:
+        """Rendered frames should match the upstream BabyAI oracle."""
         for task_id in babyai_task_ids():
             with self.subTest(task_id=task_id):
                 print(f"render {task_id}", flush=True)
@@ -102,6 +105,7 @@ class BabyAIRenderTest(absltest.TestCase):
                     env.close()
 
     def test_render_is_batch_consistent_and_state_invariant(self) -> None:
+        """Rendering should be batch-consistent and side-effect free."""
         for task_id in _REPRESENTATIVE_TASK_IDS:
             with self.subTest(task_id=task_id):
                 env = make_gymnasium(

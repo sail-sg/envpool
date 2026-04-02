@@ -11,10 +11,15 @@ EnvPool supports all 75 non-BabyAI ``MiniGrid-*`` environments and all 96
 Render Compare
 --------------
 
-Representative first-frame compares for the supported MiniGrid tasks. In each
-panel, EnvPool is on the left and upstream ``minigrid`` is on the right.
+Representative first-frame compares for the supported MiniGrid and BabyAI
+tasks. In each panel, EnvPool is on the left and upstream ``minigrid`` is on
+the right.
 
 .. image:: ../_static/render_samples/minigrid_official_compare.png
+    :width: 900px
+    :align: center
+
+.. image:: ../_static/render_samples/babyai_official_compare.png
     :width: 900px
     :align: center
 

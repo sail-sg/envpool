@@ -18,10 +18,10 @@ from __future__ import annotations
 from typing import Any, cast
 
 import gymnasium as gym
-import minigrid  # noqa: F401
 import numpy as np
 from absl.testing import absltest
 
+import envpool.minigrid.registration  # noqa: F401
 from envpool.minigrid.babyai_test_utils import (
     babyai_task_ids,
     debug_state,
@@ -32,7 +32,9 @@ from envpool.registration import make_gymnasium
 
 
 class BabyAIEnvPoolAlignTest(absltest.TestCase):
-    def check_spec(
+    """Alignment checks against upstream BabyAI environments."""
+
+    def _check_spec(
         self,
         spec0: gym.spaces.Space,
         spec1: gym.spaces.Space,
@@ -46,7 +48,7 @@ class BabyAIEnvPoolAlignTest(absltest.TestCase):
             np.testing.assert_allclose(spec0.low, spec1.low)
             np.testing.assert_allclose(spec0.high, spec1.high)
 
-    def run_align_check(
+    def _run_align_check(
         self,
         task_id: str,
         total: int = 100,
@@ -56,15 +58,15 @@ class BabyAIEnvPoolAlignTest(absltest.TestCase):
         env = make_gymnasium(task_id, num_envs=1, seed=0, **kwargs)
         try:
             oracle_obs_space = cast(Any, oracle_env.observation_space)
-            self.check_spec(
+            self._check_spec(
                 oracle_obs_space["direction"],
                 env.observation_space["direction"],
             )
-            self.check_spec(
+            self._check_spec(
                 oracle_obs_space["image"],
                 env.observation_space["image"],
             )
-            self.check_spec(oracle_env.action_space, env.action_space)
+            self._check_spec(oracle_env.action_space, env.action_space)
 
             obs, info = env.reset()
             oracle_env.reset(seed=0)
@@ -130,10 +132,11 @@ class BabyAIEnvPoolAlignTest(absltest.TestCase):
             env.close()
 
     def test_registered_babyai_envs(self) -> None:
+        """All registered BabyAI tasks should match upstream transitions."""
         for task_id in babyai_task_ids():
             with self.subTest(task_id=task_id):
                 print(f"align {task_id}", flush=True)
-                self.run_align_check(task_id)
+                self._run_align_check(task_id)
 
 
 if __name__ == "__main__":
