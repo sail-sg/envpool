@@ -12,21 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "envpool/minigrid/impl/babyai_task_factory.h"
+#ifndef ENVPOOL_MINIGRID_IMPL_BABYAI_TASK_FACTORY_H_
+#define ENVPOOL_MINIGRID_IMPL_BABYAI_TASK_FACTORY_H_
+
+#include <memory>
+
+#include "envpool/minigrid/impl/babyai_env.h"
 
 namespace minigrid {
 
-std::unique_ptr<MiniGridTask> MakeBabyAITask(const BabyAITaskConfig& config) {
-  if (auto task = MakeBabyAIGoToTask(config); task != nullptr) {
-    return task;
-  }
-  if (auto task = MakeBabyAIPickupTask(config); task != nullptr) {
-    return task;
-  }
-  if (auto task = MakeBabyAIOpenTask(config); task != nullptr) {
-    return task;
-  }
-  return MakeBabyAIUnlockTask(config);
-}
+std::unique_ptr<MiniGridTask> MakeBabyAIGoToTask(
+    const BabyAITaskConfig& config);
+std::unique_ptr<MiniGridTask> MakeBabyAIPickupTask(
+    const BabyAITaskConfig& config);
+std::unique_ptr<MiniGridTask> MakeBabyAIOpenTask(
+    const BabyAITaskConfig& config);
+std::unique_ptr<MiniGridTask> MakeBabyAIUnlockTask(
+    const BabyAITaskConfig& config);
 
 }  // namespace minigrid
+
+#endif  // ENVPOOL_MINIGRID_IMPL_BABYAI_TASK_FACTORY_H_
