@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
+#ifndef ENVPOOL_MINIGRID_IMPL_BABYAI_CORE_H_
+#define ENVPOOL_MINIGRID_IMPL_BABYAI_CORE_H_
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -30,9 +32,9 @@ class BabyAIRejectSampling : public std::runtime_error {
   explicit BabyAIRejectSampling(const std::string& msg);
 };
 
-enum class BabyAIStatus { kContinue, kSuccess, kFailure };
+enum class BabyAIStatus : std::uint8_t { kContinue, kSuccess, kFailure };
 
-enum class BabyAILoc { kNone, kLeft, kRight, kFront, kBehind };
+enum class BabyAILoc : std::uint8_t { kNone, kLeft, kRight, kFront, kBehind };
 
 class BabyAIInstr;
 
@@ -309,3 +311,5 @@ BabyAITaskConfig MakeMiniBossConfig(BabyAITaskConfig config);
 BabyAITaskConfig MakeBossNoUnlockConfig(BabyAITaskConfig config);
 
 }  // namespace minigrid
+
+#endif  // ENVPOOL_MINIGRID_IMPL_BABYAI_CORE_H_

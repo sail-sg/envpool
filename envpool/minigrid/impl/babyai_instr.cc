@@ -146,7 +146,7 @@ void BabyAIObjDesc::FindMatchingObjs(const BabyAILevelTask& env,
       if (use_location) {
         obj_uids_.push_back(cell.GetUid());
       }
-      obj_poss_.push_back({x, y});
+      obj_poss_.emplace_back(x, y);
       obj_pos_uids_.push_back(cell.GetUid());
     }
   }

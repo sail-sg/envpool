@@ -554,8 +554,10 @@ void LockedRoomTask::GenGrid() {
     }
     int room_w = left_wall + 1;
     int room_h = size_ / 3 + 1;
-    rooms.push_back({{0, j}, {room_w, room_h}, {left_wall, j + 3}});
-    rooms.push_back({{right_wall, j}, {room_w, room_h}, {right_wall, j + 3}});
+    rooms.emplace_back(
+        LockedRoomInfo{{0, j}, {room_w, room_h}, {left_wall, j + 3}});
+    rooms.emplace_back(
+        LockedRoomInfo{{right_wall, j}, {room_w, room_h}, {right_wall, j + 3}});
   }
   int locked_idx = RandInt(0, static_cast<int>(rooms.size()));
   rooms[locked_idx].locked = true;

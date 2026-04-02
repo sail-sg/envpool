@@ -41,7 +41,8 @@ class BabyAIOpenTask : public BabyAILevelTask {
           const Pos pos = room.door_pos[door_idx];
           const WorldObj door = GetCell(pos.first, pos.second);
           if (door.GetType() == kDoor) {
-            doors.push_back({pos, {door.GetType(), door.GetColor()}});
+            doors.emplace_back(
+                pos, std::pair<Type, Color>{door.GetType(), door.GetColor()});
           }
         }
       }
@@ -82,7 +83,7 @@ class BabyAIOpenDoorTask : public BabyAILevelTask {
     std::vector<std::pair<Pos, std::pair<Type, Color>>> doors;
     for (int i = 0; i < 4; ++i) {
       Pos pos = AddDoor(1, 1, i, door_colors[i], false);
-      doors.push_back({pos, {kDoor, door_colors[i]}});
+      doors.emplace_back(pos, std::pair<Type, Color>{kDoor, door_colors[i]});
     }
     std::string select_by = select_by_;
     if (select_by.empty()) {
@@ -163,7 +164,7 @@ class BabyAIOpenDoorsOrderTask : public BabyAILevelTask {
     std::vector<std::pair<Pos, std::pair<Type, Color>>> doors;
     for (Color color : colors) {
       Pos pos = AddDoor(1, 1, -1, color, false);
-      doors.push_back({pos, {kDoor, color}});
+      doors.emplace_back(pos, std::pair<Type, Color>{kDoor, color});
     }
     PlaceAgentInRoom(1, 1);
     auto selected = RandSubset(doors, 2);

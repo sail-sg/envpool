@@ -567,10 +567,10 @@ bool RoomGridTask::CheckObjsReachable() const {
     if (cell.GetType() != kEmpty && cell.GetType() != kDoor) {
       continue;
     }
-    stack.push_back({pos.first + 1, pos.second});
-    stack.push_back({pos.first - 1, pos.second});
-    stack.push_back({pos.first, pos.second + 1});
-    stack.push_back({pos.first, pos.second - 1});
+    stack.emplace_back(pos.first + 1, pos.second);
+    stack.emplace_back(pos.first - 1, pos.second);
+    stack.emplace_back(pos.first, pos.second + 1);
+    stack.emplace_back(pos.first, pos.second - 1);
   }
   for (int x = 0; x < width_; ++x) {
     for (int y = 0; y < height_; ++y) {

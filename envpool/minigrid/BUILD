@@ -34,6 +34,7 @@ cc_library(
         "impl/minigrid_env.cc",
         "impl/minigrid_render.cc",
         "impl/minigrid_room_tasks.cc",
+        "impl/minigrid_task_factory.cc",
         "impl/minigrid_tasks.cc",
     ],
     hdrs = [
@@ -42,14 +43,23 @@ cc_library(
         "impl/babyai_task_factory.h",
         "impl/minigrid_env.h",
         "impl/minigrid_task_utils.h",
+        "impl/minigrid_task_factory.h",
         "impl/utils.h",
         "minigrid.h",
     ],
     deps = [
         "//envpool/core:async_envpool",
         "//envpool/core:logging",
-        "//envpool/core:py_envpool",
         "@opencv",
+    ],
+)
+
+cc_library(
+    name = "minigrid_bindings",
+    srcs = ["impl/minigrid_bindings.cc"],
+    deps = [
+        ":minigrid_env",
+        "//envpool/core:py_envpool",
     ],
 )
 
@@ -57,8 +67,7 @@ pybind_extension(
     name = "minigrid_envpool",
     srcs = ["minigrid.cc"],
     deps = [
-        ":minigrid_env",
-        "//envpool/core:py_envpool",
+        ":minigrid_bindings",
     ],
 )
 
