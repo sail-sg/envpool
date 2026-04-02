@@ -51,16 +51,13 @@ _ALL_STRICT_TASK_IDS = frozenset((
     "BabyAI-OpenDoorsOrderN4Debug-v0",
     "BabyAI-PickupDistDebug-v0",
 ))
-_FIRST_OPEN_STRICT_TASK_IDS = frozenset((
-    "BabyAI-OpenRedBlueDoorsDebug-v0",
-))
+_FIRST_OPEN_STRICT_TASK_IDS = frozenset(("BabyAI-OpenRedBlueDoorsDebug-v0",))
+
 
 def babyai_task_ids() -> list[str]:
     """Return the full set of registered BabyAI task ids."""
     task_ids = sorted(
-        task_id
-        for task_id in list_all_envs()
-        if task_id.startswith("BabyAI-")
+        task_id for task_id in list_all_envs() if task_id.startswith("BabyAI-")
     )
     if len(task_ids) != _BABYAI_NUM_TASKS:
         raise AssertionError(

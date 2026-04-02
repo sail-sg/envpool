@@ -67,10 +67,7 @@ class BabyAIEnvPoolDeterministicTest(absltest.TestCase):
                 self._obs_from_reset(env1.reset()),
             )
             for _ in range(total):
-                action = np.array([
-                    act_space.sample()
-                    for _ in range(num_envs)
-                ])
+                action = np.array([act_space.sample() for _ in range(num_envs)])
                 self._assert_obs_equal(
                     env0.step(action)[0],
                     env1.step(action)[0],
@@ -95,19 +92,14 @@ class BabyAIEnvPoolDeterministicTest(absltest.TestCase):
             obs0 = self._obs_from_reset(env0.reset())
             obs1 = self._obs_from_reset(env1.reset())
             differs = any(
-                not np.array_equal(obs0[key], obs1[key])
-                for key in obs0
+                not np.array_equal(obs0[key], obs1[key]) for key in obs0
             )
             for _ in range(total):
-                action = np.array([
-                    act_space.sample()
-                    for _ in range(num_envs)
-                ])
+                action = np.array([act_space.sample() for _ in range(num_envs)])
                 obs0 = env0.step(action)[0]
                 obs1 = env1.step(action)[0]
                 differs = differs or any(
-                    not np.array_equal(obs0[key], obs1[key])
-                    for key in obs0
+                    not np.array_equal(obs0[key], obs1[key]) for key in obs0
                 )
                 if differs:
                     break
