@@ -97,7 +97,7 @@ float MiniGridTask::Step(Act act) {
       agent_pos_ = fwd_pos;
     }
     if (cur_fwd.GetType() == kGoal) {
-      reward = 1.0f - 0.9f * (static_cast<float>(step_count_) / max_steps_);
+      reward = SuccessReward();
       terminated = true;
     } else if (cur_fwd.GetType() == kLava) {
       terminated = true;
@@ -286,6 +286,10 @@ Pos MiniGridTask::DirVec() const { return kDirToVec[agent_dir_]; }
 Pos MiniGridTask::RightVec() const {
   const Pos dir = DirVec();
   return {-dir.second, dir.first};
+}
+
+float MiniGridTask::SuccessReward() const {
+  return 1.0f - 0.9f * (static_cast<float>(step_count_) / max_steps_);
 }
 
 RoomGridTask::RoomGridTask(std::string env_name, int room_size, int num_rows,

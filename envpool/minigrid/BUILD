@@ -22,8 +22,10 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
     name = "minigrid_env",
     srcs = [
+        "impl/babyai_core.cc",
         "impl/babyai_env.cc",
         "impl/babyai_goto_tasks.cc",
+        "impl/babyai_instr.cc",
         "impl/babyai_open_tasks.cc",
         "impl/babyai_pickup_tasks.cc",
         "impl/babyai_tasks.cc",

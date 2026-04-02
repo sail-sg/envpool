@@ -85,7 +85,7 @@ void MemoryTask::AfterStep(Act act, const WorldObj& pre_fwd, const Pos& fwd_pos,
                            const WorldObj& pre_carrying, float* reward,
                            bool* terminated) {
   if (agent_pos_ == success_pos_) {
-    *reward = 1.0f - 0.9f * (static_cast<float>(step_count_) / max_steps_);
+    *reward = SuccessReward();
     *terminated = true;
   } else if (agent_pos_ == failure_pos_) {
     *reward = 0.0f;
@@ -304,7 +304,7 @@ void UnlockTask::AfterStep(Act act, const WorldObj& pre_fwd, const Pos& fwd_pos,
                            bool* terminated) {
   if (act == kToggle &&
       GetCell(target_pos_.first, target_pos_.second).GetDoorOpen()) {
-    *reward = 1.0f - 0.9f * (static_cast<float>(step_count_) / max_steps_);
+    *reward = SuccessReward();
     *terminated = true;
   }
 }
@@ -331,7 +331,7 @@ void UnlockPickupTask::AfterStep(Act act, const WorldObj& pre_fwd,
                                  bool* terminated) {
   if (act == kPickup && carrying_.GetType() == target_type_ &&
       carrying_.GetColor() == target_color_) {
-    *reward = 1.0f - 0.9f * (static_cast<float>(step_count_) / max_steps_);
+    *reward = SuccessReward();
     *terminated = true;
   }
 }
@@ -359,7 +359,7 @@ void BlockedUnlockPickupTask::AfterStep(Act act, const WorldObj& pre_fwd,
                                         float* reward, bool* terminated) {
   if (act == kPickup && carrying_.GetType() == target_type_ &&
       carrying_.GetColor() == target_color_) {
-    *reward = 1.0f - 0.9f * (static_cast<float>(step_count_) / max_steps_);
+    *reward = SuccessReward();
     *terminated = true;
   }
 }
@@ -393,7 +393,7 @@ void KeyCorridorTask::AfterStep(Act act, const WorldObj& pre_fwd,
                                 bool* terminated) {
   if (act == kPickup && carrying_.GetType() == target_type_ &&
       carrying_.GetColor() == target_color_) {
-    *reward = 1.0f - 0.9f * (static_cast<float>(step_count_) / max_steps_);
+    *reward = SuccessReward();
     *terminated = true;
   }
 }
@@ -499,7 +499,7 @@ void ObstructedMazeTask::AfterStep(Act act, const WorldObj& pre_fwd,
                                    bool* terminated) {
   if (act == kPickup && carrying_.GetType() == target_type_ &&
       carrying_.GetColor() == target_color_) {
-    *reward = 1.0f - 0.9f * (static_cast<float>(step_count_) / max_steps_);
+    *reward = SuccessReward();
     *terminated = true;
   }
 }

@@ -302,7 +302,7 @@ void FetchTask::AfterStep(Act act, const WorldObj& pre_fwd, const Pos& fwd_pos,
   *terminated = true;
   if (carrying_.GetType() == target_type_ &&
       carrying_.GetColor() == target_color_) {
-    *reward = 1.0f - 0.9f * (static_cast<float>(step_count_) / max_steps_);
+    *reward = SuccessReward();
   } else {
     *reward = 0.0f;
   }
@@ -353,7 +353,7 @@ void GoToDoorTask::AfterStep(Act act, const WorldObj& pre_fwd,
   }
   if (act == kDone) {
     if (IsAdjacent(agent_pos_, target_pos_)) {
-      *reward = 1.0f - 0.9f * (static_cast<float>(step_count_) / max_steps_);
+      *reward = SuccessReward();
     }
     *terminated = true;
   }
@@ -399,7 +399,7 @@ void GoToObjectTask::AfterStep(Act act, const WorldObj& pre_fwd,
   }
   if (act == kDone) {
     if (IsAdjacent(agent_pos_, target_pos_)) {
-      *reward = 1.0f - 0.9f * (static_cast<float>(step_count_) / max_steps_);
+      *reward = SuccessReward();
     }
     *terminated = true;
   }
@@ -469,7 +469,7 @@ void PutNearTask::AfterStep(Act act, const WorldObj& pre_fwd,
     if (GetCell(fwd_pos.first, fwd_pos.second) == pre_carrying &&
         std::abs(fwd_pos.first - target_pos_.first) <= 1 &&
         std::abs(fwd_pos.second - target_pos_.second) <= 1) {
-      *reward = 1.0f - 0.9f * (static_cast<float>(step_count_) / max_steps_);
+      *reward = SuccessReward();
     }
     *terminated = true;
   }
@@ -509,7 +509,7 @@ void RedBlueDoorTask::AfterStep(Act act, const WorldObj& pre_fwd,
       GetCell(blue_door_pos_.first, blue_door_pos_.second).GetDoorOpen();
   if (blue_open_after) {
     if (red_open_before_) {
-      *reward = 1.0f - 0.9f * (static_cast<float>(step_count_) / max_steps_);
+      *reward = SuccessReward();
     }
     *terminated = true;
   } else if (red_open_after && blue_open_before_) {

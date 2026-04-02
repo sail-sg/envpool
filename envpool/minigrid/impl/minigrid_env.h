@@ -173,6 +173,7 @@ class MiniGridTask {
   [[nodiscard]] Pos FrontPos() const;
   [[nodiscard]] Pos DirVec() const;
   [[nodiscard]] Pos RightVec() const;
+  [[nodiscard]] float SuccessReward() const;
 
  private:
   int next_uid_{1};
