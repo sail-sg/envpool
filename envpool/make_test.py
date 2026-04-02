@@ -169,6 +169,9 @@ class _MakeTest(absltest.TestCase):
                 finally:
                     env0.close()
                     env1.close()
+                    del env0
+                    del env1
+                    gc.collect()
         except Exception as exc:
             _emit_github_error(f"MyWayHome-v1 make/reset failed: {exc}")
             raise
