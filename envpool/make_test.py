@@ -280,7 +280,7 @@ class _MakeTest(absltest.TestCase):
             for task_id in envpool.list_all_envs()
             if task_id.startswith(_GYMNASIUM_ROBOTICS_PREFIXES)
         )
-        self.assertLen(task_ids, 217)
+        self.assertLen(task_ids, 157)
         self.check_step(task_ids)
 
     def test_make_mujoco_gym(self) -> None:

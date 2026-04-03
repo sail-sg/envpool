@@ -58,6 +58,13 @@ _HAND_CANONICAL_BY_V0 = {
     for task_id in _HAND_ENVS
     if task_id.endswith("-v0")
 }
+_RENDER_ALIGNMENT_ENVS = (
+    "FetchReach-v4",
+    "HandReach-v3",
+    "AdroitHandDoor-v1",
+    "PointMaze_UMaze-v3",
+    "FrankaKitchen-v1",
+)
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -76,6 +83,26 @@ def _make_upstream_env(task_id: str, **kwargs: Any) -> gym.Env:
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=DeprecationWarning)
         return gym.make(_upstream_task_id(task_id), **kwargs)
+
+
+def _render_first_envpool_frame(env: Any) -> np.ndarray:
+    try:
+        frame = cast(np.ndarray, env.render())
+    except Exception as error:
+        if sys.platform in {"darwin", "win32"} and "gladLoadGL" in str(error):
+            raise absltest.SkipTest(
+                "Gymnasium-Robotics MuJoCo offscreen rendering is "
+                "unavailable in this runtime."
+            ) from error
+        raise
+    return frame[0]
+
+
+def _render_first_upstream_frame(env: gym.Env) -> np.ndarray:
+    frame = cast(np.ndarray, env.render())
+    if frame.ndim == 4:
+        return frame[0]
+    return frame
 
 
 def _assert_goal_obs_equal(
@@ -255,6 +282,46 @@ def _reset_upstream_kitchen_state(
     return base_env._get_obs(robot_obs)
 
 
+def _reset_upstream_render_state(
+    task_id: str,
+    env: gym.Env,
+    info: dict[str, np.ndarray],
+) -> None:
+    if task_id.startswith(("Fetch", "Hand")):
+        _reset_upstream_state(
+            env,
+            info["qpos0"][0],
+            info["qvel0"][0],
+            info["goal0"][0],
+        )
+        return
+    if task_id.startswith("AdroitHand"):
+        _reset_upstream_adroit_state(
+            env,
+            info["qpos0"][0],
+            info["qvel0"][0],
+            info["extra0"][0],
+            task_id,
+        )
+        return
+    if task_id.startswith("PointMaze_"):
+        _reset_upstream_point_maze_state(
+            env,
+            info["qpos0"][0],
+            info["qvel0"][0],
+            info["goal0"][0],
+        )
+        return
+    if task_id.startswith("FrankaKitchen-"):
+        _reset_upstream_kitchen_state(
+            env,
+            info["qpos0"][0],
+            info["qvel0"][0],
+        )
+        return
+    raise ValueError(f"Unsupported render task: {task_id}")
+
+
 def _kitchen_task_list_to_mask(tasks: list[str]) -> np.ndarray:
     mask = np.zeros(7, dtype=np.int32)
     for task_id, task_name in enumerate([
@@ -378,6 +445,50 @@ def _assert_different_seed_rollout(
             finally:
                 env0.close()
                 env1.close()
+
+
+def _assert_render_alignment(
+    test_case: absltest.TestCase,
+    task_id: str,
+) -> None:
+    env0 = _make_upstream_env(task_id, render_mode="rgb_array")
+    env1 = make_gymnasium(task_id, num_envs=1, seed=0, render_mode="rgb_array")
+    try:
+        env0.reset(seed=0)
+        _, info1 = env1.reset()
+        _reset_upstream_render_state(task_id, env0, info1)
+        frame0 = _render_first_upstream_frame(env0)
+        frame1 = _render_first_envpool_frame(env1)
+        test_case.assertEqual(frame0.shape, frame1.shape)
+        diff = np.abs(frame0.astype(np.int16) - frame1.astype(np.int16))
+        mean_abs_diff = float(np.mean(diff))
+        mismatch_ratio = float(np.mean(np.max(diff, axis=-1) > 32))
+        test_case.assertLessEqual(
+            mean_abs_diff,
+            8.0,
+            msg=(
+                f"{task_id} render mean_abs_diff={mean_abs_diff:.3f} "
+                f"mismatch_ratio={mismatch_ratio:.3f}"
+            ),
+        )
+        test_case.assertLessEqual(
+            mismatch_ratio,
+            0.12,
+            msg=(
+                f"{task_id} render mean_abs_diff={mean_abs_diff:.3f} "
+                f"mismatch_ratio={mismatch_ratio:.3f}"
+            ),
+        )
+    finally:
+        env0.close()
+        env1.close()
+
+
+class _GymnasiumRoboticsRenderEnvPoolTest(absltest.TestCase):
+    def test_render_alignment(self) -> None:
+        for task_id in _RENDER_ALIGNMENT_ENVS:
+            with self.subTest(task_id=task_id):
+                _assert_render_alignment(self, task_id)
 
 
 class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):

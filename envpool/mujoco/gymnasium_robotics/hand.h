@@ -234,6 +234,16 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
     }
   }
 
+  bool RenderCamera(mjvCamera* camera) override {
+    camera->distance = 0.5;
+    camera->azimuth = 55.0;
+    camera->elevation = -25.0;
+    camera->lookat[0] = 1.0;
+    camera->lookat[1] = 0.96;
+    camera->lookat[2] = 0.14;
+    return true;
+  }
+
  private:
   void SetupInitialEnvState() {
     if (task_type_ == TaskType::kReach) {

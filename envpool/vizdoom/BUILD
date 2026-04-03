@@ -130,6 +130,7 @@ pybind_extension(
 py_library(
     name = "vizdoom",
     srcs = ["__init__.py"],
+    imports = ["../.."],
     data = [
         ":gen_vizdoom_maps",
         ":vizdoom_envpool",
@@ -137,7 +138,6 @@ py_library(
         "//envpool/vizdoom/bin:vizdoom_bin",
         "//envpool/vizdoom/bin:vizdoom_pk3",
     ],
-    imports = ["../.."],
     deps = ["//envpool/python:api"],
 )
 
@@ -179,8 +179,8 @@ py_test(
     name = "vizdoom_pretrain_test",
     size = "enormous",
     srcs = ["vizdoom_pretrain_test.py"],
-    data = [":gen_pretrain_weight"],
     imports = ["../.."],
+    data = [":gen_pretrain_weight"],
     deps = [
         ":vizdoom",
         ":vizdoom_registration",

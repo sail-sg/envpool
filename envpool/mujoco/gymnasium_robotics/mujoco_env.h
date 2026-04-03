@@ -17,6 +17,7 @@
 
 #include <mujoco.h>
 
+#include <algorithm>
 #include <array>
 #include <cstring>
 #include <memory>
@@ -80,7 +81,14 @@ class MujocoRobotEnv : public RenderableEnv {
       renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
           envpool::mujoco::CameraPolicy::kGymLike);
     }
-    renderer_->Render(model_, data_, width, height, camera_id, rgb);
+    mjvCamera camera_override;
+    InitializeRenderCamera(&camera_override);
+    if (RenderCamera(&camera_override)) {
+      renderer_->Render(model_, data_, width, height, camera_id, rgb,
+                        &camera_override);
+    } else {
+      renderer_->Render(model_, data_, width, height, camera_id, rgb);
+    }
   }
 
   std::pair<int, int> RenderSize(int width, int height) const override {
@@ -108,6 +116,29 @@ class MujocoRobotEnv : public RenderableEnv {
   virtual void EnvSetup() {}
   virtual void StepCallback() {}
   virtual void RenderCallback() {}
+  virtual bool RenderCamera(mjvCamera* camera) {
+    (void)camera;
+    return false;
+  }
+
+  void InitializeRenderCamera(mjvCamera* camera) const {
+    mjv_defaultCamera(camera);
+    camera->type = mjCAMERA_FREE;
+    camera->fixedcamid = -1;
+    camera->distance = model_->stat.extent;
+    if (model_->ngeom == 0) {
+      return;
+    }
+    for (int axis = 0; axis < 3; ++axis) {
+      std::vector<mjtNum> positions(model_->ngeom);
+      for (int geom_id = 0; geom_id < model_->ngeom; ++geom_id) {
+        positions[geom_id] = data_->geom_xpos[geom_id * 3 + axis];
+      }
+      auto mid = positions.begin() + positions.size() / 2;
+      std::nth_element(positions.begin(), mid, positions.end());
+      camera->lookat[axis] = *mid;
+    }
+  }
 
   void InitializeRobotEnv() {
     initial_time_ = data_->time;

@@ -197,6 +197,16 @@ class FetchEnv : public Env<FetchEnvSpec>, public MujocoRobotEnv {
     mj_forward(model_, data_);
   }
 
+  bool RenderCamera(mjvCamera* camera) override {
+    camera->distance = 2.5;
+    camera->azimuth = 132.0;
+    camera->elevation = -14.0;
+    camera->lookat[0] = 1.3;
+    camera->lookat[1] = 0.75;
+    camera->lookat[2] = 0.55;
+    return true;
+  }
+
  private:
   void SetupInitialEnvState() {
     SetJointQpos(model_, data_, "robot0:slide0",

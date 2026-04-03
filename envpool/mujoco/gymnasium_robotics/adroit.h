@@ -165,6 +165,25 @@ class AdroitEnv : public Env<AdroitEnvSpec>, public MujocoRobotEnv {
   }
 
  protected:
+  bool RenderCamera(mjvCamera* camera) override {
+    switch (task_type_) {
+      case TaskType::kDoor:
+      case TaskType::kRelocate:
+        camera->distance = 1.5;
+        camera->azimuth = 90.0;
+        break;
+      case TaskType::kHammer:
+        camera->distance = 2.0;
+        camera->azimuth = 45.0;
+        break;
+      case TaskType::kPen:
+        camera->distance = 1.0;
+        camera->azimuth = -45.0;
+        break;
+    }
+    return true;
+  }
+
   static TaskType ParseTaskType(const std::string& task) {
     if (task == "door") {
       return TaskType::kDoor;

@@ -86,6 +86,7 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
   mjtNum maze_size_scaling_;
   mjtNum maze_height_;
   mjtNum position_noise_range_;
+  mjtNum camera_distance_;
   std::array<mjtNum, 2> goal_{};
   std::array<mjtNum, 2> reset_pos_{};
   std::vector<std::array<mjtNum, 2>> goal_locations_;
@@ -108,6 +109,8 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
         maze_size_scaling_(spec.config["maze_size_scaling"_]),
         maze_height_(spec.config["maze_height"_]),
         position_noise_range_(spec.config["position_noise_range"_]),
+        camera_distance_(MazeRows(spec.config["maze_map"_]).size() > 8 ? 12.5
+                                                                       : 8.8),
         target_site_id_(SiteId(model_, "target")) {
     BuildMazeLocations(spec.config["maze_map"_]);
     InitializeRobotEnv();
@@ -164,6 +167,11 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
   }
 
  protected:
+  bool RenderCamera(mjvCamera* camera) override {
+    camera->distance = camera_distance_;
+    return true;
+  }
+
   static const std::vector<std::string>& MazeRows(const std::string& maze_map) {
     static const std::vector<std::string> k_open = {
         "1111111", "1000001", "1000001", "1000001", "1111111",

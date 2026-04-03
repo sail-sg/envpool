@@ -256,6 +256,6 @@ pybind_extension(
 py_library(
     name = "core",
     srcs = ["__init__.py"],
-    data = [":shared_thread_pool"],
     imports = ["../.."],
+    data = [":shared_thread_pool"],
 )

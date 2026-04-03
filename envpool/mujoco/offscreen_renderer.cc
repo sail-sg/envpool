@@ -470,9 +470,16 @@ void OffscreenRenderer::Initialize(const mjModel* model) {
 }
 
 void OffscreenRenderer::UpdateCamera(const mjModel* model, const mjData* data,
-                                     int camera_id) {
+                                     int camera_id,
+                                     const mjvCamera* camera_override) {
   if (camera_id < -1 || camera_id >= model->ncam) {
     throw std::out_of_range("camera_id is out of range");
+  }
+  if (camera_id == -1 && camera_override != nullptr) {
+    camera_ = *camera_override;
+    camera_.type = mjCAMERA_FREE;
+    camera_.fixedcamid = -1;
+    return;
   }
   if (camera_id == -1 && camera_policy_ == CameraPolicy::kGymLike) {
     int track_camera_id = mj_name2id(model, mjOBJ_CAMERA, "track");
@@ -510,7 +517,8 @@ void OffscreenRenderer::UpdateCamera(const mjModel* model, const mjData* data,
 }
 
 void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
-                               int height, int camera_id, unsigned char* rgb) {
+                               int height, int camera_id, unsigned char* rgb,
+                               const mjvCamera* camera_override) {
   if (!initialized_) {
     Initialize(model);
   }
@@ -519,7 +527,7 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
     mjr_resizeOffscreen(width, height, &context_);
   }
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
-  UpdateCamera(model, data, camera_id);
+  UpdateCamera(model, data, camera_id, camera_override);
 
   mjrRect viewport = {0, 0, width, height};
   mjv_updateScene(model, data, &option_, nullptr, &camera_, mjCAT_ALL, &scene_);

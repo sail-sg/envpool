@@ -268,6 +268,16 @@ class KitchenEnv : public Env<KitchenEnvSpec>, public MujocoRobotEnv {
   }
 
  protected:
+  bool RenderCamera(mjvCamera* camera) override {
+    camera->distance = 2.2;
+    camera->azimuth = 70.0;
+    camera->elevation = -35.0;
+    camera->lookat[0] = -0.2;
+    camera->lookat[1] = 0.5;
+    camera->lookat[2] = 2.0;
+    return true;
+  }
+
   static int TaskId(const std::string& task_name) {
     for (int i = 0; i < kitchen_internal::kTaskCount; ++i) {
       if (task_name == kitchen_internal::kTaskSpecs[i].name) {

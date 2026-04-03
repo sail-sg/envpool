@@ -20,8 +20,8 @@ load("//envpool:requirements.bzl", "requirement")
 py_library(
     name = "dummy",
     srcs = ["__init__.py"],
-    data = [":dummy_envpool"],
     imports = ["../.."],
+    data = [":dummy_envpool"],
     deps = ["//envpool/python:api"],
 )
 
@@ -49,8 +49,8 @@ cc_test(
 py_test(
     name = "dummy_py_envpool_test",
     srcs = ["dummy_py_envpool_test.py"],
-    data = [":dummy_envpool"],
     imports = ["../.."],
+    data = [":dummy_envpool"],
     deps = [
         requirement("numpy"),
         requirement("absl-py"),
