@@ -20,18 +20,18 @@ from envpool.registration import register
 procgen_game_config = [
     ("bigfish", 6000, [0, 1]),
     ("bossfight", 4000, [0, 1]),
-    ("caveflyer", 1000, [0, 1, 10]),
+    ("caveflyer", 1000, [0, 1, 10, 20]),
     ("chaser", 1000, [0, 1, 2]),
-    ("climber", 1000, [0, 1]),
-    ("coinrun", 1000, [0, 1]),
+    ("climber", 1000, [0, 1, 20]),
+    ("coinrun", 1000, [0, 1, 20]),
     ("dodgeball", 1000, [0, 1, 2, 10]),
     ("fruitbot", 1000, [0, 1]),
-    ("heist", 1000, [0, 1, 10]),
-    ("jumper", 1000, [0, 1, 10]),
-    ("leaper", 500, [0, 1, 2]),
-    ("maze", 500, [0, 1, 10]),
+    ("heist", 1000, [0, 1, 10, 20]),
+    ("jumper", 1000, [0, 1, 10, 20]),
+    ("leaper", 500, [0, 1, 2, 20]),
+    ("maze", 500, [0, 1, 10, 20]),
     ("miner", 1000, [0, 1, 10]),
-    ("ninja", 1000, [0, 1]),
+    ("ninja", 1000, [0, 1, 20]),
     ("plunder", 4000, [0, 1]),
     ("starpilot", 1000, [0, 1, 2]),
 ]
@@ -41,6 +41,7 @@ distribution = {
     1: "Hard",
     2: "Extreme",
     10: "Memory",
+    20: "Exploration",
 }
 
 for env_name, timeout, dist_mode in procgen_game_config:
