@@ -764,13 +764,13 @@ class _GymnasiumRoboticsEnvPoolBase:
         return self.__repr__()
 
 
-class GymnasiumRoboticsGymnasiumEnvPool(  # type: ignore[misc,override]
+class GymnasiumRoboticsGymnasiumEnvPool(  # type: ignore[misc,override,unused-ignore]
     _GymnasiumRoboticsEnvPoolBase,
     gymnasium.Env,
 ):
     """Gymnasium EnvPool adapter around upstream Gymnasium-Robotics envs."""
 
-    def reset(  # type: ignore[override]
+    def reset(  # type: ignore[override,unused-ignore]
         self,
         env_id: np.ndarray | None = None,
     ) -> tuple[Any, dict[str, np.ndarray]]:
@@ -778,7 +778,7 @@ class GymnasiumRoboticsGymnasiumEnvPool(  # type: ignore[misc,override]
         env_ids = _as_int32_env_ids(env_id, self.all_env_ids)
         return self._reset_selected(env_ids)
 
-    def step(  # type: ignore[override]
+    def step(  # type: ignore[override,unused-ignore]
         self,
         action: Any,
         env_id: np.ndarray | None = None,
