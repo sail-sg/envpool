@@ -28,8 +28,8 @@
 #include <vector>
 
 #include "envpool/core/env.h"
-#include "envpool/mujoco/robotics/utils.h"
 #include "envpool/mujoco/offscreen_renderer.h"
+#include "envpool/mujoco/robotics/utils.h"
 
 namespace gymnasium_robotics {
 
