@@ -45,7 +45,7 @@ cc_library(
     deps = [
         "//envpool/core:async_envpool",
         "//envpool/mujoco:mujoco_render",
-        "@mujoco//:mujoco_lib",
+        "@mujoco//:mujoco_plugin_lib",
     ],
 )
 
