@@ -27,7 +27,6 @@ py_library(
         "//envpool/python:protocol",
         requirement("dm-env"),
         requirement("gymnasium"),
-        requirement("gymnasium-robotics"),
         requirement("numpy"),
     ],
 )
@@ -40,7 +39,6 @@ py_library(
         ":gymnasium_robotics",
         "//envpool:registration",
         requirement("gymnasium"),
-        requirement("gymnasium-robotics"),
     ],
 )
 

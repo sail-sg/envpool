@@ -20,7 +20,7 @@ numpy==2.4.3
 opt-einsum==3.4.0
 optree==0.19.0
 packaging==26.0
-pettingzoo==1.25.0
+pettingzoo==1.24.3
 pillow==12.1.1
 pyopengl==3.1.10
 scipy==1.17.1
