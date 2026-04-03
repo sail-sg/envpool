@@ -68,7 +68,6 @@ cc_library(
             "-Wno-stringop-truncation",
         ],
     }),
-    alwayslink = 1,
     cxxopts = select({
         "@envpool//:windows": ["/std:c++20"],
         "//conditions:default": ["-std=c++20"],
@@ -94,4 +93,5 @@ cc_library(
         "@tinyobjloader",
         "@tinyxml2",
     ],
+    alwayslink = 1,
 )
