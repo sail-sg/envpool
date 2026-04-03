@@ -24,6 +24,10 @@
 #include <utility>
 #include <vector>
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
+
 #include "envpool/minigrid/impl/minigrid_env.h"
 
 namespace minigrid {
@@ -270,7 +274,25 @@ WFCModel BuildWFCModel(const WFCPreset& preset) {
   return model;
 }
 
-int CountAllowedPatterns(WFCMask mask) { return __builtin_popcountll(mask); }
+int CountAllowedPatterns(WFCMask mask) {
+#ifdef _MSC_VER
+  return static_cast<int>(__popcnt64(mask));
+#else
+  return __builtin_popcountll(mask);
+#endif
+}
+
+int LowestAllowedPattern(WFCMask mask) {
+  CHECK_NE(mask, WFCMask{0});
+#ifdef _MSC_VER
+  unsigned long pattern_idx = 0;
+  const unsigned char found = _BitScanForward64(&pattern_idx, mask);
+  CHECK_NE(found, 0);
+  return static_cast<int>(pattern_idx);
+#else
+  return __builtin_ctzll(mask);
+#endif
+}
 
 bool PropagateWave(const WFCModel& model, int width, int height,
                    std::vector<WFCMask>* wave) {
@@ -283,7 +305,7 @@ bool PropagateWave(const WFCModel& model, int width, int height,
         const WFCMask cur_mask = (*wave)[idx];
         WFCMask next_mask = cur_mask;
         for (WFCMask allowed = cur_mask; allowed != 0; allowed &= allowed - 1) {
-          const int pattern_idx = __builtin_ctzll(allowed);
+          const int pattern_idx = LowestAllowedPattern(allowed);
           bool supported = true;
           for (int dir_idx = 0; dir_idx < 4; ++dir_idx) {
             int next_x = x + kWFCDirections[dir_idx].first;
@@ -325,7 +347,7 @@ int SelectPattern(WFCMask mask, const std::vector<double>& weights,
                   std::mt19937* gen_ref) {
   double total_weight = 0.0;
   for (WFCMask allowed = mask; allowed != 0; allowed &= allowed - 1) {
-    total_weight += weights[__builtin_ctzll(allowed)];
+    total_weight += weights[LowestAllowedPattern(allowed)];
   }
   CHECK_GT(total_weight, 0.0);
   std::uniform_real_distribution<double> dist(0.0, total_weight);
@@ -334,7 +356,7 @@ int SelectPattern(WFCMask mask, const std::vector<double>& weights,
   double cumulative = 0.0;
   int fallback_idx = 0;
   for (WFCMask allowed = mask; allowed != 0; allowed &= allowed - 1) {
-    const int pattern_idx = __builtin_ctzll(allowed);
+    const int pattern_idx = LowestAllowedPattern(allowed);
     fallback_idx = pattern_idx;
     cumulative += weights[pattern_idx];
     if (sample < cumulative) {
@@ -384,7 +406,7 @@ bool SolveWFC(const WFCModel& model, int width, int height,
     for (int x = 0; x < width; ++x) {
       const WFCMask mask = wave[y * width + x];
       CHECK_EQ(CountAllowedPatterns(mask), 1);
-      const int pattern_idx = __builtin_ctzll(mask);
+      const int pattern_idx = LowestAllowedPattern(mask);
       (*bitmap)[y][x] = model.patterns[pattern_idx][0];
     }
   }
