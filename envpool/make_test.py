@@ -16,6 +16,7 @@
 import gc
 import os
 import pprint
+import sys
 import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -40,6 +41,16 @@ _SKIP_MUJOCO_RENDER_SMOKE = (
 )
 
 _RenderFactory = Callable[..., GymEnvPool | GymnasiumEnvPool]
+
+_GYMNASIUM_ROBOTICS_PREFIXES = (
+    "AdroitHand",
+    "AntMaze_",
+    "Fetch",
+    "FrankaKitchen-",
+    "HandManipulate",
+    "HandReach",
+    "PointMaze_",
+)
 
 
 @contextmanager
@@ -76,6 +87,15 @@ class _MakeTest(absltest.TestCase):
             render_once(envpool.make_gym)
             render_once(envpool.make_gymnasium)
         except Exception as exc:
+            if (
+                task_id.startswith(_GYMNASIUM_ROBOTICS_PREFIXES)
+                and sys.platform in {"darwin", "win32"}
+                and "gladLoadGL" in str(exc)
+            ):
+                self.skipTest(
+                    "Gymnasium-Robotics MuJoCo offscreen rendering is "
+                    "unavailable in this runtime."
+                )
             _emit_github_error(f"{task_id} render smoke failed: {exc}")
             raise
 
@@ -254,15 +274,7 @@ class _MakeTest(absltest.TestCase):
         task_ids = sorted(
             task_id
             for task_id in envpool.list_all_envs()
-            if task_id.startswith((
-                "AdroitHand",
-                "AntMaze_",
-                "Fetch",
-                "FrankaKitchen-",
-                "HandManipulate",
-                "HandReach",
-                "PointMaze_",
-            ))
+            if task_id.startswith(_GYMNASIUM_ROBOTICS_PREFIXES)
         )
         if not task_ids:
             self.skipTest("gymnasium-robotics package is unavailable")
