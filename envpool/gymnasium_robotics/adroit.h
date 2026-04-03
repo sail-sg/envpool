@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <stdexcept>
 #include <string>
@@ -76,7 +77,7 @@ using AdroitEnvSpec = EnvSpec<AdroitEnvFns>;
 
 class AdroitEnv : public Env<AdroitEnvSpec>, public MujocoRobotEnv {
  protected:
-  enum class TaskType {
+  enum class TaskType : std::uint8_t {
     kDoor,
     kHammer,
     kPen,
@@ -155,7 +156,8 @@ class AdroitEnv : public Env<AdroitEnvSpec>, public MujocoRobotEnv {
     const float* act = static_cast<const float*>(action["action"_].Data());
     for (int i = 0; i < action_dim_; ++i) {
       mjtNum value =
-          std::clamp(static_cast<mjtNum>(act[i]), mjtNum(-1.0), mjtNum(1.0));
+          std::clamp(static_cast<mjtNum>(act[i]), static_cast<mjtNum>(-1.0),
+                     static_cast<mjtNum>(1.0));
       data_->ctrl[i] = act_mean_[i] + value * act_rng_[i];
     }
     DoSimulation();
@@ -388,7 +390,8 @@ class AdroitEnv : public Env<AdroitEnvSpec>, public MujocoRobotEnv {
       obs.push_back(data_->qpos[i]);
     }
     for (int i = model_->nv - 6; i < model_->nv; ++i) {
-      obs.push_back(std::clamp(data_->qvel[i], mjtNum(-1.0), mjtNum(1.0)));
+      obs.push_back(std::clamp(data_->qvel[i], static_cast<mjtNum>(-1.0),
+                               static_cast<mjtNum>(1.0)));
     }
     auto palm_pos = GetSiteXpos(model_, data_, grasp_site_id_);
     auto obj_pos = BodyXpos(data_, object_body_id_);
@@ -409,8 +412,9 @@ class AdroitEnv : public Env<AdroitEnvSpec>, public MujocoRobotEnv {
     for (int i = 0; i < 3; ++i) {
       obs.push_back(target_pos[i]);
     }
-    obs.push_back(std::clamp(data_->sensordata[nail_sensor_addr_], mjtNum(-1.0),
-                             mjtNum(1.0)));
+    obs.push_back(std::clamp(data_->sensordata[nail_sensor_addr_],
+                             static_cast<mjtNum>(-1.0),
+                             static_cast<mjtNum>(1.0)));
     return obs;
   }
 

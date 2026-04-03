@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <random>
 #include <stdexcept>
@@ -92,18 +93,18 @@ using HandEnvSpec = EnvSpec<HandEnvFns>;
 
 class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
  protected:
-  enum class TaskType {
+  enum class TaskType : std::uint8_t {
     kReach,
     kManipulate,
   };
 
-  enum class TargetPositionType {
+  enum class TargetPositionType : std::uint8_t {
     kIgnore,
     kFixed,
     kRandom,
   };
 
-  enum class TargetRotationType {
+  enum class TargetRotationType : std::uint8_t {
     kIgnore,
     kFixed,
     kXyz,
@@ -111,13 +112,13 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
     kParallel,
   };
 
-  enum class TouchVisualizationType {
+  enum class TouchVisualizationType : std::uint8_t {
     kOff,
     kAlways,
     kOnTouch,
   };
 
-  enum class TouchObsType {
+  enum class TouchObsType : std::uint8_t {
     kOff,
     kSensordata,
     kBoolean,

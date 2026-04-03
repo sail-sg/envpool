@@ -228,8 +228,9 @@ class KitchenEnv : public Env<KitchenEnvSpec>, public MujocoRobotEnv {
   void Step(const Action& action) override {
     const auto* act = static_cast<const mjtNum*>(action["action"_].Data());
     for (int i = 0; i < kitchen_internal::kRobotDim; ++i) {
-      mjtNum value =
-          std::clamp(act[i], mjtNum(-1.0), mjtNum(1.0)) * mjtNum(2.0);
+      mjtNum value = std::clamp(act[i], static_cast<mjtNum>(-1.0),
+                                static_cast<mjtNum>(1.0)) *
+                     static_cast<mjtNum>(2.0);
       value = std::clamp(value, kitchen_internal::kRobotVelBound[i][0],
                          kitchen_internal::kRobotVelBound[i][1]);
       value = last_robot_qpos_[i] + value * Dt();

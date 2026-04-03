@@ -130,14 +130,18 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
   }
 
   void Step(const Action& action) override {
-    data_->qvel[0] = std::clamp(data_->qvel[0], mjtNum(-5.0), mjtNum(5.0));
-    data_->qvel[1] = std::clamp(data_->qvel[1], mjtNum(-5.0), mjtNum(5.0));
+    data_->qvel[0] = std::clamp(data_->qvel[0], static_cast<mjtNum>(-5.0),
+                                static_cast<mjtNum>(5.0));
+    data_->qvel[1] = std::clamp(data_->qvel[1], static_cast<mjtNum>(-5.0),
+                                static_cast<mjtNum>(5.0));
     mj_forward(model_, data_);
     const float* act = static_cast<const float*>(action["action"_].Data());
     data_->ctrl[0] =
-        std::clamp(static_cast<mjtNum>(act[0]), mjtNum(-1.0), mjtNum(1.0));
+        std::clamp(static_cast<mjtNum>(act[0]), static_cast<mjtNum>(-1.0),
+                   static_cast<mjtNum>(1.0));
     data_->ctrl[1] =
-        std::clamp(static_cast<mjtNum>(act[1]), mjtNum(-1.0), mjtNum(1.0));
+        std::clamp(static_cast<mjtNum>(act[1]), static_cast<mjtNum>(-1.0),
+                   static_cast<mjtNum>(1.0));
     DoSimulation();
     ++elapsed_step_;
 
