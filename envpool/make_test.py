@@ -238,7 +238,7 @@ class _MakeTest(absltest.TestCase):
             for task_id in envpool.list_all_envs()
             if task_id.startswith("MiniGrid-")
         )
-        self.assertLen(task_ids, 75)
+        self.assertLen(task_ids, 81)
         self.check_step(task_ids)
 
     def test_make_babyai(self) -> None:

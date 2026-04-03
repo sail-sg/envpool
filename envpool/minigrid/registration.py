@@ -415,6 +415,23 @@ _register(
     env_name="blocked_unlock_pickup",
 )
 
+for preset in (
+    "MazeSimple",
+    "DungeonMazeScaled",
+    "RoomsFabric",
+    "ObstaclesBlackdots",
+    "ObstaclesAngular",
+    "ObstaclesHogs3",
+):
+    _register(
+        f"MiniGrid-WFC-{preset}-v0",
+        25 * 20,
+        env_name="wfc",
+        wfc_preset=preset,
+        size=25,
+        ensure_connected=True,
+    )
+
 _register_babyai("BabyAI-ActionObjDoor-v0", env_name="babyai_action_obj_door")
 _register_babyai(
     "BabyAI-BlockedUnlockPickup-v0",

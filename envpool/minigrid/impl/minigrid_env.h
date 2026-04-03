@@ -533,6 +533,20 @@ class ObstructedMazeTask : public RoomGridTask {
   void AddKeyToRoom(int i, int j, Color color, bool key_in_box);
 };
 
+class WFCTask : public MiniGridTask {
+ public:
+  WFCTask(std::string wfc_preset, int size, bool ensure_connected,
+          int max_steps);
+
+ protected:
+  void GenGrid() override;
+
+ private:
+  std::string wfc_preset_;
+  int size_;
+  bool ensure_connected_;
+};
+
 }  // namespace minigrid
 
 #endif  // ENVPOOL_MINIGRID_IMPL_MINIGRID_ENV_H_

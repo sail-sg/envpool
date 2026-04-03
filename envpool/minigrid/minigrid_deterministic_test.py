@@ -29,7 +29,7 @@ class _MiniGridEnvPoolDeterministicTest(absltest.TestCase):
             for task_id in list_all_envs()
             if task_id.startswith("MiniGrid-")
         )
-        self.assertLen(task_ids, 75)
+        self.assertLen(task_ids, 81)
         return task_ids
 
     def obs_from_reset(
@@ -116,6 +116,7 @@ class _MiniGridEnvPoolDeterministicTest(absltest.TestCase):
             "MiniGrid-MultiRoom-N6-v0",
             "MiniGrid-ObstructedMaze-Full-v1",
             "MiniGrid-PutNear-8x8-N3-v0",
+            "MiniGrid-WFC-MazeSimple-v0",
         ]:
             with self.subTest(task_id=task_id):
                 self.run_different_seed_check(task_id)

@@ -184,6 +184,12 @@ MiniGridTaskFactories() {
           {"obstructed_maze_1dlhb", MakeObstructedMazeTask},
           {"obstructed_maze_full", MakeObstructedMazeTask},
           {"obstructed_maze_full_v1", MakeObstructedMazeTask},
+          {"wfc",
+           [](const Config& conf) {
+             return std::make_unique<WFCTask>(
+                 conf["wfc_preset"_], conf["size"_], conf["ensure_connected"_],
+                 conf["max_episode_steps"_]);
+           }},
       };
   return factories;
 }
