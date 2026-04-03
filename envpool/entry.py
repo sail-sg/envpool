@@ -49,6 +49,11 @@ except ImportError:
     pass
 
 try:
+    import envpool.gymnasium_robotics.registration  # noqa: F401
+except ImportError:
+    pass
+
+try:
     import envpool.toy_text.registration  # noqa: F401
 except ImportError:
     pass

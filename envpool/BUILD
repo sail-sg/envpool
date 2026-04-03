@@ -37,6 +37,7 @@ py_library(
         "//envpool/atari:atari_registration",
         "//envpool/box2d:box2d_registration",
         "//envpool/classic_control:classic_control_registration",
+        "//envpool/gymnasium_robotics:gymnasium_robotics_registration",
         "//envpool/minigrid:minigrid_registration",
         "//envpool/mujoco:mujoco_dmc_registration",
         "//envpool/mujoco:mujoco_gym_registration",
@@ -58,6 +59,7 @@ py_library(
         "//envpool/box2d",
         "//envpool/classic_control",
         "//envpool/core",
+        "//envpool/gymnasium_robotics",
         "//envpool/minigrid",
         "//envpool/mujoco",
         "//envpool/procgen",
@@ -69,9 +71,9 @@ py_library(
 
 py_test(
     name = "make_test",
+    timeout = "long",
     srcs = ["make_test.py"],
     imports = [".."],
-    timeout = "long",
     deps = [
         ":envpool",
         requirement("absl-py"),

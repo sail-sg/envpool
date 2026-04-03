@@ -1,4 +1,4 @@
-# Copyright 2022 Garena Online Private Limited
+# Copyright 2026 Garena Online Private Limited
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,68 +12,51 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
-load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("//envpool:requirements.bzl", "requirement")
 
 package(default_visibility = ["//visibility:public"])
 
-cc_library(
-    name = "toy_text_env",
-    hdrs = [
-        "blackjack.h",
-        "catch.h",
-        "cliffwalking.h",
-        "frozen_lake.h",
-        "nchain.h",
-        "taxi.h",
-    ],
-    deps = [
-        "//envpool/core:async_envpool",
-    ],
-)
-
-pybind_extension(
-    name = "toy_text_envpool",
-    srcs = [
-        "toy_text.cc",
-    ],
-    deps = [
-        ":toy_text_env",
-        "//envpool/core:py_envpool",
-    ],
-)
-
 py_library(
-    name = "toy_text",
+    name = "gymnasium_robotics",
     srcs = ["__init__.py"],
-    data = [":toy_text_envpool"],
     imports = ["../.."],
-    deps = ["//envpool/python:api"],
+    deps = [
+        "//envpool/python:data",
+        "//envpool/python:glfw_context",
+        "//envpool/python:protocol",
+        requirement("dm-env"),
+        requirement("gymnasium"),
+        requirement("gymnasium-robotics"),
+        requirement("numpy"),
+    ],
 )
 
 py_library(
-    name = "toy_text_registration",
+    name = "gymnasium_robotics_registration",
     srcs = ["registration.py"],
     imports = ["../.."],
     deps = [
+        ":gymnasium_robotics",
         "//envpool:registration",
+        requirement("gymnasium"),
+        requirement("gymnasium-robotics"),
     ],
 )
 
 py_test(
-    name = "toy_text_test",
-    srcs = ["toy_text_test.py"],
+    name = "gymnasium_robotics_test",
+    size = "enormous",
+    srcs = ["gymnasium_robotics_test.py"],
     imports = ["../.."],
     deps = [
-        ":toy_text",
-        ":toy_text_registration",
+        ":gymnasium_robotics",
+        ":gymnasium_robotics_registration",
+        "//envpool:registration",
+        requirement("dm-env"),
         requirement("absl-py"),
-        requirement("dm_env"),
         requirement("gymnasium"),
+        requirement("gymnasium-robotics"),
         requirement("numpy"),
-        requirement("scipy"),
-        requirement("pygame"),
     ],
 )

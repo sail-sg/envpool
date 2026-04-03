@@ -92,6 +92,7 @@ stable version through `envpool.readthedocs.io/en/stable/
    env/classic_control
    env/dm_control
    env/minigrid
+   env/gymnasium_robotics
    env/mujoco_gym
    env/procgen
    env/toy_text

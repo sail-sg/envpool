@@ -79,18 +79,18 @@ cc_library(
         "gym/inverted_double_pendulum.h",
         "gym/inverted_pendulum.h",
         "gym/mujoco_env.h",
-        "offscreen_renderer.h",
         "gym/pusher.h",
         "gym/reacher.h",
         "gym/swimmer.h",
         "gym/walker2d.h",
+        "offscreen_renderer.h",
     ],
     data = [
         ":gen_mujoco_gym_xml",
     ],
     deps = [
-        "//envpool/core:async_envpool",
         ":mujoco_render",
+        "//envpool/core:async_envpool",
         "@mujoco//:mujoco_lib",
     ],
 )
@@ -124,18 +124,18 @@ cc_library(
         "dmc/humanoid_CMU.h",
         "dmc/manipulator.h",
         "dmc/mujoco_env.h",
-        "offscreen_renderer.h",
         "dmc/pendulum.h",
         "dmc/point_mass.h",
         "dmc/reacher.h",
         "dmc/swimmer.h",
         "dmc/utils.h",
         "dmc/walker.h",
+        "offscreen_renderer.h",
     ],
     data = [":gen_mujoco_dmc_xml"],
     deps = [
-        "//envpool/core:async_envpool",
         ":mujoco_render",
+        "//envpool/core:async_envpool",
         "@mujoco//:mujoco_lib",
         "@pugixml",
     ],
@@ -155,22 +155,22 @@ pybind_extension(
 py_library(
     name = "mujoco_dmc",
     srcs = ["dmc/__init__.py"],
-    imports = ["../.."],
     data = [
         ":gen_mujoco_dmc_xml",
         ":mujoco_dmc_envpool",
     ],
+    imports = ["../.."],
     deps = ["//envpool/python:api"],
 )
 
 py_library(
     name = "mujoco_gym",
     srcs = ["gym/__init__.py"],
-    imports = ["../.."],
     data = [
         ":gen_mujoco_gym_xml",
         ":mujoco_gym_envpool",
     ],
+    imports = ["../.."],
     deps = ["//envpool/python:api"],
 )
 

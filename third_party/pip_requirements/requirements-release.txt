@@ -3,6 +3,7 @@ wheel
 numpy>=2,<3
 dm-env>=1.6
 gymnasium>=1.2.3
+gymnasium-robotics>=1.4.2
 optree>=0.19.0
 jax[cpu]>=0.9.2,<0.10
 packaging>=26.0

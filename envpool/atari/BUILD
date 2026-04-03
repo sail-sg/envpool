@@ -43,11 +43,11 @@ genrule(
 py_library(
     name = "atari",
     srcs = ["__init__.py"],
-    imports = ["../.."],
     data = [
         ":atari_envpool",
         ":gen_atari_roms",
     ],
+    imports = ["../.."],
     deps = ["//envpool/python:api"],
 )
 
@@ -156,10 +156,10 @@ py_test(
     name = "atari_pretrain_test",
     size = "enormous",
     srcs = ["atari_pretrain_test.py"],
-    imports = ["../.."],
     data = [
         ":gen_pretrain_weight",
     ],
+    imports = ["../.."],
     deps = [
         ":atari",
         ":atari_network",

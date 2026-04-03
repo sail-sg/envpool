@@ -18,6 +18,7 @@ fsspec==2026.2.0
 glfw==2.10.0
 grpcio==1.78.0
 gymnasium==1.2.3
+gymnasium-robotics==1.4.2
 h5py==3.16.0
 idna==3.11
 imageio==2.37.3

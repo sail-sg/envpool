@@ -42,8 +42,8 @@ cc_library(
         "impl/babyai_env.h",
         "impl/babyai_task_factory.h",
         "impl/minigrid_env.h",
-        "impl/minigrid_task_utils.h",
         "impl/minigrid_task_factory.h",
+        "impl/minigrid_task_utils.h",
         "impl/utils.h",
         "minigrid.h",
     ],
@@ -58,15 +58,15 @@ pybind_extension(
     name = "minigrid_envpool",
     srcs = ["minigrid.cc"],
     deps = [
-        "//envpool/minigrid_bindings:minigrid_bindings",
+        "//envpool/minigrid_bindings",
     ],
 )
 
 py_library(
     name = "minigrid",
     srcs = ["__init__.py"],
-    imports = ["../.."],
     data = [":minigrid_envpool"],
+    imports = ["../.."],
     deps = [
         "//envpool/python:api",
         requirement("numpy"),

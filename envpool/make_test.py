@@ -250,6 +250,25 @@ class _MakeTest(absltest.TestCase):
         self.assertLen(task_ids, 96)
         self.check_step(task_ids)
 
+    def test_make_gymnasium_robotics(self) -> None:
+        task_ids = sorted(
+            task_id
+            for task_id in envpool.list_all_envs()
+            if task_id.startswith((
+                "AdroitHand",
+                "AntMaze_",
+                "Fetch",
+                "FrankaKitchen-",
+                "HandManipulate",
+                "HandReach",
+                "PointMaze_",
+            ))
+        )
+        if not task_ids:
+            self.skipTest("gymnasium-robotics package is unavailable")
+        self.assertLen(task_ids, 217)
+        self.check_step(task_ids)
+
     def test_make_mujoco_gym(self) -> None:
         self.check_step([
             "Ant-v3",
@@ -346,6 +365,8 @@ class _MakeTest(absltest.TestCase):
         if not _SKIP_MUJOCO_RENDER_SMOKE:
             self.check_render("Ant-v5")
             self.check_render("WalkerWalk-v1")
+            if "FetchReach-v4" in envpool.list_all_envs():
+                self.check_render("FetchReach-v4")
 
     def test_make_procgen(self) -> None:
         self.check_step([

@@ -71,7 +71,7 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
                 )
                 d1 = np.logical_or(term1, trunc1)
                 np.testing.assert_allclose(o0, o1[0], atol=1e-4)
-                np.testing.assert_allclose(r0, r1[0])
+                np.testing.assert_allclose(np.asarray(r0), np.asarray(r1[0]))
                 np.testing.assert_allclose(d0, d1[0])
                 np.testing.assert_allclose(term0, term1[0])
                 np.testing.assert_allclose(trunc0, trunc1[0])

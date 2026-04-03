@@ -58,8 +58,8 @@ pybind_extension(
 py_library(
     name = "box2d",
     srcs = ["__init__.py"],
-    imports = ["../.."],
     data = [":box2d_envpool"],
+    imports = ["../.."],
     deps = ["//envpool/python:api"],
 )
 

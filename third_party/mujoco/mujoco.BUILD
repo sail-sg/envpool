@@ -72,13 +72,13 @@ cc_library(
         "include/mujoco",
         "src",
     ],
-    linkstatic = 1,
     linkopts = select({
         "@envpool//:linux": [
             "-ldl",
         ],
         "//conditions:default": [],
     }),
+    linkstatic = 1,
     deps = [
         "@ccd",
         "@lodepng",
