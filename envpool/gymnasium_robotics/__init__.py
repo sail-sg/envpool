@@ -570,6 +570,7 @@ class _GymnasiumRoboticsEnvPoolBase:
             dict() for _ in range(self._num_envs)
         ]
         self._pending_step: tuple[Any, ...] | None = None
+        self._pending_reset = False
         for env_id in range(self._num_envs):
             self._reset_one(env_id)
         self._needs_seeded_reset = [True] * self._num_envs
@@ -688,6 +689,7 @@ class _GymnasiumRoboticsEnvPoolBase:
     ) -> None:
         env_ids = _as_int32_env_ids(env_id, self.all_env_ids)
         self._pending_step = self._step_selected(action, env_ids)
+        self._pending_reset = False
 
     def recv(
         self,
@@ -699,10 +701,20 @@ class _GymnasiumRoboticsEnvPoolBase:
             raise RuntimeError("send() must be called before recv().")
         ret = self._pending_step
         self._pending_step = None
+        self._pending_reset = False
         return ret
 
     def async_reset(self) -> None:
-        self._reset_selected(self.all_env_ids)
+        obs, info = self._reset_selected(self.all_env_ids)
+        num_envs = info["env_id"].shape[0]
+        self._pending_step = (
+            obs,
+            np.zeros(num_envs, dtype=np.float64),
+            np.zeros(num_envs, dtype=np.bool_),
+            np.zeros(num_envs, dtype=np.bool_),
+            info,
+        )
+        self._pending_reset = True
 
     def render(
         self,
@@ -838,5 +850,19 @@ class GymnasiumRoboticsDMEnvPool(
         if self._pending_step is None:
             raise RuntimeError("send() must be called before recv().")
         pending_step = self._pending_step
+        pending_reset = self._pending_reset
         self._pending_step = None
+        self._pending_reset = False
+        if pending_reset:
+            obs, _, _, _, info = pending_step
+            return TimeStep(
+                step_type=np.full(
+                    info["env_id"].shape[0],
+                    dm_env.StepType.FIRST,
+                    dtype=np.int32,
+                ),
+                reward=np.zeros(info["env_id"].shape[0], dtype=np.float64),
+                discount=np.ones(info["env_id"].shape[0], dtype=np.float64),
+                observation=_build_dm_observation(obs, info),
+            )
         return _dm_timestep(*pending_step)

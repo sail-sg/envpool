@@ -314,6 +314,30 @@ class _GymnasiumRoboticsEnvPoolTest(absltest.TestCase):
         finally:
             env.close()
 
+    def test_async_reset_recv(self) -> None:
+        env_gymnasium = make_gymnasium("FetchReach-v4", num_envs=2, seed=0)
+        env_dm = make_dm("FetchReach-v4", num_envs=2, seed=0)
+        try:
+            env_gymnasium.async_reset()
+            obs, reward, terminated, truncated, info = env_gymnasium.recv()
+            self.assertIsInstance(obs, dict)
+            self.assertEqual(obs["observation"].shape[0], 2)
+            self.assertEqual(reward.tolist(), [0.0, 0.0])
+            self.assertEqual(terminated.tolist(), [False, False])
+            self.assertEqual(truncated.tolist(), [False, False])
+            self.assertEqual(info["env_id"].tolist(), [0, 1])
+            self.assertEqual(info["elapsed_step"].tolist(), [0, 0])
+
+            env_dm.async_reset()
+            timestep = env_dm.recv()
+            self.assertIsInstance(timestep, dm_env.TimeStep)
+            self.assertTrue(timestep.first().all())
+            self.assertEqual(timestep.reward.tolist(), [0.0, 0.0])
+            self.assertEqual(timestep.discount.tolist(), [1.0, 1.0])
+        finally:
+            env_gymnasium.close()
+            env_dm.close()
+
     def test_render_smoke(self) -> None:
         env = make_gymnasium(
             "FetchReach-v4",
