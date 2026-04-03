@@ -18,6 +18,38 @@ from typing import Any
 from envpool.registration import register
 
 _IMPORT_PATH = "envpool.gymnasium_robotics"
+_ROBOTICS_ENV_CLASSES = {
+    "Fetch": (
+        "GymnasiumRoboticsFetchEnvSpec",
+        "GymnasiumRoboticsFetchDMEnvPool",
+        "GymnasiumRoboticsFetchGymEnvPool",
+        "GymnasiumRoboticsFetchGymnasiumEnvPool",
+    ),
+    "Hand": (
+        "GymnasiumRoboticsHandEnvSpec",
+        "GymnasiumRoboticsHandDMEnvPool",
+        "GymnasiumRoboticsHandGymEnvPool",
+        "GymnasiumRoboticsHandGymnasiumEnvPool",
+    ),
+    "Adroit": (
+        "GymnasiumRoboticsAdroitEnvSpec",
+        "GymnasiumRoboticsAdroitDMEnvPool",
+        "GymnasiumRoboticsAdroitGymEnvPool",
+        "GymnasiumRoboticsAdroitGymnasiumEnvPool",
+    ),
+    "PointMaze": (
+        "GymnasiumRoboticsPointMazeEnvSpec",
+        "GymnasiumRoboticsPointMazeDMEnvPool",
+        "GymnasiumRoboticsPointMazeGymEnvPool",
+        "GymnasiumRoboticsPointMazeGymnasiumEnvPool",
+    ),
+    "Kitchen": (
+        "GymnasiumRoboticsKitchenEnvSpec",
+        "GymnasiumRoboticsKitchenDMEnvPool",
+        "GymnasiumRoboticsKitchenGymEnvPool",
+        "GymnasiumRoboticsKitchenGymnasiumEnvPool",
+    ),
+}
 
 _FETCH_TASKS: dict[str, dict[str, Any]] = {
     "FetchReach": {
@@ -325,16 +357,30 @@ gymnasium_robotics_point_maze_envs = [
 
 gymnasium_robotics_kitchen_envs = ["FrankaKitchen-v1"]
 
+
+def _register_robotics_env(
+    family: str,
+    task_id: str,
+    **kwargs: Any,
+) -> None:
+    spec_cls, dm_cls, gym_cls, gymnasium_cls = _ROBOTICS_ENV_CLASSES[family]
+    register(
+        task_id=task_id,
+        import_path=_IMPORT_PATH,
+        spec_cls=spec_cls,
+        dm_cls=dm_cls,
+        gym_cls=gym_cls,
+        gymnasium_cls=gymnasium_cls,
+        **kwargs,
+    )
+
+
 for task, kwargs in _FETCH_TASKS.items():
     for reward_suffix, reward_type in [("", "sparse"), ("Dense", "dense")]:
         for version in ["v1", "v4"]:
-            register(
+            _register_robotics_env(
+                "Fetch",
                 task_id=f"{task}{reward_suffix}-{version}",
-                import_path=_IMPORT_PATH,
-                spec_cls="GymnasiumRoboticsFetchEnvSpec",
-                dm_cls="GymnasiumRoboticsFetchDMEnvPool",
-                gym_cls="GymnasiumRoboticsFetchGymEnvPool",
-                gymnasium_cls="GymnasiumRoboticsFetchGymnasiumEnvPool",
                 max_episode_steps=50,
                 reward_type=reward_type,
                 **kwargs,
@@ -342,13 +388,9 @@ for task, kwargs in _FETCH_TASKS.items():
 
 for reward_suffix, reward_type in [("", "sparse"), ("Dense", "dense")]:
     for version in ["v0", "v3"]:
-        register(
+        _register_robotics_env(
+            "Hand",
             task_id=f"HandReach{reward_suffix}-{version}",
-            import_path=_IMPORT_PATH,
-            spec_cls="GymnasiumRoboticsHandEnvSpec",
-            dm_cls="GymnasiumRoboticsHandDMEnvPool",
-            gym_cls="GymnasiumRoboticsHandGymEnvPool",
-            gymnasium_cls="GymnasiumRoboticsHandGymnasiumEnvPool",
             max_episode_steps=50,
             xml_file="hand/reach.xml",
             hand_task="reach",
@@ -373,15 +415,11 @@ for obj_name, obj_conf in _HAND_MANIPULATE_OBJECTS.items():
     for variant, variant_conf in obj_conf["variants"].items():
         for reward_suffix, reward_type in [("", "sparse"), ("Dense", "dense")]:
             for version in ["v0", "v1"]:
-                register(
+                _register_robotics_env(
+                    "Hand",
                     task_id=(
                         f"HandManipulate{obj_name}{variant}{reward_suffix}-{version}"
                     ),
-                    import_path=_IMPORT_PATH,
-                    spec_cls="GymnasiumRoboticsHandEnvSpec",
-                    dm_cls="GymnasiumRoboticsHandDMEnvPool",
-                    gym_cls="GymnasiumRoboticsHandGymEnvPool",
-                    gymnasium_cls="GymnasiumRoboticsHandGymnasiumEnvPool",
                     max_episode_steps=100,
                     xml_file=obj_conf["xml_file"],
                     hand_task="manipulate",
@@ -416,16 +454,12 @@ for obj_name, obj_conf in _HAND_MANIPULATE_OBJECTS.items():
                 ("Dense", "dense"),
             ]:
                 for version in ["v0", "v1"]:
-                    register(
+                    _register_robotics_env(
+                        "Hand",
                         task_id=(
                             f"HandManipulate{obj_name}{variant}"
                             f"{touch_suffix}{reward_suffix}-{version}"
                         ),
-                        import_path=_IMPORT_PATH,
-                        spec_cls="GymnasiumRoboticsHandEnvSpec",
-                        dm_cls="GymnasiumRoboticsHandDMEnvPool",
-                        gym_cls="GymnasiumRoboticsHandGymEnvPool",
-                        gymnasium_cls=("GymnasiumRoboticsHandGymnasiumEnvPool"),
                         max_episode_steps=100,
                         xml_file=obj_conf["touch_xml_file"],
                         hand_task="manipulate",
@@ -452,13 +486,9 @@ for obj_name, obj_conf in _HAND_MANIPULATE_OBJECTS.items():
 
 for task, kwargs in _ADROIT_TASKS.items():
     for reward_suffix, reward_type in [("", "dense"), ("Sparse", "sparse")]:
-        register(
+        _register_robotics_env(
+            "Adroit",
             task_id=f"{task}{reward_suffix}-v1",
-            import_path=_IMPORT_PATH,
-            spec_cls="GymnasiumRoboticsAdroitEnvSpec",
-            dm_cls="GymnasiumRoboticsAdroitDMEnvPool",
-            gym_cls="GymnasiumRoboticsAdroitGymEnvPool",
-            gymnasium_cls="GymnasiumRoboticsAdroitGymnasiumEnvPool",
             max_episode_steps=200,
             reward_type=reward_type,
             **kwargs,
@@ -466,13 +496,9 @@ for task, kwargs in _ADROIT_TASKS.items():
 
 for task, kwargs in _POINT_MAZE_TASKS.items():
     for reward_suffix, reward_type in [("", "sparse"), ("Dense", "dense")]:
-        register(
+        _register_robotics_env(
+            "PointMaze",
             task_id=f"{task}{reward_suffix}-v3",
-            import_path=_IMPORT_PATH,
-            spec_cls="GymnasiumRoboticsPointMazeEnvSpec",
-            dm_cls="GymnasiumRoboticsPointMazeDMEnvPool",
-            gym_cls="GymnasiumRoboticsPointMazeGymEnvPool",
-            gymnasium_cls="GymnasiumRoboticsPointMazeGymnasiumEnvPool",
             reward_type=reward_type,
             continuing_task=True,
             reset_target=False,
@@ -482,13 +508,9 @@ for task, kwargs in _POINT_MAZE_TASKS.items():
             **kwargs,
         )
 
-register(
+_register_robotics_env(
+    "Kitchen",
     task_id="FrankaKitchen-v1",
-    import_path=_IMPORT_PATH,
-    spec_cls="GymnasiumRoboticsKitchenEnvSpec",
-    dm_cls="GymnasiumRoboticsKitchenDMEnvPool",
-    gym_cls="GymnasiumRoboticsKitchenGymEnvPool",
-    gymnasium_cls="GymnasiumRoboticsKitchenGymnasiumEnvPool",
     max_episode_steps=280,
     frame_skip=40,
     xml_file="kitchen_franka/kitchen_assets/kitchen_env_model.xml",

@@ -77,6 +77,5 @@ py_test(
     deps = [
         ":envpool",
         requirement("absl-py"),
-        requirement("gymnasium-robotics"),
     ],
 )

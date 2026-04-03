@@ -310,8 +310,8 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
         mjtNum y =
             y_center - (static_cast<mjtNum>(row) + 0.5) * maze_size_scaling;
         xml << "    <geom name=\"block_" << row << "_" << col << "\" pos=\""
-            << x << " " << y << " " << z_pos << "\" "
-            << "size=\"" << half_size << " " << half_size << " " << z_pos
+            << x << " " << y << " " << z_pos << "\" " << "size=\"" << half_size
+            << " " << half_size << " " << z_pos
             << R"(" type="box" material="" contype="1" conaffinity="1" )"
             << "rgba=\"0.7 0.5 0.3 1.0\"/>\n";
       }

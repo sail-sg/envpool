@@ -21,7 +21,7 @@ from typing import Any, cast
 
 import dm_env
 import gymnasium as gym
-import gymnasium_robotics  # noqa: F401
+import gymnasium_robotics
 import mujoco
 import numpy as np
 from absl.testing import absltest
@@ -60,6 +60,10 @@ _HAND_CANONICAL_BY_V0 = {
 }
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+# Importing gymnasium_robotics registers the upstream env IDs used as the
+# rollout-alignment oracle in this test module.
+_ = gymnasium_robotics.__version__
 
 
 def _upstream_task_id(task_id: str) -> str:
@@ -267,6 +271,115 @@ def _kitchen_task_list_to_mask(tasks: list[str]) -> np.ndarray:
     return mask
 
 
+def _assert_make_registered_envs(
+    test_case: absltest.TestCase,
+    task_ids: list[str],
+) -> None:
+    for task_id in task_ids:
+        with test_case.subTest(task_id=task_id):
+            spec = make_spec(task_id)
+            test_case.assertIsNotNone(spec.observation_space)
+            test_case.assertIsNotNone(spec.action_space)
+
+            env_dm = make_dm(task_id)
+            env_gymnasium = make_gymnasium(task_id)
+            try:
+                test_case.assertIsInstance(env_dm, dm_env.Environment)
+                test_case.assertIsInstance(env_gymnasium, gym.Env)
+                env_dm.reset()
+                env_gymnasium.reset()
+            finally:
+                env_dm.close()
+                env_gymnasium.close()
+
+
+def _assert_space_alignment(
+    test_case: absltest.TestCase,
+    task_ids: list[str],
+) -> None:
+    for task_id in task_ids:
+        with test_case.subTest(task_id=task_id):
+            env0 = _make_upstream_env(task_id)
+            env1 = make_gymnasium(task_id)
+            try:
+                _assert_space_equal(
+                    env0.observation_space,
+                    env1.observation_space,
+                )
+                _assert_space_equal(env0.action_space, env1.action_space)
+            finally:
+                env0.close()
+                env1.close()
+
+
+def _sample_action_batch(
+    action_space: gym.Space,
+    num_envs: int,
+) -> np.ndarray:
+    return np.stack([action_space.sample() for _ in range(num_envs)])
+
+
+def _assert_same_seed_rollout(
+    test_case: absltest.TestCase,
+    task_ids: list[str],
+    num_steps: int,
+) -> None:
+    for task_id in task_ids:
+        with test_case.subTest(task_id=task_id):
+            env0 = make_gymnasium(task_id, num_envs=2, seed=0)
+            env1 = make_gymnasium(task_id, num_envs=2, seed=0)
+            try:
+                _assert_goal_obs_equal(env0.reset()[0], env1.reset()[0])
+                env0.action_space.seed(1)
+                for _ in range(num_steps):
+                    action = _sample_action_batch(
+                        env0.action_space,
+                        num_envs=2,
+                    )
+                    obs0, reward0, term0, trunc0, _ = env0.step(action)
+                    obs1, reward1, term1, trunc1, _ = env1.step(action)
+                    _assert_goal_obs_equal(obs0, obs1)
+                    np.testing.assert_allclose(reward0, reward1)
+                    np.testing.assert_array_equal(term0, term1)
+                    np.testing.assert_array_equal(trunc0, trunc1)
+            finally:
+                env0.close()
+                env1.close()
+
+
+def _assert_different_seed_rollout(
+    test_case: absltest.TestCase,
+    task_ids: list[str],
+    num_steps: int,
+) -> None:
+    for task_id in task_ids:
+        with test_case.subTest(task_id=task_id):
+            env0 = make_gymnasium(task_id, num_envs=2, seed=0)
+            env1 = make_gymnasium(task_id, num_envs=2, seed=1)
+            try:
+                obs0 = env0.reset()[0]
+                obs1 = env1.reset()[0]
+                differs = not _obs_allclose(obs0, obs1)
+                env0.action_space.seed(1)
+                for _ in range(num_steps):
+                    action = _sample_action_batch(
+                        env0.action_space,
+                        num_envs=2,
+                    )
+                    obs0 = env0.step(action)[0]
+                    obs1 = env1.step(action)[0]
+                    differs = differs or not _obs_allclose(obs0, obs1)
+                    if differs:
+                        break
+                test_case.assertTrue(
+                    differs,
+                    msg=f"expected different rollouts for {task_id}",
+                )
+            finally:
+                env0.close()
+                env1.close()
+
+
 class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
     def test_registered_fetch_env_count(self) -> None:
         task_ids = sorted(
@@ -278,86 +391,16 @@ class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
         self.assertLen(task_ids, 16)
 
     def test_make_registered_fetch_envs(self) -> None:
-        for task_id in _FETCH_ENVS:
-            with self.subTest(task_id=task_id):
-                spec = make_spec(task_id)
-                self.assertIsNotNone(spec.observation_space)
-                self.assertIsNotNone(spec.action_space)
-
-                env_dm = make_dm(task_id)
-                env_gymnasium = make_gymnasium(task_id)
-                try:
-                    self.assertIsInstance(env_dm, dm_env.Environment)
-                    self.assertIsInstance(env_gymnasium, gym.Env)
-                    env_dm.reset()
-                    env_gymnasium.reset()
-                finally:
-                    env_dm.close()
-                    env_gymnasium.close()
+        _assert_make_registered_envs(self, _FETCH_ENVS)
 
     def test_space_alignment(self) -> None:
-        for task_id in _FETCH_ENVS:
-            with self.subTest(task_id=task_id):
-                env0 = _make_upstream_env(task_id)
-                env1 = make_gymnasium(task_id)
-                try:
-                    _assert_space_equal(
-                        env0.observation_space,
-                        env1.observation_space,
-                    )
-                    _assert_space_equal(env0.action_space, env1.action_space)
-                finally:
-                    env0.close()
-                    env1.close()
+        _assert_space_alignment(self, _FETCH_ENVS)
 
     def test_deterministic_rollout_same_seed(self) -> None:
-        for task_id in _FETCH_ENVS:
-            with self.subTest(task_id=task_id):
-                env0 = make_gymnasium(task_id, num_envs=2, seed=0)
-                env1 = make_gymnasium(task_id, num_envs=2, seed=0)
-                try:
-                    _assert_goal_obs_equal(env0.reset()[0], env1.reset()[0])
-                    env0.action_space.seed(1)
-                    for _ in range(32):
-                        action = np.stack([
-                            env0.action_space.sample() for _ in range(2)
-                        ])
-                        obs0, reward0, term0, trunc0, _ = env0.step(action)
-                        obs1, reward1, term1, trunc1, _ = env1.step(action)
-                        _assert_goal_obs_equal(obs0, obs1)
-                        np.testing.assert_allclose(reward0, reward1)
-                        np.testing.assert_array_equal(term0, term1)
-                        np.testing.assert_array_equal(trunc0, trunc1)
-                finally:
-                    env0.close()
-                    env1.close()
+        _assert_same_seed_rollout(self, _FETCH_ENVS, num_steps=32)
 
     def test_different_seed_rollout_changes(self) -> None:
-        for task_id in _FETCH_ENVS:
-            with self.subTest(task_id=task_id):
-                env0 = make_gymnasium(task_id, num_envs=2, seed=0)
-                env1 = make_gymnasium(task_id, num_envs=2, seed=1)
-                try:
-                    obs0 = env0.reset()[0]
-                    obs1 = env1.reset()[0]
-                    differs = not _obs_allclose(obs0, obs1)
-                    env0.action_space.seed(1)
-                    for _ in range(32):
-                        action = np.stack([
-                            env0.action_space.sample() for _ in range(2)
-                        ])
-                        obs0 = env0.step(action)[0]
-                        obs1 = env1.step(action)[0]
-                        differs = differs or not _obs_allclose(obs0, obs1)
-                        if differs:
-                            break
-                    self.assertTrue(
-                        differs,
-                        msg=f"expected different rollouts for {task_id}",
-                    )
-                finally:
-                    env0.close()
-                    env1.close()
+        _assert_different_seed_rollout(self, _FETCH_ENVS, num_steps=32)
 
     def test_align_with_upstream_rollout(self) -> None:
         for task_id in _FETCH_ENVS:
@@ -523,86 +566,16 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
         self.assertLen(task_ids, 112)
 
     def test_make_registered_hand_envs(self) -> None:
-        for task_id in _HAND_ENVS:
-            with self.subTest(task_id=task_id):
-                spec = make_spec(task_id)
-                self.assertIsNotNone(spec.observation_space)
-                self.assertIsNotNone(spec.action_space)
-
-                env_dm = make_dm(task_id)
-                env_gymnasium = make_gymnasium(task_id)
-                try:
-                    self.assertIsInstance(env_dm, dm_env.Environment)
-                    self.assertIsInstance(env_gymnasium, gym.Env)
-                    env_dm.reset()
-                    env_gymnasium.reset()
-                finally:
-                    env_dm.close()
-                    env_gymnasium.close()
+        _assert_make_registered_envs(self, _HAND_ENVS)
 
     def test_space_alignment(self) -> None:
-        for task_id in _HAND_ENVS:
-            with self.subTest(task_id=task_id):
-                env0 = _make_upstream_env(task_id)
-                env1 = make_gymnasium(task_id)
-                try:
-                    _assert_space_equal(
-                        env0.observation_space,
-                        env1.observation_space,
-                    )
-                    _assert_space_equal(env0.action_space, env1.action_space)
-                finally:
-                    env0.close()
-                    env1.close()
+        _assert_space_alignment(self, _HAND_ENVS)
 
     def test_deterministic_rollout_same_seed(self) -> None:
-        for task_id in _HAND_ENVS:
-            with self.subTest(task_id=task_id):
-                env0 = make_gymnasium(task_id, num_envs=2, seed=0)
-                env1 = make_gymnasium(task_id, num_envs=2, seed=0)
-                try:
-                    _assert_goal_obs_equal(env0.reset()[0], env1.reset()[0])
-                    env0.action_space.seed(1)
-                    for _ in range(8):
-                        action = np.stack([
-                            env0.action_space.sample() for _ in range(2)
-                        ])
-                        obs0, reward0, term0, trunc0, _ = env0.step(action)
-                        obs1, reward1, term1, trunc1, _ = env1.step(action)
-                        _assert_goal_obs_equal(obs0, obs1)
-                        np.testing.assert_allclose(reward0, reward1)
-                        np.testing.assert_array_equal(term0, term1)
-                        np.testing.assert_array_equal(trunc0, trunc1)
-                finally:
-                    env0.close()
-                    env1.close()
+        _assert_same_seed_rollout(self, _HAND_ENVS, num_steps=8)
 
     def test_different_seed_rollout_changes(self) -> None:
-        for task_id in _HAND_ENVS:
-            with self.subTest(task_id=task_id):
-                env0 = make_gymnasium(task_id, num_envs=2, seed=0)
-                env1 = make_gymnasium(task_id, num_envs=2, seed=1)
-                try:
-                    obs0 = env0.reset()[0]
-                    obs1 = env1.reset()[0]
-                    differs = not _obs_allclose(obs0, obs1)
-                    env0.action_space.seed(1)
-                    for _ in range(8):
-                        action = np.stack([
-                            env0.action_space.sample() for _ in range(2)
-                        ])
-                        obs0 = env0.step(action)[0]
-                        obs1 = env1.step(action)[0]
-                        differs = differs or not _obs_allclose(obs0, obs1)
-                        if differs:
-                            break
-                    self.assertTrue(
-                        differs,
-                        msg=f"expected different rollouts for {task_id}",
-                    )
-                finally:
-                    env0.close()
-                    env1.close()
+        _assert_different_seed_rollout(self, _HAND_ENVS, num_steps=8)
 
     def test_align_with_upstream_rollout(self) -> None:
         for task_id in _HAND_ENVS:
@@ -697,85 +670,16 @@ class _GymnasiumRoboticsAdroitEnvPoolTest(absltest.TestCase):
         self.assertLen(task_ids, 8)
 
     def test_make_registered_adroit_envs(self) -> None:
-        for task_id in _ADROIT_ENVS:
-            with self.subTest(task_id=task_id):
-                spec = make_spec(task_id)
-                self.assertIsNotNone(spec.observation_space)
-                self.assertIsNotNone(spec.action_space)
-
-                env_dm = make_dm(task_id)
-                env_gymnasium = make_gymnasium(task_id)
-                try:
-                    self.assertIsInstance(env_dm, dm_env.Environment)
-                    self.assertIsInstance(env_gymnasium, gym.Env)
-                    env_dm.reset()
-                    env_gymnasium.reset()
-                finally:
-                    env_dm.close()
-                    env_gymnasium.close()
+        _assert_make_registered_envs(self, _ADROIT_ENVS)
 
     def test_space_alignment(self) -> None:
-        for task_id in _ADROIT_ENVS:
-            with self.subTest(task_id=task_id):
-                env0 = _make_upstream_env(task_id)
-                env1 = make_gymnasium(task_id)
-                try:
-                    _assert_space_equal(
-                        env0.observation_space, env1.observation_space
-                    )
-                    _assert_space_equal(env0.action_space, env1.action_space)
-                finally:
-                    env0.close()
-                    env1.close()
+        _assert_space_alignment(self, _ADROIT_ENVS)
 
     def test_deterministic_rollout_same_seed(self) -> None:
-        for task_id in _ADROIT_ENVS:
-            with self.subTest(task_id=task_id):
-                env0 = make_gymnasium(task_id, num_envs=2, seed=0)
-                env1 = make_gymnasium(task_id, num_envs=2, seed=0)
-                try:
-                    np.testing.assert_allclose(env0.reset()[0], env1.reset()[0])
-                    env0.action_space.seed(1)
-                    for _ in range(8):
-                        action = np.stack([
-                            env0.action_space.sample() for _ in range(2)
-                        ])
-                        obs0, reward0, term0, trunc0, _ = env0.step(action)
-                        obs1, reward1, term1, trunc1, _ = env1.step(action)
-                        np.testing.assert_allclose(obs0, obs1)
-                        np.testing.assert_allclose(reward0, reward1)
-                        np.testing.assert_array_equal(term0, term1)
-                        np.testing.assert_array_equal(trunc0, trunc1)
-                finally:
-                    env0.close()
-                    env1.close()
+        _assert_same_seed_rollout(self, _ADROIT_ENVS, num_steps=8)
 
     def test_different_seed_rollout_changes(self) -> None:
-        for task_id in _ADROIT_ENVS:
-            with self.subTest(task_id=task_id):
-                env0 = make_gymnasium(task_id, num_envs=2, seed=0)
-                env1 = make_gymnasium(task_id, num_envs=2, seed=1)
-                try:
-                    obs0 = env0.reset()[0]
-                    obs1 = env1.reset()[0]
-                    differs = not np.allclose(obs0, obs1)
-                    env0.action_space.seed(1)
-                    for _ in range(8):
-                        action = np.stack([
-                            env0.action_space.sample() for _ in range(2)
-                        ])
-                        obs0 = env0.step(action)[0]
-                        obs1 = env1.step(action)[0]
-                        differs = differs or not np.allclose(obs0, obs1)
-                        if differs:
-                            break
-                    self.assertTrue(
-                        differs,
-                        msg=f"expected different rollouts for {task_id}",
-                    )
-                finally:
-                    env0.close()
-                    env1.close()
+        _assert_different_seed_rollout(self, _ADROIT_ENVS, num_steps=8)
 
     def test_align_with_upstream_rollout(self) -> None:
         for task_id in _ADROIT_ENVS:
@@ -849,85 +753,16 @@ class _GymnasiumRoboticsPointMazeEnvPoolTest(absltest.TestCase):
         self.assertLen(task_ids, 20)
 
     def test_make_registered_point_maze_envs(self) -> None:
-        for task_id in _POINT_MAZE_ENVS:
-            with self.subTest(task_id=task_id):
-                spec = make_spec(task_id)
-                self.assertIsNotNone(spec.observation_space)
-                self.assertIsNotNone(spec.action_space)
-
-                env_dm = make_dm(task_id)
-                env_gymnasium = make_gymnasium(task_id)
-                try:
-                    self.assertIsInstance(env_dm, dm_env.Environment)
-                    self.assertIsInstance(env_gymnasium, gym.Env)
-                    env_dm.reset()
-                    env_gymnasium.reset()
-                finally:
-                    env_dm.close()
-                    env_gymnasium.close()
+        _assert_make_registered_envs(self, _POINT_MAZE_ENVS)
 
     def test_space_alignment(self) -> None:
-        for task_id in _POINT_MAZE_ENVS:
-            with self.subTest(task_id=task_id):
-                env0 = _make_upstream_env(task_id)
-                env1 = make_gymnasium(task_id)
-                try:
-                    _assert_space_equal(
-                        env0.observation_space, env1.observation_space
-                    )
-                    _assert_space_equal(env0.action_space, env1.action_space)
-                finally:
-                    env0.close()
-                    env1.close()
+        _assert_space_alignment(self, _POINT_MAZE_ENVS)
 
     def test_deterministic_rollout_same_seed(self) -> None:
-        for task_id in _POINT_MAZE_ENVS:
-            with self.subTest(task_id=task_id):
-                env0 = make_gymnasium(task_id, num_envs=2, seed=0)
-                env1 = make_gymnasium(task_id, num_envs=2, seed=0)
-                try:
-                    _assert_goal_obs_equal(env0.reset()[0], env1.reset()[0])
-                    env0.action_space.seed(1)
-                    for _ in range(16):
-                        action = np.stack([
-                            env0.action_space.sample() for _ in range(2)
-                        ])
-                        obs0, reward0, term0, trunc0, _ = env0.step(action)
-                        obs1, reward1, term1, trunc1, _ = env1.step(action)
-                        _assert_goal_obs_equal(obs0, obs1)
-                        np.testing.assert_allclose(reward0, reward1)
-                        np.testing.assert_array_equal(term0, term1)
-                        np.testing.assert_array_equal(trunc0, trunc1)
-                finally:
-                    env0.close()
-                    env1.close()
+        _assert_same_seed_rollout(self, _POINT_MAZE_ENVS, num_steps=16)
 
     def test_different_seed_rollout_changes(self) -> None:
-        for task_id in _POINT_MAZE_ENVS:
-            with self.subTest(task_id=task_id):
-                env0 = make_gymnasium(task_id, num_envs=2, seed=0)
-                env1 = make_gymnasium(task_id, num_envs=2, seed=1)
-                try:
-                    obs0 = env0.reset()[0]
-                    obs1 = env1.reset()[0]
-                    differs = not _obs_allclose(obs0, obs1)
-                    env0.action_space.seed(1)
-                    for _ in range(16):
-                        action = np.stack([
-                            env0.action_space.sample() for _ in range(2)
-                        ])
-                        obs0 = env0.step(action)[0]
-                        obs1 = env1.step(action)[0]
-                        differs = differs or not _obs_allclose(obs0, obs1)
-                        if differs:
-                            break
-                    self.assertTrue(
-                        differs,
-                        msg=f"expected different rollouts for {task_id}",
-                    )
-                finally:
-                    env0.close()
-                    env1.close()
+        _assert_different_seed_rollout(self, _POINT_MAZE_ENVS, num_steps=16)
 
     def test_align_with_upstream_rollout(self) -> None:
         for task_id in _POINT_MAZE_ENVS:
@@ -1000,22 +835,7 @@ class _GymnasiumRoboticsKitchenEnvPoolTest(absltest.TestCase):
         self.assertLen(task_ids, 1)
 
     def test_make_registered_kitchen_envs(self) -> None:
-        for task_id in _KITCHEN_ENVS:
-            with self.subTest(task_id=task_id):
-                spec = make_spec(task_id)
-                self.assertIsNotNone(spec.observation_space)
-                self.assertIsNotNone(spec.action_space)
-
-                env_dm = make_dm(task_id)
-                env_gymnasium = make_gymnasium(task_id)
-                try:
-                    self.assertIsInstance(env_dm, dm_env.Environment)
-                    self.assertIsInstance(env_gymnasium, gym.Env)
-                    env_dm.reset()
-                    env_gymnasium.reset()
-                finally:
-                    env_dm.close()
-                    env_gymnasium.close()
+        _assert_make_registered_envs(self, _KITCHEN_ENVS)
 
     def test_space_alignment(self) -> None:
         env0 = _make_upstream_env("FrankaKitchen-v1")
@@ -1028,46 +848,10 @@ class _GymnasiumRoboticsKitchenEnvPoolTest(absltest.TestCase):
             env1.close()
 
     def test_deterministic_rollout_same_seed(self) -> None:
-        env0 = make_gymnasium("FrankaKitchen-v1", num_envs=2, seed=0)
-        env1 = make_gymnasium("FrankaKitchen-v1", num_envs=2, seed=0)
-        try:
-            _assert_goal_obs_equal(env0.reset()[0], env1.reset()[0])
-            env0.action_space.seed(1)
-            for _ in range(8):
-                action = np.stack([
-                    env0.action_space.sample() for _ in range(2)
-                ])
-                obs0, reward0, term0, trunc0, _ = env0.step(action)
-                obs1, reward1, term1, trunc1, _ = env1.step(action)
-                _assert_goal_obs_equal(obs0, obs1)
-                np.testing.assert_allclose(reward0, reward1)
-                np.testing.assert_array_equal(term0, term1)
-                np.testing.assert_array_equal(trunc0, trunc1)
-        finally:
-            env0.close()
-            env1.close()
+        _assert_same_seed_rollout(self, _KITCHEN_ENVS, num_steps=8)
 
     def test_different_seed_rollout_changes(self) -> None:
-        env0 = make_gymnasium("FrankaKitchen-v1", num_envs=2, seed=0)
-        env1 = make_gymnasium("FrankaKitchen-v1", num_envs=2, seed=1)
-        try:
-            obs0 = env0.reset()[0]
-            obs1 = env1.reset()[0]
-            differs = not _obs_allclose(obs0, obs1)
-            env0.action_space.seed(1)
-            for _ in range(8):
-                action = np.stack([
-                    env0.action_space.sample() for _ in range(2)
-                ])
-                obs0 = env0.step(action)[0]
-                obs1 = env1.step(action)[0]
-                differs = differs or not _obs_allclose(obs0, obs1)
-                if differs:
-                    break
-            self.assertTrue(differs, msg="expected different kitchen rollouts")
-        finally:
-            env0.close()
-            env1.close()
+        _assert_different_seed_rollout(self, _KITCHEN_ENVS, num_steps=8)
 
     def test_align_with_upstream_rollout(self) -> None:
         env0 = _make_upstream_env(

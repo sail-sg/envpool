@@ -44,7 +44,6 @@ _RenderFactory = Callable[..., GymEnvPool | GymnasiumEnvPool]
 
 _GYMNASIUM_ROBOTICS_PREFIXES = (
     "AdroitHand",
-    "AntMaze_",
     "Fetch",
     "FrankaKitchen-",
     "HandManipulate",
@@ -281,8 +280,6 @@ class _MakeTest(absltest.TestCase):
             for task_id in envpool.list_all_envs()
             if task_id.startswith(_GYMNASIUM_ROBOTICS_PREFIXES)
         )
-        if not task_ids:
-            self.skipTest("gymnasium-robotics package is unavailable")
         self.assertLen(task_ids, 217)
         self.check_step(task_ids)
 
