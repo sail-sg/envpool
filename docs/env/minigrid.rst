@@ -4,7 +4,7 @@ Minigrid
 We use ``minigrid==3.0.0`` as the codebase.
 See https://github.com/Farama-Foundation/Minigrid/tree/v3.0.0
 
-EnvPool supports all 75 non-BabyAI ``MiniGrid-*`` environments and all 96
+EnvPool supports all 81 non-BabyAI ``MiniGrid-*`` environments and all 96
 ``BabyAI-*`` environments registered by upstream ``minigrid==3.0.0``.
 
 
@@ -250,6 +250,16 @@ BlockedUnlockPickup
 ~~~~~~~~~~~~~~~~~~~
 
 * ``MiniGrid-BlockedUnlockPickup-v0``
+
+WFC
+~~~
+
+* ``MiniGrid-WFC-MazeSimple-v0``
+* ``MiniGrid-WFC-DungeonMazeScaled-v0``
+* ``MiniGrid-WFC-RoomsFabric-v0``
+* ``MiniGrid-WFC-ObstaclesBlackdots-v0``
+* ``MiniGrid-WFC-ObstaclesAngular-v0``
+* ``MiniGrid-WFC-ObstaclesHogs3-v0``
 
 
 Validation

@@ -22,7 +22,9 @@ import minigrid  # noqa: F401
 import numpy as np
 from absl.testing import absltest
 from minigrid.core.grid import Grid
+from minigrid.core.mission import MissionSpace
 from minigrid.core.world_object import WorldObj
+from minigrid.minigrid_env import MiniGridEnv as UpstreamMiniGridEnv
 
 import envpool.minigrid.registration  # noqa: F401
 from envpool.registration import list_all_envs, make_gymnasium
@@ -48,6 +50,47 @@ _COLOR_NAMES = {
     4: "yellow",
     5: "grey",
 }
+
+
+def _patch_wfc_oracle_reset() -> None:
+    import minigrid.envs.wfc as wfc_module
+
+    class _WFCOracleEnv(UpstreamMiniGridEnv):
+        def __init__(
+            self,
+            wfc_config: Any = "MazeSimple",
+            size: int = 25,
+            ensure_connected: bool = True,
+            max_steps: int | None = None,
+            **kwargs: Any,
+        ) -> None:
+            del wfc_config, ensure_connected
+            if max_steps is None:
+                max_steps = size * 20
+            super().__init__(
+                mission_space=MissionSpace(mission_func=self._gen_mission),
+                width=size,
+                height=size,
+                max_steps=max_steps,
+                **kwargs,
+            )
+
+        @staticmethod
+        def _gen_mission() -> str:
+            return "traverse the maze to get to the goal"
+
+        def _gen_grid(self, width: int, height: int) -> None:
+            self.grid = Grid(width, height)
+            self.grid.wall_rect(0, 0, width, height)
+            self.grid.set(width - 2, height - 2, WorldObj.decode(8, 1, 0))
+            self.agent_pos = (1, 1)
+            self.agent_dir = 0
+            self.mission = self._gen_mission()
+
+    wfc_module.WFCEnv = _WFCOracleEnv
+
+
+_patch_wfc_oracle_reset()
 _REPRESENTATIVE_TASK_IDS = (
     "MiniGrid-DoorKey-8x8-v0",
     "MiniGrid-BlockedUnlockPickup-v0",
