@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import sys
 import warnings
 from typing import Any, cast
 
@@ -320,7 +321,17 @@ class _GymnasiumRoboticsEnvPoolTest(absltest.TestCase):
         )
         try:
             env.reset()
-            frame = env.render()
+            try:
+                frame = env.render()
+            except Exception as error:
+                if sys.platform in {"darwin", "win32"} and "gladLoadGL" in str(
+                    error
+                ):
+                    self.skipTest(
+                        "Gymnasium-Robotics MuJoCo offscreen rendering is "
+                        "unavailable in this runtime."
+                    )
+                raise
             self.assertIsNotNone(frame)
             frame = cast(np.ndarray, frame)
             self.assertEqual(frame.shape[0], 1)
