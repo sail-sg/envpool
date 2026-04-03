@@ -17,6 +17,7 @@
 
 #include <unistd.h>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -50,18 +51,22 @@ class PointMazeEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     (void)conf;
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
+#ifdef ENVPOOL_TEST
     return MakeDict("obs:observation"_.Bind(Spec<mjtNum>({4}, {-inf, inf})),
                     "obs:achieved_goal"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
                     "obs:desired_goal"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
                     "info:success"_.Bind(Spec<mjtNum>({-1}, {0.0, 1.0})),
-                    "info:distance"_.Bind(Spec<mjtNum>({-1}, {0.0, inf}))
-#ifdef ENVPOOL_TEST
-                        ,
+                    "info:distance"_.Bind(Spec<mjtNum>({-1}, {0.0, inf})),
                     "info:qpos0"_.Bind(Spec<mjtNum>({2})),
                     "info:qvel0"_.Bind(Spec<mjtNum>({2})),
-                    "info:goal0"_.Bind(Spec<mjtNum>({2}))
+                    "info:goal0"_.Bind(Spec<mjtNum>({2})));
+#else
+    return MakeDict("obs:observation"_.Bind(Spec<mjtNum>({4}, {-inf, inf})),
+                    "obs:achieved_goal"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
+                    "obs:desired_goal"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
+                    "info:success"_.Bind(Spec<mjtNum>({-1}, {0.0, 1.0})),
+                    "info:distance"_.Bind(Spec<mjtNum>({-1}, {0.0, inf})));
 #endif
-    );
   }
 
   template <typename Config>

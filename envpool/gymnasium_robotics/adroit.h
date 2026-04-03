@@ -50,20 +50,17 @@ class AdroitEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
 #ifdef ENVPOOL_TEST
-    int qpos_dim = conf["qpos_dim"_];
-    int qvel_dim = conf["qvel_dim"_];
-    int reset_dim = conf["reset_dim"_];
-#endif
     return MakeDict("obs"_.Bind(Spec<mjtNum>({conf["obs_dim"_]}, {-inf, inf})),
                     "info:success"_.Bind(Spec<mjtNum>({-1}, {0.0, 1.0})),
-                    "info:distance"_.Bind(Spec<mjtNum>({-1}, {0.0, inf}))
-#ifdef ENVPOOL_TEST
-                        ,
-                    "info:qpos0"_.Bind(Spec<mjtNum>({qpos_dim})),
-                    "info:qvel0"_.Bind(Spec<mjtNum>({qvel_dim})),
-                    "info:extra0"_.Bind(Spec<mjtNum>({reset_dim}))
+                    "info:distance"_.Bind(Spec<mjtNum>({-1}, {0.0, inf})),
+                    "info:qpos0"_.Bind(Spec<mjtNum>({conf["qpos_dim"_]})),
+                    "info:qvel0"_.Bind(Spec<mjtNum>({conf["qvel_dim"_]})),
+                    "info:extra0"_.Bind(Spec<mjtNum>({conf["reset_dim"_]})));
+#else
+    return MakeDict("obs"_.Bind(Spec<mjtNum>({conf["obs_dim"_]}, {-inf, inf})),
+                    "info:success"_.Bind(Spec<mjtNum>({-1}, {0.0, 1.0})),
+                    "info:distance"_.Bind(Spec<mjtNum>({-1}, {0.0, inf})));
 #endif
-    );
   }
 
   template <typename Config>

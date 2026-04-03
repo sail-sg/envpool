@@ -22,6 +22,7 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "envpool/core/async_envpool.h"
@@ -145,6 +146,7 @@ class KitchenEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     (void)conf;
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
+#ifdef ENVPOOL_TEST
     return MakeDict(
         "obs:observation"_.Bind(Spec<mjtNum>({59}, {-inf, inf})),
         "obs:desired_goal:bottom burner"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
@@ -166,13 +168,33 @@ class KitchenEnvFns {
         "info:step_task_completions"_.Bind(
             Spec<int>({kitchen_internal::kTaskCount}, {0, 1})),
         "info:episode_task_completions"_.Bind(
-            Spec<int>({kitchen_internal::kTaskCount}, {0, 1}))
-#ifdef ENVPOOL_TEST
-            ,
+            Spec<int>({kitchen_internal::kTaskCount}, {0, 1})),
         "info:qpos0"_.Bind(Spec<mjtNum>({30}, {-inf, inf})),
-        "info:qvel0"_.Bind(Spec<mjtNum>({29}, {-inf, inf}))
+        "info:qvel0"_.Bind(Spec<mjtNum>({29}, {-inf, inf})));
+#else
+    return MakeDict(
+        "obs:observation"_.Bind(Spec<mjtNum>({59}, {-inf, inf})),
+        "obs:desired_goal:bottom burner"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
+        "obs:desired_goal:top burner"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
+        "obs:desired_goal:light switch"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
+        "obs:desired_goal:slide cabinet"_.Bind(Spec<mjtNum>({1}, {-inf, inf})),
+        "obs:desired_goal:hinge cabinet"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
+        "obs:desired_goal:microwave"_.Bind(Spec<mjtNum>({1}, {-inf, inf})),
+        "obs:desired_goal:kettle"_.Bind(Spec<mjtNum>({7}, {-inf, inf})),
+        "obs:achieved_goal:bottom burner"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
+        "obs:achieved_goal:top burner"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
+        "obs:achieved_goal:light switch"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
+        "obs:achieved_goal:slide cabinet"_.Bind(Spec<mjtNum>({1}, {-inf, inf})),
+        "obs:achieved_goal:hinge cabinet"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
+        "obs:achieved_goal:microwave"_.Bind(Spec<mjtNum>({1}, {-inf, inf})),
+        "obs:achieved_goal:kettle"_.Bind(Spec<mjtNum>({7}, {-inf, inf})),
+        "info:tasks_to_complete"_.Bind(
+            Spec<int>({kitchen_internal::kTaskCount}, {0, 1})),
+        "info:step_task_completions"_.Bind(
+            Spec<int>({kitchen_internal::kTaskCount}, {0, 1})),
+        "info:episode_task_completions"_.Bind(
+            Spec<int>({kitchen_internal::kTaskCount}, {0, 1})));
 #endif
-    );
   }
 
   template <typename Config>
