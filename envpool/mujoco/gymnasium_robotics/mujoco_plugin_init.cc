@@ -21,8 +21,7 @@ extern "C" int __stdcall MjObjDecoderDllMain(void* hinst, DWORD reason,
 extern "C" int __stdcall MjStlDecoderDllMain(void* hinst, DWORD reason,
                                              void* reserved);
 
-extern "C" BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason,
-                               LPVOID reserved) {
+extern "C" BOOL WINAPI DllMain(HINSTANCE hinst, DWORD reason, LPVOID reserved) {
   return MjObjDecoderDllMain(hinst, reason, reserved) &&
          MjStlDecoderDllMain(hinst, reason, reserved);
 }
