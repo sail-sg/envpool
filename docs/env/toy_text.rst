@@ -1,8 +1,8 @@
 Toy Text
 ========
 
-Most of the environments in classic control borrow from `Gym
-<https://github.com/openai/gym/tree/master/gym/envs/toy_text>`_ and
+Most of the environments in toy text borrow from `Gymnasium
+<https://github.com/Farama-Foundation/Gymnasium/tree/v1.2.3/gymnasium/envs/toy_text>`_ and
 `bsuite <https://github.com/deepmind/bsuite/tree/master/bsuite/environments>`_.
 
 
@@ -19,8 +19,8 @@ move downwards on the column they are in.
 FrozenLake-v1, FrozenLake8x8-v1
 -------------------------------
 
-`gym FrozenLake-v1 source code
-<https://github.com/openai/gym/blob/master/gym/envs/toy_text/frozen_lake.py>`_
+`gymnasium FrozenLake-v1 source code
+<https://github.com/Farama-Foundation/Gymnasium/blob/v1.2.3/gymnasium/envs/toy_text/frozen_lake.py>`_
 
 The agent controls the movement of a character in a grid world. Some tiles of
 the grid are walkable, and others lead to the agent falling into the water.
@@ -37,8 +37,8 @@ threshold.
 Taxi-v3
 -------
 
-`gym Taxi-v3 source code
-<https://github.com/openai/gym/blob/master/gym/envs/toy_text/taxi.py>`_
+`gymnasium Taxi-v3 source code
+<https://github.com/Farama-Foundation/Gymnasium/blob/v1.2.3/gymnasium/envs/toy_text/taxi.py>`_
 
 There are four designated locations in the grid world indicated by Red, Green,
 Yellow, and Blue. When the episode starts, the taxi starts off at a random
@@ -51,7 +51,7 @@ the passenger. Once the passenger is dropped off, the episode ends.
 NChain-v0
 ---------
 
-`gym NChain-v0 source code
+`legacy gym NChain-v0 source code
 <https://github.com/openai/gym/blob/v0.20.0/gym/envs/toy_text/nchain.py>`_
 
 This game presents moves along a linear chain of states, with two actions:
@@ -85,14 +85,19 @@ the goal.
 ``CliffWalkingSlippery-v1`` follows Gymnasium's optional slippery dynamics:
 each action samples uniformly from the intended direction and its two
 perpendicular alternatives. ``CliffWalking-v0`` is retained as a legacy alias
-for the non-slippery ``CliffWalking-v1`` task.
+for the non-slippery ``CliffWalking-v1`` task. The namespace alias
+``tabular/CliffWalking-v0`` is also available.
 
 
 Blackjack-v1
 ------------
 
-`gym Blackjack-v1 source code
-<https://github.com/openai/gym/blob/master/gym/envs/toy_text/blackjack.py>`_
+The task ID ``tabular/Blackjack-v0`` is also available with
+``sab=True`` and ``natural=False``, matching Gymnasium's current
+tabular Blackjack defaults.
+
+`gymnasium Blackjack-v1 source code
+<https://github.com/Farama-Foundation/Gymnasium/blob/v1.2.3/gymnasium/envs/toy_text/blackjack.py>`_
 
 Blackjack is a card game where the goal is to obtain cards that sum to as near
 as possible to 21 without going over. They're playing against a fixed dealer.
