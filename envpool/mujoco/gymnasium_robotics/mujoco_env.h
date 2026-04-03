@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <filesystem>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -98,7 +99,7 @@ class MujocoRobotEnv : public RenderableEnv {
  protected:
   static std::string ResolveModelPath(const std::string& base_path,
                                       const std::string& model_path) {
-    if (!model_path.empty() && model_path[0] == '/') {
+    if (std::filesystem::path(model_path).is_absolute()) {
       return model_path;
     }
     return base_path + "/mujoco/gymnasium_robotics/assets/" + model_path;

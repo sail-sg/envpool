@@ -15,13 +15,18 @@
 #ifndef ENVPOOL_MUJOCO_GYMNASIUM_ROBOTICS_POINT_MAZE_H_
 #define ENVPOOL_MUJOCO_GYMNASIUM_ROBOTICS_POINT_MAZE_H_
 
+#ifdef _WIN32
+#include <process.h>
+#else
 #include <unistd.h>
+#endif
 
 #include <algorithm>
 #include <array>
 #include <atomic>
 #include <cmath>
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
 #include <limits>
 #include <stdexcept>
@@ -250,9 +255,10 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
                                   mjtNum maze_size_scaling,
                                   mjtNum maze_height) {
     static std::atomic<int> counter{0};
-    std::string xml_path = "/tmp/envpool_point_maze_" +
-                           std::to_string(getpid()) + "_" +
-                           std::to_string(counter.fetch_add(1)) + ".xml";
+    auto xml_path =
+        std::filesystem::temp_directory_path() /
+        ("envpool_point_maze_" + std::to_string(ProcessId()) + "_" +
+         std::to_string(counter.fetch_add(1)) + ".xml");
     std::ofstream xml(xml_path);
     if (!xml) {
       throw std::runtime_error("Failed to create temporary PointMaze XML.");
@@ -336,7 +342,15 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
         << "  </actuator>\n"
         << "</mujoco>\n";
     xml.close();
-    return xml_path;
+    return xml_path.string();
+  }
+
+  static int ProcessId() {
+#ifdef _WIN32
+    return _getpid();
+#else
+    return getpid();
+#endif
   }
 
   void BuildMazeLocations(const std::string& maze_map) {
