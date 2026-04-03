@@ -29,10 +29,7 @@ copy_to_directory(
 
 cc_library(
     name = "gymnasium_robotics_env",
-    srcs = [
-        "mujoco_plugin_init.cc",
-        "utils.cc",
-    ],
+    srcs = ["utils.cc"],
     hdrs = [
         "adroit.h",
         "fetch.h",
@@ -55,7 +52,10 @@ cc_library(
 
 pybind_extension(
     name = "gymnasium_robotics_envpool",
-    srcs = ["gymnasium_robotics_envpool.cc"],
+    srcs = [
+        "gymnasium_robotics_envpool.cc",
+        "mujoco_plugin_init.cc",
+    ],
     deps = [
         ":gymnasium_robotics_env",
         "//envpool/core:py_envpool",
