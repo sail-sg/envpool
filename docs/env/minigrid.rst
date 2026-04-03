@@ -254,8 +254,8 @@ BlockedUnlockPickup
 WFC
 ~~~
 
-Representative first-frame renders for the WFC presets below, ordered
-row-major by task ID.
+Representative first-frame compares for the WFC presets below. In each row,
+EnvPool is on the left and upstream ``minigrid`` is on the right.
 
 .. image:: ../_static/render_samples/minigrid_wfc_render.png
     :width: 900px
