@@ -254,6 +254,13 @@ BlockedUnlockPickup
 WFC
 ~~~
 
+Representative first-frame renders for the WFC presets below, ordered
+row-major by task ID.
+
+.. image:: ../_static/render_samples/minigrid_wfc_render.png
+    :width: 900px
+    :align: center
+
 * ``MiniGrid-WFC-MazeSimple-v0``
 * ``MiniGrid-WFC-DungeonMazeScaled-v0``
 * ``MiniGrid-WFC-RoomsFabric-v0``
