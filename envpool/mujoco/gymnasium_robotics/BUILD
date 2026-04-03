@@ -29,7 +29,10 @@ copy_to_directory(
 
 cc_library(
     name = "gymnasium_robotics_env",
-    srcs = ["utils.cc"],
+    srcs = [
+        "mujoco_plugin_init.cc",
+        "utils.cc",
+    ],
     hdrs = [
         "adroit.h",
         "fetch.h",
@@ -45,7 +48,8 @@ cc_library(
     deps = [
         "//envpool/core:async_envpool",
         "//envpool/mujoco:mujoco_render",
-        "@mujoco//:mujoco_plugin_lib",
+        "@mujoco//:mujoco_obj_decoder_plugin_lib",
+        "@mujoco//:mujoco_stl_decoder_plugin_lib",
     ],
 )
 
