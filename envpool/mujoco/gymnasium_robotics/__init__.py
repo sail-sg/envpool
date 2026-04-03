@@ -13,7 +13,7 @@
 # limitations under the License.
 """Gymnasium-Robotics envs implemented by native EnvPool C++ backends."""
 
-from envpool.gymnasium_robotics.gymnasium_robotics_envpool import (
+from envpool.mujoco.gymnasium_robotics.gymnasium_robotics_envpool import (
     _GymnasiumRoboticsAdroitEnvPool,
     _GymnasiumRoboticsAdroitEnvSpec,
     _GymnasiumRoboticsFetchEnvPool,

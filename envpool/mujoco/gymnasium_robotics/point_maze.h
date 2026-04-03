@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef ENVPOOL_GYMNASIUM_ROBOTICS_POINT_MAZE_H_
-#define ENVPOOL_GYMNASIUM_ROBOTICS_POINT_MAZE_H_
+#ifndef ENVPOOL_MUJOCO_GYMNASIUM_ROBOTICS_POINT_MAZE_H_
+#define ENVPOOL_MUJOCO_GYMNASIUM_ROBOTICS_POINT_MAZE_H_
 
 #include <unistd.h>
 
@@ -31,8 +31,8 @@
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
-#include "envpool/gymnasium_robotics/mujoco_env.h"
-#include "envpool/gymnasium_robotics/utils.h"
+#include "envpool/mujoco/gymnasium_robotics/mujoco_env.h"
+#include "envpool/mujoco/gymnasium_robotics/utils.h"
 
 namespace gymnasium_robotics {
 
@@ -465,4 +465,4 @@ using PointMazeEnvPool = AsyncEnvPool<PointMazeEnv>;
 
 }  // namespace gymnasium_robotics
 
-#endif  // ENVPOOL_GYMNASIUM_ROBOTICS_POINT_MAZE_H_
+#endif  // ENVPOOL_MUJOCO_GYMNASIUM_ROBOTICS_POINT_MAZE_H_

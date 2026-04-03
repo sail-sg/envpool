@@ -49,7 +49,7 @@ except ImportError:
     pass
 
 try:
-    import envpool.gymnasium_robotics.registration  # noqa: F401
+    import envpool.mujoco.gymnasium_robotics.registration  # noqa: F401
 except ImportError:
     pass
 

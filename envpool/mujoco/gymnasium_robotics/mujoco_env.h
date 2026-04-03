@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef ENVPOOL_GYMNASIUM_ROBOTICS_MUJOCO_ENV_H_
-#define ENVPOOL_GYMNASIUM_ROBOTICS_MUJOCO_ENV_H_
+#ifndef ENVPOOL_MUJOCO_GYMNASIUM_ROBOTICS_MUJOCO_ENV_H_
+#define ENVPOOL_MUJOCO_GYMNASIUM_ROBOTICS_MUJOCO_ENV_H_
 
 #include <mujoco.h>
 
@@ -26,7 +26,7 @@
 #include <vector>
 
 #include "envpool/core/env.h"
-#include "envpool/gymnasium_robotics/utils.h"
+#include "envpool/mujoco/gymnasium_robotics/utils.h"
 #include "envpool/mujoco/offscreen_renderer.h"
 
 namespace gymnasium_robotics {
@@ -93,7 +93,7 @@ class MujocoRobotEnv : public RenderableEnv {
     if (!model_path.empty() && model_path[0] == '/') {
       return model_path;
     }
-    return base_path + "/gymnasium_robotics/assets/" + model_path;
+    return base_path + "/mujoco/gymnasium_robotics/assets/" + model_path;
   }
 
   static mjModel* LoadModel(const std::string& xml_path) {
@@ -144,4 +144,4 @@ class MujocoRobotEnv : public RenderableEnv {
 
 }  // namespace gymnasium_robotics
 
-#endif  // ENVPOOL_GYMNASIUM_ROBOTICS_MUJOCO_ENV_H_
+#endif  // ENVPOOL_MUJOCO_GYMNASIUM_ROBOTICS_MUJOCO_ENV_H_

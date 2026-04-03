@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef ENVPOOL_GYMNASIUM_ROBOTICS_UTILS_H_
-#define ENVPOOL_GYMNASIUM_ROBOTICS_UTILS_H_
+#ifndef ENVPOOL_MUJOCO_GYMNASIUM_ROBOTICS_UTILS_H_
+#define ENVPOOL_MUJOCO_GYMNASIUM_ROBOTICS_UTILS_H_
 
 #include <mujoco.h>
 
@@ -75,4 +75,4 @@ void ResetMocap2BodyXpos(const mjModel* model, mjData* data);
 
 }  // namespace gymnasium_robotics
 
-#endif  // ENVPOOL_GYMNASIUM_ROBOTICS_UTILS_H_
+#endif  // ENVPOOL_MUJOCO_GYMNASIUM_ROBOTICS_UTILS_H_

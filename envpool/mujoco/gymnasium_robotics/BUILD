@@ -65,7 +65,7 @@ py_library(
         ":gen_gymnasium_robotics_assets",
         ":gymnasium_robotics_envpool",
     ],
-    imports = ["../.."],
+    imports = ["../../.."],
     deps = [
         "//envpool/python:api",
     ],
@@ -74,7 +74,7 @@ py_library(
 py_library(
     name = "gymnasium_robotics_registration",
     srcs = ["registration.py"],
-    imports = ["../.."],
+    imports = ["../../.."],
     deps = [
         ":gymnasium_robotics",
         "//envpool:registration",
@@ -85,7 +85,7 @@ py_test(
     name = "gymnasium_robotics_test",
     size = "enormous",
     srcs = ["gymnasium_robotics_test.py"],
-    imports = ["../.."],
+    imports = ["../../.."],
     deps = [
         ":gymnasium_robotics",
         ":gymnasium_robotics_registration",

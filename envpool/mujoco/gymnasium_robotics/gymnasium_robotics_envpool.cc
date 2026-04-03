@@ -13,11 +13,11 @@
 // limitations under the License.
 
 #include "envpool/core/py_envpool.h"
-#include "envpool/gymnasium_robotics/adroit.h"
-#include "envpool/gymnasium_robotics/fetch.h"
-#include "envpool/gymnasium_robotics/hand.h"
-#include "envpool/gymnasium_robotics/kitchen.h"
-#include "envpool/gymnasium_robotics/point_maze.h"
+#include "envpool/mujoco/gymnasium_robotics/adroit.h"
+#include "envpool/mujoco/gymnasium_robotics/fetch.h"
+#include "envpool/mujoco/gymnasium_robotics/hand.h"
+#include "envpool/mujoco/gymnasium_robotics/kitchen.h"
+#include "envpool/mujoco/gymnasium_robotics/point_maze.h"
 
 using GymnasiumRoboticsFetchEnvSpec =
     PyEnvSpec<gymnasium_robotics::FetchEnvSpec>;

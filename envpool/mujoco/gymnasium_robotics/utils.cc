@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "envpool/gymnasium_robotics/utils.h"
+#include "envpool/mujoco/gymnasium_robotics/utils.h"
 
 #include <algorithm>
 #include <array>
