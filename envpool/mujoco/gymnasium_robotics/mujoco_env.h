@@ -19,8 +19,8 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cstring>
-#include <filesystem>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -99,10 +99,29 @@ class MujocoRobotEnv : public RenderableEnv {
  protected:
   static std::string ResolveModelPath(const std::string& base_path,
                                       const std::string& model_path) {
-    if (std::filesystem::path(model_path).is_absolute()) {
+    if (IsAbsolutePath(model_path)) {
       return model_path;
     }
     return base_path + "/mujoco/gymnasium_robotics/assets/" + model_path;
+  }
+
+  static bool IsAbsolutePath(const std::string& path) {
+    if (path.empty()) {
+      return false;
+    }
+    if (path[0] == '/') {
+      return true;
+    }
+#ifdef _WIN32
+    if (path[0] == '\\') {
+      return true;
+    }
+    return path.size() >= 3 &&
+           std::isalpha(static_cast<unsigned char>(path[0])) &&
+           path[1] == ':' && (path[2] == '/' || path[2] == '\\');
+#else
+    return false;
+#endif
   }
 
   static mjModel* LoadModel(const std::string& xml_path) {

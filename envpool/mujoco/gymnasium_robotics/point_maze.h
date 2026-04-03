@@ -26,7 +26,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstdio>
-#include <filesystem>
+#include <cstdlib>
 #include <fstream>
 #include <limits>
 #include <stdexcept>
@@ -255,10 +255,17 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
                                   mjtNum maze_size_scaling,
                                   mjtNum maze_height) {
     static std::atomic<int> counter{0};
-    auto xml_path =
-        std::filesystem::temp_directory_path() /
-        ("envpool_point_maze_" + std::to_string(ProcessId()) + "_" +
-         std::to_string(counter.fetch_add(1)) + ".xml");
+    std::string xml_path = TemporaryDirectory();
+    if (!xml_path.empty() && xml_path.back() != '/' &&
+        xml_path.back() != '\\') {
+#ifdef _WIN32
+      xml_path.push_back('\\');
+#else
+      xml_path.push_back('/');
+#endif
+    }
+    xml_path += "envpool_point_maze_" + std::to_string(ProcessId()) + "_" +
+                std::to_string(counter.fetch_add(1)) + ".xml";
     std::ofstream xml(xml_path);
     if (!xml) {
       throw std::runtime_error("Failed to create temporary PointMaze XML.");
@@ -342,7 +349,7 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
         << "  </actuator>\n"
         << "</mujoco>\n";
     xml.close();
-    return xml_path.string();
+    return xml_path;
   }
 
   static int ProcessId() {
@@ -350,6 +357,20 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
     return _getpid();
 #else
     return getpid();
+#endif
+  }
+
+  static std::string TemporaryDirectory() {
+    for (const char* env_key : {"TMPDIR", "TEMP", "TMP"}) {
+      const char* env_value = std::getenv(env_key);
+      if (env_value != nullptr && env_value[0] != '\0') {
+        return env_value;
+      }
+    }
+#ifdef _WIN32
+    return "C:\\Windows\\Temp";
+#else
+    return "/tmp";
 #endif
   }
 
