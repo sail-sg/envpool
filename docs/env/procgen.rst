@@ -44,9 +44,13 @@ Options
 * ``use_generated_assets (bool)``: default to ``False``;
 * ``paint_vel_info (bool)``: default to ``False``;
 * ``use_easy_jump (bool)``: default to ``False``;
-* ``distribution_mode (int)``: one of ``(0, 1, 2, 10)``; ``0`` stands for easy
-  mode, ``1`` stands for hard mode, ``2`` stands for extreme mode, ``10``
-  stands for memory mode. The default value is determined by ``task_id``.
+* ``distribution_mode (int)``: one of ``(0, 1, 2, 10, 20)``; ``0`` stands for
+  easy mode, ``1`` stands for hard mode, ``2`` stands for extreme mode, ``10``
+  stands for memory mode, and ``20`` stands for exploration mode. Exploration
+  mode follows Procgen's Python wrapper behavior: it uses hard mode levels,
+  overrides ``num_levels`` to ``1``, and overrides ``start_level`` to a
+  game-specific exploration seed. The default value is determined by
+  ``task_id``.
 
 Note: arguments after ``env_name`` are provided by procgen environment itself.
 We keep the default value as-is. We haven't tested the setting of
@@ -77,13 +81,16 @@ Available Tasks
 * ``CaveflyerEasy-v0``
 * ``CaveflyerHard-v0``
 * ``CaveflyerMemory-v0``
+* ``CaveflyerExploration-v0``
 * ``ChaserEasy-v0``
 * ``ChaserHard-v0``
 * ``ChaserExtreme-v0``
 * ``ClimberEasy-v0``
 * ``ClimberHard-v0``
+* ``ClimberExploration-v0``
 * ``CoinrunEasy-v0``
 * ``CoinrunHard-v0``
+* ``CoinrunExploration-v0``
 * ``DodgeballEasy-v0``
 * ``DodgeballHard-v0``
 * ``DodgeballExtreme-v0``
@@ -93,20 +100,25 @@ Available Tasks
 * ``HeistEasy-v0``
 * ``HeistHard-v0``
 * ``HeistMemory-v0``
+* ``HeistExploration-v0``
 * ``JumperEasy-v0``
 * ``JumperHard-v0``
 * ``JumperMemory-v0``
+* ``JumperExploration-v0``
 * ``LeaperEasy-v0``
 * ``LeaperHard-v0``
 * ``LeaperExtreme-v0``
+* ``LeaperExploration-v0``
 * ``MazeEasy-v0``
 * ``MazeHard-v0``
 * ``MazeMemory-v0``
+* ``MazeExploration-v0``
 * ``MinerEasy-v0``
 * ``MinerHard-v0``
 * ``MinerMemory-v0``
 * ``NinjaEasy-v0``
 * ``NinjaHard-v0``
+* ``NinjaExploration-v0``
 * ``PlunderEasy-v0``
 * ``PlunderHard-v0``
 * ``StarpilotEasy-v0``

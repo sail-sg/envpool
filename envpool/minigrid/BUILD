@@ -36,6 +36,7 @@ cc_library(
         "impl/minigrid_room_tasks.cc",
         "impl/minigrid_task_factory.cc",
         "impl/minigrid_tasks.cc",
+        "impl/minigrid_wfc_tasks.cc",
     ],
     hdrs = [
         "impl/babyai_core.h",

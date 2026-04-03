@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from typing import Any
 
 from envpool.registration import register
 
@@ -28,7 +29,7 @@ _BABYAI_MISSION_BYTES = 512
 _RANDOM_START = {"agent_start_pos": (-1, -1), "agent_start_dir": -1}
 
 
-def _register(task_id: str, max_episode_steps: int, **kwargs: object) -> None:
+def _register(task_id: str, max_episode_steps: int, **kwargs: Any) -> None:
     register(
         task_id=task_id,
         import_path=_IMPORT_PATH,
@@ -41,7 +42,7 @@ def _register(task_id: str, max_episode_steps: int, **kwargs: object) -> None:
     )
 
 
-def _register_babyai(task_id: str, **kwargs: object) -> None:
+def _register_babyai(task_id: str, **kwargs: Any) -> None:
     config: dict[str, object] = {
         "room_size": 8,
         "num_rows": 3,
@@ -414,6 +415,23 @@ _register(
     16 * 6**2,
     env_name="blocked_unlock_pickup",
 )
+
+for preset in (
+    "MazeSimple",
+    "DungeonMazeScaled",
+    "RoomsFabric",
+    "ObstaclesBlackdots",
+    "ObstaclesAngular",
+    "ObstaclesHogs3",
+):
+    _register(
+        f"MiniGrid-WFC-{preset}-v0",
+        25 * 20,
+        env_name="wfc",
+        wfc_preset=preset,
+        size=25,
+        ensure_connected=True,
+    )
 
 _register_babyai("BabyAI-ActionObjDoor-v0", env_name="babyai_action_obj_door")
 _register_babyai(

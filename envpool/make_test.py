@@ -219,8 +219,11 @@ class _MakeTest(absltest.TestCase):
     def test_make_classic(self) -> None:
         self.check_step([
             "CartPole-v0",
+            "phys2d/CartPole-v0",
             "CartPole-v1",
+            "phys2d/CartPole-v1",
             "Pendulum-v0",
+            "phys2d/Pendulum-v0",
             "Pendulum-v1",
             "MountainCar-v0",
             "MountainCarContinuous-v0",
@@ -235,9 +238,11 @@ class _MakeTest(absltest.TestCase):
             "Taxi-v3",
             "NChain-v0",
             "CliffWalking-v1",
+            "tabular/CliffWalking-v0",
             "CliffWalkingSlippery-v1",
             "CliffWalking-v0",
             "Blackjack-v1",
+            "tabular/Blackjack-v0",
         ])
 
     def test_make_box2d(self) -> None:
@@ -258,7 +263,7 @@ class _MakeTest(absltest.TestCase):
             for task_id in envpool.list_all_envs()
             if task_id.startswith("MiniGrid-")
         )
-        self.assertLen(task_ids, 75)
+        self.assertLen(task_ids, 81)
         self.check_step(task_ids)
 
     def test_make_babyai(self) -> None:
@@ -387,14 +392,17 @@ class _MakeTest(absltest.TestCase):
             "BossfightEasy-v0",
             "BossfightHard-v0",
             "CaveflyerEasy-v0",
+            "CaveflyerExploration-v0",
             "CaveflyerHard-v0",
             "CaveflyerMemory-v0",
             "ChaserEasy-v0",
             "ChaserHard-v0",
             "ChaserExtreme-v0",
             "ClimberEasy-v0",
+            "ClimberExploration-v0",
             "ClimberHard-v0",
             "CoinrunEasy-v0",
+            "CoinrunExploration-v0",
             "CoinrunHard-v0",
             "DodgeballEasy-v0",
             "DodgeballHard-v0",
@@ -403,21 +411,26 @@ class _MakeTest(absltest.TestCase):
             "FruitbotEasy-v0",
             "FruitbotHard-v0",
             "HeistEasy-v0",
+            "HeistExploration-v0",
             "HeistHard-v0",
             "HeistMemory-v0",
             "JumperEasy-v0",
+            "JumperExploration-v0",
             "JumperHard-v0",
             "JumperMemory-v0",
             "LeaperEasy-v0",
+            "LeaperExploration-v0",
             "LeaperHard-v0",
             "LeaperExtreme-v0",
             "MazeEasy-v0",
+            "MazeExploration-v0",
             "MazeHard-v0",
             "MazeMemory-v0",
             "MinerEasy-v0",
             "MinerHard-v0",
             "MinerMemory-v0",
             "NinjaEasy-v0",
+            "NinjaExploration-v0",
             "NinjaHard-v0",
             "PlunderEasy-v0",
             "PlunderHard-v0",

@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Classic control env registration."""
+"""Toy text env registration."""
 
 from envpool.registration import register
 
@@ -78,6 +78,7 @@ register(
     dm_cls="CliffWalkingDMEnvPool",
     gym_cls="CliffWalkingGymEnvPool",
     gymnasium_cls="CliffWalkingGymnasiumEnvPool",
+    aliases=["tabular/CliffWalking-v0"],
     is_slippery=False,
 )
 
@@ -108,6 +109,8 @@ register(
     dm_cls="BlackjackDMEnvPool",
     gym_cls="BlackjackGymEnvPool",
     gymnasium_cls="BlackjackGymnasiumEnvPool",
+    # Gymnasium tabular/Blackjack-v0 uses the same default rules as Blackjack-v1.
+    aliases=["tabular/Blackjack-v0"],
     sab=True,
     natural=False,
 )

@@ -47,18 +47,20 @@ class EnvRegistry:
         dm_cls: str,
         gym_cls: str,
         gymnasium_cls: str,
+        aliases: Sequence[str] = (),
         **kwargs: Any,
     ) -> None:
         """Register EnvSpec and EnvPool in global EnvRegistry."""
-        assert task_id not in self.specs
         if "base_path" not in kwargs:
             kwargs["base_path"] = base_path
-        self.specs[task_id] = (import_path, spec_cls, kwargs)
-        self.envpools[task_id] = {
-            "dm": (import_path, dm_cls),
-            "gym": (import_path, gym_cls),
-            "gymnasium": (import_path, gymnasium_cls),
-        }
+        for alias in (task_id, *aliases):
+            assert alias not in self.specs
+            self.specs[alias] = (import_path, spec_cls, dict(kwargs))
+            self.envpools[alias] = {
+                "dm": (import_path, dm_cls),
+                "gym": (import_path, gym_cls),
+                "gymnasium": (import_path, gymnasium_cls),
+            }
 
     @staticmethod
     def _extract_wrapper_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
