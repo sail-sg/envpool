@@ -1,10 +1,11 @@
 Gymnasium-Robotics
 ==================
 
-EnvPool provides native C++ backends for the Gymnasium-Robotics Fetch, Shadow
-Hand, Adroit, PointMaze, and FrankaKitchen task families. The Python package
-exposes the same ``make_dm``, ``make_gym``, and ``make_gymnasium`` entry points
-as other EnvPool environments, including batched sync and async stepping.
+EnvPool provides native C++ implementations for the Gymnasium-Robotics Fetch,
+Shadow Hand, Adroit, PointMaze, and FrankaKitchen task families. The Python
+package exposes the same ``make_dm``, ``make_gym``, and ``make_gymnasium``
+entry points as other EnvPool environments, including batched sync and async
+stepping.
 
 Supported Tasks
 ---------------
