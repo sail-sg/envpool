@@ -193,7 +193,7 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
         initial_goal_(spec.config["goal_dim"_], 0.0) {
     SetupActuatorMaps();
     SetupTaskIds();
-    EnvSetup();
+    SetupInitialEnvState();
     InitializeRobotEnv();
     SetupTouchSensors();
     if (touch_visualization_ == TouchVisualizationType::kOff) {
@@ -224,7 +224,18 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
   }
 
  protected:
-  void EnvSetup() override {
+  void EnvSetup() override { SetupInitialEnvState(); }
+
+  void RenderCallback() override {
+    if (task_type_ == TaskType::kReach) {
+      RenderReachGoal();
+    } else {
+      RenderManipulateGoal();
+    }
+  }
+
+ private:
+  void SetupInitialEnvState() {
     if (task_type_ == TaskType::kReach) {
       SetDefaultReachInitialQpos();
     }
@@ -236,16 +247,6 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
       }
     }
   }
-
-  void RenderCallback() override {
-    if (task_type_ == TaskType::kReach) {
-      RenderReachGoal();
-    } else {
-      RenderManipulateGoal();
-    }
-  }
-
- private:
   static TaskType ParseTaskType(const std::string& value) {
     if (value == "reach") {
       return TaskType::kReach;
@@ -323,14 +324,14 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
   }
 
   static std::string ReplaceActuatorPrefix(const std::string& actuator_name) {
-    constexpr std::string_view kPrefix = ":A_";
-    std::size_t pos = actuator_name.find(kPrefix);
+    constexpr std::string_view k_prefix = ":A_";
+    std::size_t pos = actuator_name.find(k_prefix);
     if (pos == std::string::npos) {
       throw std::runtime_error("Unexpected Hand actuator name: " +
                                actuator_name);
     }
     std::string joint_name = actuator_name;
-    joint_name.replace(pos, kPrefix.size(), ":");
+    joint_name.replace(pos, k_prefix.size(), ":");
     return joint_name;
   }
 
@@ -499,7 +500,7 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
   }
 
   std::vector<mjtNum> SampleReachGoal() {
-    constexpr int kThumbIdx = 4;
+    constexpr int k_thumb_idx = 4;
     int finger_idx = reach_finger_dist_(gen_);
     std::array<mjtNum, 3> meeting_pos{
         static_cast<mjtNum>(palm_xpos_[0] + goal_noise_dist_(gen_)),
@@ -507,7 +508,7 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
         static_cast<mjtNum>(palm_xpos_[2] + 0.05 + goal_noise_dist_(gen_)),
     };
     std::vector<mjtNum> goal = initial_goal_;
-    for (int selected_idx : std::array<int, 2>{kThumbIdx, finger_idx}) {
+    for (int selected_idx : std::array<int, 2>{k_thumb_idx, finger_idx}) {
       std::array<mjtNum, 3> offset_direction{
           meeting_pos[0] - goal[3 * selected_idx],
           meeting_pos[1] - goal[3 * selected_idx + 1],
@@ -655,8 +656,10 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
                        const std::vector<mjtNum>& desired_goal) const {
     if (task_type_ == TaskType::kReach) {
       mjtNum distance = ReachGoalDistance(achieved_goal, desired_goal);
-      return sparse_reward_ ? (distance > distance_threshold_ ? -1.0 : 0.0)
-                            : -distance;
+      if (sparse_reward_) {
+        return distance > distance_threshold_ ? -1.0 : 0.0;
+      }
+      return -distance;
     }
     auto [d_pos, d_rot] = ManipulationGoalDistance(achieved_goal, desired_goal);
     if (sparse_reward_) {
