@@ -22,6 +22,7 @@ register(
     dm_cls="CartPoleDMEnvPool",
     gym_cls="CartPoleGymEnvPool",
     gymnasium_cls="CartPoleGymnasiumEnvPool",
+    aliases=["phys2d/CartPole-v0"],
     max_episode_steps=200,
     reward_threshold=195.0,
 )
@@ -33,6 +34,7 @@ register(
     dm_cls="CartPoleDMEnvPool",
     gym_cls="CartPoleGymEnvPool",
     gymnasium_cls="CartPoleGymnasiumEnvPool",
+    aliases=["phys2d/CartPole-v1"],
     max_episode_steps=500,
     reward_threshold=475.0,
 )
@@ -44,6 +46,7 @@ register(
     dm_cls="PendulumDMEnvPool",
     gym_cls="PendulumGymEnvPool",
     gymnasium_cls="PendulumGymnasiumEnvPool",
+    aliases=["phys2d/Pendulum-v0"],
     version=0,
     max_episode_steps=200,
 )

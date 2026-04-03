@@ -199,8 +199,11 @@ class _MakeTest(absltest.TestCase):
     def test_make_classic(self) -> None:
         self.check_step([
             "CartPole-v0",
+            "phys2d/CartPole-v0",
             "CartPole-v1",
+            "phys2d/CartPole-v1",
             "Pendulum-v0",
+            "phys2d/Pendulum-v0",
             "Pendulum-v1",
             "MountainCar-v0",
             "MountainCarContinuous-v0",
@@ -215,9 +218,11 @@ class _MakeTest(absltest.TestCase):
             "Taxi-v3",
             "NChain-v0",
             "CliffWalking-v1",
+            "tabular/CliffWalking-v0",
             "CliffWalkingSlippery-v1",
             "CliffWalking-v0",
             "Blackjack-v1",
+            "tabular/Blackjack-v0",
         ])
 
     def test_make_box2d(self) -> None:
