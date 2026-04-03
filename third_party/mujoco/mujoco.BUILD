@@ -20,6 +20,12 @@ cc_library(
     name = "mujoco_lib",
     srcs = (
         glob(["src/cc/*.h"]) + glob([
+            "plugin/obj_decoder/*.cc",
+            "plugin/obj_decoder/*.h",
+        ]) + glob([
+            "plugin/stl_decoder/*.cc",
+            "plugin/stl_decoder/*.h",
+        ]) + glob([
             "src/engine/*.c",
             "src/engine/*.cc",
             "src/engine/*.h",
@@ -62,6 +68,7 @@ cc_library(
             "-Wno-stringop-truncation",
         ],
     }),
+    alwayslink = 1,
     cxxopts = select({
         "@envpool//:windows": ["/std:c++20"],
         "//conditions:default": ["-std=c++20"],

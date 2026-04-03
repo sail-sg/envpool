@@ -1,18 +1,18 @@
 Gymnasium-Robotics
 ==================
 
-EnvPool registers upstream ``gymnasium_robotics==1.4.2`` task IDs when the
-optional ``gymnasium-robotics`` package is installed. This backend wraps one
-upstream Gymnasium-Robotics environment per EnvPool slot and focuses on API and
-registry compatibility for ``make_dm``, ``make_gym``, and ``make_gymnasium``.
+EnvPool provides native C++ backends for the Gymnasium-Robotics Fetch, Shadow
+Hand, Adroit, PointMaze, and FrankaKitchen task families. The Python package
+exposes the same ``make_dm``, ``make_gym``, and ``make_gymnasium`` entry points
+as other EnvPool environments, including batched sync and async stepping.
 
 Supported Tasks
 ---------------
 
-EnvPool mirrors Adroit, Fetch, Shadow Hand manipulation/reach, AntMaze,
-PointMaze, and FrankaKitchen task IDs from Gymnasium-Robotics. Legacy MuJoCo
-``*-v2`` IDs such as ``Ant-v2`` and ``HalfCheetah-v2`` are intentionally not
-registered, because EnvPool already provides the corresponding native MuJoCo
+EnvPool mirrors Adroit, Fetch, Shadow Hand manipulation/reach, PointMaze, and
+FrankaKitchen task IDs from Gymnasium-Robotics. Legacy MuJoCo ``*-v2`` IDs such
+as ``Ant-v2`` and ``HalfCheetah-v2`` are intentionally not registered, because
+EnvPool already provides the corresponding native MuJoCo
 ``*-v3``/``*-v4``/``*-v5`` tasks.
 
 For legacy Gymnasium-Robotics IDs that still point to the deprecated
@@ -40,5 +40,9 @@ Examples
 Notes
 -----
 
-This backend currently runs in synchronous mode only. Use ``batch_size=0`` or
-``batch_size=num_envs`` when creating Gymnasium-Robotics EnvPools.
+``FrankaKitchen-v1`` uses a fixed all-task observation schema in EnvPool so
+that the C++ state specification remains static. The returned ``info`` values
+for ``tasks_to_complete``, ``step_task_completions``, and
+``episode_task_completions`` are 7-dimensional masks ordered as
+``bottom burner``, ``top burner``, ``light switch``, ``slide cabinet``,
+``hinge cabinet``, ``microwave``, and ``kettle``.

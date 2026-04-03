@@ -12,22 +12,51 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("//envpool:requirements.bzl", "requirement")
 
 package(default_visibility = ["//visibility:public"])
 
+cc_library(
+    name = "gymnasium_robotics_env",
+    srcs = ["utils.cc"],
+    hdrs = [
+        "adroit.h",
+        "fetch.h",
+        "hand.h",
+        "kitchen.h",
+        "mujoco_env.h",
+        "point_maze.h",
+        "utils.h",
+    ],
+    data = glob(["assets/**"]),
+    deps = [
+        "//envpool/core:async_envpool",
+        "//envpool/mujoco:mujoco_render",
+        "@mujoco//:mujoco_lib",
+    ],
+)
+
+pybind_extension(
+    name = "gymnasium_robotics_envpool",
+    srcs = ["gymnasium_robotics_envpool.cc"],
+    deps = [
+        ":gymnasium_robotics_env",
+        "//envpool/core:py_envpool",
+    ],
+)
+
 py_library(
     name = "gymnasium_robotics",
     srcs = ["__init__.py"],
+    data = [
+        ":gymnasium_robotics_envpool",
+    ] + glob(["assets/**"]),
     imports = ["../.."],
     deps = [
-        "//envpool/python:data",
-        "//envpool/python:glfw_context",
-        "//envpool/python:protocol",
-        requirement("dm-env"),
-        requirement("gymnasium"),
-        requirement("numpy"),
+        "//envpool/python:api",
     ],
 )
 
@@ -38,7 +67,6 @@ py_library(
     deps = [
         ":gymnasium_robotics",
         "//envpool:registration",
-        requirement("gymnasium"),
     ],
 )
 
@@ -55,6 +83,7 @@ py_test(
         requirement("absl-py"),
         requirement("gymnasium"),
         requirement("gymnasium-robotics"),
+        requirement("mujoco"),
         requirement("numpy"),
     ],
 )
