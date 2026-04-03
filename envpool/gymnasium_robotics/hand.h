@@ -42,18 +42,16 @@ class HandEnvFns {
         "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(20),
         "xml_file"_.Bind(std::string("hand/reach.xml")),
         "hand_task"_.Bind(std::string("reach")),
-        "reward_type"_.Bind(std::string("sparse")),
-        "obs_dim"_.Bind(63), "goal_dim"_.Bind(15),
-        "qpos_dim"_.Bind(24), "qvel_dim"_.Bind(24),
-        "relative_control"_.Bind(false),
-        "distance_threshold"_.Bind(0.01), "rotation_threshold"_.Bind(0.1),
+        "reward_type"_.Bind(std::string("sparse")), "obs_dim"_.Bind(63),
+        "goal_dim"_.Bind(15), "qpos_dim"_.Bind(24), "qvel_dim"_.Bind(24),
+        "relative_control"_.Bind(false), "distance_threshold"_.Bind(0.01),
+        "rotation_threshold"_.Bind(0.1),
         "target_position"_.Bind(std::string("ignore")),
         "target_rotation"_.Bind(std::string("ignore")),
         "target_position_low0"_.Bind(-0.04),
         "target_position_high0"_.Bind(0.04),
         "target_position_low1"_.Bind(-0.06),
-        "target_position_high1"_.Bind(0.02),
-        "target_position_low2"_.Bind(0.0),
+        "target_position_high1"_.Bind(0.02), "target_position_low2"_.Bind(0.0),
         "target_position_high2"_.Bind(0.06),
         "randomize_initial_position"_.Bind(true),
         "randomize_initial_rotation"_.Bind(true),
@@ -127,11 +125,8 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
   };
 
   static constexpr std::array<const char*, 5> kFingertipSiteNames = {
-      "robot0:S_fftip",
-      "robot0:S_mftip",
-      "robot0:S_rftip",
-      "robot0:S_lftip",
-      "robot0:S_thtip",
+      "robot0:S_fftip", "robot0:S_mftip", "robot0:S_rftip",
+      "robot0:S_lftip", "robot0:S_thtip",
   };
 
   TaskType task_type_;
@@ -330,7 +325,8 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
     constexpr std::string_view kPrefix = ":A_";
     std::size_t pos = actuator_name.find(kPrefix);
     if (pos == std::string::npos) {
-      throw std::runtime_error("Unexpected Hand actuator name: " + actuator_name);
+      throw std::runtime_error("Unexpected Hand actuator name: " +
+                               actuator_name);
     }
     std::string joint_name = actuator_name;
     joint_name.replace(pos, kPrefix.size(), ":");
@@ -397,8 +393,7 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
     }
     for (int sensor_id = 0; sensor_id < model_->nsensor; ++sensor_id) {
       const char* sensor_name = mj_id2name(model_, mjOBJ_SENSOR, sensor_id);
-      if (sensor_name == nullptr ||
-          !StartsWith(sensor_name, "robot0:TS_")) {
+      if (sensor_name == nullptr || !StartsWith(sensor_name, "robot0:TS_")) {
         continue;
       }
       touch_sensor_addrs_.push_back(model_->sensor_adr[sensor_id]);
@@ -440,10 +435,9 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
       mjtNum range_low = model_->actuator_ctrlrange[2 * i];
       mjtNum range_high = model_->actuator_ctrlrange[2 * i + 1];
       mjtNum actuation_range = (range_high - range_low) / 2.0;
-      mjtNum actuation_center =
-          relative_control_
-              ? data_->qpos[actuator_qpos_addr_[i]]
-              : (range_high + range_low) / 2.0;
+      mjtNum actuation_center = relative_control_
+                                    ? data_->qpos[actuator_qpos_addr_[i]]
+                                    : (range_high + range_low) / 2.0;
       if (relative_control_ && actuator_coupled_qpos_addr_[i] >= 0) {
         actuation_center += data_->qpos[actuator_coupled_qpos_addr_[i]];
       }
@@ -483,10 +477,10 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
       }
     }
     NormalizeQuat(&initial_quat);
-    SetJointQpos(model_, data_, "object:joint",
-                 {initial_pos[0], initial_pos[1], initial_pos[2],
-                  initial_quat[0], initial_quat[1], initial_quat[2],
-                  initial_quat[3]});
+    SetJointQpos(
+        model_, data_, "object:joint",
+        {initial_pos[0], initial_pos[1], initial_pos[2], initial_quat[0],
+         initial_quat[1], initial_quat[2], initial_quat[3]});
     std::array<float, 20> zero_action{};
     for (int i = 0; i < 10; ++i) {
       SetHandAction(zero_action.data());
@@ -544,8 +538,8 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
     };
     if (target_position_ == TargetPositionType::kRandom) {
       for (int i = 0; i < 3; ++i) {
-        std::uniform_real_distribution<> offset_dist(
-            target_position_low_[i], target_position_high_[i]);
+        std::uniform_real_distribution<> offset_dist(target_position_low_[i],
+                                                     target_position_high_[i]);
         target_pos[i] += static_cast<mjtNum>(offset_dist(gen_));
       }
     }
@@ -561,7 +555,7 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
       target_quat = SampleManipulationTargetQuat();
     }
     NormalizeQuat(&target_quat);
-    return {target_pos[0], target_pos[1], target_pos[2], target_quat[0],
+    return {target_pos[0],  target_pos[1],  target_pos[2], target_quat[0],
             target_quat[1], target_quat[2], target_quat[3]};
   }
 
@@ -570,8 +564,8 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
       return {1.0, 0.0, 0.0, 0.0};
     }
     if (target_rotation_ == TargetRotationType::kZ) {
-      return QuatFromAngleAndAxis(
-          static_cast<mjtNum>(rotation_dist_(gen_)), {0.0, 0.0, 1.0});
+      return QuatFromAngleAndAxis(static_cast<mjtNum>(rotation_dist_(gen_)),
+                                  {0.0, 0.0, 1.0});
     }
     if (target_rotation_ == TargetRotationType::kParallel) {
       auto z_quat = QuatFromAngleAndAxis(
@@ -594,8 +588,8 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
 
   std::array<mjtNum, 4> SampleManipulationTargetQuat() {
     if (target_rotation_ == TargetRotationType::kZ) {
-      return QuatFromAngleAndAxis(
-          static_cast<mjtNum>(rotation_dist_(gen_)), {0.0, 0.0, 1.0});
+      return QuatFromAngleAndAxis(static_cast<mjtNum>(rotation_dist_(gen_)),
+                                  {0.0, 0.0, 1.0});
     }
     if (target_rotation_ == TargetRotationType::kParallel) {
       auto z_quat = QuatFromAngleAndAxis(
@@ -665,8 +659,9 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
     }
     auto [d_pos, d_rot] = ManipulationGoalDistance(achieved_goal, desired_goal);
     if (sparse_reward_) {
-      return (d_pos < distance_threshold_ && d_rot < rotation_threshold_) ? 0.0
-                                                                          : -1.0;
+      return (d_pos < distance_threshold_ && d_rot < rotation_threshold_)
+                 ? 0.0
+                 : -1.0;
     }
     return -(10.0 * d_pos + d_rot);
   }
@@ -674,7 +669,8 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
   bool IsSuccess(const std::vector<mjtNum>& achieved_goal,
                  const std::vector<mjtNum>& desired_goal) const {
     if (task_type_ == TaskType::kReach) {
-      return ReachGoalDistance(achieved_goal, desired_goal) < distance_threshold_;
+      return ReachGoalDistance(achieved_goal, desired_goal) <
+             distance_threshold_;
     }
     auto [d_pos, d_rot] = ManipulationGoalDistance(achieved_goal, desired_goal);
     return d_pos < distance_threshold_ && d_rot < rotation_threshold_;
@@ -700,9 +696,8 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
   }
 
   static void NormalizeQuat(std::array<mjtNum, 4>* quat) {
-    mjtNum norm =
-        std::sqrt((*quat)[0] * (*quat)[0] + (*quat)[1] * (*quat)[1] +
-                  (*quat)[2] * (*quat)[2] + (*quat)[3] * (*quat)[3]);
+    mjtNum norm = std::sqrt((*quat)[0] * (*quat)[0] + (*quat)[1] * (*quat)[1] +
+                            (*quat)[2] * (*quat)[2] + (*quat)[3] * (*quat)[3]);
     if (norm <= 0.0) {
       *quat = {1.0, 0.0, 0.0, 0.0};
       return;
@@ -715,8 +710,7 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
   void RenderReachGoal() {
     std::vector<mjtNum> achieved_goal = AchievedGoal();
     for (int finger_idx = 0; finger_idx < 5; ++finger_idx) {
-      UpdateSitePosition(target_site_ids_[finger_idx],
-                         &goal_[3 * finger_idx]);
+      UpdateSitePosition(target_site_ids_[finger_idx], &goal_[3 * finger_idx]);
       UpdateSitePosition(finger_site_ids_[finger_idx],
                          &achieved_goal[3 * finger_idx]);
     }
@@ -798,7 +792,8 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
       }
     }
 
-    state["obs:achieved_goal"_].Assign(achieved_goal.data(), achieved_goal.size());
+    state["obs:achieved_goal"_].Assign(achieved_goal.data(),
+                                       achieved_goal.size());
     state["obs:desired_goal"_].Assign(goal_.data(), goal_.size());
     state["info:is_success"_] = IsSuccess(achieved_goal, goal_) ? 1.0 : 0.0;
     state["info:distance"_] = InfoDistance(achieved_goal, goal_);

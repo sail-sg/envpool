@@ -37,15 +37,15 @@ class FetchEnvFns {
     return MakeDict(
         "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(20),
         "xml_file"_.Bind(std::string("fetch/reach.xml")),
-        "reward_type"_.Bind(std::string("sparse")),
-        "has_object"_.Bind(false), "block_gripper"_.Bind(true),
-        "target_in_the_air"_.Bind(true), "gripper_extra_height"_.Bind(0.2),
-        "target_offset_x"_.Bind(0.0), "target_offset_y"_.Bind(0.0),
-        "target_offset_z"_.Bind(0.0), "obj_range"_.Bind(0.15),
-        "target_range"_.Bind(0.15), "distance_threshold"_.Bind(0.05),
-        "initial_slide0"_.Bind(0.4049), "initial_slide1"_.Bind(0.48),
-        "initial_slide2"_.Bind(0.0), "initial_object_x"_.Bind(1.25),
-        "initial_object_y"_.Bind(0.53), "initial_object_z"_.Bind(0.4));
+        "reward_type"_.Bind(std::string("sparse")), "has_object"_.Bind(false),
+        "block_gripper"_.Bind(true), "target_in_the_air"_.Bind(true),
+        "gripper_extra_height"_.Bind(0.2), "target_offset_x"_.Bind(0.0),
+        "target_offset_y"_.Bind(0.0), "target_offset_z"_.Bind(0.0),
+        "obj_range"_.Bind(0.15), "target_range"_.Bind(0.15),
+        "distance_threshold"_.Bind(0.05), "initial_slide0"_.Bind(0.4049),
+        "initial_slide1"_.Bind(0.48), "initial_slide2"_.Bind(0.0),
+        "initial_object_x"_.Bind(1.25), "initial_object_y"_.Bind(0.53),
+        "initial_object_z"_.Bind(0.4));
   }
 
   template <typename Config>
@@ -142,8 +142,9 @@ class FetchEnv : public Env<FetchEnvSpec>, public MujocoRobotEnv {
     done_ = elapsed_step_ >= max_episode_steps_;
     auto achieved_goal = AchievedGoal();
     mjtNum distance = GoalDistance(achieved_goal, goal_);
-    mjtNum reward = sparse_reward_ ? (distance > distance_threshold_ ? -1.0 : 0.0)
-                                   : -distance;
+    mjtNum reward = sparse_reward_
+                        ? (distance > distance_threshold_ ? -1.0 : 0.0)
+                        : -distance;
     WriteState(static_cast<float>(reward));
   }
 
@@ -174,15 +175,18 @@ class FetchEnv : public Env<FetchEnvSpec>, public MujocoRobotEnv {
   }
 
   void EnvSetup() override {
-    SetJointQpos(model_, data_, "robot0:slide0", spec_.config["initial_slide0"_]);
-    SetJointQpos(model_, data_, "robot0:slide1", spec_.config["initial_slide1"_]);
-    SetJointQpos(model_, data_, "robot0:slide2", spec_.config["initial_slide2"_]);
+    SetJointQpos(model_, data_, "robot0:slide0",
+                 spec_.config["initial_slide0"_]);
+    SetJointQpos(model_, data_, "robot0:slide1",
+                 spec_.config["initial_slide1"_]);
+    SetJointQpos(model_, data_, "robot0:slide2",
+                 spec_.config["initial_slide2"_]);
     if (spec_.config["has_object"_]) {
       SetJointQpos(model_, data_, "object0:joint",
                    std::vector<mjtNum>{spec_.config["initial_object_x"_],
                                        spec_.config["initial_object_y"_],
-                                       spec_.config["initial_object_z"_],
-                                       1.0, 0.0, 0.0, 0.0});
+                                       spec_.config["initial_object_z"_], 1.0,
+                                       0.0, 0.0, 0.0});
     }
     ResetMocapWelds(model_, data_);
     mj_forward(model_, data_);
@@ -199,7 +203,8 @@ class FetchEnv : public Env<FetchEnvSpec>, public MujocoRobotEnv {
       DoSimulation();
     }
 
-    initial_gripper_xpos_ = GetSiteXpos(model_, data_, SiteId(model_, "robot0:grip"));
+    initial_gripper_xpos_ =
+        GetSiteXpos(model_, data_, SiteId(model_, "robot0:grip"));
     if (spec_.config["has_object"_]) {
       height_offset_ = GetSiteXpos(model_, data_, SiteId(model_, "object0"))[2];
     }
@@ -215,10 +220,12 @@ class FetchEnv : public Env<FetchEnvSpec>, public MujocoRobotEnv {
   }
 
   void RenderCallback() override {
-    std::array<mjtNum, 3> target_xpos = GetSiteXpos(model_, data_, target_site_id_);
+    std::array<mjtNum, 3> target_xpos =
+        GetSiteXpos(model_, data_, target_site_id_);
     for (int i = 0; i < 3; ++i) {
       model_->site_pos[3 * target_site_id_ + i] =
-          goal_[i] - (target_xpos[i] - model_->site_pos[3 * target_site_id_ + i]);
+          goal_[i] -
+          (target_xpos[i] - model_->site_pos[3 * target_site_id_ + i]);
     }
     mj_forward(model_, data_);
   }
@@ -254,12 +261,12 @@ class FetchEnv : public Env<FetchEnvSpec>, public MujocoRobotEnv {
         0.0,
         1.0,
         0.0,
-        block_gripper_ ? mjtNum{0.0}
-                       : static_cast<mjtNum>(
-                             std::clamp(raw_action[3], -1.0F, 1.0F)),
-        block_gripper_ ? mjtNum{0.0}
-                       : static_cast<mjtNum>(
-                             std::clamp(raw_action[3], -1.0F, 1.0F)),
+        block_gripper_
+            ? mjtNum{0.0}
+            : static_cast<mjtNum>(std::clamp(raw_action[3], -1.0F, 1.0F)),
+        block_gripper_
+            ? mjtNum{0.0}
+            : static_cast<mjtNum>(std::clamp(raw_action[3], -1.0F, 1.0F)),
     };
     return action;
   }

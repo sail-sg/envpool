@@ -59,8 +59,8 @@ std::array<mjtNum, 3> Quat2Euler(const std::array<mjtNum, 4>& quat);
 std::array<mjtNum, 4> QuatConjugate(const std::array<mjtNum, 4>& quat);
 std::array<mjtNum, 4> QuatMul(const std::array<mjtNum, 4>& lhs,
                               const std::array<mjtNum, 4>& rhs);
-std::array<mjtNum, 4> QuatFromAngleAndAxis(
-    mjtNum angle, const std::array<mjtNum, 3>& axis);
+std::array<mjtNum, 4> QuatFromAngleAndAxis(mjtNum angle,
+                                           const std::array<mjtNum, 3>& axis);
 const std::vector<std::array<mjtNum, 4>>& ParallelQuats();
 
 std::pair<std::vector<mjtNum>, std::vector<mjtNum>> RobotGetObs(

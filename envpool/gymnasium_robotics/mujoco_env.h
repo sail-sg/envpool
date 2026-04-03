@@ -65,7 +65,8 @@ class MujocoRobotEnv : public RenderableEnv {
         qpos0_(model_->nq),
         qvel0_(model_->nv)
 #endif
-  {}
+  {
+  }
 
   ~MujocoRobotEnv() override {
     mj_deleteData(data_);

@@ -36,13 +36,13 @@ namespace gymnasium_robotics {
 class AdroitEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(5),
-                    "xml_file"_.Bind(std::string("adroit_hand/adroit_door.xml")),
-                    "adroit_task"_.Bind(std::string("door")),
-                    "reward_type"_.Bind(std::string("dense")),
-                    "obs_dim"_.Bind(39), "action_dim"_.Bind(28),
-                    "qpos_dim"_.Bind(30), "qvel_dim"_.Bind(30),
-                    "reset_dim"_.Bind(3));
+    return MakeDict(
+        "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(5),
+        "xml_file"_.Bind(std::string("adroit_hand/adroit_door.xml")),
+        "adroit_task"_.Bind(std::string("door")),
+        "reward_type"_.Bind(std::string("dense")), "obs_dim"_.Bind(39),
+        "action_dim"_.Bind(28), "qpos_dim"_.Bind(30), "qvel_dim"_.Bind(30),
+        "reset_dim"_.Bind(3));
   }
 
   template <typename Config>
@@ -53,15 +53,14 @@ class AdroitEnvFns {
     int qvel_dim = conf["qvel_dim"_];
     int reset_dim = conf["reset_dim"_];
 #endif
-    return MakeDict(
-        "obs"_.Bind(Spec<mjtNum>({conf["obs_dim"_]}, {-inf, inf})),
-        "info:success"_.Bind(Spec<mjtNum>({-1}, {0.0, 1.0})),
-        "info:distance"_.Bind(Spec<mjtNum>({-1}, {0.0, inf}))
+    return MakeDict("obs"_.Bind(Spec<mjtNum>({conf["obs_dim"_]}, {-inf, inf})),
+                    "info:success"_.Bind(Spec<mjtNum>({-1}, {0.0, 1.0})),
+                    "info:distance"_.Bind(Spec<mjtNum>({-1}, {0.0, inf}))
 #ifdef ENVPOOL_TEST
-            ,
-        "info:qpos0"_.Bind(Spec<mjtNum>({qpos_dim})),
-        "info:qvel0"_.Bind(Spec<mjtNum>({qvel_dim})),
-        "info:extra0"_.Bind(Spec<mjtNum>({reset_dim}))
+                        ,
+                    "info:qpos0"_.Bind(Spec<mjtNum>({qpos_dim})),
+                    "info:qvel0"_.Bind(Spec<mjtNum>({qvel_dim})),
+                    "info:extra0"_.Bind(Spec<mjtNum>({reset_dim}))
 #endif
     );
   }
@@ -264,7 +263,8 @@ class AdroitEnv : public Env<AdroitEnvSpec>, public MujocoRobotEnv {
     int wrist_end = ActuatorId(model_, "A_WRJ0");
     int hand_begin = ActuatorId(model_, "A_FFJ3");
     int hand_end = ActuatorId(model_, "A_THJ0");
-    for (int actuator_id = wrist_begin; actuator_id <= wrist_end; ++actuator_id) {
+    for (int actuator_id = wrist_begin; actuator_id <= wrist_end;
+         ++actuator_id) {
       model_->actuator_gainprm[mjNGAIN * actuator_id] = 10.0;
       model_->actuator_gainprm[mjNGAIN * actuator_id + 1] = 0.0;
       model_->actuator_gainprm[mjNGAIN * actuator_id + 2] = 0.0;
@@ -284,12 +284,10 @@ class AdroitEnv : public Env<AdroitEnvSpec>, public MujocoRobotEnv {
 
   void SetupActionScale() {
     for (int i = 0; i < action_dim_; ++i) {
-      act_mean_[i] =
-          0.5 *
-          (model_->actuator_ctrlrange[2 * i] + model_->actuator_ctrlrange[2 * i + 1]);
-      act_rng_[i] =
-          0.5 *
-          (model_->actuator_ctrlrange[2 * i + 1] - model_->actuator_ctrlrange[2 * i]);
+      act_mean_[i] = 0.5 * (model_->actuator_ctrlrange[2 * i] +
+                            model_->actuator_ctrlrange[2 * i + 1]);
+      act_rng_[i] = 0.5 * (model_->actuator_ctrlrange[2 * i + 1] -
+                           model_->actuator_ctrlrange[2 * i]);
     }
   }
 
@@ -305,7 +303,8 @@ class AdroitEnv : public Env<AdroitEnvSpec>, public MujocoRobotEnv {
         model_->body_pos[3 * target_body_id_ + 2] = Uniform(0.1, 0.25);
         break;
       case TaskType::kPen: {
-        auto desired_orien = Euler2Quat({Uniform(-1.0, 1.0), Uniform(-1.0, 1.0), 0.0});
+        auto desired_orien =
+            Euler2Quat({Uniform(-1.0, 1.0), Uniform(-1.0, 1.0), 0.0});
         for (int i = 0; i < 4; ++i) {
           model_->body_quat[4 * target_body_id_ + i] = desired_orien[i];
         }
@@ -321,10 +320,12 @@ class AdroitEnv : public Env<AdroitEnvSpec>, public MujocoRobotEnv {
     }
     mj_forward(model_, data_);
     if (task_type_ == TaskType::kPen) {
-      pen_length_ = L2(Diff(GetSiteXpos(model_, data_, object_top_site_id_),
-                            GetSiteXpos(model_, data_, object_bottom_site_id_)));
-      target_length_ = L2(Diff(GetSiteXpos(model_, data_, target_top_site_id_),
-                               GetSiteXpos(model_, data_, target_bottom_site_id_)));
+      pen_length_ =
+          L2(Diff(GetSiteXpos(model_, data_, object_top_site_id_),
+                  GetSiteXpos(model_, data_, object_bottom_site_id_)));
+      target_length_ =
+          L2(Diff(GetSiteXpos(model_, data_, target_top_site_id_),
+                  GetSiteXpos(model_, data_, target_bottom_site_id_)));
     }
   }
 
@@ -408,8 +409,8 @@ class AdroitEnv : public Env<AdroitEnvSpec>, public MujocoRobotEnv {
     for (int i = 0; i < 3; ++i) {
       obs.push_back(target_pos[i]);
     }
-    obs.push_back(
-        std::clamp(data_->sensordata[nail_sensor_addr_], mjtNum(-1.0), mjtNum(1.0)));
+    obs.push_back(std::clamp(data_->sensordata[nail_sensor_addr_], mjtNum(-1.0),
+                             mjtNum(1.0)));
     return obs;
   }
 
@@ -423,8 +424,8 @@ class AdroitEnv : public Env<AdroitEnvSpec>, public MujocoRobotEnv {
     auto desired_pos = GetSiteXpos(model_, data_, eps_ball_site_id_);
     auto obj_orien =
         Orientation(object_top_site_id_, object_bottom_site_id_, pen_length_);
-    auto desired_orien =
-        Orientation(target_top_site_id_, target_bottom_site_id_, target_length_);
+    auto desired_orien = Orientation(target_top_site_id_,
+                                     target_bottom_site_id_, target_length_);
     for (int i = 0; i < 3; ++i) {
       obs.push_back(obj_pos[i]);
     }
@@ -530,8 +531,8 @@ class AdroitEnv : public Env<AdroitEnvSpec>, public MujocoRobotEnv {
     auto desired_pos = GetSiteXpos(model_, data_, eps_ball_site_id_);
     auto obj_orien =
         Orientation(object_top_site_id_, object_bottom_site_id_, pen_length_);
-    auto desired_orien =
-        Orientation(target_top_site_id_, target_bottom_site_id_, target_length_);
+    auto desired_orien = Orientation(target_top_site_id_,
+                                     target_bottom_site_id_, target_length_);
     mjtNum distance = L2(Diff(obj_pos, desired_pos));
     mjtNum similarity = Dot(obj_orien, desired_orien);
     bool success = distance < 0.075 && similarity > 0.95;

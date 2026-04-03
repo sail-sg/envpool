@@ -149,7 +149,9 @@ def _reset_upstream_state(
     base_env.data.qvel[:] = qvel
     if hasattr(base_env, "_set_action"):
         base_env._set_action(
-            np.zeros(base_env.action_space.shape, dtype=base_env.action_space.dtype)
+            np.zeros(
+                base_env.action_space.shape, dtype=base_env.action_space.dtype
+            )
         )
     mujoco.mj_forward(base_env.model, base_env.data)
     base_env.goal = np.array(goal, copy=True)
@@ -165,7 +167,9 @@ def _reset_upstream_adroit_state(
 ) -> np.ndarray:
     base_env = cast(Any, env.unwrapped)
     if task_id.startswith("AdroitHandDoor"):
-        body_id = mujoco.mj_name2id(base_env.model, mujoco.mjtObj.mjOBJ_BODY, "frame")
+        body_id = mujoco.mj_name2id(
+            base_env.model, mujoco.mjtObj.mjOBJ_BODY, "frame"
+        )
         base_env.model.body_pos[body_id] = extra
     elif task_id.startswith("AdroitHandHammer"):
         body_id = mujoco.mj_name2id(
@@ -249,17 +253,15 @@ def _reset_upstream_kitchen_state(
 
 def _kitchen_task_list_to_mask(tasks: list[str]) -> np.ndarray:
     mask = np.zeros(7, dtype=np.int32)
-    for task_id, task_name in enumerate(
-        [
-            "bottom burner",
-            "top burner",
-            "light switch",
-            "slide cabinet",
-            "hinge cabinet",
-            "microwave",
-            "kettle",
-        ]
-    ):
+    for task_id, task_name in enumerate([
+        "bottom burner",
+        "top burner",
+        "light switch",
+        "slide cabinet",
+        "hinge cabinet",
+        "microwave",
+        "kettle",
+    ]):
         if task_name in tasks:
             mask[task_id] = 1
     return mask
@@ -268,7 +270,9 @@ def _kitchen_task_list_to_mask(tasks: list[str]) -> np.ndarray:
 class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
     def test_registered_fetch_env_count(self) -> None:
         task_ids = sorted(
-            task_id for task_id in list_all_envs() if task_id.startswith("Fetch")
+            task_id
+            for task_id in list_all_envs()
+            if task_id.startswith("Fetch")
         )
         self.assertEqual(task_ids, sorted(_FETCH_ENVS))
         self.assertLen(task_ids, 16)
@@ -315,9 +319,9 @@ class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
                     _assert_goal_obs_equal(env0.reset()[0], env1.reset()[0])
                     env0.action_space.seed(1)
                     for _ in range(32):
-                        action = np.stack(
-                            [env0.action_space.sample() for _ in range(2)]
-                        )
+                        action = np.stack([
+                            env0.action_space.sample() for _ in range(2)
+                        ])
                         obs0, reward0, term0, trunc0, _ = env0.step(action)
                         obs1, reward1, term1, trunc1, _ = env1.step(action)
                         _assert_goal_obs_equal(obs0, obs1)
@@ -339,9 +343,9 @@ class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
                     differs = not _obs_allclose(obs0, obs1)
                     env0.action_space.seed(1)
                     for _ in range(32):
-                        action = np.stack(
-                            [env0.action_space.sample() for _ in range(2)]
-                        )
+                        action = np.stack([
+                            env0.action_space.sample() for _ in range(2)
+                        ])
                         obs0 = env0.step(action)[0]
                         obs1 = env1.step(action)[0]
                         differs = differs or not _obs_allclose(obs0, obs1)
@@ -381,12 +385,16 @@ class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
                     truncated1 = np.array([False])
                     for _ in range(32):
                         action = env0.action_space.sample()
-                        obs0, reward0, terminated0, truncated0, info0 = env0.step(
-                            action
+                        obs0, reward0, terminated0, truncated0, info0 = (
+                            env0.step(action)
                         )
-                        obs1, reward1, terminated1, truncated1, info1 = env1.step(
-                            np.asarray([action], dtype=env0.action_space.dtype),
-                            np.asarray([0], dtype=np.int32),
+                        obs1, reward1, terminated1, truncated1, info1 = (
+                            env1.step(
+                                np.asarray(
+                                    [action], dtype=env0.action_space.dtype
+                                ),
+                                np.asarray([0], dtype=np.int32),
+                            )
                         )
                         _assert_goal_obs_equal(
                             obs0,
@@ -425,7 +433,9 @@ class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
             with self.subTest(alias_id=alias_id):
                 alias_spec = make_spec(alias_id)
                 target_spec = make_spec(target_id)
-                self.assertEqual(alias_spec.config.xml_file, target_spec.config.xml_file)
+                self.assertEqual(
+                    alias_spec.config.xml_file, target_spec.config.xml_file
+                )
                 self.assertEqual(
                     alias_spec.config.reward_type,
                     target_spec.config.reward_type,
@@ -434,7 +444,9 @@ class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
                     alias_spec.observation_space,
                     target_spec.observation_space,
                 )
-                self.assertEqual(alias_spec.action_space, target_spec.action_space)
+                self.assertEqual(
+                    alias_spec.action_space, target_spec.action_space
+                )
 
     def test_dm_send_recv(self) -> None:
         action_space = make_spec("FetchReach-v4").action_space
@@ -552,9 +564,9 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
                     _assert_goal_obs_equal(env0.reset()[0], env1.reset()[0])
                     env0.action_space.seed(1)
                     for _ in range(8):
-                        action = np.stack(
-                            [env0.action_space.sample() for _ in range(2)]
-                        )
+                        action = np.stack([
+                            env0.action_space.sample() for _ in range(2)
+                        ])
                         obs0, reward0, term0, trunc0, _ = env0.step(action)
                         obs1, reward1, term1, trunc1, _ = env1.step(action)
                         _assert_goal_obs_equal(obs0, obs1)
@@ -576,9 +588,9 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
                     differs = not _obs_allclose(obs0, obs1)
                     env0.action_space.seed(1)
                     for _ in range(8):
-                        action = np.stack(
-                            [env0.action_space.sample() for _ in range(2)]
-                        )
+                        action = np.stack([
+                            env0.action_space.sample() for _ in range(2)
+                        ])
                         obs0 = env0.step(action)[0]
                         obs1 = env1.step(action)[0]
                         differs = differs or not _obs_allclose(obs0, obs1)
@@ -618,12 +630,16 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
                     truncated1 = np.array([False])
                     for _ in range(8):
                         action = env0.action_space.sample()
-                        obs0, reward0, terminated0, truncated0, info0 = env0.step(
-                            action
+                        obs0, reward0, terminated0, truncated0, info0 = (
+                            env0.step(action)
                         )
-                        obs1, reward1, terminated1, truncated1, info1 = env1.step(
-                            np.asarray([action], dtype=env0.action_space.dtype),
-                            np.asarray([0], dtype=np.int32),
+                        obs1, reward1, terminated1, truncated1, info1 = (
+                            env1.step(
+                                np.asarray(
+                                    [action], dtype=env0.action_space.dtype
+                                ),
+                                np.asarray([0], dtype=np.int32),
+                            )
                         )
                         _assert_goal_obs_equal(
                             obs0,
@@ -654,7 +670,9 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
             with self.subTest(alias_id=alias_id):
                 alias_spec = make_spec(alias_id)
                 target_spec = make_spec(target_id)
-                self.assertEqual(alias_spec.config.xml_file, target_spec.config.xml_file)
+                self.assertEqual(
+                    alias_spec.config.xml_file, target_spec.config.xml_file
+                )
                 self.assertEqual(
                     alias_spec.config.reward_type,
                     target_spec.config.reward_type,
@@ -663,7 +681,9 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
                     alias_spec.observation_space,
                     target_spec.observation_space,
                 )
-                self.assertEqual(alias_spec.action_space, target_spec.action_space)
+                self.assertEqual(
+                    alias_spec.action_space, target_spec.action_space
+                )
 
 
 class _GymnasiumRoboticsAdroitEnvPoolTest(absltest.TestCase):
@@ -700,7 +720,9 @@ class _GymnasiumRoboticsAdroitEnvPoolTest(absltest.TestCase):
                 env0 = _make_upstream_env(task_id)
                 env1 = make_gymnasium(task_id)
                 try:
-                    _assert_space_equal(env0.observation_space, env1.observation_space)
+                    _assert_space_equal(
+                        env0.observation_space, env1.observation_space
+                    )
                     _assert_space_equal(env0.action_space, env1.action_space)
                 finally:
                     env0.close()
@@ -715,9 +737,9 @@ class _GymnasiumRoboticsAdroitEnvPoolTest(absltest.TestCase):
                     np.testing.assert_allclose(env0.reset()[0], env1.reset()[0])
                     env0.action_space.seed(1)
                     for _ in range(8):
-                        action = np.stack(
-                            [env0.action_space.sample() for _ in range(2)]
-                        )
+                        action = np.stack([
+                            env0.action_space.sample() for _ in range(2)
+                        ])
                         obs0, reward0, term0, trunc0, _ = env0.step(action)
                         obs1, reward1, term1, trunc1, _ = env1.step(action)
                         np.testing.assert_allclose(obs0, obs1)
@@ -739,9 +761,9 @@ class _GymnasiumRoboticsAdroitEnvPoolTest(absltest.TestCase):
                     differs = not np.allclose(obs0, obs1)
                     env0.action_space.seed(1)
                     for _ in range(8):
-                        action = np.stack(
-                            [env0.action_space.sample() for _ in range(2)]
-                        )
+                        action = np.stack([
+                            env0.action_space.sample() for _ in range(2)
+                        ])
                         obs0 = env0.step(action)[0]
                         obs1 = env1.step(action)[0]
                         differs = differs or not np.allclose(obs0, obs1)
@@ -780,12 +802,16 @@ class _GymnasiumRoboticsAdroitEnvPoolTest(absltest.TestCase):
 
                     for _ in range(8):
                         action = env0.action_space.sample()
-                        obs0, reward0, terminated0, truncated0, info0 = env0.step(
-                            action
+                        obs0, reward0, terminated0, truncated0, info0 = (
+                            env0.step(action)
                         )
-                        obs1, reward1, terminated1, truncated1, info1 = env1.step(
-                            np.asarray([action], dtype=env0.action_space.dtype),
-                            np.asarray([0], dtype=np.int32),
+                        obs1, reward1, terminated1, truncated1, info1 = (
+                            env1.step(
+                                np.asarray(
+                                    [action], dtype=env0.action_space.dtype
+                                ),
+                                np.asarray([0], dtype=np.int32),
+                            )
                         )
                         np.testing.assert_allclose(
                             obs0,
@@ -846,7 +872,9 @@ class _GymnasiumRoboticsPointMazeEnvPoolTest(absltest.TestCase):
                 env0 = _make_upstream_env(task_id)
                 env1 = make_gymnasium(task_id)
                 try:
-                    _assert_space_equal(env0.observation_space, env1.observation_space)
+                    _assert_space_equal(
+                        env0.observation_space, env1.observation_space
+                    )
                     _assert_space_equal(env0.action_space, env1.action_space)
                 finally:
                     env0.close()
@@ -861,9 +889,9 @@ class _GymnasiumRoboticsPointMazeEnvPoolTest(absltest.TestCase):
                     _assert_goal_obs_equal(env0.reset()[0], env1.reset()[0])
                     env0.action_space.seed(1)
                     for _ in range(16):
-                        action = np.stack(
-                            [env0.action_space.sample() for _ in range(2)]
-                        )
+                        action = np.stack([
+                            env0.action_space.sample() for _ in range(2)
+                        ])
                         obs0, reward0, term0, trunc0, _ = env0.step(action)
                         obs1, reward1, term1, trunc1, _ = env1.step(action)
                         _assert_goal_obs_equal(obs0, obs1)
@@ -885,9 +913,9 @@ class _GymnasiumRoboticsPointMazeEnvPoolTest(absltest.TestCase):
                     differs = not _obs_allclose(obs0, obs1)
                     env0.action_space.seed(1)
                     for _ in range(16):
-                        action = np.stack(
-                            [env0.action_space.sample() for _ in range(2)]
-                        )
+                        action = np.stack([
+                            env0.action_space.sample() for _ in range(2)
+                        ])
                         obs0 = env0.step(action)[0]
                         obs1 = env1.step(action)[0]
                         differs = differs or not _obs_allclose(obs0, obs1)
@@ -925,12 +953,16 @@ class _GymnasiumRoboticsPointMazeEnvPoolTest(absltest.TestCase):
 
                     for _ in range(16):
                         action = env0.action_space.sample()
-                        obs0, reward0, terminated0, truncated0, info0 = env0.step(
-                            action
+                        obs0, reward0, terminated0, truncated0, info0 = (
+                            env0.step(action)
                         )
-                        obs1, reward1, terminated1, truncated1, info1 = env1.step(
-                            np.asarray([action], dtype=env0.action_space.dtype),
-                            np.asarray([0], dtype=np.int32),
+                        obs1, reward1, terminated1, truncated1, info1 = (
+                            env1.step(
+                                np.asarray(
+                                    [action], dtype=env0.action_space.dtype
+                                ),
+                                np.asarray([0], dtype=np.int32),
+                            )
                         )
                         _assert_goal_obs_equal(
                             obs0,
@@ -1002,7 +1034,9 @@ class _GymnasiumRoboticsKitchenEnvPoolTest(absltest.TestCase):
             _assert_goal_obs_equal(env0.reset()[0], env1.reset()[0])
             env0.action_space.seed(1)
             for _ in range(8):
-                action = np.stack([env0.action_space.sample() for _ in range(2)])
+                action = np.stack([
+                    env0.action_space.sample() for _ in range(2)
+                ])
                 obs0, reward0, term0, trunc0, _ = env0.step(action)
                 obs1, reward1, term1, trunc1, _ = env1.step(action)
                 _assert_goal_obs_equal(obs0, obs1)
@@ -1022,7 +1056,9 @@ class _GymnasiumRoboticsKitchenEnvPoolTest(absltest.TestCase):
             differs = not _obs_allclose(obs0, obs1)
             env0.action_space.seed(1)
             for _ in range(8):
-                action = np.stack([env0.action_space.sample() for _ in range(2)])
+                action = np.stack([
+                    env0.action_space.sample() for _ in range(2)
+                ])
                 obs0 = env0.step(action)[0]
                 obs1 = env1.step(action)[0]
                 differs = differs or not _obs_allclose(obs0, obs1)
@@ -1076,7 +1112,9 @@ class _GymnasiumRoboticsKitchenEnvPoolTest(absltest.TestCase):
 
             for _ in range(8):
                 action = env0.action_space.sample()
-                obs0, reward0, terminated0, truncated0, info0 = env0.step(action)
+                obs0, reward0, terminated0, truncated0, info0 = env0.step(
+                    action
+                )
                 obs1, reward1, terminated1, truncated1, info1 = env1.step(
                     np.asarray([action], dtype=env0.action_space.dtype),
                     np.asarray([0], dtype=np.int32),

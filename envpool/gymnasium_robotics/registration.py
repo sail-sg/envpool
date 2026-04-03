@@ -425,9 +425,7 @@ for obj_name, obj_conf in _HAND_MANIPULATE_OBJECTS.items():
                         spec_cls="GymnasiumRoboticsHandEnvSpec",
                         dm_cls="GymnasiumRoboticsHandDMEnvPool",
                         gym_cls="GymnasiumRoboticsHandGymEnvPool",
-                        gymnasium_cls=(
-                            "GymnasiumRoboticsHandGymnasiumEnvPool"
-                        ),
+                        gymnasium_cls=("GymnasiumRoboticsHandGymnasiumEnvPool"),
                         max_episode_steps=100,
                         xml_file=obj_conf["touch_xml_file"],
                         hand_task="manipulate",

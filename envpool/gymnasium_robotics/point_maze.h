@@ -17,8 +17,8 @@
 
 #include <unistd.h>
 
-#include <atomic>
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <cstdio>
 #include <fstream>
@@ -41,10 +41,8 @@ class PointMazeEnvFns {
     return MakeDict("reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(1),
                     "maze_map"_.Bind(std::string("U_MAZE")),
                     "reward_type"_.Bind(std::string("sparse")),
-                    "continuing_task"_.Bind(true),
-                    "reset_target"_.Bind(false),
-                    "maze_size_scaling"_.Bind(1.0),
-                    "maze_height"_.Bind(0.4),
+                    "continuing_task"_.Bind(true), "reset_target"_.Bind(false),
+                    "maze_size_scaling"_.Bind(1.0), "maze_height"_.Bind(0.4),
                     "position_noise_range"_.Bind(0.25));
   }
 
@@ -52,17 +50,16 @@ class PointMazeEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     (void)conf;
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
-    return MakeDict(
-        "obs:observation"_.Bind(Spec<mjtNum>({4}, {-inf, inf})),
-        "obs:achieved_goal"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-        "obs:desired_goal"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-        "info:success"_.Bind(Spec<mjtNum>({-1}, {0.0, 1.0})),
-        "info:distance"_.Bind(Spec<mjtNum>({-1}, {0.0, inf}))
+    return MakeDict("obs:observation"_.Bind(Spec<mjtNum>({4}, {-inf, inf})),
+                    "obs:achieved_goal"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
+                    "obs:desired_goal"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
+                    "info:success"_.Bind(Spec<mjtNum>({-1}, {0.0, 1.0})),
+                    "info:distance"_.Bind(Spec<mjtNum>({-1}, {0.0, inf}))
 #ifdef ENVPOOL_TEST
-            ,
-        "info:qpos0"_.Bind(Spec<mjtNum>({2})),
-        "info:qvel0"_.Bind(Spec<mjtNum>({2})),
-        "info:goal0"_.Bind(Spec<mjtNum>({2}))
+                        ,
+                    "info:qpos0"_.Bind(Spec<mjtNum>({2})),
+                    "info:qvel0"_.Bind(Spec<mjtNum>({2})),
+                    "info:goal0"_.Bind(Spec<mjtNum>({2}))
 #endif
     );
   }
@@ -137,15 +134,18 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
     data_->qvel[1] = std::clamp(data_->qvel[1], mjtNum(-5.0), mjtNum(5.0));
     mj_forward(model_, data_);
     const float* act = static_cast<const float*>(action["action"_].Data());
-    data_->ctrl[0] = std::clamp(static_cast<mjtNum>(act[0]), mjtNum(-1.0), mjtNum(1.0));
-    data_->ctrl[1] = std::clamp(static_cast<mjtNum>(act[1]), mjtNum(-1.0), mjtNum(1.0));
+    data_->ctrl[0] =
+        std::clamp(static_cast<mjtNum>(act[0]), mjtNum(-1.0), mjtNum(1.0));
+    data_->ctrl[1] =
+        std::clamp(static_cast<mjtNum>(act[1]), mjtNum(-1.0), mjtNum(1.0));
     DoSimulation();
     ++elapsed_step_;
 
     auto achieved_goal = AchievedGoal();
     mjtNum distance = GoalDistance(achieved_goal, goal_);
     bool success = distance <= 0.45;
-    mjtNum reward = sparse_reward_ ? (success ? 1.0 : 0.0) : std::exp(-distance);
+    mjtNum reward =
+        sparse_reward_ ? (success ? 1.0 : 0.0) : std::exp(-distance);
     bool terminated = !continuing_task_ && success;
     done_ = terminated || elapsed_step_ >= max_episode_steps_;
     WriteState(reward, distance, success);
@@ -231,8 +231,9 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
                                   mjtNum maze_size_scaling,
                                   mjtNum maze_height) {
     static std::atomic<int> counter{0};
-    std::string xml_path = "/tmp/envpool_point_maze_" + std::to_string(getpid()) +
-                           "_" + std::to_string(counter.fetch_add(1)) + ".xml";
+    std::string xml_path = "/tmp/envpool_point_maze_" +
+                           std::to_string(getpid()) + "_" +
+                           std::to_string(counter.fetch_add(1)) + ".xml";
     std::ofstream xml(xml_path);
     if (!xml) {
       throw std::runtime_error("Failed to create temporary PointMaze XML.");
@@ -293,17 +294,19 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
         if (rows[row][col] != '1') {
           continue;
         }
-        mjtNum x = (static_cast<mjtNum>(col) + 0.5) * maze_size_scaling - x_center;
-        mjtNum y = y_center - (static_cast<mjtNum>(row) + 0.5) * maze_size_scaling;
-        xml << "    <geom name=\"block_" << row << "_" << col
-            << "\" pos=\"" << x << " " << y << " " << z_pos << "\" "
+        mjtNum x =
+            (static_cast<mjtNum>(col) + 0.5) * maze_size_scaling - x_center;
+        mjtNum y =
+            y_center - (static_cast<mjtNum>(row) + 0.5) * maze_size_scaling;
+        xml << "    <geom name=\"block_" << row << "_" << col << "\" pos=\""
+            << x << " " << y << " " << z_pos << "\" "
             << "size=\"" << half_size << " " << half_size << " " << z_pos
             << "\" type=\"box\" material=\"\" contype=\"1\" conaffinity=\"1\" "
             << "rgba=\"0.7 0.5 0.3 1.0\"/>\n";
       }
     }
-    xml << "    <site name=\"target\" pos=\"0 0 " << z_pos
-        << "\" size=\"" << 0.2 * maze_size_scaling
+    xml << "    <site name=\"target\" pos=\"0 0 " << z_pos << "\" size=\""
+        << 0.2 * maze_size_scaling
         << "\" rgba=\"1 0 0 0.7\" type=\"sphere\"/>\n"
         << "  </worldbody>\n"
         << "  <actuator>\n"
@@ -374,8 +377,8 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
     if (goal_locations_.empty()) {
       throw std::runtime_error("PointMaze goal locations are empty.");
     }
-    int goal_id =
-        static_cast<int>(unit_dist_(gen_) * static_cast<double>(goal_locations_.size()));
+    int goal_id = static_cast<int>(unit_dist_(gen_) *
+                                   static_cast<double>(goal_locations_.size()));
     goal_id = std::min(goal_id, static_cast<int>(goal_locations_.size()) - 1);
     return goal_locations_[goal_id];
   }
@@ -386,9 +389,10 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
     }
     std::array<mjtNum, 2> reset_pos = goal_;
     while (GoalDistance(reset_pos, goal_) <= 0.5 * maze_size_scaling_) {
-      int reset_id = static_cast<int>(unit_dist_(gen_) *
-                                      static_cast<double>(reset_locations_.size()));
-      reset_id = std::min(reset_id, static_cast<int>(reset_locations_.size()) - 1);
+      int reset_id = static_cast<int>(
+          unit_dist_(gen_) * static_cast<double>(reset_locations_.size()));
+      reset_id =
+          std::min(reset_id, static_cast<int>(reset_locations_.size()) - 1);
       reset_pos = reset_locations_[reset_id];
     }
     return reset_pos;

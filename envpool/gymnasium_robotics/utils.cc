@@ -57,14 +57,10 @@ std::array<mjtNum, 9> Euler2Mat(const std::array<mjtNum, 3>& euler) {
   double cs = ci * sk;
   double sc = si * ck;
   double ss = si * sk;
-  return {static_cast<mjtNum>(cj * ci),
-          static_cast<mjtNum>(cj * si),
-          static_cast<mjtNum>(-sj),
-          static_cast<mjtNum>(sj * cs - sc),
-          static_cast<mjtNum>(sj * ss + cc),
-          static_cast<mjtNum>(cj * sk),
-          static_cast<mjtNum>(sj * cc + ss),
-          static_cast<mjtNum>(sj * sc - cs),
+  return {static_cast<mjtNum>(cj * ci),      static_cast<mjtNum>(cj * si),
+          static_cast<mjtNum>(-sj),          static_cast<mjtNum>(sj * cs - sc),
+          static_cast<mjtNum>(sj * ss + cc), static_cast<mjtNum>(cj * sk),
+          static_cast<mjtNum>(sj * cc + ss), static_cast<mjtNum>(sj * sc - cs),
           static_cast<mjtNum>(cj * ck)};
 }
 
@@ -225,13 +221,13 @@ std::array<mjtNum, 9> GetSiteXmat(const mjModel* model, const mjData* data,
 }
 
 std::array<mjtNum, 9> Quat2Mat(const std::array<mjtNum, 4>& quat) {
-  constexpr double kEps = 2.220446049250313e-16;
+  constexpr double k_eps = 2.220446049250313e-16;
   double w = quat[0];
   double x = quat[1];
   double y = quat[2];
   double z = quat[3];
   double nq = w * w + x * x + y * y + z * z;
-  if (nq <= kEps) {
+  if (nq <= k_eps) {
     return {1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0};
   }
   double s = 2.0 / nq;
@@ -247,15 +243,12 @@ std::array<mjtNum, 9> Quat2Mat(const std::array<mjtNum, 4>& quat) {
   double y_y = y * y_scale;
   double y_z = y * z_scale;
   double z_z = z * z_scale;
-  return {static_cast<mjtNum>(1.0 - (y_y + z_z)),
-          static_cast<mjtNum>(x_y - w_z),
-          static_cast<mjtNum>(x_z + w_y),
-          static_cast<mjtNum>(x_y + w_z),
-          static_cast<mjtNum>(1.0 - (x_x + z_z)),
-          static_cast<mjtNum>(y_z - w_x),
-          static_cast<mjtNum>(x_z - w_y),
-          static_cast<mjtNum>(y_z + w_x),
-          static_cast<mjtNum>(1.0 - (x_x + y_y))};
+  return {
+      static_cast<mjtNum>(1.0 - (y_y + z_z)), static_cast<mjtNum>(x_y - w_z),
+      static_cast<mjtNum>(x_z + w_y),         static_cast<mjtNum>(x_y + w_z),
+      static_cast<mjtNum>(1.0 - (x_x + z_z)), static_cast<mjtNum>(y_z - w_x),
+      static_cast<mjtNum>(x_z - w_y),         static_cast<mjtNum>(y_z + w_x),
+      static_cast<mjtNum>(1.0 - (x_x + y_y))};
 }
 
 std::array<mjtNum, 4> Euler2Quat(const std::array<mjtNum, 3>& euler) {
@@ -279,9 +272,9 @@ std::array<mjtNum, 4> Euler2Quat(const std::array<mjtNum, 3>& euler) {
 }
 
 std::array<mjtNum, 3> Mat2Euler(const std::array<mjtNum, 9>& mat) {
-  constexpr double kEps = 4.0 * 2.220446049250313e-16;
+  constexpr double k_eps = 4.0 * 2.220446049250313e-16;
   double cy = std::sqrt(mat[8] * mat[8] + mat[5] * mat[5]);
-  if (cy > kEps) {
+  if (cy > k_eps) {
     return {static_cast<mjtNum>(-std::atan2(mat[5], mat[8])),
             static_cast<mjtNum>(-std::atan2(-mat[2], cy)),
             static_cast<mjtNum>(-std::atan2(mat[1], mat[0]))};
@@ -308,10 +301,10 @@ std::array<mjtNum, 4> QuatMul(const std::array<mjtNum, 4>& lhs,
   };
 }
 
-std::array<mjtNum, 4> QuatFromAngleAndAxis(
-    mjtNum angle, const std::array<mjtNum, 3>& axis) {
-  double norm = std::sqrt(axis[0] * axis[0] + axis[1] * axis[1] +
-                          axis[2] * axis[2]);
+std::array<mjtNum, 4> QuatFromAngleAndAxis(mjtNum angle,
+                                           const std::array<mjtNum, 3>& axis) {
+  double norm =
+      std::sqrt(axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2]);
   if (norm <= 0.0) {
     return {1.0, 0.0, 0.0, 0.0};
   }
@@ -324,7 +317,7 @@ std::array<mjtNum, 4> QuatFromAngleAndAxis(
 }
 
 const std::vector<std::array<mjtNum, 4>>& ParallelQuats() {
-  static const std::vector<std::array<mjtNum, 4>> kParallelQuats = [] {
+  static const std::vector<std::array<mjtNum, 4>> k_parallel_quats = [] {
     std::vector<std::array<mjtNum, 3>> parallel_eulers;
     const std::array<mjtNum, 4> mult90 = {
         0.0,
@@ -342,8 +335,7 @@ const std::vector<std::array<mjtNum, 4>>& ParallelQuats() {
             if ((i == 0 || i == 2) && rounded == -2) {
               rounded = 2;
             }
-            canonical[i] =
-                static_cast<mjtNum>(rounded * (kPi / 2.0));
+            canonical[i] = static_cast<mjtNum>(rounded * (kPi / 2.0));
           }
           bool duplicate = false;
           for (const auto& existing : parallel_eulers) {
@@ -368,7 +360,7 @@ const std::vector<std::array<mjtNum, 4>>& ParallelQuats() {
     }
     return parallel_quats;
   }();
-  return kParallelQuats;
+  return k_parallel_quats;
 }
 
 std::pair<std::vector<mjtNum>, std::vector<mjtNum>> RobotGetObs(
