@@ -406,7 +406,7 @@ bool KeepLargestConnectedComponent(WFCBitmap* bitmap,
       }
       std::queue<Pos> frontier;
       std::vector<Pos> component;
-      frontier.push({start_x, start_y});
+      frontier.emplace(start_x, start_y);
       seen[start_y][start_x] = 1;
       while (!frontier.empty()) {
         const Pos pos = frontier.front();
@@ -422,7 +422,7 @@ bool KeepLargestConnectedComponent(WFCBitmap* bitmap,
             continue;
           }
           seen[next_y][next_x] = 1;
-          frontier.push({next_x, next_y});
+          frontier.emplace(next_x, next_y);
         }
       }
       if (component.size() > best_component.size() && component.size() > 1) {
@@ -451,7 +451,7 @@ void CollectNavigableCells(const WFCBitmap& bitmap,
   for (int y = 0; y < height; ++y) {
     for (int x = 0; x < width; ++x) {
       if (bitmap[y][x] == 0) {
-        navigable_cells->push_back({x, y});
+        navigable_cells->emplace_back(x, y);
       }
     }
   }
