@@ -539,6 +539,17 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
 
     maybe(
         http_archive,
+        name = "gymnasium_robotics_assets",
+        sha256 = "0c47791b0d8aa167f63a574793f1c54724b545ae2b03225c78946139f2a4c8ac",
+        strip_prefix = "Gymnasium-Robotics-1.4.2/gymnasium_robotics/envs",
+        urls = [
+            "https://github.com/Farama-Foundation/Gymnasium-Robotics/archive/refs/tags/v1.4.2.tar.gz",
+        ],
+        build_file = "//third_party/gymnasium_robotics_assets:gymnasium_robotics_assets.BUILD",
+    )
+
+    maybe(
+        http_archive,
         name = "box2d",
         sha256 = "85b9b104d256c985e6e244b4227d447897fac429071cc114e5cc819dae848852",
         strip_prefix = "box2d-2.4.2",

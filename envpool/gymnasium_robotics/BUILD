@@ -16,8 +16,16 @@ load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("//envpool:requirements.bzl", "requirement")
+load("//third_party:common.bzl", "copy_to_directory")
 
 package(default_visibility = ["//visibility:public"])
+
+copy_to_directory(
+    name = "gen_gymnasium_robotics_assets",
+    srcs = ["@gymnasium_robotics_assets"],
+    out = "assets",
+    strip_prefix = "gymnasium_robotics_assets/assets/",
+)
 
 cc_library(
     name = "gymnasium_robotics_env",
@@ -31,7 +39,9 @@ cc_library(
         "point_maze.h",
         "utils.h",
     ],
-    data = glob(["assets/**"]),
+    data = [
+        ":gen_gymnasium_robotics_assets",
+    ],
     deps = [
         "//envpool/core:async_envpool",
         "//envpool/mujoco:mujoco_render",
@@ -52,8 +62,9 @@ py_library(
     name = "gymnasium_robotics",
     srcs = ["__init__.py"],
     data = [
+        ":gen_gymnasium_robotics_assets",
         ":gymnasium_robotics_envpool",
-    ] + glob(["assets/**"]),
+    ],
     imports = ["../.."],
     deps = [
         "//envpool/python:api",
