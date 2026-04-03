@@ -14,8 +14,8 @@ The generated reference for the core headers used below is available in
   a more complex, real example.
 
 In the following example, we will create an environment ``CartPole``.
-It is the same version as `OpenAI gym
-<https://github.com/openai/gym/blob/master/gym/envs/classic_control/cartpole.py>`_.
+It follows the same CartPole dynamics as `Gymnasium
+<https://github.com/Farama-Foundation/Gymnasium/blob/main/gymnasium/envs/classic_control/cartpole.py>`_.
 
 The full implementation is in `Pull Request 25
 <https://github.com/sail-sg/envpool/pull/25/files>`_.
@@ -115,7 +115,7 @@ available to see on the python side:
     >>> import envpool
     >>> spec = envpool.make_spec("CartPole-v0")
     >>> spec
-    CartPoleEnvSpec(num_envs=1, batch_size=1, num_threads=0, max_num_players=1, thread_affinity_offset=-1, base_path='envpool', seed=42, gym_reset_return_info=False, max_episode_steps=200, reward_threshold=195.0)
+    CartPoleEnvSpec(num_envs=1, batch_size=1, num_threads=0, max_num_players=1, thread_affinity_offset=-1, base_path='envpool', seed=42, gym_reset_return_info=True, max_episode_steps=200, reward_threshold=195.0)
 
     >>> # if we change a config value
     >>> env = envpool.make_gym("CartPole-v0", reward_threshold=666)
@@ -195,9 +195,10 @@ available to see on the python side:
 
     ::
 
-        >>> import gym
+        >>> import gymnasium as gym
+        >>> import gymnasium_robotics
         >>> env = gym.make("FetchReach-v1")
-        >>> e.observation_space
+        >>> env.observation_space
         Dict(achieved_goal:Box([-inf ...], [inf ...], (3,), float32), desired_goal:Box([-inf ...], [inf ...], (3,), float32), observation:Box([-inf ...], [inf ...], (10,), float32))
         >>> env.reset()
         >>> env.step([0, 0, 0, 0])
@@ -206,7 +207,8 @@ available to see on the python side:
                   3.22889321e-06, -1.55593223e-06]),
           'achieved_goal': array([1.34185919, 0.74910066, 0.53454538]),
           'desired_goal': array([1.36677977, 0.67090477, 0.60136475])},
-         -1.0,
+         np.float64(-1.0),
+         False,
          False,
          {'is_success': 0.0})
 
@@ -721,7 +723,7 @@ If we want to add ``tianshou`` as a build dependency, in ``setup.cfg``:
     python_requires = >=3.11
     install_requires =
         dm-env>=1.4
-        gym>=0.18
+        gymnasium>=0.26
         numpy>=1.19
         types-protobuf>=3.17.3
         typing-extensions

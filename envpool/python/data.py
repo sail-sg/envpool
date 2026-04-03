@@ -17,7 +17,6 @@ from collections import namedtuple
 from typing import Any, cast
 
 import dm_env
-import gym
 import gymnasium
 import numpy as np
 import optree
@@ -117,16 +116,15 @@ def dm_spec_transform(
     )
 
 
-def gym_spec_transform(name: str, spec: ArraySpec, spec_type: str) -> gym.Space:
+def gym_spec_transform(
+    name: str, spec: ArraySpec, spec_type: str
+) -> gymnasium.Space:
     """Transform ArraySpec to gym.Env compatible spaces."""
     discrete_range = _maybe_discrete_range(spec, spec_type)
     if discrete_range is not None:
         start, num_values = discrete_range
-        try:
-            return gym.spaces.Discrete(n=num_values, start=start)
-        except TypeError:  # old gym version doesn't have `start`
-            return gym.spaces.Discrete(n=num_values)
-    return gym.spaces.Box(
+        return gymnasium.spaces.Discrete(n=num_values, start=start)
+    return gymnasium.spaces.Box(
         shape=[s for s in spec.shape if s != -1],
         dtype=spec.dtype,
         low=spec.minimum,
@@ -138,16 +136,7 @@ def gymnasium_spec_transform(
     name: str, spec: ArraySpec, spec_type: str
 ) -> gymnasium.Space:
     """Transform ArraySpec to gymnasium.Env compatible spaces."""
-    discrete_range = _maybe_discrete_range(spec, spec_type)
-    if discrete_range is not None:
-        start, num_values = discrete_range
-        return gymnasium.spaces.Discrete(n=num_values, start=start)
-    return gymnasium.spaces.Box(
-        shape=[s for s in spec.shape if s != -1],
-        dtype=spec.dtype,
-        low=spec.minimum,
-        high=spec.maximum,
-    )
+    return gym_spec_transform(name, spec, spec_type)
 
 
 def dm_structure(

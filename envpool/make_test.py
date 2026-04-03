@@ -23,7 +23,6 @@ from pathlib import Path
 from typing import Callable, get_type_hints
 
 import dm_env
-import gym
 import gymnasium
 from absl.testing import absltest
 
@@ -124,7 +123,7 @@ class _MakeTest(absltest.TestCase):
             print(env_gym)
             print(env_gym)
             self.assertIsInstance(env_gymnasium, gymnasium.Env)
-            self.assertIsInstance(env_gym, gym.Env)
+            self.assertIsInstance(env_gym, gymnasium.Env)
             self.assertIsInstance(env_dm, dm_env.Environment)
             self.assertEqual(spec.action_space.n, 18)
             self.assertEqual(env_gym.action_space.n, 18)
@@ -162,7 +161,7 @@ class _MakeTest(absltest.TestCase):
                 try:
                     print(env0)
                     print(env1)
-                    self.assertIsInstance(env0, gym.Env)
+                    self.assertIsInstance(env0, gymnasium.Env)
                     self.assertIsInstance(env1, gymnasium.Env)
                     env0.reset()
                     env1.reset()
@@ -186,7 +185,7 @@ class _MakeTest(absltest.TestCase):
                 print(env_dm)
                 print(env_gym)
                 print(env_gymnasium)
-                self.assertIsInstance(env_gym, gym.Env)
+                self.assertIsInstance(env_gym, gymnasium.Env)
                 self.assertIsInstance(env_dm, dm_env.Environment)
                 self.assertIsInstance(env_gymnasium, gymnasium.Env)
                 env_dm.reset()

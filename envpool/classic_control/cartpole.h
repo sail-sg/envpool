@@ -36,10 +36,9 @@ class CartPoleEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    float fmax = std::numeric_limits<float>::max();
-    return MakeDict(
-        "obs"_.Bind(Spec<float>({4}, {{-4.8, -fmax, -M_PI / 7.5, -fmax},
-                                      {4.8, fmax, M_PI / 7.5, fmax}})));
+    float inf = std::numeric_limits<float>::infinity();
+    return MakeDict("obs"_.Bind(Spec<float>(
+        {4}, {{-4.8, -inf, -M_PI / 7.5, -inf}, {4.8, inf, M_PI / 7.5, inf}})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {

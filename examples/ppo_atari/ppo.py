@@ -17,19 +17,15 @@
 import argparse
 from typing import Any
 
-import gym
 import numpy as np
 import torch
 import torch.nn.functional as F
 import tqdm
 from gae import compute_gae
-from packaging import version
 from torch import nn
 from torch.utils.tensorboard import SummaryWriter
 
 import envpool
-
-is_legacy_gym = version.parse(gym.__version__) < version.parse("0.26.0")
 
 
 class CnnActorCritic(nn.Module):
@@ -259,11 +255,8 @@ class Actor:
                     for _ in range(
                         self.config.step_per_collect // self.config.waitnum
                     ):
-                        if is_legacy_gym:
-                            obs, rew, done, info = self.train_envs.recv()
-                        else:
-                            obs, rew, term, trunc, info = self.train_envs.recv()
-                            done = term + trunc
+                        obs, rew, term, trunc, info = self.train_envs.recv()
+                        done = term + trunc
                         env_id = info["env_id"]
                         obs = torch.tensor(obs, device="cuda")
                         self.obs_batch.append(obs)

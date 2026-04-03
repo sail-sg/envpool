@@ -17,8 +17,6 @@ filelock==3.25.2
 fsspec==2026.2.0
 glfw==2.10.0
 grpcio==1.78.0
-gym==0.26.2
-gym-notices==0.1.0
 gymnasium==1.2.3
 h5py==3.16.0
 idna==3.11

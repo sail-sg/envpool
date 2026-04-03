@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Benchmark EnvPool against Gym vector environments."""
+"""Benchmark EnvPool against Gymnasium vector environments."""
 
 import argparse
 import time

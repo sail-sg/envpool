@@ -23,7 +23,6 @@ py_library(
     imports = ["../.."],
     deps = [
         requirement("dm-env"),
-        requirement("gym"),
         requirement("gymnasium"),
         requirement("numpy"),
     ],
@@ -45,7 +44,6 @@ py_library(
     deps = [
         requirement("optree"),
         requirement("dm-env"),
-        requirement("gym"),
         requirement("gymnasium"),
         requirement("numpy"),
         ":protocol",
@@ -58,7 +56,6 @@ py_library(
     imports = ["../.."],
     deps = [
         requirement("dm-env"),
-        requirement("gym"),
         requirement("gymnasium"),
         ":data",
         ":protocol",
@@ -134,7 +131,7 @@ py_library(
     deps = [
         requirement("optree"),
         requirement("dm-env"),
-        requirement("gym"),
+        requirement("gymnasium"),
         requirement("numpy"),
         ":data",
         ":envpool",

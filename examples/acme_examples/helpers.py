@@ -17,7 +17,7 @@ import logging
 from typing import Iterable, Iterator, Mapping
 
 import dm_env
-import gym
+import gymnasium as gym
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -40,7 +40,6 @@ from acme.jax import utils, variable_utils
 from acme.jax.types import PRNGKey
 from acme.utils import loggers
 from acme.utils.loggers import aggregators, base, filters, terminal
-from packaging import version
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env.dummy_vec_env import DummyVecEnv
 
@@ -48,7 +47,6 @@ import envpool
 from envpool.python.protocol import EnvPool
 
 logging.getLogger().setLevel(logging.INFO)
-is_legacy_gym = version.parse(gym.__version__) < version.parse("0.26.0")
 
 
 class TimeStep(dm_env.TimeStep):
@@ -307,10 +305,7 @@ class BatchEnvWrapper(dm_env.Environment):
     def reset(self) -> TimeStep:
         """Reset the wrapped environment and return the first timestep."""
         self._reset_next_step = False
-        if is_legacy_gym:
-            observation = self._environment.reset()
-        else:
-            observation, _ = self._environment.reset()
+        observation, _ = self._environment.reset()
         ts = TimeStep(
             step_type=np.full(
                 self._num_envs, dm_env.StepType.FIRST, dtype="int32"
@@ -326,13 +321,8 @@ class BatchEnvWrapper(dm_env.Environment):
         if self._reset_next_step:
             return self.reset()
         if self._use_env_pool:
-            if is_legacy_gym:
-                observation, reward, done, _ = self._environment.step(action)
-            else:
-                observation, reward, term, trunc, _ = self._environment.step(
-                    action
-                )
-                done = term + trunc
+            observation, reward, term, trunc, _ = self._environment.step(action)
+            done = term + trunc
         else:
             self._environment.step_async(action)
             observation, reward, done, _ = self._environment.step_wait()

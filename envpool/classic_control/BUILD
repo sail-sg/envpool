@@ -72,7 +72,7 @@ py_test(
         ":classic_control_registration",
         requirement("absl-py"),
         requirement("dm_env"),
-        requirement("gym"),
+        requirement("gymnasium"),
         requirement("numpy"),
         requirement("pygame"),
     ],
