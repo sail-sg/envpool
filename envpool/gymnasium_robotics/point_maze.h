@@ -148,8 +148,10 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
     auto achieved_goal = AchievedGoal();
     mjtNum distance = GoalDistance(achieved_goal, goal_);
     bool success = distance <= 0.45;
-    mjtNum reward =
-        sparse_reward_ ? (success ? 1.0 : 0.0) : std::exp(-distance);
+    mjtNum reward = std::exp(-distance);
+    if (sparse_reward_) {
+      reward = success ? 1.0 : 0.0;
+    }
     bool terminated = !continuing_task_ && success;
     done_ = terminated || elapsed_step_ >= max_episode_steps_;
     WriteState(reward, distance, success);
@@ -158,75 +160,75 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
 
  protected:
   static const std::vector<std::string>& MazeRows(const std::string& maze_map) {
-    static const std::vector<std::string> kOpen = {
+    static const std::vector<std::string> k_open = {
         "1111111", "1000001", "1000001", "1000001", "1111111",
     };
-    static const std::vector<std::string> kOpenDiverseG = {
+    static const std::vector<std::string> k_open_diverse_g = {
         "1111111", "1rgggg1", "1ggggg1", "1ggggg1", "1111111",
     };
-    static const std::vector<std::string> kOpenDiverseGr = {
+    static const std::vector<std::string> k_open_diverse_gr = {
         "1111111", "1ccccc1", "1ccccc1", "1ccccc1", "1111111",
     };
-    static const std::vector<std::string> kUMaze = {
+    static const std::vector<std::string> k_u_maze = {
         "11111", "10001", "11101", "10001", "11111",
     };
-    static const std::vector<std::string> kMedium = {
+    static const std::vector<std::string> k_medium = {
         "11111111", "10011001", "10010001", "11000111",
         "10010001", "10100101", "10001001", "11111111",
     };
-    static const std::vector<std::string> kMediumDiverseG = {
+    static const std::vector<std::string> k_medium_diverse_g = {
         "11111111", "1r011001", "100100g1", "11000111",
         "10010001", "1g100101", "10001g01", "11111111",
     };
-    static const std::vector<std::string> kMediumDiverseGr = {
+    static const std::vector<std::string> k_medium_diverse_gr = {
         "11111111", "1c011001", "100100c1", "11000111",
         "10010001", "1c100101", "10001c01", "11111111",
     };
-    static const std::vector<std::string> kLarge = {
+    static const std::vector<std::string> k_large = {
         "111111111111", "100001000001", "101101010101",
         "100000010001", "101111011101", "100101000001",
         "110101010111", "100100010001", "111111111111",
     };
-    static const std::vector<std::string> kLargeDiverseG = {
+    static const std::vector<std::string> k_large_diverse_g = {
         "111111111111", "1r0001g00001", "101101010101",
         "10000g0100g1", "101111011101", "10g101000001",
         "110101010111", "1001g0g10g01", "111111111111",
     };
-    static const std::vector<std::string> kLargeDiverseGr = {
+    static const std::vector<std::string> k_large_diverse_gr = {
         "111111111111", "1c0001c00001", "101101010101",
         "10000c0100c1", "101111011101", "10c101000001",
         "110101010111", "1001c0c10c01", "111111111111",
     };
 
     if (maze_map == "OPEN") {
-      return kOpen;
+      return k_open;
     }
     if (maze_map == "OPEN_DIVERSE_G") {
-      return kOpenDiverseG;
+      return k_open_diverse_g;
     }
     if (maze_map == "OPEN_DIVERSE_GR") {
-      return kOpenDiverseGr;
+      return k_open_diverse_gr;
     }
     if (maze_map == "U_MAZE") {
-      return kUMaze;
+      return k_u_maze;
     }
     if (maze_map == "MEDIUM_MAZE") {
-      return kMedium;
+      return k_medium;
     }
     if (maze_map == "MEDIUM_MAZE_DIVERSE_G") {
-      return kMediumDiverseG;
+      return k_medium_diverse_g;
     }
     if (maze_map == "MEDIUM_MAZE_DIVERSE_GR") {
-      return kMediumDiverseGr;
+      return k_medium_diverse_gr;
     }
     if (maze_map == "LARGE_MAZE") {
-      return kLarge;
+      return k_large;
     }
     if (maze_map == "LARGE_MAZE_DIVERSE_G") {
-      return kLargeDiverseG;
+      return k_large_diverse_g;
     }
     if (maze_map == "LARGE_MAZE_DIVERSE_GR") {
-      return kLargeDiverseGr;
+      return k_large_diverse_gr;
     }
     throw std::runtime_error("Unknown PointMaze map: " + maze_map);
   }
@@ -305,11 +307,11 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
         xml << "    <geom name=\"block_" << row << "_" << col << "\" pos=\""
             << x << " " << y << " " << z_pos << "\" "
             << "size=\"" << half_size << " " << half_size << " " << z_pos
-            << "\" type=\"box\" material=\"\" contype=\"1\" conaffinity=\"1\" "
+            << R"(" type="box" material="" contype="1" conaffinity="1" )"
             << "rgba=\"0.7 0.5 0.3 1.0\"/>\n";
       }
     }
-    xml << "    <site name=\"target\" pos=\"0 0 " << z_pos << "\" size=\""
+    xml << R"(    <site name="target" pos="0 0 )" << z_pos << "\" size=\""
         << 0.2 * maze_size_scaling
         << "\" rgba=\"1 0 0 0.7\" type=\"sphere\"/>\n"
         << "  </worldbody>\n"
