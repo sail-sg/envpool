@@ -28,7 +28,7 @@ copy_to_directory(
 )
 
 cc_library(
-    name = "gymnasium_robotics_env",
+    name = "robotics_env",
     srcs = ["utils.cc"],
     hdrs = [
         "adroit.h",
@@ -51,23 +51,23 @@ cc_library(
 )
 
 pybind_extension(
-    name = "gymnasium_robotics_envpool",
+    name = "robotics_envpool",
     srcs = [
-        "gymnasium_robotics_envpool.cc",
         "mujoco_plugin_init.cc",
+        "robotics_envpool.cc",
     ],
     deps = [
-        ":gymnasium_robotics_env",
+        ":robotics_env",
         "//envpool/core:py_envpool",
     ],
 )
 
 py_library(
-    name = "gymnasium_robotics",
+    name = "robotics",
     srcs = ["__init__.py"],
     data = [
         ":gen_gymnasium_robotics_assets",
-        ":gymnasium_robotics_envpool",
+        ":robotics_envpool",
     ],
     imports = ["../../.."],
     deps = [
@@ -76,23 +76,23 @@ py_library(
 )
 
 py_library(
-    name = "gymnasium_robotics_registration",
+    name = "robotics_registration",
     srcs = ["registration.py"],
     imports = ["../../.."],
     deps = [
-        ":gymnasium_robotics",
+        ":robotics",
         "//envpool:registration",
     ],
 )
 
 py_test(
-    name = "gymnasium_robotics_test",
+    name = "robotics_test",
     size = "enormous",
-    srcs = ["gymnasium_robotics_test.py"],
+    srcs = ["robotics_test.py"],
     imports = ["../../.."],
     deps = [
-        ":gymnasium_robotics",
-        ":gymnasium_robotics_registration",
+        ":robotics",
+        ":robotics_registration",
         "//envpool:registration",
         requirement("dm-env"),
         requirement("absl-py"),

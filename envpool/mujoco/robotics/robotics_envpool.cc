@@ -13,11 +13,11 @@
 // limitations under the License.
 
 #include "envpool/core/py_envpool.h"
-#include "envpool/mujoco/gymnasium_robotics/adroit.h"
-#include "envpool/mujoco/gymnasium_robotics/fetch.h"
-#include "envpool/mujoco/gymnasium_robotics/hand.h"
-#include "envpool/mujoco/gymnasium_robotics/kitchen.h"
-#include "envpool/mujoco/gymnasium_robotics/point_maze.h"
+#include "envpool/mujoco/robotics/adroit.h"
+#include "envpool/mujoco/robotics/fetch.h"
+#include "envpool/mujoco/robotics/hand.h"
+#include "envpool/mujoco/robotics/kitchen.h"
+#include "envpool/mujoco/robotics/point_maze.h"
 
 using GymnasiumRoboticsFetchEnvSpec =
     PyEnvSpec<gymnasium_robotics::FetchEnvSpec>;
@@ -38,7 +38,7 @@ using GymnasiumRoboticsKitchenEnvSpec =
 using GymnasiumRoboticsKitchenEnvPool =
     PyEnvPool<gymnasium_robotics::KitchenEnvPool>;
 
-PYBIND11_MODULE(gymnasium_robotics_envpool, m) {
+PYBIND11_MODULE(robotics_envpool, m) {
   REGISTER(m, GymnasiumRoboticsFetchEnvSpec, GymnasiumRoboticsFetchEnvPool)
   REGISTER(m, GymnasiumRoboticsHandEnvSpec, GymnasiumRoboticsHandEnvPool)
   REGISTER(m, GymnasiumRoboticsAdroitEnvSpec, GymnasiumRoboticsAdroitEnvPool)

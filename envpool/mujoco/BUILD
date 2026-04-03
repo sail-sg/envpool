@@ -48,7 +48,7 @@ py_library(
     deps = [
         ":mujoco_dmc",
         ":mujoco_gym",
-        "//envpool/mujoco/gymnasium_robotics",
+        "//envpool/mujoco/robotics",
     ],
 )
 

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef ENVPOOL_MUJOCO_GYMNASIUM_ROBOTICS_KITCHEN_H_
-#define ENVPOOL_MUJOCO_GYMNASIUM_ROBOTICS_KITCHEN_H_
+#ifndef ENVPOOL_MUJOCO_ROBOTICS_KITCHEN_H_
+#define ENVPOOL_MUJOCO_ROBOTICS_KITCHEN_H_
 
 #include <mujoco.h>
 
@@ -27,8 +27,8 @@
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
-#include "envpool/mujoco/gymnasium_robotics/mujoco_env.h"
-#include "envpool/mujoco/gymnasium_robotics/utils.h"
+#include "envpool/mujoco/robotics/mujoco_env.h"
+#include "envpool/mujoco/robotics/utils.h"
 
 namespace gymnasium_robotics {
 namespace kitchen_internal {
@@ -468,4 +468,4 @@ using KitchenEnvPool = AsyncEnvPool<KitchenEnv>;
 
 }  // namespace gymnasium_robotics
 
-#endif  // ENVPOOL_MUJOCO_GYMNASIUM_ROBOTICS_KITCHEN_H_
+#endif  // ENVPOOL_MUJOCO_ROBOTICS_KITCHEN_H_

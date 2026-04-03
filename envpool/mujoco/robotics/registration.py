@@ -17,7 +17,7 @@ from typing import Any
 
 from envpool.registration import register
 
-_IMPORT_PATH = "envpool.mujoco.gymnasium_robotics"
+_IMPORT_PATH = "envpool.mujoco.robotics"
 _ROBOTICS_ENV_CLASSES = {
     "Fetch": (
         "GymnasiumRoboticsFetchEnvSpec",

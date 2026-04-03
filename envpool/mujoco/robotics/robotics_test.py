@@ -26,7 +26,7 @@ import mujoco
 import numpy as np
 from absl.testing import absltest
 
-import envpool.mujoco.gymnasium_robotics.registration as robotics_registration
+import envpool.mujoco.robotics.registration as robotics_registration
 from envpool.registration import (
     list_all_envs,
     make_dm,
