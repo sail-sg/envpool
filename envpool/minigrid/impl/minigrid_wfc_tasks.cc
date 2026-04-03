@@ -285,7 +285,7 @@ int CountAllowedPatterns(WFCMask mask) {
 int LowestAllowedPattern(WFCMask mask) {
   CHECK_NE(mask, WFCMask{0});
 #ifdef _MSC_VER
-  unsigned long pattern_idx = 0;
+  unsigned long pattern_idx = 0;  // NOLINT(runtime/int)
   const unsigned char found = _BitScanForward64(&pattern_idx, mask);
   CHECK_NE(found, 0);
   return static_cast<int>(pattern_idx);
