@@ -115,7 +115,7 @@ class FetchEnv : public Env<FetchEnvSpec>, public MujocoRobotEnv {
         obj_dist_(-obj_range_, obj_range_),
         air_goal_dist_(0.0, 0.45),
         coin_dist_(0.0, 1.0) {
-    EnvSetup();
+    SetupInitialEnvState();
     InitializeRobotEnv();
   }
 
@@ -142,9 +142,10 @@ class FetchEnv : public Env<FetchEnvSpec>, public MujocoRobotEnv {
     done_ = elapsed_step_ >= max_episode_steps_;
     auto achieved_goal = AchievedGoal();
     mjtNum distance = GoalDistance(achieved_goal, goal_);
-    mjtNum reward = sparse_reward_
-                        ? (distance > distance_threshold_ ? -1.0 : 0.0)
-                        : -distance;
+    mjtNum reward = -distance;
+    if (sparse_reward_) {
+      reward = distance > distance_threshold_ ? -1.0 : 0.0;
+    }
     WriteState(static_cast<float>(reward));
   }
 
@@ -174,7 +175,30 @@ class FetchEnv : public Env<FetchEnvSpec>, public MujocoRobotEnv {
     return true;
   }
 
-  void EnvSetup() override {
+  void EnvSetup() override { SetupInitialEnvState(); }
+
+  void StepCallback() override {
+    if (!block_gripper_) {
+      return;
+    }
+    SetJointQpos(model_, data_, "robot0:l_gripper_finger_joint", 0.0);
+    SetJointQpos(model_, data_, "robot0:r_gripper_finger_joint", 0.0);
+    mj_forward(model_, data_);
+  }
+
+  void RenderCallback() override {
+    std::array<mjtNum, 3> target_xpos =
+        GetSiteXpos(model_, data_, target_site_id_);
+    for (int i = 0; i < 3; ++i) {
+      model_->site_pos[3 * target_site_id_ + i] =
+          goal_[i] -
+          (target_xpos[i] - model_->site_pos[3 * target_site_id_ + i]);
+    }
+    mj_forward(model_, data_);
+  }
+
+ private:
+  void SetupInitialEnvState() {
     SetJointQpos(model_, data_, "robot0:slide0",
                  spec_.config["initial_slide0"_]);
     SetJointQpos(model_, data_, "robot0:slide1",
@@ -209,28 +233,6 @@ class FetchEnv : public Env<FetchEnvSpec>, public MujocoRobotEnv {
       height_offset_ = GetSiteXpos(model_, data_, SiteId(model_, "object0"))[2];
     }
   }
-
-  void StepCallback() override {
-    if (!block_gripper_) {
-      return;
-    }
-    SetJointQpos(model_, data_, "robot0:l_gripper_finger_joint", 0.0);
-    SetJointQpos(model_, data_, "robot0:r_gripper_finger_joint", 0.0);
-    mj_forward(model_, data_);
-  }
-
-  void RenderCallback() override {
-    std::array<mjtNum, 3> target_xpos =
-        GetSiteXpos(model_, data_, target_site_id_);
-    for (int i = 0; i < 3; ++i) {
-      model_->site_pos[3 * target_site_id_ + i] =
-          goal_[i] -
-          (target_xpos[i] - model_->site_pos[3 * target_site_id_ + i]);
-    }
-    mj_forward(model_, data_);
-  }
-
- private:
   void SetMocapPos(const std::string& body_name,
                    const std::vector<mjtNum>& value) {
     int body_id = BodyId(model_, body_name);
