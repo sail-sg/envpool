@@ -15,7 +15,6 @@
 
 from __future__ import annotations
 
-import sys
 import warnings
 from typing import Any, cast
 
@@ -25,6 +24,10 @@ import gymnasium_robotics
 import mujoco
 import numpy as np
 from absl.testing import absltest
+
+from envpool.python.glfw_context import preload_windows_gl_dlls
+
+preload_windows_gl_dlls(strict=True)
 
 import envpool.mujoco.robotics.registration as robotics_registration
 from envpool.registration import (
@@ -86,15 +89,7 @@ def _make_upstream_env(task_id: str, **kwargs: Any) -> gym.Env:
 
 
 def _render_first_envpool_frame(env: Any) -> np.ndarray:
-    try:
-        frame = cast(np.ndarray, env.render())
-    except Exception as error:
-        if sys.platform in {"darwin", "win32"} and "gladLoadGL" in str(error):
-            raise absltest.SkipTest(
-                "Gymnasium-Robotics MuJoCo offscreen rendering is "
-                "unavailable in this runtime."
-            ) from error
-        raise
+    frame = cast(np.ndarray, env.render())
     return frame[0]
 
 
@@ -649,17 +644,7 @@ class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
         env = make_gymnasium("FetchReach-v4", render_mode="rgb_array")
         try:
             env.reset()
-            try:
-                frame = env.render()
-            except Exception as error:
-                if sys.platform in {"darwin", "win32"} and "gladLoadGL" in str(
-                    error
-                ):
-                    self.skipTest(
-                        "Gymnasium-Robotics MuJoCo offscreen rendering is "
-                        "unavailable in this runtime."
-                    )
-                raise
+            frame = env.render()
             self.assertIsNotNone(frame)
             frame = cast(np.ndarray, frame)
             self.assertEqual(frame.shape[0], 1)
