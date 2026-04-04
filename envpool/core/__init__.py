@@ -18,7 +18,40 @@ This module currently exports the shared worker-pool handle used by
 argument on envpool instances.
 """
 
-from .shared_thread_pool import _SharedThreadPool
+import importlib.machinery
+import importlib.util
+import sys
+from pathlib import Path
+
+try:
+    from .shared_thread_pool import _SharedThreadPool
+except ModuleNotFoundError:
+    _shared_thread_pool_dll = (
+        Path(__file__).resolve().with_name("shared_thread_pool_dll.dll")
+    )
+    if not _shared_thread_pool_dll.is_file():
+        raise
+    _shared_thread_pool_name = f"{__name__}.shared_thread_pool"
+    _shared_thread_pool_loader = importlib.machinery.ExtensionFileLoader(
+        _shared_thread_pool_name,
+        str(_shared_thread_pool_dll),
+    )
+    _shared_thread_pool_spec = importlib.util.spec_from_loader(
+        _shared_thread_pool_name,
+        _shared_thread_pool_loader,
+        origin=str(_shared_thread_pool_dll),
+    )
+    if (
+        _shared_thread_pool_spec is None
+        or _shared_thread_pool_spec.loader is None
+    ):
+        raise
+    _shared_thread_pool = importlib.util.module_from_spec(
+        _shared_thread_pool_spec
+    )
+    sys.modules[_shared_thread_pool_name] = _shared_thread_pool
+    _shared_thread_pool_spec.loader.exec_module(_shared_thread_pool)
+    _SharedThreadPool = _shared_thread_pool._SharedThreadPool
 
 SharedThreadPool = _SharedThreadPool
 

@@ -257,7 +257,10 @@ py_library(
     name = "core",
     srcs = ["__init__.py"],
     data = select({
-        "//:windows": [":shared_thread_pool.pyd"],
+        "//:windows": [
+            ":shared_thread_pool.pyd",
+            ":shared_thread_pool_dll",
+        ],
         "//conditions:default": [":shared_thread_pool"],
     }),
     imports = ["../.."],
