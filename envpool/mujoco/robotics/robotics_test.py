@@ -16,12 +16,40 @@
 from __future__ import annotations
 
 import os
+import platform
+import subprocess
 import sys
 import warnings
 from typing import Any, cast
 
-if sys.platform.startswith("linux"):
-    os.environ.setdefault("MUJOCO_GL", "osmesa")
+
+def _configure_linux_mujoco_gl() -> None:
+    if platform.system() != "Linux" or os.environ.get("MUJOCO_GL"):
+        return
+    for backend in ("egl", "osmesa"):
+        env = dict(os.environ)
+        env["MUJOCO_GL"] = backend
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import mujoco; "
+                    "ctx = mujoco.GLContext(1, 1); "
+                    "ctx.make_current(); "
+                    "ctx.free()"
+                ),
+            ],
+            env=env,
+            check=False,
+            capture_output=True,
+        )
+        if result.returncode == 0:
+            os.environ["MUJOCO_GL"] = backend
+            return
+
+
+_configure_linux_mujoco_gl()
 
 import dm_env
 import gymnasium as gym
