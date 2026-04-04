@@ -48,7 +48,7 @@ py_library(
     deps = [
         ":mujoco_dmc",
         ":mujoco_gym",
-        "//envpool/mujoco/robotics",
+        ":robotics",
     ],
 )
 
@@ -67,6 +67,13 @@ copy_to_directory(
     srcs = ["@mujoco_dmc_xml"],
     out = "assets_dmc",
     strip_prefix = "suite/",
+)
+
+copy_to_directory(
+    name = "gen_gymnasium_robotics_assets",
+    srcs = ["@gymnasium_robotics_assets"],
+    out = "robotics/assets",
+    strip_prefix = "gymnasium_robotics_assets/assets/",
 )
 
 cc_library(
@@ -175,6 +182,50 @@ py_library(
     deps = ["//envpool/python:api"],
 )
 
+cc_library(
+    name = "robotics_env",
+    srcs = ["robotics/utils.cc"],
+    hdrs = [
+        "robotics/adroit.h",
+        "robotics/fetch.h",
+        "robotics/hand.h",
+        "robotics/kitchen.h",
+        "robotics/mujoco_env.h",
+        "robotics/point_maze.h",
+        "robotics/utils.h",
+    ],
+    data = [":gen_gymnasium_robotics_assets"],
+    deps = [
+        ":mujoco_render",
+        "//envpool/core:async_envpool",
+        "@mujoco//:mujoco_obj_decoder_plugin_lib",
+        "@mujoco//:mujoco_stl_decoder_plugin_lib",
+    ],
+)
+
+pybind_extension(
+    name = "robotics_envpool",
+    srcs = [
+        "robotics/mujoco_plugin_init.cc",
+        "robotics/robotics_envpool.cc",
+    ],
+    deps = [
+        ":robotics_env",
+        "//envpool/core:py_envpool",
+    ],
+)
+
+py_library(
+    name = "robotics",
+    srcs = ["robotics/__init__.py"],
+    data = [
+        ":gen_gymnasium_robotics_assets",
+        ":robotics_envpool",
+    ],
+    imports = ["../.."],
+    deps = ["//envpool/python:api"],
+)
+
 cc_test(
     name = "mujoco_envpool_test",
     size = "enormous",
@@ -198,6 +249,16 @@ py_library(
     srcs = ["gym/registration.py"],
     imports = ["../.."],
     deps = ["//envpool:registration"],
+)
+
+py_library(
+    name = "robotics_registration",
+    srcs = ["robotics/registration.py"],
+    imports = ["../.."],
+    deps = [
+        ":robotics",
+        "//envpool:registration",
+    ],
 )
 
 py_test(
@@ -320,11 +381,11 @@ py_test(
 py_test(
     name = "robotics_test",
     size = "enormous",
-    srcs = ["//envpool/mujoco/robotics:robotics_test.py"],
+    srcs = ["robotics/robotics_test.py"],
     imports = ["../.."],
     deps = [
-        "//envpool/mujoco/robotics",
-        "//envpool/mujoco/robotics:robotics_registration",
+        ":robotics",
+        ":robotics_registration",
         requirement("dm-env"),
         requirement("absl-py"),
         requirement("gymnasium"),
