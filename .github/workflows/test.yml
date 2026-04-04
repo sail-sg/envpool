@@ -388,30 +388,30 @@ jobs:
               || true
             printf '==== python importlib diagnostics\n'
             python - <<'PY' || true
-import importlib.util
-from pathlib import Path
+          import importlib.util
+          from pathlib import Path
 
-paths = [
-    Path("bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/core/shared_thread_pool.pyd"),
-    Path("bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/mujoco/robotics_envpool.pyd"),
-]
-for path in paths:
-    print(f"path={path}")
-    print(f"  exists={path.exists()}")
-    print(f"  is_file={path.is_file()}")
-    print(f"  is_symlink={path.is_symlink()}")
-    if path.is_symlink():
-        print(f"  readlink={path.readlink()}")
+          paths = [
+              Path("bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/core/shared_thread_pool.pyd"),
+              Path("bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/mujoco/robotics_envpool.pyd"),
+          ]
+          for path in paths:
+              print(f"path={path}")
+              print(f"  exists={path.exists()}")
+              print(f"  is_file={path.is_file()}")
+              print(f"  is_symlink={path.is_symlink()}")
+              if path.is_symlink():
+                  print(f"  readlink={path.readlink()}")
 
-print(
-    "find_spec(envpool.core.shared_thread_pool)="
-    f"{importlib.util.find_spec('envpool.core.shared_thread_pool')}"
-)
-print(
-    "find_spec(envpool.mujoco.robotics_envpool)="
-    f"{importlib.util.find_spec('envpool.mujoco.robotics_envpool')}"
-)
-PY
+          print(
+              "find_spec(envpool.core.shared_thread_pool)="
+              f"{importlib.util.find_spec('envpool.core.shared_thread_pool')}"
+          )
+          print(
+              "find_spec(envpool.mujoco.robotics_envpool)="
+              f"{importlib.util.find_spec('envpool.mujoco.robotics_envpool')}"
+          )
+          PY
           fi
           exit "$status"
   deploy-coverage-pages:
