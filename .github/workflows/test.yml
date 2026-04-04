@@ -352,10 +352,27 @@ jobs:
         run: |
           repo_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-repo")
           disk_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-disk")
+          set +e
           make \
             BAZELOPT="--repository_cache=$repo_cache --disk_cache=$disk_cache" \
             BAZEL_TEST_TARGETS="//envpool/mujoco/..." \
             bazel-test
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            for runfiles_dir in \
+              bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/core \
+              bazel-bin/envpool/mujoco/mujoco_gym_align_test.exe.runfiles/envpool/envpool/core \
+              bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/mujoco/robotics
+            do
+              printf '==== %s\n' "$runfiles_dir"
+              find "$runfiles_dir" -maxdepth 1 -type f -print | sort || true
+            done
+            printf '==== shared_thread_pool / robotics_envpool in robotics_test runfiles\n'
+            find bazel-bin/envpool/mujoco/robotics_test.exe.runfiles \
+              \( -name 'shared_thread_pool*' -o -name 'robotics_envpool*' \) \
+              -print | sort || true
+          fi
+          exit "$status"
   deploy-coverage-pages:
     name: Deploy coverage page
     if: ${{ github.event_name == 'push' }}
