@@ -479,10 +479,9 @@ def _assert_render_alignment(
     test_case: absltest.TestCase,
     task_id: str,
 ) -> None:
-    env1 = make_gymnasium(task_id, num_envs=1, seed=0, render_mode="rgb_array")
+    env1 = make_gymnasium(task_id, num_envs=1, seed=0)
     try:
         _, info1 = env1.reset()
-        frame1 = _render_first_envpool_frame(env1)
     finally:
         env1.close()
 
@@ -493,6 +492,17 @@ def _assert_render_alignment(
         frame0 = _render_first_upstream_frame(env0)
     finally:
         env0.close()
+
+    env1 = make_gymnasium(task_id, num_envs=1, seed=0, render_mode="rgb_array")
+    try:
+        _, info1_check = env1.reset()
+        for key in ("qpos0", "qvel0", "goal0", "extra0"):
+            if key in info1:
+                test_case.assertIn(key, info1_check)
+                np.testing.assert_allclose(info1_check[key], info1[key])
+        frame1 = _render_first_envpool_frame(env1)
+    finally:
+        env1.close()
 
     test_case.assertEqual(frame0.shape, frame1.shape)
     diff = np.abs(frame0.astype(np.int16) - frame1.astype(np.int16))
