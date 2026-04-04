@@ -316,3 +316,20 @@ py_test(
         requirement("dm-control"),
     ],
 )
+
+py_test(
+    name = "robotics_test",
+    size = "enormous",
+    srcs = ["//envpool/mujoco/robotics:robotics_test.py"],
+    imports = ["../.."],
+    deps = [
+        "//envpool/mujoco/robotics",
+        "//envpool/mujoco/robotics:robotics_registration",
+        requirement("dm-env"),
+        requirement("absl-py"),
+        requirement("gymnasium"),
+        requirement("gymnasium-robotics"),
+        requirement("mujoco"),
+        requirement("numpy"),
+    ],
+)

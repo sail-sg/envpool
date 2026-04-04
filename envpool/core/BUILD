@@ -256,12 +256,6 @@ pybind_extension(
 py_library(
     name = "core",
     srcs = ["__init__.py"],
-    data = select({
-        "//:windows": [
-            ":shared_thread_pool.pyd",
-            ":shared_thread_pool_dll",
-        ],
-        "//conditions:default": [":shared_thread_pool"],
-    }),
+    data = [":shared_thread_pool"],
     imports = ["../.."],
 )

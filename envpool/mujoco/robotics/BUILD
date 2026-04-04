@@ -14,11 +14,12 @@
 
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@rules_cc//cc:defs.bzl", "cc_library")
-load("@rules_python//python:defs.bzl", "py_library", "py_test")
-load("//envpool:requirements.bzl", "requirement")
+load("@rules_python//python:defs.bzl", "py_library")
 load("//third_party:common.bzl", "copy_to_directory")
 
 package(default_visibility = ["//visibility:public"])
+
+exports_files(["robotics_test.py"])
 
 copy_to_directory(
     name = "gen_gymnasium_robotics_assets",
@@ -82,22 +83,5 @@ py_library(
     deps = [
         ":robotics",
         "//envpool:registration",
-    ],
-)
-
-py_test(
-    name = "robotics_test",
-    size = "enormous",
-    srcs = ["robotics_test.py"],
-    imports = ["../../.."],
-    deps = [
-        ":robotics",
-        ":robotics_registration",
-        requirement("dm-env"),
-        requirement("absl-py"),
-        requirement("gymnasium"),
-        requirement("gymnasium-robotics"),
-        requirement("mujoco"),
-        requirement("numpy"),
     ],
 )
