@@ -352,23 +352,10 @@ jobs:
         run: |
           repo_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-repo")
           disk_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-disk")
-          make BAZELOPT="--repository_cache=$repo_cache --disk_cache=$disk_cache" bazel-test
-      - name: Save Bazel caches
-        id: save-bazel-caches
-        if: ${{ always() && !cancelled() }}
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ~/.cache/bazelisk
-            ~/.cache/envpool-bazel-repo
-            ~/.cache/envpool-bazel-disk
-          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
-      - name: Prune older Bazel caches
-        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python scripts/prune_actions_caches.py --repo "${{ github.repository }}" --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
+          make \
+            BAZELOPT="--repository_cache=$repo_cache --disk_cache=$disk_cache" \
+            BAZEL_TEST_TARGETS="//envpool/mujoco/..." \
+            bazel-test
   deploy-coverage-pages:
     name: Deploy coverage page
     if: ${{ github.event_name == 'push' }}
