@@ -371,6 +371,47 @@ jobs:
             find bazel-bin/envpool/mujoco/robotics_test.exe.runfiles \
               \( -name 'shared_thread_pool*' -o -name 'robotics_envpool*' \) \
               -print | sort || true
+            printf '==== shared_thread_pool symlink details\n'
+            ls -l \
+              bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/core/shared_thread_pool.pyd \
+              bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/mujoco/robotics_envpool.pyd \
+              || true
+            readlink \
+              bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/core/shared_thread_pool.pyd \
+              || true
+            readlink \
+              bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/mujoco/robotics_envpool.pyd \
+              || true
+            printf '==== robotics_test MANIFEST entries\n'
+            grep -E 'shared_thread_pool|robotics_envpool' \
+              bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/MANIFEST \
+              || true
+            printf '==== python importlib diagnostics\n'
+            python - <<'PY' || true
+import importlib.util
+from pathlib import Path
+
+paths = [
+    Path("bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/core/shared_thread_pool.pyd"),
+    Path("bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/mujoco/robotics_envpool.pyd"),
+]
+for path in paths:
+    print(f"path={path}")
+    print(f"  exists={path.exists()}")
+    print(f"  is_file={path.is_file()}")
+    print(f"  is_symlink={path.is_symlink()}")
+    if path.is_symlink():
+        print(f"  readlink={path.readlink()}")
+
+print(
+    "find_spec(envpool.core.shared_thread_pool)="
+    f"{importlib.util.find_spec('envpool.core.shared_thread_pool')}"
+)
+print(
+    "find_spec(envpool.mujoco.robotics_envpool)="
+    f"{importlib.util.find_spec('envpool.mujoco.robotics_envpool')}"
+)
+PY
           fi
           exit "$status"
   deploy-coverage-pages:
