@@ -352,68 +352,23 @@ jobs:
         run: |
           repo_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-repo")
           disk_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-disk")
-          set +e
-          make \
-            BAZELOPT="--repository_cache=$repo_cache --disk_cache=$disk_cache" \
-            BAZEL_TEST_TARGETS="//envpool/mujoco/..." \
-            bazel-test
-          status=$?
-          if [ "$status" -ne 0 ]; then
-            for runfiles_dir in \
-              bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/core \
-              bazel-bin/envpool/mujoco/mujoco_gym_align_test.exe.runfiles/envpool/envpool/core \
-              bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/mujoco/robotics
-            do
-              printf '==== %s\n' "$runfiles_dir"
-              find "$runfiles_dir" -maxdepth 1 -type f -print | sort || true
-            done
-            printf '==== shared_thread_pool / robotics_envpool in robotics_test runfiles\n'
-            find bazel-bin/envpool/mujoco/robotics_test.exe.runfiles \
-              \( -name 'shared_thread_pool*' -o -name 'robotics_envpool*' \) \
-              -print | sort || true
-            printf '==== shared_thread_pool symlink details\n'
-            ls -l \
-              bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/core/shared_thread_pool.pyd \
-              bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/mujoco/robotics_envpool.pyd \
-              || true
-            readlink \
-              bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/core/shared_thread_pool.pyd \
-              || true
-            readlink \
-              bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/mujoco/robotics_envpool.pyd \
-              || true
-            printf '==== robotics_test MANIFEST entries\n'
-            grep -E 'shared_thread_pool|robotics_envpool' \
-              bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/MANIFEST \
-              || true
-            printf '==== python importlib diagnostics\n'
-            python - <<'PY' || true
-          import importlib.util
-          from pathlib import Path
-
-          paths = [
-              Path("bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/core/shared_thread_pool.pyd"),
-              Path("bazel-bin/envpool/mujoco/robotics_test.exe.runfiles/envpool/envpool/mujoco/robotics_envpool.pyd"),
-          ]
-          for path in paths:
-              print(f"path={path}")
-              print(f"  exists={path.exists()}")
-              print(f"  is_file={path.is_file()}")
-              print(f"  is_symlink={path.is_symlink()}")
-              if path.is_symlink():
-                  print(f"  readlink={path.readlink()}")
-
-          print(
-              "find_spec(envpool.core.shared_thread_pool)="
-              f"{importlib.util.find_spec('envpool.core.shared_thread_pool')}"
-          )
-          print(
-              "find_spec(envpool.mujoco.robotics_envpool)="
-              f"{importlib.util.find_spec('envpool.mujoco.robotics_envpool')}"
-          )
-          PY
-          fi
-          exit "$status"
+          make BAZELOPT="--repository_cache=$repo_cache --disk_cache=$disk_cache" bazel-test
+      - name: Save Bazel caches
+        id: save-bazel-caches
+        if: ${{ always() && !cancelled() }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cache/bazelisk
+            ~/.cache/envpool-bazel-repo
+            ~/.cache/envpool-bazel-disk
+          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+      - name: Prune older Bazel caches
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/prune_actions_caches.py --repo "${{ github.repository }}" --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
   deploy-coverage-pages:
     name: Deploy coverage page
     if: ${{ github.event_name == 'push' }}
