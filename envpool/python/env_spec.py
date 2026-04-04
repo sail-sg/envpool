@@ -129,7 +129,7 @@ class EnvSpecMixin(ABC):
         """
         spec = self.state_array_spec
         spec = {
-            k.replace("obs:", ""): gym_spec_transform(
+            k.replace("obs:", "").replace(":", "."): gym_spec_transform(
                 k.replace(":", ".").split(".")[-1], v, "obs"
             )
             for k, v in spec.items()

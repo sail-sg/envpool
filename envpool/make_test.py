@@ -16,6 +16,7 @@
 import gc
 import os
 import pprint
+import sys
 import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -40,6 +41,15 @@ _SKIP_MUJOCO_RENDER_SMOKE = (
 )
 
 _RenderFactory = Callable[..., GymEnvPool | GymnasiumEnvPool]
+
+_GYMNASIUM_ROBOTICS_PREFIXES = (
+    "AdroitHand",
+    "Fetch",
+    "FrankaKitchen-",
+    "HandManipulate",
+    "HandReach",
+    "PointMaze_",
+)
 
 
 @contextmanager
@@ -76,6 +86,15 @@ class _MakeTest(absltest.TestCase):
             render_once(envpool.make_gym)
             render_once(envpool.make_gymnasium)
         except Exception as exc:
+            if (
+                task_id.startswith(_GYMNASIUM_ROBOTICS_PREFIXES)
+                and sys.platform in {"darwin", "win32"}
+                and "gladLoadGL" in str(exc)
+            ):
+                self.skipTest(
+                    "Gymnasium-Robotics MuJoCo offscreen rendering is "
+                    "unavailable in this runtime."
+                )
             _emit_github_error(f"{task_id} render smoke failed: {exc}")
             raise
 
@@ -255,6 +274,15 @@ class _MakeTest(absltest.TestCase):
         self.assertLen(task_ids, 96)
         self.check_step(task_ids)
 
+    def test_make_gymnasium_robotics(self) -> None:
+        task_ids = sorted(
+            task_id
+            for task_id in envpool.list_all_envs()
+            if task_id.startswith(_GYMNASIUM_ROBOTICS_PREFIXES)
+        )
+        self.assertLen(task_ids, 157)
+        self.check_step(task_ids)
+
     def test_make_mujoco_gym(self) -> None:
         self.check_step([
             "Ant-v3",
@@ -351,6 +379,8 @@ class _MakeTest(absltest.TestCase):
         if not _SKIP_MUJOCO_RENDER_SMOKE:
             self.check_render("Ant-v5")
             self.check_render("WalkerWalk-v1")
+            if "FetchReach-v4" in envpool.list_all_envs():
+                self.check_render("FetchReach-v4")
 
     def test_make_procgen(self) -> None:
         self.check_step([

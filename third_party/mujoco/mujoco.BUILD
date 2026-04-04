@@ -72,13 +72,13 @@ cc_library(
         "include/mujoco",
         "src",
     ],
-    linkstatic = 1,
     linkopts = select({
         "@envpool//:linux": [
             "-ldl",
         ],
         "//conditions:default": [],
     }),
+    linkstatic = 1,
     deps = [
         "@ccd",
         "@lodepng",
@@ -87,4 +87,45 @@ cc_library(
         "@tinyobjloader",
         "@tinyxml2",
     ],
+)
+
+cc_library(
+    name = "mujoco_obj_decoder_plugin_lib",
+    srcs = glob([
+        "plugin/obj_decoder/*.cc",
+        "plugin/obj_decoder/*.h",
+    ]),
+    cxxopts = select({
+        "@envpool//:windows": ["/std:c++20"],
+        "//conditions:default": ["-std=c++20"],
+    }),
+    defines = ["MJ_STATIC"] + select({
+        "@envpool//:windows": ["mjDLLMAIN=MjObjDecoderDllMain"],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":mujoco_lib",
+        "@tinyobjloader",
+    ],
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "mujoco_stl_decoder_plugin_lib",
+    srcs = glob([
+        "plugin/stl_decoder/*.cc",
+        "plugin/stl_decoder/*.h",
+    ]),
+    cxxopts = select({
+        "@envpool//:windows": ["/std:c++20"],
+        "//conditions:default": ["-std=c++20"],
+    }),
+    defines = ["MJ_STATIC"] + select({
+        "@envpool//:windows": ["mjDLLMAIN=MjStlDecoderDllMain"],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":mujoco_lib",
+    ],
+    alwayslink = 1,
 )

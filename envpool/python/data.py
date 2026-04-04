@@ -13,6 +13,8 @@
 # limitations under the License.
 """Helper function for data convertion."""
 
+import keyword
+import re
 from collections import namedtuple
 from typing import Any, cast
 
@@ -32,6 +34,8 @@ def _maybe_scalar_int(value: Any) -> int | None:
     if arr.size != 1:
         return None
     scalar = arr.item()
+    if not np.isfinite(scalar):
+        return None
     integer = int(scalar)
     if not np.isclose(scalar, integer):
         return None
@@ -78,7 +82,8 @@ def to_nested_dict(
         segments = k.split(".")
         ptr = ret
         for s in segments[:-1]:
-            if s not in ptr:
+            keys = ptr.spaces if isinstance(ptr, gymnasium.spaces.Dict) else ptr
+            if s not in keys:
                 ptr[s] = generator()
             ptr = ptr[s]
         ptr[segments[-1]] = v
@@ -87,7 +92,22 @@ def to_nested_dict(
 
 def to_namedtuple(name: str, hdict: dict) -> tuple:
     """Convert a hierarchical dict to namedtuple."""
-    return namedtuple(name, hdict.keys())(*[
+    typename = re.sub(r"\W", "_", name)
+    if not typename or typename[0].isdigit() or keyword.iskeyword(typename):
+        typename = f"_{typename}"
+    field_names = []
+    used_field_names: dict[str, int] = {}
+    for key in hdict.keys():
+        field = re.sub(r"\W", "_", key)
+        if not field or field[0].isdigit() or keyword.iskeyword(field):
+            field = f"_{field}"
+        if field in used_field_names:
+            used_field_names[field] += 1
+            field = f"{field}_{used_field_names[field]}"
+        else:
+            used_field_names[field] = 0
+        field_names.append(field)
+    return namedtuple(typename, field_names)(*[
         to_namedtuple(k, v) if isinstance(v, dict) else v
         for k, v in hdict.items()
     ])

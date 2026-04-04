@@ -1,4 +1,4 @@
-# Copyright 2023 Garena Online Private Limited
+# Copyright 2026 Garena Online Private Limited
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,17 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Core Python bindings exposed by envpool.
-
-This module currently exports the shared worker-pool handle used by
-`envpool.make_thread_pool(...)` and the optional `thread_pool=` constructor
-argument on envpool instances.
-"""
-
-from .shared_thread_pool import _SharedThreadPool
-
-SharedThreadPool = _SharedThreadPool
-
-__all__ = [
-    "SharedThreadPool",
-]

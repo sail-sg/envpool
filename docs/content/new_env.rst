@@ -191,26 +191,19 @@ available to see on the python side:
 .. note ::
 
     EnvPool supports the environment that has multiple observations or even
-    nested observations. For example, ``FetchReach-v1``:
+    nested observations. For example, ``FetchReach-v4``:
 
     ::
 
-        >>> import gymnasium as gym
-        >>> import gymnasium_robotics
-        >>> env = gym.make("FetchReach-v1")
+        >>> import envpool
+        >>> env = envpool.make_gymnasium("FetchReach-v4", num_envs=1, seed=0)
         >>> env.observation_space
         Dict(achieved_goal:Box([-inf ...], [inf ...], (3,), float32), desired_goal:Box([-inf ...], [inf ...], (3,), float32), observation:Box([-inf ...], [inf ...], (10,), float32))
-        >>> env.reset()
-        >>> env.step([0, 0, 0, 0])
-        ({'observation': array([ 1.34185919e+00,  7.49100661e-01,  5.34545376e-01,  0.00000000e+00,
-                  0.00000000e+00,  2.49364315e-05,  2.35502607e-07, -1.56066826e-04,
-                  3.22889321e-06, -1.55593223e-06]),
-          'achieved_goal': array([1.34185919, 0.74910066, 0.53454538]),
-          'desired_goal': array([1.36677977, 0.67090477, 0.60136475])},
-         np.float64(-1.0),
-         False,
-         False,
-         {'is_success': 0.0})
+        >>> obs, info = env.reset()
+        >>> obs["observation"].shape
+        (1, 10)
+        >>> obs["achieved_goal"].shape
+        (1, 3)
 
     If we want to create such a state spec (including both obs and info), here
     is the solution:

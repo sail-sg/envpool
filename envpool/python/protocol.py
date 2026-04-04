@@ -14,7 +14,6 @@
 """Protocol of C++ EnvPool."""
 
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
     Literal,
@@ -109,18 +108,6 @@ class EnvSpec(Protocol):
         """Reward threshold, None for no threshold."""
 
 
-if TYPE_CHECKING:
-    from envpool.core import SharedThreadPool
-
-    ThreadPoolArg: TypeAlias = SharedThreadPool | None
-    EnvPoolInitNoThreadPool: TypeAlias = Callable[[EnvSpec], None]
-    EnvPoolInit: TypeAlias = Callable[[EnvSpec, ThreadPoolArg], None]
-else:
-    ThreadPoolArg: TypeAlias = Any
-    EnvPoolInitNoThreadPool: TypeAlias = Callable[..., None]
-    EnvPoolInit: TypeAlias = Callable[..., None]
-
-
 class ArraySpec:
     """Spec of numpy array."""
 
@@ -167,9 +154,7 @@ class EnvPool(Protocol):
     _last_players_env_id: np.ndarray
     spec: Any
 
-    def __init__(
-        self, spec: EnvSpec, thread_pool: ThreadPoolArg = None
-    ) -> None:
+    def __init__(self, spec: EnvSpec):
         """Constructor of EnvPool."""
 
     def __len__(self) -> int:

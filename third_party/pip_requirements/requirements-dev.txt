@@ -3,6 +3,7 @@ wheel
 numpy>=2,<3
 dm-env>=1.6
 gymnasium>=1.2.3
+gymnasium-robotics>=1.4.2
 box2d==2.3.10; sys_platform != "linux" or (platform_machine != "aarch64" and platform_machine != "arm64")
 box2d==2.3.2; sys_platform == "linux" and (platform_machine == "aarch64" or platform_machine == "arm64")
 colorama

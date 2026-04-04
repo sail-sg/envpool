@@ -48,6 +48,7 @@ py_library(
     deps = [
         ":mujoco_dmc",
         ":mujoco_gym",
+        ":robotics",
     ],
 )
 
@@ -68,6 +69,13 @@ copy_to_directory(
     strip_prefix = "suite/",
 )
 
+copy_to_directory(
+    name = "gen_gymnasium_robotics_assets",
+    srcs = ["@gymnasium_robotics_assets"],
+    out = "robotics/assets",
+    strip_prefix = "gymnasium_robotics_assets/assets/",
+)
+
 cc_library(
     name = "mujoco_gym_env",
     hdrs = [
@@ -79,18 +87,18 @@ cc_library(
         "gym/inverted_double_pendulum.h",
         "gym/inverted_pendulum.h",
         "gym/mujoco_env.h",
-        "offscreen_renderer.h",
         "gym/pusher.h",
         "gym/reacher.h",
         "gym/swimmer.h",
         "gym/walker2d.h",
+        "offscreen_renderer.h",
     ],
     data = [
         ":gen_mujoco_gym_xml",
     ],
     deps = [
-        "//envpool/core:async_envpool",
         ":mujoco_render",
+        "//envpool/core:async_envpool",
         "@mujoco//:mujoco_lib",
     ],
 )
@@ -124,18 +132,18 @@ cc_library(
         "dmc/humanoid_CMU.h",
         "dmc/manipulator.h",
         "dmc/mujoco_env.h",
-        "offscreen_renderer.h",
         "dmc/pendulum.h",
         "dmc/point_mass.h",
         "dmc/reacher.h",
         "dmc/swimmer.h",
         "dmc/utils.h",
         "dmc/walker.h",
+        "offscreen_renderer.h",
     ],
     data = [":gen_mujoco_dmc_xml"],
     deps = [
-        "//envpool/core:async_envpool",
         ":mujoco_render",
+        "//envpool/core:async_envpool",
         "@mujoco//:mujoco_lib",
         "@pugixml",
     ],
@@ -155,22 +163,66 @@ pybind_extension(
 py_library(
     name = "mujoco_dmc",
     srcs = ["dmc/__init__.py"],
-    imports = ["../.."],
     data = [
         ":gen_mujoco_dmc_xml",
         ":mujoco_dmc_envpool",
     ],
+    imports = ["../.."],
     deps = ["//envpool/python:api"],
 )
 
 py_library(
     name = "mujoco_gym",
     srcs = ["gym/__init__.py"],
-    imports = ["../.."],
     data = [
         ":gen_mujoco_gym_xml",
         ":mujoco_gym_envpool",
     ],
+    imports = ["../.."],
+    deps = ["//envpool/python:api"],
+)
+
+cc_library(
+    name = "robotics_env",
+    srcs = ["robotics/utils.cc"],
+    hdrs = [
+        "robotics/adroit.h",
+        "robotics/fetch.h",
+        "robotics/hand.h",
+        "robotics/kitchen.h",
+        "robotics/mujoco_env.h",
+        "robotics/point_maze.h",
+        "robotics/utils.h",
+    ],
+    data = [":gen_gymnasium_robotics_assets"],
+    deps = [
+        ":mujoco_render",
+        "//envpool/core:async_envpool",
+        "@mujoco//:mujoco_obj_decoder_plugin_lib",
+        "@mujoco//:mujoco_stl_decoder_plugin_lib",
+    ],
+)
+
+pybind_extension(
+    name = "robotics_envpool",
+    srcs = [
+        "robotics/mujoco_plugin_init.cc",
+        "robotics/robotics_envpool.cc",
+    ],
+    deps = [
+        ":robotics_env",
+        "//envpool/core:py_envpool",
+    ],
+)
+
+py_library(
+    name = "robotics",
+    srcs = ["robotics/__init__.py"],
+    data = [
+        ":gen_gymnasium_robotics_assets",
+        ":robotics_envpool",
+    ],
+    imports = ["../.."],
     deps = ["//envpool/python:api"],
 )
 
@@ -197,6 +249,16 @@ py_library(
     srcs = ["gym/registration.py"],
     imports = ["../.."],
     deps = ["//envpool:registration"],
+)
+
+py_library(
+    name = "robotics_registration",
+    srcs = ["robotics/registration.py"],
+    imports = ["../.."],
+    deps = [
+        ":robotics",
+        "//envpool:registration",
+    ],
 )
 
 py_test(
@@ -313,5 +375,22 @@ py_test(
         requirement("mujoco"),
         requirement("dm-env"),
         requirement("dm-control"),
+    ],
+)
+
+py_test(
+    name = "robotics_test",
+    size = "enormous",
+    srcs = ["robotics/robotics_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":robotics",
+        ":robotics_registration",
+        requirement("dm-env"),
+        requirement("absl-py"),
+        requirement("gymnasium"),
+        requirement("gymnasium-robotics"),
+        requirement("mujoco"),
+        requirement("numpy"),
     ],
 )

@@ -20,7 +20,6 @@ from typing import Any, Literal, overload
 
 import numpy as np
 
-from .core import SharedThreadPool
 from .python.protocol import (
     DMEnvPool,
     EnvSpec,
@@ -87,24 +86,6 @@ class EnvRegistry:
             setattr(env, f"_{key}", value)
         return env
 
-    def make_thread_pool(
-        self,
-        num_envs_capacity: int,
-        num_threads: int = 0,
-        thread_affinity_offset: int = -1,
-    ) -> SharedThreadPool:
-        """Create a shared worker pool for multiple envpool instances.
-
-        `num_envs_capacity` is the total number of env slots that may be alive
-        across all envpools using this pool at the same time. `num_threads=0`
-        follows EnvPool's default thread selection, and
-        `thread_affinity_offset` keeps the shared pool aligned with the same
-        CPU-affinity behavior used by per-envpool workers.
-        """
-        return SharedThreadPool(
-            num_threads, num_envs_capacity, thread_affinity_offset
-        )
-
     @overload
     def make(
         self, task_id: str, env_type: Literal["dm"], **kwargs: Any
@@ -144,12 +125,9 @@ class EnvRegistry:
         )
         assert env_type in ["dm", "gym", "gymnasium"]
 
-        thread_pool = kwargs.pop("thread_pool", None)
         spec = self.make_spec(task_id, **kwargs)
         import_path, envpool_cls = self.envpools[task_id][env_type]
-        env = getattr(importlib.import_module(import_path), envpool_cls)(
-            spec, thread_pool
-        )
+        env = getattr(importlib.import_module(import_path), envpool_cls)(spec)
         return self._apply_wrapper_kwargs(env, wrapper_kwargs)
 
     def make_dm(self, task_id: str, **kwargs: Any) -> DMEnvPool:
@@ -275,17 +253,6 @@ def make(
         return registry.make(task_id, "gymnasium", **kwargs)
     raise AssertionError(
         "env_type should be one of 'dm', 'gym', or 'gymnasium'."
-    )
-
-
-def make_thread_pool(
-    num_envs_capacity: int,
-    num_threads: int = 0,
-    thread_affinity_offset: int = -1,
-) -> SharedThreadPool:
-    """Create a shared worker pool for multiple envpool instances."""
-    return registry.make_thread_pool(
-        num_envs_capacity, num_threads, thread_affinity_offset
     )
 
 

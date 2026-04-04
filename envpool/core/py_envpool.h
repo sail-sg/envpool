@@ -30,7 +30,6 @@
 #include <vector>
 
 #include "envpool/core/envpool.h"
-#include "envpool/core/shared_thread_pool.h"
 #include "envpool/core/xla.h"
 
 namespace py = pybind11;
@@ -214,9 +213,8 @@ class PyEnvPool : public EnvPool {
   static std::vector<std::string> py_state_keys;
   static std::vector<std::string> py_action_keys;
 
-  explicit PyEnvPool(const PySpec& py_spec,
-                     const std::shared_ptr<SharedThreadPool>& tp = nullptr)
-      : EnvPool(py_spec, tp), py_spec(py_spec) {}
+  explicit PyEnvPool(const PySpec& py_spec)
+      : EnvPool(py_spec), py_spec(py_spec) {}
 
   /**
    * Get XLA functions.
@@ -318,7 +316,6 @@ std::vector<std::string> PyEnvPool<EnvPool>::py_action_keys =
   py::class_<ENVPOOL>(                                                        \
       MODULE, "_" #ENVPOOL,                                                   \
       py::metaclass(py::module_::import("abc").attr("ABCMeta")))              \
-      .def(py::init<const SPEC&, std::shared_ptr<SharedThreadPool>>())        \
       .def(py::init<const SPEC&>())                                           \
       .def_readonly("_spec", &ENVPOOL::py_spec)                               \
       .def("_recv", &ENVPOOL::PyRecv)                                         \

@@ -47,11 +47,13 @@ class OffscreenRenderer {
   ~OffscreenRenderer();
 
   void Render(const mjModel* model, mjData* data, int width, int height,
-              int camera_id, unsigned char* rgb);
+              int camera_id, unsigned char* rgb,
+              const mjvCamera* camera_override = nullptr);
 
  private:
   void Initialize(const mjModel* model);
-  void UpdateCamera(const mjModel* model, const mjData* data, int camera_id);
+  void UpdateCamera(const mjModel* model, const mjData* data, int camera_id,
+                    const mjvCamera* camera_override);
 
   std::shared_ptr<GlContext> gl_context_;
   mjvScene scene_;
