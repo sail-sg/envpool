@@ -145,15 +145,15 @@ clang-tidy: clang-tidy-install bazel-pip-requirement-dev
 		exit 0; \
 	fi; \
 	echo "Running clang-tidy on: $$targets"; \
-	$(BAZEL) build $(BAZELOPT) $(WINDOWS_ENVPOOL_TEST_DEFINE) $$targets --config=clang-tidy --config=test
+	$(BAZEL) build $(BAZELOPT) $$targets --config=clang-tidy --config=test
 
 bazel-debug: bazel-install bazel-pip-requirement-dev
-	$(BAZEL) run $(BAZELOPT) $(WINDOWS_ENVPOOL_TEST_DEFINE) //:setup --config=debug -- bdist_wheel
+	$(BAZEL) run $(BAZELOPT) //:setup --config=debug -- bdist_wheel
 	mkdir -p dist
 	cp bazel-bin/setup$(BAZEL_RUNFILES_SUFFIX)/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-build: bazel-install bazel-pip-requirement-dev
-	$(BAZEL) run $(BAZELOPT) $(WINDOWS_ENVPOOL_TEST_DEFINE) //:setup --config=test -- bdist_wheel
+	$(BAZEL) run $(BAZELOPT) //:setup --config=test -- bdist_wheel
 	mkdir -p dist
 	cp bazel-bin/setup$(BAZEL_RUNFILES_SUFFIX)/$(PROJECT_NAME)/dist/*.whl ./dist
 

@@ -32,14 +32,12 @@ from envpool.registration import (
     make_gym,
     make_gymnasium,
     make_spec,
-    make_thread_pool,
     register,
 )
 
 __version__ = "1.1.0"
 __all__ = [
     "register",
-    "make_thread_pool",
     "make",
     "make_dm",
     "make_gym",

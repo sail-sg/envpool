@@ -371,9 +371,7 @@ class _MiniGridEnvPoolAlignTest(absltest.TestCase):
             np.testing.assert_array_equal(obs0["image"], obs1["image"][0])
             self.assertEqual(obs0["mission"], _mission_from_obs(obs1))
             np.testing.assert_allclose(float(rew0), float(rew1[0]), rtol=1e-6)
-            # EnvPool's gymnasium wrapper maps timeout steps to
-            # `terminated=False, truncated=True` via `done & ~trunc`.
-            self.assertEqual(bool(term0 and not trunc0), bool(term1[0]))
+            self.assertEqual(bool(term0), bool(term1[0]))
             self.assertEqual(bool(trunc0), bool(trunc1[0]))
             np.testing.assert_array_equal(
                 np.asarray(cast(Any, env0.unwrapped).agent_pos),
