@@ -15,8 +15,13 @@
 
 from __future__ import annotations
 
+import os
+import sys
 import warnings
 from typing import Any, cast
+
+if sys.platform.startswith("linux"):
+    os.environ.setdefault("MUJOCO_GL", "osmesa")
 
 import dm_env
 import gymnasium as gym
@@ -446,37 +451,41 @@ def _assert_render_alignment(
     test_case: absltest.TestCase,
     task_id: str,
 ) -> None:
-    env0 = _make_upstream_env(task_id, render_mode="rgb_array")
     env1 = make_gymnasium(task_id, num_envs=1, seed=0, render_mode="rgb_array")
     try:
-        env0.reset(seed=0)
         _, info1 = env1.reset()
+        frame1 = _render_first_envpool_frame(env1)
+    finally:
+        env1.close()
+
+    env0 = _make_upstream_env(task_id, render_mode="rgb_array")
+    try:
+        env0.reset(seed=0)
         _reset_upstream_render_state(task_id, env0, info1)
         frame0 = _render_first_upstream_frame(env0)
-        frame1 = _render_first_envpool_frame(env1)
-        test_case.assertEqual(frame0.shape, frame1.shape)
-        diff = np.abs(frame0.astype(np.int16) - frame1.astype(np.int16))
-        mean_abs_diff = float(np.mean(diff))
-        mismatch_ratio = float(np.mean(np.max(diff, axis=-1) > 32))
-        test_case.assertLessEqual(
-            mean_abs_diff,
-            8.0,
-            msg=(
-                f"{task_id} render mean_abs_diff={mean_abs_diff:.3f} "
-                f"mismatch_ratio={mismatch_ratio:.3f}"
-            ),
-        )
-        test_case.assertLessEqual(
-            mismatch_ratio,
-            0.12,
-            msg=(
-                f"{task_id} render mean_abs_diff={mean_abs_diff:.3f} "
-                f"mismatch_ratio={mismatch_ratio:.3f}"
-            ),
-        )
     finally:
         env0.close()
-        env1.close()
+
+    test_case.assertEqual(frame0.shape, frame1.shape)
+    diff = np.abs(frame0.astype(np.int16) - frame1.astype(np.int16))
+    mean_abs_diff = float(np.mean(diff))
+    mismatch_ratio = float(np.mean(np.max(diff, axis=-1) > 32))
+    test_case.assertLessEqual(
+        mean_abs_diff,
+        8.0,
+        msg=(
+            f"{task_id} render mean_abs_diff={mean_abs_diff:.3f} "
+            f"mismatch_ratio={mismatch_ratio:.3f}"
+        ),
+    )
+    test_case.assertLessEqual(
+        mismatch_ratio,
+        0.12,
+        msg=(
+            f"{task_id} render mean_abs_diff={mean_abs_diff:.3f} "
+            f"mismatch_ratio={mismatch_ratio:.3f}"
+        ),
+    )
 
 
 class _GymnasiumRoboticsRenderEnvPoolTest(absltest.TestCase):
