@@ -425,12 +425,13 @@ std::shared_ptr<GlContext> CreateGlContext() {
       std::make_shared<CglContext>();
   return context;
 #elif defined(ENVPOOL_HAS_WGL)
-  thread_local std::shared_ptr<GlContext> context = [] {
-    if (wglGetCurrentContext() != nullptr && wglGetCurrentDC() != nullptr) {
-      return std::shared_ptr<GlContext>(std::make_shared<BorrowedWglContext>());
-    }
-    return std::shared_ptr<GlContext>(std::make_shared<WglContext>());
-  }();
+  if (wglGetCurrentContext() != nullptr && wglGetCurrentDC() != nullptr) {
+    // Borrowed WGL handles become invalid if another library later calls
+    // `glfw.terminate()`, so do not cache them across renderer instances.
+    return std::make_shared<BorrowedWglContext>();
+  }
+  thread_local std::shared_ptr<GlContext> context =
+      std::make_shared<WglContext>();
   return context;
 #elif defined(ENVPOOL_HAS_EGL)
   thread_local std::shared_ptr<GlContext> context =
