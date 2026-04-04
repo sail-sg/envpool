@@ -94,6 +94,7 @@ py_test(
         ":robotics",
         ":robotics_registration",
         "//envpool:registration",
+        "//envpool/core",
         requirement("dm-env"),
         requirement("absl-py"),
         requirement("gymnasium"),
