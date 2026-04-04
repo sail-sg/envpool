@@ -93,8 +93,6 @@ py_test(
     deps = [
         ":robotics",
         ":robotics_registration",
-        "//envpool:registration",
-        "//envpool/core",
         requirement("dm-env"),
         requirement("absl-py"),
         requirement("gymnasium"),
