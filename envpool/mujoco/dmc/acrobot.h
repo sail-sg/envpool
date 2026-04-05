@@ -148,10 +148,10 @@ class AcrobotEnvBase : public Env<EnvSpecT>, public MujocoEnv {
       auto obs_velocity = state["obs:velocity"_];
       AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
                         reset);
-#ifdef ENVPOOL_TEST
-      state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-#endif
     }
+#ifdef ENVPOOL_TEST
+    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
+#endif
   }
 
   std::array<mjtNum, 2> Horizontal() {

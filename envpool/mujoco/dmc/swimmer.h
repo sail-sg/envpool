@@ -191,11 +191,11 @@ class SwimmerEnvBase : public Env<EnvSpecT>, public MujocoEnv {
       auto obs_body_velocities = state["obs:body_velocities"_];
       AssignObservation("obs:body_velocities", &obs_body_velocities,
                         body_velocities.data(), body_velocities.size(), reset);
-#ifdef ENVPOOL_TEST
-      state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-      state["info:target0"_].Assign(target0_.data(), target0_.size());
-#endif
     }
+#ifdef ENVPOOL_TEST
+    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
+    state["info:target0"_].Assign(target0_.data(), target0_.size());
+#endif
   }
 
   std::array<mjtNum, 2> NoseToTarget() {

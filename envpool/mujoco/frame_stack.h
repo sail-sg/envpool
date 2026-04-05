@@ -154,6 +154,31 @@ Spec<uint8_t> PixelObservationSpec(const Config& conf) {
       {static_cast<uint8_t>(0), static_cast<uint8_t>(255)});
 }
 
+template <typename Key>
+inline constexpr bool IsObservationKey() {
+  constexpr auto kKey = Key::kStrView;
+  return kKey == "obs" ||
+         (kKey.size() > 4 && kKey[0] == 'o' && kKey[1] == 'b' &&
+          kKey[2] == 's' && kKey[3] == ':');
+}
+
+template <std::size_t I = 0, typename DictT>
+auto NonObservationStateSpec(const DictT& spec) {
+  if constexpr (I == DictT::kSize) {
+    return MakeDict();
+  } else {
+    using Key = std::tuple_element_t<I, typename DictT::Keys>;
+    auto tail = NonObservationStateSpec<I + 1>(spec);
+    if constexpr (IsObservationKey<Key>()) {
+      return tail;
+    } else {
+      const auto& values = static_cast<const typename DictT::Values&>(spec);
+      auto value = std::get<I>(values);
+      return ConcatDict(MakeDict(Key().Bind(std::move(value))), tail);
+    }
+  }
+}
+
 template <typename BaseEnvFns>
 class PixelObservationEnvFns : public BaseEnvFns {
  public:
@@ -166,7 +191,9 @@ class PixelObservationEnvFns : public BaseEnvFns {
 
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs:pixels"_.Bind(PixelObservationSpec(conf)));
+    return ConcatDict(
+        NonObservationStateSpec(BaseEnvFns::StateSpec(conf)),
+        MakeDict("obs:pixels"_.Bind(PixelObservationSpec(conf))));
   }
 
   template <typename Config>

@@ -659,14 +659,14 @@ class AdroitEnvBase : public Env<EnvSpecT>, public MujocoRobotEnv {
       }
       auto obs_state = state["obs"_];
       AssignObservation("obs", &obs_state, obs.data(), obs.size(), reset);
-      state["info:success"_] = success ? 1.0 : 0.0;
-      state["info:distance"_] = distance;
-#ifdef ENVPOOL_TEST
-      state["info:qpos0"_].Assign(qpos0_.data(), qpos0_.size());
-      state["info:qvel0"_].Assign(qvel0_.data(), qvel0_.size());
-      state["info:extra0"_].Assign(extra0_.data(), extra0_.size());
-#endif
     }
+    state["info:success"_] = success ? 1.0 : 0.0;
+    state["info:distance"_] = distance;
+#ifdef ENVPOOL_TEST
+    state["info:qpos0"_].Assign(qpos0_.data(), qpos0_.size());
+    state["info:qvel0"_].Assign(qvel0_.data(), qvel0_.size());
+    state["info:extra0"_].Assign(extra0_.data(), extra0_.size());
+#endif
     state["reward"_] = static_cast<float>(reward);
   }
 };

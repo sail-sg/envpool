@@ -73,7 +73,7 @@ class HumanoidStandupEnvFns {
 
 using HumanoidStandupEnvSpec = EnvSpec<HumanoidStandupEnvFns>;
 using HumanoidStandupPixelEnvFns =
-    PixelObservationEnvFns<HumanoidStandupEnvFns>;
+PixelObservationEnvFns<HumanoidStandupEnvFns>;
 using HumanoidStandupPixelEnvSpec = EnvSpec<HumanoidStandupPixelEnvFns>;
 
 template <typename EnvSpecT, bool kFromPixels>
@@ -205,23 +205,21 @@ class HumanoidStandupEnvBase : public Env<EnvSpecT>, public MujocoEnv {
         }
       }
       CommitObservation(&obs_state, reset);
-      // info
-      state["info:reward_linup"_] = xv * forward_reward_weight_;
-      state["info:reward_quadctrl"_] = -ctrl_cost;
-      state["info:reward_impact"_] = -contact_cost;
-      state["info:reward_alive"_] = healthy_reward_;
-#ifdef ENVPOOL_TEST
-      state["info:qpos0"_].Assign(qpos0_, model_->nq);
-      state["info:qvel0"_].Assign(qvel0_, model_->nv);
-#endif
     }
+    state["info:reward_linup"_] = xv * forward_reward_weight_;
+    state["info:reward_quadctrl"_] = -ctrl_cost;
+    state["info:reward_impact"_] = -contact_cost;
+    state["info:reward_alive"_] = healthy_reward_;
+#ifdef ENVPOOL_TEST
+    state["info:qpos0"_].Assign(qpos0_, model_->nq);
+    state["info:qvel0"_].Assign(qvel0_, model_->nv);
+#endif
   }
 };
-
 using HumanoidStandupEnv =
-    HumanoidStandupEnvBase<HumanoidStandupEnvSpec, false>;
+HumanoidStandupEnvBase<HumanoidStandupEnvSpec, false>;
 using HumanoidStandupPixelEnv =
-    HumanoidStandupEnvBase<HumanoidStandupPixelEnvSpec, true>;
+HumanoidStandupEnvBase<HumanoidStandupPixelEnvSpec, true>;
 using HumanoidStandupEnvPool = AsyncEnvPool<HumanoidStandupEnv>;
 using HumanoidStandupPixelEnvPool = AsyncEnvPool<HumanoidStandupPixelEnv>;
 

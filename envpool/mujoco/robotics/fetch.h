@@ -392,15 +392,15 @@ class FetchEnvBase : public Env<EnvSpecT>, public MujocoRobotEnv {
       auto obs_desired_goal = state["obs:desired_goal"_];
       AssignObservation("obs:desired_goal", &obs_desired_goal, goal_.data(), 3,
                         reset);
-      mjtNum distance = GoalDistance(achieved_goal, goal_);
-      state["info:is_success"_] = distance < distance_threshold_ ? 1.0 : 0.0;
-      state["info:distance"_] = distance;
-#ifdef ENVPOOL_TEST
-      state["info:qpos0"_].Assign(qpos0_.data(), qpos0_.size());
-      state["info:qvel0"_].Assign(qvel0_.data(), qvel0_.size());
-      state["info:goal0"_].Assign(goal_.data(), goal_.size());
-#endif
     }
+    mjtNum distance = GoalDistance(achieved_goal, goal_);
+    state["info:is_success"_] = distance < distance_threshold_ ? 1.0 : 0.0;
+    state["info:distance"_] = distance;
+#ifdef ENVPOOL_TEST
+    state["info:qpos0"_].Assign(qpos0_.data(), qpos0_.size());
+    state["info:qvel0"_].Assign(qvel0_.data(), qvel0_.size());
+    state["info:goal0"_].Assign(goal_.data(), goal_.size());
+#endif
   }
 };
 

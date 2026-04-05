@@ -67,6 +67,16 @@ def _assert_pixels_match(obs: np.ndarray, render: Any) -> None:
     np.testing.assert_array_equal(obs, _render_to_bchw(render))
 
 
+def _assert_nested_equal(lhs: Any, rhs: Any) -> None:
+    if isinstance(lhs, dict):
+        assert isinstance(rhs, dict)
+        assert lhs.keys() == rhs.keys()
+        for key in lhs:
+            _assert_nested_equal(lhs[key], rhs[key])
+        return
+    np.testing.assert_allclose(np.asarray(lhs), np.asarray(rhs))
+
+
 def assert_make_spec_exposes_bchw_pixel_specs(
     test: absltest.TestCase, import_path: str
 ) -> None:
@@ -137,6 +147,50 @@ def assert_frame_stack_rolls_in_channel_dimension(
                 prev_obs = obs
         finally:
             env.close()
+
+
+def assert_pixel_env_preserves_gym_info_fields(test: absltest.TestCase) -> None:
+    """Checks that Gym pixel envs keep task-specific info specs and values."""
+    task_id = "Ant-v4"
+    info_keys = [
+        "info:reward_forward",
+        "info:reward_ctrl",
+        "info:reward_contact",
+        "info:reward_survive",
+        "info:x_velocity",
+        "info:y_velocity",
+    ]
+    pixel_spec = make_spec(
+        task_id,
+        from_pixels=True,
+        render_width=RENDER_WIDTH,
+        render_height=RENDER_HEIGHT,
+    )
+    for key in info_keys:
+        test.assertIn(key, pixel_spec.state_array_spec)
+
+    state_env = make_gymnasium(task_id, num_envs=1, seed=0)
+    pixel_env = make_gymnasium(
+        task_id,
+        num_envs=1,
+        seed=0,
+        from_pixels=True,
+        render_mode="rgb_array",
+        render_width=RENDER_WIDTH,
+        render_height=RENDER_HEIGHT,
+    )
+    try:
+        _, state_info = state_env.reset()
+        _, pixel_info = pixel_env.reset()
+        _assert_nested_equal(state_info, pixel_info)
+
+        action = _zero_action(state_env.action_space, 1)
+        _, _, _, _, state_info = state_env.step(action)
+        _, _, _, _, pixel_info = pixel_env.step(action)
+        _assert_nested_equal(state_info, pixel_info)
+    finally:
+        state_env.close()
+        pixel_env.close()
 
 
 def assert_tasks_align_with_render_for_three_steps(

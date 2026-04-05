@@ -524,11 +524,11 @@ class KitchenEnvBase : public Env<EnvSpecT>, public MujocoRobotEnv {
           step_task_completions_.data(), step_task_completions_.size());
       state["info:episode_task_completions"_].Assign(
           episode_task_completions_.data(), episode_task_completions_.size());
-#ifdef ENVPOOL_TEST
-      state["info:qpos0"_].Assign(qpos0_.data(), qpos0_.size());
-      state["info:qvel0"_].Assign(qvel0_.data(), qvel0_.size());
-#endif
     }
+#ifdef ENVPOOL_TEST
+    state["info:qpos0"_].Assign(qpos0_.data(), qpos0_.size());
+    state["info:qvel0"_].Assign(qvel0_.data(), qvel0_.size());
+#endif
     state["reward"_] = static_cast<float>(reward);
   }
 };

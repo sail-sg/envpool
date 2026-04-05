@@ -233,10 +233,10 @@ class HumanoidEnvBase : public Env<EnvSpecT>, public MujocoEnv {
         AssignObservation("obs:com_velocity", &obs_com_velocity,
                           com_velocity.data(), com_velocity.size(), reset);
       }
-#ifdef ENVPOOL_TEST
-      state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-#endif
     }
+#ifdef ENVPOOL_TEST
+    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
+#endif
   }
 
   mjtNum TorsoUpright() {

@@ -222,13 +222,13 @@ class FingerEnvBase : public Env<EnvSpecT>, public MujocoEnv {
         AssignObservation("obs:dist_to_target", &obs_dist_to_target,
                           DistToTarget(), reset);
       }
-#ifdef ENVPOOL_TEST
-      state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-      if (!is_spin_) {
-        state["info:target"_] = target_angle_;
-      }
-#endif
     }
+#ifdef ENVPOOL_TEST
+    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
+    if (!is_spin_) {
+      state["info:target"_] = target_angle_;
+    }
+#endif
   }
 
   void SetRandomJointAngles(int max_attempts = 1000) {

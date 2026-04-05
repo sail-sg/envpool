@@ -250,22 +250,21 @@ class HumanoidEnvBase : public Env<EnvSpecT>, public MujocoEnv {
         }
       }
       CommitObservation(&obs_state, reset);
-      // info
-      state["info:reward_linvel"_] = xv * forward_reward_weight_;
-      state["info:reward_quadctrl"_] = -ctrl_cost;
-      state["info:reward_alive"_] = healthy_reward;
-      state["info:reward_impact"_] = -contact_cost;
-      state["info:x_position"_] = x_after;
-      state["info:y_position"_] = y_after;
-      state["info:distance_from_origin"_] =
-          std::sqrt(x_after * x_after + y_after * y_after);
-      state["info:x_velocity"_] = xv;
-      state["info:y_velocity"_] = yv;
-#ifdef ENVPOOL_TEST
-      state["info:qpos0"_].Assign(qpos0_, model_->nq);
-      state["info:qvel0"_].Assign(qvel0_, model_->nv);
-#endif
     }
+    state["info:reward_linvel"_] = xv * forward_reward_weight_;
+    state["info:reward_quadctrl"_] = -ctrl_cost;
+    state["info:reward_alive"_] = healthy_reward;
+    state["info:reward_impact"_] = -contact_cost;
+    state["info:x_position"_] = x_after;
+    state["info:y_position"_] = y_after;
+    state["info:distance_from_origin"_] =
+        std::sqrt(x_after * x_after + y_after * y_after);
+    state["info:x_velocity"_] = xv;
+    state["info:y_velocity"_] = yv;
+#ifdef ENVPOOL_TEST
+    state["info:qpos0"_].Assign(qpos0_, model_->nq);
+    state["info:qvel0"_].Assign(qvel0_, model_->nv);
+#endif
   }
 };
 

@@ -183,10 +183,10 @@ class HopperEnvBase : public Env<EnvSpecT>, public MujocoEnv {
       const auto& touch = Touch();
       auto obs_touch = state["obs:touch"_];
       AssignObservation("obs:touch", &obs_touch, touch.data(), 2, reset);
-#ifdef ENVPOOL_TEST
-      state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-#endif
     }
+#ifdef ENVPOOL_TEST
+    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
+#endif
   }
 };
 

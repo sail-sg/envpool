@@ -408,11 +408,11 @@ class ManipulatorEnvBase : public Env<EnvSpecT>, public MujocoEnv {
       auto obs_target_pos = state["obs:target_pos"_];
       AssignObservation("obs:target_pos", &obs_target_pos, target_pos.data(),
                         target_pos.size(), reset);
-#ifdef ENVPOOL_TEST
-      state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-      state["info:random_info"_].Assign(random_info_.data(), 8);
-#endif
     }
+#ifdef ENVPOOL_TEST
+    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
+    state["info:random_info"_].Assign(random_info_.data(), 8);
+#endif
   }
 };
 

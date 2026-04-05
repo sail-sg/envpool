@@ -161,16 +161,15 @@ class HalfCheetahEnvBase : public Env<EnvSpecT>, public MujocoEnv {
         *(obs++) = data_->qvel[i];
       }
       CommitObservation(&obs_state, reset);
-      // info
-      state["info:reward_run"_] = xv * forward_reward_weight_;
-      state["info:reward_ctrl"_] = -ctrl_cost;
-      state["info:x_position"_] = x_after;
-      state["info:x_velocity"_] = xv;
-#ifdef ENVPOOL_TEST
-      state["info:qpos0"_].Assign(qpos0_, model_->nq);
-      state["info:qvel0"_].Assign(qvel0_, model_->nv);
-#endif
     }
+    state["info:reward_run"_] = xv * forward_reward_weight_;
+    state["info:reward_ctrl"_] = -ctrl_cost;
+    state["info:x_position"_] = x_after;
+    state["info:x_velocity"_] = xv;
+#ifdef ENVPOOL_TEST
+    state["info:qpos0"_].Assign(qpos0_, model_->nq);
+    state["info:qvel0"_].Assign(qvel0_, model_->nv);
+#endif
   }
 };
 

@@ -210,11 +210,11 @@ class FishEnvBase : public Env<EnvSpecT>, public MujocoEnv {
         AssignObservation("obs:target", &obs_target, target.data(),
                           target.size(), reset);
       }
-#ifdef ENVPOOL_TEST
-      state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-      state["info:target0"_].Assign(target0_.data(), target0_.size());
-#endif
     }
+#ifdef ENVPOOL_TEST
+    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
+    state["info:target0"_].Assign(target0_.data(), target0_.size());
+#endif
   }
 
   mjtNum Upright() {

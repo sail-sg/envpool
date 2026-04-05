@@ -62,9 +62,9 @@ class InvertedDoublePendulumEnvFns {
 
 using InvertedDoublePendulumEnvSpec = EnvSpec<InvertedDoublePendulumEnvFns>;
 using InvertedDoublePendulumPixelEnvFns =
-    PixelObservationEnvFns<InvertedDoublePendulumEnvFns>;
+PixelObservationEnvFns<InvertedDoublePendulumEnvFns>;
 using InvertedDoublePendulumPixelEnvSpec =
-    EnvSpec<InvertedDoublePendulumPixelEnvFns>;
+EnvSpec<InvertedDoublePendulumPixelEnvFns>;
 
 template <typename EnvSpecT, bool kFromPixels>
 class InvertedDoublePendulumEnvBase : public Env<EnvSpecT>, public MujocoEnv {
@@ -181,22 +181,20 @@ class InvertedDoublePendulumEnvBase : public Env<EnvSpecT>, public MujocoEnv {
         *(obs++) = x;
       }
       CommitObservation(&obs_state, reset);
-      // info
-#ifdef ENVPOOL_TEST
-      state["info:qpos0"_].Assign(qpos0_, model_->nq);
-      state["info:qvel0"_].Assign(qvel0_, model_->nv);
-#endif
     }
+#ifdef ENVPOOL_TEST
+    state["info:qpos0"_].Assign(qpos0_, model_->nq);
+    state["info:qvel0"_].Assign(qvel0_, model_->nv);
+#endif
   }
 };
-
 using InvertedDoublePendulumEnv =
-    InvertedDoublePendulumEnvBase<InvertedDoublePendulumEnvSpec, false>;
-using InvertedDoublePendulumPixelEnv =
-    InvertedDoublePendulumEnvBase<InvertedDoublePendulumPixelEnvSpec, true>;
+InvertedDoublePendulumEnvBase<InvertedDoublePendulumEnvSpec, false>;
+using InvertedDoublePendulumPixelEnv = InvertedDoublePendulumEnvBase<
+InvertedDoublePendulumPixelEnvSpec, true>;
 using InvertedDoublePendulumEnvPool = AsyncEnvPool<InvertedDoublePendulumEnv>;
 using InvertedDoublePendulumPixelEnvPool =
-    AsyncEnvPool<InvertedDoublePendulumPixelEnv>;
+AsyncEnvPool<InvertedDoublePendulumPixelEnv>;
 
 }  // namespace mujoco_gym
 

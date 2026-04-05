@@ -208,21 +208,20 @@ class PusherEnvBase : public Env<EnvSpecT>, public MujocoEnv {
         *(obs++) = data_->xpos[id_goal_ * 3 + i];
       }
       CommitObservation(&obs_state, reset);
-      // info
-      mjtNum reward_dist = -dist_cost;
-      mjtNum reward_ctrl = -ctrl_cost;
-      if (weighted_reward_info_) {
-        reward_dist *= dist_cost_weight_;
-        reward_ctrl *= ctrl_cost_weight_;
-      }
-      state["info:reward_dist"_] = reward_dist;
-      state["info:reward_ctrl"_] = reward_ctrl;
-      state["info:reward_near"_] = -near_cost * near_cost_weight_;
-#ifdef ENVPOOL_TEST
-      state["info:qpos0"_].Assign(qpos0_, model_->nq);
-      state["info:qvel0"_].Assign(qvel0_, model_->nv);
-#endif
     }
+    mjtNum reward_dist = -dist_cost;
+    mjtNum reward_ctrl = -ctrl_cost;
+    if (weighted_reward_info_) {
+      reward_dist *= dist_cost_weight_;
+      reward_ctrl *= ctrl_cost_weight_;
+    }
+    state["info:reward_dist"_] = reward_dist;
+    state["info:reward_ctrl"_] = reward_ctrl;
+    state["info:reward_near"_] = -near_cost * near_cost_weight_;
+#ifdef ENVPOOL_TEST
+    state["info:qpos0"_].Assign(qpos0_, model_->nq);
+    state["info:qvel0"_].Assign(qvel0_, model_->nv);
+#endif
   }
 };
 
