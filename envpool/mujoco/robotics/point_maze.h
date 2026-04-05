@@ -171,7 +171,7 @@ class PointMazeEnvBase : public Env<EnvSpecT>, public MujocoRobotEnv {
     data_->qvel[1] = std::clamp(data_->qvel[1], static_cast<mjtNum>(-5.0),
                                 static_cast<mjtNum>(5.0));
     mj_forward(model_, data_);
-    const float* act = static_cast<const float*>(action["action"_].Data());
+    const auto* act = static_cast<const float*>(action["action"_].Data());
     data_->ctrl[0] =
         std::clamp(static_cast<mjtNum>(act[0]), static_cast<mjtNum>(-1.0),
                    static_cast<mjtNum>(1.0));

@@ -154,7 +154,7 @@ class HumanoidEnvBase : public Env<EnvSpecT>, public MujocoEnv {
 
   void Step(const Action& action) override {
     // step
-    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
+    auto* act = static_cast<mjtNum*>(action["action"_].Data());
     const auto& before = GetMassCenter();
     MujocoStep(act);
     const auto& after = GetMassCenter();

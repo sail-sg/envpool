@@ -137,7 +137,7 @@ class Walker2dEnvBase : public Env<EnvSpecT>, public MujocoEnv {
 
   void Step(const Action& action) override {
     // step
-    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
+    auto* act = static_cast<mjtNum*>(action["action"_].Data());
     mjtNum x_before = data_->qpos[0];
     MujocoStep(act);
     mjtNum x_after = data_->qpos[0];

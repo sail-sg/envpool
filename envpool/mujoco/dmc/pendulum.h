@@ -113,7 +113,7 @@ class PendulumEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   }
 
   void Step(const Action& action) override {
-    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
+    auto* act = static_cast<mjtNum*>(action["action"_].Data());
     ControlStep(act);
     WriteState(false);
   }

@@ -171,7 +171,7 @@ class AdroitEnvBase : public Env<EnvSpecT>, public MujocoRobotEnv {
   }
 
   void Step(const Action& action) override {
-    const float* act = static_cast<const float*>(action["action"_].Data());
+    const auto* act = static_cast<const float*>(action["action"_].Data());
     for (int i = 0; i < action_dim_; ++i) {
       mjtNum value =
           std::clamp(static_cast<mjtNum>(act[i]), static_cast<mjtNum>(-1.0),

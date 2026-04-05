@@ -124,7 +124,7 @@ class SwimmerEnvBase : public Env<EnvSpecT>, public MujocoEnv {
 
   void Step(const Action& action) override {
     // step
-    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
+    auto* act = static_cast<mjtNum*>(action["action"_].Data());
     mjtNum x_before = data_->qpos[0];
     mjtNum y_before = data_->qpos[1];
     MujocoStep(act);

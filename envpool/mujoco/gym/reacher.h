@@ -140,7 +140,7 @@ class ReacherEnvBase : public Env<EnvSpecT>, public MujocoEnv {
 
   void Step(const Action& action) override {
     // step
-    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
+    auto* act = static_cast<mjtNum*>(action["action"_].Data());
     std::array<mjtNum, 3> dist = {0.0, 0.0, 0.0};
     if (!reward_after_step_) {
       dist = GetDist();
