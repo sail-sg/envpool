@@ -40,18 +40,21 @@ std::string GetReacherXML(const std::string& base_path,
 class ReacherEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("frame_skip"_.Bind(1),
+    return MakeDict("frame_skip"_.Bind(1), "frame_stack"_.Bind(1),
                     "task_name"_.Bind(std::string("easy")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs:position"_.Bind(Spec<mjtNum>({2})),
-                    "obs:to_target"_.Bind(Spec<mjtNum>({2})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({2}))
+    return MakeDict(
+        "obs:position"_.Bind(
+            StackSpec(Spec<mjtNum>({2}), conf["frame_stack"_])),
+        "obs:to_target"_.Bind(
+            StackSpec(Spec<mjtNum>({2}), conf["frame_stack"_])),
+        "obs:velocity"_.Bind(StackSpec(Spec<mjtNum>({2}), conf["frame_stack"_]))
 #ifdef ENVPOOL_TEST
-                        ,
-                    "info:qpos0"_.Bind(Spec<mjtNum>({2})),
-                    "info:target"_.Bind(Spec<mjtNum>({2}))
+            ,
+        "info:qpos0"_.Bind(Spec<mjtNum>({2})),
+        "info:target"_.Bind(Spec<mjtNum>({2}))
 #endif
     );  // NOLINT
   }
@@ -79,7 +82,8 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
         MujocoEnv(
             spec.config["base_path"_],
             GetReacherXML(spec.config["base_path"_], spec.config["task_name"_]),
-            spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
+            spec.config["frame_skip"_], spec.config["max_episode_steps"_],
+            spec.config["frame_stack"_]),
         id_target_(mj_name2id(model_, mjOBJ_GEOM, "target")),
         id_finger_(mj_name2id(model_, mjOBJ_GEOM, "finger")) {
     const std::string& task_name = spec.config["task_name"_];
@@ -113,13 +117,13 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
 
   void Reset() override {
     ControlReset();
-    WriteState();
+    WriteState(true);
   }
 
   void Step(const Action& action) override {
     mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
     ControlStep(act);
-    WriteState();
+    WriteState(false);
   }
 
   float TaskGetReward() override {
@@ -130,15 +134,21 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
   }
 
  private:
-  void WriteState() {
+  void WriteState(bool reset) {
     auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
-    state["obs:position"_].Assign(data_->qpos, model_->nq);
+    auto obs_position = state["obs:position"_];
+    AssignObservation("obs:position", &obs_position, data_->qpos, model_->nq,
+                      reset);
     const auto& finger = FingerToTarget();
-    state["obs:to_target"_].Assign(finger.data(), finger.size());
-    state["obs:velocity"_].Assign(data_->qvel, model_->nv);
+    auto obs_to_target = state["obs:to_target"_];
+    AssignObservation("obs:to_target", &obs_to_target, finger.data(),
+                      finger.size(), reset);
+    auto obs_velocity = state["obs:velocity"_];
+    AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
+                      reset);
     // info for check alignment
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);

@@ -27,11 +27,44 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "envpool/core/env.h"
 #include "envpool/mujoco/offscreen_renderer.h"
 
 namespace mujoco_gym {
+
+template <typename D>
+Spec<D> StackSpec(const Spec<D>& spec, int frame_stack) {
+  if (frame_stack < 1) {
+    throw std::invalid_argument("frame_stack must be greater than 0");
+  }
+  if (frame_stack == 1) {
+    return spec;
+  }
+  std::vector<int> stacked_shape = {frame_stack};
+  stacked_shape.insert(stacked_shape.end(), spec.shape.begin(),
+                       spec.shape.end());
+  Spec<D> stacked(stacked_shape);
+  stacked.is_discrete = spec.is_discrete;
+  stacked.bounds = spec.bounds;
+  const auto& [minimum, maximum] = spec.elementwise_bounds;
+  if (!minimum.empty() || !maximum.empty()) {
+    std::vector<D> stacked_minimum;
+    std::vector<D> stacked_maximum;
+    stacked_minimum.reserve(minimum.size() * frame_stack);
+    stacked_maximum.reserve(maximum.size() * frame_stack);
+    for (int i = 0; i < frame_stack; ++i) {
+      stacked_minimum.insert(stacked_minimum.end(), minimum.begin(),
+                             minimum.end());
+      stacked_maximum.insert(stacked_maximum.end(), maximum.begin(),
+                             maximum.end());
+    }
+    stacked.elementwise_bounds =
+        std::make_tuple(std::move(stacked_minimum), std::move(stacked_maximum));
+  }
+  return stacked;
+}
 
 class MujocoEnv : public RenderableEnv {
  private:
@@ -56,22 +89,29 @@ class MujocoEnv : public RenderableEnv {
   mjtNum *qpos0_{nullptr}, *qvel0_{nullptr};  // for align check
 #endif
   int frame_skip_;
+  int frame_stack_;
   bool post_constraint_;
   int max_episode_steps_, elapsed_step_;
   bool done_{true};
   std::unique_ptr<envpool::mujoco::OffscreenRenderer> renderer_;
+  std::vector<mjtNum> stacked_observation_;
+  std::vector<mjtNum> observation_scratch_;
 
  public:
   MujocoEnv(const std::string& xml, int frame_skip, bool post_constraint,
-            int max_episode_steps)
+            int max_episode_steps, int frame_stack)
       : xml_path_(ResolveXMLPath(xml)),
         model_(mj_loadXML(xml_path_.c_str(), nullptr, error_.data(), 1000)),
         frame_skip_(frame_skip),
+        frame_stack_(frame_stack),
         post_constraint_(post_constraint),
         max_episode_steps_(max_episode_steps),
         elapsed_step_(max_episode_steps + 1) {
     if (model_ == nullptr) {
       throw std::runtime_error(error_.data());
+    }
+    if (frame_stack_ < 1) {
+      throw std::invalid_argument("frame_stack must be greater than 0");
     }
     data_ = mj_makeData(model_);
     init_qpos_ = new mjtNum[model_->nq];
@@ -128,6 +168,45 @@ class MujocoEnv : public RenderableEnv {
 
   std::pair<int, int> RenderSize(int width, int height) const override {
     return {width > 0 ? width : 480, height > 0 ? height : 480};
+  }
+
+ protected:
+  mjtNum* PrepareObservation(Array* target) {
+    if (frame_stack_ == 1) {
+      return static_cast<mjtNum*>(target->Data());
+    }
+    DCHECK_EQ(target->Shape(0), static_cast<std::size_t>(frame_stack_));
+    DCHECK_EQ(target->size % static_cast<std::size_t>(frame_stack_),
+              static_cast<std::size_t>(0));
+    observation_scratch_.resize(target->size /
+                                static_cast<std::size_t>(frame_stack_));
+    return observation_scratch_.data();
+  }
+
+  void CommitObservation(Array* target, bool reset) {
+    if (frame_stack_ == 1) {
+      return;
+    }
+    std::size_t stacked_size = target->size;
+    std::size_t frame_size =
+        stacked_size / static_cast<std::size_t>(frame_stack_);
+    if (stacked_observation_.size() != stacked_size) {
+      stacked_observation_.resize(stacked_size);
+      reset = true;
+    }
+    if (reset) {
+      for (int i = 0; i < frame_stack_; ++i) {
+        std::memcpy(stacked_observation_.data() + i * frame_size,
+                    observation_scratch_.data(), frame_size * sizeof(mjtNum));
+      }
+    } else {
+      std::memmove(stacked_observation_.data(),
+                   stacked_observation_.data() + frame_size,
+                   (stacked_size - frame_size) * sizeof(mjtNum));
+      std::memcpy(stacked_observation_.data() + stacked_size - frame_size,
+                  observation_scratch_.data(), frame_size * sizeof(mjtNum));
+    }
+    target->Assign(stacked_observation_.data(), stacked_size);
   }
 };
 

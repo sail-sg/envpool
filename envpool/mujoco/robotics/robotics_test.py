@@ -208,9 +208,7 @@ def _reset_upstream_state(
     base_env.data.qvel[:] = qvel
     if hasattr(base_env, "_set_action"):
         base_env._set_action(
-            np.zeros(
-                base_env.action_space.shape, dtype=base_env.action_space.dtype
-            )
+            np.zeros(base_env.action_space.shape, dtype=base_env.action_space.dtype)
         )
     mujoco.mj_forward(base_env.model, base_env.data)
     base_env.goal = np.array(goal, copy=True)
@@ -226,9 +224,7 @@ def _reset_upstream_adroit_state(
 ) -> np.ndarray:
     base_env = cast(Any, env.unwrapped)
     if task_id.startswith("AdroitHandDoor"):
-        body_id = mujoco.mj_name2id(
-            base_env.model, mujoco.mjtObj.mjOBJ_BODY, "frame"
-        )
+        body_id = mujoco.mj_name2id(base_env.model, mujoco.mjtObj.mjOBJ_BODY, "frame")
         base_env.model.body_pos[body_id] = extra
     elif task_id.startswith("AdroitHandHammer"):
         body_id = mujoco.mj_name2id(
@@ -352,15 +348,17 @@ def _reset_upstream_render_state(
 
 def _kitchen_task_list_to_mask(tasks: list[str]) -> np.ndarray:
     mask = np.zeros(7, dtype=np.int32)
-    for task_id, task_name in enumerate([
-        "bottom burner",
-        "top burner",
-        "light switch",
-        "slide cabinet",
-        "hinge cabinet",
-        "microwave",
-        "kettle",
-    ]):
+    for task_id, task_name in enumerate(
+        [
+            "bottom burner",
+            "top burner",
+            "light switch",
+            "slide cabinet",
+            "hinge cabinet",
+            "microwave",
+            "kettle",
+        ]
+    ):
         if task_name in tasks:
             mask[task_id] = 1
     return mask
@@ -536,9 +534,7 @@ class _GymnasiumRoboticsRenderEnvPoolTest(absltest.TestCase):
 class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
     def test_registered_fetch_env_count(self) -> None:
         task_ids = sorted(
-            task_id
-            for task_id in list_all_envs()
-            if task_id.startswith("Fetch")
+            task_id for task_id in list_all_envs() if task_id.startswith("Fetch")
         )
         self.assertEqual(task_ids, sorted(_FETCH_ENVS))
         self.assertLen(task_ids, 16)
@@ -581,16 +577,12 @@ class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
                     truncated1 = np.array([False])
                     for _ in range(32):
                         action = env0.action_space.sample()
-                        obs0, reward0, terminated0, truncated0, info0 = (
-                            env0.step(action)
+                        obs0, reward0, terminated0, truncated0, info0 = env0.step(
+                            action
                         )
-                        obs1, reward1, terminated1, truncated1, info1 = (
-                            env1.step(
-                                np.asarray(
-                                    [action], dtype=env0.action_space.dtype
-                                ),
-                                np.asarray([0], dtype=np.int32),
-                            )
+                        obs1, reward1, terminated1, truncated1, info1 = env1.step(
+                            np.asarray([action], dtype=env0.action_space.dtype),
+                            np.asarray([0], dtype=np.int32),
                         )
                         _assert_goal_obs_equal(
                             obs0,
@@ -640,9 +632,7 @@ class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
                     alias_spec.observation_space,
                     target_spec.observation_space,
                 )
-                self.assertEqual(
-                    alias_spec.action_space, target_spec.action_space
-                )
+                self.assertEqual(alias_spec.action_space, target_spec.action_space)
 
     def test_dm_send_recv(self) -> None:
         action_space = make_spec("FetchReach-v4").action_space
@@ -699,6 +689,77 @@ class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
         finally:
             env.close()
 
+    def test_frame_stack(self) -> None:
+        spec = make_spec("FetchReach-v4", frame_stack=4)
+        obs_space = cast(gym.spaces.Dict, spec.observation_space)
+        self.assertEqual(obs_space.spaces["observation"].shape, (4, 10))
+        self.assertEqual(obs_space.spaces["achieved_goal"].shape, (4, 3))
+        self.assertEqual(obs_space.spaces["desired_goal"].shape, (4, 3))
+
+        env = make_gymnasium("FetchReach-v4", num_envs=1, seed=0, frame_stack=4)
+        try:
+            obs0, _ = env.reset()
+            np.testing.assert_allclose(
+                obs0["observation"][0, 0], obs0["observation"][0, 1]
+            )
+            np.testing.assert_allclose(
+                obs0["achieved_goal"][0, 0], obs0["achieved_goal"][0, 1]
+            )
+            np.testing.assert_allclose(
+                obs0["desired_goal"][0, 0], obs0["desired_goal"][0, 1]
+            )
+
+            action = np.zeros(
+                (1,) + spec.action_space.shape, dtype=spec.action_space.dtype
+            )
+            obs1, _, _, _, _ = env.step(action, np.asarray([0], dtype=np.int32))
+            np.testing.assert_allclose(
+                obs0["observation"][0, 1:], obs1["observation"][0, :-1]
+            )
+            np.testing.assert_allclose(
+                obs0["achieved_goal"][0, 1:], obs1["achieved_goal"][0, :-1]
+            )
+            np.testing.assert_allclose(
+                obs0["desired_goal"][0, 1:], obs1["desired_goal"][0, :-1]
+            )
+        finally:
+            env.close()
+
+    def test_frame_stack_one_matches_default(self) -> None:
+        spec0 = make_spec("FetchReach-v4")
+        spec1 = make_spec("FetchReach-v4", frame_stack=1)
+        obs_space0 = cast(gym.spaces.Dict, spec0.observation_space)
+        obs_space1 = cast(gym.spaces.Dict, spec1.observation_space)
+        self.assertEqual(
+            obs_space0.spaces["observation"].shape,
+            obs_space1.spaces["observation"].shape,
+        )
+        self.assertEqual(
+            obs_space0.spaces["achieved_goal"].shape,
+            obs_space1.spaces["achieved_goal"].shape,
+        )
+        self.assertEqual(
+            obs_space0.spaces["desired_goal"].shape,
+            obs_space1.spaces["desired_goal"].shape,
+        )
+
+        env0 = make_gymnasium("FetchReach-v4", num_envs=1, seed=0)
+        env1 = make_gymnasium("FetchReach-v4", num_envs=1, seed=0, frame_stack=1)
+        try:
+            obs0, _ = env0.reset()
+            obs1, _ = env1.reset()
+            _assert_goal_obs_equal(obs0, obs1)
+
+            action = np.zeros(
+                (1,) + spec0.action_space.shape, dtype=spec0.action_space.dtype
+            )
+            obs0, _, _, _, _ = env0.step(action, np.asarray([0], dtype=np.int32))
+            obs1, _, _, _, _ = env1.step(action, np.asarray([0], dtype=np.int32))
+            _assert_goal_obs_equal(obs0, obs1)
+        finally:
+            env0.close()
+            env1.close()
+
 
 class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
     def test_registered_hand_env_count(self) -> None:
@@ -746,16 +807,12 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
                     truncated1 = np.array([False])
                     for _ in range(8):
                         action = env0.action_space.sample()
-                        obs0, reward0, terminated0, truncated0, info0 = (
-                            env0.step(action)
+                        obs0, reward0, terminated0, truncated0, info0 = env0.step(
+                            action
                         )
-                        obs1, reward1, terminated1, truncated1, info1 = (
-                            env1.step(
-                                np.asarray(
-                                    [action], dtype=env0.action_space.dtype
-                                ),
-                                np.asarray([0], dtype=np.int32),
-                            )
+                        obs1, reward1, terminated1, truncated1, info1 = env1.step(
+                            np.asarray([action], dtype=env0.action_space.dtype),
+                            np.asarray([0], dtype=np.int32),
                         )
                         _assert_goal_obs_equal(
                             obs0,
@@ -797,17 +854,13 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
                     alias_spec.observation_space,
                     target_spec.observation_space,
                 )
-                self.assertEqual(
-                    alias_spec.action_space, target_spec.action_space
-                )
+                self.assertEqual(alias_spec.action_space, target_spec.action_space)
 
 
 class _GymnasiumRoboticsAdroitEnvPoolTest(absltest.TestCase):
     def test_registered_adroit_env_count(self) -> None:
         task_ids = sorted(
-            task_id
-            for task_id in list_all_envs()
-            if task_id.startswith("AdroitHand")
+            task_id for task_id in list_all_envs() if task_id.startswith("AdroitHand")
         )
         self.assertEqual(task_ids, sorted(_ADROIT_ENVS))
         self.assertLen(task_ids, 8)
@@ -849,16 +902,12 @@ class _GymnasiumRoboticsAdroitEnvPoolTest(absltest.TestCase):
 
                     for _ in range(8):
                         action = env0.action_space.sample()
-                        obs0, reward0, terminated0, truncated0, info0 = (
-                            env0.step(action)
+                        obs0, reward0, terminated0, truncated0, info0 = env0.step(
+                            action
                         )
-                        obs1, reward1, terminated1, truncated1, info1 = (
-                            env1.step(
-                                np.asarray(
-                                    [action], dtype=env0.action_space.dtype
-                                ),
-                                np.asarray([0], dtype=np.int32),
-                            )
+                        obs1, reward1, terminated1, truncated1, info1 = env1.step(
+                            np.asarray([action], dtype=env0.action_space.dtype),
+                            np.asarray([0], dtype=np.int32),
                         )
                         np.testing.assert_allclose(
                             obs0,
@@ -888,9 +937,7 @@ class _GymnasiumRoboticsAdroitEnvPoolTest(absltest.TestCase):
 class _GymnasiumRoboticsPointMazeEnvPoolTest(absltest.TestCase):
     def test_registered_point_maze_env_count(self) -> None:
         task_ids = sorted(
-            task_id
-            for task_id in list_all_envs()
-            if task_id.startswith("PointMaze_")
+            task_id for task_id in list_all_envs() if task_id.startswith("PointMaze_")
         )
         self.assertEqual(task_ids, sorted(_POINT_MAZE_ENVS))
         self.assertLen(task_ids, 20)
@@ -931,16 +978,12 @@ class _GymnasiumRoboticsPointMazeEnvPoolTest(absltest.TestCase):
 
                     for _ in range(16):
                         action = env0.action_space.sample()
-                        obs0, reward0, terminated0, truncated0, info0 = (
-                            env0.step(action)
+                        obs0, reward0, terminated0, truncated0, info0 = env0.step(
+                            action
                         )
-                        obs1, reward1, terminated1, truncated1, info1 = (
-                            env1.step(
-                                np.asarray(
-                                    [action], dtype=env0.action_space.dtype
-                                ),
-                                np.asarray([0], dtype=np.int32),
-                            )
+                        obs1, reward1, terminated1, truncated1, info1 = env1.step(
+                            np.asarray([action], dtype=env0.action_space.dtype),
+                            np.asarray([0], dtype=np.int32),
                         )
                         _assert_goal_obs_equal(
                             obs0,
@@ -965,6 +1008,77 @@ class _GymnasiumRoboticsPointMazeEnvPoolTest(absltest.TestCase):
                 finally:
                     env0.close()
                     env1.close()
+
+    def test_frame_stack(self) -> None:
+        spec = make_spec("PointMaze_UMaze-v3", frame_stack=4)
+        obs_space = cast(gym.spaces.Dict, spec.observation_space)
+        self.assertEqual(obs_space.spaces["observation"].shape, (4, 4))
+        self.assertEqual(obs_space.spaces["achieved_goal"].shape, (4, 2))
+        self.assertEqual(obs_space.spaces["desired_goal"].shape, (4, 2))
+
+        env = make_gymnasium("PointMaze_UMaze-v3", num_envs=1, seed=0, frame_stack=4)
+        try:
+            obs0, _ = env.reset()
+            np.testing.assert_allclose(
+                obs0["observation"][0, 0], obs0["observation"][0, 1]
+            )
+            np.testing.assert_allclose(
+                obs0["achieved_goal"][0, 0], obs0["achieved_goal"][0, 1]
+            )
+            np.testing.assert_allclose(
+                obs0["desired_goal"][0, 0], obs0["desired_goal"][0, 1]
+            )
+
+            action = np.zeros(
+                (1,) + spec.action_space.shape, dtype=spec.action_space.dtype
+            )
+            obs1, _, _, _, _ = env.step(action, np.asarray([0], dtype=np.int32))
+            np.testing.assert_allclose(
+                obs0["observation"][0, 1:], obs1["observation"][0, :-1]
+            )
+            np.testing.assert_allclose(
+                obs0["achieved_goal"][0, 1:], obs1["achieved_goal"][0, :-1]
+            )
+            np.testing.assert_allclose(
+                obs0["desired_goal"][0, 1:], obs1["desired_goal"][0, :-1]
+            )
+        finally:
+            env.close()
+
+    def test_frame_stack_one_matches_default(self) -> None:
+        spec0 = make_spec("PointMaze_UMaze-v3")
+        spec1 = make_spec("PointMaze_UMaze-v3", frame_stack=1)
+        obs_space0 = cast(gym.spaces.Dict, spec0.observation_space)
+        obs_space1 = cast(gym.spaces.Dict, spec1.observation_space)
+        self.assertEqual(
+            obs_space0.spaces["observation"].shape,
+            obs_space1.spaces["observation"].shape,
+        )
+        self.assertEqual(
+            obs_space0.spaces["achieved_goal"].shape,
+            obs_space1.spaces["achieved_goal"].shape,
+        )
+        self.assertEqual(
+            obs_space0.spaces["desired_goal"].shape,
+            obs_space1.spaces["desired_goal"].shape,
+        )
+
+        env0 = make_gymnasium("PointMaze_UMaze-v3", num_envs=1, seed=0)
+        env1 = make_gymnasium("PointMaze_UMaze-v3", num_envs=1, seed=0, frame_stack=1)
+        try:
+            obs0, _ = env0.reset()
+            obs1, _ = env1.reset()
+            _assert_goal_obs_equal(obs0, obs1)
+
+            action = np.zeros(
+                (1,) + spec0.action_space.shape, dtype=spec0.action_space.dtype
+            )
+            obs0, _, _, _, _ = env0.step(action, np.asarray([0], dtype=np.int32))
+            obs1, _, _, _, _ = env1.step(action, np.asarray([0], dtype=np.int32))
+            _assert_goal_obs_equal(obs0, obs1)
+        finally:
+            env0.close()
+            env1.close()
 
 
 class _GymnasiumRoboticsKitchenEnvPoolTest(absltest.TestCase):
@@ -1039,9 +1153,7 @@ class _GymnasiumRoboticsKitchenEnvPoolTest(absltest.TestCase):
 
             for _ in range(8):
                 action = env0.action_space.sample()
-                obs0, reward0, terminated0, truncated0, info0 = env0.step(
-                    action
-                )
+                obs0, reward0, terminated0, truncated0, info0 = env0.step(action)
                 obs1, reward1, terminated1, truncated1, info1 = env1.step(
                     np.asarray([action], dtype=env0.action_space.dtype),
                     np.asarray([0], dtype=np.int32),
@@ -1069,9 +1181,7 @@ class _GymnasiumRoboticsKitchenEnvPoolTest(absltest.TestCase):
                     info1["step_task_completions"][0],
                 )
                 np.testing.assert_array_equal(
-                    _kitchen_task_list_to_mask(
-                        info0["episode_task_completions"]
-                    ),
+                    _kitchen_task_list_to_mask(info0["episode_task_completions"]),
                     info1["episode_task_completions"][0],
                 )
                 if terminated1[0] or truncated1[0]:

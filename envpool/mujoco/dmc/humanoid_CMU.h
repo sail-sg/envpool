@@ -40,17 +40,23 @@ std::string GetHumanoidCMUXML(const std::string& base_path,
 class HumanoidCMUEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("frame_skip"_.Bind(10),
+    return MakeDict("frame_skip"_.Bind(10), "frame_stack"_.Bind(1),
                     "task_name"_.Bind(std::string("stand")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs:joint_angles"_.Bind(Spec<mjtNum>({56})),
-                    "obs:head_height"_.Bind(Spec<mjtNum>({})),
-                    "obs:extremities"_.Bind(Spec<mjtNum>({12})),
-                    "obs:torso_vertical"_.Bind(Spec<mjtNum>({3})),
-                    "obs:com_velocity"_.Bind(Spec<mjtNum>({3})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({62}))
+    return MakeDict("obs:joint_angles"_.Bind(
+                        StackSpec(Spec<mjtNum>({56}), conf["frame_stack"_])),
+                    "obs:head_height"_.Bind(
+                        StackSpec(Spec<mjtNum>({}), conf["frame_stack"_])),
+                    "obs:extremities"_.Bind(
+                        StackSpec(Spec<mjtNum>({12}), conf["frame_stack"_])),
+                    "obs:torso_vertical"_.Bind(
+                        StackSpec(Spec<mjtNum>({3}), conf["frame_stack"_])),
+                    "obs:com_velocity"_.Bind(
+                        StackSpec(Spec<mjtNum>({3}), conf["frame_stack"_])),
+                    "obs:velocity"_.Bind(
+                        StackSpec(Spec<mjtNum>({62}), conf["frame_stack"_]))
 #ifdef ENVPOOL_TEST
                         ,
                     "info:qpos0"_.Bind(Spec<mjtNum>({63}))
@@ -86,8 +92,8 @@ class HumanoidCMUEnv : public Env<HumanoidCMUEnvSpec>, public MujocoEnv {
         MujocoEnv(spec.config["base_path"_],
                   GetHumanoidCMUXML(spec.config["base_path"_],
                                     spec.config["task_name"_]),
-                  spec.config["frame_skip"_],
-                  spec.config["max_episode_steps"_]),
+                  spec.config["frame_skip"_], spec.config["max_episode_steps"_],
+                  spec.config["frame_stack"_]),
         id_head_(mj_name2id(model_, mjOBJ_XBODY, "head")),
         id_lhand_(mj_name2id(model_, mjOBJ_XBODY, "lhand")),
         id_lfoot_(mj_name2id(model_, mjOBJ_XBODY, "lfoot")),
@@ -126,13 +132,13 @@ class HumanoidCMUEnv : public Env<HumanoidCMUEnvSpec>, public MujocoEnv {
 
   void Reset() override {
     ControlReset();
-    WriteState();
+    WriteState(true);
   }
 
   void Step(const Action& action) override {
     mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
     ControlStep(act);
-    WriteState();
+    WriteState(false);
   }
 
   float TaskGetReward() override {
@@ -170,7 +176,7 @@ class HumanoidCMUEnv : public Env<HumanoidCMUEnvSpec>, public MujocoEnv {
   bool TaskShouldTerminateEpisode() override { return false; }
 
  private:
-  void WriteState() {
+  void WriteState(bool reset) {
     auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
@@ -179,13 +185,23 @@ class HumanoidCMUEnv : public Env<HumanoidCMUEnvSpec>, public MujocoEnv {
     const auto& extremities = Extremities();
     const auto& com_velocity = CenterOfMassVelocity();
     const auto& torso_vertical = TorsoVerticalOrientation();
-    state["obs:joint_angles"_].Assign(joint_angles.data(), joint_angles.size());
-    state["obs:head_height"_] = HeadHeight();
-    state["obs:extremities"_].Assign(extremities.data(), extremities.size());
-    state["obs:torso_vertical"_].Assign(torso_vertical.data(),
-                                        torso_vertical.size());
-    state["obs:com_velocity"_].Assign(com_velocity.data(), com_velocity.size());
-    state["obs:velocity"_].Assign(data_->qvel, model_->nv);
+    auto obs_joint_angles = state["obs:joint_angles"_];
+    AssignObservation("obs:joint_angles", &obs_joint_angles,
+                      joint_angles.data(), joint_angles.size(), reset);
+    auto obs_head_height = state["obs:head_height"_];
+    AssignObservation("obs:head_height", &obs_head_height, HeadHeight(), reset);
+    auto obs_extremities = state["obs:extremities"_];
+    AssignObservation("obs:extremities", &obs_extremities, extremities.data(),
+                      extremities.size(), reset);
+    auto obs_torso_vertical = state["obs:torso_vertical"_];
+    AssignObservation("obs:torso_vertical", &obs_torso_vertical,
+                      torso_vertical.data(), torso_vertical.size(), reset);
+    auto obs_com_velocity = state["obs:com_velocity"_];
+    AssignObservation("obs:com_velocity", &obs_com_velocity,
+                      com_velocity.data(), com_velocity.size(), reset);
+    auto obs_velocity = state["obs:velocity"_];
+    AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
+                      reset);
     // info
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);

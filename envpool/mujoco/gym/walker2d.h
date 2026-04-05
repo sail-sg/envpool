@@ -32,8 +32,9 @@ class Walker2dEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
-        "frame_skip"_.Bind(4), "post_constraint"_.Bind(true),
-        "ctrl_cost_weight"_.Bind(0.001), "terminate_when_unhealthy"_.Bind(true),
+        "frame_skip"_.Bind(4), "frame_stack"_.Bind(1),
+        "post_constraint"_.Bind(true), "ctrl_cost_weight"_.Bind(0.001),
+        "terminate_when_unhealthy"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
         "legacy_healthy_reward"_.Bind(true),
         "xml_file"_.Bind(std::string("walker2d.xml")),
@@ -47,13 +48,15 @@ class Walker2dEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
     bool no_pos = conf["exclude_current_positions_from_observation"_];
-    return MakeDict("obs"_.Bind(Spec<mjtNum>({no_pos ? 17 : 18}, {-inf, inf})),
+    return MakeDict(
+        "obs"_.Bind(StackSpec(Spec<mjtNum>({no_pos ? 17 : 18}, {-inf, inf}),
+                              conf["frame_stack"_])),
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.Bind(Spec<mjtNum>({9})),
-                    "info:qvel0"_.Bind(Spec<mjtNum>({9})),
+        "info:qpos0"_.Bind(Spec<mjtNum>({9})),
+        "info:qvel0"_.Bind(Spec<mjtNum>({9})),
 #endif
-                    "info:x_position"_.Bind(Spec<mjtNum>({-1})),
-                    "info:x_velocity"_.Bind(Spec<mjtNum>({-1})));
+        "info:x_position"_.Bind(Spec<mjtNum>({-1})),
+        "info:x_velocity"_.Bind(Spec<mjtNum>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -76,11 +79,11 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
  public:
   Walker2dEnv(const Spec& spec, int env_id)
       : Env<Walker2dEnvSpec>(spec, env_id),
-        MujocoEnv(std::string(spec.config["base_path"_]) +
-                      "/mujoco/assets_gym/" +
-                      std::string(spec.config["xml_file"_]),
-                  spec.config["frame_skip"_], spec.config["post_constraint"_],
-                  spec.config["max_episode_steps"_]),
+        MujocoEnv(
+            std::string(spec.config["base_path"_]) + "/mujoco/assets_gym/" +
+                std::string(spec.config["xml_file"_]),
+            spec.config["frame_skip"_], spec.config["post_constraint"_],
+            spec.config["max_episode_steps"_], spec.config["frame_stack"_]),
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         legacy_healthy_reward_(spec.config["legacy_healthy_reward"_]),
@@ -115,7 +118,7 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteState(0.0, 0.0, 0.0);
+    WriteState(0.0, 0.0, 0.0, true);
   }
 
   void Step(const Action& action) override {
@@ -145,7 +148,7 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
     ++elapsed_step_;
     done_ = (terminate_when_unhealthy_ ? !is_healthy : false) ||
             (elapsed_step_ >= max_episode_steps_);
-    WriteState(reward, xv, x_after);
+    WriteState(reward, xv, x_after, false);
   }
 
  private:
@@ -160,11 +163,12 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
     return true;
   }
 
-  void WriteState(float reward, mjtNum xv, mjtNum x_after) {
+  void WriteState(float reward, mjtNum xv, mjtNum x_after, bool reset) {
     auto state = Allocate();
     state["reward"_] = reward;
     // obs
-    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());
+    auto obs_state = state["obs"_];
+    mjtNum* obs = PrepareObservation(&obs_state);
     for (int i = no_pos_ ? 1 : 0; i < model_->nq; ++i) {
       *(obs++) = data_->qpos[i];
     }
@@ -174,6 +178,7 @@ class Walker2dEnv : public Env<Walker2dEnvSpec>, public MujocoEnv {
       x = std::max(velocity_min_, x);
       *(obs++) = x;
     }
+    CommitObservation(&obs_state, reset);
     // info
     state["info:x_position"_] = x_after;
     state["info:x_velocity"_] = xv;

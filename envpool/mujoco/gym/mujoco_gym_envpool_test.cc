@@ -52,3 +52,61 @@ TEST(MjcEnvPoolTest, CheckAction) {
   envpool.Send(action);
   state_vec = envpool.Recv();
 }
+
+TEST(MjcEnvPoolTest, FrameStack) {
+  auto config = mujoco_gym::HalfCheetahEnvSpec::kDefaultConfig;
+  constexpr int kNumEnvs = 1;
+  constexpr int kFrameStack = 4;
+  constexpr int kObsDim = 17;
+  config["num_envs"_] = kNumEnvs;
+  config["batch_size"_] = kNumEnvs;
+  config["seed"_] = 0;
+  config["frame_stack"_] = kFrameStack;
+  mujoco_gym::HalfCheetahEnvSpec spec(config);
+  EXPECT_EQ(spec.state_spec["obs"_].shape,
+            std::vector<int>({kFrameStack, kObsDim}));
+
+  mujoco_gym::HalfCheetahEnvPool envpool(spec);
+  TArray<int> all_env_ids(Spec<int>({kNumEnvs}));
+  all_env_ids[0] = 0;
+  envpool.Reset(all_env_ids);
+
+  MjcState reset_state(envpool.Recv());
+  EXPECT_EQ(reset_state["obs"_].Shape(),
+            std::vector<std::size_t>({kNumEnvs, kFrameStack, kObsDim}));
+  const auto reset_obs = TArray<mjtNum>(reset_state["obs"_][0]);
+  const auto* reset_ptr = static_cast<const mjtNum*>(reset_obs.Data());
+  for (int i = 1; i < kFrameStack; ++i) {
+    for (int j = 0; j < kObsDim; ++j) {
+      EXPECT_EQ(reset_ptr[j], reset_ptr[i * kObsDim + j]);
+    }
+  }
+
+  std::vector<Array> raw_action({Array(Spec<int>({kNumEnvs})),
+                                 Array(Spec<int>({kNumEnvs})),
+                                 Array(Spec<double>({kNumEnvs, 6}))});
+  MjcAction action(raw_action);
+  action["env_id"_][0] = 0;
+  action["players.env_id"_][0] = 0;
+  for (int j = 0; j < 6; ++j) {
+    action["action"_][0][j] = 0.0;
+  }
+  envpool.Send(action);
+
+  MjcState step_state(envpool.Recv());
+  EXPECT_EQ(step_state["obs"_].Shape(),
+            std::vector<std::size_t>({kNumEnvs, kFrameStack, kObsDim}));
+  const auto step_obs = TArray<mjtNum>(step_state["obs"_][0]);
+  const auto* step_ptr = static_cast<const mjtNum*>(step_obs.Data());
+  for (int i = 0; i < kFrameStack - 1; ++i) {
+    for (int j = 0; j < kObsDim; ++j) {
+      EXPECT_EQ(step_ptr[i * kObsDim + j], reset_ptr[j]);
+    }
+  }
+  bool changed = false;
+  for (int j = 0; j < kObsDim; ++j) {
+    changed =
+        changed || (step_ptr[(kFrameStack - 1) * kObsDim + j] != reset_ptr[j]);
+  }
+  EXPECT_TRUE(changed);
+}

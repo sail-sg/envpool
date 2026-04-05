@@ -33,8 +33,9 @@ class PusherEnvFns {
   static decltype(auto) DefaultConfig() {
     return MakeDict(
         "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(5),
-        "post_constraint"_.Bind(true), "ctrl_cost_weight"_.Bind(0.1),
-        "dist_cost_weight"_.Bind(1.0), "near_cost_weight"_.Bind(0.5),
+        "frame_stack"_.Bind(1), "post_constraint"_.Bind(true),
+        "ctrl_cost_weight"_.Bind(0.1), "dist_cost_weight"_.Bind(1.0),
+        "near_cost_weight"_.Bind(0.5),
         "xml_file"_.Bind(std::string("pusher.xml")),
         "reward_after_step"_.Bind(false), "weighted_reward_info"_.Bind(false),
         "reset_qvel_scale"_.Bind(0.005), "cylinder_x_min"_.Bind(-0.3),
@@ -44,7 +45,8 @@ class PusherEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
-    return MakeDict("obs"_.Bind(Spec<mjtNum>({23}, {-inf, inf})),
+    return MakeDict("obs"_.Bind(StackSpec(Spec<mjtNum>({23}, {-inf, inf}),
+                                          conf["frame_stack"_])),
 #ifdef ENVPOOL_TEST
                     "info:qpos0"_.Bind(Spec<mjtNum>({11})),
                     "info:qvel0"_.Bind(Spec<mjtNum>({11})),
@@ -72,11 +74,11 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
  public:
   PusherEnv(const Spec& spec, int env_id)
       : Env<PusherEnvSpec>(spec, env_id),
-        MujocoEnv(std::string(spec.config["base_path"_]) +
-                      "/mujoco/assets_gym/" +
-                      std::string(spec.config["xml_file"_]),
-                  spec.config["frame_skip"_], spec.config["post_constraint"_],
-                  spec.config["max_episode_steps"_]),
+        MujocoEnv(
+            std::string(spec.config["base_path"_]) + "/mujoco/assets_gym/" +
+                std::string(spec.config["xml_file"_]),
+            spec.config["frame_skip"_], spec.config["post_constraint"_],
+            spec.config["max_episode_steps"_], spec.config["frame_stack"_]),
         id_tips_arm_(mj_name2id(model_, mjOBJ_XBODY, "tips_arm")),
         id_object_(mj_name2id(model_, mjOBJ_XBODY, "object")),
         id_goal_(mj_name2id(model_, mjOBJ_XBODY, "goal")),
@@ -124,7 +126,7 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteState(0.0, 0.0, 0.0, 0.0);
+    WriteState(0.0, 0.0, 0.0, 0.0, true);
   }
 
   void Step(const Action& action) override {
@@ -154,7 +156,7 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
         static_cast<float>(-weighted_ctrl_cost - dist_cost * dist_cost_weight_ -
                            near_cost * near_cost_weight_);
     done_ = (++elapsed_step_ >= max_episode_steps_);
-    WriteState(reward, ctrl_cost, dist_cost, near_cost);
+    WriteState(reward, ctrl_cost, dist_cost, near_cost, false);
   }
 
  private:
@@ -166,11 +168,12 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
   }
 
   void WriteState(float reward, mjtNum ctrl_cost, mjtNum dist_cost,
-                  mjtNum near_cost) {
+                  mjtNum near_cost, bool reset) {
     auto state = Allocate();
     state["reward"_] = reward;
     // obs
-    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());
+    auto obs_state = state["obs"_];
+    mjtNum* obs = PrepareObservation(&obs_state);
     for (int i = 0; i < 7; ++i) {
       *(obs++) = data_->qpos[i];
     }
@@ -186,6 +189,7 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
     for (int i = 0; i < 3; ++i) {
       *(obs++) = data_->xpos[id_goal_ * 3 + i];
     }
+    CommitObservation(&obs_state, reset);
     // info
     mjtNum reward_dist = -dist_cost;
     mjtNum reward_ctrl = -ctrl_cost;

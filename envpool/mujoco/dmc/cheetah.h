@@ -39,16 +39,18 @@ std::string GetCheetahXML(const std::string& base_path,
 class CheetahEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("frame_skip"_.Bind(1),
+    return MakeDict("frame_skip"_.Bind(1), "frame_stack"_.Bind(1),
                     "task_name"_.Bind(std::string("run")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs:position"_.Bind(Spec<mjtNum>({8})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({9}))
+    return MakeDict(
+        "obs:position"_.Bind(
+            StackSpec(Spec<mjtNum>({8}), conf["frame_stack"_])),
+        "obs:velocity"_.Bind(StackSpec(Spec<mjtNum>({9}), conf["frame_stack"_]))
 #ifdef ENVPOOL_TEST
-                        ,
-                    "info:qpos0"_.Bind(Spec<mjtNum>({9}))
+            ,
+        "info:qpos0"_.Bind(Spec<mjtNum>({9}))
 #endif
     );  // NOLINT
   }
@@ -71,7 +73,8 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
         MujocoEnv(
             spec.config["base_path"_],
             GetCheetahXML(spec.config["base_path"_], spec.config["task_name"_]),
-            spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
+            spec.config["frame_skip"_], spec.config["max_episode_steps"_],
+            spec.config["frame_stack"_]),
         id_torso_subtreelinvel_(GetSensorId(model_, "torso_subtreelinvel")) {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name != "run") {
@@ -101,13 +104,13 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
 
   void Reset() override {
     ControlReset();
-    WriteState();
+    WriteState(true);
   }
 
   void Step(const Action& action) override {
     mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
     ControlStep(act);
-    WriteState();
+    WriteState(false);
   }
 
   float TaskGetReward() override {
@@ -119,13 +122,17 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
   bool TaskShouldTerminateEpisode() override { return false; }
 
  private:
-  void WriteState() {
+  void WriteState(bool reset) {
     auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
-    state["obs:position"_].Assign(data_->qpos + 1, model_->nq - 1);
-    state["obs:velocity"_].Assign(data_->qvel, model_->nv);
+    auto obs_position = state["obs:position"_];
+    AssignObservation("obs:position", &obs_position, data_->qpos + 1,
+                      model_->nq - 1, reset);
+    auto obs_velocity = state["obs:velocity"_];
+    AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
+                      reset);
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
 #endif

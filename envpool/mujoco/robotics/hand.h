@@ -41,7 +41,7 @@ class HandEnvFns {
   static decltype(auto) DefaultConfig() {
     return MakeDict(
         "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(20),
-        "xml_file"_.Bind(std::string("hand/reach.xml")),
+        "frame_stack"_.Bind(1), "xml_file"_.Bind(std::string("hand/reach.xml")),
         "hand_task"_.Bind(std::string("reach")),
         "reward_type"_.Bind(std::string("sparse")), "obs_dim"_.Bind(63),
         "goal_dim"_.Bind(15), "qpos_dim"_.Bind(24), "qvel_dim"_.Bind(24),
@@ -71,9 +71,12 @@ class HandEnvFns {
     int qvel_dim = conf["qvel_dim"_];
 #endif
     return MakeDict(
-        "obs:observation"_.Bind(Spec<mjtNum>({obs_dim}, {-inf, inf})),
-        "obs:achieved_goal"_.Bind(Spec<mjtNum>({goal_dim}, {-inf, inf})),
-        "obs:desired_goal"_.Bind(Spec<mjtNum>({goal_dim}, {-inf, inf})),
+        "obs:observation"_.Bind(StackSpec(Spec<mjtNum>({obs_dim}, {-inf, inf}),
+                                          conf["frame_stack"_])),
+        "obs:achieved_goal"_.Bind(StackSpec(
+            Spec<mjtNum>({goal_dim}, {-inf, inf}), conf["frame_stack"_])),
+        "obs:desired_goal"_.Bind(StackSpec(
+            Spec<mjtNum>({goal_dim}, {-inf, inf}), conf["frame_stack"_])),
         "info:is_success"_.Bind(Spec<mjtNum>({-1}, {0.0, 1.0})),
 #ifdef ENVPOOL_TEST
         "info:qpos0"_.Bind(Spec<mjtNum>({qpos_dim})),
@@ -169,7 +172,8 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
       : Env<HandEnvSpec>(spec, env_id),
         MujocoRobotEnv(spec.config["base_path"_], spec.config["xml_file"_],
                        spec.config["frame_skip"_],
-                       spec.config["max_episode_steps"_]),
+                       spec.config["max_episode_steps"_],
+                       spec.config["frame_stack"_]),
         task_type_(ParseTaskType(spec.config["hand_task"_])),
         sparse_reward_(spec.config["reward_type"_] == "sparse"),
         relative_control_(spec.config["relative_control"_]),
@@ -212,7 +216,7 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
     }
     goal_ = SampleGoal();
     CaptureResetState();
-    WriteState(0.0F);
+    WriteState(0.0F, true);
   }
 
   void Step(const Action& action) override {
@@ -220,7 +224,7 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
     DoSimulation();
     ++elapsed_step_;
     done_ = elapsed_step_ >= max_episode_steps_;
-    WriteState(static_cast<float>(ComputeReward(AchievedGoal(), goal_)));
+    WriteState(static_cast<float>(ComputeReward(AchievedGoal(), goal_)), false);
   }
 
  protected:
@@ -769,10 +773,11 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
     }
   }
 
-  void WriteState(float reward) {
+  void WriteState(float reward, bool reset) {
     auto state = Allocate();
     state["reward"_] = reward;
-    mjtNum* obs = static_cast<mjtNum*>(state["obs:observation"_].Data());
+    auto obs_observation = state["obs:observation"_];
+    mjtNum* obs = PrepareObservation("obs:observation", &obs_observation);
     auto [robot_qpos, robot_qvel] = RobotGetObs(model_, data_);
     for (mjtNum value : robot_qpos) {
       *(obs++) = value;
@@ -805,10 +810,14 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
         }
       }
     }
+    CommitObservation("obs:observation", &obs_observation, reset);
 
-    state["obs:achieved_goal"_].Assign(achieved_goal.data(),
-                                       achieved_goal.size());
-    state["obs:desired_goal"_].Assign(goal_.data(), goal_.size());
+    auto obs_achieved_goal = state["obs:achieved_goal"_];
+    AssignObservation("obs:achieved_goal", &obs_achieved_goal,
+                      achieved_goal.data(), achieved_goal.size(), reset);
+    auto obs_desired_goal = state["obs:desired_goal"_];
+    AssignObservation("obs:desired_goal", &obs_desired_goal, goal_.data(),
+                      goal_.size(), reset);
     state["info:is_success"_] = IsSuccess(achieved_goal, goal_) ? 1.0 : 0.0;
     state["info:distance"_] = InfoDistance(achieved_goal, goal_);
 #ifdef ENVPOOL_TEST

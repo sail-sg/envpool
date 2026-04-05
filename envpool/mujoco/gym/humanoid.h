@@ -32,8 +32,8 @@ class HumanoidEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
-        "frame_skip"_.Bind(5), "post_constraint"_.Bind(true),
-        "legacy_healthy_reward"_.Bind(true),
+        "frame_skip"_.Bind(5), "frame_stack"_.Bind(1),
+        "post_constraint"_.Bind(true), "legacy_healthy_reward"_.Bind(true),
         "exclude_worldbody_observations"_.Bind(false),
         "exclude_root_actuator_forces"_.Bind(false),
         "use_contact_force"_.Bind(false), "forward_reward_weight"_.Bind(1.25),
@@ -56,7 +56,8 @@ class HumanoidEnvFns {
     if (conf["exclude_root_actuator_forces"_]) {
       obs_n -= 6;
     }
-    return MakeDict("obs"_.Bind(Spec<mjtNum>({obs_n}, {-inf, inf})),
+    return MakeDict("obs"_.Bind(StackSpec(Spec<mjtNum>({obs_n}, {-inf, inf}),
+                                          conf["frame_stack"_])),
 #ifdef ENVPOOL_TEST
                     "info:qpos0"_.Bind(Spec<mjtNum>({24})),
                     "info:qvel0"_.Bind(Spec<mjtNum>({23})),
@@ -92,11 +93,11 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
  public:
   HumanoidEnv(const Spec& spec, int env_id)
       : Env<HumanoidEnvSpec>(spec, env_id),
-        MujocoEnv(std::string(spec.config["base_path"_]) +
-                      "/mujoco/assets_gym/" +
-                      std::string(spec.config["xml_file"_]),
-                  spec.config["frame_skip"_], spec.config["post_constraint"_],
-                  spec.config["max_episode_steps"_]),
+        MujocoEnv(
+            std::string(spec.config["base_path"_]) + "/mujoco/assets_gym/" +
+                std::string(spec.config["xml_file"_]),
+            spec.config["frame_skip"_], spec.config["post_constraint"_],
+            spec.config["max_episode_steps"_], spec.config["frame_stack"_]),
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         use_contact_force_(spec.config["use_contact_force"_]),
@@ -134,7 +135,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+    WriteState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true);
   }
 
   void Step(const Action& action) override {
@@ -176,7 +177,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
     done_ = (terminate_when_unhealthy_ ? !is_healthy : false) ||
             (elapsed_step_ >= max_episode_steps_);
     WriteState(reward, xv, yv, ctrl_cost, contact_cost, after[0], after[1],
-               healthy_reward);
+               healthy_reward, false);
   }
 
  private:
@@ -199,11 +200,12 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
 
   void WriteState(float reward, mjtNum xv, mjtNum yv, mjtNum ctrl_cost,
                   mjtNum contact_cost, mjtNum x_after, mjtNum y_after,
-                  mjtNum healthy_reward) {
+                  mjtNum healthy_reward, bool reset) {
     auto state = Allocate();
     state["reward"_] = reward;
     // obs
-    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());
+    auto obs_state = state["obs"_];
+    mjtNum* obs = PrepareObservation(&obs_state);
     for (int i = no_pos_ ? 2 : 0; i < model_->nq; ++i) {
       *(obs++) = data_->qpos[i];
     }
@@ -229,6 +231,7 @@ class HumanoidEnv : public Env<HumanoidEnvSpec>, public MujocoEnv {
         *(obs++) = data_->cfrc_ext[i * 6 + j];
       }
     }
+    CommitObservation(&obs_state, reset);
     // info
     state["info:reward_linvel"_] = xv * forward_reward_weight_;
     state["info:reward_quadctrl"_] = -ctrl_cost;

@@ -21,13 +21,16 @@
 #include <mujoco.h>
 
 #include <array>
+#include <cstddef>
 #include <memory>
 #include <random>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "envpool/core/env.h"
 #include "envpool/mujoco/dmc/utils.h"
+#include "envpool/mujoco/frame_stack.h"
 #include "envpool/mujoco/offscreen_renderer.h"
 
 #ifndef M_PI
@@ -35,6 +38,8 @@
 #endif
 
 namespace mujoco_dmc {
+
+using envpool::mujoco::StackSpec;
 
 /*
  * This class combines with dmc Task and Physics API.
@@ -59,10 +64,11 @@ class MujocoEnv : public RenderableEnv {
   std::unique_ptr<mjtNum> qpos0_;
 #endif
   std::unique_ptr<envpool::mujoco::OffscreenRenderer> renderer_;
+  envpool::mujoco::FrameStackBuffer frame_stack_buffer_;
 
  public:
   MujocoEnv(const std::string& base_path, const std::string& raw_xml,
-            int n_sub_steps, int max_episode_steps);
+            int n_sub_steps, int max_episode_steps, int frame_stack);
   ~MujocoEnv() override;
 
   // rl control Environment
@@ -115,6 +121,24 @@ class MujocoEnv : public RenderableEnv {
 
   std::pair<int, int> RenderSize(int width, int height) const override {
     return {width > 0 ? width : 480, height > 0 ? height : 480};
+  }
+
+  mjtNum* PrepareObservation(std::string_view key, Array* target) {
+    return frame_stack_buffer_.Prepare(key, target);
+  }
+
+  void CommitObservation(std::string_view key, Array* target, bool reset) {
+    frame_stack_buffer_.Commit(key, target, reset);
+  }
+
+  void AssignObservation(std::string_view key, Array* target,
+                         const mjtNum* data, std::size_t size, bool reset) {
+    frame_stack_buffer_.Assign(key, target, data, size, reset);
+  }
+
+  void AssignObservation(std::string_view key, Array* target, mjtNum value,
+                         bool reset) {
+    frame_stack_buffer_.AssignScalar(key, target, value, reset);
   }
 };
 

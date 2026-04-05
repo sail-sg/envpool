@@ -39,6 +39,7 @@ class AdroitEnvFns {
   static decltype(auto) DefaultConfig() {
     return MakeDict(
         "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(5),
+        "frame_stack"_.Bind(1),
         "xml_file"_.Bind(std::string("adroit_hand/adroit_door.xml")),
         "adroit_task"_.Bind(std::string("door")),
         "reward_type"_.Bind(std::string("dense")), "obs_dim"_.Bind(39),
@@ -50,16 +51,20 @@ class AdroitEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
 #ifdef ENVPOOL_TEST
-    return MakeDict("obs"_.Bind(Spec<mjtNum>({conf["obs_dim"_]}, {-inf, inf})),
-                    "info:success"_.Bind(Spec<mjtNum>({-1}, {0.0, 1.0})),
-                    "info:distance"_.Bind(Spec<mjtNum>({-1}, {0.0, inf})),
-                    "info:qpos0"_.Bind(Spec<mjtNum>({conf["qpos_dim"_]})),
-                    "info:qvel0"_.Bind(Spec<mjtNum>({conf["qvel_dim"_]})),
-                    "info:extra0"_.Bind(Spec<mjtNum>({conf["reset_dim"_]})));
+    return MakeDict(
+        "obs"_.Bind(StackSpec(Spec<mjtNum>({conf["obs_dim"_]}, {-inf, inf}),
+                              conf["frame_stack"_])),
+        "info:success"_.Bind(Spec<mjtNum>({-1}, {0.0, 1.0})),
+        "info:distance"_.Bind(Spec<mjtNum>({-1}, {0.0, inf})),
+        "info:qpos0"_.Bind(Spec<mjtNum>({conf["qpos_dim"_]})),
+        "info:qvel0"_.Bind(Spec<mjtNum>({conf["qvel_dim"_]})),
+        "info:extra0"_.Bind(Spec<mjtNum>({conf["reset_dim"_]})));
 #else
-    return MakeDict("obs"_.Bind(Spec<mjtNum>({conf["obs_dim"_]}, {-inf, inf})),
-                    "info:success"_.Bind(Spec<mjtNum>({-1}, {0.0, 1.0})),
-                    "info:distance"_.Bind(Spec<mjtNum>({-1}, {0.0, inf})));
+    return MakeDict(
+        "obs"_.Bind(StackSpec(Spec<mjtNum>({conf["obs_dim"_]}, {-inf, inf}),
+                              conf["frame_stack"_])),
+        "info:success"_.Bind(Spec<mjtNum>({-1}, {0.0, 1.0})),
+        "info:distance"_.Bind(Spec<mjtNum>({-1}, {0.0, inf})));
 #endif
   }
 
@@ -120,7 +125,8 @@ class AdroitEnv : public Env<AdroitEnvSpec>, public MujocoRobotEnv {
       : Env<AdroitEnvSpec>(spec, env_id),
         MujocoRobotEnv(spec.config["base_path"_], spec.config["xml_file"_],
                        spec.config["frame_skip"_],
-                       spec.config["max_episode_steps"_]),
+                       spec.config["max_episode_steps"_],
+                       spec.config["frame_stack"_]),
         task_type_(ParseTaskType(spec.config["adroit_task"_])),
         sparse_reward_(spec.config["reward_type"_] == "sparse"),
         obs_dim_(spec.config["obs_dim"_]),
@@ -146,7 +152,7 @@ class AdroitEnv : public Env<AdroitEnvSpec>, public MujocoRobotEnv {
     ResetTaskState();
     CaptureResetState();
     CaptureTaskState();
-    WriteState(0.0);
+    WriteState(0.0, 0.0, false, true);
   }
 
   void Step(const Action& action) override {
@@ -161,7 +167,8 @@ class AdroitEnv : public Env<AdroitEnvSpec>, public MujocoRobotEnv {
     ++elapsed_step_;
     done_ = elapsed_step_ >= max_episode_steps_;
     auto reward_info = ComputeRewardInfo();
-    WriteState(reward_info.reward, reward_info.distance, reward_info.success);
+    WriteState(reward_info.reward, reward_info.distance, reward_info.success,
+               false);
   }
 
  protected:
@@ -624,13 +631,15 @@ class AdroitEnv : public Env<AdroitEnvSpec>, public MujocoRobotEnv {
     throw std::runtime_error("Unknown Adroit task type.");
   }
 
-  void WriteState(mjtNum reward, mjtNum distance = 0.0, bool success = false) {
+  void WriteState(mjtNum reward, mjtNum distance = 0.0, bool success = false,
+                  bool reset = false) {
     State state = Allocate();
     auto obs = Observation();
     if (static_cast<int>(obs.size()) != obs_dim_) {
       throw std::runtime_error("Unexpected Adroit observation size.");
     }
-    state["obs"_].Assign(obs.data(), obs.size());
+    auto obs_state = state["obs"_];
+    AssignObservation("obs", &obs_state, obs.data(), obs.size(), reset);
     state["reward"_] = static_cast<float>(reward);
     state["info:success"_] = success ? 1.0 : 0.0;
     state["info:distance"_] = distance;

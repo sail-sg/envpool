@@ -31,16 +31,16 @@ namespace mujoco_gym {
 class HumanoidStandupEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("frame_skip"_.Bind(5), "post_constraint"_.Bind(true),
-                    "forward_reward_weight"_.Bind(1.0),
-                    "exclude_current_positions_from_observation"_.Bind(true),
-                    "exclude_worldbody_observations"_.Bind(false),
-                    "exclude_root_actuator_forces"_.Bind(false),
-                    "xml_file"_.Bind(std::string("humanoidstandup.xml")),
-                    "ctrl_cost_weight"_.Bind(0.1),
-                    "contact_cost_weight"_.Bind(5e-7),
-                    "contact_cost_max"_.Bind(10.0), "healthy_reward"_.Bind(1.0),
-                    "reset_noise_scale"_.Bind(1e-2));
+    return MakeDict(
+        "frame_skip"_.Bind(5), "frame_stack"_.Bind(1),
+        "post_constraint"_.Bind(true), "forward_reward_weight"_.Bind(1.0),
+        "exclude_current_positions_from_observation"_.Bind(true),
+        "exclude_worldbody_observations"_.Bind(false),
+        "exclude_root_actuator_forces"_.Bind(false),
+        "xml_file"_.Bind(std::string("humanoidstandup.xml")),
+        "ctrl_cost_weight"_.Bind(0.1), "contact_cost_weight"_.Bind(5e-7),
+        "contact_cost_max"_.Bind(10.0), "healthy_reward"_.Bind(1.0),
+        "reset_noise_scale"_.Bind(1e-2));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -58,7 +58,8 @@ class HumanoidStandupEnvFns {
         "info:qpos0"_.Bind(Spec<mjtNum>({24})),
         "info:qvel0"_.Bind(Spec<mjtNum>({23})),
 #endif
-        "obs"_.Bind(Spec<mjtNum>({obs_n}, {-inf, inf})),
+        "obs"_.Bind(StackSpec(Spec<mjtNum>({obs_n}, {-inf, inf}),
+                              conf["frame_stack"_])),
         "info:reward_linup"_.Bind(Spec<mjtNum>({-1})),
         "info:reward_quadctrl"_.Bind(Spec<mjtNum>({-1})),
         "info:reward_alive"_.Bind(Spec<mjtNum>({-1})),
@@ -84,11 +85,11 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
  public:
   HumanoidStandupEnv(const Spec& spec, int env_id)
       : Env<HumanoidStandupEnvSpec>(spec, env_id),
-        MujocoEnv(std::string(spec.config["base_path"_]) +
-                      "/mujoco/assets_gym/" +
-                      std::string(spec.config["xml_file"_]),
-                  spec.config["frame_skip"_], spec.config["post_constraint"_],
-                  spec.config["max_episode_steps"_]),
+        MujocoEnv(
+            std::string(spec.config["base_path"_]) + "/mujoco/assets_gym/" +
+                std::string(spec.config["xml_file"_]),
+            spec.config["frame_skip"_], spec.config["post_constraint"_],
+            spec.config["max_episode_steps"_], spec.config["frame_stack"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         exclude_worldbody_observations_(
             spec.config["exclude_worldbody_observations"_]),
@@ -121,7 +122,7 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteState(0.0, 0.0, 0.0, 0.0);
+    WriteState(0.0, 0.0, 0.0, 0.0, true);
   }
 
   void Step(const Action& action) override {
@@ -149,16 +150,17 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
         static_cast<float>(xv * forward_reward_weight_ + healthy_reward_ -
                            ctrl_cost - contact_cost);
     done_ = (++elapsed_step_ >= max_episode_steps_);
-    WriteState(reward, xv, ctrl_cost, contact_cost);
+    WriteState(reward, xv, ctrl_cost, contact_cost, false);
   }
 
  private:
   void WriteState(float reward, mjtNum xv, mjtNum ctrl_cost,
-                  mjtNum contact_cost) {
+                  mjtNum contact_cost, bool reset) {
     auto state = Allocate();
     state["reward"_] = reward;
     // obs
-    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());
+    auto obs_state = state["obs"_];
+    mjtNum* obs = PrepareObservation(&obs_state);
     for (int i = no_pos_ ? 2 : 0; i < model_->nq; ++i) {
       *(obs++) = data_->qpos[i];
     }
@@ -184,6 +186,7 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
         *(obs++) = data_->cfrc_ext[i * 6 + j];
       }
     }
+    CommitObservation(&obs_state, reset);
     // info
     state["info:reward_linup"_] = xv * forward_reward_weight_;
     state["info:reward_quadctrl"_] = -ctrl_cost;

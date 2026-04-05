@@ -40,16 +40,18 @@ std::string GetPendulumXML(const std::string& base_path,
 class PendulumEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("frame_skip"_.Bind(1),
+    return MakeDict("frame_skip"_.Bind(1), "frame_stack"_.Bind(1),
                     "task_name"_.Bind(std::string("swingup")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs:orientation"_.Bind(Spec<mjtNum>({2})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({1}))
+    return MakeDict(
+        "obs:orientation"_.Bind(
+            StackSpec(Spec<mjtNum>({2}), conf["frame_stack"_])),
+        "obs:velocity"_.Bind(StackSpec(Spec<mjtNum>({1}), conf["frame_stack"_]))
 #ifdef ENVPOOL_TEST
-                        ,
-                    "info:qpos0"_.Bind(Spec<mjtNum>({1}))
+            ,
+        "info:qpos0"_.Bind(Spec<mjtNum>({1}))
 #endif
     );  // NOLINT
   }
@@ -72,8 +74,8 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public MujocoEnv {
         MujocoEnv(spec.config["base_path"_],
                   GetPendulumXML(spec.config["base_path"_],
                                  spec.config["task_name"_]),
-                  spec.config["frame_skip"_],
-                  spec.config["max_episode_steps"_]),
+                  spec.config["frame_skip"_], spec.config["max_episode_steps"_],
+                  spec.config["frame_stack"_]),
         id_hinge_(GetQvelId(model_, "hinge")),
         id_pole_(mj_name2id(model_, mjOBJ_XBODY, "pole")) {
     const std::string& task_name = spec.config["task_name"_];
@@ -94,13 +96,13 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public MujocoEnv {
 
   void Reset() override {
     ControlReset();
-    WriteState();
+    WriteState(true);
   }
 
   void Step(const Action& action) override {
     mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
     ControlStep(act);
-    WriteState();
+    WriteState(false);
   }
 
   float TaskGetReward() override {
@@ -109,14 +111,17 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public MujocoEnv {
   bool TaskShouldTerminateEpisode() override { return false; }
 
  private:
-  void WriteState() {
+  void WriteState(bool reset) {
     auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
     const auto& pole_orient = PoleOrientation();
-    state["obs:orientation"_].Assign(pole_orient.data(), pole_orient.size());
-    state["obs:velocity"_] = AngularVelocity();
+    auto obs_orientation = state["obs:orientation"_];
+    AssignObservation("obs:orientation", &obs_orientation, pole_orient.data(),
+                      pole_orient.size(), reset);
+    auto obs_velocity = state["obs:velocity"_];
+    AssignObservation("obs:velocity", &obs_velocity, AngularVelocity(), reset);
     // info for check alignment
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);

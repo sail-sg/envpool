@@ -50,7 +50,7 @@ std::string GetSwimmerXML(const std::string& base_path,
 class SwimmerEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("frame_skip"_.Bind(15),
+    return MakeDict("frame_skip"_.Bind(15), "frame_stack"_.Bind(1),
                     "task_name"_.Bind(std::string("swimmer6")));
   }
   template <typename Config>
@@ -65,9 +65,12 @@ class SwimmerEnvFns {
       throw std::runtime_error("Unknown task_name " + task_name +
                                " for dmc swimmer.");
     }
-    return MakeDict("obs:joints"_.Bind(Spec<mjtNum>({n_bodies - 1})),
-                    "obs:to_target"_.Bind(Spec<mjtNum>({2})),
-                    "obs:body_velocities"_.Bind(Spec<mjtNum>({3 * n_bodies}))
+    return MakeDict("obs:joints"_.Bind(StackSpec(Spec<mjtNum>({n_bodies - 1}),
+                                                 conf["frame_stack"_])),
+                    "obs:to_target"_.Bind(
+                        StackSpec(Spec<mjtNum>({2}), conf["frame_stack"_])),
+                    "obs:body_velocities"_.Bind(StackSpec(
+                        Spec<mjtNum>({3 * n_bodies}), conf["frame_stack"_]))
 #ifdef ENVPOOL_TEST
                         ,
                     "info:qpos0"_.Bind(Spec<mjtNum>({n_bodies + 2})),
@@ -104,7 +107,8 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
         MujocoEnv(
             spec.config["base_path"_],
             GetSwimmerXML(spec.config["base_path"_], spec.config["task_name"_]),
-            spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
+            spec.config["frame_skip"_], spec.config["max_episode_steps"_],
+            spec.config["frame_stack"_]),
         id_head_(mj_name2id(model_, mjOBJ_GEOM, "head")),
         id_nose_(mj_name2id(model_, mjOBJ_GEOM, "nose")),
         id_target_(mj_name2id(model_, mjOBJ_GEOM, "target")),
@@ -134,13 +138,13 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
 
   void Reset() override {
     ControlReset();
-    WriteState();
+    WriteState(true);
   }
 
   void Step(const Action& action) override {
     mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
     ControlStep(act);
-    WriteState();
+    WriteState(false);
   }
 
   float TaskGetReward() override {
@@ -153,7 +157,7 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
   bool TaskShouldTerminateEpisode() override { return false; }
 
  private:
-  void WriteState() {
+  void WriteState(bool reset) {
     const auto& joints = Joints();
     const auto& to_target = NoseToTarget();
     const auto& body_velocities = BodyVelocities();
@@ -162,10 +166,15 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
-    state["obs:joints"_].Assign(joints.data(), joints.size());
-    state["obs:to_target"_].Assign(to_target.data(), to_target.size());
-    state["obs:body_velocities"_].Assign(body_velocities.data(),
-                                         body_velocities.size());
+    auto obs_joints = state["obs:joints"_];
+    AssignObservation("obs:joints", &obs_joints, joints.data(), joints.size(),
+                      reset);
+    auto obs_to_target = state["obs:to_target"_];
+    AssignObservation("obs:to_target", &obs_to_target, to_target.data(),
+                      to_target.size(), reset);
+    auto obs_body_velocities = state["obs:body_velocities"_];
+    AssignObservation("obs:body_velocities", &obs_body_velocities,
+                      body_velocities.data(), body_velocities.size(), reset);
     // info
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);

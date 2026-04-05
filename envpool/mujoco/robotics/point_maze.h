@@ -45,6 +45,7 @@ class PointMazeEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict("reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(1),
+                    "frame_stack"_.Bind(1),
                     "maze_map"_.Bind(std::string("U_MAZE")),
                     "reward_type"_.Bind(std::string("sparse")),
                     "continuing_task"_.Bind(true), "reset_target"_.Bind(false),
@@ -57,18 +58,24 @@ class PointMazeEnvFns {
     (void)conf;
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
 #ifdef ENVPOOL_TEST
-    return MakeDict("obs:observation"_.Bind(Spec<mjtNum>({4}, {-inf, inf})),
-                    "obs:achieved_goal"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-                    "obs:desired_goal"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
+    return MakeDict("obs:observation"_.Bind(StackSpec(
+                        Spec<mjtNum>({4}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:achieved_goal"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:desired_goal"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
                     "info:success"_.Bind(Spec<mjtNum>({-1}, {0.0, 1.0})),
                     "info:distance"_.Bind(Spec<mjtNum>({-1}, {0.0, inf})),
                     "info:qpos0"_.Bind(Spec<mjtNum>({2})),
                     "info:qvel0"_.Bind(Spec<mjtNum>({2})),
                     "info:goal0"_.Bind(Spec<mjtNum>({2})));
 #else
-    return MakeDict("obs:observation"_.Bind(Spec<mjtNum>({4}, {-inf, inf})),
-                    "obs:achieved_goal"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-                    "obs:desired_goal"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
+    return MakeDict("obs:observation"_.Bind(StackSpec(
+                        Spec<mjtNum>({4}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:achieved_goal"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:desired_goal"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
                     "info:success"_.Bind(Spec<mjtNum>({-1}, {0.0, 1.0})),
                     "info:distance"_.Bind(Spec<mjtNum>({-1}, {0.0, inf})));
 #endif
@@ -107,7 +114,8 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
                                     spec.config["maze_size_scaling"_],
                                     spec.config["maze_height"_]),
                        spec.config["frame_skip"_],
-                       spec.config["max_episode_steps"_]),
+                       spec.config["max_episode_steps"_],
+                       spec.config["frame_stack"_]),
         sparse_reward_(spec.config["reward_type"_] == "sparse"),
         continuing_task_(spec.config["continuing_task"_]),
         reset_target_(spec.config["reset_target"_]),
@@ -139,7 +147,7 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
     CaptureResetState();
     auto achieved_goal = AchievedGoal();
     mjtNum distance = GoalDistance(achieved_goal, goal_);
-    WriteState(0.0, distance, distance <= 0.45);
+    WriteState(0.0, distance, distance <= 0.45, true);
   }
 
   void Step(const Action& action) override {
@@ -167,7 +175,7 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
     }
     bool terminated = !continuing_task_ && success;
     done_ = terminated || elapsed_step_ >= max_episode_steps_;
-    WriteState(reward, distance, success);
+    WriteState(reward, distance, success, false);
     UpdateGoal(achieved_goal);
   }
 
@@ -482,17 +490,22 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
     UpdateTargetSitePos();
   }
 
-  void WriteState(mjtNum reward, mjtNum distance, bool success) {
+  void WriteState(mjtNum reward, mjtNum distance, bool success, bool reset) {
     State state = Allocate();
-    auto* obs = static_cast<mjtNum*>(state["obs:observation"_].Data());
+    auto obs_observation = state["obs:observation"_];
+    auto* obs = PrepareObservation("obs:observation", &obs_observation);
     obs[0] = data_->qpos[0];
     obs[1] = data_->qpos[1];
     obs[2] = data_->qvel[0];
     obs[3] = data_->qvel[1];
+    CommitObservation("obs:observation", &obs_observation, reset);
     auto achieved_goal = AchievedGoal();
-    state["obs:achieved_goal"_].Assign(achieved_goal.data(),
-                                       achieved_goal.size());
-    state["obs:desired_goal"_].Assign(goal_.data(), goal_.size());
+    auto obs_achieved_goal = state["obs:achieved_goal"_];
+    AssignObservation("obs:achieved_goal", &obs_achieved_goal,
+                      achieved_goal.data(), achieved_goal.size(), reset);
+    auto obs_desired_goal = state["obs:desired_goal"_];
+    AssignObservation("obs:desired_goal", &obs_desired_goal, goal_.data(),
+                      goal_.size(), reset);
     state["reward"_] = static_cast<float>(reward);
     state["info:success"_] = success ? 1.0 : 0.0;
     state["info:distance"_] = distance;

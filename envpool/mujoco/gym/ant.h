@@ -33,8 +33,8 @@ class AntEnvFns {
   static decltype(auto) DefaultConfig() {
     return MakeDict(
         "reward_threshold"_.Bind(6000.0), "frame_skip"_.Bind(5),
-        "post_constraint"_.Bind(true), "use_contact_force"_.Bind(false),
-        "legacy_healthy_reward"_.Bind(true),
+        "frame_stack"_.Bind(1), "post_constraint"_.Bind(true),
+        "use_contact_force"_.Bind(false), "legacy_healthy_reward"_.Bind(true),
         "exclude_worldbody_contact_forces"_.Bind(false),
         "terminate_when_unhealthy"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
@@ -52,7 +52,8 @@ class AntEnvFns {
     if (conf["use_contact_force"_]) {
       obs_n += conf["exclude_worldbody_contact_forces"_] ? 13 * 6 : 14 * 6;
     }
-    return MakeDict("obs"_.Bind(Spec<mjtNum>({obs_n}, {-inf, inf})),
+    return MakeDict("obs"_.Bind(StackSpec(Spec<mjtNum>({obs_n}, {-inf, inf}),
+                                          conf["frame_stack"_])),
 #ifdef ENVPOOL_TEST
                     "info:qpos0"_.Bind(Spec<mjtNum>({15})),
                     "info:qvel0"_.Bind(Spec<mjtNum>({14})),
@@ -90,11 +91,11 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
  public:
   AntEnv(const Spec& spec, int env_id)
       : Env<AntEnvSpec>(spec, env_id),
-        MujocoEnv(std::string(spec.config["base_path"_]) +
-                      "/mujoco/assets_gym/" +
-                      std::string(spec.config["xml_file"_]),
-                  spec.config["frame_skip"_], spec.config["post_constraint"_],
-                  spec.config["max_episode_steps"_]),
+        MujocoEnv(
+            std::string(spec.config["base_path"_]) + "/mujoco/assets_gym/" +
+                std::string(spec.config["xml_file"_]),
+            spec.config["frame_skip"_], spec.config["post_constraint"_],
+            spec.config["max_episode_steps"_], spec.config["frame_stack"_]),
         id_torso_(mj_name2id(model_, mjOBJ_XBODY, "torso")),
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
@@ -133,7 +134,7 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+    WriteState(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true);
   }
 
   void Step(const Action& action) override {
@@ -180,7 +181,7 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
     done_ = (terminate_when_unhealthy_ ? !is_healthy : false) ||
             (elapsed_step_ >= max_episode_steps_);
     WriteState(reward, xv, yv, ctrl_cost, contact_cost, x_after, y_after,
-               healthy_reward);
+               healthy_reward, false);
   }
 
  private:
@@ -203,11 +204,12 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
 
   void WriteState(float reward, mjtNum xv, mjtNum yv, mjtNum ctrl_cost,
                   mjtNum contact_cost, mjtNum x_after, mjtNum y_after,
-                  mjtNum healthy_reward) {
+                  mjtNum healthy_reward, bool reset) {
     auto state = Allocate();
     state["reward"_] = reward;
     // obs
-    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());
+    auto obs_state = state["obs"_];
+    mjtNum* obs = PrepareObservation(&obs_state);
     for (int i = no_pos_ ? 2 : 0; i < model_->nq; ++i) {
       *(obs++) = data_->qpos[i];
     }
@@ -224,6 +226,7 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
         }
       }
     }
+    CommitObservation(&obs_state, reset);
     // info
     state["info:reward_forward"_] = xv * forward_reward_weight_;
     state["info:reward_ctrl"_] = -ctrl_cost;

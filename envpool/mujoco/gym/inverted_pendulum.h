@@ -32,7 +32,8 @@ class InvertedPendulumEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict("reward_threshold"_.Bind(950.0), "frame_skip"_.Bind(2),
-                    "post_constraint"_.Bind(true), "healthy_reward"_.Bind(1.0),
+                    "frame_stack"_.Bind(1), "post_constraint"_.Bind(true),
+                    "healthy_reward"_.Bind(1.0),
                     "reward_if_not_terminated"_.Bind(false),
                     "xml_file"_.Bind(std::string("inverted_pendulum.xml")),
                     "healthy_z_min"_.Bind(-0.2), "healthy_z_max"_.Bind(0.2),
@@ -42,11 +43,13 @@ class InvertedPendulumEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
 #ifdef ENVPOOL_TEST
-    return MakeDict("obs"_.Bind(Spec<mjtNum>({4}, {-inf, inf})),
+    return MakeDict("obs"_.Bind(StackSpec(Spec<mjtNum>({4}, {-inf, inf}),
+                                          conf["frame_stack"_])),
                     "info:qpos0"_.Bind(Spec<mjtNum>({2})),
                     "info:qvel0"_.Bind(Spec<mjtNum>({2})));
 #else
-    return MakeDict("obs"_.Bind(Spec<mjtNum>({4}, {-inf, inf})));
+    return MakeDict("obs"_.Bind(
+        StackSpec(Spec<mjtNum>({4}, {-inf, inf}), conf["frame_stack"_])));
 #endif
   }
   template <typename Config>
@@ -67,11 +70,11 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
  public:
   InvertedPendulumEnv(const Spec& spec, int env_id)
       : Env<InvertedPendulumEnvSpec>(spec, env_id),
-        MujocoEnv(std::string(spec.config["base_path"_]) +
-                      "/mujoco/assets_gym/" +
-                      std::string(spec.config["xml_file"_]),
-                  spec.config["frame_skip"_], spec.config["post_constraint"_],
-                  spec.config["max_episode_steps"_]),
+        MujocoEnv(
+            std::string(spec.config["base_path"_]) + "/mujoco/assets_gym/" +
+                std::string(spec.config["xml_file"_]),
+            spec.config["frame_skip"_], spec.config["post_constraint"_],
+            spec.config["max_episode_steps"_], spec.config["frame_stack"_]),
         reward_if_not_terminated_(spec.config["reward_if_not_terminated"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
         healthy_z_min_(spec.config["healthy_z_min"_]),
@@ -98,7 +101,7 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteState(0.0);
+    WriteState(0.0, true);
   }
 
   void Step(const Action& action) override {
@@ -109,8 +112,9 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
     bool terminated = !IsHealthy();
     ++elapsed_step_;
     done_ = terminated || (elapsed_step_ >= max_episode_steps_);
-    WriteState(reward_if_not_terminated_ ? static_cast<float>(!terminated)
-                                         : 1.0);
+    WriteState(
+        reward_if_not_terminated_ ? static_cast<float>(!terminated) : 1.0,
+        false);
   }
 
  private:
@@ -131,17 +135,19 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
     return true;
   }
 
-  void WriteState(float reward) {
+  void WriteState(float reward, bool reset) {
     auto state = Allocate();
     state["reward"_] = reward;
     // obs
-    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());
+    auto obs_state = state["obs"_];
+    mjtNum* obs = PrepareObservation(&obs_state);
     for (int i = 0; i < model_->nq; ++i) {
       *(obs++) = data_->qpos[i];
     }
     for (int i = 0; i < model_->nv; ++i) {
       *(obs++) = data_->qvel[i];
     }
+    CommitObservation(&obs_state, reset);
     // info
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_, model_->nq);
