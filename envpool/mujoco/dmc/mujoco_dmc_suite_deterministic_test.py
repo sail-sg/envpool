@@ -30,7 +30,9 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
         blacklist: list[str] | None = None,
         num_envs: int = 4,
     ) -> None:
-        domain_name = "".join([g[:1].upper() + g[1:] for g in domain.split("_")])
+        domain_name = "".join([
+            g[:1].upper() + g[1:] for g in domain.split("_")
+        ])
         task_name = "".join([g[:1].upper() + g[1:] for g in task.split("_")])
         task_id = f"{domain_name}{task_name}-v1"
         np.random.seed(0)
@@ -39,16 +41,14 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
         env2 = make_dm(task_id, num_envs=num_envs, seed=1)
         act_spec = env0.action_spec()
         for t in range(3000):
-            action = np.array(
-                [
-                    np.random.uniform(
-                        low=act_spec.minimum,
-                        high=act_spec.maximum,
-                        size=act_spec.shape,
-                    )
-                    for _ in range(num_envs)
-                ]
-            )
+            action = np.array([
+                np.random.uniform(
+                    low=act_spec.minimum,
+                    high=act_spec.maximum,
+                    size=act_spec.shape,
+                )
+                for _ in range(num_envs)
+            ])
             ts0 = env0.step(action)
             obs0 = ts0.observation
             obs1 = env1.step(action).observation
@@ -60,7 +60,10 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
                 np.testing.assert_allclose(o0, o1)
                 if blacklist and k in blacklist:
                     continue
-                if np.abs(o0).sum() > 0 and ts0.step_type[0] != dm_env.StepType.FIRST:
+                if (
+                    np.abs(o0).sum() > 0
+                    and ts0.step_type[0] != dm_env.StepType.FIRST
+                ):
                     self.assertFalse(np.allclose(o0, o2), (t, k, o0, o2))
 
     def test_acrobot(self) -> None:
@@ -224,7 +227,9 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
             obs_spec0 = env0.observation_spec()
             obs_spec1 = env1.observation_spec()
             self.assertEqual(obs_spec0.orientations.shape, (14,))
-            self.assertEqual(obs_spec0.orientations.shape, obs_spec1.orientations.shape)
+            self.assertEqual(
+                obs_spec0.orientations.shape, obs_spec1.orientations.shape
+            )
             self.assertEqual(obs_spec0.height.shape, obs_spec1.height.shape)
             self.assertEqual(obs_spec0.velocity.shape, obs_spec1.velocity.shape)
 
@@ -233,7 +238,9 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
             np.testing.assert_allclose(
                 ts0.observation.orientations, ts1.observation.orientations
             )
-            np.testing.assert_allclose(ts0.observation.height, ts1.observation.height)
+            np.testing.assert_allclose(
+                ts0.observation.height, ts1.observation.height
+            )
             np.testing.assert_allclose(
                 ts0.observation.velocity, ts1.observation.velocity
             )
@@ -245,7 +252,9 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
             np.testing.assert_allclose(
                 ts0.observation.orientations, ts1.observation.orientations
             )
-            np.testing.assert_allclose(ts0.observation.height, ts1.observation.height)
+            np.testing.assert_allclose(
+                ts0.observation.height, ts1.observation.height
+            )
             np.testing.assert_allclose(
                 ts0.observation.velocity, ts1.observation.velocity
             )
