@@ -89,14 +89,18 @@ class _AtariEnvPoolTest(absltest.TestCase):
         self.assertEqual(breakout_hard.spec.config.difficulty, 1)
         breakout_default_obs, _ = breakout_default.reset()
         breakout_hard_obs, _ = breakout_hard.reset()
-        self.assertFalse(np.array_equal(breakout_default_obs, breakout_hard_obs))
+        self.assertFalse(
+            np.array_equal(breakout_default_obs, breakout_hard_obs)
+        )
 
         freeway_default = make_gym("Freeway-v5", **kwargs)
         freeway_alt_mode = make_gym("Freeway-v5", mode=1, **kwargs)
         self.assertEqual(freeway_alt_mode.spec.config.mode, 1)
         freeway_default_obs, _ = freeway_default.reset()
         freeway_alt_mode_obs, _ = freeway_alt_mode.reset()
-        self.assertFalse(np.array_equal(freeway_default_obs, freeway_alt_mode_obs))
+        self.assertFalse(
+            np.array_equal(freeway_default_obs, freeway_alt_mode_obs)
+        )
 
     def test_align(self) -> None:
         """Make sure gym's envpool and dm_env's envpool generate the same data."""
