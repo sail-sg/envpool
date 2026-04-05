@@ -55,36 +55,36 @@ TEST(MjcEnvPoolTest, CheckAction) {
 
 TEST(MjcEnvPoolTest, FrameStack) {
   auto config = mujoco_gym::HalfCheetahEnvSpec::kDefaultConfig;
-  constexpr int kNumEnvs = 1;
-  constexpr int kFrameStack = 4;
-  constexpr int kObsDim = 17;
-  config["num_envs"_] = kNumEnvs;
-  config["batch_size"_] = kNumEnvs;
+  constexpr int num_envs = 1;
+  constexpr int frame_stack = 4;
+  constexpr int obs_dim = 17;
+  config["num_envs"_] = num_envs;
+  config["batch_size"_] = num_envs;
   config["seed"_] = 0;
-  config["frame_stack"_] = kFrameStack;
+  config["frame_stack"_] = frame_stack;
   mujoco_gym::HalfCheetahEnvSpec spec(config);
   EXPECT_EQ(spec.state_spec["obs"_].shape,
-            std::vector<int>({kFrameStack, kObsDim}));
+            std::vector<int>({frame_stack, obs_dim}));
 
   mujoco_gym::HalfCheetahEnvPool envpool(spec);
-  TArray<int> all_env_ids(Spec<int>({kNumEnvs}));
+  TArray<int> all_env_ids(Spec<int>({num_envs}));
   all_env_ids[0] = 0;
   envpool.Reset(all_env_ids);
 
   MjcState reset_state(envpool.Recv());
   EXPECT_EQ(reset_state["obs"_].Shape(),
-            std::vector<std::size_t>({kNumEnvs, kFrameStack, kObsDim}));
+            std::vector<std::size_t>({num_envs, frame_stack, obs_dim}));
   const auto reset_obs = TArray<mjtNum>(reset_state["obs"_][0]);
   const auto* reset_ptr = static_cast<const mjtNum*>(reset_obs.Data());
-  for (int i = 1; i < kFrameStack; ++i) {
-    for (int j = 0; j < kObsDim; ++j) {
-      EXPECT_EQ(reset_ptr[j], reset_ptr[i * kObsDim + j]);
+  for (int i = 1; i < frame_stack; ++i) {
+    for (int j = 0; j < obs_dim; ++j) {
+      EXPECT_EQ(reset_ptr[j], reset_ptr[i * obs_dim + j]);
     }
   }
 
-  std::vector<Array> raw_action({Array(Spec<int>({kNumEnvs})),
-                                 Array(Spec<int>({kNumEnvs})),
-                                 Array(Spec<double>({kNumEnvs, 6}))});
+  std::vector<Array> raw_action({Array(Spec<int>({num_envs})),
+                                 Array(Spec<int>({num_envs})),
+                                 Array(Spec<double>({num_envs, 6}))});
   MjcAction action(raw_action);
   action["env_id"_][0] = 0;
   action["players.env_id"_][0] = 0;
@@ -95,18 +95,18 @@ TEST(MjcEnvPoolTest, FrameStack) {
 
   MjcState step_state(envpool.Recv());
   EXPECT_EQ(step_state["obs"_].Shape(),
-            std::vector<std::size_t>({kNumEnvs, kFrameStack, kObsDim}));
+            std::vector<std::size_t>({num_envs, frame_stack, obs_dim}));
   const auto step_obs = TArray<mjtNum>(step_state["obs"_][0]);
   const auto* step_ptr = static_cast<const mjtNum*>(step_obs.Data());
-  for (int i = 0; i < kFrameStack - 1; ++i) {
-    for (int j = 0; j < kObsDim; ++j) {
-      EXPECT_EQ(step_ptr[i * kObsDim + j], reset_ptr[j]);
+  for (int i = 0; i < frame_stack - 1; ++i) {
+    for (int j = 0; j < obs_dim; ++j) {
+      EXPECT_EQ(step_ptr[i * obs_dim + j], reset_ptr[j]);
     }
   }
   bool changed = false;
-  for (int j = 0; j < kObsDim; ++j) {
+  for (int j = 0; j < obs_dim; ++j) {
     changed =
-        changed || (step_ptr[(kFrameStack - 1) * kObsDim + j] != reset_ptr[j]);
+        changed || (step_ptr[(frame_stack - 1) * obs_dim + j] != reset_ptr[j]);
   }
   EXPECT_TRUE(changed);
 }
