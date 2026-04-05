@@ -133,7 +133,10 @@ from envpool.python.api import py_env
     GymInvertedDoublePendulumPixelDMEnvPool,
     GymInvertedDoublePendulumPixelGymEnvPool,
     GymInvertedDoublePendulumPixelGymnasiumEnvPool,
-) = py_env(_GymInvertedDoublePendulumPixelEnvSpec, _GymInvertedDoublePendulumPixelEnvPool)
+) = py_env(
+    _GymInvertedDoublePendulumPixelEnvSpec,
+    _GymInvertedDoublePendulumPixelEnvPool,
+)
 (
     GymInvertedPendulumEnvSpec,
     GymInvertedPendulumDMEnvPool,

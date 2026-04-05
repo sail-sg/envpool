@@ -33,6 +33,7 @@
 #include <vector>
 
 #include "envpool/core/array.h"
+#include "envpool/core/dict.h"
 #include "envpool/core/spec.h"
 
 namespace envpool::mujoco {

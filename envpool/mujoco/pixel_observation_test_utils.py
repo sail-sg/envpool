@@ -156,9 +156,7 @@ def assert_tasks_align_with_render_for_three_steps(
             )
             try:
                 obs, _ = env.reset()
-                test.assertEqual(
-                    obs.shape, (1, 3, RENDER_HEIGHT, RENDER_WIDTH)
-                )
+                test.assertEqual(obs.shape, (1, 3, RENDER_HEIGHT, RENDER_WIDTH))
                 test.assertEqual(obs.dtype, np.uint8)
                 render = env.render(env_ids=[0])
                 assert render is not None

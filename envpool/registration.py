@@ -106,7 +106,7 @@ class EnvRegistry:
     def _pixel_variant_name(class_name: str, suffix: str) -> str:
         if not class_name.endswith(suffix):
             raise ValueError(f"{class_name} does not end with {suffix}")
-        return f"{class_name[:-len(suffix)]}Pixel{suffix}"
+        return f"{class_name[: -len(suffix)]}Pixel{suffix}"
 
     @staticmethod
     def _pixel_variant_supported(import_path: str) -> bool:
