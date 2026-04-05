@@ -73,7 +73,7 @@ class HumanoidStandupEnvFns {
 
 using HumanoidStandupEnvSpec = EnvSpec<HumanoidStandupEnvFns>;
 using HumanoidStandupPixelEnvFns =
-PixelObservationEnvFns<HumanoidStandupEnvFns>;
+    PixelObservationEnvFns<HumanoidStandupEnvFns>;  // NOLINT
 using HumanoidStandupPixelEnvSpec = EnvSpec<HumanoidStandupPixelEnvFns>;
 
 template <typename EnvSpecT, bool kFromPixels>
@@ -217,9 +217,9 @@ class HumanoidStandupEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   }
 };
 using HumanoidStandupEnv =
-HumanoidStandupEnvBase<HumanoidStandupEnvSpec, false>;
+    HumanoidStandupEnvBase<HumanoidStandupEnvSpec, false>;  // NOLINT
 using HumanoidStandupPixelEnv =
-HumanoidStandupEnvBase<HumanoidStandupPixelEnvSpec, true>;
+    HumanoidStandupEnvBase<HumanoidStandupPixelEnvSpec, true>;  // NOLINT
 using HumanoidStandupEnvPool = AsyncEnvPool<HumanoidStandupEnv>;
 using HumanoidStandupPixelEnvPool = AsyncEnvPool<HumanoidStandupPixelEnv>;
 

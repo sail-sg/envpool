@@ -157,9 +157,8 @@ Spec<uint8_t> PixelObservationSpec(const Config& conf) {
 template <typename Key>
 inline constexpr bool IsObservationKey() {
   constexpr auto kKey = Key::kStrView;
-  return kKey == "obs" ||
-         (kKey.size() > 4 && kKey[0] == 'o' && kKey[1] == 'b' &&
-          kKey[2] == 's' && kKey[3] == ':');
+  return kKey == "obs" || (kKey.size() > 4 && kKey[0] == 'o' &&
+                           kKey[1] == 'b' && kKey[2] == 's' && kKey[3] == ':');
 }
 
 template <std::size_t I = 0, typename DictT>
@@ -191,9 +190,8 @@ class PixelObservationEnvFns : public BaseEnvFns {
 
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return ConcatDict(
-        NonObservationStateSpec(BaseEnvFns::StateSpec(conf)),
-        MakeDict("obs:pixels"_.Bind(PixelObservationSpec(conf))));
+    return ConcatDict(NonObservationStateSpec(BaseEnvFns::StateSpec(conf)),
+                      MakeDict("obs:pixels"_.Bind(PixelObservationSpec(conf))));
   }
 
   template <typename Config>

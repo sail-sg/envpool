@@ -60,7 +60,7 @@ class InvertedPendulumEnvFns {
 
 using InvertedPendulumEnvSpec = EnvSpec<InvertedPendulumEnvFns>;
 using InvertedPendulumPixelEnvFns =
-PixelObservationEnvFns<InvertedPendulumEnvFns>;
+    PixelObservationEnvFns<InvertedPendulumEnvFns>;  // NOLINT
 using InvertedPendulumPixelEnvSpec = EnvSpec<InvertedPendulumPixelEnvFns>;
 
 template <typename EnvSpecT, bool kFromPixels>
@@ -174,9 +174,9 @@ class InvertedPendulumEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   }
 };
 using InvertedPendulumEnv =
-InvertedPendulumEnvBase<InvertedPendulumEnvSpec, false>;
+    InvertedPendulumEnvBase<InvertedPendulumEnvSpec, false>;  // NOLINT
 using InvertedPendulumPixelEnv =
-InvertedPendulumEnvBase<InvertedPendulumPixelEnvSpec, true>;
+    InvertedPendulumEnvBase<InvertedPendulumPixelEnvSpec, true>;  // NOLINT
 using InvertedPendulumEnvPool = AsyncEnvPool<InvertedPendulumEnv>;
 using InvertedPendulumPixelEnvPool = AsyncEnvPool<InvertedPendulumPixelEnv>;
 
