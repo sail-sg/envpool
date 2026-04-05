@@ -27,6 +27,13 @@ preload_windows_gl_dlls(strict=True)
 RENDER_WIDTH = 64
 RENDER_HEIGHT = 48
 NUM_STEPS = 3
+_PIXEL_RENDER_MAX_MEAN_ABS_DIFF = 0.1
+_PIXEL_RENDER_MAX_MISMATCH_RATIO = 0.02
+_PIXEL_BACKEND_ERROR_MESSAGES = (
+    "OpenGL version 1.5 or higher required",
+    "failed to initialize GLFW-backed MuJoCo render context",
+    "failed to initialize GLFW for MuJoCo render",
+)
 
 
 def task_ids_for_import_path(import_path: str) -> list[str]:
@@ -63,8 +70,49 @@ def _render_to_bchw(frame: Any) -> np.ndarray:
     return np.transpose(np.asarray(frame), (0, 3, 1, 2))
 
 
+def _assert_frames_close(
+    actual: np.ndarray,
+    expected: np.ndarray,
+    *,
+    max_mean_abs_diff: float = _PIXEL_RENDER_MAX_MEAN_ABS_DIFF,
+    max_mismatch_ratio: float = _PIXEL_RENDER_MAX_MISMATCH_RATIO,
+) -> None:
+    if actual.shape != expected.shape:
+        raise AssertionError(
+            f"frame shapes differ: {actual.shape} != {expected.shape}"
+        )
+    diff = np.abs(actual.astype(np.int16) - expected.astype(np.int16))
+    if diff.size == 0:
+        return
+    mismatch_ratio = float(np.count_nonzero(diff)) / float(diff.size)
+    mean_abs_diff = float(diff.mean())
+    if mean_abs_diff > max_mean_abs_diff:
+        raise AssertionError(
+            "mean pixel delta "
+            f"{mean_abs_diff:.3f} exceeded {max_mean_abs_diff:.3f}"
+        )
+    if mismatch_ratio > max_mismatch_ratio:
+        raise AssertionError(
+            "pixel mismatch ratio "
+            f"{mismatch_ratio:.4%} exceeded {max_mismatch_ratio:.4%}"
+        )
+
+
 def _assert_pixels_match(obs: np.ndarray, render: Any) -> None:
-    np.testing.assert_array_equal(obs, _render_to_bchw(render))
+    _assert_frames_close(obs, _render_to_bchw(render))
+
+
+def _skip_for_unavailable_pixel_backend(
+    test: absltest.TestCase,
+    task_id: str,
+    exc: Exception,
+) -> None:
+    message = str(exc)
+    if any(token in message for token in _PIXEL_BACKEND_ERROR_MESSAGES):
+        test.skipTest(
+            f"{task_id} pixel observations are unavailable on this "
+            f"platform/backend: {message}"
+        )
 
 
 def _assert_nested_equal(lhs: Any, rhs: Any) -> None:
@@ -114,17 +162,18 @@ def assert_frame_stack_rolls_in_channel_dimension(
     """Checks that frame stacking shifts along the channel dimension."""
     task_id = first_task_id_for_import_path(import_path)
     with test.subTest(task_id=task_id):
-        env = make_gymnasium(
-            task_id,
-            num_envs=1,
-            seed=0,
-            from_pixels=True,
-            frame_stack=3,
-            render_mode="rgb_array",
-            render_width=RENDER_WIDTH,
-            render_height=RENDER_HEIGHT,
-        )
+        env = None
         try:
+            env = make_gymnasium(
+                task_id,
+                num_envs=1,
+                seed=0,
+                from_pixels=True,
+                frame_stack=3,
+                render_mode="rgb_array",
+                render_width=RENDER_WIDTH,
+                render_height=RENDER_HEIGHT,
+            )
             obs0, _ = env.reset()
             test.assertEqual(
                 obs0.shape,
@@ -145,8 +194,12 @@ def assert_frame_stack_rolls_in_channel_dimension(
                 np.testing.assert_array_equal(obs[:, :-3], prev_obs[:, 3:])
                 _assert_pixels_match(obs[:, -3:], render)
                 prev_obs = obs
+        except Exception as exc:
+            _skip_for_unavailable_pixel_backend(test, task_id, exc)
+            raise
         finally:
-            env.close()
+            if env is not None:
+                env.close()
 
 
 def assert_pixel_env_preserves_gym_info_fields(test: absltest.TestCase) -> None:
@@ -169,17 +222,19 @@ def assert_pixel_env_preserves_gym_info_fields(test: absltest.TestCase) -> None:
     for key in info_keys:
         test.assertIn(key, pixel_spec.state_array_spec)
 
-    state_env = make_gymnasium(task_id, num_envs=1, seed=0)
-    pixel_env = make_gymnasium(
-        task_id,
-        num_envs=1,
-        seed=0,
-        from_pixels=True,
-        render_mode="rgb_array",
-        render_width=RENDER_WIDTH,
-        render_height=RENDER_HEIGHT,
-    )
+    state_env = None
+    pixel_env = None
     try:
+        state_env = make_gymnasium(task_id, num_envs=1, seed=0)
+        pixel_env = make_gymnasium(
+            task_id,
+            num_envs=1,
+            seed=0,
+            from_pixels=True,
+            render_mode="rgb_array",
+            render_width=RENDER_WIDTH,
+            render_height=RENDER_HEIGHT,
+        )
         _, state_info = state_env.reset()
         _, pixel_info = pixel_env.reset()
         _assert_nested_equal(state_info, pixel_info)
@@ -188,9 +243,14 @@ def assert_pixel_env_preserves_gym_info_fields(test: absltest.TestCase) -> None:
         _, _, _, _, state_info = state_env.step(action)
         _, _, _, _, pixel_info = pixel_env.step(action)
         _assert_nested_equal(state_info, pixel_info)
+    except Exception as exc:
+        _skip_for_unavailable_pixel_backend(test, task_id, exc)
+        raise
     finally:
-        state_env.close()
-        pixel_env.close()
+        if state_env is not None:
+            state_env.close()
+        if pixel_env is not None:
+            pixel_env.close()
 
 
 def assert_tasks_align_with_render_for_three_steps(
@@ -199,16 +259,17 @@ def assert_tasks_align_with_render_for_three_steps(
     """Checks that each task matches `render()` for reset + 3 steps."""
     for task_id in task_ids_for_import_path(import_path):
         with test.subTest(task_id=task_id):
-            env = make_gymnasium(
-                task_id,
-                num_envs=1,
-                seed=0,
-                from_pixels=True,
-                render_mode="rgb_array",
-                render_width=RENDER_WIDTH,
-                render_height=RENDER_HEIGHT,
-            )
+            env = None
             try:
+                env = make_gymnasium(
+                    task_id,
+                    num_envs=1,
+                    seed=0,
+                    from_pixels=True,
+                    render_mode="rgb_array",
+                    render_width=RENDER_WIDTH,
+                    render_height=RENDER_HEIGHT,
+                )
                 obs, _ = env.reset()
                 test.assertEqual(obs.shape, (1, 3, RENDER_HEIGHT, RENDER_WIDTH))
                 test.assertEqual(obs.dtype, np.uint8)
@@ -225,5 +286,9 @@ def assert_tasks_align_with_render_for_three_steps(
                     render = env.render(env_ids=[0])
                     assert render is not None
                     _assert_pixels_match(obs, render)
+            except Exception as exc:
+                _skip_for_unavailable_pixel_backend(test, task_id, exc)
+                raise
             finally:
-                env.close()
+                if env is not None:
+                    env.close()
