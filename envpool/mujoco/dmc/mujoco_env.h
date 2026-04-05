@@ -28,6 +28,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "envpool/core/env.h"
 #include "envpool/mujoco/dmc/utils.h"
@@ -72,6 +73,11 @@ class MujocoEnv : public RenderableEnv {
   envpool::mujoco::FrameStackBuffer frame_stack_buffer_;
   envpool::mujoco::PixelFrameStackBuffer pixel_frame_stack_buffer_;
   int render_width_, render_height_, render_camera_id_;
+  std::vector<uint8_t> cached_render_;
+  bool has_cached_render_{false};
+  int cached_render_width_{0};
+  int cached_render_height_{0};
+  int cached_render_camera_id_{0};
 
  public:
   MujocoEnv(const std::string& base_path, const std::string& raw_xml,
@@ -119,13 +125,41 @@ class MujocoEnv : public RenderableEnv {
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/suite/utils/randomizers.py#L35
   void RandomizeLimitedAndRotationalJoints(std::mt19937* gen);
 
-  void Render(int width, int height, int camera_id,
-              unsigned char* rgb) override {
+  void RenderFresh(int width, int height, int camera_id, unsigned char* rgb) {
     if (renderer_ == nullptr) {
       renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
           envpool::mujoco::CameraPolicy::kDmControl);
     }
     renderer_->Render(model_, data_, width, height, camera_id, rgb);
+  }
+
+  bool CopyCachedRender(int width, int height, int camera_id,
+                        unsigned char* rgb) const {
+    if (!has_cached_render_ || cached_render_width_ != width ||
+        cached_render_height_ != height ||
+        cached_render_camera_id_ != camera_id) {
+      return false;
+    }
+    std::memcpy(rgb, cached_render_.data(), cached_render_.size());
+    return true;
+  }
+
+  void UpdateCachedRender(int width, int height, int camera_id,
+                          const unsigned char* rgb) {
+    std::size_t render_size = static_cast<std::size_t>(width) * height * 3;
+    cached_render_.assign(rgb, rgb + render_size);
+    has_cached_render_ = true;
+    cached_render_width_ = width;
+    cached_render_height_ = height;
+    cached_render_camera_id_ = camera_id;
+  }
+
+  void Render(int width, int height, int camera_id,
+              unsigned char* rgb) override {
+    if (CopyCachedRender(width, height, camera_id, rgb)) {
+      return;
+    }
+    RenderFresh(width, height, camera_id, rgb);
   }
 
   std::pair<int, int> RenderSize(int width, int height) const override {
@@ -153,7 +187,9 @@ class MujocoEnv : public RenderableEnv {
   void AssignPixelObservation(std::string_view key, Array* target, bool reset) {
     uint8_t* scratch =
         pixel_frame_stack_buffer_.Prepare(key, render_width_, render_height_);
-    Render(render_width_, render_height_, render_camera_id_, scratch);
+    RenderFresh(render_width_, render_height_, render_camera_id_, scratch);
+    UpdateCachedRender(render_width_, render_height_, render_camera_id_,
+                       scratch);
     pixel_frame_stack_buffer_.Commit(key, target, render_width_, render_height_,
                                      reset);
   }

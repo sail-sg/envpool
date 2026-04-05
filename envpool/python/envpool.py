@@ -235,6 +235,15 @@ class EnvPoolMixin(ABC):
             int(getattr(self, "_render_camera_id", -1)),
         )
 
+    def _pixel_observation_render_size(self: EnvPool) -> tuple[int, int] | None:
+        state_keys = getattr(self, "_state_keys", ())
+        if "obs:pixels" not in state_keys:
+            return None
+        return (
+            int(self.config["render_width"]),
+            int(self.config["render_height"]),
+        )
+
     def _show_human_frame(self: EnvPool, frame: np.ndarray) -> None:
         try:
             import cv2
@@ -300,6 +309,9 @@ class EnvPoolMixin(ABC):
         return_info: bool = True,
     ) -> TimeStep | tuple:
         """Recv a batch state from EnvPool."""
+        pixel_render_size = self._pixel_observation_render_size()
+        if pixel_render_size is not None:
+            self._ensure_platform_render_context(*pixel_render_size)
         state_list = self._recv()
         if not hasattr(self, "_state_names"):
             self._state_names = self._state_keys
