@@ -49,6 +49,10 @@ Options
   default to ``4``;
 * ``gray_scale (bool)``: whether to use gray scale env wrapper, default to
   ``True``;
+* ``mode (int)``: the ALE game mode to use, default to ``-1`` which keeps the
+  game's built-in default mode;
+* ``difficulty (int)``: the ALE game difficulty to use, default to ``-1``
+  which keeps the game's built-in default difficulty;
 * ``frame_skip (int)``: the number of frames to execute one repeated action,
   only the last frame would be kept, default to ``4``;
 * ``noop_max (int)``: the maximum number of no-op action being executed when
