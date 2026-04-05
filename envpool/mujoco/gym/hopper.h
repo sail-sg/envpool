@@ -66,9 +66,17 @@ class HopperEnvFns {
 };
 
 using HopperEnvSpec = EnvSpec<HopperEnvFns>;
+using HopperPixelEnvFns = PixelObservationEnvFns<HopperEnvFns>;
+using HopperPixelEnvSpec = EnvSpec<HopperPixelEnvFns>;
 
-class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class HopperEnvBase : public Env<EnvSpecT>, public MujocoEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+  using Base::spec_;
+
   bool terminate_when_unhealthy_, no_pos_;
   bool legacy_healthy_reward_;
   mjtNum ctrl_cost_weight_, forward_reward_weight_;
@@ -79,13 +87,19 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
   std::uniform_real_distribution<> dist_;
 
  public:
-  HopperEnv(const Spec& spec, int env_id)
-      : Env<HopperEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  HopperEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(
             std::string(spec.config["base_path"_]) + "/mujoco/assets_gym/" +
                 std::string(spec.config["xml_file"_]),
             spec.config["frame_skip"_], spec.config["post_constraint"_],
-            spec.config["max_episode_steps"_], spec.config["frame_stack"_]),
+            spec.config["max_episode_steps"_], spec.config["frame_stack"_],
+            RenderWidthOrDefault<kFromPixels>(spec.config),
+            RenderHeightOrDefault<kFromPixels>(spec.config),
+            RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         legacy_healthy_reward_(spec.config["legacy_healthy_reward"_]),
@@ -181,29 +195,37 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
     auto state = Allocate();
     state["reward"_] = reward;
     // obs
-    auto obs_state = state["obs"_];
-    mjtNum* obs = PrepareObservation(&obs_state);
-    for (int i = no_pos_ ? 1 : 0; i < model_->nq; ++i) {
-      *(obs++) = data_->qpos[i];
-    }
-    for (int i = 0; i < model_->nv; ++i) {
-      mjtNum x = data_->qvel[i];
-      x = std::min(velocity_max_, x);
-      x = std::max(velocity_min_, x);
-      *(obs++) = x;
-    }
-    CommitObservation(&obs_state, reset);
-    // info
-    state["info:x_position"_] = x_after;
-    state["info:x_velocity"_] = xv;
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation(&obs_pixels, reset);
+    } else {
+      auto obs_state = state["obs"_];
+      mjtNum* obs = PrepareObservation(&obs_state);
+      for (int i = no_pos_ ? 1 : 0; i < model_->nq; ++i) {
+        *(obs++) = data_->qpos[i];
+      }
+      for (int i = 0; i < model_->nv; ++i) {
+        mjtNum x = data_->qvel[i];
+        x = std::min(velocity_max_, x);
+        x = std::max(velocity_min_, x);
+        *(obs++) = x;
+      }
+      CommitObservation(&obs_state, reset);
+      // info
+      state["info:x_position"_] = x_after;
+      state["info:x_velocity"_] = xv;
 #ifdef ENVPOOL_TEST
-    state["info:qpos0"_].Assign(qpos0_, model_->nq);
-    state["info:qvel0"_].Assign(qvel0_, model_->nv);
+      state["info:qpos0"_].Assign(qpos0_, model_->nq);
+      state["info:qvel0"_].Assign(qvel0_, model_->nv);
 #endif
+    }
   }
 };
 
+using HopperEnv = HopperEnvBase<HopperEnvSpec, false>;
+using HopperPixelEnv = HopperEnvBase<HopperPixelEnvSpec, true>;
 using HopperEnvPool = AsyncEnvPool<HopperEnv>;
+using HopperPixelEnvPool = AsyncEnvPool<HopperPixelEnv>;
 
 }  // namespace mujoco_gym
 

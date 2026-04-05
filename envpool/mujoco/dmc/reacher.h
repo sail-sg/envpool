@@ -65,9 +65,16 @@ class ReacherEnvFns {
 };
 
 using ReacherEnvSpec = EnvSpec<ReacherEnvFns>;
+using ReacherPixelEnvFns = PixelObservationEnvFns<ReacherEnvFns>;
+using ReacherPixelEnvSpec = EnvSpec<ReacherPixelEnvFns>;
 
-class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class ReacherEnvBase : public Env<EnvSpecT>, public MujocoEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+
   const mjtNum kBigTarget = 0.05;
   const mjtNum kSmallTarget = 0.015;
   int id_target_, id_finger_;
@@ -77,13 +84,19 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
 #endif
 
  public:
-  ReacherEnv(const Spec& spec, int env_id)
-      : Env<ReacherEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  ReacherEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(
             spec.config["base_path"_],
             GetReacherXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_],
-            spec.config["frame_stack"_]),
+            spec.config["frame_stack"_],
+            RenderWidthOrDefault<kFromPixels>(spec.config),
+            RenderHeightOrDefault<kFromPixels>(spec.config),
+            RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         id_target_(mj_name2id(model_, mjOBJ_GEOM, "target")),
         id_finger_(mj_name2id(model_, mjOBJ_GEOM, "finger")) {
     const std::string& task_name = spec.config["task_name"_];
@@ -138,22 +151,25 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
-    // obs
-    auto obs_position = state["obs:position"_];
-    AssignObservation("obs:position", &obs_position, data_->qpos, model_->nq,
-                      reset);
-    const auto& finger = FingerToTarget();
-    auto obs_to_target = state["obs:to_target"_];
-    AssignObservation("obs:to_target", &obs_to_target, finger.data(),
-                      finger.size(), reset);
-    auto obs_velocity = state["obs:velocity"_];
-    AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
-                      reset);
-    // info for check alignment
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation("obs:pixels", &obs_pixels, reset);
+    } else {
+      auto obs_position = state["obs:position"_];
+      AssignObservation("obs:position", &obs_position, data_->qpos, model_->nq,
+                        reset);
+      const auto& finger = FingerToTarget();
+      auto obs_to_target = state["obs:to_target"_];
+      AssignObservation("obs:to_target", &obs_to_target, finger.data(),
+                        finger.size(), reset);
+      auto obs_velocity = state["obs:velocity"_];
+      AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
+                        reset);
 #ifdef ENVPOOL_TEST
-    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    state["info:target"_].Assign(target_.data(), target_.size());
+      state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
+      state["info:target"_].Assign(target_.data(), target_.size());
 #endif
+    }
   }
 
   std::array<mjtNum, 2> FingerToTarget() {
@@ -170,7 +186,10 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
   }
 };
 
+using ReacherEnv = ReacherEnvBase<ReacherEnvSpec, false>;
+using ReacherPixelEnv = ReacherEnvBase<ReacherPixelEnvSpec, true>;
 using ReacherEnvPool = AsyncEnvPool<ReacherEnv>;
+using ReacherPixelEnvPool = AsyncEnvPool<ReacherPixelEnv>;
 
 }  // namespace mujoco_dmc
 

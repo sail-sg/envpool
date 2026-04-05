@@ -89,9 +89,17 @@ class PointMazeEnvFns {
 };
 
 using PointMazeEnvSpec = EnvSpec<PointMazeEnvFns>;
+using PointMazePixelEnvFns = PixelObservationEnvFns<PointMazeEnvFns>;
+using PointMazePixelEnvSpec = EnvSpec<PointMazePixelEnvFns>;
 
-class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class PointMazeEnvBase : public Env<EnvSpecT>, public MujocoRobotEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+  using Base::spec_;
+
   bool sparse_reward_;
   bool continuing_task_;
   bool reset_target_;
@@ -107,15 +115,22 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
   std::uniform_real_distribution<> unit_dist_{0.0, 1.0};
 
  public:
-  PointMazeEnv(const Spec& spec, int env_id)
-      : Env<PointMazeEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+  using State = typename Base::State;
+
+  PointMazeEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoRobotEnv(spec.config["base_path"_],
                        BuildMazeXml(spec.config["maze_map"_],
                                     spec.config["maze_size_scaling"_],
                                     spec.config["maze_height"_]),
                        spec.config["frame_skip"_],
                        spec.config["max_episode_steps"_],
-                       spec.config["frame_stack"_]),
+                       spec.config["frame_stack"_],
+                       RenderWidthOrDefault<kFromPixels>(spec.config),
+                       RenderHeightOrDefault<kFromPixels>(spec.config),
+                       RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         sparse_reward_(spec.config["reward_type"_] == "sparse"),
         continuing_task_(spec.config["continuing_task"_]),
         reset_target_(spec.config["reset_target"_]),
@@ -130,7 +145,7 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
     std::remove(model_path_.c_str());
   }
 
-  ~PointMazeEnv() override = default;
+  ~PointMazeEnvBase() override = default;
 
   bool IsDone() override { return done_; }
 
@@ -492,32 +507,40 @@ class PointMazeEnv : public Env<PointMazeEnvSpec>, public MujocoRobotEnv {
 
   void WriteState(mjtNum reward, mjtNum distance, bool success, bool reset) {
     State state = Allocate();
-    auto obs_observation = state["obs:observation"_];
-    auto* obs = PrepareObservation("obs:observation", &obs_observation);
-    obs[0] = data_->qpos[0];
-    obs[1] = data_->qpos[1];
-    obs[2] = data_->qvel[0];
-    obs[3] = data_->qvel[1];
-    CommitObservation("obs:observation", &obs_observation, reset);
     auto achieved_goal = AchievedGoal();
-    auto obs_achieved_goal = state["obs:achieved_goal"_];
-    AssignObservation("obs:achieved_goal", &obs_achieved_goal,
-                      achieved_goal.data(), achieved_goal.size(), reset);
-    auto obs_desired_goal = state["obs:desired_goal"_];
-    AssignObservation("obs:desired_goal", &obs_desired_goal, goal_.data(),
-                      goal_.size(), reset);
-    state["reward"_] = static_cast<float>(reward);
-    state["info:success"_] = success ? 1.0 : 0.0;
-    state["info:distance"_] = distance;
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation("obs:pixels", &obs_pixels, reset);
+    } else {
+      auto obs_observation = state["obs:observation"_];
+      auto* obs = PrepareObservation("obs:observation", &obs_observation);
+      obs[0] = data_->qpos[0];
+      obs[1] = data_->qpos[1];
+      obs[2] = data_->qvel[0];
+      obs[3] = data_->qvel[1];
+      CommitObservation("obs:observation", &obs_observation, reset);
+      auto obs_achieved_goal = state["obs:achieved_goal"_];
+      AssignObservation("obs:achieved_goal", &obs_achieved_goal,
+                        achieved_goal.data(), achieved_goal.size(), reset);
+      auto obs_desired_goal = state["obs:desired_goal"_];
+      AssignObservation("obs:desired_goal", &obs_desired_goal, goal_.data(),
+                        goal_.size(), reset);
+      state["info:success"_] = success ? 1.0 : 0.0;
+      state["info:distance"_] = distance;
 #ifdef ENVPOOL_TEST
-    state["info:qpos0"_].Assign(qpos0_.data(), qpos0_.size());
-    state["info:qvel0"_].Assign(qvel0_.data(), qvel0_.size());
-    state["info:goal0"_].Assign(goal_.data(), goal_.size());
+      state["info:qpos0"_].Assign(qpos0_.data(), qpos0_.size());
+      state["info:qvel0"_].Assign(qvel0_.data(), qvel0_.size());
+      state["info:goal0"_].Assign(goal_.data(), goal_.size());
 #endif
+    }
+    state["reward"_] = static_cast<float>(reward);
   }
 };
 
+using PointMazeEnv = PointMazeEnvBase<PointMazeEnvSpec, false>;
+using PointMazePixelEnv = PointMazeEnvBase<PointMazePixelEnvSpec, true>;
 using PointMazeEnvPool = AsyncEnvPool<PointMazeEnv>;
+using PointMazePixelEnvPool = AsyncEnvPool<PointMazePixelEnv>;
 
 }  // namespace gymnasium_robotics
 

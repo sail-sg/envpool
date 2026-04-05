@@ -22,6 +22,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <random>
 #include <string>
@@ -39,6 +40,10 @@
 
 namespace mujoco_dmc {
 
+using envpool::mujoco::PixelObservationEnvFns;
+using envpool::mujoco::RenderCameraIdOrDefault;
+using envpool::mujoco::RenderHeightOrDefault;
+using envpool::mujoco::RenderWidthOrDefault;
 using envpool::mujoco::StackSpec;
 
 /*
@@ -65,10 +70,14 @@ class MujocoEnv : public RenderableEnv {
 #endif
   std::unique_ptr<envpool::mujoco::OffscreenRenderer> renderer_;
   envpool::mujoco::FrameStackBuffer frame_stack_buffer_;
+  envpool::mujoco::PixelFrameStackBuffer pixel_frame_stack_buffer_;
+  int render_width_, render_height_, render_camera_id_;
 
  public:
   MujocoEnv(const std::string& base_path, const std::string& raw_xml,
-            int n_sub_steps, int max_episode_steps, int frame_stack);
+            int n_sub_steps, int max_episode_steps, int frame_stack,
+            int render_width = 84, int render_height = 84,
+            int render_camera_id = -1);
   ~MujocoEnv() override;
 
   // rl control Environment
@@ -139,6 +148,14 @@ class MujocoEnv : public RenderableEnv {
   void AssignObservation(std::string_view key, Array* target, mjtNum value,
                          bool reset) {
     frame_stack_buffer_.AssignScalar(key, target, value, reset);
+  }
+
+  void AssignPixelObservation(std::string_view key, Array* target, bool reset) {
+    uint8_t* scratch =
+        pixel_frame_stack_buffer_.Prepare(key, render_width_, render_height_);
+    Render(render_width_, render_height_, render_camera_id_, scratch);
+    pixel_frame_stack_buffer_.Commit(key, target, render_width_, render_height_,
+                                     reset);
   }
 };
 

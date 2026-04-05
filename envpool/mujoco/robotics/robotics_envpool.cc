@@ -23,26 +23,60 @@ using GymnasiumRoboticsFetchEnvSpec =
     PyEnvSpec<gymnasium_robotics::FetchEnvSpec>;
 using GymnasiumRoboticsFetchEnvPool =
     PyEnvPool<gymnasium_robotics::FetchEnvPool>;
+using GymnasiumRoboticsFetchPixelEnvSpec =
+    PyEnvSpec<gymnasium_robotics::FetchPixelEnvSpec>;
+using GymnasiumRoboticsFetchPixelEnvPool =
+    PyEnvPool<gymnasium_robotics::FetchPixelEnvPool>;
+
 using GymnasiumRoboticsHandEnvSpec = PyEnvSpec<gymnasium_robotics::HandEnvSpec>;
 using GymnasiumRoboticsHandEnvPool = PyEnvPool<gymnasium_robotics::HandEnvPool>;
+using GymnasiumRoboticsHandPixelEnvSpec =
+    PyEnvSpec<gymnasium_robotics::HandPixelEnvSpec>;
+using GymnasiumRoboticsHandPixelEnvPool =
+    PyEnvPool<gymnasium_robotics::HandPixelEnvPool>;
+
 using GymnasiumRoboticsAdroitEnvSpec =
     PyEnvSpec<gymnasium_robotics::AdroitEnvSpec>;
 using GymnasiumRoboticsAdroitEnvPool =
     PyEnvPool<gymnasium_robotics::AdroitEnvPool>;
+using GymnasiumRoboticsAdroitPixelEnvSpec =
+    PyEnvSpec<gymnasium_robotics::AdroitPixelEnvSpec>;
+using GymnasiumRoboticsAdroitPixelEnvPool =
+    PyEnvPool<gymnasium_robotics::AdroitPixelEnvPool>;
+
 using GymnasiumRoboticsPointMazeEnvSpec =
     PyEnvSpec<gymnasium_robotics::PointMazeEnvSpec>;
 using GymnasiumRoboticsPointMazeEnvPool =
     PyEnvPool<gymnasium_robotics::PointMazeEnvPool>;
+using GymnasiumRoboticsPointMazePixelEnvSpec =
+    PyEnvSpec<gymnasium_robotics::PointMazePixelEnvSpec>;
+using GymnasiumRoboticsPointMazePixelEnvPool =
+    PyEnvPool<gymnasium_robotics::PointMazePixelEnvPool>;
+
 using GymnasiumRoboticsKitchenEnvSpec =
     PyEnvSpec<gymnasium_robotics::KitchenEnvSpec>;
 using GymnasiumRoboticsKitchenEnvPool =
     PyEnvPool<gymnasium_robotics::KitchenEnvPool>;
+using GymnasiumRoboticsKitchenPixelEnvSpec =
+    PyEnvSpec<gymnasium_robotics::KitchenPixelEnvSpec>;
+using GymnasiumRoboticsKitchenPixelEnvPool =
+    PyEnvPool<gymnasium_robotics::KitchenPixelEnvPool>;
 
 PYBIND11_MODULE(robotics_envpool, m) {
   REGISTER(m, GymnasiumRoboticsFetchEnvSpec, GymnasiumRoboticsFetchEnvPool)
+  REGISTER(m, GymnasiumRoboticsFetchPixelEnvSpec,
+           GymnasiumRoboticsFetchPixelEnvPool)
   REGISTER(m, GymnasiumRoboticsHandEnvSpec, GymnasiumRoboticsHandEnvPool)
+  REGISTER(m, GymnasiumRoboticsHandPixelEnvSpec,
+           GymnasiumRoboticsHandPixelEnvPool)
   REGISTER(m, GymnasiumRoboticsAdroitEnvSpec, GymnasiumRoboticsAdroitEnvPool)
+  REGISTER(m, GymnasiumRoboticsAdroitPixelEnvSpec,
+           GymnasiumRoboticsAdroitPixelEnvPool)
   REGISTER(m, GymnasiumRoboticsPointMazeEnvSpec,
            GymnasiumRoboticsPointMazeEnvPool)
+  REGISTER(m, GymnasiumRoboticsPointMazePixelEnvSpec,
+           GymnasiumRoboticsPointMazePixelEnvPool)
   REGISTER(m, GymnasiumRoboticsKitchenEnvSpec, GymnasiumRoboticsKitchenEnvPool)
+  REGISTER(m, GymnasiumRoboticsKitchenPixelEnvSpec,
+           GymnasiumRoboticsKitchenPixelEnvPool)
 }

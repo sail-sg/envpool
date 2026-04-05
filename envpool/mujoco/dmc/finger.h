@@ -69,9 +69,16 @@ class FingerEnvFns {
 };
 
 using FingerEnvSpec = EnvSpec<FingerEnvFns>;
+using FingerPixelEnvFns = PixelObservationEnvFns<FingerEnvFns>;
+using FingerPixelEnvSpec = EnvSpec<FingerPixelEnvFns>;
 
-class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class FingerEnvBase : public Env<EnvSpecT>, public MujocoEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+
   const mjtNum kEasyTargetSize = 0.07;
   const mjtNum kHardTargetSize = 0.03;
   const mjtNum kSpinVelocity = 15;
@@ -89,13 +96,19 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
 #endif
 
  public:
-  FingerEnv(const Spec& spec, int env_id)
-      : Env<FingerEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  FingerEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(
             spec.config["base_path"_],
             GetFingerXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_],
-            spec.config["frame_stack"_]),
+            spec.config["frame_stack"_],
+            RenderWidthOrDefault<kFromPixels>(spec.config),
+            RenderHeightOrDefault<kFromPixels>(spec.config),
+            RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         id_site_target_(mj_name2id(model_, mjOBJ_SITE, "target")),
         id_site_tip_(mj_name2id(model_, mjOBJ_SITE, "tip")),
         id_hinge_(GetQvelId(model_, "hinge")),
@@ -183,35 +196,39 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
     auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
-    // obs
-    const auto& bound_pos = BoundedPosition();
-    const auto& velocity = Velocity();
-    const auto& touch = Touch();
-    auto obs_position = state["obs:position"_];
-    AssignObservation("obs:position", &obs_position, bound_pos.data(),
-                      bound_pos.size(), reset);
-    auto obs_velocity = state["obs:velocity"_];
-    AssignObservation("obs:velocity", &obs_velocity, velocity.data(),
-                      velocity.size(), reset);
-    auto obs_touch = state["obs:touch"_];
-    AssignObservation("obs:touch", &obs_touch, touch.data(), touch.size(),
-                      reset);
-    if (!is_spin_) {
-      const auto& target_position = TargetPosition();
-      auto obs_target_position = state["obs:target_position"_];
-      AssignObservation("obs:target_position", &obs_target_position,
-                        target_position.data(), target_position.size(), reset);
-      auto obs_dist_to_target = state["obs:dist_to_target"_];
-      AssignObservation("obs:dist_to_target", &obs_dist_to_target,
-                        DistToTarget(), reset);
-    }
-    // info
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation("obs:pixels", &obs_pixels, reset);
+    } else {
+      const auto& bound_pos = BoundedPosition();
+      const auto& velocity = Velocity();
+      const auto& touch = Touch();
+      auto obs_position = state["obs:position"_];
+      AssignObservation("obs:position", &obs_position, bound_pos.data(),
+                        bound_pos.size(), reset);
+      auto obs_velocity = state["obs:velocity"_];
+      AssignObservation("obs:velocity", &obs_velocity, velocity.data(),
+                        velocity.size(), reset);
+      auto obs_touch = state["obs:touch"_];
+      AssignObservation("obs:touch", &obs_touch, touch.data(), touch.size(),
+                        reset);
+      if (!is_spin_) {
+        const auto& target_position = TargetPosition();
+        auto obs_target_position = state["obs:target_position"_];
+        AssignObservation("obs:target_position", &obs_target_position,
+                          target_position.data(), target_position.size(),
+                          reset);
+        auto obs_dist_to_target = state["obs:dist_to_target"_];
+        AssignObservation("obs:dist_to_target", &obs_dist_to_target,
+                          DistToTarget(), reset);
+      }
 #ifdef ENVPOOL_TEST
-    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    if (!is_spin_) {
-      state["info:target"_] = target_angle_;
-    }
+      state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
+      if (!is_spin_) {
+        state["info:target"_] = target_angle_;
+      }
 #endif
+    }
   }
 
   void SetRandomJointAngles(int max_attempts = 1000) {
@@ -293,7 +310,10 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
   }
 };
 
+using FingerEnv = FingerEnvBase<FingerEnvSpec, false>;
+using FingerPixelEnv = FingerEnvBase<FingerPixelEnvSpec, true>;
 using FingerEnvPool = AsyncEnvPool<FingerEnv>;
+using FingerPixelEnvPool = AsyncEnvPool<FingerPixelEnv>;
 
 }  // namespace mujoco_dmc
 

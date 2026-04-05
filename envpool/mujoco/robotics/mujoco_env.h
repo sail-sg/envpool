@@ -36,6 +36,10 @@
 
 namespace gymnasium_robotics {
 
+using envpool::mujoco::PixelObservationEnvFns;
+using envpool::mujoco::RenderCameraIdOrDefault;
+using envpool::mujoco::RenderHeightOrDefault;
+using envpool::mujoco::RenderWidthOrDefault;
 using envpool::mujoco::StackSpec;
 
 class MujocoRobotEnv : public RenderableEnv {
@@ -56,10 +60,23 @@ class MujocoRobotEnv : public RenderableEnv {
 #endif
   std::unique_ptr<envpool::mujoco::OffscreenRenderer> renderer_;
   envpool::mujoco::FrameStackBuffer frame_stack_buffer_;
+  envpool::mujoco::PixelFrameStackBuffer pixel_frame_stack_buffer_;
+  int render_width_;
+  int render_height_;
+  int render_camera_id_;
+  // Robotics render callbacks update visualization state, so cache the exact
+  // frame emitted for native pixel observations and matching render() calls.
+  std::vector<uint8_t> cached_render_;
+  bool has_cached_render_{false};
+  int cached_render_width_{0};
+  int cached_render_height_{0};
+  int cached_render_camera_id_{0};
 
  public:
   MujocoRobotEnv(const std::string& base_path, const std::string& model_path,
-                 int frame_skip, int max_episode_steps, int frame_stack)
+                 int frame_skip, int max_episode_steps, int frame_stack,
+                 int render_width = 84, int render_height = 84,
+                 int render_camera_id = -1)
       : model_path_(ResolveModelPath(base_path, model_path)),
         model_(LoadModel(model_path_)),
         data_(mj_makeData(model_)),
@@ -74,7 +91,11 @@ class MujocoRobotEnv : public RenderableEnv {
         qvel0_(model_->nv)
 #endif
         ,
-        frame_stack_buffer_(frame_stack) {
+        frame_stack_buffer_(frame_stack),
+        pixel_frame_stack_buffer_(frame_stack),
+        render_width_(render_width),
+        render_height_(render_height),
+        render_camera_id_(render_camera_id) {
   }
 
   ~MujocoRobotEnv() override {
@@ -82,8 +103,7 @@ class MujocoRobotEnv : public RenderableEnv {
     mj_deleteModel(model_);
   }
 
-  void Render(int width, int height, int camera_id,
-              unsigned char* rgb) override {
+  void RenderFresh(int width, int height, int camera_id, unsigned char* rgb) {
     RenderCallback();
     if (renderer_ == nullptr) {
       renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
@@ -97,6 +117,35 @@ class MujocoRobotEnv : public RenderableEnv {
     } else {
       renderer_->Render(model_, data_, width, height, camera_id, rgb);
     }
+  }
+
+  bool CopyCachedRender(int width, int height, int camera_id,
+                        unsigned char* rgb) const {
+    if (!has_cached_render_ || cached_render_width_ != width ||
+        cached_render_height_ != height ||
+        cached_render_camera_id_ != camera_id) {
+      return false;
+    }
+    std::memcpy(rgb, cached_render_.data(), cached_render_.size());
+    return true;
+  }
+
+  void UpdateCachedRender(int width, int height, int camera_id,
+                          const unsigned char* rgb) {
+    std::size_t render_size = static_cast<std::size_t>(width) * height * 3;
+    cached_render_.assign(rgb, rgb + render_size);
+    has_cached_render_ = true;
+    cached_render_width_ = width;
+    cached_render_height_ = height;
+    cached_render_camera_id_ = camera_id;
+  }
+
+  void Render(int width, int height, int camera_id,
+              unsigned char* rgb) override {
+    if (CopyCachedRender(width, height, camera_id, rgb)) {
+      return;
+    }
+    RenderFresh(width, height, camera_id, rgb);
   }
 
   std::pair<int, int> RenderSize(int width, int height) const override {
@@ -215,6 +264,16 @@ class MujocoRobotEnv : public RenderableEnv {
   void AssignObservation(std::string_view key, Array* target, mjtNum value,
                          bool reset) {
     frame_stack_buffer_.AssignScalar(key, target, value, reset);
+  }
+
+  void AssignPixelObservation(std::string_view key, Array* target, bool reset) {
+    uint8_t* scratch =
+        pixel_frame_stack_buffer_.Prepare(key, render_width_, render_height_);
+    RenderFresh(render_width_, render_height_, render_camera_id_, scratch);
+    UpdateCachedRender(render_width_, render_height_, render_camera_id_,
+                       scratch);
+    pixel_frame_stack_buffer_.Commit(key, target, render_width_, render_height_,
+                                     reset);
   }
 };
 

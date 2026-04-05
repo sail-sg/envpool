@@ -66,8 +66,15 @@ class FishEnvFns {
 };
 
 using FishEnvSpec = EnvSpec<FishEnvFns>;
+using FishPixelEnvFns = PixelObservationEnvFns<FishEnvFns>;
+using FishPixelEnvSpec = EnvSpec<FishPixelEnvFns>;
 
-class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class FishEnvBase : public Env<EnvSpecT>, public MujocoEnv {
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+
   const std::array<std::string, 7> kJoints = {
       "tail1",          "tail_twist",   "tail2",        "finright_roll",
       "finright_pitch", "finleft_roll", "finleft_pitch"};
@@ -81,13 +88,19 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
 #endif
 
  public:
-  FishEnv(const Spec& spec, int env_id)
-      : Env<FishEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  FishEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(
             spec.config["base_path"_],
             GetFishXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_],
-            spec.config["frame_stack"_]),
+            spec.config["frame_stack"_],
+            RenderWidthOrDefault<kFromPixels>(spec.config),
+            RenderHeightOrDefault<kFromPixels>(spec.config),
+            RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         id_mouth_(mj_name2id(model_, mjOBJ_GEOM, "mouth")),
         id_qpos_root_(GetQposId(model_, "root")),
         id_torso_(mj_name2id(model_, mjOBJ_XBODY, "torso")),
@@ -178,27 +191,30 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
     auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
-    // obs
-    const auto& joint_angles = JointAngles();
-    auto obs_joint_angles = state["obs:joint_angles"_];
-    AssignObservation("obs:joint_angles", &obs_joint_angles,
-                      joint_angles.data(), joint_angles.size(), reset);
-    auto obs_upright = state["obs:upright"_];
-    AssignObservation("obs:upright", &obs_upright, Upright(), reset);
-    auto obs_velocity = state["obs:velocity"_];
-    AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
-                      reset);
-    if (is_swim_) {
-      const auto& target = MouthToTarget();
-      auto obs_target = state["obs:target"_];
-      AssignObservation("obs:target", &obs_target, target.data(), target.size(),
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation("obs:pixels", &obs_pixels, reset);
+    } else {
+      const auto& joint_angles = JointAngles();
+      auto obs_joint_angles = state["obs:joint_angles"_];
+      AssignObservation("obs:joint_angles", &obs_joint_angles,
+                        joint_angles.data(), joint_angles.size(), reset);
+      auto obs_upright = state["obs:upright"_];
+      AssignObservation("obs:upright", &obs_upright, Upright(), reset);
+      auto obs_velocity = state["obs:velocity"_];
+      AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
                         reset);
-    }
-    // info
+      if (is_swim_) {
+        const auto& target = MouthToTarget();
+        auto obs_target = state["obs:target"_];
+        AssignObservation("obs:target", &obs_target, target.data(),
+                          target.size(), reset);
+      }
 #ifdef ENVPOOL_TEST
-    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    state["info:target0"_].Assign(target0_.data(), target0_.size());
+      state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
+      state["info:target0"_].Assign(target0_.data(), target0_.size());
 #endif
+    }
   }
 
   mjtNum Upright() {
@@ -249,7 +265,10 @@ class FishEnv : public Env<FishEnvSpec>, public MujocoEnv {
   }
 };
 
+using FishEnv = FishEnvBase<FishEnvSpec, false>;
+using FishPixelEnv = FishEnvBase<FishPixelEnvSpec, true>;
 using FishEnvPool = AsyncEnvPool<FishEnv>;
+using FishPixelEnvPool = AsyncEnvPool<FishPixelEnv>;
 
 }  // namespace mujoco_dmc
 

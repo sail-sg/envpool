@@ -62,21 +62,34 @@ class AcrobotEnvFns {
 };
 
 using AcrobotEnvSpec = EnvSpec<AcrobotEnvFns>;
+using AcrobotPixelEnvFns = PixelObservationEnvFns<AcrobotEnvFns>;
+using AcrobotPixelEnvSpec = EnvSpec<AcrobotPixelEnvFns>;
 
-class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class AcrobotEnvBase : public Env<EnvSpecT>, public MujocoEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+
   int id_upper_arm_, id_lower_arm_, id_target_, id_tip_, id_shoulder_,
       id_elbow_;
   bool is_sparse_;
 
  public:
-  AcrobotEnv(const Spec& spec, int env_id)
-      : Env<AcrobotEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  AcrobotEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(
             spec.config["base_path"_],
             GetAcrobotXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_],
-            spec.config["frame_stack"_]),
+            spec.config["frame_stack"_],
+            RenderWidthOrDefault<kFromPixels>(spec.config),
+            RenderHeightOrDefault<kFromPixels>(spec.config),
+            RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         id_upper_arm_(mj_name2id(model_, mjOBJ_XBODY, "upper_arm")),
         id_lower_arm_(mj_name2id(model_, mjOBJ_XBODY, "lower_arm")),
         id_target_(mj_name2id(model_, mjOBJ_SITE, "target")),
@@ -124,18 +137,21 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
     auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
-    // obs
-    const auto& orientations = Orientations();
-    auto obs_orientations = state["obs:orientations"_];
-    AssignObservation("obs:orientations", &obs_orientations,
-                      orientations.data(), orientations.size(), reset);
-    auto obs_velocity = state["obs:velocity"_];
-    AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
-                      reset);
-    // info for check alignment
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation("obs:pixels", &obs_pixels, reset);
+    } else {
+      const auto& orientations = Orientations();
+      auto obs_orientations = state["obs:orientations"_];
+      AssignObservation("obs:orientations", &obs_orientations,
+                        orientations.data(), orientations.size(), reset);
+      auto obs_velocity = state["obs:velocity"_];
+      AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
+                        reset);
 #ifdef ENVPOOL_TEST
-    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
+      state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
 #endif
+    }
   }
 
   std::array<mjtNum, 2> Horizontal() {
@@ -169,7 +185,10 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public MujocoEnv {
   }
 };
 
+using AcrobotEnv = AcrobotEnvBase<AcrobotEnvSpec, false>;
+using AcrobotPixelEnv = AcrobotEnvBase<AcrobotPixelEnvSpec, true>;
 using AcrobotEnvPool = AsyncEnvPool<AcrobotEnv>;
+using AcrobotPixelEnvPool = AsyncEnvPool<AcrobotPixelEnv>;
 
 }  // namespace mujoco_dmc
 

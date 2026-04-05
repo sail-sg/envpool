@@ -62,9 +62,17 @@ class PusherEnvFns {
 };
 
 using PusherEnvSpec = EnvSpec<PusherEnvFns>;
+using PusherPixelEnvFns = PixelObservationEnvFns<PusherEnvFns>;
+using PusherPixelEnvSpec = EnvSpec<PusherPixelEnvFns>;
 
-class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class PusherEnvBase : public Env<EnvSpecT>, public MujocoEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+  using Base::spec_;
+
   int id_tips_arm_, id_object_, id_goal_;
   mjtNum ctrl_cost_weight_, dist_cost_weight_, near_cost_weight_;
   mjtNum cylinder_dist_min_;
@@ -72,13 +80,19 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
   std::uniform_real_distribution<> dist_qpos_x_, dist_qpos_y_, dist_qvel_;
 
  public:
-  PusherEnv(const Spec& spec, int env_id)
-      : Env<PusherEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  PusherEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(
             std::string(spec.config["base_path"_]) + "/mujoco/assets_gym/" +
                 std::string(spec.config["xml_file"_]),
             spec.config["frame_skip"_], spec.config["post_constraint"_],
-            spec.config["max_episode_steps"_], spec.config["frame_stack"_]),
+            spec.config["max_episode_steps"_], spec.config["frame_stack"_],
+            RenderWidthOrDefault<kFromPixels>(spec.config),
+            RenderHeightOrDefault<kFromPixels>(spec.config),
+            RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         id_tips_arm_(mj_name2id(model_, mjOBJ_XBODY, "tips_arm")),
         id_object_(mj_name2id(model_, mjOBJ_XBODY, "object")),
         id_goal_(mj_name2id(model_, mjOBJ_XBODY, "goal")),
@@ -172,42 +186,50 @@ class PusherEnv : public Env<PusherEnvSpec>, public MujocoEnv {
     auto state = Allocate();
     state["reward"_] = reward;
     // obs
-    auto obs_state = state["obs"_];
-    mjtNum* obs = PrepareObservation(&obs_state);
-    for (int i = 0; i < 7; ++i) {
-      *(obs++) = data_->qpos[i];
-    }
-    for (int i = 0; i < 7; ++i) {
-      *(obs++) = data_->qvel[i];
-    }
-    for (int i = 0; i < 3; ++i) {
-      *(obs++) = data_->xpos[id_tips_arm_ * 3 + i];
-    }
-    for (int i = 0; i < 3; ++i) {
-      *(obs++) = data_->xpos[id_object_ * 3 + i];
-    }
-    for (int i = 0; i < 3; ++i) {
-      *(obs++) = data_->xpos[id_goal_ * 3 + i];
-    }
-    CommitObservation(&obs_state, reset);
-    // info
-    mjtNum reward_dist = -dist_cost;
-    mjtNum reward_ctrl = -ctrl_cost;
-    if (weighted_reward_info_) {
-      reward_dist *= dist_cost_weight_;
-      reward_ctrl *= ctrl_cost_weight_;
-    }
-    state["info:reward_dist"_] = reward_dist;
-    state["info:reward_ctrl"_] = reward_ctrl;
-    state["info:reward_near"_] = -near_cost * near_cost_weight_;
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation(&obs_pixels, reset);
+    } else {
+      auto obs_state = state["obs"_];
+      mjtNum* obs = PrepareObservation(&obs_state);
+      for (int i = 0; i < 7; ++i) {
+        *(obs++) = data_->qpos[i];
+      }
+      for (int i = 0; i < 7; ++i) {
+        *(obs++) = data_->qvel[i];
+      }
+      for (int i = 0; i < 3; ++i) {
+        *(obs++) = data_->xpos[id_tips_arm_ * 3 + i];
+      }
+      for (int i = 0; i < 3; ++i) {
+        *(obs++) = data_->xpos[id_object_ * 3 + i];
+      }
+      for (int i = 0; i < 3; ++i) {
+        *(obs++) = data_->xpos[id_goal_ * 3 + i];
+      }
+      CommitObservation(&obs_state, reset);
+      // info
+      mjtNum reward_dist = -dist_cost;
+      mjtNum reward_ctrl = -ctrl_cost;
+      if (weighted_reward_info_) {
+        reward_dist *= dist_cost_weight_;
+        reward_ctrl *= ctrl_cost_weight_;
+      }
+      state["info:reward_dist"_] = reward_dist;
+      state["info:reward_ctrl"_] = reward_ctrl;
+      state["info:reward_near"_] = -near_cost * near_cost_weight_;
 #ifdef ENVPOOL_TEST
-    state["info:qpos0"_].Assign(qpos0_, model_->nq);
-    state["info:qvel0"_].Assign(qvel0_, model_->nv);
+      state["info:qpos0"_].Assign(qpos0_, model_->nq);
+      state["info:qvel0"_].Assign(qvel0_, model_->nv);
 #endif
+    }
   }
 };
 
+using PusherEnv = PusherEnvBase<PusherEnvSpec, false>;
+using PusherPixelEnv = PusherEnvBase<PusherPixelEnvSpec, true>;
 using PusherEnvPool = AsyncEnvPool<PusherEnv>;
+using PusherPixelEnvPool = AsyncEnvPool<PusherPixelEnv>;
 
 }  // namespace mujoco_gym
 

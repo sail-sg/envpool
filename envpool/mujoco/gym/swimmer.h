@@ -65,21 +65,35 @@ class SwimmerEnvFns {
 };
 
 using SwimmerEnvSpec = EnvSpec<SwimmerEnvFns>;
+using SwimmerPixelEnvFns = PixelObservationEnvFns<SwimmerEnvFns>;
+using SwimmerPixelEnvSpec = EnvSpec<SwimmerPixelEnvFns>;
 
-class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class SwimmerEnvBase : public Env<EnvSpecT>, public MujocoEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+  using Base::spec_;
+
   bool no_pos_;
   mjtNum ctrl_cost_weight_, forward_reward_weight_;
   std::uniform_real_distribution<> dist_;
 
  public:
-  SwimmerEnv(const Spec& spec, int env_id)
-      : Env<SwimmerEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  SwimmerEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(
             std::string(spec.config["base_path"_]) + "/mujoco/assets_gym/" +
                 std::string(spec.config["xml_file"_]),
             spec.config["frame_skip"_], spec.config["post_constraint"_],
-            spec.config["max_episode_steps"_], spec.config["frame_stack"_]),
+            spec.config["max_episode_steps"_], spec.config["frame_stack"_],
+            RenderWidthOrDefault<kFromPixels>(spec.config),
+            RenderHeightOrDefault<kFromPixels>(spec.config),
+            RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
@@ -139,32 +153,40 @@ class SwimmerEnv : public Env<SwimmerEnvSpec>, public MujocoEnv {
     auto state = Allocate();
     state["reward"_] = reward;
     // obs
-    auto obs_state = state["obs"_];
-    mjtNum* obs = PrepareObservation(&obs_state);
-    for (int i = no_pos_ ? 2 : 0; i < model_->nq; ++i) {
-      *(obs++) = data_->qpos[i];
-    }
-    for (int i = 0; i < model_->nv; ++i) {
-      *(obs++) = data_->qvel[i];
-    }
-    CommitObservation(&obs_state, reset);
-    // info
-    state["info:reward_fwd"_] = xv * forward_reward_weight_;
-    state["info:reward_ctrl"_] = -ctrl_cost;
-    state["info:x_position"_] = x_after;
-    state["info:y_position"_] = y_after;
-    state["info:distance_from_origin"_] =
-        std::sqrt(x_after * x_after + y_after * y_after);
-    state["info:x_velocity"_] = xv;
-    state["info:y_velocity"_] = yv;
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation(&obs_pixels, reset);
+    } else {
+      auto obs_state = state["obs"_];
+      mjtNum* obs = PrepareObservation(&obs_state);
+      for (int i = no_pos_ ? 2 : 0; i < model_->nq; ++i) {
+        *(obs++) = data_->qpos[i];
+      }
+      for (int i = 0; i < model_->nv; ++i) {
+        *(obs++) = data_->qvel[i];
+      }
+      CommitObservation(&obs_state, reset);
+      // info
+      state["info:reward_fwd"_] = xv * forward_reward_weight_;
+      state["info:reward_ctrl"_] = -ctrl_cost;
+      state["info:x_position"_] = x_after;
+      state["info:y_position"_] = y_after;
+      state["info:distance_from_origin"_] =
+          std::sqrt(x_after * x_after + y_after * y_after);
+      state["info:x_velocity"_] = xv;
+      state["info:y_velocity"_] = yv;
 #ifdef ENVPOOL_TEST
-    state["info:qpos0"_].Assign(qpos0_, model_->nq);
-    state["info:qvel0"_].Assign(qvel0_, model_->nv);
+      state["info:qpos0"_].Assign(qpos0_, model_->nq);
+      state["info:qvel0"_].Assign(qvel0_, model_->nv);
 #endif
+    }
   }
 };
 
+using SwimmerEnv = SwimmerEnvBase<SwimmerEnvSpec, false>;
+using SwimmerPixelEnv = SwimmerEnvBase<SwimmerPixelEnvSpec, true>;
 using SwimmerEnvPool = AsyncEnvPool<SwimmerEnv>;
+using SwimmerPixelEnvPool = AsyncEnvPool<SwimmerPixelEnv>;
 
 }  // namespace mujoco_gym
 

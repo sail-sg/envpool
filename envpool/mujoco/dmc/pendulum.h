@@ -62,20 +62,33 @@ class PendulumEnvFns {
 };
 
 using PendulumEnvSpec = EnvSpec<PendulumEnvFns>;
+using PendulumPixelEnvFns = PixelObservationEnvFns<PendulumEnvFns>;
+using PendulumPixelEnvSpec = EnvSpec<PendulumPixelEnvFns>;
 
-class PendulumEnv : public Env<PendulumEnvSpec>, public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class PendulumEnvBase : public Env<EnvSpecT>, public MujocoEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+
   const mjtNum kCosineBound = std::cos(8.0 / 180 * M_PI);
   int id_hinge_, id_pole_;
 
  public:
-  PendulumEnv(const Spec& spec, int env_id)
-      : Env<PendulumEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  PendulumEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(spec.config["base_path"_],
                   GetPendulumXML(spec.config["base_path"_],
                                  spec.config["task_name"_]),
                   spec.config["frame_skip"_], spec.config["max_episode_steps"_],
-                  spec.config["frame_stack"_]),
+                  spec.config["frame_stack"_],
+                  RenderWidthOrDefault<kFromPixels>(spec.config),
+                  RenderHeightOrDefault<kFromPixels>(spec.config),
+                  RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         id_hinge_(GetQvelId(model_, "hinge")),
         id_pole_(mj_name2id(model_, mjOBJ_XBODY, "pole")) {
     const std::string& task_name = spec.config["task_name"_];
@@ -115,17 +128,21 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public MujocoEnv {
     auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
-    // obs
-    const auto& pole_orient = PoleOrientation();
-    auto obs_orientation = state["obs:orientation"_];
-    AssignObservation("obs:orientation", &obs_orientation, pole_orient.data(),
-                      pole_orient.size(), reset);
-    auto obs_velocity = state["obs:velocity"_];
-    AssignObservation("obs:velocity", &obs_velocity, AngularVelocity(), reset);
-    // info for check alignment
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation("obs:pixels", &obs_pixels, reset);
+    } else {
+      const auto& pole_orient = PoleOrientation();
+      auto obs_orientation = state["obs:orientation"_];
+      AssignObservation("obs:orientation", &obs_orientation, pole_orient.data(),
+                        pole_orient.size(), reset);
+      auto obs_velocity = state["obs:velocity"_];
+      AssignObservation("obs:velocity", &obs_velocity, AngularVelocity(),
+                        reset);
 #ifdef ENVPOOL_TEST
-    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
+      state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
 #endif
+    }
   }
 
   mjtNum PoleVertical() {
@@ -142,7 +159,10 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public MujocoEnv {
   }
 };
 
+using PendulumEnv = PendulumEnvBase<PendulumEnvSpec, false>;
+using PendulumPixelEnv = PendulumEnvBase<PendulumPixelEnvSpec, true>;
 using PendulumEnvPool = AsyncEnvPool<PendulumEnv>;
+using PendulumPixelEnvPool = AsyncEnvPool<PendulumPixelEnv>;
 
 }  // namespace mujoco_dmc
 

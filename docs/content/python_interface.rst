@@ -44,13 +44,16 @@ batched environments:
   If omitted, the environment-specific default render size is used;
 * ``render_camera_id (int)``: default camera id used by ``render()``, default
   to ``-1``;
+* ``from_pixels (bool)``: for MuJoCo tasks, expose native C++
+  render-backed pixel observations through the normal observation API instead
+  of the environment's state observations;
 * other configurations such as ``img_height`` / ``img_width`` / ``stack_num``
   / ``frame_skip`` / ``noop_max`` in Atari env, ``reward_metric`` /
   ``lmp_save_dir`` in ViZDoom env, please refer to the corresponding pages.
 
-The observation space and action space of resulted environment are
-**channel-first** single environment's space, but each time the
-observation/action's first dimension is always equal to ``num_envs``
+The observation space and action space of resulted environment describe a
+single environment's space, but each time the observation/action's first
+dimension is always equal to ``num_envs``
 (sync mode) or equal to ``batch_size`` (async mode).
 
 ``envpool.make_gym``, ``envpool.make_dm``, and ``envpool.make_gymnasium`` are
@@ -185,6 +188,27 @@ the reference is the exact in-tree render oracle used by the test suite.
 .. image:: ../_static/render_samples/vizdoom_oracle_compare.png
     :width: 900px
     :align: center
+
+Pixel Observations
+------------------
+
+When ``from_pixels=True`` is passed to ``envpool.make`` / ``make_dm`` /
+``make_gym`` / ``make_gymnasium`` for MuJoCo tasks, EnvPool uses a native C++
+render path to populate the public observation API.
+
+For Gym and Gymnasium wrappers, the returned observation becomes a ``uint8``
+tensor in channel-first layout: ``(B, 3, H, W)`` when ``frame_stack == 1`` and
+``(B, 3 * frame_stack, H, W)`` otherwise. The ``info`` dictionary remains
+unchanged.
+
+For the dm_env wrapper, the timestep observation keeps the usual info fields
+such as ``env_id`` while replacing the state observation payload with a
+``pixels`` field.
+
+``frame_stack`` is applied on the channel dimension, so the observation surface
+matches the usual PyTorch ``BCHW`` convention directly. If ``render_width`` /
+``render_height`` are omitted, EnvPool defaults both to ``84`` so the
+resulting observation spec is fully defined up front.
 
 
 Action Input Format

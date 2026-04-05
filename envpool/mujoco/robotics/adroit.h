@@ -76,9 +76,17 @@ class AdroitEnvFns {
 };
 
 using AdroitEnvSpec = EnvSpec<AdroitEnvFns>;
+using AdroitPixelEnvFns = PixelObservationEnvFns<AdroitEnvFns>;
+using AdroitPixelEnvSpec = EnvSpec<AdroitPixelEnvFns>;
 
-class AdroitEnv : public Env<AdroitEnvSpec>, public MujocoRobotEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class AdroitEnvBase : public Env<EnvSpecT>, public MujocoRobotEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+  using Base::spec_;
+
   enum class TaskType : std::uint8_t {
     kDoor,
     kHammer,
@@ -121,12 +129,19 @@ class AdroitEnv : public Env<AdroitEnvSpec>, public MujocoRobotEnv {
 #endif
 
  public:
-  AdroitEnv(const Spec& spec, int env_id)
-      : Env<AdroitEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+  using State = typename Base::State;
+
+  AdroitEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoRobotEnv(spec.config["base_path"_], spec.config["xml_file"_],
                        spec.config["frame_skip"_],
                        spec.config["max_episode_steps"_],
-                       spec.config["frame_stack"_]),
+                       spec.config["frame_stack"_],
+                       RenderWidthOrDefault<kFromPixels>(spec.config),
+                       RenderHeightOrDefault<kFromPixels>(spec.config),
+                       RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         task_type_(ParseTaskType(spec.config["adroit_task"_])),
         sparse_reward_(spec.config["reward_type"_] == "sparse"),
         obs_dim_(spec.config["obs_dim"_]),
@@ -634,24 +649,32 @@ class AdroitEnv : public Env<AdroitEnvSpec>, public MujocoRobotEnv {
   void WriteState(mjtNum reward, mjtNum distance = 0.0, bool success = false,
                   bool reset = false) {
     State state = Allocate();
-    auto obs = Observation();
-    if (static_cast<int>(obs.size()) != obs_dim_) {
-      throw std::runtime_error("Unexpected Adroit observation size.");
-    }
-    auto obs_state = state["obs"_];
-    AssignObservation("obs", &obs_state, obs.data(), obs.size(), reset);
-    state["reward"_] = static_cast<float>(reward);
-    state["info:success"_] = success ? 1.0 : 0.0;
-    state["info:distance"_] = distance;
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation("obs:pixels", &obs_pixels, reset);
+    } else {
+      auto obs = Observation();
+      if (static_cast<int>(obs.size()) != obs_dim_) {
+        throw std::runtime_error("Unexpected Adroit observation size.");
+      }
+      auto obs_state = state["obs"_];
+      AssignObservation("obs", &obs_state, obs.data(), obs.size(), reset);
+      state["info:success"_] = success ? 1.0 : 0.0;
+      state["info:distance"_] = distance;
 #ifdef ENVPOOL_TEST
-    state["info:qpos0"_].Assign(qpos0_.data(), qpos0_.size());
-    state["info:qvel0"_].Assign(qvel0_.data(), qvel0_.size());
-    state["info:extra0"_].Assign(extra0_.data(), extra0_.size());
+      state["info:qpos0"_].Assign(qpos0_.data(), qpos0_.size());
+      state["info:qvel0"_].Assign(qvel0_.data(), qvel0_.size());
+      state["info:extra0"_].Assign(extra0_.data(), extra0_.size());
 #endif
+    }
+    state["reward"_] = static_cast<float>(reward);
   }
 };
 
+using AdroitEnv = AdroitEnvBase<AdroitEnvSpec, false>;
+using AdroitPixelEnv = AdroitEnvBase<AdroitPixelEnvSpec, true>;
 using AdroitEnvPool = AsyncEnvPool<AdroitEnv>;
+using AdroitPixelEnvPool = AsyncEnvPool<AdroitPixelEnv>;
 
 }  // namespace gymnasium_robotics
 

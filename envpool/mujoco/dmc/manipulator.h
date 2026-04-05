@@ -88,9 +88,16 @@ class ManipulatorEnvFns {
 };
 
 using ManipulatorEnvSpec = EnvSpec<ManipulatorEnvFns>;
+using ManipulatorPixelEnvFns = PixelObservationEnvFns<ManipulatorEnvFns>;
+using ManipulatorPixelEnvSpec = EnvSpec<ManipulatorPixelEnvFns>;
 
-class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class ManipulatorEnvBase : public Env<EnvSpecT>, public MujocoEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+
   const mjtNum kClose = 0.01;
   const mjtNum kPInHand = 0.1;
   const mjtNum kPInTarget = 0.1;
@@ -119,13 +126,19 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
   int id_site_peg_tip_, id_site_ball_, id_site_target_ball_;
 
  public:
-  ManipulatorEnv(const Spec& spec, int env_id)
-      : Env<ManipulatorEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  ManipulatorEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(spec.config["base_path"_],
                   GetManipulatorXML(spec.config["base_path"_],
                                     spec.config["task_name"_]),
                   spec.config["frame_skip"_], spec.config["max_episode_steps"_],
-                  spec.config["frame_stack"_]),
+                  spec.config["frame_stack"_],
+                  RenderWidthOrDefault<kFromPixels>(spec.config),
+                  RenderHeightOrDefault<kFromPixels>(spec.config),
+                  RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         use_peg_(spec.config["task_name"_] == "bring_peg" ||
                  spec.config["task_name"_] == "insert_peg"),
         insert_(spec.config["task_name"_] == "insert_peg" ||
@@ -359,47 +372,54 @@ class ManipulatorEnv : public Env<ManipulatorEnvSpec>, public MujocoEnv {
   }
 
   void WriteState(bool reset) {
-    const auto& bounded_joint_pos = BoundedJointPos();
-    const auto& joint_vel_arm = JointVelArm();
-    const auto& touch = Touch();
-    const auto& hand_pos = Body2dPose(id_xbody_hand_);
-    const auto& object_pos = Body2dPose(id_xbody_object_);
-    const auto& joint_vel_obj = JointVelObj();
-    const auto& target_pos = Body2dPose(id_xbody_target_);
-
     auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
-    // obs
-    auto obs_arm_pos = state["obs:arm_pos"_];
-    AssignObservation("obs:arm_pos", &obs_arm_pos, bounded_joint_pos.data(),
-                      bounded_joint_pos.size(), reset);
-    auto obs_arm_vel = state["obs:arm_vel"_];
-    AssignObservation("obs:arm_vel", &obs_arm_vel, joint_vel_arm.data(),
-                      joint_vel_arm.size(), reset);
-    auto obs_touch = state["obs:touch"_];
-    AssignObservation("obs:touch", &obs_touch, touch.data(), touch.size(),
-                      reset);
-    auto obs_hand_pos = state["obs:hand_pos"_];
-    AssignObservation("obs:hand_pos", &obs_hand_pos, hand_pos.data(),
-                      hand_pos.size(), reset);
-    auto obs_object_pos = state["obs:object_pos"_];
-    AssignObservation("obs:object_pos", &obs_object_pos, object_pos.data(),
-                      object_pos.size(), reset);
-    auto obs_object_vel = state["obs:object_vel"_];
-    AssignObservation("obs:object_vel", &obs_object_vel, joint_vel_obj.data(),
-                      joint_vel_obj.size(), reset);
-    auto obs_target_pos = state["obs:target_pos"_];
-    AssignObservation("obs:target_pos", &obs_target_pos, target_pos.data(),
-                      target_pos.size(), reset);
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation("obs:pixels", &obs_pixels, reset);
+    } else {
+      const auto& bounded_joint_pos = BoundedJointPos();
+      const auto& joint_vel_arm = JointVelArm();
+      const auto& touch = Touch();
+      const auto& hand_pos = Body2dPose(id_xbody_hand_);
+      const auto& object_pos = Body2dPose(id_xbody_object_);
+      const auto& joint_vel_obj = JointVelObj();
+      const auto& target_pos = Body2dPose(id_xbody_target_);
+
+      auto obs_arm_pos = state["obs:arm_pos"_];
+      AssignObservation("obs:arm_pos", &obs_arm_pos, bounded_joint_pos.data(),
+                        bounded_joint_pos.size(), reset);
+      auto obs_arm_vel = state["obs:arm_vel"_];
+      AssignObservation("obs:arm_vel", &obs_arm_vel, joint_vel_arm.data(),
+                        joint_vel_arm.size(), reset);
+      auto obs_touch = state["obs:touch"_];
+      AssignObservation("obs:touch", &obs_touch, touch.data(), touch.size(),
+                        reset);
+      auto obs_hand_pos = state["obs:hand_pos"_];
+      AssignObservation("obs:hand_pos", &obs_hand_pos, hand_pos.data(),
+                        hand_pos.size(), reset);
+      auto obs_object_pos = state["obs:object_pos"_];
+      AssignObservation("obs:object_pos", &obs_object_pos, object_pos.data(),
+                        object_pos.size(), reset);
+      auto obs_object_vel = state["obs:object_vel"_];
+      AssignObservation("obs:object_vel", &obs_object_vel, joint_vel_obj.data(),
+                        joint_vel_obj.size(), reset);
+      auto obs_target_pos = state["obs:target_pos"_];
+      AssignObservation("obs:target_pos", &obs_target_pos, target_pos.data(),
+                        target_pos.size(), reset);
 #ifdef ENVPOOL_TEST
-    state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    state["info:random_info"_].Assign(random_info_.data(), 8);
+      state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
+      state["info:random_info"_].Assign(random_info_.data(), 8);
 #endif
+    }
   }
 };
 
+using ManipulatorEnv = ManipulatorEnvBase<ManipulatorEnvSpec, false>;
+using ManipulatorPixelEnv = ManipulatorEnvBase<ManipulatorPixelEnvSpec, true>;
 using ManipulatorEnvPool = AsyncEnvPool<ManipulatorEnv>;
+using ManipulatorPixelEnvPool = AsyncEnvPool<ManipulatorPixelEnv>;
 
 }  // namespace mujoco_dmc
 

@@ -93,9 +93,17 @@ class HandEnvFns {
 };
 
 using HandEnvSpec = EnvSpec<HandEnvFns>;
+using HandPixelEnvFns = PixelObservationEnvFns<HandEnvFns>;
+using HandPixelEnvSpec = EnvSpec<HandPixelEnvFns>;
 
-class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class HandEnvBase : public Env<EnvSpecT>, public MujocoRobotEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+  using Base::spec_;
+
   enum class TaskType : std::uint8_t {
     kReach,
     kManipulate,
@@ -168,12 +176,19 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
   std::normal_distribution<> object_noise_dist_{0.0, 0.005};
 
  public:
-  HandEnv(const Spec& spec, int env_id)
-      : Env<HandEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+  using State = typename Base::State;
+
+  HandEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoRobotEnv(spec.config["base_path"_], spec.config["xml_file"_],
                        spec.config["frame_skip"_],
                        spec.config["max_episode_steps"_],
-                       spec.config["frame_stack"_]),
+                       spec.config["frame_stack"_],
+                       RenderWidthOrDefault<kFromPixels>(spec.config),
+                       RenderHeightOrDefault<kFromPixels>(spec.config),
+                       RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         task_type_(ParseTaskType(spec.config["hand_task"_])),
         sparse_reward_(spec.config["reward_type"_] == "sparse"),
         relative_control_(spec.config["relative_control"_]),
@@ -776,59 +791,67 @@ class HandEnv : public Env<HandEnvSpec>, public MujocoRobotEnv {
   void WriteState(float reward, bool reset) {
     auto state = Allocate();
     state["reward"_] = reward;
-    auto obs_observation = state["obs:observation"_];
-    mjtNum* obs = PrepareObservation("obs:observation", &obs_observation);
-    auto [robot_qpos, robot_qvel] = RobotGetObs(model_, data_);
-    for (mjtNum value : robot_qpos) {
-      *(obs++) = value;
-    }
-    for (mjtNum value : robot_qvel) {
-      *(obs++) = value;
-    }
     std::vector<mjtNum> achieved_goal = AchievedGoal();
-    if (task_type_ == TaskType::kManipulate) {
-      auto object_qvel = GetJointQvel(model_, data_, "object:joint");
-      for (mjtNum value : object_qvel) {
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation("obs:pixels", &obs_pixels, reset);
+    } else {
+      auto obs_observation = state["obs:observation"_];
+      mjtNum* obs = PrepareObservation("obs:observation", &obs_observation);
+      auto [robot_qpos, robot_qvel] = RobotGetObs(model_, data_);
+      for (mjtNum value : robot_qpos) {
         *(obs++) = value;
       }
-    }
-    for (mjtNum value : achieved_goal) {
-      *(obs++) = value;
-    }
-    if (task_type_ == TaskType::kManipulate) {
-      if (touch_obs_ == TouchObsType::kSensordata) {
-        for (int sensor_addr : touch_sensor_addrs_) {
-          *(obs++) = data_->sensordata[sensor_addr];
-        }
-      } else if (touch_obs_ == TouchObsType::kBoolean) {
-        for (int sensor_addr : touch_sensor_addrs_) {
-          *(obs++) = data_->sensordata[sensor_addr] > 0.0 ? 1.0 : 0.0;
-        }
-      } else if (touch_obs_ == TouchObsType::kLog) {
-        for (int sensor_addr : touch_sensor_addrs_) {
-          *(obs++) = std::log(data_->sensordata[sensor_addr] + 1.0);
+      for (mjtNum value : robot_qvel) {
+        *(obs++) = value;
+      }
+      if (task_type_ == TaskType::kManipulate) {
+        auto object_qvel = GetJointQvel(model_, data_, "object:joint");
+        for (mjtNum value : object_qvel) {
+          *(obs++) = value;
         }
       }
-    }
-    CommitObservation("obs:observation", &obs_observation, reset);
+      for (mjtNum value : achieved_goal) {
+        *(obs++) = value;
+      }
+      if (task_type_ == TaskType::kManipulate) {
+        if (touch_obs_ == TouchObsType::kSensordata) {
+          for (int sensor_addr : touch_sensor_addrs_) {
+            *(obs++) = data_->sensordata[sensor_addr];
+          }
+        } else if (touch_obs_ == TouchObsType::kBoolean) {
+          for (int sensor_addr : touch_sensor_addrs_) {
+            *(obs++) = data_->sensordata[sensor_addr] > 0.0 ? 1.0 : 0.0;
+          }
+        } else if (touch_obs_ == TouchObsType::kLog) {
+          for (int sensor_addr : touch_sensor_addrs_) {
+            *(obs++) = std::log(data_->sensordata[sensor_addr] + 1.0);
+          }
+        }
+      }
+      CommitObservation("obs:observation", &obs_observation, reset);
 
-    auto obs_achieved_goal = state["obs:achieved_goal"_];
-    AssignObservation("obs:achieved_goal", &obs_achieved_goal,
-                      achieved_goal.data(), achieved_goal.size(), reset);
-    auto obs_desired_goal = state["obs:desired_goal"_];
-    AssignObservation("obs:desired_goal", &obs_desired_goal, goal_.data(),
-                      goal_.size(), reset);
-    state["info:is_success"_] = IsSuccess(achieved_goal, goal_) ? 1.0 : 0.0;
-    state["info:distance"_] = InfoDistance(achieved_goal, goal_);
+      auto obs_achieved_goal = state["obs:achieved_goal"_];
+      AssignObservation("obs:achieved_goal", &obs_achieved_goal,
+                        achieved_goal.data(), achieved_goal.size(), reset);
+      auto obs_desired_goal = state["obs:desired_goal"_];
+      AssignObservation("obs:desired_goal", &obs_desired_goal, goal_.data(),
+                        goal_.size(), reset);
+      state["info:is_success"_] = IsSuccess(achieved_goal, goal_) ? 1.0 : 0.0;
+      state["info:distance"_] = InfoDistance(achieved_goal, goal_);
 #ifdef ENVPOOL_TEST
-    state["info:qpos0"_].Assign(qpos0_.data(), qpos0_.size());
-    state["info:qvel0"_].Assign(qvel0_.data(), qvel0_.size());
-    state["info:goal0"_].Assign(goal_.data(), goal_.size());
+      state["info:qpos0"_].Assign(qpos0_.data(), qpos0_.size());
+      state["info:qvel0"_].Assign(qvel0_.data(), qvel0_.size());
+      state["info:goal0"_].Assign(goal_.data(), goal_.size());
 #endif
+    }
   }
 };
 
+using HandEnv = HandEnvBase<HandEnvSpec, false>;
+using HandPixelEnv = HandEnvBase<HandPixelEnvSpec, true>;
 using HandEnvPool = AsyncEnvPool<HandEnv>;
+using HandPixelEnvPool = AsyncEnvPool<HandPixelEnv>;
 
 }  // namespace gymnasium_robotics
 
