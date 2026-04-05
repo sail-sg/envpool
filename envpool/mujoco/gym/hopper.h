@@ -33,7 +33,8 @@ class HopperEnvFns {
   static decltype(auto) DefaultConfig() {
     return MakeDict(
         "reward_threshold"_.Bind(6000.0), "frame_skip"_.Bind(4),
-        "post_constraint"_.Bind(true), "terminate_when_unhealthy"_.Bind(true),
+        "frame_stack"_.Bind(1), "post_constraint"_.Bind(true),
+        "terminate_when_unhealthy"_.Bind(true),
         "legacy_healthy_reward"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
         "xml_file"_.Bind(std::string("hopper.xml")),
@@ -48,13 +49,15 @@ class HopperEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
     bool no_pos = conf["exclude_current_positions_from_observation"_];
-    return MakeDict("obs"_.Bind(Spec<mjtNum>({no_pos ? 11 : 12}, {-inf, inf})),
+    return MakeDict(
+        "obs"_.Bind(StackSpec(Spec<mjtNum>({no_pos ? 11 : 12}, {-inf, inf}),
+                              conf["frame_stack"_])),
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.Bind(Spec<mjtNum>({6})),
-                    "info:qvel0"_.Bind(Spec<mjtNum>({6})),
+        "info:qpos0"_.Bind(Spec<mjtNum>({6})),
+        "info:qvel0"_.Bind(Spec<mjtNum>({6})),
 #endif
-                    "info:x_position"_.Bind(Spec<mjtNum>({-1})),
-                    "info:x_velocity"_.Bind(Spec<mjtNum>({-1})));
+        "info:x_position"_.Bind(Spec<mjtNum>({-1})),
+        "info:x_velocity"_.Bind(Spec<mjtNum>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -78,11 +81,11 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
  public:
   HopperEnv(const Spec& spec, int env_id)
       : Env<HopperEnvSpec>(spec, env_id),
-        MujocoEnv(std::string(spec.config["base_path"_]) +
-                      "/mujoco/assets_gym/" +
-                      std::string(spec.config["xml_file"_]),
-                  spec.config["frame_skip"_], spec.config["post_constraint"_],
-                  spec.config["max_episode_steps"_]),
+        MujocoEnv(
+            std::string(spec.config["base_path"_]) + "/mujoco/assets_gym/" +
+                std::string(spec.config["xml_file"_]),
+            spec.config["frame_skip"_], spec.config["post_constraint"_],
+            spec.config["max_episode_steps"_], spec.config["frame_stack"_]),
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         legacy_healthy_reward_(spec.config["legacy_healthy_reward"_]),
@@ -118,7 +121,7 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteState(0.0, 0.0, 0.0);
+    WriteState(0.0, 0.0, 0.0, true);
   }
 
   void Step(const Action& action) override {
@@ -148,7 +151,7 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
     ++elapsed_step_;
     done_ = (terminate_when_unhealthy_ ? !is_healthy : false) ||
             (elapsed_step_ >= max_episode_steps_);
-    WriteState(reward, xv, x_after);
+    WriteState(reward, xv, x_after, false);
   }
 
  private:
@@ -174,11 +177,12 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
     return true;
   }
 
-  void WriteState(float reward, mjtNum xv, mjtNum x_after) {
+  void WriteState(float reward, mjtNum xv, mjtNum x_after, bool reset) {
     auto state = Allocate();
     state["reward"_] = reward;
     // obs
-    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());
+    auto obs_state = state["obs"_];
+    mjtNum* obs = PrepareObservation(&obs_state);
     for (int i = no_pos_ ? 1 : 0; i < model_->nq; ++i) {
       *(obs++) = data_->qpos[i];
     }
@@ -188,6 +192,7 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
       x = std::max(velocity_min_, x);
       *(obs++) = x;
     }
+    CommitObservation(&obs_state, reset);
     // info
     state["info:x_position"_] = x_after;
     state["info:x_velocity"_] = xv;

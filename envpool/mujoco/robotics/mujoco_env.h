@@ -20,18 +20,23 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cstddef>
 #include <cstring>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 #include "envpool/core/env.h"
+#include "envpool/mujoco/frame_stack.h"
 #include "envpool/mujoco/offscreen_renderer.h"
 #include "envpool/mujoco/robotics/utils.h"
 
 namespace gymnasium_robotics {
+
+using envpool::mujoco::StackSpec;
 
 class MujocoRobotEnv : public RenderableEnv {
  protected:
@@ -50,10 +55,11 @@ class MujocoRobotEnv : public RenderableEnv {
   std::vector<mjtNum> qvel0_;
 #endif
   std::unique_ptr<envpool::mujoco::OffscreenRenderer> renderer_;
+  envpool::mujoco::FrameStackBuffer frame_stack_buffer_;
 
  public:
   MujocoRobotEnv(const std::string& base_path, const std::string& model_path,
-                 int frame_skip, int max_episode_steps)
+                 int frame_skip, int max_episode_steps, int frame_stack)
       : model_path_(ResolveModelPath(base_path, model_path)),
         model_(LoadModel(model_path_)),
         data_(mj_makeData(model_)),
@@ -67,7 +73,8 @@ class MujocoRobotEnv : public RenderableEnv {
         qpos0_(model_->nq),
         qvel0_(model_->nv)
 #endif
-  {
+        ,
+        frame_stack_buffer_(frame_stack) {
   }
 
   ~MujocoRobotEnv() override {
@@ -190,6 +197,24 @@ class MujocoRobotEnv : public RenderableEnv {
     std::memcpy(qpos0_.data(), data_->qpos, sizeof(mjtNum) * model_->nq);
     std::memcpy(qvel0_.data(), data_->qvel, sizeof(mjtNum) * model_->nv);
 #endif
+  }
+
+  mjtNum* PrepareObservation(std::string_view key, Array* target) {
+    return frame_stack_buffer_.Prepare(key, target);
+  }
+
+  void CommitObservation(std::string_view key, Array* target, bool reset) {
+    frame_stack_buffer_.Commit(key, target, reset);
+  }
+
+  void AssignObservation(std::string_view key, Array* target,
+                         const mjtNum* data, std::size_t size, bool reset) {
+    frame_stack_buffer_.Assign(key, target, data, size, reset);
+  }
+
+  void AssignObservation(std::string_view key, Array* target, mjtNum value,
+                         bool reset) {
+    frame_stack_buffer_.AssignScalar(key, target, value, reset);
   }
 };
 

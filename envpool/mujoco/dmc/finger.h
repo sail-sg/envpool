@@ -40,20 +40,25 @@ std::string GetFingerXML(const std::string& base_path,
 class FingerEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("frame_skip"_.Bind(2),
+    return MakeDict("frame_skip"_.Bind(2), "frame_stack"_.Bind(1),
                     "task_name"_.Bind(std::string("spin")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs:position"_.Bind(Spec<mjtNum>({4})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({3})),
-                    "obs:touch"_.Bind(Spec<mjtNum>({2})),
-                    "obs:target_position"_.Bind(Spec<mjtNum>({2})),
-                    "obs:dist_to_target"_.Bind(Spec<mjtNum>({}))
+    return MakeDict(
+        "obs:position"_.Bind(
+            StackSpec(Spec<mjtNum>({4}), conf["frame_stack"_])),
+        "obs:velocity"_.Bind(
+            StackSpec(Spec<mjtNum>({3}), conf["frame_stack"_])),
+        "obs:touch"_.Bind(StackSpec(Spec<mjtNum>({2}), conf["frame_stack"_])),
+        "obs:target_position"_.Bind(
+            StackSpec(Spec<mjtNum>({2}), conf["frame_stack"_])),
+        "obs:dist_to_target"_.Bind(
+            StackSpec(Spec<mjtNum>({}), conf["frame_stack"_]))
 #ifdef ENVPOOL_TEST
-                        ,
-                    "info:qpos0"_.Bind(Spec<mjtNum>({3})),
-                    "info:target"_.Bind(Spec<mjtNum>({1}))
+            ,
+        "info:qpos0"_.Bind(Spec<mjtNum>({3})),
+        "info:target"_.Bind(Spec<mjtNum>({1}))
 #endif
     );  // NOLINT
   }
@@ -89,7 +94,8 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
         MujocoEnv(
             spec.config["base_path"_],
             GetFingerXML(spec.config["base_path"_], spec.config["task_name"_]),
-            spec.config["frame_skip"_], spec.config["max_episode_steps"_]),
+            spec.config["frame_skip"_], spec.config["max_episode_steps"_],
+            spec.config["frame_stack"_]),
         id_site_target_(mj_name2id(model_, mjOBJ_SITE, "target")),
         id_site_tip_(mj_name2id(model_, mjOBJ_SITE, "tip")),
         id_hinge_(GetQvelId(model_, "hinge")),
@@ -154,13 +160,13 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
 
   void Reset() override {
     ControlReset();
-    WriteState();
+    WriteState(true);
   }
 
   void Step(const Action& action) override {
     mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
     ControlStep(act);
-    WriteState();
+    WriteState(false);
   }
 
   float TaskGetReward() override {
@@ -173,7 +179,7 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
   bool TaskShouldTerminateEpisode() override { return false; }
 
  private:
-  void WriteState() {
+  void WriteState(bool reset) {
     auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
@@ -181,14 +187,23 @@ class FingerEnv : public Env<FingerEnvSpec>, public MujocoEnv {
     const auto& bound_pos = BoundedPosition();
     const auto& velocity = Velocity();
     const auto& touch = Touch();
-    state["obs:position"_].Assign(bound_pos.data(), bound_pos.size());
-    state["obs:velocity"_].Assign(velocity.data(), velocity.size());
-    state["obs:touch"_].Assign(touch.data(), touch.size());
+    auto obs_position = state["obs:position"_];
+    AssignObservation("obs:position", &obs_position, bound_pos.data(),
+                      bound_pos.size(), reset);
+    auto obs_velocity = state["obs:velocity"_];
+    AssignObservation("obs:velocity", &obs_velocity, velocity.data(),
+                      velocity.size(), reset);
+    auto obs_touch = state["obs:touch"_];
+    AssignObservation("obs:touch", &obs_touch, touch.data(), touch.size(),
+                      reset);
     if (!is_spin_) {
       const auto& target_position = TargetPosition();
-      state["obs:target_position"_].Assign(target_position.data(),
-                                           target_position.size());
-      state["obs:dist_to_target"_] = DistToTarget();
+      auto obs_target_position = state["obs:target_position"_];
+      AssignObservation("obs:target_position", &obs_target_position,
+                        target_position.data(), target_position.size(), reset);
+      auto obs_dist_to_target = state["obs:dist_to_target"_];
+      AssignObservation("obs:dist_to_target", &obs_dist_to_target,
+                        DistToTarget(), reset);
     }
     // info
 #ifdef ENVPOOL_TEST

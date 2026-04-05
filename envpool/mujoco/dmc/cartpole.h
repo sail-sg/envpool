@@ -50,7 +50,7 @@ std::string GetCartpoleXML(const std::string& base_path,
 class CartpoleEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("frame_skip"_.Bind(1),
+    return MakeDict("frame_skip"_.Bind(1), "frame_stack"_.Bind(1),
                     "task_name"_.Bind(std::string("balance")));
   }
   template <typename Config>
@@ -68,8 +68,10 @@ class CartpoleEnvFns {
       throw std::runtime_error("Unknown task_name " + task_name +
                                " for dmc cartpole.");
     }
-    return MakeDict("obs:position"_.Bind(Spec<mjtNum>({1 + 2 * n_poles})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({1 + n_poles}))
+    return MakeDict("obs:position"_.Bind(StackSpec(
+                        Spec<mjtNum>({1 + 2 * n_poles}), conf["frame_stack"_])),
+                    "obs:velocity"_.Bind(StackSpec(Spec<mjtNum>({1 + n_poles}),
+                                                   conf["frame_stack"_]))
 #ifdef ENVPOOL_TEST
                         ,
                     "info:qpos0"_.Bind(Spec<mjtNum>({1 + n_poles})),
@@ -100,8 +102,8 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
         MujocoEnv(spec.config["base_path"_],
                   GetCartpoleXML(spec.config["base_path"_],
                                  spec.config["task_name"_]),
-                  spec.config["frame_skip"_],
-                  spec.config["max_episode_steps"_]),
+                  spec.config["frame_skip"_], spec.config["max_episode_steps"_],
+                  spec.config["frame_stack"_]),
         id_slider_(GetQposId(model_, "slider")),
         id_hinge1_(GetQposId(model_, "hinge_1")),
         is_sparse_(spec.config["task_name"_] == "balance_sparse" ||
@@ -141,13 +143,13 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
 
   void Reset() override {
     ControlReset();
-    WriteState();
+    WriteState(true);
   }
 
   void Step(const Action& action) override {
     mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
     ControlStep(act);
-    WriteState();
+    WriteState(false);
   }
 
   float TaskGetReward() override {
@@ -184,14 +186,18 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
   bool TaskShouldTerminateEpisode() override { return false; }
 
  private:
-  void WriteState() {
+  void WriteState(bool reset) {
     auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
     const auto& position = BoundedPosition();
-    state["obs:position"_].Assign(position.data(), position.size());
-    state["obs:velocity"_].Assign(data_->qvel, model_->nv);
+    auto obs_position = state["obs:position"_];
+    AssignObservation("obs:position", &obs_position, position.data(),
+                      position.size(), reset);
+    auto obs_velocity = state["obs:velocity"_];
+    AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
+                      reset);
     // info for check alignment
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);

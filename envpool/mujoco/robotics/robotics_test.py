@@ -699,6 +699,83 @@ class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
         finally:
             env.close()
 
+    def test_frame_stack(self) -> None:
+        spec = make_spec("FetchReach-v4", frame_stack=4)
+        obs_space = cast(gym.spaces.Dict, spec.observation_space)
+        self.assertEqual(obs_space.spaces["observation"].shape, (4, 10))
+        self.assertEqual(obs_space.spaces["achieved_goal"].shape, (4, 3))
+        self.assertEqual(obs_space.spaces["desired_goal"].shape, (4, 3))
+
+        env = make_gymnasium("FetchReach-v4", num_envs=1, seed=0, frame_stack=4)
+        try:
+            obs0, _ = env.reset()
+            np.testing.assert_allclose(
+                obs0["observation"][0, 0], obs0["observation"][0, 1]
+            )
+            np.testing.assert_allclose(
+                obs0["achieved_goal"][0, 0], obs0["achieved_goal"][0, 1]
+            )
+            np.testing.assert_allclose(
+                obs0["desired_goal"][0, 0], obs0["desired_goal"][0, 1]
+            )
+
+            action = np.zeros(
+                (1,) + spec.action_space.shape, dtype=spec.action_space.dtype
+            )
+            obs1, _, _, _, _ = env.step(action, np.asarray([0], dtype=np.int32))
+            np.testing.assert_allclose(
+                obs0["observation"][0, 1:], obs1["observation"][0, :-1]
+            )
+            np.testing.assert_allclose(
+                obs0["achieved_goal"][0, 1:], obs1["achieved_goal"][0, :-1]
+            )
+            np.testing.assert_allclose(
+                obs0["desired_goal"][0, 1:], obs1["desired_goal"][0, :-1]
+            )
+        finally:
+            env.close()
+
+    def test_frame_stack_one_matches_default(self) -> None:
+        spec0 = make_spec("FetchReach-v4")
+        spec1 = make_spec("FetchReach-v4", frame_stack=1)
+        obs_space0 = cast(gym.spaces.Dict, spec0.observation_space)
+        obs_space1 = cast(gym.spaces.Dict, spec1.observation_space)
+        self.assertEqual(
+            obs_space0.spaces["observation"].shape,
+            obs_space1.spaces["observation"].shape,
+        )
+        self.assertEqual(
+            obs_space0.spaces["achieved_goal"].shape,
+            obs_space1.spaces["achieved_goal"].shape,
+        )
+        self.assertEqual(
+            obs_space0.spaces["desired_goal"].shape,
+            obs_space1.spaces["desired_goal"].shape,
+        )
+
+        env0 = make_gymnasium("FetchReach-v4", num_envs=1, seed=0)
+        env1 = make_gymnasium(
+            "FetchReach-v4", num_envs=1, seed=0, frame_stack=1
+        )
+        try:
+            obs0, _ = env0.reset()
+            obs1, _ = env1.reset()
+            _assert_goal_obs_equal(obs0, obs1)
+
+            action = np.zeros(
+                (1,) + spec0.action_space.shape, dtype=spec0.action_space.dtype
+            )
+            obs0, _, _, _, _ = env0.step(
+                action, np.asarray([0], dtype=np.int32)
+            )
+            obs1, _, _, _, _ = env1.step(
+                action, np.asarray([0], dtype=np.int32)
+            )
+            _assert_goal_obs_equal(obs0, obs1)
+        finally:
+            env0.close()
+            env1.close()
+
 
 class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
     def test_registered_hand_env_count(self) -> None:
@@ -965,6 +1042,85 @@ class _GymnasiumRoboticsPointMazeEnvPoolTest(absltest.TestCase):
                 finally:
                     env0.close()
                     env1.close()
+
+    def test_frame_stack(self) -> None:
+        spec = make_spec("PointMaze_UMaze-v3", frame_stack=4)
+        obs_space = cast(gym.spaces.Dict, spec.observation_space)
+        self.assertEqual(obs_space.spaces["observation"].shape, (4, 4))
+        self.assertEqual(obs_space.spaces["achieved_goal"].shape, (4, 2))
+        self.assertEqual(obs_space.spaces["desired_goal"].shape, (4, 2))
+
+        env = make_gymnasium(
+            "PointMaze_UMaze-v3", num_envs=1, seed=0, frame_stack=4
+        )
+        try:
+            obs0, _ = env.reset()
+            np.testing.assert_allclose(
+                obs0["observation"][0, 0], obs0["observation"][0, 1]
+            )
+            np.testing.assert_allclose(
+                obs0["achieved_goal"][0, 0], obs0["achieved_goal"][0, 1]
+            )
+            np.testing.assert_allclose(
+                obs0["desired_goal"][0, 0], obs0["desired_goal"][0, 1]
+            )
+
+            action = np.zeros(
+                (1,) + spec.action_space.shape, dtype=spec.action_space.dtype
+            )
+            obs1, _, _, _, _ = env.step(action, np.asarray([0], dtype=np.int32))
+            np.testing.assert_allclose(
+                obs0["observation"][0, 1:], obs1["observation"][0, :-1]
+            )
+            np.testing.assert_allclose(
+                obs0["achieved_goal"][0, 1:], obs1["achieved_goal"][0, :-1]
+            )
+            np.testing.assert_allclose(
+                obs0["desired_goal"][0, 1:], obs1["desired_goal"][0, :-1]
+            )
+        finally:
+            env.close()
+
+    def test_frame_stack_one_matches_default(self) -> None:
+        spec0 = make_spec("PointMaze_UMaze-v3")
+        spec1 = make_spec("PointMaze_UMaze-v3", frame_stack=1)
+        obs_space0 = cast(gym.spaces.Dict, spec0.observation_space)
+        obs_space1 = cast(gym.spaces.Dict, spec1.observation_space)
+        self.assertEqual(
+            obs_space0.spaces["observation"].shape,
+            obs_space1.spaces["observation"].shape,
+        )
+        self.assertEqual(
+            obs_space0.spaces["achieved_goal"].shape,
+            obs_space1.spaces["achieved_goal"].shape,
+        )
+        self.assertEqual(
+            obs_space0.spaces["desired_goal"].shape,
+            obs_space1.spaces["desired_goal"].shape,
+        )
+
+        env0 = make_gymnasium("PointMaze_UMaze-v3", num_envs=1, seed=0)
+        env1 = make_gymnasium(
+            "PointMaze_UMaze-v3", num_envs=1, seed=0, frame_stack=1
+        )
+        try:
+            obs0, _ = env0.reset()
+            obs1, _ = env1.reset()
+            _assert_goal_obs_equal(obs0, obs1)
+
+            action = np.zeros(
+                (1,) + spec0.action_space.shape, dtype=spec0.action_space.dtype
+            )
+            obs0, _, _, _, _ = env0.step(
+                action, np.asarray([0], dtype=np.int32)
+            )
+            obs1, _, _, _, _ = env1.step(
+                action, np.asarray([0], dtype=np.int32)
+            )
+            _assert_goal_obs_equal(obs0, obs1)
+        finally:
+            env0.close()
+            env1.close()
 
 
 class _GymnasiumRoboticsKitchenEnvPoolTest(absltest.TestCase):

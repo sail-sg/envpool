@@ -33,9 +33,9 @@ class ReacherEnvFns {
   static decltype(auto) DefaultConfig() {
     return MakeDict(
         "reward_threshold"_.Bind(-3.75), "frame_skip"_.Bind(2),
-        "post_constraint"_.Bind(true), "ctrl_cost_weight"_.Bind(1.0),
-        "reward_after_step"_.Bind(false), "obs_include_z_distance"_.Bind(true),
-        "dist_cost_weight"_.Bind(1.0),
+        "frame_stack"_.Bind(1), "post_constraint"_.Bind(true),
+        "ctrl_cost_weight"_.Bind(1.0), "reward_after_step"_.Bind(false),
+        "obs_include_z_distance"_.Bind(true), "dist_cost_weight"_.Bind(1.0),
         "xml_file"_.Bind(std::string("reacher.xml")),
         "reset_qpos_scale"_.Bind(0.1), "reset_qvel_scale"_.Bind(0.005),
         "reset_goal_scale"_.Bind(0.2));
@@ -44,8 +44,10 @@ class ReacherEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
     return MakeDict(
-        "obs"_.Bind(Spec<mjtNum>({conf["obs_include_z_distance"_] ? 11 : 10},
-                                 {-inf, inf})),
+        "obs"_.Bind(
+            StackSpec(Spec<mjtNum>({conf["obs_include_z_distance"_] ? 11 : 10},
+                                   {-inf, inf}),
+                      conf["frame_stack"_])),
 #ifdef ENVPOOL_TEST
         "info:qpos0"_.Bind(Spec<mjtNum>({4})),
         "info:qvel0"_.Bind(Spec<mjtNum>({4})),
@@ -71,11 +73,11 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
  public:
   ReacherEnv(const Spec& spec, int env_id)
       : Env<ReacherEnvSpec>(spec, env_id),
-        MujocoEnv(std::string(spec.config["base_path"_]) +
-                      "/mujoco/assets_gym/" +
-                      std::string(spec.config["xml_file"_]),
-                  spec.config["frame_skip"_], spec.config["post_constraint"_],
-                  spec.config["max_episode_steps"_]),
+        MujocoEnv(
+            std::string(spec.config["base_path"_]) + "/mujoco/assets_gym/" +
+                std::string(spec.config["xml_file"_]),
+            spec.config["frame_skip"_], spec.config["post_constraint"_],
+            spec.config["max_episode_steps"_], spec.config["frame_stack"_]),
         id_fingertip_(mj_name2id(model_, mjOBJ_XBODY, "fingertip")),
         id_target_(mj_name2id(model_, mjOBJ_XBODY, "target")),
         reward_after_step_(spec.config["reward_after_step"_]),
@@ -119,7 +121,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteState(0.0, 0.0, 0.0);
+    WriteState(0.0, 0.0, 0.0, true);
   }
 
   void Step(const Action& action) override {
@@ -147,7 +149,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     // reward and done
     auto reward = static_cast<float>(-dist_cost - ctrl_cost);
     done_ = (++elapsed_step_ >= max_episode_steps_);
-    WriteState(reward, ctrl_cost, dist_cost);
+    WriteState(reward, ctrl_cost, dist_cost, false);
   }
 
  private:
@@ -159,11 +161,13 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
         data_->xpos[id_fingertip_ * 3 + 2] - data_->xpos[id_target_ * 3 + 2]};
   }
 
-  void WriteState(float reward, mjtNum ctrl_cost, mjtNum dist_cost) {
+  void WriteState(float reward, mjtNum ctrl_cost, mjtNum dist_cost,
+                  bool reset) {
     auto state = Allocate();
     state["reward"_] = reward;
     // obs
-    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());
+    auto obs_state = state["obs"_];
+    mjtNum* obs = PrepareObservation(&obs_state);
     *(obs++) = std::cos(data_->qpos[0]);
     *(obs++) = std::cos(data_->qpos[1]);
     *(obs++) = std::sin(data_->qpos[0]);
@@ -180,6 +184,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     if (obs_include_z_distance_) {
       *(obs++) = dist[2];
     }
+    CommitObservation(&obs_state, reset);
     // info
     state["info:reward_dist"_] = -dist_cost;
     state["info:reward_ctrl"_] = -ctrl_cost;

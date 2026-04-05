@@ -79,6 +79,7 @@ copy_to_directory(
 cc_library(
     name = "mujoco_gym_env",
     hdrs = [
+        "frame_stack.h",
         "gym/ant.h",
         "gym/half_cheetah.h",
         "gym/hopper.h",
@@ -121,6 +122,7 @@ cc_library(
         "dmc/utils.cc",
     ],
     hdrs = [
+        "frame_stack.h",
         "dmc/acrobot.h",
         "dmc/ball_in_cup.h",
         "dmc/cartpole.h",
@@ -186,6 +188,7 @@ cc_library(
     name = "robotics_env",
     srcs = ["robotics/utils.cc"],
     hdrs = [
+        "frame_stack.h",
         "robotics/adroit.h",
         "robotics/fetch.h",
         "robotics/hand.h",

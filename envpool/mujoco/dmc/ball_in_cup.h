@@ -39,16 +39,18 @@ std::string GetBallInCupXML(const std::string& base_path,
 class BallInCupEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("frame_skip"_.Bind(10),
+    return MakeDict("frame_skip"_.Bind(10), "frame_stack"_.Bind(1),
                     "task_name"_.Bind(std::string("catch")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs:position"_.Bind(Spec<mjtNum>({4})),
-                    "obs:velocity"_.Bind(Spec<mjtNum>({4}))
+    return MakeDict(
+        "obs:position"_.Bind(
+            StackSpec(Spec<mjtNum>({4}), conf["frame_stack"_])),
+        "obs:velocity"_.Bind(StackSpec(Spec<mjtNum>({4}), conf["frame_stack"_]))
 #ifdef ENVPOOL_TEST
-                        ,
-                    "info:qpos0"_.Bind(Spec<mjtNum>({4}))
+            ,
+        "info:qpos0"_.Bind(Spec<mjtNum>({4}))
 #endif
     );  // NOLINT
   }
@@ -70,8 +72,8 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
         MujocoEnv(spec.config["base_path"_],
                   GetBallInCupXML(spec.config["base_path"_],
                                   spec.config["task_name"_]),
-                  spec.config["frame_skip"_],
-                  spec.config["max_episode_steps"_]),
+                  spec.config["frame_skip"_], spec.config["max_episode_steps"_],
+                  spec.config["frame_stack"_]),
         id_target_(mj_name2id(model_, mjOBJ_SITE, "target")),
         id_ball_(mj_name2id(model_, mjOBJ_XBODY, "ball")),
         id_ball_x_(GetQposId(model_, "ball_x")),
@@ -102,13 +104,13 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
 
   void Reset() override {
     ControlReset();
-    WriteState();
+    WriteState(true);
   }
 
   void Step(const Action& action) override {
     mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
     ControlStep(act);
-    WriteState();
+    WriteState(false);
   }
 
   float TaskGetReward() override { return static_cast<float>(InTarget()); }
@@ -116,13 +118,17 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
   bool TaskShouldTerminateEpisode() override { return false; }
 
  private:
-  void WriteState() {
+  void WriteState(bool reset) {
     auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
     // obs
-    state["obs:position"_].Assign(data_->qpos, model_->nq);
-    state["obs:velocity"_].Assign(data_->qvel, model_->nv);
+    auto obs_position = state["obs:position"_];
+    AssignObservation("obs:position", &obs_position, data_->qpos, model_->nq,
+                      reset);
+    auto obs_velocity = state["obs:velocity"_];
+    AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
+                      reset);
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
 #endif

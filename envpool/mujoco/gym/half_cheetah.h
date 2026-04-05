@@ -32,7 +32,7 @@ class HalfCheetahEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict("reward_threshold"_.Bind(4800.0), "frame_skip"_.Bind(5),
-                    "post_constraint"_.Bind(true),
+                    "frame_stack"_.Bind(1), "post_constraint"_.Bind(true),
                     "exclude_current_positions_from_observation"_.Bind(true),
                     "xml_file"_.Bind(std::string("half_cheetah.xml")),
                     "ctrl_cost_weight"_.Bind(0.1),
@@ -43,15 +43,17 @@ class HalfCheetahEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
     bool no_pos = conf["exclude_current_positions_from_observation"_];
-    return MakeDict("obs"_.Bind(Spec<mjtNum>({no_pos ? 17 : 18}, {-inf, inf})),
+    return MakeDict(
+        "obs"_.Bind(StackSpec(Spec<mjtNum>({no_pos ? 17 : 18}, {-inf, inf}),
+                              conf["frame_stack"_])),
 #ifdef ENVPOOL_TEST
-                    "info:qpos0"_.Bind(Spec<mjtNum>({9})),
-                    "info:qvel0"_.Bind(Spec<mjtNum>({9})),
+        "info:qpos0"_.Bind(Spec<mjtNum>({9})),
+        "info:qvel0"_.Bind(Spec<mjtNum>({9})),
 #endif
-                    "info:reward_run"_.Bind(Spec<mjtNum>({-1})),
-                    "info:reward_ctrl"_.Bind(Spec<mjtNum>({-1})),
-                    "info:x_position"_.Bind(Spec<mjtNum>({-1})),
-                    "info:x_velocity"_.Bind(Spec<mjtNum>({-1})));
+        "info:reward_run"_.Bind(Spec<mjtNum>({-1})),
+        "info:reward_ctrl"_.Bind(Spec<mjtNum>({-1})),
+        "info:x_position"_.Bind(Spec<mjtNum>({-1})),
+        "info:x_velocity"_.Bind(Spec<mjtNum>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -71,11 +73,11 @@ class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
  public:
   HalfCheetahEnv(const Spec& spec, int env_id)
       : Env<HalfCheetahEnvSpec>(spec, env_id),
-        MujocoEnv(std::string(spec.config["base_path"_]) +
-                      "/mujoco/assets_gym/" +
-                      std::string(spec.config["xml_file"_]),
-                  spec.config["frame_skip"_], spec.config["post_constraint"_],
-                  spec.config["max_episode_steps"_]),
+        MujocoEnv(
+            std::string(spec.config["base_path"_]) + "/mujoco/assets_gym/" +
+                std::string(spec.config["xml_file"_]),
+            spec.config["frame_skip"_], spec.config["post_constraint"_],
+            spec.config["max_episode_steps"_], spec.config["frame_stack"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
@@ -102,7 +104,7 @@ class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
     done_ = false;
     elapsed_step_ = 0;
     MujocoReset();
-    WriteState(0.0, 0.0, 0.0, 0.0);
+    WriteState(0.0, 0.0, 0.0, 0.0, true);
   }
 
   void Step(const Action& action) override {
@@ -123,21 +125,24 @@ class HalfCheetahEnv : public Env<HalfCheetahEnvSpec>, public MujocoEnv {
     // reward and done
     auto reward = static_cast<float>(xv * forward_reward_weight_ - ctrl_cost);
     done_ = (++elapsed_step_ >= max_episode_steps_);
-    WriteState(reward, xv, ctrl_cost, x_after);
+    WriteState(reward, xv, ctrl_cost, x_after, false);
   }
 
  private:
-  void WriteState(float reward, mjtNum xv, mjtNum ctrl_cost, mjtNum x_after) {
+  void WriteState(float reward, mjtNum xv, mjtNum ctrl_cost, mjtNum x_after,
+                  bool reset) {
     auto state = Allocate();
     state["reward"_] = reward;
     // obs
-    mjtNum* obs = static_cast<mjtNum*>(state["obs"_].Data());
+    auto obs_state = state["obs"_];
+    mjtNum* obs = PrepareObservation(&obs_state);
     for (int i = no_pos_ ? 1 : 0; i < model_->nq; ++i) {
       *(obs++) = data_->qpos[i];
     }
     for (int i = 0; i < model_->nv; ++i) {
       *(obs++) = data_->qvel[i];
     }
+    CommitObservation(&obs_state, reset);
     // info
     state["info:reward_run"_] = xv * forward_reward_weight_;
     state["info:reward_ctrl"_] = -ctrl_cost;

@@ -126,6 +126,7 @@ class KitchenEnvFns {
   static decltype(auto) DefaultConfig() {
     return MakeDict(
         "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(40),
+        "frame_stack"_.Bind(1),
         "xml_file"_.Bind(
             std::string("kitchen_franka/kitchen_assets/kitchen_env_model.xml")),
         "tasks_to_complete"_.Bind(std::vector<std::string>{
@@ -147,53 +148,81 @@ class KitchenEnvFns {
     (void)conf;
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
 #ifdef ENVPOOL_TEST
-    return MakeDict(
-        "obs:observation"_.Bind(Spec<mjtNum>({59}, {-inf, inf})),
-        "obs:desired_goal:bottom burner"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-        "obs:desired_goal:top burner"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-        "obs:desired_goal:light switch"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-        "obs:desired_goal:slide cabinet"_.Bind(Spec<mjtNum>({1}, {-inf, inf})),
-        "obs:desired_goal:hinge cabinet"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-        "obs:desired_goal:microwave"_.Bind(Spec<mjtNum>({1}, {-inf, inf})),
-        "obs:desired_goal:kettle"_.Bind(Spec<mjtNum>({7}, {-inf, inf})),
-        "obs:achieved_goal:bottom burner"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-        "obs:achieved_goal:top burner"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-        "obs:achieved_goal:light switch"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-        "obs:achieved_goal:slide cabinet"_.Bind(Spec<mjtNum>({1}, {-inf, inf})),
-        "obs:achieved_goal:hinge cabinet"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-        "obs:achieved_goal:microwave"_.Bind(Spec<mjtNum>({1}, {-inf, inf})),
-        "obs:achieved_goal:kettle"_.Bind(Spec<mjtNum>({7}, {-inf, inf})),
-        "info:tasks_to_complete"_.Bind(
-            Spec<int>({kitchen_internal::kTaskCount}, {0, 1})),
-        "info:step_task_completions"_.Bind(
-            Spec<int>({kitchen_internal::kTaskCount}, {0, 1})),
-        "info:episode_task_completions"_.Bind(
-            Spec<int>({kitchen_internal::kTaskCount}, {0, 1})),
-        "info:qpos0"_.Bind(Spec<mjtNum>({30}, {-inf, inf})),
-        "info:qvel0"_.Bind(Spec<mjtNum>({29}, {-inf, inf})));
+    return MakeDict("obs:observation"_.Bind(StackSpec(
+                        Spec<mjtNum>({59}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:desired_goal:bottom burner"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:desired_goal:top burner"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:desired_goal:light switch"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:desired_goal:slide cabinet"_.Bind(StackSpec(
+                        Spec<mjtNum>({1}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:desired_goal:hinge cabinet"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:desired_goal:microwave"_.Bind(StackSpec(
+                        Spec<mjtNum>({1}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:desired_goal:kettle"_.Bind(StackSpec(
+                        Spec<mjtNum>({7}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:achieved_goal:bottom burner"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:achieved_goal:top burner"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:achieved_goal:light switch"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:achieved_goal:slide cabinet"_.Bind(StackSpec(
+                        Spec<mjtNum>({1}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:achieved_goal:hinge cabinet"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:achieved_goal:microwave"_.Bind(StackSpec(
+                        Spec<mjtNum>({1}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:achieved_goal:kettle"_.Bind(StackSpec(
+                        Spec<mjtNum>({7}, {-inf, inf}), conf["frame_stack"_])),
+                    "info:tasks_to_complete"_.Bind(
+                        Spec<int>({kitchen_internal::kTaskCount}, {0, 1})),
+                    "info:step_task_completions"_.Bind(
+                        Spec<int>({kitchen_internal::kTaskCount}, {0, 1})),
+                    "info:episode_task_completions"_.Bind(
+                        Spec<int>({kitchen_internal::kTaskCount}, {0, 1})),
+                    "info:qpos0"_.Bind(Spec<mjtNum>({30}, {-inf, inf})),
+                    "info:qvel0"_.Bind(Spec<mjtNum>({29}, {-inf, inf})));
 #else
-    return MakeDict(
-        "obs:observation"_.Bind(Spec<mjtNum>({59}, {-inf, inf})),
-        "obs:desired_goal:bottom burner"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-        "obs:desired_goal:top burner"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-        "obs:desired_goal:light switch"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-        "obs:desired_goal:slide cabinet"_.Bind(Spec<mjtNum>({1}, {-inf, inf})),
-        "obs:desired_goal:hinge cabinet"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-        "obs:desired_goal:microwave"_.Bind(Spec<mjtNum>({1}, {-inf, inf})),
-        "obs:desired_goal:kettle"_.Bind(Spec<mjtNum>({7}, {-inf, inf})),
-        "obs:achieved_goal:bottom burner"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-        "obs:achieved_goal:top burner"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-        "obs:achieved_goal:light switch"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-        "obs:achieved_goal:slide cabinet"_.Bind(Spec<mjtNum>({1}, {-inf, inf})),
-        "obs:achieved_goal:hinge cabinet"_.Bind(Spec<mjtNum>({2}, {-inf, inf})),
-        "obs:achieved_goal:microwave"_.Bind(Spec<mjtNum>({1}, {-inf, inf})),
-        "obs:achieved_goal:kettle"_.Bind(Spec<mjtNum>({7}, {-inf, inf})),
-        "info:tasks_to_complete"_.Bind(
-            Spec<int>({kitchen_internal::kTaskCount}, {0, 1})),
-        "info:step_task_completions"_.Bind(
-            Spec<int>({kitchen_internal::kTaskCount}, {0, 1})),
-        "info:episode_task_completions"_.Bind(
-            Spec<int>({kitchen_internal::kTaskCount}, {0, 1})));
+    return MakeDict("obs:observation"_.Bind(StackSpec(
+                        Spec<mjtNum>({59}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:desired_goal:bottom burner"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:desired_goal:top burner"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:desired_goal:light switch"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:desired_goal:slide cabinet"_.Bind(StackSpec(
+                        Spec<mjtNum>({1}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:desired_goal:hinge cabinet"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:desired_goal:microwave"_.Bind(StackSpec(
+                        Spec<mjtNum>({1}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:desired_goal:kettle"_.Bind(StackSpec(
+                        Spec<mjtNum>({7}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:achieved_goal:bottom burner"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:achieved_goal:top burner"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:achieved_goal:light switch"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:achieved_goal:slide cabinet"_.Bind(StackSpec(
+                        Spec<mjtNum>({1}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:achieved_goal:hinge cabinet"_.Bind(StackSpec(
+                        Spec<mjtNum>({2}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:achieved_goal:microwave"_.Bind(StackSpec(
+                        Spec<mjtNum>({1}, {-inf, inf}), conf["frame_stack"_])),
+                    "obs:achieved_goal:kettle"_.Bind(StackSpec(
+                        Spec<mjtNum>({7}, {-inf, inf}), conf["frame_stack"_])),
+                    "info:tasks_to_complete"_.Bind(
+                        Spec<int>({kitchen_internal::kTaskCount}, {0, 1})),
+                    "info:step_task_completions"_.Bind(
+                        Spec<int>({kitchen_internal::kTaskCount}, {0, 1})),
+                    "info:episode_task_completions"_.Bind(
+                        Spec<int>({kitchen_internal::kTaskCount}, {0, 1})));
 #endif
   }
 
@@ -224,7 +253,8 @@ class KitchenEnv : public Env<KitchenEnvSpec>, public MujocoRobotEnv {
       : Env<KitchenEnvSpec>(spec, env_id),
         MujocoRobotEnv(spec.config["base_path"_], spec.config["xml_file"_],
                        spec.config["frame_skip"_],
-                       spec.config["max_episode_steps"_]),
+                       spec.config["max_episode_steps"_],
+                       spec.config["frame_stack"_]),
         terminate_on_tasks_completed_(
             spec.config["terminate_on_tasks_completed"_]),
         remove_task_when_completed_(spec.config["remove_task_when_completed"_]),
@@ -244,7 +274,7 @@ class KitchenEnv : public Env<KitchenEnvSpec>, public MujocoRobotEnv {
     step_task_completions_.fill(0);
     episode_task_completions_.fill(0);
     CaptureResetState();
-    WriteState(0.0);
+    WriteState(0.0, true);
   }
 
   void Step(const Action& action) override {
@@ -264,7 +294,7 @@ class KitchenEnv : public Env<KitchenEnvSpec>, public MujocoRobotEnv {
     mjtNum reward = UpdateTaskCompletions();
     done_ = elapsed_step_ >= max_episode_steps_ ||
             (terminate_on_tasks_completed_ && AllTasksCompleted());
-    WriteState(reward);
+    WriteState(reward, false);
   }
 
  protected:
@@ -373,7 +403,8 @@ class KitchenEnv : public Env<KitchenEnvSpec>, public MujocoRobotEnv {
     return std::sqrt(distance_sq);
   }
 
-  void WriteGoalState(State* state, const char* prefix, int task_id) const {
+  void WriteGoalState(State* state, const char* prefix, int task_id,
+                      bool reset) {
     const auto& task = kitchen_internal::kTaskSpecs[task_id];
     std::vector<mjtNum> value(task.dim);
     for (int i = 0; i < task.dim; ++i) {
@@ -381,52 +412,69 @@ class KitchenEnv : public Env<KitchenEnvSpec>, public MujocoRobotEnv {
           prefix[4] == 'd' ? task.goal[i] : data_->qpos[task.qpos_indices[i]];
     }
     if (task_id == 0 && prefix[4] == 'd') {
-      (*state)["obs:desired_goal:bottom burner"_].Assign(value.data(),
-                                                         value.size());
+      auto obs = (*state)["obs:desired_goal:bottom burner"_];
+      AssignObservation("obs:desired_goal:bottom burner", &obs, value.data(),
+                        value.size(), reset);
     } else if (task_id == 1 && prefix[4] == 'd') {
-      (*state)["obs:desired_goal:top burner"_].Assign(value.data(),
-                                                      value.size());
+      auto obs = (*state)["obs:desired_goal:top burner"_];
+      AssignObservation("obs:desired_goal:top burner", &obs, value.data(),
+                        value.size(), reset);
     } else if (task_id == 2 && prefix[4] == 'd') {
-      (*state)["obs:desired_goal:light switch"_].Assign(value.data(),
-                                                        value.size());
+      auto obs = (*state)["obs:desired_goal:light switch"_];
+      AssignObservation("obs:desired_goal:light switch", &obs, value.data(),
+                        value.size(), reset);
     } else if (task_id == 3 && prefix[4] == 'd') {
-      (*state)["obs:desired_goal:slide cabinet"_].Assign(value.data(),
-                                                         value.size());
+      auto obs = (*state)["obs:desired_goal:slide cabinet"_];
+      AssignObservation("obs:desired_goal:slide cabinet", &obs, value.data(),
+                        value.size(), reset);
     } else if (task_id == 4 && prefix[4] == 'd') {
-      (*state)["obs:desired_goal:hinge cabinet"_].Assign(value.data(),
-                                                         value.size());
+      auto obs = (*state)["obs:desired_goal:hinge cabinet"_];
+      AssignObservation("obs:desired_goal:hinge cabinet", &obs, value.data(),
+                        value.size(), reset);
     } else if (task_id == 5 && prefix[4] == 'd') {
-      (*state)["obs:desired_goal:microwave"_].Assign(value.data(),
-                                                     value.size());
+      auto obs = (*state)["obs:desired_goal:microwave"_];
+      AssignObservation("obs:desired_goal:microwave", &obs, value.data(),
+                        value.size(), reset);
     } else if (task_id == 6 && prefix[4] == 'd') {
-      (*state)["obs:desired_goal:kettle"_].Assign(value.data(), value.size());
+      auto obs = (*state)["obs:desired_goal:kettle"_];
+      AssignObservation("obs:desired_goal:kettle", &obs, value.data(),
+                        value.size(), reset);
     } else if (task_id == 0) {
-      (*state)["obs:achieved_goal:bottom burner"_].Assign(value.data(),
-                                                          value.size());
+      auto obs = (*state)["obs:achieved_goal:bottom burner"_];
+      AssignObservation("obs:achieved_goal:bottom burner", &obs, value.data(),
+                        value.size(), reset);
     } else if (task_id == 1) {
-      (*state)["obs:achieved_goal:top burner"_].Assign(value.data(),
-                                                       value.size());
+      auto obs = (*state)["obs:achieved_goal:top burner"_];
+      AssignObservation("obs:achieved_goal:top burner", &obs, value.data(),
+                        value.size(), reset);
     } else if (task_id == 2) {
-      (*state)["obs:achieved_goal:light switch"_].Assign(value.data(),
-                                                         value.size());
+      auto obs = (*state)["obs:achieved_goal:light switch"_];
+      AssignObservation("obs:achieved_goal:light switch", &obs, value.data(),
+                        value.size(), reset);
     } else if (task_id == 3) {
-      (*state)["obs:achieved_goal:slide cabinet"_].Assign(value.data(),
-                                                          value.size());
+      auto obs = (*state)["obs:achieved_goal:slide cabinet"_];
+      AssignObservation("obs:achieved_goal:slide cabinet", &obs, value.data(),
+                        value.size(), reset);
     } else if (task_id == 4) {
-      (*state)["obs:achieved_goal:hinge cabinet"_].Assign(value.data(),
-                                                          value.size());
+      auto obs = (*state)["obs:achieved_goal:hinge cabinet"_];
+      AssignObservation("obs:achieved_goal:hinge cabinet", &obs, value.data(),
+                        value.size(), reset);
     } else if (task_id == 5) {
-      (*state)["obs:achieved_goal:microwave"_].Assign(value.data(),
-                                                      value.size());
+      auto obs = (*state)["obs:achieved_goal:microwave"_];
+      AssignObservation("obs:achieved_goal:microwave", &obs, value.data(),
+                        value.size(), reset);
     } else {
-      (*state)["obs:achieved_goal:kettle"_].Assign(value.data(), value.size());
+      auto obs = (*state)["obs:achieved_goal:kettle"_];
+      AssignObservation("obs:achieved_goal:kettle", &obs, value.data(),
+                        value.size(), reset);
     }
   }
 
-  void WriteState(mjtNum reward) {
+  void WriteState(mjtNum reward, bool reset) {
     State state = Allocate();
     auto [robot_qpos, robot_qvel] = NoisyRobotObs();
-    auto* obs = static_cast<mjtNum*>(state["obs:observation"_].Data());
+    auto obs_observation = state["obs:observation"_];
+    auto* obs = PrepareObservation("obs:observation", &obs_observation);
     int obs_index = 0;
     for (int i = 0; i < kitchen_internal::kRobotDim; ++i) {
       obs[obs_index++] = robot_qpos[i];
@@ -446,9 +494,10 @@ class KitchenEnv : public Env<KitchenEnvSpec>, public MujocoRobotEnv {
                                    kitchen_internal::kRobotVelNoiseAmp[9 + i] *
                                    noise_dist_(gen_);
     }
+    CommitObservation("obs:observation", &obs_observation, reset);
     for (int task_id = 0; task_id < kitchen_internal::kTaskCount; ++task_id) {
-      WriteGoalState(&state, "obs:desired_goal:", task_id);
-      WriteGoalState(&state, "obs:achieved_goal:", task_id);
+      WriteGoalState(&state, "obs:desired_goal:", task_id, reset);
+      WriteGoalState(&state, "obs:achieved_goal:", task_id, reset);
     }
     state["reward"_] = static_cast<float>(reward);
     state["info:tasks_to_complete"_].Assign(tasks_to_complete_.data(),

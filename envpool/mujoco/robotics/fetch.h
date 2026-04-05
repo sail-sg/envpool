@@ -36,6 +36,7 @@ class FetchEnvFns {
   static decltype(auto) DefaultConfig() {
     return MakeDict(
         "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(20),
+        "frame_stack"_.Bind(1),
         "xml_file"_.Bind(std::string("fetch/reach.xml")),
         "reward_type"_.Bind(std::string("sparse")), "has_object"_.Bind(false),
         "block_gripper"_.Bind(true), "target_in_the_air"_.Bind(true),
@@ -57,9 +58,12 @@ class FetchEnvFns {
     int qvel_dim = conf["has_object"_] ? 21 : 15;
 #endif
     return MakeDict(
-        "obs:observation"_.Bind(Spec<mjtNum>({obs_dim}, {-inf, inf})),
-        "obs:achieved_goal"_.Bind(Spec<mjtNum>({3}, {-inf, inf})),
-        "obs:desired_goal"_.Bind(Spec<mjtNum>({3}, {-inf, inf})),
+        "obs:observation"_.Bind(StackSpec(Spec<mjtNum>({obs_dim}, {-inf, inf}),
+                                          conf["frame_stack"_])),
+        "obs:achieved_goal"_.Bind(
+            StackSpec(Spec<mjtNum>({3}, {-inf, inf}), conf["frame_stack"_])),
+        "obs:desired_goal"_.Bind(
+            StackSpec(Spec<mjtNum>({3}, {-inf, inf}), conf["frame_stack"_])),
         "info:is_success"_.Bind(Spec<mjtNum>({-1}, {0.0, 1.0})),
 #ifdef ENVPOOL_TEST
         "info:qpos0"_.Bind(Spec<mjtNum>({qpos_dim})),
@@ -96,7 +100,8 @@ class FetchEnv : public Env<FetchEnvSpec>, public MujocoRobotEnv {
       : Env<FetchEnvSpec>(spec, env_id),
         MujocoRobotEnv(spec.config["base_path"_], spec.config["xml_file"_],
                        spec.config["frame_skip"_],
-                       spec.config["max_episode_steps"_]),
+                       spec.config["max_episode_steps"_],
+                       spec.config["frame_stack"_]),
         has_object_(spec.config["has_object"_]),
         block_gripper_(spec.config["block_gripper"_]),
         target_in_the_air_(spec.config["target_in_the_air"_]),
@@ -128,7 +133,7 @@ class FetchEnv : public Env<FetchEnvSpec>, public MujocoRobotEnv {
     }
     goal_ = SampleGoal();
     CaptureResetState();
-    WriteState(0.0);
+    WriteState(0.0, true);
   }
 
   void Step(const Action& action) override {
@@ -146,7 +151,7 @@ class FetchEnv : public Env<FetchEnvSpec>, public MujocoRobotEnv {
     if (sparse_reward_) {
       reward = distance > distance_threshold_ ? -1.0 : 0.0;
     }
-    WriteState(static_cast<float>(reward));
+    WriteState(static_cast<float>(reward), false);
   }
 
  protected:
@@ -311,11 +316,12 @@ class FetchEnv : public Env<FetchEnvSpec>, public MujocoRobotEnv {
     return std::sqrt(dx * dx + dy * dy + dz * dz);
   }
 
-  void WriteState(float reward) {
+  void WriteState(float reward, bool reset) {
     auto state = Allocate();
     state["reward"_] = reward;
 
-    mjtNum* obs = static_cast<mjtNum*>(state["obs:observation"_].Data());
+    auto obs_observation = state["obs:observation"_];
+    mjtNum* obs = PrepareObservation("obs:observation", &obs_observation);
     auto grip_pos = GetSiteXpos(model_, data_, grip_site_id_);
     auto grip_velp = GetSiteXvelp(model_, data_, grip_site_id_);
     auto [robot_qpos, robot_qvel] = RobotGetObs(model_, data_);
@@ -358,10 +364,15 @@ class FetchEnv : public Env<FetchEnvSpec>, public MujocoRobotEnv {
     for (int i = 0; i < 2; ++i) {
       *(obs++) = robot_qvel[robot_qvel.size() - 2 + i] * Dt();
     }
+    CommitObservation("obs:observation", &obs_observation, reset);
 
     auto achieved_goal = AchievedGoal();
-    state["obs:achieved_goal"_].Assign(achieved_goal.data(), 3);
-    state["obs:desired_goal"_].Assign(goal_.data(), 3);
+    auto obs_achieved_goal = state["obs:achieved_goal"_];
+    AssignObservation("obs:achieved_goal", &obs_achieved_goal,
+                      achieved_goal.data(), 3, reset);
+    auto obs_desired_goal = state["obs:desired_goal"_];
+    AssignObservation("obs:desired_goal", &obs_desired_goal, goal_.data(), 3,
+                      reset);
     mjtNum distance = GoalDistance(achieved_goal, goal_);
     state["info:is_success"_] = distance < distance_threshold_ ? 1.0 : 0.0;
     state["info:distance"_] = distance;

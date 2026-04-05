@@ -25,10 +25,11 @@
 namespace mujoco_dmc {
 
 MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
-                     int n_sub_steps, int max_episode_steps)
+                     int n_sub_steps, int max_episode_steps, int frame_stack)
     : n_sub_steps_(n_sub_steps),
       max_episode_steps_(max_episode_steps),
-      elapsed_step_(max_episode_steps + 1) {
+      elapsed_step_(max_episode_steps + 1),
+      frame_stack_buffer_(frame_stack) {
   // initialize vfs from common assets and raw xml
   // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/mujoco/wrapper/core.py#L158
   // https://github.com/deepmind/mujoco/blob/main/python/mujoco/structs.cc
