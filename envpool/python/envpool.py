@@ -244,6 +244,11 @@ class EnvPoolMixin(ABC):
             int(self.config["render_height"]),
         )
 
+    def _ensure_pixel_observation_context(self: EnvPool) -> None:
+        pixel_render_size = self._pixel_observation_render_size()
+        if pixel_render_size is not None:
+            self._ensure_platform_render_context(*pixel_render_size)
+
     def _show_human_frame(self: EnvPool, frame: np.ndarray) -> None:
         try:
             import cv2
@@ -299,6 +304,7 @@ class EnvPoolMixin(ABC):
         env_id: np.ndarray | None = None,
     ) -> None:
         """Send actions into EnvPool."""
+        self._ensure_pixel_observation_context()
         converted_action = self._from(action, env_id)
         self._check_action(converted_action)
         self._send(converted_action)
@@ -309,9 +315,7 @@ class EnvPoolMixin(ABC):
         return_info: bool = True,
     ) -> TimeStep | tuple:
         """Recv a batch state from EnvPool."""
-        pixel_render_size = self._pixel_observation_render_size()
-        if pixel_render_size is not None:
-            self._ensure_platform_render_context(*pixel_render_size)
+        self._ensure_pixel_observation_context()
         state_list = self._recv()
         if not hasattr(self, "_state_names"):
             self._state_names = self._state_keys
@@ -324,6 +328,7 @@ class EnvPoolMixin(ABC):
 
     def async_reset(self: EnvPool) -> None:
         """Follows the async semantics, reset the envs in env_ids."""
+        self._ensure_pixel_observation_context()
         self._reset(self.all_env_ids)
 
     def step(
@@ -345,6 +350,7 @@ class EnvPoolMixin(ABC):
         """
         if env_id is None:
             env_id = self.all_env_ids
+        self._ensure_pixel_observation_context()
         self._reset(env_id)
         return self.recv(
             reset=True, return_info=self.config["gym_reset_return_info"]

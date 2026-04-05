@@ -206,6 +206,9 @@ class EnvPool(Protocol):
     def _pixel_observation_render_size(self) -> tuple[int, int] | None:
         """Resolved render size for native pixel observations when enabled."""
 
+    def _ensure_pixel_observation_context(self) -> None:
+        """Prepare a platform render context for native pixel observations."""
+
     def _ensure_platform_render_context(self, width: int, height: int) -> None:
         """Prepare any platform-specific GL context required before render."""
 
