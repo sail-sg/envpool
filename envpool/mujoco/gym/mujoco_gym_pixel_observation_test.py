@@ -19,6 +19,7 @@ import envpool.mujoco.gym.registration  # noqa: F401
 from envpool.mujoco.pixel_observation_test_utils import (
     assert_frame_stack_rolls_in_channel_dimension,
     assert_make_spec_exposes_bchw_pixel_specs,
+    assert_pixel_env_preserves_gym_info_fields,
     assert_tasks_align_with_render_for_three_steps,
 )
 
@@ -35,6 +36,10 @@ class MujocoGymPixelObservationTest(absltest.TestCase):
     def test_frame_stack_rolls_in_channel_dimension(self) -> None:
         """Frame stacking should shift along the channel dimension."""
         assert_frame_stack_rolls_in_channel_dimension(self, _IMPORT_PATH)
+
+    def test_pixel_envs_preserve_task_info_fields(self) -> None:
+        """Pixel Gym envs should keep task-specific info specs and values."""
+        assert_pixel_env_preserves_gym_info_fields(self)
 
     def test_all_gym_tasks_align_with_render_for_three_steps(self) -> None:
         """All Gym MuJoCo tasks should match `render()` for reset + 3 steps."""

@@ -155,10 +155,11 @@ Spec<uint8_t> PixelObservationSpec(const Config& conf) {
 }
 
 template <typename Key>
-inline constexpr bool IsObservationKey() {
-  constexpr auto kKey = Key::kStrView;
-  return kKey == "obs" || (kKey.size() > 4 && kKey[0] == 'o' &&
-                           kKey[1] == 'b' && kKey[2] == 's' && kKey[3] == ':');
+constexpr bool IsObservationKey() {
+  constexpr auto k_key = Key::kStrView;
+  return k_key == "obs" ||
+         (k_key.size() > 4 && k_key[0] == 'o' && k_key[1] == 'b' &&
+          k_key[2] == 's' && k_key[3] == ':');
 }
 
 template <std::size_t I = 0, typename DictT>
