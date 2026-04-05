@@ -203,6 +203,9 @@ class EnvPool(Protocol):
     def _render_config(self) -> tuple[str | None, int, int, int, int]:
         """Normalized render config."""
 
+    def _pixel_observation_render_size(self) -> tuple[int, int] | None:
+        """Resolved render size for native pixel observations when enabled."""
+
     def _ensure_platform_render_context(self, width: int, height: int) -> None:
         """Prepare any platform-specific GL context required before render."""
 
