@@ -71,6 +71,37 @@ class _AtariEnvPoolTest(absltest.TestCase):
         env = make_gym("Breakout-v5", full_action_space=True)
         self.assertEqual(env.action_space.n, 18)
 
+    def test_mode_and_difficulty_change_reset_observation(self) -> None:
+        kwargs = {
+            "num_envs": 1,
+            "seed": 0,
+            "stack_num": 1,
+            "frame_skip": 1,
+            "noop_max": 1,
+            "use_fire_reset": False,
+            "gray_scale": False,
+            "img_height": 210,
+            "img_width": 160,
+        }
+
+        breakout_default = make_gym("Breakout-v5", **kwargs)
+        breakout_hard = make_gym("Breakout-v5", difficulty=1, **kwargs)
+        self.assertEqual(breakout_hard.spec.config.difficulty, 1)
+        breakout_default_obs, _ = breakout_default.reset()
+        breakout_hard_obs, _ = breakout_hard.reset()
+        self.assertFalse(
+            np.array_equal(breakout_default_obs, breakout_hard_obs)
+        )
+
+        freeway_default = make_gym("Freeway-v5", **kwargs)
+        freeway_alt_mode = make_gym("Freeway-v5", mode=1, **kwargs)
+        self.assertEqual(freeway_alt_mode.spec.config.mode, 1)
+        freeway_default_obs, _ = freeway_default.reset()
+        freeway_alt_mode_obs, _ = freeway_alt_mode.reset()
+        self.assertFalse(
+            np.array_equal(freeway_default_obs, freeway_alt_mode_obs)
+        )
+
     def test_align(self) -> None:
         """Make sure gym's envpool and dm_env's envpool generate the same data."""
         num_envs = 4

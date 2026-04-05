@@ -73,6 +73,15 @@ class _SpecTest(absltest.TestCase):
         )
         self.assertRaises(ValueError, AtariEnvSpec, config)
 
+    def test_mode_and_difficulty_defaults_and_overrides(self) -> None:
+        spec = make_spec("Breakout-v5")
+        self.assertEqual(spec.config.mode, -1)
+        self.assertEqual(spec.config.difficulty, -1)
+
+        spec = make_spec("Breakout-v5", mode=4, difficulty=1)
+        self.assertEqual(spec.config.mode, 4)
+        self.assertEqual(spec.config.difficulty, 1)
+
     def test_metadata(self) -> None:
         num_envs = 4
         env = make_gym("Pong-v5", num_envs=num_envs)

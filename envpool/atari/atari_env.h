@@ -21,6 +21,7 @@
 #include <deque>
 #include <memory>
 #include <random>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -54,7 +55,8 @@ class AtariEnvFns {
         "zero_discount_on_life_loss"_.Bind(false), "episodic_life"_.Bind(false),
         "reward_clip"_.Bind(false), "use_fire_reset"_.Bind(true),
         "img_height"_.Bind(84), "img_width"_.Bind(84),
-        "task"_.Bind(std::string("pong")), "full_action_space"_.Bind(false),
+        "task"_.Bind(std::string("pong")), "mode"_.Bind(-1),
+        "difficulty"_.Bind(-1), "full_action_space"_.Bind(false),
         "repeat_action_probability"_.Bind(0.0f),
         "use_inter_area_resize"_.Bind(true), "gray_scale"_.Bind(true));
   }
@@ -73,6 +75,12 @@ class AtariEnvFns {
   static decltype(auto) ActionSpec(const Config& conf) {
     ale::ALEInterface env;
     env.loadROM(GetRomPath(conf["base_path"_], conf["task"_]));
+    if (conf["mode"_] >= 0) {
+      env.setMode(conf["mode"_]);
+    }
+    if (conf["difficulty"_] >= 0) {
+      env.setDifficulty(conf["difficulty"_]);
+    }
     int action_size = conf["full_action_space"_]
                           ? env.getLegalActionSet().size()
                           : env.getMinimalActionSet().size();
@@ -129,6 +137,12 @@ class AtariEnv : public Env<AtariEnvSpec>, public RenderableEnv {
                    spec.config["repeat_action_probability"_]);
     env_->setInt("random_seed", seed_);
     env_->loadROM(rom_path_);
+    if (spec.config["mode"_] >= 0) {
+      env_->setMode(spec.config["mode"_]);
+    }
+    if (spec.config["difficulty"_] >= 0) {
+      env_->setDifficulty(spec.config["difficulty"_]);
+    }
     if (spec.config["full_action_space"_]) {
       action_set_ = env_->getLegalActionSet();
     } else {
