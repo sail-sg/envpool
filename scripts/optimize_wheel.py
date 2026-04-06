@@ -113,12 +113,28 @@ def _strip_command(kind: str) -> list[str] | None:
     raise ValueError(f"unsupported binary kind: {kind}")
 
 
-def _strip_native_binaries(unpack_dir: Path) -> tuple[int, list[str]]:
+def _should_strip_binary(path: Path, kind: str) -> bool:
+    """Only strip shared libraries / extension modules, not executables."""
+    name = path.name.lower()
+    if kind == "pe":
+        return name.endswith((".dll", ".pyd"))
+    if kind == "macho":
+        return name.endswith((".dylib", ".so"))
+    if kind == "elf":
+        return ".so" in name
+    raise ValueError(f"unsupported binary kind: {kind}")
+
+
+def _strip_native_binaries(unpack_dir: Path) -> tuple[int, int, list[str]]:
     stripped = 0
+    skipped = 0
     failures: list[str] = []
     for path in sorted(unpack_dir.rglob("*")):
         kind = _binary_kind(path)
         if kind is None:
+            continue
+        if not _should_strip_binary(path, kind):
+            skipped += 1
             continue
         command = _strip_command(kind)
         if command is None:
@@ -134,7 +150,7 @@ def _strip_native_binaries(unpack_dir: Path) -> tuple[int, list[str]]:
             stripped += 1
             continue
         failures.append(f"{path}: {result.stderr.strip()}")
-    return stripped, failures
+    return stripped, skipped, failures
 
 
 def _record_row(rel_path: str, data: bytes) -> list[str]:
@@ -289,7 +305,9 @@ def _optimize_wheel(wheel_path: Path) -> None:
     with tempfile.TemporaryDirectory(prefix=wheel_path.stem + ".") as tmp_dir:
         unpack_dir = Path(tmp_dir) / "wheel"
         _unpack_wheel(wheel_path, unpack_dir)
-        stripped_binaries, failures = _strip_native_binaries(unpack_dir)
+        stripped_binaries, skipped_binaries, failures = _strip_native_binaries(
+            unpack_dir
+        )
         if failures:
             details = "; ".join(failures)
             raise RuntimeError(
@@ -302,6 +320,7 @@ def _optimize_wheel(wheel_path: Path) -> None:
     delta = before_size - after_size
     print(
         f"{wheel_path.name}: stripped {stripped_binaries} native files, "
+        f"skipped {skipped_binaries} standalone executables, "
         f"optimized {optimized_pngs} PNG files "
         f"({_format_bytes(png_saved_bytes)} logical bytes), "
         f"saved {delta} bytes ({_format_bytes(delta)}), "
