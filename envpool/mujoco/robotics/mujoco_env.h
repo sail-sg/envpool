@@ -105,17 +105,34 @@ class MujocoRobotEnv : public RenderableEnv {
 
   void RenderFresh(int width, int height, int camera_id, unsigned char* rgb) {
     RenderCallback();
+#ifdef _WIN32
+    // Native pixel observations are rendered on worker threads, while env
+    // teardown happens on the Python thread. Recreating the renderer on
+    // Windows avoids cross-thread WGL resource lifetime issues.
+    envpool::mujoco::OffscreenRenderer renderer(
+        envpool::mujoco::CameraPolicy::kGymLike);
+#else
     if (renderer_ == nullptr) {
       renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
           envpool::mujoco::CameraPolicy::kGymLike);
     }
+#endif
     mjvCamera camera_override;
     InitializeRenderCamera(&camera_override);
     if (RenderCamera(&camera_override)) {
+#ifdef _WIN32
+      renderer.Render(model_, data_, width, height, camera_id, rgb,
+                      &camera_override);
+#else
       renderer_->Render(model_, data_, width, height, camera_id, rgb,
                         &camera_override);
+#endif
     } else {
+#ifdef _WIN32
+      renderer.Render(model_, data_, width, height, camera_id, rgb);
+#else
       renderer_->Render(model_, data_, width, height, camera_id, rgb);
+#endif
     }
   }
 

@@ -126,11 +126,20 @@ class MujocoEnv : public RenderableEnv {
   void RandomizeLimitedAndRotationalJoints(std::mt19937* gen);
 
   void RenderFresh(int width, int height, int camera_id, unsigned char* rgb) {
+#ifdef _WIN32
+    // Native pixel observations are rendered on worker threads, while env
+    // teardown happens on the Python thread. Recreating the renderer on
+    // Windows avoids cross-thread WGL resource lifetime issues.
+    envpool::mujoco::OffscreenRenderer renderer(
+        envpool::mujoco::CameraPolicy::kDmControl);
+    renderer.Render(model_, data_, width, height, camera_id, rgb);
+#else
     if (renderer_ == nullptr) {
       renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
           envpool::mujoco::CameraPolicy::kDmControl);
     }
     renderer_->Render(model_, data_, width, height, camera_id, rgb);
+#endif
   }
 
   bool CopyCachedRender(int width, int height, int camera_id,
