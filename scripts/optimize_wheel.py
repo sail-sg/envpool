@@ -85,7 +85,9 @@ def _strip_command(kind: str) -> list[str] | None:
             return [strip_bin, "-x"]
         return None
     if kind == "pe":
-        llvm_strip = shutil.which("llvm-strip") or shutil.which("llvm-strip.exe")
+        llvm_strip = shutil.which("llvm-strip") or shutil.which(
+            "llvm-strip.exe"
+        )
         if llvm_strip:
             return [llvm_strip, "-s"]
         strip_bin = shutil.which("strip")
@@ -188,6 +190,8 @@ def _optimize_wheel(wheel_path: Path) -> None:
         f"saved {delta} bytes ({_format_bytes(delta)}), "
         f"final size {after_size} bytes ({_format_bytes(after_size)})"
     )
+
+
 def main() -> int:
     """Optimize each wheel passed on the command line."""
     args = _parse_args()
