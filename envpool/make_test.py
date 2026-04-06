@@ -81,7 +81,7 @@ def _emit_github_error(message: str) -> None:
 
 
 def _stable_render_kwargs(task_id: str, **kwargs: object) -> dict[str, object]:
-    render_kwargs = {"render_mode": "rgb_array"}
+    render_kwargs: dict[str, object] = {"render_mode": "rgb_array"}
     if task_id == "MyWayHome-v1":
         # Keep VizDoom release smoke aligned with the dedicated render test.
         render_kwargs.update(_VIZDOOM_RENDER_KWARGS)
