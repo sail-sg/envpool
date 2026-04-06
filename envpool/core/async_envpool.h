@@ -107,7 +107,7 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
     std::vector<std::future<void>> result;
     for (std::size_t i = 0; i < num_envs_; ++i) {
       result.emplace_back(init_pool.enqueue(
-          [i, &spec, this] { envs_[i].reset(new Env(spec, i)); }));
+          [i, this] { envs_[i].reset(new Env(this->spec, i)); }));
     }
     for (auto& f : result) {
       f.get();
