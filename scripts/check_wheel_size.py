@@ -9,6 +9,14 @@ from collections import OrderedDict
 from pathlib import Path
 
 
+def _bytes_to_mb(size: int) -> float:
+    return size / 1_000_000
+
+
+def _bytes_to_mib(size: int) -> float:
+    return size / (1024 * 1024)
+
+
 def _resolve_wheels(targets: list[str]) -> list[Path]:
     wheels: OrderedDict[Path, None] = OrderedDict()
     missing: list[str] = []
@@ -64,24 +72,32 @@ def main() -> None:
     """Validate that all requested wheel files are below the configured limit."""
     args = _parse_args()
     limit = args.limit_bytes
-    limit_mib = limit / (1024 * 1024)
+    limit_mb = _bytes_to_mb(limit)
+    limit_mib = _bytes_to_mib(limit)
     oversize: list[tuple[Path, int]] = []
 
     for wheel in _resolve_wheels(args.targets):
         size = wheel.stat().st_size
-        size_mib = size / (1024 * 1024)
-        print(f"{wheel.name}: {size} bytes ({size_mib:.2f} MiB)")
+        size_mb = _bytes_to_mb(size)
+        size_mib = _bytes_to_mib(size)
+        print(
+            f"{wheel.name}: {size} bytes ({size_mb:.2f} MB, {size_mib:.2f} MiB)"
+        )
         if size >= limit:
             oversize.append((wheel, size))
 
     if oversize:
         failures = ", ".join(f"{wheel.name}={size}" for wheel, size in oversize)
         raise SystemExit(
-            f"wheel size check failed: {failures} bytes exceed limit {limit} ({limit_mib:.2f} MiB)"
+            "wheel size check failed: "
+            f"{failures} bytes exceed limit {limit} bytes "
+            f"({limit_mb:.2f} MB, {limit_mib:.2f} MiB)"
         )
 
     print(
-        f"wheel size check passed: all wheels are below {limit} bytes ({limit_mib:.2f} MiB)"
+        "wheel size check passed: "
+        f"all wheels are below {limit} bytes "
+        f"({limit_mb:.2f} MB, {limit_mib:.2f} MiB)"
     )
 
 
