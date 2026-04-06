@@ -22,9 +22,7 @@ FULL_RUN_FILES = {
 }
 FULL_RUN_PREFIXES = ("third_party/",)
 CPP_SUFFIXES = (".cc", ".h")
-BINDING_ONLY_FILES = frozenset((
-    "envpool/minigrid/minigrid_bindings.cc",
-))
+BINDING_ONLY_FILES = frozenset(("envpool/minigrid/minigrid_bindings.cc",))
 BINDING_ONLY_PREFIXES = ("envpool/minigrid_bindings/",)
 CC_RULE_KIND = "cc_(library|test)"
 SKIP_TARGETS = frozenset()
