@@ -209,6 +209,9 @@ class EnvPool(Protocol):
     def _ensure_pixel_observation_context(self) -> None:
         """Prepare a platform render context for native pixel observations."""
 
+    def _requires_windows_glfw_context(self) -> bool:
+        """Whether Windows-specific MuJoCo render bootstrapping is needed."""
+
     def _ensure_platform_render_context(self, width: int, height: int) -> None:
         """Prepare any platform-specific GL context required before render."""
 

@@ -247,7 +247,19 @@ class EnvPoolMixin(ABC):
     def _ensure_pixel_observation_context(self: EnvPool) -> None:
         pixel_render_size = self._pixel_observation_render_size()
         if pixel_render_size is not None:
-            self._ensure_platform_render_context(*pixel_render_size)
+            if not self._requires_windows_glfw_context():
+                return
+            if getattr(self, "_pixel_observation_context_ready", False):
+                return
+            width, height = pixel_render_size
+            camera_id = int(self.config["render_camera_id"])
+            env_ids = np.asarray(
+                [int(getattr(self, "_render_env_id", 0))], dtype=np.int32
+            )
+            # Warm the native MuJoCo renderer once on Windows so subsequent
+            # pixel observations can reuse the initialized WGL context.
+            self._render(env_ids, width, height, camera_id)
+            self._pixel_observation_context_ready = True
 
     def _show_human_frame(self: EnvPool, frame: np.ndarray) -> None:
         try:
