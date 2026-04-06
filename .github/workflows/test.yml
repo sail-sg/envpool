@@ -321,6 +321,7 @@ jobs:
           Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $env:QT_ROOT_DIR "bin")
           Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files\Git\usr\bin"
       - name: Restore Bazel caches
+        if: ${{ github.event_name != 'pull_request' }}
         uses: actions/cache/restore@v4
         with:
           path: |

@@ -17,6 +17,7 @@ from typing import Any
 
 import gymnasium
 import numpy as np
+from absl import logging
 from absl.testing import absltest
 
 from envpool.python.glfw_context import preload_windows_gl_dlls
@@ -199,6 +200,15 @@ def assert_tasks_align_with_render_for_three_steps(
     """Checks that each task matches `render()` for reset + 3 steps."""
     for task_id in task_ids_for_import_path(import_path):
         with test.subTest(task_id=task_id):
+            logging.info("creating pixel spec for %s", task_id)
+            make_spec(
+                task_id,
+                from_pixels=True,
+                render_width=RENDER_WIDTH,
+                render_height=RENDER_HEIGHT,
+            )
+            logging.info("created pixel spec for %s", task_id)
+            logging.info("creating pixel env for %s", task_id)
             env = make_gymnasium(
                 task_id,
                 num_envs=1,
@@ -209,7 +219,9 @@ def assert_tasks_align_with_render_for_three_steps(
                 render_height=RENDER_HEIGHT,
             )
             try:
+                logging.info("created pixel env for %s", task_id)
                 obs, _ = env.reset()
+                logging.info("reset pixel env for %s", task_id)
                 test.assertEqual(obs.shape, (1, 3, RENDER_HEIGHT, RENDER_WIDTH))
                 test.assertEqual(obs.dtype, np.uint8)
                 render = env.render(env_ids=[0])
