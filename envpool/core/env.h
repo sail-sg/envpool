@@ -72,7 +72,7 @@ template <typename EnvSpec>
 class Env {
  protected:
   int max_num_players_;
-  EnvSpec spec_;
+  const EnvSpec& spec_;
   int env_id_, seed_;
   std::mt19937 gen_;
   bool force_reset_{false};

@@ -243,6 +243,32 @@ viewer.render()
 `render_mode="human"` returns `None` and currently supports a single env id per
 call. It also requires `opencv-python` to be installed.
 
+### Pixel Observations
+
+For MuJoCo tasks, pixel observations can also be exposed directly through the
+regular observation API by passing `from_pixels=True`. This path is produced
+natively in C++, without routing through Python-side `render()`.
+
+```python
+pixels = envpool.make(
+    "WalkerWalk-v1",
+    env_type="gymnasium",
+    num_envs=2,
+    from_pixels=True,
+    frame_stack=3,
+    render_width=84,
+    render_height=84,
+)
+obs, info = pixels.reset()
+assert obs.shape == (2, 9, 84, 84)
+```
+
+Pixel observations use channel-first layout. With `frame_stack=1`, each
+environment returns `(3, H, W)`; with `frame_stack=3`, EnvPool stacks frames on
+the channel dimension and returns `(9, H, W)`. This matches the usual PyTorch
+`BCHW` convention directly. If `render_width` / `render_height` are omitted,
+EnvPool defaults them to `84`.
+
 ## Contributing
 
 EnvPool is still under development. More environments will be added, and we always welcome contributions to help EnvPool better. If you would like to contribute, please check out our [contribution guideline](https://envpool.readthedocs.io/en/latest/content/contributing.html).

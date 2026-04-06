@@ -61,20 +61,33 @@ class CheetahEnvFns {
 };
 
 using CheetahEnvSpec = EnvSpec<CheetahEnvFns>;
+using CheetahPixelEnvFns = PixelObservationEnvFns<CheetahEnvFns>;
+using CheetahPixelEnvSpec = EnvSpec<CheetahPixelEnvFns>;
 
-class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class CheetahEnvBase : public Env<EnvSpecT>, public MujocoEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+
   const mjtNum kRunSpeed = 10;
   int id_torso_subtreelinvel_;
 
  public:
-  CheetahEnv(const Spec& spec, int env_id)
-      : Env<CheetahEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  CheetahEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(
             spec.config["base_path"_],
             GetCheetahXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_],
-            spec.config["frame_stack"_]),
+            spec.config["frame_stack"_],
+            RenderWidthOrDefault<kFromPixels>(spec.config),
+            RenderHeightOrDefault<kFromPixels>(spec.config),
+            RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         id_torso_subtreelinvel_(GetSensorId(model_, "torso_subtreelinvel")) {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name != "run") {
@@ -108,7 +121,7 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
   }
 
   void Step(const Action& action) override {
-    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
+    auto* act = static_cast<mjtNum*>(action["action"_].Data());
     ControlStep(act);
     WriteState(false);
   }
@@ -126,13 +139,17 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
     auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
-    // obs
-    auto obs_position = state["obs:position"_];
-    AssignObservation("obs:position", &obs_position, data_->qpos + 1,
-                      model_->nq - 1, reset);
-    auto obs_velocity = state["obs:velocity"_];
-    AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
-                      reset);
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation("obs:pixels", &obs_pixels, reset);
+    } else {
+      auto obs_position = state["obs:position"_];
+      AssignObservation("obs:position", &obs_position, data_->qpos + 1,
+                        model_->nq - 1, reset);
+      auto obs_velocity = state["obs:velocity"_];
+      AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
+                        reset);
+    }
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
 #endif
@@ -144,7 +161,10 @@ class CheetahEnv : public Env<CheetahEnvSpec>, public MujocoEnv {
   }
 };
 
+using CheetahEnv = CheetahEnvBase<CheetahEnvSpec, false>;
+using CheetahPixelEnv = CheetahEnvBase<CheetahPixelEnvSpec, true>;
 using CheetahEnvPool = AsyncEnvPool<CheetahEnv>;
+using CheetahPixelEnvPool = AsyncEnvPool<CheetahPixelEnv>;
 
 }  // namespace mujoco_dmc
 

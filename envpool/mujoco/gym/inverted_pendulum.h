@@ -59,22 +59,36 @@ class InvertedPendulumEnvFns {
 };
 
 using InvertedPendulumEnvSpec = EnvSpec<InvertedPendulumEnvFns>;
+using InvertedPendulumPixelEnvFns =
+    PixelObservationEnvFns<InvertedPendulumEnvFns>;  // NOLINT
+using InvertedPendulumPixelEnvSpec = EnvSpec<InvertedPendulumPixelEnvFns>;
 
-class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
-                            public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class InvertedPendulumEnvBase : public Env<EnvSpecT>, public MujocoEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+  using Base::spec_;
+
   bool reward_if_not_terminated_;
   mjtNum healthy_reward_, healthy_z_min_, healthy_z_max_;
   std::uniform_real_distribution<> dist_;
 
  public:
-  InvertedPendulumEnv(const Spec& spec, int env_id)
-      : Env<InvertedPendulumEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  InvertedPendulumEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(
             std::string(spec.config["base_path"_]) + "/mujoco/assets_gym/" +
                 std::string(spec.config["xml_file"_]),
             spec.config["frame_skip"_], spec.config["post_constraint"_],
-            spec.config["max_episode_steps"_], spec.config["frame_stack"_]),
+            spec.config["max_episode_steps"_], spec.config["frame_stack"_],
+            RenderWidthOrDefault<kFromPixels>(spec.config),
+            RenderHeightOrDefault<kFromPixels>(spec.config),
+            RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         reward_if_not_terminated_(spec.config["reward_if_not_terminated"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
         healthy_z_min_(spec.config["healthy_z_min"_]),
@@ -139,24 +153,32 @@ class InvertedPendulumEnv : public Env<InvertedPendulumEnvSpec>,
     auto state = Allocate();
     state["reward"_] = reward;
     // obs
-    auto obs_state = state["obs"_];
-    mjtNum* obs = PrepareObservation(&obs_state);
-    for (int i = 0; i < model_->nq; ++i) {
-      *(obs++) = data_->qpos[i];
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation(&obs_pixels, reset);
+    } else {
+      auto obs_state = state["obs"_];
+      mjtNum* obs = PrepareObservation(&obs_state);
+      for (int i = 0; i < model_->nq; ++i) {
+        *(obs++) = data_->qpos[i];
+      }
+      for (int i = 0; i < model_->nv; ++i) {
+        *(obs++) = data_->qvel[i];
+      }
+      CommitObservation(&obs_state, reset);
     }
-    for (int i = 0; i < model_->nv; ++i) {
-      *(obs++) = data_->qvel[i];
-    }
-    CommitObservation(&obs_state, reset);
-    // info
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_, model_->nq);
     state["info:qvel0"_].Assign(qvel0_, model_->nv);
 #endif
   }
 };
-
+using InvertedPendulumEnv =
+    InvertedPendulumEnvBase<InvertedPendulumEnvSpec, false>;  // NOLINT
+using InvertedPendulumPixelEnv =
+    InvertedPendulumEnvBase<InvertedPendulumPixelEnvSpec, true>;  // NOLINT
 using InvertedPendulumEnvPool = AsyncEnvPool<InvertedPendulumEnv>;
+using InvertedPendulumPixelEnvPool = AsyncEnvPool<InvertedPendulumPixelEnv>;
 
 }  // namespace mujoco_gym
 

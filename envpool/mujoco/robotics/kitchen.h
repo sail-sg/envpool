@@ -234,9 +234,17 @@ class KitchenEnvFns {
 };
 
 using KitchenEnvSpec = EnvSpec<KitchenEnvFns>;
+using KitchenPixelEnvFns = PixelObservationEnvFns<KitchenEnvFns>;
+using KitchenPixelEnvSpec = EnvSpec<KitchenPixelEnvFns>;
 
-class KitchenEnv : public Env<KitchenEnvSpec>, public MujocoRobotEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class KitchenEnvBase : public Env<EnvSpecT>, public MujocoRobotEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+  using Base::spec_;
+
   bool terminate_on_tasks_completed_;
   bool remove_task_when_completed_;
   mjtNum robot_noise_ratio_;
@@ -249,12 +257,19 @@ class KitchenEnv : public Env<KitchenEnvSpec>, public MujocoRobotEnv {
   std::uniform_real_distribution<> noise_dist_{-1.0, 1.0};
 
  public:
-  KitchenEnv(const Spec& spec, int env_id)
-      : Env<KitchenEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+  using State = typename Base::State;
+
+  KitchenEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoRobotEnv(spec.config["base_path"_], spec.config["xml_file"_],
                        spec.config["frame_skip"_],
                        spec.config["max_episode_steps"_],
-                       spec.config["frame_stack"_]),
+                       spec.config["frame_stack"_],
+                       RenderWidthOrDefault<kFromPixels>(spec.config),
+                       RenderHeightOrDefault<kFromPixels>(spec.config),
+                       RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         terminate_on_tasks_completed_(
             spec.config["terminate_on_tasks_completed"_]),
         remove_task_when_completed_(spec.config["remove_task_when_completed"_]),
@@ -472,48 +487,56 @@ class KitchenEnv : public Env<KitchenEnvSpec>, public MujocoRobotEnv {
 
   void WriteState(mjtNum reward, bool reset) {
     State state = Allocate();
-    auto [robot_qpos, robot_qvel] = NoisyRobotObs();
-    auto obs_observation = state["obs:observation"_];
-    auto* obs = PrepareObservation("obs:observation", &obs_observation);
-    int obs_index = 0;
-    for (int i = 0; i < kitchen_internal::kRobotDim; ++i) {
-      obs[obs_index++] = robot_qpos[i];
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation("obs:pixels", &obs_pixels, reset);
+    } else {
+      auto [robot_qpos, robot_qvel] = NoisyRobotObs();
+      auto obs_observation = state["obs:observation"_];
+      auto* obs = PrepareObservation("obs:observation", &obs_observation);
+      int obs_index = 0;
+      for (int i = 0; i < kitchen_internal::kRobotDim; ++i) {
+        obs[obs_index++] = robot_qpos[i];
+      }
+      for (int i = 0; i < kitchen_internal::kRobotDim; ++i) {
+        obs[obs_index++] = robot_qvel[i];
+      }
+      for (int i = 0; i < kitchen_internal::kObjectQposDim; ++i) {
+        obs[obs_index++] = data_->qpos[9 + i] +
+                           object_noise_ratio_ *
+                               kitchen_internal::kRobotPosNoiseAmp[8 + i] *
+                               noise_dist_(gen_);
+      }
+      for (int i = 0; i < kitchen_internal::kObjectQvelDim; ++i) {
+        obs[obs_index++] = data_->qvel[9 + i] +
+                           object_noise_ratio_ *
+                               kitchen_internal::kRobotVelNoiseAmp[9 + i] *
+                               noise_dist_(gen_);
+      }
+      CommitObservation("obs:observation", &obs_observation, reset);
+      for (int task_id = 0; task_id < kitchen_internal::kTaskCount; ++task_id) {
+        WriteGoalState(&state, "obs:desired_goal:", task_id, reset);
+        WriteGoalState(&state, "obs:achieved_goal:", task_id, reset);
+      }
+      state["info:tasks_to_complete"_].Assign(tasks_to_complete_.data(),
+                                              tasks_to_complete_.size());
+      state["info:step_task_completions"_].Assign(
+          step_task_completions_.data(), step_task_completions_.size());
+      state["info:episode_task_completions"_].Assign(
+          episode_task_completions_.data(), episode_task_completions_.size());
     }
-    for (int i = 0; i < kitchen_internal::kRobotDim; ++i) {
-      obs[obs_index++] = robot_qvel[i];
-    }
-    for (int i = 0; i < kitchen_internal::kObjectQposDim; ++i) {
-      obs[obs_index++] =
-          data_->qpos[9 + i] + object_noise_ratio_ *
-                                   kitchen_internal::kRobotPosNoiseAmp[8 + i] *
-                                   noise_dist_(gen_);
-    }
-    for (int i = 0; i < kitchen_internal::kObjectQvelDim; ++i) {
-      obs[obs_index++] =
-          data_->qvel[9 + i] + object_noise_ratio_ *
-                                   kitchen_internal::kRobotVelNoiseAmp[9 + i] *
-                                   noise_dist_(gen_);
-    }
-    CommitObservation("obs:observation", &obs_observation, reset);
-    for (int task_id = 0; task_id < kitchen_internal::kTaskCount; ++task_id) {
-      WriteGoalState(&state, "obs:desired_goal:", task_id, reset);
-      WriteGoalState(&state, "obs:achieved_goal:", task_id, reset);
-    }
-    state["reward"_] = static_cast<float>(reward);
-    state["info:tasks_to_complete"_].Assign(tasks_to_complete_.data(),
-                                            tasks_to_complete_.size());
-    state["info:step_task_completions"_].Assign(step_task_completions_.data(),
-                                                step_task_completions_.size());
-    state["info:episode_task_completions"_].Assign(
-        episode_task_completions_.data(), episode_task_completions_.size());
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.data(), qpos0_.size());
     state["info:qvel0"_].Assign(qvel0_.data(), qvel0_.size());
 #endif
+    state["reward"_] = static_cast<float>(reward);
   }
 };
 
+using KitchenEnv = KitchenEnvBase<KitchenEnvSpec, false>;
+using KitchenPixelEnv = KitchenEnvBase<KitchenPixelEnvSpec, true>;
 using KitchenEnvPool = AsyncEnvPool<KitchenEnv>;
+using KitchenPixelEnvPool = AsyncEnvPool<KitchenPixelEnv>;
 
 }  // namespace gymnasium_robotics
 

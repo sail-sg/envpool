@@ -122,7 +122,6 @@ cc_library(
         "dmc/utils.cc",
     ],
     hdrs = [
-        "frame_stack.h",
         "dmc/acrobot.h",
         "dmc/ball_in_cup.h",
         "dmc/cartpole.h",
@@ -140,6 +139,7 @@ cc_library(
         "dmc/swimmer.h",
         "dmc/utils.h",
         "dmc/walker.h",
+        "frame_stack.h",
         "offscreen_renderer.h",
     ],
     data = [":gen_mujoco_dmc_xml"],
@@ -290,6 +290,66 @@ py_test(
         requirement("absl-py"),
         requirement("dm-control"),
         requirement("gymnasium"),
+    ],
+)
+
+py_test(
+    name = "mujoco_dmc_pixel_observation_test",
+    size = "enormous",
+    srcs = ["dmc/mujoco_dmc_pixel_observation_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":mujoco_dmc",
+        ":mujoco_dmc_registration",
+        ":mujoco_pixel_observation_test_utils",
+        requirement("dm-control"),
+    ],
+)
+
+py_test(
+    name = "mujoco_gym_pixel_observation_test",
+    size = "enormous",
+    srcs = ["gym/mujoco_gym_pixel_observation_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":mujoco_gym",
+        ":mujoco_gym_registration",
+        ":mujoco_pixel_observation_test_utils",
+    ],
+)
+
+py_test(
+    name = "robotics_pixel_observation_test",
+    size = "enormous",
+    srcs = ["robotics/robotics_pixel_observation_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":mujoco_pixel_observation_test_utils",
+        ":robotics",
+        ":robotics_registration",
+        requirement("gymnasium-robotics"),
+    ],
+)
+
+py_library(
+    name = "mujoco_pixel_observation_test_utils",
+    srcs = ["pixel_observation_test_utils.py"],
+    imports = ["../.."],
+    deps = [
+        "//envpool:registration",
+        "//envpool/python:glfw_context",
+        requirement("absl-py"),
+        requirement("gymnasium"),
+        requirement("numpy"),
+    ],
+)
+
+test_suite(
+    name = "mujoco_pixel_observation_test",
+    tests = [
+        ":mujoco_dmc_pixel_observation_test",
+        ":mujoco_gym_pixel_observation_test",
+        ":robotics_pixel_observation_test",
     ],
 )
 

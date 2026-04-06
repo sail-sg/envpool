@@ -61,10 +61,19 @@ class InvertedDoublePendulumEnvFns {
 };
 
 using InvertedDoublePendulumEnvSpec = EnvSpec<InvertedDoublePendulumEnvFns>;
+using InvertedDoublePendulumPixelEnvFns =
+    PixelObservationEnvFns<InvertedDoublePendulumEnvFns>;  // NOLINT
+using InvertedDoublePendulumPixelEnvSpec =
+    EnvSpec<InvertedDoublePendulumPixelEnvFns>;  // NOLINT
 
-class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
-                                  public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class InvertedDoublePendulumEnvBase : public Env<EnvSpecT>, public MujocoEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+  using Base::spec_;
+
   bool reward_if_not_terminated_;
   int constraint_obs_dim_;
   mjtNum healthy_reward_, healthy_z_max_;
@@ -73,13 +82,19 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
   std::normal_distribution<> dist_qvel_;
 
  public:
-  InvertedDoublePendulumEnv(const Spec& spec, int env_id)
-      : Env<InvertedDoublePendulumEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  InvertedDoublePendulumEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(
             std::string(spec.config["base_path"_]) + "/mujoco/assets_gym/" +
                 std::string(spec.config["xml_file"_]),
             spec.config["frame_skip"_], spec.config["post_constraint"_],
-            spec.config["max_episode_steps"_], spec.config["frame_stack"_]),
+            spec.config["max_episode_steps"_], spec.config["frame_stack"_],
+            RenderWidthOrDefault<kFromPixels>(spec.config),
+            RenderHeightOrDefault<kFromPixels>(spec.config),
+            RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         reward_if_not_terminated_(spec.config["reward_if_not_terminated"_]),
         constraint_obs_dim_(spec.config["constraint_obs_dim"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
@@ -142,35 +157,46 @@ class InvertedDoublePendulumEnv : public Env<InvertedDoublePendulumEnvSpec>,
     auto state = Allocate();
     state["reward"_] = reward;
     // obs
-    auto obs_state = state["obs"_];
-    mjtNum* obs = PrepareObservation(&obs_state);
-    *(obs++) = data_->qpos[0];
-    *(obs++) = std::sin(data_->qpos[1]);
-    *(obs++) = std::sin(data_->qpos[2]);
-    *(obs++) = std::cos(data_->qpos[1]);
-    *(obs++) = std::cos(data_->qpos[2]);
-    for (int i = 0; i < model_->nv; ++i) {
-      mjtNum x = data_->qvel[i];
-      x = std::min(observation_max_, x);
-      x = std::max(observation_min_, x);
-      *(obs++) = x;
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation(&obs_pixels, reset);
+    } else {
+      auto obs_state = state["obs"_];
+      mjtNum* obs = PrepareObservation(&obs_state);
+      *(obs++) = data_->qpos[0];
+      *(obs++) = std::sin(data_->qpos[1]);
+      *(obs++) = std::sin(data_->qpos[2]);
+      *(obs++) = std::cos(data_->qpos[1]);
+      *(obs++) = std::cos(data_->qpos[2]);
+      for (int i = 0; i < model_->nv; ++i) {
+        mjtNum x = data_->qvel[i];
+        x = std::min(observation_max_, x);
+        x = std::max(observation_min_, x);
+        *(obs++) = x;
+      }
+      for (int i = 0; i < constraint_obs_dim_; ++i) {
+        mjtNum x = data_->qfrc_constraint[i];
+        x = std::min(observation_max_, x);
+        x = std::max(observation_min_, x);
+        *(obs++) = x;
+      }
+      CommitObservation(&obs_state, reset);
     }
-    for (int i = 0; i < constraint_obs_dim_; ++i) {
-      mjtNum x = data_->qfrc_constraint[i];
-      x = std::min(observation_max_, x);
-      x = std::max(observation_min_, x);
-      *(obs++) = x;
-    }
-    CommitObservation(&obs_state, reset);
-    // info
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_, model_->nq);
     state["info:qvel0"_].Assign(qvel0_, model_->nv);
 #endif
   }
 };
-
+using InvertedDoublePendulumEnv =
+    InvertedDoublePendulumEnvBase<InvertedDoublePendulumEnvSpec,  // NOLINT
+                                  false>;                         // NOLINT
+using InvertedDoublePendulumPixelEnv =
+    InvertedDoublePendulumEnvBase<InvertedDoublePendulumPixelEnvSpec,  // NOLINT
+                                  true>;                               // NOLINT
 using InvertedDoublePendulumEnvPool = AsyncEnvPool<InvertedDoublePendulumEnv>;
+using InvertedDoublePendulumPixelEnvPool =
+    AsyncEnvPool<InvertedDoublePendulumPixelEnv>;  // NOLINT
 
 }  // namespace mujoco_gym
 

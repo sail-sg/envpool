@@ -61,19 +61,32 @@ class BallInCupEnvFns {
 };
 
 using BallInCupEnvSpec = EnvSpec<BallInCupEnvFns>;
+using BallInCupPixelEnvFns = PixelObservationEnvFns<BallInCupEnvFns>;
+using BallInCupPixelEnvSpec = EnvSpec<BallInCupPixelEnvFns>;
 
-class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class BallInCupEnvBase : public Env<EnvSpecT>, public MujocoEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+
   int id_target_, id_ball_, id_ball_x_, id_ball_z_;
 
  public:
-  BallInCupEnv(const Spec& spec, int env_id)
-      : Env<BallInCupEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  BallInCupEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(spec.config["base_path"_],
                   GetBallInCupXML(spec.config["base_path"_],
                                   spec.config["task_name"_]),
                   spec.config["frame_skip"_], spec.config["max_episode_steps"_],
-                  spec.config["frame_stack"_]),
+                  spec.config["frame_stack"_],
+                  RenderWidthOrDefault<kFromPixels>(spec.config),
+                  RenderHeightOrDefault<kFromPixels>(spec.config),
+                  RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         id_target_(mj_name2id(model_, mjOBJ_SITE, "target")),
         id_ball_(mj_name2id(model_, mjOBJ_XBODY, "ball")),
         id_ball_x_(GetQposId(model_, "ball_x")),
@@ -108,7 +121,7 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
   }
 
   void Step(const Action& action) override {
-    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
+    auto* act = static_cast<mjtNum*>(action["action"_].Data());
     ControlStep(act);
     WriteState(false);
   }
@@ -122,13 +135,17 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
     auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
-    // obs
-    auto obs_position = state["obs:position"_];
-    AssignObservation("obs:position", &obs_position, data_->qpos, model_->nq,
-                      reset);
-    auto obs_velocity = state["obs:velocity"_];
-    AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
-                      reset);
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation("obs:pixels", &obs_pixels, reset);
+    } else {
+      auto obs_position = state["obs:position"_];
+      AssignObservation("obs:position", &obs_position, data_->qpos, model_->nq,
+                        reset);
+      auto obs_velocity = state["obs:velocity"_];
+      AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
+                        reset);
+    }
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
 #endif
@@ -159,7 +176,10 @@ class BallInCupEnv : public Env<BallInCupEnvSpec>, public MujocoEnv {
   }
 };
 
+using BallInCupEnv = BallInCupEnvBase<BallInCupEnvSpec, false>;
+using BallInCupPixelEnv = BallInCupEnvBase<BallInCupPixelEnvSpec, true>;
 using BallInCupEnvPool = AsyncEnvPool<BallInCupEnv>;
+using BallInCupPixelEnvPool = AsyncEnvPool<BallInCupPixelEnv>;
 
 }  // namespace mujoco_dmc
 

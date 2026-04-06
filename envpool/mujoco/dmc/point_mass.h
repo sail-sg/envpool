@@ -61,9 +61,16 @@ class PointMassEnvFns {
 };
 
 using PointMassEnvSpec = EnvSpec<PointMassEnvFns>;
+using PointMassPixelEnvFns = PixelObservationEnvFns<PointMassEnvFns>;
+using PointMassPixelEnvSpec = EnvSpec<PointMassPixelEnvFns>;
 
-class PointMassEnv : public Env<PointMassEnvSpec>, public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class PointMassEnvBase : public Env<EnvSpecT>, public MujocoEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+
   bool randomize_gains_;
   int id_geom_target_, id_geom_pointmass_;
 #ifdef ENVPOOL_TEST
@@ -71,13 +78,19 @@ class PointMassEnv : public Env<PointMassEnvSpec>, public MujocoEnv {
 #endif
 
  public:
-  PointMassEnv(const Spec& spec, int env_id)
-      : Env<PointMassEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  PointMassEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(spec.config["base_path"_],
                   GetPointMassXML(spec.config["base_path"_],
                                   spec.config["task_name"_]),
                   spec.config["frame_skip"_], spec.config["max_episode_steps"_],
-                  spec.config["frame_stack"_]),
+                  spec.config["frame_stack"_],
+                  RenderWidthOrDefault<kFromPixels>(spec.config),
+                  RenderHeightOrDefault<kFromPixels>(spec.config),
+                  RenderCameraIdOrDefault<kFromPixels>(spec.config)),
 
         id_geom_target_(mj_name2id(model_, mjOBJ_GEOM, "target")),
         id_geom_pointmass_(mj_name2id(model_, mjOBJ_GEOM, "pointmass")) {
@@ -132,7 +145,7 @@ class PointMassEnv : public Env<PointMassEnvSpec>, public MujocoEnv {
   }
 
   void Step(const Action& action) override {
-    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
+    auto* act = static_cast<mjtNum*>(action["action"_].Data());
     ControlStep(act);
     WriteState(false);
   }
@@ -175,14 +188,17 @@ class PointMassEnv : public Env<PointMassEnvSpec>, public MujocoEnv {
     auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
-    // obs
-    auto obs_position = state["obs:position"_];
-    AssignObservation("obs:position", &obs_position, data_->qpos, model_->nq,
-                      reset);
-    auto obs_velocity = state["obs:velocity"_];
-    AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
-                      reset);
-    // info for check alignment
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation("obs:pixels", &obs_pixels, reset);
+    } else {
+      auto obs_position = state["obs:position"_];
+      AssignObservation("obs:position", &obs_position, data_->qpos, model_->nq,
+                        reset);
+      auto obs_velocity = state["obs:velocity"_];
+      AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
+                        reset);
+    }
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
     state["info:wrap_prm"_].Assign(wrap_prm_.get(), model_->nwrap);
@@ -190,7 +206,10 @@ class PointMassEnv : public Env<PointMassEnvSpec>, public MujocoEnv {
   }
 };
 
+using PointMassEnv = PointMassEnvBase<PointMassEnvSpec, false>;
+using PointMassPixelEnv = PointMassEnvBase<PointMassPixelEnvSpec, true>;
 using PointMassEnvPool = AsyncEnvPool<PointMassEnv>;
+using PointMassPixelEnvPool = AsyncEnvPool<PointMassPixelEnv>;
 
 }  // namespace mujoco_dmc
 

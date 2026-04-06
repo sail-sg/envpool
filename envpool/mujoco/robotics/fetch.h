@@ -80,9 +80,17 @@ class FetchEnvFns {
 };
 
 using FetchEnvSpec = EnvSpec<FetchEnvFns>;
+using FetchPixelEnvFns = PixelObservationEnvFns<FetchEnvFns>;
+using FetchPixelEnvSpec = EnvSpec<FetchPixelEnvFns>;
 
-class FetchEnv : public Env<FetchEnvSpec>, public MujocoRobotEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class FetchEnvBase : public Env<EnvSpecT>, public MujocoRobotEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+  using Base::spec_;
+
   bool has_object_, block_gripper_, target_in_the_air_, sparse_reward_;
   mjtNum gripper_extra_height_, obj_range_, target_range_, distance_threshold_;
   std::array<mjtNum, 3> target_offset_{};
@@ -96,12 +104,19 @@ class FetchEnv : public Env<FetchEnvSpec>, public MujocoRobotEnv {
   std::uniform_real_distribution<> coin_dist_;
 
  public:
-  FetchEnv(const Spec& spec, int env_id)
-      : Env<FetchEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+  using State = typename Base::State;
+
+  FetchEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoRobotEnv(spec.config["base_path"_], spec.config["xml_file"_],
                        spec.config["frame_skip"_],
                        spec.config["max_episode_steps"_],
-                       spec.config["frame_stack"_]),
+                       spec.config["frame_stack"_],
+                       RenderWidthOrDefault<kFromPixels>(spec.config),
+                       RenderHeightOrDefault<kFromPixels>(spec.config),
+                       RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         has_object_(spec.config["has_object"_]),
         block_gripper_(spec.config["block_gripper"_]),
         target_in_the_air_(spec.config["target_in_the_air"_]),
@@ -319,60 +334,65 @@ class FetchEnv : public Env<FetchEnvSpec>, public MujocoRobotEnv {
   void WriteState(float reward, bool reset) {
     auto state = Allocate();
     state["reward"_] = reward;
-
-    auto obs_observation = state["obs:observation"_];
-    mjtNum* obs = PrepareObservation("obs:observation", &obs_observation);
-    auto grip_pos = GetSiteXpos(model_, data_, grip_site_id_);
-    auto grip_velp = GetSiteXvelp(model_, data_, grip_site_id_);
-    auto [robot_qpos, robot_qvel] = RobotGetObs(model_, data_);
-    for (int i = 0; i < 3; ++i) {
-      *(obs++) = grip_pos[i];
-    }
-    if (has_object_) {
-      auto object_pos = GetSiteXpos(model_, data_, object_site_id_);
-      auto object_rot = Mat2Euler(GetSiteXmat(model_, data_, object_site_id_));
-      auto object_velp = GetSiteXvelp(model_, data_, object_site_id_);
-      auto object_velr = GetSiteXvelr(model_, data_, object_site_id_);
-      for (int i = 0; i < 3; ++i) {
-        object_velp[i] = (object_velp[i] - grip_velp[i]) * Dt();
-        object_velr[i] *= Dt();
-        *(obs++) = object_pos[i];
-      }
-      for (int i = 0; i < 3; ++i) {
-        *(obs++) = object_pos[i] - grip_pos[i];
-      }
-      for (int i = 0; i < 2; ++i) {
-        *(obs++) = robot_qpos[robot_qpos.size() - 2 + i];
-      }
-      for (int i = 0; i < 3; ++i) {
-        *(obs++) = object_rot[i];
-      }
-      for (int i = 0; i < 3; ++i) {
-        *(obs++) = object_velp[i];
-      }
-      for (int i = 0; i < 3; ++i) {
-        *(obs++) = object_velr[i];
-      }
-    } else {
-      for (int i = 0; i < 2; ++i) {
-        *(obs++) = robot_qpos[robot_qpos.size() - 2 + i];
-      }
-    }
-    for (int i = 0; i < 3; ++i) {
-      *(obs++) = grip_velp[i] * Dt();
-    }
-    for (int i = 0; i < 2; ++i) {
-      *(obs++) = robot_qvel[robot_qvel.size() - 2 + i] * Dt();
-    }
-    CommitObservation("obs:observation", &obs_observation, reset);
-
     auto achieved_goal = AchievedGoal();
-    auto obs_achieved_goal = state["obs:achieved_goal"_];
-    AssignObservation("obs:achieved_goal", &obs_achieved_goal,
-                      achieved_goal.data(), 3, reset);
-    auto obs_desired_goal = state["obs:desired_goal"_];
-    AssignObservation("obs:desired_goal", &obs_desired_goal, goal_.data(), 3,
-                      reset);
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation("obs:pixels", &obs_pixels, reset);
+    } else {
+      auto obs_observation = state["obs:observation"_];
+      mjtNum* obs = PrepareObservation("obs:observation", &obs_observation);
+      auto grip_pos = GetSiteXpos(model_, data_, grip_site_id_);
+      auto grip_velp = GetSiteXvelp(model_, data_, grip_site_id_);
+      auto [robot_qpos, robot_qvel] = RobotGetObs(model_, data_);
+      for (int i = 0; i < 3; ++i) {
+        *(obs++) = grip_pos[i];
+      }
+      if (has_object_) {
+        auto object_pos = GetSiteXpos(model_, data_, object_site_id_);
+        auto object_rot =
+            Mat2Euler(GetSiteXmat(model_, data_, object_site_id_));
+        auto object_velp = GetSiteXvelp(model_, data_, object_site_id_);
+        auto object_velr = GetSiteXvelr(model_, data_, object_site_id_);
+        for (int i = 0; i < 3; ++i) {
+          object_velp[i] = (object_velp[i] - grip_velp[i]) * Dt();
+          object_velr[i] *= Dt();
+          *(obs++) = object_pos[i];
+        }
+        for (int i = 0; i < 3; ++i) {
+          *(obs++) = object_pos[i] - grip_pos[i];
+        }
+        for (int i = 0; i < 2; ++i) {
+          *(obs++) = robot_qpos[robot_qpos.size() - 2 + i];
+        }
+        for (int i = 0; i < 3; ++i) {
+          *(obs++) = object_rot[i];
+        }
+        for (int i = 0; i < 3; ++i) {
+          *(obs++) = object_velp[i];
+        }
+        for (int i = 0; i < 3; ++i) {
+          *(obs++) = object_velr[i];
+        }
+      } else {
+        for (int i = 0; i < 2; ++i) {
+          *(obs++) = robot_qpos[robot_qpos.size() - 2 + i];
+        }
+      }
+      for (int i = 0; i < 3; ++i) {
+        *(obs++) = grip_velp[i] * Dt();
+      }
+      for (int i = 0; i < 2; ++i) {
+        *(obs++) = robot_qvel[robot_qvel.size() - 2 + i] * Dt();
+      }
+      CommitObservation("obs:observation", &obs_observation, reset);
+
+      auto obs_achieved_goal = state["obs:achieved_goal"_];
+      AssignObservation("obs:achieved_goal", &obs_achieved_goal,
+                        achieved_goal.data(), 3, reset);
+      auto obs_desired_goal = state["obs:desired_goal"_];
+      AssignObservation("obs:desired_goal", &obs_desired_goal, goal_.data(), 3,
+                        reset);
+    }
     mjtNum distance = GoalDistance(achieved_goal, goal_);
     state["info:is_success"_] = distance < distance_threshold_ ? 1.0 : 0.0;
     state["info:distance"_] = distance;
@@ -384,7 +404,10 @@ class FetchEnv : public Env<FetchEnvSpec>, public MujocoRobotEnv {
   }
 };
 
+using FetchEnv = FetchEnvBase<FetchEnvSpec, false>;
+using FetchPixelEnv = FetchEnvBase<FetchPixelEnvSpec, true>;
 using FetchEnvPool = AsyncEnvPool<FetchEnv>;
+using FetchPixelEnvPool = AsyncEnvPool<FetchPixelEnv>;
 
 }  // namespace gymnasium_robotics
 

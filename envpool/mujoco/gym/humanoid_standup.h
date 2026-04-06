@@ -72,10 +72,18 @@ class HumanoidStandupEnvFns {
 };
 
 using HumanoidStandupEnvSpec = EnvSpec<HumanoidStandupEnvFns>;
+using HumanoidStandupPixelEnvFns =
+    PixelObservationEnvFns<HumanoidStandupEnvFns>;  // NOLINT
+using HumanoidStandupPixelEnvSpec = EnvSpec<HumanoidStandupPixelEnvFns>;
 
-class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
-                           public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class HumanoidStandupEnvBase : public Env<EnvSpecT>, public MujocoEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+  using Base::spec_;
+
   bool no_pos_;
   bool exclude_worldbody_observations_, exclude_root_actuator_forces_;
   mjtNum ctrl_cost_weight_, contact_cost_weight_, contact_cost_max_;
@@ -83,13 +91,19 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
   std::uniform_real_distribution<> dist_;
 
  public:
-  HumanoidStandupEnv(const Spec& spec, int env_id)
-      : Env<HumanoidStandupEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  HumanoidStandupEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(
             std::string(spec.config["base_path"_]) + "/mujoco/assets_gym/" +
                 std::string(spec.config["xml_file"_]),
             spec.config["frame_skip"_], spec.config["post_constraint"_],
-            spec.config["max_episode_steps"_], spec.config["frame_stack"_]),
+            spec.config["max_episode_steps"_], spec.config["frame_stack"_],
+            RenderWidthOrDefault<kFromPixels>(spec.config),
+            RenderHeightOrDefault<kFromPixels>(spec.config),
+            RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         exclude_worldbody_observations_(
             spec.config["exclude_worldbody_observations"_]),
@@ -127,7 +141,7 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
 
   void Step(const Action& action) override {
     // step
-    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
+    auto* act = static_cast<mjtNum*>(action["action"_].Data());
     MujocoStep(act);
 
     // ctrl_cost
@@ -159,35 +173,39 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
     auto state = Allocate();
     state["reward"_] = reward;
     // obs
-    auto obs_state = state["obs"_];
-    mjtNum* obs = PrepareObservation(&obs_state);
-    for (int i = no_pos_ ? 2 : 0; i < model_->nq; ++i) {
-      *(obs++) = data_->qpos[i];
-    }
-    for (int i = 0; i < model_->nv; ++i) {
-      *(obs++) = data_->qvel[i];
-    }
-    int start_body = exclude_worldbody_observations_ ? 1 : 0;
-    for (int i = start_body; i < model_->nbody; ++i) {
-      for (int j = 0; j < 10; ++j) {
-        *(obs++) = data_->cinert[i * 10 + j];
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation(&obs_pixels, reset);
+    } else {
+      auto obs_state = state["obs"_];
+      mjtNum* obs = PrepareObservation(&obs_state);
+      for (int i = no_pos_ ? 2 : 0; i < model_->nq; ++i) {
+        *(obs++) = data_->qpos[i];
       }
-    }
-    for (int i = start_body; i < model_->nbody; ++i) {
-      for (int j = 0; j < 6; ++j) {
-        *(obs++) = data_->cvel[i * 6 + j];
+      for (int i = 0; i < model_->nv; ++i) {
+        *(obs++) = data_->qvel[i];
       }
-    }
-    for (int i = exclude_root_actuator_forces_ ? 6 : 0; i < model_->nv; ++i) {
-      *(obs++) = data_->qfrc_actuator[i];
-    }
-    for (int i = start_body; i < model_->nbody; ++i) {
-      for (int j = 0; j < 6; ++j) {
-        *(obs++) = data_->cfrc_ext[i * 6 + j];
+      int start_body = exclude_worldbody_observations_ ? 1 : 0;
+      for (int i = start_body; i < model_->nbody; ++i) {
+        for (int j = 0; j < 10; ++j) {
+          *(obs++) = data_->cinert[i * 10 + j];
+        }
       }
+      for (int i = start_body; i < model_->nbody; ++i) {
+        for (int j = 0; j < 6; ++j) {
+          *(obs++) = data_->cvel[i * 6 + j];
+        }
+      }
+      for (int i = exclude_root_actuator_forces_ ? 6 : 0; i < model_->nv; ++i) {
+        *(obs++) = data_->qfrc_actuator[i];
+      }
+      for (int i = start_body; i < model_->nbody; ++i) {
+        for (int j = 0; j < 6; ++j) {
+          *(obs++) = data_->cfrc_ext[i * 6 + j];
+        }
+      }
+      CommitObservation(&obs_state, reset);
     }
-    CommitObservation(&obs_state, reset);
-    // info
     state["info:reward_linup"_] = xv * forward_reward_weight_;
     state["info:reward_quadctrl"_] = -ctrl_cost;
     state["info:reward_impact"_] = -contact_cost;
@@ -198,8 +216,12 @@ class HumanoidStandupEnv : public Env<HumanoidStandupEnvSpec>,
 #endif
   }
 };
-
+using HumanoidStandupEnv =
+    HumanoidStandupEnvBase<HumanoidStandupEnvSpec, false>;  // NOLINT
+using HumanoidStandupPixelEnv =
+    HumanoidStandupEnvBase<HumanoidStandupPixelEnvSpec, true>;  // NOLINT
 using HumanoidStandupEnvPool = AsyncEnvPool<HumanoidStandupEnv>;
+using HumanoidStandupPixelEnvPool = AsyncEnvPool<HumanoidStandupPixelEnv>;
 
 }  // namespace mujoco_gym
 

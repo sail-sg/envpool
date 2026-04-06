@@ -66,8 +66,12 @@ void BindMiniGrid(py::module_& m) {
       py::metaclass(py::module_::import("abc").attr("ABCMeta")))
       .def(py::init<const PyMiniGridEnvSpec::ConfigValues&>())
       .def_readonly("_config_values", &PyMiniGridEnvSpec::py_config_values)
-      .def_readonly("_state_spec", &PyMiniGridEnvSpec::py_state_spec)
-      .def_readonly("_action_spec", &PyMiniGridEnvSpec::py_action_spec)
+      .def_property_readonly(
+          "_state_spec",
+          [](const PyMiniGridEnvSpec& self) { return self.StateSpecPy(); })
+      .def_property_readonly(
+          "_action_spec",
+          [](const PyMiniGridEnvSpec& self) { return self.ActionSpecPy(); })
       .def_readonly_static("_state_keys", &PyMiniGridEnvSpec::py_state_keys)
       .def_readonly_static("_action_keys", &PyMiniGridEnvSpec::py_action_keys)
       .def_readonly_static("_config_keys", &PyMiniGridEnvSpec::py_config_keys)

@@ -86,9 +86,16 @@ class CartpoleEnvFns {
 };
 
 using CartpoleEnvSpec = EnvSpec<CartpoleEnvFns>;
+using CartpolePixelEnvFns = PixelObservationEnvFns<CartpoleEnvFns>;
+using CartpolePixelEnvSpec = EnvSpec<CartpolePixelEnvFns>;
 
-class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class CartpoleEnvBase : public Env<EnvSpecT>, public MujocoEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+
   int id_slider_, id_hinge1_;
   bool is_sparse_, is_swingup_;
 
@@ -97,13 +104,19 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
 #endif
 
  public:
-  CartpoleEnv(const Spec& spec, int env_id)
-      : Env<CartpoleEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  CartpoleEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(spec.config["base_path"_],
                   GetCartpoleXML(spec.config["base_path"_],
                                  spec.config["task_name"_]),
                   spec.config["frame_skip"_], spec.config["max_episode_steps"_],
-                  spec.config["frame_stack"_]),
+                  spec.config["frame_stack"_],
+                  RenderWidthOrDefault<kFromPixels>(spec.config),
+                  RenderHeightOrDefault<kFromPixels>(spec.config),
+                  RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         id_slider_(GetQposId(model_, "slider")),
         id_hinge1_(GetQposId(model_, "hinge_1")),
         is_sparse_(spec.config["task_name"_] == "balance_sparse" ||
@@ -147,7 +160,7 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
   }
 
   void Step(const Action& action) override {
-    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
+    auto* act = static_cast<mjtNum*>(action["action"_].Data());
     ControlStep(act);
     WriteState(false);
   }
@@ -190,15 +203,18 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
     auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
-    // obs
-    const auto& position = BoundedPosition();
-    auto obs_position = state["obs:position"_];
-    AssignObservation("obs:position", &obs_position, position.data(),
-                      position.size(), reset);
-    auto obs_velocity = state["obs:velocity"_];
-    AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
-                      reset);
-    // info for check alignment
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation("obs:pixels", &obs_pixels, reset);
+    } else {
+      const auto& position = BoundedPosition();
+      auto obs_position = state["obs:position"_];
+      AssignObservation("obs:position", &obs_position, position.data(),
+                        position.size(), reset);
+      auto obs_velocity = state["obs:velocity"_];
+      AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
+                        reset);
+    }
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
     state["info:qvel0"_].Assign(qvel0_.get(), model_->nv);
@@ -239,7 +255,10 @@ class CartpoleEnv : public Env<CartpoleEnvSpec>, public MujocoEnv {
   }
 };
 
+using CartpoleEnv = CartpoleEnvBase<CartpoleEnvSpec, false>;
+using CartpolePixelEnv = CartpoleEnvBase<CartpolePixelEnvSpec, true>;
 using CartpoleEnvPool = AsyncEnvPool<CartpoleEnv>;
+using CartpolePixelEnvPool = AsyncEnvPool<CartpolePixelEnv>;
 
 }  // namespace mujoco_dmc
 
