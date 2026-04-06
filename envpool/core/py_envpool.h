@@ -144,8 +144,6 @@ class PyEnvSpec : public EnvSpec {
   using ActionSpecT =
       decltype(ExportSpecs(std::declval<typename EnvSpec::ActionSpec>()));
 
-  StateSpecT py_state_spec;
-  ActionSpecT py_action_spec;
   typename EnvSpec::ConfigValues py_config_values;
   static std::vector<std::string> py_config_keys;
   static std::vector<std::string> py_state_keys;
@@ -153,10 +151,11 @@ class PyEnvSpec : public EnvSpec {
   static typename EnvSpec::ConfigValues py_default_config_values;
 
   explicit PyEnvSpec(const typename EnvSpec::ConfigValues& conf)
-      : EnvSpec(conf),
-        py_state_spec(ExportSpecs(EnvSpec::state_spec)),
-        py_action_spec(ExportSpecs(EnvSpec::action_spec)),
-        py_config_values(EnvSpec::config.AllValues()) {}
+      : EnvSpec(conf), py_config_values(EnvSpec::config.AllValues()) {}
+
+  StateSpecT StateSpecPy() const { return ExportSpecs(EnvSpec::state_spec); }
+
+  ActionSpecT ActionSpecPy() const { return ExportSpecs(EnvSpec::action_spec); }
 };
 template <typename EnvSpec>
 std::vector<std::string> PyEnvSpec<EnvSpec>::py_config_keys =
@@ -306,8 +305,14 @@ std::vector<std::string> PyEnvPool<EnvPool>::py_action_keys =
                    py::metaclass(py::module_::import("abc").attr("ABCMeta"))) \
       .def(py::init<const typename SPEC::ConfigValues&>())                    \
       .def_readonly("_config_values", &SPEC::py_config_values)                \
-      .def_readonly("_state_spec", &SPEC::py_state_spec)                      \
-      .def_readonly("_action_spec", &SPEC::py_action_spec)                    \
+      .def_property_readonly("_state_spec",                                   \
+                             [](const SPEC& self) {                            \
+                               return self.StateSpecPy();                     \
+                             })                                               \
+      .def_property_readonly("_action_spec",                                  \
+                             [](const SPEC& self) {                           \
+                               return self.ActionSpecPy();                    \
+                             })                                               \
       .def_readonly_static("_state_keys", &SPEC::py_state_keys)               \
       .def_readonly_static("_action_keys", &SPEC::py_action_keys)             \
       .def_readonly_static("_config_keys", &SPEC::py_config_keys)             \
