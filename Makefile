@@ -233,7 +233,7 @@ pypi-wheel: auditwheel-install bazel-release
 	rm -rf wheelhouse
 	CURRENT_WHEEL=$$(ls dist/*.whl -Art | tail -n 1); \
 	python3 -m auditwheel repair --plat $(PYPI_WHEEL_PLAT) "$$CURRENT_WHEEL"
-	python3 scripts/optimize_linux_wheel.py wheelhouse/*.whl
+	python3 scripts/optimize_wheel.py wheelhouse/*.whl
 	python3 scripts/check_wheel_size.py --limit-bytes $(WHEEL_SIZE_LIMIT_BYTES) wheelhouse/*.whl
 
 release-test1:
