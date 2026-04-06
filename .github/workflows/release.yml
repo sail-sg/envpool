@@ -77,7 +77,6 @@ jobs:
           python scripts/check_wheel_size.py --limit-bytes 100000000 dist/*.whl
           python -m pip install dist/*.whl --force-reinstall
       - name: Test
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         run: |
           make release-test
       - name: Upload artifact
@@ -154,7 +153,6 @@ jobs:
           make PYPI_WHEEL_PLAT=${{ matrix.auditwheel-plat }} pypi-wheel
           python -m pip install wheelhouse/*.whl --force-reinstall
       - name: Test
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         run: |
           make release-test
       - name: Upload artifact
@@ -265,7 +263,6 @@ jobs:
           python scripts/check_wheel_size.py --limit-bytes 100000000 dist/*.whl
           python -m pip install dist/*.whl --force-reinstall
       - name: Test
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
           make release-test

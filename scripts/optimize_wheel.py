@@ -15,15 +15,19 @@ from __future__ import annotations
 
 import argparse
 import base64
+import binascii
 import hashlib
 import shutil
+import struct
 import subprocess
 import tempfile
+import zlib
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
 _ELF_MAGIC = b"\x7fELF"
 _PE_MAGIC = b"MZ"
+_PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 _MACHO_MAGICS = {
     b"\xfe\xed\xfa\xce",
     b"\xce\xfa\xed\xfe",
@@ -34,6 +38,18 @@ _MACHO_MAGICS = {
     b"\xca\xfe\xba\xbf",
     b"\xbf\xba\xfe\xca",
 }
+_PNG_DROP_CHUNKS = {
+    b"iTXt",
+    b"pHYs",
+    b"tEXt",
+    b"tIME",
+    b"zTXt",
+}
+_PNG_ZLIB_STRATEGIES = (
+    zlib.Z_DEFAULT_STRATEGY,
+    zlib.Z_FILTERED,
+    zlib.Z_RLE,
+)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -127,6 +143,103 @@ def _record_row(rel_path: str, data: bytes) -> list[str]:
     return [rel_path, f"sha256={b64}", str(len(data))]
 
 
+def _iter_png_chunks(data: bytes) -> list[tuple[bytes, bytes]]:
+    if not data.startswith(_PNG_MAGIC):
+        raise ValueError("not a PNG file")
+    pos = len(_PNG_MAGIC)
+    chunks: list[tuple[bytes, bytes]] = []
+    while pos < len(data):
+        if pos + 8 > len(data):
+            raise ValueError("truncated PNG header")
+        length = struct.unpack(">I", data[pos : pos + 4])[0]
+        chunk_type = data[pos + 4 : pos + 8]
+        pos += 8
+        if pos + length + 4 > len(data):
+            raise ValueError("truncated PNG chunk")
+        chunk_data = data[pos : pos + length]
+        pos += length + 4
+        chunks.append((chunk_type, chunk_data))
+        if chunk_type == b"IEND":
+            return chunks
+    raise ValueError("missing PNG IEND chunk")
+
+
+def _compress_png_idat(raw_bytes: bytes) -> bytes:
+    best = b""
+    for strategy in _PNG_ZLIB_STRATEGIES:
+        compressor = zlib.compressobj(
+            level=9,
+            method=zlib.DEFLATED,
+            wbits=15,
+            memLevel=9,
+            strategy=strategy,
+        )
+        candidate = compressor.compress(raw_bytes) + compressor.flush()
+        if not best or len(candidate) < len(best):
+            best = candidate
+    return best
+
+
+def _optimize_png(path: Path) -> int:
+    try:
+        before = path.read_bytes()
+        chunks = _iter_png_chunks(before)
+    except (OSError, ValueError):
+        return 0
+
+    idat_bytes = b"".join(
+        chunk_data
+        for chunk_type, chunk_data in chunks
+        if chunk_type == b"IDAT"
+    )
+    if not idat_bytes:
+        return 0
+
+    try:
+        raw_bytes = zlib.decompress(idat_bytes)
+    except zlib.error:
+        return 0
+
+    rebuilt = bytearray(_PNG_MAGIC)
+    optimized_idat = _compress_png_idat(raw_bytes)
+    idat_written = False
+    for chunk_type, chunk_data in chunks:
+        if chunk_type in _PNG_DROP_CHUNKS:
+            continue
+        if chunk_type == b"IDAT":
+            if idat_written:
+                continue
+            chunk_data = optimized_idat
+            idat_written = True
+        crc = struct.pack(
+            ">I", binascii.crc32(chunk_type + chunk_data) & 0xFFFFFFFF
+        )
+        rebuilt.extend(struct.pack(">I", len(chunk_data)))
+        rebuilt.extend(chunk_type)
+        rebuilt.extend(chunk_data)
+        rebuilt.extend(crc)
+
+    after = bytes(rebuilt)
+    if len(after) >= len(before):
+        return 0
+    path.write_bytes(after)
+    return len(before) - len(after)
+
+
+def _optimize_png_assets(unpack_dir: Path) -> tuple[int, int]:
+    optimized = 0
+    saved_bytes = 0
+    for path in sorted(unpack_dir.rglob("*.png")):
+        if path.is_symlink() or not path.is_file():
+            continue
+        delta = _optimize_png(path)
+        if delta <= 0:
+            continue
+        optimized += 1
+        saved_bytes += delta
+    return optimized, saved_bytes
+
+
 def _write_wheel(unpack_dir: Path, wheel_path: Path) -> None:
     dist_info_dir = _find_dist_info_dir(unpack_dir)
     record_rel = f"{dist_info_dir.name}/RECORD"
@@ -184,12 +297,15 @@ def _optimize_wheel(wheel_path: Path) -> None:
             raise RuntimeError(
                 f"failed to strip native binaries in {wheel_path.name}: {details}"
             )
+        optimized_pngs, png_saved_bytes = _optimize_png_assets(unpack_dir)
         _write_wheel(unpack_dir, wheel_path)
 
     after_size = wheel_path.stat().st_size
     delta = before_size - after_size
     print(
         f"{wheel_path.name}: stripped {stripped_binaries} native files, "
+        f"optimized {optimized_pngs} PNG files "
+        f"({_format_bytes(png_saved_bytes)} logical bytes), "
         f"saved {delta} bytes ({_format_bytes(delta)}), "
         f"final size {after_size} bytes ({_format_bytes(after_size)})"
     )
