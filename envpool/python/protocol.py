@@ -203,12 +203,6 @@ class EnvPool(Protocol):
     def _render_config(self) -> tuple[str | None, int, int, int, int]:
         """Normalized render config."""
 
-    def _pixel_observation_render_size(self) -> tuple[int, int] | None:
-        """Resolved render size for native pixel observations when enabled."""
-
-    def _ensure_pixel_observation_context(self) -> None:
-        """Prepare a platform render context for native pixel observations."""
-
     def _requires_windows_glfw_context(self) -> bool:
         """Whether Windows-specific MuJoCo render bootstrapping is needed."""
 

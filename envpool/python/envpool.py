@@ -235,32 +235,6 @@ class EnvPoolMixin(ABC):
             int(getattr(self, "_render_camera_id", -1)),
         )
 
-    def _pixel_observation_render_size(self: EnvPool) -> tuple[int, int] | None:
-        state_keys = getattr(self, "_state_keys", ())
-        if "obs:pixels" not in state_keys:
-            return None
-        return (
-            int(self.config["render_width"]),
-            int(self.config["render_height"]),
-        )
-
-    def _ensure_pixel_observation_context(self: EnvPool) -> None:
-        pixel_render_size = self._pixel_observation_render_size()
-        if pixel_render_size is not None:
-            if not self._requires_windows_glfw_context():
-                return
-            if getattr(self, "_pixel_observation_context_ready", False):
-                return
-            width, height = pixel_render_size
-            camera_id = int(self.config["render_camera_id"])
-            env_ids = np.asarray(
-                [int(getattr(self, "_render_env_id", 0))], dtype=np.int32
-            )
-            # Warm the native MuJoCo renderer once on Windows so subsequent
-            # pixel observations can reuse the initialized WGL context.
-            self._render(env_ids, width, height, camera_id)
-            self._pixel_observation_context_ready = True
-
     def _show_human_frame(self: EnvPool, frame: np.ndarray) -> None:
         try:
             import cv2
@@ -316,7 +290,6 @@ class EnvPoolMixin(ABC):
         env_id: np.ndarray | None = None,
     ) -> None:
         """Send actions into EnvPool."""
-        self._ensure_pixel_observation_context()
         converted_action = self._from(action, env_id)
         self._check_action(converted_action)
         self._send(converted_action)
@@ -327,7 +300,6 @@ class EnvPoolMixin(ABC):
         return_info: bool = True,
     ) -> TimeStep | tuple:
         """Recv a batch state from EnvPool."""
-        self._ensure_pixel_observation_context()
         state_list = self._recv()
         if not hasattr(self, "_state_names"):
             self._state_names = self._state_keys
@@ -340,7 +312,6 @@ class EnvPoolMixin(ABC):
 
     def async_reset(self: EnvPool) -> None:
         """Follows the async semantics, reset the envs in env_ids."""
-        self._ensure_pixel_observation_context()
         self._reset(self.all_env_ids)
 
     def step(
@@ -362,7 +333,6 @@ class EnvPoolMixin(ABC):
         """
         if env_id is None:
             env_id = self.all_env_ids
-        self._ensure_pixel_observation_context()
         self._reset(env_id)
         return self.recv(
             reset=True, return_info=self.config["gym_reset_return_info"]

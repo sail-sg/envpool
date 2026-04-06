@@ -15,7 +15,10 @@
 
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
-preload_windows_gl_dlls(prepend_path=False)
+# Prepend the Mesa userspace stack before loading MuJoCo bindings so Windows
+# native WGL code resolves the bundled OpenGL DLLs instead of the system 1.1
+# fallback available on GitHub-hosted runners.
+preload_windows_gl_dlls()
 
 import envpool.entry  # noqa: F401
 from envpool.python.protocol import (

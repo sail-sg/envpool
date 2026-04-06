@@ -15,6 +15,10 @@
 
 from absl.testing import absltest
 
+from envpool.python.glfw_context import preload_windows_gl_dlls
+
+preload_windows_gl_dlls(strict=True)
+
 import envpool.mujoco.gym.registration  # noqa: F401
 from envpool.mujoco.pixel_observation_test_utils import (
     assert_frame_stack_rolls_in_channel_dimension,
