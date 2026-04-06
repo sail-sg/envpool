@@ -103,12 +103,16 @@ class GymnasiumEnvPoolMeta(
             )
             info = cast(dict[str, Any], state["info"])
             info["elapsed_step"] = state["elapsed_step"]
+            obs = state["obs"]
+            if not isinstance(self.observation_space, gymnasium.spaces.Dict):
+                while isinstance(obs, dict) and len(obs) == 1:
+                    obs = next(iter(obs.values()))
             if reset:
-                return state["obs"], info
+                return obs, info
             done = cast(np.ndarray, state["done"])
             trunc = cast(np.ndarray, state["trunc"])
             terminated = done & ~trunc
-            return state["obs"], state["reward"], terminated, trunc, info
+            return obs, state["reward"], terminated, trunc, info
 
         attrs["_to"] = _to_gymnasium
         subcls = super().__new__(cls, name, parents, attrs)

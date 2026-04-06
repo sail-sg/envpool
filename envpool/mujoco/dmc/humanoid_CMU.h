@@ -70,9 +70,16 @@ class HumanoidCMUEnvFns {
 };
 
 using HumanoidCMUEnvSpec = EnvSpec<HumanoidCMUEnvFns>;
+using HumanoidCMUPixelEnvFns = PixelObservationEnvFns<HumanoidCMUEnvFns>;
+using HumanoidCMUPixelEnvSpec = EnvSpec<HumanoidCMUPixelEnvFns>;
 
-class HumanoidCMUEnv : public Env<HumanoidCMUEnvSpec>, public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class HumanoidCMUEnvBase : public Env<EnvSpecT>, public MujocoEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+
   // Height of head above which stand reward is 1.
   const mjtNum kStandHeight = 1.4;
   // Horizontal speeds above which move reward is 1.
@@ -87,13 +94,19 @@ class HumanoidCMUEnv : public Env<HumanoidCMUEnvSpec>, public MujocoEnv {
   mjtNum move_speed_;
 
  public:
-  HumanoidCMUEnv(const Spec& spec, int env_id)
-      : Env<HumanoidCMUEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  HumanoidCMUEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(spec.config["base_path"_],
                   GetHumanoidCMUXML(spec.config["base_path"_],
                                     spec.config["task_name"_]),
                   spec.config["frame_skip"_], spec.config["max_episode_steps"_],
-                  spec.config["frame_stack"_]),
+                  spec.config["frame_stack"_],
+                  RenderWidthOrDefault<kFromPixels>(spec.config),
+                  RenderHeightOrDefault<kFromPixels>(spec.config),
+                  RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         id_head_(mj_name2id(model_, mjOBJ_XBODY, "head")),
         id_lhand_(mj_name2id(model_, mjOBJ_XBODY, "lhand")),
         id_lfoot_(mj_name2id(model_, mjOBJ_XBODY, "lfoot")),
@@ -136,7 +149,7 @@ class HumanoidCMUEnv : public Env<HumanoidCMUEnvSpec>, public MujocoEnv {
   }
 
   void Step(const Action& action) override {
-    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
+    auto* act = static_cast<mjtNum*>(action["action"_].Data());
     ControlStep(act);
     WriteState(false);
   }
@@ -180,29 +193,33 @@ class HumanoidCMUEnv : public Env<HumanoidCMUEnvSpec>, public MujocoEnv {
     auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
-    // obs
-    const auto& joint_angles = JointAngles();
-    const auto& extremities = Extremities();
-    const auto& com_velocity = CenterOfMassVelocity();
-    const auto& torso_vertical = TorsoVerticalOrientation();
-    auto obs_joint_angles = state["obs:joint_angles"_];
-    AssignObservation("obs:joint_angles", &obs_joint_angles,
-                      joint_angles.data(), joint_angles.size(), reset);
-    auto obs_head_height = state["obs:head_height"_];
-    AssignObservation("obs:head_height", &obs_head_height, HeadHeight(), reset);
-    auto obs_extremities = state["obs:extremities"_];
-    AssignObservation("obs:extremities", &obs_extremities, extremities.data(),
-                      extremities.size(), reset);
-    auto obs_torso_vertical = state["obs:torso_vertical"_];
-    AssignObservation("obs:torso_vertical", &obs_torso_vertical,
-                      torso_vertical.data(), torso_vertical.size(), reset);
-    auto obs_com_velocity = state["obs:com_velocity"_];
-    AssignObservation("obs:com_velocity", &obs_com_velocity,
-                      com_velocity.data(), com_velocity.size(), reset);
-    auto obs_velocity = state["obs:velocity"_];
-    AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
-                      reset);
-    // info
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation("obs:pixels", &obs_pixels, reset);
+    } else {
+      const auto& joint_angles = JointAngles();
+      const auto& extremities = Extremities();
+      const auto& com_velocity = CenterOfMassVelocity();
+      const auto& torso_vertical = TorsoVerticalOrientation();
+      auto obs_joint_angles = state["obs:joint_angles"_];
+      AssignObservation("obs:joint_angles", &obs_joint_angles,
+                        joint_angles.data(), joint_angles.size(), reset);
+      auto obs_head_height = state["obs:head_height"_];
+      AssignObservation("obs:head_height", &obs_head_height, HeadHeight(),
+                        reset);
+      auto obs_extremities = state["obs:extremities"_];
+      AssignObservation("obs:extremities", &obs_extremities, extremities.data(),
+                        extremities.size(), reset);
+      auto obs_torso_vertical = state["obs:torso_vertical"_];
+      AssignObservation("obs:torso_vertical", &obs_torso_vertical,
+                        torso_vertical.data(), torso_vertical.size(), reset);
+      auto obs_com_velocity = state["obs:com_velocity"_];
+      AssignObservation("obs:com_velocity", &obs_com_velocity,
+                        com_velocity.data(), com_velocity.size(), reset);
+      auto obs_velocity = state["obs:velocity"_];
+      AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
+                        reset);
+    }
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
 #endif
@@ -306,7 +323,10 @@ class HumanoidCMUEnv : public Env<HumanoidCMUEnvSpec>, public MujocoEnv {
   }
 };
 
+using HumanoidCMUEnv = HumanoidCMUEnvBase<HumanoidCMUEnvSpec, false>;
+using HumanoidCMUPixelEnv = HumanoidCMUEnvBase<HumanoidCMUPixelEnvSpec, true>;
 using HumanoidCMUEnvPool = AsyncEnvPool<HumanoidCMUEnv>;
+using HumanoidCMUPixelEnvPool = AsyncEnvPool<HumanoidCMUPixelEnv>;
 
 }  // namespace mujoco_dmc
 

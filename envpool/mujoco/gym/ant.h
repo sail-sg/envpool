@@ -75,9 +75,17 @@ class AntEnvFns {
 };
 
 using AntEnvSpec = EnvSpec<AntEnvFns>;
+using AntPixelEnvFns = PixelObservationEnvFns<AntEnvFns>;
+using AntPixelEnvSpec = EnvSpec<AntPixelEnvFns>;
 
-class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class AntEnvBase : public Env<EnvSpecT>, public MujocoEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+  using Base::spec_;
+
   int id_torso_;
   bool terminate_when_unhealthy_, no_pos_, use_contact_force_;
   bool legacy_healthy_reward_, exclude_worldbody_contact_forces_;
@@ -89,13 +97,19 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
   std::normal_distribution<> dist_qvel_;
 
  public:
-  AntEnv(const Spec& spec, int env_id)
-      : Env<AntEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  AntEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(
             std::string(spec.config["base_path"_]) + "/mujoco/assets_gym/" +
                 std::string(spec.config["xml_file"_]),
             spec.config["frame_skip"_], spec.config["post_constraint"_],
-            spec.config["max_episode_steps"_], spec.config["frame_stack"_]),
+            spec.config["max_episode_steps"_], spec.config["frame_stack"_],
+            RenderWidthOrDefault<kFromPixels>(spec.config),
+            RenderHeightOrDefault<kFromPixels>(spec.config),
+            RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         id_torso_(mj_name2id(model_, mjOBJ_XBODY, "torso")),
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
@@ -139,7 +153,7 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
 
   void Step(const Action& action) override {
     // step
-    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
+    auto* act = static_cast<mjtNum*>(action["action"_].Data());
     mjtNum x_before = data_->xpos[id_torso_ * 3];
     mjtNum y_before = data_->xpos[id_torso_ * 3 + 1];
     MujocoStep(act);
@@ -208,26 +222,30 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
     auto state = Allocate();
     state["reward"_] = reward;
     // obs
-    auto obs_state = state["obs"_];
-    mjtNum* obs = PrepareObservation(&obs_state);
-    for (int i = no_pos_ ? 2 : 0; i < model_->nq; ++i) {
-      *(obs++) = data_->qpos[i];
-    }
-    for (int i = 0; i < model_->nv; ++i) {
-      *(obs++) = data_->qvel[i];
-    }
-    if (use_contact_force_) {
-      int start_body = exclude_worldbody_contact_forces_ ? 1 : 0;
-      for (int i = start_body; i < model_->nbody; ++i) {
-        for (int j = 0; j < 6; ++j) {
-          mjtNum x = data_->cfrc_ext[i * 6 + j];
-          x = std::min(std::max(x, contact_force_min_), contact_force_max_);
-          *(obs++) = x;
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation(&obs_pixels, reset);
+    } else {
+      auto obs_state = state["obs"_];
+      mjtNum* obs = PrepareObservation(&obs_state);
+      for (int i = no_pos_ ? 2 : 0; i < model_->nq; ++i) {
+        *(obs++) = data_->qpos[i];
+      }
+      for (int i = 0; i < model_->nv; ++i) {
+        *(obs++) = data_->qvel[i];
+      }
+      if (use_contact_force_) {
+        int start_body = exclude_worldbody_contact_forces_ ? 1 : 0;
+        for (int i = start_body; i < model_->nbody; ++i) {
+          for (int j = 0; j < 6; ++j) {
+            mjtNum x = data_->cfrc_ext[i * 6 + j];
+            x = std::min(std::max(x, contact_force_min_), contact_force_max_);
+            *(obs++) = x;
+          }
         }
       }
+      CommitObservation(&obs_state, reset);
     }
-    CommitObservation(&obs_state, reset);
-    // info
     state["info:reward_forward"_] = xv * forward_reward_weight_;
     state["info:reward_ctrl"_] = -ctrl_cost;
     state["info:reward_contact"_] = -contact_cost;
@@ -245,7 +263,10 @@ class AntEnv : public Env<AntEnvSpec>, public MujocoEnv {
   }
 };
 
+using AntEnv = AntEnvBase<AntEnvSpec, false>;
+using AntPixelEnv = AntEnvBase<AntPixelEnvSpec, true>;
 using AntEnvPool = AsyncEnvPool<AntEnv>;
+using AntPixelEnvPool = AsyncEnvPool<AntPixelEnv>;
 
 }  // namespace mujoco_gym
 

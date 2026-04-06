@@ -62,22 +62,36 @@ class ReacherEnvFns {
 };
 
 using ReacherEnvSpec = EnvSpec<ReacherEnvFns>;
+using ReacherPixelEnvFns = PixelObservationEnvFns<ReacherEnvFns>;
+using ReacherPixelEnvSpec = EnvSpec<ReacherPixelEnvFns>;
 
-class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class ReacherEnvBase : public Env<EnvSpecT>, public MujocoEnv {
  protected:
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+  using Base::spec_;
+
   int id_fingertip_, id_target_;
   bool reward_after_step_, obs_include_z_distance_;
   mjtNum ctrl_cost_weight_, dist_cost_weight_, reset_goal_scale_;
   std::uniform_real_distribution<> dist_qpos_, dist_qvel_, dist_goal_;
 
  public:
-  ReacherEnv(const Spec& spec, int env_id)
-      : Env<ReacherEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  ReacherEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(
             std::string(spec.config["base_path"_]) + "/mujoco/assets_gym/" +
                 std::string(spec.config["xml_file"_]),
             spec.config["frame_skip"_], spec.config["post_constraint"_],
-            spec.config["max_episode_steps"_], spec.config["frame_stack"_]),
+            spec.config["max_episode_steps"_], spec.config["frame_stack"_],
+            RenderWidthOrDefault<kFromPixels>(spec.config),
+            RenderHeightOrDefault<kFromPixels>(spec.config),
+            RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         id_fingertip_(mj_name2id(model_, mjOBJ_XBODY, "fingertip")),
         id_target_(mj_name2id(model_, mjOBJ_XBODY, "target")),
         reward_after_step_(spec.config["reward_after_step"_]),
@@ -126,7 +140,7 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
 
   void Step(const Action& action) override {
     // step
-    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
+    auto* act = static_cast<mjtNum*>(action["action"_].Data());
     std::array<mjtNum, 3> dist = {0.0, 0.0, 0.0};
     if (!reward_after_step_) {
       dist = GetDist();
@@ -166,26 +180,30 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
     auto state = Allocate();
     state["reward"_] = reward;
     // obs
-    auto obs_state = state["obs"_];
-    mjtNum* obs = PrepareObservation(&obs_state);
-    *(obs++) = std::cos(data_->qpos[0]);
-    *(obs++) = std::cos(data_->qpos[1]);
-    *(obs++) = std::sin(data_->qpos[0]);
-    *(obs++) = std::sin(data_->qpos[1]);
-    for (int i = 2; i < model_->nq; ++i) {
-      *(obs++) = data_->qpos[i];
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation(&obs_pixels, reset);
+    } else {
+      auto obs_state = state["obs"_];
+      mjtNum* obs = PrepareObservation(&obs_state);
+      *(obs++) = std::cos(data_->qpos[0]);
+      *(obs++) = std::cos(data_->qpos[1]);
+      *(obs++) = std::sin(data_->qpos[0]);
+      *(obs++) = std::sin(data_->qpos[1]);
+      for (int i = 2; i < model_->nq; ++i) {
+        *(obs++) = data_->qpos[i];
+      }
+      for (int i = 0; i < 2; ++i) {
+        *(obs++) = data_->qvel[i];
+      }
+      const auto& dist = GetDist();
+      *(obs++) = dist[0];
+      *(obs++) = dist[1];
+      if (obs_include_z_distance_) {
+        *(obs++) = dist[2];
+      }
+      CommitObservation(&obs_state, reset);
     }
-    for (int i = 0; i < 2; ++i) {
-      *(obs++) = data_->qvel[i];
-    }
-    const auto& dist = GetDist();
-    *(obs++) = dist[0];
-    *(obs++) = dist[1];
-    if (obs_include_z_distance_) {
-      *(obs++) = dist[2];
-    }
-    CommitObservation(&obs_state, reset);
-    // info
     state["info:reward_dist"_] = -dist_cost;
     state["info:reward_ctrl"_] = -ctrl_cost;
 #ifdef ENVPOOL_TEST
@@ -195,7 +213,10 @@ class ReacherEnv : public Env<ReacherEnvSpec>, public MujocoEnv {
   }
 };
 
+using ReacherEnv = ReacherEnvBase<ReacherEnvSpec, false>;
+using ReacherPixelEnv = ReacherEnvBase<ReacherPixelEnvSpec, true>;
 using ReacherEnvPool = AsyncEnvPool<ReacherEnv>;
+using ReacherPixelEnvPool = AsyncEnvPool<ReacherPixelEnv>;
 
 }  // namespace mujoco_gym
 

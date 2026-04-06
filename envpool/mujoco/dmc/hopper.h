@@ -62,8 +62,15 @@ class HopperEnvFns {
 };
 
 using HopperEnvSpec = EnvSpec<HopperEnvFns>;
+using HopperPixelEnvFns = PixelObservationEnvFns<HopperEnvFns>;
+using HopperPixelEnvSpec = EnvSpec<HopperPixelEnvFns>;
 
-class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
+template <typename EnvSpecT, bool kFromPixels>
+class HopperEnvBase : public Env<EnvSpecT>, public MujocoEnv {
+  using Base = Env<EnvSpecT>;
+  using Base::Allocate;
+  using Base::gen_;
+
   const mjtNum kStandHeight = 0.6;
   const mjtNum kHopSpeed = 2;
   int id_torso_, id_foot_;
@@ -71,13 +78,19 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
   bool hopping_;
 
  public:
-  HopperEnv(const Spec& spec, int env_id)
-      : Env<HopperEnvSpec>(spec, env_id),
+  using Spec = EnvSpecT;
+  using Action = typename Base::Action;
+
+  HopperEnvBase(const Spec& spec, int env_id)
+      : Env<EnvSpecT>(spec, env_id),
         MujocoEnv(
             spec.config["base_path"_],
             GetHopperXML(spec.config["base_path"_], spec.config["task_name"_]),
             spec.config["frame_skip"_], spec.config["max_episode_steps"_],
-            spec.config["frame_stack"_]),
+            spec.config["frame_stack"_],
+            RenderWidthOrDefault<kFromPixels>(spec.config),
+            RenderHeightOrDefault<kFromPixels>(spec.config),
+            RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         id_torso_(mj_name2id(model_, mjOBJ_XBODY, "torso")),
         id_foot_(mj_name2id(model_, mjOBJ_XBODY, "foot")),
         id_torso_subtreelinvel_(GetSensorId(model_, "torso_subtreelinvel")),
@@ -110,7 +123,7 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
   }
 
   void Step(const Action& action) override {
-    mjtNum* act = static_cast<mjtNum*>(action["action"_].Data());
+    auto* act = static_cast<mjtNum*>(action["action"_].Data());
     ControlStep(act);
     WriteState(false);
   }
@@ -157,24 +170,30 @@ class HopperEnv : public Env<HopperEnvSpec>, public MujocoEnv {
     auto state = Allocate();
     state["reward"_] = reward_;
     state["discount"_] = discount_;
-    // obs
-    auto obs_position = state["obs:position"_];
-    AssignObservation("obs:position", &obs_position, data_->qpos + 1,
-                      model_->nq - 1, reset);
-    auto obs_velocity = state["obs:velocity"_];
-    AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
-                      reset);
-    const auto& touch = Touch();
-    auto obs_touch = state["obs:touch"_];
-    AssignObservation("obs:touch", &obs_touch, touch.data(), 2, reset);
-    // info for check alignment
+    if constexpr (kFromPixels) {
+      auto obs_pixels = state["obs:pixels"_];
+      AssignPixelObservation("obs:pixels", &obs_pixels, reset);
+    } else {
+      auto obs_position = state["obs:position"_];
+      AssignObservation("obs:position", &obs_position, data_->qpos + 1,
+                        model_->nq - 1, reset);
+      auto obs_velocity = state["obs:velocity"_];
+      AssignObservation("obs:velocity", &obs_velocity, data_->qvel, model_->nv,
+                        reset);
+      const auto& touch = Touch();
+      auto obs_touch = state["obs:touch"_];
+      AssignObservation("obs:touch", &obs_touch, touch.data(), 2, reset);
+    }
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
 #endif
   }
 };
 
+using HopperEnv = HopperEnvBase<HopperEnvSpec, false>;
+using HopperPixelEnv = HopperEnvBase<HopperPixelEnvSpec, true>;
 using HopperEnvPool = AsyncEnvPool<HopperEnv>;
+using HopperPixelEnvPool = AsyncEnvPool<HopperPixelEnv>;
 
 }  // namespace mujoco_dmc
 
