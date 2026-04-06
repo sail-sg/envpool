@@ -18,7 +18,6 @@ import base64
 import hashlib
 import shutil
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -175,6 +174,11 @@ def _optimize_wheel(wheel_path: Path) -> None:
         unpack_dir = Path(tmp_dir) / "wheel"
         _unpack_wheel(wheel_path, unpack_dir)
         stripped_binaries, failures = _strip_native_binaries(unpack_dir)
+        if failures:
+            details = "; ".join(failures)
+            raise RuntimeError(
+                f"failed to strip native binaries in {wheel_path.name}: {details}"
+            )
         _write_wheel(unpack_dir, wheel_path)
 
     after_size = wheel_path.stat().st_size
@@ -184,10 +188,6 @@ def _optimize_wheel(wheel_path: Path) -> None:
         f"saved {delta} bytes ({_format_bytes(delta)}), "
         f"final size {after_size} bytes ({_format_bytes(after_size)})"
     )
-    for failure in failures:
-        print(f"warning: strip skipped for {failure}", file=sys.stderr)
-
-
 def main() -> int:
     """Optimize each wheel passed on the command line."""
     args = _parse_args()

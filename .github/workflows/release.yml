@@ -209,7 +209,11 @@ jobs:
       - name: Install Windows dependencies
         shell: pwsh
         run: |
-          choco install -y cmake make ninja strawberryperl swig
+          choco install -y cmake make ninja strawberryperl swig llvm
+          if (-not (Test-Path "C:\Program Files\LLVM\bin\llvm-strip.exe")) {
+            throw "llvm-strip.exe was not installed"
+          }
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files\LLVM\bin"
       - name: Create Mesa directory
         shell: pwsh
         run: |
