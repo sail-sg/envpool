@@ -15,7 +15,6 @@
 
 import gc
 import os
-import platform
 import pprint
 import sys
 import tempfile
@@ -51,11 +50,6 @@ _GYMNASIUM_ROBOTICS_PREFIXES = (
     "HandReach",
     "PointMaze_",
 )
-
-
-def _vizdoom_render_smoke_supported() -> bool:
-    machine = platform.machine().lower()
-    return sys.platform != "darwin" and machine not in {"aarch64", "arm64"}
 
 
 @contextmanager
@@ -179,11 +173,19 @@ class _MakeTest(absltest.TestCase):
             with _temporary_workdir(prefix="envpool-vizdoom-smoke-"):
                 spec = envpool.make_spec("MyWayHome-v1")
                 print(spec)
-                render_kwargs = (
-                    {"render_mode": "rgb_array"}
-                    if _vizdoom_render_smoke_supported()
-                    else {}
-                )
+                # Match the dedicated VizDoom render test configuration rather
+                # than relying on smaller defaults that have proven unstable in
+                # wheel-installed release environments.
+                render_kwargs = {
+                    "num_envs": 1,
+                    "render_mode": "rgb_array",
+                    "render_width": 320,
+                    "render_height": 240,
+                    "use_combined_action": True,
+                    "stack_num": 1,
+                    "img_width": 320,
+                    "img_height": 240,
+                }
                 env0 = envpool.make_gym("MyWayHome-v1", **render_kwargs)
                 env1 = envpool.make_gymnasium("MyWayHome-v1", **render_kwargs)
                 try:
@@ -193,9 +195,8 @@ class _MakeTest(absltest.TestCase):
                     self.assertIsInstance(env1, gymnasium.Env)
                     env0.reset()
                     env1.reset()
-                    if render_kwargs:
-                        self.assertIsNotNone(env0.render())
-                        self.assertIsNotNone(env1.render())
+                    self.assertIsNotNone(env0.render())
+                    self.assertIsNotNone(env1.render())
                 finally:
                     env0.close()
                     env1.close()
