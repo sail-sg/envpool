@@ -22,8 +22,10 @@ FULL_RUN_FILES = {
 }
 FULL_RUN_PREFIXES = ("third_party/",)
 CPP_SUFFIXES = (".cc", ".h")
+BINDING_ONLY_FILES = frozenset(("envpool/minigrid/minigrid_bindings.cc",))
+BINDING_ONLY_PREFIXES = ("envpool/minigrid_bindings/",)
 CC_RULE_KIND = "cc_(library|test)"
-SKIP_TARGETS = frozenset(("//envpool/minigrid_bindings:minigrid_bindings",))
+SKIP_TARGETS = frozenset()
 
 
 def _filter_targets(targets: list[str]) -> list[str]:
@@ -85,6 +87,14 @@ def _infer_changed_files() -> list[str]:
 
 
 def _resolve_targets(changed_files: list[str]) -> list[str]:
+    if not changed_files:
+        return []
+    changed_files = [
+        path
+        for path in changed_files
+        if path not in BINDING_ONLY_FILES
+        and not path.startswith(BINDING_ONLY_PREFIXES)
+    ]
     if not changed_files:
         return []
 

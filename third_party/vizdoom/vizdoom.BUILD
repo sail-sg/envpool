@@ -176,7 +176,7 @@ genrule(
     name = "sc_man_scanner",
     srcs = ["src/sc_man_scanner.re"],
     outs = ["src/sc_man_scanner.h"],
-    cmd = "$(execpath re2c) --no-generation-date -s -o $@ $<",
+    cmd = "$(execpath :re2c) --no-generation-date -s -o $@ $<",
     tools = [":re2c"],
 )
 
@@ -201,9 +201,9 @@ genrule(
         "xlat_parser.c",
         "xlat_parser.h",
     ],
-    cmd = "$(execpath lemon) $<",
+    cmd = "$(execpath :lemon) $<",
     tools = [
-        "lemon",
+        ":lemon",
         ":lemon_deps",
         ":xlat_parser_y",
     ],
