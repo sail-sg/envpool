@@ -150,7 +150,6 @@ jobs:
           qt_include_dir="$("$qmake_bin" -query QT_INSTALL_HEADERS)"
           sudo ln -sfn "$qt_include_dir" /usr/include/qt
       - name: Restore Bazel caches
-        if: ${{ github.event_name != 'pull_request' }}
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -171,7 +170,7 @@ jobs:
             BAZEL_TEST_TARGETS="//..." bazel-test
       - name: Save Bazel caches
         id: save-bazel-caches
-        if: ${{ always() && !cancelled() && github.event_name != 'pull_request' }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
           path: |
@@ -180,7 +179,7 @@ jobs:
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
       - name: Prune older Bazel caches
-        if: ${{ always() && !cancelled() && github.event_name != 'pull_request' && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
