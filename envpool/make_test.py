@@ -15,6 +15,7 @@
 
 import gc
 import os
+import platform
 import pprint
 import sys
 import tempfile
@@ -50,6 +51,11 @@ _GYMNASIUM_ROBOTICS_PREFIXES = (
     "HandReach",
     "PointMaze_",
 )
+
+
+def _vizdoom_render_smoke_supported() -> bool:
+    machine = platform.machine().lower()
+    return sys.platform != "darwin" and machine not in {"aarch64", "arm64"}
 
 
 @contextmanager
@@ -173,10 +179,13 @@ class _MakeTest(absltest.TestCase):
             with _temporary_workdir(prefix="envpool-vizdoom-smoke-"):
                 spec = envpool.make_spec("MyWayHome-v1")
                 print(spec)
-                env0 = envpool.make_gym("MyWayHome-v1", render_mode="rgb_array")
-                env1 = envpool.make_gymnasium(
-                    "MyWayHome-v1", render_mode="rgb_array"
+                render_kwargs = (
+                    {"render_mode": "rgb_array"}
+                    if _vizdoom_render_smoke_supported()
+                    else {}
                 )
+                env0 = envpool.make_gym("MyWayHome-v1", **render_kwargs)
+                env1 = envpool.make_gymnasium("MyWayHome-v1", **render_kwargs)
                 try:
                     print(env0)
                     print(env1)
@@ -184,6 +193,9 @@ class _MakeTest(absltest.TestCase):
                     self.assertIsInstance(env1, gymnasium.Env)
                     env0.reset()
                     env1.reset()
+                    if render_kwargs:
+                        self.assertIsNotNone(env0.render())
+                        self.assertIsNotNone(env1.render())
                 finally:
                     env0.close()
                     env1.close()
