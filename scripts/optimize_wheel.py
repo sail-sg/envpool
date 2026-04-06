@@ -252,9 +252,6 @@ def _make_zip_info(
         zip_info.external_attr = 0o100644 << 16
     else:
         zip_info = ZipInfo(rel_path, date_time=source_info.date_time)
-        zip_info.comment = source_info.comment
-        zip_info.extra = source_info.extra
-        zip_info.internal_attr = source_info.internal_attr
         zip_info.external_attr = source_info.external_attr
         zip_info.create_system = source_info.create_system
     zip_info.compress_type = ZIP_DEFLATED
