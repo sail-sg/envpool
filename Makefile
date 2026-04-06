@@ -104,7 +104,7 @@ auditwheel-install:
 release-system-install:
 	if command -v dnf >/dev/null 2>&1; then \
 		perl -MCompress::Zlib -e1 >/dev/null 2>&1 || \
-			(dnf install -y perl-IO-Compress && dnf clean all); \
+			(dnf install -y --disablerepo=epel perl-IO-Compress && dnf clean all); \
 	fi
 
 # python style / lint
