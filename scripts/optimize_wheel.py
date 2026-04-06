@@ -188,9 +188,7 @@ def _optimize_png(path: Path) -> int:
         return 0
 
     idat_bytes = b"".join(
-        chunk_data
-        for chunk_type, chunk_data in chunks
-        if chunk_type == b"IDAT"
+        chunk_data for chunk_type, chunk_data in chunks if chunk_type == b"IDAT"
     )
     if not idat_bytes:
         return 0
