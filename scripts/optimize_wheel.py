@@ -133,7 +133,10 @@ def _write_wheel(unpack_dir: Path, wheel_path: Path) -> None:
     record_rows: list[list[str]] = []
 
     with tempfile.NamedTemporaryFile(
-        prefix=wheel_path.stem + ".", suffix=".whl", delete=False
+        prefix=wheel_path.stem + ".",
+        suffix=".whl",
+        dir=wheel_path.parent,
+        delete=False,
     ) as tmp_file:
         tmp_wheel = Path(tmp_file.name)
 
