@@ -38,7 +38,9 @@ def _resolve_wheels(targets: list[str]) -> list[Path]:
         raise SystemExit(f"wheel input not found: {missing_targets}")
     if invalid:
         invalid_targets = ", ".join(str(path) for path in sorted(invalid))
-        raise SystemExit(f"non-wheel inputs are not supported: {invalid_targets}")
+        raise SystemExit(
+            f"non-wheel inputs are not supported: {invalid_targets}"
+        )
     if not wheels:
         raise SystemExit("no wheel files found to size-check")
     return list(wheels)
@@ -46,8 +48,15 @@ def _resolve_wheels(targets: list[str]) -> list[Path]:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("targets", nargs="+", help="wheel files, directories, or glob patterns")
-    parser.add_argument("--limit-bytes", type=int, required=True, help="maximum allowed size in bytes")
+    parser.add_argument(
+        "targets", nargs="+", help="wheel files, directories, or glob patterns"
+    )
+    parser.add_argument(
+        "--limit-bytes",
+        type=int,
+        required=True,
+        help="maximum allowed size in bytes",
+    )
     return parser.parse_args()
 
 
@@ -71,7 +80,9 @@ def main() -> None:
             f"wheel size check failed: {failures} bytes exceed limit {limit} ({limit_mib:.2f} MiB)"
         )
 
-    print(f"wheel size check passed: all wheels are below {limit} bytes ({limit_mib:.2f} MiB)")
+    print(
+        f"wheel size check passed: all wheels are below {limit} bytes ({limit_mib:.2f} MiB)"
+    )
 
 
 if __name__ == "__main__":

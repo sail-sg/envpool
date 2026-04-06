@@ -94,7 +94,9 @@ def _write_wheel(unpack_dir: Path, wheel_path: Path) -> None:
         tmp_wheel = Path(tmp_file.name)
 
     try:
-        with ZipFile(tmp_wheel, "w", compression=ZIP_DEFLATED, compresslevel=9) as zf:
+        with ZipFile(
+            tmp_wheel, "w", compression=ZIP_DEFLATED, compresslevel=9
+        ) as zf:
             for path in sorted(unpack_dir.rglob("*")):
                 if not path.is_file():
                     continue
@@ -107,7 +109,9 @@ def _write_wheel(unpack_dir: Path, wheel_path: Path) -> None:
 
             record_rows.sort(key=lambda row: row[0])
             record_rows.append([record_rel, "", ""])
-            record_content = "".join(",".join(row) + "\n" for row in record_rows)
+            record_content = "".join(
+                ",".join(row) + "\n" for row in record_rows
+            )
             zf.writestr(record_rel, record_content.encode("utf-8"))
 
         tmp_wheel.replace(wheel_path)
