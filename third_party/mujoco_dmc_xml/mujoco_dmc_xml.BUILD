@@ -17,7 +17,7 @@ filegroup(
     srcs = glob([
         "suite/*.xml",
         "suite/common/**",
-        "suite/dog_assets/**",
+        "suite/dog_assets/*",
     ]),
     visibility = ["//visibility:public"],
 )
