@@ -7,6 +7,7 @@ BAZEL_FILES    = $(shell find . -type f -name "*BUILD" -o -name "*.bzl")
 COMMIT_HASH    = $(shell git log -1 --format=%h)
 COPYRIGHT      = "Garena Online Private Limited"
 BAZELOPT       =
+UNAME_S        = $(shell uname -s 2>/dev/null || echo Unknown)
 # MSVC expects /D for preprocessor defines, so Bazel test/debug builds need an
 # extra Windows-only define to expose ENVPOOL_TEST-gated alignment state.
 WINDOWS_ENVPOOL_TEST_DEFINE = $(if $(filter Windows_NT,$(OS)),--cxxopt=/DENVPOOL_TEST,)
@@ -24,7 +25,11 @@ DOCKER_USER    = trinkle23897
 RELEASE_PYTHON ?= $(shell python3 -c 'import sys; print("{}.{}".format(sys.version_info[0], sys.version_info[1]))')
 RELEASE_SETUP_TARGET = //:setup_py$(subst .,,$(RELEASE_PYTHON))
 PYPI_WHEEL_PLAT ?= manylinux_2_28_x86_64
-WHEEL_SIZE_LIMIT_BYTES ?= 104857600
+WHEEL_SIZE_LIMIT_BYTES ?= 100000000
+# Procgen links Qt, but vendoring Qt pulls a large Qt/ICU stack into
+# envpool.libs. Linux release wheels expect the system Qt runtime instead.
+AUDITWHEEL_EXCLUDE_LIBS ?= libQt5Core.so.5 libQt5Gui.so.5
+AUDITWHEEL_EXCLUDE_FLAGS = $(foreach lib,$(AUDITWHEEL_EXCLUDE_LIBS),--exclude $(lib))
 CLANG_TIDY_MAJOR = 18
 CLANG_TIDY_BIN = clang-tidy-$(CLANG_TIDY_MAJOR)
 CLANG_TIDY_WRAPPER_DIR = $(HOME)/.cache/$(PROJECT_NAME)/bin
@@ -34,6 +39,21 @@ ifeq ($(OS),Windows_NT)
 BAZEL_RUNFILES_SUFFIX = .exe.runfiles
 else
 BAZEL_RUNFILES_SUFFIX = .runfiles
+endif
+ifeq ($(OS),Windows_NT)
+RELEASE_SIZE_BAZELOPT =
+else ifeq ($(UNAME_S),Darwin)
+RELEASE_SIZE_BAZELOPT =
+else ifeq ($(UNAME_S),Linux)
+RELEASE_SIZE_BAZELOPT =
+else
+RELEASE_SIZE_BAZELOPT =
+endif
+PYPI_WHEEL_PREREQS =
+PYPI_WHEEL_REPAIR_COMMAND = mkdir -p wheelhouse && cp "$$CURRENT_WHEEL" wheelhouse/
+ifeq ($(UNAME_S),Linux)
+PYPI_WHEEL_PREREQS = auditwheel-install
+PYPI_WHEEL_REPAIR_COMMAND = python3 -m auditwheel repair --plat $(PYPI_WHEEL_PLAT) $(AUDITWHEEL_EXCLUDE_FLAGS) "$$CURRENT_WHEEL"
 endif
 
 # installation
@@ -159,7 +179,7 @@ bazel-build: bazel-install bazel-pip-requirement-dev
 	cp bazel-bin/setup$(BAZEL_RUNFILES_SUFFIX)/$(PROJECT_NAME)/dist/*.whl ./dist
 
 bazel-release: bazel-install bazel-pip-requirement-release release-system-install
-	$(BAZEL) run $(BAZELOPT) $(RELEASE_SETUP_TARGET) --config=release -- bdist_wheel
+	$(BAZEL) run $(BAZELOPT) --config=release $(RELEASE_SIZE_BAZELOPT) $(RELEASE_SETUP_TARGET) -- bdist_wheel
 	mkdir -p dist
 	cp bazel-bin/$(subst //:,,$(RELEASE_SETUP_TARGET))$(BAZEL_RUNFILES_SUFFIX)/$(PROJECT_NAME)/dist/*.whl ./dist
 
@@ -229,10 +249,10 @@ docker-release-push: docker-release
 docker-release-launch: docker-release
 	docker run --network=host -v /:/host -v $(shell pwd):/app -v $(HOME)/.cache:/root/.cache --shm-size=4gb -it $(PROJECT_NAME)-release:$(DOCKER_TAG) zsh
 
-pypi-wheel: auditwheel-install bazel-release
+pypi-wheel: $(PYPI_WHEEL_PREREQS) bazel-release
 	rm -rf wheelhouse
 	CURRENT_WHEEL=$$(ls dist/*.whl -Art | tail -n 1); \
-	python3 -m auditwheel repair --plat $(PYPI_WHEEL_PLAT) "$$CURRENT_WHEEL"
+	$(PYPI_WHEEL_REPAIR_COMMAND)
 	python3 scripts/optimize_wheel.py wheelhouse/*.whl
 	python3 scripts/check_wheel_size.py --limit-bytes $(WHEEL_SIZE_LIMIT_BYTES) wheelhouse/*.whl
 
@@ -243,4 +263,9 @@ release-test1:
 release-test2:
 	cd examples && python3 make_env.py && python3 env_step.py
 
-release-test: release-test1 release-test2
+PROCGEN_QT_RUNTIME ?= present
+
+release-test-procgen-qt:
+	PYTHONPATH= python3 scripts/release_procgen_qt_smoke.py --qt-runtime $(PROCGEN_QT_RUNTIME)
+
+release-test: release-test1 release-test2 release-test-procgen-qt

@@ -71,11 +71,9 @@ jobs:
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Build
         run: |
-          rm -rf dist
-          make RELEASE_PYTHON=${{ matrix.python-version }} bazel-release
-          python scripts/optimize_wheel.py dist/*.whl
-          python scripts/check_wheel_size.py --limit-bytes 104857600 dist/*.whl
-          python -m pip install dist/*.whl --force-reinstall
+          rm -rf dist wheelhouse
+          make RELEASE_PYTHON=${{ matrix.python-version }} pypi-wheel
+          python -m pip install wheelhouse/*.whl --force-reinstall
       - name: Test
         run: |
           make release-test
@@ -83,7 +81,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: wheel-macos-${{ matrix.python-version }}
-          path: dist/*.whl
+          path: wheelhouse/
           if-no-files-found: error
 
   release-linux:
@@ -155,6 +153,12 @@ jobs:
       - name: Test
         run: |
           make release-test
+      - name: Test without Linux Qt runtime
+        run: |
+          rpm -qa 'qt5-qtbase*' 'qt5-qtdeclarative*' | sort
+          dnf remove -y 'qt5-qtbase*' 'qt5-qtdeclarative*'
+          dnf clean all
+          make PROCGEN_QT_RUNTIME=absent release-test-procgen-qt
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
@@ -257,11 +261,9 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          rm -rf dist
-          make RELEASE_PYTHON=${{ matrix.python-version }} bazel-release
-          python scripts/optimize_wheel.py dist/*.whl
-          python scripts/check_wheel_size.py --limit-bytes 104857600 dist/*.whl
-          python -m pip install dist/*.whl --force-reinstall
+          rm -rf dist wheelhouse
+          make RELEASE_PYTHON=${{ matrix.python-version }} pypi-wheel
+          python -m pip install wheelhouse/*.whl --force-reinstall
       - name: Test
         shell: bash
         run: |
@@ -270,7 +272,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: wheel-windows-${{ matrix.python-version }}
-          path: dist/*.whl
+          path: wheelhouse/
           if-no-files-found: error
 
   publish:

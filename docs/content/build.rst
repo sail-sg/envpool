@@ -150,10 +150,16 @@ tests and before the GLFW-backed render path.
 Qt runtime in wheels
 ^^^^^^^^^^^^^^^^^^^^
 
+Linux release wheels intentionally exclude the Qt shared libraries used by
+Procgen (``libQt5Core.so.5`` and ``libQt5Gui.so.5``) from ``auditwheel``
+repair. Bundling those libraries also pulls in a large Qt / ICU runtime stack,
+so Procgen users on Linux should install the system Qt 5 runtime instead, for
+example with ``apt install qtbase5-dev`` or ``dnf install qt5-qtbase``.
+
 Windows release wheels currently bundle the Qt runtime DLLs required by
 Procgen (``Qt5Core.dll`` and ``Qt5Gui.dll``) directly next to
 ``procgen_envpool.pyd``. End users installing the wheel do **not** need a
-separate Qt installation at runtime.
+separate Qt installation at runtime on Windows.
 
 Source builds still require a local Qt 5 installation so Bazel can compile and
 link against Qt. Linux and macOS continue to rely on system Qt packages at
