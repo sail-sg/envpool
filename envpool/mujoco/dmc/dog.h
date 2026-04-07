@@ -133,7 +133,7 @@ class DogEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   std::vector<int> hinge_qpos_;
   std::vector<int> hinge_qvel_;
 #ifdef ENVPOOL_TEST
-  std::unique_ptr<mjtNum[]> qvel0_;
+  std::vector<mjtNum> qvel0_;
   std::array<mjtNum, 38> act0_{};
 #endif
 
@@ -171,7 +171,7 @@ class DogEnvBase : public Env<EnvSpecT>, public MujocoEnv {
         id_velocimeter_sensor_(GetSensorId(model_, "velocimeter")),
         id_gyro_sensor_(GetSensorId(model_, "gyro")) {
 #ifdef ENVPOOL_TEST
-    qvel0_.reset(new mjtNum[model_->nv]);
+    qvel0_.resize(model_->nv);
 #endif
     const std::string& task_name = spec.config["task_name"_];
     if (task_name == "stand" || task_name == "fetch") {
@@ -241,7 +241,7 @@ class DogEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     }
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
-    std::memcpy(qvel0_.get(), data_->qvel, sizeof(mjtNum) * model_->nv);
+    std::memcpy(qvel0_.data(), data_->qvel, sizeof(mjtNum) * model_->nv);
     for (int i = 0; i < model_->na; ++i) {
       act0_[i] = data_->act[i];
     }
@@ -425,12 +425,12 @@ class DogEnvBase : public Env<EnvSpecT>, public MujocoEnv {
         data_->geom_xpos[id_ball_geom_ * 3 + 2] -
             data_->site_xpos[id_head_site_ * 3 + 2],
     };
-    mjtNum head_velocity[6];
-    mjtNum ball_velocity[6];
-    mj_objectVelocity(model_, data_, mjOBJ_SITE, id_head_site_, head_velocity,
-                      0);
-    mj_objectVelocity(model_, data_, mjOBJ_GEOM, id_ball_geom_, ball_velocity,
-                      0);
+    std::array<mjtNum, 6> head_velocity{};
+    std::array<mjtNum, 6> ball_velocity{};
+    mj_objectVelocity(model_, data_, mjOBJ_SITE, id_head_site_,
+                      head_velocity.data(), 0);
+    mj_objectVelocity(model_, data_, mjOBJ_GEOM, id_ball_geom_,
+                      ball_velocity.data(), 0);
     std::array<mjtNum, 3> head_to_ball_velocity = {
         ball_velocity[3] - head_velocity[3],
         ball_velocity[4] - head_velocity[4],
@@ -549,7 +549,7 @@ class DogEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     }
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    state["info:qvel0"_].Assign(qvel0_.get(), model_->nv);
+    state["info:qvel0"_].Assign(qvel0_.data(), model_->nv);
     state["info:qacc_warmstart0"_].Assign(data_->qacc_warmstart, model_->nv);
     state["info:act0"_].Assign(act0_.data(), model_->na);
 #endif
