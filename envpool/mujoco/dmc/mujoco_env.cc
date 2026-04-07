@@ -62,7 +62,9 @@ void AddReferencedAssetsToVFS(mjVFS* vfs, const std::string& base_path,
     asset_paths.insert(XMLAssetPath(directory, file.as_string()));
   }
   for (const std::string& asset_path : asset_paths) {
-    std::string path = base_path + "/mujoco/assets_dmc/" + asset_path;
+    std::string path = base_path;
+    path.append("/mujoco/assets_dmc/");
+    path.append(asset_path);
     std::ifstream ifs(path, std::ios::binary);
     std::string content((std::istreambuf_iterator<char>(ifs)),
                         std::istreambuf_iterator<char>());
