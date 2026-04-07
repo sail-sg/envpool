@@ -19,6 +19,30 @@ import sys
 from envpool.python.api import py_env
 
 _WINDOWS_DLL_DIR_HANDLES: list[object] = []
+_PROCGEN_EXPORTS = {
+    "ProcgenEnvSpec",
+    "ProcgenDMEnvPool",
+    "ProcgenGymEnvPool",
+    "ProcgenGymnasiumEnvPool",
+}
+_LINUX_QT_RUNTIME_ERROR = (
+    "EnvPool Procgen requires the system Qt 5 runtime on Linux. "
+    "Install the Qt5 Core/Gui shared libraries, for example via "
+    "`apt install qtbase5-dev` or `dnf install qt5-qtbase`."
+)
+_PROCGEN_IMPORT_ERROR: ImportError | None = None
+
+
+def _is_linux_qt_import_error(exc: ImportError) -> bool:
+    return sys.platform.startswith("linux") and (
+        "libQt5Core" in str(exc) or "libQt5Gui" in str(exc)
+    )
+
+
+def _raise_procgen_import_error() -> None:
+    assert _PROCGEN_IMPORT_ERROR is not None
+    raise ImportError(_LINUX_QT_RUNTIME_ERROR) from _PROCGEN_IMPORT_ERROR
+
 
 if sys.platform == "win32" and hasattr(os, "add_dll_directory"):
     # Procgen links against Qt on Windows, so register the Qt bin dir before
@@ -32,17 +56,28 @@ if sys.platform == "win32" and hasattr(os, "add_dll_directory"):
             _WINDOWS_DLL_DIR_HANDLES.append(os.add_dll_directory(qt_bin))
             break
 
-from .procgen_envpool import (
-    _ProcgenEnvPool,
-    _ProcgenEnvSpec,
-)
+try:
+    from .procgen_envpool import (
+        _ProcgenEnvPool,
+        _ProcgenEnvSpec,
+    )
+except ImportError as exc:
+    if not _is_linux_qt_import_error(exc):
+        raise
+    _PROCGEN_IMPORT_ERROR = exc
+else:
+    (
+        ProcgenEnvSpec,
+        ProcgenDMEnvPool,
+        ProcgenGymEnvPool,
+        ProcgenGymnasiumEnvPool,
+    ) = py_env(_ProcgenEnvSpec, _ProcgenEnvPool)
 
-(
-    ProcgenEnvSpec,
-    ProcgenDMEnvPool,
-    ProcgenGymEnvPool,
-    ProcgenGymnasiumEnvPool,
-) = py_env(_ProcgenEnvSpec, _ProcgenEnvPool)
+
+def __getattr__(name: str) -> object:
+    if name in _PROCGEN_EXPORTS and _PROCGEN_IMPORT_ERROR is not None:
+        _raise_procgen_import_error()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = [
     "ProcgenEnvSpec",

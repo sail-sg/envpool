@@ -4,6 +4,13 @@ Procgen
 We use ``procgen==0.10.7`` as the codebase.
 See https://github.com/openai/procgen/tree/0.10.7
 
+.. note::
+
+   Procgen links against Qt 5. Linux wheels do not vendor the Qt runtime; if
+   making a Procgen environment reports missing ``libQt5Core.so.5`` or
+   ``libQt5Gui.so.5``, install the system Qt 5 runtime, for example with
+   ``apt install qtbase5-dev`` or ``dnf install qt5-qtbase``.
+
 
 Render Compare
 --------------

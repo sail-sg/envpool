@@ -62,7 +62,10 @@ If no error occurs, you have successfully installed EnvPool.
 
 Platform notes:
 
-- PyPI wheels do not require a separate Qt installation at runtime.
+- Linux Procgen wheels intentionally do not vendor Qt. If making a Procgen
+  environment reports missing `libQt5Core.so.5` or `libQt5Gui.so.5`, install
+  the system Qt 5 runtime, for example with `apt install qtbase5-dev` or
+  `dnf install qt5-qtbase`.
 - Windows Procgen wheels bundle the required Qt runtime DLLs (`Qt5Core.dll`
   and `Qt5Gui.dll`) next to the extension module.
 - Windows source/release CI validates MuJoCo rendering with Mesa software
