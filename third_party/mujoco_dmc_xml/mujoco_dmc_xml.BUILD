@@ -19,6 +19,7 @@ filegroup(
         "suite/common/**",
         "suite/dog_assets/*",
     ], exclude = [
+        "suite/common/__init__.py",
         "suite/dog_assets/BONELingual_bone_1.stl",
         "suite/dog_assets/BONELingual_bone_2.stl",
         "suite/dog_assets/BONELingual_bone_3.stl",
