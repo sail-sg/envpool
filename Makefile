@@ -45,7 +45,7 @@ RELEASE_SIZE_BAZELOPT =
 else ifeq ($(UNAME_S),Darwin)
 RELEASE_SIZE_BAZELOPT =
 else ifeq ($(UNAME_S),Linux)
-RELEASE_SIZE_BAZELOPT = --config=release-size-linux
+RELEASE_SIZE_BAZELOPT =
 else
 RELEASE_SIZE_BAZELOPT =
 endif

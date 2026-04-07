@@ -8,8 +8,6 @@ build --incompatible_default_to_explicit_init_py
 build:debug --cxxopt=-DENVPOOL_TEST --compilation_mode=dbg -s
 build:test --cxxopt=-DENVPOOL_TEST --copt=-g0 --copt=-O3 --copt=-DNDEBUG
 build:release --copt=-g0 --copt=-O3 --copt=-DNDEBUG
-build:release-size --copt=-ffunction-sections --copt=-fdata-sections
-build:release-size-linux --config=release-size --linkopt=-Wl,--gc-sections
 
 build:linux --cxxopt=-std=c++17
 build:linux --host_cxxopt=-std=c++17
