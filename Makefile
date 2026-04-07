@@ -24,6 +24,7 @@ DOCKER_USER    = trinkle23897
 RELEASE_PYTHON ?= $(shell python3 -c 'import sys; print("{}.{}".format(sys.version_info[0], sys.version_info[1]))')
 RELEASE_SETUP_TARGET = //:setup_py$(subst .,,$(RELEASE_PYTHON))
 PYPI_WHEEL_PLAT ?= manylinux_2_28_x86_64
+WHEEL_SIZE_LIMIT_BYTES ?= 104857600
 CLANG_TIDY_MAJOR = 18
 CLANG_TIDY_BIN = clang-tidy-$(CLANG_TIDY_MAJOR)
 CLANG_TIDY_WRAPPER_DIR = $(HOME)/.cache/$(PROJECT_NAME)/bin
@@ -103,7 +104,7 @@ auditwheel-install:
 release-system-install:
 	if command -v dnf >/dev/null 2>&1; then \
 		perl -MCompress::Zlib -e1 >/dev/null 2>&1 || \
-			(dnf install -y perl-IO-Compress && dnf clean all); \
+			(dnf install -y --disablerepo=epel perl-IO-Compress && dnf clean all); \
 	fi
 
 # python style / lint
@@ -232,6 +233,8 @@ pypi-wheel: auditwheel-install bazel-release
 	rm -rf wheelhouse
 	CURRENT_WHEEL=$$(ls dist/*.whl -Art | tail -n 1); \
 	python3 -m auditwheel repair --plat $(PYPI_WHEEL_PLAT) "$$CURRENT_WHEEL"
+	python3 scripts/optimize_wheel.py wheelhouse/*.whl
+	python3 scripts/check_wheel_size.py --limit-bytes $(WHEEL_SIZE_LIMIT_BYTES) wheelhouse/*.whl
 
 release-test1:
 	tmpdir=$$(python3 -c 'import tempfile; print(tempfile.mkdtemp(prefix="envpool-release-test-"))'); \

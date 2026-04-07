@@ -51,6 +51,16 @@ _GYMNASIUM_ROBOTICS_PREFIXES = (
     "PointMaze_",
 )
 
+_VIZDOOM_RENDER_KWARGS: dict[str, object] = {
+    "num_envs": 1,
+    "render_width": 320,
+    "render_height": 240,
+    "use_combined_action": True,
+    "stack_num": 1,
+    "img_width": 320,
+    "img_height": 240,
+}
+
 
 @contextmanager
 def _temporary_workdir(prefix: str) -> Iterator[str]:
@@ -70,10 +80,19 @@ def _emit_github_error(message: str) -> None:
     print(f"::error::{escaped}")
 
 
+def _stable_render_kwargs(task_id: str, **kwargs: object) -> dict[str, object]:
+    render_kwargs: dict[str, object] = {"render_mode": "rgb_array"}
+    if task_id == "MyWayHome-v1":
+        # Keep VizDoom release smoke aligned with the dedicated render test.
+        render_kwargs.update(_VIZDOOM_RENDER_KWARGS)
+    render_kwargs.update(kwargs)
+    return render_kwargs
+
+
 class _MakeTest(absltest.TestCase):
     def check_render(self, task_id: str, **kwargs: object) -> None:
         def render_once(factory: _RenderFactory) -> None:
-            env = factory(task_id, render_mode="rgb_array", **kwargs)
+            env = factory(task_id, **_stable_render_kwargs(task_id, **kwargs))
             try:
                 env.reset()
                 self.assertIsNotNone(env.render())
@@ -173,10 +192,9 @@ class _MakeTest(absltest.TestCase):
             with _temporary_workdir(prefix="envpool-vizdoom-smoke-"):
                 spec = envpool.make_spec("MyWayHome-v1")
                 print(spec)
-                env0 = envpool.make_gym("MyWayHome-v1", render_mode="rgb_array")
-                env1 = envpool.make_gymnasium(
-                    "MyWayHome-v1", render_mode="rgb_array"
-                )
+                render_kwargs = _stable_render_kwargs("MyWayHome-v1")
+                env0 = envpool.make_gym("MyWayHome-v1", **render_kwargs)
+                env1 = envpool.make_gymnasium("MyWayHome-v1", **render_kwargs)
                 try:
                     print(env0)
                     print(env1)
@@ -184,6 +202,8 @@ class _MakeTest(absltest.TestCase):
                     self.assertIsInstance(env1, gymnasium.Env)
                     env0.reset()
                     env1.reset()
+                    self.assertIsNotNone(env0.render())
+                    self.assertIsNotNone(env1.render())
                 finally:
                     env0.close()
                     env1.close()
