@@ -79,6 +79,7 @@ def __getattr__(name: str) -> object:
         _raise_procgen_import_error()
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
+
 __all__ = [
     "ProcgenEnvSpec",
     "ProcgenDMEnvPool",
