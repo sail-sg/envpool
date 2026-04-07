@@ -152,7 +152,7 @@ Qt runtime in wheels
 
 Linux release wheels intentionally exclude the Qt shared libraries used by
 Procgen (``libQt5Core.so.5`` and ``libQt5Gui.so.5``) from ``auditwheel``
-repair. Vendoring those libraries also pulls in a large Qt / ICU runtime stack,
+repair. Bundling those libraries also pulls in a large Qt / ICU runtime stack,
 so Procgen users on Linux should install the system Qt 5 runtime instead, for
 example with ``apt install qtbase5-dev`` or ``dnf install qt5-qtbase``.
 
