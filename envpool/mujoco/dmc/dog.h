@@ -50,39 +50,36 @@ class DogEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    [[maybe_unused]] int qpos_size =
-        DogHasBall(conf["task_name"_]) ? 87 : 80;
-    [[maybe_unused]] int qvel_size =
-        DogHasBall(conf["task_name"_]) ? 85 : 79;
-    return MakeDict(
-        "obs:joint_angles"_.Bind(
-            StackSpec(Spec<mjtNum>({73}), conf["frame_stack"_])),
-        "obs:joint_velocites"_.Bind(
-            StackSpec(Spec<mjtNum>({73}), conf["frame_stack"_])),
-        "obs:torso_pelvis_height"_.Bind(
-            StackSpec(Spec<mjtNum>({2}), conf["frame_stack"_])),
-        "obs:z_projection"_.Bind(
-            StackSpec(Spec<mjtNum>({9}), conf["frame_stack"_])),
-        "obs:torso_com_velocity"_.Bind(
-            StackSpec(Spec<mjtNum>({3}), conf["frame_stack"_])),
-        "obs:inertial_sensors"_.Bind(
-            StackSpec(Spec<mjtNum>({9}), conf["frame_stack"_])),
-        "obs:foot_forces"_.Bind(
-            StackSpec(Spec<mjtNum>({12}), conf["frame_stack"_])),
-        "obs:touch_sensors"_.Bind(
-            StackSpec(Spec<mjtNum>({4}), conf["frame_stack"_])),
-        "obs:actuator_state"_.Bind(
-            StackSpec(Spec<mjtNum>({38}), conf["frame_stack"_])),
-        "obs:ball_state"_.Bind(
-            StackSpec(Spec<mjtNum>({6}), conf["frame_stack"_])),
-        "obs:target_position"_.Bind(
-            StackSpec(Spec<mjtNum>({3}), conf["frame_stack"_]))
+    [[maybe_unused]] int qpos_size = DogHasBall(conf["task_name"_]) ? 87 : 80;
+    [[maybe_unused]] int qvel_size = DogHasBall(conf["task_name"_]) ? 85 : 79;
+    return MakeDict("obs:joint_angles"_.Bind(
+                        StackSpec(Spec<mjtNum>({73}), conf["frame_stack"_])),
+                    "obs:joint_velocites"_.Bind(
+                        StackSpec(Spec<mjtNum>({73}), conf["frame_stack"_])),
+                    "obs:torso_pelvis_height"_.Bind(
+                        StackSpec(Spec<mjtNum>({2}), conf["frame_stack"_])),
+                    "obs:z_projection"_.Bind(
+                        StackSpec(Spec<mjtNum>({9}), conf["frame_stack"_])),
+                    "obs:torso_com_velocity"_.Bind(
+                        StackSpec(Spec<mjtNum>({3}), conf["frame_stack"_])),
+                    "obs:inertial_sensors"_.Bind(
+                        StackSpec(Spec<mjtNum>({9}), conf["frame_stack"_])),
+                    "obs:foot_forces"_.Bind(
+                        StackSpec(Spec<mjtNum>({12}), conf["frame_stack"_])),
+                    "obs:touch_sensors"_.Bind(
+                        StackSpec(Spec<mjtNum>({4}), conf["frame_stack"_])),
+                    "obs:actuator_state"_.Bind(
+                        StackSpec(Spec<mjtNum>({38}), conf["frame_stack"_])),
+                    "obs:ball_state"_.Bind(
+                        StackSpec(Spec<mjtNum>({6}), conf["frame_stack"_])),
+                    "obs:target_position"_.Bind(
+                        StackSpec(Spec<mjtNum>({3}), conf["frame_stack"_]))
 #ifdef ENVPOOL_TEST
-            ,
-        "info:qpos0"_.Bind(Spec<mjtNum>({qpos_size})),
-        "info:qvel0"_.Bind(Spec<mjtNum>({qvel_size})),
-        "info:qacc_warmstart0"_.Bind(Spec<mjtNum>({qvel_size})),
-        "info:act0"_.Bind(Spec<mjtNum>({38}))
+                        ,
+                    "info:qpos0"_.Bind(Spec<mjtNum>({qpos_size})),
+                    "info:qvel0"_.Bind(Spec<mjtNum>({qvel_size})),
+                    "info:qacc_warmstart0"_.Bind(Spec<mjtNum>({qvel_size})),
+                    "info:act0"_.Bind(Spec<mjtNum>({38}))
 #endif
     );  // NOLINT
   }
@@ -190,14 +187,12 @@ class DogEnvBase : public Env<EnvSpecT>, public MujocoEnv {
                                " for dmc dog.");
     }
 
-    id_touch_sensors_ = {GetSensorId(model_, "palm_L"),
-                         GetSensorId(model_, "palm_R"),
-                         GetSensorId(model_, "sole_L"),
-                         GetSensorId(model_, "sole_R")};
-    id_force_sensors_ = {GetSensorId(model_, "foot_L"),
-                         GetSensorId(model_, "foot_R"),
-                         GetSensorId(model_, "hand_L"),
-                         GetSensorId(model_, "hand_R")};
+    id_touch_sensors_ = {
+        GetSensorId(model_, "palm_L"), GetSensorId(model_, "palm_R"),
+        GetSensorId(model_, "sole_L"), GetSensorId(model_, "sole_R")};
+    id_force_sensors_ = {
+        GetSensorId(model_, "foot_L"), GetSensorId(model_, "foot_R"),
+        GetSensorId(model_, "hand_L"), GetSensorId(model_, "hand_R")};
     for (int joint_id = 0; joint_id < model_->njnt; ++joint_id) {
       if (model_->jnt_type[joint_id] == mjJNT_HINGE) {
         hinge_qpos_.push_back(model_->jnt_qposadr[joint_id]);
@@ -209,8 +204,8 @@ class DogEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   void TaskInitializeEpisode() override {
     stand_height_ = {data_->xpos[id_torso_ * 3 + 2] * 0.9,
                      data_->xpos[id_pelvis_ * 3 + 2] * 0.9};
-    body_weight_ = -model_->opt.gravity[2] *
-                   model_->body_subtreemass[id_torso_body_];
+    body_weight_ =
+        -model_->opt.gravity[2] * model_->body_subtreemass[id_torso_body_];
 
     mjtNum azimuth = RandUniform(0, 2 * M_PI)(gen_);
     data_->qpos[id_root_qpos_ + 3] = std::cos(azimuth / 2);
@@ -308,14 +303,12 @@ class DogEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   }
 
   mjtNum StandReward() {
-    mjtNum torso = RewardTolerance(data_->xpos[id_torso_ * 3 + 2],
-                                   stand_height_[0],
-                                   std::numeric_limits<double>::infinity(),
-                                   stand_height_[0]);
-    mjtNum pelvis = RewardTolerance(data_->xpos[id_pelvis_ * 3 + 2],
-                                    stand_height_[1],
-                                    std::numeric_limits<double>::infinity(),
-                                    stand_height_[1]);
+    mjtNum torso = RewardTolerance(
+        data_->xpos[id_torso_ * 3 + 2], stand_height_[0],
+        std::numeric_limits<double>::infinity(), stand_height_[0]);
+    mjtNum pelvis = RewardTolerance(
+        data_->xpos[id_pelvis_ * 3 + 2], stand_height_[1],
+        std::numeric_limits<double>::infinity(), stand_height_[1]);
     const auto& upright = Upright();
     mjtNum upright_reward = 1.0;
     for (mjtNum value : upright) {
@@ -356,8 +349,7 @@ class DogEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   mjtNum ComForwardVelocity() { return TorsoComVelocity()[0]; }
 
   std::array<mjtNum, 2> TorsoPelvisHeight() {
-    return {data_->xpos[id_torso_ * 3 + 2],
-            data_->xpos[id_pelvis_ * 3 + 2]};
+    return {data_->xpos[id_torso_ * 3 + 2], data_->xpos[id_pelvis_ * 3 + 2]};
   }
 
   std::array<mjtNum, 9> ZProjection() {
@@ -526,8 +518,8 @@ class DogEnvBase : public Env<EnvSpecT>, public MujocoEnv {
                         reset);
       auto obs_torso_pelvis_height = state["obs:torso_pelvis_height"_];
       AssignObservation("obs:torso_pelvis_height", &obs_torso_pelvis_height,
-                        torso_pelvis_height.data(),
-                        torso_pelvis_height.size(), reset);
+                        torso_pelvis_height.data(), torso_pelvis_height.size(),
+                        reset);
       auto obs_z_projection = state["obs:z_projection"_];
       AssignObservation("obs:z_projection", &obs_z_projection,
                         z_projection.data(), z_projection.size(), reset);
@@ -540,8 +532,8 @@ class DogEnvBase : public Env<EnvSpecT>, public MujocoEnv {
                         inertial_sensors.data(), inertial_sensors.size(),
                         reset);
       auto obs_foot_forces = state["obs:foot_forces"_];
-      AssignObservation("obs:foot_forces", &obs_foot_forces,
-                        foot_forces.data(), foot_forces.size(), reset);
+      AssignObservation("obs:foot_forces", &obs_foot_forces, foot_forces.data(),
+                        foot_forces.size(), reset);
       auto obs_touch_sensors = state["obs:touch_sensors"_];
       AssignObservation("obs:touch_sensors", &obs_touch_sensors,
                         touch_sensors.data(), touch_sensors.size(), reset);

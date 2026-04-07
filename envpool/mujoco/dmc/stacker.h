@@ -132,14 +132,14 @@ class StackerEnvBase : public Env<EnvSpecT>, public MujocoEnv {
 
   StackerEnvBase(const Spec& spec, int env_id)
       : Env<EnvSpecT>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_],
-                  GetStackerXML(spec.config["base_path"_],
-                                spec.config["task_name"_]),
-                  spec.config["frame_skip"_], spec.config["max_episode_steps"_],
-                  spec.config["frame_stack"_],
-                  RenderWidthOrDefault<kFromPixels>(spec.config),
-                  RenderHeightOrDefault<kFromPixels>(spec.config),
-                  RenderCameraIdOrDefault<kFromPixels>(spec.config)),
+        MujocoEnv(
+            spec.config["base_path"_],
+            GetStackerXML(spec.config["base_path"_], spec.config["task_name"_]),
+            spec.config["frame_skip"_], spec.config["max_episode_steps"_],
+            spec.config["frame_stack"_],
+            RenderWidthOrDefault<kFromPixels>(spec.config),
+            RenderHeightOrDefault<kFromPixels>(spec.config),
+            RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         n_boxes_(StackerNumBoxes(spec.config["task_name"_])),
         id_finger_(GetQposId(model_, "finger")),
         id_thumb_(GetQposId(model_, "thumb")),
@@ -161,12 +161,12 @@ class StackerEnvBase : public Env<EnvSpecT>, public MujocoEnv {
       std::string name = "box" + std::to_string(box);
       id_box_xbody_.push_back(mj_name2id(model_, mjOBJ_XBODY, name.c_str()));
       id_box_site_.push_back(mj_name2id(model_, mjOBJ_SITE, name.c_str()));
-      id_box_qpos_.push_back(
-          {GetQposId(model_, name + "_x"), GetQposId(model_, name + "_z"),
-           GetQposId(model_, name + "_y")});
-      id_box_qvel_.push_back(
-          {GetQvelId(model_, name + "_x"), GetQvelId(model_, name + "_y"),
-           GetQvelId(model_, name + "_z")});
+      id_box_qpos_.push_back({GetQposId(model_, name + "_x"),
+                              GetQposId(model_, name + "_z"),
+                              GetQposId(model_, name + "_y")});
+      id_box_qvel_.push_back({GetQvelId(model_, name + "_x"),
+                              GetQvelId(model_, name + "_y"),
+                              GetQvelId(model_, name + "_z")});
     }
   }
 
@@ -176,10 +176,8 @@ class StackerEnvBase : public Env<EnvSpecT>, public MujocoEnv {
       for (std::size_t i = 0; i < kArmJoints.size(); ++i) {
         int id_joint = id_arm_joints_[i];
         bool is_limited = model_->jnt_limited[id_joint] == 1;
-        mjtNum lower =
-            is_limited ? model_->jnt_range[id_joint * 2 + 0] : -M_PI;
-        mjtNum upper =
-            is_limited ? model_->jnt_range[id_joint * 2 + 1] : M_PI;
+        mjtNum lower = is_limited ? model_->jnt_range[id_joint * 2 + 0] : -M_PI;
+        mjtNum upper = is_limited ? model_->jnt_range[id_joint * 2 + 1] : M_PI;
         data_->qpos[id_arm_qpos_[i]] = RandUniform(lower, upper)(gen_);
       }
       data_->qpos[id_finger_] = data_->qpos[id_thumb_];
@@ -222,12 +220,11 @@ class StackerEnvBase : public Env<EnvSpecT>, public MujocoEnv {
 
   float TaskGetReward() override {
     mjtNum box_size = model_->geom_size[id_target_geom_ * 3 + 0];
-    mjtNum min_box_to_target_distance =
-        std::numeric_limits<mjtNum>::infinity();
+    mjtNum min_box_to_target_distance = std::numeric_limits<mjtNum>::infinity();
     for (int box = 0; box < n_boxes_; ++box) {
-      min_box_to_target_distance = std::min(
-          min_box_to_target_distance,
-          SiteDistance(id_box_site_[box], id_target_site_));
+      min_box_to_target_distance =
+          std::min(min_box_to_target_distance,
+                   SiteDistance(id_box_site_[box], id_target_site_));
     }
     mjtNum box_is_close =
         RewardTolerance(min_box_to_target_distance, 0.0, 0.0, 2 * box_size);
@@ -243,12 +240,12 @@ class StackerEnvBase : public Env<EnvSpecT>, public MujocoEnv {
 
  private:
   mjtNum SiteDistance(int site1, int site2) {
-    mjtNum dx = data_->site_xpos[site2 * 3 + 0] -
-                data_->site_xpos[site1 * 3 + 0];
-    mjtNum dy = data_->site_xpos[site2 * 3 + 1] -
-                data_->site_xpos[site1 * 3 + 1];
-    mjtNum dz = data_->site_xpos[site2 * 3 + 2] -
-                data_->site_xpos[site1 * 3 + 2];
+    mjtNum dx =
+        data_->site_xpos[site2 * 3 + 0] - data_->site_xpos[site1 * 3 + 0];
+    mjtNum dy =
+        data_->site_xpos[site2 * 3 + 1] - data_->site_xpos[site1 * 3 + 1];
+    mjtNum dz =
+        data_->site_xpos[site2 * 3 + 2] - data_->site_xpos[site1 * 3 + 2];
     return std::sqrt(dx * dx + dy * dy + dz * dz);
   }
 
@@ -271,10 +268,8 @@ class StackerEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   }
 
   std::array<mjtNum, 5> Touch() {
-    return {std::log1p(data_->sensordata[0]),
-            std::log1p(data_->sensordata[1]),
-            std::log1p(data_->sensordata[2]),
-            std::log1p(data_->sensordata[3]),
+    return {std::log1p(data_->sensordata[0]), std::log1p(data_->sensordata[1]),
+            std::log1p(data_->sensordata[2]), std::log1p(data_->sensordata[3]),
             std::log1p(data_->sensordata[4])};
   }
 

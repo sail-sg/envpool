@@ -68,16 +68,15 @@ class LqrEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     int n_bodies = LqrNumBodies(conf["task_name"_]);
-    return MakeDict(
-        "obs:position"_.Bind(
-            StackSpec(Spec<mjtNum>({n_bodies}), conf["frame_stack"_])),
-        "obs:velocity"_.Bind(
-            StackSpec(Spec<mjtNum>({n_bodies}), conf["frame_stack"_]))
+    return MakeDict("obs:position"_.Bind(StackSpec(Spec<mjtNum>({n_bodies}),
+                                                   conf["frame_stack"_])),
+                    "obs:velocity"_.Bind(StackSpec(Spec<mjtNum>({n_bodies}),
+                                                   conf["frame_stack"_]))
 #ifdef ENVPOOL_TEST
-            ,
-        "info:qpos0"_.Bind(Spec<mjtNum>({n_bodies})),
-        "info:qvel0"_.Bind(Spec<mjtNum>({n_bodies})),
-        "info:stiffness0"_.Bind(Spec<mjtNum>({n_bodies}))
+                        ,
+                    "info:qpos0"_.Bind(Spec<mjtNum>({n_bodies})),
+                    "info:qvel0"_.Bind(Spec<mjtNum>({n_bodies})),
+                    "info:stiffness0"_.Bind(Spec<mjtNum>({n_bodies}))
 #endif
     );  // NOLINT
   }
@@ -110,15 +109,15 @@ class LqrEnvBase : public Env<EnvSpecT>, public MujocoEnv {
 
   LqrEnvBase(const Spec& spec, int env_id)
       : Env<EnvSpecT>(spec, env_id),
-        MujocoEnv(spec.config["base_path"_],
-                  GetLqrXML(spec.config["base_path"_],
-                            spec.config["task_name"_],
-                            Env<EnvSpecT>::ResolveSeed(spec, env_id)),
-                  spec.config["frame_skip"_], spec.config["max_episode_steps"_],
-                  spec.config["frame_stack"_],
-                  RenderWidthOrDefault<kFromPixels>(spec.config),
-                  RenderHeightOrDefault<kFromPixels>(spec.config),
-                  RenderCameraIdOrDefault<kFromPixels>(spec.config)) {
+        MujocoEnv(
+            spec.config["base_path"_],
+            GetLqrXML(spec.config["base_path"_], spec.config["task_name"_],
+                      Env<EnvSpecT>::ResolveSeed(spec, env_id)),
+            spec.config["frame_skip"_], spec.config["max_episode_steps"_],
+            spec.config["frame_stack"_],
+            RenderWidthOrDefault<kFromPixels>(spec.config),
+            RenderHeightOrDefault<kFromPixels>(spec.config),
+            RenderCameraIdOrDefault<kFromPixels>(spec.config)) {
 #ifdef ENVPOOL_TEST
     qvel0_.reset(new mjtNum[model_->nv]);
     stiffness0_.resize(model_->njnt);

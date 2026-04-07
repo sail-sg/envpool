@@ -87,11 +87,9 @@ std::string XMLMakeDog(const std::string& content,
                              " for dmc dog.");
   }
 
-  pugi::xml_node floor =
-      doc.select_node("//geom[@name='floor']").node();
+  pugi::xml_node floor = doc.select_node("//geom[@name='floor']").node();
   floor.attribute("size").set_value(
-      (std::to_string(floor_size) + " " + std::to_string(floor_size) +
-       " .1")
+      (std::to_string(floor_size) + " " + std::to_string(floor_size) + " .1")
           .c_str());
 
   if (remove_ball) {
@@ -134,11 +132,9 @@ std::string XMLMakeQuadruped(const std::string& content,
   }
 
   if (floor_size > 0) {
-    pugi::xml_node floor =
-        doc.select_node("//geom[@name='floor']").node();
+    pugi::xml_node floor = doc.select_node("//geom[@name='floor']").node();
     floor.attribute("size").set_value(
-        (std::to_string(floor_size) + " " + std::to_string(floor_size) +
-         " .5")
+        (std::to_string(floor_size) + " " + std::to_string(floor_size) + " .5")
             .c_str());
   }
   if (!walls_and_ball) {

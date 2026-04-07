@@ -72,8 +72,7 @@ class QuadrupedEnvFns {
         "obs:imu"_.Bind(StackSpec(Spec<mjtNum>({6}), conf["frame_stack"_])),
         "obs:force_torque"_.Bind(
             StackSpec(Spec<mjtNum>({24}), conf["frame_stack"_])),
-        "obs:origin"_.Bind(
-            StackSpec(Spec<mjtNum>({3}), conf["frame_stack"_])),
+        "obs:origin"_.Bind(StackSpec(Spec<mjtNum>({3}), conf["frame_stack"_])),
         "obs:rangefinder"_.Bind(
             StackSpec(Spec<mjtNum>({20}), conf["frame_stack"_])),
         "obs:ball_state"_.Bind(
@@ -94,11 +93,10 @@ class QuadrupedEnvFns {
   static decltype(auto) ActionSpec(const Config& conf) {
     return MakeDict("action"_.Bind(Spec<mjtNum>(
         {-1, 12},
-        std::make_tuple(
-            std::vector<mjtNum>{-1.0, -1.0, -0.8, -1.0, -1.0, -0.8,
-                                -1.0, -1.0, -0.8, -1.0, -1.0, -0.8},
-            std::vector<mjtNum>{1.0, 1.1, 0.8, 1.0, 1.1, 0.8,
-                                1.0, 1.1, 0.8, 1.0, 1.1, 0.8}))));
+        std::make_tuple(std::vector<mjtNum>{-1.0, -1.0, -0.8, -1.0, -1.0, -0.8,
+                                            -1.0, -1.0, -0.8, -1.0, -1.0, -0.8},
+                        std::vector<mjtNum>{1.0, 1.1, 0.8, 1.0, 1.1, 0.8, 1.0,
+                                            1.1, 0.8, 1.0, 1.1, 0.8}))));
   }
 };
 
@@ -160,8 +158,7 @@ class QuadrupedEnvBase : public Env<EnvSpecT>, public MujocoEnv {
                   RenderWidthOrDefault<kFromPixels>(spec.config),
                   RenderHeightOrDefault<kFromPixels>(spec.config),
                   RenderCameraIdOrDefault<kFromPixels>(spec.config)),
-        has_rangefinder_(
-            QuadrupedHasRangefinder(spec.config["task_name"_])),
+        has_rangefinder_(QuadrupedHasRangefinder(spec.config["task_name"_])),
         has_ball_(QuadrupedHasBall(spec.config["task_name"_])),
         id_root_qpos_(GetQposId(model_, "root")),
         id_root_qvel_(GetQvelId(model_, "root")),
@@ -214,9 +211,8 @@ class QuadrupedEnvBase : public Env<EnvSpecT>, public MujocoEnv {
       for (int row = 0; row < 4; ++row) {
         for (int col = 0; col < 5; ++col) {
           int idx = row * 5 + col;
-          id_rangefinder_sensors_[idx] =
-              GetSensorId(model_, "rf_" + std::to_string(row) +
-                                       std::to_string(col));
+          id_rangefinder_sensors_[idx] = GetSensorId(
+              model_, "rf_" + std::to_string(row) + std::to_string(col));
         }
       }
     } else {
@@ -297,19 +293,17 @@ class QuadrupedEnvBase : public Env<EnvSpecT>, public MujocoEnv {
       mjtNum terrain_size = model_->hfield_size[0];
       mjtNum escape_reward =
           RewardTolerance(OriginDistance(), terrain_size,
-                          std::numeric_limits<double>::infinity(),
-                          terrain_size, 0.0, SigmoidType::kLinear);
+                          std::numeric_limits<double>::infinity(), terrain_size,
+                          0.0, SigmoidType::kLinear);
       return static_cast<float>(UprightReward(20.0) * escape_reward);
     }
     mjtNum arena_radius =
         model_->geom_size[id_floor_geom_ * 3 + 0] * std::sqrt(2.0);
-    mjtNum workspace_radius =
-        model_->site_size[id_workspace_site_ * 3 + 0];
+    mjtNum workspace_radius = model_->site_size[id_workspace_site_ * 3 + 0];
     mjtNum ball_radius = model_->geom_size[id_ball_geom_ * 3 + 0];
-    mjtNum reach_reward =
-        RewardTolerance(SelfToBallDistance(), 0.0,
-                        workspace_radius + ball_radius, arena_radius, 0.0,
-                        SigmoidType::kLinear);
+    mjtNum reach_reward = RewardTolerance(
+        SelfToBallDistance(), 0.0, workspace_radius + ball_radius, arena_radius,
+        0.0, SigmoidType::kLinear);
     mjtNum target_radius = model_->site_size[id_target_site_ * 3 + 0];
     mjtNum fetch_reward =
         RewardTolerance(BallToTargetDistance(), 0.0, target_radius,
@@ -323,8 +317,7 @@ class QuadrupedEnvBase : public Env<EnvSpecT>, public MujocoEnv {
  private:
   std::array<mjtNum, 4> RandomUnitQuaternion() {
     std::array<mjtNum, 4> q = {RandNormal(0, 1)(gen_), RandNormal(0, 1)(gen_),
-                               RandNormal(0, 1)(gen_),
-                               RandNormal(0, 1)(gen_)};
+                               RandNormal(0, 1)(gen_), RandNormal(0, 1)(gen_)};
     mjtNum norm =
         std::sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
     return {q[0] / norm, q[1] / norm, q[2] / norm, q[3] / norm};
@@ -435,9 +428,9 @@ class QuadrupedEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   }
 
   std::array<mjtNum, 3> Origin() {
-    std::array<mjtNum, 3> minus_torso_pos = {
-        -data_->xpos[id_torso_ * 3 + 0], -data_->xpos[id_torso_ * 3 + 1],
-        -data_->xpos[id_torso_ * 3 + 2]};
+    std::array<mjtNum, 3> minus_torso_pos = {-data_->xpos[id_torso_ * 3 + 0],
+                                             -data_->xpos[id_torso_ * 3 + 1],
+                                             -data_->xpos[id_torso_ * 3 + 2]};
     return TransformToFrame(minus_torso_pos, data_->xmat + id_torso_ * 9);
   }
 
@@ -533,19 +526,19 @@ class QuadrupedEnvBase : public Env<EnvSpecT>, public MujocoEnv {
       AssignObservation("obs:torso_velocity", &obs_torso_velocity,
                         torso_velocity.data(), torso_velocity.size(), reset);
       auto obs_torso_upright = state["obs:torso_upright"_];
-      AssignObservation("obs:torso_upright", &obs_torso_upright,
-                        TorsoUpright(), reset);
+      AssignObservation("obs:torso_upright", &obs_torso_upright, TorsoUpright(),
+                        reset);
       auto obs_imu = state["obs:imu"_];
       AssignObservation("obs:imu", &obs_imu, imu.data(), imu.size(), reset);
       auto obs_force_torque = state["obs:force_torque"_];
       AssignObservation("obs:force_torque", &obs_force_torque,
                         force_torque.data(), force_torque.size(), reset);
       auto obs_origin = state["obs:origin"_];
-      AssignObservation("obs:origin", &obs_origin, origin.data(),
-                        origin.size(), reset);
+      AssignObservation("obs:origin", &obs_origin, origin.data(), origin.size(),
+                        reset);
       auto obs_rangefinder = state["obs:rangefinder"_];
-      AssignObservation("obs:rangefinder", &obs_rangefinder,
-                        rangefinder.data(), rangefinder.size(), reset);
+      AssignObservation("obs:rangefinder", &obs_rangefinder, rangefinder.data(),
+                        rangefinder.size(), reset);
       auto obs_ball_state = state["obs:ball_state"_];
       AssignObservation("obs:ball_state", &obs_ball_state, ball_state.data(),
                         ball_state.size(), reset);

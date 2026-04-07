@@ -109,10 +109,8 @@ using DmcPointMassPixelEnvPool = PyEnvPool<mujoco_dmc::PointMassPixelEnvPool>;
 
 using DmcQuadrupedEnvSpec = PyEnvSpec<mujoco_dmc::QuadrupedEnvSpec>;
 using DmcQuadrupedEnvPool = PyEnvPool<mujoco_dmc::QuadrupedEnvPool>;
-using DmcQuadrupedPixelEnvSpec =
-    PyEnvSpec<mujoco_dmc::QuadrupedPixelEnvSpec>;
-using DmcQuadrupedPixelEnvPool =
-    PyEnvPool<mujoco_dmc::QuadrupedPixelEnvPool>;
+using DmcQuadrupedPixelEnvSpec = PyEnvSpec<mujoco_dmc::QuadrupedPixelEnvSpec>;
+using DmcQuadrupedPixelEnvPool = PyEnvPool<mujoco_dmc::QuadrupedPixelEnvPool>;
 
 using DmcReacherEnvSpec = PyEnvSpec<mujoco_dmc::ReacherEnvSpec>;
 using DmcReacherEnvPool = PyEnvPool<mujoco_dmc::ReacherEnvPool>;
