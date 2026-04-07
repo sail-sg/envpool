@@ -62,7 +62,7 @@ void XMLRemoveNamedElement(pugi::xml_document* doc, const std::string& tag,
                            const std::string& name) {
   std::string xpath = "//" + tag + "[@name='" + name + "']";
   pugi::xml_node node = doc->select_node(xpath.c_str()).node();
-  if (node) {
+  if (!node.empty()) {
     node.parent().remove_child(node);
   }
 }

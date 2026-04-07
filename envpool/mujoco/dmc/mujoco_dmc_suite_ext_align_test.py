@@ -104,9 +104,9 @@ class _MujocoDmcSuiteExtAlignTest(absltest.TestCase):
             if hasattr(ts.observation, "act0"):
                 env.physics.data.act = ts.observation.act0[0]
             if domain == "lqr":
-                env.physics.model.jnt_stiffness[:] = (
-                    ts.observation.stiffness0[0]
-                )
+                env.physics.model.jnt_stiffness[:] = ts.observation.stiffness0[
+                    0
+                ]
             if domain == "quadruped" and task == "escape":
                 hfield = ts.observation.hfield0[0]
                 start_idx = env.physics.model.hfield_adr[0]
