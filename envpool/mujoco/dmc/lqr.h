@@ -99,7 +99,7 @@ class LqrEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   using Base::gen_;
   using Base::seed_;
 #ifdef ENVPOOL_TEST
-  std::unique_ptr<mjtNum[]> qvel0_;
+  std::vector<mjtNum> qvel0_;
   std::vector<mjtNum> stiffness0_;
 #endif
 
@@ -119,7 +119,7 @@ class LqrEnvBase : public Env<EnvSpecT>, public MujocoEnv {
             RenderHeightOrDefault<kFromPixels>(spec.config),
             RenderCameraIdOrDefault<kFromPixels>(spec.config)) {
 #ifdef ENVPOOL_TEST
-    qvel0_.reset(new mjtNum[model_->nv]);
+    qvel0_.resize(model_->nv);
     stiffness0_.resize(model_->njnt);
 #endif
   }
@@ -136,7 +136,7 @@ class LqrEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     }
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
-    std::memcpy(qvel0_.get(), data_->qvel, sizeof(mjtNum) * model_->nv);
+    std::memcpy(qvel0_.data(), data_->qvel, sizeof(mjtNum) * model_->nv);
     std::memcpy(stiffness0_.data(), model_->jnt_stiffness,
                 sizeof(mjtNum) * model_->njnt);
 #endif
@@ -201,7 +201,7 @@ class LqrEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     }
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    state["info:qvel0"_].Assign(qvel0_.get(), model_->nv);
+    state["info:qvel0"_].Assign(qvel0_.data(), model_->nv);
     state["info:stiffness0"_].Assign(stiffness0_.data(), model_->njnt);
 #endif
   }

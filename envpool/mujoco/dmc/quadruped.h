@@ -139,7 +139,7 @@ class QuadrupedEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   std::vector<int> hinge_qpos_;
   std::vector<int> hinge_qvel_;
 #ifdef ENVPOOL_TEST
-  std::unique_ptr<mjtNum[]> qvel0_;
+  std::vector<mjtNum> qvel0_;
   std::array<mjtNum, 12> act0_{};
   std::vector<mjtNum> hfield0_;
 #endif
@@ -190,7 +190,7 @@ class QuadrupedEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     }
 
 #ifdef ENVPOOL_TEST
-    qvel0_.reset(new mjtNum[model_->nv]);
+    qvel0_.resize(model_->nv);
     int hfield_size = has_rangefinder_ && model_->nhfield > 0
                           ? model_->hfield_nrow[0] * model_->hfield_ncol[0]
                           : 1;
@@ -252,7 +252,7 @@ class QuadrupedEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     }
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
-    std::memcpy(qvel0_.get(), data_->qvel, sizeof(mjtNum) * model_->nv);
+    std::memcpy(qvel0_.data(), data_->qvel, sizeof(mjtNum) * model_->nv);
     for (int i = 0; i < model_->na; ++i) {
       act0_[i] = data_->act[i];
     }
@@ -548,7 +548,7 @@ class QuadrupedEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     }
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    state["info:qvel0"_].Assign(qvel0_.get(), model_->nv);
+    state["info:qvel0"_].Assign(qvel0_.data(), model_->nv);
     state["info:qacc_warmstart0"_].Assign(data_->qacc_warmstart, model_->nv);
     state["info:act0"_].Assign(act0_.data(), model_->na);
     state["info:hfield0"_].Assign(hfield0_.data(), hfield0_.size());

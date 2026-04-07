@@ -122,7 +122,7 @@ class StackerEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   std::vector<std::array<int, 3>> id_box_qpos_;
   std::vector<std::array<int, 3>> id_box_qvel_;
 #ifdef ENVPOOL_TEST
-  std::unique_ptr<mjtNum[]> qvel0_;
+  std::vector<mjtNum> qvel0_;
   std::array<mjtNum, 2> target0_{};
 #endif
 
@@ -149,7 +149,7 @@ class StackerEnvBase : public Env<EnvSpecT>, public MujocoEnv {
         id_hand_(mj_name2id(model_, mjOBJ_XBODY, "hand")),
         id_grasp_site_(mj_name2id(model_, mjOBJ_SITE, "grasp")) {
 #ifdef ENVPOOL_TEST
-    qvel0_.reset(new mjtNum[model_->nv]);
+    qvel0_.resize(model_->nv);
 #endif
     for (std::size_t i = 0; i < kArmJoints.size(); ++i) {
       id_arm_joints_[i] =
@@ -199,7 +199,7 @@ class StackerEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     }
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.get(), data_->qpos, sizeof(mjtNum) * model_->nq);
-    std::memcpy(qvel0_.get(), data_->qvel, sizeof(mjtNum) * model_->nv);
+    std::memcpy(qvel0_.data(), data_->qvel, sizeof(mjtNum) * model_->nv);
     target0_ = {model_->body_pos[id_target_body_ * 3 + 0],
                 model_->body_pos[id_target_body_ * 3 + 2]};
 #endif
@@ -344,7 +344,7 @@ class StackerEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     }
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.get(), model_->nq);
-    state["info:qvel0"_].Assign(qvel0_.get(), model_->nv);
+    state["info:qvel0"_].Assign(qvel0_.data(), model_->nv);
     state["info:qacc_warmstart0"_].Assign(data_->qacc_warmstart, model_->nv);
     state["info:target0"_].Assign(target0_.data(), target0_.size());
 #endif
