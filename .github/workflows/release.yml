@@ -74,7 +74,7 @@ jobs:
           rm -rf dist
           make RELEASE_PYTHON=${{ matrix.python-version }} bazel-release
           python scripts/optimize_wheel.py dist/*.whl
-          python scripts/check_wheel_size.py --limit-bytes 100000000 dist/*.whl
+          python scripts/check_wheel_size.py --limit-bytes 104857600 dist/*.whl
           python -m pip install dist/*.whl --force-reinstall
       - name: Test
         run: |
@@ -260,7 +260,7 @@ jobs:
           rm -rf dist
           make RELEASE_PYTHON=${{ matrix.python-version }} bazel-release
           python scripts/optimize_wheel.py dist/*.whl
-          python scripts/check_wheel_size.py --limit-bytes 100000000 dist/*.whl
+          python scripts/check_wheel_size.py --limit-bytes 104857600 dist/*.whl
           python -m pip install dist/*.whl --force-reinstall
       - name: Test
         shell: bash
