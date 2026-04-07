@@ -213,6 +213,10 @@ class _MujocoDmcSuiteExtAlignTest(absltest.TestCase):
         self.run_align_check_entry("lqr", ["lqr_2_1", "lqr_6_2"])
 
     def test_quadruped(self) -> None:
+        if sys.platform == "darwin":
+            self.skipTest(
+                "dm_control quadruped reset requires a working GLFW context on macOS"
+            )
         self.run_align_check_entry(
             "quadruped", ["escape", "fetch", "run", "walk"]
         )
