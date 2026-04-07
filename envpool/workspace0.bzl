@@ -503,6 +503,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         name = "mujoco",
         patch_args = ["-p1"],
         patches = [
+            "//third_party/mujoco:idempotent_stl_decoder.patch",
             "//third_party/mujoco:windows_msvc_compat.patch",
             "//third_party/mujoco:windows_msvc_c11_compat.patch",
         ],

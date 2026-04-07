@@ -349,6 +349,17 @@ py_library(
     ],
 )
 
+py_test(
+    name = "mujoco_plugin_registration_test",
+    srcs = ["mujoco_plugin_registration_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":mujoco_dmc",
+        ":robotics",
+        requirement("absl-py"),
+    ],
+)
+
 test_suite(
     name = "mujoco_pixel_observation_test",
     tests = [

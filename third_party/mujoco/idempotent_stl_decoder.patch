@@ -1,0 +1,19 @@
+diff --git a/plugin/stl_decoder/stl_decoder.cc b/plugin/stl_decoder/stl_decoder.cc
+index 85d0b77..3a4f684 100644
+--- a/plugin/stl_decoder/stl_decoder.cc
++++ b/plugin/stl_decoder/stl_decoder.cc
+@@ -139,5 +139,14 @@ mjPLUGIN_LIB_INIT {
+   decoder.extension = ".stl";
+   decoder.decode = Decode;
+   decoder.can_decode = CanDecode;
++  mjResource probe;
++  probe.name = const_cast<char*>("envpool_stl_decoder_probe.stl");
++  probe.data = nullptr;
++  probe.vfs = nullptr;
++  probe.timestamp[0] = '\0';
++  probe.provider = nullptr;
++  if (mjp_findDecoder(&probe, decoder.content_type)) {
++    return;
++  }
+   mjp_registerDecoder(&decoder);
+ }
