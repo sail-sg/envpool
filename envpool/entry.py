@@ -13,52 +13,13 @@
 # limitations under the License.
 """Entry point for all envs' registration."""
 
-try:
-    import envpool.atari.registration  # noqa: F401
-except ImportError:
-    pass
-
-try:
-    import envpool.box2d.registration  # noqa: F401
-except ImportError:
-    pass
-
-try:
-    import envpool.classic_control.registration  # noqa: F401
-except ImportError:
-    pass
-
-try:
-    import envpool.mujoco.dmc.registration  # noqa: F401
-except ImportError:
-    pass
-
-try:
-    import envpool.mujoco.gym.registration  # noqa: F401
-except ImportError:
-    pass
-
-try:
-    import envpool.procgen.registration  # noqa: F401
-except ImportError:
-    pass
-
-try:
-    import envpool.minigrid.registration  # noqa: F401
-except ImportError:
-    pass
-
-try:
-    import envpool.mujoco.robotics.registration  # noqa: F401
-except ImportError:
-    pass
-
-try:
-    import envpool.toy_text.registration  # noqa: F401
-except ImportError:
-    pass
-
-try:
-    import envpool.vizdoom.registration  # noqa: F401
-except ImportError:
-    pass
+import envpool.atari.registration  # noqa: F401
+import envpool.box2d.registration  # noqa: F401
+import envpool.classic_control.registration  # noqa: F401
+import envpool.minigrid.registration  # noqa: F401
+import envpool.mujoco.dmc.registration  # noqa: F401
+import envpool.mujoco.gym.registration  # noqa: F401
+import envpool.mujoco.robotics.registration  # noqa: F401
+import envpool.procgen.registration  # noqa: F401
+import envpool.toy_text.registration  # noqa: F401
+import envpool.vizdoom.registration  # noqa: F401
