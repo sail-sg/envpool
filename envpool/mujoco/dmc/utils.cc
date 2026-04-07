@@ -16,6 +16,7 @@
 
 #include <cmath>
 #include <fstream>
+#include <random>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -52,6 +53,178 @@ std::string XMLRemoveByBodyName(const std::string& content,
     auto parent = node.parent();
     parent.remove_child(node);
   }
+  XMLStringWriter writer;
+  doc.print(writer);
+  return writer.result;
+}
+
+void XMLRemoveNamedElement(pugi::xml_document* doc, const std::string& tag,
+                           const std::string& name) {
+  std::string xpath = "//" + tag + "[@name='" + name + "']";
+  pugi::xml_node node = doc->select_node(xpath.c_str()).node();
+  if (node) {
+    node.parent().remove_child(node);
+  }
+}
+
+std::string XMLMakeDog(const std::string& content,
+                       const std::string& task_name) {
+  pugi::xml_document doc;
+  doc.load_string(content.c_str());
+
+  double floor_size = 10.0;
+  bool remove_ball = true;
+  if (task_name == "stand" || task_name == "walk") {
+    floor_size = 15.0;
+  } else if (task_name == "trot") {
+    floor_size = 45.0;
+  } else if (task_name == "run") {
+    floor_size = 135.0;
+  } else if (task_name == "fetch") {
+    remove_ball = false;
+  } else {
+    throw std::runtime_error("Unknown task_name " + task_name +
+                             " for dmc dog.");
+  }
+
+  pugi::xml_node floor =
+      doc.select_node("//geom[@name='floor']").node();
+  floor.attribute("size").set_value(
+      (std::to_string(floor_size) + " " + std::to_string(floor_size) +
+       " .1")
+          .c_str());
+
+  if (remove_ball) {
+    XMLRemoveNamedElement(&doc, "body", "ball");
+    XMLRemoveNamedElement(&doc, "geom", "target");
+    XMLRemoveNamedElement(&doc, "camera", "ball");
+    XMLRemoveNamedElement(&doc, "camera", "head");
+    for (const auto& wall : {"px", "nx", "py", "ny"}) {
+      XMLRemoveNamedElement(&doc, "geom", std::string("wall_") + wall);
+    }
+  }
+
+  XMLStringWriter writer;
+  doc.print(writer);
+  return writer.result;
+}
+
+std::string XMLMakeQuadruped(const std::string& content,
+                             const std::string& task_name) {
+  pugi::xml_document doc;
+  doc.load_string(content.c_str());
+
+  bool terrain = false;
+  bool rangefinders = false;
+  bool walls_and_ball = false;
+  double floor_size = -1.0;
+  if (task_name == "walk") {
+    floor_size = 10.0;
+  } else if (task_name == "run") {
+    floor_size = 100.0;
+  } else if (task_name == "escape") {
+    floor_size = 40.0;
+    terrain = true;
+    rangefinders = true;
+  } else if (task_name == "fetch") {
+    walls_and_ball = true;
+  } else {
+    throw std::runtime_error("Unknown task_name " + task_name +
+                             " for dmc quadruped.");
+  }
+
+  if (floor_size > 0) {
+    pugi::xml_node floor =
+        doc.select_node("//geom[@name='floor']").node();
+    floor.attribute("size").set_value(
+        (std::to_string(floor_size) + " " + std::to_string(floor_size) +
+         " .5")
+            .c_str());
+  }
+  if (!walls_and_ball) {
+    for (const auto& wall : {"wall_px", "wall_py", "wall_nx", "wall_ny"}) {
+      XMLRemoveNamedElement(&doc, "geom", wall);
+    }
+    XMLRemoveNamedElement(&doc, "body", "ball");
+    XMLRemoveNamedElement(&doc, "site", "target");
+  }
+  if (!terrain) {
+    XMLRemoveNamedElement(&doc, "geom", "terrain");
+  }
+  if (!rangefinders) {
+    pugi::xpath_node_set sensors = doc.select_nodes("//rangefinder");
+    for (const pugi::xpath_node& sensor : sensors) {
+      pugi::xml_node node = sensor.node();
+      node.parent().remove_child(node);
+    }
+  }
+
+  XMLStringWriter writer;
+  doc.print(writer);
+  return writer.result;
+}
+
+std::string XMLMakeStacker(const std::string& content, int n_boxes) {
+  pugi::xml_document doc;
+  doc.load_string(content.c_str());
+  for (int box = n_boxes; box < 4; ++box) {
+    XMLRemoveNamedElement(&doc, "body", "box" + std::to_string(box));
+  }
+  XMLStringWriter writer;
+  doc.print(writer);
+  return writer.result;
+}
+
+std::string XMLMakeLqr(const std::string& content, int n_bodies,
+                       int n_actuators, std::mt19937* gen) {
+  if (n_bodies < 1 || n_actuators < 1 || n_actuators > n_bodies) {
+    throw std::runtime_error("Invalid lqr body/actuator count.");
+  }
+
+  pugi::xml_document doc;
+  doc.load_string(content.c_str());
+  pugi::xml_node root = doc.select_node("/mujoco").node();
+  pugi::xml_node parent = doc.select_node("/mujoco/worldbody").node();
+  pugi::xml_node actuator = root.append_child("actuator");
+  pugi::xml_node tendon = root.append_child("tendon");
+  RandUniform stiffness_dist(15.0, 25.0);
+
+  for (int body_id = 0; body_id < n_bodies; ++body_id) {
+    std::string id = std::to_string(body_id);
+    pugi::xml_node body = parent.append_child("body");
+    body.append_attribute("name") = ("body_" + id).c_str();
+    body.append_attribute("pos") = body_id == 0 ? ".25 0 .1" : ".25 0 0";
+
+    pugi::xml_node joint = body.append_child("joint");
+    joint.append_attribute("name") = ("joint_" + id).c_str();
+    joint.append_attribute("stiffness") = stiffness_dist(*gen);
+    joint.append_attribute("damping") = "0";
+
+    pugi::xml_node geom = body.append_child("geom");
+    geom.append_attribute("name") = ("geom_" + id).c_str();
+
+    pugi::xml_node site = body.append_child("site");
+    site.append_attribute("name") = ("site_" + id).c_str();
+
+    if (body_id < n_actuators) {
+      pugi::xml_node motor = actuator.append_child("motor");
+      motor.append_attribute("name") = ("motor_" + id).c_str();
+      motor.append_attribute("joint") = ("joint_" + id).c_str();
+    }
+
+    if (body_id < n_bodies - 1) {
+      pugi::xml_node spatial = tendon.append_child("spatial");
+      spatial.append_attribute("name") = ("tendon_" + id).c_str();
+      pugi::xml_node current_site = spatial.append_child("site");
+      current_site.append_attribute("site") = ("site_" + id).c_str();
+      pugi::xml_node child_site = spatial.append_child("site");
+      child_site.append_attribute("site") =
+          ("site_" + std::to_string(body_id + 1)).c_str();
+    }
+
+    parent = body;
+  }
+
   XMLStringWriter writer;
   doc.print(writer);
   return writer.result;

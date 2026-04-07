@@ -17,12 +17,36 @@
 #include <cassert>
 #include <cmath>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 namespace mujoco_dmc {
+
+void AddDirectoryAssetsToVFS(mjVFS* vfs, const std::string& base_path,
+                             const std::string& asset_dir) {
+  const std::filesystem::path root =
+      std::filesystem::path(base_path) / "mujoco" / "assets_dmc" / asset_dir;
+  if (!std::filesystem::exists(root)) {
+    return;
+  }
+  for (const auto& entry : std::filesystem::recursive_directory_iterator(root)) {
+    if (!entry.is_regular_file()) {
+      continue;
+    }
+    std::ifstream ifs(entry.path(), std::ios::binary);
+    std::string content((std::istreambuf_iterator<char>(ifs)),
+                        std::istreambuf_iterator<char>());
+    std::string vfs_name =
+        (std::filesystem::path(asset_dir) /
+         std::filesystem::relative(entry.path(), root))
+            .generic_string();
+    mj_addBufferVFS(vfs, vfs_name.c_str(), content.data(), content.size());
+  }
+}
 
 MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
                      int n_sub_steps, int max_episode_steps, int frame_stack,
@@ -56,6 +80,7 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
     mj_addBufferVFS(vfs.get(), asset_name.c_str(), content.data(),
                     content.size());
   }
+  AddDirectoryAssetsToVFS(vfs.get(), base_path, "dog_assets");
   // create model and data
   model_ = mj_loadXML(model_filename.c_str(), vfs.get(), error_.data(), 1000);
   if (model_ == nullptr) {

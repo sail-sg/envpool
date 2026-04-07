@@ -83,6 +83,7 @@ class HumanoidCMUEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   // Height of head above which stand reward is 1.
   const mjtNum kStandHeight = 1.4;
   // Horizontal speeds above which move reward is 1.
+  const mjtNum kWalkSpeed = 1;
   const mjtNum kRunSpeed = 10;
   int id_head_;
   int id_lhand_;
@@ -117,6 +118,8 @@ class HumanoidCMUEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     const std::string& task_name = spec.config["task_name"_];
     if (task_name == "stand") {
       move_speed_ = 0;
+    } else if (task_name == "walk") {
+      move_speed_ = kWalkSpeed;
     } else if (task_name == "run") {
       move_speed_ = kRunSpeed;
     } else {

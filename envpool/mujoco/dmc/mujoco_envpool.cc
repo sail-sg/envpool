@@ -17,15 +17,19 @@
 #include "envpool/mujoco/dmc/ball_in_cup.h"
 #include "envpool/mujoco/dmc/cartpole.h"
 #include "envpool/mujoco/dmc/cheetah.h"
+#include "envpool/mujoco/dmc/dog.h"
 #include "envpool/mujoco/dmc/finger.h"
 #include "envpool/mujoco/dmc/fish.h"
 #include "envpool/mujoco/dmc/hopper.h"
 #include "envpool/mujoco/dmc/humanoid.h"
 #include "envpool/mujoco/dmc/humanoid_CMU.h"
+#include "envpool/mujoco/dmc/lqr.h"
 #include "envpool/mujoco/dmc/manipulator.h"
 #include "envpool/mujoco/dmc/pendulum.h"
 #include "envpool/mujoco/dmc/point_mass.h"
+#include "envpool/mujoco/dmc/quadruped.h"
 #include "envpool/mujoco/dmc/reacher.h"
+#include "envpool/mujoco/dmc/stacker.h"
 #include "envpool/mujoco/dmc/swimmer.h"
 #include "envpool/mujoco/dmc/walker.h"
 
@@ -48,6 +52,11 @@ using DmcCheetahEnvSpec = PyEnvSpec<mujoco_dmc::CheetahEnvSpec>;
 using DmcCheetahEnvPool = PyEnvPool<mujoco_dmc::CheetahEnvPool>;
 using DmcCheetahPixelEnvSpec = PyEnvSpec<mujoco_dmc::CheetahPixelEnvSpec>;
 using DmcCheetahPixelEnvPool = PyEnvPool<mujoco_dmc::CheetahPixelEnvPool>;
+
+using DmcDogEnvSpec = PyEnvSpec<mujoco_dmc::DogEnvSpec>;
+using DmcDogEnvPool = PyEnvPool<mujoco_dmc::DogEnvPool>;
+using DmcDogPixelEnvSpec = PyEnvSpec<mujoco_dmc::DogPixelEnvSpec>;
+using DmcDogPixelEnvPool = PyEnvPool<mujoco_dmc::DogPixelEnvPool>;
 
 using DmcFingerEnvSpec = PyEnvSpec<mujoco_dmc::FingerEnvSpec>;
 using DmcFingerEnvPool = PyEnvPool<mujoco_dmc::FingerEnvPool>;
@@ -76,6 +85,11 @@ using DmcHumanoidCMUPixelEnvSpec =
 using DmcHumanoidCMUPixelEnvPool =
     PyEnvPool<mujoco_dmc::HumanoidCMUPixelEnvPool>;
 
+using DmcLqrEnvSpec = PyEnvSpec<mujoco_dmc::LqrEnvSpec>;
+using DmcLqrEnvPool = PyEnvPool<mujoco_dmc::LqrEnvPool>;
+using DmcLqrPixelEnvSpec = PyEnvSpec<mujoco_dmc::LqrPixelEnvSpec>;
+using DmcLqrPixelEnvPool = PyEnvPool<mujoco_dmc::LqrPixelEnvPool>;
+
 using DmcManipulatorEnvSpec = PyEnvSpec<mujoco_dmc::ManipulatorEnvSpec>;
 using DmcManipulatorEnvPool = PyEnvPool<mujoco_dmc::ManipulatorEnvPool>;
 using DmcManipulatorPixelEnvSpec =
@@ -93,10 +107,22 @@ using DmcPointMassEnvPool = PyEnvPool<mujoco_dmc::PointMassEnvPool>;
 using DmcPointMassPixelEnvSpec = PyEnvSpec<mujoco_dmc::PointMassPixelEnvSpec>;
 using DmcPointMassPixelEnvPool = PyEnvPool<mujoco_dmc::PointMassPixelEnvPool>;
 
+using DmcQuadrupedEnvSpec = PyEnvSpec<mujoco_dmc::QuadrupedEnvSpec>;
+using DmcQuadrupedEnvPool = PyEnvPool<mujoco_dmc::QuadrupedEnvPool>;
+using DmcQuadrupedPixelEnvSpec =
+    PyEnvSpec<mujoco_dmc::QuadrupedPixelEnvSpec>;
+using DmcQuadrupedPixelEnvPool =
+    PyEnvPool<mujoco_dmc::QuadrupedPixelEnvPool>;
+
 using DmcReacherEnvSpec = PyEnvSpec<mujoco_dmc::ReacherEnvSpec>;
 using DmcReacherEnvPool = PyEnvPool<mujoco_dmc::ReacherEnvPool>;
 using DmcReacherPixelEnvSpec = PyEnvSpec<mujoco_dmc::ReacherPixelEnvSpec>;
 using DmcReacherPixelEnvPool = PyEnvPool<mujoco_dmc::ReacherPixelEnvPool>;
+
+using DmcStackerEnvSpec = PyEnvSpec<mujoco_dmc::StackerEnvSpec>;
+using DmcStackerEnvPool = PyEnvPool<mujoco_dmc::StackerEnvPool>;
+using DmcStackerPixelEnvSpec = PyEnvSpec<mujoco_dmc::StackerPixelEnvSpec>;
+using DmcStackerPixelEnvPool = PyEnvPool<mujoco_dmc::StackerPixelEnvPool>;
 
 using DmcSwimmerEnvSpec = PyEnvSpec<mujoco_dmc::SwimmerEnvSpec>;
 using DmcSwimmerEnvPool = PyEnvPool<mujoco_dmc::SwimmerEnvPool>;
@@ -117,6 +143,8 @@ PYBIND11_MODULE(mujoco_dmc_envpool, m) {
   REGISTER(m, DmcCartpolePixelEnvSpec, DmcCartpolePixelEnvPool)
   REGISTER(m, DmcCheetahEnvSpec, DmcCheetahEnvPool)
   REGISTER(m, DmcCheetahPixelEnvSpec, DmcCheetahPixelEnvPool)
+  REGISTER(m, DmcDogEnvSpec, DmcDogEnvPool)
+  REGISTER(m, DmcDogPixelEnvSpec, DmcDogPixelEnvPool)
   REGISTER(m, DmcFingerEnvSpec, DmcFingerEnvPool)
   REGISTER(m, DmcFingerPixelEnvSpec, DmcFingerPixelEnvPool)
   REGISTER(m, DmcFishEnvSpec, DmcFishEnvPool)
@@ -127,14 +155,20 @@ PYBIND11_MODULE(mujoco_dmc_envpool, m) {
   REGISTER(m, DmcHumanoidPixelEnvSpec, DmcHumanoidPixelEnvPool)
   REGISTER(m, DmcHumanoidCMUEnvSpec, DmcHumanoidCMUEnvPool)
   REGISTER(m, DmcHumanoidCMUPixelEnvSpec, DmcHumanoidCMUPixelEnvPool)
+  REGISTER(m, DmcLqrEnvSpec, DmcLqrEnvPool)
+  REGISTER(m, DmcLqrPixelEnvSpec, DmcLqrPixelEnvPool)
   REGISTER(m, DmcManipulatorEnvSpec, DmcManipulatorEnvPool)
   REGISTER(m, DmcManipulatorPixelEnvSpec, DmcManipulatorPixelEnvPool)
   REGISTER(m, DmcPendulumEnvSpec, DmcPendulumEnvPool)
   REGISTER(m, DmcPendulumPixelEnvSpec, DmcPendulumPixelEnvPool)
   REGISTER(m, DmcPointMassEnvSpec, DmcPointMassEnvPool)
   REGISTER(m, DmcPointMassPixelEnvSpec, DmcPointMassPixelEnvPool)
+  REGISTER(m, DmcQuadrupedEnvSpec, DmcQuadrupedEnvPool)
+  REGISTER(m, DmcQuadrupedPixelEnvSpec, DmcQuadrupedPixelEnvPool)
   REGISTER(m, DmcReacherEnvSpec, DmcReacherEnvPool)
   REGISTER(m, DmcReacherPixelEnvSpec, DmcReacherPixelEnvPool)
+  REGISTER(m, DmcStackerEnvSpec, DmcStackerEnvPool)
+  REGISTER(m, DmcStackerPixelEnvSpec, DmcStackerPixelEnvPool)
   REGISTER(m, DmcSwimmerEnvSpec, DmcSwimmerEnvPool)
   REGISTER(m, DmcSwimmerPixelEnvSpec, DmcSwimmerPixelEnvPool)
   REGISTER(m, DmcWalkerEnvSpec, DmcWalkerEnvPool)

@@ -14,6 +14,10 @@
 
 filegroup(
     name = "mujoco_dmc_xml",
-    srcs = glob(["suite/*.xml"]) + ["suite/common"],
+    srcs = glob([
+        "suite/*.xml",
+        "suite/common/**",
+        "suite/dog_assets/**",
+    ]),
     visibility = ["//visibility:public"],
 )

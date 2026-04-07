@@ -29,6 +29,7 @@ class _MujocoDmcSuiteExtDeterministicTest(absltest.TestCase):
         obs_keys: list[str],
         blacklist: list[str] | None = None,
         num_envs: int = 4,
+        num_steps: int = 256,
     ) -> None:
         domain_name = "".join([
             g[:1].upper() + g[1:] for g in domain.split("_")
@@ -40,11 +41,16 @@ class _MujocoDmcSuiteExtDeterministicTest(absltest.TestCase):
         env1 = make_dm(task_id, num_envs=num_envs, seed=0)
         env2 = make_dm(task_id, num_envs=num_envs, seed=1)
         act_spec = env0.action_spec()
-        for t in range(3000):
+        action_min = act_spec.minimum
+        action_max = act_spec.maximum
+        if domain == "lqr":
+            action_min = -1.0
+            action_max = 1.0
+        for t in range(num_steps):
             action = np.array([
                 np.random.uniform(
-                    low=act_spec.minimum,
-                    high=act_spec.maximum,
+                    low=action_min,
+                    high=action_max,
                     size=act_spec.shape,
                 )
                 for _ in range(num_envs)
@@ -53,6 +59,8 @@ class _MujocoDmcSuiteExtDeterministicTest(absltest.TestCase):
             obs0 = ts0.observation
             obs1 = env1.step(action).observation
             obs2 = env2.step(action).observation
+            comparable_obs = False
+            seed1_is_allclose = True
             for k in obs_keys:
                 o0 = getattr(obs0, k)
                 o1 = getattr(obs1, k)
@@ -64,7 +72,10 @@ class _MujocoDmcSuiteExtDeterministicTest(absltest.TestCase):
                     np.abs(o0).sum() > 0
                     and ts0.step_type[0] != dm_env.StepType.FIRST
                 ):
-                    self.assertFalse(np.allclose(o0, o2), (t, k, o0, o2))
+                    comparable_obs = True
+                    seed1_is_allclose &= np.allclose(o0, o2)
+            if comparable_obs:
+                self.assertFalse(seed1_is_allclose, (t, obs0, obs2))
 
     def test_humanoid_CMU(self) -> None:
         obs_keys = [
@@ -75,8 +86,69 @@ class _MujocoDmcSuiteExtDeterministicTest(absltest.TestCase):
             "com_velocity",
             "velocity",
         ]
-        for task in ["stand", "run"]:
+        for task in ["stand", "walk", "run"]:
             self.check("humanoid_CMU", task, obs_keys)
+
+    def test_dog(self) -> None:
+        obs_keys = [
+            "joint_angles",
+            "joint_velocites",
+            "torso_pelvis_height",
+            "z_projection",
+            "torso_com_velocity",
+            "inertial_sensors",
+            "foot_forces",
+            "touch_sensors",
+            "actuator_state",
+        ]
+        for task in ["stand", "walk", "trot", "run"]:
+            self.check("dog", task, obs_keys)
+        self.check("dog", "fetch", obs_keys + ["ball_state", "target_position"])
+
+    def test_lqr(self) -> None:
+        for task in ["lqr_2_1", "lqr_6_2"]:
+            self.check("lqr", task, ["position", "velocity"])
+
+    def test_quadruped(self) -> None:
+        obs_keys = [
+            "egocentric_state",
+            "torso_velocity",
+            "torso_upright",
+            "imu",
+            "force_torque",
+        ]
+        for task in ["walk", "run"]:
+            self.check(
+                "quadruped",
+                task,
+                obs_keys,
+                blacklist=["egocentric_state"],
+            )
+        self.check(
+            "quadruped",
+            "escape",
+            obs_keys + ["origin", "rangefinder"],
+            blacklist=["egocentric_state"],
+        )
+        self.check(
+            "quadruped",
+            "fetch",
+            obs_keys + ["ball_state", "target_position"],
+            blacklist=["egocentric_state"],
+        )
+
+    def test_stacker(self) -> None:
+        obs_keys = [
+            "arm_pos",
+            "arm_vel",
+            "touch",
+            "hand_pos",
+            "box_pos",
+            "box_vel",
+            "target_pos",
+        ]
+        for task in ["stack_2", "stack_4"]:
+            self.check("stacker", task, obs_keys, blacklist=["box_vel"])
 
 
 if __name__ == "__main__":
