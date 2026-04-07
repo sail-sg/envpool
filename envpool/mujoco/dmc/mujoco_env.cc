@@ -17,34 +17,56 @@
 #include <cassert>
 #include <cmath>
 #include <cstring>
-#include <filesystem>
 #include <fstream>
 #include <memory>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
+#include "pugixml.hpp"
+
 namespace mujoco_dmc {
 
-void AddDirectoryAssetsToVFS(mjVFS* vfs, const std::string& base_path,
-                             const std::string& asset_dir) {
-  const std::filesystem::path root =
-      std::filesystem::path(base_path) / "mujoco" / "assets_dmc" / asset_dir;
-  if (!std::filesystem::exists(root)) {
+std::string XMLAssetPath(const std::string& directory,
+                         const std::string& filename) {
+  if (filename.empty() || directory.empty() || filename[0] == '/' ||
+      (filename.size() > 1 && filename[1] == ':')) {
+    return filename;
+  }
+  if (directory.back() == '/') {
+    return directory + filename;
+  }
+  return directory + "/" + filename;
+}
+
+void AddReferencedAssetsToVFS(mjVFS* vfs, const std::string& base_path,
+                              const std::string& raw_xml) {
+  pugi::xml_document doc;
+  pugi::xml_parse_result result = doc.load_string(raw_xml.c_str());
+  if (result.status != pugi::status_ok) {
     return;
   }
-  for (const auto& entry : std::filesystem::recursive_directory_iterator(root)) {
-    if (!entry.is_regular_file()) {
+  pugi::xml_node compiler = doc.child("mujoco").child("compiler");
+  std::string mesh_dir = compiler.attribute("meshdir").as_string();
+  std::string texture_dir = compiler.attribute("texturedir").as_string();
+  std::set<std::string> asset_paths;
+  for (pugi::xml_node asset = doc.child("mujoco").child("asset").first_child();
+       !asset.empty(); asset = asset.next_sibling()) {
+    pugi::xml_attribute file = asset.attribute("file");
+    if (file.empty()) {
       continue;
     }
-    std::ifstream ifs(entry.path(), std::ios::binary);
+    std::string directory =
+        std::strcmp(asset.name(), "texture") == 0 ? texture_dir : mesh_dir;
+    asset_paths.insert(XMLAssetPath(directory, file.as_string()));
+  }
+  for (const std::string& asset_path : asset_paths) {
+    std::string path = base_path + "/mujoco/assets_dmc/" + asset_path;
+    std::ifstream ifs(path, std::ios::binary);
     std::string content((std::istreambuf_iterator<char>(ifs)),
                         std::istreambuf_iterator<char>());
-    std::string vfs_name =
-        (std::filesystem::path(asset_dir) /
-         std::filesystem::relative(entry.path(), root))
-            .generic_string();
-    mj_addBufferVFS(vfs, vfs_name.c_str(), content.data(), content.size());
+    mj_addBufferVFS(vfs, asset_path.c_str(), content.data(), content.size());
   }
 }
 
@@ -80,7 +102,7 @@ MujocoEnv::MujocoEnv(const std::string& base_path, const std::string& raw_xml,
     mj_addBufferVFS(vfs.get(), asset_name.c_str(), content.data(),
                     content.size());
   }
-  AddDirectoryAssetsToVFS(vfs.get(), base_path, "dog_assets");
+  AddReferencedAssetsToVFS(vfs.get(), base_path, raw_xml);
   // create model and data
   model_ = mj_loadXML(model_filename.c_str(), vfs.get(), error_.data(), 1000);
   if (model_ == nullptr) {

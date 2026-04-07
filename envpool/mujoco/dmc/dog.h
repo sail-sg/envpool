@@ -349,7 +349,8 @@ class DogEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   }
 
   std::array<mjtNum, 3> TorsoComVelocity() {
-    return TransformToFrame(CenterOfMassVelocity(), data_->xmat + id_torso_ * 9);
+    return TransformToFrame(CenterOfMassVelocity(),
+                            data_->xmat + id_torso_ * 9);
   }
 
   mjtNum ComForwardVelocity() { return TorsoComVelocity()[0]; }
@@ -470,8 +471,10 @@ class DogEnvBase : public Env<EnvSpecT>, public MujocoEnv {
         data_->geom_xpos[id_ball_geom_ * 3 + 1],
         data_->geom_xpos[id_ball_geom_ * 3 + 2],
     };
-    mjtNum upper = Distance(ball_pos, data_->site_xpos + id_upper_bite_site_ * 3);
-    mjtNum lower = Distance(ball_pos, data_->site_xpos + id_lower_bite_site_ * 3);
+    mjtNum upper =
+        Distance(ball_pos, data_->site_xpos + id_upper_bite_site_ * 3);
+    mjtNum lower =
+        Distance(ball_pos, data_->site_xpos + id_lower_bite_site_ * 3);
     return 0.5 * (upper + lower);
   }
 
