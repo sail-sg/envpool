@@ -43,7 +43,7 @@ endif
 ifeq ($(OS),Windows_NT)
 RELEASE_SIZE_BAZELOPT =
 else ifeq ($(UNAME_S),Darwin)
-RELEASE_SIZE_BAZELOPT = --config=release-size-macos
+RELEASE_SIZE_BAZELOPT =
 else ifeq ($(UNAME_S),Linux)
 RELEASE_SIZE_BAZELOPT = --config=release-size-linux
 else

@@ -10,7 +10,6 @@ build:test --cxxopt=-DENVPOOL_TEST --copt=-g0 --copt=-O3 --copt=-DNDEBUG
 build:release --copt=-g0 --copt=-O3 --copt=-DNDEBUG
 build:release-size --copt=-Os --copt=-ffunction-sections --copt=-fdata-sections
 build:release-size-linux --config=release-size --linkopt=-Wl,--gc-sections
-build:release-size-macos --config=release-size --linkopt=-Wl,-dead_strip
 
 build:linux --cxxopt=-std=c++17
 build:linux --host_cxxopt=-std=c++17
