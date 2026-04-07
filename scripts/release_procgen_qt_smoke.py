@@ -48,7 +48,7 @@ def _run_child(name: str, code: str) -> None:
 def _present_smoke() -> None:
     _run_child(
         "qt-present without explicit procgen import",
-        f"""
+        """
         import envpool
 
         assert "CoinrunEasy-v0" in envpool.list_all_envs()
@@ -116,6 +116,7 @@ def _absent_smoke() -> None:
 
 
 def main() -> None:
+    """Run the selected Procgen Qt release smoke test."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--qt-runtime",
