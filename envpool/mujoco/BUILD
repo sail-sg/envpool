@@ -160,6 +160,7 @@ pybind_extension(
     name = "mujoco_dmc_envpool",
     srcs = [
         "dmc/mujoco_envpool.cc",
+        "dmc/mujoco_plugin_init.cc",
     ],
     deps = [
         ":mujoco_dmc_env",
