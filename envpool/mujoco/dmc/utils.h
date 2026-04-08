@@ -36,6 +36,13 @@ std::string GetFileContent(const std::string& base_path,
                            const std::string& asset_name);
 std::string XMLRemoveByBodyName(const std::string& content,
                                 const std::vector<std::string>& body_names);
+std::string XMLMakeDog(const std::string& content,
+                       const std::string& task_name);
+std::string XMLMakeQuadruped(const std::string& content,
+                             const std::string& task_name);
+std::string XMLMakeStacker(const std::string& content, int n_boxes);
+std::string XMLMakeLqr(const std::string& content, int n_bodies,
+                       int n_actuators, std::mt19937* gen);
 std::string XMLAddPoles(const std::string& content, int n_poles);
 std::string XMLMakeSwimmer(const std::string& content, int n_bodies);
 

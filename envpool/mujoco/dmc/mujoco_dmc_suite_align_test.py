@@ -217,7 +217,6 @@ class _MujocoDmcAlignTest(absltest.TestCase):
         for i in range(3):
             np.random.seed(i)
             env0.reset()
-            a = self.sample_action(action_spec)
             ts = env1.reset(np.array([0]))
             self.reset_state(env0, ts, domain, task)
             logging.info(f"reset qpos {ts.observation.qpos0[0]}")

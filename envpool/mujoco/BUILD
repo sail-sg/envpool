@@ -126,16 +126,20 @@ cc_library(
         "dmc/ball_in_cup.h",
         "dmc/cartpole.h",
         "dmc/cheetah.h",
+        "dmc/dog.h",
         "dmc/finger.h",
         "dmc/fish.h",
         "dmc/hopper.h",
         "dmc/humanoid.h",
         "dmc/humanoid_CMU.h",
+        "dmc/lqr.h",
         "dmc/manipulator.h",
         "dmc/mujoco_env.h",
         "dmc/pendulum.h",
         "dmc/point_mass.h",
+        "dmc/quadruped.h",
         "dmc/reacher.h",
+        "dmc/stacker.h",
         "dmc/swimmer.h",
         "dmc/utils.h",
         "dmc/walker.h",
@@ -147,6 +151,7 @@ cc_library(
         ":mujoco_render",
         "//envpool/core:async_envpool",
         "@mujoco//:mujoco_lib",
+        "@mujoco//:mujoco_stl_decoder_plugin_lib",
         "@pugixml",
     ],
 )
@@ -155,6 +160,7 @@ pybind_extension(
     name = "mujoco_dmc_envpool",
     srcs = [
         "dmc/mujoco_envpool.cc",
+        "dmc/mujoco_plugin_init.cc",
     ],
     deps = [
         ":mujoco_dmc_env",
@@ -341,6 +347,17 @@ py_library(
         requirement("absl-py"),
         requirement("gymnasium"),
         requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "mujoco_plugin_registration_test",
+    srcs = ["mujoco_plugin_registration_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":mujoco_dmc",
+        ":robotics",
+        requirement("absl-py"),
     ],
 )
 

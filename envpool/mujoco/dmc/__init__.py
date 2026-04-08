@@ -30,6 +30,10 @@ from envpool.mujoco.mujoco_dmc_envpool import (
     _DmcCheetahEnvSpec,
     _DmcCheetahPixelEnvPool,
     _DmcCheetahPixelEnvSpec,
+    _DmcDogEnvPool,
+    _DmcDogEnvSpec,
+    _DmcDogPixelEnvPool,
+    _DmcDogPixelEnvSpec,
     _DmcFingerEnvPool,
     _DmcFingerEnvSpec,
     _DmcFingerPixelEnvPool,
@@ -50,6 +54,10 @@ from envpool.mujoco.mujoco_dmc_envpool import (
     _DmcHumanoidEnvSpec,
     _DmcHumanoidPixelEnvPool,
     _DmcHumanoidPixelEnvSpec,
+    _DmcLqrEnvPool,
+    _DmcLqrEnvSpec,
+    _DmcLqrPixelEnvPool,
+    _DmcLqrPixelEnvSpec,
     _DmcManipulatorEnvPool,
     _DmcManipulatorEnvSpec,
     _DmcManipulatorPixelEnvPool,
@@ -62,10 +70,18 @@ from envpool.mujoco.mujoco_dmc_envpool import (
     _DmcPointMassEnvSpec,
     _DmcPointMassPixelEnvPool,
     _DmcPointMassPixelEnvSpec,
+    _DmcQuadrupedEnvPool,
+    _DmcQuadrupedEnvSpec,
+    _DmcQuadrupedPixelEnvPool,
+    _DmcQuadrupedPixelEnvSpec,
     _DmcReacherEnvPool,
     _DmcReacherEnvSpec,
     _DmcReacherPixelEnvPool,
     _DmcReacherPixelEnvSpec,
+    _DmcStackerEnvPool,
+    _DmcStackerEnvSpec,
+    _DmcStackerPixelEnvPool,
+    _DmcStackerPixelEnvSpec,
     _DmcSwimmerEnvPool,
     _DmcSwimmerEnvSpec,
     _DmcSwimmerPixelEnvPool,
@@ -127,6 +143,18 @@ from envpool.python.api import py_env
     DmcCheetahPixelGymnasiumEnvPool,
 ) = py_env(_DmcCheetahPixelEnvSpec, _DmcCheetahPixelEnvPool)
 (
+    DmcDogEnvSpec,
+    DmcDogDMEnvPool,
+    DmcDogGymEnvPool,
+    DmcDogGymnasiumEnvPool,
+) = py_env(_DmcDogEnvSpec, _DmcDogEnvPool)
+(
+    DmcDogPixelEnvSpec,
+    DmcDogPixelDMEnvPool,
+    DmcDogPixelGymEnvPool,
+    DmcDogPixelGymnasiumEnvPool,
+) = py_env(_DmcDogPixelEnvSpec, _DmcDogPixelEnvPool)
+(
     DmcFingerEnvSpec,
     DmcFingerDMEnvPool,
     DmcFingerGymEnvPool,
@@ -187,6 +215,18 @@ from envpool.python.api import py_env
     DmcHumanoidCMUPixelGymnasiumEnvPool,
 ) = py_env(_DmcHumanoidCMUPixelEnvSpec, _DmcHumanoidCMUPixelEnvPool)
 (
+    DmcLqrEnvSpec,
+    DmcLqrDMEnvPool,
+    DmcLqrGymEnvPool,
+    DmcLqrGymnasiumEnvPool,
+) = py_env(_DmcLqrEnvSpec, _DmcLqrEnvPool)
+(
+    DmcLqrPixelEnvSpec,
+    DmcLqrPixelDMEnvPool,
+    DmcLqrPixelGymEnvPool,
+    DmcLqrPixelGymnasiumEnvPool,
+) = py_env(_DmcLqrPixelEnvSpec, _DmcLqrPixelEnvPool)
+(
     DmcManipulatorEnvSpec,
     DmcManipulatorDMEnvPool,
     DmcManipulatorGymEnvPool,
@@ -223,6 +263,18 @@ from envpool.python.api import py_env
     DmcPointMassPixelGymnasiumEnvPool,
 ) = py_env(_DmcPointMassPixelEnvSpec, _DmcPointMassPixelEnvPool)
 (
+    DmcQuadrupedEnvSpec,
+    DmcQuadrupedDMEnvPool,
+    DmcQuadrupedGymEnvPool,
+    DmcQuadrupedGymnasiumEnvPool,
+) = py_env(_DmcQuadrupedEnvSpec, _DmcQuadrupedEnvPool)
+(
+    DmcQuadrupedPixelEnvSpec,
+    DmcQuadrupedPixelDMEnvPool,
+    DmcQuadrupedPixelGymEnvPool,
+    DmcQuadrupedPixelGymnasiumEnvPool,
+) = py_env(_DmcQuadrupedPixelEnvSpec, _DmcQuadrupedPixelEnvPool)
+(
     DmcReacherEnvSpec,
     DmcReacherDMEnvPool,
     DmcReacherGymEnvPool,
@@ -234,6 +286,18 @@ from envpool.python.api import py_env
     DmcReacherPixelGymEnvPool,
     DmcReacherPixelGymnasiumEnvPool,
 ) = py_env(_DmcReacherPixelEnvSpec, _DmcReacherPixelEnvPool)
+(
+    DmcStackerEnvSpec,
+    DmcStackerDMEnvPool,
+    DmcStackerGymEnvPool,
+    DmcStackerGymnasiumEnvPool,
+) = py_env(_DmcStackerEnvSpec, _DmcStackerEnvPool)
+(
+    DmcStackerPixelEnvSpec,
+    DmcStackerPixelDMEnvPool,
+    DmcStackerPixelGymEnvPool,
+    DmcStackerPixelGymnasiumEnvPool,
+) = py_env(_DmcStackerPixelEnvSpec, _DmcStackerPixelEnvPool)
 (
     DmcSwimmerEnvSpec,
     DmcSwimmerDMEnvPool,
