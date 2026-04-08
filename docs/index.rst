@@ -91,6 +91,7 @@ stable version through `envpool.readthedocs.io/en/stable/
    env/box2d
    env/classic_control
    env/dm_control
+   env/highway
    env/minigrid
    env/gymnasium_robotics
    env/mujoco_gym
