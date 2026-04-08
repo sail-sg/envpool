@@ -157,7 +157,9 @@ class VecAdapter(VecEnv):
 
 
 if use_env_pool:
-    env = envpool.make(env_id, env_type="gym", num_envs=num_envs, seed=seed)
+    env = envpool.make(
+        env_id, env_type="gymnasium", num_envs=num_envs, seed=seed
+    )
     env.spec.id = env_id
     env = VecAdapter(env)
     env = VecMonitor(env)
