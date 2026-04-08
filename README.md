@@ -20,6 +20,8 @@
 
 Here are EnvPool's several highlights:
 
+- **All-platform support: Linux, macOS, and Windows** wheels for Python 3.11-3.14;
+- **Built-in rendering** with batched `rgb_array` output and `human` display mode;
 - Compatible with OpenAI `gym` APIs, DeepMind `dm_env` APIs, and [`gymnasium`](https://github.com/Farama-Foundation/Gymnasium) APIs;
 - Manage a pool of envs, interact with the envs in batched APIs by default;
 - Support both synchronous execution and asynchronous execution;
