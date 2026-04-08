@@ -15,7 +15,13 @@
 
 import platform
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
+
+from envpool.python.glfw_context import preload_windows_gl_dlls
+
+preload_windows_gl_dlls(strict=True)
 
 import dm_env
 import mujoco
@@ -23,6 +29,7 @@ import numpy as np
 from absl import logging
 from absl.testing import absltest
 from dm_control import suite
+from dm_control.mujoco import engine as dm_control_engine
 from packaging import version
 
 import envpool.mujoco.dmc.registration  # noqa: F401
@@ -33,6 +40,17 @@ _LINUX_ARM64 = sys.platform == "linux" and platform.machine().lower() in (
     "aarch64",
     "arm64",
 )
+
+
+@contextmanager
+def _without_dm_control_render_contexts() -> Iterator[None]:
+    """Prevent non-rendering upstream resets from initializing OpenGL."""
+    original_contexts = dm_control_engine.Physics.contexts
+    dm_control_engine.Physics.contexts = property(lambda _: None)
+    try:
+        yield
+    finally:
+        dm_control_engine.Physics.contexts = original_contexts
 
 
 class _MujocoDmcSuiteExtAlignTest(absltest.TestCase):
@@ -149,7 +167,11 @@ class _MujocoDmcSuiteExtAlignTest(absltest.TestCase):
         obs_spec, action_spec = env0.observation_spec(), env0.action_spec()
         for i in range(3):
             np.random.seed(i)
-            env0.reset()
+            if domain == "quadruped" and task == "escape":
+                with _without_dm_control_render_contexts():
+                    env0.reset()
+            else:
+                env0.reset()
             ts = env1.reset(np.array([0]))
             self.reset_state(env0, ts, domain, task)
             logging.info(f"reset qpos {ts.observation.qpos0[0]}")
@@ -213,10 +235,6 @@ class _MujocoDmcSuiteExtAlignTest(absltest.TestCase):
         self.run_align_check_entry("lqr", ["lqr_2_1", "lqr_6_2"])
 
     def test_quadruped(self) -> None:
-        if sys.platform in {"darwin", "win32"}:
-            self.skipTest(
-                "dm_control quadruped reset requires a working GLFW context"
-            )
         self.run_align_check_entry(
             "quadruped", ["escape", "fetch", "run", "walk"]
         )
