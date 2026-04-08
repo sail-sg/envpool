@@ -61,16 +61,17 @@ class VecAdapter(VecEnv):
         )
 
     def _info_dict_to_list(
-        self, info_dict: dict[str, Any]
+        self, info_dict: dict[str, Any], batch_size: int
     ) -> list[dict[str, Any]]:
         """Convert EnvPool's batched info dict to SB3's list-of-dicts format."""
+        array_info = {
+            key: value
+            for key, value in info_dict.items()
+            if isinstance(value, np.ndarray)
+        }
         infos = []
-        for i in range(self.num_envs):
-            infos.append({
-                key: value[i]
-                for key, value in info_dict.items()
-                if isinstance(value, np.ndarray)
-            })
+        for i in range(batch_size):
+            infos.append({key: value[i] for key, value in array_info.items()})
         return infos
 
     def step_async(self, actions: np.ndarray) -> None:
@@ -80,7 +81,7 @@ class VecAdapter(VecEnv):
     def reset(self) -> VecEnvObs:
         """Reset the wrapped vector environment."""
         obs, info_dict = self.venv.reset()
-        self.reset_infos = self._info_dict_to_list(info_dict)
+        self.reset_infos = self._info_dict_to_list(info_dict, self.num_envs)
         self._reset_seeds()
         self._reset_options()
         return obs
@@ -93,13 +94,13 @@ class VecAdapter(VecEnv):
         """Step the wrapped environment and adapt the returned info."""
         obs, rewards, terms, truncs, info_dict = self.venv.step(self.actions)
         dones = terms | truncs
-        infos = self._info_dict_to_list(info_dict)
+        infos = self._info_dict_to_list(info_dict, self.num_envs)
         for i in range(self.num_envs):
             if dones[i]:
                 infos[i]["terminal_observation"] = obs[i]
                 reset_obs, reset_info = self.venv.reset(np.array([i]))
                 obs[i] = reset_obs[0]
-                self.reset_infos[i] = self._info_dict_to_list(reset_info)[0]
+                self.reset_infos[i] = self._info_dict_to_list(reset_info, 1)[0]
         return obs, rewards, dones, infos
 
     def close(self) -> None:
