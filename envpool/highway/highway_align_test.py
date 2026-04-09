@@ -151,7 +151,9 @@ def _patch_oracle_road(oracle: gym.Env, debug_state: Any) -> None:
                 )
             elif int(source.kind) == 1:
                 lane = SineLane(
-                    np.asarray([source.start_x, source.start_y], dtype=np.float64),
+                    np.asarray(
+                        [source.start_x, source.start_y], dtype=np.float64
+                    ),
                     np.asarray([source.end_x, source.end_y], dtype=np.float64),
                     float(source.amplitude),
                     float(source.pulsation),
@@ -160,7 +162,9 @@ def _patch_oracle_road(oracle: gym.Env, debug_state: Any) -> None:
                 )
             else:
                 lane = StraightLane(
-                    np.asarray([source.start_x, source.start_y], dtype=np.float64),
+                    np.asarray(
+                        [source.start_x, source.start_y], dtype=np.float64
+                    ),
                     np.asarray([source.end_x, source.end_y], dtype=np.float64),
                     **common,
                 )

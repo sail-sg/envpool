@@ -296,7 +296,9 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             _envpool_info(actual.info),
                             _official_info(expected.info),
                         )
-                        _assert_render_aligned(case, env, oracle, f"step {step}")
+                        _assert_render_aligned(
+                            case, env, oracle, f"step {step}"
+                        )
                 finally:
                     env.close()
                     oracle.close()
@@ -353,7 +355,9 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             _envpool_info(actual.info),
                             _official_info(expected.info),
                         )
-                        _assert_render_aligned(case, env, oracle, f"step {step}")
+                        _assert_render_aligned(
+                            case, env, oracle, f"step {step}"
+                        )
                         if bool(expected.terminated) or bool(
                             expected.truncated
                         ):
@@ -421,7 +425,9 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             _envpool_info(actual.info),
                             _official_info(expected.info),
                         )
-                        _assert_render_aligned(case, env, oracle, f"step {step}")
+                        _assert_render_aligned(
+                            case, env, oracle, f"step {step}"
+                        )
                         if bool(expected.terminated) or bool(
                             expected.truncated
                         ):
@@ -537,7 +543,9 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             _envpool_info(actual.info),
                             _official_info(expected.info),
                         )
-                        _assert_render_aligned(case, env, oracle, f"step {step}")
+                        _assert_render_aligned(
+                            case, env, oracle, f"step {step}"
+                        )
                         if bool(expected.terminated) or bool(
                             expected.truncated
                         ):
@@ -572,9 +580,13 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                     )
                     _assert_render_aligned(case, env, oracle, "reset")
 
-                    for step, action in enumerate(
-                        ((1, 1), (2, 1), (1, 0), (0, 2), (1, 1))
-                    ):
+                    for step, action in enumerate((
+                        (1, 1),
+                        (2, 1),
+                        (1, 0),
+                        (0, 2),
+                        (1, 1),
+                    )):
                         actual = _envpool_step(env, case, action)
                         _patch_oracle_from_envpool(oracle, env)
                         oracle_obs = oracle.unwrapped.observation_type.observe()
@@ -604,7 +616,9 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             _envpool_scalar(actual.truncated),
                             oracle.unwrapped._is_truncated(),
                         )
-                        _assert_render_aligned(case, env, oracle, f"step {step}")
+                        _assert_render_aligned(
+                            case, env, oracle, f"step {step}"
+                        )
                         if any(expected_terminated) or bool(
                             _envpool_scalar(actual.truncated)
                         ):
@@ -706,7 +720,9 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             _envpool_scalar(actual.truncated),
                             expected.truncated,
                         )
-                        _assert_render_aligned(case, env, oracle, f"step {step}")
+                        _assert_render_aligned(
+                            case, env, oracle, f"step {step}"
+                        )
                 finally:
                     env.close()
                     oracle.close()
