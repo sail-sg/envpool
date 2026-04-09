@@ -31,11 +31,12 @@ register_highway_envs()
 prepare_official_oracle_import()
 
 _ALIGN_ACTIONS = (1, 3, 3, 2, 1, 1, 0, 4, 4, 1, 2, 1)
+_ALIGN_STEPS = 96
 _DEFAULT_ALIGN_CONFIG = {
     "vehicles_count": 0,
     "lanes_count": 3,
     "initial_lane_id": 1,
-    "duration": 40,
+    "duration": 200,
     "simulation_frequency": 15,
     "policy_frequency": 1,
 }
@@ -61,7 +62,7 @@ _STRAIGHT_ROAD_ALIGN_CONFIGS: tuple[
         "HighwayFast-v0",
         "highway-fast-v0",
         {
-            "duration": 30,
+            "duration": 200,
             "simulation_frequency": 5,
             "lanes_count": 3,
             "initial_lane_id": 1,
@@ -371,7 +372,8 @@ class _HighwayAlignTest(absltest.TestCase):
                 cast(Any, oracle.unwrapped).observation_type.observe(),
             )
 
-            for action in _ALIGN_ACTIONS:
+            for step in range(_ALIGN_STEPS):
+                action = _ALIGN_ACTIONS[step % len(_ALIGN_ACTIONS)]
                 (
                     oracle_obs,
                     oracle_rew,
@@ -392,6 +394,8 @@ class _HighwayAlignTest(absltest.TestCase):
                 self.assertEqual(
                     bool(info["crashed"][0]), oracle_info["crashed"]
                 )
+                if bool(oracle_term) or bool(oracle_trunc):
+                    break
 
                 _patch_oracle(oracle, _debug_state(env))
         finally:

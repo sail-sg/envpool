@@ -45,6 +45,7 @@ _ALL_TASKS = (
     "TwoWay-v0",
     "UTurn-v0",
 )
+_ALL_TASKS_DETERMINISTIC_STEPS = 500
 
 
 def _assert_tree_equal(actual: Any, expected: Any) -> None:
@@ -153,7 +154,7 @@ class _HighwayDeterministicTest(absltest.TestCase):
                     obs1, _ = env1.reset()
                     _assert_tree_equal(obs0, obs1)
                     action = _idle_action(env0, task_id, num_envs)
-                    for _ in range(10):
+                    for _ in range(_ALL_TASKS_DETERMINISTIC_STEPS):
                         step0 = _step(env0, task_id, action, num_envs)
                         step1 = _step(env1, task_id, action, num_envs)
                         for actual, expected in zip(

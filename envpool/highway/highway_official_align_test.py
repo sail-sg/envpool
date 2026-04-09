@@ -33,7 +33,12 @@ from envpool.registration import make_gymnasium
 register_highway_envs()
 prepare_official_oracle_import()
 
-_ACTION_STEPS = 4
+_OFFICIAL_ALIGN_STEPS = 64
+_OFFICIAL_BACKEND_ALIGN_STEPS = 5
+_EXIT_ALIGN_STEPS = 6
+_INTERSECTION_ALIGN_STEPS = 6
+_LANE_KEEPING_ALIGN_STEPS = 2
+_RACETRACK_ALIGN_STEPS = 5
 
 
 class _Step(NamedTuple):
@@ -262,7 +267,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                     )
                     _assert_render_aligned(case, env, oracle, "reset")
 
-                    for step in range(_ACTION_STEPS):
+                    for step in range(_OFFICIAL_ALIGN_STEPS):
                         action = _official_action(oracle.action_space, step)
                         actual = _envpool_step(env, case, action)
                         _patch_oracle_from_envpool(oracle, env)
@@ -299,6 +304,10 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                         _assert_render_aligned(
                             case, env, oracle, f"step {step}"
                         )
+                        if bool(expected.terminated) or bool(
+                            expected.truncated
+                        ):
+                            break
                 finally:
                     env.close()
                     oracle.close()
@@ -331,7 +340,9 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                     )
                     _assert_render_aligned(case, env, oracle, "reset")
 
-                    for step, action in enumerate((1, 3, 0, 2, 4)):
+                    actions = (1, 3, 0, 2, 4)
+                    for step in range(_OFFICIAL_BACKEND_ALIGN_STEPS):
+                        action = actions[step % len(actions)]
                         _patch_oracle_from_envpool(oracle, env)
                         expected = _Step(*oracle.step(action))
                         actual = _envpool_step(env, case, action)
@@ -393,7 +404,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                     )
                     _assert_render_aligned(case, env, oracle, "reset")
 
-                    for step in range(6):
+                    for step in range(_OFFICIAL_ALIGN_STEPS):
                         action = _official_action(oracle.action_space, step)
                         actual = _envpool_step(env, case, action)
                         _patch_oracle_from_envpool(oracle, env)
@@ -453,7 +464,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
             )
             _assert_render_aligned(case, env, oracle, "reset")
 
-            for step in range(6):
+            for step in range(_EXIT_ALIGN_STEPS):
                 action = _official_action(oracle.action_space, step)
                 actual = _envpool_step(env, case, action)
                 _patch_oracle_from_envpool(oracle, env)
@@ -481,6 +492,8 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                     _envpool_info(actual.info), _official_info(expected.info)
                 )
                 _assert_render_aligned(case, env, oracle, f"step {step}")
+                if bool(expected.terminated) or bool(expected.truncated):
+                    break
         finally:
             env.close()
             oracle.close()
@@ -508,9 +521,9 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                     )
                     _assert_render_aligned(case, env, oracle, "reset")
 
-                    for step in range(6):
+                    for step in range(_INTERSECTION_ALIGN_STEPS):
                         action = (
-                            [1, 2, 0, 1, 2, 0][step]
+                            [1, 2, 0, 1, 2, 0][step % 6]
                             if isinstance(oracle.action_space, spaces.Discrete)
                             else _official_action(oracle.action_space, step)
                         )
@@ -580,13 +593,15 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                     )
                     _assert_render_aligned(case, env, oracle, "reset")
 
-                    for step, action in enumerate((
+                    actions = (
                         (1, 1),
                         (2, 1),
                         (1, 0),
                         (0, 2),
                         (1, 1),
-                    )):
+                    )
+                    for step in range(_OFFICIAL_ALIGN_STEPS):
+                        action = actions[step % len(actions)]
                         actual = _envpool_step(env, case, action)
                         _patch_oracle_from_envpool(oracle, env)
                         oracle_obs = oracle.unwrapped.observation_type.observe()
@@ -651,7 +666,8 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                 np.asarray([0.0], dtype=np.float32),
                 np.asarray([0.25], dtype=np.float32),
             )
-            for step, action in enumerate(actions):
+            for step in range(_LANE_KEEPING_ALIGN_STEPS):
+                action = actions[step % len(actions)]
                 expected = _Step(*oracle.step(action))
                 actual = _envpool_step(env, case, action)
                 _assert_tree_bitwise(
@@ -667,6 +683,8 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                     _envpool_scalar(actual.truncated), expected.truncated
                 )
                 _assert_render_aligned(case, env, oracle, f"step {step}")
+                if bool(expected.terminated) or bool(expected.truncated):
+                    break
         finally:
             env.close()
             oracle.close()
@@ -702,7 +720,8 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                     )
                     _assert_render_aligned(case, env, oracle, "reset")
 
-                    for step, action in enumerate(actions):
+                    for step in range(_RACETRACK_ALIGN_STEPS):
+                        action = actions[step % len(actions)]
                         expected = _Step(*oracle.step(action))
                         actual = _envpool_step(env, case, action)
                         _assert_tree_bitwise(
@@ -723,6 +742,10 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                         _assert_render_aligned(
                             case, env, oracle, f"step {step}"
                         )
+                        if bool(expected.terminated) or bool(
+                            expected.truncated
+                        ):
+                            break
                 finally:
                     env.close()
                     oracle.close()

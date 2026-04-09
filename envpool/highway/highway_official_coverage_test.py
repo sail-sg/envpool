@@ -80,6 +80,8 @@ _CASES = (
     _Case("two-way-v0"),
     _Case("u-turn-v0"),
 )
+_COVERAGE_RENDER_STEPS = 8
+_COVERAGE_DETERMINISTIC_STEPS = 100
 
 
 def _registered_highway_ids() -> set[str]:
@@ -199,7 +201,7 @@ class _HighwayOfficialCoverageTest(absltest.TestCase):
                     obs, _ = env.reset()
                     self.assertIsNotNone(obs)
                     frames = []
-                    for _ in range(3):
+                    for _ in range(_COVERAGE_RENDER_STEPS):
                         obs, reward, terminated, truncated, _ = _envpool_step(
                             env, case, action
                         )
@@ -245,7 +247,7 @@ class _HighwayOfficialCoverageTest(absltest.TestCase):
                     )
 
                     action = _envpool_action(case, env0.action_space)
-                    for _ in range(5):
+                    for _ in range(_COVERAGE_DETERMINISTIC_STEPS):
                         step0 = _envpool_step(env0, case, action)
                         step1 = _envpool_step(env1, case, action)
                         for actual, expected in zip(
