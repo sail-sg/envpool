@@ -97,351 +97,283 @@ from envpool.python.api import py_env
 (
     DmcAcrobotEnvSpec,
     DmcAcrobotDMEnvPool,
-    DmcAcrobotGymEnvPool,
     DmcAcrobotGymnasiumEnvPool,
 ) = py_env(_DmcAcrobotEnvSpec, _DmcAcrobotEnvPool)
 (
     DmcAcrobotPixelEnvSpec,
     DmcAcrobotPixelDMEnvPool,
-    DmcAcrobotPixelGymEnvPool,
     DmcAcrobotPixelGymnasiumEnvPool,
 ) = py_env(_DmcAcrobotPixelEnvSpec, _DmcAcrobotPixelEnvPool)
 (
     DmcBallInCupEnvSpec,
     DmcBallInCupDMEnvPool,
-    DmcBallInCupGymEnvPool,
     DmcBallInCupGymnasiumEnvPool,
 ) = py_env(_DmcBallInCupEnvSpec, _DmcBallInCupEnvPool)
 (
     DmcBallInCupPixelEnvSpec,
     DmcBallInCupPixelDMEnvPool,
-    DmcBallInCupPixelGymEnvPool,
     DmcBallInCupPixelGymnasiumEnvPool,
 ) = py_env(_DmcBallInCupPixelEnvSpec, _DmcBallInCupPixelEnvPool)
 (
     DmcCartpoleEnvSpec,
     DmcCartpoleDMEnvPool,
-    DmcCartpoleGymEnvPool,
     DmcCartpoleGymnasiumEnvPool,
 ) = py_env(_DmcCartpoleEnvSpec, _DmcCartpoleEnvPool)
 (
     DmcCartpolePixelEnvSpec,
     DmcCartpolePixelDMEnvPool,
-    DmcCartpolePixelGymEnvPool,
     DmcCartpolePixelGymnasiumEnvPool,
 ) = py_env(_DmcCartpolePixelEnvSpec, _DmcCartpolePixelEnvPool)
 (
     DmcCheetahEnvSpec,
     DmcCheetahDMEnvPool,
-    DmcCheetahGymEnvPool,
     DmcCheetahGymnasiumEnvPool,
 ) = py_env(_DmcCheetahEnvSpec, _DmcCheetahEnvPool)
 (
     DmcCheetahPixelEnvSpec,
     DmcCheetahPixelDMEnvPool,
-    DmcCheetahPixelGymEnvPool,
     DmcCheetahPixelGymnasiumEnvPool,
 ) = py_env(_DmcCheetahPixelEnvSpec, _DmcCheetahPixelEnvPool)
 (
     DmcDogEnvSpec,
     DmcDogDMEnvPool,
-    DmcDogGymEnvPool,
     DmcDogGymnasiumEnvPool,
 ) = py_env(_DmcDogEnvSpec, _DmcDogEnvPool)
 (
     DmcDogPixelEnvSpec,
     DmcDogPixelDMEnvPool,
-    DmcDogPixelGymEnvPool,
     DmcDogPixelGymnasiumEnvPool,
 ) = py_env(_DmcDogPixelEnvSpec, _DmcDogPixelEnvPool)
 (
     DmcFingerEnvSpec,
     DmcFingerDMEnvPool,
-    DmcFingerGymEnvPool,
     DmcFingerGymnasiumEnvPool,
 ) = py_env(_DmcFingerEnvSpec, _DmcFingerEnvPool)
 (
     DmcFingerPixelEnvSpec,
     DmcFingerPixelDMEnvPool,
-    DmcFingerPixelGymEnvPool,
     DmcFingerPixelGymnasiumEnvPool,
 ) = py_env(_DmcFingerPixelEnvSpec, _DmcFingerPixelEnvPool)
 (
     DmcFishEnvSpec,
     DmcFishDMEnvPool,
-    DmcFishGymEnvPool,
     DmcFishGymnasiumEnvPool,
 ) = py_env(_DmcFishEnvSpec, _DmcFishEnvPool)
 (
     DmcFishPixelEnvSpec,
     DmcFishPixelDMEnvPool,
-    DmcFishPixelGymEnvPool,
     DmcFishPixelGymnasiumEnvPool,
 ) = py_env(_DmcFishPixelEnvSpec, _DmcFishPixelEnvPool)
 (
     DmcHopperEnvSpec,
     DmcHopperDMEnvPool,
-    DmcHopperGymEnvPool,
     DmcHopperGymnasiumEnvPool,
 ) = py_env(_DmcHopperEnvSpec, _DmcHopperEnvPool)
 (
     DmcHopperPixelEnvSpec,
     DmcHopperPixelDMEnvPool,
-    DmcHopperPixelGymEnvPool,
     DmcHopperPixelGymnasiumEnvPool,
 ) = py_env(_DmcHopperPixelEnvSpec, _DmcHopperPixelEnvPool)
 (
     DmcHumanoidEnvSpec,
     DmcHumanoidDMEnvPool,
-    DmcHumanoidGymEnvPool,
     DmcHumanoidGymnasiumEnvPool,
 ) = py_env(_DmcHumanoidEnvSpec, _DmcHumanoidEnvPool)
 (
     DmcHumanoidPixelEnvSpec,
     DmcHumanoidPixelDMEnvPool,
-    DmcHumanoidPixelGymEnvPool,
     DmcHumanoidPixelGymnasiumEnvPool,
 ) = py_env(_DmcHumanoidPixelEnvSpec, _DmcHumanoidPixelEnvPool)
 (
     DmcHumanoidCMUEnvSpec,
     DmcHumanoidCMUDMEnvPool,
-    DmcHumanoidCMUGymEnvPool,
     DmcHumanoidCMUGymnasiumEnvPool,
 ) = py_env(_DmcHumanoidCMUEnvSpec, _DmcHumanoidCMUEnvPool)
 (
     DmcHumanoidCMUPixelEnvSpec,
     DmcHumanoidCMUPixelDMEnvPool,
-    DmcHumanoidCMUPixelGymEnvPool,
     DmcHumanoidCMUPixelGymnasiumEnvPool,
 ) = py_env(_DmcHumanoidCMUPixelEnvSpec, _DmcHumanoidCMUPixelEnvPool)
 (
     DmcLqrEnvSpec,
     DmcLqrDMEnvPool,
-    DmcLqrGymEnvPool,
     DmcLqrGymnasiumEnvPool,
 ) = py_env(_DmcLqrEnvSpec, _DmcLqrEnvPool)
 (
     DmcLqrPixelEnvSpec,
     DmcLqrPixelDMEnvPool,
-    DmcLqrPixelGymEnvPool,
     DmcLqrPixelGymnasiumEnvPool,
 ) = py_env(_DmcLqrPixelEnvSpec, _DmcLqrPixelEnvPool)
 (
     DmcManipulatorEnvSpec,
     DmcManipulatorDMEnvPool,
-    DmcManipulatorGymEnvPool,
     DmcManipulatorGymnasiumEnvPool,
 ) = py_env(_DmcManipulatorEnvSpec, _DmcManipulatorEnvPool)
 (
     DmcManipulatorPixelEnvSpec,
     DmcManipulatorPixelDMEnvPool,
-    DmcManipulatorPixelGymEnvPool,
     DmcManipulatorPixelGymnasiumEnvPool,
 ) = py_env(_DmcManipulatorPixelEnvSpec, _DmcManipulatorPixelEnvPool)
 (
     DmcPendulumEnvSpec,
     DmcPendulumDMEnvPool,
-    DmcPendulumGymEnvPool,
     DmcPendulumGymnasiumEnvPool,
 ) = py_env(_DmcPendulumEnvSpec, _DmcPendulumEnvPool)
 (
     DmcPendulumPixelEnvSpec,
     DmcPendulumPixelDMEnvPool,
-    DmcPendulumPixelGymEnvPool,
     DmcPendulumPixelGymnasiumEnvPool,
 ) = py_env(_DmcPendulumPixelEnvSpec, _DmcPendulumPixelEnvPool)
 (
     DmcPointMassEnvSpec,
     DmcPointMassDMEnvPool,
-    DmcPointMassGymEnvPool,
     DmcPointMassGymnasiumEnvPool,
 ) = py_env(_DmcPointMassEnvSpec, _DmcPointMassEnvPool)
 (
     DmcPointMassPixelEnvSpec,
     DmcPointMassPixelDMEnvPool,
-    DmcPointMassPixelGymEnvPool,
     DmcPointMassPixelGymnasiumEnvPool,
 ) = py_env(_DmcPointMassPixelEnvSpec, _DmcPointMassPixelEnvPool)
 (
     DmcQuadrupedEnvSpec,
     DmcQuadrupedDMEnvPool,
-    DmcQuadrupedGymEnvPool,
     DmcQuadrupedGymnasiumEnvPool,
 ) = py_env(_DmcQuadrupedEnvSpec, _DmcQuadrupedEnvPool)
 (
     DmcQuadrupedPixelEnvSpec,
     DmcQuadrupedPixelDMEnvPool,
-    DmcQuadrupedPixelGymEnvPool,
     DmcQuadrupedPixelGymnasiumEnvPool,
 ) = py_env(_DmcQuadrupedPixelEnvSpec, _DmcQuadrupedPixelEnvPool)
 (
     DmcReacherEnvSpec,
     DmcReacherDMEnvPool,
-    DmcReacherGymEnvPool,
     DmcReacherGymnasiumEnvPool,
 ) = py_env(_DmcReacherEnvSpec, _DmcReacherEnvPool)
 (
     DmcReacherPixelEnvSpec,
     DmcReacherPixelDMEnvPool,
-    DmcReacherPixelGymEnvPool,
     DmcReacherPixelGymnasiumEnvPool,
 ) = py_env(_DmcReacherPixelEnvSpec, _DmcReacherPixelEnvPool)
 (
     DmcStackerEnvSpec,
     DmcStackerDMEnvPool,
-    DmcStackerGymEnvPool,
     DmcStackerGymnasiumEnvPool,
 ) = py_env(_DmcStackerEnvSpec, _DmcStackerEnvPool)
 (
     DmcStackerPixelEnvSpec,
     DmcStackerPixelDMEnvPool,
-    DmcStackerPixelGymEnvPool,
     DmcStackerPixelGymnasiumEnvPool,
 ) = py_env(_DmcStackerPixelEnvSpec, _DmcStackerPixelEnvPool)
 (
     DmcSwimmerEnvSpec,
     DmcSwimmerDMEnvPool,
-    DmcSwimmerGymEnvPool,
     DmcSwimmerGymnasiumEnvPool,
 ) = py_env(_DmcSwimmerEnvSpec, _DmcSwimmerEnvPool)
 (
     DmcSwimmerPixelEnvSpec,
     DmcSwimmerPixelDMEnvPool,
-    DmcSwimmerPixelGymEnvPool,
     DmcSwimmerPixelGymnasiumEnvPool,
 ) = py_env(_DmcSwimmerPixelEnvSpec, _DmcSwimmerPixelEnvPool)
 (
     DmcWalkerEnvSpec,
     DmcWalkerDMEnvPool,
-    DmcWalkerGymEnvPool,
     DmcWalkerGymnasiumEnvPool,
 ) = py_env(_DmcWalkerEnvSpec, _DmcWalkerEnvPool)
 (
     DmcWalkerPixelEnvSpec,
     DmcWalkerPixelDMEnvPool,
-    DmcWalkerPixelGymEnvPool,
     DmcWalkerPixelGymnasiumEnvPool,
 ) = py_env(_DmcWalkerPixelEnvSpec, _DmcWalkerPixelEnvPool)
 
 __all__ = [
     "DmcAcrobotEnvSpec",
     "DmcAcrobotDMEnvPool",
-    "DmcAcrobotGymEnvPool",
     "DmcAcrobotGymnasiumEnvPool",
     "DmcAcrobotPixelEnvSpec",
     "DmcAcrobotPixelDMEnvPool",
-    "DmcAcrobotPixelGymEnvPool",
     "DmcAcrobotPixelGymnasiumEnvPool",
     "DmcBallInCupEnvSpec",
     "DmcBallInCupDMEnvPool",
-    "DmcBallInCupGymEnvPool",
     "DmcBallInCupGymnasiumEnvPool",
     "DmcBallInCupPixelEnvSpec",
     "DmcBallInCupPixelDMEnvPool",
-    "DmcBallInCupPixelGymEnvPool",
     "DmcBallInCupPixelGymnasiumEnvPool",
     "DmcCartpoleEnvSpec",
     "DmcCartpoleDMEnvPool",
-    "DmcCartpoleGymEnvPool",
     "DmcCartpoleGymnasiumEnvPool",
     "DmcCartpolePixelEnvSpec",
     "DmcCartpolePixelDMEnvPool",
-    "DmcCartpolePixelGymEnvPool",
     "DmcCartpolePixelGymnasiumEnvPool",
     "DmcCheetahEnvSpec",
     "DmcCheetahDMEnvPool",
-    "DmcCheetahGymEnvPool",
     "DmcCheetahGymnasiumEnvPool",
     "DmcCheetahPixelEnvSpec",
     "DmcCheetahPixelDMEnvPool",
-    "DmcCheetahPixelGymEnvPool",
     "DmcCheetahPixelGymnasiumEnvPool",
     "DmcFingerEnvSpec",
     "DmcFingerDMEnvPool",
-    "DmcFingerGymEnvPool",
     "DmcFingerGymnasiumEnvPool",
     "DmcFingerPixelEnvSpec",
     "DmcFingerPixelDMEnvPool",
-    "DmcFingerPixelGymEnvPool",
     "DmcFingerPixelGymnasiumEnvPool",
     "DmcFishEnvSpec",
     "DmcFishDMEnvPool",
-    "DmcFishGymEnvPool",
     "DmcFishGymnasiumEnvPool",
     "DmcFishPixelEnvSpec",
     "DmcFishPixelDMEnvPool",
-    "DmcFishPixelGymEnvPool",
     "DmcFishPixelGymnasiumEnvPool",
     "DmcHopperEnvSpec",
     "DmcHopperDMEnvPool",
-    "DmcHopperGymEnvPool",
     "DmcHopperGymnasiumEnvPool",
     "DmcHopperPixelEnvSpec",
     "DmcHopperPixelDMEnvPool",
-    "DmcHopperPixelGymEnvPool",
     "DmcHopperPixelGymnasiumEnvPool",
     "DmcHumanoidEnvSpec",
     "DmcHumanoidDMEnvPool",
-    "DmcHumanoidGymEnvPool",
     "DmcHumanoidGymnasiumEnvPool",
     "DmcHumanoidPixelEnvSpec",
     "DmcHumanoidPixelDMEnvPool",
-    "DmcHumanoidPixelGymEnvPool",
     "DmcHumanoidPixelGymnasiumEnvPool",
     "DmcHumanoidCMUEnvSpec",
     "DmcHumanoidCMUDMEnvPool",
-    "DmcHumanoidCMUGymEnvPool",
     "DmcHumanoidCMUGymnasiumEnvPool",
     "DmcHumanoidCMUPixelEnvSpec",
     "DmcHumanoidCMUPixelDMEnvPool",
-    "DmcHumanoidCMUPixelGymEnvPool",
     "DmcHumanoidCMUPixelGymnasiumEnvPool",
     "DmcManipulatorEnvSpec",
     "DmcManipulatorDMEnvPool",
-    "DmcManipulatorGymEnvPool",
     "DmcManipulatorGymnasiumEnvPool",
     "DmcManipulatorPixelEnvSpec",
     "DmcManipulatorPixelDMEnvPool",
-    "DmcManipulatorPixelGymEnvPool",
     "DmcManipulatorPixelGymnasiumEnvPool",
     "DmcPendulumEnvSpec",
     "DmcPendulumDMEnvPool",
-    "DmcPendulumGymEnvPool",
     "DmcPendulumGymnasiumEnvPool",
     "DmcPendulumPixelEnvSpec",
     "DmcPendulumPixelDMEnvPool",
-    "DmcPendulumPixelGymEnvPool",
     "DmcPendulumPixelGymnasiumEnvPool",
     "DmcPointMassEnvSpec",
     "DmcPointMassDMEnvPool",
-    "DmcPointMassGymEnvPool",
     "DmcPointMassGymnasiumEnvPool",
     "DmcPointMassPixelEnvSpec",
     "DmcPointMassPixelDMEnvPool",
-    "DmcPointMassPixelGymEnvPool",
     "DmcPointMassPixelGymnasiumEnvPool",
     "DmcReacherEnvSpec",
     "DmcReacherDMEnvPool",
-    "DmcReacherGymEnvPool",
     "DmcReacherGymnasiumEnvPool",
     "DmcReacherPixelEnvSpec",
     "DmcReacherPixelDMEnvPool",
-    "DmcReacherPixelGymEnvPool",
     "DmcReacherPixelGymnasiumEnvPool",
     "DmcSwimmerEnvSpec",
     "DmcSwimmerDMEnvPool",
-    "DmcSwimmerGymEnvPool",
     "DmcSwimmerGymnasiumEnvPool",
     "DmcSwimmerPixelEnvSpec",
     "DmcSwimmerPixelDMEnvPool",
-    "DmcSwimmerPixelGymEnvPool",
     "DmcSwimmerPixelGymnasiumEnvPool",
     "DmcWalkerEnvSpec",
     "DmcWalkerDMEnvPool",
-    "DmcWalkerGymEnvPool",
     "DmcWalkerGymnasiumEnvPool",
     "DmcWalkerPixelEnvSpec",
     "DmcWalkerPixelDMEnvPool",
-    "DmcWalkerPixelGymEnvPool",
     "DmcWalkerPixelGymnasiumEnvPool",
 ]

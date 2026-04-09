@@ -29,8 +29,6 @@ ObsType: TypeAlias = Any
 InfoDict: TypeAlias = dict[str, Any]
 ActionInput: TypeAlias = dict[str, Any] | np.ndarray
 RenderEnvId: TypeAlias = int | Sequence[int] | np.ndarray | None
-GymResetReturn: TypeAlias = tuple[ObsType, InfoDict]
-GymStepReturn: TypeAlias = tuple[ObsType, Any, Any, Any, InfoDict]
 GymnasiumResetReturn: TypeAlias = tuple[ObsType, InfoDict]
 GymnasiumStepReturn: TypeAlias = tuple[ObsType, Any, Any, Any, InfoDict]
 
@@ -345,59 +343,6 @@ class DMEnvPool(EnvPool, Protocol):
         env_id: np.ndarray | None = None,
     ) -> TimeStep:
         """Reset the dm_env-compatible envpool."""
-
-
-class GymEnvPool(EnvPool, Protocol):
-    """gym-compatible EnvPool interface."""
-
-    @property
-    def observation_space(self) -> Any:
-        """Gym observation space."""
-
-    @property
-    def action_space(self) -> Any:
-        """Gym action space."""
-
-    @overload
-    def recv(
-        self,
-        reset: Literal[False] = False,
-        return_info: bool = True,
-    ) -> GymStepReturn: ...
-
-    @overload
-    def recv(
-        self,
-        reset: Literal[True],
-        return_info: bool = True,
-    ) -> GymResetReturn: ...
-
-    @overload
-    def recv(
-        self,
-        reset: bool = False,
-        return_info: bool = True,
-    ) -> GymResetReturn | GymStepReturn: ...
-
-    def recv(
-        self,
-        reset: bool = False,
-        return_info: bool = True,
-    ) -> GymResetReturn | GymStepReturn:
-        """Recv a gym observation/reset tuple."""
-
-    def step(
-        self,
-        action: ActionInput,
-        env_id: np.ndarray | None = None,
-    ) -> GymStepReturn:
-        """Step the gym-compatible envpool."""
-
-    def reset(
-        self,
-        env_id: np.ndarray | None = None,
-    ) -> GymResetReturn:
-        """Reset the gym-compatible envpool."""
 
 
 class GymnasiumEnvPool(EnvPool, Protocol):

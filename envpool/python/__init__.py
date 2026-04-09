@@ -13,12 +13,11 @@
 # limitations under the License.
 """Python interface for EnvPool."""
 
-from .protocol import DMEnvPool, EnvPool, EnvSpec, GymEnvPool, GymnasiumEnvPool
+from .protocol import DMEnvPool, EnvPool, EnvSpec, GymnasiumEnvPool
 
 __all__ = [
     "DMEnvPool",
     "EnvPool",
     "EnvSpec",
-    "GymEnvPool",
     "GymnasiumEnvPool",
 ]

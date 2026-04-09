@@ -48,8 +48,8 @@ pybind_extension(
 py_library(
     name = "classic_control",
     srcs = ["__init__.py"],
-    imports = ["../.."],
     data = [":classic_control_envpool"],
+    imports = ["../.."],
     deps = ["//envpool/python:api"],
 )
 

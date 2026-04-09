@@ -43,7 +43,6 @@ for game in _vizdoom_game_list() + ["vizdoom_custom"]:
         import_path="envpool.vizdoom",
         spec_cls="VizdoomEnvSpec",
         dm_cls="VizdoomDMEnvPool",
-        gym_cls="VizdoomGymEnvPool",
         gymnasium_cls="VizdoomGymnasiumEnvPool",
         cfg_path=cfg_path,
         wad_path=wad_path,

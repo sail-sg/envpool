@@ -30,62 +30,53 @@ from .toy_text_envpool import (
     _TaxiEnvSpec,
 )
 
-(CatchEnvSpec, CatchDMEnvPool, CatchGymEnvPool, CatchGymnasiumEnvPool) = py_env(
+(CatchEnvSpec, CatchDMEnvPool, CatchGymnasiumEnvPool) = py_env(
     _CatchEnvSpec, _CatchEnvPool
 )
 
 (
     FrozenLakeEnvSpec,
     FrozenLakeDMEnvPool,
-    FrozenLakeGymEnvPool,
     FrozenLakeGymnasiumEnvPool,
 ) = py_env(_FrozenLakeEnvSpec, _FrozenLakeEnvPool)
 
-(TaxiEnvSpec, TaxiDMEnvPool, TaxiGymEnvPool, TaxiGymnasiumEnvPool) = py_env(
+(TaxiEnvSpec, TaxiDMEnvPool, TaxiGymnasiumEnvPool) = py_env(
     _TaxiEnvSpec, _TaxiEnvPool
 )
 
-(NChainEnvSpec, NChainDMEnvPool, NChainGymEnvPool, NChainGymnasiumEnvPool) = (
-    py_env(_NChainEnvSpec, _NChainEnvPool)
+(NChainEnvSpec, NChainDMEnvPool, NChainGymnasiumEnvPool) = py_env(
+    _NChainEnvSpec, _NChainEnvPool
 )
 
 (
     CliffWalkingEnvSpec,
     CliffWalkingDMEnvPool,
-    CliffWalkingGymEnvPool,
     CliffWalkingGymnasiumEnvPool,
 ) = py_env(_CliffWalkingEnvSpec, _CliffWalkingEnvPool)
 
 (
     BlackjackEnvSpec,
     BlackjackDMEnvPool,
-    BlackjackGymEnvPool,
     BlackjackGymnasiumEnvPool,
 ) = py_env(_BlackjackEnvSpec, _BlackjackEnvPool)
 
 __all__ = [
     "CatchEnvSpec",
     "CatchDMEnvPool",
-    "CatchGymEnvPool",
     "CatchGymnasiumEnvPool",
     "FrozenLakeEnvSpec",
     "FrozenLakeDMEnvPool",
-    "FrozenLakeGymEnvPool",
     "FrozenLakeGymnasiumEnvPool",
     "TaxiEnvSpec",
     "TaxiDMEnvPool",
-    "TaxiGymEnvPool",
     "TaxiGymnasiumEnvPool",
     "NChainEnvSpec",
     "NChainDMEnvPool",
-    "NChainGymEnvPool",
     "NChainGymnasiumEnvPool",
     "CliffWalkingEnvSpec",
     "CliffWalkingDMEnvPool",
-    "CliffWalkingGymEnvPool",
     "CliffWalkingGymnasiumEnvPool",
     "BlackjackEnvSpec",
     "BlackjackDMEnvPool",
-    "BlackjackGymEnvPool",
     "BlackjackGymnasiumEnvPool",
 ]
