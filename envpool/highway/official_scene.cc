@@ -91,10 +91,15 @@ std::array<Vec2, 9> RegulationPoints(const CollisionBox& box) {
   const double sin_h = std::sin(box.heading);
   const Vec2 half_length{box.length / 2.0, 0.0};
   const Vec2 half_width{0.0, box.width / 2.0};
-  const std::array<Vec2, 9> local{
-      -1.0 * half_length - half_width, -1.0 * half_length + half_width,
-      half_length + half_width, half_length - half_width, Vec2{},
-      -1.0 * half_length, half_length, -1.0 * half_width, half_width};
+  const std::array<Vec2, 9> local{-1.0 * half_length - half_width,
+                                  -1.0 * half_length + half_width,
+                                  half_length + half_width,
+                                  half_length - half_width,
+                                  Vec2{},
+                                  -1.0 * half_length,
+                                  half_length,
+                                  -1.0 * half_width,
+                                  half_width};
 
   std::array<Vec2, 9> points;
   for (std::size_t i = 0; i < local.size(); ++i) {
@@ -351,9 +356,8 @@ double IDMAcceleration(const Road& road, const Vehicle* ego,
                                         ego->idm_delta));
   if (HasNeighbor(front)) {
     const double d = LaneDistanceTo(road.network, *ego, front);
-    acceleration -=
-        ego->idm_comfort_acc_max *
-        std::pow(DesiredGap(*ego, front) / NotZero(d), 2.0);
+    acceleration -= ego->idm_comfort_acc_max *
+                    std::pow(DesiredGap(*ego, front) / NotZero(d), 2.0);
   }
   return acceleration;
 }
@@ -372,8 +376,8 @@ std::vector<PositionHeading> PredictTrajectoryConstantSpeed(const Road& road,
       vehicle.kind == VehicleKind::kMDP || vehicle.kind == VehicleKind::kIDM) {
     const Lane& lane = road.network.GetLane(vehicle.lane_index);
     const LaneCoordinates coordinates = lane.LocalCoordinates(vehicle.position);
-    Route route = vehicle.route.empty() ? Route{vehicle.lane_index}
-                                        : vehicle.route;
+    Route route =
+        vehicle.route.empty() ? Route{vehicle.lane_index} : vehicle.route;
     for (int i = 1; i <= 11; ++i) {
       const double time = 0.25 * static_cast<double>(i);
       trajectory.push_back(road.network.PositionHeadingAlongRoute(
