@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, cast
 
 import gymnasium as gym
 import highway_env  # noqa: F401
@@ -86,7 +86,7 @@ def _registered_highway_ids() -> set[str]:
     }
 
 
-def _make_oracle(official_id: str) -> gym.Env:
+def _make_oracle(official_id: str) -> Any:
     constructor_kwargs: dict[str, Any] = {}
     if official_id.startswith("intersection-"):
         constructor_kwargs["config"] = {
@@ -99,7 +99,7 @@ def _make_oracle(official_id: str) -> gym.Env:
         )
     except TypeError:
         wrapper = gym.make(official_id, **constructor_kwargs)
-    env = wrapper.unwrapped
+    env = cast(Any, wrapper.unwrapped)
     if official_id.startswith("intersection-"):
         env.configure(env.default_config())
     env.configure({"offscreen_rendering": True, "render_agent": True})
@@ -123,6 +123,12 @@ def _envpool_step(env: Any, case: _Case, action: np.ndarray) -> tuple[Any, ...]:
     return env.step(action, env_id)
 
 
+def _render_rgb(env: Any) -> np.ndarray:
+    frame = env.render()
+    assert frame is not None
+    return frame
+
+
 def _assert_tree_equal(
     test_case: absltest.TestCase, actual: Any, expected: Any
 ) -> None:
@@ -141,11 +147,11 @@ def _assert_space_compatible(
     official_space: spaces.Space[Any],
 ) -> None:
     if isinstance(official_space, spaces.Tuple):
-        test_case.assertIsInstance(envpool_space, type(official_space[0]))
+        assert isinstance(envpool_space, type(official_space[0]))
         test_case.assertEqual(envpool_space.shape, official_space[0].shape)
         test_case.assertEqual(envpool_space.dtype, official_space[0].dtype)
     elif isinstance(official_space, spaces.Dict):
-        test_case.assertIsInstance(envpool_space, spaces.Dict)
+        assert isinstance(envpool_space, spaces.Dict)
         test_case.assertEqual(envpool_space.keys(), official_space.keys())
         for key, official_subspace in official_space.items():
             _assert_space_compatible(
@@ -192,7 +198,7 @@ class _HighwayOfficialCoverageTest(absltest.TestCase):
                         self.assertEqual(terminated.dtype, np.dtype(bool))
                         self.assertEqual(truncated.dtype, np.dtype(bool))
                         self.assertIsNotNone(obs)
-                        frame = env.render()
+                        frame = _render_rgb(env)
                         frames.append(frame)
                         self.assertEqual(frame.dtype, np.dtype(np.uint8))
                         self.assertEqual(frame.shape[0], 1)
@@ -226,7 +232,7 @@ class _HighwayOfficialCoverageTest(absltest.TestCase):
                     obs1, _ = env1.reset()
                     _assert_tree_equal(self, obs0, obs1)
                     np.testing.assert_array_equal(
-                        env0.render()[0], env1.render()[0]
+                        _render_rgb(env0)[0], _render_rgb(env1)[0]
                     )
 
                     action = _envpool_action(case, env0.action_space)
@@ -239,7 +245,7 @@ class _HighwayOfficialCoverageTest(absltest.TestCase):
                             _assert_tree_equal(self, actual, expected)
                         _assert_tree_equal(self, step0[-1], step1[-1])
                         np.testing.assert_array_equal(
-                            env0.render()[0], env1.render()[0]
+                            _render_rgb(env0)[0], _render_rgb(env1)[0]
                         )
                 finally:
                     env0.close()

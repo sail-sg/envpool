@@ -37,7 +37,9 @@ _DEFAULT_ALIGN_CONFIG = {
     "policy_frequency": 1,
 }
 
-_STRAIGHT_ROAD_ALIGN_CONFIGS = (
+_STRAIGHT_ROAD_ALIGN_CONFIGS: tuple[
+    tuple[str, str, str, dict[str, Any]], ...
+] = (
     ("highway_v0_no_traffic", "Highway-v0", "highway-v0", {}),
     (
         "highway_v0_two_lane_left_ego",
@@ -160,6 +162,8 @@ class _HighwayAlignTest(absltest.TestCase):
             self.assertEqual(
                 env.observation_space.shape, oracle.observation_space.shape
             )
+            assert isinstance(env.action_space, gym.spaces.Discrete)
+            assert isinstance(oracle.action_space, gym.spaces.Discrete)
             self.assertEqual(env.action_space.n, oracle.action_space.n)
         finally:
             oracle.close()
@@ -179,7 +183,7 @@ class _HighwayAlignTest(absltest.TestCase):
             _patch_oracle(oracle, _debug_state(env))
             np.testing.assert_array_equal(
                 obs[0],
-                oracle.unwrapped.observation_type.observe(),
+                cast(Any, oracle.unwrapped).observation_type.observe(),
             )
 
             for action in _ALIGN_ACTIONS:
@@ -194,7 +198,7 @@ class _HighwayAlignTest(absltest.TestCase):
                     np.asarray([action], dtype=np.int64)
                 )
                 np.testing.assert_array_equal(obs[0], oracle_obs)
-                _assert_scalar_matches_float32(self, rew[0], oracle_rew)
+                _assert_scalar_matches_float32(self, rew[0], float(oracle_rew))
                 self.assertEqual(bool(term[0]), oracle_term)
                 self.assertEqual(bool(trunc[0]), oracle_trunc)
                 _assert_scalar_matches_float32(
