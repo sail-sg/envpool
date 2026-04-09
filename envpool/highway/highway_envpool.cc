@@ -43,13 +43,49 @@ using PyNativeOccupancyEnvPool = PyEnvPool<hn::NativeOccupancyPool>;
 using PyNativeMultiAgentEnvSpec = PyEnvSpec<hn::NativeMultiAgentSpec>;
 using PyNativeMultiAgentEnvPool = PyEnvPool<hn::NativeMultiAgentPool>;
 
+// Native highway variants need the same test-only state export as HighwayEnv.
+// Keep the pybind class names identical to REGISTER().
+#define REGISTER_HIGHWAY_NATIVE(MODULE, SPEC, ENVPOOL)                        \
+  py::class_<SPEC>(MODULE, "_" #SPEC,                                         \
+                   py::metaclass(py::module_::import("abc").attr("ABCMeta"))) \
+      .def(py::init<const typename SPEC::ConfigValues&>())                    \
+      .def_readonly("_config_values", &SPEC::py_config_values)                \
+      .def_property_readonly(                                                 \
+          "_state_spec", [](const SPEC& self) { return self.StateSpecPy(); }) \
+      .def_property_readonly(                                                 \
+          "_action_spec",                                                     \
+          [](const SPEC& self) { return self.ActionSpecPy(); })               \
+      .def_readonly_static("_state_keys", &SPEC::py_state_keys)               \
+      .def_readonly_static("_action_keys", &SPEC::py_action_keys)             \
+      .def_readonly_static("_config_keys", &SPEC::py_config_keys)             \
+      .def_readonly_static("_default_config_values",                          \
+                           &SPEC::py_default_config_values);                  \
+  py::class_<ENVPOOL>(                                                        \
+      MODULE, "_" #ENVPOOL,                                                   \
+      py::metaclass(py::module_::import("abc").attr("ABCMeta")))              \
+      .def(py::init<const SPEC&>())                                           \
+      .def_readonly("_spec", &ENVPOOL::py_spec)                               \
+      .def("_recv", &ENVPOOL::PyRecv)                                         \
+      .def("_send", &ENVPOOL::PySend)                                         \
+      .def("_reset", &ENVPOOL::PyReset)                                       \
+      .def("_render", &ENVPOOL::PyRender)                                     \
+      .def_readonly_static("_state_keys", &ENVPOOL::py_state_keys)            \
+      .def_readonly_static("_action_keys", &ENVPOOL::py_action_keys)          \
+      .def("_xla", &ENVPOOL::Xla)                                             \
+      .def("_debug_states", &ENVPOOL::DebugStates);
+
 PYBIND11_MODULE(highway_envpool, m) {
   using highway::HighwayDebugState;
   using highway::HighwayVehicleDebugState;
 
   py::class_<HighwayVehicleDebugState>(m, "_HighwayVehicleDebugState")
       .def_readonly("kind", &HighwayVehicleDebugState::kind)
+      .def_readonly("lane_from", &HighwayVehicleDebugState::lane_from)
+      .def_readonly("lane_to", &HighwayVehicleDebugState::lane_to)
       .def_readonly("lane_index", &HighwayVehicleDebugState::lane_index)
+      .def_readonly("target_lane_from",
+                    &HighwayVehicleDebugState::target_lane_from)
+      .def_readonly("target_lane_to", &HighwayVehicleDebugState::target_lane_to)
       .def_readonly("target_lane_index",
                     &HighwayVehicleDebugState::target_lane_index)
       .def_readonly("speed_index", &HighwayVehicleDebugState::speed_index)
@@ -61,14 +97,25 @@ PYBIND11_MODULE(highway_envpool, m) {
       .def_readonly("target_speed0", &HighwayVehicleDebugState::target_speed0)
       .def_readonly("target_speed1", &HighwayVehicleDebugState::target_speed1)
       .def_readonly("target_speed2", &HighwayVehicleDebugState::target_speed2)
+      .def_readonly("has_goal", &HighwayVehicleDebugState::has_goal)
+      .def_readonly("goal_x", &HighwayVehicleDebugState::goal_x)
+      .def_readonly("goal_y", &HighwayVehicleDebugState::goal_y)
+      .def_readonly("goal_heading", &HighwayVehicleDebugState::goal_heading)
+      .def_readonly("goal_speed", &HighwayVehicleDebugState::goal_speed)
       .def_readonly("idm_delta", &HighwayVehicleDebugState::idm_delta)
       .def_readonly("timer", &HighwayVehicleDebugState::timer)
       .def_readonly("crashed", &HighwayVehicleDebugState::crashed)
       .def_readonly("on_road", &HighwayVehicleDebugState::on_road)
       .def_readonly("check_collisions",
-                    &HighwayVehicleDebugState::check_collisions);
+                    &HighwayVehicleDebugState::check_collisions)
+      .def_readonly("enable_lane_change",
+                    &HighwayVehicleDebugState::enable_lane_change)
+      .def_readonly("route_from", &HighwayVehicleDebugState::route_from)
+      .def_readonly("route_to", &HighwayVehicleDebugState::route_to)
+      .def_readonly("route_id", &HighwayVehicleDebugState::route_id);
 
   py::class_<HighwayDebugState>(m, "_HighwayDebugState")
+      .def_readonly("scenario", &HighwayDebugState::scenario)
       .def_readonly("lanes_count", &HighwayDebugState::lanes_count)
       .def_readonly("simulation_frequency",
                     &HighwayDebugState::simulation_frequency)
@@ -108,17 +155,20 @@ PYBIND11_MODULE(highway_envpool, m) {
       .def("_xla", &PyHighwayEnvPool::Xla)
       .def("_debug_states", &PyHighwayEnvPool::DebugStates);
 
-  REGISTER(m, PyNativeKinematics5EnvSpec, PyNativeKinematics5EnvPool)
-  REGISTER(m, PyNativeKinematics7Action5EnvSpec,
-           PyNativeKinematics7Action5EnvPool)
-  REGISTER(m, PyNativeKinematics7Action3EnvSpec,
-           PyNativeKinematics7Action3EnvPool)
-  REGISTER(m, PyNativeKinematics8ContinuousEnvSpec,
-           PyNativeKinematics8ContinuousEnvPool)
-  REGISTER(m, PyNativeTTC5EnvSpec, PyNativeTTC5EnvPool)
-  REGISTER(m, PyNativeTTC16EnvSpec, PyNativeTTC16EnvPool)
-  REGISTER(m, PyNativeGoalEnvSpec, PyNativeGoalEnvPool)
-  REGISTER(m, PyNativeAttributesEnvSpec, PyNativeAttributesEnvPool)
-  REGISTER(m, PyNativeOccupancyEnvSpec, PyNativeOccupancyEnvPool)
-  REGISTER(m, PyNativeMultiAgentEnvSpec, PyNativeMultiAgentEnvPool)
+  REGISTER_HIGHWAY_NATIVE(m, PyNativeKinematics5EnvSpec,
+                          PyNativeKinematics5EnvPool)
+  REGISTER_HIGHWAY_NATIVE(m, PyNativeKinematics7Action5EnvSpec,
+                          PyNativeKinematics7Action5EnvPool)
+  REGISTER_HIGHWAY_NATIVE(m, PyNativeKinematics7Action3EnvSpec,
+                          PyNativeKinematics7Action3EnvPool)
+  REGISTER_HIGHWAY_NATIVE(m, PyNativeKinematics8ContinuousEnvSpec,
+                          PyNativeKinematics8ContinuousEnvPool)
+  REGISTER_HIGHWAY_NATIVE(m, PyNativeTTC5EnvSpec, PyNativeTTC5EnvPool)
+  REGISTER_HIGHWAY_NATIVE(m, PyNativeTTC16EnvSpec, PyNativeTTC16EnvPool)
+  REGISTER_HIGHWAY_NATIVE(m, PyNativeGoalEnvSpec, PyNativeGoalEnvPool)
+  REGISTER_HIGHWAY_NATIVE(m, PyNativeAttributesEnvSpec,
+                          PyNativeAttributesEnvPool)
+  REGISTER_HIGHWAY_NATIVE(m, PyNativeOccupancyEnvSpec, PyNativeOccupancyEnvPool)
+  REGISTER_HIGHWAY_NATIVE(m, PyNativeMultiAgentEnvSpec,
+                          PyNativeMultiAgentEnvPool)
 }

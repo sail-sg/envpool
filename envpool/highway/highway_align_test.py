@@ -105,14 +105,41 @@ def _make_oracle(oracle_env_id: str, config: dict[str, Any]) -> gym.Env:
 def _patch_oracle(oracle: gym.Env, debug_state: Any) -> None:
     from highway_env.vehicle.behavior import IDMVehicle
     from highway_env.vehicle.controller import MDPVehicle
+    from highway_env.vehicle.kinematics import Vehicle
+    from highway_env.vehicle.objects import Landmark
 
     env = cast(Any, oracle.unwrapped)
     road = env.road
     vehicles = []
+    controlled_vehicles = []
+    landmarks = []
+    is_parking = str(getattr(debug_state, "scenario", "")).startswith("parking")
+    is_plain_continuous = str(getattr(debug_state, "scenario", "")).startswith((
+        "racetrack",
+        "lane_keeping",
+    ))
     for i, source in enumerate(debug_state.vehicles):
-        lane_index = ("0", "1", int(source.lane_index))
-        target_lane_index = ("0", "1", int(source.target_lane_index))
-        if int(source.kind) == 0:
+        lane_index = (
+            str(getattr(source, "lane_from", "0")),
+            str(getattr(source, "lane_to", "1")),
+            int(source.lane_index),
+        )
+        target_lane_index = (
+            str(getattr(source, "target_lane_from", "0")),
+            str(getattr(source, "target_lane_to", "1")),
+            int(source.target_lane_index),
+        )
+        kind = int(source.kind)
+        if is_parking or is_plain_continuous:
+            vehicle = Vehicle(
+                road,
+                np.asarray([source.x, source.y], dtype=np.float64),
+                heading=float(source.heading),
+                speed=float(source.speed),
+            )
+            if is_plain_continuous and i == 0:
+                controlled_vehicles.append(vehicle)
+        elif kind in (0, 2):
             vehicle = MDPVehicle(
                 road,
                 np.asarray([source.x, source.y], dtype=np.float64),
@@ -132,7 +159,8 @@ def _patch_oracle(oracle: gym.Env, debug_state: Any) -> None:
             vehicle.speed_index = int(source.speed_index)
             vehicle.target_speed = float(source.target_speed)
             if i == 0:
-                env.controlled_vehicles = [vehicle]
+                env.vehicle = vehicle
+            controlled_vehicles.append(vehicle)
         else:
             vehicle = IDMVehicle(
                 road,
@@ -144,13 +172,62 @@ def _patch_oracle(oracle: gym.Env, debug_state: Any) -> None:
                 timer=float(source.timer),
             )
             vehicle.DELTA = float(source.idm_delta)
+            vehicle.enable_lane_change = bool(
+                getattr(source, "enable_lane_change", True)
+            )
+            if i == 0:
+                env.vehicle = vehicle
         vehicle.lane_index = lane_index
         vehicle.lane = road.network.get_lane(lane_index)
         vehicle.target_lane_index = target_lane_index
+        vehicle.speed = float(source.speed)
+        vehicle.heading = float(source.heading)
+        vehicle.position = np.asarray([source.x, source.y], dtype=np.float64)
+        vehicle.action = {"steering": 0.0, "acceleration": 0.0}
+        if getattr(source, "route_from", []):
+            vehicle.route = [
+                (
+                    str(route_from),
+                    str(route_to),
+                    None if int(route_id) < 0 else int(route_id),
+                )
+                for route_from, route_to, route_id in zip(
+                    source.route_from,
+                    source.route_to,
+                    source.route_id,
+                    strict=True,
+                )
+            ]
         vehicle.crashed = bool(source.crashed)
         vehicle.check_collisions = bool(source.check_collisions)
+        if bool(getattr(source, "has_goal", False)):
+            goal = Landmark(
+                road,
+                np.asarray([source.goal_x, source.goal_y], dtype=np.float64),
+                heading=float(source.goal_heading),
+                speed=float(source.goal_speed),
+            )
+            vehicle.goal = goal
+            landmarks.append(goal)
+            if i == 0:
+                env.vehicle = vehicle
+                env.controlled_vehicles = [vehicle]
         vehicles.append(vehicle)
     road.vehicles = vehicles
+    if controlled_vehicles:
+        env.vehicle = controlled_vehicles[0]
+        env.controlled_vehicles = controlled_vehicles
+        agents_observation_types = getattr(
+            env.observation_type, "agents_observation_types", ()
+        )
+        for obs_type, vehicle in zip(
+            agents_observation_types, controlled_vehicles, strict=False
+        ):
+            obs_type.observer_vehicle = vehicle
+    if landmarks:
+        road.objects = [
+            obj for obj in road.objects if obj.__class__.__name__ != "Landmark"
+        ] + landmarks
     env.time = float(debug_state.time)
     frames = int(
         debug_state.simulation_frequency // debug_state.policy_frequency

@@ -968,6 +968,7 @@ void HighwayEnv::Render(int width, int height, int /*camera_id*/,
 
 HighwayDebugState HighwayEnv::DebugState() const {
   HighwayDebugState state;
+  state.scenario = "highway";
   state.lanes_count = lanes_count_;
   state.simulation_frequency = simulation_frequency_;
   state.policy_frequency = policy_frequency_;
@@ -977,7 +978,11 @@ HighwayDebugState HighwayEnv::DebugState() const {
   for (const auto& v : vehicles_) {
     HighwayVehicleDebugState vehicle;
     vehicle.kind = static_cast<int>(v.kind);
+    vehicle.lane_from = "0";
+    vehicle.lane_to = "1";
     vehicle.lane_index = v.lane_index;
+    vehicle.target_lane_from = "0";
+    vehicle.target_lane_to = "1";
     vehicle.target_lane_index = v.target_lane_index;
     vehicle.speed_index = v.speed_index;
     vehicle.x = v.x;
@@ -993,6 +998,7 @@ HighwayDebugState HighwayEnv::DebugState() const {
     vehicle.crashed = v.crashed;
     vehicle.on_road = LaneOnRoad(v);
     vehicle.check_collisions = v.check_collisions;
+    vehicle.enable_lane_change = v.enable_lane_change;
     state.vehicles.push_back(vehicle);
   }
   return state;

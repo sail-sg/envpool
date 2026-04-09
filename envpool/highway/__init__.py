@@ -51,21 +51,18 @@ from .highway_envpool import (
 (
     HighwayEnvSpec,
     HighwayDMEnvPool,
-    HighwayGymEnvPool,
     HighwayGymnasiumEnvPool,
 ) = py_env(_HighwayEnvSpec, _HighwayEnvPool)
 
 (
     NativeKinematics5EnvSpec,
     NativeKinematics5DMEnvPool,
-    NativeKinematics5GymEnvPool,
     NativeKinematics5GymnasiumEnvPool,
 ) = py_env(_PyNativeKinematics5EnvSpec, _PyNativeKinematics5EnvPool)
 
 (
     NativeKinematics7Action5EnvSpec,
     NativeKinematics7Action5DMEnvPool,
-    NativeKinematics7Action5GymEnvPool,
     NativeKinematics7Action5GymnasiumEnvPool,
 ) = py_env(
     _PyNativeKinematics7Action5EnvSpec,
@@ -75,7 +72,6 @@ from .highway_envpool import (
 (
     NativeKinematics7Action3EnvSpec,
     NativeKinematics7Action3DMEnvPool,
-    NativeKinematics7Action3GymEnvPool,
     NativeKinematics7Action3GymnasiumEnvPool,
 ) = py_env(
     _PyNativeKinematics7Action3EnvSpec,
@@ -85,7 +81,6 @@ from .highway_envpool import (
 (
     NativeKinematics8ContinuousEnvSpec,
     NativeKinematics8ContinuousDMEnvPool,
-    NativeKinematics8ContinuousGymEnvPool,
     NativeKinematics8ContinuousGymnasiumEnvPool,
 ) = py_env(
     _PyNativeKinematics8ContinuousEnvSpec,
@@ -95,42 +90,36 @@ from .highway_envpool import (
 (
     NativeTTC5EnvSpec,
     NativeTTC5DMEnvPool,
-    NativeTTC5GymEnvPool,
     NativeTTC5GymnasiumEnvPool,
 ) = py_env(_PyNativeTTC5EnvSpec, _PyNativeTTC5EnvPool)
 
 (
     NativeTTC16EnvSpec,
     NativeTTC16DMEnvPool,
-    NativeTTC16GymEnvPool,
     NativeTTC16GymnasiumEnvPool,
 ) = py_env(_PyNativeTTC16EnvSpec, _PyNativeTTC16EnvPool)
 
 (
     NativeGoalEnvSpec,
     NativeGoalDMEnvPool,
-    NativeGoalGymEnvPool,
     NativeGoalGymnasiumEnvPool,
 ) = py_env(_PyNativeGoalEnvSpec, _PyNativeGoalEnvPool)
 
 (
     NativeAttributesEnvSpec,
     NativeAttributesDMEnvPool,
-    NativeAttributesGymEnvPool,
     NativeAttributesGymnasiumEnvPool,
 ) = py_env(_PyNativeAttributesEnvSpec, _PyNativeAttributesEnvPool)
 
 (
     NativeOccupancyEnvSpec,
     NativeOccupancyDMEnvPool,
-    NativeOccupancyGymEnvPool,
     NativeOccupancyGymnasiumEnvPool,
 ) = py_env(_PyNativeOccupancyEnvSpec, _PyNativeOccupancyEnvPool)
 
 (
     NativeMultiAgentEnvSpec,
     NativeMultiAgentDMEnvPool,
-    NativeMultiAgentGymEnvPool,
     NativeMultiAgentGymnasiumEnvPool,
 ) = py_env(_PyNativeMultiAgentEnvSpec, _PyNativeMultiAgentEnvPool)
 
@@ -152,8 +141,27 @@ def _debug_states(
 
 for _env_cls in (
     HighwayDMEnvPool,
-    HighwayGymEnvPool,
     HighwayGymnasiumEnvPool,
+    NativeAttributesDMEnvPool,
+    NativeAttributesGymnasiumEnvPool,
+    NativeGoalDMEnvPool,
+    NativeGoalGymnasiumEnvPool,
+    NativeKinematics5DMEnvPool,
+    NativeKinematics5GymnasiumEnvPool,
+    NativeKinematics7Action3DMEnvPool,
+    NativeKinematics7Action3GymnasiumEnvPool,
+    NativeKinematics7Action5DMEnvPool,
+    NativeKinematics7Action5GymnasiumEnvPool,
+    NativeKinematics8ContinuousDMEnvPool,
+    NativeKinematics8ContinuousGymnasiumEnvPool,
+    NativeMultiAgentDMEnvPool,
+    NativeMultiAgentGymnasiumEnvPool,
+    NativeOccupancyDMEnvPool,
+    NativeOccupancyGymnasiumEnvPool,
+    NativeTTC5DMEnvPool,
+    NativeTTC5GymnasiumEnvPool,
+    NativeTTC16DMEnvPool,
+    NativeTTC16GymnasiumEnvPool,
 ):
     cast(Any, _env_cls).debug_states = _debug_states
 
@@ -161,47 +169,36 @@ for _env_cls in (
 __all__ = [
     "HighwayEnvSpec",
     "HighwayDMEnvPool",
-    "HighwayGymEnvPool",
     "HighwayGymnasiumEnvPool",
     "NativeAttributesEnvSpec",
     "NativeAttributesDMEnvPool",
-    "NativeAttributesGymEnvPool",
     "NativeAttributesGymnasiumEnvPool",
     "NativeGoalEnvSpec",
     "NativeGoalDMEnvPool",
-    "NativeGoalGymEnvPool",
     "NativeGoalGymnasiumEnvPool",
     "NativeKinematics5EnvSpec",
     "NativeKinematics5DMEnvPool",
-    "NativeKinematics5GymEnvPool",
     "NativeKinematics5GymnasiumEnvPool",
     "NativeKinematics7Action3EnvSpec",
     "NativeKinematics7Action3DMEnvPool",
-    "NativeKinematics7Action3GymEnvPool",
     "NativeKinematics7Action3GymnasiumEnvPool",
     "NativeKinematics7Action5EnvSpec",
     "NativeKinematics7Action5DMEnvPool",
-    "NativeKinematics7Action5GymEnvPool",
     "NativeKinematics7Action5GymnasiumEnvPool",
     "NativeKinematics8ContinuousEnvSpec",
     "NativeKinematics8ContinuousDMEnvPool",
-    "NativeKinematics8ContinuousGymEnvPool",
     "NativeKinematics8ContinuousGymnasiumEnvPool",
     "NativeMultiAgentEnvSpec",
     "NativeMultiAgentDMEnvPool",
-    "NativeMultiAgentGymEnvPool",
     "NativeMultiAgentGymnasiumEnvPool",
     "NativeOccupancyEnvSpec",
     "NativeOccupancyDMEnvPool",
-    "NativeOccupancyGymEnvPool",
     "NativeOccupancyGymnasiumEnvPool",
     "NativeTTC5EnvSpec",
     "NativeTTC5DMEnvPool",
-    "NativeTTC5GymEnvPool",
     "NativeTTC5GymnasiumEnvPool",
     "NativeTTC16EnvSpec",
     "NativeTTC16DMEnvPool",
-    "NativeTTC16GymEnvPool",
     "NativeTTC16GymnasiumEnvPool",
     "_HighwayDebugState",
     "_HighwayVehicleDebugState",

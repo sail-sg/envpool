@@ -45,7 +45,11 @@ namespace highway {
 
 struct HighwayVehicleDebugState {
   int kind{0};
+  std::string lane_from{"0"};
+  std::string lane_to{"1"};
   int lane_index{0};
+  std::string target_lane_from{"0"};
+  std::string target_lane_to{"1"};
   int target_lane_index{0};
   int speed_index{0};
   double x{0.0};
@@ -56,14 +60,24 @@ struct HighwayVehicleDebugState {
   double target_speed0{20.0};
   double target_speed1{25.0};
   double target_speed2{30.0};
+  bool has_goal{false};
+  double goal_x{0.0};
+  double goal_y{0.0};
+  double goal_heading{0.0};
+  double goal_speed{0.0};
   double idm_delta{4.0};
   double timer{0.0};
   bool crashed{false};
   bool on_road{true};
   bool check_collisions{true};
+  bool enable_lane_change{true};
+  std::vector<std::string> route_from;
+  std::vector<std::string> route_to;
+  std::vector<int> route_id;
 };
 
 struct HighwayDebugState {
+  std::string scenario{"highway"};
   int lanes_count{0};
   int simulation_frequency{0};
   int policy_frequency{0};

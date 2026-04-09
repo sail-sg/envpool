@@ -20,6 +20,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <random>
 #include <string>
 #include <type_traits>
@@ -29,6 +30,8 @@
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
 #include "envpool/highway/highway_env.h"
+#include "envpool/highway/official_observation.h"
+#include "envpool/highway/official_task.h"
 
 namespace highway {
 namespace native {
@@ -58,6 +61,28 @@ inline int ClipInt(int v, int low, int high) {
 inline double Uniform(std::mt19937* gen, double low, double high) {
   std::uniform_real_distribution<double> dist(low, high);
   return dist(*gen);
+}
+
+inline highway::official::MetaAction ToMetaAction(int action) {
+  using highway::official::MetaAction;
+  action = ClipInt(action, 0, 4);
+  if (action == 0) {
+    return MetaAction::kLaneLeft;
+  }
+  if (action == 2) {
+    return MetaAction::kLaneRight;
+  }
+  if (action == 3) {
+    return MetaAction::kFaster;
+  }
+  if (action == 4) {
+    return MetaAction::kSlower;
+  }
+  return MetaAction::kIdle;
+}
+
+inline double LMap(double value, double x0, double x1, double y0, double y1) {
+  return y0 + (value - x0) * (y1 - y0) / (x1 - x0);
 }
 
 inline void Fill(unsigned char* rgb, int width, int height, std::uint8_t r,
@@ -224,6 +249,8 @@ class NativeGoalFns : public NativeBaseFns {
     return MakeDict("obs:observation"_.Bind(Spec<double>({6}, {-inf, inf})),
                     "obs:achieved_goal"_.Bind(Spec<double>({6}, {-inf, inf})),
                     "obs:desired_goal"_.Bind(Spec<double>({6}, {-inf, inf})),
+                    "info:speed"_.Bind(Spec<float>({})),
+                    "info:crashed"_.Bind(Spec<bool>({})),
                     "info:is_success"_.Bind(Spec<bool>({})));
   }
 
@@ -391,12 +418,21 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     elapsed_step_ = 0;
     time_ = 0.0;
     done_ = false;
+    if (UseOfficialBackend()) {
+      ResetOfficialBackend();
+      WriteState(0.0f);
+      return;
+    }
     ResetAgents();
     ResetTraffic();
     WriteState(0.0f);
   }
 
   void Step(const Action& action) override {
+    if (UseOfficialBackend()) {
+      StepOfficialBackend(action);
+      return;
+    }
     const Command command = AdapterT::ReadAction(action);
     ++elapsed_step_;
     const int frames = std::max(1, simulation_frequency_ / policy_frequency_);
@@ -422,6 +458,25 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     (void)camera_id;
     Fill(rgb, width, height, 100, 100, 100);
     DrawScenario(rgb, width, height);
+    if (UseOfficialBackend()) {
+      for (int i = 0; i < static_cast<int>(official_road_->vehicles.size());
+           ++i) {
+        const official::Vehicle& vehicle = official_road_->vehicles[i];
+        Agent agent;
+        agent.x = vehicle.position.x;
+        agent.y = vehicle.position.y;
+        agent.heading = vehicle.heading;
+        agent.speed = vehicle.speed;
+        agent.crashed = vehicle.crashed;
+        if (i == official_ego_index_) {
+          DrawAgent(rgb, width, height, agent, agent.crashed ? 255 : 50,
+                    agent.crashed ? 100 : 200, 0);
+        } else {
+          DrawAgent(rgb, width, height, agent, 90, 190, 255);
+        }
+      }
+      return;
+    }
     for (const Agent& agent : traffic_) {
       DrawAgent(rgb, width, height, agent, 90, 190, 255);
     }
@@ -431,6 +486,82 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       DrawAgent(rgb, width, height, agents_[1], agents_[1].crashed ? 255 : 255,
                 agents_[1].crashed ? 100 : 180, 20);
     }
+  }
+
+  [[nodiscard]] HighwayDebugState DebugState() const {
+    HighwayDebugState state;
+    state.scenario = scenario_;
+    state.simulation_frequency = simulation_frequency_;
+    state.policy_frequency = policy_frequency_;
+    state.elapsed_step = elapsed_step_;
+    state.time = time_;
+    if (UseOfficialBackend()) {
+      state.vehicles.reserve(official_road_->vehicles.size());
+      for (const official::Vehicle& source : official_road_->vehicles) {
+        HighwayVehicleDebugState vehicle;
+        vehicle.kind = static_cast<int>(source.kind);
+        vehicle.lane_from = source.lane_index.from;
+        vehicle.lane_to = source.lane_index.to;
+        vehicle.lane_index = source.lane_index.id;
+        vehicle.target_lane_from = source.target_lane_index.from;
+        vehicle.target_lane_to = source.target_lane_index.to;
+        vehicle.target_lane_index = source.target_lane_index.id;
+        vehicle.speed_index = source.speed_index;
+        vehicle.x = source.position.x;
+        vehicle.y = source.position.y;
+        vehicle.heading = source.heading;
+        vehicle.speed = source.speed;
+        vehicle.target_speed = source.target_speed;
+        vehicle.target_speed0 = source.target_speeds[0];
+        vehicle.target_speed1 = source.target_speeds[1];
+        vehicle.target_speed2 = source.target_speeds[2];
+        vehicle.has_goal = source.has_goal;
+        vehicle.goal_x = source.goal_position.x;
+        vehicle.goal_y = source.goal_position.y;
+        vehicle.goal_heading = source.goal_heading;
+        vehicle.goal_speed = source.goal_speed;
+        vehicle.idm_delta = source.idm_delta;
+        vehicle.timer = source.timer;
+        vehicle.crashed = source.crashed;
+        vehicle.on_road = official_road_->network.GetLane(source.lane_index)
+                              .OnLane(source.position);
+        vehicle.check_collisions = source.check_collisions;
+        vehicle.enable_lane_change = source.enable_lane_change;
+        vehicle.route_from.reserve(source.route.size());
+        vehicle.route_to.reserve(source.route.size());
+        vehicle.route_id.reserve(source.route.size());
+        for (const official::LaneIndex& lane_index : source.route) {
+          vehicle.route_from.push_back(lane_index.from);
+          vehicle.route_to.push_back(lane_index.to);
+          vehicle.route_id.push_back(lane_index.id);
+        }
+        state.vehicles.push_back(vehicle);
+      }
+      return state;
+    }
+    state.vehicles.reserve(1 + traffic_.size());
+    const Agent& ego = agents_[0];
+    HighwayVehicleDebugState vehicle;
+    vehicle.kind = 0;
+    vehicle.x = ego.x;
+    vehicle.y = ego.y;
+    vehicle.heading = ego.heading;
+    vehicle.speed = ego.speed;
+    vehicle.target_speed = ego.speed;
+    vehicle.crashed = ego.crashed;
+    state.vehicles.push_back(vehicle);
+    for (const Agent& source : traffic_) {
+      HighwayVehicleDebugState other;
+      other.kind = 1;
+      other.x = source.x;
+      other.y = source.y;
+      other.heading = source.heading;
+      other.speed = source.speed;
+      other.target_speed = source.speed;
+      other.crashed = source.crashed;
+      state.vehicles.push_back(other);
+    }
+    return state;
   }
 
  protected:
@@ -449,6 +580,297 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
   std::array<Agent, 2> agents_;
   std::array<Agent, 2> goals_;
   std::vector<Agent> traffic_;
+  std::optional<official::Road> official_road_;
+  int official_ego_index_{0};
+  int official_player_count_{1};
+  int official_last_action_{1};
+  double official_last_continuous_action_norm_{0.0};
+  official::LaneIndex official_active_lane_index_{"c", "d", 0};
+
+  [[nodiscard]] bool UseOfficialBackend() const {
+    return scenario_ == "merge" || scenario_ == "roundabout" ||
+           scenario_ == "two_way" || scenario_ == "u_turn" ||
+           scenario_ == "exit" || scenario_ == "intersection" ||
+           scenario_ == "intersection_continuous" ||
+           scenario_ == "intersection_multi" || scenario_ == "lane_keeping" ||
+           scenario_.find("racetrack") == 0 || IsParkingScenario();
+  }
+
+  [[nodiscard]] bool IsParkingScenario() const {
+    return scenario_ == "parking" || scenario_ == "parking_action_repeat" ||
+           scenario_ == "parking_parked";
+  }
+
+  [[nodiscard]] official::Vehicle& OfficialEgo() {
+    return official_road_->vehicles[official_ego_index_];
+  }
+
+  [[nodiscard]] const official::Vehicle& OfficialEgo() const {
+    return official_road_->vehicles[official_ego_index_];
+  }
+
+  [[nodiscard]] official::Vehicle& OfficialPlayer(int player) {
+    return official_road_->vehicles[player];
+  }
+
+  [[nodiscard]] const official::Vehicle& OfficialPlayer(int player) const {
+    return official_road_->vehicles[player];
+  }
+
+  void ResetOfficialBackend() {
+    official_player_count_ = 1;
+    if (IsParkingScenario()) {
+      official_road_ = official::MakeParkingRoad();
+      std::uniform_int_distribution<int> spot_dist(0, 27);
+      const double heading = Uniform(&this->gen_, 0.0, 2.0 * kPi);
+      official_ego_index_ = official::ResetParkingVehicles(
+          &*official_road_, 0.0, heading, spot_dist(this->gen_),
+          scenario_ == "parking_parked");
+    } else if (scenario_ == "exit") {
+      official_road_ = official::MakeExitRoad();
+      official_ego_index_ = official::ResetExitVehicles(&*official_road_);
+    } else if (scenario_ == "intersection" ||
+               scenario_ == "intersection_continuous") {
+      official_road_ = official::MakeIntersectionRoad();
+      official_ego_index_ =
+          official::ResetIntersectionVehicles(&*official_road_);
+    } else if (scenario_ == "intersection_multi") {
+      official_road_ = official::MakeIntersectionRoad();
+      official_ego_index_ =
+          official::ResetMultiAgentIntersectionVehicles(&*official_road_);
+      official_player_count_ = 2;
+    } else if (scenario_ == "lane_keeping") {
+      official_road_ = official::MakeLaneKeepingRoad();
+      official_ego_index_ = official::ResetLaneKeepingVehicle(&*official_road_);
+      official_active_lane_index_ = {"c", "d", 0};
+    } else if (scenario_.find("racetrack") == 0) {
+      official_road_ = official::MakeRacetrackRoad(scenario_);
+      const double longitudinal = scenario_ == "racetrack"        ? 48.0
+                                  : scenario_ == "racetrack_oval" ? 50.0
+                                                                  : 80.0;
+      official_ego_index_ =
+          official::ResetRacetrackVehicles(&*official_road_, longitudinal, 0);
+      official_active_lane_index_ = {"a", "b", 0};
+    } else if (scenario_ == "roundabout") {
+      official_road_ = official::MakeRoundaboutRoad();
+      official_ego_index_ = official::ResetRoundaboutVehicles(&*official_road_);
+    } else if (scenario_ == "two_way") {
+      official_road_ = official::MakeTwoWayRoad();
+      official_ego_index_ = official::ResetTwoWayVehicles(&*official_road_);
+    } else if (scenario_ == "u_turn") {
+      official_road_ = official::MakeUTurnRoad();
+      official_ego_index_ = official::ResetUTurnVehicles(&*official_road_);
+    } else {
+      official_road_ = official::MakeMergeRoad();
+      const double p0 = Uniform(&this->gen_, -5.0, 5.0);
+      const double p1 = Uniform(&this->gen_, -5.0, 5.0);
+      const double p2 = Uniform(&this->gen_, -5.0, 5.0);
+      const double v0 = Uniform(&this->gen_, -1.0, 1.0);
+      const double v1 = Uniform(&this->gen_, -1.0, 1.0);
+      const double v2 = Uniform(&this->gen_, -1.0, 1.0);
+      official_ego_index_ = official::ResetMergeVehicles(&*official_road_, p0,
+                                                         p1, p2, v0, v1, v2);
+    }
+    official_last_action_ = 1;
+    official_last_continuous_action_norm_ = 0.0;
+  }
+
+  void StepOfficialBackend(const Action& action) {
+    if (IsParkingScenario()) {
+      if constexpr (std::is_same_v<SpecT, NativeGoalSpec>) {
+        StepOfficialParking(action);
+        return;
+      }
+    }
+    if (scenario_ == "intersection_continuous") {
+      if constexpr (std::is_same_v<SpecT, NativeK8CSpec>) {
+        StepOfficialContinuous(action, -5.0, 5.0, -kPi / 3.0, kPi / 3.0);
+        return;
+      }
+    }
+    if (scenario_ == "intersection_multi") {
+      if constexpr (std::is_same_v<AdapterT, MultiAgentAdapter>) {
+        StepOfficialMultiAgentIntersection(action);
+        return;
+      }
+    }
+    if (scenario_ == "lane_keeping") {
+      if constexpr (std::is_same_v<SpecT, NativeAttributesSpec>) {
+        StepOfficialLaneKeeping(action);
+        return;
+      }
+    }
+    if (scenario_.find("racetrack") == 0) {
+      if constexpr (std::is_same_v<SpecT, NativeOccupancySpec>) {
+        StepOfficialRacetrack(action);
+        return;
+      }
+    }
+    ++elapsed_step_;
+    official_last_action_ = OfficialMetaAction(action);
+    const int frames = std::max(1, simulation_frequency_ / policy_frequency_);
+    const double dt = 1.0 / static_cast<double>(simulation_frequency_);
+    for (int frame = 0; frame < frames; ++frame) {
+      if (frame == 0) {
+        official::ActMDP(&OfficialEgo(), official_road_->network,
+                         ToMetaAction(official_last_action_));
+      }
+      official_road_->Act();
+      official_road_->Step(dt);
+    }
+    time_ += 1.0 / static_cast<double>(policy_frequency_);
+    done_ = OfficialEgo().crashed || elapsed_step_ >= max_episode_steps_ ||
+            (scenario_ == "merge" && OfficialEgo().position.x > 370.0) ||
+            ((scenario_ == "intersection" ||
+              scenario_ == "intersection_continuous") &&
+             OfficialIntersectionArrived(OfficialEgo()));
+    WriteState(static_cast<float>(OfficialReward()));
+  }
+
+  void StepOfficialMultiAgentIntersection(const Action& action) {
+    ++elapsed_step_;
+    const int frames = std::max(1, simulation_frequency_ / policy_frequency_);
+    const double dt = 1.0 / static_cast<double>(simulation_frequency_);
+    for (int frame = 0; frame < frames; ++frame) {
+      if (frame == 0) {
+        for (int player = 0; player < official_player_count_; ++player) {
+          const int action_id = ClipInt(
+              static_cast<int>(action["players.action"_][player]), 0, 2);
+          official::ActMDP(
+              &OfficialPlayer(player), official_road_->network,
+              ToMetaAction(IntersectionLongitudinalAction(action_id)));
+        }
+      }
+      official_road_->Act();
+      official_road_->Step(dt);
+    }
+    time_ += 1.0 / static_cast<double>(policy_frequency_);
+    done_ = elapsed_step_ >= max_episode_steps_;
+    for (int player = 0; player < official_player_count_; ++player) {
+      done_ = done_ || OfficialPlayer(player).crashed ||
+              OfficialIntersectionArrived(OfficialPlayer(player));
+    }
+    WriteOfficialMultiAgentState();
+  }
+
+  void StepOfficialLaneKeeping(const Action& action) {
+    ++elapsed_step_;
+    official::LowLevelAction low_level;
+    official_last_continuous_action_norm_ =
+        std::abs(Clip(action["action"_][0], -1.0, 1.0));
+    low_level.steering = OfficialContinuousMap(
+        Clip(action["action"_][0], -1.0, 1.0), -kPi / 3.0, kPi / 3.0);
+    low_level.acceleration = 0.0;
+    OfficialEgo().Act(low_level);
+
+    State state = this->Allocate();
+    WriteOfficialAttributes(&state);
+
+    const double dt = 1.0 / static_cast<double>(simulation_frequency_);
+    OfficialBicycleStep(&OfficialEgo(), dt);
+    time_ += 1.0 / static_cast<double>(policy_frequency_);
+    done_ = false;
+    state["reward"_] = static_cast<float>(OfficialLaneKeepingReward());
+  }
+
+  void StepOfficialRacetrack(const Action& action) {
+    ++elapsed_step_;
+    official::LowLevelAction low_level;
+    official_last_continuous_action_norm_ =
+        std::abs(Clip(action["action"_][0], -1.0, 1.0));
+    low_level.steering = OfficialContinuousMap(
+        Clip(action["action"_][0], -1.0, 1.0), -kPi / 4.0, kPi / 4.0);
+    low_level.acceleration = 0.0;
+    OfficialEgo().Act(low_level);
+
+    const int frames = std::max(1, simulation_frequency_ / policy_frequency_);
+    const double dt = 1.0 / static_cast<double>(simulation_frequency_);
+    for (int frame = 0; frame < frames; ++frame) {
+      official_road_->Act();
+      official_road_->Step(dt);
+    }
+    time_ += 1.0 / static_cast<double>(policy_frequency_);
+    done_ = OfficialEgo().crashed || !OfficialOnRoad(OfficialEgo()) ||
+            elapsed_step_ >= max_episode_steps_;
+    WriteState(static_cast<float>(OfficialRacetrackReward()));
+  }
+
+  void StepOfficialParking(const Action& action) {
+    ++elapsed_step_;
+    official::LowLevelAction low_level;
+    low_level.acceleration =
+        OfficialContinuousMap(Clip(action["action"_][0], -1.0, 1.0), -5.0, 5.0);
+    low_level.steering = OfficialContinuousMap(
+        Clip(action["action"_][1], -1.0, 1.0), -kPi / 4.0, kPi / 4.0);
+    OfficialEgo().Act(low_level);
+
+    const int frames = std::max(1, simulation_frequency_ / policy_frequency_);
+    const double dt = 1.0 / static_cast<double>(simulation_frequency_);
+    for (int frame = 0; frame < frames; ++frame) {
+      official_road_->Act();
+      official_road_->Step(dt);
+    }
+    time_ += 1.0 / static_cast<double>(policy_frequency_);
+    done_ = OfficialEgo().crashed || OfficialParkingSuccess() ||
+            elapsed_step_ >= max_episode_steps_;
+    WriteState(static_cast<float>(OfficialReward()));
+  }
+
+  void StepOfficialContinuous(const Action& action, double acceleration_low,
+                              double acceleration_high, double steering_low,
+                              double steering_high) {
+    ++elapsed_step_;
+    official::LowLevelAction low_level;
+    low_level.acceleration =
+        OfficialContinuousMap(Clip(action["action"_][0], -1.0, 1.0),
+                              acceleration_low, acceleration_high);
+    low_level.steering = OfficialContinuousMap(
+        Clip(action["action"_][1], -1.0, 1.0), steering_low, steering_high);
+    OfficialEgo().Act(low_level);
+
+    const int frames = std::max(1, simulation_frequency_ / policy_frequency_);
+    const double dt = 1.0 / static_cast<double>(simulation_frequency_);
+    for (int frame = 0; frame < frames; ++frame) {
+      official_road_->Act();
+      official_road_->Step(dt);
+    }
+    time_ += 1.0 / static_cast<double>(policy_frequency_);
+    done_ = OfficialEgo().crashed || elapsed_step_ >= max_episode_steps_ ||
+            (scenario_ == "intersection_continuous" &&
+             OfficialIntersectionArrived(OfficialEgo()));
+    WriteState(static_cast<float>(OfficialReward()));
+  }
+
+  [[nodiscard]] int OfficialMetaAction(const Action& action) const {
+    if constexpr (std::is_same_v<AdapterT, MultiAgentAdapter>) {
+      return ClipInt(static_cast<int>(action["players.action"_][0]), 0, 4);
+    } else {
+      const int action_id = ClipInt(static_cast<int>(action["action"_]), 0, 4);
+      if (scenario_ == "intersection") {
+        return IntersectionLongitudinalAction(action_id);
+      }
+      return action_id;
+    }
+  }
+
+  [[nodiscard]] static int IntersectionLongitudinalAction(int action_id) {
+    if (action_id == 0) {
+      return 4;
+    }
+    if (action_id == 2) {
+      return 3;
+    }
+    return 1;
+  }
+
+  [[nodiscard]] static double OfficialContinuousMap(double value, double low,
+                                                    double high) {
+    const float value32 = static_cast<float>(value);
+    const float low32 = static_cast<float>(low);
+    const float high32 = static_cast<float>(high);
+    return static_cast<double>(low32 + (high32 - low32) * (value32 - -1.0f) /
+                                           (1.0f - -1.0f));
+  }
 
   void ResetAgents() {
     agents_[0] = {};
@@ -536,6 +958,9 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
   }
 
   [[nodiscard]] double Reward() const {
+    if (UseOfficialBackend()) {
+      return OfficialReward();
+    }
     if (agents_[0].crashed) {
       return -1.0;
     }
@@ -543,6 +968,266 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       return -0.02 * Distance(agents_[0], goals_[0]);
     }
     return 0.02 * agents_[0].speed;
+  }
+
+  [[nodiscard]] double OfficialReward() const {
+    const official::Vehicle& ego = OfficialEgo();
+    if (IsParkingScenario()) {
+      return OfficialParkingReward();
+    }
+    if (scenario_ == "lane_keeping") {
+      return OfficialLaneKeepingReward();
+    }
+    if (scenario_.find("racetrack") == 0) {
+      return OfficialRacetrackReward();
+    }
+    if (scenario_ == "intersection" || scenario_ == "intersection_continuous") {
+      if (OfficialIntersectionArrived(ego)) {
+        return 1.0;
+      }
+      const double speed_reward =
+          Clip(LMap(ego.speed, 7.0, 9.0, 0.0, 1.0), 0.0, 1.0);
+      const bool on_road =
+          official_road_->network.GetLane(ego.lane_index).OnLane(ego.position);
+      return (-5.0 * static_cast<double>(ego.crashed) + speed_reward) *
+             static_cast<double>(on_road);
+    }
+    if (scenario_ == "two_way") {
+      const std::vector<official::LaneIndex> neighbours =
+          official_road_->network.AllSideLanes(ego.lane_index);
+      const double high_speed_reward =
+          static_cast<double>(ego.speed_index) /
+          static_cast<double>(ego.target_speeds.size() - 1);
+      const double left_lane_reward =
+          (static_cast<double>(neighbours.size() - 1) -
+           static_cast<double>(ego.target_lane_index.id)) /
+          static_cast<double>(std::max<int>(neighbours.size() - 1, 1));
+      return 0.8 * high_speed_reward + 0.2 * left_lane_reward;
+    }
+    if (scenario_ == "u_turn") {
+      const std::vector<official::LaneIndex> neighbours =
+          official_road_->network.AllSideLanes(ego.lane_index);
+      const double lane_reward =
+          static_cast<double>(ego.lane_index.id) /
+          static_cast<double>(std::max<int>(neighbours.size() - 1, 1));
+      const double speed_reward =
+          Clip(LMap(ego.speed, 8.0, 24.0, 0.0, 1.0), 0.0, 1.0);
+      const double on_road_reward =
+          official_road_->network.GetLane(ego.lane_index).OnLane(ego.position)
+              ? 1.0
+              : 0.0;
+      const double weighted = -1.0 * static_cast<double>(ego.crashed) +
+                              0.1 * lane_reward + 0.4 * speed_reward;
+      return LMap(weighted, -1.0, 0.5, 0.0, 1.0) * on_road_reward;
+    }
+    if (scenario_ == "roundabout") {
+      const double high_speed_reward =
+          static_cast<double>(ego.speed_index) /
+          static_cast<double>(ego.target_speeds.size() - 1);
+      const double lane_change_reward = static_cast<double>(
+          official_last_action_ == 0 || official_last_action_ == 2);
+      const double on_road_reward =
+          official_road_->network.GetLane(ego.lane_index).OnLane(ego.position)
+              ? 1.0
+              : 0.0;
+      const double weighted = -1.0 * static_cast<double>(ego.crashed) +
+                              0.2 * high_speed_reward +
+                              -0.05 * lane_change_reward;
+      return LMap(weighted, -1.0, 0.2, 0.0, 1.0) * on_road_reward;
+    }
+    if (scenario_ == "exit") {
+      const bool success =
+          (ego.target_lane_index.from == "1" &&
+           ego.target_lane_index.to == "2" && ego.target_lane_index.id == 6) ||
+          (ego.target_lane_index.from == "2" &&
+           ego.target_lane_index.to == "exit" && ego.target_lane_index.id == 0);
+      const double scaled_speed =
+          Clip(LMap(ego.speed, 20.0, 30.0, 0.0, 1.0), 0.0, 1.0);
+      const double weighted =
+          1.0 * static_cast<double>(success) + 0.1 * scaled_speed;
+      return Clip(LMap(weighted, 0.0, 1.0, 0.0, 1.0), 0.0, 1.0);
+    }
+    const double scaled_speed = LMap(ego.speed, 20.0, 30.0, 0.0, 1.0);
+    double merging_speed_reward = 0.0;
+    for (const official::Vehicle& vehicle : official_road_->vehicles) {
+      if (vehicle.lane_index.from == "b" && vehicle.lane_index.to == "c" &&
+          vehicle.lane_index.id == 2 &&
+          vehicle.kind != official::VehicleKind::kVehicle) {
+        merging_speed_reward +=
+            (vehicle.target_speed - vehicle.speed) / vehicle.target_speed;
+      }
+    }
+    const double weighted =
+        -1.0 * static_cast<double>(ego.crashed) +
+        0.1 * static_cast<double>(ego.lane_index.id) + 0.2 * scaled_speed +
+        -0.05 * static_cast<double>(official_last_action_ == 0 ||
+                                    official_last_action_ == 2) +
+        -0.5 * merging_speed_reward;
+    return LMap(weighted, -1.0 + -0.5, 0.2 + 0.1, 0.0, 1.0);
+  }
+
+  [[nodiscard]] double OfficialIntersectionReward(
+      const official::Vehicle& vehicle) const {
+    if (OfficialIntersectionArrived(vehicle)) {
+      return 1.0;
+    }
+    const double speed_reward =
+        Clip(LMap(vehicle.speed, 7.0, 9.0, 0.0, 1.0), 0.0, 1.0);
+    const bool on_road = official_road_->network.GetLane(vehicle.lane_index)
+                             .OnLane(vehicle.position);
+    return (-5.0 * static_cast<double>(vehicle.crashed) + speed_reward) *
+           static_cast<double>(on_road);
+  }
+
+  [[nodiscard]] bool OfficialOnRoad(const official::Vehicle& vehicle) const {
+    return official_road_->network.GetLane(vehicle.lane_index)
+        .OnLane(vehicle.position);
+  }
+
+  [[nodiscard]] double OfficialLaneKeepingReward() const {
+    const official::Lane& lane =
+        official_road_->network.GetLane(official_active_lane_index_);
+    const double lateral =
+        lane.LocalCoordinates(OfficialEgo().position).lateral;
+    return 1.0 - std::pow(lateral / lane.width(), 2.0);
+  }
+
+  [[nodiscard]] double OfficialRacetrackReward() const {
+    const official::Vehicle& ego = OfficialEgo();
+    const official::Lane& lane =
+        official_road_->network.GetLane(ego.lane_index);
+    const double lateral = lane.LocalCoordinates(ego.position).lateral;
+    const double lane_centering_reward = 1.0 / (1.0 + 4.0 * lateral * lateral);
+    const double weighted = lane_centering_reward -
+                            0.3 * official_last_continuous_action_norm_ -
+                            static_cast<double>(ego.crashed);
+    const double normalized = LMap(weighted, -1.0, 1.0, 0.0, 1.0);
+    return normalized * static_cast<double>(OfficialOnRoad(ego));
+  }
+
+  [[nodiscard]] std::array<double, 6> OfficialBicycleDerivative(
+      const official::Vehicle& vehicle,
+      const std::array<double, 6>& state) const {
+    constexpr double mass = 1.0;
+    constexpr double length_a = official::kVehicleLength / 2.0;
+    constexpr double length_b = official::kVehicleLength / 2.0;
+    constexpr double inertia_z =
+        (official::kVehicleLength * official::kVehicleLength +
+         official::kVehicleWidth * official::kVehicleWidth) /
+        12.0;
+    constexpr double friction_front = 15.0 * mass;
+    constexpr double friction_rear = 15.0 * mass;
+
+    const double heading = state[2];
+    double speed = state[3];
+    const double lateral_speed = state[4];
+    const double yaw_rate = state[5];
+    const double delta_f = vehicle.action.steering;
+    const double theta_vf =
+        std::atan2(lateral_speed + length_a * yaw_rate, speed);
+    const double theta_vr =
+        std::atan2(lateral_speed - length_b * yaw_rate, speed);
+    double f_yf = 2.0 * friction_front * (delta_f - theta_vf);
+    double f_yr = 2.0 * friction_rear * (0.0 - theta_vr);
+    if (std::abs(speed) < 1.0) {
+      f_yf = -mass * lateral_speed - inertia_z / length_a * yaw_rate;
+      f_yr = -mass * lateral_speed + inertia_z / length_a * yaw_rate;
+    }
+    const double d_lateral_speed =
+        1.0 / mass * (f_yf + f_yr) - yaw_rate * speed;
+    const double d_yaw_rate =
+        1.0 / inertia_z * (length_a * f_yf - length_b * f_yr);
+    const double c = std::cos(heading);
+    const double s = std::sin(heading);
+    const double speed_x = c * speed - s * lateral_speed;
+    const double speed_y = s * speed + c * lateral_speed;
+    return {speed_x,         speed_y,   yaw_rate, vehicle.action.acceleration,
+            d_lateral_speed, d_yaw_rate};
+  }
+
+  void OfficialBicycleStep(official::Vehicle* vehicle, double dt) {
+    vehicle->action.steering =
+        Clip(vehicle->action.steering, -kPi / 2.0, kPi / 2.0);
+    vehicle->yaw_rate = Clip(vehicle->yaw_rate, -2.0 * kPi, 2.0 * kPi);
+    const std::array<double, 6> state0{
+        vehicle->position.x, vehicle->position.y,    vehicle->heading,
+        vehicle->speed,      vehicle->lateral_speed, vehicle->yaw_rate};
+    const double half_dt = dt / 2.0;
+    const std::array<double, 6> k1 =
+        OfficialBicycleDerivative(*vehicle, state0);
+    std::array<double, 6> state1;
+    for (int i = 0; i < 6; ++i) {
+      state1[i] = state0[i] + k1[i] * half_dt;
+    }
+    const std::array<double, 6> k2 =
+        OfficialBicycleDerivative(*vehicle, state1);
+    std::array<double, 6> state2;
+    for (int i = 0; i < 6; ++i) {
+      state2[i] = state0[i] + k2[i] * half_dt;
+    }
+    const std::array<double, 6> k3 =
+        OfficialBicycleDerivative(*vehicle, state2);
+    std::array<double, 6> state3;
+    for (int i = 0; i < 6; ++i) {
+      state3[i] = state0[i] + k3[i] * dt;
+    }
+    const std::array<double, 6> k4 =
+        OfficialBicycleDerivative(*vehicle, state3);
+    std::array<double, 6> new_state;
+    for (int i = 0; i < 6; ++i) {
+      new_state[i] =
+          state0[i] + dt / 6.0 * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
+    }
+    vehicle->position = {new_state[0], new_state[1]};
+    vehicle->heading = new_state[2];
+    vehicle->speed = new_state[3];
+    vehicle->lateral_speed = new_state[4];
+    vehicle->yaw_rate = new_state[5];
+    vehicle->UpdateLane(official_road_->network);
+  }
+
+  [[nodiscard]] std::array<double, 6> OfficialParkingAchievedGoal() const {
+    const official::Vehicle& ego = OfficialEgo();
+    return {ego.position.x / 100.0, ego.position.y / 100.0,
+            ego.Velocity().x / 5.0, ego.Velocity().y / 5.0,
+            std::cos(ego.heading),  std::sin(ego.heading)};
+  }
+
+  [[nodiscard]] std::array<double, 6> OfficialParkingDesiredGoal() const {
+    const official::Vehicle& ego = OfficialEgo();
+    return {ego.goal_position.x / 100.0, ego.goal_position.y / 100.0, 0.0, 0.0,
+            std::cos(ego.goal_heading),  std::sin(ego.goal_heading)};
+  }
+
+  [[nodiscard]] double OfficialParkingComputeReward() const {
+    const std::array<double, 6> achieved = OfficialParkingAchievedGoal();
+    const std::array<double, 6> desired = OfficialParkingDesiredGoal();
+    constexpr std::array<double, 6> weights{1.0, 0.3, 0.0, 0.0, 0.02, 0.02};
+    double weighted_distance = 0.0;
+    for (int i = 0; i < 6; ++i) {
+      weighted_distance += weights[i] * std::abs(achieved[i] - desired[i]);
+    }
+    return -std::sqrt(weighted_distance);
+  }
+
+  [[nodiscard]] double OfficialParkingReward() const {
+    return OfficialParkingComputeReward() +
+           -5.0 * static_cast<double>(OfficialEgo().crashed);
+  }
+
+  [[nodiscard]] bool OfficialParkingSuccess() const {
+    return OfficialParkingComputeReward() > -0.12;
+  }
+
+  [[nodiscard]] bool OfficialIntersectionArrived(
+      const official::Vehicle& ego) const {
+    if (ego.lane_index.from.rfind("il", 0) != 0 ||
+        ego.lane_index.to.rfind("o", 0) != 0) {
+      return false;
+    }
+    const official::Lane& lane =
+        official_road_->network.GetLane(ego.lane_index);
+    return lane.LocalCoordinates(ego.position).longitudinal >= 25.0;
   }
 
   template <typename Row>
@@ -568,6 +1253,10 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
 
   void WriteState(float reward) {
     if constexpr (std::is_same_v<AdapterT, MultiAgentAdapter>) {
+      if (UseOfficialBackend()) {
+        WriteOfficialMultiAgentState(reward);
+        return;
+      }
       State state = this->Allocate(2);
       for (int player = 0; player < 2; ++player) {
         auto obs = state["obs:players.obs"_];
@@ -589,40 +1278,97 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     }
   }
 
+  void WriteOfficialMultiAgentState(std::optional<float> reset_reward = {}) {
+    State state = this->Allocate(official_player_count_);
+    auto obs = state["obs:players.obs"_];
+    official::KinematicObservationConfig config;
+    config.vehicles_count = 5;
+    for (int player = 0; player < official_player_count_; ++player) {
+      const official::Vehicle& vehicle = OfficialPlayer(player);
+      const std::vector<float> rows =
+          official::ObserveKinematics(*official_road_, vehicle, config);
+      for (int r = 0; r < 5; ++r) {
+        for (int c = 0; c < 5; ++c) {
+          obs(player, r, c) = rows[5 * r + c];
+        }
+      }
+      state["reward"_][player] = reset_reward.value_or(
+          static_cast<float>(OfficialIntersectionReward(vehicle)));
+      state["info:players.speed"_][player] = static_cast<float>(vehicle.speed);
+      state["info:players.crashed"_][player] = vehicle.crashed;
+    }
+  }
+
   void WriteObs(State* state) {
     if constexpr (std::is_same_v<SpecT, NativeK5Spec>) {
+      if (UseOfficialBackend()) {
+        WriteOfficialKinematics(state);
+        return;
+      }
       WriteKinematics(state, 5, 5);
       return;
     }
     if constexpr (std::is_same_v<SpecT, NativeK75Spec>) {
+      if (scenario_ == "exit") {
+        WriteOfficialExitKinematics(state);
+        return;
+      }
       WriteKinematics(state, 15, 7);
       return;
     }
     if constexpr (std::is_same_v<SpecT, NativeK73Spec>) {
+      if (scenario_ == "intersection") {
+        WriteOfficialIntersectionKinematics(state);
+        return;
+      }
       WriteKinematics(state, 15, 7);
       return;
     }
     if constexpr (std::is_same_v<SpecT, NativeK8CSpec>) {
+      if (scenario_ == "intersection_continuous") {
+        WriteOfficialIntersectionContinuousKinematics(state);
+        return;
+      }
       WriteKinematics8(state);
       return;
     }
     if constexpr (std::is_same_v<SpecT, NativeGoalSpec>) {
+      if (UseOfficialBackend()) {
+        WriteOfficialGoal(state);
+        return;
+      }
       WriteGoal(state);
       return;
     }
     if constexpr (std::is_same_v<SpecT, NativeAttributesSpec>) {
+      if (scenario_ == "lane_keeping") {
+        WriteOfficialAttributes(state);
+        return;
+      }
       WriteAttributes(state);
       return;
     }
     if constexpr (std::is_same_v<SpecT, NativeOccupancySpec>) {
+      if (scenario_.find("racetrack") == 0) {
+        WriteOfficialOccupancy(state);
+        return;
+      }
       WriteOccupancy(state);
       return;
     }
     if constexpr (std::is_same_v<SpecT, NativeTTC5Spec>) {
+      if (UseOfficialBackend()) {
+        WriteOfficialTTC<5>(state);
+        return;
+      }
       WriteTTC<5>(state);
       return;
     }
     if constexpr (std::is_same_v<SpecT, NativeTTC16Spec>) {
+      if (UseOfficialBackend()) {
+        WriteOfficialTTC<16>(state);
+        return;
+      }
       WriteTTC<16>(state);
     }
   }
@@ -645,6 +1391,143 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
 
   void WriteKinematics8(State* state) { WriteKinematics(state, 5, 8); }
 
+  void WriteOfficialKinematics(State* state) {
+    official::KinematicObservationConfig config;
+    config.vehicles_count = 5;
+    config.features = {
+        official::KinematicFeature::kPresence, official::KinematicFeature::kX,
+        official::KinematicFeature::kY,        official::KinematicFeature::kVx,
+        official::KinematicFeature::kVy,
+    };
+    if (scenario_ == "roundabout") {
+      config.absolute = true;
+      config.x_min = -100.0;
+      config.x_max = 100.0;
+      config.y_min = -100.0;
+      config.y_max = 100.0;
+      config.vx_min = -15.0;
+      config.vx_max = 15.0;
+      config.vy_min = -15.0;
+      config.vy_max = 15.0;
+    }
+    const std::vector<float> rows =
+        official::ObserveKinematics(*official_road_, OfficialEgo(), config);
+    auto obs = (*state)["obs"_];
+    for (int r = 0; r < 5; ++r) {
+      for (int c = 0; c < 5; ++c) {
+        obs(r, c) = rows[5 * r + c];
+      }
+    }
+    (*state)["info:speed"_] = static_cast<float>(OfficialEgo().speed);
+    (*state)["info:crashed"_] = OfficialEgo().crashed;
+  }
+
+  void WriteOfficialExitKinematics(State* state) {
+    official::KinematicObservationConfig config;
+    config.vehicles_count = 15;
+    config.features = {
+        official::KinematicFeature::kPresence,
+        official::KinematicFeature::kX,
+        official::KinematicFeature::kY,
+        official::KinematicFeature::kVx,
+        official::KinematicFeature::kVy,
+        official::KinematicFeature::kCosH,
+        official::KinematicFeature::kSinH,
+    };
+    config.clip = false;
+    const official::Lane& exit_pre_lane =
+        official_road_->network.GetLane({"1", "2", 6});
+    config.ego_x_override =
+        exit_pre_lane.LocalCoordinates(OfficialEgo().position).longitudinal;
+    const std::vector<float> rows =
+        official::ObserveKinematics(*official_road_, OfficialEgo(), config);
+    auto obs = (*state)["obs"_];
+    for (int r = 0; r < 15; ++r) {
+      for (int c = 0; c < 7; ++c) {
+        obs(r, c) = rows[7 * r + c];
+      }
+    }
+    (*state)["info:speed"_] = static_cast<float>(OfficialEgo().speed);
+    (*state)["info:crashed"_] = OfficialEgo().crashed;
+  }
+
+  void WriteOfficialIntersectionKinematics(State* state) {
+    official::KinematicObservationConfig config;
+    config.vehicles_count = 15;
+    config.features = {
+        official::KinematicFeature::kPresence,
+        official::KinematicFeature::kX,
+        official::KinematicFeature::kY,
+        official::KinematicFeature::kVx,
+        official::KinematicFeature::kVy,
+        official::KinematicFeature::kCosH,
+        official::KinematicFeature::kSinH,
+    };
+    config.absolute = true;
+    config.x_min = -100.0;
+    config.x_max = 100.0;
+    config.y_min = -100.0;
+    config.y_max = 100.0;
+    config.vx_min = -20.0;
+    config.vx_max = 20.0;
+    config.vy_min = -20.0;
+    config.vy_max = 20.0;
+    config.include_obstacles = false;
+    const std::vector<float> rows =
+        official::ObserveKinematics(*official_road_, OfficialEgo(), config);
+    auto obs = (*state)["obs"_];
+    for (int r = 0; r < 15; ++r) {
+      for (int c = 0; c < 7; ++c) {
+        obs(r, c) = rows[7 * r + c];
+      }
+    }
+    (*state)["info:speed"_] = static_cast<float>(OfficialEgo().speed);
+    (*state)["info:crashed"_] = OfficialEgo().crashed;
+  }
+
+  void WriteOfficialIntersectionContinuousKinematics(State* state) {
+    official::KinematicObservationConfig config;
+    config.vehicles_count = 5;
+    config.features = {
+        official::KinematicFeature::kPresence,
+        official::KinematicFeature::kX,
+        official::KinematicFeature::kY,
+        official::KinematicFeature::kVx,
+        official::KinematicFeature::kVy,
+        official::KinematicFeature::kLongOff,
+        official::KinematicFeature::kLatOff,
+        official::KinematicFeature::kAngOff,
+    };
+    const std::vector<float> rows =
+        official::ObserveKinematics(*official_road_, OfficialEgo(), config);
+    auto obs = (*state)["obs"_];
+    for (int r = 0; r < 5; ++r) {
+      for (int c = 0; c < 8; ++c) {
+        obs(r, c) = rows[8 * r + c];
+      }
+    }
+    (*state)["info:speed"_] = static_cast<float>(OfficialEgo().speed);
+    (*state)["info:crashed"_] = OfficialEgo().crashed;
+  }
+
+  template <int Horizon>
+  void WriteOfficialTTC(State* state) {
+    const std::vector<float> rows = official::ObserveTimeToCollision(
+        *official_road_, OfficialEgo(),
+        1.0 / static_cast<double>(policy_frequency_),
+        static_cast<double>(Horizon));
+    auto obs = (*state)["obs"_];
+    for (int i = 0; i < 3; ++i) {
+      for (int j = 0; j < 3; ++j) {
+        for (int k = 0; k < Horizon; ++k) {
+          obs(i, j, k) = rows[(i * 3 + j) * Horizon + k];
+        }
+      }
+    }
+    (*state)["info:speed"_] = static_cast<float>(OfficialEgo().speed);
+    (*state)["info:crashed"_] = OfficialEgo().crashed;
+  }
+
   void WriteGoal(State* state) {
     auto observation = (*state)["obs:observation"_];
     auto achieved_goal = (*state)["obs:achieved_goal"_];
@@ -665,6 +1548,24 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       desired_goal[i] = desired[i];
     }
     (*state)["info:is_success"_] = Distance(agents_[0], goals_[0]) < 3.0;
+    (*state)["info:speed"_] = static_cast<float>(agents_[0].speed);
+    (*state)["info:crashed"_] = agents_[0].crashed;
+  }
+
+  void WriteOfficialGoal(State* state) {
+    auto observation = (*state)["obs:observation"_];
+    auto achieved_goal = (*state)["obs:achieved_goal"_];
+    auto desired_goal = (*state)["obs:desired_goal"_];
+    const std::array<double, 6> achieved = OfficialParkingAchievedGoal();
+    const std::array<double, 6> desired = OfficialParkingDesiredGoal();
+    for (int i = 0; i < 6; ++i) {
+      observation[i] = achieved[i];
+      achieved_goal[i] = achieved[i];
+      desired_goal[i] = desired[i];
+    }
+    (*state)["info:is_success"_] = OfficialParkingSuccess();
+    (*state)["info:speed"_] = static_cast<float>(OfficialEgo().speed);
+    (*state)["info:crashed"_] = OfficialEgo().crashed;
   }
 
   void WriteAttributes(State* state) {
@@ -683,6 +1584,34 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     }
   }
 
+  void WriteOfficialAttributes(State* state) {
+    auto s = (*state)["obs:state"_];
+    auto d = (*state)["obs:derivative"_];
+    auto r = (*state)["obs:reference_state"_];
+    const official::Vehicle& ego = OfficialEgo();
+    const std::array<double, 6> bicycle_state{ego.position.x,    ego.position.y,
+                                              ego.heading,       ego.speed,
+                                              ego.lateral_speed, ego.yaw_rate};
+    const std::array<double, 6> derivative =
+        OfficialBicycleDerivative(ego, bicycle_state);
+    const official::Lane& lane =
+        official_road_->network.GetLane(official_active_lane_index_);
+    const official::LaneCoordinates local = lane.LocalCoordinates(ego.position);
+    const double reference_heading = lane.HeadingAt(local.longitudinal);
+    const double reference_y = ego.position.y - local.lateral;
+    const std::array<double, 4> state_values{ego.position.y, ego.heading,
+                                             ego.lateral_speed, ego.yaw_rate};
+    const std::array<double, 4> derivative_values{derivative[1], derivative[2],
+                                                  derivative[4], derivative[5]};
+    const std::array<double, 4> reference_values{reference_y, reference_heading,
+                                                 0.0, 0.0};
+    for (int i = 0; i < 4; ++i) {
+      s(i, 0) = state_values[i];
+      d(i, 0) = derivative_values[i];
+      r(i, 0) = reference_values[i];
+    }
+  }
+
   void WriteOccupancy(State* state) {
     auto obs = (*state)["obs"_];
     for (int c = 0; c < 2; ++c) {
@@ -695,6 +1624,57 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     obs(0, 6, 6) = 1.0f;
     (*state)["info:speed"_] = static_cast<float>(agents_[0].speed);
     (*state)["info:crashed"_] = agents_[0].crashed;
+  }
+
+  [[nodiscard]] std::pair<int, int> OfficialOccupancyIndex(
+      official::Vec2 position) const {
+    const official::Vehicle& ego = OfficialEgo();
+    position = position - ego.position;
+    const double c = std::cos(ego.heading);
+    const double s = std::sin(ego.heading);
+    const double aligned_x = c * position.x + s * position.y;
+    const double aligned_y = -s * position.x + c * position.y;
+    return {static_cast<int>(std::floor((aligned_x + 18.0) / 3.0)),
+            static_cast<int>(std::floor((aligned_y + 18.0) / 3.0))};
+  }
+
+  template <typename Obs>
+  void SetOfficialOccupancy(Obs obs, int layer, official::Vec2 position,
+                            float value) const {
+    const auto [i, j] = OfficialOccupancyIndex(position);
+    if (0 <= i && i < 12 && 0 <= j && j < 12) {
+      obs(layer, i, j) = value;
+    }
+  }
+
+  void WriteOfficialOccupancy(State* state) {
+    auto obs = (*state)["obs"_];
+    for (int c = 0; c < 2; ++c) {
+      for (int i = 0; i < 12; ++i) {
+        for (int j = 0; j < 12; ++j) {
+          obs(c, i, j) = 0.0f;
+        }
+      }
+    }
+
+    for (int index = static_cast<int>(official_road_->vehicles.size()) - 1;
+         index >= 0; --index) {
+      SetOfficialOccupancy(obs, 0, official_road_->vehicles[index].position,
+                           1.0f);
+    }
+
+    constexpr double lane_waypoints_spacing = 3.0;
+    for (const official::Lane* lane : official_road_->network.Lanes()) {
+      const double origin =
+          lane->LocalCoordinates(OfficialEgo().position).longitudinal;
+      for (double waypoint = origin - 100.0; waypoint < origin + 100.0;
+           waypoint += lane_waypoints_spacing) {
+        const double clipped = Clip(waypoint, 0.0, lane->length());
+        SetOfficialOccupancy(obs, 1, lane->Position(clipped, 0.0), 1.0f);
+      }
+    }
+    (*state)["info:speed"_] = static_cast<float>(OfficialEgo().speed);
+    (*state)["info:crashed"_] = OfficialEgo().crashed;
   }
 
   template <int Horizon>
@@ -797,16 +1777,32 @@ using NativeAttrsEnv = NativeTaskEnv<NativeAttributesSpec, Continuous1Adapter>;
 using NativeOccEnv = NativeTaskEnv<NativeOccupancySpec, Continuous1Adapter>;
 using NativeMultiEnv = NativeTaskEnv<NativeMultiAgentSpec, MultiAgentAdapter>;
 
-using NativeK5Pool = AsyncEnvPool<NativeK5Env>;
-using NativeK75Pool = AsyncEnvPool<NativeK75Env>;
-using NativeK73Pool = AsyncEnvPool<NativeK73Env>;
-using NativeK8CPool = AsyncEnvPool<NativeK8CEnv>;
-using NativeTTC5Pool = AsyncEnvPool<NativeTTC5Env>;
-using NativeTTC16Pool = AsyncEnvPool<NativeTTC16Env>;
-using NativeGoalPool = AsyncEnvPool<NativeGoalEnv>;
-using NativeAttributesPool = AsyncEnvPool<NativeAttrsEnv>;
-using NativeOccupancyPool = AsyncEnvPool<NativeOccEnv>;
-using NativeMultiAgentPool = AsyncEnvPool<NativeMultiEnv>;
+template <typename EnvT>
+class NativeTaskPool : public AsyncEnvPool<EnvT> {
+ public:
+  using AsyncEnvPool<EnvT>::AsyncEnvPool;
+
+  [[nodiscard]] std::vector<HighwayDebugState> DebugStates(
+      const std::vector<int>& env_ids) const {
+    std::vector<HighwayDebugState> states;
+    states.reserve(env_ids.size());
+    for (int env_id : env_ids) {
+      states.emplace_back(this->envs_[env_id]->DebugState());
+    }
+    return states;
+  }
+};
+
+using NativeK5Pool = NativeTaskPool<NativeK5Env>;
+using NativeK75Pool = NativeTaskPool<NativeK75Env>;
+using NativeK73Pool = NativeTaskPool<NativeK73Env>;
+using NativeK8CPool = NativeTaskPool<NativeK8CEnv>;
+using NativeTTC5Pool = NativeTaskPool<NativeTTC5Env>;
+using NativeTTC16Pool = NativeTaskPool<NativeTTC16Env>;
+using NativeGoalPool = NativeTaskPool<NativeGoalEnv>;
+using NativeAttributesPool = NativeTaskPool<NativeAttrsEnv>;
+using NativeOccupancyPool = NativeTaskPool<NativeOccEnv>;
+using NativeMultiAgentPool = NativeTaskPool<NativeMultiEnv>;
 
 using NativeKinematics5Env = NativeK5Env;
 using NativeKinematics7Action5Env = NativeK75Env;
