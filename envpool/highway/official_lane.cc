@@ -29,7 +29,7 @@ Vec2 operator*(double scale, Vec2 rhs) {
 
 Vec2 operator*(Vec2 lhs, double scale) { return scale * lhs; }
 
-double Dot(Vec2 lhs, Vec2 rhs) { return lhs.x * rhs.x + lhs.y * rhs.y; }
+double Dot(Vec2 lhs, Vec2 rhs) { return std::fma(lhs.x, rhs.x, lhs.y * rhs.y); }
 
 double Norm(Vec2 value) { return std::hypot(value.x, value.y); }
 
