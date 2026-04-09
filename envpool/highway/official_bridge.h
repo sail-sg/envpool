@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// TODO: replace this official highway-env bridge with a pure C++ port. It
-// intentionally lives behind the Highway module and is used only for upstream
-// HighwayEnv task families that have not been ported yet.
+// TODO(jiayi): replace this official highway-env bridge with a pure C++ port.
+// It intentionally lives behind the Highway module and is used only for
+// upstream HighwayEnv task families that have not been ported yet.
 
 #ifndef ENVPOOL_HIGHWAY_OFFICIAL_BRIDGE_H_
 #define ENVPOOL_HIGHWAY_OFFICIAL_BRIDGE_H_
@@ -580,57 +580,59 @@ class OfficialMultiAgentFns : public OfficialBaseFns<void> {
   }
 };
 
-using OfficialKinematics5EnvSpec =
-    OfficialEnvSpec<OfficialKinematics5Fns, KinematicsAdapter<5, 5>>;
-using OfficialKinematics5Env =
-    OfficialEnv<OfficialKinematics5EnvSpec, KinematicsAdapter<5, 5>>;
-using OfficialKinematics5EnvPool =
-    OfficialEnvPool<OfficialKinematics5EnvSpec, KinematicsAdapter<5, 5>>;
+struct OfficialTypes {
+  using K5 = KinematicsAdapter<5, 5>;
+  using K7 = KinematicsAdapter<15, 7>;
+  using K8 = Kinematics8ContinuousAdapter;
+  template <typename Fns, typename Adapter>
+  using Spec = OfficialEnvSpec<Fns, Adapter>;
+  template <typename SpecT, typename Adapter>
+  using Pool = OfficialEnvPool<SpecT, Adapter>;
 
-using OfficialKinematics7Action5EnvSpec =
-    OfficialEnvSpec<OfficialKinematics7Action5Fns, KinematicsAdapter<15, 7>>;
-using OfficialKinematics7Action5EnvPool =
-    OfficialEnvPool<OfficialKinematics7Action5EnvSpec,
-                    KinematicsAdapter<15, 7>>;
+  using K5Spec = Spec<OfficialKinematics5Fns, K5>;
+  using K5Env = OfficialEnv<K5Spec, K5>;
+  using K5Pool = Pool<K5Spec, K5>;
+  using K75Spec = Spec<OfficialKinematics7Action5Fns, K7>;
+  using K75Pool = Pool<K75Spec, K7>;
+  using K73Spec = Spec<OfficialKinematics7Action3Fns, K7>;
+  using K73Pool = Pool<K73Spec, K7>;
+  using K8Spec = Spec<OfficialKinematics8ContinuousFns, K8>;
+  using K8Pool = Pool<K8Spec, K8>;
+  using TTC5Spec = Spec<OfficialTTCFns<5>, TTCAdapter<5>>;
+  using TTC5Pool = Pool<TTC5Spec, TTCAdapter<5>>;
+  using TTC16Spec = Spec<OfficialTTCFns<16>, TTCAdapter<16>>;
+  using TTC16Pool = Pool<TTC16Spec, TTCAdapter<16>>;
+  using GoalSpec = Spec<OfficialGoalFns, GoalAdapter>;
+  using GoalPool = Pool<GoalSpec, GoalAdapter>;
+  using AttrsSpec = Spec<OfficialAttributesFns, AttributesAdapter>;
+  using AttrsPool = Pool<AttrsSpec, AttributesAdapter>;
+  using OccSpec = Spec<OfficialOccupancyFns, OccupancyAdapter>;
+  using OccPool = Pool<OccSpec, OccupancyAdapter>;
+  using MAgentSpec = Spec<OfficialMultiAgentFns, MultiAgentAdapter>;
+  using MAgentPool = Pool<MAgentSpec, MultiAgentAdapter>;
+};
 
-using OfficialKinematics7Action3EnvSpec =
-    OfficialEnvSpec<OfficialKinematics7Action3Fns, KinematicsAdapter<15, 7>>;
-using OfficialKinematics7Action3EnvPool =
-    OfficialEnvPool<OfficialKinematics7Action3EnvSpec,
-                    KinematicsAdapter<15, 7>>;
-
-using OfficialKinematics8ContinuousEnvSpec =
-    OfficialEnvSpec<OfficialKinematics8ContinuousFns,
-                    Kinematics8ContinuousAdapter>;
-using OfficialKinematics8ContinuousEnvPool =
-    OfficialEnvPool<OfficialKinematics8ContinuousEnvSpec,
-                    Kinematics8ContinuousAdapter>;
-
-using OfficialTTC5EnvSpec = OfficialEnvSpec<OfficialTTCFns<5>, TTCAdapter<5>>;
-using OfficialTTC5EnvPool = OfficialEnvPool<OfficialTTC5EnvSpec, TTCAdapter<5>>;
-
-using OfficialTTC16EnvSpec =
-    OfficialEnvSpec<OfficialTTCFns<16>, TTCAdapter<16>>;
-using OfficialTTC16EnvPool =
-    OfficialEnvPool<OfficialTTC16EnvSpec, TTCAdapter<16>>;
-
-using OfficialGoalEnvSpec = OfficialEnvSpec<OfficialGoalFns, GoalAdapter>;
-using OfficialGoalEnvPool = OfficialEnvPool<OfficialGoalEnvSpec, GoalAdapter>;
-
-using OfficialAttributesEnvSpec =
-    OfficialEnvSpec<OfficialAttributesFns, AttributesAdapter>;
-using OfficialAttributesEnvPool =
-    OfficialEnvPool<OfficialAttributesEnvSpec, AttributesAdapter>;
-
-using OfficialOccupancyEnvSpec =
-    OfficialEnvSpec<OfficialOccupancyFns, OccupancyAdapter>;
-using OfficialOccupancyEnvPool =
-    OfficialEnvPool<OfficialOccupancyEnvSpec, OccupancyAdapter>;
-
-using OfficialMultiAgentEnvSpec =
-    OfficialEnvSpec<OfficialMultiAgentFns, MultiAgentAdapter>;
-using OfficialMultiAgentEnvPool =
-    OfficialEnvPool<OfficialMultiAgentEnvSpec, MultiAgentAdapter>;
+using OfficialKinematics5EnvSpec = OfficialTypes::K5Spec;
+using OfficialKinematics5Env = OfficialTypes::K5Env;
+using OfficialKinematics5EnvPool = OfficialTypes::K5Pool;
+using OfficialKinematics7Action5EnvSpec = OfficialTypes::K75Spec;
+using OfficialKinematics7Action5EnvPool = OfficialTypes::K75Pool;
+using OfficialKinematics7Action3EnvSpec = OfficialTypes::K73Spec;
+using OfficialKinematics7Action3EnvPool = OfficialTypes::K73Pool;
+using OfficialKinematics8ContinuousEnvSpec = OfficialTypes::K8Spec;
+using OfficialKinematics8ContinuousEnvPool = OfficialTypes::K8Pool;
+using OfficialTTC5EnvSpec = OfficialTypes::TTC5Spec;
+using OfficialTTC5EnvPool = OfficialTypes::TTC5Pool;
+using OfficialTTC16EnvSpec = OfficialTypes::TTC16Spec;
+using OfficialTTC16EnvPool = OfficialTypes::TTC16Pool;
+using OfficialGoalEnvSpec = OfficialTypes::GoalSpec;
+using OfficialGoalEnvPool = OfficialTypes::GoalPool;
+using OfficialAttributesEnvSpec = OfficialTypes::AttrsSpec;
+using OfficialAttributesEnvPool = OfficialTypes::AttrsPool;
+using OfficialOccupancyEnvSpec = OfficialTypes::OccSpec;
+using OfficialOccupancyEnvPool = OfficialTypes::OccPool;
+using OfficialMultiAgentEnvSpec = OfficialTypes::MAgentSpec;
+using OfficialMultiAgentEnvPool = OfficialTypes::MAgentPool;
 
 }  // namespace official
 }  // namespace highway

@@ -19,6 +19,7 @@
 #include <cmath>
 #include <numeric>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace highway {

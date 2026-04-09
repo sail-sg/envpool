@@ -24,40 +24,40 @@ namespace py = pybind11;
 using PyHighwayEnvSpec = PyEnvSpec<HighwayEnvSpec>;
 using PyHighwayEnvPool = PyEnvPool<HighwayEnvPool>;
 
-using PyOfficialKinematics5EnvSpec =
-    PyEnvSpec<official::OfficialKinematics5EnvSpec>;
-using PyOfficialKinematics5EnvPool =
-    PyEnvPool<official::OfficialKinematics5EnvPool>;
-using PyOfficialKinematics7Action5EnvSpec =
-    PyEnvSpec<official::OfficialKinematics7Action5EnvSpec>;
-using PyOfficialKinematics7Action5EnvPool =
-    PyEnvPool<official::OfficialKinematics7Action5EnvPool>;
-using PyOfficialKinematics7Action3EnvSpec =
-    PyEnvSpec<official::OfficialKinematics7Action3EnvSpec>;
-using PyOfficialKinematics7Action3EnvPool =
-    PyEnvPool<official::OfficialKinematics7Action3EnvPool>;
-using PyOfficialKinematics8ContinuousEnvSpec =
-    PyEnvSpec<official::OfficialKinematics8ContinuousEnvSpec>;
-using PyOfficialKinematics8ContinuousEnvPool =
-    PyEnvPool<official::OfficialKinematics8ContinuousEnvPool>;
+using OfficialK5Spec = official::OfficialKinematics5EnvSpec;
+using OfficialK5Pool = official::OfficialKinematics5EnvPool;
+using OfficialK75Spec = official::OfficialKinematics7Action5EnvSpec;
+using OfficialK75Pool = official::OfficialKinematics7Action5EnvPool;
+using OfficialK73Spec = official::OfficialKinematics7Action3EnvSpec;
+using OfficialK73Pool = official::OfficialKinematics7Action3EnvPool;
+using OfficialK8Spec = official::OfficialKinematics8ContinuousEnvSpec;
+using OfficialK8Pool = official::OfficialKinematics8ContinuousEnvPool;
+using PyOfficialKinematics5EnvSpec = PyEnvSpec<OfficialK5Spec>;
+using PyOfficialKinematics5EnvPool = PyEnvPool<OfficialK5Pool>;
+using PyOfficialKinematics7Action5EnvSpec = PyEnvSpec<OfficialK75Spec>;
+using PyOfficialKinematics7Action5EnvPool = PyEnvPool<OfficialK75Pool>;
+using PyOfficialKinematics7Action3EnvSpec = PyEnvSpec<OfficialK73Spec>;
+using PyOfficialKinematics7Action3EnvPool = PyEnvPool<OfficialK73Pool>;
+using PyOfficialKinematics8ContinuousEnvSpec = PyEnvSpec<OfficialK8Spec>;
+using PyOfficialKinematics8ContinuousEnvPool = PyEnvPool<OfficialK8Pool>;
 using PyOfficialTTC5EnvSpec = PyEnvSpec<official::OfficialTTC5EnvSpec>;
 using PyOfficialTTC5EnvPool = PyEnvPool<official::OfficialTTC5EnvPool>;
 using PyOfficialTTC16EnvSpec = PyEnvSpec<official::OfficialTTC16EnvSpec>;
 using PyOfficialTTC16EnvPool = PyEnvPool<official::OfficialTTC16EnvPool>;
 using PyOfficialGoalEnvSpec = PyEnvSpec<official::OfficialGoalEnvSpec>;
 using PyOfficialGoalEnvPool = PyEnvPool<official::OfficialGoalEnvPool>;
-using PyOfficialAttributesEnvSpec =
-    PyEnvSpec<official::OfficialAttributesEnvSpec>;
-using PyOfficialAttributesEnvPool =
-    PyEnvPool<official::OfficialAttributesEnvPool>;
-using PyOfficialOccupancyEnvSpec =
-    PyEnvSpec<official::OfficialOccupancyEnvSpec>;
-using PyOfficialOccupancyEnvPool =
-    PyEnvPool<official::OfficialOccupancyEnvPool>;
-using PyOfficialMultiAgentEnvSpec =
-    PyEnvSpec<official::OfficialMultiAgentEnvSpec>;
-using PyOfficialMultiAgentEnvPool =
-    PyEnvPool<official::OfficialMultiAgentEnvPool>;
+using OfficialAttrsSpec = official::OfficialAttributesEnvSpec;
+using OfficialAttrsPool = official::OfficialAttributesEnvPool;
+using OfficialOccSpec = official::OfficialOccupancyEnvSpec;
+using OfficialOccPool = official::OfficialOccupancyEnvPool;
+using OfficialMAgentSpec = official::OfficialMultiAgentEnvSpec;
+using OfficialMAgentPool = official::OfficialMultiAgentEnvPool;
+using PyOfficialAttributesEnvSpec = PyEnvSpec<OfficialAttrsSpec>;
+using PyOfficialAttributesEnvPool = PyEnvPool<OfficialAttrsPool>;
+using PyOfficialOccupancyEnvSpec = PyEnvSpec<OfficialOccSpec>;
+using PyOfficialOccupancyEnvPool = PyEnvPool<OfficialOccPool>;
+using PyOfficialMultiAgentEnvSpec = PyEnvSpec<OfficialMAgentSpec>;
+using PyOfficialMultiAgentEnvPool = PyEnvPool<OfficialMAgentPool>;
 
 }  // namespace highway
 
