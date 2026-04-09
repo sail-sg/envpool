@@ -177,6 +177,7 @@ genrule(
     srcs = ["src/sc_man_scanner.re"],
     outs = ["src/sc_man_scanner.h"],
     cmd = "$(execpath :re2c) --no-generation-date -s -o $@ $<",
+    cmd_bat = "$(execpath :re2c) --no-generation-date -s -o $@ $<",
     tools = [":re2c"],
 )
 
