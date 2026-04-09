@@ -21,6 +21,7 @@ import cv2
 import numpy as np
 from absl.testing import absltest
 
+import envpool.vizdoom.registration  # noqa: F401
 from envpool.registration import make_dm, make_gym, make_spec
 
 

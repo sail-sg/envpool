@@ -21,6 +21,7 @@ import numpy as np
 from absl import logging
 from absl.testing import absltest
 
+import envpool.atari.registration  # noqa: F401
 from envpool.atari import AtariEnvSpec
 from envpool.registration import make_dm, make_gym, make_spec
 

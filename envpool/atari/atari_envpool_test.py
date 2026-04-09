@@ -25,6 +25,7 @@ from absl.testing import absltest
 from envpool.atari.atari_envpool import _AtariEnvPool, _AtariEnvSpec
 from jax import jit, lax
 
+import envpool.atari.registration  # noqa: F401
 from envpool.registration import make_dm, make_gym, make_gymnasium
 
 

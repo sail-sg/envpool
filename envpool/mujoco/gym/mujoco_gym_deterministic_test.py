@@ -16,6 +16,7 @@
 import numpy as np
 from absl.testing import absltest
 
+import envpool.mujoco.gym.registration  # noqa: F401
 from envpool.registration import make, make_gym, make_spec
 
 

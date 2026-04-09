@@ -26,6 +26,7 @@ from minigrid.core.mission import MissionSpace
 from minigrid.core.world_object import WorldObj
 from minigrid.minigrid_env import MiniGridEnv as UpstreamMiniGridEnv
 
+import envpool.minigrid.registration  # noqa: F401
 from envpool.minigrid import decode_mission
 from envpool.registration import list_all_envs, make_gymnasium
 

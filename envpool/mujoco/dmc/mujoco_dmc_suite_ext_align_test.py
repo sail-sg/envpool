@@ -32,6 +32,7 @@ from dm_control import suite
 from dm_control.mujoco import engine as dm_control_engine
 from packaging import version
 
+import envpool.mujoco.dmc.registration  # noqa: F401
 from envpool.registration import make_dm
 
 _MUJOCO_V3 = version.parse(mujoco.__version__) >= version.parse("3.0.0")

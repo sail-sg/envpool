@@ -18,6 +18,7 @@ from typing import Any
 import numpy as np
 from absl.testing import absltest
 
+import envpool.box2d.registration  # noqa: F401
 from envpool.registration import make_gym
 
 

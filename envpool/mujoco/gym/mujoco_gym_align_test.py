@@ -24,6 +24,7 @@ from absl import logging
 from absl.testing import absltest
 from packaging import version
 
+import envpool.mujoco.gym.registration  # noqa: F401
 from envpool.registration import make_gymnasium
 
 _MUJOCO_V3 = version.parse(mujoco.__version__) >= version.parse("3.0.0")

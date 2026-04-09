@@ -17,6 +17,7 @@ import dm_env
 import numpy as np
 from absl.testing import absltest
 
+import envpool.mujoco.dmc.registration  # noqa: F401
 from envpool.registration import make_dm
 
 

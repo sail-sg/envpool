@@ -18,6 +18,7 @@ from typing import Any
 import numpy as np
 from absl.testing import absltest
 
+import envpool.minigrid.registration  # noqa: F401
 from envpool.registration import list_all_envs, make_gym
 
 
