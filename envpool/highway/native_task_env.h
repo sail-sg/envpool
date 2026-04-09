@@ -448,7 +448,8 @@ class NativeMultiAgentFns : public NativeBaseFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     const float inf = std::numeric_limits<float>::infinity();
-    // TODO: Expose per-player termination for intersection-multi-agent-v1.
+    // TODO(jiayi): Expose per-player termination for
+    // intersection-multi-agent-v1.
     // The official wrapper can return mixed terminal tuples such as
     // (false, true), while EnvPool's top-level done is env-level scalar.
     return MakeDict(

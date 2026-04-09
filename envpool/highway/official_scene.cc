@@ -20,6 +20,7 @@
 #include <limits>
 #include <optional>
 #include <utility>
+#include <vector>
 
 namespace highway::official {
 namespace {
