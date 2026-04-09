@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, cast
 
 import gymnasium as gym
 import numpy as np
@@ -41,15 +41,13 @@ class _Step(NamedTuple):
     info: dict[str, Any]
 
 
-def _make_oracle(
-    official_id: str, config: dict[str, Any] | None = None
-) -> gym.Env:
+def _make_oracle(official_id: str, config: dict[str, Any] | None = None) -> Any:
     import highway_env  # noqa: F401
 
     try:
-        wrapper = gym.make(official_id, render_mode="rgb_array")
+        wrapper = cast(Any, gym.make(official_id, render_mode="rgb_array"))
     except TypeError:
-        wrapper = gym.make(official_id)
+        wrapper = cast(Any, gym.make(official_id))
     env = wrapper.unwrapped
     env.configure({
         "offscreen_rendering": True,
@@ -64,11 +62,12 @@ def _official_action(space: spaces.Space[Any], step: int) -> Any:
     if isinstance(space, spaces.Tuple):
         return tuple(_official_action(subspace, step) for subspace in space)
     if isinstance(space, spaces.Discrete):
-        if space.n == 1:
+        n = int(space.n)
+        if n == 1:
             return 0
         # Match the existing multi-step render gate; lane-change dynamics are
         # covered by highway_align_test until the official renderer is shared.
-        return [1, min(space.n - 1, 3), min(space.n - 1, 3), 4][step % 4]
+        return [1, min(n - 1, 3), min(n - 1, 3), 4][step % 4]
     if isinstance(space, spaces.Box):
         action = np.zeros(space.shape, dtype=space.dtype)
         if action.size:
@@ -130,7 +129,7 @@ def _envpool_players(value: Any, player_count: int) -> tuple[Any, ...]:
 
 
 def _envpool_info(info: dict[str, Any]) -> dict[str, Any]:
-    exposed_info = {}
+    exposed_info: dict[str, Any] = {}
     for key in ("speed", "crashed", "is_success"):
         if key in info:
             exposed_info[key] = _envpool_scalar(info[key])
