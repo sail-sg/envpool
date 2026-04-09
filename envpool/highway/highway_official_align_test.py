@@ -312,7 +312,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                     env.close()
                     oracle.close()
 
-    def test_native_official_backend_steps_match_official_from_patched_state(
+    def test_native_official_backend_matches_official_from_patched_reset_state(
         self,
     ) -> None:
         for case in (
@@ -343,7 +343,6 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                     actions = (1, 3, 0, 2, 4)
                     for step in range(_OFFICIAL_BACKEND_ALIGN_STEPS):
                         action = actions[step % len(actions)]
-                        _patch_oracle_from_envpool(oracle, env)
                         expected = _Step(*oracle.step(action))
                         actual = _envpool_step(env, case, action)
 
