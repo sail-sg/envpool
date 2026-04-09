@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import platform
 from typing import Any, NamedTuple, cast
 
 import gymnasium as gym
@@ -38,6 +39,10 @@ _EXIT_ALIGN_STEPS = 120
 _INTERSECTION_ALIGN_STEPS = 16
 _LANE_KEEPING_ALIGN_STEPS = 2
 _RACETRACK_ALIGN_STEPS = 120
+_IS_LINUX_ARM64 = (
+    platform.system() == "Linux"
+    and platform.machine().lower() in ("aarch64", "arm64")
+)
 
 
 class _Step(NamedTuple):
@@ -188,6 +193,25 @@ def _assert_tree_bitwise(actual: Any, expected: Any) -> None:
     np.testing.assert_array_equal(actual, expected)
 
 
+def _assert_tree_close(actual: Any, expected: Any, atol: float) -> None:
+    if isinstance(expected, dict):
+        assert isinstance(actual, dict)
+        assert actual.keys() == expected.keys()
+        for key in expected:
+            _assert_tree_close(actual[key], expected[key], atol)
+        return
+    if isinstance(expected, tuple):
+        assert isinstance(actual, tuple)
+        assert len(actual) == len(expected)
+        for actual_item, expected_item in zip(actual, expected, strict=True):
+            _assert_tree_close(actual_item, expected_item, atol)
+        return
+    if atol == 0.0:
+        np.testing.assert_array_equal(actual, expected)
+    else:
+        np.testing.assert_allclose(actual, expected, rtol=0.0, atol=atol)
+
+
 def _render_rgb(env: Any) -> np.ndarray:
     frame = env.render()
     assert frame is not None
@@ -231,6 +255,14 @@ _RENDER_MISMATCH_PIXEL_LIMIT: dict[str, int] = {
 }
 
 
+def _render_mismatch_pixel_limit(official_id: str) -> int:
+    if _IS_LINUX_ARM64 and official_id == "exit-v0":
+        # The official pygame renderer leaves a handful of edge pixels
+        # platform-dependent on Linux/aarch64 after several steps.
+        return 20
+    return _RENDER_MISMATCH_PIXEL_LIMIT[official_id]
+
+
 def _assert_render_aligned(
     case: _Case, envpool_env: Any, oracle: gym.Env, step_label: str
 ) -> None:
@@ -247,7 +279,7 @@ def _assert_render_aligned(
     if mismatch_pixels == 0:
         return
     mismatch_channels = int(np.count_nonzero(actual != expected))
-    limit = _RENDER_MISMATCH_PIXEL_LIMIT[case.official_id]
+    limit = _render_mismatch_pixel_limit(case.official_id)
     assert mismatch_pixels <= limit, (
         f"{case.official_id} render mismatch at {step_label}: "
         f"{mismatch_pixels} pixels / {mismatch_channels} channel values; "
@@ -418,6 +450,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
     def test_native_parking_steps_match_official_from_patched_state(
         self,
     ) -> None:
+        obs_atol = 1e-15 if _IS_LINUX_ARM64 else 0.0
         for case in (
             _Case("parking-v0"),
             _Case("parking-ActionRepeat-v0"),
@@ -435,9 +468,10 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                     env_obs, _ = env.reset()
                     oracle.reset(seed=123)
                     _patch_oracle_from_envpool(oracle, env)
-                    _assert_tree_bitwise(
+                    _assert_tree_close(
                         _envpool_reset_obs(env_obs, case),
                         oracle.unwrapped.observation_type.observe(),
+                        obs_atol,
                     )
                     _assert_render_aligned(case, env, oracle, "reset")
 
@@ -446,8 +480,10 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                         expected = _Step(*oracle.step(action))
                         actual = _envpool_step(env, case, action)
 
-                        _assert_tree_bitwise(
-                            _envpool_obs(actual.obs, case), expected.obs
+                        _assert_tree_close(
+                            _envpool_obs(actual.obs, case),
+                            expected.obs,
+                            obs_atol,
                         )
                         np.testing.assert_array_equal(
                             _envpool_scalar(actual.reward),
