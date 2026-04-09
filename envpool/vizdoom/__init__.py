@@ -23,13 +23,11 @@ from .vizdoom_envpool import (
 (
     VizdoomEnvSpec,
     VizdoomDMEnvPool,
-    VizdoomGymEnvPool,
     VizdoomGymnasiumEnvPool,
 ) = py_env(_VizdoomEnvSpec, _VizdoomEnvPool)
 
 __all__ = [
     "VizdoomEnvSpec",
     "VizdoomDMEnvPool",
-    "VizdoomGymEnvPool",
     "VizdoomGymnasiumEnvPool",
 ]

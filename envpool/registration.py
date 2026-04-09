@@ -23,7 +23,6 @@ import numpy as np
 from .python.protocol import (
     DMEnvPool,
     EnvSpec,
-    GymEnvPool,
     GymnasiumEnvPool,
 )
 
@@ -44,7 +43,6 @@ class EnvRegistry:
         import_path: str,
         spec_cls: str,
         dm_cls: str,
-        gym_cls: str,
         gymnasium_cls: str,
         aliases: Sequence[str] = (),
         **kwargs: Any,
@@ -57,7 +55,6 @@ class EnvRegistry:
             self.specs[alias] = (import_path, spec_cls, dict(kwargs))
             self.envpools[alias] = {
                 "dm": (import_path, dm_cls),
-                "gym": (import_path, gym_cls),
                 "gymnasium": (import_path, gymnasium_cls),
             }
 
@@ -139,7 +136,6 @@ class EnvRegistry:
                 )
             suffix = {
                 "dm": "DMEnvPool",
-                "gym": "GymEnvPool",
                 "gymnasium": "GymnasiumEnvPool",
             }[env_type]
             envpool_cls = self._pixel_variant_name(envpool_cls, suffix)
@@ -191,22 +187,17 @@ class EnvRegistry:
 
     @overload
     def make(
-        self, task_id: str, env_type: Literal["gym"], **kwargs: Any
-    ) -> GymEnvPool: ...
-
-    @overload
-    def make(
         self, task_id: str, env_type: Literal["gymnasium"], **kwargs: Any
     ) -> GymnasiumEnvPool: ...
 
     @overload
     def make(
         self, task_id: str, env_type: str, **kwargs: Any
-    ) -> DMEnvPool | GymEnvPool | GymnasiumEnvPool: ...
+    ) -> DMEnvPool | GymnasiumEnvPool: ...
 
     def make(
         self, task_id: str, env_type: str, **kwargs: Any
-    ) -> DMEnvPool | GymEnvPool | GymnasiumEnvPool:
+    ) -> DMEnvPool | GymnasiumEnvPool:
         """Make envpool."""
         from_pixels, wrapper_kwargs = self._extract_make_options(kwargs)
         if "gym_reset_return_info" not in kwargs:
@@ -221,7 +212,7 @@ class EnvRegistry:
         assert task_id in self.specs, (
             f"{task_id} is not supported, `envpool.list_all_envs()` may help."
         )
-        assert env_type in ["dm", "gym", "gymnasium"]
+        assert env_type in ["dm", "gymnasium"]
 
         spec = self._make_env_spec(task_id, from_pixels=from_pixels, **kwargs)
         import_path, envpool_cls = self._resolve_envpool_entry(
@@ -233,10 +224,6 @@ class EnvRegistry:
     def make_dm(self, task_id: str, **kwargs: Any) -> DMEnvPool:
         """Make dm_env compatible envpool."""
         return self.make(task_id, "dm", **kwargs)
-
-    def make_gym(self, task_id: str, **kwargs: Any) -> GymEnvPool:
-        """Make gym.Env compatible envpool."""
-        return self.make(task_id, "gym", **kwargs)
 
     def make_gymnasium(self, task_id: str, **kwargs: Any) -> GymnasiumEnvPool:
         """Make gymnasium.Env compatible envpool."""
@@ -297,7 +284,7 @@ def make(task_id: str, env_type: Literal["dm"], **kwargs: Any) -> DMEnvPool: ...
 @overload
 def make(
     task_id: str, env_type: Literal["gym"], **kwargs: Any
-) -> GymEnvPool: ...
+) -> GymnasiumEnvPool: ...
 
 
 @overload
@@ -309,18 +296,16 @@ def make(
 @overload
 def make(
     task_id: str, env_type: str, **kwargs: Any
-) -> DMEnvPool | GymEnvPool | GymnasiumEnvPool: ...
+) -> DMEnvPool | GymnasiumEnvPool: ...
 
 
 def make(
     task_id: str, env_type: str, **kwargs: Any
-) -> DMEnvPool | GymEnvPool | GymnasiumEnvPool:
+) -> DMEnvPool | GymnasiumEnvPool:
     """Make an EnvPool with a public, typed interface."""
     if env_type == "dm":
         return registry.make(task_id, "dm", **kwargs)
-    if env_type == "gym":
-        return registry.make(task_id, "gym", **kwargs)
-    if env_type == "gymnasium":
+    if env_type in ("gym", "gymnasium"):
         return registry.make(task_id, "gymnasium", **kwargs)
     raise AssertionError(
         "env_type should be one of 'dm', 'gym', or 'gymnasium'."
@@ -332,9 +317,9 @@ def make_dm(task_id: str, **kwargs: Any) -> DMEnvPool:
     return registry.make_dm(task_id, **kwargs)
 
 
-def make_gym(task_id: str, **kwargs: Any) -> GymEnvPool:
+def make_gym(task_id: str, **kwargs: Any) -> GymnasiumEnvPool:
     """Make gym.Env compatible envpool."""
-    return registry.make_gym(task_id, **kwargs)
+    return make_gymnasium(task_id, **kwargs)
 
 
 def make_gymnasium(task_id: str, **kwargs: Any) -> GymnasiumEnvPool:

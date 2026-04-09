@@ -23,7 +23,6 @@ from envpool.registration import register
 _IMPORT_PATH = "envpool.minigrid"
 _SPEC_CLS = "MiniGridEnvSpec"
 _DM_CLS = "MiniGridDMEnvPool"
-_GYM_CLS = "MiniGridGymEnvPool"
 _GYMNASIUM_CLS = "MiniGridGymnasiumEnvPool"
 _BABYAI_MISSION_BYTES = 512
 _RANDOM_START = {"agent_start_pos": (-1, -1), "agent_start_dir": -1}
@@ -35,7 +34,6 @@ def _register(task_id: str, max_episode_steps: int, **kwargs: Any) -> None:
         import_path=_IMPORT_PATH,
         spec_cls=_SPEC_CLS,
         dm_cls=_DM_CLS,
-        gym_cls=_GYM_CLS,
         gymnasium_cls=_GYMNASIUM_CLS,
         max_episode_steps=max_episode_steps,
         **kwargs,

@@ -25,7 +25,7 @@ from envpool.dummy.dummy_envpool import _DummyEnvPool, _DummyEnvSpec
 from envpool.python.api import py_env
 from envpool.python.protocol import EnvPool
 
-DummyEnvSpec, _DummyDMEnvPool, _, _ = py_env(_DummyEnvSpec, _DummyEnvPool)
+DummyEnvSpec, _DummyDMEnvPool, _ = py_env(_DummyEnvSpec, _DummyEnvPool)
 
 
 def _make_dummy_dm_env() -> EnvPool:

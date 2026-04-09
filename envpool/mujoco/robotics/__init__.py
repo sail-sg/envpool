@@ -41,13 +41,11 @@ from envpool.python.api import py_env
 (
     GymnasiumRoboticsFetchEnvSpec,
     GymnasiumRoboticsFetchDMEnvPool,
-    GymnasiumRoboticsFetchGymEnvPool,
     GymnasiumRoboticsFetchGymnasiumEnvPool,
 ) = py_env(_GymnasiumRoboticsFetchEnvSpec, _GymnasiumRoboticsFetchEnvPool)
 (
     GymnasiumRoboticsFetchPixelEnvSpec,
     GymnasiumRoboticsFetchPixelDMEnvPool,
-    GymnasiumRoboticsFetchPixelGymEnvPool,
     GymnasiumRoboticsFetchPixelGymnasiumEnvPool,
 ) = py_env(
     _GymnasiumRoboticsFetchPixelEnvSpec, _GymnasiumRoboticsFetchPixelEnvPool
@@ -55,13 +53,11 @@ from envpool.python.api import py_env
 (
     GymnasiumRoboticsHandEnvSpec,
     GymnasiumRoboticsHandDMEnvPool,
-    GymnasiumRoboticsHandGymEnvPool,
     GymnasiumRoboticsHandGymnasiumEnvPool,
 ) = py_env(_GymnasiumRoboticsHandEnvSpec, _GymnasiumRoboticsHandEnvPool)
 (
     GymnasiumRoboticsHandPixelEnvSpec,
     GymnasiumRoboticsHandPixelDMEnvPool,
-    GymnasiumRoboticsHandPixelGymEnvPool,
     GymnasiumRoboticsHandPixelGymnasiumEnvPool,
 ) = py_env(
     _GymnasiumRoboticsHandPixelEnvSpec, _GymnasiumRoboticsHandPixelEnvPool
@@ -69,13 +65,11 @@ from envpool.python.api import py_env
 (
     GymnasiumRoboticsAdroitEnvSpec,
     GymnasiumRoboticsAdroitDMEnvPool,
-    GymnasiumRoboticsAdroitGymEnvPool,
     GymnasiumRoboticsAdroitGymnasiumEnvPool,
 ) = py_env(_GymnasiumRoboticsAdroitEnvSpec, _GymnasiumRoboticsAdroitEnvPool)
 (
     GymnasiumRoboticsAdroitPixelEnvSpec,
     GymnasiumRoboticsAdroitPixelDMEnvPool,
-    GymnasiumRoboticsAdroitPixelGymEnvPool,
     GymnasiumRoboticsAdroitPixelGymnasiumEnvPool,
 ) = py_env(
     _GymnasiumRoboticsAdroitPixelEnvSpec, _GymnasiumRoboticsAdroitPixelEnvPool
@@ -83,7 +77,6 @@ from envpool.python.api import py_env
 (
     GymnasiumRoboticsPointMazeEnvSpec,
     GymnasiumRoboticsPointMazeDMEnvPool,
-    GymnasiumRoboticsPointMazeGymEnvPool,
     GymnasiumRoboticsPointMazeGymnasiumEnvPool,
 ) = py_env(
     _GymnasiumRoboticsPointMazeEnvSpec, _GymnasiumRoboticsPointMazeEnvPool
@@ -91,7 +84,6 @@ from envpool.python.api import py_env
 (
     GymnasiumRoboticsPointMazePixelEnvSpec,
     GymnasiumRoboticsPointMazePixelDMEnvPool,
-    GymnasiumRoboticsPointMazePixelGymEnvPool,
     GymnasiumRoboticsPointMazePixelGymnasiumEnvPool,
 ) = py_env(
     _GymnasiumRoboticsPointMazePixelEnvSpec,
@@ -100,13 +92,11 @@ from envpool.python.api import py_env
 (
     GymnasiumRoboticsKitchenEnvSpec,
     GymnasiumRoboticsKitchenDMEnvPool,
-    GymnasiumRoboticsKitchenGymEnvPool,
     GymnasiumRoboticsKitchenGymnasiumEnvPool,
 ) = py_env(_GymnasiumRoboticsKitchenEnvSpec, _GymnasiumRoboticsKitchenEnvPool)
 (
     GymnasiumRoboticsKitchenPixelEnvSpec,
     GymnasiumRoboticsKitchenPixelDMEnvPool,
-    GymnasiumRoboticsKitchenPixelGymEnvPool,
     GymnasiumRoboticsKitchenPixelGymnasiumEnvPool,
 ) = py_env(
     _GymnasiumRoboticsKitchenPixelEnvSpec, _GymnasiumRoboticsKitchenPixelEnvPool
@@ -115,42 +105,32 @@ from envpool.python.api import py_env
 __all__ = [
     "GymnasiumRoboticsFetchEnvSpec",
     "GymnasiumRoboticsFetchDMEnvPool",
-    "GymnasiumRoboticsFetchGymEnvPool",
     "GymnasiumRoboticsFetchGymnasiumEnvPool",
     "GymnasiumRoboticsFetchPixelEnvSpec",
     "GymnasiumRoboticsFetchPixelDMEnvPool",
-    "GymnasiumRoboticsFetchPixelGymEnvPool",
     "GymnasiumRoboticsFetchPixelGymnasiumEnvPool",
     "GymnasiumRoboticsHandEnvSpec",
     "GymnasiumRoboticsHandDMEnvPool",
-    "GymnasiumRoboticsHandGymEnvPool",
     "GymnasiumRoboticsHandGymnasiumEnvPool",
     "GymnasiumRoboticsHandPixelEnvSpec",
     "GymnasiumRoboticsHandPixelDMEnvPool",
-    "GymnasiumRoboticsHandPixelGymEnvPool",
     "GymnasiumRoboticsHandPixelGymnasiumEnvPool",
     "GymnasiumRoboticsAdroitEnvSpec",
     "GymnasiumRoboticsAdroitDMEnvPool",
-    "GymnasiumRoboticsAdroitGymEnvPool",
     "GymnasiumRoboticsAdroitGymnasiumEnvPool",
     "GymnasiumRoboticsAdroitPixelEnvSpec",
     "GymnasiumRoboticsAdroitPixelDMEnvPool",
-    "GymnasiumRoboticsAdroitPixelGymEnvPool",
     "GymnasiumRoboticsAdroitPixelGymnasiumEnvPool",
     "GymnasiumRoboticsPointMazeEnvSpec",
     "GymnasiumRoboticsPointMazeDMEnvPool",
-    "GymnasiumRoboticsPointMazeGymEnvPool",
     "GymnasiumRoboticsPointMazeGymnasiumEnvPool",
     "GymnasiumRoboticsPointMazePixelEnvSpec",
     "GymnasiumRoboticsPointMazePixelDMEnvPool",
-    "GymnasiumRoboticsPointMazePixelGymEnvPool",
     "GymnasiumRoboticsPointMazePixelGymnasiumEnvPool",
     "GymnasiumRoboticsKitchenEnvSpec",
     "GymnasiumRoboticsKitchenDMEnvPool",
-    "GymnasiumRoboticsKitchenGymEnvPool",
     "GymnasiumRoboticsKitchenGymnasiumEnvPool",
     "GymnasiumRoboticsKitchenPixelEnvSpec",
     "GymnasiumRoboticsKitchenPixelDMEnvPool",
-    "GymnasiumRoboticsKitchenPixelGymEnvPool",
     "GymnasiumRoboticsKitchenPixelGymnasiumEnvPool",
 ]

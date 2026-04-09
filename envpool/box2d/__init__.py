@@ -29,45 +29,37 @@ from .box2d_envpool import (
 (
     BipedalWalkerEnvSpec,
     BipedalWalkerDMEnvPool,
-    BipedalWalkerGymEnvPool,
     BipedalWalkerGymnasiumEnvPool,
 ) = py_env(_BipedalWalkerEnvSpec, _BipedalWalkerEnvPool)
 
 (
     CarRacingEnvSpec,
     CarRacingDMEnvPool,
-    CarRacingGymEnvPool,
     CarRacingGymnasiumEnvPool,
 ) = py_env(_CarRacingEnvSpec, _CarRacingEnvPool)
 
 (
     LunarLanderContinuousEnvSpec,
     LunarLanderContinuousDMEnvPool,
-    LunarLanderContinuousGymEnvPool,
     LunarLanderContinuousGymnasiumEnvPool,
 ) = py_env(_LunarLanderContinuousEnvSpec, _LunarLanderContinuousEnvPool)
 
 (
     LunarLanderDiscreteEnvSpec,
     LunarLanderDiscreteDMEnvPool,
-    LunarLanderDiscreteGymEnvPool,
     LunarLanderDiscreteGymnasiumEnvPool,
 ) = py_env(_LunarLanderDiscreteEnvSpec, _LunarLanderDiscreteEnvPool)
 
 __all__ = [
     "CarRacingEnvSpec",
     "CarRacingDMEnvPool",
-    "CarRacingGymEnvPool",
     "BipedalWalkerEnvSpec",
     "BipedalWalkerDMEnvPool",
-    "BipedalWalkerGymEnvPool",
     "BipedalWalkerGymnasiumEnvPool",
     "LunarLanderContinuousEnvSpec",
     "LunarLanderContinuousDMEnvPool",
-    "LunarLanderContinuousGymEnvPool",
     "LunarLanderContinuousGymnasiumEnvPool",
     "LunarLanderDiscreteEnvSpec",
     "LunarLanderDiscreteDMEnvPool",
-    "LunarLanderDiscreteGymEnvPool",
     "LunarLanderDiscreteGymnasiumEnvPool",
 ]

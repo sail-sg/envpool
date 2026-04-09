@@ -54,7 +54,6 @@ def _normalize_env_ids(
 (
     MiniGridEnvSpec,
     MiniGridDMEnvPool,
-    MiniGridGymEnvPool,
     MiniGridGymnasiumEnvPool,
 ) = py_env(_MiniGridEnvSpec, _MiniGridEnvPool)
 
@@ -70,7 +69,6 @@ def _debug_states(
 
 for _env_cls in (
     MiniGridDMEnvPool,
-    MiniGridGymEnvPool,
     MiniGridGymnasiumEnvPool,
 ):
     cast(Any, _env_cls).decode_mission = staticmethod(decode_mission)
@@ -80,7 +78,6 @@ for _env_cls in (
 __all__ = [
     "MiniGridEnvSpec",
     "MiniGridDMEnvPool",
-    "MiniGridGymEnvPool",
     "MiniGridGymnasiumEnvPool",
     "_MiniGridDebugState",
     "decode_mission",
