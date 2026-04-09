@@ -35,11 +35,11 @@ constexpr double kKpLateral = 1.0 / kTauLateral;
 constexpr double kMaxSteeringAngle = kPi / 3.0;
 
 double NotZero(double value) {
-  constexpr double kEps = 1e-2;
-  if (std::abs(value) > kEps) {
+  constexpr double k_eps = 1e-2;
+  if (std::abs(value) > k_eps) {
     return value;
   }
-  return value >= 0.0 ? kEps : -kEps;
+  return value >= 0.0 ? k_eps : -k_eps;
 }
 
 double Clip(double value, double low, double high) {
@@ -150,9 +150,9 @@ Vehicle MakeMDPVehicle(const RoadNetwork& network, Vec2 position,
                        std::optional<LaneIndex> target_lane_index,
                        std::optional<double> target_speed,
                        std::array<double, 3> target_speeds, Route route) {
-  Vehicle vehicle =
-      MakeControlledVehicle(network, position, heading, speed,
-                            target_lane_index, target_speed, std::move(route));
+  Vehicle vehicle = MakeControlledVehicle(network, position, heading, speed,
+                                          std::move(target_lane_index),
+                                          target_speed, std::move(route));
   vehicle.kind = VehicleKind::kMDP;
   vehicle.target_speeds = target_speeds;
   vehicle.speed_index = SpeedToIndex(vehicle, vehicle.target_speed);

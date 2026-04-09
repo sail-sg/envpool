@@ -38,11 +38,11 @@ double Clip(double value, double low, double high) {
 }
 
 double NotZero(double value) {
-  constexpr double kEps = 1e-2;
-  if (std::abs(value) > kEps) {
+  constexpr double k_eps = 1e-2;
+  if (std::abs(value) > k_eps) {
     return value;
   }
-  return value >= 0.0 ? kEps : -kEps;
+  return value >= 0.0 ? k_eps : -k_eps;
 }
 
 bool DoEvery(double duration, double timer) { return duration < timer; }
@@ -302,9 +302,9 @@ Vehicle MakeIDMVehicle(const RoadNetwork& network, Vec2 position,
                        std::optional<LaneIndex> target_lane_index,
                        std::optional<double> target_speed, Route route,
                        bool enable_lane_change, std::optional<double> timer) {
-  Vehicle vehicle =
-      MakeControlledVehicle(network, position, heading, speed,
-                            target_lane_index, target_speed, std::move(route));
+  Vehicle vehicle = MakeControlledVehicle(network, position, heading, speed,
+                                          std::move(target_lane_index),
+                                          target_speed, std::move(route));
   vehicle.kind = VehicleKind::kIDM;
   vehicle.enable_lane_change = enable_lane_change;
   vehicle.timer = timer.value_or(std::fmod(
