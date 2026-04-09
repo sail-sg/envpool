@@ -120,14 +120,12 @@ bool PointInRegulationBox(Vec2 point, const CollisionBox& box) {
          -box.width / 2.0 <= rotated.y && rotated.y <= box.width / 2.0;
 }
 
-bool HasRegulationCornerInside(const CollisionBox& lhs,
-                               const CollisionBox& rhs) {
-  for (Vec2 point : RegulationPoints(lhs)) {
-    if (PointInRegulationBox(point, rhs)) {
-      return true;
-    }
-  }
-  return false;
+bool HasRegulationCornerInside(const CollisionBox& candidate,
+                               const CollisionBox& container) {
+  const auto points = RegulationPoints(candidate);
+  return std::any_of(points.begin(), points.end(), [&](Vec2 point) {
+    return PointInRegulationBox(point, container);
+  });
 }
 
 std::pair<double, double> Project(const std::array<Vec2, 4>& polygon,
@@ -366,8 +364,8 @@ double FrontDistanceTo(const Vehicle& self, const Vehicle& other) {
   return Dot(self.Direction(), other.position - self.position);
 }
 
-std::vector<PositionHeading> PredictTrajectoryConstantSpeed(const Road& road,
-                                                            int vehicle_index) {
+std::vector<PositionHeading> PredictTrajectoryConstantSpeed(
+    const Road& road, std::size_t vehicle_index) {
   const Vehicle& vehicle = road.vehicles[vehicle_index];
   std::vector<PositionHeading> trajectory;
   trajectory.reserve(11);
@@ -400,7 +398,8 @@ std::vector<PositionHeading> PredictTrajectoryConstantSpeed(const Road& road,
   return trajectory;
 }
 
-bool IsConflictPossible(const Road& road, int lhs_index, int rhs_index) {
+bool IsConflictPossible(const Road& road, std::size_t lhs_index,
+                        std::size_t rhs_index) {
   const std::vector<PositionHeading> lhs =
       PredictTrajectoryConstantSpeed(road, lhs_index);
   const std::vector<PositionHeading> rhs =
@@ -466,8 +465,8 @@ void Road::EnforceRoadRules() {
     vehicle.is_yielding = false;
   }
 
-  for (int i = 0; static_cast<std::size_t>(i + 1) < vehicles.size(); ++i) {
-    for (int j = i + 1; static_cast<std::size_t>(j) < vehicles.size(); ++j) {
+  for (std::size_t i = 0; i + 1 < vehicles.size(); ++i) {
+    for (std::size_t j = i + 1; j < vehicles.size(); ++j) {
       if (!IsConflictPossible(*this, i, j)) {
         continue;
       }
