@@ -226,10 +226,6 @@ class EnvRegistry:
         """Make dm_env compatible envpool."""
         return self.make(task_id, "dm", **kwargs)
 
-    def make_gym(self, task_id: str, **kwargs: Any) -> GymEnvPool:
-        """Make gym.Env compatible envpool."""
-        return self.make_gymnasium(task_id, **kwargs)
-
     def make_gymnasium(self, task_id: str, **kwargs: Any) -> GymnasiumEnvPool:
         """Make gymnasium.Env compatible envpool."""
         return self.make(task_id, "gymnasium", **kwargs)
@@ -310,10 +306,8 @@ def make(
     """Make an EnvPool with a public, typed interface."""
     if env_type == "dm":
         return registry.make(task_id, "dm", **kwargs)
-    if env_type == "gym":
-        return make_gym(task_id, **kwargs)
-    if env_type == "gymnasium":
-        return make_gymnasium(task_id, **kwargs)
+    if env_type in ("gym", "gymnasium"):
+        return registry.make(task_id, "gymnasium", **kwargs)
     raise AssertionError(
         "env_type should be one of 'dm', 'gym', or 'gymnasium'."
     )
