@@ -194,8 +194,9 @@ class HighwayEnv : public Env<HighwayEnvSpec>, public RenderableEnv {
 
   void ApplyMetaAction(int action);
   void RoadAct();
-  void ActMDP(Vehicle* vehicle, std::optional<std::string> action);
-  void ActControlled(Vehicle* vehicle, std::optional<std::string> action);
+  void ActMDP(Vehicle* vehicle, const std::optional<std::string>& action);
+  void ActControlled(Vehicle* vehicle,
+                     const std::optional<std::string>& action);
   void ActIDM(int vehicle_index);
   void StepVehicle(Vehicle* vehicle, double dt);
   void RoadStep(double dt);

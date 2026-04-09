@@ -43,11 +43,11 @@ constexpr double kLaneChangeMaxBrakingImposed = 2.0;
 constexpr double kLaneChangeDelay = 1.0;
 
 double NotZero(double x) {
-  constexpr double kEps = 1e-2;
-  if (std::abs(x) > kEps) {
+  constexpr double k_eps = 1e-2;
+  if (std::abs(x) > k_eps) {
     return x;
   }
-  return x >= 0.0 ? kEps : -kEps;
+  return x >= 0.0 ? k_eps : -k_eps;
 }
 
 double WrapToPi(double x) {
@@ -389,10 +389,10 @@ void HighwayEnv::Reset() {
 }
 
 void HighwayEnv::ApplyMetaAction(int action) {
-  static const std::array<std::string, 5> kActions = {
+  static const std::array<std::string, 5> k_actions = {
       "LANE_LEFT", "IDLE", "LANE_RIGHT", "FASTER", "SLOWER"};
-  action = ClipInt(action, 0, static_cast<int>(kActions.size()) - 1);
-  ActMDP(&vehicles_[0], kActions[action]);
+  action = ClipInt(action, 0, static_cast<int>(k_actions.size()) - 1);
+  ActMDP(vehicles_.data(), k_actions[action]);
 }
 
 void HighwayEnv::Step(const Action& action) {
@@ -429,7 +429,8 @@ double HighwayEnv::IndexToSpeed(const Vehicle& vehicle, int index) const {
   return vehicle.target_speeds[index];
 }
 
-void HighwayEnv::ActMDP(Vehicle* vehicle, std::optional<std::string> action) {
+void HighwayEnv::ActMDP(Vehicle* vehicle,
+                        const std::optional<std::string>& action) {
   if (action == "FASTER") {
     vehicle->speed_index = SpeedToIndex(*vehicle, vehicle->speed) + 1;
     vehicle->speed_index =
@@ -448,11 +449,11 @@ void HighwayEnv::ActMDP(Vehicle* vehicle, std::optional<std::string> action) {
     ActControlled(vehicle, std::nullopt);
     return;
   }
-  ActControlled(vehicle, std::move(action));
+  ActControlled(vehicle, action);
 }
 
 void HighwayEnv::ActControlled(Vehicle* vehicle,
-                               std::optional<std::string> action) {
+                               const std::optional<std::string>& action) {
   if (action == "LANE_RIGHT") {
     const int lane =
         ClipInt(vehicle->target_lane_index + 1, 0, lanes_count_ - 1);
@@ -537,8 +538,6 @@ void HighwayEnv::StepVehicle(Vehicle* vehicle, double dt) {
     vehicle->steering = 0.0;
     vehicle->acceleration = -vehicle->speed;
   }
-  vehicle->steering = static_cast<double>(vehicle->steering);
-  vehicle->acceleration = static_cast<double>(vehicle->acceleration);
   if (vehicle->speed > kVehicleMaxSpeed) {
     vehicle->acceleration =
         std::min(vehicle->acceleration, kVehicleMaxSpeed - vehicle->speed);
@@ -593,8 +592,8 @@ std::pair<int, int> HighwayEnv::NeighbourVehicles(const Vehicle& vehicle,
       continue;
     }
     const auto [s_v, lat_v] = LaneCoordinates(other, lane_index);
-    if (!(std::abs(lat_v) <= kLaneWidth / 2.0 + 1.0 && -kVehicleLength <= s_v &&
-          s_v < kLaneLength + kVehicleLength)) {
+    if (std::abs(lat_v) > kLaneWidth / 2.0 + 1.0 || s_v < -kVehicleLength ||
+        s_v >= kLaneLength + kVehicleLength) {
       continue;
     }
     if (s <= s_v && (!s_front.has_value() || s_v <= *s_front)) {
@@ -729,7 +728,7 @@ bool HighwayEnv::EgoOnRoad() const { return LaneOnRoad(vehicles_[0]); }
 double HighwayEnv::Reward(int action) const {
   (void)action;
   const Vehicle& ego = vehicles_[0];
-  const double lane = static_cast<double>(ego.target_lane_index);
+  const auto lane = static_cast<double>(ego.target_lane_index);
   const double forward_speed = ego.speed * std::cos(ego.heading);
   const double scaled_speed =
       LMap(forward_speed, reward_speed_low_, reward_speed_high_, 0.0, 1.0);
@@ -835,7 +834,7 @@ void HighwayEnv::Render(int width, int height, int /*camera_id*/,
   const double s0 =
       (std::floor(static_cast<double>(static_cast<int>(origin_x)) /
                   stripe_spacing) -
-       static_cast<double>(stripes_count / 2)) *
+       static_cast<double>(stripes_count) / 2.0) *
       stripe_spacing;
 
   auto draw_line_segment = [&](double x0, double x1, double y,
@@ -883,10 +882,12 @@ void HighwayEnv::Render(int width, int height, int /*camera_id*/,
         static_cast<int>(center.x - static_cast<double>(sprite_px) / 2.0);
     const int sprite_top =
         static_cast<int>(center.y - static_cast<double>(sprite_px) / 2.0);
-    const Color fill =
-        v.crashed ? Color{255, 100, 100}
-                  : (v.kind == VehicleKind::kMDP ? Color{50, 200, 0}
-                                                 : Color{100, 200, 255});
+    Color fill{100, 200, 255};
+    if (v.crashed) {
+      fill = {255, 100, 100};
+    } else if (v.kind == VehicleKind::kMDP) {
+      fill = {50, 200, 0};
+    }
 
     const int body_x = Pix(tire_length, scaling);
     const int body_y = Pix(sprite_length / 2.0 - kVehicleWidth / 2.0, scaling);
