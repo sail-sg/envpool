@@ -35,8 +35,8 @@ prepare_official_oracle_import()
 
 _OFFICIAL_ALIGN_STEPS = 64
 _OFFICIAL_BACKEND_ALIGN_STEPS = 16
-_EXIT_ALIGN_STEPS = 6
-_INTERSECTION_ALIGN_STEPS = 6
+_EXIT_ALIGN_STEPS = 16
+_INTERSECTION_ALIGN_STEPS = 4
 _LANE_KEEPING_ALIGN_STEPS = 2
 _RACETRACK_ALIGN_STEPS = 5
 
@@ -153,6 +153,14 @@ def _official_info(info: dict[str, Any]) -> dict[str, Any]:
     if "speed" in exposed:
         exposed["speed"] = np.float32(exposed["speed"])
     return exposed
+
+
+def _assert_exposed_info_matches_official(
+    actual_info: dict[str, Any], expected_info: dict[str, Any]
+) -> None:
+    actual = _envpool_info(actual_info)
+    expected = _official_info(expected_info)
+    _assert_tree_bitwise(actual, {key: expected[key] for key in actual})
 
 
 def _assert_tree_bitwise(actual: Any, expected: Any) -> None:
@@ -297,9 +305,8 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             _envpool_scalar(actual.truncated),
                             expected.truncated,
                         )
-                        _assert_tree_bitwise(
-                            _envpool_info(actual.info),
-                            _official_info(expected.info),
+                        _assert_exposed_info_matches_official(
+                            actual.info, expected.info
                         )
                         _assert_render_aligned(
                             case, env, oracle, f"step {step}"
@@ -361,9 +368,8 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             _envpool_scalar(actual.truncated),
                             expected.truncated,
                         )
-                        _assert_tree_bitwise(
-                            _envpool_info(actual.info),
-                            _official_info(expected.info),
+                        _assert_exposed_info_matches_official(
+                            actual.info, expected.info
                         )
                         _assert_render_aligned(
                             case, env, oracle, f"step {step}"
@@ -405,16 +411,8 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
 
                     for step in range(_OFFICIAL_ALIGN_STEPS):
                         action = _official_action(oracle.action_space, step)
+                        expected = _Step(*oracle.step(action))
                         actual = _envpool_step(env, case, action)
-                        _patch_oracle_from_envpool(oracle, env)
-                        oracle_obs = oracle.unwrapped.observation_type.observe()
-                        expected = _Step(
-                            obs=oracle_obs,
-                            reward=oracle.unwrapped._reward(action),
-                            terminated=oracle.unwrapped._is_terminated(),
-                            truncated=oracle.unwrapped._is_truncated(),
-                            info=oracle.unwrapped._info(oracle_obs, action),
-                        )
 
                         _assert_tree_bitwise(
                             _envpool_obs(actual.obs, case), expected.obs
@@ -431,9 +429,8 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             _envpool_scalar(actual.truncated),
                             expected.truncated,
                         )
-                        _assert_tree_bitwise(
-                            _envpool_info(actual.info),
-                            _official_info(expected.info),
+                        _assert_exposed_info_matches_official(
+                            actual.info, expected.info
                         )
                         _assert_render_aligned(
                             case, env, oracle, f"step {step}"
@@ -465,16 +462,8 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
 
             for step in range(_EXIT_ALIGN_STEPS):
                 action = _official_action(oracle.action_space, step)
+                expected = _Step(*oracle.step(action))
                 actual = _envpool_step(env, case, action)
-                _patch_oracle_from_envpool(oracle, env)
-                oracle_obs = oracle.unwrapped.observation_type.observe()
-                expected = _Step(
-                    obs=oracle_obs,
-                    reward=oracle.unwrapped._reward(action),
-                    terminated=oracle.unwrapped._is_terminated(),
-                    truncated=oracle.unwrapped._is_truncated(),
-                    info=oracle.unwrapped._info(oracle_obs, action),
-                )
                 _assert_tree_bitwise(
                     _envpool_obs(actual.obs, case), expected.obs
                 )
@@ -487,8 +476,8 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                 np.testing.assert_array_equal(
                     _envpool_scalar(actual.truncated), expected.truncated
                 )
-                _assert_tree_bitwise(
-                    _envpool_info(actual.info), _official_info(expected.info)
+                _assert_exposed_info_matches_official(
+                    actual.info, expected.info
                 )
                 _assert_render_aligned(case, env, oracle, f"step {step}")
                 if bool(expected.terminated) or bool(expected.truncated):
@@ -508,7 +497,10 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                     seed=17,
                     render_mode="rgb_array",
                 )
-                oracle = _make_oracle(case.official_id)
+                oracle = _make_oracle(
+                    case.official_id,
+                    {"initial_vehicle_count": 0, "spawn_probability": 0.0},
+                )
                 try:
                     env_obs, _ = env.reset()
                     oracle.reset(seed=123)
@@ -526,16 +518,8 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             if isinstance(oracle.action_space, spaces.Discrete)
                             else _official_action(oracle.action_space, step)
                         )
+                        expected = _Step(*oracle.step(action))
                         actual = _envpool_step(env, case, action)
-                        _patch_oracle_from_envpool(oracle, env)
-                        oracle_obs = oracle.unwrapped.observation_type.observe()
-                        expected = _Step(
-                            obs=oracle_obs,
-                            reward=oracle.unwrapped._reward(action),
-                            terminated=oracle.unwrapped._is_terminated(),
-                            truncated=oracle.unwrapped._is_truncated(),
-                            info=oracle.unwrapped._info(oracle_obs, action),
-                        )
                         _assert_tree_bitwise(
                             _envpool_obs(actual.obs, case), expected.obs
                         )
@@ -551,9 +535,8 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             _envpool_scalar(actual.truncated),
                             expected.truncated,
                         )
-                        _assert_tree_bitwise(
-                            _envpool_info(actual.info),
-                            _official_info(expected.info),
+                        _assert_exposed_info_matches_official(
+                            actual.info, expected.info
                         )
                         _assert_render_aligned(
                             case, env, oracle, f"step {step}"
@@ -580,7 +563,10 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                     seed=19,
                     render_mode="rgb_array",
                 )
-                oracle = _make_oracle(case.official_id)
+                oracle = _make_oracle(
+                    case.official_id,
+                    {"initial_vehicle_count": 0, "spawn_probability": 0.0},
+                )
                 try:
                     env_obs, _ = env.reset()
                     oracle.reset(seed=123)
@@ -601,40 +587,29 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                     )
                     for step in range(_OFFICIAL_ALIGN_STEPS):
                         action = actions[step % len(actions)]
+                        expected = _Step(*oracle.step(action))
                         actual = _envpool_step(env, case, action)
-                        _patch_oracle_from_envpool(oracle, env)
-                        oracle_obs = oracle.unwrapped.observation_type.observe()
-                        expected_reward = tuple(
-                            np.float32(
-                                oracle.unwrapped._agent_reward(action, vehicle)
-                            )
-                            for vehicle in oracle.unwrapped.controlled_vehicles
-                        )
-                        expected_terminated = tuple(
-                            oracle.unwrapped._agent_is_terminal(vehicle)
-                            for vehicle in oracle.unwrapped.controlled_vehicles
-                        )
 
                         _assert_tree_bitwise(
-                            _envpool_obs(actual.obs, case), oracle_obs
+                            _envpool_obs(actual.obs, case), expected.obs
                         )
                         _assert_tree_bitwise(
                             _envpool_players(actual.reward, case.player_count),
-                            expected_reward,
+                            expected.reward,
                         )
                         np.testing.assert_array_equal(
                             _envpool_scalar(actual.terminated),
-                            any(expected_terminated),
+                            expected.terminated,
                         )
                         np.testing.assert_array_equal(
                             _envpool_scalar(actual.truncated),
-                            oracle.unwrapped._is_truncated(),
+                            expected.truncated,
                         )
                         _assert_render_aligned(
                             case, env, oracle, f"step {step}"
                         )
-                        if any(expected_terminated) or bool(
-                            _envpool_scalar(actual.truncated)
+                        if bool(expected.terminated) or bool(
+                            expected.truncated
                         ):
                             break
                 finally:

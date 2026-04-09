@@ -1628,6 +1628,8 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
         official::KinematicFeature::kSinH,
     };
     config.clip = false;
+    config.y_min = -24.0;
+    config.y_max = 24.0;
     const official::Lane& exit_pre_lane =
         official_road_->network.GetLane({"1", "2", 6});
     config.ego_x_override =

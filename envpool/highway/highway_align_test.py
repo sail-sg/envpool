@@ -356,6 +356,17 @@ def _patch_oracle(oracle: gym.Env, debug_state: Any) -> None:
     if controlled_vehicles:
         env.vehicle = controlled_vehicles[0]
         env.controlled_vehicles = controlled_vehicles
+        action_type = getattr(env, "action_type", None)
+        agents_action_types = getattr(action_type, "agents_action_types", ())
+        if agents_action_types:
+            for action_type, vehicle in zip(
+                agents_action_types, controlled_vehicles, strict=False
+            ):
+                action_type.controlled_vehicle = vehicle
+        elif action_type is not None and hasattr(
+            action_type, "controlled_vehicle"
+        ):
+            action_type.controlled_vehicle = controlled_vehicles[0]
         agents_observation_types = getattr(
             env.observation_type, "agents_observation_types", ()
         )
