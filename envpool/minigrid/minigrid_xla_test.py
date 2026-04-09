@@ -21,13 +21,22 @@ import jax
 import jax.numpy as jnp
 from absl.testing import absltest
 
-import envpool.entry  # noqa: F401
-from envpool.registration import make_gymnasium
+from envpool.minigrid import MiniGridEnvSpec, MiniGridGymnasiumEnvPool
+
+
+def _make_empty_5x5(num_envs: int) -> Any:
+    config = MiniGridEnvSpec.gen_config(
+        env_name="empty",
+        max_episode_steps=100,
+        num_envs=num_envs,
+        size=5,
+    )
+    return MiniGridGymnasiumEnvPool(MiniGridEnvSpec(config))
 
 
 class _MiniGridXlaTest(absltest.TestCase):
     def test_jitted_step_without_explicit_reset(self) -> None:
-        env = make_gymnasium("MiniGrid-Empty-5x5-v0", num_envs=8)
+        env = _make_empty_5x5(num_envs=8)
         if sys.platform in ("darwin", "win32"):
             with self.assertRaisesRegex(RuntimeError, "XLA.*unavailable"):
                 env.xla()
