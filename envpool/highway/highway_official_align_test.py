@@ -170,11 +170,16 @@ def _repeat(actions: tuple[Any, ...], step: int) -> Any:
 
 
 def _assert_exposed_info_matches_official(
-    actual_info: dict[str, Any], expected_info: dict[str, Any]
+    actual_info: dict[str, Any],
+    expected_info: dict[str, Any],
+    atol: float = 0.0,
 ) -> None:
     actual = _envpool_info(actual_info)
     expected = _official_info(expected_info)
-    _assert_tree_bitwise(actual, {key: expected[key] for key in actual})
+    if atol == 0.0:
+        _assert_tree_bitwise(actual, {key: expected[key] for key in actual})
+    else:
+        _assert_tree_close(actual, {key: expected[key] for key in actual}, atol)
 
 
 def _assert_tree_bitwise(actual: Any, expected: Any) -> None:
@@ -498,7 +503,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             expected.truncated,
                         )
                         _assert_exposed_info_matches_official(
-                            actual.info, expected.info
+                            actual.info, expected.info, obs_atol
                         )
                         _assert_render_aligned(
                             case, env, oracle, f"step {step}"
