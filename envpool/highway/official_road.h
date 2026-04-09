@@ -71,7 +71,7 @@ class RoadNetwork {
   static RoadNetwork StraightRoadNetwork(
       int lanes = 4, double start = 0.0, double length = 10000.0,
       double angle = 0.0, double speed_limit = 30.0,
-      std::pair<std::string, std::string> nodes = {"0", "1"});
+      const std::pair<std::string, std::string>& nodes = {"0", "1"});
 
  private:
   struct Edge {

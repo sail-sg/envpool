@@ -148,8 +148,9 @@ std::vector<LaneIndex> RoadNetwork::SideLanes(const LaneIndex& index) const {
   if (index.id > 0) {
     lanes.push_back({index.from, index.to, index.id - 1});
   }
-  if (static_cast<std::size_t>(index.id + 1) < edge.lanes.size()) {
-    lanes.push_back({index.from, index.to, index.id + 1});
+  const int next_id = index.id + 1;
+  if (next_id >= 0 && static_cast<std::size_t>(next_id) < edge.lanes.size()) {
+    lanes.push_back({index.from, index.to, next_id});
   }
   return lanes;
 }
@@ -184,13 +185,12 @@ bool RoadNetwork::IsConnectedRoad(const LaneIndex& start,
     return IsConnectedRoad(next, target, std::move(route), same_lane,
                            depth - 1);
   }
-  for (const std::string& next_to : OutgoingNodes(start.to)) {
-    if (IsConnectedRoad({start.to, next_to, start.id}, target, route, same_lane,
-                        depth - 1)) {
-      return true;
-    }
-  }
-  return false;
+  const std::vector<std::string> next_nodes = OutgoingNodes(start.to);
+  return std::any_of(
+      next_nodes.begin(), next_nodes.end(), [&](const std::string& next_to) {
+        return IsConnectedRoad({start.to, next_to, start.id}, target, route,
+                               same_lane, depth - 1);
+      });
 }
 
 std::vector<const Lane*> RoadNetwork::Lanes() const {
@@ -259,7 +259,7 @@ PositionHeading RoadNetwork::PositionHeadingAlongRoute(
 
 RoadNetwork RoadNetwork::StraightRoadNetwork(
     int lanes, double start, double length, double angle, double speed_limit,
-    std::pair<std::string, std::string> nodes) {
+    const std::pair<std::string, std::string>& nodes) {
   RoadNetwork network;
   for (int lane = 0; lane < lanes; ++lane) {
     const Vec2 origin =
