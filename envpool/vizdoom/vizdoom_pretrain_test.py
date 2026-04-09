@@ -30,7 +30,6 @@ from absl.testing import absltest
 from tianshou.data import Batch
 from tianshou.policy import C51Policy
 
-import envpool.vizdoom.registration  # noqa: F401
 from envpool.atari.atari_network import C51
 from envpool.registration import make_gym
 

@@ -19,7 +19,6 @@ import gymnasium as gym
 import numpy as np
 from absl.testing import absltest
 
-import envpool.classic_control.registration  # noqa: F401
 from envpool.registration import make_gym
 
 

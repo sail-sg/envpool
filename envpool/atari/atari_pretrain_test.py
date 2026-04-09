@@ -24,7 +24,6 @@ from absl.testing import absltest
 from tianshou.data import Batch
 from tianshou.policy import QRDQNPolicy
 
-import envpool.atari.registration  # noqa: F401
 from envpool.atari.atari_network import QRDQN
 from envpool.registration import make_gym
 

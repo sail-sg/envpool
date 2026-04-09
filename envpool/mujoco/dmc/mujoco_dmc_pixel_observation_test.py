@@ -19,7 +19,6 @@ from envpool.python.glfw_context import preload_windows_gl_dlls
 
 preload_windows_gl_dlls(strict=True)
 
-import envpool.mujoco.dmc.registration  # noqa: F401
 from envpool.mujoco.pixel_observation_test_utils import (
     assert_frame_stack_rolls_in_channel_dimension,
     assert_make_spec_exposes_bchw_pixel_specs,

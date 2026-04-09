@@ -21,7 +21,6 @@ from absl import logging
 from absl.testing import absltest
 from dm_env import TimeStep
 
-import envpool.toy_text.registration  # noqa: F401
 from envpool.python.protocol import DMEnvPool, GymnasiumEnvPool
 from envpool.registration import make, make_gymnasium
 

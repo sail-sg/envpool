@@ -20,7 +20,6 @@ from typing import Any
 import numpy as np
 from absl.testing import absltest
 
-import envpool.minigrid.registration  # noqa: F401
 from envpool.minigrid.babyai_test_utils import babyai_task_ids
 from envpool.registration import make_gym
 

@@ -29,7 +29,6 @@ from absl import logging
 from absl.testing import absltest
 from pygame import gfxdraw
 
-import envpool.box2d.registration  # noqa: F401
 from envpool.registration import make_gym
 
 _LINUX_ARM64 = sys.platform == "linux" and platform.machine().lower() in (

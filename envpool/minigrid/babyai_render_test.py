@@ -21,7 +21,6 @@ import gymnasium as gym
 import numpy as np
 from absl.testing import absltest
 
-import envpool.minigrid.registration  # noqa: F401
 from envpool.minigrid.babyai_test_utils import (
     babyai_task_ids,
     debug_state,
