@@ -25,7 +25,6 @@ from envpool.python.protocol import (
     DMEnvPool,
     EnvPool,
     EnvSpec,
-    GymEnvPool,
     GymnasiumEnvPool,
 )
 from envpool.registration import (
@@ -50,6 +49,5 @@ __all__ = [
     "EnvSpec",
     "EnvPool",
     "DMEnvPool",
-    "GymEnvPool",
     "GymnasiumEnvPool",
 ]

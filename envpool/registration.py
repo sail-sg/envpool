@@ -23,7 +23,6 @@ import numpy as np
 from .python.protocol import (
     DMEnvPool,
     EnvSpec,
-    GymEnvPool,
     GymnasiumEnvPool,
 )
 
@@ -285,7 +284,7 @@ def make(task_id: str, env_type: Literal["dm"], **kwargs: Any) -> DMEnvPool: ...
 @overload
 def make(
     task_id: str, env_type: Literal["gym"], **kwargs: Any
-) -> GymEnvPool: ...
+) -> GymnasiumEnvPool: ...
 
 
 @overload
@@ -297,12 +296,12 @@ def make(
 @overload
 def make(
     task_id: str, env_type: str, **kwargs: Any
-) -> DMEnvPool | GymEnvPool | GymnasiumEnvPool: ...
+) -> DMEnvPool | GymnasiumEnvPool: ...
 
 
 def make(
     task_id: str, env_type: str, **kwargs: Any
-) -> DMEnvPool | GymEnvPool | GymnasiumEnvPool:
+) -> DMEnvPool | GymnasiumEnvPool:
     """Make an EnvPool with a public, typed interface."""
     if env_type == "dm":
         return registry.make(task_id, "dm", **kwargs)
@@ -318,7 +317,7 @@ def make_dm(task_id: str, **kwargs: Any) -> DMEnvPool:
     return registry.make_dm(task_id, **kwargs)
 
 
-def make_gym(task_id: str, **kwargs: Any) -> GymEnvPool:
+def make_gym(task_id: str, **kwargs: Any) -> GymnasiumEnvPool:
     """Make gym.Env compatible envpool."""
     return make_gymnasium(task_id, **kwargs)
 
