@@ -473,7 +473,9 @@ Road MakeParkingRoad() {
   constexpr double length = 8.0;
   for (int k = 0; k < spots; ++k) {
     const double x =
-        (static_cast<double>(k + 1 - spots / 2)) * width - width / 2.0;
+        (static_cast<double>(k + 1) - static_cast<double>(spots) / 2.0) *
+            width -
+        width / 2.0;
     road.network.AddLane("a", "b",
                          Lane::Straight({x, y_offset}, {x, y_offset + length},
                                         width, {kContinuous, kContinuous}));
@@ -770,9 +772,12 @@ Road MakeRacetrackRoad(const std::string& scenario) {
   const int lanes =
       scenario == "racetrack_large" || scenario == "racetrack_oval" ? 3 : 2;
   const double start_x = scenario == "racetrack_oval" ? 0.0 : 42.0;
-  const double end_x = scenario == "racetrack_large"  ? 200.0
-                       : scenario == "racetrack_oval" ? 101.0
-                                                      : 100.0;
+  double end_x = 100.0;
+  if (scenario == "racetrack_large") {
+    end_x = 200.0;
+  } else if (scenario == "racetrack_oval") {
+    end_x = 101.0;
+  }
   const double width = 5.0;
   for (int lane = 0; lane < lanes; ++lane) {
     Lines line_types{kStriped, kStriped};
@@ -788,9 +793,10 @@ Road MakeRacetrackRoad(const std::string& scenario) {
                        line_types, false, 10.0));
   }
 
-  const Vec2 center1 = scenario == "racetrack_large"  ? Vec2{200.0, -20.0}
-                       : scenario == "racetrack_oval" ? Vec2{100.0, -20.0}
-                                                      : Vec2{100.0, -20.0};
+  Vec2 center1{100.0, -20.0};
+  if (scenario == "racetrack_large") {
+    center1 = {200.0, -20.0};
+  }
   for (int lane = 0; lane < lanes; ++lane) {
     Lines line_types{kStriped, kStriped};
     if (lane == 0) {
