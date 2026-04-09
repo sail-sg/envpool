@@ -20,8 +20,7 @@
 #include <utility>
 #include <vector>
 
-namespace highway {
-namespace official {
+namespace highway::official {
 namespace {
 
 constexpr double kPerceptionDistance = 5.0 * kVehicleMaxSpeed;
@@ -52,7 +51,7 @@ Vec2 Destination(const Road& road, const Vehicle& vehicle) {
     lane_index.id = 0;
   }
   const Lane& lane = road.network.GetLane(lane_index);
-  return lane.Position(lane.length(), 0.0);
+  return lane.Position(lane.Length(), 0.0);
 }
 
 Vec2 DestinationDirection(const Road& road, const Vehicle& vehicle) {
@@ -376,5 +375,4 @@ double FeatureValue(const FeatureRow& row, KinematicFeature feature) {
   return 0.0;
 }
 
-}  // namespace official
-}  // namespace highway
+}  // namespace highway::official

@@ -15,15 +15,15 @@
 #ifndef ENVPOOL_HIGHWAY_OFFICIAL_OBSERVATION_H_
 #define ENVPOOL_HIGHWAY_OFFICIAL_OBSERVATION_H_
 
+#include <cstdint>
 #include <optional>
 #include <vector>
 
 #include "envpool/highway/official_scene.h"
 
-namespace highway {
-namespace official {
+namespace highway::official {
 
-enum class KinematicFeature : int {
+enum class KinematicFeature : std::uint8_t {
   kPresence = 0,
   kX = 1,
   kY = 2,
@@ -90,7 +90,6 @@ struct FeatureRow {
 [[nodiscard]] double FeatureValue(const FeatureRow& row,
                                   KinematicFeature feature);
 
-}  // namespace official
-}  // namespace highway
+}  // namespace highway::official
 
 #endif  // ENVPOOL_HIGHWAY_OFFICIAL_OBSERVATION_H_

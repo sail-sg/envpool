@@ -22,8 +22,7 @@
 #include <utility>
 #include <vector>
 
-namespace highway {
-namespace official {
+namespace highway::official {
 
 namespace {
 
@@ -249,8 +248,8 @@ PositionHeading RoadNetwork::PositionHeadingAlongRoute(
     return lane_index;
   };
   LaneIndex lane_index = route_head(route);
-  while (route.size() > 1 && longitudinal > GetLane(lane_index).length()) {
-    longitudinal -= GetLane(lane_index).length();
+  while (route.size() > 1 && longitudinal > GetLane(lane_index).Length()) {
+    longitudinal -= GetLane(lane_index).Length();
     route.erase(route.begin());
     lane_index = route_head(route);
   }
@@ -339,5 +338,4 @@ std::pair<int, double> RoadNetwork::NextLaneGivenNextRoad(
   return {best_id, best_distance};
 }
 
-}  // namespace official
-}  // namespace highway
+}  // namespace highway::official

@@ -17,8 +17,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace highway {
-namespace official {
+namespace highway::official {
 
 Vec2 operator+(Vec2 lhs, Vec2 rhs) { return {lhs.x + rhs.x, lhs.y + rhs.y}; }
 
@@ -198,5 +197,4 @@ double Lane::LocalAngle(double heading, double longitudinal) const {
   return WrapToPi(heading - HeadingAt(longitudinal));
 }
 
-}  // namespace official
-}  // namespace highway
+}  // namespace highway::official

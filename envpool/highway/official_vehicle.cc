@@ -21,8 +21,7 @@
 #include <utility>
 #include <vector>
 
-namespace highway {
-namespace official {
+namespace highway::official {
 
 namespace {
 
@@ -125,7 +124,7 @@ Vehicle MakeVehicleOnLane(const RoadNetwork& network,
                           const LaneIndex& lane_index, double longitudinal,
                           std::optional<double> speed) {
   const Lane& lane = network.GetLane(lane_index);
-  const double resolved_speed = speed.has_value() ? *speed : lane.speed_limit();
+  const double resolved_speed = speed.has_value() ? *speed : lane.SpeedLimit();
   Vehicle vehicle = MakeVehicle(network, lane.Position(longitudinal, 0.0),
                                 lane.HeadingAt(longitudinal), resolved_speed);
   vehicle.lane_index = lane_index;
@@ -267,5 +266,4 @@ double IndexToSpeed(const Vehicle& vehicle, int index) {
   return vehicle.target_speeds[clipped];
 }
 
-}  // namespace official
-}  // namespace highway
+}  // namespace highway::official

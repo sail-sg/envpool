@@ -19,8 +19,7 @@
 
 #include "envpool/highway/official_scene.h"
 
-namespace highway {
-namespace official {
+namespace highway::official {
 
 [[nodiscard]] Road MakeMergeRoad();
 [[nodiscard]] int ResetMergeVehicles(Road* road, double position_noise0,
@@ -49,7 +48,6 @@ namespace official {
 [[nodiscard]] int ResetRacetrackVehicles(Road* road, double longitudinal,
                                          int lane);
 
-}  // namespace official
-}  // namespace highway
+}  // namespace highway::official
 
 #endif  // ENVPOOL_HIGHWAY_OFFICIAL_TASK_H_

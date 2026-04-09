@@ -22,8 +22,7 @@
 
 #include "envpool/highway/official_lane.h"
 
-namespace highway {
-namespace official {
+namespace highway::official {
 
 constexpr int kUnknownLaneId = -1;
 
@@ -100,7 +99,6 @@ class RoadNetwork {
 [[nodiscard]] bool LeadingToRoad(const LaneIndex& lhs, const LaneIndex& rhs,
                                  bool same_lane = false);
 
-}  // namespace official
-}  // namespace highway
+}  // namespace highway::official
 
 #endif  // ENVPOOL_HIGHWAY_OFFICIAL_ROAD_H_

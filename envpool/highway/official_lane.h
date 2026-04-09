@@ -19,13 +19,13 @@
 
 #include <array>
 #include <cmath>
+#include <cstdint>
 
-namespace highway {
-namespace official {
+namespace highway::official {
 
-constexpr double kPi = 3.14159265358979323846;
-constexpr double kDefaultLaneWidth = 4.0;
-constexpr double kLaneVehicleLength = 5.0;
+[[maybe_unused]] constexpr double kPi = 3.14159265358979323846;
+[[maybe_unused]] constexpr double kDefaultLaneWidth = 4.0;
+[[maybe_unused]] constexpr double kLaneVehicleLength = 5.0;
 
 struct Vec2 {
   double x{0.0};
@@ -41,14 +41,14 @@ double Dot(Vec2 lhs, Vec2 rhs);
 double Norm(Vec2 value);
 double WrapToPi(double angle);
 
-enum class LineType : int {
+enum class LineType : std::uint8_t {
   kNone = 0,
   kStriped = 1,
   kContinuous = 2,
   kContinuousLine = 3,
 };
 
-enum class LaneKind : int {
+enum class LaneKind : std::uint8_t {
   kStraight = 0,
   kSine = 1,
   kCircular = 2,
@@ -91,13 +91,13 @@ class Lane {
                                            double heading_weight = 1.0) const;
   [[nodiscard]] double LocalAngle(double heading, double longitudinal) const;
 
-  [[nodiscard]] LaneKind kind() const { return kind_; }
-  [[nodiscard]] double length() const { return length_; }
-  [[nodiscard]] double width() const { return width_; }
-  [[nodiscard]] bool forbidden() const { return forbidden_; }
-  [[nodiscard]] double speed_limit() const { return speed_limit_; }
-  [[nodiscard]] int priority() const { return priority_; }
-  [[nodiscard]] std::array<LineType, 2> line_types() const {
+  [[nodiscard]] LaneKind Kind() const { return kind_; }
+  [[nodiscard]] double Length() const { return length_; }
+  [[nodiscard]] double Width() const { return width_; }
+  [[nodiscard]] bool Forbidden() const { return forbidden_; }
+  [[nodiscard]] double SpeedLimit() const { return speed_limit_; }
+  [[nodiscard]] int Priority() const { return priority_; }
+  [[nodiscard]] std::array<LineType, 2> LineTypes() const {
     return line_types_;
   }
 
@@ -131,7 +131,6 @@ class Lane {
   [[nodiscard]] LaneCoordinates StraightLocalCoordinates(Vec2 position) const;
 };
 
-}  // namespace official
-}  // namespace highway
+}  // namespace highway::official
 
 #endif  // ENVPOOL_HIGHWAY_OFFICIAL_LANE_H_

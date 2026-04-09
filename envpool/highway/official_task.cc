@@ -19,8 +19,7 @@
 #include <string>
 #include <vector>
 
-namespace highway {
-namespace official {
+namespace highway::official {
 namespace {
 
 using Lines = std::array<LineType, 2>;
@@ -495,11 +494,11 @@ int ResetParkingVehicles(Road* road, double ego_x, double ego_heading,
 
   const LaneIndex goal_lane_index = ParkingSpot(goal_spot);
   const Lane& goal_lane = road->network.GetLane(goal_lane_index);
-  const Vec2 goal_position = goal_lane.Position(goal_lane.length() / 2.0, 0.0);
+  const Vec2 goal_position = goal_lane.Position(goal_lane.Length() / 2.0, 0.0);
   RoadObject goal;
   goal.kind = RoadObjectKind::kLandmark;
   goal.position = goal_position;
-  goal.heading = goal_lane.HeadingAt(goal_lane.length() / 2.0);
+  goal.heading = goal_lane.HeadingAt(goal_lane.Length() / 2.0);
   goal.solid = false;
   goal.lane_index = goal_lane_index;
   road->objects.push_back(goal);
@@ -577,10 +576,10 @@ Vehicle MakeExitTraffic(const RoadNetwork& network, const LaneIndex& lane_index,
   const Lane& lane = network.GetLane(lane_index);
   Vehicle vehicle = MakeIDMVehicle(
       network, lane.Position(longitudinal, 0.0), lane.HeadingAt(longitudinal),
-      lane.speed_limit(), lane_index, lane.speed_limit(), {}, false);
+      lane.SpeedLimit(), lane_index, lane.SpeedLimit(), {}, false);
   vehicle.lane_index = lane_index;
   vehicle.target_lane_index = lane_index;
-  vehicle.target_speed = lane.speed_limit();
+  vehicle.target_speed = lane.SpeedLimit();
   PlanRouteTo(&vehicle, network, "3");
   return vehicle;
 }
@@ -680,7 +679,7 @@ int ResetIntersectionVehicles(Road* road) {
   const LaneIndex ego_lane_index{"o0", "ir0", 0};
   const Lane& ego_lane = road->network.GetLane(ego_lane_index);
   Vehicle ego = MakeMDPVehicle(road->network, ego_lane.Position(65.0, 0.0),
-                               ego_lane.HeadingAt(60.0), ego_lane.speed_limit(),
+                               ego_lane.HeadingAt(60.0), ego_lane.SpeedLimit(),
                                std::nullopt, std::nullopt, {0.0, 4.5, 9.0});
   ego.lane_index = ego_lane_index;
   ego.target_lane_index = ego_lane_index;
@@ -709,7 +708,7 @@ int ResetMultiAgentIntersectionVehicles(Road* road) {
   const Lane& ego0_lane = road->network.GetLane(ego0_lane_index);
   Vehicle ego0 =
       MakeMDPVehicle(road->network, ego0_lane.Position(65.0, 0.0),
-                     ego0_lane.HeadingAt(60.0), ego0_lane.speed_limit());
+                     ego0_lane.HeadingAt(60.0), ego0_lane.SpeedLimit());
   ego0.lane_index = ego0_lane_index;
   ego0.target_lane_index = ego0_lane_index;
   ego0.speed_index = 0;
@@ -721,7 +720,7 @@ int ResetMultiAgentIntersectionVehicles(Road* road) {
   const Lane& ego1_lane = road->network.GetLane(ego1_lane_index);
   Vehicle ego1 =
       MakeMDPVehicle(road->network, ego1_lane.Position(66.0, 0.0),
-                     ego1_lane.HeadingAt(60.0), ego1_lane.speed_limit());
+                     ego1_lane.HeadingAt(60.0), ego1_lane.SpeedLimit());
   ego1.lane_index = ego1_lane_index;
   ego1.target_lane_index = ego1_lane_index;
   ego1.speed_index = 0;
@@ -872,7 +871,7 @@ Road MakeRacetrackRoad(const std::string& scenario) {
 int ResetRacetrackVehicles(Road* road, double longitudinal, int lane) {
   road->vehicles.clear();
   const LaneIndex lane_index{"a", "b", lane};
-  const double speed_limit = road->network.GetLane(lane_index).speed_limit();
+  const double speed_limit = road->network.GetLane(lane_index).SpeedLimit();
   Vehicle ego =
       MakeVehicleOnLane(road->network, lane_index, longitudinal, speed_limit);
   ego.kind = VehicleKind::kVehicle;
@@ -880,5 +879,4 @@ int ResetRacetrackVehicles(Road* road, double longitudinal, int lane) {
   return 0;
 }
 
-}  // namespace official
-}  // namespace highway
+}  // namespace highway::official

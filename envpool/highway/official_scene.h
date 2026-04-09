@@ -15,6 +15,7 @@
 #ifndef ENVPOOL_HIGHWAY_OFFICIAL_SCENE_H_
 #define ENVPOOL_HIGHWAY_OFFICIAL_SCENE_H_
 
+#include <cstdint>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -23,10 +24,9 @@
 #include "envpool/highway/official_road.h"
 #include "envpool/highway/official_vehicle.h"
 
-namespace highway {
-namespace official {
+namespace highway::official {
 
-enum class RoadObjectKind : int {
+enum class RoadObjectKind : std::uint8_t {
   kObstacle = 0,
   kLandmark = 1,
 };
@@ -82,7 +82,6 @@ void ChangeLanePolicy(Road* road, int vehicle_index);
 [[nodiscard]] double LaneDistanceTo(const RoadNetwork& network,
                                     const Vehicle& self, const Vehicle& other);
 
-}  // namespace official
-}  // namespace highway
+}  // namespace highway::official
 
 #endif  // ENVPOOL_HIGHWAY_OFFICIAL_SCENE_H_

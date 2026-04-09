@@ -21,8 +21,7 @@
 #include <optional>
 #include <utility>
 
-namespace highway {
-namespace official {
+namespace highway::official {
 namespace {
 
 constexpr double kIdmAccMax = 6.0;
@@ -392,7 +391,7 @@ double IDMAcceleration(const Road& road, const Vehicle* ego,
   }
   double ego_target_speed = ego->target_speed;
   const Lane& lane = road.network.GetLane(ego->lane_index);
-  ego_target_speed = Clip(ego_target_speed, 0.0, lane.speed_limit());
+  ego_target_speed = Clip(ego_target_speed, 0.0, lane.SpeedLimit());
   double acceleration = kIdmComfortAccMax *
                         (1.0 - std::pow(std::max(ego->speed, 0.0) /
                                             std::abs(NotZero(ego_target_speed)),
@@ -449,5 +448,4 @@ double LaneDistanceTo(const RoadNetwork& network, const Vehicle& self,
          lane.LocalCoordinates(self.position).longitudinal;
 }
 
-}  // namespace official
-}  // namespace highway
+}  // namespace highway::official

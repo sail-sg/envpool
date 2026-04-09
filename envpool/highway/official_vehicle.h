@@ -16,28 +16,28 @@
 #define ENVPOOL_HIGHWAY_OFFICIAL_VEHICLE_H_
 
 #include <array>
+#include <cstdint>
 #include <optional>
 #include <string>
 
 #include "envpool/highway/official_lane.h"
 #include "envpool/highway/official_road.h"
 
-namespace highway {
-namespace official {
+namespace highway::official {
 
-constexpr double kVehicleLength = 5.0;
-constexpr double kVehicleWidth = 2.0;
-constexpr double kVehicleMaxSpeed = 40.0;
-constexpr double kVehicleMinSpeed = -40.0;
+[[maybe_unused]] constexpr double kVehicleLength = 5.0;
+[[maybe_unused]] constexpr double kVehicleWidth = 2.0;
+[[maybe_unused]] constexpr double kVehicleMaxSpeed = 40.0;
+[[maybe_unused]] constexpr double kVehicleMinSpeed = -40.0;
 
-enum class VehicleKind : int {
+enum class VehicleKind : std::uint8_t {
   kVehicle = 0,
   kControlled = 1,
   kMDP = 2,
   kIDM = 3,
 };
 
-enum class MetaAction : int {
+enum class MetaAction : std::uint8_t {
   kLaneLeft = 0,
   kIdle = 1,
   kLaneRight = 2,
@@ -118,7 +118,6 @@ void FollowRoad(Vehicle* vehicle, const RoadNetwork& network);
 [[nodiscard]] int SpeedToIndex(const Vehicle& vehicle, double speed);
 [[nodiscard]] double IndexToSpeed(const Vehicle& vehicle, int index);
 
-}  // namespace official
-}  // namespace highway
+}  // namespace highway::official
 
 #endif  // ENVPOOL_HIGHWAY_OFFICIAL_VEHICLE_H_

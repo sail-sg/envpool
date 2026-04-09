@@ -1089,7 +1089,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
         official_road_->network.GetLane(official_active_lane_index_);
     const double lateral =
         lane.LocalCoordinates(OfficialEgo().position).lateral;
-    return 1.0 - std::pow(lateral / lane.width(), 2.0);
+    return 1.0 - std::pow(lateral / lane.Width(), 2.0);
   }
 
   [[nodiscard]] double OfficialRacetrackReward() const {
@@ -1669,7 +1669,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
           lane->LocalCoordinates(OfficialEgo().position).longitudinal;
       for (double waypoint = origin - 100.0; waypoint < origin + 100.0;
            waypoint += lane_waypoints_spacing) {
-        const double clipped = Clip(waypoint, 0.0, lane->length());
+        const double clipped = Clip(waypoint, 0.0, lane->Length());
         SetOfficialOccupancy(obs, 1, lane->Position(clipped, 0.0), 1.0f);
       }
     }
