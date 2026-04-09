@@ -71,6 +71,13 @@ struct Vehicle {
   bool enable_lane_change{true};
   double timer{0.0};
   double idm_delta{4.0};
+  double idm_acc_max{6.0};
+  double idm_comfort_acc_max{3.0};
+  double idm_comfort_acc_min{-5.0};
+  double idm_distance_wanted{5.0 + kVehicleLength};
+  double idm_time_wanted{1.5};
+  bool is_yielding{false};
+  int yield_timer{0};
   bool has_goal{false};
   Vec2 goal_position{};
   double goal_heading{0.0};

@@ -24,11 +24,6 @@
 namespace highway::official {
 namespace {
 
-constexpr double kIdmAccMax = 6.0;
-constexpr double kIdmComfortAccMax = 3.0;
-constexpr double kIdmComfortAccMin = -5.0;
-constexpr double kIdmDistanceWanted = 5.0 + kVehicleLength;
-constexpr double kIdmTimeWanted = 1.5;
 constexpr double kLaneChangeMinAccGain = 0.2;
 constexpr double kLaneChangeMaxBrakingImposed = 2.0;
 constexpr double kLaneChangeDelay = 1.0;
@@ -73,6 +68,13 @@ CollisionBox ToCollisionBox(const RoadObject& object) {
       std::sqrt(object.length * object.length + object.width * object.width)};
 }
 
+CollisionBox ToRegulationBox(Vec2 position, double heading) {
+  constexpr double length = 1.5 * kVehicleLength;
+  constexpr double width = 0.9 * kVehicleWidth;
+  return {position, heading, length, width,
+          std::sqrt(length * length + width * width)};
+}
+
 std::array<Vec2, 4> Corners(const CollisionBox& box) {
   const double cos_h = std::cos(box.heading);
   const double sin_h = std::sin(box.heading);
@@ -81,6 +83,45 @@ std::array<Vec2, 4> Corners(const CollisionBox& box) {
   return {
       box.center - longitudinal - lateral, box.center - longitudinal + lateral,
       box.center + longitudinal + lateral, box.center + longitudinal - lateral};
+}
+
+std::array<Vec2, 9> RegulationPoints(const CollisionBox& box) {
+  const double cos_h = std::cos(box.heading);
+  const double sin_h = std::sin(box.heading);
+  const Vec2 half_length{box.length / 2.0, 0.0};
+  const Vec2 half_width{0.0, box.width / 2.0};
+  const std::array<Vec2, 9> local{
+      -1.0 * half_length - half_width, -1.0 * half_length + half_width,
+      half_length + half_width, half_length - half_width, Vec2{},
+      -1.0 * half_length, half_length, -1.0 * half_width, half_width};
+
+  std::array<Vec2, 9> points;
+  for (std::size_t i = 0; i < local.size(); ++i) {
+    const Vec2 point{cos_h * local[i].x - sin_h * local[i].y,
+                     sin_h * local[i].x + cos_h * local[i].y};
+    points[i] = box.center + point;
+  }
+  return points;
+}
+
+bool PointInRegulationBox(Vec2 point, const CollisionBox& box) {
+  const double cos_h = std::cos(box.heading);
+  const double sin_h = std::sin(box.heading);
+  const Vec2 delta = point - box.center;
+  const Vec2 rotated{cos_h * delta.x - sin_h * delta.y,
+                     sin_h * delta.x + cos_h * delta.y};
+  return -box.length / 2.0 <= rotated.x && rotated.x <= box.length / 2.0 &&
+         -box.width / 2.0 <= rotated.y && rotated.y <= box.width / 2.0;
+}
+
+bool HasRegulationCornerInside(const CollisionBox& lhs,
+                               const CollisionBox& rhs) {
+  for (Vec2 point : RegulationPoints(lhs)) {
+    if (PointInRegulationBox(point, rhs)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 std::pair<double, double> Project(const std::array<Vec2, 4>& polygon,
@@ -171,6 +212,13 @@ CollisionResult BoxesCollide(const CollisionBox& a, const CollisionBox& b,
   }
   return CollidePolygons(Corners(a), Corners(b), displacement_a, displacement_b,
                          a.center, b.center);
+}
+
+bool IntersectsRegulationBox(PositionHeading lhs, PositionHeading rhs) {
+  const auto lhs_box = ToRegulationBox(lhs.position, lhs.heading);
+  const auto rhs_box = ToRegulationBox(rhs.position, rhs.heading);
+  return HasRegulationCornerInside(lhs_box, rhs_box) ||
+         HasRegulationCornerInside(rhs_box, lhs_box);
 }
 
 template <typename OtherT>
@@ -283,8 +331,8 @@ double LaneDistanceTo(const RoadNetwork& network, const Vehicle& self,
 double DesiredGap(const Vehicle& ego, const RoadNeighbor& front) {
   const Vec2 dv = ego.Velocity() - NeighborVelocity(front);
   const double projected_dv = Dot(dv, ego.Direction());
-  const double ab = -kIdmComfortAccMax * kIdmComfortAccMin;
-  return kIdmDistanceWanted + ego.speed * kIdmTimeWanted +
+  const double ab = -ego.idm_comfort_acc_max * ego.idm_comfort_acc_min;
+  return ego.idm_distance_wanted + ego.speed * ego.idm_time_wanted +
          ego.speed * projected_dv / (2.0 * std::sqrt(ab));
 }
 
@@ -296,16 +344,84 @@ double IDMAcceleration(const Road& road, const Vehicle* ego,
   double ego_target_speed = ego->target_speed;
   const Lane& lane = road.network.GetLane(ego->lane_index);
   ego_target_speed = Clip(ego_target_speed, 0.0, lane.SpeedLimit());
-  double acceleration = kIdmComfortAccMax *
+  double acceleration = ego->idm_comfort_acc_max *
                         (1.0 - std::pow(std::max(ego->speed, 0.0) /
                                             std::abs(NotZero(ego_target_speed)),
                                         ego->idm_delta));
   if (HasNeighbor(front)) {
     const double d = LaneDistanceTo(road.network, *ego, front);
     acceleration -=
-        kIdmComfortAccMax * std::pow(DesiredGap(*ego, front) / NotZero(d), 2.0);
+        ego->idm_comfort_acc_max *
+        std::pow(DesiredGap(*ego, front) / NotZero(d), 2.0);
   }
   return acceleration;
+}
+
+double FrontDistanceTo(const Vehicle& self, const Vehicle& other) {
+  return Dot(self.Direction(), other.position - self.position);
+}
+
+std::vector<PositionHeading> PredictTrajectoryConstantSpeed(const Road& road,
+                                                            int vehicle_index) {
+  const Vehicle& vehicle = road.vehicles[vehicle_index];
+  std::vector<PositionHeading> trajectory;
+  trajectory.reserve(11);
+
+  if (vehicle.kind == VehicleKind::kControlled ||
+      vehicle.kind == VehicleKind::kMDP || vehicle.kind == VehicleKind::kIDM) {
+    const Lane& lane = road.network.GetLane(vehicle.lane_index);
+    const LaneCoordinates coordinates = lane.LocalCoordinates(vehicle.position);
+    Route route = vehicle.route.empty() ? Route{vehicle.lane_index}
+                                        : vehicle.route;
+    for (int i = 1; i <= 11; ++i) {
+      const double time = 0.25 * static_cast<double>(i);
+      trajectory.push_back(road.network.PositionHeadingAlongRoute(
+          route, coordinates.longitudinal + vehicle.speed * time, 0.0,
+          vehicle.lane_index));
+    }
+    return trajectory;
+  }
+
+  Vehicle predicted_vehicle = vehicle;
+  predicted_vehicle.action.acceleration = 0.0;
+  double previous_time = 0.0;
+  for (int i = 1; i <= 11; ++i) {
+    const double time = 0.25 * static_cast<double>(i);
+    predicted_vehicle.Step(time - previous_time, road.network);
+    trajectory.push_back(
+        {predicted_vehicle.position, predicted_vehicle.heading});
+    previous_time = time;
+  }
+  return trajectory;
+}
+
+bool IsConflictPossible(const Road& road, int lhs_index, int rhs_index) {
+  const std::vector<PositionHeading> lhs =
+      PredictTrajectoryConstantSpeed(road, lhs_index);
+  const std::vector<PositionHeading> rhs =
+      PredictTrajectoryConstantSpeed(road, rhs_index);
+  for (std::size_t i = 0; i < lhs.size(); ++i) {
+    if (Distance(lhs[i].position, rhs[i].position) > kVehicleLength) {
+      continue;
+    }
+    if (IntersectsRegulationBox(lhs[i], rhs[i])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+int RespectPriorities(const RoadNetwork& network, const Vehicle& lhs,
+                      const Vehicle& rhs) {
+  const int lhs_priority = network.GetLane(lhs.lane_index).Priority();
+  const int rhs_priority = network.GetLane(rhs.lane_index).Priority();
+  if (lhs_priority > rhs_priority) {
+    return 1;
+  }
+  if (lhs_priority < rhs_priority) {
+    return 0;
+  }
+  return FrontDistanceTo(lhs, rhs) > FrontDistanceTo(rhs, lhs) ? 0 : 1;
 }
 
 }  // namespace
@@ -324,10 +440,44 @@ void Road::Act() {
 }
 
 void Road::Step(double dt) {
+  if (regulated) {
+    ++regulated_steps;
+    if (regulated_steps % static_cast<int>(1.0 / dt / 2.0) == 0) {
+      EnforceRoadRules();
+    }
+  }
   for (Vehicle& vehicle : vehicles) {
     vehicle.Step(dt, network);
   }
   CheckCollisions(dt);
+}
+
+void Road::EnforceRoadRules() {
+  for (Vehicle& vehicle : vehicles) {
+    if (!vehicle.is_yielding) {
+      continue;
+    }
+    vehicle.target_speed = network.GetLane(vehicle.lane_index).SpeedLimit();
+    vehicle.is_yielding = false;
+  }
+
+  for (int i = 0; static_cast<std::size_t>(i + 1) < vehicles.size(); ++i) {
+    for (int j = i + 1; static_cast<std::size_t>(j) < vehicles.size(); ++j) {
+      if (!IsConflictPossible(*this, i, j)) {
+        continue;
+      }
+      const int yielding_offset =
+          RespectPriorities(network, vehicles[i], vehicles[j]);
+      Vehicle& yielding = yielding_offset == 0 ? vehicles[i] : vehicles[j];
+      if (yielding.kind != VehicleKind::kControlled &&
+          yielding.kind != VehicleKind::kIDM) {
+        continue;
+      }
+      yielding.target_speed = 0.0;
+      yielding.is_yielding = true;
+      yielding.yield_timer = 0;
+    }
+  }
 }
 
 void Road::CheckCollisions(double dt) {
@@ -397,7 +547,8 @@ void ActIDM(Road* road, int vehicle_index) {
     action.acceleration = std::min(
         action.acceleration, IDMAcceleration(*road, &vehicle, target_front));
   }
-  action.acceleration = Clip(action.acceleration, -kIdmAccMax, kIdmAccMax);
+  action.acceleration =
+      Clip(action.acceleration, -vehicle.idm_acc_max, vehicle.idm_acc_max);
   vehicle.Act(action);
 }
 
@@ -445,8 +596,8 @@ double IDMAcceleration(const Road& road, const Vehicle* ego,
 double DesiredGap(const Vehicle& ego, const Vehicle& front) {
   const Vec2 dv = ego.Velocity() - front.Velocity();
   const double projected_dv = Dot(dv, ego.Direction());
-  const double ab = -kIdmComfortAccMax * kIdmComfortAccMin;
-  return kIdmDistanceWanted + ego.speed * kIdmTimeWanted +
+  const double ab = -ego.idm_comfort_acc_max * ego.idm_comfort_acc_min;
+  return ego.idm_distance_wanted + ego.speed * ego.idm_time_wanted +
          ego.speed * projected_dv / (2.0 * std::sqrt(ab));
 }
 

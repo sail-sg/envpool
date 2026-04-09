@@ -448,6 +448,9 @@ class NativeMultiAgentFns : public NativeBaseFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     const float inf = std::numeric_limits<float>::infinity();
+    // TODO: Expose per-player termination for intersection-multi-agent-v1.
+    // The official wrapper can return mixed terminal tuples such as
+    // (false, true), while EnvPool's top-level done is env-level scalar.
     return MakeDict(
         "obs:players.obs"_.Bind(Spec<float>({-1, 5, 5}, {-inf, inf})),
         "info:players.speed"_.Bind(Spec<float>({-1})),
@@ -941,10 +944,14 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     }
     time_ += 1.0 / static_cast<double>(policy_frequency_);
     done_ = elapsed_step_ >= max_episode_steps_;
+    bool all_players_arrived = true;
     for (int player = 0; player < official_player_count_; ++player) {
-      done_ = done_ || OfficialPlayer(player).crashed ||
-              OfficialIntersectionArrived(OfficialPlayer(player));
+      done_ = done_ || OfficialPlayer(player).crashed;
+      all_players_arrived =
+          all_players_arrived &&
+          OfficialIntersectionArrived(OfficialPlayer(player));
     }
+    done_ = done_ || all_players_arrived;
     WriteOfficialMultiAgentState();
   }
 

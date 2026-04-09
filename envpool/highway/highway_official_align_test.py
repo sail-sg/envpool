@@ -35,7 +35,7 @@ prepare_official_oracle_import()
 
 _OFFICIAL_ALIGN_STEPS = 128
 _EXIT_ALIGN_STEPS = 120
-_INTERSECTION_ALIGN_STEPS = 4
+_INTERSECTION_ALIGN_STEPS = 16
 _LANE_KEEPING_ALIGN_STEPS = 2
 _RACETRACK_ALIGN_STEPS = 120
 
@@ -154,6 +154,12 @@ def _official_info(info: dict[str, Any]) -> dict[str, Any]:
     return exposed
 
 
+def _official_multi_agent_env_terminated(terminated: Any) -> bool:
+    if isinstance(terminated, tuple):
+        return all(bool(value) for value in terminated)
+    return bool(terminated)
+
+
 def _repeat(actions: tuple[Any, ...], step: int) -> Any:
     return actions[step % len(actions)]
 
@@ -190,6 +196,15 @@ def _render_rgb(env: Any) -> np.ndarray:
 
 def _patch_oracle_from_envpool(oracle: gym.Env, envpool_env: Any) -> None:
     _patch_oracle(oracle, _debug_state(envpool_env))
+
+
+def _official_idm_is_intersection_tuned(official_id: str) -> bool:
+    return official_id in (
+        "intersection-v0",
+        "intersection-v1",
+        "intersection-multi-agent-v0",
+        "intersection-multi-agent-v1",
+    )
 
 
 _RENDER_MISMATCH_PIXEL_LIMIT: dict[str, int] = {
@@ -362,7 +377,8 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
         try:
             env_obs, _ = env.reset()
             oracle.reset(seed=123)
-            _restore_official_idm_defaults()
+            if not _official_idm_is_intersection_tuned(case.official_id):
+                _restore_official_idm_defaults()
             _patch_oracle_from_envpool(oracle, env)
             _assert_tree_bitwise(
                 _envpool_reset_obs(env_obs, case),
@@ -418,7 +434,6 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                 try:
                     env_obs, _ = env.reset()
                     oracle.reset(seed=123)
-                    _restore_official_idm_defaults()
                     _patch_oracle_from_envpool(oracle, env)
                     _assert_tree_bitwise(
                         _envpool_reset_obs(env_obs, case),
@@ -515,74 +530,93 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                         actions=actions,
                         max_steps=_INTERSECTION_ALIGN_STEPS,
                     )
-            self.assertGreaterEqual(total_steps, 20)
+            self.assertGreaterEqual(total_steps, 25)
 
     def test_native_multi_agent_intersection_matches_official_patched_state(
         self,
     ) -> None:
+        action_sequences = (
+            ((1, 1),),
+            ((0, 1),),
+            ((0, 0),),
+            ((2, 2),),
+            ((1, 1), (2, 1), (1, 0), (0, 2), (1, 1)),
+            ((0, 2), (1, 1), (2, 0), (1, 2)),
+        )
         for case in (
             _Case("intersection-multi-agent-v0", player_count=2),
             _Case("intersection-multi-agent-v1", player_count=2),
         ):
-            with self.subTest(official_id=case.official_id):
-                env = make_gymnasium(
-                    case.official_id,
-                    num_envs=1,
-                    seed=19,
-                    render_mode="rgb_array",
-                )
-                oracle = _make_oracle(
-                    case.official_id,
-                    {"initial_vehicle_count": 0, "spawn_probability": 0.0},
-                )
-                try:
-                    env_obs, _ = env.reset()
-                    oracle.reset(seed=123)
-                    _restore_official_idm_defaults()
-                    _patch_oracle_from_envpool(oracle, env)
-                    _assert_tree_bitwise(
-                        _envpool_reset_obs(env_obs, case),
-                        oracle.unwrapped.observation_type.observe(),
+            total_steps = 0
+            for actions in action_sequences:
+                with self.subTest(
+                    official_id=case.official_id, actions=actions
+                ):
+                    total_steps += self._assert_native_multi_agent_rollout(
+                        case,
+                        actions=actions,
+                        max_steps=_INTERSECTION_ALIGN_STEPS,
                     )
-                    _assert_render_aligned(case, env, oracle, "reset")
+            self.assertGreaterEqual(total_steps, 25)
 
-                    actions = (
-                        (1, 1),
-                        (2, 1),
-                        (1, 0),
-                        (0, 2),
-                        (1, 1),
-                    )
-                    for step in range(_OFFICIAL_ALIGN_STEPS):
-                        action = actions[step % len(actions)]
-                        expected = _Step(*oracle.step(action))
-                        actual = _envpool_step(env, case, action)
+    def _assert_native_multi_agent_rollout(
+        self,
+        case: _Case,
+        *,
+        actions: tuple[tuple[int, int], ...],
+        max_steps: int,
+    ) -> int:
+        env = make_gymnasium(
+            case.official_id,
+            num_envs=1,
+            seed=19,
+            render_mode="rgb_array",
+        )
+        oracle = _make_oracle(
+            case.official_id,
+            {"initial_vehicle_count": 0, "spawn_probability": 0.0},
+        )
+        steps = 0
+        try:
+            env_obs, _ = env.reset()
+            oracle.reset(seed=123)
+            _restore_official_idm_defaults()
+            _patch_oracle_from_envpool(oracle, env)
+            _assert_tree_bitwise(
+                _envpool_reset_obs(env_obs, case),
+                oracle.unwrapped.observation_type.observe(),
+            )
+            _assert_render_aligned(case, env, oracle, "reset")
 
-                        _assert_tree_bitwise(
-                            _envpool_obs(actual.obs, case), expected.obs
-                        )
-                        _assert_tree_bitwise(
-                            _envpool_players(actual.reward, case.player_count),
-                            expected.reward,
-                        )
-                        np.testing.assert_array_equal(
-                            _envpool_scalar(actual.terminated),
-                            expected.terminated,
-                        )
-                        np.testing.assert_array_equal(
-                            _envpool_scalar(actual.truncated),
-                            expected.truncated,
-                        )
-                        _assert_render_aligned(
-                            case, env, oracle, f"step {step}"
-                        )
-                        if bool(expected.terminated) or bool(
-                            expected.truncated
-                        ):
-                            break
-                finally:
-                    env.close()
-                    oracle.close()
+            for step in range(max_steps):
+                action = actions[step % len(actions)]
+                expected = _Step(*oracle.step(action))
+                actual = _envpool_step(env, case, action)
+                steps += 1
+
+                _assert_tree_bitwise(
+                    _envpool_obs(actual.obs, case), expected.obs
+                )
+                _assert_tree_bitwise(
+                    _envpool_players(actual.reward, case.player_count),
+                    expected.reward,
+                )
+                np.testing.assert_array_equal(
+                    _envpool_scalar(actual.terminated),
+                    _official_multi_agent_env_terminated(expected.terminated),
+                )
+                np.testing.assert_array_equal(
+                    _envpool_scalar(actual.truncated), expected.truncated
+                )
+                _assert_render_aligned(case, env, oracle, f"step {step}")
+                if _official_multi_agent_env_terminated(
+                    expected.terminated
+                ) or bool(expected.truncated):
+                    break
+        finally:
+            env.close()
+            oracle.close()
+        return steps
 
     def test_native_lane_keeping_matches_official_without_observation_noise(
         self,

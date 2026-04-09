@@ -608,6 +608,7 @@ int ResetExitVehicles(Road* road) {
 
 Road MakeIntersectionRoad() {
   Road road;
+  road.regulated = true;
   constexpr double lane_width = kDefaultLaneWidth;
   constexpr double right_turn_radius = lane_width + 5.0;
   constexpr double left_turn_radius = right_turn_radius + lane_width;
@@ -672,11 +673,15 @@ Vehicle MakeIntersectionIDM(const RoadNetwork& network, int incoming,
   vehicle.lane_index = lane_index;
   vehicle.target_lane_index = lane_index;
   vehicle.target_speed = speed;
+  vehicle.idm_comfort_acc_max = 6.0;
+  vehicle.idm_comfort_acc_min = -3.0;
+  vehicle.idm_distance_wanted = 7.0;
   PlanRouteTo(&vehicle, network, destination);
   return vehicle;
 }
 
 int ResetIntersectionVehicles(Road* road) {
+  road->regulated_steps = 3 * 15;
   road->vehicles.clear();
   const LaneIndex ego_lane_index{"o0", "ir0", 0};
   const Lane& ego_lane = road->network.GetLane(ego_lane_index);
@@ -704,6 +709,7 @@ int ResetIntersectionVehicles(Road* road) {
 }
 
 int ResetMultiAgentIntersectionVehicles(Road* road) {
+  road->regulated_steps = 3 * 15;
   road->vehicles.clear();
 
   const LaneIndex ego0_lane_index{"o0", "ir0", 0};

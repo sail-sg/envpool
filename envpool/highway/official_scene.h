@@ -52,11 +52,14 @@ class Road {
   std::vector<Vehicle> vehicles;
   std::vector<RoadObject> objects;
   bool record_history{false};
+  bool regulated{false};
+  int regulated_steps{0};
 
   void Act();
   void Step(double dt);
 
  private:
+  void EnforceRoadRules();
   void CheckCollisions(double dt);
 };
 
