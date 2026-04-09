@@ -92,11 +92,21 @@ class Lane {
   [[nodiscard]] double LocalAngle(double heading, double longitudinal) const;
 
   [[nodiscard]] LaneKind Kind() const { return kind_; }
+  [[nodiscard]] Vec2 Start() const { return start_; }
+  [[nodiscard]] Vec2 End() const { return end_; }
+  [[nodiscard]] Vec2 Center() const { return center_; }
   [[nodiscard]] double Length() const { return length_; }
   [[nodiscard]] double Width() const { return width_; }
   [[nodiscard]] bool Forbidden() const { return forbidden_; }
   [[nodiscard]] double SpeedLimit() const { return speed_limit_; }
   [[nodiscard]] int Priority() const { return priority_; }
+  [[nodiscard]] double Amplitude() const { return amplitude_; }
+  [[nodiscard]] double Pulsation() const { return pulsation_; }
+  [[nodiscard]] double Phase() const { return phase_; }
+  [[nodiscard]] double Radius() const { return radius_; }
+  [[nodiscard]] double StartPhase() const { return start_phase_; }
+  [[nodiscard]] double EndPhase() const { return end_phase_; }
+  [[nodiscard]] bool Clockwise() const { return clockwise_; }
   [[nodiscard]] std::array<LineType, 2> LineTypes() const {
     return line_types_;
   }

@@ -105,6 +105,94 @@ def _make_oracle(oracle_env_id: str, config: dict[str, Any]) -> gym.Env:
     )
 
 
+def _patch_oracle_road(oracle: gym.Env, debug_state: Any) -> None:
+    from highway_env.road.lane import (
+        CircularLane,
+        LineType,
+        SineLane,
+        StraightLane,
+    )
+    from highway_env.road.road import RoadNetwork
+    from highway_env.vehicle.objects import Landmark, Obstacle
+
+    env = cast(Any, oracle.unwrapped)
+    road_lanes = list(getattr(debug_state, "road_lanes", ()))
+    if road_lanes:
+        line_types = (
+            LineType.NONE,
+            LineType.STRIPED,
+            LineType.CONTINUOUS,
+            LineType.CONTINUOUS_LINE,
+        )
+        network = RoadNetwork()
+        for source in road_lanes:
+            line_pair = (
+                line_types[int(source.line_type0)],
+                line_types[int(source.line_type1)],
+            )
+            common = {
+                "width": float(source.width),
+                "line_types": line_pair,
+                "forbidden": bool(source.forbidden),
+                "speed_limit": float(source.speed_limit),
+                "priority": int(source.priority),
+            }
+            if int(source.kind) == 2:
+                lane = CircularLane(
+                    np.asarray(
+                        [source.center_x, source.center_y],
+                        dtype=np.float64,
+                    ),
+                    float(source.radius),
+                    float(source.start_phase),
+                    float(source.end_phase),
+                    clockwise=bool(source.clockwise),
+                    **common,
+                )
+            elif int(source.kind) == 1:
+                lane = SineLane(
+                    np.asarray([source.start_x, source.start_y], dtype=np.float64),
+                    np.asarray([source.end_x, source.end_y], dtype=np.float64),
+                    float(source.amplitude),
+                    float(source.pulsation),
+                    float(source.phase),
+                    **common,
+                )
+            else:
+                lane = StraightLane(
+                    np.asarray([source.start_x, source.start_y], dtype=np.float64),
+                    np.asarray([source.end_x, source.end_y], dtype=np.float64),
+                    **common,
+                )
+            network.add_lane(str(getattr(source, "from")), str(source.to), lane)
+        env.road.network = network
+
+    road_objects = list(getattr(debug_state, "road_objects", ()))
+    if road_objects:
+        objects = []
+        for source in road_objects:
+            object_cls = Landmark if int(source.kind) == 1 else Obstacle
+            object_ = object_cls(
+                env.road,
+                np.asarray([source.x, source.y], dtype=np.float64),
+                heading=float(source.heading),
+                speed=float(source.speed),
+            )
+            object_.LENGTH = float(source.length)
+            object_.WIDTH = float(source.width)
+            object_.collidable = bool(source.collidable)
+            object_.solid = bool(source.solid)
+            object_.check_collisions = bool(source.check_collisions)
+            object_.crashed = bool(source.crashed)
+            object_.hit = bool(source.hit)
+            object_.lane_index = env.road.network.get_closest_lane_index(
+                object_.position, object_.heading
+            )
+            object_.lane = env.road.network.get_lane(object_.lane_index)
+            objects.append(object_)
+        env.road.objects = objects
+
+
 def _patch_oracle(oracle: gym.Env, debug_state: Any) -> None:
     from highway_env.vehicle.behavior import IDMVehicle
     from highway_env.vehicle.controller import MDPVehicle
@@ -112,6 +200,7 @@ def _patch_oracle(oracle: gym.Env, debug_state: Any) -> None:
     from highway_env.vehicle.objects import Landmark
 
     env = cast(Any, oracle.unwrapped)
+    _patch_oracle_road(oracle, debug_state)
     road = env.road
     vehicles = []
     controlled_vehicles = []
@@ -234,7 +323,7 @@ def _patch_oracle(oracle: gym.Env, debug_state: Any) -> None:
             agents_observation_types, controlled_vehicles, strict=False
         ):
             obs_type.observer_vehicle = vehicle
-    if landmarks:
+    if landmarks and not getattr(debug_state, "road_objects", ()):
         road.objects = [
             obj for obj in road.objects if obj.__class__.__name__ != "Landmark"
         ] + landmarks

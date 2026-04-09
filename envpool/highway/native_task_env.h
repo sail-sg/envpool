@@ -89,6 +89,11 @@ inline int Pix(double length, double scaling) {
   return static_cast<int>(length * scaling);
 }
 
+inline std::uint8_t Lighten(std::uint8_t value, double ratio = 0.68) {
+  return static_cast<std::uint8_t>(
+      std::min(static_cast<int>(static_cast<double>(value) / ratio), 255));
+}
+
 inline void Fill(unsigned char* rgb, int width, int height, std::uint8_t r,
                  std::uint8_t g, std::uint8_t b) {
   for (int i = 0; i < width * height; ++i) {
@@ -109,6 +114,40 @@ inline void SetPixel(unsigned char* rgb, int width, int height, int x, int y,
   rgb[offset + 2] = b;
 }
 
+struct SpritePixel {
+  std::uint8_t r{0};
+  std::uint8_t g{0};
+  std::uint8_t b{0};
+  bool opaque{false};
+};
+
+class Sprite {
+ public:
+  explicit Sprite(int size)
+      : size_(std::max(1, size)), pixels_(size_ * size_) {}
+
+  [[nodiscard]] int size() const { return size_; }
+
+  void Set(int x, int y, std::uint8_t r, std::uint8_t g, std::uint8_t b) {
+    if (x < 0 || x >= size_ || y < 0 || y >= size_) {
+      return;
+    }
+    SpritePixel& pixel = pixels_[y * size_ + x];
+    pixel.r = r;
+    pixel.g = g;
+    pixel.b = b;
+    pixel.opaque = true;
+  }
+
+  [[nodiscard]] const SpritePixel& Get(int x, int y) const {
+    return pixels_[y * size_ + x];
+  }
+
+ private:
+  int size_{1};
+  std::vector<SpritePixel> pixels_;
+};
+
 inline void FillRect(unsigned char* rgb, int width, int height, int x, int y,
                      int w, int h, std::uint8_t r, std::uint8_t g,
                      std::uint8_t b) {
@@ -119,23 +158,130 @@ inline void FillRect(unsigned char* rgb, int width, int height, int x, int y,
   }
 }
 
+inline void FillSpriteRect(Sprite* sprite, int x, int y, int w, int h,
+                           std::uint8_t r, std::uint8_t g, std::uint8_t b) {
+  for (int yy = std::max(y, 0); yy < std::min(y + h, sprite->size()); ++yy) {
+    for (int xx = std::max(x, 0); xx < std::min(x + w, sprite->size()); ++xx) {
+      sprite->Set(xx, yy, r, g, b);
+    }
+  }
+}
+
+inline void DrawSpriteRectOutline(Sprite* sprite, int x, int y, int w, int h,
+                                  std::uint8_t r, std::uint8_t g,
+                                  std::uint8_t b) {
+  if (w <= 0 || h <= 0) {
+    return;
+  }
+  FillSpriteRect(sprite, x, y, w, 1, r, g, b);
+  FillSpriteRect(sprite, x, y + h - 1, w, 1, r, g, b);
+  FillSpriteRect(sprite, x, y, 1, h, r, g, b);
+  FillSpriteRect(sprite, x + w - 1, y, 1, h, r, g, b);
+}
+
+inline void BlitSprite(unsigned char* rgb, int width, int height,
+                       const Sprite& sprite, int cx, int cy) {
+  const int left = static_cast<int>(static_cast<double>(cx) -
+                                    static_cast<double>(sprite.size()) / 2.0);
+  const int top = static_cast<int>(static_cast<double>(cy) -
+                                   static_cast<double>(sprite.size()) / 2.0);
+  for (int y = 0; y < sprite.size(); ++y) {
+    for (int x = 0; x < sprite.size(); ++x) {
+      const SpritePixel& pixel = sprite.Get(x, y);
+      if (pixel.opaque) {
+        SetPixel(rgb, width, height, left + x, top + y, pixel.r, pixel.g,
+                 pixel.b);
+      }
+    }
+  }
+}
+
+inline void BlitRotatedSprite(unsigned char* rgb, int width, int height,
+                              const Sprite& sprite, int cx, int cy,
+                              double heading) {
+  if (std::abs(heading) <= 2.0 * 3.14159265358979323846 / 180.0) {
+    BlitSprite(rgb, width, height, sprite, cx, cy);
+    return;
+  }
+  const double cos_h = std::cos(heading);
+  const double sin_h = std::sin(heading);
+  const double half = static_cast<double>(sprite.size()) / 2.0;
+  const double radius = std::ceil(std::sqrt(2.0) * half);
+  const int min_x = std::max(0, static_cast<int>(std::floor(cx - radius)));
+  const int max_x =
+      std::min(width - 1, static_cast<int>(std::ceil(cx + radius)));
+  const int min_y = std::max(0, static_cast<int>(std::floor(cy - radius)));
+  const int max_y =
+      std::min(height - 1, static_cast<int>(std::ceil(cy + radius)));
+  for (int y = min_y; y <= max_y; ++y) {
+    for (int x = min_x; x <= max_x; ++x) {
+      const double dx = static_cast<double>(x) + 0.5 - static_cast<double>(cx);
+      const double dy = static_cast<double>(y) + 0.5 - static_cast<double>(cy);
+      const double local_x = dx * cos_h + dy * sin_h + half;
+      const double local_y = -dx * sin_h + dy * cos_h + half;
+      const int sx = static_cast<int>(std::floor(local_x));
+      const int sy = static_cast<int>(std::floor(local_y));
+      if (sx < 0 || sx >= sprite.size() || sy < 0 || sy >= sprite.size()) {
+        continue;
+      }
+      const SpritePixel& pixel = sprite.Get(sx, sy);
+      if (pixel.opaque) {
+        SetPixel(rgb, width, height, x, y, pixel.r, pixel.g, pixel.b);
+      }
+    }
+  }
+}
+
 inline void DrawLine(unsigned char* rgb, int width, int height, int x0, int y0,
                      int x1, int y1, std::uint8_t r, std::uint8_t g,
                      std::uint8_t b, int thickness = 1) {
   const int dx = x1 - x0;
   const int dy = y1 - y0;
   const int steps = std::max(std::abs(dx), std::abs(dy));
-  const int radius = std::max(0, thickness / 2);
   if (steps == 0) {
-    SetPixel(rgb, width, height, x0, y0, r, g, b);
+    const int brush_size = std::max(1, thickness);
+    const int brush_offset = -(brush_size - 1) / 2;
+    FillRect(rgb, width, height, x0 + brush_offset, y0 + brush_offset,
+             brush_size, brush_size, r, g, b);
     return;
   }
-  for (int i = 0; i <= steps; ++i) {
-    const double t = static_cast<double>(i) / static_cast<double>(steps);
-    const int x = static_cast<int>(std::lround(x0 + t * dx));
-    const int y = static_cast<int>(std::lround(y0 + t * dy));
-    FillRect(rgb, width, height, x - radius, y - radius, 2 * radius + 1,
-             2 * radius + 1, r, g, b);
+  const int sx = dx < 0 ? -1 : 1;
+  const int sy = dy < 0 ? -1 : 1;
+  const int abs_dx = std::abs(dx);
+  const int abs_dy = std::abs(dy);
+  int err = abs_dx - abs_dy;
+  int x = x0;
+  int y = y0;
+  const int brush_size = std::max(1, thickness);
+  const int brush_offset = -(brush_size - 1) / 2;
+  const int pygame_width2_dx = abs_dx >= abs_dy ? 0 : 1;
+  const int pygame_width2_dy = abs_dx >= abs_dy ? 1 : 0;
+  const auto draw_pixel = [&](int px, int py) {
+    if (thickness == 1) {
+      SetPixel(rgb, width, height, px, py, r, g, b);
+    } else if (thickness == 2) {
+      SetPixel(rgb, width, height, px, py, r, g, b);
+      SetPixel(rgb, width, height, px + pygame_width2_dx, py + pygame_width2_dy,
+               r, g, b);
+    } else {
+      FillRect(rgb, width, height, px + brush_offset, py + brush_offset,
+               brush_size, brush_size, r, g, b);
+    }
+  };
+  while (true) {
+    draw_pixel(x, y);
+    if (x == x1 && y == y1) {
+      break;
+    }
+    const int err2 = 2 * err;
+    if (err2 > -abs_dy) {
+      err -= abs_dy;
+      x += sx;
+    }
+    if (err2 < abs_dx) {
+      err += abs_dx;
+      y += sy;
+    }
   }
 }
 
@@ -149,6 +295,51 @@ inline void DrawRectOutline(unsigned char* rgb, int width, int height, int x,
   FillRect(rgb, width, height, x, y + h - 1, w, 1, r, g, b);
   FillRect(rgb, width, height, x, y, 1, h, r, g, b);
   FillRect(rgb, width, height, x + w - 1, y, 1, h, r, g, b);
+}
+
+inline void DrawRotatedRect(unsigned char* rgb, int width, int height,
+                            double cx, double cy, double heading,
+                            double local_left, double local_top,
+                            double rect_width, double rect_height,
+                            std::uint8_t r, std::uint8_t g, std::uint8_t b,
+                            bool outline) {
+  const double cos_h = std::cos(heading);
+  const double sin_h = std::sin(heading);
+  const auto rotate = [&](double x, double y) {
+    return std::pair<int, int>{
+        static_cast<int>(std::lround(cx + x * cos_h - y * sin_h)),
+        static_cast<int>(std::lround(cy + x * sin_h + y * cos_h))};
+  };
+  const auto [x0, y0] = rotate(local_left, local_top);
+  const auto [x1, y1] = rotate(local_left + rect_width, local_top);
+  const auto [x2, y2] =
+      rotate(local_left + rect_width, local_top + rect_height);
+  const auto [x3, y3] = rotate(local_left, local_top + rect_height);
+  if (outline) {
+    DrawLine(rgb, width, height, x0, y0, x1, y1, r, g, b);
+    DrawLine(rgb, width, height, x1, y1, x2, y2, r, g, b);
+    DrawLine(rgb, width, height, x2, y2, x3, y3, r, g, b);
+    DrawLine(rgb, width, height, x3, y3, x0, y0, r, g, b);
+    return;
+  }
+  const int min_x = std::max(0, std::min({x0, x1, x2, x3}));
+  const int max_x = std::min(width - 1, std::max({x0, x1, x2, x3}));
+  const int min_y = std::max(0, std::min({y0, y1, y2, y3}));
+  const int max_y = std::min(height - 1, std::max({y0, y1, y2, y3}));
+  const double inv_cos = cos_h;
+  const double inv_sin = -sin_h;
+  for (int y = min_y; y <= max_y; ++y) {
+    for (int x = min_x; x <= max_x; ++x) {
+      const double dx = static_cast<double>(x) + 0.5 - cx;
+      const double dy = static_cast<double>(y) + 0.5 - cy;
+      const double lx = dx * inv_cos - dy * inv_sin;
+      const double ly = dx * inv_sin + dy * inv_cos;
+      if (local_left <= lx && lx < local_left + rect_width && local_top <= ly &&
+          ly < local_top + rect_height) {
+        SetPixel(rgb, width, height, x, y, r, g, b);
+      }
+    }
+  }
 }
 
 inline void DrawCircle(unsigned char* rgb, int width, int height, int cx,
@@ -507,6 +698,56 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     state.elapsed_step = elapsed_step_;
     state.time = time_;
     if (UseOfficialBackend()) {
+      const std::vector<official::LaneIndex> lane_indexes =
+          official_road_->network.LaneIndexes();
+      state.road_lanes.reserve(lane_indexes.size());
+      for (const official::LaneIndex& lane_index : lane_indexes) {
+        const official::Lane& source =
+            official_road_->network.GetLane(lane_index);
+        HighwayLaneDebugState lane;
+        lane.from = lane_index.from;
+        lane.to = lane_index.to;
+        lane.index = lane_index.id;
+        lane.kind = static_cast<int>(source.Kind());
+        lane.start_x = source.Start().x;
+        lane.start_y = source.Start().y;
+        lane.end_x = source.End().x;
+        lane.end_y = source.End().y;
+        lane.center_x = source.Center().x;
+        lane.center_y = source.Center().y;
+        lane.width = source.Width();
+        const auto line_types = source.LineTypes();
+        lane.line_type0 = static_cast<int>(line_types[0]);
+        lane.line_type1 = static_cast<int>(line_types[1]);
+        lane.forbidden = source.Forbidden();
+        lane.speed_limit = source.SpeedLimit();
+        lane.priority = source.Priority();
+        lane.amplitude = source.Amplitude();
+        lane.pulsation = source.Pulsation();
+        lane.phase = source.Phase();
+        lane.radius = source.Radius();
+        lane.start_phase = source.StartPhase();
+        lane.end_phase = source.EndPhase();
+        lane.clockwise = source.Clockwise();
+        state.road_lanes.push_back(lane);
+      }
+      state.road_objects.reserve(official_road_->objects.size());
+      for (const official::RoadObject& source : official_road_->objects) {
+        HighwayRoadObjectDebugState object;
+        object.kind = static_cast<int>(source.kind);
+        object.x = source.position.x;
+        object.y = source.position.y;
+        object.heading = source.heading;
+        object.speed = source.speed;
+        object.length = source.length;
+        object.width = source.width;
+        object.collidable = source.collidable;
+        object.solid = source.solid;
+        object.check_collisions = source.check_collisions;
+        object.crashed = source.crashed;
+        object.hit = source.hit;
+        state.road_objects.push_back(object);
+      }
       state.vehicles.reserve(official_road_->vehicles.size());
       for (const official::Vehicle& source : official_road_->vehicles) {
         HighwayVehicleDebugState vehicle;
@@ -1732,6 +1973,12 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     if (IsParkingScenario()) {
       return 7.0;
     }
+    if (scenario_ == "exit") {
+      return 5.0;
+    }
+    if (scenario_ == "lane_keeping") {
+      return 7.0;
+    }
     if (scenario_ == "intersection" || scenario_ == "intersection_multi" ||
         scenario_ == "intersection_continuous") {
       return 7.15;
@@ -1749,6 +1996,9 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     }
     if (scenario_.find("racetrack") == 0) {
       return {0.5, 0.5};
+    }
+    if (scenario_ == "lane_keeping") {
+      return {0.4, 0.5};
     }
     return {0.3, 0.5};
   }
@@ -1843,13 +2093,12 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       }
       return;
     }
-    const double cos_h = std::cos(heading);
-    const double sin_h = std::sin(heading);
-    const int dx = static_cast<int>(std::lround(0.5 * pixel_length * cos_h));
-    const int dy = static_cast<int>(std::lround(0.5 * pixel_length * sin_h));
-    const int thickness = std::max(1, pixel_width);
-    DrawLine(rgb, width, height, cx - dx, cy - dy, cx + dx, cy + dy, r, g, b,
-             outline ? 1 : thickness);
+    DrawRotatedRect(rgb, width, height, static_cast<double>(cx),
+                    static_cast<double>(cy), heading,
+                    -0.5 * static_cast<double>(pixel_length),
+                    -0.5 * static_cast<double>(pixel_width),
+                    static_cast<double>(pixel_length),
+                    static_cast<double>(pixel_width), r, g, b, outline);
   }
 
   void DrawOfficialObject(unsigned char* rgb, int width, int height,
@@ -1872,19 +2121,29 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       g = 200;
       b = 0;
     }
-    DrawOfficialRect(rgb, width, height, transform, object.position,
-                     object.length, object.width, object.heading, r, g, b,
-                     false);
-    DrawOfficialRect(rgb, width, height, transform, object.position,
-                     object.length, object.width, object.heading, 60, 60, 60,
-                     true);
+    const auto object_pixel_position = transform.Pos2Pix(object.position);
+    const int object_px = object_pixel_position.first;
+    const int object_py = object_pixel_position.second;
+    const int sprite_px = transform.Pix(object.length);
+    const int rect_y = transform.Pix(object.length / 2.0 - object.width / 2.0);
+    const int rect_h = transform.Pix(object.width);
+    const double heading =
+        std::abs(object.heading) > 2.0 * kPi / 180.0 ? object.heading : 0.0;
+    Sprite object_sprite(sprite_px);
+    FillSpriteRect(&object_sprite, 0, rect_y, sprite_px, rect_h, r, g, b);
+    DrawSpriteRectOutline(&object_sprite, 0, rect_y, sprite_px, rect_h, 60, 60,
+                          60);
+    BlitRotatedSprite(rgb, width, height, object_sprite, object_px, object_py,
+                      heading);
   }
 
   void DrawOfficialVehicle(unsigned char* rgb, int width, int height,
                            const OfficialRenderTransform& transform,
                            const official::Vehicle& vehicle) const {
-    const auto [px, py] = transform.Pos2Pix(vehicle.position);
-    if (px < -80 || px > width + 80 || py < -80 || py > height + 80) {
+    const auto [vehicle_px, vehicle_py] = transform.Pos2Pix(vehicle.position);
+    const int cx = vehicle_px;
+    const int cy = vehicle_py;
+    if (cx < -80 || cx > width + 80 || cy < -80 || cy > height + 80) {
       return;
     }
     std::uint8_t r = 200;
@@ -1903,12 +2162,59 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       g = 200;
       b = 0;
     }
-    DrawOfficialRect(rgb, width, height, transform, vehicle.position,
-                     official::kVehicleLength, official::kVehicleWidth,
-                     vehicle.heading, r, g, b, false);
-    DrawOfficialRect(rgb, width, height, transform, vehicle.position,
-                     official::kVehicleLength, official::kVehicleWidth,
-                     vehicle.heading, 60, 60, 60, true);
+    constexpr double tire_length = 1.0;
+    constexpr double tire_width = 0.3;
+    constexpr double headlight_length = 0.72;
+    constexpr double headlight_width = 0.6;
+    constexpr double sprite_length =
+        official::kVehicleLength + 2.0 * tire_length;
+    const int sprite_px = transform.Pix(sprite_length);
+    const int body_x = transform.Pix(tire_length);
+    const int body_y =
+        transform.Pix(sprite_length / 2.0 - official::kVehicleWidth / 2.0);
+    const int body_w = transform.Pix(official::kVehicleLength);
+    const int body_h = transform.Pix(official::kVehicleWidth);
+    const int light_x = transform.Pix(tire_length + official::kVehicleLength -
+                                      headlight_length);
+    const int light_left_y = transform.Pix(
+        sprite_length / 2.0 - (1.4 * official::kVehicleWidth) / 3.0);
+    const int light_right_y = transform.Pix(
+        sprite_length / 2.0 + (0.6 * official::kVehicleWidth) / 5.0);
+    const int light_w = transform.Pix(headlight_length);
+    const int light_h = transform.Pix(headlight_width);
+    const double heading =
+        std::abs(vehicle.heading) > 2.0 * kPi / 180.0 ? vehicle.heading : 0.0;
+    Sprite vehicle_sprite(sprite_px);
+    FillSpriteRect(&vehicle_sprite, body_x, body_y, body_w, body_h, r, g, b);
+    FillSpriteRect(&vehicle_sprite, light_x, light_left_y, light_w, light_h,
+                   Lighten(r), Lighten(g), Lighten(b));
+    FillSpriteRect(&vehicle_sprite, light_x, light_right_y, light_w, light_h,
+                   Lighten(r), Lighten(g), Lighten(b));
+    DrawSpriteRectOutline(&vehicle_sprite, body_x, body_y, body_w, body_h, 60,
+                          60, 60);
+
+    if (vehicle.kind == official::VehicleKind::kVehicle) {
+      const int tire_px = transform.Pix(tire_length);
+      const int tire_h = transform.Pix(tire_width);
+      const int tire_local_y =
+          transform.Pix(tire_length / 2.0 - tire_width / 2.0);
+      const std::array<std::pair<int, int>, 4> tire_positions{{
+          {transform.Pix(tire_length),
+           transform.Pix(sprite_length / 2.0 - official::kVehicleWidth / 2.0)},
+          {transform.Pix(tire_length),
+           transform.Pix(sprite_length / 2.0 + official::kVehicleWidth / 2.0)},
+          {transform.Pix(sprite_length - tire_length),
+           transform.Pix(sprite_length / 2.0 - official::kVehicleWidth / 2.0)},
+          {transform.Pix(sprite_length - tire_length),
+           transform.Pix(sprite_length / 2.0 + official::kVehicleWidth / 2.0)},
+      }};
+      for (const auto& [tire_x, tire_y] : tire_positions) {
+        FillSpriteRect(&vehicle_sprite, tire_x - tire_px / 2,
+                       tire_y - tire_px / 2 + tire_local_y, tire_px, tire_h, 60,
+                       60, 60);
+      }
+    }
+    BlitRotatedSprite(rgb, width, height, vehicle_sprite, cx, cy, heading);
   }
 
   void DrawScenario(unsigned char* rgb, int width, int height) const {

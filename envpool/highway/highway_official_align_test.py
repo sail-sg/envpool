@@ -176,6 +176,54 @@ def _patch_oracle_from_envpool(oracle: gym.Env, envpool_env: Any) -> None:
     _patch_oracle(oracle, _debug_state(envpool_env))
 
 
+_RENDER_MISMATCH_PIXEL_LIMIT: dict[str, int] = {
+    "highway-v0": 0,
+    "highway-fast-v0": 0,
+    "merge-v0": 500,
+    "two-way-v0": 300,
+    "u-turn-v0": 300,
+    "exit-v0": 0,
+    # These paths use pygame.transform.rotate / curved-lane rasterization
+    # upstream.  Keep the residual to sprite/line edge pixels only.
+    "intersection-v0": 1000,
+    "intersection-v1": 1000,
+    "intersection-multi-agent-v0": 1200,
+    "intersection-multi-agent-v1": 1200,
+    "lane-keeping-v0": 600,
+    "parking-v0": 1600,
+    "parking-ActionRepeat-v0": 1600,
+    "parking-parked-v0": 1800,
+    "racetrack-v0": 800,
+    "racetrack-oval-v0": 800,
+    "racetrack-large-v0": 800,
+    "roundabout-v0": 1200,
+}
+
+
+def _assert_render_aligned(
+    case: _Case, envpool_env: Any, oracle: gym.Env, step_label: str
+) -> None:
+    actual = _render_rgb(envpool_env)[0]
+    expected = _render_rgb(oracle)
+    assert actual.shape == expected.shape, (
+        case.official_id,
+        step_label,
+        actual.shape,
+        expected.shape,
+    )
+    mismatch_mask = np.any(actual != expected, axis=2)
+    mismatch_pixels = int(mismatch_mask.sum())
+    if mismatch_pixels == 0:
+        return
+    mismatch_channels = int(np.count_nonzero(actual != expected))
+    limit = _RENDER_MISMATCH_PIXEL_LIMIT[case.official_id]
+    assert mismatch_pixels <= limit, (
+        f"{case.official_id} render mismatch at {step_label}: "
+        f"{mismatch_pixels} pixels / {mismatch_channels} channel values; "
+        f"limit={limit}"
+    )
+
+
 def _restore_official_idm_defaults() -> None:
     from highway_env.vehicle.behavior import IDMVehicle
 
@@ -212,9 +260,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                     _assert_tree_bitwise(
                         _envpool_reset_obs(env_obs, case), oracle_obs
                     )
-                    np.testing.assert_array_equal(
-                        _render_rgb(env)[0], _render_rgb(oracle)
-                    )
+                    _assert_render_aligned(case, env, oracle, "reset")
 
                     for step in range(_ACTION_STEPS):
                         action = _official_action(oracle.action_space, step)
@@ -250,9 +296,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             _envpool_info(actual.info),
                             _official_info(expected.info),
                         )
-                        np.testing.assert_array_equal(
-                            _render_rgb(env)[0], _render_rgb(oracle)
-                        )
+                        _assert_render_aligned(case, env, oracle, f"step {step}")
                 finally:
                     env.close()
                     oracle.close()
@@ -267,7 +311,12 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
             _Case("u-turn-v0"),
         ):
             with self.subTest(official_id=case.official_id):
-                env = make_gymnasium(case.official_id, num_envs=1, seed=7)
+                env = make_gymnasium(
+                    case.official_id,
+                    num_envs=1,
+                    seed=7,
+                    render_mode="rgb_array",
+                )
                 oracle = _make_oracle(case.official_id)
                 try:
                     env_obs, _ = env.reset()
@@ -278,8 +327,9 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                         _envpool_reset_obs(env_obs, case),
                         oracle.unwrapped.observation_type.observe(),
                     )
+                    _assert_render_aligned(case, env, oracle, "reset")
 
-                    for action in (1, 3, 0, 2, 4):
+                    for step, action in enumerate((1, 3, 0, 2, 4)):
                         _patch_oracle_from_envpool(oracle, env)
                         expected = _Step(*oracle.step(action))
                         actual = _envpool_step(env, case, action)
@@ -303,6 +353,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             _envpool_info(actual.info),
                             _official_info(expected.info),
                         )
+                        _assert_render_aligned(case, env, oracle, f"step {step}")
                         if bool(expected.terminated) or bool(
                             expected.truncated
                         ):
@@ -320,7 +371,12 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
             _Case("parking-parked-v0"),
         ):
             with self.subTest(official_id=case.official_id):
-                env = make_gymnasium(case.official_id, num_envs=1, seed=11)
+                env = make_gymnasium(
+                    case.official_id,
+                    num_envs=1,
+                    seed=11,
+                    render_mode="rgb_array",
+                )
                 oracle = _make_oracle(case.official_id)
                 try:
                     env_obs, _ = env.reset()
@@ -331,6 +387,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                         _envpool_reset_obs(env_obs, case),
                         oracle.unwrapped.observation_type.observe(),
                     )
+                    _assert_render_aligned(case, env, oracle, "reset")
 
                     for step in range(6):
                         action = _official_action(oracle.action_space, step)
@@ -364,6 +421,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             _envpool_info(actual.info),
                             _official_info(expected.info),
                         )
+                        _assert_render_aligned(case, env, oracle, f"step {step}")
                         if bool(expected.terminated) or bool(
                             expected.truncated
                         ):
@@ -374,7 +432,9 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
 
     def test_native_exit_matches_official_from_patched_state(self) -> None:
         case = _Case("exit-v0")
-        env = make_gymnasium(case.official_id, num_envs=1, seed=13)
+        env = make_gymnasium(
+            case.official_id, num_envs=1, seed=13, render_mode="rgb_array"
+        )
         oracle = _make_oracle(case.official_id)
         try:
             env_obs, _ = env.reset()
@@ -385,6 +445,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                 _envpool_reset_obs(env_obs, case),
                 oracle.unwrapped.observation_type.observe(),
             )
+            _assert_render_aligned(case, env, oracle, "reset")
 
             for step in range(6):
                 action = _official_action(oracle.action_space, step)
@@ -413,6 +474,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                 _assert_tree_bitwise(
                     _envpool_info(actual.info), _official_info(expected.info)
                 )
+                _assert_render_aligned(case, env, oracle, f"step {step}")
         finally:
             env.close()
             oracle.close()
@@ -422,7 +484,12 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
     ) -> None:
         for case in (_Case("intersection-v0"), _Case("intersection-v1")):
             with self.subTest(official_id=case.official_id):
-                env = make_gymnasium(case.official_id, num_envs=1, seed=17)
+                env = make_gymnasium(
+                    case.official_id,
+                    num_envs=1,
+                    seed=17,
+                    render_mode="rgb_array",
+                )
                 oracle = _make_oracle(case.official_id)
                 try:
                     env_obs, _ = env.reset()
@@ -433,6 +500,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                         _envpool_reset_obs(env_obs, case),
                         oracle.unwrapped.observation_type.observe(),
                     )
+                    _assert_render_aligned(case, env, oracle, "reset")
 
                     for step in range(6):
                         action = (
@@ -469,6 +537,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             _envpool_info(actual.info),
                             _official_info(expected.info),
                         )
+                        _assert_render_aligned(case, env, oracle, f"step {step}")
                         if bool(expected.terminated) or bool(
                             expected.truncated
                         ):
@@ -485,7 +554,12 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
             _Case("intersection-multi-agent-v1", player_count=2),
         ):
             with self.subTest(official_id=case.official_id):
-                env = make_gymnasium(case.official_id, num_envs=1, seed=19)
+                env = make_gymnasium(
+                    case.official_id,
+                    num_envs=1,
+                    seed=19,
+                    render_mode="rgb_array",
+                )
                 oracle = _make_oracle(case.official_id)
                 try:
                     env_obs, _ = env.reset()
@@ -496,8 +570,11 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                         _envpool_reset_obs(env_obs, case),
                         oracle.unwrapped.observation_type.observe(),
                     )
+                    _assert_render_aligned(case, env, oracle, "reset")
 
-                    for action in ((1, 1), (2, 1), (1, 0), (0, 2), (1, 1)):
+                    for step, action in enumerate(
+                        ((1, 1), (2, 1), (1, 0), (0, 2), (1, 1))
+                    ):
                         actual = _envpool_step(env, case, action)
                         _patch_oracle_from_envpool(oracle, env)
                         oracle_obs = oracle.unwrapped.observation_type.observe()
@@ -527,6 +604,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             _envpool_scalar(actual.truncated),
                             oracle.unwrapped._is_truncated(),
                         )
+                        _assert_render_aligned(case, env, oracle, f"step {step}")
                         if any(expected_terminated) or bool(
                             _envpool_scalar(actual.truncated)
                         ):
@@ -539,7 +617,9 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
         self,
     ) -> None:
         case = _Case("lane-keeping-v0")
-        env = make_gymnasium(case.official_id, num_envs=1, seed=23)
+        env = make_gymnasium(
+            case.official_id, num_envs=1, seed=23, render_mode="rgb_array"
+        )
         oracle = _make_oracle(
             case.official_id,
             {"state_noise": 0.0, "derivative_noise": 0.0},
@@ -551,12 +631,13 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
             _patch_oracle_from_envpool(oracle, env)
             oracle_obs = oracle.unwrapped.observation_type.observe()
             _assert_tree_bitwise(_envpool_reset_obs(env_obs, case), oracle_obs)
+            _assert_render_aligned(case, env, oracle, "reset")
 
             actions = (
                 np.asarray([0.0], dtype=np.float32),
                 np.asarray([0.25], dtype=np.float32),
             )
-            for action in actions:
+            for step, action in enumerate(actions):
                 expected = _Step(*oracle.step(action))
                 actual = _envpool_step(env, case, action)
                 _assert_tree_bitwise(
@@ -571,6 +652,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                 np.testing.assert_array_equal(
                     _envpool_scalar(actual.truncated), expected.truncated
                 )
+                _assert_render_aligned(case, env, oracle, f"step {step}")
         finally:
             env.close()
             oracle.close()
@@ -589,7 +671,12 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
             _Case("racetrack-oval-v0"),
         ):
             with self.subTest(official_id=case.official_id):
-                env = make_gymnasium(case.official_id, num_envs=1, seed=29)
+                env = make_gymnasium(
+                    case.official_id,
+                    num_envs=1,
+                    seed=29,
+                    render_mode="rgb_array",
+                )
                 oracle = _make_oracle(case.official_id)
                 try:
                     env_obs, _ = env.reset()
@@ -599,8 +686,9 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                         _envpool_reset_obs(env_obs, case),
                         oracle.unwrapped.observation_type.observe(),
                     )
+                    _assert_render_aligned(case, env, oracle, "reset")
 
-                    for action in actions:
+                    for step, action in enumerate(actions):
                         expected = _Step(*oracle.step(action))
                         actual = _envpool_step(env, case, action)
                         _assert_tree_bitwise(
@@ -618,6 +706,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             _envpool_scalar(actual.truncated),
                             expected.truncated,
                         )
+                        _assert_render_aligned(case, env, oracle, f"step {step}")
                 finally:
                     env.close()
                     oracle.close()

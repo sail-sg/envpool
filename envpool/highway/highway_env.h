@@ -76,6 +76,47 @@ struct HighwayVehicleDebugState {
   std::vector<int> route_id;
 };
 
+struct HighwayLaneDebugState {
+  std::string from;
+  std::string to;
+  int index{0};
+  int kind{0};
+  double start_x{0.0};
+  double start_y{0.0};
+  double end_x{0.0};
+  double end_y{0.0};
+  double center_x{0.0};
+  double center_y{0.0};
+  double width{kLaneWidth};
+  int line_type0{1};
+  int line_type1{1};
+  bool forbidden{false};
+  double speed_limit{20.0};
+  int priority{0};
+  double amplitude{0.0};
+  double pulsation{0.0};
+  double phase{0.0};
+  double radius{1.0};
+  double start_phase{0.0};
+  double end_phase{0.0};
+  bool clockwise{true};
+};
+
+struct HighwayRoadObjectDebugState {
+  int kind{0};
+  double x{0.0};
+  double y{0.0};
+  double heading{0.0};
+  double speed{0.0};
+  double length{2.0};
+  double width{2.0};
+  bool collidable{true};
+  bool solid{true};
+  bool check_collisions{true};
+  bool crashed{false};
+  bool hit{false};
+};
+
 struct HighwayDebugState {
   std::string scenario{"highway"};
   int lanes_count{0};
@@ -83,6 +124,8 @@ struct HighwayDebugState {
   int policy_frequency{0};
   int elapsed_step{0};
   double time{0.0};
+  std::vector<HighwayLaneDebugState> road_lanes;
+  std::vector<HighwayRoadObjectDebugState> road_objects;
   std::vector<HighwayVehicleDebugState> vehicles;
 };
 

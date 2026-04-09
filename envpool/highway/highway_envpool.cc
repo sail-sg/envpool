@@ -76,6 +76,8 @@ using PyNativeMultiAgentEnvPool = PyEnvPool<hn::NativeMultiAgentPool>;
 
 PYBIND11_MODULE(highway_envpool, m) {
   using highway::HighwayDebugState;
+  using highway::HighwayLaneDebugState;
+  using highway::HighwayRoadObjectDebugState;
   using highway::HighwayVehicleDebugState;
 
   py::class_<HighwayVehicleDebugState>(m, "_HighwayVehicleDebugState")
@@ -114,6 +116,46 @@ PYBIND11_MODULE(highway_envpool, m) {
       .def_readonly("route_to", &HighwayVehicleDebugState::route_to)
       .def_readonly("route_id", &HighwayVehicleDebugState::route_id);
 
+  py::class_<HighwayLaneDebugState>(m, "_HighwayLaneDebugState")
+      .def_readonly("from", &HighwayLaneDebugState::from)
+      .def_readonly("to", &HighwayLaneDebugState::to)
+      .def_readonly("index", &HighwayLaneDebugState::index)
+      .def_readonly("kind", &HighwayLaneDebugState::kind)
+      .def_readonly("start_x", &HighwayLaneDebugState::start_x)
+      .def_readonly("start_y", &HighwayLaneDebugState::start_y)
+      .def_readonly("end_x", &HighwayLaneDebugState::end_x)
+      .def_readonly("end_y", &HighwayLaneDebugState::end_y)
+      .def_readonly("center_x", &HighwayLaneDebugState::center_x)
+      .def_readonly("center_y", &HighwayLaneDebugState::center_y)
+      .def_readonly("width", &HighwayLaneDebugState::width)
+      .def_readonly("line_type0", &HighwayLaneDebugState::line_type0)
+      .def_readonly("line_type1", &HighwayLaneDebugState::line_type1)
+      .def_readonly("forbidden", &HighwayLaneDebugState::forbidden)
+      .def_readonly("speed_limit", &HighwayLaneDebugState::speed_limit)
+      .def_readonly("priority", &HighwayLaneDebugState::priority)
+      .def_readonly("amplitude", &HighwayLaneDebugState::amplitude)
+      .def_readonly("pulsation", &HighwayLaneDebugState::pulsation)
+      .def_readonly("phase", &HighwayLaneDebugState::phase)
+      .def_readonly("radius", &HighwayLaneDebugState::radius)
+      .def_readonly("start_phase", &HighwayLaneDebugState::start_phase)
+      .def_readonly("end_phase", &HighwayLaneDebugState::end_phase)
+      .def_readonly("clockwise", &HighwayLaneDebugState::clockwise);
+
+  py::class_<HighwayRoadObjectDebugState>(m, "_HighwayRoadObjectDebugState")
+      .def_readonly("kind", &HighwayRoadObjectDebugState::kind)
+      .def_readonly("x", &HighwayRoadObjectDebugState::x)
+      .def_readonly("y", &HighwayRoadObjectDebugState::y)
+      .def_readonly("heading", &HighwayRoadObjectDebugState::heading)
+      .def_readonly("speed", &HighwayRoadObjectDebugState::speed)
+      .def_readonly("length", &HighwayRoadObjectDebugState::length)
+      .def_readonly("width", &HighwayRoadObjectDebugState::width)
+      .def_readonly("collidable", &HighwayRoadObjectDebugState::collidable)
+      .def_readonly("solid", &HighwayRoadObjectDebugState::solid)
+      .def_readonly("check_collisions",
+                    &HighwayRoadObjectDebugState::check_collisions)
+      .def_readonly("crashed", &HighwayRoadObjectDebugState::crashed)
+      .def_readonly("hit", &HighwayRoadObjectDebugState::hit);
+
   py::class_<HighwayDebugState>(m, "_HighwayDebugState")
       .def_readonly("scenario", &HighwayDebugState::scenario)
       .def_readonly("lanes_count", &HighwayDebugState::lanes_count)
@@ -122,6 +164,8 @@ PYBIND11_MODULE(highway_envpool, m) {
       .def_readonly("policy_frequency", &HighwayDebugState::policy_frequency)
       .def_readonly("elapsed_step", &HighwayDebugState::elapsed_step)
       .def_readonly("time", &HighwayDebugState::time)
+      .def_readonly("road_lanes", &HighwayDebugState::road_lanes)
+      .def_readonly("road_objects", &HighwayDebugState::road_objects)
       .def_readonly("vehicles", &HighwayDebugState::vehicles);
 
   py::class_<PyHighwayEnvSpec>(
