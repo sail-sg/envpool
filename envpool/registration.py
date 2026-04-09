@@ -194,11 +194,11 @@ class EnvRegistry:
     @overload
     def make(
         self, task_id: str, env_type: str, **kwargs: Any
-    ) -> DMEnvPool | GymEnvPool | GymnasiumEnvPool: ...
+    ) -> DMEnvPool | GymnasiumEnvPool: ...
 
     def make(
         self, task_id: str, env_type: str, **kwargs: Any
-    ) -> DMEnvPool | GymEnvPool | GymnasiumEnvPool:
+    ) -> DMEnvPool | GymnasiumEnvPool:
         """Make envpool."""
         from_pixels, wrapper_kwargs = self._extract_make_options(kwargs)
         if "gym_reset_return_info" not in kwargs:
