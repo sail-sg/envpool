@@ -78,7 +78,6 @@ for domain, task, max_episode_steps in dmc_mujoco_envs:
         import_path="envpool.mujoco.dmc",
         spec_cls=f"Dmc{domain_name}EnvSpec",
         dm_cls=f"Dmc{domain_name}DMEnvPool",
-        gym_cls=f"Dmc{domain_name}GymEnvPool",
         gymnasium_cls=f"Dmc{domain_name}GymnasiumEnvPool",
         task_name=task,
         max_episode_steps=max_episode_steps,

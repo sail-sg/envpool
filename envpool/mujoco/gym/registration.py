@@ -84,7 +84,6 @@ for task, versions, max_episode_steps in gym_mujoco_envs:
             import_path="envpool.mujoco.gym",
             spec_cls=f"Gym{task}EnvSpec",
             dm_cls=f"Gym{task}DMEnvPool",
-            gym_cls=f"Gym{task}GymEnvPool",
             gymnasium_cls=f"Gym{task}GymnasiumEnvPool",
             post_constraint=(version == "v5"),
             max_episode_steps=max_episode_steps,

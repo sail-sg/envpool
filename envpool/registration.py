@@ -44,7 +44,6 @@ class EnvRegistry:
         import_path: str,
         spec_cls: str,
         dm_cls: str,
-        gym_cls: str,
         gymnasium_cls: str,
         aliases: Sequence[str] = (),
         **kwargs: Any,
@@ -57,7 +56,6 @@ class EnvRegistry:
             self.specs[alias] = (import_path, spec_cls, dict(kwargs))
             self.envpools[alias] = {
                 "dm": (import_path, dm_cls),
-                "gym": (import_path, gym_cls),
                 "gymnasium": (import_path, gymnasium_cls),
             }
 
@@ -139,7 +137,6 @@ class EnvRegistry:
                 )
             suffix = {
                 "dm": "DMEnvPool",
-                "gym": "GymEnvPool",
                 "gymnasium": "GymnasiumEnvPool",
             }[env_type]
             envpool_cls = self._pixel_variant_name(envpool_cls, suffix)
@@ -191,11 +188,6 @@ class EnvRegistry:
 
     @overload
     def make(
-        self, task_id: str, env_type: Literal["gym"], **kwargs: Any
-    ) -> GymEnvPool: ...
-
-    @overload
-    def make(
         self, task_id: str, env_type: Literal["gymnasium"], **kwargs: Any
     ) -> GymnasiumEnvPool: ...
 
@@ -221,7 +213,7 @@ class EnvRegistry:
         assert task_id in self.specs, (
             f"{task_id} is not supported, `envpool.list_all_envs()` may help."
         )
-        assert env_type in ["dm", "gym", "gymnasium"]
+        assert env_type in ["dm", "gymnasium"]
 
         spec = self._make_env_spec(task_id, from_pixels=from_pixels, **kwargs)
         import_path, envpool_cls = self._resolve_envpool_entry(
@@ -236,7 +228,7 @@ class EnvRegistry:
 
     def make_gym(self, task_id: str, **kwargs: Any) -> GymEnvPool:
         """Make gym.Env compatible envpool."""
-        return self.make(task_id, "gym", **kwargs)
+        return self.make_gymnasium(task_id, **kwargs)
 
     def make_gymnasium(self, task_id: str, **kwargs: Any) -> GymnasiumEnvPool:
         """Make gymnasium.Env compatible envpool."""
@@ -319,9 +311,9 @@ def make(
     if env_type == "dm":
         return registry.make(task_id, "dm", **kwargs)
     if env_type == "gym":
-        return registry.make(task_id, "gym", **kwargs)
+        return make_gym(task_id, **kwargs)
     if env_type == "gymnasium":
-        return registry.make(task_id, "gymnasium", **kwargs)
+        return make_gymnasium(task_id, **kwargs)
     raise AssertionError(
         "env_type should be one of 'dm', 'gym', or 'gymnasium'."
     )
@@ -334,7 +326,7 @@ def make_dm(task_id: str, **kwargs: Any) -> DMEnvPool:
 
 def make_gym(task_id: str, **kwargs: Any) -> GymEnvPool:
     """Make gym.Env compatible envpool."""
-    return registry.make_gym(task_id, **kwargs)
+    return make_gymnasium(task_id, **kwargs)
 
 
 def make_gymnasium(task_id: str, **kwargs: Any) -> GymnasiumEnvPool:

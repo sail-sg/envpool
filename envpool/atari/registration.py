@@ -29,7 +29,6 @@ for game in atari_game_list:
         import_path="envpool.atari",
         spec_cls="AtariEnvSpec",
         dm_cls="AtariDMEnvPool",
-        gym_cls="AtariGymEnvPool",
         gymnasium_cls="AtariGymnasiumEnvPool",
         task=game,
         max_episode_steps=27000,

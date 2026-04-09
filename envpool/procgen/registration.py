@@ -52,7 +52,6 @@ for env_name, timeout, dist_mode in procgen_game_config:
             import_path="envpool.procgen",
             spec_cls="ProcgenEnvSpec",
             dm_cls="ProcgenDMEnvPool",
-            gym_cls="ProcgenGymEnvPool",
             gymnasium_cls="ProcgenGymnasiumEnvPool",
             env_name=env_name,
             distribution_mode=dist_value,

@@ -125,22 +125,6 @@ py_library(
 )
 
 py_library(
-    name = "gym_envpool",
-    srcs = ["gym_envpool.py"],
-    imports = ["../.."],
-    deps = [
-        requirement("optree"),
-        requirement("dm-env"),
-        requirement("gymnasium"),
-        requirement("numpy"),
-        ":data",
-        ":envpool",
-        ":lax",
-        ":utils",
-    ],
-)
-
-py_library(
     name = "gymnasium_envpool",
     srcs = ["gymnasium_envpool.py"],
     imports = ["../.."],
@@ -163,7 +147,6 @@ py_library(
     deps = [
         ":dm_envpool",
         ":env_spec",
-        ":gym_envpool",
         ":gymnasium_envpool",
         ":protocol",
     ],

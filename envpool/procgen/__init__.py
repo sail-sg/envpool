@@ -22,7 +22,6 @@ _WINDOWS_DLL_DIR_HANDLES: list[object] = []
 _PROCGEN_EXPORTS = {
     "ProcgenEnvSpec",
     "ProcgenDMEnvPool",
-    "ProcgenGymEnvPool",
     "ProcgenGymnasiumEnvPool",
 }
 _LINUX_QT_RUNTIME_ERROR = (
@@ -69,7 +68,6 @@ else:
     (
         ProcgenEnvSpec,
         ProcgenDMEnvPool,
-        ProcgenGymEnvPool,
         ProcgenGymnasiumEnvPool,
     ) = py_env(_ProcgenEnvSpec, _ProcgenEnvPool)
 
@@ -83,6 +81,5 @@ def __getattr__(name: str) -> object:
 __all__ = [
     "ProcgenEnvSpec",
     "ProcgenDMEnvPool",
-    "ProcgenGymEnvPool",
     "ProcgenGymnasiumEnvPool",
 ]

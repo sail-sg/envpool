@@ -15,9 +15,8 @@
 
 from .dm_envpool import DMEnvPoolMeta
 from .env_spec import EnvSpecMeta
-from .gym_envpool import GymEnvPoolMeta
 from .gymnasium_envpool import GymnasiumEnvPoolMeta
-from .protocol import DMEnvPool, EnvPool, EnvSpec, GymEnvPool, GymnasiumEnvPool
+from .protocol import DMEnvPool, EnvPool, EnvSpec, GymnasiumEnvPool
 
 
 def py_env(
@@ -25,7 +24,6 @@ def py_env(
 ) -> tuple[
     type[EnvSpec],
     type[DMEnvPool],
-    type[GymEnvPool],
     type[GymnasiumEnvPool],
 ]:
     """Initialize EnvPool for users."""
@@ -36,9 +34,6 @@ def py_env(
         EnvSpecMeta(spec_name, (envspec,), {}),  # type: ignore[return-value]
         DMEnvPoolMeta(
             pool_name.replace("EnvPool", "DMEnvPool"), (envpool,), {}
-        ),
-        GymEnvPoolMeta(
-            pool_name.replace("EnvPool", "GymEnvPool"), (envpool,), {}
         ),
         GymnasiumEnvPoolMeta(
             pool_name.replace("EnvPool", "GymnasiumEnvPool"), (envpool,), {}
