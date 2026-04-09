@@ -76,7 +76,10 @@ py_test(
 py_test(
     name = "highway_align_test",
     size = "enormous",
-    srcs = ["highway_align_test.py"],
+    srcs = [
+        "highway_align_test.py",
+        "highway_oracle_util.py",
+    ],
     imports = ["../.."],
     deps = [
         ":highway",
@@ -93,6 +96,7 @@ py_test(
     size = "enormous",
     srcs = [
         "highway_align_test.py",
+        "highway_oracle_util.py",
         "highway_render_test.py",
     ],
     imports = ["../.."],
@@ -109,7 +113,10 @@ py_test(
 py_test(
     name = "highway_official_coverage_test",
     size = "enormous",
-    srcs = ["highway_official_coverage_test.py"],
+    srcs = [
+        "highway_official_coverage_test.py",
+        "highway_oracle_util.py",
+    ],
     imports = ["../.."],
     deps = [
         ":highway",

@@ -17,7 +17,6 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-import highway_env  # noqa: F401
 import numpy as np
 from absl.testing import absltest
 

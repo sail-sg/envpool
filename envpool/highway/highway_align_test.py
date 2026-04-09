@@ -18,14 +18,14 @@ from __future__ import annotations
 from typing import Any, cast
 
 import gymnasium as gym
-import highway_env  # noqa: F401
 import numpy as np
 from absl.testing import absltest
-from highway_env.vehicle.behavior import IDMVehicle
-from highway_env.vehicle.controller import MDPVehicle
 
 import envpool.highway.registration  # noqa: F401
+from envpool.highway.highway_oracle_util import prepare_official_oracle_import
 from envpool.registration import make_gymnasium
+
+prepare_official_oracle_import()
 
 _ALIGN_ACTIONS = (1, 3, 3, 2, 1, 1, 0, 4, 4, 1, 2, 1)
 _DEFAULT_ALIGN_CONFIG = {
@@ -85,6 +85,8 @@ def _assert_scalar_matches_float32(
 
 
 def _make_oracle(oracle_env_id: str, config: dict[str, Any]) -> gym.Env:
+    import highway_env  # noqa: F401
+
     oracle_config: dict[str, Any] = {
         "lanes_count": config["lanes_count"],
         "vehicles_count": config["vehicles_count"],
@@ -101,6 +103,9 @@ def _make_oracle(oracle_env_id: str, config: dict[str, Any]) -> gym.Env:
 
 
 def _patch_oracle(oracle: gym.Env, debug_state: Any) -> None:
+    from highway_env.vehicle.behavior import IDMVehicle
+    from highway_env.vehicle.controller import MDPVehicle
+
     env = cast(Any, oracle.unwrapped)
     road = env.road
     vehicles = []

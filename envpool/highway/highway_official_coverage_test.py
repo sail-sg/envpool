@@ -18,13 +18,15 @@ from __future__ import annotations
 from typing import Any, NamedTuple, cast
 
 import gymnasium as gym
-import highway_env  # noqa: F401
 import numpy as np
 from absl.testing import absltest
 from gymnasium import spaces
 
 import envpool.highway.registration  # noqa: F401
+from envpool.highway.highway_oracle_util import prepare_official_oracle_import
 from envpool.registration import make_gymnasium
+
+prepare_official_oracle_import()
 
 _UPSTREAM_IDS = frozenset({
     "exit-v0",
@@ -78,6 +80,8 @@ _CASES = (
 
 
 def _registered_highway_ids() -> set[str]:
+    import highway_env  # noqa: F401
+
     return {
         env_id
         for env_id, spec in gym.envs.registry.items()
@@ -87,6 +91,8 @@ def _registered_highway_ids() -> set[str]:
 
 
 def _make_oracle(official_id: str) -> Any:
+    import highway_env  # noqa: F401
+
     constructor_kwargs: dict[str, Any] = {}
     if official_id.startswith("intersection-"):
         constructor_kwargs["config"] = {
