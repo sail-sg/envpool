@@ -23,6 +23,51 @@ from absl.testing import absltest
 import envpool.highway.registration  # noqa: F401
 from envpool.registration import make_gymnasium
 
+_ALL_TASKS = (
+    "Exit-v0",
+    "Highway-v0",
+    "HighwayFast-v0",
+    "Intersection-v0",
+    "Intersection-v1",
+    "IntersectionMultiAgent-v0",
+    "IntersectionMultiAgent-v1",
+    "LaneKeeping-v0",
+    "Merge-v0",
+    "Parking-v0",
+    "ParkingActionRepeat-v0",
+    "ParkingParked-v0",
+    "Racetrack-v0",
+    "RacetrackLarge-v0",
+    "RacetrackOval-v0",
+    "Roundabout-v0",
+    "TwoWay-v0",
+    "UTurn-v0",
+)
+
+
+def _assert_tree_equal(actual: Any, expected: Any) -> None:
+    if isinstance(expected, dict):
+        assert isinstance(actual, dict)
+        assert actual.keys() == expected.keys()
+        for key in expected:
+            _assert_tree_equal(actual[key], expected[key])
+        return
+    np.testing.assert_array_equal(actual, expected)
+
+
+def _idle_action(env: Any, task_id: str, num_envs: int) -> np.ndarray:
+    if task_id.startswith("IntersectionMultiAgent"):
+        return np.ones(2 * num_envs, dtype=np.int32)
+    if hasattr(env.action_space, "n"):
+        return np.ones(num_envs, dtype=np.int32)
+    return np.zeros((num_envs, *env.action_space.shape), env.action_space.dtype)
+
+
+def _step(env: Any, task_id: str, action: np.ndarray, num_envs: int) -> Any:
+    if task_id.startswith("IntersectionMultiAgent"):
+        return env.step(action, np.arange(num_envs, dtype=np.int32))
+    return env.step(action)
+
 
 class _HighwayDeterministicTest(absltest.TestCase):
     def run_deterministic_check(
@@ -92,6 +137,32 @@ class _HighwayDeterministicTest(absltest.TestCase):
             initial_lane_id=-1,
             vehicles_density=0.5,
         )
+
+    def test_all_registered_highway_tasks_are_deterministic(self) -> None:
+        num_envs = 3
+        for task_id in _ALL_TASKS:
+            with self.subTest(task_id=task_id):
+                num_envs = (
+                    1 if task_id.startswith("IntersectionMultiAgent") else 3
+                )
+                env0 = make_gymnasium(task_id, num_envs=num_envs, seed=7)
+                env1 = make_gymnasium(task_id, num_envs=num_envs, seed=7)
+                try:
+                    obs0, _ = env0.reset()
+                    obs1, _ = env1.reset()
+                    _assert_tree_equal(obs0, obs1)
+                    action = _idle_action(env0, task_id, num_envs)
+                    for _ in range(10):
+                        step0 = _step(env0, task_id, action, num_envs)
+                        step1 = _step(env1, task_id, action, num_envs)
+                        for actual, expected in zip(
+                            step0[:-1], step1[:-1], strict=True
+                        ):
+                            _assert_tree_equal(actual, expected)
+                        _assert_tree_equal(step0[-1], step1[-1])
+                finally:
+                    env0.close()
+                    env1.close()
 
 
 if __name__ == "__main__":

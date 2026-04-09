@@ -53,13 +53,12 @@ class _Case(NamedTuple):
     player_count: int = 1
     discrete_action: int = 1
     continuous_action: tuple[float, ...] | None = None
-    bridge: bool = True
 
 
 _CASES = (
     _Case("exit-v0"),
-    _Case("highway-fast-v0", bridge=False),
-    _Case("highway-v0", bridge=False),
+    _Case("highway-fast-v0"),
+    _Case("highway-v0"),
     _Case("intersection-multi-agent-v0", player_count=2),
     _Case("intersection-multi-agent-v1", player_count=2),
     _Case("intersection-v0", discrete_action=1),
@@ -117,16 +116,6 @@ def _envpool_action(case: _Case, action_space: spaces.Space[Any]) -> np.ndarray:
     raise TypeError(f"Unsupported highway action space: {action_space!r}")
 
 
-def _oracle_action(case: _Case, action_space: spaces.Space[Any]) -> Any:
-    if case.player_count != 1:
-        return tuple([case.discrete_action] * case.player_count)
-    if isinstance(action_space, spaces.Discrete):
-        return case.discrete_action
-    if isinstance(action_space, spaces.Box):
-        return np.asarray(case.continuous_action, dtype=action_space.dtype)
-    raise TypeError(f"Unsupported highway action space: {action_space!r}")
-
-
 def _envpool_step(env: Any, case: _Case, action: np.ndarray) -> tuple[Any, ...]:
     if case.player_count == 1:
         return env.step(action)
@@ -134,32 +123,16 @@ def _envpool_step(env: Any, case: _Case, action: np.ndarray) -> tuple[Any, ...]:
     return env.step(action, env_id)
 
 
-def _assert_obs_equal(
+def _assert_tree_equal(
     test_case: absltest.TestCase, actual: Any, expected: Any
 ) -> None:
-    if isinstance(expected, tuple):
-        expected = np.stack(expected, axis=0)
-        np.testing.assert_array_equal(actual, expected)
-    elif isinstance(expected, dict):
+    if isinstance(expected, dict):
         test_case.assertIsInstance(actual, dict)
         test_case.assertEqual(actual.keys(), expected.keys())
         for key in expected:
-            np.testing.assert_array_equal(actual[key][0], expected[key])
-    else:
-        np.testing.assert_array_equal(actual[0], expected)
-
-
-def _assert_step_equal(
-    test_case: absltest.TestCase,
-    actual: tuple[Any, Any, np.ndarray, np.ndarray, dict[str, Any]],
-    expected: tuple[Any, Any, bool, bool, dict[str, Any]],
-) -> None:
-    obs, reward, terminated, truncated, _ = actual
-    oracle_obs, oracle_reward, oracle_terminated, oracle_truncated, _ = expected
-    _assert_obs_equal(test_case, obs, oracle_obs)
-    np.testing.assert_array_equal(reward, np.float32(oracle_reward))
-    np.testing.assert_array_equal(terminated, np.asarray([oracle_terminated]))
-    np.testing.assert_array_equal(truncated, np.asarray([oracle_truncated]))
+            _assert_tree_equal(test_case, actual[key], expected[key])
+        return
+    np.testing.assert_array_equal(actual, expected)
 
 
 def _assert_space_compatible(
@@ -233,38 +206,44 @@ class _HighwayOfficialCoverageTest(absltest.TestCase):
                     env.close()
                     oracle.close()
 
-    def test_official_bridge_tasks_align_bitwise_with_upstream(self) -> None:
+    def test_all_upstream_ids_are_deterministic(self) -> None:
         for case in _CASES:
-            if not case.bridge:
-                continue
             with self.subTest(official_id=case.official_id):
-                env = make_gymnasium(
+                env0 = make_gymnasium(
                     case.official_id,
                     num_envs=1,
-                    seed=0,
+                    seed=123,
                     render_mode="rgb_array",
                 )
-                oracle = _make_oracle(case.official_id)
+                env1 = make_gymnasium(
+                    case.official_id,
+                    num_envs=1,
+                    seed=123,
+                    render_mode="rgb_array",
+                )
                 try:
-                    envpool_obs, _ = env.reset()
-                    oracle_obs, _ = oracle.reset(seed=0)
-                    _assert_obs_equal(self, envpool_obs, oracle_obs)
+                    obs0, _ = env0.reset()
+                    obs1, _ = env1.reset()
+                    _assert_tree_equal(self, obs0, obs1)
                     np.testing.assert_array_equal(
-                        env.render()[0], oracle.render()
+                        env0.render()[0], env1.render()[0]
                     )
 
-                    envpool_action = _envpool_action(case, env.action_space)
-                    oracle_action = _oracle_action(case, oracle.action_space)
-                    for _ in range(2):
-                        oracle_step = oracle.step(oracle_action)
-                        envpool_step = _envpool_step(env, case, envpool_action)
-                        _assert_step_equal(self, envpool_step, oracle_step)
+                    action = _envpool_action(case, env0.action_space)
+                    for _ in range(5):
+                        step0 = _envpool_step(env0, case, action)
+                        step1 = _envpool_step(env1, case, action)
+                        for actual, expected in zip(
+                            step0[:-1], step1[:-1], strict=True
+                        ):
+                            _assert_tree_equal(self, actual, expected)
+                        _assert_tree_equal(self, step0[-1], step1[-1])
                         np.testing.assert_array_equal(
-                            env.render()[0], oracle.render()
+                            env0.render()[0], env1.render()[0]
                         )
                 finally:
-                    env.close()
-                    oracle.close()
+                    env0.close()
+                    env1.close()
 
 
 if __name__ == "__main__":

@@ -32,7 +32,7 @@ pybind_extension(
     name = "highway_envpool",
     srcs = [
         "highway_envpool.cc",
-        "official_bridge.h",
+        "native_task_env.h",
     ],
     deps = [
         ":highway_env",
