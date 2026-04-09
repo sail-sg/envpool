@@ -32,7 +32,6 @@ from envpool.python.protocol import (
     DMEnvPool,
     EnvPool,
     EnvSpec,
-    GymEnvPool,
     GymnasiumEnvPool,
 )
 
@@ -40,7 +39,7 @@ _SKIP_MUJOCO_RENDER_SMOKE = (
     os.environ.get("ENVPOOL_SKIP_MUJOCO_RENDER_SMOKE") == "1"
 )
 
-_RenderFactory = Callable[..., GymEnvPool | GymnasiumEnvPool]
+_RenderFactory = Callable[..., GymnasiumEnvPool]
 
 _GYMNASIUM_ROBOTICS_PREFIXES = (
     "AdroitHand",
@@ -128,18 +127,19 @@ class _MakeTest(absltest.TestCase):
                 "EnvSpec",
                 "EnvPool",
                 "DMEnvPool",
-                "GymEnvPool",
                 "GymnasiumEnvPool",
             ],
         )
         self.assertIs(envpool.EnvSpec, EnvSpec)
         self.assertIs(envpool.EnvPool, EnvPool)
         self.assertIs(envpool.DMEnvPool, DMEnvPool)
-        self.assertIs(envpool.GymEnvPool, GymEnvPool)
         self.assertIs(envpool.GymnasiumEnvPool, GymnasiumEnvPool)
         self.assertIs(get_type_hints(envpool.make_spec)["return"], EnvSpec)
         self.assertIs(get_type_hints(envpool.make_dm)["return"], DMEnvPool)
-        self.assertIs(get_type_hints(envpool.make_gym)["return"], GymEnvPool)
+        self.assertIs(
+            get_type_hints(envpool.make_gym)["return"],
+            GymnasiumEnvPool,
+        )
         self.assertIs(
             get_type_hints(envpool.make_gymnasium)["return"],
             GymnasiumEnvPool,

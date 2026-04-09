@@ -22,31 +22,26 @@ _ROBOTICS_ENV_CLASSES = {
     "Fetch": (
         "GymnasiumRoboticsFetchEnvSpec",
         "GymnasiumRoboticsFetchDMEnvPool",
-        "GymnasiumRoboticsFetchGymEnvPool",
         "GymnasiumRoboticsFetchGymnasiumEnvPool",
     ),
     "Hand": (
         "GymnasiumRoboticsHandEnvSpec",
         "GymnasiumRoboticsHandDMEnvPool",
-        "GymnasiumRoboticsHandGymEnvPool",
         "GymnasiumRoboticsHandGymnasiumEnvPool",
     ),
     "Adroit": (
         "GymnasiumRoboticsAdroitEnvSpec",
         "GymnasiumRoboticsAdroitDMEnvPool",
-        "GymnasiumRoboticsAdroitGymEnvPool",
         "GymnasiumRoboticsAdroitGymnasiumEnvPool",
     ),
     "PointMaze": (
         "GymnasiumRoboticsPointMazeEnvSpec",
         "GymnasiumRoboticsPointMazeDMEnvPool",
-        "GymnasiumRoboticsPointMazeGymEnvPool",
         "GymnasiumRoboticsPointMazeGymnasiumEnvPool",
     ),
     "Kitchen": (
         "GymnasiumRoboticsKitchenEnvSpec",
         "GymnasiumRoboticsKitchenDMEnvPool",
-        "GymnasiumRoboticsKitchenGymEnvPool",
         "GymnasiumRoboticsKitchenGymnasiumEnvPool",
     ),
 }
@@ -363,13 +358,12 @@ def _register_robotics_env(
     task_id: str,
     **kwargs: Any,
 ) -> None:
-    spec_cls, dm_cls, gym_cls, gymnasium_cls = _ROBOTICS_ENV_CLASSES[family]
+    spec_cls, dm_cls, gymnasium_cls = _ROBOTICS_ENV_CLASSES[family]
     register(
         task_id=task_id,
         import_path=_IMPORT_PATH,
         spec_cls=spec_cls,
         dm_cls=dm_cls,
-        gym_cls=gym_cls,
         gymnasium_cls=gymnasium_cls,
         **kwargs,
     )

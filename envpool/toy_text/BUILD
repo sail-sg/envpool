@@ -48,8 +48,8 @@ pybind_extension(
 py_library(
     name = "toy_text",
     srcs = ["__init__.py"],
-    imports = ["../.."],
     data = [":toy_text_envpool"],
+    imports = ["../.."],
     deps = ["//envpool/python:api"],
 )
 
