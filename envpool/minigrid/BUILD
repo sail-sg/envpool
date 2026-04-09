@@ -177,7 +177,7 @@ py_test(
     imports = ["../.."],
     deps = [
         ":minigrid",
-        ":minigrid_registration",
+        "//envpool:entry",
         requirement("absl-py"),
         requirement("jax"),
     ],

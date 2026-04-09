@@ -21,7 +21,7 @@ import jax
 import jax.numpy as jnp
 from absl.testing import absltest
 
-import envpool.minigrid.registration  # noqa: F401
+import envpool.entry  # noqa: F401
 from envpool.registration import make_gymnasium
 
 
