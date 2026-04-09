@@ -285,63 +285,6 @@ inline void DrawLine(unsigned char* rgb, int width, int height, int x0, int y0,
   }
 }
 
-inline void DrawRectOutline(unsigned char* rgb, int width, int height, int x,
-                            int y, int w, int h, std::uint8_t r, std::uint8_t g,
-                            std::uint8_t b) {
-  if (w <= 0 || h <= 0) {
-    return;
-  }
-  FillRect(rgb, width, height, x, y, w, 1, r, g, b);
-  FillRect(rgb, width, height, x, y + h - 1, w, 1, r, g, b);
-  FillRect(rgb, width, height, x, y, 1, h, r, g, b);
-  FillRect(rgb, width, height, x + w - 1, y, 1, h, r, g, b);
-}
-
-inline void DrawRotatedRect(unsigned char* rgb, int width, int height,
-                            double cx, double cy, double heading,
-                            double local_left, double local_top,
-                            double rect_width, double rect_height,
-                            std::uint8_t r, std::uint8_t g, std::uint8_t b,
-                            bool outline) {
-  const double cos_h = std::cos(heading);
-  const double sin_h = std::sin(heading);
-  const auto rotate = [&](double x, double y) {
-    return std::pair<int, int>{
-        static_cast<int>(std::lround(cx + x * cos_h - y * sin_h)),
-        static_cast<int>(std::lround(cy + x * sin_h + y * cos_h))};
-  };
-  const auto [x0, y0] = rotate(local_left, local_top);
-  const auto [x1, y1] = rotate(local_left + rect_width, local_top);
-  const auto [x2, y2] =
-      rotate(local_left + rect_width, local_top + rect_height);
-  const auto [x3, y3] = rotate(local_left, local_top + rect_height);
-  if (outline) {
-    DrawLine(rgb, width, height, x0, y0, x1, y1, r, g, b);
-    DrawLine(rgb, width, height, x1, y1, x2, y2, r, g, b);
-    DrawLine(rgb, width, height, x2, y2, x3, y3, r, g, b);
-    DrawLine(rgb, width, height, x3, y3, x0, y0, r, g, b);
-    return;
-  }
-  const int min_x = std::max(0, std::min({x0, x1, x2, x3}));
-  const int max_x = std::min(width - 1, std::max({x0, x1, x2, x3}));
-  const int min_y = std::max(0, std::min({y0, y1, y2, y3}));
-  const int max_y = std::min(height - 1, std::max({y0, y1, y2, y3}));
-  const double inv_cos = cos_h;
-  const double inv_sin = -sin_h;
-  for (int y = min_y; y <= max_y; ++y) {
-    for (int x = min_x; x <= max_x; ++x) {
-      const double dx = static_cast<double>(x) + 0.5 - cx;
-      const double dy = static_cast<double>(y) + 0.5 - cy;
-      const double lx = dx * inv_cos - dy * inv_sin;
-      const double ly = dx * inv_sin + dy * inv_cos;
-      if (local_left <= lx && lx < local_left + rect_width && local_top <= ly &&
-          ly < local_top + rect_height) {
-        SetPixel(rgb, width, height, x, y, r, g, b);
-      }
-    }
-  }
-}
-
 inline void DrawCircle(unsigned char* rgb, int width, int height, int cx,
                        int cy, int radius, std::uint8_t r, std::uint8_t g,
                        std::uint8_t b, int thickness = 2) {
@@ -842,15 +785,24 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
   [[nodiscard]] bool UseOfficialBackend() const {
     return scenario_ == "merge" || scenario_ == "roundabout" ||
            scenario_ == "two_way" || scenario_ == "u_turn" ||
-           scenario_ == "exit" || scenario_ == "intersection" ||
-           scenario_ == "intersection_continuous" ||
-           scenario_ == "intersection_multi" || scenario_ == "lane_keeping" ||
-           scenario_.find("racetrack") == 0 || IsParkingScenario();
+           scenario_ == "exit" || IsIntersectionScenario() ||
+           scenario_ == "lane_keeping" || IsRacetrackScenario() ||
+           IsParkingScenario();
   }
 
   [[nodiscard]] bool IsParkingScenario() const {
     return scenario_ == "parking" || scenario_ == "parking_action_repeat" ||
            scenario_ == "parking_parked";
+  }
+
+  [[nodiscard]] bool IsIntersectionScenario() const {
+    return scenario_ == "intersection" ||
+           scenario_ == "intersection_continuous" ||
+           scenario_ == "intersection_multi";
+  }
+
+  [[nodiscard]] bool IsRacetrackScenario() const {
+    return scenario_.find("racetrack") == 0;
   }
 
   [[nodiscard]] official::Vehicle& OfficialEgo() {
@@ -895,7 +847,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       official_road_ = official::MakeLaneKeepingRoad();
       official_ego_index_ = official::ResetLaneKeepingVehicle(&*official_road_);
       official_active_lane_index_ = {"c", "d", 0};
-    } else if (scenario_.find("racetrack") == 0) {
+    } else if (IsRacetrackScenario()) {
       official_road_ = official::MakeRacetrackRoad(scenario_);
       const double longitudinal = scenario_ == "racetrack"        ? 48.0
                                   : scenario_ == "racetrack_oval" ? 50.0
@@ -952,7 +904,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
         return;
       }
     }
-    if (scenario_.find("racetrack") == 0) {
+    if (IsRacetrackScenario()) {
       if constexpr (std::is_same_v<SpecT, NativeOccupancySpec>) {
         StepOfficialRacetrack(action);
         return;
@@ -1008,10 +960,9 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
   void StepOfficialLaneKeeping(const Action& action) {
     ++elapsed_step_;
     official::LowLevelAction low_level;
-    official_last_continuous_action_norm_ =
-        std::abs(Clip(action["action"_][0], -1.0, 1.0));
-    low_level.steering = OfficialContinuousMap(
-        Clip(action["action"_][0], -1.0, 1.0), -kPi / 3.0, kPi / 3.0);
+    const double steering = ClippedContinuousAction(action, 0);
+    official_last_continuous_action_norm_ = std::abs(steering);
+    low_level.steering = OfficialContinuousMap(steering, -kPi / 3.0, kPi / 3.0);
     low_level.acceleration = 0.0;
     OfficialEgo().Act(low_level);
 
@@ -1028,20 +979,13 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
   void StepOfficialRacetrack(const Action& action) {
     ++elapsed_step_;
     official::LowLevelAction low_level;
-    official_last_continuous_action_norm_ =
-        std::abs(Clip(action["action"_][0], -1.0, 1.0));
-    low_level.steering = OfficialContinuousMap(
-        Clip(action["action"_][0], -1.0, 1.0), -kPi / 4.0, kPi / 4.0);
+    const double steering = ClippedContinuousAction(action, 0);
+    official_last_continuous_action_norm_ = std::abs(steering);
+    low_level.steering = OfficialContinuousMap(steering, -kPi / 4.0, kPi / 4.0);
     low_level.acceleration = 0.0;
     OfficialEgo().Act(low_level);
 
-    const int frames = std::max(1, simulation_frequency_ / policy_frequency_);
-    const double dt = 1.0 / static_cast<double>(simulation_frequency_);
-    for (int frame = 0; frame < frames; ++frame) {
-      official_road_->Act();
-      official_road_->Step(dt);
-    }
-    time_ += 1.0 / static_cast<double>(policy_frequency_);
+    StepOfficialRoadFrames();
     done_ = OfficialEgo().crashed || !OfficialOnRoad(OfficialEgo()) ||
             elapsed_step_ >= max_episode_steps_;
     WriteState(static_cast<float>(OfficialRacetrackReward()));
@@ -1051,18 +995,12 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     ++elapsed_step_;
     official::LowLevelAction low_level;
     low_level.acceleration =
-        OfficialContinuousMap(Clip(action["action"_][0], -1.0, 1.0), -5.0, 5.0);
+        OfficialContinuousMap(ClippedContinuousAction(action, 0), -5.0, 5.0);
     low_level.steering = OfficialContinuousMap(
-        Clip(action["action"_][1], -1.0, 1.0), -kPi / 4.0, kPi / 4.0);
+        ClippedContinuousAction(action, 1), -kPi / 4.0, kPi / 4.0);
     OfficialEgo().Act(low_level);
 
-    const int frames = std::max(1, simulation_frequency_ / policy_frequency_);
-    const double dt = 1.0 / static_cast<double>(simulation_frequency_);
-    for (int frame = 0; frame < frames; ++frame) {
-      official_road_->Act();
-      official_road_->Step(dt);
-    }
-    time_ += 1.0 / static_cast<double>(policy_frequency_);
+    StepOfficialRoadFrames();
     done_ = OfficialEgo().crashed || OfficialParkingSuccess() ||
             elapsed_step_ >= max_episode_steps_;
     WriteState(static_cast<float>(OfficialReward()));
@@ -1074,12 +1012,20 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     ++elapsed_step_;
     official::LowLevelAction low_level;
     low_level.acceleration =
-        OfficialContinuousMap(Clip(action["action"_][0], -1.0, 1.0),
+        OfficialContinuousMap(ClippedContinuousAction(action, 0),
                               acceleration_low, acceleration_high);
     low_level.steering = OfficialContinuousMap(
-        Clip(action["action"_][1], -1.0, 1.0), steering_low, steering_high);
+        ClippedContinuousAction(action, 1), steering_low, steering_high);
     OfficialEgo().Act(low_level);
 
+    StepOfficialRoadFrames();
+    done_ = OfficialEgo().crashed || elapsed_step_ >= max_episode_steps_ ||
+            (scenario_ == "intersection_continuous" &&
+             OfficialIntersectionArrived(OfficialEgo()));
+    WriteState(static_cast<float>(OfficialReward()));
+  }
+
+  void StepOfficialRoadFrames() {
     const int frames = std::max(1, simulation_frequency_ / policy_frequency_);
     const double dt = 1.0 / static_cast<double>(simulation_frequency_);
     for (int frame = 0; frame < frames; ++frame) {
@@ -1087,10 +1033,11 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       official_road_->Step(dt);
     }
     time_ += 1.0 / static_cast<double>(policy_frequency_);
-    done_ = OfficialEgo().crashed || elapsed_step_ >= max_episode_steps_ ||
-            (scenario_ == "intersection_continuous" &&
-             OfficialIntersectionArrived(OfficialEgo()));
-    WriteState(static_cast<float>(OfficialReward()));
+  }
+
+  [[nodiscard]] double ClippedContinuousAction(const Action& action,
+                                               int index) const {
+    return Clip(action["action"_][index], -1.0, 1.0);
   }
 
   [[nodiscard]] int OfficialMetaAction(const Action& action) const {
@@ -1129,18 +1076,16 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     agents_[1] = {};
     goals_[0] = {};
     goals_[1] = {};
-    if (scenario_.find("parking") == 0) {
+    if (IsParkingScenario()) {
       agents_[0] = {-30.0 + Uniform(&this->gen_, -3.0, 3.0),
                     Uniform(&this->gen_, -2.0, 2.0), 0.0, 0.0, false};
       goals_[0] = {0.0, 14.0, 0.0, 0.0, false};
-    } else if (scenario_ == "intersection" ||
-               scenario_ == "intersection_continuous" ||
-               scenario_ == "intersection_multi") {
+    } else if (IsIntersectionScenario()) {
       agents_[0] = {0.0, 45.0, -kPi / 2.0, 7.0, false};
       agents_[1] = {-45.0, 0.0, 0.0, 7.0, false};
       goals_[0] = {0.0, -45.0, -kPi / 2.0, 0.0, false};
       goals_[1] = {45.0, 0.0, 0.0, 0.0, false};
-    } else if (scenario_.find("racetrack") == 0) {
+    } else if (IsRacetrackScenario()) {
       agents_[0] = {-35.0, 0.0, 0.0, 8.0, false};
     } else if (scenario_ == "roundabout") {
       agents_[0] = {-55.0, 0.0, 0.0, 12.0, false};
@@ -1197,7 +1142,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
   void StepAgent(const Command& command, int index, double dt) {
     Agent& agent = agents_[index];
     agent.speed = Clip(agent.speed + command.acceleration[index] * dt, 0.0,
-                       scenario_.find("racetrack") == 0 ? 12.0 : 35.0);
+                       IsRacetrackScenario() ? 12.0 : 35.0);
     agent.heading += command.steering[index] * dt;
     agent.x += agent.speed * std::cos(agent.heading) * dt;
     agent.y += agent.speed * std::sin(agent.heading) * dt;
@@ -1216,7 +1161,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     if (agents_[0].crashed) {
       return -1.0;
     }
-    if (scenario_.find("parking") == 0) {
+    if (IsParkingScenario()) {
       return -0.02 * Distance(agents_[0], goals_[0]);
     }
     return 0.02 * agents_[0].speed;
@@ -1230,7 +1175,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     if (scenario_ == "lane_keeping") {
       return OfficialLaneKeepingReward();
     }
-    if (scenario_.find("racetrack") == 0) {
+    if (IsRacetrackScenario()) {
       return OfficialRacetrackReward();
     }
     if (scenario_ == "intersection" || scenario_ == "intersection_continuous") {
@@ -1601,7 +1546,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       return;
     }
     if constexpr (std::is_same_v<SpecT, NativeOccupancySpec>) {
-      if (scenario_.find("racetrack") == 0) {
+      if (IsRacetrackScenario()) {
         WriteOfficialOccupancy(state);
         return;
       }
@@ -1946,11 +1891,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
 
   [[nodiscard]] std::pair<int, int> WorldToScreen(int width, int height,
                                                   double x, double y) const {
-    const double scale = scenario_ == "intersection" ||
-                                 scenario_ == "intersection_multi" ||
-                                 scenario_ == "intersection_continuous"
-                             ? 5.0
-                             : 4.0;
+    const double scale = IsIntersectionScenario() ? 5.0 : 4.0;
     return {static_cast<int>(std::lround(width * 0.5 + x * scale)),
             static_cast<int>(std::lround(height * 0.5 + y * scale))};
   }
@@ -1979,8 +1920,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     if (scenario_ == "lane_keeping") {
       return 7.0;
     }
-    if (scenario_ == "intersection" || scenario_ == "intersection_multi" ||
-        scenario_ == "intersection_continuous") {
+    if (IsIntersectionScenario()) {
       return 7.15;
     }
     return 5.5;
@@ -1990,11 +1930,10 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     if (IsParkingScenario()) {
       return {0.5, 0.5};
     }
-    if (scenario_ == "intersection" || scenario_ == "intersection_multi" ||
-        scenario_ == "intersection_continuous" || scenario_ == "roundabout") {
+    if (IsIntersectionScenario() || scenario_ == "roundabout") {
       return {0.5, 0.6};
     }
-    if (scenario_.find("racetrack") == 0) {
+    if (IsRacetrackScenario()) {
       return {0.5, 0.5};
     }
     if (scenario_ == "lane_keeping") {
@@ -2070,35 +2009,6 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     for (const official::Lane* lane : official_road_->network.Lanes()) {
       DrawOfficialLane(rgb, width, height, transform, *lane);
     }
-  }
-
-  void DrawOfficialRect(unsigned char* rgb, int width, int height,
-                        const OfficialRenderTransform& transform,
-                        official::Vec2 center, double length,
-                        double object_width, double heading, std::uint8_t r,
-                        std::uint8_t g, std::uint8_t b, bool outline) const {
-    const auto [cx, cy] = transform.Pos2Pix(center);
-    const int pixel_length = std::max(1, transform.Pix(length));
-    const int pixel_width = std::max(1, transform.Pix(object_width));
-    // Axis-aligned draws match pygame's common unrotated path and keep small
-    // vehicles legible. Rotated vehicles are approximated with a centerline.
-    if (std::abs(heading) <= 2.0 * kPi / 180.0) {
-      const int x = cx - pixel_length / 2;
-      const int y = cy - pixel_width / 2;
-      if (outline) {
-        DrawRectOutline(rgb, width, height, x, y, pixel_length, pixel_width, r,
-                        g, b);
-      } else {
-        FillRect(rgb, width, height, x, y, pixel_length, pixel_width, r, g, b);
-      }
-      return;
-    }
-    DrawRotatedRect(rgb, width, height, static_cast<double>(cx),
-                    static_cast<double>(cy), heading,
-                    -0.5 * static_cast<double>(pixel_length),
-                    -0.5 * static_cast<double>(pixel_width),
-                    static_cast<double>(pixel_length),
-                    static_cast<double>(pixel_width), r, g, b, outline);
   }
 
   void DrawOfficialObject(unsigned char* rgb, int width, int height,
@@ -2220,8 +2130,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
   void DrawScenario(unsigned char* rgb, int width, int height) const {
     const int cx = width / 2;
     const int cy = height / 2;
-    if (scenario_ == "intersection" || scenario_ == "intersection_multi" ||
-        scenario_ == "intersection_continuous") {
+    if (IsIntersectionScenario()) {
       FillRect(rgb, width, height, cx - 28, 0, 56, height, 70, 70, 70);
       FillRect(rgb, width, height, 0, cy - 28, width, 56, 70, 70, 70);
       DrawLine(rgb, width, height, cx, 0, cx, height, 255, 255, 255, 2);
@@ -2234,7 +2143,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       DrawCircle(rgb, width, height, cx, cy, 150, 255, 255, 255, 2);
       return;
     }
-    if (scenario_.find("parking") == 0) {
+    if (IsParkingScenario()) {
       for (int i = -4; i <= 4; ++i) {
         const int x = cx + i * 36;
         DrawLine(rgb, width, height, x, cy - 90, x, cy - 35, 255, 255, 255);
@@ -2243,7 +2152,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       DrawLine(rgb, width, height, 0, cy, width, cy, 255, 255, 255, 2);
       return;
     }
-    if (scenario_.find("racetrack") == 0) {
+    if (IsRacetrackScenario()) {
       DrawCircle(rgb, width, height, cx, cy, 190, 70, 70, 70, 75);
       DrawCircle(rgb, width, height, cx, cy, 150, 255, 255, 255, 2);
       DrawCircle(rgb, width, height, cx, cy, 225, 255, 255, 255, 2);
