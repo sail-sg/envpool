@@ -15,6 +15,7 @@
 """XLA smoke tests for the MiniGrid backend."""
 
 import sys
+from typing import Any
 
 import jax
 import jax.numpy as jnp
@@ -34,7 +35,7 @@ class _MiniGridXlaTest(absltest.TestCase):
         handle, _, _, step = env.xla()
 
         @jax.jit
-        def raw_step(handle: jnp.ndarray, actions: jnp.ndarray):
+        def raw_step(handle: jnp.ndarray, actions: jnp.ndarray) -> Any:
             return step(handle, actions)
 
         actions = jnp.zeros((8,), dtype=jnp.int32)

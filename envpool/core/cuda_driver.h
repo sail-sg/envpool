@@ -34,8 +34,7 @@ using EnvPoolGpuStream = void*;
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 
-namespace envpool {
-namespace cuda_driver {
+namespace envpool::cuda_driver {
 
 #if defined(__linux__)
 
@@ -156,7 +155,6 @@ inline const DriverApi& Api() {
   return *api;
 }
 
-}  // namespace cuda_driver
-}  // namespace envpool
+}  // namespace envpool::cuda_driver
 
 #endif  // ENVPOOL_CORE_CUDA_DRIVER_H_
