@@ -117,6 +117,9 @@ def _patch_oracle(oracle: gym.Env, debug_state: Any) -> None:
     controlled_vehicles = []
     landmarks = []
     is_parking = str(getattr(debug_state, "scenario", "")).startswith("parking")
+    is_lane_keeping = str(getattr(debug_state, "scenario", "")).startswith(
+        "lane_keeping"
+    )
     is_plain_continuous = str(getattr(debug_state, "scenario", "")).startswith((
         "racetrack",
         "lane_keeping",
@@ -133,7 +136,11 @@ def _patch_oracle(oracle: gym.Env, debug_state: Any) -> None:
             int(source.target_lane_index),
         )
         kind = int(source.kind)
-        if is_parking or is_plain_continuous:
+        if is_lane_keeping and i == 0:
+            vehicle = env.vehicle
+            vehicle.road = road
+            controlled_vehicles.append(vehicle)
+        elif is_parking or is_plain_continuous:
             vehicle = Vehicle(
                 road,
                 np.asarray([source.x, source.y], dtype=np.float64),

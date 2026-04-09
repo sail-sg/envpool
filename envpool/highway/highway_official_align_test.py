@@ -546,7 +546,10 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
         )
         try:
             env_obs, _ = env.reset()
-            oracle_obs, _ = oracle.reset(seed=123)
+            oracle.reset(seed=123)
+            _restore_official_idm_defaults()
+            _patch_oracle_from_envpool(oracle, env)
+            oracle_obs = oracle.unwrapped.observation_type.observe()
             _assert_tree_bitwise(_envpool_reset_obs(env_obs, case), oracle_obs)
 
             actions = (
