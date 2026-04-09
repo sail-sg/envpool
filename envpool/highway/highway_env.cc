@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 #include <numeric>
 #include <string>
 #include <utility>
@@ -86,9 +87,40 @@ struct Point2d {
   double y;
 };
 
+struct CollisionBox {
+  Point2d center;
+  double heading{0.0};
+  double length{kVehicleLength};
+  double width{kVehicleWidth};
+  double diagonal{std::sqrt(kVehicleLength * kVehicleLength +
+                            kVehicleWidth * kVehicleWidth)};
+};
+
+struct CollisionResult {
+  bool intersecting{false};
+  bool will_intersect{false};
+  Point2d translation{0.0, 0.0};
+};
+
 Point ToPoint(double x, double y) {
   return {static_cast<int>(x), static_cast<int>(y)};
 }
+
+Point2d operator+(Point2d lhs, Point2d rhs) {
+  return {lhs.x + rhs.x, lhs.y + rhs.y};
+}
+
+Point2d operator-(Point2d lhs, Point2d rhs) {
+  return {lhs.x - rhs.x, lhs.y - rhs.y};
+}
+
+Point2d operator*(double scale, Point2d point) {
+  return {scale * point.x, scale * point.y};
+}
+
+double Dot(Point2d lhs, Point2d rhs) { return lhs.x * rhs.x + lhs.y * rhs.y; }
+
+double Norm(Point2d point) { return std::sqrt(Dot(point, point)); }
 
 Point2d Rotate(const Point2d& p, double theta) {
   const double c = std::cos(theta);
@@ -233,6 +265,128 @@ void FillConvexPolygon(unsigned char* rgb, int width, int height,
         SetPixel(rgb, width, height, x, y, color);
       }
     }
+  }
+}
+
+CollisionBox ToCollisionBox(const Vehicle& vehicle) {
+  return {{vehicle.x, vehicle.y},
+          vehicle.heading,
+          kVehicleLength,
+          kVehicleWidth,
+          std::sqrt(kVehicleLength * kVehicleLength +
+                    kVehicleWidth * kVehicleWidth)};
+}
+
+Point2d Velocity(const Vehicle& vehicle) {
+  return {vehicle.Vx(), vehicle.Vy()};
+}
+
+std::array<Point2d, 4> Corners(const CollisionBox& box) {
+  const double cos_h = std::cos(box.heading);
+  const double sin_h = std::sin(box.heading);
+  const Point2d longitudinal{cos_h * box.length / 2.0,
+                             sin_h * box.length / 2.0};
+  const Point2d lateral{-sin_h * box.width / 2.0, cos_h * box.width / 2.0};
+  return {
+      box.center - longitudinal - lateral, box.center - longitudinal + lateral,
+      box.center + longitudinal + lateral, box.center + longitudinal - lateral};
+}
+
+std::pair<double, double> Project(const std::array<Point2d, 4>& polygon,
+                                  Point2d axis) {
+  double low = Dot(polygon[0], axis);
+  double high = low;
+  for (int i = 1; i < 4; ++i) {
+    const double value = Dot(polygon[i], axis);
+    low = std::min(low, value);
+    high = std::max(high, value);
+  }
+  return {low, high};
+}
+
+double IntervalDistance(double a_low, double a_high, double b_low,
+                        double b_high) {
+  return a_low < b_low ? b_low - a_high : a_low - b_high;
+}
+
+CollisionResult CollidePolygons(const std::array<Point2d, 4>& a,
+                                const std::array<Point2d, 4>& b,
+                                Point2d displacement_a, Point2d displacement_b,
+                                Point2d center_a, Point2d center_b) {
+  bool intersecting = true;
+  bool will_intersect = true;
+  double min_distance = std::numeric_limits<double>::infinity();
+  Point2d translation_axis{0.0, 0.0};
+  for (const std::array<Point2d, 4>* polygon : {&a, &b}) {
+    for (int i = 0; i < 4; ++i) {
+      const Point2d edge = (*polygon)[(i + 1) % 4] - (*polygon)[i];
+      Point2d axis{-edge.y, edge.x};
+      const double norm = Norm(axis);
+      if (norm <= 0.0) {
+        continue;
+      }
+      axis = (1.0 / norm) * axis;
+
+      auto [a_low, a_high] = Project(a, axis);
+      const auto [b_low, b_high] = Project(b, axis);
+      if (IntervalDistance(a_low, a_high, b_low, b_high) > 0.0) {
+        intersecting = false;
+      }
+
+      const double velocity_projection =
+          Dot(axis, displacement_a - displacement_b);
+      if (velocity_projection < 0.0) {
+        a_low += velocity_projection;
+      } else {
+        a_high += velocity_projection;
+      }
+
+      const double distance = IntervalDistance(a_low, a_high, b_low, b_high);
+      if (distance > 0.0) {
+        will_intersect = false;
+      }
+      if (!intersecting && !will_intersect) {
+        return {};
+      }
+      if (std::abs(distance) < min_distance) {
+        min_distance = std::abs(distance);
+        const Point2d center_delta = center_a - center_b;
+        translation_axis = Dot(center_delta, axis) > 0.0 ? axis : -1.0 * axis;
+      }
+    }
+  }
+  return {intersecting, will_intersect,
+          will_intersect ? min_distance * translation_axis : Point2d{0.0, 0.0}};
+}
+
+CollisionResult CheckVehicleCollision(const Vehicle& a, const Vehicle& b,
+                                      double dt) {
+  const CollisionBox box_a = ToCollisionBox(a);
+  const CollisionBox box_b = ToCollisionBox(b);
+  const Point2d displacement_a = dt * Velocity(a);
+  const Point2d displacement_b = dt * Velocity(b);
+  if (Norm(box_a.center - box_b.center) >
+      (box_a.diagonal + box_b.diagonal) / 2.0 + Norm(displacement_a)) {
+    return {};
+  }
+  return CollidePolygons(Corners(box_a), Corners(box_b), displacement_a,
+                         displacement_b, box_a.center, box_b.center);
+}
+
+void SetImpact(Vehicle* vehicle, Point2d impact) {
+  vehicle->impact_x = impact.x;
+  vehicle->impact_y = impact.y;
+  vehicle->has_impact = true;
+}
+
+void ApplyCollision(Vehicle* a, Vehicle* b, const CollisionResult& collision) {
+  if (collision.will_intersect) {
+    SetImpact(a, 0.5 * collision.translation);
+    SetImpact(b, -0.5 * collision.translation);
+  }
+  if (collision.intersecting) {
+    a->crashed = true;
+    b->crashed = true;
   }
 }
 
@@ -549,6 +703,14 @@ void HighwayEnv::StepVehicle(Vehicle* vehicle, double dt) {
   const double beta = std::atan(0.5 * std::tan(vehicle->steering));
   vehicle->x += vehicle->speed * std::cos(vehicle->heading + beta) * dt;
   vehicle->y += vehicle->speed * std::sin(vehicle->heading + beta) * dt;
+  if (vehicle->has_impact) {
+    vehicle->x += vehicle->impact_x;
+    vehicle->y += vehicle->impact_y;
+    vehicle->crashed = true;
+    vehicle->has_impact = false;
+    vehicle->impact_x = 0.0;
+    vehicle->impact_y = 0.0;
+  }
   vehicle->heading +=
       vehicle->speed * std::sin(beta) / (kVehicleLength / 2.0) * dt;
   vehicle->speed += vehicle->acceleration * dt;
@@ -562,19 +724,17 @@ void HighwayEnv::RoadStep(double dt) {
   for (auto& vehicle : vehicles_) {
     StepVehicle(&vehicle, dt);
   }
-  CheckCollisions();
+  CheckCollisions(dt);
 }
 
-void HighwayEnv::CheckCollisions() {
+void HighwayEnv::CheckCollisions(double dt) {
   for (std::size_t i = 0; i < vehicles_.size(); ++i) {
     for (std::size_t j = i + 1; j < vehicles_.size(); ++j) {
       if (!(vehicles_[i].check_collisions || vehicles_[j].check_collisions)) {
         continue;
       }
-      if (RectanglesIntersect(vehicles_[i], vehicles_[j])) {
-        vehicles_[i].crashed = true;
-        vehicles_[j].crashed = true;
-      }
+      ApplyCollision(&vehicles_[i], &vehicles_[j],
+                     CheckVehicleCollision(vehicles_[i], vehicles_[j], dt));
     }
   }
 }
@@ -649,6 +809,17 @@ double HighwayEnv::DesiredGap(const Vehicle& ego, const Vehicle& front) const {
 void HighwayEnv::ChangeLanePolicy(int vehicle_index) {
   Vehicle& vehicle = vehicles_[vehicle_index];
   if (vehicle.lane_index != vehicle.target_lane_index) {
+    for (const Vehicle& other : vehicles_) {
+      if (&other == &vehicle || other.lane_index == vehicle.target_lane_index ||
+          other.target_lane_index != vehicle.target_lane_index) {
+        continue;
+      }
+      const double d = LaneDistanceTo(vehicle, other);
+      if (0.0 < d && d < DesiredGap(vehicle, other)) {
+        vehicle.target_lane_index = vehicle.lane_index;
+        break;
+      }
+    }
     return;
   }
   if (!(kLaneChangeDelay < vehicle.timer)) {
@@ -709,18 +880,6 @@ bool HighwayEnv::Mobil(int vehicle_index, int lane_index) const {
                       politeness * (new_following_pred_a - new_following_a +
                                     old_following_pred_a - old_following_a);
   return jerk >= kLaneChangeMinAccGain;
-}
-
-bool HighwayEnv::RectanglesIntersect(const Vehicle& a, const Vehicle& b) const {
-  if (Norm2(a.x - b.x, a.y - b.y) > std::sqrt(kVehicleLength * kVehicleLength +
-                                              kVehicleWidth * kVehicleWidth)) {
-    return false;
-  }
-  const double dx = std::abs(a.x - b.x);
-  const double dy = std::abs(a.y - b.y);
-  // Highway vehicles are almost axis-aligned; inflate laterally to remain
-  // conservative during lane changes.
-  return dx < kVehicleLength && dy < kVehicleWidth * 1.25;
 }
 
 bool HighwayEnv::EgoOnRoad() const { return LaneOnRoad(vehicles_[0]); }

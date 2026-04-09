@@ -53,9 +53,6 @@ class Road {
   std::vector<RoadObject> objects;
   bool record_history{false};
 
-  [[nodiscard]] std::pair<int, int> NeighbourVehicles(
-      const Vehicle& vehicle,
-      const std::optional<LaneIndex>& lane_index = std::nullopt) const;
   void Act();
   void Step(double dt);
 

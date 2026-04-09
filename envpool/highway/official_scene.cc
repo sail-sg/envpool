@@ -213,45 +213,102 @@ void ApplyCollision(Vehicle* a, RoadObject* b,
   }
 }
 
-const Vehicle* VehiclePtr(const Road& road, int index) {
-  if (index < 0) {
-    return nullptr;
-  }
-  return &road.vehicles[index];
+struct RoadNeighbor {
+  const Vehicle* vehicle{nullptr};
+  const RoadObject* object{nullptr};
+};
+
+bool HasNeighbor(const RoadNeighbor& neighbor) {
+  return neighbor.vehicle != nullptr || neighbor.object != nullptr;
 }
 
-}  // namespace
+Vec2 NeighborPosition(const RoadNeighbor& neighbor) {
+  return neighbor.vehicle != nullptr ? neighbor.vehicle->position
+                                     : neighbor.object->position;
+}
 
-std::pair<int, int> Road::NeighbourVehicles(
-    const Vehicle& vehicle, const std::optional<LaneIndex>& lane_index) const {
+Vec2 NeighborVelocity(const RoadNeighbor& neighbor) {
+  return neighbor.vehicle != nullptr ? neighbor.vehicle->Velocity()
+                                     : BoxVelocity(*neighbor.object);
+}
+
+std::pair<RoadNeighbor, RoadNeighbor> RoadNeighbors(
+    const Road& road, const Vehicle& vehicle,
+    const std::optional<LaneIndex>& lane_index) {
   const LaneIndex query_index = lane_index.value_or(vehicle.lane_index);
-  const Lane& lane = network.GetLane(query_index);
+  const Lane& lane = road.network.GetLane(query_index);
   const double s = lane.LocalCoordinates(vehicle.position).longitudinal;
   double s_front = std::numeric_limits<double>::infinity();
   double s_rear = -std::numeric_limits<double>::infinity();
-  int front = -1;
-  int rear = -1;
-  for (int i = 0; static_cast<std::size_t>(i) < vehicles.size(); ++i) {
-    const Vehicle& other = vehicles[i];
-    if (&other == &vehicle) {
-      continue;
-    }
-    const LaneCoordinates other_local = lane.LocalCoordinates(other.position);
-    if (!lane.OnLane(other.position, 1.0)) {
-      continue;
+  RoadNeighbor front;
+  RoadNeighbor rear;
+  auto scan = [&](Vec2 position, RoadNeighbor neighbor) {
+    const LaneCoordinates other_local = lane.LocalCoordinates(position);
+    if (!lane.OnLane(position, 1.0)) {
+      return;
     }
     const double s_other = other_local.longitudinal;
     if (s <= s_other && s_other <= s_front) {
       s_front = s_other;
-      front = i;
+      front = neighbor;
     }
     if (s_other < s && s_rear <= s_other) {
       s_rear = s_other;
-      rear = i;
+      rear = neighbor;
     }
+  };
+
+  for (const Vehicle& other : road.vehicles) {
+    if (&other == &vehicle) {
+      continue;
+    }
+    scan(other.position, RoadNeighbor{&other, nullptr});
+  }
+  for (const RoadObject& object : road.objects) {
+    if (object.kind == RoadObjectKind::kLandmark) {
+      continue;
+    }
+    scan(object.position, RoadNeighbor{nullptr, &object});
   }
   return {front, rear};
 }
+
+double LaneDistanceTo(const RoadNetwork& network, const Vehicle& self,
+                      const RoadNeighbor& other) {
+  const Lane& lane = network.GetLane(self.lane_index);
+  return lane.LocalCoordinates(NeighborPosition(other)).longitudinal -
+         lane.LocalCoordinates(self.position).longitudinal;
+}
+
+double DesiredGap(const Vehicle& ego, const RoadNeighbor& front) {
+  const Vec2 dv = ego.Velocity() - NeighborVelocity(front);
+  const double projected_dv = Dot(dv, ego.Direction());
+  const double ab = -kIdmComfortAccMax * kIdmComfortAccMin;
+  return kIdmDistanceWanted + ego.speed * kIdmTimeWanted +
+         ego.speed * projected_dv / (2.0 * std::sqrt(ab));
+}
+
+double IDMAcceleration(const Road& road, const Vehicle* ego,
+                       const RoadNeighbor& front) {
+  if (ego == nullptr) {
+    return 0.0;
+  }
+  double ego_target_speed = ego->target_speed;
+  const Lane& lane = road.network.GetLane(ego->lane_index);
+  ego_target_speed = Clip(ego_target_speed, 0.0, lane.SpeedLimit());
+  double acceleration = kIdmComfortAccMax *
+                        (1.0 - std::pow(std::max(ego->speed, 0.0) /
+                                            std::abs(NotZero(ego_target_speed)),
+                                        ego->idm_delta));
+  if (HasNeighbor(front)) {
+    const double d = LaneDistanceTo(road.network, *ego, front);
+    acceleration -=
+        kIdmComfortAccMax * std::pow(DesiredGap(*ego, front) / NotZero(d), 2.0);
+  }
+  return acceleration;
+}
+
+}  // namespace
 
 void Road::Act() {
   for (int i = 0; static_cast<std::size_t>(i) < vehicles.size(); ++i) {
@@ -330,19 +387,15 @@ void ActIDM(Road* road, int vehicle_index) {
   LowLevelAction action;
   action.steering =
       SteeringControl(vehicle, road->network, vehicle.target_lane_index);
-  const auto [front_index, rear_index] =
-      road->NeighbourVehicles(vehicle, vehicle.lane_index);
-  (void)rear_index;
-  action.acceleration =
-      IDMAcceleration(*road, &vehicle, VehiclePtr(*road, front_index));
+  const auto [front, rear] = RoadNeighbors(*road, vehicle, vehicle.lane_index);
+  (void)rear;
+  action.acceleration = IDMAcceleration(*road, &vehicle, front);
   if (!SameRoad(vehicle.lane_index, vehicle.target_lane_index, true)) {
-    const auto [target_front_index, target_rear_index] =
-        road->NeighbourVehicles(vehicle, vehicle.target_lane_index);
-    (void)target_rear_index;
-    action.acceleration =
-        std::min(action.acceleration,
-                 IDMAcceleration(*road, &vehicle,
-                                 VehiclePtr(*road, target_front_index)));
+    const auto [target_front, target_rear] =
+        RoadNeighbors(*road, vehicle, vehicle.target_lane_index);
+    (void)target_rear;
+    action.acceleration = std::min(
+        action.acceleration, IDMAcceleration(*road, &vehicle, target_front));
   }
   action.acceleration = Clip(action.acceleration, -kIdmAccMax, kIdmAccMax);
   vehicle.Act(action);
@@ -386,22 +439,7 @@ void ChangeLanePolicy(Road* road, int vehicle_index) {
 
 double IDMAcceleration(const Road& road, const Vehicle* ego,
                        const Vehicle* front) {
-  if (ego == nullptr) {
-    return 0.0;
-  }
-  double ego_target_speed = ego->target_speed;
-  const Lane& lane = road.network.GetLane(ego->lane_index);
-  ego_target_speed = Clip(ego_target_speed, 0.0, lane.SpeedLimit());
-  double acceleration = kIdmComfortAccMax *
-                        (1.0 - std::pow(std::max(ego->speed, 0.0) /
-                                            std::abs(NotZero(ego_target_speed)),
-                                        ego->idm_delta));
-  if (front != nullptr) {
-    const double d = LaneDistanceTo(road.network, *ego, *front);
-    acceleration -= kIdmComfortAccMax *
-                    std::pow(DesiredGap(*ego, *front) / NotZero(d), 2.0);
-  }
-  return acceleration;
+  return IDMAcceleration(road, ego, RoadNeighbor{front, nullptr});
 }
 
 double DesiredGap(const Vehicle& ego, const Vehicle& front) {
@@ -414,26 +452,23 @@ double DesiredGap(const Vehicle& ego, const Vehicle& front) {
 
 bool Mobil(const Road& road, int vehicle_index, const LaneIndex& lane_index) {
   const Vehicle& self = road.vehicles[vehicle_index];
-  const auto [new_preceding_index, new_following_index] =
-      road.NeighbourVehicles(self, lane_index);
-  const Vehicle* new_preceding = VehiclePtr(road, new_preceding_index);
-  const Vehicle* new_following = VehiclePtr(road, new_following_index);
+  const auto [new_preceding, new_following] =
+      RoadNeighbors(road, self, lane_index);
   const double new_following_pred_a =
-      IDMAcceleration(road, new_following, &self);
+      IDMAcceleration(road, new_following.vehicle, &self);
   if (new_following_pred_a < -kLaneChangeMaxBrakingImposed) {
     return false;
   }
   const double self_pred_a = IDMAcceleration(road, &self, new_preceding);
-  const auto [old_preceding_index, old_following_index] =
-      road.NeighbourVehicles(self, self.lane_index);
-  const Vehicle* old_preceding = VehiclePtr(road, old_preceding_index);
-  const Vehicle* old_following = VehiclePtr(road, old_following_index);
+  const auto [old_preceding, old_following] =
+      RoadNeighbors(road, self, self.lane_index);
   const double self_a = IDMAcceleration(road, &self, old_preceding);
-  const double old_following_a = IDMAcceleration(road, old_following, &self);
+  const double old_following_a =
+      IDMAcceleration(road, old_following.vehicle, &self);
   const double old_following_pred_a =
-      IDMAcceleration(road, old_following, old_preceding);
+      IDMAcceleration(road, old_following.vehicle, old_preceding);
   const double new_following_a =
-      IDMAcceleration(road, new_following, new_preceding);
+      IDMAcceleration(road, new_following.vehicle, new_preceding);
   const double politeness = 0.0;
   const double jerk = self_pred_a - self_a +
                       politeness * (new_following_pred_a - new_following_a +

@@ -183,8 +183,11 @@ struct Vehicle {
   bool crashed{false};
   bool check_collisions{true};
   bool enable_lane_change{true};
+  bool has_impact{false};
   double timer{0.0};
   double idm_delta{4.0};
+  double impact_x{0.0};
+  double impact_y{0.0};
 
   [[nodiscard]] double Vx() const { return speed * std::cos(heading); }
   [[nodiscard]] double Vy() const { return speed * std::sin(heading); }
@@ -257,7 +260,7 @@ class HighwayEnv : public Env<HighwayEnvSpec>, public RenderableEnv {
   void ActIDM(int vehicle_index);
   void StepVehicle(Vehicle* vehicle, double dt);
   void RoadStep(double dt);
-  void CheckCollisions();
+  void CheckCollisions(double dt);
 
   [[nodiscard]] double SteeringControl(const Vehicle& vehicle,
                                        int target_lane_index) const;
@@ -279,8 +282,6 @@ class HighwayEnv : public Env<HighwayEnvSpec>, public RenderableEnv {
   void ChangeLanePolicy(int vehicle_index);
   [[nodiscard]] bool Mobil(int vehicle_index, int lane_index) const;
 
-  [[nodiscard]] bool RectanglesIntersect(const Vehicle& a,
-                                         const Vehicle& b) const;
   [[nodiscard]] double Reward(int action) const;
   [[nodiscard]] bool EgoOnRoad() const;
   void WriteState(float reward);

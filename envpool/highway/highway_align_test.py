@@ -31,7 +31,9 @@ register_highway_envs()
 prepare_official_oracle_import()
 
 _ALIGN_ACTIONS = (1, 3, 3, 2, 1, 1, 0, 4, 4, 1, 2, 1)
+_TRAFFIC_ALIGN_ACTIONS = (1, 3, 3, 4)
 _ALIGN_STEPS = 96
+_TRAFFIC_ALIGN_STEPS = 8
 _DEFAULT_ALIGN_CONFIG = {
     "vehicles_count": 0,
     "lanes_count": 3,
@@ -66,6 +68,39 @@ _STRAIGHT_ROAD_ALIGN_CONFIGS: tuple[
             "simulation_frequency": 5,
             "lanes_count": 3,
             "initial_lane_id": 1,
+        },
+    ),
+)
+
+_TRAFFIC_ALIGN_CONFIGS: tuple[tuple[str, str, str, dict[str, Any]], ...] = (
+    (
+        "highway_v0_default_traffic",
+        "Highway-v0",
+        "highway-v0",
+        {
+            "lanes_count": 4,
+            "vehicles_count": 50,
+            "initial_lane_id": -1,
+            "duration": 40,
+            "simulation_frequency": 15,
+            "policy_frequency": 1,
+            "ego_spacing": 2.0,
+            "other_vehicles_check_collisions": True,
+        },
+    ),
+    (
+        "highway_fast_v0_default_traffic",
+        "HighwayFast-v0",
+        "highway-fast-v0",
+        {
+            "lanes_count": 3,
+            "vehicles_count": 20,
+            "initial_lane_id": -1,
+            "duration": 30,
+            "simulation_frequency": 5,
+            "policy_frequency": 1,
+            "ego_spacing": 1.5,
+            "other_vehicles_check_collisions": False,
         },
     ),
 )
@@ -417,6 +452,61 @@ class _HighwayAlignTest(absltest.TestCase):
                     oracle_env_id,
                     _straight_road_config(**overrides),
                 )
+
+    def test_default_traffic_aligns_from_patched_reset_state(
+        self,
+    ) -> None:
+        for name, task_id, oracle_env_id, config in _TRAFFIC_ALIGN_CONFIGS:
+            with self.subTest(name=name):
+                env = make_gymnasium(
+                    task_id,
+                    num_envs=1,
+                    seed=0,
+                    render_mode="rgb_array",
+                    **config,
+                )
+                oracle = _make_oracle(oracle_env_id, config)
+                try:
+                    obs, _ = env.reset()
+                    oracle.reset(seed=0)
+                    _patch_oracle(oracle, _debug_state(env))
+                    np.testing.assert_array_equal(
+                        obs[0],
+                        cast(Any, oracle.unwrapped).observation_type.observe(),
+                    )
+
+                    for step in range(_TRAFFIC_ALIGN_STEPS):
+                        action = _TRAFFIC_ALIGN_ACTIONS[
+                            step % len(_TRAFFIC_ALIGN_ACTIONS)
+                        ]
+                        (
+                            oracle_obs,
+                            oracle_rew,
+                            oracle_term,
+                            oracle_trunc,
+                            oracle_info,
+                        ) = oracle.step(action)
+                        obs, rew, term, trunc, info = env.step(
+                            np.asarray([action], dtype=np.int64)
+                        )
+
+                        np.testing.assert_array_equal(obs[0], oracle_obs)
+                        _assert_scalar_matches_float32(
+                            self, rew[0], float(oracle_rew)
+                        )
+                        self.assertEqual(bool(term[0]), oracle_term)
+                        self.assertEqual(bool(trunc[0]), oracle_trunc)
+                        _assert_scalar_matches_float32(
+                            self, info["speed"][0], oracle_info["speed"]
+                        )
+                        self.assertEqual(
+                            bool(info["crashed"][0]), oracle_info["crashed"]
+                        )
+                        if bool(oracle_term) or bool(oracle_trunc):
+                            break
+                finally:
+                    env.close()
+                    oracle.close()
 
 
 if __name__ == "__main__":

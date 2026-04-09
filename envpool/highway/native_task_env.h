@@ -1599,6 +1599,9 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       config.vx_max = 15.0;
       config.vy_min = -15.0;
       config.vy_max = 15.0;
+    } else if (scenario_ == "merge") {
+      config.y_min = -2.0 * kLaneWidth;
+      config.y_max = 2.0 * kLaneWidth;
     }
     const std::vector<float> rows =
         official::ObserveKinematics(*official_road_, OfficialEgo(), config);
