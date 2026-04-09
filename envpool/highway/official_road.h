@@ -24,7 +24,7 @@
 
 namespace highway::official {
 
-constexpr int kUnknownLaneId = -1;
+[[maybe_unused]] constexpr int kUnknownLaneId = -1;
 
 struct LaneIndex {
   std::string from;
