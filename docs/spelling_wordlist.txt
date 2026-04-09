@@ -79,5 +79,10 @@ mins
 lidar
 procgen
 renderer
+backends
+pygame
+rollout
+bitwise
+dtype
 Subclassed
 deleter
