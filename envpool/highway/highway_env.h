@@ -34,14 +34,14 @@
 
 namespace highway {
 
-constexpr double kPi = 3.14159265358979323846;
-constexpr double kLaneWidth = 4.0;
-constexpr double kLaneLength = 10000.0;
-constexpr double kVehicleLength = 5.0;
-constexpr double kVehicleWidth = 2.0;
-constexpr double kVehicleMaxSpeed = 40.0;
-constexpr double kVehicleMinSpeed = -40.0;
-constexpr double kPerceptionDistance = 5.0 * kVehicleMaxSpeed;
+[[maybe_unused]] constexpr double kPi = 3.14159265358979323846;
+[[maybe_unused]] constexpr double kLaneWidth = 4.0;
+[[maybe_unused]] constexpr double kLaneLength = 10000.0;
+[[maybe_unused]] constexpr double kVehicleLength = 5.0;
+[[maybe_unused]] constexpr double kVehicleWidth = 2.0;
+[[maybe_unused]] constexpr double kVehicleMaxSpeed = 40.0;
+[[maybe_unused]] constexpr double kVehicleMinSpeed = -40.0;
+[[maybe_unused]] constexpr double kPerceptionDistance = 5.0 * kVehicleMaxSpeed;
 
 struct HighwayVehicleDebugState {
   int kind{0};
@@ -129,8 +129,8 @@ struct Vehicle {
   double timer{0.0};
   double idm_delta{4.0};
 
-  [[nodiscard]] double vx() const { return speed * std::cos(heading); }
-  [[nodiscard]] double vy() const { return speed * std::sin(heading); }
+  [[nodiscard]] double Vx() const { return speed * std::cos(heading); }
+  [[nodiscard]] double Vy() const { return speed * std::sin(heading); }
 };
 
 class HighwayEnv : public Env<HighwayEnvSpec>, public RenderableEnv {

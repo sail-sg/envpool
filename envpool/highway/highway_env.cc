@@ -639,8 +639,8 @@ double HighwayEnv::IDMAcceleration(int idm_index, const Vehicle* ego,
 }
 
 double HighwayEnv::DesiredGap(const Vehicle& ego, const Vehicle& front) const {
-  const double dvx = ego.vx() - front.vx();
-  const double dvy = ego.vy() - front.vy();
+  const double dvx = ego.Vx() - front.Vx();
+  const double dvy = ego.Vy() - front.Vy();
   const double dv = dvx * std::cos(ego.heading) + dvy * std::sin(ego.heading);
   const double ab = -kIDMComfortAccMax * kIDMComfortAccMin;
   return kIDMDistanceWanted + ego.speed * kIDMTimeWanted +
@@ -768,7 +768,7 @@ void HighwayEnv::WriteState(float reward) {
     obs(row, 4) = static_cast<float>(vy);
   };
 
-  write_row(0, 1.0, ego.x, ego.y, ego.vx(), ego.vy());
+  write_row(0, 1.0, ego.x, ego.y, ego.Vx(), ego.Vy());
 
   std::vector<int> close;
   close.reserve(vehicles_.size());
@@ -791,7 +791,7 @@ void HighwayEnv::WriteState(float reward) {
   for (int index : close) {
     const Vehicle& other = vehicles_[index];
     write_row(row++, 1.0, other.x - ego.x, other.y - ego.y,
-              other.vx() - ego.vx(), other.vy() - ego.vy());
+              other.Vx() - ego.Vx(), other.Vy() - ego.Vy());
   }
   for (; row < obs_vehicle_count_; ++row) {
     write_row(row, 0.0, 0.0, 0.0, 0.0, 0.0);
