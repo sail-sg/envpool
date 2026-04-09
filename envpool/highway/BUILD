@@ -120,7 +120,10 @@ py_library(
 py_test(
     name = "highway_deterministic_test",
     size = "enormous",
-    srcs = ["highway_deterministic_test.py"],
+    srcs = [
+        "highway_deterministic_test.py",
+        "highway_oracle_util.py",
+    ],
     imports = ["../.."],
     deps = [
         ":highway",

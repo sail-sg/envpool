@@ -55,7 +55,7 @@ class Road {
 
   [[nodiscard]] std::pair<int, int> NeighbourVehicles(
       const Vehicle& vehicle,
-      std::optional<LaneIndex> lane_index = std::nullopt) const;
+      const std::optional<LaneIndex>& lane_index = std::nullopt) const;
   void Act();
   void Step(double dt);
 

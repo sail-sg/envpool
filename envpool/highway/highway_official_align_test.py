@@ -22,12 +22,15 @@ import numpy as np
 from absl.testing import absltest
 from gymnasium import spaces
 
-import envpool.highway.registration  # noqa: F401
 from envpool.highway.highway_align_test import _debug_state, _patch_oracle
 from envpool.highway.highway_official_coverage_test import _CASES, _Case
-from envpool.highway.highway_oracle_util import prepare_official_oracle_import
+from envpool.highway.highway_oracle_util import (
+    prepare_official_oracle_import,
+    register_highway_envs,
+)
 from envpool.registration import make_gymnasium
 
+register_highway_envs()
 prepare_official_oracle_import()
 
 _ACTION_STEPS = 4

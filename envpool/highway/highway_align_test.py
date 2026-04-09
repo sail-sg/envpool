@@ -21,10 +21,13 @@ import gymnasium as gym
 import numpy as np
 from absl.testing import absltest
 
-import envpool.highway.registration  # noqa: F401
-from envpool.highway.highway_oracle_util import prepare_official_oracle_import
+from envpool.highway.highway_oracle_util import (
+    prepare_official_oracle_import,
+    register_highway_envs,
+)
 from envpool.registration import make_gymnasium
 
+register_highway_envs()
 prepare_official_oracle_import()
 
 _ALIGN_ACTIONS = (1, 3, 3, 2, 1, 1, 0, 4, 4, 1, 2, 1)

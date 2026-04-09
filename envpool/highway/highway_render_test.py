@@ -20,7 +20,6 @@ from typing import Any, cast
 import numpy as np
 from absl.testing import absltest
 
-import envpool.highway.registration  # noqa: F401
 from envpool.highway.highway_align_test import (
     _debug_state,
     _make_oracle,

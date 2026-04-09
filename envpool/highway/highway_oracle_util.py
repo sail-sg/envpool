@@ -15,9 +15,19 @@
 
 from __future__ import annotations
 
+import importlib
 import os
 import tempfile
 from pathlib import Path
+
+
+def register_highway_envs() -> None:
+    """Register EnvPool Highway tasks for tests.
+
+    Tests import make_gymnasium from the low-level registry so Bazel can keep
+    small runfiles; importing the registration module installs the tasks.
+    """
+    importlib.import_module("envpool.highway.registration")
 
 
 def prepare_official_oracle_import() -> None:

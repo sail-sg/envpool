@@ -20,8 +20,10 @@ from typing import Any
 import numpy as np
 from absl.testing import absltest
 
-import envpool.highway.registration  # noqa: F401
+from envpool.highway.highway_oracle_util import register_highway_envs
 from envpool.registration import make_gymnasium
+
+register_highway_envs()
 
 _ALL_TASKS = (
     "Exit-v0",
@@ -139,7 +141,6 @@ class _HighwayDeterministicTest(absltest.TestCase):
         )
 
     def test_all_registered_highway_tasks_are_deterministic(self) -> None:
-        num_envs = 3
         for task_id in _ALL_TASKS:
             with self.subTest(task_id=task_id):
                 num_envs = (

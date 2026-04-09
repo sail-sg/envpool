@@ -223,7 +223,7 @@ const Vehicle* VehiclePtr(const Road& road, int index) {
 }  // namespace
 
 std::pair<int, int> Road::NeighbourVehicles(
-    const Vehicle& vehicle, std::optional<LaneIndex> lane_index) const {
+    const Vehicle& vehicle, const std::optional<LaneIndex>& lane_index) const {
   const LaneIndex query_index = lane_index.value_or(vehicle.lane_index);
   const Lane& lane = network.GetLane(query_index);
   const double s = lane.LocalCoordinates(vehicle.position).longitudinal;
