@@ -198,6 +198,12 @@ cc_library(
 )
 
 cc_library(
+    name = "cuda_driver",
+    hdrs = ["cuda_driver.h"],
+    deps = [":logging"],
+)
+
+cc_library(
     name = "xla_template",
     hdrs = ["xla_template.h"],
     linkopts = select({
@@ -208,8 +214,8 @@ cc_library(
         "//conditions:default": [],
     }),
     deps = [
+        ":cuda_driver",
         ":spec",
-        "@cuda//:cudart_static",
         "@openxla_ffi_headers//:headers",
         "@pybind11",
     ],
@@ -220,9 +226,9 @@ cc_library(
     hdrs = ["xla.h"],
     deps = [
         ":array",
+        ":cuda_driver",
         ":dict",
         ":xla_template",
-        "@cuda//:cudart_static",
     ],
 )
 

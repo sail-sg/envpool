@@ -171,6 +171,18 @@ py_test(
 )
 
 py_test(
+    name = "minigrid_xla_test",
+    size = "large",
+    srcs = ["minigrid_xla_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":minigrid",
+        requirement("absl-py"),
+        requirement("jax"),
+    ],
+)
+
+py_test(
     name = "minigrid_render_test",
     size = "enormous",
     srcs = ["minigrid_render_test.py"],
