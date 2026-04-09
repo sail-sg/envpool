@@ -320,17 +320,18 @@ std::vector<float> ObserveTimeToCollision(const Road& road,
     }
   }
 
-  constexpr int kObsSpeeds = 3;
-  constexpr int kObsLanes = 3;
-  std::vector<float> obs(kObsSpeeds * kObsLanes * time_count, 1.0f);
+  constexpr int k_obs_speeds = 3;
+  constexpr int k_obs_lanes = 3;
+  std::vector<float> obs(k_obs_speeds * k_obs_lanes * time_count, 1.0f);
   auto obs_at = [&](int speed, int lane, int time) -> float& {
-    return obs[(speed * kObsLanes + lane) * time_count + time];
+    return obs[(speed * k_obs_lanes + lane) * time_count + time];
   };
-  for (int obs_speed = 0; obs_speed < kObsSpeeds; ++obs_speed) {
-    const int grid_speed = std::clamp(
-        observer.speed_index + obs_speed - kObsSpeeds / 2, 0, speed_count - 1);
-    for (int obs_lane = 0; obs_lane < kObsLanes; ++obs_lane) {
-      const int grid_lane = observer.lane_index.id + obs_lane - kObsLanes / 2;
+  for (int obs_speed = 0; obs_speed < k_obs_speeds; ++obs_speed) {
+    const int grid_speed =
+        std::clamp(observer.speed_index + obs_speed - k_obs_speeds / 2, 0,
+                   speed_count - 1);
+    for (int obs_lane = 0; obs_lane < k_obs_lanes; ++obs_lane) {
+      const int grid_lane = observer.lane_index.id + obs_lane - k_obs_lanes / 2;
       if (grid_lane < 0 || grid_lane >= lane_count) {
         continue;
       }
