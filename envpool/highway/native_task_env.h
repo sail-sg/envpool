@@ -85,6 +85,10 @@ inline double LMap(double value, double x0, double x1, double y0, double y1) {
   return y0 + (value - x0) * (y1 - y0) / (x1 - x0);
 }
 
+inline int Pix(double length, double scaling) {
+  return static_cast<int>(length * scaling);
+}
+
 inline void Fill(unsigned char* rgb, int width, int height, std::uint8_t r,
                  std::uint8_t g, std::uint8_t b) {
   for (int i = 0; i < width * height; ++i) {
@@ -133,6 +137,18 @@ inline void DrawLine(unsigned char* rgb, int width, int height, int x0, int y0,
     FillRect(rgb, width, height, x - radius, y - radius, 2 * radius + 1,
              2 * radius + 1, r, g, b);
   }
+}
+
+inline void DrawRectOutline(unsigned char* rgb, int width, int height, int x,
+                            int y, int w, int h, std::uint8_t r, std::uint8_t g,
+                            std::uint8_t b) {
+  if (w <= 0 || h <= 0) {
+    return;
+  }
+  FillRect(rgb, width, height, x, y, w, 1, r, g, b);
+  FillRect(rgb, width, height, x, y + h - 1, w, 1, r, g, b);
+  FillRect(rgb, width, height, x, y, 1, h, r, g, b);
+  FillRect(rgb, width, height, x + w - 1, y, 1, h, r, g, b);
 }
 
 inline void DrawCircle(unsigned char* rgb, int width, int height, int cx,
@@ -457,26 +473,21 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
               unsigned char* rgb) override {
     (void)camera_id;
     Fill(rgb, width, height, 100, 100, 100);
-    DrawScenario(rgb, width, height);
     if (UseOfficialBackend()) {
+      const OfficialRenderTransform transform =
+          OfficialRenderCamera(width, height);
+      DrawOfficialRoad(rgb, width, height, transform);
+      for (const official::RoadObject& object : official_road_->objects) {
+        DrawOfficialObject(rgb, width, height, transform, object);
+      }
       for (int i = 0; i < static_cast<int>(official_road_->vehicles.size());
            ++i) {
         const official::Vehicle& vehicle = official_road_->vehicles[i];
-        Agent agent;
-        agent.x = vehicle.position.x;
-        agent.y = vehicle.position.y;
-        agent.heading = vehicle.heading;
-        agent.speed = vehicle.speed;
-        agent.crashed = vehicle.crashed;
-        if (i == official_ego_index_) {
-          DrawAgent(rgb, width, height, agent, agent.crashed ? 255 : 50,
-                    agent.crashed ? 100 : 200, 0);
-        } else {
-          DrawAgent(rgb, width, height, agent, 90, 190, 255);
-        }
+        DrawOfficialVehicle(rgb, width, height, transform, vehicle);
       }
       return;
     }
+    DrawScenario(rgb, width, height);
     for (const Agent& agent : traffic_) {
       DrawAgent(rgb, width, height, agent, 90, 190, 255);
     }
@@ -1701,6 +1712,203 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
                              : 4.0;
     return {static_cast<int>(std::lround(width * 0.5 + x * scale)),
             static_cast<int>(std::lround(height * 0.5 + y * scale))};
+  }
+
+  struct OfficialRenderTransform {
+    double scaling{5.5};
+    double origin_x{0.0};
+    double origin_y{0.0};
+
+    [[nodiscard]] int Pix(double length) const {
+      return native::Pix(length, scaling);
+    }
+
+    [[nodiscard]] std::pair<int, int> Pos2Pix(official::Vec2 position) const {
+      return {Pix(position.x - origin_x), Pix(position.y - origin_y)};
+    }
+  };
+
+  [[nodiscard]] double OfficialRenderScaling() const {
+    if (IsParkingScenario()) {
+      return 7.0;
+    }
+    if (scenario_ == "intersection" || scenario_ == "intersection_multi" ||
+        scenario_ == "intersection_continuous") {
+      return 7.15;
+    }
+    return 5.5;
+  }
+
+  [[nodiscard]] std::pair<double, double> OfficialRenderCentering() const {
+    if (IsParkingScenario()) {
+      return {0.5, 0.5};
+    }
+    if (scenario_ == "intersection" || scenario_ == "intersection_multi" ||
+        scenario_ == "intersection_continuous" || scenario_ == "roundabout") {
+      return {0.5, 0.6};
+    }
+    if (scenario_.find("racetrack") == 0) {
+      return {0.5, 0.5};
+    }
+    return {0.3, 0.5};
+  }
+
+  [[nodiscard]] OfficialRenderTransform OfficialRenderCamera(int width,
+                                                             int height) const {
+    const double scaling = OfficialRenderScaling();
+    const auto [center_x, center_y] = OfficialRenderCentering();
+    const official::Vec2 focus = OfficialEgo().position;
+    return {scaling, focus.x - center_x * static_cast<double>(width) / scaling,
+            focus.y - center_y * static_cast<double>(height) / scaling};
+  }
+
+  void DrawOfficialStripe(unsigned char* rgb, int width, int height,
+                          const OfficialRenderTransform& transform,
+                          const official::Lane& lane, double start, double end,
+                          double lateral) const {
+    start = Clip(start, 0.0, lane.Length());
+    end = Clip(end, 0.0, lane.Length());
+    if (std::abs(start - end) <= 1.5) {
+      return;
+    }
+    const auto [x0, y0] = transform.Pos2Pix(lane.Position(start, lateral));
+    const auto [x1, y1] = transform.Pos2Pix(lane.Position(end, lateral));
+    DrawLine(rgb, width, height, x0, y0, x1, y1, 255, 255, 255,
+             std::max(1, transform.Pix(0.3)));
+  }
+
+  void DrawOfficialLane(unsigned char* rgb, int width, int height,
+                        const OfficialRenderTransform& transform,
+                        const official::Lane& lane) const {
+    constexpr double kStripeSpacing = 4.33;
+    constexpr double kStripeLength = 3.0;
+    const int stripes_count =
+        static_cast<int>(2.0 * static_cast<double>(height + width) /
+                         (kStripeSpacing * transform.scaling));
+    const official::LaneCoordinates origin_coordinates =
+        lane.LocalCoordinates({transform.origin_x, transform.origin_y});
+    const double s0 = (std::floor(static_cast<double>(static_cast<int>(
+                                      origin_coordinates.longitudinal)) /
+                                  kStripeSpacing) -
+                       static_cast<double>(stripes_count / 2)) *
+                      kStripeSpacing;
+    const auto line_types = lane.LineTypes();
+    for (int side = 0; side < 2; ++side) {
+      const double lateral = (static_cast<double>(side) - 0.5) * lane.Width();
+      if (line_types[side] == official::LineType::kStriped) {
+        for (int k = 0; k < stripes_count; ++k) {
+          const double start = s0 + static_cast<double>(k) * kStripeSpacing;
+          DrawOfficialStripe(rgb, width, height, transform, lane, start,
+                             start + kStripeLength, lateral);
+        }
+      } else if (line_types[side] == official::LineType::kContinuous) {
+        for (int k = 0; k < stripes_count; ++k) {
+          const double start = s0 + static_cast<double>(k) * kStripeSpacing;
+          DrawOfficialStripe(rgb, width, height, transform, lane, start,
+                             start + kStripeSpacing, lateral);
+        }
+      } else if (line_types[side] == official::LineType::kContinuousLine) {
+        DrawOfficialStripe(rgb, width, height, transform, lane, s0,
+                           s0 + stripes_count * kStripeSpacing + kStripeLength,
+                           lateral);
+      }
+    }
+  }
+
+  void DrawOfficialRoad(unsigned char* rgb, int width, int height,
+                        const OfficialRenderTransform& transform) const {
+    for (const official::Lane* lane : official_road_->network.Lanes()) {
+      DrawOfficialLane(rgb, width, height, transform, *lane);
+    }
+  }
+
+  void DrawOfficialRect(unsigned char* rgb, int width, int height,
+                        const OfficialRenderTransform& transform,
+                        official::Vec2 center, double length,
+                        double object_width, double heading, std::uint8_t r,
+                        std::uint8_t g, std::uint8_t b, bool outline) const {
+    const auto [cx, cy] = transform.Pos2Pix(center);
+    const int pixel_length = std::max(1, transform.Pix(length));
+    const int pixel_width = std::max(1, transform.Pix(object_width));
+    // Axis-aligned draws match pygame's common unrotated path and keep small
+    // vehicles legible. Rotated vehicles are approximated with a centerline.
+    if (std::abs(heading) <= 2.0 * kPi / 180.0) {
+      const int x = cx - pixel_length / 2;
+      const int y = cy - pixel_width / 2;
+      if (outline) {
+        DrawRectOutline(rgb, width, height, x, y, pixel_length, pixel_width, r,
+                        g, b);
+      } else {
+        FillRect(rgb, width, height, x, y, pixel_length, pixel_width, r, g, b);
+      }
+      return;
+    }
+    const double cos_h = std::cos(heading);
+    const double sin_h = std::sin(heading);
+    const int dx = static_cast<int>(std::lround(0.5 * pixel_length * cos_h));
+    const int dy = static_cast<int>(std::lround(0.5 * pixel_length * sin_h));
+    const int thickness = std::max(1, pixel_width);
+    DrawLine(rgb, width, height, cx - dx, cy - dy, cx + dx, cy + dy, r, g, b,
+             outline ? 1 : thickness);
+  }
+
+  void DrawOfficialObject(unsigned char* rgb, int width, int height,
+                          const OfficialRenderTransform& transform,
+                          const official::RoadObject& object) const {
+    const bool landmark = object.kind == official::RoadObjectKind::kLandmark;
+    const bool red_obstacle =
+        object.kind == official::RoadObjectKind::kObstacle && object.crashed;
+    const bool green_landmark = landmark && object.hit;
+    std::uint8_t r = landmark ? 100 : 200;
+    std::uint8_t g = landmark ? 200 : 200;
+    std::uint8_t b = landmark ? 255 : 0;
+    if (red_obstacle) {
+      r = 255;
+      g = 100;
+      b = 100;
+    }
+    if (green_landmark) {
+      r = 50;
+      g = 200;
+      b = 0;
+    }
+    DrawOfficialRect(rgb, width, height, transform, object.position,
+                     object.length, object.width, object.heading, r, g, b,
+                     false);
+    DrawOfficialRect(rgb, width, height, transform, object.position,
+                     object.length, object.width, object.heading, 60, 60, 60,
+                     true);
+  }
+
+  void DrawOfficialVehicle(unsigned char* rgb, int width, int height,
+                           const OfficialRenderTransform& transform,
+                           const official::Vehicle& vehicle) const {
+    const auto [px, py] = transform.Pos2Pix(vehicle.position);
+    if (px < -80 || px > width + 80 || py < -80 || py > height + 80) {
+      return;
+    }
+    std::uint8_t r = 200;
+    std::uint8_t g = 200;
+    std::uint8_t b = 0;
+    if (vehicle.crashed) {
+      r = 255;
+      g = 100;
+      b = 100;
+    } else if (vehicle.kind == official::VehicleKind::kIDM) {
+      r = 100;
+      g = 200;
+      b = 255;
+    } else if (vehicle.kind == official::VehicleKind::kMDP) {
+      r = 50;
+      g = 200;
+      b = 0;
+    }
+    DrawOfficialRect(rgb, width, height, transform, vehicle.position,
+                     official::kVehicleLength, official::kVehicleWidth,
+                     vehicle.heading, r, g, b, false);
+    DrawOfficialRect(rgb, width, height, transform, vehicle.position,
+                     official::kVehicleLength, official::kVehicleWidth,
+                     vehicle.heading, 60, 60, 60, true);
   }
 
   void DrawScenario(unsigned char* rgb, int width, int height) const {

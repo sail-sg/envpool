@@ -24,7 +24,7 @@ namespace {
 
 using Lines = std::array<LineType, 2>;
 
-constexpr LineType kContinuous = LineType::kContinuousLine;
+constexpr LineType kContinuous = LineType::kContinuous;
 constexpr LineType kNone = LineType::kNone;
 constexpr LineType kStriped = LineType::kStriped;
 
