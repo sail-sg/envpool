@@ -43,8 +43,8 @@ cc_library(
         "impl/babyai_env.h",
         "impl/babyai_task_factory.h",
         "impl/minigrid_env.h",
-        "impl/minigrid_task_utils.h",
         "impl/minigrid_task_factory.h",
+        "impl/minigrid_task_utils.h",
         "impl/utils.h",
         "minigrid.h",
     ],
@@ -70,8 +70,8 @@ pybind_extension(
 py_library(
     name = "minigrid",
     srcs = ["__init__.py"],
-    imports = ["../.."],
     data = [":minigrid_envpool"],
+    imports = ["../.."],
     deps = [
         "//envpool/python:api",
         requirement("numpy"),
@@ -167,6 +167,19 @@ py_test(
         requirement("absl-py"),
         requirement("gymnasium"),
         requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "minigrid_xla_test",
+    size = "large",
+    srcs = ["minigrid_xla_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":minigrid",
+        ":minigrid_registration",
+        requirement("absl-py"),
+        requirement("jax"),
     ],
 )
 

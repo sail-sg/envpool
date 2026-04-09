@@ -17,7 +17,6 @@
 #ifndef ENVPOOL_CORE_XLA_TEMPLATE_H_
 #define ENVPOOL_CORE_XLA_TEMPLATE_H_
 
-#include <cuda_runtime_api.h>
 #include <pybind11/functional.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
@@ -34,6 +33,7 @@
 #include <utility>
 #include <vector>
 
+#include "envpool/core/cuda_driver.h"
 #include "envpool/core/spec.h"
 
 namespace py = pybind11;
@@ -129,7 +129,7 @@ struct CustomCall {
     return {};
   }
 
-  static xla_ffi::Error GpuExecute(cudaStream_t stream,
+  static xla_ffi::Error GpuExecute(EnvPoolGpuStream stream,
                                    xla_ffi::RemainingArgs args,
                                    xla_ffi::RemainingRets rets,
                                    xla_ffi::Dictionary attrs) {
@@ -181,7 +181,7 @@ struct CustomCall {
 #else
     XLA_FFI_DEFINE_HANDLER(gpu_handler, GpuExecute,
                            xla_ffi::Ffi::Bind()
-                               .Ctx<xla_ffi::PlatformStream<cudaStream_t>>()
+                               .Ctx<xla_ffi::PlatformStream<EnvPoolGpuStream>>()
                                .RemainingArgs()
                                .RemainingRets()
                                .Attrs<xla_ffi::Dictionary>());
