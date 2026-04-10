@@ -18,6 +18,7 @@ jobs:
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      BAZEL_CI_RESOURCE_OPTS: --local_ram_resources=HOST_RAM*.5
       MUJOCO_GL: egl
       EGL_PLATFORM: surfaceless
     steps:
@@ -63,7 +64,7 @@ jobs:
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Coverage
         run: |
-          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" \
+          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
             BAZEL_TEST_TARGETS="//..." bazel-coverage
           mkdir -p coverage
           cp bazel-out/_coverage/_coverage_report.dat coverage/lcov.info
@@ -108,14 +109,18 @@ jobs:
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
-      # Keep multiple test cache generations for the same branch. Re-enable
-      # this prune step only if GitHub Actions cache usage becomes a problem.
-      # - name: Prune older Bazel caches
-      #   if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
-      #   continue-on-error: true
-      #   env:
-      #     GH_TOKEN: ${{ github.token }}
-      #   run: python scripts/prune_actions_caches.py --repo "${{ github.repository }}" --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
+      - name: Prune older Bazel caches
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python scripts/prune_actions_caches.py
+          --repo "${{ github.repository }}"
+          --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-"
+          --group-by-branch
+          --delete-missing-branches
+          --keep 1
   test-linux-arm64:
     name: Test (linux-arm64)
     runs-on: ubuntu-24.04-arm
@@ -123,6 +128,7 @@ jobs:
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      BAZEL_CI_RESOURCE_OPTS: --local_ram_resources=HOST_RAM*.5
       MUJOCO_GL: egl
       EGL_PLATFORM: surfaceless
     steps:
@@ -168,7 +174,7 @@ jobs:
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Test
         run: |
-          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" \
+          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
             BAZEL_TEST_TARGETS="//..." bazel-test
       - name: Save Bazel caches
         id: save-bazel-caches
@@ -180,14 +186,18 @@ jobs:
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
-      # Keep multiple test cache generations for the same branch. Re-enable
-      # this prune step only if GitHub Actions cache usage becomes a problem.
-      # - name: Prune older Bazel caches
-      #   if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
-      #   continue-on-error: true
-      #   env:
-      #     GH_TOKEN: ${{ github.token }}
-      #   run: python scripts/prune_actions_caches.py --repo "${{ github.repository }}" --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
+      - name: Prune older Bazel caches
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python scripts/prune_actions_caches.py
+          --repo "${{ github.repository }}"
+          --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-"
+          --group-by-branch
+          --delete-missing-branches
+          --keep 1
   test-macos:
     name: Test (macos)
     runs-on: macos-14
@@ -254,14 +264,18 @@ jobs:
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
-      # Keep multiple test cache generations for the same branch. Re-enable
-      # this prune step only if GitHub Actions cache usage becomes a problem.
-      # - name: Prune older Bazel caches
-      #   if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
-      #   continue-on-error: true
-      #   env:
-      #     GH_TOKEN: ${{ github.token }}
-      #   run: python scripts/prune_actions_caches.py --repo "${{ github.repository }}" --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
+      - name: Prune older Bazel caches
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python scripts/prune_actions_caches.py
+          --repo "${{ github.repository }}"
+          --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-"
+          --group-by-branch
+          --delete-missing-branches
+          --keep 1
   test-windows:
     name: Test (windows)
     runs-on: windows-2022
@@ -369,14 +383,18 @@ jobs:
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
-      # Keep multiple test cache generations for the same branch. Re-enable
-      # this prune step only if GitHub Actions cache usage becomes a problem.
-      # - name: Prune older Bazel caches
-      #   if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
-      #   continue-on-error: true
-      #   env:
-      #     GH_TOKEN: ${{ github.token }}
-      #   run: python scripts/prune_actions_caches.py --repo "${{ github.repository }}" --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
+      - name: Prune older Bazel caches
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python scripts/prune_actions_caches.py
+          --repo "${{ github.repository }}"
+          --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-"
+          --group-by-branch
+          --delete-missing-branches
+          --keep 1
   deploy-coverage-pages:
     name: Deploy coverage page
     if: ${{ github.event_name == 'push' }}

@@ -51,7 +51,7 @@ class BabyAIEnvPoolAlignTest(absltest.TestCase):
     def _run_align_check(
         self,
         task_id: str,
-        total: int = 100,
+        total: int | None = None,
         **kwargs: Any,
     ) -> None:
         oracle_env = gym.make(task_id)
@@ -70,10 +70,13 @@ class BabyAIEnvPoolAlignTest(absltest.TestCase):
 
             obs, info = env.reset()
             oracle_env.reset(seed=0)
+            state = debug_state(env)
+            if total is None:
+                total = int(state.max_steps)
             patch_verifier_state(
                 cast(Any, oracle_env.unwrapped),
                 task_id,
-                debug_state(env),
+                state,
                 int(info["elapsed_step"][0]),
             )
             self.assertEqual(

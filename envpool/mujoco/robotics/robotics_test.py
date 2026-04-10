@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import ctypes
 import os
 import platform
 import subprocess
@@ -24,11 +25,17 @@ from typing import Any, cast
 
 
 def _configure_linux_mujoco_gl() -> None:
-    if platform.system() != "Linux" or os.environ.get("MUJOCO_GL"):
+    if platform.system() != "Linux":
+        return
+    if os.environ.get("MUJOCO_GL"):
+        if os.environ["MUJOCO_GL"] == "egl":
+            os.environ.setdefault("EGL_PLATFORM", "surfaceless")
         return
     for backend in ("egl", "osmesa"):
         env = dict(os.environ)
         env["MUJOCO_GL"] = backend
+        if backend == "egl":
+            env.setdefault("EGL_PLATFORM", "surfaceless")
         result = subprocess.run(
             [
                 sys.executable,
@@ -46,6 +53,8 @@ def _configure_linux_mujoco_gl() -> None:
         )
         if result.returncode == 0:
             os.environ["MUJOCO_GL"] = backend
+            if backend == "egl":
+                os.environ.setdefault("EGL_PLATFORM", "surfaceless")
             return
 
 
@@ -61,6 +70,94 @@ from absl.testing import absltest
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
 preload_windows_gl_dlls(strict=True)
+
+
+def _configure_macos_official_renderer() -> None:
+    if platform.system() != "Darwin":
+        return
+
+    from gymnasium.envs.mujoco import mujoco_rendering
+
+    class _CglContext:
+        def __init__(self, width: int, height: int):
+            del width, height
+            from mujoco.cgl import cgl
+
+            attrib = cgl.CGLPixelFormatAttribute
+            profile = cgl.CGLOpenGLProfile
+            attrib_values = (
+                attrib.CGLPFAOpenGLProfile,
+                profile.CGLOGLPVersion_Legacy,
+                attrib.CGLPFAColorSize,
+                24,
+                attrib.CGLPFAAlphaSize,
+                8,
+                attrib.CGLPFADepthSize,
+                24,
+                attrib.CGLPFAStencilSize,
+                8,
+                attrib.CGLPFAAllowOfflineRenderers,
+                0,
+                0,  # terminator
+            )
+            attribs = (ctypes.c_int * len(attrib_values))(*attrib_values)
+            self._pixel_format = cgl.CGLPixelFormatObj()
+            num_pixel_formats = cgl.GLint()
+            cgl.CGLChoosePixelFormat(
+                attribs,
+                ctypes.byref(self._pixel_format),
+                ctypes.byref(num_pixel_formats),
+            )
+            if not self._pixel_format or num_pixel_formats.value == 0:
+                raise RuntimeError("failed to create CGL pixel format")
+
+            self._context = cgl.CGLContextObj()
+            cgl.CGLCreateContext(
+                self._pixel_format,
+                0,
+                ctypes.byref(self._context),
+            )
+            if not self._context:
+                cgl.CGLReleasePixelFormat(self._pixel_format)
+                self._pixel_format = None
+                raise RuntimeError("failed to create CGL context")
+            self._locked = False
+
+        def make_current(self) -> None:
+            from mujoco.cgl import cgl
+
+            cgl.CGLSetCurrentContext(self._context)
+            # Mirror mujoco.cgl.GLContext so the official renderer uses the
+            # same CGL lifecycle as EnvPool's native renderer.
+            if not self._locked:
+                cgl.CGLLockContext(self._context)
+                self._locked = True
+
+        def free(self) -> None:
+            from mujoco.cgl import cgl
+
+            if self._context:
+                if self._locked:
+                    cgl.CGLUnlockContext(self._context)
+                    self._locked = False
+                cgl.CGLSetCurrentContext(None)
+                cgl.CGLReleaseContext(self._context)
+                self._context = None
+            if self._pixel_format:
+                cgl.CGLReleasePixelFormat(self._pixel_format)
+                self._pixel_format = None
+
+        def __del__(self) -> None:
+            self.free()
+
+    def _import_cgl(width: int, height: int) -> Any:
+        return _CglContext(width, height)
+
+    mujoco_rendering._ALL_RENDERERS["cgl"] = _import_cgl
+    os.environ["MUJOCO_GL"] = "cgl"
+
+
+_configure_macos_official_renderer()
 
 import envpool.mujoco.robotics.registration as robotics_registration
 from envpool.registration import (
@@ -94,12 +191,12 @@ _HAND_CANONICAL_BY_V0 = {
     for task_id in _HAND_ENVS
     if task_id.endswith("-v0")
 }
-_RENDER_ALIGNMENT_ENVS = (
-    "FetchReach-v4",
-    "HandReach-v3",
-    "AdroitHandDoor-v1",
-    "PointMaze_UMaze-v3",
-    "FrankaKitchen-v1",
+_ALL_ROBOTICS_ENVS = (
+    *_FETCH_ENVS,
+    *_HAND_ENVS,
+    *_ADROIT_ENVS,
+    *_POINT_MAZE_ENVS,
+    *_KITCHEN_ENVS,
 )
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -107,6 +204,24 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 # Importing gymnasium_robotics registers the upstream env IDs used as the
 # rollout-alignment oracle in this test module.
 _ = gymnasium_robotics.__version__
+_MUJOCO_V3 = int(mujoco.__version__.split(".", maxsplit=1)[0]) >= 3
+_LINUX_ARM64 = sys.platform == "linux" and platform.machine().lower() in (
+    "aarch64",
+    "arm64",
+)
+
+
+def _alignment_observation_tolerances(task_id: str) -> tuple[float, float]:
+    if _MUJOCO_V3 and _LINUX_ARM64:
+        # Match the existing Gym/DMC MuJoCo 3.x policy: linux-arm64 source
+        # builds accumulate tiny physics drift against the official wheel on
+        # long contact-heavy rollouts.
+        if "ContinuousTouchSensors" in task_id:
+            return 1e-3, 1e-4
+        if task_id == "FrankaKitchen-v1":
+            return 2e-3, 1e-4
+    del task_id
+    return 1e-4, 1e-4
 
 
 def _upstream_task_id(task_id: str) -> str:
@@ -200,6 +315,8 @@ def _reset_upstream_state(
     env: gym.Env,
     qpos: np.ndarray,
     qvel: np.ndarray,
+    qacc: np.ndarray,
+    qacc_warmstart: np.ndarray,
     goal: np.ndarray,
 ) -> dict[str, np.ndarray]:
     base_env = cast(Any, env.unwrapped)
@@ -213,6 +330,8 @@ def _reset_upstream_state(
             )
         )
     mujoco.mj_forward(base_env.model, base_env.data)
+    base_env.data.qacc[:] = qacc
+    base_env.data.qacc_warmstart[:] = qacc_warmstart
     base_env.goal = np.array(goal, copy=True)
     return base_env._get_obs()
 
@@ -221,6 +340,8 @@ def _reset_upstream_adroit_state(
     env: gym.Env,
     qpos: np.ndarray,
     qvel: np.ndarray,
+    qacc: np.ndarray,
+    qacc_warmstart: np.ndarray,
     extra: np.ndarray,
     task_id: str,
 ) -> np.ndarray:
@@ -264,6 +385,8 @@ def _reset_upstream_adroit_state(
     base_env.data.qpos[:] = qpos
     base_env.data.qvel[:] = qvel
     mujoco.mj_forward(base_env.model, base_env.data)
+    base_env.data.qacc[:] = qacc
+    base_env.data.qacc_warmstart[:] = qacc_warmstart
     if task_id.startswith("AdroitHandPen"):
         base_env.pen_length = np.linalg.norm(
             base_env.data.site_xpos[base_env.obj_t_site_id]
@@ -280,6 +403,8 @@ def _reset_upstream_point_maze_state(
     env: gym.Env,
     qpos: np.ndarray,
     qvel: np.ndarray,
+    qacc: np.ndarray,
+    qacc_warmstart: np.ndarray,
     goal: np.ndarray,
 ) -> dict[str, np.ndarray]:
     base_env = cast(Any, env.unwrapped)
@@ -289,6 +414,8 @@ def _reset_upstream_point_maze_state(
     base_env.goal = np.array(goal, copy=True)
     base_env.update_target_site_pos()
     mujoco.mj_forward(base_env.model, base_env.data)
+    base_env.data.qacc[:] = qacc
+    base_env.data.qacc_warmstart[:] = qacc_warmstart
     point_obs, _ = base_env.point_env._get_obs()
     return base_env._get_obs(point_obs)
 
@@ -297,12 +424,16 @@ def _reset_upstream_kitchen_state(
     env: gym.Env,
     qpos: np.ndarray,
     qvel: np.ndarray,
+    qacc: np.ndarray,
+    qacc_warmstart: np.ndarray,
 ) -> dict[str, Any]:
     base_env = cast(Any, env.unwrapped)
     mujoco.mj_resetData(base_env.robot_env.model, base_env.robot_env.data)
     base_env.robot_env.data.qpos[:] = qpos
     base_env.robot_env.data.qvel[:] = qvel
     mujoco.mj_forward(base_env.robot_env.model, base_env.robot_env.data)
+    base_env.robot_env.data.qacc[:] = qacc
+    base_env.robot_env.data.qacc_warmstart[:] = qacc_warmstart
     base_env.tasks_to_complete = set(base_env.goal.keys())
     base_env.step_task_completions = []
     base_env.episode_task_completions = []
@@ -320,6 +451,8 @@ def _reset_upstream_render_state(
             env,
             info["qpos0"][0],
             info["qvel0"][0],
+            info["qacc0"][0],
+            info["qacc_warmstart0"][0],
             info["goal0"][0],
         )
         return
@@ -328,6 +461,8 @@ def _reset_upstream_render_state(
             env,
             info["qpos0"][0],
             info["qvel0"][0],
+            info["qacc0"][0],
+            info["qacc_warmstart0"][0],
             info["extra0"][0],
             task_id,
         )
@@ -337,6 +472,8 @@ def _reset_upstream_render_state(
             env,
             info["qpos0"][0],
             info["qvel0"][0],
+            info["qacc0"][0],
+            info["qacc_warmstart0"][0],
             info["goal0"][0],
         )
         return
@@ -345,6 +482,8 @@ def _reset_upstream_render_state(
             env,
             info["qpos0"][0],
             info["qvel0"][0],
+            info["qacc0"][0],
+            info["qacc_warmstart0"][0],
         )
         return
     raise ValueError(f"Unsupported render task: {task_id}")
@@ -405,6 +544,10 @@ def _assert_space_alignment(
             finally:
                 env0.close()
                 env1.close()
+
+
+def _max_episode_steps(task_id: str) -> int:
+    return int(make_spec(task_id).config.max_episode_steps)
 
 
 def _sample_action_batch(
@@ -528,7 +671,7 @@ def _assert_render_alignment(
 
 class _GymnasiumRoboticsRenderEnvPoolTest(absltest.TestCase):
     def test_render_alignment(self) -> None:
-        for task_id in _RENDER_ALIGNMENT_ENVS:
+        for task_id in _ALL_ROBOTICS_ENVS:
             with self.subTest(task_id=task_id):
                 _assert_render_alignment(self, task_id)
 
@@ -550,10 +693,16 @@ class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
         _assert_space_alignment(self, _FETCH_ENVS)
 
     def test_deterministic_rollout_same_seed(self) -> None:
-        _assert_same_seed_rollout(self, _FETCH_ENVS, num_steps=32)
+        for task_id in _FETCH_ENVS:
+            _assert_same_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_different_seed_rollout_changes(self) -> None:
-        _assert_different_seed_rollout(self, _FETCH_ENVS, num_steps=32)
+        for task_id in _FETCH_ENVS:
+            _assert_different_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_align_with_upstream_rollout(self) -> None:
         for task_id in _FETCH_ENVS:
@@ -561,6 +710,9 @@ class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
                 env0 = _make_upstream_env(task_id)
                 env1 = make_gymnasium(task_id, num_envs=1, seed=0)
                 try:
+                    obs_atol, obs_rtol = _alignment_observation_tolerances(
+                        task_id
+                    )
                     env0.action_space.seed(3)
                     env0.reset(seed=0)
                     obs1, info1 = env1.reset()
@@ -568,18 +720,20 @@ class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
                         env0,
                         info1["qpos0"][0],
                         info1["qvel0"][0],
+                        info1["qacc0"][0],
+                        info1["qacc_warmstart0"][0],
                         info1["goal0"][0],
                     )
                     _assert_goal_obs_equal(
                         obs0,
                         _first_env_obs(cast(Any, obs1)),
-                        atol=1e-4,
-                        rtol=1e-4,
+                        atol=obs_atol,
+                        rtol=obs_rtol,
                     )
 
                     terminated1 = np.array([False])
                     truncated1 = np.array([False])
-                    for _ in range(32):
+                    for _ in range(_max_episode_steps(task_id)):
                         action = env0.action_space.sample()
                         obs0, reward0, terminated0, truncated0, info0 = (
                             env0.step(action)
@@ -595,8 +749,8 @@ class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
                         _assert_goal_obs_equal(
                             obs0,
                             _first_env_obs(cast(Any, obs1)),
-                            atol=1e-4,
-                            rtol=1e-4,
+                            atol=obs_atol,
+                            rtol=obs_rtol,
                         )
                         _assert_scalar_allclose(
                             reward0,
@@ -792,10 +946,16 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
         _assert_space_alignment(self, _HAND_ENVS)
 
     def test_deterministic_rollout_same_seed(self) -> None:
-        _assert_same_seed_rollout(self, _HAND_ENVS, num_steps=8)
+        for task_id in _HAND_ENVS:
+            _assert_same_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_different_seed_rollout_changes(self) -> None:
-        _assert_different_seed_rollout(self, _HAND_ENVS, num_steps=8)
+        for task_id in _HAND_ENVS:
+            _assert_different_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_align_with_upstream_rollout(self) -> None:
         for task_id in _HAND_ENVS:
@@ -803,6 +963,9 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
                 env0 = _make_upstream_env(task_id)
                 env1 = make_gymnasium(task_id, num_envs=1, seed=0)
                 try:
+                    obs_atol, obs_rtol = _alignment_observation_tolerances(
+                        task_id
+                    )
                     env0.action_space.seed(3)
                     env0.reset(seed=0)
                     obs1, info1 = env1.reset()
@@ -810,18 +973,20 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
                         env0,
                         info1["qpos0"][0],
                         info1["qvel0"][0],
+                        info1["qacc0"][0],
+                        info1["qacc_warmstart0"][0],
                         info1["goal0"][0],
                     )
                     _assert_goal_obs_equal(
                         obs0,
                         _first_env_obs(cast(Any, obs1)),
-                        atol=1e-4,
-                        rtol=1e-4,
+                        atol=obs_atol,
+                        rtol=obs_rtol,
                     )
 
                     terminated1 = np.array([False])
                     truncated1 = np.array([False])
-                    for _ in range(8):
+                    for _ in range(_max_episode_steps(task_id)):
                         action = env0.action_space.sample()
                         obs0, reward0, terminated0, truncated0, info0 = (
                             env0.step(action)
@@ -837,8 +1002,8 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
                         _assert_goal_obs_equal(
                             obs0,
                             _first_env_obs(cast(Any, obs1)),
-                            atol=1e-4,
-                            rtol=1e-4,
+                            atol=obs_atol,
+                            rtol=obs_rtol,
                         )
                         _assert_scalar_allclose(
                             reward0,
@@ -896,10 +1061,16 @@ class _GymnasiumRoboticsAdroitEnvPoolTest(absltest.TestCase):
         _assert_space_alignment(self, _ADROIT_ENVS)
 
     def test_deterministic_rollout_same_seed(self) -> None:
-        _assert_same_seed_rollout(self, _ADROIT_ENVS, num_steps=8)
+        for task_id in _ADROIT_ENVS:
+            _assert_same_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_different_seed_rollout_changes(self) -> None:
-        _assert_different_seed_rollout(self, _ADROIT_ENVS, num_steps=8)
+        for task_id in _ADROIT_ENVS:
+            _assert_different_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_align_with_upstream_rollout(self) -> None:
         for task_id in _ADROIT_ENVS:
@@ -914,6 +1085,8 @@ class _GymnasiumRoboticsAdroitEnvPoolTest(absltest.TestCase):
                         env0,
                         info1["qpos0"][0],
                         info1["qvel0"][0],
+                        info1["qacc0"][0],
+                        info1["qacc_warmstart0"][0],
                         info1["extra0"][0],
                         task_id,
                     )
@@ -924,7 +1097,7 @@ class _GymnasiumRoboticsAdroitEnvPoolTest(absltest.TestCase):
                         rtol=1e-4,
                     )
 
-                    for _ in range(8):
+                    for _ in range(_max_episode_steps(task_id)):
                         action = env0.action_space.sample()
                         obs0, reward0, terminated0, truncated0, info0 = (
                             env0.step(action)
@@ -979,10 +1152,16 @@ class _GymnasiumRoboticsPointMazeEnvPoolTest(absltest.TestCase):
         _assert_space_alignment(self, _POINT_MAZE_ENVS)
 
     def test_deterministic_rollout_same_seed(self) -> None:
-        _assert_same_seed_rollout(self, _POINT_MAZE_ENVS, num_steps=16)
+        for task_id in _POINT_MAZE_ENVS:
+            _assert_same_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_different_seed_rollout_changes(self) -> None:
-        _assert_different_seed_rollout(self, _POINT_MAZE_ENVS, num_steps=16)
+        for task_id in _POINT_MAZE_ENVS:
+            _assert_different_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_align_with_upstream_rollout(self) -> None:
         for task_id in _POINT_MAZE_ENVS:
@@ -997,6 +1176,8 @@ class _GymnasiumRoboticsPointMazeEnvPoolTest(absltest.TestCase):
                         env0,
                         info1["qpos0"][0],
                         info1["qvel0"][0],
+                        info1["qacc0"][0],
+                        info1["qacc_warmstart0"][0],
                         info1["goal0"][0],
                     )
                     _assert_goal_obs_equal(
@@ -1006,7 +1187,7 @@ class _GymnasiumRoboticsPointMazeEnvPoolTest(absltest.TestCase):
                         rtol=1e-4,
                     )
 
-                    for _ in range(16):
+                    for _ in range(_max_episode_steps(task_id)):
                         action = env0.action_space.sample()
                         obs0, reward0, terminated0, truncated0, info0 = (
                             env0.step(action)
@@ -1147,10 +1328,16 @@ class _GymnasiumRoboticsKitchenEnvPoolTest(absltest.TestCase):
             env1.close()
 
     def test_deterministic_rollout_same_seed(self) -> None:
-        _assert_same_seed_rollout(self, _KITCHEN_ENVS, num_steps=8)
+        for task_id in _KITCHEN_ENVS:
+            _assert_same_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_different_seed_rollout_changes(self) -> None:
-        _assert_different_seed_rollout(self, _KITCHEN_ENVS, num_steps=8)
+        for task_id in _KITCHEN_ENVS:
+            _assert_different_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_align_with_upstream_rollout(self) -> None:
         env0 = _make_upstream_env(
@@ -1166,6 +1353,9 @@ class _GymnasiumRoboticsKitchenEnvPoolTest(absltest.TestCase):
             object_noise_ratio=0.0,
         )
         try:
+            obs_atol, obs_rtol = _alignment_observation_tolerances(
+                "FrankaKitchen-v1"
+            )
             env0.action_space.seed(3)
             env0.reset(seed=0)
             obs1, info1 = env1.reset()
@@ -1173,12 +1363,14 @@ class _GymnasiumRoboticsKitchenEnvPoolTest(absltest.TestCase):
                 env0,
                 info1["qpos0"][0],
                 info1["qvel0"][0],
+                info1["qacc0"][0],
+                info1["qacc_warmstart0"][0],
             )
             _assert_goal_obs_equal(
                 obs0,
                 _first_env_obs(cast(Any, obs1)),
-                atol=1e-4,
-                rtol=1e-4,
+                atol=obs_atol,
+                rtol=obs_rtol,
             )
             np.testing.assert_array_equal(
                 info1["tasks_to_complete"][0],
@@ -1193,7 +1385,7 @@ class _GymnasiumRoboticsKitchenEnvPoolTest(absltest.TestCase):
                 np.zeros(7, dtype=np.int32),
             )
 
-            for _ in range(8):
+            for _ in range(_max_episode_steps("FrankaKitchen-v1")):
                 action = env0.action_space.sample()
                 obs0, reward0, terminated0, truncated0, info0 = env0.step(
                     action
@@ -1205,8 +1397,8 @@ class _GymnasiumRoboticsKitchenEnvPoolTest(absltest.TestCase):
                 _assert_goal_obs_equal(
                     obs0,
                     _first_env_obs(cast(Any, obs1)),
-                    atol=1e-4,
-                    rtol=1e-4,
+                    atol=obs_atol,
+                    rtol=obs_rtol,
                 )
                 _assert_scalar_allclose(
                     reward0,

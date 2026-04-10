@@ -76,7 +76,7 @@ class PusherEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   int id_tips_arm_, id_object_, id_goal_;
   mjtNum ctrl_cost_weight_, dist_cost_weight_, near_cost_weight_;
   mjtNum cylinder_dist_min_;
-  bool reward_after_step_, weighted_reward_info_;
+  bool reward_after_step_, weighted_reward_info_, gymnasium_v5_render_camera_;
   std::uniform_real_distribution<> dist_qpos_x_, dist_qpos_y_, dist_qvel_;
 
  public:
@@ -102,6 +102,8 @@ class PusherEnvBase : public Env<EnvSpecT>, public MujocoEnv {
         cylinder_dist_min_(spec.config["cylinder_dist_min"_]),
         reward_after_step_(spec.config["reward_after_step"_]),
         weighted_reward_info_(spec.config["weighted_reward_info"_]),
+        gymnasium_v5_render_camera_(spec.config["xml_file"_] ==
+                                    std::string("pusher_v5.xml")),
         dist_qpos_x_(spec.config["cylinder_x_min"_],
                      spec.config["cylinder_x_max"_]),
         dist_qpos_y_(spec.config["cylinder_y_min"_],
@@ -132,6 +134,15 @@ class PusherEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     std::memcpy(qpos0_, data_->qpos, sizeof(mjtNum) * model_->nq);
     std::memcpy(qvel0_, data_->qvel, sizeof(mjtNum) * model_->nv);
 #endif
+  }
+
+  bool RenderCamera(mjvCamera* camera) override {
+    if (!gymnasium_v5_render_camera_) {
+      return false;
+    }
+    camera->trackbodyid = -1;
+    camera->distance = 4.0;
+    return true;
   }
 
   bool IsDone() override { return done_; }

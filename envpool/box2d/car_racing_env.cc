@@ -36,9 +36,9 @@ void CarRacingFrictionDetector::Contact(b2Contact* contact, bool begin) {
   Wheel* obj = nullptr;
 
   auto* u1 = reinterpret_cast<UserData*>(  // NOLINT
-      contact->GetFixtureA()->GetBody()->GetUserData().pointer);
+      contact->GetFixtureA()->GetBody()->GetUserData());
   auto* u2 = reinterpret_cast<UserData*>(  // NOLINT
-      contact->GetFixtureB()->GetBody()->GetUserData().pointer);
+      contact->GetFixtureB()->GetBody()->GetUserData());
 
   if (u1 == nullptr || u2 == nullptr) {
     return;
@@ -95,6 +95,78 @@ CarRacingBox2dEnv::CarRacingBox2dEnv(int max_episode_steps,
 
 std::pair<int, int> CarRacingBox2dEnv::RenderSize(int width, int height) const {
   return {width > 0 ? width : 600, height > 0 ? height : 400};
+}
+
+std::array<float, 7> CarRacingBox2dEnv::BodyState(const b2Body* body) const {
+  const auto pos = body->GetPosition();
+  const auto vel = body->GetLinearVelocity();
+  return {pos.x,
+          pos.y,
+          body->GetAngle(),
+          vel.x,
+          vel.y,
+          body->GetAngularVelocity(),
+          body->IsAwake() ? 1.0f : 0.0f};
+}
+
+std::vector<float> CarRacingBox2dEnv::TrackState() const {
+  std::vector<float> data;
+  data.reserve(track_.size() * 4);
+  for (const auto& segment : track_) {
+    data.insert(data.end(), segment.begin(), segment.end());
+  }
+  return data;
+}
+
+std::vector<float> CarRacingBox2dEnv::RoadPolyState() const {
+  std::vector<float> data;
+  data.reserve(roads_poly_.size() * 4 * 2);
+  for (const auto& [poly, color] : roads_poly_) {
+    (void)color;
+    for (const auto& vertex : poly) {
+      data.emplace_back(vertex.x);
+      data.emplace_back(vertex.y);
+    }
+  }
+  return data;
+}
+
+std::vector<float> CarRacingBox2dEnv::RoadColorState() const {
+  std::vector<float> data;
+  data.reserve(roads_poly_.size() * 3);
+  for (const auto& [poly, color] : roads_poly_) {
+    (void)poly;
+    // cv::Scalar stores BGR, while Gymnasium's pygame renderer expects RGB.
+    data.emplace_back(static_cast<float>(color[2]));
+    data.emplace_back(static_cast<float>(color[1]));
+    data.emplace_back(static_cast<float>(color[0]));
+  }
+  return data;
+}
+
+std::array<float, 35> CarRacingBox2dEnv::CarBodyStates() const {
+  std::array<float, 35> data;
+  auto hull_state = BodyState(car_->hull_);
+  std::copy(hull_state.begin(), hull_state.end(), data.begin());
+  for (int i = 0; i < 4; ++i) {
+    auto wheel_state = BodyState(car_->wheels_[i]->body);
+    std::copy(wheel_state.begin(), wheel_state.end(),
+              data.begin() + (i + 1) * wheel_state.size());
+  }
+  return data;
+}
+
+std::array<float, 20> CarRacingBox2dEnv::CarWheelStates() const {
+  std::array<float, 20> data;
+  for (int i = 0; i < 4; ++i) {
+    auto* wheel = car_->wheels_[i];
+    data[i * 5 + 0] = wheel->gas;
+    data[i * 5 + 1] = wheel->brake;
+    data[i * 5 + 2] = wheel->steer;
+    data[i * 5 + 3] = wheel->phase;
+    data[i * 5 + 4] = wheel->omega;
+  }
+  return data;
 }
 
 bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
@@ -285,8 +357,7 @@ bool CarRacingBox2dEnv::CreateTrack(std::mt19937* gen) {
     t->body = world_->CreateBody(&bd);
     t->body->CreateFixture(&fd_tile_);
 
-    // t->body->SetUserData(t); // recently removed from 2.4.1
-    t->body->GetUserData().pointer = reinterpret_cast<uintptr_t>(t);
+    t->body->SetUserData(t);
 
     float c = 2.55f * static_cast<float>(i % 3);
     t->road_color = {kRoadColor[0] + c, kRoadColor[1] + c, kRoadColor[2] + c};

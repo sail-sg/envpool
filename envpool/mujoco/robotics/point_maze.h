@@ -68,6 +68,8 @@ class PointMazeEnvFns {
                     "info:distance"_.Bind(Spec<mjtNum>({-1}, {0.0, inf})),
                     "info:qpos0"_.Bind(Spec<mjtNum>({2})),
                     "info:qvel0"_.Bind(Spec<mjtNum>({2})),
+                    "info:qacc0"_.Bind(Spec<mjtNum>({2})),
+                    "info:qacc_warmstart0"_.Bind(Spec<mjtNum>({2})),
                     "info:goal0"_.Bind(Spec<mjtNum>({2})));
 #else
     return MakeDict("obs:observation"_.Bind(StackSpec(
@@ -531,6 +533,9 @@ class PointMazeEnvBase : public Env<EnvSpecT>, public MujocoRobotEnv {
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.data(), qpos0_.size());
     state["info:qvel0"_].Assign(qvel0_.data(), qvel0_.size());
+    state["info:qacc0"_].Assign(qacc0_.data(), qacc0_.size());
+    state["info:qacc_warmstart0"_].Assign(qacc_warmstart0_.data(),
+                                          qacc_warmstart0_.size());
     state["info:goal0"_].Assign(goal_.data(), goal_.size());
 #endif
     state["reward"_] = static_cast<float>(reward);

@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 from absl.testing import absltest
@@ -23,6 +23,11 @@ from absl.testing import absltest
 import envpool.minigrid.registration  # noqa: F401
 from envpool.minigrid.babyai_test_utils import babyai_task_ids
 from envpool.registration import make_gym
+
+
+def _max_debug_steps(env: Any, num_envs: int) -> int:
+    states = cast(Any, env)._debug_states(np.arange(num_envs, dtype=np.int32))
+    return max(int(state.max_steps) for state in states)
 
 
 class BabyAIEnvPoolDeterministicTest(absltest.TestCase):
@@ -53,7 +58,7 @@ class BabyAIEnvPoolDeterministicTest(absltest.TestCase):
         self,
         task_id: str,
         num_envs: int = 4,
-        total: int = 64,
+        total: int | None = None,
         action_seed: int = 1,
         **kwargs: Any,
     ) -> None:
@@ -66,11 +71,23 @@ class BabyAIEnvPoolDeterministicTest(absltest.TestCase):
                 self._obs_from_reset(env0.reset()),
                 self._obs_from_reset(env1.reset()),
             )
+            if total is None:
+                total = _max_debug_steps(env0, num_envs)
             for _ in range(total):
                 action = np.array([act_space.sample() for _ in range(num_envs)])
-                self._assert_obs_equal(
-                    env0.step(action)[0],
-                    env1.step(action)[0],
+                obs0, rew0, term0, trunc0, info0 = env0.step(action)
+                obs1, rew1, term1, trunc1, info1 = env1.step(action)
+                self._assert_obs_equal(obs0, obs1)
+                np.testing.assert_allclose(rew0, rew1)
+                np.testing.assert_array_equal(term0, term1)
+                np.testing.assert_array_equal(trunc0, trunc1)
+                np.testing.assert_array_equal(
+                    info0["elapsed_step"],
+                    info1["elapsed_step"],
+                )
+                np.testing.assert_array_equal(
+                    info0["agent_pos"],
+                    info1["agent_pos"],
                 )
         finally:
             env0.close()
@@ -80,7 +97,7 @@ class BabyAIEnvPoolDeterministicTest(absltest.TestCase):
         self,
         task_id: str,
         num_envs: int = 4,
-        total: int = 32,
+        total: int | None = None,
         action_seed: int = 1,
         **kwargs: Any,
     ) -> None:
@@ -91,15 +108,23 @@ class BabyAIEnvPoolDeterministicTest(absltest.TestCase):
         try:
             obs0 = self._obs_from_reset(env0.reset())
             obs1 = self._obs_from_reset(env1.reset())
+            if total is None:
+                total = _max_debug_steps(env0, num_envs)
             differs = any(
                 not np.array_equal(obs0[key], obs1[key]) for key in obs0
             )
             for _ in range(total):
                 action = np.array([act_space.sample() for _ in range(num_envs)])
-                obs0 = env0.step(action)[0]
-                obs1 = env1.step(action)[0]
-                differs = differs or any(
-                    not np.array_equal(obs0[key], obs1[key]) for key in obs0
+                obs0, rew0, term0, trunc0, _ = env0.step(action)
+                obs1, rew1, term1, trunc1, _ = env1.step(action)
+                differs = (
+                    differs
+                    or any(
+                        not np.array_equal(obs0[key], obs1[key]) for key in obs0
+                    )
+                    or not np.allclose(rew0, rew1)
+                    or not np.array_equal(term0, term1)
+                    or not np.array_equal(trunc0, trunc1)
                 )
                 if differs:
                     break

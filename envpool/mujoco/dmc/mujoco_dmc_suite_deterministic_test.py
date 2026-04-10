@@ -29,6 +29,7 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
         obs_keys: list[str],
         blacklist: list[str] | None = None,
         num_envs: int = 4,
+        num_steps: int = 1000,
     ) -> None:
         domain_name = "".join([
             g[:1].upper() + g[1:] for g in domain.split("_")
@@ -40,31 +41,64 @@ class _MujocoDmcDeterministicTest(absltest.TestCase):
         env1 = make_dm(task_id, num_envs=num_envs, seed=0)
         env2 = make_dm(task_id, num_envs=num_envs, seed=1)
         act_spec = env0.action_spec()
-        for t in range(3000):
-            action = np.array([
-                np.random.uniform(
-                    low=act_spec.minimum,
-                    high=act_spec.maximum,
-                    size=act_spec.shape,
-                )
-                for _ in range(num_envs)
-            ])
-            ts0 = env0.step(action)
-            obs0 = ts0.observation
-            obs1 = env1.step(action).observation
-            obs2 = env2.step(action).observation
+        try:
+            ts0 = env0.reset()
+            ts1 = env1.reset()
+            ts2 = env2.reset()
             for k in obs_keys:
-                o0 = getattr(obs0, k)
-                o1 = getattr(obs1, k)
-                o2 = getattr(obs2, k)
-                np.testing.assert_allclose(o0, o1)
-                if blacklist and k in blacklist:
-                    continue
-                if (
-                    np.abs(o0).sum() > 0
-                    and ts0.step_type[0] != dm_env.StepType.FIRST
-                ):
-                    self.assertFalse(np.allclose(o0, o2), (t, k, o0, o2))
+                np.testing.assert_allclose(
+                    getattr(ts0.observation, k),
+                    getattr(ts1.observation, k),
+                )
+            seed1_is_allclose = all(
+                np.allclose(
+                    getattr(ts0.observation, k),
+                    getattr(ts2.observation, k),
+                )
+                for k in obs_keys
+                if not (blacklist and k in blacklist)
+            )
+            last_step = -1
+            for _ in range(num_steps):
+                last_step += 1
+                action = np.array([
+                    np.random.uniform(
+                        low=act_spec.minimum,
+                        high=act_spec.maximum,
+                        size=act_spec.shape,
+                    )
+                    for _ in range(num_envs)
+                ])
+                ts0 = env0.step(action)
+                ts1 = env1.step(action)
+                ts2 = env2.step(action)
+                np.testing.assert_array_equal(ts0.step_type, ts1.step_type)
+                np.testing.assert_allclose(ts0.reward, ts1.reward)
+                np.testing.assert_allclose(ts0.discount, ts1.discount)
+                obs0 = ts0.observation
+                obs1 = ts1.observation
+                obs2 = ts2.observation
+                comparable_obs = False
+                for k in obs_keys:
+                    o0 = getattr(obs0, k)
+                    o1 = getattr(obs1, k)
+                    o2 = getattr(obs2, k)
+                    np.testing.assert_allclose(o0, o1)
+                    if blacklist and k in blacklist:
+                        continue
+                    if (
+                        np.abs(o0).sum() > 0
+                        and ts0.step_type[0] != dm_env.StepType.FIRST
+                    ):
+                        comparable_obs = True
+                        seed1_is_allclose &= np.allclose(o0, o2)
+                if comparable_obs:
+                    seed1_is_allclose &= np.allclose(ts0.reward, ts2.reward)
+            self.assertFalse(seed1_is_allclose, (domain, task, last_step))
+        finally:
+            env0.close()
+            env1.close()
+            env2.close()
 
     def test_acrobot(self) -> None:
         obs_keys = ["orientations", "velocity"]

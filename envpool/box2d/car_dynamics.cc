@@ -103,8 +103,7 @@ Car::Car(std::shared_ptr<b2World> world, float init_angle, float init_x,
     rjd.upperAngle = +0.4;
     rjd.type = b2JointType::e_revoluteJoint;
     w->joint = static_cast<b2RevoluteJoint*>(world_->CreateJoint(&rjd));
-    // w->body->SetUserData(&w);
-    w->body->GetUserData().pointer = reinterpret_cast<uintptr_t>(w);
+    w->body->SetUserData(w);
     wheels_.push_back(w);
   }
 }
@@ -268,7 +267,7 @@ void Car::Draw(const cv::Mat& surf, float zoom,
       cv::fillPoly(surf, poly, color);
 
       auto* user_data =
-          reinterpret_cast<UserData*>(body->GetUserData().pointer);  // NOLINT
+          reinterpret_cast<UserData*>(body->GetUserData());  // NOLINT
       if (user_data == nullptr || user_data->type != WHEEL_TYPE) {
         continue;
       }

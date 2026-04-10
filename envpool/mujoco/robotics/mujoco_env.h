@@ -57,6 +57,8 @@ class MujocoRobotEnv : public RenderableEnv {
 #ifdef ENVPOOL_TEST
   std::vector<mjtNum> qpos0_;
   std::vector<mjtNum> qvel0_;
+  std::vector<mjtNum> qacc0_;
+  std::vector<mjtNum> qacc_warmstart0_;
 #endif
   std::unique_ptr<envpool::mujoco::OffscreenRenderer> renderer_;
   envpool::mujoco::FrameStackBuffer frame_stack_buffer_;
@@ -88,7 +90,9 @@ class MujocoRobotEnv : public RenderableEnv {
 #ifdef ENVPOOL_TEST
         ,
         qpos0_(model_->nq),
-        qvel0_(model_->nv)
+        qvel0_(model_->nv),
+        qacc0_(model_->nv),
+        qacc_warmstart0_(model_->nv)
 #endif
         ,
         frame_stack_buffer_(frame_stack),
@@ -206,6 +210,19 @@ class MujocoRobotEnv : public RenderableEnv {
     return model;
   }
 
+  static mjtNum MedianGeomPosition(const mjData* data, int ngeom, int axis) {
+    std::vector<mjtNum> positions(ngeom);
+    for (int geom_id = 0; geom_id < ngeom; ++geom_id) {
+      positions[geom_id] = data->geom_xpos[geom_id * 3 + axis];
+    }
+    std::sort(positions.begin(), positions.end());
+    int mid = ngeom / 2;
+    if (ngeom % 2 == 0) {
+      return (positions[mid - 1] + positions[mid]) * static_cast<mjtNum>(0.5);
+    }
+    return positions[mid];
+  }
+
   virtual void EnvSetup() {}
   virtual void StepCallback() {}
   virtual void RenderCallback() {}
@@ -223,13 +240,7 @@ class MujocoRobotEnv : public RenderableEnv {
       return;
     }
     for (int axis = 0; axis < 3; ++axis) {
-      std::vector<mjtNum> positions(model_->ngeom);
-      for (int geom_id = 0; geom_id < model_->ngeom; ++geom_id) {
-        positions[geom_id] = data_->geom_xpos[geom_id * 3 + axis];
-      }
-      auto mid = positions.begin() + positions.size() / 2;
-      std::nth_element(positions.begin(), mid, positions.end());
-      camera->lookat[axis] = *mid;
+      camera->lookat[axis] = MedianGeomPosition(data_, model_->ngeom, axis);
     }
   }
 
@@ -240,6 +251,7 @@ class MujocoRobotEnv : public RenderableEnv {
   }
 
   void ResetToInitialState() {
+    has_cached_render_ = false;
     mj_resetData(model_, data_);
     data_->time = initial_time_;
     std::memcpy(data_->qpos, initial_qpos_.data(), sizeof(mjtNum) * model_->nq);
@@ -253,6 +265,7 @@ class MujocoRobotEnv : public RenderableEnv {
   double Dt() const { return model_->opt.timestep * frame_skip_; }
 
   void DoSimulation() {
+    has_cached_render_ = false;
     for (int i = 0; i < frame_skip_; ++i) {
       mj_step(model_, data_);
     }
@@ -262,6 +275,9 @@ class MujocoRobotEnv : public RenderableEnv {
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.data(), data_->qpos, sizeof(mjtNum) * model_->nq);
     std::memcpy(qvel0_.data(), data_->qvel, sizeof(mjtNum) * model_->nv);
+    std::memcpy(qacc0_.data(), data_->qacc, sizeof(mjtNum) * model_->nv);
+    std::memcpy(qacc_warmstart0_.data(), data_->qacc_warmstart,
+                sizeof(mjtNum) * model_->nv);
 #endif
   }
 

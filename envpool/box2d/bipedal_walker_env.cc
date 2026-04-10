@@ -83,6 +83,31 @@ std::pair<int, int> BipedalWalkerBox2dEnv::RenderSize(int width,
           height > 0 ? height : static_cast<int>(kViewportH)};
 }
 
+std::array<float, 7> BipedalWalkerBox2dEnv::BodyState(
+    const b2Body* body) const {
+  const auto pos = body->GetPosition();
+  const auto vel = body->GetLinearVelocity();
+  return {pos.x,
+          pos.y,
+          body->GetAngle(),
+          vel.x,
+          vel.y,
+          body->GetAngularVelocity(),
+          body->IsAwake() ? 1.0f : 0.0f};
+}
+
+std::vector<float> BipedalWalkerBox2dEnv::CloudPolyState() const {
+  std::vector<float> data;
+  data.reserve(cloud_poly_.size() * 5 * 2);
+  for (const auto& cloud : cloud_poly_) {
+    for (const auto& point : cloud.points) {
+      data.emplace_back(point.x);
+      data.emplace_back(point.y);
+    }
+  }
+  return data;
+}
+
 void BipedalWalkerBox2dEnv::CreateTerrain(std::vector<b2Vec2> poly) {
   b2BodyDef bd;
   bd.type = b2_staticBody;
@@ -200,8 +225,8 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
       bd.type = b2_staticBody;
 
       b2EdgeShape shape;
-      shape.SetTwoSided(Vec2(terrain_x[i], terrain_y[i]),
-                        Vec2(terrain_x[i + 1], terrain_y[i + 1]));
+      shape.Set(Vec2(terrain_x[i], terrain_y[i]),
+                Vec2(terrain_x[i + 1], terrain_y[i + 1]));
 
       b2FixtureDef fd;
       fd.shape = &shape;
@@ -256,6 +281,7 @@ void BipedalWalkerBox2dEnv::ResetBox2d(std::mt19937* gen) {
     hull_ = world_->CreateBody(&bd);
     hull_->CreateFixture(&fd);
     b2Vec2 force = Vec2(RandUniform(-kInitialRandom, kInitialRandom)(*gen), 0);
+    initial_force_ = force.x;
     hull_->ApplyForceToCenter(force, true);
   }
 

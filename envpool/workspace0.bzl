@@ -552,12 +552,15 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "box2d",
-        sha256 = "85b9b104d256c985e6e244b4227d447897fac429071cc114e5cc819dae848852",
-        strip_prefix = "box2d-2.4.2",
+        sha256 = "5471722f290b7285dcbdee9bef61d1cb424e5a610fa6e19e9ddeb854c7e3b937",
+        strip_prefix = "pybox2d-2.3.10",
         urls = [
-            "https://github.com/erincatto/box2d/archive/refs/tags/v2.4.2.tar.gz",
+            "https://github.com/pybox2d/pybox2d/archive/refs/tags/2.3.10.tar.gz",
         ],
         build_file = "//third_party/box2d:box2d.BUILD",
+        patch_cmds = [
+            "sed -i.bak 's/^#define USE_EXCEPTIONS$/\\/\\/ #define USE_EXCEPTIONS/' Box2D/Common/b2Settings.h",
+        ],
     )
 
     # Atari/VizDoom pretrained weight for testing pipeline

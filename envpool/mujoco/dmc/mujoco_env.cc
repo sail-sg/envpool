@@ -124,6 +124,7 @@ MujocoEnv::~MujocoEnv() {
 // rl control Environment
 // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/rl/control.py#L77
 void MujocoEnv::ControlReset() {
+  has_cached_render_ = false;
   elapsed_step_ = 0;
   discount_ = 1.0;
   done_ = false;
@@ -136,6 +137,7 @@ void MujocoEnv::ControlReset() {
 
 // https://github.com/deepmind/dm_control/blob/1.0.2/dm_control/rl/control.py#L94
 void MujocoEnv::ControlStep(const mjtNum* action) {
+  has_cached_render_ = false;
   TaskBeforeStep(action);
   PhysicsStep(n_sub_steps_, action);
   TaskAfterStep();

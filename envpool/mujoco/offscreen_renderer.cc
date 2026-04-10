@@ -46,12 +46,29 @@
 
 namespace envpool::mujoco {
 
+namespace {
+
+mjtNum MedianGeomPosition(const mjData* data, int ngeom, int axis) {
+  std::vector<mjtNum> positions(ngeom);
+  for (int geom_id = 0; geom_id < ngeom; ++geom_id) {
+    positions[geom_id] = data->geom_xpos[geom_id * 3 + axis];
+  }
+  std::sort(positions.begin(), positions.end());
+  int mid = ngeom / 2;
+  if (ngeom % 2 == 0) {
+    return (positions[mid - 1] + positions[mid]) * static_cast<mjtNum>(0.5);
+  }
+  return positions[mid];
+}
+
+}  // namespace
+
 #if defined(ENVPOOL_HAS_CGL)
 
 class CglContext final : public GlContext {
  public:
   CglContext() {
-    const std::array<CGLPixelFormatAttribute, 12> attribs = {
+    const std::array<CGLPixelFormatAttribute, 13> attribs = {
         kCGLPFAOpenGLProfile,
         static_cast<CGLPixelFormatAttribute>(kCGLOGLPVersion_Legacy),
         kCGLPFAColorSize,
@@ -63,7 +80,8 @@ class CglContext final : public GlContext {
         kCGLPFAStencilSize,
         static_cast<CGLPixelFormatAttribute>(8),
         kCGLPFAAllowOfflineRenderers,
-        static_cast<CGLPixelFormatAttribute>(0),
+        static_cast<CGLPixelFormatAttribute>(0),  // value
+        static_cast<CGLPixelFormatAttribute>(0),  // terminator
     };
     GLint npix = 0;
     CGLError err = CGLChoosePixelFormat(attribs.data(), &pixel_format_, &npix);
@@ -80,6 +98,9 @@ class CglContext final : public GlContext {
 
   ~CglContext() override {
     if (context_ != nullptr) {
+      if (locked_) {
+        CGLUnlockContext(context_);
+      }
       CGLSetCurrentContext(nullptr);
       CGLReleaseContext(context_);
     }
@@ -93,9 +114,25 @@ class CglContext final : public GlContext {
     if (err != kCGLNoError) {
       throw std::runtime_error("failed to make CGL context current");
     }
+    // Match mujoco.cgl.GLContext: software/offline CGL renderers rely on the
+    // context being locked while it is current.
+    if (!locked_) {
+      err = CGLLockContext(context_);
+      if (err != kCGLNoError) {
+        throw std::runtime_error("failed to lock CGL context");
+      }
+      locked_ = true;
+    }
   }
 
   void ClearCurrent() override {
+    if (locked_) {
+      CGLError err = CGLUnlockContext(context_);
+      if (err != kCGLNoError) {
+        throw std::runtime_error("failed to unlock CGL context");
+      }
+      locked_ = false;
+    }
     CGLError err = CGLSetCurrentContext(nullptr);
     if (err != kCGLNoError) {
       throw std::runtime_error("failed to clear CGL context");
@@ -105,6 +142,7 @@ class CglContext final : public GlContext {
  private:
   CGLPixelFormatObj pixel_format_{nullptr};
   CGLContextObj context_{nullptr};
+  bool locked_{false};
 };
 
 #elif defined(ENVPOOL_HAS_WGL)
@@ -421,9 +459,10 @@ class EglContext final : public GlContext {
 
 std::shared_ptr<GlContext> CreateGlContext() {
 #if defined(ENVPOOL_HAS_CGL)
-  thread_local std::shared_ptr<GlContext> context =
-      std::make_shared<CglContext>();
-  return context;
+  // Match Gymnasium's CGL lifecycle: create a context per renderer/viewer.
+  // Reusing one CGL context across different MuJoCo models can leave renderer
+  // state behind on macOS software/offline renderers.
+  return std::make_shared<CglContext>();
 #elif defined(ENVPOOL_HAS_WGL)
   if (wglGetCurrentContext() != nullptr && wglGetCurrentDC() != nullptr) {
     // Borrowed WGL handles become invalid if another library later calls
@@ -448,6 +487,7 @@ OffscreenRenderer::OffscreenRenderer(CameraPolicy camera_policy)
   mjv_defaultScene(&scene_);
   mjv_defaultCamera(&camera_);
   mjv_defaultOption(&option_);
+  mjv_defaultPerturb(&perturb_);
   mjr_defaultContext(&context_);
   camera_.fixedcamid = -1;
 }
@@ -459,6 +499,7 @@ OffscreenRenderer::~OffscreenRenderer() {
   gl_context_->MakeCurrent();
   mjr_freeContext(&context_);
   mjv_freeScene(&scene_);
+  gl_context_->ClearCurrent();
 }
 
 void OffscreenRenderer::Initialize(const mjModel* model) {
@@ -493,13 +534,7 @@ void OffscreenRenderer::UpdateCamera(const mjModel* model, const mjData* data,
     camera_.fixedcamid = -1;
     if (!free_camera_initialized_ && model->ngeom > 0) {
       for (int axis = 0; axis < 3; ++axis) {
-        std::vector<mjtNum> positions(model->ngeom);
-        for (int geom_id = 0; geom_id < model->ngeom; ++geom_id) {
-          positions[geom_id] = data->geom_xpos[geom_id * 3 + axis];
-        }
-        auto mid = positions.begin() + positions.size() / 2;
-        std::nth_element(positions.begin(), mid, positions.end());
-        camera_.lookat[axis] = *mid;
+        camera_.lookat[axis] = MedianGeomPosition(data, model->ngeom, axis);
       }
       camera_.distance = model->stat.extent;
       free_camera_initialized_ = true;
@@ -524,14 +559,15 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
     Initialize(model);
   }
   gl_context_->MakeCurrent();
-  if (context_.offWidth < width || context_.offHeight < height) {
+  if (context_.offWidth != width || context_.offHeight != height) {
     mjr_resizeOffscreen(width, height, &context_);
   }
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
   UpdateCamera(model, data, camera_id, camera_override);
 
   mjrRect viewport = {0, 0, width, height};
-  mjv_updateScene(model, data, &option_, nullptr, &camera_, mjCAT_ALL, &scene_);
+  mjv_updateScene(model, data, &option_, &perturb_, &camera_, mjCAT_ALL,
+                  &scene_);
   mjr_render(viewport, &scene_, &context_);
 
   std::size_t frame_bytes =

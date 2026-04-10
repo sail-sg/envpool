@@ -75,4 +75,10 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python scripts/prune_actions_caches.py --repo "${{ github.repository }}" --prefix "bazel-clang-tidy-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-"
+        run: >-
+          python scripts/prune_actions_caches.py
+          --repo "${{ github.repository }}"
+          --prefix "bazel-clang-tidy-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-"
+          --group-by-branch
+          --delete-missing-branches
+          --keep 1

@@ -73,6 +73,22 @@ py_library(
 )
 
 py_test(
+    name = "box2d_align_test",
+    size = "enormous",
+    srcs = ["box2d_align_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":box2d",
+        ":box2d_registration",
+        requirement("absl-py"),
+        requirement("box2d"),
+        requirement("gymnasium"),
+        requirement("numpy"),
+        requirement("pygame"),
+    ],
+)
+
+py_test(
     name = "box2d_deterministic_test",
     size = "enormous",
     srcs = ["box2d_deterministic_test.py"],

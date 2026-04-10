@@ -58,6 +58,8 @@ class AdroitEnvFns {
         "info:distance"_.Bind(Spec<mjtNum>({-1}, {0.0, inf})),
         "info:qpos0"_.Bind(Spec<mjtNum>({conf["qpos_dim"_]})),
         "info:qvel0"_.Bind(Spec<mjtNum>({conf["qvel_dim"_]})),
+        "info:qacc0"_.Bind(Spec<mjtNum>({conf["qvel_dim"_]})),
+        "info:qacc_warmstart0"_.Bind(Spec<mjtNum>({conf["qvel_dim"_]})),
         "info:extra0"_.Bind(Spec<mjtNum>({conf["reset_dim"_]})));
 #else
     return MakeDict(
@@ -665,6 +667,9 @@ class AdroitEnvBase : public Env<EnvSpecT>, public MujocoRobotEnv {
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.data(), qpos0_.size());
     state["info:qvel0"_].Assign(qvel0_.data(), qvel0_.size());
+    state["info:qacc0"_].Assign(qacc0_.data(), qacc0_.size());
+    state["info:qacc_warmstart0"_].Assign(qacc_warmstart0_.data(),
+                                          qacc_warmstart0_.size());
     state["info:extra0"_].Assign(extra0_.data(), extra0_.size());
 #endif
     state["reward"_] = static_cast<float>(reward);
