@@ -17,6 +17,7 @@
 - [x] [Box2D](https://envpool.readthedocs.io/en/latest/env/box2d.html)
 - [x] [Procgen](https://envpool.readthedocs.io/en/latest/env/procgen.html)
 - [x] [Minigrid](https://envpool.readthedocs.io/en/latest/env/minigrid.html)
+- [x] [Highway](https://envpool.readthedocs.io/en/latest/env/highway.html)
 
 Here are EnvPool's several highlights:
 
