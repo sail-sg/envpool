@@ -18,7 +18,7 @@ jobs:
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-      BAZEL_CI_RESOURCE_OPTS: --jobs=HOST_CPUS-1 --local_cpu_resources=HOST_CPUS-1 --local_ram_resources=HOST_RAM*.5
+      BAZEL_CI_RESOURCE_OPTS: --local_ram_resources=HOST_RAM*.5
       MUJOCO_GL: egl
       EGL_PLATFORM: surfaceless
     steps:
@@ -128,7 +128,7 @@ jobs:
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-      BAZEL_CI_RESOURCE_OPTS: --jobs=HOST_CPUS-1 --local_cpu_resources=HOST_CPUS-1 --local_ram_resources=HOST_RAM*.5
+      BAZEL_CI_RESOURCE_OPTS: --local_ram_resources=HOST_RAM*.5
       MUJOCO_GL: egl
       EGL_PLATFORM: surfaceless
     steps:
