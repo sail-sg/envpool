@@ -438,9 +438,10 @@ class EglContext final : public GlContext {
 
 std::shared_ptr<GlContext> CreateGlContext() {
 #if defined(ENVPOOL_HAS_CGL)
-  thread_local std::shared_ptr<GlContext> context =
-      std::make_shared<CglContext>();
-  return context;
+  // Match Gymnasium's CGL lifecycle: create a context per renderer/viewer.
+  // Reusing one CGL context across different MuJoCo models can leave renderer
+  // state behind on macOS software/offline renderers.
+  return std::make_shared<CglContext>();
 #elif defined(ENVPOOL_HAS_WGL)
   if (wglGetCurrentContext() != nullptr && wglGetCurrentDC() != nullptr) {
     // Borrowed WGL handles become invalid if another library later calls
