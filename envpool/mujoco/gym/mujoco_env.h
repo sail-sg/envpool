@@ -124,6 +124,7 @@ class MujocoEnv : public RenderableEnv {
   }
 
   void MujocoReset() {
+    has_cached_render_ = false;
     mj_resetData(model_, data_);
     MujocoResetModel();
     mj_forward(model_, data_);
@@ -134,6 +135,7 @@ class MujocoEnv : public RenderableEnv {
   }
 
   void MujocoStep(const mjtNum* action) {
+    has_cached_render_ = false;
     for (int i = 0; i < model_->nu; ++i) {
       data_->ctrl[i] = action[i];
     }

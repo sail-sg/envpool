@@ -109,6 +109,7 @@ def _configure_macos_official_renderer() -> None:
                 8,
                 attrib.CGLPFAAllowOfflineRenderers,
                 0,
+                0,  # terminator
             )
             attribs = (ctypes.c_int * len(attrib_values))(*attrib_values)
             self._pixel_format = cgl.CGLPixelFormatObj()
@@ -193,9 +194,7 @@ def _official_viewer_debug(
     viewer = renderer.viewer
     if viewer is None:
         return "official viewer was not initialized"
-    diff = np.abs(
-        first_frame.astype(np.int16) - second_frame.astype(np.int16)
-    )
+    diff = np.abs(first_frame.astype(np.int16) - second_frame.astype(np.int16))
     return (
         "official render debug: "
         f"backend={getattr(viewer, 'backend', None)!r}, "

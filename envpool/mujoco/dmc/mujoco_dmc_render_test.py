@@ -108,6 +108,7 @@ def _configure_macos_dm_control_renderer() -> None:
                 8,
                 attrib.CGLPFAAllowOfflineRenderers,
                 0,
+                0,  # terminator
             )
             attribs = (ctypes.c_int * len(attrib_values))(*attrib_values)
             self._pixel_format = cgl.CGLPixelFormatObj()

@@ -68,7 +68,7 @@ mjtNum MedianGeomPosition(const mjData* data, int ngeom, int axis) {
 class CglContext final : public GlContext {
  public:
   CglContext() {
-    const std::array<CGLPixelFormatAttribute, 12> attribs = {
+    const std::array<CGLPixelFormatAttribute, 13> attribs = {
         kCGLPFAOpenGLProfile,
         static_cast<CGLPixelFormatAttribute>(kCGLOGLPVersion_Legacy),
         kCGLPFAColorSize,
@@ -80,7 +80,8 @@ class CglContext final : public GlContext {
         kCGLPFAStencilSize,
         static_cast<CGLPixelFormatAttribute>(8),
         kCGLPFAAllowOfflineRenderers,
-        static_cast<CGLPixelFormatAttribute>(0),
+        static_cast<CGLPixelFormatAttribute>(0),  // value
+        static_cast<CGLPixelFormatAttribute>(0),  // terminator
     };
     GLint npix = 0;
     CGLError err = CGLChoosePixelFormat(attribs.data(), &pixel_format_, &npix);
@@ -558,7 +559,7 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
     Initialize(model);
   }
   gl_context_->MakeCurrent();
-  if (context_.offWidth < width || context_.offHeight < height) {
+  if (context_.offWidth != width || context_.offHeight != height) {
     mjr_resizeOffscreen(width, height, &context_);
   }
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);

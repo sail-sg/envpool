@@ -251,6 +251,7 @@ class MujocoRobotEnv : public RenderableEnv {
   }
 
   void ResetToInitialState() {
+    has_cached_render_ = false;
     mj_resetData(model_, data_);
     data_->time = initial_time_;
     std::memcpy(data_->qpos, initial_qpos_.data(), sizeof(mjtNum) * model_->nq);
@@ -264,6 +265,7 @@ class MujocoRobotEnv : public RenderableEnv {
   double Dt() const { return model_->opt.timestep * frame_skip_; }
 
   void DoSimulation() {
+    has_cached_render_ = false;
     for (int i = 0; i < frame_skip_; ++i) {
       mj_step(model_, data_);
     }
