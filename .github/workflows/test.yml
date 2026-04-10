@@ -18,6 +18,7 @@ jobs:
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      BAZEL_CI_RESOURCE_OPTS: --jobs=HOST_CPUS-1 --local_cpu_resources=HOST_CPUS-1 --local_ram_resources=HOST_RAM*.5
       MUJOCO_GL: egl
       EGL_PLATFORM: surfaceless
     steps:
@@ -63,7 +64,7 @@ jobs:
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Coverage
         run: |
-          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" \
+          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
             BAZEL_TEST_TARGETS="//..." bazel-coverage
           mkdir -p coverage
           cp bazel-out/_coverage/_coverage_report.dat coverage/lcov.info
@@ -127,6 +128,7 @@ jobs:
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      BAZEL_CI_RESOURCE_OPTS: --jobs=HOST_CPUS-1 --local_cpu_resources=HOST_CPUS-1 --local_ram_resources=HOST_RAM*.5
       MUJOCO_GL: egl
       EGL_PLATFORM: surfaceless
     steps:
@@ -172,7 +174,7 @@ jobs:
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Test
         run: |
-          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" \
+          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
             BAZEL_TEST_TARGETS="//..." bazel-test
       - name: Save Bazel caches
         id: save-bazel-caches
