@@ -13,6 +13,7 @@
 # limitations under the License.
 """Tests for the batched MuJoCo render API."""
 
+import ctypes
 import os
 import platform
 from typing import Any, cast
@@ -48,12 +49,72 @@ def _configure_macos_official_renderer() -> None:
 
     from gymnasium.envs.mujoco import mujoco_rendering
 
+    class _CglContext:
+        def __init__(self, width: int, height: int):
+            del width, height
+            from mujoco.cgl import cgl
+
+            attrib = cgl.CGLPixelFormatAttribute
+            profile = cgl.CGLOpenGLProfile
+            attrib_values = (
+                attrib.CGLPFAOpenGLProfile,
+                profile.CGLOGLPVersion_Legacy,
+                attrib.CGLPFAColorSize,
+                24,
+                attrib.CGLPFAAlphaSize,
+                8,
+                attrib.CGLPFADepthSize,
+                24,
+                attrib.CGLPFAStencilSize,
+                8,
+                attrib.CGLPFAAllowOfflineRenderers,
+                0,
+            )
+            attribs = (ctypes.c_int * len(attrib_values))(*attrib_values)
+            self._pixel_format = cgl.CGLPixelFormatObj()
+            num_pixel_formats = cgl.GLint()
+            cgl.CGLChoosePixelFormat(
+                attribs,
+                ctypes.byref(self._pixel_format),
+                ctypes.byref(num_pixel_formats),
+            )
+            if not self._pixel_format or num_pixel_formats.value == 0:
+                raise RuntimeError("failed to create CGL pixel format")
+
+            self._context = cgl.CGLContextObj()
+            cgl.CGLCreateContext(
+                self._pixel_format,
+                0,
+                ctypes.byref(self._context),
+            )
+            if not self._context:
+                cgl.CGLReleasePixelFormat(self._pixel_format)
+                self._pixel_format = None
+                raise RuntimeError("failed to create CGL context")
+
+        def make_current(self) -> None:
+            from mujoco.cgl import cgl
+
+            cgl.CGLSetCurrentContext(self._context)
+
+        def free(self) -> None:
+            from mujoco.cgl import cgl
+
+            if self._context:
+                cgl.CGLSetCurrentContext(None)
+                cgl.CGLReleaseContext(self._context)
+                self._context = None
+            if self._pixel_format:
+                cgl.CGLReleasePixelFormat(self._pixel_format)
+                self._pixel_format = None
+
+        def __del__(self) -> None:
+            self.free()
+
     def _import_cgl(width: int, height: int) -> Any:
-        from mujoco.cgl import GLContext
+        return _CglContext(width, height)
 
-        return GLContext(width, height)
-
-    mujoco_rendering._ALL_RENDERERS.setdefault("cgl", _import_cgl)
+    mujoco_rendering._ALL_RENDERERS["cgl"] = _import_cgl
     os.environ.setdefault("MUJOCO_GL", "cgl")
 
 
