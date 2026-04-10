@@ -365,21 +365,16 @@ class _Box2dEnvPoolCorrectnessTest(absltest.TestCase):
         logging.info(
             f"{hardcore}, {np.mean(rewards):.6f} ± {np.std(rewards):.6f}"
         )
-        # the following number is from gym's 1000 episode mean reward
+        # These heuristic rollout baselines track the current Gymnasium/Box2D
+        # stack. BipedalWalker is sensitive to tiny long-horizon numerical
+        # drift under this controller, so keep this as a loose distribution
+        # sanity check; step-level alignment is covered in box2d_align_test.
         if hardcore:  # -59.219390 ± 25.209768
             self.assertTrue(abs(mean_reward + 59) < 10, (hardcore, mean_reward))
-        else:  # 145.318979 ± 126.231202 on box2d 2.4.2
-            if sys.platform in ("darwin", "win32") or _LINUX_ARM64:
-                # Gymnasium's current macOS and Windows Box2D stacks land
-                # below the historical Linux baseline for this heuristic
-                # policy, and Linux arm64 lands in the same range.
-                self.assertTrue(
-                    abs(mean_reward - 110) < 30, (hardcore, mean_reward)
-                )
-            else:
-                self.assertTrue(
-                    abs(mean_reward - 145) < 20, (hardcore, mean_reward)
-                )
+        else:  # 110.241196 ± 131.039104 on gymnasium 1.2.3 / box2d 2.3.10
+            self.assertTrue(
+                abs(mean_reward - 110) < 30, (hardcore, mean_reward)
+            )
 
     def render_bpw(self, info: dict) -> None:
         SCALE = 30.0
