@@ -59,6 +59,7 @@ class OffscreenRenderer {
   mjvScene scene_;
   mjvCamera camera_;
   mjvOption option_;
+  mjvPerturb perturb_;
   mjrContext context_;
   std::vector<unsigned char> scratch_;
   CameraPolicy camera_policy_;

@@ -97,6 +97,9 @@ class CglContext final : public GlContext {
 
   ~CglContext() override {
     if (context_ != nullptr) {
+      if (locked_) {
+        CGLUnlockContext(context_);
+      }
       CGLSetCurrentContext(nullptr);
       CGLReleaseContext(context_);
     }
@@ -110,9 +113,25 @@ class CglContext final : public GlContext {
     if (err != kCGLNoError) {
       throw std::runtime_error("failed to make CGL context current");
     }
+    // Match mujoco.cgl.GLContext: software/offline CGL renderers rely on the
+    // context being locked while it is current.
+    if (!locked_) {
+      err = CGLLockContext(context_);
+      if (err != kCGLNoError) {
+        throw std::runtime_error("failed to lock CGL context");
+      }
+      locked_ = true;
+    }
   }
 
   void ClearCurrent() override {
+    if (locked_) {
+      CGLError err = CGLUnlockContext(context_);
+      if (err != kCGLNoError) {
+        throw std::runtime_error("failed to unlock CGL context");
+      }
+      locked_ = false;
+    }
     CGLError err = CGLSetCurrentContext(nullptr);
     if (err != kCGLNoError) {
       throw std::runtime_error("failed to clear CGL context");
@@ -122,6 +141,7 @@ class CglContext final : public GlContext {
  private:
   CGLPixelFormatObj pixel_format_{nullptr};
   CGLContextObj context_{nullptr};
+  bool locked_{false};
 };
 
 #elif defined(ENVPOOL_HAS_WGL)
@@ -466,6 +486,7 @@ OffscreenRenderer::OffscreenRenderer(CameraPolicy camera_policy)
   mjv_defaultScene(&scene_);
   mjv_defaultCamera(&camera_);
   mjv_defaultOption(&option_);
+  mjv_defaultPerturb(&perturb_);
   mjr_defaultContext(&context_);
   camera_.fixedcamid = -1;
 }
@@ -544,7 +565,8 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
   UpdateCamera(model, data, camera_id, camera_override);
 
   mjrRect viewport = {0, 0, width, height};
-  mjv_updateScene(model, data, &option_, nullptr, &camera_, mjCAT_ALL, &scene_);
+  mjv_updateScene(model, data, &option_, &perturb_, &camera_, mjCAT_ALL,
+                  &scene_);
   mjr_render(viewport, &scene_, &context_);
 
   std::size_t frame_bytes =

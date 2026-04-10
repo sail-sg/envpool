@@ -16,16 +16,56 @@
 import ctypes
 import os
 import platform
+import subprocess
+import sys
 from typing import Any, cast
 
-import gymnasium as gym
-import mujoco
 import numpy as np
 from absl.testing import absltest
 
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
 preload_windows_gl_dlls(strict=True)
+
+
+def _configure_linux_mujoco_gl() -> None:
+    if platform.system() != "Linux":
+        return
+    if os.environ.get("MUJOCO_GL"):
+        if os.environ["MUJOCO_GL"] == "egl":
+            os.environ.setdefault("EGL_PLATFORM", "surfaceless")
+        return
+    for backend in ("egl", "osmesa"):
+        env = dict(os.environ)
+        env["MUJOCO_GL"] = backend
+        if backend == "egl":
+            env.setdefault("EGL_PLATFORM", "surfaceless")
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import mujoco; "
+                    "ctx = mujoco.GLContext(1, 1); "
+                    "ctx.make_current(); "
+                    "ctx.free()"
+                ),
+            ],
+            env=env,
+            check=False,
+            capture_output=True,
+        )
+        if result.returncode == 0:
+            os.environ["MUJOCO_GL"] = backend
+            if backend == "egl":
+                os.environ.setdefault("EGL_PLATFORM", "surfaceless")
+            return
+
+
+_configure_linux_mujoco_gl()
+
+import gymnasium as gym
+import mujoco
 
 import envpool.mujoco.gym.registration as reg
 from envpool.registration import make_gym
@@ -91,16 +131,25 @@ def _configure_macos_official_renderer() -> None:
                 cgl.CGLReleasePixelFormat(self._pixel_format)
                 self._pixel_format = None
                 raise RuntimeError("failed to create CGL context")
+            self._locked = False
 
         def make_current(self) -> None:
             from mujoco.cgl import cgl
 
             cgl.CGLSetCurrentContext(self._context)
+            # Mirror mujoco.cgl.GLContext so the official renderer uses the
+            # same CGL lifecycle as EnvPool's native renderer.
+            if not self._locked:
+                cgl.CGLLockContext(self._context)
+                self._locked = True
 
         def free(self) -> None:
             from mujoco.cgl import cgl
 
             if self._context:
+                if self._locked:
+                    cgl.CGLUnlockContext(self._context)
+                    self._locked = False
                 cgl.CGLSetCurrentContext(None)
                 cgl.CGLReleaseContext(self._context)
                 self._context = None
@@ -115,7 +164,7 @@ def _configure_macos_official_renderer() -> None:
         return _CglContext(width, height)
 
     mujoco_rendering._ALL_RENDERERS["cgl"] = _import_cgl
-    os.environ.setdefault("MUJOCO_GL", "cgl")
+    os.environ["MUJOCO_GL"] = "cgl"
 
 
 _configure_macos_official_renderer()
@@ -125,6 +174,43 @@ def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
     frame = env.render(env_ids=env_ids)
     assert frame is not None
     return cast(np.ndarray, frame)
+
+
+def _render_official_array(env: gym.Env[Any, Any]) -> np.ndarray:
+    viewer = env.unwrapped.mujoco_renderer.viewer
+    if viewer is not None:
+        viewer.make_context_current()
+    return cast(np.ndarray, env.render())
+
+
+def _official_viewer_debug(
+    env: gym.Env[Any, Any],
+    first_frame: np.ndarray,
+    second_frame: np.ndarray,
+) -> str:
+    base_env = env.unwrapped
+    renderer = base_env.mujoco_renderer
+    viewer = renderer.viewer
+    if viewer is None:
+        return "official viewer was not initialized"
+    diff = np.abs(
+        first_frame.astype(np.int16) - second_frame.astype(np.int16)
+    )
+    return (
+        "official render debug: "
+        f"backend={getattr(viewer, 'backend', None)!r}, "
+        f"camera_id={renderer.camera_id}, "
+        f"default_cam_config={renderer.default_cam_config!r}, "
+        f"cam_type={viewer.cam.type}, fixedcamid={viewer.cam.fixedcamid}, "
+        f"azimuth={viewer.cam.azimuth:.3f}, "
+        f"elevation={viewer.cam.elevation:.3f}, "
+        f"distance={viewer.cam.distance:.3f}, "
+        f"lookat={np.asarray(viewer.cam.lookat).tolist()}, "
+        f"first_mean={float(first_frame.mean()):.3f}, "
+        f"second_mean={float(second_frame.mean()):.3f}, "
+        f"first_second_mean_delta={float(diff.mean()):.3f}, "
+        f"first_second_max_delta={int(diff.max()) if diff.size else 0}"
+    )
 
 
 def _zero_action(space: Any, num_envs: int) -> np.ndarray:
@@ -154,7 +240,12 @@ def _assert_frames_close(
     if mean_abs_diff > max_mean_abs_diff:
         raise AssertionError(
             "mean render delta "
-            f"{mean_abs_diff:.3f} exceeded {max_mean_abs_diff:.3f}"
+            f"{mean_abs_diff:.3f} exceeded {max_mean_abs_diff:.3f}; "
+            f"actual range=({int(actual.min())}, {int(actual.max())}) "
+            f"mean={float(actual.mean()):.3f}, "
+            f"expected range=({int(expected.min())}, {int(expected.max())}) "
+            f"mean={float(expected.mean()):.3f}, "
+            f"max_delta={int(diff.max())}"
         )
     if mismatch_ratio > max_mismatch_ratio:
         raise AssertionError(
@@ -169,6 +260,30 @@ def _reset_official_state(
     base_env = env.unwrapped
     mujoco.mj_resetData(base_env.model, base_env.data)
     base_env.set_state(qpos, qvel)
+
+
+def _render_official_reset_frame(
+    task_id: str,
+    qpos: np.ndarray,
+    qvel: np.ndarray,
+    *,
+    width: int,
+    height: int,
+) -> tuple[np.ndarray, str]:
+    oracle = gym.make(
+        task_id,
+        render_mode="rgb_array",
+        width=width,
+        height=height,
+    )
+    try:
+        oracle.reset(seed=0)
+        _reset_official_state(oracle, qpos, qvel)
+        frame = _render_official_array(oracle)
+        frame_again = _render_official_array(oracle)
+        return frame, _official_viewer_debug(oracle, frame, frame_again)
+    finally:
+        oracle.close()
 
 
 class MujocoRenderTest(absltest.TestCase):
@@ -252,31 +367,31 @@ class MujocoRenderTest(absltest.TestCase):
                     render_width=96,
                     render_height=72,
                 )
-                oracle = gym.make(
-                    task_id,
-                    render_mode="rgb_array",
-                    width=96,
-                    height=72,
-                )
                 try:
                     _, info = env.reset()
-                    oracle.reset(seed=0)
-                    _reset_official_state(
-                        oracle,
-                        info["qpos0"][0],
-                        info["qvel0"][0],
-                    )
-                    expected = cast(np.ndarray, oracle.render())
+                    qpos = info["qpos0"][0]
+                    qvel = info["qvel0"][0]
                     frame = _render_array(env)[0]
-                    _assert_frames_close(
-                        frame,
-                        expected,
-                        max_mean_abs_diff=8.0,
-                        max_mismatch_ratio=0.12,
+                    expected, official_debug = _render_official_reset_frame(
+                        task_id,
+                        qpos,
+                        qvel,
+                        width=96,
+                        height=72,
                     )
+                    try:
+                        _assert_frames_close(
+                            frame,
+                            expected,
+                            max_mean_abs_diff=8.0,
+                            max_mismatch_ratio=0.12,
+                        )
+                    except AssertionError as exc:
+                        raise AssertionError(
+                            f"{exc}; {official_debug}"
+                        ) from exc
                 finally:
                     env.close()
-                    oracle.close()
 
     def test_human_render_uses_python_viewer(self) -> None:
         """Human mode should route rendered frames through the Python viewer."""

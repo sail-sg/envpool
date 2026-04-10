@@ -14,7 +14,10 @@
 """Tests for the dm_control render path."""
 
 import ctypes
+import os
 import platform
+import subprocess
+import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any, cast
@@ -25,6 +28,43 @@ from absl.testing import absltest
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
 preload_windows_gl_dlls(strict=True)
+
+
+def _configure_linux_mujoco_gl() -> None:
+    if platform.system() != "Linux":
+        return
+    if os.environ.get("MUJOCO_GL"):
+        if os.environ["MUJOCO_GL"] == "egl":
+            os.environ.setdefault("EGL_PLATFORM", "surfaceless")
+        return
+    for backend in ("egl", "osmesa"):
+        env = dict(os.environ)
+        env["MUJOCO_GL"] = backend
+        if backend == "egl":
+            env.setdefault("EGL_PLATFORM", "surfaceless")
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import mujoco; "
+                    "ctx = mujoco.GLContext(1, 1); "
+                    "ctx.make_current(); "
+                    "ctx.free()"
+                ),
+            ],
+            env=env,
+            check=False,
+            capture_output=True,
+        )
+        if result.returncode == 0:
+            os.environ["MUJOCO_GL"] = backend
+            if backend == "egl":
+                os.environ.setdefault("EGL_PLATFORM", "surfaceless")
+            return
+
+
+_configure_linux_mujoco_gl()
 
 from dm_control import _render, suite
 from dm_control._render import base as dm_control_render_base
@@ -90,16 +130,25 @@ def _configure_macos_dm_control_renderer() -> None:
                 cgl.CGLReleasePixelFormat(self._pixel_format)
                 self._pixel_format = None
                 raise RuntimeError("failed to create CGL context")
+            self._locked = False
 
         def _platform_make_current(self) -> None:
             from mujoco.cgl import cgl
 
             cgl.CGLSetCurrentContext(self._context)
+            # Mirror mujoco.cgl.GLContext so the official renderer uses the
+            # same CGL lifecycle as EnvPool's native renderer.
+            if not self._locked:
+                cgl.CGLLockContext(self._context)
+                self._locked = True
 
         def _platform_free(self) -> None:
             from mujoco.cgl import cgl
 
             if self._context:
+                if self._locked:
+                    cgl.CGLUnlockContext(self._context)
+                    self._locked = False
                 cgl.CGLSetCurrentContext(None)
                 cgl.CGLReleaseContext(self._context)
                 self._context = None

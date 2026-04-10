@@ -81,6 +81,7 @@ class HandEnvFns {
 #ifdef ENVPOOL_TEST
         "info:qpos0"_.Bind(Spec<mjtNum>({qpos_dim})),
         "info:qvel0"_.Bind(Spec<mjtNum>({qvel_dim})),
+        "info:qacc0"_.Bind(Spec<mjtNum>({qvel_dim})),
         "info:qacc_warmstart0"_.Bind(Spec<mjtNum>({qvel_dim})),
         "info:goal0"_.Bind(Spec<mjtNum>({goal_dim})),
 #endif
@@ -844,6 +845,7 @@ class HandEnvBase : public Env<EnvSpecT>, public MujocoRobotEnv {
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.data(), qpos0_.size());
     state["info:qvel0"_].Assign(qvel0_.data(), qvel0_.size());
+    state["info:qacc0"_].Assign(qacc0_.data(), qacc0_.size());
     state["info:qacc_warmstart0"_].Assign(qacc_warmstart0_.data(),
                                           qacc_warmstart0_.size());
     state["info:goal0"_].Assign(goal_.data(), goal_.size());

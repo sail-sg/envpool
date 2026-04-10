@@ -57,6 +57,7 @@ class MujocoRobotEnv : public RenderableEnv {
 #ifdef ENVPOOL_TEST
   std::vector<mjtNum> qpos0_;
   std::vector<mjtNum> qvel0_;
+  std::vector<mjtNum> qacc0_;
   std::vector<mjtNum> qacc_warmstart0_;
 #endif
   std::unique_ptr<envpool::mujoco::OffscreenRenderer> renderer_;
@@ -90,6 +91,7 @@ class MujocoRobotEnv : public RenderableEnv {
         ,
         qpos0_(model_->nq),
         qvel0_(model_->nv),
+        qacc0_(model_->nv),
         qacc_warmstart0_(model_->nv)
 #endif
         ,
@@ -271,6 +273,7 @@ class MujocoRobotEnv : public RenderableEnv {
 #ifdef ENVPOOL_TEST
     std::memcpy(qpos0_.data(), data_->qpos, sizeof(mjtNum) * model_->nq);
     std::memcpy(qvel0_.data(), data_->qvel, sizeof(mjtNum) * model_->nv);
+    std::memcpy(qacc0_.data(), data_->qacc, sizeof(mjtNum) * model_->nv);
     std::memcpy(qacc_warmstart0_.data(), data_->qacc_warmstart,
                 sizeof(mjtNum) * model_->nv);
 #endif
