@@ -200,6 +200,7 @@ def _reset_upstream_state(
     env: gym.Env,
     qpos: np.ndarray,
     qvel: np.ndarray,
+    qacc_warmstart: np.ndarray,
     goal: np.ndarray,
 ) -> dict[str, np.ndarray]:
     base_env = cast(Any, env.unwrapped)
@@ -213,6 +214,7 @@ def _reset_upstream_state(
             )
         )
     mujoco.mj_forward(base_env.model, base_env.data)
+    base_env.data.qacc_warmstart[:] = qacc_warmstart
     base_env.goal = np.array(goal, copy=True)
     return base_env._get_obs()
 
@@ -221,6 +223,7 @@ def _reset_upstream_adroit_state(
     env: gym.Env,
     qpos: np.ndarray,
     qvel: np.ndarray,
+    qacc_warmstart: np.ndarray,
     extra: np.ndarray,
     task_id: str,
 ) -> np.ndarray:
@@ -264,6 +267,7 @@ def _reset_upstream_adroit_state(
     base_env.data.qpos[:] = qpos
     base_env.data.qvel[:] = qvel
     mujoco.mj_forward(base_env.model, base_env.data)
+    base_env.data.qacc_warmstart[:] = qacc_warmstart
     if task_id.startswith("AdroitHandPen"):
         base_env.pen_length = np.linalg.norm(
             base_env.data.site_xpos[base_env.obj_t_site_id]
@@ -280,6 +284,7 @@ def _reset_upstream_point_maze_state(
     env: gym.Env,
     qpos: np.ndarray,
     qvel: np.ndarray,
+    qacc_warmstart: np.ndarray,
     goal: np.ndarray,
 ) -> dict[str, np.ndarray]:
     base_env = cast(Any, env.unwrapped)
@@ -289,6 +294,7 @@ def _reset_upstream_point_maze_state(
     base_env.goal = np.array(goal, copy=True)
     base_env.update_target_site_pos()
     mujoco.mj_forward(base_env.model, base_env.data)
+    base_env.data.qacc_warmstart[:] = qacc_warmstart
     point_obs, _ = base_env.point_env._get_obs()
     return base_env._get_obs(point_obs)
 
@@ -297,12 +303,14 @@ def _reset_upstream_kitchen_state(
     env: gym.Env,
     qpos: np.ndarray,
     qvel: np.ndarray,
+    qacc_warmstart: np.ndarray,
 ) -> dict[str, Any]:
     base_env = cast(Any, env.unwrapped)
     mujoco.mj_resetData(base_env.robot_env.model, base_env.robot_env.data)
     base_env.robot_env.data.qpos[:] = qpos
     base_env.robot_env.data.qvel[:] = qvel
     mujoco.mj_forward(base_env.robot_env.model, base_env.robot_env.data)
+    base_env.robot_env.data.qacc_warmstart[:] = qacc_warmstart
     base_env.tasks_to_complete = set(base_env.goal.keys())
     base_env.step_task_completions = []
     base_env.episode_task_completions = []
@@ -320,6 +328,7 @@ def _reset_upstream_render_state(
             env,
             info["qpos0"][0],
             info["qvel0"][0],
+            info["qacc_warmstart0"][0],
             info["goal0"][0],
         )
         return
@@ -328,6 +337,7 @@ def _reset_upstream_render_state(
             env,
             info["qpos0"][0],
             info["qvel0"][0],
+            info["qacc_warmstart0"][0],
             info["extra0"][0],
             task_id,
         )
@@ -337,6 +347,7 @@ def _reset_upstream_render_state(
             env,
             info["qpos0"][0],
             info["qvel0"][0],
+            info["qacc_warmstart0"][0],
             info["goal0"][0],
         )
         return
@@ -345,6 +356,7 @@ def _reset_upstream_render_state(
             env,
             info["qpos0"][0],
             info["qvel0"][0],
+            info["qacc_warmstart0"][0],
         )
         return
     raise ValueError(f"Unsupported render task: {task_id}")
@@ -578,6 +590,7 @@ class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
                         env0,
                         info1["qpos0"][0],
                         info1["qvel0"][0],
+                        info1["qacc_warmstart0"][0],
                         info1["goal0"][0],
                     )
                     _assert_goal_obs_equal(
@@ -826,6 +839,7 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
                         env0,
                         info1["qpos0"][0],
                         info1["qvel0"][0],
+                        info1["qacc_warmstart0"][0],
                         info1["goal0"][0],
                     )
                     _assert_goal_obs_equal(
@@ -936,6 +950,7 @@ class _GymnasiumRoboticsAdroitEnvPoolTest(absltest.TestCase):
                         env0,
                         info1["qpos0"][0],
                         info1["qvel0"][0],
+                        info1["qacc_warmstart0"][0],
                         info1["extra0"][0],
                         task_id,
                     )
@@ -1025,6 +1040,7 @@ class _GymnasiumRoboticsPointMazeEnvPoolTest(absltest.TestCase):
                         env0,
                         info1["qpos0"][0],
                         info1["qvel0"][0],
+                        info1["qacc_warmstart0"][0],
                         info1["goal0"][0],
                     )
                     _assert_goal_obs_equal(
@@ -1207,6 +1223,7 @@ class _GymnasiumRoboticsKitchenEnvPoolTest(absltest.TestCase):
                 env0,
                 info1["qpos0"][0],
                 info1["qvel0"][0],
+                info1["qacc_warmstart0"][0],
             )
             _assert_goal_obs_equal(
                 obs0,

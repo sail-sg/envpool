@@ -68,6 +68,7 @@ class FetchEnvFns {
 #ifdef ENVPOOL_TEST
         "info:qpos0"_.Bind(Spec<mjtNum>({qpos_dim})),
         "info:qvel0"_.Bind(Spec<mjtNum>({qvel_dim})),
+        "info:qacc_warmstart0"_.Bind(Spec<mjtNum>({qvel_dim})),
         "info:goal0"_.Bind(Spec<mjtNum>({3})),
 #endif
         "info:distance"_.Bind(Spec<mjtNum>({-1}, {0.0, inf})));
@@ -399,6 +400,8 @@ class FetchEnvBase : public Env<EnvSpecT>, public MujocoRobotEnv {
 #ifdef ENVPOOL_TEST
     state["info:qpos0"_].Assign(qpos0_.data(), qpos0_.size());
     state["info:qvel0"_].Assign(qvel0_.data(), qvel0_.size());
+    state["info:qacc_warmstart0"_].Assign(qacc_warmstart0_.data(),
+                                          qacc_warmstart0_.size());
     state["info:goal0"_].Assign(goal_.data(), goal_.size());
 #endif
   }

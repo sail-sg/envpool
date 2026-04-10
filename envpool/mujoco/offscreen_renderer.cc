@@ -476,6 +476,7 @@ OffscreenRenderer::~OffscreenRenderer() {
   gl_context_->MakeCurrent();
   mjr_freeContext(&context_);
   mjv_freeScene(&scene_);
+  gl_context_->ClearCurrent();
 }
 
 void OffscreenRenderer::Initialize(const mjModel* model) {

@@ -269,6 +269,13 @@ def _patch_lunar_lander(base: Any, info: dict[str, Any]) -> None:
     reset_action = np.array([0, 0]) if base.continuous else 0
     base.step(reset_action)
 
+    _set_body_state(base.lander, np.asarray(info["lander_state"][0]))
+    for leg, state in zip(
+        base.legs,
+        np.asarray(info["leg_states"][0]),
+        strict=True,
+    ):
+        _set_body_state(leg, state)
     for leg, contact in zip(
         base.legs,
         np.asarray(info["ground_contact"][0]),

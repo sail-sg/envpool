@@ -13,6 +13,8 @@
 # limitations under the License.
 """Tests for the batched MuJoCo render API."""
 
+import os
+import platform
 from typing import Any, cast
 
 import gymnasium as gym
@@ -38,6 +40,24 @@ _TASK_IDS = tuple(
 _OFFICIAL_RENDER_TASK_IDS = tuple(
     task_id for task_id in _TASK_IDS if task_id.endswith("-v5")
 )
+
+
+def _configure_macos_official_renderer() -> None:
+    if platform.system() != "Darwin":
+        return
+
+    from gymnasium.envs.mujoco import mujoco_rendering
+
+    def _import_cgl(width: int, height: int) -> Any:
+        from mujoco.cgl import GLContext
+
+        return GLContext(width, height)
+
+    mujoco_rendering._ALL_RENDERERS.setdefault("cgl", _import_cgl)
+    os.environ.setdefault("MUJOCO_GL", "cgl")
+
+
+_configure_macos_official_renderer()
 
 
 def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
@@ -79,15 +99,6 @@ def _assert_frames_close(
         raise AssertionError(
             "render mismatch ratio "
             f"{mismatch_ratio:.4%} exceeded {max_mismatch_ratio:.4%}"
-        )
-
-
-def _skip_if_official_renderer_unavailable(
-    test_case: absltest.TestCase, error: mujoco.FatalError
-) -> None:
-    if "gladLoadGL error" in str(error):
-        test_case.skipTest(
-            "official Gymnasium renderer could not initialize OpenGL"
         )
 
 
@@ -195,11 +206,7 @@ class MujocoRenderTest(absltest.TestCase):
                         info["qvel0"][0],
                     )
                     frame = _render_array(env)[0]
-                    try:
-                        expected = cast(np.ndarray, oracle.render())
-                    except mujoco.FatalError as error:
-                        _skip_if_official_renderer_unavailable(self, error)
-                        raise
+                    expected = cast(np.ndarray, oracle.render())
                     _assert_frames_close(
                         frame,
                         expected,

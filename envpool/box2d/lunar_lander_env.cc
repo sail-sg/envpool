@@ -250,8 +250,10 @@ b2Body* LunarLanderBox2dEnv::CreateParticle(float mass, b2Vec2 pos) {
 
 void LunarLanderBox2dEnv::StepBox2d(std::mt19937* gen, int action,
                                     float action0, float action1) {
-  action0 = std::min(std::max(action0, -1.0f), 1.0f);
-  action1 = std::min(std::max(action1, -1.0f), 1.0f);
+  double continuous_action0 =
+      std::clamp(static_cast<double>(action0), -1.0, 1.0);
+  double continuous_action1 =
+      std::clamp(static_cast<double>(action1), -1.0, 1.0);
   std::array<double, 2> tip;
   std::array<double, 2> side;
   std::array<double, 2> dispersion;
@@ -266,9 +268,10 @@ void LunarLanderBox2dEnv::StepBox2d(std::mt19937* gen, int action,
 
   // main engine
   double m_power = 0.0;
-  if ((continuous_ && action0 > 0) || (!continuous_ && action == 2)) {
+  if ((continuous_ && continuous_action0 > 0) ||
+      (!continuous_ && action == 2)) {
     if (continuous_) {
-      m_power = (std::min(std::max(action0, 0.0f), 1.0f) + 1) * 0.5;
+      m_power = (std::clamp(continuous_action0, 0.0, 1.0) + 1) * 0.5;
     } else {
       m_power = 1.0;
     }
@@ -284,12 +287,12 @@ void LunarLanderBox2dEnv::StepBox2d(std::mt19937* gen, int action,
 
   // orientation engines
   double s_power = 0.0;
-  if ((continuous_ && std::abs(action1) > 0.5) ||
+  if ((continuous_ && std::abs(continuous_action1) > 0.5) ||
       (!continuous_ && (action == 1 || action == 3))) {
     double direction;
     if (continuous_) {
-      direction = Sign(action1);
-      s_power = std::min(std::max(std::abs(action1), 0.5f), 1.0f);
+      direction = Sign(continuous_action1);
+      s_power = std::clamp(std::abs(continuous_action1), 0.5, 1.0);
     } else {
       direction = action - 2;
       s_power = 1.0;
@@ -321,15 +324,17 @@ void LunarLanderBox2dEnv::StepBox2d(std::mt19937* gen, int action,
   obs_[6] = ground_contact_[0];
   obs_[7] = ground_contact_[1];
   reward_ = 0;
-  float shaping = -100 * (std::sqrt(obs_[0] * obs_[0] + obs_[1] * obs_[1]) +
-                          std::sqrt(obs_[2] * obs_[2] + obs_[3] * obs_[3]) +
-                          std::abs(obs_[4])) +
-                  10 * (obs_[6] + obs_[7]);
+  double shaping = -100 * (std::sqrt(static_cast<double>(obs_[0]) * obs_[0] +
+                                     static_cast<double>(obs_[1]) * obs_[1]) +
+                           std::sqrt(static_cast<double>(obs_[2]) * obs_[2] +
+                                     static_cast<double>(obs_[3]) * obs_[3]) +
+                           std::abs(static_cast<double>(obs_[4]))) +
+                   10 * (static_cast<double>(obs_[6]) + obs_[7]);
   if (elapsed_step_ > 0) {
     reward_ = shaping - prev_shaping_;
   }
   prev_shaping_ = shaping;
-  reward_ -= static_cast<float>(m_power * 0.3 + s_power * 0.03);
+  reward_ -= m_power * 0.3 + s_power * 0.03;
   if (done_ || std::abs(obs_[0]) >= 1) {
     done_ = true;
     reward_ = -100;

@@ -13,11 +13,12 @@
 # limitations under the License.
 """Tests for the dm_control render path."""
 
+import ctypes
+import platform
 from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any, cast
 
-import mujoco
 import numpy as np
 from absl.testing import absltest
 
@@ -25,13 +26,93 @@ from envpool.python.glfw_context import preload_windows_gl_dlls
 
 preload_windows_gl_dlls(strict=True)
 
-from dm_control import suite
+from dm_control import _render, suite
+from dm_control._render import base as dm_control_render_base
+from dm_control._render import executor as dm_control_render_executor
 from dm_control.mujoco import engine as dm_control_engine
 
 import envpool.mujoco.dmc.registration as reg
 from envpool.registration import make_dm, make_gym
 
 _RENDER_STEPS = 3
+
+
+def _configure_macos_dm_control_renderer() -> None:
+    if platform.system() != "Darwin":
+        return
+
+    class _CglContext(dm_control_render_base.ContextBase):
+        def __init__(self, max_width: int, max_height: int):
+            super().__init__(
+                max_width,
+                max_height,
+                dm_control_render_executor.PassthroughRenderExecutor,
+            )
+
+        def _platform_init(self, max_width: int, max_height: int) -> None:
+            del max_width, max_height
+            from mujoco.cgl import cgl
+
+            attrib = cgl.CGLPixelFormatAttribute
+            profile = cgl.CGLOpenGLProfile
+            attrib_values = (
+                attrib.CGLPFAOpenGLProfile,
+                profile.CGLOGLPVersion_Legacy,
+                attrib.CGLPFAColorSize,
+                24,
+                attrib.CGLPFAAlphaSize,
+                8,
+                attrib.CGLPFADepthSize,
+                24,
+                attrib.CGLPFAStencilSize,
+                8,
+                attrib.CGLPFAAllowOfflineRenderers,
+                0,
+            )
+            attribs = (ctypes.c_int * len(attrib_values))(*attrib_values)
+            self._pixel_format = cgl.CGLPixelFormatObj()
+            num_pixel_formats = cgl.GLint()
+            cgl.CGLChoosePixelFormat(
+                attribs,
+                ctypes.byref(self._pixel_format),
+                ctypes.byref(num_pixel_formats),
+            )
+            if not self._pixel_format or num_pixel_formats.value == 0:
+                raise RuntimeError("failed to create CGL pixel format")
+
+            self._context = cgl.CGLContextObj()
+            cgl.CGLCreateContext(
+                self._pixel_format,
+                0,
+                ctypes.byref(self._context),
+            )
+            if not self._context:
+                cgl.CGLReleasePixelFormat(self._pixel_format)
+                self._pixel_format = None
+                raise RuntimeError("failed to create CGL context")
+
+        def _platform_make_current(self) -> None:
+            from mujoco.cgl import cgl
+
+            cgl.CGLSetCurrentContext(self._context)
+
+        def _platform_free(self) -> None:
+            from mujoco.cgl import cgl
+
+            if self._context:
+                cgl.CGLSetCurrentContext(None)
+                cgl.CGLReleaseContext(self._context)
+                self._context = None
+            if self._pixel_format:
+                cgl.CGLReleasePixelFormat(self._pixel_format)
+                self._pixel_format = None
+
+    _render.Renderer = _CglContext
+    _render.BACKEND = "cgl"
+    _render.USING_GPU = True
+
+
+_configure_macos_dm_control_renderer()
 
 
 def _task_map() -> dict[str, tuple[str, str]]:
@@ -82,15 +163,6 @@ def _assert_frames_close(
         raise AssertionError(
             "render mismatch ratio "
             f"{mismatch_ratio:.4%} exceeded {max_mismatch_ratio:.4%}"
-        )
-
-
-def _skip_if_official_renderer_unavailable(
-    test_case: absltest.TestCase, error: mujoco.FatalError
-) -> None:
-    if "gladLoadGL error" in str(error):
-        test_case.skipTest(
-            "official dm_control renderer could not initialize OpenGL"
         )
 
 
@@ -294,18 +366,14 @@ class MujocoDmcRenderTest(absltest.TestCase):
                     ts = env.reset(np.array([0]))
                     _reset_official_state(oracle, ts, domain, task)
                     frame = _render_array(env)[0]
-                    try:
-                        expected = cast(
-                            np.ndarray,
-                            oracle.physics.render(
-                                height=72,
-                                width=96,
-                                camera_id=-1,
-                            ),
-                        )
-                    except mujoco.FatalError as error:
-                        _skip_if_official_renderer_unavailable(self, error)
-                        raise
+                    expected = cast(
+                        np.ndarray,
+                        oracle.physics.render(
+                            height=72,
+                            width=96,
+                            camera_id=-1,
+                        ),
+                    )
                     _assert_frames_close(
                         frame,
                         expected,

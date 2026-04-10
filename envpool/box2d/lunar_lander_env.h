@@ -61,7 +61,7 @@ class LunarLanderBox2dEnv : public RenderableEnv {
 
  protected:
   int max_episode_steps_, elapsed_step_;
-  float reward_, prev_shaping_;
+  double reward_, prev_shaping_;
   bool continuous_, done_{true};
   std::array<float, 8> obs_;
   std::array<float, 2> last_dispersion_{0.0f, 0.0f};
