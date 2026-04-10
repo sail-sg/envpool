@@ -18,6 +18,9 @@
 #ifndef ENVPOOL_BOX2D_CAR_RACING_H_
 #define ENVPOOL_BOX2D_CAR_RACING_H_
 
+#include <array>
+#include <vector>
+
 #include "car_racing_env.h"
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
@@ -33,12 +36,24 @@ class CarRacingEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
 #ifdef ENVPOOL_TEST
-    return MakeDict("obs"_.Bind(Spec<uint8_t>({96, 96, 3}, {0, 255})),
-                    "info:tile_visited_count"_.Bind(Spec<int>({-1})),
-                    "info:car_fuel_spent"_.Bind(Spec<float>({-1})),
-                    "info:car_gas"_.Bind(Spec<float>({-1, 2})),
-                    "info:car_steer"_.Bind(Spec<float>({-1, 2})),
-                    "info:car_brake"_.Bind(Spec<float>({-1, 4})));
+    return MakeDict(
+        "obs"_.Bind(Spec<uint8_t>({96, 96, 3}, {0, 255})),
+        "info:tile_visited_count"_.Bind(Spec<int>({-1})),
+        "info:car_fuel_spent"_.Bind(Spec<float>({-1})),
+        "info:car_gas"_.Bind(Spec<float>({-1, 2})),
+        "info:car_steer"_.Bind(Spec<float>({-1, 2})),
+        "info:car_brake"_.Bind(Spec<float>({-1, 4})),
+        "info:track"_.Bind(Spec<Container<float>>({-1}, Spec<float>({-1, 4}))),
+        "info:road_poly"_.Bind(
+            Spec<Container<float>>({-1}, Spec<float>({-1, 4, 2}))),
+        "info:road_color"_.Bind(
+            Spec<Container<float>>({-1}, Spec<float>({-1, 3}))),
+        "info:car_body_states"_.Bind(Spec<float>({5, 7})),
+        "info:car_wheel_states"_.Bind(Spec<float>({4, 5})),
+        "info:car_reward"_.Bind(Spec<float>({-1})),
+        "info:car_prev_reward"_.Bind(Spec<float>({-1})),
+        "info:car_time"_.Bind(Spec<float>({-1})),
+        "info:new_lap"_.Bind(Spec<float>({-1})));
 #else
     return MakeDict("obs"_.Bind(Spec<uint8_t>({96, 96, 3}, {0, 255})));
 #endif
@@ -86,6 +101,37 @@ class CarRacingEnv : public Env<CarRacingEnvSpec>, public CarRacingBox2dEnv {
     state["info:car_gas"_].Assign(car_gas.data(), car_gas.size());
     state["info:car_steer"_].Assign(car_steer.data(), car_steer.size());
     state["info:car_brake"_].Assign(car_brake.data(), car_brake.size());
+    auto track = TrackState();
+    Container<float>& track_container = state["info:track"_];
+    auto* track_array = new TArray<float>(
+        ::Spec<float>(std::vector<int>{static_cast<int>(track.size()) / 4, 4}));
+    track_array->Assign(track.data(), track.size());
+    track_container.reset(track_array);
+
+    auto road_poly = RoadPolyState();
+    Container<float>& road_poly_container = state["info:road_poly"_];
+    auto* road_poly_array = new TArray<float>(::Spec<float>(
+        std::vector<int>{static_cast<int>(road_poly.size()) / 8, 4, 2}));
+    road_poly_array->Assign(road_poly.data(), road_poly.size());
+    road_poly_container.reset(road_poly_array);
+
+    auto road_color = RoadColorState();
+    Container<float>& road_color_container = state["info:road_color"_];
+    auto* road_color_array = new TArray<float>(::Spec<float>(
+        std::vector<int>{static_cast<int>(road_color.size()) / 3, 3}));
+    road_color_array->Assign(road_color.data(), road_color.size());
+    road_color_container.reset(road_color_array);
+
+    auto body_states = CarBodyStates();
+    auto wheel_states = CarWheelStates();
+    state["info:car_body_states"_].Assign(body_states.data(),
+                                          body_states.size());
+    state["info:car_wheel_states"_].Assign(wheel_states.data(),
+                                           wheel_states.size());
+    state["info:car_reward"_] = reward_;
+    state["info:car_prev_reward"_] = prev_reward_;
+    state["info:car_time"_] = t_;
+    state["info:new_lap"_] = new_lap_ ? 1.0f : 0.0f;
 #endif
   }
 };

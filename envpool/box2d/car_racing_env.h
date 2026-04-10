@@ -18,7 +18,7 @@
 #ifndef ENVPOOL_BOX2D_CAR_RACING_ENV_H_
 #define ENVPOOL_BOX2D_CAR_RACING_ENV_H_
 
-#include <box2d/box2d.h>
+#include <Box2D/Box2D.h>
 
 #include <algorithm>
 #include <cmath>
@@ -98,6 +98,12 @@ class CarRacingBox2dEnv : public RenderableEnv {
   std::vector<UserData*> roads_;
   // pair of position and color
   std::vector<std::pair<std::array<b2Vec2, 4>, cv::Scalar>> roads_poly_;
+  [[nodiscard]] std::array<float, 7> BodyState(const b2Body* body) const;
+  [[nodiscard]] std::vector<float> TrackState() const;
+  [[nodiscard]] std::vector<float> RoadPolyState() const;
+  [[nodiscard]] std::vector<float> RoadColorState() const;
+  [[nodiscard]] std::array<float, 35> CarBodyStates() const;
+  [[nodiscard]] std::array<float, 20> CarWheelStates() const;
 
  public:
   CarRacingBox2dEnv(int max_episode_steps, float lap_complete_percent);

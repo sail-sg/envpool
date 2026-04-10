@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit tests for Mujoco gym v4/v5 environments alignment."""
+"""Unit tests for Mujoco gym v5 environments alignment."""
 
 import platform
 import sys
@@ -35,33 +35,6 @@ _LINUX_ARM64 = sys.platform == "linux" and platform.machine().lower() in (
 
 
 class _MujocoGymAlignTest(absltest.TestCase):
-    def test_v4_space_alignment(self) -> None:
-        for env_id in [
-            "Ant-v4",
-            "HalfCheetah-v4",
-            "Hopper-v4",
-            "Humanoid-v4",
-            "HumanoidStandup-v4",
-            "InvertedDoublePendulum-v4",
-            "InvertedPendulum-v4",
-            "Pusher-v4",
-            "Reacher-v4",
-            "Swimmer-v4",
-            "Walker2d-v4",
-        ]:
-            with self.subTest(env_id=env_id):
-                try:
-                    env0 = gym.make(env_id)
-                except ImportError as err:
-                    logging.warning(
-                        "Skipping %s official reference env: %s", env_id, err
-                    )
-                    continue
-                env1 = make_gymnasium(env_id)
-                self.run_space_check(env0, env1)
-                env0.close()
-                env1.close()
-
     def observation_atol(self, env_id: str) -> float:
         if not _MUJOCO_V3:
             return 3e-4

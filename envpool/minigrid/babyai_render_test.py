@@ -51,24 +51,19 @@ class BabyAIRenderTest(absltest.TestCase):
 
     def _oracle_frame(
         self,
-        task_id: str,
+        oracle: gym.Env[Any, Any],
         state: Any,
         step_count: int,
     ) -> np.ndarray:
-        oracle = gym.make(task_id, render_mode="rgb_array")
-        try:
-            oracle.reset(seed=0)
-            patch_render_state(oracle.unwrapped, state, step_count)
-            return cast(
-                np.ndarray,
-                cast(Any, oracle.unwrapped).get_frame(
-                    highlight=False,
-                    tile_size=32,
-                    agent_pov=False,
-                ),
-            )
-        finally:
-            oracle.close()
+        patch_render_state(oracle.unwrapped, state, step_count)
+        return cast(
+            np.ndarray,
+            cast(Any, oracle.unwrapped).get_frame(
+                highlight=False,
+                tile_size=32,
+                agent_pov=False,
+            ),
+        )
 
     def test_render_matches_upstream_oracle_for_multiple_steps_for_all_tasks(
         self,
@@ -82,14 +77,17 @@ class BabyAIRenderTest(absltest.TestCase):
                     num_envs=1,
                     render_mode="rgb_array",
                 )
+                oracle = gym.make(task_id, render_mode="rgb_array")
                 try:
                     env.reset()
+                    oracle.reset(seed=0)
                     step_count = 0
-                    for step_idx in range(_RENDER_STEPS):
+                    total = _RENDER_STEPS
+                    for step_idx in range(total):
                         frame = _render_array(env)
                         frame_again = _render_array(env)
                         expected = self._oracle_frame(
-                            task_id,
+                            oracle,
                             debug_state(env, 0),
                             step_count,
                         )
@@ -98,11 +96,12 @@ class BabyAIRenderTest(absltest.TestCase):
                         self.assertEqual(frame.dtype, np.uint8)
                         np.testing.assert_array_equal(frame[0], expected)
                         np.testing.assert_array_equal(frame, frame_again)
-                        if step_idx + 1 < _RENDER_STEPS:
+                        if step_idx + 1 < total:
                             env.step(_zero_action(1))
                             step_count += 1
                 finally:
                     env.close()
+                    oracle.close()
 
     def test_render_is_batch_consistent_and_state_invariant(self) -> None:
         """Rendering should be batch-consistent and side-effect free."""
@@ -113,8 +112,12 @@ class BabyAIRenderTest(absltest.TestCase):
                     num_envs=2,
                     render_mode="rgb_array",
                 )
+                oracle0 = gym.make(task_id, render_mode="rgb_array")
+                oracle1 = gym.make(task_id, render_mode="rgb_array")
                 try:
                     env.reset()
+                    oracle0.reset(seed=0)
+                    oracle1.reset(seed=0)
                     step_count = 0
                     for step_idx in range(_RENDER_STEPS):
                         frame0 = _render_array(env)
@@ -123,12 +126,12 @@ class BabyAIRenderTest(absltest.TestCase):
                         frame0_again = _render_array(env)
 
                         expected0 = self._oracle_frame(
-                            task_id,
+                            oracle0,
                             debug_state(env, 0),
                             step_count,
                         )
                         expected1 = self._oracle_frame(
-                            task_id,
+                            oracle1,
                             debug_state(env, 1),
                             step_count,
                         )
@@ -149,6 +152,8 @@ class BabyAIRenderTest(absltest.TestCase):
                             step_count += 1
                 finally:
                     env.close()
+                    oracle0.close()
+                    oracle1.close()
 
 
 if __name__ == "__main__":

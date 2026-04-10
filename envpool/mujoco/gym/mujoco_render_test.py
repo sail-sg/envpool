@@ -15,6 +15,8 @@
 
 from typing import Any, cast
 
+import gymnasium as gym
+import mujoco
 import numpy as np
 from absl.testing import absltest
 
@@ -32,6 +34,9 @@ _TASK_IDS = tuple(
         for task, versions, _ in reg.gym_mujoco_envs
         for version in versions
     )
+)
+_OFFICIAL_RENDER_TASK_IDS = tuple(
+    task_id for task_id in _TASK_IDS if task_id.endswith("-v5")
 )
 
 
@@ -75,6 +80,23 @@ def _assert_frames_close(
             "render mismatch ratio "
             f"{mismatch_ratio:.4%} exceeded {max_mismatch_ratio:.4%}"
         )
+
+
+def _skip_if_official_renderer_unavailable(
+    test_case: absltest.TestCase, error: mujoco.FatalError
+) -> None:
+    if "gladLoadGL error" in str(error):
+        test_case.skipTest(
+            "official Gymnasium renderer could not initialize OpenGL"
+        )
+
+
+def _reset_official_state(
+    env: gym.Env[Any, Any], qpos: np.ndarray, qvel: np.ndarray
+) -> None:
+    base_env = env.unwrapped
+    mujoco.mj_resetData(base_env.model, base_env.data)
+    base_env.set_state(qpos, qvel)
 
 
 class MujocoRenderTest(absltest.TestCase):
@@ -143,6 +165,50 @@ class MujocoRenderTest(absltest.TestCase):
                             env.step(_zero_action(env.action_space, 1))
                 finally:
                     env.close()
+
+    def test_render_matches_official_reset_frame_for_all_available_tasks(
+        self,
+    ) -> None:
+        """Rendered reset frames should match Gymnasium after state sync."""
+        for task_id in _OFFICIAL_RENDER_TASK_IDS:
+            with self.subTest(task_id=task_id):
+                env = make_gym(
+                    task_id,
+                    num_envs=1,
+                    seed=0,
+                    render_mode="rgb_array",
+                    render_width=96,
+                    render_height=72,
+                )
+                oracle = gym.make(
+                    task_id,
+                    render_mode="rgb_array",
+                    width=96,
+                    height=72,
+                )
+                try:
+                    _, info = env.reset()
+                    oracle.reset(seed=0)
+                    _reset_official_state(
+                        oracle,
+                        info["qpos0"][0],
+                        info["qvel0"][0],
+                    )
+                    frame = _render_array(env)[0]
+                    try:
+                        expected = cast(np.ndarray, oracle.render())
+                    except mujoco.FatalError as error:
+                        _skip_if_official_renderer_unavailable(self, error)
+                        raise
+                    _assert_frames_close(
+                        frame,
+                        expected,
+                        max_mean_abs_diff=8.0,
+                        max_mismatch_ratio=0.12,
+                    )
+                finally:
+                    env.close()
+                    oracle.close()
 
     def test_human_render_uses_python_viewer(self) -> None:
         """Human mode should route rendered frames through the Python viewer."""

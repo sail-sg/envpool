@@ -20,6 +20,7 @@
 #include <mjxmacro.h>
 #include <mujoco.h>
 
+#include <algorithm>
 #include <array>
 #include <cstring>
 #include <fstream>
@@ -145,19 +146,23 @@ class MujocoEnv : public RenderableEnv {
   }
 
   void RenderFresh(int width, int height, int camera_id, unsigned char* rgb) {
+    mjvCamera camera_override;
+    InitializeRenderCamera(&camera_override);
+    mjvCamera* camera =
+        RenderCamera(&camera_override) ? &camera_override : nullptr;
 #ifdef _WIN32
     // Native pixel observations are rendered on worker threads, while env
     // teardown happens on the Python thread. Recreating the renderer on
     // Windows avoids cross-thread WGL resource lifetime issues.
     envpool::mujoco::OffscreenRenderer renderer(
         envpool::mujoco::CameraPolicy::kGymLike);
-    renderer.Render(model_, data_, width, height, camera_id, rgb);
+    renderer.Render(model_, data_, width, height, camera_id, rgb, camera);
 #else
     if (renderer_ == nullptr) {
       renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
           envpool::mujoco::CameraPolicy::kGymLike);
     }
-    renderer_->Render(model_, data_, width, height, camera_id, rgb);
+    renderer_->Render(model_, data_, width, height, camera_id, rgb, camera);
 #endif
   }
 
@@ -195,6 +200,37 @@ class MujocoEnv : public RenderableEnv {
   }
 
  protected:
+  static mjtNum MedianGeomPosition(const mjData* data, int ngeom, int axis) {
+    std::vector<mjtNum> positions(ngeom);
+    for (int geom_id = 0; geom_id < ngeom; ++geom_id) {
+      positions[geom_id] = data->geom_xpos[geom_id * 3 + axis];
+    }
+    std::sort(positions.begin(), positions.end());
+    int mid = ngeom / 2;
+    if (ngeom % 2 == 0) {
+      return (positions[mid - 1] + positions[mid]) * static_cast<mjtNum>(0.5);
+    }
+    return positions[mid];
+  }
+
+  virtual bool RenderCamera(mjvCamera* camera) {
+    (void)camera;
+    return false;
+  }
+
+  void InitializeRenderCamera(mjvCamera* camera) const {
+    mjv_defaultCamera(camera);
+    camera->type = mjCAMERA_FREE;
+    camera->fixedcamid = -1;
+    camera->distance = model_->stat.extent;
+    if (model_->ngeom == 0) {
+      return;
+    }
+    for (int axis = 0; axis < 3; ++axis) {
+      camera->lookat[axis] = MedianGeomPosition(data_, model_->ngeom, axis);
+    }
+  }
+
   mjtNum* PrepareObservation(Array* target) {
     return frame_stack_buffer_.Prepare("obs", target);
   }

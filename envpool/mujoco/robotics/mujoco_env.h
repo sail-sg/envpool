@@ -206,6 +206,19 @@ class MujocoRobotEnv : public RenderableEnv {
     return model;
   }
 
+  static mjtNum MedianGeomPosition(const mjData* data, int ngeom, int axis) {
+    std::vector<mjtNum> positions(ngeom);
+    for (int geom_id = 0; geom_id < ngeom; ++geom_id) {
+      positions[geom_id] = data->geom_xpos[geom_id * 3 + axis];
+    }
+    std::sort(positions.begin(), positions.end());
+    int mid = ngeom / 2;
+    if (ngeom % 2 == 0) {
+      return (positions[mid - 1] + positions[mid]) * static_cast<mjtNum>(0.5);
+    }
+    return positions[mid];
+  }
+
   virtual void EnvSetup() {}
   virtual void StepCallback() {}
   virtual void RenderCallback() {}
@@ -223,13 +236,7 @@ class MujocoRobotEnv : public RenderableEnv {
       return;
     }
     for (int axis = 0; axis < 3; ++axis) {
-      std::vector<mjtNum> positions(model_->ngeom);
-      for (int geom_id = 0; geom_id < model_->ngeom; ++geom_id) {
-        positions[geom_id] = data_->geom_xpos[geom_id * 3 + axis];
-      }
-      auto mid = positions.begin() + positions.size() / 2;
-      std::nth_element(positions.begin(), mid, positions.end());
-      camera->lookat[axis] = *mid;
+      camera->lookat[axis] = MedianGeomPosition(data_, model_->ngeom, axis);
     }
   }
 

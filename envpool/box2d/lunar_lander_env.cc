@@ -70,6 +70,30 @@ std::pair<int, int> LunarLanderBox2dEnv::RenderSize(int width,
           height > 0 ? height : static_cast<int>(kViewportH)};
 }
 
+std::array<float, 7> LunarLanderBox2dEnv::BodyState(const b2Body* body) const {
+  const auto pos = body->GetPosition();
+  const auto vel = body->GetLinearVelocity();
+  return {pos.x,
+          pos.y,
+          body->GetAngle(),
+          vel.x,
+          vel.y,
+          body->GetAngularVelocity(),
+          body->IsAwake() ? 1.0f : 0.0f};
+}
+
+std::vector<float> LunarLanderBox2dEnv::SkyPolyState() const {
+  std::vector<float> data;
+  data.reserve(sky_polys_.size() * 4 * 2);
+  for (const auto& poly : sky_polys_) {
+    for (const auto& vertex : poly) {
+      data.emplace_back(vertex.x);
+      data.emplace_back(vertex.y);
+    }
+  }
+  return data;
+}
+
 void LunarLanderBox2dEnv::ResetBox2d(std::mt19937* gen) {
   // Gymnasium recreates the Box2D world on every reset because fully
   // tearing down the prior world can still leave stale state behind.
@@ -108,7 +132,7 @@ void LunarLanderBox2dEnv::ResetBox2d(std::mt19937* gen) {
     bd.type = b2_staticBody;
 
     b2EdgeShape shape;
-    shape.SetTwoSided(b2Vec2(0, 0), Vec2(w, 0));
+    shape.Set(b2Vec2(0, 0), Vec2(w, 0));
 
     b2FixtureDef fd;
     fd.shape = &shape;
@@ -121,8 +145,8 @@ void LunarLanderBox2dEnv::ResetBox2d(std::mt19937* gen) {
                           Vec2(chunk_x[i + 1], smooth_y[i + 1]),
                           Vec2(chunk_x[i + 1], h), Vec2(chunk_x[i], h)});
     b2EdgeShape shape;
-    shape.SetTwoSided(b2Vec2(chunk_x[i], smooth_y[i]),
-                      b2Vec2(chunk_x[i + 1], smooth_y[i + 1]));
+    shape.Set(b2Vec2(chunk_x[i], smooth_y[i]),
+              b2Vec2(chunk_x[i + 1], smooth_y[i + 1]));
 
     b2FixtureDef fd;
     fd.shape = &shape;
@@ -156,6 +180,7 @@ void LunarLanderBox2dEnv::ResetBox2d(std::mt19937* gen) {
     lander_->CreateFixture(&fd);
     b2Vec2 force = Vec2(RandUniform(-kInitialRandom, kInitialRandom)(*gen),
                         RandUniform(-kInitialRandom, kInitialRandom)(*gen));
+    initial_force_ = {force.x, force.y};
     lander_->ApplyForceToCenter(force, true);
   }
 
@@ -236,6 +261,8 @@ void LunarLanderBox2dEnv::StepBox2d(std::mt19937* gen, int action,
   side[1] = tip[0];
   dispersion[0] = RandUniform(-1, 1)(*gen) / kScale;
   dispersion[1] = RandUniform(-1, 1)(*gen) / kScale;
+  last_dispersion_[0] = static_cast<float>(dispersion[0] * kScale);
+  last_dispersion_[1] = static_cast<float>(dispersion[1] * kScale);
 
   // main engine
   double m_power = 0.0;

@@ -39,6 +39,13 @@ _TASK_IDS = (
     "LunarLanderContinuous-v2",
     "LunarLanderContinuous-v3",
 )
+_OFFICIAL_RENDER_TASK_IDS = (
+    "CarRacing-v3",
+    "BipedalWalker-v3",
+    "BipedalWalkerHardcore-v3",
+    "LunarLander-v3",
+    "LunarLanderContinuous-v3",
+)
 _BOX2D_SWIGCONSTANT_RE = re.compile(r"_Box2D\.(\w+_swigconstant)\(")
 
 
@@ -219,13 +226,19 @@ class Box2DRenderTest(absltest.TestCase):
                     oracle.close()
 
     def test_render_matches_official_first_frame(self) -> None:
-        """Representative Box2D renders should stay close to Gymnasium."""
+        """All Box2D reset renders should stay close to Gymnasium."""
         thresholds = {
+            "BipedalWalker-v3": 40.0,
+            "BipedalWalkerHardcore-v3": 40.0,
             "CarRacing-v3": 15.0,
             "LunarLander-v3": 30.0,
             "LunarLanderContinuous-v3": 30.0,
         }
-        for task_id, threshold in thresholds.items():
+        self.assertEqual(
+            tuple(sorted(thresholds)),
+            tuple(sorted(_OFFICIAL_RENDER_TASK_IDS)),
+        )
+        for task_id in _OFFICIAL_RENDER_TASK_IDS:
             with self.subTest(task_id=task_id):
                 env = make_gym(
                     task_id,
@@ -240,7 +253,10 @@ class Box2DRenderTest(absltest.TestCase):
                     frame = _render_array(env)[0].astype(np.int16)
                     expected = np.asarray(oracle.render(), dtype=np.int16)
                     self.assertEqual(frame.shape, expected.shape)
-                    self.assertLess(np.abs(frame - expected).mean(), threshold)
+                    self.assertLess(
+                        np.abs(frame - expected).mean(),
+                        thresholds[task_id],
+                    )
                 finally:
                     env.close()
                     oracle.close()

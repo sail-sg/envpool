@@ -18,7 +18,7 @@
 #ifndef ENVPOOL_BOX2D_CAR_DYNAMICS_H_
 #define ENVPOOL_BOX2D_CAR_DYNAMICS_H_
 
-#include <box2d/box2d.h>
+#include <Box2D/Box2D.h>
 
 #include <array>
 #include <cmath>

@@ -28,7 +28,7 @@ from minigrid.minigrid_env import MiniGridEnv as UpstreamMiniGridEnv
 
 import envpool.minigrid.registration  # noqa: F401
 from envpool.minigrid import decode_mission
-from envpool.registration import list_all_envs, make_gymnasium
+from envpool.registration import list_all_envs, make_gymnasium, make_spec
 
 _EMPTY = 1
 _DOOR = 4
@@ -99,6 +99,10 @@ def _patch_wfc_oracle_reset() -> None:
 
 
 _patch_wfc_oracle_reset()
+
+
+def _max_episode_steps(task_id: str) -> int:
+    return int(make_spec(task_id).config.max_episode_steps)
 
 
 def _mission_from_obs(obs: dict[str, np.ndarray]) -> str:
@@ -320,9 +324,11 @@ class _MiniGridEnvPoolAlignTest(absltest.TestCase):
     def run_align_check(
         self,
         task_id: str,
-        total: int = 100,
+        total: int | None = None,
         **kwargs: Any,
     ) -> None:
+        if total is None:
+            total = _max_episode_steps(task_id)
         env0 = gym.make(task_id)
         env1 = make_gymnasium(task_id, num_envs=1, seed=0, **kwargs)
         obs_space0 = cast(Any, env0.observation_space)

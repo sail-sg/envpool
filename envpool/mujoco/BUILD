@@ -281,6 +281,8 @@ py_test(
         requirement("numpy"),
         requirement("absl-py"),
         requirement("gymnasium"),
+        requirement("imageio"),
+        requirement("mujoco"),
     ],
 )
 

@@ -18,7 +18,7 @@
 #ifndef ENVPOOL_BOX2D_BIPEDAL_WALKER_ENV_H_
 #define ENVPOOL_BOX2D_BIPEDAL_WALKER_ENV_H_
 
-#include <box2d/box2d.h>
+#include <Box2D/Box2D.h>
 
 #include <array>
 #include <memory>
@@ -89,6 +89,7 @@ class BipedalWalkerBox2dEnv : public RenderableEnv {
   std::array<float, 24> obs_;
   // info
   float scroll_;
+  float initial_force_{0.0f};
   std::vector<float> terrain_edge_path2_, terrain_poly_path4_, leg_path4_,
       hull_path5_;
   std::vector<BipedalWalkerCloudPoly> cloud_poly_;
@@ -103,6 +104,8 @@ class BipedalWalkerBox2dEnv : public RenderableEnv {
   std::array<b2RevoluteJoint*, 4> joints_;
   std::array<BipedalWalkerLidarCallback, kLidarNum> lidar_;
   std::unique_ptr<BipedalWalkerContactDetector> listener_;
+  [[nodiscard]] std::array<float, 7> BodyState(const b2Body* body) const;
+  [[nodiscard]] std::vector<float> CloudPolyState() const;
 
  public:
   BipedalWalkerBox2dEnv(bool hardcore, int max_episode_steps);

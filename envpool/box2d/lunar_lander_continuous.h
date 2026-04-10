@@ -17,6 +17,9 @@
 #ifndef ENVPOOL_BOX2D_LUNAR_LANDER_CONTINUOUS_H_
 #define ENVPOOL_BOX2D_LUNAR_LANDER_CONTINUOUS_H_
 
+#include <algorithm>
+#include <array>
+
 #include "envpool/box2d/lunar_lander_env.h"
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
@@ -30,7 +33,19 @@ class LunarLanderContinuousEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
+#ifdef ENVPOOL_TEST
+    return MakeDict("obs"_.Bind(Spec<float>({8})),
+                    "info:sky_polys"_.Bind(Spec<float>({10, 4, 2})),
+                    "info:lander_state"_.Bind(Spec<float>({7})),
+                    "info:leg_states"_.Bind(Spec<float>({2, 7})),
+                    "info:ground_contact"_.Bind(Spec<float>({2})),
+                    "info:prev_shaping"_.Bind(Spec<float>({-1})),
+                    "info:game_over"_.Bind(Spec<float>({-1})),
+                    "info:last_dispersion"_.Bind(Spec<float>({2})),
+                    "info:initial_force"_.Bind(Spec<float>({2})));
+#else
     return MakeDict("obs"_.Bind(Spec<float>({8})));
+#endif
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -66,6 +81,28 @@ class LunarLanderContinuousEnv : public Env<LunarLanderContinuousEnvSpec>,
     auto state = Allocate();
     state["reward"_] = reward_;
     state["obs"_].Assign(obs_.data(), obs_.size());
+#ifdef ENVPOOL_TEST
+    auto sky_poly = SkyPolyState();
+    state["info:sky_polys"_].Assign(sky_poly.data(), sky_poly.size());
+    auto lander_state = BodyState(lander_);
+    state["info:lander_state"_].Assign(lander_state.data(),
+                                       lander_state.size());
+    std::array<float, 14> leg_states;
+    for (int i = 0; i < 2; ++i) {
+      auto leg_state = BodyState(legs_[i]);
+      std::copy(leg_state.begin(), leg_state.end(),
+                leg_states.begin() + i * leg_state.size());
+    }
+    state["info:leg_states"_].Assign(leg_states.data(), leg_states.size());
+    state["info:ground_contact"_].Assign(ground_contact_.data(),
+                                         ground_contact_.size());
+    state["info:prev_shaping"_] = prev_shaping_;
+    state["info:game_over"_] = done_ ? 1.0f : 0.0f;
+    state["info:last_dispersion"_].Assign(last_dispersion_.data(),
+                                          last_dispersion_.size());
+    state["info:initial_force"_].Assign(initial_force_.data(),
+                                        initial_force_.size());
+#endif
   }
 };
 

@@ -19,7 +19,11 @@ import numpy as np
 from absl.testing import absltest
 
 import envpool.minigrid.registration  # noqa: F401
-from envpool.registration import list_all_envs, make_gym
+from envpool.registration import list_all_envs, make_gym, make_spec
+
+
+def _max_episode_steps(task_id: str) -> int:
+    return int(make_spec(task_id).config.max_episode_steps)
 
 
 class _MiniGridEnvPoolDeterministicTest(absltest.TestCase):
@@ -55,49 +59,80 @@ class _MiniGridEnvPoolDeterministicTest(absltest.TestCase):
         self,
         task_id: str,
         num_envs: int = 4,
-        total: int = 64,
+        total: int | None = None,
         action_seed: int = 1,
         **kwargs: Any,
     ) -> None:
+        if total is None:
+            total = _max_episode_steps(task_id)
         env0 = make_gym(task_id, num_envs=num_envs, seed=0, **kwargs)
         env1 = make_gym(task_id, num_envs=num_envs, seed=0, **kwargs)
         act_space = env0.action_space
         act_space.seed(action_seed)
-        self.assert_obs_equal(
-            self.obs_from_reset(env0.reset()),
-            self.obs_from_reset(env1.reset()),
-        )
-        for _ in range(total):
-            action = np.array([act_space.sample() for _ in range(num_envs)])
-            self.assert_obs_equal(env0.step(action)[0], env1.step(action)[0])
+        try:
+            self.assert_obs_equal(
+                self.obs_from_reset(env0.reset()),
+                self.obs_from_reset(env1.reset()),
+            )
+            for _ in range(total):
+                action = np.array([act_space.sample() for _ in range(num_envs)])
+                obs0, rew0, term0, trunc0, info0 = env0.step(action)
+                obs1, rew1, term1, trunc1, info1 = env1.step(action)
+                self.assert_obs_equal(obs0, obs1)
+                np.testing.assert_allclose(rew0, rew1)
+                np.testing.assert_array_equal(term0, term1)
+                np.testing.assert_array_equal(trunc0, trunc1)
+                np.testing.assert_array_equal(
+                    info0["elapsed_step"], info1["elapsed_step"]
+                )
+                np.testing.assert_array_equal(
+                    info0["agent_pos"], info1["agent_pos"]
+                )
+        finally:
+            env0.close()
+            env1.close()
 
     def run_different_seed_check(
         self,
         task_id: str,
         num_envs: int = 4,
-        total: int = 32,
+        total: int | None = None,
         action_seed: int = 1,
         **kwargs: Any,
     ) -> None:
+        if total is None:
+            total = _max_episode_steps(task_id)
         env0 = make_gym(task_id, num_envs=num_envs, seed=0, **kwargs)
         env1 = make_gym(task_id, num_envs=num_envs, seed=1, **kwargs)
         act_space = env0.action_space
         act_space.seed(action_seed)
-        obs0 = self.obs_from_reset(env0.reset())
-        obs1 = self.obs_from_reset(env1.reset())
-        differs = any(not np.array_equal(obs0[key], obs1[key]) for key in obs0)
-        for _ in range(total):
-            action = np.array([act_space.sample() for _ in range(num_envs)])
-            obs0 = env0.step(action)[0]
-            obs1 = env1.step(action)[0]
-            differs = differs or any(
+        try:
+            obs0 = self.obs_from_reset(env0.reset())
+            obs1 = self.obs_from_reset(env1.reset())
+            differs = any(
                 not np.array_equal(obs0[key], obs1[key]) for key in obs0
             )
-            if differs:
-                break
-        self.assertTrue(
-            differs, msg=f"expected different rollouts for {task_id}"
-        )
+            for _ in range(total):
+                action = np.array([act_space.sample() for _ in range(num_envs)])
+                obs0, rew0, term0, trunc0, _ = env0.step(action)
+                obs1, rew1, term1, trunc1, _ = env1.step(action)
+                differs = (
+                    differs
+                    or any(
+                        not np.array_equal(obs0[key], obs1[key]) for key in obs0
+                    )
+                    or not np.allclose(rew0, rew1)
+                    or not np.array_equal(term0, term1)
+                    or not np.array_equal(trunc0, trunc1)
+                )
+                if differs:
+                    break
+            self.assertTrue(
+                differs, msg=f"expected different rollouts for {task_id}"
+            )
+        finally:
+            env0.close()
+            env1.close()
 
     def test_registered_minigrid_envs_same_seed(self) -> None:
         for task_id in self.minigrid_task_ids():

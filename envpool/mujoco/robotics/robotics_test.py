@@ -94,12 +94,12 @@ _HAND_CANONICAL_BY_V0 = {
     for task_id in _HAND_ENVS
     if task_id.endswith("-v0")
 }
-_RENDER_ALIGNMENT_ENVS = (
-    "FetchReach-v4",
-    "HandReach-v3",
-    "AdroitHandDoor-v1",
-    "PointMaze_UMaze-v3",
-    "FrankaKitchen-v1",
+_ALL_ROBOTICS_ENVS = (
+    *_FETCH_ENVS,
+    *_HAND_ENVS,
+    *_ADROIT_ENVS,
+    *_POINT_MAZE_ENVS,
+    *_KITCHEN_ENVS,
 )
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -407,6 +407,10 @@ def _assert_space_alignment(
                 env1.close()
 
 
+def _max_episode_steps(task_id: str) -> int:
+    return int(make_spec(task_id).config.max_episode_steps)
+
+
 def _sample_action_batch(
     action_space: gym.Space,
     num_envs: int,
@@ -528,7 +532,7 @@ def _assert_render_alignment(
 
 class _GymnasiumRoboticsRenderEnvPoolTest(absltest.TestCase):
     def test_render_alignment(self) -> None:
-        for task_id in _RENDER_ALIGNMENT_ENVS:
+        for task_id in _ALL_ROBOTICS_ENVS:
             with self.subTest(task_id=task_id):
                 _assert_render_alignment(self, task_id)
 
@@ -550,10 +554,16 @@ class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
         _assert_space_alignment(self, _FETCH_ENVS)
 
     def test_deterministic_rollout_same_seed(self) -> None:
-        _assert_same_seed_rollout(self, _FETCH_ENVS, num_steps=32)
+        for task_id in _FETCH_ENVS:
+            _assert_same_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_different_seed_rollout_changes(self) -> None:
-        _assert_different_seed_rollout(self, _FETCH_ENVS, num_steps=32)
+        for task_id in _FETCH_ENVS:
+            _assert_different_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_align_with_upstream_rollout(self) -> None:
         for task_id in _FETCH_ENVS:
@@ -579,7 +589,7 @@ class _GymnasiumRoboticsFetchEnvPoolTest(absltest.TestCase):
 
                     terminated1 = np.array([False])
                     truncated1 = np.array([False])
-                    for _ in range(32):
+                    for _ in range(_max_episode_steps(task_id)):
                         action = env0.action_space.sample()
                         obs0, reward0, terminated0, truncated0, info0 = (
                             env0.step(action)
@@ -792,10 +802,16 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
         _assert_space_alignment(self, _HAND_ENVS)
 
     def test_deterministic_rollout_same_seed(self) -> None:
-        _assert_same_seed_rollout(self, _HAND_ENVS, num_steps=8)
+        for task_id in _HAND_ENVS:
+            _assert_same_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_different_seed_rollout_changes(self) -> None:
-        _assert_different_seed_rollout(self, _HAND_ENVS, num_steps=8)
+        for task_id in _HAND_ENVS:
+            _assert_different_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_align_with_upstream_rollout(self) -> None:
         for task_id in _HAND_ENVS:
@@ -821,7 +837,7 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
 
                     terminated1 = np.array([False])
                     truncated1 = np.array([False])
-                    for _ in range(8):
+                    for _ in range(_max_episode_steps(task_id)):
                         action = env0.action_space.sample()
                         obs0, reward0, terminated0, truncated0, info0 = (
                             env0.step(action)
@@ -896,10 +912,16 @@ class _GymnasiumRoboticsAdroitEnvPoolTest(absltest.TestCase):
         _assert_space_alignment(self, _ADROIT_ENVS)
 
     def test_deterministic_rollout_same_seed(self) -> None:
-        _assert_same_seed_rollout(self, _ADROIT_ENVS, num_steps=8)
+        for task_id in _ADROIT_ENVS:
+            _assert_same_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_different_seed_rollout_changes(self) -> None:
-        _assert_different_seed_rollout(self, _ADROIT_ENVS, num_steps=8)
+        for task_id in _ADROIT_ENVS:
+            _assert_different_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_align_with_upstream_rollout(self) -> None:
         for task_id in _ADROIT_ENVS:
@@ -924,7 +946,7 @@ class _GymnasiumRoboticsAdroitEnvPoolTest(absltest.TestCase):
                         rtol=1e-4,
                     )
 
-                    for _ in range(8):
+                    for _ in range(_max_episode_steps(task_id)):
                         action = env0.action_space.sample()
                         obs0, reward0, terminated0, truncated0, info0 = (
                             env0.step(action)
@@ -979,10 +1001,16 @@ class _GymnasiumRoboticsPointMazeEnvPoolTest(absltest.TestCase):
         _assert_space_alignment(self, _POINT_MAZE_ENVS)
 
     def test_deterministic_rollout_same_seed(self) -> None:
-        _assert_same_seed_rollout(self, _POINT_MAZE_ENVS, num_steps=16)
+        for task_id in _POINT_MAZE_ENVS:
+            _assert_same_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_different_seed_rollout_changes(self) -> None:
-        _assert_different_seed_rollout(self, _POINT_MAZE_ENVS, num_steps=16)
+        for task_id in _POINT_MAZE_ENVS:
+            _assert_different_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_align_with_upstream_rollout(self) -> None:
         for task_id in _POINT_MAZE_ENVS:
@@ -1006,7 +1034,7 @@ class _GymnasiumRoboticsPointMazeEnvPoolTest(absltest.TestCase):
                         rtol=1e-4,
                     )
 
-                    for _ in range(16):
+                    for _ in range(_max_episode_steps(task_id)):
                         action = env0.action_space.sample()
                         obs0, reward0, terminated0, truncated0, info0 = (
                             env0.step(action)
@@ -1147,10 +1175,16 @@ class _GymnasiumRoboticsKitchenEnvPoolTest(absltest.TestCase):
             env1.close()
 
     def test_deterministic_rollout_same_seed(self) -> None:
-        _assert_same_seed_rollout(self, _KITCHEN_ENVS, num_steps=8)
+        for task_id in _KITCHEN_ENVS:
+            _assert_same_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_different_seed_rollout_changes(self) -> None:
-        _assert_different_seed_rollout(self, _KITCHEN_ENVS, num_steps=8)
+        for task_id in _KITCHEN_ENVS:
+            _assert_different_seed_rollout(
+                self, [task_id], num_steps=_max_episode_steps(task_id)
+            )
 
     def test_align_with_upstream_rollout(self) -> None:
         env0 = _make_upstream_env(
@@ -1193,7 +1227,7 @@ class _GymnasiumRoboticsKitchenEnvPoolTest(absltest.TestCase):
                 np.zeros(7, dtype=np.int32),
             )
 
-            for _ in range(8):
+            for _ in range(_max_episode_steps("FrankaKitchen-v1")):
                 action = env0.action_space.sample()
                 obs0, reward0, terminated0, truncated0, info0 = env0.step(
                     action
