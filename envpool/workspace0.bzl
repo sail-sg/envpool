@@ -377,6 +377,30 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
 
     maybe(
         http_archive,
+        name = "sdl2_ttf",
+        sha256 = "2c45241a56203a59d66ec6b4eae9457e5675fc609376566a257391fd29d341a2",
+        strip_prefix = "SDL_ttf-release-2.24.0",
+        type = "tar.gz",
+        urls = [
+            "https://github.com/libsdl-org/SDL_ttf/archive/refs/tags/release-2.24.0.tar.gz",
+        ],
+        build_file = "//third_party/sdl2_ttf:sdl2_ttf.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "sdl2_gfx",
+        sha256 = "358042f1e63ba1ef4d6484047998ab08c1ee72ab589826805bfbba8fd50abe8b",
+        strip_prefix = "SDL2_gfx-c4aca6b9700ec0db0abd316809e7e6038c511ce2",
+        type = "tar.gz",
+        urls = [
+            "https://codeload.github.com/ferzkopp/SDL2_gfx/tar.gz/c4aca6b9700ec0db0abd316809e7e6038c511ce2",
+        ],
+        build_file = "//third_party/sdl2_gfx:sdl2_gfx.BUILD",
+    )
+
+    maybe(
+        http_archive,
         name = "com_github_nelhage_rules_boost",
         # sha256 = "2215e6910eb763a971b1f63f53c45c0f2b7607df38c96287666d94d954da8cdc",
         strip_prefix = "rules_boost-e60cf50996da9fe769b6e7a31b88c54966ecb191",

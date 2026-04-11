@@ -60,7 +60,7 @@ cc_library(
         "@boost//:system",
         "@boost//:thread",
         "@sdl2",
-        "@envpool//third_party/sdl2_gfx",
-        "@envpool//third_party/sdl2_ttf",
+        "@sdl2_gfx//:sdl2_gfx",
+        "@sdl2_ttf//:sdl2_ttf",
     ],
 )

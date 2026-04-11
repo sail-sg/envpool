@@ -142,7 +142,12 @@ inline void BuildEnvScenarioConfig(const std::string& env_name,
                                    unsigned int game_engine_random_seed,
                                    int max_episode_steps,
                                    ScenarioConfig* cfg) {
-  BuildScenarioConfig(env_name, episode_number, game_engine_random_seed, cfg);
+  cfg->game_engine_random_seed = game_engine_random_seed;
+  cfg->reverse_team_processing = false;
+  BuildScenarioConfig(env_name, episode_number, cfg);
+  if (!cfg->deterministic) {
+    cfg->reverse_team_processing = (game_engine_random_seed % 2) != 0;
+  }
   if (max_episode_steps > 0) {
     cfg->game_duration = max_episode_steps;
   }

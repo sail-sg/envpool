@@ -34,12 +34,20 @@ copy_to_directory(
     strip_prefix = "third_party/fonts/",
 )
 
+genrule(
+    name = "gen_gfootball_scenarios_inc",
+    srcs = ["@google_research_football//:gfootball_python"],
+    outs = ["gfootball_scenarios.inc"],
+    cmd = "$(location //third_party/gfootball:generate_scenarios) $(locations @google_research_football//:gfootball_python) > $@",
+    tools = ["//third_party/gfootball:generate_scenarios"],
+)
+
 cc_library(
     name = "gfootball_env",
     hdrs = [
         "gfootball_common.h",
         "gfootball_env.h",
-        "gfootball_scenarios.inc",
+        ":gen_gfootball_scenarios_inc",
     ],
     data = [
         ":gen_gfootball_assets_data",
