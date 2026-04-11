@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 import importlib
-from typing import Any
+from typing import Any, TypedDict
 
 import numpy as np
 
@@ -63,7 +63,15 @@ TASK_SPECS: tuple[tuple[str, int], ...] = (
     ("academy_single_goal_versus_lazy", 3000),
 )
 
-TASK_CONFIG = {
+
+class TaskConfig(TypedDict):
+    """Static task metadata used by the gfootball test oracle."""
+
+    env_name: str
+    max_episode_steps: int
+
+
+TASK_CONFIG: dict[str, TaskConfig] = {
     f"gfootball/{env_name}-v1": {
         "env_name": env_name,
         "max_episode_steps": max_episode_steps,
@@ -75,6 +83,7 @@ ALL_TASK_IDS = tuple(TASK_CONFIG)
 
 
 def register_gfootball_envs() -> None:
+    """Register the gfootball environments for tests that import helpers directly."""
     importlib.import_module("envpool.gfootball.registration")
 
 
@@ -106,6 +115,7 @@ class GfootballOracle:
         render_resolution_y: int = 720,
         physics_steps_per_frame: int = 10,
     ) -> None:
+        """Create a single-environment oracle with upstream-matching defaults."""
         task = TASK_CONFIG[task_id]
         self._env_name = str(task["env_name"])
         self._max_episode_steps = int(task["max_episode_steps"])
@@ -146,9 +156,11 @@ class GfootballOracle:
                 ],
             )
             frame = np.reshape(
-                np.concatenate(
-                    [frame[:, :, 0], frame[:, :, 1], frame[:, :, 2]]
-                ),
+                np.concatenate([
+                    frame[:, :, 0],
+                    frame[:, :, 1],
+                    frame[:, :, 2],
+                ]),
                 [3, self._render_resolution_y, self._render_resolution_x],
             )
             frame = np.transpose(frame, [1, 2, 0])
@@ -158,7 +170,9 @@ class GfootballOracle:
             _mark_point(smm[:, :, 0], *player["position"])
         for player in info["right_team"]:
             _mark_point(smm[:, :, 1], *player["position"])
-        _mark_point(smm[:, :, 2], info["ball_position"][0], info["ball_position"][1])
+        _mark_point(
+            smm[:, :, 2], info["ball_position"][0], info["ball_position"][1]
+        )
         active = (
             int(info["left_controllers"][0]) if info["left_controllers"] else -1
         )
@@ -179,7 +193,10 @@ class GfootballOracle:
         self._step = int(info["step"])
         return bool(info["is_in_play"])
 
-    def reset(self, *, engine_seed: int, episode_number: int) -> tuple[np.ndarray, dict[str, Any]]:
+    def reset(
+        self, *, engine_seed: int, episode_number: int
+    ) -> tuple[np.ndarray, dict[str, Any]]:
+        """Reset the oracle to a specific engine seed and episode number."""
         self._engine_seed = int(engine_seed)
         self._episode_number = int(episode_number)
         self._previous_score_diff = 0
@@ -236,14 +253,18 @@ class GfootballOracle:
         return self.obs(), self.info()
 
     def obs(self) -> np.ndarray:
+        """Return a copy of the current minimap observation."""
         return np.array(self._observation["obs"], copy=True)
 
     def info(self) -> dict[str, Any]:
+        """Return the current info dict using EnvPool test conventions."""
         return {
             "score": np.array(self._observation["score"], copy=True),
             "game_mode": np.int32(self._observation["game_mode"]),
             "ball_owned_team": np.int32(self._observation["ball_owned_team"]),
-            "ball_owned_player": np.int32(self._observation["ball_owned_player"]),
+            "ball_owned_player": np.int32(
+                self._observation["ball_owned_player"]
+            ),
             "steps_left": np.int32(self._observation["steps_left"]),
             "engine_seed": np.int32(self._engine_seed),
             "episode_number": np.int32(self._episode_number),
@@ -253,17 +274,16 @@ class GfootballOracle:
     def step(
         self, action: int
     ) -> tuple[np.ndarray, np.float32, np.bool_, np.bool_, dict[str, Any]]:
+        """Advance the oracle by one action and return the Gymnasium step tuple."""
         backend_action = int(_ACTION_SET[int(action)])
         waiting = int(self._engine.waiting_for_game_count)
         if waiting == 20:
             backend_action = _ACTION_SHORT_PASS
         elif waiting > 20:
             backend_action = _ACTION_IDLE
-            if (
-                int(self._observation["ball_owned_team"]) == 0
-                and int(self._observation["active"])
-                == int(self._observation["ball_owned_player"])
-            ):
+            if int(self._observation["ball_owned_team"]) == 0 and int(
+                self._observation["active"]
+            ) == int(self._observation["ball_owned_player"]):
                 backend_action = _ACTION_RIGHT if waiting < 30 else _ACTION_LEFT
         self._engine.action(backend_action, True, 0)
         while True:
@@ -272,7 +292,9 @@ class GfootballOracle:
                 break
 
         done = False
-        if self._end_episode_on_score and np.any(self._observation["score"] > 0):
+        if self._end_episode_on_score and np.any(
+            self._observation["score"] > 0
+        ):
             done = True
         if (
             self._end_episode_on_out_of_play
@@ -290,9 +312,13 @@ class GfootballOracle:
         ):
             done = True
         if int(self._observation["ball_owned_team"]) != -1:
-            self._prev_ball_owned_team = int(self._observation["ball_owned_team"])
+            self._prev_ball_owned_team = int(
+                self._observation["ball_owned_team"]
+            )
 
-        score_diff = int(self._observation["score"][0] - self._observation["score"][1])
+        score_diff = int(
+            self._observation["score"][0] - self._observation["score"][1]
+        )
         reward = np.float32(score_diff - self._previous_score_diff)
         self._previous_score_diff = score_diff
 
@@ -310,5 +336,6 @@ class GfootballOracle:
         return self.obs(), reward, terminated, truncated, self.info()
 
     def render(self) -> np.ndarray:
+        """Return the latest RGB frame in the same layout as EnvPool render output."""
         assert self._frame is not None
         return np.ascontiguousarray(self._frame[:, :, ::-1])

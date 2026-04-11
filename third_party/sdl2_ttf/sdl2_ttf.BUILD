@@ -16,39 +16,39 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
 
-config_setting(
-    name = "darwin",
-    constraint_values = ["@platforms//os:macos"],
-)
-
 genrule(
     name = "sdl_h",
     outs = ["SDL.h"],
     cmd = "cat >$@ <<'EOF'\n#include \"SDL2/SDL.h\"\nEOF",
+    cmd_bat = "@echo #include \"SDL2/SDL.h\" > $@",
 )
 
 genrule(
     name = "sdl_cpuinfo_h",
     outs = ["SDL_cpuinfo.h"],
     cmd = "cat >$@ <<'EOF'\n#include \"SDL2/SDL_cpuinfo.h\"\nEOF",
+    cmd_bat = "@echo #include \"SDL2/SDL_cpuinfo.h\" > $@",
 )
 
 genrule(
     name = "sdl_endian_h",
     outs = ["SDL_endian.h"],
     cmd = "cat >$@ <<'EOF'\n#include \"SDL2/SDL_endian.h\"\nEOF",
+    cmd_bat = "@echo #include \"SDL2/SDL_endian.h\" > $@",
 )
 
 genrule(
     name = "begin_code_h",
     outs = ["begin_code.h"],
     cmd = "cat >$@ <<'EOF'\n#include \"SDL2/begin_code.h\"\nEOF",
+    cmd_bat = "@echo #include \"SDL2/begin_code.h\" > $@",
 )
 
 genrule(
     name = "close_code_h",
     outs = ["close_code.h"],
     cmd = "cat >$@ <<'EOF'\n#include \"SDL2/close_code.h\"\nEOF",
+    cmd_bat = "@echo #include \"SDL2/close_code.h\" > $@",
 )
 
 genrule(
@@ -56,6 +56,7 @@ genrule(
     srcs = ["SDL_ttf.h"],
     outs = ["SDL2/SDL_ttf.h"],
     cmd = "mkdir -p $(@D) && cp $(location SDL_ttf.h) $@",
+    cmd_bat = "if not exist \"$(@D)\" mkdir \"$(@D)\" & copy /Y \"$(location SDL_ttf.h)\" \"$@\" >NUL",
 )
 
 cc_library(
@@ -71,16 +72,8 @@ cc_library(
         ":sdl_h",
     ],
     includes = ["."],
-    linkopts = select({
-        ":darwin": [
-            "-L/opt/homebrew/opt/libpng/lib",
-            "-L/usr/local/opt/libpng/lib",
-            "-lpng16",
-        ],
-        "//conditions:default": ["-lpng"],
-    }),
     deps = [
-        "@freetype_system//:freetype",
+        "@freetype",
         "@sdl2",
     ],
 )

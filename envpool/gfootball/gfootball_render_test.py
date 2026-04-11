@@ -36,7 +36,9 @@ def _scalar(value: np.ndarray) -> int:
 
 class _GfootballRenderTest(absltest.TestCase):
     def assert_task_render_aligned(self, task_id: str) -> None:
-        env = make_gymnasium(task_id, num_envs=1, seed=0, render_mode="rgb_array")
+        env = make_gymnasium(
+            task_id, num_envs=1, seed=0, render_mode="rgb_array"
+        )
         oracle = GfootballOracle(task_id, render=True)
         try:
             _, info = env.reset()

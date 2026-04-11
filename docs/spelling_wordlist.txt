@@ -86,3 +86,6 @@ bitwise
 dtype
 Subclassed
 deleter
+gfootball
+minimap
+rollouts

@@ -48,12 +48,24 @@ inline constexpr double kMinimapYMax = 1.0 / 2.25;
 inline constexpr std::uint8_t kMarkerValue = 255;
 
 inline constexpr std::array<int, kActionCount> kDefaultActionSet = {
-    game_idle,           game_left,         game_top_left,
-    game_top,            game_top_right,    game_right,
-    game_bottom_right,   game_bottom,       game_bottom_left,
-    game_long_pass,      game_high_pass,    game_short_pass,
-    game_shot,           game_sprint,       game_release_direction,
-    game_release_sprint, game_sliding,      game_dribble,
+    game_idle,
+    game_left,
+    game_top_left,
+    game_top,
+    game_top_right,
+    game_right,
+    game_bottom_right,
+    game_bottom,
+    game_bottom_left,
+    game_long_pass,
+    game_high_pass,
+    game_short_pass,
+    game_shot,
+    game_sprint,
+    game_release_direction,
+    game_release_sprint,
+    game_sliding,
+    game_dribble,
     game_release_dribble,
 };
 
@@ -74,8 +86,7 @@ inline void SetEnvVarIfMissing(const char* key, const std::string& value) {
 inline void EnsureGfootballRuntimePaths(const std::string& base_path) {
   SetEnvVar("GFOOTBALL_DATA_DIR", base_path + "/gfootball/assets/data");
   SetEnvVar("GFOOTBALL_FONT",
-            base_path +
-                "/gfootball/assets/fonts/AlegreyaSansSC-ExtraBold.ttf");
+            base_path + "/gfootball/assets/fonts/AlegreyaSansSC-ExtraBold.ttf");
 #if defined(__linux__)
   SetEnvVarIfMissing("MESA_GL_VERSION_OVERRIDE", "3.2");
   SetEnvVarIfMissing("MESA_GLSL_VERSION_OVERRIDE", "150");
@@ -140,8 +151,7 @@ inline void TransformFrameToRgb(const screenshoot& raw_frame, int render_width,
 inline void BuildEnvScenarioConfig(const std::string& env_name,
                                    int episode_number,
                                    unsigned int game_engine_random_seed,
-                                   int max_episode_steps,
-                                   ScenarioConfig* cfg) {
+                                   int max_episode_steps, ScenarioConfig* cfg) {
   cfg->game_engine_random_seed = game_engine_random_seed;
   cfg->reverse_team_processing = false;
   BuildScenarioConfig(env_name, episode_number, cfg);

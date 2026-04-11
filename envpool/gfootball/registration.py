@@ -15,14 +15,6 @@
 
 from envpool.registration import register
 
-_COMMON = {
-    "import_path": "envpool.gfootball",
-    "spec_cls": "GfootballEnvSpec",
-    "dm_cls": "GfootballDMEnvPool",
-    "gymnasium_cls": "GfootballGymnasiumEnvPool",
-    "render": False,
-}
-
 _SCENARIOS = (
     ("11_vs_11_competition", 3000),
     ("11_vs_11_easy_stochastic", 3000),
@@ -49,5 +41,9 @@ for env_name, max_episode_steps in _SCENARIOS:
         task_id=f"gfootball/{env_name}-v1",
         env_name=env_name,
         max_episode_steps=max_episode_steps,
-        **_COMMON,
+        import_path="envpool.gfootball",
+        spec_cls="GfootballEnvSpec",
+        dm_cls="GfootballDMEnvPool",
+        gymnasium_cls="GfootballGymnasiumEnvPool",
+        render=False,
     )

@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 import types
 from dataclasses import dataclass, field
@@ -60,6 +61,8 @@ ROLE_NAMES = (
 
 @dataclass(eq=True)
 class ScenarioState:
+    """Captured scenario configuration with the fields the C++ runtime needs."""
+
     ball_position: tuple[float, float] = (0.0, 0.0)
     left_team: list[tuple[float, float, str, bool, bool]] = field(
         default_factory=list
@@ -84,20 +87,27 @@ class ScenarioState:
 
 
 class Team:
+    """Minimal stand-in for the upstream team enum."""
+
     e_Left = "e_Left"
     e_Right = "e_Right"
 
 
 class ScenarioBuilderCapture:
+    """Small builder shim that records upstream Python scenario mutations."""
+
     def __init__(self, episode_number: int) -> None:
+        """Initialize capture state for a specific episode number."""
         self._episode_number = episode_number
         self._active_team = Team.e_Left
         self._config = ScenarioState()
 
     def config(self) -> ScenarioState:
+        """Return the captured scenario state."""
         return self._config
 
     def SetTeam(self, team: str) -> None:
+        """Switch subsequent player additions to the selected team."""
         self._active_team = team
 
     def AddPlayer(
@@ -108,6 +118,7 @@ class ScenarioBuilderCapture:
         lazy: bool = False,
         controllable: bool = True,
     ) -> None:
+        """Record a player in the currently active team."""
         player = (float(x), float(y), str(role), bool(lazy), bool(controllable))
         if self._active_team == Team.e_Left:
             self._config.left_team.append(player)
@@ -115,17 +126,19 @@ class ScenarioBuilderCapture:
             self._config.right_team.append(player)
 
     def SetBallPosition(self, ball_x: float, ball_y: float) -> None:
+        """Record the initial ball position."""
         self._config.ball_position = (float(ball_x), float(ball_y))
 
     def EpisodeNumber(self) -> int:
+        """Expose the current episode number to upstream scenario builders."""
         return self._episode_number
 
 
 def _install_fake_gfootball_modules(scenarios_dir: Path) -> None:
     fake_engine = types.ModuleType("gfootball_engine")
-    fake_engine.e_PlayerRole = types.SimpleNamespace(
-        **{name: name for name in ROLE_NAMES}
-    )
+    fake_engine.e_PlayerRole = types.SimpleNamespace(**{
+        name: name for name in ROLE_NAMES
+    })
     fake_engine.e_Team = Team
     sys.modules["gfootball_engine"] = fake_engine
 
@@ -226,35 +239,64 @@ def _emit_state(state: ScenarioState, indent: str) -> list[str]:
     return lines
 
 
+def _cpp_identifier(name: str) -> str:
+    """Convert a scenario name into a valid C++ identifier suffix."""
+    parts = [part for part in re.split(r"[^0-9A-Za-z]+", name) if part]
+    return "".join(part[:1].upper() + part[1:] for part in parts)
+
+
+def _emit_scenario_function(
+    name: str, even_state: ScenarioState, odd_state: ScenarioState
+) -> tuple[str, list[str]]:
+    """Emit a small per-scenario helper to keep clang-tidy happy."""
+    function_name = f"BuildScenarioConfig{_cpp_identifier(name)}"
+    lines = [
+        f"inline void {function_name}(bool even_episode, ScenarioConfig* cfg) {{"
+    ]
+    if even_state == odd_state:
+        lines.extend(_emit_state(even_state, "  "))
+    else:
+        lines.append("  if (even_episode) {")
+        lines.extend(_emit_state(even_state, "    "))
+        lines.append("  } else {")
+        lines.extend(_emit_state(odd_state, "    "))
+        lines.append("  }")
+    lines.append("}")
+    lines.append("")
+    return function_name, lines
+
+
 def _generate(paths: dict[str, Path]) -> str:
     scenarios_dir = next(iter(paths.values())).parent
     _install_fake_gfootball_modules(scenarios_dir)
 
-    lines = [
-        "inline void BuildScenarioConfig(const std::string& env_name,",
-        "                                int episode_number,",
-        "                                ScenarioConfig* cfg) {",
-        "  const bool even_episode = (episode_number % 2) == 0;",
-    ]
+    lines: list[str] = []
+    scenario_builders: list[tuple[str, str]] = []
     for name in SUPPORTED_SCENARIOS:
         path = paths.get(name)
         if path is None:
             raise RuntimeError(f"Missing upstream scenario source for {name}")
         even_state = _capture_state(path, episode_number=2)
         odd_state = _capture_state(path, episode_number=1)
-        lines.append(f"  if (env_name == \"{name}\") {{")
-        if even_state == odd_state:
-            lines.extend(_emit_state(even_state, "    "))
-        else:
-            lines.append("    if (even_episode) {")
-            lines.extend(_emit_state(even_state, "      "))
-            lines.append("    } else {")
-            lines.extend(_emit_state(odd_state, "      "))
-            lines.append("    }")
+        function_name, function_lines = _emit_scenario_function(
+            name, even_state, odd_state
+        )
+        lines.extend(function_lines)
+        scenario_builders.append((name, function_name))
+
+    lines.extend([
+        "inline void BuildScenarioConfig(const std::string& env_name,",
+        "                                int episode_number,",
+        "                                ScenarioConfig* cfg) {",
+        "  const bool even_episode = (episode_number % 2) == 0;",
+    ])
+    for name, function_name in scenario_builders:
+        lines.append(f'  if (env_name == "{name}") {{')
+        lines.append(f"    {function_name}(even_episode, cfg);")
         lines.append("    return;")
         lines.append("  }")
     lines.append(
-        "  throw std::runtime_error(\"Unknown gfootball scenario: \" + env_name);"
+        '  throw std::runtime_error("Unknown gfootball scenario: " + env_name);'
     )
     lines.append("}")
     lines.append("")
@@ -262,6 +304,7 @@ def _generate(paths: dict[str, Path]) -> str:
 
 
 def main(argv: list[str]) -> int:
+    """Generate the derived C++ include from upstream scenario Python files."""
     paths: dict[str, Path] = {}
     for arg in argv[1:]:
         path = Path(arg)

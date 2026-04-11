@@ -17,6 +17,7 @@
 #ifndef ENVPOOL_GFOOTBALL_GFOOTBALL_ENV_H_
 #define ENVPOOL_GFOOTBALL_GFOOTBALL_ENV_H_
 
+#include <algorithm>
 #include <cstring>
 #include <memory>
 #include <string>
@@ -35,26 +36,24 @@ using FrameSpec = Spec<uint8_t>;
 class GfootballEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict(
-        "env_name"_.Bind(std::string("11_vs_11_stochastic")),
-        "render"_.Bind(false), "physics_steps_per_frame"_.Bind(10),
-        "render_resolution_x"_.Bind(1280),
-        "render_resolution_y"_.Bind(ResolveRenderHeight(1280)));
+    return MakeDict("env_name"_.Bind(std::string("11_vs_11_stochastic")),
+                    "render"_.Bind(false), "physics_steps_per_frame"_.Bind(10),
+                    "render_resolution_x"_.Bind(1280),
+                    "render_resolution_y"_.Bind(ResolveRenderHeight(1280)));
   }
 
   template <typename Config>
   static decltype(auto) StateSpec(const Config&) {
-    return MakeDict(
-        "obs"_.Bind(
-            Spec<uint8_t>({kSMMHeight, kSMMWidth, kSMMChannels}, {0, 255})),
-        "info:score"_.Bind(Spec<int>({2})),
-        "info:game_mode"_.Bind(Spec<int>({})),
-        "info:ball_owned_team"_.Bind(Spec<int>({})),
-        "info:ball_owned_player"_.Bind(Spec<int>({})),
-        "info:steps_left"_.Bind(Spec<int>({})),
-        "info:elapsed_step"_.Bind(Spec<int>({})),
-        "info:engine_seed"_.Bind(Spec<int>({})),
-        "info:episode_number"_.Bind(Spec<int>({})));
+    return MakeDict("obs"_.Bind(Spec<uint8_t>(
+                        {kSMMHeight, kSMMWidth, kSMMChannels}, {0, 255})),
+                    "info:score"_.Bind(Spec<int>({2})),
+                    "info:game_mode"_.Bind(Spec<int>({})),
+                    "info:ball_owned_team"_.Bind(Spec<int>({})),
+                    "info:ball_owned_player"_.Bind(Spec<int>({})),
+                    "info:steps_left"_.Bind(Spec<int>({})),
+                    "info:elapsed_step"_.Bind(Spec<int>({})),
+                    "info:engine_seed"_.Bind(Spec<int>({})),
+                    "info:episode_number"_.Bind(Spec<int>({})));
   }
 
   template <typename Config>
@@ -143,7 +142,7 @@ class GfootballEnv : public Env<GfootballEnvSpec>, public RenderableEnv {
     }
 
     const int score_diff = last_info_.left_goals - last_info_.right_goals;
-    const float reward = static_cast<float>(score_diff - previous_score_diff_);
+    const auto reward = static_cast<float>(score_diff - previous_score_diff_);
     previous_score_diff_ = score_diff;
     if (static_cast<int>(last_info_.game_mode) != kGameModeNormal) {
       engine_->waiting_for_game_count += 1;
@@ -260,11 +259,12 @@ class GfootballEnv : public Env<GfootballEnvSpec>, public RenderableEnv {
     return last_info_.left_controllers[0].controlled_player;
   }
 
-  static void MarkPoint(float x, float y, int layer, TArray<uint8_t> obs) {
+  static void MarkPoint(float x, float y, int layer,
+                        const TArray<uint8_t>& obs) {
     obs(MinimapCoordY(y), MinimapCoordX(x), layer) = kMarkerValue;
   }
 
-  void FillObservation(TArray<uint8_t> obs) const {
+  void FillObservation(const TArray<uint8_t>& obs) const {
     std::memset(obs.Data(), 0, kSMMHeight * kSMMWidth * kSMMChannels);
     for (const auto& player : last_info_.left_team) {
       MarkPoint(player.player_position.env_coord(0),

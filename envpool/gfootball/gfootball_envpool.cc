@@ -17,6 +17,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "envpool/core/py_envpool.h"
 #include "envpool/gfootball/gfootball_env.h"

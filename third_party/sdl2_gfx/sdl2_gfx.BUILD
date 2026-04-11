@@ -20,6 +20,7 @@ genrule(
     name = "sdl_h",
     outs = ["SDL.h"],
     cmd = "cat >$@ <<'EOF'\n#include \"SDL2/SDL.h\"\nEOF",
+    cmd_bat = "@echo #include \"SDL2/SDL.h\" > $@",
 )
 
 genrule(
@@ -27,6 +28,7 @@ genrule(
     srcs = ["SDL2_rotozoom.h"],
     outs = ["SDL2/SDL2_rotozoom.h"],
     cmd = "mkdir -p $(@D) && cp $(location SDL2_rotozoom.h) $@",
+    cmd_bat = "if not exist \"$(@D)\" mkdir \"$(@D)\" & copy /Y \"$(location SDL2_rotozoom.h)\" \"$@\" >NUL",
 )
 
 cc_library(
@@ -34,8 +36,8 @@ cc_library(
     srcs = ["SDL2_rotozoom.c"],
     hdrs = [
         "SDL2_rotozoom.h",
-        ":sdl_h",
         ":sdl2_rotozoom_prefixed_h",
+        ":sdl_h",
     ],
     includes = ["."],
     deps = ["@sdl2"],
