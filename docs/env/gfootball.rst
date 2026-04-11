@@ -11,8 +11,8 @@ scenario table. There is no Python-environment bridge in the runtime hot path.
 Render Compare
 --------------
 
-Representative first-frame compares for all registered Google Research
-Football scenarios.
+Representative render compares for all registered Google Research Football
+scenarios.
 Each panel shows EnvPool on the left and an independent oracle that drives the
 official Google Research Football engine with upstream scenario semantics on
 the right.

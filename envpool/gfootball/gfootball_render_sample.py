@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import argparse
+import gc
 import math
 import os
 import textwrap
@@ -39,6 +40,7 @@ _FRAME_WIDTH = 128
 _FRAME_HEIGHT = 72
 _CAPTURE_WIDTH = 320
 _CAPTURE_HEIGHT = 180
+_DISPLAY_ACTIONS = (5, 11, 13)
 _PANEL_PADDING = 10
 _IMAGE_GAP = 8
 _PANEL_GAP_X = 16
@@ -72,6 +74,25 @@ def _capture_frames(task_id: str) -> tuple[np.ndarray, np.ndarray]:
         render_resolution_x=_CAPTURE_WIDTH,
         render_resolution_y=_CAPTURE_HEIGHT,
     )
+    try:
+        _, info = env.reset()
+        frame = env.render()
+        assert frame is not None
+        env_frame = np.array(frame[0], copy=True)
+        actions_taken: list[int] = []
+        for action in _DISPLAY_ACTIONS:
+            _, _, term, trunc, _ = env.step(np.asarray([action], dtype=np.int32))
+            actions_taken.append(action)
+            if bool(term[0] or trunc[0]):
+                break
+            frame = env.render()
+            assert frame is not None
+            env_frame = np.array(frame[0], copy=True)
+    finally:
+        env.close()
+        del env
+        gc.collect()
+
     oracle = GfootballOracle(
         task_id,
         render=True,
@@ -79,19 +100,21 @@ def _capture_frames(task_id: str) -> tuple[np.ndarray, np.ndarray]:
         render_resolution_y=_CAPTURE_HEIGHT,
     )
     try:
-        _, info = env.reset()
         oracle.reset(
             engine_seed=_scalar(info["engine_seed"]),
             episode_number=_scalar(info["episode_number"]),
         )
-        frame = env.render()
-        assert frame is not None
-        env_frame = np.array(frame[0], copy=True)
         oracle_frame = oracle.render()
-        np.testing.assert_array_equal(env_frame, oracle_frame)
-        return env_frame, oracle_frame
+        for index, action in enumerate(actions_taken):
+            oracle.step(action)
+            if index + 1 == len(actions_taken):
+                oracle_frame = oracle.render()
     finally:
-        env.close()
+        del oracle
+        gc.collect()
+
+    np.testing.assert_array_equal(env_frame, oracle_frame)
+    return env_frame, oracle_frame
 
 
 def _resize_frame(frame: np.ndarray) -> Image.Image:
@@ -127,11 +150,7 @@ def _draw_panel(
     title_height = len(lines) * 16
     caption_height = 14
     panel_height = (
-        2 * _PANEL_PADDING
-        + title_height
-        + caption_height
-        + 8
-        + _FRAME_HEIGHT
+        2 * _PANEL_PADDING + title_height + caption_height + 8 + _FRAME_HEIGHT
     )
     draw = ImageDraw.Draw(canvas)
     draw.rounded_rectangle(
@@ -233,9 +252,13 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("output", type=Path)
     args = parser.parse_args()
+    output = args.output
+    build_working_directory = os.environ.get("BUILD_WORKING_DIRECTORY")
+    if not output.is_absolute() and build_working_directory:
+        output = Path(build_working_directory) / output
     image = build_image()
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    image.save(args.output, optimize=True)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    image.save(output, optimize=True)
 
 
 if __name__ == "__main__":

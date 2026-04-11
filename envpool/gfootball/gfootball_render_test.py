@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+import gc
+
 import numpy as np
 from absl.testing import absltest
 
@@ -39,27 +41,47 @@ class _GfootballRenderTest(absltest.TestCase):
         env = make_gymnasium(
             task_id, num_envs=1, seed=0, render_mode="rgb_array"
         )
-        oracle = GfootballOracle(task_id, render=True)
+        frames: list[np.ndarray] = []
+        actions_taken: list[int] = []
         try:
             _, info = env.reset()
-            oracle.reset(
-                engine_seed=_scalar(info["engine_seed"]),
-                episode_number=_scalar(info["episode_number"]),
-            )
-            for action in (None, *_RENDER_ACTIONS):
-                frame = env.render()
-                assert frame is not None
-                np.testing.assert_array_equal(frame[0], oracle.render())
-                if action is None:
-                    continue
+            engine_seed = _scalar(info["engine_seed"])
+            episode_number = _scalar(info["episode_number"])
+            frame = env.render()
+            assert frame is not None
+            frames.append(np.array(frame[0], copy=True))
+            for action in _RENDER_ACTIONS:
                 _, _, term, trunc, _ = env.step(
                     np.asarray([action], dtype=np.int32)
                 )
-                oracle.step(action)
+                actions_taken.append(action)
                 if bool(term[0] or trunc[0]):
                     break
+                frame = env.render()
+                assert frame is not None
+                frames.append(np.array(frame[0], copy=True))
         finally:
             env.close()
+            del env
+            gc.collect()
+
+        oracle = GfootballOracle(task_id, render=True)
+        try:
+            oracle.reset(
+                engine_seed=engine_seed,
+                episode_number=episode_number,
+            )
+            np.testing.assert_array_equal(frames[0], oracle.render())
+            for index, action in enumerate(actions_taken):
+                oracle.step(action)
+                if index + 1 == len(frames):
+                    continue
+                np.testing.assert_array_equal(
+                    frames[index + 1], oracle.render()
+                )
+        finally:
+            del oracle
+            gc.collect()
 
     def test_all_registered_tasks_render_bitwise(self) -> None:
         for task_id in ALL_TASK_IDS:

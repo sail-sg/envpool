@@ -147,24 +147,14 @@ class GfootballOracle:
         observation: dict[str, Any] = {}
         if self._render:
             frame = np.frombuffer(self._engine.get_frame(), dtype=np.uint8)
-            frame = np.reshape(
-                frame,
-                [
+            # The engine exposes BGR pixels laid out in x-major order.
+            self._frame = np.ascontiguousarray(
+                frame.reshape(
                     self._render_resolution_x,
                     self._render_resolution_y,
                     3,
-                ],
+                ).transpose(1, 0, 2)[::-1, :, ::-1]
             )
-            frame = np.reshape(
-                np.concatenate([
-                    frame[:, :, 0],
-                    frame[:, :, 1],
-                    frame[:, :, 2],
-                ]),
-                [3, self._render_resolution_y, self._render_resolution_x],
-            )
-            frame = np.transpose(frame, [1, 2, 0])
-            self._frame = np.flip(frame, 0)
         smm = np.zeros((SMM_HEIGHT, SMM_WIDTH, 4), dtype=np.uint8)
         for player in info["left_team"]:
             _mark_point(smm[:, :, 0], *player["position"])
@@ -338,4 +328,4 @@ class GfootballOracle:
     def render(self) -> np.ndarray:
         """Return the latest RGB frame in the same layout as EnvPool render output."""
         assert self._frame is not None
-        return np.ascontiguousarray(self._frame[:, :, ::-1])
+        return self._frame

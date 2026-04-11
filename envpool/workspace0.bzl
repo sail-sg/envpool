@@ -647,6 +647,156 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
             "https://codeload.github.com/google-research/football/tar.gz/3d9e754720a95621bba6475c4d3b0d56fe919014",
         ],
         build_file = "//third_party/gfootball:gfootball.BUILD",
+        patch_cmds = ["""
+python3 - <<'PY'
+from pathlib import Path
+
+
+def replace_exact(path_str: str, old: str, new: str) -> None:
+    path = Path(path_str)
+    content = path.read_text()
+    if old not in content:
+        raise RuntimeError(f"{path_str}: pattern not found")
+    path.write_text(content.replace(old, new))
+
+
+replace_exact(
+    "third_party/gfootball_engine/src/systems/graphics/rendering/opengl_renderer3d.cpp",
+    '''  float *ptr = (float *)mapping.glMapBufferRange(
+      GL_ARRAY_BUFFER, 0, verticesDataSize * sizeof(float),
+      GL_MAP_WRITE_BIT |
+          GL_MAP_UNSYNCHRONIZED_BIT);  // GL_MAP_INVALIDATE_BUFFER_BIT |
+                                       // GL_MAP_INVALIDATE_RANGE_BIT |
+  memcpy(ptr, vertices, verticesDataSize * sizeof(float));
+  mapping.glUnmapBuffer(GL_ARRAY_BUFFER);
+''',
+    '''  float *ptr = (float *)mapping.glMapBufferRange(
+      GL_ARRAY_BUFFER, 0, verticesDataSize * sizeof(float),
+      GL_MAP_WRITE_BIT |
+          GL_MAP_UNSYNCHRONIZED_BIT);  // GL_MAP_INVALIDATE_BUFFER_BIT |
+                                       // GL_MAP_INVALIDATE_RANGE_BIT |
+  if (ptr) {
+    memcpy(ptr, vertices, verticesDataSize * sizeof(float));
+    mapping.glUnmapBuffer(GL_ARRAY_BUFFER);
+  } else {
+    mapping.glBufferSubData(GL_ARRAY_BUFFER, 0,
+                            verticesDataSize * sizeof(float), vertices);
+  }
+''',
+)
+replace_exact(
+    "third_party/gfootball_engine/src/systems/graphics/rendering/opengl_renderer3d.cpp",
+    '''bool OpenGLRenderer3D::CheckFrameBufferStatus() {
+  DO_VALIDATION;
+  GLenum status = mapping.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+  if (status == GL_FRAMEBUFFER_COMPLETE) {
+    DO_VALIDATION;
+    return true;
+  } else {
+    Log(e_FatalError, "OpenGLRenderer3D", "CheckFrameBufferStatus",
+        "Framebuffer error state #" + int_to_str(status));
+    return false;
+  }
+}
+''',
+    '''bool OpenGLRenderer3D::CheckFrameBufferStatus() {
+  DO_VALIDATION;
+  GLenum status = mapping.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+  if (status == GL_FRAMEBUFFER_COMPLETE) {
+    DO_VALIDATION;
+    return true;
+  }
+  return false;
+}
+''',
+)
+replace_exact(
+    "third_party/gfootball_engine/src/systems/graphics/objects/graphics_light.cpp",
+    '''        if (!renderer3D->CheckFrameBufferStatus()) Log(e_FatalError, "Renderer3DMessage_CreateFrameBuffer", "Execute", "Could not create framebuffer");
+''',
+    '''        if (!renderer3D->CheckFrameBufferStatus()) {
+          renderer3D->BindFrameBuffer(0);
+          targets.push_back(e_TargetAttachment_Back);
+          renderer3D->SetRenderTargets(targets);
+          targets.clear();
+          caller->SetShadow(false);
+          return;
+        }
+''',
+)
+PY
+"""],
+        patch_cmds_win = ["""
+$ErrorActionPreference = 'Stop'
+function Replace-Exact($Path, $Old, $New) {
+  $Content = Get-Content -Path $Path -Raw
+  if (-not $Content.Contains($Old)) {
+    throw \"$Path`: pattern not found\"
+  }
+  $Updated = $Content.Replace($Old, $New)
+  $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+  [System.IO.File]::WriteAllText($Path, $Updated, $Utf8NoBom)
+}
+
+Replace-Exact 'third_party/gfootball_engine/src/systems/graphics/rendering/opengl_renderer3d.cpp' @'
+  float *ptr = (float *)mapping.glMapBufferRange(
+      GL_ARRAY_BUFFER, 0, verticesDataSize * sizeof(float),
+      GL_MAP_WRITE_BIT |
+          GL_MAP_UNSYNCHRONIZED_BIT);  // GL_MAP_INVALIDATE_BUFFER_BIT |
+                                       // GL_MAP_INVALIDATE_RANGE_BIT |
+  memcpy(ptr, vertices, verticesDataSize * sizeof(float));
+  mapping.glUnmapBuffer(GL_ARRAY_BUFFER);
+'@ @'
+  float *ptr = (float *)mapping.glMapBufferRange(
+      GL_ARRAY_BUFFER, 0, verticesDataSize * sizeof(float),
+      GL_MAP_WRITE_BIT |
+          GL_MAP_UNSYNCHRONIZED_BIT);  // GL_MAP_INVALIDATE_BUFFER_BIT |
+                                       // GL_MAP_INVALIDATE_RANGE_BIT |
+  if (ptr) {
+    memcpy(ptr, vertices, verticesDataSize * sizeof(float));
+    mapping.glUnmapBuffer(GL_ARRAY_BUFFER);
+  } else {
+    mapping.glBufferSubData(GL_ARRAY_BUFFER, 0,
+                            verticesDataSize * sizeof(float), vertices);
+  }
+'@
+Replace-Exact 'third_party/gfootball_engine/src/systems/graphics/rendering/opengl_renderer3d.cpp' @'
+bool OpenGLRenderer3D::CheckFrameBufferStatus() {
+  DO_VALIDATION;
+  GLenum status = mapping.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+  if (status == GL_FRAMEBUFFER_COMPLETE) {
+    DO_VALIDATION;
+    return true;
+  } else {
+    Log(e_FatalError, "OpenGLRenderer3D", "CheckFrameBufferStatus",
+        "Framebuffer error state #" + int_to_str(status));
+    return false;
+  }
+}
+'@ @'
+bool OpenGLRenderer3D::CheckFrameBufferStatus() {
+  DO_VALIDATION;
+  GLenum status = mapping.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+  if (status == GL_FRAMEBUFFER_COMPLETE) {
+    DO_VALIDATION;
+    return true;
+  }
+  return false;
+}
+'@
+Replace-Exact 'third_party/gfootball_engine/src/systems/graphics/objects/graphics_light.cpp' @'
+        if (!renderer3D->CheckFrameBufferStatus()) Log(e_FatalError, "Renderer3DMessage_CreateFrameBuffer", "Execute", "Could not create framebuffer");
+'@ @'
+        if (!renderer3D->CheckFrameBufferStatus()) {
+          renderer3D->BindFrameBuffer(0);
+          targets.push_back(e_TargetAttachment_Back);
+          renderer3D->SetRenderTargets(targets);
+          targets.clear();
+          caller->SetShadow(false);
+          return;
+        }
+'@
+"""],
     )
 
     maybe(
