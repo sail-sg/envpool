@@ -38,7 +38,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build qtbase5-dev qtdeclarative5-dev libegl1-mesa-dev libopengl-dev
+          sudo apt-get install -y cmake ninja-build qtbase5-dev qtdeclarative5-dev libegl1-mesa-dev libopengl-dev xvfb
           qmake_bin="$(command -v qmake-qt5 || command -v qmake)"
           qt_include_dir="$("$qmake_bin" -query QT_INSTALL_HEADERS)"
           sudo ln -sfn "$qt_include_dir" /usr/include/qt
@@ -52,7 +52,8 @@ jobs:
           ln -sf requirements-dev-lock.txt requirements.txt
       - name: Generate render sample
         run: |
-          bazelisk run //envpool/gfootball:gfootball_render_sample -- \
+          xvfb-run -s "-screen 0 1280x720x24" env ENVPOOL_KEEP_DISPLAY=1 \
+            bazelisk run //envpool/gfootball:gfootball_render_sample -- \
             "$GITHUB_WORKSPACE/docs/_static/render_samples/gfootball_official_compare.png"
       - name: Upload render sample
         uses: actions/upload-artifact@v4

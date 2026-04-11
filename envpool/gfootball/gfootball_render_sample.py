@@ -175,6 +175,7 @@ def _draw_panel(
 
 
 def build_image() -> Image.Image:
+    """Build the combined render-compare image for all registered tasks."""
     register_gfootball_envs()
     panels: list[tuple[str, np.ndarray, np.ndarray]] = []
     for task_id in ALL_TASK_IDS:
@@ -228,6 +229,7 @@ def build_image() -> Image.Image:
 
 
 def main() -> None:
+    """Generate the render sample image on disk."""
     parser = argparse.ArgumentParser()
     parser.add_argument("output", type=Path)
     args = parser.parse_args()
