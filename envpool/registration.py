@@ -61,7 +61,7 @@ class EnvRegistry:
     @staticmethod
     def _extract_make_options(
         kwargs: dict[str, Any],
-    ) -> tuple[bool, dict[str, Any]]:
+    ) -> tuple[bool, dict[str, Any], bool]:
         from_pixels = bool(kwargs.pop("from_pixels", False))
         wrapper_kwargs = {
             key: kwargs.pop(key)
@@ -91,7 +91,15 @@ class EnvRegistry:
             for key in ("render_width", "render_height", "render_camera_id"):
                 if key in kwargs:
                     wrapper_kwargs[key] = kwargs.pop(key)
-        return from_pixels, wrapper_kwargs
+        needs_render = (
+            wrapper_kwargs.get("render_mode") is not None
+            or any(
+                key in wrapper_kwargs
+                for key in ("render_width", "render_height", "render_camera_id")
+            )
+            or from_pixels
+        )
+        return from_pixels, wrapper_kwargs, needs_render
 
     @staticmethod
     def _apply_wrapper_kwargs(env: Any, wrapper_kwargs: dict[str, Any]) -> Any:
@@ -142,13 +150,22 @@ class EnvRegistry:
         return import_path, envpool_cls
 
     def _make_env_spec(
-        self, task_id: str, *, from_pixels: bool = False, **make_kwargs: Any
+        self,
+        task_id: str,
+        *,
+        from_pixels: bool = False,
+        needs_render: bool = False,
+        **make_kwargs: Any,
     ) -> EnvSpec:
         """Make the underlying EnvSpec used by EnvPool constructors."""
         import_path, spec_cls, kwargs = self._resolve_spec_entry(
             task_id, from_pixels
         )
         kwargs = {**kwargs, **make_kwargs}
+        if needs_render:
+            for key in ("render", "enable_render"):
+                if key in kwargs and key not in make_kwargs:
+                    kwargs[key] = True
 
         # check arguments
         if "seed" in kwargs:  # Issue 214
@@ -199,7 +216,9 @@ class EnvRegistry:
         self, task_id: str, env_type: str, **kwargs: Any
     ) -> DMEnvPool | GymnasiumEnvPool:
         """Make envpool."""
-        from_pixels, wrapper_kwargs = self._extract_make_options(kwargs)
+        from_pixels, wrapper_kwargs, needs_render = self._extract_make_options(
+            kwargs
+        )
         if "gym_reset_return_info" not in kwargs:
             kwargs["gym_reset_return_info"] = True
         if not kwargs["gym_reset_return_info"]:
@@ -214,7 +233,12 @@ class EnvRegistry:
         )
         assert env_type in ["dm", "gymnasium"]
 
-        spec = self._make_env_spec(task_id, from_pixels=from_pixels, **kwargs)
+        spec = self._make_env_spec(
+            task_id,
+            from_pixels=from_pixels,
+            needs_render=needs_render,
+            **kwargs,
+        )
         import_path, envpool_cls = self._resolve_envpool_entry(
             task_id, env_type, from_pixels
         )
@@ -231,9 +255,12 @@ class EnvRegistry:
 
     def make_spec(self, task_id: str, **make_kwargs: Any) -> EnvSpec:
         """Make EnvSpec."""
-        from_pixels, _ = self._extract_make_options(make_kwargs)
+        from_pixels, _, needs_render = self._extract_make_options(make_kwargs)
         return self._make_env_spec(
-            task_id, from_pixels=from_pixels, **make_kwargs
+            task_id,
+            from_pixels=from_pixels,
+            needs_render=needs_render,
+            **make_kwargs,
         )
 
     @staticmethod

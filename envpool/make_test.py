@@ -294,6 +294,16 @@ class _MakeTest(absltest.TestCase):
         self.assertLen(task_ids, 96)
         self.check_step(task_ids)
 
+    def test_make_gfootball(self) -> None:
+        task_ids = sorted(
+            task_id
+            for task_id in envpool.list_all_envs()
+            if task_id.startswith("gfootball/")
+        )
+        self.assertLen(task_ids, 18)
+        self.check_step(task_ids)
+        self.check_render("gfootball/11_vs_11_stochastic-v1")
+
     def test_make_gymnasium_robotics(self) -> None:
         task_ids = sorted(
             task_id

@@ -19,6 +19,35 @@ load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 load("//third_party/cuda:cuda.bzl", "cuda_configure")
 load("//third_party/vizdoom:repo.bzl", "vizdoom_archive")
 
+def _local_freetype_repository_impl(repository_ctx):
+    os_name = repository_ctx.os.name.lower()
+    if "mac" in os_name or "darwin" in os_name:
+        candidate_paths = [
+            "/opt/homebrew/opt/freetype",
+            "/usr/local/opt/freetype",
+        ]
+    elif "linux" in os_name:
+        candidate_paths = ["/usr"]
+    else:
+        fail("Unsupported host OS for local freetype repository: %s" % repository_ctx.os.name)
+
+    resolved_path = None
+    for path in candidate_paths:
+        if repository_ctx.path(path).exists:
+            resolved_path = path
+            break
+    if resolved_path == None:
+        fail("Could not locate a system freetype installation in: %s" % candidate_paths)
+
+    repository_ctx.symlink(resolved_path, ".")
+    repository_ctx.template("BUILD.bazel", Label("//third_party/freetype:freetype.BUILD"), {})
+    repository_ctx.file("WORKSPACE", "workspace(name = \"freetype_system\")\n")
+
+local_freetype_repository = repository_rule(
+    implementation = _local_freetype_repository_impl,
+    local = True,
+)
+
 def workspace():
     """Load requested packages."""
 
@@ -342,6 +371,11 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     )
 
     maybe(
+        local_freetype_repository,
+        name = "freetype_system",
+    )
+
+    maybe(
         http_archive,
         name = "com_github_nelhage_rules_boost",
         # sha256 = "2215e6910eb763a971b1f63f53c45c0f2b7607df38c96287666d94d954da8cdc",
@@ -598,6 +632,18 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
             "https://github.com/openai/gym3/archive/4c3824680eaf9dd04dce224ee3d4856429878226.zip",
         ],
         build_file = "//third_party/gym3_libenv:gym3_libenv.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "google_research_football",
+        sha256 = "458100b893aaa530fa269a8ac17484e6f05812e266c81712834dfefc7ecd196b",
+        strip_prefix = "football-3d9e754720a95621bba6475c4d3b0d56fe919014",
+        type = "tar.gz",
+        urls = [
+            "https://codeload.github.com/google-research/football/tar.gz/3d9e754720a95621bba6475c4d3b0d56fe919014",
+        ],
+        build_file = "//third_party/gfootball:gfootball.BUILD",
     )
 
     maybe(
