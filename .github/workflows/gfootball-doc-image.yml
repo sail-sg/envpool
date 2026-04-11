@@ -1,0 +1,56 @@
+name: Gfootball Doc Image
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render-sample:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      MESA_LOADER_DRIVER_OVERRIDE: llvmpipe
+      GALLIUM_DRIVER: llvmpipe
+      USE_BAZEL_VERSION: "8.6.0"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build qtbase5-dev qtdeclarative5-dev libegl1-mesa-dev libopengl-dev
+          qmake_bin="$(command -v qmake-qt5 || command -v qmake)"
+          qt_include_dir="$("$qmake_bin" -query QT_INSTALL_HEADERS)"
+          sudo ln -sfn "$qt_include_dir" /usr/include/qt
+      - name: Install bazelisk
+        run: |
+          go install github.com/bazelbuild/bazelisk@latest
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      - name: Prepare requirements symlink
+        run: |
+          cd third_party/pip_requirements
+          ln -sf requirements-dev-lock.txt requirements.txt
+      - name: Generate render sample
+        run: |
+          bazelisk run //envpool/gfootball:gfootball_render_sample -- \
+            "$GITHUB_WORKSPACE/docs/_static/render_samples/gfootball_official_compare.png"
+      - name: Upload render sample
+        uses: actions/upload-artifact@v4
+        with:
+          name: gfootball-render-sample
+          path: docs/_static/render_samples/gfootball_official_compare.png
+          if-no-files-found: error

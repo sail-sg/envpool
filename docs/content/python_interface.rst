@@ -150,8 +150,10 @@ Representative first-frame compares for EnvPool families that support
 rendering. In each
 panel, EnvPool is on the left and the reference output is on the right. For
 Box2D, Classic Control, MiniGrid, MuJoCo, and Gymnasium-Robotics, the
-reference is the upstream Python renderer. For Atari, Procgen, and VizDoom,
-the reference is the exact in-tree render oracle used by the test suite.
+reference is the upstream Python renderer. For Google Research Football, the
+reference is an independent oracle built on the official engine and upstream
+scenario semantics. For Atari, Procgen, and VizDoom, the reference is the
+exact in-tree render oracle used by the test suite.
 
 .. image:: ../_static/render_samples/atari_oracle_compare.png
     :width: 900px
@@ -162,6 +164,10 @@ the reference is the exact in-tree render oracle used by the test suite.
     :align: center
 
 .. image:: ../_static/render_samples/classic_control_official_compare.png
+    :width: 900px
+    :align: center
+
+.. image:: ../_static/render_samples/gfootball_official_compare.png
     :width: 900px
     :align: center
 

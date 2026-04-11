@@ -14,7 +14,7 @@
 
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@rules_cc//cc:defs.bzl", "cc_library")
-load("@rules_python//python:defs.bzl", "py_library", "py_test")
+load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
 load("//envpool:requirements.bzl", "requirement")
 load("//third_party:common.bzl", "copy_to_directory")
 
@@ -89,6 +89,21 @@ py_library(
     srcs = ["registration.py"],
     imports = ["../.."],
     deps = ["//envpool:registration"],
+)
+
+py_binary(
+    name = "gfootball_render_sample",
+    srcs = [
+        "gfootball_oracle_util.py",
+        "gfootball_render_sample.py",
+    ],
+    imports = ["../.."],
+    deps = [
+        ":gfootball",
+        ":gfootball_registration",
+        requirement("numpy"),
+        requirement("pillow"),
+    ],
 )
 
 py_test(
