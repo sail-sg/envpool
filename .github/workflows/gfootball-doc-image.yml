@@ -1,7 +1,13 @@
 name: Gfootball Doc Image
 
 on:
-  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/gfootball-doc-image.yml"
+      - "docs/content/python_interface.rst"
+      - "docs/env/gfootball.rst"
+      - "envpool/gfootball/BUILD"
+      - "envpool/gfootball/gfootball_render_sample.py"
 
 permissions:
   contents: read
