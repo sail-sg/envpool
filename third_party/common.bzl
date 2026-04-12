@@ -68,6 +68,7 @@ def _copy_to_directory_impl(ctx):
     manifest_lines = []
 
     for src_path in sorted(src_map.keys()):
+        src = src_map[src_path]
         if ctx.attr.flatten:
             rel = src_path.split("/")[-1]
         else:
@@ -76,7 +77,10 @@ def _copy_to_directory_impl(ctx):
                 rel = src_path.split("/")[-1]
             else:
                 rel = src_path[idx + len(strip_prefix):]
-        out = ctx.actions.declare_file(ctx.attr.out + "/" + rel)
+        if src.is_directory:
+            out = ctx.actions.declare_directory(ctx.attr.out + "/" + rel)
+        else:
+            out = ctx.actions.declare_file(ctx.attr.out + "/" + rel)
         outputs.append(out)
         manifest_lines.append(src_path + "\t" + out.path)
 
