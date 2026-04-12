@@ -22,7 +22,7 @@ package(default_visibility = ["//visibility:public"])
 
 copy_files_to_directory(
     name = "gen_gfootball_assets_data",
-    srcs = ["@google_research_football//:engine_data"],
+    srcs = ["@google_research_football//:engine_headless_data"],
     out = "assets/data",
     strip_prefix = "third_party/gfootball_engine/data/",
 )

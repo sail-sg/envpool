@@ -16,6 +16,17 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
 
+_HEADLESS_RENDER_DATA_EXCLUDES = [
+    # EnvPool exposes gfootball as a headless-only runtime, so we can omit
+    # assets that are only touched by the render path and keep wheel size under
+    # the cross-platform release limit.
+    "third_party/gfootball_engine/data/media/objects/stadiums/test/test.ase",
+    "third_party/gfootball_engine/data/media/objects/stadiums/test/test.object",
+    "third_party/gfootball_engine/data/media/textures/adboards/**",
+    "third_party/gfootball_engine/data/media/textures/pitch/overlay.bmp",
+    "third_party/gfootball_engine/data/media/textures/pitch/seamlessgrass08.bmp",
+]
+
 config_setting(
     name = "darwin",
     constraint_values = ["@platforms//os:macos"],
@@ -29,6 +40,14 @@ filegroup(
 filegroup(
     name = "engine_data",
     srcs = glob(["third_party/gfootball_engine/data/**"]),
+)
+
+filegroup(
+    name = "engine_headless_data",
+    srcs = glob(
+        ["third_party/gfootball_engine/data/**"],
+        exclude = _HEADLESS_RENDER_DATA_EXCLUDES,
+    ),
 )
 
 filegroup(
