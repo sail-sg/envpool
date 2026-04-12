@@ -746,6 +746,19 @@ replace_exact(
     '''  std::string file_data = GetFile(name);
   SDL_RWops *rw = SDL_RWFromConstMem(file_data.data(), file_data.size());
   auto image = SDL_LoadBMP_RW(rw, 1);
+  if (image == nullptr) {
+    Log(e_FatalError, "Gui2Image", "IMG_LoadBmp",
+        "Could not load image " + name);
+  }
+''',
+)
+replace_exact(
+    "third_party/gfootball_engine/src/cmake/file.cpp",
+    '''  std::ifstream file;
+  file.open(fileName.c_str(), std::ios::in);
+''',
+    '''  std::ifstream file;
+  file.open(fileName.c_str(), std::ios::in | std::ios::binary);
 ''',
 )
 replace_exact(
@@ -868,6 +881,17 @@ Replace-Exact 'third_party/gfootball_engine/src/utils/gui2/widgets/image.cpp' @'
   std::string file_data = GetFile(name);
   SDL_RWops *rw = SDL_RWFromConstMem(file_data.data(), file_data.size());
   auto image = SDL_LoadBMP_RW(rw, 1);
+  if (image == nullptr) {
+    Log(e_FatalError, "Gui2Image", "IMG_LoadBmp",
+        "Could not load image " + name);
+  }
+'@
+Replace-Exact 'third_party/gfootball_engine/src/cmake/file.cpp' @'
+  std::ifstream file;
+  file.open(fileName.c_str(), std::ios::in);
+'@ @'
+  std::ifstream file;
+  file.open(fileName.c_str(), std::ios::in | std::ios::binary);
 '@
 Replace-Exact 'third_party/gfootball_engine/src/cmake/backtrace.h' @'
 #ifndef _CMAKE_BACKTRACE_H_
