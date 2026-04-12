@@ -41,11 +41,32 @@ class BuildPy(build_py):
     def run(self) -> None:
         """Rename copied Windows pybind artifacts to Python import suffixes."""
         super().run()
+        self._copy_generated_runtime_assets()
         if sys.platform != "win32":
             return
         for dll_path in Path(self.build_lib).rglob("*_envpool.pyd.dll"):
             dll_path.rename(dll_path.with_suffix(""))
         self._copy_windows_procgen_runtime_dlls()
+
+    def _copy_generated_runtime_assets(self) -> None:
+        repo_root = Path(__file__).resolve().parent
+        candidates = [repo_root / "bazel-bin", Path.cwd() / "bazel-bin"]
+        bazel_bin = next((path for path in candidates if path.exists()), None)
+        if bazel_bin is None:
+            return
+
+        for rel_path in (
+            "envpool/atari/roms",
+            "envpool/gfootball/assets",
+            "envpool/procgen/assets",
+            "envpool/vizdoom/bin",
+            "envpool/vizdoom/maps",
+        ):
+            source = bazel_bin / rel_path
+            if not source.exists():
+                continue
+            target = Path(self.build_lib) / rel_path
+            shutil.copytree(source, target, dirs_exist_ok=True)
 
     def _copy_windows_procgen_runtime_dlls(self) -> None:
         procgen_dir = Path(self.build_lib) / "envpool" / "procgen"
