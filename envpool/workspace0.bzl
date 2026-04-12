@@ -762,6 +762,41 @@ replace_exact(
 ''',
 )
 replace_exact(
+    "third_party/gfootball_engine/src/game_env.cpp",
+    '''  if (!already_loaded) {
+    // We show loading page only the first time when env. is started.
+    GetMenuTask()->GetWindowManager()->GetPageFactory()->CreatePage(1, 0);
+  }
+''',
+    '''  if (!already_loaded && GetGameConfig().render) {
+    // We show loading page only the first time when env. is started.
+    GetMenuTask()->GetWindowManager()->GetPageFactory()->CreatePage(1, 0);
+  }
+''',
+)
+replace_exact(
+    "third_party/gfootball_engine/src/defines.hpp",
+    '''class AIControlledKeyboard;
+class ScenarioConfig;
+class GameContext;
+class GameEnv;
+''',
+    '''class AIControlledKeyboard;
+struct ScenarioConfig;
+class GameContext;
+struct GameEnv;
+''',
+)
+replace_exact(
+    "third_party/gfootball_engine/src/main.hpp",
+    '''class GameEnv;
+class Tracker;
+''',
+    '''struct GameEnv;
+class Tracker;
+''',
+)
+replace_exact(
     "third_party/gfootball_engine/src/cmake/backtrace.h",
     '''#ifndef _CMAKE_BACKTRACE_H_
 #define _CMAKE_BACKTRACE_H_
@@ -892,6 +927,35 @@ Replace-Exact 'third_party/gfootball_engine/src/cmake/file.cpp' @'
 '@ @'
   std::ifstream file;
   file.open(fileName.c_str(), std::ios::in | std::ios::binary);
+'@
+Replace-Exact 'third_party/gfootball_engine/src/game_env.cpp' @'
+  if (!already_loaded) {
+    // We show loading page only the first time when env. is started.
+    GetMenuTask()->GetWindowManager()->GetPageFactory()->CreatePage(1, 0);
+  }
+'@ @'
+  if (!already_loaded && GetGameConfig().render) {
+    // We show loading page only the first time when env. is started.
+    GetMenuTask()->GetWindowManager()->GetPageFactory()->CreatePage(1, 0);
+  }
+'@
+Replace-Exact 'third_party/gfootball_engine/src/defines.hpp' @'
+class AIControlledKeyboard;
+class ScenarioConfig;
+class GameContext;
+class GameEnv;
+'@ @'
+class AIControlledKeyboard;
+struct ScenarioConfig;
+class GameContext;
+struct GameEnv;
+'@
+Replace-Exact 'third_party/gfootball_engine/src/main.hpp' @'
+class GameEnv;
+class Tracker;
+'@ @'
+struct GameEnv;
+class Tracker;
 '@
 Replace-Exact 'third_party/gfootball_engine/src/cmake/backtrace.h' @'
 #ifndef _CMAKE_BACKTRACE_H_
