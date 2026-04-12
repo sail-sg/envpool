@@ -16,31 +16,11 @@ load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("//envpool:requirements.bzl", "requirement")
-load("//third_party:common.bzl", "copy_files_to_directory")
+load("//third_party/gfootball:defs.bzl", "envpool_gfootball_generated_files")
 
 package(default_visibility = ["//visibility:public"])
 
-copy_files_to_directory(
-    name = "gen_gfootball_assets_data",
-    srcs = ["@google_research_football//:engine_headless_data"],
-    out = "assets/data",
-    strip_prefix = "third_party/gfootball_engine/data/",
-)
-
-copy_files_to_directory(
-    name = "gen_gfootball_assets_fonts",
-    srcs = ["@google_research_football//:engine_fonts"],
-    out = "assets/fonts",
-    strip_prefix = "third_party/fonts/",
-)
-
-genrule(
-    name = "gen_gfootball_scenarios_inc",
-    srcs = ["@google_research_football//:gfootball_python"],
-    outs = ["gfootball_scenarios.inc"],
-    cmd = "$(location //third_party/gfootball:generate_scenarios) $(locations @google_research_football//:gfootball_python) > $@",
-    tools = ["//third_party/gfootball:generate_scenarios"],
-)
+envpool_gfootball_generated_files(name = "generated_files")
 
 cc_library(
     name = "gfootball_env",

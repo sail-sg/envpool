@@ -41,37 +41,11 @@ class BuildPy(build_py):
     def run(self) -> None:
         """Rename copied Windows pybind artifacts to Python import suffixes."""
         super().run()
-        self._copy_generated_runtime_assets()
         if sys.platform != "win32":
             return
         for dll_path in Path(self.build_lib).rglob("*_envpool.pyd.dll"):
             dll_path.rename(dll_path.with_suffix(""))
         self._copy_windows_procgen_runtime_dlls()
-
-    def _copy_generated_runtime_assets(self) -> None:
-        repo_root = Path(__file__).resolve().parent
-        generated_trees = ("envpool/gfootball/assets",)
-
-        for rel_path in generated_trees:
-            target = Path(self.build_lib) / rel_path
-
-            # Under `bazel run //:setup_py* -- bdist_wheel`, generated data files
-            # are available directly in the runfiles tree next to the source
-            # package layout. For local packaging flows, we fall back to the
-            # workspace `bazel-bin` tree.
-            source_candidates = [
-                repo_root / rel_path,
-                Path.cwd() / rel_path,
-                repo_root / "bazel-bin" / rel_path,
-                Path.cwd() / "bazel-bin" / rel_path,
-            ]
-            source = next(
-                (path for path in source_candidates if path.exists()),
-                None,
-            )
-            if source is None:
-                continue
-            shutil.copytree(source, target, dirs_exist_ok=True)
 
     def _copy_windows_procgen_runtime_dlls(self) -> None:
         procgen_dir = Path(self.build_lib) / "envpool" / "procgen"

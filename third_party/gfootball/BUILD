@@ -16,7 +16,18 @@ load("@rules_python//python:defs.bzl", "py_binary")
 
 package(default_visibility = ["//visibility:public"])
 
-exports_files(["gfootball.BUILD"])
+exports_files([
+    "envpool.patch",
+    "gfootball.BUILD",
+])
+
+filegroup(
+    name = "setup_py_data",
+    srcs = [
+        "//envpool/gfootball:gen_gfootball_assets_data",
+        "//envpool/gfootball:gen_gfootball_assets_fonts",
+    ],
+)
 
 py_binary(
     name = "generate_scenarios",

@@ -1,0 +1,74 @@
+# Copyright 2026 Garena Online Private Limited
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Custom repository rule for gfootball patching."""
+
+load("@bazel_tools//tools/build_defs/repo:utils.bzl", "patch", "workspace_and_buildfile")
+
+_GFOOTBALL_PATCH_TARGETS = [
+    "third_party/gfootball_engine/src/cmake/backtrace.h",
+    "third_party/gfootball_engine/src/cmake/file.cpp",
+    "third_party/gfootball_engine/src/defines.hpp",
+    "third_party/gfootball_engine/src/game_env.cpp",
+    "third_party/gfootball_engine/src/main.hpp",
+    "third_party/gfootball_engine/src/systems/graphics/objects/graphics_light.cpp",
+    "third_party/gfootball_engine/src/systems/graphics/rendering/opengl_renderer3d.cpp",
+    "third_party/gfootball_engine/src/utils/gui2/widgets/image.cpp",
+]
+
+def _normalize_line_endings(ctx):
+    python = ctx.which("python3") or ctx.which("python")
+    if not python:
+        fail("python is required to normalize gfootball line endings before patching")
+
+    script = """
+from pathlib import Path
+
+for rel in {paths}:
+    path = Path(rel)
+    path.write_bytes(path.read_bytes().replace(b"\\r\\n", b"\\n"))
+""".format(paths = repr(_GFOOTBALL_PATCH_TARGETS))
+    result = ctx.execute([str(python), "-c", script])
+    if result.return_code:
+        fail("Error normalizing gfootball line endings:\\n{}{}".format(result.stderr, result.stdout))
+
+def _gfootball_archive_impl(ctx):
+    ctx.download_and_extract(
+        ctx.attr.urls,
+        "",
+        ctx.attr.sha256,
+        ctx.attr.type,
+        ctx.attr.strip_prefix,
+    )
+    workspace_and_buildfile(ctx)
+    _normalize_line_endings(ctx)
+    patch(ctx)
+
+gfootball_archive = repository_rule(
+    implementation = _gfootball_archive_impl,
+    attrs = {
+        "build_file": attr.label(allow_single_file = True),
+        "build_file_content": attr.string(),
+        "patch_args": attr.string_list(default = []),
+        "patch_cmds": attr.string_list(default = []),
+        "patch_cmds_win": attr.string_list(default = []),
+        "patch_strip": attr.int(default = 0),
+        "patch_tool": attr.string(default = ""),
+        "patches": attr.label_list(default = []),
+        "sha256": attr.string(mandatory = True),
+        "strip_prefix": attr.string(default = ""),
+        "type": attr.string(default = ""),
+        "urls": attr.string_list(mandatory = True),
+    },
+)
