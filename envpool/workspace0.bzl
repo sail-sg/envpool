@@ -729,11 +729,14 @@ PY
         patch_cmds_win = ["""
 $ErrorActionPreference = 'Stop'
 function Replace-Exact($Path, $Old, $New) {
-  $Content = Get-Content -Path $Path -Raw
-  if (-not $Content.Contains($Old)) {
+  $Content = [System.IO.File]::ReadAllText($Path)
+  $NormalizedContent = $Content.Replace("`r`n", "`n")
+  $NormalizedOld = $Old.Replace("`r`n", "`n")
+  $NormalizedNew = $New.Replace("`r`n", "`n")
+  if (-not $NormalizedContent.Contains($NormalizedOld)) {
     throw \"$Path`: pattern not found\"
   }
-  $Updated = $Content.Replace($Old, $New)
+  $Updated = $NormalizedContent.Replace($NormalizedOld, $NormalizedNew)
   $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
   [System.IO.File]::WriteAllText($Path, $Updated, $Utf8NoBom)
 }

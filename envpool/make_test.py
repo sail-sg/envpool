@@ -89,6 +89,20 @@ def _stable_render_kwargs(task_id: str, **kwargs: object) -> dict[str, object]:
 
 
 class _MakeTest(absltest.TestCase):
+    def check_render_unsupported(self, task_id: str, **kwargs: object) -> None:
+        for factory in (envpool.make_gym, envpool.make_gymnasium):
+            with self.assertRaisesRegex(RuntimeError, "render not implemented"):
+                env = factory(
+                    task_id, **_stable_render_kwargs(task_id, **kwargs)
+                )
+                try:
+                    env.reset()
+                    env.render()
+                finally:
+                    env.close()
+                    del env
+                    gc.collect()
+
     def check_render(self, task_id: str, **kwargs: object) -> None:
         def render_once(factory: _RenderFactory) -> None:
             env = factory(task_id, **_stable_render_kwargs(task_id, **kwargs))
@@ -302,7 +316,7 @@ class _MakeTest(absltest.TestCase):
         )
         self.assertLen(task_ids, 18)
         self.check_step(task_ids)
-        self.check_render("gfootball/11_vs_11_stochastic-v1")
+        self.check_render_unsupported("gfootball/11_vs_11_stochastic-v1")
 
     def test_make_gymnasium_robotics(self) -> None:
         task_ids = sorted(
