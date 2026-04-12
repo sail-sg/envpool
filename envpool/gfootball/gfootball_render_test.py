@@ -11,82 +11,40 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Render alignment tests for EnvPool gfootball."""
+"""Render API tests for EnvPool gfootball."""
 
 from __future__ import annotations
 
-import gc
-
-import numpy as np
 from absl.testing import absltest
 
 from envpool.gfootball.gfootball_oracle_util import (
     ALL_TASK_IDS,
-    GfootballOracle,
     register_gfootball_envs,
 )
 from envpool.registration import make_gymnasium
 
 register_gfootball_envs()
 
-_RENDER_ACTIONS = (5, 11, 13)
-
-
-def _scalar(value: np.ndarray) -> int:
-    return int(np.asarray(value).reshape(-1)[0])
-
 
 class _GfootballRenderTest(absltest.TestCase):
-    def assert_task_render_aligned(self, task_id: str) -> None:
-        env = make_gymnasium(
-            task_id, num_envs=1, seed=0, render_mode="rgb_array"
-        )
-        frames: list[np.ndarray] = []
-        actions_taken: list[int] = []
-        try:
-            _, info = env.reset()
-            engine_seed = _scalar(info["engine_seed"])
-            episode_number = _scalar(info["episode_number"])
-            frame = env.render()
-            assert frame is not None
-            frames.append(np.array(frame[0], copy=True))
-            for action in _RENDER_ACTIONS:
-                _, _, term, trunc, _ = env.step(
-                    np.asarray([action], dtype=np.int32)
-                )
-                actions_taken.append(action)
-                if bool(term[0] or trunc[0]):
-                    break
-                frame = env.render()
-                assert frame is not None
-                frames.append(np.array(frame[0], copy=True))
-        finally:
-            env.close()
-            del env
-            gc.collect()
-
-        oracle = GfootballOracle(task_id, render=True)
-        try:
-            oracle.reset(
-                engine_seed=engine_seed,
-                episode_number=episode_number,
+    def assert_task_render_unsupported(self, task_id: str) -> None:
+        for render_mode in ("rgb_array", "human"):
+            env = make_gymnasium(
+                task_id, num_envs=1, seed=0, render_mode=render_mode
             )
-            np.testing.assert_array_equal(frames[0], oracle.render())
-            for index, action in enumerate(actions_taken):
-                oracle.step(action)
-                if index + 1 == len(frames):
-                    continue
-                np.testing.assert_array_equal(
-                    frames[index + 1], oracle.render()
-                )
-        finally:
-            del oracle
-            gc.collect()
+            try:
+                env.reset()
+                with self.assertRaisesRegex(
+                    RuntimeError, "render not implemented"
+                ):
+                    env.render()
+            finally:
+                env.close()
 
-    def test_all_registered_tasks_render_bitwise(self) -> None:
+    def test_all_registered_tasks_reject_render(self) -> None:
         for task_id in ALL_TASK_IDS:
             with self.subTest(task_id=task_id):
-                self.assert_task_render_aligned(task_id)
+                self.assert_task_render_unsupported(task_id)
 
 
 if __name__ == "__main__":

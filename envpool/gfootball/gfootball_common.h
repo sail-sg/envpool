@@ -19,12 +19,9 @@
 
 #include <algorithm>
 #include <array>
-#include <cmath>
-#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <random>
-#include <stdexcept>
 #include <string>
 
 #include "defines.hpp"
@@ -38,7 +35,6 @@ inline constexpr int kSMMWidth = 96;
 inline constexpr int kSMMHeight = 72;
 inline constexpr int kSMMChannels = 4;
 inline constexpr int kActionCount = 19;
-inline constexpr int kRenderChannels = 3;
 inline constexpr int kGameModeNormal = 0;
 
 inline constexpr double kMinimapXMin = -1.0;
@@ -98,10 +94,6 @@ inline unsigned int SampleEngineSeed(std::mt19937* gen) {
   return dist(*gen);
 }
 
-inline int ResolveRenderHeight(int render_width) {
-  return static_cast<int>(std::lround(0.5625 * render_width));
-}
-
 inline int ResolveBackendAction(int action) {
   return kDefaultActionSet[std::clamp(action, 0, kActionCount - 1)];
 }
@@ -116,34 +108,6 @@ inline int MinimapCoordY(double value) {
   const double scaled =
       (value - kMinimapYMin) / (kMinimapYMax - kMinimapYMin) * kSMMHeight;
   return std::clamp(static_cast<int>(scaled), 0, kSMMHeight - 1);
-}
-
-inline std::size_t FrameSizeBytes(int render_width, int render_height) {
-  return static_cast<std::size_t>(render_width) * render_height *
-         kRenderChannels;
-}
-
-inline void TransformFrameToRgb(const screenshoot& raw_frame, int render_width,
-                                int render_height, unsigned char* dst_rgb) {
-  const std::size_t expected_size = FrameSizeBytes(render_width, render_height);
-  if (raw_frame.size() != expected_size) {
-    throw std::runtime_error("Unexpected gfootball frame size");
-  }
-  const auto* src = reinterpret_cast<const unsigned char*>(raw_frame.data());
-  for (int src_x = 0; src_x < render_width; ++src_x) {
-    for (int src_y = 0; src_y < render_height; ++src_y) {
-      const std::size_t src_index =
-          (static_cast<std::size_t>(src_x) * render_height + src_y) *
-          kRenderChannels;
-      const int dst_y = render_height - 1 - src_y;
-      const std::size_t dst_index =
-          (static_cast<std::size_t>(dst_y) * render_width + src_x) *
-          kRenderChannels;
-      dst_rgb[dst_index + 0] = src[src_index + 2];
-      dst_rgb[dst_index + 1] = src[src_index + 1];
-      dst_rgb[dst_index + 2] = src[src_index + 0];
-    }
-  }
 }
 
 #include "envpool/gfootball/gfootball_scenarios.inc"

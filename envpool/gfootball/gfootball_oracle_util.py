@@ -110,26 +110,16 @@ class GfootballOracle:
         self,
         task_id: str,
         *,
-        render: bool = False,
-        render_resolution_x: int = 1280,
-        render_resolution_y: int = 720,
         physics_steps_per_frame: int = 10,
     ) -> None:
         """Create a single-environment oracle with upstream-matching defaults."""
         task = TASK_CONFIG[task_id]
         self._env_name = str(task["env_name"])
         self._max_episode_steps = int(task["max_episode_steps"])
-        self._render = render
-        self._render_resolution_x = int(render_resolution_x)
-        self._render_resolution_y = int(render_resolution_y)
         self._engine = _GfootballOracleEngine(
             base_path,
-            render,
-            self._render_resolution_x,
-            self._render_resolution_y,
             int(physics_steps_per_frame),
         )
-        self._frame: np.ndarray | None = None
         self._observation: dict[str, Any] = {}
         self._previous_score_diff = 0
         self._previous_game_mode = -1
@@ -145,16 +135,6 @@ class GfootballOracle:
     def _retrieve_observation(self) -> bool:
         info = self._engine.get_info()
         observation: dict[str, Any] = {}
-        if self._render:
-            frame = np.frombuffer(self._engine.get_frame(), dtype=np.uint8)
-            # The engine exposes BGR pixels laid out in x-major order.
-            self._frame = np.ascontiguousarray(
-                frame.reshape(
-                    self._render_resolution_x,
-                    self._render_resolution_y,
-                    3,
-                ).transpose(1, 0, 2)[::-1, :, ::-1]
-            )
         smm = np.zeros((SMM_HEIGHT, SMM_WIDTH, 4), dtype=np.uint8)
         for player in info["left_team"]:
             _mark_point(smm[:, :, 0], *player["position"])
@@ -324,8 +304,3 @@ class GfootballOracle:
         truncated = np.bool_(done and self._step >= self._max_episode_steps)
         terminated = np.bool_(done and not truncated)
         return self.obs(), reward, terminated, truncated, self.info()
-
-    def render(self) -> np.ndarray:
-        """Return the latest RGB frame in the same layout as EnvPool render output."""
-        assert self._frame is not None
-        return self._frame

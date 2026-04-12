@@ -8,20 +8,6 @@ the upstream Python scenario files at build time to generate a static C++
 scenario table. There is no Python-environment bridge in the runtime hot path.
 
 
-Render Compare
---------------
-
-Representative render compares for all registered Google Research Football
-scenarios.
-Each panel shows EnvPool on the left and an independent oracle that drives the
-official Google Research Football engine with upstream scenario semantics on
-the right.
-
-.. image:: ../_static/render_samples/gfootball_official_compare.png
-    :width: 900px
-    :align: center
-
-
 Options
 -------
 
@@ -36,12 +22,14 @@ Options
   ``42``;
 * ``max_episode_steps (int)``: the episode horizon. Each task defaults to the
   upstream scenario duration, but callers can override it;
-* ``render_mode (str)``: ``"rgb_array"`` for batched RGB rendering or
-  ``"human"`` for the OpenCV viewer;
-* ``render_width (int)`` and ``render_height (int)``: output render size. The
-  default engine resolution is ``1280 x 720``;
 * ``physics_steps_per_frame (int)``: physics updates per policy step, default
   to ``10``.
+
+Rendering is intentionally unsupported for gfootball. The upstream headless
+renderer does not produce reliable output across EnvPool's supported CI
+platforms, so ``render_mode``, ``render_width``, and ``render_height`` are not
+part of the public contract for this environment, and ``env.render()`` raises
+``RuntimeError``.
 
 
 Observation Space
@@ -126,15 +114,17 @@ the rest of EnvPool's core environments:
 * Full registry coverage: every registered ``gfootball/*-v1`` ID is created
   through the public Gymnasium API, reset, stepped, and closed in CI;
 * Bitwise rollout alignment: ``envpool/gfootball/gfootball_align_test.py``
-  checks observations, rewards, ``terminated`` / ``truncated``, and the public
-  ``info`` fields bitwise against an independent oracle that uses the same C++
-  engine with upstream scenario semantics;
-* Bitwise render alignment: ``envpool/gfootball/gfootball_render_test.py``
-  checks the reset frame and multiple step frames bitwise for every registered
-  task;
+  runs each registered task to episode completion and checks observations,
+  rewards, ``terminated`` / ``truncated``, and the public ``info`` fields
+  bitwise against an independent oracle that uses the same C++ engine with
+  upstream scenario semantics;
+* Render rejection: ``envpool/gfootball/gfootball_render_test.py`` checks every
+  registered task rejects both ``render_mode="rgb_array"`` and
+  ``render_mode="human"`` with a runtime error instead of exposing a known-bad
+  renderer;
 * Determinism: ``envpool/gfootball/gfootball_deterministic_test.py`` requires
   identical seeds and action streams to produce identical rollouts, while a
   different seed must change the rollout;
-* Cross-platform coverage: the build, render, alignment, and determinism paths
-  are validated in CI on Linux, macOS, and Windows rather than being skipped on
-  any platform.
+* Cross-platform coverage: the build, render-rejection, alignment, and
+  determinism paths are validated in CI on Linux, macOS, and Windows rather
+  than being skipped on any platform.

@@ -29,7 +29,7 @@ from envpool.registration import make_gymnasium
 
 register_gfootball_envs()
 
-_ALIGN_ACTIONS = (5, 5, 11, 5, 13, 5, 15, 3, 7, 12, 0, 17, 18)
+_ALIGN_ACTION_SEED = 20260412
 
 
 def _scalar(value: Any) -> Any:
@@ -71,7 +71,13 @@ class _GfootballAlignTest(absltest.TestCase):
             np.testing.assert_array_equal(obs[0], oracle_obs)
             _assert_info_matches(self, info, oracle_info)
 
-            for action in _ALIGN_ACTIONS:
+            max_steps = int(_scalar(info["steps_left"]))
+            rng = np.random.default_rng(
+                _ALIGN_ACTION_SEED + sum(task_id.encode("utf-8"))
+            )
+            done = False
+            for _ in range(max_steps):
+                action = int(rng.integers(0, 19))
                 obs, rew, term, trunc, info = env.step(
                     np.asarray([action], dtype=np.int32)
                 )
@@ -92,7 +98,9 @@ class _GfootballAlignTest(absltest.TestCase):
                 )
                 _assert_info_matches(self, info, oracle_info)
                 if bool(term[0] or trunc[0]):
+                    done = True
                     break
+            self.assertTrue(done, msg=f"{task_id} did not finish by horizon")
         finally:
             env.close()
 

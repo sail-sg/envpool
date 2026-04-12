@@ -14,7 +14,7 @@
 
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@rules_cc//cc:defs.bzl", "cc_library")
-load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
+load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("//envpool:requirements.bzl", "requirement")
 load("//third_party:common.bzl", "copy_to_directory")
 
@@ -55,7 +55,6 @@ cc_library(
     ],
     deps = [
         "//envpool/core:async_envpool",
-        "//envpool/utils:image_process",
         "@google_research_football//:gfootball_engine",
     ],
 )
@@ -91,21 +90,6 @@ py_library(
     deps = ["//envpool:registration"],
 )
 
-py_binary(
-    name = "gfootball_render_sample",
-    srcs = [
-        "gfootball_oracle_util.py",
-        "gfootball_render_sample.py",
-    ],
-    imports = ["../.."],
-    deps = [
-        ":gfootball",
-        ":gfootball_registration",
-        requirement("numpy"),
-        requirement("pillow"),
-    ],
-)
-
 py_test(
     name = "gfootball_align_test",
     size = "enormous",
@@ -134,7 +118,6 @@ py_test(
         ":gfootball",
         ":gfootball_registration",
         requirement("absl-py"),
-        requirement("numpy"),
     ],
 )
 

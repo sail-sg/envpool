@@ -45,5 +45,4 @@ for env_name, max_episode_steps in _SCENARIOS:
         spec_cls="GfootballEnvSpec",
         dm_cls="GfootballDMEnvPool",
         gymnasium_cls="GfootballGymnasiumEnvPool",
-        render=False,
     )

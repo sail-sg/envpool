@@ -21,25 +21,18 @@
 #include <cstring>
 #include <memory>
 #include <string>
-#include <utility>
-#include <vector>
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
 #include "envpool/gfootball/gfootball_common.h"
-#include "envpool/utils/image_process.h"
 
 namespace gfootball {
-
-using FrameSpec = Spec<uint8_t>;
 
 class GfootballEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict("env_name"_.Bind(std::string("11_vs_11_stochastic")),
-                    "render"_.Bind(false), "physics_steps_per_frame"_.Bind(10),
-                    "render_resolution_x"_.Bind(1280),
-                    "render_resolution_y"_.Bind(ResolveRenderHeight(1280)));
+                    "physics_steps_per_frame"_.Bind(10));
   }
 
   template <typename Config>
@@ -65,24 +58,17 @@ class GfootballEnvFns {
 
 using GfootballEnvSpec = EnvSpec<GfootballEnvFns>;
 
-class GfootballEnv : public Env<GfootballEnvSpec>, public RenderableEnv {
+class GfootballEnv : public Env<GfootballEnvSpec> {
  public:
   GfootballEnv(const Spec& spec, int env_id)
       : Env<GfootballEnvSpec>(spec, env_id),
         env_name_(spec.config["env_name"_]),
-        render_enabled_(spec.config["render"_]),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
-        render_resolution_x_(spec.config["render_resolution_x"_]),
-        render_resolution_y_(spec.config["render_resolution_y"_]) {
+        max_episode_steps_(spec.config["max_episode_steps"_]) {
     EnsureGfootballRuntimePaths(spec.config["base_path"_]);
     engine_ = std::make_unique<GameEnv>();
-    engine_->game_config.render = render_enabled_;
+    engine_->game_config.render = false;
     engine_->game_config.physics_steps_per_frame =
         spec.config["physics_steps_per_frame"_];
-    engine_->game_config.render_resolution_x = render_resolution_x_;
-    engine_->game_config.render_resolution_y = render_resolution_y_;
-    render_frame_.resize(
-        FrameSizeBytes(render_resolution_x_, render_resolution_y_));
     engine_->start_game();
     episode_number_ = 1;
     ResetEpisode(/*emit_state=*/false);
@@ -155,42 +141,6 @@ class GfootballEnv : public Env<GfootballEnvSpec>, public RenderableEnv {
     WriteState(reward);
   }
 
-  [[nodiscard]] std::pair<int, int> RenderSize(int width,
-                                               int height) const override {
-    if (width <= 0 && height <= 0) {
-      return {render_resolution_x_, render_resolution_y_};
-    }
-    if (width <= 0) {
-      width = static_cast<int>(
-          std::lround(height * render_resolution_x_ /
-                      static_cast<double>(render_resolution_y_)));
-    }
-    if (height <= 0) {
-      height = static_cast<int>(
-          std::lround(width * render_resolution_y_ /
-                      static_cast<double>(render_resolution_x_)));
-    }
-    return {width, height};
-  }
-
-  void Render(int width, int height, int /*camera_id*/,
-              unsigned char* rgb) override {
-    if (!render_enabled_) {
-      throw std::runtime_error(
-          "gfootball render requested without render support enabled");
-    }
-    Array output(FrameSpec({height, width, kRenderChannels}),
-                 reinterpret_cast<char*>(rgb));
-    Array input(FrameSpec({render_resolution_y_, render_resolution_x_,
-                           kRenderChannels}),
-                reinterpret_cast<char*>(render_frame_.data()));
-    if (width == render_resolution_x_ && height == render_resolution_y_) {
-      output.Assign(input);
-      return;
-    }
-    Resize(input, &output);
-  }
-
  protected:
   [[nodiscard]] int CurrentMaxEpisodeSteps() const override {
     return max_episode_steps_;
@@ -199,10 +149,7 @@ class GfootballEnv : public Env<GfootballEnvSpec>, public RenderableEnv {
  private:
   std::unique_ptr<GameEnv> engine_;
   std::string env_name_;
-  bool render_enabled_{false};
   int max_episode_steps_{0};
-  int render_resolution_x_{1280};
-  int render_resolution_y_{720};
   int episode_number_{0};
   unsigned int engine_seed_{0};
   bool done_{true};
@@ -213,7 +160,6 @@ class GfootballEnv : public Env<GfootballEnvSpec>, public RenderableEnv {
   bool last_scenario_end_episode_on_possession_change_{false};
   bool last_scenario_end_episode_on_out_of_play_{false};
   SharedInfo last_info_;
-  std::vector<unsigned char> render_frame_;
 
   void ResetEpisode(bool emit_state) {
     previous_score_diff_ = 0;
@@ -229,7 +175,7 @@ class GfootballEnv : public Env<GfootballEnvSpec>, public RenderableEnv {
         scenario->end_episode_on_possession_change;
     last_scenario_end_episode_on_out_of_play_ =
         scenario->end_episode_on_out_of_play;
-    engine_->reset(*scenario, render_enabled_);
+    engine_->reset(*scenario, false);
     while (true) {
       if (RetrieveObservation()) {
         break;
@@ -245,10 +191,6 @@ class GfootballEnv : public Env<GfootballEnvSpec>, public RenderableEnv {
   bool RetrieveObservation() {
     SetGame(engine_.get());
     last_info_ = engine_->get_info();
-    if (render_enabled_) {
-      TransformFrameToRgb(engine_->get_frame(), render_resolution_x_,
-                          render_resolution_y_, render_frame_.data());
-    }
     return last_info_.is_in_play;
   }
 

@@ -65,14 +65,11 @@ py::list ToControllers(const std::vector<ControllerInfo>& controllers) {
 
 class GfootballOracleEngine {
  public:
-  GfootballOracleEngine(const std::string& base_path, bool render,
-                        int render_resolution_x, int render_resolution_y,
+  GfootballOracleEngine(const std::string& base_path,
                         int physics_steps_per_frame) {
     EnsureGfootballRuntimePaths(base_path);
     engine_ = std::make_unique<GameEnv>();
-    engine_->game_config.render = render;
-    engine_->game_config.render_resolution_x = render_resolution_x;
-    engine_->game_config.render_resolution_y = render_resolution_y;
+    engine_->game_config.render = false;
     engine_->game_config.physics_steps_per_frame = physics_steps_per_frame;
     engine_->start_game();
   }
@@ -82,7 +79,7 @@ class GfootballOracleEngine {
     auto scenario = ScenarioConfig::make();
     BuildEnvScenarioConfig(env_name, episode_number, engine_seed,
                            max_episode_steps, scenario.get());
-    engine_->reset(*scenario, engine_->game_config.render);
+    engine_->reset(*scenario, false);
   }
 
   py::dict GetInfo() {
@@ -106,8 +103,6 @@ class GfootballOracleEngine {
     return out;
   }
 
-  py::bytes GetFrame() { return py::bytes(engine_->get_frame()); }
-
   void Action(int action, bool left_team, int player) {
     engine_->action(action, left_team, player);
   }
@@ -129,10 +124,9 @@ class GfootballOracleEngine {
 
 void BindOracleEngine(py::module_& m) {
   py::class_<GfootballOracleEngine>(m, "_GfootballOracleEngine")
-      .def(py::init<const std::string&, bool, int, int, int>())
+      .def(py::init<const std::string&, int>())
       .def("reset", &GfootballOracleEngine::Reset)
       .def("get_info", &GfootballOracleEngine::GetInfo)
-      .def("get_frame", &GfootballOracleEngine::GetFrame)
       .def("action", &GfootballOracleEngine::Action)
       .def("step", &GfootballOracleEngine::Step)
       .def_property("waiting_for_game_count",
