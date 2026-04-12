@@ -57,7 +57,7 @@ genrule(
     outs = ["SDL2/SDL_ttf.h"],
     cmd = "mkdir -p $(@D) && cp $(location SDL_ttf.h) $@",
     cmd_bat = "if not exist \"$(@D)\" mkdir \"$(@D)\" & copy /Y \"$(location SDL_ttf.h)\" \"$@\" >NUL",
-    cmd_ps = "$ErrorActionPreference = 'Stop'; New-Item -ItemType Directory -Force -Path '$(@D)' | Out-Null; Copy-Item -LiteralPath '$(location SDL_ttf.h)' -Destination '$@' -Force",
+    cmd_ps = "$$ErrorActionPreference = 'Stop'; New-Item -ItemType Directory -Force -Path '$(@D)' | Out-Null; Copy-Item -LiteralPath '$(location SDL_ttf.h)' -Destination '$@' -Force",
 )
 
 cc_library(
