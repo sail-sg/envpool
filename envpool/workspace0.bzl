@@ -828,7 +828,7 @@ Replace-Exact 'third_party/gfootball_engine/src/utils/gui2/widgets/image.cpp' @'
 #include <SDL2/SDL_image.h>
 #endif
 
-'@ @''
+'@ ''
 Replace-Exact 'third_party/gfootball_engine/src/utils/gui2/widgets/image.cpp' @'
 #ifdef WIN32
   auto image = IMG_Load(name.c_str());
