@@ -1,0 +1,160 @@
+diff -uNr a/third_party/gfootball_engine/src/cmake/backtrace.h b/third_party/gfootball_engine/src/cmake/backtrace.h
+--- a/third_party/gfootball_engine/src/cmake/backtrace.h	2025-06-17 01:34:25
++++ b/third_party/gfootball_engine/src/cmake/backtrace.h	2026-04-12 09:17:39
+@@ -14,8 +14,14 @@
+ #ifndef _CMAKE_BACKTRACE_H_
+ #define _CMAKE_BACKTRACE_H_
+ 
++#ifdef _WIN32
++inline void print_stacktrace() {}
++
++inline void install_stacktrace() {}
++#else
+ void print_stacktrace();
+ 
+ void install_stacktrace();
++#endif
+ 
+ #endif  // _CMAKE_BACKTRACE_H_
+diff -uNr a/third_party/gfootball_engine/src/cmake/file.cpp b/third_party/gfootball_engine/src/cmake/file.cpp
+--- a/third_party/gfootball_engine/src/cmake/file.cpp	2025-06-17 01:34:25
++++ b/third_party/gfootball_engine/src/cmake/file.cpp	2026-04-12 09:17:39
+@@ -21,7 +21,7 @@
+ std::string GetFile(const std::string &fileName) {
+   DO_VALIDATION;
+   std::ifstream file;
+-  file.open(fileName.c_str(), std::ios::in);
++  file.open(fileName.c_str(), std::ios::in | std::ios::binary);
+   std::string str((std::istreambuf_iterator<char>(file)),
+       std::istreambuf_iterator<char>());
+   file.close();
+diff -uNr a/third_party/gfootball_engine/src/defines.hpp b/third_party/gfootball_engine/src/defines.hpp
+--- a/third_party/gfootball_engine/src/defines.hpp	2025-06-17 01:34:25
++++ b/third_party/gfootball_engine/src/defines.hpp	2026-04-12 09:17:39
+@@ -70,9 +70,9 @@
+ class Team;
+ class HumanGamer;
+ class AIControlledKeyboard;
+-class ScenarioConfig;
++struct ScenarioConfig;
+ class GameContext;
+-class GameEnv;
++struct GameEnv;
+ 
+ 
+ #include "base/math/vector3.hpp"
+diff -uNr a/third_party/gfootball_engine/src/game_env.cpp b/third_party/gfootball_engine/src/game_env.cpp
+--- a/third_party/gfootball_engine/src/game_env.cpp	2025-06-17 01:34:25
++++ b/third_party/gfootball_engine/src/game_env.cpp	2026-04-12 09:17:39
+@@ -383,7 +383,7 @@
+   GetMenuTask()->GetWindowManager()->GetPagePath()->Clear();
+   bool already_loaded = GetGameTask()->StopMatch();
+   GetMenuTask()->SetMatchData(new MatchData());
+-  if (!already_loaded) {
++  if (!already_loaded && GetGameConfig().render) {
+     // We show loading page only the first time when env. is started.
+     GetMenuTask()->GetWindowManager()->GetPageFactory()->CreatePage(1, 0);
+   }
+diff -uNr a/third_party/gfootball_engine/src/main.hpp b/third_party/gfootball_engine/src/main.hpp
+--- a/third_party/gfootball_engine/src/main.hpp	2025-06-17 01:34:25
++++ b/third_party/gfootball_engine/src/main.hpp	2026-04-12 09:17:39
+@@ -18,7 +18,7 @@
+ #ifndef _HPP_MAIN
+ #define _HPP_MAIN
+ 
+-class GameEnv;
++struct GameEnv;
+ class Tracker;
+ Tracker* GetTracker();
+ GameEnv* GetGame();
+diff -uNr a/third_party/gfootball_engine/src/systems/graphics/objects/graphics_light.cpp b/third_party/gfootball_engine/src/systems/graphics/objects/graphics_light.cpp
+--- a/third_party/gfootball_engine/src/systems/graphics/objects/graphics_light.cpp	2025-06-17 01:34:25
++++ b/third_party/gfootball_engine/src/systems/graphics/objects/graphics_light.cpp	2026-04-12 09:17:39
+@@ -193,7 +193,14 @@
+         renderer3D->SetRenderTargets(targets);
+         targets.clear();
+ 
+-        if (!renderer3D->CheckFrameBufferStatus()) Log(e_FatalError, "Renderer3DMessage_CreateFrameBuffer", "Execute", "Could not create framebuffer");
++        if (!renderer3D->CheckFrameBufferStatus()) {
++          renderer3D->BindFrameBuffer(0);
++          targets.push_back(e_TargetAttachment_Back);
++          renderer3D->SetRenderTargets(targets);
++          targets.clear();
++          caller->SetShadow(false);
++          return;
++        }
+         renderer3D->BindFrameBuffer(0);
+         targets.push_back(e_TargetAttachment_Back);
+         renderer3D->SetRenderTargets(targets);
+diff -uNr a/third_party/gfootball_engine/src/systems/graphics/rendering/opengl_renderer3d.cpp b/third_party/gfootball_engine/src/systems/graphics/rendering/opengl_renderer3d.cpp
+--- a/third_party/gfootball_engine/src/systems/graphics/rendering/opengl_renderer3d.cpp	2025-06-17 01:34:25
++++ b/third_party/gfootball_engine/src/systems/graphics/rendering/opengl_renderer3d.cpp	2026-04-12 09:17:39
+@@ -1148,8 +1148,13 @@
+       GL_MAP_WRITE_BIT |
+           GL_MAP_UNSYNCHRONIZED_BIT);  // GL_MAP_INVALIDATE_BUFFER_BIT |
+                                        // GL_MAP_INVALIDATE_RANGE_BIT |
+-  memcpy(ptr, vertices, verticesDataSize * sizeof(float));
+-  mapping.glUnmapBuffer(GL_ARRAY_BUFFER);
++  if (ptr) {
++    memcpy(ptr, vertices, verticesDataSize * sizeof(float));
++    mapping.glUnmapBuffer(GL_ARRAY_BUFFER);
++  } else {
++    mapping.glBufferSubData(GL_ARRAY_BUFFER, 0,
++                            verticesDataSize * sizeof(float), vertices);
++  }
+ 
+   //      glBufferData(GL_ARRAY_BUFFER, verticesDataSize * sizeof(float),
+   //      vertices, GL_DYNAMIC_DRAW);
+@@ -1932,11 +1937,8 @@
+   if (status == GL_FRAMEBUFFER_COMPLETE) {
+     DO_VALIDATION;
+     return true;
+-  } else {
+-    Log(e_FatalError, "OpenGLRenderer3D", "CheckFrameBufferStatus",
+-        "Framebuffer error state #" + int_to_str(status));
+-    return false;
+   }
++  return false;
+ }
+ 
+   // render targets
+diff -uNr a/third_party/gfootball_engine/src/utils/gui2/widgets/image.cpp b/third_party/gfootball_engine/src/utils/gui2/widgets/image.cpp
+--- a/third_party/gfootball_engine/src/utils/gui2/widgets/image.cpp	2025-06-17 01:34:25
++++ b/third_party/gfootball_engine/src/utils/gui2/widgets/image.cpp	2026-04-12 09:17:39
+@@ -23,10 +23,6 @@
+ #include "../windowmanager.hpp"
+ #include "file.h"
+ 
+-#ifdef WIN32
+-#include <SDL2/SDL_image.h>
+-#endif
+-
+ namespace blunted {
+ 
+ SDL_Surface *IMG_LoadBmp(const std::string &file) {
+@@ -34,12 +30,24 @@
+   std::string name = GetGameConfig().updatePath(file);
+   name = name.substr(0, name.length() - 4) + ".bmp";
+ #ifdef WIN32
+-  auto image = IMG_Load(name.c_str());
++  auto image = SDL_LoadBMP(name.c_str());
+ #else
+   std::string file_data = GetFile(name);
++  if (file_data.empty()) {
++    Log(e_FatalError, "Gui2Image", "IMG_LoadBmp",
++        "Could not read image " + name);
++  }
+   SDL_RWops *rw = SDL_RWFromConstMem(file_data.data(), file_data.size());
++  if (rw == nullptr) {
++    Log(e_FatalError, "Gui2Image", "IMG_LoadBmp",
++        "Could not create SDL RWops for image " + name);
++  }
+   auto image = SDL_LoadBMP_RW(rw, 1);
+ #endif
++  if (image == nullptr) {
++    Log(e_FatalError, "Gui2Image", "IMG_LoadBmp",
++        "Could not load image " + name);
++  }
+ 
+   if (image->format->format == SDL_PIXELFORMAT_ARGB8888) {
+     DO_VALIDATION;

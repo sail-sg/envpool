@@ -23,6 +23,7 @@ _SETUP_DATA = [
     "README.md",
     "setup.cfg",
     "//envpool",
+    "//third_party/gfootball:setup_py_data",
 ]
 
 _SETUP_DEPS = [

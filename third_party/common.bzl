@@ -62,17 +62,21 @@ template_rule = rule(
 
 def _copy_to_directory_impl(ctx):
     out = ctx.actions.declare_directory(ctx.attr.out)
+    manifest = ctx.actions.declare_file(ctx.label.name + "_srcs.txt")
     strip_prefix = ctx.attr.strip_prefix
     flatten = "1" if ctx.attr.flatten else "0"
+    srcs = sorted([src.path for src in ctx.files.srcs])
+
+    ctx.actions.write(output = manifest, content = "\n".join(srcs) + "\n")
 
     args = ctx.actions.args()
     args.add(out.path)
     args.add(strip_prefix)
     args.add(flatten)
-    args.add_all([src.path for src in ctx.files.srcs])
+    args.add(manifest.path)
 
     ctx.actions.run_shell(
-        inputs = ctx.files.srcs,
+        inputs = depset(ctx.files.srcs + [manifest]),
         outputs = [out],
         arguments = [args],
         command = """
@@ -81,10 +85,11 @@ set -eu
 out="$1"
 strip_prefix="$2"
 flatten="$3"
-shift 3
+manifest="$4"
 
 mkdir -p "$out"
-for src in "$@"; do
+while IFS= read -r src; do
+  [ -n "$src" ] || continue
   if [ "$flatten" = "1" ]; then
     rel="$(basename "$src")"
   else
@@ -96,7 +101,7 @@ for src in "$@"; do
   dst="$out/$rel"
   mkdir -p "$(dirname "$dst")"
   cp -R "$src" "$dst"
-done
+done < "$manifest"
 """,
     )
 
@@ -109,6 +114,69 @@ done
 
 copy_to_directory = rule(
     implementation = _copy_to_directory_impl,
+    attrs = {
+        "srcs": attr.label_list(
+            allow_files = True,
+            mandatory = True,
+        ),
+        "out": attr.string(mandatory = True),
+        "strip_prefix": attr.string(mandatory = True),
+        "flatten": attr.bool(default = False),
+    },
+)
+
+def _copy_files_to_directory_impl(ctx):
+    manifest = ctx.actions.declare_file(ctx.label.name + "_srcs.txt")
+    strip_prefix = ctx.attr.strip_prefix
+    outputs = []
+    manifest_lines = []
+
+    for src in sorted(ctx.files.srcs, key = lambda f: f.path):
+        if src.is_directory:
+            fail("copy_files_to_directory only supports file inputs")
+        if ctx.attr.flatten:
+            rel = src.path.split("/")[-1]
+        else:
+            idx = src.path.find(strip_prefix)
+            if idx == -1:
+                rel = src.path.split("/")[-1]
+            else:
+                rel = src.path[idx + len(strip_prefix):]
+        out = ctx.actions.declare_file(ctx.attr.out + "/" + rel)
+        outputs.append(out)
+        manifest_lines.append(src.path + "\t" + out.path)
+
+    ctx.actions.write(output = manifest, content = "\n".join(manifest_lines) + "\n")
+
+    args = ctx.actions.args()
+    args.add(manifest.path)
+
+    ctx.actions.run_shell(
+        inputs = depset(ctx.files.srcs + [manifest]),
+        outputs = outputs,
+        arguments = [args],
+        command = """
+set -eu
+
+manifest="$1"
+
+while IFS=$'\\t' read -r src dst; do
+  [ -n "$src" ] || continue
+  mkdir -p "$(dirname "$dst")"
+  cp -R "$src" "$dst"
+done < "$manifest"
+""",
+    )
+
+    return [
+        DefaultInfo(
+            files = depset(outputs),
+            runfiles = ctx.runfiles(files = outputs),
+        ),
+    ]
+
+copy_files_to_directory = rule(
+    implementation = _copy_files_to_directory_impl,
     attrs = {
         "srcs": attr.label_list(
             allow_files = True,

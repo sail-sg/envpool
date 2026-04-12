@@ -251,7 +251,7 @@ docker-release-launch: docker-release
 
 pypi-wheel: $(PYPI_WHEEL_PREREQS) bazel-release
 	rm -rf wheelhouse
-	CURRENT_WHEEL=$$(ls dist/*.whl -Art | tail -n 1); \
+	CURRENT_WHEEL=$$(ls -Art dist/*.whl | tail -n 1); \
 	$(PYPI_WHEEL_REPAIR_COMMAND)
 	python3 scripts/optimize_wheel.py wheelhouse/*.whl
 	python3 scripts/check_wheel_size.py --limit-bytes $(WHEEL_SIZE_LIMIT_BYTES) wheelhouse/*.whl

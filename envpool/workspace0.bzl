@@ -17,6 +17,7 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 load("//third_party/cuda:cuda.bzl", "cuda_configure")
+load("//third_party/gfootball:repo.bzl", "gfootball_archive")
 load("//third_party/vizdoom:repo.bzl", "vizdoom_archive")
 
 def workspace():
@@ -343,6 +344,43 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
 
     maybe(
         http_archive,
+        name = "freetype",
+        sha256 = "bc5c898e4756d373e0d991bab053036c5eb2aa7c0d5c67e8662ddc6da40c4103",
+        strip_prefix = "freetype-VER-2-13-3",
+        type = "tar.gz",
+        urls = [
+            "https://github.com/freetype/freetype/archive/refs/tags/VER-2-13-3.tar.gz",
+            "https://codeload.github.com/freetype/freetype/tar.gz/refs/tags/VER-2-13-3",
+        ],
+        build_file = "//third_party/freetype:freetype.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "sdl2_ttf",
+        sha256 = "2c45241a56203a59d66ec6b4eae9457e5675fc609376566a257391fd29d341a2",
+        strip_prefix = "SDL_ttf-release-2.24.0",
+        type = "tar.gz",
+        urls = [
+            "https://github.com/libsdl-org/SDL_ttf/archive/refs/tags/release-2.24.0.tar.gz",
+        ],
+        build_file = "//third_party/sdl2_ttf:sdl2_ttf.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "sdl2_gfx",
+        sha256 = "358042f1e63ba1ef4d6484047998ab08c1ee72ab589826805bfbba8fd50abe8b",
+        strip_prefix = "SDL2_gfx-c4aca6b9700ec0db0abd316809e7e6038c511ce2",
+        type = "tar.gz",
+        urls = [
+            "https://codeload.github.com/ferzkopp/SDL2_gfx/tar.gz/c4aca6b9700ec0db0abd316809e7e6038c511ce2",
+        ],
+        build_file = "//third_party/sdl2_gfx:sdl2_gfx.BUILD",
+    )
+
+    maybe(
+        http_archive,
         name = "com_github_nelhage_rules_boost",
         # sha256 = "2215e6910eb763a971b1f63f53c45c0f2b7607df38c96287666d94d954da8cdc",
         strip_prefix = "rules_boost-e60cf50996da9fe769b6e7a31b88c54966ecb191",
@@ -598,6 +636,20 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
             "https://github.com/openai/gym3/archive/4c3824680eaf9dd04dce224ee3d4856429878226.zip",
         ],
         build_file = "//third_party/gym3_libenv:gym3_libenv.BUILD",
+    )
+
+    maybe(
+        gfootball_archive,
+        name = "google_research_football",
+        sha256 = "458100b893aaa530fa269a8ac17484e6f05812e266c81712834dfefc7ecd196b",
+        strip_prefix = "football-3d9e754720a95621bba6475c4d3b0d56fe919014",
+        type = "tar.gz",
+        urls = [
+            "https://codeload.github.com/google-research/football/tar.gz/3d9e754720a95621bba6475c4d3b0d56fe919014",
+        ],
+        build_file = "//third_party/gfootball:gfootball.BUILD",
+        patch_args = ["-p1"],
+        patches = ["//third_party/gfootball:envpool.patch"],
     )
 
     maybe(
