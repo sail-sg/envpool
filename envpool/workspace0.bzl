@@ -724,6 +724,30 @@ replace_exact(
         }
 ''',
 )
+replace_exact(
+    "third_party/gfootball_engine/src/utils/gui2/widgets/image.cpp",
+    '''#ifdef WIN32
+#include <SDL2/SDL_image.h>
+#endif
+
+''',
+    "",
+)
+replace_exact(
+    "third_party/gfootball_engine/src/utils/gui2/widgets/image.cpp",
+    '''#ifdef WIN32
+  auto image = IMG_Load(name.c_str());
+#else
+  std::string file_data = GetFile(name);
+  SDL_RWops *rw = SDL_RWFromConstMem(file_data.data(), file_data.size());
+  auto image = SDL_LoadBMP_RW(rw, 1);
+#endif
+''',
+    '''  std::string file_data = GetFile(name);
+  SDL_RWops *rw = SDL_RWFromConstMem(file_data.data(), file_data.size());
+  auto image = SDL_LoadBMP_RW(rw, 1);
+''',
+)
 PY
 """],
         patch_cmds_win = ["""
@@ -798,6 +822,25 @@ Replace-Exact 'third_party/gfootball_engine/src/systems/graphics/objects/graphic
           caller->SetShadow(false);
           return;
         }
+'@
+Replace-Exact 'third_party/gfootball_engine/src/utils/gui2/widgets/image.cpp' @'
+#ifdef WIN32
+#include <SDL2/SDL_image.h>
+#endif
+
+'@ @''
+Replace-Exact 'third_party/gfootball_engine/src/utils/gui2/widgets/image.cpp' @'
+#ifdef WIN32
+  auto image = IMG_Load(name.c_str());
+#else
+  std::string file_data = GetFile(name);
+  SDL_RWops *rw = SDL_RWFromConstMem(file_data.data(), file_data.size());
+  auto image = SDL_LoadBMP_RW(rw, 1);
+#endif
+'@ @'
+  std::string file_data = GetFile(name);
+  SDL_RWops *rw = SDL_RWFromConstMem(file_data.data(), file_data.size());
+  auto image = SDL_LoadBMP_RW(rw, 1);
 '@
 """],
     )
