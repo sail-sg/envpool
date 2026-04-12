@@ -62,17 +62,24 @@ template_rule = rule(
 
 def _copy_to_directory_impl(ctx):
     out = ctx.actions.declare_directory(ctx.attr.out)
+    manifest = ctx.actions.declare_file(ctx.label.name + "_srcs.txt")
     strip_prefix = ctx.attr.strip_prefix
     flatten = "1" if ctx.attr.flatten else "0"
+    srcs = sorted([src.path for src in ctx.files.srcs])
+
+    ctx.actions.write(
+        output = manifest,
+        content = "\n".join(srcs) + "\n",
+    )
 
     args = ctx.actions.args()
     args.add(out.path)
     args.add(strip_prefix)
     args.add(flatten)
-    args.add_all([src.path for src in ctx.files.srcs])
+    args.add(manifest.path)
 
     ctx.actions.run_shell(
-        inputs = ctx.files.srcs,
+        inputs = depset(ctx.files.srcs + [manifest]),
         outputs = [out],
         arguments = [args],
         command = """
@@ -81,10 +88,11 @@ set -eu
 out="$1"
 strip_prefix="$2"
 flatten="$3"
-shift 3
+manifest="$4"
 
 mkdir -p "$out"
-for src in "$@"; do
+while IFS= read -r src; do
+  [ -n "$src" ] || continue
   if [ "$flatten" = "1" ]; then
     rel="$(basename "$src")"
   else
@@ -96,7 +104,7 @@ for src in "$@"; do
   dst="$out/$rel"
   mkdir -p "$(dirname "$dst")"
   cp -R "$src" "$dst"
-done
+done < "$manifest"
 """,
     )
 
