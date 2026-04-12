@@ -748,6 +748,33 @@ replace_exact(
   auto image = SDL_LoadBMP_RW(rw, 1);
 ''',
 )
+replace_exact(
+    "third_party/gfootball_engine/src/cmake/backtrace.h",
+    '''#ifndef _CMAKE_BACKTRACE_H_
+#define _CMAKE_BACKTRACE_H_
+
+void print_stacktrace();
+
+void install_stacktrace();
+
+#endif  // _CMAKE_BACKTRACE_H_
+''',
+    '''#ifndef _CMAKE_BACKTRACE_H_
+#define _CMAKE_BACKTRACE_H_
+
+#ifdef _WIN32
+inline void print_stacktrace() {}
+
+inline void install_stacktrace() {}
+#else
+void print_stacktrace();
+
+void install_stacktrace();
+#endif
+
+#endif  // _CMAKE_BACKTRACE_H_
+''',
+)
 PY
 """],
         patch_cmds_win = ["""
@@ -841,6 +868,31 @@ Replace-Exact 'third_party/gfootball_engine/src/utils/gui2/widgets/image.cpp' @'
   std::string file_data = GetFile(name);
   SDL_RWops *rw = SDL_RWFromConstMem(file_data.data(), file_data.size());
   auto image = SDL_LoadBMP_RW(rw, 1);
+'@
+Replace-Exact 'third_party/gfootball_engine/src/cmake/backtrace.h' @'
+#ifndef _CMAKE_BACKTRACE_H_
+#define _CMAKE_BACKTRACE_H_
+
+void print_stacktrace();
+
+void install_stacktrace();
+
+#endif  // _CMAKE_BACKTRACE_H_
+'@ @'
+#ifndef _CMAKE_BACKTRACE_H_
+#define _CMAKE_BACKTRACE_H_
+
+#ifdef _WIN32
+inline void print_stacktrace() {}
+
+inline void install_stacktrace() {}
+#else
+void print_stacktrace();
+
+void install_stacktrace();
+#endif
+
+#endif  // _CMAKE_BACKTRACE_H_
 '@
 """],
     )
