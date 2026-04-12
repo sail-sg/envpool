@@ -40,8 +40,16 @@ cc_library(
     name = "gfootball_engine",
     srcs = glob(
         ["third_party/gfootball_engine/src/**/*.cpp"],
-        exclude = ["third_party/gfootball_engine/src/client.cpp"],
-    ),
+        exclude = [
+            "third_party/gfootball_engine/src/client.cpp",
+            "third_party/gfootball_engine/src/cmake/backtrace.cpp",
+        ],
+    ) + select({
+        "@envpool//:windows": [],
+        "//conditions:default": [
+            "third_party/gfootball_engine/src/cmake/backtrace.cpp",
+        ],
+    }),
     hdrs = glob([
         "third_party/gfootball_engine/src/**/*.h",
         "third_party/gfootball_engine/src/**/*.hpp",

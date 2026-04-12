@@ -55,13 +55,7 @@ class BuildPy(build_py):
         if bazel_bin is None:
             return
 
-        for rel_path in (
-            "envpool/atari/roms",
-            "envpool/gfootball/assets",
-            "envpool/procgen/assets",
-            "envpool/vizdoom/bin",
-            "envpool/vizdoom/maps",
-        ):
+        for rel_path in ("envpool/gfootball/assets",):
             source = bazel_bin / rel_path
             if not source.exists():
                 continue
