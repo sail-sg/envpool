@@ -743,9 +743,21 @@ replace_exact(
   auto image = SDL_LoadBMP_RW(rw, 1);
 #endif
 ''',
-    '''  std::string file_data = GetFile(name);
+    '''#ifdef WIN32
+  auto image = SDL_LoadBMP(name.c_str());
+#else
+  std::string file_data = GetFile(name);
+  if (file_data.empty()) {
+    Log(e_FatalError, "Gui2Image", "IMG_LoadBmp",
+        "Could not read image " + name);
+  }
   SDL_RWops *rw = SDL_RWFromConstMem(file_data.data(), file_data.size());
+  if (rw == nullptr) {
+    Log(e_FatalError, "Gui2Image", "IMG_LoadBmp",
+        "Could not create SDL RWops for image " + name);
+  }
   auto image = SDL_LoadBMP_RW(rw, 1);
+#endif
   if (image == nullptr) {
     Log(e_FatalError, "Gui2Image", "IMG_LoadBmp",
         "Could not load image " + name);
@@ -913,9 +925,21 @@ Replace-Exact 'third_party/gfootball_engine/src/utils/gui2/widgets/image.cpp' @'
   auto image = SDL_LoadBMP_RW(rw, 1);
 #endif
 '@ @'
+#ifdef WIN32
+  auto image = SDL_LoadBMP(name.c_str());
+#else
   std::string file_data = GetFile(name);
+  if (file_data.empty()) {
+    Log(e_FatalError, "Gui2Image", "IMG_LoadBmp",
+        "Could not read image " + name);
+  }
   SDL_RWops *rw = SDL_RWFromConstMem(file_data.data(), file_data.size());
+  if (rw == nullptr) {
+    Log(e_FatalError, "Gui2Image", "IMG_LoadBmp",
+        "Could not create SDL RWops for image " + name);
+  }
   auto image = SDL_LoadBMP_RW(rw, 1);
+#endif
   if (image == nullptr) {
     Log(e_FatalError, "Gui2Image", "IMG_LoadBmp",
         "Could not load image " + name);
