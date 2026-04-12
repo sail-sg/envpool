@@ -23,6 +23,8 @@ _SETUP_DATA = [
     "README.md",
     "setup.cfg",
     "//envpool",
+    "//envpool/gfootball:gen_gfootball_assets_data",
+    "//envpool/gfootball:gen_gfootball_assets_fonts",
 ]
 
 _SETUP_DEPS = [
