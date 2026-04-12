@@ -61,47 +61,41 @@ template_rule = rule(
 )
 
 def _copy_to_directory_impl(ctx):
-    out = ctx.actions.declare_directory(ctx.attr.out)
     manifest = ctx.actions.declare_file(ctx.label.name + "_srcs.txt")
     strip_prefix = ctx.attr.strip_prefix
-    flatten = "1" if ctx.attr.flatten else "0"
-    srcs = sorted([src.path for src in ctx.files.srcs])
+    src_map = {src.path: src for src in ctx.files.srcs}
+    outputs = []
+    manifest_lines = []
 
-    ctx.actions.write(
-        output = manifest,
-        content = "\n".join(srcs) + "\n",
-    )
+    for src_path in sorted(src_map.keys()):
+        if ctx.attr.flatten:
+            rel = src_path.split("/")[-1]
+        else:
+            idx = src_path.find(strip_prefix)
+            if idx == -1:
+                rel = src_path.split("/")[-1]
+            else:
+                rel = src_path[idx + len(strip_prefix):]
+        out = ctx.actions.declare_file(ctx.attr.out + "/" + rel)
+        outputs.append(out)
+        manifest_lines.append(src_path + "\t" + out.path)
+
+    ctx.actions.write(output = manifest, content = "\n".join(manifest_lines) + "\n")
 
     args = ctx.actions.args()
-    args.add(out.path)
-    args.add(strip_prefix)
-    args.add(flatten)
     args.add(manifest.path)
 
     ctx.actions.run_shell(
         inputs = depset(ctx.files.srcs + [manifest]),
-        outputs = [out],
+        outputs = outputs,
         arguments = [args],
         command = """
 set -eu
 
-out="$1"
-strip_prefix="$2"
-flatten="$3"
-manifest="$4"
+manifest="$1"
 
-mkdir -p "$out"
-while IFS= read -r src; do
+while IFS=$'\\t' read -r src dst; do
   [ -n "$src" ] || continue
-  if [ "$flatten" = "1" ]; then
-    rel="$(basename "$src")"
-  else
-    rel="${src#*${strip_prefix}}"
-    if [ "$rel" = "$src" ]; then
-      rel="$(basename "$src")"
-    fi
-  fi
-  dst="$out/$rel"
   mkdir -p "$(dirname "$dst")"
   cp -R "$src" "$dst"
 done < "$manifest"
@@ -110,8 +104,8 @@ done < "$manifest"
 
     return [
         DefaultInfo(
-            files = depset([out]),
-            runfiles = ctx.runfiles(files = [out]),
+            files = depset(outputs),
+            runfiles = ctx.runfiles(files = outputs),
         ),
     ]
 
