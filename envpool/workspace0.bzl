@@ -541,6 +541,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         name = "mujoco",
         patch_args = ["-p1"],
         patches = [
+            "//third_party/mujoco:idempotent_obj_decoder.patch",
             "//third_party/mujoco:idempotent_stl_decoder.patch",
             "//third_party/mujoco:windows_msvc_compat.patch",
             "//third_party/mujoco:windows_msvc_c11_compat.patch",
@@ -585,6 +586,17 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
             "https://github.com/Farama-Foundation/Gymnasium-Robotics/archive/refs/tags/v1.4.2.tar.gz",
         ],
         build_file = "//third_party/gymnasium_robotics_assets:gymnasium_robotics_assets.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "metaworld_assets",
+        sha256 = "6ccb763cb05bb9f9c966a17304d4849f530f1b721699fecc68d920a000ea5bd0",
+        strip_prefix = "Metaworld-3.0.0",
+        urls = [
+            "https://github.com/Farama-Foundation/Metaworld/archive/refs/tags/v3.0.0.tar.gz",
+        ],
+        build_file = "//third_party/metaworld_assets:metaworld_assets.BUILD",
     )
 
     maybe(

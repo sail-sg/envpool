@@ -39,6 +39,7 @@ py_library(
         "//envpool/gfootball:gfootball_registration",
         "//envpool/highway:highway_registration",
         "//envpool/minigrid:minigrid_registration",
+        "//envpool/mujoco:metaworld_registration",
         "//envpool/mujoco:mujoco_dmc_registration",
         "//envpool/mujoco:mujoco_gym_registration",
         "//envpool/mujoco:robotics_registration",
