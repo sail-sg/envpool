@@ -247,7 +247,6 @@ py_library(
 
 cc_library(
     name = "metaworld_env",
-    srcs = ["metaworld/metaworld_env.cc"],
     hdrs = [
         "metaworld/metaworld_env.h",
         "metaworld/tasks.h",
@@ -357,8 +356,14 @@ py_test(
         ":metaworld",
         ":metaworld_registration",
         "//envpool/python:glfw_context",
+        "@metaworld_assets//:metaworld_oracle",
         requirement("absl-py"),
+        requirement("gymnasium"),
+        requirement("imageio"),
+        requirement("mujoco"),
         requirement("numpy"),
+        requirement("scipy"),
+        requirement("typing-extensions"),
     ],
 )
 

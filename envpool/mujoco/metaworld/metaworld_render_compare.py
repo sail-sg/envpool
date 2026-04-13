@@ -21,20 +21,26 @@ import os
 from pathlib import Path
 from typing import Any
 
-import mujoco
 import numpy as np
-from metaworld.env_dict import ALL_V3_ENVIRONMENTS
 from PIL import Image, ImageDraw, ImageFont
 
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
 preload_windows_gl_dlls(strict=True)
 
+import mujoco  # noqa: E402
+from metaworld.env_dict import ALL_V3_ENVIRONMENTS  # noqa: E402
+
 import envpool.mujoco.metaworld.registration as metaworld_registration  # noqa: E402
 from envpool.registration import make_gymnasium  # noqa: E402
 
 _TILE_WIDTH = 96
 _TILE_HEIGHT = 72
+# Render both sides at Gymnasium's default source size, then downsample only for
+# the docs mosaic. Rendering source frames directly at thumbnail size changes
+# MuJoCo offscreen antialiasing behavior.
+_SOURCE_WIDTH = 480
+_SOURCE_HEIGHT = 480
 _PAIR_GAP = 4
 _CELL_WIDTH = 230
 _CELL_HEIGHT = 104
@@ -43,6 +49,8 @@ _MARGIN = 16
 _COLUMNS = 5
 _SEED = 7
 _CAMERA_ID = 1  # MetaWorld's fixed "corner" camera.
+_MAX_MEAN_ABS_DIFF = 0.25
+_MAX_MISMATCH_RATIO = 0.005
 
 
 def _make_oracle(task_name: str) -> Any:
@@ -52,6 +60,8 @@ def _make_oracle(task_name: str) -> Any:
     )
     env._set_task_called = True
     env._partially_observable = True
+    env.mujoco_renderer.width = _SOURCE_WIDTH
+    env.mujoco_renderer.height = _SOURCE_HEIGHT
     return env
 
 
@@ -125,25 +135,81 @@ def _resize_frame(frame: np.ndarray) -> Image.Image:
     return image.resize((_TILE_WIDTH, _TILE_HEIGHT), Image.Resampling.LANCZOS)
 
 
-def _render_pair(task_name: str) -> tuple[Image.Image, Image.Image]:
+def _assert_frames_bitwise_equal(
+    task_name: str, envpool_frame: np.ndarray, official_frame: np.ndarray
+) -> None:
+    if envpool_frame.shape != official_frame.shape:
+        raise RuntimeError(
+            f"{task_name} render shape mismatch: "
+            f"{envpool_frame.shape} != {official_frame.shape}"
+        )
+    if np.array_equal(envpool_frame, official_frame):
+        return
+    diff = np.abs(
+        envpool_frame.astype(np.int16) - official_frame.astype(np.int16)
+    )
+    mismatch_ratio = float(np.count_nonzero(diff)) / float(diff.size)
+    raise RuntimeError(
+        f"{task_name} render mismatch: "
+        f"mean_abs_diff={float(diff.mean()):.6f}, "
+        f"max_abs_diff={int(diff.max())}, "
+        f"mismatch_ratio={mismatch_ratio:.6%}"
+    )
+
+
+def _assert_frames_close(
+    task_name: str, envpool_frame: np.ndarray, official_frame: np.ndarray
+) -> None:
+    if envpool_frame.shape != official_frame.shape:
+        raise RuntimeError(
+            f"{task_name} render shape mismatch: "
+            f"{envpool_frame.shape} != {official_frame.shape}"
+        )
+    diff = np.abs(
+        envpool_frame.astype(np.int16) - official_frame.astype(np.int16)
+    )
+    if diff.size == 0:
+        return
+    mismatch_ratio = float(np.count_nonzero(diff)) / float(diff.size)
+    mean_abs_diff = float(diff.mean())
+    if (
+        mean_abs_diff > _MAX_MEAN_ABS_DIFF
+        or mismatch_ratio > _MAX_MISMATCH_RATIO
+    ):
+        raise RuntimeError(
+            f"{task_name} render mismatch: "
+            f"mean_abs_diff={mean_abs_diff:.6f}, "
+            f"max_abs_diff={int(diff.max())}, "
+            f"mismatch_ratio={mismatch_ratio:.6%}"
+        )
+
+
+def _render_pair(
+    task_name: str, *, require_bitwise: bool
+) -> tuple[Image.Image, Image.Image]:
     task_id = f"Meta-World/{task_name}"
     env = make_gymnasium(
         task_id,
         num_envs=1,
         seed=_SEED,
         render_mode="rgb_array",
-        render_width=_TILE_WIDTH,
-        render_height=_TILE_HEIGHT,
+        render_width=_SOURCE_WIDTH,
+        render_height=_SOURCE_HEIGHT,
         render_camera_id=_CAMERA_ID,
     )
     oracle = _make_oracle(task_name)
     try:
-        env.reset()
         _, info = env.reset()
         _sync_reset_state(oracle, info)
         envpool_frame = env.render()
         assert envpool_frame is not None
         official_frame = oracle.render()
+        if require_bitwise:
+            _assert_frames_bitwise_equal(
+                task_name, envpool_frame[0], official_frame
+            )
+        else:
+            _assert_frames_close(task_name, envpool_frame[0], official_frame)
         return _resize_frame(envpool_frame[0]), _resize_frame(official_frame)
     finally:
         env.close()
@@ -188,7 +254,7 @@ def _draw_panel(
     )
 
 
-def generate(output: Path) -> None:
+def generate(output: Path, *, require_bitwise: bool) -> None:
     """Generate and write the full MetaWorld render comparison image."""
     task_names = tuple(metaworld_registration.metaworld_v3_envs)
     rows = math.ceil(len(task_names) / _COLUMNS)
@@ -198,7 +264,10 @@ def generate(output: Path) -> None:
     font = ImageFont.load_default()
 
     for index, task_name in enumerate(task_names):
-        envpool_image, official_image = _render_pair(task_name)
+        envpool_image, official_image = _render_pair(
+            task_name,
+            require_bitwise=require_bitwise,
+        )
         _draw_panel(
             canvas,
             task_name,
@@ -222,13 +291,14 @@ def main() -> None:
             "docs/_static/render_samples/metaworld_official_compare.png"
         ),
     )
+    parser.add_argument("--require-bitwise", action="store_true")
     args = parser.parse_args()
     output = args.output
     if not output.is_absolute():
         output = Path(
             os.environ.get("BUILD_WORKSPACE_DIRECTORY", ".")
         ).joinpath(output)
-    generate(output)
+    generate(output, require_bitwise=args.require_bitwise)
 
 
 if __name__ == "__main__":

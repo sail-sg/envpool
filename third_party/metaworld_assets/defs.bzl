@@ -44,30 +44,9 @@ while IFS= read -r src; do
     rel="$(basename "$src")"
   fi
 
-  case "$rel" in
-    *.png)
-      continue
-      ;;
-  esac
-
   dst="$out/$rel"
   mkdir -p "$(dirname "$dst")"
-  case "$rel" in
-    *.xml)
-      sed -E \
-        -e "/<texture[^>]*file=['\"][^'\"]*\\.(png|jpg|jpeg)['\"][^>]*>/d" \
-        -e "s/[[:space:]]texture=\"[^\"]*\"//g" \
-        -e "s/[[:space:]]texture='[^']*'//g" \
-        -e "s/[[:space:]]texrepeat=\"[^\"]*\"//g" \
-        -e "s/[[:space:]]texrepeat='[^']*'//g" \
-        -e "s/[[:space:]]texuniform=\"[^\"]*\"//g" \
-        -e "s/[[:space:]]texuniform='[^']*'//g" \
-        "$src" > "$dst"
-      ;;
-    *)
-      cp -R "$src" "$dst"
-      ;;
-  esac
+  cp -R "$src" "$dst"
 done < "$manifest"
 """,
     )

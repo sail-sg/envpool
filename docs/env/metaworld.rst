@@ -8,8 +8,7 @@ for each official ``ALL_V3_ENVIRONMENTS`` entry.
 
 The public task IDs use the official ``Meta-World/`` namespace and the
 official lower-case, hyphenated v3 task names, for example
-``Meta-World/reach-v3``. The historical EnvPool spelling ``MetaWorld/`` is
-also registered as an alias for each task.
+``Meta-World/reach-v3``.
 
 Observation and Action Spaces
 -----------------------------

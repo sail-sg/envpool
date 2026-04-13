@@ -75,7 +75,6 @@ for task_name in metaworld_v3_envs:
         spec_cls="MetaWorldEnvSpec",
         dm_cls="MetaWorldDMEnvPool",
         gymnasium_cls="MetaWorldGymnasiumEnvPool",
-        aliases=[f"MetaWorld/{task_name}"],
         task_name=task_name,
         max_episode_steps=500,
     )
