@@ -21,6 +21,11 @@ load("//third_party/metaworld_assets:defs.bzl", "metaworld_runtime_assets")
 
 package(default_visibility = ["//visibility:public"])
 
+config_setting(
+    name = "release_assets",
+    values = {"define": "envpool_release_assets=true"},
+)
+
 cc_library(
     name = "mujoco_render",
     srcs = ["offscreen_renderer.cc"],
@@ -82,6 +87,10 @@ metaworld_runtime_assets(
     name = "gen_metaworld_assets",
     srcs = ["@metaworld_assets"],
     out = "metaworld/assets",
+    compact = select({
+        ":release_assets": True,
+        "//conditions:default": False,
+    }),
     strip_prefix = "metaworld_assets/metaworld/assets/",
 )
 

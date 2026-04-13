@@ -24,6 +24,7 @@ def _metaworld_runtime_assets_impl(ctx):
     args.add(out.path)
     args.add(ctx.attr.strip_prefix)
     args.add(manifest.path)
+    args.add("1" if ctx.attr.compact else "0")
 
     ctx.actions.run_shell(
         inputs = depset(ctx.files.srcs + [manifest]),
@@ -35,6 +36,7 @@ set -eu
 out="$1"
 strip_prefix="$2"
 manifest="$3"
+compact="$4"
 
 mkdir -p "$out"
 while IFS= read -r src; do
@@ -44,9 +46,49 @@ while IFS= read -r src; do
     rel="$(basename "$src")"
   fi
 
+  if [ "$compact" = "1" ]; then
+    case "$rel" in
+      textures/wood2.png)
+        ;;
+      textures/*)
+        continue
+        ;;
+    esac
+  fi
+
   dst="$out/$rel"
   mkdir -p "$(dirname "$dst")"
-  cp -R "$src" "$dst"
+  if [ "$compact" = "1" ]; then
+    case "$rel" in
+      scene/*.xml)
+        sed -E \
+          -e "/<texture[^>]*file=['\"][^'\"]*\\/(floor2|metal)\\.png['\"][^>]*>/d" \
+          -e "/<material name=['\"]basic_floor['\"]/s/[[:space:]]texture=\"[^\"]*\"//g" \
+          -e "/<material name=['\"]basic_floor['\"]/s/[[:space:]]texture='[^']*'//g" \
+          -e "/<material name=['\"]basic_floor['\"]/s/[[:space:]]texrepeat=\"[^\"]*\"//g" \
+          -e "/<material name=['\"]basic_floor['\"]/s/[[:space:]]texrepeat='[^']*'//g" \
+          -e "/<material name=['\"]wall_metal['\"]/s/[[:space:]]texture=\"[^\"]*\"//g" \
+          -e "/<material name=['\"]wall_metal['\"]/s/[[:space:]]texture='[^']*'//g" \
+          "$src" > "$dst"
+        ;;
+      *.xml)
+        sed -E \
+          -e "/<texture[^>]*file=['\"][^'\"]*\\.(png|jpg|jpeg)['\"][^>]*>/d" \
+          -e "s/[[:space:]]texture=\"[^\"]*\"//g" \
+          -e "s/[[:space:]]texture='[^']*'//g" \
+          -e "s/[[:space:]]texrepeat=\"[^\"]*\"//g" \
+          -e "s/[[:space:]]texrepeat='[^']*'//g" \
+          -e "s/[[:space:]]texuniform=\"[^\"]*\"//g" \
+          -e "s/[[:space:]]texuniform='[^']*'//g" \
+          "$src" > "$dst"
+        ;;
+      *)
+        cp -R "$src" "$dst"
+        ;;
+    esac
+  else
+    cp -R "$src" "$dst"
+  fi
 done < "$manifest"
 """,
     )
@@ -67,5 +109,6 @@ metaworld_runtime_assets = rule(
         ),
         "out": attr.string(mandatory = True),
         "strip_prefix": attr.string(mandatory = True),
+        "compact": attr.bool(default = False),
     },
 )
