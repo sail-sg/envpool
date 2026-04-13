@@ -6,9 +6,10 @@ manipulation benchmark. The implementation is pinned to
 ``Farama-Foundation/Metaworld`` tag ``v3.0.0`` and exposes one EnvPool task ID
 for each official ``ALL_V3_ENVIRONMENTS`` entry.
 
-The public task IDs use the ``MetaWorld/`` prefix, for example
-``MetaWorld/reach-v3``. The legacy spelling ``Meta-World/`` is also registered
-as an alias for each task.
+The public task IDs use the official ``Meta-World/`` namespace and the
+official lower-case, hyphenated v3 task names, for example
+``Meta-World/reach-v3``. The historical EnvPool spelling ``MetaWorld/`` is
+also registered as an alias for each task.
 
 Observation and Action Spaces
 -----------------------------
@@ -27,10 +28,11 @@ All MetaWorld v3 tasks share the same public space contract:
 Render
 ------
 
-Representative native EnvPool render frames for ``reach-v3``,
-``pick-place-v3``, and ``sweep-v3`` are shown below from left to right.
+Reset render frames for all official v3 tasks are shown below. Each task panel
+places the native EnvPool render on the left and the official MetaWorld v3.0.0
+reference render on the right.
 
-.. image:: ../_static/render_samples/metaworld_envpool_render.png
+.. image:: ../_static/render_samples/metaworld_official_compare.png
     :width: 900px
     :align: center
 
@@ -40,56 +42,56 @@ Registered Task IDs
 
 .. code-block:: text
 
-    MetaWorld/assembly-v3
-    MetaWorld/basketball-v3
-    MetaWorld/bin-picking-v3
-    MetaWorld/box-close-v3
-    MetaWorld/button-press-topdown-v3
-    MetaWorld/button-press-topdown-wall-v3
-    MetaWorld/button-press-v3
-    MetaWorld/button-press-wall-v3
-    MetaWorld/coffee-button-v3
-    MetaWorld/coffee-pull-v3
-    MetaWorld/coffee-push-v3
-    MetaWorld/dial-turn-v3
-    MetaWorld/disassemble-v3
-    MetaWorld/door-close-v3
-    MetaWorld/door-lock-v3
-    MetaWorld/door-open-v3
-    MetaWorld/door-unlock-v3
-    MetaWorld/hand-insert-v3
-    MetaWorld/drawer-close-v3
-    MetaWorld/drawer-open-v3
-    MetaWorld/faucet-open-v3
-    MetaWorld/faucet-close-v3
-    MetaWorld/hammer-v3
-    MetaWorld/handle-press-side-v3
-    MetaWorld/handle-press-v3
-    MetaWorld/handle-pull-side-v3
-    MetaWorld/handle-pull-v3
-    MetaWorld/lever-pull-v3
-    MetaWorld/pick-place-wall-v3
-    MetaWorld/pick-out-of-hole-v3
-    MetaWorld/pick-place-v3
-    MetaWorld/plate-slide-v3
-    MetaWorld/plate-slide-side-v3
-    MetaWorld/plate-slide-back-v3
-    MetaWorld/plate-slide-back-side-v3
-    MetaWorld/peg-insert-side-v3
-    MetaWorld/peg-unplug-side-v3
-    MetaWorld/soccer-v3
-    MetaWorld/stick-push-v3
-    MetaWorld/stick-pull-v3
-    MetaWorld/push-v3
-    MetaWorld/push-wall-v3
-    MetaWorld/push-back-v3
-    MetaWorld/reach-v3
-    MetaWorld/reach-wall-v3
-    MetaWorld/shelf-place-v3
-    MetaWorld/sweep-into-v3
-    MetaWorld/sweep-v3
-    MetaWorld/window-open-v3
-    MetaWorld/window-close-v3
+    Meta-World/assembly-v3
+    Meta-World/basketball-v3
+    Meta-World/bin-picking-v3
+    Meta-World/box-close-v3
+    Meta-World/button-press-topdown-v3
+    Meta-World/button-press-topdown-wall-v3
+    Meta-World/button-press-v3
+    Meta-World/button-press-wall-v3
+    Meta-World/coffee-button-v3
+    Meta-World/coffee-pull-v3
+    Meta-World/coffee-push-v3
+    Meta-World/dial-turn-v3
+    Meta-World/disassemble-v3
+    Meta-World/door-close-v3
+    Meta-World/door-lock-v3
+    Meta-World/door-open-v3
+    Meta-World/door-unlock-v3
+    Meta-World/hand-insert-v3
+    Meta-World/drawer-close-v3
+    Meta-World/drawer-open-v3
+    Meta-World/faucet-open-v3
+    Meta-World/faucet-close-v3
+    Meta-World/hammer-v3
+    Meta-World/handle-press-side-v3
+    Meta-World/handle-press-v3
+    Meta-World/handle-pull-side-v3
+    Meta-World/handle-pull-v3
+    Meta-World/lever-pull-v3
+    Meta-World/pick-place-wall-v3
+    Meta-World/pick-out-of-hole-v3
+    Meta-World/pick-place-v3
+    Meta-World/plate-slide-v3
+    Meta-World/plate-slide-side-v3
+    Meta-World/plate-slide-back-v3
+    Meta-World/plate-slide-back-side-v3
+    Meta-World/peg-insert-side-v3
+    Meta-World/peg-unplug-side-v3
+    Meta-World/soccer-v3
+    Meta-World/stick-push-v3
+    Meta-World/stick-pull-v3
+    Meta-World/push-v3
+    Meta-World/push-wall-v3
+    Meta-World/push-back-v3
+    Meta-World/reach-v3
+    Meta-World/reach-wall-v3
+    Meta-World/shelf-place-v3
+    Meta-World/sweep-into-v3
+    Meta-World/sweep-v3
+    Meta-World/window-open-v3
+    Meta-World/window-close-v3
 
 
 Validation

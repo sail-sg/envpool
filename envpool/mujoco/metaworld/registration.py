@@ -70,12 +70,12 @@ metaworld_v3_envs = [
 
 for task_name in metaworld_v3_envs:
     register(
-        task_id=f"MetaWorld/{task_name}",
+        task_id=f"Meta-World/{task_name}",
         import_path="envpool.mujoco.metaworld",
         spec_cls="MetaWorldEnvSpec",
         dm_cls="MetaWorldDMEnvPool",
         gymnasium_cls="MetaWorldGymnasiumEnvPool",
-        aliases=[f"Meta-World/{task_name}"],
+        aliases=[f"MetaWorld/{task_name}"],
         task_name=task_name,
         max_episode_steps=500,
     )

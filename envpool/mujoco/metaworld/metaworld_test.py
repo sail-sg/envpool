@@ -24,7 +24,7 @@ import envpool.mujoco.metaworld.registration as metaworld_registration
 from envpool.registration import list_all_envs, make_gymnasium, make_spec
 
 _TASK_IDS = tuple(
-    f"MetaWorld/{task_name}"
+    f"Meta-World/{task_name}"
     for task_name in metaworld_registration.metaworld_v3_envs
 )
 _INFO_KEYS = {
@@ -86,10 +86,19 @@ class MetaWorldTest(absltest.TestCase):
             RuntimeError, "Unknown MetaWorld task_name: missing-v3"
         ):
             make_gymnasium(
-                "MetaWorld/reach-v3",
+                "Meta-World/reach-v3",
                 task_name="missing-v3",
                 num_envs=1,
             )
+
+    def test_metaworld_namespace_alias_is_registered(self) -> None:
+        """The historical EnvPool spelling should remain an alias."""
+        env = make_gymnasium("MetaWorld/reach-v3", num_envs=1, seed=0)
+        try:
+            obs, _ = env.reset()
+            self.assertEqual(obs.shape, (1, 39))
+        finally:
+            env.close()
 
     def test_reset_and_step_all_v3_tasks(self) -> None:
         """Every v3 task should reset and step without invalid outputs."""

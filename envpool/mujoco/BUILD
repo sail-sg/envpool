@@ -14,7 +14,7 @@
 
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
-load("@rules_python//python:defs.bzl", "py_library", "py_test")
+load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
 load("//envpool:requirements.bzl", "requirement")
 load("//third_party:common.bzl", "copy_to_directory")
 load("//third_party/metaworld_assets:defs.bzl", "metaworld_runtime_assets")
@@ -247,6 +247,7 @@ py_library(
 
 cc_library(
     name = "metaworld_env",
+    srcs = ["metaworld/metaworld_env.cc"],
     hdrs = [
         "metaworld/metaworld_env.h",
         "metaworld/tasks.h",
@@ -358,6 +359,25 @@ py_test(
         "//envpool/python:glfw_context",
         requirement("absl-py"),
         requirement("numpy"),
+    ],
+)
+
+py_binary(
+    name = "metaworld_render_compare",
+    srcs = ["metaworld/metaworld_render_compare.py"],
+    imports = ["../.."],
+    deps = [
+        ":metaworld",
+        ":metaworld_registration",
+        "//envpool/python:glfw_context",
+        "@metaworld_assets//:metaworld_oracle",
+        requirement("gymnasium"),
+        requirement("imageio"),
+        requirement("mujoco"),
+        requirement("numpy"),
+        requirement("pillow"),
+        requirement("scipy"),
+        requirement("typing-extensions"),
     ],
 )
 

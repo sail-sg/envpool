@@ -31,7 +31,7 @@ _RENDER_WIDTH = 64
 _RENDER_HEIGHT = 48
 _RENDER_STEPS = 3
 _TASK_IDS = tuple(
-    f"MetaWorld/{task_name}"
+    f"Meta-World/{task_name}"
     for task_name in metaworld_registration.metaworld_v3_envs
 )
 
@@ -88,7 +88,7 @@ class MetaWorldRenderTest(absltest.TestCase):
     ) -> None:
         """Batch rendering should match env-id rendering without side effects."""
         env = make_gymnasium(
-            "MetaWorld/reach-v3",
+            "Meta-World/reach-v3",
             num_envs=2,
             seed=0,
             render_mode="rgb_array",

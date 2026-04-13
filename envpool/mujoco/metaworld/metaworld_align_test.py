@@ -46,7 +46,7 @@ _LINUX_ARM64_PUSH_REWARD_ATOL = 1.5e-6
 _LINUX_ARM64_PUSH_INFO_ATOL = 1.5e-6
 _LINUX_ARM64_PUSH_INFO_KEYS = {"grasp_reward", "unscaled_reward"}
 _TASK_NAMES = tuple(metaworld_registration.metaworld_v3_envs)
-_TASK_IDS = tuple(f"MetaWorld/{task_name}" for task_name in _TASK_NAMES)
+_TASK_IDS = tuple(f"Meta-World/{task_name}" for task_name in _TASK_NAMES)
 _INFO_KEYS = (
     "success",
     "near_object",
