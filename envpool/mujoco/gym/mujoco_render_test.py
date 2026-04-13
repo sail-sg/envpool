@@ -178,7 +178,8 @@ def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
 
 
 def _render_official_array(env: gym.Env[Any, Any]) -> np.ndarray:
-    viewer = env.unwrapped.mujoco_renderer.viewer
+    base_env = cast(Any, env.unwrapped)
+    viewer = base_env.mujoco_renderer.viewer
     if viewer is not None:
         viewer.make_context_current()
     return cast(np.ndarray, env.render())
@@ -189,7 +190,7 @@ def _official_viewer_debug(
     first_frame: np.ndarray,
     second_frame: np.ndarray,
 ) -> str:
-    base_env = env.unwrapped
+    base_env = cast(Any, env.unwrapped)
     renderer = base_env.mujoco_renderer
     viewer = renderer.viewer
     if viewer is None:
@@ -256,7 +257,7 @@ def _assert_frames_close(
 def _reset_official_state(
     env: gym.Env[Any, Any], qpos: np.ndarray, qvel: np.ndarray
 ) -> None:
-    base_env = env.unwrapped
+    base_env = cast(Any, env.unwrapped)
     mujoco.mj_resetData(base_env.model, base_env.data)
     base_env.set_state(qpos, qvel)
 

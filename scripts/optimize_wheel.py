@@ -97,7 +97,7 @@ def _strip_command(kind: str) -> list[str] | None:
     if kind == "elf":
         strip_bin = shutil.which("strip")
         if strip_bin:
-            return [strip_bin, "--strip-unneeded"]
+            return [strip_bin, "--strip-all"]
         return None
     if kind == "macho":
         strip_bin = shutil.which("strip")

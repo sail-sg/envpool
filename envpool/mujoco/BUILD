@@ -17,6 +17,7 @@ load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("//envpool:requirements.bzl", "requirement")
 load("//third_party:common.bzl", "copy_to_directory")
+load("//third_party/metaworld_assets:defs.bzl", "metaworld_runtime_assets")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -46,6 +47,7 @@ py_library(
     srcs = ["__init__.py"],
     imports = ["../.."],
     deps = [
+        ":metaworld",
         ":mujoco_dmc",
         ":mujoco_gym",
         ":robotics",
@@ -74,6 +76,13 @@ copy_to_directory(
     srcs = ["@gymnasium_robotics_assets"],
     out = "robotics/assets",
     strip_prefix = "gymnasium_robotics_assets/assets/",
+)
+
+metaworld_runtime_assets(
+    name = "gen_metaworld_assets",
+    srcs = ["@metaworld_assets"],
+    out = "metaworld/assets",
+    strip_prefix = "metaworld_assets/metaworld/assets/",
 )
 
 cc_library(
@@ -219,6 +228,7 @@ pybind_extension(
         "robotics/robotics_envpool.cc",
     ],
     deps = [
+        ":metaworld_env",
         ":robotics_env",
         "//envpool/core:py_envpool",
     ],
@@ -229,6 +239,30 @@ py_library(
     srcs = ["robotics/__init__.py"],
     data = [
         ":gen_gymnasium_robotics_assets",
+        ":robotics_envpool",
+    ],
+    imports = ["../.."],
+    deps = ["//envpool/python:api"],
+)
+
+cc_library(
+    name = "metaworld_env",
+    hdrs = [
+        "metaworld/metaworld_env.h",
+        "metaworld/tasks.h",
+    ],
+    data = [":gen_metaworld_assets"],
+    deps = [
+        ":robotics_env",
+        "//envpool/core:async_envpool",
+    ],
+)
+
+py_library(
+    name = "metaworld",
+    srcs = ["metaworld/__init__.py"],
+    data = [
+        ":gen_metaworld_assets",
         ":robotics_envpool",
     ],
     imports = ["../.."],
@@ -267,6 +301,63 @@ py_library(
     deps = [
         ":robotics",
         "//envpool:registration",
+    ],
+)
+
+py_library(
+    name = "metaworld_registration",
+    srcs = ["metaworld/registration.py"],
+    imports = ["../.."],
+    deps = [
+        ":metaworld",
+        "//envpool:registration",
+    ],
+)
+
+py_test(
+    name = "metaworld_test",
+    size = "enormous",
+    srcs = ["metaworld/metaworld_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":metaworld",
+        ":metaworld_registration",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "metaworld_align_test",
+    size = "enormous",
+    srcs = ["metaworld/metaworld_align_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":metaworld",
+        ":metaworld_registration",
+        "@metaworld_assets//:metaworld_oracle",
+        requirement("absl-py"),
+        requirement("cloudpickle"),
+        requirement("gymnasium"),
+        requirement("imageio"),
+        requirement("mujoco"),
+        requirement("numpy"),
+        requirement("scipy"),
+        requirement("typing-extensions"),
+    ],
+)
+
+py_test(
+    name = "metaworld_render_test",
+    size = "enormous",
+    srcs = ["metaworld/metaworld_render_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":metaworld",
+        ":metaworld_registration",
+        "//envpool/python:glfw_context",
+        requirement("absl-py"),
+        requirement("numpy"),
     ],
 )
 
@@ -357,6 +448,7 @@ py_test(
     srcs = ["mujoco_plugin_registration_test.py"],
     imports = ["../.."],
     deps = [
+        ":metaworld",
         ":mujoco_dmc",
         ":robotics",
         requirement("absl-py"),

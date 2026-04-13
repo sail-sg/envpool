@@ -1,0 +1,19 @@
+diff --git a/plugin/obj_decoder/obj_decoder.cc b/plugin/obj_decoder/obj_decoder.cc
+index 6577ad0..6cb2223 100644
+--- a/plugin/obj_decoder/obj_decoder.cc
++++ b/plugin/obj_decoder/obj_decoder.cc
+@@ -116,5 +116,14 @@ mjPLUGIN_LIB_INIT {
+   decoder.extension = ".obj";
+   decoder.decode = Decode;
+   decoder.can_decode = CanDecode;
++  mjResource probe;
++  probe.name = const_cast<char*>("envpool_obj_decoder_probe.obj");
++  probe.data = nullptr;
++  probe.vfs = nullptr;
++  probe.timestamp[0] = '\0';
++  probe.provider = nullptr;
++  if (mjp_findDecoder(&probe, decoder.content_type)) {
++    return;
++  }
+   mjp_registerDecoder(&decoder);
+ }

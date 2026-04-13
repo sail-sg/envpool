@@ -118,6 +118,7 @@ class EnvRegistry:
         return import_path in {
             "envpool.mujoco.dmc",
             "envpool.mujoco.gym",
+            "envpool.mujoco.metaworld",
             "envpool.mujoco.robotics",
         }
 

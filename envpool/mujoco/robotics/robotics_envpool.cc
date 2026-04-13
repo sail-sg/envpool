@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "envpool/core/py_envpool.h"
+#include "envpool/mujoco/metaworld/metaworld_env.h"
 #include "envpool/mujoco/robotics/adroit.h"
 #include "envpool/mujoco/robotics/fetch.h"
 #include "envpool/mujoco/robotics/hand.h"
@@ -62,6 +63,11 @@ using GymnasiumRoboticsKitchenPixelEnvSpec =
 using GymnasiumRoboticsKitchenPixelEnvPool =
     PyEnvPool<gymnasium_robotics::KitchenPixelEnvPool>;
 
+using MetaWorldEnvSpec = PyEnvSpec<metaworld::MetaWorldEnvSpec>;
+using MetaWorldEnvPool = PyEnvPool<metaworld::MetaWorldEnvPool>;
+using MetaWorldPixelEnvSpec = PyEnvSpec<metaworld::MetaWorldPixelEnvSpec>;
+using MetaWorldPixelEnvPool = PyEnvPool<metaworld::MetaWorldPixelEnvPool>;
+
 PYBIND11_MODULE(robotics_envpool, m) {
   REGISTER(m, GymnasiumRoboticsFetchEnvSpec, GymnasiumRoboticsFetchEnvPool)
   REGISTER(m, GymnasiumRoboticsFetchPixelEnvSpec,
@@ -79,4 +85,6 @@ PYBIND11_MODULE(robotics_envpool, m) {
   REGISTER(m, GymnasiumRoboticsKitchenEnvSpec, GymnasiumRoboticsKitchenEnvPool)
   REGISTER(m, GymnasiumRoboticsKitchenPixelEnvSpec,
            GymnasiumRoboticsKitchenPixelEnvPool)
+  REGISTER(m, MetaWorldEnvSpec, MetaWorldEnvPool)
+  REGISTER(m, MetaWorldPixelEnvSpec, MetaWorldPixelEnvPool)
 }

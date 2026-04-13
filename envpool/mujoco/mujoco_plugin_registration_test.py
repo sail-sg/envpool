@@ -35,6 +35,18 @@ class MujocoPluginRegistrationTest(absltest.TestCase):
         """Checks the opposite import order for standalone DMC users."""
         _assert_imports_succeed("envpool.mujoco.dmc", "envpool.mujoco.robotics")
 
+    def test_robotics_then_metaworld_imports_share_obj_decoder(self) -> None:
+        """Checks the release-test import order with MetaWorld linked in."""
+        _assert_imports_succeed(
+            "envpool.mujoco.robotics", "envpool.mujoco.metaworld"
+        )
+
+    def test_metaworld_then_robotics_imports_share_obj_decoder(self) -> None:
+        """Checks the opposite import order for standalone MetaWorld users."""
+        _assert_imports_succeed(
+            "envpool.mujoco.metaworld", "envpool.mujoco.robotics"
+        )
+
 
 if __name__ == "__main__":
     absltest.main()

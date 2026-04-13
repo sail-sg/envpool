@@ -10,6 +10,7 @@
 
 - [x] [Atari games](https://envpool.readthedocs.io/en/latest/env/atari.html)
 - [x] [MuJoCo (Gymnasium)](https://envpool.readthedocs.io/en/latest/env/mujoco_gym.html)
+- [x] [MetaWorld](https://envpool.readthedocs.io/en/latest/env/metaworld.html)
 - [x] [Classic control RL envs](https://envpool.readthedocs.io/en/latest/env/classic_control.html): CartPole, MountainCar, Pendulum, Acrobot
 - [x] [Toy text RL envs](https://envpool.readthedocs.io/en/latest/env/toy_text.html): Catch, FrozenLake, Taxi, NChain, CliffWalking, Blackjack
 - [x] [ViZDoom single player](https://envpool.readthedocs.io/en/latest/env/vizdoom.html)
