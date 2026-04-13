@@ -85,10 +85,7 @@ _OFFICIAL_RENDER_MAX_MISMATCH_RATIO = 0.005
 _RENDER_STEPS = 3
 _CAMERA_ID = 1  # MetaWorld's fixed "corner" camera.
 _TASK_NAMES = tuple(metaworld_registration.metaworld_v3_envs)
-_TASK_IDS = tuple(
-    f"Meta-World/{task_name}"
-    for task_name in metaworld_registration.metaworld_v3_envs
-)
+_TASK_IDS = tuple(metaworld_registration.metaworld_v3_task_ids)
 
 
 def _configure_macos_official_renderer() -> None:
@@ -321,7 +318,7 @@ class MetaWorldRenderTest(absltest.TestCase):
     ) -> None:
         """Batch rendering should match env-id rendering without side effects."""
         env = make_gymnasium(
-            "Meta-World/reach-v3",
+            "MetaWorld/Reach-v3",
             num_envs=2,
             seed=0,
             render_mode="rgb_array",

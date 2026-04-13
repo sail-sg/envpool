@@ -6,9 +6,8 @@ manipulation benchmark. The implementation is pinned to
 ``Farama-Foundation/Metaworld`` tag ``v3.0.0`` and exposes one EnvPool task ID
 for each official ``ALL_V3_ENVIRONMENTS`` entry.
 
-The public task IDs use the official ``Meta-World/`` namespace and the
-official lower-case, hyphenated v3 task names, for example
-``Meta-World/reach-v3``.
+The public task IDs use the ``MetaWorld/`` namespace and CamelCase v3 task
+names, for example ``MetaWorld/Reach-v3``.
 
 Observation and Action Spaces
 -----------------------------
@@ -41,56 +40,56 @@ Registered Task IDs
 
 .. code-block:: text
 
-    Meta-World/assembly-v3
-    Meta-World/basketball-v3
-    Meta-World/bin-picking-v3
-    Meta-World/box-close-v3
-    Meta-World/button-press-topdown-v3
-    Meta-World/button-press-topdown-wall-v3
-    Meta-World/button-press-v3
-    Meta-World/button-press-wall-v3
-    Meta-World/coffee-button-v3
-    Meta-World/coffee-pull-v3
-    Meta-World/coffee-push-v3
-    Meta-World/dial-turn-v3
-    Meta-World/disassemble-v3
-    Meta-World/door-close-v3
-    Meta-World/door-lock-v3
-    Meta-World/door-open-v3
-    Meta-World/door-unlock-v3
-    Meta-World/hand-insert-v3
-    Meta-World/drawer-close-v3
-    Meta-World/drawer-open-v3
-    Meta-World/faucet-open-v3
-    Meta-World/faucet-close-v3
-    Meta-World/hammer-v3
-    Meta-World/handle-press-side-v3
-    Meta-World/handle-press-v3
-    Meta-World/handle-pull-side-v3
-    Meta-World/handle-pull-v3
-    Meta-World/lever-pull-v3
-    Meta-World/pick-place-wall-v3
-    Meta-World/pick-out-of-hole-v3
-    Meta-World/pick-place-v3
-    Meta-World/plate-slide-v3
-    Meta-World/plate-slide-side-v3
-    Meta-World/plate-slide-back-v3
-    Meta-World/plate-slide-back-side-v3
-    Meta-World/peg-insert-side-v3
-    Meta-World/peg-unplug-side-v3
-    Meta-World/soccer-v3
-    Meta-World/stick-push-v3
-    Meta-World/stick-pull-v3
-    Meta-World/push-v3
-    Meta-World/push-wall-v3
-    Meta-World/push-back-v3
-    Meta-World/reach-v3
-    Meta-World/reach-wall-v3
-    Meta-World/shelf-place-v3
-    Meta-World/sweep-into-v3
-    Meta-World/sweep-v3
-    Meta-World/window-open-v3
-    Meta-World/window-close-v3
+    MetaWorld/Assembly-v3
+    MetaWorld/Basketball-v3
+    MetaWorld/BinPicking-v3
+    MetaWorld/BoxClose-v3
+    MetaWorld/ButtonPressTopdown-v3
+    MetaWorld/ButtonPressTopdownWall-v3
+    MetaWorld/ButtonPress-v3
+    MetaWorld/ButtonPressWall-v3
+    MetaWorld/CoffeeButton-v3
+    MetaWorld/CoffeePull-v3
+    MetaWorld/CoffeePush-v3
+    MetaWorld/DialTurn-v3
+    MetaWorld/Disassemble-v3
+    MetaWorld/DoorClose-v3
+    MetaWorld/DoorLock-v3
+    MetaWorld/DoorOpen-v3
+    MetaWorld/DoorUnlock-v3
+    MetaWorld/HandInsert-v3
+    MetaWorld/DrawerClose-v3
+    MetaWorld/DrawerOpen-v3
+    MetaWorld/FaucetOpen-v3
+    MetaWorld/FaucetClose-v3
+    MetaWorld/Hammer-v3
+    MetaWorld/HandlePressSide-v3
+    MetaWorld/HandlePress-v3
+    MetaWorld/HandlePullSide-v3
+    MetaWorld/HandlePull-v3
+    MetaWorld/LeverPull-v3
+    MetaWorld/PickPlaceWall-v3
+    MetaWorld/PickOutOfHole-v3
+    MetaWorld/PickPlace-v3
+    MetaWorld/PlateSlide-v3
+    MetaWorld/PlateSlideSide-v3
+    MetaWorld/PlateSlideBack-v3
+    MetaWorld/PlateSlideBackSide-v3
+    MetaWorld/PegInsertSide-v3
+    MetaWorld/PegUnplugSide-v3
+    MetaWorld/Soccer-v3
+    MetaWorld/StickPush-v3
+    MetaWorld/StickPull-v3
+    MetaWorld/Push-v3
+    MetaWorld/PushWall-v3
+    MetaWorld/PushBack-v3
+    MetaWorld/Reach-v3
+    MetaWorld/ReachWall-v3
+    MetaWorld/ShelfPlace-v3
+    MetaWorld/SweepInto-v3
+    MetaWorld/Sweep-v3
+    MetaWorld/WindowOpen-v3
+    MetaWorld/WindowClose-v3
 
 
 Validation
@@ -98,7 +97,7 @@ Validation
 
 The native implementation is checked against the official MetaWorld v3.0.0
 Python oracle. The alignment test reset-syncs MuJoCo state once, then drives
-both implementations with the same external action sequence and compares
-observations, rewards, termination flags, truncation flags, and exposed info
-fields. Separate tests cover registry completeness, deterministic rollouts, and
-``rgb_array`` rendering for every registered task.
+both implementations with the same 128-step external action sequence and
+compares observations, rewards, termination flags, truncation flags, and exposed
+info fields. Separate tests cover registry completeness, deterministic rollouts,
+and ``rgb_array`` rendering for every registered task.

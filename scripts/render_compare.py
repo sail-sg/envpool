@@ -48,6 +48,7 @@ class RenderCompareConfig:
     max_mean_abs_diff: float
     max_mismatch_ratio: float
     require_bitwise: bool
+    flip_vertical: bool
 
 
 RenderPairFn = Callable[
@@ -56,14 +57,23 @@ RenderPairFn = Callable[
 
 
 @dataclass(frozen=True)
+class RenderItem:
+    """One family-specific oracle key and its display label."""
+
+    key: str
+    label: str
+
+
+@dataclass(frozen=True)
 class RenderFamily:
     """Family-specific render oracle integration."""
 
-    labels: tuple[str, ...]
+    items: tuple[RenderItem, ...]
     default_output: Path
     render_pair: RenderPairFn
     left_title: str = "EnvPool"
     right_title: str = "Official"
+    default_flip_vertical: bool = False
 
 
 _PAIR_GAP = 4
@@ -160,7 +170,7 @@ def _make_metaworld_family() -> RenderFamily:
         task_name: str,
         cfg: RenderCompareConfig,
     ) -> tuple[np.ndarray, np.ndarray]:
-        task_id = f"Meta-World/{task_name}"
+        task_id = metaworld_registration.metaworld_task_id(task_name)
         env = make_gymnasium(
             task_id,
             num_envs=1,
@@ -183,11 +193,20 @@ def _make_metaworld_family() -> RenderFamily:
             oracle.close()
 
     return RenderFamily(
-        labels=tuple(metaworld_registration.metaworld_v3_envs),
+        items=tuple(
+            RenderItem(
+                key=task_name,
+                label=metaworld_registration.metaworld_public_task_name(
+                    task_name
+                ),
+            )
+            for task_name in metaworld_registration.metaworld_v3_envs
+        ),
         default_output=Path(
             "docs/_static/render_samples/metaworld_official_compare.png"
         ),
         render_pair=render_pair,
+        default_flip_vertical=True,
     )
 
 
@@ -196,8 +215,12 @@ _FAMILY_BUILDERS: dict[str, Callable[[], RenderFamily]] = {
 }
 
 
-def _resize_frame(frame: np.ndarray, cfg: RenderCompareConfig) -> Image.Image:
+def _make_display_image(
+    frame: np.ndarray, cfg: RenderCompareConfig
+) -> Image.Image:
     image = Image.fromarray(np.asarray(frame, dtype=np.uint8))
+    if cfg.flip_vertical:
+        image = image.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
     size = (cfg.tile_width, cfg.tile_height)
     if image.size == size:
         return image
@@ -304,7 +327,7 @@ def generate(
     output: Path, family: RenderFamily, cfg: RenderCompareConfig
 ) -> None:
     """Generate and write one docs render comparison image."""
-    rows = math.ceil(len(family.labels) / cfg.columns)
+    rows = math.ceil(len(family.items) / cfg.columns)
     cell_width = cfg.tile_width * 2 + _PAIR_GAP
     cell_height = _HEADER_HEIGHT + cfg.tile_height
     width = _MARGIN * 2 + cfg.columns * cell_width
@@ -313,15 +336,15 @@ def generate(
     canvas = Image.new("RGB", (width, height), (255, 255, 255))
     font = ImageFont.load_default()
 
-    for index, label in enumerate(family.labels):
-        envpool_frame, official_frame = family.render_pair(label, cfg)
-        _assert_frames_match(label, envpool_frame, official_frame, cfg)
-        envpool_image = _resize_frame(envpool_frame, cfg)
-        official_image = _resize_frame(official_frame, cfg)
+    for index, item in enumerate(family.items):
+        envpool_frame, official_frame = family.render_pair(item.key, cfg)
+        _assert_frames_match(item.label, envpool_frame, official_frame, cfg)
+        envpool_image = _make_display_image(envpool_frame, cfg)
+        official_image = _make_display_image(official_frame, cfg)
         _draw_panel(
             canvas,
             family,
-            label,
+            item.label,
             envpool_image,
             official_image,
             index,
@@ -366,12 +389,25 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--max-mean-abs-diff", type=float, default=0.25)
     parser.add_argument("--max-mismatch-ratio", type=float, default=0.005)
     parser.add_argument("--require-bitwise", action="store_true")
+    parser.add_argument(
+        "--flip-vertical",
+        action="store_true",
+        default=None,
+        help="Flip both EnvPool and oracle frames vertically in the output.",
+    )
+    parser.add_argument(
+        "--no-flip-vertical",
+        action="store_false",
+        dest="flip_vertical",
+        help="Do not vertically flip output frames.",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     """Parse command-line arguments and generate the comparison image."""
     args = _parse_args()
+    family = _FAMILY_BUILDERS[args.family]()
     cfg = RenderCompareConfig(
         family=args.family,
         tile_width=args.tile_width,
@@ -384,8 +420,12 @@ def main() -> None:
         max_mean_abs_diff=args.max_mean_abs_diff,
         max_mismatch_ratio=args.max_mismatch_ratio,
         require_bitwise=args.require_bitwise,
+        flip_vertical=(
+            family.default_flip_vertical
+            if args.flip_vertical is None
+            else args.flip_vertical
+        ),
     )
-    family = _FAMILY_BUILDERS[cfg.family]()
 
     output = args.output or family.default_output
     if not output.is_absolute():

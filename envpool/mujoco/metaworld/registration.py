@@ -15,6 +15,21 @@
 
 from envpool.registration import register
 
+
+def metaworld_public_task_name(task_name: str) -> str:
+    """Return EnvPool's public CamelCase task suffix for an official task."""
+    name, version = task_name.rsplit("-", 1)
+    camel_name = "".join(
+        part[:1].upper() + part[1:] for part in name.split("-")
+    )
+    return f"{camel_name}-{version}"
+
+
+def metaworld_task_id(task_name: str) -> str:
+    """Return the public EnvPool ID for an official MetaWorld task name."""
+    return f"MetaWorld/{metaworld_public_task_name(task_name)}"
+
+
 metaworld_v3_envs = [
     "assembly-v3",
     "basketball-v3",
@@ -68,9 +83,13 @@ metaworld_v3_envs = [
     "window-close-v3",
 ]
 
+metaworld_v3_task_ids = [
+    metaworld_task_id(task_name) for task_name in metaworld_v3_envs
+]
+
 for task_name in metaworld_v3_envs:
     register(
-        task_id=f"Meta-World/{task_name}",
+        task_id=metaworld_task_id(task_name),
         import_path="envpool.mujoco.metaworld",
         spec_cls="MetaWorldEnvSpec",
         dm_cls="MetaWorldDMEnvPool",

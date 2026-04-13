@@ -27,11 +27,11 @@ from metaworld.env_dict import ALL_V3_ENVIRONMENTS
 import envpool.mujoco.metaworld.registration as metaworld_registration
 from envpool.registration import make_gymnasium
 
-_ALIGN_STEPS = 24
+_ALIGN_STEPS = 128
 # The native C++ path and the official Python oracle both step MuJoCo, but they
 # cross the C++/Python boundary differently. After reset-time state sync the
-# residual over the rollout is sub-2e-9 on macOS hand coordinates.
-_ALIGN_ATOL = 2e-9
+# residual over the 128-step rollout is still sub-1e-8 on macOS coordinates.
+_ALIGN_ATOL = 1e-8
 _ALIGN_RTOL = 2e-9
 _REWARD_ATOL = 1e-6
 _REWARD_RTOL = 1e-6
@@ -46,7 +46,7 @@ _LINUX_ARM64_PUSH_REWARD_ATOL = 1.5e-6
 _LINUX_ARM64_PUSH_INFO_ATOL = 1.5e-6
 _LINUX_ARM64_PUSH_INFO_KEYS = {"grasp_reward", "unscaled_reward"}
 _TASK_NAMES = tuple(metaworld_registration.metaworld_v3_envs)
-_TASK_IDS = tuple(f"Meta-World/{task_name}" for task_name in _TASK_NAMES)
+_TASK_IDS = tuple(metaworld_registration.metaworld_v3_task_ids)
 _INFO_KEYS = (
     "success",
     "near_object",

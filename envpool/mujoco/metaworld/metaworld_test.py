@@ -23,10 +23,8 @@ from absl.testing import absltest
 import envpool.mujoco.metaworld.registration as metaworld_registration
 from envpool.registration import list_all_envs, make_gymnasium, make_spec
 
-_TASK_IDS = tuple(
-    f"Meta-World/{task_name}"
-    for task_name in metaworld_registration.metaworld_v3_envs
-)
+_TASK_IDS = tuple(metaworld_registration.metaworld_v3_task_ids)
+_DETERMINISM_STEPS = 128
 _INFO_KEYS = {
     "success",
     "near_object",
@@ -74,6 +72,9 @@ class MetaWorldTest(absltest.TestCase):
         registered = set(list_all_envs())
         for task_id in _TASK_IDS:
             with self.subTest(task_id=task_id):
+                self.assertTrue(task_id.startswith("MetaWorld/"), task_id)
+                self.assertNotIn("_", task_id)
+                self.assertNotIn("Meta-World/", task_id)
                 self.assertIn(task_id, registered)
                 spec = make_spec(task_id)
                 self.assertEqual(spec.observation_space.shape, (39,))
@@ -86,7 +87,7 @@ class MetaWorldTest(absltest.TestCase):
             RuntimeError, "Unknown MetaWorld task_name: missing-v3"
         ):
             make_gymnasium(
-                "Meta-World/reach-v3",
+                "MetaWorld/Reach-v3",
                 task_name="missing-v3",
                 num_envs=1,
             )
@@ -116,7 +117,11 @@ class MetaWorldTest(absltest.TestCase):
     def test_all_v3_tasks_are_deterministic(self) -> None:
         """Same seed and same actions should produce identical rollouts."""
         rng = np.random.default_rng(123)
-        actions = rng.uniform(-1.0, 1.0, size=(10, 2, 4)).astype(np.float32)
+        actions = rng.uniform(
+            -1.0,
+            1.0,
+            size=(_DETERMINISM_STEPS, 2, 4),
+        ).astype(np.float32)
         for task_id in _TASK_IDS:
             with self.subTest(task_id=task_id):
                 env0 = make_gymnasium(task_id, num_envs=2, seed=42)
