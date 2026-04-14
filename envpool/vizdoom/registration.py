@@ -15,7 +15,7 @@
 
 import os
 
-from envpool.registration import base_path, register
+from envpool.registration import base_path, package_base_path, register
 
 maps_path = os.path.join(base_path, "vizdoom", "maps")
 
@@ -45,6 +45,7 @@ for game in _vizdoom_game_list() + ["vizdoom_custom"]:
         dm_cls="VizdoomDMEnvPool",
         gymnasium_cls="VizdoomGymnasiumEnvPool",
         cfg_path=cfg_path,
+        vzd_path=os.path.join(package_base_path, "vizdoom", "bin", "vizdoom"),
         wad_path=wad_path,
         max_episode_steps=525,
     )

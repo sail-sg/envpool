@@ -14,6 +14,7 @@
 """Global env registry."""
 
 import importlib
+import importlib.util
 import os
 from collections.abc import Sequence
 from typing import Any, Literal, overload
@@ -26,7 +27,38 @@ from .python.protocol import (
     GymnasiumEnvPool,
 )
 
-base_path = os.path.abspath(os.path.dirname(__file__))
+
+def _package_dir(package_name: str) -> str | None:
+    spec = importlib.util.find_spec(package_name)
+    if spec is None or spec.submodule_search_locations is None:
+        return None
+    return os.path.abspath(next(iter(spec.submodule_search_locations)))
+
+
+def _has_local_assets(path: str) -> bool:
+    return all(
+        os.path.exists(os.path.join(path, asset_path))
+        for asset_path in (
+            "atari/roms",
+            "gfootball/assets",
+            "mujoco/assets_dmc",
+            "procgen/assets",
+            "vizdoom/maps",
+        )
+    )
+
+
+def _asset_base_path() -> str:
+    override = os.environ.get("ENVPOOL_ASSETS_PATH")
+    if override:
+        return os.path.abspath(override)
+    if _has_local_assets(package_base_path):
+        return package_base_path
+    return _package_dir("envpool_assets") or package_base_path
+
+
+package_base_path = os.path.abspath(os.path.dirname(__file__))
+base_path = _asset_base_path()
 
 
 class EnvRegistry:
