@@ -17,6 +17,7 @@
 #ifndef ENVPOOL_VIZDOOM_VIZDOOM_ENV_H_
 #define ENVPOOL_VIZDOOM_VIZDOOM_ENV_H_
 
+#include <cctype>
 #include <deque>
 #include <map>
 #include <memory>
@@ -32,9 +33,25 @@
 
 namespace vizdoom {
 
-std::string MergePath(const std::string& base_path,
-                      const std::string& file_path) {
-  if (file_path[0] == '/') {
+inline bool IsAbsolutePath(const std::string& file_path) {
+  if (file_path.empty()) {
+    return false;
+  }
+#if defined(_WIN32)
+  if (file_path[0] == '/' || file_path[0] == '\\') {
+    return true;
+  }
+  return file_path.size() >= 3 &&
+         std::isalpha(static_cast<unsigned char>(file_path[0])) &&
+         file_path[1] == ':' && (file_path[2] == '/' || file_path[2] == '\\');
+#else
+  return file_path[0] == '/';
+#endif
+}
+
+inline std::string MergePath(const std::string& base_path,
+                             const std::string& file_path) {
+  if (file_path.empty() || IsAbsolutePath(file_path)) {
     return file_path;
   }
   return base_path + "/" + file_path;
