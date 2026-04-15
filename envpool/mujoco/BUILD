@@ -18,6 +18,7 @@ load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("//envpool:requirements.bzl", "requirement")
 load("//third_party:common.bzl", "copy_to_directory")
 load("//third_party/metaworld_assets:defs.bzl", "metaworld_runtime_assets")
+load("//third_party/myosuite:defs.bzl", "myosuite_runtime_assets")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -55,6 +56,7 @@ py_library(
         ":metaworld",
         ":mujoco_dmc",
         ":mujoco_gym",
+        ":myosuite",
         ":robotics",
     ],
 )
@@ -92,6 +94,43 @@ metaworld_runtime_assets(
         "//conditions:default": False,
     }),
     strip_prefix = "metaworld_assets/metaworld/assets/",
+)
+
+myosuite_runtime_assets(
+    name = "gen_myosuite_runtime_assets",
+    out = "myosuite_assets",
+    myosuite_env_assets = ["@myosuite_src//:myosuite_runtime_assets"],
+    myo_sim_assets = ["@myo_sim_src//:runtime_assets"],
+    furniture_sim_assets = ["@furniture_sim_src//:runtime_assets"],
+    object_sim_assets = ["@object_sim_src//:runtime_assets"],
+    mpl_sim_assets = ["@mpl_sim_src//:runtime_assets"],
+    ycb_sim_assets = ["@ycb_sim_src//:runtime_assets"],
+)
+
+filegroup(
+    name = "myosuite_runtime_assets",
+    srcs = [":gen_myosuite_runtime_assets"],
+)
+
+cc_library(
+    name = "myosuite_support",
+    hdrs = ["myosuite/paths.h"],
+    data = [":myosuite_runtime_assets"],
+)
+
+py_library(
+    name = "myosuite",
+    srcs = [
+        "myosuite/__init__.py",
+        "myosuite/metadata.py",
+        "myosuite/paths.py",
+    ],
+    data = [
+        ":myosuite_runtime_assets",
+        "//third_party/myosuite:metadata/env_ids.json",
+    ],
+    imports = ["../.."],
+    deps = ["//envpool/python:api"],
 )
 
 cc_library(
@@ -581,5 +620,29 @@ py_test(
         requirement("gymnasium-robotics"),
         requirement("mujoco"),
         requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_metadata_test",
+    size = "large",
+    srcs = ["myosuite/myosuite_metadata_test.py"],
+    data = ["@myosuite_src//:myosuite_registry_sources"],
+    imports = ["../.."],
+    deps = [
+        ":myosuite",
+        requirement("absl-py"),
+    ],
+)
+
+py_test(
+    name = "myosuite_asset_smoke_test",
+    size = "large",
+    srcs = ["myosuite/myosuite_asset_smoke_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":myosuite",
+        requirement("absl-py"),
+        requirement("mujoco"),
     ],
 )

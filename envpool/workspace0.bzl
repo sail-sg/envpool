@@ -601,6 +601,78 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
 
     maybe(
         http_archive,
+        name = "myosuite_src",
+        sha256 = "d2c5d3348b505e886de466ae4fca2589149048c463ad34188322ddfa4a1161d6",
+        strip_prefix = "myosuite-05cb84678373f91271004f99602ebbf01e57d1a1",
+        type = "tar.gz",
+        urls = [
+            "https://codeload.github.com/MyoHub/myosuite/tar.gz/05cb84678373f91271004f99602ebbf01e57d1a1",
+        ],
+        build_file = "//third_party/myosuite:myosuite.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "myo_sim_src",
+        sha256 = "bd8fdf313b46dbefcd25bf42cf8ddcc45066798164bb3551a990690cad514ebd",
+        strip_prefix = "myo_sim-33f3ded946f55adbdcf963c99999587aadaf975f",
+        type = "tar.gz",
+        urls = [
+            "https://codeload.github.com/MyoHub/myo_sim/tar.gz/33f3ded946f55adbdcf963c99999587aadaf975f",
+        ],
+        build_file = "//third_party/myosuite:myo_sim.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "furniture_sim_src",
+        sha256 = "5fb42ed8c932f7c820a72fbb86ea736957476020bdf008e17277380c3693ce9e",
+        strip_prefix = "furniture_sim-c97995afb81c9e2d7325b0069f9abc9a2c74a2f0",
+        type = "tar.gz",
+        urls = [
+            "https://codeload.github.com/vikashplus/furniture_sim/tar.gz/c97995afb81c9e2d7325b0069f9abc9a2c74a2f0",
+        ],
+        build_file = "//third_party/myosuite:furniture_sim.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "object_sim_src",
+        sha256 = "782ea1c051d9afebbbd4d164fdc35035c4bd617981f3e1cb9204c7a2e15e4a0e",
+        strip_prefix = "object_sim-87cd8dd5a11518b94fca16bc22bb04f6836c6aa7",
+        type = "tar.gz",
+        urls = [
+            "https://codeload.github.com/vikashplus/object_sim/tar.gz/87cd8dd5a11518b94fca16bc22bb04f6836c6aa7",
+        ],
+        build_file = "//third_party/myosuite:object_sim.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "mpl_sim_src",
+        sha256 = "591fce117832c789e227499ea45c601a9ca142c7dd636492f8bbcd825d54ea0a",
+        strip_prefix = "MPL_sim-58dd1abc6058e0dc06e62f13a61c36adb4916815",
+        type = "tar.gz",
+        urls = [
+            "https://codeload.github.com/vikashplus/MPL_sim/tar.gz/58dd1abc6058e0dc06e62f13a61c36adb4916815",
+        ],
+        build_file = "//third_party/myosuite:mpl_sim.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "ycb_sim_src",
+        sha256 = "81caf29e5b5c01b4af56991731b3f731a95d486addccafaaaedc7600a9f2437e",
+        strip_prefix = "YCB_sim-46edd9c361061c5d81a82f2511d4fbf76fead569",
+        type = "tar.gz",
+        urls = [
+            "https://codeload.github.com/vikashplus/YCB_sim/tar.gz/46edd9c361061c5d81a82f2511d4fbf76fead569",
+        ],
+        build_file = "//third_party/myosuite:ycb_sim.BUILD",
+    )
+
+    maybe(
+        http_archive,
         name = "box2d",
         sha256 = "5471722f290b7285dcbdee9bef61d1cb424e5a610fa6e19e9ddeb854c7e3b937",
         strip_prefix = "pybox2d-2.3.10",
