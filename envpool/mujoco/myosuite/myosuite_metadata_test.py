@@ -20,19 +20,26 @@ import os
 import subprocess
 import sys
 import tempfile
+from collections import Counter
 from pathlib import Path
 
 from absl.testing import absltest
 
 from envpool.mujoco.myosuite.metadata import (
     MYOSUITE_COUNTS,
+    MYOSUITE_DIRECT_ENTRIES,
+    MYOSUITE_DIRECT_ENTRY_BY_ID,
     MYOSUITE_DIRECT_IDS,
     MYOSUITE_EXPANDED_IDS,
     MYOSUITE_NOTES,
     MYOSUITE_PINS,
+    MYOSUITE_SUITES,
     load_myosuite_metadata,
 )
-from envpool.mujoco.myosuite.paths import resolve_workspace_path
+from envpool.mujoco.myosuite.paths import (
+    myosuite_asset_root,
+    resolve_workspace_path,
+)
 
 
 def _find_vendored_myosuite_upstream_root() -> Path:
@@ -71,9 +78,9 @@ class MyoSuiteMetadataTest(absltest.TestCase):
         self.assertEqual(
             MYOSUITE_COUNTS,
             {
-                "direct_total": 244,
-                "expanded_total": 358,
-                "myobase_direct": 35,
+                "direct_total": 254,
+                "expanded_total": 398,
+                "myobase_direct": 45,
                 "myochallenge_direct": 19,
                 "myodm_direct": 190,
             },
@@ -94,6 +101,7 @@ class MyoSuiteMetadataTest(absltest.TestCase):
         """Checks representative direct and expanded IDs are preserved."""
         expected_direct = {
             "myoElbowPose1D6MRandom-v0",
+            "myoHandPose7Fixed-v0",
             "myoArmReachRandom-v0",
             "myoChallengeBaodingP2-v1",
             "myoChallengeTableTennisP2-v0",
@@ -109,6 +117,129 @@ class MyoSuiteMetadataTest(absltest.TestCase):
         self.assertTrue(expected_direct.issubset(MYOSUITE_EXPANDED_IDS))
         self.assertTrue(expected_expanded_only.issubset(MYOSUITE_EXPANDED_IDS))
 
+    def test_direct_entries_cover_direct_and_expanded_ids(self) -> None:
+        """Checks direct-entry metadata stays aligned with the ID surfaces."""
+        self.assertLen(MYOSUITE_DIRECT_ENTRIES, MYOSUITE_COUNTS["direct_total"])
+        self.assertEqual(
+            [entry["id"] for entry in MYOSUITE_DIRECT_ENTRIES],
+            list(MYOSUITE_DIRECT_IDS),
+        )
+        expanded = sorted(
+            {entry["id"] for entry in MYOSUITE_DIRECT_ENTRIES}
+            | {
+                variant["variant_id"]
+                for entry in MYOSUITE_DIRECT_ENTRIES
+                for variant in entry["variant_defs"]
+            }
+        )
+        self.assertEqual(expanded, list(MYOSUITE_EXPANDED_IDS))
+
+    def test_representative_direct_entries_are_stable(self) -> None:
+        """Checks representative task definitions remain pinned."""
+        myobase_reach = MYOSUITE_DIRECT_ENTRY_BY_ID["myoArmReachRandom-v0"]
+        self.assertEqual(myobase_reach["suite"], "myobase")
+        self.assertEqual(myobase_reach["registration_suite"], "myoedits")
+        self.assertEqual(myobase_reach["class_name"], "ReachEnvV0")
+        self.assertEqual(
+            myobase_reach["kwargs"]["model_path"],
+            "simhive/myo_sim/arm/myoarm.xml",
+        )
+        self.assertEqual(myobase_reach["kwargs"]["far_th"], 1.0)
+        self.assertEqual(
+            myobase_reach["kwargs"]["target_reach_range"]["IFtip"],
+            [[-0.35, -0.42, 0.98], [0.0, -0.07, 1.83]],
+        )
+        self.assertEqual(
+            myobase_reach["kwargs"]["edit_fn"], "edit_fn_arm_reaching"
+        )
+        self.assertEqual(
+            [
+                variant["variant_id"]
+                for variant in myobase_reach["variant_defs"]
+            ],
+            [
+                "myoFatiArmReachRandom-v0",
+                "myoSarcArmReachRandom-v0",
+            ],
+        )
+
+        myodm_track = MYOSUITE_DIRECT_ENTRY_BY_ID["MyoHandAirplaneFly-v0"]
+        self.assertEqual(myodm_track["suite"], "myodm")
+        self.assertEqual(myodm_track["class_name"], "TrackEnv")
+        self.assertEqual(
+            myodm_track["kwargs"]["model_path"],
+            "envs/myo/assets/hand/myohand_object.xml",
+        )
+        self.assertEqual(
+            myodm_track["kwargs"]["reference"],
+            "envs/myo/myodm/data/MyoHand_airplane_fly1.npz",
+        )
+        self.assertEqual(myodm_track["model_placeholders"], ["OBJECT_NAME"])
+        self.assertEmpty(myodm_track["variant_defs"])
+
+    def test_suite_breakdowns_match_expected_entrypoint_counts(self) -> None:
+        """Checks the pinned suite mix still matches the native port plan."""
+        suite_counts = Counter(
+            (entry["suite"], entry["class_name"])
+            for entry in MYOSUITE_DIRECT_ENTRIES
+        )
+        self.assertEqual(
+            suite_counts,
+            Counter({
+                ("myobase", "PoseEnvV0"): 20,
+                ("myobase", "ReachEnvV0"): 9,
+                ("myobase", "TerrainEnvV0"): 3,
+                ("myobase", "KeyTurnEnvV0"): 2,
+                ("myobase", "TorsoEnvV0"): 2,
+                ("myobase", "WalkEnvV0"): 1,
+                ("myobase", "ObjHoldFixedEnvV0"): 1,
+                ("myobase", "ObjHoldRandomEnvV0"): 1,
+                ("myobase", "PenTwirlFixedEnvV0"): 1,
+                ("myobase", "PenTwirlRandomEnvV0"): 1,
+                ("myobase", "Geometries8EnvV0"): 1,
+                ("myobase", "Geometries100EnvV0"): 1,
+                ("myobase", "InDistribution"): 1,
+                ("myobase", "OutofDistribution"): 1,
+                ("myochallenge", "TableTennisEnvV0"): 3,
+                ("myochallenge", "RelocateEnvV0"): 3,
+                ("myochallenge", "ChaseTagEnvV0"): 3,
+                ("myochallenge", "ReorientEnvV0"): 3,
+                ("myochallenge", "SoccerEnvV0"): 2,
+                ("myochallenge", "RunTrack"): 2,
+                ("myochallenge", "BaodingEnvV1"): 2,
+                ("myochallenge", "BimanualEnvV1"): 1,
+                ("myodm", "TrackEnv"): 190,
+            }),
+        )
+
+    def test_suite_lists_match_direct_entry_groups(self) -> None:
+        """Checks suite helper lists stay consistent with direct entries."""
+        self.assertEqual(
+            MYOSUITE_SUITES["myobase_direct_ids"],
+            sorted(
+                entry["id"]
+                for entry in MYOSUITE_DIRECT_ENTRIES
+                if entry["suite"] == "myobase"
+            ),
+        )
+        self.assertEqual(
+            MYOSUITE_SUITES["myochallenge_direct_ids"],
+            sorted(
+                entry["id"]
+                for entry in MYOSUITE_DIRECT_ENTRIES
+                if entry["suite"] == "myochallenge"
+            ),
+        )
+        self.assertEqual(
+            MYOSUITE_SUITES["myodm_track_ids"],
+            sorted(
+                entry["id"]
+                for entry in MYOSUITE_DIRECT_ENTRIES
+                if entry["suite"] == "myodm"
+                and isinstance(entry["kwargs"].get("reference"), str)
+            ),
+        )
+
     def test_duplicate_note_matches_upstream_myoedits_overlap(self) -> None:
         """Checks duplicate-note metadata tracks the upstream myoedits overlap."""
         self.assertEqual(
@@ -118,6 +249,17 @@ class MyoSuiteMetadataTest(absltest.TestCase):
                 "myoArmReachRandom-v0",
             ],
         )
+
+    def test_generated_paths_exist_in_staged_assets(self) -> None:
+        """Checks generated model and reference paths resolve under staged assets."""
+        root = myosuite_asset_root()
+        for entry in MYOSUITE_DIRECT_ENTRIES:
+            with self.subTest(task_id=entry["id"], kind="model"):
+                self.assertTrue((root / entry["kwargs"]["model_path"]).exists())
+            reference = entry["kwargs"].get("reference")
+            if isinstance(reference, str):
+                with self.subTest(task_id=entry["id"], kind="reference"):
+                    self.assertTrue((root / reference).exists())
 
     def test_checked_in_metadata_matches_vendored_upstream_sources(
         self,

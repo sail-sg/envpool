@@ -33,5 +33,12 @@ _METADATA = load_myosuite_metadata()
 MYOSUITE_PINS: dict[str, Any] = dict(_METADATA["pins"])
 MYOSUITE_COUNTS: dict[str, int] = dict(_METADATA["counts"])
 MYOSUITE_NOTES: dict[str, Any] = dict(_METADATA["notes"])
+MYOSUITE_DIRECT_ENTRIES: tuple[dict[str, Any], ...] = tuple(
+    _METADATA["direct_entries"]
+)
+MYOSUITE_DIRECT_ENTRY_BY_ID: dict[str, dict[str, Any]] = {
+    entry["id"]: entry for entry in MYOSUITE_DIRECT_ENTRIES
+}
 MYOSUITE_DIRECT_IDS: tuple[str, ...] = tuple(_METADATA["direct_ids"])
 MYOSUITE_EXPANDED_IDS: tuple[str, ...] = tuple(_METADATA["expanded_ids"])
+MYOSUITE_SUITES: dict[str, Any] = dict(_METADATA["suites"])

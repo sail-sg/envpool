@@ -15,10 +15,15 @@
 filegroup(
     name = "myosuite_runtime_assets",
     srcs = glob(
-        ["myosuite/envs/myo/assets/**"],
+        [
+            "myosuite/envs/myo/assets/**",
+            "myosuite/envs/myo/myodm/data/**",
+        ],
         exclude = [
             "myosuite/envs/myo/assets/**/*.py",
             "myosuite/envs/myo/assets/**/__pycache__/**",
+            "myosuite/envs/myo/myodm/data/**/*.py",
+            "myosuite/envs/myo/myodm/data/**/__pycache__/**",
         ],
     ),
     visibility = ["//visibility:public"],
@@ -29,6 +34,7 @@ filegroup(
     srcs = [
         ".gitmodules",
         "myosuite/__init__.py",
+        "myosuite/envs/myo/assets/hand/myohand_object.xml",
         "myosuite/envs/myo/myobase/__init__.py",
         "myosuite/envs/myo/myochallenge/__init__.py",
         "myosuite/envs/myo/myodm/__init__.py",

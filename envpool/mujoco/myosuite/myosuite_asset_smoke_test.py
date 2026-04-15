@@ -20,42 +20,59 @@ from pathlib import Path
 import mujoco
 from absl.testing import absltest
 
+from envpool.mujoco.myosuite.metadata import MYOSUITE_DIRECT_ENTRIES
 from envpool.mujoco.myosuite.paths import myosuite_asset_root
 
-_TOP_LEVEL_MODEL_XMLS = (
-    "envs/myo/assets/arm/myoarm_bionic_bimanual.xml",
-    "envs/myo/assets/arm/myoarm_relocate.xml",
-    "envs/myo/assets/arm/myoarm_tabletennis.xml",
-    "envs/myo/assets/elbow/myoelbow_1dof6muscles.xml",
-    "envs/myo/assets/elbow/myoelbow_1dof6muscles_1dofexo.xml",
-    "envs/myo/assets/hand/myohand_baoding.xml",
-    "envs/myo/assets/hand/myohand_die.xml",
-    "envs/myo/assets/hand/myohand_hold.xml",
-    "envs/myo/assets/hand/myohand_keyturn.xml",
-    "envs/myo/assets/hand/myohand_pen.xml",
-    "envs/myo/assets/hand/myohand_pose.xml",
-    "envs/myo/assets/hand/myohand_sar.xml",
-    "envs/myo/assets/hand/myohand_tabletop.xml",
-    "envs/myo/assets/leg/myolegs_chasetag.xml",
-    "envs/myo/assets/leg/myoosl_runtrack.xml",
-    "envs/myo/assets/leg_soccer/myolegs_soccer.xml",
-)
+
+def _unique_model_paths() -> tuple[str, ...]:
+    return tuple(
+        sorted({
+            entry["kwargs"]["model_path"] for entry in MYOSUITE_DIRECT_ENTRIES
+        })
+    )
+
+
+def _unique_reference_paths() -> tuple[str, ...]:
+    return tuple(
+        sorted({
+            entry["kwargs"]["reference"]
+            for entry in MYOSUITE_DIRECT_ENTRIES
+            if isinstance(entry["kwargs"].get("reference"), str)
+        })
+    )
+
+
+def _loadable_model_paths() -> tuple[str, ...]:
+    return tuple(
+        sorted({
+            entry["kwargs"]["model_path"]
+            for entry in MYOSUITE_DIRECT_ENTRIES
+            if not entry["model_placeholders"]
+        })
+    )
 
 
 class MyoSuiteAssetSmokeTest(absltest.TestCase):
     """Verifies the staged MyoSuite model tree is usable from runfiles."""
 
-    def test_expected_top_level_models_exist(self) -> None:
-        """Checks that the staged runfiles tree contains each top-level model."""
+    def test_all_registered_model_paths_exist(self) -> None:
+        """Checks that every generated direct task model path is staged."""
         root = myosuite_asset_root()
-        for relative_path in _TOP_LEVEL_MODEL_XMLS:
+        for relative_path in _unique_model_paths():
             with self.subTest(relative_path=relative_path):
                 self.assertTrue((root / relative_path).exists())
 
-    def test_expected_top_level_models_load_in_mujoco(self) -> None:
-        """Checks that each top-level staged model loads through MuJoCo."""
+    def test_reference_motion_files_exist(self) -> None:
+        """Checks that generated MyoDM motion references are staged."""
         root = myosuite_asset_root()
-        for relative_path in _TOP_LEVEL_MODEL_XMLS:
+        for relative_path in _unique_reference_paths():
+            with self.subTest(relative_path=relative_path):
+                self.assertTrue((root / relative_path).exists())
+
+    def test_loadable_registered_models_open_in_mujoco(self) -> None:
+        """Checks that standalone staged models load through MuJoCo."""
+        root = myosuite_asset_root()
+        for relative_path in _loadable_model_paths():
             with self.subTest(relative_path=relative_path):
                 xml_path = root / relative_path
                 self.assertIsInstance(xml_path, Path)
