@@ -154,10 +154,10 @@ buildifier: buildifier-install
 # bazel build/test
 
 bazel-pip-requirement-dev:
-	cd third_party/pip_requirements && (cmp -s requirements.txt requirements-dev-lock.txt || cp -f requirements-dev-lock.txt requirements.txt)
+	cd third_party/pip_requirements && (cmp -s requirements.txt requirements-dev-lock.txt || (rm -f requirements.txt && cp -f requirements-dev-lock.txt requirements.txt))
 
 bazel-pip-requirement-release:
-	cd third_party/pip_requirements && (cmp -s requirements.txt requirements-release-lock.txt || cp -f requirements-release-lock.txt requirements.txt)
+	cd third_party/pip_requirements && (cmp -s requirements.txt requirements-release-lock.txt || (rm -f requirements.txt && cp -f requirements-release-lock.txt requirements.txt))
 
 clang-tidy: clang-tidy-install bazel-pip-requirement-dev
 	targets="$${CLANG_TIDY_TARGETS:-$$($(CLANG_TIDY_TARGET_RESOLVER) | tr '\n' ' ')}"; \
@@ -258,6 +258,7 @@ pypi-wheel: $(PYPI_WHEEL_PREREQS) bazel-release
 
 release-test1:
 	tmpdir=$$(python3 -c 'import tempfile; print(tempfile.mkdtemp(prefix="envpool-release-test-"))'); \
+	cd "$$tmpdir" && PYTHONPATH= python3 "$(CURDIR)/scripts/release_installed_wheel_smoke.py" --source-root "$(CURDIR)" && \
 	cd "$$tmpdir" && PYTHONPATH= python3 "$(CURDIR)/envpool/make_test.py"
 
 release-test2:
