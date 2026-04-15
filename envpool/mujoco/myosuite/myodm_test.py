@@ -18,7 +18,6 @@ from __future__ import annotations
 import importlib
 import sys
 import tempfile
-import types
 from contextlib import contextmanager
 from functools import cache
 from pathlib import Path
@@ -418,126 +417,11 @@ def _prepare_oracle_myosuite_root() -> Path:
     return temp_root
 
 
-def _install_flatten_dict_stub() -> None:
-    if "flatten_dict" in sys.modules:
-        return
-    flatten_dict = types.ModuleType("flatten_dict")
-
-    def flatten(
-        mapping: dict[str, Any],
-        reducer: str = "dot",
-        keep_empty_types: tuple[type[Any], ...] = (),
-    ) -> dict[tuple[str, ...], Any]:
-        del reducer
-        out: dict[tuple[str, ...], Any] = {}
-
-        def rec(prefix: tuple[str, ...], value: Any) -> None:
-            if isinstance(value, dict):
-                if not value and dict in keep_empty_types:
-                    out[prefix] = {}
-                    return
-                for key, child in value.items():
-                    rec(prefix + (str(key),), child)
-                return
-            out[prefix] = value
-
-        rec(tuple(), mapping)
-        return out
-
-    def unflatten(
-        mapping: dict[tuple[str, ...], Any],
-        splitter: str = "dot",
-    ) -> dict[str, Any]:
-        del splitter
-        out: dict[str, Any] = {}
-        for key, value in mapping.items():
-            parts = (
-                key if isinstance(key, tuple) else tuple(str(key).split("."))
-            )
-            cursor = out
-            for part in parts[:-1]:
-                cursor = cursor.setdefault(part, {})
-            cursor[parts[-1]] = value
-        return out
-
-    flatten_dict.__dict__["flatten"] = flatten
-    flatten_dict.__dict__["unflatten"] = unflatten
-    sys.modules["flatten_dict"] = flatten_dict
-
-
-def _install_skvideo_stub() -> None:
-    if "skvideo.io" in sys.modules:
-        return
-    skvideo = types.ModuleType("skvideo")
-    skvideo_io = types.ModuleType("skvideo.io")
-    skvideo.__dict__["io"] = skvideo_io
-    sys.modules["skvideo"] = skvideo
-    sys.modules["skvideo.io"] = skvideo_io
-
-
-def _install_termcolor_stub() -> None:
-    if "termcolor" in sys.modules:
-        return
-    termcolor = types.ModuleType("termcolor")
-
-    def colored(text: Any, *args: Any, **kwargs: Any) -> str:
-        del args, kwargs
-        return str(text)
-
-    def cprint(text: Any = "", *args: Any, **kwargs: Any) -> None:
-        del args, kwargs
-        print(text)
-
-    termcolor.__dict__["colored"] = colored
-    termcolor.__dict__["cprint"] = cprint
-    sys.modules["termcolor"] = termcolor
-
-
-def _install_git_stub() -> None:
-    if "git" in sys.modules:
-        return
-    git = types.ModuleType("git")
-
-    class GitCommandError(RuntimeError):
-        pass
-
-    class _HeadCommit:
-        hexsha = "stub"
-
-    class _Head:
-        commit = _HeadCommit()
-
-    class _Git:
-        def checkout(self, commit_hash: str) -> None:
-            del commit_hash
-
-    class Repo:
-        def __init__(self, path: str) -> None:
-            del path
-            self.head = _Head()
-            self.git = _Git()
-
-        @classmethod
-        def clone_from(cls, repo_url: str, clone_directory: str) -> "Repo":
-            del repo_url
-            return cls(clone_directory)
-
-        def remote(self, name: str) -> Any:
-            del name
-            return types.SimpleNamespace(fetch=lambda: None)
-
-    git.__dict__["GitCommandError"] = GitCommandError
-    git.__dict__["Repo"] = Repo
-    sys.modules["git"] = git
-
-
 @cache
 def _load_oracle_track_cls() -> Any:
-    _install_flatten_dict_stub()
-    _install_skvideo_stub()
-    _install_termcolor_stub()
-    _install_git_stub()
-    sys.path.insert(0, str(_prepare_oracle_myosuite_root()))
+    oracle_root = str(_prepare_oracle_myosuite_root())
+    if oracle_root not in sys.path:
+        sys.path.insert(0, oracle_root)
     module = importlib.import_module("myosuite.envs.myo.myodm.myodm_v0")
     return module.TrackEnv
 

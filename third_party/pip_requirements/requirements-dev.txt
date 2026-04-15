@@ -1,7 +1,10 @@
 setuptools==70.3.0
 wheel
 numpy>=2,<3
+click
 dm-env>=1.6
+flatten-dict
+gitpython
 gymnasium>=1.2.3
 gymnasium-robotics>=1.4.2
 highway-env>=1.10.2
@@ -19,6 +22,9 @@ opencv-python-headless>=4.13.0.92
 dm-control>=1.0.38
 mujoco==3.6.0
 imageio
+pink-noise-rl
 pygame>=2.1.3
+sk-video
 swig==4.*
+termcolor
 minigrid>=3.0.0

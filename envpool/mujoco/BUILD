@@ -122,9 +122,11 @@ py_library(
     name = "myosuite",
     srcs = [
         "myosuite/__init__.py",
+        "myosuite/config.py",
         "myosuite/metadata.py",
         "myosuite/native.py",
         "myosuite/paths.py",
+        "myosuite/registration.py",
     ],
     data = [
         ":myosuite_envpool",
@@ -132,7 +134,11 @@ py_library(
         "//third_party/myosuite:metadata/env_ids.json",
     ],
     imports = ["../.."],
-    deps = ["//envpool/python:api"],
+    deps = [
+        "//envpool/python:api",
+        requirement("mujoco"),
+        requirement("numpy"),
+    ],
 )
 
 cc_library(
@@ -156,6 +162,9 @@ pybind_extension(
     srcs = [
         "myosuite/mujoco_plugin_init.cc",
         "myosuite_envpool.cc",
+        "myosuite_envpool_base.cc",
+        "myosuite_envpool_challenge.cc",
+        "myosuite_envpool_dm.cc",
     ],
     deps = [
         ":myosuite_env",
@@ -388,6 +397,16 @@ py_library(
     imports = ["../.."],
     deps = [
         ":metaworld",
+        "//envpool:registration",
+    ],
+)
+
+py_library(
+    name = "myosuite_registration",
+    srcs = ["myosuite/registration.py"],
+    imports = ["../.."],
+    deps = [
+        ":myosuite",
         "//envpool:registration",
     ],
 )
@@ -677,6 +696,21 @@ py_test(
     ],
 )
 
+py_library(
+    name = "myosuite_oracle_test_deps",
+    deps = [
+        requirement("click"),
+        requirement("flatten-dict"),
+        requirement("gitpython"),
+        requirement("h5py"),
+        requirement("packaging"),
+        requirement("pillow"),
+        requirement("pink-noise-rl"),
+        requirement("sk-video"),
+        requirement("termcolor"),
+    ],
+)
+
 py_test(
     name = "myosuite_myobase_test",
     size = "large",
@@ -686,6 +720,8 @@ py_test(
     main = "myosuite/myobase_test.py",
     deps = [
         ":myosuite",
+        ":myosuite_oracle_test_deps",
+        "//envpool:registration",
         requirement("absl-py"),
         requirement("dm-control"),
         requirement("gymnasium"),
@@ -703,6 +739,7 @@ py_test(
     main = "myosuite/myodm_test.py",
     deps = [
         ":myosuite",
+        ":myosuite_oracle_test_deps",
         requirement("absl-py"),
         requirement("dm-control"),
         requirement("gymnasium"),
@@ -720,6 +757,7 @@ py_test(
     main = "myosuite/myochallenge_test.py",
     deps = [
         ":myosuite",
+        ":myosuite_oracle_test_deps",
         requirement("absl-py"),
         requirement("dm-control"),
         requirement("gymnasium"),

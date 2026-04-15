@@ -98,7 +98,8 @@ inline std::string ReadTextFile(const std::string& path) {
   if (!input) {
     throw std::runtime_error("Failed to open file: " + path);
   }
-  return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
+  return {std::istreambuf_iterator<char>(input),
+          std::istreambuf_iterator<char>()};
 }
 
 inline void WriteTextFile(const std::string& path, const std::string& text) {
@@ -121,7 +122,8 @@ inline std::string BuildTrackModelPath(const std::string& base_path,
   if (!asset_root.empty() && asset_root.back() == '/') {
     asset_root.pop_back();
   }
-  std::string source_model = asset_root + "/" + std::string(relative_model_path);
+  std::string source_model =
+      asset_root + "/" + std::string(relative_model_path);
   std::string object_xml = ReadTextFile(source_model);
   std::string tabletop_xml =
       ReadTextFile(asset_root + "/envs/myo/assets/hand/myohand_tabletop.xml");
@@ -135,30 +137,32 @@ inline std::string BuildTrackModelPath(const std::string& base_path,
   std::string object_tmp = prefix + "_object.xml";
 
   std::string myo_sim_root = asset_root + "/simhive/myo_sim";
-  ReplaceAll(&hand_assets_xml,
-             "meshdir=\"..\" texturedir=\"..\"",
-             "meshdir=\"" + myo_sim_root + "\" texturedir=\"" + myo_sim_root +
-                 "\"");
+  ReplaceAll(
+      &hand_assets_xml, "meshdir=\"..\" texturedir=\"..\"",
+      "meshdir=\"" + myo_sim_root + "\" texturedir=\"" + myo_sim_root + "\"");
   WriteTextFile(hand_assets_tmp, hand_assets_xml);
 
   ReplaceAll(&tabletop_xml,
              "../../../../simhive/myo_sim/hand/assets/myohand_assets.xml",
              hand_assets_tmp);
-  ReplaceAll(&tabletop_xml,
-             "../../../../simhive/furniture_sim/simpleTable/simpleTable_asset.xml",
-             asset_root +
-                 "/simhive/furniture_sim/simpleTable/simpleTable_asset.xml");
+  ReplaceAll(
+      &tabletop_xml,
+      "../../../../simhive/furniture_sim/simpleTable/simpleTable_asset.xml",
+      asset_root + "/simhive/furniture_sim/simpleTable/simpleTable_asset.xml");
   ReplaceAll(&tabletop_xml,
              "../../../../simhive/myo_sim/hand/assets/myohand_body.xml",
              asset_root + "/simhive/myo_sim/hand/assets/myohand_body.xml");
-  ReplaceAll(&tabletop_xml,
-             "../../../../simhive/furniture_sim/simpleTable/simpleGraniteTable_body.xml",
-             asset_root +
-                 "/simhive/furniture_sim/simpleTable/simpleGraniteTable_body.xml");
-  ReplaceAll(&tabletop_xml,
-             "meshdir=\"../../../../simhive/myo_sim/\" texturedir=\"../../../../simhive/myo_sim/\"",
-             "meshdir=\"" + myo_sim_root + "\" texturedir=\"" + myo_sim_root +
-                 "\"");
+  ReplaceAll(
+      &tabletop_xml,
+      "../../../../simhive/furniture_sim/simpleTable/"
+      "simpleGraniteTable_body.xml",
+      asset_root +
+          "/simhive/furniture_sim/simpleTable/simpleGraniteTable_body.xml");
+  ReplaceAll(
+      &tabletop_xml,
+      "meshdir=\"../../../../simhive/myo_sim/\" "
+      "texturedir=\"../../../../simhive/myo_sim/\"",
+      "meshdir=\"" + myo_sim_root + "\" texturedir=\"" + myo_sim_root + "\"");
   WriteTextFile(tabletop_tmp, tabletop_xml);
 
   ReplaceAll(&object_xml, "OBJECT_NAME", object_name);
@@ -212,8 +216,7 @@ struct NpyArray {
 };
 
 inline NpyArray ParseNpyPayload(const std::vector<char>& payload) {
-  if (payload.size() < 10 ||
-      std::memcmp(payload.data(), "\x93NUMPY", 6) != 0) {
+  if (payload.size() < 10 || std::memcmp(payload.data(), "\x93NUMPY", 6) != 0) {
     throw std::runtime_error("Unsupported NPY payload.");
   }
   unsigned char major = static_cast<unsigned char>(payload[6]);
@@ -334,7 +337,8 @@ inline std::vector<std::pair<std::string, NpyArray>> LoadStoredNpzArrays(
     std::uint32_t uncompressed_size = ReadLe32(&input);
     std::uint16_t name_len = ReadLe16(&input);
     std::uint16_t extra_len = ReadLe16(&input);
-    if (flags != 0 || compression != 0 || compressed_size != uncompressed_size) {
+    if (flags != 0 || compression != 0 ||
+        compressed_size != uncompressed_size) {
       throw std::runtime_error("Only stored NPZ entries are supported.");
     }
     std::string name(name_len, '\0');
@@ -405,9 +409,8 @@ inline std::array<mjtNum, 9> QuatToMat(const std::array<mjtNum, 4>& quat) {
   mjtNum yZ = y * Z;
   mjtNum zZ = z * Z;
   return {
-      1.0 - (yY + zZ), xY - wZ,         xZ + wY,
-      xY + wZ,         1.0 - (xX + zZ), yZ - wX,
-      xZ - wY,         yZ + wX,         1.0 - (xX + yY),
+      1.0 - (yY + zZ), xY - wZ, xZ + wY, xY + wZ,         1.0 - (xX + zZ),
+      yZ - wX,         xZ - wY, yZ + wX, 1.0 - (xX + yY),
   };
 }
 
@@ -416,8 +419,8 @@ inline std::array<mjtNum, 3> Mat9ToEuler(const std::array<mjtNum, 9>& mat) {
       std::numeric_limits<mjtNum>::epsilon() * static_cast<mjtNum>(4.0);
   mjtNum cy = std::sqrt(mat[8] * mat[8] + mat[5] * mat[5]);
   bool condition = cy > kEps4;
-  mjtNum rz = condition ? -std::atan2(mat[1], mat[0])
-                        : -std::atan2(-mat[3], mat[4]);
+  mjtNum rz =
+      condition ? -std::atan2(mat[1], mat[0]) : -std::atan2(-mat[3], mat[4]);
   mjtNum ry = -std::atan2(-mat[2], cy);
   mjtNum rx = condition ? -std::atan2(mat[5], mat[8]) : 0.0;
   return {rx, ry, rz};
@@ -427,8 +430,7 @@ inline std::array<mjtNum, 3> QuatToEuler(const std::array<mjtNum, 4>& quat) {
   return Mat9ToEuler(QuatToMat(quat));
 }
 
-inline std::array<mjtNum, 4> QuatConjugate(
-    const std::array<mjtNum, 4>& quat) {
+inline std::array<mjtNum, 4> QuatConjugate(const std::array<mjtNum, 4>& quat) {
   return {quat[0], -quat[1], -quat[2], -quat[3]};
 }
 
@@ -474,11 +476,13 @@ class MyoDMTrackEnvFns {
         "reference_object"_.Bind(std::vector<double>{}),
         "reference_robot_init"_.Bind(std::vector<double>{}),
         "reference_object_init"_.Bind(std::vector<double>{}),
-        "normalize_act"_.Bind(true), "obs_dim"_.Bind(0), "qpos_dim"_.Bind(0),
-        "qvel_dim"_.Bind(0), "act_dim"_.Bind(0), "action_dim"_.Bind(0),
-        "robot_dim"_.Bind(0), "object_dim"_.Bind(7),
-        "robot_horizon"_.Bind(0), "object_horizon"_.Bind(0),
-        "reference_has_robot_vel"_.Bind(false),
+        "normalize_act"_.Bind(true), "muscle_condition"_.Bind(std::string()),
+        "fatigue_reset_vec"_.Bind(std::vector<double>{}),
+        "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
+        "qpos_dim"_.Bind(0), "qvel_dim"_.Bind(0), "act_dim"_.Bind(0),
+        "action_dim"_.Bind(0),
+        "robot_dim"_.Bind(0), "object_dim"_.Bind(7), "robot_horizon"_.Bind(0),
+        "object_horizon"_.Bind(0), "reference_has_robot_vel"_.Bind(false),
         "motion_start_time"_.Bind(0.0), "motion_extrapolation"_.Bind(true),
         "reward_pose_w"_.Bind(0.0), "reward_object_w"_.Bind(1.0),
         "reward_bonus_w"_.Bind(1.0), "reward_penalty_w"_.Bind(-2.0),
@@ -574,6 +578,7 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
   int body_geom_id_{-1};
   mjtNum lift_z_{0.0};
   std::vector<bool> muscle_actuator_;
+  detail::MyoConditionState muscle_condition_state_;
   std::vector<mjtNum> reference_time_;
   std::vector<mjtNum> reference_robot_;
   std::vector<mjtNum> reference_robot_vel_;
@@ -611,8 +616,7 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
             RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         normalize_act_(spec.config["normalize_act"_]),
         motion_extrapolation_(spec.config["motion_extrapolation"_]),
-        reference_has_robot_vel_(
-            spec.config["reference_has_robot_vel"_]),
+        reference_has_robot_vel_(spec.config["reference_has_robot_vel"_]),
         terminate_obj_fail_(spec.config["terminate_obj_fail"_]),
         terminate_pose_fail_(spec.config["terminate_pose_fail"_]),
         motion_start_time_(spec.config["motion_start_time"_]),
@@ -634,6 +638,11 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
     ValidateConfig();
     CacheObjects();
     detail::BuildMuscleMask(model_, &muscle_actuator_);
+    detail::InitializeMyoConditionState(
+        model_, spec.config["muscle_condition"_],
+        spec.config["fatigue_reset_vec"_],
+        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
+        this->seed_, &muscle_condition_state_);
     detail::AdjustInitialQposForNormalizedActions(model_, data_,
                                                   normalize_act_);
     InitializeReferencePose();
@@ -649,6 +658,7 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
     done_ = false;
     elapsed_step_ = 0;
     reference_index_cache_ = 0;
+    detail::ResetMyoConditionState(&muscle_condition_state_);
     ResetToInitialState();
     ApplyResetState();
     ReferenceState reference = ReferenceAt(data_->time + motion_start_time_);
@@ -662,7 +672,9 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
     const auto* raw = static_cast<const float*>(action["action"_].Data());
     detail::ApplyMyoSuiteAction(model_, data_, muscle_actuator_, normalize_act_,
                                 raw);
-    DoSimulation();
+    detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
+                                         &muscle_condition_state_);
+    detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     ReferenceState reference = ReferenceAt(data_->time + motion_start_time_);
     UpdateTargetSite(reference);
@@ -693,9 +705,11 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
           object_dim_ = array.shape[1];
           reference_object_.assign(array.values.begin(), array.values.end());
         } else if (name == "robot_init") {
-          reference_robot_init_.assign(array.values.begin(), array.values.end());
+          reference_robot_init_.assign(array.values.begin(),
+                                       array.values.end());
         } else if (name == "object_init") {
-          reference_object_init_.assign(array.values.begin(), array.values.end());
+          reference_object_init_.assign(array.values.begin(),
+                                        array.values.end());
         }
       }
     } else {
@@ -740,7 +754,8 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
     if (robot_dim_ <= 0 || object_dim_ != 7 || reference_time_.empty()) {
       throw std::runtime_error("TrackEnv reference metadata is incomplete.");
     }
-    if (static_cast<int>(reference_robot_.size()) != robot_horizon_ * robot_dim_ ||
+    if (static_cast<int>(reference_robot_.size()) !=
+            robot_horizon_ * robot_dim_ ||
         static_cast<int>(reference_object_.size()) !=
             object_horizon_ * object_dim_) {
       throw std::runtime_error("TrackEnv reference arrays have wrong size.");
@@ -915,17 +930,15 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
       base_sq += base_delta * base_delta;
     }
     auto obj_quat = detail::Mat9ToQuat(data_->ximat + object_bid_ * 9);
-    std::array<mjtNum, 4> target_quat{
-        reference.object[3], reference.object[4], reference.object[5],
-        reference.object[6]};
+    std::array<mjtNum, 4> target_quat{reference.object[3], reference.object[4],
+                                      reference.object[5], reference.object[6]};
     mjtNum obj_rot_err = detail::QuatDistance(obj_quat, target_quat) /
                          static_cast<mjtNum>(3.14159265358979323846);
-    mjtNum obj_reward = std::exp(
-        -obj_err_scale_ * (std::sqrt(obj_com_sq) + 0.1 * obj_rot_err));
-    bool lift_bonus =
-        reference.object[2] >= lift_z_ && obj_com[2] >= lift_z_;
-    mjtNum pose_reward = qpos_reward_weight_ *
-                         std::exp(-qpos_err_scale_ * qpos_sq);
+    mjtNum obj_reward =
+        std::exp(-obj_err_scale_ * (std::sqrt(obj_com_sq) + 0.1 * obj_rot_err));
+    bool lift_bonus = reference.object[2] >= lift_z_ && obj_com[2] >= lift_z_;
+    mjtNum pose_reward =
+        qpos_reward_weight_ * std::exp(-qpos_err_scale_ * qpos_sq);
     mjtNum qvel_reward =
         qvel_reward_weight_ * std::exp(-qvel_err_scale_ * qvel_sq);
     mjtNum base_reward = std::exp(-base_err_scale_ * std::sqrt(base_sq));
@@ -938,10 +951,9 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
     reward.bonus = lift_bonus ? lift_bonus_mag_ : 0.0;
     reward.penalty = static_cast<mjtNum>(obj_term || pose_term);
     reward.done = obj_term || pose_term;
-    reward.dense_reward = reward_pose_w_ * reward.pose +
-                          reward_object_w_ * reward.object +
-                          reward_bonus_w_ * reward.bonus +
-                          reward_penalty_w_ * reward.penalty;
+    reward.dense_reward =
+        reward_pose_w_ * reward.pose + reward_object_w_ * reward.object +
+        reward_bonus_w_ * reward.bonus + reward_penalty_w_ * reward.penalty;
     return reward;
   }
 
@@ -972,7 +984,8 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
         *(buffer++) = 0.0;
       }
       for (int axis = 0; axis < 3; ++axis) {
-        *(buffer++) = data_->xipos[object_bid_ * 3 + axis] - reference.object[axis];
+        *(buffer++) =
+            data_->xipos[object_bid_ * 3 + axis] - reference.object[axis];
       }
       for (int i = 0; i < model_->na; ++i) {
         *(buffer++) = data_->act[i];

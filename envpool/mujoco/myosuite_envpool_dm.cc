@@ -13,17 +13,20 @@
 // limitations under the License.
 
 #include "envpool/core/py_envpool.h"
+#include "envpool/mujoco/myosuite/myodm.h"
 
 namespace myosuite_envpool {
 
-void RegisterMyoSuiteBaseBindings(py::module_& module);
-void RegisterMyoSuiteChallengeBindings(py::module_& module);
-void RegisterMyoSuiteDmBindings(py::module_& module);
+void RegisterMyoSuiteDmBindings(py::module_& module) {
+  using MyoDMTrackEnvSpec = PyEnvSpec<::myosuite_envpool::MyoDMTrackEnvSpec>;
+  using MyoDMTrackEnvPool = PyEnvPool<::myosuite_envpool::MyoDMTrackEnvPool>;
+  using MyoDMTrackPixelEnvSpec =
+      PyEnvSpec<::myosuite_envpool::MyoDMTrackPixelEnvSpec>;
+  using MyoDMTrackPixelEnvPool =
+      PyEnvPool<::myosuite_envpool::MyoDMTrackPixelEnvPool>;
+
+  REGISTER(module, MyoDMTrackEnvSpec, MyoDMTrackEnvPool)
+  REGISTER(module, MyoDMTrackPixelEnvSpec, MyoDMTrackPixelEnvPool)
+}
 
 }  // namespace myosuite_envpool
-
-PYBIND11_MODULE(myosuite_envpool, m) {
-  myosuite_envpool::RegisterMyoSuiteBaseBindings(m);
-  myosuite_envpool::RegisterMyoSuiteChallengeBindings(m);
-  myosuite_envpool::RegisterMyoSuiteDmBindings(m);
-}

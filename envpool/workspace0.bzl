@@ -602,6 +602,10 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "myosuite_src",
+        patch_args = ["-p1"],
+        patches = [
+            "//third_party/myosuite:upstream_compat.patch",
+        ],
         sha256 = "d2c5d3348b505e886de466ae4fca2589149048c463ad34188322ddfa4a1161d6",
         strip_prefix = "myosuite-05cb84678373f91271004f99602ebbf01e57d1a1",
         type = "tar.gz",

@@ -44,6 +44,7 @@ using envpool::mujoco::StackSpec;
 
 namespace detail {
 
+constexpr mjtNum kPi = static_cast<mjtNum>(3.14159265358979323846);
 constexpr mjtNum kPoseFarThreshold = static_cast<mjtNum>(6.283185307179586);
 
 inline std::vector<mjtNum> ToMjtVector(const std::vector<double>& input) {
@@ -57,6 +58,236 @@ inline mjtNum ClampNormalized(mjtNum value) {
 inline mjtNum MuscleActivation(mjtNum value) {
   return static_cast<mjtNum>(
       1.0 / (1.0 + std::exp(-5.0 * (static_cast<double>(value) - 0.5))));
+}
+
+enum class MuscleCondition {
+  kNone,
+  kSarcopenia,
+  kFatigue,
+  kReafferentation,
+};
+
+class CumulativeFatigueModel {
+ public:
+  void Initialize(const mjModel* model, int frame_skip, int seed) {
+    dt_ = model->opt.timestep * static_cast<mjtNum>(frame_skip);
+    tauact_.clear();
+    taudeact_.clear();
+    for (int i = 0; i < model->nu; ++i) {
+      if (model->actuator_dyntype[i] != mjDYN_MUSCLE) {
+        continue;
+      }
+      tauact_.push_back(model->actuator_dynprm[i * mjNDYN + 0]);
+      taudeact_.push_back(model->actuator_dynprm[i * mjNDYN + 1]);
+    }
+    fatigue_gen_.seed(seed);
+    Reset({}, false);
+  }
+
+  bool empty() const { return tauact_.empty(); }
+
+  void Reset(const std::vector<mjtNum>& fatigue_reset_vec,
+             bool fatigue_reset_random) {
+    std::size_t count = tauact_.size();
+    ma_.assign(count, 0.0);
+    mr_.assign(count, 1.0);
+    mf_.assign(count, 0.0);
+    tl_.assign(count, 0.0);
+    ld_.assign(count, 0.0);
+    lr_.assign(count, 0.0);
+    if (count == 0) {
+      return;
+    }
+    if (fatigue_reset_random) {
+      std::uniform_real_distribution<double> dist(0.0, 1.0);
+      for (std::size_t i = 0; i < count; ++i) {
+        mjtNum non_fatigued = static_cast<mjtNum>(dist(fatigue_gen_));
+        mjtNum active = static_cast<mjtNum>(dist(fatigue_gen_));
+        ma_[i] = non_fatigued * active;
+        mr_[i] = non_fatigued * (1.0 - active);
+        mf_[i] = 1.0 - non_fatigued;
+      }
+      return;
+    }
+    if (!fatigue_reset_vec.empty()) {
+      if (fatigue_reset_vec.size() != count) {
+        throw std::runtime_error(
+            "fatigue_reset_vec length does not match muscle count.");
+      }
+      for (std::size_t i = 0; i < count; ++i) {
+        mf_[i] = fatigue_reset_vec[i];
+        mr_[i] = 1.0 - fatigue_reset_vec[i];
+      }
+    }
+  }
+
+  void ComputeAct(std::vector<mjtNum>* act) {
+    if (act->empty()) {
+      return;
+    }
+    if (act->size() != tauact_.size()) {
+      throw std::runtime_error("Fatigue control size mismatch.");
+    }
+    tl_ = *act;
+    for (std::size_t i = 0; i < act->size(); ++i) {
+      ld_[i] = (1.0 / tauact_[i]) * (0.5 + 1.5 * ma_[i]);
+      lr_[i] = (0.5 + 1.5 * ma_[i]) / taudeact_[i];
+    }
+    for (std::size_t i = 0; i < act->size(); ++i) {
+      mjtNum c = 0.0;
+      if (ma_[i] < tl_[i] && mr_[i] > (tl_[i] - ma_[i])) {
+        c = ld_[i] * (tl_[i] - ma_[i]);
+      } else if (ma_[i] < tl_[i]) {
+        c = ld_[i] * mr_[i];
+      } else {
+        c = lr_[i] * (tl_[i] - ma_[i]);
+      }
+      mjtNum rr = ma_[i] >= tl_[i] ? recovery_multiplier_ * recovery_
+                                   : recovery_;
+      mjtNum min_c = std::max(-ma_[i] / dt_ + fatigue_ * ma_[i],
+                              (mr_[i] - 1.0) / dt_ + rr * mf_[i]);
+      mjtNum max_c = std::min((1.0 - ma_[i]) / dt_ + fatigue_ * ma_[i],
+                              mr_[i] / dt_ + rr * mf_[i]);
+      c = std::clamp(c, min_c, max_c);
+      mjtNum d_ma = (c - fatigue_ * ma_[i]) * dt_;
+      mjtNum d_mr = (-c + rr * mf_[i]) * dt_;
+      mjtNum d_mf = (fatigue_ * ma_[i] - rr * mf_[i]) * dt_;
+      ma_[i] += d_ma;
+      mr_[i] += d_mr;
+      mf_[i] += d_mf;
+    }
+    *act = ma_;
+  }
+
+ private:
+  mjtNum recovery_multiplier_{150.0};
+  mjtNum fatigue_{0.00912};
+  mjtNum recovery_{0.000094};
+  mjtNum dt_{0.0};
+  std::mt19937 fatigue_gen_;
+  std::vector<mjtNum> tauact_;
+  std::vector<mjtNum> taudeact_;
+  std::vector<mjtNum> ma_;
+  std::vector<mjtNum> mr_;
+  std::vector<mjtNum> mf_;
+  std::vector<mjtNum> tl_;
+  std::vector<mjtNum> ld_;
+  std::vector<mjtNum> lr_;
+};
+
+struct MyoConditionState {
+  MuscleCondition muscle_condition{MuscleCondition::kNone};
+  CumulativeFatigueModel fatigue_model;
+  std::vector<mjtNum> fatigue_reset_vec;
+  bool fatigue_reset_random{false};
+  int epl_index{-1};
+  int eip_index{-1};
+};
+
+inline MuscleCondition ParseMuscleCondition(std::string_view value) {
+  if (value.empty()) {
+    return MuscleCondition::kNone;
+  }
+  if (value == "sarcopenia") {
+    return MuscleCondition::kSarcopenia;
+  }
+  if (value == "fatigue") {
+    return MuscleCondition::kFatigue;
+  }
+  if (value == "reafferentation") {
+    return MuscleCondition::kReafferentation;
+  }
+  throw std::runtime_error("Unsupported MyoSuite muscle_condition.");
+}
+
+inline void InitializeMyoConditionState(
+    mjModel* model, std::string_view muscle_condition,
+    const std::vector<double>& fatigue_reset_vec, bool fatigue_reset_random,
+    int frame_skip, int seed, MyoConditionState* state) {
+  state->muscle_condition = ParseMuscleCondition(muscle_condition);
+  state->fatigue_reset_vec = ToMjtVector(fatigue_reset_vec);
+  state->fatigue_reset_random = fatigue_reset_random;
+  if (state->muscle_condition == MuscleCondition::kSarcopenia) {
+    for (int mus_idx = 0; mus_idx < model->nu; ++mus_idx) {
+      model->actuator_gainprm[mus_idx * mjNGAIN + 2] *=
+          static_cast<mjtNum>(0.5);
+    }
+    return;
+  }
+  if (state->muscle_condition == MuscleCondition::kFatigue) {
+    state->fatigue_model.Initialize(model, frame_skip, seed);
+    return;
+  }
+  if (state->muscle_condition == MuscleCondition::kReafferentation) {
+    state->epl_index = mj_name2id(model, mjOBJ_ACTUATOR, "EPL");
+    state->eip_index = mj_name2id(model, mjOBJ_ACTUATOR, "EIP");
+    if (state->epl_index < 0 || state->eip_index < 0) {
+      throw std::runtime_error(
+          "Reafferentation requires EPL and EIP actuators.");
+    }
+  }
+}
+
+inline void ResetMyoConditionState(MyoConditionState* state) {
+  if (state->muscle_condition == MuscleCondition::kFatigue) {
+    state->fatigue_model.Reset(state->fatigue_reset_vec,
+                               state->fatigue_reset_random);
+  }
+}
+
+inline void ApplyMyoConditionAdjustments(
+    const mjModel* model, mjData* data, const std::vector<bool>& muscle_actuator,
+    MyoConditionState* state) {
+  if (state->muscle_condition == MuscleCondition::kNone ||
+      state->muscle_condition == MuscleCondition::kSarcopenia) {
+    return;
+  }
+  if (state->muscle_condition == MuscleCondition::kReafferentation) {
+    data->ctrl[state->epl_index] = data->ctrl[state->eip_index];
+    data->ctrl[state->eip_index] = 0.0;
+    return;
+  }
+  std::vector<mjtNum> muscle_ctrl;
+  muscle_ctrl.reserve(model->nu);
+  for (int i = 0; i < model->nu; ++i) {
+    if (muscle_actuator[i]) {
+      muscle_ctrl.push_back(data->ctrl[i]);
+    }
+  }
+  if (muscle_ctrl.empty()) {
+    return;
+  }
+  state->fatigue_model.ComputeAct(&muscle_ctrl);
+  int muscle_index = 0;
+  for (int i = 0; i < model->nu; ++i) {
+    if (muscle_actuator[i]) {
+      data->ctrl[i] = muscle_ctrl[muscle_index++];
+    }
+  }
+}
+
+// MyoSuite's official oracle runs on dm_control Physics with legacy_step=True,
+// then calls env.forward(), which round-trips the current qpos/qvel/act back
+// through sensor2sim() and ends the step with mj_forward(). Mirror that here
+// so the next control step starts from the same post-forward warmstart /
+// constraint state that the oracle uses.
+inline void DoMyoSuiteSimulation(const mjModel* model, mjData* data,
+                                 int frame_skip) {
+  if (frame_skip <= 0) {
+    mj_forward(model, data);
+    return;
+  }
+  if (model->opt.integrator != mjINT_RK4) {
+    mj_step2(model, data);
+    for (int i = 1; i < frame_skip; ++i) {
+      mj_step(model, data);
+    }
+  } else {
+    for (int i = 0; i < frame_skip; ++i) {
+      mj_step(model, data);
+    }
+  }
+  mj_forward(model, data);
 }
 
 inline mjtNum VectorNorm(const std::vector<mjtNum>& value) {
@@ -408,7 +639,10 @@ class MyoSuitePoseEnvFns {
     return MakeDict(
         "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(10),
         "frame_stack"_.Bind(1), "model_path"_.Bind(std::string()),
-        "normalize_act"_.Bind(true), "obs_dim"_.Bind(0), "qpos_dim"_.Bind(0),
+        "normalize_act"_.Bind(true), "muscle_condition"_.Bind(std::string()),
+        "fatigue_reset_vec"_.Bind(std::vector<double>{}),
+        "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
+        "qpos_dim"_.Bind(0),
         "qvel_dim"_.Bind(0), "act_dim"_.Bind(0), "action_dim"_.Bind(0),
         "pose_thd"_.Bind(0.35), "reward_pose_w"_.Bind(1.0),
         "reward_bonus_w"_.Bind(4.0), "reward_act_reg_w"_.Bind(1.0),
@@ -466,7 +700,10 @@ class MyoSuiteReachEnvFns {
     return MakeDict(
         "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(10),
         "frame_stack"_.Bind(1), "model_path"_.Bind(std::string()),
-        "normalize_act"_.Bind(true), "obs_dim"_.Bind(0), "qpos_dim"_.Bind(0),
+        "normalize_act"_.Bind(true), "muscle_condition"_.Bind(std::string()),
+        "fatigue_reset_vec"_.Bind(std::vector<double>{}),
+        "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
+        "qpos_dim"_.Bind(0),
         "qvel_dim"_.Bind(0), "act_dim"_.Bind(0), "action_dim"_.Bind(0),
         "target_site_count"_.Bind(0), "far_th"_.Bind(0.35),
         "reward_reach_w"_.Bind(1.0), "reward_bonus_w"_.Bind(4.0),
@@ -517,7 +754,10 @@ class MyoSuiteKeyTurnEnvFns {
     return MakeDict(
         "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(10),
         "frame_stack"_.Bind(1), "model_path"_.Bind(std::string()),
-        "normalize_act"_.Bind(true), "obs_dim"_.Bind(0), "qpos_dim"_.Bind(0),
+        "normalize_act"_.Bind(true), "muscle_condition"_.Bind(std::string()),
+        "fatigue_reset_vec"_.Bind(std::vector<double>{}),
+        "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
+        "qpos_dim"_.Bind(0),
         "qvel_dim"_.Bind(0), "act_dim"_.Bind(0), "action_dim"_.Bind(0),
         "goal_th"_.Bind(3.14), "reward_key_turn_w"_.Bind(1.0),
         "reward_iftip_approach_w"_.Bind(10.0),
@@ -569,7 +809,10 @@ class MyoSuiteObjHoldEnvFns {
     return MakeDict(
         "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(10),
         "frame_stack"_.Bind(1), "model_path"_.Bind(std::string()),
-        "normalize_act"_.Bind(true), "obs_dim"_.Bind(0), "qpos_dim"_.Bind(0),
+        "normalize_act"_.Bind(true), "muscle_condition"_.Bind(std::string()),
+        "fatigue_reset_vec"_.Bind(std::vector<double>{}),
+        "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
+        "qpos_dim"_.Bind(0),
         "qvel_dim"_.Bind(0), "act_dim"_.Bind(0), "action_dim"_.Bind(0),
         "randomize_on_reset"_.Bind(false), "reward_goal_dist_w"_.Bind(100.0),
         "reward_bonus_w"_.Bind(4.0), "reward_penalty_w"_.Bind(10.0),
@@ -618,7 +861,10 @@ class MyoSuiteTorsoEnvFns {
     return MakeDict(
         "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(5),
         "frame_stack"_.Bind(1), "model_path"_.Bind(std::string()),
-        "normalize_act"_.Bind(true), "obs_dim"_.Bind(0), "qpos_dim"_.Bind(0),
+        "normalize_act"_.Bind(true), "muscle_condition"_.Bind(std::string()),
+        "fatigue_reset_vec"_.Bind(std::vector<double>{}),
+        "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
+        "qpos_dim"_.Bind(0),
         "qvel_dim"_.Bind(0), "act_dim"_.Bind(0), "action_dim"_.Bind(0),
         "pose_dim"_.Bind(0), "pose_thd"_.Bind(0.25), "reward_pose_w"_.Bind(1.0),
         "reward_bonus_w"_.Bind(4.0), "reward_act_reg_w"_.Bind(1.0),
@@ -664,7 +910,10 @@ class MyoSuitePenTwirlEnvFns {
     return MakeDict(
         "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(5),
         "frame_stack"_.Bind(1), "model_path"_.Bind(std::string()),
-        "normalize_act"_.Bind(true), "obs_dim"_.Bind(0), "qpos_dim"_.Bind(0),
+        "normalize_act"_.Bind(true), "muscle_condition"_.Bind(std::string()),
+        "fatigue_reset_vec"_.Bind(std::vector<double>{}),
+        "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
+        "qpos_dim"_.Bind(0),
         "qvel_dim"_.Bind(0), "act_dim"_.Bind(0), "action_dim"_.Bind(0),
         "randomize_target"_.Bind(false), "reward_pos_align_w"_.Bind(1.0),
         "reward_rot_align_w"_.Bind(1.0), "reward_act_reg_w"_.Bind(5.0),
@@ -740,6 +989,7 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
   std::vector<int> target_site_ids_;
   std::vector<mjtNum> initial_target_site_pos_;
   std::vector<bool> muscle_actuator_;
+  detail::MyoConditionState muscle_condition_state_;
   int weight_body_id_{-1};
   int weight_geom_id_{-1};
   mjtNum initial_weight_body_mass_{0.0};
@@ -795,6 +1045,11 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
         test_geom_size0_(detail::ToMjtVector(spec.config["test_geom_size0"_])) {
     ValidateConfig();
     BuildMuscleMask();
+    detail::InitializeMyoConditionState(
+        model_, spec.config["muscle_condition"_],
+        spec.config["fatigue_reset_vec"_],
+        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
+        this->seed_, &muscle_condition_state_);
     AdjustInitialQposForNormalizedActions();
     CacheTargetSites(spec.config["viz_site_targets"_]);
     CacheWeightRandomization(spec.config["weight_bodyname"_]);
@@ -806,6 +1061,7 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
   void Reset() override {
     done_ = false;
     elapsed_step_ = 0;
+    detail::ResetMyoConditionState(&muscle_condition_state_);
     ResetToInitialState();
     RestoreTargetSites();
     RestoreWeightRandomization();
@@ -820,7 +1076,7 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
   void Step(const Action& action) override {
     const auto* raw = static_cast<const float*>(action["action"_].Data());
     ApplyAction(raw);
-    DoSimulation();
+    detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
     done_ = reward.done || elapsed_step_ >= max_episode_steps_;
@@ -1072,6 +1328,8 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
       }
       data_->ctrl[i] = value;
     }
+    detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
+                                         &muscle_condition_state_);
   }
 
   RewardInfo ComputeRewardInfo() const {
@@ -1169,6 +1427,7 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
   std::vector<mjtNum> target_pos_max_;
   std::vector<mjtNum> current_target_pos_;
   std::vector<bool> muscle_actuator_;
+  detail::MyoConditionState muscle_condition_state_;
   std::vector<mjtNum> test_reset_qpos_;
   std::vector<mjtNum> test_reset_qvel_;
   std::vector<mjtNum> test_reset_act_;
@@ -1209,6 +1468,11 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
         test_target_pos_(detail::ToMjtVector(spec.config["test_target_pos"_])) {
     ValidateConfig();
     BuildMuscleMask();
+    detail::InitializeMyoConditionState(
+        model_, spec.config["muscle_condition"_],
+        spec.config["fatigue_reset_vec"_],
+        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
+        this->seed_, &muscle_condition_state_);
     AdjustInitialQposForNormalizedActions();
     CacheTargetSites(spec.config["target_site_names"_]);
     InitializeRobotEnv();
@@ -1219,6 +1483,7 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
   void Reset() override {
     done_ = false;
     elapsed_step_ = 0;
+    detail::ResetMyoConditionState(&muscle_condition_state_);
     ResetToInitialState();
     RestoreTargetSites();
     UpdateTargetSites();
@@ -1231,7 +1496,7 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
   void Step(const Action& action) override {
     const auto* raw = static_cast<const float*>(action["action"_].Data());
     ApplyAction(raw);
-    DoSimulation();
+    detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
     done_ = reward.done || elapsed_step_ >= max_episode_steps_;
@@ -1380,6 +1645,8 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
       }
       data_->ctrl[i] = value;
     }
+    detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
+                                         &muscle_condition_state_);
   }
 
   RewardInfo ComputeRewardInfo() const {
@@ -1491,6 +1758,7 @@ class MyoSuiteKeyTurnEnvBase : public Env<EnvSpecT>,
   int key_body_id_{-1};
   std::vector<mjtNum> initial_key_body_pos_;
   std::vector<bool> muscle_actuator_;
+  detail::MyoConditionState muscle_condition_state_;
   std::vector<mjtNum> test_reset_qpos_;
   std::vector<mjtNum> test_reset_qvel_;
   std::vector<mjtNum> test_reset_act_;
@@ -1532,6 +1800,11 @@ class MyoSuiteKeyTurnEnvBase : public Env<EnvSpecT>,
     ValidateConfig();
     CacheSites();
     detail::BuildMuscleMask(model_, &muscle_actuator_);
+    detail::InitializeMyoConditionState(
+        model_, spec.config["muscle_condition"_],
+        spec.config["fatigue_reset_vec"_],
+        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
+        this->seed_, &muscle_condition_state_);
     detail::AdjustInitialQposForNormalizedActions(model_, data_,
                                                   normalize_act_);
     InitializeRobotEnv();
@@ -1542,6 +1815,7 @@ class MyoSuiteKeyTurnEnvBase : public Env<EnvSpecT>,
   void Reset() override {
     done_ = false;
     elapsed_step_ = 0;
+    detail::ResetMyoConditionState(&muscle_condition_state_);
     ResetToInitialState();
     detail::RestoreModelBodyPos(model_, key_body_id_, initial_key_body_pos_);
     ApplyResetState();
@@ -1554,7 +1828,9 @@ class MyoSuiteKeyTurnEnvBase : public Env<EnvSpecT>,
     const auto* raw = static_cast<const float*>(action["action"_].Data());
     detail::ApplyMyoSuiteAction(model_, data_, muscle_actuator_, normalize_act_,
                                 raw);
-    DoSimulation();
+    detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
+                                         &muscle_condition_state_);
+    detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
     done_ = reward.done || elapsed_step_ >= max_episode_steps_;
@@ -1754,6 +2030,7 @@ class MyoSuiteObjHoldEnvBase : public Env<EnvSpecT>,
   std::vector<mjtNum> initial_goal_size_;
   std::vector<mjtNum> initial_object_geom_size_;
   std::vector<bool> muscle_actuator_;
+  detail::MyoConditionState muscle_condition_state_;
   std::vector<mjtNum> test_reset_qpos_;
   std::vector<mjtNum> test_reset_qvel_;
   std::vector<mjtNum> test_reset_act_;
@@ -1793,6 +2070,11 @@ class MyoSuiteObjHoldEnvBase : public Env<EnvSpecT>,
     ValidateConfig();
     CacheObjects();
     detail::BuildMuscleMask(model_, &muscle_actuator_);
+    detail::InitializeMyoConditionState(
+        model_, spec.config["muscle_condition"_],
+        spec.config["fatigue_reset_vec"_],
+        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
+        this->seed_, &muscle_condition_state_);
     detail::AdjustInitialQposForNormalizedActions(model_, data_,
                                                   normalize_act_);
     InitializeRobotEnv();
@@ -1803,6 +2085,7 @@ class MyoSuiteObjHoldEnvBase : public Env<EnvSpecT>,
   void Reset() override {
     done_ = false;
     elapsed_step_ = 0;
+    detail::ResetMyoConditionState(&muscle_condition_state_);
     ResetToInitialState();
     RestoreModelState();
     ApplyResetState();
@@ -1815,7 +2098,9 @@ class MyoSuiteObjHoldEnvBase : public Env<EnvSpecT>,
     const auto* raw = static_cast<const float*>(action["action"_].Data());
     detail::ApplyMyoSuiteAction(model_, data_, muscle_actuator_, normalize_act_,
                                 raw);
-    DoSimulation();
+    detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
+                                         &muscle_condition_state_);
+    detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
     done_ = reward.done || elapsed_step_ >= max_episode_steps_;
@@ -1988,6 +2273,7 @@ class MyoSuiteTorsoEnvBase : public Env<EnvSpecT>,
   mjtNum reward_penalty_w_;
   std::vector<mjtNum> target_qpos_value_;
   std::vector<bool> muscle_actuator_;
+  detail::MyoConditionState muscle_condition_state_;
   std::vector<mjtNum> test_reset_qpos_;
   std::vector<mjtNum> test_reset_qvel_;
   std::vector<mjtNum> test_reset_act_;
@@ -2024,6 +2310,11 @@ class MyoSuiteTorsoEnvBase : public Env<EnvSpecT>,
             detail::ToMjtVector(spec.config["test_reset_qacc_warmstart"_])) {
     ValidateConfig();
     detail::BuildMuscleMask(model_, &muscle_actuator_);
+    detail::InitializeMyoConditionState(
+        model_, spec.config["muscle_condition"_],
+        spec.config["fatigue_reset_vec"_],
+        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
+        this->seed_, &muscle_condition_state_);
     detail::AdjustInitialQposForNormalizedActions(model_, data_,
                                                   normalize_act_);
     InitializeRobotEnv();
@@ -2034,6 +2325,7 @@ class MyoSuiteTorsoEnvBase : public Env<EnvSpecT>,
   void Reset() override {
     done_ = false;
     elapsed_step_ = 0;
+    detail::ResetMyoConditionState(&muscle_condition_state_);
     ResetToInitialState();
     if (!test_reset_qpos_.empty()) {
       detail::RestoreVector(test_reset_qpos_, data_->qpos);
@@ -2056,7 +2348,9 @@ class MyoSuiteTorsoEnvBase : public Env<EnvSpecT>,
     const auto* raw = static_cast<const float*>(action["action"_].Data());
     detail::ApplyMyoSuiteAction(model_, data_, muscle_actuator_, normalize_act_,
                                 raw);
-    DoSimulation();
+    detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
+                                         &muscle_condition_state_);
+    detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
     done_ = reward.done || elapsed_step_ >= max_episode_steps_;
@@ -2171,6 +2465,7 @@ class MyoSuitePenTwirlEnvBase : public Env<EnvSpecT>,
   mjtNum tar_length_{0.0};
   std::vector<mjtNum> initial_target_body_quat_;
   std::vector<bool> muscle_actuator_;
+  detail::MyoConditionState muscle_condition_state_;
   std::vector<mjtNum> test_reset_qpos_;
   std::vector<mjtNum> test_reset_qvel_;
   std::vector<mjtNum> test_reset_act_;
@@ -2210,6 +2505,11 @@ class MyoSuitePenTwirlEnvBase : public Env<EnvSpecT>,
     ValidateConfig();
     CacheObjects();
     detail::BuildMuscleMask(model_, &muscle_actuator_);
+    detail::InitializeMyoConditionState(
+        model_, spec.config["muscle_condition"_],
+        spec.config["fatigue_reset_vec"_],
+        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
+        this->seed_, &muscle_condition_state_);
     detail::AdjustInitialQposForNormalizedActions(model_, data_,
                                                   normalize_act_);
     InitializeRobotEnv();
@@ -2220,6 +2520,7 @@ class MyoSuitePenTwirlEnvBase : public Env<EnvSpecT>,
   void Reset() override {
     done_ = false;
     elapsed_step_ = 0;
+    detail::ResetMyoConditionState(&muscle_condition_state_);
     ResetToInitialState();
     detail::RestoreModelBodyQuat(model_, target_body_id_,
                                  initial_target_body_quat_);
@@ -2233,7 +2534,9 @@ class MyoSuitePenTwirlEnvBase : public Env<EnvSpecT>,
     const auto* raw = static_cast<const float*>(action["action"_].Data());
     detail::ApplyMyoSuiteAction(model_, data_, muscle_actuator_, normalize_act_,
                                 raw);
-    DoSimulation();
+    detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
+                                         &muscle_condition_state_);
+    detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
     done_ = reward.done || elapsed_step_ >= max_episode_steps_;

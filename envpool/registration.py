@@ -17,7 +17,7 @@ import importlib
 import importlib.util
 import os
 from collections.abc import Sequence
-from typing import Any, Literal, overload
+from typing import Any, Callable, Literal, overload
 
 import numpy as np
 
@@ -151,6 +151,7 @@ class EnvRegistry:
             "envpool.mujoco.dmc",
             "envpool.mujoco.gym",
             "envpool.mujoco.metaworld",
+            "envpool.mujoco.myosuite.native",
             "envpool.mujoco.robotics",
         }
 
@@ -194,6 +195,15 @@ class EnvRegistry:
         import_path, spec_cls, kwargs = self._resolve_spec_entry(
             task_id, from_pixels
         )
+        config_resolver: (
+            Callable[[str, dict[str, Any]], dict[str, Any]] | None
+        ) = kwargs.pop("_config_resolver", None)
+        if config_resolver is not None:
+            preview_kwargs = {**kwargs, **make_kwargs}
+            kwargs = {
+                **kwargs,
+                **config_resolver(task_id, preview_kwargs),
+            }
         kwargs = {**kwargs, **make_kwargs}
         if needs_render:
             for key in ("render", "enable_render"):

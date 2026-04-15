@@ -18,7 +18,6 @@ from __future__ import annotations
 import importlib
 import sys
 import tempfile
-import types
 from contextlib import contextmanager
 from functools import cache
 from pathlib import Path
@@ -73,7 +72,9 @@ from envpool.mujoco.myosuite.paths import (
     myosuite_asset_root,
     resolve_workspace_path,
 )
+from envpool.mujoco.myosuite.registration import MYOSUITE_PUBLIC_TASK_IDS
 from envpool.python.glfw_context import preload_windows_gl_dlls
+from envpool.registration import list_all_envs, make_gymnasium
 
 preload_windows_gl_dlls(strict=True)
 
@@ -166,6 +167,22 @@ _TERRAIN_ALIGN_IDS = (
     "myoLegRoughTerrainWalk-v0",
     "myoLegHillyTerrainWalk-v0",
     "myoLegStairTerrainWalk-v0",
+)
+_PUBLIC_REPRESENTATIVE_TASK_IDS = (
+    "myoHandReorientID-v0",
+    "myoFatiHandReorientID-v0",
+    "myoLegWalk-v0",
+    "myoLegRoughTerrainWalk-v0",
+    "myoChallengeBimanual-v0",
+    "myoSarcChallengeBimanual-v0",
+    "MyoHandAirplaneFly-v0",
+    "myoReafHandPoseRandom-v0",
+    "myoSarcArmReachRandom-v0",
+)
+_PUBLIC_VARIANT_DIFF_CASES = (
+    ("myoHandPoseRandom-v0", "myoReafHandPoseRandom-v0"),
+    ("myoArmReachRandom-v0", "myoSarcArmReachRandom-v0"),
+    ("myoHandReorientID-v0", "myoFatiHandReorientID-v0"),
 )
 
 
@@ -792,6 +809,36 @@ def _make_env(config: tuple[Any, ...], pool_type: type, spec_type: type) -> Any:
     return pool_type(spec_type(config))
 
 
+def _make_registered_env(task_id: str, **kwargs: Any) -> Any:
+    return make_gymnasium(
+        task_id,
+        num_envs=1,
+        batch_size=1,
+        max_num_players=1,
+        **kwargs,
+    )
+
+
+def _registered_rollout(
+    task_id: str, *, seed: int
+) -> tuple[np.ndarray, np.ndarray]:
+    env = _make_registered_env(task_id, seed=seed)
+    try:
+        env.reset()
+        action = np.full(
+            (1, int(env.action_space.shape[-1])), 0.35, dtype=np.float32
+        )
+        final_obs = None
+        final_reward = None
+        for _ in range(3):
+            final_obs, final_reward, *_ = env.step(action)
+        assert final_obs is not None
+        assert final_reward is not None
+        return final_obs, final_reward
+    finally:
+        env.close()
+
+
 def _seeded_actions(
     shape: tuple[int, ...], steps: int, seed: int
 ) -> list[np.ndarray]:
@@ -846,126 +893,11 @@ def _find_vendored_myosuite_root() -> Path:
     raise FileNotFoundError("Unable to locate vendored myosuite source root")
 
 
-def _install_flatten_dict_stub() -> None:
-    if "flatten_dict" in sys.modules:
-        return
-    flatten_dict = types.ModuleType("flatten_dict")
-
-    def flatten(
-        mapping: dict[str, Any],
-        reducer: str = "dot",
-        keep_empty_types: tuple[type[Any], ...] = (),
-    ) -> dict[tuple[str, ...], Any]:
-        del reducer
-        out: dict[tuple[str, ...], Any] = {}
-
-        def rec(prefix: tuple[str, ...], value: Any) -> None:
-            if isinstance(value, dict):
-                if not value and dict in keep_empty_types:
-                    out[prefix] = {}
-                    return
-                for key, child in value.items():
-                    rec(prefix + (str(key),), child)
-                return
-            out[prefix] = value
-
-        rec(tuple(), mapping)
-        return out
-
-    def unflatten(
-        mapping: dict[tuple[str, ...], Any],
-        splitter: str = "dot",
-    ) -> dict[str, Any]:
-        del splitter
-        out: dict[str, Any] = {}
-        for key, value in mapping.items():
-            parts = (
-                key if isinstance(key, tuple) else tuple(str(key).split("."))
-            )
-            cursor = out
-            for part in parts[:-1]:
-                cursor = cursor.setdefault(part, {})
-            cursor[parts[-1]] = value
-        return out
-
-    flatten_dict.__dict__["flatten"] = flatten
-    flatten_dict.__dict__["unflatten"] = unflatten
-    sys.modules["flatten_dict"] = flatten_dict
-
-
-def _install_skvideo_stub() -> None:
-    if "skvideo.io" in sys.modules:
-        return
-    skvideo = types.ModuleType("skvideo")
-    skvideo_io = types.ModuleType("skvideo.io")
-    skvideo.__dict__["io"] = skvideo_io
-    sys.modules["skvideo"] = skvideo
-    sys.modules["skvideo.io"] = skvideo_io
-
-
-def _install_termcolor_stub() -> None:
-    if "termcolor" in sys.modules:
-        return
-    termcolor = types.ModuleType("termcolor")
-
-    def colored(text: Any, *args: Any, **kwargs: Any) -> str:
-        del args, kwargs
-        return str(text)
-
-    def cprint(text: Any = "", *args: Any, **kwargs: Any) -> None:
-        del args, kwargs
-        print(text)
-
-    termcolor.__dict__["colored"] = colored
-    termcolor.__dict__["cprint"] = cprint
-    sys.modules["termcolor"] = termcolor
-
-
-def _install_git_stub() -> None:
-    if "git" in sys.modules:
-        return
-    git = types.ModuleType("git")
-
-    class GitCommandError(RuntimeError):
-        pass
-
-    class _HeadCommit:
-        hexsha = "stub"
-
-    class _Head:
-        commit = _HeadCommit()
-
-    class _Git:
-        def checkout(self, commit_hash: str) -> None:
-            del commit_hash
-
-    class Repo:
-        def __init__(self, path: str) -> None:
-            del path
-            self.head = _Head()
-            self.git = _Git()
-
-        @classmethod
-        def clone_from(cls, repo_url: str, clone_directory: str) -> "Repo":
-            del repo_url
-            return cls(clone_directory)
-
-        def remote(self, name: str) -> Any:
-            del name
-            return types.SimpleNamespace(fetch=lambda: None)
-
-    git.__dict__["GitCommandError"] = GitCommandError
-    git.__dict__["Repo"] = Repo
-    sys.modules["git"] = git
-
-
 @cache
 def _load_oracle_modules() -> dict[str, Any]:
-    _install_flatten_dict_stub()
-    _install_skvideo_stub()
-    _install_termcolor_stub()
-    _install_git_stub()
-    sys.path.insert(0, str(_find_vendored_myosuite_root()))
+    oracle_root = str(_find_vendored_myosuite_root())
+    if oracle_root not in sys.path:
+        sys.path.insert(0, oracle_root)
     pose_module = importlib.import_module("myosuite.envs.myo.myobase.pose_v0")
     reach_module = importlib.import_module("myosuite.envs.myo.myobase.reach_v0")
     reorient_module = importlib.import_module(
@@ -2024,6 +1956,58 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
         env = _make_env(config, pool_type, spec_type)
         obs, _ = env.reset()
         self.assertEqual(obs.shape, (1, 3, 64, 64))
+
+    def test_public_registry_covers_full_expanded_surface(self) -> None:
+        """Public registration should expose every expanded MyoSuite task ID."""
+        registered = set(list_all_envs())
+        self.assertLen(MYOSUITE_PUBLIC_TASK_IDS, 398)
+        self.assertEmpty(set(MYOSUITE_PUBLIC_TASK_IDS) - registered)
+
+    def test_public_registered_envs_construct_and_reset(self) -> None:
+        """Representative public IDs should construct through make_gymnasium."""
+        for task_id in _PUBLIC_REPRESENTATIVE_TASK_IDS:
+            with self.subTest(task_id=task_id):
+                env = _make_registered_env(task_id, seed=0)
+                try:
+                    obs, info = env.reset()
+                    self.assertEqual(obs.shape[0], 1)
+                    self.assertIn("elapsed_step", info)
+                finally:
+                    env.close()
+
+    def test_public_variant_ids_change_dynamics(self) -> None:
+        """Variant IDs should change rollout dynamics relative to the base ID."""
+        for base_task_id, variant_task_id in _PUBLIC_VARIANT_DIFF_CASES:
+            with self.subTest(
+                base_task_id=base_task_id, variant_task_id=variant_task_id
+            ):
+                base_obs, base_reward = _registered_rollout(
+                    base_task_id, seed=7
+                )
+                variant_obs, variant_reward = _registered_rollout(
+                    variant_task_id, seed=7
+                )
+                self.assertGreater(
+                    float(np.max(np.abs(base_obs - variant_obs))), 1e-6
+                )
+                self.assertGreater(
+                    float(np.max(np.abs(base_reward - variant_reward))), 1e-6
+                )
+
+    def test_public_from_pixels_smoke(self) -> None:
+        """Public registration should expose pixel wrappers for MyoSuite."""
+        env = _make_registered_env(
+            "myoHandReorientID-v0",
+            seed=3,
+            from_pixels=True,
+            render_width=32,
+            render_height=24,
+        )
+        try:
+            obs, _ = env.reset()
+            self.assertEqual(obs.shape, (1, 3, 24, 32))
+        finally:
+            env.close()
 
 
 if __name__ == "__main__":

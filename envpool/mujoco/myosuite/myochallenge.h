@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <limits>
 #include <random>
@@ -60,6 +61,27 @@ inline std::array<mjtNum, 3> Mat9ToEuler(const mjtNum* mat) {
       regular ? -std::atan2(mat[5], mat[8]) : 0.0,
       -std::atan2(-mat[2], cy),
       regular ? -std::atan2(mat[1], mat[0]) : -std::atan2(-mat[3], mat[4]),
+  };
+}
+
+inline std::array<mjtNum, 3> RotateByQuat(const mjtNum* quat,
+                                          const mjtNum* vec) {
+  std::array<mjtNum, 9> mat{};
+  mju_quat2Mat(mat.data(), quat);
+  return {
+      mat[0] * vec[0] + mat[1] * vec[1] + mat[2] * vec[2],
+      mat[3] * vec[0] + mat[4] * vec[1] + mat[5] * vec[2],
+      mat[6] * vec[0] + mat[7] * vec[1] + mat[8] * vec[2],
+  };
+}
+
+inline std::array<float, 3> RotateByQuat(const mjtNum* quat, const float* vec) {
+  std::array<mjtNum, 9> mat{};
+  mju_quat2Mat(mat.data(), quat);
+  return {
+      static_cast<float>(mat[0] * vec[0] + mat[1] * vec[1] + mat[2] * vec[2]),
+      static_cast<float>(mat[3] * vec[0] + mat[4] * vec[1] + mat[5] * vec[2]),
+      static_cast<float>(mat[6] * vec[0] + mat[7] * vec[1] + mat[8] * vec[2]),
   };
 }
 
@@ -197,7 +219,10 @@ class MyoChallengeReorientEnvFns {
     return MakeDict(
         "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(5),
         "frame_stack"_.Bind(1), "model_path"_.Bind(std::string()),
-        "normalize_act"_.Bind(true), "obs_dim"_.Bind(0), "qpos_dim"_.Bind(0),
+        "normalize_act"_.Bind(true), "muscle_condition"_.Bind(std::string()),
+        "fatigue_reset_vec"_.Bind(std::vector<double>{}),
+        "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
+        "qpos_dim"_.Bind(0),
         "qvel_dim"_.Bind(0), "act_dim"_.Bind(0), "action_dim"_.Bind(0),
         "goal_pos_low"_.Bind(0.0), "goal_pos_high"_.Bind(0.0),
         "goal_rot_low"_.Bind(0.0), "goal_rot_high"_.Bind(0.0),
@@ -251,11 +276,9 @@ class MyoChallengeReorientEnvFns {
   }
 };
 
+using ReorientPixelFns = PixelObservationEnvFns<MyoChallengeReorientEnvFns>;
 using MyoChallengeReorientEnvSpec = EnvSpec<MyoChallengeReorientEnvFns>;
-using MyoChallengeReorientPixelEnvFns =
-    PixelObservationEnvFns<MyoChallengeReorientEnvFns>;
-using MyoChallengeReorientPixelEnvSpec =
-    EnvSpec<MyoChallengeReorientPixelEnvFns>;
+using MyoChallengeReorientPixelEnvSpec = EnvSpec<ReorientPixelFns>;
 
 class MyoChallengeRelocateEnvFns {
  public:
@@ -263,7 +286,10 @@ class MyoChallengeRelocateEnvFns {
     return MakeDict(
         "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(5),
         "frame_stack"_.Bind(1), "model_path"_.Bind(std::string()),
-        "normalize_act"_.Bind(true), "obs_dim"_.Bind(0), "qpos_dim"_.Bind(0),
+        "normalize_act"_.Bind(true), "muscle_condition"_.Bind(std::string()),
+        "fatigue_reset_vec"_.Bind(std::vector<double>{}),
+        "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
+        "qpos_dim"_.Bind(0),
         "qvel_dim"_.Bind(0), "act_dim"_.Bind(0), "action_dim"_.Bind(0),
         "target_xyz_low"_.Bind(std::vector<double>{0.0, -0.35, 0.9}),
         "target_xyz_high"_.Bind(std::vector<double>{0.2, -0.1, 0.9}),
@@ -325,11 +351,9 @@ class MyoChallengeRelocateEnvFns {
   }
 };
 
+using RelocatePixelFns = PixelObservationEnvFns<MyoChallengeRelocateEnvFns>;
 using MyoChallengeRelocateEnvSpec = EnvSpec<MyoChallengeRelocateEnvFns>;
-using MyoChallengeRelocatePixelEnvFns =
-    PixelObservationEnvFns<MyoChallengeRelocateEnvFns>;
-using MyoChallengeRelocatePixelEnvSpec =
-    EnvSpec<MyoChallengeRelocatePixelEnvFns>;
+using MyoChallengeRelocatePixelEnvSpec = EnvSpec<RelocatePixelFns>;
 
 class MyoChallengeBaodingEnvFns {
  public:
@@ -337,7 +361,10 @@ class MyoChallengeBaodingEnvFns {
     return MakeDict(
         "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(10),
         "frame_stack"_.Bind(1), "model_path"_.Bind(std::string()),
-        "normalize_act"_.Bind(true), "obs_dim"_.Bind(0), "qpos_dim"_.Bind(0),
+        "normalize_act"_.Bind(true), "muscle_condition"_.Bind(std::string()),
+        "fatigue_reset_vec"_.Bind(std::vector<double>{}),
+        "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
+        "qpos_dim"_.Bind(0),
         "qvel_dim"_.Bind(0), "act_dim"_.Bind(0), "action_dim"_.Bind(0),
         "drop_th"_.Bind(1.25), "proximity_th"_.Bind(0.015),
         "goal_time_period_low"_.Bind(5.0), "goal_time_period_high"_.Bind(5.0),
@@ -354,8 +381,10 @@ class MyoChallengeBaodingEnvFns {
         "test_reset_act"_.Bind(std::vector<double>{}),
         "test_reset_qacc_warmstart"_.Bind(std::vector<double>{}),
         "test_task"_.Bind(-1),
-        "test_ball1_starting_angle"_.Bind(std::numeric_limits<double>::quiet_NaN()),
-        "test_ball2_starting_angle"_.Bind(std::numeric_limits<double>::quiet_NaN()),
+        "test_ball1_starting_angle"_.Bind(
+            std::numeric_limits<double>::quiet_NaN()),
+        "test_ball2_starting_angle"_.Bind(
+            std::numeric_limits<double>::quiet_NaN()),
         "test_x_radius"_.Bind(std::numeric_limits<double>::quiet_NaN()),
         "test_y_radius"_.Bind(std::numeric_limits<double>::quiet_NaN()),
         "test_goal_trajectory"_.Bind(std::vector<double>{}),
@@ -395,11 +424,9 @@ class MyoChallengeBaodingEnvFns {
   }
 };
 
+using BaodingPixelFns = PixelObservationEnvFns<MyoChallengeBaodingEnvFns>;
 using MyoChallengeBaodingEnvSpec = EnvSpec<MyoChallengeBaodingEnvFns>;
-using MyoChallengeBaodingPixelEnvFns =
-    PixelObservationEnvFns<MyoChallengeBaodingEnvFns>;
-using MyoChallengeBaodingPixelEnvSpec =
-    EnvSpec<MyoChallengeBaodingPixelEnvFns>;
+using MyoChallengeBaodingPixelEnvSpec = EnvSpec<BaodingPixelFns>;
 
 class MyoChallengeBimanualEnvFns {
  public:
@@ -407,7 +434,10 @@ class MyoChallengeBimanualEnvFns {
     return MakeDict(
         "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(5),
         "frame_stack"_.Bind(1), "model_path"_.Bind(std::string()),
-        "normalize_act"_.Bind(true), "obs_dim"_.Bind(0), "qpos_dim"_.Bind(0),
+        "normalize_act"_.Bind(true), "muscle_condition"_.Bind(std::string()),
+        "fatigue_reset_vec"_.Bind(std::vector<double>{}),
+        "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
+        "qpos_dim"_.Bind(0),
         "qvel_dim"_.Bind(0), "act_dim"_.Bind(0), "action_dim"_.Bind(0),
         "proximity_th"_.Bind(0.17), "start_center"_.Bind(std::vector<double>{}),
         "goal_center"_.Bind(std::vector<double>{}),
@@ -459,11 +489,9 @@ class MyoChallengeBimanualEnvFns {
   }
 };
 
+using BimanualPixelFns = PixelObservationEnvFns<MyoChallengeBimanualEnvFns>;
 using MyoChallengeBimanualEnvSpec = EnvSpec<MyoChallengeBimanualEnvFns>;
-using MyoChallengeBimanualPixelEnvFns =
-    PixelObservationEnvFns<MyoChallengeBimanualEnvFns>;
-using MyoChallengeBimanualPixelEnvSpec =
-    EnvSpec<MyoChallengeBimanualPixelEnvFns>;
+using MyoChallengeBimanualPixelEnvSpec = EnvSpec<BimanualPixelFns>;
 
 template <typename EnvSpecT, bool kFromPixels>
 class MyoChallengeReorientEnvBase : public Env<EnvSpecT>,
@@ -532,6 +560,7 @@ class MyoChallengeReorientEnvBase : public Env<EnvSpecT>,
   std::vector<mjtNum> test_object_geom_friction_;
   std::vector<mjtNum> test_object_body_mass_;
   std::vector<bool> muscle_actuator_;
+  detail::MyoConditionState muscle_condition_state_;
 
  public:
   using Spec = EnvSpecT;
@@ -590,6 +619,11 @@ class MyoChallengeReorientEnvBase : public Env<EnvSpecT>,
     ValidateConfig();
     CacheIds();
     detail::BuildMuscleMask(model_, &muscle_actuator_);
+    detail::InitializeMyoConditionState(
+        model_, spec.config["muscle_condition"_],
+        spec.config["fatigue_reset_vec"_],
+        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
+        this->seed_, &muscle_condition_state_);
     for (int i = 0; i < model_->nq - 7; ++i) {
       data_->qpos[i] = 0.0;
     }
@@ -604,6 +638,7 @@ class MyoChallengeReorientEnvBase : public Env<EnvSpecT>,
   void Reset() override {
     done_ = false;
     elapsed_step_ = 0;
+    detail::ResetMyoConditionState(&muscle_condition_state_);
     ResetToInitialState();
     RestoreModelState();
     ApplyModelRandomization();
@@ -617,7 +652,9 @@ class MyoChallengeReorientEnvBase : public Env<EnvSpecT>,
     const auto* raw = static_cast<const float*>(action["action"_].Data());
     detail::ApplyMyoSuiteAction(model_, data_, muscle_actuator_, normalize_act_,
                                 raw);
-    DoSimulation();
+    detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
+                                         &muscle_condition_state_);
+    detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
     done_ = reward.done || elapsed_step_ >= max_episode_steps_;
@@ -1004,6 +1041,7 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
   std::vector<float> test_object_geom_rgba_;
   std::vector<mjtNum> test_object_geom_friction_;
   std::vector<bool> muscle_actuator_;
+  detail::MyoConditionState muscle_condition_state_;
 
  public:
   using Spec = EnvSpecT;
@@ -1060,6 +1098,11 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
     ValidateConfig();
     CacheIds();
     detail::BuildMuscleMask(model_, &muscle_actuator_);
+    detail::InitializeMyoConditionState(
+        model_, spec.config["muscle_condition"_],
+        spec.config["fatigue_reset_vec"_],
+        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
+        this->seed_, &muscle_condition_state_);
     int key_frame_id = has_obj_xyz_range_ ? 1 : 0;
     initial_qpos_override_.assign(
         model_->key_qpos + key_frame_id * model_->nq,
@@ -1076,6 +1119,7 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
   void Reset() override {
     done_ = false;
     elapsed_step_ = 0;
+    detail::ResetMyoConditionState(&muscle_condition_state_);
     for (int attempt = 0; attempt < 16; ++attempt) {
       ResetToInitialState();
       RestoreModelState();
@@ -1094,7 +1138,9 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
     const auto* raw = static_cast<const float*>(action["action"_].Data());
     detail::ApplyMyoSuiteAction(model_, data_, muscle_actuator_, normalize_act_,
                                 raw);
-    DoSimulation();
+    detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
+                                         &muscle_condition_state_);
+    detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
     done_ = reward.done || elapsed_step_ >= max_episode_steps_;
@@ -1282,17 +1328,25 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
     if (!using_test_override && has_obj_geom_range_) {
       int start_geom = model_->body_geomadr[object_bid_];
       int geom_count = model_->body_geomnum[object_bid_];
-      static constexpr std::array<int, 5> kGeomTypes = {2, 3, 4, 5, 6};
-      constexpr mjtNum kHalfPi = static_cast<mjtNum>(1.5707963267948966);
+      constexpr std::array<int, 5> geom_types = {2, 3, 4, 5, 6};
+      const auto half_pi_value = static_cast<mjtNum>(1.5707963267948966);
       std::uniform_int_distribution<int> type_dist(
-          0, static_cast<int>(kGeomTypes.size() - 1));
-      std::array<mjtNum, 3> half_pi = {-kHalfPi, -kHalfPi, -kHalfPi};
-      std::array<mjtNum, 3> pos_half_pi = {kHalfPi, kHalfPi, kHalfPi};
+          0, static_cast<int>(geom_types.size() - 1));
+      std::array<mjtNum, 3> half_pi = {
+          -half_pi_value,
+          -half_pi_value,
+          -half_pi_value,
+      };
+      std::array<mjtNum, 3> pos_half_pi = {
+          half_pi_value,
+          half_pi_value,
+          half_pi_value,
+      };
       mjtNum max_size =
           std::max({obj_geom_high_[0], obj_geom_high_[1], obj_geom_high_[2]});
       for (int i = 0; i < geom_count; ++i) {
         int gid = start_geom + i;
-        model_->geom_type[gid] = kGeomTypes[type_dist(gen_)];
+        model_->geom_type[gid] = geom_types[type_dist(gen_)];
         auto geom_size =
             challenge_detail::UniformVec3(&gen_, obj_geom_low_, obj_geom_high_);
         std::memcpy(model_->geom_size + gid * 3, geom_size.data(),
@@ -1571,6 +1625,7 @@ class MyoChallengeBaodingEnvBase : public Env<EnvSpecT>,
   std::vector<mjtNum> test_object2_geom_size_;
   std::vector<mjtNum> test_object1_geom_friction_;
   std::vector<mjtNum> test_object2_geom_friction_;
+  detail::MyoConditionState muscle_condition_state_;
 
  public:
   using Spec = EnvSpecT;
@@ -1608,9 +1663,8 @@ class MyoChallengeBaodingEnvBase : public Env<EnvSpecT>,
                             spec.config["obj_size_high"_] != 0.0),
         has_obj_mass_range_(spec.config["obj_mass_low"_] != 0.0 ||
                             spec.config["obj_mass_high"_] != 0.0),
-        has_obj_friction_range_(
-            !spec.config["obj_friction_low"_].empty() &&
-            !spec.config["obj_friction_high"_].empty()),
+        has_obj_friction_range_(!spec.config["obj_friction_low"_].empty() &&
+                                !spec.config["obj_friction_high"_].empty()),
         test_reset_qpos_(detail::ToMjtVector(spec.config["test_reset_qpos"_])),
         test_reset_qvel_(detail::ToMjtVector(spec.config["test_reset_qvel"_])),
         test_reset_act_(detail::ToMjtVector(spec.config["test_reset_act"_])),
@@ -1646,6 +1700,11 @@ class MyoChallengeBaodingEnvBase : public Env<EnvSpecT>,
     ValidateConfig();
     CacheIds();
     detail::BuildMuscleMask(model_, &muscle_actuator_);
+    detail::InitializeMyoConditionState(
+        model_, spec.config["muscle_condition"_],
+        spec.config["fatigue_reset_vec"_],
+        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
+        this->seed_, &muscle_condition_state_);
     for (int i = 0; i < model_->nq - 14; ++i) {
       data_->qpos[i] = 0.0;
     }
@@ -1664,6 +1723,7 @@ class MyoChallengeBaodingEnvBase : public Env<EnvSpecT>,
     done_ = false;
     elapsed_step_ = 0;
     counter_ = 0;
+    detail::ResetMyoConditionState(&muscle_condition_state_);
     ResetToInitialState();
     RestoreModelState();
     SampleEpisodeParameters();
@@ -1680,7 +1740,9 @@ class MyoChallengeBaodingEnvBase : public Env<EnvSpecT>,
     const auto* raw = static_cast<const float*>(action["action"_].Data());
     detail::ApplyMyoSuiteAction(model_, data_, muscle_actuator_, normalize_act_,
                                 raw);
-    DoSimulation();
+    detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
+                                         &muscle_condition_state_);
+    detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++counter_;
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
@@ -1724,31 +1786,45 @@ class MyoChallengeBaodingEnvBase : public Env<EnvSpecT>,
   void CacheDefaultState() {
     detail::CopyModelSitePos(model_, target1_sid_, &default_target1_site_pos_);
     detail::CopyModelSitePos(model_, target2_sid_, &default_target2_site_pos_);
-    detail::CopyModelGeomSize(model_, object1_gid_, &default_object1_geom_size_);
-    detail::CopyModelGeomSize(model_, object2_gid_, &default_object2_geom_size_);
+    detail::CopyModelGeomSize(model_, object1_gid_,
+                              &default_object1_geom_size_);
+    detail::CopyModelGeomSize(model_, object2_gid_,
+                              &default_object2_geom_size_);
     detail::CopyModelGeomFriction(model_, object1_gid_,
                                   &default_object1_geom_friction_);
     detail::CopyModelGeomFriction(model_, object2_gid_,
                                   &default_object2_geom_friction_);
-    detail::CopyModelGeomRgba(model_, object1_gid_, &default_object1_geom_rgba_);
-    detail::CopyModelGeomRgba(model_, object2_gid_, &default_object2_geom_rgba_);
-    detail::CopyModelBodyMass(model_, object1_bid_, &default_object1_body_mass_);
-    detail::CopyModelBodyMass(model_, object2_bid_, &default_object2_body_mass_);
+    detail::CopyModelGeomRgba(model_, object1_gid_,
+                              &default_object1_geom_rgba_);
+    detail::CopyModelGeomRgba(model_, object2_gid_,
+                              &default_object2_geom_rgba_);
+    detail::CopyModelBodyMass(model_, object1_bid_,
+                              &default_object1_body_mass_);
+    detail::CopyModelBodyMass(model_, object2_bid_,
+                              &default_object2_body_mass_);
   }
 
   void RestoreModelState() {
-    detail::RestoreModelSitePos(model_, target1_sid_, default_target1_site_pos_);
-    detail::RestoreModelSitePos(model_, target2_sid_, default_target2_site_pos_);
-    detail::RestoreModelGeomSize(model_, object1_gid_, default_object1_geom_size_);
-    detail::RestoreModelGeomSize(model_, object2_gid_, default_object2_geom_size_);
+    detail::RestoreModelSitePos(model_, target1_sid_,
+                                default_target1_site_pos_);
+    detail::RestoreModelSitePos(model_, target2_sid_,
+                                default_target2_site_pos_);
+    detail::RestoreModelGeomSize(model_, object1_gid_,
+                                 default_object1_geom_size_);
+    detail::RestoreModelGeomSize(model_, object2_gid_,
+                                 default_object2_geom_size_);
     detail::RestoreModelGeomFriction(model_, object1_gid_,
                                      default_object1_geom_friction_);
     detail::RestoreModelGeomFriction(model_, object2_gid_,
                                      default_object2_geom_friction_);
-    detail::RestoreModelGeomRgba(model_, object1_gid_, default_object1_geom_rgba_);
-    detail::RestoreModelGeomRgba(model_, object2_gid_, default_object2_geom_rgba_);
-    detail::RestoreModelBodyMass(model_, object1_bid_, default_object1_body_mass_);
-    detail::RestoreModelBodyMass(model_, object2_bid_, default_object2_body_mass_);
+    detail::RestoreModelGeomRgba(model_, object1_gid_,
+                                 default_object1_geom_rgba_);
+    detail::RestoreModelGeomRgba(model_, object2_gid_,
+                                 default_object2_geom_rgba_);
+    detail::RestoreModelBodyMass(model_, object1_bid_,
+                                 default_object1_body_mass_);
+    detail::RestoreModelBodyMass(model_, object2_bid_,
+                                 default_object2_body_mass_);
   }
 
   void SampleEpisodeParameters() {
@@ -1784,33 +1860,34 @@ class MyoChallengeBaodingEnvBase : public Env<EnvSpecT>,
                     ? test_y_radius_
                     : challenge_detail::UniformScalar(&gen_, goal_yrange_low_,
                                                       goal_yrange_high_);
-    goal_time_period_ =
-        challenge_detail::UniformScalar(&gen_, goal_time_period_low_,
-                                        goal_time_period_high_);
+    goal_time_period_ = challenge_detail::UniformScalar(
+        &gen_, goal_time_period_low_, goal_time_period_high_);
   }
 
   void ApplyObjectRandomization() {
     if (!test_object1_body_mass_.empty()) {
-      detail::RestoreModelBodyMass(model_, object1_bid_, test_object1_body_mass_[0]);
+      detail::RestoreModelBodyMass(model_, object1_bid_,
+                                   test_object1_body_mass_[0]);
     } else if (has_obj_mass_range_) {
-      detail::RestoreModelBodyMass(
-          model_, object1_bid_,
-          challenge_detail::UniformScalar(&gen_, obj_mass_low_, obj_mass_high_));
+      detail::RestoreModelBodyMass(model_, object1_bid_,
+                                   challenge_detail::UniformScalar(
+                                       &gen_, obj_mass_low_, obj_mass_high_));
     }
     if (!test_object2_body_mass_.empty()) {
-      detail::RestoreModelBodyMass(model_, object2_bid_, test_object2_body_mass_[0]);
+      detail::RestoreModelBodyMass(model_, object2_bid_,
+                                   test_object2_body_mass_[0]);
     } else if (has_obj_mass_range_) {
-      detail::RestoreModelBodyMass(
-          model_, object2_bid_,
-          challenge_detail::UniformScalar(&gen_, obj_mass_low_, obj_mass_high_));
+      detail::RestoreModelBodyMass(model_, object2_bid_,
+                                   challenge_detail::UniformScalar(
+                                       &gen_, obj_mass_low_, obj_mass_high_));
     }
 
     if (!test_object1_geom_friction_.empty()) {
       detail::RestoreModelGeomFriction(model_, object1_gid_,
                                        test_object1_geom_friction_);
     } else if (has_obj_friction_range_) {
-      auto friction =
-          challenge_detail::UniformVec3(&gen_, obj_friction_low_, obj_friction_high_);
+      auto friction = challenge_detail::UniformVec3(&gen_, obj_friction_low_,
+                                                    obj_friction_high_);
       detail::RestoreModelGeomFriction(
           model_, object1_gid_,
           std::vector<mjtNum>(friction.begin(), friction.end()));
@@ -1819,22 +1896,24 @@ class MyoChallengeBaodingEnvBase : public Env<EnvSpecT>,
       detail::RestoreModelGeomFriction(model_, object2_gid_,
                                        test_object2_geom_friction_);
     } else if (has_obj_friction_range_) {
-      auto friction =
-          challenge_detail::UniformVec3(&gen_, obj_friction_low_, obj_friction_high_);
+      auto friction = challenge_detail::UniformVec3(&gen_, obj_friction_low_,
+                                                    obj_friction_high_);
       detail::RestoreModelGeomFriction(
           model_, object2_gid_,
           std::vector<mjtNum>(friction.begin(), friction.end()));
     }
 
     if (!test_object1_geom_size_.empty()) {
-      detail::RestoreModelGeomSize(model_, object1_gid_, test_object1_geom_size_);
+      detail::RestoreModelGeomSize(model_, object1_gid_,
+                                   test_object1_geom_size_);
     } else if (has_obj_size_range_) {
       mjtNum size =
           challenge_detail::UniformScalar(&gen_, obj_size_low_, obj_size_high_);
       detail::RestoreModelGeomSize(model_, object1_gid_, {size, size, size});
     }
     if (!test_object2_geom_size_.empty()) {
-      detail::RestoreModelGeomSize(model_, object2_gid_, test_object2_geom_size_);
+      detail::RestoreModelGeomSize(model_, object2_gid_,
+                                   test_object2_geom_size_);
     } else if (has_obj_size_range_) {
       mjtNum size =
           challenge_detail::UniformScalar(&gen_, obj_size_low_, obj_size_high_);
@@ -1948,8 +2027,8 @@ class MyoChallengeBaodingEnvBase : public Env<EnvSpecT>,
     info.pos_dist_2_term = -target2_dist;
     info.act_reg_term = -act_reg;
     info.sparse = -(target1_dist + target2_dist);
-    info.solved = target1_dist < proximity_th_ && target2_dist < proximity_th_ &&
-                  !is_fall;
+    info.solved = target1_dist < proximity_th_ &&
+                  target2_dist < proximity_th_ && !is_fall;
     info.done = is_fall;
     info.dense_reward = reward_pos_dist_1_w_ * info.pos_dist_1_term +
                         reward_pos_dist_2_w_ * info.pos_dist_2_term;
@@ -2084,6 +2163,7 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
   std::vector<mjtNum> test_object_body_mass_;
   std::vector<mjtNum> test_object_geom_size_;
   std::vector<mjtNum> test_object_geom_friction_;
+  detail::MyoConditionState muscle_condition_state_;
 
  public:
   using Spec = EnvSpecT;
@@ -2109,9 +2189,8 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
         has_obj_scale_change_(!spec.config["obj_scale_change"_].empty()),
         has_obj_mass_range_(spec.config["obj_mass_low"_] != 0.0 ||
                             spec.config["obj_mass_high"_] != 0.0),
-        has_obj_friction_range_(
-            !spec.config["obj_friction_low"_].empty() &&
-            !spec.config["obj_friction_high"_].empty()),
+        has_obj_friction_range_(!spec.config["obj_friction_low"_].empty() &&
+                                !spec.config["obj_friction_high"_].empty()),
         obj_mass_low_(spec.config["obj_mass_low"_]),
         obj_mass_high_(spec.config["obj_mass_high"_]),
         test_reset_qpos_(detail::ToMjtVector(spec.config["test_reset_qpos"_])),
@@ -2150,6 +2229,11 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
     ValidateConfig();
     CacheIds();
     detail::BuildMuscleMask(model_, &muscle_actuator_);
+    detail::InitializeMyoConditionState(
+        model_, spec.config["muscle_condition"_],
+        spec.config["fatigue_reset_vec"_],
+        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
+        this->seed_, &muscle_condition_state_);
     grasp_key_qpos_.assign(model_->key_qpos + 2 * model_->nq,
                            model_->key_qpos + 3 * model_->nq);
     InitializeRobotEnv();
@@ -2162,6 +2246,7 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
     elapsed_step_ = 0;
     max_force_seen_ = 0.0;
     goal_touch_ = 0;
+    detail::ResetMyoConditionState(&muscle_condition_state_);
     ResetToInitialState();
     RestoreModelState();
     SampleStartAndGoal();
@@ -2175,9 +2260,20 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
 
   void Step(const Action& action) override {
     const auto* raw = static_cast<const float*>(action["action"_].Data());
-    detail::ApplyMyoSuiteAction(model_, data_, muscle_actuator_, normalize_act_,
-                                raw);
-    DoSimulation();
+    for (int actuator = 0; actuator < model_->nu; ++actuator) {
+      mjtNum value = static_cast<mjtNum>(raw[actuator]);
+      if (normalize_act_ && muscle_actuator_[actuator] && model_->na != 0) {
+        value = detail::MuscleActivation(detail::ClampNormalized(value));
+      } else if (normalize_act_ && !muscle_actuator_[actuator]) {
+        mjtNum low = model_->actuator_ctrlrange[2 * actuator + 0];
+        mjtNum high = model_->actuator_ctrlrange[2 * actuator + 1];
+        value = 0.5 * (low + high) + value * 0.5 * (high - low);
+      }
+      data_->ctrl[actuator] = value;
+    }
+    detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
+                                         &muscle_condition_state_);
+    detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
     done_ = reward.done || elapsed_step_ >= max_episode_steps_;
@@ -2219,6 +2315,8 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
       throw std::runtime_error("MyoChallenge Bimanual ids missing.");
     }
 
+    CenterBoxMeshIfNeeded();
+
     myo_body_min_ = model_->nbody;
     myo_body_max_ = -1;
     prosth_body_min_ = model_->nbody;
@@ -2255,18 +2353,65 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
     detail::CopyModelBodyPos(model_, start_bid_, &default_start_body_pos_);
     detail::CopyModelBodyPos(model_, goal_bid_, &default_goal_body_pos_);
     detail::CopyModelGeomSize(model_, obj_gid_, &default_object_geom_size_);
-    detail::CopyModelGeomFriction(model_, obj_gid_, &default_object_geom_friction_);
+    detail::CopyModelGeomFriction(model_, obj_gid_,
+                                  &default_object_geom_friction_);
     detail::CopyModelBodyMass(model_, obj_bid_, &default_object_body_mass_);
     max_force_sensor_adr_ = model_->sensor_adr[0];
 
     int expected_obs = 1 + static_cast<int>(myo_joint_qpos_indices_.size()) +
                        static_cast<int>(myo_dof_indices_.size()) +
                        static_cast<int>(prosth_joint_qpos_indices_.size()) +
-                       static_cast<int>(prosth_dof_indices_.size()) + 7 + 6 + 5;
+                       static_cast<int>(prosth_dof_indices_.size()) + 7 + 6 +
+                       5 + model_->na;
     if (expected_obs != spec_.config["obs_dim"_]) {
       throw std::runtime_error(
           "MyoChallenge Bimanual obs_dim does not match model.");
     }
+  }
+
+  void CenterBoxMeshIfNeeded() {
+    if (!has_obj_scale_change_ || obj_gid_ <= 0) {
+      return;
+    }
+    int box_mesh = -1;
+    for (int mesh = 0; mesh < model_->nmesh; ++mesh) {
+      const char* raw_name = mj_id2name(model_, mjOBJ_MESH, mesh);
+      std::string_view name = raw_name != nullptr ? raw_name : "";
+      if (name.find("box") != std::string_view::npos) {
+        box_mesh = mesh;
+        break;
+      }
+    }
+    if (box_mesh < 0) {
+      return;
+    }
+    int vert_adr = model_->mesh_vertadr[box_mesh];
+    int vert_num = model_->mesh_vertnum[box_mesh];
+    const mjtNum* mesh_quat = model_->geom_quat + (obj_gid_ - 1) * 4;
+    std::array<mjtNum, 3> mesh_pos{};
+    std::array<mjtNum, 3> box_pos{};
+    std::memcpy(mesh_pos.data(), model_->geom_pos + (obj_gid_ - 1) * 3,
+                sizeof(mjtNum) * 3);
+    std::memcpy(box_pos.data(), model_->geom_pos + obj_gid_ * 3,
+                sizeof(mjtNum) * 3);
+    for (int vertex = 0; vertex < vert_num; ++vertex) {
+      float* vert = model_->mesh_vert + (vert_adr + vertex) * 3;
+      auto rotated_vert = challenge_detail::RotateByQuat(mesh_quat, vert);
+      auto rotated_normal = challenge_detail::RotateByQuat(
+          mesh_quat, model_->mesh_normal + (vert_adr + vertex) * 3);
+      for (int axis = 0; axis < 3; ++axis) {
+        vert[axis] = static_cast<float>(rotated_vert[axis] + mesh_pos[axis] -
+                                        box_pos[axis]);
+        model_->mesh_normal[(vert_adr + vertex) * 3 + axis] =
+            rotated_normal[axis];
+      }
+    }
+    model_->geom_quat[(obj_gid_ - 1) * 4 + 0] = 1.0;
+    model_->geom_quat[(obj_gid_ - 1) * 4 + 1] = 0.0;
+    model_->geom_quat[(obj_gid_ - 1) * 4 + 2] = 0.0;
+    model_->geom_quat[(obj_gid_ - 1) * 4 + 3] = 0.0;
+    std::memcpy(model_->geom_pos + (obj_gid_ - 1) * 3, box_pos.data(),
+                sizeof(mjtNum) * 3);
   }
 
   void RestoreModelState() {
@@ -2284,23 +2429,22 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
     } else {
       for (int axis = 0; axis < 3; ++axis) {
         start_pos_[axis] =
-            start_center_[axis] + start_shifts_[axis] *
-                                      challenge_detail::UniformScalar(&gen_, -1.0,
-                                                                      1.0);
+            start_center_[axis] +
+            start_shifts_[axis] *
+                challenge_detail::UniformScalar(&gen_, -1.0, 1.0);
       }
     }
     if (!test_goal_pos_.empty()) {
       std::copy_n(test_goal_pos_.begin(), 3, goal_pos_.begin());
     } else {
       for (int axis = 0; axis < 3; ++axis) {
-        goal_pos_[axis] =
-            goal_center_[axis] + goal_shifts_[axis] *
-                                     challenge_detail::UniformScalar(&gen_, -1.0,
-                                                                     1.0);
+        goal_pos_[axis] = goal_center_[axis] +
+                          goal_shifts_[axis] *
+                              challenge_detail::UniformScalar(&gen_, -1.0, 1.0);
       }
     }
-    detail::RestoreModelBodyPos(
-        model_, start_bid_, {start_pos_[0], start_pos_[1], start_pos_[2]});
+    detail::RestoreModelBodyPos(model_, start_bid_,
+                                {start_pos_[0], start_pos_[1], start_pos_[2]});
     detail::RestoreModelBodyPos(model_, goal_bid_,
                                 {goal_pos_[0], goal_pos_[1], goal_pos_[2]});
   }
@@ -2309,18 +2453,19 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
     if (!test_object_body_mass_.empty()) {
       detail::RestoreModelBodyMass(model_, obj_bid_, test_object_body_mass_[0]);
     } else if (has_obj_mass_range_) {
-      detail::RestoreModelBodyMass(
-          model_, obj_bid_,
-          challenge_detail::UniformScalar(&gen_, obj_mass_low_, obj_mass_high_));
+      detail::RestoreModelBodyMass(model_, obj_bid_,
+                                   challenge_detail::UniformScalar(
+                                       &gen_, obj_mass_low_, obj_mass_high_));
     }
     if (!test_object_geom_friction_.empty()) {
       detail::RestoreModelGeomFriction(model_, obj_gid_,
                                        test_object_geom_friction_);
     } else if (has_obj_friction_range_) {
-      auto friction =
-          challenge_detail::UniformVec3(&gen_, obj_friction_low_, obj_friction_high_);
+      auto friction = challenge_detail::UniformVec3(&gen_, obj_friction_low_,
+                                                    obj_friction_high_);
       detail::RestoreModelGeomFriction(
-          model_, obj_gid_, std::vector<mjtNum>(friction.begin(), friction.end()));
+          model_, obj_gid_,
+          std::vector<mjtNum>(friction.begin(), friction.end()));
     }
     if (!test_object_geom_size_.empty()) {
       detail::RestoreModelGeomSize(model_, obj_gid_, test_object_geom_size_);
@@ -2365,12 +2510,17 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
     data_->qpos[manip_qpos_start_ + 1] = start_pos_[1];
     data_->qpos[manip_qpos_start_ + 2] =
         start_pos_[2] + static_cast<mjtNum>(0.1);
-    mj_forward(model_, data_);
     init_obj_z_ = data_->site_xpos[obj_sid_ * 3 + 2];
     init_palm_z_ = data_->site_xpos[palm_sid_ * 3 + 2];
   }
 
-  enum class ObjLabel { MYO = 0, PROSTH = 1, START = 2, GOAL = 3, ENV = 4 };
+  enum class ObjLabel : std::uint8_t {
+    MYO = 0,
+    PROSTH = 1,
+    START = 2,
+    GOAL = 3,
+    ENV = 4,
+  };
 
   ObjLabel ClassifyBody(int body_id) const {
     if (myo_body_min_ <= body_id && body_id <= myo_body_max_) {
@@ -2395,9 +2545,9 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
       int body1 = model_->geom_bodyid[contact.geom1];
       int body2 = model_->geom_bodyid[contact.geom2];
       if (body1 == obj_bid_) {
-        touch[static_cast<int>(ClassifyBody(body2))] += 1.0;
+        touch[static_cast<int>(ClassifyBody(body2))] = 1.0;
       } else if (body2 == obj_bid_) {
-        touch[static_cast<int>(ClassifyBody(body1))] += 1.0;
+        touch[static_cast<int>(ClassifyBody(body1))] = 1.0;
       }
     }
     return touch;
@@ -2431,6 +2581,9 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
                data_->qvel + manip_dof_start_ + 6);
     auto touch = const_cast<MyoChallengeBimanualEnvBase*>(this)->TouchVector();
     obs.insert(obs.end(), touch.begin(), touch.end());
+    if (model_->na > 0) {
+      obs.insert(obs.end(), data_->act, data_->act + model_->na);
+    }
     return obs;
   }
 
@@ -2439,8 +2592,8 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
     if (touch[static_cast<int>(ObjLabel::GOAL)] > 0.0) {
       ++goal_touch_;
     }
-    max_force_seen_ =
-        std::max(max_force_seen_, std::abs(data_->sensordata[max_force_sensor_adr_]));
+    max_force_seen_ = std::max(
+        max_force_seen_, std::abs(data_->sensordata[max_force_sensor_adr_]));
     auto palm_pos = SitePos(palm_sid_);
     auto obj_pos = SitePos(obj_sid_);
     std::array<mjtNum, 3> rpalm_pos{};
@@ -2457,11 +2610,12 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
     mjtNum act = detail::ActReg(model_, data_);
     mjtNum fin_dis = 0.0;
     for (int site_id : fin_sid_) {
-      fin_dis += challenge_detail::Norm3(challenge_detail::Sub3(
-          SitePos(site_id), obj_pos));
+      fin_dis += challenge_detail::Norm3(
+          challenge_detail::Sub3(SitePos(site_id), obj_pos));
     }
     std::array<mjtNum, 3> goal = {goal_pos_[0], goal_pos_[1], kPillarHeight};
-    mjtNum goal_dist = challenge_detail::Norm3(challenge_detail::Sub3(obj_pos, goal));
+    mjtNum goal_dist =
+        challenge_detail::Norm3(challenge_detail::Sub3(obj_pos, goal));
 
     RewardInfo reward;
     reward.reach_dist = reach_dist + std::log(reach_dist + 1e-6);
@@ -2469,9 +2623,10 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
     reward.fin_dis = fin_dis + std::log(fin_dis + 1e-6);
     reward.pass_err = pass_dist + std::log(pass_dist + 1e-3);
     reward.goal_dist = goal_dist;
-    reward.solved = goal_dist < proximity_th_ && goal_touch_ >= kTargetGoalTouch;
-    reward.done = data_->time > kMaxTime || obj_pos[2] < static_cast<mjtNum>(0.3) ||
-                  reward.solved;
+    reward.solved =
+        goal_dist < proximity_th_ && goal_touch_ >= kTargetGoalTouch;
+    reward.done = data_->time > kMaxTime ||
+                  obj_pos[2] < static_cast<mjtNum>(0.3) || reward.solved;
     reward.dense_reward = reward_reach_dist_w_ * reward.reach_dist +
                           reward_act_w_ * reward.act +
                           reward_fin_dis_w_ * reward.fin_dis +
@@ -2511,37 +2666,66 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
   }
 };
 
-using MyoChallengeReorientEnv =
-    MyoChallengeReorientEnvBase<MyoChallengeReorientEnvSpec, false>;
-using MyoChallengeReorientPixelEnv =
-    MyoChallengeReorientEnvBase<MyoChallengeReorientPixelEnvSpec, true>;
-using MyoChallengeReorientEnvPool = AsyncEnvPool<MyoChallengeReorientEnv>;
-using MyoChallengeReorientPixelEnvPool =
-    AsyncEnvPool<MyoChallengeReorientPixelEnv>;
+template <typename Spec>
+using ReorientEnvAlias = MyoChallengeReorientEnvBase<Spec, false>;
 
-using MyoChallengeRelocateEnv =
-    MyoChallengeRelocateEnvBase<MyoChallengeRelocateEnvSpec, false>;
-using MyoChallengeRelocatePixelEnv =
-    MyoChallengeRelocateEnvBase<MyoChallengeRelocatePixelEnvSpec, true>;
-using MyoChallengeRelocateEnvPool = AsyncEnvPool<MyoChallengeRelocateEnv>;
-using MyoChallengeRelocatePixelEnvPool =
-    AsyncEnvPool<MyoChallengeRelocatePixelEnv>;
+template <typename Spec>
+using ReorientPixelEnvAlias = MyoChallengeReorientEnvBase<Spec, true>;
 
-using MyoChallengeBaodingEnv =
-    MyoChallengeBaodingEnvBase<MyoChallengeBaodingEnvSpec, false>;
-using MyoChallengeBaodingPixelEnv =
-    MyoChallengeBaodingEnvBase<MyoChallengeBaodingPixelEnvSpec, true>;
-using MyoChallengeBaodingEnvPool = AsyncEnvPool<MyoChallengeBaodingEnv>;
-using MyoChallengeBaodingPixelEnvPool =
-    AsyncEnvPool<MyoChallengeBaodingPixelEnv>;
+template <typename Spec>
+using RelocateEnvAlias = MyoChallengeRelocateEnvBase<Spec, false>;
 
-using MyoChallengeBimanualEnv =
-    MyoChallengeBimanualEnvBase<MyoChallengeBimanualEnvSpec, false>;
-using MyoChallengeBimanualPixelEnv =
-    MyoChallengeBimanualEnvBase<MyoChallengeBimanualPixelEnvSpec, true>;
-using MyoChallengeBimanualEnvPool = AsyncEnvPool<MyoChallengeBimanualEnv>;
-using MyoChallengeBimanualPixelEnvPool =
-    AsyncEnvPool<MyoChallengeBimanualPixelEnv>;
+template <typename Spec>
+using RelocatePixelEnvAlias = MyoChallengeRelocateEnvBase<Spec, true>;
+
+template <typename Spec>
+using BaodingEnvAlias = MyoChallengeBaodingEnvBase<Spec, false>;
+
+template <typename Spec>
+using BaodingPixelEnvAlias = MyoChallengeBaodingEnvBase<Spec, true>;
+
+template <typename Spec>
+using BimanualEnvAlias = MyoChallengeBimanualEnvBase<Spec, false>;
+
+template <typename Spec>
+using BimanualPixelEnvAlias = MyoChallengeBimanualEnvBase<Spec, true>;
+
+using ReorientSpec = MyoChallengeReorientEnvSpec;
+using ReorientPixelSpec = MyoChallengeReorientPixelEnvSpec;
+using RelocateSpec = MyoChallengeRelocateEnvSpec;
+using RelocatePixelSpec = MyoChallengeRelocatePixelEnvSpec;
+using BaodingSpec = MyoChallengeBaodingEnvSpec;
+using BaodingPixelSpec = MyoChallengeBaodingPixelEnvSpec;
+using BimanualSpec = MyoChallengeBimanualEnvSpec;
+using BimanualPixelSpec = MyoChallengeBimanualPixelEnvSpec;
+
+using ReorientEnv = ReorientEnvAlias<ReorientSpec>;
+using ReorientPixelEnv = ReorientPixelEnvAlias<ReorientPixelSpec>;
+using MyoChallengeReorientEnv = ReorientEnv;
+using MyoChallengeReorientPixelEnv = ReorientPixelEnv;
+using MyoChallengeReorientEnvPool = AsyncEnvPool<ReorientEnv>;
+using MyoChallengeReorientPixelEnvPool = AsyncEnvPool<ReorientPixelEnv>;
+
+using RelocateEnv = RelocateEnvAlias<RelocateSpec>;
+using RelocatePixelEnv = RelocatePixelEnvAlias<RelocatePixelSpec>;
+using MyoChallengeRelocateEnv = RelocateEnv;
+using MyoChallengeRelocatePixelEnv = RelocatePixelEnv;
+using MyoChallengeRelocateEnvPool = AsyncEnvPool<RelocateEnv>;
+using MyoChallengeRelocatePixelEnvPool = AsyncEnvPool<RelocatePixelEnv>;
+
+using BaodingEnv = BaodingEnvAlias<BaodingSpec>;
+using BaodingPixelEnv = BaodingPixelEnvAlias<BaodingPixelSpec>;
+using MyoChallengeBaodingEnv = BaodingEnv;
+using MyoChallengeBaodingPixelEnv = BaodingPixelEnv;
+using MyoChallengeBaodingEnvPool = AsyncEnvPool<BaodingEnv>;
+using MyoChallengeBaodingPixelEnvPool = AsyncEnvPool<BaodingPixelEnv>;
+
+using BimanualEnv = BimanualEnvAlias<BimanualSpec>;
+using BimanualPixelEnv = BimanualPixelEnvAlias<BimanualPixelSpec>;
+using MyoChallengeBimanualEnv = BimanualEnv;
+using MyoChallengeBimanualPixelEnv = BimanualPixelEnv;
+using MyoChallengeBimanualEnvPool = AsyncEnvPool<BimanualEnv>;
+using MyoChallengeBimanualPixelEnvPool = AsyncEnvPool<BimanualPixelEnv>;
 
 }  // namespace myosuite_envpool
 

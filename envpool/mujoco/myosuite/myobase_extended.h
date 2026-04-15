@@ -26,6 +26,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "envpool/mujoco/myosuite/myobase.h"
@@ -33,8 +34,6 @@
 namespace myosuite_envpool {
 
 namespace detail {
-
-constexpr mjtNum kPi = static_cast<mjtNum>(3.14159265358979323846);
 
 inline std::array<mjtNum, 4> EulerXYZToQuat(mjtNum rx, mjtNum ry, mjtNum rz) {
   mjtNum cx = std::cos(rx * static_cast<mjtNum>(0.5));
@@ -97,7 +96,10 @@ class MyoSuiteReorientEnvFns {
     return MakeDict(
         "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(5),
         "frame_stack"_.Bind(1), "model_path"_.Bind(std::string()),
-        "normalize_act"_.Bind(true), "obs_dim"_.Bind(0), "qpos_dim"_.Bind(0),
+        "normalize_act"_.Bind(true), "muscle_condition"_.Bind(std::string()),
+        "fatigue_reset_vec"_.Bind(std::vector<double>{}),
+        "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
+        "qpos_dim"_.Bind(0),
         "qvel_dim"_.Bind(0), "act_dim"_.Bind(0), "action_dim"_.Bind(0),
         "randomization_mode"_.Bind(std::string("100")),
         "reward_pos_align_w"_.Bind(1.0), "reward_rot_align_w"_.Bind(1.0),
@@ -146,10 +148,9 @@ class MyoSuiteReorientEnvFns {
   }
 };
 
+using ReorientPixelFns = PixelObservationEnvFns<MyoSuiteReorientEnvFns>;
 using MyoSuiteReorientEnvSpec = EnvSpec<MyoSuiteReorientEnvFns>;
-using MyoSuiteReorientPixelEnvFns =
-    PixelObservationEnvFns<MyoSuiteReorientEnvFns>;
-using MyoSuiteReorientPixelEnvSpec = EnvSpec<MyoSuiteReorientPixelEnvFns>;
+using MyoSuiteReorientPixelEnvSpec = EnvSpec<ReorientPixelFns>;
 
 class MyoSuiteWalkEnvFns {
  public:
@@ -157,7 +158,10 @@ class MyoSuiteWalkEnvFns {
     return MakeDict(
         "reward_threshold"_.Bind(0.0), "frame_skip"_.Bind(10),
         "frame_stack"_.Bind(1), "model_path"_.Bind(std::string()),
-        "normalize_act"_.Bind(true), "obs_dim"_.Bind(0), "qpos_dim"_.Bind(0),
+        "normalize_act"_.Bind(true), "muscle_condition"_.Bind(std::string()),
+        "fatigue_reset_vec"_.Bind(std::vector<double>{}),
+        "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
+        "qpos_dim"_.Bind(0),
         "qvel_dim"_.Bind(0), "act_dim"_.Bind(0), "action_dim"_.Bind(0),
         "min_height"_.Bind(0.8), "max_rot"_.Bind(0.8), "hip_period"_.Bind(100),
         "reset_type"_.Bind(std::string("init")), "target_x_vel"_.Bind(0.0),
@@ -221,10 +225,9 @@ class MyoSuiteTerrainEnvFns {
   }
 };
 
+using TerrainPixelFns = PixelObservationEnvFns<MyoSuiteTerrainEnvFns>;
 using MyoSuiteTerrainEnvSpec = EnvSpec<MyoSuiteTerrainEnvFns>;
-using MyoSuiteTerrainPixelEnvFns =
-    PixelObservationEnvFns<MyoSuiteTerrainEnvFns>;
-using MyoSuiteTerrainPixelEnvSpec = EnvSpec<MyoSuiteTerrainPixelEnvFns>;
+using MyoSuiteTerrainPixelEnvSpec = EnvSpec<TerrainPixelFns>;
 
 template <typename EnvSpecT, bool kFromPixels>
 class MyoSuiteReorientEnvBase : public Env<EnvSpecT>,
@@ -278,6 +281,7 @@ class MyoSuiteReorientEnvBase : public Env<EnvSpecT>,
   std::vector<mjtNum> initial_target_bottom_pos_;
   std::vector<mjtNum> initial_success_rgba_;
   std::vector<bool> muscle_actuator_;
+  detail::MyoConditionState muscle_condition_state_;
   std::vector<mjtNum> test_reset_qpos_;
   std::vector<mjtNum> test_reset_qvel_;
   std::vector<mjtNum> test_reset_act_;
@@ -350,6 +354,11 @@ class MyoSuiteReorientEnvBase : public Env<EnvSpecT>,
     ValidateConfig();
     CacheObjects();
     detail::BuildMuscleMask(model_, &muscle_actuator_);
+    detail::InitializeMyoConditionState(
+        model_, spec.config["muscle_condition"_],
+        spec.config["fatigue_reset_vec"_],
+        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
+        this->seed_, &muscle_condition_state_);
     detail::AdjustInitialQposForNormalizedActions(model_, data_,
                                                   normalize_act_);
     for (int i = 0; i < model_->nq - 6; ++i) {
@@ -365,6 +374,7 @@ class MyoSuiteReorientEnvBase : public Env<EnvSpecT>,
   void Reset() override {
     done_ = false;
     elapsed_step_ = 0;
+    detail::ResetMyoConditionState(&muscle_condition_state_);
     ResetToInitialState();
     RestoreModelState();
     ApplyResetState();
@@ -377,7 +387,9 @@ class MyoSuiteReorientEnvBase : public Env<EnvSpecT>,
     const auto* raw = static_cast<const float*>(action["action"_].Data());
     detail::ApplyMyoSuiteAction(model_, data_, muscle_actuator_, normalize_act_,
                                 raw);
-    DoSimulation();
+    detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
+                                         &muscle_condition_state_);
+    detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
     done_ = reward.done || elapsed_step_ >= max_episode_steps_;
@@ -773,6 +785,7 @@ class MyoSuiteWalkLikeEnvBase : public Env<EnvSpecT>,
   int initial_terrain_contype_{-1};
   int initial_terrain_conaffinity_{-1};
   std::vector<bool> muscle_actuator_;
+  detail::MyoConditionState muscle_condition_state_;
   int gait_steps_{0};
   std::normal_distribution<double> init_noise_dist_{0.0, 0.02};
   std::vector<mjtNum> test_reset_qpos_;
@@ -823,6 +836,11 @@ class MyoSuiteWalkLikeEnvBase : public Env<EnvSpecT>,
     ValidateConfig();
     CacheIds();
     detail::BuildMuscleMask(model_, &muscle_actuator_);
+    detail::InitializeMyoConditionState(
+        model_, spec.config["muscle_condition"_],
+        spec.config["fatigue_reset_vec"_],
+        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
+        this->seed_, &muscle_condition_state_);
     detail::AdjustInitialQposForNormalizedActions(model_, data_,
                                                   normalize_act_);
     if (target_rot_.empty()) {
@@ -837,6 +855,7 @@ class MyoSuiteWalkLikeEnvBase : public Env<EnvSpecT>,
     done_ = false;
     elapsed_step_ = 0;
     gait_steps_ = 0;
+    detail::ResetMyoConditionState(&muscle_condition_state_);
     ResetToInitialState();
     RestoreTerrainState();
     ApplyTerrainReset();
@@ -850,7 +869,9 @@ class MyoSuiteWalkLikeEnvBase : public Env<EnvSpecT>,
     const auto* raw = static_cast<const float*>(action["action"_].Data());
     detail::ApplyMyoSuiteAction(model_, data_, muscle_actuator_, normalize_act_,
                                 raw);
-    DoSimulation();
+    detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
+                                         &muscle_condition_state_);
+    detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     ++gait_steps_;
     RewardInfo reward = ComputeRewardInfo();
@@ -1270,25 +1291,30 @@ class MyoSuiteWalkLikeEnvBase : public Env<EnvSpecT>,
 };
 
 template <typename Spec>
+using ReorientEnvBase = MyoSuiteReorientEnvBase<Spec, false>;
+
+template <typename Spec>
 using ReorientPixelEnvBase = MyoSuiteReorientEnvBase<Spec, true>;
+
+template <typename Spec>
+using WalkEnvBase = MyoSuiteWalkLikeEnvBase<Spec, false>;
 
 template <typename Spec>
 using WalkPixelEnvBase = MyoSuiteWalkLikeEnvBase<Spec, true>;
 
-using MyoSuiteReorientEnv =
-    MyoSuiteReorientEnvBase<MyoSuiteReorientEnvSpec, false>;
-using MyoSuiteReorientPixelEnv =
-    ReorientPixelEnvBase<MyoSuiteReorientPixelEnvSpec>;
-using MyoSuiteReorientEnvPool = AsyncEnvPool<MyoSuiteReorientEnv>;
-using MyoSuiteReorientPixelEnvPool = AsyncEnvPool<MyoSuiteReorientPixelEnv>;
+using ReorientEnv = ReorientEnvBase<MyoSuiteReorientEnvSpec>;
+using ReorientPixelEnv = ReorientPixelEnvBase<MyoSuiteReorientPixelEnvSpec>;
+using MyoSuiteReorientEnv = ReorientEnv;
+using MyoSuiteReorientPixelEnv = ReorientPixelEnv;
+using MyoSuiteReorientEnvPool = AsyncEnvPool<ReorientEnv>;
+using MyoSuiteReorientPixelEnvPool = AsyncEnvPool<ReorientPixelEnv>;
 
-using MyoSuiteWalkEnv = MyoSuiteWalkLikeEnvBase<MyoSuiteWalkEnvSpec, false>;
+using MyoSuiteWalkEnv = WalkEnvBase<MyoSuiteWalkEnvSpec>;
 using MyoSuiteWalkPixelEnv = WalkPixelEnvBase<MyoSuiteWalkPixelEnvSpec>;
 using MyoSuiteWalkEnvPool = AsyncEnvPool<MyoSuiteWalkEnv>;
 using MyoSuiteWalkPixelEnvPool = AsyncEnvPool<MyoSuiteWalkPixelEnv>;
 
-using MyoSuiteTerrainEnv =
-    MyoSuiteWalkLikeEnvBase<MyoSuiteTerrainEnvSpec, false>;
+using MyoSuiteTerrainEnv = WalkEnvBase<MyoSuiteTerrainEnvSpec>;
 using MyoSuiteTerrainPixelEnv = WalkPixelEnvBase<MyoSuiteTerrainPixelEnvSpec>;
 using MyoSuiteTerrainEnvPool = AsyncEnvPool<MyoSuiteTerrainEnv>;
 using MyoSuiteTerrainPixelEnvPool = AsyncEnvPool<MyoSuiteTerrainPixelEnv>;

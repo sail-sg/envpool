@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import importlib
 import sys
-import types
 from functools import cache
 from pathlib import Path
 from typing import Any
@@ -118,6 +117,10 @@ _TABLETENNIS_IDS = tuple(
 )
 _REORIENT_ALIGNMENT_OBS_ATOL = 2e-3
 _REORIENT_ALIGNMENT_ROT_ATOL = 2e-2
+_DEFAULT_ALIGNMENT_ATOL = 1e-5
+_LOCOMOTION_ALIGNMENT_ATOL = 1e-4
+_BIMANUAL_ALIGNMENT_ATOL = 5e-4
+_TABLETENNIS_ALIGNMENT_ATOL = 5e-4
 
 
 def _entry(env_id: str) -> dict[str, Any]:
@@ -568,7 +571,8 @@ def _bimanual_config(
         + len(prosth_dof)
         + 7
         + 6
-        + 5,
+        + 5
+        + model.na,
         qpos_dim=model.nq,
         qvel_dim=model.nv,
         act_dim=model.na,
@@ -646,7 +650,7 @@ def _runtrack_config(
     entry = _entry(env_id)
     kwargs = dict(entry["kwargs"])
     model = _model(kwargs["model_path"])
-    obs_dim = 1 + 1 + 17 + 17 + 2 + 3 + 4 + model.na * 4 + 2 + 2
+    obs_dim = 17 + 17 + 2 + 4 + model.na * 4 + 2 + 2
     config = MyoChallengeRunTrackEnvSpec.gen_config(
         num_envs=1,
         batch_size=1,
@@ -797,7 +801,7 @@ def _chasetag_config(
     entry = _entry(env_id)
     kwargs = dict(entry["kwargs"])
     model = _model(kwargs["model_path"])
-    obs_dim = 1 + 28 + 28 + 4 + 3 + 2 + 2 + 2 + model.na * 4
+    obs_dim = 28 + 28 + 4 + 4 + 3 + 2 + 2 + 2 + model.na * 4
     config = MyoChallengeChaseTagEnvSpec.gen_config(
         num_envs=1,
         batch_size=1,
@@ -991,146 +995,29 @@ def _find_vendored_myosuite_root() -> Path:
     raise FileNotFoundError("Unable to locate vendored myosuite source root")
 
 
-def _install_flatten_dict_stub() -> None:
-    if "flatten_dict" in sys.modules:
-        return
-    flatten_dict = types.ModuleType("flatten_dict")
-
-    def flatten(
-        mapping: dict[str, Any],
-        reducer: str = "dot",
-        keep_empty_types: tuple[type[Any], ...] = (),
-    ) -> dict[tuple[str, ...], Any]:
-        del reducer
-        out: dict[tuple[str, ...], Any] = {}
-
-        def rec(prefix: tuple[str, ...], value: Any) -> None:
-            if isinstance(value, dict):
-                if not value and dict in keep_empty_types:
-                    out[prefix] = {}
-                    return
-                for key, child in value.items():
-                    rec(prefix + (str(key),), child)
-                return
-            out[prefix] = value
-
-        rec(tuple(), mapping)
-        return out
-
-    def unflatten(
-        mapping: dict[tuple[str, ...], Any], splitter: str = "dot"
-    ) -> dict[str, Any]:
-        del splitter
-        out: dict[str, Any] = {}
-        for key, value in mapping.items():
-            parts = (
-                key if isinstance(key, tuple) else tuple(str(key).split("."))
-            )
-            cursor = out
-            for part in parts[:-1]:
-                cursor = cursor.setdefault(part, {})
-            cursor[parts[-1]] = value
-        return out
-
-    flatten_dict.__dict__["flatten"] = flatten
-    flatten_dict.__dict__["unflatten"] = unflatten
-    sys.modules["flatten_dict"] = flatten_dict
-
-
-def _install_skvideo_stub() -> None:
-    if "skvideo.io" in sys.modules:
-        return
-    skvideo = types.ModuleType("skvideo")
-    skvideo_io = types.ModuleType("skvideo.io")
-    skvideo.__dict__["io"] = skvideo_io
-    sys.modules["skvideo"] = skvideo
-    sys.modules["skvideo.io"] = skvideo_io
-
-
-def _install_termcolor_stub() -> None:
-    if "termcolor" in sys.modules:
-        return
-    termcolor = types.ModuleType("termcolor")
-
-    def colored(text: Any, *args: Any, **kwargs: Any) -> str:
-        del args, kwargs
-        return str(text)
-
-    def cprint(text: Any = "", *args: Any, **kwargs: Any) -> None:
-        del args, kwargs
-        print(text)
-
-    termcolor.__dict__["colored"] = colored
-    termcolor.__dict__["cprint"] = cprint
-    sys.modules["termcolor"] = termcolor
-
-
-def _install_git_stub() -> None:
-    if "git" in sys.modules:
-        return
-    git = types.ModuleType("git")
-
-    class GitCommandError(RuntimeError):
-        pass
-
-    class _HeadCommit:
-        hexsha = "stub"
-
-    class _Head:
-        commit = _HeadCommit()
-
-    class _Git:
-        def checkout(self, commit_hash: str) -> None:
-            del commit_hash
-
-    class Repo:
-        def __init__(self, path: str) -> None:
-            del path
-            self.head = _Head()
-            self.git = _Git()
-
-        @classmethod
-        def clone_from(cls, repo_url: str, clone_directory: str) -> "Repo":
-            del repo_url
-            return cls(clone_directory)
-
-        def remote(self, name: str) -> Any:
-            del name
-            return types.SimpleNamespace(fetch=lambda: None)
-
-    git.__dict__["GitCommandError"] = GitCommandError
-    git.__dict__["Repo"] = Repo
-    sys.modules["git"] = git
+def _prepare_oracle_imports() -> None:
+    source_root = str(_find_vendored_myosuite_root())
+    if source_root not in sys.path:
+        sys.path.insert(0, source_root)
 
 
 @cache
-def _load_oracle_modules() -> dict[str, Any]:
-    _install_flatten_dict_stub()
-    _install_skvideo_stub()
-    _install_termcolor_stub()
-    _install_git_stub()
-    sys.path.insert(0, str(_find_vendored_myosuite_root()))
-    reorient_module = importlib.import_module(
-        "myosuite.envs.myo.myochallenge.reorient_v0"
-    )
-    relocate_module = importlib.import_module(
-        "myosuite.envs.myo.myochallenge.relocate_v0"
-    )
-    return {
-        "ReorientEnvV0": reorient_module.ReorientEnvV0,
-        "RelocateEnvV0": relocate_module.RelocateEnvV0,
-    }
+def _load_oracle_class(entry_module: str, class_name: str) -> Any:
+    _prepare_oracle_imports()
+    module = importlib.import_module(entry_module)
+    return getattr(module, class_name)
 
 
-def _oracle_reorient_kwargs(env_id: str) -> dict[str, Any]:
+def _oracle_class(env_id: str) -> Any:
+    entry = _entry(env_id)
+    return _load_oracle_class(entry["entry_module"], entry["class_name"])
+
+
+def _oracle_kwargs(env_id: str) -> dict[str, Any]:
     kwargs = dict(_entry(env_id)["kwargs"])
-    kwargs["model_path"] = str(_asset_model_path(kwargs["model_path"]))
-    return kwargs
-
-
-def _oracle_relocate_kwargs(env_id: str) -> dict[str, Any]:
-    kwargs = dict(_entry(env_id)["kwargs"])
-    kwargs["model_path"] = str(_asset_model_path(kwargs["model_path"]))
+    for path_key in ("model_path", "init_pose_path"):
+        if path_key in kwargs:
+            kwargs[path_key] = str(_asset_model_path(kwargs[path_key]))
     return kwargs
 
 
@@ -1234,7 +1121,118 @@ def _oracle_reset_sync(
             .reshape(-1)
             .tolist()
         )
+    elif entry["class_name"] == "BaodingEnvV1":
+        sync["test_task"] = int(unwrapped.which_task.value)
+        sync["test_ball1_starting_angle"] = float(
+            unwrapped.ball_1_starting_angle
+        )
+        sync["test_ball2_starting_angle"] = float(
+            unwrapped.ball_2_starting_angle
+        )
+        sync["test_x_radius"] = float(unwrapped.x_radius)
+        sync["test_y_radius"] = float(unwrapped.y_radius)
+        sync["test_goal_trajectory"] = (
+            np.asarray(unwrapped.goal, dtype=np.float64).reshape(-1).tolist()
+        )
+        sync["test_object1_body_mass"] = [
+            float(sim.model.body_mass[unwrapped.object1_bid])
+        ]
+        sync["test_object2_body_mass"] = [
+            float(sim.model.body_mass[unwrapped.object2_bid])
+        ]
+        sync["test_object1_geom_size"] = (
+            sim.model.geom_size[unwrapped.object1_gid].copy().tolist()
+        )
+        sync["test_object2_geom_size"] = (
+            sim.model.geom_size[unwrapped.object2_gid].copy().tolist()
+        )
+        sync["test_object1_geom_friction"] = (
+            sim.model.geom_friction[unwrapped.object1_gid].copy().tolist()
+        )
+        sync["test_object2_geom_friction"] = (
+            sim.model.geom_friction[unwrapped.object2_gid].copy().tolist()
+        )
+    elif entry["class_name"] == "BimanualEnvV1":
+        sync["test_start_pos"] = np.asarray(
+            unwrapped.start_pos, dtype=np.float64
+        ).tolist()
+        sync["test_goal_pos"] = np.asarray(
+            unwrapped.goal_pos, dtype=np.float64
+        ).tolist()
+        sync["test_object_body_mass"] = [
+            float(sim.model.body_mass[unwrapped.obj_bid])
+        ]
+        sync["test_object_geom_size"] = (
+            sim.model.geom_size[unwrapped.obj_gid].copy().tolist()
+        )
+        sync["test_object_geom_friction"] = (
+            sim.model.geom_friction[unwrapped.obj_gid].copy().tolist()
+        )
+        obs = np.asarray(unwrapped.get_obs(), dtype=np.float64)
     return obs, sync
+
+
+def _alignment_obs_atol(env_id: str) -> float:
+    class_name = _entry(env_id)["class_name"]
+    if class_name == "BimanualEnvV1":
+        return _BIMANUAL_ALIGNMENT_ATOL
+    if class_name in {"RunTrack", "SoccerEnvV0", "ChaseTagEnvV0"}:
+        return _LOCOMOTION_ALIGNMENT_ATOL
+    if class_name == "TableTennisEnvV0":
+        return _TABLETENNIS_ALIGNMENT_ATOL
+    return _DEFAULT_ALIGNMENT_ATOL
+
+
+def _alignment_reward_atol(env_id: str) -> float:
+    class_name = _entry(env_id)["class_name"]
+    if class_name in {"RunTrack", "SoccerEnvV0", "ChaseTagEnvV0"}:
+        return _LOCOMOTION_ALIGNMENT_ATOL
+    if class_name in {"BimanualEnvV1", "TableTennisEnvV0"}:
+        return _TABLETENNIS_ALIGNMENT_ATOL
+    return _DEFAULT_ALIGNMENT_ATOL
+
+
+def _assert_alignment_with_oracle(
+    case: absltest.TestCase,
+    env_id: str,
+    config_fn: Any,
+    *,
+    action_seed: int,
+    steps: int = 8,
+) -> None:
+    entry = _entry(env_id)
+    oracle_cls = _oracle_class(env_id)
+    oracle: Any = gymnasium.wrappers.TimeLimit(
+        oracle_cls(seed=42, **_oracle_kwargs(env_id)),
+        max_episode_steps=int(entry["max_episode_steps"]),
+    )
+    obs0, sync = _oracle_reset_sync(oracle, env_id)
+    config, pool_type, spec_type = config_fn(env_id, overrides=sync)
+    native = _make_env(config, pool_type, spec_type)
+    obs_atol = _alignment_obs_atol(env_id)
+    reward_atol = _alignment_reward_atol(env_id)
+    try:
+        obs1, _ = native.reset()
+        np.testing.assert_allclose(obs1[0], obs0, atol=obs_atol, rtol=1e-5)
+        actions = _seeded_actions(
+            _batched_action_shape(native), steps, action_seed
+        )
+        for action in actions:
+            obs0, reward0, terminated0, truncated0, info0 = oracle.step(
+                action[0]
+            )
+            obs1, reward1, terminated1, truncated1, info1 = native.step(action)
+            np.testing.assert_allclose(obs1[0], obs0, atol=obs_atol, rtol=1e-5)
+            np.testing.assert_allclose(
+                reward1[0], reward0, atol=reward_atol, rtol=1e-5
+            )
+            case.assertEqual(bool(terminated1[0]), bool(terminated0))
+            case.assertEqual(bool(truncated1[0]), bool(truncated0))
+            if terminated0 or truncated0:
+                break
+    finally:
+        native.close()
+        oracle.close()
 
 
 class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
@@ -1434,12 +1432,12 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
 
     def test_reorient_alignment_with_oracle(self) -> None:
         """Reorient should align stepwise with the official oracle."""
-        cls = _load_oracle_modules()["ReorientEnvV0"]
+        cls = _oracle_class(_REORIENT_IDS[0])
         for env_id in _REORIENT_IDS:
             with self.subTest(env_id=env_id):
                 oracle = gymnasium.wrappers.TimeLimit(
-                    cls(seed=123, **_oracle_reorient_kwargs(env_id)),
-                    max_episode_steps=50,
+                    cls(seed=123, **_oracle_kwargs(env_id)),
+                    max_episode_steps=int(_entry(env_id)["max_episode_steps"]),
                 )
                 obs0, sync = _oracle_reset_sync(oracle, env_id)
                 config, pool_type, spec_type = _reorient_config(
@@ -1474,12 +1472,12 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
 
     def test_relocate_alignment_with_oracle(self) -> None:
         """Relocate should align stepwise with the official oracle."""
-        cls = _load_oracle_modules()["RelocateEnvV0"]
+        cls = _oracle_class(_RELOCATE_IDS[0])
         for env_id in _RELOCATE_IDS:
             with self.subTest(env_id=env_id):
                 oracle = gymnasium.wrappers.TimeLimit(
-                    cls(seed=123, **_oracle_relocate_kwargs(env_id)),
-                    max_episode_steps=50,
+                    cls(seed=123, **_oracle_kwargs(env_id)),
+                    max_episode_steps=int(_entry(env_id)["max_episode_steps"]),
                 )
                 obs0, sync = _oracle_reset_sync(oracle, env_id)
                 config, pool_type, spec_type = _relocate_config(
@@ -1524,6 +1522,54 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
                         break
                 native.close()
                 oracle.close()
+
+    def test_baoding_alignment_with_oracle(self) -> None:
+        """Baoding should align stepwise with the official oracle."""
+        for env_id in _BAODING_IDS:
+            with self.subTest(env_id=env_id):
+                _assert_alignment_with_oracle(
+                    self, env_id, _baoding_config, action_seed=1123
+                )
+
+    def test_bimanual_alignment_with_oracle(self) -> None:
+        """Bimanual should align stepwise with the official oracle."""
+        for env_id in _BIMANUAL_IDS:
+            with self.subTest(env_id=env_id):
+                _assert_alignment_with_oracle(
+                    self, env_id, _bimanual_config, action_seed=1223
+                )
+
+    def test_runtrack_alignment_with_oracle(self) -> None:
+        """RunTrack should align stepwise with the official oracle."""
+        for env_id in _RUNTRACK_IDS:
+            with self.subTest(env_id=env_id):
+                _assert_alignment_with_oracle(
+                    self, env_id, _runtrack_config, action_seed=1323, steps=6
+                )
+
+    def test_soccer_alignment_with_oracle(self) -> None:
+        """Soccer should align stepwise with the official oracle."""
+        for env_id in _SOCCER_IDS:
+            with self.subTest(env_id=env_id):
+                _assert_alignment_with_oracle(
+                    self, env_id, _soccer_config, action_seed=1423, steps=6
+                )
+
+    def test_chasetag_alignment_with_oracle(self) -> None:
+        """ChaseTag should align stepwise with the official oracle."""
+        for env_id in _CHASETAG_IDS:
+            with self.subTest(env_id=env_id):
+                _assert_alignment_with_oracle(
+                    self, env_id, _chasetag_config, action_seed=1523, steps=6
+                )
+
+    def test_tabletennis_alignment_with_oracle(self) -> None:
+        """TableTennis should align stepwise with the official oracle."""
+        for env_id in _TABLETENNIS_IDS:
+            with self.subTest(env_id=env_id):
+                _assert_alignment_with_oracle(
+                    self, env_id, _tabletennis_config, action_seed=1623, steps=6
+                )
 
     def test_reorient_pixel_observation_smoke(self) -> None:
         """Reorient pixel wrappers should emit non-empty batched frames."""

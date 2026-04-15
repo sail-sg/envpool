@@ -39,12 +39,12 @@ template <typename... T>
 constexpr bool HasContainerType(std::tuple<T...> /*unused*/) {
   return (is_container_v<typename T::dtype> || ...);
 }
-bool HasDynamicDim(const std::vector<int>& shape) {
+inline bool HasDynamicDim(const std::vector<int>& shape) {
   return std::any_of(shape.begin() + 1, shape.end(),
                      [](int s) { return s == -1; });
 }
 template <typename... T>
-bool HasDynamicDim(const std::tuple<T...>& state_spec) {
+inline bool HasDynamicDim(const std::tuple<T...>& state_spec) {
   bool dyn = false;
   std::apply([&](auto&&... spec) { dyn = (HasDynamicDim(spec.shape) || ...); },
              state_spec);

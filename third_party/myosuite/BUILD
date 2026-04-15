@@ -24,5 +24,6 @@ exports_files([
     "myosuite.BUILD",
     "myo_sim.BUILD",
     "object_sim.BUILD",
+    "upstream_compat.patch",
     "ycb_sim.BUILD",
 ])
