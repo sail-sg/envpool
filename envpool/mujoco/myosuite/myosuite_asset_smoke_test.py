@@ -46,12 +46,14 @@ class MyoSuiteAssetSmokeTest(absltest.TestCase):
     """Verifies the staged MyoSuite model tree is usable from runfiles."""
 
     def test_expected_top_level_models_exist(self) -> None:
+        """Checks that the staged runfiles tree contains each top-level model."""
         root = myosuite_asset_root()
         for relative_path in _TOP_LEVEL_MODEL_XMLS:
             with self.subTest(relative_path=relative_path):
                 self.assertTrue((root / relative_path).exists())
 
     def test_expected_top_level_models_load_in_mujoco(self) -> None:
+        """Checks that each top-level staged model loads through MuJoCo."""
         root = myosuite_asset_root()
         for relative_path in _TOP_LEVEL_MODEL_XMLS:
             with self.subTest(relative_path=relative_path):

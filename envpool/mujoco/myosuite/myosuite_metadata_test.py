@@ -57,6 +57,7 @@ class MyoSuiteMetadataTest(absltest.TestCase):
     """Checks the vendored upstream registry snapshot stays stable."""
 
     def test_upstream_pin_is_frozen(self) -> None:
+        """Checks the checked-in metadata stays anchored to the chosen release."""
         self.assertEqual(
             MYOSUITE_PINS["myosuite"],
             {
@@ -66,6 +67,7 @@ class MyoSuiteMetadataTest(absltest.TestCase):
         )
 
     def test_surface_counts_match_generated_snapshot(self) -> None:
+        """Checks the generated direct and expanded ID counts remain stable."""
         self.assertEqual(
             MYOSUITE_COUNTS,
             {
@@ -82,6 +84,7 @@ class MyoSuiteMetadataTest(absltest.TestCase):
         )
 
     def test_surface_lists_are_sorted_and_unique(self) -> None:
+        """Checks the generated ID lists are already canonicalized."""
         self.assertEqual(list(MYOSUITE_DIRECT_IDS), sorted(MYOSUITE_DIRECT_IDS))
         self.assertEqual(
             list(MYOSUITE_EXPANDED_IDS), sorted(MYOSUITE_EXPANDED_IDS)
@@ -90,6 +93,7 @@ class MyoSuiteMetadataTest(absltest.TestCase):
         self.assertLen(set(MYOSUITE_EXPANDED_IDS), len(MYOSUITE_EXPANDED_IDS))
 
     def test_expected_representative_ids_are_present(self) -> None:
+        """Checks representative direct and expanded IDs are preserved."""
         expected_direct = {
             "myoElbowPose1D6MRandom-v0",
             "myoArmReachRandom-v0",
@@ -108,6 +112,7 @@ class MyoSuiteMetadataTest(absltest.TestCase):
         self.assertTrue(expected_expanded_only.issubset(MYOSUITE_EXPANDED_IDS))
 
     def test_duplicate_note_matches_upstream_myoedits_overlap(self) -> None:
+        """Checks duplicate-note metadata tracks the upstream myoedits overlap."""
         self.assertEqual(
             MYOSUITE_NOTES["myoedits_duplicate_ids"],
             [
@@ -117,6 +122,7 @@ class MyoSuiteMetadataTest(absltest.TestCase):
         )
 
     def test_checked_in_metadata_matches_vendored_upstream_sources(self) -> None:
+        """Checks the checked-in snapshot still matches the pinned upstream."""
         upstream_root = _find_vendored_myosuite_upstream_root()
         generator = resolve_workspace_path("third_party/myosuite/generate_metadata.py")
         with tempfile.TemporaryDirectory() as tmpdir:

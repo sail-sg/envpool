@@ -106,6 +106,7 @@ def _parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Parse upstream registry sources and emit canonical MyoSuite metadata."""
     args = _parse_args()
     upstream_root = args.upstream_root.resolve()
     myosuite_root = upstream_root / "myosuite"
