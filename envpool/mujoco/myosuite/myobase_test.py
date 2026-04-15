@@ -348,8 +348,8 @@ def _install_flatten_dict_stub() -> None:
             cursor[parts[-1]] = value
         return out
 
-    setattr(flatten_dict, "flatten", flatten)
-    setattr(flatten_dict, "unflatten", unflatten)
+    flatten_dict.__dict__["flatten"] = flatten
+    flatten_dict.__dict__["unflatten"] = unflatten
     sys.modules["flatten_dict"] = flatten_dict
 
 
@@ -358,7 +358,7 @@ def _install_skvideo_stub() -> None:
         return
     skvideo = types.ModuleType("skvideo")
     skvideo_io = types.ModuleType("skvideo.io")
-    setattr(skvideo, "io", skvideo_io)
+    skvideo.__dict__["io"] = skvideo_io
     sys.modules["skvideo"] = skvideo
     sys.modules["skvideo.io"] = skvideo_io
 
@@ -376,8 +376,8 @@ def _install_termcolor_stub() -> None:
         del args, kwargs
         print(text)
 
-    setattr(termcolor, "colored", colored)
-    setattr(termcolor, "cprint", cprint)
+    termcolor.__dict__["colored"] = colored
+    termcolor.__dict__["cprint"] = cprint
     sys.modules["termcolor"] = termcolor
 
 
@@ -414,8 +414,8 @@ def _install_git_stub() -> None:
             del name
             return types.SimpleNamespace(fetch=lambda: None)
 
-    setattr(git, "GitCommandError", GitCommandError)
-    setattr(git, "Repo", Repo)
+    git.__dict__["GitCommandError"] = GitCommandError
+    git.__dict__["Repo"] = Repo
     sys.modules["git"] = git
 
 

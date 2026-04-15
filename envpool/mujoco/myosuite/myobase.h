@@ -47,7 +47,7 @@ namespace detail {
 constexpr mjtNum kPoseFarThreshold = static_cast<mjtNum>(6.283185307179586);
 
 inline std::vector<mjtNum> ToMjtVector(const std::vector<double>& input) {
-  return std::vector<mjtNum>(input.begin(), input.end());
+  return {input.begin(), input.end()};
 }
 
 inline mjtNum ClampNormalized(mjtNum value) {
@@ -72,7 +72,7 @@ inline std::vector<mjtNum> CurrentAct(const mjModel* model,
   if (model->na == 0) {
     return {};
   }
-  return std::vector<mjtNum>(data->act, data->act + model->na);
+  return {data->act, data->act + model->na};
 }
 
 inline mjtNum ActReg(const mjModel* model, const mjData* data) {
@@ -83,7 +83,7 @@ inline mjtNum ActReg(const mjModel* model, const mjData* data) {
 }
 
 inline std::vector<mjtNum> CopyQpos(const mjModel* model, const mjData* data) {
-  return std::vector<mjtNum>(data->qpos, data->qpos + model->nq);
+  return {data->qpos, data->qpos + model->nq};
 }
 
 inline std::vector<mjtNum> CopyQvel(const mjModel* model, const mjData* data,
@@ -906,7 +906,7 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
     }
     reward.reach_dist = detail::VectorNorm(reach_err);
     reward.act_reg = detail::ActReg(model_, data_);
-    mjtNum site_count = static_cast<mjtNum>(tip_site_ids_.size());
+    auto site_count = static_cast<mjtNum>(tip_site_ids_.size());
     mjtNum near_th = site_count * static_cast<mjtNum>(0.0125);
     mjtNum far_th = data_->time > 2.0 * Dt()
                         ? far_th_ * site_count

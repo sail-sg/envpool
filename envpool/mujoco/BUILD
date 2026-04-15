@@ -147,7 +147,10 @@ cc_library(
 
 pybind_extension(
     name = "myosuite_envpool",
-    srcs = ["myosuite_envpool.cc"],
+    srcs = [
+        "myosuite/mujoco_plugin_init.cc",
+        "myosuite_envpool.cc",
+    ],
     deps = [
         ":myosuite_env",
         "//envpool/core:py_envpool",
