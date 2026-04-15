@@ -137,7 +137,13 @@ py_library(
 
 cc_library(
     name = "myosuite_env",
-    hdrs = ["myosuite/myobase.h"],
+    hdrs = [
+        "myosuite/myobase.h",
+        "myosuite/myobase_extended.h",
+        "myosuite/myochallenge.h",
+        "myosuite/myochallenge_extended.h",
+        "myosuite/myodm.h",
+    ],
     deps = [
         ":myosuite_support",
         ":robotics_env",
@@ -678,6 +684,40 @@ py_test(
     data = ["@myosuite_src//:myosuite_python_sources"],
     imports = ["../.."],
     main = "myosuite/myobase_test.py",
+    deps = [
+        ":myosuite",
+        requirement("absl-py"),
+        requirement("dm-control"),
+        requirement("gymnasium"),
+        requirement("mujoco"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_myodm_test",
+    size = "large",
+    srcs = ["myosuite/myodm_test.py"],
+    data = ["@myosuite_src//:myosuite_python_sources"],
+    imports = ["../.."],
+    main = "myosuite/myodm_test.py",
+    deps = [
+        ":myosuite",
+        requirement("absl-py"),
+        requirement("dm-control"),
+        requirement("gymnasium"),
+        requirement("mujoco"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_myochallenge_test",
+    size = "large",
+    srcs = ["myosuite/myochallenge_test.py"],
+    data = ["@myosuite_src//:myosuite_python_sources"],
+    imports = ["../.."],
+    main = "myosuite/myochallenge_test.py",
     deps = [
         ":myosuite",
         requirement("absl-py"),

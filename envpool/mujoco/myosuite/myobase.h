@@ -195,6 +195,158 @@ inline void RestoreModelGeomSize(mjModel* model, int geom_id,
   std::memcpy(model->geom_size + geom_id * 3, value.data(), sizeof(mjtNum) * 3);
 }
 
+inline void CopyModelGeomPos(const mjModel* model, int geom_id,
+                             std::vector<mjtNum>* out) {
+  out->assign(model->geom_pos + geom_id * 3, model->geom_pos + geom_id * 3 + 3);
+}
+
+inline void RestoreModelGeomPos(mjModel* model, int geom_id,
+                                const std::vector<mjtNum>& value) {
+  if (value.empty()) {
+    return;
+  }
+  std::memcpy(model->geom_pos + geom_id * 3, value.data(), sizeof(mjtNum) * 3);
+}
+
+inline void CopyModelGeomQuat(const mjModel* model, int geom_id,
+                              std::vector<mjtNum>* out) {
+  out->assign(model->geom_quat + geom_id * 4,
+              model->geom_quat + geom_id * 4 + 4);
+}
+
+inline void RestoreModelGeomQuat(mjModel* model, int geom_id,
+                                 const std::vector<mjtNum>& value) {
+  if (value.empty()) {
+    return;
+  }
+  std::memcpy(model->geom_quat + geom_id * 4, value.data(), sizeof(mjtNum) * 4);
+}
+
+inline void CopyModelGeomRgba(const mjModel* model, int geom_id,
+                              std::vector<mjtNum>* out) {
+  out->assign(model->geom_rgba + geom_id * 4,
+              model->geom_rgba + geom_id * 4 + 4);
+}
+
+inline void RestoreModelGeomRgba(mjModel* model, int geom_id,
+                                 const std::vector<mjtNum>& value) {
+  if (value.empty()) {
+    return;
+  }
+  std::memcpy(model->geom_rgba + geom_id * 4, value.data(), sizeof(mjtNum) * 4);
+}
+
+inline void CopyModelSiteRgba(const mjModel* model, int site_id,
+                              std::vector<mjtNum>* out) {
+  out->assign(model->site_rgba + site_id * 4,
+              model->site_rgba + site_id * 4 + 4);
+}
+
+inline void RestoreModelSiteRgba(mjModel* model, int site_id,
+                                 const std::vector<mjtNum>& value) {
+  if (value.empty()) {
+    return;
+  }
+  std::memcpy(model->site_rgba + site_id * 4, value.data(), sizeof(mjtNum) * 4);
+}
+
+inline void CopyModelSitePosAndSize(const mjModel* model, int site_id,
+                                    std::vector<mjtNum>* out_pos,
+                                    std::vector<mjtNum>* out_size) {
+  CopyModelSitePos(model, site_id, out_pos);
+  CopyModelSiteSize(model, site_id, out_size);
+}
+
+inline void CopyModelBodyMass(const mjModel* model, int body_id, mjtNum* out) {
+  *out = model->body_mass[body_id];
+}
+
+inline void RestoreModelBodyMass(mjModel* model, int body_id, mjtNum value) {
+  model->body_mass[body_id] = value;
+}
+
+inline void CopyModelGeomType(const mjModel* model, int geom_id, int* out) {
+  *out = model->geom_type[geom_id];
+}
+
+inline void RestoreModelGeomType(mjModel* model, int geom_id, int value) {
+  if (value < 0) {
+    return;
+  }
+  model->geom_type[geom_id] = value;
+}
+
+inline void CopyModelGeomCondim(const mjModel* model, int geom_id, int* out) {
+  *out = model->geom_condim[geom_id];
+}
+
+inline void RestoreModelGeomCondim(mjModel* model, int geom_id, int value) {
+  if (value < 0) {
+    return;
+  }
+  model->geom_condim[geom_id] = value;
+}
+
+inline void CopyModelGeomContype(const mjModel* model, int geom_id, int* out) {
+  *out = model->geom_contype[geom_id];
+}
+
+inline void RestoreModelGeomContype(mjModel* model, int geom_id, int value) {
+  if (value < 0) {
+    return;
+  }
+  model->geom_contype[geom_id] = value;
+}
+
+inline void CopyModelGeomConaffinity(const mjModel* model, int geom_id,
+                                     int* out) {
+  *out = model->geom_conaffinity[geom_id];
+}
+
+inline void RestoreModelGeomConaffinity(mjModel* model, int geom_id,
+                                        int value) {
+  if (value < 0) {
+    return;
+  }
+  model->geom_conaffinity[geom_id] = value;
+}
+
+inline void CopyModelGeomFriction(const mjModel* model, int geom_id,
+                                  std::vector<mjtNum>* out) {
+  out->assign(model->geom_friction + geom_id * 3,
+              model->geom_friction + geom_id * 3 + 3);
+}
+
+inline void RestoreModelGeomFriction(mjModel* model, int geom_id,
+                                     const std::vector<mjtNum>& value) {
+  if (value.empty()) {
+    return;
+  }
+  std::memcpy(model->geom_friction + geom_id * 3, value.data(),
+              sizeof(mjtNum) * 3);
+}
+
+inline void CopyModelHfieldData(const mjModel* model, int hfield_id,
+                                std::vector<mjtNum>* out) {
+  int adr = model->hfield_adr[hfield_id];
+  int rows = model->hfield_nrow[hfield_id];
+  int cols = model->hfield_ncol[hfield_id];
+  out->assign(model->hfield_data + adr, model->hfield_data + adr + rows * cols);
+}
+
+inline void RestoreModelHfieldData(mjModel* model, int hfield_id,
+                                   const std::vector<mjtNum>& value) {
+  if (value.empty()) {
+    return;
+  }
+  int adr = model->hfield_adr[hfield_id];
+  int rows = model->hfield_nrow[hfield_id];
+  int cols = model->hfield_ncol[hfield_id];
+  std::size_t expected = static_cast<std::size_t>(rows) * cols;
+  std::memcpy(model->hfield_data + adr, value.data(),
+              sizeof(mjtNum) * expected);
+}
+
 inline void BuildMuscleMask(const mjModel* model,
                             std::vector<bool>* muscle_actuator) {
   muscle_actuator->assign(model->nu, false);
@@ -2169,7 +2321,10 @@ class MyoSuitePenTwirlEnvBase : public Env<EnvSpecT>,
 
   RewardInfo ComputeRewardInfo() const {
     RewardInfo reward;
-    std::vector<mjtNum> obj_pos(3), obj_des_pos(3), obj_rot(3), obj_des_rot(3);
+    std::vector<mjtNum> obj_pos(3);
+    std::vector<mjtNum> obj_des_pos(3);
+    std::vector<mjtNum> obj_rot(3);
+    std::vector<mjtNum> obj_des_rot(3);
     for (int axis = 0; axis < 3; ++axis) {
       obj_pos[axis] = data_->xpos[obj_body_id_ * 3 + axis];
       obj_des_pos[axis] = data_->site_xpos[eps_ball_sid_ * 3 + axis];

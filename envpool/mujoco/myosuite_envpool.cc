@@ -14,6 +14,10 @@
 
 #include "envpool/core/py_envpool.h"
 #include "envpool/mujoco/myosuite/myobase.h"
+#include "envpool/mujoco/myosuite/myobase_extended.h"
+#include "envpool/mujoco/myosuite/myochallenge.h"
+#include "envpool/mujoco/myosuite/myochallenge_extended.h"
+#include "envpool/mujoco/myosuite/myodm.h"
 
 using MyoSuitePoseEnvSpec = PyEnvSpec<myosuite_envpool::MyoSuitePoseEnvSpec>;
 using MyoSuitePoseEnvPool = PyEnvPool<myosuite_envpool::MyoSuitePoseEnvPool>;
@@ -63,6 +67,110 @@ using MyoSuitePenTwirlPixelEnvSpec =
 using MyoSuitePenTwirlPixelEnvPool =
     PyEnvPool<myosuite_envpool::MyoSuitePenTwirlPixelEnvPool>;
 
+using MyoSuiteReorientEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoSuiteReorientEnvSpec>;
+using MyoSuiteReorientEnvPool =
+    PyEnvPool<myosuite_envpool::MyoSuiteReorientEnvPool>;
+using MyoSuiteReorientPixelEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoSuiteReorientPixelEnvSpec>;
+using MyoSuiteReorientPixelEnvPool =
+    PyEnvPool<myosuite_envpool::MyoSuiteReorientPixelEnvPool>;
+
+using MyoSuiteWalkEnvSpec = PyEnvSpec<myosuite_envpool::MyoSuiteWalkEnvSpec>;
+using MyoSuiteWalkEnvPool = PyEnvPool<myosuite_envpool::MyoSuiteWalkEnvPool>;
+using MyoSuiteWalkPixelEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoSuiteWalkPixelEnvSpec>;
+using MyoSuiteWalkPixelEnvPool =
+    PyEnvPool<myosuite_envpool::MyoSuiteWalkPixelEnvPool>;
+
+using MyoSuiteTerrainEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoSuiteTerrainEnvSpec>;
+using MyoSuiteTerrainEnvPool =
+    PyEnvPool<myosuite_envpool::MyoSuiteTerrainEnvPool>;
+using MyoSuiteTerrainPixelEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoSuiteTerrainPixelEnvSpec>;
+using MyoSuiteTerrainPixelEnvPool =
+    PyEnvPool<myosuite_envpool::MyoSuiteTerrainPixelEnvPool>;
+
+using MyoChallengeReorientEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoChallengeReorientEnvSpec>;
+using MyoChallengeReorientEnvPool =
+    PyEnvPool<myosuite_envpool::MyoChallengeReorientEnvPool>;
+using MyoChallengeReorientPixelEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoChallengeReorientPixelEnvSpec>;
+using MyoChallengeReorientPixelEnvPool =
+    PyEnvPool<myosuite_envpool::MyoChallengeReorientPixelEnvPool>;
+
+using MyoChallengeRelocateEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoChallengeRelocateEnvSpec>;
+using MyoChallengeRelocateEnvPool =
+    PyEnvPool<myosuite_envpool::MyoChallengeRelocateEnvPool>;
+using MyoChallengeRelocatePixelEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoChallengeRelocatePixelEnvSpec>;
+using MyoChallengeRelocatePixelEnvPool =
+    PyEnvPool<myosuite_envpool::MyoChallengeRelocatePixelEnvPool>;
+
+using MyoChallengeBaodingEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoChallengeBaodingEnvSpec>;
+using MyoChallengeBaodingEnvPool =
+    PyEnvPool<myosuite_envpool::MyoChallengeBaodingEnvPool>;
+using MyoChallengeBaodingPixelEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoChallengeBaodingPixelEnvSpec>;
+using MyoChallengeBaodingPixelEnvPool =
+    PyEnvPool<myosuite_envpool::MyoChallengeBaodingPixelEnvPool>;
+
+using MyoChallengeBimanualEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoChallengeBimanualEnvSpec>;
+using MyoChallengeBimanualEnvPool =
+    PyEnvPool<myosuite_envpool::MyoChallengeBimanualEnvPool>;
+using MyoChallengeBimanualPixelEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoChallengeBimanualPixelEnvSpec>;
+using MyoChallengeBimanualPixelEnvPool =
+    PyEnvPool<myosuite_envpool::MyoChallengeBimanualPixelEnvPool>;
+
+using MyoChallengeRunTrackEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoChallengeRunTrackEnvSpec>;
+using MyoChallengeRunTrackEnvPool =
+    PyEnvPool<myosuite_envpool::MyoChallengeRunTrackEnvPool>;
+using MyoChallengeRunTrackPixelEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoChallengeRunTrackPixelEnvSpec>;
+using MyoChallengeRunTrackPixelEnvPool =
+    PyEnvPool<myosuite_envpool::MyoChallengeRunTrackPixelEnvPool>;
+
+using MyoChallengeSoccerEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoChallengeSoccerEnvSpec>;
+using MyoChallengeSoccerEnvPool =
+    PyEnvPool<myosuite_envpool::MyoChallengeSoccerEnvPool>;
+using MyoChallengeSoccerPixelEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoChallengeSoccerPixelEnvSpec>;
+using MyoChallengeSoccerPixelEnvPool =
+    PyEnvPool<myosuite_envpool::MyoChallengeSoccerPixelEnvPool>;
+
+using MyoChallengeChaseTagEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoChallengeChaseTagEnvSpec>;
+using MyoChallengeChaseTagEnvPool =
+    PyEnvPool<myosuite_envpool::MyoChallengeChaseTagEnvPool>;
+using MyoChallengeChaseTagPixelEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoChallengeChaseTagPixelEnvSpec>;
+using MyoChallengeChaseTagPixelEnvPool =
+    PyEnvPool<myosuite_envpool::MyoChallengeChaseTagPixelEnvPool>;
+
+using MyoChallengeTableTennisEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoChallengeTableTennisEnvSpec>;
+using MyoChallengeTableTennisEnvPool =
+    PyEnvPool<myosuite_envpool::MyoChallengeTableTennisEnvPool>;
+using MyoChallengeTableTennisPixelEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoChallengeTableTennisPixelEnvSpec>;
+using MyoChallengeTableTennisPixelEnvPool =
+    PyEnvPool<myosuite_envpool::MyoChallengeTableTennisPixelEnvPool>;
+
+using MyoDMTrackEnvSpec = PyEnvSpec<myosuite_envpool::MyoDMTrackEnvSpec>;
+using MyoDMTrackEnvPool = PyEnvPool<myosuite_envpool::MyoDMTrackEnvPool>;
+using MyoDMTrackPixelEnvSpec =
+    PyEnvSpec<myosuite_envpool::MyoDMTrackPixelEnvSpec>;
+using MyoDMTrackPixelEnvPool =
+    PyEnvPool<myosuite_envpool::MyoDMTrackPixelEnvPool>;
+
 PYBIND11_MODULE(myosuite_envpool, m) {
   REGISTER(m, MyoSuitePoseEnvSpec, MyoSuitePoseEnvPool)
   REGISTER(m, MyoSuitePosePixelEnvSpec, MyoSuitePosePixelEnvPool)
@@ -76,4 +184,36 @@ PYBIND11_MODULE(myosuite_envpool, m) {
   REGISTER(m, MyoSuiteTorsoPixelEnvSpec, MyoSuiteTorsoPixelEnvPool)
   REGISTER(m, MyoSuitePenTwirlEnvSpec, MyoSuitePenTwirlEnvPool)
   REGISTER(m, MyoSuitePenTwirlPixelEnvSpec, MyoSuitePenTwirlPixelEnvPool)
+  REGISTER(m, MyoSuiteReorientEnvSpec, MyoSuiteReorientEnvPool)
+  REGISTER(m, MyoSuiteReorientPixelEnvSpec, MyoSuiteReorientPixelEnvPool)
+  REGISTER(m, MyoSuiteWalkEnvSpec, MyoSuiteWalkEnvPool)
+  REGISTER(m, MyoSuiteWalkPixelEnvSpec, MyoSuiteWalkPixelEnvPool)
+  REGISTER(m, MyoSuiteTerrainEnvSpec, MyoSuiteTerrainEnvPool)
+  REGISTER(m, MyoSuiteTerrainPixelEnvSpec, MyoSuiteTerrainPixelEnvPool)
+  REGISTER(m, MyoChallengeReorientEnvSpec, MyoChallengeReorientEnvPool)
+  REGISTER(m, MyoChallengeReorientPixelEnvSpec,
+           MyoChallengeReorientPixelEnvPool)
+  REGISTER(m, MyoChallengeRelocateEnvSpec, MyoChallengeRelocateEnvPool)
+  REGISTER(m, MyoChallengeRelocatePixelEnvSpec,
+           MyoChallengeRelocatePixelEnvPool)
+  REGISTER(m, MyoChallengeBaodingEnvSpec, MyoChallengeBaodingEnvPool)
+  REGISTER(m, MyoChallengeBaodingPixelEnvSpec,
+           MyoChallengeBaodingPixelEnvPool)
+  REGISTER(m, MyoChallengeBimanualEnvSpec, MyoChallengeBimanualEnvPool)
+  REGISTER(m, MyoChallengeBimanualPixelEnvSpec,
+           MyoChallengeBimanualPixelEnvPool)
+  REGISTER(m, MyoChallengeRunTrackEnvSpec, MyoChallengeRunTrackEnvPool)
+  REGISTER(m, MyoChallengeRunTrackPixelEnvSpec,
+           MyoChallengeRunTrackPixelEnvPool)
+  REGISTER(m, MyoChallengeSoccerEnvSpec, MyoChallengeSoccerEnvPool)
+  REGISTER(m, MyoChallengeSoccerPixelEnvSpec,
+           MyoChallengeSoccerPixelEnvPool)
+  REGISTER(m, MyoChallengeChaseTagEnvSpec, MyoChallengeChaseTagEnvPool)
+  REGISTER(m, MyoChallengeChaseTagPixelEnvSpec,
+           MyoChallengeChaseTagPixelEnvPool)
+  REGISTER(m, MyoChallengeTableTennisEnvSpec, MyoChallengeTableTennisEnvPool)
+  REGISTER(m, MyoChallengeTableTennisPixelEnvSpec,
+           MyoChallengeTableTennisPixelEnvPool)
+  REGISTER(m, MyoDMTrackEnvSpec, MyoDMTrackEnvPool)
+  REGISTER(m, MyoDMTrackPixelEnvSpec, MyoDMTrackPixelEnvPool)
 }
