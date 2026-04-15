@@ -26,8 +26,7 @@ inline std::string MyoSuiteAssetRoot(const std::string& base_path) {
 
 inline std::string MyoSuiteModelPath(const std::string& base_path,
                                      std::string_view relative_model_path) {
-  return MyoSuiteAssetRoot(base_path) + "/" +
-         std::string(relative_model_path);
+  return MyoSuiteAssetRoot(base_path) + "/" + std::string(relative_model_path);
 }
 
 }  // namespace myosuite
