@@ -92,7 +92,9 @@ def _assert_rollouts_match(
     obs0, info0 = env0.reset()
     obs1, info1 = env1.reset()
     np.testing.assert_allclose(obs0, obs1, atol=atol, rtol=rtol)
-    case.assertEqual(info0["elapsed_step"].tolist(), info1["elapsed_step"].tolist())
+    case.assertEqual(
+        info0["elapsed_step"].tolist(), info1["elapsed_step"].tolist()
+    )
     for action in actions:
         obs0, reward0, terminated0, truncated0, info0 = env0.step(action)
         obs1, reward1, terminated1, truncated1, info1 = env1.step(action)
@@ -112,9 +114,7 @@ def _replace_all(text: str, old: str, new: str) -> str:
 
 
 @contextmanager
-def _edited_track_model(
-    model_path: str, object_name: str
-) -> Iterator[Path]:
+def _edited_track_model(model_path: str, object_name: str) -> Iterator[Path]:
     asset_root = myosuite_asset_root()
     source_model = asset_root / model_path
     object_xml = source_model.read_text()
@@ -338,7 +338,9 @@ def _track_config(
             kwargs.get("weighted_reward_keys", {}).get("penalty", -2.0)
         ),
         terminate_obj_fail=bool(
-            kwargs.get("Termimate_obj_fail", kwargs.get("terminate_obj_fail", True))
+            kwargs.get(
+                "Termimate_obj_fail", kwargs.get("terminate_obj_fail", True)
+            )
         ),
         terminate_pose_fail=bool(
             kwargs.get(
@@ -372,12 +374,13 @@ def _find_vendored_myosuite_root() -> Path:
     root = resolve_workspace_path(".")
     for candidate in (root, *root.parents):
         direct = candidate / "myosuite_src"
-        if (
-            (direct / "myosuite/envs/myo/myodm/myodm_v0.py").exists()
-            and (direct / "myosuite/simhive/object_sim").exists()
-        ):
+        if (direct / "myosuite/envs/myo/myodm/myodm_v0.py").exists() and (
+            direct / "myosuite/simhive/object_sim"
+        ).exists():
             return direct
-        for source_path in candidate.rglob("myosuite/envs/myo/myodm/myodm_v0.py"):
+        for source_path in candidate.rglob(
+            "myosuite/envs/myo/myodm/myodm_v0.py"
+        ):
             vendored_root = source_path.parents[4]
             if (vendored_root / "myosuite/simhive/object_sim").exists():
                 return vendored_root

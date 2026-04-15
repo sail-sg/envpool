@@ -189,9 +189,7 @@ from envpool.python.api import py_env
     MyoChallengeReorientPixelEnvSpec,
     MyoChallengeReorientPixelDMEnvPool,
     MyoChallengeReorientPixelGymnasiumEnvPool,
-) = py_env(
-    _MyoChallengeReorientPixelEnvSpec, _MyoChallengeReorientPixelEnvPool
-)
+) = py_env(_MyoChallengeReorientPixelEnvSpec, _MyoChallengeReorientPixelEnvPool)
 (
     MyoChallengeRelocateEnvSpec,
     MyoChallengeRelocateDMEnvPool,
@@ -201,9 +199,7 @@ from envpool.python.api import py_env
     MyoChallengeRelocatePixelEnvSpec,
     MyoChallengeRelocatePixelDMEnvPool,
     MyoChallengeRelocatePixelGymnasiumEnvPool,
-) = py_env(
-    _MyoChallengeRelocatePixelEnvSpec, _MyoChallengeRelocatePixelEnvPool
-)
+) = py_env(_MyoChallengeRelocatePixelEnvSpec, _MyoChallengeRelocatePixelEnvPool)
 (
     MyoChallengeBaodingEnvSpec,
     MyoChallengeBaodingDMEnvPool,
@@ -223,9 +219,7 @@ from envpool.python.api import py_env
     MyoChallengeBimanualPixelEnvSpec,
     MyoChallengeBimanualPixelDMEnvPool,
     MyoChallengeBimanualPixelGymnasiumEnvPool,
-) = py_env(
-    _MyoChallengeBimanualPixelEnvSpec, _MyoChallengeBimanualPixelEnvPool
-)
+) = py_env(_MyoChallengeBimanualPixelEnvSpec, _MyoChallengeBimanualPixelEnvPool)
 (
     MyoChallengeRunTrackEnvSpec,
     MyoChallengeRunTrackDMEnvPool,
@@ -235,9 +229,7 @@ from envpool.python.api import py_env
     MyoChallengeRunTrackPixelEnvSpec,
     MyoChallengeRunTrackPixelDMEnvPool,
     MyoChallengeRunTrackPixelGymnasiumEnvPool,
-) = py_env(
-    _MyoChallengeRunTrackPixelEnvSpec, _MyoChallengeRunTrackPixelEnvPool
-)
+) = py_env(_MyoChallengeRunTrackPixelEnvSpec, _MyoChallengeRunTrackPixelEnvPool)
 (
     MyoChallengeSoccerEnvSpec,
     MyoChallengeSoccerDMEnvPool,
@@ -247,9 +239,7 @@ from envpool.python.api import py_env
     MyoChallengeSoccerPixelEnvSpec,
     MyoChallengeSoccerPixelDMEnvPool,
     MyoChallengeSoccerPixelGymnasiumEnvPool,
-) = py_env(
-    _MyoChallengeSoccerPixelEnvSpec, _MyoChallengeSoccerPixelEnvPool
-)
+) = py_env(_MyoChallengeSoccerPixelEnvSpec, _MyoChallengeSoccerPixelEnvPool)
 (
     MyoChallengeChaseTagEnvSpec,
     MyoChallengeChaseTagDMEnvPool,
@@ -259,9 +249,7 @@ from envpool.python.api import py_env
     MyoChallengeChaseTagPixelEnvSpec,
     MyoChallengeChaseTagPixelDMEnvPool,
     MyoChallengeChaseTagPixelGymnasiumEnvPool,
-) = py_env(
-    _MyoChallengeChaseTagPixelEnvSpec, _MyoChallengeChaseTagPixelEnvPool
-)
+) = py_env(_MyoChallengeChaseTagPixelEnvSpec, _MyoChallengeChaseTagPixelEnvPool)
 (
     MyoChallengeTableTennisEnvSpec,
     MyoChallengeTableTennisDMEnvPool,

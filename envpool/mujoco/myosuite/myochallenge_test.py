@@ -97,14 +97,12 @@ _BIMANUAL_IDS = tuple(
 _RUNTRACK_IDS = tuple(
     entry["id"]
     for entry in MYOSUITE_DIRECT_ENTRIES
-    if entry["suite"] == "myochallenge"
-    and entry["class_name"] == "RunTrack"
+    if entry["suite"] == "myochallenge" and entry["class_name"] == "RunTrack"
 )
 _SOCCER_IDS = tuple(
     entry["id"]
     for entry in MYOSUITE_DIRECT_ENTRIES
-    if entry["suite"] == "myochallenge"
-    and entry["class_name"] == "SoccerEnvV0"
+    if entry["suite"] == "myochallenge" and entry["class_name"] == "SoccerEnvV0"
 )
 _CHASETAG_IDS = tuple(
     entry["id"]
@@ -200,7 +198,9 @@ def _reorient_alignment_reward_atol() -> float:
     return 2e-1
 
 
-def _assert_reorient_obs_close(actual: np.ndarray, expected: np.ndarray) -> None:
+def _assert_reorient_obs_close(
+    actual: np.ndarray, expected: np.ndarray
+) -> None:
     # The only residual after reset-sync is the `mat2euler(site_xmat)` block:
     # obj_rot, goal_rot, and rot_err. Keep the rest of the observation tight.
     np.testing.assert_allclose(
@@ -280,7 +280,11 @@ def _reorient_config(
     if overrides:
         config = MyoChallengeReorientEnvSpec.gen_config(
             **dict(
-                zip(MyoChallengeReorientEnvSpec._config_keys, config, strict=False),
+                zip(
+                    MyoChallengeReorientEnvSpec._config_keys,
+                    config,
+                    strict=False,
+                ),
                 **overrides,
             )
         )
@@ -329,8 +333,12 @@ def _relocate_config(
         obj_geom_high=[]
         if obj_geom_range is None
         else list(obj_geom_range["high"]),
-        obj_mass_low=0.0 if obj_mass_range is None else float(obj_mass_range["low"]),
-        obj_mass_high=0.0 if obj_mass_range is None else float(obj_mass_range["high"]),
+        obj_mass_low=0.0
+        if obj_mass_range is None
+        else float(obj_mass_range["low"]),
+        obj_mass_high=0.0
+        if obj_mass_range is None
+        else float(obj_mass_range["high"]),
         obj_friction_low=[]
         if obj_friction_range is None
         else list(obj_friction_range["low"]),
@@ -354,7 +362,11 @@ def _relocate_config(
     if overrides:
         config = MyoChallengeRelocateEnvSpec.gen_config(
             **dict(
-                zip(MyoChallengeRelocateEnvSpec._config_keys, config, strict=False),
+                zip(
+                    MyoChallengeRelocateEnvSpec._config_keys,
+                    config,
+                    strict=False,
+                ),
                 **overrides,
             )
         )
@@ -439,10 +451,18 @@ def _baoding_config(
         reward_pos_dist_2_w=float(
             kwargs.get("weighted_reward_keys", {}).get("pos_dist_2", 5.0)
         ),
-        obj_size_low=0.0 if obj_size_range is None else float(obj_size_range[0]),
-        obj_size_high=0.0 if obj_size_range is None else float(obj_size_range[1]),
-        obj_mass_low=0.0 if obj_mass_range is None else float(obj_mass_range[0]),
-        obj_mass_high=0.0 if obj_mass_range is None else float(obj_mass_range[1]),
+        obj_size_low=0.0
+        if obj_size_range is None
+        else float(obj_size_range[0]),
+        obj_size_high=0.0
+        if obj_size_range is None
+        else float(obj_size_range[1]),
+        obj_mass_low=0.0
+        if obj_mass_range is None
+        else float(obj_mass_range[0]),
+        obj_mass_high=0.0
+        if obj_mass_range is None
+        else float(obj_mass_range[1]),
         obj_friction_low=[]
         if obj_friction_change is None
         else list(
@@ -461,7 +481,11 @@ def _baoding_config(
     if overrides:
         config = MyoChallengeBaodingEnvSpec.gen_config(
             **dict(
-                zip(MyoChallengeBaodingEnvSpec._config_keys, config, strict=False),
+                zip(
+                    MyoChallengeBaodingEnvSpec._config_keys,
+                    config,
+                    strict=False,
+                ),
                 **overrides,
             )
         )
@@ -522,7 +546,9 @@ def _bimanual_config(
     entry = _entry(env_id)
     kwargs = dict(entry["kwargs"])
     model = _model(kwargs["model_path"])
-    myo_qpos, myo_dof, prosth_qpos, prosth_dof, _, _ = _bimanual_index_sets(model)
+    myo_qpos, myo_dof, prosth_qpos, prosth_dof, _, _ = _bimanual_index_sets(
+        model
+    )
     obj_bid = model.body("manip_object").id
     obj_gid = model.body(obj_bid).geomadr + 1
     base_friction = np.asarray(model.geom_friction[obj_gid]).reshape(-1)
@@ -555,7 +581,9 @@ def _bimanual_config(
         reward_reach_dist_w=float(
             kwargs.get("weighted_reward_keys", {}).get("reach_dist", -0.1)
         ),
-        reward_act_w=float(kwargs.get("weighted_reward_keys", {}).get("act", 0.0)),
+        reward_act_w=float(
+            kwargs.get("weighted_reward_keys", {}).get("act", 0.0)
+        ),
         reward_fin_dis_w=float(
             kwargs.get("weighted_reward_keys", {}).get("fin_dis", -0.5)
         ),
@@ -579,7 +607,11 @@ def _bimanual_config(
     if overrides:
         config = MyoChallengeBimanualEnvSpec.gen_config(
             **dict(
-                zip(MyoChallengeBimanualEnvSpec._config_keys, config, strict=False),
+                zip(
+                    MyoChallengeBimanualEnvSpec._config_keys,
+                    config,
+                    strict=False,
+                ),
                 **overrides,
             )
         )
@@ -639,7 +671,11 @@ def _runtrack_config(
     if overrides:
         config = MyoChallengeRunTrackEnvSpec.gen_config(
             **dict(
-                zip(MyoChallengeRunTrackEnvSpec._config_keys, config, strict=False),
+                zip(
+                    MyoChallengeRunTrackEnvSpec._config_keys,
+                    config,
+                    strict=False,
+                ),
                 **overrides,
             )
         )
@@ -707,7 +743,9 @@ def _soccer_config(
         act_dim=model.na,
         action_dim=model.nu,
         reset_type=str(kwargs.get("reset_type", "none")),
-        min_agent_spawn_distance=float(kwargs.get("min_agent_spawn_distance", 1)),
+        min_agent_spawn_distance=float(
+            kwargs.get("min_agent_spawn_distance", 1)
+        ),
         random_vel_low=float(kwargs.get("random_vel_range", [1.0, 5.0])[0]),
         random_vel_high=float(kwargs.get("random_vel_range", [1.0, 5.0])[1]),
         rnd_pos_noise=float(kwargs.get("rnd_pos_noise", 1.0)),
@@ -722,7 +760,9 @@ def _soccer_config(
     if overrides:
         config = MyoChallengeSoccerEnvSpec.gen_config(
             **dict(
-                zip(MyoChallengeSoccerEnvSpec._config_keys, config, strict=False),
+                zip(
+                    MyoChallengeSoccerEnvSpec._config_keys, config, strict=False
+                ),
                 **overrides,
             )
         )
@@ -781,15 +821,23 @@ def _chasetag_config(
         random_vel_low=float(kwargs.get("random_vel_range", [-2.0, 2.0])[0]),
         random_vel_high=float(kwargs.get("random_vel_range", [-2.0, 2.0])[1]),
         repeller_vel_low=float(kwargs.get("repeller_vel_range", [0.3, 1.0])[0]),
-        repeller_vel_high=float(kwargs.get("repeller_vel_range", [0.3, 1.0])[1]),
-        opponent_probabilities=list(kwargs.get("opponent_probabilities", [0.1, 0.45, 0.45])),
+        repeller_vel_high=float(
+            kwargs.get("repeller_vel_range", [0.3, 1.0])[1]
+        ),
+        opponent_probabilities=list(
+            kwargs.get("opponent_probabilities", [0.1, 0.45, 0.45])
+        ),
         reward_distance_w=-0.1,
         reward_lose_w=-1000.0,
     )
     if overrides:
         config = MyoChallengeChaseTagEnvSpec.gen_config(
             **dict(
-                zip(MyoChallengeChaseTagEnvSpec._config_keys, config, strict=False),
+                zip(
+                    MyoChallengeChaseTagEnvSpec._config_keys,
+                    config,
+                    strict=False,
+                ),
                 **overrides,
             )
         )
@@ -828,13 +876,30 @@ def _tabletennis_config(
         1
         for joint_id in range(model.njnt)
         if (
-            (name := mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_JOINT, joint_id))
+            (
+                name := mujoco.mj_id2name(
+                    model, mujoco.mjtObj.mjOBJ_JOINT, joint_id
+                )
+            )
             is not None
             and not name.startswith("ping")
             and name != "paddle_freejoint"
         )
     )
-    obs_dim = 1 + 3 + body_joint_count + body_joint_count + 3 + 3 + 3 + 3 + 4 + 3 + 6 + model.na
+    obs_dim = (
+        1
+        + 3
+        + body_joint_count
+        + body_joint_count
+        + 3
+        + 3
+        + 3
+        + 3
+        + 4
+        + 3
+        + 6
+        + model.na
+    )
     ball_xyz_range = kwargs.get("ball_xyz_range") or {}
     ball_friction_range = kwargs.get("ball_friction_range") or {}
     paddle_mass_range = kwargs.get("paddle_mass_range") or [0.0, 0.0]
@@ -919,7 +984,9 @@ def _find_vendored_myosuite_root() -> Path:
         direct = candidate / "myosuite_src"
         if (direct / "myosuite/envs/myo/myochallenge/reorient_v0.py").exists():
             return direct
-        for path in candidate.rglob("myosuite/envs/myo/myochallenge/reorient_v0.py"):
+        for path in candidate.rglob(
+            "myosuite/envs/myo/myochallenge/reorient_v0.py"
+        ):
             return path.parents[4]
     raise FileNotFoundError("Unable to locate vendored myosuite source root")
 
@@ -956,7 +1023,9 @@ def _install_flatten_dict_stub() -> None:
         del splitter
         out: dict[str, Any] = {}
         for key, value in mapping.items():
-            parts = key if isinstance(key, tuple) else tuple(str(key).split("."))
+            parts = (
+                key if isinstance(key, tuple) else tuple(str(key).split("."))
+            )
             cursor = out
             for part in parts[:-1]:
                 cursor = cursor.setdefault(part, {})
@@ -1065,7 +1134,9 @@ def _oracle_relocate_kwargs(env_id: str) -> dict[str, Any]:
     return kwargs
 
 
-def _oracle_reset_sync(env: Any, env_id: str) -> tuple[np.ndarray, dict[str, Any]]:
+def _oracle_reset_sync(
+    env: Any, env_id: str
+) -> tuple[np.ndarray, dict[str, Any]]:
     obs, _ = env.reset()
     unwrapped = env.unwrapped
     sim = unwrapped.sim
@@ -1084,46 +1155,85 @@ def _oracle_reset_sync(env: Any, env_id: str) -> tuple[np.ndarray, dict[str, Any
         object_bid = sim.model.body_name2id("Object")
         start_geom = sim.model.body_geomadr[object_bid]
         geom_count = sim.model.body_geomnum[object_bid]
-        sync["test_goal_body_pos"] = sim.model.body_pos[goal_bid].copy().tolist()
-        sync["test_goal_body_quat"] = sim.model.body_quat[goal_bid].copy().tolist()
-        sync["test_target_geom_size"] = sim.model.geom_size[target_gid].copy().tolist()
-        sync["test_object_geom_size"] = sim.model.geom_size[
-            start_geom : start_geom + geom_count
-        ].reshape(-1).tolist()
-        sync["test_object_geom_pos"] = sim.model.geom_pos[
-            start_geom : start_geom + geom_count
-        ].reshape(-1).tolist()
-        sync["test_object_geom_friction"] = sim.model.geom_friction[
-            start_geom : start_geom + geom_count
-        ].reshape(-1).tolist()
+        sync["test_goal_body_pos"] = (
+            sim.model.body_pos[goal_bid].copy().tolist()
+        )
+        sync["test_goal_body_quat"] = (
+            sim.model.body_quat[goal_bid].copy().tolist()
+        )
+        sync["test_target_geom_size"] = (
+            sim.model.geom_size[target_gid].copy().tolist()
+        )
+        sync["test_object_geom_size"] = (
+            sim.model
+            .geom_size[start_geom : start_geom + geom_count]
+            .reshape(-1)
+            .tolist()
+        )
+        sync["test_object_geom_pos"] = (
+            sim.model
+            .geom_pos[start_geom : start_geom + geom_count]
+            .reshape(-1)
+            .tolist()
+        )
+        sync["test_object_geom_friction"] = (
+            sim.model
+            .geom_friction[start_geom : start_geom + geom_count]
+            .reshape(-1)
+            .tolist()
+        )
         sync["test_object_body_mass"] = [float(sim.model.body_mass[object_bid])]
     elif entry["class_name"] == "RelocateEnvV0":
         goal_bid = sim.model.body_name2id("target")
         object_bid = sim.model.body_name2id("Object")
         start_geom = sim.model.body_geomadr[object_bid]
         geom_count = sim.model.body_geomnum[object_bid]
-        sync["test_goal_body_pos"] = sim.model.body_pos[goal_bid].copy().tolist()
-        sync["test_goal_body_quat"] = sim.model.body_quat[goal_bid].copy().tolist()
-        sync["test_object_body_pos"] = sim.model.body_pos[object_bid].copy().tolist()
+        sync["test_goal_body_pos"] = (
+            sim.model.body_pos[goal_bid].copy().tolist()
+        )
+        sync["test_goal_body_quat"] = (
+            sim.model.body_quat[goal_bid].copy().tolist()
+        )
+        sync["test_object_body_pos"] = (
+            sim.model.body_pos[object_bid].copy().tolist()
+        )
         sync["test_object_body_mass"] = [float(sim.model.body_mass[object_bid])]
-        sync["test_object_geom_type"] = sim.model.geom_type[
-            start_geom : start_geom + geom_count
-        ].astype(np.float64).tolist()
-        sync["test_object_geom_size"] = sim.model.geom_size[
-            start_geom : start_geom + geom_count
-        ].reshape(-1).tolist()
-        sync["test_object_geom_pos"] = sim.model.geom_pos[
-            start_geom : start_geom + geom_count
-        ].reshape(-1).tolist()
-        sync["test_object_geom_quat"] = sim.model.geom_quat[
-            start_geom : start_geom + geom_count
-        ].reshape(-1).tolist()
-        sync["test_object_geom_rgba"] = sim.model.geom_rgba[
-            start_geom : start_geom + geom_count
-        ].reshape(-1).tolist()
-        sync["test_object_geom_friction"] = sim.model.geom_friction[
-            start_geom : start_geom + geom_count
-        ].reshape(-1).tolist()
+        sync["test_object_geom_type"] = (
+            sim.model
+            .geom_type[start_geom : start_geom + geom_count]
+            .astype(np.float64)
+            .tolist()
+        )
+        sync["test_object_geom_size"] = (
+            sim.model
+            .geom_size[start_geom : start_geom + geom_count]
+            .reshape(-1)
+            .tolist()
+        )
+        sync["test_object_geom_pos"] = (
+            sim.model
+            .geom_pos[start_geom : start_geom + geom_count]
+            .reshape(-1)
+            .tolist()
+        )
+        sync["test_object_geom_quat"] = (
+            sim.model
+            .geom_quat[start_geom : start_geom + geom_count]
+            .reshape(-1)
+            .tolist()
+        )
+        sync["test_object_geom_rgba"] = (
+            sim.model
+            .geom_rgba[start_geom : start_geom + geom_count]
+            .reshape(-1)
+            .tolist()
+        )
+        sync["test_object_geom_friction"] = (
+            sim.model
+            .geom_friction[start_geom : start_geom + geom_count]
+            .reshape(-1)
+            .tolist()
+        )
     return obs, sync
 
 
@@ -1158,7 +1268,9 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
                 env0 = _make_env(config, pool_type, spec_type)
                 env1 = _make_env(config, pool_type, spec_type)
                 actions = _seeded_actions(_batched_action_shape(env0), 12, 1234)
-                _assert_rollouts_match(self, env0, env1, actions, atol=1e-8, rtol=1e-8)
+                _assert_rollouts_match(
+                    self, env0, env1, actions, atol=1e-8, rtol=1e-8
+                )
                 env0.close()
                 env1.close()
 
@@ -1170,7 +1282,9 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
                 env0 = _make_env(config, pool_type, spec_type)
                 env1 = _make_env(config, pool_type, spec_type)
                 actions = _seeded_actions(_batched_action_shape(env0), 12, 5678)
-                _assert_rollouts_match(self, env0, env1, actions, atol=1e-8, rtol=1e-8)
+                _assert_rollouts_match(
+                    self, env0, env1, actions, atol=1e-8, rtol=1e-8
+                )
                 env0.close()
                 env1.close()
 
@@ -1192,7 +1306,9 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
                 env0 = _make_env(config, pool_type, spec_type)
                 env1 = _make_env(config, pool_type, spec_type)
                 actions = _seeded_actions(_batched_action_shape(env0), 12, 2468)
-                _assert_rollouts_match(self, env0, env1, actions, atol=1e-8, rtol=1e-8)
+                _assert_rollouts_match(
+                    self, env0, env1, actions, atol=1e-8, rtol=1e-8
+                )
                 env0.close()
                 env1.close()
 
@@ -1214,7 +1330,9 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
                 env0 = _make_env(config, pool_type, spec_type)
                 env1 = _make_env(config, pool_type, spec_type)
                 actions = _seeded_actions(_batched_action_shape(env0), 12, 9753)
-                _assert_rollouts_match(self, env0, env1, actions, atol=1e-8, rtol=1e-8)
+                _assert_rollouts_match(
+                    self, env0, env1, actions, atol=1e-8, rtol=1e-8
+                )
                 env0.close()
                 env1.close()
 
@@ -1236,7 +1354,9 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
                 env0 = _make_env(config, pool_type, spec_type)
                 env1 = _make_env(config, pool_type, spec_type)
                 actions = _seeded_actions(_batched_action_shape(env0), 12, 1597)
-                _assert_rollouts_match(self, env0, env1, actions, atol=1e-8, rtol=1e-8)
+                _assert_rollouts_match(
+                    self, env0, env1, actions, atol=1e-8, rtol=1e-8
+                )
                 env0.close()
                 env1.close()
 
@@ -1258,7 +1378,9 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
                 env0 = _make_env(config, pool_type, spec_type)
                 env1 = _make_env(config, pool_type, spec_type)
                 actions = _seeded_actions(_batched_action_shape(env0), 12, 1601)
-                _assert_rollouts_match(self, env0, env1, actions, atol=1e-8, rtol=1e-8)
+                _assert_rollouts_match(
+                    self, env0, env1, actions, atol=1e-8, rtol=1e-8
+                )
                 env0.close()
                 env1.close()
 
@@ -1280,7 +1402,9 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
                 env0 = _make_env(config, pool_type, spec_type)
                 env1 = _make_env(config, pool_type, spec_type)
                 actions = _seeded_actions(_batched_action_shape(env0), 12, 1607)
-                _assert_rollouts_match(self, env0, env1, actions, atol=1e-8, rtol=1e-8)
+                _assert_rollouts_match(
+                    self, env0, env1, actions, atol=1e-8, rtol=1e-8
+                )
                 env0.close()
                 env1.close()
 
@@ -1318,14 +1442,22 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
                     max_episode_steps=50,
                 )
                 obs0, sync = _oracle_reset_sync(oracle, env_id)
-                config, pool_type, spec_type = _reorient_config(env_id, overrides=sync)
+                config, pool_type, spec_type = _reorient_config(
+                    env_id, overrides=sync
+                )
                 native = _make_env(config, pool_type, spec_type)
                 obs1, _ = native.reset()
                 _assert_reorient_obs_close(obs1[0], obs0)
-                actions = _seeded_actions(_batched_action_shape(native), 8, 4321)
+                actions = _seeded_actions(
+                    _batched_action_shape(native), 8, 4321
+                )
                 for action in actions:
-                    obs0, reward0, terminated0, truncated0, _ = oracle.step(action[0])
-                    obs1, reward1, terminated1, truncated1, _ = native.step(action)
+                    obs0, reward0, terminated0, truncated0, _ = oracle.step(
+                        action[0]
+                    )
+                    obs1, reward1, terminated1, truncated1, _ = native.step(
+                        action
+                    )
                     _assert_reorient_obs_close(obs1[0], obs0)
                     np.testing.assert_allclose(
                         reward1[0],
@@ -1350,7 +1482,9 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
                     max_episode_steps=50,
                 )
                 obs0, sync = _oracle_reset_sync(oracle, env_id)
-                config, pool_type, spec_type = _relocate_config(env_id, overrides=sync)
+                config, pool_type, spec_type = _relocate_config(
+                    env_id, overrides=sync
+                )
                 native = _make_env(config, pool_type, spec_type)
                 obs1, _ = native.reset()
                 # Official relocate observations are reconstructed via robot
@@ -1362,10 +1496,16 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
                     atol=_relocate_alignment_obs_atol(env_id),
                     rtol=1e-5,
                 )
-                actions = _seeded_actions(_batched_action_shape(native), 8, 8765)
+                actions = _seeded_actions(
+                    _batched_action_shape(native), 8, 8765
+                )
                 for action in actions:
-                    obs0, reward0, terminated0, truncated0, _ = oracle.step(action[0])
-                    obs1, reward1, terminated1, truncated1, _ = native.step(action)
+                    obs0, reward0, terminated0, truncated0, _ = oracle.step(
+                        action[0]
+                    )
+                    obs1, reward1, terminated1, truncated1, _ = native.step(
+                        action
+                    )
                     np.testing.assert_allclose(
                         obs1[0],
                         obs0,
