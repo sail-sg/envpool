@@ -32,6 +32,18 @@ from absl.testing import absltest
 
 from envpool.mujoco.myosuite.metadata import MYOSUITE_DIRECT_ENTRIES
 from envpool.mujoco.myosuite.native import (
+    MyoSuiteKeyTurnEnvSpec,
+    MyoSuiteKeyTurnGymnasiumEnvPool,
+    MyoSuiteKeyTurnPixelEnvSpec,
+    MyoSuiteKeyTurnPixelGymnasiumEnvPool,
+    MyoSuiteObjHoldEnvSpec,
+    MyoSuiteObjHoldGymnasiumEnvPool,
+    MyoSuiteObjHoldPixelEnvSpec,
+    MyoSuiteObjHoldPixelGymnasiumEnvPool,
+    MyoSuitePenTwirlEnvSpec,
+    MyoSuitePenTwirlGymnasiumEnvPool,
+    MyoSuitePenTwirlPixelEnvSpec,
+    MyoSuitePenTwirlPixelGymnasiumEnvPool,
     MyoSuitePoseEnvSpec,
     MyoSuitePoseGymnasiumEnvPool,
     MyoSuitePosePixelEnvSpec,
@@ -40,6 +52,10 @@ from envpool.mujoco.myosuite.native import (
     MyoSuiteReachGymnasiumEnvPool,
     MyoSuiteReachPixelEnvSpec,
     MyoSuiteReachPixelGymnasiumEnvPool,
+    MyoSuiteTorsoEnvSpec,
+    MyoSuiteTorsoGymnasiumEnvPool,
+    MyoSuiteTorsoPixelEnvSpec,
+    MyoSuiteTorsoPixelGymnasiumEnvPool,
 )
 from envpool.mujoco.myosuite.paths import (
     myosuite_asset_root,
@@ -56,6 +72,26 @@ _REACH_IDS = tuple(
     for entry in MYOSUITE_DIRECT_ENTRIES
     if entry["class_name"] == "ReachEnvV0"
 )
+_KEYTURN_IDS = tuple(
+    entry["id"]
+    for entry in MYOSUITE_DIRECT_ENTRIES
+    if entry["class_name"] == "KeyTurnEnvV0"
+)
+_OBJHOLD_IDS = tuple(
+    entry["id"]
+    for entry in MYOSUITE_DIRECT_ENTRIES
+    if entry["class_name"] in {"ObjHoldFixedEnvV0", "ObjHoldRandomEnvV0"}
+)
+_TORSO_IDS = tuple(
+    entry["id"]
+    for entry in MYOSUITE_DIRECT_ENTRIES
+    if entry["class_name"] == "TorsoEnvV0"
+)
+_PENTWIRL_IDS = tuple(
+    entry["id"]
+    for entry in MYOSUITE_DIRECT_ENTRIES
+    if entry["class_name"] in {"PenTwirlFixedEnvV0", "PenTwirlRandomEnvV0"}
+)
 _POSE_ALIGN_IDS = (
     "motorFingerPoseRandom-v0",
     "myoHandPoseRandom-v0",
@@ -66,6 +102,22 @@ _REACH_ALIGN_IDS = (
     "motorFingerReachRandom-v0",
     "myoHandReachRandom-v0",
     "myoArmReachRandom-v0",
+)
+_KEYTURN_ALIGN_IDS = (
+    "myoHandKeyTurnFixed-v0",
+    "myoHandKeyTurnRandom-v0",
+)
+_OBJHOLD_ALIGN_IDS = (
+    "myoHandObjHoldFixed-v0",
+    "myoHandObjHoldRandom-v0",
+)
+_TORSO_ALIGN_IDS = (
+    "myoTorsoPoseFixed-v0",
+    "myoTorsoExoPoseFixed-v0",
+)
+_PENTWIRL_ALIGN_IDS = (
+    "myoHandPenTwirlFixed-v0",
+    "myoHandPenTwirlRandom-v0",
 )
 
 
@@ -224,6 +276,210 @@ def _reach_config(
     return config, MyoSuiteReachGymnasiumEnvPool
 
 
+def _key_turn_config(
+    env_id: str,
+    *,
+    model_path: str | None = None,
+    overrides: dict[str, Any] | None = None,
+) -> tuple[tuple[Any, ...], type]:
+    entry = _entry(env_id)
+    kwargs = dict(entry["kwargs"])
+    if model_path is not None:
+        kwargs["model_path"] = model_path
+    model = _model(kwargs["model_path"])
+    config = MyoSuiteKeyTurnEnvSpec.gen_config(
+        num_envs=1,
+        batch_size=1,
+        max_num_players=1,
+        frame_skip=int(kwargs.get("frame_skip", 10)),
+        model_path=str(kwargs["model_path"]),
+        normalize_act=bool(kwargs.get("normalize_act", True)),
+        obs_dim=model.nq + model.nv + 6 + model.na,
+        qpos_dim=model.nq,
+        qvel_dim=model.nv,
+        act_dim=model.na,
+        action_dim=model.nu,
+        goal_th=float(kwargs.get("goal_th", np.pi)),
+        reward_key_turn_w=float(
+            kwargs.get("weighted_reward_keys", {}).get("key_turn", 1.0)
+        ),
+        reward_iftip_approach_w=float(
+            kwargs.get("weighted_reward_keys", {}).get("IFtip_approach", 10.0)
+        ),
+        reward_thtip_approach_w=float(
+            kwargs.get("weighted_reward_keys", {}).get("THtip_approach", 10.0)
+        ),
+        reward_act_reg_w=float(
+            kwargs.get("weighted_reward_keys", {}).get("act_reg", 1.0)
+        ),
+        reward_bonus_w=float(
+            kwargs.get("weighted_reward_keys", {}).get("bonus", 4.0)
+        ),
+        reward_penalty_w=float(
+            kwargs.get("weighted_reward_keys", {}).get("penalty", 25.0)
+        ),
+        key_init_range=list(kwargs.get("key_init_range", (0.0, 0.0))),
+    )
+    if overrides:
+        config = MyoSuiteKeyTurnEnvSpec.gen_config(
+            **dict(
+                zip(MyoSuiteKeyTurnEnvSpec._config_keys, config, strict=False),
+                **overrides,
+            )
+        )
+    return config, MyoSuiteKeyTurnGymnasiumEnvPool
+
+
+def _obj_hold_config(
+    env_id: str,
+    *,
+    model_path: str | None = None,
+    overrides: dict[str, Any] | None = None,
+) -> tuple[tuple[Any, ...], type]:
+    entry = _entry(env_id)
+    kwargs = dict(entry["kwargs"])
+    if model_path is not None:
+        kwargs["model_path"] = model_path
+    model = _model(kwargs["model_path"])
+    config = MyoSuiteObjHoldEnvSpec.gen_config(
+        num_envs=1,
+        batch_size=1,
+        max_num_players=1,
+        frame_skip=int(kwargs.get("frame_skip", 10)),
+        model_path=str(kwargs["model_path"]),
+        normalize_act=bool(kwargs.get("normalize_act", True)),
+        obs_dim=(model.nq - 7) + (model.nv - 6) + 6 + model.na,
+        qpos_dim=model.nq,
+        qvel_dim=model.nv,
+        act_dim=model.na,
+        action_dim=model.nu,
+        randomize_on_reset=entry["class_name"] == "ObjHoldRandomEnvV0",
+        reward_goal_dist_w=float(
+            kwargs.get("weighted_reward_keys", {}).get("goal_dist", 100.0)
+        ),
+        reward_bonus_w=float(
+            kwargs.get("weighted_reward_keys", {}).get("bonus", 4.0)
+        ),
+        reward_penalty_w=float(
+            kwargs.get("weighted_reward_keys", {}).get("penalty", 10.0)
+        ),
+    )
+    if overrides:
+        config = MyoSuiteObjHoldEnvSpec.gen_config(
+            **dict(
+                zip(MyoSuiteObjHoldEnvSpec._config_keys, config, strict=False),
+                **overrides,
+            )
+        )
+    return config, MyoSuiteObjHoldGymnasiumEnvPool
+
+
+def _torso_config(
+    env_id: str,
+    *,
+    model_path: str | None = None,
+    overrides: dict[str, Any] | None = None,
+) -> tuple[tuple[Any, ...], type]:
+    entry = _entry(env_id)
+    kwargs = dict(entry["kwargs"])
+    if model_path is not None:
+        kwargs["model_path"] = model_path
+    model = _model(kwargs["model_path"])
+    target_qpos_value = [
+        (bounds[0] + bounds[1]) / 2.0
+        for bounds in kwargs["target_jnt_range"].values()
+    ]
+    pose_dim = len(target_qpos_value)
+    config = MyoSuiteTorsoEnvSpec.gen_config(
+        num_envs=1,
+        batch_size=1,
+        max_num_players=1,
+        frame_skip=int(kwargs.get("frame_skip", 5)),
+        model_path=str(kwargs["model_path"]),
+        normalize_act=bool(kwargs.get("normalize_act", True)),
+        obs_dim=model.nq + model.nv + pose_dim + model.na,
+        qpos_dim=model.nq,
+        qvel_dim=model.nv,
+        act_dim=model.na,
+        action_dim=model.nu,
+        pose_dim=pose_dim,
+        pose_thd=float(kwargs.get("pose_thd", 0.25)),
+        reward_pose_w=float(
+            kwargs.get("weighted_reward_keys", {}).get("pose", 1.0)
+        ),
+        reward_bonus_w=float(
+            kwargs.get("weighted_reward_keys", {}).get("bonus", 4.0)
+        ),
+        reward_act_reg_w=float(
+            kwargs.get("weighted_reward_keys", {}).get("act_reg", 1.0)
+        ),
+        reward_penalty_w=float(
+            kwargs.get("weighted_reward_keys", {}).get("penalty", 50.0)
+        ),
+        target_qpos_value=target_qpos_value,
+    )
+    if overrides:
+        overrides = dict(overrides)
+        overrides.pop("test_target_qpos", None)
+        config = MyoSuiteTorsoEnvSpec.gen_config(
+            **dict(
+                zip(MyoSuiteTorsoEnvSpec._config_keys, config, strict=False),
+                **overrides,
+            )
+        )
+    return config, MyoSuiteTorsoGymnasiumEnvPool
+
+
+def _pen_twirl_config(
+    env_id: str,
+    *,
+    model_path: str | None = None,
+    overrides: dict[str, Any] | None = None,
+) -> tuple[tuple[Any, ...], type]:
+    entry = _entry(env_id)
+    kwargs = dict(entry["kwargs"])
+    if model_path is not None:
+        kwargs["model_path"] = model_path
+    model = _model(kwargs["model_path"])
+    config = MyoSuitePenTwirlEnvSpec.gen_config(
+        num_envs=1,
+        batch_size=1,
+        max_num_players=1,
+        frame_skip=int(kwargs.get("frame_skip", 5)),
+        model_path=str(kwargs["model_path"]),
+        normalize_act=bool(kwargs.get("normalize_act", True)),
+        obs_dim=(model.nq - 6) + 21 + model.na,
+        qpos_dim=model.nq,
+        qvel_dim=model.nv,
+        act_dim=model.na,
+        action_dim=model.nu,
+        randomize_target=entry["class_name"] == "PenTwirlRandomEnvV0",
+        reward_pos_align_w=float(
+            kwargs.get("weighted_reward_keys", {}).get("pos_align", 1.0)
+        ),
+        reward_rot_align_w=float(
+            kwargs.get("weighted_reward_keys", {}).get("rot_align", 1.0)
+        ),
+        reward_act_reg_w=float(
+            kwargs.get("weighted_reward_keys", {}).get("act_reg", 5.0)
+        ),
+        reward_drop_w=float(
+            kwargs.get("weighted_reward_keys", {}).get("drop", 5.0)
+        ),
+        reward_bonus_w=float(
+            kwargs.get("weighted_reward_keys", {}).get("bonus", 10.0)
+        ),
+    )
+    if overrides:
+        config = MyoSuitePenTwirlEnvSpec.gen_config(
+            **dict(
+                zip(MyoSuitePenTwirlEnvSpec._config_keys, config, strict=False),
+                **overrides,
+            )
+        )
+    return config, MyoSuitePenTwirlGymnasiumEnvPool
+
+
 def _pose_pixel_config(env_id: str) -> tuple[tuple[Any, ...], type]:
     config, _ = _pose_config(env_id)
     values = dict(zip(MyoSuitePoseEnvSpec._config_keys, config, strict=False))
@@ -246,6 +502,60 @@ def _reach_pixel_config(env_id: str) -> tuple[tuple[Any, ...], type]:
         render_camera_id=-1,
     )
     return pixel, MyoSuiteReachPixelGymnasiumEnvPool
+
+
+def _key_turn_pixel_config(env_id: str) -> tuple[tuple[Any, ...], type]:
+    config, _ = _key_turn_config(env_id)
+    values = dict(
+        zip(MyoSuiteKeyTurnEnvSpec._config_keys, config, strict=False)
+    )
+    pixel = MyoSuiteKeyTurnPixelEnvSpec.gen_config(
+        **values,
+        render_width=64,
+        render_height=64,
+        render_camera_id=-1,
+    )
+    return pixel, MyoSuiteKeyTurnPixelGymnasiumEnvPool
+
+
+def _obj_hold_pixel_config(env_id: str) -> tuple[tuple[Any, ...], type]:
+    config, _ = _obj_hold_config(env_id)
+    values = dict(
+        zip(MyoSuiteObjHoldEnvSpec._config_keys, config, strict=False)
+    )
+    pixel = MyoSuiteObjHoldPixelEnvSpec.gen_config(
+        **values,
+        render_width=64,
+        render_height=64,
+        render_camera_id=-1,
+    )
+    return pixel, MyoSuiteObjHoldPixelGymnasiumEnvPool
+
+
+def _torso_pixel_config(env_id: str) -> tuple[tuple[Any, ...], type]:
+    config, _ = _torso_config(env_id)
+    values = dict(zip(MyoSuiteTorsoEnvSpec._config_keys, config, strict=False))
+    pixel = MyoSuiteTorsoPixelEnvSpec.gen_config(
+        **values,
+        render_width=64,
+        render_height=64,
+        render_camera_id=-1,
+    )
+    return pixel, MyoSuiteTorsoPixelGymnasiumEnvPool
+
+
+def _pen_twirl_pixel_config(env_id: str) -> tuple[tuple[Any, ...], type]:
+    config, _ = _pen_twirl_config(env_id)
+    values = dict(
+        zip(MyoSuitePenTwirlEnvSpec._config_keys, config, strict=False)
+    )
+    pixel = MyoSuitePenTwirlPixelEnvSpec.gen_config(
+        **values,
+        render_width=64,
+        render_height=64,
+        render_camera_id=-1,
+    )
+    return pixel, MyoSuitePenTwirlPixelGymnasiumEnvPool
 
 
 def _make_env(config: tuple[Any, ...], pool_type: type, spec_type: type) -> Any:
@@ -428,9 +738,23 @@ def _load_oracle_modules() -> dict[str, Any]:
     sys.path.insert(0, str(_find_vendored_myosuite_root()))
     pose_module = importlib.import_module("myosuite.envs.myo.myobase.pose_v0")
     reach_module = importlib.import_module("myosuite.envs.myo.myobase.reach_v0")
+    key_turn_module = importlib.import_module(
+        "myosuite.envs.myo.myobase.key_turn_v0"
+    )
+    obj_hold_module = importlib.import_module(
+        "myosuite.envs.myo.myobase.obj_hold_v0"
+    )
+    pen_module = importlib.import_module("myosuite.envs.myo.myobase.pen_v0")
+    torso_module = importlib.import_module("myosuite.envs.myo.myobase.torso_v0")
     return {
         "PoseEnvV0": pose_module.PoseEnvV0,
         "ReachEnvV0": reach_module.ReachEnvV0,
+        "KeyTurnEnvV0": key_turn_module.KeyTurnEnvV0,
+        "ObjHoldFixedEnvV0": obj_hold_module.ObjHoldFixedEnvV0,
+        "ObjHoldRandomEnvV0": obj_hold_module.ObjHoldRandomEnvV0,
+        "PenTwirlFixedEnvV0": pen_module.PenTwirlFixedEnvV0,
+        "PenTwirlRandomEnvV0": pen_module.PenTwirlRandomEnvV0,
+        "TorsoEnvV0": torso_module.TorsoEnvV0,
     }
 
 
@@ -553,7 +877,28 @@ def _oracle_reset_sync(
         "test_reset_qacc_warmstart": unwrapped.sim.data.qacc_warmstart.copy().tolist(),
     }
     entry = _entry(env_id)
-    if "target_reach_range" not in entry["kwargs"]:
+    if entry["class_name"] == "KeyTurnEnvV0":
+        obs_sim = getattr(unwrapped, "sim_obsd", unwrapped.sim)
+        keyhead_sid = obs_sim.model.site_name2id("keyhead")
+        key_body_id = int(obs_sim.model.site_bodyid[keyhead_sid])
+        sync["test_key_body_pos"] = (
+            obs_sim.model.body_pos[key_body_id].copy().tolist()
+        )
+    elif entry["class_name"] in {"ObjHoldFixedEnvV0", "ObjHoldRandomEnvV0"}:
+        goal_sid = unwrapped.sim.model.site_name2id("goal")
+        geom_id = unwrapped.sim.model.geom_name2id("object")
+        sync["test_goal_pos"] = (
+            unwrapped.sim.model.site_pos[goal_sid].copy().tolist()
+        )
+        sync["test_object_geom_size"] = (
+            unwrapped.sim.model.geom_size[geom_id].copy().tolist()
+        )
+    elif entry["class_name"] in {"PenTwirlFixedEnvV0", "PenTwirlRandomEnvV0"}:
+        target_body_id = unwrapped.sim.model.body_name2id("target")
+        sync["test_target_body_quat"] = (
+            unwrapped.sim.model.body_quat[target_body_id].copy().tolist()
+        )
+    elif "target_reach_range" not in entry["kwargs"]:
         sync["test_target_qpos"] = unwrapped.target_jnt_value.copy().tolist()
         if getattr(unwrapped, "weight_bodyname", None):
             body_id = unwrapped.sim.model.body_name2id(
@@ -609,6 +954,49 @@ def _reach_alignment_reward_atol(env_id: str) -> float:
     return 1e-7
 
 
+def _key_turn_alignment_obs_atol(env_id: str) -> float:
+    # The official KeyTurn oracle emits observations from its sim_obsd path,
+    # while the native slice currently reads directly from the stepped sim.
+    # The residual is isolated to fingertip/key site vectors after reset-sync.
+    del env_id
+    return 3e-3
+
+
+def _key_turn_alignment_reward_atol(env_id: str) -> float:
+    del env_id
+    return 6e-3
+
+
+def _obj_hold_alignment_obs_atol(env_id: str) -> float:
+    del env_id
+    return 2e-3
+
+
+def _obj_hold_alignment_reward_atol(env_id: str) -> float:
+    del env_id
+    return 5e-2
+
+
+def _torso_alignment_obs_atol(env_id: str) -> float:
+    del env_id
+    return 1e-7
+
+
+def _torso_alignment_reward_atol(env_id: str) -> float:
+    del env_id
+    return 1e-7
+
+
+def _pen_twirl_alignment_obs_atol(env_id: str) -> float:
+    del env_id
+    return 1.1e-2
+
+
+def _pen_twirl_alignment_reward_atol(env_id: str) -> float:
+    del env_id
+    return 2e-2
+
+
 class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
     """Covers the internal native MyoSuite MyoBase slice."""
 
@@ -619,6 +1007,22 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
     def test_reach_surface_count(self) -> None:
         """ReachEnvV0 metadata should map to the expected direct surface."""
         self.assertLen(_REACH_IDS, 9)
+
+    def test_key_turn_surface_count(self) -> None:
+        """KeyTurnEnvV0 metadata should map to the expected direct surface."""
+        self.assertLen(_KEYTURN_IDS, 2)
+
+    def test_obj_hold_surface_count(self) -> None:
+        """ObjHold metadata should map to the expected direct surface."""
+        self.assertLen(_OBJHOLD_IDS, 2)
+
+    def test_torso_surface_count(self) -> None:
+        """TorsoEnvV0 metadata should map to the expected direct surface."""
+        self.assertLen(_TORSO_IDS, 2)
+
+    def test_pen_twirl_surface_count(self) -> None:
+        """PenTwirl metadata should map to the expected direct surface."""
+        self.assertLen(_PENTWIRL_IDS, 2)
 
     def test_pose_native_determinism_for_all_ids(self) -> None:
         """Pose envs should be deterministic under a fixed action sequence."""
@@ -643,6 +1047,50 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
                 actions = _seeded_actions((1, model.nu), steps=8, seed=29)
                 with self.subTest(env_id=env_id):
                     _assert_rollouts_match(self, env0, env1, actions)
+
+    def test_key_turn_native_determinism_for_all_ids(self) -> None:
+        """KeyTurn envs should be deterministic under a fixed action sequence."""
+        for env_id in _KEYTURN_IDS:
+            config, pool_type = _key_turn_config(env_id)
+            env0 = _make_env(config, pool_type, MyoSuiteKeyTurnEnvSpec)
+            env1 = _make_env(config, pool_type, MyoSuiteKeyTurnEnvSpec)
+            model = _model(_entry(env_id)["kwargs"]["model_path"])
+            actions = _seeded_actions((1, model.nu), steps=8, seed=71)
+            with self.subTest(env_id=env_id):
+                _assert_rollouts_match(self, env0, env1, actions)
+
+    def test_obj_hold_native_determinism_for_all_ids(self) -> None:
+        """ObjHold envs should be deterministic under a fixed action sequence."""
+        for env_id in _OBJHOLD_IDS:
+            config, pool_type = _obj_hold_config(env_id)
+            env0 = _make_env(config, pool_type, MyoSuiteObjHoldEnvSpec)
+            env1 = _make_env(config, pool_type, MyoSuiteObjHoldEnvSpec)
+            model = _model(_entry(env_id)["kwargs"]["model_path"])
+            actions = _seeded_actions((1, model.nu), steps=8, seed=83)
+            with self.subTest(env_id=env_id):
+                _assert_rollouts_match(self, env0, env1, actions)
+
+    def test_torso_native_determinism_for_all_ids(self) -> None:
+        """Torso envs should be deterministic under a fixed action sequence."""
+        for env_id in _TORSO_IDS:
+            config, pool_type = _torso_config(env_id)
+            env0 = _make_env(config, pool_type, MyoSuiteTorsoEnvSpec)
+            env1 = _make_env(config, pool_type, MyoSuiteTorsoEnvSpec)
+            model = _model(_entry(env_id)["kwargs"]["model_path"])
+            actions = _seeded_actions((1, model.nu), steps=8, seed=89)
+            with self.subTest(env_id=env_id):
+                _assert_rollouts_match(self, env0, env1, actions)
+
+    def test_pen_twirl_native_determinism_for_all_ids(self) -> None:
+        """PenTwirl envs should be deterministic under a fixed action sequence."""
+        for env_id in _PENTWIRL_IDS:
+            config, pool_type = _pen_twirl_config(env_id)
+            env0 = _make_env(config, pool_type, MyoSuitePenTwirlEnvSpec)
+            env1 = _make_env(config, pool_type, MyoSuitePenTwirlEnvSpec)
+            model = _model(_entry(env_id)["kwargs"]["model_path"])
+            actions = _seeded_actions((1, model.nu), steps=8, seed=107)
+            with self.subTest(env_id=env_id):
+                _assert_rollouts_match(self, env0, env1, actions)
 
     def test_pose_alignment_representative_ids(self) -> None:
         """Representative pose envs should align with the official oracle."""
@@ -754,6 +1202,228 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
                         if terminated0 or truncated0:
                             break
 
+    def test_key_turn_alignment_representative_ids(self) -> None:
+        """Representative key-turn envs should align with the official oracle."""
+        for env_id in _KEYTURN_ALIGN_IDS:
+            entry = _entry(env_id)
+            with _edited_model_if_needed(entry) as model_path:
+                with self.subTest(env_id=env_id):
+                    modules = _load_oracle_modules()
+                    cls = modules[entry["class_name"]]
+                    kwargs = dict(entry["kwargs"])
+                    kwargs.pop("edit_fn", None)
+                    kwargs["model_path"] = model_path
+                    oracle: Any = gymnasium.wrappers.TimeLimit(
+                        cls(seed=123, **kwargs),
+                        max_episode_steps=entry["max_episode_steps"],
+                    )
+                    obs0, sync = _oracle_reset_sync(oracle, env_id)
+                    obs_atol = _key_turn_alignment_obs_atol(env_id)
+                    reward_atol = _key_turn_alignment_reward_atol(env_id)
+                    config, pool_type = _key_turn_config(
+                        env_id, model_path=model_path, overrides=sync
+                    )
+                    native = _make_env(
+                        config, pool_type, MyoSuiteKeyTurnEnvSpec
+                    )
+                    obs1, _ = native.reset()
+                    np.testing.assert_allclose(
+                        obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
+                    )
+                    actions = _seeded_actions(
+                        (1, _model(model_path).nu), steps=12, seed=79
+                    )
+                    for action in actions:
+                        obs0, reward0, terminated0, truncated0, _ = oracle.step(
+                            action[0]
+                        )
+                        obs1, reward1, terminated1, truncated1, _ = native.step(
+                            action
+                        )
+                        np.testing.assert_allclose(
+                            obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
+                        )
+                        np.testing.assert_allclose(
+                            reward1,
+                            np.array([reward0]),
+                            atol=reward_atol,
+                            rtol=reward_atol,
+                        )
+                        np.testing.assert_array_equal(
+                            terminated1, np.array([terminated0])
+                        )
+                        np.testing.assert_array_equal(
+                            truncated1, np.array([truncated0])
+                        )
+                        if terminated0 or truncated0:
+                            break
+
+    def test_obj_hold_alignment_representative_ids(self) -> None:
+        """Representative obj-hold envs should align with the official oracle."""
+        for env_id in _OBJHOLD_ALIGN_IDS:
+            entry = _entry(env_id)
+            with _edited_model_if_needed(entry) as model_path:
+                with self.subTest(env_id=env_id):
+                    modules = _load_oracle_modules()
+                    cls = modules[entry["class_name"]]
+                    kwargs = dict(entry["kwargs"])
+                    kwargs.pop("edit_fn", None)
+                    kwargs["model_path"] = model_path
+                    oracle: Any = gymnasium.wrappers.TimeLimit(
+                        cls(seed=123, **kwargs),
+                        max_episode_steps=entry["max_episode_steps"],
+                    )
+                    obs0, sync = _oracle_reset_sync(oracle, env_id)
+                    obs_atol = _obj_hold_alignment_obs_atol(env_id)
+                    reward_atol = _obj_hold_alignment_reward_atol(env_id)
+                    config, pool_type = _obj_hold_config(
+                        env_id, model_path=model_path, overrides=sync
+                    )
+                    native = _make_env(
+                        config, pool_type, MyoSuiteObjHoldEnvSpec
+                    )
+                    obs1, _ = native.reset()
+                    np.testing.assert_allclose(
+                        obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
+                    )
+                    actions = _seeded_actions(
+                        (1, _model(model_path).nu), steps=12, seed=97
+                    )
+                    for action in actions:
+                        obs0, reward0, terminated0, truncated0, _ = oracle.step(
+                            action[0]
+                        )
+                        obs1, reward1, terminated1, truncated1, _ = native.step(
+                            action
+                        )
+                        np.testing.assert_allclose(
+                            obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
+                        )
+                        np.testing.assert_allclose(
+                            reward1,
+                            np.array([reward0]),
+                            atol=reward_atol,
+                            rtol=reward_atol,
+                        )
+                        np.testing.assert_array_equal(
+                            terminated1, np.array([terminated0])
+                        )
+                        np.testing.assert_array_equal(
+                            truncated1, np.array([truncated0])
+                        )
+                        if terminated0 or truncated0:
+                            break
+
+    def test_torso_alignment_representative_ids(self) -> None:
+        """Representative torso envs should align with the official oracle."""
+        for env_id in _TORSO_ALIGN_IDS:
+            entry = _entry(env_id)
+            with _edited_model_if_needed(entry) as model_path:
+                with self.subTest(env_id=env_id):
+                    modules = _load_oracle_modules()
+                    cls = modules[entry["class_name"]]
+                    kwargs = dict(entry["kwargs"])
+                    kwargs.pop("edit_fn", None)
+                    kwargs["model_path"] = model_path
+                    oracle: Any = gymnasium.wrappers.TimeLimit(
+                        cls(seed=123, **kwargs),
+                        max_episode_steps=entry["max_episode_steps"],
+                    )
+                    obs0, sync = _oracle_reset_sync(oracle, env_id)
+                    obs_atol = _torso_alignment_obs_atol(env_id)
+                    reward_atol = _torso_alignment_reward_atol(env_id)
+                    config, pool_type = _torso_config(
+                        env_id, model_path=model_path, overrides=sync
+                    )
+                    native = _make_env(config, pool_type, MyoSuiteTorsoEnvSpec)
+                    obs1, _ = native.reset()
+                    np.testing.assert_allclose(
+                        obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
+                    )
+                    actions = _seeded_actions(
+                        (1, _model(model_path).nu), steps=12, seed=101
+                    )
+                    for action in actions:
+                        obs0, reward0, terminated0, truncated0, _ = oracle.step(
+                            action[0]
+                        )
+                        obs1, reward1, terminated1, truncated1, _ = native.step(
+                            action
+                        )
+                        np.testing.assert_allclose(
+                            obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
+                        )
+                        np.testing.assert_allclose(
+                            reward1,
+                            np.array([reward0]),
+                            atol=reward_atol,
+                            rtol=reward_atol,
+                        )
+                        np.testing.assert_array_equal(
+                            terminated1, np.array([terminated0])
+                        )
+                        np.testing.assert_array_equal(
+                            truncated1, np.array([truncated0])
+                        )
+                        if terminated0 or truncated0:
+                            break
+
+    def test_pen_twirl_alignment_representative_ids(self) -> None:
+        """Representative pen-twirl envs should align with the official oracle."""
+        for env_id in _PENTWIRL_ALIGN_IDS:
+            entry = _entry(env_id)
+            with _edited_model_if_needed(entry) as model_path:
+                with self.subTest(env_id=env_id):
+                    modules = _load_oracle_modules()
+                    cls = modules[entry["class_name"]]
+                    kwargs = dict(entry["kwargs"])
+                    kwargs.pop("edit_fn", None)
+                    kwargs["model_path"] = model_path
+                    oracle: Any = gymnasium.wrappers.TimeLimit(
+                        cls(seed=123, **kwargs),
+                        max_episode_steps=entry["max_episode_steps"],
+                    )
+                    obs0, sync = _oracle_reset_sync(oracle, env_id)
+                    obs_atol = _pen_twirl_alignment_obs_atol(env_id)
+                    reward_atol = _pen_twirl_alignment_reward_atol(env_id)
+                    config, pool_type = _pen_twirl_config(
+                        env_id, model_path=model_path, overrides=sync
+                    )
+                    native = _make_env(
+                        config, pool_type, MyoSuitePenTwirlEnvSpec
+                    )
+                    obs1, _ = native.reset()
+                    np.testing.assert_allclose(
+                        obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
+                    )
+                    actions = _seeded_actions(
+                        (1, _model(model_path).nu), steps=12, seed=109
+                    )
+                    for action in actions:
+                        obs0, reward0, terminated0, truncated0, _ = oracle.step(
+                            action[0]
+                        )
+                        obs1, reward1, terminated1, truncated1, _ = native.step(
+                            action
+                        )
+                        np.testing.assert_allclose(
+                            obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
+                        )
+                        np.testing.assert_allclose(
+                            reward1,
+                            np.array([reward0]),
+                            atol=reward_atol,
+                            rtol=reward_atol,
+                        )
+                        np.testing.assert_array_equal(
+                            terminated1, np.array([terminated0])
+                        )
+                        np.testing.assert_array_equal(
+                            truncated1, np.array([truncated0])
+                        )
+                        if terminated0 or truncated0:
+                            break
+
     def test_pose_pixel_observation_smoke(self) -> None:
         """Pose pixel wrappers should emit batched RGB observations."""
         config, pool_type = _pose_pixel_config("myoHandPoseRandom-v0")
@@ -765,6 +1435,34 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
         """Reach pixel wrappers should emit batched RGB observations."""
         config, pool_type = _reach_pixel_config("myoHandReachRandom-v0")
         env = _make_env(config, pool_type, MyoSuiteReachPixelEnvSpec)
+        obs, _ = env.reset()
+        self.assertEqual(obs.shape, (1, 3, 64, 64))
+
+    def test_key_turn_pixel_observation_smoke(self) -> None:
+        """KeyTurn pixel wrappers should emit batched RGB observations."""
+        config, pool_type = _key_turn_pixel_config("myoHandKeyTurnRandom-v0")
+        env = _make_env(config, pool_type, MyoSuiteKeyTurnPixelEnvSpec)
+        obs, _ = env.reset()
+        self.assertEqual(obs.shape, (1, 3, 64, 64))
+
+    def test_obj_hold_pixel_observation_smoke(self) -> None:
+        """ObjHold pixel wrappers should emit batched RGB observations."""
+        config, pool_type = _obj_hold_pixel_config("myoHandObjHoldRandom-v0")
+        env = _make_env(config, pool_type, MyoSuiteObjHoldPixelEnvSpec)
+        obs, _ = env.reset()
+        self.assertEqual(obs.shape, (1, 3, 64, 64))
+
+    def test_torso_pixel_observation_smoke(self) -> None:
+        """Torso pixel wrappers should emit batched RGB observations."""
+        config, pool_type = _torso_pixel_config("myoTorsoPoseFixed-v0")
+        env = _make_env(config, pool_type, MyoSuiteTorsoPixelEnvSpec)
+        obs, _ = env.reset()
+        self.assertEqual(obs.shape, (1, 3, 64, 64))
+
+    def test_pen_twirl_pixel_observation_smoke(self) -> None:
+        """PenTwirl pixel wrappers should emit batched RGB observations."""
+        config, pool_type = _pen_twirl_pixel_config("myoHandPenTwirlRandom-v0")
+        env = _make_env(config, pool_type, MyoSuitePenTwirlPixelEnvSpec)
         obs, _ = env.reset()
         self.assertEqual(obs.shape, (1, 3, 64, 64))
 

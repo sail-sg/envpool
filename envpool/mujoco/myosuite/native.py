@@ -14,6 +14,18 @@
 """Internal native MyoSuite wrappers used before public registration."""
 
 from envpool.mujoco.myosuite_envpool import (
+    _MyoSuiteKeyTurnEnvPool,
+    _MyoSuiteKeyTurnEnvSpec,
+    _MyoSuiteKeyTurnPixelEnvPool,
+    _MyoSuiteKeyTurnPixelEnvSpec,
+    _MyoSuiteObjHoldEnvPool,
+    _MyoSuiteObjHoldEnvSpec,
+    _MyoSuiteObjHoldPixelEnvPool,
+    _MyoSuiteObjHoldPixelEnvSpec,
+    _MyoSuitePenTwirlEnvPool,
+    _MyoSuitePenTwirlEnvSpec,
+    _MyoSuitePenTwirlPixelEnvPool,
+    _MyoSuitePenTwirlPixelEnvSpec,
     _MyoSuitePoseEnvPool,
     _MyoSuitePoseEnvSpec,
     _MyoSuitePosePixelEnvPool,
@@ -22,6 +34,10 @@ from envpool.mujoco.myosuite_envpool import (
     _MyoSuiteReachEnvSpec,
     _MyoSuiteReachPixelEnvPool,
     _MyoSuiteReachPixelEnvSpec,
+    _MyoSuiteTorsoEnvPool,
+    _MyoSuiteTorsoEnvSpec,
+    _MyoSuiteTorsoPixelEnvPool,
+    _MyoSuiteTorsoPixelEnvSpec,
 )
 
 from envpool.python.api import py_env
@@ -46,6 +62,46 @@ from envpool.python.api import py_env
     MyoSuiteReachPixelDMEnvPool,
     MyoSuiteReachPixelGymnasiumEnvPool,
 ) = py_env(_MyoSuiteReachPixelEnvSpec, _MyoSuiteReachPixelEnvPool)
+(
+    MyoSuiteKeyTurnEnvSpec,
+    MyoSuiteKeyTurnDMEnvPool,
+    MyoSuiteKeyTurnGymnasiumEnvPool,
+) = py_env(_MyoSuiteKeyTurnEnvSpec, _MyoSuiteKeyTurnEnvPool)
+(
+    MyoSuiteKeyTurnPixelEnvSpec,
+    MyoSuiteKeyTurnPixelDMEnvPool,
+    MyoSuiteKeyTurnPixelGymnasiumEnvPool,
+) = py_env(_MyoSuiteKeyTurnPixelEnvSpec, _MyoSuiteKeyTurnPixelEnvPool)
+(
+    MyoSuiteObjHoldEnvSpec,
+    MyoSuiteObjHoldDMEnvPool,
+    MyoSuiteObjHoldGymnasiumEnvPool,
+) = py_env(_MyoSuiteObjHoldEnvSpec, _MyoSuiteObjHoldEnvPool)
+(
+    MyoSuiteObjHoldPixelEnvSpec,
+    MyoSuiteObjHoldPixelDMEnvPool,
+    MyoSuiteObjHoldPixelGymnasiumEnvPool,
+) = py_env(_MyoSuiteObjHoldPixelEnvSpec, _MyoSuiteObjHoldPixelEnvPool)
+(
+    MyoSuiteTorsoEnvSpec,
+    MyoSuiteTorsoDMEnvPool,
+    MyoSuiteTorsoGymnasiumEnvPool,
+) = py_env(_MyoSuiteTorsoEnvSpec, _MyoSuiteTorsoEnvPool)
+(
+    MyoSuiteTorsoPixelEnvSpec,
+    MyoSuiteTorsoPixelDMEnvPool,
+    MyoSuiteTorsoPixelGymnasiumEnvPool,
+) = py_env(_MyoSuiteTorsoPixelEnvSpec, _MyoSuiteTorsoPixelEnvPool)
+(
+    MyoSuitePenTwirlEnvSpec,
+    MyoSuitePenTwirlDMEnvPool,
+    MyoSuitePenTwirlGymnasiumEnvPool,
+) = py_env(_MyoSuitePenTwirlEnvSpec, _MyoSuitePenTwirlEnvPool)
+(
+    MyoSuitePenTwirlPixelEnvSpec,
+    MyoSuitePenTwirlPixelDMEnvPool,
+    MyoSuitePenTwirlPixelGymnasiumEnvPool,
+) = py_env(_MyoSuitePenTwirlPixelEnvSpec, _MyoSuitePenTwirlPixelEnvPool)
 
 __all__ = [
     "MyoSuitePoseEnvSpec",
@@ -60,4 +116,28 @@ __all__ = [
     "MyoSuiteReachPixelEnvSpec",
     "MyoSuiteReachPixelDMEnvPool",
     "MyoSuiteReachPixelGymnasiumEnvPool",
+    "MyoSuiteKeyTurnEnvSpec",
+    "MyoSuiteKeyTurnDMEnvPool",
+    "MyoSuiteKeyTurnGymnasiumEnvPool",
+    "MyoSuiteKeyTurnPixelEnvSpec",
+    "MyoSuiteKeyTurnPixelDMEnvPool",
+    "MyoSuiteKeyTurnPixelGymnasiumEnvPool",
+    "MyoSuiteObjHoldEnvSpec",
+    "MyoSuiteObjHoldDMEnvPool",
+    "MyoSuiteObjHoldGymnasiumEnvPool",
+    "MyoSuiteObjHoldPixelEnvSpec",
+    "MyoSuiteObjHoldPixelDMEnvPool",
+    "MyoSuiteObjHoldPixelGymnasiumEnvPool",
+    "MyoSuiteTorsoEnvSpec",
+    "MyoSuiteTorsoDMEnvPool",
+    "MyoSuiteTorsoGymnasiumEnvPool",
+    "MyoSuiteTorsoPixelEnvSpec",
+    "MyoSuiteTorsoPixelDMEnvPool",
+    "MyoSuiteTorsoPixelGymnasiumEnvPool",
+    "MyoSuitePenTwirlEnvSpec",
+    "MyoSuitePenTwirlDMEnvPool",
+    "MyoSuitePenTwirlGymnasiumEnvPool",
+    "MyoSuitePenTwirlPixelEnvSpec",
+    "MyoSuitePenTwirlPixelDMEnvPool",
+    "MyoSuitePenTwirlPixelGymnasiumEnvPool",
 ]
