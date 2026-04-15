@@ -99,11 +99,11 @@ metaworld_runtime_assets(
 myosuite_runtime_assets(
     name = "gen_myosuite_runtime_assets",
     out = "myosuite_assets",
-    myosuite_env_assets = ["@myosuite_src//:myosuite_runtime_assets"],
-    myo_sim_assets = ["@myo_sim_src//:runtime_assets"],
     furniture_sim_assets = ["@furniture_sim_src//:runtime_assets"],
-    object_sim_assets = ["@object_sim_src//:runtime_assets"],
     mpl_sim_assets = ["@mpl_sim_src//:runtime_assets"],
+    myo_sim_assets = ["@myo_sim_src//:runtime_assets"],
+    myosuite_env_assets = ["@myosuite_src//:myosuite_runtime_assets"],
+    object_sim_assets = ["@object_sim_src//:runtime_assets"],
     ycb_sim_assets = ["@ycb_sim_src//:runtime_assets"],
 )
 
