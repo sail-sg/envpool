@@ -79,9 +79,7 @@ class MyoSuiteMetadataTest(absltest.TestCase):
             },
         )
         self.assertLen(MYOSUITE_DIRECT_IDS, MYOSUITE_COUNTS["direct_total"])
-        self.assertLen(
-            MYOSUITE_EXPANDED_IDS, MYOSUITE_COUNTS["expanded_total"]
-        )
+        self.assertLen(MYOSUITE_EXPANDED_IDS, MYOSUITE_COUNTS["expanded_total"])
 
     def test_surface_lists_are_sorted_and_unique(self) -> None:
         """Checks the generated ID lists are already canonicalized."""
@@ -121,10 +119,14 @@ class MyoSuiteMetadataTest(absltest.TestCase):
             ],
         )
 
-    def test_checked_in_metadata_matches_vendored_upstream_sources(self) -> None:
+    def test_checked_in_metadata_matches_vendored_upstream_sources(
+        self,
+    ) -> None:
         """Checks the checked-in snapshot still matches the pinned upstream."""
         upstream_root = _find_vendored_myosuite_upstream_root()
-        generator = resolve_workspace_path("third_party/myosuite/generate_metadata.py")
+        generator = resolve_workspace_path(
+            "third_party/myosuite/generate_metadata.py"
+        )
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = Path(tmpdir) / "generated_env_ids.json"
             subprocess.run(

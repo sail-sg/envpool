@@ -38,7 +38,10 @@ def _keyword_string(node: ast.Call, arg_name: str) -> str | None:
 def _direct_ids_from_register_env_with_variants(path: Path) -> list[str]:
     ids: list[str] = []
     for node in ast.walk(_load_module(path)):
-        if isinstance(node, ast.Call) and _call_name(node) == "register_env_with_variants":
+        if (
+            isinstance(node, ast.Call)
+            and _call_name(node) == "register_env_with_variants"
+        ):
             env_id = _keyword_string(node, "id")
             if env_id is not None:
                 ids.append(env_id)
@@ -58,7 +61,9 @@ def _string_tuple_items(path: Path, target_name: str) -> list[str]:
                             if value is not None:
                                 values.append(value)
                         return values
-    raise ValueError(f"Could not find tuple assignment for {target_name} in {path}")
+    raise ValueError(
+        f"Could not find tuple assignment for {target_name} in {path}"
+    )
 
 
 def _myodm_track_ids(path: Path) -> list[str]:
@@ -66,7 +71,10 @@ def _myodm_track_ids(path: Path) -> list[str]:
     for node in module.body:
         if isinstance(node, ast.Assign):
             for target in node.targets:
-                if isinstance(target, ast.Name) and target.id == "MyoHand_task_spec":
+                if (
+                    isinstance(target, ast.Name)
+                    and target.id == "MyoHand_task_spec"
+                ):
                     if not isinstance(node.value, ast.Tuple):
                         raise ValueError("MyoHand_task_spec is not a tuple")
                     ids: list[str] = []
@@ -123,9 +131,13 @@ def main() -> None:
     )
 
     myodm_track_ids = _myodm_track_ids(myo_root / "myodm" / "__init__.py")
-    myodm_objects = _string_tuple_items(myo_root / "myodm" / "__init__.py", "OBJECTS")
+    myodm_objects = _string_tuple_items(
+        myo_root / "myodm" / "__init__.py", "OBJECTS"
+    )
     myodm_fixed_ids = [f"MyoHand{obj.title()}Fixed-v0" for obj in myodm_objects]
-    myodm_random_ids = [f"MyoHand{obj.title()}Random-v0" for obj in myodm_objects]
+    myodm_random_ids = [
+        f"MyoHand{obj.title()}Random-v0" for obj in myodm_objects
+    ]
     myodm_direct = myodm_track_ids + myodm_fixed_ids + myodm_random_ids
 
     direct_ids = _dedupe_sorted(
