@@ -348,8 +348,8 @@ def _install_flatten_dict_stub() -> None:
             cursor[parts[-1]] = value
         return out
 
-    flatten_dict.flatten = flatten
-    flatten_dict.unflatten = unflatten
+    setattr(flatten_dict, "flatten", flatten)
+    setattr(flatten_dict, "unflatten", unflatten)
     sys.modules["flatten_dict"] = flatten_dict
 
 
@@ -357,9 +357,10 @@ def _install_skvideo_stub() -> None:
     if "skvideo.io" in sys.modules:
         return
     skvideo = types.ModuleType("skvideo")
-    skvideo.io = types.ModuleType("skvideo.io")
+    skvideo_io = types.ModuleType("skvideo.io")
+    setattr(skvideo, "io", skvideo_io)
     sys.modules["skvideo"] = skvideo
-    sys.modules["skvideo.io"] = skvideo.io
+    sys.modules["skvideo.io"] = skvideo_io
 
 
 def _install_termcolor_stub() -> None:
@@ -375,8 +376,8 @@ def _install_termcolor_stub() -> None:
         del args, kwargs
         print(text)
 
-    termcolor.colored = colored
-    termcolor.cprint = cprint
+    setattr(termcolor, "colored", colored)
+    setattr(termcolor, "cprint", cprint)
     sys.modules["termcolor"] = termcolor
 
 
@@ -413,8 +414,8 @@ def _install_git_stub() -> None:
             del name
             return types.SimpleNamespace(fetch=lambda: None)
 
-    git.GitCommandError = GitCommandError
-    git.Repo = Repo
+    setattr(git, "GitCommandError", GitCommandError)
+    setattr(git, "Repo", Repo)
     sys.modules["git"] = git
 
 
@@ -513,10 +514,12 @@ def _edited_arm_reaching_model(model_path: str) -> Iterator[str]:
         xml_tree = ET.ElementTree(
             ET.fromstring(_arm_reaching_spec_to_xml(model_path))
         )
-        compiler = xml_tree.getroot().find("compiler")
-        if compiler is not None:
-            compiler.set("meshdir", ".")
-            compiler.set("texturedir", ".")
+        root = xml_tree.getroot()
+        if root is not None:
+            compiler = root.find("compiler")
+            if compiler is not None:
+                compiler.set("meshdir", ".")
+                compiler.set("texturedir", ".")
         xml_tree.write(edited_model_path, encoding="utf-8")
         yield str(edited_model_path)
 
@@ -652,7 +655,7 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
                     kwargs = dict(entry["kwargs"])
                     kwargs.pop("edit_fn", None)
                     kwargs["model_path"] = model_path
-                    oracle = gymnasium.wrappers.TimeLimit(
+                    oracle: Any = gymnasium.wrappers.TimeLimit(
                         cls(seed=123, **kwargs),
                         max_episode_steps=entry["max_episode_steps"],
                     )
@@ -708,7 +711,7 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
                     kwargs = dict(entry["kwargs"])
                     kwargs.pop("edit_fn", None)
                     kwargs["model_path"] = model_path
-                    oracle = gymnasium.wrappers.TimeLimit(
+                    oracle: Any = gymnasium.wrappers.TimeLimit(
                         cls(seed=123, **kwargs),
                         max_episode_steps=entry["max_episode_steps"],
                     )

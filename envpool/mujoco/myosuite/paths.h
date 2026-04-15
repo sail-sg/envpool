@@ -55,14 +55,14 @@ inline std::string CurrentWorkingDirectory() {
   std::array<char, 4096> buffer{};
 #ifdef _WIN32
   if (_getcwd(buffer.data(), static_cast<int>(buffer.size())) == nullptr) {
-    return std::string();
+    return {};
   }
 #else
   if (getcwd(buffer.data(), buffer.size()) == nullptr) {
-    return std::string();
+    return {};
   }
 #endif
-  return std::string(buffer.data());
+  return {buffer.data()};
 }
 
 inline std::string MyoSuiteModelPath(const std::string& base_path,
