@@ -44,3 +44,12 @@ filegroup(
     ],
     visibility = ["//visibility:public"],
 )
+
+filegroup(
+    name = "myosuite_python_sources",
+    srcs = glob(
+        ["myosuite/**/*.py"],
+        exclude = ["myosuite/**/__pycache__/**"],
+    ),
+    visibility = ["//visibility:public"],
+)

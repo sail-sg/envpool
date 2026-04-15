@@ -123,14 +123,35 @@ py_library(
     srcs = [
         "myosuite/__init__.py",
         "myosuite/metadata.py",
+        "myosuite/native.py",
         "myosuite/paths.py",
     ],
     data = [
+        ":myosuite_envpool",
         ":myosuite_runtime_assets",
         "//third_party/myosuite:metadata/env_ids.json",
     ],
     imports = ["../.."],
     deps = ["//envpool/python:api"],
+)
+
+cc_library(
+    name = "myosuite_env",
+    hdrs = ["myosuite/myobase.h"],
+    deps = [
+        ":myosuite_support",
+        ":robotics_env",
+        "//envpool/core:async_envpool",
+    ],
+)
+
+pybind_extension(
+    name = "myosuite_envpool",
+    srcs = ["myosuite_envpool.cc"],
+    deps = [
+        ":myosuite_env",
+        "//envpool/core:py_envpool",
+    ],
 )
 
 cc_library(
@@ -644,5 +665,22 @@ py_test(
         ":myosuite",
         requirement("absl-py"),
         requirement("mujoco"),
+    ],
+)
+
+py_test(
+    name = "myosuite_myobase_test",
+    size = "large",
+    srcs = ["myosuite/myobase_test.py"],
+    data = ["@myosuite_src//:myosuite_python_sources"],
+    imports = ["../.."],
+    main = "myosuite/myobase_test.py",
+    deps = [
+        ":myosuite",
+        requirement("absl-py"),
+        requirement("dm-control"),
+        requirement("gymnasium"),
+        requirement("mujoco"),
+        requirement("numpy"),
     ],
 )
