@@ -20,11 +20,16 @@ from functools import cache
 from pathlib import Path
 from typing import Any
 
-import mujoco
 import numpy as np
 
 from envpool.mujoco.myosuite.metadata import MYOSUITE_DIRECT_ENTRIES
 from envpool.mujoco.myosuite.paths import myosuite_asset_root
+
+
+def _mujoco() -> Any:
+    import mujoco as mujoco_module
+
+    return mujoco_module
 
 
 def _asset_root(base_path: str) -> Path:
@@ -65,7 +70,8 @@ def myosuite_expanded_entry(
 
 
 @cache
-def _model(base_path: str, model_path: str) -> mujoco.MjModel:
+def _model(base_path: str, model_path: str) -> Any:
+    mujoco = _mujoco()
     return mujoco.MjModel.from_xml_path(
         str(_asset_model_path(base_path, model_path))
     )
@@ -76,9 +82,8 @@ def _replace_all(text: str, old: str, new: str) -> str:
 
 
 @cache
-def _track_model(
-    base_path: str, model_path: str, object_name: str
-) -> mujoco.MjModel:
+def _track_model(base_path: str, model_path: str, object_name: str) -> Any:
+    mujoco = _mujoco()
     asset_root = _asset_root(base_path)
     source_model = asset_root / model_path
     object_xml = source_model.read_text()
@@ -254,7 +259,7 @@ def _reference_config(base_path: str, reference: Any) -> dict[str, Any]:
     }
 
 
-def _bimanual_index_sets(model: mujoco.MjModel) -> tuple[list[int], ...]:
+def _bimanual_index_sets(model: Any) -> tuple[list[int], ...]:
     myo_qpos: list[int] = []
     myo_dof: list[int] = []
     prosth_qpos: list[int] = []
@@ -621,6 +626,7 @@ def _challenge_relocate_config(
 def _baoding_config(
     base_path: str, entry: dict[str, Any], kwargs: dict[str, Any]
 ) -> dict[str, Any]:
+    mujoco = _mujoco()
     model = _model(base_path, kwargs["model_path"])
     ball1_gid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "ball1")
     obj_size_range = kwargs.get("obj_size_range")
@@ -761,6 +767,7 @@ def _runtrack_config(
 def _soccer_config(
     base_path: str, entry: dict[str, Any], kwargs: dict[str, Any]
 ) -> dict[str, Any]:
+    mujoco = _mujoco()
     model = _model(base_path, kwargs["model_path"])
     internal_joint_count = sum(
         1
@@ -847,6 +854,7 @@ def _chasetag_config(
 def _tabletennis_config(
     base_path: str, entry: dict[str, Any], kwargs: dict[str, Any]
 ) -> dict[str, Any]:
+    mujoco = _mujoco()
     model = _model(base_path, kwargs["model_path"])
     body_joint_count = sum(
         1
@@ -970,11 +978,11 @@ def _track_config(
     }
 
 
-def resolve_myosuite_task_config(
-    task_id: str, preview_kwargs: dict[str, Any]
+def _resolve_dynamic_myosuite_task_config(
+    entry: dict[str, Any],
+    variant_kwargs: dict[str, Any],
+    preview_kwargs: dict[str, Any],
 ) -> dict[str, Any]:
-    """Resolve a public MyoSuite task ID into spec kwargs for registration."""
-    entry, variant_kwargs = myosuite_expanded_entry(task_id)
     kwargs = {**entry["kwargs"], **variant_kwargs, **preview_kwargs}
     base_path = str(preview_kwargs["base_path"])
     class_name = entry["class_name"]
@@ -1024,4 +1032,58 @@ def resolve_myosuite_task_config(
 
     if "muscle_condition" in kwargs:
         config["muscle_condition"] = str(kwargs["muscle_condition"])
+    return config
+
+
+def generate_myosuite_task_config(
+    entry: dict[str, Any],
+    variant_kwargs: dict[str, Any],
+    *,
+    base_path: str,
+) -> dict[str, Any]:
+    """Generate a canonical task config for vendored metadata snapshots."""
+    return _resolve_dynamic_myosuite_task_config(
+        entry,
+        variant_kwargs,
+        {"base_path": base_path},
+    )
+
+
+def _has_dynamic_task_overrides(
+    entry: dict[str, Any],
+    variant_kwargs: dict[str, Any],
+    preview_kwargs: dict[str, Any],
+) -> bool:
+    defaults = {**entry["kwargs"], **variant_kwargs}
+    for key, value in preview_kwargs.items():
+        if key == "base_path" or key.startswith("test_"):
+            continue
+        if key in defaults and defaults[key] != value:
+            return True
+    return False
+
+
+def resolve_myosuite_task_config(
+    task_id: str, preview_kwargs: dict[str, Any]
+) -> dict[str, Any]:
+    """Resolve a public MyoSuite task ID into spec kwargs for registration."""
+    entry, variant_kwargs = myosuite_expanded_entry(task_id)
+    if _has_dynamic_task_overrides(entry, variant_kwargs, preview_kwargs):
+        return _resolve_dynamic_myosuite_task_config(
+            entry, variant_kwargs, preview_kwargs
+        )
+
+    default_config = entry.get("default_config")
+    if default_config is None:
+        return _resolve_dynamic_myosuite_task_config(
+            entry, variant_kwargs, preview_kwargs
+        )
+
+    config = dict(default_config)
+    muscle_condition = preview_kwargs.get(
+        "muscle_condition",
+        variant_kwargs.get("muscle_condition"),
+    )
+    if muscle_condition is not None:
+        config["muscle_condition"] = str(muscle_condition)
     return config

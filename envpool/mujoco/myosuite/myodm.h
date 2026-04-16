@@ -652,6 +652,14 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
 
   ~MyoDMTrackEnvBase() override = default;
 
+  envpool::mujoco::CameraPolicy RenderCameraPolicy() const override {
+    return detail::MyoSuiteRenderCameraPolicy();
+  }
+
+  void ConfigureRenderOption(mjvOption* option) const override {
+    detail::ConfigureMyoSuiteRenderOptions(option);
+  }
+
   bool IsDone() override { return done_; }
 
   void Reset() override {
@@ -674,6 +682,7 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
                                 raw);
     detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
                                          &muscle_condition_state_);
+    InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     ReferenceState reference = ReferenceAt(data_->time + motion_start_time_);

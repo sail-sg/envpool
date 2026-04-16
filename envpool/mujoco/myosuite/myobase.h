@@ -18,8 +18,10 @@
 #include <mujoco.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <limits>
 #include <random>
@@ -44,7 +46,8 @@ using envpool::mujoco::StackSpec;
 
 namespace detail {
 
-constexpr mjtNum kPi = static_cast<mjtNum>(3.14159265358979323846);
+[[maybe_unused]] constexpr mjtNum kPi =
+    static_cast<mjtNum>(3.14159265358979323846);
 constexpr mjtNum kPoseFarThreshold = static_cast<mjtNum>(6.283185307179586);
 
 inline std::vector<mjtNum> ToMjtVector(const std::vector<double>& input) {
@@ -60,7 +63,7 @@ inline mjtNum MuscleActivation(mjtNum value) {
       1.0 / (1.0 + std::exp(-5.0 * (static_cast<double>(value) - 0.5))));
 }
 
-enum class MuscleCondition {
+enum class MuscleCondition : std::uint8_t {
   kNone,
   kSarcopenia,
   kFatigue,
@@ -84,8 +87,6 @@ class CumulativeFatigueModel {
     Reset({}, false);
   }
 
-  bool empty() const { return tauact_.empty(); }
-
   void Reset(const std::vector<mjtNum>& fatigue_reset_vec,
              bool fatigue_reset_random) {
     std::size_t count = tauact_.size();
@@ -101,8 +102,8 @@ class CumulativeFatigueModel {
     if (fatigue_reset_random) {
       std::uniform_real_distribution<double> dist(0.0, 1.0);
       for (std::size_t i = 0; i < count; ++i) {
-        mjtNum non_fatigued = static_cast<mjtNum>(dist(fatigue_gen_));
-        mjtNum active = static_cast<mjtNum>(dist(fatigue_gen_));
+        const auto non_fatigued = static_cast<mjtNum>(dist(fatigue_gen_));
+        const auto active = static_cast<mjtNum>(dist(fatigue_gen_));
         ma_[i] = non_fatigued * active;
         mr_[i] = non_fatigued * (1.0 - active);
         mf_[i] = 1.0 - non_fatigued;
@@ -184,6 +185,175 @@ struct MyoConditionState {
   int eip_index{-1};
 };
 
+class NumpyPcg64 {
+ public:
+  explicit NumpyPcg64(std::uint64_t seed) { Seed(seed); }
+
+  void Seed(std::uint64_t seed) {
+    auto seed_words = SeedSequenceWords(seed);
+    InitState({seed_words[0], seed_words[1]}, {seed_words[2], seed_words[3]});
+  }
+
+  double UniformDouble(double low, double high) {
+    return low + (high - low) * NextDouble();
+  }
+
+  mjtNum UniformMjt(mjtNum low, mjtNum high) {
+    return static_cast<mjtNum>(
+        UniformDouble(static_cast<double>(low), static_cast<double>(high)));
+  }
+
+ private:
+  struct Uint128 {
+    std::uint64_t high;
+    std::uint64_t low;
+  };
+
+  static constexpr std::uint32_t kInitA = 0x43b0d7e5U;
+  static constexpr std::uint32_t kMultA = 0x931e8875U;
+  static constexpr std::uint32_t kInitB = 0x8b51f9ddU;
+  static constexpr std::uint32_t kMultB = 0x58f38dedU;
+  static constexpr std::uint32_t kMixMultL = 0xca01f9ddU;
+  static constexpr std::uint32_t kMixMultR = 0x4973f715U;
+  static constexpr int kXShift = 16;
+  static constexpr std::uint64_t kPcgMultiplierHigh = 2549297995355413924ULL;
+  static constexpr std::uint64_t kPcgMultiplierLow = 4865540595714422341ULL;
+
+  static Uint128 Add128(Uint128 lhs, Uint128 rhs) {
+    Uint128 out{};
+    out.low = lhs.low + rhs.low;
+    out.high = lhs.high + rhs.high + (out.low < rhs.low ? 1ULL : 0ULL);
+    return out;
+  }
+
+  static void Mul64Wide(std::uint64_t lhs, std::uint64_t rhs,
+                        std::uint64_t* high, std::uint64_t* low) {
+    *low = lhs * rhs;
+    std::uint64_t lhs_lo = lhs & 0xFFFFFFFFULL;
+    std::uint64_t lhs_hi = lhs >> 32;
+    std::uint64_t rhs_lo = rhs & 0xFFFFFFFFULL;
+    std::uint64_t rhs_hi = rhs >> 32;
+    std::uint64_t w0 = lhs_lo * rhs_lo;
+    std::uint64_t t = lhs_hi * rhs_lo + (w0 >> 32);
+    std::uint64_t w1 = t & 0xFFFFFFFFULL;
+    std::uint64_t w2 = t >> 32;
+    w1 += lhs_lo * rhs_hi;
+    *high = lhs_hi * rhs_hi + w2 + (w1 >> 32);
+  }
+
+  static Uint128 Mul128(Uint128 lhs, Uint128 rhs) {
+    Uint128 out{};
+    Mul64Wide(lhs.low, rhs.low, &out.high, &out.low);
+    out.high += lhs.high * rhs.low + lhs.low * rhs.high;
+    return out;
+  }
+
+  static std::uint64_t RotR64(std::uint64_t value, unsigned int rot) {
+    rot &= 63U;
+    if (rot == 0U) {
+      return value;
+    }
+    return (value >> rot) | (value << ((64U - rot) & 63U));
+  }
+
+  static std::vector<std::uint32_t> IntToUint32Array(std::uint64_t value) {
+    std::vector<std::uint32_t> words;
+    if (value == 0) {
+      words.push_back(0U);
+      return words;
+    }
+    while (value > 0) {
+      words.push_back(static_cast<std::uint32_t>(value & 0xFFFFFFFFULL));
+      value >>= 32;
+    }
+    return words;
+  }
+
+  static std::uint32_t HashMix(std::uint32_t value,
+                               std::uint32_t* hash_const) {
+    value ^= *hash_const;
+    *hash_const *= kMultA;
+    value *= *hash_const;
+    value ^= value >> kXShift;
+    return value;
+  }
+
+  static std::uint32_t Mix(std::uint32_t lhs, std::uint32_t rhs) {
+    std::uint32_t value = kMixMultL * lhs - kMixMultR * rhs;
+    value ^= value >> kXShift;
+    return value;
+  }
+
+  static std::array<std::uint64_t, 4> SeedSequenceWords(std::uint64_t seed) {
+    std::vector<std::uint32_t> entropy = IntToUint32Array(seed);
+    std::array<std::uint32_t, 4> pool{};
+    std::uint32_t hash_const = kInitA;
+    for (std::size_t i = 0; i < pool.size(); ++i) {
+      pool[i] = HashMix(i < entropy.size() ? entropy[i] : 0U, &hash_const);
+    }
+    for (std::size_t src = 0; src < pool.size(); ++src) {
+      for (std::size_t dst = 0; dst < pool.size(); ++dst) {
+        if (src == dst) {
+          continue;
+        }
+        pool[dst] = Mix(pool[dst], HashMix(pool[src], &hash_const));
+      }
+    }
+    for (std::size_t src = pool.size(); src < entropy.size(); ++src) {
+      for (std::size_t dst = 0; dst < pool.size(); ++dst) {
+        pool[dst] = Mix(pool[dst], HashMix(entropy[src], &hash_const));
+      }
+    }
+
+    std::array<std::uint32_t, 8> state32{};
+    hash_const = kInitB;
+    for (std::size_t i = 0; i < state32.size(); ++i) {
+      std::uint32_t value = pool[i % pool.size()];
+      value ^= hash_const;
+      hash_const *= kMultB;
+      value *= hash_const;
+      value ^= value >> kXShift;
+      state32[i] = value;
+    }
+    return {
+        (static_cast<std::uint64_t>(state32[1]) << 32) | state32[0],
+        (static_cast<std::uint64_t>(state32[3]) << 32) | state32[2],
+        (static_cast<std::uint64_t>(state32[5]) << 32) | state32[4],
+        (static_cast<std::uint64_t>(state32[7]) << 32) | state32[6],
+    };
+  }
+
+  void InitState(Uint128 init_state, Uint128 init_seq) {
+    state_ = {0ULL, 0ULL};
+    inc_ = {
+        (init_seq.high << 1U) | (init_seq.low >> 63U),
+        (init_seq.low << 1U) | 1ULL,
+    };
+    Step();
+    state_ = Add128(state_, init_state);
+    Step();
+  }
+
+  void Step() {
+    state_ = Add128(Mul128(state_, {kPcgMultiplierHigh, kPcgMultiplierLow}),
+                    inc_);
+  }
+
+  std::uint64_t NextUInt64() {
+    Step();
+    return RotR64(state_.high ^ state_.low,
+                  static_cast<unsigned int>(state_.high >> 58U));
+  }
+
+  double NextDouble() {
+    constexpr double kScale = 1.0 / 9007199254740992.0;
+    return static_cast<double>(NextUInt64() >> 11U) * kScale;
+  }
+
+  Uint128 state_{0ULL, 0ULL};
+  Uint128 inc_{0ULL, 0ULL};
+};
+
 inline MuscleCondition ParseMuscleCondition(std::string_view value) {
   if (value.empty()) {
     return MuscleCondition::kNone;
@@ -236,8 +406,8 @@ inline void ResetMyoConditionState(MyoConditionState* state) {
 }
 
 inline void ApplyMyoConditionAdjustments(
-    const mjModel* model, mjData* data, const std::vector<bool>& muscle_actuator,
-    MyoConditionState* state) {
+    const mjModel* model, mjData* data,
+    const std::vector<bool>& muscle_actuator, MyoConditionState* state) {
   if (state->muscle_condition == MuscleCondition::kNone ||
       state->muscle_condition == MuscleCondition::kSarcopenia) {
     return;
@@ -266,28 +436,20 @@ inline void ApplyMyoConditionAdjustments(
   }
 }
 
-// MyoSuite's official oracle runs on dm_control Physics with legacy_step=True,
-// then calls env.forward(), which round-trips the current qpos/qvel/act back
-// through sensor2sim() and ends the step with mj_forward(). Mirror that here
-// so the next control step starts from the same post-forward warmstart /
-// constraint state that the oracle uses.
+// MyoSuite advances its main simulation through Robot.step() ->
+// SimScene.advance(), which delegates to dm_control Physics.step(substeps).
+// Mirror that path directly with repeated mj_step calls. Observation-side
+// sensor2sim()/mj_forward work happens on the official sim_obsd path instead of
+// mutating the main simulation state after stepping.
 inline void DoMyoSuiteSimulation(const mjModel* model, mjData* data,
                                  int frame_skip) {
   if (frame_skip <= 0) {
     mj_forward(model, data);
     return;
   }
-  if (model->opt.integrator != mjINT_RK4) {
-    mj_step2(model, data);
-    for (int i = 1; i < frame_skip; ++i) {
-      mj_step(model, data);
-    }
-  } else {
-    for (int i = 0; i < frame_skip; ++i) {
-      mj_step(model, data);
-    }
+  for (int i = 0; i < frame_skip; ++i) {
+    mj_step(model, data);
   }
-  mj_forward(model, data);
 }
 
 inline mjtNum VectorNorm(const std::vector<mjtNum>& value) {
@@ -562,7 +724,11 @@ inline void CopyModelHfieldData(const mjModel* model, int hfield_id,
   int adr = model->hfield_adr[hfield_id];
   int rows = model->hfield_nrow[hfield_id];
   int cols = model->hfield_ncol[hfield_id];
-  out->assign(model->hfield_data + adr, model->hfield_data + adr + rows * cols);
+  std::size_t expected = static_cast<std::size_t>(rows) * cols;
+  out->resize(expected);
+  for (std::size_t i = 0; i < expected; ++i) {
+    (*out)[i] = static_cast<mjtNum>(model->hfield_data[adr + i]);
+  }
 }
 
 inline void RestoreModelHfieldData(mjModel* model, int hfield_id,
@@ -574,8 +740,12 @@ inline void RestoreModelHfieldData(mjModel* model, int hfield_id,
   int rows = model->hfield_nrow[hfield_id];
   int cols = model->hfield_ncol[hfield_id];
   std::size_t expected = static_cast<std::size_t>(rows) * cols;
-  std::memcpy(model->hfield_data + adr, value.data(),
-              sizeof(mjtNum) * expected);
+  if (value.size() != expected) {
+    throw std::runtime_error("hfield data size does not match model.");
+  }
+  for (std::size_t i = 0; i < expected; ++i) {
+    model->hfield_data[adr + i] = static_cast<float>(value[i]);
+  }
 }
 
 inline void BuildMuscleMask(const mjModel* model,
@@ -629,6 +799,17 @@ inline void ApplyMyoSuiteAction(const mjModel* model, mjData* data,
     }
     data->ctrl[i] = value;
   }
+}
+
+inline envpool::mujoco::CameraPolicy MyoSuiteRenderCameraPolicy() {
+  return envpool::mujoco::CameraPolicy::kDmControl;
+}
+
+inline void ConfigureMyoSuiteRenderOptions(mjvOption* option,
+                                           bool render_tendon = false) {
+  option->flags[mjVIS_ACTUATOR] = 1;
+  option->flags[mjVIS_ACTIVATION] = 1;
+  option->flags[mjVIS_TENDON] = render_tendon ? 1 : 0;
 }
 
 }  // namespace detail
@@ -1056,6 +1237,14 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
     InitializeRobotEnv();
   }
 
+  envpool::mujoco::CameraPolicy RenderCameraPolicy() const override {
+    return detail::MyoSuiteRenderCameraPolicy();
+  }
+
+  void ConfigureRenderOption(mjvOption* option) const override {
+    detail::ConfigureMyoSuiteRenderOptions(option);
+  }
+
   bool IsDone() override { return done_; }
 
   void Reset() override {
@@ -1076,6 +1265,7 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
   void Step(const Action& action) override {
     const auto* raw = static_cast<const float*>(action["action"_].Data());
     ApplyAction(raw);
+    InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
@@ -1478,6 +1668,14 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
     InitializeRobotEnv();
   }
 
+  envpool::mujoco::CameraPolicy RenderCameraPolicy() const override {
+    return detail::MyoSuiteRenderCameraPolicy();
+  }
+
+  void ConfigureRenderOption(mjvOption* option) const override {
+    detail::ConfigureMyoSuiteRenderOptions(option);
+  }
+
   bool IsDone() override { return done_; }
 
   void Reset() override {
@@ -1496,6 +1694,7 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
   void Step(const Action& action) override {
     const auto* raw = static_cast<const float*>(action["action"_].Data());
     ApplyAction(raw);
+    InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
@@ -1810,6 +2009,14 @@ class MyoSuiteKeyTurnEnvBase : public Env<EnvSpecT>,
     InitializeRobotEnv();
   }
 
+  envpool::mujoco::CameraPolicy RenderCameraPolicy() const override {
+    return detail::MyoSuiteRenderCameraPolicy();
+  }
+
+  void ConfigureRenderOption(mjvOption* option) const override {
+    detail::ConfigureMyoSuiteRenderOptions(option);
+  }
+
   bool IsDone() override { return done_; }
 
   void Reset() override {
@@ -1830,6 +2037,7 @@ class MyoSuiteKeyTurnEnvBase : public Env<EnvSpecT>,
                                 raw);
     detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
                                          &muscle_condition_state_);
+    InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
@@ -2080,6 +2288,14 @@ class MyoSuiteObjHoldEnvBase : public Env<EnvSpecT>,
     InitializeRobotEnv();
   }
 
+  envpool::mujoco::CameraPolicy RenderCameraPolicy() const override {
+    return detail::MyoSuiteRenderCameraPolicy();
+  }
+
+  void ConfigureRenderOption(mjvOption* option) const override {
+    detail::ConfigureMyoSuiteRenderOptions(option);
+  }
+
   bool IsDone() override { return done_; }
 
   void Reset() override {
@@ -2100,6 +2316,7 @@ class MyoSuiteObjHoldEnvBase : public Env<EnvSpecT>,
                                 raw);
     detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
                                          &muscle_condition_state_);
+    InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
@@ -2320,6 +2537,14 @@ class MyoSuiteTorsoEnvBase : public Env<EnvSpecT>,
     InitializeRobotEnv();
   }
 
+  envpool::mujoco::CameraPolicy RenderCameraPolicy() const override {
+    return detail::MyoSuiteRenderCameraPolicy();
+  }
+
+  void ConfigureRenderOption(mjvOption* option) const override {
+    detail::ConfigureMyoSuiteRenderOptions(option);
+  }
+
   bool IsDone() override { return done_; }
 
   void Reset() override {
@@ -2350,6 +2575,7 @@ class MyoSuiteTorsoEnvBase : public Env<EnvSpecT>,
                                 raw);
     detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
                                          &muscle_condition_state_);
+    InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
@@ -2515,6 +2741,14 @@ class MyoSuitePenTwirlEnvBase : public Env<EnvSpecT>,
     InitializeRobotEnv();
   }
 
+  envpool::mujoco::CameraPolicy RenderCameraPolicy() const override {
+    return detail::MyoSuiteRenderCameraPolicy();
+  }
+
+  void ConfigureRenderOption(mjvOption* option) const override {
+    detail::ConfigureMyoSuiteRenderOptions(option);
+  }
+
   bool IsDone() override { return done_; }
 
   void Reset() override {
@@ -2536,6 +2770,7 @@ class MyoSuitePenTwirlEnvBase : public Env<EnvSpecT>,
                                 raw);
     detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
                                          &muscle_condition_state_);
+    InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();

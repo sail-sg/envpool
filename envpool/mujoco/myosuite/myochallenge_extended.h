@@ -503,6 +503,14 @@ class MyoChallengeRunTrackEnvBase : public Env<EnvSpecT>,
     InitializeRobotEnv();
   }
 
+  envpool::mujoco::CameraPolicy RenderCameraPolicy() const override {
+    return detail::MyoSuiteRenderCameraPolicy();
+  }
+
+  void ConfigureRenderOption(mjvOption* option) const override {
+    detail::ConfigureMyoSuiteRenderOptions(option, true);
+  }
+
   bool IsDone() override { return done_; }
 
   void Reset() override {
@@ -536,6 +544,7 @@ class MyoChallengeRunTrackEnvBase : public Env<EnvSpecT>,
                                 ctrl.data());
     detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
                                          &muscle_condition_state_);
+    InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
@@ -855,6 +864,14 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
     InitializeRobotEnv();
   }
 
+  envpool::mujoco::CameraPolicy RenderCameraPolicy() const override {
+    return detail::MyoSuiteRenderCameraPolicy();
+  }
+
+  void ConfigureRenderOption(mjvOption* option) const override {
+    detail::ConfigureMyoSuiteRenderOptions(option, true);
+  }
+
   bool IsDone() override { return done_; }
 
   void Reset() override {
@@ -876,6 +893,7 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
                                 raw);
     detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
                                          &muscle_condition_state_);
+    InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
@@ -1249,6 +1267,14 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
     InitializeRobotEnv();
   }
 
+  envpool::mujoco::CameraPolicy RenderCameraPolicy() const override {
+    return detail::MyoSuiteRenderCameraPolicy();
+  }
+
+  void ConfigureRenderOption(mjvOption* option) const override {
+    detail::ConfigureMyoSuiteRenderOptions(option, true);
+  }
+
   bool IsDone() override { return done_; }
 
   void Reset() override {
@@ -1271,6 +1297,7 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
                                 raw);
     detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
                                          &muscle_condition_state_);
+    InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
@@ -1765,6 +1792,14 @@ class MyoChallengeTableTennisEnvBase
     InitializeRobotEnv();
   }
 
+  envpool::mujoco::CameraPolicy RenderCameraPolicy() const override {
+    return detail::MyoSuiteRenderCameraPolicy();
+  }
+
+  void ConfigureRenderOption(mjvOption* option) const override {
+    detail::ConfigureMyoSuiteRenderOptions(option);
+  }
+
   bool IsDone() override { return done_; }
 
   void Reset() override {
@@ -1790,6 +1825,7 @@ class MyoChallengeTableTennisEnvBase
                                 raw);
     detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
                                          &muscle_condition_state_);
+    InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();

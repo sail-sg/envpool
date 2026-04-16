@@ -27,6 +27,7 @@
 #include <vector>
 
 #if defined(__APPLE__) && __has_include(<OpenGL/OpenGL.h>)
+#define GL_SILENCE_DEPRECATION
 #include <OpenGL/OpenGL.h>
 #define ENVPOOL_HAS_CGL 1
 #elif defined(_WIN32) && __has_include(<windows.h>)
@@ -68,7 +69,7 @@ mjtNum MedianGeomPosition(const mjData* data, int ngeom, int axis) {
 class CglContext final : public GlContext {
  public:
   CglContext() {
-    const std::array<CGLPixelFormatAttribute, 13> attribs = {
+    const std::array<CGLPixelFormatAttribute, 17> attribs = {
         kCGLPFAOpenGLProfile,
         static_cast<CGLPixelFormatAttribute>(kCGLOGLPVersion_Legacy),
         kCGLPFAColorSize,
@@ -79,8 +80,12 @@ class CglContext final : public GlContext {
         static_cast<CGLPixelFormatAttribute>(24),
         kCGLPFAStencilSize,
         static_cast<CGLPixelFormatAttribute>(8),
-        kCGLPFAAllowOfflineRenderers,
-        static_cast<CGLPixelFormatAttribute>(0),  // value
+        kCGLPFAMultisample,
+        kCGLPFASampleBuffers,
+        static_cast<CGLPixelFormatAttribute>(1),
+        kCGLPFASamples,
+        static_cast<CGLPixelFormatAttribute>(4),
+        kCGLPFAAccelerated,
         static_cast<CGLPixelFormatAttribute>(0),  // terminator
     };
     GLint npix = 0;
@@ -459,9 +464,8 @@ class EglContext final : public GlContext {
 
 std::shared_ptr<GlContext> CreateGlContext() {
 #if defined(ENVPOOL_HAS_CGL)
-  // Match Gymnasium's CGL lifecycle: create a context per renderer/viewer.
-  // Reusing one CGL context across different MuJoCo models can leave renderer
-  // state behind on macOS software/offline renderers.
+  // Match MuJoCo Python's Darwin backend: use a dedicated multisampled CGL
+  // context per renderer instead of borrowing an unrelated current context.
   return std::make_shared<CglContext>();
 #elif defined(ENVPOOL_HAS_WGL)
   if (wglGetCurrentContext() != nullptr && wglGetCurrentDC() != nullptr) {
@@ -487,7 +491,6 @@ OffscreenRenderer::OffscreenRenderer(CameraPolicy camera_policy)
   mjv_defaultScene(&scene_);
   mjv_defaultCamera(&camera_);
   mjv_defaultOption(&option_);
-  mjv_defaultPerturb(&perturb_);
   mjr_defaultContext(&context_);
   camera_.fixedcamid = -1;
 }
@@ -508,6 +511,7 @@ void OffscreenRenderer::Initialize(const mjModel* model) {
   mjv_makeScene(model, &scene_, 10000);
   mjr_makeContext(model, &context_, mjFONTSCALE_150);
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
+  context_.readDepthMap = mjDEPTH_ZEROFAR;
   initialized_ = true;
 }
 
@@ -540,33 +544,41 @@ void OffscreenRenderer::UpdateCamera(const mjModel* model, const mjData* data,
       free_camera_initialized_ = true;
     }
   } else if (camera_id == -1) {
-    camera_.type = mjCAMERA_FREE;
     camera_.fixedcamid = -1;
-    if (!free_camera_initialized_) {
-      mjv_defaultFreeCamera(model, &camera_);
-      free_camera_initialized_ = true;
-    }
+    camera_.type = mjCAMERA_FREE;
+    mjv_defaultFreeCamera(model, &camera_);
+    free_camera_initialized_ = true;
   } else {
-    camera_.type = mjCAMERA_FIXED;
     camera_.fixedcamid = camera_id;
+    camera_.type = mjCAMERA_FIXED;
   }
 }
 
 void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
                                int height, int camera_id, unsigned char* rgb,
-                               const mjvCamera* camera_override) {
+                               const mjvCamera* camera_override,
+                               const mjvOption* option_override) {
   if (!initialized_) {
     Initialize(model);
   }
   gl_context_->MakeCurrent();
-  if (context_.offWidth != width || context_.offHeight != height) {
-    mjr_resizeOffscreen(width, height, &context_);
+  // Match mujoco.Renderer: render into the model-configured offscreen
+  // framebuffer and only grow it when callers exceed the existing capacity.
+  if (width > context_.offWidth || height > context_.offHeight) {
+    mjr_resizeOffscreen(std::max(width, context_.offWidth),
+                        std::max(height, context_.offHeight), &context_);
   }
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
+  for (int hfield_id = 0; hfield_id < model->nhfield; ++hfield_id) {
+    mjr_uploadHField(model, &context_, hfield_id);
+  }
+  if (option_override != nullptr) {
+    option_ = *option_override;
+  }
   UpdateCamera(model, data, camera_id, camera_override);
 
   mjrRect viewport = {0, 0, width, height};
-  mjv_updateScene(model, data, &option_, &perturb_, &camera_, mjCAT_ALL,
+  mjv_updateScene(model, data, &option_, nullptr, &camera_, mjCAT_ALL,
                   &scene_);
   mjr_render(viewport, &scene_, &context_);
 

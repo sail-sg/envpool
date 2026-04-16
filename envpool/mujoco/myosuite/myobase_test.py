@@ -15,8 +15,6 @@
 
 from __future__ import annotations
 
-import importlib
-import sys
 import tempfile
 from contextlib import contextmanager
 from functools import cache
@@ -68,9 +66,9 @@ from envpool.mujoco.myosuite.native import (
     MyoSuiteWalkPixelEnvSpec,
     MyoSuiteWalkPixelGymnasiumEnvPool,
 )
+from envpool.mujoco.myosuite.oracle_utils import load_oracle_class
 from envpool.mujoco.myosuite.paths import (
     myosuite_asset_root,
-    resolve_workspace_path,
 )
 from envpool.mujoco.myosuite.registration import MYOSUITE_PUBLIC_TASK_IDS
 from envpool.python.glfw_context import preload_windows_gl_dlls
@@ -184,6 +182,7 @@ _PUBLIC_VARIANT_DIFF_CASES = (
     ("myoArmReachRandom-v0", "myoSarcArmReachRandom-v0"),
     ("myoHandReorientID-v0", "myoFatiHandReorientID-v0"),
 )
+_ALIGNMENT_STEPS = 32
 
 
 def _entry(env_id: str) -> dict[str, Any]:
@@ -879,57 +878,6 @@ def _assert_rollouts_match(
         if terminated0[0] or truncated0[0]:
             break
 
-
-def _find_vendored_myosuite_root() -> Path:
-    root = resolve_workspace_path(".")
-    for candidate in (root, *root.parents):
-        direct = candidate / "myosuite_src"
-        if (direct / "myosuite/envs/myo/myobase/pose_v0.py").exists():
-            return direct
-        for pose_path in candidate.rglob(
-            "myosuite/envs/myo/myobase/pose_v0.py"
-        ):
-            return pose_path.parents[4]
-    raise FileNotFoundError("Unable to locate vendored myosuite source root")
-
-
-@cache
-def _load_oracle_modules() -> dict[str, Any]:
-    oracle_root = str(_find_vendored_myosuite_root())
-    if oracle_root not in sys.path:
-        sys.path.insert(0, oracle_root)
-    pose_module = importlib.import_module("myosuite.envs.myo.myobase.pose_v0")
-    reach_module = importlib.import_module("myosuite.envs.myo.myobase.reach_v0")
-    reorient_module = importlib.import_module(
-        "myosuite.envs.myo.myobase.reorient_sar_v0"
-    )
-    walk_module = importlib.import_module("myosuite.envs.myo.myobase.walk_v0")
-    key_turn_module = importlib.import_module(
-        "myosuite.envs.myo.myobase.key_turn_v0"
-    )
-    obj_hold_module = importlib.import_module(
-        "myosuite.envs.myo.myobase.obj_hold_v0"
-    )
-    pen_module = importlib.import_module("myosuite.envs.myo.myobase.pen_v0")
-    torso_module = importlib.import_module("myosuite.envs.myo.myobase.torso_v0")
-    return {
-        "PoseEnvV0": pose_module.PoseEnvV0,
-        "ReachEnvV0": reach_module.ReachEnvV0,
-        "Geometries100EnvV0": reorient_module.Geometries100EnvV0,
-        "Geometries8EnvV0": reorient_module.Geometries8EnvV0,
-        "InDistribution": reorient_module.InDistribution,
-        "OutofDistribution": reorient_module.OutofDistribution,
-        "WalkEnvV0": walk_module.WalkEnvV0,
-        "TerrainEnvV0": walk_module.TerrainEnvV0,
-        "KeyTurnEnvV0": key_turn_module.KeyTurnEnvV0,
-        "ObjHoldFixedEnvV0": obj_hold_module.ObjHoldFixedEnvV0,
-        "ObjHoldRandomEnvV0": obj_hold_module.ObjHoldRandomEnvV0,
-        "PenTwirlFixedEnvV0": pen_module.PenTwirlFixedEnvV0,
-        "PenTwirlRandomEnvV0": pen_module.PenTwirlRandomEnvV0,
-        "TorsoEnvV0": torso_module.TorsoEnvV0,
-    }
-
-
 def _first_child_body(body: mujoco.MjsBody) -> mujoco.MjsBody | None:
     return body.first_body()
 
@@ -1111,6 +1059,9 @@ def _oracle_reset_sync(
         sync["test_object_geom_type"] = int(model.geom_type[obj_geom_id])
         sync["test_target_geom_type"] = int(model.geom_type[target_geom_id])
         sync["test_object_geom_condim"] = int(model.geom_condim[obj_geom_id])
+        sync["test_success_site_rgba"] = (
+            model.site_rgba[unwrapped.success_indicator_sid].copy().tolist()
+        )
     elif entry["class_name"] in {"PenTwirlFixedEnvV0", "PenTwirlRandomEnvV0"}:
         target_body_id = unwrapped.sim.model.body_name2id("target")
         sync["test_target_body_quat"] = (
@@ -1128,8 +1079,32 @@ def _oracle_reset_sync(
             .copy()
             .tolist()
         )
+        sync["test_terrain_geom_rgba"] = (
+            unwrapped.sim.model.geom_rgba[terrain_geom_id].copy().tolist()
+        )
+        sync["test_terrain_geom_pos"] = (
+            unwrapped.sim.model.geom_pos[terrain_geom_id].copy().tolist()
+        )
+        sync["test_terrain_geom_contype"] = int(
+            unwrapped.sim.model.geom_contype[terrain_geom_id]
+        )
+        sync["test_terrain_geom_conaffinity"] = int(
+            unwrapped.sim.model.geom_conaffinity[terrain_geom_id]
+        )
     elif entry["class_name"] == "WalkEnvV0":
-        pass
+        terrain_geom_id = unwrapped.sim.model.geom_name2id("terrain")
+        sync["test_terrain_geom_rgba"] = (
+            unwrapped.sim.model.geom_rgba[terrain_geom_id].copy().tolist()
+        )
+        sync["test_terrain_geom_pos"] = (
+            unwrapped.sim.model.geom_pos[terrain_geom_id].copy().tolist()
+        )
+        sync["test_terrain_geom_contype"] = int(
+            unwrapped.sim.model.geom_contype[terrain_geom_id]
+        )
+        sync["test_terrain_geom_conaffinity"] = int(
+            unwrapped.sim.model.geom_conaffinity[terrain_geom_id]
+        )
     elif "target_reach_range" not in entry["kwargs"]:
         sync["test_target_qpos"] = unwrapped.target_jnt_value.copy().tolist()
         if getattr(unwrapped, "weight_bodyname", None):
@@ -1152,6 +1127,11 @@ def _oracle_reset_sync(
             )
         sync["test_target_pos"] = target_pos
     return obs, sync
+
+
+def _oracle_class(env_id: str) -> Any:
+    entry = _entry(env_id)
+    return load_oracle_class(entry["entry_module"], entry["class_name"])
 
 
 def _pose_alignment_obs_atol(env_id: str) -> float:
@@ -1405,8 +1385,7 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
             entry = _entry(env_id)
             with _edited_model_if_needed(entry) as model_path:
                 with self.subTest(env_id=env_id):
-                    modules = _load_oracle_modules()
-                    cls = modules[entry["class_name"]]
+                    cls = _oracle_class(env_id)
                     kwargs = dict(entry["kwargs"])
                     kwargs.pop("edit_fn", None)
                     kwargs["model_path"] = model_path
@@ -1428,7 +1407,9 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
                     self.assertEqual(info1["elapsed_step"].tolist(), [0])
                     native_model = _model(model_path)
                     actions = _seeded_actions(
-                        (1, native_model.nu), steps=12, seed=41
+                        (1, native_model.nu),
+                        steps=_ALIGNMENT_STEPS,
+                        seed=41,
                     )
                     for action in actions:
                         obs0, reward0, terminated0, truncated0, _ = oracle.step(
@@ -1461,8 +1442,7 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
             entry = _entry(env_id)
             with _edited_model_if_needed(entry) as model_path:
                 with self.subTest(env_id=env_id):
-                    modules = _load_oracle_modules()
-                    cls = modules[entry["class_name"]]
+                    cls = _oracle_class(env_id)
                     kwargs = dict(entry["kwargs"])
                     kwargs.pop("edit_fn", None)
                     kwargs["model_path"] = model_path
@@ -1482,7 +1462,9 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
                         obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
                     )
                     actions = _seeded_actions(
-                        (1, _model(model_path).nu), steps=12, seed=53
+                        (1, _model(model_path).nu),
+                        steps=_ALIGNMENT_STEPS,
+                        seed=53,
                     )
                     for action in actions:
                         obs0, reward0, terminated0, truncated0, _ = oracle.step(
@@ -1515,8 +1497,7 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
             entry = _entry(env_id)
             with _edited_model_if_needed(entry) as model_path:
                 with self.subTest(env_id=env_id):
-                    modules = _load_oracle_modules()
-                    cls = modules[entry["class_name"]]
+                    cls = _oracle_class(env_id)
                     kwargs = dict(entry["kwargs"])
                     kwargs["model_path"] = model_path
                     oracle: Any = gymnasium.wrappers.TimeLimit(
@@ -1537,7 +1518,9 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
                         obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
                     )
                     actions = _seeded_actions(
-                        (1, _model(model_path).nu), steps=12, seed=67
+                        (1, _model(model_path).nu),
+                        steps=_ALIGNMENT_STEPS,
+                        seed=67,
                     )
                     for action in actions:
                         obs0, reward0, terminated0, truncated0, _ = oracle.step(
@@ -1570,8 +1553,7 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
             entry = _entry(env_id)
             with _edited_model_if_needed(entry) as model_path:
                 with self.subTest(env_id=env_id):
-                    modules = _load_oracle_modules()
-                    cls = modules[entry["class_name"]]
+                    cls = _oracle_class(env_id)
                     kwargs = dict(entry["kwargs"])
                     kwargs.pop("edit_fn", None)
                     kwargs["model_path"] = model_path
@@ -1593,7 +1575,9 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
                         obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
                     )
                     actions = _seeded_actions(
-                        (1, _model(model_path).nu), steps=12, seed=79
+                        (1, _model(model_path).nu),
+                        steps=_ALIGNMENT_STEPS,
+                        seed=79,
                     )
                     for action in actions:
                         obs0, reward0, terminated0, truncated0, _ = oracle.step(
@@ -1626,8 +1610,7 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
             entry = _entry(env_id)
             with _edited_model_if_needed(entry) as model_path:
                 with self.subTest(env_id=env_id):
-                    modules = _load_oracle_modules()
-                    cls = modules[entry["class_name"]]
+                    cls = _oracle_class(env_id)
                     kwargs = dict(entry["kwargs"])
                     kwargs.pop("edit_fn", None)
                     kwargs["model_path"] = model_path
@@ -1649,7 +1632,9 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
                         obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
                     )
                     actions = _seeded_actions(
-                        (1, _model(model_path).nu), steps=12, seed=97
+                        (1, _model(model_path).nu),
+                        steps=_ALIGNMENT_STEPS,
+                        seed=97,
                     )
                     for action in actions:
                         obs0, reward0, terminated0, truncated0, _ = oracle.step(
@@ -1682,8 +1667,7 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
             entry = _entry(env_id)
             with _edited_model_if_needed(entry) as model_path:
                 with self.subTest(env_id=env_id):
-                    modules = _load_oracle_modules()
-                    cls = modules[entry["class_name"]]
+                    cls = _oracle_class(env_id)
                     kwargs = dict(entry["kwargs"])
                     kwargs.pop("edit_fn", None)
                     kwargs["model_path"] = model_path
@@ -1703,7 +1687,9 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
                         obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
                     )
                     actions = _seeded_actions(
-                        (1, _model(model_path).nu), steps=12, seed=101
+                        (1, _model(model_path).nu),
+                        steps=_ALIGNMENT_STEPS,
+                        seed=101,
                     )
                     for action in actions:
                         obs0, reward0, terminated0, truncated0, _ = oracle.step(
@@ -1736,8 +1722,7 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
             entry = _entry(env_id)
             with _edited_model_if_needed(entry) as model_path:
                 with self.subTest(env_id=env_id):
-                    modules = _load_oracle_modules()
-                    cls = modules[entry["class_name"]]
+                    cls = _oracle_class(env_id)
                     kwargs = dict(entry["kwargs"])
                     kwargs.pop("edit_fn", None)
                     kwargs["model_path"] = model_path
@@ -1759,7 +1744,9 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
                         obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
                     )
                     actions = _seeded_actions(
-                        (1, _model(model_path).nu), steps=12, seed=109
+                        (1, _model(model_path).nu),
+                        steps=_ALIGNMENT_STEPS,
+                        seed=109,
                     )
                     for action in actions:
                         obs0, reward0, terminated0, truncated0, _ = oracle.step(
@@ -1792,8 +1779,7 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
             entry = _entry(env_id)
             with _edited_model_if_needed(entry) as model_path:
                 with self.subTest(env_id=env_id):
-                    modules = _load_oracle_modules()
-                    cls = modules[entry["class_name"]]
+                    cls = _oracle_class(env_id)
                     kwargs = dict(entry["kwargs"])
                     kwargs["model_path"] = model_path
                     oracle: Any = gymnasium.wrappers.TimeLimit(
@@ -1812,7 +1798,9 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
                         obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
                     )
                     actions = _seeded_actions(
-                        (1, _model(model_path).nu), steps=12, seed=131
+                        (1, _model(model_path).nu),
+                        steps=_ALIGNMENT_STEPS,
+                        seed=131,
                     )
                     for action in actions:
                         obs0, reward0, terminated0, truncated0, _ = oracle.step(
@@ -1845,8 +1833,7 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
             entry = _entry(env_id)
             with _edited_model_if_needed(entry) as model_path:
                 with self.subTest(env_id=env_id):
-                    modules = _load_oracle_modules()
-                    cls = modules[entry["class_name"]]
+                    cls = _oracle_class(env_id)
                     kwargs = dict(entry["kwargs"])
                     kwargs["model_path"] = model_path
                     oracle: Any = gymnasium.wrappers.TimeLimit(
@@ -1865,7 +1852,9 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
                         obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
                     )
                     actions = _seeded_actions(
-                        (1, _model(model_path).nu), steps=12, seed=149
+                        (1, _model(model_path).nu),
+                        steps=_ALIGNMENT_STEPS,
+                        seed=149,
                     )
                     for action in actions:
                         obs0, reward0, terminated0, truncated0, _ = oracle.step(

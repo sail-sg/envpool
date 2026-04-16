@@ -48,7 +48,8 @@ class OffscreenRenderer {
 
   void Render(const mjModel* model, mjData* data, int width, int height,
               int camera_id, unsigned char* rgb,
-              const mjvCamera* camera_override = nullptr);
+              const mjvCamera* camera_override = nullptr,
+              const mjvOption* option_override = nullptr);
 
  private:
   void Initialize(const mjModel* model);
@@ -59,7 +60,6 @@ class OffscreenRenderer {
   mjvScene scene_;
   mjvCamera camera_;
   mjvOption option_;
-  mjvPerturb perturb_;
   mjrContext context_;
   std::vector<unsigned char> scratch_;
   CameraPolicy camera_policy_;

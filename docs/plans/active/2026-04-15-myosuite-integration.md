@@ -54,6 +54,38 @@ Generated unique public ID counts at the current pin:
 
 These counts must come from generated metadata, not handwritten lists.
 
+Those 244 direct IDs collapse into 23 concrete upstream task classes / entry
+points:
+
+- `myobase`
+  - 11 x `pose_v0:PoseEnvV0`
+  - 8 x `reach_v0:ReachEnvV0`
+  - 3 x `walk_v0:TerrainEnvV0`
+  - 2 x `key_turn_v0:KeyTurnEnvV0`
+  - 2 x `torso_v0:TorsoEnvV0`
+  - 1 x `walk_v0:WalkEnvV0`
+  - 1 x `walk_v0:ReachEnvV0`
+  - 1 x `obj_hold_v0:ObjHoldFixedEnvV0`
+  - 1 x `obj_hold_v0:ObjHoldRandomEnvV0`
+  - 1 x `pen_v0:PenTwirlFixedEnvV0`
+  - 1 x `pen_v0:PenTwirlRandomEnvV0`
+  - 4 x `reorient_sar_v0:*`
+- `myochallenge`
+  - 3 x `tabletennis_v0:TableTennisEnvV0`
+  - 3 x `relocate_v0:RelocateEnvV0`
+  - 3 x `chasetag_v0:ChaseTagEnvV0`
+  - 3 x `reorient_v0:ReorientEnvV0`
+  - 2 x `soccer_v0:SoccerEnvV0`
+  - 2 x `run_track_v0:RunTrack`
+  - 2 x `baoding_v1:BaodingEnvV1`
+  - 1 x `bimanual_v0:BimanualEnvV1`
+- `myodm`
+  - 1 x `myodm_v0:TrackEnv`, reused for all reference-motion and fixed/random
+    object tasks
+
+This is still a large port, but it is materially smaller than “244 unrelated
+envs”.
+
 ## Constraints
 
 1. Preserve MyoSuite public task naming exactly.
@@ -136,6 +168,27 @@ The first implementation pass should prioritize common shared machinery:
 - render camera parity
 - asset path resolution
 
+Important upstream mechanics confirmed from source:
+
+- `env_base.MujocoEnv` uses `dt = model.opt.timestep * frame_skip`.
+- default action normalization is linear `[-1, 1] -> actuator_ctrlrange`.
+- `BaseV0` special-cases muscle actuators before that remap:
+  - for `mjtDyn.mjDYN_MUSCLE`, actions are first passed through
+    `1 / (1 + exp(-5 * (a - 0.5)))`
+  - non-muscle actuators still flow through the default linear ctrlrange remap
+- `BaseV0` then applies optional abnormality logic:
+  - `sarcopenia` halves actuator `gainprm[:, 2]`
+  - `fatigue` runs the `CumulativeFatigue` state machine
+  - `reafferentation` redirects `EIP -> EPL`
+- reward flow is consistently `obs_dict -> get_reward_dict() -> dense` via
+  `weighted_reward_keys`
+- resets rely on the saved initial MuJoCo state plus task-specific target /
+  object randomization before the first observation is emitted
+
+This strongly suggests the native family should start from a C++
+`MyoBaseEnvBase` that mirrors `env_base.MujocoEnv` + `BaseV0`, then layer
+data-driven specializations on top.
+
 ### 4. Validation
 
 Required before public registration:
@@ -178,6 +231,8 @@ Proof:
 
 - family compiles
 - a metadata-driven smoke test can instantiate specs for implemented tasks
+- the shared base reproduces upstream action remapping, variant mechanics, and
+  reward aggregation on at least one `PoseEnvV0` and one `ReachEnvV0` task
 
 ### Milestone 3: MyoBase
 
@@ -188,6 +243,9 @@ Deliverables:
 Proof:
 
 - deterministic + alignment + render coverage over all `myobase` tasks
+- `PoseEnvV0` and `ReachEnvV0` land first, because they cover 19 out of 35
+  direct `myobase` IDs and validate most of the musculoskeletal base
+  machinery
 
 ### Milestone 4: MyoChallenge
 
@@ -252,9 +310,16 @@ Proof:
 
 - The MyoSuite public surface is much larger than a typical MuJoCo family.
   The `myodm` suite alone contributes about 190 direct IDs.
+- The direct surface is nonetheless concentrated into 23 entry points, so a
+  data-driven native port is plausible if the shared bases are done well.
 - The upstream XMLs are designed around relative includes into a `simhive`
   tree. Preserving that structure inside runfiles is simpler and less risky
   than rewriting every XML include up front.
+- The musculoskeletal action pipeline is not the same as Gymnasium-Robotics or
+  MetaWorld. `BaseV0` applies a muscle-specific nonlinear pre-transform before
+  the normal actuator ctrlrange remap, and challenge envs such as
+  `BimanualEnvV1`, `TableTennisEnvV0`, and `RunTrack` additionally mix muscle
+  and non-muscle actuator handling.
 - Several XMLs under `envs/myo/assets/` are not direct top-level models:
   `myohand_object.xml` is a template that requires object-name substitution,
   while files such as `myosuite_track.xml`, `paddle.xml`, and nested soccer

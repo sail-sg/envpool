@@ -62,6 +62,9 @@ class RenderItem:
 
     key: str
     label: str
+    max_mean_abs_diff: float | None = None
+    max_mismatch_ratio: float | None = None
+    require_match: bool = True
 
 
 @dataclass(frozen=True)
@@ -210,8 +213,76 @@ def _make_metaworld_family() -> RenderFamily:
     )
 
 
+def _make_myosuite_family() -> RenderFamily:
+    """Build the MyoSuite render comparison adapter."""
+    from envpool.mujoco.myosuite.render_utils import (
+        MYOSUITE_RENDER_COMPARE_CASES,
+        MYOSUITE_RENDER_COMPARE_STEPS,
+        capture_render_sequence,
+        official_render_thresholds,
+    )
+
+    cases = tuple(MYOSUITE_RENDER_COMPARE_CASES)
+    sequence_cache: dict[str, Any] = {}
+    case_thresholds = {
+        case.task_id: official_render_thresholds(case.task_id) for case in cases
+    }
+
+    def _split_case(key: str) -> tuple[str, int]:
+        task_id, step_index = key.split(":", maxsplit=1)
+        return task_id, int(step_index)
+
+    def render_pair(
+        key: str,
+        cfg: RenderCompareConfig,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        task_id, step_index = _split_case(key)
+        sequence = sequence_cache.get(task_id)
+        if sequence is None:
+            sequence = capture_render_sequence(
+                task_id,
+                steps=MYOSUITE_RENDER_COMPARE_STEPS,
+                seed=cfg.seed,
+                render_width=cfg.source_width,
+                render_height=cfg.source_height,
+                camera_id=cfg.camera_id,
+            )
+            sequence_cache[task_id] = sequence
+        return (
+            sequence.envpool_frames[step_index],
+            sequence.official_frames[step_index],
+        )
+
+    return RenderFamily(
+        items=tuple(
+            RenderItem(
+                key=f"{case.task_id}:{step_index}",
+                label=f"{case.label} step {step_index + 1}",
+                max_mean_abs_diff=(
+                    case_thresholds[case.task_id][0]
+                    if case_thresholds[case.task_id] is not None
+                    else None
+                ),
+                max_mismatch_ratio=(
+                    case_thresholds[case.task_id][1]
+                    if case_thresholds[case.task_id] is not None
+                    else None
+                ),
+                require_match=case.require_pixel_match,
+            )
+            for case in cases
+            for step_index in range(MYOSUITE_RENDER_COMPARE_STEPS)
+        ),
+        default_output=Path(
+            "docs/_static/render_samples/myosuite_official_compare.png"
+        ),
+        render_pair=render_pair,
+    )
+
+
 _FAMILY_BUILDERS: dict[str, Callable[[], RenderFamily]] = {
     "metaworld": _make_metaworld_family,
+    "myosuite": _make_myosuite_family,
 }
 
 
@@ -338,7 +409,35 @@ def generate(
 
     for index, item in enumerate(family.items):
         envpool_frame, official_frame = family.render_pair(item.key, cfg)
-        _assert_frames_match(item.label, envpool_frame, official_frame, cfg)
+        if item.require_match:
+            item_cfg = RenderCompareConfig(
+                family=cfg.family,
+                tile_width=cfg.tile_width,
+                tile_height=cfg.tile_height,
+                source_width=cfg.source_width,
+                source_height=cfg.source_height,
+                columns=cfg.columns,
+                seed=cfg.seed,
+                camera_id=cfg.camera_id,
+                max_mean_abs_diff=(
+                    cfg.max_mean_abs_diff
+                    if item.max_mean_abs_diff is None
+                    else item.max_mean_abs_diff
+                ),
+                max_mismatch_ratio=(
+                    cfg.max_mismatch_ratio
+                    if item.max_mismatch_ratio is None
+                    else item.max_mismatch_ratio
+                ),
+                require_bitwise=cfg.require_bitwise,
+                flip_vertical=cfg.flip_vertical,
+            )
+            _assert_frames_match(
+                item.label,
+                envpool_frame,
+                official_frame,
+                item_cfg,
+            )
         envpool_image = _make_display_image(envpool_frame, cfg)
         official_image = _make_display_image(official_frame, cfg)
         _draw_panel(

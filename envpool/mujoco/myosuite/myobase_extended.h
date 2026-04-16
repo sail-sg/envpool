@@ -119,6 +119,7 @@ class MyoSuiteReorientEnvFns {
         "test_target_geom_top_pos"_.Bind(std::vector<double>{}),
         "test_target_geom_bottom_pos"_.Bind(std::vector<double>{}),
         "test_object_body_mass"_.Bind(std::vector<double>{}),
+        "test_success_site_rgba"_.Bind(std::vector<double>{}),
         "test_object_geom_type"_.Bind(-1), "test_target_geom_type"_.Bind(-1),
         "test_object_geom_condim"_.Bind(-1));
   }
@@ -174,7 +175,11 @@ class MyoSuiteWalkEnvFns {
         "test_reset_qvel"_.Bind(std::vector<double>{}),
         "test_reset_act"_.Bind(std::vector<double>{}),
         "test_reset_qacc_warmstart"_.Bind(std::vector<double>{}),
-        "test_hfield_data"_.Bind(std::vector<double>{}));
+        "test_hfield_data"_.Bind(std::vector<double>{}),
+        "test_terrain_geom_rgba"_.Bind(std::vector<double>{}),
+        "test_terrain_geom_pos"_.Bind(std::vector<double>{}),
+        "test_terrain_geom_contype"_.Bind(-1),
+        "test_terrain_geom_conaffinity"_.Bind(-1));
   }
 
   template <typename Config>
@@ -296,6 +301,7 @@ class MyoSuiteReorientEnvBase : public Env<EnvSpecT>,
   std::vector<mjtNum> test_target_geom_top_pos_;
   std::vector<mjtNum> test_target_geom_bottom_pos_;
   std::vector<mjtNum> test_object_body_mass_;
+  std::vector<mjtNum> test_success_site_rgba_;
   int test_object_geom_type_;
   int test_target_geom_type_;
   int test_object_geom_condim_;
@@ -348,6 +354,8 @@ class MyoSuiteReorientEnvBase : public Env<EnvSpecT>,
             detail::ToMjtVector(spec.config["test_target_geom_bottom_pos"_])),
         test_object_body_mass_(
             detail::ToMjtVector(spec.config["test_object_body_mass"_])),
+        test_success_site_rgba_(
+            detail::ToMjtVector(spec.config["test_success_site_rgba"_])),
         test_object_geom_type_(spec.config["test_object_geom_type"_]),
         test_target_geom_type_(spec.config["test_target_geom_type"_]),
         test_object_geom_condim_(spec.config["test_object_geom_condim"_]) {
@@ -367,6 +375,14 @@ class MyoSuiteReorientEnvBase : public Env<EnvSpecT>,
     data_->qpos[0] = static_cast<mjtNum>(-1.5);
     mj_forward(model_, data_);
     InitializeRobotEnv();
+  }
+
+  envpool::mujoco::CameraPolicy RenderCameraPolicy() const override {
+    return detail::MyoSuiteRenderCameraPolicy();
+  }
+
+  void ConfigureRenderOption(mjvOption* option) const override {
+    detail::ConfigureMyoSuiteRenderOptions(option);
   }
 
   bool IsDone() override { return done_; }
@@ -389,6 +405,7 @@ class MyoSuiteReorientEnvBase : public Env<EnvSpecT>,
                                 raw);
     detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
                                          &muscle_condition_state_);
+    InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
@@ -613,6 +630,15 @@ class MyoSuiteReorientEnvBase : public Env<EnvSpecT>,
       }
       detail::RestoreModelBodyQuat(model_, target_body_id_,
                                    test_target_body_quat_);
+      if (!test_success_site_rgba_.empty()) {
+        detail::RestoreModelSiteRgba(model_, success_sid_,
+                                     test_success_site_rgba_);
+      } else {
+        std::vector<mjtNum> success_rgba = initial_success_rgba_;
+        success_rgba[0] = 2.0;
+        success_rgba[1] = 0.0;
+        detail::RestoreModelSiteRgba(model_, success_sid_, success_rgba);
+      }
     } else {
       RandomizeGeometry();
     }
@@ -793,6 +819,11 @@ class MyoSuiteWalkLikeEnvBase : public Env<EnvSpecT>,
   std::vector<mjtNum> test_reset_act_;
   std::vector<mjtNum> test_reset_qacc_warmstart_;
   std::vector<mjtNum> test_hfield_data_;
+  std::vector<mjtNum> test_terrain_geom_rgba_;
+  std::vector<mjtNum> test_terrain_geom_pos_;
+  int test_terrain_geom_contype_{-1};
+  int test_terrain_geom_conaffinity_{-1};
+  detail::NumpyPcg64 terrain_rng_;
   std::uniform_real_distribution<double> unit_dist_{0.0, 1.0};
 
  public:
@@ -832,7 +863,15 @@ class MyoSuiteWalkLikeEnvBase : public Env<EnvSpecT>,
         test_reset_qacc_warmstart_(
             detail::ToMjtVector(spec.config["test_reset_qacc_warmstart"_])),
         test_hfield_data_(
-            detail::ToMjtVector(spec.config["test_hfield_data"_])) {
+            detail::ToMjtVector(spec.config["test_hfield_data"_])),
+        test_terrain_geom_rgba_(
+            detail::ToMjtVector(spec.config["test_terrain_geom_rgba"_])),
+        test_terrain_geom_pos_(
+            detail::ToMjtVector(spec.config["test_terrain_geom_pos"_])),
+        test_terrain_geom_contype_(spec.config["test_terrain_geom_contype"_]),
+        test_terrain_geom_conaffinity_(
+            spec.config["test_terrain_geom_conaffinity"_]),
+        terrain_rng_(static_cast<std::uint64_t>(this->seed_)) {
     ValidateConfig();
     CacheIds();
     detail::BuildMuscleMask(model_, &muscle_actuator_);
@@ -847,6 +886,14 @@ class MyoSuiteWalkLikeEnvBase : public Env<EnvSpecT>,
       target_rot_.assign(model_->key_qpos + 3, model_->key_qpos + 7);
     }
     InitializeRobotEnv();
+  }
+
+  envpool::mujoco::CameraPolicy RenderCameraPolicy() const override {
+    return detail::MyoSuiteRenderCameraPolicy();
+  }
+
+  void ConfigureRenderOption(mjvOption* option) const override {
+    detail::ConfigureMyoSuiteRenderOptions(option);
   }
 
   bool IsDone() override { return done_; }
@@ -871,6 +918,7 @@ class MyoSuiteWalkLikeEnvBase : public Env<EnvSpecT>,
                                 raw);
     detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
                                          &muscle_condition_state_);
+    InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
     ++gait_steps_;
@@ -969,7 +1017,8 @@ class MyoSuiteWalkLikeEnvBase : public Env<EnvSpecT>,
     int cols = model_->hfield_ncol[terrain_hfield_id_];
     std::vector<mjtNum> rough(rows * cols);
     for (mjtNum& value : rough) {
-      value = static_cast<mjtNum>(unit_dist_(gen_) - 0.5);
+      value = terrain_rng_.UniformMjt(static_cast<mjtNum>(-0.5),
+                                      static_cast<mjtNum>(0.5));
     }
     std::vector<mjtNum> normalized;
     detail::NormalizeRange(rough, &normalized);
@@ -987,7 +1036,8 @@ class MyoSuiteWalkLikeEnvBase : public Env<EnvSpecT>,
     int frequency = 3;
     mjtNum scalar = terrain_variant_ == "fixed"
                         ? static_cast<mjtNum>(0.63)
-                        : static_cast<mjtNum>(0.53 + unit_dist_(gen_) * 0.20);
+                        : terrain_rng_.UniformMjt(static_cast<mjtNum>(0.53),
+                                                  static_cast<mjtNum>(0.73));
     std::vector<mjtNum> combined(total, static_cast<mjtNum>(-2.0));
     for (int i = flat_length; i < total; ++i) {
       double phase = static_cast<double>(i - flat_length) /
@@ -1014,7 +1064,8 @@ class MyoSuiteWalkLikeEnvBase : public Env<EnvSpecT>,
     int stairs_width = (total - flat) / num_stairs;
     mjtNum scalar = terrain_variant_ == "fixed"
                         ? static_cast<mjtNum>(2.5)
-                        : static_cast<mjtNum>(1.5 + unit_dist_(gen_) * 2.0);
+                        : terrain_rng_.UniformMjt(static_cast<mjtNum>(1.5),
+                                                  static_cast<mjtNum>(3.5));
     std::vector<mjtNum> data(total, static_cast<mjtNum>(-2.0));
     for (int stair = 0; stair < num_stairs; ++stair) {
       int start = flat + stair * stairs_width;
@@ -1046,9 +1097,41 @@ class MyoSuiteWalkLikeEnvBase : public Env<EnvSpecT>,
       } else {
         ApplyTerrainVisibility(false);
       }
+      if (!test_terrain_geom_rgba_.empty()) {
+        detail::RestoreModelGeomRgba(model_, terrain_geom_id_,
+                                     test_terrain_geom_rgba_);
+      }
+      if (!test_terrain_geom_pos_.empty()) {
+        detail::RestoreModelGeomPos(model_, terrain_geom_id_,
+                                    test_terrain_geom_pos_);
+      }
+      if (test_terrain_geom_contype_ >= 0) {
+        detail::RestoreModelGeomContype(model_, terrain_geom_id_,
+                                        test_terrain_geom_contype_);
+      }
+      if (test_terrain_geom_conaffinity_ >= 0) {
+        detail::RestoreModelGeomConaffinity(model_, terrain_geom_id_,
+                                            test_terrain_geom_conaffinity_);
+      }
       return;
     }
     ApplyTerrainVisibility(true);
+    if (!test_terrain_geom_rgba_.empty()) {
+      detail::RestoreModelGeomRgba(model_, terrain_geom_id_,
+                                   test_terrain_geom_rgba_);
+    }
+    if (!test_terrain_geom_pos_.empty()) {
+      detail::RestoreModelGeomPos(model_, terrain_geom_id_,
+                                  test_terrain_geom_pos_);
+    }
+    if (test_terrain_geom_contype_ >= 0) {
+      detail::RestoreModelGeomContype(model_, terrain_geom_id_,
+                                      test_terrain_geom_contype_);
+    }
+    if (test_terrain_geom_conaffinity_ >= 0) {
+      detail::RestoreModelGeomConaffinity(model_, terrain_geom_id_,
+                                          test_terrain_geom_conaffinity_);
+    }
     if (!test_hfield_data_.empty()) {
       detail::RestoreModelHfieldData(model_, terrain_hfield_id_,
                                      test_hfield_data_);

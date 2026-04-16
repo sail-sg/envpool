@@ -19,9 +19,14 @@ from __future__ import annotations
 
 import argparse
 import ast
+import importlib.util
 import json
+import os
+import shutil
 import sys
+import tempfile
 import types
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -309,6 +314,146 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
+def _copy_or_symlink_tree(src: Path, dst: Path) -> None:
+    try:
+        os.symlink(src, dst, target_is_directory=True)
+    except OSError:
+        shutil.copytree(src, dst)
+
+
+def _find_staged_runtime_asset_root() -> Path | None:
+    candidates: list[Path] = []
+    for root in (
+        Path.cwd(),
+        _repo_root(),
+        Path(os.environ["RUNFILES_DIR"])
+        if os.environ.get("RUNFILES_DIR")
+        else None,
+        Path(os.environ["TEST_SRCDIR"])
+        if os.environ.get("TEST_SRCDIR")
+        else None,
+    ):
+        if root is None:
+            continue
+        candidates.extend(
+            [
+                root / "envpool/mujoco/myosuite_assets",
+                root / "envpool/envpool/mujoco/myosuite_assets",
+                root / "mujoco/myosuite_assets",
+            ]
+        )
+    required_runtime_asset = (
+        Path("envs") / "myo" / "assets" / "hand" / "myohand_object.xml"
+    )
+    for candidate in candidates:
+        if (candidate / required_runtime_asset).exists():
+            return candidate
+    return None
+
+
+@contextmanager
+def _staged_runtime_asset_base(upstream_root: Path) -> Iterable[Path]:
+    external_root = upstream_root.parent
+    sibling_roots = {
+        "myo_sim": external_root / "myo_sim_src",
+        "furniture_sim": external_root / "furniture_sim_src",
+        "object_sim": external_root / "object_sim_src",
+        "mpl_sim": external_root / "mpl_sim_src",
+        "ycb_sim": external_root / "ycb_sim_src",
+    }
+    with tempfile.TemporaryDirectory() as tmpdir:
+        base_path = Path(tmpdir)
+        asset_root = base_path / "mujoco" / "myosuite_assets"
+        if all(path.exists() for path in sibling_roots.values()):
+            mappings = {
+                upstream_root / "myosuite" / "envs": asset_root / "envs",
+                sibling_roots["myo_sim"]: asset_root / "simhive/myo_sim",
+                sibling_roots["furniture_sim"]: asset_root
+                / "simhive/furniture_sim",
+                sibling_roots["object_sim"]: asset_root / "simhive/object_sim",
+                sibling_roots["mpl_sim"]: asset_root / "simhive/MPL_sim",
+                sibling_roots["ycb_sim"]: asset_root / "simhive/YCB_sim",
+            }
+            for src, dst in mappings.items():
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                _copy_or_symlink_tree(src, dst)
+        else:
+            staged_root = _find_staged_runtime_asset_root()
+            if staged_root is None:
+                raise FileNotFoundError(
+                    "Unable to locate staged MyoSuite runtime assets or "
+                    "vendored asset repositories."
+                )
+            asset_root.parent.mkdir(parents=True, exist_ok=True)
+            _copy_or_symlink_tree(staged_root, asset_root)
+        yield base_path
+
+
+def _attach_default_configs(
+    direct_entry_by_id: dict[str, dict[str, Any]], upstream_root: Path
+) -> None:
+    package_names = (
+        "envpool",
+        "envpool.mujoco",
+        "envpool.mujoco.myosuite",
+    )
+    originals = {
+        name: sys.modules.get(name)
+        for name in (
+            *package_names,
+            "envpool.mujoco.myosuite.metadata",
+            "envpool.mujoco.myosuite.paths",
+            "_envpool_myosuite_config_codegen",
+        )
+    }
+    for name in package_names:
+        if name not in sys.modules:
+            module = types.ModuleType(name)
+            module.__path__ = []  # type: ignore[attr-defined]
+            sys.modules[name] = module
+
+    metadata_module = types.ModuleType("envpool.mujoco.myosuite.metadata")
+    metadata_module.MYOSUITE_DIRECT_ENTRIES = tuple(direct_entry_by_id.values())
+    sys.modules["envpool.mujoco.myosuite.metadata"] = metadata_module
+
+    paths_module = types.ModuleType("envpool.mujoco.myosuite.paths")
+    paths_module.myosuite_asset_root = lambda: Path("__unused__")
+    sys.modules["envpool.mujoco.myosuite.paths"] = paths_module
+
+    config_path = _repo_root() / "envpool/mujoco/myosuite/config.py"
+    spec = importlib.util.spec_from_file_location(
+        "_envpool_myosuite_config_codegen",
+        config_path,
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(
+            f"Unable to load MyoSuite config module: {config_path}"
+        )
+    config_module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = config_module
+    spec.loader.exec_module(config_module)
+    generate_myosuite_task_config = config_module.generate_myosuite_task_config
+
+    try:
+        with _staged_runtime_asset_base(upstream_root) as base_path:
+            for entry in direct_entry_by_id.values():
+                entry["default_config"] = generate_myosuite_task_config(
+                    entry,
+                    {},
+                    base_path=str(base_path),
+                )
+    finally:
+        for name, module in originals.items():
+            if module is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = module
+
+
 def main() -> None:
     """Capture upstream suite registrations and emit canonical metadata."""
     args = _parse_args()
@@ -363,6 +508,7 @@ def main() -> None:
     direct_entries = sorted(
         direct_entry_by_id.values(), key=lambda entry: entry["id"]
     )
+    _attach_default_configs(direct_entry_by_id, upstream_root)
     direct_entries.sort(key=lambda entry: entry["id"])
     direct_ids = [entry["id"] for entry in direct_entries]
     expanded_ids = _dedupe_sorted(

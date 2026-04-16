@@ -15,8 +15,6 @@
 
 from __future__ import annotations
 
-import importlib
-import sys
 import tempfile
 from contextlib import contextmanager
 from functools import cache
@@ -35,10 +33,11 @@ from envpool.mujoco.myosuite.native import (
     MyoDMTrackPixelEnvSpec,
     MyoDMTrackPixelGymnasiumEnvPool,
 )
-from envpool.mujoco.myosuite.paths import (
-    myosuite_asset_root,
-    resolve_workspace_path,
+from envpool.mujoco.myosuite.oracle_utils import (
+    load_oracle_class,
+    prepared_track_oracle_model_path,
 )
+from envpool.mujoco.myosuite.paths import myosuite_asset_root
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
 preload_windows_gl_dlls(strict=True)
@@ -57,6 +56,7 @@ _TRACK_REPRESENTATIVE_IDS = (
     "MyoHandAirplaneRandom-v0",
     "MyoHandAirplaneFly-v0",
 )
+_ALIGNMENT_STEPS = 32
 
 
 def _entry(env_id: str) -> dict[str, Any]:
@@ -369,63 +369,6 @@ def _track_pixel_config(env_id: str) -> tuple[tuple[Any, ...], type, type]:
     return pixel, MyoDMTrackPixelGymnasiumEnvPool, MyoDMTrackPixelEnvSpec
 
 
-def _find_vendored_myosuite_root() -> Path:
-    root = resolve_workspace_path(".")
-    for candidate in (root, *root.parents):
-        direct = candidate / "myosuite_src"
-        if (direct / "myosuite/envs/myo/myodm/myodm_v0.py").exists() and (
-            direct / "myosuite/simhive/object_sim"
-        ).exists():
-            return direct
-        for source_path in candidate.rglob(
-            "myosuite/envs/myo/myodm/myodm_v0.py"
-        ):
-            vendored_root = source_path.parents[4]
-            if (vendored_root / "myosuite/simhive/object_sim").exists():
-                return vendored_root
-    raise FileNotFoundError("Unable to locate vendored myosuite source root")
-
-
-@cache
-def _prepare_oracle_myosuite_root() -> Path:
-    source_root = _find_vendored_myosuite_root()
-    external_root = source_root.parent
-    temp_root = Path(tempfile.mkdtemp(prefix="envpool_myodm_oracle_"))
-    package_root = temp_root / "myosuite"
-    package_root.mkdir()
-
-    for child in (source_root / "myosuite").iterdir():
-        if child.name in {"simhive", "__pycache__"}:
-            continue
-        (package_root / child.name).symlink_to(child)
-
-    simhive_root = package_root / "simhive"
-    simhive_root.mkdir()
-    simhive_sources = {
-        "myo_sim": external_root / "myo_sim_src",
-        "object_sim": external_root / "object_sim_src",
-        "furniture_sim": external_root / "furniture_sim_src",
-        "MPL_sim": external_root / "mpl_sim_src",
-        "YCB_sim": external_root / "ycb_sim_src",
-    }
-    for name, fallback in simhive_sources.items():
-        source = fallback
-        if not source.exists():
-            source = source_root / "myosuite" / "simhive" / name
-        if source.exists():
-            (simhive_root / name).symlink_to(source)
-    return temp_root
-
-
-@cache
-def _load_oracle_track_cls() -> Any:
-    oracle_root = str(_prepare_oracle_myosuite_root())
-    if oracle_root not in sys.path:
-        sys.path.insert(0, oracle_root)
-    module = importlib.import_module("myosuite.envs.myo.myodm.myodm_v0")
-    return module.TrackEnv
-
-
 def _oracle_reference(reference: Any) -> Any:
     if isinstance(reference, str):
         return str(myosuite_asset_root() / reference)
@@ -435,13 +378,15 @@ def _oracle_reference(reference: Any) -> Any:
     }
 
 
-def _oracle_track_kwargs(env_id: str) -> dict[str, Any]:
+@contextmanager
+def _oracle_track_kwargs(env_id: str) -> Iterator[dict[str, Any]]:
     kwargs = dict(_entry(env_id)["kwargs"])
-    return {
-        "object_name": kwargs["object_name"],
-        "model_path": "/../assets/hand/myohand_object.xml",
-        "reference": _oracle_reference(kwargs["reference"]),
-    }
+    with prepared_track_oracle_model_path() as model_path:
+        yield {
+            "object_name": kwargs["object_name"],
+            "model_path": model_path,
+            "reference": _oracle_reference(kwargs["reference"]),
+        }
 
 
 def _oracle_reset_sync(env: Any) -> tuple[np.ndarray, dict[str, Any]]:
@@ -501,56 +446,63 @@ class MyoDMTrackNativeTest(absltest.TestCase):
 
     def test_track_alignment_representative_ids(self) -> None:
         """Fixed and tracked references should align with the official oracle."""
-        cls = _load_oracle_track_cls()
+        cls = load_oracle_class("myosuite.envs.myo.myodm.myodm_v0", "TrackEnv")
         for env_id in _TRACK_ALIGN_IDS:
             with self.subTest(env_id=env_id):
                 entry = _entry(env_id)
-                oracle: Any = gymnasium.wrappers.TimeLimit(
-                    cls(seed=123, **_oracle_track_kwargs(env_id)),
-                    max_episode_steps=entry["max_episode_steps"],
-                )
-                obs0, sync = _oracle_reset_sync(oracle)
-                config, pool_type, spec_type = _track_config(
-                    env_id, overrides=sync
-                )
-                native = _make_env(config, pool_type, spec_type)
-                try:
-                    obs1, _ = native.reset()
-                    np.testing.assert_allclose(
-                        obs1, obs0[None, :], atol=1e-6, rtol=1e-6
-                    )
-                    model = _track_model(
-                        entry["kwargs"]["model_path"],
-                        entry["kwargs"]["object_name"],
-                    )
-                    actions = _seeded_actions((1, model.nu), steps=12, seed=191)
-                    for action in actions:
-                        obs0, reward0, terminated0, truncated0, _ = oracle.step(
-                            action[0]
+                with _oracle_track_kwargs(env_id) as oracle_kwargs:
+                    oracle: Any | None = None
+                    native: Any | None = None
+                    try:
+                        oracle = gymnasium.wrappers.TimeLimit(
+                            cls(seed=123, **oracle_kwargs),
+                            max_episode_steps=entry["max_episode_steps"],
                         )
-                        obs1, reward1, terminated1, truncated1, _ = native.step(
-                            action
+                        obs0, sync = _oracle_reset_sync(oracle)
+                        config, pool_type, spec_type = _track_config(
+                            env_id, overrides=sync
                         )
+                        native = _make_env(config, pool_type, spec_type)
+                        obs1, _ = native.reset()
                         np.testing.assert_allclose(
                             obs1, obs0[None, :], atol=1e-6, rtol=1e-6
                         )
-                        np.testing.assert_allclose(
-                            reward1,
-                            np.array([reward0]),
-                            atol=1e-6,
-                            rtol=1e-6,
+                        model = _track_model(
+                            entry["kwargs"]["model_path"],
+                            entry["kwargs"]["object_name"],
                         )
-                        np.testing.assert_array_equal(
-                            terminated1, np.array([terminated0])
+                        actions = _seeded_actions(
+                            (1, model.nu), steps=_ALIGNMENT_STEPS, seed=191
                         )
-                        np.testing.assert_array_equal(
-                            truncated1, np.array([truncated0])
-                        )
-                        if terminated0 or truncated0:
-                            break
-                finally:
-                    native.close()
-                    oracle.close()
+                        for action in actions:
+                            obs0, reward0, terminated0, truncated0, _ = (
+                                oracle.step(action[0])
+                            )
+                            obs1, reward1, terminated1, truncated1, _ = (
+                                native.step(action)
+                            )
+                            np.testing.assert_allclose(
+                                obs1, obs0[None, :], atol=1e-6, rtol=1e-6
+                            )
+                            np.testing.assert_allclose(
+                                reward1,
+                                np.array([reward0]),
+                                atol=1e-6,
+                                rtol=1e-6,
+                            )
+                            np.testing.assert_array_equal(
+                                terminated1, np.array([terminated0])
+                            )
+                            np.testing.assert_array_equal(
+                                truncated1, np.array([truncated0])
+                            )
+                            if terminated0 or truncated0:
+                                break
+                    finally:
+                        if native is not None:
+                            native.close()
+                        if oracle is not None:
+                            oracle.close()
 
     def test_track_pixel_observation_smoke(self) -> None:
         """Track pixel wrappers should emit batched RGB observations."""

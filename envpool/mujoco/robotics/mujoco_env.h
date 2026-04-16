@@ -113,29 +113,32 @@ class MujocoRobotEnv : public RenderableEnv {
     // Native pixel observations are rendered on worker threads, while env
     // teardown happens on the Python thread. Recreating the renderer on
     // Windows avoids cross-thread WGL resource lifetime issues.
-    envpool::mujoco::OffscreenRenderer renderer(
-        envpool::mujoco::CameraPolicy::kGymLike);
+    envpool::mujoco::OffscreenRenderer renderer(RenderCameraPolicy());
 #else
     if (renderer_ == nullptr) {
       renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
-          envpool::mujoco::CameraPolicy::kGymLike);
+          RenderCameraPolicy());
     }
 #endif
     mjvCamera camera_override;
     InitializeRenderCamera(&camera_override);
+    mjvOption option_override;
+    InitializeRenderOption(&option_override);
     if (RenderCamera(&camera_override)) {
 #ifdef _WIN32
       renderer.Render(model_, data_, width, height, camera_id, rgb,
-                      &camera_override);
+                      &camera_override, &option_override);
 #else
       renderer_->Render(model_, data_, width, height, camera_id, rgb,
-                        &camera_override);
+                        &camera_override, &option_override);
 #endif
     } else {
 #ifdef _WIN32
-      renderer.Render(model_, data_, width, height, camera_id, rgb);
+      renderer.Render(model_, data_, width, height, camera_id, rgb, nullptr,
+                      &option_override);
 #else
-      renderer_->Render(model_, data_, width, height, camera_id, rgb);
+      renderer_->Render(model_, data_, width, height, camera_id, rgb, nullptr,
+                        &option_override);
 #endif
     }
   }
@@ -230,6 +233,12 @@ class MujocoRobotEnv : public RenderableEnv {
     (void)camera;
     return false;
   }
+  virtual envpool::mujoco::CameraPolicy RenderCameraPolicy() const {
+    return envpool::mujoco::CameraPolicy::kGymLike;
+  }
+  virtual void ConfigureRenderOption(mjvOption* option) const {
+    (void)option;
+  }
 
   void InitializeRenderCamera(mjvCamera* camera) const {
     mjv_defaultCamera(camera);
@@ -242,6 +251,11 @@ class MujocoRobotEnv : public RenderableEnv {
     for (int axis = 0; axis < 3; ++axis) {
       camera->lookat[axis] = MedianGeomPosition(data_, model_->ngeom, axis);
     }
+  }
+
+  void InitializeRenderOption(mjvOption* option) const {
+    mjv_defaultOption(option);
+    ConfigureRenderOption(option);
   }
 
   void InitializeRobotEnv() {
@@ -270,6 +284,8 @@ class MujocoRobotEnv : public RenderableEnv {
       mj_step(model_, data_);
     }
   }
+
+  void InvalidateRenderCache() { has_cached_render_ = false; }
 
   void CaptureResetState() {
 #ifdef ENVPOOL_TEST

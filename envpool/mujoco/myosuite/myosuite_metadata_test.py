@@ -153,6 +153,14 @@ class MyoSuiteMetadataTest(absltest.TestCase):
             myobase_reach["kwargs"]["edit_fn"], "edit_fn_arm_reaching"
         )
         self.assertEqual(
+            myobase_reach["default_config"]["obs_dim"],
+            145,
+        )
+        self.assertEqual(
+            myobase_reach["default_config"]["action_dim"],
+            63,
+        )
+        self.assertEqual(
             [
                 variant["variant_id"]
                 for variant in myobase_reach["variant_defs"]
@@ -175,6 +183,9 @@ class MyoSuiteMetadataTest(absltest.TestCase):
             "envs/myo/myodm/data/MyoHand_airplane_fly1.npz",
         )
         self.assertEqual(myodm_track["model_placeholders"], ["OBJECT_NAME"])
+        self.assertEqual(myodm_track["default_config"]["robot_dim"], 29)
+        self.assertEqual(myodm_track["default_config"]["object_dim"], 7)
+        self.assertEqual(myodm_track["default_config"]["obs_dim"], 142)
         self.assertEmpty(myodm_track["variant_defs"])
 
     def test_suite_breakdowns_match_expected_entrypoint_counts(self) -> None:

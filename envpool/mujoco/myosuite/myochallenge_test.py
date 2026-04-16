@@ -15,8 +15,6 @@
 
 from __future__ import annotations
 
-import importlib
-import sys
 from functools import cache
 from pathlib import Path
 from typing import Any
@@ -61,9 +59,9 @@ from envpool.mujoco.myosuite.native import (
     MyoChallengeTableTennisPixelEnvSpec,
     MyoChallengeTableTennisPixelGymnasiumEnvPool,
 )
+from envpool.mujoco.myosuite.oracle_utils import load_oracle_class
 from envpool.mujoco.myosuite.paths import (
     myosuite_asset_root,
-    resolve_workspace_path,
 )
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
@@ -115,6 +113,7 @@ _TABLETENNIS_IDS = tuple(
     if entry["suite"] == "myochallenge"
     and entry["class_name"] == "TableTennisEnvV0"
 )
+_ALIGNMENT_STEPS = 32
 _REORIENT_ALIGNMENT_OBS_ATOL = 2e-3
 _REORIENT_ALIGNMENT_ROT_ATOL = 2e-2
 _DEFAULT_ALIGNMENT_ATOL = 1e-5
@@ -981,36 +980,9 @@ def _tabletennis_pixel_config(
         MyoChallengeTableTennisPixelEnvSpec,
     )
 
-
-def _find_vendored_myosuite_root() -> Path:
-    root = resolve_workspace_path(".")
-    for candidate in (root, *root.parents):
-        direct = candidate / "myosuite_src"
-        if (direct / "myosuite/envs/myo/myochallenge/reorient_v0.py").exists():
-            return direct
-        for path in candidate.rglob(
-            "myosuite/envs/myo/myochallenge/reorient_v0.py"
-        ):
-            return path.parents[4]
-    raise FileNotFoundError("Unable to locate vendored myosuite source root")
-
-
-def _prepare_oracle_imports() -> None:
-    source_root = str(_find_vendored_myosuite_root())
-    if source_root not in sys.path:
-        sys.path.insert(0, source_root)
-
-
-@cache
-def _load_oracle_class(entry_module: str, class_name: str) -> Any:
-    _prepare_oracle_imports()
-    module = importlib.import_module(entry_module)
-    return getattr(module, class_name)
-
-
 def _oracle_class(env_id: str) -> Any:
     entry = _entry(env_id)
-    return _load_oracle_class(entry["entry_module"], entry["class_name"])
+    return load_oracle_class(entry["entry_module"], entry["class_name"])
 
 
 def _oracle_kwargs(env_id: str) -> dict[str, Any]:
@@ -1198,7 +1170,7 @@ def _assert_alignment_with_oracle(
     config_fn: Any,
     *,
     action_seed: int,
-    steps: int = 8,
+    steps: int = _ALIGNMENT_STEPS,
 ) -> None:
     entry = _entry(env_id)
     oracle_cls = _oracle_class(env_id)
@@ -1447,7 +1419,7 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
                 obs1, _ = native.reset()
                 _assert_reorient_obs_close(obs1[0], obs0)
                 actions = _seeded_actions(
-                    _batched_action_shape(native), 8, 4321
+                    _batched_action_shape(native), _ALIGNMENT_STEPS, 4321
                 )
                 for action in actions:
                     obs0, reward0, terminated0, truncated0, _ = oracle.step(
@@ -1495,7 +1467,7 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
                     rtol=1e-5,
                 )
                 actions = _seeded_actions(
-                    _batched_action_shape(native), 8, 8765
+                    _batched_action_shape(native), _ALIGNMENT_STEPS, 8765
                 )
                 for action in actions:
                     obs0, reward0, terminated0, truncated0, _ = oracle.step(
@@ -1544,7 +1516,10 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
         for env_id in _RUNTRACK_IDS:
             with self.subTest(env_id=env_id):
                 _assert_alignment_with_oracle(
-                    self, env_id, _runtrack_config, action_seed=1323, steps=6
+                    self,
+                    env_id,
+                    _runtrack_config,
+                    action_seed=1323,
                 )
 
     def test_soccer_alignment_with_oracle(self) -> None:
@@ -1552,7 +1527,10 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
         for env_id in _SOCCER_IDS:
             with self.subTest(env_id=env_id):
                 _assert_alignment_with_oracle(
-                    self, env_id, _soccer_config, action_seed=1423, steps=6
+                    self,
+                    env_id,
+                    _soccer_config,
+                    action_seed=1423,
                 )
 
     def test_chasetag_alignment_with_oracle(self) -> None:
@@ -1560,7 +1538,10 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
         for env_id in _CHASETAG_IDS:
             with self.subTest(env_id=env_id):
                 _assert_alignment_with_oracle(
-                    self, env_id, _chasetag_config, action_seed=1523, steps=6
+                    self,
+                    env_id,
+                    _chasetag_config,
+                    action_seed=1523,
                 )
 
     def test_tabletennis_alignment_with_oracle(self) -> None:
@@ -1568,7 +1549,10 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
         for env_id in _TABLETENNIS_IDS:
             with self.subTest(env_id=env_id):
                 _assert_alignment_with_oracle(
-                    self, env_id, _tabletennis_config, action_seed=1623, steps=6
+                    self,
+                    env_id,
+                    _tabletennis_config,
+                    action_seed=1623,
                 )
 
     def test_reorient_pixel_observation_smoke(self) -> None:

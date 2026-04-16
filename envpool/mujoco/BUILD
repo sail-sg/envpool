@@ -136,6 +136,32 @@ py_library(
     imports = ["../.."],
     deps = [
         "//envpool/python:api",
+        requirement("numpy"),
+    ],
+)
+
+py_library(
+    name = "myosuite_oracle_utils",
+    srcs = ["myosuite/oracle_utils.py"],
+    data = ["@myosuite_src//:myosuite_python_sources"],
+    imports = ["../.."],
+    deps = [
+        ":myosuite",
+    ],
+)
+
+py_library(
+    name = "myosuite_render_utils",
+    srcs = ["myosuite/render_utils.py"],
+    data = ["@myosuite_src//:myosuite_python_sources"],
+    imports = ["../.."],
+    deps = [
+        ":myosuite",
+        ":myosuite_oracle_test_deps",
+        ":myosuite_oracle_utils",
+        "//envpool:registration",
+        requirement("dm-control"),
+        requirement("gymnasium"),
         requirement("mujoco"),
         requirement("numpy"),
     ],
@@ -681,6 +707,7 @@ py_test(
     deps = [
         ":myosuite",
         requirement("absl-py"),
+        requirement("mujoco"),
     ],
 )
 
@@ -721,6 +748,7 @@ py_test(
     deps = [
         ":myosuite",
         ":myosuite_oracle_test_deps",
+        ":myosuite_oracle_utils",
         "//envpool:registration",
         requirement("absl-py"),
         requirement("dm-control"),
@@ -740,6 +768,7 @@ py_test(
     deps = [
         ":myosuite",
         ":myosuite_oracle_test_deps",
+        ":myosuite_oracle_utils",
         requirement("absl-py"),
         requirement("dm-control"),
         requirement("gymnasium"),
@@ -758,10 +787,24 @@ py_test(
     deps = [
         ":myosuite",
         ":myosuite_oracle_test_deps",
+        ":myosuite_oracle_utils",
         requirement("absl-py"),
         requirement("dm-control"),
         requirement("gymnasium"),
         requirement("mujoco"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_render_test",
+    size = "large",
+    srcs = ["myosuite/myosuite_render_test.py"],
+    imports = ["../.."],
+    main = "myosuite/myosuite_render_test.py",
+    deps = [
+        ":myosuite_render_utils",
+        requirement("absl-py"),
         requirement("numpy"),
     ],
 )
