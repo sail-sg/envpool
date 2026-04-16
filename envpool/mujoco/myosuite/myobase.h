@@ -46,8 +46,7 @@ using envpool::mujoco::StackSpec;
 
 namespace detail {
 
-[[maybe_unused]] constexpr mjtNum kPi =
-    static_cast<mjtNum>(3.14159265358979323846);
+[[maybe_unused]] constexpr mjtNum kPi = 3.14159265358979323846;
 constexpr mjtNum kPoseFarThreshold = static_cast<mjtNum>(6.283185307179586);
 
 inline std::vector<mjtNum> ToMjtVector(const std::vector<double>& input) {
