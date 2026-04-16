@@ -300,8 +300,8 @@ class NumpyPcg64 {
       }
     }
     for (std::size_t src = pool.size(); src < entropy.size(); ++src) {
-      for (std::size_t dst = 0; dst < pool.size(); ++dst) {
-        pool[dst] = Mix(pool[dst], HashMix(entropy[src], &hash_const));
+      for (auto& value : pool) {
+        value = Mix(value, HashMix(entropy[src], &hash_const));
       }
     }
 
@@ -346,8 +346,8 @@ class NumpyPcg64 {
   }
 
   double NextDouble() {
-    constexpr double kScale = 1.0 / 9007199254740992.0;
-    return static_cast<double>(NextUInt64() >> 11U) * kScale;
+    constexpr double scale = 1.0 / 9007199254740992.0;
+    return static_cast<double>(NextUInt64() >> 11U) * scale;
   }
 
   Uint128 state_{0ULL, 0ULL};

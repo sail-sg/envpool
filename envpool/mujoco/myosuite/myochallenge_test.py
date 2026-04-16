@@ -980,6 +980,7 @@ def _tabletennis_pixel_config(
         MyoChallengeTableTennisPixelEnvSpec,
     )
 
+
 def _oracle_class(env_id: str) -> Any:
     entry = _entry(env_id)
     return load_oracle_class(entry["entry_module"], entry["class_name"])

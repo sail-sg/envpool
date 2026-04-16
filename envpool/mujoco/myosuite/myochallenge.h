@@ -2296,7 +2296,7 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
   void Step(const Action& action) override {
     const auto* raw = static_cast<const float*>(action["action"_].Data());
     for (int actuator = 0; actuator < model_->nu; ++actuator) {
-      mjtNum value = static_cast<mjtNum>(raw[actuator]);
+      auto value = static_cast<mjtNum>(raw[actuator]);
       if (normalize_act_ && muscle_actuator_[actuator] && model_->na != 0) {
         value = detail::MuscleActivation(detail::ClampNormalized(value));
       } else if (normalize_act_ && !muscle_actuator_[actuator]) {

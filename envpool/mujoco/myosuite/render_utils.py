@@ -294,8 +294,10 @@ def _render_official_array(
     if sim is None:
         raise RuntimeError("official env does not expose sim")
     physics = getattr(sim, "sim", None)
-    if prefer_physics_render and physics is not None and hasattr(
-        physics, "render"
+    if (
+        prefer_physics_render
+        and physics is not None
+        and hasattr(physics, "render")
     ):
         if hasattr(sim, "upload_height_field") and int(sim.model.nhfield) > 0:
             for hfield_id in range(int(sim.model.nhfield)):

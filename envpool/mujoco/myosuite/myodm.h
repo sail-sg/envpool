@@ -22,6 +22,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -138,7 +139,7 @@ inline std::string BuildTrackModelPath(const std::string& base_path,
 
   std::string myo_sim_root = asset_root + "/simhive/myo_sim";
   ReplaceAll(
-      &hand_assets_xml, "meshdir=\"..\" texturedir=\"..\"",
+      &hand_assets_xml, R"(meshdir=".." texturedir="..")",
       "meshdir=\"" + myo_sim_root + "\" texturedir=\"" + myo_sim_root + "\"");
   WriteTextFile(hand_assets_tmp, hand_assets_xml);
 
@@ -219,8 +220,8 @@ inline NpyArray ParseNpyPayload(const std::vector<char>& payload) {
   if (payload.size() < 10 || std::memcmp(payload.data(), "\x93NUMPY", 6) != 0) {
     throw std::runtime_error("Unsupported NPY payload.");
   }
-  unsigned char major = static_cast<unsigned char>(payload[6]);
-  unsigned char minor = static_cast<unsigned char>(payload[7]);
+  auto major = static_cast<unsigned char>(payload[6]);
+  auto minor = static_cast<unsigned char>(payload[7]);
   (void)minor;
   std::size_t offset = 8;
   std::size_t header_len = 0;
@@ -396,29 +397,30 @@ inline std::array<mjtNum, 9> QuatToMat(const std::array<mjtNum, 4>& quat) {
   mjtNum z = quat[3];
   mjtNum nq = w * w + x * x + y * y + z * z;
   mjtNum s = nq > 0.0 ? 2.0 / nq : 0.0;
-  mjtNum X = x * s;
-  mjtNum Y = y * s;
-  mjtNum Z = z * s;
-  mjtNum wX = w * X;
-  mjtNum wY = w * Y;
-  mjtNum wZ = w * Z;
-  mjtNum xX = x * X;
-  mjtNum xY = x * Y;
-  mjtNum xZ = x * Z;
-  mjtNum yY = y * Y;
-  mjtNum yZ = y * Z;
-  mjtNum zZ = z * Z;
+  mjtNum x_scaled = x * s;
+  mjtNum y_scaled = y * s;
+  mjtNum z_scaled = z * s;
+  mjtNum w_x = w * x_scaled;
+  mjtNum w_y = w * y_scaled;
+  mjtNum w_z = w * z_scaled;
+  mjtNum x_x = x * x_scaled;
+  mjtNum x_y = x * y_scaled;
+  mjtNum x_z = x * z_scaled;
+  mjtNum y_y = y * y_scaled;
+  mjtNum y_z = y * z_scaled;
+  mjtNum z_z = z * z_scaled;
   return {
-      1.0 - (yY + zZ), xY - wZ, xZ + wY, xY + wZ,         1.0 - (xX + zZ),
-      yZ - wX,         xZ - wY, yZ + wX, 1.0 - (xX + yY),
+      1.0 - (y_y + z_z), x_y - w_z, x_z + w_y,
+      x_y + w_z, 1.0 - (x_x + z_z), y_z - w_x,
+      x_z - w_y, y_z + w_x, 1.0 - (x_x + y_y),
   };
 }
 
 inline std::array<mjtNum, 3> Mat9ToEuler(const std::array<mjtNum, 9>& mat) {
-  constexpr mjtNum kEps4 =
+  constexpr mjtNum eps4 =
       std::numeric_limits<mjtNum>::epsilon() * static_cast<mjtNum>(4.0);
   mjtNum cy = std::sqrt(mat[8] * mat[8] + mat[5] * mat[5]);
-  bool condition = cy > kEps4;
+  bool condition = cy > eps4;
   mjtNum rz =
       condition ? -std::atan2(mat[1], mat[0]) : -std::atan2(-mat[3], mat[4]);
   mjtNum ry = -std::atan2(-mat[2], cy);
@@ -548,7 +550,7 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
     bool done{false};
   };
 
-  enum class ReferenceType { kFixed, kRandom, kTrack };
+  enum class ReferenceType : std::uint8_t { kFixed, kRandom, kTrack };
 
   bool normalize_act_;
   bool motion_extrapolation_;

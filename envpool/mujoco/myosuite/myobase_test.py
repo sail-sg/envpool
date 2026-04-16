@@ -878,6 +878,7 @@ def _assert_rollouts_match(
         if terminated0[0] or truncated0[0]:
             break
 
+
 def _first_child_body(body: mujoco.MjsBody) -> mujoco.MjsBody | None:
     return body.first_body()
 

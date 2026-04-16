@@ -63,20 +63,20 @@ inline mjtNum Clip(mjtNum value, mjtNum low, mjtNum high) {
 }
 
 inline mjtNum NormalizeSignedAngle(mjtNum angle) {
-  constexpr mjtNum kTwoPi = static_cast<mjtNum>(2.0) * detail::kPi;
+  constexpr mjtNum two_pi = static_cast<mjtNum>(2.0) * detail::kPi;
   while (angle > detail::kPi) {
-    angle -= kTwoPi;
+    angle -= two_pi;
   }
   while (angle < -detail::kPi) {
-    angle += kTwoPi;
+    angle += two_pi;
   }
   return angle;
 }
 
 inline mjtNum QuatYaw(const mjtNum* quat) {
-  mjtNum mat[9];
-  mju_quat2Mat(mat, quat);
-  return challenge_detail::Mat9ToEuler(mat)[2];
+  std::array<mjtNum, 9> mat{};
+  mju_quat2Mat(mat.data(), quat);
+  return challenge_detail::Mat9ToEuler(mat.data())[2];
 }
 
 inline std::array<mjtNum, 4> YawToQuat(mjtNum yaw) {
@@ -577,7 +577,7 @@ class MyoChallengeRunTrackEnvBase : public Env<EnvSpecT>,
         challenge_extra_detail::RequireId(model_, mjOBJ_SENSOR, "l_toes");
     socket_sensor_id_ = challenge_extra_detail::RequireId(model_, mjOBJ_SENSOR,
                                                           "r_socket_load");
-    static const std::vector<std::string> kBiologicalJoints = {
+    static const std::vector<std::string> biological_joints = {
         "hip_adduction_l",
         "hip_flexion_l",
         "hip_rotation_l",
@@ -596,18 +596,18 @@ class MyoChallengeRunTrackEnvBase : public Env<EnvSpecT>,
         "ankle_angle_l",
         "subtalar_angle_l",
     };
-    static const std::vector<std::string> kPainJoints = {
+    static const std::vector<std::string> pain_joints = {
         "hip_adduction_l", "hip_adduction_r",        "hip_flexion_l",
         "hip_flexion_r",   "hip_rotation_l",         "hip_rotation_r",
         "knee_angle_l",    "knee_angle_l_rotation2", "knee_angle_l_rotation3",
         "mtp_angle_l",     "ankle_angle_l",          "subtalar_angle_l",
     };
     biological_qposadrs_ =
-        challenge_extra_detail::CollectJointQposAdrs(model_, kBiologicalJoints);
+        challenge_extra_detail::CollectJointQposAdrs(model_, biological_joints);
     biological_dofadrs_ =
-        challenge_extra_detail::CollectJointDofAdrs(model_, kBiologicalJoints);
+        challenge_extra_detail::CollectJointDofAdrs(model_, biological_joints);
     pain_dofadrs_ =
-        challenge_extra_detail::CollectJointDofAdrs(model_, kPainJoints);
+        challenge_extra_detail::CollectJointDofAdrs(model_, pain_joints);
     int expected_obs = static_cast<int>(biological_qposadrs_.size()) +
                        static_cast<int>(biological_dofadrs_.size()) + 2 + 4 +
                        model_->na + model_->na + model_->na + model_->na + 2 +
@@ -937,14 +937,14 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
       internal_qposadrs_.push_back(model_->jnt_qposadr[joint_id]);
       internal_dofadrs_.push_back(model_->jnt_dofadr[joint_id]);
     }
-    static const std::vector<std::string> kPainJoints = {
+    static const std::vector<std::string> pain_joints = {
         "hip_adduction_l", "hip_adduction_r",        "hip_flexion_l",
         "hip_flexion_r",   "hip_rotation_l",         "hip_rotation_r",
         "knee_angle_l",    "knee_angle_l_rotation2", "knee_angle_l_rotation3",
         "mtp_angle_l",     "ankle_angle_l",          "subtalar_angle_l",
     };
     pain_dofadrs_ =
-        challenge_extra_detail::CollectJointDofAdrs(model_, kPainJoints);
+        challenge_extra_detail::CollectJointDofAdrs(model_, pain_joints);
     int expected_obs = 1 + static_cast<int>(internal_qposadrs_.size()) +
                        static_cast<int>(internal_dofadrs_.size()) + 4 + 4 +
                        model_->na + model_->na + model_->na + model_->na + 3 +
@@ -1103,10 +1103,10 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
     obs.insert(obs.end(), data_->act, data_->act + model_->na);
     obs.insert(obs.end(), data_->xpos + soccer_ball_body_id_ * 3,
                data_->xpos + soccer_ball_body_id_ * 3 + 3);
-    static constexpr std::array<mjtNum, 12> kGoalBounds = {
+    static constexpr std::array<mjtNum, 12> goal_bounds = {
         kGoalX, kGoalYMin, kGoalZMin, kGoalX, kGoalYMax, kGoalZMin,
         kGoalX, kGoalYMin, kGoalZMax, kGoalX, kGoalYMax, kGoalZMax};
-    obs.insert(obs.end(), kGoalBounds.begin(), kGoalBounds.end());
+    obs.insert(obs.end(), goal_bounds.begin(), goal_bounds.end());
     int root_qposadr = model_->jnt_qposadr[root_joint_id_];
     int root_dofadr = model_->jnt_dofadr[root_joint_id_];
     obs.insert(obs.end(), data_->qpos + root_qposadr,
@@ -2021,9 +2021,9 @@ class MyoChallengeTableTennisEnvBase
       const std::array<mjtNum, 3>& ball_pos) {
     std::array<mjtNum, 3> table_upper = {1.35, 0.70, 0.785};
     std::array<mjtNum, 3> table_lower = {0.5, -0.60, 0.785};
-    constexpr mjtNum kGravity = 9.81;
+    constexpr mjtNum gravity = 9.81;
     mjtNum vz = challenge_detail::UniformScalar(&gen_, -0.1, 0.1);
-    mjtNum a = -0.5 * kGravity;
+    mjtNum a = -0.5 * gravity;
     mjtNum b = vz;
     mjtNum c = ball_pos[2] - table_upper[2];
     mjtNum disc = b * b - 4.0 * a * c;

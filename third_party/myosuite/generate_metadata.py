@@ -339,13 +339,11 @@ def _find_staged_runtime_asset_root() -> Path | None:
     ):
         if root is None:
             continue
-        candidates.extend(
-            [
-                root / "envpool/mujoco/myosuite_assets",
-                root / "envpool/envpool/mujoco/myosuite_assets",
-                root / "mujoco/myosuite_assets",
-            ]
-        )
+        candidates.extend([
+            root / "envpool/mujoco/myosuite_assets",
+            root / "envpool/envpool/mujoco/myosuite_assets",
+            root / "mujoco/myosuite_assets",
+        ])
     required_runtime_asset = (
         Path("envs") / "myo" / "assets" / "hand" / "myohand_object.xml"
     )

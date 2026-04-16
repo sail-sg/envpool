@@ -524,7 +524,7 @@ class MyoSuiteReorientEnvBase : public Env<EnvSpecT>,
 
   std::vector<mjtNum> RandomSizeForType(int geom_type) {
     if (randomization_mode_ == "8") {
-      static const std::array<std::array<mjtNum, 3>, 8> kSizes = {{
+      static const std::array<std::array<mjtNum, 3>, 8> sizes = {{
           {0.013, 0.025, 0.025},
           {0.019, 0.040, 0.040},
           {0.017, 0.017, 0.017},
@@ -534,13 +534,17 @@ class MyoSuiteReorientEnvBase : public Env<EnvSpecT>,
           {0.013, 0.025, 0.025},
           {0.019, 0.040, 0.040},
       }};
-      std::array<int, 2> ids = geom_type == 3   ? std::array<int, 2>{4, 5}
-                               : geom_type == 4 ? std::array<int, 2>{0, 1}
-                               : geom_type == 5 ? std::array<int, 2>{6, 7}
-                                                : std::array<int, 2>{2, 3};
+      std::array<int, 2> ids = {2, 3};
+      if (geom_type == 3) {
+        ids = {4, 5};
+      } else if (geom_type == 4) {
+        ids = {0, 1};
+      } else if (geom_type == 5) {
+        ids = {6, 7};
+      }
       int pick =
           ids[static_cast<int>(unit_dist_(gen_) * ids.size()) % ids.size()];
-      return {kSizes[pick][0], kSizes[pick][1], kSizes[pick][2]};
+      return {sizes[pick][0], sizes[pick][1], sizes[pick][2]};
     }
     std::uniform_real_distribution<double> xdist(0.008, 0.028);
     std::uniform_real_distribution<double> ydist(0.020, 0.050);
@@ -558,10 +562,10 @@ class MyoSuiteReorientEnvBase : public Env<EnvSpecT>,
   }
 
   void RandomizeGeometry() {
-    static const std::array<int, 4> kGeomTypes = {3, 4, 5, 6};
+    static const std::array<int, 4> geom_types = {3, 4, 5, 6};
     int geom_type =
-        kGeomTypes[static_cast<int>(unit_dist_(gen_) * kGeomTypes.size()) %
-                   kGeomTypes.size()];
+        geom_types[static_cast<int>(unit_dist_(gen_) * geom_types.size()) %
+                   geom_types.size()];
     std::vector<mjtNum> size = RandomSizeForType(geom_type);
     std::vector<mjtNum> color = detail::RandomRgba(&gen_);
     std::vector<mjtNum> top_pos(3, 0.0);
@@ -1059,7 +1063,7 @@ class MyoSuiteWalkLikeEnvBase : public Env<EnvSpecT>,
     int cols = model_->hfield_ncol[terrain_hfield_id_];
     int total = rows * cols;
     int num_stairs = 12;
-    mjtNum stair_height = static_cast<mjtNum>(0.1);
+    const auto stair_height = static_cast<mjtNum>(0.1);
     int flat = 5200 - (total - 5200) % num_stairs;
     int stairs_width = (total - flat) / num_stairs;
     mjtNum scalar = terrain_variant_ == "fixed"
@@ -1149,8 +1153,12 @@ class MyoSuiteWalkLikeEnvBase : public Env<EnvSpecT>,
   }
 
   std::pair<std::vector<mjtNum>, std::vector<mjtNum>> GetResetState() {
-    int key_id = reset_type_ == "random" ? (unit_dist_(gen_) < 0.5 ? 2 : 3)
-                                         : (reset_type_ == "init" ? 2 : 0);
+    int key_id = 0;
+    if (reset_type_ == "random") {
+      key_id = unit_dist_(gen_) < 0.5 ? 2 : 3;
+    } else if (reset_type_ == "init") {
+      key_id = 2;
+    }
     std::vector<mjtNum> qpos(model_->key_qpos + key_id * model_->nq,
                              model_->key_qpos + (key_id + 1) * model_->nq);
     std::vector<mjtNum> qvel(model_->key_qvel + key_id * model_->nv,
@@ -1246,12 +1254,12 @@ class MyoSuiteWalkLikeEnvBase : public Env<EnvSpecT>,
   }
 
   mjtNum GetCyclicReward() const {
-    mjtNum phase = static_cast<mjtNum>(
+    const auto phase = static_cast<mjtNum>(
         std::fmod(static_cast<double>(gait_steps_) / hip_period_, 1.0));
-    mjtNum desired_l = static_cast<mjtNum>(
+    const auto desired_l = static_cast<mjtNum>(
         0.8 *
         std::cos(phase * static_cast<mjtNum>(2.0) * detail::kPi + detail::kPi));
-    mjtNum desired_r = static_cast<mjtNum>(
+    const auto desired_r = static_cast<mjtNum>(
         0.8 * std::cos(phase * static_cast<mjtNum>(2.0) * detail::kPi));
     mjtNum diff_l = desired_l - data_->qpos[hip_flex_qposadr_[0]];
     mjtNum diff_r = desired_r - data_->qpos[hip_flex_qposadr_[1]];
@@ -1269,8 +1277,8 @@ class MyoSuiteWalkLikeEnvBase : public Env<EnvSpecT>,
   }
 
   bool GetRotCondition() const {
-    mjtNum mat[9];
-    mju_quat2Mat(mat, data_->qpos + 3);
+    std::array<mjtNum, 9> mat{};
+    mju_quat2Mat(mat.data(), data_->qpos + 3);
     return std::abs(mat[0]) > max_rot_;
   }
 
