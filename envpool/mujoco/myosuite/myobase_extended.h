@@ -99,9 +99,8 @@ class MyoSuiteReorientEnvFns {
         "normalize_act"_.Bind(true), "muscle_condition"_.Bind(std::string()),
         "fatigue_reset_vec"_.Bind(std::vector<double>{}),
         "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
-        "qpos_dim"_.Bind(0),
-        "qvel_dim"_.Bind(0), "act_dim"_.Bind(0), "action_dim"_.Bind(0),
-        "randomization_mode"_.Bind(std::string("100")),
+        "qpos_dim"_.Bind(0), "qvel_dim"_.Bind(0), "act_dim"_.Bind(0),
+        "action_dim"_.Bind(0), "randomization_mode"_.Bind(std::string("100")),
         "reward_pos_align_w"_.Bind(1.0), "reward_rot_align_w"_.Bind(1.0),
         "reward_act_reg_w"_.Bind(5.0), "reward_drop_w"_.Bind(5.0),
         "reward_bonus_w"_.Bind(10.0),
@@ -162,11 +161,11 @@ class MyoSuiteWalkEnvFns {
         "normalize_act"_.Bind(true), "muscle_condition"_.Bind(std::string()),
         "fatigue_reset_vec"_.Bind(std::vector<double>{}),
         "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
-        "qpos_dim"_.Bind(0),
-        "qvel_dim"_.Bind(0), "act_dim"_.Bind(0), "action_dim"_.Bind(0),
-        "min_height"_.Bind(0.8), "max_rot"_.Bind(0.8), "hip_period"_.Bind(100),
-        "reset_type"_.Bind(std::string("init")), "target_x_vel"_.Bind(0.0),
-        "target_y_vel"_.Bind(1.2), "target_rot"_.Bind(std::vector<double>{}),
+        "qpos_dim"_.Bind(0), "qvel_dim"_.Bind(0), "act_dim"_.Bind(0),
+        "action_dim"_.Bind(0), "min_height"_.Bind(0.8), "max_rot"_.Bind(0.8),
+        "hip_period"_.Bind(100), "reset_type"_.Bind(std::string("init")),
+        "target_x_vel"_.Bind(0.0), "target_y_vel"_.Bind(1.2),
+        "target_rot"_.Bind(std::vector<double>{}),
         "terrain"_.Bind(std::string()), "terrain_variant"_.Bind(std::string()),
         "use_knee_condition"_.Bind(false), "reward_vel_w"_.Bind(5.0),
         "reward_done_w"_.Bind(-100.0), "reward_cyclic_hip_w"_.Bind(-10.0),
@@ -364,9 +363,8 @@ class MyoSuiteReorientEnvBase : public Env<EnvSpecT>,
     detail::BuildMuscleMask(model_, &muscle_actuator_);
     detail::InitializeMyoConditionState(
         model_, spec.config["muscle_condition"_],
-        spec.config["fatigue_reset_vec"_],
-        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
-        this->seed_, &muscle_condition_state_);
+        spec.config["fatigue_reset_vec"_], spec.config["fatigue_reset_random"_],
+        spec.config["frame_skip"_], this->seed_, &muscle_condition_state_);
     detail::AdjustInitialQposForNormalizedActions(model_, data_,
                                                   normalize_act_);
     for (int i = 0; i < model_->nq - 6; ++i) {
@@ -881,9 +879,8 @@ class MyoSuiteWalkLikeEnvBase : public Env<EnvSpecT>,
     detail::BuildMuscleMask(model_, &muscle_actuator_);
     detail::InitializeMyoConditionState(
         model_, spec.config["muscle_condition"_],
-        spec.config["fatigue_reset_vec"_],
-        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
-        this->seed_, &muscle_condition_state_);
+        spec.config["fatigue_reset_vec"_], spec.config["fatigue_reset_random"_],
+        spec.config["frame_skip"_], this->seed_, &muscle_condition_state_);
     detail::AdjustInitialQposForNormalizedActions(model_, data_,
                                                   normalize_act_);
     if (target_rot_.empty()) {

@@ -236,9 +236,7 @@ class MujocoRobotEnv : public RenderableEnv {
   virtual envpool::mujoco::CameraPolicy RenderCameraPolicy() const {
     return envpool::mujoco::CameraPolicy::kGymLike;
   }
-  virtual void ConfigureRenderOption(mjvOption* option) const {
-    (void)option;
-  }
+  virtual void ConfigureRenderOption(mjvOption* option) const { (void)option; }
 
   void InitializeRenderCamera(mjvCamera* camera) const {
     mjv_defaultCamera(camera);

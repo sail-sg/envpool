@@ -190,9 +190,9 @@ class MyoChallengeRunTrackEnvFns {
         "normalize_act"_.Bind(true), "muscle_condition"_.Bind(std::string()),
         "fatigue_reset_vec"_.Bind(std::vector<double>{}),
         "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
-        "qpos_dim"_.Bind(0),
-        "qvel_dim"_.Bind(0), "act_dim"_.Bind(0), "action_dim"_.Bind(0),
-        "ctrl_dim"_.Bind(0), "reset_type"_.Bind(std::string("random")),
+        "qpos_dim"_.Bind(0), "qvel_dim"_.Bind(0), "act_dim"_.Bind(0),
+        "action_dim"_.Bind(0), "ctrl_dim"_.Bind(0),
+        "reset_type"_.Bind(std::string("random")),
         "terrain"_.Bind(std::string("flat")), "start_pos"_.Bind(14.0),
         "end_pos"_.Bind(-15.0), "real_width"_.Bind(1.0),
         "reward_sparse_w"_.Bind(1.0), "reward_solved_w"_.Bind(10.0),
@@ -243,9 +243,8 @@ class MyoChallengeSoccerEnvFns {
         "normalize_act"_.Bind(true), "muscle_condition"_.Bind(std::string()),
         "fatigue_reset_vec"_.Bind(std::vector<double>{}),
         "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
-        "qpos_dim"_.Bind(0),
-        "qvel_dim"_.Bind(0), "act_dim"_.Bind(0), "action_dim"_.Bind(0),
-        "reset_type"_.Bind(std::string("none")),
+        "qpos_dim"_.Bind(0), "qvel_dim"_.Bind(0), "act_dim"_.Bind(0),
+        "action_dim"_.Bind(0), "reset_type"_.Bind(std::string("none")),
         "min_agent_spawn_distance"_.Bind(1.0), "random_vel_low"_.Bind(1.0),
         "random_vel_high"_.Bind(5.0), "rnd_pos_noise"_.Bind(1.0),
         "rnd_joint_noise"_.Bind(0.02),
@@ -300,10 +299,9 @@ class MyoChallengeChaseTagEnvFns {
         "normalize_act"_.Bind(true), "muscle_condition"_.Bind(std::string()),
         "fatigue_reset_vec"_.Bind(std::vector<double>{}),
         "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
-        "qpos_dim"_.Bind(0),
-        "qvel_dim"_.Bind(0), "act_dim"_.Bind(0), "action_dim"_.Bind(0),
-        "reset_type"_.Bind(std::string("init")), "win_distance"_.Bind(0.5),
-        "min_spawn_distance"_.Bind(2.0),
+        "qpos_dim"_.Bind(0), "qvel_dim"_.Bind(0), "act_dim"_.Bind(0),
+        "action_dim"_.Bind(0), "reset_type"_.Bind(std::string("init")),
+        "win_distance"_.Bind(0.5), "min_spawn_distance"_.Bind(2.0),
         "task_choice"_.Bind(std::string("CHASE")),
         "terrain"_.Bind(std::string("FLAT")), "repeller_opponent"_.Bind(false),
         "chase_vel_low"_.Bind(1.0), "chase_vel_high"_.Bind(1.0),
@@ -357,9 +355,8 @@ class MyoChallengeTableTennisEnvFns {
         "normalize_act"_.Bind(true), "muscle_condition"_.Bind(std::string()),
         "fatigue_reset_vec"_.Bind(std::vector<double>{}),
         "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
-        "qpos_dim"_.Bind(0),
-        "qvel_dim"_.Bind(0), "act_dim"_.Bind(0), "action_dim"_.Bind(0),
-        "ball_xyz_low"_.Bind(std::vector<double>{}),
+        "qpos_dim"_.Bind(0), "qvel_dim"_.Bind(0), "act_dim"_.Bind(0),
+        "action_dim"_.Bind(0), "ball_xyz_low"_.Bind(std::vector<double>{}),
         "ball_xyz_high"_.Bind(std::vector<double>{}), "ball_qvel"_.Bind(false),
         "ball_friction_low"_.Bind(std::vector<double>{}),
         "ball_friction_high"_.Bind(std::vector<double>{}),
@@ -490,9 +487,8 @@ class MyoChallengeRunTrackEnvBase : public Env<EnvSpecT>,
     detail::BuildMuscleMask(model_, &muscle_actuator_);
     detail::InitializeMyoConditionState(
         model_, spec.config["muscle_condition"_],
-        spec.config["fatigue_reset_vec"_],
-        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
-        this->seed_, &muscle_condition_state_);
+        spec.config["fatigue_reset_vec"_], spec.config["fatigue_reset_random"_],
+        spec.config["frame_skip"_], this->seed_, &muscle_condition_state_);
     for (int actuator = 0; actuator < model_->nu; ++actuator) {
       if (muscle_actuator_[actuator]) {
         muscle_actuator_ids_.push_back(actuator);
@@ -853,9 +849,8 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
     detail::BuildMuscleMask(model_, &muscle_actuator_);
     detail::InitializeMyoConditionState(
         model_, spec.config["muscle_condition"_],
-        spec.config["fatigue_reset_vec"_],
-        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
-        this->seed_, &muscle_condition_state_);
+        spec.config["fatigue_reset_vec"_], spec.config["fatigue_reset_random"_],
+        spec.config["frame_skip"_], this->seed_, &muscle_condition_state_);
     for (int actuator = 0; actuator < model_->nu; ++actuator) {
       if (muscle_actuator_[actuator]) {
         muscle_actuator_ids_.push_back(actuator);
@@ -1256,9 +1251,8 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
     detail::BuildMuscleMask(model_, &muscle_actuator_);
     detail::InitializeMyoConditionState(
         model_, spec.config["muscle_condition"_],
-        spec.config["fatigue_reset_vec"_],
-        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
-        this->seed_, &muscle_condition_state_);
+        spec.config["fatigue_reset_vec"_], spec.config["fatigue_reset_random"_],
+        spec.config["frame_skip"_], this->seed_, &muscle_condition_state_);
     for (int actuator = 0; actuator < model_->nu; ++actuator) {
       if (muscle_actuator_[actuator]) {
         muscle_actuator_ids_.push_back(actuator);
@@ -1772,9 +1766,8 @@ class MyoChallengeTableTennisEnvBase
     detail::BuildMuscleMask(model_, &muscle_actuator_);
     detail::InitializeMyoConditionState(
         model_, spec.config["muscle_condition"_],
-        spec.config["fatigue_reset_vec"_],
-        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
-        this->seed_, &muscle_condition_state_);
+        spec.config["fatigue_reset_vec"_], spec.config["fatigue_reset_random"_],
+        spec.config["frame_skip"_], this->seed_, &muscle_condition_state_);
     default_init_qpos_.assign(model_->key_qpos, model_->key_qpos + model_->nq);
     default_init_qvel_.assign(model_->key_qvel, model_->key_qvel + model_->nv);
     init_qpos_ = default_init_qpos_;

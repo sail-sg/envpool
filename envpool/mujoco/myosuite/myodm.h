@@ -410,9 +410,9 @@ inline std::array<mjtNum, 9> QuatToMat(const std::array<mjtNum, 4>& quat) {
   mjtNum y_z = y * z_scaled;
   mjtNum z_z = z * z_scaled;
   return {
-      1.0 - (y_y + z_z), x_y - w_z, x_z + w_y,
-      x_y + w_z, 1.0 - (x_x + z_z), y_z - w_x,
-      x_z - w_y, y_z + w_x, 1.0 - (x_x + y_y),
+      1.0 - (y_y + z_z), x_y - w_z,         x_z + w_y,
+      x_y + w_z,         1.0 - (x_x + z_z), y_z - w_x,
+      x_z - w_y,         y_z + w_x,         1.0 - (x_x + y_y),
   };
 }
 
@@ -482,13 +482,13 @@ class MyoDMTrackEnvFns {
         "fatigue_reset_vec"_.Bind(std::vector<double>{}),
         "fatigue_reset_random"_.Bind(false), "obs_dim"_.Bind(0),
         "qpos_dim"_.Bind(0), "qvel_dim"_.Bind(0), "act_dim"_.Bind(0),
-        "action_dim"_.Bind(0),
-        "robot_dim"_.Bind(0), "object_dim"_.Bind(7), "robot_horizon"_.Bind(0),
-        "object_horizon"_.Bind(0), "reference_has_robot_vel"_.Bind(false),
-        "motion_start_time"_.Bind(0.0), "motion_extrapolation"_.Bind(true),
-        "reward_pose_w"_.Bind(0.0), "reward_object_w"_.Bind(1.0),
-        "reward_bonus_w"_.Bind(1.0), "reward_penalty_w"_.Bind(-2.0),
-        "terminate_obj_fail"_.Bind(true), "terminate_pose_fail"_.Bind(false),
+        "action_dim"_.Bind(0), "robot_dim"_.Bind(0), "object_dim"_.Bind(7),
+        "robot_horizon"_.Bind(0), "object_horizon"_.Bind(0),
+        "reference_has_robot_vel"_.Bind(false), "motion_start_time"_.Bind(0.0),
+        "motion_extrapolation"_.Bind(true), "reward_pose_w"_.Bind(0.0),
+        "reward_object_w"_.Bind(1.0), "reward_bonus_w"_.Bind(1.0),
+        "reward_penalty_w"_.Bind(-2.0), "terminate_obj_fail"_.Bind(true),
+        "terminate_pose_fail"_.Bind(false),
         "test_reset_qpos"_.Bind(std::vector<double>{}),
         "test_reset_qvel"_.Bind(std::vector<double>{}),
         "test_reset_act"_.Bind(std::vector<double>{}),
@@ -642,9 +642,8 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
     detail::BuildMuscleMask(model_, &muscle_actuator_);
     detail::InitializeMyoConditionState(
         model_, spec.config["muscle_condition"_],
-        spec.config["fatigue_reset_vec"_],
-        spec.config["fatigue_reset_random"_], spec.config["frame_skip"_],
-        this->seed_, &muscle_condition_state_);
+        spec.config["fatigue_reset_vec"_], spec.config["fatigue_reset_random"_],
+        spec.config["frame_skip"_], this->seed_, &muscle_condition_state_);
     detail::AdjustInitialQposForNormalizedActions(model_, data_,
                                                   normalize_act_);
     InitializeReferencePose();

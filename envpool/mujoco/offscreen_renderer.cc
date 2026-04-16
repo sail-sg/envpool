@@ -578,8 +578,7 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
   UpdateCamera(model, data, camera_id, camera_override);
 
   mjrRect viewport = {0, 0, width, height};
-  mjv_updateScene(model, data, &option_, nullptr, &camera_, mjCAT_ALL,
-                  &scene_);
+  mjv_updateScene(model, data, &option_, nullptr, &camera_, mjCAT_ALL, &scene_);
   mjr_render(viewport, &scene_, &context_);
 
   std::size_t frame_bytes =
