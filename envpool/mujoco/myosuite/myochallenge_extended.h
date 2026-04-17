@@ -20,7 +20,9 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
+#include <fstream>
 #include <limits>
 #include <random>
 #include <stdexcept>
@@ -83,6 +85,119 @@ inline std::array<mjtNum, 4> YawToQuat(mjtNum yaw) {
   return challenge_detail::EulerXYZToQuat({0.0, 0.0, yaw});
 }
 
+inline std::array<mjtNum, 4> ScipyEulerXYZToQuat(
+    const std::array<mjtNum, 3>& euler) {
+  mjtNum half_x = euler[0] * static_cast<mjtNum>(0.5);
+  mjtNum half_y = euler[1] * static_cast<mjtNum>(0.5);
+  mjtNum half_z = euler[2] * static_cast<mjtNum>(0.5);
+  mjtNum sx = std::sin(half_x);
+  mjtNum sy = std::sin(half_y);
+  mjtNum sz = std::sin(half_z);
+  mjtNum cx = std::cos(half_x);
+  mjtNum cy = std::cos(half_y);
+  mjtNum cz = std::cos(half_z);
+  return {
+      cx * cy * cz + sx * sy * sz,
+      sx * cy * cz - cx * sy * sz,
+      cx * sy * cz + sx * cy * sz,
+      cx * cy * sz - sx * sy * cz,
+  };
+}
+
+inline std::uint16_t ReadLe16(std::istream* input) {
+  unsigned char bytes[2];
+  input->read(reinterpret_cast<char*>(bytes), sizeof(bytes));
+  if (!*input) {
+    throw std::runtime_error("Failed to read uint16.");
+  }
+  return static_cast<std::uint16_t>(bytes[0]) |
+         (static_cast<std::uint16_t>(bytes[1]) << 8);
+}
+
+inline std::uint32_t ReadLe32(std::istream* input) {
+  unsigned char bytes[4];
+  input->read(reinterpret_cast<char*>(bytes), sizeof(bytes));
+  if (!*input) {
+    throw std::runtime_error("Failed to read uint32.");
+  }
+  return static_cast<std::uint32_t>(bytes[0]) |
+         (static_cast<std::uint32_t>(bytes[1]) << 8) |
+         (static_cast<std::uint32_t>(bytes[2]) << 16) |
+         (static_cast<std::uint32_t>(bytes[3]) << 24);
+}
+
+inline std::pair<int, int> ParseNpyShape2d(const std::string& header) {
+  std::size_t shape_pos = header.find("shape");
+  if (shape_pos == std::string::npos) {
+    throw std::runtime_error("Missing shape in NPY header.");
+  }
+  std::size_t open = header.find('(', shape_pos);
+  std::size_t comma = header.find(',', open);
+  std::size_t close = header.find(')', comma);
+  if (open == std::string::npos || comma == std::string::npos ||
+      close == std::string::npos) {
+    throw std::runtime_error("Invalid shape in NPY header.");
+  }
+  int rows = std::stoi(header.substr(open + 1, comma - open - 1));
+  int cols = std::stoi(header.substr(comma + 1, close - comma - 1));
+  return {rows, cols};
+}
+
+inline std::vector<mjtNum> LoadNormalizedReliefPatch(const std::string& path) {
+  std::ifstream input(path, std::ios::binary);
+  if (!input) {
+    throw std::runtime_error("Failed to open MyoSuite relief asset: " + path);
+  }
+  char magic[6];
+  input.read(magic, sizeof(magic));
+  if (!input || std::string_view(magic, sizeof(magic)) != "\x93NUMPY") {
+    throw std::runtime_error("Invalid NPY magic in MyoSuite relief asset.");
+  }
+  unsigned char version[2];
+  input.read(reinterpret_cast<char*>(version), sizeof(version));
+  if (!input) {
+    throw std::runtime_error("Failed to read NPY version.");
+  }
+  std::size_t header_len = 0;
+  if (version[0] == 1) {
+    header_len = ReadLe16(&input);
+  } else if (version[0] == 2) {
+    header_len = ReadLe32(&input);
+  } else {
+    throw std::runtime_error("Unsupported NPY version for relief asset.");
+  }
+  std::string header(header_len, '\0');
+  input.read(header.data(), static_cast<std::streamsize>(header.size()));
+  if (!input) {
+    throw std::runtime_error("Failed to read NPY header.");
+  }
+  if (header.find("'fortran_order': False") == std::string::npos ||
+      (header.find("'descr': '|u1'") == std::string::npos &&
+       header.find("'descr': '<u1'") == std::string::npos)) {
+    throw std::runtime_error("Unexpected MyoSuite relief NPY layout.");
+  }
+  auto [rows, cols] = ParseNpyShape2d(header);
+  std::vector<unsigned char> raw(static_cast<std::size_t>(rows * cols));
+  input.read(reinterpret_cast<char*>(raw.data()),
+             static_cast<std::streamsize>(raw.size()));
+  if (!input) {
+    throw std::runtime_error("Failed to read MyoSuite relief payload.");
+  }
+  auto [min_it, max_it] = std::minmax_element(raw.begin(), raw.end());
+  mjtNum low = static_cast<mjtNum>(*min_it);
+  mjtNum high = static_cast<mjtNum>(*max_it);
+  mjtNum denom = std::max(high - low, static_cast<mjtNum>(1e-12));
+  std::vector<mjtNum> normalized(raw.size(), 0.0);
+  for (int row = 0; row < rows; ++row) {
+    for (int col = 0; col < cols; ++col) {
+      std::size_t src = static_cast<std::size_t>(row * cols + col);
+      std::size_t dst = static_cast<std::size_t>((rows - 1 - row) * cols + col);
+      normalized[dst] = (static_cast<mjtNum>(raw[src]) - low) / denom;
+    }
+  }
+  return normalized;
+}
+
 inline std::vector<int> CollectJointQposAdrs(
     const mjModel* model, const std::vector<std::string>& joint_names) {
   std::vector<int> out;
@@ -107,23 +222,6 @@ inline std::vector<int> CollectJointDofAdrs(
       throw std::runtime_error("Missing joint: " + joint_name);
     }
     out.push_back(model->jnt_dofadr[joint_id]);
-  }
-  return out;
-}
-
-inline std::vector<int> NamedJointsExcept(const mjModel* model,
-                                          std::string_view excluded_name) {
-  std::vector<int> out;
-  for (int joint_id = 0; joint_id < model->njnt; ++joint_id) {
-    const char* raw_name = mj_id2name(model, mjOBJ_JOINT, joint_id);
-    if (raw_name == nullptr) {
-      continue;
-    }
-    std::string_view name(raw_name);
-    if (name == excluded_name) {
-      continue;
-    }
-    out.push_back(joint_id);
   }
   return out;
 }
@@ -179,6 +277,315 @@ inline int RequireId(const mjModel* model, mjtObj obj,
   return id;
 }
 
+class ColoredNoiseProcess {
+ public:
+  ColoredNoiseProcess(mjtNum beta, int channels, int time_steps,
+                      mjtNum scale = 1.0, mjtNum max_period = 0.0)
+      : beta_(beta),
+        channels_(channels),
+        time_steps_(time_steps),
+        scale_(scale),
+        minimum_frequency_(max_period > 0.0 ? 1.0 / max_period : 0.0) {}
+
+  void SetScale(mjtNum scale) { scale_ = scale; }
+
+  void Reset(std::mt19937* gen) {
+    buffer_ =
+        PowerlawPsdGaussian(beta_, channels_, time_steps_, minimum_frequency_,
+                            gen == nullptr ? fallback_gen_ : *gen);
+    idx_ = 0;
+  }
+
+  void SetState(const std::vector<mjtNum>& buffer, int idx) {
+    if (!buffer.empty() &&
+        static_cast<int>(buffer.size()) != channels_ * time_steps_) {
+      throw std::runtime_error("Colored noise buffer has unexpected size.");
+    }
+    buffer_ = buffer;
+    idx_ = std::max(0, idx);
+  }
+
+  std::vector<mjtNum> Sample(std::mt19937* gen) {
+    if (buffer_.empty() || idx_ >= time_steps_) {
+      Reset(gen);
+    }
+    std::vector<mjtNum> out(channels_);
+    for (int channel = 0; channel < channels_; ++channel) {
+      out[channel] = scale_ * buffer_[channel * time_steps_ + idx_];
+    }
+    ++idx_;
+    return out;
+  }
+
+ private:
+  static std::vector<mjtNum> PowerlawPsdGaussian(mjtNum exponent, int channels,
+                                                 int samples, mjtNum fmin,
+                                                 std::mt19937& gen) {
+    if (channels <= 0 || samples <= 0) {
+      return {};
+    }
+    if (fmin < 0.0 || fmin > 0.5) {
+      throw std::runtime_error("Colored noise fmin must be in [0, 0.5].");
+    }
+    constexpr mjtNum kTwoPi = static_cast<mjtNum>(2.0) * detail::kPi;
+    int freq_count = samples / 2 + 1;
+    std::vector<mjtNum> s_scale(freq_count, 0.0);
+    for (int i = 0; i < freq_count; ++i) {
+      s_scale[i] = static_cast<mjtNum>(i) / static_cast<mjtNum>(samples);
+    }
+    fmin = std::max(fmin, static_cast<mjtNum>(1.0) /
+                              static_cast<mjtNum>(samples));
+    int ix = 0;
+    while (ix < freq_count && s_scale[ix] < fmin) {
+      ++ix;
+    }
+    if (ix > 0 && ix < freq_count) {
+      std::fill(s_scale.begin(), s_scale.begin() + ix, s_scale[ix]);
+    }
+    for (mjtNum& value : s_scale) {
+      value = std::pow(value, -exponent / static_cast<mjtNum>(2.0));
+    }
+    mjtNum sigma_sq = 0.0;
+    for (int i = 1; i < freq_count; ++i) {
+      mjtNum weight = s_scale[i];
+      if ((samples % 2) == 0 && i == freq_count - 1) {
+        weight *= static_cast<mjtNum>(0.5);
+      }
+      sigma_sq += weight * weight;
+    }
+    mjtNum sigma = static_cast<mjtNum>(2.0) * std::sqrt(sigma_sq) /
+                   static_cast<mjtNum>(samples);
+    if (sigma == 0.0) {
+      throw std::runtime_error("Colored noise sigma unexpectedly zero.");
+    }
+    std::normal_distribution<mjtNum> normal(0.0, 1.0);
+    std::vector<mjtNum> out(channels * samples, 0.0);
+    std::vector<mjtNum> sr(freq_count, 0.0);
+    std::vector<mjtNum> si(freq_count, 0.0);
+    for (int channel = 0; channel < channels; ++channel) {
+      for (int i = 0; i < freq_count; ++i) {
+        sr[i] = normal(gen) * s_scale[i];
+        si[i] = normal(gen) * s_scale[i];
+      }
+      si[0] = 0.0;
+      sr[0] *= std::sqrt(static_cast<mjtNum>(2.0));
+      if ((samples % 2) == 0) {
+        si[freq_count - 1] = 0.0;
+        sr[freq_count - 1] *= std::sqrt(static_cast<mjtNum>(2.0));
+      }
+      int mirrored_limit = (samples % 2) == 0 ? freq_count - 1 : freq_count;
+      for (int t = 0; t < samples; ++t) {
+        mjtNum value = sr[0];
+        for (int i = 1; i < mirrored_limit; ++i) {
+          mjtNum angle = kTwoPi * static_cast<mjtNum>(i) *
+                         static_cast<mjtNum>(t) /
+                         static_cast<mjtNum>(samples);
+          value += static_cast<mjtNum>(2.0) *
+                   (sr[i] * std::cos(angle) - si[i] * std::sin(angle));
+        }
+        if ((samples % 2) == 0) {
+          value += sr[freq_count - 1] * std::cos(detail::kPi * t);
+        }
+        out[channel * samples + t] =
+            value / static_cast<mjtNum>(samples) / sigma;
+      }
+    }
+    return out;
+  }
+
+  mjtNum beta_;
+  int channels_;
+  int time_steps_;
+  mjtNum scale_;
+  mjtNum minimum_frequency_;
+  int idx_{0};
+  std::vector<mjtNum> buffer_;
+  std::mt19937 fallback_gen_{0};
+};
+
+enum class RunTrackOslState : int {
+  kEarlyStance = 0,
+  kLateStance = 1,
+  kEarlySwing = 2,
+  kLateSwing = 3,
+};
+
+struct RunTrackOslSensorData {
+  mjtNum knee_angle{0.0};
+  mjtNum knee_vel{0.0};
+  mjtNum ankle_angle{0.0};
+  mjtNum ankle_vel{0.0};
+  mjtNum load{0.0};
+};
+
+class RunTrackOslController {
+ public:
+  RunTrackOslController() = default;
+
+  explicit RunTrackOslController(mjtNum body_mass) { Initialize(body_mass); }
+
+  void Reset(RunTrackOslState state) {
+    state_ = state;
+    running_ = false;
+  }
+
+  void Start() { running_ = true; }
+
+  void Initialize(mjtNum body_mass) { InitializeDefaults(body_mass); }
+
+  void SetState(RunTrackOslState state) { state_ = state; }
+
+  int StateId() const { return static_cast<int>(state_); }
+
+  void Update(const RunTrackOslSensorData& sensor_data) {
+    sensor_data_ = sensor_data;
+    if (!running_) {
+      return;
+    }
+    const StateParams& params = states_[StateId()];
+    for (int i = 0; i < params.threshold_count; ++i) {
+      if (ThresholdSatisfied(params.thresholds[i], sensor_data_)) {
+        state_ = NextState(state_);
+        return;
+      }
+    }
+  }
+
+  std::array<mjtNum, 2> GetTorques() const {
+    return {JointTorque(/*knee=*/true), JointTorque(/*knee=*/false)};
+  }
+
+ private:
+  struct JointParams {
+    mjtNum stiffness{0.0};
+    mjtNum damping{0.0};
+    mjtNum target_angle{0.0};
+  };
+
+  struct Threshold {
+    enum class Variable : std::uint8_t {
+      kLoad,
+      kKneeAngle,
+      kKneeVel,
+      kAnkleAngle,
+    };
+
+    Variable variable{Variable::kLoad};
+    mjtNum value{0.0};
+    bool above{false};
+  };
+
+  struct StateParams {
+    JointParams knee;
+    JointParams ankle;
+    std::array<Threshold, 2> thresholds{};
+    int threshold_count{0};
+  };
+
+  static RunTrackOslState NextState(RunTrackOslState state) {
+    switch (state) {
+      case RunTrackOslState::kEarlyStance:
+        return RunTrackOslState::kLateStance;
+      case RunTrackOslState::kLateStance:
+        return RunTrackOslState::kEarlySwing;
+      case RunTrackOslState::kEarlySwing:
+        return RunTrackOslState::kLateSwing;
+      case RunTrackOslState::kLateSwing:
+        return RunTrackOslState::kEarlyStance;
+    }
+    return RunTrackOslState::kEarlyStance;
+  }
+
+  static Threshold MakeThreshold(Threshold::Variable variable, mjtNum value,
+                                 bool above) {
+    return Threshold{variable, value, above};
+  }
+
+  static bool ThresholdSatisfied(const Threshold& threshold,
+                                 const RunTrackOslSensorData& sensor_data) {
+    mjtNum observed = 0.0;
+    switch (threshold.variable) {
+      case Threshold::Variable::kLoad:
+        observed = sensor_data.load;
+        break;
+      case Threshold::Variable::kKneeAngle:
+        observed = sensor_data.knee_angle;
+        break;
+      case Threshold::Variable::kKneeVel:
+        observed = sensor_data.knee_vel;
+        break;
+      case Threshold::Variable::kAnkleAngle:
+        observed = sensor_data.ankle_angle;
+        break;
+    }
+    return threshold.above ? observed > threshold.value
+                           : observed < threshold.value;
+  }
+
+  mjtNum JointTorque(bool knee) const {
+    const StateParams& params = states_[StateId()];
+    const JointParams& joint = knee ? params.knee : params.ankle;
+    const mjtNum angle = knee ? sensor_data_.knee_angle : sensor_data_.ankle_angle;
+    const mjtNum velocity = knee ? sensor_data_.knee_vel : sensor_data_.ankle_vel;
+    const mjtNum peak_torque =
+        knee ? knee_peak_torque_ : ankle_peak_torque_;
+    return challenge_extra_detail::Clip(
+        joint.stiffness * (joint.target_angle - angle) -
+            joint.damping * velocity,
+        -peak_torque, peak_torque);
+  }
+
+  void InitializeDefaults(mjtNum body_mass) {
+    const mjtNum body_weight = body_mass * static_cast<mjtNum>(9.81);
+    const mjtNum deg = detail::kPi / static_cast<mjtNum>(180.0);
+    states_[static_cast<int>(RunTrackOslState::kEarlyStance)] = StateParams{
+        JointParams{99.372, 3.180, 5.0 * deg},
+        JointParams{19.874, 0.0, -2.0 * deg},
+        {MakeThreshold(Threshold::Variable::kLoad,
+                       static_cast<mjtNum>(0.25) * body_weight,
+                       /*above=*/true),
+         MakeThreshold(Threshold::Variable::kAnkleAngle, 6.0 * deg,
+                       /*above=*/true)},
+        2,
+    };
+    states_[static_cast<int>(RunTrackOslState::kLateStance)] = StateParams{
+        JointParams{99.372, 1.272, 8.0 * deg},
+        JointParams{79.498, 0.063, -20.0 * deg},
+        {MakeThreshold(Threshold::Variable::kLoad,
+                       static_cast<mjtNum>(0.15) * body_weight,
+                       /*above=*/false)},
+        1,
+    };
+    states_[static_cast<int>(RunTrackOslState::kEarlySwing)] = StateParams{
+        JointParams{39.749, 0.063, 60.0 * deg},
+        JointParams{7.949, 0.0, 25.0 * deg},
+        {MakeThreshold(Threshold::Variable::kKneeAngle, 50.0 * deg,
+                       /*above=*/true),
+         MakeThreshold(Threshold::Variable::kKneeVel, 3.0 * deg,
+                       /*above=*/false)},
+        2,
+    };
+    states_[static_cast<int>(RunTrackOslState::kLateSwing)] = StateParams{
+        JointParams{15.899, 3.816, 5.0 * deg},
+        JointParams{7.949, 0.0, 15.0 * deg},
+        {MakeThreshold(Threshold::Variable::kLoad,
+                       static_cast<mjtNum>(0.4) * body_weight,
+                       /*above=*/true),
+         MakeThreshold(Threshold::Variable::kKneeAngle, 30.0 * deg,
+                       /*above=*/false)},
+        2,
+    };
+    Reset(RunTrackOslState::kEarlyStance);
+  }
+
+  std::array<StateParams, 4> states_{};
+  RunTrackOslSensorData sensor_data_{};
+  RunTrackOslState state_{RunTrackOslState::kEarlyStance};
+  bool running_{false};
+  mjtNum knee_peak_torque_{142.272};
+  mjtNum ankle_peak_torque_{168.192};
+};
+
 }  // namespace challenge_extra_detail
 
 class MyoChallengeRunTrackEnvFns {
@@ -195,11 +602,19 @@ class MyoChallengeRunTrackEnvFns {
         "reset_type"_.Bind(std::string("random")),
         "terrain"_.Bind(std::string("flat")), "start_pos"_.Bind(14.0),
         "end_pos"_.Bind(-15.0), "real_width"_.Bind(1.0),
+        "hills_difficulties"_.Bind(std::vector<double>{}),
+        "rough_difficulties"_.Bind(std::vector<double>{}),
+        "stairs_difficulties"_.Bind(std::vector<double>{}),
         "reward_sparse_w"_.Bind(1.0), "reward_solved_w"_.Bind(10.0),
         "test_reset_qpos"_.Bind(std::vector<double>{}),
         "test_reset_qvel"_.Bind(std::vector<double>{}),
         "test_reset_act"_.Bind(std::vector<double>{}),
-        "test_reset_qacc_warmstart"_.Bind(std::vector<double>{}));
+        "test_reset_qacc_warmstart"_.Bind(std::vector<double>{}),
+        "test_hfield_data"_.Bind(std::vector<double>{}),
+        "test_terrain_geom_rgba"_.Bind(std::vector<double>{}),
+        "test_terrain_geom_pos"_.Bind(std::vector<double>{}),
+        "test_terrain_type"_.Bind(-1),
+        "test_osl_state"_.Bind(-1));
   }
 
   template <typename Config>
@@ -254,8 +669,17 @@ class MyoChallengeSoccerEnvFns {
         "reward_pain_w"_.Bind(-10.0),
         "test_reset_qpos"_.Bind(std::vector<double>{}),
         "test_reset_qvel"_.Bind(std::vector<double>{}),
+        "test_reset_ctrl"_.Bind(std::vector<double>{}),
         "test_reset_act"_.Bind(std::vector<double>{}),
-        "test_reset_qacc_warmstart"_.Bind(std::vector<double>{}));
+        "test_reset_act_dot"_.Bind(std::vector<double>{}),
+        "test_reset_qacc"_.Bind(std::vector<double>{}),
+        "test_reset_qacc_warmstart"_.Bind(std::vector<double>{}),
+        "test_goalkeeper_pose"_.Bind(std::vector<double>{}),
+        "test_goalkeeper_velocity"_.Bind(std::vector<double>{}),
+        "test_goalkeeper_noise_buffer"_.Bind(std::vector<double>{}),
+        "test_goalkeeper_noise_idx"_.Bind(-1),
+        "test_goalkeeper_block_velocity"_.Bind(-1.0),
+        "test_goalkeeper_policy"_.Bind(-1));
   }
 
   template <typename Config>
@@ -304,6 +728,9 @@ class MyoChallengeChaseTagEnvFns {
         "win_distance"_.Bind(0.5), "min_spawn_distance"_.Bind(2.0),
         "task_choice"_.Bind(std::string("CHASE")),
         "terrain"_.Bind(std::string("FLAT")), "repeller_opponent"_.Bind(false),
+        "hills_range"_.Bind(std::vector<double>{0.0, 0.0}),
+        "rough_range"_.Bind(std::vector<double>{0.0, 0.0}),
+        "relief_range"_.Bind(std::vector<double>{0.0, 0.0}),
         "chase_vel_low"_.Bind(1.0), "chase_vel_high"_.Bind(1.0),
         "random_vel_low"_.Bind(-2.0), "random_vel_high"_.Bind(2.0),
         "repeller_vel_low"_.Bind(0.3), "repeller_vel_high"_.Bind(1.0),
@@ -311,8 +738,21 @@ class MyoChallengeChaseTagEnvFns {
         "reward_distance_w"_.Bind(-0.1), "reward_lose_w"_.Bind(-1000.0),
         "test_reset_qpos"_.Bind(std::vector<double>{}),
         "test_reset_qvel"_.Bind(std::vector<double>{}),
+        "test_reset_ctrl"_.Bind(std::vector<double>{}),
         "test_reset_act"_.Bind(std::vector<double>{}),
-        "test_reset_qacc_warmstart"_.Bind(std::vector<double>{}));
+        "test_reset_act_dot"_.Bind(std::vector<double>{}),
+        "test_reset_qacc"_.Bind(std::vector<double>{}),
+        "test_reset_qacc_warmstart"_.Bind(std::vector<double>{}),
+        "test_hfield_data"_.Bind(std::vector<double>{}),
+        "test_terrain_geom_rgba"_.Bind(std::vector<double>{}),
+        "test_terrain_geom_pos"_.Bind(std::vector<double>{}),
+        "test_task"_.Bind(-1),
+        "test_opponent_pose"_.Bind(std::vector<double>{}),
+        "test_opponent_velocity"_.Bind(std::vector<double>{}),
+        "test_opponent_noise_buffer"_.Bind(std::vector<double>{}),
+        "test_opponent_noise_idx"_.Bind(-1),
+        "test_chase_velocity"_.Bind(-1.0),
+        "test_opponent_policy"_.Bind(-1));
   }
 
   template <typename Config>
@@ -371,7 +811,13 @@ class MyoChallengeTableTennisEnvFns {
         "test_reset_qpos"_.Bind(std::vector<double>{}),
         "test_reset_qvel"_.Bind(std::vector<double>{}),
         "test_reset_act"_.Bind(std::vector<double>{}),
-        "test_reset_qacc_warmstart"_.Bind(std::vector<double>{}));
+        "test_reset_act_dot"_.Bind(std::vector<double>{}),
+        "test_reset_qacc_warmstart"_.Bind(std::vector<double>{}),
+        "test_ball_body_pos"_.Bind(std::vector<double>{}),
+        "test_ball_geom_friction"_.Bind(std::vector<double>{}),
+        "test_paddle_body_mass"_.Bind(std::vector<double>{}),
+        "test_init_qpos"_.Bind(std::vector<double>{}),
+        "test_init_qvel"_.Bind(std::vector<double>{}));
   }
 
   template <typename Config>
@@ -434,24 +880,45 @@ class MyoChallengeRunTrackEnvBase : public Env<EnvSpecT>,
   mjtNum real_width_;
   mjtNum reward_sparse_w_;
   mjtNum reward_solved_w_;
+  std::vector<mjtNum> hills_difficulties_;
+  std::vector<mjtNum> rough_difficulties_;
+  std::vector<mjtNum> stairs_difficulties_;
+  int terrain_geom_id_{-1};
+  int terrain_hfield_id_{-1};
   int pelvis_body_id_{-1};
   int head_site_id_{-1};
   int foot_l_body_id_{-1};
   int foot_r_body_id_{-1};
+  std::array<int, 4> foot_height_site_ids_{-1, -1, -1, -1};
   std::array<int, 2> grf_sensor_ids_{-1, -1};
-  int socket_sensor_id_{-1};
+  int osl_load_sensor_id_{-1};
+  int osl_knee_torque_actuator_id_{-1};
+  int osl_ankle_torque_actuator_id_{-1};
+  int osl_knee_qposadr_{-1};
+  int osl_ankle_qposadr_{-1};
+  int osl_knee_dofadr_{-1};
+  int osl_ankle_dofadr_{-1};
   std::vector<int> biological_qposadrs_;
   std::vector<int> biological_dofadrs_;
+  std::vector<int> biological_actuator_ids_;
   std::vector<int> pain_dofadrs_;
-  std::vector<int> hidden_actuator_ids_;
-  std::vector<int> muscle_actuator_ids_;
+  std::vector<mjtNum> initial_hfield_data_;
+  std::vector<mjtNum> initial_terrain_rgba_;
+  std::vector<mjtNum> initial_terrain_pos_;
   std::vector<bool> muscle_actuator_;
   detail::MyoConditionState muscle_condition_state_;
+  challenge_extra_detail::RunTrackOslController osl_controller_;
   int terrain_type_{0};
   std::vector<mjtNum> test_reset_qpos_;
   std::vector<mjtNum> test_reset_qvel_;
   std::vector<mjtNum> test_reset_act_;
+  std::vector<mjtNum> test_reset_act_dot_;
   std::vector<mjtNum> test_reset_qacc_warmstart_;
+  std::vector<mjtNum> test_hfield_data_;
+  std::vector<mjtNum> test_terrain_geom_rgba_;
+  std::vector<mjtNum> test_terrain_geom_pos_;
+  int test_terrain_type_{-1};
+  int test_osl_state_{-1};
 
  public:
   using Spec = EnvSpecT;
@@ -481,7 +948,23 @@ class MyoChallengeRunTrackEnvBase : public Env<EnvSpecT>,
         test_reset_qvel_(detail::ToMjtVector(spec.config["test_reset_qvel"_])),
         test_reset_act_(detail::ToMjtVector(spec.config["test_reset_act"_])),
         test_reset_qacc_warmstart_(
-            detail::ToMjtVector(spec.config["test_reset_qacc_warmstart"_])) {
+            detail::ToMjtVector(spec.config["test_reset_qacc_warmstart"_])),
+        test_hfield_data_(detail::ToMjtVector(spec.config["test_hfield_data"_])),
+        test_terrain_geom_rgba_(
+            detail::ToMjtVector(spec.config["test_terrain_geom_rgba"_])),
+        test_terrain_geom_pos_(
+            detail::ToMjtVector(spec.config["test_terrain_geom_pos"_])),
+        test_terrain_type_(spec.config["test_terrain_type"_]),
+        test_osl_state_(spec.config["test_osl_state"_]) {
+    hills_difficulties_ =
+        detail::ToMjtVector(spec.config["hills_difficulties"_]);
+    rough_difficulties_ =
+        detail::ToMjtVector(spec.config["rough_difficulties"_]);
+    stairs_difficulties_ =
+        detail::ToMjtVector(spec.config["stairs_difficulties"_]);
+    std::reverse(hills_difficulties_.begin(), hills_difficulties_.end());
+    std::reverse(rough_difficulties_.begin(), rough_difficulties_.end());
+    std::reverse(stairs_difficulties_.begin(), stairs_difficulties_.end());
     ValidateConfig();
     CacheIds();
     detail::BuildMuscleMask(model_, &muscle_actuator_);
@@ -489,13 +972,11 @@ class MyoChallengeRunTrackEnvBase : public Env<EnvSpecT>,
         model_, spec.config["muscle_condition"_],
         spec.config["fatigue_reset_vec"_], spec.config["fatigue_reset_random"_],
         spec.config["frame_skip"_], this->seed_, &muscle_condition_state_);
-    for (int actuator = 0; actuator < model_->nu; ++actuator) {
-      if (muscle_actuator_[actuator]) {
-        muscle_actuator_ids_.push_back(actuator);
-      } else {
-        hidden_actuator_ids_.push_back(actuator);
-      }
+    mjtNum total_body_mass = 0.0;
+    for (int body = 0; body < model_->nbody; ++body) {
+      total_body_mass += model_->body_mass[body];
     }
+    osl_controller_.Initialize(total_body_mass);
     InitializeRobotEnv();
   }
 
@@ -514,10 +995,10 @@ class MyoChallengeRunTrackEnvBase : public Env<EnvSpecT>,
     elapsed_step_ = 0;
     detail::ResetMyoConditionState(&muscle_condition_state_);
     ResetToInitialState();
-    terrain_type_ = terrain_ == "random"
-                        ? std::uniform_int_distribution<int>(0, 4)(gen_)
-                        : 0;
+    RestoreTrackTerrainState();
+    ApplyTrackTerrainReset();
     ApplyResetState();
+    InvalidateRenderCache();
     CaptureResetState();
     RewardInfo reward = ComputeRewardInfo();
     WriteState(reward, true, 0.0);
@@ -525,23 +1006,14 @@ class MyoChallengeRunTrackEnvBase : public Env<EnvSpecT>,
 
   void Step(const Action& action) override {
     const auto* raw = static_cast<const float*>(action["action"_].Data());
-    std::vector<float> ctrl(model_->nu, 0.0f);
-    for (std::size_t i = 0; i < muscle_actuator_ids_.size(); ++i) {
-      ctrl[muscle_actuator_ids_[i]] = raw[i];
-    }
-    mjtNum phase = static_cast<mjtNum>(2.0) * detail::kPi *
-                   static_cast<mjtNum>(std::fmod(
-                       static_cast<double>(elapsed_step_) / 40.0, 1.0));
-    for (std::size_t i = 0; i < hidden_actuator_ids_.size(); ++i) {
-      ctrl[hidden_actuator_ids_[i]] =
-          static_cast<float>(0.35 * std::sin(phase + i * detail::kPi / 2.0));
-    }
+    std::vector<float> ctrl = BuildAction(raw);
     detail::ApplyMyoSuiteAction(model_, data_, muscle_actuator_, normalize_act_,
                                 ctrl.data());
     detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
                                          &muscle_condition_state_);
     InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
+    mj_forward(model_, data_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
     done_ = reward.done || elapsed_step_ >= max_episode_steps_;
@@ -571,8 +1043,31 @@ class MyoChallengeRunTrackEnvBase : public Env<EnvSpecT>,
         challenge_extra_detail::RequireId(model_, mjOBJ_SENSOR, "l_foot");
     grf_sensor_ids_[1] =
         challenge_extra_detail::RequireId(model_, mjOBJ_SENSOR, "l_toes");
-    socket_sensor_id_ = challenge_extra_detail::RequireId(model_, mjOBJ_SENSOR,
-                                                          "r_socket_load");
+    terrain_geom_id_ =
+        challenge_extra_detail::RequireId(model_, mjOBJ_GEOM, "terrain");
+    terrain_hfield_id_ = model_->geom_dataid[terrain_geom_id_];
+    osl_load_sensor_id_ =
+        challenge_extra_detail::RequireId(model_, mjOBJ_SENSOR, "r_osl_load");
+    osl_knee_torque_actuator_id_ = challenge_extra_detail::RequireId(
+        model_, mjOBJ_ACTUATOR, "osl_knee_torque_actuator");
+    osl_ankle_torque_actuator_id_ = challenge_extra_detail::RequireId(
+        model_, mjOBJ_ACTUATOR, "osl_ankle_torque_actuator");
+    int osl_knee_joint_id =
+        challenge_extra_detail::RequireId(model_, mjOBJ_JOINT, "osl_knee_angle_r");
+    int osl_ankle_joint_id = challenge_extra_detail::RequireId(
+        model_, mjOBJ_JOINT, "osl_ankle_angle_r");
+    osl_knee_qposadr_ = model_->jnt_qposadr[osl_knee_joint_id];
+    osl_ankle_qposadr_ = model_->jnt_qposadr[osl_ankle_joint_id];
+    osl_knee_dofadr_ = model_->jnt_dofadr[osl_knee_joint_id];
+    osl_ankle_dofadr_ = model_->jnt_dofadr[osl_ankle_joint_id];
+    foot_height_site_ids_[0] =
+        challenge_extra_detail::RequireId(model_, mjOBJ_SITE, "r_heel_btm");
+    foot_height_site_ids_[1] =
+        challenge_extra_detail::RequireId(model_, mjOBJ_SITE, "r_toe_btm");
+    foot_height_site_ids_[2] =
+        challenge_extra_detail::RequireId(model_, mjOBJ_SITE, "l_heel_btm");
+    foot_height_site_ids_[3] =
+        challenge_extra_detail::RequireId(model_, mjOBJ_SITE, "l_toe_btm");
     static const std::vector<std::string> biological_joints = {
         "hip_adduction_l",
         "hip_flexion_l",
@@ -598,12 +1093,37 @@ class MyoChallengeRunTrackEnvBase : public Env<EnvSpecT>,
         "knee_angle_l",    "knee_angle_l_rotation2", "knee_angle_l_rotation3",
         "mtp_angle_l",     "ankle_angle_l",          "subtalar_angle_l",
     };
+    static const std::vector<std::string> biological_actuators = {
+        "addbrev_l",   "addbrev_r",     "addlong_l",      "addlong_r",
+        "addmagDist_l","addmagIsch_l",  "addmagMid_l",    "addmagProx_l",
+        "bflh_l",      "bfsh_l",        "edl_l",          "ehl_l",
+        "fdl_l",       "fhl_l",         "gaslat_l",       "gasmed_l",
+        "glmax1_l",    "glmax1_r",      "glmax2_l",       "glmax2_r",
+        "glmax3_l",    "glmax3_r",      "glmed1_l",       "glmed1_r",
+        "glmed2_l",    "glmed2_r",      "glmed3_l",       "glmed3_r",
+        "glmin1_l",    "glmin1_r",      "glmin2_l",       "glmin2_r",
+        "glmin3_l",    "glmin3_r",      "grac_l",         "iliacus_l",
+        "iliacus_r",   "perbrev_l",     "perlong_l",      "piri_l",
+        "piri_r",      "psoas_l",       "psoas_r",        "recfem_l",
+        "sart_l",      "semimem_l",     "semiten_l",      "soleus_l",
+        "tfl_l",       "tibant_l",      "tibpost_l",      "vasint_l",
+        "vaslat_l",    "vasmed_l",
+    };
     biological_qposadrs_ =
         challenge_extra_detail::CollectJointQposAdrs(model_, biological_joints);
     biological_dofadrs_ =
         challenge_extra_detail::CollectJointDofAdrs(model_, biological_joints);
+    for (const std::string& actuator_name : biological_actuators) {
+      biological_actuator_ids_.push_back(
+          challenge_extra_detail::RequireId(model_, mjOBJ_ACTUATOR, actuator_name));
+    }
     pain_dofadrs_ =
         challenge_extra_detail::CollectJointDofAdrs(model_, pain_joints);
+    detail::CopyModelGeomRgba(model_, terrain_geom_id_, &initial_terrain_rgba_);
+    detail::CopyModelGeomPos(model_, terrain_geom_id_, &initial_terrain_pos_);
+    if (terrain_hfield_id_ >= 0) {
+      detail::CopyModelHfieldData(model_, terrain_hfield_id_, &initial_hfield_data_);
+    }
     int expected_obs = static_cast<int>(biological_qposadrs_.size()) +
                        static_cast<int>(biological_dofadrs_.size()) + 2 + 4 +
                        model_->na + model_->na + model_->na + model_->na + 2 +
@@ -613,45 +1133,306 @@ class MyoChallengeRunTrackEnvBase : public Env<EnvSpecT>,
     }
   }
 
-  void ApplyResetState() {
-    if (!test_reset_qpos_.empty()) {
-      detail::RestoreVector(test_reset_qpos_, data_->qpos);
-      detail::RestoreVector(test_reset_qvel_, data_->qvel);
-    } else if (reset_type_ == "random") {
-      int key = std::uniform_int_distribution<int>(0, 2)(gen_);
-      detail::RestoreVector(
-          std::vector<mjtNum>(model_->key_qpos + key * model_->nq,
-                              model_->key_qpos + (key + 1) * model_->nq),
-          data_->qpos);
-      detail::RestoreVector(
-          std::vector<mjtNum>(model_->key_qvel + key * model_->nv,
-                              model_->key_qvel + (key + 1) * model_->nv),
-          data_->qvel);
-      std::uniform_real_distribution<double> x_dist(
-          -static_cast<double>(real_width_) * 0.8,
-          static_cast<double>(real_width_) * 0.8);
-      data_->qpos[0] = static_cast<mjtNum>(x_dist(gen_));
-      data_->qpos[1] = start_pos_ + 1.0;
-    } else {
-      detail::RestoreVector(
-          std::vector<mjtNum>(model_->key_qpos, model_->key_qpos + model_->nq),
-          data_->qpos);
-      detail::RestoreVector(
-          std::vector<mjtNum>(model_->key_qvel, model_->key_qvel + model_->nv),
-          data_->qvel);
+  void RestoreTrackTerrainState() {
+    detail::RestoreModelGeomRgba(model_, terrain_geom_id_, initial_terrain_rgba_);
+    detail::RestoreModelGeomPos(model_, terrain_geom_id_, initial_terrain_pos_);
+    if (terrain_hfield_id_ >= 0) {
+      detail::RestoreModelHfieldData(model_, terrain_hfield_id_, initial_hfield_data_);
+    }
+  }
+
+  void SetTrackTerrainVisible() {
+    std::vector<mjtNum> rgba = initial_terrain_rgba_;
+    std::vector<mjtNum> pos = initial_terrain_pos_;
+    rgba[3] = 1.0;
+    pos[0] = 0.0;
+    pos[1] = 0.0;
+    pos[2] = 0.005;
+    detail::RestoreModelGeomRgba(model_, terrain_geom_id_, rgba);
+    detail::RestoreModelGeomPos(model_, terrain_geom_id_, pos);
+  }
+
+  void ClearTrackTerrain() {
+    if (terrain_hfield_id_ < 0) {
+      return;
+    }
+    int rows = model_->hfield_nrow[terrain_hfield_id_];
+    int cols = model_->hfield_ncol[terrain_hfield_id_];
+    detail::RestoreModelHfieldData(
+        model_, terrain_hfield_id_,
+        std::vector<mjtNum>(rows * cols, static_cast<mjtNum>(0.0)));
+  }
+
+  void FillStairsTrackPatch(int patch_start, int patch_end, int index) {
+    int rows = patch_end - patch_start;
+    if (rows <= 0) {
+      return;
+    }
+    int stair_height_count = 3;
+    int stair_count = stair_height_count * 2;
+    int stair_flat = rows / stair_count;
+    mjtNum stair_height = stairs_difficulties_.at(index);
+    int filled_rows = stair_flat * stair_count;
+    int adr = model_->hfield_adr[terrain_hfield_id_];
+    int cols = model_->hfield_ncol[terrain_hfield_id_];
+    mjtNum height = 0.0;
+    for (int stair = 0; stair < stair_count; ++stair) {
+      for (int row = 0; row < stair_flat; ++row) {
+        int global_row = patch_start + stair * stair_flat + row;
+        if (global_row >= patch_start + filled_rows) {
+          break;
+        }
+        for (int col = 0; col < cols; ++col) {
+          model_->hfield_data[adr + global_row * cols + col] =
+              static_cast<float>(height);
+        }
+      }
+      if (stair < stair_count / 2) {
+        height += stair_height;
+      } else {
+        height -= stair_height;
+      }
+    }
+  }
+
+  void FillHillyTrackPatch(int patch_start, int patch_end, int index) {
+    int rows = patch_end - patch_start;
+    if (rows <= 0) {
+      return;
+    }
+    int cols = model_->hfield_ncol[terrain_hfield_id_];
+    int total = rows * cols;
+    std::vector<mjtNum> data(total);
+    for (int i = 0; i < total; ++i) {
+      data[i] = static_cast<mjtNum>(
+          std::sin(static_cast<double>(i) / std::max(total - 1, 1) * detail::kPi));
+    }
+    mjtNum low = *std::min_element(data.begin(), data.end());
+    mjtNum high = *std::max_element(data.begin(), data.end());
+    mjtNum denom = std::max(high - low, static_cast<mjtNum>(1e-12));
+    mjtNum scalar = hills_difficulties_.at(index);
+    int adr = model_->hfield_adr[terrain_hfield_id_];
+    for (int row = 0; row < rows; ++row) {
+      for (int col = 0; col < cols; ++col) {
+        int src = row * cols + col;
+        int dst_row = rows - 1 - row;
+        int dst_col = cols - 1 - col;
+        mjtNum value = (data[src] - low) / denom * scalar;
+        model_->hfield_data[adr + (patch_start + dst_row) * cols + dst_col] =
+            static_cast<float>(value);
+      }
+    }
+  }
+
+  void FillRoughTrackPatch(int patch_start, int patch_end, int index) {
+    int rows = patch_end - patch_start;
+    if (rows <= 0) {
+      return;
+    }
+    int cols = model_->hfield_ncol[terrain_hfield_id_];
+    std::vector<mjtNum> fill_data(rows * cols);
+    for (mjtNum& value : fill_data) {
+      value = std::uniform_real_distribution<double>(-1.0, 1.0)(gen_);
+    }
+    mjtNum scalar = std::uniform_real_distribution<double>(
+        0.0, static_cast<double>(rough_difficulties_.at(index)))(gen_);
+    mjtNum low = *std::min_element(fill_data.begin(), fill_data.end());
+    mjtNum high = *std::max_element(fill_data.begin(), fill_data.end());
+    mjtNum denom = std::max(high - low, static_cast<mjtNum>(1e-12));
+    int adr = model_->hfield_adr[terrain_hfield_id_];
+    for (int row = 0; row < rows; ++row) {
+      for (int col = 0; col < cols; ++col) {
+        mjtNum normalized = (fill_data[row * cols + col] - low) / denom;
+        model_->hfield_data[adr + (patch_start + row) * cols + col] =
+            static_cast<float>(normalized * scalar);
+      }
+    }
+  }
+
+  void ApplyTrackTerrainReset() {
+    SetTrackTerrainVisible();
+    ClearTrackTerrain();
+    if (test_terrain_type_ >= 0) {
+      terrain_type_ = test_terrain_type_;
+    }
+    if (!test_terrain_geom_rgba_.empty()) {
+      detail::RestoreModelGeomRgba(model_, terrain_geom_id_, test_terrain_geom_rgba_);
+    }
+    if (!test_terrain_geom_pos_.empty()) {
+      detail::RestoreModelGeomPos(model_, terrain_geom_id_, test_terrain_geom_pos_);
+    }
+    if (!test_hfield_data_.empty()) {
+      detail::RestoreModelHfieldData(model_, terrain_hfield_id_, test_hfield_data_);
+      return;
+    }
+    terrain_type_ = 0;
+    if (terrain_ == "flat") {
+      return;
+    }
+    if (terrain_ != "random") {
+      throw std::runtime_error("Unsupported RunTrack terrain reset type.");
+    }
+    using TerrainFn = void (MyoChallengeRunTrackEnvBase::*)(int, int, int);
+    std::vector<std::pair<TerrainFn, int>> terrain_fns = {
+        {&MyoChallengeRunTrackEnvBase::FillStairsTrackPatch, 3},
+        {&MyoChallengeRunTrackEnvBase::FillHillyTrackPatch, 1},
+        {&MyoChallengeRunTrackEnvBase::FillRoughTrackPatch, 2},
+    };
+    int terrain_choice =
+        std::uniform_int_distribution<int>(0, static_cast<int>(terrain_fns.size()) - 1)(
+            gen_);
+    terrain_type_ = terrain_fns[terrain_choice].second;
+    const std::vector<mjtNum>* difficulties = nullptr;
+    switch (terrain_type_) {
+      case 1:
+        difficulties = &hills_difficulties_;
+        break;
+      case 2:
+        difficulties = &rough_difficulties_;
+        break;
+      case 3:
+        difficulties = &stairs_difficulties_;
+        break;
+      default:
+        return;
+    }
+    if (difficulties->size() < 2) {
+      return;
+    }
+    int rows = model_->hfield_nrow[terrain_hfield_id_];
+    int patch_rows = rows / static_cast<int>(difficulties->size());
+    if (patch_rows <= 0) {
+      return;
+    }
+    int patch_start = 0;
+    for (std::size_t i = 0; i + 1 < difficulties->size(); ++i) {
+      int patch_end = patch_start + patch_rows;
+      (this->*terrain_fns[terrain_choice].first)(
+          patch_start, std::min(patch_end, rows), static_cast<int>(i));
+      patch_start = patch_end;
+    }
+  }
+
+  std::pair<std::vector<mjtNum>, std::vector<mjtNum>> RandomizedResetState() {
+    int key = std::uniform_int_distribution<int>(0, 2)(gen_);
+    std::vector<mjtNum> qpos(model_->key_qpos + key * model_->nq,
+                             model_->key_qpos + (key + 1) * model_->nq);
+    std::vector<mjtNum> qvel(model_->key_qvel + key * model_->nv,
+                             model_->key_qvel + (key + 1) * model_->nv);
+    osl_controller_.Reset(
+        key == 1 ? challenge_extra_detail::RunTrackOslState::kEarlySwing
+                 : challenge_extra_detail::RunTrackOslState::kEarlyStance);
+    std::uniform_real_distribution<double> x_dist(
+        -static_cast<double>(real_width_) * 0.8,
+        static_cast<double>(real_width_) * 0.8);
+    qpos[0] = static_cast<mjtNum>(x_dist(gen_));
+    qpos[1] = start_pos_ + 1.0;
+    return {qpos, qvel};
+  }
+
+  void AdjustModelHeight() {
+    mjtNum min_height = std::numeric_limits<mjtNum>::infinity();
+    for (int site_id : foot_height_site_ids_) {
+      min_height = std::min(min_height, data_->site_xpos[site_id * 3 + 2]);
+    }
+    data_->qpos[2] += static_cast<mjtNum>(0.005) - min_height;
+  }
+
+  challenge_extra_detail::RunTrackOslSensorData OslSensorData() const {
+    int sensor_adr = model_->sensor_adr[osl_load_sensor_id_];
+    return {
+        data_->qpos[osl_knee_qposadr_],
+        data_->qvel[osl_knee_dofadr_],
+        data_->qpos[osl_ankle_qposadr_],
+        data_->qvel[osl_ankle_dofadr_],
+        -data_->sensordata[sensor_adr + 1],
+    };
+  }
+
+  std::vector<float> BuildAction(const float* raw) {
+    std::vector<float> ctrl(model_->nu, 0.0f);
+    std::copy(raw, raw + model_->na, ctrl.begin());
+    osl_controller_.Update(OslSensorData());
+    auto torques = osl_controller_.GetTorques();
+    const std::array<std::pair<int, mjtNum>, 2> actuator_data = {{
+        {osl_knee_torque_actuator_id_, torques[0]},
+        {osl_ankle_torque_actuator_id_, torques[1]},
+    }};
+    for (const auto& [actuator_id, torque] : actuator_data) {
+      mjtNum ctrl_value = torque / model_->actuator_gear[actuator_id * 6];
+      mjtNum min_ctrl = model_->actuator_ctrlrange[actuator_id * 2];
+      mjtNum max_ctrl = model_->actuator_ctrlrange[actuator_id * 2 + 1];
+      ctrl_value = challenge_extra_detail::Clip(ctrl_value, min_ctrl, max_ctrl);
+      if (normalize_act_) {
+        mjtNum ctrl_mean = (min_ctrl + max_ctrl) * static_cast<mjtNum>(0.5);
+        mjtNum ctrl_rng = (max_ctrl - min_ctrl) * static_cast<mjtNum>(0.5);
+        ctrl_value = (ctrl_value - ctrl_mean) / ctrl_rng;
+      }
+      ctrl[actuator_id] = static_cast<float>(ctrl_value);
+    }
+    return ctrl;
+  }
+
+  void ResetSimulationState(const std::vector<mjtNum>& qpos,
+                            const std::vector<mjtNum>& qvel) {
+    mj_resetData(model_, data_);
+    data_->time = initial_time_;
+    detail::RestoreVector(qpos, data_->qpos);
+    detail::RestoreVector(qvel, data_->qvel);
+    if (model_->nu != 0) {
+      mju_zero(data_->ctrl, model_->nu);
+    }
+    if (model_->na != 0) {
+      mju_zero(data_->act, model_->na);
     }
     mj_forward(model_, data_);
-    bool rerun_forward = false;
+  }
+
+  void ApplyResetState() {
+    osl_controller_.Reset(challenge_extra_detail::RunTrackOslState::kEarlyStance);
+    std::vector<mjtNum> qpos;
+    std::vector<mjtNum> qvel;
+    if (!test_reset_qpos_.empty()) {
+      qpos = test_reset_qpos_;
+      qvel = test_reset_qvel_;
+    } else if (reset_type_ == "random") {
+      std::tie(qpos, qvel) = RandomizedResetState();
+    } else {
+      osl_controller_.Reset(challenge_extra_detail::RunTrackOslState::kEarlyStance);
+      qpos.assign(model_->key_qpos, model_->key_qpos + model_->nq);
+      qvel.assign(model_->key_qvel, model_->key_qvel + model_->nv);
+    }
+
+    ResetSimulationState(qpos, qvel);
+    if (test_reset_qpos_.empty() && reset_type_ != "init") {
+      AdjustModelHeight();
+      qpos.assign(data_->qpos, data_->qpos + model_->nq);
+      qvel.assign(data_->qvel, data_->qvel + model_->nv);
+      ResetSimulationState(qpos, qvel);
+    }
     if (!test_reset_act_.empty()) {
       detail::RestoreVector(test_reset_act_, data_->act);
-      rerun_forward = true;
-    }
-    if (!test_reset_qacc_warmstart_.empty()) {
-      detail::RestoreVector(test_reset_qacc_warmstart_, data_->qacc_warmstart);
-    }
-    if (rerun_forward) {
       mj_forward(model_, data_);
     }
+    if (!test_reset_qacc_warmstart_.empty()) {
+      detail::RestoreVector(test_reset_qacc_warmstart_,
+                            data_->qacc_warmstart);
+#ifdef ENVPOOL_TEST
+      mjtNum max_diff = 0.0;
+      for (int i = 0; i < model_->nv; ++i) {
+        max_diff = std::max(
+            max_diff, std::abs(data_->qacc_warmstart[i] -
+                               test_reset_qacc_warmstart_[i]));
+      }
+      std::fprintf(stderr, "RunTrack qacc_warmstart restore max diff: %.17g\n",
+                   static_cast<double>(max_diff));
+#endif
+    }
+    if (test_osl_state_ >= 0) {
+      osl_controller_.SetState(
+          static_cast<challenge_extra_detail::RunTrackOslState>(test_osl_state_));
+    }
+    osl_controller_.Start();
   }
 
   bool Fallen() const {
@@ -694,22 +1475,22 @@ class MyoChallengeRunTrackEnvBase : public Env<EnvSpecT>,
     }
     obs.insert(obs.end(), data_->xquat + pelvis_body_id_ * 4,
                data_->xquat + pelvis_body_id_ * 4 + 4);
-    for (int actuator : muscle_actuator_ids_) {
-      obs.push_back(data_->actuator_length[actuator]);
-    }
-    for (int actuator : muscle_actuator_ids_) {
-      obs.push_back(challenge_extra_detail::Clip(
-          data_->actuator_velocity[actuator], -100.0, 100.0));
-    }
-    for (int actuator : muscle_actuator_ids_) {
-      obs.push_back(challenge_extra_detail::Clip(
-          data_->actuator_force[actuator] / 1000.0, -100.0, 100.0));
-    }
-    obs.insert(obs.end(), data_->act, data_->act + model_->na);
     obs.push_back(data_->qpos[0]);
     obs.push_back(data_->qpos[1]);
     obs.push_back(data_->qvel[0]);
     obs.push_back(data_->qvel[1]);
+    for (int actuator_id : biological_actuator_ids_) {
+      obs.push_back(data_->actuator_length[actuator_id]);
+    }
+    for (int actuator_id : biological_actuator_ids_) {
+      obs.push_back(challenge_extra_detail::Clip(
+          data_->actuator_velocity[actuator_id], -100.0, 100.0));
+    }
+    for (int actuator_id : biological_actuator_ids_) {
+      obs.push_back(challenge_extra_detail::Clip(
+          data_->actuator_force[actuator_id] / 1000.0, -100.0, 100.0));
+    }
+    obs.insert(obs.end(), data_->act, data_->act + model_->na);
     return obs;
   }
 
@@ -770,6 +1551,9 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
   static constexpr mjtNum kGoalYMax = 3.3;
   static constexpr mjtNum kGoalZMin = 0.0;
   static constexpr mjtNum kGoalZMax = 2.2;
+  static constexpr int kGoalkeeperBlockBall = 0;
+  static constexpr int kGoalkeeperRandom = 1;
+  static constexpr int kGoalkeeperStationary = 2;
 
   bool normalize_act_;
   std::string reset_type_;
@@ -797,13 +1581,24 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
   std::vector<int> muscle_actuator_ids_;
   std::vector<bool> muscle_actuator_;
   detail::MyoConditionState muscle_condition_state_;
-  int goalkeeper_policy_{2};
-  mjtNum goalkeeper_velocity_{0.0};
+  challenge_extra_detail::ColoredNoiseProcess goalkeeper_noise_process_{
+      2.0, 2, 10};
+  int goalkeeper_policy_{kGoalkeeperStationary};
+  std::array<mjtNum, 2> goalkeeper_velocity_{0.0, 0.0};
   mjtNum goalkeeper_block_velocity_{1.0};
   std::vector<mjtNum> test_reset_qpos_;
   std::vector<mjtNum> test_reset_qvel_;
+  std::vector<mjtNum> test_reset_ctrl_;
   std::vector<mjtNum> test_reset_act_;
+  std::vector<mjtNum> test_reset_act_dot_;
+  std::vector<mjtNum> test_reset_qacc_;
   std::vector<mjtNum> test_reset_qacc_warmstart_;
+  std::vector<mjtNum> test_goalkeeper_pose_;
+  std::vector<mjtNum> test_goalkeeper_velocity_;
+  std::vector<mjtNum> test_goalkeeper_noise_buffer_;
+  int test_goalkeeper_noise_idx_{-1};
+  mjtNum test_goalkeeper_block_velocity_{-1.0};
+  int test_goalkeeper_policy_{-1};
 
  public:
   using Spec = EnvSpecT;
@@ -834,9 +1629,23 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
         reward_pain_w_(spec.config["reward_pain_w"_]),
         test_reset_qpos_(detail::ToMjtVector(spec.config["test_reset_qpos"_])),
         test_reset_qvel_(detail::ToMjtVector(spec.config["test_reset_qvel"_])),
+        test_reset_ctrl_(detail::ToMjtVector(spec.config["test_reset_ctrl"_])),
         test_reset_act_(detail::ToMjtVector(spec.config["test_reset_act"_])),
+        test_reset_act_dot_(
+            detail::ToMjtVector(spec.config["test_reset_act_dot"_])),
+        test_reset_qacc_(detail::ToMjtVector(spec.config["test_reset_qacc"_])),
         test_reset_qacc_warmstart_(
-            detail::ToMjtVector(spec.config["test_reset_qacc_warmstart"_])) {
+            detail::ToMjtVector(spec.config["test_reset_qacc_warmstart"_])),
+        test_goalkeeper_pose_(
+            detail::ToMjtVector(spec.config["test_goalkeeper_pose"_])),
+        test_goalkeeper_velocity_(
+            detail::ToMjtVector(spec.config["test_goalkeeper_velocity"_])),
+        test_goalkeeper_noise_buffer_(
+            detail::ToMjtVector(spec.config["test_goalkeeper_noise_buffer"_])),
+        test_goalkeeper_noise_idx_(spec.config["test_goalkeeper_noise_idx"_]),
+        test_goalkeeper_block_velocity_(
+            spec.config["test_goalkeeper_block_velocity"_]),
+        test_goalkeeper_policy_(spec.config["test_goalkeeper_policy"_]) {
     auto probs = spec.config["goalkeeper_probabilities"_];
     if (probs.size() != 3) {
       throw std::runtime_error("Expected three goalkeeper probabilities.");
@@ -844,6 +1653,8 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
     for (int i = 0; i < 3; ++i) {
       goalkeeper_probabilities_[i] = static_cast<mjtNum>(probs[i]);
     }
+    goalkeeper_block_velocity_ =
+        challenge_detail::UniformScalar(&gen_, random_vel_low_, random_vel_high_);
     ValidateConfig();
     CacheIds();
     detail::BuildMuscleMask(model_, &muscle_actuator_);
@@ -876,6 +1687,9 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
     ResetToInitialState();
     ApplyResetState();
     ResetGoalkeeper();
+    ApplyGoalkeeperTestState();
+    mj_forward(model_, data_);
+    InvalidateRenderCache();
     CaptureResetState();
     RewardInfo reward = ComputeRewardInfo();
     WriteState(reward, true, 0.0);
@@ -890,6 +1704,7 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
                                          &muscle_condition_state_);
     InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
+    detail::RefreshObservedMyoSuiteState(model_, data_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
     done_ = reward.done || elapsed_step_ >= max_episode_steps_;
@@ -926,12 +1741,58 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
         challenge_extra_detail::RequireId(model_, mjOBJ_SENSOR, "l_foot");
     grf_sensor_ids_[3] =
         challenge_extra_detail::RequireId(model_, mjOBJ_SENSOR, "l_toes");
-    std::vector<int> joints =
-        challenge_extra_detail::NamedJointsExcept(model_, "root");
-    for (int joint_id : joints) {
-      internal_qposadrs_.push_back(model_->jnt_qposadr[joint_id]);
-      internal_dofadrs_.push_back(model_->jnt_dofadr[joint_id]);
-    }
+    static const std::vector<std::string> kMyoJoints = {
+        "Abs_r3",
+        "Abs_t1",
+        "Abs_t2",
+        "L1_L2_AR",
+        "L1_L2_FE",
+        "L1_L2_LB",
+        "L2_L3_AR",
+        "L2_L3_FE",
+        "L2_L3_LB",
+        "L3_L4_AR",
+        "L3_L4_FE",
+        "L3_L4_LB",
+        "L4_L5_AR",
+        "L4_L5_FE",
+        "L4_L5_LB",
+        "ankle_angle_l",
+        "ankle_angle_r",
+        "axial_rotation",
+        "flex_extension",
+        "hip_adduction_l",
+        "hip_adduction_r",
+        "hip_flexion_l",
+        "hip_flexion_r",
+        "hip_rotation_l",
+        "hip_rotation_r",
+        "knee_angle_l",
+        "knee_angle_l_beta_rotation1",
+        "knee_angle_l_beta_translation1",
+        "knee_angle_l_beta_translation2",
+        "knee_angle_l_rotation2",
+        "knee_angle_l_rotation3",
+        "knee_angle_l_translation1",
+        "knee_angle_l_translation2",
+        "knee_angle_r",
+        "knee_angle_r_beta_rotation1",
+        "knee_angle_r_beta_translation1",
+        "knee_angle_r_beta_translation2",
+        "knee_angle_r_rotation2",
+        "knee_angle_r_rotation3",
+        "knee_angle_r_translation1",
+        "knee_angle_r_translation2",
+        "lat_bending",
+        "mtp_angle_l",
+        "mtp_angle_r",
+        "subtalar_angle_l",
+        "subtalar_angle_r",
+    };
+    internal_qposadrs_ =
+        challenge_extra_detail::CollectJointQposAdrs(model_, kMyoJoints);
+    internal_dofadrs_ =
+        challenge_extra_detail::CollectJointDofAdrs(model_, kMyoJoints);
     static const std::vector<std::string> pain_joints = {
         "hip_adduction_l", "hip_adduction_r",        "hip_flexion_l",
         "hip_flexion_r",   "hip_rotation_l",         "hip_rotation_r",
@@ -940,10 +1801,10 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
     };
     pain_dofadrs_ =
         challenge_extra_detail::CollectJointDofAdrs(model_, pain_joints);
-    int expected_obs = 1 + static_cast<int>(internal_qposadrs_.size()) +
-                       static_cast<int>(internal_dofadrs_.size()) + 4 + 4 +
-                       model_->na + model_->na + model_->na + model_->na + 3 +
-                       12 + 7 + 6 + 2;
+    int expected_obs = static_cast<int>(internal_qposadrs_.size()) +
+                       static_cast<int>(internal_dofadrs_.size()) + 4 + 4 + 3 +
+                       7 + 6 + model_->na + model_->na + model_->na +
+                       model_->na;
     if (expected_obs != spec_.config["obs_dim"_]) {
       throw std::runtime_error("Soccer obs_dim does not match model.");
     }
@@ -972,38 +1833,66 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
   void SampleGoalkeeperPolicy() {
     mjtNum u = challenge_detail::UniformScalar(&gen_, 0.0, 1.0);
     if (u < goalkeeper_probabilities_[0]) {
-      goalkeeper_policy_ = 0;
+      goalkeeper_policy_ = kGoalkeeperBlockBall;
     } else if (u <
                goalkeeper_probabilities_[0] + goalkeeper_probabilities_[1]) {
-      goalkeeper_policy_ = 1;
+      goalkeeper_policy_ = kGoalkeeperRandom;
     } else {
-      goalkeeper_policy_ = 2;
+      goalkeeper_policy_ = kGoalkeeperStationary;
     }
   }
 
   void ResetGoalkeeper() {
+    goalkeeper_noise_process_.SetScale(goalkeeper_block_velocity_);
+    goalkeeper_noise_process_.Reset(&gen_);
+    goalkeeper_velocity_ = {0.0, 0.0};
     SampleGoalkeeperPolicy();
-    goalkeeper_velocity_ = 0.0;
-    goalkeeper_block_velocity_ = challenge_detail::UniformScalar(
-        &gen_, random_vel_low_, random_vel_high_);
     mjtNum y = challenge_detail::UniformScalar(&gen_, kGoalYMin, kGoalYMax);
     SetGoalkeeperPose(kGoalX, y, 0.0);
+    goalkeeper_velocity_ = {0.0, 0.0};
+    goalkeeper_block_velocity_ = challenge_detail::UniformScalar(
+        &gen_, random_vel_low_, random_vel_high_);
   }
 
   void UpdateGoalkeeperState() {
-    mjtNum command = 0.0;
-    if (goalkeeper_policy_ == 0) {
+    std::array<mjtNum, 2> command = {0.0, 0.0};
+    if (goalkeeper_policy_ == kGoalkeeperBlockBall) {
       mjtNum ball_y = data_->xpos[soccer_ball_body_id_ * 3 + 1];
-      command = challenge_extra_detail::Clip(ball_y - GoalkeeperPose()[1],
-                                             -goalkeeper_block_velocity_,
-                                             goalkeeper_block_velocity_);
-    } else if (goalkeeper_policy_ == 1) {
-      command = challenge_detail::UniformScalar(
-          &gen_, -goalkeeper_block_velocity_, goalkeeper_block_velocity_);
+      command[0] = challenge_extra_detail::Clip(
+          ball_y - GoalkeeperPose()[1], -goalkeeper_block_velocity_,
+          goalkeeper_block_velocity_);
+    } else if (goalkeeper_policy_ == kGoalkeeperRandom) {
+      auto sample = goalkeeper_noise_process_.Sample(&gen_);
+      command[0] = challenge_extra_detail::Clip(
+          sample[0], -goalkeeper_block_velocity_, goalkeeper_block_velocity_);
+      command[1] = challenge_extra_detail::Clip(
+          sample[1], -goalkeeper_block_velocity_, goalkeeper_block_velocity_);
     }
-    goalkeeper_velocity_ = command;
     auto pose = GoalkeeperPose();
-    SetGoalkeeperPose(kGoalX, pose[1] + Dt() * command, pose[2]);
+    pose[1] += Dt() * command[0];
+    SetGoalkeeperPose(pose[0], pose[1], pose[2]);
+    goalkeeper_velocity_ = command;
+  }
+
+  void ApplyGoalkeeperTestState() {
+    if (test_goalkeeper_pose_.size() == 3) {
+      SetGoalkeeperPose(test_goalkeeper_pose_[0], test_goalkeeper_pose_[1],
+                        test_goalkeeper_pose_[2]);
+    }
+    if (test_goalkeeper_velocity_.size() == 2) {
+      goalkeeper_velocity_[0] = test_goalkeeper_velocity_[0];
+      goalkeeper_velocity_[1] = test_goalkeeper_velocity_[1];
+    }
+    if (!test_goalkeeper_noise_buffer_.empty()) {
+      goalkeeper_noise_process_.SetState(test_goalkeeper_noise_buffer_,
+                                         test_goalkeeper_noise_idx_);
+    }
+    if (test_goalkeeper_block_velocity_ >= 0.0) {
+      goalkeeper_block_velocity_ = test_goalkeeper_block_velocity_;
+    }
+    if (test_goalkeeper_policy_ >= 0) {
+      goalkeeper_policy_ = test_goalkeeper_policy_;
+    }
   }
 
   void ApplyResetState() {
@@ -1018,11 +1907,9 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
           std::vector<mjtNum>(model_->key_qvel, model_->key_qvel + model_->nv),
           data_->qvel);
       if (reset_type_ == "random") {
-        std::normal_distribution<double> joint_noise(
-            -static_cast<double>(rnd_joint_noise_),
-            static_cast<double>(rnd_joint_noise_));
         for (int adr : internal_qposadrs_) {
-          data_->qpos[adr] += static_cast<mjtNum>(joint_noise(gen_));
+          data_->qpos[adr] += challenge_detail::UniformScalar(
+              &gen_, -std::abs(rnd_joint_noise_), std::abs(rnd_joint_noise_));
         }
         data_->qpos[model_->jnt_qposadr[root_joint_id_] + 0] +=
             challenge_detail::UniformScalar(&gen_, -rnd_pos_noise_, 0.0);
@@ -1033,12 +1920,23 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
     }
     mj_forward(model_, data_);
     bool rerun_forward = false;
+    if (!test_reset_ctrl_.empty()) {
+      detail::RestoreVector(test_reset_ctrl_, data_->ctrl);
+      rerun_forward = true;
+    }
     if (!test_reset_act_.empty()) {
       detail::RestoreVector(test_reset_act_, data_->act);
       rerun_forward = true;
     }
+    if (!test_reset_act_dot_.empty()) {
+      detail::RestoreVector(test_reset_act_dot_, data_->act_dot);
+    }
+    if (!test_reset_qacc_.empty()) {
+      detail::RestoreVector(test_reset_qacc_, data_->qacc);
+    }
     if (!test_reset_qacc_warmstart_.empty()) {
       detail::RestoreVector(test_reset_qacc_warmstart_, data_->qacc_warmstart);
+      rerun_forward = true;
     }
     if (rerun_forward) {
       mj_forward(model_, data_);
@@ -1074,7 +1972,6 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
   std::vector<mjtNum> Observation() const {
     std::vector<mjtNum> obs;
     obs.reserve(spec_.config["obs_dim"_]);
-    obs.push_back(data_->time);
     for (int adr : internal_qposadrs_) {
       obs.push_back(data_->qpos[adr]);
     }
@@ -1086,31 +1983,26 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
     }
     obs.insert(obs.end(), data_->xquat + torso_body_id_ * 4,
                data_->xquat + torso_body_id_ * 4 + 4);
-    for (int actuator : muscle_actuator_ids_) {
-      obs.push_back(data_->actuator_length[actuator]);
-    }
-    for (int actuator : muscle_actuator_ids_) {
-      obs.push_back(data_->actuator_velocity[actuator]);
-    }
-    for (int actuator : muscle_actuator_ids_) {
-      obs.push_back(data_->actuator_force[actuator]);
-    }
-    obs.insert(obs.end(), data_->act, data_->act + model_->na);
     obs.insert(obs.end(), data_->xpos + soccer_ball_body_id_ * 3,
                data_->xpos + soccer_ball_body_id_ * 3 + 3);
-    static constexpr std::array<mjtNum, 12> goal_bounds = {
-        kGoalX, kGoalYMin, kGoalZMin, kGoalX, kGoalYMax, kGoalZMin,
-        kGoalX, kGoalYMin, kGoalZMax, kGoalX, kGoalYMax, kGoalZMax};
-    obs.insert(obs.end(), goal_bounds.begin(), goal_bounds.end());
     int root_qposadr = model_->jnt_qposadr[root_joint_id_];
     int root_dofadr = model_->jnt_dofadr[root_joint_id_];
     obs.insert(obs.end(), data_->qpos + root_qposadr,
                data_->qpos + root_qposadr + 7);
     obs.insert(obs.end(), data_->qvel + root_dofadr,
                data_->qvel + root_dofadr + 6);
-    auto keeper = GoalkeeperPose();
-    obs.push_back(keeper[0]);
-    obs.push_back(keeper[1]);
+    for (int actuator : muscle_actuator_ids_) {
+      obs.push_back(data_->actuator_length[actuator]);
+    }
+    for (int actuator : muscle_actuator_ids_) {
+      obs.push_back(challenge_extra_detail::Clip(
+          data_->actuator_velocity[actuator], -100.0, 100.0));
+    }
+    for (int actuator : muscle_actuator_ids_) {
+      obs.push_back(challenge_extra_detail::Clip(
+          data_->actuator_force[actuator] / 1000.0, -100.0, 100.0));
+    }
+    obs.insert(obs.end(), data_->act, data_->act + model_->na);
     return obs;
   }
 
@@ -1180,6 +2072,9 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
   std::string task_choice_;
   std::string terrain_;
   bool repeller_opponent_;
+  std::vector<mjtNum> hills_range_;
+  std::vector<mjtNum> rough_range_;
+  std::vector<mjtNum> relief_range_;
   mjtNum chase_vel_low_;
   mjtNum chase_vel_high_;
   mjtNum random_vel_low_;
@@ -1196,18 +2091,40 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
   int opponent_body_id_{-1};
   int opponent_mocap_id_{-1};
   int success_indicator_site_id_{-1};
+  int terrain_geom_id_{-1};
+  int terrain_hfield_id_{-1};
   std::array<int, 4> grf_sensor_ids_{-1, -1, -1, -1};
   std::vector<int> muscle_actuator_ids_;
   std::vector<bool> muscle_actuator_;
   detail::MyoConditionState muscle_condition_state_;
+  challenge_extra_detail::ColoredNoiseProcess opponent_noise_process_{2.0, 2,
+                                                                     2000,
+                                                                     10.0};
+  std::vector<mjtNum> initial_hfield_data_;
+  std::vector<mjtNum> initial_terrain_rgba_;
+  std::vector<mjtNum> initial_terrain_pos_;
+  std::vector<mjtNum> relief_patch_template_;
   int current_task_{kChase};
   int opponent_policy_{kStationary};
-  mjtNum opponent_linear_velocity_{0.0};
+  std::array<mjtNum, 2> opponent_velocity_{0.0, 0.0};
   mjtNum chase_velocity_{1.0};
   std::vector<mjtNum> test_reset_qpos_;
   std::vector<mjtNum> test_reset_qvel_;
+  std::vector<mjtNum> test_reset_ctrl_;
   std::vector<mjtNum> test_reset_act_;
+  std::vector<mjtNum> test_reset_act_dot_;
+  std::vector<mjtNum> test_reset_qacc_;
   std::vector<mjtNum> test_reset_qacc_warmstart_;
+  std::vector<mjtNum> test_hfield_data_;
+  std::vector<mjtNum> test_terrain_geom_rgba_;
+  std::vector<mjtNum> test_terrain_geom_pos_;
+  int test_task_{-1};
+  std::vector<mjtNum> test_opponent_pose_;
+  std::vector<mjtNum> test_opponent_velocity_;
+  std::vector<mjtNum> test_opponent_noise_buffer_;
+  int test_opponent_noise_idx_{-1};
+  mjtNum test_chase_velocity_{-1.0};
+  int test_opponent_policy_{-1};
 
  public:
   using Spec = EnvSpecT;
@@ -1231,6 +2148,9 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
         task_choice_(spec.config["task_choice"_]),
         terrain_(spec.config["terrain"_]),
         repeller_opponent_(spec.config["repeller_opponent"_]),
+        hills_range_(detail::ToMjtVector(spec.config["hills_range"_])),
+        rough_range_(detail::ToMjtVector(spec.config["rough_range"_])),
+        relief_range_(detail::ToMjtVector(spec.config["relief_range"_])),
         chase_vel_low_(spec.config["chase_vel_low"_]),
         chase_vel_high_(spec.config["chase_vel_high"_]),
         random_vel_low_(spec.config["random_vel_low"_]),
@@ -1243,9 +2163,28 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
             detail::ToMjtVector(spec.config["opponent_probabilities"_])),
         test_reset_qpos_(detail::ToMjtVector(spec.config["test_reset_qpos"_])),
         test_reset_qvel_(detail::ToMjtVector(spec.config["test_reset_qvel"_])),
+        test_reset_ctrl_(detail::ToMjtVector(spec.config["test_reset_ctrl"_])),
         test_reset_act_(detail::ToMjtVector(spec.config["test_reset_act"_])),
+        test_reset_act_dot_(
+            detail::ToMjtVector(spec.config["test_reset_act_dot"_])),
+        test_reset_qacc_(detail::ToMjtVector(spec.config["test_reset_qacc"_])),
         test_reset_qacc_warmstart_(
-            detail::ToMjtVector(spec.config["test_reset_qacc_warmstart"_])) {
+            detail::ToMjtVector(spec.config["test_reset_qacc_warmstart"_])),
+        test_hfield_data_(detail::ToMjtVector(spec.config["test_hfield_data"_])),
+        test_terrain_geom_rgba_(
+            detail::ToMjtVector(spec.config["test_terrain_geom_rgba"_])),
+        test_terrain_geom_pos_(
+            detail::ToMjtVector(spec.config["test_terrain_geom_pos"_])),
+        test_task_(spec.config["test_task"_]),
+        test_opponent_pose_(
+            detail::ToMjtVector(spec.config["test_opponent_pose"_])),
+        test_opponent_velocity_(
+            detail::ToMjtVector(spec.config["test_opponent_velocity"_])),
+        test_opponent_noise_buffer_(
+            detail::ToMjtVector(spec.config["test_opponent_noise_buffer"_])),
+        test_opponent_noise_idx_(spec.config["test_opponent_noise_idx"_]),
+        test_chase_velocity_(spec.config["test_chase_velocity"_]),
+        test_opponent_policy_(spec.config["test_opponent_policy"_]) {
     ValidateConfig();
     CacheIds();
     detail::BuildMuscleMask(model_, &muscle_actuator_);
@@ -1276,10 +2215,15 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
     elapsed_step_ = 0;
     detail::ResetMyoConditionState(&muscle_condition_state_);
     ResetToInitialState();
+    ApplyTerrainReset();
     SampleTask();
     ApplyResetState();
+    FlattenAgentTerrainPatch();
     ResetOpponent();
+    ApplyOpponentTestState();
+    mj_forward(model_, data_);
     CaptureResetState();
+    InvalidateRenderCache();
     RewardInfo reward = ComputeRewardInfo();
     WriteState(reward, true, 0.0);
   }
@@ -1293,6 +2237,7 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
                                          &muscle_condition_state_);
     InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
+    detail::RefreshObservedMyoSuiteState(model_, data_);
     ++elapsed_step_;
     RewardInfo reward = ComputeRewardInfo();
     done_ = reward.done || elapsed_step_ >= max_episode_steps_;
@@ -1331,14 +2276,278 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
         challenge_extra_detail::RequireId(model_, mjOBJ_SENSOR, "l_foot");
     grf_sensor_ids_[3] =
         challenge_extra_detail::RequireId(model_, mjOBJ_SENSOR, "l_toes");
+    terrain_geom_id_ =
+        challenge_extra_detail::RequireId(model_, mjOBJ_GEOM, "terrain");
+    terrain_hfield_id_ = model_->geom_dataid[terrain_geom_id_];
+    detail::CopyModelGeomRgba(model_, terrain_geom_id_, &initial_terrain_rgba_);
+    detail::CopyModelGeomPos(model_, terrain_geom_id_, &initial_terrain_pos_);
+    if (terrain_hfield_id_ >= 0) {
+      detail::CopyModelHfieldData(model_, terrain_hfield_id_,
+                                  &initial_hfield_data_);
+      if (terrain_ != "FLAT") {
+        relief_patch_template_ = challenge_extra_detail::LoadNormalizedReliefPatch(
+            myosuite::MyoSuiteAssetRoot(spec_.config["base_path"_]) +
+            "/envs/myo/assets/myo_relief.npy");
+        int patch_rows = model_->hfield_nrow[terrain_hfield_id_] / 3;
+        int patch_cols = model_->hfield_ncol[terrain_hfield_id_] / 3;
+        if (static_cast<int>(relief_patch_template_.size()) !=
+            patch_rows * patch_cols) {
+          throw std::runtime_error(
+              "MyoSuite relief patch size does not match ChaseTag hfield.");
+        }
+      }
+    }
     int expected_obs = 28 + 28 + 4 + 4 + 3 + 2 + 2 + 2 + model_->na * 4;
     if (expected_obs != spec_.config["obs_dim"_]) {
       throw std::runtime_error("ChaseTag obs_dim does not match model.");
     }
   }
 
+  static void RotateSquarePatch90(std::vector<mjtNum>* patch, int side) {
+    std::vector<mjtNum> rotated(patch->size(), 0.0);
+    for (int row = 0; row < side; ++row) {
+      for (int col = 0; col < side; ++col) {
+        rotated[(side - 1 - col) * side + row] = (*patch)[row * side + col];
+      }
+    }
+    *patch = std::move(rotated);
+  }
+
+  mjtNum RangeLow(const std::vector<mjtNum>& range) const {
+    return range.empty() ? static_cast<mjtNum>(0.0) : range[0];
+  }
+
+  mjtNum RangeHigh(const std::vector<mjtNum>& range) const {
+    if (range.size() < 2) {
+      return RangeLow(range);
+    }
+    return range[1];
+  }
+
+  void RestoreTerrainModelState() {
+    detail::RestoreModelGeomRgba(model_, terrain_geom_id_, initial_terrain_rgba_);
+    detail::RestoreModelGeomPos(model_, terrain_geom_id_, initial_terrain_pos_);
+    if (terrain_hfield_id_ >= 0) {
+      detail::RestoreModelHfieldData(model_, terrain_hfield_id_,
+                                     initial_hfield_data_);
+    }
+  }
+
+  void SetTerrainVisible() {
+    std::vector<mjtNum> rgba = initial_terrain_rgba_;
+    std::vector<mjtNum> pos = initial_terrain_pos_;
+    if (rgba.size() >= 4) {
+      rgba[3] = 1.0;
+    }
+    if (pos.size() >= 3) {
+      pos[0] = 0.0;
+      pos[1] = 0.0;
+      pos[2] = 0.0;
+    }
+    detail::RestoreModelGeomRgba(model_, terrain_geom_id_, rgba);
+    detail::RestoreModelGeomPos(model_, terrain_geom_id_, pos);
+  }
+
+  void HideTerrain() {
+    std::vector<mjtNum> rgba = initial_terrain_rgba_;
+    std::vector<mjtNum> pos = initial_terrain_pos_;
+    if (rgba.size() >= 4) {
+      rgba[3] = 0.0;
+    }
+    if (pos.size() >= 3) {
+      pos[0] = 0.0;
+      pos[1] = 0.0;
+      pos[2] = -10.0;
+    }
+    detail::RestoreModelGeomRgba(model_, terrain_geom_id_, rgba);
+    detail::RestoreModelGeomPos(model_, terrain_geom_id_, pos);
+  }
+
+  void FillTerrainPatch(int patch_i, int patch_j,
+                        const std::vector<mjtNum>& patch) {
+    if (terrain_hfield_id_ < 0) {
+      return;
+    }
+    int rows = model_->hfield_nrow[terrain_hfield_id_];
+    int cols = model_->hfield_ncol[terrain_hfield_id_];
+    int patch_rows = rows / 3;
+    int patch_cols = cols / 3;
+    if (patch_rows <= 0 || patch_cols <= 0 ||
+        static_cast<int>(patch.size()) != patch_rows * patch_cols) {
+      throw std::runtime_error("Invalid ChaseTag terrain patch.");
+    }
+    int adr = model_->hfield_adr[terrain_hfield_id_];
+    for (int row = 0; row < patch_rows; ++row) {
+      for (int col = 0; col < patch_cols; ++col) {
+        int dst_row = patch_i * patch_rows + row;
+        int dst_col = patch_j * patch_cols + col;
+        if (dst_row >= rows || dst_col >= cols) {
+          continue;
+        }
+        model_->hfield_data[adr + dst_row * cols + dst_col] =
+            static_cast<float>(patch[row * patch_cols + col]);
+      }
+    }
+  }
+
+  std::vector<mjtNum> FlatTerrainPatch(int patch_rows, int patch_cols) const {
+    return std::vector<mjtNum>(patch_rows * patch_cols, static_cast<mjtNum>(0.0));
+  }
+
+  std::vector<mjtNum> RoughTerrainPatch(int patch_rows, int patch_cols) {
+    std::vector<mjtNum> patch(patch_rows * patch_cols, 0.0);
+    for (mjtNum& value : patch) {
+      value = challenge_detail::UniformScalar(&gen_, -1.0, 1.0);
+    }
+    auto [low_it, high_it] = std::minmax_element(patch.begin(), patch.end());
+    mjtNum denom = std::max(*high_it - *low_it, static_cast<mjtNum>(1e-12));
+    mjtNum scalar =
+        challenge_detail::UniformScalar(&gen_, RangeLow(rough_range_),
+                                        RangeHigh(rough_range_));
+    for (mjtNum& value : patch) {
+      value = (value - *low_it) / denom * scalar - static_cast<mjtNum>(0.02);
+    }
+    return patch;
+  }
+
+  std::vector<mjtNum> HillyTerrainPatch(int patch_rows, int patch_cols) {
+    int total = patch_rows * patch_cols;
+    std::vector<mjtNum> data(total, 0.0);
+    for (int i = 0; i < total; ++i) {
+      mjtNum angle = static_cast<mjtNum>(10.0 * detail::kPi * i /
+                                         std::max(total - 1, 1));
+      data[i] = std::sin(angle + static_cast<mjtNum>(0.5) * detail::kPi) -
+                static_cast<mjtNum>(1.0);
+    }
+    auto [low_it, high_it] = std::minmax_element(data.begin(), data.end());
+    mjtNum denom = std::max(*high_it - *low_it, static_cast<mjtNum>(1e-12));
+    mjtNum scalar =
+        challenge_detail::UniformScalar(&gen_, RangeLow(hills_range_),
+                                        RangeHigh(hills_range_));
+    std::vector<mjtNum> patch(total, 0.0);
+    for (int row = 0; row < patch_rows; ++row) {
+      for (int col = 0; col < patch_cols; ++col) {
+        int src = row * patch_cols + col;
+        int dst_row = patch_rows - 1 - row;
+        int dst_col = patch_cols - 1 - col;
+        patch[dst_row * patch_cols + dst_col] =
+            (data[src] - *low_it) / denom * scalar;
+      }
+    }
+    if (patch_rows == patch_cols &&
+        challenge_detail::UniformScalar(&gen_, 0.0, 1.0) < 0.5) {
+      RotateSquarePatch90(&patch, patch_rows);
+    }
+    return patch;
+  }
+
+  std::vector<mjtNum> ReliefTerrainPatch(int patch_rows, int patch_cols) {
+    if (static_cast<int>(relief_patch_template_.size()) != patch_rows * patch_cols) {
+      throw std::runtime_error("Unexpected MyoSuite relief patch dimensions.");
+    }
+    mjtNum scalar =
+        challenge_detail::UniformScalar(&gen_, RangeLow(relief_range_),
+                                        RangeHigh(relief_range_));
+    std::vector<mjtNum> patch = relief_patch_template_;
+    for (mjtNum& value : patch) {
+      value *= scalar;
+    }
+    return patch;
+  }
+
+  void ApplyTerrainReset() {
+    RestoreTerrainModelState();
+    if (!test_terrain_geom_rgba_.empty()) {
+      detail::RestoreModelGeomRgba(model_, terrain_geom_id_,
+                                   test_terrain_geom_rgba_);
+    }
+    if (!test_terrain_geom_pos_.empty()) {
+      detail::RestoreModelGeomPos(model_, terrain_geom_id_,
+                                  test_terrain_geom_pos_);
+    }
+    if (terrain_hfield_id_ < 0) {
+      return;
+    }
+    if (!test_hfield_data_.empty()) {
+      detail::RestoreModelHfieldData(model_, terrain_hfield_id_,
+                                     test_hfield_data_);
+      return;
+    }
+    if (terrain_ == "FLAT") {
+      HideTerrain();
+      return;
+    }
+    if (terrain_ != "random") {
+      throw std::runtime_error("Unsupported ChaseTag terrain type.");
+    }
+    SetTerrainVisible();
+    int rows = model_->hfield_nrow[terrain_hfield_id_];
+    int cols = model_->hfield_ncol[terrain_hfield_id_];
+    int patch_rows = rows / 3;
+    int patch_cols = cols / 3;
+    detail::RestoreModelHfieldData(
+        model_, terrain_hfield_id_,
+        std::vector<mjtNum>(rows * cols, static_cast<mjtNum>(0.0)));
+    std::array<int, 3> generated = {0, 0, 0};
+    for (int patch_i = 0; patch_i < 3; ++patch_i) {
+      for (int patch_j = 0; patch_j < 3; ++patch_j) {
+        int terrain_choice = std::uniform_int_distribution<int>(0, 2)(gen_);
+        while (terrain_choice == 1 && generated[terrain_choice] >= 2) {
+          terrain_choice = std::uniform_int_distribution<int>(0, 2)(gen_);
+        }
+        ++generated[terrain_choice];
+        if (terrain_choice == 0) {
+          FillTerrainPatch(patch_i, patch_j,
+                           FlatTerrainPatch(patch_rows, patch_cols));
+        } else if (terrain_choice == 1) {
+          FillTerrainPatch(patch_i, patch_j,
+                           HillyTerrainPatch(patch_rows, patch_cols));
+        } else {
+          FillTerrainPatch(patch_i, patch_j,
+                           RoughTerrainPatch(patch_rows, patch_cols));
+        }
+      }
+    }
+    if (challenge_detail::UniformScalar(&gen_, 0.0, 1.0) < 0.2) {
+      int patch_i = std::uniform_int_distribution<int>(0, 2)(gen_);
+      int patch_j = std::uniform_int_distribution<int>(0, 2)(gen_);
+      FillTerrainPatch(patch_i, patch_j,
+                       ReliefTerrainPatch(patch_rows, patch_cols));
+    }
+  }
+
+  void FlattenAgentTerrainPatch() {
+    if (terrain_hfield_id_ < 0 || !test_hfield_data_.empty() ||
+        terrain_ == "FLAT") {
+      return;
+    }
+    int rows = model_->hfield_nrow[terrain_hfield_id_];
+    int cols = model_->hfield_ncol[terrain_hfield_id_];
+    int patch_rows = rows / 3;
+    int patch_cols = cols / 3;
+    if (patch_rows <= 0 || patch_cols <= 0) {
+      return;
+    }
+    constexpr mjtNum kRealLength = 12.0;
+    constexpr mjtNum kRealWidth = 12.0;
+    mjtNum map_i = data_->qpos[0] / (kRealLength / rows) +
+                   static_cast<mjtNum>(rows) * 0.5;
+    mjtNum map_j = data_->qpos[1] / (kRealWidth / cols) +
+                   static_cast<mjtNum>(cols) * 0.5;
+    int clipped_i = static_cast<int>(std::clamp(
+        map_i, static_cast<mjtNum>(0.0),
+        static_cast<mjtNum>(std::max(rows - 2, 0))));
+    int clipped_j = static_cast<int>(std::clamp(
+        map_j, static_cast<mjtNum>(0.0),
+        static_cast<mjtNum>(std::max(cols - 2, 0))));
+    FillTerrainPatch(clipped_i / patch_rows, clipped_j / patch_cols,
+                     FlatTerrainPatch(patch_rows, patch_cols));
+  }
+
   void SampleTask() {
-    if (task_choice_ == "random") {
+    if (test_task_ >= 0) {
+      current_task_ = test_task_;
+    } else if (task_choice_ == "random") {
       current_task_ = std::uniform_int_distribution<int>(0, 1)(gen_);
     } else {
       current_task_ = task_choice_ == "EVADE" ? kEvade : kChase;
@@ -1365,10 +2574,135 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
                 sizeof(mjtNum) * 4);
   }
 
-  mjtNum CalcAngularVel(mjtNum current_yaw, mjtNum desired_yaw) const {
-    mjtNum delta =
-        challenge_extra_detail::NormalizeSignedAngle(desired_yaw - current_yaw);
-    return delta >= 0.0 ? 1.0 : -1.0;
+  void MoveOpponent(const std::array<mjtNum, 2>& velocity) {
+    auto pose = OpponentPose();
+    std::array<mjtNum, 2> reported = velocity;
+    reported[0] = std::abs(reported[0]);
+    std::array<mjtNum, 2> clipped = reported;
+    clipped[0] = challenge_extra_detail::Clip(clipped[0], -2.0, 2.0);
+    clipped[1] = challenge_extra_detail::Clip(clipped[1], -2.0, 2.0);
+    mjtNum x_vel = clipped[0] *
+                   std::cos(pose[2] + static_cast<mjtNum>(0.5) * detail::kPi);
+    mjtNum y_vel = clipped[0] *
+                   std::sin(pose[2] + static_cast<mjtNum>(0.5) * detail::kPi);
+    pose[0] -= Dt() * x_vel;
+    pose[1] -= Dt() * y_vel;
+    pose[2] += Dt() * clipped[1];
+    SetOpponentPose(pose[0], pose[1], pose[2]);
+    opponent_velocity_ = reported;
+  }
+
+  std::array<mjtNum, 2> RandomMovement() {
+    auto sample = opponent_noise_process_.Sample(&gen_);
+    return {
+        challenge_extra_detail::Clip(sample[0], random_vel_low_,
+                                     random_vel_high_),
+        challenge_extra_detail::Clip(sample[1], random_vel_low_,
+                                     random_vel_high_),
+    };
+  }
+
+  std::array<mjtNum, 2> ChasePlayer() const {
+    auto pose = OpponentPose();
+    std::array<mjtNum, 2> vec = {pose[0], pose[1]};
+    std::array<mjtNum, 2> pelvis = {data_->xpos[pelvis_body_id_ * 3 + 0],
+                                    data_->xpos[pelvis_body_id_ * 3 + 1]};
+    std::array<mjtNum, 2> facing = {std::cos(pose[2]), std::sin(pose[2])};
+    std::array<mjtNum, 2> to_pelvis = {pelvis[0] - vec[0], pelvis[1] - vec[1]};
+    mjtNum angular = facing[0] * to_pelvis[0] + facing[1] * to_pelvis[1];
+    return {chase_velocity_, angular};
+  }
+
+  std::vector<std::array<mjtNum, 2>> WallPositions() const {
+    std::vector<std::array<mjtNum, 2>> out;
+    out.reserve(100);
+    for (int i = 0; i < 25; ++i) {
+      mjtNum value = -8.7 + static_cast<mjtNum>(17.4) *
+                               static_cast<mjtNum>(i) /
+                               static_cast<mjtNum>(24);
+      out.push_back({8.7, value});
+      out.push_back({-8.7, value});
+      out.push_back({value, 8.7});
+      out.push_back({value, -8.7});
+    }
+    return out;
+  }
+
+  mjtNum CalcRepellerAngularVel(mjtNum current_yaw, mjtNum desired_yaw) const {
+    auto normalize = [](mjtNum angle) {
+      constexpr mjtNum two_pi = static_cast<mjtNum>(2.0) * detail::kPi;
+      while (angle > two_pi) {
+        angle -= two_pi;
+      }
+      while (angle < 0.0) {
+        angle += two_pi;
+      }
+      return angle;
+    };
+    current_yaw = normalize(current_yaw);
+    desired_yaw = normalize(desired_yaw);
+    mjtNum clockwise = std::abs(current_yaw) +
+                       (static_cast<mjtNum>(2.0) * detail::kPi - desired_yaw);
+    mjtNum anticlockwise =
+        (static_cast<mjtNum>(2.0) * detail::kPi - current_yaw) + desired_yaw;
+    return clockwise < anticlockwise ? 1.0 : -1.0;
+  }
+
+  std::array<mjtNum, 2> RepellerPolicy() {
+    constexpr mjtNum kDistInfluence = 3.5;
+    constexpr mjtNum kEta = 20.0;
+    auto pose = OpponentPose();
+    std::vector<std::array<mjtNum, 2>> repellers = WallPositions();
+    repellers.insert(repellers.begin(),
+                     {data_->xpos[pelvis_body_id_ * 3 + 0],
+                      data_->xpos[pelvis_body_id_ * 3 + 1]});
+    std::vector<int> active_indices;
+    active_indices.reserve(repellers.size());
+    for (std::size_t i = 0; i < repellers.size(); ++i) {
+      mjtNum dist = challenge_extra_detail::Norm2(repellers[i][0] - pose[0],
+                                                  repellers[i][1] - pose[1]);
+      if (dist < kDistInfluence) {
+        active_indices.push_back(static_cast<int>(i));
+      }
+    }
+    if (active_indices.empty()) {
+      auto noise = opponent_noise_process_.Sample(&gen_);
+      mjtNum linear =
+          challenge_extra_detail::Clip(noise[0], repeller_vel_low_,
+                                       repeller_vel_high_);
+      mjtNum angular = CalcRepellerAngularVel(pose[2], noise[1]);
+      return {linear, angular};
+    }
+    std::array<mjtNum, 2> repel_center{0.0, 0.0};
+    mjtNum repel_force = 0.0;
+    for (int index : active_indices) {
+      repel_center[0] += repellers[index][0];
+      repel_center[1] += repellers[index][1];
+      mjtNum dist =
+          std::max(challenge_extra_detail::Norm2(repellers[index][0] - pose[0],
+                                                 repellers[index][1] - pose[1]),
+                   static_cast<mjtNum>(1e-5));
+      mjtNum term = static_cast<mjtNum>(1.0) / dist -
+                    static_cast<mjtNum>(1.0) / kDistInfluence;
+      repel_force += static_cast<mjtNum>(0.5) * kEta * term * term;
+    }
+    repel_center[0] /= static_cast<mjtNum>(active_indices.size());
+    repel_center[1] /= static_cast<mjtNum>(active_indices.size());
+    mjtNum linear = challenge_extra_detail::Clip(
+        repel_force / static_cast<mjtNum>(active_indices.size()),
+        repeller_vel_low_, repeller_vel_high_);
+    std::array<mjtNum, 2> escape = {pose[0] - repel_center[0],
+                                    pose[1] - repel_center[1]};
+    for (mjtNum& component : escape) {
+      if (std::abs(component) <= 0.1) {
+        mjtNum sign = component > 0.0 ? 1.0 : (component < 0.0 ? -1.0 : 0.0);
+        component = -sign * challenge_detail::UniformScalar(&gen_, 0.3, 0.9);
+      }
+    }
+    mjtNum direction =
+        std::atan2(escape[1], escape[0]) + static_cast<mjtNum>(1.57);
+    mjtNum angular = CalcRepellerAngularVel(pose[2], direction);
+    return {linear, angular};
   }
 
   void SampleOpponentPolicy() {
@@ -1377,18 +2711,21 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
       return;
     }
     mjtNum u = challenge_detail::UniformScalar(&gen_, 0.0, 1.0);
-    mjtNum cumulative = 0.0;
-    for (std::size_t i = 0; i < opponent_probabilities_.size(); ++i) {
-      cumulative += opponent_probabilities_[i];
-      if (u < cumulative) {
-        opponent_policy_ = static_cast<int>(i);
-        return;
-      }
+    if (u < opponent_probabilities_[0]) {
+      opponent_policy_ = kStaticStationary;
+    } else if (u < opponent_probabilities_[0] + opponent_probabilities_[1]) {
+      opponent_policy_ = kStationary;
+    } else if (u < opponent_probabilities_[0] + opponent_probabilities_[1] +
+                        opponent_probabilities_[2]) {
+      opponent_policy_ = kRandom;
+    } else {
+      opponent_policy_ = kRepeller;
     }
-    opponent_policy_ = repeller_opponent_ ? kRepeller : kRandom;
   }
 
   void ResetOpponent() {
+    opponent_noise_process_.Reset(&gen_);
+    opponent_velocity_ = {0.0, 0.0};
     SampleOpponentPolicy();
     chase_velocity_ =
         challenge_detail::UniformScalar(&gen_, chase_vel_low_, chase_vel_high_);
@@ -1396,55 +2733,35 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
                                     data_->xpos[pelvis_body_id_ * 3 + 1]};
     if (opponent_policy_ == kStaticStationary) {
       SetOpponentPose(0.0, -5.0, 0.0);
-      opponent_linear_velocity_ = 0.0;
+      opponent_velocity_ = {0.0, 0.0};
       return;
     }
-    for (int attempt = 0; attempt < 128; ++attempt) {
+    while (true) {
       mjtNum x = challenge_detail::UniformScalar(&gen_, -5.0, 5.0);
       mjtNum y = challenge_detail::UniformScalar(&gen_, -5.0, 5.0);
       if (challenge_extra_detail::Norm2(x - pelvis[0], y - pelvis[1]) <
           min_spawn_distance_) {
         continue;
       }
-      mjtNum yaw =
-          challenge_detail::UniformScalar(&gen_, -detail::kPi, detail::kPi);
+      mjtNum yaw = challenge_detail::UniformScalar(
+          &gen_, -static_cast<mjtNum>(2.0) * detail::kPi,
+          static_cast<mjtNum>(2.0) * detail::kPi);
       SetOpponentPose(x, y, yaw);
-      opponent_linear_velocity_ = 0.0;
+      opponent_velocity_ = {0.0, 0.0};
       return;
     }
-    SetOpponentPose(0.0, -5.0, 0.0);
-    opponent_linear_velocity_ = 0.0;
   }
 
   void UpdateOpponentState() {
-    mjtNum linear = 0.0;
-    mjtNum angular = 0.0;
-    auto pose = OpponentPose();
-    std::array<mjtNum, 2> pelvis = {data_->xpos[pelvis_body_id_ * 3 + 0],
-                                    data_->xpos[pelvis_body_id_ * 3 + 1]};
+    std::array<mjtNum, 2> velocity = {0.0, 0.0};
     if (opponent_policy_ == kRandom) {
-      linear = challenge_detail::UniformScalar(&gen_, random_vel_low_,
-                                               random_vel_high_);
-      angular = challenge_detail::UniformScalar(&gen_, -2.0, 2.0);
+      velocity = RandomMovement();
     } else if (opponent_policy_ == kChasePlayer) {
-      linear = chase_velocity_;
-      mjtNum desired = std::atan2(pelvis[1] - pose[1], pelvis[0] - pose[0]) -
-                       static_cast<mjtNum>(0.5) * detail::kPi;
-      angular = CalcAngularVel(pose[2], desired);
+      velocity = ChasePlayer();
     } else if (opponent_policy_ == kRepeller) {
-      linear = challenge_detail::UniformScalar(&gen_, repeller_vel_low_,
-                                               repeller_vel_high_);
-      mjtNum desired = std::atan2(pose[1] - pelvis[1], pose[0] - pelvis[0]) -
-                       static_cast<mjtNum>(0.5) * detail::kPi;
-      angular = CalcAngularVel(pose[2], desired);
+      velocity = RepellerPolicy();
     }
-    opponent_linear_velocity_ = linear;
-    mjtNum x_vel = std::abs(linear) *
-                   std::cos(pose[2] + static_cast<mjtNum>(0.5) * detail::kPi);
-    mjtNum y_vel = std::abs(linear) *
-                   std::sin(pose[2] + static_cast<mjtNum>(0.5) * detail::kPi);
-    SetOpponentPose(pose[0] - Dt() * x_vel, pose[1] - Dt() * y_vel,
-                    pose[2] + Dt() * angular);
+    MoveOpponent(velocity);
   }
 
   void ApplyResetState() {
@@ -1472,6 +2789,19 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
       std::copy(quat.begin(), quat.end(), data_->qpos + 3);
       data_->qpos[0] = challenge_detail::UniformScalar(&gen_, -5.0, 5.0);
       data_->qpos[1] = challenge_detail::UniformScalar(&gen_, -5.0, 5.0);
+      mjtNum orientation = challenge_detail::UniformScalar(
+          &gen_, 0.0, static_cast<mjtNum>(2.0) * detail::kPi);
+      std::array<mjtNum, 9> mat{};
+      mju_quat2Mat(mat.data(), data_->qpos + 3);
+      auto euler = challenge_detail::Mat9ToEuler(mat.data());
+      auto quat_with_orientation =
+          challenge_detail::EulerXYZToQuat({euler[0], euler[1], orientation});
+      std::copy(quat_with_orientation.begin(), quat_with_orientation.end(),
+                data_->qpos + 3);
+      mjtNum planar_speed =
+          challenge_extra_detail::Norm2(data_->qvel[0], data_->qvel[1]);
+      data_->qvel[0] = std::cos(orientation) * planar_speed;
+      data_->qvel[1] = std::sin(orientation) * planar_speed;
     } else if (reset_type_ == "init") {
       detail::RestoreVector(
           std::vector<mjtNum>(model_->key_qpos + 2 * model_->nq,
@@ -1491,15 +2821,47 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
     }
     mj_forward(model_, data_);
     bool rerun_forward = false;
+    if (!test_reset_ctrl_.empty()) {
+      detail::RestoreVector(test_reset_ctrl_, data_->ctrl);
+      rerun_forward = true;
+    }
     if (!test_reset_act_.empty()) {
       detail::RestoreVector(test_reset_act_, data_->act);
       rerun_forward = true;
     }
+    if (!test_reset_act_dot_.empty()) {
+      detail::RestoreVector(test_reset_act_dot_, data_->act_dot);
+    }
+    if (!test_reset_qacc_.empty()) {
+      detail::RestoreVector(test_reset_qacc_, data_->qacc);
+    }
     if (!test_reset_qacc_warmstart_.empty()) {
       detail::RestoreVector(test_reset_qacc_warmstart_, data_->qacc_warmstart);
+      rerun_forward = true;
     }
     if (rerun_forward) {
       mj_forward(model_, data_);
+    }
+  }
+
+  void ApplyOpponentTestState() {
+    if (test_opponent_pose_.size() == 3) {
+      SetOpponentPose(test_opponent_pose_[0], test_opponent_pose_[1],
+                      test_opponent_pose_[2]);
+    }
+    if (test_opponent_velocity_.size() == 2) {
+      opponent_velocity_[0] = test_opponent_velocity_[0];
+      opponent_velocity_[1] = test_opponent_velocity_[1];
+    }
+    if (!test_opponent_noise_buffer_.empty()) {
+      opponent_noise_process_.SetState(test_opponent_noise_buffer_,
+                                       test_opponent_noise_idx_);
+    }
+    if (test_chase_velocity_ >= 0.0) {
+      chase_velocity_ = test_chase_velocity_;
+    }
+    if (test_opponent_policy_ >= 0) {
+      opponent_policy_ = test_opponent_policy_;
     }
   }
 
@@ -1578,8 +2940,7 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
                data_->xquat + pelvis_body_id_ * 4 + 4);
     auto pose = OpponentPose();
     obs.insert(obs.end(), pose.begin(), pose.end());
-    obs.push_back(opponent_linear_velocity_);
-    obs.push_back(0.0);
+    obs.insert(obs.end(), opponent_velocity_.begin(), opponent_velocity_.end());
     obs.push_back(data_->qpos[0]);
     obs.push_back(data_->qpos[1]);
     obs.push_back(data_->qvel[0]);
@@ -1588,10 +2949,12 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
       obs.push_back(data_->actuator_length[actuator]);
     }
     for (int actuator : muscle_actuator_ids_) {
-      obs.push_back(data_->actuator_velocity[actuator]);
+      obs.push_back(challenge_extra_detail::Clip(
+          data_->actuator_velocity[actuator], -100.0, 100.0));
     }
     for (int actuator : muscle_actuator_ids_) {
-      obs.push_back(data_->actuator_force[actuator]);
+      obs.push_back(challenge_extra_detail::Clip(
+          data_->actuator_force[actuator] / 1000.0, -100.0, 100.0));
     }
     obs.insert(obs.end(), data_->act, data_->act + model_->na);
     return obs;
@@ -1727,7 +3090,13 @@ class MyoChallengeTableTennisEnvBase
   std::vector<mjtNum> test_reset_qpos_;
   std::vector<mjtNum> test_reset_qvel_;
   std::vector<mjtNum> test_reset_act_;
+  std::vector<mjtNum> test_reset_act_dot_;
   std::vector<mjtNum> test_reset_qacc_warmstart_;
+  std::vector<mjtNum> test_ball_body_pos_;
+  std::vector<mjtNum> test_ball_geom_friction_;
+  std::vector<mjtNum> test_paddle_body_mass_;
+  std::vector<mjtNum> test_init_qpos_;
+  std::vector<mjtNum> test_init_qvel_;
 
  public:
   using Spec = EnvSpecT;
@@ -1758,8 +3127,18 @@ class MyoChallengeTableTennisEnvBase
         test_reset_qpos_(detail::ToMjtVector(spec.config["test_reset_qpos"_])),
         test_reset_qvel_(detail::ToMjtVector(spec.config["test_reset_qvel"_])),
         test_reset_act_(detail::ToMjtVector(spec.config["test_reset_act"_])),
+        test_reset_act_dot_(
+            detail::ToMjtVector(spec.config["test_reset_act_dot"_])),
         test_reset_qacc_warmstart_(
-            detail::ToMjtVector(spec.config["test_reset_qacc_warmstart"_])) {
+            detail::ToMjtVector(spec.config["test_reset_qacc_warmstart"_])),
+        test_ball_body_pos_(
+            detail::ToMjtVector(spec.config["test_ball_body_pos"_])),
+        test_ball_geom_friction_(
+            detail::ToMjtVector(spec.config["test_ball_geom_friction"_])),
+        test_paddle_body_mass_(
+            detail::ToMjtVector(spec.config["test_paddle_body_mass"_])),
+        test_init_qpos_(detail::ToMjtVector(spec.config["test_init_qpos"_])),
+        test_init_qvel_(detail::ToMjtVector(spec.config["test_init_qvel"_])) {
     ParseRanges(spec);
     ValidateConfig();
     CacheIds();
@@ -1776,7 +3155,10 @@ class MyoChallengeTableTennisEnvBase
     init_qvel_[ball_dofadr_ + 1] = 1.6;
     init_qvel_[ball_dofadr_ + 2] = 0.1;
     default_init_qvel_ = init_qvel_;
-    init_paddle_quat_ = challenge_detail::EulerXYZToQuat({-0.3, 1.57, 0.0});
+    // Upstream TableTennis seeds this reference via
+    // scipy.spatial.transform.Rotation.from_euler('xyz', ...).as_quat()[[3,0,1,2]].
+    init_paddle_quat_ =
+        challenge_extra_detail::ScipyEulerXYZToQuat({-0.3, 1.57, 0.0});
     detail::CopyModelBodyPos(model_, ball_body_id_, &default_ball_body_pos_);
     detail::CopyModelGeomFriction(model_, ball_geom_id_,
                                   &default_ball_geom_friction_);
@@ -1806,6 +3188,7 @@ class MyoChallengeTableTennisEnvBase
     init_qvel_ = default_init_qvel_;
     RestoreModelState();
     ApplyModelRandomization();
+    ApplyOracleModelOverrides();
     ApplyResetState();
     CaptureResetState();
     RewardInfo reward = ComputeRewardInfo();
@@ -1814,8 +3197,21 @@ class MyoChallengeTableTennisEnvBase
 
   void Step(const Action& action) override {
     const auto* raw = static_cast<const float*>(action["action"_].Data());
+    std::vector<float> processed_controls(model_->nu);
+    for (int i = 0; i < model_->nu; ++i) {
+      processed_controls[i] = raw[i];
+      if (normalize_act_ &&
+          model_->actuator_dyntype[i] != mjDYN_MUSCLE) {
+        mjtNum low = model_->actuator_ctrlrange[i * 2];
+        mjtNum high = model_->actuator_ctrlrange[i * 2 + 1];
+        processed_controls[i] = static_cast<float>(
+            (low + high) * static_cast<mjtNum>(0.5) +
+            static_cast<mjtNum>(raw[i]) *
+                (high - low) * static_cast<mjtNum>(0.5));
+      }
+    }
     detail::ApplyMyoSuiteAction(model_, data_, muscle_actuator_, normalize_act_,
-                                raw);
+                                processed_controls.data());
     detail::ApplyMyoConditionAdjustments(model_, data_, muscle_actuator_,
                                          &muscle_condition_state_);
     InvalidateRenderCache();
@@ -1922,7 +3318,7 @@ class MyoChallengeTableTennisEnvBase
       body_qposadrs_.push_back(model_->jnt_qposadr[joint_id]);
       body_dofadrs_.push_back(model_->jnt_dofadr[joint_id]);
     }
-    int expected_obs = 1 + 3 + static_cast<int>(body_qposadrs_.size()) +
+    int expected_obs = 3 + static_cast<int>(body_qposadrs_.size()) +
                        static_cast<int>(body_dofadrs_.size()) + 3 + 3 + 3 + 3 +
                        4 + 3 + 6 + model_->na;
     if (expected_obs != spec_.config["obs_dim"_]) {
@@ -2002,11 +3398,39 @@ class MyoChallengeTableTennisEnvBase
       detail::RestoreVector(test_reset_act_, data_->act);
       rerun_forward = true;
     }
+    if (!test_reset_act_dot_.empty()) {
+      detail::RestoreVector(test_reset_act_dot_, data_->act_dot);
+    }
     if (!test_reset_qacc_warmstart_.empty()) {
       detail::RestoreVector(test_reset_qacc_warmstart_, data_->qacc_warmstart);
+      rerun_forward = true;
     }
     if (rerun_forward) {
       mj_forward(model_, data_);
+    }
+  }
+
+  void ApplyOracleModelOverrides() {
+    if (test_ball_body_pos_.size() == 3) {
+      detail::RestoreModelBodyPos(model_, ball_body_id_, test_ball_body_pos_);
+    }
+    if (!test_ball_geom_friction_.empty()) {
+      detail::RestoreModelGeomFriction(model_, ball_geom_id_,
+                                       test_ball_geom_friction_);
+    }
+    if (!test_paddle_body_mass_.empty()) {
+      detail::RestoreModelBodyMass(model_, paddle_body_id_,
+                                   test_paddle_body_mass_[0]);
+    }
+    if (test_init_qpos_.size() == static_cast<std::size_t>(model_->nq)) {
+      init_qpos_ = test_init_qpos_;
+    } else if (test_ball_body_pos_.size() == 3) {
+      init_qpos_[ball_qposadr_ + 0] = test_ball_body_pos_[0];
+      init_qpos_[ball_qposadr_ + 1] = test_ball_body_pos_[1];
+      init_qpos_[ball_qposadr_ + 2] = test_ball_body_pos_[2];
+    }
+    if (test_init_qvel_.size() == static_cast<std::size_t>(model_->nv)) {
+      init_qvel_ = test_init_qvel_;
     }
   }
 
@@ -2183,7 +3607,6 @@ class MyoChallengeTableTennisEnvBase
   std::vector<mjtNum> Observation(const RewardInfo& reward) const {
     std::vector<mjtNum> obs;
     obs.reserve(spec_.config["obs_dim"_]);
-    obs.push_back(data_->time);
     obs.insert(obs.end(), data_->site_xpos + pelvis_site_id_ * 3,
                data_->site_xpos + pelvis_site_id_ * 3 + 3);
     for (int adr : body_qposadrs_) {

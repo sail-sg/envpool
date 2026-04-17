@@ -25,11 +25,209 @@ import numpy as np
 from envpool.mujoco.myosuite.metadata import MYOSUITE_DIRECT_ENTRIES
 from envpool.mujoco.myosuite.paths import myosuite_asset_root
 
+_ARM_REACH_EDIT_FN = "edit_fn_arm_reaching"
+_ARM_REACH_RAW_MODEL_PATH = "envs/myo/assets/arm/myoarm_reach.xml"
+_ARM_REACH_MODEL_PATH = "simhive/myo_sim/arm/myoarm_reach.xml"
+_TABLETENNIS_RAW_MODEL_PATH = "envs/myo/assets/arm/myoarm_tabletennis.xml"
+_TABLETENNIS_MODEL_PATH = "simhive/myo_sim/arm/myoarm_tabletennis.xml"
 
-def _mujoco() -> Any:
-    import mujoco as mujoco_module
+_RESET_SYNC_TEST_KEYS = {
+    "test_reset_qpos",
+    "test_reset_qvel",
+    "test_reset_act",
+    "test_reset_qacc_warmstart",
+}
 
-    return mujoco_module
+_PREVIEW_TEST_KEYS_BY_ENTRYPOINT = {
+    ("myobase", "PoseEnvV0"): {
+        "test_target_qpos",
+        "test_body_mass",
+        "test_geom_size0",
+    },
+    ("myobase", "ReachEnvV0"): {"test_target_pos"},
+    ("myobase", "Geometries100EnvV0"): {
+        "test_target_body_quat",
+        "test_object_geom_size",
+        "test_target_geom_size",
+        "test_object_geom_rgba",
+        "test_target_geom_rgba",
+        "test_object_geom_top_pos",
+        "test_object_geom_bottom_pos",
+        "test_target_geom_top_pos",
+        "test_target_geom_bottom_pos",
+        "test_object_body_mass",
+        "test_object_geom_type",
+        "test_target_geom_type",
+        "test_object_geom_condim",
+        "test_success_site_rgba",
+    },
+    ("myobase", "Geometries8EnvV0"): {
+        "test_target_body_quat",
+        "test_object_geom_size",
+        "test_target_geom_size",
+        "test_object_geom_rgba",
+        "test_target_geom_rgba",
+        "test_object_geom_top_pos",
+        "test_object_geom_bottom_pos",
+        "test_target_geom_top_pos",
+        "test_target_geom_bottom_pos",
+        "test_object_body_mass",
+        "test_object_geom_type",
+        "test_target_geom_type",
+        "test_object_geom_condim",
+        "test_success_site_rgba",
+    },
+    ("myobase", "InDistribution"): {
+        "test_target_body_quat",
+        "test_object_geom_size",
+        "test_target_geom_size",
+        "test_object_geom_rgba",
+        "test_target_geom_rgba",
+        "test_object_geom_top_pos",
+        "test_object_geom_bottom_pos",
+        "test_target_geom_top_pos",
+        "test_target_geom_bottom_pos",
+        "test_object_body_mass",
+        "test_object_geom_type",
+        "test_target_geom_type",
+        "test_object_geom_condim",
+        "test_success_site_rgba",
+    },
+    ("myobase", "OutofDistribution"): {
+        "test_target_body_quat",
+        "test_object_geom_size",
+        "test_target_geom_size",
+        "test_object_geom_rgba",
+        "test_target_geom_rgba",
+        "test_object_geom_top_pos",
+        "test_object_geom_bottom_pos",
+        "test_target_geom_top_pos",
+        "test_target_geom_bottom_pos",
+        "test_object_body_mass",
+        "test_object_geom_type",
+        "test_target_geom_type",
+        "test_object_geom_condim",
+        "test_success_site_rgba",
+    },
+    ("myobase", "KeyTurnEnvV0"): {
+        "test_key_body_pos",
+        "test_goal_pos",
+    },
+    ("myobase", "ObjHoldFixedEnvV0"): {"test_object_geom_size"},
+    ("myobase", "ObjHoldRandomEnvV0"): {"test_object_geom_size"},
+    ("myobase", "PenTwirlFixedEnvV0"): {"test_target_body_quat"},
+    ("myobase", "PenTwirlRandomEnvV0"): {"test_target_body_quat"},
+    ("myobase", "WalkEnvV0"): {
+        "test_terrain_geom_rgba",
+        "test_terrain_geom_pos",
+        "test_terrain_geom_contype",
+        "test_terrain_geom_conaffinity",
+    },
+    ("myobase", "TerrainEnvV0"): {
+        "test_hfield_data",
+        "test_terrain_geom_rgba",
+        "test_terrain_geom_pos",
+        "test_terrain_geom_contype",
+        "test_terrain_geom_conaffinity",
+    },
+    ("myochallenge", "ReorientEnvV0"): {
+        "test_reset_act_dot",
+        "test_goal_body_pos",
+        "test_goal_body_quat",
+        "test_target_geom_size",
+        "test_object_geom_size",
+        "test_object_geom_pos",
+        "test_object_geom_friction",
+        "test_object_body_mass",
+    },
+    ("myochallenge", "RelocateEnvV0"): {
+        "test_reset_act_dot",
+        "test_goal_body_pos",
+        "test_goal_body_quat",
+        "test_goal_mocap_pos",
+        "test_goal_mocap_quat",
+        "test_object_body_pos",
+        "test_object_body_mass",
+        "test_object_geom_type",
+        "test_object_geom_size",
+        "test_object_geom_pos",
+        "test_object_geom_quat",
+        "test_object_geom_rgba",
+        "test_object_geom_friction",
+    },
+    ("myochallenge", "BaodingEnvV1"): {
+        "test_task",
+        "test_ball1_starting_angle",
+        "test_ball2_starting_angle",
+        "test_x_radius",
+        "test_y_radius",
+        "test_goal_trajectory",
+        "test_target1_site_pos",
+        "test_target2_site_pos",
+        "test_object1_body_mass",
+        "test_object2_body_mass",
+        "test_object1_geom_size",
+        "test_object2_geom_size",
+        "test_object1_geom_friction",
+        "test_object2_geom_friction",
+    },
+    ("myochallenge", "BimanualEnvV1"): {
+        "test_start_pos",
+        "test_goal_pos",
+        "test_object_body_mass",
+        "test_object_geom_size",
+        "test_object_geom_friction",
+    },
+    ("myochallenge", "RunTrack"): {
+        "test_hfield_data",
+        "test_terrain_geom_rgba",
+        "test_terrain_geom_pos",
+        "test_terrain_type",
+        "test_osl_state",
+    },
+    ("myochallenge", "SoccerEnvV0"): {
+        "test_reset_ctrl",
+        "test_reset_act_dot",
+        "test_goalkeeper_pose",
+        "test_goalkeeper_velocity",
+        "test_goalkeeper_noise_buffer",
+        "test_goalkeeper_noise_idx",
+        "test_goalkeeper_block_velocity",
+        "test_goalkeeper_policy",
+    },
+    ("myochallenge", "ChaseTagEnvV0"): {
+        "test_reset_ctrl",
+        "test_reset_act_dot",
+        "test_hfield_data",
+        "test_terrain_geom_rgba",
+        "test_terrain_geom_pos",
+        "test_task",
+        "test_opponent_pose",
+        "test_opponent_velocity",
+        "test_opponent_noise_buffer",
+        "test_opponent_noise_idx",
+        "test_chase_velocity",
+        "test_opponent_policy",
+    },
+    ("myochallenge", "TableTennisEnvV0"): {
+        "test_reset_act_dot",
+        "test_ball_body_pos",
+        "test_ball_geom_friction",
+        "test_paddle_body_mass",
+        "test_init_qpos",
+        "test_init_qvel",
+    },
+    ("myodm", "TrackEnv"): {
+        "test_playback_reference",
+        "test_reset_ctrl",
+        "test_reset_act_dot",
+        "test_reset_integration_state",
+        "test_reference_time",
+        "test_reference_robot",
+        "test_reference_robot_vel",
+        "test_reference_object",
+    },
+}
 
 
 def _asset_root(base_path: str) -> Path:
@@ -40,10 +238,43 @@ def _asset_root(base_path: str) -> Path:
 
 
 def _asset_model_path(base_path: str, model_path: str) -> Path:
-    path = Path(model_path)
+    path = Path(resolve_myosuite_model_path(model_path))
     if path.is_absolute():
         return path
-    return _asset_root(base_path) / model_path
+    return _asset_root(base_path) / path
+
+
+def resolve_myosuite_model_path(
+    model_path: str, edit_fn: str | None = None
+) -> str:
+    """Resolve upstream model edits into packaged runtime asset paths."""
+    if Path(model_path).is_absolute():
+        return model_path
+    if model_path == _ARM_REACH_RAW_MODEL_PATH or edit_fn == _ARM_REACH_EDIT_FN:
+        return _ARM_REACH_MODEL_PATH
+    if model_path == _TABLETENNIS_RAW_MODEL_PATH:
+        return _TABLETENNIS_MODEL_PATH
+    return model_path
+
+
+def _prepare_runtime_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
+    runtime_kwargs = dict(kwargs)
+    runtime_kwargs["model_path"] = resolve_myosuite_model_path(
+        str(runtime_kwargs["model_path"]),
+        (
+            str(runtime_kwargs["edit_fn"])
+            if runtime_kwargs.get("edit_fn") is not None
+            else None
+        ),
+    )
+    return runtime_kwargs
+
+
+def _supported_preview_test_keys(entry: dict[str, Any]) -> set[str]:
+    return _RESET_SYNC_TEST_KEYS | _PREVIEW_TEST_KEYS_BY_ENTRYPOINT.get(
+        (entry["suite"], entry["class_name"]),
+        set(),
+    )
 
 
 @cache
@@ -71,7 +302,8 @@ def myosuite_expanded_entry(
 
 @cache
 def _model(base_path: str, model_path: str) -> Any:
-    mujoco = _mujoco()
+    import mujoco
+
     return mujoco.MjModel.from_xml_path(
         str(_asset_model_path(base_path, model_path))
     )
@@ -83,7 +315,8 @@ def _replace_all(text: str, old: str, new: str) -> str:
 
 @cache
 def _track_model(base_path: str, model_path: str, object_name: str) -> Any:
-    mujoco = _mujoco()
+    import mujoco
+
     asset_root = _asset_root(base_path)
     source_model = asset_root / model_path
     object_xml = source_model.read_text()
@@ -221,8 +454,8 @@ def _reference_config(base_path: str, reference: Any) -> dict[str, Any]:
             "reference_robot": [],
             "reference_robot_vel": [],
             "reference_object": [],
-            "reference_robot_init": [],
-            "reference_object_init": [],
+            "reference_robot_init": robot_init.tolist(),
+            "reference_object_init": object_init.tolist(),
             "robot_dim": int(robot.shape[1]),
             "object_dim": int(obj.shape[1]),
             "robot_horizon": int(robot.shape[0]),
@@ -338,6 +571,9 @@ def _reach_config(
 ) -> dict[str, Any]:
     model = _model(base_path, kwargs["model_path"])
     site_names, mins, maxs = _flatten_site_ranges(kwargs["target_reach_range"])
+    is_walk_reach = (
+        entry["entry_module"] == "myosuite.envs.myo.myobase.walk_v0"
+    )
     return {
         "frame_skip": int(kwargs.get("frame_skip", 10)),
         "model_path": str(kwargs["model_path"]),
@@ -356,6 +592,10 @@ def _reach_config(
         "target_site_names": site_names,
         "target_pos_min": mins,
         "target_pos_max": maxs,
+        "joint_random_range": list(kwargs.get("joint_random_range", [])),
+        "target_pos_relative_to_tip": is_walk_reach,
+        "hide_skin_geom_group_1": is_walk_reach,
+        "hide_terrain": is_walk_reach,
     }
 
 
@@ -626,7 +866,8 @@ def _challenge_relocate_config(
 def _baoding_config(
     base_path: str, entry: dict[str, Any], kwargs: dict[str, Any]
 ) -> dict[str, Any]:
-    mujoco = _mujoco()
+    import mujoco
+
     model = _model(base_path, kwargs["model_path"])
     ball1_gid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "ball1")
     obj_size_range = kwargs.get("obj_size_range")
@@ -759,6 +1000,9 @@ def _runtrack_config(
         "start_pos": float(kwargs.get("start_pos", 14)),
         "end_pos": float(kwargs.get("end_pos", -15)),
         "real_width": float(kwargs.get("real_width", 1)),
+        "hills_difficulties": list(kwargs.get("hills_difficulties", [])),
+        "rough_difficulties": list(kwargs.get("rough_difficulties", [])),
+        "stairs_difficulties": list(kwargs.get("stairs_difficulties", [])),
         "reward_sparse_w": 1.0,
         "reward_solved_w": 10.0,
     }
@@ -767,7 +1011,8 @@ def _runtrack_config(
 def _soccer_config(
     base_path: str, entry: dict[str, Any], kwargs: dict[str, Any]
 ) -> dict[str, Any]:
-    mujoco = _mujoco()
+    import mujoco
+
     model = _model(base_path, kwargs["model_path"])
     internal_joint_count = sum(
         1
@@ -780,17 +1025,14 @@ def _soccer_config(
         "frame_skip": int(kwargs.get("frame_skip", 10)),
         "model_path": str(kwargs["model_path"]),
         "normalize_act": bool(kwargs.get("normalize_act", True)),
-        "obs_dim": 1
-        + internal_joint_count
+        "obs_dim": internal_joint_count
         + internal_joint_count
         + 4
         + 4
-        + model.na * 4
         + 3
-        + 12
         + 7
         + 6
-        + 2,
+        + model.na * 4,
         "qpos_dim": model.nq,
         "qvel_dim": model.nv,
         "act_dim": model.na,
@@ -831,17 +1073,20 @@ def _chasetag_config(
         "task_choice": str(kwargs.get("task_choice", "CHASE")),
         "terrain": str(kwargs.get("terrain", "FLAT")),
         "repeller_opponent": bool(kwargs.get("repeller_opponent", False)),
+        "hills_range": list(kwargs.get("hills_range", [0.0, 0.0])),
+        "rough_range": list(kwargs.get("rough_range", [0.0, 0.0])),
+        "relief_range": list(kwargs.get("relief_range", [0.0, 0.0])),
         "chase_vel_low": float(kwargs.get("chase_vel_range", [1.0, 1.0])[0]),
         "chase_vel_high": float(kwargs.get("chase_vel_range", [1.0, 1.0])[1]),
-        "random_vel_low": float(kwargs.get("random_vel_range", [-2.0, 2.0])[0]),
+        "random_vel_low": float(kwargs.get("random_vel_range", [1.0, 1.0])[0]),
         "random_vel_high": float(
-            kwargs.get("random_vel_range", [-2.0, 2.0])[1]
+            kwargs.get("random_vel_range", [1.0, 1.0])[1]
         ),
         "repeller_vel_low": float(
-            kwargs.get("repeller_vel_range", [0.3, 1.0])[0]
+            kwargs.get("repeller_vel_range", [1.0, 1.0])[0]
         ),
         "repeller_vel_high": float(
-            kwargs.get("repeller_vel_range", [0.3, 1.0])[1]
+            kwargs.get("repeller_vel_range", [1.0, 1.0])[1]
         ),
         "opponent_probabilities": list(
             kwargs.get("opponent_probabilities", [0.1, 0.45, 0.45])
@@ -854,9 +1099,25 @@ def _chasetag_config(
 def _tabletennis_config(
     base_path: str, entry: dict[str, Any], kwargs: dict[str, Any]
 ) -> dict[str, Any]:
-    mujoco = _mujoco()
+    import mujoco
+
     model = _model(base_path, kwargs["model_path"])
-    body_joint_count = sum(
+    body_qpos_count = sum(
+        1
+        for joint_id in range(model.njnt)
+        if (
+            (
+                name := mujoco.mj_id2name(
+                    model, mujoco.mjtObj.mjOBJ_JOINT, joint_id
+                )
+            )
+            is not None
+            and not name.startswith("ping")
+            and name != "pingpong_freejoint"
+            and name != "paddle_freejoint"
+        )
+    )
+    body_dof_count = sum(
         1
         for joint_id in range(model.njnt)
         if (
@@ -883,10 +1144,9 @@ def _tabletennis_config(
         "frame_skip": int(kwargs.get("frame_skip", 5)),
         "model_path": str(kwargs["model_path"]),
         "normalize_act": bool(kwargs.get("normalize_act", True)),
-        "obs_dim": 1
-        + 3
-        + body_joint_count
-        + body_joint_count
+        "obs_dim": 3
+        + body_qpos_count
+        + body_dof_count
         + 3
         + 3
         + 3
@@ -983,7 +1243,11 @@ def _resolve_dynamic_myosuite_task_config(
     variant_kwargs: dict[str, Any],
     preview_kwargs: dict[str, Any],
 ) -> dict[str, Any]:
-    kwargs = {**entry["kwargs"], **variant_kwargs, **preview_kwargs}
+    kwargs = _prepare_runtime_kwargs({
+        **entry["kwargs"],
+        **variant_kwargs,
+        **preview_kwargs,
+    })
     base_path = str(preview_kwargs["base_path"])
     class_name = entry["class_name"]
     suite = entry["suite"]
@@ -1032,6 +1296,10 @@ def _resolve_dynamic_myosuite_task_config(
 
     if "muscle_condition" in kwargs:
         config["muscle_condition"] = str(kwargs["muscle_condition"])
+    supported_test_keys = _supported_preview_test_keys(entry)
+    for key, value in preview_kwargs.items():
+        if key in supported_test_keys:
+            config[key] = value
     return config
 
 
@@ -1054,6 +1322,10 @@ def _has_dynamic_task_overrides(
     variant_kwargs: dict[str, Any],
     preview_kwargs: dict[str, Any],
 ) -> bool:
+    # Muscle-condition variants can change structural model metadata such as
+    # actuator count, so they must bypass baked default configs.
+    if variant_kwargs:
+        return True
     defaults = {**entry["kwargs"], **variant_kwargs}
     for key, value in preview_kwargs.items():
         if key == "base_path" or key.startswith("test_"):
@@ -1086,4 +1358,8 @@ def resolve_myosuite_task_config(
     )
     if muscle_condition is not None:
         config["muscle_condition"] = str(muscle_condition)
+    supported_test_keys = _supported_preview_test_keys(entry)
+    for key, value in preview_kwargs.items():
+        if key in supported_test_keys:
+            config[key] = value
     return config

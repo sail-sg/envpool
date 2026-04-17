@@ -39,6 +39,10 @@ MYOSUITE_DIRECT_ENTRIES: tuple[dict[str, Any], ...] = tuple(
 MYOSUITE_DIRECT_ENTRY_BY_ID: dict[str, dict[str, Any]] = {
     entry["id"]: entry for entry in MYOSUITE_DIRECT_ENTRIES
 }
-MYOSUITE_DIRECT_IDS: tuple[str, ...] = tuple(_METADATA["direct_ids"])
-MYOSUITE_EXPANDED_IDS: tuple[str, ...] = tuple(_METADATA["expanded_ids"])
+MYOSUITE_DIRECT_IDS: tuple[str, ...] = tuple(
+    _METADATA["direct_ids"]
+)  # Re-exported for tests and public registration helpers.
+MYOSUITE_EXPANDED_IDS: tuple[str, ...] = tuple(
+    _METADATA["expanded_ids"]
+)  # Includes variants; consumed by public task registration.
 MYOSUITE_SUITES: dict[str, Any] = dict(_METADATA["suites"])

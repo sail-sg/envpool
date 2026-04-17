@@ -16,14 +16,18 @@ package(default_visibility = ["//visibility:public"])
 
 exports_files([
     "defs.bzl",
+    "env_ids.json",
+    "generate_arm_reach_asset.py",
+    "generate_tabletennis_asset.py",
     "furniture_sim.BUILD",
     "generate_metadata.py",
     "metadata/README.md",
-    "metadata/env_ids.json",
     "mpl_sim.BUILD",
     "myosuite.BUILD",
     "myo_sim.BUILD",
     "object_sim.BUILD",
+    "simhive/myo_sim/arm/myoarm_reach.xml",
+    "simhive/myo_sim/arm/myoarm_tabletennis.xml",
     "upstream_compat.patch",
     "ycb_sim.BUILD",
 ])

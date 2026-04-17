@@ -172,6 +172,42 @@ inline void RestoreBodyGeomSlice4f(mjModel* model, float* target, int body_id,
               sizeof(float) * 4 * geom_count);
 }
 
+inline void CopyBodyGeomSlice6(const mjModel* model, const mjtNum* src,
+                               int body_id, std::vector<mjtNum>* out) {
+  int start_geom = model->body_geomadr[body_id];
+  int geom_count = model->body_geomnum[body_id];
+  out->assign(src + start_geom * 6, src + (start_geom + geom_count) * 6);
+}
+
+inline void RestoreBodyGeomSlice6(mjModel* model, mjtNum* target, int body_id,
+                                  const std::vector<mjtNum>& value) {
+  if (value.empty()) {
+    return;
+  }
+  int start_geom = model->body_geomadr[body_id];
+  int geom_count = model->body_geomnum[body_id];
+  std::memcpy(target + start_geom * 6, value.data(),
+              sizeof(mjtNum) * 6 * geom_count);
+}
+
+inline void CopyBodyGeomScalarSlice(const mjModel* model, const mjtNum* src,
+                                    int body_id, std::vector<mjtNum>* out) {
+  int start_geom = model->body_geomadr[body_id];
+  int geom_count = model->body_geomnum[body_id];
+  out->assign(src + start_geom, src + start_geom + geom_count);
+}
+
+inline void RestoreBodyGeomScalarSlice(mjModel* model, mjtNum* target,
+                                       int body_id,
+                                       const std::vector<mjtNum>& value) {
+  if (value.empty()) {
+    return;
+  }
+  int start_geom = model->body_geomadr[body_id];
+  int geom_count = model->body_geomnum[body_id];
+  std::memcpy(target + start_geom, value.data(), sizeof(mjtNum) * geom_count);
+}
+
 inline void CopyBodyGeomTypeSlice(const mjModel* model, int body_id,
                                   std::vector<int>* out) {
   int start_geom = model->body_geomadr[body_id];
@@ -235,6 +271,7 @@ class MyoChallengeReorientEnvFns {
         "test_reset_qpos"_.Bind(std::vector<double>{}),
         "test_reset_qvel"_.Bind(std::vector<double>{}),
         "test_reset_act"_.Bind(std::vector<double>{}),
+        "test_reset_act_dot"_.Bind(std::vector<double>{}),
         "test_reset_qacc_warmstart"_.Bind(std::vector<double>{}),
         "test_goal_body_pos"_.Bind(std::vector<double>{}),
         "test_goal_body_quat"_.Bind(std::vector<double>{}),
@@ -308,9 +345,12 @@ class MyoChallengeRelocateEnvFns {
         "test_reset_qpos"_.Bind(std::vector<double>{}),
         "test_reset_qvel"_.Bind(std::vector<double>{}),
         "test_reset_act"_.Bind(std::vector<double>{}),
+        "test_reset_act_dot"_.Bind(std::vector<double>{}),
         "test_reset_qacc_warmstart"_.Bind(std::vector<double>{}),
         "test_goal_body_pos"_.Bind(std::vector<double>{}),
         "test_goal_body_quat"_.Bind(std::vector<double>{}),
+        "test_goal_mocap_pos"_.Bind(std::vector<double>{}),
+        "test_goal_mocap_quat"_.Bind(std::vector<double>{}),
         "test_object_body_pos"_.Bind(std::vector<double>{}),
         "test_object_body_mass"_.Bind(std::vector<double>{}),
         "test_object_geom_type"_.Bind(std::vector<double>{}),
@@ -387,6 +427,8 @@ class MyoChallengeBaodingEnvFns {
         "test_x_radius"_.Bind(std::numeric_limits<double>::quiet_NaN()),
         "test_y_radius"_.Bind(std::numeric_limits<double>::quiet_NaN()),
         "test_goal_trajectory"_.Bind(std::vector<double>{}),
+        "test_target1_site_pos"_.Bind(std::vector<double>{}),
+        "test_target2_site_pos"_.Bind(std::vector<double>{}),
         "test_object1_body_mass"_.Bind(std::vector<double>{}),
         "test_object2_body_mass"_.Bind(std::vector<double>{}),
         "test_object1_geom_size"_.Bind(std::vector<double>{}),
@@ -550,6 +592,7 @@ class MyoChallengeReorientEnvBase : public Env<EnvSpecT>,
   std::vector<mjtNum> test_reset_qpos_;
   std::vector<mjtNum> test_reset_qvel_;
   std::vector<mjtNum> test_reset_act_;
+  std::vector<mjtNum> test_reset_act_dot_;
   std::vector<mjtNum> test_reset_qacc_warmstart_;
   std::vector<mjtNum> test_goal_body_pos_;
   std::vector<mjtNum> test_goal_body_quat_;
@@ -599,6 +642,8 @@ class MyoChallengeReorientEnvBase : public Env<EnvSpecT>,
         test_reset_qpos_(detail::ToMjtVector(spec.config["test_reset_qpos"_])),
         test_reset_qvel_(detail::ToMjtVector(spec.config["test_reset_qvel"_])),
         test_reset_act_(detail::ToMjtVector(spec.config["test_reset_act"_])),
+        test_reset_act_dot_(
+            detail::ToMjtVector(spec.config["test_reset_act_dot"_])),
         test_reset_qacc_warmstart_(
             detail::ToMjtVector(spec.config["test_reset_qacc_warmstart"_])),
         test_goal_body_pos_(
@@ -622,6 +667,7 @@ class MyoChallengeReorientEnvBase : public Env<EnvSpecT>,
         model_, spec.config["muscle_condition"_],
         spec.config["fatigue_reset_vec"_], spec.config["fatigue_reset_random"_],
         spec.config["frame_skip"_], this->seed_, &muscle_condition_state_);
+    PrimePersistentFatigueState();
     for (int i = 0; i < model_->nq - 7; ++i) {
       data_->qpos[i] = 0.0;
     }
@@ -629,6 +675,7 @@ class MyoChallengeReorientEnvBase : public Env<EnvSpecT>,
     mj_forward(model_, data_);
     CacheDefaultState();
     InitializeRobotEnv();
+    ComputeRewardInfo(true);
   }
 
   envpool::mujoco::CameraPolicy RenderCameraPolicy() const override {
@@ -644,13 +691,15 @@ class MyoChallengeReorientEnvBase : public Env<EnvSpecT>,
   void Reset() override {
     done_ = false;
     elapsed_step_ = 0;
-    detail::ResetMyoConditionState(&muscle_condition_state_);
+    if (!PreserveFatigueAcrossReset()) {
+      detail::ResetMyoConditionState(&muscle_condition_state_);
+    }
     ResetToInitialState();
     RestoreModelState();
     ApplyModelRandomization();
     ApplyResetState();
     CaptureResetState();
-    RewardInfo reward = ComputeRewardInfo();
+    RewardInfo reward = ComputeRewardInfo(false);
     WriteState(reward, true, 0.0);
   }
 
@@ -663,12 +712,35 @@ class MyoChallengeReorientEnvBase : public Env<EnvSpecT>,
     InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
-    RewardInfo reward = ComputeRewardInfo();
+    RewardInfo reward = ComputeRewardInfo(true);
     done_ = reward.done || elapsed_step_ >= max_episode_steps_;
     WriteState(reward, false, reward.dense_reward);
   }
 
  private:
+  bool PreserveFatigueAcrossReset() const {
+    return muscle_condition_state_.muscle_condition ==
+           detail::MuscleCondition::kFatigue;
+  }
+
+  void PrimePersistentFatigueState() {
+    if (!PreserveFatigueAcrossReset()) {
+      return;
+    }
+    // Upstream ReorientEnvV0.reset() forwards reset_qpos positionally into
+    // BaseV0.reset(fatigue_reset=True, *args, **kwargs), so fatigue_reset sees
+    // None and the constructor-time zero-action warmup persists across resets.
+    std::vector<mjtNum> muscle_ctrl;
+    muscle_ctrl.reserve(model_->nu);
+    for (int i = 0; i < model_->nu; ++i) {
+      if (muscle_actuator_[i]) {
+        muscle_ctrl.push_back(normalize_act_ ? detail::MuscleActivation(0.0)
+                                             : static_cast<mjtNum>(0.0));
+      }
+    }
+    muscle_condition_state_.fatigue_model.ComputeAct(&muscle_ctrl);
+  }
+
   void ValidateConfig() {
     if (model_->nq != spec_.config["qpos_dim"_] ||
         model_->nv != spec_.config["qvel_dim"_] ||
@@ -854,12 +926,20 @@ class MyoChallengeReorientEnvBase : public Env<EnvSpecT>,
       detail::RestoreVector(test_reset_act_, data_->act);
       rerun_forward = true;
     }
+    if (!test_reset_act_dot_.empty()) {
+      detail::RestoreVector(test_reset_act_dot_, data_->act_dot);
+    }
     if (!test_reset_qacc_warmstart_.empty()) {
       detail::RestoreVector(test_reset_qacc_warmstart_, data_->qacc_warmstart);
     }
     if (rerun_forward) {
       mj_forward(model_, data_);
     }
+    // Official MyoSuite reset leaves dm_control Physics ready for the next
+    // legacy-step transition, i.e. with step1 fields such as act_dot
+    // refreshed. Without this, the first mj_step2 integrates stale actuator
+    // derivatives and only step 1 drifts.
+    mj_step1(model_, data_);
   }
 
   std::vector<mjtNum> Observation() const {
@@ -895,7 +975,7 @@ class MyoChallengeReorientEnvBase : public Env<EnvSpecT>,
     return obs;
   }
 
-  RewardInfo ComputeRewardInfo() {
+  RewardInfo ComputeRewardInfo(bool apply_visuals) {
     std::array<mjtNum, 3> obj_pos{};
     std::array<mjtNum, 3> goal_pos{};
     detail::CopySitePos(model_, data_, object_sid_, obj_pos.data());
@@ -929,8 +1009,10 @@ class MyoChallengeReorientEnvBase : public Env<EnvSpecT>,
                         reward_bonus_w_ * info.bonus +
                         reward_act_reg_w_ * info.act_reg_term +
                         reward_penalty_w_ * info.penalty;
-    challenge_detail::SetSiteSuccessColor(model_, success_indicator_sid_,
-                                          info.solved);
+    if (apply_visuals) {
+      challenge_detail::SetSiteSuccessColor(model_, success_indicator_sid_,
+                                            info.solved);
+    }
     return info;
   }
 
@@ -1030,15 +1112,20 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
   std::vector<mjtNum> default_object_geom_size_;
   std::vector<mjtNum> default_object_geom_pos_;
   std::vector<mjtNum> default_object_geom_quat_;
+  std::vector<mjtNum> default_object_geom_aabb_;
+  std::vector<mjtNum> default_object_geom_rbound_;
   std::vector<float> default_object_geom_rgba_;
   std::vector<mjtNum> default_object_geom_friction_;
   std::vector<int> default_object_geom_type_;
   std::vector<mjtNum> test_reset_qpos_;
   std::vector<mjtNum> test_reset_qvel_;
   std::vector<mjtNum> test_reset_act_;
+  std::vector<mjtNum> test_reset_act_dot_;
   std::vector<mjtNum> test_reset_qacc_warmstart_;
   std::vector<mjtNum> test_goal_body_pos_;
   std::vector<mjtNum> test_goal_body_quat_;
+  std::vector<mjtNum> test_goal_mocap_pos_;
+  std::vector<mjtNum> test_goal_mocap_quat_;
   std::vector<mjtNum> test_object_body_pos_;
   std::vector<mjtNum> test_object_body_mass_;
   std::vector<int> test_object_geom_type_;
@@ -1079,12 +1166,18 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
         test_reset_qpos_(detail::ToMjtVector(spec.config["test_reset_qpos"_])),
         test_reset_qvel_(detail::ToMjtVector(spec.config["test_reset_qvel"_])),
         test_reset_act_(detail::ToMjtVector(spec.config["test_reset_act"_])),
+        test_reset_act_dot_(
+            detail::ToMjtVector(spec.config["test_reset_act_dot"_])),
         test_reset_qacc_warmstart_(
             detail::ToMjtVector(spec.config["test_reset_qacc_warmstart"_])),
         test_goal_body_pos_(
             detail::ToMjtVector(spec.config["test_goal_body_pos"_])),
         test_goal_body_quat_(
             detail::ToMjtVector(spec.config["test_goal_body_quat"_])),
+        test_goal_mocap_pos_(
+            detail::ToMjtVector(spec.config["test_goal_mocap_pos"_])),
+        test_goal_mocap_quat_(
+            detail::ToMjtVector(spec.config["test_goal_mocap_quat"_])),
         test_object_body_pos_(
             detail::ToMjtVector(spec.config["test_object_body_pos"_])),
         test_object_body_mass_(
@@ -1118,6 +1211,7 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
     mj_forward(model_, data_);
     CacheDefaultState();
     InitializeRobotEnv();
+    InitializeSuccessIndicatorState();
   }
 
   envpool::mujoco::CameraPolicy RenderCameraPolicy() const override {
@@ -1144,7 +1238,7 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
       }
     }
     CaptureResetState();
-    RewardInfo reward = ComputeRewardInfo();
+    RewardInfo reward = ComputeRewardInfo(false);
     WriteState(reward, true, 0.0);
   }
 
@@ -1157,12 +1251,22 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
     InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
     ++elapsed_step_;
-    RewardInfo reward = ComputeRewardInfo();
+    RewardInfo reward = ComputeRewardInfo(true);
     done_ = reward.done || elapsed_step_ >= max_episode_steps_;
     WriteState(reward, false, reward.dense_reward);
   }
 
  private:
+  void InitializeSuccessIndicatorState() {
+    challenge_detail::SetSiteSuccessColor(model_, success_indicator_sid_, true);
+    if (success_indicator_sid_ >= 0) {
+      for (int axis = 0; axis < 3; ++axis) {
+        model_->site_size[success_indicator_sid_ * 3 + axis] =
+            static_cast<mjtNum>(0.25);
+      }
+    }
+  }
+
   static std::array<mjtNum, 3> ToArray3(const std::vector<double>& value) {
     if (value.size() != 3) {
       throw std::runtime_error("Expected a length-3 vector.");
@@ -1248,6 +1352,11 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
                                          &default_object_geom_pos_);
     challenge_detail::CopyBodyGeomSlice4(model_, model_->geom_quat, object_bid_,
                                          &default_object_geom_quat_);
+    challenge_detail::CopyBodyGeomSlice6(model_, model_->geom_aabb, object_bid_,
+                                         &default_object_geom_aabb_);
+    challenge_detail::CopyBodyGeomScalarSlice(model_, model_->geom_rbound,
+                                              object_bid_,
+                                              &default_object_geom_rbound_);
     challenge_detail::CopyBodyGeomSlice4f(
         model_, model_->geom_rgba, object_bid_, &default_object_geom_rgba_);
     challenge_detail::CopyBodyGeomSlice3(model_, model_->geom_friction,
@@ -1268,6 +1377,10 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
         model_, model_->geom_pos, object_bid_, default_object_geom_pos_);
     challenge_detail::RestoreBodyGeomSlice4(
         model_, model_->geom_quat, object_bid_, default_object_geom_quat_);
+    challenge_detail::RestoreBodyGeomSlice6(
+        model_, model_->geom_aabb, object_bid_, default_object_geom_aabb_);
+    challenge_detail::RestoreBodyGeomScalarSlice(
+        model_, model_->geom_rbound, object_bid_, default_object_geom_rbound_);
     challenge_detail::RestoreBodyGeomSlice4f(
         model_, model_->geom_rgba, object_bid_, default_object_geom_rgba_);
     challenge_detail::RestoreBodyGeomSlice3(model_, model_->geom_friction,
@@ -1296,6 +1409,16 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
       goal_body_quat.assign(quat.begin(), quat.end());
     }
     SetGoalPose(goal_body_pos, goal_body_quat);
+    if (goal_mocap_id_ >= 0) {
+      if (test_goal_mocap_pos_.size() == 3) {
+        std::memcpy(data_->mocap_pos + goal_mocap_id_ * 3,
+                    test_goal_mocap_pos_.data(), sizeof(mjtNum) * 3);
+      }
+      if (test_goal_mocap_quat_.size() == 4) {
+        std::memcpy(data_->mocap_quat + goal_mocap_id_ * 4,
+                    test_goal_mocap_quat_.data(), sizeof(mjtNum) * 4);
+      }
+    }
 
     if (!test_object_body_pos_.empty()) {
       detail::RestoreModelBodyPos(model_, object_bid_, test_object_body_pos_);
@@ -1313,6 +1436,19 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
     if (!test_object_geom_size_.empty()) {
       challenge_detail::RestoreBodyGeomSlice3(
           model_, model_->geom_size, object_bid_, test_object_geom_size_);
+      if (has_obj_geom_range_) {
+        int start_geom = model_->body_geomadr[object_bid_];
+        int geom_count = model_->body_geomnum[object_bid_];
+        mjtNum max_size =
+            std::max({obj_geom_high_[0], obj_geom_high_[1], obj_geom_high_[2]});
+        for (int i = 0; i < geom_count; ++i) {
+          int gid = start_geom + i;
+          for (int axis = 0; axis < 3; ++axis) {
+            model_->geom_aabb[gid * 6 + 3 + axis] = obj_geom_high_[axis];
+          }
+          model_->geom_rbound[gid] = static_cast<mjtNum>(2.0) * max_size;
+        }
+      }
     }
     if (!test_object_geom_pos_.empty()) {
       challenge_detail::RestoreBodyGeomSlice3(
@@ -1437,12 +1573,19 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
       detail::RestoreVector(test_reset_act_, data_->act);
       rerun_forward = true;
     }
+    if (!test_reset_act_dot_.empty()) {
+      detail::RestoreVector(test_reset_act_dot_, data_->act_dot);
+    }
     if (!test_reset_qacc_warmstart_.empty()) {
       detail::RestoreVector(test_reset_qacc_warmstart_, data_->qacc_warmstart);
     }
     if (rerun_forward) {
       mj_forward(model_, data_);
     }
+    // Official MyoSuite reset leaves dm_control Physics ready for the next
+    // legacy-step transition. Mirror that here so the first mj_step2 consumes
+    // fresh activation derivatives instead of stale reset leftovers.
+    mj_step1(model_, data_);
   }
 
   std::vector<mjtNum> Observation() const {
@@ -1475,7 +1618,7 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
     return obs;
   }
 
-  RewardInfo ComputeRewardInfo() {
+  RewardInfo ComputeRewardInfo(bool apply_visuals) {
     std::array<mjtNum, 3> palm_pos{};
     std::array<mjtNum, 3> obj_pos{};
     std::array<mjtNum, 3> goal_pos{};
@@ -1506,9 +1649,11 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
     info.dense_reward = reward_pos_dist_w_ * info.pos_dist_term +
                         reward_rot_dist_w_ * info.rot_dist_term +
                         reward_act_reg_w_ * info.act_reg_term;
-    challenge_detail::SetSiteSuccessColor(model_, success_indicator_sid_,
-                                          info.solved);
-    if (success_indicator_sid_ >= 0) {
+    if (apply_visuals) {
+      challenge_detail::SetSiteSuccessColor(model_, success_indicator_sid_,
+                                            info.solved);
+    }
+    if (apply_visuals && success_indicator_sid_ >= 0) {
       mjtNum size =
           info.solved ? static_cast<mjtNum>(0.25) : static_cast<mjtNum>(0.1);
       model_->site_size[success_indicator_sid_ * 3 + 0] = size;
@@ -1634,6 +1779,8 @@ class MyoChallengeBaodingEnvBase : public Env<EnvSpecT>,
   mjtNum test_x_radius_;
   mjtNum test_y_radius_;
   std::vector<mjtNum> test_goal_trajectory_;
+  std::vector<mjtNum> test_target1_site_pos_;
+  std::vector<mjtNum> test_target2_site_pos_;
   std::vector<mjtNum> test_object1_body_mass_;
   std::vector<mjtNum> test_object2_body_mass_;
   std::vector<mjtNum> test_object1_geom_size_;
@@ -1692,6 +1839,10 @@ class MyoChallengeBaodingEnvBase : public Env<EnvSpecT>,
         test_y_radius_(spec.config["test_y_radius"_]),
         test_goal_trajectory_(
             detail::ToMjtVector(spec.config["test_goal_trajectory"_])),
+        test_target1_site_pos_(
+            detail::ToMjtVector(spec.config["test_target1_site_pos"_])),
+        test_target2_site_pos_(
+            detail::ToMjtVector(spec.config["test_target2_site_pos"_])),
         test_object1_body_mass_(
             detail::ToMjtVector(spec.config["test_object1_body_mass"_])),
         test_object2_body_mass_(
@@ -1750,7 +1901,12 @@ class MyoChallengeBaodingEnvBase : public Env<EnvSpecT>,
     RestoreModelState();
     SampleEpisodeParameters();
     ApplyObjectRandomization();
-    UpdateTargetsForCurrentCounter();
+    if (!test_target1_site_pos_.empty()) {
+      detail::RestoreModelSitePos(model_, target1_sid_, test_target1_site_pos_);
+    }
+    if (!test_target2_site_pos_.empty()) {
+      detail::RestoreModelSitePos(model_, target2_sid_, test_target2_site_pos_);
+    }
     ApplyResetState();
     CaptureResetState();
     RewardInfo reward = ComputeRewardInfo();
@@ -2146,6 +2302,8 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
   std::array<mjtNum, 3> obj_friction_high_{0.0, 0.0, 0.0};
   int start_bid_{-1};
   int goal_bid_{-1};
+  int start_mocap_id_{-1};
+  int goal_mocap_id_{-1};
   int obj_bid_{-1};
   int obj_sid_{-1};
   int obj_gid_{-1};
@@ -2293,7 +2451,7 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
     for (int actuator = 0; actuator < model_->nu; ++actuator) {
       auto value = static_cast<mjtNum>(raw[actuator]);
       if (normalize_act_ && muscle_actuator_[actuator] && model_->na != 0) {
-        value = detail::MuscleActivation(detail::ClampNormalized(value));
+        value = detail::MuscleActivation(value);
       } else if (normalize_act_ && !muscle_actuator_[actuator]) {
         mjtNum low = model_->actuator_ctrlrange[2 * actuator + 0];
         mjtNum high = model_->actuator_ctrlrange[2 * actuator + 1];
@@ -2332,6 +2490,8 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
     obj_gid_ = model_->body_geomadr[obj_bid_] + 1;
     start_bid_ = mj_name2id(model_, mjOBJ_BODY, "start");
     goal_bid_ = mj_name2id(model_, mjOBJ_BODY, "goal");
+    start_mocap_id_ = start_bid_ >= 0 ? model_->body_mocapid[start_bid_] : -1;
+    goal_mocap_id_ = goal_bid_ >= 0 ? model_->body_mocapid[goal_bid_] : -1;
     palm_sid_ = mj_name2id(model_, mjOBJ_SITE, "S_grasp");
     fin_sid_[0] = mj_name2id(model_, mjOBJ_SITE, "THtip");
     fin_sid_[1] = mj_name2id(model_, mjOBJ_SITE, "IFtip");
@@ -2478,6 +2638,16 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
                                 {start_pos_[0], start_pos_[1], start_pos_[2]});
     detail::RestoreModelBodyPos(model_, goal_bid_,
                                 {goal_pos_[0], goal_pos_[1], goal_pos_[2]});
+    if (start_mocap_id_ >= 0) {
+      data_->mocap_pos[start_mocap_id_ * 3 + 0] = start_pos_[0];
+      data_->mocap_pos[start_mocap_id_ * 3 + 1] = start_pos_[1];
+      data_->mocap_pos[start_mocap_id_ * 3 + 2] = start_pos_[2];
+    }
+    if (goal_mocap_id_ >= 0) {
+      data_->mocap_pos[goal_mocap_id_ * 3 + 0] = goal_pos_[0];
+      data_->mocap_pos[goal_mocap_id_ * 3 + 1] = goal_pos_[1];
+      data_->mocap_pos[goal_mocap_id_ * 3 + 2] = goal_pos_[2];
+    }
   }
 
   void ApplyObjectRandomization() {
@@ -2523,15 +2693,13 @@ class MyoChallengeBimanualEnvBase : public Env<EnvSpecT>,
       std::fill(data_->qvel, data_->qvel + model_->nv, 0.0);
     }
     mj_forward(model_, data_);
-    bool rerun_forward = false;
     if (!test_reset_act_.empty()) {
       detail::RestoreVector(test_reset_act_, data_->act);
-      rerun_forward = true;
     }
     if (!test_reset_qacc_warmstart_.empty()) {
       detail::RestoreVector(test_reset_qacc_warmstart_, data_->qacc_warmstart);
     }
-    if (rerun_forward) {
+    if (!test_reset_act_.empty()) {
       mj_forward(model_, data_);
     }
   }

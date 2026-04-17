@@ -15,18 +15,16 @@
 
 from __future__ import annotations
 
-import tempfile
-from contextlib import contextmanager
 from functools import cache
 from pathlib import Path
-from typing import Any, Iterator
-from xml.etree import ElementTree as ET
+from typing import Any
 
 import gymnasium
 import mujoco
 import numpy as np
 from absl.testing import absltest
 
+from envpool.mujoco.myosuite.config import resolve_myosuite_model_path
 from envpool.mujoco.myosuite.metadata import MYOSUITE_DIRECT_ENTRIES
 from envpool.mujoco.myosuite.native import (
     MyoSuiteKeyTurnEnvSpec,
@@ -196,6 +194,18 @@ def _asset_model_path(model_path: str) -> Path:
     return path if path.is_absolute() else myosuite_asset_root() / model_path
 
 
+def _runtime_model_path(entry: dict[str, Any]) -> str:
+    kwargs = entry["kwargs"]
+    return resolve_myosuite_model_path(
+        str(kwargs["model_path"]),
+        (str(kwargs["edit_fn"]) if kwargs.get("edit_fn") is not None else None),
+    )
+
+
+def _alignment_model_path(entry: dict[str, Any]) -> str:
+    return str(_asset_model_path(_runtime_model_path(entry)))
+
+
 @cache
 def _model(path: str) -> mujoco.MjModel:
     return mujoco.MjModel.from_xml_path(str(_asset_model_path(path)))
@@ -300,6 +310,9 @@ def _reach_config(
         kwargs["model_path"] = model_path
     model = _model(kwargs["model_path"])
     site_names, mins, maxs = _flatten_site_ranges(kwargs["target_reach_range"])
+    is_walk_reach = (
+        entry["entry_module"] == "myosuite.envs.myo.myobase.walk_v0"
+    )
     config = MyoSuiteReachEnvSpec.gen_config(
         num_envs=1,
         batch_size=1,
@@ -329,6 +342,10 @@ def _reach_config(
         target_site_names=site_names,
         target_pos_min=mins,
         target_pos_max=maxs,
+        joint_random_range=list(kwargs.get("joint_random_range", [])),
+        target_pos_relative_to_tip=is_walk_reach,
+        hide_skin_geom_group_1=is_walk_reach,
+        hide_terrain=is_walk_reach,
     )
     if overrides:
         config = MyoSuiteReachEnvSpec.gen_config(
@@ -539,12 +556,10 @@ def _torso_config(
         target_qpos_value=target_qpos_value,
     )
     if overrides:
-        overrides = dict(overrides)
-        overrides.pop("test_target_qpos", None)
         config = MyoSuiteTorsoEnvSpec.gen_config(
             **dict(
                 zip(MyoSuiteTorsoEnvSpec._config_keys, config, strict=False),
-                **overrides,
+                **dict(overrides),
             )
         )
     return config, MyoSuiteTorsoGymnasiumEnvPool
@@ -824,12 +839,12 @@ def _registered_rollout(
     env = _make_registered_env(task_id, seed=seed)
     try:
         env.reset()
-        action = np.full(
-            (1, int(env.action_space.shape[-1])), 0.35, dtype=np.float32
+        actions = _seeded_actions(
+            (1, int(env.action_space.shape[-1])), steps=32, seed=seed + 11
         )
         final_obs = None
         final_reward = None
-        for _ in range(3):
+        for action in actions:
             final_obs, final_reward, *_ = env.step(action)
         assert final_obs is not None
         assert final_reward is not None
@@ -877,109 +892,6 @@ def _assert_rollouts_match(
         )
         if terminated0[0] or truncated0[0]:
             break
-
-
-def _first_child_body(body: mujoco.MjsBody) -> mujoco.MjsBody | None:
-    return body.first_body()
-
-
-def _arm_reaching_spec_to_xml(model_path: str) -> str:
-    spec = mujoco.MjSpec.from_file(model_path)
-    root_names = ("firstmc", "secondmc", "thirdmc", "fourthmc", "fifthmc")
-    tip_site = spec.site("IFtip")
-    tip_site_name = str(tip_site.name)
-    tip_site_size = tip_site.size.copy()
-    tip_site_pos = tip_site.pos.copy()
-    tip_site_rgba = tip_site.rgba.copy()
-    body_chains: dict[str, list[tuple[str, np.ndarray, list[str]]]] = {}
-
-    for root_name in root_names:
-        body_chains[root_name] = []
-        root_body = spec.body(root_name)
-        child = _first_child_body(root_body)
-        while child is not None:
-            mesh_names = [
-                str(geom.name)
-                for geom in child.geoms
-                if geom.type == mujoco.mjtGeom.mjGEOM_MESH
-            ]
-            body_chains[root_name].append((
-                str(child.name),
-                child.pos.copy(),
-                mesh_names,
-            ))
-            child = _first_child_body(child)
-
-    for root_name in root_names:
-        root_body = spec.body(root_name)
-        child = _first_child_body(root_body)
-        if child is not None:
-            spec.delete(child)
-
-    for root_name in root_names:
-        parent = spec.body(root_name)
-        for body_name, pos, mesh_names in body_chains[root_name]:
-            parent.add_body(name=body_name, pos=pos)
-            current = spec.body(body_name)
-            for mesh_name in mesh_names:
-                current.add_geom(
-                    meshname=mesh_name,
-                    name=body_name,
-                    type=mujoco.mjtGeom.mjGEOM_MESH,
-                )
-            if body_name == "distph2":
-                current.add_site(
-                    name=tip_site_name,
-                    size=tip_site_size * 2.0,
-                    pos=tip_site_pos,
-                    rgba=tip_site_rgba,
-                )
-            parent = current
-
-    spec.body("world").add_site(
-        name="IFtip_target",
-        type=mujoco.mjtGeom.mjGEOM_SPHERE,
-        size=[0.02, 0.02, 0.02],
-        pos=[-0.2, -0.2, 1.2],
-        rgba=[0.0, 0.0, 1.0, 0.3],
-    )
-    return spec.to_xml()
-
-
-@contextmanager
-def _edited_arm_reaching_model(model_path: str) -> Iterator[str]:
-    base_model_path = Path(model_path)
-    myo_sim_root = base_model_path.parent.parent
-    with tempfile.TemporaryDirectory() as td:
-        td_path = Path(td)
-        arm_dir = td_path / "arm"
-        arm_dir.mkdir()
-        (td_path / "myo_sim").symlink_to(myo_sim_root, target_is_directory=True)
-        edited_model_path = arm_dir / "myoarm_reach.xml"
-        xml_tree = ET.ElementTree(
-            ET.fromstring(_arm_reaching_spec_to_xml(model_path))
-        )
-        root = xml_tree.getroot()
-        if root is not None:
-            compiler = root.find("compiler")
-            if compiler is not None:
-                compiler.set("meshdir", ".")
-                compiler.set("texturedir", ".")
-        xml_tree.write(edited_model_path, encoding="utf-8")
-        yield str(edited_model_path)
-
-
-@contextmanager
-def _edited_model_if_needed(entry: dict[str, Any]) -> Iterator[str]:
-    kwargs = entry["kwargs"]
-    edit_name = kwargs.get("edit_fn")
-    if edit_name != "edit_fn_arm_reaching":
-        yield str(_asset_model_path(kwargs["model_path"]))
-        return
-    with _edited_arm_reaching_model(
-        str(_asset_model_path(kwargs["model_path"]))
-    ) as edited_path:
-        yield edited_path
 
 
 def _oracle_reset_sync(
@@ -1106,7 +1018,7 @@ def _oracle_reset_sync(
         sync["test_terrain_geom_conaffinity"] = int(
             unwrapped.sim.model.geom_conaffinity[terrain_geom_id]
         )
-    elif "target_reach_range" not in entry["kwargs"]:
+    elif entry["class_name"] == "PoseEnvV0":
         sync["test_target_qpos"] = unwrapped.target_jnt_value.copy().tolist()
         if getattr(unwrapped, "weight_bodyname", None):
             body_id = unwrapped.sim.model.body_name2id(
@@ -1119,7 +1031,7 @@ def _oracle_reset_sync(
             sync["test_geom_size0"] = [
                 float(unwrapped.sim.model.geom_size[geom_id][0])
             ]
-    else:
+    elif entry["class_name"] == "ReachEnvV0":
         target_pos: list[float] = []
         for site_name in entry["kwargs"]["target_reach_range"]:
             site_id = unwrapped.sim.model.site_name2id(site_name + "_target")
@@ -1285,7 +1197,7 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
             config, pool_type = _pose_config(env_id)
             env0 = _make_env(config, pool_type, MyoSuitePoseEnvSpec)
             env1 = _make_env(config, pool_type, MyoSuitePoseEnvSpec)
-            model = _model(_entry(env_id)["kwargs"]["model_path"])
+            model = _model(_runtime_model_path(_entry(env_id)))
             actions = _seeded_actions((1, model.nu), steps=8, seed=17)
             with self.subTest(env_id=env_id):
                 _assert_rollouts_match(self, env0, env1, actions)
@@ -1294,14 +1206,14 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
         """Reach envs should be deterministic under a fixed action sequence."""
         for env_id in _REACH_IDS:
             entry = _entry(env_id)
-            with _edited_model_if_needed(entry) as model_path:
-                config, pool_type = _reach_config(env_id, model_path=model_path)
-                env0 = _make_env(config, pool_type, MyoSuiteReachEnvSpec)
-                env1 = _make_env(config, pool_type, MyoSuiteReachEnvSpec)
-                model = _model(model_path)
-                actions = _seeded_actions((1, model.nu), steps=8, seed=29)
-                with self.subTest(env_id=env_id):
-                    _assert_rollouts_match(self, env0, env1, actions)
+            model_path = str(_asset_model_path(_runtime_model_path(entry)))
+            config, pool_type = _reach_config(env_id, model_path=model_path)
+            env0 = _make_env(config, pool_type, MyoSuiteReachEnvSpec)
+            env1 = _make_env(config, pool_type, MyoSuiteReachEnvSpec)
+            model = _model(model_path)
+            actions = _seeded_actions((1, model.nu), steps=8, seed=29)
+            with self.subTest(env_id=env_id):
+                _assert_rollouts_match(self, env0, env1, actions)
 
     def test_reorient_native_determinism_for_all_ids(self) -> None:
         """Reorient envs should be deterministic under a fixed action sequence."""
@@ -1309,7 +1221,7 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
             config, pool_type = _reorient_config(env_id)
             env0 = _make_env(config, pool_type, MyoSuiteReorientEnvSpec)
             env1 = _make_env(config, pool_type, MyoSuiteReorientEnvSpec)
-            model = _model(_entry(env_id)["kwargs"]["model_path"])
+            model = _model(_runtime_model_path(_entry(env_id)))
             actions = _seeded_actions((1, model.nu), steps=8, seed=61)
             with self.subTest(env_id=env_id):
                 _assert_rollouts_match(self, env0, env1, actions)
@@ -1320,7 +1232,7 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
             config, pool_type = _key_turn_config(env_id)
             env0 = _make_env(config, pool_type, MyoSuiteKeyTurnEnvSpec)
             env1 = _make_env(config, pool_type, MyoSuiteKeyTurnEnvSpec)
-            model = _model(_entry(env_id)["kwargs"]["model_path"])
+            model = _model(_runtime_model_path(_entry(env_id)))
             actions = _seeded_actions((1, model.nu), steps=8, seed=71)
             with self.subTest(env_id=env_id):
                 _assert_rollouts_match(self, env0, env1, actions)
@@ -1331,7 +1243,7 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
             config, pool_type = _obj_hold_config(env_id)
             env0 = _make_env(config, pool_type, MyoSuiteObjHoldEnvSpec)
             env1 = _make_env(config, pool_type, MyoSuiteObjHoldEnvSpec)
-            model = _model(_entry(env_id)["kwargs"]["model_path"])
+            model = _model(_runtime_model_path(_entry(env_id)))
             actions = _seeded_actions((1, model.nu), steps=8, seed=83)
             with self.subTest(env_id=env_id):
                 _assert_rollouts_match(self, env0, env1, actions)
@@ -1342,7 +1254,7 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
             config, pool_type = _torso_config(env_id)
             env0 = _make_env(config, pool_type, MyoSuiteTorsoEnvSpec)
             env1 = _make_env(config, pool_type, MyoSuiteTorsoEnvSpec)
-            model = _model(_entry(env_id)["kwargs"]["model_path"])
+            model = _model(_runtime_model_path(_entry(env_id)))
             actions = _seeded_actions((1, model.nu), steps=8, seed=89)
             with self.subTest(env_id=env_id):
                 _assert_rollouts_match(self, env0, env1, actions)
@@ -1353,7 +1265,7 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
             config, pool_type = _pen_twirl_config(env_id)
             env0 = _make_env(config, pool_type, MyoSuitePenTwirlEnvSpec)
             env1 = _make_env(config, pool_type, MyoSuitePenTwirlEnvSpec)
-            model = _model(_entry(env_id)["kwargs"]["model_path"])
+            model = _model(_runtime_model_path(_entry(env_id)))
             actions = _seeded_actions((1, model.nu), steps=8, seed=107)
             with self.subTest(env_id=env_id):
                 _assert_rollouts_match(self, env0, env1, actions)
@@ -1364,7 +1276,7 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
             config, pool_type, spec_type = _walk_like_config(env_id)
             env0 = _make_env(config, pool_type, spec_type)
             env1 = _make_env(config, pool_type, spec_type)
-            model = _model(_entry(env_id)["kwargs"]["model_path"])
+            model = _model(_runtime_model_path(_entry(env_id)))
             actions = _seeded_actions((1, model.nu), steps=8, seed=113)
             with self.subTest(env_id=env_id):
                 _assert_rollouts_match(self, env0, env1, actions)
@@ -1375,7 +1287,7 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
             config, pool_type, spec_type = _walk_like_config(env_id)
             env0 = _make_env(config, pool_type, spec_type)
             env1 = _make_env(config, pool_type, spec_type)
-            model = _model(_entry(env_id)["kwargs"]["model_path"])
+            model = _model(_runtime_model_path(_entry(env_id)))
             actions = _seeded_actions((1, model.nu), steps=8, seed=127)
             with self.subTest(env_id=env_id):
                 _assert_rollouts_match(self, env0, env1, actions)
@@ -1384,503 +1296,495 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
         """Representative pose envs should align with the official oracle."""
         for env_id in _POSE_ALIGN_IDS:
             entry = _entry(env_id)
-            with _edited_model_if_needed(entry) as model_path:
-                with self.subTest(env_id=env_id):
-                    cls = _oracle_class(env_id)
-                    kwargs = dict(entry["kwargs"])
-                    kwargs.pop("edit_fn", None)
-                    kwargs["model_path"] = model_path
-                    oracle: Any = gymnasium.wrappers.TimeLimit(
-                        cls(seed=123, **kwargs),
-                        max_episode_steps=entry["max_episode_steps"],
+            model_path = _alignment_model_path(entry)
+            with self.subTest(env_id=env_id):
+                cls = _oracle_class(env_id)
+                kwargs = dict(entry["kwargs"])
+                kwargs.pop("edit_fn", None)
+                kwargs["model_path"] = model_path
+                oracle: Any = gymnasium.wrappers.TimeLimit(
+                    cls(seed=123, **kwargs),
+                    max_episode_steps=entry["max_episode_steps"],
+                )
+                obs0, sync = _oracle_reset_sync(oracle, env_id)
+                obs_atol = _pose_alignment_obs_atol(env_id)
+                reward_atol = _pose_alignment_reward_atol(env_id)
+                config, pool_type = _pose_config(
+                    env_id, model_path=model_path, overrides=sync
+                )
+                native = _make_env(config, pool_type, MyoSuitePoseEnvSpec)
+                obs1, info1 = native.reset()
+                np.testing.assert_allclose(
+                    obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
+                )
+                self.assertEqual(info1["elapsed_step"].tolist(), [0])
+                native_model = _model(model_path)
+                actions = _seeded_actions(
+                    (1, native_model.nu),
+                    steps=_ALIGNMENT_STEPS,
+                    seed=41,
+                )
+                for action in actions:
+                    obs0, reward0, terminated0, truncated0, _ = oracle.step(
+                        action[0]
                     )
-                    obs0, sync = _oracle_reset_sync(oracle, env_id)
-                    obs_atol = _pose_alignment_obs_atol(env_id)
-                    reward_atol = _pose_alignment_reward_atol(env_id)
-                    config, pool_type = _pose_config(
-                        env_id, model_path=model_path, overrides=sync
+                    obs1, reward1, terminated1, truncated1, _ = native.step(
+                        action
                     )
-                    native = _make_env(config, pool_type, MyoSuitePoseEnvSpec)
-                    obs1, info1 = native.reset()
                     np.testing.assert_allclose(
                         obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
                     )
-                    self.assertEqual(info1["elapsed_step"].tolist(), [0])
-                    native_model = _model(model_path)
-                    actions = _seeded_actions(
-                        (1, native_model.nu),
-                        steps=_ALIGNMENT_STEPS,
-                        seed=41,
+                    np.testing.assert_allclose(
+                        reward1,
+                        np.array([reward0]),
+                        atol=reward_atol,
+                        rtol=reward_atol,
                     )
-                    for action in actions:
-                        obs0, reward0, terminated0, truncated0, _ = oracle.step(
-                            action[0]
-                        )
-                        obs1, reward1, terminated1, truncated1, _ = native.step(
-                            action
-                        )
-                        np.testing.assert_allclose(
-                            obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
-                        )
-                        np.testing.assert_allclose(
-                            reward1,
-                            np.array([reward0]),
-                            atol=reward_atol,
-                            rtol=reward_atol,
-                        )
-                        np.testing.assert_array_equal(
-                            terminated1, np.array([terminated0])
-                        )
-                        np.testing.assert_array_equal(
-                            truncated1, np.array([truncated0])
-                        )
-                        if terminated0 or truncated0:
-                            break
+                    np.testing.assert_array_equal(
+                        terminated1, np.array([terminated0])
+                    )
+                    np.testing.assert_array_equal(
+                        truncated1, np.array([truncated0])
+                    )
+                    if terminated0 or truncated0:
+                        break
 
     def test_reach_alignment_representative_ids(self) -> None:
         """Representative reach envs should align with the official oracle."""
         for env_id in _REACH_ALIGN_IDS:
             entry = _entry(env_id)
-            with _edited_model_if_needed(entry) as model_path:
-                with self.subTest(env_id=env_id):
-                    cls = _oracle_class(env_id)
-                    kwargs = dict(entry["kwargs"])
-                    kwargs.pop("edit_fn", None)
-                    kwargs["model_path"] = model_path
-                    oracle: Any = gymnasium.wrappers.TimeLimit(
-                        cls(seed=123, **kwargs),
-                        max_episode_steps=entry["max_episode_steps"],
+            model_path = _alignment_model_path(entry)
+            with self.subTest(env_id=env_id):
+                cls = _oracle_class(env_id)
+                kwargs = dict(entry["kwargs"])
+                kwargs.pop("edit_fn", None)
+                kwargs["model_path"] = model_path
+                oracle: Any = gymnasium.wrappers.TimeLimit(
+                    cls(seed=123, **kwargs),
+                    max_episode_steps=entry["max_episode_steps"],
+                )
+                obs0, sync = _oracle_reset_sync(oracle, env_id)
+                obs_atol = _reach_alignment_obs_atol(env_id)
+                reward_atol = _reach_alignment_reward_atol(env_id)
+                config, pool_type = _reach_config(
+                    env_id, model_path=model_path, overrides=sync
+                )
+                native = _make_env(config, pool_type, MyoSuiteReachEnvSpec)
+                obs1, _ = native.reset()
+                np.testing.assert_allclose(
+                    obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
+                )
+                actions = _seeded_actions(
+                    (1, _model(model_path).nu),
+                    steps=_ALIGNMENT_STEPS,
+                    seed=53,
+                )
+                for action in actions:
+                    obs0, reward0, terminated0, truncated0, _ = oracle.step(
+                        action[0]
                     )
-                    obs0, sync = _oracle_reset_sync(oracle, env_id)
-                    obs_atol = _reach_alignment_obs_atol(env_id)
-                    reward_atol = _reach_alignment_reward_atol(env_id)
-                    config, pool_type = _reach_config(
-                        env_id, model_path=model_path, overrides=sync
+                    obs1, reward1, terminated1, truncated1, _ = native.step(
+                        action
                     )
-                    native = _make_env(config, pool_type, MyoSuiteReachEnvSpec)
-                    obs1, _ = native.reset()
                     np.testing.assert_allclose(
                         obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
                     )
-                    actions = _seeded_actions(
-                        (1, _model(model_path).nu),
-                        steps=_ALIGNMENT_STEPS,
-                        seed=53,
+                    np.testing.assert_allclose(
+                        reward1,
+                        np.array([reward0]),
+                        atol=reward_atol,
+                        rtol=reward_atol,
                     )
-                    for action in actions:
-                        obs0, reward0, terminated0, truncated0, _ = oracle.step(
-                            action[0]
-                        )
-                        obs1, reward1, terminated1, truncated1, _ = native.step(
-                            action
-                        )
-                        np.testing.assert_allclose(
-                            obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
-                        )
-                        np.testing.assert_allclose(
-                            reward1,
-                            np.array([reward0]),
-                            atol=reward_atol,
-                            rtol=reward_atol,
-                        )
-                        np.testing.assert_array_equal(
-                            terminated1, np.array([terminated0])
-                        )
-                        np.testing.assert_array_equal(
-                            truncated1, np.array([truncated0])
-                        )
-                        if terminated0 or truncated0:
-                            break
+                    np.testing.assert_array_equal(
+                        terminated1, np.array([terminated0])
+                    )
+                    np.testing.assert_array_equal(
+                        truncated1, np.array([truncated0])
+                    )
+                    if terminated0 or truncated0:
+                        break
 
     def test_reorient_alignment_representative_ids(self) -> None:
         """Representative reorient envs should align with the official oracle."""
         for env_id in _REORIENT_ALIGN_IDS:
             entry = _entry(env_id)
-            with _edited_model_if_needed(entry) as model_path:
-                with self.subTest(env_id=env_id):
-                    cls = _oracle_class(env_id)
-                    kwargs = dict(entry["kwargs"])
-                    kwargs["model_path"] = model_path
-                    oracle: Any = gymnasium.wrappers.TimeLimit(
-                        cls(seed=123, **kwargs),
-                        max_episode_steps=entry["max_episode_steps"],
+            model_path = _alignment_model_path(entry)
+            with self.subTest(env_id=env_id):
+                cls = _oracle_class(env_id)
+                kwargs = dict(entry["kwargs"])
+                kwargs["model_path"] = model_path
+                oracle: Any = gymnasium.wrappers.TimeLimit(
+                    cls(seed=123, **kwargs),
+                    max_episode_steps=entry["max_episode_steps"],
+                )
+                obs0, sync = _oracle_reset_sync(oracle, env_id)
+                obs_atol = _reorient_alignment_obs_atol(env_id)
+                reward_atol = _reorient_alignment_reward_atol(env_id)
+                config, pool_type = _reorient_config(
+                    env_id, model_path=model_path, overrides=sync
+                )
+                native = _make_env(config, pool_type, MyoSuiteReorientEnvSpec)
+                obs1, _ = native.reset()
+                np.testing.assert_allclose(
+                    obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
+                )
+                actions = _seeded_actions(
+                    (1, _model(model_path).nu),
+                    steps=_ALIGNMENT_STEPS,
+                    seed=67,
+                )
+                for action in actions:
+                    obs0, reward0, terminated0, truncated0, _ = oracle.step(
+                        action[0]
                     )
-                    obs0, sync = _oracle_reset_sync(oracle, env_id)
-                    obs_atol = _reorient_alignment_obs_atol(env_id)
-                    reward_atol = _reorient_alignment_reward_atol(env_id)
-                    config, pool_type = _reorient_config(
-                        env_id, model_path=model_path, overrides=sync
+                    obs1, reward1, terminated1, truncated1, _ = native.step(
+                        action
                     )
-                    native = _make_env(
-                        config, pool_type, MyoSuiteReorientEnvSpec
-                    )
-                    obs1, _ = native.reset()
                     np.testing.assert_allclose(
                         obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
                     )
-                    actions = _seeded_actions(
-                        (1, _model(model_path).nu),
-                        steps=_ALIGNMENT_STEPS,
-                        seed=67,
+                    np.testing.assert_allclose(
+                        reward1,
+                        np.array([reward0]),
+                        atol=reward_atol,
+                        rtol=reward_atol,
                     )
-                    for action in actions:
-                        obs0, reward0, terminated0, truncated0, _ = oracle.step(
-                            action[0]
-                        )
-                        obs1, reward1, terminated1, truncated1, _ = native.step(
-                            action
-                        )
-                        np.testing.assert_allclose(
-                            obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
-                        )
-                        np.testing.assert_allclose(
-                            reward1,
-                            np.array([reward0]),
-                            atol=reward_atol,
-                            rtol=reward_atol,
-                        )
-                        np.testing.assert_array_equal(
-                            terminated1, np.array([terminated0])
-                        )
-                        np.testing.assert_array_equal(
-                            truncated1, np.array([truncated0])
-                        )
-                        if terminated0 or truncated0:
-                            break
+                    np.testing.assert_array_equal(
+                        terminated1, np.array([terminated0])
+                    )
+                    np.testing.assert_array_equal(
+                        truncated1, np.array([truncated0])
+                    )
+                    if terminated0 or truncated0:
+                        break
 
     def test_key_turn_alignment_representative_ids(self) -> None:
         """Representative key-turn envs should align with the official oracle."""
         for env_id in _KEYTURN_ALIGN_IDS:
             entry = _entry(env_id)
-            with _edited_model_if_needed(entry) as model_path:
-                with self.subTest(env_id=env_id):
-                    cls = _oracle_class(env_id)
-                    kwargs = dict(entry["kwargs"])
-                    kwargs.pop("edit_fn", None)
-                    kwargs["model_path"] = model_path
-                    oracle: Any = gymnasium.wrappers.TimeLimit(
-                        cls(seed=123, **kwargs),
-                        max_episode_steps=entry["max_episode_steps"],
+            model_path = _alignment_model_path(entry)
+            with self.subTest(env_id=env_id):
+                cls = _oracle_class(env_id)
+                kwargs = dict(entry["kwargs"])
+                kwargs.pop("edit_fn", None)
+                kwargs["model_path"] = model_path
+                oracle: Any = gymnasium.wrappers.TimeLimit(
+                    cls(seed=123, **kwargs),
+                    max_episode_steps=entry["max_episode_steps"],
+                )
+                obs0, sync = _oracle_reset_sync(oracle, env_id)
+                obs_atol = _key_turn_alignment_obs_atol(env_id)
+                reward_atol = _key_turn_alignment_reward_atol(env_id)
+                config, pool_type = _key_turn_config(
+                    env_id, model_path=model_path, overrides=sync
+                )
+                native = _make_env(config, pool_type, MyoSuiteKeyTurnEnvSpec)
+                obs1, _ = native.reset()
+                np.testing.assert_allclose(
+                    obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
+                )
+                actions = _seeded_actions(
+                    (1, _model(model_path).nu),
+                    steps=_ALIGNMENT_STEPS,
+                    seed=79,
+                )
+                for action in actions:
+                    obs0, reward0, terminated0, truncated0, _ = oracle.step(
+                        action[0]
                     )
-                    obs0, sync = _oracle_reset_sync(oracle, env_id)
-                    obs_atol = _key_turn_alignment_obs_atol(env_id)
-                    reward_atol = _key_turn_alignment_reward_atol(env_id)
-                    config, pool_type = _key_turn_config(
-                        env_id, model_path=model_path, overrides=sync
+                    obs1, reward1, terminated1, truncated1, _ = native.step(
+                        action
                     )
-                    native = _make_env(
-                        config, pool_type, MyoSuiteKeyTurnEnvSpec
-                    )
-                    obs1, _ = native.reset()
                     np.testing.assert_allclose(
                         obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
                     )
-                    actions = _seeded_actions(
-                        (1, _model(model_path).nu),
-                        steps=_ALIGNMENT_STEPS,
-                        seed=79,
+                    np.testing.assert_allclose(
+                        reward1,
+                        np.array([reward0]),
+                        atol=reward_atol,
+                        rtol=reward_atol,
                     )
-                    for action in actions:
-                        obs0, reward0, terminated0, truncated0, _ = oracle.step(
-                            action[0]
-                        )
-                        obs1, reward1, terminated1, truncated1, _ = native.step(
-                            action
-                        )
-                        np.testing.assert_allclose(
-                            obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
-                        )
-                        np.testing.assert_allclose(
-                            reward1,
-                            np.array([reward0]),
-                            atol=reward_atol,
-                            rtol=reward_atol,
-                        )
-                        np.testing.assert_array_equal(
-                            terminated1, np.array([terminated0])
-                        )
-                        np.testing.assert_array_equal(
-                            truncated1, np.array([truncated0])
-                        )
-                        if terminated0 or truncated0:
-                            break
+                    np.testing.assert_array_equal(
+                        terminated1, np.array([terminated0])
+                    )
+                    np.testing.assert_array_equal(
+                        truncated1, np.array([truncated0])
+                    )
+                    if terminated0 or truncated0:
+                        break
 
     def test_obj_hold_alignment_representative_ids(self) -> None:
         """Representative obj-hold envs should align with the official oracle."""
         for env_id in _OBJHOLD_ALIGN_IDS:
             entry = _entry(env_id)
-            with _edited_model_if_needed(entry) as model_path:
-                with self.subTest(env_id=env_id):
-                    cls = _oracle_class(env_id)
-                    kwargs = dict(entry["kwargs"])
-                    kwargs.pop("edit_fn", None)
-                    kwargs["model_path"] = model_path
-                    oracle: Any = gymnasium.wrappers.TimeLimit(
-                        cls(seed=123, **kwargs),
-                        max_episode_steps=entry["max_episode_steps"],
+            model_path = _alignment_model_path(entry)
+            with self.subTest(env_id=env_id):
+                cls = _oracle_class(env_id)
+                kwargs = dict(entry["kwargs"])
+                kwargs.pop("edit_fn", None)
+                kwargs["model_path"] = model_path
+                oracle: Any = gymnasium.wrappers.TimeLimit(
+                    cls(seed=123, **kwargs),
+                    max_episode_steps=entry["max_episode_steps"],
+                )
+                obs0, sync = _oracle_reset_sync(oracle, env_id)
+                obs_atol = _obj_hold_alignment_obs_atol(env_id)
+                reward_atol = _obj_hold_alignment_reward_atol(env_id)
+                config, pool_type = _obj_hold_config(
+                    env_id, model_path=model_path, overrides=sync
+                )
+                native = _make_env(config, pool_type, MyoSuiteObjHoldEnvSpec)
+                obs1, _ = native.reset()
+                np.testing.assert_allclose(
+                    obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
+                )
+                actions = _seeded_actions(
+                    (1, _model(model_path).nu),
+                    steps=_ALIGNMENT_STEPS,
+                    seed=97,
+                )
+                for action in actions:
+                    obs0, reward0, terminated0, truncated0, _ = oracle.step(
+                        action[0]
                     )
-                    obs0, sync = _oracle_reset_sync(oracle, env_id)
-                    obs_atol = _obj_hold_alignment_obs_atol(env_id)
-                    reward_atol = _obj_hold_alignment_reward_atol(env_id)
-                    config, pool_type = _obj_hold_config(
-                        env_id, model_path=model_path, overrides=sync
+                    obs1, reward1, terminated1, truncated1, _ = native.step(
+                        action
                     )
-                    native = _make_env(
-                        config, pool_type, MyoSuiteObjHoldEnvSpec
-                    )
-                    obs1, _ = native.reset()
                     np.testing.assert_allclose(
                         obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
                     )
-                    actions = _seeded_actions(
-                        (1, _model(model_path).nu),
-                        steps=_ALIGNMENT_STEPS,
-                        seed=97,
+                    np.testing.assert_allclose(
+                        reward1,
+                        np.array([reward0]),
+                        atol=reward_atol,
+                        rtol=reward_atol,
                     )
-                    for action in actions:
-                        obs0, reward0, terminated0, truncated0, _ = oracle.step(
-                            action[0]
-                        )
-                        obs1, reward1, terminated1, truncated1, _ = native.step(
-                            action
-                        )
-                        np.testing.assert_allclose(
-                            obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
-                        )
-                        np.testing.assert_allclose(
-                            reward1,
-                            np.array([reward0]),
-                            atol=reward_atol,
-                            rtol=reward_atol,
-                        )
-                        np.testing.assert_array_equal(
-                            terminated1, np.array([terminated0])
-                        )
-                        np.testing.assert_array_equal(
-                            truncated1, np.array([truncated0])
-                        )
-                        if terminated0 or truncated0:
-                            break
+                    np.testing.assert_array_equal(
+                        terminated1, np.array([terminated0])
+                    )
+                    np.testing.assert_array_equal(
+                        truncated1, np.array([truncated0])
+                    )
+                    if terminated0 or truncated0:
+                        break
 
     def test_torso_alignment_representative_ids(self) -> None:
         """Representative torso envs should align with the official oracle."""
         for env_id in _TORSO_ALIGN_IDS:
             entry = _entry(env_id)
-            with _edited_model_if_needed(entry) as model_path:
-                with self.subTest(env_id=env_id):
-                    cls = _oracle_class(env_id)
-                    kwargs = dict(entry["kwargs"])
-                    kwargs.pop("edit_fn", None)
-                    kwargs["model_path"] = model_path
-                    oracle: Any = gymnasium.wrappers.TimeLimit(
-                        cls(seed=123, **kwargs),
-                        max_episode_steps=entry["max_episode_steps"],
+            model_path = _alignment_model_path(entry)
+            with self.subTest(env_id=env_id):
+                cls = _oracle_class(env_id)
+                kwargs = dict(entry["kwargs"])
+                kwargs.pop("edit_fn", None)
+                kwargs["model_path"] = model_path
+                oracle: Any = gymnasium.wrappers.TimeLimit(
+                    cls(seed=123, **kwargs),
+                    max_episode_steps=entry["max_episode_steps"],
+                )
+                obs0, sync = _oracle_reset_sync(oracle, env_id)
+                obs_atol = _torso_alignment_obs_atol(env_id)
+                reward_atol = _torso_alignment_reward_atol(env_id)
+                config, pool_type = _torso_config(
+                    env_id, model_path=model_path, overrides=sync
+                )
+                native = _make_env(config, pool_type, MyoSuiteTorsoEnvSpec)
+                obs1, _ = native.reset()
+                np.testing.assert_allclose(
+                    obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
+                )
+                actions = _seeded_actions(
+                    (1, _model(model_path).nu),
+                    steps=_ALIGNMENT_STEPS,
+                    seed=101,
+                )
+                for action in actions:
+                    obs0, reward0, terminated0, truncated0, _ = oracle.step(
+                        action[0]
                     )
-                    obs0, sync = _oracle_reset_sync(oracle, env_id)
-                    obs_atol = _torso_alignment_obs_atol(env_id)
-                    reward_atol = _torso_alignment_reward_atol(env_id)
-                    config, pool_type = _torso_config(
-                        env_id, model_path=model_path, overrides=sync
+                    obs1, reward1, terminated1, truncated1, _ = native.step(
+                        action
                     )
-                    native = _make_env(config, pool_type, MyoSuiteTorsoEnvSpec)
-                    obs1, _ = native.reset()
                     np.testing.assert_allclose(
                         obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
                     )
-                    actions = _seeded_actions(
-                        (1, _model(model_path).nu),
-                        steps=_ALIGNMENT_STEPS,
-                        seed=101,
+                    np.testing.assert_allclose(
+                        reward1,
+                        np.array([reward0]),
+                        atol=reward_atol,
+                        rtol=reward_atol,
                     )
-                    for action in actions:
-                        obs0, reward0, terminated0, truncated0, _ = oracle.step(
-                            action[0]
-                        )
-                        obs1, reward1, terminated1, truncated1, _ = native.step(
-                            action
-                        )
-                        np.testing.assert_allclose(
-                            obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
-                        )
-                        np.testing.assert_allclose(
-                            reward1,
-                            np.array([reward0]),
-                            atol=reward_atol,
-                            rtol=reward_atol,
-                        )
-                        np.testing.assert_array_equal(
-                            terminated1, np.array([terminated0])
-                        )
-                        np.testing.assert_array_equal(
-                            truncated1, np.array([truncated0])
-                        )
-                        if terminated0 or truncated0:
-                            break
+                    np.testing.assert_array_equal(
+                        terminated1, np.array([terminated0])
+                    )
+                    np.testing.assert_array_equal(
+                        truncated1, np.array([truncated0])
+                    )
+                    if terminated0 or truncated0:
+                        break
 
     def test_pen_twirl_alignment_representative_ids(self) -> None:
         """Representative pen-twirl envs should align with the official oracle."""
         for env_id in _PENTWIRL_ALIGN_IDS:
             entry = _entry(env_id)
-            with _edited_model_if_needed(entry) as model_path:
-                with self.subTest(env_id=env_id):
-                    cls = _oracle_class(env_id)
-                    kwargs = dict(entry["kwargs"])
-                    kwargs.pop("edit_fn", None)
-                    kwargs["model_path"] = model_path
-                    oracle: Any = gymnasium.wrappers.TimeLimit(
-                        cls(seed=123, **kwargs),
-                        max_episode_steps=entry["max_episode_steps"],
+            model_path = _alignment_model_path(entry)
+            with self.subTest(env_id=env_id):
+                cls = _oracle_class(env_id)
+                kwargs = dict(entry["kwargs"])
+                kwargs.pop("edit_fn", None)
+                kwargs["model_path"] = model_path
+                oracle: Any = gymnasium.wrappers.TimeLimit(
+                    cls(seed=123, **kwargs),
+                    max_episode_steps=entry["max_episode_steps"],
+                )
+                obs0, sync = _oracle_reset_sync(oracle, env_id)
+                obs_atol = _pen_twirl_alignment_obs_atol(env_id)
+                reward_atol = _pen_twirl_alignment_reward_atol(env_id)
+                config, pool_type = _pen_twirl_config(
+                    env_id, model_path=model_path, overrides=sync
+                )
+                native = _make_env(config, pool_type, MyoSuitePenTwirlEnvSpec)
+                obs1, _ = native.reset()
+                np.testing.assert_allclose(
+                    obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
+                )
+                actions = _seeded_actions(
+                    (1, _model(model_path).nu),
+                    steps=_ALIGNMENT_STEPS,
+                    seed=109,
+                )
+                for action in actions:
+                    obs0, reward0, terminated0, truncated0, _ = oracle.step(
+                        action[0]
                     )
-                    obs0, sync = _oracle_reset_sync(oracle, env_id)
-                    obs_atol = _pen_twirl_alignment_obs_atol(env_id)
-                    reward_atol = _pen_twirl_alignment_reward_atol(env_id)
-                    config, pool_type = _pen_twirl_config(
-                        env_id, model_path=model_path, overrides=sync
+                    obs1, reward1, terminated1, truncated1, _ = native.step(
+                        action
                     )
-                    native = _make_env(
-                        config, pool_type, MyoSuitePenTwirlEnvSpec
-                    )
-                    obs1, _ = native.reset()
                     np.testing.assert_allclose(
                         obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
                     )
-                    actions = _seeded_actions(
-                        (1, _model(model_path).nu),
-                        steps=_ALIGNMENT_STEPS,
-                        seed=109,
+                    np.testing.assert_allclose(
+                        reward1,
+                        np.array([reward0]),
+                        atol=reward_atol,
+                        rtol=reward_atol,
                     )
-                    for action in actions:
-                        obs0, reward0, terminated0, truncated0, _ = oracle.step(
-                            action[0]
-                        )
-                        obs1, reward1, terminated1, truncated1, _ = native.step(
-                            action
-                        )
-                        np.testing.assert_allclose(
-                            obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
-                        )
-                        np.testing.assert_allclose(
-                            reward1,
-                            np.array([reward0]),
-                            atol=reward_atol,
-                            rtol=reward_atol,
-                        )
-                        np.testing.assert_array_equal(
-                            terminated1, np.array([terminated0])
-                        )
-                        np.testing.assert_array_equal(
-                            truncated1, np.array([truncated0])
-                        )
-                        if terminated0 or truncated0:
-                            break
+                    np.testing.assert_array_equal(
+                        terminated1, np.array([terminated0])
+                    )
+                    np.testing.assert_array_equal(
+                        truncated1, np.array([truncated0])
+                    )
+                    if terminated0 or truncated0:
+                        break
 
     def test_walk_alignment_representative_ids(self) -> None:
         """Representative walk envs should align with the official oracle."""
         for env_id in _WALK_ALIGN_IDS:
             entry = _entry(env_id)
-            with _edited_model_if_needed(entry) as model_path:
-                with self.subTest(env_id=env_id):
-                    cls = _oracle_class(env_id)
-                    kwargs = dict(entry["kwargs"])
-                    kwargs["model_path"] = model_path
-                    oracle: Any = gymnasium.wrappers.TimeLimit(
-                        cls(seed=123, **kwargs),
-                        max_episode_steps=entry["max_episode_steps"],
+            model_path = _alignment_model_path(entry)
+            with self.subTest(env_id=env_id):
+                cls = _oracle_class(env_id)
+                kwargs = dict(entry["kwargs"])
+                kwargs["model_path"] = model_path
+                oracle: Any = gymnasium.wrappers.TimeLimit(
+                    cls(seed=123, **kwargs),
+                    max_episode_steps=entry["max_episode_steps"],
+                )
+                obs0, sync = _oracle_reset_sync(oracle, env_id)
+                obs_atol = _walk_alignment_obs_atol(env_id)
+                reward_atol = _walk_alignment_reward_atol(env_id)
+                config, pool_type, spec_type = _walk_like_config(
+                    env_id, model_path=model_path, overrides=sync
+                )
+                native = _make_env(config, pool_type, spec_type)
+                obs1, _ = native.reset()
+                np.testing.assert_allclose(
+                    obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
+                )
+                actions = _seeded_actions(
+                    (1, _model(model_path).nu),
+                    steps=_ALIGNMENT_STEPS,
+                    seed=131,
+                )
+                for action in actions:
+                    obs0, reward0, terminated0, truncated0, _ = oracle.step(
+                        action[0]
                     )
-                    obs0, sync = _oracle_reset_sync(oracle, env_id)
-                    obs_atol = _walk_alignment_obs_atol(env_id)
-                    reward_atol = _walk_alignment_reward_atol(env_id)
-                    config, pool_type, spec_type = _walk_like_config(
-                        env_id, model_path=model_path, overrides=sync
+                    obs1, reward1, terminated1, truncated1, _ = native.step(
+                        action
                     )
-                    native = _make_env(config, pool_type, spec_type)
-                    obs1, _ = native.reset()
                     np.testing.assert_allclose(
                         obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
                     )
-                    actions = _seeded_actions(
-                        (1, _model(model_path).nu),
-                        steps=_ALIGNMENT_STEPS,
-                        seed=131,
+                    np.testing.assert_allclose(
+                        reward1,
+                        np.array([reward0]),
+                        atol=reward_atol,
+                        rtol=reward_atol,
                     )
-                    for action in actions:
-                        obs0, reward0, terminated0, truncated0, _ = oracle.step(
-                            action[0]
-                        )
-                        obs1, reward1, terminated1, truncated1, _ = native.step(
-                            action
-                        )
-                        np.testing.assert_allclose(
-                            obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
-                        )
-                        np.testing.assert_allclose(
-                            reward1,
-                            np.array([reward0]),
-                            atol=reward_atol,
-                            rtol=reward_atol,
-                        )
-                        np.testing.assert_array_equal(
-                            terminated1, np.array([terminated0])
-                        )
-                        np.testing.assert_array_equal(
-                            truncated1, np.array([truncated0])
-                        )
-                        if terminated0 or truncated0:
-                            break
+                    np.testing.assert_array_equal(
+                        terminated1, np.array([terminated0])
+                    )
+                    np.testing.assert_array_equal(
+                        truncated1, np.array([truncated0])
+                    )
+                    if terminated0 or truncated0:
+                        break
 
     def test_terrain_alignment_representative_ids(self) -> None:
         """Representative terrain envs should align with the official oracle."""
         for env_id in _TERRAIN_ALIGN_IDS:
             entry = _entry(env_id)
-            with _edited_model_if_needed(entry) as model_path:
-                with self.subTest(env_id=env_id):
-                    cls = _oracle_class(env_id)
-                    kwargs = dict(entry["kwargs"])
-                    kwargs["model_path"] = model_path
-                    oracle: Any = gymnasium.wrappers.TimeLimit(
-                        cls(seed=123, **kwargs),
-                        max_episode_steps=entry["max_episode_steps"],
+            model_path = _alignment_model_path(entry)
+            with self.subTest(env_id=env_id):
+                cls = _oracle_class(env_id)
+                kwargs = dict(entry["kwargs"])
+                kwargs["model_path"] = model_path
+                oracle: Any = gymnasium.wrappers.TimeLimit(
+                    cls(seed=123, **kwargs),
+                    max_episode_steps=entry["max_episode_steps"],
+                )
+                obs0, sync = _oracle_reset_sync(oracle, env_id)
+                obs_atol = _terrain_alignment_obs_atol(env_id)
+                reward_atol = _terrain_alignment_reward_atol(env_id)
+                config, pool_type, spec_type = _walk_like_config(
+                    env_id, model_path=model_path, overrides=sync
+                )
+                native = _make_env(config, pool_type, spec_type)
+                obs1, _ = native.reset()
+                np.testing.assert_allclose(
+                    obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
+                )
+                actions = _seeded_actions(
+                    (1, _model(model_path).nu),
+                    steps=_ALIGNMENT_STEPS,
+                    seed=149,
+                )
+                for action in actions:
+                    obs0, reward0, terminated0, truncated0, _ = oracle.step(
+                        action[0]
                     )
-                    obs0, sync = _oracle_reset_sync(oracle, env_id)
-                    obs_atol = _terrain_alignment_obs_atol(env_id)
-                    reward_atol = _terrain_alignment_reward_atol(env_id)
-                    config, pool_type, spec_type = _walk_like_config(
-                        env_id, model_path=model_path, overrides=sync
+                    obs1, reward1, terminated1, truncated1, _ = native.step(
+                        action
                     )
-                    native = _make_env(config, pool_type, spec_type)
-                    obs1, _ = native.reset()
                     np.testing.assert_allclose(
                         obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
                     )
-                    actions = _seeded_actions(
-                        (1, _model(model_path).nu),
-                        steps=_ALIGNMENT_STEPS,
-                        seed=149,
+                    np.testing.assert_allclose(
+                        reward1,
+                        np.array([reward0]),
+                        atol=reward_atol,
+                        rtol=reward_atol,
                     )
-                    for action in actions:
-                        obs0, reward0, terminated0, truncated0, _ = oracle.step(
-                            action[0]
-                        )
-                        obs1, reward1, terminated1, truncated1, _ = native.step(
-                            action
-                        )
-                        np.testing.assert_allclose(
-                            obs1, obs0[None, :], atol=obs_atol, rtol=obs_atol
-                        )
-                        np.testing.assert_allclose(
-                            reward1,
-                            np.array([reward0]),
-                            atol=reward_atol,
-                            rtol=reward_atol,
-                        )
-                        np.testing.assert_array_equal(
-                            terminated1, np.array([terminated0])
-                        )
-                        np.testing.assert_array_equal(
-                            truncated1, np.array([truncated0])
-                        )
-                        if terminated0 or truncated0:
-                            break
+                    np.testing.assert_array_equal(
+                        terminated1, np.array([terminated0])
+                    )
+                    np.testing.assert_array_equal(
+                        truncated1, np.array([truncated0])
+                    )
+                    if terminated0 or truncated0:
+                        break
 
     def test_pose_pixel_observation_smoke(self) -> None:
         """Pose pixel wrappers should emit batched RGB observations."""

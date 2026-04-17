@@ -239,6 +239,7 @@ class MujocoRobotEnv : public RenderableEnv {
   virtual void ConfigureRenderOption(mjvOption* option) const { (void)option; }
 
   void InitializeRenderCamera(mjvCamera* camera) const {
+    *camera = mjvCamera{};
     mjv_defaultCamera(camera);
     camera->type = mjCAMERA_FREE;
     camera->fixedcamid = -1;
@@ -252,6 +253,7 @@ class MujocoRobotEnv : public RenderableEnv {
   }
 
   void InitializeRenderOption(mjvOption* option) const {
+    *option = mjvOption{};
     mjv_defaultOption(option);
     ConfigureRenderOption(option);
   }
@@ -268,6 +270,9 @@ class MujocoRobotEnv : public RenderableEnv {
     data_->time = initial_time_;
     std::memcpy(data_->qpos, initial_qpos_.data(), sizeof(mjtNum) * model_->nq);
     std::memcpy(data_->qvel, initial_qvel_.data(), sizeof(mjtNum) * model_->nv);
+    if (model_->nu != 0) {
+      mju_zero(data_->ctrl, model_->nu);
+    }
     if (model_->na != 0) {
       mju_zero(data_->act, model_->na);
     }
@@ -283,7 +288,9 @@ class MujocoRobotEnv : public RenderableEnv {
     }
   }
 
-  void InvalidateRenderCache() { has_cached_render_ = false; }
+  void InvalidateRenderCache() {
+    has_cached_render_ = false;
+  }
 
   void CaptureResetState() {
 #ifdef ENVPOOL_TEST

@@ -15,8 +15,11 @@
 
 from __future__ import annotations
 
+import ctypes
 import importlib
 import os
+import platform
+import subprocess
 import sys
 import tempfile
 from contextlib import contextmanager
@@ -28,6 +31,228 @@ from envpool.mujoco.myosuite.paths import (
     myosuite_asset_root,
     resolve_workspace_path,
 )
+
+
+def _configure_linux_mujoco_gl() -> None:
+    if platform.system() != "Linux":
+        return
+    if os.environ.get("MUJOCO_GL"):
+        if os.environ["MUJOCO_GL"] == "egl":
+            os.environ.setdefault("EGL_PLATFORM", "surfaceless")
+        return
+    for backend in ("egl", "osmesa"):
+        env = dict(os.environ)
+        env["MUJOCO_GL"] = backend
+        if backend == "egl":
+            env.setdefault("EGL_PLATFORM", "surfaceless")
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import mujoco; "
+                    "ctx = mujoco.GLContext(1, 1); "
+                    "ctx.make_current(); "
+                    "ctx.free()"
+                ),
+            ],
+            env=env,
+            check=False,
+            capture_output=True,
+        )
+        if result.returncode == 0:
+            os.environ["MUJOCO_GL"] = backend
+            if backend == "egl":
+                os.environ.setdefault("EGL_PLATFORM", "surfaceless")
+            return
+
+
+def _configure_macos_dm_control_imports() -> None:
+    if platform.system() != "Darwin":
+        return
+    # dm_control eagerly imports the GLFW backend when MUJOCO_GL is unset.
+    # Force the no-render backend at import time so non-render oracle tests do
+    # not hang inside glfw.init() on macOS.
+    os.environ.setdefault("MUJOCO_GL", "off")
+
+
+def _configure_macos_dm_control_renderer() -> None:
+    if platform.system() != "Darwin":
+        return
+
+    from dm_control import _render
+    from dm_control._render import base as dm_control_render_base
+    from dm_control._render import executor as dm_control_render_executor
+
+    class _CglContext(dm_control_render_base.ContextBase):
+        def __init__(self, max_width: int, max_height: int):
+            super().__init__(
+                max_width,
+                max_height,
+                dm_control_render_executor.PassthroughRenderExecutor,
+            )
+
+        def _platform_init(self, max_width: int, max_height: int) -> None:
+            del max_width, max_height
+            from mujoco.cgl import cgl
+
+            attrib = cgl.CGLPixelFormatAttribute
+            profile = cgl.CGLOpenGLProfile
+            attrib_values = (
+                attrib.CGLPFAOpenGLProfile,
+                profile.CGLOGLPVersion_Legacy,
+                attrib.CGLPFAColorSize,
+                24,
+                attrib.CGLPFAAlphaSize,
+                8,
+                attrib.CGLPFADepthSize,
+                24,
+                attrib.CGLPFAStencilSize,
+                8,
+                attrib.CGLPFAMultisample,
+                attrib.CGLPFASampleBuffers,
+                1,
+                attrib.CGLPFASample,
+                4,
+                attrib.CGLPFAAccelerated,
+                0,
+            )
+            attribs = (ctypes.c_int * len(attrib_values))(*attrib_values)
+            self._pixel_format = cgl.CGLPixelFormatObj()
+            num_pixel_formats = cgl.GLint()
+            cgl.CGLChoosePixelFormat(
+                attribs,
+                ctypes.byref(self._pixel_format),
+                ctypes.byref(num_pixel_formats),
+            )
+            if not self._pixel_format or num_pixel_formats.value == 0:
+                raise RuntimeError("failed to create CGL pixel format")
+
+            self._context = cgl.CGLContextObj()
+            cgl.CGLCreateContext(
+                self._pixel_format,
+                0,
+                ctypes.byref(self._context),
+            )
+            if not self._context:
+                cgl.CGLReleasePixelFormat(self._pixel_format)
+                self._pixel_format = None
+                raise RuntimeError("failed to create CGL context")
+            self._locked = False
+
+        def _platform_make_current(self) -> None:
+            from mujoco.cgl import cgl
+
+            cgl.CGLSetCurrentContext(self._context)
+            # Mirror mujoco.cgl.GLContext so the official renderer uses the
+            # same CGL lifecycle as EnvPool's native renderer.
+            if not self._locked:
+                cgl.CGLLockContext(self._context)
+                self._locked = True
+
+        def _platform_free(self) -> None:
+            from mujoco.cgl import cgl
+
+            if self._context:
+                if self._locked:
+                    cgl.CGLUnlockContext(self._context)
+                    self._locked = False
+                cgl.CGLSetCurrentContext(None)
+                cgl.CGLReleaseContext(self._context)
+                self._context = None
+            if self._pixel_format:
+                cgl.CGLReleasePixelFormat(self._pixel_format)
+                self._pixel_format = None
+
+    _render.Renderer = _CglContext
+    _render.BACKEND = "cgl"
+    _render.USING_GPU = True
+
+
+def _configure_macos_mujoco_renderer() -> None:
+    if platform.system() != "Darwin":
+        return
+
+    import mujoco.rendering.classic.gl_context as classic_gl_context
+    import mujoco.rendering.classic.renderer as classic_renderer
+
+    class _ClassicCglContext:
+        def __init__(self, width: int, height: int):
+            del width, height
+            from mujoco.cgl import cgl
+
+            attrib = cgl.CGLPixelFormatAttribute
+            profile = cgl.CGLOpenGLProfile
+            attrib_values = (
+                attrib.CGLPFAOpenGLProfile,
+                profile.CGLOGLPVersion_Legacy,
+                attrib.CGLPFAColorSize,
+                24,
+                attrib.CGLPFAAlphaSize,
+                8,
+                attrib.CGLPFADepthSize,
+                24,
+                attrib.CGLPFAStencilSize,
+                8,
+                attrib.CGLPFAMultisample,
+                attrib.CGLPFASampleBuffers,
+                1,
+                attrib.CGLPFASample,
+                4,
+                attrib.CGLPFAAccelerated,
+                0,
+            )
+            attribs = (ctypes.c_int * len(attrib_values))(*attrib_values)
+            self._pixel_format = cgl.CGLPixelFormatObj()
+            num_pixel_formats = cgl.GLint()
+            cgl.CGLChoosePixelFormat(
+                attribs,
+                ctypes.byref(self._pixel_format),
+                ctypes.byref(num_pixel_formats),
+            )
+            if not self._pixel_format or num_pixel_formats.value == 0:
+                raise RuntimeError("failed to create CGL pixel format")
+
+            self._context = cgl.CGLContextObj()
+            cgl.CGLCreateContext(
+                self._pixel_format,
+                0,
+                ctypes.byref(self._context),
+            )
+            if not self._context:
+                cgl.CGLReleasePixelFormat(self._pixel_format)
+                self._pixel_format = None
+                raise RuntimeError("failed to create CGL context")
+            self._locked = False
+
+        def make_current(self) -> None:
+            from mujoco.cgl import cgl
+
+            cgl.CGLSetCurrentContext(self._context)
+            if not self._locked:
+                cgl.CGLLockContext(self._context)
+                self._locked = True
+
+        def free(self) -> None:
+            from mujoco.cgl import cgl
+
+            if self._context:
+                if self._locked:
+                    cgl.CGLUnlockContext(self._context)
+                    self._locked = False
+                cgl.CGLSetCurrentContext(None)
+                cgl.CGLReleaseContext(self._context)
+                self._context = None
+            if self._pixel_format:
+                cgl.CGLReleasePixelFormat(self._pixel_format)
+                self._pixel_format = None
+
+        def __del__(self) -> None:
+            self.free()
+
+    os.environ["MUJOCO_GL"] = "cgl"
+    classic_gl_context.GLContext = _ClassicCglContext
+    classic_renderer.GLContext = _ClassicCglContext
 
 
 def _replace_all(text: str, old: str, new: str) -> str:
@@ -54,11 +279,16 @@ def find_vendored_myosuite_root() -> Path:
 
 
 @cache
-def prepare_oracle_imports() -> None:
+def prepare_oracle_imports(*, render: bool = False) -> None:
     """Expose vendored MyoSuite Python modules on sys.path."""
+    _configure_linux_mujoco_gl()
+    _configure_macos_dm_control_imports()
     source_root = str(find_vendored_myosuite_root())
     if source_root not in sys.path:
         sys.path.insert(0, source_root)
+    if render:
+        _configure_macos_dm_control_renderer()
+        _configure_macos_mujoco_renderer()
 
 
 @cache
@@ -67,6 +297,14 @@ def load_oracle_class(entry_module: str, class_name: str) -> Any:
     prepare_oracle_imports()
     module = importlib.import_module(entry_module)
     return getattr(module, class_name)
+
+
+@cache
+def load_oracle_attr(module_path: str, attr_name: str) -> Any:
+    """Import one vendored upstream attribute by module path and name."""
+    prepare_oracle_imports()
+    module = importlib.import_module(module_path)
+    return getattr(module, attr_name)
 
 
 @contextmanager

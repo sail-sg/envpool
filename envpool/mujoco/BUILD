@@ -16,7 +16,7 @@ load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("//envpool:requirements.bzl", "requirement")
-load("//third_party:common.bzl", "copy_to_directory")
+load("//third_party:common.bzl", "copy_files_to_directory", "copy_to_directory")
 load("//third_party/metaworld_assets:defs.bzl", "metaworld_runtime_assets")
 load("//third_party/myosuite:defs.bzl", "myosuite_runtime_assets")
 
@@ -104,12 +104,28 @@ myosuite_runtime_assets(
     myo_sim_assets = ["@myo_sim_src//:runtime_assets"],
     myosuite_env_assets = ["@myosuite_src//:myosuite_runtime_assets"],
     object_sim_assets = ["@object_sim_src//:runtime_assets"],
+    patched_assets = [
+        "//third_party/myosuite:simhive/myo_sim/arm/myoarm_reach.xml",
+        "//third_party/myosuite:simhive/myo_sim/arm/myoarm_tabletennis.xml",
+    ],
     ycb_sim_assets = ["@ycb_sim_src//:runtime_assets"],
 )
 
 filegroup(
     name = "myosuite_runtime_assets",
     srcs = [":gen_myosuite_runtime_assets"],
+)
+
+copy_files_to_directory(
+    name = "gen_myosuite_metadata",
+    srcs = ["//third_party/myosuite:env_ids.json"],
+    out = "myosuite",
+    strip_prefix = "third_party/myosuite/",
+)
+
+filegroup(
+    name = "myosuite_packaged_metadata",
+    srcs = [":gen_myosuite_metadata"],
 )
 
 cc_library(
@@ -130,8 +146,8 @@ py_library(
     ],
     data = [
         ":myosuite_envpool",
+        ":myosuite_packaged_metadata",
         ":myosuite_runtime_assets",
-        "//third_party/myosuite:metadata/env_ids.json",
     ],
     imports = ["../.."],
     deps = [
@@ -796,15 +812,187 @@ py_test(
     ],
 )
 
+# Keep MyoSuite render checks exclusive and moderately sharded: concurrent
+# shard binaries can create enough GL pressure on AGX to trip MuJoCo's
+# compiled-variants footprint limit, while a single monolithic sweep is too
+# large for one process.
+_MYOSUITE_RENDER_SHARD_COUNT = 8
+
+
 py_test(
-    name = "myosuite_render_test",
+    name = "myosuite_render_doc_test",
     size = "large",
     srcs = ["myosuite/myosuite_render_test.py"],
+    args = [
+        "--nomyosuite_render_run_surface",
+        "--myosuite_render_include_doc_cases=true",
+    ],
     imports = ["../.."],
     main = "myosuite/myosuite_render_test.py",
+    tags = ["exclusive"],
     deps = [
         ":myosuite_render_utils",
         requirement("absl-py"),
         requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_render_shard_0",
+    size = "enormous",
+    srcs = ["myosuite/myosuite_render_test.py"],
+    args = [
+        "--myosuite_render_shard_index=0",
+        "--myosuite_render_shard_count=8",
+        "--myosuite_render_include_doc_cases=false",
+    ],
+    imports = ["../.."],
+    main = "myosuite/myosuite_render_test.py",
+    tags = ["exclusive"],
+    deps = [
+        ":myosuite_render_utils",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_render_shard_1",
+    size = "enormous",
+    srcs = ["myosuite/myosuite_render_test.py"],
+    args = [
+        "--myosuite_render_shard_index=1",
+        "--myosuite_render_shard_count=8",
+        "--myosuite_render_include_doc_cases=false",
+    ],
+    imports = ["../.."],
+    main = "myosuite/myosuite_render_test.py",
+    tags = ["exclusive"],
+    deps = [
+        ":myosuite_render_utils",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_render_shard_2",
+    size = "enormous",
+    srcs = ["myosuite/myosuite_render_test.py"],
+    args = [
+        "--myosuite_render_shard_index=2",
+        "--myosuite_render_shard_count=8",
+        "--myosuite_render_include_doc_cases=false",
+    ],
+    imports = ["../.."],
+    main = "myosuite/myosuite_render_test.py",
+    tags = ["exclusive"],
+    deps = [
+        ":myosuite_render_utils",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_render_shard_3",
+    size = "enormous",
+    srcs = ["myosuite/myosuite_render_test.py"],
+    args = [
+        "--myosuite_render_shard_index=3",
+        "--myosuite_render_shard_count=8",
+        "--myosuite_render_include_doc_cases=false",
+    ],
+    imports = ["../.."],
+    main = "myosuite/myosuite_render_test.py",
+    tags = ["exclusive"],
+    deps = [
+        ":myosuite_render_utils",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_render_shard_4",
+    size = "enormous",
+    srcs = ["myosuite/myosuite_render_test.py"],
+    args = [
+        "--myosuite_render_shard_index=4",
+        "--myosuite_render_shard_count=8",
+        "--myosuite_render_include_doc_cases=false",
+    ],
+    imports = ["../.."],
+    main = "myosuite/myosuite_render_test.py",
+    tags = ["exclusive"],
+    deps = [
+        ":myosuite_render_utils",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_render_shard_5",
+    size = "enormous",
+    srcs = ["myosuite/myosuite_render_test.py"],
+    args = [
+        "--myosuite_render_shard_index=5",
+        "--myosuite_render_shard_count=8",
+        "--myosuite_render_include_doc_cases=false",
+    ],
+    imports = ["../.."],
+    main = "myosuite/myosuite_render_test.py",
+    tags = ["exclusive"],
+    deps = [
+        ":myosuite_render_utils",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_render_shard_6",
+    size = "enormous",
+    srcs = ["myosuite/myosuite_render_test.py"],
+    args = [
+        "--myosuite_render_shard_index=6",
+        "--myosuite_render_shard_count=8",
+        "--myosuite_render_include_doc_cases=false",
+    ],
+    imports = ["../.."],
+    main = "myosuite/myosuite_render_test.py",
+    tags = ["exclusive"],
+    deps = [
+        ":myosuite_render_utils",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_render_shard_7",
+    size = "enormous",
+    srcs = ["myosuite/myosuite_render_test.py"],
+    args = [
+        "--myosuite_render_shard_index=7",
+        "--myosuite_render_shard_count=8",
+        "--myosuite_render_include_doc_cases=false",
+    ],
+    imports = ["../.."],
+    main = "myosuite/myosuite_render_test.py",
+    tags = ["exclusive"],
+    deps = [
+        ":myosuite_render_utils",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
+test_suite(
+    name = "myosuite_render_test",
+    tests = [":myosuite_render_doc_test"] + [
+        ":myosuite_render_shard_%d" % shard_index
+        for shard_index in range(_MYOSUITE_RENDER_SHARD_COUNT)
     ],
 )

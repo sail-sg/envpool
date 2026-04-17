@@ -24,6 +24,10 @@ import mujoco
 import numpy as np
 from absl.testing import absltest
 
+from envpool.mujoco.myosuite.config import (
+    myosuite_expanded_entry,
+    resolve_myosuite_model_path,
+)
 from envpool.mujoco.myosuite.metadata import MYOSUITE_DIRECT_ENTRIES
 from envpool.mujoco.myosuite.native import (
     MyoChallengeBaodingEnvSpec,
@@ -123,23 +127,53 @@ _TABLETENNIS_ALIGNMENT_ATOL = 5e-4
 
 
 def _entry(env_id: str) -> dict[str, Any]:
-    return next(
-        entry for entry in MYOSUITE_DIRECT_ENTRIES if entry["id"] == env_id
-    )
+    entry, variant_kwargs = myosuite_expanded_entry(env_id)
+    merged = dict(entry)
+    merged["id"] = env_id
+    merged["kwargs"] = {**entry["kwargs"], **variant_kwargs}
+    return merged
 
 
-def _asset_model_path(model_path: str) -> Path:
+def _runtime_model_path(model_path: str) -> Path:
+    path = Path(resolve_myosuite_model_path(model_path))
+    return path if path.is_absolute() else myosuite_asset_root() / path
+
+
+def _oracle_model_path(model_path: str) -> Path:
     path = Path(model_path)
-    return path if path.is_absolute() else myosuite_asset_root() / model_path
+    return path if path.is_absolute() else myosuite_asset_root() / path
 
 
 @cache
 def _model(path: str) -> mujoco.MjModel:
-    return mujoco.MjModel.from_xml_path(str(_asset_model_path(path)))
+    return mujoco.MjModel.from_xml_path(str(_runtime_model_path(path)))
 
 
 def _make_env(config: tuple[Any, ...], pool_type: type, spec_type: type) -> Any:
     return pool_type(spec_type(config))
+
+
+def _soccer_policy_id(policy: str) -> int:
+    return {"block_ball": 0, "random": 1, "stationary": 2}[policy]
+
+
+def _chasetag_policy_id(policy: str) -> int:
+    return {
+        "static_stationary": 0,
+        "stationary": 1,
+        "random": 2,
+        "chase_player": 3,
+        "repeller": 4,
+    }[policy]
+
+
+def _runtrack_osl_state_id(state: str) -> int:
+    return {
+        "e_stance": 0,
+        "l_stance": 1,
+        "e_swing": 2,
+        "l_swing": 3,
+    }[state]
 
 
 def _seeded_actions(
@@ -245,6 +279,7 @@ def _reorient_config(
         frame_skip=int(kwargs.get("frame_skip", 5)),
         model_path=str(kwargs["model_path"]),
         normalize_act=bool(kwargs.get("normalize_act", True)),
+        muscle_condition=str(kwargs.get("muscle_condition", "")),
         obs_dim=(model.nq - 7) + (model.nv - 6) + 18 + model.na,
         qpos_dim=model.nq,
         qvel_dim=model.nv,
@@ -316,6 +351,7 @@ def _relocate_config(
         frame_skip=int(kwargs.get("frame_skip", 5)),
         model_path=str(kwargs["model_path"]),
         normalize_act=bool(kwargs.get("normalize_act", True)),
+        muscle_condition=str(kwargs.get("muscle_condition", "")),
         obs_dim=(model.nq - 7) + (model.nv - 6) + 18 + model.na,
         qpos_dim=model.nq,
         qvel_dim=model.nv,
@@ -432,6 +468,7 @@ def _baoding_config(
         frame_skip=int(kwargs.get("frame_skip", 10)),
         model_path=str(kwargs["model_path"]),
         normalize_act=bool(kwargs.get("normalize_act", True)),
+        muscle_condition=str(kwargs.get("muscle_condition", "")),
         obs_dim=(model.nq - 14) + 24 + model.na,
         qpos_dim=model.nq,
         qvel_dim=model.nv,
@@ -563,6 +600,7 @@ def _bimanual_config(
         frame_skip=int(kwargs.get("frame_skip", 5)),
         model_path=str(kwargs["model_path"]),
         normalize_act=bool(kwargs.get("normalize_act", True)),
+        muscle_condition=str(kwargs.get("muscle_condition", "")),
         obs_dim=1
         + len(myo_qpos)
         + len(myo_dof)
@@ -657,6 +695,7 @@ def _runtrack_config(
         frame_skip=int(kwargs.get("frame_skip", 5)),
         model_path=str(kwargs["model_path"]),
         normalize_act=bool(kwargs.get("normalize_act", True)),
+        muscle_condition=str(kwargs.get("muscle_condition", "")),
         obs_dim=obs_dim,
         qpos_dim=model.nq,
         qvel_dim=model.nv,
@@ -668,6 +707,9 @@ def _runtrack_config(
         start_pos=float(kwargs.get("start_pos", 14)),
         end_pos=float(kwargs.get("end_pos", -15)),
         real_width=float(kwargs.get("real_width", 1)),
+        hills_difficulties=list(kwargs.get("hills_difficulties", [])),
+        rough_difficulties=list(kwargs.get("rough_difficulties", [])),
+        stairs_difficulties=list(kwargs.get("stairs_difficulties", [])),
         reward_sparse_w=1.0,
         reward_solved_w=10.0,
     )
@@ -720,17 +762,14 @@ def _soccer_config(
         not in (None, "root")
     )
     obs_dim = (
-        1
-        + internal_joint_count
+        internal_joint_count
         + internal_joint_count
         + 4
         + 4
-        + model.na * 4
         + 3
-        + 12
         + 7
         + 6
-        + 2
+        + model.na * 4
     )
     probabilities = kwargs.get("goalkeeper_probabilities", [0.1, 0.45, 0.45])
     config = MyoChallengeSoccerEnvSpec.gen_config(
@@ -740,6 +779,7 @@ def _soccer_config(
         frame_skip=int(kwargs.get("frame_skip", 10)),
         model_path=str(kwargs["model_path"]),
         normalize_act=bool(kwargs.get("normalize_act", True)),
+        muscle_condition=str(kwargs.get("muscle_condition", "")),
         obs_dim=obs_dim,
         qpos_dim=model.nq,
         qvel_dim=model.nv,
@@ -808,6 +848,7 @@ def _chasetag_config(
         frame_skip=int(kwargs.get("frame_skip", 10)),
         model_path=str(kwargs["model_path"]),
         normalize_act=bool(kwargs.get("normalize_act", True)),
+        muscle_condition=str(kwargs.get("muscle_condition", "")),
         obs_dim=obs_dim,
         qpos_dim=model.nq,
         qvel_dim=model.nv,
@@ -819,13 +860,16 @@ def _chasetag_config(
         task_choice=str(kwargs.get("task_choice", "CHASE")),
         terrain=str(kwargs.get("terrain", "FLAT")),
         repeller_opponent=bool(kwargs.get("repeller_opponent", False)),
+        hills_range=list(kwargs.get("hills_range", [0.0, 0.0])),
+        rough_range=list(kwargs.get("rough_range", [0.0, 0.0])),
+        relief_range=list(kwargs.get("relief_range", [0.0, 0.0])),
         chase_vel_low=float(kwargs.get("chase_vel_range", [1.0, 1.0])[0]),
         chase_vel_high=float(kwargs.get("chase_vel_range", [1.0, 1.0])[1]),
-        random_vel_low=float(kwargs.get("random_vel_range", [-2.0, 2.0])[0]),
-        random_vel_high=float(kwargs.get("random_vel_range", [-2.0, 2.0])[1]),
-        repeller_vel_low=float(kwargs.get("repeller_vel_range", [0.3, 1.0])[0]),
+        random_vel_low=float(kwargs.get("random_vel_range", [1.0, 1.0])[0]),
+        random_vel_high=float(kwargs.get("random_vel_range", [1.0, 1.0])[1]),
+        repeller_vel_low=float(kwargs.get("repeller_vel_range", [1.0, 1.0])[0]),
         repeller_vel_high=float(
-            kwargs.get("repeller_vel_range", [0.3, 1.0])[1]
+            kwargs.get("repeller_vel_range", [1.0, 1.0])[1]
         ),
         opponent_probabilities=list(
             kwargs.get("opponent_probabilities", [0.1, 0.45, 0.45])
@@ -874,8 +918,24 @@ def _tabletennis_config(
 ) -> tuple[tuple[Any, ...], type, type]:
     entry = _entry(env_id)
     kwargs = dict(entry["kwargs"])
+    model_path = str(resolve_myosuite_model_path(kwargs["model_path"]))
     model = _model(kwargs["model_path"])
-    body_joint_count = sum(
+    body_qpos_count = sum(
+        1
+        for joint_id in range(model.njnt)
+        if (
+            (
+                name := mujoco.mj_id2name(
+                    model, mujoco.mjtObj.mjOBJ_JOINT, joint_id
+                )
+            )
+            is not None
+            and not name.startswith("ping")
+            and name != "pingpong_freejoint"
+            and name != "paddle_freejoint"
+        )
+    )
+    body_dof_count = sum(
         1
         for joint_id in range(model.njnt)
         if (
@@ -890,10 +950,9 @@ def _tabletennis_config(
         )
     )
     obs_dim = (
-        1
-        + 3
-        + body_joint_count
-        + body_joint_count
+        3
+        + body_qpos_count
+        + body_dof_count
         + 3
         + 3
         + 3
@@ -917,8 +976,9 @@ def _tabletennis_config(
         batch_size=1,
         max_num_players=1,
         frame_skip=int(kwargs.get("frame_skip", 5)),
-        model_path=str(kwargs["model_path"]),
+        model_path=model_path,
         normalize_act=bool(kwargs.get("normalize_act", True)),
+        muscle_condition=str(kwargs.get("muscle_condition", "")),
         obs_dim=obs_dim,
         qpos_dim=model.nq,
         qvel_dim=model.nv,
@@ -990,8 +1050,14 @@ def _oracle_kwargs(env_id: str) -> dict[str, Any]:
     kwargs = dict(_entry(env_id)["kwargs"])
     for path_key in ("model_path", "init_pose_path"):
         if path_key in kwargs:
-            kwargs[path_key] = str(_asset_model_path(kwargs[path_key]))
+            kwargs[path_key] = str(_oracle_model_path(kwargs[path_key]))
     return kwargs
+
+
+def _oracle_live_obs(unwrapped: Any) -> np.ndarray:
+    obs_dict = unwrapped.get_obs_dict(unwrapped.sim)
+    _, obs = unwrapped.obsdict2obsvec(obs_dict, unwrapped.obs_keys)
+    return np.asarray(obs, dtype=np.float64)
 
 
 def _oracle_reset_sync(
@@ -1010,6 +1076,9 @@ def _oracle_reset_sync(
     }
     entry = _entry(env_id)
     if entry["class_name"] == "ReorientEnvV0":
+        sync["test_reset_act_dot"] = (
+            sim.data.act_dot.copy().tolist() if sim.model.na > 0 else []
+        )
         goal_bid = sim.model.body_name2id("target")
         target_gid = sim.model.geom_name2id("target_dice")
         object_bid = sim.model.body_name2id("Object")
@@ -1044,7 +1113,11 @@ def _oracle_reset_sync(
         )
         sync["test_object_body_mass"] = [float(sim.model.body_mass[object_bid])]
     elif entry["class_name"] == "RelocateEnvV0":
+        sync["test_reset_act_dot"] = (
+            sim.data.act_dot.copy().tolist() if sim.model.na > 0 else []
+        )
         goal_bid = sim.model.body_name2id("target")
+        goal_mocap_id = int(sim.model.body_mocapid[goal_bid])
         object_bid = sim.model.body_name2id("Object")
         start_geom = sim.model.body_geomadr[object_bid]
         geom_count = sim.model.body_geomnum[object_bid]
@@ -1054,6 +1127,13 @@ def _oracle_reset_sync(
         sync["test_goal_body_quat"] = (
             sim.model.body_quat[goal_bid].copy().tolist()
         )
+        if goal_mocap_id >= 0:
+            sync["test_goal_mocap_pos"] = (
+                sim.data.mocap_pos[goal_mocap_id].copy().tolist()
+            )
+            sync["test_goal_mocap_quat"] = (
+                sim.data.mocap_quat[goal_mocap_id].copy().tolist()
+            )
         sync["test_object_body_pos"] = (
             sim.model.body_pos[object_bid].copy().tolist()
         )
@@ -1094,6 +1174,9 @@ def _oracle_reset_sync(
             .reshape(-1)
             .tolist()
         )
+        # Upstream can recursively re-reset here to avoid contact, but still
+        # return the first stale observation. Align against the final live sim.
+        obs = _oracle_live_obs(unwrapped)
     elif entry["class_name"] == "BaodingEnvV1":
         sync["test_task"] = int(unwrapped.which_task.value)
         sync["test_ball1_starting_angle"] = float(
@@ -1106,6 +1189,12 @@ def _oracle_reset_sync(
         sync["test_y_radius"] = float(unwrapped.y_radius)
         sync["test_goal_trajectory"] = (
             np.asarray(unwrapped.goal, dtype=np.float64).reshape(-1).tolist()
+        )
+        sync["test_target1_site_pos"] = (
+            sim.model.site_pos[unwrapped.target1_sid].copy().tolist()
+        )
+        sync["test_target2_site_pos"] = (
+            sim.model.site_pos[unwrapped.target2_sid].copy().tolist()
         )
         sync["test_object1_body_mass"] = [
             float(sim.model.body_mass[unwrapped.object1_bid])
@@ -1142,6 +1231,121 @@ def _oracle_reset_sync(
             sim.model.geom_friction[unwrapped.obj_gid].copy().tolist()
         )
         obs = np.asarray(unwrapped.get_obs(), dtype=np.float64)
+    elif entry["class_name"] == "RunTrack":
+        terrain_geom_id = sim.model.geom_name2id("terrain")
+        hfield_id = int(sim.model.geom_dataid[terrain_geom_id])
+        nrow = int(sim.model.hfield_nrow[hfield_id])
+        ncol = int(sim.model.hfield_ncol[hfield_id])
+        adr = int(sim.model.hfield_adr[hfield_id])
+        sync["test_hfield_data"] = (
+            sim.model.hfield_data[adr : adr + nrow * ncol].copy().tolist()
+        )
+        sync["test_terrain_geom_rgba"] = (
+            sim.model.geom_rgba[terrain_geom_id].copy().tolist()
+        )
+        sync["test_terrain_geom_pos"] = (
+            sim.model.geom_pos[terrain_geom_id].copy().tolist()
+        )
+        sync["test_terrain_type"] = int(
+            np.asarray(unwrapped.terrain_type).reshape(-1)[0]
+        )
+        sync["test_osl_state"] = _runtrack_osl_state_id(
+            unwrapped.OSL_CTRL.STATE_MACHINE.current_state.get_name()
+        )
+        obs = np.asarray(unwrapped.get_obs(), dtype=np.float64)
+    elif entry["class_name"] == "SoccerEnvV0":
+        sync["test_reset_ctrl"] = (
+            sim.data.ctrl.copy().tolist() if sim.model.nu > 0 else []
+        )
+        sync["test_reset_act_dot"] = (
+            sim.data.act_dot.copy().tolist() if sim.model.na > 0 else []
+        )
+        sync["test_reset_qacc"] = sim.data.qacc.copy().tolist()
+        goalkeeper = unwrapped.goalkeeper
+        sync["test_goalkeeper_pose"] = np.asarray(
+            goalkeeper.get_goalkeeper_pose(), dtype=np.float64
+        ).tolist()
+        sync["test_goalkeeper_velocity"] = np.asarray(
+            goalkeeper.goalkeeper_vel, dtype=np.float64
+        ).tolist()
+        sync["test_goalkeeper_noise_buffer"] = np.asarray(
+            goalkeeper.noise_process.buffer, dtype=np.float64
+        ).reshape(-1).tolist()
+        sync["test_goalkeeper_noise_idx"] = int(goalkeeper.noise_process.idx)
+        sync["test_goalkeeper_block_velocity"] = float(
+            goalkeeper.block_velocity
+        )
+        sync["test_goalkeeper_policy"] = _soccer_policy_id(
+            goalkeeper.goalkeeper_policy
+        )
+        # Soccer mutates `sim` after reset and only forwards the live sim, not
+        # the observed sim used by `get_obs()`. Align against the final live
+        # sim state instead of the stale reset return value.
+        obs = _oracle_live_obs(unwrapped)
+    elif entry["class_name"] == "ChaseTagEnvV0":
+        sync["test_reset_ctrl"] = (
+            sim.data.ctrl.copy().tolist() if sim.model.nu > 0 else []
+        )
+        sync["test_reset_act_dot"] = (
+            sim.data.act_dot.copy().tolist() if sim.model.na > 0 else []
+        )
+        sync["test_reset_qacc"] = sim.data.qacc.copy().tolist()
+        opponent = unwrapped.opponent
+        terrain_geom_id = sim.model.geom_name2id("terrain")
+        hfield_id = int(sim.model.geom_dataid[terrain_geom_id])
+        sync["test_task"] = int(unwrapped.current_task.value)
+        sync["test_hfield_data"] = (
+            sim.model.hfield_data[
+                int(sim.model.hfield_adr[hfield_id]) : int(sim.model.hfield_adr[hfield_id])
+                + int(sim.model.hfield_nrow[hfield_id])
+                * int(sim.model.hfield_ncol[hfield_id])
+            ]
+            .copy()
+            .tolist()
+        )
+        sync["test_terrain_geom_rgba"] = (
+            sim.model.geom_rgba[terrain_geom_id].copy().tolist()
+        )
+        sync["test_terrain_geom_pos"] = (
+            sim.model.geom_pos[terrain_geom_id].copy().tolist()
+        )
+        sync["test_opponent_pose"] = np.asarray(
+            opponent.get_opponent_pose(), dtype=np.float64
+        ).tolist()
+        sync["test_opponent_velocity"] = np.asarray(
+            opponent.opponent_vel, dtype=np.float64
+        ).tolist()
+        sync["test_opponent_noise_buffer"] = np.asarray(
+            opponent.noise_process.buffer, dtype=np.float64
+        ).reshape(-1).tolist()
+        sync["test_opponent_noise_idx"] = int(opponent.noise_process.idx)
+        sync["test_chase_velocity"] = float(opponent.chase_velocity)
+        sync["test_opponent_policy"] = _chasetag_policy_id(
+            opponent.opponent_policy
+        )
+        # ChaseTag has the same live-sim vs observed-sim reset split as Soccer.
+        obs = _oracle_live_obs(unwrapped)
+    elif entry["class_name"] == "TableTennisEnvV0":
+        sync["test_ball_body_pos"] = (
+            sim.model.body_pos[unwrapped.id_info.ball_bid].copy().tolist()
+        )
+        sync["test_ball_geom_friction"] = (
+            sim.model.geom_friction[unwrapped.id_info.ball_gid]
+            .copy()
+            .tolist()
+        )
+        sync["test_paddle_body_mass"] = [
+            float(sim.model.body_mass[unwrapped.id_info.paddle_bid])
+        ]
+        sync["test_init_qpos"] = (
+            np.asarray(unwrapped.init_qpos, dtype=np.float64).tolist()
+        )
+        sync["test_init_qvel"] = (
+            np.asarray(unwrapped.init_qvel, dtype=np.float64).tolist()
+        )
+        sync["test_reset_act_dot"] = (
+            sim.data.act_dot.copy().tolist() if sim.model.na > 0 else []
+        )
     return obs, sync
 
 
@@ -1191,10 +1395,8 @@ def _assert_alignment_with_oracle(
             _batched_action_shape(native), steps, action_seed
         )
         for action in actions:
-            obs0, reward0, terminated0, truncated0, info0 = oracle.step(
-                action[0]
-            )
-            obs1, reward1, terminated1, truncated1, info1 = native.step(action)
+            obs0, reward0, terminated0, truncated0, _ = oracle.step(action[0])
+            obs1, reward1, terminated1, truncated1, _ = native.step(action)
             np.testing.assert_allclose(obs1[0], obs0, atol=obs_atol, rtol=1e-5)
             np.testing.assert_allclose(
                 reward1[0], reward0, atol=reward_atol, rtol=1e-5
@@ -1206,8 +1408,6 @@ def _assert_alignment_with_oracle(
     finally:
         native.close()
         oracle.close()
-
-
 class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
     """Covers the internal native MyoChallenge slice implemented so far."""
 
@@ -1442,6 +1642,34 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
                         break
                 native.close()
                 oracle.close()
+
+    def test_reorient_fatigue_first_step_act_matches_oracle(self) -> None:
+        """Fatigue Reorient should preserve upstream warm-started act state."""
+        env_id = "myoFatiChallengeDieReorientP1-v0"
+        oracle = gymnasium.wrappers.TimeLimit(
+            _oracle_class(env_id)(seed=123, **_oracle_kwargs(env_id)),
+            max_episode_steps=int(_entry(env_id)["max_episode_steps"]),
+        )
+        obs0, sync = _oracle_reset_sync(oracle, env_id)
+        config, pool_type, spec_type = _reorient_config(env_id, overrides=sync)
+        native = _make_env(config, pool_type, spec_type)
+        obs1, _ = native.reset()
+        _assert_reorient_obs_close(obs1[0], obs0)
+        action = _seeded_actions(_batched_action_shape(native), 1, 104)[0]
+        obs0, reward0, terminated0, truncated0, _ = oracle.step(action[0])
+        obs1, reward1, terminated1, truncated1, _ = native.step(action)
+        act_dim = oracle.unwrapped.sim.model.na
+        np.testing.assert_allclose(
+            obs1[0][-act_dim:],
+            obs0[-act_dim:],
+            atol=5e-8,
+            rtol=1e-8,
+        )
+        np.testing.assert_allclose(reward1[0], reward0, atol=5e-8, rtol=1e-8)
+        self.assertEqual(bool(terminated1[0]), bool(terminated0))
+        self.assertEqual(bool(truncated1[0]), bool(truncated0))
+        native.close()
+        oracle.close()
 
     def test_relocate_alignment_with_oracle(self) -> None:
         """Relocate should align stepwise with the official oracle."""

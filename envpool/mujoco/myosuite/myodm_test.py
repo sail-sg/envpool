@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import tempfile
 from contextlib import contextmanager
+from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
 from typing import Any, Iterator
@@ -48,8 +49,11 @@ _TRACK_IDS = tuple(
     if entry["class_name"] == "TrackEnv"
 )
 _TRACK_ALIGN_IDS = (
+    "MyoHandAlarmclockFixed-v0",
     "MyoHandAirplaneFixed-v0",
+    "MyoHandAirplaneRandom-v0",
     "MyoHandAirplaneFly-v0",
+    "MyoHandPyramidmediumRandom-v0",
 )
 _TRACK_REPRESENTATIVE_IDS = (
     "MyoHandAirplaneFixed-v0",
@@ -57,6 +61,16 @@ _TRACK_REPRESENTATIVE_IDS = (
     "MyoHandAirplaneFly-v0",
 )
 _ALIGNMENT_STEPS = 32
+
+
+@dataclass(frozen=True)
+class _TrackReferenceSample:
+    """One official TrackEnv reference sample consumed during a rollout."""
+
+    time: float
+    robot: np.ndarray
+    robot_vel: np.ndarray | None
+    object: np.ndarray
 
 
 def _entry(env_id: str) -> dict[str, Any]:
@@ -240,8 +254,8 @@ def _reference_config(reference: Any) -> dict[str, Any]:
             "reference_robot": [],
             "reference_robot_vel": [],
             "reference_object": [],
-            "reference_robot_init": [],
-            "reference_object_init": [],
+            "reference_robot_init": robot_init.tolist(),
+            "reference_object_init": object_init.tolist(),
             "robot_dim": int(robot.shape[1]),
             "object_dim": int(obj.shape[1]),
             "robot_horizon": int(robot.shape[0]),
@@ -279,7 +293,10 @@ def _reference_config(reference: Any) -> dict[str, Any]:
 
 
 def _track_config(
-    env_id: str, *, overrides: dict[str, Any] | None = None
+    env_id: str,
+    *,
+    overrides: dict[str, Any] | None = None,
+    seed: int | None = None,
 ) -> tuple[tuple[Any, ...], type, type]:
     entry = _entry(env_id)
     kwargs = dict(entry["kwargs"])
@@ -301,6 +318,7 @@ def _track_config(
         num_envs=1,
         batch_size=1,
         max_num_players=1,
+        **({} if seed is None else {"seed": seed}),
         frame_skip=int(kwargs.get("frame_skip", 10)),
         model_path=str(kwargs["model_path"]),
         object_name=str(kwargs["object_name"]),
@@ -392,17 +410,84 @@ def _oracle_track_kwargs(env_id: str) -> Iterator[dict[str, Any]]:
 def _oracle_reset_sync(env: Any) -> tuple[np.ndarray, dict[str, Any]]:
     obs, _ = env.reset()
     unwrapped = env.unwrapped
+    integration_state = unwrapped.sim.sim.get_state(
+        int(mujoco.mjtState.mjSTATE_INTEGRATION)
+    )
     return obs, {
         "test_reset_qpos": unwrapped.sim.data.qpos.copy().tolist(),
         "test_reset_qvel": unwrapped.sim.data.qvel.copy().tolist(),
+        "test_reset_ctrl": unwrapped.sim.data.ctrl.copy().tolist(),
         "test_reset_act": (
             unwrapped.sim.data.act.copy().tolist()
+            if unwrapped.sim.model.na > 0
+            else []
+        ),
+        "test_reset_act_dot": (
+            unwrapped.sim.data.act_dot.copy().tolist()
             if unwrapped.sim.model.na > 0
             else []
         ),
         "test_reset_qacc_warmstart": (
             unwrapped.sim.data.qacc_warmstart.copy().tolist()
         ),
+        "test_reset_integration_state": integration_state.tolist(),
+    }
+
+
+@contextmanager
+def _record_track_reference_samples(
+    env: Any,
+) -> Iterator[list[_TrackReferenceSample]]:
+    unwrapped = env.unwrapped
+    ref = getattr(unwrapped, "ref", None)
+    if ref is None or not hasattr(ref, "get_reference"):
+        yield []
+        return
+    original_get_reference = ref.get_reference
+    samples: list[_TrackReferenceSample] = []
+
+    def wrapped_get_reference(time: Any) -> Any:
+        reference = original_get_reference(time)
+        samples.append(
+            _TrackReferenceSample(
+                time=float(time),
+                robot=np.asarray(reference.robot, dtype=np.float64).copy(),
+                robot_vel=(
+                    None
+                    if reference.robot_vel is None
+                    else np.asarray(reference.robot_vel, dtype=np.float64).copy()
+                ),
+                object=np.asarray(reference.object, dtype=np.float64).copy(),
+            )
+        )
+        return reference
+
+    ref.get_reference = wrapped_get_reference
+    try:
+        yield samples
+    finally:
+        ref.get_reference = original_get_reference
+
+
+def _track_reference_sync(
+    samples: list[_TrackReferenceSample],
+) -> dict[str, Any]:
+    if not samples:
+        return {}
+    has_robot_vel = samples[0].robot_vel is not None
+    return {
+        "test_reference_time": [round(sample.time, 4) for sample in samples],
+        "test_reference_robot": np.concatenate(
+            [sample.robot for sample in samples]
+        ).tolist(),
+        "test_reference_robot_vel": (
+            []
+            if not has_robot_vel
+            else np.concatenate([sample.robot_vel for sample in samples]).tolist()
+        ),
+        "test_reference_object": np.concatenate(
+            [sample.object for sample in samples]
+        ).tolist(),
     }
 
 
@@ -445,7 +530,7 @@ class MyoDMTrackNativeTest(absltest.TestCase):
                     env1.close()
 
     def test_track_alignment_representative_ids(self) -> None:
-        """Fixed and tracked references should align with the official oracle."""
+        """Fixed, random, and tracked references align with the official oracle."""
         cls = load_oracle_class("myosuite.envs.myo.myodm.myodm_v0", "TrackEnv")
         for env_id in _TRACK_ALIGN_IDS:
             with self.subTest(env_id=env_id):
@@ -460,7 +545,7 @@ class MyoDMTrackNativeTest(absltest.TestCase):
                         )
                         obs0, sync = _oracle_reset_sync(oracle)
                         config, pool_type, spec_type = _track_config(
-                            env_id, overrides=sync
+                            env_id, overrides=sync, seed=123
                         )
                         native = _make_env(config, pool_type, spec_type)
                         obs1, _ = native.reset()
@@ -475,10 +560,10 @@ class MyoDMTrackNativeTest(absltest.TestCase):
                             (1, model.nu), steps=_ALIGNMENT_STEPS, seed=191
                         )
                         for action in actions:
-                            obs0, reward0, terminated0, truncated0, _ = (
+                            obs0, reward0, terminated0, truncated0, info0 = (
                                 oracle.step(action[0])
                             )
-                            obs1, reward1, terminated1, truncated1, _ = (
+                            obs1, reward1, terminated1, truncated1, info1 = (
                                 native.step(action)
                             )
                             np.testing.assert_allclose(
@@ -503,6 +588,56 @@ class MyoDMTrackNativeTest(absltest.TestCase):
                             native.close()
                         if oracle is not None:
                             oracle.close()
+
+    def test_track_playback_reference_alignment(self) -> None:
+        """Playback sync should consume repeated-time samples in oracle order."""
+        env_id = "MyoHandPyramidmediumRandom-v0"
+        entry = _entry(env_id)
+        cls = load_oracle_class("myosuite.envs.myo.myodm.myodm_v0", "TrackEnv")
+        with _oracle_track_kwargs(env_id) as oracle_kwargs:
+            oracle: Any | None = None
+            native: Any | None = None
+            try:
+                oracle = gymnasium.wrappers.TimeLimit(
+                    cls(seed=123, **oracle_kwargs),
+                    max_episode_steps=entry["max_episode_steps"],
+                )
+                with _record_track_reference_samples(oracle) as samples:
+                    _, sync = _oracle_reset_sync(oracle)
+                    _ = oracle.unwrapped.playback()
+                    oracle_qpos = oracle.unwrapped.sim.data.qpos.copy()
+                    oracle_qvel = oracle.unwrapped.sim.data.qvel.copy()
+                self.assertEqual(
+                    [round(sample.time, 4) for sample in samples], [0.0, 0.0]
+                )
+                sync["test_playback_reference"] = True
+                sync.update(_track_reference_sync(samples))
+                config, pool_type, spec_type = _track_config(
+                    env_id, overrides=sync, seed=123
+                )
+                native = _make_env(config, pool_type, spec_type)
+                _, _ = native.reset()
+                model = _track_model(
+                    entry["kwargs"]["model_path"],
+                    entry["kwargs"]["object_name"],
+                )
+                zero = np.zeros((1, model.nu), dtype=np.float32)
+                obs, _, _, _, _ = native.step(zero)
+                qpos_dim = int(model.nq)
+                qvel_dim = int(model.nv)
+                native_qpos = np.asarray(obs)[0, :qpos_dim]
+                native_qvel = np.asarray(obs)[0, qpos_dim : qpos_dim + qvel_dim]
+                np.testing.assert_allclose(
+                    native_qpos, oracle_qpos, atol=1e-9, rtol=1e-9
+                )
+                np.testing.assert_allclose(
+                    native_qvel, oracle_qvel, atol=1e-9, rtol=1e-9
+                )
+            finally:
+                if native is not None:
+                    native.close()
+                if oracle is not None:
+                    oracle.close()
 
     def test_track_pixel_observation_smoke(self) -> None:
         """Track pixel wrappers should emit batched RGB observations."""

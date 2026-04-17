@@ -25,6 +25,7 @@ from pathlib import Path
 
 from absl.testing import absltest
 
+from envpool.mujoco.myosuite.config import resolve_myosuite_task_config
 from envpool.mujoco.myosuite.metadata import (
     MYOSUITE_COUNTS,
     MYOSUITE_DIRECT_ENTRIES,
@@ -154,11 +155,15 @@ class MyoSuiteMetadataTest(absltest.TestCase):
         )
         self.assertEqual(
             myobase_reach["default_config"]["obs_dim"],
-            145,
+            80,
+        )
+        self.assertEqual(
+            myobase_reach["default_config"]["model_path"],
+            "simhive/myo_sim/arm/myoarm_reach.xml",
         )
         self.assertEqual(
             myobase_reach["default_config"]["action_dim"],
-            63,
+            34,
         )
         self.assertEqual(
             [
@@ -187,6 +192,32 @@ class MyoSuiteMetadataTest(absltest.TestCase):
         self.assertEqual(myodm_track["default_config"]["object_dim"], 7)
         self.assertEqual(myodm_track["default_config"]["obs_dim"], 142)
         self.assertEmpty(myodm_track["variant_defs"])
+
+    def test_reach_default_configs_capture_derived_render_flags(self) -> None:
+        """Checks baked reach configs keep walk-specific derived flags."""
+        walk_reach = MYOSUITE_DIRECT_ENTRY_BY_ID["myoLegStandRandom-v0"]
+        self.assertEqual(
+            walk_reach["entry_module"],
+            "myosuite.envs.myo.myobase.walk_v0",
+        )
+        self.assertEqual(walk_reach["class_name"], "ReachEnvV0")
+        self.assertTrue(walk_reach["default_config"]["target_pos_relative_to_tip"])
+        self.assertTrue(walk_reach["default_config"]["hide_skin_geom_group_1"])
+        self.assertTrue(walk_reach["default_config"]["hide_terrain"])
+        self.assertEqual(
+            walk_reach["default_config"]["joint_random_range"],
+            [-0.2, 0.2],
+        )
+
+        arm_reach = MYOSUITE_DIRECT_ENTRY_BY_ID["myoArmReachRandom-v0"]
+        self.assertEqual(
+            arm_reach["entry_module"],
+            "myosuite.envs.myo.myobase.reach_v0",
+        )
+        self.assertEqual(arm_reach["class_name"], "ReachEnvV0")
+        self.assertFalse(arm_reach["default_config"]["target_pos_relative_to_tip"])
+        self.assertFalse(arm_reach["default_config"]["hide_skin_geom_group_1"])
+        self.assertFalse(arm_reach["default_config"]["hide_terrain"])
 
     def test_suite_breakdowns_match_expected_entrypoint_counts(self) -> None:
         """Checks the pinned suite mix still matches the native port plan."""
@@ -271,6 +302,28 @@ class MyoSuiteMetadataTest(absltest.TestCase):
             if isinstance(reference, str):
                 with self.subTest(task_id=entry["id"], kind="reference"):
                     self.assertTrue((root / reference).exists())
+
+    def test_preview_test_overrides_are_filtered_by_supported_spec(self) -> None:
+        """Checks pose-only preview state does not leak into torso configs."""
+        base_path = str(myosuite_asset_root().parent.parent)
+
+        pose_config = resolve_myosuite_task_config(
+            "myoElbowPose1D6MFixed-v0",
+            {
+                "base_path": base_path,
+                "test_target_qpos": [0.123],
+            },
+        )
+        self.assertEqual(pose_config["test_target_qpos"], [0.123])
+
+        torso_config = resolve_myosuite_task_config(
+            "myoTorsoPoseFixed-v0",
+            {
+                "base_path": base_path,
+                "test_target_qpos": [0.123],
+            },
+        )
+        self.assertNotIn("test_target_qpos", torso_config)
 
     def test_checked_in_metadata_matches_vendored_upstream_sources(
         self,

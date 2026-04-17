@@ -648,18 +648,13 @@ class MyoSuiteReorientEnvBase : public Env<EnvSpecT>,
       detail::RestoreVector(test_reset_qpos_, data_->qpos);
       detail::RestoreVector(test_reset_qvel_, data_->qvel);
     }
-    mj_forward(model_, data_);
-    bool rerun_forward = false;
     if (!test_reset_act_.empty()) {
       detail::RestoreVector(test_reset_act_, data_->act);
-      rerun_forward = true;
     }
     if (!test_reset_qacc_warmstart_.empty()) {
       detail::RestoreVector(test_reset_qacc_warmstart_, data_->qacc_warmstart);
     }
-    if (rerun_forward) {
-      mj_forward(model_, data_);
-    }
+    mj_forward(model_, data_);
   }
 
   RewardInfo ComputeRewardInfo() const {
@@ -921,6 +916,7 @@ class MyoSuiteWalkLikeEnvBase : public Env<EnvSpecT>,
                                          &muscle_condition_state_);
     InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
+    detail::RefreshObservedMyoSuiteState(model_, data_);
     ++elapsed_step_;
     ++gait_steps_;
     RewardInfo reward = ComputeRewardInfo();

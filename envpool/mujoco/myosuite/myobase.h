@@ -58,8 +58,12 @@ inline mjtNum ClampNormalized(mjtNum value) {
 }
 
 inline mjtNum MuscleActivation(mjtNum value) {
-  return static_cast<mjtNum>(
-      1.0 / (1.0 + std::exp(-5.0 * (static_cast<double>(value) - 0.5))));
+  // Official MyoSuite applies the logistic transform in-place on the
+  // float32 action array before assigning it into MuJoCo's ctrl buffer.
+  float action = static_cast<float>(value);
+  float activation =
+      1.0F / (1.0F + std::exp(-5.0F * (action - 0.5F)));
+  return static_cast<mjtNum>(activation);
 }
 
 enum class MuscleCondition : std::uint8_t {
@@ -429,25 +433,55 @@ inline void ApplyMyoConditionAdjustments(
   int muscle_index = 0;
   for (int i = 0; i < model->nu; ++i) {
     if (muscle_actuator[i]) {
-      data->ctrl[i] = muscle_ctrl[muscle_index++];
+      // Official BaseV0 carries actions in a float32 numpy array. Fatigue
+      // updates feed double-precision values back into that float32 buffer
+      // before Robot.step copies ctrl into MuJoCo. Mirror that round-trip so
+      // actuator state and render overlays remain bitwise aligned.
+      data->ctrl[i] =
+          static_cast<mjtNum>(static_cast<float>(muscle_ctrl[muscle_index++]));
     }
   }
 }
 
 // MyoSuite advances its main simulation through Robot.step() ->
-// SimScene.advance(), which delegates to dm_control Physics.step(substeps).
-// Mirror that path directly with repeated mj_step calls. Observation-side
-// sensor2sim()/mj_forward work happens on the official sim_obsd path instead of
-// mutating the main simulation state after stepping.
+// SimScene.advance(), which delegates to dm_control Physics.step(substeps)
+// with legacy_step enabled. Mirror that exact mj_step2 / mj_step / mj_step1
+// sequence so simulation and render-visible state stay bitwise aligned.
 inline void DoMyoSuiteSimulation(const mjModel* model, mjData* data,
                                  int frame_skip) {
   if (frame_skip <= 0) {
     mj_forward(model, data);
     return;
   }
-  for (int i = 0; i < frame_skip; ++i) {
-    mj_step(model, data);
+  if (model->opt.integrator != mjINT_RK4) {
+    mj_step2(model, data);
+    for (int i = 1; i < frame_skip; ++i) {
+      mj_step(model, data);
+    }
+  } else {
+    for (int i = 0; i < frame_skip; ++i) {
+      mj_step(model, data);
+    }
   }
+  mj_step1(model, data);
+}
+
+// Reset-sync previews inject qpos/qvel/act directly into the live mjData after
+// model randomization. Re-run MuJoCo's stage-1 reconstruction so the first
+// rendered frame sees the same muscle/tendon state as the oracle.
+inline void FinalizeMyoSuiteResetSync(const mjModel* model, mjData* data) {
+  mj_step1(model, data);
+}
+
+// Official MyoSuite calls Robot.get_sensors() followed by
+// Robot.sensor2sim(..., sim_obsd) inside env_base.get_obs(). When
+// `obsd_model_path` aliases the main simulation, that replay writes qpos/qvel/act
+// back into the same mjData and runs `forward()` once more before any
+// observation/reward code reads force- and contact-derived fields. Mirror that
+// post-step reconstruction so GRF, actuator_force, qacc, and future warmstarts
+// match the oracle exactly.
+inline void RefreshObservedMyoSuiteState(const mjModel* model, mjData* data) {
+  mj_forward(model, data);
 }
 
 inline mjtNum VectorNorm(const std::vector<mjtNum>& value) {
@@ -624,7 +658,10 @@ inline void RestoreModelGeomRgba(mjModel* model, int geom_id,
   if (value.empty()) {
     return;
   }
-  std::memcpy(model->geom_rgba + geom_id * 4, value.data(), sizeof(mjtNum) * 4);
+  float* target = model->geom_rgba + geom_id * 4;
+  for (int axis = 0; axis < 4; ++axis) {
+    target[axis] = static_cast<float>(value[axis]);
+  }
 }
 
 inline void CopyModelSiteRgba(const mjModel* model, int site_id,
@@ -638,7 +675,10 @@ inline void RestoreModelSiteRgba(mjModel* model, int site_id,
   if (value.empty()) {
     return;
   }
-  std::memcpy(model->site_rgba + site_id * 4, value.data(), sizeof(mjtNum) * 4);
+  float* target = model->site_rgba + site_id * 4;
+  for (int axis = 0; axis < 4; ++axis) {
+    target[axis] = static_cast<float>(value[axis]);
+  }
 }
 
 inline void CopyModelSitePosAndSize(const mjModel* model, int site_id,
@@ -786,7 +826,7 @@ inline void ApplyMyoSuiteAction(const mjModel* model, mjData* data,
                                 const std::vector<bool>& muscle_actuator,
                                 bool normalize_act, const float* raw) {
   for (int i = 0; i < model->nu; ++i) {
-    mjtNum value = ClampNormalized(static_cast<mjtNum>(raw[i]));
+    mjtNum value = static_cast<mjtNum>(raw[i]);
     if (normalize_act && muscle_actuator[i] && model->na != 0) {
       value = MuscleActivation(value);
     } else if (normalize_act && model->na == 0) {
@@ -804,10 +844,11 @@ inline envpool::mujoco::CameraPolicy MyoSuiteRenderCameraPolicy() {
 }
 
 inline void ConfigureMyoSuiteRenderOptions(mjvOption* option,
-                                           bool render_tendon = false) {
+                                           bool render_tendon = true) {
+  mjv_defaultOption(option);
+  option->flags[mjVIS_TENDON] = render_tendon ? 1 : 0;
   option->flags[mjVIS_ACTUATOR] = 1;
   option->flags[mjVIS_ACTIVATION] = 1;
-  option->flags[mjVIS_TENDON] = render_tendon ? 1 : 0;
 }
 
 }  // namespace detail
@@ -890,6 +931,10 @@ class MyoSuiteReachEnvFns {
         "target_site_names"_.Bind(std::vector<std::string>{}),
         "target_pos_min"_.Bind(std::vector<double>{}),
         "target_pos_max"_.Bind(std::vector<double>{}),
+        "joint_random_range"_.Bind(std::vector<double>{}),
+        "target_pos_relative_to_tip"_.Bind(false),
+        "hide_skin_geom_group_1"_.Bind(false),
+        "hide_terrain"_.Bind(false),
         "test_reset_qpos"_.Bind(std::vector<double>{}),
         "test_reset_qvel"_.Bind(std::vector<double>{}),
         "test_reset_act"_.Bind(std::vector<double>{}),
@@ -1470,6 +1515,10 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
   }
 
   void ApplyResetState() {
+    bool has_test_reset_override = !test_reset_qpos_.empty() ||
+                                   !test_reset_qvel_.empty() ||
+                                   !test_reset_act_.empty() ||
+                                   !test_reset_qacc_warmstart_.empty();
     if (!test_reset_qpos_.empty()) {
       detail::RestoreVector(test_reset_qpos_, data_->qpos);
       detail::RestoreVector(test_reset_qvel_, data_->qvel);
@@ -1498,11 +1547,14 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
     if (!test_reset_qacc_warmstart_.empty()) {
       detail::RestoreVector(test_reset_qacc_warmstart_, data_->qacc_warmstart);
     }
+    if (has_test_reset_override) {
+      detail::FinalizeMyoSuiteResetSync(model_, data_);
+    }
   }
 
   void ApplyAction(const float* raw) {
     for (int i = 0; i < model_->nu; ++i) {
-      mjtNum value = detail::ClampNormalized(static_cast<mjtNum>(raw[i]));
+      mjtNum value = static_cast<mjtNum>(raw[i]);
       if (normalize_act_ && muscle_actuator_[i] && model_->na != 0) {
         value = detail::MuscleActivation(value);
       } else if (normalize_act_ && model_->na == 0) {
@@ -1610,9 +1662,15 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
   std::vector<mjtNum> initial_target_site_pos_;
   std::vector<mjtNum> target_pos_min_;
   std::vector<mjtNum> target_pos_max_;
+  std::vector<mjtNum> joint_random_range_;
   std::vector<mjtNum> current_target_pos_;
+  std::vector<mjtNum> init_qpos_;
+  std::vector<mjtNum> init_qvel_;
   std::vector<bool> muscle_actuator_;
   detail::MyoConditionState muscle_condition_state_;
+  bool target_pos_relative_to_tip_;
+  bool hide_skin_geom_group_1_;
+  bool hide_terrain_;
   std::vector<mjtNum> test_reset_qpos_;
   std::vector<mjtNum> test_reset_qvel_;
   std::vector<mjtNum> test_reset_act_;
@@ -1643,8 +1701,14 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
         reward_penalty_w_(spec.config["reward_penalty_w"_]),
         target_pos_min_(detail::ToMjtVector(spec.config["target_pos_min"_])),
         target_pos_max_(detail::ToMjtVector(spec.config["target_pos_max"_])),
+        joint_random_range_(
+            detail::ToMjtVector(spec.config["joint_random_range"_])),
         current_target_pos_(target_pos_min_),
         muscle_actuator_(model_->nu, false),
+        target_pos_relative_to_tip_(
+            spec.config["target_pos_relative_to_tip"_]),
+        hide_skin_geom_group_1_(spec.config["hide_skin_geom_group_1"_]),
+        hide_terrain_(spec.config["hide_terrain"_]),
         test_reset_qpos_(detail::ToMjtVector(spec.config["test_reset_qpos"_])),
         test_reset_qvel_(detail::ToMjtVector(spec.config["test_reset_qvel"_])),
         test_reset_act_(detail::ToMjtVector(spec.config["test_reset_act"_])),
@@ -1658,7 +1722,16 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
         spec.config["fatigue_reset_vec"_], spec.config["fatigue_reset_random"_],
         spec.config["frame_skip"_], this->seed_, &muscle_condition_state_);
     AdjustInitialQposForNormalizedActions();
+    if (HasJointRandomization()) {
+      if (model_->nkey <= 0) {
+        throw std::runtime_error(
+            "Reach joint_random_range requires at least one keyframe.");
+      }
+      init_qpos_.assign(model_->key_qpos, model_->key_qpos + model_->nq);
+      init_qvel_.assign(model_->key_qvel, model_->key_qvel + model_->nv);
+    }
     CacheTargetSites(spec.config["target_site_names"_]);
+    ApplyStaticVisualSetup();
     InitializeRobotEnv();
   }
 
@@ -1678,6 +1751,7 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
     detail::ResetMyoConditionState(&muscle_condition_state_);
     ResetToInitialState();
     RestoreTargetSites();
+    PrepareTargetGenerationState();
     UpdateTargetSites();
     ApplyResetState();
     CaptureResetState();
@@ -1719,6 +1793,10 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
         static_cast<int>(test_target_pos_.size()) != site_count * 3) {
       throw std::runtime_error("Reach test_target_pos has wrong length.");
     }
+    if (!joint_random_range_.empty() && joint_random_range_.size() != 2) {
+      throw std::runtime_error(
+          "Reach joint_random_range must be empty or length 2.");
+    }
     if (!test_reset_act_.empty() &&
         static_cast<int>(test_reset_act_.size()) != model_->na) {
       throw std::runtime_error("Reach test_reset_act has wrong length.");
@@ -1733,6 +1811,11 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
     if (expected_obs != spec_.config["obs_dim"_]) {
       throw std::runtime_error("Reach config obs_dim does not match model.");
     }
+  }
+
+  bool HasJointRandomization() const {
+    return joint_random_range_.size() == 2 &&
+           joint_random_range_[0] != joint_random_range_[1];
   }
 
   void BuildMuscleMask() {
@@ -1793,16 +1876,69 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
     }
   }
 
+  void ApplyStaticVisualSetup() {
+    if (hide_skin_geom_group_1_) {
+      for (int geom_id = 0; geom_id < model_->ngeom; ++geom_id) {
+        if (model_->geom_group[geom_id] == 1) {
+          model_->geom_rgba[geom_id * 4 + 3] = static_cast<float>(0.0);
+        }
+      }
+    }
+    if (hide_terrain_) {
+      int terrain_geom_id = mj_name2id(model_, mjOBJ_GEOM, "terrain");
+      if (terrain_geom_id >= 0) {
+        model_->geom_rgba[terrain_geom_id * 4 + 3] = static_cast<float>(0.0);
+        model_->geom_pos[terrain_geom_id * 3 + 0] = static_cast<mjtNum>(0.0);
+        model_->geom_pos[terrain_geom_id * 3 + 1] = static_cast<mjtNum>(0.0);
+        model_->geom_pos[terrain_geom_id * 3 + 2] = static_cast<mjtNum>(-10.0);
+      }
+    }
+  }
+
+  std::vector<mjtNum> GenerateRandomizedQpos() {
+    std::vector<mjtNum> qpos = init_qpos_;
+    std::uniform_real_distribution<double> dist(joint_random_range_[0],
+                                                joint_random_range_[1]);
+    for (int joint_id = 0; joint_id < model_->njnt; ++joint_id) {
+      int qpos_addr = model_->jnt_qposadr[joint_id];
+      mjtNum value = qpos[qpos_addr] + static_cast<mjtNum>(dist(gen_));
+      mjtNum low = model_->jnt_range[joint_id * 2];
+      mjtNum high = model_->jnt_range[joint_id * 2 + 1];
+      qpos[qpos_addr] = std::clamp(value, low, high);
+    }
+    return qpos;
+  }
+
+  void PrepareTargetGenerationState() {
+    if (!target_pos_relative_to_tip_ || !HasJointRandomization()) {
+      return;
+    }
+    std::vector<mjtNum> qpos = GenerateRandomizedQpos();
+    detail::RestoreVector(qpos, data_->qpos);
+    if (!init_qvel_.empty()) {
+      detail::RestoreVector(init_qvel_, data_->qvel);
+    }
+    mj_forward(model_, data_);
+  }
+
   void UpdateTargetSites() {
     if (!test_target_pos_.empty()) {
       current_target_pos_ = test_target_pos_;
     } else {
       current_target_pos_.resize(target_pos_min_.size());
-      for (std::size_t i = 0; i < target_pos_min_.size(); ++i) {
-        double alpha = unit_dist_(gen_);
-        current_target_pos_[i] =
-            target_pos_min_[i] + static_cast<mjtNum>(alpha) *
-                                     (target_pos_max_[i] - target_pos_min_[i]);
+      for (std::size_t i = 0; i < target_site_ids_.size(); ++i) {
+        for (int axis = 0; axis < 3; ++axis) {
+          int offset = static_cast<int>(i) * 3 + axis;
+          double alpha = unit_dist_(gen_);
+          mjtNum target_value =
+              target_pos_min_[offset] +
+              static_cast<mjtNum>(alpha) *
+                  (target_pos_max_[offset] - target_pos_min_[offset]);
+          if (target_pos_relative_to_tip_) {
+            target_value += data_->site_xpos[tip_site_ids_[i] * 3 + axis];
+          }
+          current_target_pos_[offset] = target_value;
+        }
       }
     }
     for (std::size_t i = 0; i < target_site_ids_.size(); ++i) {
@@ -1812,9 +1948,21 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
   }
 
   void ApplyResetState() {
+    bool has_test_reset_override = !test_reset_qpos_.empty() ||
+                                   !test_reset_qvel_.empty() ||
+                                   !test_reset_act_.empty() ||
+                                   !test_reset_qacc_warmstart_.empty();
     if (!test_reset_qpos_.empty()) {
       detail::RestoreVector(test_reset_qpos_, data_->qpos);
-      detail::RestoreVector(test_reset_qvel_, data_->qvel);
+      if (!test_reset_qvel_.empty()) {
+        detail::RestoreVector(test_reset_qvel_, data_->qvel);
+      }
+    } else if (HasJointRandomization()) {
+      std::vector<mjtNum> qpos = GenerateRandomizedQpos();
+      detail::RestoreVector(qpos, data_->qpos);
+      if (!init_qvel_.empty()) {
+        detail::RestoreVector(init_qvel_, data_->qvel);
+      }
     }
     mj_forward(model_, data_);
     if (!test_reset_act_.empty()) {
@@ -1823,11 +1971,14 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
     if (!test_reset_qacc_warmstart_.empty()) {
       detail::RestoreVector(test_reset_qacc_warmstart_, data_->qacc_warmstart);
     }
+    if (has_test_reset_override) {
+      detail::FinalizeMyoSuiteResetSync(model_, data_);
+    }
   }
 
   void ApplyAction(const float* raw) {
     for (int i = 0; i < model_->nu; ++i) {
-      mjtNum value = detail::ClampNormalized(static_cast<mjtNum>(raw[i]));
+      mjtNum value = static_cast<mjtNum>(raw[i]);
       if (normalize_act_ && muscle_actuator_[i] && model_->na != 0) {
         value = detail::MuscleActivation(value);
       } else if (normalize_act_ && model_->na == 0) {
@@ -2095,6 +2246,10 @@ class MyoSuiteKeyTurnEnvBase : public Env<EnvSpecT>,
   }
 
   void ApplyResetState() {
+    bool has_test_reset_override = !test_reset_qpos_.empty() ||
+                                   !test_reset_qvel_.empty() ||
+                                   !test_reset_act_.empty() ||
+                                   !test_reset_qacc_warmstart_.empty();
     if (!test_reset_qpos_.empty()) {
       detail::RestoreVector(test_reset_qpos_, data_->qpos);
       detail::RestoreVector(test_reset_qvel_, data_->qvel);
@@ -2119,6 +2274,9 @@ class MyoSuiteKeyTurnEnvBase : public Env<EnvSpecT>,
     }
     if (!test_reset_qacc_warmstart_.empty()) {
       detail::RestoreVector(test_reset_qacc_warmstart_, data_->qacc_warmstart);
+    }
+    if (has_test_reset_override) {
+      detail::FinalizeMyoSuiteResetSync(model_, data_);
     }
   }
 
@@ -2362,6 +2520,10 @@ class MyoSuiteObjHoldEnvBase : public Env<EnvSpecT>,
   }
 
   void ApplyResetState() {
+    bool has_test_reset_override = !test_reset_qpos_.empty() ||
+                                   !test_reset_qvel_.empty() ||
+                                   !test_reset_act_.empty() ||
+                                   !test_reset_qacc_warmstart_.empty();
     if (!test_reset_qpos_.empty()) {
       detail::RestoreVector(test_reset_qpos_, data_->qpos);
       detail::RestoreVector(test_reset_qvel_, data_->qvel);
@@ -2393,6 +2555,9 @@ class MyoSuiteObjHoldEnvBase : public Env<EnvSpecT>,
     }
     if (!test_reset_qacc_warmstart_.empty()) {
       detail::RestoreVector(test_reset_qacc_warmstart_, data_->qacc_warmstart);
+    }
+    if (has_test_reset_override) {
+      detail::FinalizeMyoSuiteResetSync(model_, data_);
     }
   }
 
@@ -2554,6 +2719,7 @@ class MyoSuiteTorsoEnvBase : public Env<EnvSpecT>,
         detail::RestoreVector(test_reset_qacc_warmstart_,
                               data_->qacc_warmstart);
       }
+      detail::FinalizeMyoSuiteResetSync(model_, data_);
     }
     CaptureResetState();
     RewardInfo reward = ComputeRewardInfo();
@@ -2819,6 +2985,10 @@ class MyoSuitePenTwirlEnvBase : public Env<EnvSpecT>,
   }
 
   void ApplyResetState() {
+    bool has_test_reset_override = !test_reset_qpos_.empty() ||
+                                   !test_reset_qvel_.empty() ||
+                                   !test_reset_act_.empty() ||
+                                   !test_reset_qacc_warmstart_.empty();
     if (!test_reset_qpos_.empty()) {
       detail::RestoreVector(test_reset_qpos_, data_->qpos);
       detail::RestoreVector(test_reset_qvel_, data_->qvel);
@@ -2844,6 +3014,9 @@ class MyoSuitePenTwirlEnvBase : public Env<EnvSpecT>,
     }
     if (!test_reset_qacc_warmstart_.empty()) {
       detail::RestoreVector(test_reset_qacc_warmstart_, data_->qacc_warmstart);
+    }
+    if (has_test_reset_override) {
+      detail::FinalizeMyoSuiteResetSync(model_, data_);
     }
   }
 

@@ -53,16 +53,14 @@ Render
 ------
 
 MyoSuite render support ships through the same native MuJoCo pixel path used by
-other EnvPool MuJoCo families. Representative render compares for MyoBase
-reorient, walk, terrain, MyoChallenge, and MyoDM TrackEnv tasks are shown
-below. Each panel shows EnvPool on the left and the official MyoSuite renderer
-on the right for the first three stepped rollout frames after a reset-time
-state sync. The terrain row intentionally shows the official MyoSuite
-offscreen renderer limitation: upstream mutates terrain heightfields at reset
-time but does not upload those updates into its generic offscreen
-``mujoco.Renderer`` context, so the official terrain panels stay on the flat
-floor while EnvPool renders the sampled terrain directly from native MuJoCo
-state.
+other EnvPool MuJoCo families. The public render validation now sweeps every
+registered MyoSuite task ID, including the fatigue, sarcopenia, and
+reafferentation variants, and checks the reset frame plus the first three
+stepped rollout frames against the pinned official renderer bitwise. The
+comparison image below keeps a representative slice from MyoBase reorient,
+walk, terrain, MyoChallenge, and MyoDM TrackEnv tasks so the doc stays
+readable. Each panel shows EnvPool on the left and the official MyoSuite
+renderer on the right.
 
 .. image:: ../_static/render_samples/myosuite_official_compare.png
    :alt: EnvPool and official MyoSuite render compares for representative MyoSuite tasks
@@ -76,12 +74,11 @@ The MyoSuite integration is validated in four layers:
 * generated metadata checks for the full upstream registry surface
 * deterministic rollout tests for the native implementations
 * 32-step oracle alignment against the official MyoSuite Python
-  implementation for representative MyoBase, MyoChallenge, and MyoDM tasks
-* public ``render()`` validation that checks reset and the first three stepped
-  frames against the official MyoSuite renderer for representative reorient,
-  walk, challenge, and TrackEnv tasks with tight raster thresholds, plus a
-  terrain-specific multi-step render test and documented official visual
-  reference frames
+  implementation for the direct MyoBase, MyoChallenge, and MyoDM task surface
+* public ``render()`` validation that checks the reset frame and the first
+  three stepped frames bitwise against the official MyoSuite renderer for every
+  registered public task ID, while the doc image above shows a representative
+  slice of that full sweep
 * public registration tests that construct direct and variant IDs through
   ``make_gymnasium`` and verify that fatigue, sarcopenia, and reafferentation
   variants actually change rollout dynamics

@@ -356,6 +356,9 @@ def _find_staged_runtime_asset_root() -> Path | None:
 @contextmanager
 def _staged_runtime_asset_base(upstream_root: Path) -> Iterable[Path]:
     external_root = upstream_root.parent
+    patched_myo_sim_root = (
+        _repo_root() / "third_party" / "myosuite" / "simhive" / "myo_sim"
+    )
     sibling_roots = {
         "myo_sim": external_root / "myo_sim_src",
         "furniture_sim": external_root / "furniture_sim_src",
@@ -378,7 +381,16 @@ def _staged_runtime_asset_base(upstream_root: Path) -> Iterable[Path]:
             }
             for src, dst in mappings.items():
                 dst.parent.mkdir(parents=True, exist_ok=True)
-                _copy_or_symlink_tree(src, dst)
+                if (
+                    src == sibling_roots["myo_sim"]
+                    and patched_myo_sim_root.exists()
+                ):
+                    shutil.copytree(src, dst)
+                    shutil.copytree(
+                        patched_myo_sim_root, dst, dirs_exist_ok=True
+                    )
+                else:
+                    _copy_or_symlink_tree(src, dst)
         else:
             staged_root = _find_staged_runtime_asset_root()
             if staged_root is None:

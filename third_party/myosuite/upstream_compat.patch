@@ -100,6 +100,18 @@ index c3bab63..ef41956 100644
                  ('act_reg', act_mag),
                  ('pain', pain),
                  # Must keys
+@@ -456,8 +457,8 @@ class SoccerEnvV0(WalkEnvV0):
+         # Add some noise to the joints
+         for jnt in self.myo_joints:
+-            self.sim.data.joint(jnt).qpos[0] += self.np_random.uniform(-np.abs(self.rnd_joint_noise), np.abs(self.rnd_joint_noise), size=(1,))
++            self.sim.data.joint(jnt).qpos[0] += self.np_random.uniform(-np.abs(self.rnd_joint_noise), np.abs(self.rnd_joint_noise))
+
+         # Body start position randomizations
+         # Treatment for root joint is different
+-        self.sim.data.joint('root').qpos[0] += self.np_random.uniform(-np.abs(self.rnd_pos_noise), 0, size=(1,)) # Only allow body to move behind the ball, not in front
+-        self.sim.data.joint('root').qpos[1] += self.np_random.uniform(-np.abs(self.rnd_pos_noise), np.abs(self.rnd_pos_noise),size=(1,)) # Y-direction movement allowable
++        self.sim.data.joint('root').qpos[0] += self.np_random.uniform(-np.abs(self.rnd_pos_noise), 0) # Only allow body to move behind the ball, not in front
++        self.sim.data.joint('root').qpos[1] += self.np_random.uniform(-np.abs(self.rnd_pos_noise), np.abs(self.rnd_pos_noise)) # Y-direction movement allowable
 diff --git a/myosuite/envs/myo/myochallenge/tabletennis_v0.py b/myosuite/envs/myo/myochallenge/tabletennis_v0.py
 index 1bbbfe5..c840519 100644
 --- a/myosuite/envs/myo/myochallenge/tabletennis_v0.py
@@ -113,7 +125,7 @@ index 1bbbfe5..c840519 100644
          temp_model = spec.compile()
 
          removed_ids = recursive_immobilize(spec, temp_model, spec.body("femur_l"), remove_eqs=True)
-@@ -419,14 +419,14 @@ class TableTennisEnvV0(BaseV0):
+@@ -419,15 +419,15 @@ class TableTennisEnvV0(BaseV0):
              spec_copy: mujoco.MjSpec = spec.copy()
              attachment_frame = torso.add_frame(quat=[0.5, 0.5, -0.5, 0.5],
                                                 pos=[0.05, 0.373, -0.04])
@@ -133,7 +145,8 @@ index 1bbbfe5..c840519 100644
 +            [spec_copy.delete(e) for e in list(spec_copy.equalities)]
 +            [spec_copy.delete(s) for s in list(spec_copy.sensors)]
 +            [spec_copy.delete(c) for c in list(spec_copy.cameras)]
-             recursive_immobilize(spec, temp_model, spec_copy.worldbody)
+-            recursive_immobilize(spec, temp_model, spec_copy.worldbody)
++            recursive_immobilize(spec_copy, temp_model, spec_copy.worldbody)
              recursive_remove_contacts(spec_copy.worldbody, return_condition=None)
 
 @@ -438,7 +438,7 @@ class TableTennisEnvV0(BaseV0):

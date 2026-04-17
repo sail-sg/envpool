@@ -489,10 +489,18 @@ class MyoDMTrackEnvFns {
         "reward_object_w"_.Bind(1.0), "reward_bonus_w"_.Bind(1.0),
         "reward_penalty_w"_.Bind(-2.0), "terminate_obj_fail"_.Bind(true),
         "terminate_pose_fail"_.Bind(false),
+        "test_playback_reference"_.Bind(false),
         "test_reset_qpos"_.Bind(std::vector<double>{}),
         "test_reset_qvel"_.Bind(std::vector<double>{}),
+        "test_reset_ctrl"_.Bind(std::vector<double>{}),
         "test_reset_act"_.Bind(std::vector<double>{}),
-        "test_reset_qacc_warmstart"_.Bind(std::vector<double>{}));
+        "test_reset_act_dot"_.Bind(std::vector<double>{}),
+        "test_reset_integration_state"_.Bind(std::vector<double>{}),
+        "test_reset_qacc_warmstart"_.Bind(std::vector<double>{}),
+        "test_reference_time"_.Bind(std::vector<double>{}),
+        "test_reference_robot"_.Bind(std::vector<double>{}),
+        "test_reference_robot_vel"_.Bind(std::vector<double>{}),
+        "test_reference_object"_.Bind(std::vector<double>{}));
   }
 
   template <typename Config>
@@ -593,12 +601,22 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
   int object_horizon_{0};
   int horizon_{0};
   int reference_index_cache_{0};
+  int playback_reference_index_{0};
   ReferenceType reference_type_{ReferenceType::kFixed};
+  detail::NumpyPcg64 reference_rng_{0};
   ReferenceState current_reference_;
   std::vector<mjtNum> test_reset_qpos_;
   std::vector<mjtNum> test_reset_qvel_;
+  std::vector<mjtNum> test_reset_ctrl_;
   std::vector<mjtNum> test_reset_act_;
+  std::vector<mjtNum> test_reset_act_dot_;
+  std::vector<mjtNum> test_reset_integration_state_;
   std::vector<mjtNum> test_reset_qacc_warmstart_;
+  std::vector<mjtNum> test_reference_time_;
+  std::vector<mjtNum> test_reference_robot_;
+  std::vector<mjtNum> test_reference_robot_vel_;
+  std::vector<mjtNum> test_reference_object_;
+  bool test_playback_reference_;
 
  public:
   using Spec = EnvSpecT;
@@ -631,13 +649,29 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
         object_dim_(spec.config["object_dim"_]),
         robot_horizon_(spec.config["robot_horizon"_]),
         object_horizon_(spec.config["object_horizon"_]),
+        reference_rng_(static_cast<std::uint64_t>(this->seed_)),
         test_reset_qpos_(detail::ToMjtVector(spec.config["test_reset_qpos"_])),
         test_reset_qvel_(detail::ToMjtVector(spec.config["test_reset_qvel"_])),
+        test_reset_ctrl_(detail::ToMjtVector(spec.config["test_reset_ctrl"_])),
         test_reset_act_(detail::ToMjtVector(spec.config["test_reset_act"_])),
+        test_reset_act_dot_(
+            detail::ToMjtVector(spec.config["test_reset_act_dot"_])),
+        test_reset_integration_state_(detail::ToMjtVector(
+            spec.config["test_reset_integration_state"_])),
         test_reset_qacc_warmstart_(
-            detail::ToMjtVector(spec.config["test_reset_qacc_warmstart"_])) {
+            detail::ToMjtVector(spec.config["test_reset_qacc_warmstart"_])),
+        test_reference_time_(
+            detail::ToMjtVector(spec.config["test_reference_time"_])),
+        test_reference_robot_(
+            detail::ToMjtVector(spec.config["test_reference_robot"_])),
+        test_reference_robot_vel_(
+            detail::ToMjtVector(spec.config["test_reference_robot_vel"_])),
+        test_reference_object_(
+            detail::ToMjtVector(spec.config["test_reference_object"_])),
+        test_playback_reference_(spec.config["test_playback_reference"_]) {
     LoadReference(spec);
     ValidateConfig();
+    mj_forward(model_, data_);
     CacheObjects();
     detail::BuildMuscleMask(model_, &muscle_actuator_);
     detail::InitializeMyoConditionState(
@@ -648,6 +682,7 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
                                                   normalize_act_);
     InitializeReferencePose();
     InitializeRobotEnv();
+    PrimeReferenceRngForOracleResetBehavior();
     detail::RemoveTrackTemporaryFiles(model_path_);
   }
 
@@ -667,10 +702,13 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
     done_ = false;
     elapsed_step_ = 0;
     reference_index_cache_ = 0;
+    playback_reference_index_ = 0;
     detail::ResetMyoConditionState(&muscle_condition_state_);
     ResetToInitialState();
     ApplyResetState();
-    ReferenceState reference = ReferenceAt(data_->time + motion_start_time_);
+    ReferenceState reference =
+        test_playback_reference_ ? PlaybackReferenceAtCurrentIndex()
+                                 : ReferenceAt(data_->time + motion_start_time_);
     UpdateTargetSite(reference);
     CaptureResetState();
     RewardInfo reward = ComputeReward(reference);
@@ -678,6 +716,21 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
   }
 
   void Step(const Action& action) override {
+    if (test_playback_reference_) {
+      InvalidateRenderCache();
+      if (playback_reference_index_ + 1 < horizon_) {
+        ++playback_reference_index_;
+      }
+      ReferenceState reference = PlaybackReferenceAtCurrentIndex();
+      SetQposFromReference(reference);
+      mj_forward(model_, data_);
+      data_->time += Dt();
+      ++elapsed_step_;
+      RewardInfo reward = ComputeReward(reference);
+      done_ = false;
+      WriteState(reward, reference, false, reward.dense_reward);
+      return;
+    }
     const auto* raw = static_cast<const float*>(action["action"_].Data());
     detail::ApplyMyoSuiteAction(model_, data_, muscle_actuator_, normalize_act_,
                                 raw);
@@ -685,6 +738,7 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
                                          &muscle_condition_state_);
     InvalidateRenderCache();
     detail::DoMyoSuiteSimulation(model_, data_, frame_skip_);
+    detail::RefreshObservedMyoSuiteState(model_, data_);
     ++elapsed_step_;
     ReferenceState reference = ReferenceAt(data_->time + motion_start_time_);
     UpdateTargetSite(reference);
@@ -732,6 +786,39 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
           detail::ToMjtVector(spec.config["reference_robot_init"_]);
       reference_object_init_ =
           detail::ToMjtVector(spec.config["reference_object_init"_]);
+    }
+    if (!test_reference_time_.empty()) {
+      int horizon = static_cast<int>(test_reference_time_.size());
+      if (robot_dim_ <= 0 || object_dim_ <= 0) {
+        throw std::runtime_error(
+            "TrackEnv test reference dims are not initialized.");
+      }
+      if (static_cast<int>(test_reference_robot_.size()) !=
+              horizon * robot_dim_ ||
+          static_cast<int>(test_reference_object_.size()) !=
+              horizon * object_dim_) {
+        throw std::runtime_error(
+            "TrackEnv test reference arrays have wrong size.");
+      }
+      reference_time_ = test_reference_time_;
+      reference_robot_ = test_reference_robot_;
+      reference_object_ = test_reference_object_;
+      reference_robot_init_.assign(reference_robot_.begin(),
+                                   reference_robot_.begin() + robot_dim_);
+      reference_object_init_.assign(reference_object_.begin(),
+                                    reference_object_.begin() + object_dim_);
+      robot_horizon_ = horizon;
+      object_horizon_ = horizon;
+      if (reference_has_robot_vel_) {
+        if (static_cast<int>(test_reference_robot_vel_.size()) !=
+            horizon * robot_dim_) {
+          throw std::runtime_error(
+              "TrackEnv test reference robot_vel has wrong size.");
+        }
+        reference_robot_vel_ = test_reference_robot_vel_;
+      } else {
+        reference_robot_vel_.clear();
+      }
     }
     if (reference_has_robot_vel_ && reference_robot_vel_.empty()) {
       reference_has_robot_vel_ = false;
@@ -802,39 +889,76 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
         static_cast<int>(reference_object_init_.size()) != object_dim_) {
       throw std::runtime_error("TrackEnv init reference has wrong size.");
     }
-    for (int i = 0; i < robot_dim_; ++i) {
-      data_->qpos[i] = reference_robot_init_[i];
-    }
-    for (int axis = 0; axis < 3; ++axis) {
-      data_->qpos[robot_dim_ + axis] = reference_object_init_[axis];
-    }
-    std::array<mjtNum, 4> quat{
-        reference_object_init_[3], reference_object_init_[4],
-        reference_object_init_[5], reference_object_init_[6]};
-    auto euler = detail::QuatToEuler(quat);
-    for (int axis = 0; axis < 3; ++axis) {
-      data_->qpos[robot_dim_ + 3 + axis] = euler[axis];
-    }
+    ReferenceState reference;
+    reference.robot = reference_robot_init_;
+    reference.object = reference_object_init_;
+    SetQposFromReference(reference);
     mju_zero(data_->qvel, model_->nv);
     mj_forward(model_, data_);
   }
 
   void ApplyResetState() {
+    if (!test_reset_integration_state_.empty()) {
+      mj_setState(model_, data_, test_reset_integration_state_.data(),
+                  mjSTATE_INTEGRATION);
+      mj_forward(model_, data_);
+      mj_step1(model_, data_);
+      return;
+    }
+    bool has_test_reset_override = !test_reset_qpos_.empty() ||
+                                   !test_reset_qvel_.empty() ||
+                                   !test_reset_ctrl_.empty() ||
+                                   !test_reset_act_.empty() ||
+                                   !test_reset_act_dot_.empty() ||
+                                   !test_reset_qacc_warmstart_.empty();
     if (!test_reset_qpos_.empty()) {
       detail::RestoreVector(test_reset_qpos_, data_->qpos);
       detail::RestoreVector(test_reset_qvel_, data_->qvel);
     }
     mj_forward(model_, data_);
+    if (!test_reset_ctrl_.empty()) {
+      detail::RestoreVector(test_reset_ctrl_, data_->ctrl);
+    }
+    bool rerun_forward = false;
     if (!test_reset_act_.empty()) {
       detail::RestoreVector(test_reset_act_, data_->act);
+      rerun_forward = true;
+    }
+    if (!test_reset_act_dot_.empty()) {
+      detail::RestoreVector(test_reset_act_dot_, data_->act_dot);
     }
     if (!test_reset_qacc_warmstart_.empty()) {
       detail::RestoreVector(test_reset_qacc_warmstart_, data_->qacc_warmstart);
+    }
+    if (rerun_forward) {
+      mj_forward(model_, data_);
+    }
+    if (has_test_reset_override) {
+      // Official BaseV0 reset leaves dm_control Physics ready for the next
+      // legacy-step transition, including actuator-derivative fields such as
+      // act_dot. TrackEnv needs the same reset-sync treatment as Challenge
+      // tasks; otherwise the first mj_step2 can drift on some seeds/actions.
+      mj_step1(model_, data_);
     }
   }
 
   const mjtNum* RobotRow(int index) const {
     return reference_robot_.data() + index * robot_dim_;
+  }
+
+  void SetQposFromReference(const ReferenceState& reference) {
+    for (int i = 0; i < robot_dim_; ++i) {
+      data_->qpos[i] = reference.robot[i];
+    }
+    for (int axis = 0; axis < 3; ++axis) {
+      data_->qpos[robot_dim_ + axis] = reference.object[axis];
+    }
+    std::array<mjtNum, 4> quat{reference.object[3], reference.object[4],
+                               reference.object[5], reference.object[6]};
+    auto euler = detail::QuatToEuler(quat);
+    for (int axis = 0; axis < 3; ++axis) {
+      data_->qpos[robot_dim_ + 3 + axis] = euler[axis];
+    }
   }
 
   const mjtNum* RobotVelRow(int index) const {
@@ -845,6 +969,38 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
 
   const mjtNum* ObjectRow(int index) const {
     return reference_object_.data() + index * object_dim_;
+  }
+
+  ReferenceState PlaybackReferenceAtCurrentIndex() {
+    current_reference_.robot.resize(robot_dim_);
+    current_reference_.object.resize(object_dim_);
+    if (reference_has_robot_vel_) {
+      current_reference_.robot_vel.resize(robot_dim_);
+    } else {
+      current_reference_.robot_vel.assign(1, 0.0);
+    }
+    int index = std::clamp(playback_reference_index_, 0, horizon_ - 1);
+    std::copy_n(RobotRow(std::min(index, robot_horizon_ - 1)), robot_dim_,
+                current_reference_.robot.data());
+    std::copy_n(ObjectRow(std::min(index, object_horizon_ - 1)), object_dim_,
+                current_reference_.object.data());
+    if (reference_has_robot_vel_) {
+      std::copy_n(RobotVelRow(std::min(index, robot_horizon_ - 1)), robot_dim_,
+                  current_reference_.robot_vel.data());
+    }
+    return current_reference_;
+  }
+
+  void PrimeReferenceRngForOracleResetBehavior() {
+    if (reference_type_ != ReferenceType::kRandom) {
+      return;
+    }
+    // Upstream TrackEnv construction goes through env_base.MujocoEnv._setup(),
+    // which performs one zero-action step to build observation_space. For
+    // random references that eagerly consumes one ref.get_reference() sample
+    // before the user's first reset(). Mirror that here so the first native
+    // reset observes the same sampled target under the same seed.
+    (void)ReferenceAt(motion_start_time_);
   }
 
   ReferenceState ReferenceAt(mjtNum raw_time) {
@@ -867,34 +1023,50 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
     }
     if (reference_type_ == ReferenceType::kRandom) {
       for (int i = 0; i < robot_dim_; ++i) {
-        std::uniform_real_distribution<double> dist(RobotRow(0)[i],
-                                                    RobotRow(1)[i]);
-        current_reference_.robot[i] = static_cast<mjtNum>(dist(Base::gen_));
+        current_reference_.robot[i] =
+            reference_rng_.UniformMjt(RobotRow(0)[i], RobotRow(1)[i]);
       }
       if (reference_has_robot_vel_) {
         for (int i = 0; i < robot_dim_; ++i) {
-          std::uniform_real_distribution<double> dist(RobotVelRow(0)[i],
-                                                      RobotVelRow(1)[i]);
           current_reference_.robot_vel[i] =
-              static_cast<mjtNum>(dist(Base::gen_));
+              reference_rng_.UniformMjt(RobotVelRow(0)[i], RobotVelRow(1)[i]);
         }
       }
       for (int i = 0; i < object_dim_; ++i) {
-        std::uniform_real_distribution<double> dist(ObjectRow(0)[i],
-                                                    ObjectRow(1)[i]);
-        current_reference_.object[i] = static_cast<mjtNum>(dist(Base::gen_));
+        current_reference_.object[i] =
+            reference_rng_.UniformMjt(ObjectRow(0)[i], ObjectRow(1)[i]);
       }
       return current_reference_;
     }
+    int index = reference_index_cache_;
     if (motion_extrapolation_ && time >= reference_time_.back()) {
-      reference_index_cache_ = horizon_ - 1;
+      index = horizon_ - 1;
     } else {
-      while (reference_index_cache_ + 1 < horizon_ &&
-             reference_time_[reference_index_cache_ + 1] <= time) {
-        ++reference_index_cache_;
+      if (time == reference_time_[reference_index_cache_]) {
+        index = reference_index_cache_;
+      } else if (reference_index_cache_ + 1 < horizon_ &&
+                 time == reference_time_[reference_index_cache_ + 1]) {
+        index = reference_index_cache_ + 1;
+      } else if (reference_index_cache_ + 1 < horizon_ &&
+                 time > reference_time_[reference_index_cache_] &&
+                 time < reference_time_[reference_index_cache_ + 1]) {
+        index = reference_index_cache_;
+      } else {
+        auto upper = std::upper_bound(reference_time_.begin(),
+                                      reference_time_.end(), time);
+        if (upper == reference_time_.begin()) {
+          index = 0;
+        } else {
+          index = static_cast<int>(upper - reference_time_.begin() - 1);
+        }
+        if (index < 0) {
+          index = 0;
+        } else if (index >= horizon_) {
+          index = horizon_ - 1;
+        }
       }
     }
-    int index = reference_index_cache_;
+    reference_index_cache_ = index;
     std::copy_n(RobotRow(std::min(index, robot_horizon_ - 1)), robot_dim_,
                 current_reference_.robot.data());
     std::copy_n(ObjectRow(std::min(index, object_horizon_ - 1)), object_dim_,

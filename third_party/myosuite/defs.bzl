@@ -37,6 +37,7 @@ def _myosuite_runtime_assets_impl(ctx):
     )
     add_entries(ctx.files.mpl_sim_assets, "mpl_sim_src/", "simhive/MPL_sim/")
     add_entries(ctx.files.ycb_sim_assets, "ycb_sim_src/", "simhive/YCB_sim/")
+    add_entries(ctx.files.patched_assets, "third_party/myosuite/", "")
 
     ctx.actions.write(output = manifest, content = "\n".join(lines) + "\n")
 
@@ -52,6 +53,7 @@ def _myosuite_runtime_assets_impl(ctx):
             ctx.files.object_sim_assets +
             ctx.files.mpl_sim_assets +
             ctx.files.ycb_sim_assets +
+            ctx.files.patched_assets +
             [manifest],
         ),
         outputs = [out],
@@ -109,6 +111,9 @@ myosuite_runtime_assets = rule(
         "ycb_sim_assets": attr.label_list(
             allow_files = True,
             mandatory = True,
+        ),
+        "patched_assets": attr.label_list(
+            allow_files = True,
         ),
         "out": attr.string(mandatory = True),
     },

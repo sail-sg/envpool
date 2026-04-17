@@ -56,4 +56,12 @@ def myosuite_asset_root() -> Path:
 
 def myosuite_metadata_path() -> Path:
     """Return the vendored generated MyoSuite metadata JSON path."""
-    return resolve_workspace_path("third_party/myosuite/metadata/env_ids.json")
+    for relative_path in (
+        "envpool/mujoco/myosuite/env_ids.json",
+        "third_party/myosuite/env_ids.json",
+    ):
+        try:
+            return resolve_workspace_path(relative_path)
+        except FileNotFoundError:
+            continue
+    raise FileNotFoundError("Unable to resolve MyoSuite metadata JSON path.")

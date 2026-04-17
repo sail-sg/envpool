@@ -303,9 +303,6 @@ class EglContext final : public GlContext {
         EGL_OPENGL_BIT,
         EGL_NONE,
     };
-    const std::array<EGLint, 5> pbuffer_attribs = {
-        EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE,
-    };
 
     display_ = CreateDisplay();
     if (display_ == EGL_NO_DISPLAY) {
@@ -326,17 +323,8 @@ class EglContext final : public GlContext {
       display_ = EGL_NO_DISPLAY;
       throw std::runtime_error("failed to bind EGL OpenGL API");
     }
-    surface_ =
-        eglCreatePbufferSurface(display_, config, pbuffer_attribs.data());
-    if (surface_ == EGL_NO_SURFACE) {
-      eglTerminate(display_);
-      display_ = EGL_NO_DISPLAY;
-      throw std::runtime_error("failed to create EGL pbuffer surface");
-    }
     context_ = eglCreateContext(display_, config, EGL_NO_CONTEXT, nullptr);
     if (context_ == EGL_NO_CONTEXT) {
-      eglDestroySurface(display_, surface_);
-      surface_ = EGL_NO_SURFACE;
       eglTerminate(display_);
       display_ = EGL_NO_DISPLAY;
       throw std::runtime_error("failed to create EGL context");
@@ -349,16 +337,14 @@ class EglContext final : public GlContext {
       if (context_ != EGL_NO_CONTEXT) {
         eglDestroyContext(display_, context_);
       }
-      if (surface_ != EGL_NO_SURFACE) {
-        eglDestroySurface(display_, surface_);
-      }
       eglTerminate(display_);
       eglReleaseThread();
     }
   }
 
   void MakeCurrent() override {
-    if (eglMakeCurrent(display_, surface_, surface_, context_) != EGL_TRUE) {
+    if (eglMakeCurrent(display_, EGL_NO_SURFACE, EGL_NO_SURFACE, context_) !=
+        EGL_TRUE) {
       throw std::runtime_error("failed to make EGL context current");
     }
   }
@@ -368,7 +354,6 @@ class EglContext final : public GlContext {
                        EGL_NO_CONTEXT) != EGL_TRUE) {
       throw std::runtime_error("failed to clear EGL context");
     }
-    eglReleaseThread();
   }
 
  private:
@@ -457,7 +442,6 @@ class EglContext final : public GlContext {
 
   EGLDisplay display_{EGL_NO_DISPLAY};
   EGLContext context_{EGL_NO_CONTEXT};
-  EGLSurface surface_{EGL_NO_SURFACE};
 };
 
 #endif
@@ -520,6 +504,10 @@ void OffscreenRenderer::UpdateCamera(const mjModel* model, const mjData* data,
                                      const mjvCamera* camera_override) {
   if (camera_id < -1 || camera_id >= model->ncam) {
     throw std::out_of_range("camera_id is out of range");
+  }
+  if (camera_policy_ == CameraPolicy::kDmControl) {
+    camera_ = mjvCamera{};
+    mjv_defaultCamera(&camera_);
   }
   if (camera_id == -1 && camera_override != nullptr) {
     camera_ = *camera_override;
@@ -595,7 +583,6 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
         scratch_.data() + static_cast<std::size_t>(height - 1 - y) * row_bytes;
     std::memcpy(rgb + static_cast<std::size_t>(y) * row_bytes, src, row_bytes);
   }
-  gl_context_->ClearCurrent();
 }
 
 }  // namespace envpool::mujoco

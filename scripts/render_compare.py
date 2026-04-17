@@ -218,6 +218,7 @@ def _make_myosuite_family() -> RenderFamily:
     from envpool.mujoco.myosuite.render_utils import (
         MYOSUITE_RENDER_COMPARE_CASES,
         MYOSUITE_RENDER_COMPARE_STEPS,
+        MYOSUITE_RENDER_RETRY_SEEDS,
         capture_render_sequence,
         official_render_thresholds,
     )
@@ -246,6 +247,7 @@ def _make_myosuite_family() -> RenderFamily:
                 render_width=cfg.source_width,
                 render_height=cfg.source_height,
                 camera_id=cfg.camera_id,
+                retry_seeds=MYOSUITE_RENDER_RETRY_SEEDS,
             )
             sequence_cache[task_id] = sequence
         return (
@@ -268,7 +270,7 @@ def _make_myosuite_family() -> RenderFamily:
                     if case_thresholds[case.task_id] is not None
                     else None
                 ),
-                require_match=case.require_pixel_match,
+                require_match=True,
             )
             for case in cases
             for step_index in range(MYOSUITE_RENDER_COMPARE_STEPS)
