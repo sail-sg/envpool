@@ -107,8 +107,9 @@ inline std::array<mjtNum, 4> ScipyEulerXYZToQuat(
 }
 
 inline std::uint16_t ReadLe16(std::istream* input) {
-  unsigned char bytes[2];
-  input->read(reinterpret_cast<char*>(bytes), sizeof(bytes));
+  std::array<unsigned char, 2> bytes{};
+  input->read(reinterpret_cast<char*>(bytes.data()),
+              static_cast<std::streamsize>(bytes.size()));
   if (!*input) {
     throw std::runtime_error("Failed to read uint16.");
   }
@@ -117,8 +118,9 @@ inline std::uint16_t ReadLe16(std::istream* input) {
 }
 
 inline std::uint32_t ReadLe32(std::istream* input) {
-  unsigned char bytes[4];
-  input->read(reinterpret_cast<char*>(bytes), sizeof(bytes));
+  std::array<unsigned char, 4> bytes{};
+  input->read(reinterpret_cast<char*>(bytes.data()),
+              static_cast<std::streamsize>(bytes.size()));
   if (!*input) {
     throw std::runtime_error("Failed to read uint32.");
   }
@@ -150,13 +152,14 @@ inline std::vector<mjtNum> LoadNormalizedReliefPatch(const std::string& path) {
   if (!input) {
     throw std::runtime_error("Failed to open MyoSuite relief asset: " + path);
   }
-  char magic[6];
-  input.read(magic, sizeof(magic));
-  if (!input || std::string_view(magic, sizeof(magic)) != "\x93NUMPY") {
+  std::array<char, 6> magic{};
+  input.read(magic.data(), static_cast<std::streamsize>(magic.size()));
+  if (!input || std::string_view(magic.data(), magic.size()) != "\x93NUMPY") {
     throw std::runtime_error("Invalid NPY magic in MyoSuite relief asset.");
   }
-  unsigned char version[2];
-  input.read(reinterpret_cast<char*>(version), sizeof(version));
+  std::array<unsigned char, 2> version{};
+  input.read(reinterpret_cast<char*>(version.data()),
+             static_cast<std::streamsize>(version.size()));
   if (!input) {
     throw std::runtime_error("Failed to read NPY version.");
   }
@@ -186,14 +189,18 @@ inline std::vector<mjtNum> LoadNormalizedReliefPatch(const std::string& path) {
     throw std::runtime_error("Failed to read MyoSuite relief payload.");
   }
   auto [min_it, max_it] = std::minmax_element(raw.begin(), raw.end());
-  mjtNum low = static_cast<mjtNum>(*min_it);
-  mjtNum high = static_cast<mjtNum>(*max_it);
+  const auto low = static_cast<mjtNum>(*min_it);
+  const auto high = static_cast<mjtNum>(*max_it);
   mjtNum denom = std::max(high - low, static_cast<mjtNum>(1e-12));
   std::vector<mjtNum> normalized(raw.size(), 0.0);
+  const auto cols_index = static_cast<std::size_t>(cols);
   for (int row = 0; row < rows; ++row) {
+    const auto row_index = static_cast<std::size_t>(row);
+    const auto flipped_row_index = static_cast<std::size_t>(rows - 1 - row);
     for (int col = 0; col < cols; ++col) {
-      std::size_t src = static_cast<std::size_t>(row * cols + col);
-      std::size_t dst = static_cast<std::size_t>((rows - 1 - row) * cols + col);
+      const auto col_index = static_cast<std::size_t>(col);
+      const auto src = row_index * cols_index + col_index;
+      const auto dst = flipped_row_index * cols_index + col_index;
       normalized[dst] = (static_cast<mjtNum>(raw[src]) - low) / denom;
     }
   }
@@ -329,7 +336,7 @@ class ColoredNoiseProcess {
     if (fmin < 0.0 || fmin > 0.5) {
       throw std::runtime_error("Colored noise fmin must be in [0, 0.5].");
     }
-    constexpr mjtNum kTwoPi = static_cast<mjtNum>(2.0) * detail::kPi;
+    constexpr mjtNum k_two_pi = static_cast<mjtNum>(2.0) * detail::kPi;
     int freq_count = samples / 2 + 1;
     std::vector<mjtNum> s_scale(freq_count, 0.0);
     for (int i = 0; i < freq_count; ++i) {
@@ -379,7 +386,7 @@ class ColoredNoiseProcess {
       for (int t = 0; t < samples; ++t) {
         mjtNum value = sr[0];
         for (int i = 1; i < mirrored_limit; ++i) {
-          mjtNum angle = kTwoPi * static_cast<mjtNum>(i) *
+          mjtNum angle = k_two_pi * static_cast<mjtNum>(i) *
                          static_cast<mjtNum>(t) / static_cast<mjtNum>(samples);
           value += static_cast<mjtNum>(2.0) *
                    (sr[i] * std::cos(angle) - si[i] * std::sin(angle));
@@ -404,7 +411,7 @@ class ColoredNoiseProcess {
   std::mt19937 fallback_gen_{0};
 };
 
-enum class RunTrackOslState : int {
+enum class RunTrackOslState : std::uint8_t {
   kEarlyStance = 0,
   kLateStance = 1,
   kEarlySwing = 2,
@@ -1746,7 +1753,7 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
         challenge_extra_detail::RequireId(model_, mjOBJ_SENSOR, "l_foot");
     grf_sensor_ids_[3] =
         challenge_extra_detail::RequireId(model_, mjOBJ_SENSOR, "l_toes");
-    static const std::vector<std::string> kMyoJoints = {
+    static const std::vector<std::string> k_myo_joints = {
         "Abs_r3",
         "Abs_t1",
         "Abs_t2",
@@ -1795,9 +1802,9 @@ class MyoChallengeSoccerEnvBase : public Env<EnvSpecT>,
         "subtalar_angle_r",
     };
     internal_qposadrs_ =
-        challenge_extra_detail::CollectJointQposAdrs(model_, kMyoJoints);
+        challenge_extra_detail::CollectJointQposAdrs(model_, k_myo_joints);
     internal_dofadrs_ =
-        challenge_extra_detail::CollectJointDofAdrs(model_, kMyoJoints);
+        challenge_extra_detail::CollectJointDofAdrs(model_, k_myo_joints);
     static const std::vector<std::string> pain_joints = {
         "hip_adduction_l", "hip_adduction_r",        "hip_flexion_l",
         "hip_flexion_r",   "hip_rotation_l",         "hip_rotation_r",
@@ -2534,12 +2541,12 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
     if (patch_rows <= 0 || patch_cols <= 0) {
       return;
     }
-    constexpr mjtNum kRealLength = 12.0;
-    constexpr mjtNum kRealWidth = 12.0;
-    mjtNum map_i =
-        data_->qpos[0] / (kRealLength / rows) + static_cast<mjtNum>(rows) * 0.5;
-    mjtNum map_j =
-        data_->qpos[1] / (kRealWidth / cols) + static_cast<mjtNum>(cols) * 0.5;
+    constexpr mjtNum k_real_length = 12.0;
+    constexpr mjtNum k_real_width = 12.0;
+    mjtNum map_i = data_->qpos[0] / (k_real_length / rows) +
+                   static_cast<mjtNum>(rows) * 0.5;
+    mjtNum map_j = data_->qpos[1] / (k_real_width / cols) +
+                   static_cast<mjtNum>(cols) * 0.5;
     int clipped_i = static_cast<int>(
         std::clamp(map_i, static_cast<mjtNum>(0.0),
                    static_cast<mjtNum>(std::max(rows - 2, 0))));
@@ -2654,8 +2661,8 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
   }
 
   std::array<mjtNum, 2> RepellerPolicy() {
-    constexpr mjtNum kDistInfluence = 3.5;
-    constexpr mjtNum kEta = 20.0;
+    constexpr mjtNum k_dist_influence = 3.5;
+    constexpr mjtNum k_eta = 20.0;
     auto pose = OpponentPose();
     std::vector<std::array<mjtNum, 2>> repellers = WallPositions();
     repellers.insert(repellers.begin(), {data_->xpos[pelvis_body_id_ * 3 + 0],
@@ -2665,7 +2672,7 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
     for (std::size_t i = 0; i < repellers.size(); ++i) {
       mjtNum dist = challenge_extra_detail::Norm2(repellers[i][0] - pose[0],
                                                   repellers[i][1] - pose[1]);
-      if (dist < kDistInfluence) {
+      if (dist < k_dist_influence) {
         active_indices.push_back(static_cast<int>(i));
       }
     }
@@ -2686,8 +2693,8 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
                                                  repellers[index][1] - pose[1]),
                    static_cast<mjtNum>(1e-5));
       mjtNum term = static_cast<mjtNum>(1.0) / dist -
-                    static_cast<mjtNum>(1.0) / kDistInfluence;
-      repel_force += static_cast<mjtNum>(0.5) * kEta * term * term;
+                    static_cast<mjtNum>(1.0) / k_dist_influence;
+      repel_force += static_cast<mjtNum>(0.5) * k_eta * term * term;
     }
     repel_center[0] /= static_cast<mjtNum>(active_indices.size());
     repel_center[1] /= static_cast<mjtNum>(active_indices.size());
@@ -2698,7 +2705,12 @@ class MyoChallengeChaseTagEnvBase : public Env<EnvSpecT>,
                                     pose[1] - repel_center[1]};
     for (mjtNum& component : escape) {
       if (std::abs(component) <= 0.1) {
-        mjtNum sign = component > 0.0 ? 1.0 : (component < 0.0 ? -1.0 : 0.0);
+        mjtNum sign = 0.0;
+        if (component > 0.0) {
+          sign = 1.0;
+        } else if (component < 0.0) {
+          sign = -1.0;
+        }
         component = -sign * challenge_detail::UniformScalar(&gen_, 0.3, 0.9);
       }
     }
