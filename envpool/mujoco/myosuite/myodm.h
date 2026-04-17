@@ -656,8 +656,8 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
         test_reset_act_(detail::ToMjtVector(spec.config["test_reset_act"_])),
         test_reset_act_dot_(
             detail::ToMjtVector(spec.config["test_reset_act_dot"_])),
-        test_reset_integration_state_(detail::ToMjtVector(
-            spec.config["test_reset_integration_state"_])),
+        test_reset_integration_state_(
+            detail::ToMjtVector(spec.config["test_reset_integration_state"_])),
         test_reset_qacc_warmstart_(
             detail::ToMjtVector(spec.config["test_reset_qacc_warmstart"_])),
         test_reference_time_(
@@ -906,12 +906,10 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
       mj_step1(model_, data_);
       return;
     }
-    bool has_test_reset_override = !test_reset_qpos_.empty() ||
-                                   !test_reset_qvel_.empty() ||
-                                   !test_reset_ctrl_.empty() ||
-                                   !test_reset_act_.empty() ||
-                                   !test_reset_act_dot_.empty() ||
-                                   !test_reset_qacc_warmstart_.empty();
+    bool has_test_reset_override =
+        !test_reset_qpos_.empty() || !test_reset_qvel_.empty() ||
+        !test_reset_ctrl_.empty() || !test_reset_act_.empty() ||
+        !test_reset_act_dot_.empty() || !test_reset_qacc_warmstart_.empty();
     if (!test_reset_qpos_.empty()) {
       detail::RestoreVector(test_reset_qpos_, data_->qpos);
       detail::RestoreVector(test_reset_qvel_, data_->qvel);

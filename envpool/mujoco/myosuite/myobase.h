@@ -61,8 +61,7 @@ inline mjtNum MuscleActivation(mjtNum value) {
   // Official MyoSuite applies the logistic transform in-place on the
   // float32 action array before assigning it into MuJoCo's ctrl buffer.
   float action = static_cast<float>(value);
-  float activation =
-      1.0F / (1.0F + std::exp(-5.0F * (action - 0.5F)));
+  float activation = 1.0F / (1.0F + std::exp(-5.0F * (action - 0.5F)));
   return static_cast<mjtNum>(activation);
 }
 
@@ -934,8 +933,7 @@ class MyoSuiteReachEnvFns {
         "target_pos_max"_.Bind(std::vector<double>{}),
         "joint_random_range"_.Bind(std::vector<double>{}),
         "target_pos_relative_to_tip"_.Bind(false),
-        "hide_skin_geom_group_1"_.Bind(false),
-        "hide_terrain"_.Bind(false),
+        "hide_skin_geom_group_1"_.Bind(false), "hide_terrain"_.Bind(false),
         "test_reset_qpos"_.Bind(std::vector<double>{}),
         "test_reset_qvel"_.Bind(std::vector<double>{}),
         "test_reset_act"_.Bind(std::vector<double>{}),
@@ -1516,10 +1514,9 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
   }
 
   void ApplyResetState() {
-    bool has_test_reset_override = !test_reset_qpos_.empty() ||
-                                   !test_reset_qvel_.empty() ||
-                                   !test_reset_act_.empty() ||
-                                   !test_reset_qacc_warmstart_.empty();
+    bool has_test_reset_override =
+        !test_reset_qpos_.empty() || !test_reset_qvel_.empty() ||
+        !test_reset_act_.empty() || !test_reset_qacc_warmstart_.empty();
     if (!test_reset_qpos_.empty()) {
       detail::RestoreVector(test_reset_qpos_, data_->qpos);
       detail::RestoreVector(test_reset_qvel_, data_->qvel);
@@ -1706,8 +1703,7 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
             detail::ToMjtVector(spec.config["joint_random_range"_])),
         current_target_pos_(target_pos_min_),
         muscle_actuator_(model_->nu, false),
-        target_pos_relative_to_tip_(
-            spec.config["target_pos_relative_to_tip"_]),
+        target_pos_relative_to_tip_(spec.config["target_pos_relative_to_tip"_]),
         hide_skin_geom_group_1_(spec.config["hide_skin_geom_group_1"_]),
         hide_terrain_(spec.config["hide_terrain"_]),
         test_reset_qpos_(detail::ToMjtVector(spec.config["test_reset_qpos"_])),
@@ -1949,10 +1945,9 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
   }
 
   void ApplyResetState() {
-    bool has_test_reset_override = !test_reset_qpos_.empty() ||
-                                   !test_reset_qvel_.empty() ||
-                                   !test_reset_act_.empty() ||
-                                   !test_reset_qacc_warmstart_.empty();
+    bool has_test_reset_override =
+        !test_reset_qpos_.empty() || !test_reset_qvel_.empty() ||
+        !test_reset_act_.empty() || !test_reset_qacc_warmstart_.empty();
     if (!test_reset_qpos_.empty()) {
       detail::RestoreVector(test_reset_qpos_, data_->qpos);
       if (!test_reset_qvel_.empty()) {
@@ -2247,10 +2242,9 @@ class MyoSuiteKeyTurnEnvBase : public Env<EnvSpecT>,
   }
 
   void ApplyResetState() {
-    bool has_test_reset_override = !test_reset_qpos_.empty() ||
-                                   !test_reset_qvel_.empty() ||
-                                   !test_reset_act_.empty() ||
-                                   !test_reset_qacc_warmstart_.empty();
+    bool has_test_reset_override =
+        !test_reset_qpos_.empty() || !test_reset_qvel_.empty() ||
+        !test_reset_act_.empty() || !test_reset_qacc_warmstart_.empty();
     if (!test_reset_qpos_.empty()) {
       detail::RestoreVector(test_reset_qpos_, data_->qpos);
       detail::RestoreVector(test_reset_qvel_, data_->qvel);
@@ -2521,10 +2515,9 @@ class MyoSuiteObjHoldEnvBase : public Env<EnvSpecT>,
   }
 
   void ApplyResetState() {
-    bool has_test_reset_override = !test_reset_qpos_.empty() ||
-                                   !test_reset_qvel_.empty() ||
-                                   !test_reset_act_.empty() ||
-                                   !test_reset_qacc_warmstart_.empty();
+    bool has_test_reset_override =
+        !test_reset_qpos_.empty() || !test_reset_qvel_.empty() ||
+        !test_reset_act_.empty() || !test_reset_qacc_warmstart_.empty();
     if (!test_reset_qpos_.empty()) {
       detail::RestoreVector(test_reset_qpos_, data_->qpos);
       detail::RestoreVector(test_reset_qvel_, data_->qvel);
@@ -2986,10 +2979,9 @@ class MyoSuitePenTwirlEnvBase : public Env<EnvSpecT>,
   }
 
   void ApplyResetState() {
-    bool has_test_reset_override = !test_reset_qpos_.empty() ||
-                                   !test_reset_qvel_.empty() ||
-                                   !test_reset_act_.empty() ||
-                                   !test_reset_qacc_warmstart_.empty();
+    bool has_test_reset_override =
+        !test_reset_qpos_.empty() || !test_reset_qvel_.empty() ||
+        !test_reset_act_.empty() || !test_reset_qacc_warmstart_.empty();
     if (!test_reset_qpos_.empty()) {
       detail::RestoreVector(test_reset_qpos_, data_->qpos);
       detail::RestoreVector(test_reset_qvel_, data_->qvel);

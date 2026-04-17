@@ -288,9 +288,7 @@ class MujocoRobotEnv : public RenderableEnv {
     }
   }
 
-  void InvalidateRenderCache() {
-    has_cached_render_ = false;
-  }
+  void InvalidateRenderCache() { has_cached_render_ = false; }
 
   void CaptureResetState() {
 #ifdef ENVPOOL_TEST

@@ -1354,9 +1354,8 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
                                          &default_object_geom_quat_);
     challenge_detail::CopyBodyGeomSlice6(model_, model_->geom_aabb, object_bid_,
                                          &default_object_geom_aabb_);
-    challenge_detail::CopyBodyGeomScalarSlice(model_, model_->geom_rbound,
-                                              object_bid_,
-                                              &default_object_geom_rbound_);
+    challenge_detail::CopyBodyGeomScalarSlice(
+        model_, model_->geom_rbound, object_bid_, &default_object_geom_rbound_);
     challenge_detail::CopyBodyGeomSlice4f(
         model_, model_->geom_rgba, object_bid_, &default_object_geom_rgba_);
     challenge_detail::CopyBodyGeomSlice3(model_, model_->geom_friction,
