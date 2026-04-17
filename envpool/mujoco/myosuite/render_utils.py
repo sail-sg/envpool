@@ -119,9 +119,7 @@ MYOSUITE_RENDER_RETRY_SEEDS = (
 _MYODM_FIXED_TASK_IDS = frozenset(MYOSUITE_SUITES["myodm_fixed_ids"])
 
 
-def official_render_thresholds(
-    task_id: str,
-) -> tuple[float, float] | None:
+def official_render_thresholds(task_id: str) -> tuple[float, float]:
     """Return the render oracle thresholds for MyoSuite compare frames."""
     del task_id
     return (0.0, 0.0)
@@ -392,7 +390,7 @@ def _make_oracle(
             kwargs["render_mode"] = "rgb_array"
         if camera_id != -1 and _ctor_accepts_kwarg(oracle_cls, "camera_id"):
             kwargs["camera_id"] = camera_id
-        oracle = gymnasium.wrappers.TimeLimit(
+        oracle: Any = gymnasium.wrappers.TimeLimit(
             oracle_cls(seed=seed, **kwargs),
             max_episode_steps=int(entry["max_episode_steps"]),
         )
@@ -1125,7 +1123,7 @@ def capture_render_sequence(
 ) -> RenderSequence:
     """Capture reset plus a short EnvPool-oracle render rollout."""
     last_early_termination: _RenderEarlyTerminationError | None = None
-    action_modes = (action_mode,)
+    action_modes: tuple[str, ...] = (action_mode,)
     if action_mode == "random":
         if _entry(task_id)["suite"] == "myodm":
             action_modes += ("hold", "zero", "playback")

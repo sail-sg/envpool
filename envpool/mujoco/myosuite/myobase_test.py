@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from functools import cache
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import gymnasium
 import mujoco
@@ -1837,7 +1837,9 @@ class MyoSuiteMyoBaseNativeTest(absltest.TestCase):
         """Walk pixel wrappers should stay constructible alongside terrain render."""
         config, pool_type, spec_type = _walk_pixel_config("myoLegWalk-v0")
         env = _make_env(config, pool_type, spec_type)
-        self.assertIn("obs:pixels", MyoSuiteWalkPixelEnvSpec._state_keys)
+        self.assertIn(
+            "obs:pixels", cast(list[str], MyoSuiteWalkPixelEnvSpec._state_keys)
+        )
         self.assertIsNotNone(env)
 
     def test_terrain_pixel_observation_smoke(self) -> None:

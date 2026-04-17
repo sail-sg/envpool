@@ -1617,7 +1617,7 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
         cls = _oracle_class(_REORIENT_IDS[0])
         for env_id in _REORIENT_IDS:
             with self.subTest(env_id=env_id):
-                oracle = gymnasium.wrappers.TimeLimit(
+                oracle: Any = gymnasium.wrappers.TimeLimit(
                     cls(seed=123, **_oracle_kwargs(env_id)),
                     max_episode_steps=int(_entry(env_id)["max_episode_steps"]),
                 )
@@ -1641,7 +1641,7 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
                     _assert_reorient_obs_close(obs1[0], obs0)
                     np.testing.assert_allclose(
                         reward1[0],
-                        reward0,
+                        float(reward0),
                         atol=_reorient_alignment_reward_atol(),
                         rtol=1e-5,
                     )
@@ -1655,7 +1655,7 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
     def test_reorient_fatigue_first_step_act_matches_oracle(self) -> None:
         """Fatigue Reorient should preserve upstream warm-started act state."""
         env_id = "myoFatiChallengeDieReorientP1-v0"
-        oracle = gymnasium.wrappers.TimeLimit(
+        oracle: Any = gymnasium.wrappers.TimeLimit(
             _oracle_class(env_id)(seed=123, **_oracle_kwargs(env_id)),
             max_episode_steps=int(_entry(env_id)["max_episode_steps"]),
         )
@@ -1674,7 +1674,9 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
             atol=5e-8,
             rtol=1e-8,
         )
-        np.testing.assert_allclose(reward1[0], reward0, atol=5e-8, rtol=1e-8)
+        np.testing.assert_allclose(
+            reward1[0], float(reward0), atol=5e-8, rtol=1e-8
+        )
         self.assertEqual(bool(terminated1[0]), bool(terminated0))
         self.assertEqual(bool(truncated1[0]), bool(truncated0))
         native.close()
@@ -1685,7 +1687,7 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
         cls = _oracle_class(_RELOCATE_IDS[0])
         for env_id in _RELOCATE_IDS:
             with self.subTest(env_id=env_id):
-                oracle = gymnasium.wrappers.TimeLimit(
+                oracle: Any = gymnasium.wrappers.TimeLimit(
                     cls(seed=123, **_oracle_kwargs(env_id)),
                     max_episode_steps=int(_entry(env_id)["max_episode_steps"]),
                 )
@@ -1722,7 +1724,7 @@ class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
                     )
                     np.testing.assert_allclose(
                         reward1[0],
-                        reward0,
+                        float(reward0),
                         atol=_relocate_alignment_reward_atol(env_id),
                         rtol=1e-5,
                     )

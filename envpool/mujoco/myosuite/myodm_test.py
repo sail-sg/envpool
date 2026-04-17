@@ -599,8 +599,8 @@ class MyoDMTrackNativeTest(absltest.TestCase):
         entry = _entry(env_id)
         cls = load_oracle_class("myosuite.envs.myo.myodm.myodm_v0", "TrackEnv")
         with _oracle_track_kwargs(env_id) as oracle_kwargs:
-            oracle: Any | None = None
-            native: Any | None = None
+            oracle: Any = None
+            native: Any = None
             try:
                 oracle = gymnasium.wrappers.TimeLimit(
                     cls(seed=123, **oracle_kwargs),
