@@ -1268,9 +1268,12 @@ def _oracle_reset_sync(
         sync["test_goalkeeper_velocity"] = np.asarray(
             goalkeeper.goalkeeper_vel, dtype=np.float64
         ).tolist()
-        sync["test_goalkeeper_noise_buffer"] = np.asarray(
-            goalkeeper.noise_process.buffer, dtype=np.float64
-        ).reshape(-1).tolist()
+        sync["test_goalkeeper_noise_buffer"] = (
+            np
+            .asarray(goalkeeper.noise_process.buffer, dtype=np.float64)
+            .reshape(-1)
+            .tolist()
+        )
         sync["test_goalkeeper_noise_idx"] = int(goalkeeper.noise_process.idx)
         sync["test_goalkeeper_block_velocity"] = float(
             goalkeeper.block_velocity
@@ -1295,8 +1298,11 @@ def _oracle_reset_sync(
         hfield_id = int(sim.model.geom_dataid[terrain_geom_id])
         sync["test_task"] = int(unwrapped.current_task.value)
         sync["test_hfield_data"] = (
-            sim.model.hfield_data[
-                int(sim.model.hfield_adr[hfield_id]) : int(sim.model.hfield_adr[hfield_id])
+            sim.model
+            .hfield_data[
+                int(sim.model.hfield_adr[hfield_id]) : int(
+                    sim.model.hfield_adr[hfield_id]
+                )
                 + int(sim.model.hfield_nrow[hfield_id])
                 * int(sim.model.hfield_ncol[hfield_id])
             ]
@@ -1315,9 +1321,12 @@ def _oracle_reset_sync(
         sync["test_opponent_velocity"] = np.asarray(
             opponent.opponent_vel, dtype=np.float64
         ).tolist()
-        sync["test_opponent_noise_buffer"] = np.asarray(
-            opponent.noise_process.buffer, dtype=np.float64
-        ).reshape(-1).tolist()
+        sync["test_opponent_noise_buffer"] = (
+            np
+            .asarray(opponent.noise_process.buffer, dtype=np.float64)
+            .reshape(-1)
+            .tolist()
+        )
         sync["test_opponent_noise_idx"] = int(opponent.noise_process.idx)
         sync["test_chase_velocity"] = float(opponent.chase_velocity)
         sync["test_opponent_policy"] = _chasetag_policy_id(
@@ -1330,19 +1339,17 @@ def _oracle_reset_sync(
             sim.model.body_pos[unwrapped.id_info.ball_bid].copy().tolist()
         )
         sync["test_ball_geom_friction"] = (
-            sim.model.geom_friction[unwrapped.id_info.ball_gid]
-            .copy()
-            .tolist()
+            sim.model.geom_friction[unwrapped.id_info.ball_gid].copy().tolist()
         )
         sync["test_paddle_body_mass"] = [
             float(sim.model.body_mass[unwrapped.id_info.paddle_bid])
         ]
-        sync["test_init_qpos"] = (
-            np.asarray(unwrapped.init_qpos, dtype=np.float64).tolist()
-        )
-        sync["test_init_qvel"] = (
-            np.asarray(unwrapped.init_qvel, dtype=np.float64).tolist()
-        )
+        sync["test_init_qpos"] = np.asarray(
+            unwrapped.init_qpos, dtype=np.float64
+        ).tolist()
+        sync["test_init_qvel"] = np.asarray(
+            unwrapped.init_qvel, dtype=np.float64
+        ).tolist()
         sync["test_reset_act_dot"] = (
             sim.data.act_dot.copy().tolist() if sim.model.na > 0 else []
         )
@@ -1408,6 +1415,8 @@ def _assert_alignment_with_oracle(
     finally:
         native.close()
         oracle.close()
+
+
 class MyoSuiteMyoChallengeNativeTest(absltest.TestCase):
     """Covers the internal native MyoChallenge slice implemented so far."""
 

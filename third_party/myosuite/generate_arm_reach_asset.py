@@ -122,7 +122,7 @@ def main() -> None:
         for elem in root.iter():
             file_attr = elem.get("file")
             if file_attr is not None and file_attr.startswith("../myo_sim/"):
-                elem.set("file", "../" + file_attr[len("../myo_sim/"):])
+                elem.set("file", "../" + file_attr[len("../myo_sim/") :])
     args.output.parent.mkdir(parents=True, exist_ok=True)
     xml_tree.write(args.output, encoding="utf-8")
 

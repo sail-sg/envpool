@@ -310,9 +310,7 @@ def _reach_config(
         kwargs["model_path"] = model_path
     model = _model(kwargs["model_path"])
     site_names, mins, maxs = _flatten_site_ranges(kwargs["target_reach_range"])
-    is_walk_reach = (
-        entry["entry_module"] == "myosuite.envs.myo.myobase.walk_v0"
-    )
+    is_walk_reach = entry["entry_module"] == "myosuite.envs.myo.myobase.walk_v0"
     config = MyoSuiteReachEnvSpec.gen_config(
         num_envs=1,
         batch_size=1,

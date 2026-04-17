@@ -201,7 +201,9 @@ class MyoSuiteMetadataTest(absltest.TestCase):
             "myosuite.envs.myo.myobase.walk_v0",
         )
         self.assertEqual(walk_reach["class_name"], "ReachEnvV0")
-        self.assertTrue(walk_reach["default_config"]["target_pos_relative_to_tip"])
+        self.assertTrue(
+            walk_reach["default_config"]["target_pos_relative_to_tip"]
+        )
         self.assertTrue(walk_reach["default_config"]["hide_skin_geom_group_1"])
         self.assertTrue(walk_reach["default_config"]["hide_terrain"])
         self.assertEqual(
@@ -215,7 +217,9 @@ class MyoSuiteMetadataTest(absltest.TestCase):
             "myosuite.envs.myo.myobase.reach_v0",
         )
         self.assertEqual(arm_reach["class_name"], "ReachEnvV0")
-        self.assertFalse(arm_reach["default_config"]["target_pos_relative_to_tip"])
+        self.assertFalse(
+            arm_reach["default_config"]["target_pos_relative_to_tip"]
+        )
         self.assertFalse(arm_reach["default_config"]["hide_skin_geom_group_1"])
         self.assertFalse(arm_reach["default_config"]["hide_terrain"])
 
@@ -303,7 +307,9 @@ class MyoSuiteMetadataTest(absltest.TestCase):
                 with self.subTest(task_id=entry["id"], kind="reference"):
                     self.assertTrue((root / reference).exists())
 
-    def test_preview_test_overrides_are_filtered_by_supported_spec(self) -> None:
+    def test_preview_test_overrides_are_filtered_by_supported_spec(
+        self,
+    ) -> None:
         """Checks pose-only preview state does not leak into torso configs."""
         base_path = str(myosuite_asset_root().parent.parent)
 

@@ -571,9 +571,7 @@ def _reach_config(
 ) -> dict[str, Any]:
     model = _model(base_path, kwargs["model_path"])
     site_names, mins, maxs = _flatten_site_ranges(kwargs["target_reach_range"])
-    is_walk_reach = (
-        entry["entry_module"] == "myosuite.envs.myo.myobase.walk_v0"
-    )
+    is_walk_reach = entry["entry_module"] == "myosuite.envs.myo.myobase.walk_v0"
     return {
         "frame_skip": int(kwargs.get("frame_skip", 10)),
         "model_path": str(kwargs["model_path"]),
@@ -1079,9 +1077,7 @@ def _chasetag_config(
         "chase_vel_low": float(kwargs.get("chase_vel_range", [1.0, 1.0])[0]),
         "chase_vel_high": float(kwargs.get("chase_vel_range", [1.0, 1.0])[1]),
         "random_vel_low": float(kwargs.get("random_vel_range", [1.0, 1.0])[0]),
-        "random_vel_high": float(
-            kwargs.get("random_vel_range", [1.0, 1.0])[1]
-        ),
+        "random_vel_high": float(kwargs.get("random_vel_range", [1.0, 1.0])[1]),
         "repeller_vel_low": float(
             kwargs.get("repeller_vel_range", [1.0, 1.0])[0]
         ),

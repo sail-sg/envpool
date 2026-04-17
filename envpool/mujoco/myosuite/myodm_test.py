@@ -455,7 +455,9 @@ def _record_track_reference_samples(
                 robot_vel=(
                     None
                     if reference.robot_vel is None
-                    else np.asarray(reference.robot_vel, dtype=np.float64).copy()
+                    else np.asarray(
+                        reference.robot_vel, dtype=np.float64
+                    ).copy()
                 ),
                 object=np.asarray(reference.object, dtype=np.float64).copy(),
             )
@@ -477,17 +479,19 @@ def _track_reference_sync(
     has_robot_vel = samples[0].robot_vel is not None
     return {
         "test_reference_time": [round(sample.time, 4) for sample in samples],
-        "test_reference_robot": np.concatenate(
-            [sample.robot for sample in samples]
-        ).tolist(),
+        "test_reference_robot": np.concatenate([
+            sample.robot for sample in samples
+        ]).tolist(),
         "test_reference_robot_vel": (
             []
             if not has_robot_vel
-            else np.concatenate([sample.robot_vel for sample in samples]).tolist()
+            else np.concatenate([
+                sample.robot_vel for sample in samples
+            ]).tolist()
         ),
-        "test_reference_object": np.concatenate(
-            [sample.object for sample in samples]
-        ).tolist(),
+        "test_reference_object": np.concatenate([
+            sample.object for sample in samples
+        ]).tolist(),
     }
 
 

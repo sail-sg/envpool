@@ -739,9 +739,12 @@ def _sync_reset_myochallenge(
         sync["test_goalkeeper_velocity"] = np.asarray(
             goalkeeper.goalkeeper_vel, dtype=np.float64
         ).tolist()
-        sync["test_goalkeeper_noise_buffer"] = np.asarray(
-            goalkeeper.noise_process.buffer, dtype=np.float64
-        ).reshape(-1).tolist()
+        sync["test_goalkeeper_noise_buffer"] = (
+            np
+            .asarray(goalkeeper.noise_process.buffer, dtype=np.float64)
+            .reshape(-1)
+            .tolist()
+        )
         sync["test_goalkeeper_noise_idx"] = int(goalkeeper.noise_process.idx)
         sync["test_goalkeeper_block_velocity"] = float(
             goalkeeper.block_velocity
@@ -758,8 +761,11 @@ def _sync_reset_myochallenge(
         hfield_id = int(sim.model.geom_dataid[terrain_geom_id])
         sync["test_task"] = int(unwrapped.current_task.value)
         sync["test_hfield_data"] = (
-            sim.model.hfield_data[
-                int(sim.model.hfield_adr[hfield_id]) : int(sim.model.hfield_adr[hfield_id])
+            sim.model
+            .hfield_data[
+                int(sim.model.hfield_adr[hfield_id]) : int(
+                    sim.model.hfield_adr[hfield_id]
+                )
                 + int(sim.model.hfield_nrow[hfield_id])
                 * int(sim.model.hfield_ncol[hfield_id])
             ]
@@ -778,9 +784,12 @@ def _sync_reset_myochallenge(
         sync["test_opponent_velocity"] = np.asarray(
             opponent.opponent_vel, dtype=np.float64
         ).tolist()
-        sync["test_opponent_noise_buffer"] = np.asarray(
-            opponent.noise_process.buffer, dtype=np.float64
-        ).reshape(-1).tolist()
+        sync["test_opponent_noise_buffer"] = (
+            np
+            .asarray(opponent.noise_process.buffer, dtype=np.float64)
+            .reshape(-1)
+            .tolist()
+        )
         sync["test_opponent_noise_idx"] = int(opponent.noise_process.idx)
         sync["test_chase_velocity"] = float(opponent.chase_velocity)
         sync["test_opponent_policy"] = _chasetag_policy_id(
@@ -800,19 +809,17 @@ def _sync_reset_myochallenge(
             sim.model.body_pos[unwrapped.id_info.ball_bid].copy().tolist()
         )
         sync["test_ball_geom_friction"] = (
-            sim.model.geom_friction[unwrapped.id_info.ball_gid]
-            .copy()
-            .tolist()
+            sim.model.geom_friction[unwrapped.id_info.ball_gid].copy().tolist()
         )
         sync["test_paddle_body_mass"] = [
             float(sim.model.body_mass[unwrapped.id_info.paddle_bid])
         ]
-        sync["test_init_qpos"] = (
-            np.asarray(unwrapped.init_qpos, dtype=np.float64).tolist()
-        )
-        sync["test_init_qvel"] = (
-            np.asarray(unwrapped.init_qvel, dtype=np.float64).tolist()
-        )
+        sync["test_init_qpos"] = np.asarray(
+            unwrapped.init_qpos, dtype=np.float64
+        ).tolist()
+        sync["test_init_qvel"] = np.asarray(
+            unwrapped.init_qvel, dtype=np.float64
+        ).tolist()
         sync["test_reset_act_dot"] = (
             sim.data.act_dot.copy().tolist() if sim.model.na > 0 else []
         )
@@ -882,7 +889,9 @@ def _record_track_reference_samples(
                 robot_vel=(
                     None
                     if reference.robot_vel is None
-                    else np.asarray(reference.robot_vel, dtype=np.float64).copy()
+                    else np.asarray(
+                        reference.robot_vel, dtype=np.float64
+                    ).copy()
                 ),
                 object=np.asarray(reference.object, dtype=np.float64).copy(),
             )
@@ -904,19 +913,19 @@ def _track_reference_sync(
     has_robot_vel = samples[0].robot_vel is not None
     return {
         "test_reference_time": [round(sample.time, 4) for sample in samples],
-        "test_reference_robot": np.concatenate(
-            [sample.robot for sample in samples]
-        ).tolist(),
+        "test_reference_robot": np.concatenate([
+            sample.robot for sample in samples
+        ]).tolist(),
         "test_reference_robot_vel": (
             []
             if not has_robot_vel
-            else np.concatenate(
-                [cast(np.ndarray, sample.robot_vel) for sample in samples]
-            ).tolist()
+            else np.concatenate([
+                cast(np.ndarray, sample.robot_vel) for sample in samples
+            ]).tolist()
         ),
-        "test_reference_object": np.concatenate(
-            [sample.object for sample in samples]
-        ).tolist(),
+        "test_reference_object": np.concatenate([
+            sample.object for sample in samples
+        ]).tolist(),
     }
 
 
@@ -979,7 +988,9 @@ def _capture_render_sequence_once(
             elif action_mode == "zero":
                 actions = _zero_actions(action_shape, steps)
             else:
-                raise ValueError(f"Unsupported render action mode: {action_mode}")
+                raise ValueError(
+                    f"Unsupported render action mode: {action_mode}"
+                )
             official_frames: list[np.ndarray] = []
             step_outcomes: list[tuple[bool, bool]] = []
             if suite == "myodm":
@@ -999,8 +1010,13 @@ def _capture_render_sequence_once(
                         )
                 else:
                     for action in actions:
-                        _, _, terminated0, truncated0, _ = oracle.step(action[0])
-                        step_outcomes.append((bool(terminated0), bool(truncated0)))
+                        _, _, terminated0, truncated0, _ = oracle.step(
+                            action[0]
+                        )
+                        step_outcomes.append((
+                            bool(terminated0),
+                            bool(truncated0),
+                        ))
                         official_frames.append(
                             _render_official_array(
                                 oracle,
@@ -1026,7 +1042,10 @@ def _capture_render_sequence_once(
             reset_envpool = _render_envpool_array(env)[0].copy()
             envpool_frames: list[np.ndarray] = []
             if suite == "myodm":
-                for step_index, (action, (terminated0, truncated0)) in enumerate(
+                for step_index, (
+                    action,
+                    (terminated0, truncated0),
+                ) in enumerate(
                     zip(actions, step_outcomes, strict=True),
                     start=1,
                 ):
@@ -1041,12 +1060,8 @@ def _capture_render_sequence_once(
                             f"{task_id} truncated mismatch at render step "
                             f"{step_index}"
                         )
-                    if (
-                        action_mode != "playback"
-                        and (
-                            step_index < steps
-                            and (terminated0 or truncated0)
-                        )
+                    if action_mode != "playback" and (
+                        step_index < steps and (terminated0 or truncated0)
                     ):
                         raise _RenderEarlyTerminationError(
                             task_id, seed, step_index
@@ -1137,4 +1152,6 @@ def capture_render_sequence(
             f"candidate action modes {action_modes} and seeds "
             f"{(seed, *retry_seeds)}"
         ) from last_early_termination
-    raise RuntimeError("capture_render_sequence exhausted without attempting a seed")
+    raise RuntimeError(
+        "capture_render_sequence exhausted without attempting a seed"
+    )

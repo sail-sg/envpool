@@ -107,8 +107,7 @@ def _selected_task_ids() -> tuple[str, ...]:
         raise ValueError("myosuite_render_shard_count must be positive")
     if shard_index < 0 or shard_index >= shard_count:
         raise ValueError(
-            "myosuite_render_shard_index must satisfy "
-            "0 <= index < shard_count"
+            "myosuite_render_shard_index must satisfy 0 <= index < shard_count"
         )
     return tuple(MYOSUITE_RENDER_VALIDATE_TASK_IDS[shard_index::shard_count])
 
@@ -119,7 +118,9 @@ class MyoSuiteRenderTest(absltest.TestCase):
     def test_render_is_batch_consistent_and_state_invariant(self) -> None:
         """Repeated renders should be batch-consistent and side-effect free."""
         if not FLAGS.myosuite_render_include_doc_cases:
-            self.skipTest("Representative render checks disabled for this shard.")
+            self.skipTest(
+                "Representative render checks disabled for this shard."
+            )
         env = make_gymnasium(
             "myoHandReorientID-v0",
             num_envs=2,
@@ -204,7 +205,9 @@ class MyoSuiteRenderTest(absltest.TestCase):
     def test_representative_render_cases_stay_documented(self) -> None:
         """Representative doc cases remain part of the public render sweep."""
         if not FLAGS.myosuite_render_include_doc_cases:
-            self.skipTest("Representative render checks disabled for this shard.")
+            self.skipTest(
+                "Representative render checks disabled for this shard."
+            )
         covered = set(MYOSUITE_RENDER_VALIDATE_TASK_IDS)
         for render_case in MYOSUITE_RENDER_COMPARE_CASES:
             with self.subTest(task_id=render_case.task_id):
@@ -213,7 +216,9 @@ class MyoSuiteRenderTest(absltest.TestCase):
     def test_render_retry_skips_early_terminal_seed(self) -> None:
         """Render capture should retry when a candidate seed ends too early."""
         if not FLAGS.myosuite_render_include_doc_cases:
-            self.skipTest("Representative render checks disabled for this shard.")
+            self.skipTest(
+                "Representative render checks disabled for this shard."
+            )
         sequence = capture_render_sequence(
             "MyoHandAlarmclockFixed-v0",
             steps=MYOSUITE_RENDER_COMPARE_STEPS,
