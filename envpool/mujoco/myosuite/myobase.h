@@ -60,7 +60,7 @@ inline mjtNum ClampNormalized(mjtNum value) {
 inline mjtNum MuscleActivation(mjtNum value) {
   // Official MyoSuite applies the logistic transform in-place on the
   // float32 action array before assigning it into MuJoCo's ctrl buffer.
-  float action = static_cast<float>(value);
+  auto action = static_cast<float>(value);
   float activation = 1.0F / (1.0F + std::exp(-5.0F * (action - 0.5F)));
   return static_cast<mjtNum>(activation);
 }
@@ -826,7 +826,7 @@ inline void ApplyMyoSuiteAction(const mjModel* model, mjData* data,
                                 const std::vector<bool>& muscle_actuator,
                                 bool normalize_act, const float* raw) {
   for (int i = 0; i < model->nu; ++i) {
-    mjtNum value = static_cast<mjtNum>(raw[i]);
+    auto value = static_cast<mjtNum>(raw[i]);
     if (normalize_act && muscle_actuator[i] && model->na != 0) {
       value = MuscleActivation(value);
     } else if (normalize_act && model->na == 0) {
@@ -1552,7 +1552,7 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
 
   void ApplyAction(const float* raw) {
     for (int i = 0; i < model_->nu; ++i) {
-      mjtNum value = static_cast<mjtNum>(raw[i]);
+      auto value = static_cast<mjtNum>(raw[i]);
       if (normalize_act_ && muscle_actuator_[i] && model_->na != 0) {
         value = detail::MuscleActivation(value);
       } else if (normalize_act_ && model_->na == 0) {
@@ -1974,7 +1974,7 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
 
   void ApplyAction(const float* raw) {
     for (int i = 0; i < model_->nu; ++i) {
-      mjtNum value = static_cast<mjtNum>(raw[i]);
+      auto value = static_cast<mjtNum>(raw[i]);
       if (normalize_act_ && muscle_actuator_[i] && model_->na != 0) {
         value = detail::MuscleActivation(value);
       } else if (normalize_act_ && model_->na == 0) {
