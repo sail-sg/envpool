@@ -475,8 +475,9 @@ inline void FinalizeMyoSuiteResetSync(const mjModel* model, mjData* data) {
 
 // Official MyoSuite calls Robot.get_sensors() followed by
 // Robot.sensor2sim(..., sim_obsd) inside env_base.get_obs(). When
-// `obsd_model_path` aliases the main simulation, that replay writes qpos/qvel/act
-// back into the same mjData and runs `forward()` once more before any
+// `obsd_model_path` aliases the main simulation, that replay writes
+// qpos/qvel/act back into the same mjData and runs `forward()` once more
+// before any
 // observation/reward code reads force- and contact-derived fields. Mirror that
 // post-step reconstruction so GRF, actuator_force, qacc, and future warmstarts
 // match the oracle exactly.

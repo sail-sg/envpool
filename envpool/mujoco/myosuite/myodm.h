@@ -707,8 +707,9 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
     ResetToInitialState();
     ApplyResetState();
     ReferenceState reference =
-        test_playback_reference_ ? PlaybackReferenceAtCurrentIndex()
-                                 : ReferenceAt(data_->time + motion_start_time_);
+        test_playback_reference_
+            ? PlaybackReferenceAtCurrentIndex()
+            : ReferenceAt(data_->time + motion_start_time_);
     UpdateTargetSite(reference);
     CaptureResetState();
     RewardInfo reward = ComputeReward(reference);
