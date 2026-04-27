@@ -38,7 +38,7 @@ genrule(
     srcs = [],
     outs = ["arith.h"],
     cmd = "$(execpath :arithchk) > $@",
-    cmd_bat = "\"$(execpath :arithchk)\" > \"$@\"",
+    cmd_bat = "$(execpath :arithchk) > $@",
     tools = [":arithchk"],
 )
 
@@ -55,7 +55,7 @@ genrule(
     srcs = [],
     outs = ["gd_qnan.h"],
     cmd = "$(execpath :qnan) > $@",
-    cmd_bat = "\"$(execpath :qnan)\" > \"$@\"",
+    cmd_bat = "$(execpath :qnan) > $@",
     tools = [":qnan"],
 )
 
@@ -179,7 +179,7 @@ genrule(
     srcs = ["src/sc_man_scanner.re"],
     outs = ["src/sc_man_scanner.h"],
     cmd = "$(execpath :re2c) --no-generation-date -s -o $@ $<",
-    cmd_bat = "\"$(execpath :re2c)\" --no-generation-date -s -o \"$@\" \"$<\"",
+    cmd_bat = "$(execpath :re2c) --no-generation-date -s -o $@ $<",
     tools = [":re2c"],
 )
 
@@ -205,7 +205,7 @@ genrule(
         "xlat_parser.h",
     ],
     cmd = "$(execpath :lemon) $<",
-    cmd_bat = "\"$(execpath :lemon)\" \"$<\"",
+    cmd_bat = "$(execpath :lemon) $<",
     tools = [
         ":lemon",
         ":lemon_deps",
