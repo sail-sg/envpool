@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any, cast
 
 import numpy as np
@@ -107,8 +108,16 @@ def _assert_frames_close(
 
 
 def _selected_task_ids() -> tuple[str, ...]:
-    shard_count = FLAGS.myosuite_render_shard_count
-    shard_index = FLAGS.myosuite_render_shard_index
+    shard_count = int(
+        os.environ.get(
+            "TEST_TOTAL_SHARDS", FLAGS.myosuite_render_shard_count
+        )
+    )
+    shard_index = int(
+        os.environ.get(
+            "TEST_SHARD_INDEX", FLAGS.myosuite_render_shard_index
+        )
+    )
     if shard_count <= 0:
         raise ValueError("myosuite_render_shard_count must be positive")
     if shard_index < 0 or shard_index >= shard_count:

@@ -16,7 +16,6 @@ load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("//envpool:requirements.bzl", "requirement")
-load("//envpool/mujoco:myosuite_render_tests.bzl", "myosuite_render_shard_tests")
 load("//third_party:common.bzl", "copy_files_to_directory", "copy_to_directory")
 load("//third_party/metaworld_assets:defs.bzl", "metaworld_runtime_assets")
 load("//third_party/myosuite:defs.bzl", "myosuite_runtime_assets")
@@ -813,12 +812,11 @@ py_test(
     ],
 )
 
-# Keep MyoSuite render checks exclusive and finely sharded: concurrent shard
-# binaries can create GL pressure, while multiple MyoSuite models in one macOS
-# process can trip AGX's compiled-variants footprint limit or cause
-# otherwise-bitwise frames to drift by a pixel. The generated metadata currently
-# exposes 398 public IDs, so this keeps each full-surface shard to one env.
-_MYOSUITE_RENDER_SHARD_COUNT = 398
+# Keep MyoSuite render checks exclusive and finely sharded. The generated
+# metadata currently exposes 398 public IDs; Bazel caps a single test target at
+# 50 shards, so each full-surface process validates a small contiguous group
+# without creating hundreds of separate runfiles trees.
+_MYOSUITE_RENDER_SHARD_COUNT = 50
 
 py_test(
     name = "myosuite_render_doc_test",
@@ -838,12 +836,28 @@ py_test(
     ],
 )
 
-myosuite_render_shard_tests(_MYOSUITE_RENDER_SHARD_COUNT)
+py_test(
+    name = "myosuite_render_surface_test",
+    size = "large",
+    srcs = ["myosuite/myosuite_render_test.py"],
+    args = [
+        "--myosuite_render_include_doc_cases=false",
+    ],
+    imports = ["../.."],
+    main = "myosuite/myosuite_render_test.py",
+    shard_count = _MYOSUITE_RENDER_SHARD_COUNT,
+    tags = ["exclusive"],
+    deps = [
+        ":myosuite_render_utils",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
 
 test_suite(
     name = "myosuite_render_test",
-    tests = [":myosuite_render_doc_test"] + [
-        ":myosuite_render_shard_%d" % shard_index
-        for shard_index in range(_MYOSUITE_RENDER_SHARD_COUNT)
+    tests = [
+        ":myosuite_render_doc_test",
+        ":myosuite_render_surface_test",
     ],
 )
