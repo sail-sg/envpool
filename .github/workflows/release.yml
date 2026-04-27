@@ -96,6 +96,10 @@ jobs:
       MESA_LOADER_DRIVER_OVERRIDE: llvmpipe
       GALLIUM_DRIVER: llvmpipe
       ENVPOOL_SKIP_MUJOCO_RENDER_SMOKE: "1"
+      BAZEL_RELEASE_RESOURCE_OPTS: >-
+        ${{ matrix.arch == 'aarch64'
+          && '--jobs=2 --local_cpu_resources=2 --local_ram_resources=HOST_RAM*.5 --show_progress_rate_limit=60'
+          || '--jobs=HOST_CPUS-1 --local_cpu_resources=HOST_CPUS-1 --local_ram_resources=HOST_RAM*.5 --show_progress_rate_limit=60' }}
     strategy:
       fail-fast: false
       matrix:
@@ -148,7 +152,7 @@ jobs:
       - name: Build
         run: |
           rm -rf dist wheelhouse
-          make PYPI_WHEEL_PLAT=${{ matrix.auditwheel-plat }} pypi-wheel
+          make BAZELOPT="$BAZEL_RELEASE_RESOURCE_OPTS" PYPI_WHEEL_PLAT=${{ matrix.auditwheel-plat }} pypi-wheel
           python -m pip install wheelhouse/*.whl --force-reinstall
       - name: Test
         run: |
