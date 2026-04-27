@@ -21,6 +21,18 @@ from typing import Any
 
 from envpool.mujoco.myosuite.paths import myosuite_metadata_path
 
+__all__ = [
+    "MYOSUITE_COUNTS",
+    "MYOSUITE_DIRECT_ENTRIES",
+    "MYOSUITE_DIRECT_ENTRY_BY_ID",
+    "MYOSUITE_DIRECT_IDS",
+    "MYOSUITE_EXPANDED_IDS",
+    "MYOSUITE_NOTES",
+    "MYOSUITE_PINS",
+    "MYOSUITE_SUITES",
+    "load_myosuite_metadata",
+]
+
 
 @cache
 def load_myosuite_metadata() -> dict[str, Any]:

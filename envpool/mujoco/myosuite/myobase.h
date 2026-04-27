@@ -879,6 +879,7 @@ class MyoSuitePoseEnvFns {
         "test_reset_act"_.Bind(std::vector<double>{}),
         "test_reset_qacc_warmstart"_.Bind(std::vector<double>{}),
         "test_target_qpos"_.Bind(std::vector<double>{}),
+        "test_target_site_pos"_.Bind(std::vector<double>{}),
         "test_body_mass"_.Bind(std::vector<double>{}),
         "test_geom_size0"_.Bind(std::vector<double>{}));
   }
@@ -1221,6 +1222,7 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
   std::vector<mjtNum> test_reset_act_;
   std::vector<mjtNum> test_reset_qacc_warmstart_;
   std::vector<mjtNum> test_target_qpos_;
+  std::vector<mjtNum> test_target_site_pos_;
   std::vector<mjtNum> test_body_mass_;
   std::vector<mjtNum> test_geom_size0_;
   std::uniform_real_distribution<double> unit_dist_{0.0, 1.0};
@@ -1262,6 +1264,8 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
             detail::ToMjtVector(spec.config["test_reset_qacc_warmstart"_])),
         test_target_qpos_(
             detail::ToMjtVector(spec.config["test_target_qpos"_])),
+        test_target_site_pos_(
+            detail::ToMjtVector(spec.config["test_target_site_pos"_])),
         test_body_mass_(detail::ToMjtVector(spec.config["test_body_mass"_])),
         test_geom_size0_(detail::ToMjtVector(spec.config["test_geom_size0"_])) {
     ValidateConfig();
@@ -1363,6 +1367,13 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
         static_cast<int>(test_target_qpos_.size()) != model_->nq) {
       throw std::runtime_error("Pose test_target_qpos has wrong length.");
     }
+    int expected_target_site_pos =
+        static_cast<int>(spec_.config["viz_site_targets"_].size()) * 3;
+    if (!test_target_site_pos_.empty() &&
+        static_cast<int>(test_target_site_pos_.size()) !=
+            expected_target_site_pos) {
+      throw std::runtime_error("Pose test_target_site_pos has wrong length.");
+    }
   }
 
   void BuildMuscleMask() {
@@ -1461,6 +1472,14 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
 
   void ApplyTargetVisualization() {
     if (target_site_ids_.empty()) {
+      return;
+    }
+    if (!test_target_site_pos_.empty()) {
+      for (std::size_t i = 0; i < target_site_ids_.size(); ++i) {
+        std::memcpy(model_->site_pos + target_site_ids_[i] * 3,
+                    test_target_site_pos_.data() + i * 3, sizeof(mjtNum) * 3);
+      }
+      mj_forward(model_, data_);
       return;
     }
     std::vector<mjtNum> saved_qpos = detail::CopyQpos(model_, data_);

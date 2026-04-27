@@ -86,17 +86,23 @@ def _assert_frames_close(
     diff = np.abs(actual.astype(np.int16) - expected.astype(np.int16))
     if diff.size == 0:
         return
-    mismatch_ratio = float(np.count_nonzero(diff)) / float(diff.size)
+    mismatch_count = int(np.count_nonzero(diff))
+    mismatch_ratio = float(mismatch_count) / float(diff.size)
     mean_abs_diff = float(diff.mean())
+    max_abs_diff = int(diff.max())
     if mean_abs_diff > max_mean_abs_diff:
         raise AssertionError(
             f"{label} mean render delta "
-            f"{mean_abs_diff:.3f} exceeded {max_mean_abs_diff:.3f}"
+            f"{mean_abs_diff:.6f} exceeded {max_mean_abs_diff:.6f}; "
+            f"max delta {max_abs_diff}, mismatched values "
+            f"{mismatch_count}/{diff.size} ({mismatch_ratio:.6%})"
         )
     if mismatch_ratio > max_mismatch_ratio:
         raise AssertionError(
             f"{label} render mismatch ratio "
-            f"{mismatch_ratio:.4%} exceeded {max_mismatch_ratio:.4%}"
+            f"{mismatch_ratio:.6%} exceeded {max_mismatch_ratio:.6%}; "
+            f"mean delta {mean_abs_diff:.6f}, max delta {max_abs_diff}, "
+            f"mismatched values {mismatch_count}/{diff.size}"
         )
 
 
@@ -109,7 +115,13 @@ def _selected_task_ids() -> tuple[str, ...]:
         raise ValueError(
             "myosuite_render_shard_index must satisfy 0 <= index < shard_count"
         )
-    return tuple(MYOSUITE_RENDER_VALIDATE_TASK_IDS[shard_index::shard_count])
+    # The public IDs are generated in sorted upstream order. Keep contiguous
+    # model variants together so macOS AGX does not compile shaders for many
+    # unrelated MyoDM object models in one process.
+    total = len(MYOSUITE_RENDER_VALIDATE_TASK_IDS)
+    start = total * shard_index // shard_count
+    end = total * (shard_index + 1) // shard_count
+    return tuple(MYOSUITE_RENDER_VALIDATE_TASK_IDS[start:end])
 
 
 class MyoSuiteRenderTest(absltest.TestCase):

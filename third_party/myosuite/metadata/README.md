@@ -4,7 +4,7 @@ This directory documents the generated metadata derived from the pinned
 upstream `MyoHub/myosuite` source tree.
 
 The source of truth is `../generate_metadata.py`, and the checked-in JSON
-snapshot lives at `../env_ids.json`. Regenerate the JSON after changing the
+snapshot lives at `env_ids.json`. Regenerate the JSON after changing the
 upstream pin or when validating that the local metadata still matches the
 pinned official registry surface.
 

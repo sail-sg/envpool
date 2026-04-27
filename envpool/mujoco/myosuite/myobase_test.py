@@ -1018,6 +1018,14 @@ def _oracle_reset_sync(
         )
     elif entry["class_name"] == "PoseEnvV0":
         sync["test_target_qpos"] = unwrapped.target_jnt_value.copy().tolist()
+        target_site_pos: list[float] = []
+        for site_name in entry["kwargs"].get("viz_site_targets", []):
+            site_id = unwrapped.sim.model.site_name2id(site_name + "_target")
+            target_site_pos.extend(
+                unwrapped.sim.model.site_pos[site_id].copy().tolist()
+            )
+        if target_site_pos:
+            sync["test_target_site_pos"] = target_site_pos
         if getattr(unwrapped, "weight_bodyname", None):
             body_id = unwrapped.sim.model.body_name2id(
                 unwrapped.weight_bodyname

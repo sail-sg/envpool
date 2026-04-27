@@ -902,8 +902,24 @@ class MyoDMTrackEnvBase : public Env<EnvSpecT>,
     if (!test_reset_integration_state_.empty()) {
       mj_setState(model_, data_, test_reset_integration_state_.data(),
                   mjSTATE_INTEGRATION);
+      if (!test_reset_ctrl_.empty()) {
+        detail::RestoreVector(test_reset_ctrl_, data_->ctrl);
+      }
+      if (!test_reset_act_.empty()) {
+        detail::RestoreVector(test_reset_act_, data_->act);
+      }
+      if (!test_reset_qacc_warmstart_.empty()) {
+        detail::RestoreVector(test_reset_qacc_warmstart_,
+                              data_->qacc_warmstart);
+      }
       mj_forward(model_, data_);
+      if (!test_reset_act_dot_.empty()) {
+        detail::RestoreVector(test_reset_act_dot_, data_->act_dot);
+      }
       mj_step1(model_, data_);
+      if (!test_reset_act_dot_.empty()) {
+        detail::RestoreVector(test_reset_act_dot_, data_->act_dot);
+      }
       return;
     }
     bool has_test_reset_override =

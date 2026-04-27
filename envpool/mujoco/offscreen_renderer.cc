@@ -69,7 +69,7 @@ mjtNum MedianGeomPosition(const mjData* data, int ngeom, int axis) {
 class CglContext final : public GlContext {
  public:
   CglContext() {
-    const std::array<CGLPixelFormatAttribute, 17> attribs = {
+    const std::array<CGLPixelFormatAttribute, 12> attribs = {
         kCGLPFAOpenGLProfile,
         static_cast<CGLPixelFormatAttribute>(kCGLOGLPVersion_Legacy),
         kCGLPFAColorSize,
@@ -80,12 +80,7 @@ class CglContext final : public GlContext {
         static_cast<CGLPixelFormatAttribute>(24),
         kCGLPFAStencilSize,
         static_cast<CGLPixelFormatAttribute>(8),
-        kCGLPFAMultisample,
-        kCGLPFASampleBuffers,
-        static_cast<CGLPixelFormatAttribute>(1),
-        kCGLPFASamples,
-        static_cast<CGLPixelFormatAttribute>(4),
-        kCGLPFAAccelerated,
+        kCGLPFAAllowOfflineRenderers,
         static_cast<CGLPixelFormatAttribute>(0),  // terminator
     };
     GLint npix = 0;
@@ -448,8 +443,8 @@ class EglContext final : public GlContext {
 
 std::shared_ptr<GlContext> CreateGlContext() {
 #if defined(ENVPOOL_HAS_CGL)
-  // Match MuJoCo Python's Darwin backend: use a dedicated multisampled CGL
-  // context per renderer instead of borrowing an unrelated current context.
+  // Use a dedicated offline CGL context per renderer so macOS CI can render
+  // without a hardware-accelerated pixel format.
   return std::make_shared<CglContext>();
 #elif defined(ENVPOOL_HAS_WGL)
   if (wglGetCurrentContext() != nullptr && wglGetCurrentDC() != nullptr) {

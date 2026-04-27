@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import gc
 import inspect
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -220,6 +221,24 @@ def _unwrapped_env(env: Any) -> Any:
     return env.unwrapped if hasattr(env, "unwrapped") else env
 
 
+def _close_oracle_render_resources(env: Any) -> None:
+    sim = getattr(_unwrapped_env(env), "sim", None)
+    renderer = getattr(sim, "renderer", None)
+    if renderer is None:
+        return
+    # MyoSuite's MJRenderer.close() only handles the onscreen window. Release
+    # its offscreen mujoco.Renderer explicitly so macOS AGX shader variants do
+    # not accumulate across the full-surface render oracle sweep.
+    offscreen_renderer = getattr(renderer, "_renderer", None)
+    if offscreen_renderer is not None and hasattr(offscreen_renderer, "close"):
+        offscreen_renderer.close()
+        renderer._renderer = None
+    window = getattr(renderer, "_window", None)
+    if window is not None and hasattr(window, "close"):
+        window.close()
+        renderer._window = None
+
+
 def _to_uint8_frame(frame: Any) -> np.ndarray:
     array = np.asarray(frame)
     if array.dtype == np.uint8:
@@ -397,7 +416,9 @@ def _make_oracle(
         try:
             yield oracle
         finally:
+            _close_oracle_render_resources(oracle)
             oracle.close()
+            gc.collect()
 
 
 def _sync_reset_myobase(
@@ -523,6 +544,14 @@ def _sync_reset_myobase(
         )
     elif entry["class_name"] == "PoseEnvV0":
         sync["test_target_qpos"] = _tolist_array(unwrapped.target_jnt_value)
+        target_site_pos: list[float] = []
+        for site_name in entry["kwargs"].get("viz_site_targets", []):
+            site_id = unwrapped.sim.model.site_name2id(site_name + "_target")
+            target_site_pos.extend(
+                unwrapped.sim.model.site_pos[site_id].copy().tolist()
+            )
+        if target_site_pos:
+            sync["test_target_site_pos"] = target_site_pos
         if getattr(unwrapped, "weight_bodyname", None):
             body_id = unwrapped.sim.model.body_name2id(
                 unwrapped.weight_bodyname
@@ -1108,6 +1137,7 @@ def _capture_render_sequence_once(
             )
         finally:
             env.close()
+            gc.collect()
 
 
 def capture_render_sequence(

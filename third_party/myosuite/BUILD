@@ -16,11 +16,11 @@ package(default_visibility = ["//visibility:public"])
 
 exports_files([
     "defs.bzl",
-    "env_ids.json",
     "generate_arm_reach_asset.py",
     "generate_tabletennis_asset.py",
     "furniture_sim.BUILD",
     "generate_metadata.py",
+    "metadata/env_ids.json",
     "metadata/README.md",
     "mpl_sim.BUILD",
     "myosuite.BUILD",

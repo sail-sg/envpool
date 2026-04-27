@@ -41,6 +41,7 @@ _RESET_SYNC_TEST_KEYS = {
 _PREVIEW_TEST_KEYS_BY_ENTRYPOINT = {
     ("myobase", "PoseEnvV0"): {
         "test_target_qpos",
+        "test_target_site_pos",
         "test_body_mass",
         "test_geom_size0",
     },
