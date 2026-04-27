@@ -465,9 +465,9 @@ inline void DoMyoSuiteSimulation(const mjModel* model, mjData* data,
   mj_step1(model, data);
 }
 
-// Reset-sync previews inject qpos/qvel/act directly into the live mjData after
-// model randomization. Re-run MuJoCo's stage-1 reconstruction so the first
-// rendered frame sees the same muscle/tendon state as the oracle.
+// Reset-sync previews inject qpos/qvel/ctrl/act directly into the live mjData
+// after model randomization. Re-run MuJoCo's stage-1 reconstruction so the
+// first rendered frame and legacy-step transition start from the oracle state.
 inline void FinalizeMyoSuiteResetSync(const mjModel* model, mjData* data) {
   mj_step1(model, data);
 }
@@ -876,6 +876,7 @@ class MyoSuitePoseEnvFns {
         "weight_range"_.Bind(std::vector<double>{}),
         "test_reset_qpos"_.Bind(std::vector<double>{}),
         "test_reset_qvel"_.Bind(std::vector<double>{}),
+        "test_reset_ctrl"_.Bind(std::vector<double>{}),
         "test_reset_act"_.Bind(std::vector<double>{}),
         "test_reset_qacc_warmstart"_.Bind(std::vector<double>{}),
         "test_target_qpos"_.Bind(std::vector<double>{}),
@@ -937,6 +938,7 @@ class MyoSuiteReachEnvFns {
         "hide_skin_geom_group_1"_.Bind(false), "hide_terrain"_.Bind(false),
         "test_reset_qpos"_.Bind(std::vector<double>{}),
         "test_reset_qvel"_.Bind(std::vector<double>{}),
+        "test_reset_ctrl"_.Bind(std::vector<double>{}),
         "test_reset_act"_.Bind(std::vector<double>{}),
         "test_reset_qacc_warmstart"_.Bind(std::vector<double>{}),
         "test_target_pos"_.Bind(std::vector<double>{}));
@@ -1219,6 +1221,7 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
   std::vector<mjtNum> weight_range_;
   std::vector<mjtNum> test_reset_qpos_;
   std::vector<mjtNum> test_reset_qvel_;
+  std::vector<mjtNum> test_reset_ctrl_;
   std::vector<mjtNum> test_reset_act_;
   std::vector<mjtNum> test_reset_qacc_warmstart_;
   std::vector<mjtNum> test_target_qpos_;
@@ -1259,6 +1262,7 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
         weight_range_(detail::ToMjtVector(spec.config["weight_range"_])),
         test_reset_qpos_(detail::ToMjtVector(spec.config["test_reset_qpos"_])),
         test_reset_qvel_(detail::ToMjtVector(spec.config["test_reset_qvel"_])),
+        test_reset_ctrl_(detail::ToMjtVector(spec.config["test_reset_ctrl"_])),
         test_reset_act_(detail::ToMjtVector(spec.config["test_reset_act"_])),
         test_reset_qacc_warmstart_(
             detail::ToMjtVector(spec.config["test_reset_qacc_warmstart"_])),
@@ -1353,6 +1357,10 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
     if (!test_reset_qvel_.empty() &&
         static_cast<int>(test_reset_qvel_.size()) != model_->nv) {
       throw std::runtime_error("Pose test_reset_qvel has wrong length.");
+    }
+    if (!test_reset_ctrl_.empty() &&
+        static_cast<int>(test_reset_ctrl_.size()) != model_->nu) {
+      throw std::runtime_error("Pose test_reset_ctrl has wrong length.");
     }
     if (!test_reset_act_.empty() &&
         static_cast<int>(test_reset_act_.size()) != model_->na) {
@@ -1535,7 +1543,8 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
   void ApplyResetState() {
     bool has_test_reset_override =
         !test_reset_qpos_.empty() || !test_reset_qvel_.empty() ||
-        !test_reset_act_.empty() || !test_reset_qacc_warmstart_.empty();
+        !test_reset_ctrl_.empty() || !test_reset_act_.empty() ||
+        !test_reset_qacc_warmstart_.empty();
     if (!test_reset_qpos_.empty()) {
       detail::RestoreVector(test_reset_qpos_, data_->qpos);
       detail::RestoreVector(test_reset_qvel_, data_->qvel);
@@ -1558,6 +1567,9 @@ class MyoSuitePoseEnvBase : public Env<EnvSpecT>,
       throw std::runtime_error("Unsupported Pose reset_type.");
     }
     mj_forward(model_, data_);
+    if (!test_reset_ctrl_.empty()) {
+      detail::RestoreVector(test_reset_ctrl_, data_->ctrl);
+    }
     if (!test_reset_act_.empty()) {
       detail::RestoreVector(test_reset_act_, data_->act);
     }
@@ -1690,6 +1702,7 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
   bool hide_terrain_;
   std::vector<mjtNum> test_reset_qpos_;
   std::vector<mjtNum> test_reset_qvel_;
+  std::vector<mjtNum> test_reset_ctrl_;
   std::vector<mjtNum> test_reset_act_;
   std::vector<mjtNum> test_reset_qacc_warmstart_;
   std::vector<mjtNum> test_target_pos_;
@@ -1727,6 +1740,7 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
         hide_terrain_(spec.config["hide_terrain"_]),
         test_reset_qpos_(detail::ToMjtVector(spec.config["test_reset_qpos"_])),
         test_reset_qvel_(detail::ToMjtVector(spec.config["test_reset_qvel"_])),
+        test_reset_ctrl_(detail::ToMjtVector(spec.config["test_reset_ctrl"_])),
         test_reset_act_(detail::ToMjtVector(spec.config["test_reset_act"_])),
         test_reset_qacc_warmstart_(
             detail::ToMjtVector(spec.config["test_reset_qacc_warmstart"_])),
@@ -1816,6 +1830,10 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
     if (!test_reset_act_.empty() &&
         static_cast<int>(test_reset_act_.size()) != model_->na) {
       throw std::runtime_error("Reach test_reset_act has wrong length.");
+    }
+    if (!test_reset_ctrl_.empty() &&
+        static_cast<int>(test_reset_ctrl_.size()) != model_->nu) {
+      throw std::runtime_error("Reach test_reset_ctrl has wrong length.");
     }
     if (!test_reset_qacc_warmstart_.empty() &&
         static_cast<int>(test_reset_qacc_warmstart_.size()) != model_->nv) {
@@ -1966,7 +1984,8 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
   void ApplyResetState() {
     bool has_test_reset_override =
         !test_reset_qpos_.empty() || !test_reset_qvel_.empty() ||
-        !test_reset_act_.empty() || !test_reset_qacc_warmstart_.empty();
+        !test_reset_ctrl_.empty() || !test_reset_act_.empty() ||
+        !test_reset_qacc_warmstart_.empty();
     if (!test_reset_qpos_.empty()) {
       detail::RestoreVector(test_reset_qpos_, data_->qpos);
       if (!test_reset_qvel_.empty()) {
@@ -1980,6 +1999,9 @@ class MyoSuiteReachEnvBase : public Env<EnvSpecT>,
       }
     }
     mj_forward(model_, data_);
+    if (!test_reset_ctrl_.empty()) {
+      detail::RestoreVector(test_reset_ctrl_, data_->ctrl);
+    }
     if (!test_reset_act_.empty()) {
       detail::RestoreVector(test_reset_act_, data_->act);
     }

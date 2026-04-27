@@ -1116,6 +1116,7 @@ def _oracle_reset_sync(
         sync["test_reset_act_dot"] = (
             sim.data.act_dot.copy().tolist() if sim.model.na > 0 else []
         )
+        sync["test_reset_ctrl"] = sim.data.ctrl.copy().tolist()
         goal_bid = sim.model.body_name2id("target")
         goal_mocap_id = int(sim.model.body_mocapid[goal_bid])
         object_bid = sim.model.body_name2id("Object")

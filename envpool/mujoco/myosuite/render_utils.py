@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import gc
 import inspect
+import platform
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -284,6 +285,10 @@ def _render_official_array(
             raise RuntimeError("official physics.render() returned None")
         return _to_uint8_frame(frame)
     if hasattr(sim, "renderer"):
+        needs_macos_warmup = (
+            platform.system() == "Darwin"
+            and getattr(sim.renderer, "_renderer", None) is None
+        )
         if hasattr(sim, "upload_height_field") and int(sim.model.nhfield) > 0:
             if getattr(sim.renderer, "_renderer", None) is None:
                 sim.renderer.setup_renderer(
@@ -303,6 +308,16 @@ def _render_official_array(
                     )
             for hfield_id in range(int(sim.model.nhfield)):
                 sim.upload_height_field(hfield_id)
+        if needs_macos_warmup:
+            # The official mujoco.Renderer CGL path can produce one-LSB edge
+            # pixels on its first draw after creating a fresh mjrContext. Match
+            # EnvPool's native renderer initialization by discarding that
+            # context warm-up frame before returning the oracle image.
+            sim.renderer.render_offscreen(
+                width=width,
+                height=height,
+                camera_id=camera_id,
+            )
         frame = sim.renderer.render_offscreen(
             width=width,
             height=height,
@@ -426,6 +441,7 @@ def _sync_reset_myobase(
 ) -> tuple[np.ndarray, dict[str, Any]]:
     obs, _ = env.reset()
     unwrapped = env.unwrapped
+    entry = _entry(task_id)
     sync: dict[str, Any] = {
         "test_reset_qpos": unwrapped.sim.data.qpos.copy().tolist(),
         "test_reset_qvel": unwrapped.sim.data.qvel.copy().tolist(),
@@ -438,7 +454,8 @@ def _sync_reset_myobase(
             unwrapped.sim.data.qacc_warmstart.copy().tolist()
         ),
     }
-    entry = _entry(task_id)
+    if entry["class_name"] in {"PoseEnvV0", "ReachEnvV0"}:
+        sync["test_reset_ctrl"] = unwrapped.sim.data.ctrl.copy().tolist()
     if entry["class_name"] == "KeyTurnEnvV0":
         obs_sim = getattr(unwrapped, "sim_obsd", unwrapped.sim)
         keyhead_sid = obs_sim.model.site_name2id("keyhead")
@@ -630,6 +647,7 @@ def _sync_reset_myochallenge(
         sync["test_reset_act_dot"] = (
             sim.data.act_dot.copy().tolist() if sim.model.na > 0 else []
         )
+        sync["test_reset_ctrl"] = sim.data.ctrl.copy().tolist()
         goal_bid = sim.model.body_name2id("target")
         goal_mocap_id = int(sim.model.body_mocapid[goal_bid])
         object_bid = sim.model.body_name2id("Object")

@@ -470,6 +470,7 @@ OffscreenRenderer::OffscreenRenderer(CameraPolicy camera_policy)
   mjv_defaultScene(&scene_);
   mjv_defaultCamera(&camera_);
   mjv_defaultOption(&option_);
+  mjv_defaultPerturb(&perturb_);
   mjr_defaultContext(&context_);
   camera_.fixedcamid = -1;
 }
@@ -490,7 +491,12 @@ void OffscreenRenderer::Initialize(const mjModel* model) {
   mjv_makeScene(model, &scene_, 10000);
   mjr_makeContext(model, &context_, mjFONTSCALE_150);
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
-  context_.readDepthMap = mjDEPTH_ZEROFAR;
+  if (camera_policy_ == CameraPolicy::kDmControl) {
+    context_.readDepthMap = mjDEPTH_ZEROFAR;
+#if defined(__APPLE__)
+    needs_render_warmup_ = true;
+#endif
+  }
   initialized_ = true;
 }
 
@@ -545,15 +551,21 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
     Initialize(model);
   }
   gl_context_->MakeCurrent();
-  // Match mujoco.Renderer: render into the model-configured offscreen
-  // framebuffer and only grow it when callers exceed the existing capacity.
-  if (width > context_.offWidth || height > context_.offHeight) {
+  if (camera_policy_ == CameraPolicy::kDmControl &&
+      (width > context_.offWidth || height > context_.offHeight)) {
+    // Match mujoco.Renderer: render into the model-configured offscreen
+    // framebuffer and only grow it when callers exceed the existing capacity.
     mjr_resizeOffscreen(std::max(width, context_.offWidth),
                         std::max(height, context_.offHeight), &context_);
+  } else if (camera_policy_ == CameraPolicy::kGymLike &&
+             (context_.offWidth != width || context_.offHeight != height)) {
+    mjr_resizeOffscreen(width, height, &context_);
   }
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
-  for (int hfield_id = 0; hfield_id < model->nhfield; ++hfield_id) {
-    mjr_uploadHField(model, &context_, hfield_id);
+  if (camera_policy_ == CameraPolicy::kDmControl) {
+    for (int hfield_id = 0; hfield_id < model->nhfield; ++hfield_id) {
+      mjr_uploadHField(model, &context_, hfield_id);
+    }
   }
   if (option_override != nullptr) {
     option_ = *option_override;
@@ -561,7 +573,16 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
   UpdateCamera(model, data, camera_id, camera_override);
 
   mjrRect viewport = {0, 0, width, height};
-  mjv_updateScene(model, data, &option_, nullptr, &camera_, mjCAT_ALL, &scene_);
+  const mjvPerturb* perturb =
+      camera_policy_ == CameraPolicy::kDmControl ? nullptr : &perturb_;
+  mjv_updateScene(model, data, &option_, perturb, &camera_, mjCAT_ALL, &scene_);
+  if (needs_render_warmup_) {
+    // macOS CGL can return a one-time, one-LSB difference on the first
+    // offscreen render after a fresh mjrContext. Draw once before the public
+    // readback so reset-frame comparisons exercise the stable renderer state.
+    mjr_render(viewport, &scene_, &context_);
+    needs_render_warmup_ = false;
+  }
   mjr_render(viewport, &scene_, &context_);
 
   std::size_t frame_bytes =
@@ -577,6 +598,9 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
     const auto* src =
         scratch_.data() + static_cast<std::size_t>(height - 1 - y) * row_bytes;
     std::memcpy(rgb + static_cast<std::size_t>(y) * row_bytes, src, row_bytes);
+  }
+  if (camera_policy_ == CameraPolicy::kGymLike) {
+    gl_context_->ClearCurrent();
   }
 }
 

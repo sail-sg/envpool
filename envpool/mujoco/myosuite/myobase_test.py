@@ -897,6 +897,7 @@ def _oracle_reset_sync(
 ) -> tuple[np.ndarray, dict[str, Any]]:
     obs, _ = env.reset()
     unwrapped = env.unwrapped
+    entry = _entry(env_id)
     sync: dict[str, Any] = {
         "test_reset_qpos": unwrapped.sim.data.qpos.copy().tolist(),
         "test_reset_qvel": unwrapped.sim.data.qvel.copy().tolist(),
@@ -907,7 +908,8 @@ def _oracle_reset_sync(
         ),
         "test_reset_qacc_warmstart": unwrapped.sim.data.qacc_warmstart.copy().tolist(),
     }
-    entry = _entry(env_id)
+    if entry["class_name"] in {"PoseEnvV0", "ReachEnvV0"}:
+        sync["test_reset_ctrl"] = unwrapped.sim.data.ctrl.copy().tolist()
     if entry["class_name"] == "KeyTurnEnvV0":
         obs_sim = getattr(unwrapped, "sim_obsd", unwrapped.sim)
         keyhead_sid = obs_sim.model.site_name2id("keyhead")

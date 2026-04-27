@@ -1429,15 +1429,6 @@ class MyoChallengeRunTrackEnvBase : public Env<EnvSpecT>,
     }
     if (!test_reset_qacc_warmstart_.empty()) {
       detail::RestoreVector(test_reset_qacc_warmstart_, data_->qacc_warmstart);
-#ifdef ENVPOOL_TEST
-      mjtNum max_diff = 0.0;
-      for (int i = 0; i < model_->nv; ++i) {
-        max_diff = std::max(max_diff, std::abs(data_->qacc_warmstart[i] -
-                                               test_reset_qacc_warmstart_[i]));
-      }
-      std::fprintf(stderr, "RunTrack qacc_warmstart restore max diff: %.17g\n",
-                   static_cast<double>(max_diff));
-#endif
     }
     if (test_osl_state_ >= 0) {
       osl_controller_.SetState(

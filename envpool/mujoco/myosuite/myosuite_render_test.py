@@ -15,11 +15,9 @@
 
 from __future__ import annotations
 
-import os
 from typing import Any, cast
 
 import numpy as np
-from absl import flags
 from absl.testing import absltest
 
 from envpool.mujoco.myosuite.render_utils import (
@@ -28,34 +26,11 @@ from envpool.mujoco.myosuite.render_utils import (
     MYOSUITE_RENDER_RETRY_SEEDS,
     MYOSUITE_RENDER_VALIDATE_TASK_IDS,
     capture_render_sequence,
-    official_render_thresholds,
 )
 from envpool.registration import make_gymnasium
 
 _RENDER_WIDTH = 96
 _RENDER_HEIGHT = 72
-
-FLAGS = flags.FLAGS
-flags.DEFINE_bool(
-    "myosuite_render_run_surface",
-    True,
-    "Whether to run the full public MyoSuite render sweep.",
-)
-flags.DEFINE_integer(
-    "myosuite_render_shard_index",
-    0,
-    "Zero-based shard index for the public MyoSuite render sweep.",
-)
-flags.DEFINE_integer(
-    "myosuite_render_shard_count",
-    1,
-    "Total shard count for the public MyoSuite render sweep.",
-)
-flags.DEFINE_bool(
-    "myosuite_render_include_doc_cases",
-    True,
-    "Whether to run the representative doc-case checks in this binary.",
-)
 
 
 def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
@@ -107,37 +82,11 @@ def _assert_frames_close(
         )
 
 
-def _selected_task_ids() -> tuple[str, ...]:
-    shard_count = int(
-        os.environ.get("TEST_TOTAL_SHARDS", FLAGS.myosuite_render_shard_count)
-    )
-    shard_index = int(
-        os.environ.get("TEST_SHARD_INDEX", FLAGS.myosuite_render_shard_index)
-    )
-    if shard_count <= 0:
-        raise ValueError("myosuite_render_shard_count must be positive")
-    if shard_index < 0 or shard_index >= shard_count:
-        raise ValueError(
-            "myosuite_render_shard_index must satisfy 0 <= index < shard_count"
-        )
-    # The public IDs are generated in sorted upstream order. Keep contiguous
-    # model variants together so macOS AGX does not compile shaders for many
-    # unrelated MyoDM object models in one process.
-    total = len(MYOSUITE_RENDER_VALIDATE_TASK_IDS)
-    start = total * shard_index // shard_count
-    end = total * (shard_index + 1) // shard_count
-    return tuple(MYOSUITE_RENDER_VALIDATE_TASK_IDS[start:end])
-
-
 class MyoSuiteRenderTest(absltest.TestCase):
     """Checks public render semantics and representative oracle frames."""
 
     def test_render_is_batch_consistent_and_state_invariant(self) -> None:
         """Repeated renders should be batch-consistent and side-effect free."""
-        if not FLAGS.myosuite_render_include_doc_cases:
-            self.skipTest(
-                "Representative render checks disabled for this shard."
-            )
         env = make_gymnasium(
             "myoHandReorientID-v0",
             num_envs=2,
@@ -174,57 +123,8 @@ class MyoSuiteRenderTest(absltest.TestCase):
         finally:
             env.close()
 
-    def test_all_public_renders_match_official(self) -> None:
-        """Every public MyoSuite task should match the oracle for 3 steps."""
-        if not FLAGS.myosuite_render_run_surface:
-            self.skipTest("Full-surface render sweep disabled for this target.")
-        task_ids = _selected_task_ids()
-        self.assertNotEmpty(task_ids)
-        for task_id in task_ids:
-            thresholds = official_render_thresholds(task_id)
-            with self.subTest(task_id=task_id):
-                sequence = capture_render_sequence(
-                    task_id,
-                    steps=MYOSUITE_RENDER_COMPARE_STEPS,
-                    seed=7,
-                    render_width=_RENDER_WIDTH,
-                    render_height=_RENDER_HEIGHT,
-                    action_mode="random",
-                    retry_seeds=MYOSUITE_RENDER_RETRY_SEEDS,
-                )
-                max_mean_abs_diff, max_mismatch_ratio = thresholds
-                _assert_frames_close(
-                    sequence.reset_envpool,
-                    sequence.reset_official,
-                    label=f"{task_id} reset",
-                    max_mean_abs_diff=max_mean_abs_diff,
-                    max_mismatch_ratio=max_mismatch_ratio,
-                )
-                self.assertLen(
-                    sequence.envpool_frames, MYOSUITE_RENDER_COMPARE_STEPS
-                )
-                for index, (envpool_frame, official_frame) in enumerate(
-                    zip(
-                        sequence.envpool_frames,
-                        sequence.official_frames,
-                        strict=True,
-                    ),
-                    start=1,
-                ):
-                    _assert_frames_close(
-                        envpool_frame,
-                        official_frame,
-                        label=f"{task_id} step {index}",
-                        max_mean_abs_diff=max_mean_abs_diff,
-                        max_mismatch_ratio=max_mismatch_ratio,
-                    )
-
     def test_representative_render_cases_stay_documented(self) -> None:
         """Representative doc cases remain part of the public render sweep."""
-        if not FLAGS.myosuite_render_include_doc_cases:
-            self.skipTest(
-                "Representative render checks disabled for this shard."
-            )
         covered = set(MYOSUITE_RENDER_VALIDATE_TASK_IDS)
         for render_case in MYOSUITE_RENDER_COMPARE_CASES:
             with self.subTest(task_id=render_case.task_id):
@@ -232,10 +132,6 @@ class MyoSuiteRenderTest(absltest.TestCase):
 
     def test_render_retry_skips_early_terminal_seed(self) -> None:
         """Render capture should retry when a candidate seed ends too early."""
-        if not FLAGS.myosuite_render_include_doc_cases:
-            self.skipTest(
-                "Representative render checks disabled for this shard."
-            )
         sequence = capture_render_sequence(
             "MyoHandAlarmclockFixed-v0",
             steps=MYOSUITE_RENDER_COMPARE_STEPS,

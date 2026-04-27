@@ -60,11 +60,13 @@ class OffscreenRenderer {
   mjvScene scene_;
   mjvCamera camera_;
   mjvOption option_;
+  mjvPerturb perturb_;
   mjrContext context_;
   std::vector<unsigned char> scratch_;
   CameraPolicy camera_policy_;
   bool initialized_{false};
   bool free_camera_initialized_{false};
+  bool needs_render_warmup_{false};
 };
 
 }  // namespace envpool::mujoco

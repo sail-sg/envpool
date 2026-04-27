@@ -76,6 +76,16 @@ def _configure_macos_dm_control_imports() -> None:
     os.environ.setdefault("MUJOCO_GL", "off")
 
 
+def _configure_windows_dm_control_imports() -> None:
+    if platform.system() != "Windows":
+        return
+    # MyoSuite's official reset path can instantiate dm_control rendering
+    # helpers even when an oracle test only compares numeric state. Windows CI
+    # supplies Mesa for explicit render tests, but this non-render path should
+    # not depend on GLFW picking up a usable WGL context.
+    os.environ.setdefault("MUJOCO_GL", "off")
+
+
 def _configure_macos_dm_control_renderer() -> None:
     if platform.system() != "Darwin":
         return
@@ -280,7 +290,9 @@ def find_vendored_myosuite_root() -> Path:
 def prepare_oracle_imports(*, render: bool = False) -> None:
     """Expose vendored MyoSuite Python modules on sys.path."""
     _configure_linux_mujoco_gl()
-    _configure_macos_dm_control_imports()
+    if not render:
+        _configure_macos_dm_control_imports()
+        _configure_windows_dm_control_imports()
     source_root = str(find_vendored_myosuite_root())
     if source_root not in sys.path:
         sys.path.insert(0, source_root)

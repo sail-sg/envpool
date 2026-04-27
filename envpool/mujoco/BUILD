@@ -813,19 +813,14 @@ py_test(
 )
 
 # Keep MyoSuite render checks exclusive and finely sharded. The generated
-# metadata currently exposes 398 public IDs; Bazel caps a single test target at
-# 50 shards, so each full-surface process validates a small contiguous group
-# without creating hundreds of separate runfiles trees.
+# metadata currently exposes 398 public IDs; small contiguous shards keep
+# official MuJoCo renderer state isolated enough for strict bitwise checks.
 _MYOSUITE_RENDER_SHARD_COUNT = 50
 
 py_test(
     name = "myosuite_render_doc_test",
     size = "large",
     srcs = ["myosuite/myosuite_render_test.py"],
-    args = [
-        "--nomyosuite_render_run_surface",
-        "--myosuite_render_include_doc_cases=true",
-    ],
     imports = ["../.."],
     main = "myosuite/myosuite_render_test.py",
     tags = ["exclusive"],
@@ -839,12 +834,9 @@ py_test(
 py_test(
     name = "myosuite_render_surface_test",
     size = "large",
-    srcs = ["myosuite/myosuite_render_test.py"],
-    args = [
-        "--myosuite_render_include_doc_cases=false",
-    ],
+    srcs = ["myosuite/myosuite_render_surface_test.py"],
     imports = ["../.."],
-    main = "myosuite/myosuite_render_test.py",
+    main = "myosuite/myosuite_render_surface_test.py",
     shard_count = _MYOSUITE_RENDER_SHARD_COUNT,
     tags = ["exclusive"],
     deps = [

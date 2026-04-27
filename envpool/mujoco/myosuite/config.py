@@ -40,12 +40,13 @@ _RESET_SYNC_TEST_KEYS = {
 
 _PREVIEW_TEST_KEYS_BY_ENTRYPOINT = {
     ("myobase", "PoseEnvV0"): {
+        "test_reset_ctrl",
         "test_target_qpos",
         "test_target_site_pos",
         "test_body_mass",
         "test_geom_size0",
     },
-    ("myobase", "ReachEnvV0"): {"test_target_pos"},
+    ("myobase", "ReachEnvV0"): {"test_reset_ctrl", "test_target_pos"},
     ("myobase", "Geometries100EnvV0"): {
         "test_target_body_quat",
         "test_object_geom_size",
@@ -142,6 +143,7 @@ _PREVIEW_TEST_KEYS_BY_ENTRYPOINT = {
         "test_object_body_mass",
     },
     ("myochallenge", "RelocateEnvV0"): {
+        "test_reset_ctrl",
         "test_reset_act_dot",
         "test_goal_body_pos",
         "test_goal_body_quat",

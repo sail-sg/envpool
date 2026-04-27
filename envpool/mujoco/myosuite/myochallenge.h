@@ -344,6 +344,7 @@ class MyoChallengeRelocateEnvFns {
         "reward_act_reg_w"_.Bind(0.0),
         "test_reset_qpos"_.Bind(std::vector<double>{}),
         "test_reset_qvel"_.Bind(std::vector<double>{}),
+        "test_reset_ctrl"_.Bind(std::vector<double>{}),
         "test_reset_act"_.Bind(std::vector<double>{}),
         "test_reset_act_dot"_.Bind(std::vector<double>{}),
         "test_reset_qacc_warmstart"_.Bind(std::vector<double>{}),
@@ -1119,6 +1120,7 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
   std::vector<int> default_object_geom_type_;
   std::vector<mjtNum> test_reset_qpos_;
   std::vector<mjtNum> test_reset_qvel_;
+  std::vector<mjtNum> test_reset_ctrl_;
   std::vector<mjtNum> test_reset_act_;
   std::vector<mjtNum> test_reset_act_dot_;
   std::vector<mjtNum> test_reset_qacc_warmstart_;
@@ -1165,6 +1167,7 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
         reward_act_reg_w_(spec.config["reward_act_reg_w"_]),
         test_reset_qpos_(detail::ToMjtVector(spec.config["test_reset_qpos"_])),
         test_reset_qvel_(detail::ToMjtVector(spec.config["test_reset_qvel"_])),
+        test_reset_ctrl_(detail::ToMjtVector(spec.config["test_reset_ctrl"_])),
         test_reset_act_(detail::ToMjtVector(spec.config["test_reset_act"_])),
         test_reset_act_dot_(
             detail::ToMjtVector(spec.config["test_reset_act_dot"_])),
@@ -1312,6 +1315,26 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
     if (expected_obs != spec_.config["obs_dim"_]) {
       throw std::runtime_error(
           "MyoChallenge Relocate obs_dim does not match model.");
+    }
+    if (!test_reset_ctrl_.empty() &&
+        static_cast<int>(test_reset_ctrl_.size()) != model_->nu) {
+      throw std::runtime_error(
+          "MyoChallenge Relocate test_reset_ctrl has wrong length.");
+    }
+    if (!test_reset_act_.empty() &&
+        static_cast<int>(test_reset_act_.size()) != model_->na) {
+      throw std::runtime_error(
+          "MyoChallenge Relocate test_reset_act has wrong length.");
+    }
+    if (!test_reset_act_dot_.empty() &&
+        static_cast<int>(test_reset_act_dot_.size()) != model_->na) {
+      throw std::runtime_error(
+          "MyoChallenge Relocate test_reset_act_dot has wrong length.");
+    }
+    if (!test_reset_qacc_warmstart_.empty() &&
+        static_cast<int>(test_reset_qacc_warmstart_.size()) != model_->nv) {
+      throw std::runtime_error(
+          "MyoChallenge Relocate test_reset_qacc_warmstart has wrong length.");
     }
   }
 
@@ -1568,6 +1591,10 @@ class MyoChallengeRelocateEnvBase : public Env<EnvSpecT>,
     }
     mj_forward(model_, data_);
     bool rerun_forward = false;
+    if (!test_reset_ctrl_.empty()) {
+      detail::RestoreVector(test_reset_ctrl_, data_->ctrl);
+      rerun_forward = true;
+    }
     if (!test_reset_act_.empty()) {
       detail::RestoreVector(test_reset_act_, data_->act);
       rerun_forward = true;
