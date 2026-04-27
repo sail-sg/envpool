@@ -207,6 +207,9 @@ class EnvPool(Protocol):
     def _ensure_platform_render_context(self, width: int, height: int) -> None:
         """Prepare any platform-specific GL context required before render."""
 
+    def _requires_pixel_render_context(self) -> bool:
+        """Whether recv may render pixels before render bootstraps GL."""
+
     def _show_human_frame(self, frame: np.ndarray) -> None:
         """Display a rendered frame in a Python viewer."""
 
