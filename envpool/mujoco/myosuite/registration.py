@@ -18,11 +18,10 @@ from envpool.mujoco.myosuite.config import (
     resolve_myosuite_task_config,
 )
 from envpool.mujoco.myosuite.metadata import MYOSUITE_EXPANDED_IDS
-from envpool.registration import register
+from envpool.registration import register, registry
 
 _IMPORT_PATH = "envpool.mujoco.myosuite.native"
 MYOSUITE_PUBLIC_TASK_IDS = tuple(MYOSUITE_EXPANDED_IDS)
-_REGISTERED = False
 
 _CLASS_PREFIX = {
     ("myobase", "PoseEnvV0"): "MyoSuitePose",
@@ -63,10 +62,9 @@ def _public_env_names(task_id: str) -> tuple[str, str, str]:
 
 def register_myosuite_tasks() -> None:
     """Register every public MyoSuite task ID."""
-    global _REGISTERED
-    if _REGISTERED:
-        return
     for task_id in MYOSUITE_PUBLIC_TASK_IDS:
+        if task_id in registry.specs:
+            continue
         entry, _ = myosuite_expanded_entry(task_id)
         spec_cls, dm_cls, gym_cls = _public_env_names(task_id)
         register(
@@ -78,7 +76,6 @@ def register_myosuite_tasks() -> None:
             max_episode_steps=int(entry["max_episode_steps"]),
             _config_resolver=resolve_myosuite_task_config,
         )
-    _REGISTERED = True
 
 
 register_myosuite_tasks()
