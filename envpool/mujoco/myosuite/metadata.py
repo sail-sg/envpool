@@ -58,3 +58,15 @@ MYOSUITE_EXPANDED_IDS: tuple[str, ...] = tuple(
     _METADATA["expanded_ids"]
 )  # Includes variants; consumed by public task registration.
 MYOSUITE_SUITES: dict[str, Any] = dict(_METADATA["suites"])
+
+
+def _validate_metadata_constants() -> None:
+    if len(MYOSUITE_DIRECT_IDS) != MYOSUITE_COUNTS["direct_total"]:
+        raise ValueError("MyoSuite direct metadata count is inconsistent.")
+    if len(MYOSUITE_EXPANDED_IDS) != MYOSUITE_COUNTS["expanded_total"]:
+        raise ValueError("MyoSuite expanded metadata count is inconsistent.")
+    if not set(MYOSUITE_DIRECT_IDS).issubset(MYOSUITE_EXPANDED_IDS):
+        raise ValueError("MyoSuite expanded IDs must include direct IDs.")
+
+
+_validate_metadata_constants()
