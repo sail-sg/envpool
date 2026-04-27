@@ -64,10 +64,11 @@ jobs:
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Coverage
         run: |
+          myosuite_test_targets="//envpool/mujoco:myosuite_metadata_test //envpool/mujoco:myosuite_asset_smoke_test //envpool/mujoco:myosuite_myobase_test //envpool/mujoco:myosuite_myodm_test //envpool/mujoco:myosuite_myochallenge_test //envpool/mujoco:myosuite_render_doc_test //envpool/mujoco:myosuite_render_surface_test"
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
-            BAZEL_TEST_TARGETS="//... -//envpool/mujoco:myosuite_render_surface_test" bazel-coverage
+            BAZEL_TEST_TARGETS="//... -//envpool/mujoco:myosuite_metadata_test -//envpool/mujoco:myosuite_asset_smoke_test -//envpool/mujoco:myosuite_myobase_test -//envpool/mujoco:myosuite_myodm_test -//envpool/mujoco:myosuite_myochallenge_test -//envpool/mujoco:myosuite_render_doc_test -//envpool/mujoco:myosuite_render_surface_test" bazel-coverage
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
-            BAZEL_TEST_TARGETS="//envpool/mujoco:myosuite_render_surface_test" bazel-test
+            BAZEL_TEST_TARGETS="$myosuite_test_targets" bazel-test
           mkdir -p coverage
           cp bazel-out/_coverage/_coverage_report.dat coverage/lcov.info
           python3 scripts/coverage_summary.py \
