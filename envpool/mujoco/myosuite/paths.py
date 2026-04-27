@@ -57,7 +57,9 @@ def myosuite_asset_root() -> Path:
 def myosuite_metadata_path() -> Path:
     """Return the vendored generated MyoSuite metadata JSON path."""
     try:
-        return resolve_workspace_path("third_party/myosuite/metadata/env_ids.json")
+        return resolve_workspace_path(
+            "third_party/myosuite/metadata/env_ids.json"
+        )
     except FileNotFoundError as workspace_error:
         # Release wheels do not carry the source workspace, but Bazel packages
         # this generated metadata next to the Python modules.
