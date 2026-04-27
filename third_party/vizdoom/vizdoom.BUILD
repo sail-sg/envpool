@@ -166,7 +166,10 @@ cc_binary(
         "tools/re2c/substr.cc",
         "tools/re2c/translate.cc",
     ] + glob(["tools/re2c/*.h"]),
-    copts = ["-DHAVE_CONFIG_H"],
+    copts = select({
+        "@envpool//:windows": [],
+        "//conditions:default": ["-DHAVE_CONFIG_H"],
+    }),
 )
 
 cc_binary(

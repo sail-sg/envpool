@@ -438,6 +438,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         patches = [
             "//third_party/vizdoom:sdl_thread.patch",
             "//third_party/vizdoom:windows_msvc_compat.patch",
+            "//third_party/vizdoom:re2c_safe_substr.patch",
         ],
     )
 
