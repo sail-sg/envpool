@@ -99,7 +99,7 @@ jobs:
       BAZEL_RELEASE_RESOURCE_OPTS: >-
         ${{ matrix.arch == 'aarch64'
           && '--jobs=2 --local_cpu_resources=2 --local_ram_resources=HOST_RAM*.5 --show_progress_rate_limit=60'
-          || '--jobs=HOST_CPUS-1 --local_cpu_resources=HOST_CPUS-1 --local_ram_resources=HOST_RAM*.5 --show_progress_rate_limit=60' }}
+          || '--jobs=2 --local_cpu_resources=2 --local_ram_resources=HOST_RAM*.5 --show_progress_rate_limit=60' }}
     strategy:
       fail-fast: false
       matrix:
