@@ -22,7 +22,7 @@
 -
  namespace re2c
  {
- 
+
  void SubStr::out(std::ostream& o) const
  {
   o.write(str, len);
