@@ -38,6 +38,7 @@ genrule(
     srcs = [],
     outs = ["arith.h"],
     cmd = "$(execpath :arithchk) > $@",
+    cmd_bat = "$(execpath :arithchk) > $@",
     tools = [":arithchk"],
 )
 
@@ -54,6 +55,7 @@ genrule(
     srcs = [],
     outs = ["gd_qnan.h"],
     cmd = "$(execpath :qnan) > $@",
+    cmd_bat = "$(execpath :qnan) > $@",
     tools = [":qnan"],
 )
 
@@ -164,7 +166,10 @@ cc_binary(
         "tools/re2c/substr.cc",
         "tools/re2c/translate.cc",
     ] + glob(["tools/re2c/*.h"]),
-    copts = ["-DHAVE_CONFIG_H"],
+    copts = select({
+        "@envpool//:windows": [],
+        "//conditions:default": ["-DHAVE_CONFIG_H"],
+    }),
 )
 
 cc_binary(
@@ -177,6 +182,7 @@ genrule(
     srcs = ["src/sc_man_scanner.re"],
     outs = ["src/sc_man_scanner.h"],
     cmd = "$(execpath :re2c) --no-generation-date -s -o $@ $<",
+    cmd_bat = "$(execpath :re2c) --no-generation-date -s -o $@ $<",
     tools = [":re2c"],
 )
 
@@ -202,6 +208,7 @@ genrule(
         "xlat_parser.h",
     ],
     cmd = "$(execpath :lemon) $<",
+    cmd_bat = "$(execpath :lemon) $<",
     tools = [
         ":lemon",
         ":lemon_deps",

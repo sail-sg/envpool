@@ -16,8 +16,9 @@ load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("//envpool:requirements.bzl", "requirement")
-load("//third_party:common.bzl", "copy_to_directory")
+load("//third_party:common.bzl", "copy_files_to_directory", "copy_to_directory")
 load("//third_party/metaworld_assets:defs.bzl", "metaworld_runtime_assets")
+load("//third_party/myosuite:defs.bzl", "myosuite_runtime_assets")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -55,6 +56,7 @@ py_library(
         ":metaworld",
         ":mujoco_dmc",
         ":mujoco_gym",
+        ":myosuite",
         ":robotics",
     ],
 )
@@ -92,6 +94,124 @@ metaworld_runtime_assets(
         "//conditions:default": False,
     }),
     strip_prefix = "metaworld_assets/metaworld/assets/",
+)
+
+myosuite_runtime_assets(
+    name = "gen_myosuite_runtime_assets",
+    out = "myosuite_assets",
+    furniture_sim_assets = ["@furniture_sim_src//:runtime_assets"],
+    mpl_sim_assets = ["@mpl_sim_src//:runtime_assets"],
+    myo_sim_assets = ["@myo_sim_src//:runtime_assets"],
+    myosuite_env_assets = ["@myosuite_src//:myosuite_runtime_assets"],
+    object_sim_assets = ["@object_sim_src//:runtime_assets"],
+    patched_assets = [
+        "//third_party/myosuite:simhive/myo_sim/arm/myoarm_reach.xml",
+        "//third_party/myosuite:simhive/myo_sim/arm/myoarm_tabletennis.xml",
+    ],
+    ycb_sim_assets = ["@ycb_sim_src//:runtime_assets"],
+)
+
+filegroup(
+    name = "myosuite_runtime_assets",
+    srcs = [":gen_myosuite_runtime_assets"],
+)
+
+copy_files_to_directory(
+    name = "gen_myosuite_metadata",
+    srcs = ["//third_party/myosuite:metadata/env_ids.json"],
+    out = "myosuite",
+    strip_prefix = "third_party/myosuite/metadata/",
+)
+
+filegroup(
+    name = "myosuite_packaged_metadata",
+    srcs = [":gen_myosuite_metadata"],
+)
+
+cc_library(
+    name = "myosuite_support",
+    hdrs = ["myosuite/paths.h"],
+    data = [":myosuite_runtime_assets"],
+)
+
+py_library(
+    name = "myosuite",
+    srcs = [
+        "myosuite/__init__.py",
+        "myosuite/config.py",
+        "myosuite/metadata.py",
+        "myosuite/native.py",
+        "myosuite/paths.py",
+        "myosuite/registration.py",
+    ],
+    data = [
+        ":myosuite_envpool",
+        ":myosuite_packaged_metadata",
+        ":myosuite_runtime_assets",
+    ],
+    imports = ["../.."],
+    deps = [
+        "//envpool/python:api",
+        requirement("numpy"),
+    ],
+)
+
+py_library(
+    name = "myosuite_oracle_utils",
+    srcs = ["myosuite/oracle_utils.py"],
+    data = ["@myosuite_src//:myosuite_python_sources"],
+    imports = ["../.."],
+    deps = [
+        ":myosuite",
+    ],
+)
+
+py_library(
+    name = "myosuite_render_utils",
+    srcs = ["myosuite/render_utils.py"],
+    data = ["@myosuite_src//:myosuite_python_sources"],
+    imports = ["../.."],
+    deps = [
+        ":myosuite",
+        ":myosuite_oracle_test_deps",
+        ":myosuite_oracle_utils",
+        "//envpool:registration",
+        requirement("dm-control"),
+        requirement("gymnasium"),
+        requirement("mujoco"),
+        requirement("numpy"),
+    ],
+)
+
+cc_library(
+    name = "myosuite_env",
+    hdrs = [
+        "myosuite/myobase.h",
+        "myosuite/myobase_extended.h",
+        "myosuite/myochallenge.h",
+        "myosuite/myochallenge_extended.h",
+        "myosuite/myodm.h",
+    ],
+    deps = [
+        ":myosuite_support",
+        ":robotics_env",
+        "//envpool/core:async_envpool",
+    ],
+)
+
+pybind_extension(
+    name = "myosuite_envpool",
+    srcs = [
+        "myosuite/mujoco_plugin_init.cc",
+        "myosuite_envpool.cc",
+        "myosuite_envpool_base.cc",
+        "myosuite_envpool_challenge.cc",
+        "myosuite_envpool_dm.cc",
+    ],
+    deps = [
+        ":myosuite_env",
+        "//envpool/core:py_envpool",
+    ],
 )
 
 cc_library(
@@ -319,6 +439,16 @@ py_library(
     imports = ["../.."],
     deps = [
         ":metaworld",
+        "//envpool:registration",
+    ],
+)
+
+py_library(
+    name = "myosuite_registration",
+    srcs = ["myosuite/registration.py"],
+    imports = ["../.."],
+    deps = [
+        ":myosuite",
         "//envpool:registration",
     ],
 )
@@ -581,5 +711,145 @@ py_test(
         requirement("gymnasium-robotics"),
         requirement("mujoco"),
         requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_metadata_test",
+    size = "large",
+    srcs = ["myosuite/myosuite_metadata_test.py"],
+    data = ["@myosuite_src//:myosuite_registry_sources"],
+    imports = ["../.."],
+    deps = [
+        ":myosuite",
+        requirement("absl-py"),
+        requirement("mujoco"),
+    ],
+)
+
+py_test(
+    name = "myosuite_asset_smoke_test",
+    size = "large",
+    srcs = ["myosuite/myosuite_asset_smoke_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":myosuite",
+        requirement("absl-py"),
+        requirement("mujoco"),
+    ],
+)
+
+py_library(
+    name = "myosuite_oracle_test_deps",
+    deps = [
+        requirement("click"),
+        requirement("flatten-dict"),
+        requirement("gitpython"),
+        requirement("h5py"),
+        requirement("packaging"),
+        requirement("pillow"),
+        requirement("pink-noise-rl"),
+        requirement("sk-video"),
+        requirement("termcolor"),
+    ],
+)
+
+py_test(
+    name = "myosuite_myobase_test",
+    size = "large",
+    srcs = ["myosuite/myobase_test.py"],
+    data = ["@myosuite_src//:myosuite_python_sources"],
+    imports = ["../.."],
+    main = "myosuite/myobase_test.py",
+    deps = [
+        ":myosuite",
+        ":myosuite_oracle_test_deps",
+        ":myosuite_oracle_utils",
+        "//envpool:registration",
+        requirement("absl-py"),
+        requirement("dm-control"),
+        requirement("gymnasium"),
+        requirement("mujoco"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_myodm_test",
+    size = "large",
+    srcs = ["myosuite/myodm_test.py"],
+    data = ["@myosuite_src//:myosuite_python_sources"],
+    imports = ["../.."],
+    main = "myosuite/myodm_test.py",
+    deps = [
+        ":myosuite",
+        ":myosuite_oracle_test_deps",
+        ":myosuite_oracle_utils",
+        requirement("absl-py"),
+        requirement("dm-control"),
+        requirement("gymnasium"),
+        requirement("mujoco"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_myochallenge_test",
+    size = "large",
+    srcs = ["myosuite/myochallenge_test.py"],
+    data = ["@myosuite_src//:myosuite_python_sources"],
+    imports = ["../.."],
+    main = "myosuite/myochallenge_test.py",
+    deps = [
+        ":myosuite",
+        ":myosuite_oracle_test_deps",
+        ":myosuite_oracle_utils",
+        requirement("absl-py"),
+        requirement("dm-control"),
+        requirement("gymnasium"),
+        requirement("mujoco"),
+        requirement("numpy"),
+    ],
+)
+
+# Keep MyoSuite render checks exclusive and finely sharded. The generated
+# metadata currently exposes 398 public IDs; small contiguous shards keep
+# official MuJoCo renderer state isolated enough for strict bitwise checks.
+_MYOSUITE_RENDER_SHARD_COUNT = 50
+
+py_test(
+    name = "myosuite_render_doc_test",
+    size = "large",
+    srcs = ["myosuite/myosuite_render_test.py"],
+    imports = ["../.."],
+    main = "myosuite/myosuite_render_test.py",
+    tags = ["exclusive"],
+    deps = [
+        ":myosuite_render_utils",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_render_surface_test",
+    size = "large",
+    srcs = ["myosuite/myosuite_render_surface_test.py"],
+    imports = ["../.."],
+    main = "myosuite/myosuite_render_surface_test.py",
+    shard_count = _MYOSUITE_RENDER_SHARD_COUNT,
+    tags = ["exclusive"],
+    deps = [
+        ":myosuite_render_utils",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
+test_suite(
+    name = "myosuite_render_test",
+    tests = [
+        ":myosuite_render_doc_test",
+        ":myosuite_render_surface_test",
     ],
 )

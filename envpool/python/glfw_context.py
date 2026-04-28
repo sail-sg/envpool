@@ -11,12 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""GLFW-backed MuJoCo render context helpers for Windows."""
+"""GLFW-backed MuJoCo render context helpers."""
 
 from __future__ import annotations
 
 import ctypes
 import os
+import platform
 import threading
 import warnings
 from pathlib import Path
@@ -82,16 +83,17 @@ def _glfw_error_details(glfw: object) -> str:
 
 
 def _warn_glfw_fallback(reason: str) -> None:
+    system = platform.system()
     warnings.warn(
         "Failed to initialize the GLFW-backed MuJoCo render context on "
-        f"Windows; falling back to EnvPool's native WGL path. {reason}",
+        f"{system}; falling back to EnvPool's native OpenGL path. {reason}",
         RuntimeWarning,
         stacklevel=2,
     )
 
 
 class _GlfwContext:
-    """Hidden GLFW window aligned with MuJoCo's upstream Windows backend."""
+    """Hidden GLFW window aligned with MuJoCo's upstream backend."""
 
     def __init__(self, width: int, height: int) -> None:
         preload_windows_gl_dlls()
@@ -99,7 +101,7 @@ class _GlfwContext:
             import glfw
         except ImportError as exc:
             raise RuntimeError(
-                "MuJoCo rendering on Windows requires the `glfw` package."
+                "MuJoCo rendering requires the `glfw` package."
             ) from exc
         if not glfw.init():
             raise RuntimeError(
@@ -138,7 +140,7 @@ class _GlfwContext:
 
 
 def try_ensure_mujoco_glfw_context(width: int, height: int) -> bool:
-    """Best-effort GLFW context setup that falls back to native WGL."""
+    """Best-effort GLFW context setup that falls back to native GL paths."""
     global _GLFW_CONTEXT, _GLFW_FAILURE_REASON
     with _CONTEXT_LOCK:
         if _GLFW_FAILURE_REASON is not None:

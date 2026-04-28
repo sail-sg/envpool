@@ -1,0 +1,55 @@
+# Copyright 2026 Garena Online Private Limited
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+filegroup(
+    name = "myosuite_runtime_assets",
+    srcs = glob(
+        [
+            "myosuite/envs/myo/assets/**",
+            "myosuite/envs/myo/myodm/data/**",
+        ],
+        exclude = [
+            "myosuite/envs/myo/assets/**/*.py",
+            "myosuite/envs/myo/assets/**/__pycache__/**",
+            "myosuite/envs/myo/myodm/data/**/*.py",
+            "myosuite/envs/myo/myodm/data/**/__pycache__/**",
+        ],
+    ),
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "myosuite_registry_sources",
+    srcs = [
+        ".gitmodules",
+        "myosuite/__init__.py",
+        "myosuite/envs/myo/assets/hand/myohand_object.xml",
+        "myosuite/envs/myo/myobase/__init__.py",
+        "myosuite/envs/myo/myochallenge/__init__.py",
+        "myosuite/envs/myo/myodm/__init__.py",
+        "myosuite/envs/myo/myoedits/__init__.py",
+        "myosuite_init.py",
+        "pyproject.toml",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "myosuite_python_sources",
+    srcs = glob(
+        ["myosuite/**/*.py"],
+        exclude = ["myosuite/**/__pycache__/**"],
+    ),
+    visibility = ["//visibility:public"],
+)

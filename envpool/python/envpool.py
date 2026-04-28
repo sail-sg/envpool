@@ -69,6 +69,13 @@ class EnvPoolMixin(ABC):
         if self._requires_windows_glfw_context():
             try_ensure_mujoco_glfw_context(width or 640, height or 480)
 
+    def _requires_pixel_render_context(self) -> bool:
+        """Return whether _recv may render pixels before render() is called."""
+        return (
+            self._requires_windows_glfw_context()
+            and "obs:pixels" in getattr(self, "_state_keys", ())
+        )
+
     def _player_action_count(
         self: EnvPool, adict: dict[str, Any]
     ) -> int | None:
@@ -300,6 +307,11 @@ class EnvPoolMixin(ABC):
         return_info: bool = True,
     ) -> TimeStep | tuple:
         """Recv a batch state from EnvPool."""
+        if self._requires_pixel_render_context():
+            self._ensure_platform_render_context(
+                int(getattr(self, "_render_width", 0)),
+                int(getattr(self, "_render_height", 0)),
+            )
         state_list = self._recv()
         if not hasattr(self, "_state_names"):
             self._state_names = self._state_keys

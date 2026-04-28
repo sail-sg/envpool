@@ -48,7 +48,8 @@ class OffscreenRenderer {
 
   void Render(const mjModel* model, mjData* data, int width, int height,
               int camera_id, unsigned char* rgb,
-              const mjvCamera* camera_override = nullptr);
+              const mjvCamera* camera_override = nullptr,
+              const mjvOption* option_override = nullptr);
 
  private:
   void Initialize(const mjModel* model);
@@ -65,6 +66,7 @@ class OffscreenRenderer {
   CameraPolicy camera_policy_;
   bool initialized_{false};
   bool free_camera_initialized_{false};
+  bool needs_render_warmup_{false};
 };
 
 }  // namespace envpool::mujoco

@@ -1,0 +1,201 @@
+diff --git a/myosuite/envs/myo/myochallenge/bimanual_v0.py b/myosuite/envs/myo/myochallenge/bimanual_v0.py
+index 31ab7cf..7e45aa7 100644
+--- a/myosuite/envs/myo/myochallenge/bimanual_v0.py
++++ b/myosuite/envs/myo/myochallenge/bimanual_v0.py
+@@ -87,9 +87,9 @@ class BimanualEnvV1(BaseV0):
+         self.start_bid = self.id_info.start_id
+         self.goal_bid = self.id_info.goal_id
+
+-        self.obj_bid = self.id_info.manip_body_id
++        self.obj_bid = int(np.asarray(self.id_info.manip_body_id).reshape(-1)[0])
+         self.obj_sid = self.sim.model.site_name2id('touch_site')
+-        self.obj_gid = self.sim.model.body(self.obj_bid).geomadr + 1
++        self.obj_gid = int(np.asarray(self.sim.model.body(self.obj_bid).geomadr).reshape(-1)[0]) + 1
+         self.obj_mid = next(i
+                             for i in range(self.sim.model.nmesh)
+                             if "box" in self.sim.model.mesh(i).name)
+@@ -169,8 +169,10 @@ class BimanualEnvV1(BaseV0):
+         to call this method within setup after relevant ids have been identified.
+         """
+         self.obj_size0 = self.sim.model.geom_size[self.obj_gid].copy()
+-        self.obj_vert_addr = np.arange(self.sim.model.mesh(self.obj_mid).vertadr,
+-                                       self.sim.model.mesh(self.obj_mid).vertadr + self.sim.model.mesh(0).vertnum)
++        obj_mesh = self.sim.model.mesh(self.obj_mid)
++        obj_vertadr = int(np.asarray(obj_mesh.vertadr).reshape(-1)[0])
++        obj_vertnum = int(np.asarray(obj_mesh.vertnum).reshape(-1)[0])
++        self.obj_vert_addr = np.arange(obj_vertadr, obj_vertadr + obj_vertnum)
+         q = self.sim.model.geom(self.obj_gid - 1).quat
+         r = R.from_quat([q[1], q[2], q[3], q[0]])
+         self.sim.model.mesh_vert[self.obj_vert_addr] = r.apply(self.sim.model.mesh_vert[self.obj_vert_addr])
+@@ -407,7 +409,7 @@ class ContactTrajIssue(enum.Enum):
+
+ class IdInfo:
+     def __init__(self, model: mujoco.MjModel):
+-        self.manip_body_id = model.body("manip_object").id
++        self.manip_body_id = int(np.asarray(model.body("manip_object").id).reshape(-1)[0])
+
+         myo_bodies = [model.body(i).id for i in range(model.nbody)
+                       if not model.body(i).name.startswith("prosthesis")
+@@ -431,14 +433,16 @@ class IdInfo:
+         self.prosth_dof_range = np.concatenate([model.joint(i).dofadr for i in range(model.njnt)
+                                                 if model.joint(i).name.startswith("prosthesis")])
+
+-        self.manip_joint_range = np.arange(model.joint("manip_object/freejoint").qposadr,
+-                                           model.joint("manip_object/freejoint").qposadr + 7)
++        manip_joint = model.joint("manip_object/freejoint")
++        manip_qposadr = int(np.asarray(manip_joint.qposadr).reshape(-1)[0])
++        manip_dofadr = int(np.asarray(manip_joint.dofadr).reshape(-1)[0])
++        self.manip_joint_range = np.arange(manip_qposadr, manip_qposadr + 7)
+
+-        self.manip_dof_range = np.arange(model.joint("manip_object/freejoint").dofadr,
+-                                         model.joint("manip_object/freejoint").dofadr + 6)
++        self.manip_dof_range = np.arange(manip_dofadr,
++                                         manip_dofadr + 6)
+
+-        self.start_id = model.body("start").id
+-        self.goal_id = model.body("goal").id
++        self.start_id = int(np.asarray(model.body("start").id).reshape(-1)[0])
++        self.goal_id = int(np.asarray(model.body("goal").id).reshape(-1)[0])
+
+
+ def get_touching_objects(model: mujoco.MjModel, data: mujoco.MjData, id_info: IdInfo):
+diff --git a/myosuite/envs/myo/myochallenge/chasetag_v0.py b/myosuite/envs/myo/myochallenge/chasetag_v0.py
+index 7eaea4f..92f4eba 100644
+--- a/myosuite/envs/myo/myochallenge/chasetag_v0.py
++++ b/myosuite/envs/myo/myochallenge/chasetag_v0.py
+@@ -631,12 +631,13 @@ class ChaseTagEnvV0(WalkEnvV0):
+         # The task is entirely defined by these 3 lines
+         win_cdt = self._win_condition()
+         lose_cdt = self._lose_condition()
++        time_value = float(np.asarray(self.obs_dict["time"]).reshape(-1)[0])
+         if self.current_task.name == "CHASE":
+-            score = self._get_score(float(self.obs_dict["time"])) if win_cdt else 0
++            score = self._get_score(time_value) if win_cdt else 0
+             self.obs_dict["time"] = self.maxTime if lose_cdt else self.obs_dict["time"]
+         elif self.current_task.name == "EVADE":
+             score = (
+-                self._get_score(float(self.obs_dict["time"]))
++                self._get_score(time_value)
+                 if (win_cdt or lose_cdt)
+                 else 0
+             )
+diff --git a/myosuite/envs/myo/myochallenge/soccer_v0.py b/myosuite/envs/myo/myochallenge/soccer_v0.py
+index c3bab63..ef41956 100644
+--- a/myosuite/envs/myo/myochallenge/soccer_v0.py
++++ b/myosuite/envs/myo/myochallenge/soccer_v0.py
+@@ -344,6 +344,7 @@ class SoccerEnvV0(WalkEnvV0):
+
+         pain = self.get_jnt_limit_violation() # Joint limit violation torque as pain score
+         done = bool(goal_scored or time_limit_exceeded or fallen)
++        time_cost = float(np.asarray(self.obs_dict['time']).reshape(-1)[0])
+         # ----------------------
+
+         # Example reward, you should change this!
+@@ -358,7 +359,7 @@ class SoccerEnvV0(WalkEnvV0):
+
+                 # Optional Keys
+                 ('goal_scored', float(goal_scored)),
+-                ('time_cost', float(self.obs_dict['time'])),
++                ('time_cost', time_cost),
+                 ('act_reg', act_mag),
+                 ('pain', pain),
+                 # Must keys
+@@ -456,8 +457,8 @@ class SoccerEnvV0(WalkEnvV0):
+         # Add some noise to the joints
+         for jnt in self.myo_joints:
+-            self.sim.data.joint(jnt).qpos[0] += self.np_random.uniform(-np.abs(self.rnd_joint_noise), np.abs(self.rnd_joint_noise), size=(1,))
++            self.sim.data.joint(jnt).qpos[0] += self.np_random.uniform(-np.abs(self.rnd_joint_noise), np.abs(self.rnd_joint_noise))
+
+         # Body start position randomizations
+         # Treatment for root joint is different
+-        self.sim.data.joint('root').qpos[0] += self.np_random.uniform(-np.abs(self.rnd_pos_noise), 0, size=(1,)) # Only allow body to move behind the ball, not in front
+-        self.sim.data.joint('root').qpos[1] += self.np_random.uniform(-np.abs(self.rnd_pos_noise), np.abs(self.rnd_pos_noise),size=(1,)) # Y-direction movement allowable
++        self.sim.data.joint('root').qpos[0] += self.np_random.uniform(-np.abs(self.rnd_pos_noise), 0) # Only allow body to move behind the ball, not in front
++        self.sim.data.joint('root').qpos[1] += self.np_random.uniform(-np.abs(self.rnd_pos_noise), np.abs(self.rnd_pos_noise)) # Y-direction movement allowable
+diff --git a/myosuite/envs/myo/myochallenge/tabletennis_v0.py b/myosuite/envs/myo/myochallenge/tabletennis_v0.py
+index 1bbbfe5..c840519 100644
+--- a/myosuite/envs/myo/myochallenge/tabletennis_v0.py
++++ b/myosuite/envs/myo/myochallenge/tabletennis_v0.py
+@@ -401,7 +401,7 @@ class TableTennisEnvV0(BaseV0):
+                 warnings.warn("A paddle was found that was not a free body. Confirm this is intended.")
+         for s in spec.sensors:
+             if "pingpong" not in s.name and "paddle" not in s.name:
+-                s.delete()
++                spec.delete(s)
+         temp_model = spec.compile()
+
+         removed_ids = recursive_immobilize(spec, temp_model, spec.body("femur_l"), remove_eqs=True)
+@@ -419,15 +419,15 @@ class TableTennisEnvV0(BaseV0):
+             spec_copy: mujoco.MjSpec = spec.copy()
+             attachment_frame = torso.add_frame(quat=[0.5, 0.5, -0.5, 0.5],
+                                                pos=[0.05, 0.373, -0.04])
+-            [k.delete() for k in spec_copy.keys]
+-            [t.delete() for t in spec_copy.textures]
+-            [m.delete() for m in spec_copy.materials]
+-            [t.delete() for t in spec_copy.tendons]
+-            [a.delete() for a in spec_copy.actuators]
+-            [e.delete() for e in spec_copy.equalities]
+-            [s.delete() for s in spec_copy.sensors]
+-            [c.delete() for c in spec_copy.cameras]
++            [spec_copy.delete(k) for k in list(spec_copy.keys)]
++            [spec_copy.delete(t) for t in list(spec_copy.textures)]
++            [spec_copy.delete(m) for m in list(spec_copy.materials)]
++            [spec_copy.delete(t) for t in list(spec_copy.tendons)]
++            [spec_copy.delete(a) for a in list(spec_copy.actuators)]
++            [spec_copy.delete(e) for e in list(spec_copy.equalities)]
++            [spec_copy.delete(s) for s in list(spec_copy.sensors)]
++            [spec_copy.delete(c) for c in list(spec_copy.cameras)]
+-            recursive_immobilize(spec, temp_model, spec_copy.worldbody)
++            recursive_immobilize(spec_copy, temp_model, spec_copy.worldbody)
+             recursive_remove_contacts(spec_copy.worldbody, return_condition=None)
+
+@@ -438,7 +438,7 @@ class TableTennisEnvV0(BaseV0):
+                     mesh.name += "_mirrored"
+                     mesh.scale[1] *= -1
+                 else:
+-                    mesh.delete()
++                    spec_copy.delete(mesh)
+
+             attachment_frame.attach_body(spec_copy.body("clavicle_mirrored"))
+             spec.body("ulna_mirrored").quat =[0.546, 0, 0, -0.838]
+diff --git a/myosuite/utils/spec_processing.py b/myosuite/utils/spec_processing.py
+index 924ccb6..0cfa789 100644
+--- a/myosuite/utils/spec_processing.py
++++ b/myosuite/utils/spec_processing.py
+@@ -2,19 +2,19 @@ import mujoco
+
+ def recursive_immobilize(spec, temp_model, parent, remove_eqs=False, remove_actuators=False):
+     removed_joint_ids = []
+-    for s in parent.sites:
+-        s.delete()
+-    for j in parent.joints:
++    for s in list(parent.sites):
++        spec.delete(s)
++    for j in list(parent.joints):
+         removed_joint_ids.extend(temp_model.joint(j.name).qposadr)
+         if remove_eqs:
+-            for e in spec.equalities:
++            for e in list(spec.equalities):
+                 if e.type == mujoco.mjtEq.mjEQ_JOINT and (e.name1 == j.name or e.name2 == j.name):
+-                    e.delete()
++                    spec.delete(e)
+         if remove_actuators:
+-            for a in spec.actuators:
++            for a in list(spec.actuators):
+                 if a.trntype == mujoco.mjtTrn.mjTRN_JOINT and a.target == j.name:
+-                    a.delete()
+-        j.delete()
++                    spec.delete(a)
++        spec.delete(j)
+     for child in parent.bodies:
+         removed_joint_ids.extend(
+             recursive_immobilize(spec, temp_model, child, remove_eqs, remove_actuators)
+@@ -38,7 +38,7 @@ def recursive_mirror(meshes_to_mirror, spec_copy, parent):
+     parent.name += "_mirrored"
+     for g in parent.geoms:
+         if g.type != mujoco.mjtGeom.mjGEOM_MESH:
+-            g.delete()
++            spec_copy.delete(g)
+             continue
+         g.pos[1] *= -1
+         g.quat[[1, 3]] *= -1

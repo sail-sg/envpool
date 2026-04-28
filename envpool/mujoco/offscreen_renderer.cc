@@ -27,6 +27,7 @@
 #include <vector>
 
 #if defined(__APPLE__) && __has_include(<OpenGL/OpenGL.h>)
+#define GL_SILENCE_DEPRECATION
 #include <OpenGL/OpenGL.h>
 #define ENVPOOL_HAS_CGL 1
 #elif defined(_WIN32) && __has_include(<windows.h>)
@@ -68,7 +69,7 @@ mjtNum MedianGeomPosition(const mjData* data, int ngeom, int axis) {
 class CglContext final : public GlContext {
  public:
   CglContext() {
-    const std::array<CGLPixelFormatAttribute, 13> attribs = {
+    const std::array<CGLPixelFormatAttribute, 12> attribs = {
         kCGLPFAOpenGLProfile,
         static_cast<CGLPixelFormatAttribute>(kCGLOGLPVersion_Legacy),
         kCGLPFAColorSize,
@@ -80,7 +81,6 @@ class CglContext final : public GlContext {
         kCGLPFAStencilSize,
         static_cast<CGLPixelFormatAttribute>(8),
         kCGLPFAAllowOfflineRenderers,
-        static_cast<CGLPixelFormatAttribute>(0),  // value
         static_cast<CGLPixelFormatAttribute>(0),  // terminator
     };
     GLint npix = 0;
@@ -298,9 +298,6 @@ class EglContext final : public GlContext {
         EGL_OPENGL_BIT,
         EGL_NONE,
     };
-    const std::array<EGLint, 5> pbuffer_attribs = {
-        EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE,
-    };
 
     display_ = CreateDisplay();
     if (display_ == EGL_NO_DISPLAY) {
@@ -321,17 +318,8 @@ class EglContext final : public GlContext {
       display_ = EGL_NO_DISPLAY;
       throw std::runtime_error("failed to bind EGL OpenGL API");
     }
-    surface_ =
-        eglCreatePbufferSurface(display_, config, pbuffer_attribs.data());
-    if (surface_ == EGL_NO_SURFACE) {
-      eglTerminate(display_);
-      display_ = EGL_NO_DISPLAY;
-      throw std::runtime_error("failed to create EGL pbuffer surface");
-    }
     context_ = eglCreateContext(display_, config, EGL_NO_CONTEXT, nullptr);
     if (context_ == EGL_NO_CONTEXT) {
-      eglDestroySurface(display_, surface_);
-      surface_ = EGL_NO_SURFACE;
       eglTerminate(display_);
       display_ = EGL_NO_DISPLAY;
       throw std::runtime_error("failed to create EGL context");
@@ -344,16 +332,14 @@ class EglContext final : public GlContext {
       if (context_ != EGL_NO_CONTEXT) {
         eglDestroyContext(display_, context_);
       }
-      if (surface_ != EGL_NO_SURFACE) {
-        eglDestroySurface(display_, surface_);
-      }
       eglTerminate(display_);
       eglReleaseThread();
     }
   }
 
   void MakeCurrent() override {
-    if (eglMakeCurrent(display_, surface_, surface_, context_) != EGL_TRUE) {
+    if (eglMakeCurrent(display_, EGL_NO_SURFACE, EGL_NO_SURFACE, context_) !=
+        EGL_TRUE) {
       throw std::runtime_error("failed to make EGL context current");
     }
   }
@@ -363,7 +349,6 @@ class EglContext final : public GlContext {
                        EGL_NO_CONTEXT) != EGL_TRUE) {
       throw std::runtime_error("failed to clear EGL context");
     }
-    eglReleaseThread();
   }
 
  private:
@@ -452,16 +437,14 @@ class EglContext final : public GlContext {
 
   EGLDisplay display_{EGL_NO_DISPLAY};
   EGLContext context_{EGL_NO_CONTEXT};
-  EGLSurface surface_{EGL_NO_SURFACE};
 };
 
 #endif
 
 std::shared_ptr<GlContext> CreateGlContext() {
 #if defined(ENVPOOL_HAS_CGL)
-  // Match Gymnasium's CGL lifecycle: create a context per renderer/viewer.
-  // Reusing one CGL context across different MuJoCo models can leave renderer
-  // state behind on macOS software/offline renderers.
+  // Use a dedicated offline CGL context per renderer so macOS CI can render
+  // without a hardware-accelerated pixel format.
   return std::make_shared<CglContext>();
 #elif defined(ENVPOOL_HAS_WGL)
   if (wglGetCurrentContext() != nullptr && wglGetCurrentDC() != nullptr) {
@@ -508,6 +491,12 @@ void OffscreenRenderer::Initialize(const mjModel* model) {
   mjv_makeScene(model, &scene_, 10000);
   mjr_makeContext(model, &context_, mjFONTSCALE_150);
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
+  if (camera_policy_ == CameraPolicy::kDmControl) {
+    context_.readDepthMap = mjDEPTH_ZEROFAR;
+#if defined(__APPLE__)
+    needs_render_warmup_ = true;
+#endif
+  }
   initialized_ = true;
 }
 
@@ -516,6 +505,10 @@ void OffscreenRenderer::UpdateCamera(const mjModel* model, const mjData* data,
                                      const mjvCamera* camera_override) {
   if (camera_id < -1 || camera_id >= model->ncam) {
     throw std::out_of_range("camera_id is out of range");
+  }
+  if (camera_policy_ == CameraPolicy::kDmControl) {
+    camera_ = mjvCamera{};
+    mjv_defaultCamera(&camera_);
   }
   if (camera_id == -1 && camera_override != nullptr) {
     camera_ = *camera_override;
@@ -540,34 +533,56 @@ void OffscreenRenderer::UpdateCamera(const mjModel* model, const mjData* data,
       free_camera_initialized_ = true;
     }
   } else if (camera_id == -1) {
-    camera_.type = mjCAMERA_FREE;
     camera_.fixedcamid = -1;
-    if (!free_camera_initialized_) {
-      mjv_defaultFreeCamera(model, &camera_);
-      free_camera_initialized_ = true;
-    }
+    camera_.type = mjCAMERA_FREE;
+    mjv_defaultFreeCamera(model, &camera_);
+    free_camera_initialized_ = true;
   } else {
-    camera_.type = mjCAMERA_FIXED;
     camera_.fixedcamid = camera_id;
+    camera_.type = mjCAMERA_FIXED;
   }
 }
 
 void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
                                int height, int camera_id, unsigned char* rgb,
-                               const mjvCamera* camera_override) {
+                               const mjvCamera* camera_override,
+                               const mjvOption* option_override) {
   if (!initialized_) {
     Initialize(model);
   }
   gl_context_->MakeCurrent();
-  if (context_.offWidth != width || context_.offHeight != height) {
+  if (camera_policy_ == CameraPolicy::kDmControl &&
+      (width > context_.offWidth || height > context_.offHeight)) {
+    // Match mujoco.Renderer: render into the model-configured offscreen
+    // framebuffer and only grow it when callers exceed the existing capacity.
+    mjr_resizeOffscreen(std::max(width, context_.offWidth),
+                        std::max(height, context_.offHeight), &context_);
+  } else if (camera_policy_ == CameraPolicy::kGymLike &&
+             (context_.offWidth != width || context_.offHeight != height)) {
     mjr_resizeOffscreen(width, height, &context_);
   }
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
+  if (camera_policy_ == CameraPolicy::kDmControl) {
+    for (int hfield_id = 0; hfield_id < model->nhfield; ++hfield_id) {
+      mjr_uploadHField(model, &context_, hfield_id);
+    }
+  }
+  if (option_override != nullptr) {
+    option_ = *option_override;
+  }
   UpdateCamera(model, data, camera_id, camera_override);
 
   mjrRect viewport = {0, 0, width, height};
-  mjv_updateScene(model, data, &option_, &perturb_, &camera_, mjCAT_ALL,
-                  &scene_);
+  const mjvPerturb* perturb =
+      camera_policy_ == CameraPolicy::kDmControl ? nullptr : &perturb_;
+  mjv_updateScene(model, data, &option_, perturb, &camera_, mjCAT_ALL, &scene_);
+  if (needs_render_warmup_) {
+    // macOS CGL can return a one-time, one-LSB difference on the first
+    // offscreen render after a fresh mjrContext. Draw once before the public
+    // readback so reset-frame comparisons exercise the stable renderer state.
+    mjr_render(viewport, &scene_, &context_);
+    needs_render_warmup_ = false;
+  }
   mjr_render(viewport, &scene_, &context_);
 
   std::size_t frame_bytes =
@@ -584,7 +599,9 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
         scratch_.data() + static_cast<std::size_t>(height - 1 - y) * row_bytes;
     std::memcpy(rgb + static_cast<std::size_t>(y) * row_bytes, src, row_bytes);
   }
-  gl_context_->ClearCurrent();
+  if (camera_policy_ == CameraPolicy::kGymLike) {
+    gl_context_->ClearCurrent();
+  }
 }
 
 }  // namespace envpool::mujoco
