@@ -19,6 +19,10 @@ from functools import cache
 from pathlib import Path
 from typing import Any, cast
 
+from envpool.python.glfw_context import preload_windows_gl_dlls
+
+preload_windows_gl_dlls(strict=True)
+
 import gymnasium
 import mujoco
 import numpy as np
@@ -69,10 +73,7 @@ from envpool.mujoco.myosuite.paths import (
     myosuite_asset_root,
 )
 from envpool.mujoco.myosuite.registration import MYOSUITE_PUBLIC_TASK_IDS
-from envpool.python.glfw_context import preload_windows_gl_dlls
 from envpool.registration import list_all_envs, make_gymnasium
-
-preload_windows_gl_dlls(strict=True)
 
 _POSE_IDS = tuple(
     entry["id"]

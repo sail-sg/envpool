@@ -47,41 +47,6 @@ def _zero_action(space: Any, num_envs: int) -> np.ndarray:
     return np.repeat(zero[np.newaxis, ...], num_envs, axis=0)
 
 
-def _assert_frames_close(
-    actual: np.ndarray,
-    expected: np.ndarray,
-    *,
-    label: str = "frame",
-    max_mean_abs_diff: float = 1.0,
-    max_mismatch_ratio: float = 0.1,
-) -> None:
-    if actual.shape != expected.shape:
-        raise AssertionError(
-            f"{label} shapes differ: {actual.shape} != {expected.shape}"
-        )
-    diff = np.abs(actual.astype(np.int16) - expected.astype(np.int16))
-    if diff.size == 0:
-        return
-    mismatch_count = int(np.count_nonzero(diff))
-    mismatch_ratio = float(mismatch_count) / float(diff.size)
-    mean_abs_diff = float(diff.mean())
-    max_abs_diff = int(diff.max())
-    if mean_abs_diff > max_mean_abs_diff:
-        raise AssertionError(
-            f"{label} mean render delta "
-            f"{mean_abs_diff:.6f} exceeded {max_mean_abs_diff:.6f}; "
-            f"max delta {max_abs_diff}, mismatched values "
-            f"{mismatch_count}/{diff.size} ({mismatch_ratio:.6%})"
-        )
-    if mismatch_ratio > max_mismatch_ratio:
-        raise AssertionError(
-            f"{label} render mismatch ratio "
-            f"{mismatch_ratio:.6%} exceeded {max_mismatch_ratio:.6%}; "
-            f"mean delta {mean_abs_diff:.6f}, max delta {max_abs_diff}, "
-            f"mismatched values {mismatch_count}/{diff.size}"
-        )
-
-
 class MyoSuiteRenderTest(absltest.TestCase):
     """Checks public render semantics and representative oracle frames."""
 
@@ -113,9 +78,9 @@ class MyoSuiteRenderTest(absltest.TestCase):
                     frames.shape, (2, _RENDER_HEIGHT, _RENDER_WIDTH, 3)
                 )
                 self.assertEqual(frame0.dtype, np.uint8)
-                _assert_frames_close(frame0[0], frames[0])
-                _assert_frames_close(frame1[0], frames[1])
-                _assert_frames_close(frame0, frame0_again)
+                np.testing.assert_array_equal(frame0[0], frames[0])
+                np.testing.assert_array_equal(frame1[0], frames[1])
+                np.testing.assert_array_equal(frame0, frame0_again)
                 self.assertGreater(int(frame0.max()) - int(frame0.min()), 0)
 
                 if step + 1 < MYOSUITE_RENDER_COMPARE_STEPS:

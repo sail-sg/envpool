@@ -19,6 +19,10 @@ from functools import cache
 from pathlib import Path
 from typing import Any
 
+from envpool.python.glfw_context import preload_windows_gl_dlls
+
+preload_windows_gl_dlls(strict=True)
+
 import gymnasium
 import mujoco
 import numpy as np
@@ -67,9 +71,6 @@ from envpool.mujoco.myosuite.oracle_utils import load_oracle_class
 from envpool.mujoco.myosuite.paths import (
     myosuite_asset_root,
 )
-from envpool.python.glfw_context import preload_windows_gl_dlls
-
-preload_windows_gl_dlls(strict=True)
 
 _REORIENT_IDS = tuple(
     entry["id"]

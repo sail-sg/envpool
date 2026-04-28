@@ -86,6 +86,35 @@ def _configure_windows_dm_control_imports() -> None:
     os.environ.setdefault("MUJOCO_GL", "off")
 
 
+def _configure_windows_mujoco_renderer() -> None:
+    if platform.system() != "Windows":
+        return
+
+    from envpool.python.glfw_context import preload_windows_gl_dlls
+
+    preload_windows_gl_dlls(strict=True)
+    if os.environ.get("MUJOCO_GL", "").lower().strip() in {
+        "disable",
+        "disabled",
+        "off",
+        "false",
+        "0",
+    }:
+        os.environ["MUJOCO_GL"] = "glfw"
+    else:
+        os.environ.setdefault("MUJOCO_GL", "glfw")
+
+    # A non-render oracle import may have loaded these modules with
+    # MUJOCO_GL=off, which leaves classic.gl_context without GLContext.
+    for module_name in (
+        "mujoco.rendering.classic.gl_context",
+        "mujoco.rendering.classic.renderer",
+    ):
+        module = sys.modules.get(module_name)
+        if module is not None:
+            importlib.reload(module)
+
+
 def _configure_macos_dm_control_renderer() -> None:
     if platform.system() != "Darwin":
         return
@@ -297,6 +326,7 @@ def prepare_oracle_imports(*, render: bool = False) -> None:
     if source_root not in sys.path:
         sys.path.insert(0, source_root)
     if render:
+        _configure_windows_mujoco_renderer()
         _configure_macos_dm_control_renderer()
         _configure_macos_mujoco_renderer()
 

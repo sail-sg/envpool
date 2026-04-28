@@ -23,6 +23,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterator, cast
 
+from envpool.python.glfw_context import preload_windows_gl_dlls
+
+preload_windows_gl_dlls(strict=True)
+
 import gymnasium
 import numpy as np
 
@@ -38,10 +42,8 @@ from envpool.mujoco.myosuite.oracle_utils import (
 )
 from envpool.mujoco.myosuite.paths import myosuite_asset_root
 from envpool.mujoco.myosuite.registration import MYOSUITE_PUBLIC_TASK_IDS
-from envpool.python.glfw_context import preload_windows_gl_dlls
 from envpool.registration import make_gymnasium
 
-preload_windows_gl_dlls(strict=True)
 prepare_oracle_imports(render=True)
 
 
