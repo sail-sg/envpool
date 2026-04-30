@@ -601,6 +601,74 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
 
     maybe(
         http_archive,
+        name = "myosuite_source",
+        sha256 = "f75b77563547fce6d9be46abee2b86e636dd5e57a6f1d470fdbc2104dcd61d34",
+        strip_prefix = "myosuite-2.11.6",
+        urls = [
+            "https://github.com/MyoHub/myosuite/archive/refs/tags/v2.11.6.tar.gz",
+        ],
+        patch_args = ["-p1"],
+        patches = ["//third_party/myosuite:mujoco36_mjspec_compat.patch"],
+        build_file = "//third_party/myosuite:myosuite_source.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "myosuite_myo_sim",
+        sha256 = "bd8fdf313b46dbefcd25bf42cf8ddcc45066798164bb3551a990690cad514ebd",
+        strip_prefix = "myo_sim-33f3ded946f55adbdcf963c99999587aadaf975f",
+        urls = [
+            "https://github.com/MyoHub/myo_sim/archive/33f3ded946f55adbdcf963c99999587aadaf975f.tar.gz",
+        ],
+        build_file = "//third_party/myosuite:simhive_source.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "myosuite_object_sim",
+        sha256 = "782ea1c051d9afebbbd4d164fdc35035c4bd617981f3e1cb9204c7a2e15e4a0e",
+        strip_prefix = "object_sim-87cd8dd5a11518b94fca16bc22bb04f6836c6aa7",
+        urls = [
+            "https://github.com/vikashplus/object_sim/archive/87cd8dd5a11518b94fca16bc22bb04f6836c6aa7.tar.gz",
+        ],
+        build_file = "//third_party/myosuite:simhive_source.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "myosuite_mpl_sim",
+        sha256 = "591fce117832c789e227499ea45c601a9ca142c7dd636492f8bbcd825d54ea0a",
+        strip_prefix = "MPL_sim-58dd1abc6058e0dc06e62f13a61c36adb4916815",
+        urls = [
+            "https://github.com/vikashplus/MPL_sim/archive/58dd1abc6058e0dc06e62f13a61c36adb4916815.tar.gz",
+        ],
+        build_file = "//third_party/myosuite:simhive_source.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "myosuite_ycb_sim",
+        sha256 = "81caf29e5b5c01b4af56991731b3f731a95d486addccafaaaedc7600a9f2437e",
+        strip_prefix = "YCB_sim-46edd9c361061c5d81a82f2511d4fbf76fead569",
+        urls = [
+            "https://github.com/vikashplus/YCB_sim/archive/46edd9c361061c5d81a82f2511d4fbf76fead569.tar.gz",
+        ],
+        build_file = "//third_party/myosuite:simhive_source.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "myosuite_furniture_sim",
+        sha256 = "5fb42ed8c932f7c820a72fbb86ea736957476020bdf008e17277380c3693ce9e",
+        strip_prefix = "furniture_sim-c97995afb81c9e2d7325b0069f9abc9a2c74a2f0",
+        urls = [
+            "https://github.com/vikashplus/furniture_sim/archive/c97995afb81c9e2d7325b0069f9abc9a2c74a2f0.tar.gz",
+        ],
+        build_file = "//third_party/myosuite:simhive_source.BUILD",
+    )
+
+    maybe(
+        http_archive,
         name = "box2d",
         sha256 = "5471722f290b7285dcbdee9bef61d1cb424e5a610fa6e19e9ddeb854c7e3b937",
         strip_prefix = "pybox2d-2.3.10",

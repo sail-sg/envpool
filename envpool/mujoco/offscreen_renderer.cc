@@ -489,6 +489,9 @@ OffscreenRenderer::OffscreenRenderer(CameraPolicy camera_policy)
   mjv_defaultOption(&option_);
   mjv_defaultPerturb(&perturb_);
   mjr_defaultContext(&context_);
+  option_.flags[mjVIS_TENDON] = 0;
+  option_.flags[mjVIS_ACTUATOR] = 0;
+  option_.flags[mjVIS_ACTIVATION] = 0;
   camera_.fixedcamid = -1;
 }
 

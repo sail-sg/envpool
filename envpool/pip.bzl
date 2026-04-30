@@ -40,3 +40,22 @@ def workspace():
             quiet = False,
             # extra_pip_args = ["--extra-index-url", "https://mirrors.aliyun.com/pypi/simple"],
         )
+
+    if "myosuite_oracle_requirements" not in native.existing_rules().keys():
+        multi_pip_parse(
+            name = "myosuite_oracle_requirements",
+            default_version = "3.12",
+            python_interpreter_target = {
+                "3.11": "@python_versions_3_11_host//:python",
+                "3.12": "@python_versions_3_12_host//:python",
+                "3.13": "@python_versions_3_13_host//:python",
+                "3.14": "@python_versions_3_14_host//:python",
+            },
+            requirements_lock = {
+                "3.11": "@envpool//third_party/myosuite:oracle_requirements.txt",
+                "3.12": "@envpool//third_party/myosuite:oracle_requirements.txt",
+                "3.13": "@envpool//third_party/myosuite:oracle_requirements.txt",
+                "3.14": "@envpool//third_party/myosuite:oracle_requirements.txt",
+            },
+            quiet = False,
+        )

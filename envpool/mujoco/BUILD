@@ -14,10 +14,12 @@
 
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
-load("@rules_python//python:defs.bzl", "py_library", "py_test")
+load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
+load("//envpool:myosuite_oracle_requirements.bzl", "oracle_requirement")
 load("//envpool:requirements.bzl", "requirement")
 load("//third_party:common.bzl", "copy_to_directory")
 load("//third_party/metaworld_assets:defs.bzl", "metaworld_runtime_assets")
+load("//third_party/myosuite:defs.bzl", "myosuite_runtime_assets")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -55,6 +57,7 @@ py_library(
         ":metaworld",
         ":mujoco_dmc",
         ":mujoco_gym",
+        ":myosuite",
         ":robotics",
     ],
 )
@@ -92,6 +95,19 @@ metaworld_runtime_assets(
         "//conditions:default": False,
     }),
     strip_prefix = "metaworld_assets/metaworld/assets/",
+)
+
+myosuite_runtime_assets(
+    name = "gen_myosuite_assets",
+    srcs = [
+        "@myosuite_furniture_sim//:source",
+        "@myosuite_mpl_sim//:source",
+        "@myosuite_myo_sim//:source",
+        "@myosuite_object_sim//:source",
+        "@myosuite_source//:runtime_assets",
+        "@myosuite_ycb_sim//:source",
+    ],
+    out = "myosuite/assets",
 )
 
 cc_library(
@@ -278,6 +294,48 @@ py_library(
     deps = ["//envpool/python:api"],
 )
 
+cc_library(
+    name = "myosuite_env",
+    hdrs = [
+        "frame_stack.h",
+        "myosuite/myosuite_env.h",
+        "offscreen_renderer.h",
+    ],
+    data = [":gen_myosuite_assets"],
+    deps = [
+        ":mujoco_render",
+        ":robotics_env",
+        "//envpool/core:async_envpool",
+        "//third_party/myosuite:myosuite_tasks",
+        "@mujoco//:mujoco_lib",
+        "@mujoco//:mujoco_obj_decoder_plugin_lib",
+        "@mujoco//:mujoco_stl_decoder_plugin_lib",
+    ],
+)
+
+pybind_extension(
+    name = "myosuite_envpool",
+    srcs = ["myosuite/myosuite_envpool.cc"],
+    deps = [
+        ":myosuite_env",
+        "//envpool/core:py_envpool",
+    ],
+)
+
+py_library(
+    name = "myosuite",
+    srcs = [
+        "myosuite/__init__.py",
+        "myosuite/tasks.py",
+    ],
+    data = [
+        ":gen_myosuite_assets",
+        ":myosuite_envpool",
+    ],
+    imports = ["../.."],
+    deps = ["//envpool/python:api"],
+)
+
 cc_test(
     name = "mujoco_envpool_test",
     size = "enormous",
@@ -323,6 +381,19 @@ py_library(
     ],
 )
 
+py_library(
+    name = "myosuite_registration",
+    srcs = [
+        "myosuite/registration.py",
+        "myosuite/tasks.py",
+    ],
+    imports = ["../.."],
+    deps = [
+        ":myosuite",
+        "//envpool:registration",
+    ],
+)
+
 py_test(
     name = "metaworld_test",
     size = "enormous",
@@ -333,6 +404,80 @@ py_test(
         ":metaworld_registration",
         requirement("absl-py"),
         requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_test",
+    size = "enormous",
+    srcs = ["myosuite/myosuite_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":myosuite",
+        ":myosuite_registration",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_render_test",
+    size = "enormous",
+    srcs = ["myosuite/myosuite_render_test.py"],
+    data = [
+        ":myosuite_oracle_probe",
+    ],
+    imports = ["../.."],
+    deps = [
+        ":myosuite",
+        ":myosuite_registration",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_oracle_align_test",
+    size = "enormous",
+    srcs = ["myosuite/myosuite_oracle_align_test.py"],
+    data = [
+        ":myosuite_oracle_probe",
+    ],
+    imports = ["../.."],
+    deps = [
+        ":myosuite",
+        ":myosuite_registration",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
+py_binary(
+    name = "myosuite_oracle_probe",
+    srcs = ["myosuite/myosuite_oracle_probe.py"],
+    data = [
+        "@myosuite_furniture_sim//:source",
+        "@myosuite_mpl_sim//:source",
+        "@myosuite_myo_sim//:source",
+        "@myosuite_object_sim//:source",
+        "@myosuite_source//:source",
+        "@myosuite_ycb_sim//:source",
+    ],
+    imports = ["../.."],
+    deps = [
+        oracle_requirement("click"),
+        oracle_requirement("dm-control"),
+        oracle_requirement("flatten-dict"),
+        oracle_requirement("gitpython"),
+        oracle_requirement("gymnasium"),
+        oracle_requirement("h5py"),
+        oracle_requirement("mujoco"),
+        oracle_requirement("numpy"),
+        oracle_requirement("packaging"),
+        oracle_requirement("pillow"),
+        oracle_requirement("pink-noise-rl"),
+        oracle_requirement("sk-video"),
+        oracle_requirement("termcolor"),
     ],
 )
 

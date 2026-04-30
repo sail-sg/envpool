@@ -97,6 +97,7 @@ stable version through `envpool.readthedocs.io/en/stable/
    env/gymnasium_robotics
    env/metaworld
    env/mujoco_gym
+   env/myosuite
    env/procgen
    env/toy_text
    env/vizdoom
