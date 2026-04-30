@@ -67,6 +67,7 @@ cc_library(
         "//conditions:default": ["-std=c++20"],
     }),
     defines = ["MJ_STATIC"],
+    features = ["-coverage"],
     includes = [
         "include",
         "include/mujoco",
