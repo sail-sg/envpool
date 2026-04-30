@@ -339,6 +339,9 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
             "https://www.libsdl.org/release/SDL2-2.32.10.tar.gz",
             "https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.tar.gz",
         ],
+        patches = [
+            "//third_party/sdl2:windows_xinput_stub.patch",
+        ],
         build_file = "//third_party/sdl2:sdl2.BUILD",
     )
 

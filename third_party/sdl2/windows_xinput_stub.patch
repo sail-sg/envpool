@@ -1,0 +1,22 @@
+--- src/joystick/windows/SDL_xinputjoystick.c
++++ src/joystick/windows/SDL_xinputjoystick.c
+@@ -482,13 +482,19 @@
+ int SDL_XINPUT_JoystickInit(void)
+ {
+     return 0;
+ }
+ 
+ void SDL_XINPUT_JoystickDetect(JoyStick_DeviceData **pContext)
+ {
+ }
+ 
++int SDL_XINPUT_GetSteamVirtualGamepadSlot(Uint8 userid)
++{
++    (void)userid;
++    return -1;
++}
++
+ int SDL_XINPUT_JoystickOpen(SDL_Joystick *joystick, JoyStick_DeviceData *joystickdevice)
+ {
+     return SDL_Unsupported();
+ }
