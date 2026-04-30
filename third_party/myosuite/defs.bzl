@@ -103,14 +103,35 @@ while IFS= read -r src; do
       ;;
     *myosuite_mpl_sim*/*)
       rel="${src#*myosuite_mpl_sim*/}"
+      case "$rel" in
+        LICENSE|assets/handL_assets.xml|assets/handL_chain.xml|assets/left_arm_assets.xml|assets/left_arm_chain_myochallenge.xml|meshes/mplL/*)
+          ;;
+        *)
+          continue
+          ;;
+      esac
       dst="$out/myosuite/simhive/MPL_sim/$rel"
       ;;
     *myosuite_ycb_sim*/*)
       rel="${src#*myosuite_ycb_sim*/}"
+      case "$rel" in
+        LICENSE|includes/defaults_ycb.xml|includes/assets_009_gelatin_box.xml|includes/body_009_gelatin_box.xml|meshes/009_gelatin_box.msh|textures/009_gelatin_box.png)
+          ;;
+        *)
+          continue
+          ;;
+      esac
       dst="$out/myosuite/simhive/YCB_sim/$rel"
       ;;
     *myosuite_furniture_sim*/*)
       rel="${src#*myosuite_furniture_sim*/}"
+      case "$rel" in
+        LICENSE|simpleTable.xml|simpleTable/*|common/textures/stone0.png|common/textures/stone1.png|common/textures/wood1.png)
+          ;;
+        *)
+          continue
+          ;;
+      esac
       dst="$out/myosuite/simhive/furniture_sim/$rel"
       ;;
     *myosuite_myo_sim*/*)
@@ -119,6 +140,23 @@ while IFS= read -r src; do
       ;;
     *myosuite_object_sim*/*)
       rel="${src#*myosuite_object_sim*/}"
+      case "$rel" in
+        LICENSE|common.xml)
+          ;;
+        *)
+          object_dir="${rel%%/*}"
+          object_needed=0
+          while IFS= read -r object_name; do
+            if [ "$object_dir" = "$object_name" ]; then
+              object_needed=1
+              break
+            fi
+          done < "$objects"
+          if [ "$object_needed" -eq 0 ]; then
+            continue
+          fi
+          ;;
+      esac
       dst="$out/myosuite/simhive/object_sim/$rel"
       ;;
     *)
