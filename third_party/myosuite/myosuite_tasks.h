@@ -17,13 +17,14 @@
 #define THIRD_PARTY_MYOSUITE_MYOSUITE_TASKS_H_
 
 #include <array>
+#include <cstdint>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 
 namespace third_party::myosuite {
 
-enum class MyoSuiteTaskKind {
+enum class MyoSuiteTaskKind : std::uint8_t {
   kPose,
   kReach,
   kWalkReach,
@@ -47,7 +48,7 @@ enum class MyoSuiteTaskKind {
   kMyoDmTrack,
 };
 
-enum class MyoSuiteMuscleCondition {
+enum class MyoSuiteMuscleCondition : std::uint8_t {
   kNormal,
   kSarcopenia,
   kFatigue,
