@@ -222,10 +222,10 @@ def workspace():
     maybe(
         http_archive,
         name = "zlib",
-        sha256 = "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
+        sha256 = "b99a0b86c0ba9360ec7e78c4f1e43b1cbdf1e6936c8fa0f6835c0cd694a495a1",
         strip_prefix = "zlib-1.3.2",
         urls = [
-            "https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz",
+            "https://github.com/madler/zlib/archive/refs/tags/v1.3.2.tar.gz",
         ],
         build_file = "//third_party/zlib:zlib.BUILD",
     )
