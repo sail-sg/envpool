@@ -18,6 +18,7 @@
 #include <mujoco.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstring>
 #include <limits>
@@ -217,7 +218,7 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
       mjtNum value = std::max<mjtNum>(-1.0, std::min<mjtNum>(1.0, raw[i]));
       if (model_->na > 0 && task_.normalize_act &&
           model_->actuator_dyntype[i] == mjDYN_MUSCLE) {
-        const float action_value = static_cast<float>(value);
+        const auto action_value = static_cast<float>(value);
         value = static_cast<mjtNum>(
             1.0F / (1.0F + std::exp(-5.0F * (action_value - 0.5F))));
       }
@@ -447,8 +448,7 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     }
     const int start = model_->sensor_adr[sensor_id];
     const int dim = model_->sensor_dim[sensor_id];
-    return std::vector<mjtNum>(data_->sensordata + start,
-                               data_->sensordata + start + dim);
+    return {data_->sensordata + start, data_->sensordata + start + dim};
   }
 
   static std::string AssetPath(const std::string& base_path,
@@ -506,10 +506,10 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     if (task_.muscle_condition != MyoSuiteMuscleCondition::kFatigue) {
       return;
     }
-    constexpr mjtNum kRecoveryMultiplier = 10.0 * 15.0;
-    constexpr mjtNum kFatigueCoefficient = 0.00912;
-    constexpr mjtNum kRecoveryCoefficient = 0.1 * 0.00094;
-    const mjtNum dt = static_cast<mjtNum>(Dt());
+    constexpr mjtNum k_recovery_multiplier = 10.0 * 15.0;
+    constexpr mjtNum k_fatigue_coefficient = 0.00912;
+    constexpr mjtNum k_recovery_coefficient = 0.1 * 0.00094;
+    const auto dt = static_cast<mjtNum>(Dt());
     for (std::size_t i = 0; i < muscle_actuator_ids_.size(); ++i) {
       const int actuator_id = muscle_actuator_ids_[i];
       fatigue_tl_[i] = (*ctrl)[actuator_id];
@@ -530,18 +530,19 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
         transfer = lr * (tl - ma);
       }
 
-      const mjtNum recovery = ma >= tl
-                                  ? kRecoveryMultiplier * kRecoveryCoefficient
-                                  : kRecoveryCoefficient;
-      const mjtNum lower = std::max(-ma / dt + kFatigueCoefficient * ma,
+      const mjtNum recovery =
+          ma >= tl ? k_recovery_multiplier * k_recovery_coefficient
+                   : k_recovery_coefficient;
+      const mjtNum lower = std::max(-ma / dt + k_fatigue_coefficient * ma,
                                     (mr - 1.0) / dt + recovery * mf);
-      const mjtNum upper = std::min((1.0 - ma) / dt + kFatigueCoefficient * ma,
-                                    mr / dt + recovery * mf);
+      const mjtNum upper =
+          std::min((1.0 - ma) / dt + k_fatigue_coefficient * ma,
+                   mr / dt + recovery * mf);
       transfer = std::max(lower, std::min(upper, transfer));
 
-      fatigue_ma_[i] += (transfer - kFatigueCoefficient * ma) * dt;
+      fatigue_ma_[i] += (transfer - k_fatigue_coefficient * ma) * dt;
       fatigue_mr_[i] += (-transfer + recovery * mf) * dt;
-      fatigue_mf_[i] += (kFatigueCoefficient * ma - recovery * mf) * dt;
+      fatigue_mf_[i] += (k_fatigue_coefficient * ma - recovery * mf) * dt;
       (*ctrl)[actuator_id] = fatigue_ma_[i];
     }
   }
@@ -689,7 +690,7 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     if (end <= begin) {
       return {};
     }
-    return std::vector<mjtNum>(data_->qpos + begin, data_->qpos + end);
+    return {data_->qpos + begin, data_->qpos + end};
   }
 
   std::vector<mjtNum> QvelSlice(int begin, int end, bool scale_dt) const {
@@ -707,12 +708,11 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     if (model_->na <= 0) {
       return {};
     }
-    return std::vector<mjtNum>(data_->act, data_->act + model_->na);
+    return {data_->act, data_->act + model_->na};
   }
 
   std::vector<mjtNum> ActuatorLength() const {
-    return std::vector<mjtNum>(data_->actuator_length,
-                               data_->actuator_length + model_->nu);
+    return {data_->actuator_length, data_->actuator_length + model_->nu};
   }
 
   std::vector<mjtNum> ActuatorVelocity() const {
@@ -767,7 +767,7 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
 
   std::vector<mjtNum> CenterOfMassVelocity() const {
     mjtNum mass_sum = 0.0;
-    mjtNum cvel[6] = {};
+    std::array<mjtNum, 6> cvel{};
     for (int body = 0; body < model_->nbody; ++body) {
       const mjtNum mass = model_->body_mass[body];
       mass_sum += mass;
@@ -784,7 +784,7 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
 
   std::vector<mjtNum> CenterOfMass() const {
     mjtNum mass_sum = 0.0;
-    mjtNum com[3] = {};
+    std::array<mjtNum, 3> com{};
     for (int body = 0; body < model_->nbody; ++body) {
       const mjtNum mass = model_->body_mass[body];
       mass_sum += mass;
@@ -824,7 +824,7 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
 
   ObsDict BuildObsDict() const {
     ObsDict obs;
-    const mjtNum dt = static_cast<mjtNum>(Dt());
+    const auto dt = static_cast<mjtNum>(Dt());
     obs["time"] = {data_->time};
     obs["t"] = {data_->time};
     obs["qpos"] = QposSlice(0, model_->nq);
@@ -972,9 +972,9 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
 
   const std::vector<mjtNum>& ObsValue(const ObsDict& obs,
                                       const std::string& key) const {
-    static const std::vector<mjtNum> kEmpty;
+    static const std::vector<mjtNum> k_empty;
     auto it = obs.find(key);
-    return it == obs.end() ? kEmpty : it->second;
+    return it == obs.end() ? k_empty : it->second;
   }
 
   mjtNum ActMagnitude(const ObsDict& obs) const {
@@ -1002,8 +1002,8 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     const mjtNum max_rot = metadata_.max_rot > 0.0 ? metadata_.max_rot : 0.8;
     const auto quat = QposSlice(3, 7);
     if (quat.size() == 4) {
-      mjtNum mat[9];
-      mju_quat2Mat(mat, quat.data());
+      std::array<mjtNum, 9> mat{};
+      mju_quat2Mat(mat.data(), quat.data());
       if (std::abs(mat[0]) > max_rot) {
         return true;
       }
