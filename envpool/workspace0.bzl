@@ -587,6 +587,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         strip_prefix = "Gymnasium-Robotics-1.4.2/gymnasium_robotics/envs",
         urls = [
             "https://github.com/Farama-Foundation/Gymnasium-Robotics/archive/refs/tags/v1.4.2.tar.gz",
+            "https://codeload.github.com/Farama-Foundation/Gymnasium-Robotics/tar.gz/refs/tags/v1.4.2",
         ],
         build_file = "//third_party/gymnasium_robotics_assets:gymnasium_robotics_assets.BUILD",
     )
@@ -598,6 +599,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         strip_prefix = "Metaworld-3.0.0",
         urls = [
             "https://github.com/Farama-Foundation/Metaworld/archive/refs/tags/v3.0.0.tar.gz",
+            "https://codeload.github.com/Farama-Foundation/Metaworld/tar.gz/refs/tags/v3.0.0",
         ],
         build_file = "//third_party/metaworld_assets:metaworld_assets.BUILD",
     )
