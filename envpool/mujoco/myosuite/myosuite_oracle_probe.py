@@ -41,8 +41,10 @@ def _configure_macos_mujoco_renderer() -> None:
         return
 
     import mujoco
+    from mujoco import cgl as mujoco_cgl
     from mujoco import gl_context
     from mujoco.cgl import cgl
+    from mujoco.rendering.classic import renderer as classic_renderer
 
     class _CglContext:
         def __init__(self, width: int, height: int) -> None:
@@ -110,6 +112,8 @@ def _configure_macos_mujoco_renderer() -> None:
 
     gl_context.GLContext = _CglContext
     mujoco.gl_context.GLContext = _CglContext
+    mujoco_cgl.GLContext = _CglContext
+    classic_renderer.gl_context.GLContext = _CglContext
 
 
 def _runfiles_root() -> Path:
