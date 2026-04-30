@@ -128,7 +128,9 @@ jobs:
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-      BAZEL_CI_RESOURCE_OPTS: --jobs=HOST_CPUS-1 --local_cpu_resources=HOST_CPUS-1 --local_ram_resources=HOST_RAM*.5
+      # Keep arm64 below full CPU/RAM saturation; otherwise the hosted runner can
+      # drop heartbeat during the full //... build before tests start.
+      BAZEL_CI_RESOURCE_OPTS: --jobs=2 --local_cpu_resources=2 --local_ram_resources=HOST_RAM*.35
       MUJOCO_GL: egl
       EGL_PLATFORM: surfaceless
     steps:
