@@ -127,7 +127,13 @@ while IFS= read -r src; do
   esac
 
   case "$rel" in
-    .gitignore|.idea/*|BUILD.bazel|REPO.bazel|WORKSPACE|README.md|test_sims.py)
+    .gitignore|.github/*|.idea/*|__init__.py|BUILD.bazel|REPO.bazel|WORKSPACE)
+      continue
+      ;;
+    README.md|objects.png|preview.py|pyproject.toml|test_sims.py|tests/*)
+      continue
+      ;;
+    */object.xml)
       continue
       ;;
     scene/*.mtl|scene/*.obj)

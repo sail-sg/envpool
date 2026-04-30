@@ -626,10 +626,12 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "myosuite_object_sim",
-        sha256 = "782ea1c051d9afebbbd4d164fdc35035c4bd617981f3e1cb9204c7a2e15e4a0e",
-        strip_prefix = "object_sim-87cd8dd5a11518b94fca16bc22bb04f6836c6aa7",
+        sha256 = "beed226fcf1d27b91f9147221ef450c2ccab8e5bb7b5954dbcb5635024ed4874",
+        strip_prefix = "object_sim-0.1.0",
         urls = [
-            "https://github.com/vikashplus/object_sim/archive/87cd8dd5a11518b94fca16bc22bb04f6836c6aa7.tar.gz",
+            # MyoSuite v2.11.6 gitlinks vikashplus/object_sim@87cd8dd, but
+            # that commit is no longer fetchable from GitHub archives.
+            "https://github.com/MyoHub/object_sim/archive/refs/tags/v0.1.0.tar.gz",
         ],
         build_file = "//third_party/myosuite:simhive_source.BUILD",
     )
