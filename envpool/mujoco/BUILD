@@ -316,6 +316,17 @@ cc_library(
 pybind_extension(
     name = "myosuite_envpool",
     srcs = ["myosuite/myosuite_envpool.cc"],
+    copts = select({
+        "//:linux": [
+            "-fno-profile-arcs",
+            "-fno-test-coverage",
+        ],
+        "@platforms//os:osx": [
+            "-fno-coverage-mapping",
+            "-fno-profile-instr-generate",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [
         ":myosuite_env",
         "//envpool/core:py_envpool",

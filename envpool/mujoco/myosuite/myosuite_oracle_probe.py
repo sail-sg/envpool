@@ -116,6 +116,16 @@ def _configure_macos_mujoco_renderer() -> None:
     classic_renderer.gl_context.GLContext = _CglContext
 
 
+def _configure_linux_mujoco_renderer(render: bool) -> None:
+    """Force the pinned oracle onto EnvPool CI's headless EGL renderer."""
+    if not render or platform.system() != "Linux":
+        return
+
+    os.environ["MUJOCO_GL"] = "egl"
+    os.environ["PYOPENGL_PLATFORM"] = "egl"
+    os.environ.setdefault("EGL_PLATFORM", "surfaceless")
+
+
 def _runfiles_root() -> Path:
     path = Path(__file__).absolute()
     for parent in (path, *path.parents):
@@ -466,6 +476,7 @@ def main() -> None:
     parser.add_argument("--steps", type=int, default=64)
     parser.add_argument("--seed", type=int, default=5)
     args = parser.parse_args()
+    _configure_linux_mujoco_renderer(args.render)
 
     if args.mode == "space":
         report = _space_report(args.task_id)
