@@ -21,8 +21,10 @@ the upstream v2.11.6 contract without replacing EnvPool's normal runtime deps.
 from __future__ import annotations
 
 import argparse
+import ctypes
 import json
 import os
+import platform
 import shutil
 import sys
 import tempfile
@@ -31,6 +33,83 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+
+
+def _configure_macos_mujoco_renderer() -> None:
+    """Match EnvPool's CGL context setup for official render-oracle tests."""
+    if platform.system() != "Darwin":
+        return
+
+    import mujoco
+    from mujoco import gl_context
+    from mujoco.cgl import cgl
+
+    class _CglContext:
+        def __init__(self, width: int, height: int) -> None:
+            del width, height
+            attrib = cgl.CGLPixelFormatAttribute
+            profile = cgl.CGLOpenGLProfile
+            attrib_values = (
+                attrib.CGLPFAOpenGLProfile,
+                profile.CGLOGLPVersion_Legacy,
+                attrib.CGLPFAColorSize,
+                24,
+                attrib.CGLPFAAlphaSize,
+                8,
+                attrib.CGLPFADepthSize,
+                24,
+                attrib.CGLPFAStencilSize,
+                8,
+                attrib.CGLPFAAllowOfflineRenderers,
+                0,
+                0,  # terminator
+            )
+            attribs = (ctypes.c_int * len(attrib_values))(*attrib_values)
+            self._pixel_format = cgl.CGLPixelFormatObj()
+            num_pixel_formats = cgl.GLint()
+            cgl.CGLChoosePixelFormat(
+                attribs,
+                ctypes.byref(self._pixel_format),
+                ctypes.byref(num_pixel_formats),
+            )
+            if not self._pixel_format or num_pixel_formats.value == 0:
+                raise RuntimeError("failed to create CGL pixel format")
+
+            self._context = cgl.CGLContextObj()
+            cgl.CGLCreateContext(
+                self._pixel_format,
+                0,
+                ctypes.byref(self._context),
+            )
+            if not self._context:
+                cgl.CGLReleasePixelFormat(self._pixel_format)
+                self._pixel_format = None
+                raise RuntimeError("failed to create CGL context")
+            self._locked = False
+
+        def make_current(self) -> None:
+            cgl.CGLSetCurrentContext(self._context)
+            if not self._locked:
+                cgl.CGLLockContext(self._context)
+                self._locked = True
+
+        def free(self) -> None:
+            if self._context:
+                if self._locked:
+                    cgl.CGLUnlockContext(self._context)
+                    self._locked = False
+                cgl.CGLSetCurrentContext(None)
+                cgl.CGLReleaseContext(self._context)
+                self._context = None
+            if self._pixel_format:
+                cgl.CGLReleasePixelFormat(self._pixel_format)
+                self._pixel_format = None
+
+        def __del__(self) -> None:
+            self.free()
+
+    gl_context.GLContext = _CglContext
+    mujoco.gl_context.GLContext = _CglContext
 
 
 def _runfiles_root() -> Path:
@@ -81,6 +160,7 @@ def _oracle_source_path() -> Path:
 def _import_official() -> tuple[Any, Any, Any]:
     warnings.filterwarnings("ignore")
     sys.path.insert(0, str(_oracle_source_path()))
+    _configure_macos_mujoco_renderer()
     import myosuite as official_myosuite
     from myosuite import gym_registry_specs
     from myosuite.utils import gym
