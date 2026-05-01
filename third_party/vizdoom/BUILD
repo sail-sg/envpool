@@ -11,3 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+filegroup(
+    name = "sc_man_scanner_h",
+    srcs = ["sc_man_scanner.h"],
+    visibility = ["//visibility:public"],
+)

@@ -179,11 +179,19 @@ cc_binary(
 
 genrule(
     name = "sc_man_scanner",
-    srcs = ["src/sc_man_scanner.re"],
+    srcs = [
+        "src/sc_man_scanner.re",
+        "@envpool//third_party/vizdoom:sc_man_scanner_h",
+    ],
     outs = ["src/sc_man_scanner.h"],
-    cmd = "$(execpath :re2c) --no-generation-date -s -o $@ $<",
-    cmd_bat = "$(execpath :re2c) --no-generation-date -s -o $@ $<",
-    tools = [":re2c"],
+    cmd = "$(execpath :re2c) --no-generation-date -s -o $@ " +
+          "$(location src/sc_man_scanner.re)",
+    cmd_bat = "copy /Y " +
+              "$(location @envpool//third_party/vizdoom:sc_man_scanner_h) $@",
+    tools = select({
+        "@envpool//:windows": [],
+        "//conditions:default": [":re2c"],
+    }),
 )
 
 genrule(
