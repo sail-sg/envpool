@@ -64,6 +64,7 @@ _SIMHIVE_REPOS = {
     "myo": "myosuite_myo_sim",
     "object": "myosuite_object_sim",
 }
+_WINDOWS_SHORT_IMPORT_PACKAGES = ("mujoco", "h5py")
 _DLL_DIRECTORY_HANDLES: list[Any] = []
 
 
@@ -110,16 +111,21 @@ def _patch_codegen_only_imports(package: Path) -> None:
     import_utils = package / "utils" / "import_utils.py"
     text = import_utils.read_text()
     eager_git = "from os.path import expanduser\nimport git\n\n\n"
-    if eager_git not in text:
-        raise ValueError("unexpected MyoSuite import_utils.py layout")
-    text = text.replace(eager_git, "from os.path import expanduser\n\n\n", 1)
     fetch_def = (
         "def fetch_git(repo_url, commit_hash, clone_directory, "
         "clone_path=None):\n"
     )
+    lazy_fetch = fetch_def + "    import git\n"
+    if eager_git not in text:
+        if lazy_fetch in text:
+            return
+        raise ValueError("unexpected MyoSuite import_utils.py layout")
+    text = text.replace(eager_git, "from os.path import expanduser\n\n\n", 1)
     if fetch_def not in text:
         raise ValueError("unexpected MyoSuite fetch_git layout")
-    text = text.replace(fetch_def, fetch_def + "    import git\n", 1)
+    text = text.replace(fetch_def, lazy_fetch, 1)
+    if import_utils.is_symlink():
+        import_utils.unlink()
     import_utils.write_text(text)
 
 
@@ -172,17 +178,17 @@ def _import_official() -> tuple[Any, Any, Any]:
     return official_myosuite, gym_registry_specs, gym
 
 
-def _shorten_windows_mujoco_import(source_root: Path) -> None:
-    if os.name != "nt":
-        return
-    spec = importlib.util.find_spec("mujoco")
+def _copy_short_import_package(
+    source_root: Path, package_name: str
+) -> list[Path]:
+    spec = importlib.util.find_spec(package_name)
     if spec is None or spec.submodule_search_locations is None:
-        return
+        return []
     source = Path(next(iter(spec.submodule_search_locations)))
     if not source.is_dir():
-        return
+        return []
     destination_root = source_root / "_oracle_site"
-    destination = destination_root / "mujoco"
+    destination = destination_root / package_name
     if not destination.exists():
         shutil.copytree(
             source,
@@ -190,12 +196,31 @@ def _shorten_windows_mujoco_import(source_root: Path) -> None:
             symlinks=False,
             ignore=shutil.ignore_patterns("__pycache__"),
         )
-    sys.path.insert(0, str(destination_root))
-    for name in tuple(sys.modules):
-        if name == "mujoco" or name.startswith("mujoco."):
-            del sys.modules[name]
+    copied = [destination]
+    sibling = source.parent / f"{package_name}.libs"
+    if sibling.is_dir():
+        sibling_destination = destination_root / sibling.name
+        if not sibling_destination.exists():
+            shutil.copytree(sibling, sibling_destination, symlinks=False)
+        copied.append(sibling_destination)
+    return copied
+
+
+def _shorten_windows_binary_imports(source_root: Path) -> None:
+    if os.name != "nt":
+        return
+    destination_root = source_root / "_oracle_site"
+    copied: list[Path] = []
+    for package_name in _WINDOWS_SHORT_IMPORT_PACKAGES:
+        copied.extend(_copy_short_import_package(source_root, package_name))
+        for name in tuple(sys.modules):
+            if name == package_name or name.startswith(f"{package_name}."):
+                del sys.modules[name]
+    if copied:
+        sys.path.insert(0, str(destination_root))
     if hasattr(os, "add_dll_directory"):
-        _DLL_DIRECTORY_HANDLES.append(os.add_dll_directory(str(destination)))
+        for path in copied:
+            _DLL_DIRECTORY_HANDLES.append(os.add_dll_directory(str(path)))
 
 
 def _jsonable(value: Any) -> Any:
@@ -442,7 +467,7 @@ def _task_from_spec(
 
 
 def _write_outputs(args: argparse.Namespace, source_root: Path) -> None:
-    _shorten_windows_mujoco_import(source_root)
+    _shorten_windows_binary_imports(source_root)
     official_myosuite, gym_registry_specs, gym = _import_official()
     if official_myosuite.__version__ != _ORACLE_VERSION:
         raise ValueError(
