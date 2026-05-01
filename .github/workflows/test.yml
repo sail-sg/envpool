@@ -47,6 +47,10 @@ jobs:
           qmake_bin="$(command -v qmake-qt5 || command -v qmake)"
           qt_include_dir="$("$qmake_bin" -query QT_INSTALL_HEADERS)"
           sudo ln -sfn "$qt_include_dir" /usr/include/qt
+      - name: Free runner disk for coverage
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h
       - name: Restore Bazel caches
         uses: actions/cache/restore@v4
         with:
