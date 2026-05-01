@@ -187,7 +187,7 @@ render API is unsupported.
     :width: 900px
     :align: center
 
-.. image:: ../_static/render_samples/myosuite_official_compare.png
+.. image:: ../_static/render_samples/myosuite_myobase_official_compare.png
     :width: 900px
     :align: center
 

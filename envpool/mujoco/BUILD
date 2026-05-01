@@ -336,11 +336,55 @@ pybind_extension(
     ],
 )
 
+genrule(
+    name = "gen_myosuite_tasks_py",
+    srcs = ["//third_party/myosuite:myosuite_generated_tasks_py"],
+    outs = ["myosuite/generated_tasks.py"],
+    cmd = "cp $(location //third_party/myosuite:myosuite_generated_tasks_py) $@",
+    cmd_bat = "copy /Y \"$(location //third_party/myosuite:myosuite_generated_tasks_py)\" \"$@\"",
+)
+
+py_binary(
+    name = "generate_myosuite_render_sample",
+    srcs = [
+        "myosuite/myosuite_oracle_probe.py",
+        "//third_party/myosuite:generate_render_sample.py",
+    ],
+    data = [
+        "@myosuite_furniture_sim//:source",
+        "@myosuite_mpl_sim//:source",
+        "@myosuite_myo_sim//:source",
+        "@myosuite_object_sim//:source",
+        "@myosuite_source//:source",
+        "@myosuite_ycb_sim//:source",
+    ],
+    imports = ["../.."],
+    main = "generate_render_sample.py",
+    deps = [
+        ":myosuite",
+        ":myosuite_registration",
+        oracle_requirement("click"),
+        oracle_requirement("dm-control"),
+        oracle_requirement("flatten-dict"),
+        oracle_requirement("gitpython"),
+        oracle_requirement("gymnasium"),
+        oracle_requirement("h5py"),
+        oracle_requirement("mujoco"),
+        oracle_requirement("numpy"),
+        oracle_requirement("packaging"),
+        oracle_requirement("pillow"),
+        oracle_requirement("pink-noise-rl"),
+        oracle_requirement("sk-video"),
+        oracle_requirement("termcolor"),
+    ],
+)
+
 py_library(
     name = "myosuite",
     srcs = [
         "myosuite/__init__.py",
         "myosuite/tasks.py",
+        ":gen_myosuite_tasks_py",
     ],
     data = [
         ":gen_myosuite_assets",

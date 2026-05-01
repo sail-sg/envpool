@@ -145,6 +145,32 @@ class CglContext final : public GlContext {
   bool locked_{false};
 };
 
+class BorrowedCglContext final : public GlContext {
+ public:
+  BorrowedCglContext() : context_(CGLGetCurrentContext()) {
+    if (context_ == nullptr) {
+      throw std::runtime_error("failed to capture current CGL context");
+    }
+  }
+
+  void MakeCurrent() override {
+    CGLError err = CGLSetCurrentContext(context_);
+    if (err != kCGLNoError) {
+      throw std::runtime_error("failed to make borrowed CGL context current");
+    }
+  }
+
+  void ClearCurrent() override {
+    CGLError err = CGLSetCurrentContext(nullptr);
+    if (err != kCGLNoError) {
+      throw std::runtime_error("failed to clear borrowed CGL context");
+    }
+  }
+
+ private:
+  CGLContextObj context_{nullptr};
+};
+
 #elif defined(ENVPOOL_HAS_WGL)
 
 namespace {
@@ -459,10 +485,12 @@ class EglContext final : public GlContext {
 
 std::shared_ptr<GlContext> CreateGlContext() {
 #if defined(ENVPOOL_HAS_CGL)
-  // Match Gymnasium's CGL lifecycle: create a context per renderer/viewer.
-  // Reusing one CGL context across different MuJoCo models can leave renderer
-  // state behind on macOS software/offline renderers.
-  return std::make_shared<CglContext>();
+  if (CGLGetCurrentContext() != nullptr) {
+    return std::make_shared<BorrowedCglContext>();
+  }
+  thread_local std::shared_ptr<GlContext> context =
+      std::make_shared<CglContext>();
+  return context;
 #elif defined(ENVPOOL_HAS_WGL)
   if (wglGetCurrentContext() != nullptr && wglGetCurrentDC() != nullptr) {
     // Borrowed WGL handles become invalid if another library later calls
@@ -482,16 +510,19 @@ std::shared_ptr<GlContext> CreateGlContext() {
 #endif
 }
 
-OffscreenRenderer::OffscreenRenderer(CameraPolicy camera_policy)
+OffscreenRenderer::OffscreenRenderer(CameraPolicy camera_policy,
+                                     bool disable_auxiliary_visuals)
     : camera_policy_(camera_policy) {
   mjv_defaultScene(&scene_);
   mjv_defaultCamera(&camera_);
   mjv_defaultOption(&option_);
   mjv_defaultPerturb(&perturb_);
   mjr_defaultContext(&context_);
-  option_.flags[mjVIS_TENDON] = 0;
-  option_.flags[mjVIS_ACTUATOR] = 0;
-  option_.flags[mjVIS_ACTIVATION] = 0;
+  if (disable_auxiliary_visuals) {
+    option_.flags[mjVIS_TENDON] = 0;
+    option_.flags[mjVIS_ACTUATOR] = 0;
+    option_.flags[mjVIS_ACTIVATION] = 0;
+  }
   camera_.fixedcamid = -1;
 }
 
@@ -562,15 +593,14 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
     Initialize(model);
   }
   gl_context_->MakeCurrent();
-  if (context_.offWidth != width || context_.offHeight != height) {
+  if (context_.offWidth < width || context_.offHeight < height) {
     mjr_resizeOffscreen(width, height, &context_);
   }
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
   UpdateCamera(model, data, camera_id, camera_override);
 
   mjrRect viewport = {0, 0, width, height};
-  mjv_updateScene(model, data, &option_, &perturb_, &camera_, mjCAT_ALL,
-                  &scene_);
+  mjv_updateScene(model, data, &option_, nullptr, &camera_, mjCAT_ALL, &scene_);
   mjr_render(viewport, &scene_, &context_);
 
   std::size_t frame_bytes =

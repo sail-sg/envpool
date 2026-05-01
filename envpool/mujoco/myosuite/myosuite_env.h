@@ -278,6 +278,10 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     return true;
   }
 
+  void RenderCallback() override { mj_forward(model_, data_); }
+
+  bool DisableAuxiliaryRenderVisuals() const override { return false; }
+
  protected:
   struct RewardResult {
     mjtNum dense{0.0};

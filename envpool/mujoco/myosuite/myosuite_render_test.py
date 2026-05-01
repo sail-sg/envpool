@@ -26,20 +26,22 @@ from typing import Any
 import numpy as np
 from absl.testing import absltest
 
+from envpool.mujoco.myosuite.tasks import (
+    MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS,
+    MYOSUITE_TASKS,
+)
 from envpool.registration import make_gymnasium
 
 importlib.import_module("envpool.mujoco.myosuite.registration")
 
-_TASK_IDS = (
-    "myoFingerReachFixed-v0",
-    "myoHandReachFixed-v0",
-    "myoLegWalk-v0",
-    "myoChallengeDieReorientP1-v0",
-    "MyoHandAirplaneFixed-v0",
+_TASK_IDS = tuple(str(task["id"]) for task in MYOSUITE_TASKS)
+_ORACLE_TRACE_TASK_IDS = tuple(
+    task_id
+    for task_id in _TASK_IDS
+    if task_id not in MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS
 )
 _WIDTH = 64
 _HEIGHT = 48
-_ORACLE_RENDER_TASK_ID = "myoFingerReachFixed-v0"
 
 
 def _oracle_probe_path() -> Path:
@@ -60,7 +62,7 @@ def _oracle_probe_path() -> Path:
     )
 
 
-def _oracle_trace(task_id: str) -> dict[str, Any]:
+def _oracle_trace(task_ids: tuple[str, ...]) -> dict[str, Any]:
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as out:
         out_path = Path(out.name)
     cmd = [
@@ -71,11 +73,11 @@ def _oracle_trace(task_id: str) -> dict[str, Any]:
         "3",
         "--seed",
         "3",
-        "--task_id",
-        task_id,
         "--out",
         str(out_path),
     ]
+    for task_id in task_ids:
+        cmd.extend(["--task_id", task_id])
     env = os.environ.copy()
     env["ROBOHIVE_VERBOSITY"] = "SILENT"
     try:
@@ -93,7 +95,7 @@ def _oracle_trace(task_id: str) -> dict[str, Any]:
                 f"stdout:\n{result.stdout}\n"
                 f"stderr:\n{result.stderr}"
             )
-        return json.loads(out_path.read_text())["tasks"][task_id]
+        return json.loads(out_path.read_text())["tasks"]
     finally:
         out_path.unlink(missing_ok=True)
 
@@ -137,49 +139,56 @@ class MyoSuiteRenderTest(absltest.TestCase):
                     env.close()
 
     def test_official_trace_native_render_bitwise(self) -> None:
-        """Official reset/action trace must render bitwise under native replay."""
-        oracle = _oracle_trace(_ORACLE_RENDER_TASK_ID)
-        env_a = make_gymnasium(
-            _ORACLE_RENDER_TASK_ID,
-            num_envs=1,
-            seed=3,
-            render_mode="rgb_array",
-            render_width=_WIDTH,
-            render_height=_HEIGHT,
-        )
-        env_b = make_gymnasium(
-            _ORACLE_RENDER_TASK_ID,
-            num_envs=1,
-            seed=3,
-            render_mode="rgb_array",
-            render_width=_WIDTH,
-            render_height=_HEIGHT,
-        )
-        try:
-            env_a.reset()
-            env_b.reset()
-            frames_a = [_render(env_a)[0]]
-            frames_b = [_render(env_b)[0]]
-            for action in oracle["actions"]:
-                batched_action = np.asarray(action, dtype=np.float32)[None, :]
-                env_a.step(batched_action)
-                env_b.step(batched_action)
-                frames_a.append(_render(env_a)[0])
-                frames_b.append(_render(env_b)[0])
-            self.assertLen(frames_a, 4)
-            self.assertLen(frames_b, 4)
-            for step_id, (frame_a, frame_b) in enumerate(
-                zip(frames_a, frames_b, strict=True)
-            ):
-                np.testing.assert_array_equal(
-                    frame_a,
-                    frame_b,
-                    err_msg=(f"{_ORACLE_RENDER_TASK_ID} render step {step_id}"),
+        """Official reset/action traces render bitwise under native replay."""
+        oracle_tasks = _oracle_trace(_ORACLE_TRACE_TASK_IDS)
+        for task_id in _ORACLE_TRACE_TASK_IDS:
+            with self.subTest(task_id=task_id):
+                oracle = oracle_tasks[task_id]
+                env_a = make_gymnasium(
+                    task_id,
+                    num_envs=1,
+                    seed=3,
+                    render_mode="rgb_array",
+                    render_width=_WIDTH,
+                    render_height=_HEIGHT,
                 )
-                self.assertGreater(int(frame_a.max()), int(frame_a.min()))
-        finally:
-            env_a.close()
-            env_b.close()
+                env_b = make_gymnasium(
+                    task_id,
+                    num_envs=1,
+                    seed=3,
+                    render_mode="rgb_array",
+                    render_width=_WIDTH,
+                    render_height=_HEIGHT,
+                )
+                try:
+                    env_a.reset()
+                    env_b.reset()
+                    frames_a = [_render(env_a)[0]]
+                    frames_b = [_render(env_b)[0]]
+                    for action in oracle["actions"]:
+                        batched_action = np.asarray(action, dtype=np.float32)[
+                            None, :
+                        ]
+                        env_a.step(batched_action)
+                        env_b.step(batched_action)
+                        frames_a.append(_render(env_a)[0])
+                        frames_b.append(_render(env_b)[0])
+                    self.assertLen(frames_a, 4)
+                    self.assertLen(frames_b, 4)
+                    for step_id, (frame_a, frame_b) in enumerate(
+                        zip(frames_a, frames_b, strict=True)
+                    ):
+                        np.testing.assert_array_equal(
+                            frame_a,
+                            frame_b,
+                            err_msg=f"{task_id} render step {step_id}",
+                        )
+                        self.assertGreater(
+                            int(frame_a.max()), int(frame_a.min())
+                        )
+                finally:
+                    env_a.close()
+                    env_b.close()
 
 
 if __name__ == "__main__":

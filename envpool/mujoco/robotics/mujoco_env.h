@@ -114,11 +114,13 @@ class MujocoRobotEnv : public RenderableEnv {
     // teardown happens on the Python thread. Recreating the renderer on
     // Windows avoids cross-thread WGL resource lifetime issues.
     envpool::mujoco::OffscreenRenderer renderer(
-        envpool::mujoco::CameraPolicy::kGymLike);
+        envpool::mujoco::CameraPolicy::kGymLike,
+        DisableAuxiliaryRenderVisuals());
 #else
     if (renderer_ == nullptr) {
       renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
-          envpool::mujoco::CameraPolicy::kGymLike);
+          envpool::mujoco::CameraPolicy::kGymLike,
+          DisableAuxiliaryRenderVisuals());
     }
 #endif
     mjvCamera camera_override;
@@ -230,6 +232,7 @@ class MujocoRobotEnv : public RenderableEnv {
     (void)camera;
     return false;
   }
+  virtual bool DisableAuxiliaryRenderVisuals() const { return true; }
 
   void InitializeRenderCamera(mjvCamera* camera) const {
     mjv_defaultCamera(camera);
