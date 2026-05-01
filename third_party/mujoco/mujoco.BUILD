@@ -34,6 +34,9 @@ cc_library(
         ]) + glob([
             "src/render/classic/glad/*",
         ]) + glob([
+            "src/ui/*.c",
+            "src/ui/*.h",
+        ]) + glob([
             "src/user/*.c",
             "src/user/*.cc",
             "src/user/*.h",
@@ -141,6 +144,9 @@ cc_library(
             "src/render/classic/*.h",
         ]) + glob([
             "src/render/classic/glad/*",
+        ]) + glob([
+            "src/ui/*.c",
+            "src/ui/*.h",
         ]) + glob([
             "src/user/*.c",
             "src/user/*.cc",
