@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import importlib
+import importlib.util
 import json
 import os
 import posixpath
@@ -63,6 +64,7 @@ _SIMHIVE_REPOS = {
     "myo": "myosuite_myo_sim",
     "object": "myosuite_object_sim",
 }
+_DLL_DIRECTORY_HANDLES: list[Any] = []
 
 
 def _manifest_paths(path: Path) -> list[Path]:
@@ -147,6 +149,32 @@ def _import_official() -> tuple[Any, Any, Any]:
     from myosuite.utils import gym
 
     return official_myosuite, gym_registry_specs, gym
+
+
+def _shorten_windows_mujoco_import(source_root: Path) -> None:
+    if os.name != "nt":
+        return
+    spec = importlib.util.find_spec("mujoco")
+    if spec is None or spec.submodule_search_locations is None:
+        return
+    source = Path(next(iter(spec.submodule_search_locations)))
+    if not source.is_dir():
+        return
+    destination_root = source_root / "_oracle_site"
+    destination = destination_root / "mujoco"
+    if not destination.exists():
+        shutil.copytree(
+            source,
+            destination,
+            symlinks=False,
+            ignore=shutil.ignore_patterns("__pycache__"),
+        )
+    sys.path.insert(0, str(destination_root))
+    for name in tuple(sys.modules):
+        if name == "mujoco" or name.startswith("mujoco."):
+            del sys.modules[name]
+    if hasattr(os, "add_dll_directory"):
+        _DLL_DIRECTORY_HANDLES.append(os.add_dll_directory(str(destination)))
 
 
 def _jsonable(value: Any) -> Any:
@@ -393,6 +421,7 @@ def _task_from_spec(
 
 
 def _write_outputs(args: argparse.Namespace, source_root: Path) -> None:
+    _shorten_windows_mujoco_import(source_root)
     official_myosuite, gym_registry_specs, gym = _import_official()
     if official_myosuite.__version__ != _ORACLE_VERSION:
         raise ValueError(
