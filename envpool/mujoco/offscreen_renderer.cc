@@ -586,11 +586,13 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
     mjr_render(viewport, &scene_, &context_);
   };
   render_scene();
-  if (share_cgl_context_ && first_render) {
+  if (first_render) {
+#if defined(ENVPOOL_HAS_CGL)
     // The macOS offline CGL path can settle newly-created MuJoCo GL resources
     // on the first draw. Draw the same scene again before reading pixels so
-    // independently reset MyoSuite envs expose a deterministic reset frame.
+    // reset renders are deterministic across freshly-created renderers.
     render_scene();
+#endif
   }
 
   std::size_t frame_bytes =

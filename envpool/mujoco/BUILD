@@ -341,6 +341,7 @@ pybind_extension(
         ],
         "//conditions:default": [],
     }),
+    features = ["-coverage"],
     deps = [
         ":myosuite_env",
         "//envpool/core:py_envpool",
