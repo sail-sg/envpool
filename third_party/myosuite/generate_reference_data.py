@@ -102,8 +102,9 @@ def _reference_entry(task: dict[str, Any], source_root: Path) -> dict[str, Any]:
 
 
 def _name(task_id: str, suffix: str) -> str:
-    stem = re.sub(r"[^0-9A-Za-z]", "_", task_id)
-    return f"kMyoSuiteReference_{stem}_{suffix}"
+    parts = re.split(r"[^0-9A-Za-z]+", f"{task_id}_{suffix}")
+    stem = "".join(part[:1].upper() + part[1:] for part in parts if part)
+    return f"kMyoSuiteReference{stem}"
 
 
 def _array(name: str, values: list[float]) -> list[str]:
