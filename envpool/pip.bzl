@@ -42,14 +42,18 @@ def workspace():
         )
 
     if "myosuite_oracle_requirements" not in native.existing_rules().keys():
+        # The official MyoSuite package is only a test/codegen oracle. Keep its
+        # dependency hub pinned to the same Python 3.12 interpreter for every
+        # EnvPool toolchain key so generic targets such as //:setup_py314 do not
+        # try to build oracle-only wheels for unsupported Python/platform pairs.
         multi_pip_parse(
             name = "myosuite_oracle_requirements",
             default_version = "3.12",
             python_interpreter_target = {
-                "3.11": "@python_versions_3_11_host//:python",
+                "3.11": "@python_versions_3_12_host//:python",
                 "3.12": "@python_versions_3_12_host//:python",
-                "3.13": "@python_versions_3_13_host//:python",
-                "3.14": "@python_versions_3_14_host//:python",
+                "3.13": "@python_versions_3_12_host//:python",
+                "3.14": "@python_versions_3_12_host//:python",
             },
             requirements_lock = {
                 "3.11": "@envpool//third_party/myosuite:oracle_requirements.txt",
