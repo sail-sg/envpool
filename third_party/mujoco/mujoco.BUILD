@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -106,6 +106,22 @@ cc_library(
         "@tinyobjloader",
         "@tinyxml2",
     ],
+)
+
+cc_binary(
+    name = "libmujoco.so.3.6.0",
+    linkopts = select({
+        "@envpool//:linux": ["-Wl,-soname,libmujoco.so.3.6.0"],
+        "//conditions:default": [],
+    }),
+    linkshared = True,
+    linkstatic = True,
+    deps = [":mujoco_lib"],
+)
+
+filegroup(
+    name = "mujoco_shared_lib",
+    srcs = [":libmujoco.so.3.6.0"],
 )
 
 cc_library(

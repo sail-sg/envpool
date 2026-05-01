@@ -544,7 +544,10 @@ py_binary_312(
         "@myosuite_object_sim//:source",
         "@myosuite_source//:source",
         "@myosuite_ycb_sim//:source",
-    ],
+    ] + select({
+        "//:linux": ["@mujoco//:mujoco_shared_lib"],
+        "//conditions:default": [],
+    }),
     imports = ["../.."],
     deps = [
         "//envpool/python:glfw_context",

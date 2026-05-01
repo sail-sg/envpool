@@ -163,6 +163,26 @@ def _oracle_probe_path() -> Path:
     )
 
 
+def _oracle_mujoco_preload_path() -> Path | None:
+    if not sys.platform.startswith("linux"):
+        return None
+    runfiles = Path(os.environ["TEST_SRCDIR"])
+    workspace = os.environ.get("TEST_WORKSPACE", "envpool")
+    candidates = (
+        runfiles / "mujoco" / "libmujoco.so.3.6.0",
+        runfiles / workspace / "external" / "mujoco" / "libmujoco.so.3.6.0",
+    )
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    for candidate in runfiles.rglob("libmujoco.so.3.6.0"):
+        if candidate.is_file() and "site-packages" not in candidate.parts:
+            return candidate
+    raise RuntimeError(
+        f"could not locate Bazel-built libmujoco.so.3.6.0 under {runfiles}"
+    )
+
+
 def _run_oracle_probe(
     mode: str, task_ids: tuple[str, ...] = (), steps: int = _ROLLOUT_STEPS
 ) -> dict[str, Any]:
@@ -183,6 +203,18 @@ def _run_oracle_probe(
         cmd.extend(["--task_id", task_id])
     env = os.environ.copy()
     env["ROBOHIVE_VERBOSITY"] = "SILENT"
+    mujoco_preload = _oracle_mujoco_preload_path()
+    if mujoco_preload is not None:
+        env["LD_PRELOAD"] = (
+            f"{mujoco_preload}:{env['LD_PRELOAD']}"
+            if env.get("LD_PRELOAD")
+            else str(mujoco_preload)
+        )
+        env["LD_LIBRARY_PATH"] = (
+            f"{mujoco_preload.parent}:{env['LD_LIBRARY_PATH']}"
+            if env.get("LD_LIBRARY_PATH")
+            else str(mujoco_preload.parent)
+        )
     try:
         result = subprocess.run(
             cmd,
