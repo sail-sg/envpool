@@ -67,6 +67,10 @@ cc_library(
         "//conditions:default": ["-std=c++20"],
     }),
     defines = ["MJ_STATIC"],
+    # Coverage instrumentation perturbs MuJoCo's floating-point integrator on
+    # Linux enough to invalidate long oracle rollouts. Keep third-party
+    # physics code out of EnvPool coverage instead of widening oracle drift.
+    features = ["-coverage"],
     includes = [
         "include",
         "include/mujoco",

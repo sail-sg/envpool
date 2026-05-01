@@ -316,6 +316,20 @@ cc_library(
 pybind_extension(
     name = "myosuite_envpool",
     srcs = ["myosuite/myosuite_envpool.cc"],
+    # The native MyoSuite runtime is header-only under myosuite_env.h and is
+    # compiled into this extension. Coverage instrumentation changes Linux
+    # floating-point codegen enough to make long oracle rollouts diverge.
+    copts = select({
+        "//:linux": [
+            "-fno-profile-arcs",
+            "-fno-test-coverage",
+        ],
+        "@platforms//os:osx": [
+            "-fno-coverage-mapping",
+            "-fno-profile-instr-generate",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [
         ":myosuite_env",
         "//envpool/core:py_envpool",
