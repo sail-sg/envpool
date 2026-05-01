@@ -14,7 +14,7 @@
 
 """MyoSuite task metadata generated from the pinned upstream source."""
 
-from envpool.mujoco.myosuite.generated_tasks import (  # type: ignore[import-not-found]
+from envpool.mujoco.myosuite.generated_tasks import (
     MYOSUITE_ORACLE_COMMIT,
     MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS,
     MYOSUITE_ORACLE_VERSION,
