@@ -38,13 +38,13 @@ class GlContext {
   virtual void ClearCurrent() = 0;
 };
 
-std::shared_ptr<GlContext> CreateGlContext();
+std::shared_ptr<GlContext> CreateGlContext(bool share_cgl_context = false);
 
 class OffscreenRenderer {
  public:
   explicit OffscreenRenderer(
       CameraPolicy camera_policy = CameraPolicy::kGymLike,
-      bool disable_auxiliary_visuals = true);
+      bool disable_auxiliary_visuals = false, bool share_cgl_context = false);
   ~OffscreenRenderer();
 
   void Render(const mjModel* model, mjData* data, int width, int height,
@@ -64,6 +64,7 @@ class OffscreenRenderer {
   mjrContext context_;
   std::vector<unsigned char> scratch_;
   CameraPolicy camera_policy_;
+  bool share_cgl_context_;
   bool initialized_{false};
   bool free_camera_initialized_{false};
 };

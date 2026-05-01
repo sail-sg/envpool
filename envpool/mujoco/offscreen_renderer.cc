@@ -145,32 +145,6 @@ class CglContext final : public GlContext {
   bool locked_{false};
 };
 
-class BorrowedCglContext final : public GlContext {
- public:
-  BorrowedCglContext() : context_(CGLGetCurrentContext()) {
-    if (context_ == nullptr) {
-      throw std::runtime_error("failed to capture current CGL context");
-    }
-  }
-
-  void MakeCurrent() override {
-    CGLError err = CGLSetCurrentContext(context_);
-    if (err != kCGLNoError) {
-      throw std::runtime_error("failed to make borrowed CGL context current");
-    }
-  }
-
-  void ClearCurrent() override {
-    CGLError err = CGLSetCurrentContext(nullptr);
-    if (err != kCGLNoError) {
-      throw std::runtime_error("failed to clear borrowed CGL context");
-    }
-  }
-
- private:
-  CGLContextObj context_{nullptr};
-};
-
 #elif defined(ENVPOOL_HAS_WGL)
 
 namespace {
@@ -483,15 +457,19 @@ class EglContext final : public GlContext {
 
 #endif
 
-std::shared_ptr<GlContext> CreateGlContext() {
+std::shared_ptr<GlContext> CreateGlContext(bool share_cgl_context) {
 #if defined(ENVPOOL_HAS_CGL)
-  if (CGLGetCurrentContext() != nullptr) {
-    return std::make_shared<BorrowedCglContext>();
+  if (share_cgl_context) {
+    thread_local std::shared_ptr<GlContext> context =
+        std::make_shared<CglContext>();
+    return context;
   }
-  thread_local std::shared_ptr<GlContext> context =
-      std::make_shared<CglContext>();
-  return context;
+  // Match Gymnasium's CGL lifecycle: create a context per renderer/viewer.
+  // Reusing one CGL context across different MuJoCo models can leave renderer
+  // state behind on macOS software/offline renderers.
+  return std::make_shared<CglContext>();
 #elif defined(ENVPOOL_HAS_WGL)
+  (void)share_cgl_context;
   if (wglGetCurrentContext() != nullptr && wglGetCurrentDC() != nullptr) {
     // Borrowed WGL handles become invalid if another library later calls
     // `glfw.terminate()`, so do not cache them across renderer instances.
@@ -501,18 +479,21 @@ std::shared_ptr<GlContext> CreateGlContext() {
       std::make_shared<WglContext>();
   return context;
 #elif defined(ENVPOOL_HAS_EGL)
+  (void)share_cgl_context;
   thread_local std::shared_ptr<GlContext> context =
       std::make_shared<EglContext>();
   return context;
 #else
+  (void)share_cgl_context;
   throw std::runtime_error(
       "MuJoCo rendering is unsupported on this platform/build");
 #endif
 }
 
 OffscreenRenderer::OffscreenRenderer(CameraPolicy camera_policy,
-                                     bool disable_auxiliary_visuals)
-    : camera_policy_(camera_policy) {
+                                     bool disable_auxiliary_visuals,
+                                     bool share_cgl_context)
+    : camera_policy_(camera_policy), share_cgl_context_(share_cgl_context) {
   mjv_defaultScene(&scene_);
   mjv_defaultCamera(&camera_);
   mjv_defaultOption(&option_);
@@ -537,7 +518,7 @@ OffscreenRenderer::~OffscreenRenderer() {
 }
 
 void OffscreenRenderer::Initialize(const mjModel* model) {
-  gl_context_ = CreateGlContext();
+  gl_context_ = CreateGlContext(share_cgl_context_);
   gl_context_->MakeCurrent();
   mjv_makeScene(model, &scene_, 10000);
   mjr_makeContext(model, &context_, mjFONTSCALE_150);
@@ -593,14 +574,15 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
     Initialize(model);
   }
   gl_context_->MakeCurrent();
-  if (context_.offWidth < width || context_.offHeight < height) {
+  if (context_.offWidth != width || context_.offHeight != height) {
     mjr_resizeOffscreen(width, height, &context_);
   }
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
   UpdateCamera(model, data, camera_id, camera_override);
 
   mjrRect viewport = {0, 0, width, height};
-  mjv_updateScene(model, data, &option_, nullptr, &camera_, mjCAT_ALL, &scene_);
+  mjv_updateScene(model, data, &option_, &perturb_, &camera_, mjCAT_ALL,
+                  &scene_);
   mjr_render(viewport, &scene_, &context_);
 
   std::size_t frame_bytes =

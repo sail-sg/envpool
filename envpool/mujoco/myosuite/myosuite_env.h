@@ -282,6 +282,8 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
 
   bool DisableAuxiliaryRenderVisuals() const override { return false; }
 
+  bool ShareRenderContext() const override { return true; }
+
  protected:
   struct RewardResult {
     mjtNum dense{0.0};
