@@ -813,8 +813,8 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     }
     std::vector<mjtNum> result(cols);
     for (int i = 0; i < cols; ++i) {
-      const mjtNum a = static_cast<mjtNum>(values[row * cols + i]);
-      const mjtNum b = static_cast<mjtNum>(values[next * cols + i]);
+      const auto a = static_cast<mjtNum>(values[row * cols + i]);
+      const auto b = static_cast<mjtNum>(values[next * cols + i]);
       result[i] = (1.0 - blend) * a + blend * b;
     }
     return result;
@@ -842,7 +842,7 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     }
     const double* begin = reference_.time;
     const double* end = reference_.time + reference_.time_size;
-    const auto upper = std::upper_bound(begin, end, rounded);
+    const auto* const upper = std::upper_bound(begin, end, rounded);
     int next = static_cast<int>(upper - begin);
     next = std::max(1, std::min(last, next));
     myodm_reference_index_ = next - 1;
@@ -884,8 +884,8 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     const auto [row, next] = MyoDmReferenceRows(time);
     mjtNum blend = 0.0;
     if (row != next) {
-      const mjtNum t0 = static_cast<mjtNum>(reference_.time[row]);
-      const mjtNum t1 = static_cast<mjtNum>(reference_.time[next]);
+      const auto t0 = static_cast<mjtNum>(reference_.time[row]);
+      const auto t1 = static_cast<mjtNum>(reference_.time[next]);
       if (t1 > t0) {
         blend = (time - t0) / (t1 - t0);
       }
