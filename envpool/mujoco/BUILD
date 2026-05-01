@@ -474,6 +474,7 @@ py_test(
     deps = [
         ":myosuite",
         ":myosuite_registration",
+        "//envpool/python:glfw_context",
         requirement("absl-py"),
         requirement("numpy"),
     ],
@@ -490,6 +491,7 @@ py_test(
     deps = [
         ":myosuite",
         ":myosuite_registration",
+        "//envpool/python:glfw_context",
         requirement("absl-py"),
         requirement("numpy"),
     ],
@@ -524,6 +526,7 @@ py_binary_312(
     ],
     imports = ["../.."],
     deps = [
+        "//envpool/python:glfw_context",
         oracle_requirement("click"),
         oracle_requirement("dm-control"),
         oracle_requirement("flatten-dict"),

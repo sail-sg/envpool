@@ -65,6 +65,10 @@ cc_library(
         # Match upstream MuJoCo's default CMake build on Linux x86_64. The
         # pinned official oracle wheel enables AVX platform SIMD there.
         "@envpool//:linux_x86_64": [
+            # CI runs Bazel tests in fastbuild, while the official Python
+            # wheel is release-built. Keep MuJoCo's integrator codegen aligned
+            # with the wheel instead of compensating with looser oracle checks.
+            "-O3",
             "-mavx",
             "-mpclmul",
         ],

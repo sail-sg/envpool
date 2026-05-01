@@ -34,6 +34,11 @@ from typing import Any
 
 import numpy as np
 
+from envpool.python.glfw_context import preload_windows_gl_dlls
+
+if platform.system() == "Windows":
+    preload_windows_gl_dlls(strict=True)
+
 
 def _configure_macos_mujoco_renderer() -> None:
     """Match EnvPool's CGL context setup for official render-oracle tests."""

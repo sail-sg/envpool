@@ -18,7 +18,9 @@ from __future__ import annotations
 import importlib
 import json
 import os
+import platform
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -30,7 +32,11 @@ from envpool.mujoco.myosuite.tasks import (
     MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS,
     MYOSUITE_TASKS,
 )
+from envpool.python.glfw_context import preload_windows_gl_dlls
 from envpool.registration import make_gymnasium
+
+if platform.system() == "Windows":
+    preload_windows_gl_dlls(strict=True)
 
 importlib.import_module("envpool.mujoco.myosuite.registration")
 
@@ -47,16 +53,22 @@ _HEIGHT = 48
 def _oracle_probe_path() -> Path:
     runfiles = Path(os.environ["TEST_SRCDIR"])
     workspace = os.environ.get("TEST_WORKSPACE", "envpool")
+    launcher_names = (
+        ("myosuite_oracle_probe.exe", "myosuite_oracle_probe")
+        if sys.platform == "win32"
+        else ("myosuite_oracle_probe", "myosuite_oracle_probe.exe")
+    )
     candidates = [
-        runfiles / workspace / "envpool/mujoco/myosuite_oracle_probe",
-        runfiles / workspace / "envpool/mujoco/myosuite_oracle_probe.exe",
+        runfiles / workspace / "envpool/mujoco" / launcher
+        for launcher in launcher_names
     ]
     for candidate in candidates:
         if candidate.is_file():
             return candidate
-    matches = list(runfiles.rglob("myosuite_oracle_probe"))
-    if matches:
-        return matches[0]
+    for launcher in launcher_names:
+        matches = list(runfiles.rglob(launcher))
+        if matches:
+            return matches[0]
     raise RuntimeError(
         f"could not locate myosuite_oracle_probe under {runfiles}"
     )
