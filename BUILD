@@ -11,6 +11,14 @@ config_setting(
 )
 
 config_setting(
+    name = "linux_x86_64",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+)
+
+config_setting(
     name = "windows",
     constraint_values = ["@platforms//os:windows"],
 )

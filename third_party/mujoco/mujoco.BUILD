@@ -61,12 +61,23 @@ cc_library(
             "-Wno-stringop-overflow",
             "-Wno-stringop-truncation",
         ],
+    }) + select({
+        # Match upstream MuJoCo's default CMake build on Linux x86_64. The
+        # pinned official oracle wheel enables AVX platform SIMD there.
+        "@envpool//:linux_x86_64": [
+            "-mavx",
+            "-mpclmul",
+        ],
+        "//conditions:default": [],
     }),
     cxxopts = select({
         "@envpool//:windows": ["/std:c++20"],
         "//conditions:default": ["-std=c++20"],
     }),
-    defines = ["MJ_STATIC"],
+    defines = ["MJ_STATIC"] + select({
+        "@envpool//:linux_x86_64": ["mjUSEPLATFORMSIMD"],
+        "//conditions:default": [],
+    }),
     # Coverage instrumentation perturbs MuJoCo's floating-point integrator on
     # Linux enough to invalidate long oracle rollouts. Keep third-party
     # physics code out of EnvPool coverage instead of widening oracle drift.
