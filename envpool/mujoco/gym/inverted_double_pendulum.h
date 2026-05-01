@@ -76,7 +76,6 @@ class InvertedDoublePendulumEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   using Base::spec_;
 
   bool reward_if_not_terminated_;
-  bool gymnasium_v5_render_camera_;
   int constraint_obs_dim_;
   mjtNum healthy_reward_, healthy_z_max_;
   mjtNum observation_min_, observation_max_;
@@ -98,7 +97,6 @@ class InvertedDoublePendulumEnvBase : public Env<EnvSpecT>, public MujocoEnv {
             RenderHeightOrDefault<kFromPixels>(spec.config),
             RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         reward_if_not_terminated_(spec.config["reward_if_not_terminated"_]),
-        gymnasium_v5_render_camera_(spec.config["gymnasium_v5_render_camera"_]),
         constraint_obs_dim_(spec.config["constraint_obs_dim"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
         healthy_z_max_(spec.config["healthy_z_max"_]),
@@ -119,19 +117,6 @@ class InvertedDoublePendulumEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     std::memcpy(qpos0_, data_->qpos, sizeof(mjtNum) * model_->nq);
     std::memcpy(qvel0_, data_->qvel, sizeof(mjtNum) * model_->nv);
 #endif
-  }
-
-  bool RenderCamera(mjvCamera* camera) override {
-    if (!gymnasium_v5_render_camera_) {
-      return false;
-    }
-    camera->trackbodyid = 0;
-    camera->distance = 4.1225;
-    camera->lookat[0] = 0.0;
-    camera->lookat[1] = 0.0;
-    camera->lookat[2] = 0.1225;
-    ApplyGymnasiumDefaultCameraId(camera);
-    return true;
   }
 
   bool IsDone() override { return done_; }
