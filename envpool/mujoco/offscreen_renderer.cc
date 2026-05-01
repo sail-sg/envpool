@@ -570,6 +570,7 @@ void OffscreenRenderer::UpdateCamera(const mjModel* model, const mjData* data,
 void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
                                int height, int camera_id, unsigned char* rgb,
                                const mjvCamera* camera_override) {
+  const bool first_render = !initialized_;
   if (!initialized_) {
     Initialize(model);
   }
@@ -581,9 +582,18 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
   UpdateCamera(model, data, camera_id, camera_override);
 
   mjrRect viewport = {0, 0, width, height};
-  mjv_updateScene(model, data, &option_, &perturb_, &camera_, mjCAT_ALL,
-                  &scene_);
-  mjr_render(viewport, &scene_, &context_);
+  auto render_scene = [&] {
+    mjv_updateScene(model, data, &option_, &perturb_, &camera_, mjCAT_ALL,
+                    &scene_);
+    mjr_render(viewport, &scene_, &context_);
+  };
+  render_scene();
+  if (share_cgl_context_ && first_render) {
+    // The macOS offline CGL path can settle newly-created MuJoCo GL resources
+    // on the first draw. Draw the same scene again before reading pixels so
+    // independently reset MyoSuite envs expose a deterministic reset frame.
+    render_scene();
+  }
 
   std::size_t frame_bytes =
       static_cast<std::size_t>(width) * height * 3 * sizeof(unsigned char);
