@@ -106,6 +106,23 @@ def _myosuite_source_root(paths: list[Path]) -> Path:
     raise ValueError(f"could not infer MyoSuite source root from {root}")
 
 
+def _patch_codegen_only_imports(package: Path) -> None:
+    import_utils = package / "utils" / "import_utils.py"
+    text = import_utils.read_text()
+    eager_git = "from os.path import expanduser\nimport git\n\n\n"
+    if eager_git not in text:
+        raise ValueError("unexpected MyoSuite import_utils.py layout")
+    text = text.replace(eager_git, "from os.path import expanduser\n\n\n", 1)
+    fetch_def = (
+        "def fetch_git(repo_url, commit_hash, clone_directory, "
+        "clone_path=None):\n"
+    )
+    if fetch_def not in text:
+        raise ValueError("unexpected MyoSuite fetch_git layout")
+    text = text.replace(fetch_def, fetch_def + "    import git\n", 1)
+    import_utils.write_text(text)
+
+
 @contextlib.contextmanager
 def _assembled_source(
     source_manifest: Path, sim_manifests: dict[str, Path]
@@ -115,10 +132,14 @@ def _assembled_source(
         key: _repo_root(_manifest_paths(manifest), _SIMHIVE_REPOS[key])
         for key, manifest in sim_manifests.items()
     }
-    with tempfile.TemporaryDirectory(prefix="envpool-myosuite-src-") as tmp:
+    with tempfile.TemporaryDirectory(
+        prefix="envpool-myosuite-src-",
+        ignore_cleanup_errors=os.name == "nt",
+    ) as tmp:
         root = Path(tmp)
         package = root / "myosuite"
         shutil.copytree(source_root / "myosuite", package, symlinks=True)
+        _patch_codegen_only_imports(package)
         simhive = package / "simhive"
         simhive.mkdir(exist_ok=True)
         for key, dirname in _SIMHIVE_DIRS.items():
