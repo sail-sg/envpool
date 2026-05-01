@@ -21,6 +21,7 @@ from oracle instantiation in this test.
 
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import platform
@@ -32,7 +33,6 @@ from typing import Any, cast
 import numpy as np
 from absl.testing import absltest
 
-import envpool.mujoco.myosuite.registration  # noqa: F401
 from envpool.mujoco.myosuite.tasks import (
     MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS,
     MYOSUITE_ORACLE_VERSION,
@@ -40,6 +40,8 @@ from envpool.mujoco.myosuite.tasks import (
     MyoSuiteTask,
 )
 from envpool.registration import make_gymnasium, make_spec
+
+importlib.import_module("envpool.mujoco.myosuite.registration")
 
 _ROLLOUT_STEPS = 128
 _ORACLE_SPACE_BATCH_SIZE = 64

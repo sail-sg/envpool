@@ -22,6 +22,7 @@
 #include <cmath>
 #include <cstring>
 #include <limits>
+#include <random>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -33,6 +34,7 @@
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
 #include "envpool/mujoco/robotics/mujoco_env.h"
+#include "third_party/myosuite/myosuite_reference_data.h"
 #include "third_party/myosuite/myosuite_task_metadata.h"
 #include "third_party/myosuite/myosuite_tasks.h"
 
@@ -43,9 +45,12 @@ using envpool::mujoco::RenderCameraIdOrDefault;
 using envpool::mujoco::RenderHeightOrDefault;
 using envpool::mujoco::RenderWidthOrDefault;
 using envpool::mujoco::StackSpec;
+using third_party::myosuite::GetMyoSuiteReferenceData;
 using third_party::myosuite::GetMyoSuiteTask;
 using third_party::myosuite::GetMyoSuiteTaskMetadata;
 using third_party::myosuite::MyoSuiteMuscleCondition;
+using third_party::myosuite::MyoSuiteReferenceData;
+using third_party::myosuite::MyoSuiteReferenceType;
 using third_party::myosuite::MyoSuiteTaskDef;
 using third_party::myosuite::MyoSuiteTaskKind;
 using third_party::myosuite::MyoSuiteTaskMetadata;
@@ -107,6 +112,7 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
 
   const MyoSuiteTaskDef& task_;
   const MyoSuiteTaskMetadata& metadata_;
+  const MyoSuiteReferenceData& reference_;
   int task_index_;
   std::vector<std::string> obs_keys_;
   std::vector<std::pair<std::string, mjtNum>> reward_weights_;
@@ -127,6 +133,12 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
   std::vector<mjtNum> fatigue_mf_;
   std::vector<mjtNum> fatigue_tl_;
   int task_step_{0};
+  int myodm_reference_index_{0};
+  mjtNum myodm_lift_z_{0.0};
+  std::vector<mjtNum> tabletennis_init_paddle_quat_;
+  int bimanual_goal_touch_{0};
+  mjtNum bimanual_init_obj_z_{0.0};
+  mjtNum bimanual_init_palm_z_{0.0};
   mjtNum sparse_{0.0};
   mjtNum solved_{0.0};
 #ifdef ENVPOOL_TEST
@@ -160,6 +172,8 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
         task_(GetMyoSuiteTask(std::string(spec.config["task_name"_]))),
         metadata_(
             GetMyoSuiteTaskMetadata(std::string(spec.config["task_name"_]))),
+        reference_(
+            GetMyoSuiteReferenceData(std::string(spec.config["task_name"_]))),
         task_index_(TaskIndex(task_.id)),
         obs_keys_(SplitList(metadata_.obs_keys)),
         reward_weights_(ParseWeights(metadata_.rwd_keys_wt)),
@@ -189,7 +203,9 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     InitializeFatigue();
     ApplyMetadataInitialState();
     SetDefaultInitialQpos();
+    ApplyBimanualInitialState();
     InitializeRobotEnv();
+    InitializeTaskCaches();
   }
 
   bool IsDone() override { return done_; }
@@ -198,6 +214,8 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     done_ = false;
     elapsed_step_ = 0;
     task_step_ = 0;
+    myodm_reference_index_ = 0;
+    bimanual_goal_touch_ = 0;
     sparse_ = 0.0;
     solved_ = 0.0;
     ResetFatigue();
@@ -268,6 +286,12 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     bool terminated{false};
   };
 
+  struct MyoDmReferenceFrame {
+    std::vector<mjtNum> robot;
+    std::vector<mjtNum> robot_vel;
+    std::vector<mjtNum> object;
+  };
+
   using ObsDict = std::unordered_map<std::string, std::vector<mjtNum>>;
 
   static std::vector<std::string> SplitList(std::string_view text,
@@ -322,6 +346,21 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     return std::sqrt(sum);
   }
 
+  static mjtNum SquaredNorm(const std::vector<mjtNum>& values) {
+    mjtNum sum = 0.0;
+    for (mjtNum value : values) {
+      sum += value * value;
+    }
+    return sum;
+  }
+
+  static mjtNum MeanSquare(const std::vector<mjtNum>& values) {
+    if (values.empty()) {
+      return 0.0;
+    }
+    return SquaredNorm(values) / static_cast<mjtNum>(values.size());
+  }
+
   static mjtNum Dot(const std::vector<mjtNum>& lhs,
                     const std::vector<mjtNum>& rhs) {
     mjtNum sum = 0.0;
@@ -340,6 +379,60 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
       return 0.0;
     }
     return Dot(lhs, rhs) / denom;
+  }
+
+  static mjtNum QuaternionDistance(const std::vector<mjtNum>& current,
+                                   const std::vector<mjtNum>& target) {
+    if (current.size() < 4 || target.size() < 4) {
+      return 0.0;
+    }
+    const mjtNum cw = current[0];
+    const mjtNum cx = current[1];
+    const mjtNum cy = current[2];
+    const mjtNum cz = current[3];
+    const mjtNum tw = target[0];
+    const mjtNum tx = -target[1];
+    const mjtNum ty = -target[2];
+    const mjtNum tz = -target[3];
+    const mjtNum dw = cw * tw - cx * tx - cy * ty - cz * tz;
+    const mjtNum dx = cw * tx + cx * tw + cy * tz - cz * ty;
+    const mjtNum dy = cw * ty - cx * tz + cy * tw + cz * tx;
+    const mjtNum dz = cw * tz + cx * ty - cy * tx + cz * tw;
+    const mjtNum axis_norm = std::sqrt(dx * dx + dy * dy + dz * dz);
+    return std::abs(2.0 * std::atan2(axis_norm, dw));
+  }
+
+  static mjtNum YawFromQuat(const mjtNum* quat) {
+    const mjtNum w = quat[0];
+    const mjtNum x = quat[1];
+    const mjtNum y = quat[2];
+    const mjtNum z = quat[3];
+    return std::atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z));
+  }
+
+  static bool StartsWith(std::string_view value, std::string_view prefix) {
+    return value.size() >= prefix.size() &&
+           value.substr(0, prefix.size()) == prefix;
+  }
+
+  static int JointQposWidth(int joint_type) {
+    if (joint_type == mjJNT_FREE) {
+      return 7;
+    }
+    if (joint_type == mjJNT_BALL) {
+      return 4;
+    }
+    return 1;
+  }
+
+  static int JointDofWidth(int joint_type) {
+    if (joint_type == mjJNT_FREE) {
+      return 6;
+    }
+    if (joint_type == mjJNT_BALL) {
+      return 3;
+    }
+    return 1;
   }
 
   static std::vector<mjtNum> Subtract(const std::vector<mjtNum>& lhs,
@@ -414,6 +507,14 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     }
     return {data_->xpos[3 * body_id], data_->xpos[3 * body_id + 1],
             data_->xpos[3 * body_id + 2]};
+  }
+
+  std::vector<mjtNum> BodyPos(int body_id) const {
+    if (body_id < 0) {
+      return {0.0, 0.0, 0.0};
+    }
+    return {model_->body_pos[3 * body_id], model_->body_pos[3 * body_id + 1],
+            model_->body_pos[3 * body_id + 2]};
   }
 
   std::vector<mjtNum> BodyXquat(int body_id) const {
@@ -600,6 +701,20 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     mj_forward(model_, data_);
   }
 
+  void ApplyBimanualInitialState() {
+    if (task_.kind != MyoSuiteTaskKind::kChallengeBimanual ||
+        model_->nkey <= 2) {
+      return;
+    }
+    std::memcpy(data_->qpos, model_->key_qpos + 2 * model_->nq,
+                sizeof(mjtNum) * model_->nq);
+    std::fill(data_->qvel, data_->qvel + model_->nv, 0.0);
+    if (model_->na > 0) {
+      mju_zero(data_->act, model_->na);
+    }
+    mj_forward(model_, data_);
+  }
+
   void ApplyResetTargets() {
     const int count = std::min({static_cast<int>(target_sites_.size()),
                                 static_cast<int>(target_reach_low_.size()),
@@ -618,7 +733,32 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
             (target_reach_low_[i][axis] + target_reach_high_[i][axis]) * 0.5;
       }
     }
+    if (task_.kind == MyoSuiteTaskKind::kChallengeBimanual) {
+      const int start = BodyId("start");
+      const int goal = BodyId("goal");
+      if (start >= 0) {
+        model_->body_pos[3 * start] = -0.4;
+        model_->body_pos[3 * start + 1] = -0.25;
+        model_->body_pos[3 * start + 2] = 1.05;
+      }
+      if (goal >= 0) {
+        model_->body_pos[3 * goal] = 0.4;
+        model_->body_pos[3 * goal + 1] = -0.25;
+        model_->body_pos[3 * goal + 2] = 1.05;
+      }
+      const int object_joint = JointId("manip_object/freejoint");
+      if (object_joint >= 0) {
+        const int qpos_id = model_->jnt_qposadr[object_joint];
+        data_->qpos[qpos_id] = -0.4;
+        data_->qpos[qpos_id + 1] = -0.25;
+        data_->qpos[qpos_id + 2] = 1.15;
+      }
+    }
     mj_forward(model_, data_);
+    if (task_.kind == MyoSuiteTaskKind::kChallengeBimanual) {
+      bimanual_init_obj_z_ = SiteXpos(SiteId("touch_site"))[2];
+      bimanual_init_palm_z_ = SiteXpos(SiteId("S_grasp"))[2];
+    }
   }
 
   void WarmstartFromCurrentAcceleration() {
@@ -629,6 +769,150 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
       std::memcpy(data_->qacc_warmstart, data_->qacc,
                   sizeof(mjtNum) * model_->nv);
     }
+  }
+
+  void InitializeTaskCaches() {
+    if (task_.kind == MyoSuiteTaskKind::kMyoDmTrack) {
+      const int object_bid = task_.object_name[0] != '\0'
+                                 ? BodyId(task_.object_name)
+                                 : BodyId("Object");
+      myodm_lift_z_ = BodyXpos(object_bid)[2] + 0.02;
+    }
+    if (task_.kind == MyoSuiteTaskKind::kChallengeTableTennis) {
+      tabletennis_init_paddle_quat_ = BodyXquat(BodyId("paddle"));
+    }
+    if (task_.kind == MyoSuiteTaskKind::kChallengeBimanual) {
+      bimanual_init_obj_z_ = SiteXpos(SiteId("touch_site"))[2];
+      bimanual_init_palm_z_ = SiteXpos(SiteId("S_grasp"))[2];
+    }
+  }
+
+  static std::vector<mjtNum> ReferenceRow(const double* values, int rows,
+                                          int cols, int row) {
+    if (rows <= 0 || cols <= 0) {
+      return {};
+    }
+    row = std::max(0, std::min(rows - 1, row));
+    std::vector<mjtNum> result(cols);
+    for (int i = 0; i < cols; ++i) {
+      result[i] = static_cast<mjtNum>(values[row * cols + i]);
+    }
+    return result;
+  }
+
+  static std::vector<mjtNum> ReferenceBlend(const double* values, int rows,
+                                            int cols, int row, int next,
+                                            mjtNum blend) {
+    if (rows <= 0 || cols <= 0) {
+      return {};
+    }
+    row = std::max(0, std::min(rows - 1, row));
+    next = std::max(0, std::min(rows - 1, next));
+    if (row == next) {
+      return ReferenceRow(values, rows, cols, row);
+    }
+    std::vector<mjtNum> result(cols);
+    for (int i = 0; i < cols; ++i) {
+      const mjtNum a = static_cast<mjtNum>(values[row * cols + i]);
+      const mjtNum b = static_cast<mjtNum>(values[next * cols + i]);
+      result[i] = (1.0 - blend) * a + blend * b;
+    }
+    return result;
+  }
+
+  std::pair<int, int> MyoDmReferenceRows(mjtNum time) {
+    if (reference_.time_size <= 1) {
+      return {0, 0};
+    }
+    const mjtNum rounded = std::round(time * 10000.0) / 10000.0;
+    const int last = reference_.time_size - 1;
+    if (rounded >= static_cast<mjtNum>(reference_.time[last])) {
+      myodm_reference_index_ = last;
+      return {last, last};
+    }
+    if (myodm_reference_index_ < last &&
+        rounded ==
+            static_cast<mjtNum>(reference_.time[myodm_reference_index_ + 1])) {
+      ++myodm_reference_index_;
+      return {myodm_reference_index_, myodm_reference_index_};
+    }
+    if (rounded ==
+        static_cast<mjtNum>(reference_.time[myodm_reference_index_])) {
+      return {myodm_reference_index_, myodm_reference_index_};
+    }
+    const double* begin = reference_.time;
+    const double* end = reference_.time + reference_.time_size;
+    const auto upper = std::upper_bound(begin, end, rounded);
+    int next = static_cast<int>(upper - begin);
+    next = std::max(1, std::min(last, next));
+    myodm_reference_index_ = next - 1;
+    if (rounded == static_cast<mjtNum>(reference_.time[next])) {
+      myodm_reference_index_ = next;
+      return {next, next};
+    }
+    return {myodm_reference_index_, next};
+  }
+
+  MyoDmReferenceFrame MyoDmReferenceAt(mjtNum time) {
+    MyoDmReferenceFrame frame;
+    if (reference_.type == MyoSuiteReferenceType::kNone) {
+      return frame;
+    }
+    if (reference_.type == MyoSuiteReferenceType::kRandom) {
+      auto sample = [this](const double* values, int rows, int cols) {
+        if (rows < 2 || cols <= 0) {
+          return ReferenceRow(values, rows, cols, 0);
+        }
+        std::vector<mjtNum> result(cols);
+        for (int i = 0; i < cols; ++i) {
+          std::uniform_real_distribution<mjtNum> dist(
+              static_cast<mjtNum>(values[i]),
+              static_cast<mjtNum>(values[cols + i]));
+          result[i] = dist(gen_);
+        }
+        return result;
+      };
+      frame.robot = sample(reference_.robot, reference_.robot_rows,
+                           reference_.robot_cols);
+      frame.robot_vel = sample(reference_.robot_vel, reference_.robot_vel_rows,
+                               reference_.robot_vel_cols);
+      frame.object = sample(reference_.object, reference_.object_rows,
+                            reference_.object_cols);
+      return frame;
+    }
+
+    const auto [row, next] = MyoDmReferenceRows(time);
+    mjtNum blend = 0.0;
+    if (row != next) {
+      const mjtNum t0 = static_cast<mjtNum>(reference_.time[row]);
+      const mjtNum t1 = static_cast<mjtNum>(reference_.time[next]);
+      if (t1 > t0) {
+        blend = (time - t0) / (t1 - t0);
+      }
+    }
+    frame.robot = ReferenceBlend(reference_.robot, reference_.robot_rows,
+                                 reference_.robot_cols, row, next, blend);
+    frame.robot_vel =
+        ReferenceBlend(reference_.robot_vel, reference_.robot_vel_rows,
+                       reference_.robot_vel_cols, row, next, blend);
+    frame.object = ReferenceBlend(reference_.object, reference_.object_rows,
+                                  reference_.object_cols, row, next, blend);
+    return frame;
+  }
+
+  void ApplyMyoDmReferenceSite(const MyoDmReferenceFrame& reference) {
+    if (task_.kind != MyoSuiteTaskKind::kMyoDmTrack ||
+        reference.object.size() < 3) {
+      return;
+    }
+    const int target_sid = SiteId("target");
+    if (target_sid < 0) {
+      return;
+    }
+    for (int axis = 0; axis < 3; ++axis) {
+      model_->site_pos[3 * target_sid + axis] = reference.object[axis];
+    }
+    mj_forward(model_, data_);
   }
 
   void PreStepTaskUpdate() {
@@ -700,6 +984,162 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     const mjtNum scale = scale_dt ? static_cast<mjtNum>(Dt()) : 1.0;
     for (int i = begin; i < end; ++i) {
       result.push_back(data_->qvel[i] * scale);
+    }
+    return result;
+  }
+
+  std::vector<mjtNum> JointQposValues(int joint_id) const {
+    if (joint_id < 0) {
+      return {};
+    }
+    const int begin = model_->jnt_qposadr[joint_id];
+    return QposSlice(begin, begin + JointQposWidth(model_->jnt_type[joint_id]));
+  }
+
+  std::vector<mjtNum> JointQvelValues(int joint_id, bool scale_dt) const {
+    if (joint_id < 0) {
+      return {};
+    }
+    const int begin = model_->jnt_dofadr[joint_id];
+    return QvelSlice(begin, begin + JointDofWidth(model_->jnt_type[joint_id]),
+                     scale_dt);
+  }
+
+  bool IsBimanualProsthesisJoint(int joint_id) const {
+    const char* name = mj_id2name(model_, mjOBJ_JOINT, joint_id);
+    return name != nullptr && StartsWith(name, "prosthesis");
+  }
+
+  bool IsBimanualManipObjectJoint(int joint_id) const {
+    const char* name = mj_id2name(model_, mjOBJ_JOINT, joint_id);
+    return name != nullptr &&
+           std::string_view(name) == "manip_object/freejoint";
+  }
+
+  std::vector<mjtNum> BimanualJointQpos(bool prosthesis) const {
+    std::vector<mjtNum> result;
+    for (int joint_id = 0; joint_id < model_->njnt; ++joint_id) {
+      if (IsBimanualManipObjectJoint(joint_id) ||
+          IsBimanualProsthesisJoint(joint_id) != prosthesis) {
+        continue;
+      }
+      const auto values = JointQposValues(joint_id);
+      result.insert(result.end(), values.begin(), values.end());
+    }
+    return result;
+  }
+
+  std::vector<mjtNum> BimanualJointQvel(bool prosthesis) const {
+    std::vector<mjtNum> result;
+    for (int joint_id = 0; joint_id < model_->njnt; ++joint_id) {
+      if (IsBimanualManipObjectJoint(joint_id) ||
+          IsBimanualProsthesisJoint(joint_id) != prosthesis) {
+        continue;
+      }
+      const auto values = JointQvelValues(joint_id, false);
+      result.insert(result.end(), values.begin(), values.end());
+    }
+    return result;
+  }
+
+  std::vector<mjtNum> AverageSites(const char* lhs, const char* rhs) const {
+    const auto lhs_pos = SiteXpos(SiteId(lhs));
+    const auto rhs_pos = SiteXpos(SiteId(rhs));
+    return {(lhs_pos[0] + rhs_pos[0]) * 0.5, (lhs_pos[1] + rhs_pos[1]) * 0.5,
+            (lhs_pos[2] + rhs_pos[2]) * 0.5};
+  }
+
+  int BimanualBodyLabel(int body_id) const {
+    const int start_id = BodyId("start");
+    const int goal_id = BodyId("goal");
+    const int object_id = BodyId("manip_object");
+    int myo_min = model_->nbody;
+    int myo_max = -1;
+    int prosth_min = model_->nbody;
+    int prosth_max = -1;
+    for (int id = 0; id < model_->nbody; ++id) {
+      const char* raw_name = mj_id2name(model_, mjOBJ_BODY, id);
+      const std::string_view name = raw_name == nullptr ? "" : raw_name;
+      if (StartsWith(name, "prosthesis/")) {
+        prosth_min = std::min(prosth_min, id);
+        prosth_max = std::max(prosth_max, id);
+      } else if (id != start_id && id != goal_id && id != object_id) {
+        myo_min = std::min(myo_min, id);
+        myo_max = std::max(myo_max, id);
+      }
+    }
+    if (myo_min <= body_id && body_id <= myo_max) {
+      return 0;
+    }
+    if (prosth_min <= body_id && body_id <= prosth_max) {
+      return 1;
+    }
+    if (body_id == start_id) {
+      return 2;
+    }
+    if (body_id == goal_id) {
+      return 3;
+    }
+    return 4;
+  }
+
+  std::vector<mjtNum> BimanualTouchingBody() const {
+    std::vector<mjtNum> result(5, 0.0);
+    const int object_id = BodyId("manip_object");
+    if (object_id < 0) {
+      return result;
+    }
+    for (int i = 0; i < data_->ncon; ++i) {
+      const mjContact& contact = data_->contact[i];
+      const int body1 = model_->geom_bodyid[contact.geom1];
+      const int body2 = model_->geom_bodyid[contact.geom2];
+      if (body1 == object_id) {
+        result[BimanualBodyLabel(body2)] += 1.0;
+      } else if (body2 == object_id) {
+        result[BimanualBodyLabel(body1)] += 1.0;
+      }
+    }
+    return result;
+  }
+
+  std::vector<mjtNum> TableTennisTouchingInfo() const {
+    std::vector<mjtNum> result(6, 0.0);
+    const int ball_id = BodyId("pingpong");
+    if (ball_id < 0) {
+      return result;
+    }
+    const int paddle = GeomId("pad");
+    const int own = GeomId("coll_own_half");
+    const int opponent = GeomId("coll_opponent_half");
+    const int net = GeomId("coll_net");
+    const int ground = GeomId("ground");
+    auto label = [&](int geom_id) {
+      if (geom_id == paddle) {
+        return 0;
+      }
+      if (geom_id == own) {
+        return 1;
+      }
+      if (geom_id == opponent) {
+        return 2;
+      }
+      if (geom_id == net) {
+        return 3;
+      }
+      if (geom_id == ground) {
+        return 4;
+      }
+      return 5;
+    };
+    for (int i = 0; i < data_->ncon; ++i) {
+      const mjContact& contact = data_->contact[i];
+      const int body1 = model_->geom_bodyid[contact.geom1];
+      const int body2 = model_->geom_bodyid[contact.geom2];
+      if (body1 == ball_id) {
+        result[label(contact.geom2)] += 1.0;
+      } else if (body2 == ball_id) {
+        result[label(contact.geom1)] += 1.0;
+      }
     }
     return result;
   }
@@ -822,8 +1262,13 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     return result;
   }
 
-  ObsDict BuildObsDict() const {
+  ObsDict BuildObsDict() {
     ObsDict obs;
+    MyoDmReferenceFrame myodm_reference;
+    if (task_.kind == MyoSuiteTaskKind::kMyoDmTrack) {
+      myodm_reference = MyoDmReferenceAt(data_->time);
+      ApplyMyoDmReferenceSite(myodm_reference);
+    }
     const auto dt = static_cast<mjtNum>(Dt());
     obs["time"] = {data_->time};
     obs["t"] = {data_->time};
@@ -930,42 +1375,101 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
         QposSlice(0, std::min(7, static_cast<int>(model_->nq)));
     obs["model_root_vel"] =
         QvelSlice(0, std::min(6, static_cast<int>(model_->nv)), false);
-    obs["opponent_pose"] = {};
-    obs["opponent_vel"] = {};
+    if (model_->nmocap > 0) {
+      obs["opponent_pose"] = {data_->mocap_pos[0], data_->mocap_pos[1],
+                              YawFromQuat(data_->mocap_quat)};
+    } else {
+      const auto opponent = BodyXpos(BodyId("opponent"));
+      obs["opponent_pose"] = {opponent[0], opponent[1], 0.0};
+    }
+    obs["opponent_vel"] = {0.0, 0.0};
 
     obs["pelvis_pos"] = SiteXpos(SiteId("pelvis"));
     obs["body_qpos"] =
         QposSlice(0, std::max(0, static_cast<int>(model_->nq) - 7));
     obs["body_qvel"] =
         QvelSlice(0, std::max(0, static_cast<int>(model_->nv) - 6), true);
-    obs["ball_pos"] = SiteXpos(SiteId("pingpong"));
-    obs["ball_vel"] = SensorData("pingpong_vel_sensor");
-    obs["paddle_pos"] = SiteXpos(SiteId("paddle"));
-    obs["paddle_vel"] = SensorData("paddle_vel_sensor");
-    obs["paddle_ori"] = BodyXquat(BodyId("paddle"));
-    obs["touching_info"] = std::vector<mjtNum>(6, 0.0);
+    if (task_.kind == MyoSuiteTaskKind::kChallengeSoccer) {
+      obs["ball_pos"] = BodyXpos(BodyId("soccer_ball"));
+    }
+    if (task_.kind == MyoSuiteTaskKind::kChallengeTableTennis) {
+      obs["ball_pos"] = SiteXpos(SiteId("pingpong"));
+      obs["ball_vel"] = SensorData("pingpong_vel_sensor");
+      obs["paddle_pos"] = SiteXpos(SiteId("paddle"));
+      obs["paddle_vel"] = SensorData("paddle_vel_sensor");
+      obs["paddle_ori"] = BodyXquat(BodyId("paddle"));
+      obs["padde_ori_err"] =
+          Subtract(obs["paddle_ori"], tabletennis_init_paddle_quat_);
+      obs["reach_err"] = Subtract(obs["paddle_pos"], obs["ball_pos"]);
+      obs["palm_pos"] = SiteXpos(SiteId("S_grasp"));
+      obs["palm_err"] = Subtract(obs["palm_pos"], obs["paddle_pos"]);
+      obs["touching_info"] = TableTennisTouchingInfo();
+    }
 
-    // MyoDM tracking metadata is loaded natively as model state; reference
-    // tracks are added separately. Until then, fixed-reference IDs use the
-    // reference implied by the official initial qpos.
-    obs["curr_hand_qpos"] =
-        QposSlice(0, std::max(0, static_cast<int>(model_->nq) - 6));
-    obs["curr_hand_qvel"] =
-        QvelSlice(0, std::max(0, static_cast<int>(model_->nv) - 6), false);
-    obs["targ_hand_qpos"] =
-        std::vector<mjtNum>(obs["curr_hand_qpos"].size(), 0.0);
-    obs["targ_hand_qvel"] =
-        std::vector<mjtNum>(obs["curr_hand_qvel"].size(), 0.0);
-    obs["hand_qpos_err"] =
-        Subtract(obs["curr_hand_qpos"], obs["targ_hand_qpos"]);
-    obs["hand_qvel_err"] =
-        Subtract(obs["curr_hand_qvel"], obs["targ_hand_qvel"]);
-    const int object_bid = task_.object_name[0] != '\0'
-                               ? BodyId(task_.object_name)
-                               : BodyId("Object");
-    obs["curr_obj_com"] = BodyXpos(object_bid);
-    obs["targ_obj_com"] = {0.2, 0.2, 0.1};
-    obs["obj_com_err"] = Subtract(obs["curr_obj_com"], obs["targ_obj_com"]);
+    if (task_.kind == MyoSuiteTaskKind::kChallengeBimanual) {
+      obs["myohand_qpos"] = BimanualJointQpos(false);
+      obs["myohand_qvel"] = BimanualJointQvel(false);
+      obs["pros_hand_qpos"] = BimanualJointQpos(true);
+      obs["pros_hand_qvel"] = BimanualJointQvel(true);
+      const int object_joint = JointId("manip_object/freejoint");
+      obs["object_qpos"] = JointQposValues(object_joint);
+      obs["object_qvel"] = JointQvelValues(object_joint, false);
+      obs["touching_body"] = BimanualTouchingBody();
+      obs["palm_pos"] = SiteXpos(SiteId("S_grasp"));
+      obs["fin0"] = SiteXpos(SiteId("THtip"));
+      obs["fin1"] = SiteXpos(SiteId("IFtip"));
+      obs["fin2"] = SiteXpos(SiteId("MFtip"));
+      obs["fin3"] = SiteXpos(SiteId("RFtip"));
+      obs["fin4"] = SiteXpos(SiteId("LFtip"));
+      obs["Rpalm_pos"] =
+          AverageSites("prosthesis/palm_thumb", "prosthesis/palm_pinky");
+      obs["obj_pos"] = SiteXpos(SiteId("touch_site"));
+      obs["start_pos"] = BodyPos(BodyId("start"));
+      obs["goal_pos"] = BodyPos(BodyId("goal"));
+      obs["reach_err"] = Subtract(obs["palm_pos"], obs["obj_pos"]);
+      obs["pass_err"] = Subtract(obs["Rpalm_pos"], obs["obj_pos"]);
+      const int elbow = JointId("elbow_flexion");
+      obs["elbow_fle"] = JointQposValues(elbow);
+    }
+
+    if (task_.kind == MyoSuiteTaskKind::kMyoDmTrack) {
+      obs["curr_hand_qpos"] =
+          QposSlice(0, std::max(0, static_cast<int>(model_->nq) - 6));
+      obs["curr_hand_qvel"] =
+          QvelSlice(0, std::max(0, static_cast<int>(model_->nv) - 6), false);
+      obs["targ_hand_qpos"] =
+          myodm_reference.robot.empty()
+              ? std::vector<mjtNum>(obs["curr_hand_qpos"].size(), 0.0)
+              : myodm_reference.robot;
+      obs["targ_hand_qvel"] = myodm_reference.robot_vel.empty()
+                                  ? std::vector<mjtNum>{0.0}
+                                  : myodm_reference.robot_vel;
+      obs["hand_qpos_err"] =
+          Subtract(obs["curr_hand_qpos"], obs["targ_hand_qpos"]);
+      obs["hand_qvel_err"] =
+          myodm_reference.robot_vel.empty()
+              ? std::vector<mjtNum>{0.0}
+              : Subtract(obs["curr_hand_qvel"], obs["targ_hand_qvel"]);
+      const int object_bid = task_.object_name[0] != '\0'
+                                 ? BodyId(task_.object_name)
+                                 : BodyId("Object");
+      obs["curr_obj_com"] = BodyXpos(object_bid);
+      obs["curr_obj_rot"] = BodyXquat(object_bid);
+      if (myodm_reference.object.size() >= 7) {
+        obs["targ_obj_com"] = {myodm_reference.object[0],
+                               myodm_reference.object[1],
+                               myodm_reference.object[2]};
+        obs["targ_obj_rot"] = {
+            myodm_reference.object[3], myodm_reference.object[4],
+            myodm_reference.object[5], myodm_reference.object[6]};
+      } else {
+        obs["targ_obj_com"] = {0.2, 0.2, 0.1};
+        obs["targ_obj_rot"] = {1.0, 0.0, 0.0, 0.0};
+      }
+      obs["obj_com_err"] = Subtract(obs["curr_obj_com"], obs["targ_obj_com"]);
+      obs["wrist_err"] = BodyXpos(BodyId("lunate"));
+      obs["base_error"] = Subtract(obs["curr_obj_com"], obs["wrist_err"]);
+    }
     (void)dt;
     return obs;
   }
@@ -1018,13 +1522,44 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     return false;
   }
 
-  RewardResult ComputeReward(const ObsDict& obs) const {
+  RewardResult ComputeReward(const ObsDict& obs) {
     std::unordered_map<std::string, mjtNum> values;
     bool terminated = false;
     const mjtNum pi = std::acos(static_cast<mjtNum>(-1.0));
 
-    if (task_.kind == MyoSuiteTaskKind::kPose ||
-        task_.kind == MyoSuiteTaskKind::kTorsoPose) {
+    if (task_.kind == MyoSuiteTaskKind::kMyoDmTrack) {
+      const mjtNum obj_com_err = Norm(ObsValue(obs, "obj_com_err"));
+      const mjtNum obj_rot_err =
+          QuaternionDistance(ObsValue(obs, "curr_obj_rot"),
+                             ObsValue(obs, "targ_obj_rot")) /
+          pi;
+      const mjtNum obj_reward =
+          std::exp(-50.0 * (obj_com_err + 0.1 * obj_rot_err));
+      const auto& targ_obj_com = ObsValue(obs, "targ_obj_com");
+      const auto& curr_obj_com = ObsValue(obs, "curr_obj_com");
+      const bool lift_bonus =
+          targ_obj_com.size() > 2 && curr_obj_com.size() > 2 &&
+          targ_obj_com[2] >= myodm_lift_z_ && curr_obj_com[2] >= myodm_lift_z_;
+      const mjtNum qpos_reward =
+          std::exp(-5.0 * SquaredNorm(ObsValue(obs, "hand_qpos_err")));
+      const mjtNum qvel_reward =
+          std::exp(-0.1 * SquaredNorm(ObsValue(obs, "hand_qvel_err")));
+      const mjtNum pose_reward = 0.35 * qpos_reward + 0.05 * qvel_reward;
+      const mjtNum base_error = Norm(ObsValue(obs, "base_error"));
+      const mjtNum base_reward = std::exp(-40.0 * base_error);
+      const bool myodm_done =
+          SquaredNorm(ObsValue(obs, "obj_com_err")) >= 0.25 * 0.25 ||
+          SquaredNorm(ObsValue(obs, "base_error")) >= 0.25 * 0.25;
+      values["pose"] = pose_reward;
+      values["object"] = obj_reward + base_reward;
+      values["bonus"] = lift_bonus ? 1.0 : 0.0;
+      values["penalty"] = myodm_done ? 1.0 : 0.0;
+      values["sparse"] = 0.0;
+      values["solved"] = 0.0;
+      values["done"] = myodm_done ? 1.0 : 0.0;
+      terminated = myodm_done;
+    } else if (task_.kind == MyoSuiteTaskKind::kPose ||
+               task_.kind == MyoSuiteTaskKind::kTorsoPose) {
       const mjtNum pose_dist = Norm(ObsValue(obs, "pose_err"));
       const mjtNum pose_thd =
           metadata_.pose_thd > 0.0 ? metadata_.pose_thd : 0.35;
@@ -1183,10 +1718,144 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
       values["solved"] =
           pos_dist < 0.025 && rot_dist < 0.262 && !drop ? 1.0 : 0.0;
       terminated = drop;
-    } else {
-      values["sparse"] = 0.0;
+    } else if (task_.kind == MyoSuiteTaskKind::kChallengeRunTrack) {
+      const auto& root_pos = ObsValue(obs, "model_root_pos");
+      const auto& root_vel = ObsValue(obs, "model_root_vel");
+      const mjtNum x = root_pos.size() > 0 ? root_pos[0] : 0.0;
+      const mjtNum y = root_pos.size() > 1 ? root_pos[1] : 0.0;
+      const mjtNum y_vel = root_vel.size() > 1 ? root_vel[1] : 0.0;
+      const bool random_track =
+          std::string_view(task_.id).find("Random") != std::string_view::npos;
+      const mjtNum start_pos = random_track ? 58.0 : 14.0;
+      const mjtNum end_pos = random_track ? -45.0 : -15.0;
+      const bool fallen = WalkDone(obs);
+      const bool win = y < end_pos;
+      const bool lose = x > 1.0 || x < -1.0 || y > start_pos + 2.0 || fallen;
+      values["act_reg"] = MeanSquare(ObsValue(obs, "act"));
+      values["pain"] = 0.0;
+      values["sparse"] = -y_vel;
+      values["solved"] = win ? 1.0 : 0.0;
+      values["done"] = (win || lose) ? 1.0 : 0.0;
+      terminated = win || lose;
+    } else if (task_.kind == MyoSuiteTaskKind::kChallengeChaseTag) {
+      const auto& root_pos = ObsValue(obs, "model_root_pos");
+      const auto& opponent_pose = ObsValue(obs, "opponent_pose");
+      const mjtNum dx = (root_pos.size() > 0 ? root_pos[0] : 0.0) -
+                        (opponent_pose.size() > 0 ? opponent_pose[0] : 0.0);
+      const mjtNum dy = (root_pos.size() > 1 ? root_pos[1] : 0.0) -
+                        (opponent_pose.size() > 1 ? opponent_pose[1] : 0.0);
+      const mjtNum distance = std::sqrt(dx * dx + dy * dy);
+      const bool win = distance <= 0.5;
+      const auto pelvis = BodyXpos(BodyId("pelvis"));
+      const bool out_of_bounds =
+          std::abs(pelvis[0]) > 6.5 || std::abs(pelvis[1]) > 6.5;
+      const bool lose = data_->time >= 20.0 || out_of_bounds;
+      values["act_reg"] = ActMagnitude(obs);
+      values["distance"] = distance;
+      values["lose"] = lose ? 1.0 : 0.0;
+      values["sparse"] =
+          win ? 1.0 - std::round(data_->time * 100.0) / 100.0 / 20.0 : 0.0;
+      values["solved"] = win ? 1.0 : 0.0;
+      values["done"] = (win || lose) ? 1.0 : 0.0;
+      terminated = win || lose;
+    } else if (task_.kind == MyoSuiteTaskKind::kChallengeTableTennis) {
+      const mjtNum reach_dist = Norm(ObsValue(obs, "reach_err"));
+      const mjtNum palm_dist = Norm(ObsValue(obs, "palm_err"));
+      const mjtNum paddle_quat_err = Norm(ObsValue(obs, "padde_ori_err"));
+      const int torso_joint = JointId("flex_extension");
+      const mjtNum torso_err =
+          torso_joint >= 0
+              ? std::abs(data_->qpos[model_->jnt_qposadr[torso_joint]])
+              : 0.0;
+      const auto& ball_pos = ObsValue(obs, "ball_pos");
+      const auto& touching = ObsValue(obs, "touching_info");
+      const bool paddle_touch = !touching.empty() && touching[0] == 1.0;
+      const bool ball_done =
+          data_->time > 20.0 || (ball_pos.size() > 2 && ball_pos[2] < 0.3);
+      values["reach_dist"] = std::exp(-reach_dist);
+      values["palm_dist"] = std::exp(-5.0 * palm_dist);
+      values["paddle_quat"] = std::exp(-5.0 * paddle_quat_err);
+      values["torso_up"] = std::exp(-5.0 * torso_err);
+      values["act_reg"] = -ActMagnitude(obs);
+      values["sparse"] = paddle_touch ? 1.0 : 0.0;
       values["solved"] = 0.0;
-      values["done"] = 0.0;
+      values["done"] = ball_done ? 1.0 : 0.0;
+      terminated = ball_done;
+    } else if (task_.kind == MyoSuiteTaskKind::kChallengeBimanual) {
+      const mjtNum reach_dist = Norm(ObsValue(obs, "reach_err"));
+      const mjtNum pass_dist = Norm(ObsValue(obs, "pass_err"));
+      const auto& obj_pos = ObsValue(obs, "obj_pos");
+      const auto& palm_pos = ObsValue(obs, "palm_pos");
+      auto goal_pos = ObsValue(obs, "goal_pos");
+      if (goal_pos.size() >= 3) {
+        goal_pos[2] = 1.09;
+      }
+      mjtNum lift_height = 0.0;
+      if (obj_pos.size() >= 3 && palm_pos.size() >= 3) {
+        const mjtNum obj_lift = obj_pos[2] - bimanual_init_obj_z_;
+        const mjtNum palm_lift = palm_pos[2] - bimanual_init_palm_z_;
+        lift_height =
+            5.0 * std::exp(-10.0 * ((obj_lift - 0.2) * (obj_lift - 0.2) +
+                                    (palm_lift - 0.2) * (palm_lift - 0.2))) -
+            5.0;
+      }
+      mjtNum fin_open = 0.0;
+      mjtNum fin_dis = 0.0;
+      for (const char* key : {"fin0", "fin1", "fin2", "fin3", "fin4"}) {
+        fin_open += Norm(Subtract(ObsValue(obs, key), palm_pos));
+        fin_dis += Norm(Subtract(ObsValue(obs, key), obj_pos));
+      }
+      const auto& elbow = ObsValue(obs, "elbow_fle");
+      const mjtNum elbow_value = elbow.empty() ? 0.0 : elbow[0];
+      const mjtNum elbow_err =
+          5.0 * std::exp(-10.0 * (elbow_value - 1.0) * (elbow_value - 1.0)) -
+          5.0;
+      const mjtNum goal_dist = Norm(Subtract(obj_pos, goal_pos));
+      const auto& touching = ObsValue(obs, "touching_body");
+      if (touching.size() > 3 && touching[3] == 1.0) {
+        ++bimanual_goal_touch_;
+      }
+      const bool solved = goal_dist < 0.17 && bimanual_goal_touch_ >= 10;
+      const bool done = data_->time > 10.0 ||
+                        (obj_pos.size() > 2 && obj_pos[2] < 0.3) || solved;
+      values["reach_dist"] = reach_dist + std::log(reach_dist + 1e-6);
+      values["pass_err"] = pass_dist + std::log(pass_dist + 1e-3);
+      values["act"] = ActMagnitude(obs);
+      values["fin_open"] = std::exp(-5.0 * fin_open);
+      values["fin_dis"] = fin_dis + std::log(fin_dis + 1e-6);
+      values["lift_bonus"] = elbow_err;
+      values["lift_height"] = lift_height;
+      values["goal_dist"] = goal_dist;
+      values["sparse"] = 0.0;
+      values["solved"] = solved ? 1.0 : 0.0;
+      values["done"] = done ? 1.0 : 0.0;
+      terminated = done;
+    } else if (task_.kind == MyoSuiteTaskKind::kChallengeSoccer) {
+      const auto& root_pos = ObsValue(obs, "model_root_pos");
+      const auto& ball_pos = ObsValue(obs, "ball_pos");
+      std::vector<mjtNum> root_xyz(3, 0.0);
+      for (std::size_t i = 0; i < root_xyz.size() && i < root_pos.size(); ++i) {
+        root_xyz[i] = root_pos[i];
+      }
+      const mjtNum distance = Norm(Subtract(root_xyz, ball_pos));
+      const bool goal_scored = ball_pos.size() >= 3 && ball_pos[0] >= 50.0 &&
+                               ball_pos[1] >= -3.3 && ball_pos[1] <= 3.3 &&
+                               ball_pos[2] >= 0.0 && ball_pos[2] <= 2.2;
+      const auto pelvis = BodyXpos(BodyId("pelvis"));
+      const bool fallen = pelvis[2] < 0.2;
+      const bool done = goal_scored || data_->time >= 10.0 || fallen;
+      values["goal_scored"] = goal_scored ? 1.0 : 0.0;
+      values["time_cost"] = data_->time;
+      values["act_reg"] = ActMagnitude(obs);
+      values["pain"] = 0.0;
+      values["distance"] = distance;
+      values["sparse"] = done ? 1.0 : 0.0;
+      values["solved"] = goal_scored ? 1.0 : 0.0;
+      values["done"] = done ? 1.0 : 0.0;
+      terminated = done;
+    } else {
+      throw std::runtime_error("Unhandled MyoSuite reward task kind: " +
+                               std::string(task_.id));
     }
 
     RewardResult result;

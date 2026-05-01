@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import sys
 import types
@@ -23,8 +24,6 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw
-
-_REGISTERED = False
 
 
 def _bootstrap_envpool_namespace() -> None:
@@ -43,12 +42,10 @@ def _bootstrap_envpool_namespace() -> None:
 
 
 def _make_gymnasium(task_id: str, **kwargs: object):
-    global _REGISTERED
     _bootstrap_envpool_namespace()
-    if not _REGISTERED:
-        import envpool.mujoco.myosuite.registration  # noqa: F401
-
-        _REGISTERED = True
+    if not getattr(_make_gymnasium, "_registered", False):
+        importlib.import_module("envpool.mujoco.myosuite.registration")
+        _make_gymnasium._registered = True  # type: ignore[attr-defined]
     from envpool.registration import make_gymnasium
 
     return make_gymnasium(task_id, **kwargs)

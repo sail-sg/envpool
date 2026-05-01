@@ -26,6 +26,9 @@ from envpool.registration import list_all_envs, make_gymnasium, make_spec
 
 _TASKS = tuple(MYOSUITE_TASKS)
 _TASK_IDS = tuple(task["id"] for task in _TASKS)
+_ORACLE_NUMPY2_BROKEN_TASKS = tuple(
+    task for task in _TASKS if task["oracle_numpy2_broken"]
+)
 _DETERMINISM_STEPS = 8
 _INFO_KEYS = {
     "task_id",
@@ -106,6 +109,22 @@ class MyoSuiteTest(absltest.TestCase):
                     self.assertFalse(np.any(np.isnan(obs)))
                     self.assertFalse(np.any(np.isnan(rew)))
                     self.assertTrue(_INFO_KEYS.issubset(info.keys()))
+                finally:
+                    env.close()
+
+    def test_oracle_skipped_tasks_keep_native_surface(self) -> None:
+        """Oracle skips must not collapse the native environment surface."""
+        self.assertLen(_ORACLE_NUMPY2_BROKEN_TASKS, 9)
+        for task in _ORACLE_NUMPY2_BROKEN_TASKS:
+            task_id = task["id"]
+            with self.subTest(task_id=task_id):
+                env = make_gymnasium(task_id, num_envs=1, seed=11)
+                try:
+                    obs, _ = env.reset()
+                    self.assertFalse(np.all(obs == 0), task_id)
+                    action = np.zeros((1, task["action_dim"]), dtype=np.float32)
+                    obs, *_ = env.step(action)
+                    self.assertFalse(np.all(obs == 0), task_id)
                 finally:
                     env.close()
 

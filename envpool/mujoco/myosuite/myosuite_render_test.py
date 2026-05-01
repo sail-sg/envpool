@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import subprocess
@@ -25,8 +26,9 @@ from typing import Any
 import numpy as np
 from absl.testing import absltest
 
-import envpool.mujoco.myosuite.registration  # noqa: F401
 from envpool.registration import make_gymnasium
+
+importlib.import_module("envpool.mujoco.myosuite.registration")
 
 _TASK_IDS = (
     "myoFingerReachFixed-v0",

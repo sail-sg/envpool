@@ -17,6 +17,7 @@ load("@rules_cc//cc:cc_library.bzl", "cc_library")
 exports_files([
     "oracle_requirements.txt",
     "myosuite_source.BUILD",
+    "myosuite_reference_data.h",
     "myosuite_tasks.h",
     "myosuite_tasks.json",
     "simhive_source.BUILD",
@@ -25,6 +26,7 @@ exports_files([
 cc_library(
     name = "myosuite_tasks",
     hdrs = [
+        "myosuite_reference_data.h",
         "myosuite_task_metadata.h",
         "myosuite_tasks.h",
     ],

@@ -42,6 +42,47 @@ SCALAR_DEFAULTS = {
     "target_y_vel": 0.0,
 }
 
+ORACLE_BROKEN_SOURCE_METADATA = {
+    "myosuite.envs.myo.myochallenge.bimanual_v0:BimanualEnvV1": {
+        "obs_keys": [
+            "time",
+            "myohand_qpos",
+            "myohand_qvel",
+            "pros_hand_qpos",
+            "pros_hand_qvel",
+            "object_qpos",
+            "object_qvel",
+            "touching_body",
+        ],
+        "rwd_keys_wt": {
+            "act": 0.0,
+            "fin_dis": -0.5,
+            "pass_err": -1.0,
+            "reach_dist": -0.1,
+        },
+    },
+    "myosuite.envs.myo.myochallenge.soccer_v0:SoccerEnvV0": {
+        "obs_keys": [
+            "internal_qpos",
+            "internal_qvel",
+            "grf",
+            "torso_angle",
+            "ball_pos",
+            "model_root_pos",
+            "model_root_vel",
+            "muscle_length",
+            "muscle_velocity",
+            "muscle_force",
+        ],
+        "rwd_keys_wt": {
+            "act_reg": -100.0,
+            "goal_scored": 1000.0,
+            "pain": -10.0,
+            "time_cost": -0.01,
+        },
+    },
+}
+
 
 def _csv(items: list[Any] | None) -> str:
     if not items:
@@ -96,7 +137,7 @@ def _entry(
     task: dict[str, Any], metadata: dict[str, Any] | None
 ) -> dict[str, Any]:
     if metadata is None:
-        metadata = {}
+        metadata = ORACLE_BROKEN_SOURCE_METADATA.get(task["entry_point"], {})
     low_ranges: list[str] = []
     high_ranges: list[str] = []
     for i, _target_site in enumerate(metadata.get("target_sites") or []):
