@@ -38,6 +38,7 @@ class HopperEnvFns {
         "legacy_healthy_reward"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
         "xml_file"_.Bind(std::string("hopper.xml")),
+        "gymnasium_v5_render_camera"_.Bind(false),
         "ctrl_cost_weight"_.Bind(1e-3), "forward_reward_weight"_.Bind(1.0),
         "healthy_reward"_.Bind(1.0), "velocity_min"_.Bind(-10.0),
         "velocity_max"_.Bind(10.0), "healthy_state_min"_.Bind(-100.0),
@@ -79,6 +80,7 @@ class HopperEnvBase : public Env<EnvSpecT>, public MujocoEnv {
 
   bool terminate_when_unhealthy_, no_pos_;
   bool legacy_healthy_reward_;
+  bool gymnasium_v5_render_camera_;
   mjtNum ctrl_cost_weight_, forward_reward_weight_;
   mjtNum healthy_reward_, healthy_z_min_;
   mjtNum velocity_min_, velocity_max_;
@@ -103,6 +105,7 @@ class HopperEnvBase : public Env<EnvSpecT>, public MujocoEnv {
         terminate_when_unhealthy_(spec.config["terminate_when_unhealthy"_]),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
         legacy_healthy_reward_(spec.config["legacy_healthy_reward"_]),
+        gymnasium_v5_render_camera_(spec.config["gymnasium_v5_render_camera"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
@@ -127,6 +130,20 @@ class HopperEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     std::memcpy(qpos0_, data_->qpos, sizeof(mjtNum) * model_->nq);
     std::memcpy(qvel0_, data_->qvel, sizeof(mjtNum) * model_->nv);
 #endif
+  }
+
+  bool RenderCamera(mjvCamera* camera) override {
+    if (!gymnasium_v5_render_camera_) {
+      return false;
+    }
+    camera->trackbodyid = 2;
+    camera->distance = 3.0;
+    camera->lookat[0] = 0.0;
+    camera->lookat[1] = 0.0;
+    camera->lookat[2] = 1.15;
+    camera->elevation = -20.0;
+    ApplyGymnasiumDefaultCameraId(camera);
+    return true;
   }
 
   bool IsDone() override { return done_; }

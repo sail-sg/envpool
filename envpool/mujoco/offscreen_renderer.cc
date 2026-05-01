@@ -534,8 +534,6 @@ void OffscreenRenderer::UpdateCamera(const mjModel* model, const mjData* data,
   }
   if (camera_id == -1 && camera_override != nullptr) {
     camera_ = *camera_override;
-    camera_.type = mjCAMERA_FREE;
-    camera_.fixedcamid = -1;
     return;
   }
   if (camera_id == -1 && camera_policy_ == CameraPolicy::kGymLike) {

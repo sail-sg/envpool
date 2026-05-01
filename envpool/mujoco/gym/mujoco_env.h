@@ -224,6 +224,7 @@ class MujocoEnv : public RenderableEnv {
     mjv_defaultCamera(camera);
     camera->type = mjCAMERA_FREE;
     camera->fixedcamid = -1;
+    camera->trackbodyid = -1;
     camera->distance = model_->stat.extent;
     if (model_->ngeom == 0) {
       return;
@@ -231,6 +232,17 @@ class MujocoEnv : public RenderableEnv {
     for (int axis = 0; axis < 3; ++axis) {
       camera->lookat[axis] = MedianGeomPosition(data_, model_->ngeom, axis);
     }
+  }
+
+  void ApplyGymnasiumDefaultCameraId(mjvCamera* camera) const {
+    int track_camera_id = mj_name2id(model_, mjOBJ_CAMERA, "track");
+    if (track_camera_id >= 0) {
+      camera->type = mjCAMERA_FIXED;
+      camera->fixedcamid = track_camera_id;
+      return;
+    }
+    camera->type = mjCAMERA_FREE;
+    camera->fixedcamid = -1;
   }
 
   mjtNum* PrepareObservation(Array* target) {

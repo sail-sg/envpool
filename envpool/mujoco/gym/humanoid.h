@@ -40,6 +40,7 @@ class HumanoidEnvFns {
         "terminate_when_unhealthy"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
         "xml_file"_.Bind(std::string("humanoid.xml")),
+        "gymnasium_v5_render_camera"_.Bind(false),
         "ctrl_cost_weight"_.Bind(0.1), "healthy_reward"_.Bind(5.0),
         "healthy_z_min"_.Bind(1.0), "healthy_z_max"_.Bind(2.0),
         "contact_cost_weight"_.Bind(5e-7), "contact_cost_max"_.Bind(10.0),
@@ -93,6 +94,7 @@ class HumanoidEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   bool terminate_when_unhealthy_, no_pos_, use_contact_force_;
   bool legacy_healthy_reward_, exclude_worldbody_observations_;
   bool exclude_root_actuator_forces_;
+  bool gymnasium_v5_render_camera_;
   mjtNum ctrl_cost_weight_, forward_reward_weight_, healthy_reward_;
   mjtNum healthy_z_min_, healthy_z_max_;
   mjtNum contact_cost_weight_, contact_cost_max_;
@@ -120,6 +122,7 @@ class HumanoidEnvBase : public Env<EnvSpecT>, public MujocoEnv {
             spec.config["exclude_worldbody_observations"_]),
         exclude_root_actuator_forces_(
             spec.config["exclude_root_actuator_forces"_]),
+        gymnasium_v5_render_camera_(spec.config["gymnasium_v5_render_camera"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
@@ -141,6 +144,20 @@ class HumanoidEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     std::memcpy(qpos0_, data_->qpos, sizeof(mjtNum) * model_->nq);
     std::memcpy(qvel0_, data_->qvel, sizeof(mjtNum) * model_->nv);
 #endif
+  }
+
+  bool RenderCamera(mjvCamera* camera) override {
+    if (!gymnasium_v5_render_camera_) {
+      return false;
+    }
+    camera->trackbodyid = 1;
+    camera->distance = 4.0;
+    camera->lookat[0] = 0.0;
+    camera->lookat[1] = 0.0;
+    camera->lookat[2] = 2.0;
+    camera->elevation = -20.0;
+    ApplyGymnasiumDefaultCameraId(camera);
+    return true;
   }
 
   bool IsDone() override { return done_; }

@@ -191,6 +191,14 @@ render API is unsupported.
     :width: 900px
     :align: center
 
+.. image:: ../_static/render_samples/myosuite_myochallenge_official_compare.png
+    :width: 900px
+    :align: center
+
+.. image:: ../_static/render_samples/myosuite_myodm_official_compare.png
+    :width: 900px
+    :align: center
+
 .. image:: ../_static/render_samples/vizdoom_oracle_compare.png
     :width: 900px
     :align: center
