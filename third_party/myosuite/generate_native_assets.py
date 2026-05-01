@@ -120,7 +120,13 @@ def _assembled_source(
         simhive = package / "simhive"
         simhive.mkdir(exist_ok=True)
         for key, dirname in _SIMHIVE_DIRS.items():
-            shutil.copytree(sim_roots[key], simhive / dirname, symlinks=True)
+            dst = simhive / dirname
+            if dst.exists() or dst.is_symlink():
+                if dst.is_dir() and not dst.is_symlink():
+                    shutil.rmtree(dst)
+                else:
+                    dst.unlink()
+            shutil.copytree(sim_roots[key], dst, symlinks=True)
         old_path = list(sys.path)
         for name in tuple(sys.modules):
             if name == "myosuite" or name.startswith("myosuite."):
