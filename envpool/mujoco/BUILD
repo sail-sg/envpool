@@ -314,15 +314,17 @@ cc_library(
     ],
 )
 
-pybind_extension(
-    name = "myosuite_envpool",
+cc_library(
+    name = "myosuite_envpool_module",
     srcs = [
         "myosuite/mujoco_plugin_init.cc",
         "myosuite/myosuite_envpool.cc",
     ],
     # The native MyoSuite runtime is header-only under myosuite_env.h and is
-    # compiled into this extension. Coverage instrumentation changes Linux
-    # floating-point codegen enough to make long oracle rollouts diverge.
+    # compiled into this module object. Coverage instrumentation changes Linux
+    # floating-point codegen enough to make long oracle rollouts diverge; the
+    # pybind_extension wrapper still links under coverage so instrumented
+    # transitive deps resolve their coverage runtime symbols.
     copts = select({
         "//:linux_x86_64": [
             # CI fastbuild otherwise compiles the header-only MyoSuite runtime
@@ -345,6 +347,14 @@ pybind_extension(
     deps = [
         ":myosuite_env",
         "//envpool/core:py_envpool",
+    ],
+    alwayslink = True,
+)
+
+pybind_extension(
+    name = "myosuite_envpool",
+    deps = [
+        ":myosuite_envpool_module",
     ],
 )
 
