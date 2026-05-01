@@ -116,12 +116,97 @@ cc_binary(
     }),
     linkshared = True,
     linkstatic = True,
-    deps = [":mujoco_lib"],
+    deps = [":mujoco_shared_export_lib"],
 )
 
 filegroup(
     name = "mujoco_shared_lib",
     srcs = [":libmujoco.so.3.6.0"],
+)
+
+cc_library(
+    name = "mujoco_shared_export_lib",
+    srcs = (
+        glob(["src/cc/*.h"]) + glob([
+            "src/engine/*.c",
+            "src/engine/*.cc",
+            "src/engine/*.h",
+        ]) + glob([
+            "src/thread/*.c",
+            "src/thread/*.cc",
+            "src/thread/*.h",
+        ]) + glob([
+            "src/render/classic/*.c",
+            "src/render/classic/*.cc",
+            "src/render/classic/*.h",
+        ]) + glob([
+            "src/render/classic/glad/*",
+        ]) + glob([
+            "src/user/*.c",
+            "src/user/*.cc",
+            "src/user/*.h",
+        ]) + glob([
+            "src/xml/*.c",
+            "src/xml/*.cc",
+            "src/xml/*.h",
+        ])
+    ),
+    hdrs = glob([
+        "include/mujoco/*.h",
+        "include/mujoco/experimental/**/*.h",
+        "src/render/classic/**/*.h",
+        "src/render/classic/**/*.inc",
+    ]),
+    copts = [
+        "-DCCD_STATIC_DEFINE",
+    ] + select({
+        "@envpool//:windows": [],
+        "//conditions:default": [
+            "-D_GNU_SOURCE",
+            "-Wno-int-in-bool-context",
+            "-Wno-maybe-uninitialized",
+            "-Wno-sign-compare",
+            "-Wno-stringop-overflow",
+            "-Wno-stringop-truncation",
+        ],
+    }) + select({
+        "@envpool//:linux_x86_64": [
+            "-O3",
+            "-mavx",
+            "-mpclmul",
+        ],
+        "//conditions:default": [],
+    }),
+    cxxopts = select({
+        "@envpool//:windows": ["/std:c++20"],
+        "//conditions:default": ["-std=c++20"],
+    }),
+    defines = ["MUJOCO_DLL_EXPORTS"] + select({
+        "@envpool//:linux_x86_64": ["mjUSEPLATFORMSIMD"],
+        "//conditions:default": [],
+    }),
+    features = ["-coverage"],
+    includes = [
+        "include",
+        "include/mujoco",
+        "src",
+    ],
+    linkopts = select({
+        "@envpool//:linux": [
+            "-ldl",
+        ],
+        "//conditions:default": [],
+    }),
+    linkstatic = 1,
+    deps = [
+        "@ccd",
+        "@lodepng",
+        "@marchingcubecpp",
+        "@qhull",
+        "@tinyobjloader",
+        "@tinyxml2",
+    ],
+    alwayslink = True,
 )
 
 cc_library(
