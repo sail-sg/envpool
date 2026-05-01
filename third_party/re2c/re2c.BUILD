@@ -43,5 +43,6 @@ cc_binary(
         ".",
         "bootstrap",
     ],
+    visibility = ["//visibility:public"],
     deps = ["@envpool//third_party/re2c:config"],
 )
