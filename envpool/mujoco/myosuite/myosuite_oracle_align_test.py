@@ -24,7 +24,6 @@ from __future__ import annotations
 import importlib
 import json
 import os
-import platform
 import subprocess
 import sys
 import tempfile
@@ -71,23 +70,6 @@ _BITWISE_ROLLOUT_TASK_IDS = frozenset({
     "myoFingerReachFixed-v0",
     "myoFingerPoseFixed-v0",
 })
-_LINUX_X86_64_WHEEL_DRIFT_ROLLOUT_TASK_IDS = frozenset({
-    # The oracle and EnvPool both use MuJoCo 3.6.0 here, but on Linux x86_64
-    # the oracle loads the official prebuilt wheel while EnvPool links the
-    # Bazel source build. MuJoCo documents that numerical reproducibility is
-    # not guaranteed across builds; keep the residual scoped to the two tasks
-    # where CI observes single-digit micro float32 rollout deltas.
-    "myoFingerReachFixed-v0",
-    "myoFingerPoseFixed-v0",
-})
-_MUJOCO_BINARY_DRIFT_ROLLOUT_TASK_IDS = frozenset({
-    # These match ctrl/act exactly; qpos/qvel drift starts inside mj_step when
-    # comparing EnvPool's Bazel-linked MuJoCo 3.6.0 to the oracle subprocess'
-    # pinned MuJoCo Python wheel. Keep the residual threshold scoped here.
-    "myoHandKeyTurnFixed-v0",
-    "myoHandObjHoldFixed-v0",
-    "myoHandPenTwirlFixed-v0",
-})
 _EXPECTED_ORACLE_NUMPY2_BROKEN_IDS = frozenset({
     "myoChallengeBimanual-v0",
     "myoSarcChallengeBimanual-v0",
@@ -99,6 +81,20 @@ _EXPECTED_ORACLE_NUMPY2_BROKEN_IDS = frozenset({
     "myoFatiChallengeSoccerP1-v0",
     "myoFatiChallengeSoccerP2-v0",
 })
+_SYNC_STATE_KEYS = (
+    "qpos0",
+    "qvel0",
+    "act0",
+    "qacc0",
+    "qacc_warmstart0",
+    "ctrl",
+    "site_pos",
+    "site_quat",
+    "body_pos",
+    "body_quat",
+    "mocap_pos",
+    "mocap_quat",
+)
 
 
 def _oracle_task_ids() -> tuple[str, ...]:
@@ -119,24 +115,6 @@ def _oracle_rollout_task_ids() -> tuple[str, ...]:
 
 def _task_metadata_by_id() -> dict[str, MyoSuiteTask]:
     return {task["id"]: task for task in MYOSUITE_TASKS}
-
-
-def _is_linux_x86_64() -> bool:
-    return platform.system() == "Linux" and platform.machine() in {
-        "AMD64",
-        "x86_64",
-    }
-
-
-def _rollout_tolerance(task_id: str) -> tuple[float, float] | None:
-    if task_id in _MUJOCO_BINARY_DRIFT_ROLLOUT_TASK_IDS:
-        return (1e-5, 1e-4)
-    if (
-        _is_linux_x86_64()
-        and task_id in _LINUX_X86_64_WHEEL_DRIFT_ROLLOUT_TASK_IDS
-    ):
-        return (1e-5, 1e-4)
-    return None
 
 
 def _oracle_probe_path() -> Path:
@@ -184,10 +162,14 @@ def _oracle_mujoco_preload_path() -> Path | None:
 
 
 def _run_oracle_probe(
-    mode: str, task_ids: tuple[str, ...] = (), steps: int = _ROLLOUT_STEPS
+    mode: str,
+    task_ids: tuple[str, ...] = (),
+    steps: int = _ROLLOUT_STEPS,
+    sync_states: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as out:
         out_path = Path(out.name)
+    sync_path: Path | None = None
     cmd = [
         str(_oracle_probe_path()),
         "--mode",
@@ -201,6 +183,11 @@ def _run_oracle_probe(
     ]
     for task_id in task_ids:
         cmd.extend(["--task_id", task_id])
+    if sync_states is not None:
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as sync:
+            sync_path = Path(sync.name)
+        sync_path.write_text(json.dumps(sync_states, sort_keys=True))
+        cmd.extend(["--sync_state", str(sync_path)])
     env = os.environ.copy()
     env["ROBOHIVE_VERBOSITY"] = "SILENT"
     mujoco_preload = _oracle_mujoco_preload_path()
@@ -233,6 +220,8 @@ def _run_oracle_probe(
         return cast(dict[str, Any], json.loads(out_path.read_text()))
     finally:
         out_path.unlink(missing_ok=True)
+        if sync_path is not None:
+            sync_path.unlink(missing_ok=True)
 
 
 def _run_oracle_space_reports(
@@ -246,6 +235,14 @@ def _run_oracle_space_reports(
             raise AssertionError(report["version"])
         tasks.update(cast(dict[str, dict[str, Any]], report["tasks"]))
     return tasks
+
+
+def _sync_state_from_info(info: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: np.asarray(info[key][0], dtype=np.float64).tolist()
+        for key in _SYNC_STATE_KEYS
+        if key in info
+    }
 
 
 class MyoSuiteOracleAlignTest(absltest.TestCase):
@@ -307,18 +304,28 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
 
     def test_oracle_rollout_surface_except_numpy2_broken_ids(self) -> None:
         """Exercise nontrivial rollouts with oracle-generated actions."""
-        report = _run_oracle_probe("trace", _oracle_rollout_task_ids())
-        oracle_tasks = cast(dict[str, dict[str, Any]], report["tasks"])
-        for task in MYOSUITE_TASKS:
-            task_id = task["id"]
-            if task_id in MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS:
-                continue
-            if task_id not in _ROLLOUT_TASK_IDS:
-                continue
-            with self.subTest(task_id=task_id):
+        rollout_task_ids = _oracle_rollout_task_ids()
+        envpools: dict[str, Any] = {}
+        envpool_reset_obs: dict[str, np.ndarray] = {}
+        sync_states: dict[str, dict[str, Any]] = {}
+        try:
+            for task_id in rollout_task_ids:
                 envpool = make_gymnasium(task_id, num_envs=1, seed=5)
-                try:
-                    envpool_obs, _ = envpool.reset()
+                envpool_obs, info = envpool.reset()
+                envpools[task_id] = envpool
+                envpool_reset_obs[task_id] = envpool_obs
+                sync_states[task_id] = _sync_state_from_info(info)
+
+            report = _run_oracle_probe(
+                "trace", rollout_task_ids, sync_states=sync_states
+            )
+            oracle_tasks = cast(dict[str, dict[str, Any]], report["tasks"])
+            task_metadata = _task_metadata_by_id()
+            for task_id in rollout_task_ids:
+                task = task_metadata[task_id]
+                with self.subTest(task_id=task_id):
+                    envpool = envpools[task_id]
+                    envpool_obs = envpool_reset_obs[task_id]
                     oracle_task = oracle_tasks[task_id]
                     self.assertLen(oracle_task["obs"], _ROLLOUT_STEPS + 1)
                     self.assertLen(oracle_task["actions"], _ROLLOUT_STEPS)
@@ -339,7 +346,6 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
                         self.assertEqual(envpool_step[1].shape, (1,))
                         self.assertEqual(envpool_step[2].shape, (1,))
                         self.assertEqual(envpool_step[3].shape, (1,))
-                        rollout_tolerance = _rollout_tolerance(task_id)
                         if task_id in _BITWISE_ROLLOUT_TASK_IDS:
                             oracle_obs = np.asarray(
                                 oracle_task["obs"][step_id + 1],
@@ -349,69 +355,15 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
                                 oracle_task["rewards"][step_id],
                                 dtype=np.float32,
                             )
-                            if rollout_tolerance is None:
-                                np.testing.assert_array_equal(
-                                    envpool_step[0][0].astype(np.float32),
-                                    oracle_obs,
-                                    err_msg=f"{task_id} step {step_id} obs",
-                                )
-                                self.assertEqual(
-                                    float(envpool_step[1][0]),
-                                    float(oracle_reward),
-                                    msg=f"{task_id} step {step_id} reward",
-                                )
-                            else:
-                                atol, rtol = rollout_tolerance
-                                np.testing.assert_allclose(
-                                    envpool_step[0][0].astype(np.float32),
-                                    oracle_obs,
-                                    atol=atol,
-                                    rtol=rtol,
-                                    err_msg=f"{task_id} step {step_id} obs",
-                                )
-                                np.testing.assert_allclose(
-                                    np.asarray(
-                                        envpool_step[1][0],
-                                        dtype=np.float32,
-                                    ),
-                                    oracle_reward,
-                                    atol=atol,
-                                    rtol=rtol,
-                                    err_msg=f"{task_id} step {step_id} reward",
-                                )
-                            self.assertEqual(
-                                bool(envpool_step[2][0]),
-                                bool(oracle_task["terminated"][step_id]),
-                                msg=f"{task_id} step {step_id} terminated",
-                            )
-                            self.assertEqual(
-                                bool(envpool_step[3][0]),
-                                bool(oracle_task["truncated"][step_id]),
-                                msg=f"{task_id} step {step_id} truncated",
-                            )
-                        elif rollout_tolerance is not None:
-                            atol, rtol = rollout_tolerance
-                            np.testing.assert_allclose(
+                            np.testing.assert_array_equal(
                                 envpool_step[0][0].astype(np.float32),
-                                np.asarray(
-                                    oracle_task["obs"][step_id + 1],
-                                    dtype=np.float32,
-                                ),
-                                atol=atol,
-                                rtol=rtol,
+                                oracle_obs,
                                 err_msg=f"{task_id} step {step_id} obs",
                             )
-                            np.testing.assert_allclose(
-                                np.asarray(
-                                    envpool_step[1][0], dtype=np.float32
-                                ),
-                                np.asarray(
-                                    oracle_task["rewards"][step_id],
-                                    dtype=np.float32,
-                                ),
-                                atol=atol,
-                                rtol=rtol,
-                                err_msg=f"{task_id} step {step_id} reward",
+                            self.assertEqual(
+                                float(envpool_step[1][0]),
+                                float(oracle_reward),
+                                msg=f"{task_id} step {step_id} reward",
                             )
                             self.assertEqual(
                                 bool(envpool_step[2][0]),
@@ -427,8 +379,12 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
                             oracle_task["truncated"][step_id]
                         ):
                             break
-                finally:
+        finally:
+            for envpool in envpools.values():
+                try:
                     envpool.close()
+                except Exception:
+                    pass
 
 
 if __name__ == "__main__":

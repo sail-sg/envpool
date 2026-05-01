@@ -55,7 +55,7 @@ class MyoSuiteTest(absltest.TestCase):
             if arr0.dtype == object or arr1.dtype == object:
                 self.assertEqual(arr0.shape, arr1.shape)
             else:
-                np.testing.assert_allclose(arr0, arr1, err_msg=f"info[{key}]")
+                np.testing.assert_array_equal(arr0, arr1, err_msg=f"info[{key}]")
 
     def test_generated_registry_matches_official_surface(self) -> None:
         """Generated metadata must cover all pinned official MyoSuite IDs."""
@@ -144,7 +144,7 @@ class MyoSuiteTest(absltest.TestCase):
                 try:
                     obs0, info0 = env0.reset()
                     obs1, info1 = env1.reset()
-                    np.testing.assert_allclose(obs0, obs1)
+                    np.testing.assert_array_equal(obs0, obs1)
                     self._assert_info_equal(info0, info1)
                     for action in actions:
                         step0 = env0.step(action)
@@ -152,7 +152,7 @@ class MyoSuiteTest(absltest.TestCase):
                         for value0, value1 in zip(
                             step0[:4], step1[:4], strict=True
                         ):
-                            np.testing.assert_allclose(value0, value1)
+                            np.testing.assert_array_equal(value0, value1)
                         self._assert_info_equal(step0[4], step1[4])
                 finally:
                     env0.close()

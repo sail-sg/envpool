@@ -335,6 +335,57 @@ def _state_report(env: Any) -> dict[str, Any]:
     }
 
 
+def _state_array(
+    state: dict[str, Any], key: str, shape: tuple[int, ...]
+) -> np.ndarray | None:
+    value = state.get(key)
+    if value is None:
+        return None
+    array = np.asarray(value, dtype=np.float64)
+    size = int(np.prod(shape, dtype=np.int64))
+    if array.size < size:
+        raise ValueError(
+            f"sync state {key} has {array.size} values, expected {size}"
+        )
+    return array[:size].reshape(shape)
+
+
+def _assign_sync_array(
+    state: dict[str, Any], key: str, target: np.ndarray
+) -> None:
+    value = _state_array(state, key, target.shape)
+    if value is not None:
+        target[...] = value
+
+
+def _sync_to_envpool_reset_state(env: Any, state: dict[str, Any]) -> np.ndarray:
+    """Patch the official oracle to EnvPool's reset-time MuJoCo state once."""
+    sim = env.sim
+    model = sim.model
+    data = sim.data
+
+    _assign_sync_array(state, "site_pos", model.site_pos)
+    _assign_sync_array(state, "site_quat", model.site_quat)
+    _assign_sync_array(state, "body_pos", model.body_pos)
+    _assign_sync_array(state, "body_quat", model.body_quat)
+    if model.nmocap > 0:
+        _assign_sync_array(state, "mocap_pos", data.mocap_pos)
+        _assign_sync_array(state, "mocap_quat", data.mocap_quat)
+
+    qpos = _state_array(state, "qpos0", data.qpos.shape)
+    qvel = _state_array(state, "qvel0", data.qvel.shape)
+    act = _state_array(state, "act0", data.act.shape) if model.na > 0 else None
+    sim.set_state(time=0.0, qpos=qpos, qvel=qvel, act=act)
+
+    _assign_sync_array(state, "ctrl", data.ctrl)
+    _assign_sync_array(state, "qacc0", data.qacc)
+    _assign_sync_array(state, "qacc_warmstart0", data.qacc_warmstart)
+    if hasattr(env, "last_ctrl"):
+        env.last_ctrl = data.ctrl.copy()
+    sim.forward()
+    return env.get_obs()
+
+
 def _trace_info(info: dict[str, Any]) -> dict[str, Any]:
     scalar_info: dict[str, Any] = {}
     for key in ("rwd_dense", "rwd_sparse", "solved", "done", "time"):
@@ -401,6 +452,7 @@ def _trace_report(
     render_width: int,
     render_height: int,
     camera_id: int,
+    sync_states: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     official_myosuite, _, gym = _import_official()
     rng = np.random.default_rng(seed + 17)
@@ -411,6 +463,10 @@ def _trace_report(
             reset = env.reset(seed=seed)
             obs = reset[0] if isinstance(reset, tuple) else reset
             unwrapped = env.unwrapped
+            if sync_states is not None and task_id in sync_states:
+                obs = _sync_to_envpool_reset_state(
+                    unwrapped, sync_states[task_id]
+                )
             low = _array(env.action_space.low).astype(np.float32)
             high = _array(env.action_space.high).astype(np.float32)
             frames: list[Any] = []
@@ -477,11 +533,18 @@ def main() -> None:
     parser.add_argument("--render_width", type=int, default=64)
     parser.add_argument("--render_height", type=int, default=48)
     parser.add_argument("--camera_id", type=int, default=-1)
+    parser.add_argument("--sync_state")
     parser.add_argument("--task_id", action="append", default=[])
     parser.add_argument("--steps", type=int, default=64)
     parser.add_argument("--seed", type=int, default=5)
     args = parser.parse_args()
     _configure_linux_mujoco_renderer(args.render)
+
+    sync_states = (
+        json.loads(Path(args.sync_state).read_text())
+        if args.sync_state is not None
+        else None
+    )
 
     if args.mode == "space":
         report = _space_report(args.task_id)
@@ -496,6 +559,7 @@ def main() -> None:
             args.render_width,
             args.render_height,
             args.camera_id,
+            sync_states,
         )
     else:
         report = _metadata_report(args.task_id)

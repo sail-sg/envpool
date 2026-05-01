@@ -40,6 +40,8 @@
 
 namespace myosuite {
 
+constexpr int kMyoSuiteTestStatePad = 8192;
+
 using envpool::mujoco::PixelObservationEnvFns;
 using envpool::mujoco::RenderCameraIdOrDefault;
 using envpool::mujoco::RenderHeightOrDefault;
@@ -77,16 +79,28 @@ class MyoSuiteEnvFns {
         "info:qpos0"_.Bind(Spec<mjtNum>({2048})),
         "info:qvel0"_.Bind(Spec<mjtNum>({2048})),
         "info:act0"_.Bind(Spec<mjtNum>({2048})),
+        "info:qacc0"_.Bind(Spec<mjtNum>({2048})),
         "info:qacc_warmstart0"_.Bind(Spec<mjtNum>({2048})),
         "info:qpos"_.Bind(Spec<mjtNum>({2048})),
         "info:qvel"_.Bind(Spec<mjtNum>({2048})),
         "info:act"_.Bind(Spec<mjtNum>({2048})),
         "info:ctrl"_.Bind(Spec<mjtNum>({2048})),
+        "info:qacc"_.Bind(Spec<mjtNum>({2048})),
         "info:qacc_warmstart"_.Bind(Spec<mjtNum>({2048})),
+        "info:site_pos"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:site_quat"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:body_pos"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:body_quat"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:mocap_pos"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:mocap_quat"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
 #endif
         "info:model_nq"_.Bind(Spec<int>({})),
         "info:model_nv"_.Bind(Spec<int>({})),
-        "info:model_na"_.Bind(Spec<int>({})));
+        "info:model_na"_.Bind(Spec<int>({})),
+        "info:model_nu"_.Bind(Spec<int>({})),
+        "info:model_nsite"_.Bind(Spec<int>({})),
+        "info:model_nbody"_.Bind(Spec<int>({})),
+        "info:model_nmocap"_.Bind(Spec<int>({})));
   }
 
   template <typename Config>
@@ -145,12 +159,20 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
   std::vector<mjtNum> qpos0_pad_;
   std::vector<mjtNum> qvel0_pad_;
   std::vector<mjtNum> act0_pad_;
+  std::vector<mjtNum> qacc0_pad_;
   std::vector<mjtNum> qacc_warmstart0_pad_;
   std::vector<mjtNum> qpos_pad_;
   std::vector<mjtNum> qvel_pad_;
   std::vector<mjtNum> act_pad_;
   std::vector<mjtNum> ctrl_pad_;
+  std::vector<mjtNum> qacc_pad_;
   std::vector<mjtNum> qacc_warmstart_pad_;
+  std::vector<mjtNum> site_pos_pad_;
+  std::vector<mjtNum> site_quat_pad_;
+  std::vector<mjtNum> body_pos_pad_;
+  std::vector<mjtNum> body_quat_pad_;
+  std::vector<mjtNum> mocap_pos_pad_;
+  std::vector<mjtNum> mocap_quat_pad_;
 #endif
 
  public:
@@ -191,12 +213,20 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
         qpos0_pad_(2048, 0.0),
         qvel0_pad_(2048, 0.0),
         act0_pad_(2048, 0.0),
+        qacc0_pad_(2048, 0.0),
         qacc_warmstart0_pad_(2048, 0.0),
         qpos_pad_(2048, 0.0),
         qvel_pad_(2048, 0.0),
         act_pad_(2048, 0.0),
         ctrl_pad_(2048, 0.0),
-        qacc_warmstart_pad_(2048, 0.0)
+        qacc_pad_(2048, 0.0),
+        qacc_warmstart_pad_(2048, 0.0),
+        site_pos_pad_(kMyoSuiteTestStatePad, 0.0),
+        site_quat_pad_(kMyoSuiteTestStatePad, 0.0),
+        body_pos_pad_(kMyoSuiteTestStatePad, 0.0),
+        body_quat_pad_(kMyoSuiteTestStatePad, 0.0),
+        mocap_pos_pad_(kMyoSuiteTestStatePad, 0.0),
+        mocap_quat_pad_(kMyoSuiteTestStatePad, 0.0)
 #endif
   {
     ApplyMuscleCondition();
@@ -1880,6 +1910,7 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     std::fill(qpos0_pad_.begin(), qpos0_pad_.end(), 0.0);
     std::fill(qvel0_pad_.begin(), qvel0_pad_.end(), 0.0);
     std::fill(act0_pad_.begin(), act0_pad_.end(), 0.0);
+    std::fill(qacc0_pad_.begin(), qacc0_pad_.end(), 0.0);
     std::fill(qacc_warmstart0_pad_.begin(), qacc_warmstart0_pad_.end(), 0.0);
     for (int i = 0; i < model_->nq && i < 2048; ++i) {
       qpos0_pad_[i] = data_->qpos[i];
@@ -1891,6 +1922,7 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
       act0_pad_[i] = data_->act[i];
     }
     for (int i = 0; i < model_->nv && i < 2048; ++i) {
+      qacc0_pad_[i] = data_->qacc[i];
       qacc_warmstart0_pad_[i] = data_->qacc_warmstart[i];
     }
 #endif
@@ -1902,12 +1934,20 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     std::fill(qvel_pad_.begin(), qvel_pad_.end(), 0.0);
     std::fill(act_pad_.begin(), act_pad_.end(), 0.0);
     std::fill(ctrl_pad_.begin(), ctrl_pad_.end(), 0.0);
+    std::fill(qacc_pad_.begin(), qacc_pad_.end(), 0.0);
     std::fill(qacc_warmstart_pad_.begin(), qacc_warmstart_pad_.end(), 0.0);
+    std::fill(site_pos_pad_.begin(), site_pos_pad_.end(), 0.0);
+    std::fill(site_quat_pad_.begin(), site_quat_pad_.end(), 0.0);
+    std::fill(body_pos_pad_.begin(), body_pos_pad_.end(), 0.0);
+    std::fill(body_quat_pad_.begin(), body_quat_pad_.end(), 0.0);
+    std::fill(mocap_pos_pad_.begin(), mocap_pos_pad_.end(), 0.0);
+    std::fill(mocap_quat_pad_.begin(), mocap_quat_pad_.end(), 0.0);
     for (int i = 0; i < model_->nq && i < 2048; ++i) {
       qpos_pad_[i] = data_->qpos[i];
     }
     for (int i = 0; i < model_->nv && i < 2048; ++i) {
       qvel_pad_[i] = data_->qvel[i];
+      qacc_pad_[i] = data_->qacc[i];
       qacc_warmstart_pad_[i] = data_->qacc_warmstart[i];
     }
     for (int i = 0; i < model_->na && i < 2048; ++i) {
@@ -1915,6 +1955,24 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     }
     for (int i = 0; i < model_->nu && i < 2048; ++i) {
       ctrl_pad_[i] = data_->ctrl[i];
+    }
+    for (int i = 0; i < model_->nsite * 3 && i < kMyoSuiteTestStatePad; ++i) {
+      site_pos_pad_[i] = model_->site_pos[i];
+    }
+    for (int i = 0; i < model_->nsite * 4 && i < kMyoSuiteTestStatePad; ++i) {
+      site_quat_pad_[i] = model_->site_quat[i];
+    }
+    for (int i = 0; i < model_->nbody * 3 && i < kMyoSuiteTestStatePad; ++i) {
+      body_pos_pad_[i] = model_->body_pos[i];
+    }
+    for (int i = 0; i < model_->nbody * 4 && i < kMyoSuiteTestStatePad; ++i) {
+      body_quat_pad_[i] = model_->body_quat[i];
+    }
+    for (int i = 0; i < model_->nmocap * 3 && i < kMyoSuiteTestStatePad; ++i) {
+      mocap_pos_pad_[i] = data_->mocap_pos[i];
+    }
+    for (int i = 0; i < model_->nmocap * 4 && i < kMyoSuiteTestStatePad; ++i) {
+      mocap_quat_pad_[i] = data_->mocap_quat[i];
     }
 #endif
   }
@@ -1942,19 +2000,35 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     state["info:model_nq"_] = model_->nq;
     state["info:model_nv"_] = model_->nv;
     state["info:model_na"_] = model_->na;
+    state["info:model_nu"_] = model_->nu;
+    state["info:model_nsite"_] = model_->nsite;
+    state["info:model_nbody"_] = model_->nbody;
+    state["info:model_nmocap"_] = model_->nmocap;
 #ifdef ENVPOOL_TEST
     CapturePaddedCurrentState();
     state["info:qpos0"_].Assign(qpos0_pad_.data(), qpos0_pad_.size());
     state["info:qvel0"_].Assign(qvel0_pad_.data(), qvel0_pad_.size());
     state["info:act0"_].Assign(act0_pad_.data(), act0_pad_.size());
+    state["info:qacc0"_].Assign(qacc0_pad_.data(), qacc0_pad_.size());
     state["info:qacc_warmstart0"_].Assign(qacc_warmstart0_pad_.data(),
                                           qacc_warmstart0_pad_.size());
     state["info:qpos"_].Assign(qpos_pad_.data(), qpos_pad_.size());
     state["info:qvel"_].Assign(qvel_pad_.data(), qvel_pad_.size());
     state["info:act"_].Assign(act_pad_.data(), act_pad_.size());
     state["info:ctrl"_].Assign(ctrl_pad_.data(), ctrl_pad_.size());
+    state["info:qacc"_].Assign(qacc_pad_.data(), qacc_pad_.size());
     state["info:qacc_warmstart"_].Assign(qacc_warmstart_pad_.data(),
                                          qacc_warmstart_pad_.size());
+    state["info:site_pos"_].Assign(site_pos_pad_.data(), site_pos_pad_.size());
+    state["info:site_quat"_].Assign(site_quat_pad_.data(),
+                                    site_quat_pad_.size());
+    state["info:body_pos"_].Assign(body_pos_pad_.data(), body_pos_pad_.size());
+    state["info:body_quat"_].Assign(body_quat_pad_.data(),
+                                    body_quat_pad_.size());
+    state["info:mocap_pos"_].Assign(mocap_pos_pad_.data(),
+                                    mocap_pos_pad_.size());
+    state["info:mocap_quat"_].Assign(mocap_quat_pad_.data(),
+                                     mocap_quat_pad_.size());
 #endif
   }
 };
