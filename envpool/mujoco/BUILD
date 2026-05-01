@@ -316,6 +316,20 @@ cc_library(
 pybind_extension(
     name = "myosuite_envpool",
     srcs = ["myosuite/myosuite_envpool.cc"],
+    # The native MyoSuite environment is implemented in headers included here.
+    # Coverage instrumentation perturbs Linux floating-point codegen enough to
+    # break bitwise oracle alignment for the MuJoCo rollout state.
+    copts = select({
+        "//:linux": [
+            "-fno-profile-arcs",
+            "-fno-test-coverage",
+        ],
+        "@platforms//os:osx": [
+            "-fno-coverage-mapping",
+            "-fno-profile-instr-generate",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [
         ":myosuite_env",
         "//envpool/core:py_envpool",
