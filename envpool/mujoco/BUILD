@@ -316,11 +316,21 @@ cc_library(
 
 pybind_extension(
     name = "myosuite_envpool",
-    srcs = ["myosuite/myosuite_envpool.cc"],
+    srcs = [
+        "myosuite/mujoco_plugin_init.cc",
+        "myosuite/myosuite_envpool.cc",
+    ],
     # The native MyoSuite runtime is header-only under myosuite_env.h and is
     # compiled into this extension. Coverage instrumentation changes Linux
     # floating-point codegen enough to make long oracle rollouts diverge.
     copts = select({
+        "//:linux_x86_64": [
+            # CI fastbuild otherwise compiles the header-only MyoSuite runtime
+            # at -O0 while the pinned official oracle wheel is release-built.
+            "-O3",
+            "-fno-profile-arcs",
+            "-fno-test-coverage",
+        ],
         "//:linux": [
             "-fno-profile-arcs",
             "-fno-test-coverage",
