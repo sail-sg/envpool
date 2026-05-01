@@ -89,6 +89,7 @@ backends
 pygame
 rollout
 bitwise
+Bimanual
 dtype
 Subclassed
 deleter
