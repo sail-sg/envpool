@@ -55,7 +55,9 @@ class MyoSuiteTest(absltest.TestCase):
             if arr0.dtype == object or arr1.dtype == object:
                 self.assertEqual(arr0.shape, arr1.shape)
             else:
-                np.testing.assert_array_equal(arr0, arr1, err_msg=f"info[{key}]")
+                np.testing.assert_array_equal(
+                    arr0, arr1, err_msg=f"info[{key}]"
+                )
 
     def test_generated_registry_matches_official_surface(self) -> None:
         """Generated metadata must cover all pinned official MyoSuite IDs."""
