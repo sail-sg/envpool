@@ -166,10 +166,7 @@ cc_binary(
         "tools/re2c/substr.cc",
         "tools/re2c/translate.cc",
     ] + glob(["tools/re2c/*.h"]),
-    copts = select({
-        "@envpool//:windows": [],
-        "//conditions:default": ["-DHAVE_CONFIG_H"],
-    }),
+    copts = ["-DHAVE_CONFIG_H"],
 )
 
 cc_binary(
@@ -179,17 +176,14 @@ cc_binary(
 
 genrule(
     name = "sc_man_scanner",
-    srcs = [
-        "src/sc_man_scanner.re",
-        "@envpool//third_party/vizdoom:sc_man_scanner_h",
-    ],
+    srcs = ["src/sc_man_scanner.re"],
     outs = ["src/sc_man_scanner.h"],
     cmd = "$(execpath :re2c) --no-generation-date -s -o $@ " +
           "$(location src/sc_man_scanner.re)",
-    cmd_bat = "copy /Y " +
-              "$(location @envpool//third_party/vizdoom:sc_man_scanner_h) $@",
+    cmd_bat = "$(execpath @re2c_4_5_1//:re2c) --no-generation-date " +
+              "-s -o $@ $(location src/sc_man_scanner.re)",
     tools = select({
-        "@envpool//:windows": [],
+        "@envpool//:windows": ["@re2c_4_5_1//:re2c"],
         "//conditions:default": [":re2c"],
     }),
 )

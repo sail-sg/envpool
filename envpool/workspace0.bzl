@@ -425,6 +425,17 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     )
 
     maybe(
+        http_archive,
+        name = "re2c_4_5_1",
+        build_file = "//third_party/re2c:re2c.BUILD",
+        sha256 = "ffea067c11aa668bcb42885be6e6cd000302000b7747d2bb213299ec66b7864e",
+        strip_prefix = "re2c-4.5.1",
+        urls = [
+            "https://github.com/skvadrik/re2c/releases/download/4.5.1/re2c-4.5.1.tar.xz",
+        ],
+    )
+
+    maybe(
         vizdoom_archive,
         name = "vizdoom",
         patch_args = [

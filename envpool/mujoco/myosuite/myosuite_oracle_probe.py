@@ -176,9 +176,9 @@ def _import_official() -> tuple[Any, Any, Any]:
     sys.path.insert(0, str(_oracle_source_path()))
     _configure_macos_mujoco_renderer()
     import myosuite as official_myosuite
-    from myosuite import gym_registry_specs
     from myosuite.utils import gym
 
+    gym_registry_specs = official_myosuite.gym_registry_specs
     return official_myosuite, gym_registry_specs, gym
 
 
