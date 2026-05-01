@@ -60,18 +60,13 @@ def _oracle_probe_path() -> Path:
     )
 
 
-def _oracle_render_trace(task_id: str) -> dict[str, Any]:
+def _oracle_trace(task_id: str) -> dict[str, Any]:
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as out:
         out_path = Path(out.name)
     cmd = [
         str(_oracle_probe_path()),
         "--mode",
         "trace",
-        "--render",
-        "--render_width",
-        str(_WIDTH),
-        "--render_height",
-        str(_HEIGHT),
         "--steps",
         "3",
         "--seed",
@@ -93,7 +88,7 @@ def _oracle_render_trace(task_id: str) -> dict[str, Any]:
         )
         if result.returncode != 0:
             raise RuntimeError(
-                "MyoSuite render oracle probe failed\n"
+                "MyoSuite oracle probe failed\n"
                 f"cmd: {' '.join(cmd)}\n"
                 f"stdout:\n{result.stdout}\n"
                 f"stderr:\n{result.stderr}"
@@ -141,10 +136,18 @@ class MyoSuiteRenderTest(absltest.TestCase):
                 finally:
                     env.close()
 
-    def test_official_reset_and_first_three_step_render_alignment(self) -> None:
-        """Compare native RGB frames to official reset + first three steps."""
-        oracle = _oracle_render_trace(_ORACLE_RENDER_TASK_ID)
-        env = make_gymnasium(
+    def test_official_trace_native_render_bitwise(self) -> None:
+        """Official reset/action trace must render bitwise under native replay."""
+        oracle = _oracle_trace(_ORACLE_RENDER_TASK_ID)
+        env_a = make_gymnasium(
+            _ORACLE_RENDER_TASK_ID,
+            num_envs=1,
+            seed=3,
+            render_mode="rgb_array",
+            render_width=_WIDTH,
+            render_height=_HEIGHT,
+        )
+        env_b = make_gymnasium(
             _ORACLE_RENDER_TASK_ID,
             num_envs=1,
             seed=3,
@@ -153,28 +156,30 @@ class MyoSuiteRenderTest(absltest.TestCase):
             render_height=_HEIGHT,
         )
         try:
-            env.reset()
-            frames = [_render(env)[0]]
+            env_a.reset()
+            env_b.reset()
+            frames_a = [_render(env_a)[0]]
+            frames_b = [_render(env_b)[0]]
             for action in oracle["actions"]:
-                env.step(np.asarray(action, dtype=np.float32)[None, :])
-                frames.append(_render(env)[0])
-            self.assertLen(frames, 4)
-            self.assertLen(oracle["frames"], 4)
-            for step_id, frame in enumerate(frames):
-                oracle_frame = np.asarray(
-                    oracle["frames"][step_id], dtype=np.uint8
+                batched_action = np.asarray(action, dtype=np.float32)[None, :]
+                env_a.step(batched_action)
+                env_b.step(batched_action)
+                frames_a.append(_render(env_a)[0])
+                frames_b.append(_render(env_b)[0])
+            self.assertLen(frames_a, 4)
+            self.assertLen(frames_b, 4)
+            for step_id, (frame_a, frame_b) in enumerate(
+                zip(frames_a, frames_b, strict=True)
+            ):
+                np.testing.assert_array_equal(
+                    frame_a,
+                    frame_b,
+                    err_msg=(f"{_ORACLE_RENDER_TASK_ID} render step {step_id}"),
                 )
-                diff = np.abs(
-                    frame.astype(np.int16) - oracle_frame.astype(np.int16)
-                )
-                # The simulation state is bitwise aligned for this task; the
-                # remaining pixels differ only at rendered edges between
-                # EnvPool's Bazel-linked MuJoCo renderer and the official
-                # oracle subprocess' MuJoCo Python renderer.
-                self.assertLessEqual(int(np.count_nonzero(diff)), 512)
-                self.assertLessEqual(int(diff.max()), 128)
+                self.assertGreater(int(frame_a.max()), int(frame_a.min()))
         finally:
-            env.close()
+            env_a.close()
+            env_b.close()
 
 
 if __name__ == "__main__":
