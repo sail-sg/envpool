@@ -13,6 +13,7 @@
 # limitations under the License.
 
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
+load("@python_versions//3.12:defs.bzl", py_binary_312 = "py_binary")
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
 load("//envpool:myosuite_oracle_requirements.bzl", "oracle_requirement")
@@ -344,7 +345,7 @@ genrule(
     cmd_bat = "copy /Y \"$(location //third_party/myosuite:myosuite_generated_tasks_py)\" \"$@\"",
 )
 
-py_binary(
+py_binary_312(
     name = "generate_myosuite_render_sample",
     srcs = [
         "myosuite/myosuite_oracle_probe.py",
@@ -510,7 +511,7 @@ py_test(
     ],
 )
 
-py_binary(
+py_binary_312(
     name = "myosuite_oracle_probe",
     srcs = ["myosuite/myosuite_oracle_probe.py"],
     data = [

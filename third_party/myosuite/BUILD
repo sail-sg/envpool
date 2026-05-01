@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@python_versions//3.12:defs.bzl", py_binary_312 = "py_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
-load("@rules_python//python:defs.bzl", "py_binary")
 load("//envpool:myosuite_oracle_requirements.bzl", "oracle_requirement")
 load("//third_party/myosuite:defs.bzl", "myosuite_native_assets")
 
@@ -24,7 +24,7 @@ exports_files([
     "generate_render_sample.py",
 ])
 
-py_binary(
+py_binary_312(
     name = "generate_native_assets",
     srcs = [
         "generate_native_assets.py",
