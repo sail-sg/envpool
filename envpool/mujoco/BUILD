@@ -15,7 +15,7 @@
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@python_versions//3.12:defs.bzl", py_binary_312 = "py_binary")
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
-load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
+load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("//envpool:myosuite_oracle_requirements.bzl", "oracle_requirement")
 load("//envpool:requirements.bzl", "requirement")
 load("//third_party:common.bzl", "copy_to_directory")
