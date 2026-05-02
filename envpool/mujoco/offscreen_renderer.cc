@@ -654,6 +654,8 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
   if (cgl_warmup_render_) {
     render_scene();
   }
+#else
+  (void)cgl_warmup_render_;
 #endif
 
   std::size_t frame_bytes =
