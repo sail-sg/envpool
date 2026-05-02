@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <limits>
 #include <random>
@@ -159,7 +160,7 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
   using Base::gen_;
   using Base::spec_;
 
-  enum class OslPhase {
+  enum class OslPhase : std::uint8_t {
     kEStance,
     kLStance,
     kESwing,
