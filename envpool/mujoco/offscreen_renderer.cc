@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <array>
 #include <cerrno>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -68,7 +69,7 @@ mjtNum MedianGeomPosition(const mjData* data, int ngeom, int axis) {
 class CglContext final : public GlContext {
  public:
   CglContext() {
-    const std::array<CGLPixelFormatAttribute, 17> attribs = {
+    const std::array<CGLPixelFormatAttribute, 17> preferred_attribs = {
         kCGLPFAOpenGLProfile,
         static_cast<CGLPixelFormatAttribute>(kCGLOGLPVersion_Legacy),
         kCGLPFAColorSize,
@@ -87,12 +88,25 @@ class CglContext final : public GlContext {
         kCGLPFAAccelerated,
         static_cast<CGLPixelFormatAttribute>(0),  // terminator
     };
-    GLint npix = 0;
-    CGLError err = CGLChoosePixelFormat(attribs.data(), &pixel_format_, &npix);
-    if (err != kCGLNoError || pixel_format_ == nullptr || npix == 0) {
+    const std::array<CGLPixelFormatAttribute, 12> offline_attribs = {
+        kCGLPFAOpenGLProfile,
+        static_cast<CGLPixelFormatAttribute>(kCGLOGLPVersion_Legacy),
+        kCGLPFAColorSize,
+        static_cast<CGLPixelFormatAttribute>(24),
+        kCGLPFAAlphaSize,
+        static_cast<CGLPixelFormatAttribute>(8),
+        kCGLPFADepthSize,
+        static_cast<CGLPixelFormatAttribute>(24),
+        kCGLPFAStencilSize,
+        static_cast<CGLPixelFormatAttribute>(8),
+        kCGLPFAAllowOfflineRenderers,
+        static_cast<CGLPixelFormatAttribute>(0),  // terminator
+    };
+    if (!ChoosePixelFormat(preferred_attribs) &&
+        !ChoosePixelFormat(offline_attribs)) {
       throw std::runtime_error("failed to create CGL pixel format");
     }
-    err = CGLCreateContext(pixel_format_, nullptr, &context_);
+    CGLError err = CGLCreateContext(pixel_format_, nullptr, &context_);
     if (err != kCGLNoError || context_ == nullptr) {
       CGLReleasePixelFormat(pixel_format_);
       pixel_format_ = nullptr;
@@ -144,6 +158,22 @@ class CglContext final : public GlContext {
   }
 
  private:
+  template <std::size_t N>
+  bool ChoosePixelFormat(
+      const std::array<CGLPixelFormatAttribute, N>& attribs) {
+    GLint npix = 0;
+    CGLPixelFormatObj pixel_format = nullptr;
+    CGLError err = CGLChoosePixelFormat(attribs.data(), &pixel_format, &npix);
+    if (err != kCGLNoError || pixel_format == nullptr || npix == 0) {
+      if (pixel_format != nullptr) {
+        CGLReleasePixelFormat(pixel_format);
+      }
+      return false;
+    }
+    pixel_format_ = pixel_format;
+    return true;
+  }
+
   CGLPixelFormatObj pixel_format_{nullptr};
   CGLContextObj context_{nullptr};
   bool locked_{false};
