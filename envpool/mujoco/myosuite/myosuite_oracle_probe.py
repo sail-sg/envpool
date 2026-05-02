@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import ctypes
+import importlib.util
 import json
 import os
 import platform
@@ -38,6 +39,60 @@ from envpool.python.glfw_context import preload_windows_gl_dlls
 
 if platform.system() == "Windows":
     preload_windows_gl_dlls(strict=True)
+
+
+def _runfiles_root() -> Path:
+    path = Path(__file__).absolute()
+    for parent in (path, *path.parents):
+        if parent.name.endswith(".runfiles"):
+            return parent
+    path = Path(__file__).resolve()
+    runfiles_dir = os.environ.get("RUNFILES_DIR")
+    if runfiles_dir:
+        return Path(runfiles_dir)
+    if "TEST_SRCDIR" in os.environ:
+        return Path(os.environ["TEST_SRCDIR"])
+    return path.parents[3]
+
+
+def _bazel_mujoco_dll_path() -> Path:
+    runfiles = _runfiles_root()
+    workspace = os.environ.get("TEST_WORKSPACE", "envpool")
+    candidates = (
+        runfiles / "mujoco" / "mujoco.dll",
+        runfiles / workspace / "external" / "mujoco" / "mujoco.dll",
+    )
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    for candidate in runfiles.rglob("mujoco.dll"):
+        if candidate.is_file() and "site-packages" not in candidate.parts:
+            return candidate
+    raise RuntimeError(
+        f"could not locate Bazel-built mujoco.dll under {runfiles}"
+    )
+
+
+def _configure_windows_mujoco_package() -> None:
+    """Make the official oracle import use EnvPool's Bazel-built MuJoCo DLL."""
+    if platform.system() != "Windows" or getattr(
+        _configure_windows_mujoco_package, "_configured", False
+    ):
+        return
+
+    spec = importlib.util.find_spec("mujoco")
+    if spec is None or spec.submodule_search_locations is None:
+        raise RuntimeError("could not locate pinned mujoco Python package")
+    package_dir = Path(next(iter(spec.submodule_search_locations)))
+    if not (package_dir / "__init__.py").is_file():
+        raise RuntimeError(f"invalid mujoco package path: {package_dir}")
+
+    patched_root = Path(tempfile.mkdtemp(prefix="mujoco-oracle-"))
+    patched_package = patched_root / "mujoco"
+    shutil.copytree(package_dir, patched_package, symlinks=False)
+    shutil.copy2(_bazel_mujoco_dll_path(), patched_package / "mujoco.dll")
+    sys.path.insert(0, str(patched_root))
+    _configure_windows_mujoco_package._configured = True  # type: ignore[attr-defined]
 
 
 def _configure_macos_mujoco_renderer() -> None:
@@ -131,20 +186,6 @@ def _configure_linux_mujoco_renderer(render: bool) -> None:
     os.environ.setdefault("EGL_PLATFORM", "surfaceless")
 
 
-def _runfiles_root() -> Path:
-    path = Path(__file__).absolute()
-    for parent in (path, *path.parents):
-        if parent.name.endswith(".runfiles"):
-            return parent
-    path = Path(__file__).resolve()
-    runfiles_dir = os.environ.get("RUNFILES_DIR")
-    if runfiles_dir:
-        return Path(runfiles_dir)
-    if "TEST_SRCDIR" in os.environ:
-        return Path(os.environ["TEST_SRCDIR"])
-    return path.parents[3]
-
-
 def _oracle_source_path() -> Path:
     runfiles = _runfiles_root()
     source = runfiles / "myosuite_source/myosuite"
@@ -178,6 +219,7 @@ def _oracle_source_path() -> Path:
 
 def _import_official() -> tuple[Any, Any, Any]:
     warnings.filterwarnings("ignore")
+    _configure_windows_mujoco_package()
     sys.path.insert(0, str(_oracle_source_path()))
     _configure_macos_mujoco_renderer()
     import myosuite as official_myosuite

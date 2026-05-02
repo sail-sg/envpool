@@ -129,9 +129,19 @@ cc_binary(
     deps = [":mujoco_shared_export_lib"],
 )
 
+cc_binary(
+    name = "mujoco.dll",
+    linkshared = True,
+    linkstatic = True,
+    deps = [":mujoco_shared_export_lib"],
+)
+
 filegroup(
     name = "mujoco_shared_lib",
-    srcs = [":libmujoco.so.3.6.0"],
+    srcs = select({
+        "@envpool//:windows": [":mujoco.dll"],
+        "//conditions:default": [":libmujoco.so.3.6.0"],
+    }),
 )
 
 cc_library(

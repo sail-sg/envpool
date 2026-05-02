@@ -551,6 +551,7 @@ py_binary_312(
         "@myosuite_ycb_sim//:source",
     ] + select({
         "//:linux": ["@mujoco//:mujoco_shared_lib"],
+        "//:windows": ["@mujoco//:mujoco_shared_lib"],
         "//conditions:default": [],
     }),
     imports = ["../.."],
