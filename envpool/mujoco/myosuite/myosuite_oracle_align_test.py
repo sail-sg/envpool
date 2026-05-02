@@ -46,6 +46,7 @@ importlib.import_module("envpool.mujoco.myosuite.registration")
 
 _ROLLOUT_STEPS = 128
 _ORACLE_SPACE_BATCH_SIZE = 64
+_ROLLOUT_BATCH_SIZE = 4
 _ROLLOUT_TASK_IDS = frozenset({
     "MyoHandAirplaneFixed-v0",
     "MyoHandAirplaneFly-v0",
@@ -163,6 +164,16 @@ def _oracle_rollout_task_ids() -> tuple[str, ...]:
         task_id
         for task_id in _oracle_task_ids()
         if task_id in _ROLLOUT_TASK_IDS
+    )
+
+
+def _task_batches(
+    task_ids: tuple[str, ...],
+    batch_size: int,
+) -> tuple[tuple[str, ...], ...]:
+    return tuple(
+        task_ids[start : start + batch_size]
+        for start in range(0, len(task_ids), batch_size)
     )
 
 
@@ -352,88 +363,97 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
     def test_oracle_rollout_surface_except_numpy2_broken_ids(self) -> None:
         """Exercise nontrivial rollouts with oracle-generated actions."""
         rollout_task_ids = _oracle_rollout_task_ids()
-        envpools: dict[str, Any] = {}
-        envpool_reset_obs: dict[str, np.ndarray] = {}
-        sync_states: dict[str, dict[str, Any]] = {}
-        try:
-            for task_id in rollout_task_ids:
-                envpool = make_gymnasium(task_id, num_envs=1, seed=5)
-                envpool_obs, info = envpool.reset()
-                envpools[task_id] = envpool
-                envpool_reset_obs[task_id] = envpool_obs
-                sync_states[task_id] = _sync_state_from_info(info)
+        task_metadata = _task_metadata_by_id()
+        for batch in _task_batches(rollout_task_ids, _ROLLOUT_BATCH_SIZE):
+            envpools: dict[str, Any] = {}
+            envpool_reset_obs: dict[str, np.ndarray] = {}
+            sync_states: dict[str, dict[str, Any]] = {}
+            try:
+                for task_id in batch:
+                    envpool = make_gymnasium(task_id, num_envs=1, seed=5)
+                    envpool_obs, info = envpool.reset()
+                    envpools[task_id] = envpool
+                    envpool_reset_obs[task_id] = envpool_obs
+                    sync_states[task_id] = _sync_state_from_info(info)
 
-            report = _run_oracle_probe(
-                "trace", rollout_task_ids, sync_states=sync_states
-            )
-            oracle_tasks = cast(dict[str, dict[str, Any]], report["tasks"])
-            task_metadata = _task_metadata_by_id()
-            for task_id in rollout_task_ids:
-                task = task_metadata[task_id]
-                with self.subTest(task_id=task_id):
+                report = _run_oracle_probe(
+                    "trace", batch, sync_states=sync_states
+                )
+                oracle_tasks = cast(dict[str, dict[str, Any]], report["tasks"])
+                self.assertSetEqual(set(oracle_tasks), set(batch))
+
+                for task_id in batch:
+                    task = task_metadata[task_id]
                     envpool = envpools[task_id]
                     envpool_obs = envpool_reset_obs[task_id]
                     oracle_task = oracle_tasks[task_id]
-                    self.assertLen(oracle_task["obs"], _ROLLOUT_STEPS + 1)
-                    self.assertLen(oracle_task["actions"], _ROLLOUT_STEPS)
-                    self.assertEqual(envpool_obs.shape, (1, task["obs_dim"]))
-                    if task_id in _BITWISE_ROLLOUT_TASK_IDS:
-                        np.testing.assert_array_equal(
-                            envpool_obs[0].astype(np.float32),
-                            np.asarray(oracle_task["obs"][0], dtype=np.float32),
-                            err_msg=f"{task_id} reset obs",
-                        )
-
-                    for step_id, action in enumerate(oracle_task["actions"]):
-                        action = np.asarray(action, dtype=np.float32)
-                        envpool_step = envpool.step(action[None, :])
+                    with self.subTest(task_id=task_id):
+                        self.assertLen(oracle_task["obs"], _ROLLOUT_STEPS + 1)
+                        self.assertLen(oracle_task["actions"], _ROLLOUT_STEPS)
                         self.assertEqual(
-                            envpool_step[0].shape, (1, task["obs_dim"])
+                            envpool_obs.shape, (1, task["obs_dim"])
                         )
-                        self.assertEqual(envpool_step[1].shape, (1,))
-                        self.assertEqual(envpool_step[2].shape, (1,))
-                        self.assertEqual(envpool_step[3].shape, (1,))
                         if task_id in _BITWISE_ROLLOUT_TASK_IDS:
-                            oracle_obs = np.asarray(
-                                oracle_task["obs"][step_id + 1],
-                                dtype=np.float32,
-                            )
-                            oracle_reward = np.asarray(
-                                oracle_task["rewards"][step_id],
-                                dtype=np.float32,
-                            )
                             np.testing.assert_array_equal(
-                                envpool_step[0][0].astype(np.float32),
-                                oracle_obs,
-                                err_msg=f"{task_id} step {step_id} obs",
+                                envpool_obs[0].astype(np.float32),
+                                np.asarray(
+                                    oracle_task["obs"][0], dtype=np.float32
+                                ),
+                                err_msg=f"{task_id} reset obs",
                             )
-                            self.assertEqual(
-                                float(envpool_step[1][0]),
-                                float(oracle_reward),
-                                msg=f"{task_id} step {step_id} reward",
-                            )
-                            self.assertEqual(
-                                bool(envpool_step[2][0]),
-                                bool(oracle_task["terminated"][step_id]),
-                                msg=f"{task_id} step {step_id} terminated",
-                            )
-                            self.assertEqual(
-                                bool(envpool_step[3][0]),
-                                bool(oracle_task["truncated"][step_id]),
-                                msg=f"{task_id} step {step_id} truncated",
-                            )
-                        if bool(oracle_task["terminated"][step_id]) or bool(
-                            oracle_task["truncated"][step_id]
+
+                        for step_id, action in enumerate(
+                            oracle_task["actions"]
                         ):
-                            break
-        finally:
-            for envpool in envpools.values():
-                try:
-                    envpool.close()
-                except Exception as exc:
-                    logging.warning(
-                        "ignored MyoSuite env close failure: %s", exc
-                    )
+                            action = np.asarray(action, dtype=np.float32)
+                            envpool_step = envpool.step(action[None, :])
+                            self.assertEqual(
+                                envpool_step[0].shape, (1, task["obs_dim"])
+                            )
+                            self.assertEqual(envpool_step[1].shape, (1,))
+                            self.assertEqual(envpool_step[2].shape, (1,))
+                            self.assertEqual(envpool_step[3].shape, (1,))
+                            if task_id in _BITWISE_ROLLOUT_TASK_IDS:
+                                oracle_obs = np.asarray(
+                                    oracle_task["obs"][step_id + 1],
+                                    dtype=np.float32,
+                                )
+                                oracle_reward = np.asarray(
+                                    oracle_task["rewards"][step_id],
+                                    dtype=np.float32,
+                                )
+                                np.testing.assert_array_equal(
+                                    envpool_step[0][0].astype(np.float32),
+                                    oracle_obs,
+                                    err_msg=f"{task_id} step {step_id} obs",
+                                )
+                                self.assertEqual(
+                                    float(envpool_step[1][0]),
+                                    float(oracle_reward),
+                                    msg=f"{task_id} step {step_id} reward",
+                                )
+                                self.assertEqual(
+                                    bool(envpool_step[2][0]),
+                                    bool(oracle_task["terminated"][step_id]),
+                                    msg=f"{task_id} step {step_id} terminated",
+                                )
+                                self.assertEqual(
+                                    bool(envpool_step[3][0]),
+                                    bool(oracle_task["truncated"][step_id]),
+                                    msg=f"{task_id} step {step_id} truncated",
+                                )
+                            if bool(oracle_task["terminated"][step_id]) or bool(
+                                oracle_task["truncated"][step_id]
+                            ):
+                                break
+            finally:
+                for envpool in envpools.values():
+                    try:
+                        envpool.close()
+                    except Exception as exc:
+                        logging.warning(
+                            "ignored MyoSuite env close failure: %s", exc
+                        )
 
 
 if __name__ == "__main__":

@@ -54,6 +54,7 @@ _NATIVE_ONLY_RENDER_TASK_IDS = tuple(
 )
 _WIDTH = 64
 _HEIGHT = 48
+_ORACLE_RENDER_BATCH_SIZE = 32
 _SYNC_STATE_KEYS = (
     "qpos0",
     "qvel0",
@@ -134,6 +135,16 @@ def _shard_task_ids(task_ids: tuple[str, ...]) -> tuple[str, ...]:
         task_id
         for index, task_id in enumerate(task_ids)
         if index % total_shards == shard_index
+    )
+
+
+def _task_batches(
+    task_ids: tuple[str, ...],
+    batch_size: int,
+) -> tuple[tuple[str, ...], ...]:
+    return tuple(
+        task_ids[start : start + batch_size]
+        for start in range(0, len(task_ids), batch_size)
     )
 
 
@@ -337,32 +348,36 @@ class MyoSuiteRenderTest(absltest.TestCase):
 
     def test_official_trace_native_render_bitwise(self) -> None:
         """Official render matches EnvPool reset and first 3 API frames."""
-        envpool_frames: dict[str, list[np.ndarray]] = {}
-        trace_plan: dict[str, dict[str, Any]] = {}
-        for task_id in _SHARDED_ORACLE_TRACE_TASK_IDS:
-            frames, plan = _envpool_trace_record(task_id)
-            envpool_frames[task_id] = frames
-            trace_plan[task_id] = plan
-        oracle_tasks = _oracle_trace(_SHARDED_ORACLE_TRACE_TASK_IDS, trace_plan)
-        for task_id in _SHARDED_ORACLE_TRACE_TASK_IDS:
-            with self.subTest(task_id=task_id):
-                oracle = oracle_tasks[task_id]
-                frames = envpool_frames[task_id]
-                oracle_frames = [
-                    np.asarray(frame, dtype=np.uint8)
-                    for frame in oracle["frames"]
-                ]
-                self.assertLen(frames, 4)
-                self.assertLen(oracle_frames, 4)
-                for step_id, (frame, oracle_frame) in enumerate(
-                    zip(frames, oracle_frames, strict=True)
-                ):
-                    np.testing.assert_array_equal(
-                        frame,
-                        oracle_frame,
-                        err_msg=f"{task_id} render step {step_id}",
-                    )
-                    self.assertGreater(int(frame.max()), int(frame.min()))
+        for batch in _task_batches(
+            _SHARDED_ORACLE_TRACE_TASK_IDS, _ORACLE_RENDER_BATCH_SIZE
+        ):
+            envpool_frames: dict[str, list[np.ndarray]] = {}
+            trace_plan: dict[str, dict[str, Any]] = {}
+            for task_id in batch:
+                frames, plan = _envpool_trace_record(task_id)
+                envpool_frames[task_id] = frames
+                trace_plan[task_id] = plan
+            oracle_tasks = _oracle_trace(batch, trace_plan)
+            self.assertSetEqual(set(oracle_tasks), set(batch))
+            for task_id in batch:
+                with self.subTest(task_id=task_id):
+                    oracle = oracle_tasks[task_id]
+                    frames = envpool_frames[task_id]
+                    oracle_frames = [
+                        np.asarray(frame, dtype=np.uint8)
+                        for frame in oracle["frames"]
+                    ]
+                    self.assertLen(frames, 4)
+                    self.assertLen(oracle_frames, 4)
+                    for step_id, (frame, oracle_frame) in enumerate(
+                        zip(frames, oracle_frames, strict=True)
+                    ):
+                        np.testing.assert_array_equal(
+                            frame,
+                            oracle_frame,
+                            err_msg=f"{task_id} render step {step_id}",
+                        )
+                        self.assertGreater(int(frame.max()), int(frame.min()))
 
 
 if __name__ == "__main__":
