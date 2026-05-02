@@ -454,6 +454,8 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
 
   bool ShareRenderContext() const override { return true; }
 
+  bool PreferOfflineRenderContext() const override { return true; }
+
  protected:
   struct RewardResult {
     mjtNum dense{0.0};

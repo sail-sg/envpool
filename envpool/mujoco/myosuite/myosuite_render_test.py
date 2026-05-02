@@ -47,6 +47,11 @@ _ORACLE_TRACE_TASK_IDS = tuple(
     for task_id in _TASK_IDS
     if task_id not in MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS
 )
+_NATIVE_ONLY_RENDER_TASK_IDS = tuple(
+    task_id
+    for task_id in _TASK_IDS
+    if task_id in MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS
+)
 _WIDTH = 64
 _HEIGHT = 48
 _SYNC_STATE_KEYS = (
@@ -115,6 +120,27 @@ _SYNC_STATE_SIZES = {
     "fatigue_mf": "nu",
     "fatigue_tl": "nu",
 }
+
+
+def _shard_task_ids(task_ids: tuple[str, ...]) -> tuple[str, ...]:
+    total_shards = int(os.environ.get("TEST_TOTAL_SHARDS", "1"))
+    shard_index = int(os.environ.get("TEST_SHARD_INDEX", "0"))
+    status_file = os.environ.get("TEST_SHARD_STATUS_FILE")
+    if status_file:
+        Path(status_file).touch(exist_ok=True)
+    if total_shards <= 1:
+        return task_ids
+    return tuple(
+        task_id
+        for index, task_id in enumerate(task_ids)
+        if index % total_shards == shard_index
+    )
+
+
+_SHARDED_ORACLE_TRACE_TASK_IDS = _shard_task_ids(_ORACLE_TRACE_TASK_IDS)
+_SHARDED_NATIVE_ONLY_RENDER_TASK_IDS = _shard_task_ids(
+    _NATIVE_ONLY_RENDER_TASK_IDS
+)
 
 
 def _oracle_probe_path() -> Path:
@@ -282,8 +308,8 @@ class MyoSuiteRenderTest(absltest.TestCase):
     """Validate native MyoSuite RGB rendering after reset and steps."""
 
     def test_reset_and_first_three_step_render(self) -> None:
-        """Render reset and the first three deterministic zero-action steps."""
-        for task_id in _TASK_IDS:
+        """Render oracle-skip tasks through reset and the first three steps."""
+        for task_id in _SHARDED_NATIVE_ONLY_RENDER_TASK_IDS:
             with self.subTest(task_id=task_id):
                 env = make_gymnasium(
                     task_id,
@@ -313,12 +339,12 @@ class MyoSuiteRenderTest(absltest.TestCase):
         """Official render matches EnvPool reset and first 3 API frames."""
         envpool_frames: dict[str, list[np.ndarray]] = {}
         trace_plan: dict[str, dict[str, Any]] = {}
-        for task_id in _ORACLE_TRACE_TASK_IDS:
+        for task_id in _SHARDED_ORACLE_TRACE_TASK_IDS:
             frames, plan = _envpool_trace_record(task_id)
             envpool_frames[task_id] = frames
             trace_plan[task_id] = plan
-        oracle_tasks = _oracle_trace(_ORACLE_TRACE_TASK_IDS, trace_plan)
-        for task_id in _ORACLE_TRACE_TASK_IDS:
+        oracle_tasks = _oracle_trace(_SHARDED_ORACLE_TRACE_TASK_IDS, trace_plan)
+        for task_id in _SHARDED_ORACLE_TRACE_TASK_IDS:
             with self.subTest(task_id=task_id):
                 oracle = oracle_tasks[task_id]
                 frames = envpool_frames[task_id]

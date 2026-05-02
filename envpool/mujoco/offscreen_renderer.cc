@@ -68,7 +68,7 @@ mjtNum MedianGeomPosition(const mjData* data, int ngeom, int axis) {
 
 class CglContext final : public GlContext {
  public:
-  CglContext() {
+  explicit CglContext(bool prefer_offline_context) {
     const std::array<CGLPixelFormatAttribute, 17> preferred_attribs = {
         kCGLPFAOpenGLProfile,
         static_cast<CGLPixelFormatAttribute>(kCGLOGLPVersion_Legacy),
@@ -102,10 +102,17 @@ class CglContext final : public GlContext {
         kCGLPFAAllowOfflineRenderers,
         static_cast<CGLPixelFormatAttribute>(0),  // terminator
     };
-    // Match the macOS oracle wrappers used by render alignment tests; the
-    // accelerated MSAA format can rasterize antialiased edges differently.
-    if (!ChoosePixelFormat(offline_attribs) &&
-        !ChoosePixelFormat(preferred_attribs)) {
+    bool chose_pixel_format = false;
+    if (prefer_offline_context) {
+      // MyoSuite's official macOS renderer uses the offline CGL path; matching
+      // it avoids antialiased-edge drift in bitwise render comparisons.
+      chose_pixel_format = ChoosePixelFormat(offline_attribs) ||
+                           ChoosePixelFormat(preferred_attribs);
+    } else {
+      chose_pixel_format = ChoosePixelFormat(preferred_attribs) ||
+                           ChoosePixelFormat(offline_attribs);
+    }
+    if (!chose_pixel_format) {
       throw std::runtime_error("failed to create CGL pixel format");
     }
     CGLError err = CGLCreateContext(pixel_format_, nullptr, &context_);
@@ -493,19 +500,26 @@ class EglContext final : public GlContext {
 
 #endif
 
-std::shared_ptr<GlContext> CreateGlContext(bool share_cgl_context) {
+std::shared_ptr<GlContext> CreateGlContext(bool share_cgl_context,
+                                           bool prefer_offline_cgl_context) {
 #if defined(ENVPOOL_HAS_CGL)
   if (share_cgl_context) {
-    thread_local std::shared_ptr<GlContext> context =
-        std::make_shared<CglContext>();
-    return context;
+    if (prefer_offline_cgl_context) {
+      thread_local std::shared_ptr<GlContext> offline_context =
+          std::make_shared<CglContext>(true);
+      return offline_context;
+    }
+    thread_local std::shared_ptr<GlContext> preferred_context =
+        std::make_shared<CglContext>(false);
+    return preferred_context;
   }
   // Match Gymnasium's CGL lifecycle: create a context per renderer/viewer.
   // Reusing one CGL context across different MuJoCo models can leave renderer
   // state behind on macOS software/offline renderers.
-  return std::make_shared<CglContext>();
+  return std::make_shared<CglContext>(prefer_offline_cgl_context);
 #elif defined(ENVPOOL_HAS_WGL)
   (void)share_cgl_context;
+  (void)prefer_offline_cgl_context;
   if (wglGetCurrentContext() != nullptr && wglGetCurrentDC() != nullptr) {
     // Borrowed WGL handles become invalid if another library later calls
     // `glfw.terminate()`, so do not cache them across renderer instances.
@@ -516,11 +530,13 @@ std::shared_ptr<GlContext> CreateGlContext(bool share_cgl_context) {
   return context;
 #elif defined(ENVPOOL_HAS_EGL)
   (void)share_cgl_context;
+  (void)prefer_offline_cgl_context;
   thread_local std::shared_ptr<GlContext> context =
       std::make_shared<EglContext>();
   return context;
 #else
   (void)share_cgl_context;
+  (void)prefer_offline_cgl_context;
   throw std::runtime_error(
       "MuJoCo rendering is unsupported on this platform/build");
 #endif
@@ -528,8 +544,11 @@ std::shared_ptr<GlContext> CreateGlContext(bool share_cgl_context) {
 
 OffscreenRenderer::OffscreenRenderer(CameraPolicy camera_policy,
                                      bool disable_auxiliary_visuals,
-                                     bool share_cgl_context)
-    : camera_policy_(camera_policy), share_cgl_context_(share_cgl_context) {
+                                     bool share_cgl_context,
+                                     bool prefer_offline_cgl_context)
+    : camera_policy_(camera_policy),
+      share_cgl_context_(share_cgl_context),
+      prefer_offline_cgl_context_(prefer_offline_cgl_context) {
   mjv_defaultScene(&scene_);
   mjv_defaultCamera(&camera_);
   mjv_defaultOption(&option_);
@@ -556,7 +575,8 @@ OffscreenRenderer::~OffscreenRenderer() {
 }
 
 void OffscreenRenderer::Initialize(const mjModel* model) {
-  gl_context_ = CreateGlContext(share_cgl_context_);
+  gl_context_ =
+      CreateGlContext(share_cgl_context_, prefer_offline_cgl_context_);
   gl_context_->MakeCurrent();
   mjv_makeScene(model, &scene_, 10000);
   mjr_makeContext(model, &context_, mjFONTSCALE_150);
