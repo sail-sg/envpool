@@ -55,7 +55,11 @@ cc_library(
     copts = [
         "-DCCD_STATIC_DEFINE",
     ] + select({
-        "@envpool//:windows": [],
+        "@envpool//:windows": [
+            # CI fastbuild otherwise compiles MuJoCo at /Od while the pinned
+            # official oracle wheel is release-built.
+            "/O2",
+        ],
         "//conditions:default": [
             "-D_GNU_SOURCE",
             "-Wno-int-in-bool-context",
@@ -166,7 +170,9 @@ cc_library(
     copts = [
         "-DCCD_STATIC_DEFINE",
     ] + select({
-        "@envpool//:windows": [],
+        "@envpool//:windows": [
+            "/O2",
+        ],
         "//conditions:default": [
             "-D_GNU_SOURCE",
             "-Wno-int-in-bool-context",

@@ -326,6 +326,11 @@ cc_library(
     # pybind_extension wrapper still links under coverage so instrumented
     # transitive deps resolve their coverage runtime symbols.
     copts = select({
+        "//:windows": [
+            # CI fastbuild otherwise compiles the header-only MyoSuite runtime
+            # at /Od while the pinned official oracle wheel is release-built.
+            "/O2",
+        ],
         "//:linux_x86_64": [
             # CI fastbuild otherwise compiles the header-only MyoSuite runtime
             # at -O0 while the pinned official oracle wheel is release-built.
