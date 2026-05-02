@@ -57,8 +57,10 @@ cc_library(
     ] + select({
         "@envpool//:windows": [
             # CI fastbuild otherwise compiles MuJoCo at /Od while the pinned
-            # official oracle wheel is release-built.
+            # official oracle wheel is release-built. Upstream MuJoCo's CMake
+            # build also enables AVX platform SIMD on MSVC when available.
             "/O2",
+            "/arch:AVX",
         ],
         "//conditions:default": [
             "-D_GNU_SOURCE",
@@ -87,6 +89,7 @@ cc_library(
     }),
     defines = ["MJ_STATIC"] + select({
         "@envpool//:linux_x86_64": ["mjUSEPLATFORMSIMD"],
+        "@envpool//:windows": ["mjUSEPLATFORMSIMD"],
         "//conditions:default": [],
     }),
     # Coverage instrumentation perturbs MuJoCo's floating-point integrator on
@@ -172,6 +175,7 @@ cc_library(
     ] + select({
         "@envpool//:windows": [
             "/O2",
+            "/arch:AVX",
         ],
         "//conditions:default": [
             "-D_GNU_SOURCE",
@@ -195,6 +199,7 @@ cc_library(
     }),
     defines = ["MUJOCO_DLL_EXPORTS"] + select({
         "@envpool//:linux_x86_64": ["mjUSEPLATFORMSIMD"],
+        "@envpool//:windows": ["mjUSEPLATFORMSIMD"],
         "//conditions:default": [],
     }),
     features = ["-coverage"],
