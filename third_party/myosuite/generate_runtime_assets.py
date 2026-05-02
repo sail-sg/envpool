@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import shutil
 import tempfile
+import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from pathlib import Path
 
@@ -418,12 +419,43 @@ def _generate_tabletennis_xml(out: Path) -> None:
     source = asset_arm / "myoarm_tabletennis.xml"
     spec = mujoco.MjSpec.from_file(str(source))
     _preprocess_tabletennis_spec(spec)
-    model = spec.compile()
-    mujoco.mj_saveModel(
-        model,
-        str(asset_arm / "myoarm_tabletennis_native.mjb"),
-        None,
-    )
+    xml_text = _normalize_tabletennis_xml(spec.to_xml())
+    (asset_arm / "myoarm_tabletennis_native.xml").write_text(xml_text)
+
+
+def _normalize_tabletennis_xml(xml_text: str) -> str:
+    root = ET.fromstring(xml_text)
+    seen_default_classes: set[str] = set()
+
+    def visit(parent: ET.Element) -> None:
+        index = 0
+        while index < len(parent):
+            child = parent[index]
+            if (
+                parent.tag == "default"
+                and child.tag == "default"
+                and not child.attrib
+            ):
+                grandchildren = list(child)
+                parent.remove(child)
+                for offset, grandchild in enumerate(grandchildren):
+                    parent.insert(index + offset, grandchild)
+                continue
+            elif child.tag == "default" and "class" in child.attrib:
+                class_name = child.attrib["class"]
+                if class_name in seen_default_classes:
+                    parent.remove(child)
+                else:
+                    seen_default_classes.add(class_name)
+                    visit(child)
+                    index += 1
+            else:
+                visit(child)
+                index += 1
+
+    visit(root)
+    ET.indent(root, space="  ")
+    return ET.tostring(root, encoding="unicode") + "\n"
 
 
 def _parse_args() -> argparse.Namespace:

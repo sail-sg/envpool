@@ -430,7 +430,7 @@ def _task_from_spec(
         model_path = "myosuite/simhive/myo_sim/arm/myoarm_reach.xml"
     if _kind(entry_point, task_id) == "kChallengeTableTennis":
         model_path = (
-            "myosuite/envs/myo/assets/arm/myoarm_tabletennis_native.mjb"
+            "myosuite/envs/myo/assets/arm/myoarm_tabletennis_native.xml"
         )
     if _kind(entry_point, task_id) == "kMyoDmTrack":
         model_path = (
