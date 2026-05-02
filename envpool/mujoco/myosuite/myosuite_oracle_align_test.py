@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
+from absl import logging
 from absl.testing import absltest
 
 from envpool.mujoco.myosuite.tasks import (
@@ -383,8 +384,10 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
             for envpool in envpools.values():
                 try:
                     envpool.close()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logging.warning(
+                        "ignored MyoSuite env close failure: %s", exc
+                    )
 
 
 if __name__ == "__main__":
