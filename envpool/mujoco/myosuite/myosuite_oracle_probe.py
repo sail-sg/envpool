@@ -21,6 +21,7 @@ the upstream v2.11.6 contract without replacing EnvPool's normal runtime deps.
 from __future__ import annotations
 
 import argparse
+import ctypes
 import importlib
 import importlib.util
 import json
@@ -36,8 +37,6 @@ from typing import Any
 import numpy as np
 
 from envpool.python.glfw_context import preload_windows_gl_dlls
-
-ctypes = importlib.import_module("ctypes")
 
 if platform.system() == "Windows":
     preload_windows_gl_dlls(strict=True)
