@@ -622,6 +622,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         strip_prefix = "myosuite-2.11.6",
         urls = [
             "https://github.com/MyoHub/myosuite/archive/refs/tags/v2.11.6.tar.gz",
+            "https://codeload.github.com/MyoHub/myosuite/tar.gz/refs/tags/v2.11.6",
         ],
         patch_args = ["-p1"],
         patches = ["//third_party/myosuite:mujoco36_mjspec_compat.patch"],
@@ -635,6 +636,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         strip_prefix = "myo_sim-33f3ded946f55adbdcf963c99999587aadaf975f",
         urls = [
             "https://github.com/MyoHub/myo_sim/archive/33f3ded946f55adbdcf963c99999587aadaf975f.tar.gz",
+            "https://codeload.github.com/MyoHub/myo_sim/tar.gz/33f3ded946f55adbdcf963c99999587aadaf975f",
         ],
         build_file = "//third_party/myosuite:simhive_source.BUILD",
     )
@@ -648,6 +650,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
             # MyoSuite v2.11.6 gitlinks vikashplus/object_sim@87cd8dd, but
             # that commit is no longer fetchable from GitHub archives.
             "https://github.com/MyoHub/object_sim/archive/refs/tags/v0.1.0.tar.gz",
+            "https://codeload.github.com/MyoHub/object_sim/tar.gz/refs/tags/v0.1.0",
         ],
         build_file = "//third_party/myosuite:simhive_source.BUILD",
     )
@@ -659,6 +662,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         strip_prefix = "MPL_sim-58dd1abc6058e0dc06e62f13a61c36adb4916815",
         urls = [
             "https://github.com/vikashplus/MPL_sim/archive/58dd1abc6058e0dc06e62f13a61c36adb4916815.tar.gz",
+            "https://codeload.github.com/vikashplus/MPL_sim/tar.gz/58dd1abc6058e0dc06e62f13a61c36adb4916815",
         ],
         build_file = "//third_party/myosuite:simhive_source.BUILD",
     )
@@ -670,6 +674,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         strip_prefix = "YCB_sim-46edd9c361061c5d81a82f2511d4fbf76fead569",
         urls = [
             "https://github.com/vikashplus/YCB_sim/archive/46edd9c361061c5d81a82f2511d4fbf76fead569.tar.gz",
+            "https://codeload.github.com/vikashplus/YCB_sim/tar.gz/46edd9c361061c5d81a82f2511d4fbf76fead569",
         ],
         build_file = "//third_party/myosuite:simhive_source.BUILD",
     )
@@ -681,6 +686,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         strip_prefix = "furniture_sim-c97995afb81c9e2d7325b0069f9abc9a2c74a2f0",
         urls = [
             "https://github.com/vikashplus/furniture_sim/archive/c97995afb81c9e2d7325b0069f9abc9a2c74a2f0.tar.gz",
+            "https://codeload.github.com/vikashplus/furniture_sim/tar.gz/c97995afb81c9e2d7325b0069f9abc9a2c74a2f0",
         ],
         build_file = "//third_party/myosuite:simhive_source.BUILD",
     )

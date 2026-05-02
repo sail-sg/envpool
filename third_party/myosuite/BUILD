@@ -52,11 +52,11 @@ py_binary_312(
 py_binary_312(
     name = "generate_runtime_assets",
     srcs = ["generate_runtime_assets.py"],
+    visibility = ["//visibility:public"],
     deps = [
         oracle_requirement("mujoco"),
         oracle_requirement("typing_extensions"),
     ],
-    visibility = ["//visibility:public"],
 )
 
 myosuite_native_assets(
