@@ -102,15 +102,12 @@ class CglContext final : public GlContext {
         kCGLPFAAllowOfflineRenderers,
         static_cast<CGLPixelFormatAttribute>(0),  // terminator
     };
-    bool chose_pixel_format = false;
-    if (prefer_offline_context) {
-      // MyoSuite's official macOS renderer uses the offline CGL path; matching
-      // it avoids antialiased-edge drift in bitwise render comparisons.
-      chose_pixel_format = ChoosePixelFormat(offline_attribs) ||
-                           ChoosePixelFormat(preferred_attribs);
-    } else {
-      chose_pixel_format = ChoosePixelFormat(preferred_attribs) ||
-                           ChoosePixelFormat(offline_attribs);
+    // Match MuJoCo's default CGL path first. MyoSuite's oracle uses the same
+    // offline renderer for bitwise render comparisons; the accelerated format
+    // is only a fallback for MyoSuite if offline CGL is unavailable.
+    bool chose_pixel_format = ChoosePixelFormat(offline_attribs);
+    if (!chose_pixel_format && prefer_offline_context) {
+      chose_pixel_format = ChoosePixelFormat(preferred_attribs);
     }
     if (!chose_pixel_format) {
       throw std::runtime_error("failed to create CGL pixel format");
