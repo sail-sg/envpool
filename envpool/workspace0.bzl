@@ -17,6 +17,7 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 load("//third_party/cuda:cuda.bzl", "cuda_configure")
+load("//third_party/freedoom:defs.bzl", "freedoom_archive")
 load("//third_party/gfootball:repo.bzl", "gfootball_archive")
 load("//third_party/vizdoom:repo.bzl", "vizdoom_archive")
 
@@ -416,14 +417,16 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     )
 
     maybe(
-        http_archive,
+        freedoom_archive,
         name = "freedoom",
+        attempts = 8,
+        build_file = "//third_party/freedoom:freedoom.BUILD",
         sha256 = "f42c6810fc89b0282de1466c2c9c7c9818031a8d556256a6db1b69f6a77b5806",
         strip_prefix = "freedoom-0.12.1/",
+        type = "zip",
         urls = [
             "https://github.com/freedoom/freedoom/releases/download/v0.12.1/freedoom-0.12.1.zip",
         ],
-        build_file = "//third_party/freedoom:freedoom.BUILD",
     )
 
     maybe(
