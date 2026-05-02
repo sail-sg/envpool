@@ -28,15 +28,16 @@ from typing import Any
 import numpy as np
 from absl.testing import absltest
 
+from envpool.python.glfw_context import preload_windows_gl_dlls
+
+if platform.system() == "Windows":
+    preload_windows_gl_dlls(strict=True)
+
 from envpool.mujoco.myosuite.tasks import (
     MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS,
     MYOSUITE_TASKS,
 )
-from envpool.python.glfw_context import preload_windows_gl_dlls
 from envpool.registration import make_gymnasium
-
-if platform.system() == "Windows":
-    preload_windows_gl_dlls(strict=True)
 
 importlib.import_module("envpool.mujoco.myosuite.registration")
 

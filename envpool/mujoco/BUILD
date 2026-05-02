@@ -420,7 +420,10 @@ py_library(
         ":myosuite_envpool",
     ],
     imports = ["../.."],
-    deps = ["//envpool/python:api"],
+    deps = [
+        "//envpool/python:api",
+        "//envpool/python:glfw_context",
+    ],
 )
 
 cc_test(

@@ -13,6 +13,14 @@
 # limitations under the License.
 """MyoSuite native MuJoCo envs."""
 
+import os
+import platform
+
+from envpool.python.glfw_context import preload_windows_gl_dlls
+
+if platform.system() == "Windows":
+    preload_windows_gl_dlls(strict=bool(os.environ.get("ENVPOOL_DLL_DIR")))
+
 from envpool.mujoco.myosuite_envpool import (
     _MyoSuiteEnvPool,
     _MyoSuiteEnvSpec,
