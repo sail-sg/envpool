@@ -88,7 +88,7 @@ class CglContext final : public GlContext {
         kCGLPFAAccelerated,
         static_cast<CGLPixelFormatAttribute>(0),  // terminator
     };
-    const std::array<CGLPixelFormatAttribute, 12> offline_attribs = {
+    const std::array<CGLPixelFormatAttribute, 13> offline_attribs = {
         kCGLPFAOpenGLProfile,
         static_cast<CGLPixelFormatAttribute>(kCGLOGLPVersion_Legacy),
         kCGLPFAColorSize,
@@ -100,6 +100,7 @@ class CglContext final : public GlContext {
         kCGLPFAStencilSize,
         static_cast<CGLPixelFormatAttribute>(8),
         kCGLPFAAllowOfflineRenderers,
+        static_cast<CGLPixelFormatAttribute>(0),  // value
         static_cast<CGLPixelFormatAttribute>(0),  // terminator
     };
     // Match MuJoCo's default CGL path first. MyoSuite's oracle uses the same
