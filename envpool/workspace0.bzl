@@ -215,6 +215,7 @@ def workspace():
         strip_prefix = "ThreadPool-9a42ec1329f259a5f4881a291db1dcb8f2ad9040",
         urls = [
             "https://github.com/progschj/ThreadPool/archive/9a42ec1329f259a5f4881a291db1dcb8f2ad9040.zip",
+            "https://codeload.github.com/progschj/ThreadPool/zip/9a42ec1329f259a5f4881a291db1dcb8f2ad9040",
         ],
         build_file = "//third_party/threadpool:threadpool.BUILD",
         patches = [
