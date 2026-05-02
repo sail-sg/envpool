@@ -16,13 +16,15 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
+import os
 import shutil
+import sys
 import tempfile
 import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from pathlib import Path
-
-import mujoco
+from typing import Any
 
 _MYODM_OBJECTS = (
     "airplane",
@@ -76,6 +78,69 @@ _MYODM_OBJECTS = (
     "waterbottle",
     "wineglass",
 )
+_WINDOWS_SHORT_IMPORT_PACKAGES = ("mujoco",)
+_DLL_DIRECTORY_HANDLES: list[Any] = []
+mujoco: Any = None
+
+
+def _copy_short_import_package(
+    destination_root: Path, package_name: str
+) -> list[Path]:
+    spec = importlib.util.find_spec(package_name)
+    if spec is None or spec.submodule_search_locations is None:
+        return []
+    source = Path(next(iter(spec.submodule_search_locations)))
+    if not source.is_dir():
+        return []
+    destination = destination_root / package_name
+    if not destination.exists():
+        shutil.copytree(
+            source,
+            destination,
+            symlinks=False,
+            ignore=shutil.ignore_patterns("__pycache__"),
+        )
+    copied = [destination]
+    sibling = source.parent / f"{package_name}.libs"
+    if sibling.is_dir():
+        sibling_destination = destination_root / sibling.name
+        if not sibling_destination.exists():
+            shutil.copytree(sibling, sibling_destination, symlinks=False)
+        copied.append(sibling_destination)
+    return copied
+
+
+def _shorten_windows_binary_imports() -> None:
+    if os.name != "nt":
+        return
+    # Bazel runfiles paths can exceed the Windows DLL loader path limit.
+    destination_root = (
+        Path(tempfile.gettempdir()) / "envpool_mujoco_runtime_site"
+    )
+    destination_root.mkdir(parents=True, exist_ok=True)
+    copied: list[Path] = []
+    for package_name in _WINDOWS_SHORT_IMPORT_PACKAGES:
+        copied.extend(
+            _copy_short_import_package(destination_root, package_name)
+        )
+        for name in tuple(sys.modules):
+            if name == package_name or name.startswith(f"{package_name}."):
+                del sys.modules[name]
+    if copied:
+        sys.path.insert(0, str(destination_root))
+    if hasattr(os, "add_dll_directory"):
+        for path in copied:
+            _DLL_DIRECTORY_HANDLES.append(os.add_dll_directory(str(path)))
+
+
+def _load_mujoco() -> Any:
+    global mujoco
+    if mujoco is None:
+        _shorten_windows_binary_imports()
+        import mujoco as mujoco_module
+
+        mujoco = mujoco_module
+    return mujoco
 
 
 def _read_manifest(path: Path) -> list[Path]:
@@ -262,6 +327,7 @@ def _apply_arm_reach_edit(spec: mujoco.MjSpec) -> None:
 
 
 def _generate_arm_reach_xml(out: Path) -> None:
+    _load_mujoco()
     myo_sim = (out / "myosuite/simhive/myo_sim").resolve()
     source_arm = myo_sim / "arm"
     with tempfile.TemporaryDirectory(prefix="myosuite-arm-reach-") as temp:
@@ -415,6 +481,7 @@ def _preprocess_tabletennis_spec(spec: mujoco.MjSpec) -> mujoco.MjSpec:
 
 
 def _generate_tabletennis_xml(out: Path) -> None:
+    _load_mujoco()
     asset_arm = out / "myosuite/envs/myo/assets/arm"
     source = asset_arm / "myoarm_tabletennis.xml"
     spec = mujoco.MjSpec.from_file(str(source))
