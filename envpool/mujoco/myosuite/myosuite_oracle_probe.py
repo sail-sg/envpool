@@ -210,7 +210,7 @@ def _configure_windows_mujoco_renderer() -> None:
     ):
         return
 
-    from ctypes import wintypes
+    import ctypes.wintypes as wintypes
 
     import mujoco
     from mujoco import gl_context
