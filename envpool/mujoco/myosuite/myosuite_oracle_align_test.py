@@ -91,11 +91,63 @@ _SYNC_STATE_KEYS = (
     "ctrl",
     "site_pos",
     "site_quat",
+    "site_size",
+    "site_rgba",
     "body_pos",
     "body_quat",
+    "body_mass",
+    "geom_pos",
+    "geom_quat",
+    "geom_size",
+    "geom_rgba",
+    "geom_friction",
+    "geom_aabb",
+    "geom_rbound",
+    "geom_contype",
+    "geom_conaffinity",
+    "geom_type",
+    "geom_condim",
+    "hfield_data",
     "mocap_pos",
     "mocap_quat",
+    "fatigue_ma",
+    "fatigue_mr",
+    "fatigue_mf",
+    "fatigue_tl",
 )
+_SYNC_STATE_SIZES = {
+    "qpos0": "nq",
+    "qvel0": "nv",
+    "act0": "na",
+    "qacc0": "nv",
+    "qacc_warmstart0": "nv",
+    "ctrl": "nu",
+    "site_pos": "nsite3",
+    "site_quat": "nsite4",
+    "site_size": "nsite3",
+    "site_rgba": "nsite4",
+    "body_pos": "nbody3",
+    "body_quat": "nbody4",
+    "body_mass": "nbody",
+    "geom_pos": "ngeom3",
+    "geom_quat": "ngeom4",
+    "geom_size": "ngeom3",
+    "geom_rgba": "ngeom4",
+    "geom_friction": "ngeom3",
+    "geom_aabb": "ngeom6",
+    "geom_rbound": "ngeom",
+    "geom_contype": "ngeom",
+    "geom_conaffinity": "ngeom",
+    "geom_type": "ngeom",
+    "geom_condim": "ngeom",
+    "hfield_data": "nhfielddata",
+    "mocap_pos": "nmocap3",
+    "mocap_quat": "nmocap4",
+    "fatigue_ma": "nu",
+    "fatigue_mr": "nu",
+    "fatigue_mf": "nu",
+    "fatigue_tl": "nu",
+}
 
 
 def _oracle_task_ids() -> tuple[str, ...]:
@@ -142,26 +194,6 @@ def _oracle_probe_path() -> Path:
     )
 
 
-def _oracle_mujoco_preload_path() -> Path | None:
-    if not sys.platform.startswith("linux"):
-        return None
-    runfiles = Path(os.environ["TEST_SRCDIR"])
-    workspace = os.environ.get("TEST_WORKSPACE", "envpool")
-    candidates = (
-        runfiles / "mujoco" / "libmujoco.so.3.6.0",
-        runfiles / workspace / "external" / "mujoco" / "libmujoco.so.3.6.0",
-    )
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    for candidate in runfiles.rglob("libmujoco.so.3.6.0"):
-        if candidate.is_file() and "site-packages" not in candidate.parts:
-            return candidate
-    raise RuntimeError(
-        f"could not locate Bazel-built libmujoco.so.3.6.0 under {runfiles}"
-    )
-
-
 def _run_oracle_probe(
     mode: str,
     task_ids: tuple[str, ...] = (),
@@ -191,18 +223,6 @@ def _run_oracle_probe(
         cmd.extend(["--sync_state", str(sync_path)])
     env = os.environ.copy()
     env["ROBOHIVE_VERBOSITY"] = "SILENT"
-    mujoco_preload = _oracle_mujoco_preload_path()
-    if mujoco_preload is not None:
-        env["LD_PRELOAD"] = (
-            f"{mujoco_preload}:{env['LD_PRELOAD']}"
-            if env.get("LD_PRELOAD")
-            else str(mujoco_preload)
-        )
-        env["LD_LIBRARY_PATH"] = (
-            f"{mujoco_preload.parent}:{env['LD_LIBRARY_PATH']}"
-            if env.get("LD_LIBRARY_PATH")
-            else str(mujoco_preload.parent)
-        )
     try:
         result = subprocess.run(
             cmd,
@@ -239,11 +259,37 @@ def _run_oracle_space_reports(
 
 
 def _sync_state_from_info(info: dict[str, Any]) -> dict[str, Any]:
-    return {
-        key: np.asarray(info[key][0], dtype=np.float64).tolist()
-        for key in _SYNC_STATE_KEYS
-        if key in info
+    dims = {
+        "nq": int(np.asarray(info["model_nq"]).ravel()[0]),
+        "nv": int(np.asarray(info["model_nv"]).ravel()[0]),
+        "na": int(np.asarray(info["model_na"]).ravel()[0]),
+        "nu": int(np.asarray(info["model_nu"]).ravel()[0]),
+        "nsite": int(np.asarray(info["model_nsite"]).ravel()[0]),
+        "nbody": int(np.asarray(info["model_nbody"]).ravel()[0]),
+        "ngeom": int(np.asarray(info["model_ngeom"]).ravel()[0]),
+        "nhfielddata": int(np.asarray(info["model_nhfielddata"]).ravel()[0]),
+        "nmocap": int(np.asarray(info["model_nmocap"]).ravel()[0]),
     }
+    dims.update({
+        "nsite3": dims["nsite"] * 3,
+        "nsite4": dims["nsite"] * 4,
+        "nbody3": dims["nbody"] * 3,
+        "nbody4": dims["nbody"] * 4,
+        "ngeom3": dims["ngeom"] * 3,
+        "ngeom4": dims["ngeom"] * 4,
+        "ngeom6": dims["ngeom"] * 6,
+        "nmocap3": dims["nmocap"] * 3,
+        "nmocap4": dims["nmocap"] * 4,
+    })
+    sync_state = {}
+    for key in _SYNC_STATE_KEYS:
+        if key not in info:
+            continue
+        size = dims[_SYNC_STATE_SIZES[key]]
+        sync_state[key] = (
+            np.asarray(info[key][0], dtype=np.float64).ravel()[:size].tolist()
+        )
+    return sync_state
 
 
 class MyoSuiteOracleAlignTest(absltest.TestCase):

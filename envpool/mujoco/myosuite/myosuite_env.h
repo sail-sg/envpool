@@ -40,7 +40,7 @@
 
 namespace myosuite {
 
-constexpr int kMyoSuiteTestStatePad = 8192;
+constexpr int kMyoSuiteTestStatePad = 65536;
 
 using envpool::mujoco::PixelObservationEnvFns;
 using envpool::mujoco::RenderCameraIdOrDefault;
@@ -87,12 +87,45 @@ class MyoSuiteEnvFns {
         "info:ctrl"_.Bind(Spec<mjtNum>({2048})),
         "info:qacc"_.Bind(Spec<mjtNum>({2048})),
         "info:qacc_warmstart"_.Bind(Spec<mjtNum>({2048})),
+        "info:actuator_length"_.Bind(Spec<mjtNum>({2048})),
+        "info:actuator_velocity"_.Bind(Spec<mjtNum>({2048})),
+        "info:actuator_force"_.Bind(Spec<mjtNum>({2048})),
+        "info:fatigue_ma"_.Bind(Spec<mjtNum>({2048})),
+        "info:fatigue_mr"_.Bind(Spec<mjtNum>({2048})),
+        "info:fatigue_mf"_.Bind(Spec<mjtNum>({2048})),
+        "info:fatigue_tl"_.Bind(Spec<mjtNum>({2048})),
+        "info:fatigue_tauact"_.Bind(Spec<mjtNum>({2048})),
+        "info:fatigue_taudeact"_.Bind(Spec<mjtNum>({2048})),
+        "info:fatigue_dt"_.Bind(Spec<mjtNum>({})),
         "info:site_pos"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
         "info:site_quat"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:site_xpos"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:site_size"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:site_rgba"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
         "info:body_pos"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
         "info:body_quat"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:body_mass"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:light_xpos"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:light_xdir"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:geom_pos"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:geom_quat"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:geom_size"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:geom_xpos"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:geom_xmat"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:geom_rgba"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:geom_friction"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:geom_aabb"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:geom_rbound"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:geom_contype"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:geom_conaffinity"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:geom_type"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:geom_condim"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:hfield_data"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
         "info:mocap_pos"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
         "info:mocap_quat"_.Bind(Spec<mjtNum>({kMyoSuiteTestStatePad})),
+        "info:time"_.Bind(Spec<mjtNum>({})),
+        "info:model_timestep"_.Bind(Spec<mjtNum>({})),
+        "info:frame_skip"_.Bind(Spec<int>({})),
 #endif
         "info:model_nq"_.Bind(Spec<int>({})),
         "info:model_nv"_.Bind(Spec<int>({})),
@@ -100,6 +133,8 @@ class MyoSuiteEnvFns {
         "info:model_nu"_.Bind(Spec<int>({})),
         "info:model_nsite"_.Bind(Spec<int>({})),
         "info:model_nbody"_.Bind(Spec<int>({})),
+        "info:model_ngeom"_.Bind(Spec<int>({})),
+        "info:model_nhfielddata"_.Bind(Spec<int>({})),
         "info:model_nmocap"_.Bind(Spec<int>({})));
   }
 
@@ -123,6 +158,22 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
   using Base::Allocate;
   using Base::gen_;
   using Base::spec_;
+
+  enum class OslPhase {
+    kEStance,
+    kLStance,
+    kESwing,
+    kLSwing,
+  };
+
+  struct OslStateParams {
+    mjtNum knee_stiffness;
+    mjtNum knee_damping;
+    mjtNum knee_target_angle;
+    mjtNum ankle_stiffness;
+    mjtNum ankle_damping;
+    mjtNum ankle_target_angle;
+  };
 
   const MyoSuiteTaskDef& task_;
   const MyoSuiteTaskMetadata& metadata_;
@@ -149,7 +200,15 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
   int task_step_{0};
   int myodm_reference_index_{0};
   mjtNum myodm_lift_z_{0.0};
+  OslPhase osl_phase_{OslPhase::kEStance};
+  mjtNum osl_body_weight_{0.0};
+  int osl_knee_actuator_id_{-1};
+  int osl_ankle_actuator_id_{-1};
+  int osl_knee_joint_id_{-1};
+  int osl_ankle_joint_id_{-1};
+  int osl_load_sensor_id_{-1};
   std::vector<mjtNum> tabletennis_init_paddle_quat_;
+  std::array<mjtNum, 3> challenge_reorient_goal_obj_offset_{};
   int bimanual_goal_touch_{0};
   mjtNum bimanual_init_obj_z_{0.0};
   mjtNum bimanual_init_palm_z_{0.0};
@@ -167,10 +226,39 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
   std::vector<mjtNum> ctrl_pad_;
   std::vector<mjtNum> qacc_pad_;
   std::vector<mjtNum> qacc_warmstart_pad_;
+  std::vector<mjtNum> actuator_length_pad_;
+  std::vector<mjtNum> actuator_velocity_pad_;
+  std::vector<mjtNum> actuator_force_pad_;
+  std::vector<mjtNum> fatigue_ma_pad_;
+  std::vector<mjtNum> fatigue_mr_pad_;
+  std::vector<mjtNum> fatigue_mf_pad_;
+  std::vector<mjtNum> fatigue_tl_pad_;
+  std::vector<mjtNum> fatigue_tauact_pad_;
+  std::vector<mjtNum> fatigue_taudeact_pad_;
   std::vector<mjtNum> site_pos_pad_;
   std::vector<mjtNum> site_quat_pad_;
+  std::vector<mjtNum> site_xpos_pad_;
+  std::vector<mjtNum> site_size_pad_;
+  std::vector<mjtNum> site_rgba_pad_;
   std::vector<mjtNum> body_pos_pad_;
   std::vector<mjtNum> body_quat_pad_;
+  std::vector<mjtNum> body_mass_pad_;
+  std::vector<mjtNum> light_xpos_pad_;
+  std::vector<mjtNum> light_xdir_pad_;
+  std::vector<mjtNum> geom_pos_pad_;
+  std::vector<mjtNum> geom_quat_pad_;
+  std::vector<mjtNum> geom_size_pad_;
+  std::vector<mjtNum> geom_xpos_pad_;
+  std::vector<mjtNum> geom_xmat_pad_;
+  std::vector<mjtNum> geom_rgba_pad_;
+  std::vector<mjtNum> geom_friction_pad_;
+  std::vector<mjtNum> geom_aabb_pad_;
+  std::vector<mjtNum> geom_rbound_pad_;
+  std::vector<mjtNum> geom_contype_pad_;
+  std::vector<mjtNum> geom_conaffinity_pad_;
+  std::vector<mjtNum> geom_type_pad_;
+  std::vector<mjtNum> geom_condim_pad_;
+  std::vector<mjtNum> hfield_data_pad_;
   std::vector<mjtNum> mocap_pos_pad_;
   std::vector<mjtNum> mocap_quat_pad_;
 #endif
@@ -221,16 +309,47 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
         ctrl_pad_(2048, 0.0),
         qacc_pad_(2048, 0.0),
         qacc_warmstart_pad_(2048, 0.0),
+        actuator_length_pad_(2048, 0.0),
+        actuator_velocity_pad_(2048, 0.0),
+        actuator_force_pad_(2048, 0.0),
+        fatigue_ma_pad_(2048, 0.0),
+        fatigue_mr_pad_(2048, 0.0),
+        fatigue_mf_pad_(2048, 0.0),
+        fatigue_tl_pad_(2048, 0.0),
+        fatigue_tauact_pad_(2048, 0.0),
+        fatigue_taudeact_pad_(2048, 0.0),
         site_pos_pad_(kMyoSuiteTestStatePad, 0.0),
         site_quat_pad_(kMyoSuiteTestStatePad, 0.0),
+        site_xpos_pad_(kMyoSuiteTestStatePad, 0.0),
+        site_size_pad_(kMyoSuiteTestStatePad, 0.0),
+        site_rgba_pad_(kMyoSuiteTestStatePad, 0.0),
         body_pos_pad_(kMyoSuiteTestStatePad, 0.0),
         body_quat_pad_(kMyoSuiteTestStatePad, 0.0),
+        body_mass_pad_(kMyoSuiteTestStatePad, 0.0),
+        light_xpos_pad_(kMyoSuiteTestStatePad, 0.0),
+        light_xdir_pad_(kMyoSuiteTestStatePad, 0.0),
+        geom_pos_pad_(kMyoSuiteTestStatePad, 0.0),
+        geom_quat_pad_(kMyoSuiteTestStatePad, 0.0),
+        geom_size_pad_(kMyoSuiteTestStatePad, 0.0),
+        geom_xpos_pad_(kMyoSuiteTestStatePad, 0.0),
+        geom_xmat_pad_(kMyoSuiteTestStatePad, 0.0),
+        geom_rgba_pad_(kMyoSuiteTestStatePad, 0.0),
+        geom_friction_pad_(kMyoSuiteTestStatePad, 0.0),
+        geom_aabb_pad_(kMyoSuiteTestStatePad, 0.0),
+        geom_rbound_pad_(kMyoSuiteTestStatePad, 0.0),
+        geom_contype_pad_(kMyoSuiteTestStatePad, 0.0),
+        geom_conaffinity_pad_(kMyoSuiteTestStatePad, 0.0),
+        geom_type_pad_(kMyoSuiteTestStatePad, 0.0),
+        geom_condim_pad_(kMyoSuiteTestStatePad, 0.0),
+        hfield_data_pad_(kMyoSuiteTestStatePad, 0.0),
         mocap_pos_pad_(kMyoSuiteTestStatePad, 0.0),
         mocap_quat_pad_(kMyoSuiteTestStatePad, 0.0)
 #endif
   {
     ApplyMuscleCondition();
     InitializeFatigue();
+    ApplyMyoDmModelEdits();
+    ApplyBaodingModelEdits();
     ApplyMetadataInitialState();
     SetDefaultInitialQpos();
     ApplyBimanualInitialState();
@@ -250,6 +369,7 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     solved_ = 0.0;
     ResetFatigue();
     ResetToInitialState();
+    ResetOslController();
     ApplyResetTargets();
     WarmstartFromCurrentAcceleration();
     std::fill(last_ctrl_.begin(), last_ctrl_.end(), 0.0);
@@ -277,11 +397,15 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     }
     ApplyFatigue(&ctrl);
     ApplyReafferentation(&ctrl);
+    ApplyOslControls(&ctrl);
     PreStepTaskUpdate();
     const bool robot_step_normalizes_ctrl =
-        task_.normalize_act && model_->na == 0;
+        task_.normalize_act &&
+        (model_->na == 0 ||
+         task_.kind == MyoSuiteTaskKind::kChallengeTableTennis);
     for (int i = 0; i < model_->nu; ++i) {
-      if (robot_step_normalizes_ctrl) {
+      if (robot_step_normalizes_ctrl &&
+          (model_->na == 0 || model_->actuator_dyntype[i] != mjDYN_MUSCLE)) {
         const mjtNum low = model_->actuator_ctrlrange[2 * i];
         const mjtNum high = model_->actuator_ctrlrange[2 * i + 1];
         ctrl[i] = (low + high) * 0.5 + ctrl[i] * (high - low) * 0.5;
@@ -304,7 +428,22 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
   }
 
   bool RenderCamera(mjvCamera* camera) override {
+    mjv_defaultCamera(camera);
+    camera->type = mjCAMERA_FREE;
+    camera->fixedcamid = -1;
     mjv_defaultFreeCamera(model_, camera);
+    return true;
+  }
+
+  bool RenderOption(mjvOption* option) override {
+    mjv_defaultOption(option);
+    option->flags[mjVIS_ACTUATOR] = 1;
+    option->flags[mjVIS_ACTIVATION] = 1;
+    if (task_.kind == MyoSuiteTaskKind::kChallengeRunTrack ||
+        task_.kind == MyoSuiteTaskKind::kChallengeChaseTag ||
+        task_.kind == MyoSuiteTaskKind::kChallengeSoccer) {
+      option->flags[mjVIS_TENDON] = 1;
+    }
     return true;
   }
 
@@ -525,6 +664,10 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     return mj_name2id(model_, mjOBJ_JOINT, name);
   }
 
+  int ActuatorId(const char* name) const {
+    return mj_name2id(model_, mjOBJ_ACTUATOR, name);
+  }
+
   int SensorId(const char* name) const {
     return mj_name2id(model_, mjOBJ_SENSOR, name);
   }
@@ -639,6 +782,168 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     std::fill(fatigue_tl_.begin(), fatigue_tl_.end(), 0.0);
   }
 
+  void InitializeOslController() {
+    if (task_.kind != MyoSuiteTaskKind::kChallengeRunTrack) {
+      return;
+    }
+    osl_knee_actuator_id_ = ActuatorId("osl_knee_torque_actuator");
+    osl_ankle_actuator_id_ = ActuatorId("osl_ankle_torque_actuator");
+    osl_knee_joint_id_ = JointId("osl_knee_angle_r");
+    osl_ankle_joint_id_ = JointId("osl_ankle_angle_r");
+    osl_load_sensor_id_ = SensorId("r_osl_load");
+    mjtNum body_mass = 0.0;
+    for (int i = 0; i < model_->nbody; ++i) {
+      body_mass += model_->body_mass[i];
+    }
+    osl_body_weight_ = body_mass * static_cast<mjtNum>(9.81);
+    ResetOslController();
+  }
+
+  void ResetOslController() {
+    if (task_.kind != MyoSuiteTaskKind::kChallengeRunTrack) {
+      return;
+    }
+    osl_phase_ = OslPhase::kEStance;
+    if (model_->nkey < 3) {
+      return;
+    }
+    int closest_key = 0;
+    mjtNum closest_distance = std::numeric_limits<mjtNum>::infinity();
+    for (int key = 0; key < 3; ++key) {
+      const mjtNum* key_qpos = model_->key_qpos + key * model_->nq;
+      mjtNum distance = 0.0;
+      for (int i = std::min<int>(7, model_->nq); i < model_->nq; ++i) {
+        const mjtNum diff = data_->qpos[i] - key_qpos[i];
+        distance += diff * diff;
+      }
+      if (distance < closest_distance) {
+        closest_distance = distance;
+        closest_key = key;
+      }
+    }
+    osl_phase_ = closest_key == 1 ? OslPhase::kESwing : OslPhase::kEStance;
+  }
+
+  static mjtNum DegreesToRadians(mjtNum degrees) {
+    return degrees * std::acos(static_cast<mjtNum>(-1.0)) /
+           static_cast<mjtNum>(180.0);
+  }
+
+  OslStateParams CurrentOslStateParams() const {
+    switch (osl_phase_) {
+      case OslPhase::kLStance:
+        return {99.372, 1.272, DegreesToRadians(8.0),
+                79.498, 0.063, DegreesToRadians(-20.0)};
+      case OslPhase::kESwing:
+        return {39.749, 0.063, DegreesToRadians(60.0),
+                7.949,  0.0,   DegreesToRadians(25.0)};
+      case OslPhase::kLSwing:
+        return {15.899, 3.816, DegreesToRadians(5.0),
+                7.949,  0.0,   DegreesToRadians(15.0)};
+      case OslPhase::kEStance:
+      default:
+        return {99.372, 3.180, DegreesToRadians(5.0),
+                19.874, 0.0,   DegreesToRadians(-2.0)};
+    }
+  }
+
+  void UpdateOslPhase(mjtNum knee_angle, mjtNum knee_vel, mjtNum ankle_angle,
+                      mjtNum load) {
+    switch (osl_phase_) {
+      case OslPhase::kEStance:
+        if (load > 0.25 * osl_body_weight_ ||
+            ankle_angle > DegreesToRadians(6.0)) {
+          osl_phase_ = OslPhase::kLStance;
+        }
+        break;
+      case OslPhase::kLStance:
+        if (load < 0.15 * osl_body_weight_) {
+          osl_phase_ = OslPhase::kESwing;
+        }
+        break;
+      case OslPhase::kESwing:
+        if (knee_angle > DegreesToRadians(50.0) ||
+            knee_vel < DegreesToRadians(3.0)) {
+          osl_phase_ = OslPhase::kLSwing;
+        }
+        break;
+      case OslPhase::kLSwing:
+        if (load > 0.4 * osl_body_weight_ ||
+            knee_angle < DegreesToRadians(30.0)) {
+          osl_phase_ = OslPhase::kEStance;
+        }
+        break;
+    }
+  }
+
+  mjtNum JointQpos(int joint_id) const {
+    if (joint_id < 0) {
+      return 0.0;
+    }
+    return data_->qpos[model_->jnt_qposadr[joint_id]];
+  }
+
+  mjtNum JointQvel(int joint_id) const {
+    if (joint_id < 0) {
+      return 0.0;
+    }
+    return data_->qvel[model_->jnt_dofadr[joint_id]];
+  }
+
+  mjtNum OslLoad() const {
+    if (osl_load_sensor_id_ < 0 ||
+        model_->sensor_dim[osl_load_sensor_id_] <= 1) {
+      return 0.0;
+    }
+    const int adr = model_->sensor_adr[osl_load_sensor_id_];
+    return -data_->sensordata[adr + 1];
+  }
+
+  mjtNum OslActuatorControl(int actuator_id, mjtNum torque) const {
+    if (actuator_id < 0) {
+      return 0.0;
+    }
+    const mjtNum gear = model_->actuator_gear[6 * actuator_id];
+    mjtNum ctrl = gear != 0.0 ? torque / gear : 0.0;
+    const mjtNum low = model_->actuator_ctrlrange[2 * actuator_id];
+    const mjtNum high = model_->actuator_ctrlrange[2 * actuator_id + 1];
+    ctrl = std::max(low, std::min(high, ctrl));
+    if (task_.normalize_act) {
+      const mjtNum mean = (low + high) * 0.5;
+      const mjtNum range = (high - low) * 0.5;
+      ctrl = range != 0.0 ? (ctrl - mean) / range : 0.0;
+    }
+    return ctrl;
+  }
+
+  void ApplyOslControls(std::vector<mjtNum>* ctrl) {
+    if (task_.kind != MyoSuiteTaskKind::kChallengeRunTrack ||
+        osl_knee_actuator_id_ < 0 || osl_ankle_actuator_id_ < 0) {
+      return;
+    }
+    const mjtNum knee_angle = JointQpos(osl_knee_joint_id_);
+    const mjtNum knee_vel = JointQvel(osl_knee_joint_id_);
+    const mjtNum ankle_angle = JointQpos(osl_ankle_joint_id_);
+    const mjtNum ankle_vel = JointQvel(osl_ankle_joint_id_);
+    UpdateOslPhase(knee_angle, knee_vel, ankle_angle, OslLoad());
+    const auto params = CurrentOslStateParams();
+    const mjtNum knee_torque = std::max<mjtNum>(
+        -142.272, std::min<mjtNum>(
+                      142.272, params.knee_stiffness *
+                                       (params.knee_target_angle - knee_angle) -
+                                   params.knee_damping * knee_vel));
+    const mjtNum ankle_torque = std::max<mjtNum>(
+        -168.192,
+        std::min<mjtNum>(
+            168.192,
+            params.ankle_stiffness * (params.ankle_target_angle - ankle_angle) -
+                params.ankle_damping * ankle_vel));
+    (*ctrl)[osl_knee_actuator_id_] =
+        OslActuatorControl(osl_knee_actuator_id_, knee_torque);
+    (*ctrl)[osl_ankle_actuator_id_] =
+        OslActuatorControl(osl_ankle_actuator_id_, ankle_torque);
+  }
+
   void ApplyFatigue(std::vector<mjtNum>* ctrl) {
     if (task_.muscle_condition != MyoSuiteMuscleCondition::kFatigue) {
       return;
@@ -655,7 +960,7 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
       const mjtNum mr = fatigue_mr_[i];
       const mjtNum mf = fatigue_mf_[i];
       const mjtNum tl = fatigue_tl_[i];
-      const mjtNum ld = (0.5 + 1.5 * ma) / fatigue_tauact_[i];
+      const mjtNum ld = (1.0 / fatigue_tauact_[i]) * (0.5 + 1.5 * ma);
       const mjtNum lr = (0.5 + 1.5 * ma) / fatigue_taudeact_[i];
 
       mjtNum transfer = 0.0;
@@ -680,7 +985,8 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
       fatigue_ma_[i] += (transfer - k_fatigue_coefficient * ma) * dt;
       fatigue_mr_[i] += (-transfer + recovery * mf) * dt;
       fatigue_mf_[i] += (k_fatigue_coefficient * ma - recovery * mf) * dt;
-      (*ctrl)[actuator_id] = fatigue_ma_[i];
+      (*ctrl)[actuator_id] =
+          static_cast<mjtNum>(static_cast<float>(fatigue_ma_[i]));
     }
   }
 
@@ -693,6 +999,16 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     if (epl >= 0 && eip >= 0) {
       (*ctrl)[epl] = (*ctrl)[eip];
       (*ctrl)[eip] = 0.0;
+    }
+  }
+
+  void ApplyMyoDmModelEdits() {
+    if (task_.kind != MyoSuiteTaskKind::kMyoDmTrack) {
+      return;
+    }
+    const int body_geom = GeomId("body");
+    if (body_geom >= 0) {
+      model_->geom_rgba[4 * body_geom + 3] = 0.0;
     }
   }
 
@@ -709,6 +1025,20 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
       mju_zero(data_->act, model_->na);
     }
     mj_forward(model_, data_);
+  }
+
+  void ApplyBaodingModelEdits() {
+    if (task_.kind != MyoSuiteTaskKind::kChallengeBaoding) {
+      return;
+    }
+    const int target1 = SiteId("target1_site");
+    const int target2 = SiteId("target2_site");
+    if (target1 >= 0) {
+      model_->site_group[target1] = 2;
+    }
+    if (target2 >= 0) {
+      model_->site_group[target2] = 2;
+    }
   }
 
   void SetDefaultInitialQpos() {
@@ -790,11 +1120,26 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
         data_->qpos[qpos_id + 2] = 1.15;
       }
     }
+    ApplyChallengeRunTrackTerrainReset();
     mj_forward(model_, data_);
     if (task_.kind == MyoSuiteTaskKind::kChallengeBimanual) {
       bimanual_init_obj_z_ = SiteXpos(SiteId("touch_site"))[2];
       bimanual_init_palm_z_ = SiteXpos(SiteId("S_grasp"))[2];
     }
+  }
+
+  void ApplyChallengeRunTrackTerrainReset() {
+    if (task_.kind != MyoSuiteTaskKind::kChallengeRunTrack) {
+      return;
+    }
+    const int terrain = GeomId("terrain");
+    if (terrain < 0) {
+      return;
+    }
+    model_->geom_pos[3 * terrain] = 0.0;
+    model_->geom_pos[3 * terrain + 1] = 0.0;
+    model_->geom_pos[3 * terrain + 2] = 0.005;
+    model_->geom_rgba[4 * terrain + 3] = 1.0;
   }
 
   void WarmstartFromCurrentAcceleration() {
@@ -814,8 +1159,16 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
                                  : BodyId("Object");
       myodm_lift_z_ = BodyXpos(object_bid)[2] + 0.02;
     }
+    InitializeOslController();
     if (task_.kind == MyoSuiteTaskKind::kChallengeTableTennis) {
       tabletennis_init_paddle_quat_ = BodyXquat(BodyId("paddle"));
+    }
+    if (task_.kind == MyoSuiteTaskKind::kChallengeReorient) {
+      const auto target = SiteXpos(SiteId("target_o"));
+      const auto object = SiteXpos(SiteId("object_o"));
+      for (int axis = 0; axis < 3; ++axis) {
+        challenge_reorient_goal_obj_offset_[axis] = target[axis] - object[axis];
+      }
     }
     if (task_.kind == MyoSuiteTaskKind::kChallengeBimanual) {
       bimanual_init_obj_z_ = SiteXpos(SiteId("touch_site"))[2];
@@ -1371,6 +1724,11 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
       obs["goal_pos"] = SiteXpos(SiteId("target_o"));
       obs["palm_pos"] = SiteXpos(SiteId("S_grasp"));
       obs["pos_err"] = Subtract(obs["goal_pos"], obs["obj_pos"]);
+      if (task_.kind == MyoSuiteTaskKind::kChallengeReorient) {
+        for (int axis = 0; axis < 3; ++axis) {
+          obs["pos_err"][axis] -= challenge_reorient_goal_obj_offset_[axis];
+        }
+      }
       obs["reach_err"] = Subtract(obs["palm_pos"], obs["obj_pos"]);
       obs["obj_rot"] = MatToEuler(data_->site_xmat + 9 * SiteId("object_o"));
       obs["goal_rot"] = MatToEuler(data_->site_xmat + 9 * SiteId("target_o"));
@@ -1681,7 +2039,16 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
       values["bonus"] = (rot_align > 0.9 && pos_align < 0.075 ? 1.0 : 0.0) +
                         (rot_align > 0.95 && pos_align < 0.075 ? 5.0 : 0.0);
       values["sparse"] = -pos_align + rot_align;
-      values["solved"] = rot_align > 0.95 && !dropped ? 1.0 : 0.0;
+      const bool solved = rot_align > 0.95 && !dropped;
+      values["solved"] = solved ? 1.0 : 0.0;
+      if (task_.kind == MyoSuiteTaskKind::kReorientSar) {
+        const int indicator = SiteId("success");
+        if (indicator >= 0 && (model_->site_rgba[4 * indicator] != 0.0 ||
+                               model_->site_rgba[4 * indicator + 1] != 2.0)) {
+          model_->site_rgba[4 * indicator] = solved ? 0.0 : 2.0;
+          model_->site_rgba[4 * indicator + 1] = solved ? 2.0 : 0.0;
+        }
+      }
       terminated = dropped;
     } else if (task_.kind == MyoSuiteTaskKind::kWalk ||
                task_.kind == MyoSuiteTaskKind::kTerrain) {
@@ -1736,6 +2103,20 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
       values["act_reg"] = -ActMagnitude(obs);
       values["sparse"] = -(d1 + d2);
       values["solved"] = d1 < 0.015 && d2 < 0.015 && !fall ? 1.0 : 0.0;
+      const int object1_gid = GeomId("ball1");
+      const int object2_gid = GeomId("ball2");
+      if (object1_gid >= 0) {
+        model_->geom_rgba[4 * object1_gid] =
+            d1 < 0.015 ? static_cast<mjtNum>(1.0) : static_cast<mjtNum>(0.5);
+        model_->geom_rgba[4 * object1_gid + 1] =
+            d1 < 0.015 ? static_cast<mjtNum>(1.0) : static_cast<mjtNum>(0.5);
+      }
+      if (object2_gid >= 0) {
+        model_->geom_rgba[4 * object2_gid] =
+            d1 < 0.015 ? static_cast<mjtNum>(0.9) : static_cast<mjtNum>(0.5);
+        model_->geom_rgba[4 * object2_gid + 1] =
+            d1 < 0.015 ? static_cast<mjtNum>(0.7) : static_cast<mjtNum>(0.5);
+      }
       terminated = fall;
     } else if (task_.kind == MyoSuiteTaskKind::kChallengeRelocate ||
                task_.kind == MyoSuiteTaskKind::kChallengeReorient) {
@@ -1751,8 +2132,18 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
       values["act_reg"] = -ActMagnitude(obs);
       values["penalty"] = drop ? -1.0 : 0.0;
       values["sparse"] = -rot_dist - 10.0 * pos_dist;
-      values["solved"] =
-          pos_dist < 0.025 && rot_dist < 0.262 && !drop ? 1.0 : 0.0;
+      const bool solved = pos_dist < 0.025 && rot_dist < 0.262 && !drop;
+      values["solved"] = solved ? 1.0 : 0.0;
+      const int indicator = SiteId("target_ball");
+      if (indicator >= 0) {
+        model_->site_rgba[4 * indicator] = solved ? 0.0 : 2.0;
+        model_->site_rgba[4 * indicator + 1] = solved ? 2.0 : 0.0;
+        if (task_.kind == MyoSuiteTaskKind::kChallengeRelocate) {
+          for (int axis = 0; axis < 3; ++axis) {
+            model_->site_size[3 * indicator + axis] = solved ? 0.25 : 0.1;
+          }
+        }
+      }
       terminated = drop;
     } else if (task_.kind == MyoSuiteTaskKind::kChallengeRunTrack) {
       const auto& root_pos = ObsValue(obs, "model_root_pos");
@@ -1781,11 +2172,13 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
       const mjtNum dy = (root_pos.size() > 1 ? root_pos[1] : 0.0) -
                         (opponent_pose.size() > 1 ? opponent_pose[1] : 0.0);
       const mjtNum distance = std::sqrt(dx * dx + dy * dy);
-      const bool win = distance <= 0.5;
+      const bool tagged = distance <= 0.5;
       const auto pelvis = BodyXpos(BodyId("pelvis"));
       const bool out_of_bounds =
           std::abs(pelvis[0]) > 6.5 || std::abs(pelvis[1]) > 6.5;
-      const bool lose = data_->time >= 20.0 || out_of_bounds;
+      const bool fallen = pelvis[2] < 0.5;
+      const bool win = tagged;
+      const bool lose = data_->time >= 20.0 || out_of_bounds || fallen;
       values["act_reg"] = ActMagnitude(obs);
       values["distance"] = distance;
       values["lose"] = lose ? 1.0 : 0.0;
@@ -1793,6 +2186,13 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
           win ? 1.0 - std::round(data_->time * 100.0) / 100.0 / 20.0 : 0.0;
       values["solved"] = win ? 1.0 : 0.0;
       values["done"] = (win || lose) ? 1.0 : 0.0;
+      const int indicator = SiteId("opponent_indicator");
+      if (indicator >= 0) {
+        model_->site_rgba[4 * indicator] = win ? 0.0 : 2.0;
+        model_->site_rgba[4 * indicator + 1] = win ? 2.0 : 0.0;
+        model_->site_rgba[4 * indicator + 2] = 0.0;
+        model_->site_rgba[4 * indicator + 3] = win ? 0.2 : 0.0;
+      }
       terminated = win || lose;
     } else if (task_.kind == MyoSuiteTaskKind::kChallengeTableTennis) {
       const mjtNum reach_dist = Norm(ObsValue(obs, "reach_err"));
@@ -1936,10 +2336,40 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     std::fill(ctrl_pad_.begin(), ctrl_pad_.end(), 0.0);
     std::fill(qacc_pad_.begin(), qacc_pad_.end(), 0.0);
     std::fill(qacc_warmstart_pad_.begin(), qacc_warmstart_pad_.end(), 0.0);
+    std::fill(actuator_length_pad_.begin(), actuator_length_pad_.end(), 0.0);
+    std::fill(actuator_velocity_pad_.begin(), actuator_velocity_pad_.end(),
+              0.0);
+    std::fill(actuator_force_pad_.begin(), actuator_force_pad_.end(), 0.0);
+    std::fill(fatigue_ma_pad_.begin(), fatigue_ma_pad_.end(), 0.0);
+    std::fill(fatigue_mr_pad_.begin(), fatigue_mr_pad_.end(), 0.0);
+    std::fill(fatigue_mf_pad_.begin(), fatigue_mf_pad_.end(), 0.0);
+    std::fill(fatigue_tl_pad_.begin(), fatigue_tl_pad_.end(), 0.0);
+    std::fill(fatigue_tauact_pad_.begin(), fatigue_tauact_pad_.end(), 0.0);
+    std::fill(fatigue_taudeact_pad_.begin(), fatigue_taudeact_pad_.end(), 0.0);
     std::fill(site_pos_pad_.begin(), site_pos_pad_.end(), 0.0);
     std::fill(site_quat_pad_.begin(), site_quat_pad_.end(), 0.0);
+    std::fill(site_xpos_pad_.begin(), site_xpos_pad_.end(), 0.0);
+    std::fill(site_size_pad_.begin(), site_size_pad_.end(), 0.0);
+    std::fill(site_rgba_pad_.begin(), site_rgba_pad_.end(), 0.0);
     std::fill(body_pos_pad_.begin(), body_pos_pad_.end(), 0.0);
     std::fill(body_quat_pad_.begin(), body_quat_pad_.end(), 0.0);
+    std::fill(body_mass_pad_.begin(), body_mass_pad_.end(), 0.0);
+    std::fill(light_xpos_pad_.begin(), light_xpos_pad_.end(), 0.0);
+    std::fill(light_xdir_pad_.begin(), light_xdir_pad_.end(), 0.0);
+    std::fill(geom_pos_pad_.begin(), geom_pos_pad_.end(), 0.0);
+    std::fill(geom_quat_pad_.begin(), geom_quat_pad_.end(), 0.0);
+    std::fill(geom_size_pad_.begin(), geom_size_pad_.end(), 0.0);
+    std::fill(geom_xpos_pad_.begin(), geom_xpos_pad_.end(), 0.0);
+    std::fill(geom_xmat_pad_.begin(), geom_xmat_pad_.end(), 0.0);
+    std::fill(geom_rgba_pad_.begin(), geom_rgba_pad_.end(), 0.0);
+    std::fill(geom_friction_pad_.begin(), geom_friction_pad_.end(), 0.0);
+    std::fill(geom_aabb_pad_.begin(), geom_aabb_pad_.end(), 0.0);
+    std::fill(geom_rbound_pad_.begin(), geom_rbound_pad_.end(), 0.0);
+    std::fill(geom_contype_pad_.begin(), geom_contype_pad_.end(), 0.0);
+    std::fill(geom_conaffinity_pad_.begin(), geom_conaffinity_pad_.end(), 0.0);
+    std::fill(geom_type_pad_.begin(), geom_type_pad_.end(), 0.0);
+    std::fill(geom_condim_pad_.begin(), geom_condim_pad_.end(), 0.0);
+    std::fill(hfield_data_pad_.begin(), hfield_data_pad_.end(), 0.0);
     std::fill(mocap_pos_pad_.begin(), mocap_pos_pad_.end(), 0.0);
     std::fill(mocap_quat_pad_.begin(), mocap_quat_pad_.end(), 0.0);
     for (int i = 0; i < model_->nq && i < 2048; ++i) {
@@ -1955,18 +2385,69 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     }
     for (int i = 0; i < model_->nu && i < 2048; ++i) {
       ctrl_pad_[i] = data_->ctrl[i];
+      actuator_length_pad_[i] = data_->actuator_length[i];
+      actuator_velocity_pad_[i] = data_->actuator_velocity[i];
+      actuator_force_pad_[i] = data_->actuator_force[i];
+    }
+    for (int i = 0; i < static_cast<int>(fatigue_ma_.size()) && i < 2048; ++i) {
+      fatigue_ma_pad_[i] = fatigue_ma_[i];
+      fatigue_mr_pad_[i] = fatigue_mr_[i];
+      fatigue_mf_pad_[i] = fatigue_mf_[i];
+      fatigue_tl_pad_[i] = fatigue_tl_[i];
+      fatigue_tauact_pad_[i] = fatigue_tauact_[i];
+      fatigue_taudeact_pad_[i] = fatigue_taudeact_[i];
     }
     for (int i = 0; i < model_->nsite * 3 && i < kMyoSuiteTestStatePad; ++i) {
       site_pos_pad_[i] = model_->site_pos[i];
+      site_xpos_pad_[i] = data_->site_xpos[i];
     }
     for (int i = 0; i < model_->nsite * 4 && i < kMyoSuiteTestStatePad; ++i) {
       site_quat_pad_[i] = model_->site_quat[i];
+    }
+    for (int i = 0; i < model_->nsite * 3 && i < kMyoSuiteTestStatePad; ++i) {
+      site_size_pad_[i] = model_->site_size[i];
+    }
+    for (int i = 0; i < model_->nsite * 4 && i < kMyoSuiteTestStatePad; ++i) {
+      site_rgba_pad_[i] = model_->site_rgba[i];
     }
     for (int i = 0; i < model_->nbody * 3 && i < kMyoSuiteTestStatePad; ++i) {
       body_pos_pad_[i] = model_->body_pos[i];
     }
     for (int i = 0; i < model_->nbody * 4 && i < kMyoSuiteTestStatePad; ++i) {
       body_quat_pad_[i] = model_->body_quat[i];
+    }
+    for (int i = 0; i < model_->nbody && i < kMyoSuiteTestStatePad; ++i) {
+      body_mass_pad_[i] = model_->body_mass[i];
+    }
+    for (int i = 0; i < model_->nlight * 3 && i < kMyoSuiteTestStatePad; ++i) {
+      light_xpos_pad_[i] = data_->light_xpos[i];
+      light_xdir_pad_[i] = data_->light_xdir[i];
+    }
+    for (int i = 0; i < model_->ngeom * 3 && i < kMyoSuiteTestStatePad; ++i) {
+      geom_pos_pad_[i] = model_->geom_pos[i];
+      geom_size_pad_[i] = model_->geom_size[i];
+      geom_friction_pad_[i] = model_->geom_friction[i];
+      geom_xpos_pad_[i] = data_->geom_xpos[i];
+    }
+    for (int i = 0; i < model_->ngeom * 4 && i < kMyoSuiteTestStatePad; ++i) {
+      geom_quat_pad_[i] = model_->geom_quat[i];
+      geom_rgba_pad_[i] = model_->geom_rgba[i];
+    }
+    for (int i = 0; i < model_->ngeom * 9 && i < kMyoSuiteTestStatePad; ++i) {
+      geom_xmat_pad_[i] = data_->geom_xmat[i];
+    }
+    for (int i = 0; i < model_->ngeom && i < kMyoSuiteTestStatePad; ++i) {
+      geom_rbound_pad_[i] = model_->geom_rbound[i];
+      geom_contype_pad_[i] = model_->geom_contype[i];
+      geom_conaffinity_pad_[i] = model_->geom_conaffinity[i];
+      geom_type_pad_[i] = model_->geom_type[i];
+      geom_condim_pad_[i] = model_->geom_condim[i];
+    }
+    for (int i = 0; i < model_->ngeom * 6 && i < kMyoSuiteTestStatePad; ++i) {
+      geom_aabb_pad_[i] = model_->geom_aabb[i];
+    }
+    for (int i = 0; i < model_->nhfielddata && i < kMyoSuiteTestStatePad; ++i) {
+      hfield_data_pad_[i] = model_->hfield_data[i];
     }
     for (int i = 0; i < model_->nmocap * 3 && i < kMyoSuiteTestStatePad; ++i) {
       mocap_pos_pad_[i] = data_->mocap_pos[i];
@@ -2003,6 +2484,8 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     state["info:model_nu"_] = model_->nu;
     state["info:model_nsite"_] = model_->nsite;
     state["info:model_nbody"_] = model_->nbody;
+    state["info:model_ngeom"_] = model_->ngeom;
+    state["info:model_nhfielddata"_] = model_->nhfielddata;
     state["info:model_nmocap"_] = model_->nmocap;
 #ifdef ENVPOOL_TEST
     CapturePaddedCurrentState();
@@ -2019,16 +2502,80 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     state["info:qacc"_].Assign(qacc_pad_.data(), qacc_pad_.size());
     state["info:qacc_warmstart"_].Assign(qacc_warmstart_pad_.data(),
                                          qacc_warmstart_pad_.size());
+    state["info:actuator_length"_].Assign(actuator_length_pad_.data(),
+                                          actuator_length_pad_.size());
+    state["info:actuator_velocity"_].Assign(actuator_velocity_pad_.data(),
+                                            actuator_velocity_pad_.size());
+    state["info:actuator_force"_].Assign(actuator_force_pad_.data(),
+                                         actuator_force_pad_.size());
+    state["info:fatigue_ma"_].Assign(fatigue_ma_pad_.data(),
+                                     fatigue_ma_pad_.size());
+    state["info:fatigue_mr"_].Assign(fatigue_mr_pad_.data(),
+                                     fatigue_mr_pad_.size());
+    state["info:fatigue_mf"_].Assign(fatigue_mf_pad_.data(),
+                                     fatigue_mf_pad_.size());
+    state["info:fatigue_tl"_].Assign(fatigue_tl_pad_.data(),
+                                     fatigue_tl_pad_.size());
+    state["info:fatigue_tauact"_].Assign(fatigue_tauact_pad_.data(),
+                                         fatigue_tauact_pad_.size());
+    state["info:fatigue_taudeact"_].Assign(fatigue_taudeact_pad_.data(),
+                                           fatigue_taudeact_pad_.size());
+    state["info:fatigue_dt"_] =
+        task_.muscle_condition == MyoSuiteMuscleCondition::kFatigue
+            ? static_cast<mjtNum>(Dt())
+            : 0.0;
     state["info:site_pos"_].Assign(site_pos_pad_.data(), site_pos_pad_.size());
     state["info:site_quat"_].Assign(site_quat_pad_.data(),
                                     site_quat_pad_.size());
+    state["info:site_xpos"_].Assign(site_xpos_pad_.data(),
+                                    site_xpos_pad_.size());
+    state["info:site_size"_].Assign(site_size_pad_.data(),
+                                    site_size_pad_.size());
+    state["info:site_rgba"_].Assign(site_rgba_pad_.data(),
+                                    site_rgba_pad_.size());
     state["info:body_pos"_].Assign(body_pos_pad_.data(), body_pos_pad_.size());
     state["info:body_quat"_].Assign(body_quat_pad_.data(),
                                     body_quat_pad_.size());
+    state["info:body_mass"_].Assign(body_mass_pad_.data(),
+                                    body_mass_pad_.size());
+    state["info:light_xpos"_].Assign(light_xpos_pad_.data(),
+                                     light_xpos_pad_.size());
+    state["info:light_xdir"_].Assign(light_xdir_pad_.data(),
+                                     light_xdir_pad_.size());
+    state["info:geom_pos"_].Assign(geom_pos_pad_.data(), geom_pos_pad_.size());
+    state["info:geom_quat"_].Assign(geom_quat_pad_.data(),
+                                    geom_quat_pad_.size());
+    state["info:geom_size"_].Assign(geom_size_pad_.data(),
+                                    geom_size_pad_.size());
+    state["info:geom_xpos"_].Assign(geom_xpos_pad_.data(),
+                                    geom_xpos_pad_.size());
+    state["info:geom_xmat"_].Assign(geom_xmat_pad_.data(),
+                                    geom_xmat_pad_.size());
+    state["info:geom_rgba"_].Assign(geom_rgba_pad_.data(),
+                                    geom_rgba_pad_.size());
+    state["info:geom_friction"_].Assign(geom_friction_pad_.data(),
+                                        geom_friction_pad_.size());
+    state["info:geom_aabb"_].Assign(geom_aabb_pad_.data(),
+                                    geom_aabb_pad_.size());
+    state["info:geom_rbound"_].Assign(geom_rbound_pad_.data(),
+                                      geom_rbound_pad_.size());
+    state["info:geom_contype"_].Assign(geom_contype_pad_.data(),
+                                       geom_contype_pad_.size());
+    state["info:geom_conaffinity"_].Assign(geom_conaffinity_pad_.data(),
+                                           geom_conaffinity_pad_.size());
+    state["info:geom_type"_].Assign(geom_type_pad_.data(),
+                                    geom_type_pad_.size());
+    state["info:geom_condim"_].Assign(geom_condim_pad_.data(),
+                                      geom_condim_pad_.size());
+    state["info:hfield_data"_].Assign(hfield_data_pad_.data(),
+                                      hfield_data_pad_.size());
     state["info:mocap_pos"_].Assign(mocap_pos_pad_.data(),
                                     mocap_pos_pad_.size());
     state["info:mocap_quat"_].Assign(mocap_quat_pad_.data(),
                                      mocap_quat_pad_.size());
+    state["info:time"_] = data_->time;
+    state["info:model_timestep"_] = model_->opt.timestep;
+    state["info:frame_skip"_] = frame_skip_;
 #endif
   }
 };

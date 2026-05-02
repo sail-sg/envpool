@@ -68,7 +68,7 @@ mjtNum MedianGeomPosition(const mjData* data, int ngeom, int axis) {
 class CglContext final : public GlContext {
  public:
   CglContext() {
-    const std::array<CGLPixelFormatAttribute, 13> attribs = {
+    const std::array<CGLPixelFormatAttribute, 17> attribs = {
         kCGLPFAOpenGLProfile,
         static_cast<CGLPixelFormatAttribute>(kCGLOGLPVersion_Legacy),
         kCGLPFAColorSize,
@@ -79,8 +79,12 @@ class CglContext final : public GlContext {
         static_cast<CGLPixelFormatAttribute>(24),
         kCGLPFAStencilSize,
         static_cast<CGLPixelFormatAttribute>(8),
-        kCGLPFAAllowOfflineRenderers,
-        static_cast<CGLPixelFormatAttribute>(0),  // value
+        kCGLPFAMultisample,
+        kCGLPFASampleBuffers,
+        static_cast<CGLPixelFormatAttribute>(1),
+        kCGLPFASamples,
+        static_cast<CGLPixelFormatAttribute>(4),
+        kCGLPFAAccelerated,
         static_cast<CGLPixelFormatAttribute>(0),  // terminator
     };
     GLint npix = 0;
@@ -514,7 +518,9 @@ OffscreenRenderer::~OffscreenRenderer() {
   gl_context_->MakeCurrent();
   mjr_freeContext(&context_);
   mjv_freeScene(&scene_);
+#if !defined(ENVPOOL_HAS_CGL)
   gl_context_->ClearCurrent();
+#endif
 }
 
 void OffscreenRenderer::Initialize(const mjModel* model) {
@@ -523,6 +529,7 @@ void OffscreenRenderer::Initialize(const mjModel* model) {
   mjv_makeScene(model, &scene_, 10000);
   mjr_makeContext(model, &context_, mjFONTSCALE_150);
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
+  context_.readDepthMap = mjDEPTH_ZEROFAR;
   initialized_ = true;
 }
 
@@ -567,33 +574,28 @@ void OffscreenRenderer::UpdateCamera(const mjModel* model, const mjData* data,
 
 void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
                                int height, int camera_id, unsigned char* rgb,
-                               const mjvCamera* camera_override) {
-  const bool first_render = !initialized_;
+                               const mjvCamera* camera_override,
+                               const mjvOption* option_override) {
   if (!initialized_) {
     Initialize(model);
   }
   gl_context_->MakeCurrent();
-  if (context_.offWidth != width || context_.offHeight != height) {
-    mjr_resizeOffscreen(width, height, &context_);
-  }
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
   UpdateCamera(model, data, camera_id, camera_override);
 
   mjrRect viewport = {0, 0, width, height};
   auto render_scene = [&] {
-    mjv_updateScene(model, data, &option_, &perturb_, &camera_, mjCAT_ALL,
-                    &scene_);
+    mjv_updateScene(model, data,
+                    option_override != nullptr ? option_override : &option_,
+                    nullptr, &camera_, mjCAT_ALL, &scene_);
     mjr_render(viewport, &scene_, &context_);
   };
   render_scene();
-  if (first_render) {
 #if defined(ENVPOOL_HAS_CGL)
-    // The macOS offline CGL path can settle newly-created MuJoCo GL resources
-    // on the first draw. Draw the same scene again before reading pixels so
-    // reset renders are deterministic across freshly-created renderers.
-    render_scene();
+  // Match the first-frame CGL warmup needed by MuJoCo's Python renderer on
+  // macOS; otherwise a few offscreen tasks can differ on their first frame.
+  render_scene();
 #endif
-  }
 
   std::size_t frame_bytes =
       static_cast<std::size_t>(width) * height * 3 * sizeof(unsigned char);

@@ -426,6 +426,12 @@ def _task_from_spec(
     object_name = str(kwargs.get("object_name", ""))
     reference_path = ""
     model_path = _normalize_path(str(kwargs.get("model_path", "")), source_root)
+    if "ArmReach" in task_id:
+        model_path = "myosuite/simhive/myo_sim/arm/myoarm_reach.xml"
+    if _kind(entry_point, task_id) == "kChallengeTableTennis":
+        model_path = (
+            "myosuite/envs/myo/assets/arm/myoarm_tabletennis_native.mjb"
+        )
     if _kind(entry_point, task_id) == "kMyoDmTrack":
         model_path = (
             f"myosuite/envs/myo/assets/hand/myohand_object_{object_name}.xml"

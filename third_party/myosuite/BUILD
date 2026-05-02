@@ -49,6 +49,16 @@ py_binary_312(
     ],
 )
 
+py_binary_312(
+    name = "generate_runtime_assets",
+    srcs = ["generate_runtime_assets.py"],
+    deps = [
+        oracle_requirement("mujoco"),
+        oracle_requirement("typing_extensions"),
+    ],
+    visibility = ["//visibility:public"],
+)
+
 myosuite_native_assets(
     name = "gen_myosuite_native_assets",
     furniture_srcs = ["@myosuite_furniture_sim//:source"],

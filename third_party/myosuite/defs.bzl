@@ -81,115 +81,17 @@ def _myosuite_runtime_assets_impl(ctx):
     args.add(manifest.path)
     args.add(object_manifest.path)
 
-    ctx.actions.run_shell(
+    ctx.actions.run(
+        executable = ctx.executable.generator,
         inputs = depset(ctx.files.srcs + [manifest, object_manifest]),
         outputs = [out],
         arguments = [args],
-        command = r"""
-set -eu
-
-out="$1"
-manifest="$2"
-objects="$3"
-
-mkdir -p "$out/myosuite" "$out/myosuite/simhive"
-while IFS= read -r src; do
-  [ -n "$src" ] || continue
-
-  case "$src" in
-    *myosuite_source*/myosuite/*)
-      rel="${src#*myosuite_source*/myosuite/}"
-      dst="$out/myosuite/$rel"
-      ;;
-    *myosuite_mpl_sim*/*)
-      rel="${src#*myosuite_mpl_sim*/}"
-      case "$rel" in
-        LICENSE|assets/handL_assets.xml|assets/handL_chain.xml|assets/left_arm_assets.xml|assets/left_arm_chain_myochallenge.xml|meshes/mplL/*)
-          ;;
-        *)
-          continue
-          ;;
-      esac
-      dst="$out/myosuite/simhive/MPL_sim/$rel"
-      ;;
-    *myosuite_ycb_sim*/*)
-      rel="${src#*myosuite_ycb_sim*/}"
-      case "$rel" in
-        LICENSE|includes/defaults_ycb.xml|includes/assets_009_gelatin_box.xml|includes/body_009_gelatin_box.xml|meshes/009_gelatin_box.msh|textures/009_gelatin_box.png)
-          ;;
-        *)
-          continue
-          ;;
-      esac
-      dst="$out/myosuite/simhive/YCB_sim/$rel"
-      ;;
-    *myosuite_furniture_sim*/*)
-      rel="${src#*myosuite_furniture_sim*/}"
-      case "$rel" in
-        LICENSE|simpleTable.xml|simpleTable/*|common/textures/stone0.png|common/textures/stone1.png|common/textures/wood1.png)
-          ;;
-        *)
-          continue
-          ;;
-      esac
-      dst="$out/myosuite/simhive/furniture_sim/$rel"
-      ;;
-    *myosuite_myo_sim*/*)
-      rel="${src#*myosuite_myo_sim*/}"
-      dst="$out/myosuite/simhive/myo_sim/$rel"
-      ;;
-    *myosuite_object_sim*/*)
-      rel="${src#*myosuite_object_sim*/}"
-      case "$rel" in
-        LICENSE|common.xml)
-          ;;
-        *)
-          object_dir="${rel%%/*}"
-          object_needed=0
-          while IFS= read -r object_name; do
-            if [ "$object_dir" = "$object_name" ]; then
-              object_needed=1
-              break
-            fi
-          done < "$objects"
-          if [ "$object_needed" -eq 0 ]; then
-            continue
-          fi
-          ;;
-      esac
-      dst="$out/myosuite/simhive/object_sim/$rel"
-      ;;
-    *)
-      continue
-      ;;
-  esac
-
-  case "$rel" in
-    .gitignore|.github/*|.idea/*|__init__.py|BUILD.bazel|REPO.bazel|WORKSPACE)
-      continue
-      ;;
-    README.md|objects.png|preview.py|pyproject.toml|test_sims.py|tests/*)
-      continue
-      ;;
-    */object.xml)
-      continue
-      ;;
-    scene/*.mtl|scene/*.obj)
-      continue
-      ;;
-  esac
-
-  mkdir -p "$(dirname "$dst")"
-  cp -R "$src" "$dst"
-done < "$manifest"
-
-template="$out/myosuite/envs/myo/assets/hand/myohand_object.xml"
-while IFS= read -r object_name; do
-  [ -n "$object_name" ] || continue
-  sed "s/OBJECT_NAME/${object_name}/g" "$template" \
-    > "$out/myosuite/envs/myo/assets/hand/myohand_object_${object_name}.xml"
-done < "$objects"
-""",
+        env = {
+            "PATH": "/usr/sbin:/usr/bin:/bin:/opt/homebrew/bin:/usr/local/bin",
+        },
+        mnemonic = "GenerateMyoSuiteRuntimeAssets",
+        progress_message = "Generating native MyoSuite runtime assets",
+        use_default_shell_env = True,
     )
 
     return [
@@ -207,6 +109,11 @@ myosuite_runtime_assets = rule(
             mandatory = True,
         ),
         "out": attr.string(mandatory = True),
+        "generator": attr.label(
+            default = "//third_party/myosuite:generate_runtime_assets",
+            executable = True,
+            cfg = "exec",
+        ),
     },
 )
 

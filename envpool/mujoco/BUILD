@@ -378,10 +378,12 @@ py_binary_312(
         "//third_party/myosuite:generate_render_sample.py",
     ],
     data = [
+        ":myosuite_oracle_probe",
         "@myosuite_furniture_sim//:source",
         "@myosuite_mpl_sim//:source",
         "@myosuite_myo_sim//:source",
         "@myosuite_object_sim//:source",
+        "@mujoco//:mujoco_shared_lib",
         "@myosuite_source//:source",
         "@myosuite_ycb_sim//:source",
     ],
@@ -547,13 +549,10 @@ py_binary_312(
         "@myosuite_mpl_sim//:source",
         "@myosuite_myo_sim//:source",
         "@myosuite_object_sim//:source",
+        "@mujoco//:mujoco_shared_lib",
         "@myosuite_source//:source",
         "@myosuite_ycb_sim//:source",
-    ] + select({
-        "//:linux": ["@mujoco//:mujoco_shared_lib"],
-        "//:windows": ["@mujoco//:mujoco_shared_lib"],
-        "//conditions:default": [],
-    }),
+    ],
     imports = ["../.."],
     deps = [
         "//envpool/python:glfw_context",

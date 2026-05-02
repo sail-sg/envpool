@@ -130,6 +130,17 @@ cc_binary(
 )
 
 cc_binary(
+    name = "libmujoco.3.6.0.dylib",
+    linkopts = select({
+        "@platforms//os:osx": ["-Wl,-install_name,@rpath/mujoco.framework/Versions/A/libmujoco.3.6.0.dylib"],
+        "//conditions:default": [],
+    }),
+    linkshared = True,
+    linkstatic = True,
+    deps = [":mujoco_shared_export_lib"],
+)
+
+cc_binary(
     name = "mujoco.dll",
     linkshared = True,
     linkstatic = True,
@@ -140,6 +151,7 @@ filegroup(
     name = "mujoco_shared_lib",
     srcs = select({
         "@envpool//:windows": [":mujoco.dll"],
+        "@platforms//os:osx": [":libmujoco.3.6.0.dylib"],
         "//conditions:default": [":libmujoco.so.3.6.0"],
     }),
 )
