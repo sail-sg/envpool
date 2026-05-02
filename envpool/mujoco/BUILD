@@ -515,11 +515,11 @@ py_test(
     name = "myosuite_render_test",
     size = "enormous",
     srcs = ["myosuite/myosuite_render_test.py"],
-    shard_count = 4,
     data = [
         ":myosuite_oracle_probe",
     ],
     imports = ["../.."],
+    shard_count = 4,
     deps = [
         ":myosuite",
         ":myosuite_registration",

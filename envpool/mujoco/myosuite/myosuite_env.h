@@ -456,6 +456,10 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
 
   bool PreferOfflineRenderContext() const override { return true; }
 
+  bool ResizeOffscreenRenderContext() const override { return false; }
+
+  bool CglWarmupRender() const override { return true; }
+
  protected:
   struct RewardResult {
     mjtNum dense{0.0};

@@ -543,10 +543,14 @@ std::shared_ptr<GlContext> CreateGlContext(bool share_cgl_context,
 OffscreenRenderer::OffscreenRenderer(CameraPolicy camera_policy,
                                      bool disable_auxiliary_visuals,
                                      bool share_cgl_context,
-                                     bool prefer_offline_cgl_context)
+                                     bool prefer_offline_cgl_context,
+                                     bool resize_offscreen,
+                                     bool cgl_warmup_render)
     : camera_policy_(camera_policy),
       share_cgl_context_(share_cgl_context),
-      prefer_offline_cgl_context_(prefer_offline_cgl_context) {
+      prefer_offline_cgl_context_(prefer_offline_cgl_context),
+      resize_offscreen_(resize_offscreen),
+      cgl_warmup_render_(cgl_warmup_render) {
   mjv_defaultScene(&scene_);
   mjv_defaultCamera(&camera_);
   mjv_defaultOption(&option_);
@@ -567,9 +571,7 @@ OffscreenRenderer::~OffscreenRenderer() {
   gl_context_->MakeCurrent();
   mjr_freeContext(&context_);
   mjv_freeScene(&scene_);
-#if !defined(ENVPOOL_HAS_CGL)
   gl_context_->ClearCurrent();
-#endif
 }
 
 void OffscreenRenderer::Initialize(const mjModel* model) {
@@ -630,6 +632,10 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
     Initialize(model);
   }
   gl_context_->MakeCurrent();
+  if (resize_offscreen_ &&
+      (context_.offWidth != width || context_.offHeight != height)) {
+    mjr_resizeOffscreen(width, height, &context_);
+  }
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
   UpdateCamera(model, data, camera_id, camera_override);
 
@@ -637,14 +643,17 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
   auto render_scene = [&] {
     mjv_updateScene(model, data,
                     option_override != nullptr ? option_override : &option_,
-                    nullptr, &camera_, mjCAT_ALL, &scene_);
+                    &perturb_, &camera_, mjCAT_ALL, &scene_);
     mjr_render(viewport, &scene_, &context_);
   };
   render_scene();
 #if defined(ENVPOOL_HAS_CGL)
   // Match the first-frame CGL warmup needed by MuJoCo's Python renderer on
-  // macOS; otherwise a few offscreen tasks can differ on their first frame.
-  render_scene();
+  // macOS for MyoSuite's classic renderer; keep the default path aligned with
+  // the existing Gym/MetaWorld/DMC render tests.
+  if (cgl_warmup_render_) {
+    render_scene();
+  }
 #endif
 
   std::size_t frame_bytes =

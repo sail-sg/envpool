@@ -116,13 +116,15 @@ class MujocoRobotEnv : public RenderableEnv {
     envpool::mujoco::OffscreenRenderer renderer(
         envpool::mujoco::CameraPolicy::kGymLike,
         DisableAuxiliaryRenderVisuals(), ShareRenderContext(),
-        PreferOfflineRenderContext());
+        PreferOfflineRenderContext(), ResizeOffscreenRenderContext(),
+        CglWarmupRender());
 #else
     if (renderer_ == nullptr) {
       renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
           envpool::mujoco::CameraPolicy::kGymLike,
           DisableAuxiliaryRenderVisuals(), ShareRenderContext(),
-          PreferOfflineRenderContext());
+          PreferOfflineRenderContext(), ResizeOffscreenRenderContext(),
+          CglWarmupRender());
     }
 #endif
     mjvCamera camera_override;
@@ -256,6 +258,8 @@ class MujocoRobotEnv : public RenderableEnv {
   virtual bool DisableAuxiliaryRenderVisuals() const { return true; }
   virtual bool ShareRenderContext() const { return false; }
   virtual bool PreferOfflineRenderContext() const { return false; }
+  virtual bool ResizeOffscreenRenderContext() const { return true; }
+  virtual bool CglWarmupRender() const { return false; }
 
   void InitializeRenderCamera(mjvCamera* camera) const {
     mjv_defaultCamera(camera);

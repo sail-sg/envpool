@@ -46,7 +46,8 @@ class OffscreenRenderer {
   explicit OffscreenRenderer(
       CameraPolicy camera_policy = CameraPolicy::kGymLike,
       bool disable_auxiliary_visuals = false, bool share_cgl_context = false,
-      bool prefer_offline_cgl_context = false);
+      bool prefer_offline_cgl_context = false, bool resize_offscreen = true,
+      bool cgl_warmup_render = false);
   ~OffscreenRenderer();
 
   void Render(const mjModel* model, mjData* data, int width, int height,
@@ -69,6 +70,8 @@ class OffscreenRenderer {
   CameraPolicy camera_policy_;
   bool share_cgl_context_;
   bool prefer_offline_cgl_context_;
+  bool resize_offscreen_;
+  bool cgl_warmup_render_;
   bool initialized_{false};
   bool free_camera_initialized_{false};
 };
