@@ -102,8 +102,10 @@ class CglContext final : public GlContext {
         kCGLPFAAllowOfflineRenderers,
         static_cast<CGLPixelFormatAttribute>(0),  // terminator
     };
-    if (!ChoosePixelFormat(preferred_attribs) &&
-        !ChoosePixelFormat(offline_attribs)) {
+    // Match the macOS oracle wrappers used by render alignment tests; the
+    // accelerated MSAA format can rasterize antialiased edges differently.
+    if (!ChoosePixelFormat(offline_attribs) &&
+        !ChoosePixelFormat(preferred_attribs)) {
       throw std::runtime_error("failed to create CGL pixel format");
     }
     CGLError err = CGLCreateContext(pixel_format_, nullptr, &context_);

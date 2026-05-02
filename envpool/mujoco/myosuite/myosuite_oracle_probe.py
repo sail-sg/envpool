@@ -170,8 +170,8 @@ def _configure_macos_mujoco_renderer() -> None:
             )
 
             if not self._choose_pixel_format(
-                cgl, preferred_attribs
-            ) and not self._choose_pixel_format(cgl, offline_attribs):
+                cgl, offline_attribs
+            ) and not self._choose_pixel_format(cgl, preferred_attribs):
                 raise RuntimeError("failed to create CGL pixel format")
 
             self._context = cgl.CGLContextObj()
@@ -191,11 +191,14 @@ def _configure_macos_mujoco_renderer() -> None:
             attribs = (ctypes.c_int * len(attrib_values))(*attrib_values)
             pixel_format = cgl.CGLPixelFormatObj()
             num_pixel_formats = cgl.GLint()
-            cgl.CGLChoosePixelFormat(
-                attribs,
-                ctypes.byref(pixel_format),
-                ctypes.byref(num_pixel_formats),
-            )
+            try:
+                cgl.CGLChoosePixelFormat(
+                    attribs,
+                    ctypes.byref(pixel_format),
+                    ctypes.byref(num_pixel_formats),
+                )
+            except cgl.CGLError:
+                return False
             if not pixel_format or num_pixel_formats.value == 0:
                 return False
             self._pixel_format = pixel_format
