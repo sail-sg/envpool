@@ -238,8 +238,6 @@ def _configure_windows_mujoco_renderer() -> None:
     ):
         return
 
-    import ctypes.wintypes as wintypes
-
     import mujoco
     from mujoco import gl_context
     from mujoco import glfw as mujoco_glfw
@@ -247,6 +245,7 @@ def _configure_windows_mujoco_renderer() -> None:
     from mujoco.rendering.classic import renderer as classic_renderer
 
     ctypes_attrs = vars(ctypes)
+    wintypes = importlib.import_module("ctypes.wintypes")
     windll = ctypes_attrs["WinDLL"]
     winfunctype = ctypes_attrs["WINFUNCTYPE"]
     win_error = ctypes_attrs["WinError"]
@@ -506,8 +505,7 @@ def _import_official() -> tuple[Any, Any, Any]:
     sys.path.insert(0, str(_oracle_source_path()))
     _configure_macos_mujoco_renderer()
     _configure_windows_mujoco_renderer()
-    import myosuite as official_myosuite
-
+    official_myosuite = importlib.import_module("myosuite")
     gym = importlib.import_module("myosuite.utils").gym
     gym_registry_specs = official_myosuite.gym_registry_specs
     return official_myosuite, gym_registry_specs, gym
