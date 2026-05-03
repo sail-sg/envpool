@@ -123,12 +123,9 @@ _SYNC_STATE_SIZES = {
 }
 
 
-def _shard_task_ids(task_ids: tuple[str, ...]) -> tuple[str, ...]:
-    total_shards = int(os.environ.get("TEST_TOTAL_SHARDS", "1"))
-    shard_index = int(os.environ.get("TEST_SHARD_INDEX", "0"))
-    status_file = os.environ.get("TEST_SHARD_STATUS_FILE")
-    if status_file:
-        Path(status_file).touch(exist_ok=True)
+def _render_shard_task_ids(task_ids: tuple[str, ...]) -> tuple[str, ...]:
+    total_shards = int(os.environ.get("MYOSUITE_RENDER_TOTAL_SHARDS", "1"))
+    shard_index = int(os.environ.get("MYOSUITE_RENDER_SHARD_INDEX", "0"))
     if total_shards <= 1:
         return task_ids
     return tuple(
@@ -148,8 +145,8 @@ def _task_batches(
     )
 
 
-_SHARDED_ORACLE_TRACE_TASK_IDS = _shard_task_ids(_ORACLE_TRACE_TASK_IDS)
-_SHARDED_NATIVE_ONLY_RENDER_TASK_IDS = _shard_task_ids(
+_SHARDED_ORACLE_TRACE_TASK_IDS = _render_shard_task_ids(_ORACLE_TRACE_TASK_IDS)
+_SHARDED_NATIVE_ONLY_RENDER_TASK_IDS = _render_shard_task_ids(
     _NATIVE_ONLY_RENDER_TASK_IDS
 )
 

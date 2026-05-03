@@ -502,6 +502,7 @@ py_test(
     size = "enormous",
     srcs = ["myosuite/myosuite_test.py"],
     imports = ["../.."],
+    tags = ["exclusive"],
     deps = [
         ":myosuite",
         ":myosuite_registration",
@@ -511,22 +512,39 @@ py_test(
     ],
 )
 
-py_test(
+[
+    py_test(
+        name = "myosuite_render_test_shard_%d" % shard_index,
+        size = "enormous",
+        srcs = ["myosuite/myosuite_render_test.py"],
+        data = [
+            ":myosuite_oracle_probe",
+        ],
+        env = {
+            "MYOSUITE_RENDER_SHARD_INDEX": str(shard_index),
+            "MYOSUITE_RENDER_TOTAL_SHARDS": "4",
+        },
+        imports = ["../.."],
+        main = "myosuite/myosuite_render_test.py",
+        tags = ["exclusive"],
+        deps = [
+            ":myosuite",
+            ":myosuite_registration",
+            "//envpool/python:glfw_context",
+            requirement("absl-py"),
+            requirement("numpy"),
+        ],
+    )
+    for shard_index in range(4)
+]
+
+test_suite(
     name = "myosuite_render_test",
-    size = "enormous",
-    srcs = ["myosuite/myosuite_render_test.py"],
-    data = [
-        ":myosuite_oracle_probe",
-    ],
-    imports = ["../.."],
-    shard_count = 4,
-    tags = ["exclusive"],
-    deps = [
-        ":myosuite",
-        ":myosuite_registration",
-        "//envpool/python:glfw_context",
-        requirement("absl-py"),
-        requirement("numpy"),
+    tests = [
+        ":myosuite_render_test_shard_0",
+        ":myosuite_render_test_shard_1",
+        ":myosuite_render_test_shard_2",
+        ":myosuite_render_test_shard_3",
     ],
 )
 
