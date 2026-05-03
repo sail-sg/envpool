@@ -162,7 +162,10 @@ class MujocoEnv : public RenderableEnv {
 #else
     if (renderer_ == nullptr) {
       renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
-          envpool::mujoco::CameraPolicy::kGymLike);
+          envpool::mujoco::CameraPolicy::kGymLike,
+          /*disable_auxiliary_visuals=*/false, /*share_cgl_context=*/false,
+          /*prefer_offline_cgl_context=*/false, /*resize_offscreen=*/true,
+          /*cgl_warmup_render=*/true);
     }
     renderer_->Render(model_, data_, width, height, camera_id, rgb, camera);
 #endif
