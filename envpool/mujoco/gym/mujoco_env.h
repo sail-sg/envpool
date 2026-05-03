@@ -157,18 +157,12 @@ class MujocoEnv : public RenderableEnv {
     // teardown happens on the Python thread. Recreating the renderer on
     // Windows avoids cross-thread WGL resource lifetime issues.
     envpool::mujoco::OffscreenRenderer renderer(
-        envpool::mujoco::CameraPolicy::kGymLike,
-        /*disable_auxiliary_visuals=*/false, /*share_cgl_context=*/false,
-        /*prefer_offline_cgl_context=*/true, /*resize_offscreen=*/true,
-        /*cgl_warmup_render=*/true);
+        envpool::mujoco::CameraPolicy::kGymLike);
     renderer.Render(model_, data_, width, height, camera_id, rgb, camera);
 #else
     if (renderer_ == nullptr) {
       renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
-          envpool::mujoco::CameraPolicy::kGymLike,
-          /*disable_auxiliary_visuals=*/false, /*share_cgl_context=*/false,
-          /*prefer_offline_cgl_context=*/true, /*resize_offscreen=*/true,
-          /*cgl_warmup_render=*/true);
+          envpool::mujoco::CameraPolicy::kGymLike);
     }
     renderer_->Render(model_, data_, width, height, camera_id, rgb, camera);
 #endif
