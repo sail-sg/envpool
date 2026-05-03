@@ -170,15 +170,17 @@ _SHARDED_NATIVE_ONLY_RENDER_TASK_IDS = _render_shard_task_ids(
 def _oracle_probe_path() -> Path:
     runfiles = Path(os.environ["TEST_SRCDIR"])
     workspace = os.environ.get("TEST_WORKSPACE", "envpool")
-    launcher_names = (
-        ("myosuite_oracle_probe.exe", "myosuite_oracle_probe")
-        if sys.platform == "win32"
-        else ("myosuite_oracle_probe", "myosuite_oracle_probe.exe")
-    )
+    launcher_names = ("myosuite_oracle_probe.exe",)
+    if sys.platform != "win32":
+        launcher_names = ("myosuite_oracle_probe", "myosuite_oracle_probe.exe")
     candidates = [
         runfiles / workspace / "envpool/mujoco" / launcher
         for launcher in launcher_names
     ]
+    if sys.platform == "win32":
+        candidates.extend(
+            runfiles.parent / launcher for launcher in launcher_names
+        )
     for candidate in candidates:
         if candidate.is_file():
             return candidate
