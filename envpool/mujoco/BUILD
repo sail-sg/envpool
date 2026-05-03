@@ -412,18 +412,24 @@ py_binary_312(
 )
 
 py_library(
-    name = "myosuite",
+    name = "myosuite_task_metadata",
     srcs = [
-        "myosuite/__init__.py",
         "myosuite/tasks.py",
         ":gen_myosuite_tasks_py",
     ],
+    imports = ["../.."],
+)
+
+py_library(
+    name = "myosuite",
+    srcs = ["myosuite/__init__.py"],
     data = [
         ":gen_myosuite_assets",
         ":myosuite_envpool",
     ],
     imports = ["../.."],
     deps = [
+        ":myosuite_task_metadata",
         "//envpool/python:api",
         "//envpool/python:glfw_context",
     ],
@@ -476,13 +482,11 @@ py_library(
 
 py_library(
     name = "myosuite_registration",
-    srcs = [
-        "myosuite/registration.py",
-        "myosuite/tasks.py",
-    ],
+    srcs = ["myosuite/registration.py"],
     imports = ["../.."],
     deps = [
         ":myosuite",
+        ":myosuite_task_metadata",
         "//envpool:registration",
     ],
 )
@@ -504,15 +508,13 @@ py_test(
     name = "myosuite_test",
     size = "enormous",
     srcs = ["myosuite/myosuite_test.py"],
-    data = [
-        ":gen_myosuite_tasks_py",
-    ],
     imports = ["../.."],
     shard_count = 8,
     tags = ["exclusive"],
     deps = [
         ":myosuite",
         ":myosuite_registration",
+        ":myosuite_task_metadata",
         "//envpool/python:glfw_context",
         requirement("absl-py"),
         requirement("numpy"),
@@ -523,16 +525,14 @@ py_test(
     name = "myosuite_render_test",
     size = "enormous",
     srcs = ["myosuite/myosuite_render_test.py"],
-    data = [
-        ":gen_myosuite_tasks_py",
-        ":myosuite_oracle_probe",
-    ],
+    data = [":myosuite_oracle_probe"],
     imports = ["../.."],
     shard_count = 8,
     tags = ["exclusive"],
     deps = [
         ":myosuite",
         ":myosuite_registration",
+        ":myosuite_task_metadata",
         "//envpool/python:glfw_context",
         requirement("absl-py"),
         requirement("numpy"),
@@ -543,16 +543,14 @@ py_test(
     name = "myosuite_oracle_align_test",
     size = "enormous",
     srcs = ["myosuite/myosuite_oracle_align_test.py"],
-    data = [
-        ":gen_myosuite_tasks_py",
-        ":myosuite_oracle_probe",
-    ],
+    data = [":myosuite_oracle_probe"],
     imports = ["../.."],
     shard_count = 4,
     tags = ["exclusive"],
     deps = [
         ":myosuite",
         ":myosuite_registration",
+        ":myosuite_task_metadata",
         requirement("absl-py"),
         requirement("numpy"),
     ],
