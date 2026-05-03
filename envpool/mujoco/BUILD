@@ -377,9 +377,12 @@ py_binary_312(
         "myosuite/myosuite_oracle_probe.py",
         "//third_party/myosuite:generate_render_sample.py",
     ],
-    data = [
+    data = select({
+        # Linux oracle rendering uses the pinned pip MuJoCo wheel directly.
+        "//:linux": [],
+        "//conditions:default": ["@mujoco//:mujoco_shared_lib"],
+    }) + [
         ":myosuite_oracle_probe",
-        "@mujoco//:mujoco_shared_lib",
         "@myosuite_furniture_sim//:source",
         "@myosuite_mpl_sim//:source",
         "@myosuite_myo_sim//:source",
@@ -568,8 +571,11 @@ py_test(
 py_binary_312(
     name = "myosuite_oracle_probe",
     srcs = ["myosuite/myosuite_oracle_probe.py"],
-    data = [
-        "@mujoco//:mujoco_shared_lib",
+    data = select({
+        # Linux oracle rendering uses the pinned pip MuJoCo wheel directly.
+        "//:linux": [],
+        "//conditions:default": ["@mujoco//:mujoco_shared_lib"],
+    }) + [
         "@myosuite_furniture_sim//:source",
         "@myosuite_mpl_sim//:source",
         "@myosuite_myo_sim//:source",
