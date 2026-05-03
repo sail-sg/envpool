@@ -504,6 +504,9 @@ py_test(
     name = "myosuite_test",
     size = "enormous",
     srcs = ["myosuite/myosuite_test.py"],
+    data = [
+        ":gen_myosuite_tasks_py",
+    ],
     imports = ["../.."],
     shard_count = 8,
     tags = ["exclusive"],
@@ -521,6 +524,7 @@ py_test(
     size = "enormous",
     srcs = ["myosuite/myosuite_render_test.py"],
     data = [
+        ":gen_myosuite_tasks_py",
         ":myosuite_oracle_probe",
     ],
     imports = ["../.."],
@@ -540,6 +544,7 @@ py_test(
     size = "enormous",
     srcs = ["myosuite/myosuite_oracle_align_test.py"],
     data = [
+        ":gen_myosuite_tasks_py",
         ":myosuite_oracle_probe",
     ],
     imports = ["../.."],
