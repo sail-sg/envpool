@@ -34,6 +34,32 @@ import warnings
 from pathlib import Path
 from typing import Any
 
+# MyoSuite projects normalized muscle actions through np.exp(float32). NumPy's
+# optional x86 SIMD kernels and its scalar kernel differ by single-ULP amounts,
+# so pin the oracle helper to the portable baseline before NumPy is imported.
+_NUMPY_X86_BASELINE_FEATURE_MASK = (
+    "AVX",
+    "AVX2",
+    "FMA3",
+    "F16C",
+    "SSE42",
+    "SSE41",
+    "POPCNT",
+    "SSSE3",
+    "AVX512F",
+    "AVX512CD",
+    "AVX512_SKX",
+    "AVX512_CLX",
+    "AVX512_CNL",
+    "AVX512_ICL",
+    "AVX512_SPR",
+)
+if platform.machine().lower() in {"amd64", "x86_64"}:
+    os.environ.setdefault(
+        "NPY_DISABLE_CPU_FEATURES",
+        ",".join(_NUMPY_X86_BASELINE_FEATURE_MASK),
+    )
+
 import numpy as np
 
 from envpool.python.glfw_context import preload_windows_gl_dlls
