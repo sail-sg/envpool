@@ -18,6 +18,7 @@ load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("//envpool:myosuite_oracle_requirements.bzl", "oracle_requirement")
 load("//envpool:requirements.bzl", "requirement")
+load("//envpool/mujoco:myosuite_test_shards.bzl", "myosuite_sharded_py_test")
 load("//third_party:common.bzl", "copy_to_directory")
 load("//third_party/metaworld_assets:defs.bzl", "metaworld_runtime_assets")
 load("//third_party/myosuite:defs.bzl", "myosuite_runtime_assets")
@@ -500,12 +501,11 @@ py_test(
     ],
 )
 
-py_test(
+myosuite_sharded_py_test(
     name = "myosuite_test",
-    size = "enormous",
-    srcs = ["myosuite/myosuite_test.py"],
-    imports = ["../.."],
-    tags = ["exclusive"],
+    src = "myosuite/myosuite_test.py",
+    env_prefix = "MYOSUITE_TEST",
+    shard_count = 8,
     deps = [
         ":myosuite",
         ":myosuite_registration",
@@ -515,15 +515,14 @@ py_test(
     ],
 )
 
-py_test(
+myosuite_sharded_py_test(
     name = "myosuite_render_test",
-    size = "enormous",
-    srcs = ["myosuite/myosuite_render_test.py"],
+    src = "myosuite/myosuite_render_test.py",
     data = [
         ":myosuite_oracle_probe",
     ],
-    imports = ["../.."],
-    tags = ["exclusive"],
+    env_prefix = "MYOSUITE_RENDER",
+    shard_count = 8,
     deps = [
         ":myosuite",
         ":myosuite_registration",
@@ -533,15 +532,14 @@ py_test(
     ],
 )
 
-py_test(
+myosuite_sharded_py_test(
     name = "myosuite_oracle_align_test",
-    size = "enormous",
-    srcs = ["myosuite/myosuite_oracle_align_test.py"],
+    src = "myosuite/myosuite_oracle_align_test.py",
     data = [
         ":myosuite_oracle_probe",
     ],
-    imports = ["../.."],
-    tags = ["exclusive"],
+    env_prefix = "MYOSUITE_ORACLE",
+    shard_count = 4,
     deps = [
         ":myosuite",
         ":myosuite_registration",

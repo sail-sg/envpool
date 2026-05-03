@@ -54,7 +54,7 @@ _NATIVE_ONLY_RENDER_TASK_IDS = tuple(
 )
 _WIDTH = 64
 _HEIGHT = 48
-_ORACLE_RENDER_BATCH_SIZE = 32
+_ORACLE_RENDER_BATCH_SIZE = 8
 _SYNC_STATE_KEYS = (
     "qpos0",
     "qvel0",
@@ -124,10 +124,25 @@ _SYNC_STATE_SIZES = {
 
 
 def _render_shard_task_ids(task_ids: tuple[str, ...]) -> tuple[str, ...]:
-    total_shards = int(os.environ.get("MYOSUITE_RENDER_TOTAL_SHARDS", "1"))
-    shard_index = int(os.environ.get("MYOSUITE_RENDER_SHARD_INDEX", "0"))
+    total_shards = int(
+        os.environ.get(
+            "MYOSUITE_RENDER_TOTAL_SHARDS",
+            os.environ.get("TEST_TOTAL_SHARDS", "1"),
+        )
+    )
+    shard_index = int(
+        os.environ.get(
+            "MYOSUITE_RENDER_SHARD_INDEX",
+            os.environ.get("TEST_SHARD_INDEX", "0"),
+        )
+    )
+    shard_status_file = os.environ.get("TEST_SHARD_STATUS_FILE")
+    if shard_status_file:
+        Path(shard_status_file).touch()
     if total_shards <= 1:
         return task_ids
+    if shard_index < 0 or shard_index >= total_shards:
+        raise ValueError(f"invalid Bazel shard {shard_index} of {total_shards}")
     return tuple(
         task_id
         for index, task_id in enumerate(task_ids)

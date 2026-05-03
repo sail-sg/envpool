@@ -15,13 +15,15 @@
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 from absl.testing import absltest
 
 import envpool.mujoco.myosuite.registration as myosuite_registration
-from envpool.mujoco.myosuite.tasks import MYOSUITE_TASKS
+from envpool.mujoco.myosuite.tasks import MYOSUITE_TASKS, MyoSuiteTask
 from envpool.registration import list_all_envs, make_gymnasium, make_spec
 
 _TASKS = tuple(MYOSUITE_TASKS)
@@ -39,6 +41,36 @@ _INFO_KEYS = {
     "model_nv",
     "model_na",
 }
+
+
+def _shard_tasks(tasks: tuple[MyoSuiteTask, ...]) -> tuple[MyoSuiteTask, ...]:
+    total_shards = int(
+        os.environ.get(
+            "MYOSUITE_TEST_TOTAL_SHARDS",
+            os.environ.get("TEST_TOTAL_SHARDS", "1"),
+        )
+    )
+    shard_index = int(
+        os.environ.get(
+            "MYOSUITE_TEST_SHARD_INDEX",
+            os.environ.get("TEST_SHARD_INDEX", "0"),
+        )
+    )
+    shard_status_file = os.environ.get("TEST_SHARD_STATUS_FILE")
+    if shard_status_file:
+        Path(shard_status_file).touch()
+    if total_shards <= 1:
+        return tasks
+    if shard_index < 0 or shard_index >= total_shards:
+        raise ValueError(f"invalid Bazel shard {shard_index} of {total_shards}")
+    return tuple(
+        task
+        for index, task in enumerate(tasks)
+        if index % total_shards == shard_index
+    )
+
+
+_SHARDED_TASKS = _shard_tasks(_TASKS)
 
 
 class MyoSuiteTest(absltest.TestCase):
@@ -94,7 +126,7 @@ class MyoSuiteTest(absltest.TestCase):
 
     def test_reset_and_step_reference_surface(self) -> None:
         """Every registered task must reset and step with expected shapes."""
-        for task in _TASKS:
+        for task in _SHARDED_TASKS:
             task_id = task["id"]
             with self.subTest(task_id=task_id):
                 env = make_gymnasium(task_id, num_envs=2, seed=7)
@@ -133,7 +165,7 @@ class MyoSuiteTest(absltest.TestCase):
     def test_reference_surface_is_deterministic(self) -> None:
         """Same seed and action sequence must produce identical rollouts."""
         rng = np.random.default_rng(123)
-        for task in _TASKS:
+        for task in _SHARDED_TASKS:
             task_id = task["id"]
             with self.subTest(task_id=task_id):
                 actions = rng.uniform(

@@ -45,8 +45,8 @@ from envpool.registration import make_gymnasium, make_spec
 importlib.import_module("envpool.mujoco.myosuite.registration")
 
 _ROLLOUT_STEPS = 128
-_ORACLE_SPACE_BATCH_SIZE = 64
-_ROLLOUT_BATCH_SIZE = 4
+_ORACLE_SPACE_BATCH_SIZE = 32
+_ROLLOUT_BATCH_SIZE = 2
 _ROLLOUT_TASK_IDS = frozenset({
     "MyoHandAirplaneFixed-v0",
     "MyoHandAirplaneFly-v0",
@@ -159,11 +159,40 @@ def _oracle_task_ids() -> tuple[str, ...]:
     )
 
 
-def _oracle_rollout_task_ids() -> tuple[str, ...]:
+def _shard_task_ids(task_ids: tuple[str, ...]) -> tuple[str, ...]:
+    total_shards = int(
+        os.environ.get(
+            "MYOSUITE_ORACLE_TOTAL_SHARDS",
+            os.environ.get("TEST_TOTAL_SHARDS", "1"),
+        )
+    )
+    shard_index = int(
+        os.environ.get(
+            "MYOSUITE_ORACLE_SHARD_INDEX",
+            os.environ.get("TEST_SHARD_INDEX", "0"),
+        )
+    )
+    shard_status_file = os.environ.get("TEST_SHARD_STATUS_FILE")
+    if shard_status_file:
+        Path(shard_status_file).touch()
+    if total_shards <= 1:
+        return task_ids
+    if shard_index < 0 or shard_index >= total_shards:
+        raise ValueError(f"invalid Bazel shard {shard_index} of {total_shards}")
     return tuple(
         task_id
-        for task_id in _oracle_task_ids()
-        if task_id in _ROLLOUT_TASK_IDS
+        for index, task_id in enumerate(task_ids)
+        if index % total_shards == shard_index
+    )
+
+
+def _oracle_rollout_task_ids() -> tuple[str, ...]:
+    return _shard_task_ids(
+        tuple(
+            task_id
+            for task_id in _oracle_task_ids()
+            if task_id in _ROLLOUT_TASK_IDS
+        )
     )
 
 
@@ -328,8 +357,9 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
 
     def test_oracle_space_coverage_except_numpy2_broken_ids(self) -> None:
         """Native spaces must match every instantiable official oracle env."""
-        oracle_tasks = _run_oracle_space_reports(_oracle_task_ids())
-        self.assertLen(oracle_tasks, len(MYOSUITE_TASKS) - 9)
+        task_ids = _shard_task_ids(_oracle_task_ids())
+        oracle_tasks = _run_oracle_space_reports(task_ids)
+        self.assertLen(oracle_tasks, len(task_ids))
         task_metadata = _task_metadata_by_id()
         for task_id, oracle_task in oracle_tasks.items():
             with self.subTest(task_id=task_id):
