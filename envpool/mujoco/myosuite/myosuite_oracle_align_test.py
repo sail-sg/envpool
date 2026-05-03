@@ -217,6 +217,20 @@ def _oracle_probe_path() -> Path:
     launcher_names: tuple[str, ...] = ("myosuite_oracle_probe.exe",)
     if sys.platform != "win32":
         launcher_names = ("myosuite_oracle_probe", "myosuite_oracle_probe.exe")
+    logical_suffixes = (
+        tuple(f"envpool/mujoco/{launcher}" for launcher in launcher_names)
+        + launcher_names
+    )
+    manifest = os.environ.get("RUNFILES_MANIFEST_FILE")
+    if manifest:
+        with Path(manifest).open(encoding="utf-8") as f:
+            for line in f:
+                logical, _, physical = line.rstrip("\n").partition(" ")
+                logical = logical.replace("\\", "/")
+                if any(logical.endswith(suffix) for suffix in logical_suffixes):
+                    candidate = Path(physical or logical)
+                    if candidate.is_file():
+                        return candidate
     candidates = [
         runfiles / workspace / "envpool/mujoco" / launcher
         for launcher in launcher_names
@@ -229,9 +243,9 @@ def _oracle_probe_path() -> Path:
         if candidate.is_file():
             return candidate
     for launcher in launcher_names:
-        matches = list(runfiles.rglob(launcher))
-        if matches:
-            return matches[0]
+        for match in runfiles.rglob(launcher):
+            if match.is_file():
+                return match
     raise RuntimeError(
         f"could not locate myosuite_oracle_probe under {runfiles}"
     )
@@ -267,13 +281,18 @@ def _run_oracle_probe(
     env = os.environ.copy()
     env["ROBOHIVE_VERBOSITY"] = "SILENT"
     try:
-        result = subprocess.run(
-            cmd,
-            check=False,
-            capture_output=True,
-            env=env,
-            text=True,
-        )
+        try:
+            result = subprocess.run(
+                cmd,
+                check=False,
+                capture_output=True,
+                env=env,
+                text=True,
+            )
+        except OSError as exc:
+            raise RuntimeError(
+                f"MyoSuite oracle probe failed to start\ncmd: {' '.join(cmd)}"
+            ) from exc
         if result.returncode != 0:
             raise RuntimeError(
                 "MyoSuite oracle probe failed\n"
