@@ -134,8 +134,8 @@ def _configure_macos_official_renderer() -> None:
             )
 
             if not self._choose_pixel_format(
-                cgl, preferred_attribs
-            ) and not self._choose_pixel_format(cgl, offline_attribs):
+                cgl, offline_attribs
+            ) and not self._choose_pixel_format(cgl, preferred_attribs):
                 raise RuntimeError("failed to create CGL pixel format")
 
             self._context = cgl.CGLContextObj()
