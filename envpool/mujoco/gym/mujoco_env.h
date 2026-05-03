@@ -159,14 +159,16 @@ class MujocoEnv : public RenderableEnv {
     envpool::mujoco::OffscreenRenderer renderer(
         envpool::mujoco::CameraPolicy::kGymLike,
         /*disable_auxiliary_visuals=*/false, /*share_cgl_context=*/false,
-        /*prefer_offline_cgl_context=*/true);
+        /*prefer_offline_cgl_context=*/true, /*resize_offscreen=*/true,
+        /*cgl_warmup_render=*/true);
     renderer.Render(model_, data_, width, height, camera_id, rgb, camera);
 #else
     if (renderer_ == nullptr) {
       renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
           envpool::mujoco::CameraPolicy::kGymLike,
           /*disable_auxiliary_visuals=*/false, /*share_cgl_context=*/false,
-          /*prefer_offline_cgl_context=*/true);
+          /*prefer_offline_cgl_context=*/true, /*resize_offscreen=*/true,
+          /*cgl_warmup_render=*/true);
     }
     renderer_->Render(model_, data_, width, height, camera_id, rgb, camera);
 #endif

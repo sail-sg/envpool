@@ -651,12 +651,11 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
   };
   render_scene();
 #if defined(ENVPOOL_HAS_CGL)
-  // Match the first-frame CGL warmup needed by MuJoCo's Python renderer on
-  // macOS for MyoSuite's classic renderer. macOS 14 arm64's offline renderer
-  // can leave a few anti-aliased edge pixels unsettled after one warmup pass,
-  // so MyoSuite uses two warmup passes on both the native and oracle paths.
+  // macOS CGL can expose an unsettled offline framebuffer on the first native
+  // readback. Dry-render the scene first so the first public frame is the
+  // settled MuJoCo output.
   if (cgl_warmup_render_ && !cgl_warmup_done_) {
-    for (int pass = 0; pass < 2; ++pass) {
+    for (int pass = 0; pass < 3; ++pass) {
       render_scene();
     }
     cgl_warmup_done_ = true;
