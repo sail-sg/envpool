@@ -43,35 +43,12 @@ BROKEN_IDS = (
     "myoSarcChallengeSoccerP2-v0",
 )
 
-TASK_FIELDS = (
-    "id",
-    "entry_point",
-    "model_path",
-    "reference_path",
-    "object_name",
-    "obs_dim",
-    "action_dim",
-    "max_episode_steps",
-    "frame_skip",
-    "normalize_act",
-    "oracle_numpy2_broken",
-)
-
-
 def _escape(value: str) -> str:
     return value.replace("\\", "\\\\").replace('"', '\\"')
 
 
 def _bool(value: bool) -> str:
     return "true" if value else "false"
-
-
-def _py_value(value: Any) -> str:
-    if isinstance(value, bool):
-        return "True" if value else "False"
-    if isinstance(value, str):
-        return json.dumps(value)
-    return str(value)
 
 
 def _refresh_from_metadata(
@@ -224,78 +201,19 @@ def _write_header(tasks: list[dict[str, Any]], output: Path) -> None:
     output.write_text("\n".join(lines))
 
 
-def _write_python(tasks: list[dict[str, Any]], output: Path) -> None:
-    lines = [
-        "# Copyright 2026 Garena Online Private Limited",
-        "#",
-        '# Licensed under the Apache License, Version 2.0 (the "License");',
-        "# you may not use this file except in compliance with the License.",
-        "# You may obtain a copy of the License at",
-        "#",
-        "#      http://www.apache.org/licenses/LICENSE-2.0",
-        "#",
-        "# Unless required by applicable law or agreed to in writing, software",
-        '# distributed under the License is distributed on an "AS IS" BASIS,',
-        "# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.",
-        "# See the License for the specific language governing permissions and",
-        "# limitations under the License.",
-        "",
-        f'"""Generated MyoSuite v{ORACLE_VERSION} task metadata."""',
-        "",
-        "from __future__ import annotations",
-        "",
-        "from typing import TypedDict",
-        "",
-        "",
-        "class MyoSuiteTask(TypedDict):",
-        '    """Generated Python metadata for one pinned MyoSuite task."""',
-        "",
-        "    id: str",
-        "    entry_point: str",
-        "    model_path: str",
-        "    reference_path: str",
-        "    object_name: str",
-        "    obs_dim: int",
-        "    action_dim: int",
-        "    max_episode_steps: int",
-        "    frame_skip: int",
-        "    normalize_act: bool",
-        "    oracle_numpy2_broken: bool",
-        "",
-        "",
-        f'MYOSUITE_ORACLE_VERSION = "{ORACLE_VERSION}"',
-        f'MYOSUITE_ORACLE_COMMIT = "{ORACLE_COMMIT}"',
-        "MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS = frozenset({",
-    ]
-    for task_id in BROKEN_IDS:
-        lines.append(f"    {json.dumps(task_id)},")
-    lines.extend(["})", "", "MYOSUITE_TASKS: list[MyoSuiteTask] = ["])
-    for task in tasks:
-        lines.append("    {")
-        for field in TASK_FIELDS:
-            lines.append(
-                f"        {json.dumps(field)}: {_py_value(task[field])},"
-            )
-        lines.append("    },")
-    lines.extend(["]", ""])
-    output.write_text("\n".join(lines))
-
-
 def main() -> None:
-    """Generate the C++ and Python task registry files."""
+    """Generate native task registry files."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--tasks-json", type=Path, required=True)
     parser.add_argument("--oracle-metadata", type=Path)
     parser.add_argument("--out-json", type=Path, required=True)
     parser.add_argument("--out-header", type=Path, required=True)
-    parser.add_argument("--out-python", type=Path, required=True)
     args = parser.parse_args()
 
     tasks = json.loads(args.tasks_json.read_text())
     _refresh_from_metadata(tasks, args.oracle_metadata)
     _write_json(tasks, args.out_json)
     _write_header(tasks, args.out_header)
-    _write_python(tasks, args.out_python)
 
 
 if __name__ == "__main__":

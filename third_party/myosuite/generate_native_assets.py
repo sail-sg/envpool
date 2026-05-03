@@ -46,6 +46,7 @@ import generate_task_metadata
 import generate_task_registry
 
 _ORACLE_VERSION = generate_task_registry.ORACLE_VERSION
+_ORACLE_COMMIT = generate_task_registry.ORACLE_COMMIT
 _BROKEN_IDS = set(generate_task_registry.BROKEN_IDS)
 _BROKEN_SPACE = {
     "myosuite.envs.myo.myochallenge.bimanual_v0:BimanualEnvV1": (210, 80, 5),
@@ -492,7 +493,6 @@ def _write_outputs(args: argparse.Namespace, source_root: Path) -> None:
 
     generate_task_registry._write_json(tasks, args.out_tasks_json)
     generate_task_registry._write_header(tasks, args.out_tasks_header)
-    generate_task_registry._write_python(tasks, args.out_tasks_python)
 
     metadata_entries = [
         generate_task_metadata._entry(task, metadata.get(task["id"]))
@@ -503,6 +503,18 @@ def _write_outputs(args: argparse.Namespace, source_root: Path) -> None:
     )
     generate_task_metadata._write_header(
         metadata_entries, args.out_metadata_header
+    )
+    args.out_oracle_json.write_text(
+        json.dumps(
+            {
+                "commit": _ORACLE_COMMIT,
+                "numpy2_broken_ids": sorted(_BROKEN_IDS),
+                "version": _ORACLE_VERSION,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n"
     )
 
     reference_entries = [
@@ -525,9 +537,9 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--object-manifest", type=Path, required=True)
     parser.add_argument("--out-tasks-json", type=Path, required=True)
     parser.add_argument("--out-tasks-header", type=Path, required=True)
-    parser.add_argument("--out-tasks-python", type=Path, required=True)
     parser.add_argument("--out-metadata-json", type=Path, required=True)
     parser.add_argument("--out-metadata-header", type=Path, required=True)
+    parser.add_argument("--out-oracle-json", type=Path, required=True)
     parser.add_argument("--out-reference-header", type=Path, required=True)
     return parser.parse_args()
 

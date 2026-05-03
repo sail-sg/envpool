@@ -78,13 +78,6 @@ filegroup(
 )
 
 filegroup(
-    name = "myosuite_generated_tasks_py",
-    srcs = [":gen_myosuite_native_assets"],
-    output_group = "python",
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
     name = "myosuite_generated_json",
     srcs = [":gen_myosuite_native_assets"],
     output_group = "json",

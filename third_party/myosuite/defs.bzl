@@ -73,6 +73,13 @@ def _myosuite_runtime_assets_impl(ctx):
     srcs = sorted([src.path for src in ctx.files.srcs])
     ctx.actions.write(output = manifest, content = "\n".join(srcs) + "\n")
 
+    metadata_manifest = ctx.actions.declare_file(ctx.label.name + "_metadata.txt")
+    metadata_srcs = sorted([src.path for src in ctx.files.metadata_srcs])
+    ctx.actions.write(
+        output = metadata_manifest,
+        content = "\n".join(metadata_srcs) + ("\n" if metadata_srcs else ""),
+    )
+
     object_manifest = ctx.actions.declare_file(ctx.label.name + "_objects.txt")
     ctx.actions.write(output = object_manifest, content = "\n".join(_MYODM_OBJECTS) + "\n")
 
@@ -80,10 +87,15 @@ def _myosuite_runtime_assets_impl(ctx):
     args.add(out.path)
     args.add(manifest.path)
     args.add(object_manifest.path)
+    args.add(metadata_manifest.path)
 
     ctx.actions.run(
         executable = ctx.executable.generator,
-        inputs = depset(ctx.files.srcs + [manifest, object_manifest]),
+        inputs = depset(
+            ctx.files.srcs +
+            ctx.files.metadata_srcs +
+            [manifest, metadata_manifest, object_manifest],
+        ),
         outputs = [out],
         arguments = [args],
         env = {
@@ -108,6 +120,7 @@ myosuite_runtime_assets = rule(
             allow_files = True,
             mandatory = True,
         ),
+        "metadata_srcs": attr.label_list(allow_files = True),
         "out": attr.string(mandatory = True),
         "generator": attr.label(
             default = "//third_party/myosuite:generate_runtime_assets",
@@ -128,9 +141,9 @@ def _write_manifest(ctx, name, files):
 def _myosuite_native_assets_impl(ctx):
     tasks_json = ctx.actions.declare_file("myosuite_tasks.json")
     tasks_header = ctx.actions.declare_file("myosuite_tasks.h")
-    tasks_python = ctx.actions.declare_file("myosuite_generated_tasks.py")
     metadata_json = ctx.actions.declare_file("myosuite_task_metadata.json")
     metadata_header = ctx.actions.declare_file("myosuite_task_metadata.h")
+    oracle_json = ctx.actions.declare_file("myosuite_oracle_metadata.json")
     reference_header = ctx.actions.declare_file("myosuite_reference_data.h")
 
     myosuite_manifest = _write_manifest(ctx, "myosuite", ctx.files.myosuite_srcs)
@@ -149,9 +162,9 @@ def _myosuite_native_assets_impl(ctx):
     args.add("--object-manifest", object_manifest)
     args.add("--out-tasks-json", tasks_json)
     args.add("--out-tasks-header", tasks_header)
-    args.add("--out-tasks-python", tasks_python)
     args.add("--out-metadata-json", metadata_json)
     args.add("--out-metadata-header", metadata_header)
+    args.add("--out-oracle-json", oracle_json)
     args.add("--out-reference-header", reference_header)
 
     manifests = [
@@ -176,9 +189,9 @@ def _myosuite_native_assets_impl(ctx):
         outputs = [
             tasks_json,
             tasks_header,
-            tasks_python,
             metadata_json,
             metadata_header,
+            oracle_json,
             reference_header,
         ],
         arguments = [args],
@@ -191,14 +204,13 @@ def _myosuite_native_assets_impl(ctx):
     )
 
     headers = depset([tasks_header, metadata_header, reference_header])
-    json_files = depset([tasks_json, metadata_json])
-    python_files = depset([tasks_python])
+    json_files = depset([tasks_json, metadata_json, oracle_json])
     all_files = depset([
         tasks_json,
         tasks_header,
-        tasks_python,
         metadata_json,
         metadata_header,
+        oracle_json,
         reference_header,
     ])
     return [
@@ -206,7 +218,6 @@ def _myosuite_native_assets_impl(ctx):
         OutputGroupInfo(
             headers = headers,
             json = json_files,
-            python = python_files,
         ),
     ]
 

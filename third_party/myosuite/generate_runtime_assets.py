@@ -256,6 +256,15 @@ def _copy_runtime_sources(out: Path, manifest: Path, objects: set[str]) -> None:
         shutil.copy2(src, dst)
 
 
+def _copy_runtime_metadata(out: Path, manifest: Path) -> None:
+    metadata_dir = out / "metadata"
+    for src in _read_manifest(manifest):
+        if not src.is_file() or src.suffix != ".json":
+            continue
+        metadata_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, metadata_dir / src.name)
+
+
 def _generate_myodm_object_xml(out: Path, objects: set[str]) -> None:
     template = out / "myosuite/envs/myo/assets/hand/myohand_object.xml"
     text = template.read_text()
@@ -530,6 +539,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("out", type=Path)
     parser.add_argument("manifest", type=Path)
     parser.add_argument("objects", type=Path)
+    parser.add_argument("metadata", type=Path)
     return parser.parse_args()
 
 
@@ -540,6 +550,7 @@ def main() -> None:
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "myosuite/simhive").mkdir(parents=True, exist_ok=True)
     _copy_runtime_sources(args.out, args.manifest, objects)
+    _copy_runtime_metadata(args.out, args.metadata)
     _generate_myodm_object_xml(args.out, objects)
     _generate_arm_reach_xml(args.out)
     _generate_tabletennis_xml(args.out)

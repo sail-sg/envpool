@@ -109,6 +109,7 @@ myosuite_runtime_assets(
         "@myosuite_ycb_sim//:source",
     ],
     out = "myosuite/assets",
+    metadata_srcs = ["//third_party/myosuite:myosuite_generated_json"],
 )
 
 cc_library(
@@ -363,14 +364,6 @@ pybind_extension(
     ],
 )
 
-genrule(
-    name = "gen_myosuite_tasks_py",
-    srcs = ["//third_party/myosuite:myosuite_generated_tasks_py"],
-    outs = ["myosuite/generated_tasks.py"],
-    cmd = "cp $(location //third_party/myosuite:myosuite_generated_tasks_py) $@",
-    cmd_bat = "copy /Y \"$(location //third_party/myosuite:myosuite_generated_tasks_py)\" \"$@\"",
-)
-
 py_binary_312(
     name = "generate_myosuite_render_sample",
     srcs = [
@@ -413,10 +406,8 @@ py_binary_312(
 
 py_library(
     name = "myosuite_task_metadata",
-    srcs = [
-        "myosuite/tasks.py",
-        ":gen_myosuite_tasks_py",
-    ],
+    srcs = ["myosuite/tasks.py"],
+    data = [":gen_myosuite_assets"],
     imports = ["../.."],
 )
 
