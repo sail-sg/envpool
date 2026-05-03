@@ -21,6 +21,7 @@ the upstream v2.11.6 contract without replacing EnvPool's normal runtime deps.
 from __future__ import annotations
 
 import argparse
+import atexit
 import ctypes
 import importlib
 import importlib.util
@@ -135,6 +136,7 @@ def _configure_mujoco_package_shared_lib() -> None:
         raise RuntimeError(f"invalid mujoco package path: {package_dir}")
 
     patched_root = Path(tempfile.mkdtemp(prefix="mujoco-oracle-"))
+    atexit.register(shutil.rmtree, patched_root, ignore_errors=True)
     patched_package = patched_root / "mujoco"
     shutil.copytree(package_dir, patched_package, symlinks=False)
     shutil.copy2(_bazel_mujoco_shared_lib_path(), patched_package / shared_lib)
@@ -494,20 +496,50 @@ def _configure_linux_mujoco_renderer(render: bool) -> None:
     os.environ.setdefault("EGL_PLATFORM", "surfaceless")
 
 
+def _link_or_copy_file(src: str, dst: str) -> None:
+    try:
+        os.link(src, dst)
+    except OSError:
+        shutil.copy2(src, dst)
+
+
+def _overlay_tree(
+    source: Path,
+    destination: Path,
+    *,
+    ignore: Any = None,
+    prefer_directory_symlink: bool = True,
+) -> None:
+    if prefer_directory_symlink:
+        try:
+            os.symlink(source, destination, target_is_directory=True)
+            return
+        except OSError:
+            pass
+    shutil.copytree(
+        source,
+        destination,
+        symlinks=True,
+        copy_function=_link_or_copy_file,
+        ignore=ignore,
+    )
+
+
 def _oracle_source_path() -> Path:
     runfiles = _runfiles_root()
     source = runfiles / "myosuite_source/myosuite"
     if not (source / "__init__.py").is_file():
         raise RuntimeError(f"could not locate MyoSuite source at {source}")
     assembled = Path(tempfile.mkdtemp(prefix="myosuite-oracle-"))
+    atexit.register(shutil.rmtree, assembled, ignore_errors=True)
     package = assembled / "myosuite"
-    shutil.copytree(
+    _overlay_tree(
         source,
         package,
-        symlinks=False,
         ignore=lambda _root, names: (
             {"simhive"} if "simhive" in names else set()
         ),
+        prefer_directory_symlink=False,
     )
     simhive = package / "simhive"
     simhive.mkdir()
@@ -521,7 +553,7 @@ def _oracle_source_path() -> Path:
         repo_path = runfiles / repo
         if not repo_path.is_dir():
             raise RuntimeError(f"could not locate {repo_path}")
-        shutil.copytree(repo_path, simhive / name, symlinks=False)
+        _overlay_tree(repo_path, simhive / name)
     return assembled
 
 
@@ -887,6 +919,7 @@ def _trace_info(info: dict[str, Any]) -> dict[str, Any]:
 
 
 def _render_frame(env: Any, width: int, height: int, camera_id: int) -> Any:
+    env.unwrapped.sim.forward()
     renderer = env.unwrapped.sim.renderer
     frame = renderer.render_offscreen(
         width=width,

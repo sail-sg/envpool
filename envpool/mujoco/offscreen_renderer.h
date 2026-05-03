@@ -74,6 +74,7 @@ class OffscreenRenderer {
   bool cgl_warmup_render_;
   bool initialized_{false};
   bool free_camera_initialized_{false};
+  bool cgl_warmup_done_{false};
 };
 
 }  // namespace envpool::mujoco

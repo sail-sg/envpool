@@ -103,12 +103,15 @@ class CglContext final : public GlContext {
         static_cast<CGLPixelFormatAttribute>(0),  // value
         static_cast<CGLPixelFormatAttribute>(0),  // terminator
     };
-    // Match MuJoCo's default CGL path first. MyoSuite's oracle uses the same
-    // offline renderer for bitwise render comparisons; the accelerated format
-    // is only a fallback for MyoSuite if offline CGL is unavailable.
-    bool chose_pixel_format = ChoosePixelFormat(offline_attribs);
-    if (!chose_pixel_format && prefer_offline_context) {
-      chose_pixel_format = ChoosePixelFormat(preferred_attribs);
+    // Gym/DMControl mirror MuJoCo's default accelerated CGL format, while
+    // MyoSuite's bitwise oracle explicitly prefers the offline renderer.
+    bool chose_pixel_format = prefer_offline_context
+                                  ? ChoosePixelFormat(offline_attribs)
+                                  : ChoosePixelFormat(preferred_attribs);
+    if (!chose_pixel_format) {
+      chose_pixel_format = prefer_offline_context
+                               ? ChoosePixelFormat(preferred_attribs)
+                               : ChoosePixelFormat(offline_attribs);
     }
     if (!chose_pixel_format) {
       throw std::runtime_error("failed to create CGL pixel format");
@@ -651,8 +654,9 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
   // Match the first-frame CGL warmup needed by MuJoCo's Python renderer on
   // macOS for MyoSuite's classic renderer; keep the default path aligned with
   // the existing Gym/MetaWorld/DMC render tests.
-  if (cgl_warmup_render_) {
+  if (cgl_warmup_render_ && !cgl_warmup_done_) {
     render_scene();
+    cgl_warmup_done_ = true;
   }
 #else
   (void)cgl_warmup_render_;

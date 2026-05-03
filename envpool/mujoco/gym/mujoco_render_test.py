@@ -107,8 +107,12 @@ def _configure_macos_official_renderer() -> None:
                 24,
                 attrib.CGLPFAStencilSize,
                 8,
-                attrib.CGLPFAAllowOfflineRenderers,
-                0,
+                attrib.CGLPFAMultisample,
+                attrib.CGLPFASampleBuffers,
+                1,
+                attrib.CGLPFASample,
+                4,
+                attrib.CGLPFAAccelerated,
                 0,  # terminator
             )
             attribs = (ctypes.c_int * len(attrib_values))(*attrib_values)
@@ -138,8 +142,8 @@ def _configure_macos_official_renderer() -> None:
             from mujoco.cgl import cgl
 
             cgl.CGLSetCurrentContext(self._context)
-            # Mirror mujoco.cgl.GLContext so the official renderer uses the
-            # same CGL lifecycle as EnvPool's native renderer.
+            # Mirror mujoco.cgl.GLContext's pixel format while keeping the
+            # lock lifecycle idempotent for repeated render() calls.
             if not self._locked:
                 cgl.CGLLockContext(self._context)
                 self._locked = True
