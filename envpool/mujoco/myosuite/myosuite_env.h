@@ -452,7 +452,7 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
 
   bool DisableAuxiliaryRenderVisuals() const override { return false; }
 
-  bool ShareRenderContext() const override { return true; }
+  bool ShareRenderContext() const override { return false; }
 
   bool PreferOfflineRenderContext() const override { return true; }
 
