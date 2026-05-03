@@ -72,7 +72,8 @@ def _read_metadata_json(filename: str) -> Any:
             f"could not resolve package for MyoSuite metadata {filename}"
         )
     resource = (
-        resources.files(package)
+        resources
+        .files(package)
         .joinpath("assets")
         .joinpath("metadata")
         .joinpath(filename)
@@ -92,9 +93,7 @@ MYOSUITE_ORACLE_VERSION = str(_ORACLE_METADATA["version"])
 MYOSUITE_ORACLE_COMMIT = str(_ORACLE_METADATA["commit"])
 MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS = frozenset(
     str(task_id)
-    for task_id in cast(
-        list[object], _ORACLE_METADATA["numpy2_broken_ids"]
-    )
+    for task_id in cast(list[object], _ORACLE_METADATA["numpy2_broken_ids"])
 )
 
 __all__ = [

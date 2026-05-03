@@ -43,6 +43,7 @@ BROKEN_IDS = (
     "myoSarcChallengeSoccerP2-v0",
 )
 
+
 def _escape(value: str) -> str:
     return value.replace("\\", "\\\\").replace('"', '\\"')
 
