@@ -649,27 +649,36 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
                     &perturb_, &camera_, mjCAT_ALL, &scene_);
     mjr_render(viewport, &scene_, &context_);
   };
-  render_scene();
-#if defined(ENVPOOL_HAS_CGL)
-  // macOS CGL can expose an unsettled offline framebuffer on the first native
-  // readback. Dry-render the scene first so the first public frame is the
-  // settled MuJoCo output.
-  if (cgl_warmup_render_ && !cgl_warmup_done_) {
-    for (int pass = 0; pass < 3; ++pass) {
-      render_scene();
-    }
-    cgl_warmup_done_ = true;
-  }
-#else
-  (void)cgl_warmup_render_;
-#endif
 
   std::size_t frame_bytes =
       static_cast<std::size_t>(width) * height * 3 * sizeof(unsigned char);
   if (scratch_.size() != frame_bytes) {
     scratch_.resize(frame_bytes);
   }
-  mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
+
+  bool frame_read = false;
+  render_scene();
+#if defined(ENVPOOL_HAS_CGL)
+  // macOS CGL can expose an unsettled offline framebuffer on the first native
+  // readback. Match the official oracle's first-frame warmup: each warmup pass
+  // runs a full offscreen render and readback, then the last readback becomes
+  // the public frame.
+  if (cgl_warmup_render_ && !cgl_warmup_done_) {
+    mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
+    for (int pass = 0; pass < 3; ++pass) {
+      render_scene();
+      mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
+    }
+    cgl_warmup_done_ = true;
+    frame_read = true;
+  }
+#else
+  (void)cgl_warmup_render_;
+#endif
+
+  if (!frame_read) {
+    mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
+  }
 
   std::size_t row_bytes =
       static_cast<std::size_t>(width) * 3 * sizeof(unsigned char);
