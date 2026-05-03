@@ -22,6 +22,7 @@ import platform
 import subprocess
 import sys
 import tempfile
+import unittest
 from pathlib import Path
 from typing import Any
 
@@ -393,4 +394,4 @@ class MyoSuiteRenderTest(absltest.TestCase):
 
 
 if __name__ == "__main__":
-    absltest.main()
+    unittest.main()

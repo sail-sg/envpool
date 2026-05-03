@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import os
+import unittest
 from pathlib import Path
 from typing import Any
 
@@ -194,4 +195,4 @@ class MyoSuiteTest(absltest.TestCase):
 
 
 if __name__ == "__main__":
-    absltest.main()
+    unittest.main()

@@ -27,6 +27,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import unittest
 from pathlib import Path
 from typing import Any, cast
 
@@ -487,4 +488,4 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
 
 
 if __name__ == "__main__":
-    absltest.main()
+    unittest.main()
