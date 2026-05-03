@@ -34,6 +34,7 @@ import posixpath
 import shutil
 import sys
 import tempfile
+import warnings
 from pathlib import Path
 from typing import Any, cast
 
@@ -533,6 +534,8 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> None:
     """Generate all native MyoSuite registry and metadata assets."""
+    os.environ.setdefault("ROBOHIVE_VERBOSITY", "SILENT")
+    warnings.filterwarnings("ignore")
     args = _parse_args()
     sim_manifests = {
         "mpl": args.mpl_manifest,
