@@ -652,10 +652,13 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
   render_scene();
 #if defined(ENVPOOL_HAS_CGL)
   // Match the first-frame CGL warmup needed by MuJoCo's Python renderer on
-  // macOS for MyoSuite's classic renderer; keep the default path aligned with
-  // the existing Gym/MetaWorld/DMC render tests.
+  // macOS for MyoSuite's classic renderer. macOS 14 arm64's offline renderer
+  // can leave a few anti-aliased edge pixels unsettled after one warmup pass,
+  // so MyoSuite uses two warmup passes on both the native and oracle paths.
   if (cgl_warmup_render_ && !cgl_warmup_done_) {
-    render_scene();
+    for (int pass = 0; pass < 2; ++pass) {
+      render_scene();
+    }
     cgl_warmup_done_ = true;
   }
 #else
