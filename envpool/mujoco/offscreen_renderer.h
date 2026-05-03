@@ -74,7 +74,9 @@ class OffscreenRenderer {
   bool cgl_warmup_render_;
   bool initialized_{false};
   bool free_camera_initialized_{false};
+#if defined(__APPLE__)
   bool cgl_warmup_done_{false};
+#endif
 };
 
 }  // namespace envpool::mujoco
