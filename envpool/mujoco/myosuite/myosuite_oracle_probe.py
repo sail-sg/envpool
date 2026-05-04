@@ -969,7 +969,7 @@ def _render_frame(env: Any, width: int, height: int, camera_id: int) -> Any:
         renderer, "_envpool_cgl_first_render_done", False
     ):
         renderer._envpool_cgl_first_render_done = True
-        for _ in range(8):
+        for _ in range(32):
             frame = renderer.render_offscreen(
                 width=width,
                 height=height,

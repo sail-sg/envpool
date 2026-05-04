@@ -673,20 +673,28 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
     scratch_.resize(frame_bytes);
   }
 
+  auto read_pixels = [&] {
+#if defined(ENVPOOL_HAS_CGL)
+    if (cgl_warmup_render_) {
+      mjr_finish();
+    }
+#endif
+    mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
+  };
+
   bool frame_read = false;
   render_scene();
 #if defined(ENVPOOL_HAS_CGL)
   // macOS CGL can expose an unsettled offline framebuffer on the first native
   // readback, especially for tiny moving challenge geoms. On GitHub macOS
-  // runners an early unsettled frame can repeat bitwise before the renderer
-  // settles, so use a fixed warmup count and make the final readback public.
+  // runners an early unsettled frame can repeat for several readbacks before
+  // the renderer settles, so use a fixed settle window and make the final
+  // readback public.
   if (cgl_warmup_render_ && !cgl_warmup_done_) {
-    glFinish();
-    mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
-    for (int pass = 0; pass < 8; ++pass) {
+    read_pixels();
+    for (int pass = 0; pass < 32; ++pass) {
       render_scene();
-      glFinish();
-      mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
+      read_pixels();
     }
     cgl_warmup_done_ = true;
     frame_read = true;
@@ -696,12 +704,7 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
 #endif
 
   if (!frame_read) {
-#if defined(ENVPOOL_HAS_CGL)
-    if (cgl_warmup_render_) {
-      glFinish();
-    }
-#endif
-    mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
+    read_pixels();
   }
 
   std::size_t row_bytes =
