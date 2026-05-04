@@ -170,9 +170,10 @@ _SHARDED_NATIVE_ONLY_RENDER_TASK_IDS = _render_shard_task_ids(
 def _oracle_probe_path() -> Path:
     runfiles = Path(os.environ["TEST_SRCDIR"])
     workspace = os.environ.get("TEST_WORKSPACE", "envpool")
-    launcher_names: tuple[str, ...] = ("myosuite_oracle_probe.exe",)
-    if sys.platform != "win32":
-        launcher_names = ("myosuite_oracle_probe", "myosuite_oracle_probe.exe")
+    launcher_names: tuple[str, ...] = (
+        "myosuite_oracle_probe",
+        "myosuite_oracle_probe.exe",
+    )
     logical_suffixes = (
         tuple(f"envpool/mujoco/{launcher}" for launcher in launcher_names)
         + launcher_names
@@ -207,6 +208,13 @@ def _oracle_probe_path() -> Path:
     )
 
 
+def _oracle_probe_cmd() -> list[str]:
+    path = _oracle_probe_path()
+    if sys.platform == "win32" and path.suffix.lower() != ".exe":
+        return [sys.executable, str(path)]
+    return [str(path)]
+
+
 def _oracle_trace(
     task_ids: tuple[str, ...],
     trace_plan: dict[str, dict[str, Any]],
@@ -216,8 +224,7 @@ def _oracle_trace(
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as plan:
         plan_path = Path(plan.name)
     plan_path.write_text(json.dumps(trace_plan, sort_keys=True))
-    cmd = [
-        str(_oracle_probe_path()),
+    cmd = _oracle_probe_cmd() + [
         "--mode",
         "trace",
         "--render",

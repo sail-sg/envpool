@@ -214,9 +214,10 @@ def _task_metadata_by_id() -> dict[str, MyoSuiteTask]:
 def _oracle_probe_path() -> Path:
     runfiles = Path(os.environ["TEST_SRCDIR"])
     workspace = os.environ.get("TEST_WORKSPACE", "envpool")
-    launcher_names: tuple[str, ...] = ("myosuite_oracle_probe.exe",)
-    if sys.platform != "win32":
-        launcher_names = ("myosuite_oracle_probe", "myosuite_oracle_probe.exe")
+    launcher_names: tuple[str, ...] = (
+        "myosuite_oracle_probe",
+        "myosuite_oracle_probe.exe",
+    )
     logical_suffixes = (
         tuple(f"envpool/mujoco/{launcher}" for launcher in launcher_names)
         + launcher_names
@@ -251,6 +252,13 @@ def _oracle_probe_path() -> Path:
     )
 
 
+def _oracle_probe_cmd() -> list[str]:
+    path = _oracle_probe_path()
+    if sys.platform == "win32" and path.suffix.lower() != ".exe":
+        return [sys.executable, str(path)]
+    return [str(path)]
+
+
 def _run_oracle_probe(
     mode: str,
     task_ids: tuple[str, ...] = (),
@@ -260,8 +268,7 @@ def _run_oracle_probe(
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as out:
         out_path = Path(out.name)
     sync_path: Path | None = None
-    cmd = [
-        str(_oracle_probe_path()),
+    cmd = _oracle_probe_cmd() + [
         "--mode",
         mode,
         "--out",
