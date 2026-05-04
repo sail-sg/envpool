@@ -662,11 +662,14 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
   // macOS CGL can expose an unsettled offline framebuffer on the first native
   // readback, especially for tiny moving challenge geoms. On GitHub macOS
   // runners an early unsettled frame can repeat bitwise before the renderer
-  // settles, so use a fixed warmup count and make the final readback public.
+  // settles, so finish each warmup render, use a fixed warmup count, and make
+  // the final readback public.
   if (cgl_warmup_render_ && !cgl_warmup_done_) {
+    mjr_finish();
     mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
     for (int pass = 0; pass < 8; ++pass) {
       render_scene();
+      mjr_finish();
       mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
     }
     cgl_warmup_done_ = true;
