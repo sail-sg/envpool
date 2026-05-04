@@ -660,14 +660,19 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
   render_scene();
 #if defined(ENVPOOL_HAS_CGL)
   // macOS CGL can expose an unsettled offline framebuffer on the first native
-  // readback. Match the official oracle's first-frame warmup: each warmup pass
-  // runs a full offscreen render and readback, then the last readback becomes
-  // the public frame.
+  // readback, especially for tiny moving challenge geoms. Make the first
+  // public frame the first bitwise-stable readback instead of relying on a
+  // fixed number of warmup passes.
   if (cgl_warmup_render_ && !cgl_warmup_done_) {
     mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
-    for (int pass = 0; pass < 3; ++pass) {
+    std::vector<unsigned char> previous = scratch_;
+    for (int pass = 0; pass < 8; ++pass) {
       render_scene();
       mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
+      if (scratch_ == previous) {
+        break;
+      }
+      previous = scratch_;
     }
     cgl_warmup_done_ = true;
     frame_read = true;

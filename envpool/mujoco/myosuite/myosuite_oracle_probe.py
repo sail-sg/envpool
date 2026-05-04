@@ -969,12 +969,16 @@ def _render_frame(env: Any, width: int, height: int, camera_id: int) -> Any:
         renderer, "_envpool_cgl_first_render_done", False
     ):
         renderer._envpool_cgl_first_render_done = True
-        for _ in range(3):
+        previous = frame.copy()
+        for _ in range(8):
             frame = renderer.render_offscreen(
                 width=width,
                 height=height,
                 camera_id=camera_id,
             )
+            if np.array_equal(frame, previous):
+                break
+            previous = frame.copy()
     return frame
 
 
