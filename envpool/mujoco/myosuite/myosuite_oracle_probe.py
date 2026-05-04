@@ -184,7 +184,7 @@ def _configure_mujoco_package_shared_lib() -> None:
 
 
 def _configure_macos_mujoco_renderer() -> None:
-    """Match EnvPool's CGL context setup for official render-oracle tests."""
+    """Use MuJoCo's default CGL pixel format with EnvPool's lock lifecycle."""
     if platform.system() != "Darwin":
         return
 
@@ -237,8 +237,8 @@ def _configure_macos_mujoco_renderer() -> None:
             )
 
             if not self._choose_pixel_format(
-                cgl, offline_attribs
-            ) and not self._choose_pixel_format(cgl, preferred_attribs):
+                cgl, preferred_attribs
+            ) and not self._choose_pixel_format(cgl, offline_attribs):
                 raise RuntimeError("failed to create CGL pixel format")
 
             self._context = cgl.CGLContextObj()

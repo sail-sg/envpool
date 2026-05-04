@@ -454,7 +454,7 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
 
   bool ShareRenderContext() const override { return false; }
 
-  bool PreferOfflineRenderContext() const override { return true; }
+  bool PreferOfflineRenderContext() const override { return false; }
 
   bool ResizeOffscreenRenderContext() const override { return false; }
 

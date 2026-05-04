@@ -103,8 +103,8 @@ class CglContext final : public GlContext {
         static_cast<CGLPixelFormatAttribute>(0),  // value
         static_cast<CGLPixelFormatAttribute>(0),  // terminator
     };
-    // Gym/DMControl mirror MuJoCo's default accelerated CGL format, while
-    // MyoSuite's bitwise oracle explicitly prefers the offline renderer.
+    // Most MuJoCo oracles use the default accelerated CGL format; callers can
+    // still request the offline renderer when an upstream oracle does so.
     bool chose_pixel_format = prefer_offline_context
                                   ? ChoosePixelFormat(offline_attribs)
                                   : ChoosePixelFormat(preferred_attribs);
@@ -662,14 +662,11 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
   // macOS CGL can expose an unsettled offline framebuffer on the first native
   // readback, especially for tiny moving challenge geoms. On GitHub macOS
   // runners an early unsettled frame can repeat bitwise before the renderer
-  // settles, so finish each warmup render, use a fixed warmup count, and make
-  // the final readback public.
+  // settles, so use a fixed warmup count and make the final readback public.
   if (cgl_warmup_render_ && !cgl_warmup_done_) {
-    mjr_finish();
     mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
     for (int pass = 0; pass < 8; ++pass) {
       render_scene();
-      mjr_finish();
       mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
     }
     cgl_warmup_done_ = true;
