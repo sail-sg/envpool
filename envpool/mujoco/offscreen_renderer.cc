@@ -681,9 +681,11 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
   // runners an early unsettled frame can repeat bitwise before the renderer
   // settles, so use a fixed warmup count and make the final readback public.
   if (cgl_warmup_render_ && !cgl_warmup_done_) {
+    glFinish();
     mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
     for (int pass = 0; pass < 8; ++pass) {
       render_scene();
+      glFinish();
       mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
     }
     cgl_warmup_done_ = true;
@@ -694,6 +696,11 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
 #endif
 
   if (!frame_read) {
+#if defined(ENVPOOL_HAS_CGL)
+    if (cgl_warmup_render_) {
+      glFinish();
+    }
+#endif
     mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
   }
 
