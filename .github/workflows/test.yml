@@ -10,12 +10,6 @@ permissions:
   actions: write
   contents: read
 
-env:
-  MYOSUITE_BAZEL_TEST_TARGETS: >-
-    //envpool/mujoco:myosuite_test
-    //envpool/mujoco:myosuite_oracle_align_test
-    //envpool/mujoco:myosuite_render_test
-
 jobs:
   test-linux-x64:
     name: Test (linux-x64)
@@ -68,15 +62,22 @@ jobs:
         run: |
           go install github.com/bazelbuild/bazelisk@latest
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
-      - name: Test
+      - name: Coverage
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
-            BAZEL_TEST_TARGETS="$MYOSUITE_BAZEL_TEST_TARGETS" bazel-test
+            BAZEL_TEST_TARGETS="//..." bazel-coverage
+          mkdir -p coverage
+          cp bazel-out/_coverage/_coverage_report.dat coverage/lcov.info
+          python3 scripts/coverage_summary.py \
+            --lcov coverage/lcov.info \
+            --output-dir coverage \
+            --summary-file coverage/summary.md \
+            --badge-file coverage/coverage-badge.svg \
+            --genhtml-lcov-file coverage/lcov.genhtml.info \
+            --repo-root "$GITHUB_WORKSPACE"
       - name: Publish coverage summary
-        if: ${{ false }}
         run: cat coverage/summary.md >> "$GITHUB_STEP_SUMMARY"
       - name: Build coverage site
-        if: ${{ false }}
         run: |
           genhtml coverage/lcov.genhtml.info \
             --prefix "$GITHUB_WORKSPACE" \
@@ -87,20 +88,20 @@ jobs:
             --title "EnvPool coverage report"
           cp coverage/coverage-badge.svg coverage/site/coverage-badge.svg
       - name: Upload coverage artifacts
-        if: ${{ false }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report-linux-x64-${{ github.sha }}
           path: coverage
           if-no-files-found: warn
       - name: Upload coverage Pages artifact
-        if: ${{ false }}
+        if: ${{ github.event_name == 'push' }}
         uses: actions/upload-pages-artifact@v4
         with:
           path: coverage/site
       - name: Save Bazel caches
         id: save-bazel-caches
-        if: ${{ false }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
           path: |
@@ -109,7 +110,7 @@ jobs:
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
       - name: Prune older Bazel caches
-        if: ${{ false }}
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -174,10 +175,10 @@ jobs:
       - name: Test
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
-            BAZEL_TEST_TARGETS="$MYOSUITE_BAZEL_TEST_TARGETS" bazel-test
+            BAZEL_TEST_TARGETS="//..." bazel-test
       - name: Save Bazel caches
         id: save-bazel-caches
-        if: ${{ false }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
           path: |
@@ -186,7 +187,7 @@ jobs:
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
       - name: Prune older Bazel caches
-        if: ${{ false }}
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -253,11 +254,10 @@ jobs:
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Test
         run: |
-          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
-            BAZEL_TEST_TARGETS="$MYOSUITE_BAZEL_TEST_TARGETS" bazel-test
+          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" bazel-test
       - name: Save Bazel caches
         id: save-bazel-caches
-        if: ${{ false }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
           path: |
@@ -266,7 +266,7 @@ jobs:
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
       - name: Prune older Bazel caches
-        if: ${{ false }}
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -374,11 +374,10 @@ jobs:
         run: |
           repo_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-repo")
           disk_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-disk")
-          make BAZELOPT="--repository_cache=$repo_cache --disk_cache=$disk_cache $BAZEL_CI_RESOURCE_OPTS" \
-            BAZEL_TEST_TARGETS="$MYOSUITE_BAZEL_TEST_TARGETS" bazel-test
+          make BAZELOPT="--repository_cache=$repo_cache --disk_cache=$disk_cache $BAZEL_CI_RESOURCE_OPTS" bazel-test
       - name: Save Bazel caches
         id: save-bazel-caches
-        if: ${{ false }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
           path: |
@@ -387,7 +386,7 @@ jobs:
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
       - name: Prune older Bazel caches
-        if: ${{ false }}
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
