@@ -458,7 +458,21 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
 
   bool ResizeOffscreenRenderContext() const override { return false; }
 
-  bool CglWarmupRender() const override { return true; }
+  bool CglWarmupRender() const override {
+    switch (task_.kind) {
+      case MyoSuiteTaskKind::kChallengeBaoding:
+      case MyoSuiteTaskKind::kChallengeBimanual:
+      case MyoSuiteTaskKind::kChallengeChaseTag:
+      case MyoSuiteTaskKind::kChallengeRelocate:
+      case MyoSuiteTaskKind::kChallengeReorient:
+      case MyoSuiteTaskKind::kChallengeRunTrack:
+      case MyoSuiteTaskKind::kChallengeSoccer:
+      case MyoSuiteTaskKind::kChallengeTableTennis:
+        return true;
+      default:
+        return false;
+    }
+  }
 
  protected:
   struct RewardResult {

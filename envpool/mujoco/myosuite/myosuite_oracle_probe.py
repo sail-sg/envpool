@@ -957,7 +957,13 @@ def _trace_info(info: dict[str, Any]) -> dict[str, Any]:
     return scalar_info
 
 
-def _render_frame(env: Any, width: int, height: int, camera_id: int) -> Any:
+def _needs_cgl_warmup_render(task_id: str) -> bool:
+    return "Challenge" in task_id
+
+
+def _render_frame(
+    task_id: str, env: Any, width: int, height: int, camera_id: int
+) -> Any:
     env.unwrapped.sim.forward()
     renderer = env.unwrapped.sim.renderer
     frame = renderer.render_offscreen(
@@ -965,8 +971,10 @@ def _render_frame(env: Any, width: int, height: int, camera_id: int) -> Any:
         height=height,
         camera_id=camera_id,
     )
-    if platform.system() == "Darwin" and not getattr(
-        renderer, "_envpool_cgl_first_render_done", False
+    if (
+        platform.system() == "Darwin"
+        and _needs_cgl_warmup_render(task_id)
+        and not getattr(renderer, "_envpool_cgl_first_render_done", False)
     ):
         renderer._envpool_cgl_first_render_done = True
         for _ in range(32):
@@ -1069,7 +1077,11 @@ def _trace_report(
                 frames.append(
                     _jsonable_array(
                         _render_frame(
-                            env, render_width, render_height, camera_id
+                            task_id,
+                            env,
+                            render_width,
+                            render_height,
+                            camera_id,
                         )
                     )
                 )
@@ -1129,7 +1141,11 @@ def _trace_report(
                     frames.append(
                         _jsonable_array(
                             _render_frame(
-                                env, render_width, render_height, camera_id
+                                task_id,
+                                env,
+                                render_width,
+                                render_height,
+                                camera_id,
                             )
                         )
                     )

@@ -14,8 +14,8 @@
 
 load("@python_versions//3.12:defs.bzl", py_binary_312 = "py_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
-load("//envpool:myosuite_oracle_requirements.bzl", "oracle_requirement")
 load("//third_party/myosuite:defs.bzl", "myosuite_native_assets")
+load("//third_party/myosuite:oracle_requirements.bzl", "oracle_requirement")
 
 exports_files([
     "oracle_requirements.txt",

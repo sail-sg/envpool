@@ -16,11 +16,11 @@ load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 load("@python_versions//3.12:defs.bzl", py_binary_312 = "py_binary")
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load("@rules_python//python:defs.bzl", "py_library", "py_test")
-load("//envpool:myosuite_oracle_requirements.bzl", "oracle_requirement")
 load("//envpool:requirements.bzl", "requirement")
 load("//third_party:common.bzl", "copy_to_directory")
 load("//third_party/metaworld_assets:defs.bzl", "metaworld_runtime_assets")
 load("//third_party/myosuite:defs.bzl", "myosuite_runtime_assets")
+load("//third_party/myosuite:oracle_requirements.bzl", "oracle_requirement")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -313,6 +313,12 @@ cc_library(
         "@mujoco//:mujoco_obj_decoder_plugin_lib",
         "@mujoco//:mujoco_stl_decoder_plugin_lib",
     ],
+)
+
+cc_library(
+    name = "myosuite_clang_tidy",
+    srcs = ["myosuite/myosuite_clang_tidy.cc"],
+    deps = [":myosuite_env"],
 )
 
 cc_library(
