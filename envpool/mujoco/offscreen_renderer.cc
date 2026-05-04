@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -29,6 +30,7 @@
 
 #if defined(__APPLE__) && __has_include(<OpenGL/OpenGL.h>)
 #include <OpenGL/OpenGL.h>
+#include <OpenGL/gl.h>
 #define ENVPOOL_HAS_CGL 1
 #elif defined(_WIN32) && __has_include(<windows.h>)
 #ifndef NOMINMAX
@@ -48,6 +50,11 @@
 namespace envpool::mujoco {
 
 namespace {
+
+bool DebugMujocoRender() {
+  const char* debug = std::getenv("ENVPOOL_MUJOCO_RENDER_DEBUG");
+  return debug != nullptr && std::strcmp(debug, "1") == 0;
+}
 
 mjtNum MedianGeomPosition(const mjData* data, int ngeom, int axis) {
   std::vector<mjtNum> positions(ngeom);
@@ -105,13 +112,15 @@ class CglContext final : public GlContext {
     };
     // Most MuJoCo oracles use the default accelerated CGL format; callers can
     // still request the offline renderer when an upstream oracle does so.
-    bool chose_pixel_format = prefer_offline_context
-                                  ? ChoosePixelFormat(offline_attribs)
-                                  : ChoosePixelFormat(preferred_attribs);
+    bool chose_pixel_format =
+        prefer_offline_context
+            ? ChoosePixelFormat(offline_attribs, "offline")
+            : ChoosePixelFormat(preferred_attribs, "preferred");
     if (!chose_pixel_format) {
-      chose_pixel_format = prefer_offline_context
-                               ? ChoosePixelFormat(preferred_attribs)
-                               : ChoosePixelFormat(offline_attribs);
+      chose_pixel_format =
+          prefer_offline_context
+              ? ChoosePixelFormat(preferred_attribs, "preferred")
+              : ChoosePixelFormat(offline_attribs, "offline");
     }
     if (!chose_pixel_format) {
       throw std::runtime_error("failed to create CGL pixel format");
@@ -121,6 +130,15 @@ class CglContext final : public GlContext {
       CGLReleasePixelFormat(pixel_format_);
       pixel_format_ = nullptr;
       throw std::runtime_error("failed to create CGL context");
+    }
+    if (DebugMujocoRender()) {
+      std::cerr << "ENVPOOL_CGL_CONTEXT"
+                << " mode=" << pixel_format_mode_
+                << " npix=" << pixel_format_count_
+                << " accelerated=" << Describe(kCGLPFAAccelerated)
+                << " offline=" << Describe(kCGLPFAAllowOfflineRenderers)
+                << " sample_buffers=" << Describe(kCGLPFASampleBuffers)
+                << " samples=" << Describe(kCGLPFASamples) << "\n";
     }
   }
 
@@ -169,8 +187,8 @@ class CglContext final : public GlContext {
 
  private:
   template <std::size_t N>
-  bool ChoosePixelFormat(
-      const std::array<CGLPixelFormatAttribute, N>& attribs) {
+  bool ChoosePixelFormat(const std::array<CGLPixelFormatAttribute, N>& attribs,
+                         const char* mode) {
     GLint npix = 0;
     CGLPixelFormatObj pixel_format = nullptr;
     CGLError err = CGLChoosePixelFormat(attribs.data(), &pixel_format, &npix);
@@ -181,11 +199,24 @@ class CglContext final : public GlContext {
       return false;
     }
     pixel_format_ = pixel_format;
+    pixel_format_mode_ = mode;
+    pixel_format_count_ = npix;
     return true;
+  }
+
+  GLint Describe(CGLPixelFormatAttribute attrib) const {
+    GLint value = 0;
+    if (pixel_format_ == nullptr) {
+      return value;
+    }
+    CGLDescribePixelFormat(pixel_format_, 0, attrib, &value);
+    return value;
   }
 
   CGLPixelFormatObj pixel_format_{nullptr};
   CGLContextObj context_{nullptr};
+  const char* pixel_format_mode_{"unknown"};
+  GLint pixel_format_count_{0};
   bool locked_{false};
 };
 
@@ -586,6 +617,35 @@ void OffscreenRenderer::Initialize(const mjModel* model) {
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
   context_.readDepthMap = mjDEPTH_ZEROFAR;
   initialized_ = true;
+#if defined(ENVPOOL_HAS_CGL)
+  if (DebugMujocoRender()) {
+    GLint max_samples = 0;
+    GLint sample_buffers = 0;
+    GLint samples = 0;
+    glGetIntegerv(GL_MAX_SAMPLES, &max_samples);
+    glGetIntegerv(GL_SAMPLE_BUFFERS, &sample_buffers);
+    glGetIntegerv(GL_SAMPLES, &samples);
+    const auto* vendor = glGetString(GL_VENDOR);
+    const auto* renderer = glGetString(GL_RENDERER);
+    const auto* version = glGetString(GL_VERSION);
+    std::cerr
+        << "ENVPOOL_MJR_CONTEXT"
+        << " offWidth=" << context_.offWidth
+        << " offHeight=" << context_.offHeight
+        << " offSamples=" << context_.offSamples
+        << " windowAvailable=" << context_.windowAvailable
+        << " windowSamples=" << context_.windowSamples
+        << " gl_max_samples=" << max_samples
+        << " gl_sample_buffers=" << sample_buffers << " gl_samples=" << samples
+        << " gl_vendor=\""
+        << (vendor == nullptr ? "" : reinterpret_cast<const char*>(vendor))
+        << "\" gl_renderer=\""
+        << (renderer == nullptr ? "" : reinterpret_cast<const char*>(renderer))
+        << "\" gl_version=\""
+        << (version == nullptr ? "" : reinterpret_cast<const char*>(version))
+        << "\"\n";
+  }
+#endif
 }
 
 void OffscreenRenderer::UpdateCamera(const mjModel* model, const mjData* data,

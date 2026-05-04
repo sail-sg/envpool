@@ -413,10 +413,18 @@ class MyoSuiteRenderTest(absltest.TestCase):
                     for step_id, (frame, oracle_frame) in enumerate(
                         zip(frames, oracle_frames, strict=True)
                     ):
+                        err_msg = f"{task_id} render step {step_id}"
+                        if "render_context" in oracle:
+                            err_msg += (
+                                "\nofficial_render_context="
+                                + json.dumps(
+                                    oracle["render_context"], sort_keys=True
+                                )
+                            )
                         np.testing.assert_array_equal(
                             frame,
                             oracle_frame,
-                            err_msg=f"{task_id} render step {step_id}",
+                            err_msg=err_msg,
                         )
                         self.assertGreater(int(frame.max()), int(frame.min()))
 

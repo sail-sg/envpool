@@ -200,6 +200,8 @@ def _configure_macos_mujoco_renderer() -> None:
             self._pixel_format: Any = None
             self._context: Any = None
             self._locked = False
+            self._envpool_cgl_mode = "unknown"
+            self._envpool_cgl_pixel_format: dict[str, int] = {}
             attrib = cgl.CGLPixelFormatAttribute
             profile = cgl.CGLOpenGLProfile
             preferred_attribs = (
@@ -237,9 +239,12 @@ def _configure_macos_mujoco_renderer() -> None:
             )
 
             if not self._choose_pixel_format(
-                cgl, preferred_attribs
-            ) and not self._choose_pixel_format(cgl, offline_attribs):
+                cgl, "preferred", preferred_attribs
+            ) and not self._choose_pixel_format(
+                cgl, "offline", offline_attribs
+            ):
                 raise RuntimeError("failed to create CGL pixel format")
+            self._describe_pixel_format(cgl)
 
             self._context = cgl.CGLContextObj()
             cgl.CGLCreateContext(
@@ -253,7 +258,7 @@ def _configure_macos_mujoco_renderer() -> None:
                 raise RuntimeError("failed to create CGL context")
 
         def _choose_pixel_format(
-            self, cgl: Any, attrib_values: tuple[int, ...]
+            self, cgl: Any, mode: str, attrib_values: tuple[int, ...]
         ) -> bool:
             attribs = (ctypes.c_int * len(attrib_values))(*attrib_values)
             pixel_format = cgl.CGLPixelFormatObj()
@@ -269,7 +274,33 @@ def _configure_macos_mujoco_renderer() -> None:
             if not pixel_format or num_pixel_formats.value == 0:
                 return False
             self._pixel_format = pixel_format
+            self._envpool_cgl_mode = mode
+            self._envpool_cgl_num_pixel_formats = int(num_pixel_formats.value)
             return True
+
+        def _describe_pixel_format(self, cgl: Any) -> None:
+            describe = getattr(cgl, "CGLDescribePixelFormat", None)
+            if describe is None:
+                return
+            attrib = cgl.CGLPixelFormatAttribute
+            report = {
+                "accelerated": attrib.CGLPFAAccelerated,
+                "offline": attrib.CGLPFAAllowOfflineRenderers,
+                "sample_buffers": attrib.CGLPFASampleBuffers,
+                "samples": attrib.CGLPFASample,
+            }
+            for name, attr in report.items():
+                value = cgl.GLint()
+                try:
+                    describe(
+                        self._pixel_format,
+                        0,
+                        attr,
+                        ctypes.byref(value),
+                    )
+                except cgl.CGLError:
+                    continue
+                self._envpool_cgl_pixel_format[name] = int(value.value)
 
         def make_current(self) -> None:
             cgl.CGLSetCurrentContext(self._context)
@@ -978,6 +1009,42 @@ def _render_frame(env: Any, width: int, height: int, camera_id: int) -> Any:
     return frame
 
 
+def _render_context_report(env: Any) -> dict[str, Any]:
+    renderer = env.unwrapped.sim.renderer
+    inner_renderer = getattr(renderer, "_renderer", None)
+    if inner_renderer is None:
+        return {}
+    mjr_context = getattr(inner_renderer, "_mjr_context", None)
+    gl_context = getattr(inner_renderer, "_gl_context", None)
+    context_report: dict[str, Any] = {
+        "gl_context": {
+            "mode": getattr(gl_context, "_envpool_cgl_mode", None),
+            "num_pixel_formats": getattr(
+                gl_context, "_envpool_cgl_num_pixel_formats", None
+            ),
+            "pixel_format": getattr(
+                gl_context, "_envpool_cgl_pixel_format", None
+            ),
+        },
+        "mjr_context": {},
+    }
+    if mjr_context is not None:
+        for name in (
+            "offWidth",
+            "offHeight",
+            "offSamples",
+            "windowAvailable",
+            "windowSamples",
+        ):
+            try:
+                context_report["mjr_context"][name] = int(
+                    getattr(mjr_context, name)
+                )
+            except (AttributeError, TypeError, ValueError):
+                pass
+    return context_report
+
+
 def _next_action(
     rng: np.random.Generator,
     low: np.ndarray,
@@ -1135,6 +1202,8 @@ def _trace_report(
                     )
             if render:
                 trace["frames"] = frames
+                if os.environ.get("ENVPOOL_MUJOCO_RENDER_DEBUG") == "1":
+                    trace["render_context"] = _render_context_report(env)
             tasks[task_id] = trace
         except Exception as exc:
             raise RuntimeError(f"oracle trace failed for {task_id}") from exc
