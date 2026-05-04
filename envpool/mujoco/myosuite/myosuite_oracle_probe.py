@@ -83,6 +83,26 @@ def _runfiles_root() -> Path:
     return path.parents[3]
 
 
+def _runfiles_manifests(runfiles: Path) -> tuple[Path, ...]:
+    manifests = []
+    env_manifest = os.environ.get("RUNFILES_MANIFEST_FILE")
+    if env_manifest:
+        manifests.append(Path(env_manifest))
+    manifests.extend([
+        runfiles / "MANIFEST",
+        runfiles.parent / f"{runfiles.name}_manifest",
+    ])
+
+    unique_manifests = []
+    seen = set()
+    for manifest in manifests:
+        key = os.fspath(manifest)
+        if key not in seen:
+            unique_manifests.append(manifest)
+            seen.add(key)
+    return tuple(unique_manifests)
+
+
 def _mujoco_shared_lib_name() -> str | None:
     system = platform.system()
     if system == "Darwin":
@@ -100,6 +120,25 @@ def _bazel_mujoco_shared_lib_path() -> Path:
         )
     runfiles = _runfiles_root()
     workspace = os.environ.get("TEST_WORKSPACE", "envpool")
+    manifest_keys = (
+        f"mujoco/{shared_lib}",
+        f"{workspace}/external/mujoco/{shared_lib}",
+    )
+    for manifest in _runfiles_manifests(runfiles):
+        if not manifest.is_file():
+            continue
+        with manifest.open(encoding="utf-8") as f:
+            for line in f:
+                logical_path, _, real_path = line.rstrip("\n").partition(" ")
+                if logical_path not in manifest_keys:
+                    continue
+                candidate = Path(real_path)
+                if (
+                    candidate.is_file()
+                    and "site-packages" not in candidate.parts
+                ):
+                    return candidate
+
     candidates = (
         runfiles / "mujoco" / shared_lib,
         runfiles / workspace / "external" / "mujoco" / shared_lib,
