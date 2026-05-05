@@ -958,14 +958,19 @@ def _trace_info(info: dict[str, Any]) -> dict[str, Any]:
 
 
 def _needs_cgl_warmup_render(task_id: str) -> bool:
-    return "Challenge" in task_id or task_id in {
-        "motorFingerReachFixed-v0",
-        "motorFingerReachRandom-v0",
-        "myoFingerPoseFixed-v0",
-        "myoFingerPoseRandom-v0",
-        "myoFingerReachFixed-v0",
-        "myoFingerReachRandom-v0",
-    }
+    return (
+        "Challenge" in task_id
+        or "Elbow" in task_id
+        or task_id
+        in {
+            "motorFingerReachFixed-v0",
+            "motorFingerReachRandom-v0",
+            "myoFingerPoseFixed-v0",
+            "myoFingerPoseRandom-v0",
+            "myoFingerReachFixed-v0",
+            "myoFingerReachRandom-v0",
+        }
+    )
 
 
 def _render_frame(

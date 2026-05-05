@@ -459,10 +459,11 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
   bool ResizeOffscreenRenderContext() const override { return false; }
 
   bool CglWarmupRender() const override {
+    const std::string_view model_path(task_.model_path);
     if ((task_.kind == MyoSuiteTaskKind::kPose ||
          task_.kind == MyoSuiteTaskKind::kReach) &&
-        std::string_view(task_.model_path).find("/finger/") !=
-            std::string_view::npos) {
+        (model_path.find("/elbow/") != std::string_view::npos ||
+         model_path.find("/finger/") != std::string_view::npos)) {
       return true;
     }
     switch (task_.kind) {

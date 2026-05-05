@@ -539,13 +539,25 @@ py_test(
 MYOSUITE_CGL_RENDER_REGRESSION_IDS = ",".join([
     "motorFingerReachFixed-v0",
     "motorFingerReachRandom-v0",
+    "myoElbowPose1D6MExoFixed-v0",
+    "myoElbowPose1D6MExoRandom-v0",
+    "myoElbowPose1D6MFixed-v0",
+    "myoElbowPose1D6MRandom-v0",
     "myoChallengeTableTennisP0-v0",
     "myoChallengeTableTennisP1-v0",
     "myoChallengeTableTennisP2-v0",
+    "myoFatiElbowPose1D6MExoFixed-v0",
+    "myoFatiElbowPose1D6MExoRandom-v0",
+    "myoFatiElbowPose1D6MFixed-v0",
+    "myoFatiElbowPose1D6MRandom-v0",
     "myoFingerPoseFixed-v0",
     "myoFingerPoseRandom-v0",
     "myoFingerReachFixed-v0",
     "myoFingerReachRandom-v0",
+    "myoSarcElbowPose1D6MExoFixed-v0",
+    "myoSarcElbowPose1D6MExoRandom-v0",
+    "myoSarcElbowPose1D6MFixed-v0",
+    "myoSarcElbowPose1D6MRandom-v0",
 ])
 
 py_test(
