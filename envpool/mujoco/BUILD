@@ -536,6 +536,36 @@ py_test(
     ],
 )
 
+MYOSUITE_FINGER_RENDER_REGRESSION_IDS = ",".join([
+    "motorFingerReachFixed-v0",
+    "motorFingerReachRandom-v0",
+    "myoFingerPoseFixed-v0",
+    "myoFingerPoseRandom-v0",
+    "myoFingerReachFixed-v0",
+    "myoFingerReachRandom-v0",
+])
+
+py_test(
+    name = "myosuite_finger_render_regression_test",
+    size = "enormous",
+    srcs = ["myosuite/myosuite_render_test.py"],
+    data = [":myosuite_oracle_probe"],
+    env = {
+        "MYOSUITE_RENDER_TASK_IDS": MYOSUITE_FINGER_RENDER_REGRESSION_IDS,
+    },
+    imports = ["../.."],
+    main = "myosuite/myosuite_render_test.py",
+    tags = ["exclusive"],
+    deps = [
+        ":myosuite",
+        ":myosuite_registration",
+        ":myosuite_task_metadata",
+        "//envpool/python:glfw_context",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
 py_test(
     name = "myosuite_oracle_align_test",
     size = "enormous",

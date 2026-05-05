@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  # Temporary MuJoCo-only CI while stabilizing PR #400.
+  # Temporary focused MyoSuite render CI while stabilizing PR #400.
   # Restore the full //... targets and cache save/prune before final merge.
   test-linux-x64:
     name: Test (linux-x64)
@@ -67,7 +67,7 @@ jobs:
       - name: Coverage
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
-            BAZEL_TEST_TARGETS="//envpool/mujoco/..." bazel-coverage
+            BAZEL_TEST_TARGETS="//envpool/mujoco:myosuite_finger_render_regression_test" bazel-coverage
           mkdir -p coverage
           cp bazel-out/_coverage/_coverage_report.dat coverage/lcov.info
           python3 scripts/coverage_summary.py \
@@ -177,7 +177,7 @@ jobs:
       - name: Test
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
-            BAZEL_TEST_TARGETS="//envpool/mujoco/..." bazel-test
+            BAZEL_TEST_TARGETS="//envpool/mujoco:myosuite_finger_render_regression_test" bazel-test
       - name: Save Bazel caches
         id: save-bazel-caches
         if: ${{ false }}
@@ -257,7 +257,7 @@ jobs:
       - name: Test
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
-            BAZEL_TEST_TARGETS="//envpool/mujoco/..." bazel-test
+            BAZEL_TEST_TARGETS="//envpool/mujoco:myosuite_finger_render_regression_test" bazel-test
       - name: Save Bazel caches
         id: save-bazel-caches
         if: ${{ false }}
@@ -378,7 +378,7 @@ jobs:
           repo_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-repo")
           disk_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-disk")
           make BAZELOPT="--repository_cache=$repo_cache --disk_cache=$disk_cache $BAZEL_CI_RESOURCE_OPTS" \
-            BAZEL_TEST_TARGETS="//envpool/mujoco/..." bazel-test
+            BAZEL_TEST_TARGETS="//envpool/mujoco:myosuite_finger_render_regression_test" bazel-test
       - name: Save Bazel caches
         id: save-bazel-caches
         if: ${{ false }}

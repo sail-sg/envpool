@@ -43,6 +43,37 @@ from envpool.registration import make_gymnasium
 importlib.import_module("envpool.mujoco.myosuite.registration")
 
 _TASK_IDS = tuple(str(task["id"]) for task in MYOSUITE_TASKS)
+_TASK_ID_SET = frozenset(_TASK_IDS)
+
+
+def _render_task_allowlist_from_env() -> tuple[str, ...] | None:
+    raw = os.environ.get("MYOSUITE_RENDER_TASK_IDS")
+    if raw is None:
+        return None
+    task_ids = tuple(
+        dict.fromkeys(
+            task_id for task_id in raw.replace(",", " ").split() if task_id
+        )
+    )
+    if not task_ids:
+        raise ValueError("MYOSUITE_RENDER_TASK_IDS is set but empty")
+    unknown = sorted(set(task_ids) - _TASK_ID_SET)
+    if unknown:
+        raise ValueError(f"unknown MYOSUITE_RENDER_TASK_IDS: {unknown}")
+    return task_ids
+
+
+_RENDER_TASK_ALLOWLIST = _render_task_allowlist_from_env()
+
+
+def _filter_render_task_ids(task_ids: tuple[str, ...]) -> tuple[str, ...]:
+    if _RENDER_TASK_ALLOWLIST is None:
+        return task_ids
+    return tuple(
+        task_id for task_id in task_ids if task_id in _RENDER_TASK_ALLOWLIST
+    )
+
+
 _ORACLE_TRACE_TASK_IDS = tuple(
     task_id
     for task_id in _TASK_IDS
@@ -161,9 +192,11 @@ def _task_batches(
     )
 
 
-_SHARDED_ORACLE_TRACE_TASK_IDS = _render_shard_task_ids(_ORACLE_TRACE_TASK_IDS)
+_SHARDED_ORACLE_TRACE_TASK_IDS = _render_shard_task_ids(
+    _filter_render_task_ids(_ORACLE_TRACE_TASK_IDS)
+)
 _SHARDED_NATIVE_ONLY_RENDER_TASK_IDS = _render_shard_task_ids(
-    _NATIVE_ONLY_RENDER_TASK_IDS
+    _filter_render_task_ids(_NATIVE_ONLY_RENDER_TASK_IDS)
 )
 
 
