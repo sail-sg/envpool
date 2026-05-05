@@ -417,40 +417,37 @@ def _render_stats(
     frame_diffs = []
     for idx, diff in enumerate(diffs):
         mismatched_pixels = int(np.count_nonzero(np.any(diff != 0, axis=-1)))
-        frame_diffs.append(
-            {
-                "max_abs_diff": int(diff.max()),
-                "mismatched_pixels": mismatched_pixels,
-                "mean_abs_diff": float(np.mean(diff)),
-                "first_diff": (
-                    {
-                        "index": [int(item) for item in np.argwhere(diff)[0]],
-                        "envpool": [
-                            int(item)
-                            for item in envpool_frames[idx][
-                                tuple(np.argwhere(diff)[0][:2])
-                            ]
-                        ],
-                        "official": [
-                            int(item)
-                            for item in oracle_frames[idx][
-                                tuple(np.argwhere(diff)[0][:2])
-                            ]
-                        ],
-                    }
-                    if mismatched_pixels
-                    else None
-                ),
-            }
-        )
+        frame_diffs.append({
+            "max_abs_diff": int(diff.max()),
+            "mismatched_pixels": mismatched_pixels,
+            "mean_abs_diff": float(np.mean(diff)),
+            "first_diff": (
+                {
+                    "index": [int(item) for item in np.argwhere(diff)[0]],
+                    "envpool": [
+                        int(item)
+                        for item in envpool_frames[idx][
+                            tuple(np.argwhere(diff)[0][:2])
+                        ]
+                    ],
+                    "official": [
+                        int(item)
+                        for item in oracle_frames[idx][
+                            tuple(np.argwhere(diff)[0][:2])
+                        ]
+                    ],
+                }
+                if mismatched_pixels
+                else None
+            ),
+        })
     stats: dict[str, object] = {
         "task_id": task_id,
         "frames": len(diffs),
         "frame_diffs": frame_diffs,
         "max_abs_diff": max(int(diff.max()) for diff in diffs),
         "mismatched_pixels": sum(
-            int(np.count_nonzero(np.any(diff != 0, axis=-1)))
-            for diff in diffs
+            int(np.count_nonzero(np.any(diff != 0, axis=-1))) for diff in diffs
         ),
         "mean_abs_diff": max(float(np.mean(diff)) for diff in diffs),
         "envpool_elapsed_steps": [
