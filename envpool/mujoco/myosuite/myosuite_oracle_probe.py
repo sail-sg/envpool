@@ -68,6 +68,8 @@ from envpool.python.glfw_context import preload_windows_gl_dlls
 if platform.system() == "Windows":
     preload_windows_gl_dlls(strict=True)
 
+_CGL_FIRST_FRAME_SETTLE_PASSES = 4
+
 
 def _runfiles_root() -> Path:
     path = Path(__file__).absolute()
@@ -961,11 +963,22 @@ def _trace_info(info: dict[str, Any]) -> dict[str, Any]:
 def _render_frame(env: Any, width: int, height: int, camera_id: int) -> Any:
     env.unwrapped.sim.forward()
     renderer = env.unwrapped.sim.renderer
-    return renderer.render_offscreen(
+    frame = renderer.render_offscreen(
         width=width,
         height=height,
         camera_id=camera_id,
     )
+    if platform.system() == "Darwin" and not getattr(
+        renderer, "_envpool_cgl_first_render_done", False
+    ):
+        renderer._envpool_cgl_first_render_done = True
+        for _ in range(_CGL_FIRST_FRAME_SETTLE_PASSES):
+            frame = renderer.render_offscreen(
+                width=width,
+                height=height,
+                camera_id=camera_id,
+            )
+    return frame
 
 
 def _next_action(

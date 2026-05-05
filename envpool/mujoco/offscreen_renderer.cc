@@ -48,6 +48,10 @@
 
 namespace envpool::mujoco {
 
+#if defined(ENVPOOL_HAS_CGL)
+constexpr int kCglFirstFrameSettlePasses = 4;
+#endif
+
 namespace {
 
 mjtNum MedianGeomPosition(const mjData* data, int ngeom, int axis) {
@@ -671,8 +675,30 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
     scratch_.resize(frame_bytes);
   }
 
+  auto read_pixels = [&] {
+#if defined(ENVPOOL_HAS_CGL)
+    mjr_finish();
+#endif
+    mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
+  };
+
   render_scene();
-  mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
+#if defined(ENVPOOL_HAS_CGL)
+  // macOS CGL can expose an unsettled first offscreen frame. Settle once per
+  // renderer so env code does not need task-specific render workarounds.
+  if (!cgl_first_frame_settled_) {
+    read_pixels();
+    for (int pass = 0; pass < kCglFirstFrameSettlePasses; ++pass) {
+      render_scene();
+      read_pixels();
+    }
+    cgl_first_frame_settled_ = true;
+  } else {
+    read_pixels();
+  }
+#else
+  read_pixels();
+#endif
 
   std::size_t row_bytes =
       static_cast<std::size_t>(width) * 3 * sizeof(unsigned char);

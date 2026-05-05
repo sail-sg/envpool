@@ -72,6 +72,9 @@ class OffscreenRenderer {
   bool resize_offscreen_;
   bool initialized_{false};
   bool free_camera_initialized_{false};
+#if defined(__APPLE__)
+  bool cgl_first_frame_settled_{false};
+#endif
 };
 
 }  // namespace envpool::mujoco
