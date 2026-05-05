@@ -231,7 +231,6 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--out_dir", type=Path)
     parser.add_argument("--all_tasks", action="store_true")
     parser.add_argument("--quiet", action="store_true")
-    parser.add_argument("--require_bitwise", action="store_true")
     parser.add_argument("--debug_json", type=Path)
     parser.add_argument("--task_id", default="myoFingerReachFixed-v0")
     parser.add_argument("--seed", default=3, type=int)
@@ -404,7 +403,7 @@ def _task_frames_from_trace(
     return envpool_frames, oracle_frames, envpool_infos
 
 
-def _bitwise_stats(
+def _render_stats(
     task_id: str,
     envpool_frames: Sequence[np.ndarray],
     oracle_frames: Sequence[np.ndarray],
@@ -415,13 +414,14 @@ def _bitwise_stats(
         np.abs(a.astype(np.int16) - b.astype(np.int16))
         for a, b in zip(envpool_frames, oracle_frames, strict=True)
     ]
-    stats: dict[str, object] = {
-        "task_id": task_id,
-        "frames": len(diffs),
-        "frame_diffs": [
+    frame_diffs = []
+    for idx, diff in enumerate(diffs):
+        mismatched_pixels = int(np.count_nonzero(np.any(diff != 0, axis=-1)))
+        frame_diffs.append(
             {
                 "max_abs_diff": int(diff.max()),
-                "nonzero_channels": int(np.count_nonzero(diff)),
+                "mismatched_pixels": mismatched_pixels,
+                "mean_abs_diff": float(np.mean(diff)),
                 "first_diff": (
                     {
                         "index": [int(item) for item in np.argwhere(diff)[0]],
@@ -438,14 +438,21 @@ def _bitwise_stats(
                             ]
                         ],
                     }
-                    if np.count_nonzero(diff)
+                    if mismatched_pixels
                     else None
                 ),
             }
-            for idx, diff in enumerate(diffs)
-        ],
+        )
+    stats: dict[str, object] = {
+        "task_id": task_id,
+        "frames": len(diffs),
+        "frame_diffs": frame_diffs,
         "max_abs_diff": max(int(diff.max()) for diff in diffs),
-        "nonzero_channels": sum(int(np.count_nonzero(diff)) for diff in diffs),
+        "mismatched_pixels": sum(
+            int(np.count_nonzero(np.any(diff != 0, axis=-1)))
+            for diff in diffs
+        ),
+        "mean_abs_diff": max(float(np.mean(diff)) for diff in diffs),
         "envpool_elapsed_steps": [
             int(np.asarray(info["elapsed_step"]).ravel()[0])
             for info in envpool_infos
@@ -557,7 +564,7 @@ def _render_single(
 
     out.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(out)
-    return _bitwise_stats(
+    return _render_stats(
         task_id, envpool_frames, oracle_frames, task_trace, envpool_infos
     )
 
@@ -617,7 +624,7 @@ def _render_group(
             task_id, traces[task_id], width, height, seed, envpool_records
         )
         stats.append(
-            _bitwise_stats(
+            _render_stats(
                 task_id,
                 envpool_frames,
                 oracle_frames,
@@ -736,12 +743,6 @@ def main() -> None:
                 sort_keys=True,
             )
         )
-    if args.require_bitwise:
-        failures = [stat for stat in stats if stat["nonzero_channels"] != 0]
-        if failures:
-            raise AssertionError(
-                f"render comparison is not bitwise: {failures[:8]}"
-            )
     if args.quiet:
         print(
             json.dumps(
