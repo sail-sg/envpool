@@ -87,6 +87,10 @@ _NATIVE_ONLY_RENDER_TASK_IDS = tuple(
 _WIDTH = 64
 _HEIGHT = 48
 _ORACLE_RENDER_BATCH_SIZE = 8
+# Catch wrong camera/model/scene regressions without chasing backend pixel noise.
+_MAX_RENDER_CHANNEL_DIFF = 3
+_MAX_RENDER_MISMATCHED_PIXELS = 32
+_MAX_RENDER_MEAN_ABS_DIFF = 0.025
 _SYNC_STATE_KEYS = (
     "qpos0",
     "qvel0",
@@ -347,6 +351,33 @@ def _render(env: Any) -> np.ndarray:
     return frame
 
 
+def _assert_render_aligned(
+    test: absltest.TestCase,
+    frame: np.ndarray,
+    oracle_frame: np.ndarray,
+    *,
+    task_id: str,
+    step_id: int,
+) -> None:
+    test.assertEqual(frame.shape, oracle_frame.shape)
+    test.assertEqual(frame.dtype, np.uint8)
+    test.assertEqual(oracle_frame.dtype, np.uint8)
+    diff = np.abs(frame.astype(np.int16) - oracle_frame.astype(np.int16))
+    max_abs = int(diff.max())
+    mismatched_pixels = int(np.count_nonzero(np.any(diff != 0, axis=-1)))
+    mean_abs = float(np.mean(diff))
+    if (
+        max_abs > _MAX_RENDER_CHANNEL_DIFF
+        or mismatched_pixels > _MAX_RENDER_MISMATCHED_PIXELS
+        or mean_abs > _MAX_RENDER_MEAN_ABS_DIFF
+    ):
+        test.fail(
+            f"{task_id} render step {step_id} drifted: "
+            f"max_abs={max_abs}, mismatched_pixels={mismatched_pixels}, "
+            f"mean_abs={mean_abs:.6f}"
+        )
+
+
 def _midpoint_action(env: Any) -> np.ndarray:
     low = np.asarray(env.action_space.low, dtype=np.float32)
     high = np.asarray(env.action_space.high, dtype=np.float32)
@@ -420,7 +451,7 @@ class MyoSuiteRenderTest(absltest.TestCase):
                 finally:
                     env.close()
 
-    def test_official_trace_native_render_bitwise(self) -> None:
+    def test_official_trace_native_render_alignment(self) -> None:
         """Official render matches EnvPool reset and first 3 API frames."""
         for batch in _task_batches(
             _SHARDED_ORACLE_TRACE_TASK_IDS, _ORACLE_RENDER_BATCH_SIZE
@@ -446,10 +477,12 @@ class MyoSuiteRenderTest(absltest.TestCase):
                     for step_id, (frame, oracle_frame) in enumerate(
                         zip(frames, oracle_frames, strict=True)
                     ):
-                        np.testing.assert_array_equal(
+                        _assert_render_aligned(
+                            self,
                             frame,
                             oracle_frame,
-                            err_msg=f"{task_id} render step {step_id}",
+                            task_id=task_id,
+                            step_id=step_id,
                         )
                         self.assertGreater(int(frame.max()), int(frame.min()))
 

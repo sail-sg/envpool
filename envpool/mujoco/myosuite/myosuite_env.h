@@ -458,29 +458,6 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
 
   bool ResizeOffscreenRenderContext() const override { return false; }
 
-  bool CglWarmupRender() const override {
-    const std::string_view model_path(task_.model_path);
-    if ((task_.kind == MyoSuiteTaskKind::kPose ||
-         task_.kind == MyoSuiteTaskKind::kReach) &&
-        (model_path.find("/elbow/") != std::string_view::npos ||
-         model_path.find("/finger/") != std::string_view::npos)) {
-      return true;
-    }
-    switch (task_.kind) {
-      case MyoSuiteTaskKind::kChallengeBaoding:
-      case MyoSuiteTaskKind::kChallengeBimanual:
-      case MyoSuiteTaskKind::kChallengeChaseTag:
-      case MyoSuiteTaskKind::kChallengeRelocate:
-      case MyoSuiteTaskKind::kChallengeReorient:
-      case MyoSuiteTaskKind::kChallengeRunTrack:
-      case MyoSuiteTaskKind::kChallengeSoccer:
-      case MyoSuiteTaskKind::kChallengeTableTennis:
-        return true;
-      default:
-        return false;
-    }
-  }
-
  protected:
   struct RewardResult {
     mjtNum dense{0.0};

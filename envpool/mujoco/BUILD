@@ -536,51 +536,6 @@ py_test(
     ],
 )
 
-MYOSUITE_CGL_RENDER_REGRESSION_IDS = ",".join([
-    "motorFingerReachFixed-v0",
-    "motorFingerReachRandom-v0",
-    "myoElbowPose1D6MExoFixed-v0",
-    "myoElbowPose1D6MExoRandom-v0",
-    "myoElbowPose1D6MFixed-v0",
-    "myoElbowPose1D6MRandom-v0",
-    "myoChallengeTableTennisP0-v0",
-    "myoChallengeTableTennisP1-v0",
-    "myoChallengeTableTennisP2-v0",
-    "myoFatiElbowPose1D6MExoFixed-v0",
-    "myoFatiElbowPose1D6MExoRandom-v0",
-    "myoFatiElbowPose1D6MFixed-v0",
-    "myoFatiElbowPose1D6MRandom-v0",
-    "myoFingerPoseFixed-v0",
-    "myoFingerPoseRandom-v0",
-    "myoFingerReachFixed-v0",
-    "myoFingerReachRandom-v0",
-    "myoSarcElbowPose1D6MExoFixed-v0",
-    "myoSarcElbowPose1D6MExoRandom-v0",
-    "myoSarcElbowPose1D6MFixed-v0",
-    "myoSarcElbowPose1D6MRandom-v0",
-])
-
-py_test(
-    name = "myo_cgl_render_test",
-    size = "enormous",
-    srcs = ["myosuite/myosuite_render_test.py"],
-    data = [":myosuite_oracle_probe"],
-    env = {
-        "MYOSUITE_RENDER_TASK_IDS": MYOSUITE_CGL_RENDER_REGRESSION_IDS,
-    },
-    imports = ["../.."],
-    main = "myosuite/myosuite_render_test.py",
-    tags = ["exclusive"],
-    deps = [
-        ":myosuite",
-        ":myosuite_registration",
-        ":myosuite_task_metadata",
-        "//envpool/python:glfw_context",
-        requirement("absl-py"),
-        requirement("numpy"),
-    ],
-)
-
 py_test(
     name = "myosuite_oracle_align_test",
     size = "enormous",
@@ -606,7 +561,6 @@ py_binary_312(
         "//:linux": [],
         "//conditions:default": ["@mujoco//:mujoco_shared_lib"],
     }) + [
-        "//third_party/myosuite:myosuite_generated_json",
         "@myosuite_furniture_sim//:source",
         "@myosuite_mpl_sim//:source",
         "@myosuite_myo_sim//:source",

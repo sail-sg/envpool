@@ -561,13 +561,11 @@ OffscreenRenderer::OffscreenRenderer(CameraPolicy camera_policy,
                                      bool disable_auxiliary_visuals,
                                      bool share_cgl_context,
                                      bool prefer_offline_cgl_context,
-                                     bool resize_offscreen,
-                                     bool cgl_warmup_render)
+                                     bool resize_offscreen)
     : camera_policy_(camera_policy),
       share_cgl_context_(share_cgl_context),
       prefer_offline_cgl_context_(prefer_offline_cgl_context),
-      resize_offscreen_(resize_offscreen),
-      cgl_warmup_render_(cgl_warmup_render) {
+      resize_offscreen_(resize_offscreen) {
   mjv_defaultScene(&scene_);
   mjv_defaultCamera(&camera_);
   mjv_defaultOption(&option_);
@@ -673,39 +671,8 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
     scratch_.resize(frame_bytes);
   }
 
-  auto read_pixels = [&] {
-#if defined(ENVPOOL_HAS_CGL)
-    if (cgl_warmup_render_) {
-      mjr_finish();
-    }
-#endif
-    mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
-  };
-
-  bool frame_read = false;
   render_scene();
-#if defined(ENVPOOL_HAS_CGL)
-  // macOS CGL can expose an unsettled offline framebuffer on the first native
-  // readback, especially for tiny moving challenge geoms. On GitHub macOS
-  // runners an early unsettled frame can repeat for several readbacks before
-  // the renderer settles, so use a fixed settle window and make the final
-  // readback public.
-  if (cgl_warmup_render_ && !cgl_warmup_done_) {
-    read_pixels();
-    for (int pass = 0; pass < 32; ++pass) {
-      render_scene();
-      read_pixels();
-    }
-    cgl_warmup_done_ = true;
-    frame_read = true;
-  }
-#else
-  (void)cgl_warmup_render_;
-#endif
-
-  if (!frame_read) {
-    read_pixels();
-  }
+  mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
 
   std::size_t row_bytes =
       static_cast<std::size_t>(width) * 3 * sizeof(unsigned char);

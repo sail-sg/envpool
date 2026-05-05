@@ -68,10 +68,6 @@ from envpool.python.glfw_context import preload_windows_gl_dlls
 if platform.system() == "Windows":
     preload_windows_gl_dlls(strict=True)
 
-_MYOSUITE_TASKS_JSON = "myosuite_tasks.json"
-_CGL_WARMUP_MODEL_FAMILIES = ("elbow", "finger")
-_TASK_METADATA_BY_ID: dict[str, dict[str, Any]] | None = None
-
 
 def _runfiles_root() -> Path:
     path = Path(__file__).absolute()
@@ -156,67 +152,6 @@ def _bazel_mujoco_shared_lib_path() -> Path:
     raise RuntimeError(
         f"could not locate Bazel-built {shared_lib} under {runfiles}"
     )
-
-
-def _myosuite_tasks_json_path() -> Path:
-    runfiles = _runfiles_root()
-    workspace = os.environ.get("TEST_WORKSPACE", "envpool")
-    suffixes = (
-        f"third_party/myosuite/{_MYOSUITE_TASKS_JSON}",
-        f"{workspace}/third_party/myosuite/{_MYOSUITE_TASKS_JSON}",
-        (f"envpool/mujoco/myosuite/assets/metadata/{_MYOSUITE_TASKS_JSON}"),
-        (
-            f"{workspace}/envpool/mujoco/myosuite/assets/metadata/"
-            f"{_MYOSUITE_TASKS_JSON}"
-        ),
-    )
-    candidates = (
-        runfiles / workspace / "third_party/myosuite" / _MYOSUITE_TASKS_JSON,
-        runfiles / "third_party/myosuite" / _MYOSUITE_TASKS_JSON,
-        (
-            runfiles
-            / workspace
-            / "envpool/mujoco/myosuite/assets/metadata"
-            / _MYOSUITE_TASKS_JSON
-        ),
-        (
-            runfiles
-            / "envpool/mujoco/myosuite/assets/metadata"
-            / _MYOSUITE_TASKS_JSON
-        ),
-    )
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    for manifest in _runfiles_manifests(runfiles):
-        if not manifest.is_file():
-            continue
-        with manifest.open(encoding="utf-8") as f:
-            for line in f:
-                logical_path, _, real_path = line.rstrip("\n").partition(" ")
-                logical_path = logical_path.replace("\\", "/")
-                if not any(
-                    logical_path.endswith(suffix) for suffix in suffixes
-                ):
-                    continue
-                candidate = Path(real_path or logical_path)
-                if candidate.is_file():
-                    return candidate
-    raise RuntimeError(
-        f"could not locate generated {_MYOSUITE_TASKS_JSON} under {runfiles}"
-    )
-
-
-def _myosuite_task_metadata_by_id() -> dict[str, dict[str, Any]]:
-    global _TASK_METADATA_BY_ID
-    if _TASK_METADATA_BY_ID is None:
-        tasks = json.loads(_myosuite_tasks_json_path().read_text())
-        _TASK_METADATA_BY_ID = {
-            str(task["id"]): task
-            for task in tasks
-            if isinstance(task, dict) and "id" in task
-        }
-    return _TASK_METADATA_BY_ID
 
 
 def _configure_mujoco_package_shared_lib() -> None:
@@ -619,6 +554,7 @@ def _overlay_tree(
             os.symlink(source, destination, target_is_directory=True)
             return
         except OSError:
+            # Some Bazel runfiles and Windows paths cannot be symlinked.
             pass
     shutil.copytree(
         source,
@@ -1022,44 +958,14 @@ def _trace_info(info: dict[str, Any]) -> dict[str, Any]:
     return scalar_info
 
 
-def _needs_cgl_warmup_render(task_id: str) -> bool:
-    task = _myosuite_task_metadata_by_id().get(task_id)
-    if task is None:
-        raise KeyError(f"missing generated MyoSuite metadata for {task_id}")
-    kind = str(task["kind"])
-    model_path_value = str(task["model_path"]).replace("\\", "/")
-    model_path = f"/{model_path_value}"
-    return kind.startswith("kChallenge") or (
-        kind in {"kPose", "kReach"}
-        and any(
-            f"/{family}/" in model_path for family in _CGL_WARMUP_MODEL_FAMILIES
-        )
-    )
-
-
-def _render_frame(
-    task_id: str, env: Any, width: int, height: int, camera_id: int
-) -> Any:
+def _render_frame(env: Any, width: int, height: int, camera_id: int) -> Any:
     env.unwrapped.sim.forward()
     renderer = env.unwrapped.sim.renderer
-    frame = renderer.render_offscreen(
+    return renderer.render_offscreen(
         width=width,
         height=height,
         camera_id=camera_id,
     )
-    if (
-        platform.system() == "Darwin"
-        and _needs_cgl_warmup_render(task_id)
-        and not getattr(renderer, "_envpool_cgl_first_render_done", False)
-    ):
-        renderer._envpool_cgl_first_render_done = True
-        for _ in range(32):
-            frame = renderer.render_offscreen(
-                width=width,
-                height=height,
-                camera_id=camera_id,
-            )
-    return frame
 
 
 def _next_action(
@@ -1153,7 +1059,6 @@ def _trace_report(
                 frames.append(
                     _jsonable_array(
                         _render_frame(
-                            task_id,
                             env,
                             render_width,
                             render_height,
@@ -1217,7 +1122,6 @@ def _trace_report(
                     frames.append(
                         _jsonable_array(
                             _render_frame(
-                                task_id,
                                 env,
                                 render_width,
                                 render_height,
