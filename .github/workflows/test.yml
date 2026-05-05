@@ -10,12 +10,7 @@ permissions:
   actions: write
   contents: read
 
-env:
-  MUJOCO_BAZEL_TEST_TARGETS: //envpool/mujoco/...
-
 jobs:
-  # Temporary MuJoCo-only CI while stabilizing PR #400.
-  # Restore the full //... targets and cache save/prune before final merge.
   test-linux-x64:
     name: Test (linux-x64)
     runs-on: ubuntu-24.04
@@ -70,7 +65,7 @@ jobs:
       - name: Coverage
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
-            BAZEL_TEST_TARGETS="$MUJOCO_BAZEL_TEST_TARGETS" bazel-coverage
+            BAZEL_TEST_TARGETS="//..." bazel-coverage
           mkdir -p coverage
           cp bazel-out/_coverage/_coverage_report.dat coverage/lcov.info
           python3 scripts/coverage_summary.py \
@@ -106,7 +101,7 @@ jobs:
           path: coverage/site
       - name: Save Bazel caches
         id: save-bazel-caches
-        if: ${{ false }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
           path: |
@@ -115,7 +110,7 @@ jobs:
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
       - name: Prune older Bazel caches
-        if: ${{ false }}
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -180,10 +175,10 @@ jobs:
       - name: Test
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
-            BAZEL_TEST_TARGETS="$MUJOCO_BAZEL_TEST_TARGETS" bazel-test
+            BAZEL_TEST_TARGETS="//..." bazel-test
       - name: Save Bazel caches
         id: save-bazel-caches
-        if: ${{ false }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
           path: |
@@ -192,7 +187,7 @@ jobs:
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
       - name: Prune older Bazel caches
-        if: ${{ false }}
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -259,11 +254,10 @@ jobs:
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Test
         run: |
-          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
-            BAZEL_TEST_TARGETS="$MUJOCO_BAZEL_TEST_TARGETS" bazel-test
+          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" bazel-test
       - name: Save Bazel caches
         id: save-bazel-caches
-        if: ${{ false }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
           path: |
@@ -272,7 +266,7 @@ jobs:
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
       - name: Prune older Bazel caches
-        if: ${{ false }}
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -380,11 +374,10 @@ jobs:
         run: |
           repo_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-repo")
           disk_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-disk")
-          make BAZELOPT="--repository_cache=$repo_cache --disk_cache=$disk_cache $BAZEL_CI_RESOURCE_OPTS" \
-            BAZEL_TEST_TARGETS="$MUJOCO_BAZEL_TEST_TARGETS" bazel-test
+          make BAZELOPT="--repository_cache=$repo_cache --disk_cache=$disk_cache $BAZEL_CI_RESOURCE_OPTS" bazel-test
       - name: Save Bazel caches
         id: save-bazel-caches
-        if: ${{ false }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
           path: |
@@ -393,7 +386,7 @@ jobs:
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
       - name: Prune older Bazel caches
-        if: ${{ false }}
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
