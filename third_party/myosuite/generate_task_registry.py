@@ -31,17 +31,7 @@ from typing import Any
 ORACLE_VERSION = "2.11.6"
 ORACLE_COMMIT = "05cb84678373f91271004f99602ebbf01e57d1a1"
 
-BROKEN_IDS = (
-    "myoChallengeBimanual-v0",
-    "myoChallengeSoccerP1-v0",
-    "myoChallengeSoccerP2-v0",
-    "myoFatiChallengeBimanual-v0",
-    "myoFatiChallengeSoccerP1-v0",
-    "myoFatiChallengeSoccerP2-v0",
-    "myoSarcChallengeBimanual-v0",
-    "myoSarcChallengeSoccerP1-v0",
-    "myoSarcChallengeSoccerP2-v0",
-)
+BROKEN_IDS: tuple[str, ...] = ()
 
 
 def _escape(value: str) -> str:

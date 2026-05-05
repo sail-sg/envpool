@@ -11,13 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Oracle coverage checks for native MyoSuite envs.
-
-The pinned oracle is MyoSuite v2.11.6. Nine official Bimanual/Soccer IDs are
-registered by upstream but fail to instantiate under the repository's numpy 2
-test environment; those IDs remain registered in EnvPool and are excluded only
-from oracle instantiation in this test.
-"""
+"""Oracle coverage checks for native MyoSuite envs."""
 
 from __future__ import annotations
 
@@ -63,27 +57,26 @@ _ROLLOUT_TASK_IDS = frozenset({
     "myoLegWalk-v0",
     "myoLegRoughTerrainWalk-v0",
     "myoChallengeBaodingP1-v1",
+    "myoChallengeBimanual-v0",
     "myoChallengeChaseTagP1-v0",
     "myoChallengeDieReorientP1-v0",
     "myoChallengeOslRunFixed-v0",
     "myoChallengeRelocateP1-v0",
+    "myoChallengeSoccerP1-v0",
+    "myoChallengeSoccerP2-v0",
     "myoChallengeTableTennisP0-v0",
+    "myoFatiChallengeBimanual-v0",
+    "myoFatiChallengeSoccerP1-v0",
+    "myoFatiChallengeSoccerP2-v0",
+    "myoSarcChallengeBimanual-v0",
+    "myoSarcChallengeSoccerP1-v0",
+    "myoSarcChallengeSoccerP2-v0",
 })
 _BITWISE_ROLLOUT_TASK_IDS = frozenset({
     "myoFingerReachFixed-v0",
     "myoFingerPoseFixed-v0",
 })
-_EXPECTED_ORACLE_NUMPY2_BROKEN_IDS = frozenset({
-    "myoChallengeBimanual-v0",
-    "myoSarcChallengeBimanual-v0",
-    "myoFatiChallengeBimanual-v0",
-    "myoChallengeSoccerP1-v0",
-    "myoChallengeSoccerP2-v0",
-    "myoSarcChallengeSoccerP1-v0",
-    "myoSarcChallengeSoccerP2-v0",
-    "myoFatiChallengeSoccerP1-v0",
-    "myoFatiChallengeSoccerP2-v0",
-})
+_EXPECTED_ORACLE_NUMPY2_BROKEN_IDS: frozenset[str] = frozenset()
 _SYNC_STATE_KEYS = (
     "qpos0",
     "qvel0",
@@ -153,11 +146,7 @@ _SYNC_STATE_SIZES = {
 
 
 def _oracle_task_ids() -> tuple[str, ...]:
-    return tuple(
-        task["id"]
-        for task in MYOSUITE_TASKS
-        if task["id"] not in MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS
-    )
+    return tuple(task["id"] for task in MYOSUITE_TASKS)
 
 
 def _shard_task_ids(task_ids: tuple[str, ...]) -> tuple[str, ...]:
@@ -364,16 +353,13 @@ def _sync_state_from_info(info: dict[str, Any]) -> dict[str, Any]:
 class MyoSuiteOracleAlignTest(absltest.TestCase):
     """Validate native MyoSuite coverage against the pinned oracle surface."""
 
-    def test_only_known_numpy2_oracle_failures_are_excluded(self) -> None:
-        """The oracle exclusion set is limited to the nine upstream failures."""
+    def test_no_numpy2_oracle_failures_are_excluded(self) -> None:
+        """Every pinned upstream ID is instantiable by the oracle."""
         self.assertSetEqual(
             MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS,
             _EXPECTED_ORACLE_NUMPY2_BROKEN_IDS,
         )
-        self.assertLen(MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS, 9)
-        for task_id in MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS:
-            with self.subTest(task_id=task_id):
-                self.assertEqual(make_spec(task_id).config.task_name, task_id)
+        self.assertEmpty(MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS)
 
     def test_pinned_official_registry_coverage(self) -> None:
         """Every pinned upstream registry ID must be represented locally."""
@@ -384,8 +370,8 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
         self.assertEqual(official_ids, envpool_ids)
         self.assertLen(official_ids, 398)
 
-    def test_oracle_space_coverage_except_numpy2_broken_ids(self) -> None:
-        """Native spaces must match every instantiable official oracle env."""
+    def test_oracle_space_coverage(self) -> None:
+        """Native spaces must match every official oracle env."""
         task_ids = _shard_task_ids(_oracle_task_ids())
         oracle_tasks = _run_oracle_space_reports(task_ids)
         self.assertLen(oracle_tasks, len(task_ids))
@@ -419,7 +405,7 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
                     task["max_episode_steps"],
                 )
 
-    def test_oracle_rollout_surface_except_numpy2_broken_ids(self) -> None:
+    def test_oracle_rollout_surface(self) -> None:
         """Exercise nontrivial rollouts with oracle-generated actions."""
         rollout_task_ids = _oracle_rollout_task_ids()
         task_metadata = _task_metadata_by_id()

@@ -48,10 +48,6 @@ import generate_task_registry
 _ORACLE_VERSION = generate_task_registry.ORACLE_VERSION
 _ORACLE_COMMIT = generate_task_registry.ORACLE_COMMIT
 _BROKEN_IDS = set(generate_task_registry.BROKEN_IDS)
-_BROKEN_SPACE = {
-    "myosuite.envs.myo.myochallenge.bimanual_v0:BimanualEnvV1": (210, 80, 5),
-    "myosuite.envs.myo.myochallenge.soccer_v0:SoccerEnvV0": (1276, 290, 10),
-}
 _SIMHIVE_DIRS = {
     "mpl": "MPL_sim",
     "ycb": "YCB_sim",
@@ -274,8 +270,6 @@ def _metadata_report(task_ids: list[str], gym: Any) -> dict[str, Any]:
 
     tasks: dict[str, dict[str, Any]] = {}
     for task_id in task_ids:
-        if task_id in _BROKEN_IDS:
-            continue
         env = gym.make(task_id)
         try:
             unwrapped = env.unwrapped
@@ -464,11 +458,6 @@ def _task_from_spec(
         task["obs_dim"] = int(metadata[task_id]["observation_shape"][0])
         task["action_dim"] = int(metadata[task_id]["action_shape"][0])
         task["frame_skip"] = int(metadata[task_id]["frame_skip"])
-    elif entry_point in _BROKEN_SPACE:
-        obs_dim, action_dim, frame_skip = _BROKEN_SPACE[entry_point]
-        task["obs_dim"] = obs_dim
-        task["action_dim"] = action_dim
-        task["frame_skip"] = frame_skip
     else:
         raise ValueError(f"missing metadata for {task_id}")
     return task
