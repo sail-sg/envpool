@@ -549,7 +549,7 @@ MYOSUITE_CGL_RENDER_REGRESSION_IDS = ",".join([
 ])
 
 py_test(
-    name = "myosuite_cgl_render_regression_test",
+    name = "myo_cgl_render_test",
     size = "enormous",
     srcs = ["myosuite/myosuite_render_test.py"],
     data = [":myosuite_oracle_probe"],
