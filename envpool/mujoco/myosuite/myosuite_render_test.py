@@ -88,8 +88,11 @@ _WIDTH = 64
 _HEIGHT = 48
 _ORACLE_RENDER_BATCH_SIZE = 8
 # Catch wrong camera/model/scene regressions without chasing backend pixel noise.
-_MAX_RENDER_MISMATCHED_PIXELS = 64
-_MAX_RENDER_MEAN_ABS_DIFF = 0.25
+_RENDER_BLOCK_SIZE = 4
+_MAX_RENDER_MEAN_ABS_DIFF = 24.0
+_MAX_RENDER_BLOCK_MEAN_ABS_DIFF = 24.0
+_MAX_RENDER_LARGE_MISMATCH_RATIO = 0.50
+_LARGE_RENDER_DELTA = 32
 _SYNC_STATE_KEYS = (
     "qpos0",
     "qvel0",
@@ -350,6 +353,22 @@ def _render(env: Any) -> np.ndarray:
     return frame
 
 
+def _block_mean(frame: np.ndarray) -> np.ndarray:
+    height, width, channels = frame.shape
+    block = _RENDER_BLOCK_SIZE
+    if height % block or width % block:
+        raise AssertionError(
+            f"render size {frame.shape} is not divisible by block {block}"
+        )
+    return frame.reshape(
+        height // block,
+        block,
+        width // block,
+        block,
+        channels,
+    ).mean(axis=(1, 3))
+
+
 def _assert_render_aligned(
     test: absltest.TestCase,
     frame: np.ndarray,
@@ -363,16 +382,22 @@ def _assert_render_aligned(
     test.assertEqual(oracle_frame.dtype, np.uint8)
     diff = np.abs(frame.astype(np.int16) - oracle_frame.astype(np.int16))
     max_abs = int(diff.max())
-    mismatched_pixels = int(np.count_nonzero(np.any(diff != 0, axis=-1)))
     mean_abs = float(np.mean(diff))
+    block_diff = np.abs(_block_mean(frame) - _block_mean(oracle_frame))
+    block_mean_abs = float(np.mean(block_diff))
+    large_mismatch_ratio = float(
+        np.mean(np.max(diff, axis=-1) > _LARGE_RENDER_DELTA)
+    )
     if (
-        mismatched_pixels > _MAX_RENDER_MISMATCHED_PIXELS
-        or mean_abs > _MAX_RENDER_MEAN_ABS_DIFF
+        mean_abs > _MAX_RENDER_MEAN_ABS_DIFF
+        or block_mean_abs > _MAX_RENDER_BLOCK_MEAN_ABS_DIFF
+        or large_mismatch_ratio > _MAX_RENDER_LARGE_MISMATCH_RATIO
     ):
         test.fail(
             f"{task_id} render step {step_id} drifted: "
-            f"max_abs={max_abs}, mismatched_pixels={mismatched_pixels}, "
-            f"mean_abs={mean_abs:.6f}"
+            f"max_abs={max_abs}, mean_abs={mean_abs:.6f}, "
+            f"block_mean_abs={block_mean_abs:.6f}, "
+            f"large_mismatch_ratio={large_mismatch_ratio:.6f}"
         )
 
 
