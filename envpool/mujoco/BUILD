@@ -507,7 +507,6 @@ py_test(
     srcs = ["myosuite/myosuite_test.py"],
     imports = ["../.."],
     shard_count = 8,
-    tags = ["exclusive"],
     deps = [
         ":myosuite",
         ":myosuite_registration",
@@ -525,7 +524,6 @@ py_test(
     data = [":myosuite_oracle_probe"],
     imports = ["../.."],
     shard_count = 8,
-    tags = ["exclusive"],
     deps = [
         ":myosuite",
         ":myosuite_registration",
@@ -543,7 +541,6 @@ py_test(
     data = [":myosuite_oracle_probe"],
     imports = ["../.."],
     shard_count = 4,
-    tags = ["exclusive"],
     deps = [
         ":myosuite",
         ":myosuite_registration",
