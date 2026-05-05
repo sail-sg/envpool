@@ -536,9 +536,12 @@ py_test(
     ],
 )
 
-MYOSUITE_FINGER_RENDER_REGRESSION_IDS = ",".join([
+MYOSUITE_CGL_RENDER_REGRESSION_IDS = ",".join([
     "motorFingerReachFixed-v0",
     "motorFingerReachRandom-v0",
+    "myoChallengeTableTennisP0-v0",
+    "myoChallengeTableTennisP1-v0",
+    "myoChallengeTableTennisP2-v0",
     "myoFingerPoseFixed-v0",
     "myoFingerPoseRandom-v0",
     "myoFingerReachFixed-v0",
@@ -546,12 +549,12 @@ MYOSUITE_FINGER_RENDER_REGRESSION_IDS = ",".join([
 ])
 
 py_test(
-    name = "myosuite_finger_render_regression_test",
+    name = "myosuite_cgl_render_regression_test",
     size = "enormous",
     srcs = ["myosuite/myosuite_render_test.py"],
     data = [":myosuite_oracle_probe"],
     env = {
-        "MYOSUITE_RENDER_TASK_IDS": MYOSUITE_FINGER_RENDER_REGRESSION_IDS,
+        "MYOSUITE_RENDER_TASK_IDS": MYOSUITE_CGL_RENDER_REGRESSION_IDS,
     },
     imports = ["../.."],
     main = "myosuite/myosuite_render_test.py",
