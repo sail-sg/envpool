@@ -39,6 +39,7 @@ class AntEnvFns {
         "terminate_when_unhealthy"_.Bind(true),
         "exclude_current_positions_from_observation"_.Bind(true),
         "xml_file"_.Bind(std::string("ant.xml")),
+        "gymnasium_v5_render_camera"_.Bind(false),
         "forward_reward_weight"_.Bind(1.0), "ctrl_cost_weight"_.Bind(0.5),
         "contact_cost_weight"_.Bind(5e-4), "healthy_reward"_.Bind(1.0),
         "healthy_z_min"_.Bind(0.2), "healthy_z_max"_.Bind(1.0),
@@ -89,6 +90,7 @@ class AntEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   int id_torso_;
   bool terminate_when_unhealthy_, no_pos_, use_contact_force_;
   bool legacy_healthy_reward_, exclude_worldbody_contact_forces_;
+  bool gymnasium_v5_render_camera_;
   mjtNum ctrl_cost_weight_, contact_cost_weight_;
   mjtNum forward_reward_weight_, healthy_reward_;
   mjtNum healthy_z_min_, healthy_z_max_;
@@ -117,6 +119,7 @@ class AntEnvBase : public Env<EnvSpecT>, public MujocoEnv {
         legacy_healthy_reward_(spec.config["legacy_healthy_reward"_]),
         exclude_worldbody_contact_forces_(
             spec.config["exclude_worldbody_contact_forces"_]),
+        gymnasium_v5_render_camera_(spec.config["gymnasium_v5_render_camera"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         contact_cost_weight_(spec.config["contact_cost_weight"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
@@ -140,6 +143,15 @@ class AntEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     std::memcpy(qpos0_, data_->qpos, sizeof(mjtNum) * model_->nq);
     std::memcpy(qvel0_, data_->qvel, sizeof(mjtNum) * model_->nv);
 #endif
+  }
+
+  bool RenderCamera(mjvCamera* camera) override {
+    if (!gymnasium_v5_render_camera_) {
+      return false;
+    }
+    camera->distance = 4.0;
+    ApplyGymnasiumDefaultCameraId(camera);
+    return true;
   }
 
   bool IsDone() override { return done_; }

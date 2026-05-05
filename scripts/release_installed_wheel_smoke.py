@@ -76,6 +76,8 @@ def main() -> None:
         raise RuntimeError(f"envpool-assets missing required files: {missing}")
 
     required_package_files = [
+        envpool_package
+        / "mujoco/myosuite/assets/myosuite/envs/myo/assets/hand/myohand_pose.xml",
         envpool_package / "vizdoom/bin/vizdoom",
         envpool_package / "vizdoom/bin/vizdoom.pk3",
     ]

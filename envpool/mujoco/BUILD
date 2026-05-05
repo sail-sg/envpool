@@ -13,11 +13,14 @@
 # limitations under the License.
 
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
+load("@python_versions//3.12:defs.bzl", py_binary_312 = "py_binary")
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load("//envpool:requirements.bzl", "requirement")
 load("//third_party:common.bzl", "copy_to_directory")
 load("//third_party/metaworld_assets:defs.bzl", "metaworld_runtime_assets")
+load("//third_party/myosuite:defs.bzl", "myosuite_runtime_assets")
+load("//third_party/myosuite:oracle_requirements.bzl", "oracle_requirement")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -55,6 +58,7 @@ py_library(
         ":metaworld",
         ":mujoco_dmc",
         ":mujoco_gym",
+        ":myosuite",
         ":robotics",
     ],
 )
@@ -92,6 +96,20 @@ metaworld_runtime_assets(
         "//conditions:default": False,
     }),
     strip_prefix = "metaworld_assets/metaworld/assets/",
+)
+
+myosuite_runtime_assets(
+    name = "gen_myosuite_assets",
+    srcs = [
+        "@myosuite_furniture_sim//:source",
+        "@myosuite_mpl_sim//:source",
+        "@myosuite_myo_sim//:source",
+        "@myosuite_object_sim//:source",
+        "@myosuite_source//:runtime_assets",
+        "@myosuite_ycb_sim//:source",
+    ],
+    out = "myosuite/assets",
+    metadata_srcs = ["//third_party/myosuite:myosuite_generated_json"],
 )
 
 cc_library(
@@ -278,6 +296,142 @@ py_library(
     deps = ["//envpool/python:api"],
 )
 
+cc_library(
+    name = "myosuite_env",
+    hdrs = [
+        "frame_stack.h",
+        "myosuite/myosuite_env.h",
+        "offscreen_renderer.h",
+    ],
+    data = [":gen_myosuite_assets"],
+    deps = [
+        ":mujoco_render",
+        ":robotics_env",
+        "//envpool/core:async_envpool",
+        "//third_party/myosuite:myosuite_tasks",
+        "@mujoco//:mujoco_lib",
+        "@mujoco//:mujoco_obj_decoder_plugin_lib",
+        "@mujoco//:mujoco_stl_decoder_plugin_lib",
+    ],
+)
+
+cc_library(
+    name = "myosuite_clang_tidy",
+    srcs = ["myosuite/myosuite_clang_tidy.cc"],
+    deps = [":myosuite_env"],
+)
+
+cc_library(
+    name = "myosuite_envpool_module",
+    srcs = [
+        "myosuite/mujoco_plugin_init.cc",
+        "myosuite/myosuite_envpool.cc",
+    ],
+    # The native MyoSuite runtime is header-only under myosuite_env.h and is
+    # compiled into this module object. Coverage instrumentation changes Linux
+    # floating-point codegen enough to make long oracle rollouts diverge; the
+    # pybind_extension wrapper still links under coverage so instrumented
+    # transitive deps resolve their coverage runtime symbols.
+    copts = select({
+        "//:windows": [
+            # CI fastbuild otherwise compiles the header-only MyoSuite runtime
+            # at /Od while the pinned official oracle wheel is release-built.
+            "/O2",
+        ],
+        "//:linux_x86_64": [
+            # CI fastbuild otherwise compiles the header-only MyoSuite runtime
+            # at -O0 while the pinned official oracle wheel is release-built.
+            "-O3",
+            "-fno-profile-arcs",
+            "-fno-test-coverage",
+        ],
+        "//:linux": [
+            "-fno-profile-arcs",
+            "-fno-test-coverage",
+        ],
+        "@platforms//os:osx": [
+            "-fno-coverage-mapping",
+            "-fno-profile-instr-generate",
+        ],
+        "//conditions:default": [],
+    }),
+    features = ["-coverage"],
+    deps = [
+        ":myosuite_env",
+        "//envpool/core:py_envpool",
+    ],
+    alwayslink = True,
+)
+
+pybind_extension(
+    name = "myosuite_envpool",
+    deps = [
+        ":myosuite_envpool_module",
+    ],
+)
+
+py_binary_312(
+    name = "generate_myosuite_render_sample",
+    srcs = [
+        "myosuite/myosuite_oracle_probe.py",
+        "//third_party/myosuite:generate_render_sample.py",
+    ],
+    data = select({
+        # Linux oracle rendering uses the pinned pip MuJoCo wheel directly.
+        "//:linux": [],
+        "//conditions:default": ["@mujoco//:mujoco_shared_lib"],
+    }) + [
+        ":myosuite_oracle_probe",
+        "@myosuite_furniture_sim//:source",
+        "@myosuite_mpl_sim//:source",
+        "@myosuite_myo_sim//:source",
+        "@myosuite_object_sim//:source",
+        "@myosuite_source//:source",
+        "@myosuite_ycb_sim//:source",
+    ],
+    imports = ["../.."],
+    main = "generate_render_sample.py",
+    deps = [
+        ":myosuite",
+        ":myosuite_registration",
+        oracle_requirement("click"),
+        oracle_requirement("dm-control"),
+        oracle_requirement("flatten-dict"),
+        oracle_requirement("gitpython"),
+        oracle_requirement("gymnasium"),
+        oracle_requirement("h5py"),
+        oracle_requirement("mujoco"),
+        oracle_requirement("numpy"),
+        oracle_requirement("packaging"),
+        oracle_requirement("pillow"),
+        oracle_requirement("pink-noise-rl"),
+        oracle_requirement("sk-video"),
+        oracle_requirement("termcolor"),
+    ],
+)
+
+py_library(
+    name = "myosuite_task_metadata",
+    srcs = ["myosuite/tasks.py"],
+    data = [":gen_myosuite_assets"],
+    imports = ["../.."],
+)
+
+py_library(
+    name = "myosuite",
+    srcs = ["myosuite/__init__.py"],
+    data = [
+        ":gen_myosuite_assets",
+        ":myosuite_envpool",
+    ],
+    imports = ["../.."],
+    deps = [
+        ":myosuite_task_metadata",
+        "//envpool/python:api",
+        "//envpool/python:glfw_context",
+    ],
+)
+
 cc_test(
     name = "mujoco_envpool_test",
     size = "enormous",
@@ -323,6 +477,17 @@ py_library(
     ],
 )
 
+py_library(
+    name = "myosuite_registration",
+    srcs = ["myosuite/registration.py"],
+    imports = ["../.."],
+    deps = [
+        ":myosuite",
+        ":myosuite_task_metadata",
+        "//envpool:registration",
+    ],
+)
+
 py_test(
     name = "metaworld_test",
     size = "enormous",
@@ -333,6 +498,89 @@ py_test(
         ":metaworld_registration",
         requirement("absl-py"),
         requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_test",
+    size = "enormous",
+    srcs = ["myosuite/myosuite_test.py"],
+    imports = ["../.."],
+    shard_count = 8,
+    deps = [
+        ":myosuite",
+        ":myosuite_registration",
+        ":myosuite_task_metadata",
+        "//envpool/python:glfw_context",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_render_test",
+    size = "enormous",
+    srcs = ["myosuite/myosuite_render_test.py"],
+    data = [":myosuite_oracle_probe"],
+    imports = ["../.."],
+    shard_count = 8,
+    deps = [
+        ":myosuite",
+        ":myosuite_registration",
+        ":myosuite_task_metadata",
+        "//envpool/python:glfw_context",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "myosuite_oracle_align_test",
+    size = "enormous",
+    srcs = ["myosuite/myosuite_oracle_align_test.py"],
+    data = [":myosuite_oracle_probe"],
+    imports = ["../.."],
+    shard_count = 8,
+    deps = [
+        ":myosuite",
+        ":myosuite_registration",
+        ":myosuite_task_metadata",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
+py_binary_312(
+    name = "myosuite_oracle_probe",
+    srcs = ["myosuite/myosuite_oracle_probe.py"],
+    data = select({
+        # Linux oracle rendering uses the pinned pip MuJoCo wheel directly.
+        "//:linux": [],
+        "//conditions:default": ["@mujoco//:mujoco_shared_lib"],
+    }) + [
+        "@myosuite_furniture_sim//:source",
+        "@myosuite_mpl_sim//:source",
+        "@myosuite_myo_sim//:source",
+        "@myosuite_object_sim//:source",
+        "@myosuite_source//:source",
+        "@myosuite_ycb_sim//:source",
+    ],
+    imports = ["../.."],
+    deps = [
+        "//envpool/python:glfw_context",
+        oracle_requirement("click"),
+        oracle_requirement("dm-control"),
+        oracle_requirement("flatten-dict"),
+        oracle_requirement("gitpython"),
+        oracle_requirement("gymnasium"),
+        oracle_requirement("h5py"),
+        oracle_requirement("mujoco"),
+        oracle_requirement("numpy"),
+        oracle_requirement("packaging"),
+        oracle_requirement("pillow"),
+        oracle_requirement("pink-noise-rl"),
+        oracle_requirement("sk-video"),
+        oracle_requirement("termcolor"),
     ],
 )
 

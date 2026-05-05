@@ -35,6 +35,7 @@ class HalfCheetahEnvFns {
                     "frame_stack"_.Bind(1), "post_constraint"_.Bind(true),
                     "exclude_current_positions_from_observation"_.Bind(true),
                     "xml_file"_.Bind(std::string("half_cheetah.xml")),
+                    "gymnasium_v5_render_camera"_.Bind(false),
                     "ctrl_cost_weight"_.Bind(0.1),
                     "forward_reward_weight"_.Bind(1.0),
                     "reset_noise_scale"_.Bind(0.1));
@@ -74,6 +75,7 @@ class HalfCheetahEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   using Base::spec_;
 
   bool no_pos_;
+  bool gymnasium_v5_render_camera_;
   mjtNum ctrl_cost_weight_, forward_reward_weight_;
   std::uniform_real_distribution<> dist_qpos_;
   std::normal_distribution<> dist_qvel_;
@@ -93,6 +95,7 @@ class HalfCheetahEnvBase : public Env<EnvSpecT>, public MujocoEnv {
             RenderHeightOrDefault<kFromPixels>(spec.config),
             RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         no_pos_(spec.config["exclude_current_positions_from_observation"_]),
+        gymnasium_v5_render_camera_(spec.config["gymnasium_v5_render_camera"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         forward_reward_weight_(spec.config["forward_reward_weight"_]),
         dist_qpos_(-spec.config["reset_noise_scale"_],
@@ -110,6 +113,15 @@ class HalfCheetahEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     std::memcpy(qpos0_, data_->qpos, sizeof(mjtNum) * model_->nq);
     std::memcpy(qvel0_, data_->qvel, sizeof(mjtNum) * model_->nv);
 #endif
+  }
+
+  bool RenderCamera(mjvCamera* camera) override {
+    if (!gymnasium_v5_render_camera_) {
+      return false;
+    }
+    camera->distance = 4.0;
+    ApplyGymnasiumDefaultCameraId(camera);
+    return true;
   }
 
   bool IsDone() override { return done_; }

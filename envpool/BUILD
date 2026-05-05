@@ -42,6 +42,7 @@ py_library(
         "//envpool/mujoco:metaworld_registration",
         "//envpool/mujoco:mujoco_dmc_registration",
         "//envpool/mujoco:mujoco_gym_registration",
+        "//envpool/mujoco:myosuite_registration",
         "//envpool/mujoco:robotics_registration",
         "//envpool/procgen:procgen_registration",
         "//envpool/toy_text:toy_text_registration",

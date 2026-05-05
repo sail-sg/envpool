@@ -38,6 +38,7 @@ genrule(
     srcs = [],
     outs = ["arith.h"],
     cmd = "$(execpath :arithchk) > $@",
+    cmd_bat = "$(execpath :arithchk) > $@",
     tools = [":arithchk"],
 )
 
@@ -54,6 +55,7 @@ genrule(
     srcs = [],
     outs = ["gd_qnan.h"],
     cmd = "$(execpath :qnan) > $@",
+    cmd_bat = "$(execpath :qnan) > $@",
     tools = [":qnan"],
 )
 
@@ -176,8 +178,14 @@ genrule(
     name = "sc_man_scanner",
     srcs = ["src/sc_man_scanner.re"],
     outs = ["src/sc_man_scanner.h"],
-    cmd = "$(execpath :re2c) --no-generation-date -s -o $@ $<",
-    tools = [":re2c"],
+    cmd = "$(execpath :re2c) --no-generation-date -s -o $@ " +
+          "$(location src/sc_man_scanner.re)",
+    cmd_bat = "$(execpath @re2c_4_5_1//:re2c) --no-generation-date " +
+              "-s -o $@ $(location src/sc_man_scanner.re)",
+    tools = select({
+        "@envpool//:windows": ["@re2c_4_5_1//:re2c"],
+        "//conditions:default": [":re2c"],
+    }),
 )
 
 genrule(
@@ -185,6 +193,7 @@ genrule(
     srcs = ["tools/lemon/lempar.c"],
     outs = ["lempar.c"],
     cmd = "cp $(SRCS) $(RULEDIR)",
+    cmd_bat = "copy /Y $(SRCS) $(RULEDIR)",
 )
 
 genrule(
@@ -192,6 +201,7 @@ genrule(
     srcs = ["src/xlat/xlat_parser.y"],
     outs = ["xlat_parser.y"],
     cmd = "cp $< $@",
+    cmd_bat = "copy /Y $< $@",
 )
 
 genrule(
@@ -202,6 +212,7 @@ genrule(
         "xlat_parser.h",
     ],
     cmd = "$(execpath :lemon) $<",
+    cmd_bat = "$(execpath :lemon) $<",
     tools = [
         ":lemon",
         ":lemon_deps",
@@ -466,6 +477,7 @@ genrule(
     srcs = [":wadsrc"],
     outs = ["vizdoom.pk3"],
     cmd = "$(execpath zipdir) -udf $@ $<",
+    cmd_bat = "$(execpath zipdir) -udf $@ $<",
     tools = [":zipdir"],
     visibility = ["//visibility:public"],
 )

@@ -29,6 +29,24 @@ _REGISTERED_DLL_DIRS: set[str] = set()
 _PRELOADED_DLL_PATHS: set[str] = set()
 
 
+def _resolve_windows_gl_dll_dir(root: Path, *, strict: bool) -> Path | None:
+    if (root / "opengl32.dll").is_file():
+        return root
+    candidates = sorted(
+        path.parent for path in root.rglob("opengl32.dll") if path.is_file()
+    )
+    if candidates:
+        for candidate in candidates:
+            if candidate.name.lower() in {"x64", "bin"}:
+                return candidate
+        return candidates[0]
+    if strict:
+        raise FileNotFoundError(
+            f"ENVPOOL_DLL_DIR does not contain opengl32.dll: {root}"
+        )
+    return None
+
+
 def preload_windows_gl_dlls(
     *, prepend_path: bool = True, strict: bool = False
 ) -> None:
@@ -45,7 +63,10 @@ def preload_windows_gl_dlls(
                 f"ENVPOOL_DLL_DIR does not exist: {resolved_dir}"
             )
         return
-    resolved_str = str(resolved_dir)
+    resolved_dll_dir = _resolve_windows_gl_dll_dir(resolved_dir, strict=strict)
+    if resolved_dll_dir is None:
+        return
+    resolved_str = str(resolved_dll_dir)
     if prepend_path:
         path_entries = os.environ.get("PATH", "").split(os.pathsep)
         if resolved_str not in path_entries:
@@ -61,7 +82,7 @@ def preload_windows_gl_dlls(
     if win_dll is None:
         return
     for dll_name in ("libglapi.dll", "libgallium_wgl.dll", "opengl32.dll"):
-        dll_path = resolved_dir / dll_name
+        dll_path = resolved_dll_dir / dll_name
         dll_path_str = str(dll_path)
         if dll_path.is_file() and dll_path_str not in _PRELOADED_DLL_PATHS:
             _WINDOWS_DLL_HANDLES.append(win_dll(str(dll_path)))

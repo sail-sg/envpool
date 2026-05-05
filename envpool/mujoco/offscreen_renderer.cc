@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <array>
 #include <cerrno>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -28,6 +29,7 @@
 
 #if defined(__APPLE__) && __has_include(<OpenGL/OpenGL.h>)
 #include <OpenGL/OpenGL.h>
+#include <OpenGL/gl.h>
 #define ENVPOOL_HAS_CGL 1
 #elif defined(_WIN32) && __has_include(<windows.h>)
 #ifndef NOMINMAX
@@ -45,6 +47,10 @@
 #endif
 
 namespace envpool::mujoco {
+
+#if defined(ENVPOOL_HAS_CGL)
+constexpr int kCglFirstFrameSettlePasses = 4;
+#endif
 
 namespace {
 
@@ -67,8 +73,27 @@ mjtNum MedianGeomPosition(const mjData* data, int ngeom, int axis) {
 
 class CglContext final : public GlContext {
  public:
-  CglContext() {
-    const std::array<CGLPixelFormatAttribute, 13> attribs = {
+  explicit CglContext(bool prefer_offline_context) {
+    const std::array<CGLPixelFormatAttribute, 17> preferred_attribs = {
+        kCGLPFAOpenGLProfile,
+        static_cast<CGLPixelFormatAttribute>(kCGLOGLPVersion_Legacy),
+        kCGLPFAColorSize,
+        static_cast<CGLPixelFormatAttribute>(24),
+        kCGLPFAAlphaSize,
+        static_cast<CGLPixelFormatAttribute>(8),
+        kCGLPFADepthSize,
+        static_cast<CGLPixelFormatAttribute>(24),
+        kCGLPFAStencilSize,
+        static_cast<CGLPixelFormatAttribute>(8),
+        kCGLPFAMultisample,
+        kCGLPFASampleBuffers,
+        static_cast<CGLPixelFormatAttribute>(1),
+        kCGLPFASamples,
+        static_cast<CGLPixelFormatAttribute>(4),
+        kCGLPFAAccelerated,
+        static_cast<CGLPixelFormatAttribute>(0),  // terminator
+    };
+    const std::array<CGLPixelFormatAttribute, 13> offline_attribs = {
         kCGLPFAOpenGLProfile,
         static_cast<CGLPixelFormatAttribute>(kCGLOGLPVersion_Legacy),
         kCGLPFAColorSize,
@@ -83,12 +108,20 @@ class CglContext final : public GlContext {
         static_cast<CGLPixelFormatAttribute>(0),  // value
         static_cast<CGLPixelFormatAttribute>(0),  // terminator
     };
-    GLint npix = 0;
-    CGLError err = CGLChoosePixelFormat(attribs.data(), &pixel_format_, &npix);
-    if (err != kCGLNoError || pixel_format_ == nullptr || npix == 0) {
+    // Most MuJoCo oracles use the default accelerated CGL format; callers can
+    // still request the offline renderer when an upstream oracle does so.
+    bool chose_pixel_format = prefer_offline_context
+                                  ? ChoosePixelFormat(offline_attribs)
+                                  : ChoosePixelFormat(preferred_attribs);
+    if (!chose_pixel_format) {
+      chose_pixel_format = prefer_offline_context
+                               ? ChoosePixelFormat(preferred_attribs)
+                               : ChoosePixelFormat(offline_attribs);
+    }
+    if (!chose_pixel_format) {
       throw std::runtime_error("failed to create CGL pixel format");
     }
-    err = CGLCreateContext(pixel_format_, nullptr, &context_);
+    CGLError err = CGLCreateContext(pixel_format_, nullptr, &context_);
     if (err != kCGLNoError || context_ == nullptr) {
       CGLReleasePixelFormat(pixel_format_);
       pixel_format_ = nullptr;
@@ -140,10 +173,39 @@ class CglContext final : public GlContext {
   }
 
  private:
+  template <std::size_t N>
+  bool ChoosePixelFormat(
+      const std::array<CGLPixelFormatAttribute, N>& attribs) {
+    GLint npix = 0;
+    CGLPixelFormatObj pixel_format = nullptr;
+    CGLError err = CGLChoosePixelFormat(attribs.data(), &pixel_format, &npix);
+    if (err != kCGLNoError || pixel_format == nullptr || npix == 0) {
+      if (pixel_format != nullptr) {
+        CGLReleasePixelFormat(pixel_format);
+      }
+      return false;
+    }
+    pixel_format_ = pixel_format;
+    return true;
+  }
+
   CGLPixelFormatObj pixel_format_{nullptr};
   CGLContextObj context_{nullptr};
   bool locked_{false};
 };
+
+void PrimeCglContextForFirstReadback() {
+  // GitHub's macOS 14 CGL/Metal stack lazily finalizes renderer sample state.
+  // These no-op queries happen after MuJoCo creates the offscreen framebuffer
+  // and before the first render, making the first readback deterministic.
+  GLint value = 0;
+  glGetIntegerv(GL_MAX_SAMPLES, &value);
+  glGetIntegerv(GL_SAMPLE_BUFFERS, &value);
+  glGetIntegerv(GL_SAMPLES, &value);
+  (void)glGetString(GL_VENDOR);
+  (void)glGetString(GL_RENDERER);
+  (void)glGetString(GL_VERSION);
+}
 
 #elif defined(ENVPOOL_HAS_WGL)
 
@@ -457,13 +519,26 @@ class EglContext final : public GlContext {
 
 #endif
 
-std::shared_ptr<GlContext> CreateGlContext() {
+std::shared_ptr<GlContext> CreateGlContext(bool share_cgl_context,
+                                           bool prefer_offline_cgl_context) {
 #if defined(ENVPOOL_HAS_CGL)
+  if (share_cgl_context) {
+    if (prefer_offline_cgl_context) {
+      thread_local std::shared_ptr<GlContext> offline_context =
+          std::make_shared<CglContext>(true);
+      return offline_context;
+    }
+    thread_local std::shared_ptr<GlContext> preferred_context =
+        std::make_shared<CglContext>(false);
+    return preferred_context;
+  }
   // Match Gymnasium's CGL lifecycle: create a context per renderer/viewer.
   // Reusing one CGL context across different MuJoCo models can leave renderer
   // state behind on macOS software/offline renderers.
-  return std::make_shared<CglContext>();
+  return std::make_shared<CglContext>(prefer_offline_cgl_context);
 #elif defined(ENVPOOL_HAS_WGL)
+  (void)share_cgl_context;
+  (void)prefer_offline_cgl_context;
   if (wglGetCurrentContext() != nullptr && wglGetCurrentDC() != nullptr) {
     // Borrowed WGL handles become invalid if another library later calls
     // `glfw.terminate()`, so do not cache them across renderer instances.
@@ -473,22 +548,38 @@ std::shared_ptr<GlContext> CreateGlContext() {
       std::make_shared<WglContext>();
   return context;
 #elif defined(ENVPOOL_HAS_EGL)
+  (void)share_cgl_context;
+  (void)prefer_offline_cgl_context;
   thread_local std::shared_ptr<GlContext> context =
       std::make_shared<EglContext>();
   return context;
 #else
+  (void)share_cgl_context;
+  (void)prefer_offline_cgl_context;
   throw std::runtime_error(
       "MuJoCo rendering is unsupported on this platform/build");
 #endif
 }
 
-OffscreenRenderer::OffscreenRenderer(CameraPolicy camera_policy)
-    : camera_policy_(camera_policy) {
+OffscreenRenderer::OffscreenRenderer(CameraPolicy camera_policy,
+                                     bool disable_auxiliary_visuals,
+                                     bool share_cgl_context,
+                                     bool prefer_offline_cgl_context,
+                                     bool resize_offscreen)
+    : camera_policy_(camera_policy),
+      share_cgl_context_(share_cgl_context),
+      prefer_offline_cgl_context_(prefer_offline_cgl_context),
+      resize_offscreen_(resize_offscreen) {
   mjv_defaultScene(&scene_);
   mjv_defaultCamera(&camera_);
   mjv_defaultOption(&option_);
   mjv_defaultPerturb(&perturb_);
   mjr_defaultContext(&context_);
+  if (disable_auxiliary_visuals) {
+    option_.flags[mjVIS_TENDON] = 0;
+    option_.flags[mjVIS_ACTUATOR] = 0;
+    option_.flags[mjVIS_ACTIVATION] = 0;
+  }
   camera_.fixedcamid = -1;
 }
 
@@ -503,12 +594,17 @@ OffscreenRenderer::~OffscreenRenderer() {
 }
 
 void OffscreenRenderer::Initialize(const mjModel* model) {
-  gl_context_ = CreateGlContext();
+  gl_context_ =
+      CreateGlContext(share_cgl_context_, prefer_offline_cgl_context_);
   gl_context_->MakeCurrent();
   mjv_makeScene(model, &scene_, 10000);
   mjr_makeContext(model, &context_, mjFONTSCALE_150);
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
+  context_.readDepthMap = mjDEPTH_ZEROFAR;
   initialized_ = true;
+#if defined(ENVPOOL_HAS_CGL)
+  PrimeCglContextForFirstReadback();
+#endif
 }
 
 void OffscreenRenderer::UpdateCamera(const mjModel* model, const mjData* data,
@@ -519,8 +615,6 @@ void OffscreenRenderer::UpdateCamera(const mjModel* model, const mjData* data,
   }
   if (camera_id == -1 && camera_override != nullptr) {
     camera_ = *camera_override;
-    camera_.type = mjCAMERA_FREE;
-    camera_.fixedcamid = -1;
     return;
   }
   if (camera_id == -1 && camera_policy_ == CameraPolicy::kGymLike) {
@@ -554,28 +648,57 @@ void OffscreenRenderer::UpdateCamera(const mjModel* model, const mjData* data,
 
 void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
                                int height, int camera_id, unsigned char* rgb,
-                               const mjvCamera* camera_override) {
+                               const mjvCamera* camera_override,
+                               const mjvOption* option_override) {
   if (!initialized_) {
     Initialize(model);
   }
   gl_context_->MakeCurrent();
-  if (context_.offWidth != width || context_.offHeight != height) {
+  if (resize_offscreen_ &&
+      (context_.offWidth != width || context_.offHeight != height)) {
     mjr_resizeOffscreen(width, height, &context_);
   }
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
   UpdateCamera(model, data, camera_id, camera_override);
 
   mjrRect viewport = {0, 0, width, height};
-  mjv_updateScene(model, data, &option_, &perturb_, &camera_, mjCAT_ALL,
-                  &scene_);
-  mjr_render(viewport, &scene_, &context_);
+  auto render_scene = [&] {
+    mjv_updateScene(model, data,
+                    option_override != nullptr ? option_override : &option_,
+                    &perturb_, &camera_, mjCAT_ALL, &scene_);
+    mjr_render(viewport, &scene_, &context_);
+  };
 
   std::size_t frame_bytes =
       static_cast<std::size_t>(width) * height * 3 * sizeof(unsigned char);
   if (scratch_.size() != frame_bytes) {
     scratch_.resize(frame_bytes);
   }
-  mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
+
+  auto read_pixels = [&] {
+#if defined(ENVPOOL_HAS_CGL)
+    mjr_finish();
+#endif
+    mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
+  };
+
+  render_scene();
+#if defined(ENVPOOL_HAS_CGL)
+  // macOS CGL can expose an unsettled first offscreen frame. Settle once per
+  // renderer so env code does not need task-specific render workarounds.
+  if (!cgl_first_frame_settled_) {
+    read_pixels();
+    for (int pass = 0; pass < kCglFirstFrameSettlePasses; ++pass) {
+      render_scene();
+      read_pixels();
+    }
+    cgl_first_frame_settled_ = true;
+  } else {
+    read_pixels();
+  }
+#else
+  read_pixels();
+#endif
 
   std::size_t row_bytes =
       static_cast<std::size_t>(width) * 3 * sizeof(unsigned char);

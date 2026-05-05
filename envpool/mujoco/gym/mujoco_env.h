@@ -162,7 +162,9 @@ class MujocoEnv : public RenderableEnv {
 #else
     if (renderer_ == nullptr) {
       renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
-          envpool::mujoco::CameraPolicy::kGymLike);
+          envpool::mujoco::CameraPolicy::kGymLike,
+          /*disable_auxiliary_visuals=*/false, /*share_cgl_context=*/false,
+          /*prefer_offline_cgl_context=*/false, /*resize_offscreen=*/true);
     }
     renderer_->Render(model_, data_, width, height, camera_id, rgb, camera);
 #endif
@@ -224,6 +226,7 @@ class MujocoEnv : public RenderableEnv {
     mjv_defaultCamera(camera);
     camera->type = mjCAMERA_FREE;
     camera->fixedcamid = -1;
+    camera->trackbodyid = -1;
     camera->distance = model_->stat.extent;
     if (model_->ngeom == 0) {
       return;
@@ -231,6 +234,17 @@ class MujocoEnv : public RenderableEnv {
     for (int axis = 0; axis < 3; ++axis) {
       camera->lookat[axis] = MedianGeomPosition(data_, model_->ngeom, axis);
     }
+  }
+
+  void ApplyGymnasiumDefaultCameraId(mjvCamera* camera) const {
+    int track_camera_id = mj_name2id(model_, mjOBJ_CAMERA, "track");
+    if (track_camera_id >= 0) {
+      camera->type = mjCAMERA_FIXED;
+      camera->fixedcamid = track_camera_id;
+      return;
+    }
+    camera->type = mjCAMERA_FREE;
+    camera->fixedcamid = -1;
   }
 
   mjtNum* PrepareObservation(Array* target) {
