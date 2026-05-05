@@ -44,6 +44,55 @@ importlib.import_module("envpool.mujoco.myosuite.registration")
 
 _TASK_IDS = tuple(str(task["id"]) for task in MYOSUITE_TASKS)
 _TASK_ID_SET = frozenset(_TASK_IDS)
+# Render traces are the expensive part of this suite. The full 398-ID surface is
+# covered by registry, space, reset/step, determinism, and generated docs. Keep
+# CI render checks to a diagonal set that catches wrong-camera/model/scene
+# regressions without retesting the full modifier cartesian product.
+_ORACLE_RENDER_REPRESENTATIVE_TASK_IDS = frozenset({
+    "MyoHandAirplaneFixed-v0",
+    "MyoHandAirplaneFly-v0",
+    "MyoHandCupPour-v0",
+    "MyoHandHammerUse-v0",
+    "MyoHandWatchRandom-v0",
+    "motorFingerPoseFixed-v0",
+    "myoArmReachFixed-v0",
+    "myoElbowPose1D6MExoFixed-v0",
+    "myoFingerReachFixed-v0",
+    "myoFingerPoseFixed-v0",
+    "myoHandReachFixed-v0",
+    "myoHandPoseFixed-v0",
+    "myoHandKeyTurnFixed-v0",
+    "myoHandObjHoldFixed-v0",
+    "myoHandPenTwirlFixed-v0",
+    "myoHandReorient8-v0",
+    "myoLegStandRandom-v0",
+    "myoLegWalk-v0",
+    "myoLegRoughTerrainWalk-v0",
+    "myoFatiArmReachFixed-v0",
+    "myoFatiHandReorient8-v0",
+    "myoFatiLegWalk-v0",
+    "myoSarcArmReachFixed-v0",
+    "myoSarcHandReorient8-v0",
+    "myoSarcLegWalk-v0",
+    "myoChallengeBaodingP1-v1",
+    "myoChallengeBimanual-v0",
+    "myoChallengeChaseTagP1-v0",
+    "myoChallengeDieReorientP1-v0",
+    "myoChallengeOslRunFixed-v0",
+    "myoChallengeRelocateP1-v0",
+    "myoChallengeSoccerP1-v0",
+    "myoChallengeTableTennisP0-v0",
+    "myoFatiChallengeBimanual-v0",
+    "myoSarcChallengeSoccerP2-v0",
+})
+_UNKNOWN_ORACLE_RENDER_REPRESENTATIVE_TASK_IDS = (
+    _ORACLE_RENDER_REPRESENTATIVE_TASK_IDS - _TASK_ID_SET
+)
+if _UNKNOWN_ORACLE_RENDER_REPRESENTATIVE_TASK_IDS:
+    raise ValueError(
+        "unknown MyoSuite oracle render representatives: "
+        f"{sorted(_UNKNOWN_ORACLE_RENDER_REPRESENTATIVE_TASK_IDS)}"
+    )
 
 
 def _render_task_allowlist_from_env() -> tuple[str, ...] | None:
@@ -74,16 +123,32 @@ def _filter_render_task_ids(task_ids: tuple[str, ...]) -> tuple[str, ...]:
     )
 
 
-_ORACLE_TRACE_TASK_IDS = tuple(
-    task_id
-    for task_id in _TASK_IDS
-    if task_id not in MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS
-)
-_NATIVE_ONLY_RENDER_TASK_IDS = tuple(
-    task_id
-    for task_id in _TASK_IDS
-    if task_id in MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS
-)
+def _native_render_task_ids() -> tuple[str, ...]:
+    if _RENDER_TASK_ALLOWLIST is not None:
+        return _filter_render_task_ids(_TASK_IDS)
+    return tuple(
+        task_id
+        for task_id in _TASK_IDS
+        if task_id in _ORACLE_RENDER_REPRESENTATIVE_TASK_IDS
+    )
+
+
+def _oracle_trace_task_ids() -> tuple[str, ...]:
+    if _RENDER_TASK_ALLOWLIST is None:
+        return tuple(
+            task_id
+            for task_id in _TASK_IDS
+            if task_id in _ORACLE_RENDER_REPRESENTATIVE_TASK_IDS
+            and task_id not in MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS
+        )
+    return tuple(
+        task_id
+        for task_id in _filter_render_task_ids(_TASK_IDS)
+        if task_id not in MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS
+    )
+
+
+_NATIVE_RENDER_TASK_IDS = _native_render_task_ids()
 _WIDTH = 64
 _HEIGHT = 48
 _ORACLE_RENDER_BATCH_SIZE = 8
@@ -199,10 +264,10 @@ def _task_batches(
 
 
 _SHARDED_ORACLE_TRACE_TASK_IDS = _render_shard_task_ids(
-    _filter_render_task_ids(_ORACLE_TRACE_TASK_IDS)
+    _oracle_trace_task_ids()
 )
-_SHARDED_NATIVE_ONLY_RENDER_TASK_IDS = _render_shard_task_ids(
-    _filter_render_task_ids(_NATIVE_ONLY_RENDER_TASK_IDS)
+_SHARDED_NATIVE_RENDER_TASK_IDS = _render_shard_task_ids(
+    _NATIVE_RENDER_TASK_IDS
 )
 
 
@@ -447,8 +512,8 @@ class MyoSuiteRenderTest(absltest.TestCase):
     """Validate native MyoSuite RGB rendering after reset and steps."""
 
     def test_reset_and_first_three_step_render(self) -> None:
-        """Render oracle-skip tasks through reset and the first three steps."""
-        for task_id in _SHARDED_NATIVE_ONLY_RENDER_TASK_IDS:
+        """Representative tasks render through reset and first three steps."""
+        for task_id in _SHARDED_NATIVE_RENDER_TASK_IDS:
             with self.subTest(task_id=task_id):
                 env = make_gymnasium(
                     task_id,

@@ -540,7 +540,7 @@ py_test(
     srcs = ["myosuite/myosuite_oracle_align_test.py"],
     data = [":myosuite_oracle_probe"],
     imports = ["../.."],
-    shard_count = 4,
+    shard_count = 8,
     deps = [
         ":myosuite",
         ":myosuite_registration",
