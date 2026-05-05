@@ -14,11 +14,14 @@ jobs:
   test-linux-x64:
     name: Test (linux-x64)
     runs-on: ubuntu-24.04
-    timeout-minutes: 240
+    timeout-minutes: 180
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-      BAZEL_CI_RESOURCE_OPTS: --jobs=HOST_CPUS-1 --local_cpu_resources=HOST_CPUS-1 --local_ram_resources=HOST_RAM*.5 --experimental_disk_cache_gc_max_size=2G --experimental_disk_cache_gc_idle_delay=0s
+      # Keep hosted Linux runners responsive during the full MuJoCo/MyoSuite coverage
+      # build. The default HOST_CPUS-1 parallelism can starve the runner hard
+      # enough for GitHub Actions to lose communication.
+      BAZEL_CI_RESOURCE_OPTS: --jobs=2 --local_cpu_resources=2 --local_ram_resources=HOST_RAM*.35 --experimental_disk_cache_gc_max_size=2G --experimental_disk_cache_gc_idle_delay=0s
       MUJOCO_GL: egl
       EGL_PLATFORM: surfaceless
     steps:
@@ -54,10 +57,10 @@ jobs:
             ~/.cache/bazelisk
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
-          key: bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}
+          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}
           restore-keys: |
-            bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.DEFAULT_BRANCH }}-
-            bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-
+            bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.DEFAULT_BRANCH }}-
+            bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-
       - name: Install bazelisk
         run: |
           go install github.com/bazelbuild/bazelisk@latest
@@ -101,34 +104,37 @@ jobs:
           path: coverage/site
       - name: Save Bazel caches
         id: save-bazel-caches
-        if: ${{ success() }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
           path: |
             ~/.cache/bazelisk
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
-          key: bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
       - name: Prune older Bazel caches
-        if: ${{ success() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: >-
           python scripts/prune_actions_caches.py
           --repo "${{ github.repository }}"
-          --prefix "bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-"
+          --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-"
           --group-by-branch
           --delete-missing-branches
           --keep 1
   test-linux-arm64:
     name: Test (linux-arm64)
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 240
+    timeout-minutes: 180
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-      BAZEL_CI_RESOURCE_OPTS: --jobs=HOST_CPUS-1 --local_cpu_resources=HOST_CPUS-1 --local_ram_resources=HOST_RAM*.5 --experimental_disk_cache_gc_max_size=2G --experimental_disk_cache_gc_idle_delay=0s
+      # Keep hosted Linux runners responsive during the full MuJoCo/MyoSuite test
+      # build. The default HOST_CPUS-1 parallelism can starve the runner hard
+      # enough for GitHub Actions to lose communication.
+      BAZEL_CI_RESOURCE_OPTS: --jobs=2 --local_cpu_resources=2 --local_ram_resources=HOST_RAM*.35 --experimental_disk_cache_gc_max_size=2G --experimental_disk_cache_gc_idle_delay=0s
       MUJOCO_GL: egl
       EGL_PLATFORM: surfaceless
     steps:
@@ -164,10 +170,10 @@ jobs:
             ~/.cache/bazelisk
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
-          key: bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}
+          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}
           restore-keys: |
-            bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.DEFAULT_BRANCH }}-
-            bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-
+            bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.DEFAULT_BRANCH }}-
+            bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-
       - name: Install bazelisk
         run: |
           go install github.com/bazelbuild/bazelisk@latest
@@ -178,34 +184,34 @@ jobs:
             BAZEL_TEST_TARGETS="//..." bazel-test
       - name: Save Bazel caches
         id: save-bazel-caches
-        if: ${{ success() }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
           path: |
             ~/.cache/bazelisk
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
-          key: bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
       - name: Prune older Bazel caches
-        if: ${{ success() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: >-
           python scripts/prune_actions_caches.py
           --repo "${{ github.repository }}"
-          --prefix "bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-"
+          --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-"
           --group-by-branch
           --delete-missing-branches
           --keep 1
   test-macos:
     name: Test (macos)
     runs-on: macos-14
-    timeout-minutes: 240
+    timeout-minutes: 180
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-      BAZEL_CI_RESOURCE_OPTS: --jobs=HOST_CPUS-1 --local_cpu_resources=HOST_CPUS-1 --local_ram_resources=HOST_RAM*.5 --experimental_disk_cache_gc_max_size=2G --experimental_disk_cache_gc_idle_delay=0s
+      BAZEL_CI_RESOURCE_OPTS: --jobs=HOST_CPUS-1 --local_cpu_resources=HOST_CPUS-1 --local_ram_resources=HOST_RAM*.5
       HOMEBREW_NO_AUTO_UPDATE: "1"
     steps:
       - name: Cancel previous run
@@ -244,10 +250,10 @@ jobs:
             ~/.cache/bazelisk
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
-          key: bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}
+          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}
           restore-keys: |
-            bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.DEFAULT_BRANCH }}-
-            bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-
+            bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.DEFAULT_BRANCH }}-
+            bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-
       - name: Install bazelisk
         run: |
           go install github.com/bazelbuild/bazelisk@latest
@@ -257,35 +263,35 @@ jobs:
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" bazel-test
       - name: Save Bazel caches
         id: save-bazel-caches
-        if: ${{ success() }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
           path: |
             ~/.cache/bazelisk
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
-          key: bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
       - name: Prune older Bazel caches
-        if: ${{ success() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: >-
           python scripts/prune_actions_caches.py
           --repo "${{ github.repository }}"
-          --prefix "bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-"
+          --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-"
           --group-by-branch
           --delete-missing-branches
           --keep 1
   test-windows:
     name: Test (windows)
     runs-on: windows-2022
-    timeout-minutes: 240
+    timeout-minutes: 180
     env:
       BAZEL_SH: C:/Program Files/Git/usr/bin/bash.exe
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-      BAZEL_CI_RESOURCE_OPTS: --jobs=HOST_CPUS-1 --local_cpu_resources=HOST_CPUS-1 --local_ram_resources=HOST_RAM*.5 --experimental_disk_cache_gc_max_size=2G --experimental_disk_cache_gc_idle_delay=0s
+      BAZEL_CI_RESOURCE_OPTS: --jobs=HOST_CPUS-1 --local_cpu_resources=HOST_CPUS-1 --local_ram_resources=HOST_RAM*.5
       MESA_GL_VERSION_OVERRIDE: 4.5COMPAT
       MSYS2_ARG_CONV_EXCL: "*"
       MSYS_NO_PATHCONV: "1"
@@ -349,10 +355,10 @@ jobs:
             ~/.cache/bazelisk
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
-          key: bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}
+          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}
           restore-keys: |
-            bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.DEFAULT_BRANCH }}-
-            bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-
+            bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.DEFAULT_BRANCH }}-
+            bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-
       - name: Install bazelisk
         shell: pwsh
         run: |
@@ -377,23 +383,23 @@ jobs:
           make BAZELOPT="--repository_cache=$repo_cache --disk_cache=$disk_cache $BAZEL_CI_RESOURCE_OPTS" bazel-test
       - name: Save Bazel caches
         id: save-bazel-caches
-        if: ${{ success() }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v4
         with:
           path: |
             ~/.cache/bazelisk
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
-          key: bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
       - name: Prune older Bazel caches
-        if: ${{ success() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: >-
           python scripts/prune_actions_caches.py
           --repo "${{ github.repository }}"
-          --prefix "bazel-test-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-"
+          --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-"
           --group-by-branch
           --delete-missing-branches
           --keep 1

@@ -341,11 +341,14 @@ cc_library(
         "//:linux_x86_64": [
             # CI fastbuild otherwise compiles the header-only MyoSuite runtime
             # at -O0 while the pinned official oracle wheel is release-built.
+            # This is x86_64-only because the official Linux x86_64 MuJoCo
+            # wheel enables platform SIMD; linux_arm64 only needs coverage
+            # disabled for stable long oracle rollouts.
             "-O3",
             "-fno-profile-arcs",
             "-fno-test-coverage",
         ],
-        "//:linux": [
+        "//:linux_arm64": [
             "-fno-profile-arcs",
             "-fno-test-coverage",
         ],
@@ -539,8 +542,13 @@ py_test(
     size = "enormous",
     srcs = ["myosuite/myosuite_oracle_align_test.py"],
     data = [":myosuite_oracle_probe"],
+    # This test is an oracle correctness gate, not a Python coverage target.
+    # rules_python coverage tries to import native object dirs from the
+    # transitive MyoSuite deps as Python modules and can fail after the unittest
+    # body already passed with module-not-imported warnings.
+    features = ["-coverage"],
     imports = ["../.."],
-    shard_count = 4,
+    shard_count = 8,
     deps = [
         ":myosuite",
         ":myosuite_registration",

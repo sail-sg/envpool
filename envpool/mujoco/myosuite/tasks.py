@@ -40,6 +40,7 @@ class MyoSuiteTask(TypedDict):
 
 
 _METADATA_DIR = Path("assets/metadata")
+_ASSETS_METADATA_DIR = Path("mujoco/myosuite") / _METADATA_DIR
 _TASKS_JSON = "myosuite_tasks.json"
 _ORACLE_JSON = "myosuite_oracle_metadata.json"
 
@@ -47,6 +48,11 @@ _ORACLE_JSON = "myosuite_oracle_metadata.json"
 def _metadata_candidates(filename: str) -> tuple[Path, ...]:
     package_dir = Path(__file__).resolve().parent
     candidates = [package_dir / _METADATA_DIR / filename]
+    assets_override = os.environ.get("ENVPOOL_ASSETS_PATH")
+    if assets_override:
+        candidates.append(
+            Path(assets_override) / _ASSETS_METADATA_DIR / filename
+        )
     runfiles = os.environ.get("TEST_SRCDIR")
     if runfiles:
         workspace = os.environ.get("TEST_WORKSPACE", "envpool")
@@ -66,21 +72,23 @@ def _read_metadata_json(filename: str) -> Any:
         attempted.append(str(path))
         if path.is_file():
             return json.loads(path.read_text())
-    package = __package__
-    if package is None:
-        raise FileNotFoundError(
-            f"could not resolve package for MyoSuite metadata {filename}"
-        )
-    resource = (
-        resources
-        .files(package)
-        .joinpath("assets")
-        .joinpath("metadata")
-        .joinpath(filename)
-    )
-    attempted.append(str(resource))
-    if resource.is_file():
-        return json.loads(resource.read_text())
+    resource_roots: list[tuple[str, tuple[str, ...]]] = []
+    if __package__:
+        resource_roots.append((__package__, ("assets", "metadata")))
+    resource_roots.append((
+        "envpool_assets",
+        ("mujoco", "myosuite", "assets", "metadata"),
+    ))
+    for package, parts in resource_roots:
+        try:
+            resource = resources.files(package)
+        except ModuleNotFoundError:
+            continue
+        for part in (*parts, filename):
+            resource = resource.joinpath(part)
+        attempted.append(str(resource))
+        if resource.is_file():
+            return json.loads(resource.read_text())
     raise FileNotFoundError(
         f"could not find MyoSuite generated metadata {filename}; "
         f"tried {attempted}"

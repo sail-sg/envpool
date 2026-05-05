@@ -82,6 +82,48 @@ _WINDOWS_SHORT_IMPORT_PACKAGES = ("mujoco",)
 _DLL_DIRECTORY_HANDLES: list[Any] = []
 mujoco: Any = None
 
+_UNUSED_RUNTIME_ASSETS = {
+    "myosuite": {
+        "envs/myo/assets/leg_soccer/soccer_assets/soccer_scene/SoccerPitch_goal.obj",
+        "envs/myo/assets/pingpong.obj",
+    },
+    "myosuite_furniture_sim": {
+        "simpleTable/simpleTable.png",
+    },
+    "myosuite_mpl_sim": {
+        "meshes/mplL/palm_link-cvx.stl",
+        "meshes/mplL/wrist_dev_link-cvx.stl",
+        "meshes/mplL/wrist_fe_link-cvx.stl",
+        "meshes/mplL/wrist_rot_link-cvx.stl",
+    },
+    "myosuite_myo_sim": {
+        "meshes/hand_2distph.stl",
+        "meshes/hand_2midph.stl",
+        "meshes/hand_2proxph.stl",
+        "meshes/hat_spine.stl",
+        "meshes/human_highpoly.stl",
+        "meshes/human_lowpoly.stl",
+        "meshes/osl_generic_socket_enlarged.stl",
+        "meshes/ribcage_s.stl",
+        "scene/myosuite_scene.msh",
+        "scene/myosuite_scene_noFloor.png",
+    },
+    "myosuite_myo_sim_patterns": (
+        "meshes/fingers",
+        "meshes/movaxesfin",
+    ),
+    "myosuite_myo_sim_suffixes": (
+        "_lvs.stl",
+        "_rvs.stl",
+    ),
+    "myosuite_object_sim": {
+        "hammer/hammer.stl",
+        "knife/knife.stl",
+        "lightbulb/lightbulb.stl",
+        "scissors/scissors.stl",
+    },
+}
+
 
 def _copy_short_import_package(
     destination_root: Path, package_name: str
@@ -188,7 +230,7 @@ def _object_needed(rel: str, objects: set[str]) -> bool:
 def _destination(src: Path, out: Path, objects: set[str]) -> Path | None:
     rel = _after_marker(src, "myosuite_source/myosuite")
     if rel is not None:
-        if _skip_common(rel):
+        if rel in _UNUSED_RUNTIME_ASSETS["myosuite"] or _skip_common(rel):
             return None
         return out / "myosuite" / rel
 
@@ -201,7 +243,11 @@ def _destination(src: Path, out: Path, objects: set[str]) -> Path | None:
             "assets/left_arm_assets.xml",
             "assets/left_arm_chain_myochallenge.xml",
         } or rel.startswith("meshes/mplL/")
-        if not keep or _skip_common(rel):
+        if (
+            not keep
+            or rel in _UNUSED_RUNTIME_ASSETS["myosuite_mpl_sim"]
+            or _skip_common(rel)
+        ):
             return None
         return out / "myosuite/simhive/MPL_sim" / rel
 
@@ -228,19 +274,34 @@ def _destination(src: Path, out: Path, objects: set[str]) -> Path | None:
             "common/textures/wood1.png",
             "simpleTable.xml",
         } or rel.startswith("simpleTable/")
-        if not keep or _skip_common(rel):
+        if (
+            not keep
+            or rel in _UNUSED_RUNTIME_ASSETS["myosuite_furniture_sim"]
+            or _skip_common(rel)
+        ):
             return None
         return out / "myosuite/simhive/furniture_sim" / rel
 
     rel = _after_marker(src, "myosuite_myo_sim")
     if rel is not None:
-        if _skip_common(rel):
+        if (
+            rel in _UNUSED_RUNTIME_ASSETS["myosuite_myo_sim"]
+            or rel.startswith(
+                _UNUSED_RUNTIME_ASSETS["myosuite_myo_sim_patterns"]
+            )
+            or rel.endswith(_UNUSED_RUNTIME_ASSETS["myosuite_myo_sim_suffixes"])
+            or _skip_common(rel)
+        ):
             return None
         return out / "myosuite/simhive/myo_sim" / rel
 
     rel = _after_marker(src, "myosuite_object_sim")
     if rel is not None:
-        if not _object_needed(rel, objects) or _skip_common(rel):
+        if (
+            not _object_needed(rel, objects)
+            or rel in _UNUSED_RUNTIME_ASSETS["myosuite_object_sim"]
+            or _skip_common(rel)
+        ):
             return None
         return out / "myosuite/simhive/object_sim" / rel
 
