@@ -606,6 +606,7 @@ py_binary_312(
         "//:linux": [],
         "//conditions:default": ["@mujoco//:mujoco_shared_lib"],
     }) + [
+        "//third_party/myosuite:myosuite_generated_json",
         "@myosuite_furniture_sim//:source",
         "@myosuite_mpl_sim//:source",
         "@myosuite_myo_sim//:source",
