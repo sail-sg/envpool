@@ -369,7 +369,7 @@ class EglContext final : public GlContext {
       throw std::runtime_error("failed to initialize EGL");
     }
     eglReleaseThread();
-    EGLDisplay display = display_->get();
+    EGLDisplay display = display_->Get();
     EGLConfig config = nullptr;
     EGLint num_configs = 0;
     if (eglChooseConfig(display, config_attribs.data(), &config, 1,
@@ -398,7 +398,7 @@ class EglContext final : public GlContext {
 
   ~EglContext() override {
     if (display_ != nullptr) {
-      EGLDisplay display = display_->get();
+      EGLDisplay display = display_->Get();
       eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
       if (context_ != EGL_NO_CONTEXT) {
         eglDestroyContext(display, context_);
@@ -411,14 +411,14 @@ class EglContext final : public GlContext {
   }
 
   void MakeCurrent() override {
-    if (eglMakeCurrent(display_->get(), surface_, surface_, context_) !=
+    if (eglMakeCurrent(display_->Get(), surface_, surface_, context_) !=
         EGL_TRUE) {
       throw std::runtime_error("failed to make EGL context current");
     }
   }
 
   void ClearCurrent() override {
-    if (eglMakeCurrent(display_->get(), EGL_NO_SURFACE, EGL_NO_SURFACE,
+    if (eglMakeCurrent(display_->Get(), EGL_NO_SURFACE, EGL_NO_SURFACE,
                        EGL_NO_CONTEXT) != EGL_TRUE) {
       throw std::runtime_error("failed to clear EGL context");
     }
@@ -437,7 +437,7 @@ class EglContext final : public GlContext {
       }
     }
 
-    EGLDisplay get() const { return display_; }
+    EGLDisplay Get() const { return display_; }
 
    private:
     EGLDisplay display_{EGL_NO_DISPLAY};
@@ -623,7 +623,8 @@ OffscreenRenderer::~OffscreenRenderer() {
   try {
     gl_context_->MakeCurrent();
     made_current = true;
-  } catch (const std::exception&) {
+  } catch (const std::exception& error) {
+    static_cast<void>(error);
     // Destructors must not throw during Python/interpreter shutdown. If the GL
     // context is already unavailable, free CPU-side scene state and let process
     // teardown reclaim the backend resources.
@@ -635,7 +636,8 @@ OffscreenRenderer::~OffscreenRenderer() {
   if (made_current) {
     try {
       gl_context_->ClearCurrent();
-    } catch (const std::exception&) {
+    } catch (const std::exception& error) {
+      static_cast<void>(error);
       // Preserve no-throw destructor semantics.
     }
   }
