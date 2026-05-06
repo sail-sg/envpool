@@ -23,8 +23,16 @@ _EGL_TEARDOWN_CASES = (
     ("dmc", "envpool.mujoco.dmc.registration", "WalkerWalk-v1"),
     ("gym", "envpool.mujoco.gym.registration", "Walker2d-v4"),
     ("robotics", "envpool.mujoco.robotics.registration", "FetchReach-v4"),
-    ("metaworld", "envpool.mujoco.metaworld.registration", "MetaWorld/Reach-v3"),
-    ("myosuite", "envpool.mujoco.myosuite.registration", "myoFingerReachFixed-v0"),
+    (
+        "metaworld",
+        "envpool.mujoco.metaworld.registration",
+        "MetaWorld/Reach-v3",
+    ),
+    (
+        "myosuite",
+        "envpool.mujoco.myosuite.registration",
+        "myoFingerReachFixed-v0",
+    ),
 )
 
 
@@ -33,9 +41,7 @@ class MujocoEglTeardownTest(absltest.TestCase):
 
     def test_pixel_env_teardown_exits_cleanly_for_all_gl_families(self) -> None:
         """All native MuJoCo pixel families should exit cleanly under EGL."""
-        assert_egl_pixel_env_teardown_exits_cleanly(
-            self, _EGL_TEARDOWN_CASES
-        )
+        assert_egl_pixel_env_teardown_exits_cleanly(self, _EGL_TEARDOWN_CASES)
 
 
 if __name__ == "__main__":
