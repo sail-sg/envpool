@@ -151,6 +151,7 @@ class EnvRegistry:
             "envpool.mujoco.dmc",
             "envpool.mujoco.gym",
             "envpool.mujoco.metaworld",
+            "envpool.mujoco.myosuite",
             "envpool.mujoco.robotics",
         }
 

@@ -28,17 +28,13 @@ The compile-time dictionary helpers used by these types still live in
 Environment Authoring
 ---------------------
 
-.. doxygenvariable:: common_config
-   :project: envpool_cpp_api
-
-.. doxygenvariable:: common_action_spec
-   :project: envpool_cpp_api
-
-.. doxygenvariable:: common_state_spec
-   :project: envpool_cpp_api
+The shared dictionaries in ``envpool/core/env_spec.h`` define the base
+configuration, action, and state entries that every environment family extends:
+``common_config``, ``common_action_spec``, and ``common_state_spec``.
 
 .. doxygenclass:: EnvSpec
    :project: envpool_cpp_api
+   :members: config, state_spec, action_spec, EnvSpec
 
 .. doxygenclass:: Env
    :project: envpool_cpp_api

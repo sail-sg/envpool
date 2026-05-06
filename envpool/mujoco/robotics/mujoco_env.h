@@ -114,28 +114,38 @@ class MujocoRobotEnv : public RenderableEnv {
     // teardown happens on the Python thread. Recreating the renderer on
     // Windows avoids cross-thread WGL resource lifetime issues.
     envpool::mujoco::OffscreenRenderer renderer(
-        envpool::mujoco::CameraPolicy::kGymLike);
+        envpool::mujoco::CameraPolicy::kGymLike,
+        DisableAuxiliaryRenderVisuals(), ShareRenderContext(),
+        PreferOfflineRenderContext(), ResizeOffscreenRenderContext());
 #else
     if (renderer_ == nullptr) {
       renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
-          envpool::mujoco::CameraPolicy::kGymLike);
+          envpool::mujoco::CameraPolicy::kGymLike,
+          DisableAuxiliaryRenderVisuals(), ShareRenderContext(),
+          PreferOfflineRenderContext(), ResizeOffscreenRenderContext());
     }
 #endif
     mjvCamera camera_override;
     InitializeRenderCamera(&camera_override);
+    mjvOption option_override;
+    mjv_defaultOption(&option_override);
+    const mjvOption* option =
+        RenderOption(&option_override) ? &option_override : nullptr;
     if (RenderCamera(&camera_override)) {
 #ifdef _WIN32
       renderer.Render(model_, data_, width, height, camera_id, rgb,
-                      &camera_override);
+                      &camera_override, option);
 #else
       renderer_->Render(model_, data_, width, height, camera_id, rgb,
-                        &camera_override);
+                        &camera_override, option);
 #endif
     } else {
 #ifdef _WIN32
-      renderer.Render(model_, data_, width, height, camera_id, rgb);
+      renderer.Render(model_, data_, width, height, camera_id, rgb, nullptr,
+                      option);
 #else
-      renderer_->Render(model_, data_, width, height, camera_id, rgb);
+      renderer_->Render(model_, data_, width, height, camera_id, rgb, nullptr,
+                        option);
 #endif
     }
   }
@@ -202,6 +212,15 @@ class MujocoRobotEnv : public RenderableEnv {
   }
 
   static mjModel* LoadModel(const std::string& xml_path) {
+    if (xml_path.size() >= 4 &&
+        xml_path.substr(xml_path.size() - 4) == ".mjb") {
+      mjModel* model = mj_loadModel(xml_path.c_str(), nullptr);
+      if (model == nullptr) {
+        throw std::runtime_error("failed to load MuJoCo binary model: " +
+                                 xml_path);
+      }
+      return model;
+    }
     std::array<char, 1000> error{};
     mjModel* model = mj_loadXML(xml_path.c_str(), nullptr, error.data(), 1000);
     if (model == nullptr) {
@@ -230,6 +249,14 @@ class MujocoRobotEnv : public RenderableEnv {
     (void)camera;
     return false;
   }
+  virtual bool RenderOption(mjvOption* option) {
+    (void)option;
+    return false;
+  }
+  virtual bool DisableAuxiliaryRenderVisuals() const { return true; }
+  virtual bool ShareRenderContext() const { return false; }
+  virtual bool PreferOfflineRenderContext() const { return false; }
+  virtual bool ResizeOffscreenRenderContext() const { return true; }
 
   void InitializeRenderCamera(mjvCamera* camera) const {
     mjv_defaultCamera(camera);

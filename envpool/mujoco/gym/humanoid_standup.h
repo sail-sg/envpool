@@ -38,6 +38,7 @@ class HumanoidStandupEnvFns {
         "exclude_worldbody_observations"_.Bind(false),
         "exclude_root_actuator_forces"_.Bind(false),
         "xml_file"_.Bind(std::string("humanoidstandup.xml")),
+        "gymnasium_v5_render_camera"_.Bind(false),
         "ctrl_cost_weight"_.Bind(0.1), "contact_cost_weight"_.Bind(5e-7),
         "contact_cost_max"_.Bind(10.0), "healthy_reward"_.Bind(1.0),
         "reset_noise_scale"_.Bind(1e-2));
@@ -86,6 +87,7 @@ class HumanoidStandupEnvBase : public Env<EnvSpecT>, public MujocoEnv {
 
   bool no_pos_;
   bool exclude_worldbody_observations_, exclude_root_actuator_forces_;
+  bool gymnasium_v5_render_camera_;
   mjtNum ctrl_cost_weight_, contact_cost_weight_, contact_cost_max_;
   mjtNum forward_reward_weight_, healthy_reward_;
   std::uniform_real_distribution<> dist_;
@@ -109,6 +111,7 @@ class HumanoidStandupEnvBase : public Env<EnvSpecT>, public MujocoEnv {
             spec.config["exclude_worldbody_observations"_]),
         exclude_root_actuator_forces_(
             spec.config["exclude_root_actuator_forces"_]),
+        gymnasium_v5_render_camera_(spec.config["gymnasium_v5_render_camera"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         contact_cost_weight_(spec.config["contact_cost_weight"_]),
         contact_cost_max_(spec.config["contact_cost_max"_]),
@@ -128,6 +131,20 @@ class HumanoidStandupEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     std::memcpy(qpos0_, data_->qpos, sizeof(mjtNum) * model_->nq);
     std::memcpy(qvel0_, data_->qvel, sizeof(mjtNum) * model_->nv);
 #endif
+  }
+
+  bool RenderCamera(mjvCamera* camera) override {
+    if (!gymnasium_v5_render_camera_) {
+      return false;
+    }
+    camera->trackbodyid = 1;
+    camera->distance = 4.0;
+    camera->lookat[0] = 0.0;
+    camera->lookat[1] = 0.0;
+    camera->lookat[2] = 0.8925;
+    camera->elevation = -20.0;
+    ApplyGymnasiumDefaultCameraId(camera);
+    return true;
   }
 
   bool IsDone() override { return done_; }

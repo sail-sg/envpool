@@ -45,3 +45,7 @@ pip_workspace()
 load("@pip_requirements//:requirements.bzl", "install_deps")
 
 install_deps()
+
+load("@myosuite_oracle_requirements//:requirements.bzl", myosuite_oracle_install_deps = "install_deps")
+
+myosuite_oracle_install_deps()

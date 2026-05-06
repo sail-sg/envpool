@@ -94,9 +94,31 @@ def _configure_macos_official_renderer() -> None:
             del width, height
             from mujoco.cgl import cgl
 
+            self._pixel_format: Any = None
+            self._context: Any = None
+            self._locked = False
             attrib = cgl.CGLPixelFormatAttribute
             profile = cgl.CGLOpenGLProfile
-            attrib_values = (
+            preferred_attribs = (
+                attrib.CGLPFAOpenGLProfile,
+                profile.CGLOGLPVersion_Legacy,
+                attrib.CGLPFAColorSize,
+                24,
+                attrib.CGLPFAAlphaSize,
+                8,
+                attrib.CGLPFADepthSize,
+                24,
+                attrib.CGLPFAStencilSize,
+                8,
+                attrib.CGLPFAMultisample,
+                attrib.CGLPFASampleBuffers,
+                1,
+                attrib.CGLPFASample,
+                4,
+                attrib.CGLPFAAccelerated,
+                0,  # terminator
+            )
+            offline_attribs = (
                 attrib.CGLPFAOpenGLProfile,
                 profile.CGLOGLPVersion_Legacy,
                 attrib.CGLPFAColorSize,
@@ -108,18 +130,12 @@ def _configure_macos_official_renderer() -> None:
                 attrib.CGLPFAStencilSize,
                 8,
                 attrib.CGLPFAAllowOfflineRenderers,
-                0,
                 0,  # terminator
             )
-            attribs = (ctypes.c_int * len(attrib_values))(*attrib_values)
-            self._pixel_format = cgl.CGLPixelFormatObj()
-            num_pixel_formats = cgl.GLint()
-            cgl.CGLChoosePixelFormat(
-                attribs,
-                ctypes.byref(self._pixel_format),
-                ctypes.byref(num_pixel_formats),
-            )
-            if not self._pixel_format or num_pixel_formats.value == 0:
+
+            if not self._choose_pixel_format(
+                cgl, preferred_attribs
+            ) and not self._choose_pixel_format(cgl, offline_attribs):
                 raise RuntimeError("failed to create CGL pixel format")
 
             self._context = cgl.CGLContextObj()
@@ -132,14 +148,32 @@ def _configure_macos_official_renderer() -> None:
                 cgl.CGLReleasePixelFormat(self._pixel_format)
                 self._pixel_format = None
                 raise RuntimeError("failed to create CGL context")
-            self._locked = False
+
+        def _choose_pixel_format(
+            self, cgl: Any, attrib_values: tuple[int, ...]
+        ) -> bool:
+            attribs = (ctypes.c_int * len(attrib_values))(*attrib_values)
+            pixel_format = cgl.CGLPixelFormatObj()
+            num_pixel_formats = cgl.GLint()
+            try:
+                cgl.CGLChoosePixelFormat(
+                    attribs,
+                    ctypes.byref(pixel_format),
+                    ctypes.byref(num_pixel_formats),
+                )
+            except cgl.CGLError:
+                return False
+            if not pixel_format or num_pixel_formats.value == 0:
+                return False
+            self._pixel_format = pixel_format
+            return True
 
         def make_current(self) -> None:
             from mujoco.cgl import cgl
 
             cgl.CGLSetCurrentContext(self._context)
-            # Mirror mujoco.cgl.GLContext so the official renderer uses the
-            # same CGL lifecycle as EnvPool's native renderer.
+            # Mirror mujoco.cgl.GLContext's pixel format while keeping the
+            # lock lifecycle idempotent for repeated render() calls.
             if not self._locked:
                 cgl.CGLLockContext(self._context)
                 self._locked = True

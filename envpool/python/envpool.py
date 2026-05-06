@@ -26,6 +26,14 @@ from dm_env import TimeStep
 from .glfw_context import try_ensure_mujoco_glfw_context
 from .protocol import EnvPool, EnvSpec
 
+_MUJOCO_PYBIND_MODULE_PREFIXES = (
+    "envpool.mujoco",
+    "metaworld_",
+    "mujoco_",
+    "myosuite_",
+    "robotics_",
+)
+
 
 def _normalize_env_id(env_id: Any) -> Any:
     """Normalize env_id while preserving traced arrays for XLA send paths."""
@@ -60,8 +68,10 @@ class EnvPoolMixin(ABC):
             return False
         # Dynamic wrapper classes are created in envpool.python.api, so detect
         # MuJoCo by scanning the MRO for the underlying pybind base module.
+        # Some pybind extensions are named by task family rather than
+        # `mujoco_*`, but they still share the same Windows GL bootstrap.
         return any(
-            base.__module__.startswith(("envpool.mujoco", "mujoco_"))
+            base.__module__.startswith(_MUJOCO_PYBIND_MODULE_PREFIXES)
             for base in type(self).__mro__
         )
 

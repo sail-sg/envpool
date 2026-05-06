@@ -20,6 +20,7 @@
 - [x] [Minigrid](https://envpool.readthedocs.io/en/latest/env/minigrid.html)
 - [x] [Highway](https://envpool.readthedocs.io/en/latest/env/highway.html)
 - [x] [MetaWorld](https://envpool.readthedocs.io/en/latest/env/metaworld.html)
+- [x] [MyoSuite](https://envpool.readthedocs.io/en/latest/env/myosuite.html)
 
 Here are EnvPool's several highlights:
 

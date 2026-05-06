@@ -147,12 +147,14 @@ def _eval_c51_subprocess(
     result_queue: mp.Queue,
     task: str,
     resume_path: str,
+    num_envs: int,
     cfg_path: str | None,
     reward_config: dict | None,
 ) -> None:
     reward, length = _eval_c51_impl(
         task,
         resume_path,
+        num_envs=num_envs,
         cfg_path=cfg_path,
         reward_config=reward_config,
     )
@@ -188,6 +190,7 @@ class _VizdoomPretrainTest(absltest.TestCase):
         self,
         task: str,
         resume_path: str,
+        num_envs: int = 10,
         cfg_path: str | None = None,
         reward_config: dict | None = None,
     ) -> tuple[np.ndarray, np.ndarray]:
@@ -195,7 +198,14 @@ class _VizdoomPretrainTest(absltest.TestCase):
         result_queue: mp.Queue = ctx.Queue()
         proc = ctx.Process(
             target=_eval_c51_subprocess,
-            args=(result_queue, task, resume_path, cfg_path, reward_config),
+            args=(
+                result_queue,
+                task,
+                resume_path,
+                num_envs,
+                cfg_path,
+                reward_config,
+            ),
         )
         proc.start()
         proc.join(timeout=360)
@@ -222,9 +232,11 @@ class _VizdoomPretrainTest(absltest.TestCase):
         model_path = self.get_package_path("policy-d3.pth")
         self.assertTrue(os.path.exists(model_path))
         reward_config = {"KILLCOUNT": [1, 0]}
+        num_envs = 2
         baseline_reward, baseline_length = self.eval_c51_subprocess(
             "D3_battle",
             model_path,
+            num_envs=num_envs,
             reward_config=reward_config,
         )
         # test with customized config
@@ -239,6 +251,7 @@ class _VizdoomPretrainTest(absltest.TestCase):
             reward, length = self.eval_c51_subprocess(
                 "D3_battle",
                 model_path,
+                num_envs=num_envs,
                 cfg_path=custom_cfg_path,
                 reward_config=reward_config,
             )

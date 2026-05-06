@@ -17,6 +17,7 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 load("//third_party/cuda:cuda.bzl", "cuda_configure")
+load("//third_party/freedoom:defs.bzl", "freedoom_archive")
 load("//third_party/gfootball:repo.bzl", "gfootball_archive")
 load("//third_party/vizdoom:repo.bzl", "vizdoom_archive")
 
@@ -146,7 +147,9 @@ def workspace():
         build_file = "//third_party/openxla_ffi:ffi_api.BUILD",
         sha256 = "753df38eab0d430da20e614316401663bcfca433905b976745a6e59998635ce8",
         strip_prefix = "xla-187a5eb58277a85847d1516bd1e20b7faf03d5ef/xla/ffi/api",
+        type = "tar.gz",
         urls = [
+            "https://codeload.github.com/openxla/xla/tar.gz/187a5eb58277a85847d1516bd1e20b7faf03d5ef",
             "https://github.com/openxla/xla/archive/187a5eb58277a85847d1516bd1e20b7faf03d5ef.tar.gz",
         ],
     )
@@ -212,6 +215,7 @@ def workspace():
         strip_prefix = "ThreadPool-9a42ec1329f259a5f4881a291db1dcb8f2ad9040",
         urls = [
             "https://github.com/progschj/ThreadPool/archive/9a42ec1329f259a5f4881a291db1dcb8f2ad9040.zip",
+            "https://codeload.github.com/progschj/ThreadPool/zip/9a42ec1329f259a5f4881a291db1dcb8f2ad9040",
         ],
         build_file = "//third_party/threadpool:threadpool.BUILD",
         patches = [
@@ -222,10 +226,10 @@ def workspace():
     maybe(
         http_archive,
         name = "zlib",
-        sha256 = "bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16",
+        sha256 = "b99a0b86c0ba9360ec7e78c4f1e43b1cbdf1e6936c8fa0f6835c0cd694a495a1",
         strip_prefix = "zlib-1.3.2",
         urls = [
-            "https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz",
+            "https://github.com/madler/zlib/archive/refs/tags/v1.3.2.tar.gz",
         ],
         build_file = "//third_party/zlib:zlib.BUILD",
     )
@@ -339,6 +343,9 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
             "https://www.libsdl.org/release/SDL2-2.32.10.tar.gz",
             "https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.tar.gz",
         ],
+        patches = [
+            "//third_party/sdl2:windows_xinput_stub.patch",
+        ],
         build_file = "//third_party/sdl2:sdl2.BUILD",
     )
 
@@ -411,14 +418,27 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     )
 
     maybe(
-        http_archive,
+        freedoom_archive,
         name = "freedoom",
+        attempts = 8,
+        build_file = "//third_party/freedoom:freedoom.BUILD",
         sha256 = "f42c6810fc89b0282de1466c2c9c7c9818031a8d556256a6db1b69f6a77b5806",
         strip_prefix = "freedoom-0.12.1/",
+        type = "zip",
         urls = [
             "https://github.com/freedoom/freedoom/releases/download/v0.12.1/freedoom-0.12.1.zip",
         ],
-        build_file = "//third_party/freedoom:freedoom.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "re2c_4_5_1",
+        build_file = "//third_party/re2c:re2c.BUILD",
+        sha256 = "ffea067c11aa668bcb42885be6e6cd000302000b7747d2bb213299ec66b7864e",
+        strip_prefix = "re2c-4.5.1",
+        urls = [
+            "https://github.com/skvadrik/re2c/releases/download/4.5.1/re2c-4.5.1.tar.xz",
+        ],
     )
 
     maybe(
@@ -584,6 +604,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         strip_prefix = "Gymnasium-Robotics-1.4.2/gymnasium_robotics/envs",
         urls = [
             "https://github.com/Farama-Foundation/Gymnasium-Robotics/archive/refs/tags/v1.4.2.tar.gz",
+            "https://codeload.github.com/Farama-Foundation/Gymnasium-Robotics/tar.gz/refs/tags/v1.4.2",
         ],
         build_file = "//third_party/gymnasium_robotics_assets:gymnasium_robotics_assets.BUILD",
     )
@@ -595,8 +616,85 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         strip_prefix = "Metaworld-3.0.0",
         urls = [
             "https://github.com/Farama-Foundation/Metaworld/archive/refs/tags/v3.0.0.tar.gz",
+            "https://codeload.github.com/Farama-Foundation/Metaworld/tar.gz/refs/tags/v3.0.0",
         ],
         build_file = "//third_party/metaworld_assets:metaworld_assets.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "myosuite_source",
+        sha256 = "f75b77563547fce6d9be46abee2b86e636dd5e57a6f1d470fdbc2104dcd61d34",
+        strip_prefix = "myosuite-2.11.6",
+        urls = [
+            "https://github.com/MyoHub/myosuite/archive/refs/tags/v2.11.6.tar.gz",
+            "https://codeload.github.com/MyoHub/myosuite/tar.gz/refs/tags/v2.11.6",
+        ],
+        patch_args = ["-p1"],
+        patches = ["//third_party/myosuite:mujoco36_mjspec_compat.patch"],
+        build_file = "//third_party/myosuite:myosuite_source.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "myosuite_myo_sim",
+        sha256 = "bd8fdf313b46dbefcd25bf42cf8ddcc45066798164bb3551a990690cad514ebd",
+        strip_prefix = "myo_sim-33f3ded946f55adbdcf963c99999587aadaf975f",
+        urls = [
+            "https://github.com/MyoHub/myo_sim/archive/33f3ded946f55adbdcf963c99999587aadaf975f.tar.gz",
+            "https://codeload.github.com/MyoHub/myo_sim/tar.gz/33f3ded946f55adbdcf963c99999587aadaf975f",
+        ],
+        build_file = "//third_party/myosuite:simhive_source.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "myosuite_object_sim",
+        sha256 = "beed226fcf1d27b91f9147221ef450c2ccab8e5bb7b5954dbcb5635024ed4874",
+        strip_prefix = "object_sim-0.1.0",
+        urls = [
+            # MyoSuite v2.11.6 gitlinks vikashplus/object_sim@87cd8dd, but
+            # that commit is no longer fetchable from GitHub archives.
+            "https://github.com/MyoHub/object_sim/archive/refs/tags/v0.1.0.tar.gz",
+            "https://codeload.github.com/MyoHub/object_sim/tar.gz/refs/tags/v0.1.0",
+        ],
+        build_file = "//third_party/myosuite:simhive_source.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "myosuite_mpl_sim",
+        sha256 = "591fce117832c789e227499ea45c601a9ca142c7dd636492f8bbcd825d54ea0a",
+        strip_prefix = "MPL_sim-58dd1abc6058e0dc06e62f13a61c36adb4916815",
+        urls = [
+            "https://github.com/vikashplus/MPL_sim/archive/58dd1abc6058e0dc06e62f13a61c36adb4916815.tar.gz",
+            "https://codeload.github.com/vikashplus/MPL_sim/tar.gz/58dd1abc6058e0dc06e62f13a61c36adb4916815",
+        ],
+        build_file = "//third_party/myosuite:simhive_source.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "myosuite_ycb_sim",
+        sha256 = "81caf29e5b5c01b4af56991731b3f731a95d486addccafaaaedc7600a9f2437e",
+        strip_prefix = "YCB_sim-46edd9c361061c5d81a82f2511d4fbf76fead569",
+        urls = [
+            "https://github.com/vikashplus/YCB_sim/archive/46edd9c361061c5d81a82f2511d4fbf76fead569.tar.gz",
+            "https://codeload.github.com/vikashplus/YCB_sim/tar.gz/46edd9c361061c5d81a82f2511d4fbf76fead569",
+        ],
+        build_file = "//third_party/myosuite:simhive_source.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "myosuite_furniture_sim",
+        sha256 = "5fb42ed8c932f7c820a72fbb86ea736957476020bdf008e17277380c3693ce9e",
+        strip_prefix = "furniture_sim-c97995afb81c9e2d7325b0069f9abc9a2c74a2f0",
+        urls = [
+            "https://github.com/vikashplus/furniture_sim/archive/c97995afb81c9e2d7325b0069f9abc9a2c74a2f0.tar.gz",
+            "https://codeload.github.com/vikashplus/furniture_sim/tar.gz/c97995afb81c9e2d7325b0069f9abc9a2c74a2f0",
+        ],
+        build_file = "//third_party/myosuite:simhive_source.BUILD",
     )
 
     maybe(

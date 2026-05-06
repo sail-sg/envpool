@@ -37,8 +37,9 @@ class InvertedDoublePendulumEnvFns {
         "healthy_reward"_.Bind(10.0), "reward_if_not_terminated"_.Bind(false),
         "constraint_obs_dim"_.Bind(3),
         "xml_file"_.Bind(std::string("inverted_double_pendulum.xml")),
-        "healthy_z_max"_.Bind(1.0), "observation_min"_.Bind(-10.0),
-        "observation_max"_.Bind(10.0), "reset_noise_scale"_.Bind(0.1));
+        "gymnasium_v5_render_camera"_.Bind(false), "healthy_z_max"_.Bind(1.0),
+        "observation_min"_.Bind(-10.0), "observation_max"_.Bind(10.0),
+        "reset_noise_scale"_.Bind(0.1));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {

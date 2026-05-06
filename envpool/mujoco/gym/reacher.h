@@ -37,6 +37,7 @@ class ReacherEnvFns {
         "ctrl_cost_weight"_.Bind(1.0), "reward_after_step"_.Bind(false),
         "obs_include_z_distance"_.Bind(true), "dist_cost_weight"_.Bind(1.0),
         "xml_file"_.Bind(std::string("reacher.xml")),
+        "gymnasium_v5_render_camera"_.Bind(false),
         "reset_qpos_scale"_.Bind(0.1), "reset_qvel_scale"_.Bind(0.005),
         "reset_goal_scale"_.Bind(0.2));
   }
@@ -75,6 +76,7 @@ class ReacherEnvBase : public Env<EnvSpecT>, public MujocoEnv {
 
   int id_fingertip_, id_target_;
   bool reward_after_step_, obs_include_z_distance_;
+  bool gymnasium_v5_render_camera_;
   mjtNum ctrl_cost_weight_, dist_cost_weight_, reset_goal_scale_;
   std::uniform_real_distribution<> dist_qpos_, dist_qvel_, dist_goal_;
 
@@ -96,6 +98,7 @@ class ReacherEnvBase : public Env<EnvSpecT>, public MujocoEnv {
         id_target_(mj_name2id(model_, mjOBJ_XBODY, "target")),
         reward_after_step_(spec.config["reward_after_step"_]),
         obs_include_z_distance_(spec.config["obs_include_z_distance"_]),
+        gymnasium_v5_render_camera_(spec.config["gymnasium_v5_render_camera"_]),
         ctrl_cost_weight_(spec.config["ctrl_cost_weight"_]),
         dist_cost_weight_(spec.config["dist_cost_weight"_]),
         reset_goal_scale_(spec.config["reset_goal_scale"_]),
@@ -127,6 +130,15 @@ class ReacherEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     std::memcpy(qpos0_, data_->qpos, sizeof(mjtNum) * model_->nq);
     std::memcpy(qvel0_, data_->qvel, sizeof(mjtNum) * model_->nv);
 #endif
+  }
+
+  bool RenderCamera(mjvCamera* camera) override {
+    if (!gymnasium_v5_render_camera_) {
+      return false;
+    }
+    camera->trackbodyid = 0;
+    ApplyGymnasiumDefaultCameraId(camera);
+    return true;
   }
 
   bool IsDone() override { return done_; }

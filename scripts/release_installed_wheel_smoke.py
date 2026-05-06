@@ -48,7 +48,7 @@ def main() -> None:
         )
 
     asset_version = Version(version("envpool-assets"))
-    if not Version("0.1.0") <= asset_version < Version("0.2.0"):
+    if not Version("0.2.0") <= asset_version < Version("0.3.0"):
         raise RuntimeError(
             f"unexpected envpool-assets version: {asset_version}"
         )
@@ -67,6 +67,8 @@ def main() -> None:
         assets_package / "atari/roms/pong.bin",
         assets_package / "gfootball/assets/data",
         assets_package / "mujoco/assets_dmc/cartpole.xml",
+        assets_package
+        / "mujoco/myosuite/assets/myosuite/envs/myo/assets/hand/myohand_pose.xml",
         assets_package / "procgen/assets/platformer/playerBlue_dead.png",
         assets_package / "vizdoom/bin/freedoom2.wad",
         assets_package / "vizdoom/maps/basic.wad",

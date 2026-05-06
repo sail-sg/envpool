@@ -112,6 +112,10 @@ py_library(
 py_library(
     name = "dm_envpool",
     srcs = ["dm_envpool.py"],
+    data = [
+        "lax.py",
+        "xla_template.py",
+    ],
     imports = ["../.."],
     deps = [
         requirement("optree"),
@@ -119,7 +123,6 @@ py_library(
         requirement("numpy"),
         ":data",
         ":envpool",
-        ":lax",
         ":utils",
     ],
 )
@@ -127,6 +130,10 @@ py_library(
 py_library(
     name = "gymnasium_envpool",
     srcs = ["gymnasium_envpool.py"],
+    data = [
+        "lax.py",
+        "xla_template.py",
+    ],
     imports = ["../.."],
     deps = [
         requirement("optree"),
@@ -135,7 +142,6 @@ py_library(
         requirement("numpy"),
         ":data",
         ":envpool",
-        ":lax",
         ":utils",
     ],
 )

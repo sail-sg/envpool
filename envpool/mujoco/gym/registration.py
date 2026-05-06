@@ -34,6 +34,8 @@ gym_mujoco_envs = [
 for task, versions, max_episode_steps in gym_mujoco_envs:
     for version in versions:
         extra_args: dict[str, Any] = {}
+        if version == "v5":
+            extra_args["gymnasium_v5_render_camera"] = True
         if task in ["Ant", "Humanoid"] and version == "v3":
             extra_args["use_contact_force"] = True
         if task == "Ant" and version == "v5":

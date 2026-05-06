@@ -31,13 +31,13 @@ namespace mujoco_gym {
 class InvertedPendulumEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("reward_threshold"_.Bind(950.0), "frame_skip"_.Bind(2),
-                    "frame_stack"_.Bind(1), "post_constraint"_.Bind(true),
-                    "healthy_reward"_.Bind(1.0),
-                    "reward_if_not_terminated"_.Bind(false),
-                    "xml_file"_.Bind(std::string("inverted_pendulum.xml")),
-                    "healthy_z_min"_.Bind(-0.2), "healthy_z_max"_.Bind(0.2),
-                    "reset_noise_scale"_.Bind(0.01));
+    return MakeDict(
+        "reward_threshold"_.Bind(950.0), "frame_skip"_.Bind(2),
+        "frame_stack"_.Bind(1), "post_constraint"_.Bind(true),
+        "healthy_reward"_.Bind(1.0), "reward_if_not_terminated"_.Bind(false),
+        "xml_file"_.Bind(std::string("inverted_pendulum.xml")),
+        "gymnasium_v5_render_camera"_.Bind(false), "healthy_z_min"_.Bind(-0.2),
+        "healthy_z_max"_.Bind(0.2), "reset_noise_scale"_.Bind(0.01));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -72,6 +72,7 @@ class InvertedPendulumEnvBase : public Env<EnvSpecT>, public MujocoEnv {
   using Base::spec_;
 
   bool reward_if_not_terminated_;
+  bool gymnasium_v5_render_camera_;
   mjtNum healthy_reward_, healthy_z_min_, healthy_z_max_;
   std::uniform_real_distribution<> dist_;
 
@@ -90,6 +91,7 @@ class InvertedPendulumEnvBase : public Env<EnvSpecT>, public MujocoEnv {
             RenderHeightOrDefault<kFromPixels>(spec.config),
             RenderCameraIdOrDefault<kFromPixels>(spec.config)),
         reward_if_not_terminated_(spec.config["reward_if_not_terminated"_]),
+        gymnasium_v5_render_camera_(spec.config["gymnasium_v5_render_camera"_]),
         healthy_reward_(spec.config["healthy_reward"_]),
         healthy_z_min_(spec.config["healthy_z_min"_]),
         healthy_z_max_(spec.config["healthy_z_max"_]),
@@ -107,6 +109,16 @@ class InvertedPendulumEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     std::memcpy(qpos0_, data_->qpos, sizeof(mjtNum) * model_->nq);
     std::memcpy(qvel0_, data_->qvel, sizeof(mjtNum) * model_->nv);
 #endif
+  }
+
+  bool RenderCamera(mjvCamera* camera) override {
+    if (!gymnasium_v5_render_camera_) {
+      return false;
+    }
+    camera->trackbodyid = 0;
+    camera->distance = 2.04;
+    ApplyGymnasiumDefaultCameraId(camera);
+    return true;
   }
 
   bool IsDone() override { return done_; }

@@ -38,17 +38,21 @@ class GlContext {
   virtual void ClearCurrent() = 0;
 };
 
-std::shared_ptr<GlContext> CreateGlContext();
+std::shared_ptr<GlContext> CreateGlContext(
+    bool share_cgl_context = false, bool prefer_offline_cgl_context = false);
 
 class OffscreenRenderer {
  public:
   explicit OffscreenRenderer(
-      CameraPolicy camera_policy = CameraPolicy::kGymLike);
+      CameraPolicy camera_policy = CameraPolicy::kGymLike,
+      bool disable_auxiliary_visuals = false, bool share_cgl_context = false,
+      bool prefer_offline_cgl_context = false, bool resize_offscreen = true);
   ~OffscreenRenderer();
 
   void Render(const mjModel* model, mjData* data, int width, int height,
               int camera_id, unsigned char* rgb,
-              const mjvCamera* camera_override = nullptr);
+              const mjvCamera* camera_override = nullptr,
+              const mjvOption* option_override = nullptr);
 
  private:
   void Initialize(const mjModel* model);
@@ -63,8 +67,14 @@ class OffscreenRenderer {
   mjrContext context_;
   std::vector<unsigned char> scratch_;
   CameraPolicy camera_policy_;
+  bool share_cgl_context_;
+  bool prefer_offline_cgl_context_;
+  bool resize_offscreen_;
   bool initialized_{false};
   bool free_camera_initialized_{false};
+#if defined(__APPLE__)
+  bool cgl_first_frame_settled_{false};
+#endif
 };
 
 }  // namespace envpool::mujoco

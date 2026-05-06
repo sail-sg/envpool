@@ -37,6 +37,7 @@ class PusherEnvFns {
         "ctrl_cost_weight"_.Bind(0.1), "dist_cost_weight"_.Bind(1.0),
         "near_cost_weight"_.Bind(0.5),
         "xml_file"_.Bind(std::string("pusher.xml")),
+        "gymnasium_v5_render_camera"_.Bind(false),
         "reward_after_step"_.Bind(false), "weighted_reward_info"_.Bind(false),
         "reset_qvel_scale"_.Bind(0.005), "cylinder_x_min"_.Bind(-0.3),
         "cylinder_x_max"_.Bind(0.0), "cylinder_y_min"_.Bind(-0.2),
@@ -102,8 +103,7 @@ class PusherEnvBase : public Env<EnvSpecT>, public MujocoEnv {
         cylinder_dist_min_(spec.config["cylinder_dist_min"_]),
         reward_after_step_(spec.config["reward_after_step"_]),
         weighted_reward_info_(spec.config["weighted_reward_info"_]),
-        gymnasium_v5_render_camera_(spec.config["xml_file"_] ==
-                                    std::string("pusher_v5.xml")),
+        gymnasium_v5_render_camera_(spec.config["gymnasium_v5_render_camera"_]),
         dist_qpos_x_(spec.config["cylinder_x_min"_],
                      spec.config["cylinder_x_max"_]),
         dist_qpos_y_(spec.config["cylinder_y_min"_],
@@ -142,6 +142,7 @@ class PusherEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     }
     camera->trackbodyid = -1;
     camera->distance = 4.0;
+    ApplyGymnasiumDefaultCameraId(camera);
     return true;
   }
 
