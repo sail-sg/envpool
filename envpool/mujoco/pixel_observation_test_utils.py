@@ -13,6 +13,11 @@
 # limitations under the License.
 """Shared helpers for native MuJoCo pixel-observation tests."""
 
+import os
+import platform
+import subprocess
+import sys
+from collections.abc import Sequence
 from typing import Any
 
 import gymnasium
@@ -20,6 +25,7 @@ import numpy as np
 from absl import logging
 from absl.testing import absltest
 
+from envpool.python import glfw_context as envpool_glfw_context
 from envpool.python.glfw_context import preload_windows_gl_dlls
 from envpool.registration import make_gymnasium, make_spec, registry
 
@@ -28,6 +34,10 @@ preload_windows_gl_dlls(strict=True)
 RENDER_WIDTH = 64
 RENDER_HEIGHT = 48
 NUM_STEPS = 3
+EGL_TEARDOWN_RENDER_WIDTH = 84
+EGL_TEARDOWN_RENDER_HEIGHT = 84
+EGL_TEARDOWN_FRAME_STACK = 3
+EglTeardownCase = tuple[str, str, str]
 
 
 def task_ids_for_import_path(import_path: str) -> list[str]:
@@ -239,3 +249,73 @@ def assert_tasks_align_with_render_for_three_steps(
                     _assert_pixels_match(obs, render)
             finally:
                 env.close()
+
+
+def assert_egl_pixel_env_teardown_exits_cleanly(
+    test: absltest.TestCase,
+    cases: Sequence[EglTeardownCase],
+) -> None:
+    """Checks EGL pixel envs from multiple families can exit cleanly.
+
+    The subprocess intentionally keeps envs alive until interpreter shutdown:
+    issue #401 happens in teardown, after the rollout itself has succeeded.
+    """
+    if platform.system() != "Linux":
+        test.skipTest("EGL teardown regression is Linux-specific.")
+    env = dict(os.environ)
+    env["MUJOCO_GL"] = "egl"
+    env.setdefault("EGL_PLATFORM", "surfaceless")
+
+    package_parent = os.path.dirname(
+        os.path.dirname(os.path.dirname(envpool_glfw_context.__file__))
+    )
+    python_paths = [package_parent] + [
+        path for path in sys.path if path and path != package_parent
+    ]
+    python_path = os.pathsep.join(python_paths)
+    if env.get("PYTHONPATH"):
+        python_path = f"{python_path}{os.pathsep}{env['PYTHONPATH']}"
+    env["PYTHONPATH"] = python_path
+
+    code = f"""
+import importlib
+import sys
+
+sys.path.insert(0, {package_parent!r})
+sys.modules.pop("envpool", None)
+from envpool.registration import make
+
+envs = []
+for label, registration_module, task_id in {tuple(cases)!r}:
+    importlib.import_module(registration_module)
+    pixels = make(
+        task_id,
+        env_type="gymnasium",
+        num_envs=2,
+        from_pixels=True,
+        frame_stack={EGL_TEARDOWN_FRAME_STACK},
+        render_width={EGL_TEARDOWN_RENDER_WIDTH},
+        render_height={EGL_TEARDOWN_RENDER_HEIGHT},
+    )
+    obs, info = pixels.reset()
+    assert obs.shape == (
+        2,
+        {3 * EGL_TEARDOWN_FRAME_STACK},
+        {EGL_TEARDOWN_RENDER_HEIGHT},
+        {EGL_TEARDOWN_RENDER_WIDTH},
+    ), (label, task_id, obs.shape)
+    envs.append(pixels)
+    print("successful", label, task_id)
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        env=env,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    test.assertEqual(
+        result.returncode,
+        0,
+        msg=f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}",
+    )
