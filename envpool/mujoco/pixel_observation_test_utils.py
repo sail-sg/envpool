@@ -37,6 +37,7 @@ NUM_STEPS = 3
 EGL_TEARDOWN_RENDER_WIDTH = 84
 EGL_TEARDOWN_RENDER_HEIGHT = 84
 EGL_TEARDOWN_FRAME_STACK = 3
+EGL_TEARDOWN_SUBPROCESS_TIMEOUT_SECONDS = 180
 EglTeardownCase = tuple[str, str, str]
 
 
@@ -307,13 +308,21 @@ for label, registration_module, task_id in {tuple(cases)!r}:
     envs.append(pixels)
     print("successful", label, task_id)
 """
-    result = subprocess.run(
-        [sys.executable, "-c", code],
-        env=env,
-        check=False,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            env=env,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=EGL_TEARDOWN_SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        test.fail(
+            "EGL teardown subprocess timed out after "
+            f"{EGL_TEARDOWN_SUBPROCESS_TIMEOUT_SECONDS} seconds.\n"
+            f"stdout:\n{exc.stdout or ''}\nstderr:\n{exc.stderr or ''}"
+        )
     test.assertEqual(
         result.returncode,
         0,
