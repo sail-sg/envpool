@@ -89,6 +89,14 @@ def _assert_nested_equal(lhs: Any, rhs: Any) -> None:
     np.testing.assert_allclose(np.asarray(lhs), np.asarray(rhs))
 
 
+def _subprocess_output_to_text(output: str | bytes | None) -> str:
+    if output is None:
+        return ""
+    if isinstance(output, bytes):
+        return output.decode(errors="replace")
+    return output
+
+
 def assert_make_spec_exposes_bchw_pixel_specs(
     test: absltest.TestCase, import_path: str
 ) -> None:
@@ -318,10 +326,12 @@ for label, registration_module, task_id in {tuple(cases)!r}:
             timeout=EGL_TEARDOWN_SUBPROCESS_TIMEOUT_SECONDS,
         )
     except subprocess.TimeoutExpired as exc:
+        stdout = _subprocess_output_to_text(exc.stdout)
+        stderr = _subprocess_output_to_text(exc.stderr)
         test.fail(
             "EGL teardown subprocess timed out after "
             f"{EGL_TEARDOWN_SUBPROCESS_TIMEOUT_SECONDS} seconds.\n"
-            f"stdout:\n{exc.stdout or ''}\nstderr:\n{exc.stderr or ''}"
+            f"stdout:\n{stdout}\nstderr:\n{stderr}"
         )
     test.assertEqual(
         result.returncode,

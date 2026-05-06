@@ -38,6 +38,7 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
     ) -> None:
         if ProcgenGym3Env is None:
             self.skipTest("upstream procgen is not installed")
+        assert ProcgenGym3Env is not None
 
         logging.info(f"procgen oracle check for {task_id}")
         envpool_env = make_gym(
