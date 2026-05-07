@@ -13,7 +13,7 @@
 # limitations under the License.
 """Unit tests for classic control environments."""
 
-from typing import Any, no_type_check
+from typing import Any, cast, no_type_check
 
 import gymnasium as gym
 import numpy as np
@@ -81,6 +81,44 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
         env1 = make_gym("CartPole-v1")
         self.run_space_check(env0, env1)
         self.run_deterministic_check("CartPole-v1")
+
+    def test_cartpole_gymnasium_vector_wrapper(self) -> None:
+        num_envs = 4
+        env = make_gym("CartPole-v1", num_envs=num_envs)
+        self.assertEqual(env.num_envs, num_envs)
+        self.assertTrue(env.is_vector_env)
+        self.assertIs(env.single_observation_space, env.observation_space)
+        self.assertIs(env.single_action_space, env.action_space)
+        if hasattr(gym, "vector") and hasattr(gym.vector, "VectorEnv"):
+            self.assertIsInstance(env, gym.vector.VectorEnv)
+
+        vector_wrappers = getattr(gym.wrappers, "vector", None)
+        normalize_observation = getattr(
+            vector_wrappers, "NormalizeObservation", None
+        )
+        if normalize_observation is None:
+            normalize_observation = gym.wrappers.NormalizeObservation
+        wrapped = cast(Any, normalize_observation)(env)
+        try:
+            obs, _ = wrapped.reset()
+            if hasattr(wrapped, "num_envs"):
+                self.assertEqual(wrapped.num_envs, num_envs)
+            if hasattr(wrapped, "is_vector_env"):
+                self.assertTrue(wrapped.is_vector_env)
+            self.assertEqual(
+                obs.shape, (num_envs, *env.single_observation_space.shape)
+            )
+            obs, rew, term, trunc, _ = wrapped.step(
+                np.zeros(num_envs, dtype=np.int32)
+            )
+            self.assertEqual(
+                obs.shape, (num_envs, *env.single_observation_space.shape)
+            )
+            self.assertEqual(rew.shape, (num_envs,))
+            self.assertEqual(term.shape, (num_envs,))
+            self.assertEqual(trunc.shape, (num_envs,))
+        finally:
+            wrapped.close()
 
     def test_pendulum(self) -> None:
         env0 = gym.make("Pendulum-v1")

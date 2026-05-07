@@ -349,12 +349,28 @@ class GymnasiumEnvPool(EnvPool, Protocol):
     """gymnasium-compatible EnvPool interface."""
 
     @property
+    def num_envs(self) -> int:
+        """Number of sub-environments."""
+
+    @property
+    def is_vector_env(self) -> bool:
+        """Whether the EnvPool should be treated as vectorized."""
+
+    @property
     def observation_space(self) -> Any:
         """Gymnasium observation space."""
 
     @property
+    def single_observation_space(self) -> Any:
+        """Gymnasium single sub-environment observation space."""
+
+    @property
     def action_space(self) -> Any:
         """Gymnasium action space."""
+
+    @property
+    def single_action_space(self) -> Any:
+        """Gymnasium single sub-environment action space."""
 
     @overload
     def recv(
@@ -394,5 +410,8 @@ class GymnasiumEnvPool(EnvPool, Protocol):
     def reset(
         self,
         env_id: np.ndarray | None = None,
+        *,
+        seed: int | list[int] | None = None,
+        options: dict[str, Any] | None = None,
     ) -> GymnasiumResetReturn:
         """Reset the gymnasium-compatible envpool."""
