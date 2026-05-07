@@ -55,6 +55,11 @@ The observation space and action space of resulted environment describe a
 single environment's space, but each time the observation/action's first
 dimension is always equal to ``num_envs``
 (sync mode) or equal to ``batch_size`` (async mode).
+For Gymnasium compatibility, the Gymnasium wrapper also exposes
+``num_envs``, ``is_vector_env``, ``single_observation_space``, and
+``single_action_space`` for vector-aware wrappers such as Gymnasium's vector
+``NormalizeObservation``. EnvPool keeps ``observation_space`` and
+``action_space`` as the single-environment spaces for backward compatibility.
 
 ``envpool.make_gym``, ``envpool.make_dm``, and ``envpool.make_gymnasium`` are
 shortcuts for ``envpool.make(..., env_type="gym" | "dm" | "gymnasium")``,
