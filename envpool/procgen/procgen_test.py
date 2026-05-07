@@ -14,6 +14,8 @@
 """Unit tests for Procgen environments."""
 
 # import cv2
+from typing import Any, cast
+
 import numpy as np
 from absl import logging
 from absl.testing import absltest
@@ -37,7 +39,11 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
         total: int = 200,
     ) -> None:
         if ProcgenGym3Env is None:
-            self.skipTest("upstream procgen is not installed")
+            self.skipTest(
+                "optional upstream procgen oracle is not installed; "
+                "native Procgen checks still run"
+            )
+        procgen_env_cls = cast(Any, ProcgenGym3Env)
 
         logging.info(f"procgen oracle check for {task_id}")
         envpool_env = make_gym(
@@ -51,7 +57,7 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
         procgen_env = None
         rng = np.random.default_rng(seed)
         try:
-            procgen_env = ProcgenGym3Env(
+            procgen_env = procgen_env_cls(
                 num=1,
                 env_name=env_name,
                 distribution_mode=distribution[dist_value].lower(),

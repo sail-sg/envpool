@@ -664,6 +664,27 @@ py_test(
 )
 
 py_test(
+    name = "mujoco_egl_teardown_test",
+    size = "enormous",
+    srcs = ["mujoco_egl_teardown_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":metaworld",
+        ":metaworld_registration",
+        ":mujoco_dmc",
+        ":mujoco_dmc_registration",
+        ":mujoco_gym",
+        ":mujoco_gym_registration",
+        ":mujoco_pixel_observation_test_utils",
+        ":myosuite",
+        ":myosuite_registration",
+        ":robotics",
+        ":robotics_registration",
+        requirement("absl-py"),
+    ],
+)
+
+py_test(
     name = "mujoco_dmc_pixel_observation_test",
     size = "enormous",
     srcs = ["dmc/mujoco_dmc_pixel_observation_test.py"],
@@ -729,6 +750,7 @@ py_test(
 test_suite(
     name = "mujoco_pixel_observation_test",
     tests = [
+        ":mujoco_egl_teardown_test",
         ":mujoco_dmc_pixel_observation_test",
         ":mujoco_gym_pixel_observation_test",
         ":robotics_pixel_observation_test",

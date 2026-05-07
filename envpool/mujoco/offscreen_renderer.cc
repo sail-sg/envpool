@@ -364,64 +364,61 @@ class EglContext final : public GlContext {
         EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE,
     };
 
-    display_ = CreateDisplay();
-    if (display_ == EGL_NO_DISPLAY) {
+    display_ = AcquireDisplay();
+    if (display_ == nullptr) {
       throw std::runtime_error("failed to initialize EGL");
     }
     eglReleaseThread();
+    EGLDisplay display = display_->Get();
     EGLConfig config = nullptr;
     EGLint num_configs = 0;
-    if (eglChooseConfig(display_, config_attribs.data(), &config, 1,
+    if (eglChooseConfig(display, config_attribs.data(), &config, 1,
                         &num_configs) != EGL_TRUE ||
         num_configs < 1) {
-      eglTerminate(display_);
-      display_ = EGL_NO_DISPLAY;
+      display_.reset();
       throw std::runtime_error("failed to choose EGL config");
     }
     if (eglBindAPI(EGL_OPENGL_API) != EGL_TRUE) {
-      eglTerminate(display_);
-      display_ = EGL_NO_DISPLAY;
+      display_.reset();
       throw std::runtime_error("failed to bind EGL OpenGL API");
     }
-    surface_ =
-        eglCreatePbufferSurface(display_, config, pbuffer_attribs.data());
+    surface_ = eglCreatePbufferSurface(display, config, pbuffer_attribs.data());
     if (surface_ == EGL_NO_SURFACE) {
-      eglTerminate(display_);
-      display_ = EGL_NO_DISPLAY;
+      display_.reset();
       throw std::runtime_error("failed to create EGL pbuffer surface");
     }
-    context_ = eglCreateContext(display_, config, EGL_NO_CONTEXT, nullptr);
+    context_ = eglCreateContext(display, config, EGL_NO_CONTEXT, nullptr);
     if (context_ == EGL_NO_CONTEXT) {
-      eglDestroySurface(display_, surface_);
+      eglDestroySurface(display, surface_);
       surface_ = EGL_NO_SURFACE;
-      eglTerminate(display_);
-      display_ = EGL_NO_DISPLAY;
+      display_.reset();
       throw std::runtime_error("failed to create EGL context");
     }
   }
 
   ~EglContext() override {
-    if (display_ != EGL_NO_DISPLAY) {
-      eglMakeCurrent(display_, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    if (display_ != nullptr) {
+      EGLDisplay display = display_->Get();
+      eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
       if (context_ != EGL_NO_CONTEXT) {
-        eglDestroyContext(display_, context_);
+        eglDestroyContext(display, context_);
       }
       if (surface_ != EGL_NO_SURFACE) {
-        eglDestroySurface(display_, surface_);
+        eglDestroySurface(display, surface_);
       }
-      eglTerminate(display_);
       eglReleaseThread();
     }
   }
 
   void MakeCurrent() override {
-    if (eglMakeCurrent(display_, surface_, surface_, context_) != EGL_TRUE) {
+    if (eglMakeCurrent(display_->Get(), surface_, surface_, context_) !=
+        EGL_TRUE) {
       throw std::runtime_error("failed to make EGL context current");
     }
   }
 
   void ClearCurrent() override {
-    if (eglMakeCurrent(display_, EGL_NO_SURFACE, EGL_NO_SURFACE,
+    if (eglMakeCurrent(display_->Get(), EGL_NO_SURFACE, EGL_NO_SURFACE,
                        EGL_NO_CONTEXT) != EGL_TRUE) {
       throw std::runtime_error("failed to clear EGL context");
     }
@@ -429,6 +426,23 @@ class EglContext final : public GlContext {
   }
 
  private:
+  class DisplayHandle {
+   public:
+    explicit DisplayHandle(EGLDisplay display) : display_(display) {}
+
+    ~DisplayHandle() {
+      if (display_ != EGL_NO_DISPLAY) {
+        eglTerminate(display_);
+        eglReleaseThread();
+      }
+    }
+
+    EGLDisplay Get() const { return display_; }
+
+   private:
+    EGLDisplay display_{EGL_NO_DISPLAY};
+  };
+
   static EGLDisplay TryInitializeDisplay(EGLDisplay display) {
     if (display == EGL_NO_DISPLAY) {
       return EGL_NO_DISPLAY;
@@ -502,7 +516,7 @@ class EglContext final : public GlContext {
   }
 #endif
 
-  static EGLDisplay CreateDisplay() {
+  static EGLDisplay CreateRawDisplay() {
 #if defined(ENVPOOL_HAS_EGL_DEVICE_EXT)
     EGLDisplay display = TryInitializeDeviceDisplay();
     if (display != EGL_NO_DISPLAY) {
@@ -512,7 +526,25 @@ class EglContext final : public GlContext {
     return TryInitializeDisplay(eglGetDisplay(EGL_DEFAULT_DISPLAY));
   }
 
-  EGLDisplay display_{EGL_NO_DISPLAY};
+  static std::shared_ptr<DisplayHandle> AcquireDisplay() {
+    static std::mutex mutex;
+    static std::weak_ptr<DisplayHandle> weak_display;
+
+    std::lock_guard<std::mutex> lock(mutex);
+    std::shared_ptr<DisplayHandle> display = weak_display.lock();
+    if (display != nullptr) {
+      return display;
+    }
+    EGLDisplay raw_display = CreateRawDisplay();
+    if (raw_display == EGL_NO_DISPLAY) {
+      return nullptr;
+    }
+    display = std::make_shared<DisplayHandle>(raw_display);
+    weak_display = display;
+    return display;
+  }
+
+  std::shared_ptr<DisplayHandle> display_;
   EGLContext context_{EGL_NO_CONTEXT};
   EGLSurface surface_{EGL_NO_SURFACE};
 };
@@ -587,10 +619,28 @@ OffscreenRenderer::~OffscreenRenderer() {
   if (!initialized_) {
     return;
   }
-  gl_context_->MakeCurrent();
-  mjr_freeContext(&context_);
+  bool made_current = false;
+  try {
+    gl_context_->MakeCurrent();
+    made_current = true;
+  } catch (const std::exception& error) {
+    static_cast<void>(error);
+    // Destructors must not throw during Python/interpreter shutdown. If the GL
+    // context is already unavailable, free CPU-side scene state and let process
+    // teardown reclaim the backend resources.
+  }
+  if (made_current) {
+    mjr_freeContext(&context_);
+  }
   mjv_freeScene(&scene_);
-  gl_context_->ClearCurrent();
+  if (made_current) {
+    try {
+      gl_context_->ClearCurrent();
+    } catch (const std::exception& error) {
+      static_cast<void>(error);
+      // Preserve no-throw destructor semantics.
+    }
+  }
 }
 
 void OffscreenRenderer::Initialize(const mjModel* model) {

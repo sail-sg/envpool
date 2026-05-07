@@ -33,7 +33,7 @@ import sys
 import tempfile
 import warnings
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 # MyoSuite projects normalized muscle actions through np.exp(float32). NumPy's
 # optional x86 SIMD kernels and its scalar kernel differ by single-ULP amounts,
@@ -343,7 +343,7 @@ def _configure_windows_mujoco_renderer() -> None:
     window_proc = wndproc(user32.DefWindowProcW)
 
     class _WndClass(ctypes.Structure):
-        _fields_ = [
+        _fields_: ClassVar[Any] = [
             ("style", wintypes.UINT),
             ("lpfnWndProc", wndproc),
             ("cbClsExtra", ctypes.c_int),
@@ -357,7 +357,7 @@ def _configure_windows_mujoco_renderer() -> None:
         ]
 
     class _PixelFormatDescriptor(ctypes.Structure):
-        _fields_ = [
+        _fields_: ClassVar[Any] = [
             ("nSize", wintypes.WORD),
             ("nVersion", wintypes.WORD),
             ("dwFlags", wintypes.DWORD),
