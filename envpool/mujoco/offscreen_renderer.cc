@@ -25,6 +25,7 @@
 #include <memory>
 #include <mutex>
 #include <stdexcept>
+#include <string_view>
 #include <vector>
 
 #if defined(__APPLE__) && __has_include(<OpenGL/OpenGL.h>)
@@ -382,15 +383,20 @@ class EglContext final : public GlContext {
       display_.reset();
       throw std::runtime_error("failed to bind EGL OpenGL API");
     }
-    surface_ = eglCreatePbufferSurface(display, config, pbuffer_attribs.data());
-    if (surface_ == EGL_NO_SURFACE) {
-      display_.reset();
-      throw std::runtime_error("failed to create EGL pbuffer surface");
+    if (!HasExtension(display, "EGL_KHR_surfaceless_context")) {
+      surface_ =
+          eglCreatePbufferSurface(display, config, pbuffer_attribs.data());
+      if (surface_ == EGL_NO_SURFACE) {
+        display_.reset();
+        throw std::runtime_error("failed to create EGL pbuffer surface");
+      }
     }
     context_ = eglCreateContext(display, config, EGL_NO_CONTEXT, nullptr);
     if (context_ == EGL_NO_CONTEXT) {
-      eglDestroySurface(display, surface_);
-      surface_ = EGL_NO_SURFACE;
+      if (surface_ != EGL_NO_SURFACE) {
+        eglDestroySurface(display, surface_);
+        surface_ = EGL_NO_SURFACE;
+      }
       display_.reset();
       throw std::runtime_error("failed to create EGL context");
     }
@@ -442,6 +448,26 @@ class EglContext final : public GlContext {
    private:
     EGLDisplay display_{EGL_NO_DISPLAY};
   };
+
+  static bool HasExtension(EGLDisplay display, const char* extension) {
+    const char* extensions = eglQueryString(display, EGL_EXTENSIONS);
+    if (extensions == nullptr) {
+      return false;
+    }
+    const std::string_view list(extensions);
+    const std::string_view needle(extension);
+    std::size_t pos = 0;
+    while ((pos = list.find(needle, pos)) != std::string_view::npos) {
+      const bool begins_token = pos == 0 || list[pos - 1] == ' ';
+      const std::size_t end = pos + needle.size();
+      const bool ends_token = end == list.size() || list[end] == ' ';
+      if (begins_token && ends_token) {
+        return true;
+      }
+      pos = end;
+    }
+    return false;
+  }
 
   static EGLDisplay TryInitializeDisplay(EGLDisplay display) {
     if (display == EGL_NO_DISPLAY) {
