@@ -264,7 +264,7 @@ def assert_egl_pixel_env_teardown_exits_cleanly(
     test: absltest.TestCase,
     cases: Sequence[EglTeardownCase],
 ) -> None:
-    """Checks EGL pixel envs from multiple families can exit cleanly.
+    """Checks EGL pixel envs from multiple families exit without GL noise.
 
     The subprocess intentionally keeps envs alive until interpreter shutdown:
     issue #401 happens in teardown, after the rollout itself has succeeded.
@@ -336,5 +336,10 @@ for label, registration_module, task_id in {tuple(cases)!r}:
     test.assertEqual(
         result.returncode,
         0,
+        msg=f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}",
+    )
+    test.assertNotIn(
+        "OpenGL error 0x502 in or before mjr_makeContext",
+        result.stderr,
         msg=f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}",
     )
