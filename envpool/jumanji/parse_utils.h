@@ -23,8 +23,7 @@
 #include <string>
 #include <type_traits>
 
-namespace jumanji {
-namespace parse {
+namespace jumanji::parse {
 
 template <typename T, std::size_t N>
 std::array<T, N> CsvArray(const std::string& text, T fill_value = T{}) {
@@ -48,7 +47,6 @@ std::array<T, N> CsvArray(const std::string& text, T fill_value = T{}) {
   return values;
 }
 
-}  // namespace parse
-}  // namespace jumanji
+}  // namespace jumanji::parse
 
 #endif  // ENVPOOL_JUMANJI_PARSE_UTILS_H_

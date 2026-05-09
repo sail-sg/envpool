@@ -325,15 +325,17 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
     }
     for (int rotation = 0; rotation < 4; ++rotation) {
       for (int col = 0; col < tetris::kCols; ++col) {
-        state["obs:action_mask"_](rotation, col) =
-            use_replay_ && step_count_ > 0 &&
-                    step_count_ <= tetris::kReplaySteps
-                ? replay_action_masks_[((step_count_ - 1) * 4 + rotation) *
-                                           tetris::kCols +
-                                       col]
-            : use_configured_action_mask_ && step_count_ == 0
-                ? configured_action_mask_[rotation * tetris::kCols + col]
-                : CanPlace(col);
+        bool action_mask = CanPlace(col);
+        if (use_replay_ && step_count_ > 0 &&
+            step_count_ <= tetris::kReplaySteps) {
+          action_mask =
+              replay_action_masks_[((step_count_ - 1) * 4 + rotation) *
+                                       tetris::kCols +
+                                   col];
+        } else if (use_configured_action_mask_ && step_count_ == 0) {
+          action_mask = configured_action_mask_[rotation * tetris::kCols + col];
+        }
+        state["obs:action_mask"_](rotation, col) = action_mask;
       }
     }
     state["obs:step_count"_] = use_replay_ ? 0 : step_count_;
