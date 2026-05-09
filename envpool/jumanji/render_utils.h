@@ -24,8 +24,7 @@
 #include <cstdint>
 #include <utility>
 
-namespace jumanji {
-namespace render {
+namespace jumanji::render {
 
 struct Color {
   unsigned char r;
@@ -219,26 +218,26 @@ inline void DrawDigit(int width, int height, int digit, int left, int top,
   const int t = std::max(1, std::min(w, h) / 7);
   const int mid = top + h / 2;
   const std::uint8_t s = segments[static_cast<std::size_t>(digit)];
-  if (s & 0b1000000) {
+  if ((s & 0b1000000) != 0) {
     DrawSegment(width, height, left + t, top, right - t, top + t, color, rgb);
   }
-  if (s & 0b0100000) {
+  if ((s & 0b0100000) != 0) {
     DrawSegment(width, height, right - t, top + t, right, mid, color, rgb);
   }
-  if (s & 0b0010000) {
+  if ((s & 0b0010000) != 0) {
     DrawSegment(width, height, right - t, mid, right, bottom - t, color, rgb);
   }
-  if (s & 0b0001000) {
+  if ((s & 0b0001000) != 0) {
     DrawSegment(width, height, left + t, bottom - t, right - t, bottom, color,
                 rgb);
   }
-  if (s & 0b0000100) {
+  if ((s & 0b0000100) != 0) {
     DrawSegment(width, height, left, mid, left + t, bottom - t, color, rgb);
   }
-  if (s & 0b0000010) {
+  if ((s & 0b0000010) != 0) {
     DrawSegment(width, height, left, top + t, left + t, mid, color, rgb);
   }
-  if (s & 0b0000001) {
+  if ((s & 0b0000001) != 0) {
     DrawSegment(width, height, left + t, mid - t / 2, right - t,
                 mid + (t + 1) / 2, color, rgb);
   }
@@ -258,7 +257,6 @@ inline void DrawNumber(int width, int height, int value, int left, int top,
   DrawDigit(width, height, value % 10, mid + 1, top, right, bottom, color, rgb);
 }
 
-}  // namespace render
-}  // namespace jumanji
+}  // namespace jumanji::render
 
 #endif  // ENVPOOL_JUMANJI_RENDER_UTILS_H_
