@@ -16,6 +16,7 @@
 from absl.testing import absltest
 
 from envpool.mujoco.pixel_observation_test_utils import (
+    assert_egl_async_pixel_envs_do_not_share_context_concurrently,
     assert_egl_pixel_env_teardown_exits_cleanly,
 )
 
@@ -42,6 +43,12 @@ class MujocoEglTeardownTest(absltest.TestCase):
     def test_pixel_env_teardown_exits_cleanly_for_all_gl_families(self) -> None:
         """All native MuJoCo pixel families should exit cleanly under EGL."""
         assert_egl_pixel_env_teardown_exits_cleanly(self, _EGL_TEARDOWN_CASES)
+
+    def test_async_pixel_envs_do_not_share_egl_context_concurrently(
+        self,
+    ) -> None:
+        """Async pixel envs should not reuse one EGL context concurrently."""
+        assert_egl_async_pixel_envs_do_not_share_context_concurrently(self)
 
 
 if __name__ == "__main__":

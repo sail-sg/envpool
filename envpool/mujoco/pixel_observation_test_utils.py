@@ -38,6 +38,7 @@ EGL_TEARDOWN_RENDER_WIDTH = 84
 EGL_TEARDOWN_RENDER_HEIGHT = 84
 EGL_TEARDOWN_FRAME_STACK = 3
 EGL_TEARDOWN_SUBPROCESS_TIMEOUT_SECONDS = 180
+EGL_ASYNC_CONTEXT_STEPS = 64
 EglTeardownCase = tuple[str, str, str]
 
 
@@ -340,6 +341,97 @@ for label, registration_module, task_id in {tuple(cases)!r}:
     )
     test.assertNotIn(
         "OpenGL error 0x502 in or before mjr_makeContext",
+        result.stderr,
+        msg=f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}",
+    )
+
+
+def assert_egl_async_pixel_envs_do_not_share_context_concurrently(
+    test: absltest.TestCase,
+) -> None:
+    """Checks async pixel rendering does not reuse one EGL context in workers."""
+    if platform.system() != "Linux":
+        test.skipTest("EGL context regression is Linux-specific.")
+    env = dict(os.environ)
+    env["MUJOCO_GL"] = "egl"
+    env.setdefault("EGL_PLATFORM", "surfaceless")
+
+    package_parent = os.path.dirname(
+        os.path.dirname(os.path.dirname(envpool_glfw_context.__file__))
+    )
+    python_paths = [package_parent] + [
+        path for path in sys.path if path and path != package_parent
+    ]
+    python_path = os.pathsep.join(python_paths)
+    if env.get("PYTHONPATH"):
+        python_path = f"{python_path}{os.pathsep}{env['PYTHONPATH']}"
+    env["PYTHONPATH"] = python_path
+
+    code = f"""
+import importlib
+import sys
+
+import numpy as np
+
+sys.path.insert(0, {package_parent!r})
+sys.modules.pop("envpool", None)
+importlib.import_module("envpool.mujoco.dmc.registration")
+from envpool.registration import make
+
+pixels = make(
+    "WalkerWalk-v1",
+    env_type="gymnasium",
+    num_envs=4,
+    batch_size=2,
+    num_threads=2,
+    from_pixels=True,
+    render_width={RENDER_WIDTH},
+    render_height={RENDER_HEIGHT},
+)
+pixels.async_reset()
+for _ in range(2):
+    obs, reward, term, trunc, info = pixels.recv()
+    assert obs.shape == (2, 3, {RENDER_HEIGHT}, {RENDER_WIDTH}), obs.shape
+
+action = np.zeros((2,) + pixels.action_space.shape, dtype=np.float64)
+pairs = [
+    np.asarray([0, 2], dtype=np.int32),
+    np.asarray([1, 3], dtype=np.int32),
+    np.asarray([0, 3], dtype=np.int32),
+    np.asarray([1, 2], dtype=np.int32),
+]
+for i in range({EGL_ASYNC_CONTEXT_STEPS}):
+    pixels.send(action, pairs[i % len(pairs)])
+    obs, reward, term, trunc, info = pixels.recv()
+    assert obs.shape == (2, 3, {RENDER_HEIGHT}, {RENDER_WIDTH}), obs.shape
+
+pixels.close()
+print("successful async egl context stress")
+"""
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            env=env,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=EGL_TEARDOWN_SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        stdout = _subprocess_output_to_text(exc.stdout)
+        stderr = _subprocess_output_to_text(exc.stderr)
+        test.fail(
+            "EGL async context subprocess timed out after "
+            f"{EGL_TEARDOWN_SUBPROCESS_TIMEOUT_SECONDS} seconds.\n"
+            f"stdout:\n{stdout}\nstderr:\n{stderr}"
+        )
+    test.assertEqual(
+        result.returncode,
+        0,
+        msg=f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}",
+    )
+    test.assertNotIn(
+        "failed to make EGL context current",
         result.stderr,
         msg=f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}",
     )
