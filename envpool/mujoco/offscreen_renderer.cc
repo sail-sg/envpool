@@ -437,10 +437,12 @@ class EglContext final : public GlContext {
     explicit DisplayHandle(EGLDisplay display) : display_(display) {}
 
     ~DisplayHandle() {
-      if (display_ != EGL_NO_DISPLAY) {
-        eglTerminate(display_);
-        eglReleaseThread();
-      }
+      // EGLDisplay handles are process-wide. Python MuJoCo/Gymnasium renderers
+      // cache the same display in module globals, so terminating it when the
+      // last EnvPool renderer closes can invalidate later upstream renders in
+      // the same process. Contexts and surfaces remain renderer-owned and are
+      // destroyed normally; keep the display alive until process teardown.
+      eglReleaseThread();
     }
 
     EGLDisplay Get() const { return display_; }
@@ -554,10 +556,9 @@ class EglContext final : public GlContext {
 
   static std::shared_ptr<DisplayHandle> AcquireDisplay() {
     static std::mutex mutex;
-    static std::weak_ptr<DisplayHandle> weak_display;
+    static std::shared_ptr<DisplayHandle> display;
 
     std::lock_guard<std::mutex> lock(mutex);
-    std::shared_ptr<DisplayHandle> display = weak_display.lock();
     if (display != nullptr) {
       return display;
     }
@@ -566,7 +567,6 @@ class EglContext final : public GlContext {
       return nullptr;
     }
     display = std::make_shared<DisplayHandle>(raw_display);
-    weak_display = display;
     return display;
   }
 
@@ -608,9 +608,12 @@ std::shared_ptr<GlContext> CreateGlContext(bool share_cgl_context,
 #elif defined(ENVPOOL_HAS_EGL)
   (void)share_cgl_context;
   (void)prefer_offline_cgl_context;
-  thread_local std::shared_ptr<GlContext> context =
-      std::make_shared<EglContext>();
-  return context;
+  // EnvPool worker threads can process a different environment on a later
+  // reset/step. If multiple renderers created on one worker share a thread
+  // local EGLContext, those renderers can later try to make the same context
+  // current concurrently on different workers. Keep the EGLDisplay shared, but
+  // give each renderer its own EGLContext.
+  return std::make_shared<EglContext>();
 #else
   (void)share_cgl_context;
   (void)prefer_offline_cgl_context;
