@@ -76,6 +76,8 @@ booleans
 viewport
 Tensorflow
 Jax
+Jumanji
+Matplotlib
 Xcode
 jitting
 api
