@@ -5,4 +5,6 @@ dm-env>=1.6
 gymnasium>=1.2.3
 optree>=0.19.0
 jax[cpu]>=0.9.2,<0.10
+matplotlib>=3.5
 packaging>=26.0
+pillow>=9
