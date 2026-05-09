@@ -2,7 +2,7 @@ target-version = "py311"
 line-length = 80
 preview = true
 force-exclude = true
-extend-exclude = ["build", "docs/_build"]
+extend-exclude = ["build", "docs/_build", "envpool/jumanji/_official_render"]
 
 [lint]
 select = [

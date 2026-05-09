@@ -14,6 +14,7 @@
 
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//envpool:requirements.bzl", "requirement")
+load("//third_party/jumanji:oracle_requirements.bzl", "jumanji_oracle_requirement")
 
 py_binary(
     name = "render_compare",
@@ -21,6 +22,8 @@ py_binary(
     imports = [".."],
     visibility = ["//visibility:public"],
     deps = [
+        "//envpool/jumanji",
+        "//envpool/jumanji:jumanji_registration",
         "//envpool/mujoco:metaworld",
         "//envpool/mujoco:metaworld_registration",
         "//envpool/python:glfw_context",
@@ -28,9 +31,13 @@ py_binary(
         requirement("gymnasium"),
         requirement("imageio"),
         requirement("mujoco"),
-        requirement("numpy"),
-        requirement("pillow"),
         requirement("scipy"),
         requirement("typing-extensions"),
+        jumanji_oracle_requirement("jax"),
+        jumanji_oracle_requirement("jumanji"),
+        jumanji_oracle_requirement("matplotlib"),
+        jumanji_oracle_requirement("numpy"),
+        jumanji_oracle_requirement("pillow"),
+        jumanji_oracle_requirement("requests"),
     ],
 )
