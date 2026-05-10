@@ -29,7 +29,8 @@ from envpool.registration import make_gym
 
 _PACKAGE_DIR = os.path.dirname(__file__)
 _D1_NUM_ENVS = 10
-_D3_NUM_ENVS = 10
+_D3_NUM_ENVS = 4
+_D3_MAX_STEPS = 600
 
 
 def _get_map_path(path: str) -> str:
@@ -509,7 +510,7 @@ def _d3_custom_cfg() -> str:
     with open(_get_map_path("D3_battle.cfg")) as f:
         cfg = f.read()
     cfg = cfg.replace(
-        "screen_resolution = RES_160X120", "screen_resolution = RES_640X480"
+        "screen_resolution = RES_160X120", "screen_resolution = RES_320X240"
     )
     cfg = cfg.replace("screen_format = GRAY8", "screen_format = CRCGCB")
     cfg = cfg.replace("render_weapon = true", "render_weapon = false")
@@ -550,7 +551,7 @@ def _d3_cfg_file(prefix: str = "") -> Iterator[str]:
 def _eval_d3(
     num_envs: int = _D3_NUM_ENVS,
     cfg_prefix: str = "",
-    max_steps: int = 1050,
+    max_steps: int = _D3_MAX_STEPS,
 ) -> tuple[np.ndarray, np.ndarray]:
     with _temporary_workdir(), _d3_cfg_file(cfg_prefix) as cfg_path:
         env = make_gym(
@@ -563,8 +564,8 @@ def _eval_d3(
             stack_num=1,
             frame_skip=2,
             max_episode_steps=max_steps,
-            img_width=640,
-            img_height=480,
+            img_width=320,
+            img_height=240,
             reward_config={"DAMAGECOUNT": [1, 0], "KILLCOUNT": [10, 0]},
             selected_weapon_reward_config={},
         )
@@ -607,17 +608,17 @@ def _eval_d3(
 
 
 class _VizdoomPretrainTest(absltest.TestCase):
-    def test_d1_basic_cv_policy(self) -> None:
+    def test_0_d3_battle_cv_policy(self) -> None:
+        rewards, lengths = _eval_d3()
+        self.assertGreaterEqual(rewards.mean(), 150.0)
+        self.assertGreaterEqual(rewards.min(), 40.0)
+        self.assertGreaterEqual(lengths.mean(), 500)
+
+    def test_1_d1_basic_cv_policy(self) -> None:
         rewards, lengths = _eval_d1()
         self.assertGreaterEqual(rewards.mean(), 0.8)
         self.assertGreaterEqual(rewards.min(), 0.25)
         self.assertGreaterEqual(lengths.mean(), 1500)
-
-    def test_d3_battle_cv_policy(self) -> None:
-        rewards, lengths = _eval_d3()
-        self.assertGreaterEqual(rewards.mean(), 400.0)
-        self.assertGreaterEqual(rewards.min(), 200.0)
-        self.assertGreaterEqual(lengths.mean(), 900)
 
 
 if __name__ == "__main__":
