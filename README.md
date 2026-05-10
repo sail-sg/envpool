@@ -21,6 +21,7 @@
 - [x] [Highway](https://envpool.readthedocs.io/en/latest/env/highway.html)
 - [x] [MetaWorld](https://envpool.readthedocs.io/en/latest/env/metaworld.html)
 - [x] [MyoSuite](https://envpool.readthedocs.io/en/latest/env/myosuite.html)
+- [x] [PGX Go](https://envpool.readthedocs.io/en/latest/env/pgx.html): `go_9x9`, `go_19x19`
 
 Here are EnvPool's several highlights:
 

@@ -64,6 +64,7 @@ optree==0.19.0
 packaging==26.0
 pandas==2.3.1
 pettingzoo==1.24.3
+pgx==2.6.0
 pillow==12.1.1
 protobuf==7.34.1
 pygame==2.6.1
@@ -75,6 +76,7 @@ requests==2.32.5
 scipy==1.17.1
 six==1.17.0
 swig==4.4.1
+svgwrite==1.4.3
 sympy==1.14.0
 tensorboard==2.20.0
 tensorboard-data-server==0.7.2

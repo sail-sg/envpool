@@ -144,6 +144,10 @@ def gym_spec_transform(
     if discrete_range is not None:
         start, num_values = discrete_range
         return gymnasium.spaces.Discrete(n=num_values, start=start)
+    if np.issubdtype(spec.dtype, np.bool_):
+        return gymnasium.spaces.MultiBinary(
+            [s for s in spec.shape if s != -1]
+        )
     return gymnasium.spaces.Box(
         shape=[s for s in spec.shape if s != -1],
         dtype=spec.dtype,
