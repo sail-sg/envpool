@@ -15,14 +15,10 @@
 # limitations under the License.
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, NamedTuple
+from dataclasses import dataclass
+from typing import Any, NamedTuple
 
 import numpy as np
-
-if TYPE_CHECKING:  # https://github.com/python/mypy/issues/6239
-    from dataclasses import dataclass
-else:
-    from dataclasses import dataclass
 
 
 @dataclass

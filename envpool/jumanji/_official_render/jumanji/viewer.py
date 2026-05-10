@@ -1,6 +1,5 @@
 # ruff: noqa
 # fmt: off
-from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +15,8 @@ from __future__ import annotations
 # limitations under the License.
 
 """Abstract environment viewer class."""
+
+from __future__ import annotations
 
 import abc
 from typing import Any, Callable, Generic, Optional, Sequence, Tuple

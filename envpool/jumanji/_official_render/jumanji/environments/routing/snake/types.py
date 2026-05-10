@@ -15,14 +15,9 @@
 # limitations under the License.
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import IntEnum
-from typing import TYPE_CHECKING, NamedTuple
-
-
-if TYPE_CHECKING:
-    from dataclasses import dataclass
-else:
-    from dataclasses import dataclass
+from typing import Any, NamedTuple
 
 
 class Position(NamedTuple):

@@ -1,6 +1,5 @@
 # ruff: noqa
 # fmt: off
-from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +13,7 @@ from __future__ import annotations
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 from importlib import resources
 from itertools import groupby, pairwise
@@ -159,7 +159,7 @@ class CVRPViewer(MatplotlibViewer):
         map_img = plt.imread(img_path)
         ax.imshow(map_img, extent=(0, 1, 0, 1))
 
-    def _group_tour(self, tour: Array) -> list:
+    def _group_tour(self, tour: NDArray) -> list:
         """Group the tour into routes that either (1) start and end at the depot, or, (2) start at
         the depot and end at the current city.
 
@@ -179,7 +179,7 @@ class CVRPViewer(MatplotlibViewer):
         return tour_grouped
 
     def _draw_route(
-        self, ax: plt.Axes, coords: Array, col_id: int
+        self, ax: plt.Axes, coords: NDArray, col_id: int
     ) -> Tuple[Quiver, PathCollection]:
         """Draw the arrows and nodes for each route in the given colour."""
         x, y = coords.T

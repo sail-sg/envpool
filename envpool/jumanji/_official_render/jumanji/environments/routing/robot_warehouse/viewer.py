@@ -1,6 +1,5 @@
 # ruff: noqa
 # fmt: off
-from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,8 +17,9 @@ from __future__ import annotations
 """File adapted from [Rware](https://github.com/semitable/robotic-warehouse). More specifically,
 the rendering code is copied from the original Rware environment and should be ignored from the
 copyright."""
+from __future__ import annotations
 
-from typing import Optional, Sequence, Tuple
+from typing import Any, Optional, Sequence, Tuple
 
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt

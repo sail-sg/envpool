@@ -15,14 +15,10 @@
 # limitations under the License.
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
-
-if TYPE_CHECKING:
-    from dataclasses import dataclass
-else:
-    from dataclasses import dataclass
 
 
 @dataclass
