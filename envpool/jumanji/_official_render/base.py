@@ -15,12 +15,17 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Callable
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.layout_engine import ConstrainedLayoutEngine
 from numpy.typing import NDArray
+
+
+def asset_path(name: str) -> Path:
+    return Path(__file__).with_name("img") / name
 
 
 class MatplotlibViewer:

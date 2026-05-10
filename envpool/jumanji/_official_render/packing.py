@@ -16,7 +16,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, NamedTuple
 
 import matplotlib
@@ -26,7 +25,7 @@ import mpl_toolkits.mplot3d.art3d
 import numpy as np
 from numpy.typing import NDArray
 
-from envpool.jumanji._official_render.base import MatplotlibViewer
+from envpool.jumanji._official_render.base import MatplotlibViewer, asset_path
 
 
 @dataclass
@@ -443,11 +442,7 @@ class KnapsackViewer(MatplotlibViewer):
         ax.set_ylim(0, 1)
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
-        img_path = (
-            Path(__file__).with_name("jumanji")
-            / "environments/packing/knapsack/img/knapsack.png"
-        )
-        ax.imshow(plt.imread(img_path), extent=(0, 1, 0, 1))
+        ax.imshow(plt.imread(asset_path("knapsack.png")), extent=(0, 1, 0, 1))
 
 
 class TetrisViewer(MatplotlibViewer):

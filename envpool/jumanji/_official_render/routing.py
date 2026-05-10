@@ -18,7 +18,6 @@ from __future__ import annotations
 from dataclasses import dataclass, fields, is_dataclass
 from enum import IntEnum
 from itertools import groupby
-from pathlib import Path
 from typing import Any, Callable, NamedTuple
 
 import matplotlib
@@ -35,16 +34,9 @@ from PIL import Image
 
 from envpool.jumanji._official_render.base import (
     MatplotlibViewer,
+    asset_path,
     spring_layout,
 )
-
-
-def _routing_asset(*parts: str) -> Path:
-    return (
-        Path(__file__).with_name("jumanji")
-        / "environments/routing"
-        / Path(*parts)
-    )
 
 
 def _tree_slice(tree: Any, index: int) -> Any:
@@ -257,19 +249,19 @@ class CVRPViewer(MatplotlibViewer):
         self._clear_display()
         fig, ax = self._get_fig_ax()
         ax.clear()
-        self._prepare_figure(ax, "cvrp")
+        self._prepare_figure(ax)
         self._add_tour(ax, state)
         if save_path:
             fig.savefig(save_path, bbox_inches="tight", pad_inches=0.2)
         return self._display(fig)
 
-    def _prepare_figure(self, ax: plt.Axes, family: str) -> None:
+    def _prepare_figure(self, ax: plt.Axes) -> None:
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
         ax.imshow(
-            plt.imread(_routing_asset(family, "img", "city_map.jpeg")),
+            plt.imread(asset_path("city_map.jpeg")),
             extent=(0, 1, 0, 1),
         )
 
@@ -443,7 +435,7 @@ class LevelBasedForagingViewer(MatplotlibViewer):
         ax.add_collection(LineCollection(lines, colors=(self.LINE_COLOR,)))
 
     def _draw_agents(self, agents: LBFAgent, ax: plt.Axes) -> None:
-        img = plt.imread(_routing_asset("lbf", "imgs", "agent.png"))
+        img = plt.imread(asset_path("lbf_agent.png"))
         for i in range(len(agents.level)):
             agent = _tree_slice(agents, i)
             cell_center = self._entity_position(agent)
@@ -454,7 +446,7 @@ class LevelBasedForagingViewer(MatplotlibViewer):
             self.draw_badge(agent.level, cell_center, ax)
 
     def _draw_food(self, food_items: Food, ax: plt.Axes) -> None:
-        img = plt.imread(_routing_asset("lbf", "imgs", "apple.png"))
+        img = plt.imread(asset_path("lbf_apple.png"))
         for i in range(len(food_items.level)):
             food = _tree_slice(food_items, i)
             if food.eaten:
@@ -748,7 +740,7 @@ class MultiCVRPViewer(CVRPViewer):
         self._clear_display()
         fig, ax = self._get_fig_ax()
         ax.clear()
-        self._prepare_figure(ax, "multi_cvrp")
+        self._prepare_figure(ax)
         self._add_tour(ax, state)
         if save_path:
             fig.savefig(save_path, bbox_inches="tight", pad_inches=0.2)
@@ -1283,7 +1275,7 @@ class BoxViewer(MatplotlibViewer):
             "box_on_target",
         ]
         self.images = [
-            Image.open(_routing_asset("sokoban", "imgs", f"{image_name}.png"))
+            Image.open(asset_path(f"sokoban_{image_name}.png"))
             for image_name in image_names
         ]
         super().__init__(name, render_mode)
@@ -1351,7 +1343,7 @@ class TSPViewer(MatplotlibViewer):
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
         ax.imshow(
-            plt.imread(_routing_asset("tsp", "img", "city_map.jpeg")),
+            plt.imread(asset_path("city_map.jpeg")),
             extent=(0, 1, 0, 1),
         )
 
