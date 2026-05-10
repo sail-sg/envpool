@@ -20,12 +20,12 @@ import numpy as np
 from absl.testing import absltest
 
 import envpool.pgx.registration  # noqa: F401
-from envpool.registration import make_gymnasium, make_spec
+from envpool.registration import make_gymnasium, make_spec, registry
 
 
 def _make_small_go(**kwargs):
     return make_gymnasium(
-        "go_9x9",
+        "Go9x9-v1",
         board_size=5,
         num_envs=1,
         seed=0,
@@ -35,7 +35,7 @@ def _make_small_go(**kwargs):
 
 def _make_small_chinese_go(**kwargs):
     return make_gymnasium(
-        "go_chinese_9x9",
+        "ChineseGo9x9-v1",
         board_size=5,
         num_envs=1,
         seed=0,
@@ -50,10 +50,10 @@ def _step(env, action: int):
 class _PgxGoTest(absltest.TestCase):
     def test_registered_specs_match_pgx_shape(self) -> None:
         cases = (
-            ("go_9x9", 9, "pgx"),
-            ("go_19x19", 19, "pgx"),
-            ("go_chinese_9x9", 9, "chinese"),
-            ("go_chinese_19x19", 19, "chinese"),
+            ("Go9x9-v1", 9, "pgx"),
+            ("Go19x19-v1", 19, "pgx"),
+            ("ChineseGo9x9-v1", 9, "chinese"),
+            ("ChineseGo19x19-v1", 19, "chinese"),
         )
         for task_id, size, rules in cases:
             with self.subTest(task_id=task_id):
@@ -72,6 +72,19 @@ class _PgxGoTest(absltest.TestCase):
                     spec.gymnasium_action_space, gym.spaces.Discrete
                 )
                 self.assertEqual(spec.gymnasium_action_space.n, size * size + 1)
+
+    def test_go_tasks_do_not_register_aliases(self) -> None:
+        """Go tasks use EnvPool-style task IDs only."""
+        for task_id in (
+            "PGXGo9x9-v1",
+            "PGXGo19x19-v1",
+            "go_9x9",
+            "go_19x19",
+            "go_chinese_9x9",
+            "go_chinese_19x19",
+        ):
+            with self.subTest(task_id=task_id):
+                self.assertNotIn(task_id, registry.specs)
 
     def test_reset_shapes_and_player_metadata(self) -> None:
         env = _make_small_go()
@@ -180,7 +193,7 @@ class _PgxGoTest(absltest.TestCase):
 
     def test_chinese_rules_mask_positional_superko(self) -> None:
         env = make_gymnasium(
-            "go_chinese_9x9",
+            "ChineseGo9x9-v1",
             board_size=3,
             max_terminal_steps=200,
             num_envs=1,

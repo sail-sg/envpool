@@ -4,11 +4,11 @@ PGX
 EnvPool includes a native C++ implementation of the PGX Go environments from
 `PGX <https://github.com/sotetsuk/pgx>`_ 2.6.0.
 
-The default ``go_9x9`` and ``go_19x19`` tasks follow PGX's Go v1 rules:
+The default ``Go9x9-v1`` and ``Go19x19-v1`` tasks follow PGX's Go v1 rules:
 
 * Tromp-Taylor scoring.
 * Two players.
-* ``go_9x9`` and ``go_19x19`` task IDs.
+* ``Go9x9-v1`` and ``Go19x19-v1`` task IDs.
 * ``N * N + 1`` discrete actions, where the final action is pass.
 * Boolean observation shape ``(N, N, 17)`` using the AlphaGo Zero history
   planes.
@@ -27,10 +27,10 @@ EnvPool also provides Chinese-rule variants:
 Supported Tasks
 ---------------
 
-* ``go_9x9``; alias: ``PGXGo9x9-v1``
-* ``go_19x19``; alias: ``PGXGo19x19-v1``
-* ``go_chinese_9x9``; alias: ``ChineseGo9x9-v1``
-* ``go_chinese_19x19``; alias: ``ChineseGo19x19-v1``
+* ``Go9x9-v1``
+* ``Go19x19-v1``
+* ``ChineseGo9x9-v1``
+* ``ChineseGo19x19-v1``
 
 Observation
 -----------

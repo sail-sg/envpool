@@ -24,10 +24,10 @@ import envpool.pgx.registration  # noqa: F401
 from envpool.registration import make_gymnasium
 
 _TASKS = (
-    ("go_9x9", 9),
-    ("go_19x19", 19),
-    ("go_chinese_9x9", 9),
-    ("go_chinese_19x19", 19),
+    ("Go9x9-v1", 9),
+    ("Go19x19-v1", 19),
+    ("ChineseGo9x9-v1", 9),
+    ("ChineseGo19x19-v1", 19),
 )
 
 

@@ -21,7 +21,7 @@
 - [x] [Highway](https://envpool.readthedocs.io/en/latest/env/highway.html)
 - [x] [MetaWorld](https://envpool.readthedocs.io/en/latest/env/metaworld.html)
 - [x] [MyoSuite](https://envpool.readthedocs.io/en/latest/env/myosuite.html)
-- [x] [PGX Go](https://envpool.readthedocs.io/en/latest/env/pgx.html): `go_9x9`, `go_19x19`, Chinese-rule variants
+- [x] [PGX](https://envpool.readthedocs.io/en/latest/env/pgx.html): `Go9x9-v1`, `Go19x19-v1`, Chinese-rule variants
 
 Here are EnvPool's several highlights:
 

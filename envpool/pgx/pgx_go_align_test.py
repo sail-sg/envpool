@@ -29,8 +29,8 @@ from envpool.registration import make_gymnasium
 
 _PGX_VERSION = "2.6.0"
 _PUBLIC_CASES = (
-    ("go_9x9", 9, 30),
-    ("go_19x19", 19, 30),
+    ("Go9x9-v1", "go_9x9", 9, 30),
+    ("Go19x19-v1", "go_19x19", 19, 30),
 )
 _FIVE_BY_FIVE_ACTIONS = (
     12,
@@ -92,9 +92,9 @@ def _make_envpool_go(task_id: str, size: int, **kwargs: Any) -> Any:
     return make_gymnasium(task_id, **env_kwargs)
 
 
-def _make_pgx_go(task_id: str, size: int, **kwargs: Any) -> Any:
+def _make_pgx_go(oracle_id: str, size: int, **kwargs: Any) -> Any:
     if size in (9, 19) and not kwargs:
-        return pgx.make(task_id)
+        return pgx.make(oracle_id)
     return Go(size=size, **kwargs)
 
 
@@ -208,11 +208,12 @@ class PgxGoAlignTest(absltest.TestCase):
     def _reset_pair(
         self,
         task_id: str,
+        oracle_id: str,
         size: int,
         **kwargs: Any,
     ) -> tuple[Any, Any, Any]:
         env = _make_envpool_go(task_id, size, **kwargs)
-        oracle = _make_pgx_go(task_id, size, **kwargs)
+        oracle = _make_pgx_go(oracle_id, size, **kwargs)
         obs, info = env.reset()
         oracle_state = _init_oracle_for_current_player(
             oracle,
@@ -223,9 +224,13 @@ class PgxGoAlignTest(absltest.TestCase):
 
     def test_public_go_tasks_align_with_pgx_oracle(self) -> None:
         """Registered Go tasks should match PGX for nontrivial rollouts."""
-        for task_id, size, rollout_steps in _PUBLIC_CASES:
+        for task_id, oracle_id, size, rollout_steps in _PUBLIC_CASES:
             with self.subTest(task_id=task_id):
-                env, oracle, oracle_state = self._reset_pair(task_id, size)
+                env, oracle, oracle_state = self._reset_pair(
+                    task_id,
+                    oracle_id,
+                    size,
+                )
                 board_area = size * size
                 for step in range(rollout_steps):
                     mask = np.asarray(oracle_state.legal_action_mask)
@@ -259,7 +264,11 @@ class PgxGoAlignTest(absltest.TestCase):
 
     def test_five_by_five_capture_rollout_aligns_with_pgx_oracle(self) -> None:
         """A capture-heavy upstream 5x5 rollout should match step by step."""
-        env, oracle, oracle_state = self._reset_pair("go_9x9", 5)
+        env, oracle, oracle_state = self._reset_pair(
+            "Go9x9-v1",
+            "go_9x9",
+            5,
+        )
         for action in _FIVE_BY_FIVE_ACTIONS:
             oracle_state = self._step_and_assert(
                 env,
@@ -272,7 +281,11 @@ class PgxGoAlignTest(absltest.TestCase):
 
     def test_ko_and_illegal_retake_align_with_pgx_oracle(self) -> None:
         """SSK ko masking and illegal retake penalties should match PGX."""
-        env, oracle, oracle_state = self._reset_pair("go_9x9", 5)
+        env, oracle, oracle_state = self._reset_pair(
+            "Go9x9-v1",
+            "go_9x9",
+            5,
+        )
         for action in _KO_ACTIONS:
             oracle_state = self._step_and_assert(
                 env,
@@ -288,9 +301,13 @@ class PgxGoAlignTest(absltest.TestCase):
 
     def test_occupied_illegal_action_aligns_with_pgx_oracle(self) -> None:
         """Ordinary illegal occupied-point moves should match PGX."""
-        for task_id, size, _ in _PUBLIC_CASES:
+        for task_id, oracle_id, size, _ in _PUBLIC_CASES:
             with self.subTest(task_id=task_id):
-                env, oracle, oracle_state = self._reset_pair(task_id, size)
+                env, oracle, oracle_state = self._reset_pair(
+                    task_id,
+                    oracle_id,
+                    size,
+                )
                 oracle_state = self._step_and_assert(
                     env,
                     oracle,
@@ -312,6 +329,7 @@ class PgxGoAlignTest(absltest.TestCase):
     def test_positional_superko_aligns_with_pgx_oracle(self) -> None:
         """PSK terminal state and rewards should match PGX exactly."""
         env, oracle, oracle_state = self._reset_pair(
+            "Go9x9-v1",
             "go_9x9",
             3,
             max_terminal_steps=200,
@@ -330,6 +348,7 @@ class PgxGoAlignTest(absltest.TestCase):
     def test_max_terminal_steps_aligns_with_pgx_oracle(self) -> None:
         """Time-limit terminal logic should match PGX Go."""
         env, oracle, oracle_state = self._reset_pair(
+            "Go9x9-v1",
             "go_9x9",
             9,
             max_terminal_steps=3,

@@ -24,10 +24,10 @@ import envpool.pgx.registration  # noqa: F401
 from envpool.registration import make_gymnasium
 
 _TASKS = (
-    ("go_9x9", 9),
-    ("go_19x19", 19),
-    ("go_chinese_9x9", 9),
-    ("go_chinese_19x19", 19),
+    ("Go9x9-v1", 9),
+    ("Go19x19-v1", 19),
+    ("ChineseGo9x9-v1", 9),
+    ("ChineseGo19x19-v1", 19),
 )
 
 
@@ -79,7 +79,7 @@ class PgxGoRenderTest(absltest.TestCase):
     def test_batched_render_env_id_selection(self) -> None:
         """Batched render should respect explicit env-id selection."""
         env = make_gymnasium(
-            "go_9x9",
+            "Go9x9-v1",
             board_size=5,
             num_envs=2,
             seed=0,
@@ -105,7 +105,7 @@ class PgxGoRenderTest(absltest.TestCase):
     def test_render_marks_stone_colors_at_grid_points(self) -> None:
         """Rendered stones should use stable black and white colors."""
         env = make_gymnasium(
-            "go_9x9",
+            "Go9x9-v1",
             board_size=5,
             num_envs=1,
             seed=0,

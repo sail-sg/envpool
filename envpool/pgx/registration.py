@@ -28,16 +28,14 @@ _COMMON = {
 }
 
 register(
-    task_id="go_9x9",
-    aliases=["PGXGo9x9-v1"],
+    task_id="Go9x9-v1",
     board_size=9,
     task="go_9x9",
     **_COMMON,
 )
 
 register(
-    task_id="go_19x19",
-    aliases=["PGXGo19x19-v1"],
+    task_id="Go19x19-v1",
     board_size=19,
     task="go_19x19",
     **_COMMON,
@@ -49,16 +47,14 @@ _CHINESE_COMMON = {
 }
 
 register(
-    task_id="go_chinese_9x9",
-    aliases=["ChineseGo9x9-v1"],
+    task_id="ChineseGo9x9-v1",
     board_size=9,
     task="go_chinese_9x9",
     **_CHINESE_COMMON,
 )
 
 register(
-    task_id="go_chinese_19x19",
-    aliases=["ChineseGo19x19-v1"],
+    task_id="ChineseGo19x19-v1",
     board_size=19,
     task="go_chinese_19x19",
     **_CHINESE_COMMON,
