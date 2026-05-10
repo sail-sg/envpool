@@ -34,6 +34,7 @@ class GoEnvFns {
   static decltype(auto) DefaultConfig() {
     return MakeDict("board_size"_.Bind(19), "komi"_.Bind(7.5),
                     "history_length"_.Bind(8), "max_terminal_steps"_.Bind(0),
+                    "rules"_.Bind(std::string("pgx")),
                     "task"_.Bind(std::string("go_19x19")));
   }
 
@@ -50,6 +51,8 @@ class GoEnvFns {
         "info:ko"_.Bind(Spec<int>({}, {-1, size * size - 1})),
         "info:is_psk"_.Bind(Spec<bool>({})),
         "info:consecutive_pass_count"_.Bind(Spec<int>({})),
+        "info:black_area"_.Bind(Spec<int>({})),
+        "info:white_area"_.Bind(Spec<int>({})),
         "info:players.id"_.Bind(Spec<int>({-1}, {0, 1})));
   }
 
@@ -70,6 +73,7 @@ class GoEnv : public Env<GoEnvSpec>, public RenderableEnv {
         komi_(spec.config["komi"_]),
         history_length_(spec.config["history_length"_]),
         max_terminal_steps_(spec.config["max_terminal_steps"_]),
+        rules_(ParseRules(std::string(spec.config["rules"_]))),
         board_area_(size_ * size_),
         board_(board_area_),
         board_history_(history_length_ * board_area_),
@@ -186,6 +190,8 @@ class GoEnv : public Env<GoEnvSpec>, public RenderableEnv {
   }
 
  private:
+  enum class Rules { kPgx, kChinese };
+
   using Hash = std::pair<uint64_t, uint64_t>;
   using Rgb = std::array<unsigned char, 3>;
 
@@ -193,6 +199,7 @@ class GoEnv : public Env<GoEnvSpec>, public RenderableEnv {
   double komi_;
   int history_length_;
   int max_terminal_steps_;
+  Rules rules_;
   int board_area_;
   std::vector<int> board_;
   std::vector<int> board_history_;
@@ -205,6 +212,19 @@ class GoEnv : public Env<GoEnvSpec>, public RenderableEnv {
   std::array<int, 2> player_order_{0, 1};
   std::vector<Hash> hash_history_;
   std::vector<bool> legal_action_mask_;
+
+  static Rules ParseRules(const std::string& rules) {
+    if (rules == "pgx" || rules == "tromp_taylor") {
+      return Rules::kPgx;
+    }
+    if (rules == "chinese") {
+      return Rules::kChinese;
+    }
+    CHECK(false) << "Unknown PGX Go rules: " << rules;
+    return Rules::kPgx;
+  }
+
+  bool UsesChineseRules() const { return rules_ == Rules::kChinese; }
 
   int MaxTerminalSteps() const {
     if (max_terminal_steps_ > 0) {
@@ -252,13 +272,15 @@ class GoEnv : public Env<GoEnvSpec>, public RenderableEnv {
     std::vector<int64_t> idx_squared_sum;
   };
 
-  Counts CountLiberties() const {
+  Counts CountLiberties() const { return CountLiberties(board_); }
+
+  Counts CountLiberties(const std::vector<int>& board) const {
     std::vector<int64_t> per_point_num(board_area_, 0);
     std::vector<int64_t> per_point_sum(board_area_, 0);
     std::vector<int64_t> per_point_squared_sum(board_area_, 0);
     for (int xy = 0; xy < board_area_; ++xy) {
       for (int adj : Adjacent(xy)) {
-        if (adj == -1 || board_[adj] != 0) {
+        if (adj == -1 || board[adj] != 0) {
           continue;
         }
         const int64_t idx = static_cast<int64_t>(adj) + 1;
@@ -274,7 +296,7 @@ class GoEnv : public Env<GoEnvSpec>, public RenderableEnv {
         std::vector<int64_t>(board_area_, 0),
     };
     for (int xy = 0; xy < board_area_; ++xy) {
-      const int chain_ix = std::abs(board_[xy]) - 1;
+      const int chain_ix = std::abs(board[xy]) - 1;
       if (chain_ix < 0) {
         continue;
       }
@@ -325,7 +347,18 @@ class GoEnv : public Env<GoEnvSpec>, public RenderableEnv {
     if (ko_ >= 0) {
       legal_action_mask_[ko_] = false;
     }
+    if (UsesChineseRules()) {
+      MaskRepeatedPositions();
+    }
     legal_action_mask_[board_area_] = true;
+  }
+
+  void MaskRepeatedPositions() {
+    for (int xy = 0; xy < board_area_; ++xy) {
+      if (legal_action_mask_[xy] && WouldRepeatPosition(xy)) {
+        legal_action_mask_[xy] = false;
+      }
+    }
   }
 
   void StepGame(int action) {
@@ -340,22 +373,33 @@ class GoEnv : public Env<GoEnvSpec>, public RenderableEnv {
     if (step_count_ < static_cast<int>(hash_history_.size())) {
       hash_history_[step_count_] = hash;
     }
-    is_psk_ = IsPsk(hash);
+    is_psk_ = UsesChineseRules() ? false : IsPsk(hash);
     ++step_count_;
   }
 
+  struct ApplyResult {
+    int num_captured;
+    int ko;
+  };
+
   void ApplyAction(int action) {
     consecutive_pass_count_ = 0;
+    const ApplyResult result = ApplyActionToBoard(action, &board_);
+    num_captured_[Color()] += result.num_captured;
+    ko_ = result.ko;
+  }
+
+  ApplyResult ApplyActionToBoard(int action, std::vector<int>* board) const {
     const int color = Color();
     const auto [my_sign, opp_sign] = Signs(color);
     const std::array<int, 4> adj_ixs = Adjacent(action);
-    const Counts counts = CountLiberties();
+    const Counts counts = CountLiberties(*board);
 
     std::array<int, 4> adj_ids{};
     std::array<bool, 4> is_killed{};
     for (int i = 0; i < 4; ++i) {
       const int adj = adj_ixs[i];
-      adj_ids[i] = adj == -1 ? board_.back() : board_[adj];
+      adj_ids[i] = adj == -1 ? board->back() : (*board)[adj];
       if (adj == -1 || adj_ids[i] * opp_sign <= 0) {
         is_killed[i] = false;
         continue;
@@ -374,7 +418,7 @@ class GoEnv : public Env<GoEnvSpec>, public RenderableEnv {
     int num_captured = 0;
     for (int xy = 0; xy < board_area_; ++xy) {
       for (int i = 0; i < 4; ++i) {
-        if (is_killed[i] && board_[xy] == adj_ids[i]) {
+        if (is_killed[i] && (*board)[xy] == adj_ids[i]) {
           surrounded[xy] = true;
         }
       }
@@ -392,45 +436,47 @@ class GoEnv : public Env<GoEnvSpec>, public RenderableEnv {
     }
     bool ko_may_occur = true;
     for (int adj : adj_ixs) {
-      if (adj != -1 && board_[adj] * opp_sign <= 0) {
+      if (adj != -1 && (*board)[adj] * opp_sign <= 0) {
         ko_may_occur = false;
         break;
       }
     }
     for (int xy = 0; xy < board_area_; ++xy) {
       if (surrounded[xy]) {
-        board_[xy] = 0;
+        (*board)[xy] = 0;
       }
     }
-    num_captured_[color] += num_captured;
-    ko_ = ko_may_occur && num_captured == 1 ? adj_ixs[ko_ix] : -1;
 
-    board_[action] = (action + 1) * my_sign;
-    MergeAdjacentChains(action, adj_ixs, my_sign);
+    (*board)[action] = (action + 1) * my_sign;
+    MergeAdjacentChains(action, adj_ixs, my_sign, board);
+    return {
+        num_captured,
+        ko_may_occur && num_captured == 1 ? adj_ixs[ko_ix] : -1,
+    };
   }
 
   void MergeAdjacentChains(int action, const std::array<int, 4>& adj_ixs,
-                           int my_sign) {
+                           int my_sign, std::vector<int>* board) const {
     std::array<bool, 4> should_merge{};
     std::array<int, 4> target_ids{};
     int smallest_id = 9999;
     for (int i = 0; i < 4; ++i) {
       const int adj = adj_ixs[i];
-      target_ids[i] = adj == -1 ? board_.back() : board_[adj];
+      target_ids[i] = adj == -1 ? board->back() : (*board)[adj];
       should_merge[i] = adj != -1 && target_ids[i] * my_sign > 0;
       if (should_merge[i]) {
         smallest_id = std::min(smallest_id, std::abs(target_ids[i]));
       }
     }
-    const int new_id = board_[action];
+    const int new_id = (*board)[action];
     smallest_id = std::min(std::abs(new_id), smallest_id) * my_sign;
     for (int xy = 0; xy < board_area_; ++xy) {
-      bool merge = board_[xy] == new_id;
+      bool merge = (*board)[xy] == new_id;
       for (int i = 0; i < 4; ++i) {
-        merge = merge || (should_merge[i] && board_[xy] == target_ids[i]);
+        merge = merge || (should_merge[i] && (*board)[xy] == target_ids[i]);
       }
       if (merge) {
-        board_[xy] = smallest_id;
+        (*board)[xy] = smallest_id;
       }
     }
   }
@@ -454,11 +500,13 @@ class GoEnv : public Env<GoEnvSpec>, public RenderableEnv {
     return x ^ (x >> 31);
   }
 
-  Hash ComputeHash() const {
+  Hash ComputeHash() const { return ComputeHash(board_); }
+
+  Hash ComputeHash(const std::vector<int>& board) const {
     uint64_t h0 = 0x243f6a8885a308d3ULL;
     uint64_t h1 = 0x13198a2e03707344ULL;
     for (int xy = 0; xy < board_area_; ++xy) {
-      const uint64_t stone = static_cast<uint64_t>(Sign(board_[xy]) + 1);
+      const uint64_t stone = static_cast<uint64_t>(Sign(board[xy]) + 1);
       h0 ^= SplitMix64(stone * 0x100000001b3ULL + xy);
       h1 ^= SplitMix64(stone * 0x9e3779b97f4a7c15ULL + xy * 17ULL);
     }
@@ -476,6 +524,32 @@ class GoEnv : public Env<GoEnvSpec>, public RenderableEnv {
       }
     }
     return same_hash_count > 1;
+  }
+
+  bool WouldRepeatPosition(int action) const {
+    std::vector<int> next_board = board_;
+    ApplyActionToBoard(action, &next_board);
+    const Hash hash = ComputeHash(next_board);
+    if (hash == EmptyBoardHash()) {
+      return true;
+    }
+    for (int i = 0;
+         i < step_count_ && i < static_cast<int>(hash_history_.size()); ++i) {
+      if (hash_history_[i] == hash) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Hash EmptyBoardHash() const {
+    uint64_t h0 = 0x243f6a8885a308d3ULL;
+    uint64_t h1 = 0x13198a2e03707344ULL;
+    for (int xy = 0; xy < board_area_; ++xy) {
+      h0 ^= SplitMix64(0x100000001b3ULL + xy);
+      h1 ^= SplitMix64(0x9e3779b97f4a7c15ULL + xy * 17ULL);
+    }
+    return {h0, h1};
   }
 
   bool IsTerminal() const {
@@ -514,8 +588,7 @@ class GoEnv : public Env<GoEnvSpec>, public RenderableEnv {
   }
 
   std::array<float, 2> ColorRewards() const {
-    const int black_score = CountTerritory(1) + CountStones(1);
-    const int white_score = CountTerritory(-1) + CountStones(-1);
+    const auto [black_score, white_score] = AreaScores();
     std::array<float, 2> rewards = black_score - komi_ > white_score
                                        ? std::array<float, 2>{1.0f, -1.0f}
                                        : std::array<float, 2>{-1.0f, 1.0f};
@@ -527,6 +600,54 @@ class GoEnv : public Env<GoEnvSpec>, public RenderableEnv {
       rewards = {0.0f, 0.0f};
     }
     return rewards;
+  }
+
+  std::array<int, 2> AreaScores() const {
+    if (UsesChineseRules()) {
+      return ChineseAreaScores();
+    }
+    return {
+        CountTerritory(1) + CountStones(1),
+        CountTerritory(-1) + CountStones(-1),
+    };
+  }
+
+  std::array<int, 2> ChineseAreaScores() const {
+    std::array<int, 2> area{CountStones(1), CountStones(-1)};
+    std::vector<bool> seen(board_area_, false);
+    for (int start = 0; start < board_area_; ++start) {
+      if (seen[start] || board_[start] != 0) {
+        continue;
+      }
+      std::vector<int> stack{start};
+      seen[start] = true;
+      int empty_count = 0;
+      bool touches_black = false;
+      bool touches_white = false;
+      while (!stack.empty()) {
+        const int xy = stack.back();
+        stack.pop_back();
+        ++empty_count;
+        for (int adj : Adjacent(xy)) {
+          if (adj == -1) {
+            continue;
+          }
+          const int sign = Sign(board_[adj]);
+          if (sign > 0) {
+            touches_black = true;
+          } else if (sign < 0) {
+            touches_white = true;
+          } else if (!seen[adj]) {
+            seen[adj] = true;
+            stack.push_back(adj);
+          }
+        }
+      }
+      if (touches_black != touches_white) {
+        area[touches_black ? 0 : 1] += empty_count;
+      }
+    }
+    return area;
   }
 
   int CountStones(int color_sign) const {
@@ -550,10 +671,13 @@ class GoEnv : public Env<GoEnvSpec>, public RenderableEnv {
 
   void WriteState(const std::array<float, 2>& player_rewards) {
     State state = Allocate(2);
+    const auto [black_area, white_area] = AreaScores();
     state["info:current_player"_] = CurrentPlayer();
     state["info:ko"_] = ko_;
     state["info:is_psk"_] = is_psk_;
     state["info:consecutive_pass_count"_] = consecutive_pass_count_;
+    state["info:black_area"_] = black_area;
+    state["info:white_area"_] = white_area;
     for (int xy = 0; xy < board_area_; ++xy) {
       state["info:board"_](xy / size_, xy % size_) = Sign(board_[xy]);
       state["info:legal_action_mask"_][xy] =

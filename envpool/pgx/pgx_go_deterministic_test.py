@@ -26,6 +26,8 @@ from envpool.registration import make_gymnasium
 _TASKS = (
     ("go_9x9", 9),
     ("go_19x19", 19),
+    ("go_chinese_9x9", 9),
+    ("go_chinese_19x19", 19),
 )
 
 
@@ -96,6 +98,8 @@ def _assert_info_equal(
         "ko",
         "is_psk",
         "consecutive_pass_count",
+        "black_area",
+        "white_area",
     ):
         np.testing.assert_array_equal(lhs[key], rhs[key], err_msg=key)
     test_case.assertIn("players", lhs)

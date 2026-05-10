@@ -26,6 +26,8 @@ from envpool.registration import make_gymnasium
 _TASKS = (
     ("go_9x9", 9),
     ("go_19x19", 19),
+    ("go_chinese_9x9", 9),
+    ("go_chinese_19x19", 19),
 )
 
 

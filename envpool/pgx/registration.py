@@ -24,6 +24,7 @@ _COMMON = {
     "komi": 7.5,
     "history_length": 8,
     "max_terminal_steps": 0,
+    "rules": "pgx",
 }
 
 register(
@@ -40,4 +41,25 @@ register(
     board_size=19,
     task="go_19x19",
     **_COMMON,
+)
+
+_CHINESE_COMMON = {
+    **_COMMON,
+    "rules": "chinese",
+}
+
+register(
+    task_id="go_chinese_9x9",
+    aliases=["ChineseGo9x9-v1"],
+    board_size=9,
+    task="go_chinese_9x9",
+    **_CHINESE_COMMON,
+)
+
+register(
+    task_id="go_chinese_19x19",
+    aliases=["ChineseGo19x19-v1"],
+    board_size=19,
+    task="go_chinese_19x19",
+    **_CHINESE_COMMON,
 )

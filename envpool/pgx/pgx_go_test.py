@@ -33,17 +33,34 @@ def _make_small_go(**kwargs):
     )
 
 
+def _make_small_chinese_go(**kwargs):
+    return make_gymnasium(
+        "go_chinese_9x9",
+        board_size=5,
+        num_envs=1,
+        seed=0,
+        **kwargs,
+    )
+
+
 def _step(env, action: int):
     return env.step(np.asarray([action], dtype=np.int32))
 
 
 class _PgxGoTest(absltest.TestCase):
     def test_registered_specs_match_pgx_shape(self) -> None:
-        for task_id, size in (("go_9x9", 9), ("go_19x19", 19)):
+        cases = (
+            ("go_9x9", 9, "pgx"),
+            ("go_19x19", 19, "pgx"),
+            ("go_chinese_9x9", 9, "chinese"),
+            ("go_chinese_19x19", 19, "chinese"),
+        )
+        for task_id, size, rules in cases:
             with self.subTest(task_id=task_id):
                 spec = make_spec(task_id)
                 self.assertEqual(spec.config.max_num_players, 2)
                 self.assertEqual(spec.config.board_size, size)
+                self.assertEqual(spec.config.rules, rules)
                 self.assertIsInstance(
                     spec.gymnasium_observation_space, gym.spaces.MultiBinary
                 )
@@ -65,6 +82,8 @@ class _PgxGoTest(absltest.TestCase):
         self.assertIn(int(info["current_player"][0]), (0, 1))
         self.assertEqual(info["legal_action_mask"].shape, (1, 26))
         np.testing.assert_array_equal(info["legal_action_mask"], True)
+        self.assertEqual(info["black_area"][0], 25)
+        self.assertEqual(info["white_area"][0], 25)
 
     def test_end_by_two_consecutive_passes(self) -> None:
         env = _make_small_go()
@@ -142,6 +161,70 @@ class _PgxGoTest(absltest.TestCase):
         self.assertFalse(bool(truncated[0]))
         self.assertEqual(reward[loser], -1.0)
         self.assertEqual(float(np.sum(reward)), 0.0)
+
+    def test_chinese_rules_empty_board_area_is_neutral(self) -> None:
+        env = _make_small_chinese_go()
+        _, info = env.reset()
+        black_player = int(info["current_player"][0])
+        self.assertEqual(info["black_area"][0], 0)
+        self.assertEqual(info["white_area"][0], 0)
+
+        _step(env, 25)
+        _, reward, terminated, truncated, info = _step(env, 25)
+        self.assertTrue(bool(terminated[0]))
+        self.assertFalse(bool(truncated[0]))
+        self.assertEqual(info["black_area"][0], 0)
+        self.assertEqual(info["white_area"][0], 0)
+        self.assertEqual(reward[black_player], -1.0)
+        self.assertEqual(reward[1 - black_player], 1.0)
+
+    def test_chinese_rules_mask_positional_superko(self) -> None:
+        env = make_gymnasium(
+            "go_chinese_9x9",
+            board_size=3,
+            max_terminal_steps=200,
+            num_envs=1,
+            seed=0,
+        )
+        actions = [
+            5,
+            0,
+            8,
+            3,
+            1,
+            4,
+            6,
+            7,
+            6,
+            3,
+            7,
+            0,
+            2,
+            4,
+            5,
+            7,
+            1,
+            8,
+            6,
+            0,
+            8,
+            3,
+            7,
+        ]
+        _, info = env.reset()
+        for action in actions[:-1]:
+            self.assertTrue(bool(info["legal_action_mask"][0, action]))
+            _, _, terminated, _, info = _step(env, action)
+            self.assertFalse(bool(terminated[0]))
+
+        repeated_action = actions[-1]
+        loser = int(info["current_player"][0])
+        self.assertFalse(bool(info["legal_action_mask"][0, repeated_action]))
+        _, reward, terminated, truncated, info = _step(env, repeated_action)
+        self.assertTrue(bool(terminated[0]))
+        self.assertFalse(bool(truncated[0]))
+        self.assertFalse(bool(info["is_psk"][0]))
+        self.assertEqual(reward[loser], -1.0)
 
     def test_render_reset_and_step(self) -> None:
         env = _make_small_go(render_mode="rgb_array")
