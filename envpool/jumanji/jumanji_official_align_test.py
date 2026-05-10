@@ -15,14 +15,15 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
+import shutil
+import sys
+import tempfile
 import warnings
 from dataclasses import fields, is_dataclass, replace
 from pathlib import Path
 from typing import Any, cast
-
-import numpy as np
-from absl.testing import absltest
 
 
 def _configure_matplotlib() -> None:
@@ -39,7 +40,53 @@ def _configure_matplotlib() -> None:
         os.environ["MPLCONFIGDIR"] = str(mpl_config)
 
 
+def _shorten_windows_oracle_site_packages() -> None:
+    """Copy oracle wheels to a short path before loading Windows extensions."""
+    if os.name != "nt":
+        return
+
+    oracle_sites: list[Path] = []
+    for entry in sys.path:
+        if "jumanji_oracle_requirements" not in str(entry):
+            continue
+        path = Path(entry)
+        if path.name == "site-packages":
+            oracle_sites.append(path)
+    if not oracle_sites:
+        return
+
+    key = hashlib.sha1(
+        "|".join(str(path) for path in oracle_sites).encode("utf-8")
+    ).hexdigest()[:12]
+    short_site = Path(tempfile.gettempdir()) / "ej_o" / key / "s"
+    marker = short_site / ".copied"
+    if not marker.exists():
+        short_site.mkdir(parents=True, exist_ok=True)
+        for site in oracle_sites:
+            for src in site.iterdir():
+                if src.name == "__pycache__":
+                    continue
+                dst = short_site / src.name
+                if src.is_dir():
+                    shutil.copytree(
+                        src,
+                        dst,
+                        dirs_exist_ok=True,
+                        ignore=shutil.ignore_patterns("__pycache__"),
+                    )
+                else:
+                    shutil.copy2(src, dst)
+        marker.write_text("ok")
+
+    sys.path[:] = [str(short_site)] + [
+        entry
+        for entry in sys.path
+        if "jumanji_oracle_requirements" not in str(entry)
+    ]
+
+
 _configure_matplotlib()
+_shorten_windows_oracle_site_packages()
 warnings.filterwarnings(
     "ignore",
     message="FigureCanvasAgg is non-interactive.*",
@@ -55,6 +102,8 @@ warnings.filterwarnings("ignore", category=ResourceWarning)
 import jax  # noqa: E402
 import jax.numpy as jnp  # noqa: E402
 import jumanji  # noqa: E402
+import numpy as np  # noqa: E402
+from absl.testing import absltest  # noqa: E402
 from jumanji.environments.routing.sokoban.generator import (  # noqa: E402
     SimpleSolveGenerator,
 )

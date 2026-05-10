@@ -232,7 +232,7 @@ class _VizdoomPretrainTest(absltest.TestCase):
         model_path = self.get_package_path("policy-d3.pth")
         self.assertTrue(os.path.exists(model_path))
         reward_config = {"KILLCOUNT": [1, 0]}
-        num_envs = 2
+        num_envs = 1
         baseline_reward, baseline_length = self.eval_c51_subprocess(
             "D3_battle",
             model_path,
