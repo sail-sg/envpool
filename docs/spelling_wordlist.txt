@@ -56,6 +56,7 @@ Tromp
 Taylor
 AlphaGo
 komi
+ko
 superko
 py
 Mujoco
