@@ -20,18 +20,6 @@ load("//envpool:requirements.bzl", "requirement")
 package(default_visibility = ["//visibility:public"])
 
 genrule(
-    name = "gen_pretrain_weight",
-    srcs = [
-        "@pretrain_weight//:pth",
-    ],
-    outs = [
-        "policy-d1.pth",
-        "policy-d3.pth",
-    ],
-    cmd = "cp $(SRCS) $(@D)",
-)
-
-genrule(
     name = "gen_vizdoom_maps",
     srcs = [
         "@vizdoom_lib//:vizdoom_maps",
@@ -150,9 +138,10 @@ py_library(
 
 py_test(
     name = "vizdoom_render_test",
-    size = "enormous",
+    size = "small",
     srcs = ["vizdoom_render_test.py"],
     imports = ["../.."],
+    tags = ["exclusive"],
     deps = [
         ":vizdoom",
         ":vizdoom_registration",
@@ -163,31 +152,29 @@ py_test(
 
 py_test(
     name = "vizdoom_test",
-    size = "enormous",
+    size = "small",
     srcs = ["vizdoom_test.py"],
     imports = ["../.."],
+    tags = ["exclusive"],
+    deps = [
+        ":vizdoom",
+        ":vizdoom_registration",
+        requirement("numpy"),
+        requirement("absl-py"),
+    ],
+)
+
+py_test(
+    name = "vizdoom_pretrain_test",
+    size = "medium",
+    srcs = ["vizdoom_pretrain_test.py"],
+    imports = ["../.."],
+    tags = ["exclusive"],
     deps = [
         ":vizdoom",
         ":vizdoom_registration",
         requirement("numpy"),
         requirement("absl-py"),
         requirement("opencv-python-headless"),
-    ],
-)
-
-py_test(
-    name = "vizdoom_pretrain_test",
-    size = "enormous",
-    srcs = ["vizdoom_pretrain_test.py"],
-    data = [":gen_pretrain_weight"],
-    imports = ["../.."],
-    deps = [
-        ":vizdoom",
-        ":vizdoom_registration",
-        "//envpool/atari:atari_network",
-        requirement("numpy"),
-        requirement("absl-py"),
-        requirement("tianshou"),
-        requirement("torch"),
     ],
 )

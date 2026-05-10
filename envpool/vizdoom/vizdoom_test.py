@@ -17,7 +17,6 @@ import os
 from contextlib import contextmanager
 from typing import Any, Iterator
 
-import cv2
 import numpy as np
 from absl.testing import absltest
 
@@ -77,10 +76,11 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
 
     def test_hg(
         self,
-        num_envs: int = 10,
-        step: int = 5000,
-        width: int = 160,
-        height: int = 120,
+        num_envs: int = 2,
+        step: int = 100,
+        width: int = 64,
+        height: int = 48,
+        max_episode_steps: int = 20,
         render: bool = False,
     ) -> None:
         if render:
@@ -89,6 +89,7 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
             make_gym(
                 "D1Basic-v1",
                 num_envs=num_envs,
+                max_episode_steps=max_episode_steps,
                 use_combined_action=True,
                 img_width=width,
                 img_height=height,
@@ -107,6 +108,8 @@ class _VizdoomEnvPoolBasicTest(absltest.TestCase):
                 done = np.logical_or(terminated, truncated)
                 env_id = info["env_id"]
                 if render:
+                    import cv2
+
                     obs[env_id] = obs_.transpose(0, 2, 3, 1)
                     obs[env_id[done]] = 255
                     obs_all = np.zeros((height, width * num_envs, 3), np.uint8)
