@@ -208,8 +208,11 @@ class MultiCVRPEnv : public Env<MultiCVRPEnvSpec>, public RenderableEnv {
         node_coordinates_[node * 2] = static_cast<float>(node) / 2.0f;
         node_coordinates_[node * 2 + 1] = 0.0f;
       }
-      demands_[node] = use_configured_state_ ? configured_demands_[node]
-                                             : (node == 0 ? 0 : 10);
+      if (use_configured_state_) {
+        demands_[node] = configured_demands_[node];
+      } else {
+        demands_[node] = node == 0 ? 0 : 10;
+      }
       windows_start_[node] =
           use_configured_state_ ? configured_windows_start_[node] : 0.0f;
       windows_end_[node] =
