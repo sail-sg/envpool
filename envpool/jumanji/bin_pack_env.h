@@ -224,7 +224,7 @@ class BinPackEnv : public Env<BinPackEnvSpec>, public RenderableEnv {
                      {100, 160, 160}, rgb);
     render::DrawLine(width, height, x1 + depth_x, y0 - depth_y, x3, y3,
                      {100, 160, 160}, rgb);
-    const int placed = static_cast<int>(
+    const auto placed = static_cast<int>(
         std::count(items_placed_.begin(), items_placed_.end(), true));
     for (int item = 0; item < placed; ++item) {
       const int px0 = x0 + 4 + item * box_w / 4;

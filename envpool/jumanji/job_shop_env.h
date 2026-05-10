@@ -173,7 +173,7 @@ class JobShopEnv : public Env<JobShopEnvSpec>, public RenderableEnv {
                          (machine + 1) * row_h - 2, render::Palette(job), rgb);
       }
     }
-    const int completed = static_cast<int>(
+    const auto completed = static_cast<int>(
         std::count(completed_.begin(), completed_.end(), true));
     const int completed_w =
         std::clamp(width * completed / jobshop::kActiveJobs, 0, width);

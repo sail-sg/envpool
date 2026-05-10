@@ -120,7 +120,7 @@ inline std::size_t ParseNpyHeaderLength(const std::vector<char>& bytes) {
       bytes[4] != 'P' || bytes[5] != 'Y') {
     throw std::runtime_error("invalid Boxoban npy magic");
   }
-  const unsigned char major = static_cast<unsigned char>(bytes[6]);
+  const auto major = static_cast<unsigned char>(bytes[6]);
   if (major == 1) {
     return 10 + static_cast<unsigned char>(bytes[8]) +
            (static_cast<unsigned char>(bytes[9]) << 8);
@@ -332,8 +332,8 @@ class SokobanEnv : public Env<SokobanEnvSpec>, public RenderableEnv {
     const int next_targets = sokoban::CountTargets(level_);
     const bool solved = next_targets == sokoban::kNumBoxes;
     done_ = solved || elapsed_step_ >= max_episode_steps_;
-    const float reward = static_cast<float>(next_targets - previous_targets) +
-                         (solved ? 10.0f : 0.0f) - 0.1f;
+    const auto reward = static_cast<float>(next_targets - previous_targets) +
+                        (solved ? 10.0f : 0.0f) - 0.1f;
     WriteState(reward);
   }
 

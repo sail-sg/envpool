@@ -248,7 +248,7 @@ class RubiksCubeEnvBase : public Env<SpecT>, public RenderableEnv {
       const int face_top = y_origin + face_pos[face][1] * face_side;
       for (int row = 0; row < 3; ++row) {
         for (int col = 0; col < 3; ++col) {
-          const int value = static_cast<int>(static_cast<unsigned char>(
+          const auto value = static_cast<int>(static_cast<unsigned char>(
               cube_[rubiks_cube::Offset(face, row, col)]));
           const int left = face_left + col * face_side / 3;
           const int right = face_left + (col + 1) * face_side / 3;

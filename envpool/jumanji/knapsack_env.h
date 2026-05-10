@@ -145,7 +145,7 @@ class KnapsackEnv : public Env<KnapsackEnvSpec>, public RenderableEnv {
       const int y = item_area_top + row * (bag_bottom - item_area_top - 8) / 5;
       render::FillCircle(width, height, x, y, 3, render::Palette(item), rgb);
     }
-    const int budget_h = static_cast<int>(
+    const auto budget_h = static_cast<int>(
         (bag_bottom - bag_top) *
         std::clamp(remaining_budget_ / total_budget_, 0.0f, 1.0f));
     render::FillRect(width, height, width - 14, bag_bottom - budget_h,
