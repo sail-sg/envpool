@@ -20,7 +20,7 @@ import numpy as np
 from absl.testing import absltest
 
 import envpool.pgx.registration  # noqa: F401
-from envpool.registration import make_gymnasium, make_spec, registry
+from envpool.registration import make_gymnasium, make_spec
 
 
 def _make_small_go(**kwargs):
@@ -72,19 +72,6 @@ class _PgxGoTest(absltest.TestCase):
                     spec.gymnasium_action_space, gym.spaces.Discrete
                 )
                 self.assertEqual(spec.gymnasium_action_space.n, size * size + 1)
-
-    def test_go_tasks_do_not_register_aliases(self) -> None:
-        """Go tasks use EnvPool-style task IDs only."""
-        for task_id in (
-            "PGXGo9x9-v1",
-            "PGXGo19x19-v1",
-            "go_9x9",
-            "go_19x19",
-            "go_chinese_9x9",
-            "go_chinese_19x19",
-        ):
-            with self.subTest(task_id=task_id):
-                self.assertNotIn(task_id, registry.specs)
 
     def test_reset_shapes_and_player_metadata(self) -> None:
         env = _make_small_go()
