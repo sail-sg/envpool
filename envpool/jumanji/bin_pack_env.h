@@ -305,9 +305,9 @@ class BinPackEnv : public Env<BinPackEnvSpec>, public RenderableEnv {
     const float space_x = ems_x2_[ems] - ems_x1_[ems];
     const float space_y = ems_y2_[ems] - ems_y1_[ems];
     const float space_z = ems_z2_[ems] - ems_z1_[ems];
-    constexpr float kEps = 1e-6f;
-    return item_x_[item] <= space_x + kEps && item_y_[item] <= space_y + kEps &&
-           item_z_[item] <= space_z + kEps;
+    constexpr float k_eps = 1e-6f;
+    return item_x_[item] <= space_x + k_eps &&
+           item_y_[item] <= space_y + k_eps && item_z_[item] <= space_z + k_eps;
   }
 
   bool HasValidAction() const {
