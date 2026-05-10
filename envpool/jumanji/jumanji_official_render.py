@@ -15,9 +15,7 @@
 
 from __future__ import annotations
 
-import importlib
 import os
-import sys
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -42,90 +40,12 @@ def configure_matplotlib() -> None:
 
 configure_matplotlib()
 
-_VENDOR_ROOT = Path(__file__).with_name("_official_render")
-_MISSING = object()
-_VENDOR_MODULES: dict[str, Any] = {}
-_VENDOR_IMPORTS = (
-    "jumanji.environments.logic.game_2048.types",
-    "jumanji.environments.logic.game_2048.viewer",
-    "jumanji.environments.logic.graph_coloring.types",
-    "jumanji.environments.logic.graph_coloring.viewer",
-    "jumanji.environments.logic.minesweeper.types",
-    "jumanji.environments.logic.minesweeper.viewer",
-    "jumanji.environments.logic.rubiks_cube.types",
-    "jumanji.environments.logic.rubiks_cube.viewer",
-    "jumanji.environments.logic.sliding_tile_puzzle.types",
-    "jumanji.environments.logic.sliding_tile_puzzle.viewer",
-    "jumanji.environments.logic.sudoku.env",
-    "jumanji.environments.logic.sudoku.viewer",
-    "jumanji.environments.packing.bin_pack.space",
-    "jumanji.environments.packing.bin_pack.types",
-    "jumanji.environments.packing.bin_pack.viewer",
-    "jumanji.environments.packing.flat_pack.types",
-    "jumanji.environments.packing.flat_pack.viewer",
-    "jumanji.environments.packing.job_shop.types",
-    "jumanji.environments.packing.job_shop.viewer",
-    "jumanji.environments.packing.knapsack.types",
-    "jumanji.environments.packing.knapsack.viewer",
-    "jumanji.environments.packing.tetris.types",
-    "jumanji.environments.packing.tetris.viewer",
-    "jumanji.environments.routing.cleaner.types",
-    "jumanji.environments.routing.cleaner.viewer",
-    "jumanji.environments.routing.connector.viewer",
-    "jumanji.environments.routing.cvrp.types",
-    "jumanji.environments.routing.cvrp.viewer",
-    "jumanji.environments.routing.lbf.types",
-    "jumanji.environments.routing.lbf.viewer",
-    "jumanji.environments.routing.maze.types",
-    "jumanji.environments.routing.maze.viewer",
-    "jumanji.environments.routing.mmst.types",
-    "jumanji.environments.routing.mmst.viewer",
-    "jumanji.environments.routing.multi_cvrp.types",
-    "jumanji.environments.routing.multi_cvrp.viewer",
-    "jumanji.environments.routing.pac_man.types",
-    "jumanji.environments.routing.pac_man.viewer",
-    "jumanji.environments.routing.robot_warehouse.types",
-    "jumanji.environments.routing.robot_warehouse.viewer",
-    "jumanji.environments.routing.snake.types",
-    "jumanji.environments.routing.snake.viewer",
-    "jumanji.environments.routing.sokoban.viewer",
-    "jumanji.environments.routing.tsp.types",
-    "jumanji.environments.routing.tsp.viewer",
-    "jumanji.environments.swarms.common.types",
-    "jumanji.environments.swarms.search_and_rescue.types",
-    "jumanji.environments.swarms.search_and_rescue.viewer",
+from envpool.jumanji._official_render import (  # noqa: E402
+    logic,
+    packing,
+    routing,
+    swarms,
 )
-
-
-def _is_vendor_name(name: str) -> bool:
-    return name == "jumanji" or name.startswith("jumanji.")
-
-
-def _load_vendor_modules() -> None:
-    if _VENDOR_MODULES:
-        return
-    active_names = [name for name in sys.modules if _is_vendor_name(name)]
-    saved = {name: sys.modules.get(name, _MISSING) for name in active_names}
-    for name in active_names:
-        sys.modules.pop(name, None)
-
-    sys.path.insert(0, str(_VENDOR_ROOT))
-    try:
-        for name in _VENDOR_IMPORTS:
-            _VENDOR_MODULES[name] = importlib.import_module(name)
-    finally:
-        if sys.path and sys.path[0] == str(_VENDOR_ROOT):
-            sys.path.pop(0)
-        for name in [name for name in sys.modules if _is_vendor_name(name)]:
-            sys.modules.pop(name, None)
-        for name, module in saved.items():
-            if module is not _MISSING:
-                sys.modules[name] = module
-
-
-def _mod(name: str) -> Any:
-    _load_vendor_modules()
-    return _VENDOR_MODULES[name]
 
 
 def _asarray(value: Any, dtype: Any | None = None) -> NDArray[np.generic]:
@@ -479,8 +399,6 @@ def update_render_aux(
 def _make_bin_pack_state(
     obs: Mapping[str, Any], config: Mapping[str, Any], aux: Mapping[str, Any]
 ) -> Any:
-    types = _mod("jumanji.environments.packing.bin_pack.types")
-    space_mod = _mod("jumanji.environments.packing.bin_pack.space")
     ems = obs["ems"]
     container = _config_array(
         config,
@@ -511,9 +429,9 @@ def _make_bin_pack_state(
         _get(obs, "items.z_len"),
     )
     loc = np.asarray(aux.get("items_location", np.zeros((20, 3))), np.float32)
-    return types.State(
-        container=space_mod.Space(*[_a(v) for v in container.tolist()]),
-        ems=space_mod.Space(
+    return packing.BinPackState(
+        container=packing.Space(*[_a(v) for v in container.tolist()]),
+        ems=packing.Space(
             _a(ems["x1"]),
             _a(ems["x2"]),
             _a(ems["y1"]),
@@ -522,10 +440,10 @@ def _make_bin_pack_state(
             _a(ems["z2"]),
         ),
         ems_mask=_a(obs["ems_mask"]),
-        items=types.Item(_a(item_x), _a(item_y), _a(item_z)),
+        items=packing.Item(_a(item_x), _a(item_y), _a(item_z)),
         items_mask=_a(obs["items_mask"]),
         items_placed=_a(obs["items_placed"]),
-        items_location=types.Location(
+        items_location=packing.Location(
             _a(loc[:, 0]), _a(loc[:, 1]), _a(loc[:, 2])
         ),
         action_mask=_a(obs["action_mask"]),
@@ -535,8 +453,7 @@ def _make_bin_pack_state(
 
 
 def _make_cvrp_state(obs: Mapping[str, Any], aux: Mapping[str, Any]) -> Any:
-    types = _mod("jumanji.environments.routing.cvrp.types")
-    return types.State(
+    return routing.CVRPState(
         coordinates=_a(obs["coordinates"]),
         demands=_a(obs["demands"]),
         position=_a(obs["position"]),
@@ -549,8 +466,7 @@ def _make_cvrp_state(obs: Mapping[str, Any], aux: Mapping[str, Any]) -> Any:
 
 
 def _make_cleaner_state(obs: Mapping[str, Any]) -> Any:
-    types = _mod("jumanji.environments.routing.cleaner.types")
-    return types.State(
+    return routing.CleanerState(
         grid=_a(obs["grid"]),
         agents_locations=_a(obs["agents_locations"]),
         action_mask=_a(obs["action_mask"]),
@@ -560,9 +476,8 @@ def _make_cleaner_state(obs: Mapping[str, Any]) -> Any:
 
 
 def _make_flat_pack_state(obs: Mapping[str, Any]) -> Any:
-    types = _mod("jumanji.environments.packing.flat_pack.types")
     blocks = _asarray(obs["blocks"])
-    return types.State(
+    return packing.FlatPackState(
         grid=_a(obs["grid"]),
         num_blocks=_a(blocks.shape[0], np.int32),
         blocks=_a(blocks),
@@ -574,8 +489,7 @@ def _make_flat_pack_state(obs: Mapping[str, Any]) -> Any:
 
 
 def _make_game2048_state(obs: Mapping[str, Any], score: float) -> Any:
-    types = _mod("jumanji.environments.logic.game_2048.types")
-    return types.State(
+    return logic.Game2048State(
         board=_a(obs["board"]),
         step_count=_a(0, np.int32),
         action_mask=_a(obs["action_mask"]),
@@ -585,8 +499,7 @@ def _make_game2048_state(obs: Mapping[str, Any], score: float) -> Any:
 
 
 def _make_graph_coloring_state(obs: Mapping[str, Any]) -> Any:
-    types = _mod("jumanji.environments.logic.graph_coloring.types")
-    return types.State(
+    return logic.GraphColoringState(
         adj_matrix=_a(obs["adj_matrix"]),
         colors=_a(obs["colors"]),
         current_node_index=_a(obs["current_node_index"], np.int32),
@@ -596,8 +509,7 @@ def _make_graph_coloring_state(obs: Mapping[str, Any]) -> Any:
 
 
 def _make_job_shop_state(obs: Mapping[str, Any], aux: Mapping[str, Any]) -> Any:
-    types = _mod("jumanji.environments.packing.job_shop.types")
-    return types.State(
+    return packing.JobShopState(
         ops_machine_ids=_a(obs["ops_machine_ids"]),
         ops_durations=_a(obs["ops_durations"]),
         ops_mask=_a(obs["ops_mask"]),
@@ -611,8 +523,7 @@ def _make_job_shop_state(obs: Mapping[str, Any], aux: Mapping[str, Any]) -> Any:
 
 
 def _make_knapsack_state(obs: Mapping[str, Any]) -> Any:
-    types = _mod("jumanji.environments.packing.knapsack.types")
-    return types.State(
+    return packing.KnapsackState(
         weights=_a(obs["weights"]),
         values=_a(obs["values"]),
         packed_items=_a(obs["packed_items"]),
@@ -622,18 +533,17 @@ def _make_knapsack_state(obs: Mapping[str, Any]) -> Any:
 
 
 def _make_lbf_state(obs: Mapping[str, Any]) -> Any:
-    types = _mod("jumanji.environments.routing.lbf.types")
     view = _asarray(obs["agents_view"], np.int32).reshape(2, -1, 3)[0]
     food = view[:2]
     agents = view[2:4]
-    return types.State(
-        agents=types.Agent(
+    return routing.LBFState(
+        agents=routing.LBFAgent(
             id=_a(np.arange(agents.shape[0], dtype=np.int32)),
             position=_a(agents[:, :2]),
             level=_a(agents[:, 2]),
             loading=_a(np.zeros(agents.shape[0], dtype=bool)),
         ),
-        food_items=types.Food(
+        food_items=routing.Food(
             id=_a(np.arange(food.shape[0], dtype=np.int32)),
             position=_a(food[:, :2]),
             level=_a(food[:, 2]),
@@ -645,12 +555,13 @@ def _make_lbf_state(obs: Mapping[str, Any]) -> Any:
 
 
 def _make_maze_state(obs: Mapping[str, Any]) -> Any:
-    types = _mod("jumanji.environments.routing.maze.types")
     agent = obs["agent_position"]
     target = obs["target_position"]
-    return types.State(
-        agent_position=types.Position(_a(agent["row"]), _a(agent["col"])),
-        target_position=types.Position(_a(target["row"]), _a(target["col"])),
+    return routing.MazeState(
+        agent_position=routing.MazePosition(_a(agent["row"]), _a(agent["col"])),
+        target_position=routing.MazePosition(
+            _a(target["row"]), _a(target["col"])
+        ),
         walls=_a(obs["walls"]),
         action_mask=_a(obs["action_mask"]),
         step_count=_a(obs["step_count"], np.int32),
@@ -661,7 +572,6 @@ def _make_maze_state(obs: Mapping[str, Any]) -> Any:
 def _make_minesweeper_state(
     obs: Mapping[str, Any], config: Mapping[str, Any]
 ) -> Any:
-    types = _mod("jumanji.environments.logic.minesweeper.types")
     mines = _config_array(
         config,
         "minesweeper_mine_locations",
@@ -669,7 +579,7 @@ def _make_minesweeper_state(
         np.int32,
         np.arange(int(obs["num_mines"]), dtype=np.int32),
     )
-    return types.State(
+    return logic.MinesweeperState(
         board=_a(obs["board"]),
         step_count=_a(obs["step_count"], np.int32),
         flat_mine_locations=_a(mines),
@@ -703,7 +613,6 @@ def _mmst_nodes_to_connect(
 def _make_mmst_state(
     obs: Mapping[str, Any], config: Mapping[str, Any], aux: Mapping[str, Any]
 ) -> Any:
-    types = _mod("jumanji.environments.routing.mmst.types")
     connected = np.asarray(
         aux.get("connected_nodes", np.full((3, 70), -1)), dtype=np.int32
     )
@@ -711,7 +620,7 @@ def _make_mmst_state(
     position_index = np.maximum(
         np.count_nonzero(connected >= 0, axis=1) - 1, 0
     ).astype(np.int32)
-    return types.State(
+    return routing.MMSTState(
         node_types=_a(obs["node_types"]),
         adj_matrix=_a(obs["adj_matrix"]),
         connected_nodes=_a(connected),
@@ -730,7 +639,6 @@ def _make_mmst_state(
 def _make_multi_cvrp_state(
     obs: Mapping[str, Any], aux: Mapping[str, Any]
 ) -> Any:
-    types = _mod("jumanji.environments.routing.multi_cvrp.types")
     nodes = obs["nodes"]
     windows = obs["windows"]
     coeffs = obs["coeffs"]
@@ -742,11 +650,11 @@ def _make_multi_cvrp_state(
     for vehicle in range(2):
         distances = np.sum((coords - vehicle_coords[vehicle]) ** 2, axis=1)
         positions[vehicle] = int(np.argmin(distances))
-    return types.State(
-        nodes=types.Node(_a(nodes["coordinates"]), _a(nodes["demands"])),
-        windows=types.TimeWindow(_a(windows["start"]), _a(windows["end"])),
-        coeffs=types.PenalityCoeff(_a(coeffs["early"]), _a(coeffs["late"])),
-        vehicles=types.StateVehicle(
+    return routing.MultiCVRPState(
+        nodes=routing.Node(_a(nodes["coordinates"]), _a(nodes["demands"])),
+        windows=routing.TimeWindow(_a(windows["start"]), _a(windows["end"])),
+        coeffs=routing.PenalityCoeff(_a(coeffs["early"]), _a(coeffs["late"])),
+        vehicles=routing.StateVehicle(
             local_times=_a(vehicles["local_times"]),
             capacities=_a(vehicles["capacities"]),
             positions=_a(positions),
@@ -761,11 +669,12 @@ def _make_multi_cvrp_state(
 
 
 def _make_pac_man_state(obs: Mapping[str, Any]) -> Any:
-    types = _mod("jumanji.environments.routing.pac_man.types")
     player = obs["player_locations"]
-    return types.Observation(
+    return routing.PacManObservation(
         grid=_a(obs["grid"]),
-        player_locations=types.Position(_a(player["x"]), _a(player["y"])),
+        player_locations=routing.PacManPosition(
+            _a(player["x"]), _a(player["y"])
+        ),
         ghost_locations=_a(obs["ghost_locations"]),
         power_up_locations=_a(obs["power_up_locations"]),
         frightened_state_time=_a(obs["frightened_state_time"], np.int32),
@@ -778,7 +687,6 @@ def _make_pac_man_state(obs: Mapping[str, Any]) -> Any:
 def _make_robot_warehouse_state(
     obs: Mapping[str, Any], config: Mapping[str, Any]
 ) -> Any:
-    types = _mod("jumanji.environments.routing.robot_warehouse.types")
     grid = _config_array(
         config,
         "robot_warehouse_render_grid",
@@ -814,10 +722,10 @@ def _make_robot_warehouse_state(
         np.int32,
         np.zeros(80, dtype=np.int32),
     )
-    return types.State(
+    return routing.RobotWarehouseState(
         grid=_a(grid),
-        agents=types.Agent(
-            position=types.Position(_a(agent_x), _a(agent_y)),
+        agents=routing.RobotAgent(
+            position=routing.RobotPosition(_a(agent_x), _a(agent_y)),
             direction=_a(
                 _config_array(
                     config,
@@ -836,8 +744,8 @@ def _make_robot_warehouse_state(
                 )
             ),
         ),
-        shelves=types.Shelf(
-            position=types.Position(_a(shelf_x), _a(shelf_y)),
+        shelves=routing.Shelf(
+            position=routing.RobotPosition(_a(shelf_x), _a(shelf_y)),
             is_requested=_a(
                 _csv_bool_array(
                     config,
@@ -855,8 +763,7 @@ def _make_robot_warehouse_state(
 
 
 def _make_rubiks_state(obs: Mapping[str, Any]) -> Any:
-    types = _mod("jumanji.environments.logic.rubiks_cube.types")
-    return types.State(
+    return logic.RubiksCubeState(
         cube=_a(obs["cube"]),
         step_count=_a(obs["step_count"], np.int32),
         key=_key(),
@@ -866,8 +773,6 @@ def _make_rubiks_state(obs: Mapping[str, Any]) -> Any:
 def _make_search_and_rescue_state(
     obs: Mapping[str, Any], config: Mapping[str, Any], aux: Mapping[str, Any]
 ) -> Any:
-    types = _mod("jumanji.environments.swarms.search_and_rescue.types")
-    common = _mod("jumanji.environments.swarms.common.types")
     target_pos = _config_array(
         config,
         "search_and_rescue_target_positions",
@@ -904,8 +809,8 @@ def _make_search_and_rescue_state(
         ),
         dtype=bool,
     )
-    return types.State(
-        searchers=common.AgentState(
+    return swarms.SearchAndRescueState(
+        searchers=swarms.AgentState(
             pos=_a(obs["positions"]),
             heading=_a(headings),
             speed=_a(
@@ -918,7 +823,7 @@ def _make_search_and_rescue_state(
                 )
             ),
         ),
-        targets=types.TargetState(
+        targets=swarms.TargetState(
             pos=_a(target_pos),
             vel=_a(
                 _config_array(
@@ -937,10 +842,9 @@ def _make_search_and_rescue_state(
 
 
 def _make_sliding_tile_state(obs: Mapping[str, Any]) -> Any:
-    types = _mod("jumanji.environments.logic.sliding_tile_puzzle.types")
     puzzle = _asarray(obs["puzzle"], np.int32)
     empty = np.argwhere(puzzle == 0)
-    return types.State(
+    return logic.SlidingTilePuzzleState(
         puzzle=_a(puzzle),
         empty_tile_position=_a(empty[0] if empty.size else [0, 0], np.int32),
         key=_key(),
@@ -949,22 +853,21 @@ def _make_sliding_tile_state(obs: Mapping[str, Any]) -> Any:
 
 
 def _make_snake_state(obs: Mapping[str, Any]) -> Any:
-    types = _mod("jumanji.environments.routing.snake.types")
     grid = _asarray(obs["grid"], np.float32)
     body_state = grid[:, :, 4].astype(np.int32)
     body = body_state > 0
     head = np.argwhere(grid[:, :, 1] > 0)
     fruit = np.argwhere(grid[:, :, 3] > 0)
     length = max(int(np.max(body_state)), 1)
-    return types.State(
+    return routing.SnakeState(
         body=_a(body),
         body_state=_a(body_state),
-        head_position=types.Position(
+        head_position=routing.SnakePosition(
             _a(head[0, 0] if head.size else 0, np.int32),
             _a(head[0, 1] if head.size else 0, np.int32),
         ),
         tail=_a(body_state == 1),
-        fruit_position=types.Position(
+        fruit_position=routing.SnakePosition(
             _a(fruit[0, 0] if fruit.size else 0, np.int32),
             _a(fruit[0, 1] if fruit.size else 0, np.int32),
         ),
@@ -1003,21 +906,19 @@ def _make_sokoban_state(obs: Mapping[str, Any], aux: Mapping[str, Any]) -> Any:
 
 
 def _make_sudoku_state(obs: Mapping[str, Any]) -> Any:
-    types = _mod("jumanji.environments.logic.sudoku.env")
-    return types.State(board=_a(obs["board"]))
+    return logic.SudokuState(board=_a(obs["board"]))
 
 
 def _make_tetris_state(
     obs: Mapping[str, Any], score: float, aux: Mapping[str, Any]
 ) -> Any:
-    types = _mod("jumanji.environments.packing.tetris.types")
     grid = _asarray(obs["grid"], np.int32)
     if "grid_padded" in aux:
         grid_padded = np.asarray(aux["grid_padded"], dtype=np.int32)
     else:
         grid_padded = np.zeros((13, 13), dtype=np.int32)
         grid_padded[: grid.shape[0], : grid.shape[1]] = grid
-    return types.State(
+    return packing.TetrisState(
         grid_padded=_a(grid_padded),
         grid_padded_old=_a(aux.get("grid_padded_old", grid_padded)),
         tetromino_index=_a(0, np.int32),
@@ -1036,9 +937,8 @@ def _make_tetris_state(
 
 
 def _make_tsp_state(obs: Mapping[str, Any]) -> Any:
-    types = _mod("jumanji.environments.routing.tsp.types")
     trajectory = _asarray(obs["trajectory"], np.int32)
-    return types.State(
+    return routing.TSPState(
         coordinates=_a(obs["coordinates"]),
         position=_a(obs["position"], np.int32),
         visited_mask=_a(~_asarray(obs["action_mask"], bool)),
@@ -1076,45 +976,35 @@ def render_official_frame(
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.packing.bin_pack.viewer"
-            ).BinPackViewer("BinPack", "rgb_array"),
+            lambda: packing.BinPackViewer("BinPack", "rgb_array"),
         )
         state = _make_bin_pack_state(obs, config, aux)
     elif task_id == "CVRP-v1":
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod("jumanji.environments.routing.cvrp.viewer").CVRPViewer(
-                "CVRP", 20, "rgb_array"
-            ),
+            lambda: routing.CVRPViewer("CVRP", 20, "rgb_array"),
         )
         state = _make_cvrp_state(obs, aux)
     elif task_id == "Cleaner-v0":
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.routing.cleaner.viewer"
-            ).CleanerViewer("Cleaner", "rgb_array"),
+            lambda: routing.CleanerViewer("Cleaner", "rgb_array"),
         )
         state = _make_cleaner_state(obs)
     elif task_id == "Connector-v2":
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.routing.connector.viewer"
-            ).ConnectorViewer("Connector", 10, "rgb_array"),
+            lambda: routing.ConnectorViewer("Connector", 10, "rgb_array"),
         )
         state = _a(obs["grid"])
     elif task_id == "FlatPack-v0":
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.packing.flat_pack.viewer"
-            ).FlatPackViewer(
+            lambda: packing.FlatPackViewer(
                 "FlatPack", _asarray(obs["blocks"]).shape[0], "rgb_array"
             ),
         )
@@ -1123,90 +1013,74 @@ def render_official_frame(
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.logic.game_2048.viewer"
-            ).Game2048Viewer("Game2048", 4, "rgb_array"),
+            lambda: logic.Game2048Viewer("Game2048", 4, "rgb_array"),
         )
         state = _make_game2048_state(obs, score)
     elif task_id == "GraphColoring-v1":
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.logic.graph_coloring.viewer"
-            ).GraphColoringViewer("GraphColoring", "rgb_array"),
+            lambda: logic.GraphColoringViewer("GraphColoring", "rgb_array"),
         )
         state = _make_graph_coloring_state(obs)
     elif task_id == "JobShop-v0":
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.packing.job_shop.viewer"
-            ).JobShopViewer("JobShop", 20, 10, 8, 6, "rgb_array"),
+            lambda: packing.JobShopViewer("JobShop", 20, 10, 8, 6, "rgb_array"),
         )
         state = _make_job_shop_state(obs, aux)
     elif task_id == "Knapsack-v1":
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.packing.knapsack.viewer"
-            ).KnapsackViewer("Knapsack", "rgb_array", 12.5),
+            lambda: packing.KnapsackViewer("Knapsack", "rgb_array", 12.5),
         )
         state = _make_knapsack_state(obs)
     elif task_id == "LevelBasedForaging-v0":
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.routing.lbf.viewer"
-            ).LevelBasedForagingViewer(8, "LevelBasedForaging", "rgb_array"),
+            lambda: routing.LevelBasedForagingViewer(
+                8, "LevelBasedForaging", "rgb_array"
+            ),
         )
         state = _make_lbf_state(obs)
     elif task_id == "MMST-v0":
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod("jumanji.environments.routing.mmst.viewer").MMSTViewer(
-                3, "MMST", "rgb_array"
-            ),
+            lambda: routing.MMSTViewer(3, "MMST", "rgb_array"),
         )
         state = _make_mmst_state(obs, config, aux)
     elif task_id == "Maze-v0":
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.routing.maze.viewer"
-            ).MazeEnvViewer("Maze", "rgb_array"),
+            lambda: routing.MazeEnvViewer("Maze", "rgb_array"),
         )
         state = _make_maze_state(obs)
     elif task_id == "Minesweeper-v0":
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.logic.minesweeper.viewer"
-            ).MinesweeperViewer(10, 10, "rgb_array"),
+            lambda: logic.MinesweeperViewer(10, 10, "rgb_array"),
         )
         state = _make_minesweeper_state(obs, config)
     elif task_id == "MultiCVRP-v0":
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.routing.multi_cvrp.viewer"
-            ).MultiCVRPViewer("MultiCVRP", 2, 20, 10, "rgb_array"),
+            lambda: routing.MultiCVRPViewer(
+                "MultiCVRP", 2, 20, 10, "rgb_array"
+            ),
         )
         state = _make_multi_cvrp_state(obs, aux)
     elif task_id == "PacMan-v1":
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.routing.pac_man.viewer"
-            ).PacManViewer("PacMan", "rgb_array"),
+            lambda: routing.PacManViewer("PacMan", "rgb_array"),
         )
         state = _make_pac_man_state(obs)
     elif task_id == "RobotWarehouse-v0":
@@ -1214,9 +1088,7 @@ def render_official_frame(
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.routing.robot_warehouse.viewer"
-            ).RobotWarehouseViewer(
+            lambda: routing.RobotWarehouseViewer(
                 (20, 10), goals, "RobotWarehouse", "rgb_array"
             ),
         )
@@ -1225,9 +1097,7 @@ def render_official_frame(
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.logic.rubiks_cube.viewer"
-            ).RubiksCubeViewer(
+            lambda: logic.RubiksCubeViewer(
                 ["white", "green", "red", "blue", "orange", "yellow"],
                 _asarray(obs["cube"]).shape[1],
                 "rgb_array",
@@ -1238,9 +1108,9 @@ def render_official_frame(
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.swarms.search_and_rescue.viewer"
-            ).SearchAndRescueViewer("SearchAndRescue", render_mode="rgb_array"),
+            lambda: swarms.SearchAndRescueViewer(
+                "SearchAndRescue", render_mode="rgb_array"
+            ),
         )
         state = _make_search_and_rescue_state(obs, config, aux)
         render_passes = 2
@@ -1248,54 +1118,45 @@ def render_official_frame(
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.logic.sliding_tile_puzzle.viewer"
-            ).SlidingTilePuzzleViewer("SlidingTilePuzzle", "rgb_array"),
+            lambda: logic.SlidingTilePuzzleViewer(
+                "SlidingTilePuzzle",
+                "rgb_array",
+            ),
         )
         state = _make_sliding_tile_state(obs)
     elif task_id == "Snake-v1":
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.routing.snake.viewer"
-            ).SnakeViewer("Snake", "rgb_array"),
+            lambda: routing.SnakeViewer("Snake", "rgb_array"),
         )
         state = _make_snake_state(obs)
     elif task_id == "Sokoban-v0":
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.routing.sokoban.viewer"
-            ).BoxViewer("Sokoban", _sokoban_combine, "rgb_array"),
+            lambda: routing.BoxViewer("Sokoban", _sokoban_combine, "rgb_array"),
         )
         state = _make_sokoban_state(obs, aux)
     elif task_id.startswith("Sudoku"):
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.logic.sudoku.viewer"
-            ).SudokuViewer("Sudoku", "rgb_array"),
+            lambda: logic.SudokuViewer("Sudoku", "rgb_array"),
         )
         state = _make_sudoku_state(obs)
     elif task_id == "TSP-v1":
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod("jumanji.environments.routing.tsp.viewer").TSPViewer(
-                "TSP", "rgb_array"
-            ),
+            lambda: routing.TSPViewer("TSP", "rgb_array"),
         )
         state = _make_tsp_state(obs)
     elif task_id == "Tetris-v0":
         viewer = _cached_viewer(
             aux,
             task_id,
-            lambda: _mod(
-                "jumanji.environments.packing.tetris.viewer"
-            ).TetrisViewer(10, 10, "rgb_array"),
+            lambda: packing.TetrisViewer(10, 10, "rgb_array"),
         )
         state = _make_tetris_state(obs, score, aux)
     else:
