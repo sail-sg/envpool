@@ -213,13 +213,14 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
   void WriteState(float reward) {
     auto state = Allocate();
     for (int node = 0; node < mmst::kNumNodes; ++node) {
-      state["obs:node_types"_][node] =
-          use_replay_ && step_count_ > 0 && step_count_ <= mmst::kReplaySteps
-              ? replay_node_types_[(step_count_ - 1) * mmst::kNumNodes + node]
-          : use_configured_state_ && step_count_ == 0
-              ? configured_node_types_[node]
-          : visited_[node] ? 5
-                           : 0;
+      if (use_replay_ && step_count_ > 0 && step_count_ <= mmst::kReplaySteps) {
+        state["obs:node_types"_][node] =
+            replay_node_types_[(step_count_ - 1) * mmst::kNumNodes + node];
+      } else if (use_configured_state_ && step_count_ == 0) {
+        state["obs:node_types"_][node] = configured_node_types_[node];
+      } else {
+        state["obs:node_types"_][node] = visited_[node] ? 5 : 0;
+      }
       for (int other = 0; other < mmst::kNumNodes; ++other) {
         state["obs:adj_matrix"_](node, other) =
             use_configured_state_
@@ -233,15 +234,19 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
               ? replay_positions_[(step_count_ - 1) * mmst::kNumAgents + agent]
               : positions_[agent];
       for (int node = 0; node < mmst::kNumNodes; ++node) {
-        state["obs:action_mask"_](agent, node) =
-            use_replay_ && step_count_ > 0 && step_count_ <= mmst::kReplaySteps
-                ? replay_action_mask_[((step_count_ - 1) * mmst::kNumAgents +
-                                       agent) *
-                                          mmst::kNumNodes +
-                                      node]
-            : use_configured_state_ && step_count_ == 0
-                ? configured_action_mask_[agent * mmst::kNumNodes + node]
-                : IsActionValid(agent, node);
+        if (use_replay_ && step_count_ > 0 &&
+            step_count_ <= mmst::kReplaySteps) {
+          state["obs:action_mask"_](agent, node) =
+              replay_action_mask_[((step_count_ - 1) * mmst::kNumAgents +
+                                   agent) *
+                                      mmst::kNumNodes +
+                                  node];
+        } else if (use_configured_state_ && step_count_ == 0) {
+          state["obs:action_mask"_](agent, node) =
+              configured_action_mask_[agent * mmst::kNumNodes + node];
+        } else {
+          state["obs:action_mask"_](agent, node) = IsActionValid(agent, node);
+        }
       }
     }
     state["obs:step_count"_] = step_count_;

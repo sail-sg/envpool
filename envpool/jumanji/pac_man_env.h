@@ -415,12 +415,15 @@ class PacManEnv : public Env<PacManEnvSpec>, public RenderableEnv {
     for (int action = 0; action < 5; ++action) {
       const int row = player_row_ + pacman::kMoves[action][0];
       const int col = player_col_ + pacman::kMoves[action][1];
-      state["obs:action_mask"_][action] =
-          use_replay_ && step_count_ > 0 && step_count_ <= pacman::kReplaySteps
-              ? replay_action_mask_[(step_count_ - 1) * 5 + action]
-          : use_configured_action_mask_ && step_count_ == 0
-              ? configured_action_mask_[action]
-              : IsOpen(row, col);
+      if (use_replay_ && step_count_ > 0 &&
+          step_count_ <= pacman::kReplaySteps) {
+        state["obs:action_mask"_][action] =
+            replay_action_mask_[(step_count_ - 1) * 5 + action];
+      } else if (use_configured_action_mask_ && step_count_ == 0) {
+        state["obs:action_mask"_][action] = configured_action_mask_[action];
+      } else {
+        state["obs:action_mask"_][action] = IsOpen(row, col);
+      }
     }
     if (use_replay_ && step_count_ > 0 && step_count_ <= pacman::kReplaySteps) {
       state["obs:frightened_state_time"_] =

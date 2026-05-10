@@ -298,16 +298,20 @@ class JobShopEnv : public Env<JobShopEnvSpec>, public RenderableEnv {
                                                 machine]
               : machine_remaining_times_[machine];
       for (int job = 0; job <= jobshop::kNoJob; ++job) {
-        state["obs:action_mask"_](machine, job) =
-            use_replay_ && step_count_ > 0 &&
-                    step_count_ <= jobshop::kReplaySteps
-                ? replay_action_mask_
-                      [((step_count_ - 1) * jobshop::kNumMachines + machine) *
-                           (jobshop::kNoJob + 1) +
-                       job]
-            : use_configured_action_mask_ && step_count_ == 0
-                ? configured_action_mask_[machine * (jobshop::kNoJob + 1) + job]
-                : job == jobshop::kNoJob || CanStart(machine, job);
+        if (use_replay_ && step_count_ > 0 &&
+            step_count_ <= jobshop::kReplaySteps) {
+          state["obs:action_mask"_](machine, job) =
+              replay_action_mask_[((step_count_ - 1) * jobshop::kNumMachines +
+                                   machine) *
+                                      (jobshop::kNoJob + 1) +
+                                  job];
+        } else if (use_configured_action_mask_ && step_count_ == 0) {
+          state["obs:action_mask"_](machine, job) =
+              configured_action_mask_[machine * (jobshop::kNoJob + 1) + job];
+        } else {
+          state["obs:action_mask"_](machine, job) =
+              job == jobshop::kNoJob || CanStart(machine, job);
+        }
       }
     }
     state["reward"_] = reward;
