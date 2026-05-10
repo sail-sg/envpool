@@ -213,7 +213,9 @@ class GraphColoringEnv : public Env<GraphColoringEnvSpec>,
       for (int col = 0; col < row; ++col) {
         const bool edge = edge_dist(gen_);
         adj_[graph_coloring::Offset(row, col)] = edge;
-        adj_[graph_coloring::Offset(col, row)] = edge;
+        const int transpose_row = col;
+        const int transpose_col = row;
+        adj_[graph_coloring::Offset(transpose_row, transpose_col)] = edge;
       }
     }
   }
