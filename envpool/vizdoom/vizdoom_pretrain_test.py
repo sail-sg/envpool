@@ -14,7 +14,6 @@
 """VizDoom smoke tests driven by lightweight scripted CV policies."""
 
 import os
-import shutil
 import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -37,9 +36,17 @@ def _get_map_path(path: str) -> str:
     return os.path.join(_PACKAGE_DIR, "maps", path)
 
 
-def _reset_runtime_dir() -> None:
-    shutil.rmtree("_vizdoom", ignore_errors=True)
-    os.makedirs("_vizdoom", exist_ok=True)
+@contextmanager
+def _temporary_workdir() -> Iterator[None]:
+    prev_cwd = os.getcwd()
+    with tempfile.TemporaryDirectory(
+        prefix="vizdoom-runtime-", ignore_cleanup_errors=True
+    ) as tempdir:
+        os.chdir(tempdir)
+        try:
+            yield
+        finally:
+            os.chdir(prev_cwd)
 
 
 def _active_info(info: dict, keep: np.ndarray, done: np.ndarray) -> dict:
@@ -152,58 +159,57 @@ def _d1_action(
 
 
 def _eval_d1() -> tuple[np.ndarray, np.ndarray]:
-    _reset_runtime_dir()
-    env = make_gym(
-        "D1Basic-v1",
-        num_envs=_D1_NUM_ENVS,
-        seed=0,
-        wad_path=_get_map_path("D1_basic.wad"),
-        cfg_path=_get_map_path("D1_basic.cfg"),
-        use_combined_action=True,
-        stack_num=1,
-        frame_skip=1,
-        max_episode_steps=2100,
-        render_mode="rgb_array",
-        render_width=240,
-        render_height=180,
-    )
-    try:
-        rewards = np.zeros(_D1_NUM_ENVS)
-        lengths = np.zeros(_D1_NUM_ENVS)
-        states = [
-            {"id": float(i), "last_seen": -999.0, "lost_spin": -1.0}
-            for i in range(_D1_NUM_ENVS)
-        ]
-        ids = np.arange(_D1_NUM_ENVS)
-        _, info = env.reset()
-        frames = cast(np.ndarray, env.render(env_ids=ids))
-        for step in range(2100):
-            actions = [
-                _d1_action(
-                    step,
-                    frames[row],
-                    float(np.asarray(info["HEALTH"])[row]),
-                    states[int(env_id)],
-                )
-                for row, env_id in enumerate(ids)
+    with _temporary_workdir():
+        env = make_gym(
+            "D1Basic-v1",
+            num_envs=_D1_NUM_ENVS,
+            seed=0,
+            wad_path=_get_map_path("D1_basic.wad"),
+            cfg_path=_get_map_path("D1_basic.cfg"),
+            use_combined_action=True,
+            stack_num=1,
+            frame_skip=1,
+            max_episode_steps=2100,
+            render_mode="rgb_array",
+            render_width=240,
+            render_height=180,
+        )
+        try:
+            rewards = np.zeros(_D1_NUM_ENVS)
+            lengths = np.zeros(_D1_NUM_ENVS)
+            states = [
+                {"id": float(i), "last_seen": -999.0, "lost_spin": -1.0}
+                for i in range(_D1_NUM_ENVS)
             ]
-            _, rew, terminated, truncated, step_info = env.step(
-                np.asarray(actions, dtype=np.int64), ids
-            )
-            done = np.logical_or(terminated, truncated)
-            cur_ids = np.asarray(step_info["env_id"])
-            rewards[cur_ids] += rew
-            lengths[cur_ids] += 1
-            keep = ~done
-            ids = cur_ids[keep]
-            info = _active_info(step_info, keep, done)
-            if len(ids) == 0:
-                break
+            ids = np.arange(_D1_NUM_ENVS)
+            _, info = env.reset()
             frames = cast(np.ndarray, env.render(env_ids=ids))
-        return rewards, lengths
-    finally:
-        env.close()
-        shutil.rmtree("_vizdoom", ignore_errors=True)
+            for step in range(2100):
+                actions = [
+                    _d1_action(
+                        step,
+                        frames[row],
+                        float(np.asarray(info["HEALTH"])[row]),
+                        states[int(env_id)],
+                    )
+                    for row, env_id in enumerate(ids)
+                ]
+                _, rew, terminated, truncated, step_info = env.step(
+                    np.asarray(actions, dtype=np.int64), ids
+                )
+                done = np.logical_or(terminated, truncated)
+                cur_ids = np.asarray(step_info["env_id"])
+                rewards[cur_ids] += rew
+                lengths[cur_ids] += 1
+                keep = ~done
+                ids = cur_ids[keep]
+                info = _active_info(step_info, keep, done)
+                if len(ids) == 0:
+                    break
+                frames = cast(np.ndarray, env.render(env_ids=ids))
+            return rewards, lengths
+        finally:
+            env.close()
 
 
 def _d3_action(
@@ -546,8 +552,7 @@ def _eval_d3(
     cfg_prefix: str = "",
     max_steps: int = 1050,
 ) -> tuple[np.ndarray, np.ndarray]:
-    _reset_runtime_dir()
-    with _d3_cfg_file(cfg_prefix) as cfg_path:
+    with _temporary_workdir(), _d3_cfg_file(cfg_prefix) as cfg_path:
         env = make_gym(
             "D3Battle-v1",
             num_envs=num_envs,
@@ -599,7 +604,6 @@ def _eval_d3(
             return rewards, lengths
         finally:
             env.close()
-            shutil.rmtree("_vizdoom", ignore_errors=True)
 
 
 class _VizdoomPretrainTest(absltest.TestCase):
