@@ -91,7 +91,7 @@ class LevelBasedForagingEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     (void)conf;
     return MakeDict(
-        "obs:agents_view"_.Bind(Spec<int>({2, 12}, {-1, 8})),
+        "obs:agents_view"_.Bind(Spec<int>({2, lbf::kViewSize}, {-1, 8})),
         "obs:action_mask"_.Bind(Spec<bool>({2, 6}, {false, true})),
         "obs:step_count"_.Bind(Spec<int>({}, {0, 100})),
         "info:percent_eaten"_.Bind(Spec<float>({}, {0.0f, 100.0f})));
