@@ -189,9 +189,11 @@ class CVRPEnv : public Env<CVRPEnvSpec>, public RenderableEnv {
         coordinates_[node * 2] = static_cast<float>(node) / 20.0f;
         coordinates_[node * 2 + 1] = 0.0f;
       }
-      demands_[node] = spec_.config["cvrp_demands"_].empty()
-                           ? (node == 0 ? 0.0f : 0.05f)
-                           : configured_demands_[node];
+      if (spec_.config["cvrp_demands"_].empty()) {
+        demands_[node] = node == 0 ? 0.0f : 0.05f;
+      } else {
+        demands_[node] = configured_demands_[node];
+      }
       unvisited_[node] = node != 0;
     }
     trajectory_.fill(0);

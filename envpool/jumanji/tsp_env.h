@@ -153,10 +153,12 @@ class TSPEnv : public Env<TSPEnvSpec>, public RenderableEnv {
     for (int city = 0; city < tsp::kNumCities; ++city) {
       const int x = map_x(coordinates_[city * 2]);
       const int y = map_y(coordinates_[city * 2 + 1]);
-      const render::Color color =
-          city == position_
-              ? render::Palette(0)
-              : (visited_[city] ? render::Palette(2) : render::kBlack);
+      render::Color color = render::kBlack;
+      if (city == position_) {
+        color = render::Palette(0);
+      } else if (visited_[city]) {
+        color = render::Palette(2);
+      }
       render::FillCircle(width, height, x, y, city == position_ ? 4 : 3, color,
                          rgb);
     }
