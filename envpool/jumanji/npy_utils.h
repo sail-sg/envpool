@@ -22,8 +22,7 @@
 #include <string>
 #include <vector>
 
-namespace jumanji {
-namespace npy {
+namespace jumanji::npy {
 
 inline std::size_t HeaderLength(const std::vector<char>& bytes,
                                 const std::string& name) {
@@ -52,7 +51,6 @@ inline std::size_t HeaderLength(const std::vector<char>& bytes,
   throw std::runtime_error("unsupported " + name + " npy version");
 }
 
-}  // namespace npy
-}  // namespace jumanji
+}  // namespace jumanji::npy
 
 #endif  // ENVPOOL_JUMANJI_NPY_UTILS_H_
