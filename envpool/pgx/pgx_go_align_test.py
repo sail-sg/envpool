@@ -155,7 +155,9 @@ class PgxGoAlignTest(absltest.TestCase):
             env_info["board"][0],
             _oracle_board(oracle_state, size),
         )
-        self.assertEqual(int(env_info["ko"][0]), int(np.asarray(oracle_state._x.ko)))
+        self.assertEqual(
+            int(env_info["ko"][0]), int(np.asarray(oracle_state._x.ko))
+        )
         self.assertEqual(
             bool(env_info["is_psk"][0]),
             bool(np.asarray(oracle_state._x.is_psk)),
@@ -316,7 +318,9 @@ class PgxGoAlignTest(absltest.TestCase):
                     size,
                 )
                 self.assertFalse(bool(np.asarray(oracle_state.terminated)))
-                self.assertFalse(bool(np.asarray(oracle_state.legal_action_mask)[0]))
+                self.assertFalse(
+                    bool(np.asarray(oracle_state.legal_action_mask)[0])
+                )
                 oracle_state = self._step_and_assert(
                     env,
                     oracle,
