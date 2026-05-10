@@ -225,7 +225,7 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
         state["obs:adj_matrix"_](node, other) =
             use_configured_state_
                 ? configured_adj_matrix_[node * mmst::kNumNodes + other]
-                : mmst::Adjacent(node, other);
+                : static_cast<int>(mmst::Adjacent(node, other));
       }
     }
     for (int agent = 0; agent < mmst::kNumAgents; ++agent) {
