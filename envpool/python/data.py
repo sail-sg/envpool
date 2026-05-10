@@ -144,22 +144,10 @@ def gym_spec_transform(
     if discrete_range is not None:
         start, num_values = discrete_range
         return gymnasium.spaces.Discrete(n=num_values, start=start)
-    shape = [s for s in spec.shape if s != -1]
     if np.issubdtype(spec.dtype, np.bool_):
-        low: np.ndarray = np.asarray(spec.minimum, dtype=spec.dtype)
-        high: np.ndarray = np.asarray(spec.maximum, dtype=spec.dtype)
-        if low.shape == ():
-            low = np.full(shape, low.item(), dtype=spec.dtype)
-        if high.shape == ():
-            high = np.full(shape, high.item(), dtype=spec.dtype)
-        return gymnasium.spaces.Box(
-            shape=shape,
-            dtype=spec.dtype,
-            low=low,
-            high=high,
-        )
+        return gymnasium.spaces.MultiBinary([s for s in spec.shape if s != -1])
     return gymnasium.spaces.Box(
-        shape=shape,
+        shape=[s for s in spec.shape if s != -1],
         dtype=spec.dtype,
         low=spec.minimum,
         high=spec.maximum,
