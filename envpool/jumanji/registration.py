@@ -57,6 +57,9 @@ jumanji_env_ids = [task_id for task_id, _, _ in _TASKS]
 jumanji_envpool_task_ids = [f"Jumanji/{task_id}" for task_id in jumanji_env_ids]
 
 for task_id, class_prefix, max_episode_steps in _TASKS:
+    kwargs = dict(_COMMON)
+    if task_id == "Sudoku-very-easy-v0":
+        kwargs["sudoku_database"] = "very-easy"
     register(
         task_id=task_id,
         aliases=(f"Jumanji/{task_id}",),
@@ -64,5 +67,5 @@ for task_id, class_prefix, max_episode_steps in _TASKS:
         dm_cls=f"{class_prefix}DMEnvPool",
         gymnasium_cls=f"{class_prefix}GymnasiumEnvPool",
         max_episode_steps=max_episode_steps,
-        **_COMMON,
+        **kwargs,
     )

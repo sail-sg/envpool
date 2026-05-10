@@ -202,7 +202,9 @@ def with_jumanji_python_render(cls: _GymEnvT, task_id: str) -> _GymEnvT:
         return output
 
     def recv(self: Any, *args: Any, **kwargs: Any) -> Any:
-        reset_output = bool(kwargs.get("reset", False))
+        reset_output = (
+            bool(args[0]) if args else bool(kwargs.get("reset", False))
+        )
         output = original_recv(self, *args, **kwargs)
         _cache_gymnasium_output(self, output, reset=reset_output)
         return output

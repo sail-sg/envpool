@@ -728,11 +728,11 @@ class MultiCVRPViewer(CVRPViewer):
         map_max: int,
         render_mode: str = "human",
     ) -> None:
+        super().__init__(name, num_customers + 1, render_mode)
         self._num_vehicles = num_vehicles
         self._num_customers = num_customers
         self._map_max = map_max
         self._cmap = plt.get_cmap(self.COLORMAP_NAME, self._num_vehicles + 1)
-        MatplotlibViewer.__init__(self, name, render_mode)
 
     def render(
         self, state: MultiCVRPState, save_path: str | None = None

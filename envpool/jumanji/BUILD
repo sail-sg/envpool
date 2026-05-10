@@ -38,6 +38,7 @@ cc_library(
         "minesweeper_env.h",
         "mmst_env.h",
         "multi_cvrp_env.h",
+        "npy_utils.h",
         "pac_man_env.h",
         "parse_utils.h",
         "render_utils.h",
@@ -75,8 +76,8 @@ py_library(
     data = glob([
         "_official_render/**/*.jpeg",
         "_official_render/**/*.png",
+        "assets/**/*.npy",
     ]) + [
-        ":boxoban_unfiltered_test",
         ":jumanji_envpool",
     ],
     imports = ["../.."],
@@ -87,11 +88,6 @@ py_library(
         requirement("numpy"),
         requirement("pillow"),
     ],
-)
-
-filegroup(
-    name = "boxoban_unfiltered_test",
-    srcs = ["assets/boxoban/unfiltered-test.npy"],
 )
 
 py_library(

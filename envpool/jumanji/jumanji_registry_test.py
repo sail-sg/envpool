@@ -127,6 +127,19 @@ class JumanjiRegistryTest(absltest.TestCase):
                 finally:
                     env.close()
 
+    def test_render_cache_handles_positional_recv_reset(self) -> None:
+        env = make_gymnasium(
+            "Game2048-v1", num_envs=1, seed=0, render_mode="rgb_array"
+        )
+        try:
+            env.async_reset()
+            _, info = env.recv(True)
+            self.assertEqual(info["env_id"].tolist(), [0])
+            frame = env.render(env_ids=np.asarray([0], dtype=np.int32))
+            _assert_render_batch(frame, 1)
+        finally:
+            env.close()
+
 
 if __name__ == "__main__":
     absltest.main()

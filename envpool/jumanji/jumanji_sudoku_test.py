@@ -59,6 +59,21 @@ def _make_env(task_id: str = "Sudoku-v0") -> Any:
 class JumanjiSudokuTest(absltest.TestCase):
     """Checks native Sudoku transitions for both registered IDs."""
 
+    def test_default_reset_uses_seeded_database(self) -> None:
+        env0 = make_gymnasium("Sudoku-v0", num_envs=1, seed=0)
+        env1 = make_gymnasium("Sudoku-v0", num_envs=1, seed=1)
+        easy = make_gymnasium("Sudoku-very-easy-v0", num_envs=1, seed=0)
+        try:
+            obs0, _ = env0.reset()
+            obs1, _ = env1.reset()
+            obs_easy, _ = easy.reset()
+            self.assertFalse(np.array_equal(obs0["board"], obs1["board"]))
+            self.assertFalse(np.array_equal(obs0["board"], obs_easy["board"]))
+        finally:
+            env0.close()
+            env1.close()
+            easy.close()
+
     def test_final_valid_action_solves(self) -> None:
         for task_id in ("Sudoku-v0", "Sudoku-very-easy-v0"):
             with self.subTest(task_id=task_id):

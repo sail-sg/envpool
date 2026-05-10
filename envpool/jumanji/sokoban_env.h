@@ -31,6 +31,7 @@
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
+#include "envpool/jumanji/npy_utils.h"
 #include "envpool/jumanji/render_utils.h"
 
 namespace jumanji {
@@ -114,32 +115,6 @@ inline Dataset FallbackDataset() {
   return dataset;
 }
 
-inline std::size_t ParseNpyHeaderLength(const std::vector<char>& bytes) {
-  if (bytes.size() < 10 || bytes[0] != static_cast<char>(0x93) ||
-      bytes[1] != 'N' || bytes[2] != 'U' || bytes[3] != 'M' ||
-      bytes[4] != 'P' || bytes[5] != 'Y') {
-    throw std::runtime_error("invalid Boxoban npy magic");
-  }
-  const auto major = static_cast<unsigned char>(bytes[6]);
-  if (major == 1) {
-    return 10 + static_cast<unsigned char>(bytes[8]) +
-           (static_cast<unsigned char>(bytes[9]) << 8);
-  }
-  if (major == 2 || major == 3) {
-    if (bytes.size() < 12) {
-      throw std::runtime_error("truncated Boxoban npy header");
-    }
-    std::size_t header_len = 0;
-    for (int i = 0; i < 4; ++i) {
-      header_len |=
-          static_cast<std::size_t>(static_cast<unsigned char>(bytes[8 + i]))
-          << (8 * i);
-    }
-    return 12 + header_len;
-  }
-  throw std::runtime_error("unsupported Boxoban npy version");
-}
-
 inline Dataset LoadNpyDataset(const std::string& path) {
   std::ifstream input(path, std::ios::binary);
   if (!input) {
@@ -147,7 +122,7 @@ inline Dataset LoadNpyDataset(const std::string& path) {
   }
   std::vector<char> bytes((std::istreambuf_iterator<char>(input)),
                           std::istreambuf_iterator<char>());
-  const std::size_t data_offset = ParseNpyHeaderLength(bytes);
+  const std::size_t data_offset = npy::HeaderLength(bytes, "Boxoban");
   if (bytes.size() < data_offset ||
       (bytes.size() - data_offset) % (kCellCount * 2) != 0) {
     throw std::runtime_error("unexpected Boxoban npy data size");

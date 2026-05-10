@@ -20,12 +20,18 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <fstream>
+#include <memory>
+#include <random>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
+#include "envpool/jumanji/npy_utils.h"
 #include "envpool/jumanji/render_utils.h"
 
 namespace jumanji {
@@ -35,6 +41,10 @@ constexpr int kBoardWidth = 9;
 constexpr int kCellCount = kBoardWidth * kBoardWidth;
 
 using Board = std::array<int, kCellCount>;
+
+struct Dataset {
+  std::vector<Board> boards;
+};
 
 inline int Offset(int row, int col) { return row * kBoardWidth + col; }
 
@@ -64,6 +74,53 @@ inline Board ParseBoard(const std::string& text) {
     board[index++] = std::stoi(token);
   }
   return board;
+}
+
+inline std::string DatabaseFile(const std::string& name) {
+  if (name == "mixed") {
+    return "10000_mixed_puzzles.npy";
+  }
+  if (name == "very-easy") {
+    return "1000_very_easy_puzzles.npy";
+  }
+  throw std::runtime_error("unknown Sudoku database: " + name);
+}
+
+inline Dataset LoadNpyDataset(const std::string& path) {
+  std::ifstream input(path, std::ios::binary);
+  if (!input) {
+    throw std::runtime_error("failed to open Sudoku database: " + path);
+  }
+  std::vector<char> bytes((std::istreambuf_iterator<char>(input)),
+                          std::istreambuf_iterator<char>());
+  const std::size_t data_offset = npy::HeaderLength(bytes, "Sudoku");
+  if (bytes.size() < data_offset ||
+      (bytes.size() - data_offset) % kCellCount != 0) {
+    throw std::runtime_error("unexpected Sudoku npy data size");
+  }
+  const std::size_t board_count = (bytes.size() - data_offset) / kCellCount;
+  Dataset dataset;
+  dataset.boards.reserve(board_count);
+  for (std::size_t board_id = 0; board_id < board_count; ++board_id) {
+    Board board;
+    const std::size_t board_offset = data_offset + board_id * kCellCount;
+    for (int cell = 0; cell < kCellCount; ++cell) {
+      board[cell] = static_cast<int>(static_cast<unsigned char>(
+                        bytes[board_offset + cell])) -
+                    1;
+    }
+    dataset.boards.push_back(board);
+  }
+  if (dataset.boards.empty()) {
+    throw std::runtime_error("empty Sudoku database");
+  }
+  return dataset;
+}
+
+inline std::shared_ptr<const Dataset> GetDataset(const std::string& base_path,
+                                                 const std::string& database) {
+  return std::make_shared<Dataset>(LoadNpyDataset(
+      base_path + "/jumanji/assets/sudoku/" + DatabaseFile(database)));
 }
 
 inline bool IsPlacementValid(const Board& board, int row, int col, int value) {
@@ -125,7 +182,8 @@ inline bool IsSolved(const Board& board) {
 class SudokuEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("sudoku_initial_board"_.Bind(std::string("")));
+    return MakeDict("sudoku_initial_board"_.Bind(std::string("")),
+                    "sudoku_database"_.Bind(std::string("mixed")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -147,6 +205,8 @@ class SudokuEnv : public Env<SudokuEnvSpec>, public RenderableEnv {
  protected:
   sudoku::Board board_{};
   sudoku::Board initial_board_{};
+  std::shared_ptr<const sudoku::Dataset> dataset_;
+  bool use_configured_board_;
   bool done_{true};
 
  public:
@@ -156,7 +216,10 @@ class SudokuEnv : public Env<SudokuEnvSpec>, public RenderableEnv {
   SudokuEnv(const Spec& spec, int env_id)
       : Env<SudokuEnvSpec>(spec, env_id),
         initial_board_(
-            sudoku::ParseBoard(spec.config["sudoku_initial_board"_])) {}
+            sudoku::ParseBoard(spec.config["sudoku_initial_board"_])),
+        dataset_(sudoku::GetDataset(spec.config["base_path"_],
+                                    spec.config["sudoku_database"_])),
+        use_configured_board_(!spec.config["sudoku_initial_board"_].empty()) {}
 
   bool IsDone() override { return done_; }
 
@@ -198,7 +261,13 @@ class SudokuEnv : public Env<SudokuEnvSpec>, public RenderableEnv {
   }
 
   void Reset() override {
-    board_ = initial_board_;
+    if (use_configured_board_) {
+      board_ = initial_board_;
+    } else {
+      std::uniform_int_distribution<std::size_t> dist(
+          0, dataset_->boards.size() - 1);
+      board_ = dataset_->boards[dist(gen_)];
+    }
     done_ = !AnyActionAvailable() || sudoku::IsSolved(board_);
     WriteState(0.0f);
   }
