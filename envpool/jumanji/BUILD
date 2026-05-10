@@ -128,6 +128,7 @@ py_test(
         requirement("absl-py"),
         requirement("numpy"),
         jumanji_oracle_requirement("jax"),
+        jumanji_oracle_requirement("jaxlib"),
         jumanji_oracle_requirement("jumanji"),
         jumanji_oracle_requirement("matplotlib"),
         jumanji_oracle_requirement("requests"),

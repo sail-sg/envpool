@@ -15,18 +15,31 @@
 
 from __future__ import annotations
 
+import os
 import warnings
 from dataclasses import fields, is_dataclass, replace
+from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
 from absl.testing import absltest
 
-from envpool.jumanji.jumanji_official_render import (  # noqa: E402
-    configure_matplotlib,
-)
 
-configure_matplotlib()
+def _configure_matplotlib() -> None:
+    """Configure Matplotlib without importing EnvPool's Jumanji package."""
+    os.environ.setdefault("MPLBACKEND", "Agg")
+    if "MPLCONFIGDIR" not in os.environ:
+        mpl_config = Path(
+            os.environ.get(
+                "ENVPOOL_JUMANJI_MPLCONFIGDIR",
+                "/tmp/envpool-jumanji-matplotlib",
+            )
+        )
+        mpl_config.mkdir(parents=True, exist_ok=True)
+        os.environ["MPLCONFIGDIR"] = str(mpl_config)
+
+
+_configure_matplotlib()
 warnings.filterwarnings(
     "ignore",
     message="FigureCanvasAgg is non-interactive.*",
