@@ -32,11 +32,11 @@ struct Color {
   unsigned char b;
 };
 
-constexpr Color kWhite{255, 255, 255};
-constexpr Color kPanel{247, 247, 247};
-constexpr Color kGrid{192, 192, 192};
-constexpr Color kDarkGrid{70, 70, 70};
-constexpr Color kBlack{0, 0, 0};
+[[maybe_unused]] constexpr Color kWhite{255, 255, 255};
+[[maybe_unused]] constexpr Color kPanel{247, 247, 247};
+[[maybe_unused]] constexpr Color kGrid{192, 192, 192};
+[[maybe_unused]] constexpr Color kDarkGrid{70, 70, 70};
+[[maybe_unused]] constexpr Color kBlack{0, 0, 0};
 
 inline std::size_t PixelOffset(int width, int x, int y) {
   return (static_cast<std::size_t>(y) * width + x) * 3;
