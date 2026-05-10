@@ -190,7 +190,7 @@ class GoEnv : public Env<GoEnvSpec>, public RenderableEnv {
   }
 
  private:
-  enum class Rules { kPgx, kChinese };
+  enum class Rules : uint8_t { kPgx, kChinese };
 
   using Hash = std::pair<uint64_t, uint64_t>;
   using Rgb = std::array<unsigned char, 3>;
@@ -506,7 +506,8 @@ class GoEnv : public Env<GoEnvSpec>, public RenderableEnv {
     uint64_t h0 = 0x243f6a8885a308d3ULL;
     uint64_t h1 = 0x13198a2e03707344ULL;
     for (int xy = 0; xy < board_area_; ++xy) {
-      const uint64_t stone = static_cast<uint64_t>(Sign(board[xy]) + 1);
+      const int stone_sign = Sign(board[xy]) + 1;
+      const auto stone = static_cast<uint64_t>(stone_sign);
       h0 ^= SplitMix64(stone * 0x100000001b3ULL + xy);
       h1 ^= SplitMix64(stone * 0x9e3779b97f4a7c15ULL + xy * 17ULL);
     }
