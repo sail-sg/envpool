@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +19,7 @@ from importlib import resources
 from itertools import pairwise
 from typing import List, Optional, Sequence, Tuple
 
-import jax.numpy as jnp
+import numpy as np
 import matplotlib.animation
 import matplotlib.pyplot as plt
 from matplotlib.artist import Artist
@@ -93,7 +96,7 @@ class TSPViewer(MatplotlibViewer[State]):
             old_state, new_state = state_pair
             updated: List[Artist] = []
 
-            if not jnp.array_equal(old_state.coordinates, new_state.coordinates):
+            if not np.array_equal(old_state.coordinates, new_state.coordinates):
                 cities.set_offsets(new_state.coordinates)
                 updated.append(cities)
 

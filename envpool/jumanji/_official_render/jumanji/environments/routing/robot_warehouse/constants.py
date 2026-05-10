@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import jax.numpy as jnp
+import numpy as np
 
 from jumanji.environments.routing.robot_warehouse.types import Direction
 
@@ -21,7 +24,7 @@ _SHELVES = 0
 _AGENTS = 1
 
 # agent directions
-_POSSIBLE_DIRECTIONS = jnp.array([d.value for d in Direction])
+_POSSIBLE_DIRECTIONS = np.array([d.value for d in Direction])
 
 # viewer constants
 _FIGURE_SIZE = (5, 5)

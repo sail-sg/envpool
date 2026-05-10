@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,12 +17,11 @@
 
 from typing import TYPE_CHECKING, NamedTuple
 
-import chex
 
 if TYPE_CHECKING:  # https://github.com/python/mypy/issues/6239
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
 
 @dataclass
@@ -35,14 +37,14 @@ class State:
     key: random key used for auto-reset.
     """
 
-    coordinates: chex.Array  # (num_nodes + 1, 2)
-    demands: chex.Array  # (num_nodes + 1,)
-    position: chex.Numeric  # ()
-    capacity: chex.Numeric  # ()
-    visited_mask: chex.Array  # (num_nodes + 1,)
-    trajectory: chex.Array  # (2 * num_nodes,)
-    num_total_visits: chex.Numeric  # ()
-    key: chex.PRNGKey  # (2,)
+    coordinates: Any  # (num_nodes + 1, 2)
+    demands: Any  # (num_nodes + 1,)
+    position: Any  # ()
+    capacity: Any  # ()
+    visited_mask: Any  # (num_nodes + 1,)
+    trajectory: Any  # (2 * num_nodes,)
+    num_total_visits: Any  # ()
+    key: Any  # (2,)
 
 
 class Observation(NamedTuple):
@@ -56,10 +58,10 @@ class Observation(NamedTuple):
     action_mask: binary mask (False/True <--> invalid/valid action).
     """
 
-    coordinates: chex.Array  # (num_nodes + 1, 2)
-    demands: chex.Array  # (num_nodes + 1,)
-    unvisited_nodes: chex.Array  # (num_nodes + 1,)
-    position: chex.Numeric  # ()
-    trajectory: chex.Array  # (2 * num_nodes,)
-    capacity: chex.Numeric  # ()
-    action_mask: chex.Array  # (num_nodes + 1,)
+    coordinates: Any  # (num_nodes + 1, 2)
+    demands: Any  # (num_nodes + 1,)
+    unvisited_nodes: Any  # (num_nodes + 1,)
+    position: Any  # ()
+    trajectory: Any  # (2 * num_nodes,)
+    capacity: Any  # ()
+    action_mask: Any  # (num_nodes + 1,)

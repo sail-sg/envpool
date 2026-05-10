@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,10 +17,9 @@
 
 from typing import Optional, Sequence, Tuple
 
-import jax.numpy as jnp
+import numpy as np
 import matplotlib.animation
 import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib.artist import Artist
 from numpy.typing import NDArray
 
@@ -100,9 +102,9 @@ class SearchAndRescueViewer(MatplotlibViewer[State]):
         def make_frame(state: State) -> Tuple[Artist, Artist]:
             searcher_quiver.set_offsets(state.searchers.pos)
             searcher_quiver.set_UVC(
-                jnp.cos(state.searchers.heading), jnp.sin(state.searchers.heading)
+                np.cos(state.searchers.heading), np.sin(state.searchers.heading)
             )
-            target_colors = self.target_colors[state.targets.found.astype(jnp.int32)]
+            target_colors = self.target_colors[state.targets.found.astype(np.int32)]
             target_scatter.set_offsets(state.targets.pos)
             target_scatter.set_color(target_colors)
             return searcher_quiver, target_scatter
@@ -123,7 +125,7 @@ class SearchAndRescueViewer(MatplotlibViewer[State]):
     def _draw(self, ax: plt.Axes, state: State) -> None:
         ax.clear()
         draw_agents(ax, state.searchers, self.searcher_color)
-        target_colors = self.target_colors[state.targets.found.astype(jnp.int32)]
+        target_colors = self.target_colors[state.targets.found.astype(np.int32)]
         ax.scatter(
             state.targets.pos[:, 0], state.targets.pos[:, 1], marker="o", color=target_colors
         )

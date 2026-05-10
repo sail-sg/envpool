@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,12 +17,11 @@
 
 from typing import TYPE_CHECKING, NamedTuple
 
-import chex
 
 if TYPE_CHECKING:
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
 
 @dataclass
@@ -47,20 +49,20 @@ class State:
     step_count: current number of steps in the episode.
     """
 
-    grid_padded: chex.Array  # (num_rows+3, num_cols+3)
-    grid_padded_old: chex.Array  # (num_rows+3, num_cols+3)
-    tetromino_index: chex.Numeric  # ()
-    old_tetromino_rotated: chex.Array  # (4, 4)
-    new_tetromino: chex.Array  # (4, 4)
-    x_position: chex.Array  # ()
-    y_position: chex.Array  # ()
-    action_mask: chex.Array  # (4, num_cols)
-    full_lines: chex.Array  # (num_rows,)
-    score: chex.Array  # ()
-    reward: chex.Array  # ()
-    key: chex.PRNGKey  # (2,)
-    is_reset: chex.Array  # ()
-    step_count: chex.Numeric  # ()
+    grid_padded: Any  # (num_rows+3, num_cols+3)
+    grid_padded_old: Any  # (num_rows+3, num_cols+3)
+    tetromino_index: Any  # ()
+    old_tetromino_rotated: Any  # (4, 4)
+    new_tetromino: Any  # (4, 4)
+    x_position: Any  # ()
+    y_position: Any  # ()
+    action_mask: Any  # (4, num_cols)
+    full_lines: Any  # (num_rows,)
+    score: Any  # ()
+    reward: Any  # ()
+    key: Any  # (2,)
+    is_reset: Any  # ()
+    step_count: Any  # ()
 
 
 class Observation(NamedTuple):
@@ -74,7 +76,7 @@ class Observation(NamedTuple):
     step_count: current number of steps in the episode.
     """
 
-    grid: chex.Array  # (num_rows, num_cols)
-    tetromino: chex.Array  # (4, 4)
-    action_mask: chex.Array  # (4, num_cols)
-    step_count: chex.Numeric  # ()
+    grid: Any  # (num_rows, num_cols)
+    tetromino: Any  # (4, 4)
+    action_mask: Any  # (4, num_cols)
+    step_count: Any  # ()

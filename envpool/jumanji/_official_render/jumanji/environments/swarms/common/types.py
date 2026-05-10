@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,9 +19,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
-import chex
 
 
 @dataclass(frozen=True)
@@ -47,6 +49,6 @@ class AgentState:
     speed: Speed of the agents
     """
 
-    pos: chex.Array  # (num_agents, 2)
-    heading: chex.Array  # (num_agents,)
-    speed: chex.Array  # (num_agents,)
+    pos: Any  # (num_agents, 2)
+    heading: Any  # (num_agents,)
+    speed: Any  # (num_agents,)

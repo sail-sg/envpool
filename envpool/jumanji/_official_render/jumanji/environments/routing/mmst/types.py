@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,10 +20,9 @@ from typing import TYPE_CHECKING, NamedTuple
 if TYPE_CHECKING:  # https://github.com/python/mypy/issues/6239
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
-import chex
-import jax.numpy as jnp
+import numpy as np
 
 
 @dataclass
@@ -40,18 +42,18 @@ class State:
     key: state PRNGkey.
     """
 
-    node_types: chex.Array  # (num_nodes,)
-    adj_matrix: chex.Array  # (num_nodes, num_nodes)
-    connected_nodes: chex.Array  # (num_agents, time_limit)
-    connected_nodes_index: chex.Array  # (num_agents, num_nodes)
-    nodes_to_connect: chex.Array  # (num_agents, num_nodes_to_connect_per_agent)
-    node_edges: chex.Array  # (num_agents, num_nodes, num_nodes)
-    positions: chex.Array  # (num_agents,)
-    position_index: chex.Array  # (num_agents,)
-    action_mask: chex.Array  # (num_agents, num_nodes)
-    finished_agents: chex.Array  # (num_agents,)
-    step_count: jnp.int32  # ()
-    key: chex.PRNGKey  # (2,)
+    node_types: Any  # (num_nodes,)
+    adj_matrix: Any  # (num_nodes, num_nodes)
+    connected_nodes: Any  # (num_agents, time_limit)
+    connected_nodes_index: Any  # (num_agents, num_nodes)
+    nodes_to_connect: Any  # (num_agents, num_nodes_to_connect_per_agent)
+    node_edges: Any  # (num_agents, num_nodes, num_nodes)
+    positions: Any  # (num_agents,)
+    position_index: Any  # (num_agents,)
+    action_mask: Any  # (num_agents, num_nodes)
+    finished_agents: Any  # (num_agents,)
+    step_count: np.int32  # ()
+    key: Any  # (2,)
 
 
 class Observation(NamedTuple):
@@ -73,19 +75,19 @@ class Observation(NamedTuple):
         - Utility unconnected nodes are represented by -1.
         For the 12 node example mentioned above,
         the expected observation view node_types will have the following values:
-        node_types = jnp.array(
+        node_types = np.array(
             [
                 [1, 0, -1, 2, -1, 3, 1, -1, 3, 1, -1, -1],
                 [3, 2, -1, 0, -1, 1, 3, -1, 1, 3, -1, -1],
             ],
-            dtype=jnp.int32,
+            dtype=np.int32,
         )
         Note: to make the environment single agent, we use the first agent's observation.
 
     adj_matrix: Adjacency matrix representing the connections between nodes.
 
     positions: Current node positions of the agents.
-        In our current problem, this will be represented as jnp.array([1, 3]).
+        In our current problem, this will be represented as np.array([1, 3]).
 
     step_count: integer to keep track of the number of steps.
 
@@ -94,17 +96,17 @@ class Observation(NamedTuple):
         this mask determines if there is a valid edge to every other node.
     """
 
-    node_types: chex.Array  # (num_nodes)
-    adj_matrix: chex.Array  # (num_nodes, num_nodes)
-    positions: chex.Array  # (num_agents,)
-    step_count: jnp.int32  # ()
-    action_mask: chex.Array  # (num_agents, num_nodes)
+    node_types: Any  # (num_nodes)
+    adj_matrix: Any  # (num_nodes, num_nodes)
+    positions: Any  # (num_agents,)
+    step_count: np.int32  # ()
+    action_mask: Any  # (num_agents, num_nodes)
 
 
 @dataclass
 class Graph:
     """
-    nodes: Array with node indices (jnp.arange(number of nodes)).
+    nodes: Array with node indices (np.arange(number of nodes)).
     edges: Array with all egdes in the graph.
     edge_codes: Array with edge codes.
     max_degree: (int).
@@ -112,10 +114,10 @@ class Graph:
     edge_index: (int) index location for the next edge.
     """
 
-    nodes: chex.Array  # (num_nodes,)
-    edges: chex.Array  # (num_edges, 2)
-    edge_codes: chex.Array  # (num_edges,)
-    max_degree: jnp.int32  # ()
-    node_degree: chex.Array  # (num_nodes,)
-    edge_index: jnp.int32  # ()
-    node_edges: chex.Array  # (num_nodes, num_nodes)
+    nodes: Any  # (num_nodes,)
+    edges: Any  # (num_edges, 2)
+    edge_codes: Any  # (num_edges,)
+    max_degree: np.int32  # ()
+    node_degree: Any  # (num_nodes,)
+    edge_index: np.int32  # ()
+    node_edges: Any  # (num_nodes, num_nodes)

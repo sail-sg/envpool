@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,9 +17,7 @@
 
 from typing import Tuple
 
-import chex
-import jax
-import jax.numpy as jnp
+import numpy as np
 
 from jumanji.environments.routing.connector.constants import (
     EMPTY,
@@ -27,17 +28,17 @@ from jumanji.environments.routing.connector.constants import (
 from jumanji.environments.routing.connector.types import Agent
 
 
-def get_path(agent_id: jnp.int32) -> jnp.int32:
+def get_path(agent_id: np.int32) -> np.int32:
     """Get the value used in the state to represent the path of the given agent."""
     return PATH + 3 * agent_id
 
 
-def get_position(agent_id: jnp.int32) -> jnp.int32:
+def get_position(agent_id: np.int32) -> np.int32:
     """Get the value used in the state to represent the position of the given agent."""
     return POSITION + 3 * agent_id
 
 
-def get_target(agent_id: jnp.int32) -> jnp.int32:
+def get_target(agent_id: np.int32) -> np.int32:
     """Get the value used in the state to represent the target of the given agent."""
     return TARGET + 3 * agent_id
 
@@ -62,7 +63,7 @@ def get_agent_id(value: int) -> int:
     return 0 if value == 0 else (value - 1) // 3 + 1
 
 
-def move_position(position: chex.Array, action: jnp.int32) -> chex.Array:
+def move_position(position: Any, action: np.int32) -> Any:
     """Use a position and an action to return a new position.
 
     Args:
@@ -73,34 +74,37 @@ def move_position(position: chex.Array, action: jnp.int32) -> chex.Array:
     """
     row, col = position
 
-    move_noop = lambda row, col: jnp.array([row, col], jnp.int32)
-    move_left = lambda row, col: jnp.array([row, col - 1], jnp.int32)
-    move_up = lambda row, col: jnp.array([row - 1, col], jnp.int32)
-    move_right = lambda row, col: jnp.array([row, col + 1], jnp.int32)
-    move_down = lambda row, col: jnp.array([row + 1, col], jnp.int32)
+    moves = (
+        lambda row, col: np.array([row, col], np.int32),
+        lambda row, col: np.array([row - 1, col], np.int32),
+        lambda row, col: np.array([row, col + 1], np.int32),
+        lambda row, col: np.array([row + 1, col], np.int32),
+        lambda row, col: np.array([row, col - 1], np.int32),
+    )
 
-    return jax.lax.switch(action, [move_noop, move_up, move_right, move_down, move_left], row, col)
+    return moves[int(action)](row, col)
 
 
-def move_agent(agent: Agent, grid: chex.Array, new_pos: chex.Array) -> Tuple[Agent, chex.Array]:
+def move_agent(agent: Agent, grid: Any, new_pos: Any) -> Tuple[Agent, Any]:
     """Moves `agent` to `new_pos` on `grid`. Sets `agent`'s position to `new_pos`.
 
     Returns:
         An agent and grid representing the agent at the new_pos.
     """
-    grid = grid.at[tuple(new_pos)].set(get_position(agent.id))
-    grid = grid.at[tuple(agent.position)].set(get_path(agent.id))
+    grid = np.array(grid, copy=True)
+    grid[tuple(new_pos)] = get_position(agent.id)
+    grid[tuple(agent.position)] = get_path(agent.id)
 
     new_agent = Agent(
         id=agent.id,
         start=agent.start,
         target=agent.target,
-        position=jnp.array(new_pos),
+        position=np.array(new_pos),
     )
     return new_agent, grid
 
 
-def is_valid_position(grid: chex.Array, agent: Agent, position: chex.Array) -> chex.Array:
+def is_valid_position(grid: Any, agent: Agent, position: Any) -> Any:
     """Checks to see if the specified agent can move to `position`.
 
     Args:
@@ -124,12 +128,12 @@ def is_valid_position(grid: chex.Array, agent: Agent, position: chex.Array) -> c
     return in_bounds & open_cell & not_connected
 
 
-def connected_or_blocked(agent: Agent, action_mask: chex.Array) -> chex.Array:
+def connected_or_blocked(agent: Agent, action_mask: Any) -> Any:
     """Returns: `True` if an agent is connected or blocked, `False` otherwise."""
-    return agent.connected.all() | jnp.logical_not(action_mask[1:].any())
+    return agent.connected.all() | np.logical_not(action_mask[1:].any())
 
 
-def get_agent_grid(agent_id: jnp.int32, grid: chex.Array) -> chex.Array:
+def get_agent_grid(agent_id: np.int32, grid: Any) -> Any:
     """Returns the grid with zeros everywhere except locations related to the desired agent:
     path, position, or target represented by 1, 2, 3 for the first agent, 4, 5, 6 for the
     second agent, etc."""
@@ -143,8 +147,8 @@ def get_agent_grid(agent_id: jnp.int32, grid: chex.Array) -> chex.Array:
 
 
 def get_correction_mask(
-    old_grid: chex.Array, joined_grid: chex.Array, agent_id: chex.Numeric
-) -> Tuple[chex.Array, chex.Array]:
+    old_grid: Any, joined_grid: Any, agent_id: Any
+) -> Tuple[Any, Any]:
     """Creates a correction grid for collided agents.
 
     This is used when vmapping each agents movements, in order to correct for collisions.
@@ -165,7 +169,7 @@ def get_correction_mask(
     # we want to convert it back to POSITION by adding the grids.
     correction_value = POSITION - PATH
     # There is a collision if the `agent_id`'s POSITION isn't on the `joined_grid`
-    has_collision = jnp.logical_not(jnp.any(joined_grid == position))
+    has_collision = np.logical_not(np.any(joined_grid == position))
     # Grid of all zeros, except at the position of `agent_id`s POSITION on the `old_grid`
     correction_mask = (old_grid == position) * correction_value
     return correction_mask * has_collision, has_collision

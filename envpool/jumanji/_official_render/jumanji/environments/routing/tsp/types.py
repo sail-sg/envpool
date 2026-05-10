@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,12 +17,11 @@
 
 from typing import TYPE_CHECKING, NamedTuple
 
-import chex
 
 if TYPE_CHECKING:  # https://github.com/python/mypy/issues/6239
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
 
 @dataclass
@@ -33,12 +35,12 @@ class State:
     key: random key used for auto-reset.
     """
 
-    coordinates: chex.Array  # (num_cities, 2)
-    position: chex.Numeric  # ()
-    visited_mask: chex.Array  # (num_cities,)
-    trajectory: chex.Array  # (num_cities,)
-    num_visited: chex.Numeric  # ()
-    key: chex.PRNGKey  # (2,)
+    coordinates: Any  # (num_cities, 2)
+    position: Any  # ()
+    visited_mask: Any  # (num_cities,)
+    trajectory: Any  # (num_cities,)
+    num_visited: Any  # ()
+    key: Any  # (2,)
 
 
 class Observation(NamedTuple):
@@ -49,7 +51,7 @@ class Observation(NamedTuple):
     action_mask: binary mask (False/True <--> illegal/legal).
     """
 
-    coordinates: chex.Array  # (num_cities, 2)
-    position: chex.Numeric  # ()
-    trajectory: chex.Array  # (num_cities,)
-    action_mask: chex.Array  # (num_cities,)
+    coordinates: Any  # (num_cities, 2)
+    position: Any  # ()
+    trajectory: Any  # (num_cities,)
+    action_mask: Any  # (num_cities,)

@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,12 +17,11 @@
 
 from typing import TYPE_CHECKING
 
-import chex
 
 if TYPE_CHECKING:
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 from typing import NamedTuple
 
 
@@ -33,11 +35,11 @@ class State:
     key: random key used for auto-reset.
     """
 
-    adj_matrix: chex.Array  # (num_nodes, num_nodes)
-    colors: chex.Array  # (num_nodes,)
-    current_node_index: chex.Numeric  # ()
-    action_mask: chex.Array  # (num_colors,)
-    key: chex.PRNGKey  # (2,)
+    adj_matrix: Any  # (num_nodes, num_nodes)
+    colors: Any  # (num_nodes,)
+    current_node_index: Any  # ()
+    action_mask: Any  # (num_colors,)
+    key: Any  # (2,)
 
 
 class Observation(NamedTuple):
@@ -48,7 +50,7 @@ class Observation(NamedTuple):
     action_mask: binary mask indicating the validity of assigning a color to the current node.
     """
 
-    adj_matrix: chex.Array  # (num_nodes, num_nodes)
-    colors: chex.Array  # (num_nodes,)
-    current_node_index: chex.Numeric  # ()
-    action_mask: chex.Array  # (num_colors,)
+    adj_matrix: Any  # (num_nodes, num_nodes)
+    colors: Any  # (num_nodes,)
+    current_node_index: Any  # ()
+    action_mask: Any  # (num_colors,)

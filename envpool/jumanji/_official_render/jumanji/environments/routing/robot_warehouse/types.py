@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,11 +20,10 @@ from typing import TYPE_CHECKING, NamedTuple, Union
 if TYPE_CHECKING:  # https://github.com/python/mypy/issues/6239
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
 from enum import IntEnum
 
-import chex
 
 
 class Action(IntEnum):
@@ -65,8 +67,8 @@ class Position(NamedTuple):
     y: the y-position of the entity.
     """
 
-    x: chex.Array  # ()
-    y: chex.Array  # ()
+    x: Any  # ()
+    y: Any  # ()
 
 
 class Agent(NamedTuple):
@@ -78,8 +80,8 @@ class Agent(NamedTuple):
     """
 
     position: Position  # (2,)
-    direction: chex.Array  # ()
-    is_carrying: chex.Array  # ()
+    direction: Any  # ()
+    is_carrying: Any  # ()
 
 
 class Shelf(NamedTuple):
@@ -90,7 +92,7 @@ class Shelf(NamedTuple):
     """
 
     position: Position  # (2,)
-    is_requested: chex.Array  # ()
+    is_requested: Any  # ()
 
 
 Entity = Union[Agent, Shelf]
@@ -109,13 +111,13 @@ class State:
     key: a pseudorandom number generator key.
     """
 
-    grid: chex.Array  # (2, grid_width, grid_height)
+    grid: Any  # (2, grid_width, grid_height)
     agents: Agent  # (num_agents, ...)
     shelves: Shelf  # (num_shelves, ...)
-    request_queue: chex.Array  # (num_requested,)
-    step_count: chex.Array  # ()
-    action_mask: chex.Array  # (num_agents, 5)
-    key: chex.PRNGKey  # (2,)
+    request_queue: Any  # (num_requested,)
+    step_count: Any  # ()
+    action_mask: Any  # (num_agents, 5)
+    key: Any  # (2,)
 
 
 class Observation(NamedTuple):
@@ -128,6 +130,6 @@ class Observation(NamedTuple):
     step_count: the number of steps elapsed since the beginning of the episode.
     """
 
-    agents_view: chex.Array  # (num_agents, num_obs_features)
-    action_mask: chex.Array  # (num_agents, 5)
-    step_count: chex.Array  # ()
+    agents_view: Any  # (num_agents, num_obs_features)
+    action_mask: Any  # (num_agents, 5)
+    step_count: Any  # ()

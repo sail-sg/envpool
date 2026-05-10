@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +18,6 @@
 from itertools import pairwise
 from typing import List, Optional, Sequence, Tuple
 
-import chex
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
@@ -142,7 +144,7 @@ class GraphColoringViewer(MatplotlibViewer[State]):
         return nodes, labels, edges
 
     def _render_nodes(
-        self, ax: plt.Axes, pos: List[Tuple[float, float]], colors: chex.Array
+        self, ax: plt.Axes, pos: List[Tuple[float, float]], colors: Any
     ) -> Tuple[List[plt.Circle], List[plt.Text]]:
         # Set the radius of the nodes as a fraction of the scale,
         # so nodes appear smaller when there are more of them.
@@ -179,7 +181,7 @@ class GraphColoringViewer(MatplotlibViewer[State]):
         self,
         ax: plt.Axes,
         pos: List[Tuple[float, float]],
-        adj_matrix: chex.Array,
+        adj_matrix: Any,
         num_nodes: int,
     ) -> List[plt.Line2D]:
         edges = []

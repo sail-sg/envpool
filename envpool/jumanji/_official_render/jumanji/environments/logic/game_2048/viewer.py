@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +17,7 @@
 
 from typing import ClassVar, Dict, Optional, Sequence, Tuple
 
-import jax.numpy as jnp
+import numpy as np
 import matplotlib.animation
 import matplotlib.pyplot as plt
 from matplotlib.artist import Artist
@@ -177,8 +180,8 @@ class Game2048Viewer(MatplotlibViewer[State]):
             state: the current state of the game.
         """
         ax.clear()
-        ax.set_xticks(jnp.arange(-0.5, 4 - 1, 1))
-        ax.set_yticks(jnp.arange(-0.5, 4 - 1, 1))
+        ax.set_xticks(np.arange(-0.5, 4 - 1, 1))
+        ax.set_yticks(np.arange(-0.5, 4 - 1, 1))
         ax.tick_params(
             top=False,
             bottom=False,
@@ -190,7 +193,7 @@ class Game2048Viewer(MatplotlibViewer[State]):
             labelright=False,
         )
         # Get the tile values from the exponents.
-        board = jnp.power(2, state.board)
+        board = np.power(2, state.board)
 
         # Iterate through each cell and render tiles.
         for row in range(0, self._board_size):

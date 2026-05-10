@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,11 +18,9 @@
 from itertools import pairwise
 from typing import Dict, List, Optional, Sequence, Tuple
 
-import chex
-import jax.numpy as jnp
+import numpy as np
 import matplotlib.animation
 import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib.artist import Artist
 from matplotlib.lines import Line2D
 from numpy.typing import NDArray
@@ -165,7 +166,7 @@ class MMSTViewer(MatplotlibViewer[State]):
         return lines, circles, labels
 
     def build_edges(
-        self, adj_matrix: chex.Array, connected_nodes: chex.Array
+        self, adj_matrix: Any, connected_nodes: Any
     ) -> Dict[Tuple[int, ...], List[Tuple[float, ...]]]:
         # Normalize id for either order.
         def edge_id(n1: int, n2: int) -> Tuple[int, ...]:
@@ -176,7 +177,7 @@ class MMSTViewer(MatplotlibViewer[State]):
 
         # Convert to numpy
         connected_nodes = np.asarray(connected_nodes)
-        row_indices, col_indices = jnp.nonzero(adj_matrix)
+        row_indices, col_indices = np.nonzero(adj_matrix)
         # Create the edge list as a list of tuples (source, target)
         edges_list = [
             (int(row), int(col)) for row, col in zip(row_indices, col_indices, strict=False)
@@ -239,7 +240,7 @@ class MMSTViewer(MatplotlibViewer[State]):
 
             updated = []
 
-            if not jnp.array_equal(old_state.adj_matrix, new_state.adj_matrix):
+            if not np.array_equal(old_state.adj_matrix, new_state.adj_matrix):
                 while circles:
                     circle = circles.pop()
                     circle[0].remove()

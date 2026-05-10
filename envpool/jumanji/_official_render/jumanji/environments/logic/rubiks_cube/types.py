@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,15 +17,14 @@
 
 from typing import TYPE_CHECKING, NamedTuple
 
-import chex
 from typing_extensions import TypeAlias
 
 if TYPE_CHECKING:
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
-Cube: TypeAlias = chex.Array
+Cube: TypeAlias = object
 
 
 @dataclass
@@ -35,8 +37,8 @@ class State:
     """
 
     cube: Cube  # (6, cube_size, cube_size)
-    step_count: chex.Numeric  # ()
-    key: chex.PRNGKey  # (2,)
+    step_count: Any  # ()
+    key: Any  # (2,)
 
 
 class Observation(NamedTuple):
@@ -47,4 +49,4 @@ class Observation(NamedTuple):
     """
 
     cube: Cube  # (6, cube_size, cube_size)
-    step_count: chex.Numeric  # ()
+    step_count: Any  # ()

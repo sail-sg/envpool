@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,13 +15,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import fields, is_dataclass, replace
 from typing import Sequence, TypeVar
 
-import chex
-import jax
-import jax.numpy as jnp
+import numpy as np
 
 T = TypeVar("T")
+
+
+def _tree_map(function, *trees):
+    first = trees[0]
+    if is_dataclass(first) and not isinstance(first, type):
+        return replace(
+            first,
+            **{
+                field.name: _tree_map(
+                    function, *(getattr(tree, field.name) for tree in trees)
+                )
+                for field in fields(first)
+            },
+        )
+    if isinstance(first, tuple) and hasattr(first, "_fields"):
+        return type(first)(
+            *(_tree_map(function, *values) for values in zip(*trees))
+        )
+    if isinstance(first, tuple):
+        return type(first)(_tree_map(function, *values) for values in zip(*trees))
+    if isinstance(first, list):
+        return [_tree_map(function, *values) for values in zip(*trees)]
+    if isinstance(first, dict):
+        return {
+            key: _tree_map(function, *(tree[key] for tree in trees))
+            for key in first
+        }
+    return function(*trees)
 
 
 def tree_transpose(list_of_trees: Sequence[T]) -> T:
@@ -30,10 +60,10 @@ def tree_transpose(list_of_trees: Sequence[T]) -> T:
     Returns:
         tree of arrays.
     """
-    return jax.tree_util.tree_map(lambda *xs: jnp.stack(xs, axis=0), *list_of_trees)  # type: ignore
+    return _tree_map(lambda *xs: np.stack(xs, axis=0), *list_of_trees)  # type: ignore
 
 
-def tree_slice(tree: T, i: chex.Numeric) -> T:
+def tree_slice(tree: T, i: Any) -> T:
     """Returns a slice of the tree where all leaves are mapped by x: x[i].
 
     Args:
@@ -43,10 +73,10 @@ def tree_slice(tree: T, i: chex.Numeric) -> T:
     Returns:
         tree whose leaves have been reduced to their i-th item
     """
-    return jax.tree_util.tree_map(lambda x: x[i], tree)  # type: ignore
+    return _tree_map(lambda x: x[i], tree)  # type: ignore
 
 
-def tree_add_element(tree: T, i: chex.Numeric, element: T) -> T:
+def tree_add_element(tree: T, i: Any, element: T) -> T:
     """Sets one value of a tree along the batch axis. It is equivalent to
 
     ```Python
@@ -64,5 +94,10 @@ def tree_add_element(tree: T, i: chex.Numeric, element: T) -> T:
         tree whose elements are the same as before but with the ith value being set to that of
             the given element.
     """
-    new_tree: T = jax.tree_util.tree_map(lambda array, value: array.at[i].set(value), tree, element)
+    def set_element(array, value):
+        out = np.array(array, copy=True)
+        out[i] = value
+        return out
+
+    new_tree: T = _tree_map(set_element, tree, element)
     return new_tree

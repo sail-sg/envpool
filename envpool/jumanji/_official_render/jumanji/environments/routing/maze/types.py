@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,17 +20,16 @@ from typing import TYPE_CHECKING, NamedTuple
 if TYPE_CHECKING:  # https://github.com/python/mypy/issues/6239
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
-import chex
-import jax.numpy as jnp
+import numpy as np
 
 
 class Position(NamedTuple):
-    row: jnp.int32
-    col: jnp.int32
+    row: np.int32
+    col: np.int32
 
-    def __eq__(self, other: object) -> chex.Array:
+    def __eq__(self, other: object) -> Any:
         if not isinstance(other, Position):
             return NotImplemented
         return (self.row == other.row) & (self.col == other.col)
@@ -46,10 +48,10 @@ class State:
 
     agent_position: Position  # Position(row, col) each of shape ()
     target_position: Position  # Position(row, col) each of shape ()
-    walls: chex.Array  # (num_rows, num_cols)
-    action_mask: chex.Array  # (4,)
-    step_count: jnp.int32  # ()
-    key: chex.PRNGKey  # (2,)
+    walls: Any  # (num_rows, num_cols)
+    action_mask: Any  # (4,)
+    step_count: np.int32  # ()
+    key: Any  # (2,)
 
 
 class Observation(NamedTuple):
@@ -64,6 +66,6 @@ class Observation(NamedTuple):
 
     agent_position: Position  # Position(row, col) each of shape ()
     target_position: Position  # Position(row, col) each of shape ()
-    walls: chex.Array  # (num_rows, num_cols)
-    action_mask: chex.Array  # (4,)
-    step_count: jnp.int32  # ()
+    walls: Any  # (num_rows, num_cols)
+    action_mask: Any  # (4,)
+    step_count: np.int32  # ()

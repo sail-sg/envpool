@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +17,7 @@
 
 from typing import Tuple, Union
 
-import jax.numpy as jnp
+import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.quiver import Quiver
@@ -39,8 +42,8 @@ def draw_agents(
     q = ax.quiver(
         agent_states.pos[:, 0],
         agent_states.pos[:, 1],
-        jnp.cos(agent_states.heading),
-        jnp.sin(agent_states.heading),
+        np.cos(agent_states.heading),
+        np.sin(agent_states.heading),
         color=color,
         pivot="middle",
         width=0.005,

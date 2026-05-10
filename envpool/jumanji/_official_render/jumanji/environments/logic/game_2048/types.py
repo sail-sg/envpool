@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,16 +17,15 @@
 
 from typing import TYPE_CHECKING, NamedTuple
 
-import chex
 from typing_extensions import TypeAlias
 
 if TYPE_CHECKING:
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
 # Define a type alias for a board, which is an array.
-Board: TypeAlias = chex.Array
+Board: TypeAlias = object
 
 
 @dataclass
@@ -40,10 +42,10 @@ class State:
     """
 
     board: Board  # (board_size, board_size)
-    step_count: chex.Numeric  # ()
-    action_mask: chex.Array  # (4,)
-    score: chex.Numeric  # ()
-    key: chex.PRNGKey  # (2,)
+    step_count: Any  # ()
+    action_mask: Any  # (4,)
+    score: Any  # ()
+    key: Any  # (2,)
 
 
 class Observation(NamedTuple):
@@ -56,4 +58,4 @@ class Observation(NamedTuple):
     """
 
     board: Board  # (board_size, board_size)
-    action_mask: chex.Array  # (4,)
+    action_mask: Any  # (4,)

@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +17,6 @@
 
 from typing import Any, Dict, Optional, Sequence, Tuple
 
-import chex
 import matplotlib.animation
 import matplotlib.cm
 import matplotlib.pyplot as plt
@@ -52,7 +54,7 @@ class ConnectorViewer(MatplotlibViewer):
 
         super().__init__(name, render_mode)
 
-    def render(self, grid: chex.Array, save_path: Optional[str] = None) -> Optional[NDArray]:
+    def render(self, grid: Any, save_path: Optional[str] = None) -> Optional[NDArray]:
         """Render Connector.
 
         Args:
@@ -74,7 +76,7 @@ class ConnectorViewer(MatplotlibViewer):
 
     def animate(
         self,
-        grids: Sequence[chex.Array],
+        grids: Sequence[Any],
         interval: int = 200,
         save_path: Optional[str] = None,
     ) -> matplotlib.animation.FuncAnimation:
@@ -92,7 +94,7 @@ class ConnectorViewer(MatplotlibViewer):
         fig, ax = self._get_fig_ax(name_suffix="_animation", show=False)
         plt.close(fig=fig)
 
-        def make_frame(grid: chex.Array) -> Tuple[Artist]:
+        def make_frame(grid: Any) -> Tuple[Artist]:
             ax.clear()
             self._add_grid_image(grid, ax)
             return (ax,)
@@ -111,14 +113,14 @@ class ConnectorViewer(MatplotlibViewer):
 
         return self._animation
 
-    def _add_grid_image(self, grid: chex.Array, ax: plt.Axes) -> None:
+    def _add_grid_image(self, grid: Any, ax: plt.Axes) -> None:
         self._draw_grid(grid, ax)
         ax.set_axis_off()
         ax.set_aspect(1)
         ax.relim()
         ax.autoscale_view()
 
-    def _draw_grid(self, grid: chex.Array, ax: plt.Axes) -> None:
+    def _draw_grid(self, grid: Any, ax: plt.Axes) -> None:
         rows, cols = grid.shape
 
         for row in range(rows):

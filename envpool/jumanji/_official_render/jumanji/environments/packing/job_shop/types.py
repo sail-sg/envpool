@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,12 +17,11 @@
 
 from typing import TYPE_CHECKING, NamedTuple, Optional
 
-import chex
 
 if TYPE_CHECKING:  # https://github.com/python/mypy/issues/6239
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
 
 class Observation(NamedTuple):
@@ -39,12 +41,12 @@ class Observation(NamedTuple):
         The last column corresponds to no-op.
     """
 
-    ops_machine_ids: chex.Array  # (num_jobs, max_num_ops)
-    ops_durations: chex.Array  # (num_jobs, max_num_ops)
-    ops_mask: chex.Array  # (num_jobs, max_num_ops)
-    machines_job_ids: chex.Array  # (num_machines,)
-    machines_remaining_times: chex.Array  # (num_machines,)
-    action_mask: chex.Array  # (num_machines, num_jobs + 1)
+    ops_machine_ids: Any  # (num_jobs, max_num_ops)
+    ops_durations: Any  # (num_jobs, max_num_ops)
+    ops_mask: Any  # (num_jobs, max_num_ops)
+    machines_job_ids: Any  # (num_machines,)
+    machines_remaining_times: Any  # (num_machines,)
+    action_mask: Any  # (num_machines, num_jobs + 1)
 
 
 @dataclass
@@ -70,12 +72,12 @@ class State:
     key: random key used for auto-reset.
     """
 
-    ops_machine_ids: chex.Array  # (num_jobs, max_num_ops)
-    ops_durations: chex.Array  # (num_jobs, max_num_ops)
-    ops_mask: chex.Array  # (num_jobs, max_num_ops)
-    machines_job_ids: chex.Array  # (num_machines,)
-    machines_remaining_times: chex.Array  # (num_machines,)
-    action_mask: Optional[chex.Array]  # (num_machines, num_jobs + 1)
-    step_count: chex.Numeric  # ()
-    scheduled_times: chex.Array  # (num_jobs, max_num_ops)
-    key: chex.PRNGKey  # (2,)
+    ops_machine_ids: Any  # (num_jobs, max_num_ops)
+    ops_durations: Any  # (num_jobs, max_num_ops)
+    ops_mask: Any  # (num_jobs, max_num_ops)
+    machines_job_ids: Any  # (num_machines,)
+    machines_remaining_times: Any  # (num_machines,)
+    action_mask: Optional[Any]  # (num_machines, num_jobs + 1)
+    step_count: Any  # ()
+    scheduled_times: Any  # (num_jobs, max_num_ops)
+    key: Any  # (2,)

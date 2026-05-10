@@ -1,3 +1,5 @@
+# ruff: noqa
+# fmt: off
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,19 +18,18 @@ from __future__ import annotations
 from enum import IntEnum
 from typing import TYPE_CHECKING, NamedTuple
 
-import chex
 
 if TYPE_CHECKING:
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
 
 class Position(NamedTuple):
-    row: chex.Array
-    col: chex.Array
+    row: Any
+    col: Any
 
-    def __eq__(self, other: Position) -> chex.Array:  # type: ignore[override]
+    def __eq__(self, other: Position) -> Any:  # type: ignore[override]
         if not isinstance(other, Position):
             return NotImplemented
         return (self.row == other.row) & (self.col == other.col)
@@ -60,15 +61,15 @@ class State:
     key: random key used to sample a new fruit when one is eaten and used for auto-reset.
     """
 
-    body: chex.Array  # (num_rows, num_cols)
-    body_state: chex.Array  # (num_rows, num_cols)
+    body: Any  # (num_rows, num_cols)
+    body_state: Any  # (num_rows, num_cols)
     head_position: Position  # leaves of shape ()
-    tail: chex.Array  # (num_rows, num_cols)
+    tail: Any  # (num_rows, num_cols)
     fruit_position: Position  # ()
-    length: chex.Numeric  # ()
-    step_count: chex.Numeric  # ()
-    action_mask: chex.Array  # (4,)
-    key: chex.PRNGKey  # (2,)
+    length: Any  # ()
+    step_count: Any  # ()
+    action_mask: Any  # (4,)
+    key: Any  # (2,)
 
 
 class Observation(NamedTuple):
@@ -78,6 +79,6 @@ class Observation(NamedTuple):
     action_mask: array specifying which directions the snake can move in from its current position.
     """
 
-    grid: chex.Array  # (num_rows, num_cols, 5)
-    step_count: chex.Numeric  # Shape ()
-    action_mask: chex.Array  # (4,)
+    grid: Any  # (num_rows, num_cols, 5)
+    step_count: Any  # Shape ()
+    action_mask: Any  # (4,)

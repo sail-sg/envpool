@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,12 +17,11 @@
 
 from typing import TYPE_CHECKING, NamedTuple
 
-import chex
 
 if TYPE_CHECKING:  # https://github.com/python/mypy/issues/6239
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
 
 @dataclass
@@ -32,9 +34,9 @@ class Entity:
     level: the level of this food.
     """
 
-    id: chex.Array  # ()
-    position: chex.Array  # (2,)
-    level: chex.Array  # ()
+    id: Any  # ()
+    position: Any  # (2,)
+    level: Any  # ()
 
 
 @dataclass
@@ -48,7 +50,7 @@ class Agent(Entity):
     loading: whether the agent is currently loading food.
     """
 
-    loading: chex.Array  # () - bool: is loading food
+    loading: Any  # () - bool: is loading food
 
 
 @dataclass
@@ -62,7 +64,7 @@ class Food(Entity):
     eaten: whether the food has been eaten.
     """
 
-    eaten: chex.Array  # () - bool: has been eaten
+    eaten: Any  # () - bool: has been eaten
 
 
 @dataclass
@@ -78,8 +80,8 @@ class State:
 
     agents: Agent  # List of Agent entities (pytree structure)
     food_items: Food  # List of Food entities (pytree structure)
-    step_count: chex.Array  # ()
-    key: chex.PRNGKey  # (2,)
+    step_count: Any  # ()
+    key: Any  # (2,)
 
 
 class Observation(NamedTuple):
@@ -92,6 +94,6 @@ class Observation(NamedTuple):
     step_count: (int32) the current episode step.
     """
 
-    agents_view: chex.Array  # (num_agents, 3 * (num_food + num_agents))
-    action_mask: chex.Array  # (num_agents, 6)
-    step_count: chex.Array  # ()
+    agents_view: Any  # (num_agents, 3 * (num_food + num_agents))
+    action_mask: Any  # (num_agents, 6)
+    step_count: Any  # ()

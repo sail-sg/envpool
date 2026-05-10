@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,8 +17,7 @@
 
 from typing import List, Optional, Sequence, Tuple
 
-import chex
-import jax.numpy as jnp
+import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.artist import Artist
@@ -110,8 +112,8 @@ class MinesweeperViewer(MatplotlibViewer[State]):
 
     def _draw(self, ax: plt.Axes, state: State) -> None:
         ax.clear()
-        ax.set_xticks(jnp.arange(-0.5, self.num_cols - 1, 1))
-        ax.set_yticks(jnp.arange(-0.5, self.num_rows - 1, 1))
+        ax.set_xticks(np.arange(-0.5, self.num_cols - 1, 1))
+        ax.set_yticks(np.arange(-0.5, self.num_rows - 1, 1))
         ax.tick_params(
             top=False,
             bottom=False,
@@ -122,7 +124,7 @@ class MinesweeperViewer(MatplotlibViewer[State]):
             labeltop=False,
             labelright=False,
         )
-        background = jnp.ones_like(state.board)
+        background = np.ones_like(state.board)
         for i in range(self.num_rows):
             for j in range(self.num_cols):
                 background = self._render_grid_square(
@@ -132,12 +134,13 @@ class MinesweeperViewer(MatplotlibViewer[State]):
         ax.grid(color="black", linestyle="-", linewidth=2)
 
     def _render_grid_square(
-        self, state: State, ax: plt.Axes, i: int, j: int, background: chex.Array
-    ) -> chex.Array:
+        self, state: State, ax: plt.Axes, i: int, j: int, background: Any
+    ) -> Any:
         board_value = state.board[i, j]
         if board_value != UNEXPLORED_ID:
-            if explored_mine(state=state, action=jnp.array([i, j], dtype=jnp.int32)):
-                background = background.at[i, j].set(0)
+            if explored_mine(state=state, action=np.array([i, j], dtype=np.int32)):
+                background = np.array(background, copy=True)
+                background[i, j] = 0
             else:
                 ax.text(
                     j,

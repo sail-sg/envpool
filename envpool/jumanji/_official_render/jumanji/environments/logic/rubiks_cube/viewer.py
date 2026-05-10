@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +17,7 @@
 
 from typing import Any, List, Optional, Sequence, Tuple
 
-import jax.numpy as jnp
+import numpy as np
 import matplotlib
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -127,8 +130,8 @@ class RubiksCubeViewer(MatplotlibViewer[State]):
         for i, face in enumerate(Face):
             ax[i].clear()
             ax[i].set_title(label=f"{face}")
-            ax[i].set_xticks(jnp.arange(-0.5, self.cube_size - 1, 1))
-            ax[i].set_yticks(jnp.arange(-0.5, self.cube_size - 1, 1))
+            ax[i].set_xticks(np.arange(-0.5, self.cube_size - 1, 1))
+            ax[i].set_yticks(np.arange(-0.5, self.cube_size - 1, 1))
             ax[i].tick_params(
                 top=False,
                 bottom=False,

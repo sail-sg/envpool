@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,9 +20,8 @@ from typing import TYPE_CHECKING, NamedTuple
 if TYPE_CHECKING:  # https://github.com/python/mypy/issues/6239
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
-import chex
 
 
 @dataclass
@@ -32,8 +34,8 @@ class Node:
         demands take up more vehicle capacity.
     """
 
-    coordinates: chex.Array  # Shape: (num_customers + 1, 2)
-    demands: chex.Array  # Shape: (num_customers + 1,)
+    coordinates: Any  # Shape: (num_customers + 1, 2)
+    demands: Any  # Shape: (num_customers + 1,)
 
 
 @dataclass
@@ -47,8 +49,8 @@ class TimeWindow:
         this time, a penalty (based on late coeff) will be handed out.
     """
 
-    start: chex.Array  # Shape: (num_customers,)
-    end: chex.Array  # Shape: (num_customers,)
+    start: Any  # Shape: (num_customers,)
+    end: Any  # Shape: (num_customers,)
 
 
 @dataclass
@@ -64,8 +66,8 @@ class PenalityCoeff:
         pentality = (Vehicle.local_times - TimeWindow.end) * PenalityCoeff.late.
     """
 
-    early: chex.Array  # Shape: (num_customers,)
-    late: chex.Array  # Shape: (num_customers,)
+    early: Any  # Shape: (num_customers,)
+    late: Any  # Shape: (num_customers,)
 
 
 @dataclass
@@ -80,8 +82,8 @@ class Vehicle:
         add before needing to return to the depot.
     """
 
-    local_times: chex.Array  # Shape: (num_vehicles,)
-    capacities: chex.Array  # Shape: (num_vehicles,)
+    local_times: Any  # Shape: (num_vehicles,)
+    capacities: Any  # Shape: (num_vehicles,)
 
 
 @dataclass
@@ -98,7 +100,7 @@ class ObsVehicle(Vehicle):
         add before needing to return to the depot.
     """
 
-    coordinates: chex.Array  # Shape: (num_vehicles, 2)
+    coordinates: Any  # Shape: (num_vehicles, 2)
 
 
 @dataclass
@@ -120,9 +122,9 @@ class StateVehicle(Vehicle):
         has received thus far.
     """
 
-    positions: chex.Array  # Shape: (num_vehicles,)
-    distances: chex.Array  # Shape: (num_vehicles,)
-    time_penalties: chex.Array  # Shape: (num_vehicles,)
+    positions: Any  # Shape: (num_vehicles,)
+    distances: Any  # Shape: (num_vehicles,)
+    time_penalties: Any  # Shape: (num_vehicles,)
 
 
 @dataclass
@@ -144,11 +146,11 @@ class State:
     windows: TimeWindow  # Shape: (num_customers, ...)
     coeffs: PenalityCoeff  # Shape: (num_customers, ...)
     vehicles: StateVehicle  # Shape: (num_vehicles, ...)
-    order: chex.Array  # Shape: (num_vehicles, 2 * num_customers,) - this size is
+    order: Any  # Shape: (num_vehicles, 2 * num_customers,) - this size is
     # worst-case when hitting the max step length.
-    step_count: chex.Array  # Shape: ()
-    action_mask: chex.Array  # Shape: (num_vehicles, num_customers + 1)
-    key: chex.PRNGKey  # (2,)
+    step_count: Any  # Shape: ()
+    action_mask: Any  # Shape: (num_vehicles, num_customers + 1)
+    key: Any  # (2,)
 
 
 class Observation(NamedTuple):
@@ -167,4 +169,4 @@ class Observation(NamedTuple):
     windows: TimeWindow  # Shape: (num_vehicles, num_customers, ...)
     coeffs: PenalityCoeff  # Shape: (num_vehicles, num_customers, ...)
     vehicles: ObsVehicle  # Shape: (num_vehicles, ...)
-    action_mask: chex.Array  # Shape: (num_vehicles, num_customers + 1)
+    action_mask: Any  # Shape: (num_vehicles, num_customers + 1)

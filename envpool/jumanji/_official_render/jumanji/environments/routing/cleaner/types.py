@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,13 +17,12 @@
 
 from typing import TYPE_CHECKING, NamedTuple, Optional
 
-import chex
-import jax.numpy as jnp
+import numpy as np
 
 if TYPE_CHECKING:
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
 
 @dataclass
@@ -36,11 +38,11 @@ class State:
     key: random key used for auto-reset.
     """
 
-    grid: chex.Array  # (num_rows, num_cols)
-    agents_locations: chex.Array  # (num_agents, 2)
-    action_mask: Optional[chex.Array]  # (num_agents, 4)
-    step_count: jnp.int32  # ()
-    key: chex.PRNGKey  # (2,)
+    grid: Any  # (num_rows, num_cols)
+    agents_locations: Any  # (num_agents, 2)
+    action_mask: Optional[Any]  # (num_agents, 4)
+    step_count: np.int32  # ()
+    key: Any  # (2,)
 
 
 class Observation(NamedTuple):
@@ -54,7 +56,7 @@ class Observation(NamedTuple):
     step_count: the number of steps elapsed since the beginning of the episode.
     """
 
-    grid: chex.Array  # (num_rows, num_cols)
-    agents_locations: chex.Array  # (num_agents, 2)
-    action_mask: chex.Array  # (num_agents, 4)
-    step_count: jnp.int32  # ()
+    grid: Any  # (num_rows, num_cols)
+    agents_locations: Any  # (num_agents, 2)
+    action_mask: Any  # (num_agents, 4)
+    step_count: np.int32  # ()

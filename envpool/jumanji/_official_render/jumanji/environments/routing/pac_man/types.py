@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,17 +21,16 @@ from typing import TYPE_CHECKING, NamedTuple
 if TYPE_CHECKING:
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
-import chex
-import jax.numpy as jnp
+import numpy as np
 
 
 class Position(NamedTuple):
-    x: jnp.int32
-    y: jnp.int32
+    x: np.int32
+    y: np.int32
 
-    def __eq__(self, other: object) -> chex.Array:
+    def __eq__(self, other: object) -> Any:
         if not isinstance(other, Position):
             return NotImplemented
         return (self.x == other.x) & (self.y == other.y)
@@ -39,58 +41,58 @@ class State:
     """The state of the environment.
 
     key: random key used for auto-reset.
-    grid: jax array (int) of the ingame maze with walls.
+    grid: array (int) of the ingame maze with walls.
     pellets: int tracking the number of pellets.
-    frightened_state_time: jax array (int) of shape ()
+    frightened_state_time: array (int) of shape ()
         tracks number of steps for the scatter state.
-    pellet_locations: jax array (int) of pellet locations.
-    power_up_locations: jax array (int) of power-up locations
+    pellet_locations: array (int) of pellet locations.
+    power_up_locations: array (int) of power-up locations
     player_locations: current 2D position of agent.
-    ghost_locations: jax array (int) of current ghost positions.
+    ghost_locations: array (int) of current ghost positions.
     initial_player_locations: starting 2D position of agent.
-    initial_ghost_positions: jax array (int) of initial ghost positions.
-    ghost_init_targets: jax array (int) of initial ghost targets.
+    initial_ghost_positions: array (int) of initial ghost positions.
+    ghost_init_targets: array (int) of initial ghost targets.
         used to direct ghosts on respawn.
-    old_ghost_locations: jax array (int) of shape ghost positions from last step.
+    old_ghost_locations: array (int) of shape ghost positions from last step.
         used to prevent ghost backtracking.
-    ghost_init_steps: jax array (int) of number of initial ghost steps.
+    ghost_init_steps: array (int) of number of initial ghost steps.
         used to determine per ghost initialisation.
-    ghost_actions: jax array (int) of ghost action at current step.
+    ghost_actions: array (int) of ghost action at current step.
     last_direction: (int) tracking the last direction of the player.
     dead: (bool) used to track player death.
-    visited_index: jax array (int) of visited locations.
+    visited_index: array (int) of visited locations.
         used to prevent repeated pellet points.
-    ghost_starts: jax array (int) of reset positions for ghosts
+    ghost_starts: array (int) of reset positions for ghosts
         used to reset ghost positions if eaten
-    scatter_targets: jax array (int) of scatter targets.
+    scatter_targets: array (int) of scatter targets.
             target locations for ghosts when scatter behavior is active.
     step_count: (int32) of total steps taken from reset till current timestep.
-    ghost_eaten: jax array (bool) tracking if ghost has been eaten before.
+    ghost_eaten: array (bool) tracking if ghost has been eaten before.
     score: (int32) of total points aquired.
     """
 
-    key: chex.PRNGKey  # (2,)
-    grid: chex.Array  # (31,28)
-    pellets: jnp.int32  # ()
-    frightened_state_time: jnp.int32  # ()
-    pellet_locations: chex.Array  # (316,2)
-    power_up_locations: chex.Array  # (4,2)
+    key: Any  # (2,)
+    grid: Any  # (31,28)
+    pellets: np.int32  # ()
+    frightened_state_time: np.int32  # ()
+    pellet_locations: Any  # (316,2)
+    power_up_locations: Any  # (4,2)
     player_locations: Position  # Position(row, col) each of shape ()
-    ghost_locations: chex.Array  # (4,2)
+    ghost_locations: Any  # (4,2)
     initial_player_locations: Position  # Position(row, col) each of shape ()
-    initial_ghost_positions: chex.Array  # (4,2)
-    ghost_init_targets: chex.Array  # (4,2)
-    old_ghost_locations: chex.Array  # (4,2)
-    ghost_init_steps: chex.Array  # (4,)
-    ghost_actions: chex.Array  # (4,)
-    last_direction: jnp.int32  # ()
+    initial_ghost_positions: Any  # (4,2)
+    ghost_init_targets: Any  # (4,2)
+    old_ghost_locations: Any  # (4,2)
+    ghost_init_steps: Any  # (4,)
+    ghost_actions: Any  # (4,)
+    last_direction: np.int32  # ()
     dead: bool  # ()
-    visited_index: chex.Array  # (320,2)
-    ghost_starts: chex.Array  # (4,2)
-    scatter_targets: chex.Array  # (4,2)
-    step_count: jnp.int32  # ()
-    ghost_eaten: chex.Array  # (4,)
-    score: jnp.int32  # ()
+    visited_index: Any  # (320,2)
+    ghost_starts: Any  # (4,2)
+    scatter_targets: Any  # (4,2)
+    step_count: np.int32  # ()
+    ghost_eaten: Any  # (4,)
+    score: np.int32  # ()
 
 
 class Observation(NamedTuple):
@@ -106,11 +108,11 @@ class Observation(NamedTuple):
     score: (int32) of total points aquired.
     """
 
-    grid: chex.Array  # (31, 28)
+    grid: Any  # (31, 28)
     player_locations: Position
-    ghost_locations: chex.Array
-    power_up_locations: chex.Array
-    frightened_state_time: jnp.int32
-    pellet_locations: chex.Array
-    action_mask: chex.Array
-    score: jnp.int32  # ()
+    ghost_locations: Any
+    power_up_locations: Any
+    frightened_state_time: np.int32
+    pellet_locations: Any
+    action_mask: Any
+    score: np.int32  # ()

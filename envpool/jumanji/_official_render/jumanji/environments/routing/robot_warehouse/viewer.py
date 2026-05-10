@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,11 +19,8 @@
 the rendering code is copied from the original Rware environment and should be ignored from the
 copyright."""
 
-# flake8: noqa: CCR001
-
 from typing import Optional, Sequence, Tuple
 
-import chex
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
@@ -38,7 +38,7 @@ class RobotWarehouseViewer(MatplotlibViewer[State]):
     def __init__(
         self,
         grid_size: Tuple[int, int],
-        goals: chex.Array,
+        goals: Any,
         name: str = "RobotWarehouse",
         render_mode: str = "human",
     ) -> None:

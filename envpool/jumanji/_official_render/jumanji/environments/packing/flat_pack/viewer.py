@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +17,6 @@
 
 from typing import Any, Dict, Optional, Sequence, Tuple
 
-import chex
 import matplotlib.animation
 import matplotlib.cm
 import matplotlib.pyplot as plt
@@ -108,14 +110,14 @@ class FlatPackViewer(MatplotlibViewer[State]):
 
         return self._animation
 
-    def _add_grid_image(self, grid: chex.Array, ax: plt.Axes) -> None:
+    def _add_grid_image(self, grid: Any, ax: plt.Axes) -> None:
         self._draw_grid(grid, ax)
         ax.set_axis_off()
         ax.set_aspect(1)
         ax.relim()
         ax.autoscale_view()
 
-    def _draw_grid(self, grid: chex.Array, ax: plt.Axes) -> None:
+    def _draw_grid(self, grid: Any, ax: plt.Axes) -> None:
         # Flip the grid upside down to match the coordinate system of matplotlib.
         grid = np.flipud(grid)
         rows, cols = grid.shape

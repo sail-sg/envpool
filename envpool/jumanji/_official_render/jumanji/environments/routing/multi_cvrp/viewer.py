@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,11 +19,9 @@ from importlib import resources
 from itertools import groupby, pairwise
 from typing import List, Optional, Sequence, Tuple, Union
 
-import chex
-import jax.numpy as jnp
+import numpy as np
 import matplotlib.animation
 import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib.artist import Artist
 from matplotlib.collections import PathCollection
 from matplotlib.quiver import Quiver
@@ -111,7 +112,7 @@ class MultiCVRPViewer(MatplotlibViewer[State]):
             old_state, new_state = state_pair
             updated = []
 
-            if not jnp.array_equal(old_state.nodes.coordinates, new_state.nodes.coordinates):
+            if not np.array_equal(old_state.nodes.coordinates, new_state.nodes.coordinates):
                 x_coords, y_coords = (
                     new_state.nodes.coordinates[:, 0] / self._map_max,
                     new_state.nodes.coordinates[:, 1] / self._map_max,
@@ -162,7 +163,7 @@ class MultiCVRPViewer(MatplotlibViewer[State]):
         map_img = plt.imread(img_path)
         ax.imshow(map_img, extent=(0, 1, 0, 1))
 
-    def _group_tour(self, tour: chex.Array) -> List[NDArray]:
+    def _group_tour(self, tour: Any) -> List[NDArray]:
         """Group the tour into routes that either (1) start and end at the depot, or, (2) start at
         the depot and end at the current city.
 
@@ -182,7 +183,7 @@ class MultiCVRPViewer(MatplotlibViewer[State]):
         return tour_grouped
 
     def _draw_route(
-        self, ax: plt.Axes, coords: chex.Array, col_id: int
+        self, ax: plt.Axes, coords: Any, col_id: int
     ) -> Tuple[Quiver, PathCollection]:
         """Draw the arrows and nodes for each route in the given colour."""
         x, y = coords[:, 0], coords[:, 1]

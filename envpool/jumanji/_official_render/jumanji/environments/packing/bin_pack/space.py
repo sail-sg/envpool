@@ -1,3 +1,5 @@
+# ruff: noqa
+# fmt: off
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,29 +17,28 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import chex
-import jax.numpy as jnp
+import numpy as np
 
 if TYPE_CHECKING:
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
 
 @dataclass
 class Space:
-    x1: chex.Numeric
-    x2: chex.Numeric
-    y1: chex.Numeric
-    y2: chex.Numeric
-    z1: chex.Numeric
-    z2: chex.Numeric
+    x1: Any
+    x2: Any
+    y1: Any
+    y2: Any
+    z1: Any
+    z2: Any
 
     def astype(self, dtype: Any) -> Space:
-        space_dict = {key: jnp.asarray(value, dtype) for key, value in self.__dict__.items()}
+        space_dict = {key: np.asarray(value, dtype) for key, value in self.__dict__.items()}
         return Space(**space_dict)
 
-    def get_axis_value(self, axis: str, index: int) -> chex.Numeric:
+    def get_axis_value(self, axis: str, index: int) -> Any:
         """Dynamically returns the correct attribute given the axis ("x", "y" or "z") and the index
         (1 or 2).
 
@@ -55,7 +56,7 @@ class Space:
         """
         return getattr(self, f"{axis}{index}")
 
-    def set_axis_value(self, axis: str, index: int, value: chex.Numeric) -> None:
+    def set_axis_value(self, axis: str, index: int, value: Any) -> None:
         """Dynamically sets the correct attribute given the axis ("x", "y" or "z"), the index
         (1 or 2) and the value to set.
 
@@ -82,34 +83,34 @@ class Space:
             ")"
         )
 
-    def volume(self) -> chex.Numeric:
+    def volume(self) -> Any:
         """Returns the volume as a float to prevent from overflow with 32 bits."""
-        x_len = jnp.asarray(self.x2 - self.x1, float)
-        y_len = jnp.asarray(self.y2 - self.y1, float)
-        z_len = jnp.asarray(self.z2 - self.z1, float)
+        x_len = np.asarray(self.x2 - self.x1, np.float32)
+        y_len = np.asarray(self.y2 - self.y1, np.float32)
+        z_len = np.asarray(self.z2 - self.z1, np.float32)
         return x_len * y_len * z_len
 
     def intersection(self, space: Space) -> Space:
         """Returns the intersected space with another space (i.e. the space that is included in both
         spaces whose volume is maximum).
         """
-        x1 = jnp.maximum(self.x1, space.x1)
-        x2 = jnp.minimum(self.x2, space.x2)
-        y1 = jnp.maximum(self.y1, space.y1)
-        y2 = jnp.minimum(self.y2, space.y2)
-        z1 = jnp.maximum(self.z1, space.z1)
-        z2 = jnp.minimum(self.z2, space.z2)
+        x1 = np.maximum(self.x1, space.x1)
+        x2 = np.minimum(self.x2, space.x2)
+        y1 = np.maximum(self.y1, space.y1)
+        y2 = np.minimum(self.y2, space.y2)
+        z1 = np.maximum(self.z1, space.z1)
+        z2 = np.minimum(self.z2, space.z2)
         return Space(x1=x1, x2=x2, y1=y1, y2=y2, z1=z1, z2=z2)
 
-    def intersect(self, space: Space) -> chex.Numeric:
+    def intersect(self, space: Space) -> Any:
         """Returns whether a space intersect another space or not."""
         return ~(self.intersection(space).is_empty())
 
-    def is_empty(self) -> chex.Numeric:
+    def is_empty(self) -> Any:
         """A space is empty if at least one dimension is negative or zero."""
         return (self.x1 >= self.x2) | (self.y1 >= self.y2) | (self.z1 >= self.z2)
 
-    def is_included(self, space: Space) -> chex.Numeric:
+    def is_included(self, space: Space) -> Any:
         """Returns whether self is included into another space."""
         return (
             (self.x1 >= space.x1)
@@ -131,7 +132,7 @@ class Space:
         Returns:
             space whose dimensions are all infinite but on the given axis where it is semi-closed.
         """
-        inf_ = jnp.inf
+        inf_ = np.inf
         axis_direction = f"{axis}_{direction}"
         if axis_direction == "x_lower":
             return Space(x1=-inf_, x2=self.x1, y1=-inf_, y2=inf_, z1=-inf_, z2=inf_)

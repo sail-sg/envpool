@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import jax.numpy as jnp
+import numpy as np
 
 # Observation
 DIRTY = 0
@@ -20,4 +23,4 @@ CLEAN = 1
 WALL = 2
 
 # Actions
-MOVES = jnp.array([[-1, 0], [0, 1], [1, 0], [0, -1]])  # Up, right, down, left
+MOVES = np.array([[-1, 0], [0, 1], [1, 0], [0, -1]])  # Up, right, down, left

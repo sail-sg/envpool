@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,10 +22,9 @@ from typing_extensions import TypeAlias
 if TYPE_CHECKING:
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
-import chex
-import jax.numpy as jnp
+import numpy as np
 
 from jumanji.environments.packing.bin_pack.space import Space
 
@@ -32,13 +34,13 @@ EMS: TypeAlias = Space
 
 def empty_ems() -> EMS:
     """Returns an empty EMS located at (0, 0, 0)."""
-    return EMS(x1=0, x2=0, y1=0, y2=0, z1=0, z2=0).astype(jnp.int32)
+    return EMS(x1=0, x2=0, y1=0, y2=0, z1=0, z2=0).astype(np.int32)
 
 
 class Item(NamedTuple):
-    x_len: chex.Numeric
-    y_len: chex.Numeric
-    z_len: chex.Numeric
+    x_len: Any
+    y_len: Any
+    z_len: Any
 
 
 def item_from_space(space: Space) -> Item:
@@ -50,7 +52,7 @@ def item_from_space(space: Space) -> Item:
     )
 
 
-def item_fits_in_item(item: Item, other_item: Item) -> chex.Array:
+def item_fits_in_item(item: Item, other_item: Item) -> Any:
     """Check if an item is smaller than another one."""
     return (
         (item.x_len <= other_item.x_len)
@@ -59,18 +61,18 @@ def item_fits_in_item(item: Item, other_item: Item) -> chex.Array:
     )
 
 
-def item_volume(item: Item) -> chex.Array:
+def item_volume(item: Item) -> Any:
     """Returns the volume as a float to prevent from overflow with 32 bits."""
-    x_len = jnp.asarray(item.x_len, float)
-    y_len = jnp.asarray(item.y_len, float)
-    z_len = jnp.asarray(item.z_len, float)
+    x_len = np.asarray(item.x_len, np.float32)
+    y_len = np.asarray(item.y_len, np.float32)
+    z_len = np.asarray(item.z_len, np.float32)
     return x_len * y_len * z_len
 
 
 class Location(NamedTuple):
-    x: chex.Numeric
-    y: chex.Numeric
-    z: chex.Numeric
+    x: Any
+    y: Any
+    z: Any
 
 
 def location_from_space(space: Space) -> Location:
@@ -122,14 +124,14 @@ class State:
 
     container: Container  # leaves of shape ()
     ems: EMS  # leaves of shape (max_num_ems,)
-    ems_mask: chex.Array  # (max_num_ems,)
+    ems_mask: Any  # (max_num_ems,)
     items: Item  # leaves of shape (max_num_items,)
-    items_mask: chex.Array  # (max_num_items,)
-    items_placed: chex.Array  # (max_num_items,)
+    items_mask: Any  # (max_num_items,)
+    items_placed: Any  # (max_num_items,)
     items_location: Location  # leaves of shape (max_num_items,)
-    action_mask: Optional[chex.Array]  # (obs_num_ems, max_num_items)
-    sorted_ems_indexes: chex.Array  # (max_num_ems,)
-    key: chex.PRNGKey  # (2,)
+    action_mask: Optional[Any]  # (obs_num_ems, max_num_items)
+    sorted_ems_indexes: Any  # (max_num_ems,)
+    key: Any  # (2,)
 
 
 class Observation(NamedTuple):
@@ -144,8 +146,8 @@ class Observation(NamedTuple):
     """
 
     ems: EMS  # leaves of shape (obs_num_ems,)
-    ems_mask: chex.Array  # (obs_num_ems,)
+    ems_mask: Any  # (obs_num_ems,)
     items: Item  # leaves of shape (max_num_items,)
-    items_mask: chex.Array  # (max_num_items,)
-    items_placed: chex.Array  # (max_num_items,)
-    action_mask: chex.Array  # (obs_num_ems, max_num_items)
+    items_mask: Any  # (max_num_items,)
+    items_placed: Any  # (max_num_items,)
+    action_mask: Any  # (obs_num_ems, max_num_items)

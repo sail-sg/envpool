@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +18,6 @@
 from importlib import resources
 from typing import Callable, Optional, Sequence, Tuple
 
-import chex
 import matplotlib.animation
 import matplotlib.cm
 import matplotlib.pyplot as plt
@@ -64,7 +66,7 @@ class BoxViewer(MatplotlibViewer):
 
         super().__init__(name, render_mode)
 
-    def render(self, state: chex.Array, save_path: Optional[str] = None) -> Optional[NDArray]:
+    def render(self, state: Any, save_path: Optional[str] = None) -> Optional[NDArray]:
         """Render the given state of the `Sokoban` environment.
 
         Args:
@@ -87,7 +89,7 @@ class BoxViewer(MatplotlibViewer):
 
     def animate(
         self,
-        states: Sequence[chex.Array],
+        states: Sequence[Any],
         interval: int = 200,
         save_path: Optional[str] = None,
     ) -> matplotlib.animation.FuncAnimation:
@@ -106,7 +108,7 @@ class BoxViewer(MatplotlibViewer):
         fig, ax = self._get_fig_ax(name_suffix="_animation", show=False)
         plt.close(fig=fig)
 
-        def make_frame(state: chex.Array) -> Tuple[Artist]:
+        def make_frame(state: Any) -> Tuple[Artist]:
             ax.clear()
             self._add_grid_image(state, ax)
             return (ax,)
@@ -125,7 +127,7 @@ class BoxViewer(MatplotlibViewer):
 
         return self._animation
 
-    def _add_grid_image(self, state: chex.Array, ax: plt.Axes) -> None:
+    def _add_grid_image(self, state: Any, ax: plt.Axes) -> None:
         """
         Add a grid image to the provided axes.
 
@@ -141,7 +143,7 @@ class BoxViewer(MatplotlibViewer):
         ax.relim()
         ax.autoscale_view()
 
-    def _draw_grid(self, grid: chex.Array, ax: plt.Axes) -> None:
+    def _draw_grid(self, grid: Any, ax: plt.Axes) -> None:
         """
         Draw a grid onto provided axes.
 

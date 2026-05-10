@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +17,6 @@
 
 from typing import ClassVar, Optional, Sequence
 
-import chex
 from matplotlib import animation
 from numpy.typing import NDArray
 
@@ -86,7 +88,8 @@ class MazeEnvViewer(MazeViewer):
         mazes = [self._overlay_agent_and_target(state) for state in states]
         return super().animate(mazes, interval, save_path)
 
-    def _overlay_agent_and_target(self, state: State) -> chex.Array:
-        maze = state.walls.astype(int)
-        maze = maze.at[tuple(state.agent_position)].set(self.AGENT)
-        return maze.at[tuple(state.target_position)].set(self.TARGET)
+    def _overlay_agent_and_target(self, state: State) -> Any:
+        maze = state.walls.astype(int, copy=True)
+        maze[tuple(state.agent_position)] = self.AGENT
+        maze[tuple(state.target_position)] = self.TARGET
+        return maze

@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,9 +19,8 @@ from typing import TYPE_CHECKING, NamedTuple
 if TYPE_CHECKING:
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
-import chex
 
 from jumanji.environments.swarms.common.types import AgentState
 
@@ -34,9 +36,9 @@ class TargetState:
         target has been located by a searcher.
     """
 
-    pos: chex.Array  # (num_targets, 2)
-    vel: chex.Array  # (num_targets, 2)
-    found: chex.Array  # (num_targets,)
+    pos: Any  # (num_targets, 2)
+    vel: Any  # (num_targets, 2)
+    found: Any  # (num_targets,)
 
 
 @dataclass
@@ -44,13 +46,13 @@ class State:
     """
     searchers: Searcher agent states.
     targets: Search target state.
-    key: JAX random key.
+    key: random key.
     step: Environment step number
     """
 
     searchers: AgentState
     targets: TargetState
-    key: chex.PRNGKey
+    key: Any
     step: int = 0
 
 
@@ -79,7 +81,7 @@ class Observation(NamedTuple):
     and `0.5` is the normalised distance to the other agent.
     """
 
-    searcher_views: chex.Array  # (num_searchers, num_vision)
-    targets_remaining: chex.Numeric  # ()
-    step: chex.Numeric  # ()
-    positions: chex.Array  # (num_searchers, 2)
+    searcher_views: Any  # (num_searchers, num_vision)
+    targets_remaining: Any  # ()
+    step: Any  # ()
+    positions: Any  # (num_searchers, 2)

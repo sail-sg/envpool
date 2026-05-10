@@ -46,7 +46,6 @@ _VENDOR_ROOT = Path(__file__).with_name("_official_render")
 _MISSING = object()
 _VENDOR_MODULES: dict[str, Any] = {}
 _VENDOR_IMPORTS = (
-    "jax.numpy",
     "jumanji.environments.logic.game_2048.types",
     "jumanji.environments.logic.game_2048.viewer",
     "jumanji.environments.logic.graph_coloring.types",
@@ -99,12 +98,7 @@ _VENDOR_IMPORTS = (
 
 
 def _is_vendor_name(name: str) -> bool:
-    return (
-        name == "jumanji"
-        or name == "jax"
-        or name == "chex"
-        or name.startswith(("jumanji.", "jax."))
-    )
+    return name == "jumanji" or name.startswith("jumanji.")
 
 
 def _load_vendor_modules() -> None:
@@ -134,16 +128,23 @@ def _mod(name: str) -> Any:
     return _VENDOR_MODULES[name]
 
 
-def _jnp() -> Any:
-    return _mod("jax.numpy")
-
-
 def _asarray(value: Any, dtype: Any | None = None) -> NDArray[np.generic]:
     return np.asarray(value, dtype=dtype)
 
 
+def _default_array_dtype(value: Any, dtype: Any | None) -> Any | None:
+    if dtype is not None:
+        return dtype
+    array = np.asarray(value)
+    if array.dtype == np.dtype("float64"):
+        return np.float32
+    if array.dtype == np.dtype("int64"):
+        return np.int32
+    return None
+
+
 def _a(value: Any, dtype: Any | None = None) -> Any:
-    return _jnp().asarray(value, dtype=dtype)
+    return np.asarray(value, dtype=_default_array_dtype(value, dtype))
 
 
 def _key() -> Any:

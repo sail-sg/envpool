@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +17,6 @@
 
 from typing import ClassVar, Dict, List, Optional, Sequence, Tuple
 
-import chex
 import matplotlib.animation
 import matplotlib.cm
 import matplotlib.pyplot as plt
@@ -44,7 +46,7 @@ class MazeViewer(MatplotlibViewer):
         """
         super().__init__(name, render_mode)
 
-    def render(self, maze: chex.Array, save_path: Optional[str] = None) -> Optional[NDArray]:
+    def render(self, maze: Any, save_path: Optional[str] = None) -> Optional[NDArray]:
         """
         Render maze.
 
@@ -67,7 +69,7 @@ class MazeViewer(MatplotlibViewer):
 
     def animate(
         self,
-        mazes: Sequence[chex.Array],
+        mazes: Sequence[Any],
         interval: int = 200,
         save_path: Optional[str] = None,
     ) -> matplotlib.animation.FuncAnimation:
@@ -85,7 +87,7 @@ class MazeViewer(MatplotlibViewer):
         fig, ax = self._get_fig_ax(name_suffix="_animation", show=False)
         plt.close(fig=fig)
 
-        def make_frame(maze: chex.Array) -> Tuple[Artist]:
+        def make_frame(maze: Any) -> Tuple[Artist]:
             ax.clear()
             self._add_grid_image(maze, ax)
             return (ax,)
@@ -104,12 +106,12 @@ class MazeViewer(MatplotlibViewer):
 
         return self._animation
 
-    def _add_grid_image(self, maze: chex.Array, ax: Axes) -> image.AxesImage:
+    def _add_grid_image(self, maze: Any, ax: Axes) -> image.AxesImage:
         img = self._create_grid_image(maze)
         ax.set_axis_off()
         return ax.imshow(img)
 
-    def _create_grid_image(self, maze: chex.Array) -> NDArray:
+    def _create_grid_image(self, maze: Any) -> NDArray:
         img = np.zeros((*maze.shape, 3))
         for tile_value, color in self.COLORS.items():
             img[np.where(maze == tile_value)] = color

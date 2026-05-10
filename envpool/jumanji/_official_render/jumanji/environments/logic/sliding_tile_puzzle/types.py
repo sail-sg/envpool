@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,12 +17,11 @@
 
 from typing import TYPE_CHECKING
 
-import chex
 
 if TYPE_CHECKING:
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 from typing import NamedTuple
 
 
@@ -31,10 +33,10 @@ class State:
     key: random key used for generating random numbers at each step.
     """
 
-    puzzle: chex.Array  # (N, N)
-    empty_tile_position: chex.Array  # (2,)
-    key: chex.PRNGKey  # (2,)
-    step_count: chex.Array  # (1,)
+    puzzle: Any  # (N, N)
+    empty_tile_position: Any  # (2,)
+    key: Any  # (2,)
+    step_count: Any  # (1,)
 
 
 class Observation(NamedTuple):
@@ -44,7 +46,7 @@ class Observation(NamedTuple):
     action_mask: 1D array indicating the validity of each action.
     """
 
-    puzzle: chex.Array  # (N, N)
-    empty_tile_position: chex.Array  # (2,)
-    action_mask: chex.Array  # (4,)  # assuming 4 possible actions: up, down, left, right
+    puzzle: Any  # (N, N)
+    empty_tile_position: Any  # (2,)
+    action_mask: Any  # (4,)  # assuming 4 possible actions: up, down, left, right
     step_count: int  # Current timestep

@@ -15,7 +15,7 @@
 
 The renderers in this file are adapted from the Apache-2.0 Jumanji v1.1.1
 Matplotlib viewers, but consume EnvPool observations and do not import the
-official ``jumanji`` or ``jax`` packages.
+official runtime packages.
 """
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,12 +17,11 @@
 
 from typing import TYPE_CHECKING, NamedTuple
 
-import chex
 
 if TYPE_CHECKING:  # https://github.com/python/mypy/issues/6239
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
 
 class Observation(NamedTuple):
@@ -32,9 +34,9 @@ class Observation(NamedTuple):
         for each block on the grid.
     """
 
-    grid: chex.Array  # (num_rows, num_cols)
-    blocks: chex.Array  # (num_blocks, 3, 3)
-    action_mask: chex.Array  # (num_blocks, num_rotations, num_rows-3, num_cols-3)
+    grid: Any  # (num_rows, num_cols)
+    blocks: Any  # (num_blocks, 3, 3)
+    action_mask: Any  # (num_blocks, num_rotations, num_rows-3, num_cols-3)
 
 
 @dataclass
@@ -52,10 +54,10 @@ class State:
     key: random key used for board generation.
     """
 
-    grid: chex.Array  # (num_rows, num_cols)
-    num_blocks: chex.Numeric  # ()
-    blocks: chex.Array  # (num_blocks, 3, 3)
-    action_mask: chex.Array  # (num_blocks, num_rotations, num_rows-3, num_cols-3)
-    placed_blocks: chex.Array  # (num_blocks,)
-    step_count: chex.Numeric  # ()
-    key: chex.PRNGKey  # (2,)
+    grid: Any  # (num_rows, num_cols)
+    num_blocks: Any  # ()
+    blocks: Any  # (num_blocks, 3, 3)
+    action_mask: Any  # (num_blocks, num_rotations, num_rows-3, num_cols-3)
+    placed_blocks: Any  # (num_blocks,)
+    step_count: Any  # ()
+    key: Any  # (2,)

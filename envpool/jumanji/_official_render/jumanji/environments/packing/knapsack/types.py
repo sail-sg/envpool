@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,12 +17,11 @@
 
 from typing import TYPE_CHECKING, NamedTuple
 
-import chex
 
 if TYPE_CHECKING:  # https://github.com/python/mypy/issues/6239
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
 
 @dataclass
@@ -32,11 +34,11 @@ class State:
     key: random key used for auto-reset.
     """
 
-    weights: chex.Array  # (num_items,)
-    values: chex.Array  # (num_items,)
-    packed_items: chex.Array  # (num_items,)
-    remaining_budget: chex.Array  # ()
-    key: chex.PRNGKey  # (2,)
+    weights: Any  # (num_items,)
+    values: Any  # (num_items,)
+    packed_items: Any  # (num_items,)
+    remaining_budget: Any  # ()
+    key: Any  # (2,)
 
 
 class Observation(NamedTuple):
@@ -47,7 +49,7 @@ class Observation(NamedTuple):
     action_mask: binary mask denoting which items can be packed into the knapsack.
     """
 
-    weights: chex.Array  # (num_items,)
-    values: chex.Array  # (num_items,)
-    packed_items: chex.Array  # (num_items,)
-    action_mask: chex.Array  # (num_items,)
+    weights: Any  # (num_items,)
+    values: Any  # (num_items,)
+    packed_items: Any  # (num_items,)
+    action_mask: Any  # (num_items,)

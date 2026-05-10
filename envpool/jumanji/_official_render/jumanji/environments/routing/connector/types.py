@@ -1,3 +1,5 @@
+# ruff: noqa
+# fmt: off
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,13 +17,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, NamedTuple
 
-import chex
-import jax.numpy as jnp
+import numpy as np
 
 if TYPE_CHECKING:  # https://github.com/python/mypy/issues/6239
     from dataclasses import dataclass
 else:
-    from chex import dataclass
+    from dataclasses import dataclass
 
 
 @dataclass
@@ -33,17 +34,17 @@ class Agent:
     position: the current position of this agent.
     """
 
-    id: chex.Array  # ()
-    start: chex.Array  # (2,)
-    target: chex.Array  # (2,)
-    position: chex.Array  # (2,)
+    id: Any  # ()
+    start: Any  # (2,)
+    target: Any  # (2,)
+    position: Any  # (2,)
 
     @property
-    def connected(self) -> chex.Array:
+    def connected(self) -> Any:
         """returns: True if the agent has reached its target."""
-        return jnp.all(self.position == self.target, axis=-1)
+        return np.all(self.position == self.target, axis=-1)
 
-    def __eq__(self: Agent, agent_2: Any) -> chex.Array:
+    def __eq__(self: Agent, agent_2: Any) -> Any:
         if not isinstance(agent_2, Agent):
             return NotImplemented
         same_ids = (agent_2.id == self.id).all()
@@ -62,10 +63,10 @@ class State:
     key: random key used for auto-reset.
     """
 
-    grid: chex.Array  # (grid_size, grid_size)
-    step_count: chex.Array  # ()
+    grid: Any  # (grid_size, grid_size)
+    step_count: Any  # ()
     agents: Agent  # (num_agents, ...)
-    key: chex.PRNGKey  # (2,)
+    key: Any  # (2,)
 
 
 class Observation(NamedTuple):
@@ -86,6 +87,6 @@ class Observation(NamedTuple):
     step_count: (int32) the current episode step.
     """
 
-    grid: chex.Array  # (num_agents, grid_size, grid_size)
-    action_mask: chex.Array  # (num_agents, 5)
-    step_count: chex.Array  # ()
+    grid: Any  # (num_agents, grid_size, grid_size)
+    action_mask: Any  # (num_agents, 5)
+    step_count: Any  # ()

@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +17,6 @@
 
 from typing import List, Tuple
 
-import chex
 import numpy as np
 
 
@@ -34,7 +36,7 @@ def _compute_repulsive_forces(
 
 
 def _compute_attractive_forces(
-    graph: chex.Array,
+    graph: Any,
     attractive_forces: np.ndarray,
     pos: np.ndarray,
     k: float,
@@ -54,7 +56,7 @@ def _compute_attractive_forces(
 
 
 def spring_layout(
-    graph: chex.Array, num_nodes: int, seed: int = 42, iterations: int = 100
+    graph: Any, num_nodes: int, seed: int = 42, iterations: int = 100
 ) -> List[Tuple[float, float]]:
     """
     Compute a 2D spring layout for the given graph using

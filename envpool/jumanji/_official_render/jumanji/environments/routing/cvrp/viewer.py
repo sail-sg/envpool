@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+from __future__ import annotations
 # Copyright 2022 InstaDeep Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,11 +19,9 @@ from importlib import resources
 from itertools import groupby, pairwise
 from typing import List, Optional, Sequence, Tuple, Union
 
-import jax.numpy as jnp
+import numpy as np
 import matplotlib.animation
 import matplotlib.pyplot as plt
-import numpy as np
-from chex import Array
 from matplotlib.artist import Artist
 from matplotlib.collections import PathCollection
 from matplotlib.quiver import Quiver
@@ -101,7 +102,7 @@ class CVRPViewer(MatplotlibViewer):
             updated = []
 
             # If new episode then update node  artist positions
-            if not jnp.array_equal(old_state.coordinates, new_state.coordinates):
+            if not np.array_equal(old_state.coordinates, new_state.coordinates):
                 x_coords, y_coords = new_state.coordinates.T
                 nodes[0].set(
                     x=x_coords[0] - 0.5 * self.DEPOT_SIZE, y=y_coords[0] - 0.5 * self.DEPOT_SIZE
