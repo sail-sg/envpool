@@ -181,7 +181,9 @@ class JobShopEnv : public Env<JobShopEnvSpec>, public RenderableEnv {
       render::FillRect(width, height, 0, 0, completed_w, row_h, {60, 190, 90},
                        rgb);
     }
-    render::StrokeRect(width, height, 0, 0, width, height, {210, 210, 210},
+    const int right = width;
+    const int bottom = height;
+    render::StrokeRect(width, height, 0, 0, right, bottom, {210, 210, 210},
                        rgb);
   }
 

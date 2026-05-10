@@ -125,7 +125,9 @@ class SnakeEnv : public Env<SnakeEnvSpec>, public RenderableEnv {
   void Render(int width, int height, int /*camera_id*/,
               unsigned char* rgb) override {
     render::Clear(width, height, render::kWhite, rgb);
-    render::StrokeRect(width, height, 0, 0, width, height, {170, 170, 170},
+    const int right = width;
+    const int bottom = height;
+    render::StrokeRect(width, height, 0, 0, right, bottom, {170, 170, 170},
                        rgb);
     for (int row = 0; row < snake::kRows; ++row) {
       for (int col = 0; col < snake::kCols; ++col) {
