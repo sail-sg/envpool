@@ -53,8 +53,8 @@ py_library(
 )
 
 py_test(
-    name = "pgx_go_test",
-    srcs = ["pgx_go_test.py"],
+    name = "pgx_test",
+    srcs = ["pgx_test.py"],
     data = [":pgx_envpool"],
     imports = ["../.."],
     deps = [
@@ -67,8 +67,8 @@ py_test(
 )
 
 py_test(
-    name = "pgx_go_align_test",
-    srcs = ["pgx_go_align_test.py"],
+    name = "pgx_align_test",
+    srcs = ["pgx_align_test.py"],
     data = [":pgx_envpool"],
     imports = ["../.."],
     deps = [
@@ -82,8 +82,8 @@ py_test(
 )
 
 py_test(
-    name = "pgx_go_deterministic_test",
-    srcs = ["pgx_go_deterministic_test.py"],
+    name = "pgx_deterministic_test",
+    srcs = ["pgx_deterministic_test.py"],
     data = [":pgx_envpool"],
     imports = ["../.."],
     deps = [
@@ -95,8 +95,8 @@ py_test(
 )
 
 py_test(
-    name = "pgx_go_render_test",
-    srcs = ["pgx_go_render_test.py"],
+    name = "pgx_render_test",
+    srcs = ["pgx_render_test.py"],
     data = [":pgx_envpool"],
     imports = ["../.."],
     deps = [

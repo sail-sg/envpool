@@ -13,9 +13,11 @@
 # limitations under the License.
 """PGX env registration."""
 
+from typing import Any
+
 from envpool.registration import register
 
-_COMMON = {
+_COMMON: dict[str, Any] = {
     "import_path": "envpool.pgx",
     "spec_cls": "GoEnvSpec",
     "dm_cls": "GoDMEnvPool",
@@ -41,7 +43,7 @@ register(
     **_COMMON,
 )
 
-_CHINESE_COMMON = {
+_CHINESE_COMMON: dict[str, Any] = {
     **_COMMON,
     "rules": "chinese",
 }

@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import gymnasium as gym
 import numpy as np
 from absl.testing import absltest
@@ -23,7 +25,7 @@ import envpool.pgx.registration  # noqa: F401
 from envpool.registration import make_gymnasium, make_spec
 
 
-def _make_small_go(**kwargs):
+def _make_small_go(**kwargs: Any) -> Any:
     return make_gymnasium(
         "Go9x9-v1",
         board_size=5,
@@ -33,7 +35,7 @@ def _make_small_go(**kwargs):
     )
 
 
-def _make_small_chinese_go(**kwargs):
+def _make_small_chinese_go(**kwargs: Any) -> Any:
     return make_gymnasium(
         "ChineseGo9x9-v1",
         board_size=5,
@@ -43,7 +45,7 @@ def _make_small_chinese_go(**kwargs):
     )
 
 
-def _step(env, action: int):
+def _step(env: Any, action: int) -> Any:
     return env.step(np.asarray([action], dtype=np.int32))
 
 
