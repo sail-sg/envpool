@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native TSP rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 import math
@@ -48,6 +46,7 @@ class JumanjiTSPTest(absltest.TestCase):
     """Checks native TSP dense rewards and masks."""
 
     def test_line_tour_matches_dense_reward(self) -> None:
+        """Checks a line tour receives the dense distance reward."""
         coordinates = _line_coordinates()
         env = _make_env()
         try:
@@ -80,6 +79,7 @@ class JumanjiTSPTest(absltest.TestCase):
             env.close()
 
     def test_revisiting_city_terminates_with_penalty(self) -> None:
+        """Checks revisiting a city terminates with penalty."""
         env = _make_env()
         try:
             env.reset()

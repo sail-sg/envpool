@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native Sokoban rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 import dataclasses

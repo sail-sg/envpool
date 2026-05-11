@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native Connector rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 import numpy as np
@@ -28,6 +26,7 @@ class JumanjiConnectorTest(absltest.TestCase):
     """Checks native Connector transitions."""
 
     def test_parallel_connections_on_default_layout(self) -> None:
+        """Checks parallel agents connect on the default layout."""
         env = make_gymnasium(
             "Connector-v2", num_envs=1, seed=0, render_mode="rgb_array"
         )

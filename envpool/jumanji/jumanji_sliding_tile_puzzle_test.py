@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native SlidingTilePuzzle rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 import numpy as np
@@ -28,6 +26,7 @@ class JumanjiSlidingTilePuzzleTest(absltest.TestCase):
     """Checks native SlidingTilePuzzle transitions."""
 
     def test_one_move_solution_matches_dense_reward(self) -> None:
+        """Checks a one-move solution receives dense reward."""
         initial = np.arange(1, 26, dtype=np.int32)
         initial[-2:] = [0, 24]
         initial = initial.reshape(5, 5)
@@ -85,6 +84,7 @@ class JumanjiSlidingTilePuzzleTest(absltest.TestCase):
             env.close()
 
     def test_seeded_reset_is_deterministic(self) -> None:
+        """Checks seeded resets produce identical puzzles."""
         env0 = make_gymnasium("SlidingTilePuzzle-v0", num_envs=4, seed=17)
         env1 = make_gymnasium("SlidingTilePuzzle-v0", num_envs=4, seed=17)
         try:

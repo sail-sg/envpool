@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native Snake rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 from typing import Any
@@ -41,6 +39,7 @@ class JumanjiSnakeTest(absltest.TestCase):
     """Checks native Snake transitions."""
 
     def test_move_and_eat_fruit(self) -> None:
+        """Checks movement, fruit collection, and scoring."""
         env = _make_env()
         try:
             obs, _ = env.reset()
@@ -80,6 +79,7 @@ class JumanjiSnakeTest(absltest.TestCase):
             env.close()
 
     def test_invalid_wall_move_terminates(self) -> None:
+        """Checks moving into a wall terminates."""
         env = _make_env()
         try:
             env.reset()

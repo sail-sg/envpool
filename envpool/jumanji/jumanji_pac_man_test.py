@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native PacMan rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 import numpy as np
@@ -28,6 +26,7 @@ class JumanjiPacManTest(absltest.TestCase):
     """Checks native PacMan transitions."""
 
     def test_player_eats_pellet(self) -> None:
+        """Checks the player eats a pellet and scores."""
         env = make_gymnasium(
             "PacMan-v1", num_envs=1, seed=0, render_mode="rgb_array"
         )

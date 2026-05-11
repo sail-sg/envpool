@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native BinPack rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 import numpy as np
@@ -28,6 +26,7 @@ class JumanjiBinPackTest(absltest.TestCase):
     """Checks native BinPack transitions."""
 
     def test_place_item_in_empty_space(self) -> None:
+        """Checks placement updates item and EMS state."""
         env = make_gymnasium(
             "BinPack-v2", num_envs=1, seed=0, render_mode="rgb_array"
         )

@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native Tetris rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 import numpy as np
@@ -28,6 +26,7 @@ class JumanjiTetrisTest(absltest.TestCase):
     """Checks native Tetris transitions."""
 
     def test_drop_square_piece(self) -> None:
+        """Checks dropping the square piece updates the board."""
         env = make_gymnasium(
             "Tetris-v0", num_envs=1, seed=0, render_mode="rgb_array"
         )

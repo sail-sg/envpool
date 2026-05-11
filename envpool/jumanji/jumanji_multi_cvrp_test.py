@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native MultiCVRP rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 import numpy as np
@@ -28,6 +26,7 @@ class JumanjiMultiCVRPTest(absltest.TestCase):
     """Checks native MultiCVRP transitions."""
 
     def test_two_vehicles_serve_customers(self) -> None:
+        """Checks two vehicles serve customers and return."""
         env = make_gymnasium(
             "MultiCVRP-v0", num_envs=1, seed=0, render_mode="rgb_array"
         )

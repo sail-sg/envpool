@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native Knapsack rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 from typing import Any
@@ -49,6 +47,7 @@ class JumanjiKnapsackTest(absltest.TestCase):
     """Checks native Knapsack transitions."""
 
     def test_dense_reward_and_action_mask(self) -> None:
+        """Checks dense reward and mask updates for valid items."""
         env = _make_env()
         try:
             obs, info = env.reset()
@@ -88,6 +87,7 @@ class JumanjiKnapsackTest(absltest.TestCase):
             env.close()
 
     def test_invalid_item_terminates_with_zero_reward(self) -> None:
+        """Checks invalid items terminate with zero reward."""
         env = _make_env()
         try:
             env.reset()

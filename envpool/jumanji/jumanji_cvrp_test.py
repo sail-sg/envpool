@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native CVRP rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 import numpy as np
@@ -28,6 +26,7 @@ class JumanjiCVRPTest(absltest.TestCase):
     """Checks native CVRP transitions."""
 
     def test_visit_customer_and_return_to_depot(self) -> None:
+        """Checks visiting a customer then returning to depot."""
         env = make_gymnasium(
             "CVRP-v1", num_envs=1, seed=0, render_mode="rgb_array"
         )

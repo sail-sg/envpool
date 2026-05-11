@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native Cleaner rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 from typing import Any
@@ -44,6 +42,7 @@ class JumanjiCleanerTest(absltest.TestCase):
     """Checks native Cleaner multi-agent transitions."""
 
     def test_valid_moves_clean_unique_tiles(self) -> None:
+        """Checks valid moves clean each tile once."""
         env = _make_env()
         try:
             obs, info = env.reset()
@@ -82,6 +81,7 @@ class JumanjiCleanerTest(absltest.TestCase):
             env.close()
 
     def test_invalid_action_terminates_after_valid_agents_move(self) -> None:
+        """Checks invalid actions terminate after valid agents move."""
         env = _make_env()
         try:
             env.reset()

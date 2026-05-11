@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass, fields, is_dataclass
 from enum import IntEnum
 from itertools import groupby
-from typing import Any, Callable, NamedTuple
+from typing import Any, Callable, NamedTuple, cast
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -41,16 +41,16 @@ from envpool.jumanji._official_render.base import (
 
 def _tree_slice(tree: Any, index: int) -> Any:
     if is_dataclass(tree):
-        values = {
+        field_values = {
             field.name: _tree_slice(getattr(tree, field.name), index)
             for field in fields(tree)
         }
-        return type(tree)(**values)
+        return cast(Any, type(tree))(**field_values)
     if isinstance(tree, tuple) and hasattr(tree, "_fields"):
-        values = (
+        tuple_values = (
             _tree_slice(getattr(tree, name), index) for name in tree._fields
         )
-        return type(tree)(*values)
+        return cast(Any, type(tree))(*tuple_values)
     return tree[index]
 
 
@@ -303,7 +303,7 @@ class CVRPViewer(MatplotlibViewer):
     def _draw_cities(
         self, ax: plt.Axes, state: CVRPState
     ) -> list[plt.Circle | plt.Rectangle]:
-        nodes = []
+        nodes: list[plt.Circle | plt.Rectangle] = []
         x_coords, y_coords = state.coordinates.T
         depot = plt.Rectangle(
             (
@@ -735,7 +735,7 @@ class MultiCVRPViewer(CVRPViewer):
         self._cmap = plt.get_cmap(self.COLORMAP_NAME, self._num_vehicles + 1)
 
     def render(
-        self, state: MultiCVRPState, save_path: str | None = None
+        self, state: Any, save_path: str | None = None
     ) -> NDArray[np.generic] | None:
         self._clear_display()
         fig, ax = self._get_fig_ax()
@@ -782,7 +782,7 @@ class MultiCVRPViewer(CVRPViewer):
         return routes
 
     def _add_tour(
-        self, ax: plt.Axes, state: MultiCVRPState
+        self, ax: plt.Axes, state: Any
     ) -> tuple[
         list[plt.Circle | plt.Rectangle], list[tuple[Quiver, PathCollection]]
     ]:
@@ -798,7 +798,7 @@ class MultiCVRPViewer(CVRPViewer):
             color=self.NODE_COLOUR,
         )
         ax.add_artist(depot)
-        nodes = [depot]
+        nodes: list[plt.Circle | plt.Rectangle] = [depot]
         for i in range(1, x_coords.shape[0]):
             node = plt.Circle(
                 (x_coords[i], y_coords[i]),
@@ -896,7 +896,9 @@ def create_pac_man_grid_image(observation: PacManObservation) -> Any:
     layer_3 = expand_rgb[:, :, 2]
 
     for i in range(len(idx)):
-        if np.array(idx[i]).sum != 0:
+        # Jumanji v1.1.1 compares the sum method object instead of calling it.
+        # Keep the typo so EnvPool render remains bitwise with the oracle.
+        if cast(Any, np.array(idx[i]).sum) != 0:
             loc = idx[i]
             c = loc[1] * n + 1
             r = loc[0] * n + 1

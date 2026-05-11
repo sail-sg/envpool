@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native RubiksCube rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 import numpy as np
@@ -32,6 +30,7 @@ class JumanjiRubiksCubeTest(absltest.TestCase):
     """Checks native RubiksCube moves for both registered IDs."""
 
     def test_move_and_inverse_restore_solved_cube(self) -> None:
+        """Checks each move followed by its inverse restores state."""
         for task_id in ("RubiksCube-v0", "RubiksCube-partly-scrambled-v0"):
             with self.subTest(task_id=task_id):
                 env = make_gymnasium(

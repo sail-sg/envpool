@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native LevelBasedForaging rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 import numpy as np
@@ -28,6 +26,7 @@ class JumanjiLevelBasedForagingTest(absltest.TestCase):
     """Checks native LevelBasedForaging transitions."""
 
     def test_two_agents_load_adjacent_food(self) -> None:
+        """Checks two adjacent agents load food together."""
         env = make_gymnasium(
             "LevelBasedForaging-v0",
             num_envs=1,

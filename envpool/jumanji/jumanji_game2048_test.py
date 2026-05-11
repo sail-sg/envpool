@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native Game2048 rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 import numpy as np
@@ -82,6 +80,7 @@ class JumanjiGame2048Test(absltest.TestCase):
     """Checks native Game2048 transitions against a rule reference."""
 
     def test_rollout_matches_reference_without_random_cell(self) -> None:
+        """Checks a deterministic rollout against a rule reference."""
         initial = np.asarray(
             [
                 [1, 1, 2, 2],
@@ -135,6 +134,7 @@ class JumanjiGame2048Test(absltest.TestCase):
             env.close()
 
     def test_seeded_reset_is_deterministic(self) -> None:
+        """Checks seeded resets produce identical boards."""
         env0 = make_gymnasium("Game2048-v1", num_envs=4, seed=7)
         env1 = make_gymnasium("Game2048-v1", num_envs=4, seed=7)
         try:

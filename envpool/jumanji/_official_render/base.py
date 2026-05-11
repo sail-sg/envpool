@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -59,7 +59,7 @@ class MatplotlibViewer:
         show: bool = True,
         padding: float = 0.05,
         **fig_kwargs: Any,
-    ) -> tuple[plt.Figure, plt.Axes]:
+    ) -> tuple[plt.Figure, Any]:
         figure_name = getattr(self, "_figure_name", self._name)
         name = figure_name if name_suffix is None else figure_name + name_suffix
 
@@ -91,7 +91,8 @@ class MatplotlibViewer:
 
     def _display_rgb_array(self, fig: plt.Figure) -> NDArray[np.generic]:
         fig.canvas.draw()
-        return np.asarray(fig.canvas.buffer_rgba())
+        canvas = cast(Any, fig.canvas)
+        return np.asarray(canvas.buffer_rgba())
 
 
 def _compute_repulsive_forces(

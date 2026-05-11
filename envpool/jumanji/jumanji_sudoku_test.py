@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native Sudoku rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 from typing import Any
@@ -60,6 +58,7 @@ class JumanjiSudokuTest(absltest.TestCase):
     """Checks native Sudoku transitions for both registered IDs."""
 
     def test_default_reset_uses_seeded_database(self) -> None:
+        """Checks reset draws from the seeded puzzle database."""
         env0 = make_gymnasium("Sudoku-v0", num_envs=1, seed=0)
         env1 = make_gymnasium("Sudoku-v0", num_envs=1, seed=1)
         easy = make_gymnasium("Sudoku-very-easy-v0", num_envs=1, seed=0)
@@ -75,6 +74,7 @@ class JumanjiSudokuTest(absltest.TestCase):
             easy.close()
 
     def test_final_valid_action_solves(self) -> None:
+        """Checks the final valid action solves the puzzle."""
         for task_id in ("Sudoku-v0", "Sudoku-very-easy-v0"):
             with self.subTest(task_id=task_id):
                 env = _make_env(task_id)
@@ -101,6 +101,7 @@ class JumanjiSudokuTest(absltest.TestCase):
                     env.close()
 
     def test_invalid_action_terminates_without_reward(self) -> None:
+        """Checks invalid actions terminate without reward."""
         env = _make_env()
         try:
             env.reset()

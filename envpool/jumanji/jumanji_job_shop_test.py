@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native JobShop rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 import numpy as np
@@ -28,6 +26,7 @@ class JumanjiJobShopTest(absltest.TestCase):
     """Checks native JobShop transitions."""
 
     def test_schedule_two_jobs(self) -> None:
+        """Checks scheduling advances both jobs."""
         env = make_gymnasium(
             "JobShop-v0", num_envs=1, seed=0, render_mode="rgb_array"
         )

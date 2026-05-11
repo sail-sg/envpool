@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native SearchAndRescue rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 import numpy as np
@@ -28,6 +26,7 @@ class JumanjiSearchAndRescueTest(absltest.TestCase):
     """Checks native SearchAndRescue transitions."""
 
     def test_searcher_finds_target(self) -> None:
+        """Checks a searcher finds a target."""
         env = make_gymnasium(
             "SearchAndRescue-v0", num_envs=1, seed=0, render_mode="rgb_array"
         )

@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native Maze rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 from typing import Any
@@ -42,6 +40,7 @@ class JumanjiMazeTest(absltest.TestCase):
     """Checks native Maze transitions."""
 
     def test_invalid_move_noops_and_target_terminates(self) -> None:
+        """Checks walls no-op and reaching target terminates."""
         env = _make_env()
         try:
             obs, _ = env.reset()
@@ -88,6 +87,7 @@ class JumanjiMazeTest(absltest.TestCase):
             env.close()
 
     def test_seeded_reset_is_deterministic(self) -> None:
+        """Checks seeded resets produce identical mazes."""
         env0 = make_gymnasium("Maze-v0", num_envs=3, seed=5)
         env1 = make_gymnasium("Maze-v0", num_envs=3, seed=5)
         try:

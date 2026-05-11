@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native RobotWarehouse rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 import numpy as np
@@ -28,6 +26,7 @@ class JumanjiRobotWarehouseTest(absltest.TestCase):
     """Checks native RobotWarehouse transitions."""
 
     def test_agents_move_right(self) -> None:
+        """Checks agents move right on the warehouse grid."""
         env = make_gymnasium(
             "RobotWarehouse-v0", num_envs=1, seed=0, render_mode="rgb_array"
         )

@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native MMST rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 import numpy as np
@@ -28,6 +26,7 @@ class JumanjiMMSTTest(absltest.TestCase):
     """Checks native MMST transitions."""
 
     def test_agents_expand_tree_frontiers(self) -> None:
+        """Checks agents expand tree frontiers."""
         env = make_gymnasium(
             "MMST-v0", num_envs=1, seed=0, render_mode="rgb_array"
         )

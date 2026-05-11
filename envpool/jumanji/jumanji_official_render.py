@@ -48,7 +48,7 @@ from envpool.jumanji._official_render import (  # noqa: E402
 )
 
 
-def _asarray(value: Any, dtype: Any | None = None) -> NDArray[np.generic]:
+def _asarray(value: Any, dtype: Any | None = None) -> Any:
     return np.asarray(value, dtype=dtype)
 
 
@@ -84,12 +84,12 @@ def _config_array(
     shape: tuple[int, ...],
     dtype: Any,
     default: Any,
-) -> NDArray[np.generic]:
+) -> Any:
     value = config.get(key, "")
     if value == "" or value is None:
         return np.asarray(default, dtype=dtype).reshape(shape)
     if isinstance(value, str):
-        sep = "," if "," in value else None
+        sep = "," if "," in value else " "
         array = np.fromstring(value, dtype=dtype, sep=sep)
     else:
         array = np.asarray(value, dtype=dtype).reshape(-1)
@@ -105,12 +105,12 @@ def _config_step_array(
     shape: tuple[int, ...],
     dtype: Any,
     steps: int = 3,
-) -> NDArray[np.generic] | None:
+) -> Any | None:
     value = config.get(key, "")
     if value == "" or value is None or step <= 0 or step > steps:
         return None
     if isinstance(value, str):
-        sep = "," if "," in value else None
+        sep = "," if "," in value else " "
         array = np.fromstring(value, dtype=dtype, sep=sep)
     else:
         array = np.asarray(value, dtype=dtype).reshape(-1)
@@ -313,11 +313,14 @@ def _update_aux(
                 np.count_nonzero(replay >= 0, axis=1) - 1, 0
             ).astype(np.int32)
     elif task_id == "MultiCVRP-v0":
-        actions = np.asarray(action, dtype=np.int16).reshape(-1)
+        vehicle_actions = np.asarray(action, dtype=np.int16).reshape(-1)
         step_count = int(aux.get("step_count", 1))
         order = np.asarray(aux["order"], dtype=np.int16)
-        if actions.size >= order.shape[0] and step_count < order.shape[1]:
-            order[:, step_count] = actions[: order.shape[0]]
+        if (
+            vehicle_actions.size >= order.shape[0]
+            and step_count < order.shape[1]
+        ):
+            order[:, step_count] = vehicle_actions[: order.shape[0]]
         aux["order"] = order
         aux["step_count"] = step_count + 1
     elif task_id == "Sokoban-v0":

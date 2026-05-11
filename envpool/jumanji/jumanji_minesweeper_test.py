@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native Minesweeper rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 import numpy as np
@@ -65,6 +63,7 @@ class JumanjiMinesweeperTest(absltest.TestCase):
     """Checks native Minesweeper against the official rule structure."""
 
     def test_rollout_matches_reference(self) -> None:
+        """Checks rollout observations against a rule reference."""
         mines = {0, 11, 22}
         env = make_gymnasium(
             "Minesweeper-v0",
@@ -108,6 +107,7 @@ class JumanjiMinesweeperTest(absltest.TestCase):
             env.close()
 
     def test_seeded_reset_is_deterministic(self) -> None:
+        """Checks seeded resets produce identical mine fields."""
         env0 = make_gymnasium("Minesweeper-v0", num_envs=4, seed=9)
         env1 = make_gymnasium("Minesweeper-v0", num_envs=4, seed=9)
         try:

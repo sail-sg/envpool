@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native FlatPack rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 import numpy as np
@@ -28,6 +26,7 @@ class JumanjiFlatPackTest(absltest.TestCase):
     """Checks native FlatPack transitions."""
 
     def test_place_first_block(self) -> None:
+        """Checks placing the first block updates the grid."""
         env = make_gymnasium(
             "FlatPack-v0", num_envs=1, seed=0, render_mode="rgb_array"
         )

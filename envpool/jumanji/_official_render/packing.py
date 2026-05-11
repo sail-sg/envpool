@@ -16,10 +16,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, cast
 
 import matplotlib
-import matplotlib.cm
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.art3d
 import numpy as np
@@ -145,7 +144,7 @@ class BinPackViewer(MatplotlibViewer):
         show: bool = True,
         padding: float = 0.05,
         **fig_kwargs: Any,
-    ) -> tuple[plt.Figure, plt.Axes]:
+    ) -> tuple[plt.Figure, Any]:
         del padding, fig_kwargs
         figure_name = getattr(self, "_figure_name", self._name)
         name = figure_name if name_suffix is None else figure_name + name_suffix
@@ -200,7 +199,7 @@ class BinPackViewer(MatplotlibViewer):
         self,
         pos: tuple[float, float, float],
         lens: tuple[float, float, float],
-        colour: matplotlib.cm.ScalarMappable | str,
+        colour: Any,
         alpha: float,
     ) -> mpl_toolkits.mplot3d.art3d.Poly3DCollection:
         return mpl_toolkits.mplot3d.art3d.Poly3DCollection(
@@ -212,7 +211,7 @@ class BinPackViewer(MatplotlibViewer):
         )
 
     def _add_overlay(
-        self, fig: plt.Figure, ax: plt.Axes, state: BinPackState
+        self, fig: plt.Figure, ax: Any, state: BinPackState
     ) -> None:
         eps = 0.05
         container = item_from_space(state.container)
@@ -372,8 +371,8 @@ class JobShopViewer(MatplotlibViewer):
         )
         ax.set_xlim(0, xlim)
         ax.set_ylim(-0.9, self._num_machines)
-        ax.xaxis.get_major_locator().set_params(integer=True)
-        ax.yaxis.get_major_locator().set_params(integer=True)
+        cast(Any, ax.xaxis.get_major_locator()).set_params(integer=True)
+        cast(Any, ax.yaxis.get_major_locator()).set_params(integer=True)
         major_ticks = np.arange(0, xlim, 10)
         minor_ticks = np.arange(0, xlim, 1)
         ax.set_xticks(major_ticks)
@@ -454,7 +453,7 @@ class TetrisViewer(MatplotlibViewer):
         self.n_colors = 10
         colormap_indices = np.arange(0, 1, 1 / self.n_colors)
         colormap = plt.get_cmap("hsv", self.n_colors + 1)
-        self.colors = [(1.0, 1.0, 1.0, 1.0)]
+        self.colors: list[Any] = [(1.0, 1.0, 1.0, 1.0)]
         for colormap_idx in colormap_indices:
             self.colors.append(colormap(colormap_idx))
         self.edgecolors = [(0.0, 0.0, 0.0), (0.9, 0.9, 0.9)]

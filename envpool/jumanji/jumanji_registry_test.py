@@ -13,8 +13,6 @@
 # limitations under the License.
 """Registry and smoke tests for the native Jumanji family."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 from typing import Any
@@ -128,6 +126,7 @@ class JumanjiRegistryTest(absltest.TestCase):
                     env.close()
 
     def test_render_cache_handles_positional_recv_reset(self) -> None:
+        """Checks render works after positional recv reset."""
         env = make_gymnasium(
             "Game2048-v1", num_envs=1, seed=0, render_mode="rgb_array"
         )

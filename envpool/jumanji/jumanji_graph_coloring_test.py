@@ -13,8 +13,6 @@
 # limitations under the License.
 """Native GraphColoring rule tests."""
 
-# ruff: noqa: D102
-
 from __future__ import annotations
 
 from typing import Any
@@ -40,6 +38,7 @@ class JumanjiGraphColoringTest(absltest.TestCase):
     """Checks native GraphColoring transitions."""
 
     def test_valid_coloring_finishes_with_unique_color_penalty(self) -> None:
+        """Checks a valid coloring scores by unique colors used."""
         env = _make_env()
         try:
             obs, _ = env.reset()
@@ -78,6 +77,7 @@ class JumanjiGraphColoringTest(absltest.TestCase):
             env.close()
 
     def test_invalid_neighbor_color_terminates(self) -> None:
+        """Checks adjacent equal colors terminate the episode."""
         env = _make_env()
         try:
             env.reset()
