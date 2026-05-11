@@ -68,13 +68,12 @@ class KuhnPokerEnv : public Env<KuhnPokerEnvSpec>, public RenderableEnv {
   bool IsDone() override { return done_; }
 
   void Reset() override {
-    static constexpr int kDeals[6][2] = {
-        {0, 1}, {0, 2}, {1, 0}, {1, 2}, {2, 0}, {2, 1},
-    };
+    static constexpr std::array<std::array<int, 2>, 6> k_deals = {
+        {{0, 1}, {0, 2}, {1, 0}, {1, 2}, {2, 0}, {2, 1}}};
     current_player_ = static_cast<int>(gen_() & 1U);
     const int deal = static_cast<int>(gen_() % 6);
-    cards_[0] = kDeals[deal][0];
-    cards_[1] = kDeals[deal][1];
+    cards_[0] = k_deals[deal][0];
+    cards_[1] = k_deals[deal][1];
     last_action_ = -1;
     pot_ = {0, 0};
     legal_action_mask_ = {true, true};

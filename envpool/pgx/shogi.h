@@ -471,13 +471,13 @@ class ShogiEnv : public Env<ShogiEnvSpec>, public RenderableEnv {
   }
 
   static std::array<int, 8> Around(int pos) {
-    static constexpr std::array<int, 8> kDx = {-1, -1, 0, 1, 1, 1, 0, -1};
-    static constexpr std::array<int, 8> kDy = {0, -1, -1, -1, 0, 1, 1, 1};
+    static constexpr std::array<int, 8> k_dx = {-1, -1, 0, 1, 1, 1, 0, -1};
+    static constexpr std::array<int, 8> k_dy = {0, -1, -1, -1, 0, 1, 1, 1};
     std::array<int, 8> out{};
     out.fill(-1);
     for (int i = 0; i < 8; ++i) {
-      const int x = shogi::X(pos) + kDx[i];
-      const int y = shogi::Y(pos) + kDy[i];
+      const int x = shogi::X(pos) + k_dx[i];
+      const int y = shogi::Y(pos) + k_dy[i];
       if (x >= 0 && x < shogi::kBoardSize && y >= 0 && y < shogi::kBoardSize) {
         out[i] = x * shogi::kBoardSize + y;
       }

@@ -117,17 +117,17 @@ inline Tables MakeTables() {
     }
   }
 
-  static constexpr std::array<int, 40> kDr = {
+  static constexpr std::array<int, 40> k_dr = {
       -4, -3, -2, -1, 1, 2, 3, 4, 0,  0,  0,  0,  0,  0, 0,  0, -4, -3, -2, -1,
       1,  2,  3,  4,  4, 3, 2, 1, -1, -2, -3, -4, -1, 1, -2, 2, -1, 1,  -2, 2};
-  static constexpr std::array<int, 40> kDc = {
+  static constexpr std::array<int, 40> k_dc = {
       0, 0, 0,  0,  0,  0,  0,  0,  -4, -3, -2, -1, 1,  2,
       3, 4, -4, -3, -2, -1, 1,  2,  3,  4,  -4, -3, -2, -1,
       1, 2, 3,  4,  -2, -2, -1, -1, 2,  2,  1,  1};
   for (int from = 0; from < kSquares; ++from) {
     for (int plane = 9; plane < kPlanes; ++plane) {
-      const int row = Row(from) + kDr[plane - 9];
-      const int col = Col(from) + kDc[plane - 9];
+      const int row = Row(from) + k_dr[plane - 9];
+      const int col = Col(from) + k_dc[plane - 9];
       if (0 <= row && row < kSize && 0 <= col && col < kSize) {
         const int to = Pos(row, col);
         tables.to_map[from][plane] = to;
@@ -436,12 +436,12 @@ class GardnerChessEnv : public Env<GardnerChessEnvSpec>, public RenderableEnv {
       piece = gardner_chess::kQueen;
     }
     if (action.underpromotion >= 0) {
-      static constexpr std::array<int, 3> kUnderpromotions = {
+      static constexpr std::array<int, 3> k_underpromotions = {
           gardner_chess::kRook,
           gardner_chess::kBishop,
           gardner_chess::kKnight,
       };
-      piece = kUnderpromotions[action.underpromotion];
+      piece = k_underpromotions[action.underpromotion];
     }
     board[action.from] = gardner_chess::kEmpty;
     board[action.to] = piece;
@@ -739,11 +739,13 @@ inline Tables MakeTables() {
     dr[n] = d;
     dc[n++] = -d;
   }
-  static constexpr std::array<int, 8> kKnightDr = {-1, 1, -2, 2, -1, 1, -2, 2};
-  static constexpr std::array<int, 8> kKnightDc = {-2, -2, -1, -1, 2, 2, 1, 1};
+  static constexpr std::array<int, 8> k_knight_dr = {-1, 1, -2, 2,
+                                                     -1, 1, -2, 2};
+  static constexpr std::array<int, 8> k_knight_dc = {-2, -2, -1, -1,
+                                                     2,  2,  1,  1};
   for (int i = 0; i < 8; ++i) {
-    dr[n] = kKnightDr[i];
-    dc[n++] = kKnightDc[i];
+    dr[n] = k_knight_dr[i];
+    dc[n++] = k_knight_dc[i];
   }
 
   for (int from = 0; from < kSquares; ++from) {
@@ -1122,12 +1124,12 @@ class ChessEnv : public Env<ChessEnvSpec>, public RenderableEnv {
       piece = chess::kQueen;
     }
     if (action.underpromotion >= 0) {
-      static constexpr std::array<int, 3> kUnderpromotions = {
+      static constexpr std::array<int, 3> k_underpromotions = {
           chess::kRook,
           chess::kBishop,
           chess::kKnight,
       };
-      piece = kUnderpromotions[action.underpromotion];
+      piece = k_underpromotions[action.underpromotion];
     }
     board[action.from] = chess::kEmpty;
     board[action.to] = piece;
