@@ -25,8 +25,10 @@ from envpool.registration import make_gymnasium
 
 _GO_TASKS = (
     ("Go9x9-v1", 9),
+    ("Go13x13-v1", 13),
     ("Go19x19-v1", 19),
     ("ChineseGo9x9-v1", 9),
+    ("ChineseGo13x13-v1", 13),
     ("ChineseGo19x19-v1", 19),
 )
 _BOARD_GAME_TASKS = (

@@ -37,6 +37,13 @@ register(
 )
 
 register(
+    task_id="Go13x13-v1",
+    board_size=13,
+    task="go_13x13",
+    **_COMMON,
+)
+
+register(
     task_id="Go19x19-v1",
     board_size=19,
     task="go_19x19",
@@ -52,6 +59,13 @@ register(
     task_id="ChineseGo9x9-v1",
     board_size=9,
     task="go_chinese_9x9",
+    **_CHINESE_COMMON,
+)
+
+register(
+    task_id="ChineseGo13x13-v1",
+    board_size=13,
+    task="go_chinese_13x13",
     **_CHINESE_COMMON,
 )
 

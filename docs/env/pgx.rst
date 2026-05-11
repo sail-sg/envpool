@@ -10,8 +10,10 @@ Supported Tasks
 EnvPool registers the following PGX tasks:
 
 * ``Go9x9-v1``
+* ``Go13x13-v1``
 * ``Go19x19-v1``
 * ``ChineseGo9x9-v1``
+* ``ChineseGo13x13-v1``
 * ``ChineseGo19x19-v1``
 * ``TicTacToe-v1``
 * ``ConnectFour-v1``
@@ -33,7 +35,8 @@ native Atari environments.
 Go Rules
 --------
 
-``Go9x9-v1`` and ``Go19x19-v1`` follow PGX's Go v1 rules:
+``Go9x9-v1``, ``Go13x13-v1``, and ``Go19x19-v1`` follow PGX's
+Go v1 rules:
 
 * Tromp-Taylor scoring.
 * ``N * N + 1`` discrete actions, where the final action is pass.

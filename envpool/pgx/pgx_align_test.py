@@ -30,6 +30,7 @@ from envpool.registration import make_gymnasium
 _PGX_VERSION = "2.6.0"
 _PUBLIC_CASES = (
     ("Go9x9-v1", "go_9x9", 9, 30),
+    ("Go13x13-v1", "go_13x13", 13, 30),
     ("Go19x19-v1", "go_19x19", 19, 30),
 )
 _BOARD_GAME_CASES = (

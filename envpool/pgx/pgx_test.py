@@ -73,8 +73,10 @@ class _PgxGoTest(absltest.TestCase):
     def test_registered_specs_match_pgx_shape(self) -> None:
         cases = (
             ("Go9x9-v1", 9, "pgx"),
+            ("Go13x13-v1", 13, "pgx"),
             ("Go19x19-v1", 19, "pgx"),
             ("ChineseGo9x9-v1", 9, "chinese"),
+            ("ChineseGo13x13-v1", 13, "chinese"),
             ("ChineseGo19x19-v1", 19, "chinese"),
         )
         for task_id, size, rules in cases:

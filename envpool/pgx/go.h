@@ -766,6 +766,8 @@ class GoEnv : public Env<GoEnvSpec>, public RenderableEnv {
     std::vector<int> points;
     if (size_ == 19) {
       points = {3, 9, 15};
+    } else if (size_ == 13) {
+      points = {3, 6, 9};
     } else if (size_ == 9) {
       points = {2, 4, 6};
     }
