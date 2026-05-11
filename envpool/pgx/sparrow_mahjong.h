@@ -96,12 +96,12 @@ inline bool IsRed(int tile_id) {
 }
 
 inline int ToBase5(const std::array<int, kNumTileTypes>& hand) {
-  static constexpr std::array<int, kNumTileTypes> kBase = {
+  static constexpr std::array<int, kNumTileTypes> k_base = {
       9765625, 1953125, 390625, 78125, 15625, 3125, 625, 125, 25, 5, 1,
   };
   int value = 0;
   for (int i = 0; i < kNumTileTypes; ++i) {
-    value += hand[i] * kBase[i];
+    value += hand[i] * k_base[i];
   }
   return value;
 }
