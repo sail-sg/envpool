@@ -39,9 +39,8 @@ constexpr int kPlanes = 49;
 constexpr int kActions = kSquares * kPlanes;
 constexpr int kHistory = 8;
 constexpr int kMaxTerminationSteps = 256;
-constexpr int kMaxPieces = 10;
 
-enum Piece {
+enum Piece : std::uint8_t {
   kEmpty = 0,
   kPawn = 1,
   kKnight = 2,
@@ -53,7 +52,6 @@ enum Piece {
 
 using Board = std::array<int, kSquares>;
 using BoardHistory = std::array<Board, kHistory>;
-using Hash = std::array<uint32_t, 2>;
 
 // clang-format off
 constexpr Board kInitBoard = {
@@ -61,7 +59,6 @@ constexpr Board kInitBoard = {
     -1, -3, 5, 1, 0, -1, -5, 6, 1, 0, -1, -6,
 };
 // clang-format on
-constexpr Hash kInitHash = {2025569903U, 1172890342U};
 
 inline int Row(int pos) { return pos % kSize; }
 inline int Col(int pos) { return pos / kSize; }
@@ -192,8 +189,9 @@ inline Tables MakeTables() {
       const int c0 = Col(from);
       const int r1 = Row(to);
       const int c1 = Col(to);
-      if (!(std::abs(r1 - r0) == 0 || std::abs(c1 - c0) == 0 ||
-            std::abs(r1 - r0) == std::abs(c1 - c0))) {
+      const int dr_abs = std::abs(r1 - r0);
+      const int dc_abs = std::abs(c1 - c0);
+      if (dr_abs != 0 && dc_abs != 0 && dr_abs != dc_abs) {
         continue;
       }
       const int dr = std::max(-1, std::min(1, r1 - r0));
@@ -248,7 +246,7 @@ inline BoardHistory FlipHistory(const BoardHistory& history) {
 }
 
 inline uint64_t BoardKey(const Board& board, int turn) {
-  uint64_t key = static_cast<uint64_t>(turn + 1);
+  auto key = static_cast<uint64_t>(turn) + 1ULL;
   for (int value : board) {
     key = key * 1315423911ULL + static_cast<uint64_t>(value + 7);
   }
@@ -409,12 +407,10 @@ class GardnerChessEnv : public Env<GardnerChessEnvSpec>, public RenderableEnv {
   }
 
   bool IsAttacking(const gardner_chess::Board& board, int pos) const {
-    for (int from : gardner_chess::GetTables().can_move_any[pos]) {
-      if (from >= 0 && IsPseudoLegal(board, {from, pos, -1})) {
-        return true;
-      }
-    }
-    return false;
+    const auto& attackers = gardner_chess::GetTables().can_move_any[pos];
+    return std::any_of(attackers.begin(), attackers.end(), [&](int from) {
+      return from >= 0 && IsPseudoLegal(board, {from, pos, -1});
+    });
   }
 
   bool IsChecking(const gardner_chess::Board& board) const {
@@ -644,7 +640,7 @@ constexpr int kActions = kSquares * kPlanes;
 constexpr int kHistory = 8;
 constexpr int kMaxTerminationSteps = 512;
 
-enum Piece {
+enum Piece : std::uint8_t {
   kEmpty = 0,
   kPawn = 1,
   kKnight = 2,
@@ -807,7 +803,9 @@ inline Tables MakeTables() {
       const int c0 = Col(from);
       const int r1 = Row(to);
       const int c1 = Col(to);
-      if (!(r1 == r0 || c1 == c0 || std::abs(r1 - r0) == std::abs(c1 - c0))) {
+      const int dr_abs = std::abs(r1 - r0);
+      const int dc_abs = std::abs(c1 - c0);
+      if (dr_abs != 0 && dc_abs != 0 && dr_abs != dc_abs) {
         continue;
       }
       const int step_r = std::max(-1, std::min(1, r1 - r0));
@@ -1009,12 +1007,11 @@ class ChessEnv : public Env<ChessEnvSpec>, public RenderableEnv {
     if (!IsSlidingPiece(board[from]) && std::abs(board[from]) != chess::kPawn) {
       return true;
     }
-    for (int between : chess::GetTables().between[from][to]) {
-      if (between >= 0 && board[between] != chess::kEmpty) {
-        return false;
-      }
-    }
-    return true;
+    const auto& between_positions = chess::GetTables().between[from][to];
+    return std::all_of(between_positions.begin(), between_positions.end(),
+                       [&](int between) {
+                         return between < 0 || board[between] == chess::kEmpty;
+                       });
   }
 
   bool IsPseudoLegal(const chess::Board& board,
@@ -1165,12 +1162,8 @@ class ChessEnv : public Env<ChessEnvSpec>, public RenderableEnv {
     const std::array<int, 3> queen_checks = {16, 24, 32};
     const std::array<int, 3> king_checks = {32, 40, 48};
     const auto& checks = queen_side ? queen_checks : king_checks;
-    for (int pos : checks) {
-      if (IsAttacked(board_, pos)) {
-        return false;
-      }
-    }
-    return true;
+    return std::all_of(checks.begin(), checks.end(),
+                       [&](int pos) { return !IsAttacked(board_, pos); });
   }
 
   void UpdateLegalActionMask() {
