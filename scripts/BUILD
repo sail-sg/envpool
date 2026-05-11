@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_python//python:defs.bzl", "py_binary")
+load("@rules_python//python:defs.bzl", "py_binary", "py_test")
 load("//envpool:requirements.bzl", "requirement")
 load("//third_party/jumanji:oracle_requirements.bzl", "jumanji_oracle_requirement")
 
@@ -40,4 +40,13 @@ py_binary(
         jumanji_oracle_requirement("pillow"),
         jumanji_oracle_requirement("requests"),
     ],
+)
+
+py_test(
+    name = "prune_actions_caches_test",
+    srcs = [
+        "prune_actions_caches.py",
+        "prune_actions_caches_test.py",
+    ],
+    main = "prune_actions_caches_test.py",
 )

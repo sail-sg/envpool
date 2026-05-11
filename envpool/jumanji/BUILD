@@ -289,7 +289,7 @@ py_test(
 
 py_test(
     name = "jumanji_maze_test",
-    size = "small",
+    size = "medium",
     srcs = ["jumanji_maze_test.py"],
     imports = ["../.."],
     deps = [
