@@ -35,7 +35,7 @@ using Rgb = std::array<unsigned char, 3>;
 
 constexpr std::array<int, 8> kOthelloShifts = {1, -1, 8, -8, 7, -7, 9, -9};
 
-inline constexpr std::array<std::array<int, 3>, 8> TicTacToeLines() {
+constexpr std::array<std::array<int, 3>, 8> TicTacToeLines() {
   return {{{0, 1, 2},
            {3, 4, 5},
            {6, 7, 8},
