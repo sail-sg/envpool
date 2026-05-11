@@ -50,6 +50,14 @@ args
 lmp
 timestep
 RGB
+PGX
+SSK
+Tromp
+Taylor
+AlphaGo
+komi
+ko
+superko
 py
 Mujoco
 MyoBase
