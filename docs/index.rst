@@ -99,6 +99,7 @@ stable version through `envpool.readthedocs.io/en/stable/
    env/metaworld
    env/mujoco_gym
    env/myosuite
+   env/pgx
    env/procgen
    env/toy_text
    env/vizdoom
