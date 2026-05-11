@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Render tests for PGX Go environments."""
+"""Render tests for PGX environments."""
 
 from __future__ import annotations
 
@@ -23,11 +23,26 @@ from absl.testing import absltest
 import envpool.pgx.registration  # noqa: F401
 from envpool.registration import make_gymnasium
 
-_TASKS = (
+_GO_TASKS = (
     ("Go9x9-v1", 9),
     ("Go19x19-v1", 19),
     ("ChineseGo9x9-v1", 9),
     ("ChineseGo19x19-v1", 19),
+)
+_BOARD_GAME_TASKS = (
+    ("TicTacToe-v1", 4),
+    ("ConnectFour-v1", 3),
+    ("Hex-v1", 60),
+    ("Othello-v1", 19),
+    ("KuhnPoker-v1", 0),
+    ("LeducHoldem-v1", 1),
+    ("Play2048-v1", 0),
+    ("AnimalShogi-v1", 6),
+    ("Backgammon-v1", 0),
+    ("Chess-v1", 89),
+    ("GardnerChess-v1", 62),
+    ("Shogi-v1", 5),
+    ("SparrowMahjong-v1", 0),
 )
 
 
@@ -37,12 +52,22 @@ def _render_array(env: Any, env_ids: Any = None) -> np.ndarray:
     return cast(np.ndarray, frame)
 
 
-class PgxGoRenderTest(absltest.TestCase):
-    """RGB render coverage for native PGX Go."""
+def _legal_action(info: dict[str, Any], preferred: int, step: int = 0) -> int:
+    mask = np.asarray(info["legal_action_mask"][0], dtype=np.bool_)
+    if 0 <= preferred < mask.shape[0] and bool(mask[preferred]):
+        return preferred
+    actions = np.flatnonzero(mask)
+    if actions.size == 0:
+        raise AssertionError("environment returned no legal actions")
+    return int(actions[(step * 3 + 1) % actions.size])
 
-    def test_render_reset_and_multiple_steps_for_all_tasks(self) -> None:
+
+class PgxRenderTest(absltest.TestCase):
+    """RGB render coverage for native PGX environments."""
+
+    def test_render_reset_and_multiple_steps_for_go_tasks(self) -> None:
         """Every public Go task should render reset and multi-step frames."""
-        for task_id, size in _TASKS:
+        for task_id, size in _GO_TASKS:
             with self.subTest(task_id=task_id):
                 env = make_gymnasium(
                     task_id,
@@ -73,6 +98,47 @@ class PgxGoRenderTest(absltest.TestCase):
                 second_stone = _render_array(env)
                 self.assertGreater(
                     int(np.count_nonzero(second_stone != first_stone)),
+                    0,
+                )
+
+    def test_render_reset_and_multiple_steps_for_board_games(self) -> None:
+        """Every non-Go PGX task should render reset and stepped frames."""
+        for task_id, preferred_action in _BOARD_GAME_TASKS:
+            with self.subTest(task_id=task_id):
+                env = make_gymnasium(
+                    task_id,
+                    num_envs=1,
+                    seed=0,
+                    render_mode="rgb_array",
+                    render_width=96,
+                    render_height=96,
+                )
+                _, info = env.reset()
+                reset_frame = _render_array(env)
+                reset_again = _render_array(env)
+                self.assertEqual(reset_frame.shape, (1, 96, 96, 3))
+                self.assertEqual(reset_frame.dtype, np.uint8)
+                np.testing.assert_array_equal(reset_frame, reset_again)
+                self.assertGreater(
+                    int(reset_frame.max()) - int(reset_frame.min()),
+                    0,
+                )
+
+                first_action = _legal_action(info, preferred_action)
+                _, _, _, _, info = env.step(
+                    np.asarray([first_action], dtype=np.int32),
+                )
+                first_frame = _render_array(env)
+                self.assertGreater(
+                    int(np.count_nonzero(first_frame != reset_frame)),
+                    0,
+                )
+
+                second_action = _legal_action(info, 0, 1)
+                env.step(np.asarray([second_action], dtype=np.int32))
+                second_frame = _render_array(env)
+                self.assertGreater(
+                    int(np.count_nonzero(second_frame != first_frame)),
                     0,
                 )
 
