@@ -33,6 +33,19 @@ namespace board_games {
 
 using Rgb = std::array<unsigned char, 3>;
 
+constexpr std::array<int, 8> kOthelloShifts = {1, -1, 8, -8, 7, -7, 9, -9};
+
+inline constexpr std::array<std::array<int, 3>, 8> TicTacToeLines() {
+  return {{{0, 1, 2},
+           {3, 4, 5},
+           {6, 7, 8},
+           {0, 3, 6},
+           {1, 4, 7},
+           {2, 5, 8},
+           {0, 4, 8},
+           {2, 4, 6}}};
+}
+
 inline int Sign(int value) {
   if (value > 0) {
     return 1;
@@ -103,6 +116,16 @@ inline std::array<float, 2> IllegalRewards(int loser) {
   std::array<float, 2> rewards{1.0f, 1.0f};
   rewards[loser] = -1.0f;
   return rewards;
+}
+
+inline int OpponentBoardValue(bool my, bool opp) {
+  if (opp) {
+    return 1;
+  }
+  if (my) {
+    return -1;
+  }
+  return 0;
 }
 
 template <typename Mask>
@@ -204,12 +227,8 @@ class TicTacToeEnv : public Env<TicTacToeEnvSpec>, public RenderableEnv {
 
   void StepGame(int action) {
     board_[action] = color_;
-    static constexpr int kLines[8][3] = {
-        {0, 1, 2}, {3, 4, 5}, {6, 7, 8}, {0, 3, 6},
-        {1, 4, 7}, {2, 5, 8}, {0, 4, 8}, {2, 4, 6},
-    };
     bool won = false;
-    for (const auto& line : kLines) {
+    for (const auto& line : board_games::TicTacToeLines()) {
       won = won || (board_[line[0]] == color_ && board_[line[1]] == color_ &&
                     board_[line[2]] == color_);
     }
@@ -577,8 +596,8 @@ class HexEnv : public Env<HexEnvSpec>, public RenderableEnv {
     const int x = xy / 11;
     const int y = xy % 11;
     std::array<int, 6> out{};
-    const int xs[6] = {x, x + 1, x - 1, x + 1, x - 1, x};
-    const int ys[6] = {y - 1, y - 1, y, y, y + 1, y + 1};
+    const std::array<int, 6> xs = {x, x + 1, x - 1, x + 1, x - 1, x};
+    const std::array<int, 6> ys = {y - 1, y - 1, y, y, y + 1, y + 1};
     for (int i = 0; i < 6; ++i) {
       out[i] = (0 <= xs[i] && xs[i] < 11 && 0 <= ys[i] && ys[i] < 11)
                    ? xs[i] * 11 + ys[i]
@@ -854,8 +873,7 @@ class OthelloEnv : public Env<OthelloEnvSpec>, public RenderableEnv {
 
     std::vector<int> reverse;
     if (action < 64) {
-      static constexpr int kShifts[8] = {1, -1, 8, -8, 7, -7, 9, -9};
-      for (int shift : kShifts) {
+      for (int shift : board_games::kOthelloShifts) {
         std::vector<int> line = Captures(board_, action, shift);
         reverse.insert(reverse.end(), line.begin(), line.end());
       }
@@ -871,16 +889,15 @@ class OthelloEnv : public Env<OthelloEnvSpec>, public RenderableEnv {
       emp[xy] = !(my[xy] || opp[xy]);
     }
     std::array<bool, 64> legal{};
-    static constexpr int kShifts[8] = {1, -1, 8, -8, 7, -7, 9, -9};
     std::array<int, 64> opponent_board{};
     for (int xy = 0; xy < 64; ++xy) {
-      opponent_board[xy] = opp[xy] ? 1 : (my[xy] ? -1 : 0);
+      opponent_board[xy] = board_games::OpponentBoardValue(my[xy], opp[xy]);
     }
     for (int xy = 0; xy < 64; ++xy) {
       if (!emp[xy]) {
         continue;
       }
-      for (int shift : kShifts) {
+      for (int shift : board_games::kOthelloShifts) {
         if (!Captures(opponent_board, xy, shift).empty()) {
           legal[xy] = true;
         }
@@ -895,7 +912,7 @@ class OthelloEnv : public Env<OthelloEnvSpec>, public RenderableEnv {
     rewards_ = done_ ? GetReward(my, opp) : std::array<float, 2>{0.0f, 0.0f};
 
     for (int xy = 0; xy < 64; ++xy) {
-      next_board[xy] = opp[xy] ? 1 : (my[xy] ? -1 : 0);
+      next_board[xy] = board_games::OpponentBoardValue(my[xy], opp[xy]);
     }
     board_ = next_board;
     turn_ = 1 - turn_;
