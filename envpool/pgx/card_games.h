@@ -346,7 +346,7 @@ class LeducHoldemEnv : public Env<LeducHoldemEnvSpec>, public RenderableEnv {
     const int new_last_action = round_over ? -1 : action;
     const int new_current_player =
         round_over ? first_player_ : 1 - current_player_;
-    int new_raise_count = round_over ? 0 : raise_count_ + (action == 1);
+    int new_raise_count = round_over ? 0 : raise_count_ + (action == 1 ? 1 : 0);
     std::array<bool, 3> legal{};
     if (action == 0) {
       legal = {true, true, false};
