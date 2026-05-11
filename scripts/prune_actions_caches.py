@@ -133,8 +133,21 @@ def _branch_name_from_cache_key(key: str, prefix: str) -> str | None:
     if not key.startswith(prefix):
         return None
     suffix = key[len(prefix) :]
-    branch, separator, run_id = suffix.rpartition("-")
-    if not separator or not branch or not run_id.isdigit():
+
+    def branch_from_run_suffix(value: str) -> str | None:
+        branch, separator, run_id = value.rpartition("-")
+        if not separator or not branch or not run_id.isdigit():
+            return None
+        return branch
+
+    branch_and_run, attempt_separator, attempt = suffix.rpartition("-attempt")
+    if attempt_separator and attempt.isdigit():
+        branch = branch_from_run_suffix(branch_and_run)
+        if branch is not None:
+            return branch
+
+    branch = branch_from_run_suffix(suffix)
+    if branch is None:
         return None
     return branch
 
@@ -184,7 +197,8 @@ def _stale_caches_by_branch(
     if ungrouped:
         print(
             f"Skipping {len(ungrouped)} caches whose keys do not match "
-            f"'<prefix><branch>-<run_id>' for prefix {prefix}",
+            f"'<prefix><branch>-<run_id>[-attempt<attempt>]' "
+            f"for prefix {prefix}",
             file=sys.stderr,
         )
     return sorted(stale_caches.values(), key=_sort_key, reverse=True)

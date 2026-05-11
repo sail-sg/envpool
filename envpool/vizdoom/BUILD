@@ -152,7 +152,7 @@ py_test(
 
 py_test(
     name = "vizdoom_test",
-    size = "small",
+    size = "medium",
     srcs = ["vizdoom_test.py"],
     imports = ["../.."],
     tags = ["exclusive"],
@@ -166,7 +166,7 @@ py_test(
 
 py_test(
     name = "vizdoom_pretrain_test",
-    size = "medium",
+    size = "large",
     srcs = ["vizdoom_pretrain_test.py"],
     imports = ["../.."],
     tags = ["exclusive"],

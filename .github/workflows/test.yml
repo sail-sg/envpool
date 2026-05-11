@@ -78,6 +78,10 @@ jobs:
             --badge-file coverage/coverage-badge.svg \
             --genhtml-lcov-file coverage/lcov.genhtml.info \
             --repo-root "$GITHUB_WORKSPACE"
+      - name: Shut down Bazel
+        if: ${{ always() && !cancelled() }}
+        continue-on-error: true
+        run: bazelisk shutdown
       - name: Publish coverage summary
         run: cat coverage/summary.md >> "$GITHUB_STEP_SUMMARY"
       - name: Build coverage site
@@ -111,9 +115,9 @@ jobs:
             ~/.cache/bazelisk
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
-          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}-attempt${{ github.run_attempt }}
       - name: Prune older Bazel caches
-        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        if: ${{ success() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -182,6 +186,10 @@ jobs:
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
             BAZEL_TEST_TARGETS="//..." bazel-test
+      - name: Shut down Bazel
+        if: ${{ always() && !cancelled() }}
+        continue-on-error: true
+        run: bazelisk shutdown
       - name: Save Bazel caches
         id: save-bazel-caches
         if: ${{ always() && !cancelled() }}
@@ -191,9 +199,9 @@ jobs:
             ~/.cache/bazelisk
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
-          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}-attempt${{ github.run_attempt }}
       - name: Prune older Bazel caches
-        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        if: ${{ success() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -261,6 +269,10 @@ jobs:
       - name: Test
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" bazel-test
+      - name: Shut down Bazel
+        if: ${{ always() && !cancelled() }}
+        continue-on-error: true
+        run: bazelisk shutdown
       - name: Save Bazel caches
         id: save-bazel-caches
         if: ${{ always() && !cancelled() }}
@@ -270,9 +282,9 @@ jobs:
             ~/.cache/bazelisk
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
-          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}-attempt${{ github.run_attempt }}
       - name: Prune older Bazel caches
-        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        if: ${{ success() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -291,8 +303,10 @@ jobs:
       BAZEL_SH: C:/Program Files/Git/usr/bin/bash.exe
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-      BAZEL_CI_RESOURCE_OPTS: --jobs=HOST_CPUS-1 --local_cpu_resources=HOST_CPUS-1 --local_ram_resources=HOST_RAM*.5 --experimental_disk_cache_gc_max_size=2G --experimental_disk_cache_gc_idle_delay=0s
-      BAZEL_CACHE_PREFIX: bazel-test-v5-windows-capped
+      # MSVC ignores the POSIX -g0/-O3 flags from --config=test. Use opt mode
+      # and a larger capped disk cache so Windows reruns are not cold builds.
+      BAZEL_CI_RESOURCE_OPTS: --compilation_mode=opt --jobs=HOST_CPUS-1 --local_cpu_resources=HOST_CPUS-1 --local_ram_resources=HOST_RAM*.5 --experimental_disk_cache_gc_max_size=4G --experimental_disk_cache_gc_idle_delay=0s
+      BAZEL_CACHE_PREFIX: bazel-test-v6-windows-opt-cache4g
       MESA_GL_VERSION_OVERRIDE: 4.5COMPAT
       MSYS2_ARG_CONV_EXCL: "*"
       MSYS_NO_PATHCONV: "1"
@@ -384,6 +398,11 @@ jobs:
           repo_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-repo")
           disk_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-disk")
           make BAZELOPT="--repository_cache=$repo_cache --disk_cache=$disk_cache $BAZEL_CI_RESOURCE_OPTS" bazel-test
+      - name: Shut down Bazel
+        if: ${{ always() && !cancelled() }}
+        continue-on-error: true
+        shell: bash
+        run: bazelisk shutdown
       - name: Save Bazel caches
         id: save-bazel-caches
         if: ${{ always() && !cancelled() }}
@@ -393,9 +412,9 @@ jobs:
             ~/.cache/bazelisk
             ~/.cache/envpool-bazel-repo
             ~/.cache/envpool-bazel-disk
-          key: ${{ env.BAZEL_CACHE_PREFIX }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}
+          key: ${{ env.BAZEL_CACHE_PREFIX }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}-attempt${{ github.run_attempt }}
       - name: Prune older Bazel caches
-        if: ${{ always() && !cancelled() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        if: ${{ success() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
