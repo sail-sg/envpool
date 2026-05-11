@@ -38,8 +38,12 @@ constexpr int kRook = 2;
 constexpr int kKing = 3;
 constexpr int kGold = 4;
 constexpr int kMaxSteps = 256;
-constexpr std::array<int, 12> kInitBoard = {6, -1, -1, 2,  8,  5,
-                                            0, 3,  7,  -1, -1, 1};
+// clang-format off
+constexpr std::array<int, 12> kInitBoard = {
+    6, -1, -1, 2, 8, 5,
+    0, 3, 7, -1, -1, 1,
+};
+// clang-format on
 constexpr std::array<int, 8> kDx = {-1, -1, -1, 0, 0, 1, 1, 1};
 constexpr std::array<int, 8> kDy = {-1, 0, 1, -1, 1, -1, 0, 1};
 

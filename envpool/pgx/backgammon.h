@@ -34,8 +34,12 @@ using Board = std::array<int, 28>;
 using Dice = std::array<int, 2>;
 using PlayableDice = std::array<int, 4>;
 
-constexpr Board kInitBoard = {2, 0, 0, 0, 0, -5, 0, -3, 0, 0,  0, 5, -5, 0,
-                              0, 0, 3, 0, 5, 0,  0, 0,  0, -2, 0, 0, 0,  0};
+// clang-format off
+constexpr Board kInitBoard = {
+    2, 0, 0, 0, 0, -5, 0, -3, 0, 0, 0, 5, -5, 0,
+    0, 0, 3, 0, 5, 0, 0, 0, 0, -2, 0, 0, 0, 0,
+};
+// clang-format on
 
 inline int BarIdx() { return 24; }
 inline int OffIdx() { return 26; }

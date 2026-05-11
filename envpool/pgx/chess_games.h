@@ -55,8 +55,12 @@ using Board = std::array<int, kSquares>;
 using BoardHistory = std::array<Board, kHistory>;
 using Hash = std::array<uint32_t, 2>;
 
-constexpr Board kInitBoard = {4,  1,  0, -1, -4, 2,  1,  0, -1, -2, 3,  1, 0,
-                              -1, -3, 5, 1,  0,  -1, -5, 6, 1,  0,  -1, -6};
+// clang-format off
+constexpr Board kInitBoard = {
+    4, 1, 0, -1, -4, 2, 1, 0, -1, -2, 3, 1, 0,
+    -1, -3, 5, 1, 0, -1, -5, 6, 1, 0, -1, -6,
+};
+// clang-format on
 constexpr Hash kInitHash = {2025569903U, 1172890342U};
 
 inline int Row(int pos) { return pos % kSize; }
