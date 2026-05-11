@@ -22,6 +22,7 @@
 - [x] [MetaWorld](https://envpool.readthedocs.io/en/latest/env/metaworld.html)
 - [x] [MyoSuite](https://envpool.readthedocs.io/en/latest/env/myosuite.html)
 - [x] [PGX](https://envpool.readthedocs.io/en/latest/env/pgx.html)
+- [x] [Jumanji](https://envpool.readthedocs.io/en/latest/env/jumanji.html)
 
 Here are EnvPool's several highlights:
 

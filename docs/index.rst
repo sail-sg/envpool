@@ -93,6 +93,7 @@ stable version through `envpool.readthedocs.io/en/stable/
    env/dm_control
    env/gfootball
    env/highway
+   env/jumanji
    env/minigrid
    env/gymnasium_robotics
    env/metaworld

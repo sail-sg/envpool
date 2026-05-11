@@ -15,6 +15,7 @@
 """EnvPool pip requirements initialization, this is loaded in WORKSPACE."""
 
 load("@python_versions//:pip.bzl", "multi_pip_parse")
+load("//third_party/jumanji:oracle_workspace.bzl", "jumanji_oracle_pip_workspace")
 load("//third_party/myosuite:oracle_workspace.bzl", "myosuite_oracle_pip_workspace")
 
 def workspace():
@@ -42,4 +43,5 @@ def workspace():
             # extra_pip_args = ["--extra-index-url", "https://mirrors.aliyun.com/pypi/simple"],
         )
 
+    jumanji_oracle_pip_workspace()
     myosuite_oracle_pip_workspace()

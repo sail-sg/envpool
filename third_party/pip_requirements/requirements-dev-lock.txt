@@ -12,7 +12,7 @@ cuda-pathfinder==1.4.3
 cycler==0.12.1
 dm-control==1.0.38
 dm-env==1.6
-dm-tree==0.1.9
+dm-tree==0.1.10
 etils==1.14.0
 farama-notifications==0.0.4
 filelock==3.25.2
