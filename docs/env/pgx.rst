@@ -1,17 +1,46 @@
 PGX
 ===
 
-EnvPool includes a native C++ implementation of the PGX Go environments from
+EnvPool includes native C++ implementations of PGX environments from
 `PGX <https://github.com/sotetsuk/pgx>`_ 2.6.0.
 
-The default ``Go9x9-v1`` and ``Go19x19-v1`` tasks follow PGX's Go v1 rules:
+Supported Tasks
+---------------
+
+EnvPool registers the following PGX tasks:
+
+* ``Go9x9-v1``
+* ``Go13x13-v1``
+* ``Go19x19-v1``
+* ``ChineseGo9x9-v1``
+* ``ChineseGo13x13-v1``
+* ``ChineseGo19x19-v1``
+* ``TicTacToe-v1``
+* ``ConnectFour-v1``
+* ``Hex-v1``
+* ``Othello-v1``
+* ``KuhnPoker-v1``
+* ``LeducHoldem-v1``
+* ``Play2048-v1``
+* ``AnimalShogi-v1``
+* ``Backgammon-v1``
+* ``Chess-v1``
+* ``GardnerChess-v1``
+* ``Shogi-v1``
+* ``SparrowMahjong-v1``
+
+The PGX MinAtar tasks are not registered here because EnvPool already provides
+native Atari environments.
+
+Go Rules
+--------
+
+``Go9x9-v1``, ``Go13x13-v1``, and ``Go19x19-v1`` follow PGX's
+Go v1 rules:
 
 * Tromp-Taylor scoring.
-* Two players.
-* ``Go9x9-v1`` and ``Go19x19-v1`` task IDs.
 * ``N * N + 1`` discrete actions, where the final action is pass.
-* Boolean observation shape ``(N, N, 17)`` using the AlphaGo Zero history
-  planes.
+* Boolean observation shape ``(N, N, 17)`` using AlphaGo Zero history planes.
 * SSK legal-action filtering, with positional superko occurrence ending the
   game as a loss for the player who made the repeated position.
 
@@ -22,48 +51,23 @@ EnvPool also provides Chinese-rule variants:
 * Positional superko moves are masked as illegal actions instead of being
   accepted and then turned into a terminal loss.
 * The same no-suicide, two-pass terminal, action, and observation API as the
-  PGX-compatible tasks.
+  PGX-compatible Go tasks.
 
-Supported Tasks
----------------
+API Notes
+---------
 
-* ``Go9x9-v1``
-* ``Go19x19-v1``
-* ``ChineseGo9x9-v1``
-* ``ChineseGo19x19-v1``
+PGX turn-based games are exposed through EnvPool's multiplayer API. Each state
+contains one observation per player, ``info["current_player"]`` identifies the
+player ID whose turn it is, and each environment consumes one action for that
+current player.
 
-Observation
------------
-
-PGX Go is turn-based, but EnvPool exposes it through the existing multiplayer
-API. Each state contains two player observations. ``info["current_player"]``
-identifies the player ID whose turn it is, and a single action per environment
-is interpreted as that player's action.
-
-The Gymnasium observation space is ``MultiBinary((N, N, 17))``. Runtime
-observations have leading player dimension ``2`` for each environment and are
-returned as boolean arrays.
-
-Info
-----
-
-The Gymnasium info dictionary includes:
-
-* ``board``: clipped board values, ``1`` for black, ``-1`` for white, ``0`` for
-  empty.
-* ``current_player``: player ID to act.
-* ``legal_action_mask``: legal actions for the current player.
-* ``ko``: SSK ko point, or ``-1``.
-* ``is_psk``: whether the latest move produced positional superko.
-* ``consecutive_pass_count``.
-* ``black_area`` and ``white_area``: area scores before komi under the selected
-  rule set.
-* ``players.id``.
+The task IDs intentionally follow EnvPool style and do not use a ``PGX`` prefix.
 
 Configuration
 -------------
 
-``komi`` defaults to ``7.5`` and ``history_length`` defaults to ``8`` to match
-PGX. ``max_terminal_steps=0`` means ``2 * N * N``, matching PGX's default.
-``rules`` is ``"pgx"`` for the PGX-compatible tasks and ``"chinese"`` for the
-Chinese-rule variants.
+Go tasks support ``komi``, ``history_length``, ``max_terminal_steps``, and
+``rules``. ``komi`` defaults to ``7.5`` and ``history_length`` defaults to ``8``
+to match PGX. ``max_terminal_steps=0`` means ``2 * N * N``. ``rules`` is
+``"pgx"`` for the PGX-compatible tasks and ``"chinese"`` for the Chinese-rule
+variants.

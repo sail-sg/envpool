@@ -20,8 +20,18 @@ load("//envpool:requirements.bzl", "requirement")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-    name = "pgx_go_env",
-    hdrs = ["go.h"],
+    name = "pgx_env",
+    hdrs = [
+        "animal_shogi.h",
+        "backgammon.h",
+        "board_games.h",
+        "card_games.h",
+        "chess_games.h",
+        "go.h",
+        "play2048.h",
+        "shogi.h",
+        "sparrow_mahjong.h",
+    ],
     deps = [
         "//envpool/core:async_envpool",
         "//envpool/core:env",
@@ -32,7 +42,7 @@ pybind_extension(
     name = "pgx_envpool",
     srcs = ["pgx.cc"],
     deps = [
-        ":pgx_go_env",
+        ":pgx_env",
         "//envpool/core:py_envpool",
     ],
 )
@@ -68,6 +78,7 @@ py_test(
 
 py_test(
     name = "pgx_align_test",
+    timeout = "long",
     srcs = ["pgx_align_test.py"],
     data = [":pgx_envpool"],
     imports = ["../.."],
