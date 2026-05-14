@@ -119,10 +119,10 @@ class PlaygroundAlohaEnvFns {
   }
 };
 
-using PlaygroundAlohaEnvSpec = EnvSpec<PlaygroundAlohaEnvFns>;
-using PlaygroundAlohaPixelEnvFns =
-    PixelObservationEnvFns<PlaygroundAlohaEnvFns>;
-using PlaygroundAlohaPixelEnvSpec = EnvSpec<PlaygroundAlohaPixelEnvFns>;
+using AlohaAliases = PlaygroundEnvAliases<PlaygroundAlohaEnvFns>;
+using PlaygroundAlohaEnvSpec = AlohaAliases::Spec;
+using PlaygroundAlohaPixelEnvFns = AlohaAliases::PixelFns;
+using PlaygroundAlohaPixelEnvSpec = AlohaAliases::PixelSpec;
 
 template <typename EnvSpecT, bool kFromPixels>
 class PlaygroundAlohaEnvBase : public Env<EnvSpecT>,
@@ -798,12 +798,15 @@ class PlaygroundAlohaEnvBase : public Env<EnvSpecT>,
   }
 };
 
-using PlaygroundAlohaEnv =
-    PlaygroundAlohaEnvBase<PlaygroundAlohaEnvSpec, false>;
-using PlaygroundAlohaPixelEnv =
-    PlaygroundAlohaEnvBase<PlaygroundAlohaPixelEnvSpec, true>;
-using PlaygroundAlohaEnvPool = AsyncEnvPool<PlaygroundAlohaEnv>;
-using PlaygroundAlohaPixelEnvPool = AsyncEnvPool<PlaygroundAlohaPixelEnv>;
+template <typename Spec, bool kFromPixels>
+using AlohaBase = PlaygroundAlohaEnvBase<Spec, kFromPixels>;
+using AlohaEnv = AlohaBase<PlaygroundAlohaEnvSpec, false>;
+using AlohaPixelEnv = AlohaBase<PlaygroundAlohaPixelEnvSpec, true>;
+using PlaygroundAlohaEnv = AlohaEnv;
+using PlaygroundAlohaPixelEnv = AlohaPixelEnv;
+using PlaygroundAlohaEnvPool = PlaygroundEnvPoolT<PlaygroundAlohaEnv>;
+using AlohaPixelEnvPool = PlaygroundEnvPoolT<PlaygroundAlohaPixelEnv>;
+using PlaygroundAlohaPixelEnvPool = AlohaPixelEnvPool;
 
 }  // namespace mujoco_playground
 

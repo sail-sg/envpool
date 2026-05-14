@@ -637,6 +637,7 @@ py_test(
         "@mujoco_menagerie_playground//:unitree_h1_assets",
     ],
     imports = ["../.."],
+    shard_count = 4,
     deps = [
         ":playground",
         ":playground_registration",

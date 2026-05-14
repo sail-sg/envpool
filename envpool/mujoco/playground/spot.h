@@ -53,13 +53,18 @@ constexpr int kSpotGetupStateDim = 30;
 constexpr int kSpotGaitStateDim = 69;
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
 constexpr const char* kSpotFeetSites[kSpotFeet] = {"FL", "FR", "HL", "HR"};
-// NOLINTNEXTLINE(modernize-avoid-c-arrays)
-constexpr const char* kSpotFootLinvelSensors[kSpotFeet] = {
-    "FL_global_linvel", "FR_global_linvel", "HL_global_linvel",
-    "HR_global_linvel"};
-// NOLINTNEXTLINE(modernize-avoid-c-arrays)
-constexpr const char* kSpotFootPosSensors[kSpotFeet] = {"FL_pos", "FR_pos",
-                                                        "HL_pos", "HR_pos"};
+inline const std::array<const char*, kSpotFeet>& SpotFootLinvelSensors() {
+  static constexpr std::array<const char*, kSpotFeet> kNames = {
+      "FL_global_linvel", "FR_global_linvel", "HL_global_linvel",
+      "HR_global_linvel"};
+  return kNames;
+}
+
+inline const std::array<const char*, kSpotFeet>& SpotFootPosSensors() {
+  static constexpr std::array<const char*, kSpotFeet> kNames = {
+      "FL_pos", "FR_pos", "HL_pos", "HR_pos"};
+  return kNames;
+}
 constexpr std::array<std::array<mjtNum, kSpotFeet>, 5> kSpotGaitPhases = {{
     {0.0, M_PI, M_PI, 0.0},
     {0.0, 0.5 * M_PI, M_PI, 1.5 * M_PI},
@@ -309,19 +314,18 @@ class PlaygroundSpotGaitEnvFns {
   }
 };
 
-using PlaygroundSpotJoystickEnvSpec = EnvSpec<PlaygroundSpotJoystickEnvFns>;
-using PlaygroundSpotJoystickPixelEnvFns =
-    PixelObservationEnvFns<PlaygroundSpotJoystickEnvFns>;
-using PlaygroundSpotJoystickPixelEnvSpec =
-    EnvSpec<PlaygroundSpotJoystickPixelEnvFns>;
-using PlaygroundSpotGetupEnvSpec = EnvSpec<PlaygroundSpotGetupEnvFns>;
-using PlaygroundSpotGetupPixelEnvFns =
-    PixelObservationEnvFns<PlaygroundSpotGetupEnvFns>;
-using PlaygroundSpotGetupPixelEnvSpec = EnvSpec<PlaygroundSpotGetupPixelEnvFns>;
-using PlaygroundSpotGaitEnvSpec = EnvSpec<PlaygroundSpotGaitEnvFns>;
-using PlaygroundSpotGaitPixelEnvFns =
-    PixelObservationEnvFns<PlaygroundSpotGaitEnvFns>;
-using PlaygroundSpotGaitPixelEnvSpec = EnvSpec<PlaygroundSpotGaitPixelEnvFns>;
+using SpotJoystickAliases = PlaygroundEnvAliases<PlaygroundSpotJoystickEnvFns>;
+using SpotGetupAliases = PlaygroundEnvAliases<PlaygroundSpotGetupEnvFns>;
+using SpotGaitAliases = PlaygroundEnvAliases<PlaygroundSpotGaitEnvFns>;
+using PlaygroundSpotJoystickEnvSpec = SpotJoystickAliases::Spec;
+using PlaygroundSpotJoystickPixelEnvFns = SpotJoystickAliases::PixelFns;
+using PlaygroundSpotJoystickPixelEnvSpec = SpotJoystickAliases::PixelSpec;
+using PlaygroundSpotGetupEnvSpec = SpotGetupAliases::Spec;
+using PlaygroundSpotGetupPixelEnvFns = SpotGetupAliases::PixelFns;
+using PlaygroundSpotGetupPixelEnvSpec = SpotGetupAliases::PixelSpec;
+using PlaygroundSpotGaitEnvSpec = SpotGaitAliases::Spec;
+using PlaygroundSpotGaitPixelEnvFns = SpotGaitAliases::PixelFns;
+using PlaygroundSpotGaitPixelEnvSpec = SpotGaitAliases::PixelSpec;
 
 template <typename EnvSpecT, bool kFromPixels>
 class PlaygroundSpotEnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
@@ -457,9 +461,9 @@ class PlaygroundSpotEnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
       feet_site_ids_[i] = RequireId(mjOBJ_SITE, kSpotFeetSites[i]);
       feet_floor_sensor_adrs_[i] =
           SensorAdr(std::string(kSpotFeetSites[i]) + "_floor_found");
-      feet_linvel_sensor_adrs_[i] = SensorAdr(kSpotFootLinvelSensors[i]);
+      feet_linvel_sensor_adrs_[i] = SensorAdr(SpotFootLinvelSensors()[i]);
       if (!is_getup_) {
-        feet_pos_sensor_adrs_[i] = SensorAdr(kSpotFootPosSensors[i]);
+        feet_pos_sensor_adrs_[i] = SensorAdr(SpotFootPosSensors()[i]);
       }
     }
     hx_default_pose_ = {default_pose_[0], default_pose_[3], default_pose_[6],
@@ -1240,26 +1244,32 @@ class PlaygroundSpotEnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
   }
 };
 
-using PlaygroundSpotJoystickEnv =
-    PlaygroundSpotEnvBase<PlaygroundSpotJoystickEnvSpec, false>;
-using PlaygroundSpotJoystickPixelEnv =
-    PlaygroundSpotEnvBase<PlaygroundSpotJoystickPixelEnvSpec, true>;
-using PlaygroundSpotJoystickEnvPool = AsyncEnvPool<PlaygroundSpotJoystickEnv>;
-using PlaygroundSpotJoystickPixelEnvPool =
-    AsyncEnvPool<PlaygroundSpotJoystickPixelEnv>;
-using PlaygroundSpotGetupEnv =
-    PlaygroundSpotEnvBase<PlaygroundSpotGetupEnvSpec, false>;
-using PlaygroundSpotGetupPixelEnv =
-    PlaygroundSpotEnvBase<PlaygroundSpotGetupPixelEnvSpec, true>;
-using PlaygroundSpotGetupEnvPool = AsyncEnvPool<PlaygroundSpotGetupEnv>;
-using PlaygroundSpotGetupPixelEnvPool =
-    AsyncEnvPool<PlaygroundSpotGetupPixelEnv>;
-using PlaygroundSpotGaitEnv =
-    PlaygroundSpotEnvBase<PlaygroundSpotGaitEnvSpec, false>;
-using PlaygroundSpotGaitPixelEnv =
-    PlaygroundSpotEnvBase<PlaygroundSpotGaitPixelEnvSpec, true>;
-using PlaygroundSpotGaitEnvPool = AsyncEnvPool<PlaygroundSpotGaitEnv>;
-using PlaygroundSpotGaitPixelEnvPool = AsyncEnvPool<PlaygroundSpotGaitPixelEnv>;
+template <typename Spec, bool kFromPixels>
+using SpotBase = PlaygroundSpotEnvBase<Spec, kFromPixels>;
+using SpotJoystickEnv = SpotBase<PlaygroundSpotJoystickEnvSpec, false>;
+using SpotJoystickPixelEnv = SpotBase<PlaygroundSpotJoystickPixelEnvSpec, true>;
+using SpotGetupEnv = SpotBase<PlaygroundSpotGetupEnvSpec, false>;
+using SpotGetupPixelEnv = SpotBase<PlaygroundSpotGetupPixelEnvSpec, true>;
+using SpotGaitEnv = SpotBase<PlaygroundSpotGaitEnvSpec, false>;
+using SpotGaitPixelEnv = SpotBase<PlaygroundSpotGaitPixelEnvSpec, true>;
+using PlaygroundSpotJoystickEnv = SpotJoystickEnv;
+using PlaygroundSpotJoystickPixelEnv = SpotJoystickPixelEnv;
+using PlaygroundSpotGetupEnv = SpotGetupEnv;
+using PlaygroundSpotGetupPixelEnv = SpotGetupPixelEnv;
+using PlaygroundSpotGaitEnv = SpotGaitEnv;
+using PlaygroundSpotGaitPixelEnv = SpotGaitPixelEnv;
+using SpotJoystickEnvPool = PlaygroundEnvPoolT<PlaygroundSpotJoystickEnv>;
+using SpotJoystickPixelEnvPool = PlaygroundEnvPoolT<SpotJoystickPixelEnv>;
+using SpotGetupEnvPool = PlaygroundEnvPoolT<PlaygroundSpotGetupEnv>;
+using SpotGetupPixelEnvPool = PlaygroundEnvPoolT<PlaygroundSpotGetupPixelEnv>;
+using SpotGaitEnvPool = PlaygroundEnvPoolT<PlaygroundSpotGaitEnv>;
+using SpotGaitPixelEnvPool = PlaygroundEnvPoolT<PlaygroundSpotGaitPixelEnv>;
+using PlaygroundSpotJoystickEnvPool = SpotJoystickEnvPool;
+using PlaygroundSpotJoystickPixelEnvPool = SpotJoystickPixelEnvPool;
+using PlaygroundSpotGetupEnvPool = SpotGetupEnvPool;
+using PlaygroundSpotGetupPixelEnvPool = SpotGetupPixelEnvPool;
+using PlaygroundSpotGaitEnvPool = SpotGaitEnvPool;
+using PlaygroundSpotGaitPixelEnvPool = SpotGaitPixelEnvPool;
 
 }  // namespace mujoco_playground
 

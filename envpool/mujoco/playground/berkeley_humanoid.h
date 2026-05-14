@@ -49,9 +49,11 @@ constexpr int kBerkeleyObsDim = 52;
 constexpr int kBerkeleyPrivilegedStateDim = 114;
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
 constexpr const char* kBerkeleyFeetSites[kBerkeleyFeet] = {"l_foot", "r_foot"};
-// NOLINTNEXTLINE(modernize-avoid-c-arrays)
-constexpr const char* kBerkeleyFeetGeoms[kBerkeleyFeet] = {"l_foot1",
-                                                           "r_foot1"};
+inline const std::array<const char*, kBerkeleyFeet>& BerkeleyFeetGeoms() {
+  static constexpr std::array<const char*, kBerkeleyFeet> kNames = {"l_foot1",
+                                                                    "r_foot1"};
+  return kNames;
+}
 
 class PlaygroundBerkeleyHumanoidEnvFns {
  public:
@@ -157,12 +159,12 @@ class PlaygroundBerkeleyHumanoidEnvFns {
   }
 };
 
-using PlaygroundBerkeleyHumanoidEnvSpec =
-    EnvSpec<PlaygroundBerkeleyHumanoidEnvFns>;
-using PlaygroundBerkeleyHumanoidPixelEnvFns =
-    PixelObservationEnvFns<PlaygroundBerkeleyHumanoidEnvFns>;
-using PlaygroundBerkeleyHumanoidPixelEnvSpec =
-    EnvSpec<PlaygroundBerkeleyHumanoidPixelEnvFns>;
+using BerkeleyAliases = PlaygroundEnvAliases<PlaygroundBerkeleyHumanoidEnvFns>;
+using BerkeleySpec = BerkeleyAliases::Spec;
+using BerkeleyPixelSpec = BerkeleyAliases::PixelSpec;
+using PlaygroundBerkeleyHumanoidEnvSpec = BerkeleySpec;
+using PlaygroundBerkeleyHumanoidPixelEnvFns = BerkeleyAliases::PixelFns;
+using PlaygroundBerkeleyHumanoidPixelEnvSpec = BerkeleyPixelSpec;
 
 template <typename EnvSpecT, bool kFromPixels>
 class PlaygroundBerkeleyHumanoidEnvBase : public Env<EnvSpecT>,
@@ -305,7 +307,7 @@ class PlaygroundBerkeleyHumanoidEnvBase : public Env<EnvSpecT>,
     for (int i = 0; i < kBerkeleyFeet; ++i) {
       feet_site_ids_[i] = RequireId(mjOBJ_SITE, kBerkeleyFeetSites[i]);
       feet_floor_sensor_ids_[i] = RequireId(
-          mjOBJ_SENSOR, std::string(kBerkeleyFeetGeoms[i]) + "_floor_found");
+          mjOBJ_SENSOR, std::string(BerkeleyFeetGeoms()[i]) + "_floor_found");
       feet_linvel_sensor_adrs_[i] =
           SensorAdr(std::string(kBerkeleyFeetSites[i]) + "_global_linvel");
     }
@@ -905,15 +907,16 @@ class PlaygroundBerkeleyHumanoidEnvBase : public Env<EnvSpecT>,
   std::array<mjtNum, kBerkeleyPrivilegedStateDim> privileged_obs_{};
 };
 
-using PlaygroundBerkeleyHumanoidEnv =
-    PlaygroundBerkeleyHumanoidEnvBase<PlaygroundBerkeleyHumanoidEnvSpec, false>;
-using PlaygroundBerkeleyHumanoidPixelEnv =
-    PlaygroundBerkeleyHumanoidEnvBase<PlaygroundBerkeleyHumanoidPixelEnvSpec,
-                                      true>;
-using PlaygroundBerkeleyHumanoidEnvPool =
-    AsyncEnvPool<PlaygroundBerkeleyHumanoidEnv>;
-using PlaygroundBerkeleyHumanoidPixelEnvPool =
-    AsyncEnvPool<PlaygroundBerkeleyHumanoidPixelEnv>;
+template <typename Spec, bool kFromPixels>
+using BerkeleyBase = PlaygroundBerkeleyHumanoidEnvBase<Spec, kFromPixels>;
+using BerkeleyEnv = BerkeleyBase<BerkeleySpec, false>;
+using BerkeleyPixelEnv = BerkeleyBase<BerkeleyPixelSpec, true>;
+using BerkeleyEnvPool = PlaygroundEnvPoolT<BerkeleyEnv>;
+using BerkeleyPixelEnvPool = PlaygroundEnvPoolT<BerkeleyPixelEnv>;
+using PlaygroundBerkeleyHumanoidEnv = BerkeleyEnv;
+using PlaygroundBerkeleyHumanoidPixelEnv = BerkeleyPixelEnv;
+using PlaygroundBerkeleyHumanoidEnvPool = BerkeleyEnvPool;
+using PlaygroundBerkeleyHumanoidPixelEnvPool = BerkeleyPixelEnvPool;
 
 }  // namespace mujoco_playground
 

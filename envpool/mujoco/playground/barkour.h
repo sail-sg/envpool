@@ -48,9 +48,12 @@ constexpr int kBarkourObsDim = 31;
 constexpr int kBarkourHistoryLen = 15;
 constexpr int kBarkourStateDim = kBarkourObsDim * kBarkourHistoryLen;
 constexpr int kBarkourFeet = 4;
-// NOLINTNEXTLINE(modernize-avoid-c-arrays)
-constexpr const char* kBarkourFeetGeoms[kBarkourFeet] = {
-    "foot_front_left", "foot_hind_left", "foot_front_right", "foot_hind_right"};
+inline const std::array<const char*, kBarkourFeet>& BarkourFeetGeoms() {
+  static constexpr std::array<const char*, kBarkourFeet> kNames = {
+      "foot_front_left", "foot_hind_left", "foot_front_right",
+      "foot_hind_right"};
+  return kNames;
+}
 
 class PlaygroundBarkourEnvFns {
  public:
@@ -125,10 +128,10 @@ class PlaygroundBarkourEnvFns {
   }
 };
 
-using PlaygroundBarkourEnvSpec = EnvSpec<PlaygroundBarkourEnvFns>;
-using PlaygroundBarkourPixelEnvFns =
-    PixelObservationEnvFns<PlaygroundBarkourEnvFns>;
-using PlaygroundBarkourPixelEnvSpec = EnvSpec<PlaygroundBarkourPixelEnvFns>;
+using BarkourAliases = PlaygroundEnvAliases<PlaygroundBarkourEnvFns>;
+using PlaygroundBarkourEnvSpec = BarkourAliases::Spec;
+using PlaygroundBarkourPixelEnvFns = BarkourAliases::PixelFns;
+using PlaygroundBarkourPixelEnvSpec = BarkourAliases::PixelSpec;
 
 template <typename EnvSpecT, bool kFromPixels>
 class PlaygroundBarkourEnvBase : public Env<EnvSpecT>,
@@ -225,7 +228,7 @@ class PlaygroundBarkourEnvBase : public Env<EnvSpecT>,
                -0.7, -1.0, 0.05, -0.7, -1.0, 0.05};
     uppers_ = {0.52, 2.1, 2.1, 0.52, 2.1, 2.1, 0.52, 2.1, 2.1, 0.52, 2.1, 2.1};
     for (int i = 0; i < kBarkourFeet; ++i) {
-      foot_geom_ids_[i] = RequireId(mjOBJ_GEOM, kBarkourFeetGeoms[i]);
+      foot_geom_ids_[i] = RequireId(mjOBJ_GEOM, BarkourFeetGeoms()[i]);
     }
     floor_geom_id_ = RequireId(mjOBJ_GEOM, "floor");
     torso_body_id_ = RequireId(mjOBJ_BODY, "torso");
@@ -607,12 +610,15 @@ class PlaygroundBarkourEnvBase : public Env<EnvSpecT>,
   }
 };
 
-using PlaygroundBarkourEnv =
-    PlaygroundBarkourEnvBase<PlaygroundBarkourEnvSpec, false>;
-using PlaygroundBarkourPixelEnv =
-    PlaygroundBarkourEnvBase<PlaygroundBarkourPixelEnvSpec, true>;
-using PlaygroundBarkourEnvPool = AsyncEnvPool<PlaygroundBarkourEnv>;
-using PlaygroundBarkourPixelEnvPool = AsyncEnvPool<PlaygroundBarkourPixelEnv>;
+template <typename Spec, bool kFromPixels>
+using BarkourBase = PlaygroundBarkourEnvBase<Spec, kFromPixels>;
+using BarkourEnv = BarkourBase<PlaygroundBarkourEnvSpec, false>;
+using BarkourPixelEnv = BarkourBase<PlaygroundBarkourPixelEnvSpec, true>;
+using PlaygroundBarkourEnv = BarkourEnv;
+using PlaygroundBarkourPixelEnv = BarkourPixelEnv;
+using PlaygroundBarkourEnvPool = PlaygroundEnvPoolT<PlaygroundBarkourEnv>;
+using BarkourPixelEnvPool = PlaygroundEnvPoolT<PlaygroundBarkourPixelEnv>;
+using PlaygroundBarkourPixelEnvPool = BarkourPixelEnvPool;
 
 }  // namespace mujoco_playground
 

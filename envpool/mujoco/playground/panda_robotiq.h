@@ -127,11 +127,10 @@ class PlaygroundPandaRobotiqEnvFns {
   }
 };
 
-using PlaygroundPandaRobotiqEnvSpec = EnvSpec<PlaygroundPandaRobotiqEnvFns>;
-using PlaygroundPandaRobotiqPixelEnvFns =
-    PixelObservationEnvFns<PlaygroundPandaRobotiqEnvFns>;
-using PlaygroundPandaRobotiqPixelEnvSpec =
-    EnvSpec<PlaygroundPandaRobotiqPixelEnvFns>;
+using PandaRobotiqAliases = PlaygroundEnvAliases<PlaygroundPandaRobotiqEnvFns>;
+using PlaygroundPandaRobotiqEnvSpec = PandaRobotiqAliases::Spec;
+using PlaygroundPandaRobotiqPixelEnvFns = PandaRobotiqAliases::PixelFns;
+using PlaygroundPandaRobotiqPixelEnvSpec = PandaRobotiqAliases::PixelSpec;
 
 template <typename EnvSpecT, bool kFromPixels>
 class PlaygroundPandaRobotiqEnvBase : public Env<EnvSpecT>,
@@ -887,13 +886,18 @@ class PlaygroundPandaRobotiqEnvBase : public Env<EnvSpecT>,
   }
 };
 
-using PlaygroundPandaRobotiqEnv =
-    PlaygroundPandaRobotiqEnvBase<PlaygroundPandaRobotiqEnvSpec, false>;
-using PlaygroundPandaRobotiqPixelEnv =
-    PlaygroundPandaRobotiqEnvBase<PlaygroundPandaRobotiqPixelEnvSpec, true>;
-using PlaygroundPandaRobotiqEnvPool = AsyncEnvPool<PlaygroundPandaRobotiqEnv>;
-using PlaygroundPandaRobotiqPixelEnvPool =
-    AsyncEnvPool<PlaygroundPandaRobotiqPixelEnv>;
+using PandaRobotiqSpec = PlaygroundPandaRobotiqEnvSpec;
+using PandaRobotiqPixelSpec = PlaygroundPandaRobotiqPixelEnvSpec;
+template <typename Spec, bool kFromPixels>
+using PandaRobotiqBase = PlaygroundPandaRobotiqEnvBase<Spec, kFromPixels>;
+using PandaRobotiqEnv = PandaRobotiqBase<PandaRobotiqSpec, false>;
+using PandaRobotiqPixelEnv = PandaRobotiqBase<PandaRobotiqPixelSpec, true>;
+using PlaygroundPandaRobotiqEnv = PandaRobotiqEnv;
+using PlaygroundPandaRobotiqPixelEnv = PandaRobotiqPixelEnv;
+using PandaRobotiqEnvPool = PlaygroundEnvPoolT<PlaygroundPandaRobotiqEnv>;
+using PandaRobotiqPixelEnvPool = PlaygroundEnvPoolT<PandaRobotiqPixelEnv>;
+using PlaygroundPandaRobotiqEnvPool = PandaRobotiqEnvPool;
+using PlaygroundPandaRobotiqPixelEnvPool = PandaRobotiqPixelEnvPool;
 
 }  // namespace mujoco_playground
 

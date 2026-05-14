@@ -129,10 +129,10 @@ class PlaygroundPandaEnvFns {
   }
 };
 
-using PlaygroundPandaEnvSpec = EnvSpec<PlaygroundPandaEnvFns>;
-using PlaygroundPandaPixelEnvFns =
-    PixelObservationEnvFns<PlaygroundPandaEnvFns>;
-using PlaygroundPandaPixelEnvSpec = EnvSpec<PlaygroundPandaPixelEnvFns>;
+using PandaAliases = PlaygroundEnvAliases<PlaygroundPandaEnvFns>;
+using PlaygroundPandaEnvSpec = PandaAliases::Spec;
+using PlaygroundPandaPixelEnvFns = PandaAliases::PixelFns;
+using PlaygroundPandaPixelEnvSpec = PandaAliases::PixelSpec;
 
 template <typename EnvSpecT, bool kFromPixels>
 class PlaygroundPandaEnvBase : public Env<EnvSpecT>,
@@ -1122,12 +1122,14 @@ class PlaygroundPandaEnvBase : public Env<EnvSpecT>,
   }
 };
 
-using PlaygroundPandaEnv =
-    PlaygroundPandaEnvBase<PlaygroundPandaEnvSpec, false>;
-using PlaygroundPandaPixelEnv =
-    PlaygroundPandaEnvBase<PlaygroundPandaPixelEnvSpec, true>;
-using PlaygroundPandaEnvPool = AsyncEnvPool<PlaygroundPandaEnv>;
-using PlaygroundPandaPixelEnvPool = AsyncEnvPool<PlaygroundPandaPixelEnv>;
+template <typename Spec, bool kFromPixels>
+using PandaBase = PlaygroundPandaEnvBase<Spec, kFromPixels>;
+using PandaEnv = PandaBase<PlaygroundPandaEnvSpec, false>;
+using PandaPixelEnv = PandaBase<PlaygroundPandaPixelEnvSpec, true>;
+using PlaygroundPandaEnv = PandaEnv;
+using PlaygroundPandaPixelEnv = PandaPixelEnv;
+using PlaygroundPandaEnvPool = PlaygroundEnvPoolT<PlaygroundPandaEnv>;
+using PlaygroundPandaPixelEnvPool = PlaygroundEnvPoolT<PlaygroundPandaPixelEnv>;
 
 }  // namespace mujoco_playground
 

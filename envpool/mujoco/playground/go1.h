@@ -137,9 +137,10 @@ class PlaygroundGo1EnvFns {
   }
 };
 
-using PlaygroundGo1EnvSpec = EnvSpec<PlaygroundGo1EnvFns>;
-using PlaygroundGo1PixelEnvFns = PixelObservationEnvFns<PlaygroundGo1EnvFns>;
-using PlaygroundGo1PixelEnvSpec = EnvSpec<PlaygroundGo1PixelEnvFns>;
+using Go1Aliases = PlaygroundEnvAliases<PlaygroundGo1EnvFns>;
+using PlaygroundGo1EnvSpec = Go1Aliases::Spec;
+using PlaygroundGo1PixelEnvFns = Go1Aliases::PixelFns;
+using PlaygroundGo1PixelEnvSpec = Go1Aliases::PixelSpec;
 
 template <typename EnvSpecT, bool kFromPixels>
 class PlaygroundGo1EnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
@@ -734,11 +735,14 @@ class PlaygroundGo1EnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
   }
 };
 
-using PlaygroundGo1Env = PlaygroundGo1EnvBase<PlaygroundGo1EnvSpec, false>;
-using PlaygroundGo1PixelEnv =
-    PlaygroundGo1EnvBase<PlaygroundGo1PixelEnvSpec, true>;
-using PlaygroundGo1EnvPool = AsyncEnvPool<PlaygroundGo1Env>;
-using PlaygroundGo1PixelEnvPool = AsyncEnvPool<PlaygroundGo1PixelEnv>;
+template <typename Spec, bool kFromPixels>
+using Go1Base = PlaygroundGo1EnvBase<Spec, kFromPixels>;
+using Go1Env = Go1Base<PlaygroundGo1EnvSpec, false>;
+using Go1PixelEnv = Go1Base<PlaygroundGo1PixelEnvSpec, true>;
+using PlaygroundGo1Env = Go1Env;
+using PlaygroundGo1PixelEnv = Go1PixelEnv;
+using PlaygroundGo1EnvPool = PlaygroundEnvPoolT<PlaygroundGo1Env>;
+using PlaygroundGo1PixelEnvPool = PlaygroundEnvPoolT<PlaygroundGo1PixelEnv>;
 
 class PlaygroundGo1GetupEnvFns {
  public:
@@ -804,10 +808,10 @@ class PlaygroundGo1GetupEnvFns {
   }
 };
 
-using PlaygroundGo1GetupEnvSpec = EnvSpec<PlaygroundGo1GetupEnvFns>;
-using PlaygroundGo1GetupPixelEnvFns =
-    PixelObservationEnvFns<PlaygroundGo1GetupEnvFns>;
-using PlaygroundGo1GetupPixelEnvSpec = EnvSpec<PlaygroundGo1GetupPixelEnvFns>;
+using Go1GetupAliases = PlaygroundEnvAliases<PlaygroundGo1GetupEnvFns>;
+using PlaygroundGo1GetupEnvSpec = Go1GetupAliases::Spec;
+using PlaygroundGo1GetupPixelEnvFns = Go1GetupAliases::PixelFns;
+using PlaygroundGo1GetupPixelEnvSpec = Go1GetupAliases::PixelSpec;
 
 template <typename EnvSpecT, bool kFromPixels>
 class PlaygroundGo1GetupEnvBase : public Env<EnvSpecT>,
@@ -1238,12 +1242,15 @@ class PlaygroundGo1GetupEnvBase : public Env<EnvSpecT>,
   }
 };
 
-using PlaygroundGo1GetupEnv =
-    PlaygroundGo1GetupEnvBase<PlaygroundGo1GetupEnvSpec, false>;
-using PlaygroundGo1GetupPixelEnv =
-    PlaygroundGo1GetupEnvBase<PlaygroundGo1GetupPixelEnvSpec, true>;
-using PlaygroundGo1GetupEnvPool = AsyncEnvPool<PlaygroundGo1GetupEnv>;
-using PlaygroundGo1GetupPixelEnvPool = AsyncEnvPool<PlaygroundGo1GetupPixelEnv>;
+template <typename Spec, bool kFromPixels>
+using Go1GetupBase = PlaygroundGo1GetupEnvBase<Spec, kFromPixels>;
+using Go1GetupEnv = Go1GetupBase<PlaygroundGo1GetupEnvSpec, false>;
+using Go1GetupPixelEnv = Go1GetupBase<PlaygroundGo1GetupPixelEnvSpec, true>;
+using PlaygroundGo1GetupEnv = Go1GetupEnv;
+using PlaygroundGo1GetupPixelEnv = Go1GetupPixelEnv;
+using PlaygroundGo1GetupEnvPool = PlaygroundEnvPoolT<PlaygroundGo1GetupEnv>;
+using Go1GetupPixelEnvPool = PlaygroundEnvPoolT<PlaygroundGo1GetupPixelEnv>;
+using PlaygroundGo1GetupPixelEnvPool = Go1GetupPixelEnvPool;
 
 class PlaygroundGo1HandstandEnvFns {
  public:
@@ -1310,11 +1317,10 @@ class PlaygroundGo1HandstandEnvFns {
   }
 };
 
-using PlaygroundGo1HandstandEnvSpec = EnvSpec<PlaygroundGo1HandstandEnvFns>;
-using PlaygroundGo1HandstandPixelEnvFns =
-    PixelObservationEnvFns<PlaygroundGo1HandstandEnvFns>;
-using PlaygroundGo1HandstandPixelEnvSpec =
-    EnvSpec<PlaygroundGo1HandstandPixelEnvFns>;
+using Go1HandstandAliases = PlaygroundEnvAliases<PlaygroundGo1HandstandEnvFns>;
+using PlaygroundGo1HandstandEnvSpec = Go1HandstandAliases::Spec;
+using PlaygroundGo1HandstandPixelEnvFns = Go1HandstandAliases::PixelFns;
+using PlaygroundGo1HandstandPixelEnvSpec = Go1HandstandAliases::PixelSpec;
 
 template <typename EnvSpecT, bool kFromPixels>
 class PlaygroundGo1HandstandEnvBase : public Env<EnvSpecT>,
@@ -1799,13 +1805,18 @@ class PlaygroundGo1HandstandEnvBase : public Env<EnvSpecT>,
   }
 };
 
-using PlaygroundGo1HandstandEnv =
-    PlaygroundGo1HandstandEnvBase<PlaygroundGo1HandstandEnvSpec, false>;
-using PlaygroundGo1HandstandPixelEnv =
-    PlaygroundGo1HandstandEnvBase<PlaygroundGo1HandstandPixelEnvSpec, true>;
-using PlaygroundGo1HandstandEnvPool = AsyncEnvPool<PlaygroundGo1HandstandEnv>;
-using PlaygroundGo1HandstandPixelEnvPool =
-    AsyncEnvPool<PlaygroundGo1HandstandPixelEnv>;
+template <typename Spec, bool kFromPixels>
+using Go1HandstandBase = PlaygroundGo1HandstandEnvBase<Spec, kFromPixels>;
+using Go1HandstandSpec = PlaygroundGo1HandstandEnvSpec;
+using Go1HandstandPixelSpec = PlaygroundGo1HandstandPixelEnvSpec;
+using Go1HandstandEnv = Go1HandstandBase<Go1HandstandSpec, false>;
+using Go1HandstandPixelEnv = Go1HandstandBase<Go1HandstandPixelSpec, true>;
+using PlaygroundGo1HandstandEnv = Go1HandstandEnv;
+using PlaygroundGo1HandstandPixelEnv = Go1HandstandPixelEnv;
+using Go1HandstandEnvPool = PlaygroundEnvPoolT<PlaygroundGo1HandstandEnv>;
+using Go1HandstandPixelEnvPool = PlaygroundEnvPoolT<Go1HandstandPixelEnv>;
+using PlaygroundGo1HandstandEnvPool = Go1HandstandEnvPool;
+using PlaygroundGo1HandstandPixelEnvPool = Go1HandstandPixelEnvPool;
 
 }  // namespace mujoco_playground
 

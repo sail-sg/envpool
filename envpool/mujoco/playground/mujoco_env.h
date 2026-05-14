@@ -28,11 +28,28 @@
 #include <utility>
 #include <vector>
 
+#include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
 #include "envpool/mujoco/frame_stack.h"
 #include "envpool/mujoco/offscreen_renderer.h"
 
 namespace mujoco_playground {
+
+template <typename EnvFns>
+using PlaygroundEnvSpecT = EnvSpec<EnvFns>;
+
+template <typename EnvFns>
+using PlaygroundPixelEnvFns = envpool::mujoco::PixelObservationEnvFns<EnvFns>;
+
+template <typename Env>
+using PlaygroundEnvPoolT = AsyncEnvPool<Env>;
+
+template <typename EnvFns>
+struct PlaygroundEnvAliases {
+  using Spec = PlaygroundEnvSpecT<EnvFns>;
+  using PixelFns = PlaygroundPixelEnvFns<EnvFns>;
+  using PixelSpec = PlaygroundEnvSpecT<PixelFns>;
+};
 
 class PlaygroundMujocoEnv : public RenderableEnv {
  private:

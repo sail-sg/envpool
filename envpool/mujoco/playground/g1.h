@@ -159,9 +159,10 @@ class PlaygroundG1EnvFns {
   }
 };
 
-using PlaygroundG1EnvSpec = EnvSpec<PlaygroundG1EnvFns>;
-using PlaygroundG1PixelEnvFns = PixelObservationEnvFns<PlaygroundG1EnvFns>;
-using PlaygroundG1PixelEnvSpec = EnvSpec<PlaygroundG1PixelEnvFns>;
+using G1Aliases = PlaygroundEnvAliases<PlaygroundG1EnvFns>;
+using PlaygroundG1EnvSpec = G1Aliases::Spec;
+using PlaygroundG1PixelEnvFns = G1Aliases::PixelFns;
+using PlaygroundG1PixelEnvSpec = G1Aliases::PixelSpec;
 
 template <typename EnvSpecT, bool kFromPixels>
 class PlaygroundG1EnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
@@ -969,11 +970,14 @@ class PlaygroundG1EnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
   std::array<mjtNum, kG1PrivilegedStateDim> privileged_obs_{};
 };
 
-using PlaygroundG1Env = PlaygroundG1EnvBase<PlaygroundG1EnvSpec, false>;
-using PlaygroundG1PixelEnv =
-    PlaygroundG1EnvBase<PlaygroundG1PixelEnvSpec, true>;
-using PlaygroundG1EnvPool = AsyncEnvPool<PlaygroundG1Env>;
-using PlaygroundG1PixelEnvPool = AsyncEnvPool<PlaygroundG1PixelEnv>;
+template <typename Spec, bool kFromPixels>
+using G1Base = PlaygroundG1EnvBase<Spec, kFromPixels>;
+using G1Env = G1Base<PlaygroundG1EnvSpec, false>;
+using G1PixelEnv = G1Base<PlaygroundG1PixelEnvSpec, true>;
+using PlaygroundG1Env = G1Env;
+using PlaygroundG1PixelEnv = G1PixelEnv;
+using PlaygroundG1EnvPool = PlaygroundEnvPoolT<PlaygroundG1Env>;
+using PlaygroundG1PixelEnvPool = PlaygroundEnvPoolT<PlaygroundG1PixelEnv>;
 
 }  // namespace mujoco_playground
 

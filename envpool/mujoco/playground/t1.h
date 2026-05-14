@@ -50,14 +50,19 @@ constexpr int kT1ObsDim = 85;
 constexpr int kT1PrivilegedStateDim = 180;
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
 constexpr const char* kT1FeetSites[kT1Feet] = {"left_foot", "right_foot"};
-// NOLINTNEXTLINE(modernize-avoid-c-arrays)
-constexpr const char* kT1LeftFootSensors[kT1FootSensors] = {
-    "left_foot_1_floor_found", "left_foot_2_floor_found",
-    "left_foot_3_floor_found", "left_foot_4_floor_found"};
-// NOLINTNEXTLINE(modernize-avoid-c-arrays)
-constexpr const char* kT1RightFootSensors[kT1FootSensors] = {
-    "right_foot_1_floor_found", "right_foot_2_floor_found",
-    "right_foot_3_floor_found", "right_foot_4_floor_found"};
+inline const std::array<const char*, kT1FootSensors>& T1LeftFootSensors() {
+  static constexpr std::array<const char*, kT1FootSensors> kNames = {
+      "left_foot_1_floor_found", "left_foot_2_floor_found",
+      "left_foot_3_floor_found", "left_foot_4_floor_found"};
+  return kNames;
+}
+
+inline const std::array<const char*, kT1FootSensors>& T1RightFootSensors() {
+  static constexpr std::array<const char*, kT1FootSensors> kNames = {
+      "right_foot_1_floor_found", "right_foot_2_floor_found",
+      "right_foot_3_floor_found", "right_foot_4_floor_found"};
+  return kNames;
+}
 
 class PlaygroundT1EnvFns {
  public:
@@ -166,9 +171,10 @@ class PlaygroundT1EnvFns {
   }
 };
 
-using PlaygroundT1EnvSpec = EnvSpec<PlaygroundT1EnvFns>;
-using PlaygroundT1PixelEnvFns = PixelObservationEnvFns<PlaygroundT1EnvFns>;
-using PlaygroundT1PixelEnvSpec = EnvSpec<PlaygroundT1PixelEnvFns>;
+using T1Aliases = PlaygroundEnvAliases<PlaygroundT1EnvFns>;
+using PlaygroundT1EnvSpec = T1Aliases::Spec;
+using PlaygroundT1PixelEnvFns = T1Aliases::PixelFns;
+using PlaygroundT1PixelEnvSpec = T1Aliases::PixelSpec;
 
 template <typename EnvSpecT, bool kFromPixels>
 class PlaygroundT1EnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
@@ -313,9 +319,9 @@ class PlaygroundT1EnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
     }
     for (int i = 0; i < kT1FootSensors; ++i) {
       left_floor_sensor_ids_[i] =
-          RequireId(mjOBJ_SENSOR, kT1LeftFootSensors[i]);
+          RequireId(mjOBJ_SENSOR, T1LeftFootSensors()[i]);
       right_floor_sensor_ids_[i] =
-          RequireId(mjOBJ_SENSOR, kT1RightFootSensors[i]);
+          RequireId(mjOBJ_SENSOR, T1RightFootSensors()[i]);
     }
     left_foot_right_foot_sensor_id_ =
         RequireId(mjOBJ_SENSOR, "left_foot_right_foot_found");
@@ -959,11 +965,14 @@ class PlaygroundT1EnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
   std::array<mjtNum, kT1PrivilegedStateDim> privileged_obs_{};
 };
 
-using PlaygroundT1Env = PlaygroundT1EnvBase<PlaygroundT1EnvSpec, false>;
-using PlaygroundT1PixelEnv =
-    PlaygroundT1EnvBase<PlaygroundT1PixelEnvSpec, true>;
-using PlaygroundT1EnvPool = AsyncEnvPool<PlaygroundT1Env>;
-using PlaygroundT1PixelEnvPool = AsyncEnvPool<PlaygroundT1PixelEnv>;
+template <typename Spec, bool kFromPixels>
+using T1Base = PlaygroundT1EnvBase<Spec, kFromPixels>;
+using T1Env = T1Base<PlaygroundT1EnvSpec, false>;
+using T1PixelEnv = T1Base<PlaygroundT1PixelEnvSpec, true>;
+using PlaygroundT1Env = T1Env;
+using PlaygroundT1PixelEnv = T1PixelEnv;
+using PlaygroundT1EnvPool = PlaygroundEnvPoolT<PlaygroundT1Env>;
+using PlaygroundT1PixelEnvPool = PlaygroundEnvPoolT<PlaygroundT1PixelEnv>;
 
 }  // namespace mujoco_playground
 

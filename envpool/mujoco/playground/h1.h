@@ -56,20 +56,32 @@ constexpr int kH1JoystickStateDim = 113;
 constexpr int kH1MaxStateDim = kH1InplaceStateDim;
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
 constexpr const char* kH1FeetSites[kH1Feet] = {"left_foot", "right_foot"};
-// NOLINTNEXTLINE(modernize-avoid-c-arrays)
-constexpr const char* kH1LeftFootSensors[kH1FootSensors] = {
-    "left_foot1_floor_found", "left_foot2_floor_found",
-    "left_foot3_floor_found"};
-// NOLINTNEXTLINE(modernize-avoid-c-arrays)
-constexpr const char* kH1RightFootSensors[kH1FootSensors] = {
-    "right_foot1_floor_found", "right_foot2_floor_found",
-    "right_foot3_floor_found"};
-// NOLINTNEXTLINE(modernize-avoid-c-arrays)
-constexpr int kH1HxIdxs[15] = {0,  1,  4,  5,  6,  9,  10, 11,
-                               12, 13, 14, 15, 16, 17, 18};
-// NOLINTNEXTLINE(modernize-avoid-c-arrays)
-constexpr mjtNum kH1HxWeights[15] = {5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 2.0, 1.0,
-                                     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+inline const std::array<const char*, kH1FootSensors>& H1LeftFootSensors() {
+  static constexpr std::array<const char*, kH1FootSensors> kNames = {
+      "left_foot1_floor_found", "left_foot2_floor_found",
+      "left_foot3_floor_found"};
+  return kNames;
+}
+
+inline const std::array<const char*, kH1FootSensors>& H1RightFootSensors() {
+  static constexpr std::array<const char*, kH1FootSensors> kNames = {
+      "right_foot1_floor_found", "right_foot2_floor_found",
+      "right_foot3_floor_found"};
+  return kNames;
+}
+
+inline const std::array<int, 15>& H1HxIdxs() {
+  static constexpr std::array<int, 15> kIdxs = {0,  1,  4,  5,  6,  9,  10, 11,
+                                                12, 13, 14, 15, 16, 17, 18};
+  return kIdxs;
+}
+
+inline const std::array<mjtNum, 15>& H1HxWeights() {
+  static constexpr std::array<mjtNum, 15> kWeights = {5.0, 5.0, 5.0, 5.0, 5.0,
+                                                      5.0, 2.0, 1.0, 1.0, 1.0,
+                                                      1.0, 1.0, 1.0, 1.0, 1.0};
+  return kWeights;
+}
 
 class PlaygroundH1EnvFns {
  public:
@@ -163,9 +175,10 @@ class PlaygroundH1EnvFns {
   }
 };
 
-using PlaygroundH1EnvSpec = EnvSpec<PlaygroundH1EnvFns>;
-using PlaygroundH1PixelEnvFns = PixelObservationEnvFns<PlaygroundH1EnvFns>;
-using PlaygroundH1PixelEnvSpec = EnvSpec<PlaygroundH1PixelEnvFns>;
+using H1Aliases = PlaygroundEnvAliases<PlaygroundH1EnvFns>;
+using PlaygroundH1EnvSpec = H1Aliases::Spec;
+using PlaygroundH1PixelEnvFns = H1Aliases::PixelFns;
+using PlaygroundH1PixelEnvSpec = H1Aliases::PixelSpec;
 
 template <typename EnvSpecT, bool kFromPixels>
 class PlaygroundH1EnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
@@ -275,7 +288,7 @@ class PlaygroundH1EnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
       uppers_[i] = model_->actuator_ctrlrange[i * 2 + 1];
     }
     for (int i = 0; i < 15; ++i) {
-      hx_default_pose_[i] = default_pose_[kH1HxIdxs[i]];
+      hx_default_pose_[i] = default_pose_[H1HxIdxs()[i]];
     }
     for (int i = 0; i < kH1Feet; ++i) {
       feet_site_ids_[i] = RequireId(mjOBJ_SITE, kH1FeetSites[i]);
@@ -284,9 +297,9 @@ class PlaygroundH1EnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
     }
     for (int i = 0; i < kH1FootSensors; ++i) {
       left_floor_sensor_ids_[i] =
-          RequireId(mjOBJ_SENSOR, kH1LeftFootSensors[i]);
+          RequireId(mjOBJ_SENSOR, H1LeftFootSensors()[i]);
       right_floor_sensor_ids_[i] =
-          RequireId(mjOBJ_SENSOR, kH1RightFootSensors[i]);
+          RequireId(mjOBJ_SENSOR, H1RightFootSensors()[i]);
       left_floor_sensor_adrs_[i] =
           model_->sensor_adr[left_floor_sensor_ids_[i]];
       right_floor_sensor_adrs_[i] =
@@ -610,8 +623,8 @@ class PlaygroundH1EnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
   mjtNum CostPose() const {
     mjtNum cost = 0.0;
     for (int i = 0; i < 15; ++i) {
-      const mjtNum delta = data_->qpos[7 + kH1HxIdxs[i]] - hx_default_pose_[i];
-      cost += delta * delta * kH1HxWeights[i];
+      const mjtNum delta = data_->qpos[7 + H1HxIdxs()[i]] - hx_default_pose_[i];
+      cost += delta * delta * H1HxWeights()[i];
     }
     return cost;
   }
@@ -802,11 +815,14 @@ class PlaygroundH1EnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
   }
 };
 
-using PlaygroundH1Env = PlaygroundH1EnvBase<PlaygroundH1EnvSpec, false>;
-using PlaygroundH1PixelEnv =
-    PlaygroundH1EnvBase<PlaygroundH1PixelEnvSpec, true>;
-using PlaygroundH1EnvPool = AsyncEnvPool<PlaygroundH1Env>;
-using PlaygroundH1PixelEnvPool = AsyncEnvPool<PlaygroundH1PixelEnv>;
+template <typename Spec, bool kFromPixels>
+using H1Base = PlaygroundH1EnvBase<Spec, kFromPixels>;
+using H1Env = H1Base<PlaygroundH1EnvSpec, false>;
+using H1PixelEnv = H1Base<PlaygroundH1PixelEnvSpec, true>;
+using PlaygroundH1Env = H1Env;
+using PlaygroundH1PixelEnv = H1PixelEnv;
+using PlaygroundH1EnvPool = PlaygroundEnvPoolT<PlaygroundH1Env>;
+using PlaygroundH1PixelEnvPool = PlaygroundEnvPoolT<PlaygroundH1PixelEnv>;
 
 }  // namespace mujoco_playground
 

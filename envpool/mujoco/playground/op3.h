@@ -47,12 +47,17 @@ constexpr int kOp3Feet = 2;
 constexpr int kOp3FootSensors = 2;
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
 constexpr const char* kOp3FeetSites[kOp3Feet] = {"left_foot", "right_foot"};
-// NOLINTNEXTLINE(modernize-avoid-c-arrays)
-constexpr const char* kOp3LeftFootSensors[kOp3FootSensors] = {
-    "l_foot1_floor_found", "l_foot2_floor_found"};
-// NOLINTNEXTLINE(modernize-avoid-c-arrays)
-constexpr const char* kOp3RightFootSensors[kOp3FootSensors] = {
-    "r_foot1_floor_found", "r_foot2_floor_found"};
+inline const std::array<const char*, kOp3FootSensors>& Op3LeftFootSensors() {
+  static constexpr std::array<const char*, kOp3FootSensors> kNames = {
+      "l_foot1_floor_found", "l_foot2_floor_found"};
+  return kNames;
+}
+
+inline const std::array<const char*, kOp3FootSensors>& Op3RightFootSensors() {
+  static constexpr std::array<const char*, kOp3FootSensors> kNames = {
+      "r_foot1_floor_found", "r_foot2_floor_found"};
+  return kNames;
+}
 
 class PlaygroundOp3EnvFns {
  public:
@@ -122,9 +127,10 @@ class PlaygroundOp3EnvFns {
   }
 };
 
-using PlaygroundOp3EnvSpec = EnvSpec<PlaygroundOp3EnvFns>;
-using PlaygroundOp3PixelEnvFns = PixelObservationEnvFns<PlaygroundOp3EnvFns>;
-using PlaygroundOp3PixelEnvSpec = EnvSpec<PlaygroundOp3PixelEnvFns>;
+using Op3Aliases = PlaygroundEnvAliases<PlaygroundOp3EnvFns>;
+using PlaygroundOp3EnvSpec = Op3Aliases::Spec;
+using PlaygroundOp3PixelEnvFns = Op3Aliases::PixelFns;
+using PlaygroundOp3PixelEnvSpec = Op3Aliases::PixelSpec;
 
 template <typename EnvSpecT, bool kFromPixels>
 class PlaygroundOp3EnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
@@ -222,8 +228,8 @@ class PlaygroundOp3EnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
           SensorAdr(std::string(kOp3FeetSites[i]) + "_global_linvel");
     }
     for (int i = 0; i < kOp3FootSensors; ++i) {
-      left_floor_sensor_adrs_[i] = SensorAdr(kOp3LeftFootSensors[i]);
-      right_floor_sensor_adrs_[i] = SensorAdr(kOp3RightFootSensors[i]);
+      left_floor_sensor_adrs_[i] = SensorAdr(Op3LeftFootSensors()[i]);
+      right_floor_sensor_adrs_[i] = SensorAdr(Op3RightFootSensors()[i]);
     }
     torso_body_id_ = RequireId(mjOBJ_BODY, "body_link");
     gyro_adr_ = SensorAdr("gyro");
@@ -565,11 +571,14 @@ class PlaygroundOp3EnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
   }
 };
 
-using PlaygroundOp3Env = PlaygroundOp3EnvBase<PlaygroundOp3EnvSpec, false>;
-using PlaygroundOp3PixelEnv =
-    PlaygroundOp3EnvBase<PlaygroundOp3PixelEnvSpec, true>;
-using PlaygroundOp3EnvPool = AsyncEnvPool<PlaygroundOp3Env>;
-using PlaygroundOp3PixelEnvPool = AsyncEnvPool<PlaygroundOp3PixelEnv>;
+template <typename Spec, bool kFromPixels>
+using Op3Base = PlaygroundOp3EnvBase<Spec, kFromPixels>;
+using Op3Env = Op3Base<PlaygroundOp3EnvSpec, false>;
+using Op3PixelEnv = Op3Base<PlaygroundOp3PixelEnvSpec, true>;
+using PlaygroundOp3Env = Op3Env;
+using PlaygroundOp3PixelEnv = Op3PixelEnv;
+using PlaygroundOp3EnvPool = PlaygroundEnvPoolT<PlaygroundOp3Env>;
+using PlaygroundOp3PixelEnvPool = PlaygroundEnvPoolT<PlaygroundOp3PixelEnv>;
 
 }  // namespace mujoco_playground
 

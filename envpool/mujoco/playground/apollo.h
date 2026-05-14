@@ -150,10 +150,10 @@ class PlaygroundApolloEnvFns {
   }
 };
 
-using PlaygroundApolloEnvSpec = EnvSpec<PlaygroundApolloEnvFns>;
-using PlaygroundApolloPixelEnvFns =
-    PixelObservationEnvFns<PlaygroundApolloEnvFns>;
-using PlaygroundApolloPixelEnvSpec = EnvSpec<PlaygroundApolloPixelEnvFns>;
+using ApolloAliases = PlaygroundEnvAliases<PlaygroundApolloEnvFns>;
+using PlaygroundApolloEnvSpec = ApolloAliases::Spec;
+using PlaygroundApolloPixelEnvFns = ApolloAliases::PixelFns;
+using PlaygroundApolloPixelEnvSpec = ApolloAliases::PixelSpec;
 
 template <typename EnvSpecT, bool kFromPixels>
 class PlaygroundApolloEnvBase : public Env<EnvSpecT>,
@@ -729,12 +729,15 @@ class PlaygroundApolloEnvBase : public Env<EnvSpecT>,
   }
 };
 
-using PlaygroundApolloEnv =
-    PlaygroundApolloEnvBase<PlaygroundApolloEnvSpec, false>;
-using PlaygroundApolloPixelEnv =
-    PlaygroundApolloEnvBase<PlaygroundApolloPixelEnvSpec, true>;
-using PlaygroundApolloEnvPool = AsyncEnvPool<PlaygroundApolloEnv>;
-using PlaygroundApolloPixelEnvPool = AsyncEnvPool<PlaygroundApolloPixelEnv>;
+template <typename Spec, bool kFromPixels>
+using ApolloBase = PlaygroundApolloEnvBase<Spec, kFromPixels>;
+using ApolloEnv = ApolloBase<PlaygroundApolloEnvSpec, false>;
+using ApolloPixelEnv = ApolloBase<PlaygroundApolloPixelEnvSpec, true>;
+using PlaygroundApolloEnv = ApolloEnv;
+using PlaygroundApolloPixelEnv = ApolloPixelEnv;
+using PlaygroundApolloEnvPool = PlaygroundEnvPoolT<PlaygroundApolloEnv>;
+using ApolloPixelEnvPool = PlaygroundEnvPoolT<PlaygroundApolloPixelEnv>;
+using PlaygroundApolloPixelEnvPool = ApolloPixelEnvPool;
 
 }  // namespace mujoco_playground
 

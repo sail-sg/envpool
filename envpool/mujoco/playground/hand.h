@@ -160,9 +160,10 @@ class PlaygroundHandEnvFns {
   }
 };
 
-using PlaygroundHandEnvSpec = EnvSpec<PlaygroundHandEnvFns>;
-using PlaygroundHandPixelEnvFns = PixelObservationEnvFns<PlaygroundHandEnvFns>;
-using PlaygroundHandPixelEnvSpec = EnvSpec<PlaygroundHandPixelEnvFns>;
+using HandAliases = PlaygroundEnvAliases<PlaygroundHandEnvFns>;
+using PlaygroundHandEnvSpec = HandAliases::Spec;
+using PlaygroundHandPixelEnvFns = HandAliases::PixelFns;
+using PlaygroundHandPixelEnvSpec = HandAliases::PixelSpec;
 
 template <typename EnvSpecT, bool kFromPixels>
 class PlaygroundHandEnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
@@ -1161,11 +1162,14 @@ class PlaygroundHandEnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
   }
 };
 
-using PlaygroundHandEnv = PlaygroundHandEnvBase<PlaygroundHandEnvSpec, false>;
-using PlaygroundHandPixelEnv =
-    PlaygroundHandEnvBase<PlaygroundHandPixelEnvSpec, true>;
-using PlaygroundHandEnvPool = AsyncEnvPool<PlaygroundHandEnv>;
-using PlaygroundHandPixelEnvPool = AsyncEnvPool<PlaygroundHandPixelEnv>;
+template <typename Spec, bool kFromPixels>
+using HandBase = PlaygroundHandEnvBase<Spec, kFromPixels>;
+using HandEnv = HandBase<PlaygroundHandEnvSpec, false>;
+using HandPixelEnv = HandBase<PlaygroundHandPixelEnvSpec, true>;
+using PlaygroundHandEnv = HandEnv;
+using PlaygroundHandPixelEnv = HandPixelEnv;
+using PlaygroundHandEnvPool = PlaygroundEnvPoolT<PlaygroundHandEnv>;
+using PlaygroundHandPixelEnvPool = PlaygroundEnvPoolT<PlaygroundHandPixelEnv>;
 
 }  // namespace mujoco_playground
 
