@@ -1,0 +1,27 @@
+diff --git a/mujoco_playground/_src/locomotion/go1/xmls/go1_mjx_feetonly.xml b/mujoco_playground/_src/locomotion/go1/xmls/go1_mjx_feetonly.xml
+--- a/mujoco_playground/_src/locomotion/go1/xmls/go1_mjx_feetonly.xml
++++ b/mujoco_playground/_src/locomotion/go1/xmls/go1_mjx_feetonly.xml
+@@ -1,5 +1,5 @@
+ <mujoco model="go1 feet only">
+-  <compiler angle="radian" meshdir="../../../../../mujoco_menagerie/unitree_go1/assets" autolimits="true"/>
++  <compiler angle="radian" autolimits="true"/>
+ 
+   <option iterations="1" ls_iterations="5" timestep="0.004" integrator="Euler">
+     <flag eulerdamp="disable"/>
+@@ -73,11 +73,11 @@
+ 
+   <asset>
+     <material name="dark" rgba="0.2 0.2 0.2 1"/>
+-    <mesh class="go1" file="../../../../mujoco_menagerie/unitree_go1/assets/trunk.stl"/>
+-    <mesh class="go1" file="../../../../mujoco_menagerie/unitree_go1/assets/hip.stl"/>
+-    <mesh class="go1" file="../../../../mujoco_menagerie/unitree_go1/assets/thigh_mirror.stl"/>
+-    <mesh class="go1" file="../../../../mujoco_menagerie/unitree_go1/assets/calf.stl"/>
+-    <mesh class="go1" file="../../../../mujoco_menagerie/unitree_go1/assets/thigh.stl"/>
++    <mesh class="go1" file="../../../../../mujoco_menagerie/unitree_go1/assets/trunk.stl"/>
++    <mesh class="go1" file="../../../../../mujoco_menagerie/unitree_go1/assets/hip.stl"/>
++    <mesh class="go1" file="../../../../../mujoco_menagerie/unitree_go1/assets/thigh_mirror.stl"/>
++    <mesh class="go1" file="../../../../../mujoco_menagerie/unitree_go1/assets/calf.stl"/>
++    <mesh class="go1" file="../../../../../mujoco_menagerie/unitree_go1/assets/thigh.stl"/>
+   </asset>
+ 
+   <worldbody>

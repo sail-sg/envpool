@@ -44,6 +44,7 @@ py_library(
         "//envpool/mujoco:mujoco_dmc_registration",
         "//envpool/mujoco:mujoco_gym_registration",
         "//envpool/mujoco:myosuite_registration",
+        "//envpool/mujoco:playground_registration",
         "//envpool/mujoco:robotics_registration",
         "//envpool/pgx:pgx_registration",
         "//envpool/procgen:procgen_registration",

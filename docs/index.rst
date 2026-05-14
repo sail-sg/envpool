@@ -103,6 +103,7 @@ stable version through `envpool.readthedocs.io/en/stable/
    env/procgen
    env/toy_text
    env/vizdoom
+   env/mujoco_playground
 
 
 Indices and tables

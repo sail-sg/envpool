@@ -1,0 +1,98 @@
+diff --git a/mujoco_playground/_src/locomotion/apollo/xmls/apollo_mjx_feetonly.xml b/mujoco_playground/_src/locomotion/apollo/xmls/apollo_mjx_feetonly.xml
+--- a/mujoco_playground/_src/locomotion/apollo/xmls/apollo_mjx_feetonly.xml
++++ b/mujoco_playground/_src/locomotion/apollo/xmls/apollo_mjx_feetonly.xml
+@@ -95,50 +95,50 @@
+   </default>
+ 
+   <asset>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/neck_mount_fix_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/neck_yaw_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/afh_2_1_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/torso_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/battery_mount_fix.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/torso_pitch_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/torso_roll_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/pelvis_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/l_shoulder_aa_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/l_shoulder_ie_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/l_shoulder_fe_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/l_elbow_fe_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/l_wrist_roll_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/l_wrist_yaw_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/l_wrist_pitch_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/ability_hand/wrist_adapter.STL"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/ability_hand/wristmesh.STL"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/ability_hand/FB_palm_ref.STL"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/ability_hand/idx-F1.STL"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/ability_hand/idx-F2.STL"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/ability_hand/thumb-F1.STL"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/ability_hand/thumb-F2-left.STL"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/r_shoulder_aa_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/r_shoulder_ie_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/r_shoulder_fe_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/r_elbow_fe_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/r_wrist_roll_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/r_wrist_yaw_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/r_wrist_pitch_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/ability_hand/FB_palm_ref_MIR.STL"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/ability_hand/thumb-F1-MIR.STL"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/ability_hand/thumb-F2-right.STL"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/l_hip_ie_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/l_hip_aa_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/l_hip_fe_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/l_knee_fe_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/l_ankle_ie_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/l_foot_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/r_hip_ie_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/r_hip_aa_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/r_hip_fe_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/r_knee_fe_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/r_ankle_ie_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/apptronik_apollo/assets/r_foot_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/neck_mount_fix_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/neck_yaw_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/afh_2_1_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/torso_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/battery_mount_fix.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/torso_pitch_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/torso_roll_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/pelvis_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/l_shoulder_aa_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/l_shoulder_ie_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/l_shoulder_fe_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/l_elbow_fe_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/l_wrist_roll_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/l_wrist_yaw_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/l_wrist_pitch_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/ability_hand/wrist_adapter.STL"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/ability_hand/wristmesh.STL"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/ability_hand/FB_palm_ref.STL"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/ability_hand/idx-F1.STL"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/ability_hand/idx-F2.STL"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/ability_hand/thumb-F1.STL"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/ability_hand/thumb-F2-left.STL"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/r_shoulder_aa_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/r_shoulder_ie_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/r_shoulder_fe_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/r_elbow_fe_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/r_wrist_roll_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/r_wrist_yaw_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/r_wrist_pitch_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/ability_hand/FB_palm_ref_MIR.STL"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/ability_hand/thumb-F1-MIR.STL"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/ability_hand/thumb-F2-right.STL"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/l_hip_ie_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/l_hip_aa_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/l_hip_fe_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/l_knee_fe_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/l_ankle_ie_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/l_foot_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/r_hip_ie_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/r_hip_aa_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/r_hip_fe_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/r_knee_fe_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/r_ankle_ie_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/apptronik_apollo/assets/r_foot_link.stl"/>
+   </asset>
+ 
+   <worldbody>

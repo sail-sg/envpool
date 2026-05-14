@@ -18,6 +18,8 @@ tianshou>=0.5.1,<1.0.0
 opencv-python-headless>=4.13.0.92
 dm-control>=1.0.38
 mujoco==3.6.0
+mujoco-mjx==3.6.0
+trimesh==4.12.2
 imageio
 pygame>=2.1.3
 swig==4.*

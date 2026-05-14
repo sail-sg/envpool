@@ -699,6 +699,47 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
 
     maybe(
         http_archive,
+        name = "mujoco_playground_source",
+        patch_args = ["-p1"],
+        patches = [
+            "//third_party/mujoco_playground:aero_hand_asset_paths.patch",
+            "//third_party/mujoco_playground:aloha_asset_paths.patch",
+            "//third_party/mujoco_playground:apollo_mesh_paths.patch",
+            "//third_party/mujoco_playground:go1_mesh_paths.patch",
+            "//third_party/mujoco_playground:h1_mesh_paths.patch",
+            "//third_party/mujoco_playground:op3_mesh_paths.patch",
+            "//third_party/mujoco_playground:oracle_imports.patch",
+            "//third_party/mujoco_playground:panda_include_paths.patch",
+            "//third_party/mujoco_playground:panda_robotiq_asset_paths.patch",
+            "//third_party/mujoco_playground:t1_mesh_paths.patch",
+        ],
+        sha256 = "6348dee222e52318098dc425ff9708af46e0b6d4d0a17c44336a1e4f53c90f04",
+        strip_prefix = "mujoco_playground-0.2.0",
+        urls = [
+            "https://github.com/google-deepmind/mujoco_playground/archive/refs/tags/v0.2.0.tar.gz",
+            "https://codeload.github.com/google-deepmind/mujoco_playground/tar.gz/refs/tags/v0.2.0",
+        ],
+        build_file = "//third_party/mujoco_playground:mujoco_playground_source.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "mujoco_menagerie_playground",
+        patch_args = ["-p1"],
+        patches = [
+            "//third_party/mujoco_playground:panda_menagerie_mesh_paths.patch",
+        ],
+        sha256 = "376e2d66b31e0cf3adfc91d9aba5e36b9093c542ee8f8ddb1801c41d74cc689d",
+        strip_prefix = "mujoco_menagerie-1b86ece576591213e2b666ebf59508454200ca97",
+        urls = [
+            "https://github.com/google-deepmind/mujoco_menagerie/archive/1b86ece576591213e2b666ebf59508454200ca97.tar.gz",
+            "https://codeload.github.com/google-deepmind/mujoco_menagerie/tar.gz/1b86ece576591213e2b666ebf59508454200ca97",
+        ],
+        build_file = "//third_party/mujoco_playground:mujoco_menagerie.BUILD",
+    )
+
+    maybe(
+        http_archive,
         name = "box2d",
         sha256 = "5471722f290b7285dcbdee9bef61d1cb424e5a610fa6e19e9ddeb854c7e3b937",
         strip_prefix = "pybox2d-2.3.10",
