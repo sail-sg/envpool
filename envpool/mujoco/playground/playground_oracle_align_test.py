@@ -146,6 +146,7 @@ def _configure_macos_mujoco_renderer() -> None:
     if platform.system() != "Darwin":
         return
 
+    os.environ["MUJOCO_GL"] = "cgl"
     from mujoco import gl_context as mujoco_gl_context
 
     class _CglContext:
@@ -261,7 +262,24 @@ def _configure_macos_mujoco_renderer() -> None:
 
     mujoco_gl_context.GLContext = _CglContext
     mujoco.GLContext = _CglContext
-    os.environ["MUJOCO_GL"] = "cgl"
+    try:
+        import mujoco.cgl as mujoco_cgl
+
+        mujoco_cgl.GLContext = _CglContext
+    except (AttributeError, ImportError):
+        pass
+    try:
+        from mujoco.rendering.classic import gl_context as classic_gl_context
+
+        classic_gl_context.GLContext = _CglContext
+    except (AttributeError, ImportError):
+        pass
+    try:
+        from mujoco.rendering.classic import renderer as classic_renderer
+
+        classic_renderer.gl_context.GLContext = _CglContext
+    except (AttributeError, ImportError):
+        pass
 
 
 _configure_macos_mujoco_renderer()
