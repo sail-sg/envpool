@@ -48,15 +48,15 @@ constexpr int kOp3FootSensors = 2;
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
 constexpr const char* kOp3FeetSites[kOp3Feet] = {"left_foot", "right_foot"};
 inline const std::array<const char*, kOp3FootSensors>& Op3LeftFootSensors() {
-  static constexpr std::array<const char*, kOp3FootSensors> kNames = {
+  static constexpr std::array<const char*, kOp3FootSensors> k_names = {
       "l_foot1_floor_found", "l_foot2_floor_found"};
-  return kNames;
+  return k_names;
 }
 
 inline const std::array<const char*, kOp3FootSensors>& Op3RightFootSensors() {
-  static constexpr std::array<const char*, kOp3FootSensors> kNames = {
+  static constexpr std::array<const char*, kOp3FootSensors> k_names = {
       "r_foot1_floor_found", "r_foot2_floor_found"};
-  return kNames;
+  return k_names;
 }
 
 class PlaygroundOp3EnvFns {

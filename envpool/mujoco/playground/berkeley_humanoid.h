@@ -50,9 +50,9 @@ constexpr int kBerkeleyPrivilegedStateDim = 114;
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
 constexpr const char* kBerkeleyFeetSites[kBerkeleyFeet] = {"l_foot", "r_foot"};
 inline const std::array<const char*, kBerkeleyFeet>& BerkeleyFeetGeoms() {
-  static constexpr std::array<const char*, kBerkeleyFeet> kNames = {"l_foot1",
-                                                                    "r_foot1"};
-  return kNames;
+  static constexpr std::array<const char*, kBerkeleyFeet> k_names = {"l_foot1",
+                                                                     "r_foot1"};
+  return k_names;
 }
 
 class PlaygroundBerkeleyHumanoidEnvFns {

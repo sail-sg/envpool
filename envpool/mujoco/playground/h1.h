@@ -57,30 +57,30 @@ constexpr int kH1MaxStateDim = kH1InplaceStateDim;
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
 constexpr const char* kH1FeetSites[kH1Feet] = {"left_foot", "right_foot"};
 inline const std::array<const char*, kH1FootSensors>& H1LeftFootSensors() {
-  static constexpr std::array<const char*, kH1FootSensors> kNames = {
+  static constexpr std::array<const char*, kH1FootSensors> k_names = {
       "left_foot1_floor_found", "left_foot2_floor_found",
       "left_foot3_floor_found"};
-  return kNames;
+  return k_names;
 }
 
 inline const std::array<const char*, kH1FootSensors>& H1RightFootSensors() {
-  static constexpr std::array<const char*, kH1FootSensors> kNames = {
+  static constexpr std::array<const char*, kH1FootSensors> k_names = {
       "right_foot1_floor_found", "right_foot2_floor_found",
       "right_foot3_floor_found"};
-  return kNames;
+  return k_names;
 }
 
 inline const std::array<int, 15>& H1HxIdxs() {
-  static constexpr std::array<int, 15> kIdxs = {0,  1,  4,  5,  6,  9,  10, 11,
-                                                12, 13, 14, 15, 16, 17, 18};
-  return kIdxs;
+  static constexpr std::array<int, 15> k_idxs = {0,  1,  4,  5,  6,  9,  10, 11,
+                                                 12, 13, 14, 15, 16, 17, 18};
+  return k_idxs;
 }
 
 inline const std::array<mjtNum, 15>& H1HxWeights() {
-  static constexpr std::array<mjtNum, 15> kWeights = {5.0, 5.0, 5.0, 5.0, 5.0,
-                                                      5.0, 2.0, 1.0, 1.0, 1.0,
-                                                      1.0, 1.0, 1.0, 1.0, 1.0};
-  return kWeights;
+  static constexpr std::array<mjtNum, 15> k_weights = {5.0, 5.0, 5.0, 5.0, 5.0,
+                                                       5.0, 2.0, 1.0, 1.0, 1.0,
+                                                       1.0, 1.0, 1.0, 1.0, 1.0};
+  return k_weights;
 }
 
 class PlaygroundH1EnvFns {

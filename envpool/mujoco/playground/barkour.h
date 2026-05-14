@@ -49,10 +49,10 @@ constexpr int kBarkourHistoryLen = 15;
 constexpr int kBarkourStateDim = kBarkourObsDim * kBarkourHistoryLen;
 constexpr int kBarkourFeet = 4;
 inline const std::array<const char*, kBarkourFeet>& BarkourFeetGeoms() {
-  static constexpr std::array<const char*, kBarkourFeet> kNames = {
+  static constexpr std::array<const char*, kBarkourFeet> k_names = {
       "foot_front_left", "foot_hind_left", "foot_front_right",
       "foot_hind_right"};
-  return kNames;
+  return k_names;
 }
 
 class PlaygroundBarkourEnvFns {

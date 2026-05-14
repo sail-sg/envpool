@@ -51,17 +51,17 @@ constexpr int kT1PrivilegedStateDim = 180;
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
 constexpr const char* kT1FeetSites[kT1Feet] = {"left_foot", "right_foot"};
 inline const std::array<const char*, kT1FootSensors>& T1LeftFootSensors() {
-  static constexpr std::array<const char*, kT1FootSensors> kNames = {
+  static constexpr std::array<const char*, kT1FootSensors> k_names = {
       "left_foot_1_floor_found", "left_foot_2_floor_found",
       "left_foot_3_floor_found", "left_foot_4_floor_found"};
-  return kNames;
+  return k_names;
 }
 
 inline const std::array<const char*, kT1FootSensors>& T1RightFootSensors() {
-  static constexpr std::array<const char*, kT1FootSensors> kNames = {
+  static constexpr std::array<const char*, kT1FootSensors> k_names = {
       "right_foot_1_floor_found", "right_foot_2_floor_found",
       "right_foot_3_floor_found", "right_foot_4_floor_found"};
-  return kNames;
+  return k_names;
 }
 
 class PlaygroundT1EnvFns {

@@ -54,16 +54,16 @@ constexpr int kSpotGaitStateDim = 69;
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
 constexpr const char* kSpotFeetSites[kSpotFeet] = {"FL", "FR", "HL", "HR"};
 inline const std::array<const char*, kSpotFeet>& SpotFootLinvelSensors() {
-  static constexpr std::array<const char*, kSpotFeet> kNames = {
+  static constexpr std::array<const char*, kSpotFeet> k_names = {
       "FL_global_linvel", "FR_global_linvel", "HL_global_linvel",
       "HR_global_linvel"};
-  return kNames;
+  return k_names;
 }
 
 inline const std::array<const char*, kSpotFeet>& SpotFootPosSensors() {
-  static constexpr std::array<const char*, kSpotFeet> kNames = {
+  static constexpr std::array<const char*, kSpotFeet> k_names = {
       "FL_pos", "FR_pos", "HL_pos", "HR_pos"};
-  return kNames;
+  return k_names;
 }
 constexpr std::array<std::array<mjtNum, kSpotFeet>, 5> kSpotGaitPhases = {{
     {0.0, M_PI, M_PI, 0.0},
