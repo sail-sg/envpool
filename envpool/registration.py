@@ -152,6 +152,7 @@ class EnvRegistry:
             "envpool.mujoco.gym",
             "envpool.mujoco.metaworld",
             "envpool.mujoco.myosuite",
+            "envpool.mujoco.playground",
             "envpool.mujoco.robotics",
         }
 

@@ -1,0 +1,29 @@
+// Copyright 2026 Garena Online Private Limited
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "envpool/core/py_envpool.h"
+#include "envpool/mujoco/playground/g1.h"
+#include "envpool/mujoco/playground/py_envpool_register.h"
+
+using PlaygroundG1EnvSpec = PyEnvSpec<mujoco_playground::PlaygroundG1EnvSpec>;
+using PlaygroundG1EnvPool = PyEnvPool<mujoco_playground::PlaygroundG1EnvPool>;
+using PlaygroundG1PixelEnvSpec =
+    PyEnvSpec<mujoco_playground::PlaygroundG1PixelEnvSpec>;
+using PlaygroundG1PixelEnvPool =
+    PyEnvPool<mujoco_playground::PlaygroundG1PixelEnvPool>;
+
+void RegisterPlaygroundG1(pybind11::module_& m) {
+  REGISTER(m, PlaygroundG1EnvSpec, PlaygroundG1EnvPool)
+  REGISTER(m, PlaygroundG1PixelEnvSpec, PlaygroundG1PixelEnvPool)
+}

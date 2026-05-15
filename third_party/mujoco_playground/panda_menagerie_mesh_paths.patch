@@ -1,0 +1,146 @@
+diff --git a/franka_emika_panda/mjx_panda.xml b/franka_emika_panda/mjx_panda.xml
+--- a/franka_emika_panda/mjx_panda.xml
++++ b/franka_emika_panda/mjx_panda.xml
+@@ -44,75 +44,75 @@
+     <material class="panda" name="light_blue" rgba="0.039216 0.541176 0.780392 1"/>
+ 
+     <!-- Collision meshes -->
+-    <mesh name="link0_c" file="link0.stl"/>
+-    <mesh name="link1_c" file="link1.stl"/>
+-    <mesh name="link2_c" file="link2.stl"/>
+-    <mesh name="link3_c" file="link3.stl"/>
+-    <mesh name="link4_c" file="link4.stl"/>
+-    <mesh name="link5_c0" file="link5_collision_0.obj"/>
+-    <mesh name="link5_c1" file="link5_collision_1.obj"/>
+-    <mesh name="link5_c2" file="link5_collision_2.obj"/>
+-    <mesh name="link6_c" file="link6.stl"/>
+-    <mesh name="link7_c" file="link7.stl"/>
+-    <mesh name="hand_c" file="hand.stl"/>
++    <mesh name="link0_c" file="assets/link0.stl"/>
++    <mesh name="link1_c" file="assets/link1.stl"/>
++    <mesh name="link2_c" file="assets/link2.stl"/>
++    <mesh name="link3_c" file="assets/link3.stl"/>
++    <mesh name="link4_c" file="assets/link4.stl"/>
++    <mesh name="link5_c0" file="assets/link5_collision_0.obj"/>
++    <mesh name="link5_c1" file="assets/link5_collision_1.obj"/>
++    <mesh name="link5_c2" file="assets/link5_collision_2.obj"/>
++    <mesh name="link6_c" file="assets/link6.stl"/>
++    <mesh name="link7_c" file="assets/link7.stl"/>
++    <mesh name="hand_c" file="assets/hand.stl"/>
+ 
+     <!-- Visual meshes -->
+-    <mesh file="link0_0.obj"/>
+-    <mesh file="link0_1.obj"/>
+-    <mesh file="link0_2.obj"/>
+-    <mesh file="link0_3.obj"/>
+-    <mesh file="link0_4.obj"/>
+-    <mesh file="link0_5.obj"/>
+-    <mesh file="link0_7.obj"/>
+-    <mesh file="link0_8.obj"/>
+-    <mesh file="link0_9.obj"/>
+-    <mesh file="link0_10.obj"/>
+-    <mesh file="link0_11.obj"/>
+-    <mesh file="link1.obj"/>
+-    <mesh file="link2.obj"/>
+-    <mesh file="link3_0.obj"/>
+-    <mesh file="link3_1.obj"/>
+-    <mesh file="link3_2.obj"/>
+-    <mesh file="link3_3.obj"/>
+-    <mesh file="link4_0.obj"/>
+-    <mesh file="link4_1.obj"/>
+-    <mesh file="link4_2.obj"/>
+-    <mesh file="link4_3.obj"/>
+-    <mesh file="link5_0.obj"/>
+-    <mesh file="link5_1.obj"/>
+-    <mesh file="link5_2.obj"/>
+-    <mesh file="link6_0.obj"/>
+-    <mesh file="link6_1.obj"/>
+-    <mesh file="link6_2.obj"/>
+-    <mesh file="link6_3.obj"/>
+-    <mesh file="link6_4.obj"/>
+-    <mesh file="link6_5.obj"/>
+-    <mesh file="link6_6.obj"/>
+-    <mesh file="link6_7.obj"/>
+-    <mesh file="link6_8.obj"/>
+-    <mesh file="link6_9.obj"/>
+-    <mesh file="link6_10.obj"/>
+-    <mesh file="link6_11.obj"/>
+-    <mesh file="link6_12.obj"/>
+-    <mesh file="link6_13.obj"/>
+-    <mesh file="link6_14.obj"/>
+-    <mesh file="link6_15.obj"/>
+-    <mesh file="link6_16.obj"/>
+-    <mesh file="link7_0.obj"/>
+-    <mesh file="link7_1.obj"/>
+-    <mesh file="link7_2.obj"/>
+-    <mesh file="link7_3.obj"/>
+-    <mesh file="link7_4.obj"/>
+-    <mesh file="link7_5.obj"/>
+-    <mesh file="link7_6.obj"/>
+-    <mesh file="link7_7.obj"/>
+-    <mesh file="hand_0.obj"/>
+-    <mesh file="hand_1.obj"/>
+-    <mesh file="hand_2.obj"/>
+-    <mesh file="hand_3.obj"/>
+-    <mesh file="hand_4.obj"/>
+-    <mesh file="finger_0.obj"/>
+-    <mesh file="finger_1.obj"/>
++    <mesh file="assets/link0_0.obj"/>
++    <mesh file="assets/link0_1.obj"/>
++    <mesh file="assets/link0_2.obj"/>
++    <mesh file="assets/link0_3.obj"/>
++    <mesh file="assets/link0_4.obj"/>
++    <mesh file="assets/link0_5.obj"/>
++    <mesh file="assets/link0_7.obj"/>
++    <mesh file="assets/link0_8.obj"/>
++    <mesh file="assets/link0_9.obj"/>
++    <mesh file="assets/link0_10.obj"/>
++    <mesh file="assets/link0_11.obj"/>
++    <mesh file="assets/link1.obj"/>
++    <mesh file="assets/link2.obj"/>
++    <mesh file="assets/link3_0.obj"/>
++    <mesh file="assets/link3_1.obj"/>
++    <mesh file="assets/link3_2.obj"/>
++    <mesh file="assets/link3_3.obj"/>
++    <mesh file="assets/link4_0.obj"/>
++    <mesh file="assets/link4_1.obj"/>
++    <mesh file="assets/link4_2.obj"/>
++    <mesh file="assets/link4_3.obj"/>
++    <mesh file="assets/link5_0.obj"/>
++    <mesh file="assets/link5_1.obj"/>
++    <mesh file="assets/link5_2.obj"/>
++    <mesh file="assets/link6_0.obj"/>
++    <mesh file="assets/link6_1.obj"/>
++    <mesh file="assets/link6_2.obj"/>
++    <mesh file="assets/link6_3.obj"/>
++    <mesh file="assets/link6_4.obj"/>
++    <mesh file="assets/link6_5.obj"/>
++    <mesh file="assets/link6_6.obj"/>
++    <mesh file="assets/link6_7.obj"/>
++    <mesh file="assets/link6_8.obj"/>
++    <mesh file="assets/link6_9.obj"/>
++    <mesh file="assets/link6_10.obj"/>
++    <mesh file="assets/link6_11.obj"/>
++    <mesh file="assets/link6_12.obj"/>
++    <mesh file="assets/link6_13.obj"/>
++    <mesh file="assets/link6_14.obj"/>
++    <mesh file="assets/link6_15.obj"/>
++    <mesh file="assets/link6_16.obj"/>
++    <mesh file="assets/link7_0.obj"/>
++    <mesh file="assets/link7_1.obj"/>
++    <mesh file="assets/link7_2.obj"/>
++    <mesh file="assets/link7_3.obj"/>
++    <mesh file="assets/link7_4.obj"/>
++    <mesh file="assets/link7_5.obj"/>
++    <mesh file="assets/link7_6.obj"/>
++    <mesh file="assets/link7_7.obj"/>
++    <mesh file="assets/hand_0.obj"/>
++    <mesh file="assets/hand_1.obj"/>
++    <mesh file="assets/hand_2.obj"/>
++    <mesh file="assets/hand_3.obj"/>
++    <mesh file="assets/hand_4.obj"/>
++    <mesh file="assets/finger_0.obj"/>
++    <mesh file="assets/finger_1.obj"/>
+   </asset>
+ 
+   <worldbody>

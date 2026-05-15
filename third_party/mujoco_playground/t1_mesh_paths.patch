@@ -1,0 +1,58 @@
+diff --git a/mujoco_playground/_src/locomotion/t1/xmls/t1_mjx_feetonly.xml b/mujoco_playground/_src/locomotion/t1/xmls/t1_mjx_feetonly.xml
+--- a/mujoco_playground/_src/locomotion/t1/xmls/t1_mjx_feetonly.xml
++++ b/mujoco_playground/_src/locomotion/t1/xmls/t1_mjx_feetonly.xml
+@@ -9,30 +9,30 @@
+     <material name="light_gray" rgba="0.76 0.76 0.76 1"/>
+     <material name="medium_gray" rgba="0.4 0.4 0.4 1"/>
+ 
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/Trunk.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/H1.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/H2.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/AL1.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/AL2.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/AL3.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/left_hand_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/AR1.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/AR2.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/AR3.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/right_hand_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/Waist.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/Hip_Pitch_Left.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/Hip_Roll_Left.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/Hip_Yaw_Left.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/Shank_Left.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/Ankle_Cross_Left.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/left_foot_link.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/Hip_Pitch_Right.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/Hip_Roll_Right.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/Hip_Yaw_Right.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/Shank_Right.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/Ankle_Cross_Right.stl"/>
+-    <mesh file="../../../../external_deps/mujoco_menagerie/booster_t1/assets/right_foot_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/Trunk.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/H1.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/H2.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/AL1.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/AL2.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/AL3.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/left_hand_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/AR1.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/AR2.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/AR3.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/right_hand_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/Waist.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/Hip_Pitch_Left.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/Hip_Roll_Left.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/Hip_Yaw_Left.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/Shank_Left.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/Ankle_Cross_Left.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/left_foot_link.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/Hip_Pitch_Right.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/Hip_Roll_Right.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/Hip_Yaw_Right.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/Shank_Right.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/Ankle_Cross_Right.stl"/>
++    <mesh file="../../../../../mujoco_menagerie/booster_t1/assets/right_foot_link.stl"/>
+   </asset>
+ 
+   <default>

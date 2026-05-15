@@ -35,6 +35,14 @@ class MujocoPluginRegistrationTest(absltest.TestCase):
         """Checks the opposite import order for standalone DMC users."""
         _assert_imports_succeed("envpool.mujoco.dmc", "envpool.mujoco.robotics")
 
+    def test_playground_shares_stl_decoder_with_existing_modules(self) -> None:
+        """Checks Playground can coexist with the existing STL users."""
+        _assert_imports_succeed(
+            "envpool.mujoco.playground",
+            "envpool.mujoco.dmc",
+            "envpool.mujoco.robotics",
+        )
+
     def test_robotics_then_metaworld_imports_share_obj_decoder(self) -> None:
         """Checks the release-test import order with MetaWorld linked in."""
         _assert_imports_succeed(

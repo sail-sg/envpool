@@ -34,6 +34,11 @@ _EGL_TEARDOWN_CASES = (
         "envpool.mujoco.myosuite.registration",
         "myoFingerReachFixed-v0",
     ),
+    (
+        "playground",
+        "envpool.mujoco.playground.registration",
+        "Go1JoystickFlatTerrain-v1",
+    ),
 )
 
 

@@ -1,0 +1,10 @@
+diff --git a/mujoco_playground/_src/locomotion/h1/xmls/h1_mjx_feetonly.xml b/mujoco_playground/_src/locomotion/h1/xmls/h1_mjx_feetonly.xml
+--- a/mujoco_playground/_src/locomotion/h1/xmls/h1_mjx_feetonly.xml
++++ b/mujoco_playground/_src/locomotion/h1/xmls/h1_mjx_feetonly.xml
+@@ -1,5 +1,5 @@
+ <mujoco model="h1">
+-  <compiler angle="radian" meshdir="../mujoco_menagerie/unitree_h1/assets" autolimits="true"/>
++  <compiler angle="radian" meshdir="../../../../../mujoco_menagerie/unitree_h1/assets" autolimits="true"/>
+ 
+   <option iterations="1" ls_iterations="5" timestep="0.004">
+     <flag eulerdamp="disable"/>

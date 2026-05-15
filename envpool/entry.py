@@ -24,6 +24,7 @@ import envpool.mujoco.dmc.registration  # noqa: F401
 import envpool.mujoco.gym.registration  # noqa: F401
 import envpool.mujoco.metaworld.registration  # noqa: F401
 import envpool.mujoco.myosuite.registration  # noqa: F401
+import envpool.mujoco.playground.registration  # noqa: F401
 import envpool.mujoco.robotics.registration  # noqa: F401
 import envpool.pgx.registration  # noqa: F401
 import envpool.procgen.registration  # noqa: F401

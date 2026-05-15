@@ -128,10 +128,10 @@ struct SpecTupleHelper<Spec<Container<dtype>>> {
 };
 
 template <typename... Spec>
-decltype(auto) ExportSpecs(const std::tuple<Spec...>& specs) {
+py::tuple ExportSpecs(const std::tuple<Spec...>& specs) {
   return std::apply(
       [&](auto&&... spec) {
-        return std::make_tuple(SpecTupleHelper<Spec>::Make(spec)...);
+        return py::make_tuple(SpecTupleHelper<Spec>::Make(spec)...);
       },
       specs);
 }
@@ -218,7 +218,7 @@ class PyEnvPool : public EnvPool {
   /**
    * Get XLA functions.
    */
-  auto Xla() {
+  py::tuple Xla() {
     if (HasContainerType(EnvPool::spec.state_spec)) {
       throw std::runtime_error(
           "State of this env has dynamic shaped container, XLA is disabled");
@@ -231,11 +231,11 @@ class PyEnvPool : public EnvPool {
       throw std::runtime_error(
           "Xla is not available for multiplayer environment.");
     }
-    return std::make_tuple(
-        std::make_tuple("recv",
-                        CustomCall<EnvPool, XlaRecv<EnvPool>>::Xla(this)),
-        std::make_tuple("send",
-                        CustomCall<EnvPool, XlaSend<EnvPool>>::Xla(this)));
+    return py::make_tuple(
+        py::make_tuple("recv",
+                       CustomCall<EnvPool, XlaRecv<EnvPool>>::Xla(this)),
+        py::make_tuple("send",
+                       CustomCall<EnvPool, XlaSend<EnvPool>>::Xla(this)));
   }
 
   /**

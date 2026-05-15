@@ -1,0 +1,52 @@
+diff --git a/mujoco_playground/_src/manipulation/franka_emika_panda_robotiq/xmls/panda_updated_robotiq_2f85.xml b/mujoco_playground/_src/manipulation/franka_emika_panda_robotiq/xmls/panda_updated_robotiq_2f85.xml
+--- a/mujoco_playground/_src/manipulation/franka_emika_panda_robotiq/xmls/panda_updated_robotiq_2f85.xml
++++ b/mujoco_playground/_src/manipulation/franka_emika_panda_robotiq/xmls/panda_updated_robotiq_2f85.xml
+@@ -1,5 +1,5 @@
+ <mujoco model="panda scene with updated robotiq gripper">
+-  <compiler angle="radian" meshdir="assets" autolimits="true"/>
++  <compiler angle="radian" meshdir="../../../../../mujoco_menagerie/franka_emika_panda/assets" autolimits="true"/>
+ 
+   <statistic center="0.3 0 0.4" extent="1"/>
+ 
+@@ -129,19 +129,19 @@
+     <mesh file="finger_1.obj"/>
+ 
+     <!-- Force Torque meshes -->
+-    <mesh name="fts300_base_mesh" file="robotiq_fts300_base.stl" scale="0.001 0.001 0.001" />
+-    <mesh name="fts300_top_mesh" file="robotiq_fts300_top.stl" scale="0.001 0.001 0.001" />
+-    <mesh name="fts300_coupling_mesh" file="robotiq_fts300_coupling.stl" scale="0.001 0.001 0.001" />
++    <mesh name="fts300_base_mesh" file="../../robotiq_2f85_v4/assets/robotiq_fts300_base.stl" scale="0.001 0.001 0.001" />
++    <mesh name="fts300_top_mesh" file="../../robotiq_2f85_v4/assets/robotiq_fts300_top.stl" scale="0.001 0.001 0.001" />
++    <mesh name="fts300_coupling_mesh" file="../../robotiq_2f85_v4/assets/robotiq_fts300_coupling.stl" scale="0.001 0.001 0.001" />
+ 
+     <!-- Gripper Meshes -->
+-    <mesh file="base.stl"/>
+-    <mesh file="base_coupling.stl"/>
+-    <mesh file="c-a01-85-open.stl"/>
+-    <mesh file="driver.stl"/>
+-    <mesh file="coupler.stl"/>
+-    <mesh file="spring_link.stl"/>
+-    <mesh file="follower.stl"/>
+-    <mesh file="tongue.stl"/>
++    <mesh file="../../robotiq_2f85_v4/assets/base.stl"/>
++    <mesh file="../../robotiq_2f85_v4/assets/base_coupling.stl"/>
++    <mesh file="../../robotiq_2f85_v4/assets/c-a01-85-open.stl"/>
++    <mesh file="../../robotiq_2f85_v4/assets/driver.stl"/>
++    <mesh file="../../robotiq_2f85_v4/assets/coupler.stl"/>
++    <mesh file="../../robotiq_2f85_v4/assets/spring_link.stl"/>
++    <mesh file="../../robotiq_2f85_v4/assets/follower.stl"/>
++    <mesh file="../../robotiq_2f85_v4/assets/tongue.stl"/>
+   </asset>
+ 
+   <worldbody>
+diff --git a/mujoco_playground/_src/manipulation/franka_emika_panda_robotiq/xmls/scene_panda_robotiq_cube.xml b/mujoco_playground/_src/manipulation/franka_emika_panda_robotiq/xmls/scene_panda_robotiq_cube.xml
+--- a/mujoco_playground/_src/manipulation/franka_emika_panda_robotiq/xmls/scene_panda_robotiq_cube.xml
++++ b/mujoco_playground/_src/manipulation/franka_emika_panda_robotiq/xmls/scene_panda_robotiq_cube.xml
+@@ -1,6 +1,6 @@
+ <mujoco model="panda scene with updated robotiq gripper">
+   <include file="panda_updated_robotiq_2f85.xml"/>
+-  <compiler angle="radian" assetdir="assets" autolimits="true"/>
++  <compiler angle="radian" meshdir="../../../../../mujoco_menagerie/franka_emika_panda/assets" texturedir="../assets" autolimits="true"/>
+ 
+   <option timestep="0.005" iterations="10" ls_iterations="10" integrator="implicitfast">
+     <flag eulerdamp="disable"/>

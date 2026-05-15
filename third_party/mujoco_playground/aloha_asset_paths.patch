@@ -1,0 +1,45 @@
+diff --git a/mujoco_playground/_src/manipulation/aloha/xmls/mjx_scene.xml b/mujoco_playground/_src/manipulation/aloha/xmls/mjx_scene.xml
+index 8ac7f97..c03b8c5 100644
+--- a/mujoco_playground/_src/manipulation/aloha/xmls/mjx_scene.xml
++++ b/mujoco_playground/_src/manipulation/aloha/xmls/mjx_scene.xml
+@@ -1,5 +1,5 @@
+ <mujoco model="aloha_scene">
+-  <compiler meshdir="assets" texturedir="assets"/>
++  <compiler meshdir="../../../../../mujoco_menagerie/aloha/assets"/>
+ 
+   <include file="mjx_aloha.xml"/>
+ 
+@@ -37,8 +37,8 @@
+ 
+     <!-- Table dimensions (length x width x height in meters): 1.21x0.76x0.75 -->
+     <mesh file="tablelegs.obj"/>
+     <mesh file="tabletop.obj"/>
+ 
+-    <texture type="2d" file="small_meta_table_diffuse.png"/>
++    <texture type="2d" file="../../../../../mujoco_menagerie/aloha/assets/small_meta_table_diffuse.png"/>
+     <texture type="skybox" builtin="gradient" rgb1="1 1 1" rgb2="1 1 1" width="800" height="800"/>
+     <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="1 1 1" rgb2="1 1 1" markrgb="0 0 0"
+       width="300" height="300"/>
+diff --git a/mujoco_playground/_src/manipulation/aloha/xmls/mjx_aloha.xml b/mujoco_playground/_src/manipulation/aloha/xmls/mjx_aloha.xml
+index 6ba07e0..f82d0cf 100644
+--- a/mujoco_playground/_src/manipulation/aloha/xmls/mjx_aloha.xml
++++ b/mujoco_playground/_src/manipulation/aloha/xmls/mjx_aloha.xml
+@@ -1,5 +1,5 @@
+ <mujoco model="aloha">
+-  <compiler angle="radian" meshdir="assets" autolimits="true"/>
++  <compiler angle="radian" meshdir="../../../../../mujoco_menagerie/aloha/assets" autolimits="true"/>
+ 
+   <option impratio="5"/>
+ 
+diff --git a/mujoco_playground/_src/manipulation/aloha/xmls/mjx_single_peg_insertion.xml b/mujoco_playground/_src/manipulation/aloha/xmls/mjx_single_peg_insertion.xml
+index e6f9a2d..5eb6b76 100644
+--- a/mujoco_playground/_src/manipulation/aloha/xmls/mjx_single_peg_insertion.xml
++++ b/mujoco_playground/_src/manipulation/aloha/xmls/mjx_single_peg_insertion.xml
+@@ -1,6 +1,6 @@
+ <mujoco model="single peg insertion">
+   <asset>
+-    <texture type="cube" name="socket_texture" fileright="socket_blue.png" fileleft="socket_blue.png" fileup="socket_blue.png" filedown="socket_blue.png" filefront="socket_white.png" fileback="socket_blue.png"/>
++    <texture type="cube" name="socket_texture" fileright="assets/socket_blue.png" fileleft="assets/socket_blue.png" fileup="assets/socket_blue.png" filedown="assets/socket_blue.png" filefront="assets/socket_white.png" fileback="assets/socket_blue.png"/>
+     <material name="socket_texture" texture="socket_texture"/>
+   </asset>
+   <include file="mjx_scene.xml"/>

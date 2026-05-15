@@ -59,6 +59,7 @@ py_library(
         ":mujoco_dmc",
         ":mujoco_gym",
         ":myosuite",
+        ":playground",
         ":robotics",
     ],
 )
@@ -110,6 +111,35 @@ myosuite_runtime_assets(
     ],
     out = "myosuite/assets",
     metadata_srcs = ["//third_party/myosuite:myosuite_generated_json"],
+)
+
+copy_to_directory(
+    name = "gen_mujoco_playground_assets",
+    srcs = ["@mujoco_playground_source//:runtime_assets"],
+    out = "playground/assets/mujoco_playground",
+    strip_prefix = "mujoco_playground/",
+)
+
+copy_to_directory(
+    name = "gen_mujoco_playground_menagerie",
+    srcs = [
+        "@mujoco_menagerie_playground//:aloha_assets",
+        "@mujoco_menagerie_playground//:apptronik_apollo_assets",
+        "@mujoco_menagerie_playground//:berkeley_humanoid_assets",
+        "@mujoco_menagerie_playground//:booster_t1_assets",
+        "@mujoco_menagerie_playground//:boston_dynamics_spot_assets",
+        "@mujoco_menagerie_playground//:franka_emika_panda_assets",
+        "@mujoco_menagerie_playground//:google_barkour_vb_assets",
+        "@mujoco_menagerie_playground//:leap_hand_assets",
+        "@mujoco_menagerie_playground//:robotiq_2f85_v4_assets",
+        "@mujoco_menagerie_playground//:robotis_op3_assets",
+        "@mujoco_menagerie_playground//:tetheria_aero_hand_open_assets",
+        "@mujoco_menagerie_playground//:unitree_g1_assets",
+        "@mujoco_menagerie_playground//:unitree_go1_assets",
+        "@mujoco_menagerie_playground//:unitree_h1_assets",
+    ],
+    out = "playground/assets/mujoco_menagerie",
+    strip_prefix = "mujoco_menagerie_playground/",
 )
 
 cc_library(
@@ -435,6 +465,77 @@ py_library(
     ],
 )
 
+cc_library(
+    name = "playground_env",
+    hdrs = [
+        "frame_stack.h",
+        "offscreen_renderer.h",
+        "playground/aloha.h",
+        "playground/apollo.h",
+        "playground/barkour.h",
+        "playground/berkeley_humanoid.h",
+        "playground/g1.h",
+        "playground/go1.h",
+        "playground/h1.h",
+        "playground/hand.h",
+        "playground/mujoco_env.h",
+        "playground/op3.h",
+        "playground/panda.h",
+        "playground/panda_robotiq.h",
+        "playground/spot.h",
+        "playground/t1.h",
+    ],
+    data = [
+        ":gen_mujoco_playground_assets",
+        ":gen_mujoco_playground_menagerie",
+    ],
+    deps = [
+        ":mujoco_render",
+        "//envpool/core:async_envpool",
+        "@mujoco//:mujoco_lib",
+        "@mujoco//:mujoco_obj_decoder_plugin_lib",
+        "@mujoco//:mujoco_stl_decoder_plugin_lib",
+    ],
+)
+
+pybind_extension(
+    name = "playground_envpool",
+    srcs = [
+        "playground/mujoco_plugin_init.cc",
+        "playground/playground_envpool.cc",
+        "playground/py_envpool_register.h",
+        "playground/register_aloha.cc",
+        "playground/register_apollo.cc",
+        "playground/register_barkour.cc",
+        "playground/register_berkeley_humanoid.cc",
+        "playground/register_g1.cc",
+        "playground/register_go1.cc",
+        "playground/register_h1.cc",
+        "playground/register_hand.cc",
+        "playground/register_op3.cc",
+        "playground/register_panda.cc",
+        "playground/register_panda_robotiq.cc",
+        "playground/register_spot.cc",
+        "playground/register_t1.cc",
+    ],
+    deps = [
+        ":playground_env",
+        "//envpool/core:py_envpool",
+    ],
+)
+
+py_library(
+    name = "playground",
+    srcs = ["playground/__init__.py"],
+    data = [
+        ":gen_mujoco_playground_assets",
+        ":gen_mujoco_playground_menagerie",
+        ":playground_envpool",
+    ],
+    imports = ["../.."],
+    deps = ["//envpool/python:api"],
+)
+
 cc_test(
     name = "mujoco_envpool_test",
     size = "enormous",
@@ -488,6 +589,69 @@ py_library(
         ":myosuite",
         ":myosuite_task_metadata",
         "//envpool:registration",
+    ],
+)
+
+py_library(
+    name = "playground_registration",
+    srcs = ["playground/registration.py"],
+    imports = ["../.."],
+    deps = [
+        ":playground",
+        "//envpool:registration",
+    ],
+)
+
+py_test(
+    name = "playground_test",
+    size = "enormous",
+    srcs = ["playground/playground_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":playground",
+        ":playground_registration",
+        requirement("absl-py"),
+        requirement("gymnasium"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
+    name = "playground_oracle_align_test",
+    size = "enormous",
+    srcs = ["playground/playground_oracle_align_test.py"],
+    data = [
+        "@mujoco_menagerie_playground//:aloha_assets",
+        "@mujoco_menagerie_playground//:apptronik_apollo_assets",
+        "@mujoco_menagerie_playground//:berkeley_humanoid_assets",
+        "@mujoco_menagerie_playground//:booster_t1_assets",
+        "@mujoco_menagerie_playground//:boston_dynamics_spot_assets",
+        "@mujoco_menagerie_playground//:franka_emika_panda_assets",
+        "@mujoco_menagerie_playground//:google_barkour_vb_assets",
+        "@mujoco_menagerie_playground//:leap_hand_assets",
+        "@mujoco_menagerie_playground//:robotiq_2f85_v4_assets",
+        "@mujoco_menagerie_playground//:robotis_op3_assets",
+        "@mujoco_menagerie_playground//:tetheria_aero_hand_open_assets",
+        "@mujoco_menagerie_playground//:unitree_g1_assets",
+        "@mujoco_menagerie_playground//:unitree_go1_assets",
+        "@mujoco_menagerie_playground//:unitree_h1_assets",
+    ],
+    # This is an oracle correctness gate. Running it under rules_python
+    # coverage adds substantial CI cost without useful EnvPool coverage signal.
+    features = ["-coverage"],
+    imports = ["../.."],
+    shard_count = 4,
+    deps = [
+        ":playground",
+        ":playground_registration",
+        "//envpool/python:glfw_context",
+        "@mujoco_playground_source//:python",
+        requirement("absl-py"),
+        requirement("etils"),
+        requirement("jax"),
+        requirement("mujoco"),
+        requirement("mujoco-mjx"),
+        requirement("numpy"),
     ],
 )
 
@@ -678,6 +842,8 @@ py_test(
         ":mujoco_pixel_observation_test_utils",
         ":myosuite",
         ":myosuite_registration",
+        ":playground",
+        ":playground_registration",
         ":robotics",
         ":robotics_registration",
         requirement("absl-py"),
@@ -722,6 +888,18 @@ py_test(
     ],
 )
 
+py_test(
+    name = "playground_pixel_observation_test",
+    size = "enormous",
+    srcs = ["playground/playground_pixel_observation_test.py"],
+    imports = ["../.."],
+    deps = [
+        ":mujoco_pixel_observation_test_utils",
+        ":playground",
+        ":playground_registration",
+    ],
+)
+
 py_library(
     name = "mujoco_pixel_observation_test_utils",
     srcs = ["pixel_observation_test_utils.py"],
@@ -742,6 +920,7 @@ py_test(
     deps = [
         ":metaworld",
         ":mujoco_dmc",
+        ":playground",
         ":robotics",
         requirement("absl-py"),
     ],
@@ -750,9 +929,10 @@ py_test(
 test_suite(
     name = "mujoco_pixel_observation_test",
     tests = [
-        ":mujoco_egl_teardown_test",
         ":mujoco_dmc_pixel_observation_test",
+        ":mujoco_egl_teardown_test",
         ":mujoco_gym_pixel_observation_test",
+        ":playground_pixel_observation_test",
         ":robotics_pixel_observation_test",
     ],
 )

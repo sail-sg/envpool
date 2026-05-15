@@ -1,0 +1,22 @@
+diff --git a/mujoco_playground/_src/manipulation/aero_hand/xmls/reorientation_cube.xml b/mujoco_playground/_src/manipulation/aero_hand/xmls/reorientation_cube.xml
+--- a/mujoco_playground/_src/manipulation/aero_hand/xmls/reorientation_cube.xml
++++ b/mujoco_playground/_src/manipulation/aero_hand/xmls/reorientation_cube.xml
+@@ -8,7 +8,7 @@
+   <asset>
+     <texture name="dexcube" type="2d" file="reorientation_cube_textures/dex_cube.png"/>
+     <material name="dexcube" texture="dexcube"/>
+-    <mesh name="cube_mesh" file="dex_cube.obj" scale="0.025 0.025 0.025"/>
++    <mesh name="cube_mesh" file="../../../../../mujoco_menagerie/tetheria_aero_hand_open/assets/dex_cube.obj" scale="0.025 0.025 0.025"/>
+   </asset>
+ 
+   <worldbody>
+diff --git a/mujoco_playground/_src/manipulation/aero_hand/xmls/right_hand.xml b/mujoco_playground/_src/manipulation/aero_hand/xmls/right_hand.xml
+--- a/mujoco_playground/_src/manipulation/aero_hand/xmls/right_hand.xml
++++ b/mujoco_playground/_src/manipulation/aero_hand/xmls/right_hand.xml
+@@ -1,5 +1,5 @@
+ <mujoco model="Tetheria_Aero_Hand_Open_RightHand">
+-  <compiler angle="radian" meshdir="assets/"/>
++  <compiler angle="radian" meshdir="../../../../../mujoco_menagerie/tetheria_aero_hand_open/assets"/>
+ 
+   <option timestep="0.01" integrator="Euler" iterations="5" ls_iterations="8">
+     <flag eulerdamp="disable"/>
