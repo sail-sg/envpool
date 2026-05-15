@@ -67,12 +67,8 @@ jobs:
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Coverage
         run: |
-          coverage_targets="//..."
-          coverage_targets="$coverage_targets -//envpool/mujoco:playground_test"
-          coverage_targets="$coverage_targets -//envpool/mujoco:playground_oracle_align_test"
-          coverage_targets="$coverage_targets -//envpool/mujoco:playground_pixel_observation_test"
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
-            BAZEL_TEST_TARGETS="$coverage_targets" bazel-coverage
+            BAZEL_TEST_TARGETS="//..." bazel-coverage
           mkdir -p coverage
           cp bazel-out/_coverage/_coverage_report.dat coverage/lcov.info
           python3 scripts/coverage_summary.py \
@@ -82,13 +78,6 @@ jobs:
             --badge-file coverage/coverage-badge.svg \
             --genhtml-lcov-file coverage/lcov.genhtml.info \
             --repo-root "$GITHUB_WORKSPACE"
-      - name: Playground tests
-        run: |
-          playground_targets="//envpool/mujoco:playground_test"
-          playground_targets="$playground_targets //envpool/mujoco:playground_oracle_align_test"
-          playground_targets="$playground_targets //envpool/mujoco:playground_pixel_observation_test"
-          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
-            BAZEL_TEST_TARGETS="$playground_targets" bazel-test
       - name: Shut down Bazel
         if: ${{ always() && !cancelled() }}
         continue-on-error: true

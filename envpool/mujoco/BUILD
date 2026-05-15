@@ -636,6 +636,9 @@ py_test(
         "@mujoco_menagerie_playground//:unitree_go1_assets",
         "@mujoco_menagerie_playground//:unitree_h1_assets",
     ],
+    # This is an oracle correctness gate. Running it under rules_python
+    # coverage adds substantial CI cost without useful EnvPool coverage signal.
+    features = ["-coverage"],
     imports = ["../.."],
     shard_count = 4,
     deps = [
