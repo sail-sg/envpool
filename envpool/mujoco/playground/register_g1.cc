@@ -13,20 +13,17 @@
 // limitations under the License.
 
 #include "envpool/core/py_envpool.h"
+#include "envpool/mujoco/playground/g1.h"
 #include "envpool/mujoco/playground/py_envpool_register.h"
 
-PYBIND11_MODULE(playground_envpool, m) {
-  RegisterPlaygroundAloha(m);
-  RegisterPlaygroundApollo(m);
-  RegisterPlaygroundBarkour(m);
-  RegisterPlaygroundBerkeleyHumanoid(m);
-  RegisterPlaygroundG1(m);
-  RegisterPlaygroundGo1(m);
-  RegisterPlaygroundH1(m);
-  RegisterPlaygroundHand(m);
-  RegisterPlaygroundOp3(m);
-  RegisterPlaygroundPanda(m);
-  RegisterPlaygroundPandaRobotiq(m);
-  RegisterPlaygroundSpot(m);
-  RegisterPlaygroundT1(m);
+using PlaygroundG1EnvSpec = PyEnvSpec<mujoco_playground::PlaygroundG1EnvSpec>;
+using PlaygroundG1EnvPool = PyEnvPool<mujoco_playground::PlaygroundG1EnvPool>;
+using PlaygroundG1PixelEnvSpec =
+    PyEnvSpec<mujoco_playground::PlaygroundG1PixelEnvSpec>;
+using PlaygroundG1PixelEnvPool =
+    PyEnvPool<mujoco_playground::PlaygroundG1PixelEnvPool>;
+
+void RegisterPlaygroundG1(pybind11::module_& m) {
+  REGISTER(m, PlaygroundG1EnvSpec, PlaygroundG1EnvPool)
+  REGISTER(m, PlaygroundG1PixelEnvSpec, PlaygroundG1PixelEnvPool)
 }
