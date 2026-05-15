@@ -13,8 +13,12 @@
 # limitations under the License.
 """MuJoCo Playground native MuJoCo envs."""
 
-from envpool.mujoco import playground_envpool as _bindings
+from importlib import import_module
+from types import ModuleType
+
 from envpool.python.api import py_env
+
+_bindings: ModuleType = import_module("envpool.mujoco.playground_envpool")
 
 _PY_ENV_PREFIXES = (
     "PlaygroundAloha",
