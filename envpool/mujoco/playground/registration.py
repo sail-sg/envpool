@@ -142,40 +142,7 @@ _PLAYGROUND_TASKS: tuple[_Task, ...] = (
     ("T1JoystickRoughTerrain", "PlaygroundT1", 1000, {}),
 )
 
-_REGISTER_ORDER: tuple[str, ...] = (
-    "AlohaHandOver",
-    "AlohaSinglePegInsertion",
-    "BarkourJoystick",
-    "ApolloJoystickFlatTerrain",
-    "Op3Joystick",
-    "BerkeleyHumanoidJoystickFlatTerrain",
-    "BerkeleyHumanoidJoystickRoughTerrain",
-    "G1JoystickFlatTerrain",
-    "G1JoystickRoughTerrain",
-    "Go1JoystickFlatTerrain",
-    "Go1JoystickRoughTerrain",
-    "Go1Getup",
-    "Go1Handstand",
-    "Go1Footstand",
-    "H1InplaceGaitTracking",
-    "H1JoystickGaitTracking",
-    "LeapCubeRotateZAxis",
-    "LeapCubeReorient",
-    "AeroCubeRotateZAxis",
-    "PandaPickCube",
-    "PandaPickCubeOrientation",
-    "PandaOpenCabinet",
-    "PandaPickCubeCartesian",
-    "PandaRobotiqPushCube",
-    "SpotFlatTerrainJoystick",
-    "SpotGetup",
-    "SpotJoystickGaitTracking",
-    "T1JoystickFlatTerrain",
-    "T1JoystickRoughTerrain",
-)
-
 PLAYGROUND_ENVS = tuple(task_name for task_name, _, _, _ in _PLAYGROUND_TASKS)
-_TASK_BY_NAME: dict[str, _Task] = {task[0]: task for task in _PLAYGROUND_TASKS}
 
 
 def _register_task(
@@ -197,5 +164,5 @@ def _register_task(
     )
 
 
-for _task_name in _REGISTER_ORDER:
-    _register_task(*_TASK_BY_NAME[_task_name])
+for _task in _PLAYGROUND_TASKS:
+    _register_task(*_task)

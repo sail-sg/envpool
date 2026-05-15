@@ -1202,14 +1202,29 @@ def _make_mujoco_playground_family() -> RenderFamily:
         finally:
             renderer.close()
 
-    def render_pair(
-        task_id: str,
-        cfg: RenderCompareConfig,
-    ) -> tuple[np.ndarray, np.ndarray]:
-        oracle = make_oracle(task_id)
-        env_kwargs: dict[str, Any] = {}
+    def zero_command_kwargs(
+        *,
+        noise_key: str | None = "noise_level",
+        noise_value: float = 0.0,
+        disable_key: str | None = None,
+    ) -> dict[str, Any]:
+        kwargs: dict[str, Any] = {
+            "lin_vel_x_min": 0.0,
+            "lin_vel_x_max": 0.0,
+            "lin_vel_y_min": 0.0,
+            "lin_vel_y_max": 0.0,
+            "ang_vel_yaw_min": 0.0,
+            "ang_vel_yaw_max": 0.0,
+        }
+        if noise_key is not None:
+            kwargs[noise_key] = noise_value
+        if disable_key is not None:
+            kwargs[disable_key] = 0.0
+        return kwargs
+
+    def envpool_kwargs(task_id: str) -> dict[str, Any]:
         if task_id.startswith("Apollo"):
-            env_kwargs = {
+            return {
                 "noise_level": 0.0,
                 "push_enable": 0.0,
                 "command_min0": 0.0,
@@ -1223,97 +1238,27 @@ def _make_mujoco_playground_family() -> RenderFamily:
                 "command_zero_prob2": 1.0,
             }
         if task_id.startswith("Barkour"):
-            env_kwargs = {
-                "obs_noise": -1.0,
-                "lin_vel_x_min": 0.0,
-                "lin_vel_x_max": 0.0,
-                "lin_vel_y_min": 0.0,
-                "lin_vel_y_max": 0.0,
-                "ang_vel_yaw_min": 0.0,
-                "ang_vel_yaw_max": 0.0,
+            return {
+                **zero_command_kwargs(noise_key="obs_noise", noise_value=-1.0),
                 "kick_wait_steps_min": 100000,
                 "kick_wait_steps_max": 100001,
             }
         if task_id.startswith("Op3"):
-            env_kwargs = {
-                "obs_noise": -1.0,
-                "lin_vel_x_min": 0.0,
-                "lin_vel_x_max": 0.0,
-                "lin_vel_y_min": 0.0,
-                "lin_vel_y_max": 0.0,
-                "ang_vel_yaw_min": 0.0,
-                "ang_vel_yaw_max": 0.0,
-            }
-        if task_id.startswith("BerkeleyHumanoid"):
-            env_kwargs = {
-                "noise_level": 0.0,
-                "push_enable": 0.0,
-                "lin_vel_x_min": 0.0,
-                "lin_vel_x_max": 0.0,
-                "lin_vel_y_min": 0.0,
-                "lin_vel_y_max": 0.0,
-                "ang_vel_yaw_min": 0.0,
-                "ang_vel_yaw_max": 0.0,
-            }
-        if task_id.startswith("G1"):
-            env_kwargs = {
-                "noise_level": 0.0,
-                "push_enable": 0.0,
-                "lin_vel_x_min": 0.0,
-                "lin_vel_x_max": 0.0,
-                "lin_vel_y_min": 0.0,
-                "lin_vel_y_max": 0.0,
-                "ang_vel_yaw_min": 0.0,
-                "ang_vel_yaw_max": 0.0,
-            }
-        if task_id.startswith("T1"):
-            env_kwargs = {
-                "noise_level": 0.0,
-                "push_enable": 0.0,
-                "lin_vel_x_min": 0.0,
-                "lin_vel_x_max": 0.0,
-                "lin_vel_y_min": 0.0,
-                "lin_vel_y_max": 0.0,
-                "ang_vel_yaw_min": 0.0,
-                "ang_vel_yaw_max": 0.0,
-            }
+            return zero_command_kwargs(noise_key="obs_noise", noise_value=-1.0)
+        if task_id.startswith(("BerkeleyHumanoid", "G1", "T1")):
+            return zero_command_kwargs(disable_key="push_enable")
         if task_id.startswith("H1"):
-            env_kwargs = {
-                "obs_noise_level": 0.0,
-                "lin_vel_x_min": 0.0,
-                "lin_vel_x_max": 0.0,
-                "lin_vel_y_min": 0.0,
-                "lin_vel_y_max": 0.0,
-                "ang_vel_yaw_min": 0.0,
-                "ang_vel_yaw_max": 0.0,
-            }
+            return zero_command_kwargs(noise_key="obs_noise_level")
         if task_id == "SpotFlatTerrainJoystick-v1":
-            env_kwargs = {
-                "noise_level": 0.0,
-                "pert_enable": 0.0,
-                "lin_vel_x_min": 0.0,
-                "lin_vel_x_max": 0.0,
-                "lin_vel_y_min": 0.0,
-                "lin_vel_y_max": 0.0,
-                "ang_vel_yaw_min": 0.0,
-                "ang_vel_yaw_max": 0.0,
-            }
+            return zero_command_kwargs(disable_key="pert_enable")
         if task_id == "SpotGetup-v1":
-            env_kwargs = {"noise_level": 0.0}
+            return {"noise_level": 0.0}
         if task_id == "SpotJoystickGaitTracking-v1":
-            env_kwargs = {
-                "noise_level": 0.0,
-                "lin_vel_x_min": 0.0,
-                "lin_vel_x_max": 0.0,
-                "lin_vel_y_min": 0.0,
-                "lin_vel_y_max": 0.0,
-                "ang_vel_yaw_min": 0.0,
-                "ang_vel_yaw_max": 0.0,
-            }
+            return zero_command_kwargs()
         if task_id == "PandaPickCubeCartesian-v1":
-            env_kwargs = {"guide_sample_prob": 0.0}
+            return {"guide_sample_prob": 0.0}
         if task_id == "PandaRobotiqPushCube-v1":
-            env_kwargs = {
+            return {
                 "action_min_delay": 0,
                 "action_max_delay": 1,
                 "obs_min_delay": 0,
@@ -1330,7 +1275,14 @@ def _make_mujoco_playground_family() -> RenderFamily:
             "LeapCubeReorient-v1",
             "AeroCubeRotateZAxis-v1",
         ):
-            env_kwargs = {"noise_level": 0.0, "pert_enable": 0.0}
+            return {"noise_level": 0.0, "pert_enable": 0.0}
+        return {}
+
+    def render_pair(
+        task_id: str,
+        cfg: RenderCompareConfig,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        oracle = make_oracle(task_id)
         env = make_gymnasium(
             task_id,
             num_envs=1,
@@ -1338,7 +1290,7 @@ def _make_mujoco_playground_family() -> RenderFamily:
             render_mode="rgb_array",
             render_width=cfg.source_width,
             render_height=cfg.source_height,
-            **env_kwargs,
+            **envpool_kwargs(task_id),
         )
         try:
             _, info = env.reset()
