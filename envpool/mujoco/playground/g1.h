@@ -37,12 +37,6 @@
 
 namespace mujoco_playground {
 
-using envpool::mujoco::PixelObservationEnvFns;
-using envpool::mujoco::RenderCameraIdOrDefault;
-using envpool::mujoco::RenderHeightOrDefault;
-using envpool::mujoco::RenderWidthOrDefault;
-using envpool::mujoco::StackSpec;
-
 constexpr int kG1ActionDim = 29;
 constexpr int kG1Feet = 2;
 constexpr int kG1ObsDim = 103;

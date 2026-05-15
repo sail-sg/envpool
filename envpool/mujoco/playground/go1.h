@@ -38,12 +38,6 @@
 
 namespace mujoco_playground {
 
-using envpool::mujoco::PixelObservationEnvFns;
-using envpool::mujoco::RenderCameraIdOrDefault;
-using envpool::mujoco::RenderHeightOrDefault;
-using envpool::mujoco::RenderWidthOrDefault;
-using envpool::mujoco::StackSpec;
-
 constexpr int kGo1ActionDim = 12;
 constexpr int kGo1StateDim = 48;
 constexpr int kGo1PrivilegedStateDim = 123;

@@ -37,12 +37,6 @@
 
 namespace mujoco_playground {
 
-using envpool::mujoco::PixelObservationEnvFns;
-using envpool::mujoco::RenderCameraIdOrDefault;
-using envpool::mujoco::RenderHeightOrDefault;
-using envpool::mujoco::RenderWidthOrDefault;
-using envpool::mujoco::StackSpec;
-
 constexpr int kBerkeleyActionDim = 12;
 constexpr int kBerkeleyFeet = 2;
 constexpr int kBerkeleyObsDim = 52;

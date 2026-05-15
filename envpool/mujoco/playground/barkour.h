@@ -37,12 +37,6 @@
 
 namespace mujoco_playground {
 
-using envpool::mujoco::PixelObservationEnvFns;
-using envpool::mujoco::RenderCameraIdOrDefault;
-using envpool::mujoco::RenderHeightOrDefault;
-using envpool::mujoco::RenderWidthOrDefault;
-using envpool::mujoco::StackSpec;
-
 constexpr int kBarkourActionDim = 12;
 constexpr int kBarkourObsDim = 31;
 constexpr int kBarkourHistoryLen = 15;

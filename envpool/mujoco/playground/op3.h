@@ -33,12 +33,6 @@
 
 namespace mujoco_playground {
 
-using envpool::mujoco::PixelObservationEnvFns;
-using envpool::mujoco::RenderCameraIdOrDefault;
-using envpool::mujoco::RenderHeightOrDefault;
-using envpool::mujoco::RenderWidthOrDefault;
-using envpool::mujoco::StackSpec;
-
 constexpr int kOp3ActionDim = 20;
 constexpr int kOp3ObsDim = 49;
 constexpr int kOp3HistoryLen = 3;

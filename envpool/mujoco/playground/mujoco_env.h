@@ -35,6 +35,11 @@
 
 namespace mujoco_playground {
 
+using envpool::mujoco::RenderCameraIdOrDefault;
+using envpool::mujoco::RenderHeightOrDefault;
+using envpool::mujoco::RenderWidthOrDefault;
+using envpool::mujoco::StackSpec;
+
 template <typename EnvFns>
 using PlaygroundEnvSpecT = EnvSpec<EnvFns>;
 
