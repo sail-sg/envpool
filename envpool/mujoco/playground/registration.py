@@ -16,8 +16,9 @@
 from envpool.registration import register
 
 _IMPORT_PATH = "envpool.mujoco.playground"
+_Task = tuple[str, str, int, dict[str, object]]
 
-_PLAYGROUND_TASKS = (
+_PLAYGROUND_TASKS: tuple[_Task, ...] = (
     ("AlohaHandOver", "PlaygroundAloha", 250, {}),
     (
         "AlohaSinglePegInsertion",
@@ -141,7 +142,7 @@ _PLAYGROUND_TASKS = (
     ("T1JoystickRoughTerrain", "PlaygroundT1", 1000, {}),
 )
 
-_REGISTER_ORDER = (
+_REGISTER_ORDER: tuple[str, ...] = (
     "AlohaHandOver",
     "AlohaSinglePegInsertion",
     "BarkourJoystick",
@@ -174,7 +175,7 @@ _REGISTER_ORDER = (
 )
 
 PLAYGROUND_ENVS = tuple(task_name for task_name, _, _, _ in _PLAYGROUND_TASKS)
-_TASK_BY_NAME = {task[0]: task for task in _PLAYGROUND_TASKS}
+_TASK_BY_NAME: dict[str, _Task] = {task[0]: task for task in _PLAYGROUND_TASKS}
 
 
 def _register_task(
