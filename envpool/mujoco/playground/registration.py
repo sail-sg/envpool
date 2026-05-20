@@ -13,10 +13,49 @@
 # limitations under the License.
 """MuJoCo Playground env registration."""
 
-from envpool.registration import register
+from envpool.registration import asset_base_path, register
 
 _IMPORT_PATH = "envpool.mujoco.playground"
 _Task = tuple[str, str, int, dict[str, object]]
+
+
+def _playground_base_path(
+    package_name: str,
+    local_asset_path: str,
+) -> str:
+    return asset_base_path(package_name, local_asset_path)
+
+
+_PLAYGROUND_BASE_PATHS = {
+    "humanoid": _playground_base_path(
+        "envpool_assets_mujoco_playground_humanoid",
+        "mujoco/playground/assets/mujoco_playground/_src/locomotion/apollo",
+    ),
+    "nonhumanoid": _playground_base_path(
+        "envpool_assets_mujoco_large",
+        "mujoco/playground/assets/mujoco_playground/_src/locomotion/go1",
+    ),
+}
+
+_PLAYGROUND_ASSET_KEYS = {
+    "PlaygroundAloha": "nonhumanoid",
+    "PlaygroundApollo": "humanoid",
+    "PlaygroundBarkour": "nonhumanoid",
+    "PlaygroundBerkeleyHumanoid": "humanoid",
+    "PlaygroundG1": "humanoid",
+    "PlaygroundGo1": "nonhumanoid",
+    "PlaygroundGo1Getup": "nonhumanoid",
+    "PlaygroundGo1Handstand": "nonhumanoid",
+    "PlaygroundH1": "humanoid",
+    "PlaygroundHand": "nonhumanoid",
+    "PlaygroundOp3": "humanoid",
+    "PlaygroundPanda": "nonhumanoid",
+    "PlaygroundPandaRobotiq": "nonhumanoid",
+    "PlaygroundSpotJoystick": "nonhumanoid",
+    "PlaygroundSpotGetup": "nonhumanoid",
+    "PlaygroundSpotGait": "nonhumanoid",
+    "PlaygroundT1": "humanoid",
+}
 
 _PLAYGROUND_TASKS: tuple[_Task, ...] = (
     ("AlohaHandOver", "PlaygroundAloha", 250, {}),
@@ -145,6 +184,11 @@ _PLAYGROUND_TASKS: tuple[_Task, ...] = (
 PLAYGROUND_ENVS = tuple(task_name for task_name, _, _, _ in _PLAYGROUND_TASKS)
 
 
+def _base_path_for_task(env_cls_prefix: str) -> str:
+    key = _PLAYGROUND_ASSET_KEYS[env_cls_prefix]
+    return _PLAYGROUND_BASE_PATHS[key]
+
+
 def _register_task(
     task_name: str,
     env_cls_prefix: str,
@@ -160,6 +204,7 @@ def _register_task(
         gymnasium_cls=f"{env_cls_prefix}GymnasiumEnvPool",
         task_name=task_name,
         max_episode_steps=max_episode_steps,
+        base_path=_base_path_for_task(env_cls_prefix),
         **kwargs,
     )
 

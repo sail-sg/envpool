@@ -419,6 +419,11 @@ class _MakeTest(absltest.TestCase):
             "WalkerWalk-v1",
         ])
 
+    def test_make_mujoco_playground(self) -> None:
+        self.check_step([
+            "Go1JoystickFlatTerrain-v1",
+        ])
+
     def test_render_smoke(self) -> None:
         self.check_render("CartPole-v1")
         self.check_render("LunarLander-v3")
