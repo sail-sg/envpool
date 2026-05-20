@@ -76,6 +76,10 @@ def _read_metadata_json(filename: str) -> Any:
     if __package__:
         resource_roots.append((__package__, ("assets", "metadata")))
     resource_roots.append((
+        "envpool_assets_mujoco_large",
+        ("mujoco", "myosuite", "assets", "metadata"),
+    ))
+    resource_roots.append((
         "envpool_assets",
         ("mujoco", "myosuite", "assets", "metadata"),
     ))

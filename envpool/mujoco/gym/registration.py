@@ -15,7 +15,9 @@
 
 from typing import Any
 
-from envpool.registration import register
+from envpool.registration import asset_base_path, register
+
+_GYM_BASE_PATH = asset_base_path("envpool_assets", "mujoco/assets_gym")
 
 gym_mujoco_envs = [
     ("Ant", ("v3", "v4", "v5"), 1000),
@@ -89,5 +91,6 @@ for task, versions, max_episode_steps in gym_mujoco_envs:
             gymnasium_cls=f"Gym{task}GymnasiumEnvPool",
             post_constraint=(version == "v5"),
             max_episode_steps=max_episode_steps,
+            base_path=_GYM_BASE_PATH,
             **extra_args,
         )
