@@ -15,10 +15,9 @@
 
 import os
 
-from envpool.registration import asset_base_path, package_base_path, register
+from envpool.registration import base_path, package_base_path, register
 
-_VIZDOOM_BASE_PATH = asset_base_path("envpool_assets", "vizdoom/maps")
-maps_path = os.path.join(_VIZDOOM_BASE_PATH, "vizdoom", "maps")
+maps_path = os.path.join(base_path, "vizdoom", "maps")
 
 
 def _vizdoom_game_list() -> list[str]:
@@ -49,5 +48,4 @@ for game in _vizdoom_game_list() + ["vizdoom_custom"]:
         vzd_path=os.path.join(package_base_path, "vizdoom", "bin", "vizdoom"),
         wad_path=wad_path,
         max_episode_steps=525,
-        base_path=_VIZDOOM_BASE_PATH,
     )

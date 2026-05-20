@@ -61,14 +61,6 @@ package_base_path = os.path.abspath(os.path.dirname(__file__))
 base_path = _asset_base_path()
 
 
-def asset_base_path(package_name: str, local_asset_path: str) -> str:
-    """Return the asset root for one split asset package."""
-    local_path = os.path.join(package_base_path, local_asset_path)
-    if os.path.exists(local_path):
-        return package_base_path
-    return _package_dir(package_name) or base_path
-
-
 class EnvRegistry:
     """A collection of available envs."""
 

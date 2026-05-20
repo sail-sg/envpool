@@ -15,12 +15,9 @@
 
 from typing import Any
 
-from envpool.registration import asset_base_path, register
+from envpool.registration import register
 
 _IMPORT_PATH = "envpool.mujoco.robotics"
-_ROBOTICS_BASE_PATH = asset_base_path(
-    "envpool_assets", "mujoco/robotics/assets"
-)
 _ROBOTICS_ENV_CLASSES = {
     "Fetch": (
         "GymnasiumRoboticsFetchEnvSpec",
@@ -368,7 +365,6 @@ def _register_robotics_env(
         spec_cls=spec_cls,
         dm_cls=dm_cls,
         gymnasium_cls=gymnasium_cls,
-        base_path=_ROBOTICS_BASE_PATH,
         **kwargs,
     )
 

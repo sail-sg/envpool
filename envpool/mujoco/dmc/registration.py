@@ -13,9 +13,7 @@
 # limitations under the License.
 """Mujoco dm_control suite env registration."""
 
-from envpool.registration import asset_base_path, register
-
-_DMC_BASE_PATH = asset_base_path("envpool_assets", "mujoco/assets_dmc")
+from envpool.registration import register
 
 # from suite.BENCHMARKING
 dmc_mujoco_envs = [
@@ -83,5 +81,4 @@ for domain, task, max_episode_steps in dmc_mujoco_envs:
         gymnasium_cls=f"Dmc{domain_name}GymnasiumEnvPool",
         task_name=task,
         max_episode_steps=max_episode_steps,
-        base_path=_DMC_BASE_PATH,
     )

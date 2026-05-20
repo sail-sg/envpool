@@ -13,11 +13,7 @@
 # limitations under the License.
 """MetaWorld v3 Sawyer env registration."""
 
-from envpool.registration import asset_base_path, register
-
-_METAWORLD_BASE_PATH = asset_base_path(
-    "envpool_assets", "mujoco/metaworld/assets"
-)
+from envpool.registration import register
 
 
 def metaworld_public_task_name(task_name: str) -> str:
@@ -100,5 +96,4 @@ for task_name in metaworld_v3_envs:
         gymnasium_cls="MetaWorldGymnasiumEnvPool",
         task_name=task_name,
         max_episode_steps=500,
-        base_path=_METAWORLD_BASE_PATH,
     )
