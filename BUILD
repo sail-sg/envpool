@@ -52,6 +52,12 @@ filegroup(
     srcs = [".clang-tidy"],
 )
 
+filegroup(
+    name = "setup_cfg",
+    srcs = ["setup.cfg"],
+    visibility = ["//visibility:public"],
+)
+
 py_binary(
     name = "setup",
     srcs = _SETUP_SRCS,

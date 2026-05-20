@@ -13,6 +13,7 @@
 # limitations under the License.
 """Test for envpool.make."""
 
+import configparser
 import gc
 import os
 import pprint
@@ -22,6 +23,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, get_type_hints
+from unittest import mock
 
 import dm_env
 import gymnasium
@@ -60,6 +62,32 @@ _VIZDOOM_RENDER_KWARGS: dict[str, object] = {
     "img_height": 240,
 }
 
+_FAMILY_SMOKE_TASKS: dict[str, tuple[str, ...]] = {
+    "envpool.atari": ("Defender-v5",),
+    "envpool.box2d": ("LunarLander-v3",),
+    "envpool.classic_control": ("CartPole-v1",),
+    "envpool.gfootball": ("gfootball/academy_empty_goal_close-v1",),
+    "envpool.highway": ("HighwayFast-v0",),
+    "envpool.jumanji": ("Game2048-v1",),
+    "envpool.minigrid": ("MiniGrid-DoorKey-8x8-v0",),
+    "envpool.mujoco.dmc": ("WalkerWalk-v1",),
+    "envpool.mujoco.gym": ("Ant-v5",),
+    "envpool.mujoco.metaworld": ("MetaWorld/Reach-v3",),
+    "envpool.mujoco.playground": (
+        "Go1JoystickFlatTerrain-v1",
+        "G1JoystickFlatTerrain-v1",
+    ),
+    "envpool.mujoco.robotics": ("FetchReach-v4",),
+    "envpool.pgx": ("TicTacToe-v1",),
+    "envpool.procgen": ("CoinrunEasy-v0",),
+    "envpool.toy_text": ("Catch-v0",),
+    "envpool.vizdoom": ("MyWayHome-v1",),
+}
+
+_DYNAMIC_FAMILY_SMOKE_PREFIXES: dict[str, str] = {
+    "envpool.mujoco.myosuite": "MyoSuite/",
+}
+
 
 @contextmanager
 def _temporary_workdir(prefix: str) -> Iterator[str]:
@@ -89,6 +117,23 @@ def _stable_render_kwargs(task_id: str, **kwargs: object) -> dict[str, object]:
 
 
 class _MakeTest(absltest.TestCase):
+    def _family_smoke_tasks(self) -> dict[str, tuple[str, ...]]:
+        from envpool.registration import registry
+
+        tasks = dict(_FAMILY_SMOKE_TASKS)
+        for import_path, prefix in _DYNAMIC_FAMILY_SMOKE_PREFIXES.items():
+            candidates = sorted(
+                task_id
+                for task_id, (registered_import_path, _, _) in (
+                    registry.specs.items()
+                )
+                if registered_import_path == import_path
+                and task_id.startswith(prefix)
+            )
+            self.assertNotEmpty(candidates, import_path)
+            tasks[import_path] = (candidates[0],)
+        return tasks
+
     def check_render_unsupported(self, task_id: str, **kwargs: object) -> None:
         for factory in (envpool.make_gym, envpool.make_gymnasium):
             with self.assertRaisesRegex(RuntimeError, "render not implemented"):
@@ -131,7 +176,19 @@ class _MakeTest(absltest.TestCase):
             raise
 
     def test_version(self) -> None:
-        print(envpool.__version__)
+        config = configparser.ConfigParser()
+        self.assertTrue(config.read(Path(__file__).parents[1] / "setup.cfg"))
+        self.assertEqual(config["metadata"]["version"], envpool.__version__)
+
+    def test_asset_base_path_env_override(self) -> None:
+        from envpool.registration import asset_base_path
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with mock.patch.dict(os.environ, {"ENVPOOL_ASSETS_PATH": tmpdir}):
+                self.assertEqual(
+                    asset_base_path("envpool_assets", "atari/roms"),
+                    os.path.abspath(tmpdir),
+                )
 
     def test_public_typing_interface(self) -> None:
         self.assertTrue(Path(envpool.__file__).with_name("py.typed").is_file())
@@ -161,6 +218,26 @@ class _MakeTest(absltest.TestCase):
 
     def test_list_all_envs(self) -> None:
         pprint.pprint(envpool.list_all_envs())
+
+    def test_make_registered_env_families(self) -> None:
+        from envpool.registration import registry
+
+        registered_import_paths = {
+            import_path for import_path, _, _ in registry.specs.values()
+        }
+        smoke_tasks = self._family_smoke_tasks()
+        self.assertEmpty(registered_import_paths - smoke_tasks.keys())
+        self.assertEmpty(smoke_tasks.keys() - registered_import_paths)
+        missing_task_ids = [
+            task_id
+            for task_ids in smoke_tasks.values()
+            for task_id in task_ids
+            if task_id not in registry.specs
+        ]
+        self.assertEmpty(missing_task_ids)
+        for import_path, task_ids in smoke_tasks.items():
+            with self.subTest(import_path=import_path):
+                self.check_step(list(task_ids))
 
     def test_make_atari(self) -> None:
         self.assertRaises(TypeError, envpool.make, "Pong-v5")
@@ -417,6 +494,11 @@ class _MakeTest(absltest.TestCase):
             "WalkerRun-v1",
             "WalkerStand-v1",
             "WalkerWalk-v1",
+        ])
+
+    def test_make_mujoco_playground(self) -> None:
+        self.check_step([
+            "Go1JoystickFlatTerrain-v1",
         ])
 
     def test_render_smoke(self) -> None:

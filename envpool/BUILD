@@ -81,6 +81,7 @@ py_test(
     name = "make_test",
     timeout = "long",
     srcs = ["make_test.py"],
+    data = ["//:setup_cfg"],
     imports = [".."],
     deps = [
         ":envpool",
