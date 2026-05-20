@@ -13,7 +13,9 @@
 # limitations under the License.
 """Procgen env registration."""
 
-from envpool.registration import register
+from envpool.registration import asset_base_path, register
+
+_PROCGEN_BASE_PATH = asset_base_path("envpool_assets", "procgen/assets")
 
 # 16 games in Procgen
 # https://github.com/openai/procgen/blob/0.10.7/procgen/src/game.cpp#L56-L66
@@ -56,4 +58,5 @@ for env_name, timeout, dist_mode in procgen_game_config:
             env_name=env_name,
             distribution_mode=dist_value,
             max_episode_steps=timeout,
+            base_path=_PROCGEN_BASE_PATH,
         )

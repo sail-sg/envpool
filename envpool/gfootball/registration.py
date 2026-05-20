@@ -13,7 +13,9 @@
 # limitations under the License.
 """Google Research Football env registration."""
 
-from envpool.registration import register
+from envpool.registration import asset_base_path, register
+
+_GFOOTBALL_BASE_PATH = asset_base_path("envpool_assets", "gfootball/assets")
 
 _SCENARIOS = (
     ("11_vs_11_competition", 3000),
@@ -45,4 +47,5 @@ for env_name, max_episode_steps in _SCENARIOS:
         spec_cls="GfootballEnvSpec",
         dm_cls="GfootballDMEnvPool",
         gymnasium_cls="GfootballGymnasiumEnvPool",
+        base_path=_GFOOTBALL_BASE_PATH,
     )
