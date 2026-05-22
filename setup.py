@@ -30,7 +30,7 @@ class BinaryDistribution(Distribution):
         """Return `False` because EnvPool ships extension modules."""
         return False
 
-    def has_ext_modules(foo) -> bool:
+    def has_ext_modules(self) -> bool:
         """Report that EnvPool has extension modules."""
         return True
 
