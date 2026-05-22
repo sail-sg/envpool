@@ -298,8 +298,8 @@ class GfootballOracle:
             self._engine.waiting_for_game_count = 0
         if self._step >= self._max_episode_steps:
             done = True
-
-        self._elapsed_step += 1
+        else:
+            self._elapsed_step += 1
 
         truncated = np.bool_(done and self._step >= self._max_episode_steps)
         terminated = np.bool_(done and not truncated)
