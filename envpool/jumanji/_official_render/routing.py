@@ -653,7 +653,10 @@ class MMSTViewer(MatplotlibViewer):
 
         for agent in range(self.num_agents):
             conn_group = connected_nodes[agent]
-            len_conn = np.where(conn_group != -1)[0][-1]
+            valid_indices = np.where(conn_group != -1)[0]
+            if len(valid_indices) == 0:
+                continue
+            len_conn = valid_indices[-1]
             for i in range(len_conn):
                 key = edge_id(conn_group[i], conn_group[i + 1])
                 edges[key] = [
