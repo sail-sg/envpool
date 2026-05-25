@@ -19,6 +19,8 @@ import os
 import re
 import sys
 import types
+from collections import deque
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
@@ -41,6 +43,7 @@ _TASK_CONFIGS = {
 _COLOR_WALL = np.array([74, 65, 42], dtype=np.int16)
 _COLOR_GOAL = np.array([0, 255, 0], dtype=np.int16)
 _COLOR_BONUS = np.array([255, 255, 0], dtype=np.int16)
+_DIR_TO_VEC = ((1, 0), (0, 1), (-1, 0), (0, -1))
 
 
 def _install_upstream_compat_modules() -> None:
@@ -264,6 +267,16 @@ def _sort_envs(value: np.ndarray, info: dict[str, Any]) -> np.ndarray:
     return value[np.argsort(info["env_id"])]
 
 
+def _player_index(info: dict[str, Any], env_id: int, player_id: int) -> int:
+    matches = np.where(
+        (info["players"]["env_id"] == env_id)
+        & (info["players"]["id"] == player_id)
+    )[0]
+    if matches.size != 1:
+        raise ValueError(f"expected one player {player_id} in env {env_id}")
+    return int(matches[0])
+
+
 def _action_for_player_order(
     canonical_action: np.ndarray,
     info: dict[str, Any],
@@ -297,6 +310,167 @@ def _classify_tile(tile: np.ndarray) -> str | None:
     }
     name, distance = min(distances.items(), key=lambda item: item[1])
     return name if distance < 50 else None
+
+
+def _classify_grid(frame: np.ndarray, grid_size: int) -> list[list[str | None]]:
+    return [
+        [
+            _classify_tile(
+                frame[
+                    y * 32 : (y + 1) * 32,
+                    x * 32 : (x + 1) * 32,
+                ],
+            )
+            for x in range(grid_size)
+        ]
+        for y in range(grid_size)
+    ]
+
+
+def _find_path(
+    grid: list[list[str | None]],
+    start: tuple[int, int],
+    target: tuple[int, int],
+    blocked: set[tuple[int, int]] | None = None,
+) -> list[tuple[int, int]] | None:
+    blocked = blocked or set()
+    height = len(grid)
+    width = len(grid[0])
+    queue = deque([start])
+    parents: dict[tuple[int, int], tuple[int, int] | None] = {start: None}
+    while queue:
+        pos = queue.popleft()
+        if pos == target:
+            path = []
+            while pos is not None:
+                path.append(pos)
+                pos = parents[pos]
+            return path[::-1]
+        for dx, dy in _DIR_TO_VEC:
+            nxt = (pos[0] + dx, pos[1] + dy)
+            if (
+                nxt in parents
+                or nxt in blocked
+                or nxt[0] < 0
+                or nxt[0] >= width
+                or nxt[1] < 0
+                or nxt[1] >= height
+                or grid[nxt[1]][nxt[0]] == "wall"
+            ):
+                continue
+            parents[nxt] = pos
+            queue.append(nxt)
+    return None
+
+
+def _turn_actions(current_dir: int, target_dir: int) -> list[int]:
+    delta = (target_dir - current_dir) % 4
+    if delta == 0:
+        return []
+    if delta == 1:
+        return [1]
+    if delta == 2:
+        return [1, 1]
+    return [0]
+
+
+def _actions_for_path(
+    path: list[tuple[int, int]],
+    start_dir: int,
+) -> tuple[list[int], int]:
+    actions = []
+    current_dir = start_dir
+    for current, nxt in pairwise(path):
+        step = (nxt[0] - current[0], nxt[1] - current[1])
+        target_dir = _DIR_TO_VEC.index(step)
+        actions.extend(_turn_actions(current_dir, target_dir))
+        actions.append(2)
+        current_dir = target_dir
+    return actions, current_dir
+
+
+def _render_single(env: Any) -> np.ndarray:
+    frame = env.render()
+    if frame is None:
+        raise ValueError("expected rgb_array render")
+    return frame[0]
+
+
+def _agent_full_color(
+    env: Any, info: dict[str, Any], agent_id: int = 0
+) -> np.ndarray:
+    frame = _render_single(env)
+    index = _player_index(info, env_id=0, player_id=agent_id)
+    x, y = info["players"]["pos"][index].astype(np.int64)
+    tile = frame[y * 32 : (y + 1) * 32, x * 32 : (x + 1) * 32]
+    return tile.reshape(-1, 3).max(axis=0).astype(np.int16)
+
+
+def _agent_obs_color(
+    obs: np.ndarray,
+    info: dict[str, Any],
+    agent_id: int = 0,
+    view_size: int = 7,
+    view_offset: int = 1,
+    view_tile_size: int = 8,
+) -> np.ndarray:
+    index = _player_index(info, env_id=0, player_id=agent_id)
+    tile_x = view_size // 2
+    tile_y = view_size - 1 - view_offset
+    tile = obs[
+        index,
+        tile_y * view_tile_size : (tile_y + 1) * view_tile_size,
+        tile_x * view_tile_size : (tile_x + 1) * view_tile_size,
+    ]
+    return tile.reshape(-1, 3).max(axis=0).astype(np.int16)
+
+
+def _step_solo(
+    env: Any, info: dict[str, Any], action: int
+) -> tuple[np.ndarray, dict[str, Any]]:
+    obs, _, _, _, info = env.step({
+        "players": {
+            "env_id": info["players"]["env_id"],
+            "action": np.array([action], dtype=np.int32),
+        },
+    })
+    return obs, info
+
+
+def _find_bonus_excursion(
+    frame: np.ndarray,
+    info: dict[str, Any],
+    grid_size: int,
+) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
+    grid = _classify_grid(frame, grid_size)
+    start_index = _player_index(info, env_id=0, player_id=0)
+    start = tuple(info["players"]["pos"][start_index].astype(np.int64))
+    bonuses = {
+        (x, y)
+        for y, row in enumerate(grid)
+        for x, cell in enumerate(row)
+        if cell == "bonus"
+    }
+    for bonus in sorted(
+        bonuses, key=lambda pos: abs(pos[0] - start[0]) + abs(pos[1] - start[1])
+    ):
+        path = _find_path(grid, start, bonus, blocked=bonuses - {bonus})
+        if path is None or len(path) < 2:
+            continue
+        for dx, dy in _DIR_TO_VEC:
+            off_bonus = (bonus[0] + dx, bonus[1] + dy)
+            if off_bonus == path[-2] or (
+                0 <= off_bonus[1] < len(grid)
+                and 0 <= off_bonus[0] < len(grid[0])
+                and grid[off_bonus[1]][off_bonus[0]] is None
+                and off_bonus not in bonuses
+            ):
+                off_path = [bonus, off_bonus]
+                if off_bonus == path[-2] or _find_path(
+                    grid, bonus, off_bonus, blocked=bonuses
+                ):
+                    return path, off_path
+    raise AssertionError("could not find reachable bonus excursion")
 
 
 def _sync_upstream_from_envpool(
@@ -414,6 +588,9 @@ class MarlGridTest(absltest.TestCase):
             self.assertEqual(spec.config.view_size, view_size)
             self.assertEqual(spec.config.n_clutter, n_clutter)
             self.assertEqual(spec.config.n_bonus_tiles, n_bonus_tiles)
+            self.assertFalse(spec.config.prestige_coloring)
+            self.assertAlmostEqual(spec.config.prestige_beta, 0.95)
+            self.assertAlmostEqual(spec.config.prestige_scale, 2.0)
 
     def test_registry_matches_pinned_upstream(self) -> None:
         """Check EnvPool tasks against the pinned upstream registry source."""
@@ -499,6 +676,153 @@ class MarlGridTest(absltest.TestCase):
         finally:
             env0.close()
             env1.close()
+
+    def test_prestige_coloring_default_matches_explicit_false(self) -> None:
+        """Check the default config keeps the existing fixed-color rendering."""
+        env0 = make_gymnasium(
+            "Goalcycle-demo-solo-v0",
+            num_envs=1,
+            seed=13,
+            render_mode="rgb_array",
+        )
+        env1 = make_gymnasium(
+            "Goalcycle-demo-solo-v0",
+            num_envs=1,
+            seed=13,
+            render_mode="rgb_array",
+            prestige_coloring=False,
+        )
+        try:
+            obs0, info0 = env0.reset()
+            obs1, info1 = env1.reset()
+            np.testing.assert_array_equal(obs0, obs1)
+            np.testing.assert_array_equal(
+                _render_single(env0), _render_single(env1)
+            )
+            for _ in range(3):
+                action0 = {
+                    "players": {
+                        "env_id": info0["players"]["env_id"],
+                        "action": np.array([2], dtype=np.int32),
+                    },
+                }
+                action1 = {
+                    "players": {
+                        "env_id": info1["players"]["env_id"],
+                        "action": np.array([2], dtype=np.int32),
+                    },
+                }
+                obs0, reward0, terminated0, truncated0, info0 = env0.step(
+                    action0
+                )
+                obs1, reward1, terminated1, truncated1, info1 = env1.step(
+                    action1
+                )
+                np.testing.assert_array_equal(obs0, obs1)
+                np.testing.assert_array_equal(reward0, reward1)
+                np.testing.assert_array_equal(terminated0, terminated1)
+                np.testing.assert_array_equal(truncated0, truncated1)
+                np.testing.assert_array_equal(
+                    _render_single(env0),
+                    _render_single(env1),
+                )
+        finally:
+            env0.close()
+            env1.close()
+
+    def test_prestige_coloring_tracks_goalcycle_rewards(self) -> None:
+        """Validate reset, positive reward, and negative reward prestige colors."""
+        env = make_gymnasium(
+            "Goalcycle-demo-solo-v0",
+            num_envs=1,
+            seed=29,
+            render_mode="rgb_array",
+            prestige_coloring=True,
+            bonus_penalty=1.0,
+            n_clutter=0,
+            reward_decay=False,
+        )
+        try:
+            obs, info = env.reset()
+            reset_full = _agent_full_color(env, info)
+            reset_obs = _agent_obs_color(obs, info)
+            self.assertGreater(reset_full[0], 220)
+            self.assertLess(reset_full[2], 40)
+            self.assertGreater(reset_obs[0], 220)
+            self.assertLess(reset_obs[2], 40)
+
+            start_frame = _render_single(env)
+            path_to_bonus, path_off_bonus = _find_bonus_excursion(
+                start_frame,
+                info,
+                grid_size=13,
+            )
+            agent_index = _player_index(info, env_id=0, player_id=0)
+            current_dir = int(info["players"]["dir"][agent_index])
+            actions, current_dir = _actions_for_path(path_to_bonus, current_dir)
+            for action in actions:
+                obs, info = _step_solo(env, info, action)
+
+            actions, current_dir = _actions_for_path(
+                path_off_bonus, current_dir
+            )
+            for action in actions:
+                obs, info = _step_solo(env, info, action)
+            positive_full = _agent_full_color(env, info)
+            positive_obs = _agent_obs_color(obs, info)
+            self.assertGreater(positive_full[2], reset_full[2] + 50)
+            self.assertLess(positive_full[0], reset_full[0] - 50)
+            self.assertGreater(positive_obs[2], reset_obs[2] + 50)
+            self.assertLess(positive_obs[0], reset_obs[0] - 50)
+
+            actions, current_dir = _actions_for_path(
+                path_off_bonus[::-1], current_dir
+            )
+            for action in actions:
+                obs, info = _step_solo(env, info, action)
+            actions, current_dir = _actions_for_path(
+                path_off_bonus, current_dir
+            )
+            for action in actions:
+                obs, info = _step_solo(env, info, action)
+            reset_after_negative_full = _agent_full_color(env, info)
+            reset_after_negative_obs = _agent_obs_color(obs, info)
+            self.assertGreater(reset_after_negative_full[0], 220)
+            self.assertLess(reset_after_negative_full[2], 40)
+            self.assertGreater(reset_after_negative_obs[0], 220)
+            self.assertLess(reset_after_negative_obs[2], 40)
+        finally:
+            env.close()
+
+    def test_prestige_coloring_goalcycle_social_smoke(self) -> None:
+        """Check GoalCycle can be instantiated with a social agent override."""
+        env = make_gymnasium(
+            "Goalcycle-demo-solo-v0",
+            num_envs=1,
+            seed=31,
+            render_mode="rgb_array",
+            n_agents=3,
+            max_num_players=3,
+            prestige_coloring=True,
+        )
+        try:
+            obs, info = env.reset()
+            self.assertEqual(obs.shape, (3, 56, 56, 3))
+            frame = _render_single(env)
+            self.assertEqual(frame.shape, (13 * 32, 13 * 32, 3))
+            obs, reward, terminated, truncated, info = env.step({
+                "players": {
+                    "env_id": info["players"]["env_id"],
+                    "action": np.full((3,), 6, dtype=np.int32),
+                },
+            })
+            self.assertEqual(obs.shape, (3, 56, 56, 3))
+            self.assertEqual(reward.shape, (3,))
+            self.assertEqual(terminated.shape, (1,))
+            self.assertEqual(truncated.shape, (1,))
+            self.assertGreater(int(_render_single(env).sum()), 0)
+        finally:
+            env.close()
 
     def test_aligns_with_pinned_upstream_after_reset_sync(self) -> None:
         """Compare step outputs with the pinned upstream source after reset sync."""
