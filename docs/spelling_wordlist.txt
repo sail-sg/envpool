@@ -109,6 +109,7 @@ rollouts
 filesystem
 basenames
 vendored
+rasterization
 MarlGrid
 kandouss
 multi-agent
