@@ -853,14 +853,14 @@ is complete end-to-end:
   anchored to that version.
 - Register every intended upstream task ID or scenario. Do not collapse multiple
   upstream IDs into one generic EnvPool task.
-- Add registry coverage that checks EnvPool task IDs and task configs against
-  the pinned upstream source when practical.
+- Add registry coverage that checks EnvPool task IDs and task configuration
+  values against the pinned upstream source when practical.
 - Add deterministic tests that replay the same external action sequence across
   reset plus nontrivial multi-step rollouts for every registered ID. If render
   is supported, include rendered frames in the determinism check.
 - Add step-level oracle alignment tests when an official implementation exists.
-  A reset-time state sync is acceptable when needed, but do not resynchronize
-  during the rollout. Compare observations, rewards, terminated/truncated
+  A reset-time state sync is acceptable when needed, but do not sync state
+  again during the rollout. Compare observations, rewards, terminated/truncated
   semantics, exposed info, and renders when render output is expected to match.
 - Add render tests for reset frames, multi-step frames, batched rendering, and
   env-id selection when rendering is supported.
