@@ -78,10 +78,21 @@ inline constexpr std::array<std::pair<int, int>, 4> kDirToVec = {
 
 inline Rgb ColorValue(AgentColor color) {
   static constexpr std::array<Rgb, 6> kColors = {
-      Rgb{255, 0, 0},    Rgb{0, 0, 255},     Rgb{112, 39, 195},
-      Rgb{255, 165, 0},  Rgb{128, 128, 0},   Rgb{255, 0, 189},
+      Rgb{255, 0, 0},   Rgb{0, 0, 255},   Rgb{112, 39, 195},
+      Rgb{255, 165, 0}, Rgb{128, 128, 0}, Rgb{255, 0, 189},
   };
   return kColors[static_cast<int>(color)];
+}
+
+inline Rgb PrestigeColor(float prestige, float prestige_scale) {
+  double prestige_scaled = std::tanh(static_cast<double>(prestige) /
+                                     static_cast<double>(prestige_scale));
+  prestige_scaled = std::clamp(prestige_scaled, 0.0, 1.0);
+  return Rgb{
+      static_cast<std::uint8_t>((1.0 - prestige_scaled) * 255.0),
+      0,
+      static_cast<std::uint8_t>(prestige_scaled * 255.0),
+  };
 }
 
 inline AgentColor AgentColorByIndex(int index) {
@@ -113,6 +124,7 @@ struct Agent {
   bool done{false};
   int bonus_state{-1};
   float step_reward{0.0f};
+  float prestige{0.0f};
 };
 
 inline int Offset(int x, int y, int width) { return y * width + x; }
@@ -181,8 +193,8 @@ inline void FillCoords(std::vector<std::uint8_t>* img, int width, int height,
   }
 }
 
-inline std::vector<std::uint8_t> Downsample(const std::vector<std::uint8_t>& src,
-                                           int width, int height, int factor) {
+inline std::vector<std::uint8_t> Downsample(
+    const std::vector<std::uint8_t>& src, int width, int height, int factor) {
   int out_width = width / factor;
   int out_height = height / factor;
   std::vector<std::uint8_t> out(out_width * out_height * 3, 0);
@@ -219,19 +231,24 @@ inline std::vector<std::uint8_t> EmptyTile(int tile_size) {
   return img;
 }
 
-inline std::vector<std::uint8_t> RenderAgentTile(AgentColor color, int dir,
-                                                int tile_size) {
+inline std::vector<std::uint8_t> RenderAgentTile(const Rgb& color, int dir,
+                                                 int tile_size) {
   int hi_width = tile_size * kTileSubdivs;
   int hi_height = tile_size * kTileSubdivs;
   std::vector<std::uint8_t> img(hi_width * hi_height * 3, 0);
-  auto tri =
-      PointInTriangle({0.12f, 0.19f}, {0.87f, 0.50f}, {0.12f, 0.81f});
+  auto tri = PointInTriangle({0.12f, 0.19f}, {0.87f, 0.50f}, {0.12f, 0.81f});
   tri = RotateFn(tri, 0.5f, 0.5f, 0.5f * kPi * dir);
-  FillCoords(&img, hi_width, hi_height, tri, ColorValue(color));
+  FillCoords(&img, hi_width, hi_height, tri, color);
   return Downsample(img, hi_width, hi_height, kTileSubdivs);
 }
 
-inline std::vector<std::uint8_t> RenderObjectTile(CellType type, int tile_size) {
+inline std::vector<std::uint8_t> RenderAgentTile(AgentColor color, int dir,
+                                                 int tile_size) {
+  return RenderAgentTile(ColorValue(color), dir, tile_size);
+}
+
+inline std::vector<std::uint8_t> RenderObjectTile(CellType type,
+                                                  int tile_size) {
   if (type == CellType::kEmpty) {
     return EmptyTile(tile_size);
   }
@@ -272,8 +289,7 @@ inline std::vector<std::uint8_t> BlendTiles(
     for (int c = 0; c < 3; ++c) {
       int offset = i * 3 + c;
       out[offset] = static_cast<std::uint8_t>(
-          (base[offset] * (max_alpha - alpha[i]) +
-           overlay[offset] * alpha[i]) /
+          (base[offset] * (max_alpha - alpha[i]) + overlay[offset] * alpha[i]) /
           max_alpha);
     }
   }
@@ -354,15 +370,16 @@ inline std::vector<std::uint8_t> RotateImage(
 class MarlGridEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict(
-        "env_name"_.Bind(std::string("empty")), "n_agents"_.Bind(2),
-        "grid_size"_.Bind(9), "view_size"_.Bind(7),
-        "view_tile_size"_.Bind(8), "view_offset"_.Bind(0),
-        "n_clutter"_.Bind(0), "randomize_goal"_.Bind(false),
-        "n_bonus_tiles"_.Bind(3), "bonus_reward"_.Bind(1.0f),
-        "bonus_penalty"_.Bind(0.0f), "initial_reward"_.Bind(true),
-        "reset_on_mistake"_.Bind(false), "reward_decay"_.Bind(true),
-        "respawn"_.Bind(false), "ghost_mode"_.Bind(true));
+    return MakeDict("env_name"_.Bind(std::string("empty")), "n_agents"_.Bind(2),
+                    "grid_size"_.Bind(9), "view_size"_.Bind(7),
+                    "view_tile_size"_.Bind(8), "view_offset"_.Bind(0),
+                    "n_clutter"_.Bind(0), "randomize_goal"_.Bind(false),
+                    "n_bonus_tiles"_.Bind(3), "bonus_reward"_.Bind(1.0f),
+                    "bonus_penalty"_.Bind(0.0f), "initial_reward"_.Bind(true),
+                    "reset_on_mistake"_.Bind(false), "reward_decay"_.Bind(true),
+                    "respawn"_.Bind(false), "ghost_mode"_.Bind(true),
+                    "prestige_coloring"_.Bind(false),
+                    "prestige_beta"_.Bind(0.95f), "prestige_scale"_.Bind(2.0f));
   }
 
   template <typename Config>
@@ -371,8 +388,7 @@ class MarlGridEnvFns {
     int bound = conf["grid_size"_];
     return MakeDict(
         "obs"_.Bind(Spec<std::uint8_t>({-1, obs_size, obs_size, 3}, {0, 255})),
-        "info:players.id"_.Bind(
-            Spec<int>({-1}, {0, conf["max_num_players"_]})),
+        "info:players.id"_.Bind(Spec<int>({-1}, {0, conf["max_num_players"_]})),
         "info:players.done"_.Bind(Spec<bool>({-1})),
         "info:players.active"_.Bind(Spec<bool>({-1})),
         "info:players.pos"_.Bind(Spec<int>({-1, 2}, {-1, bound})),
@@ -407,11 +423,17 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
         reward_decay_(spec.config["reward_decay"_]),
         respawn_(spec.config["respawn"_]),
         ghost_mode_(spec.config["ghost_mode"_]),
+        prestige_coloring_(spec.config["prestige_coloring"_]),
+        prestige_beta_(spec.config["prestige_beta"_]),
+        prestige_scale_(spec.config["prestige_scale"_]),
         max_episode_steps_(spec.config["max_episode_steps"_]) {
     CHECK_GE(max_num_players_, n_agents_);
     CHECK_GE(grid_size_, 3);
     CHECK_GE(view_size_, 3);
     CHECK_LE(n_agents_, 6);
+    CHECK_GE(prestige_beta_, 0.0f);
+    CHECK_LE(prestige_beta_, 1.0f);
+    CHECK_GT(prestige_scale_, 0.0f);
     agents_.resize(n_agents_);
     for (int i = 0; i < n_agents_; ++i) {
       agents_[i].color = detail::AgentColorByIndex(i);
@@ -432,6 +454,7 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
       agent.y = -1;
       agent.bonus_state = -1;
       agent.step_reward = 0.0f;
+      agent.prestige = 0.0f;
     }
     GenGrid();
     for (int i = 0; i < n_agents_; ++i) {
@@ -461,8 +484,8 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
     }
     std::shuffle(order.begin(), order.end(), gen_);
     for (int agent_id : order) {
-      DoAgentStep(agent_id, static_cast<detail::Act>(
-                                static_cast<int>(action["players.action"_][agent_id])));
+      DoAgentStep(agent_id, static_cast<detail::Act>(static_cast<int>(
+                                action["players.action"_][agent_id])));
     }
     for (int i = 0; i < n_agents_; ++i) {
       if (agents_[i].done) {
@@ -523,6 +546,9 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
   bool reward_decay_{true};
   bool respawn_{false};
   bool ghost_mode_{true};
+  bool prestige_coloring_{false};
+  float prestige_beta_{0.95f};
+  float prestige_scale_{2.0f};
   int max_episode_steps_{100};
   int step_count_{0};
   bool done_{true};
@@ -547,9 +573,7 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
     return dist(gen_);
   }
 
-  void ClearGrid() {
-    grid_.assign(grid_size_ * grid_size_, detail::Cell{});
-  }
+  void ClearGrid() { grid_.assign(grid_size_ * grid_size_, detail::Cell{}); }
 
   void WallRect() {
     for (int i = 0; i < grid_size_; ++i) {
@@ -656,6 +680,23 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
     return reward;
   }
 
+  void ApplyPrestigeReward(detail::Agent* agent, float reward) const {
+    if (!prestige_coloring_) {
+      return;
+    }
+    if (reward >= 0.0f) {
+      agent->prestige += reward;
+    } else {
+      agent->prestige = 0.0f;
+    }
+  }
+
+  void DecayPrestige(detail::Agent* agent) const {
+    if (prestige_coloring_ && agent->active) {
+      agent->prestige *= prestige_beta_;
+    }
+  }
+
   void DoAgentStep(int agent_id, detail::Act act) {
     detail::Agent& agent = agents_[agent_id];
     if (!agent.active) {
@@ -689,12 +730,12 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
           reward = BonusReward(&agent, bonus_cell);
         }
         if (reward_decay_) {
-          reward *= 1.0f -
-                    0.9f * (static_cast<float>(step_count_) /
-                            static_cast<float>(max_episode_steps_));
+          reward *= 1.0f - 0.9f * (static_cast<float>(step_count_) /
+                                   static_cast<float>(max_episode_steps_));
         }
         last_rewards_[agent_id] += reward;
         agent.step_reward += reward;
+        ApplyPrestigeReward(&agent, reward);
         if (fwd_type == detail::CellType::kGoal ||
             fwd_type == detail::CellType::kLava) {
           agent.done = true;
@@ -702,10 +743,11 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
       }
     } else if (act == detail::kPickup || act == detail::kDrop ||
                act == detail::kToggle || act == detail::kDone) {
-      return;
+      // Unsupported MarlGrid actions are accepted as no-ops.
     } else {
       throw std::runtime_error("invalid MarlGrid action");
     }
+    DecayPrestige(&agent);
   }
 
   [[nodiscard]] std::vector<bool> VisibilityMask(
@@ -767,7 +809,8 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
     return mask;
   }
 
-  [[nodiscard]] std::pair<int, int> ViewTopLeft(const detail::Agent& agent) const {
+  [[nodiscard]] std::pair<int, int> ViewTopLeft(
+      const detail::Agent& agent) const {
     if (agent.dir == 0) {
       return {agent.x - view_offset_, agent.y - view_size_ / 2};
     }
@@ -775,9 +818,21 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
       return {agent.x - view_size_ / 2, agent.y - view_offset_};
     }
     if (agent.dir == 2) {
-      return {agent.x - view_size_ + 1 + view_offset_, agent.y - view_size_ / 2};
+      return {agent.x - view_size_ + 1 + view_offset_,
+              agent.y - view_size_ / 2};
     }
     return {agent.x - view_size_ / 2, agent.y - view_size_ + 1 + view_offset_};
+  }
+
+  [[nodiscard]] std::vector<std::uint8_t> RenderAgentTile(int agent_id,
+                                                          int tile_size) const {
+    const detail::Agent& agent = agents_[agent_id];
+    if (prestige_coloring_) {
+      return detail::RenderAgentTile(
+          detail::PrestigeColor(agent.prestige, prestige_scale_), agent.dir,
+          tile_size);
+    }
+    return detail::RenderAgentTile(agent.color, agent.dir, tile_size);
   }
 
   [[nodiscard]] std::vector<std::uint8_t> RenderTile(const detail::Cell* cell,
@@ -801,9 +856,7 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
     }
     if (cell == nullptr || cell->type == detail::CellType::kEmpty) {
       if (chosen_agent >= 0) {
-        auto tile = detail::RenderAgentTile(agents_[chosen_agent].color,
-                                            agents_[chosen_agent].dir,
-                                            tile_size);
+        auto tile = RenderAgentTile(chosen_agent, tile_size);
         if (detail::HasBlackCorner(tile, tile_size)) {
           detail::AddTile(&tile, detail::EmptyTile(tile_size));
         }
@@ -813,9 +866,7 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
     }
     auto tile = detail::RenderObjectTile(cell->type, tile_size);
     if (chosen_agent >= 0) {
-      auto agent_tile = detail::RenderAgentTile(agents_[chosen_agent].color,
-                                               agents_[chosen_agent].dir,
-                                               tile_size);
+      auto agent_tile = RenderAgentTile(chosen_agent, tile_size);
       tile = detail::BlendTiles(tile, agent_tile, tile_size);
     }
     if (detail::HasBlackCorner(tile, tile_size)) {
@@ -832,10 +883,9 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
         auto tile = RenderTile(&CellAt(x, y), top_agent_id, tile_size);
         tile = detail::RotateImage(tile, tile_size, tile_size, orientation);
         for (int row = 0; row < tile_size; ++row) {
-          std::memcpy(output + ((y * tile_size + row) * img_size +
-                                x * tile_size) *
-                                   3,
-                      tile.data() + row * tile_size * 3, tile_size * 3);
+          std::memcpy(
+              output + ((y * tile_size + row) * img_size + x * tile_size) * 3,
+              tile.data() + row * tile_size * 3, tile_size * 3);
         }
       }
     }
