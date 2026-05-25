@@ -22,7 +22,7 @@ import types
 from collections import deque
 from itertools import pairwise
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 from absl.testing import absltest
@@ -56,21 +56,21 @@ def _install_upstream_compat_modules() -> None:
         np.__dict__["bool"] = np.bool_
 
     gym_mod = types.ModuleType("gym")
-    gym_mod.Env = gymnasium.Env
-    gym_mod.spaces = gymnasium.spaces
+    cast(Any, gym_mod).Env = gymnasium.Env
+    cast(Any, gym_mod).spaces = gymnasium.spaces
     gym_utils_mod = types.ModuleType("gym.utils")
     gym_seeding_mod = types.ModuleType("gym.utils.seeding")
-    gym_seeding_mod.np_random = lambda seed=None: (
+    cast(Any, gym_seeding_mod).np_random = lambda seed=None: (
         np.random.RandomState(seed),
         seed,
     )
-    gym_utils_mod.seeding = gym_seeding_mod
-    gym_mod.utils = gym_utils_mod
+    cast(Any, gym_utils_mod).seeding = gym_seeding_mod
+    cast(Any, gym_mod).utils = gym_utils_mod
     gym_envs_mod = types.ModuleType("gym.envs")
     gym_registration_mod = types.ModuleType("gym.envs.registration")
-    gym_registration_mod.register = lambda *args, **kwargs: None
-    gym_envs_mod.registration = gym_registration_mod
-    gym_mod.envs = gym_envs_mod
+    cast(Any, gym_registration_mod).register = lambda *args, **kwargs: None
+    cast(Any, gym_envs_mod).registration = gym_registration_mod
+    cast(Any, gym_mod).envs = gym_envs_mod
     sys.modules.setdefault("gym", gym_mod)
     sys.modules.setdefault("gym.envs", gym_envs_mod)
     sys.modules.setdefault("gym.envs.registration", gym_registration_mod)
@@ -78,19 +78,19 @@ def _install_upstream_compat_modules() -> None:
     sys.modules.setdefault("gym.utils.seeding", gym_seeding_mod)
 
     numba_mod = types.ModuleType("numba")
-    numba_mod.boolean = np.bool_
-    numba_mod.njit = _numba_njit
+    cast(Any, numba_mod).boolean = np.bool_
+    cast(Any, numba_mod).njit = _numba_njit
     sys.modules.setdefault("numba", numba_mod)
 
     rendering_mod = types.ModuleType("gym_minigrid.rendering")
-    rendering_mod.fill_coords = _fill_coords
-    rendering_mod.point_in_rect = _point_in_rect
-    rendering_mod.point_in_triangle = _point_in_triangle
-    rendering_mod.rotate_fn = _rotate_fn
-    rendering_mod.downsample = _downsample
-    rendering_mod.highlight_img = _highlight_img
+    cast(Any, rendering_mod).fill_coords = _fill_coords
+    cast(Any, rendering_mod).point_in_rect = _point_in_rect
+    cast(Any, rendering_mod).point_in_triangle = _point_in_triangle
+    cast(Any, rendering_mod).rotate_fn = _rotate_fn
+    cast(Any, rendering_mod).downsample = _downsample
+    cast(Any, rendering_mod).highlight_img = _highlight_img
     gym_minigrid_mod = types.ModuleType("gym_minigrid")
-    gym_minigrid_mod.rendering = rendering_mod
+    cast(Any, gym_minigrid_mod).rendering = rendering_mod
     sys.modules.setdefault("gym_minigrid", gym_minigrid_mod)
     sys.modules.setdefault("gym_minigrid.rendering", rendering_mod)
 
@@ -109,7 +109,7 @@ def _install_upstream_compat_modules() -> None:
         def close(self) -> None:
             self.isopen = False
 
-    marlgrid_rendering_mod.SimpleImageViewer = SimpleImageViewer
+    cast(Any, marlgrid_rendering_mod).SimpleImageViewer = SimpleImageViewer
     sys.modules.setdefault("marlgrid.rendering", marlgrid_rendering_mod)
 
 
@@ -940,6 +940,8 @@ class MarlGridTest(absltest.TestCase):
                         }
                         _, _, _, _, info = env.step(action)
                     frame = env.render(np.array([1, 0], dtype=np.int32))
+                    self.assertIsNotNone(frame)
+                    assert frame is not None
                     self.assertEqual(frame.dtype, np.uint8)
                     self.assertEqual(
                         frame.shape, (2, native_size, native_size, 3)
