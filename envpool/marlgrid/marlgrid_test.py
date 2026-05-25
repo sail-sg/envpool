@@ -20,6 +20,7 @@ import re
 import sys
 import types
 from collections import deque
+from functools import lru_cache
 from itertools import pairwise
 from pathlib import Path
 from typing import Any, cast
@@ -233,9 +234,67 @@ def _highlight_img(
     )
 
 
+def _candidate_runfile_roots() -> list[Path]:
+    roots: list[Path] = []
+    for env_name in ("TEST_SRCDIR", "RUNFILES_DIR"):
+        if os.environ.get(env_name):
+            roots.append(Path(os.environ[env_name]))
+    roots.append(Path.cwd())
+    roots.extend(Path(__file__).resolve().parents)
+    workspace = os.environ.get("TEST_WORKSPACE")
+    if workspace:
+        roots.extend(root / workspace for root in list(roots))
+    return roots
+
+
+@lru_cache
+def _runfiles_manifest_entries() -> tuple[tuple[str, Path], ...]:
+    manifest = os.environ.get("RUNFILES_MANIFEST_FILE")
+    if not manifest:
+        return ()
+    entries = []
+    with Path(manifest).open(encoding="utf-8") as f:
+        for line in f:
+            logical, sep, physical = line.rstrip("\n").partition(" ")
+            entries.append((
+                logical.replace("\\", "/"),
+                Path(physical if sep else logical),
+            ))
+    return tuple(entries)
+
+
+def _find_manifest_runfile(relative: str) -> Path | None:
+    relative = relative.replace("\\", "/")
+    candidates = [relative]
+    workspace = os.environ.get("TEST_WORKSPACE")
+    if workspace:
+        candidates.append(f"{workspace}/{relative}")
+    for logical, physical in _runfiles_manifest_entries():
+        for candidate in candidates:
+            if logical == candidate:
+                return physical
+            prefix = f"{candidate.rstrip('/')}/"
+            if logical.startswith(prefix):
+                path = physical
+                for _ in logical[len(prefix) :].split("/"):
+                    path = path.parent
+                return path
+    return None
+
+
+def _find_runfile(relative: str) -> Path:
+    manifest_path = _find_manifest_runfile(relative)
+    if manifest_path is not None:
+        return manifest_path
+    for root in _candidate_runfile_roots():
+        path = root / relative
+        if path.exists():
+            return path
+    raise FileNotFoundError(f"could not find runfile {relative!r}")
+
+
 def _upstream_registration_file() -> Path:
-    runfiles = Path(os.environ["TEST_SRCDIR"])
-    return runfiles / "marlgrid" / "marlgrid" / "envs" / "__init__.py"
+    return _find_runfile("marlgrid/marlgrid/envs/__init__.py")
 
 
 def _upstream_registered_ids() -> list[str]:
@@ -245,7 +304,7 @@ def _upstream_registered_ids() -> list[str]:
 
 def _make_upstream_env(task_id: str) -> Any:
     _install_upstream_compat_modules()
-    upstream_root = str(Path(os.environ["TEST_SRCDIR"]) / "marlgrid")
+    upstream_root = str(_upstream_registration_file().parents[2])
     if upstream_root not in sys.path:
         sys.path.insert(0, upstream_root)
     import marlgrid.envs as upstream_envs  # pylint: disable=import-outside-toplevel
