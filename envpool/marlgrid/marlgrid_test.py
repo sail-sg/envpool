@@ -1159,7 +1159,10 @@ class MarlGridTest(absltest.TestCase):
                         frame.shape, (2, native_size, native_size, 3)
                     )
                     self.assertGreater(int(frame.sum()), 0)
-                    np.testing.assert_array_equal(frame[1], env.render()[0])
+                    default_frame = env.render()
+                    self.assertIsNotNone(default_frame)
+                    assert default_frame is not None
+                    np.testing.assert_array_equal(frame[1], default_frame[0])
                 finally:
                     env.close()
 
