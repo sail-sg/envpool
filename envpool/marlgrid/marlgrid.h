@@ -77,11 +77,11 @@ inline constexpr std::array<std::pair<int, int>, 4> kDirToVec = {
 };
 
 inline Rgb ColorValue(AgentColor color) {
-  static constexpr std::array<Rgb, 6> kColors = {
+  static constexpr std::array<Rgb, 6> k_colors = {
       Rgb{255, 0, 0},   Rgb{0, 0, 255},   Rgb{112, 39, 195},
       Rgb{255, 165, 0}, Rgb{128, 128, 0}, Rgb{255, 0, 189},
   };
-  return kColors[static_cast<int>(color)];
+  return k_colors[static_cast<int>(color)];
 }
 
 inline Rgb PrestigeColor(float prestige, float prestige_scale) {
@@ -96,13 +96,13 @@ inline Rgb PrestigeColor(float prestige, float prestige_scale) {
 }
 
 inline AgentColor AgentColorByIndex(int index) {
-  static constexpr std::array<AgentColor, 6> kColors = {
+  static constexpr std::array<AgentColor, 6> k_colors = {
       AgentColor::kRed,    AgentColor::kBlue,  AgentColor::kPurple,
       AgentColor::kOrange, AgentColor::kOlive, AgentColor::kPink,
   };
   CHECK_GE(index, 0);
-  CHECK_LT(index, static_cast<int>(kColors.size()));
-  return kColors[index];
+  CHECK_LT(index, static_cast<int>(k_colors.size()));
+  return k_colors[index];
 }
 
 struct Cell {
@@ -298,19 +298,16 @@ inline std::vector<std::uint8_t> BlendTiles(
 
 inline bool HasBlackCorner(const std::vector<std::uint8_t>& img,
                            int tile_size) {
-  std::array<int, 4> corners = {
+  const std::array<int, 4> corners = {
       0,
       tile_size - 1,
       (tile_size - 1) * tile_size,
       tile_size * tile_size - 1,
   };
-  for (int corner : corners) {
+  return std::any_of(corners.begin(), corners.end(), [&](int corner) {
     int offset = corner * 3;
-    if (img[offset + 0] == 0 && img[offset + 1] == 0 && img[offset + 2] == 0) {
-      return true;
-    }
-  }
-  return false;
+    return img[offset + 0] == 0 && img[offset + 1] == 0 && img[offset + 2] == 0;
+  });
 }
 
 inline void AddTile(std::vector<std::uint8_t>* img,
@@ -762,7 +759,9 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
       for (int x = ax; x < width; ++x) {
         if (mask[detail::Offset(x, y, width)] &&
             transparent[detail::Offset(x, y, width)]) {
-          if (x < width - 1) mask[detail::Offset(x + 1, y, width)] = true;
+          if (x < width - 1) {
+            mask[detail::Offset(x + 1, y, width)] = true;
+          }
           if (y > 0) {
             mask[detail::Offset(x, y - 1, width)] = true;
             if (x < width - 1) {
@@ -774,10 +773,14 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
       for (int x = std::min(ax + 1, width - 1); x > 0; --x) {
         if (mask[detail::Offset(x, y, width)] &&
             transparent[detail::Offset(x, y, width)]) {
-          if (x > 0) mask[detail::Offset(x - 1, y, width)] = true;
+          if (x > 0) {
+            mask[detail::Offset(x - 1, y, width)] = true;
+          }
           if (y > 0) {
             mask[detail::Offset(x, y - 1, width)] = true;
-            if (x > 0) mask[detail::Offset(x - 1, y - 1, width)] = true;
+            if (x > 0) {
+              mask[detail::Offset(x - 1, y - 1, width)] = true;
+            }
           }
         }
       }
@@ -786,7 +789,9 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
       for (int x = ax; x < width; ++x) {
         if (mask[detail::Offset(x, y, width)] &&
             transparent[detail::Offset(x, y, width)]) {
-          if (x < width - 1) mask[detail::Offset(x + 1, y, width)] = true;
+          if (x < width - 1) {
+            mask[detail::Offset(x + 1, y, width)] = true;
+          }
           if (y < height - 1) {
             mask[detail::Offset(x, y + 1, width)] = true;
             if (x < width - 1) {
@@ -798,10 +803,14 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
       for (int x = std::min(ax + 1, width - 1); x > 0; --x) {
         if (mask[detail::Offset(x, y, width)] &&
             transparent[detail::Offset(x, y, width)]) {
-          if (x > 0) mask[detail::Offset(x - 1, y, width)] = true;
+          if (x > 0) {
+            mask[detail::Offset(x - 1, y, width)] = true;
+          }
           if (y < height - 1) {
             mask[detail::Offset(x, y + 1, width)] = true;
-            if (x > 0) mask[detail::Offset(x - 1, y + 1, width)] = true;
+            if (x > 0) {
+              mask[detail::Offset(x - 1, y + 1, width)] = true;
+            }
           }
         }
       }
