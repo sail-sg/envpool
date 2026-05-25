@@ -33,7 +33,7 @@ from envpool.registration import list_all_envs, make_gymnasium, make_spec
 
 _TASK_CONFIGS = {
     "Goalcycle-demo-solo-v0": (1, 13, 7, 12, 3),
-    "MarlGrid-1AgentCluttered15x15-v0": (1, 15, 5, 30, 3),
+    "MarlGrid-1AgentCluttered15x15-v0": (1, 11, 5, 30, 3),
     "MarlGrid-2AgentEmpty9x9-v0": (2, 9, 7, 0, 3),
     "MarlGrid-3AgentCluttered11x11-v0": (3, 11, 7, 12, 3),
     "MarlGrid-3AgentCluttered15x15-v0": (3, 15, 7, 25, 3),
@@ -45,6 +45,8 @@ _COLOR_WALL = np.array([74, 65, 42], dtype=np.int16)
 _COLOR_GOAL = np.array([0, 255, 0], dtype=np.int16)
 _COLOR_BONUS = np.array([255, 255, 0], dtype=np.int16)
 _DIR_TO_VEC = ((1, 0), (0, 1), (-1, 0), (0, -1))
+_DETERMINISTIC_STEPS = 12
+_GOALCYCLE_ALIGN_STEPS = 20
 
 
 def _install_upstream_compat_modules() -> None:
@@ -313,6 +315,21 @@ def _make_upstream_env(task_id: str) -> Any:
     return getattr(upstream_envs, f"env_{env_index}")()
 
 
+def _upstream_task_config(task_id: str) -> tuple[int, int, int, int, int]:
+    oracle_env = _make_upstream_env(task_id)
+    try:
+        return (
+            len(oracle_env.agents),
+            int(oracle_env.width),
+            int(oracle_env.agents[0].view_size),
+            int(getattr(oracle_env, "n_clutter", 0)),
+            int(getattr(oracle_env, "n_bonus_tiles", 3)),
+        )
+    finally:
+        if hasattr(oracle_env, "close"):
+            oracle_env.close()
+
+
 def _player_order(info: dict[str, Any]) -> np.ndarray:
     players = info["players"]
     return np.lexsort((players["id"], players["env_id"]))
@@ -324,6 +341,10 @@ def _sort_players(value: np.ndarray, info: dict[str, Any]) -> np.ndarray:
 
 def _sort_envs(value: np.ndarray, info: dict[str, Any]) -> np.ndarray:
     return value[np.argsort(info["env_id"])]
+
+
+def _sorted_player_info(info: dict[str, Any], key: str) -> np.ndarray:
+    return _sort_players(info["players"][key], info)
 
 
 def _player_index(info: dict[str, Any], env_id: int, player_id: int) -> int:
@@ -532,6 +553,79 @@ def _find_bonus_excursion(
     raise AssertionError("could not find reachable bonus excursion")
 
 
+def _find_goal_position(
+    grid: list[list[str | None]],
+) -> tuple[int, int] | None:
+    goals = [
+        (x, y)
+        for y, row in enumerate(grid)
+        for x, cell in enumerate(row)
+        if cell == "goal"
+    ]
+    return goals[0] if len(goals) == 1 else None
+
+
+def _first_agent_goal_actions(
+    frame: np.ndarray,
+    info: dict[str, Any],
+    n_agents: int,
+    grid_size: int,
+) -> list[np.ndarray] | None:
+    grid = _classify_grid(frame, grid_size)
+    goal = _find_goal_position(grid)
+    if goal is None:
+        return None
+
+    agent0_index = _player_index(info, env_id=0, player_id=0)
+    start = tuple(info["players"]["pos"][agent0_index].astype(np.int64))
+    start_dir = int(info["players"]["dir"][agent0_index])
+    blocked = {
+        tuple(pos.astype(np.int64))
+        for index, pos in enumerate(info["players"]["pos"])
+        if int(info["players"]["id"][index]) != 0
+    }
+    path = _find_path(grid, start, goal, blocked=blocked)
+    if path is None:
+        return None
+    plan, _ = _actions_for_path(path, start_dir)
+
+    if not plan:
+        return [np.full(n_agents, 6, dtype=np.int32)]
+    rollout = []
+    for action_id in plan:
+        action = np.full(n_agents, 6, dtype=np.int32)
+        action[0] = action_id
+        rollout.append(action)
+    return rollout
+
+
+def _scripted_rollout_actions(n_agents: int, steps: int) -> list[np.ndarray]:
+    patterns = (
+        np.arange(n_agents, dtype=np.int32) % 7,
+        (np.arange(n_agents, dtype=np.int32) + 1) % 7,
+        (np.arange(n_agents, dtype=np.int32) + 2) % 7,
+        np.full(n_agents, 0, dtype=np.int32),
+        np.full(n_agents, 1, dtype=np.int32),
+        np.full(n_agents, 3, dtype=np.int32),
+        np.full(n_agents, 4, dtype=np.int32),
+        np.full(n_agents, 5, dtype=np.int32),
+        np.full(n_agents, 6, dtype=np.int32),
+    )
+    return [patterns[i % len(patterns)].copy() for i in range(steps)]
+
+
+def _non_moving_rollout_actions(n_agents: int, steps: int) -> list[np.ndarray]:
+    patterns = (
+        np.full(n_agents, 0, dtype=np.int32),
+        np.full(n_agents, 1, dtype=np.int32),
+        np.full(n_agents, 3, dtype=np.int32),
+        np.full(n_agents, 4, dtype=np.int32),
+        np.full(n_agents, 5, dtype=np.int32),
+        np.full(n_agents, 6, dtype=np.int32),
+    )
+    return [patterns[i % len(patterns)].copy() for i in range(steps)]
+
+
 def _sync_upstream_from_envpool(
     oracle_env: Any,
     frame: np.ndarray,
@@ -652,10 +746,13 @@ class MarlGridTest(absltest.TestCase):
             self.assertAlmostEqual(spec.config.prestige_scale, 2.0)
 
     def test_registry_matches_pinned_upstream(self) -> None:
-        """Check EnvPool tasks against the pinned upstream registry source."""
+        """Check EnvPool task IDs and configs against the pinned upstream."""
         self.assertEqual(
             sorted(_upstream_registered_ids()), sorted(_TASK_CONFIGS)
         )
+        for task_id, config in _TASK_CONFIGS.items():
+            with self.subTest(task_id=task_id):
+                self.assertEqual(_upstream_task_config(task_id), config)
 
     def test_multiplayer_step_shapes(self) -> None:
         """Validate player-shaped reset and step outputs."""
@@ -692,49 +789,75 @@ class MarlGridTest(absltest.TestCase):
             env.close()
 
     def test_same_seed_is_deterministic(self) -> None:
-        """Check same-seed rollouts independent of async return order."""
-        env0 = make_gymnasium("MarlGrid-4AgentEmpty9x9-v0", num_envs=2, seed=7)
-        env1 = make_gymnasium("MarlGrid-4AgentEmpty9x9-v0", num_envs=2, seed=7)
-        actions = [
-            np.array([0, 1, 2, 2, 0, 1, 2, 2], dtype=np.int32),
-            np.array([2, 2, 1, 0, 2, 2, 1, 0], dtype=np.int32),
-            np.array([1, 2, 2, 0, 1, 2, 2, 0], dtype=np.int32),
-        ]
-        try:
-            obs0, info0 = env0.reset()
-            obs1, info1 = env1.reset()
-            np.testing.assert_array_equal(
-                _sort_players(obs0, info0), _sort_players(obs1, info1)
-            )
-            np.testing.assert_array_equal(
-                _sort_players(info0["players"]["pos"], info0),
-                _sort_players(info1["players"]["pos"], info1),
-            )
-            for action in actions:
-                out0 = env0.step(_action_for_player_order(action, info0))
-                out1 = env1.step(_action_for_player_order(action, info1))
-                obs0, reward0, terminated0, truncated0, info0 = out0
-                obs1, reward1, terminated1, truncated1, info1 = out1
-                np.testing.assert_array_equal(
-                    _sort_players(obs0, info0), _sort_players(obs1, info1)
+        """Check all registered IDs are deterministic, including rendering."""
+        num_envs = 2
+        env_ids = np.arange(num_envs, dtype=np.int32)
+        for task_id, (n_agents, _, _, _, _) in _TASK_CONFIGS.items():
+            with self.subTest(task_id=task_id):
+                env0 = make_gymnasium(
+                    task_id,
+                    num_envs=num_envs,
+                    seed=7,
+                    render_mode="rgb_array",
                 )
-                np.testing.assert_array_equal(
-                    _sort_players(reward0, info0), _sort_players(reward1, info1)
+                env1 = make_gymnasium(
+                    task_id,
+                    num_envs=num_envs,
+                    seed=7,
+                    render_mode="rgb_array",
                 )
-                np.testing.assert_array_equal(
-                    _sort_envs(terminated0, info0),
-                    _sort_envs(terminated1, info1),
+                actions = _scripted_rollout_actions(
+                    n_agents * num_envs, _DETERMINISTIC_STEPS
                 )
-                np.testing.assert_array_equal(
-                    _sort_envs(truncated0, info0), _sort_envs(truncated1, info1)
-                )
-                np.testing.assert_array_equal(
-                    _sort_players(info0["players"]["pos"], info0),
-                    _sort_players(info1["players"]["pos"], info1),
-                )
-        finally:
-            env0.close()
-            env1.close()
+                try:
+                    obs0, info0 = env0.reset()
+                    obs1, info1 = env1.reset()
+                    np.testing.assert_array_equal(
+                        _sort_players(obs0, info0), _sort_players(obs1, info1)
+                    )
+                    np.testing.assert_array_equal(
+                        _sort_players(info0["players"]["pos"], info0),
+                        _sort_players(info1["players"]["pos"], info1),
+                    )
+                    np.testing.assert_array_equal(
+                        env0.render(env_ids), env1.render(env_ids)
+                    )
+                    for action in actions:
+                        out0 = env0.step(
+                            _action_for_player_order(action, info0)
+                        )
+                        out1 = env1.step(
+                            _action_for_player_order(action, info1)
+                        )
+                        obs0, reward0, terminated0, truncated0, info0 = out0
+                        obs1, reward1, terminated1, truncated1, info1 = out1
+                        np.testing.assert_array_equal(
+                            _sort_players(obs0, info0),
+                            _sort_players(obs1, info1),
+                        )
+                        np.testing.assert_array_equal(
+                            _sort_players(reward0, info0),
+                            _sort_players(reward1, info1),
+                        )
+                        np.testing.assert_array_equal(
+                            _sort_envs(terminated0, info0),
+                            _sort_envs(terminated1, info1),
+                        )
+                        np.testing.assert_array_equal(
+                            _sort_envs(truncated0, info0),
+                            _sort_envs(truncated1, info1),
+                        )
+                        for key in ("id", "done", "active", "pos", "dir"):
+                            np.testing.assert_array_equal(
+                                _sorted_player_info(info0, key),
+                                _sorted_player_info(info1, key),
+                            )
+                        np.testing.assert_array_equal(
+                            env0.render(env_ids), env1.render(env_ids)
+                        )
+                finally:
+                    env0.close()
+                    env1.close()
 
     def test_prestige_coloring_default_matches_explicit_false(self) -> None:
         """Check the default config keeps the existing fixed-color rendering."""
@@ -887,15 +1010,39 @@ class MarlGridTest(absltest.TestCase):
         """Compare step outputs with the pinned upstream source after reset sync."""
         for task_id, (n_agents, grid_size, _, _, _) in _TASK_CONFIGS.items():
             with self.subTest(task_id=task_id):
-                env = make_gymnasium(
-                    task_id,
-                    num_envs=1,
-                    seed=11,
-                    render_mode="rgb_array",
-                )
-                oracle_env = _make_upstream_env(task_id)
+                env = None
+                oracle_env = None
                 try:
-                    obs, info = env.reset()
+                    rollout_actions = None
+                    for seed in range(11, 31):
+                        env = make_gymnasium(
+                            task_id,
+                            num_envs=1,
+                            seed=seed,
+                            render_mode="rgb_array",
+                        )
+                        obs, info = env.reset()
+                        frame = env.render()
+                        self.assertIsNotNone(frame)
+                        assert frame is not None
+                        frame0 = frame[0]
+                        if task_id.startswith("Goalcycle-"):
+                            rollout_actions = _non_moving_rollout_actions(
+                                n_agents, _GOALCYCLE_ALIGN_STEPS
+                            )
+                            break
+                        rollout_actions = _first_agent_goal_actions(
+                            frame0, info, n_agents, grid_size
+                        )
+                        if rollout_actions is not None:
+                            break
+                        env.close()
+                        env = None
+                    self.assertIsNotNone(rollout_actions)
+                    assert env is not None
+                    assert rollout_actions is not None
+
+                    oracle_env = _make_upstream_env(task_id)
                     frame = env.render()
                     self.assertIsNotNone(frame)
                     assert frame is not None
@@ -911,20 +1058,8 @@ class MarlGridTest(absltest.TestCase):
                         _upstream_full_render(oracle_env),
                     )
 
-                    actions = [
-                        (np.arange(n_agents, dtype=np.int32) + 0) % 3,
-                        (np.arange(n_agents, dtype=np.int32) + 1) % 3,
-                        (np.arange(n_agents, dtype=np.int32) + 2) % 3,
-                        np.full(n_agents, 0, dtype=np.int32),
-                        np.full(n_agents, 1, dtype=np.int32),
-                    ]
-                    if task_id.startswith("Goalcycle-"):
-                        actions = [
-                            np.full(n_agents, 0, dtype=np.int32),
-                            np.full(n_agents, 1, dtype=np.int32),
-                            np.full(n_agents, 6, dtype=np.int32),
-                        ]
-                    for action in actions:
+                    saw_done = False
+                    for action in rollout_actions:
                         obs, reward, terminated, truncated, info = env.step({
                             "players": {
                                 "env_id": np.zeros(n_agents, dtype=np.int32),
@@ -934,24 +1069,33 @@ class MarlGridTest(absltest.TestCase):
                         oracle_obs, oracle_reward, oracle_done, _ = (
                             oracle_env.step(action.tolist())
                         )
-                        np.testing.assert_array_equal(
-                            _sort_players(obs, info),
-                            np.stack(oracle_obs),
-                        )
-                        np.testing.assert_array_equal(
+                        np.testing.assert_allclose(
                             _sort_players(reward, info),
                             oracle_reward,
+                            rtol=0,
+                            atol=1e-7,
                         )
                         self.assertEqual(
                             bool(terminated[0] or truncated[0]),
                             bool(oracle_done),
                         )
+                        saw_done = saw_done or bool(oracle_done)
                         oracle_info = _upstream_agent_info(oracle_env)
                         for key, value in oracle_info.items():
                             np.testing.assert_array_equal(
                                 _sort_players(info["players"][key], info),
                                 value,
                             )
+                        first_player_done = bool(oracle_info["done"][0])
+                        if first_player_done:
+                            # Upstream's tile cache can keep the just-deactivated
+                            # agent blended into the terminal goal tile. Stop the
+                            # pixel/obs comparison at that per-player done boundary.
+                            break
+                        np.testing.assert_array_equal(
+                            _sort_players(obs, info),
+                            np.stack(oracle_obs),
+                        )
                         frame = env.render()
                         self.assertIsNotNone(frame)
                         assert frame is not None
@@ -959,11 +1103,18 @@ class MarlGridTest(absltest.TestCase):
                             frame[0],
                             _upstream_full_render(oracle_env),
                         )
+                    if not task_id.startswith("Goalcycle-"):
+                        self.assertTrue(oracle_env.agents[0].done, task_id)
+                        if n_agents == 1:
+                            self.assertTrue(saw_done, task_id)
                     self.assertEqual(
                         frame0.shape, (grid_size * 32, grid_size * 32, 3)
                     )
                 finally:
-                    env.close()
+                    if env is not None:
+                        env.close()
+                    if oracle_env is not None and hasattr(oracle_env, "close"):
+                        oracle_env.close()
 
     def test_render_rgb_array_all_tasks(self) -> None:
         """Render every registered task after reset and after multiple steps."""
@@ -986,7 +1137,9 @@ class MarlGridTest(absltest.TestCase):
                         frame.shape, (2, native_size, native_size, 3)
                     )
                     self.assertGreater(int(frame.sum()), 0)
-                    for action_id in (2, 1):
+                    frame_again = env.render(np.array([0, 1], dtype=np.int32))
+                    np.testing.assert_array_equal(frame, frame_again)
+                    for action_id in (2, 1, 0, 6):
                         action = {
                             "players": {
                                 "env_id": info["players"]["env_id"],
@@ -1006,6 +1159,7 @@ class MarlGridTest(absltest.TestCase):
                         frame.shape, (2, native_size, native_size, 3)
                     )
                     self.assertGreater(int(frame.sum()), 0)
+                    np.testing.assert_array_equal(frame[1], env.render()[0])
                 finally:
                     env.close()
 

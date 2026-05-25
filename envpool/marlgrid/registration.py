@@ -47,7 +47,7 @@ _register(
     "MarlGrid-1AgentCluttered15x15-v0",
     n_agents=1,
     env_name="cluttered",
-    grid_size=15,
+    grid_size=11,
     view_size=5,
     n_clutter=30,
 )

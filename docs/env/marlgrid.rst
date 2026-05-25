@@ -8,6 +8,9 @@ Its GoalCycle environments were used in the 2021 paper by Ndousse and
 coauthors, `Emergent Social Learning via Multi-agent Reinforcement Learning
 <https://proceedings.mlr.press/v139/ndousse21a.html>`_.
 
+.. image:: ../_static/render_samples/marlgrid_official_compare.png
+   :align: center
+
 
 Options
 -------
@@ -82,6 +85,10 @@ Multi-agent tasks accept EnvPool's player-shaped action format, for example:
 
 Available Tasks
 ---------------
+
+Task IDs follow the pinned upstream registry. Note that upstream names
+``MarlGrid-1AgentCluttered15x15-v0`` as ``15x15`` even though that pinned
+registry config uses ``grid_size=11``.
 
 * ``MarlGrid-1AgentCluttered15x15-v0``
 * ``MarlGrid-3AgentCluttered11x11-v0``
