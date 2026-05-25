@@ -4,6 +4,9 @@ MarlGrid
 We use ``kandouss/marlgrid`` commit
 ``e88c40bad07653575ac11fe2f3a115e4de3d13e9`` as the reference implementation.
 MarlGrid is a multi-agent gridworld based on the original MiniGrid codebase.
+Its GoalCycle environments were used in the 2021 paper by Ndousse and
+coauthors, `Emergent Social Learning via Multi-agent Reinforcement Learning
+<https://proceedings.mlr.press/v139/ndousse21a.html>`_.
 
 
 Options
@@ -19,7 +22,16 @@ Options
   provided, it must contain exactly one seed per environment. Default to
   ``42``;
 * ``max_num_players (int)``: maximum number of players in one environment.
-  Each registered task defaults this to its number of agents.
+  Each registered task defaults this to its number of agents;
+* ``prestige_coloring (bool)``: use the ``kandouss/marlgrid`` prestige cue for
+  agent rendering. This option defaults to ``False`` to preserve the fixed
+  agent colors used by existing tasks. When enabled, positive rewards move an
+  agent color from red toward blue, negative rewards reset it to red, and
+  prestige decays after each active agent step;
+* ``prestige_beta (float)``: per-step prestige decay factor, default to
+  ``0.95``;
+* ``prestige_scale (float)``: reward-history scale used when mapping prestige
+  to color, default to ``2.0``.
 
 
 Observation Space

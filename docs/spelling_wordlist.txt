@@ -114,4 +114,6 @@ kandouss
 multi-agent
 partial-view
 Goalcycle
+GoalCycle
 gridworld
+Ndousse
