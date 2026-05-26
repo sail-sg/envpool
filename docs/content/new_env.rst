@@ -839,3 +839,35 @@ Make Tests
 
 You can add a test in ``envpool/make_test.py`` to see if the environment can be
 successfully created.
+
+
+New Environment Review Checklist
+--------------------------------
+
+Before opening a PR for a new environment family, make sure the implementation
+is complete end-to-end:
+
+- The runtime implementation is native C++; do not call or embed the official
+  Python environment from C++ runtime code.
+- Pin the exact upstream oracle version when one exists, and keep all tests
+  anchored to that version.
+- Register every intended upstream task ID or scenario. Do not collapse multiple
+  upstream IDs into one generic EnvPool task.
+- Add registry coverage that checks EnvPool task IDs and task configuration
+  values against the pinned upstream source when practical.
+- Add deterministic tests that replay the same external action sequence across
+  reset plus nontrivial multi-step rollouts for every registered ID. If render
+  is supported, include rendered frames in the determinism check.
+- Add step-level oracle alignment tests when an official implementation exists.
+  A reset-time state sync is acceptable when needed, but do not sync state
+  again during the rollout. Compare observations, rewards, terminated/truncated
+  semantics, exposed info, and renders when render output is expected to match.
+- Add render tests for reset frames, multi-step frames, batched rendering, and
+  env-id selection when rendering is supported.
+- Add the new family to ``envpool/make_test.py`` so source builds and installed
+  release wheels exercise ``envpool.make_*`` for the registered import path.
+- Update the environment docs, docs index, README support list, and release
+  packaging. If an official renderer exists, add an EnvPool-vs-official render
+  comparison image to the environment doc page.
+- Keep tolerances narrow, platform-scoped, and documented. Do not skip new
+  environment tests on a supported platform just to make CI pass.

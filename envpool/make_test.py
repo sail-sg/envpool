@@ -69,6 +69,10 @@ _FAMILY_SMOKE_TASKS: dict[str, tuple[str, ...]] = {
     "envpool.gfootball": ("gfootball/academy_empty_goal_close-v1",),
     "envpool.highway": ("HighwayFast-v0",),
     "envpool.jumanji": ("Game2048-v1",),
+    "envpool.marlgrid": (
+        "MarlGrid-2AgentEmpty9x9-v0",
+        "Goalcycle-demo-solo-v0",
+    ),
     "envpool.minigrid": ("MiniGrid-DoorKey-8x8-v0",),
     "envpool.mujoco.dmc": ("WalkerWalk-v1",),
     "envpool.mujoco.gym": ("Ant-v5",),

@@ -39,3 +39,15 @@ If you are unsure about any of these, don't hesitate to ask. We are here to help
 - [ ] I have reformatted the code using `make format` (**required**)
 - [ ] I have checked the code using `make lint` (**required**)
 - [ ] I have ensured `make bazel-test` pass. (**required**)
+
+## New Environment Checklist
+
+For PRs that add a new environment family or new upstream task family:
+
+- [ ] Runtime logic is native C++ and does not bridge to the official Python environment.
+- [ ] All intended upstream task IDs/scenarios are registered, documented, and covered by tests.
+- [ ] The upstream oracle/version is pinned, and tests check EnvPool registration/configs against it.
+- [ ] Determinism tests cover reset plus multi-step rollouts for every registered ID, including render frames when rendering is supported.
+- [ ] Oracle alignment tests compare step-level observations, rewards, done/truncation, info, and renders after at most one reset-time state sync.
+- [ ] Render tests cover reset, multi-step, batched render/env-id selection, and docs include EnvPool-vs-official images when an official renderer exists.
+- [ ] `envpool/make_test.py`, release packaging, docs, and README support lists are updated.

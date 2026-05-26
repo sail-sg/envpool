@@ -94,6 +94,7 @@ stable version through `envpool.readthedocs.io/en/stable/
    env/gfootball
    env/highway
    env/jumanji
+   env/marlgrid
    env/minigrid
    env/gymnasium_robotics
    env/metaworld

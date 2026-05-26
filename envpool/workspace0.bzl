@@ -814,6 +814,18 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     )
 
     maybe(
+        http_archive,
+        name = "marlgrid",
+        sha256 = "8871232e3abf0946dd7181dd4c332a521fb38a6b33bfb730d575c879990ff8cc",
+        strip_prefix = "marlgrid-e88c40bad07653575ac11fe2f3a115e4de3d13e9",
+        type = "tar.gz",
+        urls = [
+            "https://codeload.github.com/kandouss/marlgrid/tar.gz/e88c40bad07653575ac11fe2f3a115e4de3d13e9",
+        ],
+        build_file = "//third_party/marlgrid:marlgrid.BUILD",
+    )
+
+    maybe(
         cuda_configure,
         name = "cuda",
     )
