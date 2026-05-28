@@ -67,26 +67,27 @@ def preload_windows_gl_dlls(
     if resolved_dll_dir is None:
         return
     resolved_str = str(resolved_dll_dir)
-    if prepend_path:
-        path_entries = os.environ.get("PATH", "").split(os.pathsep)
-        if resolved_str not in path_entries:
-            filtered_entries = [entry for entry in path_entries if entry]
-            os.environ["PATH"] = os.pathsep.join([
-                resolved_str,
-                *filtered_entries,
-            ])
-    if resolved_str not in _REGISTERED_DLL_DIRS:
-        _WINDOWS_DLL_HANDLES.append(os.add_dll_directory(resolved_str))
-        _REGISTERED_DLL_DIRS.add(resolved_str)
-    win_dll = getattr(ctypes, "WinDLL", None)
-    if win_dll is None:
-        return
-    for dll_name in ("libglapi.dll", "libgallium_wgl.dll", "opengl32.dll"):
-        dll_path = resolved_dll_dir / dll_name
-        dll_path_str = str(dll_path)
-        if dll_path.is_file() and dll_path_str not in _PRELOADED_DLL_PATHS:
-            _WINDOWS_DLL_HANDLES.append(win_dll(str(dll_path)))
-            _PRELOADED_DLL_PATHS.add(dll_path_str)
+    with _CONTEXT_LOCK:
+        if prepend_path:
+            path_entries = os.environ.get("PATH", "").split(os.pathsep)
+            if resolved_str not in path_entries:
+                filtered_entries = [entry for entry in path_entries if entry]
+                os.environ["PATH"] = os.pathsep.join([
+                    resolved_str,
+                    *filtered_entries,
+                ])
+        if resolved_str not in _REGISTERED_DLL_DIRS:
+            _WINDOWS_DLL_HANDLES.append(os.add_dll_directory(resolved_str))
+            _REGISTERED_DLL_DIRS.add(resolved_str)
+        win_dll = getattr(ctypes, "WinDLL", None)
+        if win_dll is None:
+            return
+        for dll_name in ("libglapi.dll", "libgallium_wgl.dll", "opengl32.dll"):
+            dll_path = resolved_dll_dir / dll_name
+            dll_path_str = str(dll_path)
+            if dll_path.is_file() and dll_path_str not in _PRELOADED_DLL_PATHS:
+                _WINDOWS_DLL_HANDLES.append(win_dll(str(dll_path)))
+                _PRELOADED_DLL_PATHS.add(dll_path_str)
 
 
 def _glfw_error_details(glfw: object) -> str:
