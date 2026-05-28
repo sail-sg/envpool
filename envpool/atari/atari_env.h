@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <deque>
+#include <iostream>
 #include <memory>
 #include <random>
 #include <sstream>
@@ -203,6 +204,12 @@ class AtariEnv : public Env<AtariEnvSpec>, public RenderableEnv {
     float reward = 0.0;
     done_ = false;
     int act = action["action"_];
+    if (act < 0 || act >= static_cast<int>(action_set_.size())) {
+      std::cerr << "AtariEnv::Step: action " << act
+                << " is out of range [0, " << action_set_.size()
+                << "), clamping to valid range." << std::endl;
+      act = std::clamp(act, 0, static_cast<int>(action_set_.size()) - 1);
+    }
     int skip_id = frame_skip_;
     int pooled_frame_count = std::min(frame_skip_, 2);
     for (; skip_id > 0 && !done_; --skip_id) {
