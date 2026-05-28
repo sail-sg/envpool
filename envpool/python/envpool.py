@@ -355,8 +355,14 @@ class EnvPoolMixin(ABC):
                 import cv2
 
                 cv2.destroyWindow(self._render_window_name)
-            except Exception:
+            except ImportError:
                 pass
+            except Exception:
+                warnings.warn(
+                    "Failed to close render window",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
             self._render_window_open = False
         close = getattr(super(), "close", None)
         if close is not None:

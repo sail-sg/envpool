@@ -94,7 +94,10 @@ class EnvRegistry:
         if "base_path" not in kwargs:
             kwargs["base_path"] = base_path
         for alias in (task_id, *aliases):
-            assert alias not in self.specs
+            if alias in self.specs:
+                raise ValueError(
+                    f"Duplicate registration: '{alias}' is already registered."
+                )
             self.specs[alias] = (import_path, spec_cls, dict(kwargs))
             self.envpools[alias] = {
                 "dm": (import_path, dm_cls),
@@ -216,10 +219,11 @@ class EnvRegistry:
         # check arguments
         if "seed" in kwargs:  # Issue 214
             if self._is_env_seed_sequence(kwargs["seed"]):
-                assert "env_seed" not in kwargs, (
-                    "Pass either `seed` as an int or seed list, or "
-                    "`env_seed`, but not both."
-                )
+                if "env_seed" in kwargs:
+                    raise ValueError(
+                        "Pass either `seed` as an int or seed list, or "
+                        "`env_seed`, but not both."
+                    )
                 kwargs["env_seed"] = self._normalize_env_seed(
                     kwargs["seed"],
                     kwargs.get("num_envs", 1),
@@ -233,11 +237,17 @@ class EnvRegistry:
                 kwargs.get("num_envs", 1),
             )
         if "num_envs" in kwargs:
-            assert kwargs["num_envs"] >= 1
+            if kwargs["num_envs"] < 1:
+                raise ValueError("num_envs must be >= 1.")
         if "batch_size" in kwargs:
-            assert 0 <= kwargs["batch_size"] <= kwargs["num_envs"]
+            if not (0 <= kwargs["batch_size"] <= kwargs["num_envs"]):
+                raise ValueError(
+                    f"batch_size must be in [0, num_envs({kwargs['num_envs']}), "
+                    f"got {kwargs['batch_size']}."
+                )
         if "max_num_players" in kwargs:
-            assert 1 <= kwargs["max_num_players"]
+            if kwargs["max_num_players"] < 1:
+                raise ValueError("max_num_players must be >= 1.")
 
         spec_cls = getattr(importlib.import_module(import_path), spec_cls)
         config = spec_cls.gen_config(**kwargs)
@@ -274,10 +284,14 @@ class EnvRegistry:
                 "after resets."
             )
 
-        assert task_id in self.specs, (
-            f"{task_id} is not supported, `envpool.list_all_envs()` may help."
-        )
-        assert env_type in ["dm", "gymnasium"]
+        if task_id not in self.specs:
+            raise ValueError(
+                f"{task_id} is not supported, `envpool.list_all_envs()` may help."
+            )
+        if env_type not in ["dm", "gymnasium"]:
+            raise ValueError(
+                f"env_type must be 'dm' or 'gymnasium', got '{env_type}'."
+            )
 
         spec = self._make_env_spec(
             task_id,
@@ -312,9 +326,10 @@ class EnvRegistry:
     @staticmethod
     def _assert_int32_seed(seed: Any) -> None:
         INT_MAX = 2**31
-        assert -INT_MAX <= seed < INT_MAX, (
-            f"Seed should be in range of int32, got {seed}"
-        )
+        if not (-INT_MAX <= seed < INT_MAX):
+            raise ValueError(
+                f"Seed should be in range of int32, got {seed}"
+            )
 
     @staticmethod
     def _is_env_seed_sequence(seed: Any) -> bool:
@@ -324,17 +339,19 @@ class EnvRegistry:
 
     def _normalize_env_seed(self, seed: Any, num_envs: int) -> list[int]:
         if isinstance(seed, np.ndarray):
-            assert seed.ndim == 1, (
-                "`seed` as an array must be 1-dimensional, "
-                f"got shape {seed.shape}"
-            )
+            if seed.ndim != 1:
+                raise ValueError(
+                    "`seed` as an array must be 1-dimensional, "
+                    f"got shape {seed.shape}"
+                )
             seed = seed.tolist()
         else:
             seed = list(seed)
-        assert len(seed) == num_envs, (
-            "When `seed` is a sequence, its length must match `num_envs`, "
-            f"got len(seed) = {len(seed)} and num_envs = {num_envs}"
-        )
+        if len(seed) != num_envs:
+            raise ValueError(
+                "When `seed` is a sequence, its length must match `num_envs`, "
+                f"got len(seed) = {len(seed)} and num_envs = {num_envs}"
+            )
         normalized_seed = [int(s) for s in seed]
         for s in normalized_seed:
             self._assert_int32_seed(s)
