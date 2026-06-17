@@ -282,6 +282,18 @@ class _MakeTest(absltest.TestCase):
             env_gym.close()
             env_gymnasium.close()
 
+    def test_make_batch_size_without_num_envs(self) -> None:
+        # Regression: passing batch_size without num_envs used to raise
+        # KeyError on the bare kwargs["num_envs"] subscript in
+        # EnvRegistry._make_env_spec. batch_size=0 means "default to
+        # num_envs" (see core/env_spec.h) and must be accepted; an
+        # out-of-range batch_size must raise AssertionError, not KeyError.
+        env = envpool.make_gymnasium("CartPole-v1", batch_size=0)
+        env.close()
+        self.assertRaises(
+            AssertionError, envpool.make_gymnasium, "CartPole-v1", batch_size=2
+        )
+
     def test_make_vizdoom(self) -> None:
         try:
             with _temporary_workdir(prefix="envpool-vizdoom-smoke-"):

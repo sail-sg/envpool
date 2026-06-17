@@ -235,7 +235,7 @@ class EnvRegistry:
         if "num_envs" in kwargs:
             assert kwargs["num_envs"] >= 1
         if "batch_size" in kwargs:
-            assert 0 <= kwargs["batch_size"] <= kwargs["num_envs"]
+            assert 0 <= kwargs["batch_size"] <= kwargs.get("num_envs", 1)
         if "max_num_players" in kwargs:
             assert 1 <= kwargs["max_num_players"]
 
