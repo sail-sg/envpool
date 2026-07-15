@@ -62,10 +62,23 @@ enum class AgentColor : std::uint8_t {
   kPink = 5,
 };
 
+enum class MatrixObsChannel : std::uint8_t {
+  kEmpty = 0,
+  kWall = 1,
+  kGoal = 2,
+  kBonus = 3,
+  kLava = 4,
+  kAgent = 5,
+  kAgentRed = 6,
+  kAgentGreen = 7,
+  kAgentBlue = 8,
+};
+
 using Rgb = std::array<std::uint8_t, 3>;
 
 inline constexpr int kTilePixels = 32;
 inline constexpr int kTileSubdivs = 3;
+inline constexpr int kMatrixObsChannels = 9;
 inline constexpr double kPi = 3.14159265358979323846;
 inline constexpr Rgb kShadowColor = {35, 25, 30};
 inline constexpr Rgb kWorstColor = {74, 65, 42};
@@ -376,15 +389,33 @@ class MarlGridEnvFns {
                     "reset_on_mistake"_.Bind(false), "reward_decay"_.Bind(true),
                     "respawn"_.Bind(false), "ghost_mode"_.Bind(true),
                     "prestige_coloring"_.Bind(false),
-                    "prestige_beta"_.Bind(0.95f), "prestige_scale"_.Bind(2.0f));
+                    "prestige_beta"_.Bind(0.95f), "prestige_scale"_.Bind(2.0f),
+                    "observation_format"_.Bind(std::string("pixels")));
   }
 
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    int obs_size = conf["view_size"_] * conf["view_tile_size"_];
+    const std::string observation_format = conf["observation_format"_];
+    if (observation_format != "pixels" && observation_format != "matrix" &&
+        observation_format != "full_matrix") {
+      throw std::runtime_error(
+          "MarlGrid observation_format must be 'pixels', 'matrix', or "
+          "'full_matrix'");
+    }
+    const bool matrix_observation = observation_format == "matrix";
+    const bool full_matrix_observation = observation_format == "full_matrix";
+    int obs_size = full_matrix_observation
+                       ? conf["grid_size"_]
+                       : (matrix_observation
+                              ? conf["view_size"_]
+                              : conf["view_size"_] * conf["view_tile_size"_]);
+    int obs_channels = (matrix_observation || full_matrix_observation)
+                           ? detail::kMatrixObsChannels
+                           : 3;
     int bound = conf["grid_size"_];
     return MakeDict(
-        "obs"_.Bind(Spec<std::uint8_t>({-1, obs_size, obs_size, 3}, {0, 255})),
+        "obs"_.Bind(Spec<std::uint8_t>({-1, obs_size, obs_size, obs_channels},
+                                       {0, 255})),
         "info:players.id"_.Bind(Spec<int>({-1}, {0, conf["max_num_players"_]})),
         "info:players.done"_.Bind(Spec<bool>({-1})),
         "info:players.active"_.Bind(Spec<bool>({-1})),
@@ -423,6 +454,7 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
         prestige_coloring_(spec.config["prestige_coloring"_]),
         prestige_beta_(spec.config["prestige_beta"_]),
         prestige_scale_(spec.config["prestige_scale"_]),
+        observation_format_(spec.config["observation_format"_]),
         max_episode_steps_(spec.config["max_episode_steps"_]) {
     CHECK_GE(max_num_players_, n_agents_);
     CHECK_GE(grid_size_, 3);
@@ -431,6 +463,12 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
     CHECK_GE(prestige_beta_, 0.0f);
     CHECK_LE(prestige_beta_, 1.0f);
     CHECK_GT(prestige_scale_, 0.0f);
+    if (observation_format_ != "pixels" && observation_format_ != "matrix" &&
+        observation_format_ != "full_matrix") {
+      throw std::runtime_error(
+          "MarlGrid observation_format must be 'pixels', 'matrix', or "
+          "'full_matrix'");
+    }
     agents_.resize(n_agents_);
     for (int i = 0; i < n_agents_; ++i) {
       agents_[i].color = detail::AgentColorByIndex(i);
@@ -546,6 +584,7 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
   bool prestige_coloring_{false};
   float prestige_beta_{0.95f};
   float prestige_scale_{2.0f};
+  std::string observation_format_{"pixels"};
   int max_episode_steps_{100};
   int step_count_{0};
   bool done_{true};
@@ -844,25 +883,29 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
     return detail::RenderAgentTile(agent.color, agent.dir, tile_size);
   }
 
+  [[nodiscard]] int TopAgentForCell(const detail::Cell* cell,
+                                    int top_agent_id) const {
+    if (cell == nullptr) {
+      return -1;
+    }
+    if (top_agent_id >= 0 &&
+        std::find(cell->agents.begin(), cell->agents.end(), top_agent_id) !=
+            cell->agents.end() &&
+        agents_[top_agent_id].active) {
+      return top_agent_id;
+    }
+    for (int agent_id : cell->agents) {
+      if (agents_[agent_id].active) {
+        return agent_id;
+      }
+    }
+    return -1;
+  }
+
   [[nodiscard]] std::vector<std::uint8_t> RenderTile(const detail::Cell* cell,
                                                      int top_agent_id,
                                                      int tile_size) const {
-    int chosen_agent = -1;
-    if (cell != nullptr) {
-      if (top_agent_id >= 0 &&
-          std::find(cell->agents.begin(), cell->agents.end(), top_agent_id) !=
-              cell->agents.end() &&
-          agents_[top_agent_id].active) {
-        chosen_agent = top_agent_id;
-      } else {
-        for (int agent_id : cell->agents) {
-          if (agents_[agent_id].active) {
-            chosen_agent = agent_id;
-            break;
-          }
-        }
-      }
-    }
+    int chosen_agent = TopAgentForCell(cell, top_agent_id);
     if (cell == nullptr || cell->type == detail::CellType::kEmpty) {
       if (chosen_agent >= 0) {
         auto tile = RenderAgentTile(chosen_agent, tile_size);
@@ -953,6 +996,113 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
     std::memcpy(output, image.data(), image.size());
   }
 
+  static int MatrixObsOffset(int x, int y, int channel, int obs_size) {
+    return (y * obs_size + x) * detail::kMatrixObsChannels + channel;
+  }
+
+  void WriteMatrixBaseTile(const detail::Cell* cell, int x, int y, int obs_size,
+                           std::uint8_t* output) const {
+    int base_channel = static_cast<int>(detail::MatrixObsChannel::kEmpty);
+    if (cell != nullptr) {
+      if (cell->type == detail::CellType::kWall) {
+        base_channel = static_cast<int>(detail::MatrixObsChannel::kWall);
+      } else if (cell->type == detail::CellType::kGoal) {
+        base_channel = static_cast<int>(detail::MatrixObsChannel::kGoal);
+      } else if (cell->type == detail::CellType::kBonus) {
+        base_channel = static_cast<int>(detail::MatrixObsChannel::kBonus);
+      } else if (cell->type == detail::CellType::kLava) {
+        base_channel = static_cast<int>(detail::MatrixObsChannel::kLava);
+      }
+    }
+    output[MatrixObsOffset(x, y, base_channel, obs_size)] = 255;
+  }
+
+  void WriteMatrixAgentTile(int chosen_agent, int x, int y, int obs_size,
+                            std::uint8_t* output) const {
+    if (chosen_agent < 0) {
+      return;
+    }
+    detail::Rgb color =
+        prestige_coloring_
+            ? detail::PrestigeColor(agents_[chosen_agent].prestige,
+                                    prestige_scale_)
+            : detail::ColorValue(agents_[chosen_agent].color);
+    output[MatrixObsOffset(
+        x, y, static_cast<int>(detail::MatrixObsChannel::kAgent), obs_size)] =
+        255;
+    output[MatrixObsOffset(
+        x, y, static_cast<int>(detail::MatrixObsChannel::kAgentRed),
+        obs_size)] = color[0];
+    output[MatrixObsOffset(
+        x, y, static_cast<int>(detail::MatrixObsChannel::kAgentGreen),
+        obs_size)] = color[1];
+    output[MatrixObsOffset(
+        x, y, static_cast<int>(detail::MatrixObsChannel::kAgentBlue),
+        obs_size)] = color[2];
+  }
+
+  void WriteAgentMatrixObs(int agent_id, std::uint8_t* output) const {
+    int obs_values = view_size_ * view_size_ * detail::kMatrixObsChannels;
+    std::fill(output, output + obs_values, 0);
+    for (int y = 0; y < view_size_; ++y) {
+      for (int x = 0; x < view_size_; ++x) {
+        output[MatrixObsOffset(
+            x, y, static_cast<int>(detail::MatrixObsChannel::kEmpty),
+            view_size_)] = 255;
+      }
+    }
+
+    const detail::Agent& agent = agents_[agent_id];
+    if (!agent.active) {
+      return;
+    }
+    int rot_k = (agent.dir + 1) % 4;
+    auto [top_x, top_y] = ViewTopLeft(agent);
+    std::vector<const detail::Cell*> view_cells(view_size_ * view_size_,
+                                                nullptr);
+    std::vector<bool> transparent(view_size_ * view_size_, true);
+    for (int y = 0; y < view_size_; ++y) {
+      for (int x = 0; x < view_size_; ++x) {
+        auto [sx, sy] = detail::RotateCoord(x, y, view_size_, rot_k);
+        int wx = top_x + sx;
+        int wy = top_y + sy;
+        if (InBounds(wx, wy)) {
+          const detail::Cell& cell = CellAt(wx, wy);
+          view_cells[detail::Offset(x, y, view_size_)] = &cell;
+          transparent[detail::Offset(x, y, view_size_)] = cell.CanSeeBehind();
+        }
+      }
+    }
+    std::vector<bool> visible = VisibilityMask(transparent);
+    for (int y = 0; y < view_size_; ++y) {
+      for (int x = 0; x < view_size_; ++x) {
+        if (!visible[detail::Offset(x, y, view_size_)]) {
+          continue;
+        }
+        const detail::Cell* cell = view_cells[detail::Offset(x, y, view_size_)];
+        for (int channel = 0; channel < 5; ++channel) {
+          output[MatrixObsOffset(x, y, channel, view_size_)] = 0;
+        }
+        WriteMatrixBaseTile(cell, x, y, view_size_, output);
+        WriteMatrixAgentTile(TopAgentForCell(cell, agent_id), x, y, view_size_,
+                             output);
+      }
+    }
+  }
+
+  void WriteAgentFullMatrixObs(int agent_id, std::uint8_t* output) const {
+    int obs_values = grid_size_ * grid_size_ * detail::kMatrixObsChannels;
+    std::fill(output, output + obs_values, 0);
+    for (int y = 0; y < grid_size_; ++y) {
+      for (int x = 0; x < grid_size_; ++x) {
+        const detail::Cell& cell = CellAt(x, y);
+        WriteMatrixBaseTile(&cell, x, y, grid_size_, output);
+        WriteMatrixAgentTile(TopAgentForCell(&cell, agent_id), x, y, grid_size_,
+                             output);
+      }
+    }
+  }
+
   void ResizeNearest(const std::uint8_t* src, int src_width, int src_height,
                      std::uint8_t* dst, int dst_width, int dst_height) const {
     for (int y = 0; y < dst_height; ++y) {
@@ -975,7 +1125,15 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
       state["info:players.pos"_](i, 1) = agents_[i].y;
       state["info:players.dir"_][i] = agents_[i].dir;
       state["reward"_][i] = last_rewards_[i];
-      RenderAgentObs(i, static_cast<std::uint8_t*>(state["obs"_][i].Data()));
+      if (observation_format_ == "matrix") {
+        WriteAgentMatrixObs(
+            i, static_cast<std::uint8_t*>(state["obs"_][i].Data()));
+      } else if (observation_format_ == "full_matrix") {
+        WriteAgentFullMatrixObs(
+            i, static_cast<std::uint8_t*>(state["obs"_][i].Data()));
+      } else {
+        RenderAgentObs(i, static_cast<std::uint8_t*>(state["obs"_][i].Data()));
+      }
     }
   }
 };

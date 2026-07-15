@@ -44,6 +44,15 @@ _TASK_CONFIGS = {
 _COLOR_WALL = np.array([74, 65, 42], dtype=np.int16)
 _COLOR_GOAL = np.array([0, 255, 0], dtype=np.int16)
 _COLOR_BONUS = np.array([255, 255, 0], dtype=np.int16)
+_MATRIX_EMPTY = 0
+_MATRIX_WALL = 1
+_MATRIX_GOAL = 2
+_MATRIX_BONUS = 3
+_MATRIX_LAVA = 4
+_MATRIX_AGENT = 5
+_MATRIX_AGENT_RED = 6
+_MATRIX_AGENT_GREEN = 7
+_MATRIX_AGENT_BLUE = 8
 _DIR_TO_VEC = ((1, 0), (0, 1), (-1, 0), (0, -1))
 _DETERMINISTIC_STEPS = 12
 _GOALCYCLE_ALIGN_STEPS = 20
@@ -744,6 +753,7 @@ class MarlGridTest(absltest.TestCase):
             self.assertFalse(spec.config.prestige_coloring)
             self.assertAlmostEqual(spec.config.prestige_beta, 0.95)
             self.assertAlmostEqual(spec.config.prestige_scale, 2.0)
+            self.assertEqual(spec.config.observation_format, "pixels")
 
     def test_registry_matches_pinned_upstream(self) -> None:
         """Check EnvPool task IDs and configs against the pinned upstream."""
@@ -785,6 +795,93 @@ class MarlGridTest(absltest.TestCase):
             self.assertEqual(terminated.shape, (2,))
             self.assertEqual(truncated.shape, (2,))
             self.assertEqual(info["players"]["done"].shape, (6,))
+        finally:
+            env.close()
+
+    def test_matrix_observation_shapes(self) -> None:
+        """Validate semantic matrix observations from EnvPool directly."""
+        env = make_gymnasium(
+            "Goalcycle-demo-solo-v0",
+            num_envs=1,
+            seed=0,
+            observation_format="matrix",
+        )
+        try:
+            obs, info = env.reset()
+            self.assertEqual(obs.shape, (1, 7, 7, 9))
+            self.assertEqual(obs.dtype, np.uint8)
+            ego_tile = obs[0, 5, 3]
+            self.assertEqual(ego_tile[_MATRIX_AGENT], 255)
+            np.testing.assert_array_equal(
+                ego_tile[
+                    [
+                        _MATRIX_AGENT_RED,
+                        _MATRIX_AGENT_GREEN,
+                        _MATRIX_AGENT_BLUE,
+                    ]
+                ],
+                np.array([255, 0, 0], dtype=np.uint8),
+            )
+            base_sum = obs[..., :5].sum(axis=-1)
+            np.testing.assert_array_equal(
+                base_sum, np.full((1, 7, 7), 255, dtype=np.uint64)
+            )
+
+            action = {
+                "players": {
+                    "env_id": info["players"]["env_id"],
+                    "action": np.array([2], dtype=np.int32),
+                },
+            }
+            obs, reward, terminated, truncated, info = env.step(action)
+            self.assertEqual(obs.shape, (1, 7, 7, 9))
+            self.assertEqual(reward.shape, (1,))
+            self.assertEqual(terminated.shape, (1,))
+            self.assertEqual(truncated.shape, (1,))
+        finally:
+            env.close()
+
+    def test_full_matrix_observation_shapes(self) -> None:
+        """Validate global semantic matrix observations from EnvPool directly."""
+        env = make_gymnasium(
+            "Goalcycle-demo-solo-v0",
+            num_envs=1,
+            seed=0,
+            observation_format="full_matrix",
+        )
+        try:
+            obs, info = env.reset()
+            self.assertEqual(obs.shape, (1, 13, 13, 9))
+            self.assertEqual(obs.dtype, np.uint8)
+            agent_x, agent_y = info["players"]["pos"][0]
+            agent_tile = obs[0, agent_y, agent_x]
+            self.assertEqual(agent_tile[_MATRIX_AGENT], 255)
+            np.testing.assert_array_equal(
+                agent_tile[
+                    [
+                        _MATRIX_AGENT_RED,
+                        _MATRIX_AGENT_GREEN,
+                        _MATRIX_AGENT_BLUE,
+                    ]
+                ],
+                np.array([255, 0, 0], dtype=np.uint8),
+            )
+            base_sum = obs[..., :5].sum(axis=-1)
+            np.testing.assert_array_equal(
+                base_sum, np.full((1, 13, 13), 255, dtype=np.uint64)
+            )
+
+            action = {
+                "players": {
+                    "env_id": info["players"]["env_id"],
+                    "action": np.array([2], dtype=np.int32),
+                },
+            }
+            obs, reward, terminated, truncated, info = env.step(action)
+            self.assertEqual(obs.shape, (1, 13, 13, 9))
+            self.assertEqual(reward.shape, (1,))
+            self.assertEqual(terminated.shape, (1,))
+            self.assertEqual(truncated.shape, (1,))
         finally:
             env.close()
 
