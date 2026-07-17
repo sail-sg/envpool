@@ -222,7 +222,7 @@ class EnvPoolMixin(ABC):
 
     @property
     def is_async(self: EnvPool) -> bool:
-        """Whether this env is in sync mode or async mode."""
+        """Return if this env is in sync mode or async mode."""
         return (
             self.config["batch_size"] > 0
             and self.config["num_envs"] != self.config["batch_size"]

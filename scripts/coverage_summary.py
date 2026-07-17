@@ -67,7 +67,7 @@ class CoverageTotals:
 
     @property
     def line_ratio(self) -> float | None:
-        """Line coverage ratio, if available."""
+        """Return the line coverage ratio, if available."""
         if self.lines_found == 0:
             return None
         return self.lines_hit / self.lines_found

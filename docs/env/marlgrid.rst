@@ -34,15 +34,40 @@ Options
 * ``prestige_beta (float)``: per-step prestige decay factor, default to
   ``0.95``;
 * ``prestige_scale (float)``: reward-history scale used when mapping prestige
-  to color, default to ``2.0``.
+  to color, default to ``2.0``;
+* ``observation_format (str)``: observation representation. ``"pixels"``
+  (default) returns the existing RGB partial view, ``"matrix"`` returns an
+  egocentric semantic partial view, and ``"full_matrix"`` returns the
+  world-oriented semantic grid.
 
 
 Observation Space
 -----------------
 
-MarlGrid returns one RGB partial-view image per player. The default registered
-tasks use ``view_tile_size=8`` and expose ``obs`` as a uint8 tensor with shape
-``(view_tile_size * view_size, view_tile_size * view_size, 3)`` per player.
+MarlGrid returns one uint8 observation per player. Its shape depends on
+``observation_format``:
+
+* ``pixels``: ``(view_tile_size * view_size, view_tile_size * view_size, 3)``.
+  This is the existing RGB partial view. The default registered tasks use
+  ``view_tile_size=8``;
+* ``matrix``: ``(view_size, view_size, 13)``. This is the agent's egocentric
+  partial view. Occluded cells and every cell for an inactive player are all
+  zero;
+* ``full_matrix``: ``(grid_size, grid_size, 13)``. This is the global grid in
+  world coordinates. Every cell for an inactive player is zero.
+
+For both matrix formats, channels are:
+
+* ``0``--``4``: one-hot empty, wall, goal, bonus, and lava base tiles;
+* ``5``: agent presence;
+* ``6``--``8``: agent red, green, and blue values. These contain the prestige
+  color when ``prestige_coloring=True``;
+* ``9``--``12``: one-hot agent direction: right, down, left, and up.
+
+One visible base-tile channel and every active one-hot channel use value
+``255``. An agent can occupy a base object, so base-tile and agent channels may
+both be set. Directions in ``matrix`` use the rotated egocentric coordinates;
+directions in ``full_matrix`` use world coordinates.
 
 Player metadata is returned under ``info["players"]``:
 

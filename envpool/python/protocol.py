@@ -234,7 +234,7 @@ class EnvPool(Protocol):
 
     @property
     def is_async(self) -> bool:
-        """Whether this env is in sync mode or async mode."""
+        """Return if this env is in sync mode or async mode."""
 
     @property
     def observation_space(self) -> Any:

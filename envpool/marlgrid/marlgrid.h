@@ -72,13 +72,17 @@ enum class MatrixObsChannel : std::uint8_t {
   kAgentRed = 6,
   kAgentGreen = 7,
   kAgentBlue = 8,
+  kAgentDirRight = 9,
+  kAgentDirDown = 10,
+  kAgentDirLeft = 11,
+  kAgentDirUp = 12,
 };
 
 using Rgb = std::array<std::uint8_t, 3>;
 
 inline constexpr int kTilePixels = 32;
 inline constexpr int kTileSubdivs = 3;
-inline constexpr int kMatrixObsChannels = 9;
+inline constexpr int kMatrixObsChannels = 13;
 inline constexpr double kPi = 3.14159265358979323846;
 inline constexpr Rgb kShadowColor = {35, 25, 30};
 inline constexpr Rgb kWorstColor = {74, 65, 42};
@@ -402,16 +406,15 @@ class MarlGridEnvFns {
           "MarlGrid observation_format must be 'pixels', 'matrix', or "
           "'full_matrix'");
     }
-    const bool matrix_observation = observation_format == "matrix";
-    const bool full_matrix_observation = observation_format == "full_matrix";
-    int obs_size = full_matrix_observation
-                       ? conf["grid_size"_]
-                       : (matrix_observation
-                              ? conf["view_size"_]
-                              : conf["view_size"_] * conf["view_tile_size"_]);
-    int obs_channels = (matrix_observation || full_matrix_observation)
-                           ? detail::kMatrixObsChannels
-                           : 3;
+    int obs_size = conf["view_size"_] * conf["view_tile_size"_];
+    int obs_channels = 3;
+    if (observation_format == "matrix") {
+      obs_size = conf["view_size"_];
+      obs_channels = detail::kMatrixObsChannels;
+    } else if (observation_format == "full_matrix") {
+      obs_size = conf["grid_size"_];
+      obs_channels = detail::kMatrixObsChannels;
+    }
     int bound = conf["grid_size"_];
     return MakeDict(
         "obs"_.Bind(Spec<std::uint8_t>({-1, obs_size, obs_size, obs_channels},
@@ -1018,7 +1021,7 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
   }
 
   void WriteMatrixAgentTile(int chosen_agent, int x, int y, int obs_size,
-                            std::uint8_t* output) const {
+                            int orientation, std::uint8_t* output) const {
     if (chosen_agent < 0) {
       return;
     }
@@ -1039,24 +1042,22 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
     output[MatrixObsOffset(
         x, y, static_cast<int>(detail::MatrixObsChannel::kAgentBlue),
         obs_size)] = color[2];
+    int direction = (agents_[chosen_agent].dir + orientation) % 4;
+    output[MatrixObsOffset(
+        x, y,
+        static_cast<int>(detail::MatrixObsChannel::kAgentDirRight) + direction,
+        obs_size)] = 255;
   }
 
   void WriteAgentMatrixObs(int agent_id, std::uint8_t* output) const {
     int obs_values = view_size_ * view_size_ * detail::kMatrixObsChannels;
     std::fill(output, output + obs_values, 0);
-    for (int y = 0; y < view_size_; ++y) {
-      for (int x = 0; x < view_size_; ++x) {
-        output[MatrixObsOffset(
-            x, y, static_cast<int>(detail::MatrixObsChannel::kEmpty),
-            view_size_)] = 255;
-      }
-    }
-
     const detail::Agent& agent = agents_[agent_id];
     if (!agent.active) {
       return;
     }
     int rot_k = (agent.dir + 1) % 4;
+    int orientation = (4 - rot_k) % 4;
     auto [top_x, top_y] = ViewTopLeft(agent);
     std::vector<const detail::Cell*> view_cells(view_size_ * view_size_,
                                                 nullptr);
@@ -1080,12 +1081,9 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
           continue;
         }
         const detail::Cell* cell = view_cells[detail::Offset(x, y, view_size_)];
-        for (int channel = 0; channel < 5; ++channel) {
-          output[MatrixObsOffset(x, y, channel, view_size_)] = 0;
-        }
         WriteMatrixBaseTile(cell, x, y, view_size_, output);
         WriteMatrixAgentTile(TopAgentForCell(cell, agent_id), x, y, view_size_,
-                             output);
+                             orientation, output);
       }
     }
   }
@@ -1093,12 +1091,15 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
   void WriteAgentFullMatrixObs(int agent_id, std::uint8_t* output) const {
     int obs_values = grid_size_ * grid_size_ * detail::kMatrixObsChannels;
     std::fill(output, output + obs_values, 0);
+    if (!agents_[agent_id].active) {
+      return;
+    }
     for (int y = 0; y < grid_size_; ++y) {
       for (int x = 0; x < grid_size_; ++x) {
         const detail::Cell& cell = CellAt(x, y);
         WriteMatrixBaseTile(&cell, x, y, grid_size_, output);
         WriteMatrixAgentTile(TopAgentForCell(&cell, agent_id), x, y, grid_size_,
-                             output);
+                             0, output);
       }
     }
   }
