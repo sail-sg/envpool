@@ -31,7 +31,7 @@ def py_env(
     spec_name = envspec.__name__[1:]
     pool_name = envpool.__name__[1:]
     return (
-        EnvSpecMeta(spec_name, (envspec,), {}),  # type: ignore[return-value]
+        EnvSpecMeta(spec_name, (envspec,), {}),
         DMEnvPoolMeta(
             pool_name.replace("EnvPool", "DMEnvPool"), (envpool,), {}
         ),
