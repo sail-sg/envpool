@@ -600,7 +600,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "gymnasium_robotics_assets",
-        sha256 = "0c47791b0d8aa167f63a574793f1c54724b545ae2b03225c78946139f2a4c8ac",
+        sha256 = "e5f49da77b31c3f7be02eea7f9788d7fd817d4eccdcef625b1a85a77e221532f",
         strip_prefix = "Gymnasium-Robotics-1.4.2/gymnasium_robotics/envs",
         urls = [
             "https://github.com/Farama-Foundation/Gymnasium-Robotics/archive/refs/tags/v1.4.2.tar.gz",
