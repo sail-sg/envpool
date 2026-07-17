@@ -264,7 +264,7 @@ def workspace():
     maybe(
         http_archive,
         name = "ale",
-        sha256 = "d6ac9406690bb3533b37a99253bdfc59bc27779c5e1b6855c763d0b367bcbf96",
+        sha256 = "2e63a79e04f22cd2100383a02646d3e38f180e056c79692c91658cfeecbb3d88",
         strip_prefix = "Arcade-Learning-Environment-0.11.2",
         urls = [
             "https://github.com/Farama-Foundation/Arcade-Learning-Environment/archive/refs/tags/v0.11.2.tar.gz",
