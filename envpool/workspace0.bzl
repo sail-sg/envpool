@@ -264,7 +264,7 @@ def workspace():
     maybe(
         http_archive,
         name = "ale",
-        sha256 = "d6ac9406690bb3533b37a99253bdfc59bc27779c5e1b6855c763d0b367bcbf96",
+        sha256 = "2e63a79e04f22cd2100383a02646d3e38f180e056c79692c91658cfeecbb3d88",
         strip_prefix = "Arcade-Learning-Environment-0.11.2",
         urls = [
             "https://github.com/Farama-Foundation/Arcade-Learning-Environment/archive/refs/tags/v0.11.2.tar.gz",
@@ -600,7 +600,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "gymnasium_robotics_assets",
-        sha256 = "0c47791b0d8aa167f63a574793f1c54724b545ae2b03225c78946139f2a4c8ac",
+        sha256 = "e5f49da77b31c3f7be02eea7f9788d7fd817d4eccdcef625b1a85a77e221532f",
         strip_prefix = "Gymnasium-Robotics-1.4.2/gymnasium_robotics/envs",
         urls = [
             "https://github.com/Farama-Foundation/Gymnasium-Robotics/archive/refs/tags/v1.4.2.tar.gz",

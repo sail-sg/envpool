@@ -106,7 +106,7 @@ class EnvRegistry:
         kwargs: dict[str, Any],
     ) -> tuple[bool, dict[str, Any], bool]:
         from_pixels = bool(kwargs.pop("from_pixels", False))
-        wrapper_kwargs = {
+        wrapper_kwargs: dict[str, Any] = {
             key: kwargs.pop(key)
             for key in ("render_mode", "render_env_id")
             if key in kwargs

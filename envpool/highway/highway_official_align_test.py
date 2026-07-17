@@ -149,7 +149,7 @@ def _envpool_info(info: dict[str, Any]) -> dict[str, Any]:
 
 
 def _official_info(info: dict[str, Any]) -> dict[str, Any]:
-    exposed = {
+    exposed: dict[str, Any] = {
         key: info[key]
         for key in ("speed", "crashed", "is_success")
         if key in info
