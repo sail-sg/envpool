@@ -44,16 +44,9 @@ _TASK_CONFIGS = {
 _COLOR_WALL = np.array([74, 65, 42], dtype=np.int16)
 _COLOR_GOAL = np.array([0, 255, 0], dtype=np.int16)
 _COLOR_BONUS = np.array([255, 255, 0], dtype=np.int16)
-_MATRIX_EMPTY = 0
-_MATRIX_WALL = 1
-_MATRIX_GOAL = 2
-_MATRIX_BONUS = 3
-_MATRIX_LAVA = 4
 _MATRIX_AGENT = 5
-_MATRIX_AGENT_RED = 6
-_MATRIX_AGENT_GREEN = 7
-_MATRIX_AGENT_BLUE = 8
-_MATRIX_AGENT_DIR_RIGHT = 9
+_MATRIX_COLOR = slice(6, 9)
+_MATRIX_DIRECTION = 9
 _MATRIX_CHANNELS = 13
 _OBSERVATION_FORMATS = ("pixels", "matrix", "full_matrix")
 _DIR_TO_VEC = ((1, 0), (0, 1), (-1, 0), (0, -1))
@@ -728,6 +721,57 @@ def _upstream_agent_info(oracle_env: Any) -> dict[str, np.ndarray]:
     }
 
 
+def _make_synced_rollout(
+    task_id: str, observation_format: str
+) -> tuple[Any, Any, np.ndarray, dict[str, Any], np.ndarray, list[np.ndarray]]:
+    n_agents, grid_size, _, _, _ = _TASK_CONFIGS[task_id]
+    for seed in range(11, 31):
+        env = make_gymnasium(
+            task_id,
+            num_envs=1,
+            seed=seed,
+            render_mode="rgb_array",
+            observation_format=observation_format,
+        )
+        obs, info = env.reset()
+        frame = _render_single(env)
+        actions = (
+            _non_moving_rollout_actions(n_agents, _GOALCYCLE_ALIGN_STEPS)
+            if task_id.startswith("Goalcycle-")
+            else _first_agent_goal_actions(frame, info, n_agents, grid_size)
+        )
+        if actions is not None:
+            break
+        env.close()
+    else:
+        raise AssertionError(f"could not find rollout for {task_id}")
+    oracle_env = _make_upstream_env(task_id)
+    _sync_upstream_from_envpool(oracle_env, frame, info)
+    return env, oracle_env, obs, info, frame, actions
+
+
+def _assert_upstream_step(
+    test: absltest.TestCase,
+    reward: np.ndarray,
+    terminated: np.ndarray,
+    truncated: np.ndarray,
+    info: dict[str, Any],
+    oracle_reward: Any,
+    oracle_done: Any,
+    oracle_env: Any,
+) -> dict[str, np.ndarray]:
+    np.testing.assert_allclose(
+        _sort_players(reward, info), oracle_reward, rtol=0, atol=1e-7
+    )
+    test.assertEqual(bool(terminated[0] or truncated[0]), bool(oracle_done))
+    oracle_info = _upstream_agent_info(oracle_env)
+    for key, value in oracle_info.items():
+        np.testing.assert_array_equal(
+            _sort_players(info["players"][key], info), value
+        )
+    return oracle_info
+
+
 def _upstream_matrix_tile(
     cell: Any,
     observer: Any,
@@ -742,36 +786,32 @@ def _upstream_matrix_tile(
     )
 
     tile = np.zeros(_MATRIX_CHANNELS, dtype=np.uint8)
-    base_channel = _MATRIX_EMPTY
-    if isinstance(cell, Wall):
-        base_channel = _MATRIX_WALL
-    elif isinstance(cell, Goal):
-        base_channel = _MATRIX_GOAL
-    elif isinstance(cell, BonusTile):
-        base_channel = _MATRIX_BONUS
-    elif isinstance(cell, Lava):
-        base_channel = _MATRIX_LAVA
-    elif cell is not None and not isinstance(cell, GridAgent):
+    base_types = (Wall, Goal, BonusTile, Lava)
+    base_channel = next(
+        (i for i, cls in enumerate(base_types, 1) if isinstance(cell, cls)), 0
+    )
+    if (
+        cell is not None
+        and base_channel == 0
+        and not isinstance(cell, GridAgent)
+    ):
         raise AssertionError(f"unsupported MarlGrid matrix cell {type(cell)}")
     tile[base_channel] = 255
 
-    agents = []
-    if isinstance(cell, GridAgent):
-        agents.append(cell)
-    agents.extend(getattr(cell, "agents", []))
-    active_agents = [agent for agent in agents if agent.active]
-    if observer in active_agents:
-        chosen_agent = observer
-    elif active_agents:
-        chosen_agent = active_agents[0]
-    else:
+    agents = (
+        [cell] if isinstance(cell, GridAgent) else getattr(cell, "agents", ())
+    )
+    chosen_agent = (
+        observer
+        if observer in agents and observer.active
+        else next((agent for agent in agents if agent.active), None)
+    )
+    if chosen_agent is None:
         return tile
     tile[_MATRIX_AGENT] = 255
-    tile[_MATRIX_AGENT_RED : _MATRIX_AGENT_BLUE + 1] = (
-        chosen_agent.numeric_color
-    )
+    tile[_MATRIX_COLOR] = chosen_agent.numeric_color
     direction = (chosen_agent.dir + orientation) % 4
-    tile[_MATRIX_AGENT_DIR_RIGHT + direction] = 255
+    tile[_MATRIX_DIRECTION + direction] = 255
     return tile
 
 
@@ -837,56 +877,30 @@ class MarlGridTest(absltest.TestCase):
                 self.assertEqual(_upstream_task_config(task_id), config)
 
     def test_multiplayer_step_shapes(self) -> None:
-        """Validate player-shaped reset and step outputs."""
-        env = make_gymnasium(
-            "MarlGrid-3AgentCluttered11x11-v0",
-            num_envs=2,
-            batch_size=2,
-            seed=0,
-        )
-        try:
-            obs, info = env.reset()
-            self.assertEqual(obs.shape, (6, 56, 56, 3))
-            np.testing.assert_array_equal(
-                _sort_players(info["players"]["env_id"], info),
-                np.array([0, 0, 0, 1, 1, 1], dtype=np.int32),
-            )
-            np.testing.assert_array_equal(
-                _sort_players(info["players"]["id"], info),
-                np.array([0, 1, 2, 0, 1, 2], dtype=np.int32),
-            )
-            action = {
-                "players": {
-                    "env_id": info["players"]["env_id"],
-                    "action": np.full((6,), 2, dtype=np.int32),
-                },
-            }
-            obs, reward, terminated, truncated, info = env.step(action)
-            self.assertEqual(obs.shape, (6, 56, 56, 3))
-            self.assertEqual(reward.shape, (6,))
-            self.assertEqual(terminated.shape, (2,))
-            self.assertEqual(truncated.shape, (2,))
-            self.assertEqual(info["players"]["done"].shape, (6,))
-        finally:
-            env.close()
-
-    def test_matrix_multiplayer_step_shapes(self) -> None:
-        """Validate player-shaped matrix observations before and after a step."""
-        for observation_format, obs_size in (
-            ("matrix", 7),
-            ("full_matrix", 11),
+        """Validate player-shaped outputs for every observation format."""
+        for observation_format, obs_shape in (
+            ("pixels", (56, 56, 3)),
+            ("matrix", (7, 7, _MATRIX_CHANNELS)),
+            ("full_matrix", (11, 11, _MATRIX_CHANNELS)),
         ):
             with self.subTest(observation_format=observation_format):
                 env = make_gymnasium(
                     "MarlGrid-3AgentCluttered11x11-v0",
                     num_envs=2,
+                    batch_size=2,
                     seed=0,
                     observation_format=observation_format,
                 )
                 try:
                     obs, info = env.reset()
-                    self.assertEqual(
-                        obs.shape, (6, obs_size, obs_size, _MATRIX_CHANNELS)
+                    self.assertEqual(obs.shape, (6, *obs_shape))
+                    np.testing.assert_array_equal(
+                        _sort_players(info["players"]["env_id"], info),
+                        np.array([0, 0, 0, 1, 1, 1], dtype=np.int32),
+                    )
+                    np.testing.assert_array_equal(
+                        _sort_players(info["players"]["id"], info),
+                        np.array([0, 1, 2, 0, 1, 2], dtype=np.int32),
                     )
                     action = {
                         "players": {
@@ -894,13 +908,12 @@ class MarlGridTest(absltest.TestCase):
                             "action": np.full(6, 2, dtype=np.int32),
                         },
                     }
-                    obs, reward, terminated, truncated, _ = env.step(action)
-                    self.assertEqual(
-                        obs.shape, (6, obs_size, obs_size, _MATRIX_CHANNELS)
-                    )
+                    obs, reward, terminated, truncated, info = env.step(action)
+                    self.assertEqual(obs.shape, (6, *obs_shape))
                     self.assertEqual(reward.shape, (6,))
                     self.assertEqual(terminated.shape, (2,))
                     self.assertEqual(truncated.shape, (2,))
+                    self.assertEqual(info["players"]["done"].shape, (6,))
                 finally:
                     env.close()
 
@@ -1136,42 +1149,9 @@ class MarlGridTest(absltest.TestCase):
                 env = None
                 oracle_env = None
                 try:
-                    rollout_actions = None
-                    for seed in range(11, 31):
-                        env = make_gymnasium(
-                            task_id,
-                            num_envs=1,
-                            seed=seed,
-                            render_mode="rgb_array",
-                        )
-                        obs, info = env.reset()
-                        frame = env.render()
-                        self.assertIsNotNone(frame)
-                        assert frame is not None
-                        frame0 = frame[0]
-                        if task_id.startswith("Goalcycle-"):
-                            rollout_actions = _non_moving_rollout_actions(
-                                n_agents, _GOALCYCLE_ALIGN_STEPS
-                            )
-                            break
-                        rollout_actions = _first_agent_goal_actions(
-                            frame0, info, n_agents, grid_size
-                        )
-                        if rollout_actions is not None:
-                            break
-                        env.close()
-                        env = None
-                    self.assertIsNotNone(rollout_actions)
-                    assert env is not None
-                    assert rollout_actions is not None
-
-                    oracle_env = _make_upstream_env(task_id)
-                    frame = env.render()
-                    self.assertIsNotNone(frame)
-                    assert frame is not None
-                    frame0 = frame[0]
-                    _sync_upstream_from_envpool(oracle_env, frame0, info)
-
+                    env, oracle_env, obs, info, frame0, rollout_actions = (
+                        _make_synced_rollout(task_id, "pixels")
+                    )
                     np.testing.assert_array_equal(
                         _sort_players(obs, info),
                         _upstream_obs(oracle_env),
@@ -1192,23 +1172,17 @@ class MarlGridTest(absltest.TestCase):
                         oracle_obs, oracle_reward, oracle_done, _ = (
                             oracle_env.step(action.tolist())
                         )
-                        np.testing.assert_allclose(
-                            _sort_players(reward, info),
+                        oracle_info = _assert_upstream_step(
+                            self,
+                            reward,
+                            terminated,
+                            truncated,
+                            info,
                             oracle_reward,
-                            rtol=0,
-                            atol=1e-7,
-                        )
-                        self.assertEqual(
-                            bool(terminated[0] or truncated[0]),
-                            bool(oracle_done),
+                            oracle_done,
+                            oracle_env,
                         )
                         saw_done = saw_done or bool(oracle_done)
-                        oracle_info = _upstream_agent_info(oracle_env)
-                        for key, value in oracle_info.items():
-                            np.testing.assert_array_equal(
-                                _sort_players(info["players"][key], info),
-                                value,
-                            )
                         first_player_done = bool(oracle_info["done"][0])
                         if first_player_done:
                             # Upstream's tile cache can keep the just-deactivated
@@ -1244,7 +1218,7 @@ class MarlGridTest(absltest.TestCase):
         matrix_formats = ("matrix", "full_matrix")
         for observation_format, (
             task_id,
-            (n_agents, grid_size, _, _, _),
+            (n_agents, _grid_size, _, _, _),
         ) in product(matrix_formats, _TASK_CONFIGS.items()):
             with self.subTest(
                 task_id=task_id, observation_format=observation_format
@@ -1252,35 +1226,9 @@ class MarlGridTest(absltest.TestCase):
                 env = None
                 oracle_env = None
                 try:
-                    rollout_actions = None
-                    for seed in range(11, 31):
-                        env = make_gymnasium(
-                            task_id,
-                            num_envs=1,
-                            seed=seed,
-                            render_mode="rgb_array",
-                            observation_format=observation_format,
-                        )
-                        obs, info = env.reset()
-                        frame0 = _render_single(env)
-                        if task_id.startswith("Goalcycle-"):
-                            rollout_actions = _non_moving_rollout_actions(
-                                n_agents, _GOALCYCLE_ALIGN_STEPS
-                            )
-                            break
-                        rollout_actions = _first_agent_goal_actions(
-                            frame0, info, n_agents, grid_size
-                        )
-                        if rollout_actions is not None:
-                            break
-                        env.close()
-                        env = None
-                    self.assertIsNotNone(rollout_actions)
-                    assert env is not None
-                    assert rollout_actions is not None
-
-                    oracle_env = _make_upstream_env(task_id)
-                    _sync_upstream_from_envpool(oracle_env, frame0, info)
+                    env, oracle_env, obs, info, _, rollout_actions = (
+                        _make_synced_rollout(task_id, observation_format)
+                    )
                     full_matrix = observation_format == "full_matrix"
                     np.testing.assert_array_equal(
                         _sort_players(obs, info),
@@ -1297,22 +1245,16 @@ class MarlGridTest(absltest.TestCase):
                         _, oracle_reward, oracle_done, _ = oracle_env.step(
                             action.tolist()
                         )
-                        np.testing.assert_allclose(
-                            _sort_players(reward, info),
+                        _assert_upstream_step(
+                            self,
+                            reward,
+                            terminated,
+                            truncated,
+                            info,
                             oracle_reward,
-                            rtol=0,
-                            atol=1e-7,
+                            oracle_done,
+                            oracle_env,
                         )
-                        self.assertEqual(
-                            bool(terminated[0] or truncated[0]),
-                            bool(oracle_done),
-                        )
-                        oracle_info = _upstream_agent_info(oracle_env)
-                        for key, value in oracle_info.items():
-                            np.testing.assert_array_equal(
-                                _sort_players(info["players"][key], info),
-                                value,
-                            )
                         np.testing.assert_array_equal(
                             _sort_players(obs, info),
                             _upstream_matrix_obs(oracle_env, full_matrix),

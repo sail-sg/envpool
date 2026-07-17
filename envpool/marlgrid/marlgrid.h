@@ -62,26 +62,13 @@ enum class AgentColor : std::uint8_t {
   kPink = 5,
 };
 
-enum class MatrixObsChannel : std::uint8_t {
-  kEmpty = 0,
-  kWall = 1,
-  kGoal = 2,
-  kBonus = 3,
-  kLava = 4,
-  kAgent = 5,
-  kAgentRed = 6,
-  kAgentGreen = 7,
-  kAgentBlue = 8,
-  kAgentDirRight = 9,
-  kAgentDirDown = 10,
-  kAgentDirLeft = 11,
-  kAgentDirUp = 12,
-};
-
 using Rgb = std::array<std::uint8_t, 3>;
 
 inline constexpr int kTilePixels = 32;
 inline constexpr int kTileSubdivs = 3;
+inline constexpr int kMatrixAgentChannel = 5;
+inline constexpr int kMatrixColorChannel = 6;
+inline constexpr int kMatrixDirectionChannel = 9;
 inline constexpr int kMatrixObsChannels = 13;
 inline constexpr double kPi = 3.14159265358979323846;
 inline constexpr Rgb kShadowColor = {35, 25, 30};
@@ -466,12 +453,6 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
     CHECK_GE(prestige_beta_, 0.0f);
     CHECK_LE(prestige_beta_, 1.0f);
     CHECK_GT(prestige_scale_, 0.0f);
-    if (observation_format_ != "pixels" && observation_format_ != "matrix" &&
-        observation_format_ != "full_matrix") {
-      throw std::runtime_error(
-          "MarlGrid observation_format must be 'pixels', 'matrix', or "
-          "'full_matrix'");
-    }
     agents_.resize(n_agents_);
     for (int i = 0; i < n_agents_; ++i) {
       agents_[i].color = detail::AgentColorByIndex(i);
@@ -946,6 +927,26 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
     }
   }
 
+  [[nodiscard]] auto AgentViewCells(const detail::Agent& agent) const {
+    int rot_k = (agent.dir + 1) % 4;
+    auto [top_x, top_y] = ViewTopLeft(agent);
+    std::vector<const detail::Cell*> cells(view_size_ * view_size_, nullptr);
+    std::vector<bool> transparent(cells.size(), true);
+    for (int y = 0; y < view_size_; ++y) {
+      for (int x = 0; x < view_size_; ++x) {
+        auto [sx, sy] = detail::RotateCoord(x, y, view_size_, rot_k);
+        int wx = top_x + sx;
+        int wy = top_y + sy;
+        if (InBounds(wx, wy)) {
+          const detail::Cell& cell = CellAt(wx, wy);
+          cells[detail::Offset(x, y, view_size_)] = &cell;
+          transparent[detail::Offset(x, y, view_size_)] = cell.CanSeeBehind();
+        }
+      }
+    }
+    return std::pair{std::move(cells), VisibilityMask(transparent)};
+  }
+
   void RenderAgentObs(int agent_id, std::uint8_t* output) const {
     int obs_size = view_size_ * view_tile_size_;
     std::vector<std::uint8_t> image(obs_size * obs_size * 3, 0);
@@ -959,25 +960,8 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
       std::memcpy(output, image.data(), image.size());
       return;
     }
-    int rot_k = (agent.dir + 1) % 4;
-    int orientation = (4 - rot_k) % 4;
-    auto [top_x, top_y] = ViewTopLeft(agent);
-    std::vector<const detail::Cell*> view_cells(view_size_ * view_size_,
-                                                nullptr);
-    std::vector<bool> transparent(view_size_ * view_size_, true);
-    for (int y = 0; y < view_size_; ++y) {
-      for (int x = 0; x < view_size_; ++x) {
-        auto [sx, sy] = detail::RotateCoord(x, y, view_size_, rot_k);
-        int wx = top_x + sx;
-        int wy = top_y + sy;
-        if (InBounds(wx, wy)) {
-          const detail::Cell& cell = CellAt(wx, wy);
-          view_cells[detail::Offset(x, y, view_size_)] = &cell;
-          transparent[detail::Offset(x, y, view_size_)] = cell.CanSeeBehind();
-        }
-      }
-    }
-    std::vector<bool> visible = VisibilityMask(transparent);
+    int orientation = 3 - agent.dir;
+    auto [view_cells, visible] = AgentViewCells(agent);
     for (int y = 0; y < view_size_; ++y) {
       for (int x = 0; x < view_size_; ++x) {
         if (!visible[detail::Offset(x, y, view_size_)]) {
@@ -1005,18 +989,7 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
 
   void WriteMatrixBaseTile(const detail::Cell* cell, int x, int y, int obs_size,
                            std::uint8_t* output) const {
-    int base_channel = static_cast<int>(detail::MatrixObsChannel::kEmpty);
-    if (cell != nullptr) {
-      if (cell->type == detail::CellType::kWall) {
-        base_channel = static_cast<int>(detail::MatrixObsChannel::kWall);
-      } else if (cell->type == detail::CellType::kGoal) {
-        base_channel = static_cast<int>(detail::MatrixObsChannel::kGoal);
-      } else if (cell->type == detail::CellType::kBonus) {
-        base_channel = static_cast<int>(detail::MatrixObsChannel::kBonus);
-      } else if (cell->type == detail::CellType::kLava) {
-        base_channel = static_cast<int>(detail::MatrixObsChannel::kLava);
-      }
-    }
+    int base_channel = cell == nullptr ? 0 : static_cast<int>(cell->type);
     output[MatrixObsOffset(x, y, base_channel, obs_size)] = 255;
   }
 
@@ -1030,23 +1003,13 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
             ? detail::PrestigeColor(agents_[chosen_agent].prestige,
                                     prestige_scale_)
             : detail::ColorValue(agents_[chosen_agent].color);
-    output[MatrixObsOffset(
-        x, y, static_cast<int>(detail::MatrixObsChannel::kAgent), obs_size)] =
-        255;
-    output[MatrixObsOffset(
-        x, y, static_cast<int>(detail::MatrixObsChannel::kAgentRed),
-        obs_size)] = color[0];
-    output[MatrixObsOffset(
-        x, y, static_cast<int>(detail::MatrixObsChannel::kAgentGreen),
-        obs_size)] = color[1];
-    output[MatrixObsOffset(
-        x, y, static_cast<int>(detail::MatrixObsChannel::kAgentBlue),
-        obs_size)] = color[2];
+    output[MatrixObsOffset(x, y, detail::kMatrixAgentChannel, obs_size)] = 255;
+    std::copy(
+        color.begin(), color.end(),
+        output + MatrixObsOffset(x, y, detail::kMatrixColorChannel, obs_size));
     int direction = (agents_[chosen_agent].dir + orientation) % 4;
-    output[MatrixObsOffset(
-        x, y,
-        static_cast<int>(detail::MatrixObsChannel::kAgentDirRight) + direction,
-        obs_size)] = 255;
+    output[MatrixObsOffset(x, y, detail::kMatrixDirectionChannel + direction,
+                           obs_size)] = 255;
   }
 
   void WriteAgentMatrixObs(int agent_id, std::uint8_t* output) const {
@@ -1056,25 +1019,8 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
     if (!agent.active) {
       return;
     }
-    int rot_k = (agent.dir + 1) % 4;
-    int orientation = (4 - rot_k) % 4;
-    auto [top_x, top_y] = ViewTopLeft(agent);
-    std::vector<const detail::Cell*> view_cells(view_size_ * view_size_,
-                                                nullptr);
-    std::vector<bool> transparent(view_size_ * view_size_, true);
-    for (int y = 0; y < view_size_; ++y) {
-      for (int x = 0; x < view_size_; ++x) {
-        auto [sx, sy] = detail::RotateCoord(x, y, view_size_, rot_k);
-        int wx = top_x + sx;
-        int wy = top_y + sy;
-        if (InBounds(wx, wy)) {
-          const detail::Cell& cell = CellAt(wx, wy);
-          view_cells[detail::Offset(x, y, view_size_)] = &cell;
-          transparent[detail::Offset(x, y, view_size_)] = cell.CanSeeBehind();
-        }
-      }
-    }
-    std::vector<bool> visible = VisibilityMask(transparent);
+    int orientation = 3 - agent.dir;
+    auto [view_cells, visible] = AgentViewCells(agent);
     for (int y = 0; y < view_size_; ++y) {
       for (int x = 0; x < view_size_; ++x) {
         if (!visible[detail::Offset(x, y, view_size_)]) {
@@ -1126,14 +1072,13 @@ class MarlGridEnv : public Env<MarlGridEnvSpec>, public RenderableEnv {
       state["info:players.pos"_](i, 1) = agents_[i].y;
       state["info:players.dir"_][i] = agents_[i].dir;
       state["reward"_][i] = last_rewards_[i];
+      auto* obs = static_cast<std::uint8_t*>(state["obs"_][i].Data());
       if (observation_format_ == "matrix") {
-        WriteAgentMatrixObs(
-            i, static_cast<std::uint8_t*>(state["obs"_][i].Data()));
+        WriteAgentMatrixObs(i, obs);
       } else if (observation_format_ == "full_matrix") {
-        WriteAgentFullMatrixObs(
-            i, static_cast<std::uint8_t*>(state["obs"_][i].Data()));
+        WriteAgentFullMatrixObs(i, obs);
       } else {
-        RenderAgentObs(i, static_cast<std::uint8_t*>(state["obs"_][i].Data()));
+        RenderAgentObs(i, obs);
       }
     }
   }
