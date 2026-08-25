@@ -1804,7 +1804,8 @@ class MetaWorldEnvBase : public Env<EnvSpecT>,
         mjtNum tcp_to_obj = Distance(obj, tcp);
         mjtNum tcp_to_obj_init = Distance(obj, init_tcp_);
         mjtNum obj_to_target = std::abs(target_pos_[2] - obj[2]);
-        mjtNum tcp_closed = 1.0 - tcp_open;
+        mjtNum tcp_closed =
+            task_index_ == 5 ? std::max<mjtNum>(tcp_open, 0.0) : 1.0 - tcp_open;
         mjtNum near_button =
             LongTailTolerance(tcp_to_obj, 0.0, 0.01, tcp_to_obj_init);
         mjtNum pressed =

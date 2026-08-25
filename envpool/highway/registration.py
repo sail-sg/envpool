@@ -13,6 +13,8 @@
 # limitations under the License.
 """Highway env registration."""
 
+from typing import Any
+
 from envpool.registration import register
 
 _COMMON = {
@@ -33,6 +35,129 @@ register(
     duration=40,
     **_COMMON,
 )
+
+
+_NEW_TASKS: tuple[tuple[str, str, str, str, bool, dict[str, Any]], ...] = (
+    (
+        "Exit-v1",
+        "exit-v1",
+        "NativeKinematics7Action5",
+        "exit",
+        True,
+        {"duration": 18, "simulation_frequency": 5},
+    ),
+    (
+        "Intersection-v2",
+        "intersection-v2",
+        "NativeKinematics7Action3",
+        "intersection",
+        True,
+        {"duration": 13, "screen_height": 600},
+    ),
+    (
+        "IntersectionMultiAgent-v2",
+        "intersection-multi-agent-v2",
+        "NativeMultiAgent",
+        "intersection_multi",
+        True,
+        {"duration": 13, "screen_height": 600, "max_num_players": 2},
+    ),
+    (
+        "Merge-v1",
+        "merge-v1",
+        "NativeKinematics5",
+        "merge",
+        True,
+        {"duration": 200},
+    ),
+    (
+        "MergeGeneric-v0",
+        "merge-generic-v0",
+        "NativeKinematics5",
+        "merge_generic",
+        False,
+        {"duration": 200},
+    ),
+    (
+        "MergeGeneric-v1",
+        "merge-generic-v1",
+        "NativeKinematics5",
+        "merge_generic",
+        True,
+        {"duration": 200},
+    ),
+    (
+        "Racetrack-v1",
+        "racetrack-v1",
+        "NativeOccupancy",
+        "racetrack",
+        True,
+        {"duration": 300, "policy_frequency": 5, "screen_height": 600},
+    ),
+    (
+        "RacetrackLarge-v1",
+        "racetrack-large-v1",
+        "NativeOccupancy",
+        "racetrack_large",
+        True,
+        {"duration": 300, "policy_frequency": 5, "screen_height": 600},
+    ),
+    (
+        "RacetrackOval-v1",
+        "racetrack-oval-v1",
+        "NativeOccupancy",
+        "racetrack_oval",
+        True,
+        {"duration": 300, "policy_frequency": 5, "screen_height": 600},
+    ),
+    (
+        "Roundabout-v1",
+        "roundabout-v1",
+        "NativeKinematics5",
+        "roundabout",
+        True,
+        {"duration": 11, "screen_height": 600},
+    ),
+    (
+        "RoundaboutGeneric-v0",
+        "roundabout-generic-v0",
+        "NativeKinematics5",
+        "roundabout_generic",
+        False,
+        {"duration": 17, "screen_height": 600, "vehicles_count": 5},
+    ),
+    (
+        "RoundaboutGeneric-v1",
+        "roundabout-generic-v1",
+        "NativeKinematics5",
+        "roundabout_generic",
+        True,
+        {"duration": 17, "screen_height": 600, "vehicles_count": 5},
+    ),
+    (
+        "UTurn-v1",
+        "u-turn-v1",
+        "NativeTTC16",
+        "u_turn",
+        True,
+        {"duration": 10, "screen_width": 789, "screen_height": 289},
+    ),
+)
+
+for task_id, alias, class_prefix, scenario, connected, defaults in _NEW_TASKS:
+    register(
+        task_id=task_id,
+        aliases=[alias],
+        spec_cls=f"{class_prefix}EnvSpec",
+        dm_cls=f"{class_prefix}DMEnvPool",
+        gymnasium_cls=f"{class_prefix}GymnasiumEnvPool",
+        scenario=scenario,
+        max_episode_steps=defaults.get("duration", 200)
+        * defaults.get("policy_frequency", 1),
+        neighbour_vehicles_connected_lanes=connected,
+        **defaults,
+        **_NATIVE_COMMON,
+    )
 
 register(
     task_id="Exit-v0",

@@ -30,11 +30,11 @@ template_rule(
     src = "src/ale/version.hpp.in",
     out = "version.hpp",
     substitutions = {
-        "@ALE_VERSION@": "0.11.2",
+        "@ALE_VERSION@": "0.12.1",
         "@ALE_VERSION_MAJOR@": "0",
-        "@ALE_VERSION_MINOR@": "11",
-        "@ALE_VERSION_PATCH@": "2",
-        "@ALE_VERSION_GIT_SHA@": "ecc113829d571348adc1a299fcf1321238dd684e",
+        "@ALE_VERSION_MINOR@": "12",
+        "@ALE_VERSION_PATCH@": "1",
+        "@ALE_VERSION_GIT_SHA@": "8a8fafb1ac37796e3e8197a2e5727204fa1b926d",
     },
 )
 
@@ -51,6 +51,8 @@ cc_library(
         ],
         exclude = [
             "src/ale/python/**",
+            "src/ale/vector/**",
+            "src/ale/wasm/**",
         ],
     ),
     hdrs = [

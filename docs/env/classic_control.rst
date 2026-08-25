@@ -2,7 +2,7 @@ Classic Control
 ===============
 
 All of the environments in classic control borrow from `Gymnasium
-<https://github.com/Farama-Foundation/Gymnasium/tree/v1.2.3/gymnasium/envs/classic_control>`_.
+<https://github.com/Farama-Foundation/Gymnasium/tree/v1.3.0/gymnasium/envs/classic_control>`_.
 
 
 Render Compare
@@ -24,7 +24,7 @@ Namespace aliases ``phys2d/CartPole-v0`` and ``phys2d/CartPole-v1`` are also
 available.
 
 `gymnasium cartpole source code
-<https://github.com/Farama-Foundation/Gymnasium/blob/v1.2.3/gymnasium/envs/classic_control/cartpole.py>`_
+<https://github.com/Farama-Foundation/Gymnasium/blob/v1.3.0/gymnasium/envs/classic_control/cartpole.py>`_
 
 A pole is attached by an un-actuated joint to a cart, which moves along a
 frictionless track. The pendulum starts upright, and the goal is to prevent it
@@ -41,7 +41,7 @@ Pendulum-v0, Pendulum-v1
 The namespace alias ``phys2d/Pendulum-v0`` is also available for ``Pendulum-v0``.
 
 `gymnasium pendulum source code
-<https://github.com/Farama-Foundation/Gymnasium/blob/v1.2.3/gymnasium/envs/classic_control/pendulum.py>`_
+<https://github.com/Farama-Foundation/Gymnasium/blob/v1.3.0/gymnasium/envs/classic_control/pendulum.py>`_
 
 The inverted pendulum swing-up problem is a classic problem in the control
 literature. In this version of the problem, the pendulum starts in a random
@@ -55,9 +55,9 @@ MountainCar-v0, MountainCarContinuous-v0
 ----------------------------------------
 
 `gymnasium mountain_car source code
-<https://github.com/Farama-Foundation/Gymnasium/blob/v1.2.3/gymnasium/envs/classic_control/mountain_car.py>`_
+<https://github.com/Farama-Foundation/Gymnasium/blob/v1.3.0/gymnasium/envs/classic_control/mountain_car.py>`_
 and `gymnasium mountain_car continuous source code
-<https://github.com/Farama-Foundation/Gymnasium/blob/v1.2.3/gymnasium/envs/classic_control/continuous_mountain_car.py>`_
+<https://github.com/Farama-Foundation/Gymnasium/blob/v1.3.0/gymnasium/envs/classic_control/continuous_mountain_car.py>`_
 
 The agent (a car) is started at the bottom of a valley. For any given state the
 agent may choose to accelerate to the left, right or cease any acceleration.
@@ -67,7 +67,7 @@ Acrobot-v1
 ----------
 
 `gymnasium acrobot source code
-<https://github.com/Farama-Foundation/Gymnasium/blob/v1.2.3/gymnasium/envs/classic_control/acrobot.py>`_
+<https://github.com/Farama-Foundation/Gymnasium/blob/v1.3.0/gymnasium/envs/classic_control/acrobot.py>`_
 
 Acrobot is a 2-link pendulum with only the second joint actuated. Initially,
 both links point downwards. The goal is to swing the end-effector at a height

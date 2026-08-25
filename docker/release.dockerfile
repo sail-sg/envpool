@@ -23,7 +23,7 @@ COPY . .
 
 # cache bazel build (cpp only)
 
-RUN PATH=/opt/python/cp311-cp311/bin:$PATH bazel build //envpool/utils:image_process_test --config=release
-RUN PATH=/opt/python/cp311-cp311/bin:$PATH bazel build //envpool/vizdoom/bin:vizdoom_bin --config=release
+RUN PATH=/opt/python/cp312-cp312/bin:$PATH bazel build //envpool/utils:image_process_test --config=release
+RUN PATH=/opt/python/cp312-cp312/bin:$PATH bazel build //envpool/vizdoom/bin:vizdoom_bin --config=release
 
 WORKDIR /app

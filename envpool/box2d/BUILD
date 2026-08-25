@@ -84,7 +84,7 @@ py_test(
         requirement("box2d"),
         requirement("gymnasium"),
         requirement("numpy"),
-        requirement("pygame"),
+        requirement("pygame-ce"),
     ],
 )
 
@@ -113,7 +113,7 @@ py_test(
         requirement("box2d"),
         requirement("gymnasium"),
         requirement("numpy"),
-        requirement("pygame"),
+        requirement("pygame-ce"),
     ],
 )
 
@@ -128,7 +128,7 @@ py_test(
         requirement("absl-py"),
         requirement("box2d"),
         requirement("gymnasium"),
-        requirement("pygame"),
+        requirement("pygame-ce"),
         requirement("numpy"),
     ],
 )

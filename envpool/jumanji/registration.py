@@ -11,14 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Jumanji v1.1.1 env registration."""
+"""Jumanji v1.1.2 env registration."""
 
 from __future__ import annotations
 
 from envpool.registration import asset_base_path, register
 
-JUMANJI_ORACLE_VERSION = "1.1.1"
-JUMANJI_ORACLE_COMMIT = "b668afc08a14a71d7eed3f618456d5bda2eea06e"
+JUMANJI_ORACLE_VERSION = "1.1.2"
+JUMANJI_ORACLE_COMMIT = "0584fdc4ddb3f616e28546f7aaf65f1dd59aeb48"
 
 _COMMON = {
     "import_path": "envpool.jumanji",
@@ -29,7 +29,7 @@ _TASKS: tuple[tuple[str, str, int], ...] = (
     ("BinPack-v2", "BinPack", 20),
     ("CVRP-v1", "CVRP", 40),
     ("Cleaner-v0", "Cleaner", 100),
-    ("Connector-v2", "Connector", 50),
+    ("Connector-v3", "Connector", 50),
     ("FlatPack-v0", "FlatPack", 25),
     ("Game2048-v1", "Game2048", 1000),
     ("GraphColoring-v1", "GraphColoring", 20),
@@ -59,11 +59,14 @@ jumanji_envpool_task_ids = [f"Jumanji/{task_id}" for task_id in jumanji_env_ids]
 
 for task_id, class_prefix, max_episode_steps in _TASKS:
     kwargs = dict(_COMMON)
+    aliases = (f"Jumanji/{task_id}",)
+    if task_id == "Connector-v3":
+        aliases += ("Connector-v2", "Jumanji/Connector-v2")
     if task_id == "Sudoku-very-easy-v0":
         kwargs["sudoku_database"] = "very-easy"
     register(
         task_id=task_id,
-        aliases=(f"Jumanji/{task_id}",),
+        aliases=aliases,
         spec_cls=f"{class_prefix}EnvSpec",
         dm_cls=f"{class_prefix}DMEnvPool",
         gymnasium_cls=f"{class_prefix}GymnasiumEnvPool",

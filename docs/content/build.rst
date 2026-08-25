@@ -2,7 +2,7 @@ Build From Source
 =================
 
 We recommend developing EnvPool on Ubuntu 24.04. Release wheels are built for
-Python 3.11-3.14 in ``manylinux_2_28_x86_64`` and
+Python 3.12-3.14 in ``manylinux_2_28_x86_64`` and
 ``manylinux_2_28_aarch64`` environments for Linux, on ``macos-14`` for
 macOS, and on ``windows-2022`` for Windows.
 
@@ -71,7 +71,7 @@ Install Other Dependencies
 
 EnvPool source builds share a few common requirements across platforms:
 
-- **Python >= 3.11**
+- **Python >= 3.12**
 - **Java 17**
 - **Go >= 1.22** plus ``bazelisk`` / ``bazel``
 - **SWIG**

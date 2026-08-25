@@ -2,7 +2,7 @@ Box2D
 =====
 
 EnvPool's Box2D implementation follows ``box2d==2.4.2``. The current Python
-baseline checks compare against Gymnasium ``1.2.3`` Box2D environments backed
+baseline checks compare against Gymnasium ``1.3.0`` Box2D environments backed
 by the ``box2d`` wheel.
 
 

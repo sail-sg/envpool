@@ -2,7 +2,7 @@ Jumanji
 ========
 
 EnvPool provides native C++ batched implementations for the public task IDs in
-``jumanji==1.1.1``.
+``jumanji==1.1.2``.
 
 
 Render Compare
@@ -10,7 +10,7 @@ Render Compare
 
 Representative reset-frame renders for all Jumanji tasks. Each panel shows
 EnvPool ``env.render()`` on the left and the pinned official
-``jumanji==1.1.1`` Matplotlib renderer on the right. The generation script
+``jumanji==1.1.2`` Matplotlib renderer on the right. The generation script
 resets the official oracle first, passes the supported reset-state fields into
 EnvPool, and writes the side-by-side comparison image from those synchronized
 reset states.
@@ -41,7 +41,7 @@ Supported Tasks
 * ``BinPack-v2``
 * ``CVRP-v1``
 * ``Cleaner-v0``
-* ``Connector-v2``
+* ``Connector-v3`` (``Connector-v2`` remains as a compatibility alias)
 * ``FlatPack-v0``
 * ``Game2048-v1``
 * ``GraphColoring-v1``

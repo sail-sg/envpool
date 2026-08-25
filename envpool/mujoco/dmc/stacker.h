@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// https://github.com/deepmind/dm_control/blob/1.0.38/dm_control/suite/stacker.py
+// https://github.com/deepmind/dm_control/blob/1.0.44/dm_control/suite/stacker.py
 
 #ifndef ENVPOOL_MUJOCO_DMC_STACKER_H_
 #define ENVPOOL_MUJOCO_DMC_STACKER_H_

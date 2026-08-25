@@ -383,7 +383,7 @@ def _envpool_kwargs_from_official_state(
                 official_state.agents_locations
             ),
         }
-    if task_id == "Connector-v2":
+    if task_id == "Connector-v3":
         return {"connector_grid": _csv_flat_int(official_state.grid)}
     if task_id == "FlatPack-v0":
         future_rollout = _future_official_rollout(

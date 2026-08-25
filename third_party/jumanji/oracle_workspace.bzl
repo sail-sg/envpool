@@ -21,19 +21,17 @@ def jumanji_oracle_pip_workspace():
     if "jumanji_oracle_requirements" in native.existing_rules().keys():
         return
 
-    # Keep the official Jumanji oracle on NumPy 1.26/JAX 0.4.35. The v1.1.1
+    # Keep the official Jumanji oracle on NumPy 1.26/JAX 0.4.35. The v1.1.2
     # Tetris viewer still calls APIs that are incompatible with NumPy 2.4.
     multi_pip_parse(
         name = "jumanji_oracle_requirements",
         default_version = "3.12",
         python_interpreter_target = {
-            "3.11": "@python_versions_3_12_host//:python",
             "3.12": "@python_versions_3_12_host//:python",
             "3.13": "@python_versions_3_12_host//:python",
             "3.14": "@python_versions_3_12_host//:python",
         },
         requirements_lock = {
-            "3.11": "@envpool//third_party/jumanji:oracle_requirements.txt",
             "3.12": "@envpool//third_party/jumanji:oracle_requirements.txt",
             "3.13": "@envpool//third_party/jumanji:oracle_requirements.txt",
             "3.14": "@envpool//third_party/jumanji:oracle_requirements.txt",

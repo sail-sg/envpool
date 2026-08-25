@@ -2,7 +2,7 @@ Toy Text
 ========
 
 Most of the environments in toy text borrow from `Gymnasium
-<https://github.com/Farama-Foundation/Gymnasium/tree/v1.2.3/gymnasium/envs/toy_text>`_ and
+<https://github.com/Farama-Foundation/Gymnasium/tree/v1.3.0/gymnasium/envs/toy_text>`_ and
 `bsuite <https://github.com/deepmind/bsuite/tree/master/bsuite/environments>`_.
 
 
@@ -20,7 +20,7 @@ FrozenLake-v1, FrozenLake8x8-v1
 -------------------------------
 
 `gymnasium FrozenLake-v1 source code
-<https://github.com/Farama-Foundation/Gymnasium/blob/v1.2.3/gymnasium/envs/toy_text/frozen_lake.py>`_
+<https://github.com/Farama-Foundation/Gymnasium/blob/v1.3.0/gymnasium/envs/toy_text/frozen_lake.py>`_
 
 The agent controls the movement of a character in a grid world. Some tiles of
 the grid are walkable, and others lead to the agent falling into the water.
@@ -34,11 +34,11 @@ while the latter has ``size`` 8, ``max_episode_steps`` 200 with 0.85 reward
 threshold.
 
 
-Taxi-v3
--------
+Taxi-v4 / Taxi-v3
+-----------------
 
-`gymnasium Taxi-v3 source code
-<https://github.com/Farama-Foundation/Gymnasium/blob/v1.2.3/gymnasium/envs/toy_text/taxi.py>`_
+`gymnasium Taxi-v4 source code
+<https://github.com/Farama-Foundation/Gymnasium/blob/v1.3.0/gymnasium/envs/toy_text/taxi.py>`_
 
 There are four designated locations in the grid world indicated by Red, Green,
 Yellow, and Blue. When the episode starts, the taxi starts off at a random
@@ -70,7 +70,7 @@ CliffWalking-v1, CliffWalkingSlippery-v1
 ----------------------------------------
 
 `gymnasium CliffWalking-v1 source code
-<https://github.com/Farama-Foundation/Gymnasium/blob/v1.2.3/gymnasium/envs/toy_text/cliffwalking.py>`_
+<https://github.com/Farama-Foundation/Gymnasium/blob/v1.3.0/gymnasium/envs/toy_text/cliffwalking.py>`_
 
 The board is a 4x12 matrix, with (using NumPy matrix indexing):
 
@@ -97,7 +97,7 @@ The task ID ``tabular/Blackjack-v0`` is also available with
 tabular Blackjack defaults.
 
 `gymnasium Blackjack-v1 source code
-<https://github.com/Farama-Foundation/Gymnasium/blob/v1.2.3/gymnasium/envs/toy_text/blackjack.py>`_
+<https://github.com/Farama-Foundation/Gymnasium/blob/v1.3.0/gymnasium/envs/toy_text/blackjack.py>`_
 
 Blackjack is a card game where the goal is to obtain cards that sum to as near
 as possible to 21 without going over. They're playing against a fixed dealer.

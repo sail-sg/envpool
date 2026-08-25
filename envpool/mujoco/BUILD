@@ -226,7 +226,6 @@ pybind_extension(
     name = "mujoco_dmc_envpool",
     srcs = [
         "dmc/mujoco_envpool.cc",
-        "dmc/mujoco_plugin_init.cc",
     ],
     deps = [
         ":mujoco_dmc_env",
@@ -281,7 +280,6 @@ cc_library(
 pybind_extension(
     name = "robotics_envpool",
     srcs = [
-        "robotics/mujoco_plugin_init.cc",
         "robotics/robotics_envpool.cc",
     ],
     deps = [
@@ -354,7 +352,6 @@ cc_library(
 cc_library(
     name = "myosuite_envpool_module",
     srcs = [
-        "myosuite/mujoco_plugin_init.cc",
         "myosuite/myosuite_envpool.cc",
     ],
     # The native MyoSuite runtime is header-only under myosuite_env.h and is
@@ -433,6 +430,7 @@ py_binary_312(
         oracle_requirement("gitpython"),
         oracle_requirement("gymnasium"),
         oracle_requirement("h5py"),
+        oracle_requirement("imageio"),
         oracle_requirement("mujoco"),
         oracle_requirement("numpy"),
         oracle_requirement("packaging"),
@@ -501,7 +499,6 @@ cc_library(
 pybind_extension(
     name = "playground_envpool",
     srcs = [
-        "playground/mujoco_plugin_init.cc",
         "playground/playground_envpool.cc",
         "playground/py_envpool_register.h",
         "playground/register_aloha.cc",
@@ -746,6 +743,7 @@ py_binary_312(
         oracle_requirement("gitpython"),
         oracle_requirement("gymnasium"),
         oracle_requirement("h5py"),
+        oracle_requirement("imageio"),
         oracle_requirement("mujoco"),
         oracle_requirement("numpy"),
         oracle_requirement("packaging"),

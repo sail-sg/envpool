@@ -39,6 +39,7 @@ py_binary_312(
         oracle_requirement("gitpython"),
         oracle_requirement("gymnasium"),
         oracle_requirement("h5py"),
+        oracle_requirement("imageio"),
         oracle_requirement("mujoco"),
         oracle_requirement("numpy"),
         oracle_requirement("packaging"),

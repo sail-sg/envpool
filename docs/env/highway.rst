@@ -98,21 +98,34 @@ Available Tasks
 * ``Highway-v0``; alias: ``highway-v0``
 * ``HighwayFast-v0``; alias: ``highway-fast-v0``
 * ``Exit-v0``; alias: ``exit-v0``
+* ``Exit-v1``; alias: ``exit-v1``
 * ``Intersection-v0``; alias: ``intersection-v0``
 * ``Intersection-v1``; alias: ``intersection-v1``
+* ``Intersection-v2``; alias: ``intersection-v2``
 * ``IntersectionMultiAgent-v0``; alias: ``intersection-multi-agent-v0``
 * ``IntersectionMultiAgent-v1``; alias: ``intersection-multi-agent-v1``
+* ``IntersectionMultiAgent-v2``; alias: ``intersection-multi-agent-v2``
 * ``LaneKeeping-v0``; alias: ``lane-keeping-v0``
 * ``Merge-v0``; alias: ``merge-v0``
+* ``Merge-v1``; alias: ``merge-v1``
+* ``MergeGeneric-v0``; alias: ``merge-generic-v0``
+* ``MergeGeneric-v1``; alias: ``merge-generic-v1``
 * ``Parking-v0``; alias: ``parking-v0``
 * ``ParkingActionRepeat-v0``; alias: ``parking-ActionRepeat-v0``
 * ``ParkingParked-v0``; alias: ``parking-parked-v0``
 * ``Racetrack-v0``; alias: ``racetrack-v0``
+* ``Racetrack-v1``; alias: ``racetrack-v1``
 * ``RacetrackLarge-v0``; alias: ``racetrack-large-v0``
+* ``RacetrackLarge-v1``; alias: ``racetrack-large-v1``
 * ``RacetrackOval-v0``; alias: ``racetrack-oval-v0``
+* ``RacetrackOval-v1``; alias: ``racetrack-oval-v1``
 * ``Roundabout-v0``; alias: ``roundabout-v0``
+* ``Roundabout-v1``; alias: ``roundabout-v1``
+* ``RoundaboutGeneric-v0``; alias: ``roundabout-generic-v0``
+* ``RoundaboutGeneric-v1``; alias: ``roundabout-generic-v1``
 * ``TwoWay-v0``; alias: ``two-way-v0``
 * ``UTurn-v0``; alias: ``u-turn-v0``
+* ``UTurn-v1``; alias: ``u-turn-v1``
 
 
 Correctness Tests

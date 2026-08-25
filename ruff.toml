@@ -1,4 +1,4 @@
-target-version = "py311"
+target-version = "py312"
 line-length = 80
 preview = true
 force-exclude = true

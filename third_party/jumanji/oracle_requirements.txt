@@ -17,7 +17,7 @@ Farama-Notifications==0.0.6
 filelock==3.29.0
 fonttools==4.62.1
 fsspec==2026.4.0
-gymnasium==1.2.3
+gymnasium==1.3.0
 h11==0.16.0
 hf-xet==1.5.0
 httpcore==1.0.9
@@ -27,7 +27,7 @@ idna==3.13
 jax==0.4.35
 jax-tqdm==0.4.0
 jaxlib==0.4.35
-jumanji==1.1.1
+jumanji==1.1.2
 kiwisolver==1.5.0
 markdown-it-py==4.2.0
 matplotlib==3.10.8

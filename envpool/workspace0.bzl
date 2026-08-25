@@ -272,10 +272,10 @@ def workspace():
     maybe(
         http_archive,
         name = "ale",
-        sha256 = "2e63a79e04f22cd2100383a02646d3e38f180e056c79692c91658cfeecbb3d88",
-        strip_prefix = "Arcade-Learning-Environment-0.11.2",
+        sha256 = "ade05f76416b4a49e8d6e5cc9bebb0745ae69f813aaeabe5813043f288db8ab3",
+        strip_prefix = "Arcade-Learning-Environment-0.12.1",
         urls = [
-            "https://github.com/Farama-Foundation/Arcade-Learning-Environment/archive/refs/tags/v0.11.2.tar.gz",
+            "https://github.com/Farama-Foundation/Arcade-Learning-Environment/archive/refs/tags/v0.12.1.tar.gz",
         ],
         build_file = "//third_party/ale:ale.BUILD",
     )
@@ -574,10 +574,10 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
             "//third_party/mujoco:windows_msvc_compat.patch",
             "//third_party/mujoco:windows_msvc_c11_compat.patch",
         ],
-        sha256 = "0d6bb25612da5d1c398d21cf5b039367d4deef15c064b049c3127043d613b539",
-        strip_prefix = "mujoco-3.6.0",
+        sha256 = "f6346a0bab22bc0db5cabfe299fd3819b8b9bab67907c1ec0d243c675635ea3d",
+        strip_prefix = "mujoco-3.11.0",
         urls = [
-            "https://github.com/google-deepmind/mujoco/archive/refs/tags/3.6.0.tar.gz",
+            "https://github.com/google-deepmind/mujoco/archive/refs/tags/3.11.0.tar.gz",
         ],
         build_file = "//third_party/mujoco:mujoco.BUILD",
     )
@@ -596,11 +596,11 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "mujoco_dmc_xml",
-        sha256 = "23e86e28ef6ba9d2fec95103d45bd2061cfed35c8b0012b1ac5ee41b080d56c6",
-        strip_prefix = "dm_control-1.0.38/dm_control",
+        sha256 = "2989aedd24a28966f472b8882376f82b08290350527724b5591ae38d5937aee7",
+        strip_prefix = "dm_control-1.0.44/dm_control",
         urls = [
-            "https://github.com/deepmind/dm_control/archive/refs/tags/1.0.38.tar.gz",
-            "https://codeload.github.com/deepmind/dm_control/tar.gz/refs/tags/1.0.38",
+            "https://github.com/google-deepmind/dm_control/archive/refs/tags/1.0.44.tar.gz",
+            "https://codeload.github.com/google-deepmind/dm_control/tar.gz/refs/tags/1.0.44",
         ],
         build_file = "//third_party/mujoco_dmc_xml:mujoco_dmc_xml.BUILD",
     )
@@ -620,11 +620,11 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "metaworld_assets",
-        sha256 = "6ccb763cb05bb9f9c966a17304d4849f530f1b721699fecc68d920a000ea5bd0",
-        strip_prefix = "Metaworld-3.0.0",
+        sha256 = "fbcfbb07eacec784f32c0efa5dcaa0ee361a39ada8780298aedde3ad7ef40417",
+        strip_prefix = "Metaworld-3.1.1",
         urls = [
-            "https://github.com/Farama-Foundation/Metaworld/archive/refs/tags/v3.0.0.tar.gz",
-            "https://codeload.github.com/Farama-Foundation/Metaworld/tar.gz/refs/tags/v3.0.0",
+            "https://github.com/Farama-Foundation/Metaworld/archive/refs/tags/v3.1.1.tar.gz",
+            "https://codeload.github.com/Farama-Foundation/Metaworld/tar.gz/refs/tags/v3.1.1",
         ],
         build_file = "//third_party/metaworld_assets:metaworld_assets.BUILD",
     )
@@ -632,14 +632,12 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "myosuite_source",
-        sha256 = "f75b77563547fce6d9be46abee2b86e636dd5e57a6f1d470fdbc2104dcd61d34",
-        strip_prefix = "myosuite-2.11.6",
+        sha256 = "9fc2c610c5d71d2640cc75a0ea989c4f864622b49f67d38bfe7f1f6623396257",
+        strip_prefix = "myosuite-2.12.2",
         urls = [
-            "https://github.com/MyoHub/myosuite/archive/refs/tags/v2.11.6.tar.gz",
-            "https://codeload.github.com/MyoHub/myosuite/tar.gz/refs/tags/v2.11.6",
+            "https://github.com/MyoHub/myosuite/archive/refs/tags/v2.12.2.tar.gz",
+            "https://codeload.github.com/MyoHub/myosuite/tar.gz/refs/tags/v2.12.2",
         ],
-        patch_args = ["-p1"],
-        patches = ["//third_party/myosuite:mujoco36_mjspec_compat.patch"],
         build_file = "//third_party/myosuite:myosuite_source.BUILD",
     )
 
@@ -661,7 +659,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         sha256 = "beed226fcf1d27b91f9147221ef450c2ccab8e5bb7b5954dbcb5635024ed4874",
         strip_prefix = "object_sim-0.1.0",
         urls = [
-            # MyoSuite v2.11.6 gitlinks vikashplus/object_sim@87cd8dd, but
+            # MyoSuite v2.12.2 gitlinks vikashplus/object_sim@87cd8dd, but
             # that commit is no longer fetchable from GitHub archives.
             "https://github.com/MyoHub/object_sim/archive/refs/tags/v0.1.0.tar.gz",
             "https://codeload.github.com/MyoHub/object_sim/tar.gz/refs/tags/v0.1.0",

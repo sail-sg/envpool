@@ -28,7 +28,7 @@
 
 Here are EnvPool's several highlights:
 
-- **All-platform support: Linux, macOS, and Windows** wheels for Python 3.11-3.14;
+- **All-platform support: Linux, macOS, and Windows** wheels for Python 3.12-3.14;
 - **Built-in rendering** with batched `rgb_array` output and `human` display mode;
 - Compatible with [`gymnasium`](https://github.com/Farama-Foundation/Gymnasium) APIs and DeepMind `dm_env` APIs;
 - Manage a pool of envs, interact with the envs in batched APIs by default;
@@ -53,7 +53,7 @@ Check out our [arXiv paper](https://arxiv.org/abs/2206.10558) for more details!
 
 ### PyPI
 
-EnvPool is currently hosted on [PyPI](https://pypi.org/project/envpool/). It supports Python 3.11-3.14 on Linux, macOS, and Windows.
+EnvPool is currently hosted on [PyPI](https://pypi.org/project/envpool/). It supports Python 3.12-3.14 on Linux, macOS, and Windows.
 
 You can simply install EnvPool with the following command:
 

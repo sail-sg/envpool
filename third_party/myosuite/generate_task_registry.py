@@ -28,8 +28,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-ORACLE_VERSION = "2.11.6"
-ORACLE_COMMIT = "05cb84678373f91271004f99602ebbf01e57d1a1"
+ORACLE_VERSION = "2.12.2"
+ORACLE_COMMIT = "5635e1a61c63b0363fa8b289c8cc137f0e4c736d"
 
 BROKEN_IDS: tuple[str, ...] = ()
 

@@ -119,9 +119,9 @@ cc_library(
 )
 
 cc_binary(
-    name = "libmujoco.so.3.6.0",
+    name = "libmujoco.so.3.11.0",
     linkopts = select({
-        "@envpool//:linux": ["-Wl,-soname,libmujoco.so.3.6.0"],
+        "@envpool//:linux": ["-Wl,-soname,libmujoco.so.3.11.0"],
         "//conditions:default": [],
     }),
     linkshared = True,
@@ -130,9 +130,9 @@ cc_binary(
 )
 
 cc_binary(
-    name = "libmujoco.3.6.0.dylib",
+    name = "libmujoco.3.11.0.dylib",
     linkopts = select({
-        "@platforms//os:osx": ["-Wl,-install_name,@rpath/mujoco.framework/Versions/A/libmujoco.3.6.0.dylib"],
+        "@platforms//os:osx": ["-Wl,-install_name,@rpath/mujoco.framework/Versions/A/libmujoco.3.11.0.dylib"],
         "//conditions:default": [],
     }),
     linkshared = True,
@@ -151,8 +151,8 @@ filegroup(
     name = "mujoco_shared_lib",
     srcs = select({
         "@envpool//:windows": [":mujoco.dll"],
-        "@platforms//os:osx": [":libmujoco.3.6.0.dylib"],
-        "//conditions:default": [":libmujoco.so.3.6.0"],
+        "@platforms//os:osx": [":libmujoco.3.11.0.dylib"],
+        "//conditions:default": [":libmujoco.so.3.11.0"],
     }),
 )
 
@@ -184,6 +184,11 @@ cc_library(
             "src/xml/*.c",
             "src/xml/*.cc",
             "src/xml/*.h",
+        ]) + glob([
+            "plugin/obj_decoder/*.cc",
+            "plugin/obj_decoder/*.h",
+            "plugin/stl_decoder/*.cc",
+            "plugin/stl_decoder/*.h",
         ])
     ),
     hdrs = glob([
@@ -258,10 +263,7 @@ cc_library(
         "@envpool//:windows": ["/std:c++20"],
         "//conditions:default": ["-std=c++20"],
     }),
-    defines = ["MJ_STATIC"] + select({
-        "@envpool//:windows": ["mjDLLMAIN=MjObjDecoderDllMain"],
-        "//conditions:default": [],
-    }),
+    defines = ["MJ_STATIC"],
     deps = [
         ":mujoco_lib",
         "@tinyobjloader",
@@ -279,10 +281,7 @@ cc_library(
         "@envpool//:windows": ["/std:c++20"],
         "//conditions:default": ["-std=c++20"],
     }),
-    defines = ["MJ_STATIC"] + select({
-        "@envpool//:windows": ["mjDLLMAIN=MjStlDecoderDllMain"],
-        "//conditions:default": [],
-    }),
+    defines = ["MJ_STATIC"],
     deps = [
         ":mujoco_lib",
     ],

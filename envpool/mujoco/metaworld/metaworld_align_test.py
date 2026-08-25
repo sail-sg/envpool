@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Alignment tests against the official MetaWorld v3.0.0 oracle."""
+"""Alignment tests against the official MetaWorld v3.1.1 oracle."""
 
 from __future__ import annotations
 
@@ -219,7 +219,7 @@ def _reward_atol(task_name: str) -> float:
 
 
 class MetaWorldAlignTest(absltest.TestCase):
-    """Alignment tests for native MetaWorld against the v3.0.0 oracle."""
+    """Alignment tests for native MetaWorld against the v3.1.1 oracle."""
 
     def test_official_v3_registry_coverage(self) -> None:
         """EnvPool should register the official v3 registry order exactly."""

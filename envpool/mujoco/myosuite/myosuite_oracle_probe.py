@@ -15,7 +15,7 @@
 
 This binary is used only by tests. It intentionally runs in a separate Python
 process from EnvPool so the official MyoSuite dependencies can stay pinned to
-the upstream v2.11.6 contract without replacing EnvPool's normal runtime deps.
+the upstream v2.12.2 contract without replacing EnvPool's normal runtime deps.
 """
 
 from __future__ import annotations
@@ -108,7 +108,7 @@ def _runfiles_manifests(runfiles: Path) -> tuple[Path, ...]:
 def _mujoco_shared_lib_name() -> str | None:
     system = platform.system()
     if system == "Darwin":
-        return "libmujoco.3.6.0.dylib"
+        return "libmujoco.3.11.0.dylib"
     if system == "Windows":
         return "mujoco.dll"
     return None
@@ -161,7 +161,7 @@ def _configure_mujoco_package_shared_lib() -> None:
 
     Linux uses the pinned pip MuJoCo wheel directly. Replacing or preloading the
     package library there corrupts the Python binding's model-name reads in
-    MuJoCo 3.6.0, while the pip wheel already works with the EGL render path.
+    MuJoCo 3.11.0, while the pip wheel already works with the EGL render path.
     """
     shared_lib = _mujoco_shared_lib_name()
     if shared_lib is None or getattr(
@@ -673,8 +673,8 @@ def _metadata_report(task_ids: list[str]) -> dict[str, Any]:
         env = gym.make(task_id)
         try:
             unwrapped = env.unwrapped
-            model = unwrapped.sim.model
-            data = unwrapped.sim.data
+            model = unwrapped.mj_model
+            data = unwrapped.mj_data
             task: dict[str, Any] = {
                 "action_shape": list(env.action_space.shape),
                 "entry_class": type(unwrapped).__name__,
@@ -743,8 +743,8 @@ def _metadata_report(task_ids: list[str]) -> dict[str, Any]:
 
 
 def _state_report(env: Any) -> dict[str, Any]:
-    model = env.sim.model
-    data = env.sim.data
+    model = env.mj_model
+    data = env.mj_data
     state = {
         "act": _jsonable_array(data.act) if model.na > 0 else [],
         "actuator_force": _jsonable_array(data.actuator_force),
@@ -829,8 +829,8 @@ def _sync_osl_phase_from_qpos(env: Any) -> None:
     controller = getattr(env, "OSL_CTRL", None)
     if controller is None:
         return
-    model = env.sim.model
-    data = env.sim.data
+    model = env.mj_model
+    data = env.mj_data
     if model.nkey < 3:
         controller.reset("e_stance")
         controller.start()
@@ -898,9 +898,10 @@ def _sync_fatigue_hidden_state(env: Any, state: dict[str, Any]) -> None:
 
 def _sync_to_envpool_reset_state(env: Any, state: dict[str, Any]) -> np.ndarray:
     """Patch the official oracle to EnvPool's reset-time MuJoCo state once."""
-    sim = env.sim
-    model = sim.model
-    data = sim.data
+    import mujoco
+
+    model = env.mj_model
+    data = env.mj_data
 
     _assign_sync_array(state, "site_pos", model.site_pos)
     _assign_sync_array(state, "site_quat", model.site_quat)
@@ -930,10 +931,16 @@ def _sync_to_envpool_reset_state(env: Any, state: dict[str, Any]) -> np.ndarray:
     qpos = _state_array(state, "qpos0", data.qpos.shape)
     qvel = _state_array(state, "qvel0", data.qvel.shape)
     act = _state_array(state, "act0", data.act.shape) if model.na > 0 else None
-    sim.set_state(time=0.0, qpos=qpos, qvel=qvel, act=act)
+    data.time = 0.0
+    if qpos is not None:
+        data.qpos[:] = qpos
+    if qvel is not None:
+        data.qvel[:] = qvel
+    if act is not None:
+        data.act[:] = act
 
     _assign_sync_array(state, "ctrl", data.ctrl)
-    sim.forward()
+    mujoco.mj_forward(model, data)
     _sync_osl_phase_from_qpos(env)
     _sync_baoding_goal_from_envpool_reset_state(env)
     _sync_chasetag_hidden_state(env)
@@ -961,8 +968,11 @@ def _trace_info(info: dict[str, Any]) -> dict[str, Any]:
 
 
 def _render_frame(env: Any, width: int, height: int, camera_id: int) -> Any:
-    env.unwrapped.sim.forward()
-    renderer = env.unwrapped.sim.renderer
+    import mujoco
+
+    unwrapped = env.unwrapped
+    mujoco.mj_forward(unwrapped.mj_model, unwrapped.mj_data)
+    renderer = unwrapped.mj_renderer
     frame = renderer.render_offscreen(
         width=width,
         height=height,
@@ -1045,6 +1055,8 @@ def _trace_report(
     trace_plan: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     official_myosuite, _, gym = _import_official()
+    import mujoco
+
     rng = np.random.default_rng(seed + 17)
     tasks: dict[str, dict[str, Any]] = {}
     for task_id in task_ids:
@@ -1111,7 +1123,7 @@ def _trace_report(
                             unwrapped, planned_sync_states[step_id + 1]
                         )
                     else:
-                        env.sim.forward()
+                        mujoco.mj_forward(unwrapped.mj_model, unwrapped.mj_data)
                     trace["obs"].append(_jsonable_array(obs))
                     trace["rewards"].append(0.0)
                     trace["terminated"].append(False)

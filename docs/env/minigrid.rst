@@ -1,11 +1,11 @@
 Minigrid
 ========
 
-We use ``minigrid==3.0.0`` as the codebase.
-See https://github.com/Farama-Foundation/Minigrid/tree/v3.0.0
+We use ``minigrid==3.1.0`` as the codebase.
+See https://github.com/Farama-Foundation/Minigrid/tree/v3.1.0
 
 EnvPool supports all 81 non-BabyAI ``MiniGrid-*`` environments and all 96
-``BabyAI-*`` environments registered by upstream ``minigrid==3.0.0``.
+``BabyAI-*`` environments registered by upstream ``minigrid==3.1.0``.
 
 
 Render Compare
@@ -89,7 +89,7 @@ subset ``[0, 2]``.
 Available Tasks
 ---------------
 
-All upstream ``BabyAI-*`` task IDs from ``minigrid==3.0.0`` are available in
+All upstream ``BabyAI-*`` task IDs from ``minigrid==3.1.0`` are available in
 addition to the ``MiniGrid-*`` task IDs listed below.
 
 Empty
@@ -200,6 +200,7 @@ MultiRoom
 
 * ``MiniGrid-MultiRoom-N2-S4-v0``
 * ``MiniGrid-MultiRoom-N4-S5-v0``
+* ``MiniGrid-MultiRoom-N4-S5-v1``
 * ``MiniGrid-MultiRoom-N6-v0``
 
 ObstructedMaze

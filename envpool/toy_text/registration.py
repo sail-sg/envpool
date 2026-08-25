@@ -48,7 +48,8 @@ register(
 )
 
 register(
-    task_id="Taxi-v3",
+    task_id="Taxi-v4",
+    aliases=["Taxi-v3"],
     import_path="envpool.toy_text",
     spec_cls="TaxiEnvSpec",
     dm_cls="TaxiDMEnvPool",

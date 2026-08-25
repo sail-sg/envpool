@@ -1,8 +1,8 @@
 MyoSuite
 ========
 
-EnvPool's MyoSuite integration uses ``myosuite==2.11.6`` pinned at commit
-``05cb84678373f91271004f99602ebbf01e57d1a1`` with ``mujoco==3.6.0``.
+EnvPool's MyoSuite integration uses ``myosuite==2.12.2`` pinned at commit
+``5635e1a61c63b0363fa8b289c8cc137f0e4c736d`` with ``mujoco==3.11.0``.
 The runtime implementation is native C++; the official Python package is used
 only by oracle tests and doc-generation tooling.
 

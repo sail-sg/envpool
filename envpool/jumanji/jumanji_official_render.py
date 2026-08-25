@@ -996,7 +996,7 @@ def render_official_frame(
             lambda: routing.CleanerViewer("Cleaner", "rgb_array"),
         )
         state = _make_cleaner_state(obs)
-    elif task_id == "Connector-v2":
+    elif task_id == "Connector-v3":
         viewer = _cached_viewer(
             aux,
             task_id,

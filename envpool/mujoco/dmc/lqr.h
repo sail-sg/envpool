@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// https://github.com/deepmind/dm_control/blob/1.0.38/dm_control/suite/lqr.py
+// https://github.com/deepmind/dm_control/blob/1.0.44/dm_control/suite/lqr.py
 
 #ifndef ENVPOOL_MUJOCO_DMC_LQR_H_
 #define ENVPOOL_MUJOCO_DMC_LQR_H_
