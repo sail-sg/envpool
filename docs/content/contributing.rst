@@ -91,7 +91,7 @@ integration; however, you don't want to build other stuff such as OpenCV:
 
     bazel test --test_output=all //envpool/mujoco:mujoco_gym_align_test --config=test
     # or alternatively
-    cd bazel-bin/envpool/mujoco/mujoco_gym_align_test.runfiles/envpool/
+    cd bazel-bin/envpool/mujoco/mujoco_gym_align_test.runfiles/_main/
     ./envpool/mujoco/mujoco_gym_align_test
 
 Feel free to customize the command in ``Makefile``!

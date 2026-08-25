@@ -21,7 +21,7 @@ jobs:
       # Keep hosted Linux runners responsive during the full MuJoCo/MyoSuite coverage
       # build. The default HOST_CPUS-1 parallelism can starve the runner hard
       # enough for GitHub Actions to lose communication.
-      BAZEL_CI_RESOURCE_OPTS: --jobs=2 --local_cpu_resources=2 --local_ram_resources=HOST_RAM*.35 --experimental_disk_cache_gc_max_size=2G --experimental_disk_cache_gc_idle_delay=0s
+      BAZEL_CI_RESOURCE_OPTS: --jobs=2 --local_resources=cpu=2 --local_resources=memory=HOST_RAM*.35 --experimental_disk_cache_gc_max_size=2G --experimental_disk_cache_gc_idle_delay=0s
       MUJOCO_GL: egl
       EGL_PLATFORM: surfaceless
     steps:
@@ -138,7 +138,7 @@ jobs:
       # Keep hosted Linux runners responsive during the full MuJoCo/MyoSuite test
       # build. The default HOST_CPUS-1 parallelism can starve the runner hard
       # enough for GitHub Actions to lose communication.
-      BAZEL_CI_RESOURCE_OPTS: --jobs=2 --local_cpu_resources=2 --local_ram_resources=HOST_RAM*.35 --experimental_disk_cache_gc_max_size=2G --experimental_disk_cache_gc_idle_delay=0s
+      BAZEL_CI_RESOURCE_OPTS: --jobs=2 --local_resources=cpu=2 --local_resources=memory=HOST_RAM*.35 --experimental_disk_cache_gc_max_size=2G --experimental_disk_cache_gc_idle_delay=0s
       MUJOCO_GL: egl
       EGL_PLATFORM: surfaceless
     steps:
@@ -219,7 +219,7 @@ jobs:
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-      BAZEL_CI_RESOURCE_OPTS: --jobs=HOST_CPUS-1 --local_cpu_resources=HOST_CPUS-1 --local_ram_resources=HOST_RAM*.5
+      BAZEL_CI_RESOURCE_OPTS: --jobs=HOST_CPUS-1 --local_resources=cpu=HOST_CPUS-1 --local_resources=memory=HOST_RAM*.5
       HOMEBREW_NO_AUTO_UPDATE: "1"
     steps:
       - name: Cancel previous run
@@ -305,7 +305,7 @@ jobs:
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
       # MSVC ignores the POSIX -g0/-O3 flags from --config=test. Use opt mode
       # and a larger capped disk cache so Windows reruns are not cold builds.
-      BAZEL_CI_RESOURCE_OPTS: --compilation_mode=opt --jobs=HOST_CPUS-1 --local_cpu_resources=HOST_CPUS-1 --local_ram_resources=HOST_RAM*.5 --experimental_disk_cache_gc_max_size=4G --experimental_disk_cache_gc_idle_delay=0s
+      BAZEL_CI_RESOURCE_OPTS: --compilation_mode=opt --jobs=HOST_CPUS-1 --local_resources=cpu=HOST_CPUS-1 --local_resources=memory=HOST_RAM*.5 --experimental_disk_cache_gc_max_size=4G --experimental_disk_cache_gc_idle_delay=0s
       BAZEL_CACHE_PREFIX: bazel-test-v6-windows-opt-cache4g
       MESA_GL_VERSION_OVERRIDE: 4.5COMPAT
       MSYS2_ARG_CONV_EXCL: "*"
