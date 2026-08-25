@@ -380,11 +380,15 @@ genrule(
     name = "iwadpicker_cocoa_o",
     srcs = glob(["src/**"]) + [
         ":viz_version",
+        "@sdl2//:include/SDL.h",
         "@sdl2//:srcs",
     ],
     outs = ["iwadpicker_cocoa.o"],
     cmd = """
 generated_dir=$$(dirname "$(execpath :viz_version)")
+vizdoom_src="$(location src/posix/osx/iwadpicker_cocoa.mm)"
+vizdoom_src="$${vizdoom_src%/posix/osx/iwadpicker_cocoa.mm}"
+sdl_include=$$(dirname "$(location @sdl2//:include/SDL.h)")
 /usr/bin/xcrun --sdk macosx clang++ -c -x objective-c++ -std=c++17 \
   -Dstricmp=strcasecmp \
   -Dstrnicmp=strncasecmp \
@@ -394,10 +398,10 @@ generated_dir=$$(dirname "$(execpath :viz_version)")
   -D__forceinline=inline \
   -fPIC \
   -fomit-frame-pointer \
-  -Iexternal/vizdoom/src \
-  -Iexternal/vizdoom/src/posix \
-  -Iexternal/vizdoom/src/posix/sdl \
-  -Iexternal/sdl2/include \
+  -I"$${vizdoom_src}" \
+  -I"$${vizdoom_src}/posix" \
+  -I"$${vizdoom_src}/posix/sdl" \
+  -I"$${sdl_include}" \
   -I"$${generated_dir}" \
   "$(location src/posix/osx/iwadpicker_cocoa.mm)" \
   -o "$@"
@@ -412,11 +416,15 @@ genrule(
     name = "i_system_mm_o",
     srcs = glob(["src/**"]) + [
         ":viz_version",
+        "@sdl2//:include/SDL.h",
         "@sdl2//:srcs",
     ],
     outs = ["i_system.mm.o"],
     cmd = """
 generated_dir=$$(dirname "$(execpath :viz_version)")
+vizdoom_src="$(location src/posix/sdl/i_system.mm)"
+vizdoom_src="$${vizdoom_src%/posix/sdl/i_system.mm}"
+sdl_include=$$(dirname "$(location @sdl2//:include/SDL.h)")
 /usr/bin/xcrun --sdk macosx clang++ -c -x objective-c++ -std=c++17 \
   -Dstricmp=strcasecmp \
   -Dstrnicmp=strncasecmp \
@@ -426,10 +434,10 @@ generated_dir=$$(dirname "$(execpath :viz_version)")
   -D__forceinline=inline \
   -fPIC \
   -fomit-frame-pointer \
-  -Iexternal/vizdoom/src \
-  -Iexternal/vizdoom/src/posix \
-  -Iexternal/vizdoom/src/posix/sdl \
-  -Iexternal/sdl2/include \
+  -I"$${vizdoom_src}" \
+  -I"$${vizdoom_src}/posix" \
+  -I"$${vizdoom_src}/posix/sdl" \
+  -I"$${sdl_include}" \
   -I"$${generated_dir}" \
   "$(location src/posix/sdl/i_system.mm)" \
   -o "$@"

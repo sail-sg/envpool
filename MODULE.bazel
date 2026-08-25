@@ -1,0 +1,138 @@
+module(name = "envpool")
+
+bazel_dep(name = "bazel_features", version = "1.51.0")
+bazel_dep(name = "bazel_skylib", version = "1.9.2")
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "protobuf", version = "36.0", repo_name = "com_google_protobuf")
+bazel_dep(name = "rules_cc", version = "0.2.22")
+bazel_dep(name = "rules_foreign_cc", version = "0.15.1")
+bazel_dep(name = "rules_java", version = "9.8.0")
+bazel_dep(name = "rules_python", version = "2.3.2")
+bazel_dep(name = "rules_shell", version = "0.8.0")
+
+single_version_override(
+    module_name = "rules_python",
+    patches = [
+        "//third_party/rules_python:pip_repository_host_platform.patch",
+        "//third_party/rules_python:zipapp_explicit_init.patch",
+    ],
+)
+
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.defaults(python_version = "3.12")
+python.toolchain(
+    configure_coverage_tool = True,
+    python_version = "3.12",
+)
+python.toolchain(
+    configure_coverage_tool = True,
+    python_version = "3.13",
+)
+python.toolchain(
+    configure_coverage_tool = True,
+    python_version = "3.14",
+)
+use_repo(python, "python_3_12", "python_3_13", "python_3_14", "python_versions")
+
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip.parse(
+    hub_name = "pip_requirements",
+    python_version = "3.12",
+    requirements_lock = "//third_party/pip_requirements:requirements.txt",
+)
+pip.parse(
+    hub_name = "pip_requirements",
+    python_version = "3.13",
+    requirements_lock = "//third_party/pip_requirements:requirements.txt",
+)
+pip.parse(
+    hub_name = "pip_requirements",
+    python_version = "3.14",
+    requirements_lock = "//third_party/pip_requirements:requirements.txt",
+)
+pip.parse(
+    hub_name = "jumanji_oracle_requirements",
+    python_version = "3.12",
+    requirements_lock = "//third_party/jumanji:oracle_requirements.txt",
+)
+pip.parse(
+    hub_name = "myosuite_oracle_requirements",
+    python_version = "3.12",
+    requirements_lock = "//third_party/myosuite:oracle_requirements.txt",
+)
+use_repo(
+    pip,
+    "jumanji_oracle_requirements",
+    "myosuite_oracle_requirements",
+    "pip_requirements",
+)
+
+envpool_repositories = use_extension("//envpool:workspace0.bzl", "repositories")
+use_repo(
+    envpool_repositories,
+    "ale",
+    "atari_roms",
+    "bazel_clang_tidy",
+    "boost",
+    "box2d",
+    "ccd",
+    "com_github_gflags_gflags",
+    "com_github_google_glog",
+    "com_github_nelhage_rules_boost",
+    "com_google_absl",
+    "com_google_googletest",
+    "concurrentqueue",
+    "cuda",
+    "freedoom",
+    "freetype",
+    "google_research_football",
+    "gym3_libenv",
+    "gymnasium_robotics_assets",
+    "libjpeg_turbo",
+    "lodepng",
+    "marchingcubecpp",
+    "marlgrid",
+    "metaworld_assets",
+    "mujoco",
+    "mujoco_dmc_xml",
+    "mujoco_gym_xml",
+    "mujoco_menagerie_playground",
+    "mujoco_playground_source",
+    "myosuite_furniture_sim",
+    "myosuite_mpl_sim",
+    "myosuite_myo_sim",
+    "myosuite_object_sim",
+    "myosuite_source",
+    "myosuite_ycb_sim",
+    "nasm",
+    "opencv",
+    "openxla_ffi_headers",
+    "pretrain_weight",
+    "procgen",
+    "pugixml",
+    "pybind11",
+    "pybind11_bazel",
+    "qhull",
+    "qt",
+    "re2c_4_5_1",
+    "sdl2",
+    "sdl2_gfx",
+    "sdl2_ttf",
+    "threadpool",
+    "tinyobjloader",
+    "tinyxml2",
+    "vizdoom",
+    "vizdoom_extra_maps",
+    "vizdoom_lib",
+    "zlib",
+)
+
+boost_dependencies = use_extension("//envpool:workspace1.bzl", "boost_dependencies")
+use_repo(
+    boost_dependencies,
+    "com_github_facebook_zstd",
+    "net_zlib_zlib",
+    "openssl",
+    "org_bzip_bzip2",
+    "org_lzma_lzma",
+)

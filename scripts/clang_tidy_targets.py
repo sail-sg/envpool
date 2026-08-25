@@ -14,9 +14,9 @@ FULL_RUN_FILES = {
     ".bazelversion",
     ".clang-tidy",
     "BUILD",
-    "WORKSPACE",
+    "MODULE.bazel",
+    "MODULE.bazel.lock",
     "envpool/BUILD",
-    "envpool/pip.bzl",
     "envpool/requirements.bzl",
     "envpool/workspace0.bzl",
     "envpool/workspace1.bzl",
@@ -48,7 +48,7 @@ def _git(*args: str) -> str:
 
 def _bazel(*args: str) -> str:
     env = os.environ.copy()
-    env.setdefault("USE_BAZEL_VERSION", "8.7.0")
+    env.setdefault("USE_BAZEL_VERSION", "9.2.0")
     return subprocess.check_output(
         ["bazelisk", *args],
         cwd=REPO_ROOT,

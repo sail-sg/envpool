@@ -12,31 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""EnvPool workspace initialization, load after workspace0."""
+"""Bzlmod adapter for Boost's upstream repository macro."""
 
 load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
-load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
-load("@rules_python//python:repositories.bzl", "python_register_multi_toolchains")
-load("//third_party/qt:qt_configure.bzl", "qt_configure")
 
-def workspace():
-    """Configure pip requirements."""
-    python_register_multi_toolchains(
-        name = "python_versions",
-        python_versions = ["3.12", "3.13", "3.14"],
-        default_version = "3.12",
-        ignore_root_user_error = True,
-        register_coverage_tool = True,
-    )
-
-    rules_foreign_cc_dependencies(
-        register_default_tools = False,
-        register_built_tools = False,
-        register_built_pkgconfig_toolchain = False,
-    )
-
+def _boost_dependencies_impl(_module_ctx):
     boost_deps()
 
-    qt_configure(name = "qt")
-
-workspace1 = workspace
+boost_dependencies = module_extension(implementation = _boost_dependencies_impl)
