@@ -235,6 +235,7 @@ for task_id, size, random_length in (
 for task_id, min_num_rooms, max_num_rooms, max_room_size in (
     ("MiniGrid-MultiRoom-N2-S4-v0", 2, 2, 4),
     ("MiniGrid-MultiRoom-N4-S5-v0", 6, 6, 5),
+    ("MiniGrid-MultiRoom-N4-S5-v1", 4, 4, 5),
     ("MiniGrid-MultiRoom-N6-v0", 6, 6, 10),
 ):
     _register(

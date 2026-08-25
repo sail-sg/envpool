@@ -23,6 +23,10 @@ import sys
 import warnings
 from typing import Any, cast
 
+from envpool.mujoco.oracle import configure_mujoco_package_shared_lib
+
+configure_mujoco_package_shared_lib()
+
 
 def _configure_linux_mujoco_gl() -> None:
     if platform.system() != "Linux":

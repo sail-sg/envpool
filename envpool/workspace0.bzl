@@ -24,16 +24,23 @@ load("//third_party/vizdoom:repo.bzl", "vizdoom_archive")
 def workspace():
     """Load requested packages."""
 
+    # rules_python's scoped flags need a newer skylib than the WORKSPACE defaults.
+    maybe(
+        http_archive,
+        name = "bazel_skylib",
+        sha256 = "37cdfbc6faefea94f7b37760a305c98c08981116c2bc9e821e3b423221fad8c8",
+        urls = [
+            "https://github.com/bazelbuild/bazel-skylib/releases/download/1.9.2/bazel-skylib-1.9.2.tar.gz",
+        ],
+    )
+
     maybe(
         http_archive,
         name = "rules_shell",
-        patches = [
-            "//third_party/rules_shell:bazel_sh_environ.patch",
-        ],
-        sha256 = "410e8ff32e018b9efd2743507e7595c26e2628567c42224411ff533b57d27c28",
-        strip_prefix = "rules_shell-0.2.0",
+        sha256 = "20721f63908879c083f94869e618ea8d4ff5edb91ff9a72a2ebee357fdbc352d",
+        strip_prefix = "rules_shell-0.8.0",
         urls = [
-            "https://github.com/bazelbuild/rules_shell/releases/download/v0.2.0/rules_shell-v0.2.0.tar.gz",
+            "https://github.com/bazelbuild/rules_shell/releases/download/v0.8.0/rules_shell-v0.8.0.tar.gz",
         ],
     )
 
@@ -43,19 +50,19 @@ def workspace():
         patches = [
             "//third_party/rules_cc:rules_shell_bazel_sh.patch",
         ],
-        sha256 = "283fa1cdaaf172337898749cf4b9b1ef5ea269da59540954e51fba0e7b8f277a",
-        strip_prefix = "rules_cc-0.2.17",
+        sha256 = "81c10a95a5c22d838276ee90d712635d6042419fdfca5ef88328226b6321e53b",
+        strip_prefix = "rules_cc-0.2.22",
         urls = [
-            "https://github.com/bazelbuild/rules_cc/releases/download/0.2.17/rules_cc-0.2.17.tar.gz",
+            "https://github.com/bazelbuild/rules_cc/releases/download/0.2.22/rules_cc-0.2.22.tar.gz",
         ],
     )
 
     maybe(
         http_archive,
         name = "rules_java",
-        sha256 = "9de4e178c2c4f98d32aafe5194c3f2b717ae10405caa11bdcb460ac2a6f61516",
+        sha256 = "88537048d7d07589ff4939c99889300c7063e43480ddd3cfa94d6c2cc899aa2e",
         urls = [
-            "https://github.com/bazelbuild/rules_java/releases/download/9.6.1/rules_java-9.6.1.tar.gz",
+            "https://github.com/bazelbuild/rules_java/releases/download/9.8.0/rules_java-9.8.0.tar.gz",
         ],
     )
 
@@ -64,20 +71,20 @@ def workspace():
     maybe(
         http_archive,
         name = "protobuf",
-        sha256 = "9f0933ad12abb0a8957b3b64aefc34774ccbe57f77f890c66cb4067519bb83c1",
-        strip_prefix = "protobuf-34.1",
+        sha256 = "1902386466b5795b166337d2a9d91f9b7cf2bee4ed76c8fb0b73bd39edd30b9d",
+        strip_prefix = "protobuf-36.0",
         urls = [
-            "https://github.com/protocolbuffers/protobuf/releases/download/v34.1/protobuf-34.1.bazel.tar.gz",
+            "https://github.com/protocolbuffers/protobuf/releases/download/v36.0/protobuf-36.0.bazel.tar.gz",
         ],
     )
 
     maybe(
         http_archive,
         name = "com_google_protobuf",
-        sha256 = "9f0933ad12abb0a8957b3b64aefc34774ccbe57f77f890c66cb4067519bb83c1",
-        strip_prefix = "protobuf-34.1",
+        sha256 = "1902386466b5795b166337d2a9d91f9b7cf2bee4ed76c8fb0b73bd39edd30b9d",
+        strip_prefix = "protobuf-36.0",
         urls = [
-            "https://github.com/protocolbuffers/protobuf/releases/download/v34.1/protobuf-34.1.bazel.tar.gz",
+            "https://github.com/protocolbuffers/protobuf/releases/download/v36.0/protobuf-36.0.bazel.tar.gz",
         ],
     )
 
@@ -85,12 +92,13 @@ def workspace():
         http_archive,
         name = "rules_python",
         patches = [
+            "//third_party/rules_python:pip_repository_host_platform.patch",
             "//third_party/rules_python:zipapp_explicit_init.patch",
         ],
-        sha256 = "2f5c284fbb4e86045c2632d3573fc006facbca5d1fa02976e89dc0cd5488b590",
-        strip_prefix = "rules_python-1.6.3",
+        sha256 = "25a00d55e4376ef6d9f28938b68038faca17c95580c9afe6953e7dde013d00e4",
+        strip_prefix = "rules_python-2.3.2",
         urls = [
-            "https://github.com/bazelbuild/rules_python/releases/download/1.6.3/rules_python-1.6.3.tar.gz",
+            "https://github.com/bazel-contrib/rules_python/releases/download/2.3.2/rules_python-2.3.2.tar.gz",
         ],
     )
 
@@ -107,10 +115,10 @@ def workspace():
     maybe(
         http_archive,
         name = "bazel_features",
-        sha256 = "c26b4e69cf02fea24511a108d158188b9d8174426311aac59ce803a78d107648",
-        strip_prefix = "bazel_features-1.43.0",
+        sha256 = "5450bfb2c8b4bc961c75368838f86156f563cc9adef1be7d504fc5619d54daab",
+        strip_prefix = "bazel_features-1.51.0",
         urls = [
-            "https://github.com/bazel-contrib/bazel_features/releases/download/v1.43.0/bazel_features-v1.43.0.tar.gz",
+            "https://github.com/bazel-contrib/bazel_features/releases/download/v1.51.0/bazel_features-v1.51.0.tar.gz",
         ],
     )
 
@@ -121,11 +129,11 @@ def workspace():
             "//third_party/pybind11_bazel:build_defs_rules_cc_defs.patch",
             "//third_party/pybind11_bazel:pybind11_build_rules_cc_defs.patch",
         ],
-        sha256 = "4a8983811b562a02ef9ccc545c93dc275e23054ac8996170b8975fa387afa890",
-        strip_prefix = "pybind11_bazel-3.0.1",
+        sha256 = "f11ba4e4b409e60088493b5429686c7ab8f67e936a06eb0e53dc5c121ebf8613",
+        strip_prefix = "pybind11_bazel-3.0.3",
         type = "tar.gz",
         urls = [
-            "https://codeload.github.com/pybind/pybind11_bazel/tar.gz/refs/tags/v3.0.1",
+            "https://codeload.github.com/pybind/pybind11_bazel/tar.gz/refs/tags/v3.0.3",
         ],
     )
 
@@ -133,11 +141,11 @@ def workspace():
         http_archive,
         name = "pybind11",
         build_file = "@pybind11_bazel//:pybind11-BUILD.bazel",
-        sha256 = "2f20a0af0b921815e0e169ea7fec63909869323581b89d7de1553468553f6a2d",
-        strip_prefix = "pybind11-3.0.2",
+        sha256 = "ef712655692a2e9bf7bb7874c022564a45f91d847ddee987e720cd9e28849665",
+        strip_prefix = "pybind11-3.1.0",
         type = "tar.gz",
         urls = [
-            "https://codeload.github.com/pybind/pybind11/tar.gz/refs/tags/v3.0.2",
+            "https://codeload.github.com/pybind/pybind11/tar.gz/refs/tags/v3.1.0",
         ],
     )
 
@@ -157,20 +165,20 @@ def workspace():
     maybe(
         http_archive,
         name = "com_google_absl",
-        sha256 = "05597c3c532197690a31ebad50a7c9c3fb682d3c5a681b20eb03655ffb4e9483",
-        strip_prefix = "abseil-cpp-20260107.1",
+        sha256 = "f7e05179df39c45434cad433f5783840bb3788ef322976f9138bc6b72b3a107d",
+        strip_prefix = "abseil-cpp-20260817.0",
         urls = [
-            "https://github.com/abseil/abseil-cpp/archive/refs/tags/20260107.1.zip",
+            "https://github.com/abseil/abseil-cpp/archive/refs/tags/20260817.0.tar.gz",
         ],
     )
 
     maybe(
         http_archive,
         name = "com_github_gflags_gflags",
-        sha256 = "f619a51371f41c0ad6837b2a98af9d4643b3371015d873887f7e8d3237320b2f",
-        strip_prefix = "gflags-2.3.0",
+        sha256 = "1b5e0648d7b94021895086e65479b4eaca7935eecfffd7dd9512eb576181c53d",
+        strip_prefix = "gflags-2.3.1",
         urls = [
-            "https://github.com/gflags/gflags/archive/v2.3.0.tar.gz",
+            "https://github.com/gflags/gflags/archive/refs/tags/v2.3.1.tar.gz",
         ],
         patches = [
             "//third_party/gflags:rules_cc_defs.patch",
@@ -190,20 +198,20 @@ def workspace():
     maybe(
         http_archive,
         name = "com_google_googletest",
-        sha256 = "65fab701d9829d38cb77c14acdc431d2108bfdbf8979e40eb8ae567edf10b27c",
-        strip_prefix = "googletest-1.17.0",
+        sha256 = "6e3191c1455468b3fc35a417fb565c1c5071aee1b7e7f85e30cf48a98d37d8b5",
+        strip_prefix = "googletest-1.18.0",
         urls = [
-            "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz",
+            "https://github.com/google/googletest/archive/refs/tags/v1.18.0.tar.gz",
         ],
     )
 
     maybe(
         http_archive,
         name = "concurrentqueue",
-        sha256 = "87fbc9884d60d0d4bf3462c18f4c0ee0a9311d0519341cac7cbd361c885e5281",
-        strip_prefix = "concurrentqueue-1.0.4",
+        sha256 = "4d6368a27492d86011fde5ca0cf386dce7c49cd425aa3d9b063ca6ec373a6ef3",
+        strip_prefix = "concurrentqueue-1.0.5",
         urls = [
-            "https://github.com/cameron314/concurrentqueue/archive/refs/tags/v1.0.4.tar.gz",
+            "https://github.com/cameron314/concurrentqueue/archive/refs/tags/v1.0.5.tar.gz",
         ],
         build_file = "//third_party/concurrentqueue:concurrentqueue.BUILD",
     )
@@ -242,10 +250,10 @@ def workspace():
             "//third_party/opencv:windows_msvc_flag_check.patch",
             "//third_party/opencv:windows_cpu_baseline_flags.patch",
         ],
-        sha256 = "1d40ca017ea51c533cf9fd5cbde5b5fe7ae248291ddf2af99d4c17cf8e13017d",
-        strip_prefix = "opencv-4.13.0",
+        sha256 = "ee8fb9b30eb60850431b4656447080e3737b56e45719c92b67f245950609f86e",
+        strip_prefix = "opencv-4.14.0",
         urls = [
-            "https://github.com/opencv/opencv/archive/refs/tags/4.13.0.tar.gz",
+            "https://github.com/opencv/opencv/archive/refs/tags/4.14.0.tar.gz",
         ],
         build_file = "//third_party/opencv:opencv.BUILD",
     )
@@ -253,10 +261,10 @@ def workspace():
     maybe(
         http_archive,
         name = "pugixml",
-        sha256 = "b39647064d9e28297a34278bfb897092bf33b7c487906ddfc094c9e8868bddcb",
-        strip_prefix = "pugixml-1.15/src",
+        sha256 = "357bcab8877dc9943f355d3a72daba1b053238ba955f50fa81586afb65090219",
+        strip_prefix = "pugixml-1.16/src",
         urls = [
-            "https://github.com/zeux/pugixml/archive/refs/tags/v1.15.tar.gz",
+            "https://github.com/zeux/pugixml/archive/refs/tags/v1.16.tar.gz",
         ],
         build_file = "//third_party/pugixml:pugixml.BUILD",
     )
@@ -264,10 +272,10 @@ def workspace():
     maybe(
         http_archive,
         name = "ale",
-        sha256 = "2e63a79e04f22cd2100383a02646d3e38f180e056c79692c91658cfeecbb3d88",
-        strip_prefix = "Arcade-Learning-Environment-0.11.2",
+        sha256 = "ade05f76416b4a49e8d6e5cc9bebb0745ae69f813aaeabe5813043f288db8ab3",
+        strip_prefix = "Arcade-Learning-Environment-0.12.1",
         urls = [
-            "https://github.com/Farama-Foundation/Arcade-Learning-Environment/archive/refs/tags/v0.11.2.tar.gz",
+            "https://github.com/Farama-Foundation/Arcade-Learning-Environment/archive/refs/tags/v0.12.1.tar.gz",
         ],
         build_file = "//third_party/ale:ale.BUILD",
     )
@@ -286,10 +294,10 @@ def workspace():
     maybe(
         http_archive,
         name = "libjpeg_turbo",
-        sha256 = "075920b826834ac4ddf97661cc73491047855859affd671d52079c6867c1c6c0",
-        strip_prefix = "libjpeg-turbo-3.1.3",
+        sha256 = "ecae8008e2cc9ade2f2c1bb9d5e6d4fb73e7c433866a056bd82980741571a022",
+        strip_prefix = "libjpeg-turbo-3.1.4.1",
         urls = [
-            "https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.1.3/libjpeg-turbo-3.1.3.tar.gz",
+            "https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.1.4.1/libjpeg-turbo-3.1.4.1.tar.gz",
         ],
         build_file = "//third_party/jpeg:jpeg.BUILD",
     )
@@ -352,12 +360,12 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "freetype",
-        sha256 = "bc5c898e4756d373e0d991bab053036c5eb2aa7c0d5c67e8662ddc6da40c4103",
-        strip_prefix = "freetype-VER-2-13-3",
+        sha256 = "dc49de6b01a266eef4876a4dd34d9842c475d3e28ff2eff63bd2fb760ab56261",
+        strip_prefix = "freetype-VER-2-14-3",
         type = "tar.gz",
         urls = [
-            "https://github.com/freetype/freetype/archive/refs/tags/VER-2-13-3.tar.gz",
-            "https://codeload.github.com/freetype/freetype/tar.gz/refs/tags/VER-2-13-3",
+            "https://github.com/freetype/freetype/archive/refs/tags/VER-2-14-3.tar.gz",
+            "https://codeload.github.com/freetype/freetype/tar.gz/refs/tags/VER-2-14-3",
         ],
         build_file = "//third_party/freetype:freetype.BUILD",
     )
@@ -389,7 +397,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "com_github_nelhage_rules_boost",
-        # sha256 = "2215e6910eb763a971b1f63f53c45c0f2b7607df38c96287666d94d954da8cdc",
+        sha256 = "d35b9362124fde75d43c59ab78773691a3b4159339cd24547eeb477e99b8c3df",
         strip_prefix = "rules_boost-e60cf50996da9fe769b6e7a31b88c54966ecb191",
         urls = [
             "https://github.com/nelhage/rules_boost/archive/e60cf50996da9fe769b6e7a31b88c54966ecb191.tar.gz",
@@ -566,10 +574,10 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
             "//third_party/mujoco:windows_msvc_compat.patch",
             "//third_party/mujoco:windows_msvc_c11_compat.patch",
         ],
-        sha256 = "0d6bb25612da5d1c398d21cf5b039367d4deef15c064b049c3127043d613b539",
-        strip_prefix = "mujoco-3.6.0",
+        sha256 = "f6346a0bab22bc0db5cabfe299fd3819b8b9bab67907c1ec0d243c675635ea3d",
+        strip_prefix = "mujoco-3.11.0",
         urls = [
-            "https://github.com/google-deepmind/mujoco/archive/refs/tags/3.6.0.tar.gz",
+            "https://github.com/google-deepmind/mujoco/archive/refs/tags/3.11.0.tar.gz",
         ],
         build_file = "//third_party/mujoco:mujoco.BUILD",
     )
@@ -588,11 +596,11 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "mujoco_dmc_xml",
-        sha256 = "23e86e28ef6ba9d2fec95103d45bd2061cfed35c8b0012b1ac5ee41b080d56c6",
-        strip_prefix = "dm_control-1.0.38/dm_control",
+        sha256 = "2989aedd24a28966f472b8882376f82b08290350527724b5591ae38d5937aee7",
+        strip_prefix = "dm_control-1.0.44/dm_control",
         urls = [
-            "https://github.com/deepmind/dm_control/archive/refs/tags/1.0.38.tar.gz",
-            "https://codeload.github.com/deepmind/dm_control/tar.gz/refs/tags/1.0.38",
+            "https://github.com/google-deepmind/dm_control/archive/refs/tags/1.0.44.tar.gz",
+            "https://codeload.github.com/google-deepmind/dm_control/tar.gz/refs/tags/1.0.44",
         ],
         build_file = "//third_party/mujoco_dmc_xml:mujoco_dmc_xml.BUILD",
     )
@@ -612,11 +620,11 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "metaworld_assets",
-        sha256 = "6ccb763cb05bb9f9c966a17304d4849f530f1b721699fecc68d920a000ea5bd0",
-        strip_prefix = "Metaworld-3.0.0",
+        sha256 = "fbcfbb07eacec784f32c0efa5dcaa0ee361a39ada8780298aedde3ad7ef40417",
+        strip_prefix = "Metaworld-3.1.1",
         urls = [
-            "https://github.com/Farama-Foundation/Metaworld/archive/refs/tags/v3.0.0.tar.gz",
-            "https://codeload.github.com/Farama-Foundation/Metaworld/tar.gz/refs/tags/v3.0.0",
+            "https://github.com/Farama-Foundation/Metaworld/archive/refs/tags/v3.1.1.tar.gz",
+            "https://codeload.github.com/Farama-Foundation/Metaworld/tar.gz/refs/tags/v3.1.1",
         ],
         build_file = "//third_party/metaworld_assets:metaworld_assets.BUILD",
     )
@@ -624,14 +632,12 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "myosuite_source",
-        sha256 = "f75b77563547fce6d9be46abee2b86e636dd5e57a6f1d470fdbc2104dcd61d34",
-        strip_prefix = "myosuite-2.11.6",
+        sha256 = "9fc2c610c5d71d2640cc75a0ea989c4f864622b49f67d38bfe7f1f6623396257",
+        strip_prefix = "myosuite-2.12.2",
         urls = [
-            "https://github.com/MyoHub/myosuite/archive/refs/tags/v2.11.6.tar.gz",
-            "https://codeload.github.com/MyoHub/myosuite/tar.gz/refs/tags/v2.11.6",
+            "https://github.com/MyoHub/myosuite/archive/refs/tags/v2.12.2.tar.gz",
+            "https://codeload.github.com/MyoHub/myosuite/tar.gz/refs/tags/v2.12.2",
         ],
-        patch_args = ["-p1"],
-        patches = ["//third_party/myosuite:mujoco36_mjspec_compat.patch"],
         build_file = "//third_party/myosuite:myosuite_source.BUILD",
     )
 
@@ -653,7 +659,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         sha256 = "beed226fcf1d27b91f9147221ef450c2ccab8e5bb7b5954dbcb5635024ed4874",
         strip_prefix = "object_sim-0.1.0",
         urls = [
-            # MyoSuite v2.11.6 gitlinks vikashplus/object_sim@87cd8dd, but
+            # MyoSuite v2.12.2 gitlinks vikashplus/object_sim@87cd8dd, but
             # that commit is no longer fetchable from GitHub archives.
             "https://github.com/MyoHub/object_sim/archive/refs/tags/v0.1.0.tar.gz",
             "https://codeload.github.com/MyoHub/object_sim/tar.gz/refs/tags/v0.1.0",

@@ -28,7 +28,7 @@ class JumanjiConnectorTest(absltest.TestCase):
     def test_parallel_connections_on_default_layout(self) -> None:
         """Checks parallel agents connect on the default layout."""
         env = make_gymnasium(
-            "Connector-v2", num_envs=1, seed=0, render_mode="rgb_array"
+            "Connector-v3", num_envs=1, seed=0, render_mode="rgb_array"
         )
         try:
             obs, info = env.reset()

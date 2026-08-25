@@ -607,8 +607,8 @@ template_rule(
     out = "jconfig_win.h",
     substitutions = {
         "@JPEG_LIB_VERSION@": "62",
-        "@VERSION@": "3.1.3",
-        "@LIBJPEG_TURBO_VERSION_NUMBER@": "3001003",
+        "@VERSION@": "3.1.4.1",
+        "@LIBJPEG_TURBO_VERSION_NUMBER@": "3001004",
         "#cmakedefine C_ARITH_CODING_SUPPORTED 1": "#define C_ARITH_CODING_SUPPORTED 1",
         "#cmakedefine D_ARITH_CODING_SUPPORTED 1": "#define D_ARITH_CODING_SUPPORTED 1",
         "#cmakedefine WITH_SIMD 1": "#define WITH_SIMD 1",
@@ -617,8 +617,8 @@ template_rule(
 
 JCONFIG_NOWIN_COMMON_SUBSTITUTIONS = {
     "@JPEG_LIB_VERSION@": "62",
-    "@VERSION@": "3.1.3",
-    "@LIBJPEG_TURBO_VERSION_NUMBER@": "3001003",
+    "@VERSION@": "3.1.4.1",
+    "@LIBJPEG_TURBO_VERSION_NUMBER@": "3001004",
     "#cmakedefine C_ARITH_CODING_SUPPORTED 1": "#define C_ARITH_CODING_SUPPORTED 1",
     "#cmakedefine D_ARITH_CODING_SUPPORTED 1": "#define D_ARITH_CODING_SUPPORTED 1",
     "#cmakedefine RIGHT_SHIFT_IS_UNSIGNED 1": "",
@@ -651,8 +651,8 @@ template_rule(
 )
 
 JCONFIGINT_COMMON_SUBSTITUTIONS = {
-    "@BUILD@": "20251210",
-    "@VERSION@": "3.1.3",
+    "@BUILD@": "20260327",
+    "@VERSION@": "3.1.4.1",
     "@CMAKE_PROJECT_NAME@": "libjpeg-turbo",
     "#undef inline": "",
     "#cmakedefine C_ARITH_CODING_SUPPORTED 1": "#define C_ARITH_CODING_SUPPORTED 1",
@@ -734,7 +734,7 @@ template_rule(
     src = "src/jversion.h.in",
     out = "jversion.h",
     substitutions = {
-        "@COPYRIGHT_YEAR@": "1991-2025",
+        "@COPYRIGHT_YEAR@": "1991-2026",
     },
 )
 

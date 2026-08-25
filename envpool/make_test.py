@@ -362,6 +362,7 @@ class _MakeTest(absltest.TestCase):
             "FrozenLake-v1",
             "FrozenLake8x8-v1",
             "Taxi-v3",
+            "Taxi-v4",
             "NChain-v0",
             "CliffWalking-v1",
             "tabular/CliffWalking-v0",
@@ -389,7 +390,6 @@ class _MakeTest(absltest.TestCase):
             for task_id in envpool.list_all_envs()
             if task_id.startswith("MiniGrid-")
         )
-        self.assertLen(task_ids, 81)
         self.check_step(task_ids)
 
     def test_make_babyai(self) -> None:

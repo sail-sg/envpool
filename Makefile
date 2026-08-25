@@ -26,9 +26,11 @@ RELEASE_PYTHON ?= $(shell python3 -c 'import sys; print("{}.{}".format(sys.versi
 RELEASE_SETUP_TARGET = //:setup_py$(subst .,,$(RELEASE_PYTHON))
 PYPI_WHEEL_PLAT ?= manylinux_2_28_x86_64
 WHEEL_SIZE_LIMIT_BYTES ?= 100000000
-# Procgen links Qt, but vendoring Qt pulls a large Qt/ICU stack into
-# envpool.libs. Linux release wheels expect the system Qt runtime instead.
-AUDITWHEEL_EXCLUDE_LIBS ?= libQt5Core.so.5 libQt5Gui.so.5
+# Linux wheels use system Qt to avoid vendoring its large Qt/ICU stack.
+# Keep EGL/OpenGL on the system GL dispatch stack too: MuJoCo's GL loader
+# does not recognize auditwheel's renamed EGL library.
+AUDITWHEEL_EXCLUDE_LIBS ?= libQt5Core.so.5 libQt5Gui.so.5 \
+	libEGL.so.1 libOpenGL.so.0 libGLdispatch.so.0
 AUDITWHEEL_EXCLUDE_FLAGS = $(foreach lib,$(AUDITWHEEL_EXCLUDE_LIBS),--exclude $(lib))
 CLANG_TIDY_MAJOR = 18
 CLANG_TIDY_BIN = clang-tidy-$(CLANG_TIDY_MAJOR)
@@ -160,6 +162,7 @@ bazel-pip-requirement-release:
 	cd third_party/pip_requirements && (cmp -s requirements.txt requirements-release-lock.txt || (rm -f requirements.txt && cp -f requirements-release-lock.txt requirements.txt))
 
 clang-tidy: clang-tidy-install bazel-pip-requirement-dev
+	set -eo pipefail; \
 	targets="$${CLANG_TIDY_TARGETS:-$$($(CLANG_TIDY_TARGET_RESOLVER) | tr '\n' ' ')}"; \
 	if [ -z "$$targets" ]; then \
 		echo "No clang-tidy-relevant C++ changes detected; skipping."; \
@@ -259,7 +262,8 @@ pypi-wheel: $(PYPI_WHEEL_PREREQS) bazel-release
 release-test1:
 	tmpdir=$$(python3 -c 'import tempfile; print(tempfile.mkdtemp(prefix="envpool-release-test-"))'); \
 	cd "$$tmpdir" && PYTHONPATH= python3 "$(CURDIR)/scripts/release_installed_wheel_smoke.py" --source-root "$(CURDIR)" && \
-	cd "$$tmpdir" && PYTHONPATH= python3 "$(CURDIR)/envpool/make_test.py"
+	cd "$$tmpdir" && PYTHONPATH= python3 "$(CURDIR)/envpool/make_test.py" && \
+	cd "$$tmpdir" && PYTHONPATH= python3 "$(CURDIR)/envpool/jumanji/jumanji_registry_test.py"
 
 release-test2:
 	cd examples && python3 make_env.py && python3 env_step.py

@@ -17,6 +17,10 @@ import platform
 import sys
 from typing import Any, no_type_check
 
+from envpool.mujoco.oracle import configure_mujoco_package_shared_lib
+
+configure_mujoco_package_shared_lib()
+
 import gymnasium as gym
 import mujoco
 import numpy as np

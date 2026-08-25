@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Alignment tests against the official MetaWorld v3.0.0 oracle."""
+"""Alignment tests against the official MetaWorld v3.1.1 oracle."""
 
 from __future__ import annotations
 
@@ -37,6 +37,16 @@ _REWARD_ATOL = 1e-6
 _REWARD_RTOL = 1e-6
 _INFO_ATOL = 2e-7
 _INFO_RTOL = 2e-7
+_LINUX_X86_64_CONTACT_ALIGN_ATOL = {
+    "door-lock-v3": 5e-6,
+    "door-unlock-v3": 1.5e-5,
+}
+_LINUX_X86_64_CONTACT_REWARD_ATOL = 2e-6
+_LINUX_X86_64_CONTACT_INFO_KEYS = {"grasp_reward", "unscaled_reward"}
+_LINUX_X86_64 = sys.platform == "linux" and platform.machine().lower() in (
+    "x86_64",
+    "amd64",
+)
 _LINUX_ARM64 = sys.platform == "linux" and platform.machine().lower() in (
     "aarch64",
     "arm64",
@@ -148,6 +158,12 @@ def _first_env_obs(obs: np.ndarray) -> np.ndarray:
 
 
 def _obs_atol(task_name: str, obs: np.ndarray) -> Any:
+    if _LINUX_X86_64:
+        # MuJoCo's Linux wheel is built with Clang 20 while EnvPool's static
+        # engine is built with GCC. Only these shared door-lock mesh contacts
+        # diverge: their measured 128-step maxima are 4.89e-6 and 1.49e-5.
+        if task_name in _LINUX_X86_64_CONTACT_ALIGN_ATOL:
+            return _LINUX_X86_64_CONTACT_ALIGN_ATOL[task_name]
     if _LINUX_ARM64:
         # Linux arm64 accumulates a larger MuJoCo residual over the 128-step
         # rollout, with the largest absolute drift in near-zero object
@@ -199,6 +215,12 @@ def _assert_obs_allclose(
 
 
 def _info_atol(task_name: str, key: str) -> float:
+    if (
+        _LINUX_X86_64
+        and task_name in _LINUX_X86_64_CONTACT_ALIGN_ATOL
+        and key in _LINUX_X86_64_CONTACT_INFO_KEYS
+    ):
+        return _LINUX_X86_64_CONTACT_REWARD_ATOL
     if _LINUX_ARM64 and key in _LINUX_ARM64_CONTINUOUS_INFO_KEYS:
         if task_name in _LINUX_ARM64_LOOSE_TASKS:
             return _LINUX_ARM64_LOOSE_INFO_ATOL
@@ -209,6 +231,8 @@ def _info_atol(task_name: str, key: str) -> float:
 
 
 def _reward_atol(task_name: str) -> float:
+    if _LINUX_X86_64 and task_name in _LINUX_X86_64_CONTACT_ALIGN_ATOL:
+        return _LINUX_X86_64_CONTACT_REWARD_ATOL
     if _LINUX_ARM64 and task_name in _LINUX_ARM64_LOOSE_TASKS:
         return _LINUX_ARM64_LOOSE_REWARD_ATOL
     if _LINUX_ARM64:
@@ -219,7 +243,7 @@ def _reward_atol(task_name: str) -> float:
 
 
 class MetaWorldAlignTest(absltest.TestCase):
-    """Alignment tests for native MetaWorld against the v3.0.0 oracle."""
+    """Alignment tests for native MetaWorld against the v3.1.1 oracle."""
 
     def test_official_v3_registry_coverage(self) -> None:
         """EnvPool should register the official v3 registry order exactly."""

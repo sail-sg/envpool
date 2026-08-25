@@ -231,8 +231,10 @@ def _official_idm_is_intersection_tuned(official_id: str) -> bool:
     return official_id in (
         "intersection-v0",
         "intersection-v1",
+        "intersection-v2",
         "intersection-multi-agent-v0",
         "intersection-multi-agent-v1",
+        "intersection-multi-agent-v2",
     )
 
 
@@ -240,28 +242,41 @@ _RENDER_MISMATCH_PIXEL_LIMIT: dict[str, int] = {
     "highway-v0": 0,
     "highway-fast-v0": 0,
     "merge-v0": 500,
+    "merge-v1": 500,
+    "merge-generic-v0": 500,
+    "merge-generic-v1": 500,
     "two-way-v0": 300,
     "u-turn-v0": 300,
+    "u-turn-v1": 300,
     "exit-v0": 0,
+    "exit-v1": 0,
     # These paths use pygame.transform.rotate / curved-lane rasterization
     # upstream.  Keep the residual to sprite/line edge pixels only.
     "intersection-v0": 1000,
     "intersection-v1": 1000,
+    "intersection-v2": 1000,
     "intersection-multi-agent-v0": 1200,
     "intersection-multi-agent-v1": 1200,
+    "intersection-multi-agent-v2": 1200,
     "lane-keeping-v0": 600,
     "parking-v0": 1600,
     "parking-ActionRepeat-v0": 1600,
     "parking-parked-v0": 1800,
     "racetrack-v0": 800,
+    "racetrack-v1": 800,
     "racetrack-oval-v0": 800,
+    "racetrack-oval-v1": 800,
     "racetrack-large-v0": 800,
+    "racetrack-large-v1": 800,
     "roundabout-v0": 1200,
+    "roundabout-v1": 1200,
+    "roundabout-generic-v0": 1200,
+    "roundabout-generic-v1": 1200,
 }
 
 
 def _render_mismatch_pixel_limit(official_id: str) -> int:
-    if _IS_LINUX_ARM64 and official_id == "exit-v0":
+    if _IS_LINUX_ARM64 and official_id in ("exit-v0", "exit-v1"):
         # The official pygame renderer leaves a handful of edge pixels
         # platform-dependent on Linux/aarch64 after several steps.
         return 20
@@ -379,9 +394,16 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
     ) -> None:
         test_cases = (
             (_Case("merge-v0"), (1, 4), 16, 16),
+            (_Case("merge-v1"), (1, 4), 16, 16),
+            (_Case("merge-generic-v0"), (1, 4), 16, 10),
+            (_Case("merge-generic-v1"), (1, 4), 16, 10),
             (_Case("roundabout-v0"), (1,), 11, 10),
+            (_Case("roundabout-v1"), (3,), 11, 10),
+            (_Case("roundabout-generic-v0"), (1,), 17, 10),
+            (_Case("roundabout-generic-v1"), (0,), 17, 10),
             (_Case("two-way-v0"), (0,), 15, 10),
             (_Case("u-turn-v0"), (1,), 7, 7),
+            (_Case("u-turn-v1"), (2,), 7, 7),
         )
         for case, actions, max_steps, min_steps in test_cases:
             with self.subTest(official_id=case.official_id):
@@ -403,6 +425,17 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
         actions: tuple[Any, ...],
         max_steps: int,
     ) -> int:
+        # Linux's native and NumPy paths round one near-zero generic-merge
+        # lateral coordinate differently by exactly one float64 epsilon.
+        obs_atol = (
+            np.finfo(np.float64).eps
+            if (
+                platform.system() == "Linux"
+                and platform.machine().lower() in ("x86_64", "amd64")
+                and case.official_id == "merge-generic-v1"
+            )
+            else 0.0
+        )
         env = make_gymnasium(
             case.official_id,
             num_envs=1,
@@ -429,8 +462,8 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                 actual = _envpool_step(env, case, action)
                 steps += 1
 
-                _assert_tree_bitwise(
-                    _envpool_obs(actual.obs, case), expected.obs
+                _assert_tree_close(
+                    _envpool_obs(actual.obs, case), expected.obs, obs_atol
                 )
                 np.testing.assert_array_equal(
                     _envpool_scalar(actual.reward), np.float32(expected.reward)
@@ -517,18 +550,20 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                     oracle.close()
 
     def test_native_exit_matches_official_from_patched_state(self) -> None:
-        case = _Case("exit-v0")
-        total_steps = 0
-        for actions in ((1,), (0,), (3,), (4,), (1, 3)):
-            with self.subTest(actions=actions):
-                total_steps += self._assert_native_single_agent_rollout(
-                    case,
-                    seed=13,
-                    oracle_config={},
-                    actions=actions,
-                    max_steps=_EXIT_ALIGN_STEPS,
-                )
-        self.assertGreaterEqual(total_steps, 80)
+        for case in (_Case("exit-v0"), _Case("exit-v1")):
+            total_steps = 0
+            for actions in ((1,), (0,), (3,), (4,), (1, 3)):
+                with self.subTest(
+                    official_id=case.official_id, actions=actions
+                ):
+                    total_steps += self._assert_native_single_agent_rollout(
+                        case,
+                        seed=13,
+                        oracle_config={},
+                        actions=actions,
+                        max_steps=_EXIT_ALIGN_STEPS,
+                    )
+            self.assertGreaterEqual(total_steps, 80)
 
     def test_native_intersection_matches_official_from_patched_state(
         self,
@@ -555,6 +590,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
         for case, action_sequences in (
             (_Case("intersection-v0"), discrete_action_sequences),
             (_Case("intersection-v1"), continuous_action_sequences),
+            (_Case("intersection-v2"), discrete_action_sequences),
         ):
             total_steps = 0
             for actions in action_sequences:
@@ -587,6 +623,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
         for case in (
             _Case("intersection-multi-agent-v0", player_count=2),
             _Case("intersection-multi-agent-v1", player_count=2),
+            _Case("intersection-multi-agent-v2", player_count=2),
         ):
             total_steps = 0
             for actions in action_sequences:
@@ -621,7 +658,6 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
         try:
             env_obs, _ = env.reset()
             oracle.reset(seed=123)
-            _restore_official_idm_defaults()
             _patch_oracle_from_envpool(oracle, env)
             _assert_tree_bitwise(
                 _envpool_reset_obs(env_obs, case),
@@ -710,8 +746,11 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
         actions = (np.asarray([0.0], dtype=np.float32),)
         for case in (
             _Case("racetrack-v0"),
+            _Case("racetrack-v1"),
             _Case("racetrack-large-v0"),
+            _Case("racetrack-large-v1"),
             _Case("racetrack-oval-v0"),
+            _Case("racetrack-oval-v1"),
         ):
             with self.subTest(official_id=case.official_id):
                 env = make_gymnasium(

@@ -225,11 +225,11 @@ void MujocoEnv::PhysicsStep(int nstep, const mjtNum* action) {
 void MujocoEnv::RandomizeLimitedAndRotationalJoints(std::mt19937* gen) {
   for (int joint_id = 0; joint_id < model_->njnt; ++joint_id) {
     int joint_type = model_->jnt_type[joint_id];
-    mjtByte is_limited = model_->jnt_limited[joint_id];
+    bool is_limited = model_->jnt_limited[joint_id];
     mjtNum range_min = model_->jnt_range[joint_id * 2 + 0];
     mjtNum range_max = model_->jnt_range[joint_id * 2 + 1];
     int qpos_offset = model_->jnt_qposadr[joint_id];
-    if (is_limited != 0) {
+    if (is_limited) {
       if (joint_type == mjJNT_HINGE || joint_type == mjJNT_SLIDE) {
         data_->qpos[qpos_offset] = RandUniform(range_min, range_max)(*gen);
       } else if (joint_type == mjJNT_BALL) {

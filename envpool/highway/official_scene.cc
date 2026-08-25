@@ -290,23 +290,50 @@ std::pair<RoadNeighbor, RoadNeighbor> RoadNeighbors(
   const LaneIndex query_index = lane_index.value_or(vehicle.lane_index);
   const Lane& lane = road.network.GetLane(query_index);
   const double s = lane.LocalCoordinates(vehicle.position).longitudinal;
+  std::vector<std::pair<const Lane*, double>> search_lanes{{&lane, 0.0}};
+  if (road.connected_lane_neighbors) {
+    const std::vector<LaneIndex> indexes = road.network.LaneIndexes();
+    auto add_connected_lanes = [&](bool next) {
+      for (const LaneIndex& candidate : indexes) {
+        if (candidate.id != 0 || (next ? candidate.from != query_index.to
+                                       : candidate.to != query_index.from)) {
+          continue;
+        }
+        LaneIndex selected = candidate;
+        for (const LaneIndex& sibling : indexes) {
+          if (sibling.SameRoad(candidate) && sibling.id == query_index.id) {
+            selected = sibling;
+            break;
+          }
+        }
+        const Lane& connected = road.network.GetLane(selected);
+        search_lanes.emplace_back(&connected,
+                                  next ? lane.Length() : -connected.Length());
+      }
+    };
+    add_connected_lanes(true);
+    add_connected_lanes(false);
+  }
   double s_front = std::numeric_limits<double>::infinity();
   double s_rear = -std::numeric_limits<double>::infinity();
   RoadNeighbor front;
   RoadNeighbor rear;
   auto scan = [&](Vec2 position, RoadNeighbor neighbor) {
-    const LaneCoordinates other_local = lane.LocalCoordinates(position);
-    if (!lane.OnLane(position, 1.0)) {
-      return;
-    }
-    const double s_other = other_local.longitudinal;
-    if (s <= s_other && s_other <= s_front) {
-      s_front = s_other;
-      front = neighbor;
-    }
-    if (s_other < s && s_rear <= s_other) {
-      s_rear = s_other;
-      rear = neighbor;
+    for (const auto& [search_lane, offset] : search_lanes) {
+      if (!search_lane->OnLane(position, 1.0)) {
+        continue;
+      }
+      const double s_other =
+          search_lane->LocalCoordinates(position).longitudinal + offset;
+      if (s <= s_other && s_other <= s_front) {
+        s_front = s_other;
+        front = neighbor;
+      }
+      if (s_other < s && s_rear <= s_other) {
+        s_rear = s_other;
+        rear = neighbor;
+      }
+      break;
     }
   };
 

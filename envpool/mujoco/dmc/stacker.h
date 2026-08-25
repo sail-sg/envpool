@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// https://github.com/deepmind/dm_control/blob/1.0.38/dm_control/suite/stacker.py
+// https://github.com/deepmind/dm_control/blob/1.0.44/dm_control/suite/stacker.py
 
 #ifndef ENVPOOL_MUJOCO_DMC_STACKER_H_
 #define ENVPOOL_MUJOCO_DMC_STACKER_H_
@@ -175,7 +175,7 @@ class StackerEnvBase : public Env<EnvSpecT>, public MujocoEnv {
     while (penetrating) {
       for (std::size_t i = 0; i < kArmJoints.size(); ++i) {
         int id_joint = id_arm_joints_[i];
-        bool is_limited = model_->jnt_limited[id_joint] == 1;
+        bool is_limited = model_->jnt_limited[id_joint];
         mjtNum lower = is_limited ? model_->jnt_range[id_joint * 2 + 0] : -M_PI;
         mjtNum upper = is_limited ? model_->jnt_range[id_joint * 2 + 1] : M_PI;
         data_->qpos[id_arm_qpos_[i]] = RandUniform(lower, upper)(gen_);

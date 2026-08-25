@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// https://github.com/deepmind/dm_control/blob/1.0.38/dm_control/suite/quadruped.py
+// https://github.com/deepmind/dm_control/blob/1.0.44/dm_control/suite/quadruped.py
 
 #ifndef ENVPOOL_MUJOCO_DMC_QUADRUPED_H_
 #define ENVPOOL_MUJOCO_DMC_QUADRUPED_H_

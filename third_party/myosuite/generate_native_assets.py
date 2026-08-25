@@ -108,7 +108,7 @@ def _myosuite_source_root(paths: list[Path]) -> Path:
 def _patch_codegen_only_imports(package: Path) -> None:
     import_utils = package / "utils" / "import_utils.py"
     text = import_utils.read_text()
-    eager_git = "from os.path import expanduser\nimport git\n\n\n"
+    eager_git = "\nimport git\n"
     fetch_def = (
         "def fetch_git(repo_url, commit_hash, clone_directory, "
         "clone_path=None):\n"
@@ -118,7 +118,7 @@ def _patch_codegen_only_imports(package: Path) -> None:
         if lazy_fetch in text:
             return
         raise ValueError("unexpected MyoSuite import_utils.py layout")
-    text = text.replace(eager_git, "from os.path import expanduser\n\n\n", 1)
+    text = text.replace(eager_git, "\n", 1)
     if fetch_def not in text:
         raise ValueError("unexpected MyoSuite fetch_git layout")
     text = text.replace(fetch_def, lazy_fetch, 1)
@@ -247,8 +247,8 @@ def _names_from_ids(model: Any, obj_type: Any, ids: list[int]) -> list[str]:
 
 
 def _state_report(env: Any) -> dict[str, Any]:
-    model = env.sim.model
-    data = env.sim.data
+    model = env.mj_model
+    data = env.mj_data
     return {
         "act": _jsonable(data.act) if model.na > 0 else [],
         "ctrl": _jsonable(data.ctrl),
@@ -273,8 +273,8 @@ def _metadata_report(task_ids: list[str], gym: Any) -> dict[str, Any]:
         env = gym.make(task_id)
         try:
             unwrapped = env.unwrapped
-            model = unwrapped.sim.model
-            data = unwrapped.sim.data
+            model = unwrapped.mj_model
+            data = unwrapped.mj_data
             task: dict[str, Any] = {
                 "action_shape": list(env.action_space.shape),
                 "entry_class": type(unwrapped).__name__,

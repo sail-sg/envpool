@@ -208,7 +208,7 @@ CleanerGymnasiumEnvPool = with_jumanji_python_render(
     CleanerGymnasiumEnvPool, "Cleaner-v0"
 )
 ConnectorGymnasiumEnvPool = with_jumanji_python_render(
-    ConnectorGymnasiumEnvPool, "Connector-v2"
+    ConnectorGymnasiumEnvPool, "Connector-v3"
 )
 FlatPackGymnasiumEnvPool = with_jumanji_python_render(
     FlatPackGymnasiumEnvPool, "FlatPack-v0"

@@ -141,10 +141,10 @@ cmake(
     out_static_libs = select({
         "@envpool//:windows": [
             "zlib.lib",
-            "opencv_imgproc4130.lib",
-            "opencv_features2d4130.lib",
-            "opencv_flann4130.lib",
-            "opencv_core4130.lib",
+            "opencv_imgproc4140.lib",
+            "opencv_features2d4140.lib",
+            "opencv_flann4140.lib",
+            "opencv_core4140.lib",
         ],
         "//conditions:default": [
             "libopencv_imgproc.a",

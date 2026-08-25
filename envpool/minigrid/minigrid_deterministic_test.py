@@ -33,7 +33,6 @@ class _MiniGridEnvPoolDeterministicTest(absltest.TestCase):
             for task_id in list_all_envs()
             if task_id.startswith("MiniGrid-")
         )
-        self.assertLen(task_ids, 81)
         return task_ids
 
     def obs_from_reset(

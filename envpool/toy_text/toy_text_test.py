@@ -13,6 +13,7 @@
 # limitations under the License.
 """Unit tests for classic control environments."""
 
+from collections import deque
 from typing import Any, cast, no_type_check
 
 import gymnasium as gym
@@ -142,16 +143,30 @@ class _ToyTextEnvTest(absltest.TestCase):
 
     @no_type_check
     def test_taxi(self) -> None:
-        env = make_gymnasium("Taxi-v3")
+        for task_id in ("Taxi-v3", "Taxi-v4"):
+            with self.subTest(task_id=task_id):
+                self._check_taxi(task_id)
+
+    @no_type_check
+    def _check_taxi(self, task_id: str) -> None:
+        env = make_gymnasium(task_id)
         assert isinstance(env.observation_space, gym.spaces.Discrete)
         assert env.observation_space.n == 500
         assert isinstance(env.action_space, gym.spaces.Discrete)
         assert env.action_space.n == 6
-        ref = gym.make("Taxi-v3")
+        ref = gym.make("Taxi-v4")
         for _ in range(10):
             # random agent
             ref.reset()
-            ref.unwrapped.s = env.reset()[0][0]
+            initial_obs, initial_info = env.reset()
+            ref.unwrapped.s = initial_obs[0]
+            _, _, passenger, destination = ref.unwrapped.decode(initial_obs[0])
+            assert passenger != destination
+            np.testing.assert_array_equal(
+                initial_info["action_mask"][0],
+                ref.unwrapped.action_mask(initial_obs[0]),
+            )
+            assert initial_info["prob"][0] == 1.0
             done = [False]
             while not done[0]:
                 act = np.random.randint(6, size=(1,))
@@ -167,6 +182,10 @@ class _ToyTextEnvTest(absltest.TestCase):
                     and ref_done == done[0]
                 )
                 assert ref_term == term[0] and ref_trunc == trunc[0]
+                np.testing.assert_array_equal(
+                    info["action_mask"][0], ref_info["action_mask"]
+                )
+                assert info["prob"][0] == ref_info["prob"]
         locs = ref.unwrapped.locs
         left_point = [(4, 4), (0, 3), (4, 2), (0, 1)]
         right_point = [(0, 0), (4, 1), (0, 2), (4, 3)]
@@ -216,6 +235,77 @@ class _ToyTextEnvTest(absltest.TestCase):
                     and ref_truncated == truncated[0]
                 )
             assert ref_rew == 20 and ref_done
+
+    @no_type_check
+    def test_taxi_v4_rainy_transitions(self) -> None:
+        rainy_probability = 0.5
+        env = make_gymnasium(
+            "Taxi-v4", is_rainy=True, rainy_probability=rainy_probability
+        )
+        ref = gym.make(
+            "Taxi-v4", is_rainy=True, rainy_probability=rainy_probability
+        )
+        obs, _ = env.reset()
+        for step in range(128):
+            action = step % 6
+            transitions = ref.unwrapped.P[int(obs[0])][action]
+            obs, reward, terminated, truncated, info = env.step(
+                np.asarray([action], dtype=np.int32)
+            )
+            assert any(
+                np.isclose(probability, info["prob"][0])
+                and state == obs[0]
+                and expected_reward == reward[0]
+                and expected_terminated == terminated[0]
+                for probability, state, expected_reward, expected_terminated in transitions
+            )
+            np.testing.assert_array_equal(
+                info["action_mask"][0], ref.unwrapped.action_mask(obs[0])
+            )
+            if terminated[0] or truncated[0]:
+                obs, _ = env.reset()
+
+    @no_type_check
+    def test_taxi_v4_fickle_passenger_changes_destination_once(self) -> None:
+        env = make_gymnasium(
+            "Taxi-v4", fickle_passenger=True, fickle_probability=1.0
+        )
+        ref = gym.make("Taxi-v4")
+        obs, info = env.reset()
+        previous_destination = ref.unwrapped.decode(obs[0])[3]
+        passenger_location = ref.unwrapped.locs[ref.unwrapped.decode(obs[0])[2]]
+        queue = deque([(int(obs[0]), ())])
+        visited = {int(obs[0])}
+        route = ()
+        while queue:
+            state, actions = queue.popleft()
+            if ref.unwrapped.decode(state)[:2] == passenger_location:
+                route = actions
+                break
+            for action in range(4):
+                next_state = ref.unwrapped.P[state][action][0][1]
+                if next_state not in visited:
+                    visited.add(next_state)
+                    queue.append((next_state, (*actions, action)))
+
+        for action in (*route, 4):
+            obs, _, terminated, truncated, info = env.step(
+                np.asarray([action], dtype=np.int32)
+            )
+            assert not terminated[0] and not truncated[0]
+        assert ref.unwrapped.decode(obs[0])[2:] == (4, previous_destination)
+
+        first_move = np.flatnonzero(info["action_mask"][0][:4])[0]
+        obs, _, terminated, truncated, info = env.step(
+            np.asarray([first_move], dtype=np.int32)
+        )
+        assert not terminated[0] and not truncated[0]
+        new_destination = ref.unwrapped.decode(obs[0])[3]
+        assert new_destination != previous_destination
+
+        second_move = np.flatnonzero(info["action_mask"][0][:4])[0]
+        obs, *_ = env.step(np.asarray([second_move], dtype=np.int32))
+        assert ref.unwrapped.decode(obs[0])[3] == new_destination
 
     def test_nchain(self) -> None:
         num_envs = 100

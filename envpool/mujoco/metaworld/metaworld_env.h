@@ -704,7 +704,8 @@ class MetaWorldEnvBase : public Env<EnvSpecT>,
       return;
     }
     for (int i = 0; i < 3; ++i) {
-      mjtNum delta = std::clamp<mjtNum>(action[i], -1.0, 1.0) * 0.01;
+      auto clipped = std::clamp(static_cast<float>(action[i]), -1.0F, 1.0F);
+      auto delta = static_cast<mjtNum>(clipped * 0.01F);
       mjtNum value = data_->mocap_pos[3 * mocap_id_ + i] + delta;
       value = std::clamp<mjtNum>(value, task_.hand_low[i], task_.hand_high[i]);
       data_->mocap_pos[3 * mocap_id_ + i] = value;
@@ -1804,7 +1805,8 @@ class MetaWorldEnvBase : public Env<EnvSpecT>,
         mjtNum tcp_to_obj = Distance(obj, tcp);
         mjtNum tcp_to_obj_init = Distance(obj, init_tcp_);
         mjtNum obj_to_target = std::abs(target_pos_[2] - obj[2]);
-        mjtNum tcp_closed = 1.0 - tcp_open;
+        mjtNum tcp_closed =
+            task_index_ == 5 ? std::max<mjtNum>(tcp_open, 0.0) : 1.0 - tcp_open;
         mjtNum near_button =
             LongTailTolerance(tcp_to_obj, 0.0, 0.01, tcp_to_obj_init);
         mjtNum pressed =

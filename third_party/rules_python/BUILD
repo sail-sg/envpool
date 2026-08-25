@@ -12,4 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-exports_files(["zipapp_explicit_init.patch"])
+exports_files([
+    "pip_repository_host_platform.patch",
+    "zipapp_explicit_init.patch",
+])

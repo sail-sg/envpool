@@ -15,7 +15,7 @@
 
 This binary is used only by tests. It intentionally runs in a separate Python
 process from EnvPool so the official MyoSuite dependencies can stay pinned to
-the upstream v2.11.6 contract without replacing EnvPool's normal runtime deps.
+the upstream v2.12.2 contract without replacing EnvPool's normal runtime deps.
 """
 
 from __future__ import annotations
@@ -24,7 +24,6 @@ import argparse
 import atexit
 import ctypes
 import importlib
-import importlib.util
 import json
 import os
 import platform
@@ -63,126 +62,16 @@ if platform.machine().lower() in {"amd64", "x86_64"}:
 
 import numpy as np
 
+from envpool.mujoco.oracle import (
+    configure_mujoco_package_shared_lib,
+    runfiles_root,
+)
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
 if platform.system() == "Windows":
     preload_windows_gl_dlls(strict=True)
 
 _CGL_FIRST_FRAME_SETTLE_PASSES = 4
-
-
-def _runfiles_root() -> Path:
-    path = Path(__file__).absolute()
-    for parent in (path, *path.parents):
-        if parent.name.endswith(".runfiles"):
-            return parent
-    path = Path(__file__).resolve()
-    runfiles_dir = os.environ.get("RUNFILES_DIR")
-    if runfiles_dir:
-        return Path(runfiles_dir)
-    if "TEST_SRCDIR" in os.environ:
-        return Path(os.environ["TEST_SRCDIR"])
-    return path.parents[3]
-
-
-def _runfiles_manifests(runfiles: Path) -> tuple[Path, ...]:
-    manifests = []
-    env_manifest = os.environ.get("RUNFILES_MANIFEST_FILE")
-    if env_manifest:
-        manifests.append(Path(env_manifest))
-    manifests.extend([
-        runfiles / "MANIFEST",
-        runfiles.parent / f"{runfiles.name}_manifest",
-    ])
-
-    unique_manifests = []
-    seen = set()
-    for manifest in manifests:
-        key = os.fspath(manifest)
-        if key not in seen:
-            unique_manifests.append(manifest)
-            seen.add(key)
-    return tuple(unique_manifests)
-
-
-def _mujoco_shared_lib_name() -> str | None:
-    system = platform.system()
-    if system == "Darwin":
-        return "libmujoco.3.6.0.dylib"
-    if system == "Windows":
-        return "mujoco.dll"
-    return None
-
-
-def _bazel_mujoco_shared_lib_path() -> Path:
-    shared_lib = _mujoco_shared_lib_name()
-    if shared_lib is None:
-        raise RuntimeError(
-            f"no Bazel-built MuJoCo shared library for {platform.system()}"
-        )
-    runfiles = _runfiles_root()
-    workspace = os.environ.get("TEST_WORKSPACE", "envpool")
-    manifest_keys = (
-        f"mujoco/{shared_lib}",
-        f"{workspace}/external/mujoco/{shared_lib}",
-    )
-    for manifest in _runfiles_manifests(runfiles):
-        if not manifest.is_file():
-            continue
-        with manifest.open(encoding="utf-8") as f:
-            for line in f:
-                logical_path, _, real_path = line.rstrip("\n").partition(" ")
-                if logical_path not in manifest_keys:
-                    continue
-                candidate = Path(real_path)
-                if (
-                    candidate.is_file()
-                    and "site-packages" not in candidate.parts
-                ):
-                    return candidate
-
-    candidates = (
-        runfiles / "mujoco" / shared_lib,
-        runfiles / workspace / "external" / "mujoco" / shared_lib,
-    )
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    for candidate in runfiles.rglob(shared_lib):
-        if candidate.is_file() and "site-packages" not in candidate.parts:
-            return candidate
-    raise RuntimeError(
-        f"could not locate Bazel-built {shared_lib} under {runfiles}"
-    )
-
-
-def _configure_mujoco_package_shared_lib() -> None:
-    """Make the pinned oracle import use EnvPool's Bazel-built MuJoCo lib.
-
-    Linux uses the pinned pip MuJoCo wheel directly. Replacing or preloading the
-    package library there corrupts the Python binding's model-name reads in
-    MuJoCo 3.6.0, while the pip wheel already works with the EGL render path.
-    """
-    shared_lib = _mujoco_shared_lib_name()
-    if shared_lib is None or getattr(
-        _configure_mujoco_package_shared_lib, "_configured", False
-    ):
-        return
-
-    spec = importlib.util.find_spec("mujoco")
-    if spec is None or spec.submodule_search_locations is None:
-        raise RuntimeError("could not locate pinned mujoco Python package")
-    package_dir = Path(next(iter(spec.submodule_search_locations)))
-    if not (package_dir / "__init__.py").is_file():
-        raise RuntimeError(f"invalid mujoco package path: {package_dir}")
-
-    patched_root = Path(tempfile.mkdtemp(prefix="mujoco-oracle-"))
-    atexit.register(shutil.rmtree, patched_root, ignore_errors=True)
-    patched_package = patched_root / "mujoco"
-    shutil.copytree(package_dir, patched_package, symlinks=False)
-    shutil.copy2(_bazel_mujoco_shared_lib_path(), patched_package / shared_lib)
-    sys.path.insert(0, str(patched_root))
-    _configure_mujoco_package_shared_lib._configured = True  # type: ignore[attr-defined]
 
 
 def _configure_macos_mujoco_renderer() -> None:
@@ -568,7 +457,7 @@ def _overlay_tree(
 
 
 def _oracle_source_path() -> Path:
-    runfiles = _runfiles_root()
+    runfiles = runfiles_root()
     source = runfiles / "myosuite_source/myosuite"
     if not (source / "__init__.py").is_file():
         raise RuntimeError(f"could not locate MyoSuite source at {source}")
@@ -601,7 +490,7 @@ def _oracle_source_path() -> Path:
 
 def _import_official() -> tuple[Any, Any, Any]:
     warnings.filterwarnings("ignore")
-    _configure_mujoco_package_shared_lib()
+    configure_mujoco_package_shared_lib()
     sys.path.insert(0, str(_oracle_source_path()))
     _configure_macos_mujoco_renderer()
     _configure_windows_mujoco_renderer()
@@ -673,8 +562,8 @@ def _metadata_report(task_ids: list[str]) -> dict[str, Any]:
         env = gym.make(task_id)
         try:
             unwrapped = env.unwrapped
-            model = unwrapped.sim.model
-            data = unwrapped.sim.data
+            model = unwrapped.mj_model
+            data = unwrapped.mj_data
             task: dict[str, Any] = {
                 "action_shape": list(env.action_space.shape),
                 "entry_class": type(unwrapped).__name__,
@@ -743,8 +632,8 @@ def _metadata_report(task_ids: list[str]) -> dict[str, Any]:
 
 
 def _state_report(env: Any) -> dict[str, Any]:
-    model = env.sim.model
-    data = env.sim.data
+    model = env.mj_model
+    data = env.mj_data
     state = {
         "act": _jsonable_array(data.act) if model.na > 0 else [],
         "actuator_force": _jsonable_array(data.actuator_force),
@@ -829,8 +718,8 @@ def _sync_osl_phase_from_qpos(env: Any) -> None:
     controller = getattr(env, "OSL_CTRL", None)
     if controller is None:
         return
-    model = env.sim.model
-    data = env.sim.data
+    model = env.mj_model
+    data = env.mj_data
     if model.nkey < 3:
         controller.reset("e_stance")
         controller.start()
@@ -898,9 +787,10 @@ def _sync_fatigue_hidden_state(env: Any, state: dict[str, Any]) -> None:
 
 def _sync_to_envpool_reset_state(env: Any, state: dict[str, Any]) -> np.ndarray:
     """Patch the official oracle to EnvPool's reset-time MuJoCo state once."""
-    sim = env.sim
-    model = sim.model
-    data = sim.data
+    import mujoco
+
+    model = env.mj_model
+    data = env.mj_data
 
     _assign_sync_array(state, "site_pos", model.site_pos)
     _assign_sync_array(state, "site_quat", model.site_quat)
@@ -930,10 +820,16 @@ def _sync_to_envpool_reset_state(env: Any, state: dict[str, Any]) -> np.ndarray:
     qpos = _state_array(state, "qpos0", data.qpos.shape)
     qvel = _state_array(state, "qvel0", data.qvel.shape)
     act = _state_array(state, "act0", data.act.shape) if model.na > 0 else None
-    sim.set_state(time=0.0, qpos=qpos, qvel=qvel, act=act)
+    data.time = 0.0
+    if qpos is not None:
+        data.qpos[:] = qpos
+    if qvel is not None:
+        data.qvel[:] = qvel
+    if act is not None:
+        data.act[:] = act
 
     _assign_sync_array(state, "ctrl", data.ctrl)
-    sim.forward()
+    mujoco.mj_forward(model, data)
     _sync_osl_phase_from_qpos(env)
     _sync_baoding_goal_from_envpool_reset_state(env)
     _sync_chasetag_hidden_state(env)
@@ -961,8 +857,11 @@ def _trace_info(info: dict[str, Any]) -> dict[str, Any]:
 
 
 def _render_frame(env: Any, width: int, height: int, camera_id: int) -> Any:
-    env.unwrapped.sim.forward()
-    renderer = env.unwrapped.sim.renderer
+    import mujoco
+
+    unwrapped = env.unwrapped
+    mujoco.mj_forward(unwrapped.mj_model, unwrapped.mj_data)
+    renderer = unwrapped.mj_renderer
     frame = renderer.render_offscreen(
         width=width,
         height=height,
@@ -1045,6 +944,8 @@ def _trace_report(
     trace_plan: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     official_myosuite, _, gym = _import_official()
+    import mujoco
+
     rng = np.random.default_rng(seed + 17)
     tasks: dict[str, dict[str, Any]] = {}
     for task_id in task_ids:
@@ -1111,7 +1012,7 @@ def _trace_report(
                             unwrapped, planned_sync_states[step_id + 1]
                         )
                     else:
-                        env.sim.forward()
+                        mujoco.mj_forward(unwrapped.mj_model, unwrapped.mj_data)
                     trace["obs"].append(_jsonable_array(obs))
                     trace["rewards"].append(0.0)
                     trace["terminated"].append(False)

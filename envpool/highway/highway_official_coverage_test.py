@@ -31,27 +31,6 @@ from envpool.registration import make_gymnasium
 register_highway_envs()
 prepare_official_oracle_import()
 
-_UPSTREAM_IDS = frozenset({
-    "exit-v0",
-    "highway-fast-v0",
-    "highway-v0",
-    "intersection-multi-agent-v0",
-    "intersection-multi-agent-v1",
-    "intersection-v0",
-    "intersection-v1",
-    "lane-keeping-v0",
-    "merge-v0",
-    "parking-ActionRepeat-v0",
-    "parking-parked-v0",
-    "parking-v0",
-    "racetrack-large-v0",
-    "racetrack-oval-v0",
-    "racetrack-v0",
-    "roundabout-v0",
-    "two-way-v0",
-    "u-turn-v0",
-})
-
 
 class _Case(NamedTuple):
     official_id: str
@@ -62,24 +41,38 @@ class _Case(NamedTuple):
 
 _CASES = (
     _Case("exit-v0"),
+    _Case("exit-v1"),
     _Case("highway-fast-v0"),
     _Case("highway-v0"),
     _Case("intersection-multi-agent-v0", player_count=2),
     _Case("intersection-multi-agent-v1", player_count=2),
+    _Case("intersection-multi-agent-v2", player_count=2),
     _Case("intersection-v0", discrete_action=1),
     _Case("intersection-v1", continuous_action=(0.0, 0.0)),
+    _Case("intersection-v2", discrete_action=1),
     _Case("lane-keeping-v0", continuous_action=(0.0,)),
     _Case("merge-v0"),
+    _Case("merge-v1"),
+    _Case("merge-generic-v0"),
+    _Case("merge-generic-v1"),
     _Case("parking-ActionRepeat-v0", continuous_action=(0.0, 0.0)),
     _Case("parking-parked-v0", continuous_action=(0.0, 0.0)),
     _Case("parking-v0", continuous_action=(0.0, 0.0)),
     _Case("racetrack-large-v0", continuous_action=(0.0,)),
+    _Case("racetrack-large-v1", continuous_action=(0.0,)),
     _Case("racetrack-oval-v0", continuous_action=(0.0,)),
+    _Case("racetrack-oval-v1", continuous_action=(0.0,)),
     _Case("racetrack-v0", continuous_action=(0.0,)),
+    _Case("racetrack-v1", continuous_action=(0.0,)),
     _Case("roundabout-v0"),
+    _Case("roundabout-v1"),
+    _Case("roundabout-generic-v0"),
+    _Case("roundabout-generic-v1"),
     _Case("two-way-v0"),
     _Case("u-turn-v0"),
+    _Case("u-turn-v1"),
 )
+_UPSTREAM_IDS = frozenset(case.official_id for case in _CASES)
 _COVERAGE_RENDER_STEPS = 8
 _COVERAGE_DETERMINISTIC_STEPS = 100
 

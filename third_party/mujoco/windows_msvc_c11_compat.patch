@@ -18,7 +18,7 @@ diff --git a/src/engine/engine_array_safety.h b/src/engine/engine_array_safety.h
 diff --git a/src/engine/engine_print.c b/src/engine/engine_print.c
 --- a/src/engine/engine_print.c
 +++ b/src/engine/engine_print.c
-@@ -45,6 +45,17 @@
+@@ -45,6 +45,18 @@
  #define INT_FORMAT " %d"
  #define SIZE_FORMAT " %" PRId64
  #define NAME_FORMAT "%-21s"
@@ -29,6 +29,7 @@ diff --git a/src/engine/engine_print.c b/src/engine/engine_print.c
 +#define PRINT_FORMAT_FOR_TYPE_double float_format
 +#define PRINT_FORMAT_FOR_TYPE_int INT_FORMAT
 +#define PRINT_FORMAT_FOR_TYPE_mjtByte INT_FORMAT
++#define PRINT_FORMAT_FOR_TYPE_mjtBool INT_FORMAT
 +#define PRINT_FORMAT_FOR_TYPE_mjtSize SIZE_FORMAT
 +#define PRINT_FORMAT_FOR_TYPE_char NULL
 +#define PRINT_FORMAT_FOR_TYPE_size_t NULL
@@ -36,7 +37,7 @@ diff --git a/src/engine/engine_print.c b/src/engine/engine_print.c
  
  
  
-@@ -588,10 +599,7 @@
+@@ -556,10 +568,7 @@
    fprintf(fp, "SIZES\n");
  #define X( name )                                 \
    if (m->name) {                                  \
@@ -44,17 +45,17 @@ diff --git a/src/engine/engine_print.c b/src/engine/engine_print.c
 -        m->name,                                  \
 -        mjtSize : SIZE_FORMAT,                    \
 -        default : INT_FORMAT);                    \
-+    const char* format = SIZE_FORMAT;             \
++    const char* format = SIZE_FORMAT;                    \
      fprintf(fp, NAME_FORMAT, "  " #name);         \
      fprintf(fp, format, m->name);                 \
      fprintf(fp, "\n");                            \
-@@ -606,16 +614,14 @@
+@@ -580,16 +589,14 @@
  #define X(type, name, sz)                                             \
    fprintf(fp, NAME_FORMAT, "  " #name);                               \
    {                                                                   \
 -    const char* format =                                              \
 -        _Generic(m->opt.name, mjtNum: float_format, int: INT_FORMAT); \
-+    const char* format = PRINT_FORMAT_FOR_TYPE(type);                 \
++    const char* format = PRINT_FORMAT_FOR_TYPE(type); \
      fprintf(fp, format, m->opt.name);                                 \
    }                                                                   \
    fprintf(fp, "\n");
@@ -63,27 +64,27 @@ diff --git a/src/engine/engine_print.c b/src/engine/engine_print.c
    {                                                                      \
 -    const char* format =                                                 \
 -        _Generic(m->opt.name[0], mjtNum: float_format, int: INT_FORMAT); \
-+    const char* format = PRINT_FORMAT_FOR_TYPE(type);                    \
++    const char* format = PRINT_FORMAT_FOR_TYPE(type); \
      for (int i = 0; i < sz; i++) {                                       \
        fprintf(fp, format, m->opt.name[i]);                               \
      }                                                                    \
-@@ -634,8 +640,7 @@
- #define X(type, name)                                                       \
+@@ -608,8 +615,7 @@
+ #define X(type, name, sz)                                                   \
    fprintf(fp, NAME_FORMAT, "    " #name);                                   \
    {                                                                         \
 -    const char* format =                                                    \
 -        _Generic(m->vis.global.name, float: float_format, int: INT_FORMAT); \
-+    const char* format = PRINT_FORMAT_FOR_TYPE(type);                       \
++    const char* format = PRINT_FORMAT_FOR_TYPE(type); \
      fprintf(fp, format, m->vis.global.name);                                \
    }                                                                         \
    fprintf(fp, "\n");
-@@ -656,18 +661,14 @@
+@@ -630,18 +636,14 @@
  #define X(type, name, sz)                                                      \
    fprintf(fp, NAME_FORMAT, "    " #name);                                      \
    {                                                                            \
 -    const char* format =                                                       \
 -        _Generic(m->vis.headlight.name, float: float_format, int: INT_FORMAT); \
-+    const char* format = PRINT_FORMAT_FOR_TYPE(type);                          \
++    const char* format = PRINT_FORMAT_FOR_TYPE(type); \
      fprintf(fp, format, m->vis.headlight.name);                                \
    }                                                                            \
    fprintf(fp, "\n");
@@ -94,11 +95,11 @@ diff --git a/src/engine/engine_print.c b/src/engine/engine_print.c
 -        m->vis.headlight.name[0],                           \
 -        float: float_format,                                \
 -        int: INT_FORMAT);                                   \
-+    const char* format = PRINT_FORMAT_FOR_TYPE(type);       \
++    const char* format = PRINT_FORMAT_FOR_TYPE(type);                                   \
      for (int i = 0; i < sz; i++) {                          \
        fprintf(fp, format, m->vis.headlight.name[i]);        \
      }                                                       \
-@@ -761,13 +762,7 @@
+@@ -734,14 +736,7 @@
  
  #define X(type, name, num, sz)                                              \
    if (&m->num == object_class && sz > 0) {                                  \
@@ -107,13 +108,14 @@ diff --git a/src/engine/engine_print.c b/src/engine/engine_print.c
 -                                  float:   float_format,                    \
 -                                  int:     INT_FORMAT,                      \
 -                                  mjtByte: INT_FORMAT,                      \
+-                                  mjtBool: INT_FORMAT,                      \
 -                                  mjtSize: SIZE_FORMAT,                     \
 -                                  default: NULL);                           \
-+    const char* format = PRINT_FORMAT_FOR_TYPE(type);                       \
++    const char* format = PRINT_FORMAT_FOR_TYPE(type);                           \
      if (format) {                                                           \
        fprintf(fp, "  ");                                                    \
        fprintf(fp, NAME_FORMAT, #name);                                      \
-@@ -1266,12 +1261,7 @@
+@@ -1260,13 +1255,7 @@
        strcmp(#name, "pbase") != 0 &&                                          \
        strcmp(#name, "parena") != 0 &&                                         \
        strcmp(#name, "threadpool") != 0) {                                     \
@@ -122,8 +124,9 @@ diff --git a/src/engine/engine_print.c b/src/engine/engine_print.c
 -        int : INT_FORMAT,                                                     \
 -        mjtSize : SIZE_FORMAT,                                                \
 -        mjtByte : INT_FORMAT,                                                 \
+-        mjtBool : INT_FORMAT,                                                 \
 -        default : NULL);                                                      \
-+    const char* format = PRINT_FORMAT_FOR_TYPE(type);                         \
++    const char* format = PRINT_FORMAT_FOR_TYPE(type);                                                      \
      if (format) {                                                             \
        fprintf(fp, "  ");                                                      \
        fprintf(fp, NAME_FORMAT, #name);                                        \

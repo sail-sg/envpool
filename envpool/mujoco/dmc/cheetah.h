@@ -98,7 +98,7 @@ class CheetahEnvBase : public Env<EnvSpecT>, public MujocoEnv {
 
   void TaskInitializeEpisode() override {
     for (int id_joint = 0; id_joint < model_->njnt; ++id_joint) {
-      bool is_limited = model_->jnt_limited[id_joint] == 1;
+      bool is_limited = model_->jnt_limited[id_joint];
       if (is_limited) {
         mjtNum range_min = model_->jnt_range[id_joint * 2 + 0];
         mjtNum range_max = model_->jnt_range[id_joint * 2 + 1];

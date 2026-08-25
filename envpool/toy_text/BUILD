@@ -74,6 +74,6 @@ py_test(
         requirement("gymnasium"),
         requirement("numpy"),
         requirement("scipy"),
-        requirement("pygame"),
+        requirement("pygame-ce"),
     ],
 )

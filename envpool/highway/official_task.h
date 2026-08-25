@@ -15,6 +15,7 @@
 #ifndef ENVPOOL_HIGHWAY_OFFICIAL_TASK_H_
 #define ENVPOOL_HIGHWAY_OFFICIAL_TASK_H_
 
+#include <random>
 #include <string>
 
 #include "envpool/highway/official_scene.h"
@@ -27,8 +28,19 @@ namespace highway::official {
                                      double position_noise2,
                                      double speed_noise0, double speed_noise1,
                                      double speed_noise2);
+[[nodiscard]] Road MakeMergeGenericRoad(int lanes, double before_merge,
+                                        double converge_merge,
+                                        double parallel_merge,
+                                        double after_merge);
+[[nodiscard]] int ResetMergeGenericVehicles(Road* road, int lanes,
+                                            int vehicle_count,
+                                            double max_position,
+                                            std::mt19937* generator);
 [[nodiscard]] Road MakeRoundaboutRoad();
 [[nodiscard]] int ResetRoundaboutVehicles(Road* road);
+[[nodiscard]] Road MakeRoundaboutGenericRoad(double radius, int lanes);
+[[nodiscard]] int ResetRoundaboutGenericVehicles(Road* road, int vehicle_count,
+                                                 std::mt19937* generator);
 [[nodiscard]] Road MakeTwoWayRoad();
 [[nodiscard]] int ResetTwoWayVehicles(Road* road);
 [[nodiscard]] Road MakeUTurnRoad();

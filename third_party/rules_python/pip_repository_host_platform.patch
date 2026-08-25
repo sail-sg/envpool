@@ -1,0 +1,21 @@
+Use normalized platform names when evaluating WORKSPACE requirement markers.
+Bazel reports "amd64" and "mac os x", not the names expected by pep508_env.env.
+Without normalization, platform-specific dependencies can silently disappear.
+
+--- python/private/pypi/pip_repository.bzl
++++ python/private/pypi/pip_repository.bzl
+@@ -108,8 +108,12 @@
+         "osx_x86_64",
+         "windows_x86_64",
+     ]
+-
+-    marker_env = env(os = rctx.os.name, arch = rctx.os.arch, python_version = python_version)
++
++    marker_env = env(
++        os = repo_utils.get_platforms_os_name(rctx),
++        arch = repo_utils.get_platforms_cpu_name(rctx),
++        python_version = python_version,
++    )
+     requirements_by_platform = parse_requirements(
+         rctx,
+         requirements_by_platform = requirements_files_by_platform(

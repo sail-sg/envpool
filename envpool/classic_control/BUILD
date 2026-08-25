@@ -74,7 +74,7 @@ py_test(
         requirement("dm_env"),
         requirement("gymnasium"),
         requirement("numpy"),
-        requirement("pygame"),
+        requirement("pygame-ce"),
     ],
 )
 
@@ -89,6 +89,6 @@ py_test(
         requirement("absl-py"),
         requirement("gymnasium"),
         requirement("numpy"),
-        requirement("pygame"),
+        requirement("pygame-ce"),
     ],
 )

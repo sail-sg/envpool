@@ -24,11 +24,11 @@ from absl.testing import absltest
 import envpool.jumanji.registration as jumanji_registration
 from envpool.registration import list_all_envs, make_gymnasium, make_spec
 
-_OFFICIAL_JUMANJI_V111_IDS = (
+_OFFICIAL_JUMANJI_ORACLE_IDS = (
     "BinPack-v2",
     "CVRP-v1",
     "Cleaner-v0",
-    "Connector-v2",
+    "Connector-v3",
     "FlatPack-v0",
     "Game2048-v1",
     "GraphColoring-v1",
@@ -84,19 +84,21 @@ class JumanjiRegistryTest(absltest.TestCase):
     """Smoke and registry coverage for the native Jumanji bindings."""
 
     def test_registered_ids_match_pinned_oracle_list(self) -> None:
-        """Checks EnvPool exposes every pinned Jumanji v1.1.1 ID."""
+        """Checks EnvPool exposes every pinned Jumanji v1.1.2 ID."""
         self.assertEqual(
             tuple(jumanji_registration.jumanji_env_ids),
-            _OFFICIAL_JUMANJI_V111_IDS,
+            _OFFICIAL_JUMANJI_ORACLE_IDS,
         )
         registered = set(list_all_envs())
-        for task_id in _OFFICIAL_JUMANJI_V111_IDS:
+        for task_id in _OFFICIAL_JUMANJI_ORACLE_IDS:
             self.assertIn(task_id, registered)
             self.assertIn(f"Jumanji/{task_id}", registered)
+        self.assertIn("Connector-v2", registered)
+        self.assertIn("Jumanji/Connector-v2", registered)
 
     def test_make_reset_step_and_render_all_registered_ids(self) -> None:
         """Checks each Jumanji ID can be constructed and stepped."""
-        for task_id in _OFFICIAL_JUMANJI_V111_IDS:
+        for task_id in _OFFICIAL_JUMANJI_ORACLE_IDS:
             with self.subTest(task_id=task_id):
                 spec = make_spec(task_id, num_envs=2, seed=0)
                 self.assertGreater(int(spec.config.max_episode_steps), 0)

@@ -304,10 +304,16 @@ inline void DrawCircle(unsigned char* rgb, int width, int height, int cx,
 class NativeBaseFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("scenario"_.Bind(std::string("merge")),
-                    "duration"_.Bind(40), "simulation_frequency"_.Bind(15),
-                    "policy_frequency"_.Bind(1), "screen_width"_.Bind(600),
-                    "screen_height"_.Bind(150), "render_agent"_.Bind(true));
+    return MakeDict(
+        "scenario"_.Bind(std::string("merge")), "duration"_.Bind(40),
+        "simulation_frequency"_.Bind(15), "policy_frequency"_.Bind(1),
+        "screen_width"_.Bind(600), "screen_height"_.Bind(150),
+        "render_agent"_.Bind(true),
+        "neighbour_vehicles_connected_lanes"_.Bind(false),
+        "lanes_count"_.Bind(2), "vehicles_count"_.Bind(3),
+        "before_merge_length"_.Bind(150.0), "converge_merge_length"_.Bind(80.0),
+        "parallel_merge_length"_.Bind(80.0), "after_merge_length"_.Bind(150.0),
+        "roundabout_radius"_.Bind(20.0), "roundabout_lanes"_.Bind(2));
   }
 };
 
@@ -453,7 +459,7 @@ class NativeMultiAgentFns : public NativeBaseFns {
     // The official wrapper can return mixed terminal tuples such as
     // (false, true), while EnvPool's top-level done is env-level scalar.
     return MakeDict(
-        "obs:players.obs"_.Bind(Spec<float>({-1, 5, 5}, {-inf, inf})),
+        "obs:players.obs"_.Bind(Spec<float>({-1, 15, 7}, {-inf, inf})),
         "info:players.speed"_.Bind(Spec<float>({-1})),
         "info:players.crashed"_.Bind(Spec<bool>({-1})));
   }
@@ -564,7 +570,9 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
             1, static_cast<int>(spec.config["duration"_]) *
                    static_cast<int>(spec.config["policy_frequency"_]))),
         simulation_frequency_(spec.config["simulation_frequency"_]),
-        policy_frequency_(spec.config["policy_frequency"_]) {}
+        policy_frequency_(spec.config["policy_frequency"_]),
+        connected_lane_neighbors_(
+            spec.config["neighbour_vehicles_connected_lanes"_]) {}
 
   bool IsDone() override { return done_; }
 
@@ -773,6 +781,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
   int max_episode_steps_;
   int simulation_frequency_;
   int policy_frequency_;
+  bool connected_lane_neighbors_;
   int elapsed_step_{0};
   double time_{0.0};
   bool done_{true};
@@ -787,7 +796,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
   official::LaneIndex official_active_lane_index_{"c", "d", 0};
 
   [[nodiscard]] bool UseOfficialBackend() const {
-    return scenario_ == "merge" || scenario_ == "roundabout" ||
+    return IsMergeScenario() || IsRoundaboutScenario() ||
            scenario_ == "two_way" || scenario_ == "u_turn" ||
            scenario_ == "exit" || scenario_ == "intersection" ||
            scenario_ == "intersection_continuous" ||
@@ -798,6 +807,14 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
   [[nodiscard]] bool IsParkingScenario() const {
     return scenario_ == "parking" || scenario_ == "parking_action_repeat" ||
            scenario_ == "parking_parked";
+  }
+
+  [[nodiscard]] bool IsMergeScenario() const {
+    return scenario_ == "merge" || scenario_ == "merge_generic";
+  }
+
+  [[nodiscard]] bool IsRoundaboutScenario() const {
+    return scenario_ == "roundabout" || scenario_ == "roundabout_generic";
   }
 
   [[nodiscard]] official::Vehicle& OfficialEgo() {
@@ -850,15 +867,36 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       official_ego_index_ =
           official::ResetRacetrackVehicles(&*official_road_, longitudinal, 0);
       official_active_lane_index_ = {"a", "b", 0};
-    } else if (scenario_ == "roundabout") {
-      official_road_ = official::MakeRoundaboutRoad();
-      official_ego_index_ = official::ResetRoundaboutVehicles(&*official_road_);
+    } else if (IsRoundaboutScenario()) {
+      if (scenario_ == "roundabout_generic") {
+        official_road_ = official::MakeRoundaboutGenericRoad(
+            this->spec_.config["roundabout_radius"_],
+            this->spec_.config["roundabout_lanes"_]);
+        official_ego_index_ = official::ResetRoundaboutGenericVehicles(
+            &*official_road_, this->spec_.config["vehicles_count"_],
+            &this->gen_);
+      } else {
+        official_road_ = official::MakeRoundaboutRoad();
+        official_ego_index_ =
+            official::ResetRoundaboutVehicles(&*official_road_);
+      }
     } else if (scenario_ == "two_way") {
       official_road_ = official::MakeTwoWayRoad();
       official_ego_index_ = official::ResetTwoWayVehicles(&*official_road_);
     } else if (scenario_ == "u_turn") {
       official_road_ = official::MakeUTurnRoad();
       official_ego_index_ = official::ResetUTurnVehicles(&*official_road_);
+    } else if (scenario_ == "merge_generic") {
+      const int lanes = this->spec_.config["lanes_count"_];
+      const double before = this->spec_.config["before_merge_length"_];
+      const double converge = this->spec_.config["converge_merge_length"_];
+      const double parallel = this->spec_.config["parallel_merge_length"_];
+      official_road_ = official::MakeMergeGenericRoad(
+          lanes, before, converge, parallel,
+          this->spec_.config["after_merge_length"_]);
+      official_ego_index_ = official::ResetMergeGenericVehicles(
+          &*official_road_, lanes, this->spec_.config["vehicles_count"_],
+          before + converge + parallel, &this->gen_);
     } else {
       official_road_ = official::MakeMergeRoad();
       const double p0 = Uniform(&this->gen_, -5.0, 5.0);
@@ -870,6 +908,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       official_ego_index_ = official::ResetMergeVehicles(&*official_road_, p0,
                                                          p1, p2, v0, v1, v2);
     }
+    official_road_->connected_lane_neighbors = connected_lane_neighbors_;
     official_last_action_ = 1;
     official_last_continuous_action_norm_ = 0.0;
   }
@@ -919,7 +958,14 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     }
     time_ += 1.0 / static_cast<double>(policy_frequency_);
     done_ = OfficialEgo().crashed || elapsed_step_ >= max_episode_steps_ ||
-            (scenario_ == "merge" && OfficialEgo().position.x > 370.0) ||
+            (IsMergeScenario() &&
+             OfficialEgo().position.x >
+                 (scenario_ == "merge_generic"
+                      ? this->spec_.config["before_merge_length"_] +
+                            this->spec_.config["converge_merge_length"_] +
+                            this->spec_.config["parallel_merge_length"_] +
+                            this->spec_.config["after_merge_length"_] - 90.0
+                      : 370.0)) ||
             ((scenario_ == "intersection" ||
               scenario_ == "intersection_continuous") &&
              OfficialIntersectionArrived(OfficialEgo()));
@@ -1087,7 +1133,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       goals_[1] = {45.0, 0.0, 0.0, 0.0, false};
     } else if (scenario_.find("racetrack") == 0) {
       agents_[0] = {-35.0, 0.0, 0.0, 8.0, false};
-    } else if (scenario_ == "roundabout") {
+    } else if (IsRoundaboutScenario()) {
       agents_[0] = {-55.0, 0.0, 0.0, 12.0, false};
     } else if (scenario_ == "two_way") {
       agents_[0] = {0.0, 0.0, 0.0, 22.0, false};
@@ -1217,7 +1263,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
                               0.1 * lane_reward + 0.4 * speed_reward;
       return LMap(weighted, -1.0, 0.5, 0.0, 1.0) * on_road_reward;
     }
-    if (scenario_ == "roundabout") {
+    if (IsRoundaboutScenario()) {
       const double high_speed_reward =
           static_cast<double>(ego.speed_index) /
           static_cast<double>(ego.target_speeds.size() - 1);
@@ -1479,14 +1525,33 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     State state = this->Allocate(official_player_count_);
     auto obs = state["obs:players.obs"_];
     official::KinematicObservationConfig config;
-    config.vehicles_count = 5;
+    config.vehicles_count = 15;
+    config.features = {
+        official::KinematicFeature::kPresence,
+        official::KinematicFeature::kX,
+        official::KinematicFeature::kY,
+        official::KinematicFeature::kVx,
+        official::KinematicFeature::kVy,
+        official::KinematicFeature::kCosH,
+        official::KinematicFeature::kSinH,
+    };
+    config.absolute = true;
+    config.x_min = -100.0;
+    config.x_max = 100.0;
+    config.y_min = -100.0;
+    config.y_max = 100.0;
+    config.vx_min = -20.0;
+    config.vx_max = 20.0;
+    config.vy_min = -20.0;
+    config.vy_max = 20.0;
+    config.include_obstacles = false;
     for (int player = 0; player < official_player_count_; ++player) {
       const official::Vehicle& vehicle = OfficialPlayer(player);
       const std::vector<float> rows =
           official::ObserveKinematics(*official_road_, vehicle, config);
-      for (int r = 0; r < 5; ++r) {
-        for (int c = 0; c < 5; ++c) {
-          obs(player, r, c) = rows[5 * r + c];
+      for (int r = 0; r < 15; ++r) {
+        for (int c = 0; c < 7; ++c) {
+          obs(player, r, c) = rows[7 * r + c];
         }
       }
       state["reward"_][player] = reset_reward.value_or(
@@ -1596,7 +1661,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
         official::KinematicFeature::kY,        official::KinematicFeature::kVx,
         official::KinematicFeature::kVy,
     };
-    if (scenario_ == "roundabout") {
+    if (IsRoundaboutScenario()) {
       config.absolute = true;
       config.x_min = -100.0;
       config.x_max = 100.0;
@@ -1606,7 +1671,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       config.vx_max = 15.0;
       config.vy_min = -15.0;
       config.vy_max = 15.0;
-    } else if (scenario_ == "merge") {
+    } else if (IsMergeScenario()) {
       config.y_min = -2.0 * kLaneWidth;
       config.y_max = 2.0 * kLaneWidth;
     }
@@ -1700,6 +1765,16 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
         official::KinematicFeature::kLatOff,
         official::KinematicFeature::kAngOff,
     };
+    config.absolute = true;
+    config.x_min = -100.0;
+    config.x_max = 100.0;
+    config.y_min = -100.0;
+    config.y_max = 100.0;
+    config.vx_min = -20.0;
+    config.vx_max = 20.0;
+    config.vy_min = -20.0;
+    config.vy_max = 20.0;
+    config.include_obstacles = false;
     const std::vector<float> rows =
         official::ObserveKinematics(*official_road_, OfficialEgo(), config);
     auto obs = (*state)["obs"_];
@@ -1941,7 +2016,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       return {0.5, 0.5};
     }
     if (scenario_ == "intersection" || scenario_ == "intersection_multi" ||
-        scenario_ == "intersection_continuous" || scenario_ == "roundabout") {
+        scenario_ == "intersection_continuous" || IsRoundaboutScenario()) {
       return {0.5, 0.6};
     }
     if (scenario_.find("racetrack") == 0) {
@@ -2149,7 +2224,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       DrawLine(rgb, width, height, 0, cy, width, cy, 255, 255, 255, 2);
       return;
     }
-    if (scenario_ == "roundabout") {
+    if (IsRoundaboutScenario()) {
       DrawCircle(rgb, width, height, cx, cy, 125, 70, 70, 70, 55);
       DrawCircle(rgb, width, height, cx, cy, 95, 255, 255, 255, 2);
       DrawCircle(rgb, width, height, cx, cy, 150, 255, 255, 255, 2);
@@ -2183,7 +2258,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       DrawLine(rgb, width, height, 0, y, width, y, 255, 255, 255,
                lane == -1 || lane == 1 ? 2 : 1);
     }
-    if (scenario_ == "merge" || scenario_ == "exit") {
+    if (IsMergeScenario() || scenario_ == "exit") {
       DrawLine(rgb, width, height, width / 2, cy + 70, width - 40, cy + 24, 255,
                255, 255, 2);
     }

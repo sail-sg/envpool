@@ -19,8 +19,10 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
 
+from envpool.mujoco.oracle import configure_mujoco_package_shared_lib
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
+configure_mujoco_package_shared_lib()
 preload_windows_gl_dlls(strict=True)
 
 import dm_env

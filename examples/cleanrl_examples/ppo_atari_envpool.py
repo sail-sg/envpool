@@ -24,7 +24,6 @@ import os
 import random
 import time
 from collections import deque
-from distutils.util import strtobool
 
 import gymnasium as gym
 import numpy as np
@@ -35,6 +34,15 @@ from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
 import envpool
+
+
+def _strtobool(value: str) -> bool:
+    normalized = value.lower()
+    if normalized in {"y", "yes", "t", "true", "on", "1"}:
+        return True
+    if normalized in {"n", "no", "f", "false", "off", "0"}:
+        return False
+    raise ValueError(f"invalid truth value {value!r}")
 
 
 def parse_args():
@@ -70,7 +78,7 @@ def parse_args():
   )
     parser.add_argument(
     "--torch-deterministic",
-    type=lambda x: bool(strtobool(x)),
+    type=_strtobool,
     default=True,
     nargs="?",
     const=True,
@@ -78,7 +86,7 @@ def parse_args():
   )
     parser.add_argument(
     "--cuda",
-    type=lambda x: bool(strtobool(x)),
+    type=_strtobool,
     default=True,
     nargs="?",
     const=True,
@@ -86,7 +94,7 @@ def parse_args():
   )
     parser.add_argument(
     "--track",
-    type=lambda x: bool(strtobool(x)),
+    type=_strtobool,
     default=False,
     nargs="?",
     const=True,
@@ -120,7 +128,7 @@ def parse_args():
   )
     parser.add_argument(
     "--anneal-lr",
-    type=lambda x: bool(strtobool(x)),
+    type=_strtobool,
     default=True,
     nargs="?",
     const=True,
@@ -128,7 +136,7 @@ def parse_args():
   )
     parser.add_argument(
     "--gae",
-    type=lambda x: bool(strtobool(x)),
+    type=_strtobool,
     default=True,
     nargs="?",
     const=True,
@@ -154,7 +162,7 @@ def parse_args():
   )
     parser.add_argument(
     "--norm-adv",
-    type=lambda x: bool(strtobool(x)),
+    type=_strtobool,
     default=True,
     nargs="?",
     const=True,
@@ -168,7 +176,7 @@ def parse_args():
   )
     parser.add_argument(
     "--clip-vloss",
-    type=lambda x: bool(strtobool(x)),
+    type=_strtobool,
     default=True,
     nargs="?",
     const=True,

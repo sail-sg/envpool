@@ -64,6 +64,17 @@ py_library(
     ],
 )
 
+py_library(
+    name = "mujoco_oracle",
+    srcs = ["oracle.py"],
+    data = select({
+        # Linux oracle bindings must keep the pinned pip MuJoCo library.
+        "//:linux": [],
+        "//conditions:default": ["@mujoco//:mujoco_shared_lib"],
+    }),
+    imports = ["../.."],
+)
+
 copy_to_directory(
     name = "gen_mujoco_gym_xml",
     srcs = [
@@ -226,7 +237,6 @@ pybind_extension(
     name = "mujoco_dmc_envpool",
     srcs = [
         "dmc/mujoco_envpool.cc",
-        "dmc/mujoco_plugin_init.cc",
     ],
     deps = [
         ":mujoco_dmc_env",
@@ -281,7 +291,6 @@ cc_library(
 pybind_extension(
     name = "robotics_envpool",
     srcs = [
-        "robotics/mujoco_plugin_init.cc",
         "robotics/robotics_envpool.cc",
     ],
     deps = [
@@ -354,7 +363,6 @@ cc_library(
 cc_library(
     name = "myosuite_envpool_module",
     srcs = [
-        "myosuite/mujoco_plugin_init.cc",
         "myosuite/myosuite_envpool.cc",
     ],
     # The native MyoSuite runtime is header-only under myosuite_env.h and is
@@ -409,11 +417,7 @@ py_binary_312(
         "myosuite/myosuite_oracle_probe.py",
         "//third_party/myosuite:generate_render_sample.py",
     ],
-    data = select({
-        # Linux oracle rendering uses the pinned pip MuJoCo wheel directly.
-        "//:linux": [],
-        "//conditions:default": ["@mujoco//:mujoco_shared_lib"],
-    }) + [
+    data = [
         ":myosuite_oracle_probe",
         "@myosuite_furniture_sim//:source",
         "@myosuite_mpl_sim//:source",
@@ -425,6 +429,7 @@ py_binary_312(
     imports = ["../.."],
     main = "generate_render_sample.py",
     deps = [
+        ":mujoco_oracle",
         ":myosuite",
         ":myosuite_registration",
         oracle_requirement("click"),
@@ -433,6 +438,7 @@ py_binary_312(
         oracle_requirement("gitpython"),
         oracle_requirement("gymnasium"),
         oracle_requirement("h5py"),
+        oracle_requirement("imageio"),
         oracle_requirement("mujoco"),
         oracle_requirement("numpy"),
         oracle_requirement("packaging"),
@@ -501,7 +507,6 @@ cc_library(
 pybind_extension(
     name = "playground_envpool",
     srcs = [
-        "playground/mujoco_plugin_init.cc",
         "playground/playground_envpool.cc",
         "playground/py_envpool_register.h",
         "playground/register_aloha.cc",
@@ -725,11 +730,7 @@ py_test(
 py_binary_312(
     name = "myosuite_oracle_probe",
     srcs = ["myosuite/myosuite_oracle_probe.py"],
-    data = select({
-        # Linux oracle rendering uses the pinned pip MuJoCo wheel directly.
-        "//:linux": [],
-        "//conditions:default": ["@mujoco//:mujoco_shared_lib"],
-    }) + [
+    data = [
         "@myosuite_furniture_sim//:source",
         "@myosuite_mpl_sim//:source",
         "@myosuite_myo_sim//:source",
@@ -739,6 +740,7 @@ py_binary_312(
     ],
     imports = ["../.."],
     deps = [
+        ":mujoco_oracle",
         "//envpool/python:glfw_context",
         oracle_requirement("click"),
         oracle_requirement("dm-control"),
@@ -746,6 +748,7 @@ py_binary_312(
         oracle_requirement("gitpython"),
         oracle_requirement("gymnasium"),
         oracle_requirement("h5py"),
+        oracle_requirement("imageio"),
         oracle_requirement("mujoco"),
         oracle_requirement("numpy"),
         oracle_requirement("packaging"),
@@ -959,6 +962,7 @@ py_test(
     deps = [
         ":mujoco_gym",
         ":mujoco_gym_registration",
+        ":mujoco_oracle",
         requirement("numpy"),
         requirement("absl-py"),
         requirement("gymnasium"),
@@ -1017,6 +1021,7 @@ py_test(
     deps = [
         ":mujoco_dmc",
         ":mujoco_dmc_registration",
+        ":mujoco_oracle",
         requirement("numpy"),
         requirement("absl-py"),
         requirement("mujoco"),
@@ -1031,6 +1036,7 @@ py_test(
     srcs = ["robotics/robotics_test.py"],
     imports = ["../.."],
     deps = [
+        ":mujoco_oracle",
         ":robotics",
         ":robotics_registration",
         requirement("dm-env"),

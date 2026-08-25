@@ -3,7 +3,7 @@ MetaWorld
 
 EnvPool provides native C++ implementations for the MetaWorld v3 Sawyer
 manipulation benchmark. The implementation is pinned to
-``Farama-Foundation/Metaworld`` tag ``v3.0.0`` and exposes one EnvPool task ID
+``Farama-Foundation/Metaworld`` tag ``v3.1.1`` and exposes one EnvPool task ID
 for each official ``ALL_V3_ENVIRONMENTS`` entry.
 
 The public task IDs use the ``MetaWorld/`` namespace and CamelCase v3 task
@@ -27,7 +27,7 @@ Render
 ------
 
 Reset render frames for all official v3 tasks are shown below. Each task panel
-places the native EnvPool render on the left and the official MetaWorld v3.0.0
+places the native EnvPool render on the left and the official MetaWorld v3.1.1
 reference render on the right.
 
 .. image:: ../_static/render_samples/metaworld_official_compare.png
@@ -95,7 +95,7 @@ Registered Task IDs
 Validation
 ----------
 
-The native implementation is checked against the official MetaWorld v3.0.0
+The native implementation is checked against the official MetaWorld v3.1.1
 Python oracle. The alignment test reset-syncs MuJoCo state once, then drives
 both implementations with the same 128-step external action sequence and
 compares observations, rewards, termination flags, truncation flags, and exposed

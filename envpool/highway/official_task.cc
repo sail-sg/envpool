@@ -14,9 +14,13 @@
 
 #include "envpool/highway/official_task.h"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
+#include <random>
+#include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace highway::official {
@@ -194,6 +198,105 @@ int ResetMergeVehicles(Road* road, double position_noise0,
   return 0;
 }
 
+Road MakeMergeGenericRoad(int lanes, double before_merge, double converge_merge,
+                          double parallel_merge, double after_merge) {
+  if (lanes < 1 || before_merge <= 0.0 || converge_merge <= 0.0 ||
+      parallel_merge <= 0.0 || after_merge < 90.0) {
+    throw std::invalid_argument("invalid generic highway merge geometry");
+  }
+  Road road;
+  const std::array<double, 4> ends = {
+      0.0, before_merge + converge_merge,
+      before_merge + converge_merge + parallel_merge,
+      before_merge + converge_merge + parallel_merge + after_merge};
+  const std::array<std::pair<const char*, const char*>, 3> edges = {
+      {{"a", "b"}, {"b", "c"}, {"c", "d"}}};
+  for (int segment = 0; segment < 3; ++segment) {
+    for (int lane = 0; lane < lanes; ++lane) {
+      const double y = lane * kDefaultLaneWidth;
+      const Lines lines = {
+          lane == 0 ? LineType::kContinuousLine : kStriped,
+          lane == lanes - 1 ? LineType::kContinuousLine : kNone};
+      road.network.AddLane(
+          edges[segment].first, edges[segment].second,
+          Lane::Straight({ends[segment], y}, {ends[segment + 1], y},
+                         kDefaultLaneWidth, lines, false, 30.0));
+    }
+  }
+
+  constexpr double amplitude = 3.25;
+  const double y_parallel = lanes * kDefaultLaneWidth;
+  const Lane approach =
+      Lane::Straight({0.0, y_parallel + 2.0 * amplitude},
+                     {before_merge, y_parallel + 2.0 * amplitude},
+                     kDefaultLaneWidth, {kContinuous, kContinuous}, true, 30.0);
+  const Lane converge =
+      Lane::Sine({before_merge, y_parallel + amplitude},
+                 {before_merge + converge_merge, y_parallel + amplitude},
+                 amplitude, kPi / converge_merge, kPi / 2.0, kDefaultLaneWidth,
+                 {kContinuous, kContinuous}, true, 30.0);
+  const Lane merge = Lane::Straight(
+      {before_merge + converge_merge, y_parallel},
+      {before_merge + converge_merge + parallel_merge, y_parallel},
+      kDefaultLaneWidth, {kStriped, kContinuous}, true, 30.0);
+  road.network.AddLane("j", "k", approach);
+  road.network.AddLane("k", "b", converge);
+  road.network.AddLane("b", "c", merge);
+
+  RoadObject obstacle;
+  obstacle.kind = RoadObjectKind::kObstacle;
+  obstacle.position = merge.Position(parallel_merge, 0.0);
+  obstacle.lane_index = {"b", "c", lanes};
+  road.objects.push_back(obstacle);
+  return road;
+}
+
+int ResetMergeGenericVehicles(Road* road, int lanes, int vehicle_count,
+                              double max_position, std::mt19937* generator) {
+  road->vehicles.clear();
+  const LaneIndex ego_index{"a", "b", lanes - 1};
+  const Lane& ego_lane = road->network.GetLane(ego_index);
+  Vehicle ego = MakeMDPVehicle(road->network, ego_lane.Position(30.0, 0.0),
+                               ego_lane.HeadingAt(30.0), 30.0);
+  ego.lane_index = ego_index;
+  ego.target_lane_index = ego_index;
+  road->vehicles.push_back(ego);
+
+  std::vector<std::vector<double>> positions(lanes);
+  positions[lanes - 1].push_back(30.0);
+  std::uniform_int_distribution<int> lane_distribution(0, lanes - 1);
+  std::uniform_real_distribution<double> longitudinal_distribution(
+      0.0, max_position);
+  std::uniform_real_distribution<double> speed_distribution(-2.0, 2.0);
+  for (int i = 0; i < vehicle_count; ++i) {
+    for (int attempt = 0; attempt < 10; ++attempt) {
+      const int lane_id = lane_distribution(*generator);
+      const double longitudinal = longitudinal_distribution(*generator);
+      if (std::any_of(positions[lane_id].begin(), positions[lane_id].end(),
+                      [&](double position) {
+                        return std::abs(longitudinal - position) <= 15.0;
+                      })) {
+        continue;
+      }
+      const LaneIndex lane_index{"a", "b", lane_id};
+      const Lane& lane = road->network.GetLane(lane_index);
+      road->vehicles.push_back(MakeIDMVehicle(
+          road->network, lane.Position(longitudinal, 0.0),
+          lane.HeadingAt(longitudinal), 30.0 + speed_distribution(*generator)));
+      positions[lane_id].push_back(longitudinal);
+      break;
+    }
+  }
+
+  const Lane& merge_lane = road->network.GetLane({"j", "k", 0});
+  Vehicle merge_vehicle =
+      MakeIDMVehicle(road->network, merge_lane.Position(60.0, 0.0),
+                     merge_lane.HeadingAt(60.0), 20.0);
+  merge_vehicle.target_speed = 30.0;
+  road->vehicles.push_back(merge_vehicle);
+  return 0;
+}
+
 Road MakeRoundaboutRoad() {
   Road road;
   const Vec2 center{0.0, 0.0};
@@ -330,6 +433,143 @@ int ResetRoundaboutVehicles(Road* road) {
   MakeRoundaboutIDM(road, {"we", "sx", 0}, 20.0, 16.0, "sxr");
   MakeRoundaboutIDM(road, {"we", "sx", 0}, -20.0, 16.0, "exr");
   MakeRoundaboutIDM(road, {"eer", "ees", 0}, 50.0, 16.0, "nxr");
+  return 0;
+}
+
+Road MakeRoundaboutGenericRoad(double radius, int lanes) {
+  if (radius <= 0.0 || lanes < 1) {
+    throw std::invalid_argument("invalid generic highway roundabout geometry");
+  }
+  Road road;
+  constexpr double alpha = 24.0 * kPi / 180.0;
+  const std::array<const char*, 9> nodes = {"se", "ex", "ee", "nx", "ne",
+                                            "wx", "we", "sx", "se"};
+  const std::array<std::array<double, 2>, 8> angles = {
+      {{kPi / 2.0 - alpha, alpha},
+       {alpha, -alpha},
+       {-alpha, -kPi / 2.0 + alpha},
+       {-kPi / 2.0 + alpha, -kPi / 2.0 - alpha},
+       {-kPi / 2.0 - alpha, -kPi + alpha},
+       {-kPi + alpha, -kPi - alpha},
+       {kPi - alpha, kPi / 2.0 + alpha},
+       {kPi / 2.0 + alpha, kPi / 2.0 - alpha}}};
+  for (int lane = 0; lane < lanes; ++lane) {
+    const Lines lines{lane == 0 ? kContinuous : kNone,
+                      lane == lanes - 1 ? kContinuous : kStriped};
+    for (int segment = 0; segment < 8; ++segment) {
+      road.network.AddLane(
+          nodes[segment], nodes[segment + 1],
+          Lane::Circular({0.0, 0.0}, radius + 4.0 * lane, angles[segment][0],
+                         angles[segment][1], false, kDefaultLaneWidth, lines));
+    }
+  }
+
+  const double outer_radius = radius + 4.0 * (lanes - 1);
+  const double half_span = std::max(100.0, 2.0 * outer_radius + 40.0) / 2.0;
+  const double access = 2.0 * half_span + 40.0;
+  const Vec2 entry_join{outer_radius * std::sin(alpha),
+                        outer_radius * std::cos(alpha)};
+  const Vec2 exit_join{-entry_join.x, entry_join.y};
+  const double entry_amplitude = (entry_join.x - 2.0) / 2.0;
+  const double exit_amplitude = (exit_join.x + 2.0) / 2.0;
+  const double pulsation = kPi / (half_span - entry_join.y);
+  const std::array<std::array<const char*, 6>, 4> arm_nodes = {
+      {{"ser", "ses", "se", "sx", "sxs", "sxr"},
+       {"eer", "ees", "ee", "ex", "exs", "exr"},
+       {"ner", "nes", "ne", "nx", "nxs", "nxr"},
+       {"wer", "wes", "we", "wx", "wxs", "wxr"}}};
+  for (int arm = 0; arm < 4; ++arm) {
+    const double rotation = -arm * kPi / 2.0;
+    auto point = [&](double x, double y) { return Rotate({x, y}, rotation); };
+    const auto& names = arm_nodes[arm];
+    road.network.AddLane(
+        names[0], names[1],
+        Lane::Straight(point(2.0, access), point(2.0, half_span),
+                       kDefaultLaneWidth, {kStriped, kContinuous}));
+    road.network.AddLane(
+        names[1], names[2],
+        Lane::Sine(point(2.0 + entry_amplitude, half_span),
+                   point(2.0 + entry_amplitude, entry_join.y), entry_amplitude,
+                   pulsation, -kPi / 2.0, kDefaultLaneWidth,
+                   {kContinuous, kContinuous}));
+    road.network.AddLane(
+        names[3], names[4],
+        Lane::Sine(point(exit_join.x - exit_amplitude, exit_join.y),
+                   point(exit_join.x - exit_amplitude, half_span),
+                   exit_amplitude, pulsation, -kPi / 2.0, kDefaultLaneWidth,
+                   {kContinuous, kContinuous}));
+    road.network.AddLane(
+        names[4], names[5],
+        Lane::Straight(point(-2.0, half_span), point(-2.0, access),
+                       kDefaultLaneWidth, {kNone, kContinuous}));
+  }
+  return road;
+}
+
+int ResetRoundaboutGenericVehicles(Road* road, int vehicle_count,
+                                   std::mt19937* generator) {
+  road->vehicles.clear();
+  const LaneIndex ego_index{"ser", "ses", 0};
+  const Lane& ego_lane = road->network.GetLane(ego_index);
+  const double ego_longitudinal = ego_lane.Length() - 2.5;
+  Vehicle ego =
+      MakeMDPVehicle(road->network, ego_lane.Position(ego_longitudinal, 0.0),
+                     ego_lane.HeadingAt(ego_longitudinal), 8.0, std::nullopt,
+                     std::nullopt, {0.0, 8.0, 16.0});
+  ego.lane_index = ego_index;
+  ego.target_lane_index = ego_index;
+  PlanRouteTo(&ego, road->network, "nxs");
+  road->vehicles.push_back(ego);
+
+  const std::array<std::pair<const char*, const char*>, 7> spawn_lanes = {
+      {{"we", "sx"},
+       {"sx", "se"},
+       {"ee", "nx"},
+       {"nx", "ne"},
+       {"eer", "ees"},
+       {"ner", "nes"},
+       {"wer", "wes"}}};
+  const std::array<const char*, 4> destinations = {"exr", "sxr", "nxr", "wxr"};
+  std::uniform_int_distribution<int> spawn_distribution(0,
+                                                        spawn_lanes.size() - 1);
+  std::uniform_int_distribution<int> destination_distribution(
+      0, destinations.size() - 1);
+  std::normal_distribution<double> speed_distribution(14.0, 2.0);
+  std::vector<Vec2> occupied = {ego.position};
+  for (int i = 0; i < vehicle_count; ++i) {
+    for (int attempt = 0; attempt < 10; ++attempt) {
+      const auto& edge = spawn_lanes[spawn_distribution(*generator)];
+      std::vector<LaneIndex> candidates;
+      for (const LaneIndex& index : road->network.LaneIndexes()) {
+        if (index.from == edge.first && index.to == edge.second) {
+          candidates.push_back(index);
+        }
+      }
+      std::uniform_int_distribution<int> lane_distribution(
+          0, candidates.size() - 1);
+      const LaneIndex lane_index = candidates[lane_distribution(*generator)];
+      const Lane& lane = road->network.GetLane(lane_index);
+      std::uniform_real_distribution<double> longitudinal_distribution(
+          5.0, std::max(5.0, lane.Length() - 5.0));
+      const double longitudinal = longitudinal_distribution(*generator);
+      const Vec2 position = lane.Position(longitudinal, 0.0);
+      if (std::any_of(occupied.begin(), occupied.end(), [&](Vec2 other) {
+            return Norm(position - other) < 7.0;
+          })) {
+        continue;
+      }
+      Vehicle other =
+          MakeIDMVehicle(road->network, position, lane.HeadingAt(longitudinal),
+                         speed_distribution(*generator));
+      other.lane_index = lane_index;
+      other.target_lane_index = lane_index;
+      PlanRouteTo(&other, road->network,
+                  destinations[destination_distribution(*generator)]);
+      road->vehicles.push_back(other);
+      occupied.push_back(position);
+      break;
+    }
+  }
   return 0;
 }
 
