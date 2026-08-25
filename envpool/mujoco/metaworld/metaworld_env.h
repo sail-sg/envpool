@@ -705,7 +705,7 @@ class MetaWorldEnvBase : public Env<EnvSpecT>,
     }
     for (int i = 0; i < 3; ++i) {
       auto clipped = std::clamp(static_cast<float>(action[i]), -1.0F, 1.0F);
-      mjtNum delta = static_cast<mjtNum>(clipped * 0.01F);
+      auto delta = static_cast<mjtNum>(clipped * 0.01F);
       mjtNum value = data_->mocap_pos[3 * mocap_id_ + i] + delta;
       value = std::clamp<mjtNum>(value, task_.hand_low[i], task_.hand_high[i]);
       data_->mocap_pos[3 * mocap_id_ + i] = value;
