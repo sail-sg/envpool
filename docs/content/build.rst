@@ -78,7 +78,7 @@ EnvPool source builds share a few common requirements across platforms:
 - **Qt 5**
 
 The default build and test shortcuts in this repo use **Bazel 9.2.0** via
-``bazelisk``. Bazel dependencies are configured with Bzlmod in
+``bazelisk``. Bazel dependencies are configured as modules in
 ``MODULE.bazel``.
 
 Linux (Ubuntu 24.04)
