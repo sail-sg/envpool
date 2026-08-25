@@ -37,6 +37,10 @@ _REWARD_ATOL = 1e-6
 _REWARD_RTOL = 1e-6
 _INFO_ATOL = 2e-7
 _INFO_RTOL = 2e-7
+_LINUX_X86_64_CONTACT_ALIGN_ATOL = {
+    "door-lock-v3": 5e-6,
+    "door-unlock-v3": 1.5e-5,
+}
 _LINUX_ARM64 = sys.platform == "linux" and platform.machine().lower() in (
     "aarch64",
     "arm64",
@@ -148,6 +152,15 @@ def _first_env_obs(obs: np.ndarray) -> np.ndarray:
 
 
 def _obs_atol(task_name: str, obs: np.ndarray) -> Any:
+    if sys.platform == "linux" and platform.machine().lower() in (
+        "x86_64",
+        "amd64",
+    ):
+        # MuJoCo's Linux wheel is built with Clang 20 while EnvPool's static
+        # engine is built with GCC. Only these shared door-lock mesh contacts
+        # diverge: their measured 128-step maxima are 4.89e-6 and 1.49e-5.
+        if task_name in _LINUX_X86_64_CONTACT_ALIGN_ATOL:
+            return _LINUX_X86_64_CONTACT_ALIGN_ATOL[task_name]
     if _LINUX_ARM64:
         # Linux arm64 accumulates a larger MuJoCo residual over the 128-step
         # rollout, with the largest absolute drift in near-zero object
