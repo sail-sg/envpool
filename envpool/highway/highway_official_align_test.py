@@ -425,6 +425,17 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
         actions: tuple[Any, ...],
         max_steps: int,
     ) -> int:
+        # Linux's native and NumPy paths round one near-zero generic-merge
+        # lateral coordinate differently by exactly one float64 epsilon.
+        obs_atol = (
+            np.finfo(np.float64).eps
+            if (
+                platform.system() == "Linux"
+                and platform.machine().lower() in ("x86_64", "amd64")
+                and case.official_id == "merge-generic-v1"
+            )
+            else 0.0
+        )
         env = make_gymnasium(
             case.official_id,
             num_envs=1,
@@ -451,8 +462,8 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                 actual = _envpool_step(env, case, action)
                 steps += 1
 
-                _assert_tree_bitwise(
-                    _envpool_obs(actual.obs, case), expected.obs
+                _assert_tree_close(
+                    _envpool_obs(actual.obs, case), expected.obs, obs_atol
                 )
                 np.testing.assert_array_equal(
                     _envpool_scalar(actual.reward), np.float32(expected.reward)
