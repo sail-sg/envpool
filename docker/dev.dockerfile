@@ -5,7 +5,7 @@ FROM nvidia/cuda:13.1.1-cudnn-devel-ubuntu24.04
 ARG DEBIAN_FRONTEND=noninteractive
 ARG HOME=/root
 ENV PATH=$HOME/go/bin:$PATH
-ENV USE_BAZEL_VERSION=8.6.0
+ENV USE_BAZEL_VERSION=8.7.0
 
 RUN apt-get update \
     && apt-get install -y python3-pip python3-dev python-is-python3 golang-go git wget curl zsh tmux vim \

@@ -16,7 +16,7 @@ WINDOWS_ENVPOOL_TEST_DEFINE = $(if $(filter Windows_NT,$(OS)),--cxxopt=/DENVPOOL
 # Mesa DLL directory configured by CI/local shells.
 WINDOWS_BAZEL_TEST_ENV = $(if $(filter Windows_NT,$(OS)),--test_env=ENVPOOL_DLL_DIR --test_env=MESA_GL_VERSION_OVERRIDE --test_env=GALLIUM_DRIVER --test_env=PATH,)
 BAZELISK_BIN   = $(shell command -v bazelisk 2>/dev/null || echo $(HOME)/go/bin/bazelisk)
-BAZEL_VERSION  = 8.6.0
+BAZEL_VERSION  = 8.7.0
 BAZEL          = USE_BAZEL_VERSION=$(BAZEL_VERSION) $(BAZELISK_BIN)
 BAZEL_TEST_TARGETS ?= //...
 DATE           = $(shell date "+%Y-%m-%d")

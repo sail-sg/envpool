@@ -53,10 +53,10 @@ or `golang <https://golang.org/doc/install>`_ with version >= 1.16:
         # then follow the instructions on golang official website
         go env -w GOPROXY=https://goproxy.cn
 
-        wget https://mirrors.huaweicloud.com/bazel/8.6.0/bazel-8.6.0-linux-x86_64
-        chmod +x bazel-8.6.0-linux-x86_64
+        wget https://mirrors.huaweicloud.com/bazel/8.7.0/bazel-8.7.0-linux-x86_64
+        chmod +x bazel-8.7.0-linux-x86_64
         mkdir -p $HOME/go/bin
-        mv bazel-8.6.0-linux-x86_64 $HOME/go/bin/bazel
+        mv bazel-8.7.0-linux-x86_64 $HOME/go/bin/bazel
 
         export PATH=$PATH:$HOME/go/bin  # or write to .bashrc / .zshrc
 
@@ -77,7 +77,7 @@ EnvPool source builds share a few common requirements across platforms:
 - **SWIG**
 - **Qt 5**
 
-The default build and test shortcuts in this repo use **Bazel 8.6.0** via
+The default build and test shortcuts in this repo use **Bazel 8.7.0** via
 ``bazelisk``.
 
 Linux (Ubuntu 24.04)

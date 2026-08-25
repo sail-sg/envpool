@@ -11,6 +11,7 @@ import sys
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 FULL_RUN_FILES = {
     ".bazelrc",
+    ".bazelversion",
     ".clang-tidy",
     "BUILD",
     "WORKSPACE",
@@ -47,7 +48,7 @@ def _git(*args: str) -> str:
 
 def _bazel(*args: str) -> str:
     env = os.environ.copy()
-    env.setdefault("USE_BAZEL_VERSION", "8.6.0")
+    env.setdefault("USE_BAZEL_VERSION", "8.7.0")
     return subprocess.check_output(
         ["bazelisk", *args],
         cwd=REPO_ROOT,
