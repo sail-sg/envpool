@@ -107,10 +107,10 @@ class TaxiEnv : public Env<TaxiEnvSpec> {
           {{0, 2, 3}, {1, 3, 2}, {2, 1, 0}, {3, 0, 1}}};
       const double sample = uniform_(gen_);
       const double lateral_probability = (1.0 - rainy_probability_) / 2.0;
-      const int direction = sample < rainy_probability_ ? 0
-                            : sample < rainy_probability_ + lateral_probability
-                                ? 1
-                                : 2;
+      int direction = 0;
+      if (sample >= rainy_probability_) {
+        direction = sample < rainy_probability_ + lateral_probability ? 1 : 2;
+      }
       probability = static_cast<float>(direction == 0 ? rainy_probability_
                                                       : lateral_probability);
       if (CanMove(requested_action)) {
