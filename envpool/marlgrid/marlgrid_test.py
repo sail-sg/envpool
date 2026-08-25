@@ -297,6 +297,15 @@ def _find_runfile(relative: str) -> Path:
         path = root / relative
         if path.exists():
             return path
+        mapping = root / "_repo_mapping"
+        if mapping.is_file():
+            repository, _, remainder = relative.partition("/")
+            for entry in mapping.read_text(encoding="utf-8").splitlines():
+                source, apparent, canonical = entry.split(",", 2)
+                if not source and apparent == repository:
+                    path = root / canonical / remainder
+                    if path.exists():
+                        return path
     raise FileNotFoundError(f"could not find runfile {relative!r}")
 
 

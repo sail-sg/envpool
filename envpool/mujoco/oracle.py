@@ -38,6 +38,18 @@ def runfiles_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def runfiles_repository(name: str) -> Path:
+    """Resolve an apparent repository through Bazel's runfiles mapping."""
+    root = runfiles_root()
+    mapping = root / "_repo_mapping"
+    if mapping.is_file():
+        for entry in mapping.read_text(encoding="utf-8").splitlines():
+            source, apparent, canonical = entry.split(",", 2)
+            if not source and apparent == name:
+                return root / canonical
+    return root / name
+
+
 def _runfiles_manifests(runfiles: Path) -> tuple[Path, ...]:
     candidates = []
     if manifest := os.environ.get("RUNFILES_MANIFEST_FILE"):

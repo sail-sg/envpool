@@ -647,6 +647,7 @@ py_test(
     imports = ["../.."],
     shard_count = 4,
     deps = [
+        ":mujoco_oracle",
         ":playground",
         ":playground_registration",
         "//envpool/python:glfw_context",

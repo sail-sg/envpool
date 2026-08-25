@@ -139,6 +139,7 @@ from mujoco_playground._src.manipulation.leap_hand import (
 )
 
 import envpool.mujoco.playground.registration as playground_registration
+from envpool.mujoco.oracle import runfiles_repository
 from envpool.registration import make_gymnasium
 
 
@@ -785,7 +786,7 @@ def _find_runfile(relative: str) -> Path:
 
 def _configure_oracle_assets() -> None:
     oracle_mjx_env.MENAGERIE_PATH = epath.Path(
-        _find_runfile("mujoco_menagerie_playground").as_posix()
+        runfiles_repository("mujoco_menagerie_playground").as_posix()
     )
 
 
