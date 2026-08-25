@@ -43,6 +43,14 @@ diff --git boost.BUILD boost.BUILD
  load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 +load("@rules_cc//cc:defs.bzl", "cc_library")
  load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_library", "boost_so_library", "hdr_list")
+@@ -669,6 +670,6 @@
+ boost_library(
+     name = "container_hash",
+-    defines = ["BOOST_NO_CXX98_FUNCTION_BASE"],
++    defines = ["BOOST_NO_CXX98_FUNCTION_BASE="],
+     deps = [
+         ":assert",
+         ":config",
 diff --git zlib.BUILD zlib.BUILD
 --- zlib.BUILD
 +++ zlib.BUILD
