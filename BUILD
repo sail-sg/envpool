@@ -71,6 +71,7 @@ py_binary_312(
     srcs = _SETUP_SRCS,
     data = _SETUP_DATA,
     main = "setup.py",
+    tags = ["manual"],
     deps = _SETUP_DEPS,
 )
 
@@ -79,6 +80,7 @@ py_binary_313(
     srcs = _SETUP_SRCS,
     data = _SETUP_DATA,
     main = "setup.py",
+    tags = ["manual"],
     deps = _SETUP_DEPS,
 )
 
@@ -87,5 +89,6 @@ py_binary_314(
     srcs = _SETUP_SRCS,
     data = _SETUP_DATA,
     main = "setup.py",
+    tags = ["manual"],
     deps = _SETUP_DEPS,
 )
