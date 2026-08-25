@@ -72,6 +72,8 @@ If no error occurs, you have successfully installed EnvPool.
 
 Platform notes:
 
+- Linux MuJoCo wheels use the system EGL/OpenGL runtime. For Mesa on Ubuntu,
+  install `libegl1 libopengl0 libgl1-mesa-dri`.
 - Linux Procgen wheels intentionally do not vendor Qt. If making a Procgen
   environment reports missing `libQt5Core.so.5` or `libQt5Gui.so.5`, install
   the system Qt 5 runtime, for example with `apt install qtbase5-dev` or

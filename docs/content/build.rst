@@ -147,8 +147,8 @@ EnvPool loads ``libglapi.dll``, ``libgallium_wgl.dll``, and
 ``opengl32.dll`` from ``ENVPOOL_DLL_DIR`` before the Windows MuJoCo render
 tests and before the GLFW-backed render path.
 
-Qt runtime in wheels
-^^^^^^^^^^^^^^^^^^^^
+Graphics runtime in wheels
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Linux release wheels intentionally exclude the Qt shared libraries used by
 Procgen (``libQt5Core.so.5`` and ``libQt5Gui.so.5``) from ``auditwheel``
@@ -160,6 +160,12 @@ Windows release wheels currently bundle the Qt runtime DLLs required by
 Procgen (``Qt5Core.dll`` and ``Qt5Gui.dll``) directly next to
 ``procgen_envpool.pyd``. End users installing the wheel do **not** need a
 separate Qt installation at runtime on Windows.
+
+Linux MuJoCo wheels also use system EGL and OpenGL libraries (``libEGL.so.1``,
+``libOpenGL.so.0``, and ``libGLdispatch.so.0``). Keeping these on the system GL
+dispatch stack avoids ``auditwheel`` renaming EGL libraries that MuJoCo's GL
+loader needs to recognize. For Mesa on Ubuntu, install
+``libegl1 libopengl0 libgl1-mesa-dri``.
 
 Source builds still require a local Qt 5 installation so Bazel can compile and
 link against Qt. Linux and macOS continue to rely on system Qt packages at
