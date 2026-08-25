@@ -44,6 +44,7 @@ def _temporary_workdir() -> Iterator[None]:
     with tempfile.TemporaryDirectory(
         prefix="vizdoom-runtime-", ignore_cleanup_errors=True
     ) as tempdir:
+        os.mkdir(os.path.join(tempdir, "_vizdoom"))
         os.chdir(tempdir)
         try:
             yield
