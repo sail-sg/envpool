@@ -15,13 +15,14 @@
 
 from __future__ import annotations
 
-from envpool.registration import register
+from envpool.registration import asset_base_path, register
 
 JUMANJI_ORACLE_VERSION = "1.1.1"
 JUMANJI_ORACLE_COMMIT = "b668afc08a14a71d7eed3f618456d5bda2eea06e"
 
 _COMMON = {
     "import_path": "envpool.jumanji",
+    "base_path": asset_base_path("envpool_assets", "jumanji/assets"),
 }
 
 _TASKS: tuple[tuple[str, str, int], ...] = (

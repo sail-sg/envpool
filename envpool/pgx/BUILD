@@ -82,6 +82,8 @@ py_test(
     srcs = ["pgx_align_test.py"],
     data = [":pgx_envpool"],
     imports = ["../.."],
+    # Bound JAX's compiled-code mappings across the different game families.
+    shard_count = 2,
     deps = [
         ":pgx",
         ":pgx_registration",
