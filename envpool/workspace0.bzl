@@ -397,7 +397,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "com_github_nelhage_rules_boost",
-        # sha256 = "2215e6910eb763a971b1f63f53c45c0f2b7607df38c96287666d94d954da8cdc",
+        sha256 = "d35b9362124fde75d43c59ab78773691a3b4159339cd24547eeb477e99b8c3df",
         strip_prefix = "rules_boost-e60cf50996da9fe769b6e7a31b88c54966ecb191",
         urls = [
             "https://github.com/nelhage/rules_boost/archive/e60cf50996da9fe769b6e7a31b88c54966ecb191.tar.gz",

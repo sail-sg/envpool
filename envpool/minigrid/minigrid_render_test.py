@@ -88,6 +88,12 @@ def _patch_wfc_oracle_reset() -> None:
             self.mission = self._gen_mission()
 
     wfc_module.WFCEnv = _WFCOracleEnv
+    for env_spec in gym.envs.registry.values():
+        entry_point = env_spec.entry_point
+        if isinstance(entry_point, str) and entry_point.startswith(
+            "minigrid.envs.wfc:"
+        ):
+            setattr(wfc_module, entry_point.partition(":")[2], _WFCOracleEnv)
 
 
 _patch_wfc_oracle_reset()

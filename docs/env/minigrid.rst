@@ -4,7 +4,7 @@ Minigrid
 We use ``minigrid==3.1.0`` as the codebase.
 See https://github.com/Farama-Foundation/Minigrid/tree/v3.1.0
 
-EnvPool supports all 81 non-BabyAI ``MiniGrid-*`` environments and all 96
+EnvPool supports all 82 non-BabyAI ``MiniGrid-*`` environments and all 96
 ``BabyAI-*`` environments registered by upstream ``minigrid==3.1.0``.
 
 

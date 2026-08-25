@@ -296,6 +296,9 @@ class KitchenEnvBase : public Env<EnvSpecT>, public MujocoRobotEnv {
   }
 
   void Step(const Action& action) override {
+#if defined(__clang__)
+#pragma clang fp contract(off)
+#endif
     const auto* act = static_cast<const mjtNum*>(action["action"_].Data());
     for (int i = 0; i < kitchen_internal::kRobotDim; ++i) {
       mjtNum value = std::clamp(act[i], static_cast<mjtNum>(-1.0),

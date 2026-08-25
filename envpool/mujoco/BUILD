@@ -64,6 +64,17 @@ py_library(
     ],
 )
 
+py_library(
+    name = "mujoco_oracle",
+    srcs = ["oracle.py"],
+    data = select({
+        # Linux oracle bindings must keep the pinned pip MuJoCo library.
+        "//:linux": [],
+        "//conditions:default": ["@mujoco//:mujoco_shared_lib"],
+    }),
+    imports = ["../.."],
+)
+
 copy_to_directory(
     name = "gen_mujoco_gym_xml",
     srcs = [
@@ -406,11 +417,7 @@ py_binary_312(
         "myosuite/myosuite_oracle_probe.py",
         "//third_party/myosuite:generate_render_sample.py",
     ],
-    data = select({
-        # Linux oracle rendering uses the pinned pip MuJoCo wheel directly.
-        "//:linux": [],
-        "//conditions:default": ["@mujoco//:mujoco_shared_lib"],
-    }) + [
+    data = [
         ":myosuite_oracle_probe",
         "@myosuite_furniture_sim//:source",
         "@myosuite_mpl_sim//:source",
@@ -422,6 +429,7 @@ py_binary_312(
     imports = ["../.."],
     main = "generate_render_sample.py",
     deps = [
+        ":mujoco_oracle",
         ":myosuite",
         ":myosuite_registration",
         oracle_requirement("click"),
@@ -722,11 +730,7 @@ py_test(
 py_binary_312(
     name = "myosuite_oracle_probe",
     srcs = ["myosuite/myosuite_oracle_probe.py"],
-    data = select({
-        # Linux oracle rendering uses the pinned pip MuJoCo wheel directly.
-        "//:linux": [],
-        "//conditions:default": ["@mujoco//:mujoco_shared_lib"],
-    }) + [
+    data = [
         "@myosuite_furniture_sim//:source",
         "@myosuite_mpl_sim//:source",
         "@myosuite_myo_sim//:source",
@@ -736,6 +740,7 @@ py_binary_312(
     ],
     imports = ["../.."],
     deps = [
+        ":mujoco_oracle",
         "//envpool/python:glfw_context",
         oracle_requirement("click"),
         oracle_requirement("dm-control"),
@@ -957,6 +962,7 @@ py_test(
     deps = [
         ":mujoco_gym",
         ":mujoco_gym_registration",
+        ":mujoco_oracle",
         requirement("numpy"),
         requirement("absl-py"),
         requirement("gymnasium"),
@@ -1015,6 +1021,7 @@ py_test(
     deps = [
         ":mujoco_dmc",
         ":mujoco_dmc_registration",
+        ":mujoco_oracle",
         requirement("numpy"),
         requirement("absl-py"),
         requirement("mujoco"),
@@ -1029,6 +1036,7 @@ py_test(
     srcs = ["robotics/robotics_test.py"],
     imports = ["../.."],
     deps = [
+        ":mujoco_oracle",
         ":robotics",
         ":robotics_registration",
         requirement("dm-env"),
