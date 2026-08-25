@@ -454,10 +454,8 @@ Road MakeRoundaboutGenericRoad(double radius, int lanes) {
        {kPi - alpha, kPi / 2.0 + alpha},
        {kPi / 2.0 + alpha, kPi / 2.0 - alpha}}};
   for (int lane = 0; lane < lanes; ++lane) {
-    const Lines lines = lanes == 1          ? Lines{kContinuous, kContinuous}
-                        : lane == 0         ? Lines{kContinuous, kStriped}
-                        : lane == lanes - 1 ? Lines{kNone, kContinuous}
-                                            : Lines{kNone, kStriped};
+    const Lines lines{lane == 0 ? kContinuous : kNone,
+                      lane == lanes - 1 ? kContinuous : kStriped};
     for (int segment = 0; segment < 8; ++segment) {
       road.network.AddLane(
           nodes[segment], nodes[segment + 1],
