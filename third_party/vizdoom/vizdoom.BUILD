@@ -193,7 +193,7 @@ genrule(
     srcs = ["tools/lemon/lempar.c"],
     outs = ["lempar.c"],
     cmd = "cp $(SRCS) $(RULEDIR)",
-    cmd_bat = "copy /Y $(SRCS) $(RULEDIR)",
+    cmd_bat = "copy /Y \"$(SRCS)\" \"$(RULEDIR)\"",
 )
 
 genrule(
@@ -201,7 +201,7 @@ genrule(
     srcs = ["src/xlat/xlat_parser.y"],
     outs = ["xlat_parser.y"],
     cmd = "cp $< $@",
-    cmd_bat = "copy /Y $< $@",
+    cmd_bat = "copy /Y \"$<\" \"$@\"",
 )
 
 genrule(
