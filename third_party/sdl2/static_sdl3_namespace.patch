@@ -1,7 +1,7 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -480,6 +480,24 @@ if(SDL_STATIC)
+@@ -480,6 +480,38 @@ if(SDL_STATIC)
    add_library(SDL3-static STATIC)
    add_library(SDL3::SDL3-static ALIAS SDL3-static)
    SDL_AddCommonCompilerFlags(SDL3-static)
@@ -16,6 +16,20 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 +      file(APPEND "${SDL3_PREFIX_HEADER}"
 +           "#define ${SDL3_SYMBOL} ENVPOOL_SDL3_${SDL3_SYMBOL}\n")
 +    endif()
++  endforeach()
++  foreach(SDL3_INTERNAL_SYMBOL IN ITEMS
++      SDL_CreateThreadWithStackSize
++      SDL_GetRelativeMouseMode
++      SDL_LockSensors
++      SDL_SetRelativeMouseMode
++      SDL_UnlockSensors
++      SDL_VideoInit
++      SDL_VideoQuit
++      SDL_memcpy
++      SDL_memmove
++      SDL_memset)
++    file(APPEND "${SDL3_PREFIX_HEADER}"
++         "#define ${SDL3_INTERNAL_SYMBOL} ENVPOOL_SDL3_${SDL3_INTERNAL_SYMBOL}\n")
 +  endforeach()
 +  if(MSVC)
 +    target_compile_options(SDL3-static PRIVATE "/FI${SDL3_PREFIX_HEADER}")

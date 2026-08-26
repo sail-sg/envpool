@@ -14,6 +14,11 @@
 
 load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
 
+config_setting(
+    name = "linux",
+    constraint_values = ["@platforms//os:linux"],
+)
+
 filegroup(
     name = "srcs",
     srcs = glob(["**"]),
@@ -32,7 +37,10 @@ cmake(
         "-DSDL_STATIC=ON",
         "-DSDL_TEST_LIBRARY=OFF",
         "-DSDL_TESTS=OFF",
-    ],
+    ] + select({
+        ":linux": ["-DSDL_X11_XTEST=OFF"],
+        "//conditions:default": [],
+    }),
     lib_source = ":srcs",
     out_include_dir = "include",
     out_static_libs = select({
