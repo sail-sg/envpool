@@ -34,6 +34,7 @@ cmake(
         "-GNinja",
         "-DCMAKE_BUILD_TYPE=Release",
         "-DCMAKE_INSTALL_LIBDIR=lib",
+        "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
         "-DSDL2COMPAT_INSTALL=ON",
         "-DSDL2COMPAT_STATIC=ON",
         "-DSDL2COMPAT_TESTS=OFF",
