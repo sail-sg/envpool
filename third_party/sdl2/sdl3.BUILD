@@ -38,7 +38,14 @@ cmake(
         "-DSDL_TEST_LIBRARY=OFF",
         "-DSDL_TESTS=OFF",
     ] + select({
-        ":linux": ["-DSDL_X11_XTEST=OFF"],
+        ":linux": [
+            "-DSDL_X11_XCURSOR=OFF",
+            "-DSDL_X11_XFIXES=OFF",
+            "-DSDL_X11_XINPUT=OFF",
+            "-DSDL_X11_XRANDR=OFF",
+            "-DSDL_X11_XSCRNSAVER=OFF",
+            "-DSDL_X11_XTEST=OFF",
+        ],
         "//conditions:default": [],
     }),
     lib_source = ":srcs",
