@@ -15,6 +15,8 @@ single_version_override(
     patches = ["//third_party/rules_foreign_cc:bazel9_windows_cc_import.patch"],
 )
 
+register_toolchains("//third_party/rules_foreign_cc:linux_arm64_preinstalled_ninja")
+
 single_version_override(
     module_name = "rules_python",
     patches = [

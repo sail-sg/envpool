@@ -13,3 +13,14 @@
 # limitations under the License.
 
 exports_files(["bazel9_windows_cc_import.patch"])
+
+# The upstream ARM64 Ninja binary requires a newer glibc than manylinux_2_28.
+toolchain(
+    name = "linux_arm64_preinstalled_ninja",
+    exec_compatible_with = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:linux",
+    ],
+    toolchain = "@rules_foreign_cc//toolchains/private:preinstalled_ninja",
+    toolchain_type = "@rules_foreign_cc//toolchains:ninja_toolchain",
+)
