@@ -15,7 +15,7 @@
 # Description:
 #   NASM is a portable assembler in the Intel/Microsoft tradition.
 
-load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
 licenses(["notice"])  # BSD 2-clause
 
@@ -31,26 +31,29 @@ genrule(
     cmd = "cp $(location @//third_party/nasm:config.h) $@",
 )
 
-cc_binary(
-    name = "nasm",
-    srcs = glob([
-        "asm/*.c",
-        "asm/*.h",
-        "autoconf/*.h",
-        "common/*.c",
-        "config/*.h",
-        "include/*.h",
-        "macros/*.c",
-        "nasmlib/*.c",
-        "nasmlib/*.h",
-        "output/*.c",
-        "output/*.h",
-        "stdlib/*.c",
-        "x86/*.c",
-        "x86/*.h",
-        "zlib/*.c",
-        "zlib/*.h",
-    ]) + [
+cc_library(
+    name = "nasm_lib",
+    srcs = glob(
+        [
+            "asm/*.c",
+            "asm/*.h",
+            "autoconf/*.h",
+            "common/*.c",
+            "config/*.h",
+            "include/*.h",
+            "macros/*.c",
+            "nasmlib/*.c",
+            "nasmlib/*.h",
+            "output/*.c",
+            "output/*.h",
+            "stdlib/*.c",
+            "x86/*.c",
+            "x86/*.h",
+            "zlib/*.c",
+            "zlib/*.h",
+        ],
+        exclude = ["asm/nasm.c"],
+    ) + [
         "version.h",
         ":config_h",
     ],
@@ -79,7 +82,13 @@ cc_binary(
         "x86",
         "zlib",
     ],
+)
+
+cc_binary(
+    name = "nasm",
+    srcs = ["asm/nasm.c"],
     visibility = ["@libjpeg_turbo//:__pkg__"],
+    deps = [":nasm_lib"],
 )
 
 config_setting(
