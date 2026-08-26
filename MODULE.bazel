@@ -11,6 +11,11 @@ bazel_dep(name = "rules_python", version = "2.3.2")
 bazel_dep(name = "rules_shell", version = "0.8.0")
 
 single_version_override(
+    module_name = "rules_foreign_cc",
+    patches = ["//third_party/rules_foreign_cc:bazel9_windows_cc_import.patch"],
+)
+
+single_version_override(
     module_name = "rules_python",
     patches = [
         "//third_party/rules_python:pip_repository_host_platform.patch",
