@@ -6,6 +6,14 @@
 +#if defined(__i386__) || defined(__x86_64__)
 +#define HAVE_CPUID_H 1
 +#endif
+@@ -170,6 +172,6 @@
+ /* Define to 1 if you have the <immintrin.h> header file. */
+-#if defined __has_include
++#if (defined(__i386__) || defined(__x86_64__)) && defined __has_include
+   #if __has_include (<immintrin.h>)
+     #define HAVE_IMMINTRIN_H 1
+   #endif
+ #endif
 @@ -311,3 +313,5 @@
  /* Define to 1 if _mm_clmulepi64_si128 is usable. See configure.ac for
     details. */
