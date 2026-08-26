@@ -32,7 +32,7 @@ WHEEL_SIZE_LIMIT_BYTES ?= 100000000
 AUDITWHEEL_EXCLUDE_LIBS ?= libQt5Core.so.5 libQt5Gui.so.5 \
 	libEGL.so.1 libOpenGL.so.0 libGLdispatch.so.0
 AUDITWHEEL_EXCLUDE_FLAGS = $(foreach lib,$(AUDITWHEEL_EXCLUDE_LIBS),--exclude $(lib))
-CLANG_TIDY_MAJOR = 18
+CLANG_TIDY_MAJOR = 20
 CLANG_TIDY_BIN = clang-tidy-$(CLANG_TIDY_MAJOR)
 CLANG_TIDY_WRAPPER_DIR = $(HOME)/.cache/$(PROJECT_NAME)/bin
 PATH           := $(CLANG_TIDY_WRAPPER_DIR):$(HOME)/go/bin:$(PATH)
@@ -88,8 +88,7 @@ doxygen-install:
 	command -v doxygen || (if command -v sudo >/dev/null 2>&1; then sudo apt-get update && sudo apt-get install -y doxygen; else apt-get update && apt-get install -y doxygen; fi)
 
 go-install:
-	# requires go >= 1.16
-	command -v go || (sudo apt-get install -y golang-1.18 && sudo ln -sf /usr/lib/go-1.18/bin/go /usr/bin/go)
+	command -v go || sudo apt-get install -y golang-go
 
 bazel-install: go-install
 	command -v bazelisk || go install github.com/bazelbuild/bazelisk@latest
@@ -101,7 +100,7 @@ addlicense-install: go-install
 	command -v addlicense || go install github.com/google/addlicense@latest
 
 doc-install: doxygen-install
-	$(call check_install_extra, doc8, "doc8<1")
+	$(call check_install_extra, doc8, "doc8>=2")
 	$(call check_install, setuptools)
 	$(call check_install, pbr)
 	$(call check_install, sphinx)

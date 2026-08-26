@@ -13,12 +13,7 @@
 ## limitations under the License.
 
 exports_files([
-    "atomic_windows_build.patch",
-    "bazel9_rules_cc.patch",
-    "bzip2_system_headers.patch",
     "filesystem_scope_headers.patch",
-    "lzma_linux_x86_clmul.patch",
-    "lzma_windows_copts.patch",
+    "unused_dependencies.patch",
     "windows_common_defines.patch",
-    "zlib_system_headers.patch",
 ])

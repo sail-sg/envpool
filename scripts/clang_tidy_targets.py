@@ -19,14 +19,13 @@ FULL_RUN_FILES = {
     "envpool/BUILD",
     "envpool/requirements.bzl",
     "envpool/workspace0.bzl",
-    "envpool/workspace1.bzl",
 }
 FULL_RUN_PREFIXES = ("third_party/",)
 CPP_SUFFIXES = (".cc", ".h")
 BINDING_ONLY_FILES = frozenset(("envpool/minigrid/minigrid_bindings.cc",))
 BINDING_ONLY_PREFIXES = ("envpool/minigrid_bindings/",)
 CC_RULE_KIND = "cc_(library|test)"
-# clang-tidy-18 does not finish the MyoSuite pybind translation unit: it gets
+# clang-tidy does not finish the MyoSuite pybind translation unit: it gets
 # stuck analyzing pybind11/PyEnvPool templates after the native runtime has
 # already been parsed. Keep runtime coverage through
 # //envpool/mujoco:myosuite_clang_tidy and leave only the binding module to

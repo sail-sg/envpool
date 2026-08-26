@@ -2,13 +2,33 @@ module(name = "envpool")
 
 bazel_dep(name = "bazel_features", version = "1.51.0")
 bazel_dep(name = "bazel_skylib", version = "1.9.2")
-bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "bzip2", version = "1.0.8.bcr.4")
+bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "protobuf", version = "36.0", repo_name = "com_google_protobuf")
+bazel_dep(name = "rules_boost", repo_name = "com_github_nelhage_rules_boost")
 bazel_dep(name = "rules_cc", version = "0.2.22")
 bazel_dep(name = "rules_foreign_cc", version = "0.15.1")
-bazel_dep(name = "rules_java", version = "9.8.0")
+bazel_dep(name = "rules_java", version = "9.9.0")
 bazel_dep(name = "rules_python", version = "2.3.2")
 bazel_dep(name = "rules_shell", version = "0.8.0")
+bazel_dep(name = "xz", version = "5.4.5.bcr.8")
+bazel_dep(name = "zlib", version = "1.3.2")
+bazel_dep(name = "zstd", version = "1.5.7.bcr.1")
+
+archive_override(
+    module_name = "rules_boost",
+    patches = [
+        "//third_party/boost:filesystem_scope_headers.patch",
+        "//third_party/boost:unused_dependencies.patch",
+        "//third_party/boost:windows_common_defines.patch",
+    ],
+    sha256 = "4f3e5a8091c4d2d369176e23a744a6bb1ee6f5b42beb1af192a6311cc3402ace",
+    strip_prefix = "rules_boost-d4d306ef48b7dbddf0389e48b90f6eb74ec18a71",
+    type = "tar.gz",
+    urls = [
+        "https://codeload.github.com/nelhage/rules_boost/tar.gz/d4d306ef48b7dbddf0389e48b90f6eb74ec18a71",
+    ],
+)
 
 single_version_override(
     module_name = "rules_foreign_cc",
@@ -90,7 +110,6 @@ use_repo(
     "boost",
     "box2d",
     "ccd",
-    "com_github_nelhage_rules_boost",
     "com_google_absl",
     "com_google_googletest",
     "concurrentqueue",
@@ -137,15 +156,4 @@ use_repo(
     "vizdoom",
     "vizdoom_extra_maps",
     "vizdoom_lib",
-    "zlib",
-)
-
-boost_dependencies = use_extension("//envpool:workspace1.bzl", "boost_dependencies")
-use_repo(
-    boost_dependencies,
-    "com_github_facebook_zstd",
-    "net_zlib_zlib",
-    "openssl",
-    "org_bzip_bzip2",
-    "org_lzma_lzma",
 )

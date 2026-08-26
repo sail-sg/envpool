@@ -113,17 +113,6 @@ def workspace():
 
     maybe(
         http_archive,
-        name = "zlib",
-        sha256 = "b99a0b86c0ba9360ec7e78c4f1e43b1cbdf1e6936c8fa0f6835c0cd694a495a1",
-        strip_prefix = "zlib-1.3.2",
-        urls = [
-            "https://github.com/madler/zlib/archive/refs/tags/v1.3.2.tar.gz",
-        ],
-        build_file = "//third_party/zlib:zlib.BUILD",
-    )
-
-    maybe(
-        http_archive,
         name = "opencv",
         patch_args = ["-p1"],
         patches = [
@@ -185,10 +174,10 @@ def workspace():
     maybe(
         http_archive,
         name = "nasm",
-        sha256 = "af2f241ecc061205d73ba4f781f075d025dabaeab020b676b7db144bf7015d6d",
-        strip_prefix = "nasm-nasm-3.01",
+        sha256 = "39e251d3048c9f68678903c6b05b83942c66c71e467e8c5c3c1b26cff2ef1586",
+        strip_prefix = "nasm-nasm-3.02",
         urls = [
-            "https://github.com/netwide-assembler/nasm/archive/refs/tags/nasm-3.01.tar.gz",
+            "https://github.com/netwide-assembler/nasm/archive/refs/tags/nasm-3.02.tar.gz",
         ],
         patch_cmds = ["""
 set -eux
@@ -287,33 +276,13 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
 
     maybe(
         http_archive,
-        name = "com_github_nelhage_rules_boost",
-        sha256 = "d35b9362124fde75d43c59ab78773691a3b4159339cd24547eeb477e99b8c3df",
-        strip_prefix = "rules_boost-e60cf50996da9fe769b6e7a31b88c54966ecb191",
-        urls = [
-            "https://github.com/nelhage/rules_boost/archive/e60cf50996da9fe769b6e7a31b88c54966ecb191.tar.gz",
-        ],
-        patches = [
-            "//third_party/boost:bazel9_rules_cc.patch",
-            "//third_party/boost:filesystem_scope_headers.patch",
-            "//third_party/boost:atomic_windows_build.patch",
-            "//third_party/boost:lzma_linux_x86_clmul.patch",
-            "//third_party/boost:lzma_windows_copts.patch",
-            "//third_party/boost:windows_common_defines.patch",
-            "//third_party/boost:bzip2_system_headers.patch",
-            "//third_party/boost:zlib_system_headers.patch",
-        ],
-    )
-
-    maybe(
-        http_archive,
         name = "boost",
         build_file = "@com_github_nelhage_rules_boost//:boost.BUILD",
         patch_cmds = ["rm -f doc/pdf/BUILD"],
-        sha256 = "e848446c6fec62d8a96b44ed7352238b3de040b8b9facd4d6963b32f541e00f5",
-        strip_prefix = "boost-1.90.0",
+        sha256 = "f51707c27359a0df0cac1beada86de31bb5eed5e8285592dadec384df99c2984",
+        strip_prefix = "boost-1.92.0",
         urls = [
-            "https://github.com/boostorg/boost/releases/download/boost-1.90.0/boost-1.90.0-b2-nodocs.tar.gz",
+            "https://github.com/boostorg/boost/releases/download/boost-1.92.0/boost-1.92.0-cmake.tar.gz",
         ],
     )
 

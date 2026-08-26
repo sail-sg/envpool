@@ -6,6 +6,10 @@ on:
       - main
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   actions: write
   contents: read
@@ -25,33 +29,30 @@ jobs:
       MUJOCO_GL: egl
       EGL_PLATFORM: surfaceless
     steps:
-      - name: Cancel previous run
-        uses: styfle/cancel-workflow-action@0.11.0
-        with:
-          access_token: ${{ github.token }}
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
-          go-version: "1.22"
-      - uses: actions/setup-java@v4
+          go-version: "1.27"
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "25"
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-tidy-18 cmake lcov ninja-build swig qtbase5-dev qtdeclarative5-dev libegl1-mesa-dev libopengl-dev
+          sudo apt-get install -y clang-tidy-20 cmake lcov ninja-build swig qtbase5-dev qtdeclarative5-dev libegl1-mesa-dev libopengl-dev
+          python -m pip install --upgrade cmake
           qmake_bin="$(command -v qmake-qt5 || command -v qmake)"
           qt_include_dir="$("$qmake_bin" -query QT_INSTALL_HEADERS)"
           sudo ln -sfn "$qt_include_dir" /usr/include/qt
       - name: Restore Bazel caches
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.cache/bazelisk
@@ -96,20 +97,20 @@ jobs:
           cp coverage/coverage-badge.svg coverage/site/coverage-badge.svg
       - name: Upload coverage artifacts
         if: ${{ always() && !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report-linux-x64-${{ github.sha }}
           path: coverage
           if-no-files-found: warn
       - name: Upload coverage Pages artifact
         if: ${{ github.event_name == 'push' }}
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           path: coverage/site
       - name: Save Bazel caches
         id: save-bazel-caches
         if: ${{ always() && !cancelled() }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: |
             ~/.cache/bazelisk
@@ -149,33 +150,30 @@ jobs:
       MUJOCO_GL: egl
       EGL_PLATFORM: surfaceless
     steps:
-      - name: Cancel previous run
-        uses: styfle/cancel-workflow-action@0.11.0
-        with:
-          access_token: ${{ github.token }}
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
-          go-version: "1.22"
-      - uses: actions/setup-java@v4
+          go-version: "1.27"
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "25"
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-20 clang-tidy-18 cmake lcov ninja-build swig qtbase5-dev qtdeclarative5-dev libegl1-mesa-dev libopengl-dev
+          sudo apt-get install -y clang-20 clang-tidy-20 cmake lcov ninja-build swig qtbase5-dev qtdeclarative5-dev libegl1-mesa-dev libopengl-dev
+          python -m pip install --upgrade cmake
           qmake_bin="$(command -v qmake-qt5 || command -v qmake)"
           qt_include_dir="$("$qmake_bin" -query QT_INSTALL_HEADERS)"
           sudo ln -sfn "$qt_include_dir" /usr/include/qt
       - name: Restore Bazel caches
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.cache/bazelisk
@@ -200,7 +198,7 @@ jobs:
       - name: Save Bazel caches
         id: save-bazel-caches
         if: ${{ always() && !cancelled() }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: |
             ~/.cache/bazelisk
@@ -229,28 +227,24 @@ jobs:
       BAZEL_CI_RESOURCE_OPTS: --jobs=HOST_CPUS-1 --local_resources=cpu=HOST_CPUS-1 --local_resources=memory=HOST_RAM*.5
       HOMEBREW_NO_AUTO_UPDATE: "1"
     steps:
-      - name: Cancel previous run
-        uses: styfle/cancel-workflow-action@0.11.0
-        with:
-          access_token: ${{ github.token }}
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
-          go-version: "1.22"
-      - uses: actions/setup-java@v4
+          go-version: "1.27"
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "25"
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Install macOS dependencies
         run: |
           brew install ninja swig qt@5
-          python -m pip install "cmake<4"
+          python -m pip install --upgrade cmake
           CMAKE_BIN_DIR="$(python -c "import cmake; print(cmake.CMAKE_BIN_DIR)")"
           CMAKE_BIN="$CMAKE_BIN_DIR/cmake"
           echo "$CMAKE_BIN_DIR" >> "$GITHUB_PATH"
@@ -259,7 +253,7 @@ jobs:
           sudo ln -sfn "$(brew --prefix ninja)/bin/ninja" /usr/local/bin/ninja
           echo "BAZEL_RULES_QT_DIR=$(brew --prefix qt@5)" >> "$GITHUB_ENV"
       - name: Restore Bazel caches
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.cache/bazelisk
@@ -283,7 +277,7 @@ jobs:
       - name: Save Bazel caches
         id: save-bazel-caches
         if: ${{ always() && !cancelled() }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: |
             ~/.cache/bazelisk
@@ -319,21 +313,17 @@ jobs:
       MSYS_NO_PATHCONV: "1"
       USE_BAZEL_VERSION: "9.2.0"
     steps:
-      - name: Cancel previous run
-        uses: styfle/cancel-workflow-action@0.11.0
-        with:
-          access_token: ${{ github.token }}
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
-          go-version: "1.22"
+          go-version: "1.27"
       - uses: ilammy/msvc-dev-cmd@v1
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "25"
       - name: Shorten temp path
         shell: pwsh
         run: |
@@ -350,7 +340,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Path (Join-Path $env:GITHUB_WORKSPACE ".mesa") -Force | Out-Null
       - name: Install Mesa software OpenGL
-        uses: f3d-app/install-mesa-windows-action@v1
+        uses: f3d-app/install-mesa-windows-action@v3
         with:
           path: ${{ github.workspace }}\.mesa
       - name: Export Mesa location
@@ -371,7 +361,7 @@ jobs:
           Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $env:QT_ROOT_DIR "bin")
           Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files\Git\usr\bin"
       - name: Restore Bazel caches
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           # Keep the Windows disk cache capped. The old uncapped archive grew
           # past 7 GB and exhausted the hosted runner disk during extraction.
@@ -389,13 +379,13 @@ jobs:
           go install github.com/bazelbuild/bazelisk@latest
           Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $HOME "go/bin")
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - name: Pin CMake 3
+      - name: Install latest CMake
         shell: pwsh
         run: |
-          python -m pip install "cmake<4"
+          python -m pip install --upgrade cmake
           $cmakeBinDir = python -c "import cmake; print(cmake.CMAKE_BIN_DIR)"
           Add-Content -Path $env:GITHUB_PATH -Value $cmakeBinDir
           & (Join-Path $cmakeBinDir "cmake.exe") --version
@@ -413,7 +403,7 @@ jobs:
       - name: Save Bazel caches
         id: save-bazel-caches
         if: ${{ always() && !cancelled() }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: |
             ~/.cache/bazelisk
@@ -448,4 +438,4 @@ jobs:
     steps:
       - name: Deploy GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
