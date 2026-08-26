@@ -85,7 +85,7 @@ cmake(
         "-DWITH_ITT=OFF",
         "-DWITH_JASPER=ON",
         "-DWITH_JPEG=ON",
-        "-DWITH_LAPACK=ON",
+        "-DWITH_LAPACK=OFF",
         "-DWITH_ONNX=OFF",
         "-DWITH_OPENCL=OFF",
         "-DWITH_OPENGL=OFF",
