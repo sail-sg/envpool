@@ -138,7 +138,13 @@ jobs:
       # Keep hosted Linux runners responsive during the full MuJoCo/MyoSuite test
       # build. The default HOST_CPUS-1 parallelism can starve the runner hard
       # enough for GitHub Actions to lose communication.
-      BAZEL_CI_RESOURCE_OPTS: --jobs=2 --local_resources=cpu=2 --local_resources=memory=HOST_RAM*.35 --experimental_disk_cache_gc_max_size=2G --experimental_disk_cache_gc_idle_delay=0s
+      # Match the official arm64 MuJoCo wheel's Clang 20 toolchain so contact-
+      # heavy oracle rollouts do not diverge from GCC-generated physics code.
+      BAZEL_CI_RESOURCE_OPTS: >-
+        --repo_env=CC=/usr/bin/clang-20
+        --repo_env=CXX=/usr/bin/clang++-20
+        --jobs=2 --local_resources=cpu=2 --local_resources=memory=HOST_RAM*.35
+        --experimental_disk_cache_gc_max_size=2G --experimental_disk_cache_gc_idle_delay=0s
       MUJOCO_GL: egl
       EGL_PLATFORM: surfaceless
     steps:
@@ -163,7 +169,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-tidy-18 cmake lcov ninja-build swig qtbase5-dev qtdeclarative5-dev libegl1-mesa-dev libopengl-dev
+          sudo apt-get install -y clang-20 clang-tidy-18 cmake lcov ninja-build swig qtbase5-dev qtdeclarative5-dev libegl1-mesa-dev libopengl-dev
           qmake_bin="$(command -v qmake-qt5 || command -v qmake)"
           qt_include_dir="$("$qmake_bin" -query QT_INSTALL_HEADERS)"
           sudo ln -sfn "$qt_include_dir" /usr/include/qt
