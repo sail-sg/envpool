@@ -39,37 +39,38 @@ python.toolchain(
 )
 use_repo(python, "python_3_12", "python_3_13", "python_3_14", "python_versions")
 
+# Short internal hub names keep Windows DLL runfile paths below MAX_PATH.
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 pip.parse(
-    hub_name = "pip_requirements",
+    hub_name = "p",
     python_version = "3.12",
     requirements_lock = "//third_party/pip_requirements:requirements.txt",
 )
 pip.parse(
-    hub_name = "pip_requirements",
+    hub_name = "p",
     python_version = "3.13",
     requirements_lock = "//third_party/pip_requirements:requirements.txt",
 )
 pip.parse(
-    hub_name = "pip_requirements",
+    hub_name = "p",
     python_version = "3.14",
     requirements_lock = "//third_party/pip_requirements:requirements.txt",
 )
 pip.parse(
-    hub_name = "jumanji_oracle_requirements",
+    hub_name = "j",
     python_version = "3.12",
     requirements_lock = "//third_party/jumanji:oracle_requirements.txt",
 )
 pip.parse(
-    hub_name = "myosuite_oracle_requirements",
+    hub_name = "m",
     python_version = "3.12",
     requirements_lock = "//third_party/myosuite:oracle_requirements.txt",
 )
 use_repo(
     pip,
-    "jumanji_oracle_requirements",
-    "myosuite_oracle_requirements",
-    "pip_requirements",
+    jumanji_oracle_requirements = "j",
+    myosuite_oracle_requirements = "m",
+    pip_requirements = "p",
 )
 
 envpool_repositories = use_extension("//envpool:workspace0.bzl", "repositories")
