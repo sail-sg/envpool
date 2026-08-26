@@ -32,7 +32,7 @@ def _freedoom_archive_impl(ctx):
         if result.success:
             ctx.file("BUILD.bazel", ctx.read(ctx.attr.build_file))
             return
-        last_error = result.error
+        last_error = getattr(result, "error", "download failed")
 
     fail("failed to fetch Freedoom asset after %d attempts: %s" % (
         ctx.attr.attempts,
