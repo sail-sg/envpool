@@ -14,5 +14,6 @@
 
 exports_files([
     "pip_repository_host_platform.patch",
+    "windows_short_wheel_names.patch",
     "zipapp_explicit_init.patch",
 ])
