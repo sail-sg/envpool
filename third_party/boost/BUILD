@@ -13,6 +13,7 @@
 ## limitations under the License.
 
 exports_files([
+    "atomic_windows_build.patch",
     "filesystem_scope_headers.patch",
     "unused_dependencies.patch",
     "windows_common_defines.patch",

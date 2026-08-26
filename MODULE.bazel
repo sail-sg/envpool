@@ -18,6 +18,7 @@ bazel_dep(name = "zstd", version = "1.5.7.bcr.1")
 archive_override(
     module_name = "rules_boost",
     patches = [
+        "//third_party/boost:atomic_windows_build.patch",
         "//third_party/boost:filesystem_scope_headers.patch",
         "//third_party/boost:unused_dependencies.patch",
         "//third_party/boost:windows_common_defines.patch",

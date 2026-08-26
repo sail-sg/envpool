@@ -184,9 +184,9 @@ genrule(
     srcs = ["src/sc_man_scanner.re"],
     outs = ["src/sc_man_scanner.h"],
     cmd = "$(execpath :re2c) --no-generation-date -s -o $@ " +
-          "$(location src/sc_man_scanner.re)",
+          "$(execpath src/sc_man_scanner.re)",
     cmd_bat = "$(execpath @re2c_4_5_1//:re2c) --no-generation-date " +
-              "-s -o $@ $(location src/sc_man_scanner.re)",
+              "-s -o $@ $(execpath src/sc_man_scanner.re)",
     tools = select({
         "@envpool//:windows": ["@re2c_4_5_1//:re2c"],
         "//conditions:default": [":re2c"],
@@ -392,9 +392,9 @@ genrule(
     outs = ["iwadpicker_cocoa.o"],
     cmd = """
 generated_dir=$$(dirname "$(execpath :viz_version)")
-vizdoom_src="$(location src/posix/osx/iwadpicker_cocoa.mm)"
+vizdoom_src="$(execpath src/posix/osx/iwadpicker_cocoa.mm)"
 vizdoom_src="$${vizdoom_src%/posix/osx/iwadpicker_cocoa.mm}"
-sdl_include=$$(dirname "$(location @sdl2//:include/SDL2/SDL.h)")
+sdl_include=$$(dirname "$(execpath @sdl2//:include/SDL2/SDL.h)")
 /usr/bin/xcrun --sdk macosx clang++ -c -x objective-c++ -std=c++17 \
   -Dstricmp=strcasecmp \
   -Dstrnicmp=strncasecmp \
@@ -409,7 +409,7 @@ sdl_include=$$(dirname "$(location @sdl2//:include/SDL2/SDL.h)")
   -I"$${vizdoom_src}/posix/sdl" \
   -I"$${sdl_include}" \
   -I"$${generated_dir}" \
-  "$(location src/posix/osx/iwadpicker_cocoa.mm)" \
+  "$(execpath src/posix/osx/iwadpicker_cocoa.mm)" \
   -o "$@"
 """,
     target_compatible_with = select({
@@ -428,9 +428,9 @@ genrule(
     outs = ["i_system.mm.o"],
     cmd = """
 generated_dir=$$(dirname "$(execpath :viz_version)")
-vizdoom_src="$(location src/posix/sdl/i_system.mm)"
+vizdoom_src="$(execpath src/posix/sdl/i_system.mm)"
 vizdoom_src="$${vizdoom_src%/posix/sdl/i_system.mm}"
-sdl_include=$$(dirname "$(location @sdl2//:include/SDL2/SDL.h)")
+sdl_include=$$(dirname "$(execpath @sdl2//:include/SDL2/SDL.h)")
 /usr/bin/xcrun --sdk macosx clang++ -c -x objective-c++ -std=c++17 \
   -Dstricmp=strcasecmp \
   -Dstrnicmp=strncasecmp \
@@ -445,7 +445,7 @@ sdl_include=$$(dirname "$(location @sdl2//:include/SDL2/SDL.h)")
   -I"$${vizdoom_src}/posix/sdl" \
   -I"$${sdl_include}" \
   -I"$${generated_dir}" \
-  "$(location src/posix/sdl/i_system.mm)" \
+  "$(execpath src/posix/sdl/i_system.mm)" \
   -o "$@"
 """,
     target_compatible_with = select({

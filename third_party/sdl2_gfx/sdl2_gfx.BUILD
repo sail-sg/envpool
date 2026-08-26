@@ -27,9 +27,9 @@ genrule(
     name = "sdl2_rotozoom_prefixed_h",
     srcs = ["SDL2_rotozoom.h"],
     outs = ["SDL2/SDL2_rotozoom.h"],
-    cmd = "mkdir -p $(@D) && cp $(location SDL2_rotozoom.h) $@",
-    cmd_bat = "if not exist \"$(@D)\" mkdir \"$(@D)\" & copy /Y \"$(location SDL2_rotozoom.h)\" \"$@\" >NUL",
-    cmd_ps = "$$ErrorActionPreference = 'Stop'; New-Item -ItemType Directory -Force -Path '$(@D)' | Out-Null; Copy-Item -LiteralPath '$(location SDL2_rotozoom.h)' -Destination '$@' -Force",
+    cmd = "mkdir -p $(@D) && cp $(execpath SDL2_rotozoom.h) $@",
+    cmd_bat = "if not exist \"$(@D)\" mkdir \"$(@D)\" & copy /Y \"$(execpath SDL2_rotozoom.h)\" \"$@\" >NUL",
+    cmd_ps = "$$ErrorActionPreference = 'Stop'; New-Item -ItemType Directory -Force -Path '$(@D)' | Out-Null; Copy-Item -LiteralPath '$(execpath SDL2_rotozoom.h)' -Destination '$@' -Force",
 )
 
 cc_library(

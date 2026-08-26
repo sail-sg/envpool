@@ -1,0 +1,20 @@
+--- boost.BUILD
++++ boost.BUILD
+@@ -337,12 +337,12 @@
+ 
+ boost_library(
+     name = "atomic",
+-    srcs = select({
+-        ":windows_x86_64": ["libs/atomic/src/wait_on_address.cpp"],
+-        "//conditions:default": [],
+-    }),
+     copts = ["-Iexternal/%s/libs/atomic/src" % _repo_dir],
+-    exclude_src = ["libs/atomic/src/wait_on_address.cpp"] + BOOST_ATOMIC_SSE_SRCS,
++    exclude_src = BOOST_ATOMIC_SSE_SRCS,
++    linkopts = select({
++        ":windows_x86_64": ["Synchronization.lib"],
++        "//conditions:default": [],
++    }),
+     deps = BOOST_ATOMIC_DEPS + select({
+         "@platforms//cpu:x86_64": [":atomic_sse"],
+         "//conditions:default": [],
