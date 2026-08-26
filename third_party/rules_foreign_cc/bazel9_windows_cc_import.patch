@@ -28,3 +28,40 @@ diff --git toolchains/built_toolchains.bzl toolchains/built_toolchains.bzl
  cc_import(
      name = "gettext_runtime",
      shared_library = "bin/libintl-8.dll",
+diff --git foreign_cc/built_tools/pkgconfig_build.bzl foreign_cc/built_tools/pkgconfig_build.bzl
+--- foreign_cc/built_tools/pkgconfig_build.bzl
++++ foreign_cc/built_tools/pkgconfig_build.bzl
+@@ -160,10 +160,10 @@ def pkgconfig_tool(name, srcs, **kwargs):
+         args = [
+             "-f Makefile.vc",
+             "CFG=release",
+-            "GLIB_PREFIX=\"$$EXT_BUILD_ROOT/external/glib_dev\"",
++            "GLIB_PREFIX=\"$$EXT_BUILD_ROOT/external/%s\"" % Label("@glib_dev").workspace_name,
+         ],
+         out_binaries = ["pkg-config.exe"],
+-        env = {"INCLUDE": "$$EXT_BUILD_ROOT/external/glib_src"},
++        env = {"INCLUDE": "$$EXT_BUILD_ROOT/external/%s" % Label("@glib_src").workspace_name},
+         out_static_libs = [],
+         out_shared_libs = [],
+         deps = [
+@@ -175,7 +175,7 @@ def pkgconfig_tool(name, srcs, **kwargs):
+             "@platforms//os:windows": "cp release/x64/pkg-config.exe $$INSTALLDIR/bin",
+             "//conditions:default": "",
+         }),
+-        toolchain = str(Label("//toolchains:preinstalled_nmake_toolchain")),
++        toolchain = Label("//toolchains:preinstalled_nmake_toolchain"),
+         tags = tags,
+         **kwargs
+     )
+diff --git foreign_cc/private/transitions.bzl foreign_cc/private/transitions.bzl
+--- foreign_cc/private/transitions.bzl
++++ foreign_cc/private/transitions.bzl
+@@ -27,7 +27,7 @@ extra_toolchains_transitioned_foreign_cc_target = rule(
+     cfg = _extra_toolchains_transition,
+     attrs = {
+         # This attr is singular to make it selectable when used for add make toolchain variant.
+-        "extra_toolchain": attr.string(
++        "extra_toolchain": attr.label(
+             doc = "Additional toolchain to consider. Note, this is singular.",
+             mandatory = True,
+         ),
