@@ -143,6 +143,7 @@ jobs:
       BAZEL_CI_RESOURCE_OPTS: >-
         --repo_env=CC=/usr/bin/clang-20
         --repo_env=CXX=/usr/bin/clang++-20
+        --compiler=clang
         --jobs=2 --local_resources=cpu=2 --local_resources=memory=HOST_RAM*.35
         --experimental_disk_cache_gc_max_size=2G --experimental_disk_cache_gc_idle_delay=0s
       MUJOCO_GL: egl

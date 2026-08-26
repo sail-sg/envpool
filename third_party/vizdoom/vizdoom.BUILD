@@ -21,6 +21,11 @@ config_setting(
 )
 
 config_setting(
+    name = "clang",
+    values = {"compiler": "clang"},
+)
+
+config_setting(
     name = "linux_x86_64",
     constraint_values = [
         "@platforms//cpu:x86_64",
@@ -365,6 +370,7 @@ cc_library(
         ],
     }) + select({
         "@envpool//:windows": [],
+        ":clang": [],
         ":darwin": [],
         "//conditions:default": [
             "-fno-tree-dominator-opts",
