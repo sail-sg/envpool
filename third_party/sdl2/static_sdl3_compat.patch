@@ -52,6 +52,17 @@ diff --git a/src/sdl2_compat.c b/src/sdl2_compat.c
  /** Define SDL2COMPAT_TEST_SYMS=1 to have warnings about wrong prototypes of src/sdl3_sym.h
   *  It won't compile but it helps to make sure it's sync'ed with SDL3 headers.
   */
+@@ -128,6 +134,10 @@
+ #define SDL3_SYM(rc,fn,params,args,ret) \
+     typedef rc (SDLCALL *SDL3_##fn##_t) params; \
+     static SDL3_##fn##_t SDL3_##fn = IGNORE_THIS_VERSION_OF_SDL_##fn;
++#elif defined(SDL2COMPAT_STATIC_LINK)
++#define SDL3_SYM(rc,fn,params,args,ret) \
++    typedef rc (SDLCALL *SDL3_##fn##_t) params; \
++    static SDL3_##fn##_t SDL3_##fn = ENVPOOL_SDL3_SDL_##fn;
+ #else
+ #define SDL3_SYM(rc,fn,params,args,ret) \
+     typedef rc (SDLCALL *SDL3_##fn##_t) params; \
 @@ -365,7 +371,26 @@ static bool SDL2Compat_CheckDebugLogging(void)
  /* Obviously we can't use SDL_LoadObject() to load SDL3.  :)  */
  /* FIXME: Updated library names after https://github.com/libsdl-org/SDL/issues/5626 solidifies.  */
@@ -80,3 +91,27 @@ diff --git a/src/sdl2_compat.c b/src/sdl2_compat.c
      static HMODULE Loaded_SDL3 = NULL;
      #define DIRSEP "\\"
      #define SDL3_LIBNAME "SDL3.dll"
+@@ -1103,3 +1132,3 @@ LoadSDL3(void)
+-#if defined(_MSC_VER)
++#if defined(_MSC_VER) && !defined(SDL2COMPAT_STATIC_LINK)
+-
++
+ /* NOLINTNEXTLINE(readability-redundant-declaration) */
+@@ -1162,4 +1191,6 @@ static void error_dialog(const char *errorMsg)
+-#if defined(__GNUC__) && !defined(_WIN32)
++#if defined(SDL2COMPAT_STATIC_LINK) && defined(_WIN32)
++/* Static archives use the consuming module's normal CRT startup. */
++#elif defined(__GNUC__) && !defined(_WIN32)
+ static void dllinit(void) __attribute__((constructor));
+ static void dllinit(void)
+ {
+@@ -7357,4 +7388,9 @@ SDL_Init(Uint32 flags)
+ SDL_DECLSPEC int SDLCALL
+ SDL_InitSubSystem(Uint32 flags)
+ {
++#ifdef SDL2COMPAT_STATIC_LINK
++    if (!LoadSDL3()) {
++        return -1;
++    }
++#endif
+     SynchronizeEnvironmentVariables();

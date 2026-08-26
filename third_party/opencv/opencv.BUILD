@@ -165,4 +165,8 @@ cmake(
         "//conditions:default": [],
     }),
     visibility = ["//visibility:public"],
+    deps = select({
+        "@envpool//:windows": [],
+        "//conditions:default": ["@zlib"],
+    }),
 )
