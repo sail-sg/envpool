@@ -55,3 +55,42 @@ diff --git a/src/dynapi/SDL_dynapi.h b/src/dynapi/SDL_dynapi.h
  #endif
  
  #endif
+diff --git a/src/stdlib/SDL_memcpy.c b/src/stdlib/SDL_memcpy.c
+--- a/src/stdlib/SDL_memcpy.c
++++ b/src/stdlib/SDL_memcpy.c
+@@ -24,6 +24,9 @@
+ #ifdef SDL_memcpy
+ #undef SDL_memcpy
+ #endif
++#ifdef SDL_ENVPOOL_STATIC_PREFIX
++#define SDL_memcpy ENVPOOL_SDL3_SDL_memcpy
++#endif
+ #if SDL_DYNAMIC_API
+ #define SDL_memcpy SDL_memcpy_REAL
+ #endif
+diff --git a/src/stdlib/SDL_memmove.c b/src/stdlib/SDL_memmove.c
+--- a/src/stdlib/SDL_memmove.c
++++ b/src/stdlib/SDL_memmove.c
+@@ -24,6 +24,9 @@
+ #ifdef SDL_memmove
+ #undef SDL_memmove
+ #endif
++#ifdef SDL_ENVPOOL_STATIC_PREFIX
++#define SDL_memmove ENVPOOL_SDL3_SDL_memmove
++#endif
+ #if SDL_DYNAMIC_API
+ #define SDL_memmove SDL_memmove_REAL
+ #endif
+diff --git a/src/stdlib/SDL_memset.c b/src/stdlib/SDL_memset.c
+--- a/src/stdlib/SDL_memset.c
++++ b/src/stdlib/SDL_memset.c
+@@ -24,6 +24,9 @@
+ #ifdef SDL_memset
+ #undef SDL_memset
+ #endif
++#ifdef SDL_ENVPOOL_STATIC_PREFIX
++#define SDL_memset ENVPOOL_SDL3_SDL_memset
++#endif
+ #if SDL_DYNAMIC_API
+ #define SDL_memset SDL_memset_REAL
+ #endif
