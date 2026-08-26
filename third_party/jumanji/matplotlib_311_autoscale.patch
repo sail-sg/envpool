@@ -10,7 +10,7 @@ diff --git a/jumanji/environments/routing/mmst/viewer.py b/jumanji/environments/
              lines[k] = edge
  
          circles = []
-@@ -208,7 +208,7 @@ class MMSTViewer(Viewer[State]):
+@@ -208,6 +208,6 @@ class MMSTViewer(Viewer[State]):
      ) -> Tuple[plt.Circle, plt.Circle]:
          ca = plt.Circle(xy, radius, color=line_color, zorder=100)
          cb = plt.Circle(xy, radius - thickness, color=fill_color, zorder=100)
