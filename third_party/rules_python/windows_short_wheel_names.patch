@@ -1,0 +1,21 @@
+Keep hashed Windows and universal wheel repository names below MAX_PATH. The
+pip hub already includes the Python version and the wheel digest identifies its
+distribution, ABI, and platform, so shorten the package name and omit ABI tags.
+
+--- python/private/pypi/whl_repo_name.bzl
++++ python/private/pypi/whl_repo_name.bzl
+@@ -54,10 +54,10 @@
+         abi_tag, _, _ = parsed.abi_tag.partition(".")
+         platform_tag, _, _ = parsed.platform_tag.partition(".")
+ 
+-        parts.append(name)
+-        parts.append(python_tag)
+-        parts.append(abi_tag)
+-        parts.append(platform_tag)
++        short_name = digest and platform_tag in ("any", "win_amd64", "win32")
++        parts.append(name[:4] if short_name else name)
++        if not short_name:
++            parts.extend([python_tag, abi_tag, platform_tag])
+ 
+     if digest:
+         parts.append(digest[:8])

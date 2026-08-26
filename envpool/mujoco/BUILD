@@ -647,6 +647,7 @@ py_test(
     imports = ["../.."],
     shard_count = 4,
     deps = [
+        ":mujoco_oracle",
         ":playground",
         ":playground_registration",
         "//envpool/python:glfw_context",
@@ -892,10 +893,11 @@ py_test(
 )
 
 py_test(
-    name = "playground_pixel_observation_test",
+    name = "playground_pixel_test",
     size = "enormous",
     srcs = ["playground/playground_pixel_observation_test.py"],
     imports = ["../.."],
+    main = "playground/playground_pixel_observation_test.py",
     deps = [
         ":mujoco_pixel_observation_test_utils",
         ":playground",
@@ -935,7 +937,7 @@ test_suite(
         ":mujoco_dmc_pixel_observation_test",
         ":mujoco_egl_teardown_test",
         ":mujoco_gym_pixel_observation_test",
-        ":playground_pixel_observation_test",
+        ":playground_pixel_test",
         ":robotics_pixel_observation_test",
     ],
 )

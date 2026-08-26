@@ -14,7 +14,10 @@
 
 filegroup(
     name = "source",
-    srcs = glob(["myosuite/**"]),
+    srcs = glob(
+        ["myosuite/**"],
+        exclude = ["myosuite/agents/**"],
+    ),
     visibility = ["//visibility:public"],
 )
 

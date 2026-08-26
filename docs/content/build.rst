@@ -53,10 +53,10 @@ or `golang <https://golang.org/doc/install>`_ with version >= 1.16:
         # then follow the instructions on golang official website
         go env -w GOPROXY=https://goproxy.cn
 
-        wget https://mirrors.huaweicloud.com/bazel/8.6.0/bazel-8.6.0-linux-x86_64
-        chmod +x bazel-8.6.0-linux-x86_64
+        wget https://mirrors.huaweicloud.com/bazel/9.2.0/bazel-9.2.0-linux-x86_64
+        chmod +x bazel-9.2.0-linux-x86_64
         mkdir -p $HOME/go/bin
-        mv bazel-8.6.0-linux-x86_64 $HOME/go/bin/bazel
+        mv bazel-9.2.0-linux-x86_64 $HOME/go/bin/bazel
 
         export PATH=$PATH:$HOME/go/bin  # or write to .bashrc / .zshrc
 
@@ -77,8 +77,9 @@ EnvPool source builds share a few common requirements across platforms:
 - **SWIG**
 - **Qt 5**
 
-The default build and test shortcuts in this repo use **Bazel 8.6.0** via
-``bazelisk``.
+The default build and test shortcuts in this repo use **Bazel 9.2.0** via
+``bazelisk``. Bazel dependencies are configured as modules in
+``MODULE.bazel``.
 
 Linux (Ubuntu 24.04)
 ^^^^^^^^^^^^^^^^^^^^
@@ -187,7 +188,7 @@ To build a release version, type:
     cp third_party/pip_requirements/requirements-release.txt third_party/pip_requirements/requirements.txt
     bazel run --config=release //:setup -- bdist_wheel
 
-This creates a wheel under ``bazel-bin/setup.runfiles/envpool/dist``.
+This creates a wheel under ``bazel-bin/setup.runfiles/_main/dist``.
 
 
 .. note ::
@@ -195,8 +196,8 @@ This creates a wheel under ``bazel-bin/setup.runfiles/envpool/dist``.
     For users in mainland China:
 
     - If you find ``pip install`` is quite slow to fetch 3rd-party libraries,
-      the solution is to uncomment ``extra_args`` in ``envpool/pip.bzl`` to
-      switch the pip source.
+      configure ``pip.default(index_url = ...)`` in ``MODULE.bazel`` to switch
+      the package source.
     - If you find ``bazel build`` is quite slow to fetch 3rd-party libraries,
       please refer https://docs.bazel.build/versions/main/external.html#using-proxies
 

@@ -15,6 +15,8 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
 
+exports_files(["include/SDL.h"])
+
 config_setting(
     name = "darwin",
     constraint_values = ["@platforms//os:macos"],

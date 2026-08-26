@@ -27,3 +27,21 @@ index ddb1db9..ddb5ef0 100644
  
    mju_closeResource(resource);
    return spec;
+diff --git a/include/mujoco/mjplugin.h b/include/mujoco/mjplugin.h
+--- a/include/mujoco/mjplugin.h
++++ b/include/mujoco/mjplugin.h
+@@ -203 +203 @@
+-    #pragma section(".CRT$XCU", read)
++    #pragma section(".CRT$XCV", read)
+@@ -213,9 +213,9 @@
+     #define mjPLUGIN_LIB_INIT(n)                                                          \
+       static void __cdecl _mj_init_##n(void);                                             \
+       /* use mjEXTERNC to prevent C++ name mangling */                                    \
+-      /* allocate the function pointer to the .CRT$XCU section of the executable */       \
++      /* allocate the function pointer to the .CRT$XCV section of the executable */       \
+       /* functions in this section are executed on startup before calling main() */       \
+-      mjEXTERNC __declspec(allocate(".CRT$XCU"))                                          \
++      mjEXTERNC __declspec(allocate(".CRT$XCV"))                                          \
+       void (__cdecl * _mj_ptr_##n)(void) = _mj_init_##n;                                  \
+       /* Force the linker to include the pointer symbol */                                \
+       __pragma(comment(linker, "/include:" LINKER_NAME #n))                               \

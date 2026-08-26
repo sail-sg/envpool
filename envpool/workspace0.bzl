@@ -12,115 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""EnvPool workspace initialization, this is loaded in WORKSPACE."""
+"""Pinned native repositories for EnvPool's Bzlmod extension."""
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 load("//third_party/cuda:cuda.bzl", "cuda_configure")
 load("//third_party/freedoom:defs.bzl", "freedoom_archive")
 load("//third_party/gfootball:repo.bzl", "gfootball_archive")
+load("//third_party/qt:qt_configure.bzl", "qt_configure")
 load("//third_party/vizdoom:repo.bzl", "vizdoom_archive")
 
 def workspace():
     """Load requested packages."""
-
-    # rules_python's scoped flags need a newer skylib than the WORKSPACE defaults.
-    maybe(
-        http_archive,
-        name = "bazel_skylib",
-        sha256 = "37cdfbc6faefea94f7b37760a305c98c08981116c2bc9e821e3b423221fad8c8",
-        urls = [
-            "https://github.com/bazelbuild/bazel-skylib/releases/download/1.9.2/bazel-skylib-1.9.2.tar.gz",
-        ],
-    )
-
-    maybe(
-        http_archive,
-        name = "rules_shell",
-        sha256 = "20721f63908879c083f94869e618ea8d4ff5edb91ff9a72a2ebee357fdbc352d",
-        strip_prefix = "rules_shell-0.8.0",
-        urls = [
-            "https://github.com/bazelbuild/rules_shell/releases/download/v0.8.0/rules_shell-v0.8.0.tar.gz",
-        ],
-    )
-
-    maybe(
-        http_archive,
-        name = "rules_cc",
-        patches = [
-            "//third_party/rules_cc:rules_shell_bazel_sh.patch",
-        ],
-        sha256 = "81c10a95a5c22d838276ee90d712635d6042419fdfca5ef88328226b6321e53b",
-        strip_prefix = "rules_cc-0.2.22",
-        urls = [
-            "https://github.com/bazelbuild/rules_cc/releases/download/0.2.22/rules_cc-0.2.22.tar.gz",
-        ],
-    )
-
-    maybe(
-        http_archive,
-        name = "rules_java",
-        sha256 = "88537048d7d07589ff4939c99889300c7063e43480ddd3cfa94d6c2cc899aa2e",
-        urls = [
-            "https://github.com/bazelbuild/rules_java/releases/download/9.8.0/rules_java-9.8.0.tar.gz",
-        ],
-    )
-
-    # Keep both repo names while this WORKSPACE still mixes legacy rules_python
-    # and newer rules_cc/rules_java consumers.
-    maybe(
-        http_archive,
-        name = "protobuf",
-        sha256 = "1902386466b5795b166337d2a9d91f9b7cf2bee4ed76c8fb0b73bd39edd30b9d",
-        strip_prefix = "protobuf-36.0",
-        urls = [
-            "https://github.com/protocolbuffers/protobuf/releases/download/v36.0/protobuf-36.0.bazel.tar.gz",
-        ],
-    )
-
-    maybe(
-        http_archive,
-        name = "com_google_protobuf",
-        sha256 = "1902386466b5795b166337d2a9d91f9b7cf2bee4ed76c8fb0b73bd39edd30b9d",
-        strip_prefix = "protobuf-36.0",
-        urls = [
-            "https://github.com/protocolbuffers/protobuf/releases/download/v36.0/protobuf-36.0.bazel.tar.gz",
-        ],
-    )
-
-    maybe(
-        http_archive,
-        name = "rules_python",
-        patches = [
-            "//third_party/rules_python:pip_repository_host_platform.patch",
-            "//third_party/rules_python:zipapp_explicit_init.patch",
-        ],
-        sha256 = "25a00d55e4376ef6d9f28938b68038faca17c95580c9afe6953e7dde013d00e4",
-        strip_prefix = "rules_python-2.3.2",
-        urls = [
-            "https://github.com/bazel-contrib/rules_python/releases/download/2.3.2/rules_python-2.3.2.tar.gz",
-        ],
-    )
-
-    maybe(
-        http_archive,
-        name = "rules_foreign_cc",
-        sha256 = "32759728913c376ba45b0116869b71b68b1c2ebf8f2bcf7b41222bc07b773d73",
-        strip_prefix = "rules_foreign_cc-0.15.1",
-        urls = [
-            "https://github.com/bazel-contrib/rules_foreign_cc/releases/download/0.15.1/rules_foreign_cc-0.15.1.tar.gz",
-        ],
-    )
-
-    maybe(
-        http_archive,
-        name = "bazel_features",
-        sha256 = "5450bfb2c8b4bc961c75368838f86156f563cc9adef1be7d504fc5619d54daab",
-        strip_prefix = "bazel_features-1.51.0",
-        urls = [
-            "https://github.com/bazel-contrib/bazel_features/releases/download/v1.51.0/bazel_features-v1.51.0.tar.gz",
-        ],
-    )
 
     maybe(
         http_archive,
@@ -403,6 +306,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
             "https://github.com/nelhage/rules_boost/archive/e60cf50996da9fe769b6e7a31b88c54966ecb191.tar.gz",
         ],
         patches = [
+            "//third_party/boost:bazel9_rules_cc.patch",
             "//third_party/boost:filesystem_scope_headers.patch",
             "//third_party/boost:atomic_windows_build.patch",
             "//third_party/boost:lzma_linux_x86_clmul.patch",
@@ -836,4 +740,9 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         name = "cuda",
     )
 
-workspace0 = workspace
+    qt_configure(name = "qt")
+
+def _repositories_impl(_module_ctx):
+    workspace()
+
+repositories = module_extension(implementation = _repositories_impl)

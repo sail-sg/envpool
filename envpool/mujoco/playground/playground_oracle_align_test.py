@@ -139,6 +139,7 @@ from mujoco_playground._src.manipulation.leap_hand import (
 )
 
 import envpool.mujoco.playground.registration as playground_registration
+from envpool.mujoco.oracle import runfiles_repository
 from envpool.registration import make_gymnasium
 
 
@@ -785,7 +786,7 @@ def _find_runfile(relative: str) -> Path:
 
 def _configure_oracle_assets() -> None:
     oracle_mjx_env.MENAGERIE_PATH = epath.Path(
-        _find_runfile("mujoco_menagerie_playground").as_posix()
+        runfiles_repository("mujoco_menagerie_playground").as_posix()
     )
 
 
@@ -3673,6 +3674,14 @@ def _official_render_kwargs(task_id: str) -> dict[str, Any]:
             # Windows llvmpipe leaves slightly more textured hfield edge energy
             # while preserving state and low mean pixel error.
             return {"max_mean_abs_diff": 1.05, "max_mismatch_ratio": 0.095}
+        if (
+            task_id == "G1JoystickRoughTerrain-v1"
+            and system == "Linux"
+            and _is_arm64()
+        ):
+            # ARM64 EGL leaves a deterministic 1.005/255 textured hfield
+            # fringe despite strictly aligned MuJoCo state, obs, and reward.
+            return {"max_mean_abs_diff": 1.01, "max_mismatch_ratio": 0.095}
         return {"max_mismatch_ratio": 0.095}
     if task_id.startswith("H1"):
         # H1's STL edges leave a small low-resolution rasterization fringe after

@@ -168,6 +168,11 @@ py_test(
     name = "vizdoom_pretrain_test",
     size = "large",
     srcs = ["vizdoom_pretrain_test.py"],
+    # NumPy and OpenCV OpenBLAS fork hooks race while Doom starts in parallel.
+    env = select({
+        "//:linux": {"OPENBLAS_NUM_THREADS": "1"},
+        "//conditions:default": {},
+    }),
     imports = ["../.."],
     tags = ["exclusive"],
     deps = [

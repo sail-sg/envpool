@@ -3,7 +3,7 @@ PROJECT_NAME   = envpool
 PROJECT_FOLDER = $(PROJECT_NAME) third_party examples benchmark
 PYTHON_FILES   = $(shell find . -type f -name "*.py")
 CPP_FILES      = $(shell find $(PROJECT_NAME) -type f -name "*.h" -o -name "*.cc")
-BAZEL_FILES    = $(shell find . -type f -name "*BUILD" -o -name "*.bzl")
+BAZEL_FILES    = $(shell find . -type f -name "*BUILD" -o -name "*.bzl" -o -name "MODULE.bazel")
 COMMIT_HASH    = $(shell git log -1 --format=%h)
 COPYRIGHT      = "Garena Online Private Limited"
 BAZELOPT       =
@@ -16,7 +16,7 @@ WINDOWS_ENVPOOL_TEST_DEFINE = $(if $(filter Windows_NT,$(OS)),--cxxopt=/DENVPOOL
 # Mesa DLL directory configured by CI/local shells.
 WINDOWS_BAZEL_TEST_ENV = $(if $(filter Windows_NT,$(OS)),--test_env=ENVPOOL_DLL_DIR --test_env=MESA_GL_VERSION_OVERRIDE --test_env=GALLIUM_DRIVER --test_env=PATH,)
 BAZELISK_BIN   = $(shell command -v bazelisk 2>/dev/null || echo $(HOME)/go/bin/bazelisk)
-BAZEL_VERSION  = 8.6.0
+BAZEL_VERSION  = 9.2.0
 BAZEL          = USE_BAZEL_VERSION=$(BAZEL_VERSION) $(BAZELISK_BIN)
 BAZEL_TEST_TARGETS ?= //...
 DATE           = $(shell date "+%Y-%m-%d")
@@ -42,6 +42,7 @@ BAZEL_RUNFILES_SUFFIX = .exe.runfiles
 else
 BAZEL_RUNFILES_SUFFIX = .runfiles
 endif
+BAZEL_RUNFILES_REPO = _main
 ifeq ($(OS),Windows_NT)
 RELEASE_SIZE_BAZELOPT =
 else ifeq ($(UNAME_S),Darwin)
@@ -174,17 +175,17 @@ clang-tidy: clang-tidy-install bazel-pip-requirement-dev
 bazel-debug: bazel-install bazel-pip-requirement-dev
 	$(BAZEL) run $(BAZELOPT) //:setup --config=debug -- bdist_wheel
 	mkdir -p dist
-	cp bazel-bin/setup$(BAZEL_RUNFILES_SUFFIX)/$(PROJECT_NAME)/dist/*.whl ./dist
+	cp bazel-bin/setup$(BAZEL_RUNFILES_SUFFIX)/$(BAZEL_RUNFILES_REPO)/dist/*.whl ./dist
 
 bazel-build: bazel-install bazel-pip-requirement-dev
 	$(BAZEL) run $(BAZELOPT) //:setup --config=test -- bdist_wheel
 	mkdir -p dist
-	cp bazel-bin/setup$(BAZEL_RUNFILES_SUFFIX)/$(PROJECT_NAME)/dist/*.whl ./dist
+	cp bazel-bin/setup$(BAZEL_RUNFILES_SUFFIX)/$(BAZEL_RUNFILES_REPO)/dist/*.whl ./dist
 
 bazel-release: bazel-install bazel-pip-requirement-release release-system-install
 	$(BAZEL) run $(BAZELOPT) --config=release $(RELEASE_SIZE_BAZELOPT) $(RELEASE_SETUP_TARGET) -- bdist_wheel
 	mkdir -p dist
-	cp bazel-bin/$(subst //:,,$(RELEASE_SETUP_TARGET))$(BAZEL_RUNFILES_SUFFIX)/$(PROJECT_NAME)/dist/*.whl ./dist
+	cp bazel-bin/$(subst //:,,$(RELEASE_SETUP_TARGET))$(BAZEL_RUNFILES_SUFFIX)/$(BAZEL_RUNFILES_REPO)/dist/*.whl ./dist
 
 bazel-test: bazel-install bazel-pip-requirement-dev
 	$(BAZEL) test --test_output=all $(BAZELOPT) $(WINDOWS_ENVPOOL_TEST_DEFINE) $(WINDOWS_BAZEL_TEST_ENV) --config=test --spawn_strategy=local --color=yes -- $(BAZEL_TEST_TARGETS)

@@ -64,7 +64,7 @@ import numpy as np
 
 from envpool.mujoco.oracle import (
     configure_mujoco_package_shared_lib,
-    runfiles_root,
+    runfiles_repository,
 )
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
@@ -457,8 +457,7 @@ def _overlay_tree(
 
 
 def _oracle_source_path() -> Path:
-    runfiles = runfiles_root()
-    source = runfiles / "myosuite_source/myosuite"
+    source = runfiles_repository("myosuite_source") / "myosuite"
     if not (source / "__init__.py").is_file():
         raise RuntimeError(f"could not locate MyoSuite source at {source}")
     assembled = Path(tempfile.mkdtemp(prefix="myosuite-oracle-"))
@@ -481,7 +480,7 @@ def _oracle_source_path() -> Path:
         ("myosuite_myo_sim", "myo_sim"),
         ("myosuite_object_sim", "object_sim"),
     ):
-        repo_path = runfiles / repo
+        repo_path = runfiles_repository(repo)
         if not repo_path.is_dir():
             raise RuntimeError(f"could not locate {repo_path}")
         _overlay_tree(repo_path, simhive / name)
