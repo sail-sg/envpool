@@ -1,6 +1,6 @@
-Keep hashed Windows wheel repository names below MAX_PATH. The pip hub already
-includes the Python version and the wheel digest uniquely identifies its ABI
-and platform, so those tags do not need to appear in the repository path too.
+Keep hashed Windows and universal wheel repository names below MAX_PATH. The
+pip hub already includes the Python version and the wheel digest uniquely
+identifies its ABI and platform, so those tags need not appear in the path too.
 
 --- python/private/pypi/whl_repo_name.bzl
 +++ python/private/pypi/whl_repo_name.bzl
@@ -11,7 +11,7 @@ and platform, so those tags do not need to appear in the repository path too.
 -        parts.append(python_tag)
 -        parts.append(abi_tag)
 -        parts.append(platform_tag)
-+        if not (digest and platform_tag.startswith("win_")):
++        if not (digest and platform_tag in ("any", "win_amd64", "win32")):
 +            parts.extend([python_tag, abi_tag, platform_tag])
  
      if digest:
