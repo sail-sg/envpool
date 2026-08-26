@@ -32,7 +32,7 @@ def _freedoom_archive_impl(ctx):
         if result.success:
             ctx.file("BUILD.bazel", ctx.read(ctx.attr.build_file))
             return
-        last_error = result.error
+        last_error = getattr(result, "error", "download failed")
 
     fail("failed to fetch Freedoom asset after %d attempts: %s" % (
         ctx.attr.attempts,
@@ -44,7 +44,7 @@ freedoom_archive = repository_rule(
     attrs = {
         "attempts": attr.int(default = 8),
         "build_file": attr.label(allow_single_file = True, mandatory = True),
-        "canonical_id": attr.string(default = "freedoom-0.12.1.zip"),
+        "canonical_id": attr.string(default = "freedoom-0.13.0.zip"),
         "sha256": attr.string(mandatory = True),
         "strip_prefix": attr.string(default = ""),
         "type": attr.string(default = ""),

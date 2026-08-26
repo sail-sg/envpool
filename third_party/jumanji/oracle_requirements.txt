@@ -30,7 +30,7 @@ jaxlib==0.4.35
 jumanji==1.1.2
 kiwisolver==1.5.0
 markdown-it-py==4.2.0
-matplotlib==3.10.8
+matplotlib==3.11.1
 mdurl==0.1.2
 ml-dtypes==0.5.4
 numpy==1.26.4

@@ -13,6 +13,8 @@
 # limitations under the License.
 """Api wrapper layer for EnvPool."""
 
+from typing import cast
+
 from .dm_envpool import DMEnvPoolMeta
 from .env_spec import EnvSpecMeta
 from .gymnasium_envpool import GymnasiumEnvPoolMeta
@@ -31,11 +33,17 @@ def py_env(
     spec_name = envspec.__name__[1:]
     pool_name = envpool.__name__[1:]
     return (
-        EnvSpecMeta(spec_name, (envspec,), {}),
-        DMEnvPoolMeta(
-            pool_name.replace("EnvPool", "DMEnvPool"), (envpool,), {}
+        cast(type[EnvSpec], EnvSpecMeta(spec_name, (envspec,), {})),
+        cast(
+            type[DMEnvPool],
+            DMEnvPoolMeta(
+                pool_name.replace("EnvPool", "DMEnvPool"), (envpool,), {}
+            ),
         ),
-        GymnasiumEnvPoolMeta(
-            pool_name.replace("EnvPool", "GymnasiumEnvPool"), (envpool,), {}
+        cast(
+            type[GymnasiumEnvPool],
+            GymnasiumEnvPoolMeta(
+                pool_name.replace("EnvPool", "GymnasiumEnvPool"), (envpool,), {}
+            ),
         ),
     )

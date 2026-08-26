@@ -15,7 +15,7 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
 
-exports_files(["include/SDL.h"])
+exports_files(["include/SDL2/SDL.h"])
 
 config_setting(
     name = "darwin",
@@ -28,31 +28,19 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
-# https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=sdl2-static
 cmake(
     name = "sdl2_static",
     generate_args = [
         "-GNinja",
-        "-DCMAKE_BUILD_TYPE=Release",  # always compile for release
+        "-DCMAKE_BUILD_TYPE=Release",
         "-DCMAKE_INSTALL_LIBDIR=lib",
-        "-DSDL_STATIC=ON",
-        "-DSDL_STATIC_LIB=ON",
-        "-DSDL_DLOPEN=ON",
-        "-DARTS=OFF",
-        "-DESD=OFF",
-        "-DNAS=OFF",
-        "-DHIDAPI=ON",
-        "-DRPATH=OFF",
+        "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
+        "-DSDL2COMPAT_INSTALL=ON",
+        "-DSDL2COMPAT_STATIC=ON",
+        "-DSDL2COMPAT_TESTS=OFF",
     ] + select({
-        "@envpool//:windows": [],
-        "//conditions:default": [
-            "-DALSA=ON",
-            "-DPULSEAUDIO_SHARED=ON",
-            "-DVIDEO_WAYLAND=ON",
-            "-DCLOCK_GETTIME=ON",
-            "-DJACK_SHARED=ON",
-            "-DSDL_STATIC_PIC=ON",
-        ],
+        "@envpool//:windows": ["-DSDL2COMPAT_LIBC=ON"],
+        "//conditions:default": [],
     }),
     lib_source = ":srcs",
     out_include_dir = "include",
@@ -61,6 +49,7 @@ cmake(
         "//conditions:default": ["libSDL2.a"],
     }),
     visibility = ["//visibility:public"],
+    deps = ["@sdl3//:sdl3_static"],
 )
 
 cc_library(
@@ -77,12 +66,14 @@ cc_library(
             "-framework AVFoundation",
             "-framework CoreBluetooth",
             "-framework CoreGraphics",
+            "-framework CoreMedia",
             "-framework Foundation",
             "-framework CoreServices",
             "-weak_framework GameController",
             "-weak_framework Metal",
             "-weak_framework QuartzCore",
             "-weak_framework CoreHaptics",
+            "-weak_framework UniformTypeIdentifiers",
         ],
         "@envpool//:windows": [
             "gdi32.lib",
@@ -98,5 +89,8 @@ cc_library(
         "//conditions:default": [],
     }),
     visibility = ["//visibility:public"],
-    deps = [":sdl2_static"],
+    deps = [
+        ":sdl2_static",
+        "@sdl3//:sdl3_static",
+    ],
 )

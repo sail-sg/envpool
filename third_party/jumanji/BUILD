@@ -13,5 +13,6 @@
 # limitations under the License.
 
 exports_files([
+    "matplotlib_311_autoscale.patch",
     "oracle_requirements.txt",
 ])

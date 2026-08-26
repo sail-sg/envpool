@@ -12,14 +12,13 @@ box2d==2.3.2; sys_platform == "linux" and (platform_machine == "aarch64" or plat
 colorama
 optree>=0.19.0
 jax[cpu]>=0.9.2,<0.10
-# Match Jumanji 1.1.2 autoscaling and font rasterization.
-matplotlib==3.10.8
+matplotlib==3.11.1
 absl-py
 packaging>=26.0
 tqdm
 torch>=1.0,!=2.0.0,!=2.0.1
 tianshou>=0.5.1,<1.0.0
-opencv-python-headless==4.14.0.94
+opencv-python-headless==5.0.0.93
 dm-control==1.0.44
 mujoco==3.11.0
 mujoco-mjx==3.11.0

@@ -714,8 +714,6 @@ If we want to add ``tianshou`` as a build dependency, in ``setup.cfg``:
         dm-env>=1.4
         gymnasium>=0.26
         numpy>=1.19
-        types-protobuf>=3.17.3
-        typing-extensions
    +    tianshou
 
 As for source-code dependency, for example, if we want to download

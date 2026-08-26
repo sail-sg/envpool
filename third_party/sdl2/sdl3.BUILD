@@ -1,0 +1,58 @@
+# Copyright 2026 Garena Online Private Limited
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
+
+config_setting(
+    name = "linux",
+    constraint_values = ["@platforms//os:linux"],
+)
+
+filegroup(
+    name = "srcs",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)
+
+cmake(
+    name = "sdl3_static",
+    generate_args = [
+        "-GNinja",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DCMAKE_INSTALL_LIBDIR=lib",
+        "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
+        "-DSDL_INSTALL=ON",
+        "-DSDL_SHARED=OFF",
+        "-DSDL_STATIC=ON",
+        "-DSDL_TEST_LIBRARY=OFF",
+        "-DSDL_TESTS=OFF",
+    ] + select({
+        ":linux": [
+            "-DSDL_X11_XCURSOR=OFF",
+            "-DSDL_X11_XFIXES=OFF",
+            "-DSDL_X11_XINPUT=OFF",
+            "-DSDL_X11_XRANDR=OFF",
+            "-DSDL_X11_XSCRNSAVER=OFF",
+            "-DSDL_X11_XTEST=OFF",
+        ],
+        "//conditions:default": [],
+    }),
+    lib_source = ":srcs",
+    out_include_dir = "include",
+    out_static_libs = select({
+        "@envpool//:windows": ["SDL3-static.lib"],
+        "//conditions:default": ["libSDL3.a"],
+    }),
+    visibility = ["//visibility:public"],
+)

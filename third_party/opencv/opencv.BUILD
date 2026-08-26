@@ -50,14 +50,14 @@ cmake(
         "-DBUILD_SHARED_LIBS=OFF",
         # Prefer OpenCV's upstream module whitelist over manually carrying
         # unused modules like gapi into envpool's build.
-        "-DBUILD_LIST=core,features2d,flann,imgproc",
+        "-DBUILD_LIST=core,flann,geometry,imgproc",
         "-DBUILD_EXAMPLES=OFF",
         "-DBUILD_opencv_apps=OFF",
         "-DBUILD_opencv_calib3d=OFF",
         "-DBUILD_opencv_core=ON",
-        "-DBUILD_opencv_features2d=ON",
         "-DBUILD_opencv_flann=ON",
         "-DBUILD_opencv_gapi=OFF",
+        "-DBUILD_opencv_geometry=ON",
         "-DBUILD_opencv_highgui=OFF",
         "-DBUILD_opencv_imgcodecs=OFF",
         "-DBUILD_opencv_imgproc=ON",
@@ -85,7 +85,7 @@ cmake(
         "-DWITH_ITT=OFF",
         "-DWITH_JASPER=ON",
         "-DWITH_JPEG=ON",
-        "-DWITH_LAPACK=ON",
+        "-DWITH_LAPACK=OFF",
         "-DWITH_ONNX=OFF",
         "-DWITH_OPENCL=OFF",
         "-DWITH_OPENGL=OFF",
@@ -132,7 +132,7 @@ cmake(
     }),
     out_include_dir = select({
         "@envpool//:windows": "include",
-        "//conditions:default": "include/opencv4",
+        "//conditions:default": "include/opencv5",
     }),
     out_lib_dir = select({
         "@envpool//:windows": "x64/vc17/staticlib",
@@ -141,28 +141,32 @@ cmake(
     out_static_libs = select({
         "@envpool//:windows": [
             "zlib.lib",
-            "opencv_imgproc4140.lib",
-            "opencv_features2d4140.lib",
-            "opencv_flann4140.lib",
-            "opencv_core4140.lib",
+            "opencv_imgproc500.lib",
+            "opencv_geometry500.lib",
+            "opencv_flann500.lib",
+            "opencv_core500.lib",
         ],
         "//conditions:default": [
             "libopencv_imgproc.a",
-            "libopencv_features2d.a",
+            "libopencv_geometry.a",
             "libopencv_flann.a",
             "libopencv_core.a",
         ],
     }) + select({
         ":darwin_arm64": [
-            "opencv4/3rdparty/libtegra_hal.a",
+            "opencv5/3rdparty/libtegra_hal.a",
         ],
         ":linux_arm64": [
-            "opencv4/3rdparty/libkleidicv_hal.a",
-            "opencv4/3rdparty/libkleidicv_thread.a",
-            "opencv4/3rdparty/libkleidicv.a",
-            "opencv4/3rdparty/libtegra_hal.a",
+            "opencv5/3rdparty/libkleidicv_hal.a",
+            "opencv5/3rdparty/libkleidicv_thread.a",
+            "opencv5/3rdparty/libkleidicv.a",
+            "opencv5/3rdparty/libtegra_hal.a",
         ],
         "//conditions:default": [],
     }),
     visibility = ["//visibility:public"],
+    deps = select({
+        "@envpool//:windows": [],
+        "//conditions:default": ["@zlib"],
+    }),
 )

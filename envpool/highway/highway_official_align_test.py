@@ -428,7 +428,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
         # Linux's native and NumPy paths round one near-zero generic-merge
         # lateral coordinate differently by exactly one float64 epsilon.
         obs_atol = (
-            np.finfo(np.float64).eps
+            float(np.finfo(np.float64).eps)
             if (
                 platform.system() == "Linux"
                 and platform.machine().lower() in ("x86_64", "amd64")

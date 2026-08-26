@@ -1,0 +1,21 @@
+diff --git a/jumanji/environments/routing/mmst/viewer.py b/jumanji/environments/routing/mmst/viewer.py
+--- a/jumanji/environments/routing/mmst/viewer.py
++++ b/jumanji/environments/routing/mmst/viewer.py
+@@ -114,7 +114,7 @@ class MMSTViewer(Viewer[State]):
+             x_values = [positions[n1][0], positions[n2][0]]
+             y_values = [positions[n1][1], positions[n2][1]]
+             edge = Line2D(x_values, y_values, c=color, linewidth=2)
+-            ax.add_artist(edge)
++            ax.add_line(edge)
+             lines[k] = edge
+ 
+         circles = []
+@@ -208,6 +208,6 @@ class MMSTViewer(Viewer[State]):
+     ) -> Tuple[plt.Circle, plt.Circle]:
+         ca = plt.Circle(xy, radius, color=line_color, zorder=100)
+         cb = plt.Circle(xy, radius - thickness, color=fill_color, zorder=100)
+-        ax.add_artist(ca)
+-        ax.add_artist(cb)
++        ax.add_patch(ca)
++        ax.add_patch(cb)
+         return ca, cb
