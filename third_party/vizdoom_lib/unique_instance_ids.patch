@@ -1,0 +1,17 @@
+--- src/lib/ViZDoomController.cpp
++++ src/lib/ViZDoomController.cpp
+@@ -1164,11 +1164,13 @@
+         std::string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+         this->instanceId = "";
+ 
+         br::uniform_int_distribution<size_t> charDist(0, static_cast<size_t>(chars.length() - 1));
+-        br::mt19937 rng;
+-        rng.seed((unsigned int) bc::high_resolution_clock::now().time_since_epoch().count());
++        static b::mutex instanceIdMutex;
++        b::lock_guard<b::mutex> lock(instanceIdMutex);
++        static br::mt19937 rng(static_cast<unsigned int>(
++            bc::high_resolution_clock::now().time_since_epoch().count()));
+ 
+         for (int i = 0; i < INSTANCE_ID_LENGTH; ++i) {
+             this->instanceId += chars[charDist(rng)];
+         }

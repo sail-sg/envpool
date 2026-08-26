@@ -393,6 +393,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         ],
         patches = [
             "//third_party/vizdoom_lib:windows_create_process.patch",
+            "//third_party/vizdoom_lib:unique_instance_ids.patch",
         ],
         sha256 = "76ddf186d7f093ef85cbcb0e7e387757d60e45190eb5da6d075aab31ffc316ed",
         strip_prefix = "ViZDoom-1.3.0/",
