@@ -179,6 +179,7 @@ def workspace():
         urls = [
             "https://github.com/netwide-assembler/nasm/archive/refs/tags/nasm-3.02.tar.gz",
         ],
+        patches = ["//third_party/nasm:windows_sdk_headers.patch"],
         patch_cmds = ["""
 set -eux
 perl -Iperllib -I. x86/preinsns.pl x86/insns.dat x86/insns.xda

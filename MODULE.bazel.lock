@@ -286,7 +286,7 @@
   "moduleExtensions": {
     "//envpool:workspace0.bzl%repositories": {
       "general": {
-        "bzlTransitiveDigest": "eMY7/ydJ7/SRyVUfMcN1AnxGQidZgTBNtgyiCGIrC8I=",
+        "bzlTransitiveDigest": "qVvs72BPvTSp7ezq0Bx5HTRItrbRDsqOAQbO3Qoztwk=",
         "usagesDigest": "SajRKIR8nOGpEzuKj8QlLVuws2HdnARUg1NP1i0Q7/M=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
@@ -447,6 +447,9 @@
               "strip_prefix": "nasm-nasm-3.02",
               "urls": [
                 "https://github.com/netwide-assembler/nasm/archive/refs/tags/nasm-3.02.tar.gz"
+              ],
+              "patches": [
+                "@@//third_party/nasm:windows_sdk_headers.patch"
               ],
               "patch_cmds": [
                 "\nset -eux\nperl -Iperllib -I. x86/preinsns.pl x86/insns.dat x86/insns.xda\nperl -Iperllib -I. x86/insns.pl -fc x86/insns.xda x86/iflag.c\nperl -Iperllib -I. x86/insns.pl -fh x86/insns.xda x86/iflaggen.h\nperl -Iperllib -I. x86/insns.pl -b x86/insns.xda x86/insnsb.c\nperl -Iperllib -I. x86/insns.pl -a x86/insns.xda x86/insnsa.c\nperl -Iperllib -I. x86/insns.pl -d x86/insns.xda x86/insnsd.c\nperl -Iperllib -I. x86/insns.pl -i x86/insns.xda x86/insnsi.h\nperl -Iperllib -I. x86/insns.pl -n x86/insns.xda x86/insnsn.c\nperl -Iperllib -I. version.pl h < version > version.h\nperl -Iperllib -I. version.pl mac < version > version.mac\nperl -Iperllib -I. x86/regs.pl c x86/regs.dat > x86/regs.c\nperl -Iperllib -I. x86/regs.pl fc x86/regs.dat > x86/regflags.c\nperl -Iperllib -I. x86/regs.pl dc x86/regs.dat > x86/regdis.c\nperl -Iperllib -I. x86/regs.pl dh x86/regs.dat > x86/regdis.h\nperl -Iperllib -I. x86/regs.pl vc x86/regs.dat > x86/regvals.c\nperl -Iperllib -I. x86/regs.pl h x86/regs.dat > x86/regs.h\nperl -Iperllib -I. asm/tokhash.pl c x86/insnsn.c x86/regs.dat asm/tokens.dat > asm/tokhash.c\nperl -Iperllib -I. asm/tokhash.pl h x86/insnsn.c x86/regs.dat asm/tokens.dat > asm/tokens.h\nperl -Iperllib -I. asm/pptok.pl h asm/pptok.dat asm/pptok.h\nperl -Iperllib -I. asm/pptok.pl c asm/pptok.dat asm/pptok.c\nperl -Iperllib -I. asm/pptok.pl ph asm/pptok.dat asm/pptok.ph\nperl -Iperllib -I. nasmlib/perfhash.pl h asm/directiv.dat asm/directiv.h\nperl -Iperllib -I. nasmlib/perfhash.pl c asm/directiv.dat asm/directbl.c\nperl -Iperllib -I. asm/warnings.pl c asm/warnings_c.h asm/warnings.dat\nperl -Iperllib -I. asm/warnings.pl h include/warnings.h asm/warnings.dat\nperl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'\n"

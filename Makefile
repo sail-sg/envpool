@@ -34,6 +34,7 @@ AUDITWHEEL_EXCLUDE_LIBS ?= libQt5Core.so.5 libQt5Gui.so.5 \
 AUDITWHEEL_EXCLUDE_FLAGS = $(foreach lib,$(AUDITWHEEL_EXCLUDE_LIBS),--exclude $(lib))
 CLANG_TIDY_MAJOR = 20
 CLANG_TIDY_BIN = clang-tidy-$(CLANG_TIDY_MAJOR)
+CLANG_FORMAT_BIN ?= clang-format
 CLANG_TIDY_WRAPPER_DIR = $(HOME)/.cache/$(PROJECT_NAME)/bin
 PATH           := $(CLANG_TIDY_WRAPPER_DIR):$(HOME)/go/bin:$(PATH)
 CLANG_TIDY_TARGET_RESOLVER = python3 scripts/clang_tidy_targets.py
@@ -77,7 +78,7 @@ cpplint-install:
 	$(call check_install, cpplint)
 
 clang-format-install:
-	command -v clang-format || sudo apt-get install -y clang-format
+	command -v $(CLANG_FORMAT_BIN) || sudo apt-get install -y $(CLANG_FORMAT_BIN)
 
 clang-tidy-install:
 	command -v $(CLANG_TIDY_BIN) || sudo apt-get install -y $(CLANG_TIDY_BIN)
@@ -146,7 +147,7 @@ cpplint: cpplint-install
 	cpplint $(CPP_FILES)
 
 clang-format: clang-format-install
-	clang-format --style=file -i $(CPP_FILES) -n --Werror
+	$(CLANG_FORMAT_BIN) --style=file -i $(CPP_FILES) -n --Werror
 
 # bazel file linter
 
@@ -221,7 +222,7 @@ lint: buildifier ruff py-format clang-format cpplint clang-tidy mypy docstyle sp
 format: py-format-install clang-format-install buildifier-install addlicense-install
 	ruff check --fix $(PYTHON_FILES)
 	ruff format $(PYTHON_FILES)
-	clang-format -style=file -i $(CPP_FILES)
+	$(CLANG_FORMAT_BIN) -style=file -i $(CPP_FILES)
 	buildifier -r -lint=fix $(BAZEL_FILES)
 	addlicense -c $(COPYRIGHT) -l apache -y 2026 $(PROJECT_FOLDER)
 
