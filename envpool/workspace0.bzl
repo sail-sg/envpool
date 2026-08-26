@@ -77,29 +77,6 @@ def workspace():
 
     maybe(
         http_archive,
-        name = "com_github_gflags_gflags",
-        sha256 = "1b5e0648d7b94021895086e65479b4eaca7935eecfffd7dd9512eb576181c53d",
-        strip_prefix = "gflags-2.3.1",
-        urls = [
-            "https://github.com/gflags/gflags/archive/refs/tags/v2.3.1.tar.gz",
-        ],
-        patches = [
-            "//third_party/gflags:rules_cc_defs.patch",
-        ],
-    )
-
-    maybe(
-        http_archive,
-        name = "com_github_google_glog",
-        sha256 = "c17d85c03ad9630006ef32c7be7c65656aba2e7e2fbfc82226b7e680c771fc88",
-        strip_prefix = "glog-0.7.1",
-        urls = [
-            "https://github.com/google/glog/archive/v0.7.1.zip",
-        ],
-    )
-
-    maybe(
-        http_archive,
         name = "com_google_googletest",
         sha256 = "6e3191c1455468b3fc35a417fb565c1c5071aee1b7e7f85e30cf48a98d37d8b5",
         strip_prefix = "googletest-1.18.0",

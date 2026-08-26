@@ -17,13 +17,14 @@ from typing import (
     Any,
     Callable,
     Literal,
+    Protocol,
     Sequence,
+    TypeAlias,
     overload,
 )
 
 import numpy as np
 from dm_env import TimeStep
-from typing_extensions import Protocol, TypeAlias
 
 ObsType: TypeAlias = Any
 InfoDict: TypeAlias = dict[str, Any]

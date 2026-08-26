@@ -90,8 +90,6 @@ use_repo(
     "boost",
     "box2d",
     "ccd",
-    "com_github_gflags_gflags",
-    "com_github_google_glog",
     "com_github_nelhage_rules_boost",
     "com_google_absl",
     "com_google_googletest",
