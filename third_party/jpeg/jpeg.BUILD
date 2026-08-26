@@ -91,9 +91,11 @@ cc_library(
         ["src/wrapper/*.c"],
         exclude = [
             "src/wrapper/rdcolmap-*.c",
+            "src/wrapper/rdpng-*.c",
             "src/wrapper/rdppm-*.c",
             "src/wrapper/template.c",
             "src/wrapper/wrgif-*.c",
+            "src/wrapper/wrpng-*.c",
             "src/wrapper/wrppm-*.c",
         ],
     ) + [
@@ -101,7 +103,10 @@ cc_library(
         "jconfigint.h",
         "jversion.h",
     ],
-    hdrs = glob(["src/*.h"]) + [
+    hdrs = glob([
+        "simd/*.h",
+        "src/*.h",
+    ]) + [
         "jconfig.h",
         "jconfigint.h",
         "jversion.h",
@@ -116,7 +121,7 @@ cc_library(
     deps = select({
         ":k8": [":simd_x86_64"],
         ":armeabi-v7a": [":simd_armv7a"],
-        ":arm64-v8a": [":simd_armv8a"],
+        ":arm64-v8a": [":simd_armv8a_intrinsics"],
         ":darwin_arm64": [":simd_armv8a_intrinsics"],
         ":linux_arm64": [":simd_armv8a_intrinsics"],
         ":linux_ppc64le": [":simd_altivec"],
@@ -135,11 +140,13 @@ cc_library(
         "jmorecfg.h",
         "jpegint.h",
         "jpeglib.h",
-        "jsimd.h",
-        "jsimddct.h",
     ]] + [
         "jconfig.h",
+        "simd/jsimd.c",
         "simd/jsimd.h",
+        "simd/jsimdconst.h",
+        "simd/jsimddct.h",
+        "simd/jsimdint.h",
         "simd/powerpc/jccolor-altivec.c",
         "simd/powerpc/jcgray-altivec.c",
         "simd/powerpc/jcsample-altivec.c",
@@ -151,7 +158,7 @@ cc_library(
         "simd/powerpc/jidctfst-altivec.c",
         "simd/powerpc/jidctint-altivec.c",
         "simd/powerpc/jquanti-altivec.c",
-        "simd/powerpc/jsimd.c",
+        "simd/powerpc/jsimdcpu.c",
     ],
     hdrs = glob(["src/*.h"]) + [
         "simd/powerpc/jccolext-altivec.c",
@@ -178,12 +185,14 @@ cc_library(
         "jmorecfg.h",
         "jpegint.h",
         "jpeglib.h",
-        "jsimd.h",
-        "jsimddct.h",
     ]] + [
         "jconfig.h",
         "jconfigint.h",
+        "simd/jsimd.c",
         "simd/jsimd.h",
+        "simd/jsimdconst.h",
+        "simd/jsimddct.h",
+        "simd/jsimdint.h",
         "simd/x86_64/jccolor-avx2.o",
         "simd/x86_64/jccolor-sse2.o",
         "simd/x86_64/jcgray-avx2.o",
@@ -210,7 +219,6 @@ cc_library(
         "simd/x86_64/jquantf-sse2.o",
         "simd/x86_64/jquanti-avx2.o",
         "simd/x86_64/jquanti-sse2.o",
-        "simd/x86_64/jsimd.c",
         "simd/x86_64/jsimdcpu.o",
     ],
     hdrs = glob(["src/*.h"]) + [
@@ -313,62 +321,6 @@ genrule(
     tools = ["@nasm"],
 )
 
-cc_library(
-    name = "simd_armv7a",
-    srcs = ["src/" + path for path in [
-        "jchuff.h",
-        "jdct.h",
-        "jerror.h",
-        "jinclude.h",
-        "jmorecfg.h",
-        "jpegint.h",
-        "jpeglib.h",
-        "jsimd.h",
-        "jsimddct.h",
-    ]] + [
-        "jconfig.h",
-        "simd/arm/aarch32/jsimd.c",
-        "simd/arm/aarch32/jsimd_neon.S",
-        "simd/jsimd.h",
-    ],
-    hdrs = glob(["src/*.h"]) + ["jconfig.h"],
-    copts = libjpegturbo_copts,
-    includes = [
-        ".",
-        "src",
-    ],
-)
-
-cc_library(
-    name = "simd_armv8a",
-    srcs = ["src/" + path for path in [
-        "jchuff.h",
-        "jdct.h",
-        "jerror.h",
-        "jinclude.h",
-        "jmorecfg.h",
-        "jpegint.h",
-        "jpeglib.h",
-        "jsimd.h",
-        "jsimddct.h",
-    ]] + [
-        "jconfig.h",
-        "jconfigint.h",
-        "simd/arm/aarch64/jsimd.c",
-        "simd/arm/aarch64/jsimd_neon.S",
-        "simd/jsimd.h",
-    ],
-    hdrs = glob(["src/*.h"]) + [
-        "jconfig.h",
-        "jconfigint.h",
-    ],
-    copts = libjpegturbo_copts,
-    includes = [
-        ".",
-        "src",
-    ],
-)
-
 template_rule(
     name = "simd_arm_neon_compat",
     src = "simd/arm/neon-compat.h.in",
@@ -377,56 +329,69 @@ template_rule(
         "#cmakedefine HAVE_VLD1Q_U8_X4": "#define HAVE_VLD1Q_U8_X4",
         "#cmakedefine HAVE_VLD1_S16_X3": "#define HAVE_VLD1_S16_X3",
         "#cmakedefine HAVE_VLD1_U16_X2": "#define HAVE_VLD1_U16_X2",
+        "#cmakedefine WITH_SIMDE": "",
     },
+)
+
+ARM_SIMD_SRCS = [
+    "jconfig.h",
+    "jconfigint.h",
+    "simd/arm/jccolor-neon.c",
+    "simd/arm/jcgray-neon.c",
+    "simd/arm/jcphuff-neon.c",
+    "simd/arm/jcsample-neon.c",
+    "simd/arm/jdcolor-neon.c",
+    "simd/arm/jdmerge-neon.c",
+    "simd/arm/jdsample-neon.c",
+    "simd/arm/jfdctfst-neon.c",
+    "simd/arm/jfdctint-neon.c",
+    "simd/arm/jidctfst-neon.c",
+    "simd/arm/jidctint-neon.c",
+    "simd/arm/jidctred-neon.c",
+    "simd/arm/jquanti-neon.c",
+    "simd/jsimd.c",
+]
+
+ARM_SIMD_HDRS = glob([
+    "simd/*.h",
+    "src/*.h",
+]) + [
+    "jconfig.h",
+    "jconfigint.h",
+    "simd/arm/aarch32/jccolext-neon.c",
+    "simd/arm/aarch64/jccolext-neon.c",
+    "simd/arm/align.h",
+    "simd/arm/jcgryext-neon.c",
+    "simd/arm/jchuff.h",
+    "simd/arm/jdcolext-neon.c",
+    "simd/arm/jdmrgext-neon.c",
+    ":simd_arm_neon_compat",
+]
+
+cc_library(
+    name = "simd_armv7a",
+    srcs = ARM_SIMD_SRCS + [
+        "simd/arm/aarch32/jchuff-neon.c",
+        "simd/arm/aarch32/jsimdcpu.c",
+    ],
+    hdrs = ARM_SIMD_HDRS,
+    copts = libjpegturbo_copts + ["-DNEON_INTRINSICS"],
+    includes = [
+        ".",
+        "simd/arm",
+        "src",
+    ],
+    alwayslink = 1,
 )
 
 cc_library(
     name = "simd_armv8a_intrinsics",
-    srcs = ["src/" + path for path in [
-        "jchuff.h",
-        "jdct.h",
-        "jerror.h",
-        "jinclude.h",
-        "jmorecfg.h",
-        "jpegint.h",
-        "jpeglib.h",
-        "jsimd.h",
-        "jsimddct.h",
-    ]] + [
-        "jconfig.h",
-        "jconfigint.h",
+    srcs = ARM_SIMD_SRCS + [
         "simd/arm/aarch64/jchuff-neon.c",
-        "simd/arm/aarch64/jsimd.c",
-        "simd/arm/jccolor-neon.c",
-        "simd/arm/jcgray-neon.c",
-        "simd/arm/jcphuff-neon.c",
-        "simd/arm/jcsample-neon.c",
-        "simd/arm/jdcolor-neon.c",
-        "simd/arm/jdmerge-neon.c",
-        "simd/arm/jdsample-neon.c",
-        "simd/arm/jfdctfst-neon.c",
-        "simd/arm/jfdctint-neon.c",
-        "simd/arm/jidctfst-neon.c",
-        "simd/arm/jidctint-neon.c",
-        "simd/arm/jidctred-neon.c",
-        "simd/arm/jquanti-neon.c",
-        "simd/jsimd.h",
+        "simd/arm/aarch64/jsimdcpu.c",
     ],
-    hdrs = glob(["src/*.h"]) + [
-        "jconfig.h",
-        "jconfigint.h",
-        "simd/arm/aarch32/jccolext-neon.c",
-        "simd/arm/aarch64/jccolext-neon.c",
-        "simd/arm/align.h",
-        "simd/arm/jcgryext-neon.c",
-        "simd/arm/jchuff.h",
-        "simd/arm/jdcolext-neon.c",
-        "simd/arm/jdmrgext-neon.c",
-        ":simd_arm_neon_compat",
-    ],
-    copts = libjpegturbo_copts + [
-        "-DNEON_INTRINSICS",
-    ],
+    hdrs = ARM_SIMD_HDRS,
+    copts = libjpegturbo_copts + ["-DNEON_INTRINSICS"],
     includes = [
         ".",
         "simd/arm",
@@ -445,12 +410,14 @@ cc_library(
         "jmorecfg.h",
         "jpegint.h",
         "jpeglib.h",
-        "jsimd.h",
-        "jsimddct.h",
     ]] + [
         "jconfig.h",
         "jconfigint.h",
+        "simd/jsimd.c",
         "simd/jsimd.h",
+        "simd/jsimdconst.h",
+        "simd/jsimddct.h",
+        "simd/jsimdint.h",
         "simd/x86_64/jccolor-avx2.obj",
         "simd/x86_64/jccolor-sse2.obj",
         "simd/x86_64/jcgray-avx2.obj",
@@ -477,7 +444,6 @@ cc_library(
         "simd/x86_64/jquantf-sse2.obj",
         "simd/x86_64/jquanti-avx2.obj",
         "simd/x86_64/jquanti-sse2.obj",
-        "simd/x86_64/jsimd.c",
         "simd/x86_64/jsimdcpu.obj",
     ],
     hdrs = glob(["src/*.h"]) + [
@@ -587,11 +553,12 @@ cc_library(
         "jmorecfg.h",
         "jpegint.h",
         "jpeglib.h",
-        "jsimd.h",
-        "jsimd_none.c",
-        "jsimddct.h",
     ]] + [
         "jconfig.h",
+        "simd/jsimd.h",
+        "simd/jsimdconst.h",
+        "simd/jsimddct.h",
+        "simd/jsimdint.h",
     ],
     hdrs = glob(["src/*.h"]) + ["jconfig.h"],
     copts = libjpegturbo_copts,
@@ -607,8 +574,8 @@ template_rule(
     out = "jconfig_win.h",
     substitutions = {
         "@JPEG_LIB_VERSION@": "62",
-        "@VERSION@": "3.1.4.1",
-        "@LIBJPEG_TURBO_VERSION_NUMBER@": "3001004",
+        "@VERSION@": "3.2.0",
+        "@LIBJPEG_TURBO_VERSION_NUMBER@": "3002000",
         "#cmakedefine C_ARITH_CODING_SUPPORTED 1": "#define C_ARITH_CODING_SUPPORTED 1",
         "#cmakedefine D_ARITH_CODING_SUPPORTED 1": "#define D_ARITH_CODING_SUPPORTED 1",
         "#cmakedefine WITH_SIMD 1": "#define WITH_SIMD 1",
@@ -617,8 +584,8 @@ template_rule(
 
 JCONFIG_NOWIN_COMMON_SUBSTITUTIONS = {
     "@JPEG_LIB_VERSION@": "62",
-    "@VERSION@": "3.1.4.1",
-    "@LIBJPEG_TURBO_VERSION_NUMBER@": "3001004",
+    "@VERSION@": "3.2.0",
+    "@LIBJPEG_TURBO_VERSION_NUMBER@": "3002000",
     "#cmakedefine C_ARITH_CODING_SUPPORTED 1": "#define C_ARITH_CODING_SUPPORTED 1",
     "#cmakedefine D_ARITH_CODING_SUPPORTED 1": "#define D_ARITH_CODING_SUPPORTED 1",
     "#cmakedefine RIGHT_SHIFT_IS_UNSIGNED 1": "",
@@ -652,11 +619,23 @@ template_rule(
 
 JCONFIGINT_COMMON_SUBSTITUTIONS = {
     "@BUILD@": "20260327",
-    "@VERSION@": "3.1.4.1",
+    "@VERSION@": "3.2.0",
     "@CMAKE_PROJECT_NAME@": "libjpeg-turbo",
+    "#define SIMD_ARCHITECTURE  @SIMD_ARCHITECTURE@": "#if defined(__aarch64__) || defined(_M_ARM64)\n" +
+                                                      "#define SIMD_ARCHITECTURE ARM64\n" +
+                                                      "#elif defined(__arm__) || defined(_M_ARM)\n" +
+                                                      "#define SIMD_ARCHITECTURE ARM\n" +
+                                                      "#elif defined(__x86_64__) || defined(_M_X64)\n" +
+                                                      "#define SIMD_ARCHITECTURE X86_64\n" +
+                                                      "#elif defined(__powerpc64__)\n" +
+                                                      "#define SIMD_ARCHITECTURE POWERPC\n" +
+                                                      "#else\n" +
+                                                      "#define SIMD_ARCHITECTURE NONE\n" +
+                                                      "#endif",
     "#undef inline": "",
     "#cmakedefine C_ARITH_CODING_SUPPORTED 1": "#define C_ARITH_CODING_SUPPORTED 1",
     "#cmakedefine D_ARITH_CODING_SUPPORTED 1": "#define D_ARITH_CODING_SUPPORTED 1",
+    "#cmakedefine WITH_PROFILE": "",
 }
 
 JCONFIGINT_NOWIN_COMMON_SUBSTITUTIONS = {

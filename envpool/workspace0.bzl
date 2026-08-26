@@ -153,10 +153,10 @@ def workspace():
             "//third_party/opencv:windows_msvc_flag_check.patch",
             "//third_party/opencv:windows_cpu_baseline_flags.patch",
         ],
-        sha256 = "ee8fb9b30eb60850431b4656447080e3737b56e45719c92b67f245950609f86e",
-        strip_prefix = "opencv-4.14.0",
+        sha256 = "b0528f5a1d379d59d4701cb28c36e22214cc51cf64594e5b56f2d3e6c0233095",
+        strip_prefix = "opencv-5.0.0",
         urls = [
-            "https://github.com/opencv/opencv/archive/refs/tags/4.14.0.tar.gz",
+            "https://github.com/opencv/opencv/archive/refs/tags/5.0.0.tar.gz",
         ],
         build_file = "//third_party/opencv:opencv.BUILD",
     )
@@ -197,10 +197,10 @@ def workspace():
     maybe(
         http_archive,
         name = "libjpeg_turbo",
-        sha256 = "ecae8008e2cc9ade2f2c1bb9d5e6d4fb73e7c433866a056bd82980741571a022",
-        strip_prefix = "libjpeg-turbo-3.1.4.1",
+        sha256 = "6f30092cef9fb839779646608f4ee14ae3cbac989c47fa05e841b0841f09878e",
+        strip_prefix = "libjpeg-turbo-3.2.0",
         urls = [
-            "https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.1.4.1/libjpeg-turbo-3.1.4.1.tar.gz",
+            "https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.2.0/libjpeg-turbo-3.2.0.tar.gz",
         ],
         build_file = "//third_party/jpeg:jpeg.BUILD",
     )
@@ -248,16 +248,27 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "sdl2",
-        sha256 = "5f5993c530f084535c65a6879e9b26ad441169b3e25d789d83287040a9ca5165",
-        strip_prefix = "SDL2-2.32.10",
+        patch_args = ["-p1"],
+        patches = ["//third_party/sdl2:static_sdl3_compat.patch"],
+        sha256 = "998fa62557eb46ffe7e5c3e2c123bc332f7df9d9f593b3ceed88ed1158428a44",
+        strip_prefix = "sdl2-compat-2.32.70",
         urls = [
-            "https://www.libsdl.org/release/SDL2-2.32.10.tar.gz",
-            "https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.tar.gz",
-        ],
-        patches = [
-            "//third_party/sdl2:windows_xinput_stub.patch",
+            "https://github.com/libsdl-org/sdl2-compat/releases/download/release-2.32.70/sdl2-compat-2.32.70.tar.gz",
         ],
         build_file = "//third_party/sdl2:sdl2.BUILD",
+    )
+
+    maybe(
+        http_archive,
+        name = "sdl3",
+        patch_args = ["-p1"],
+        patches = ["//third_party/sdl2:static_sdl3_namespace.patch"],
+        sha256 = "30d4aa2b3037718142b32dffd4e72f917ebb6cc5227150e7bb9c45efb2153aeb",
+        strip_prefix = "SDL3-3.4.14",
+        urls = [
+            "https://github.com/libsdl-org/SDL/releases/download/release-3.4.14/SDL3-3.4.14.tar.gz",
+        ],
+        build_file = "//third_party/sdl2:sdl3.BUILD",
     )
 
     maybe(
@@ -334,11 +345,11 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         name = "freedoom",
         attempts = 8,
         build_file = "//third_party/freedoom:freedoom.BUILD",
-        sha256 = "f42c6810fc89b0282de1466c2c9c7c9818031a8d556256a6db1b69f6a77b5806",
-        strip_prefix = "freedoom-0.12.1/",
+        sha256 = "3f9b264f3e3ce503b4fb7f6bdcb1f419d93c7b546f4df3e874dd878db9688f59",
+        strip_prefix = "freedoom-0.13.0/",
         type = "zip",
         urls = [
-            "https://github.com/freedoom/freedoom/releases/download/v0.12.1/freedoom-0.12.1.zip",
+            "https://github.com/freedoom/freedoom/releases/download/v0.13.0/freedoom-0.13.0.zip",
         ],
     )
 

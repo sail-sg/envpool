@@ -1,0 +1,43 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -480,6 +480,24 @@ if(SDL_STATIC)
+   add_library(SDL3-static STATIC)
+   add_library(SDL3::SDL3-static ALIAS SDL3-static)
+   SDL_AddCommonCompilerFlags(SDL3-static)
++  set(SDL3_PREFIX_HEADER "${PROJECT_BINARY_DIR}/envpool_sdl3_prefix.h")
++  file(WRITE "${SDL3_PREFIX_HEADER}" "#pragma once\n")
++  file(STRINGS "${PROJECT_SOURCE_DIR}/src/dynapi/SDL_dynapi_procs.h"
++       SDL3_PUBLIC_SYMBOLS REGEX "^SDL_DYNAPI_PROC\\(")
++  foreach(SDL3_SYMBOL_DECL IN LISTS SDL3_PUBLIC_SYMBOLS)
++    string(REGEX REPLACE "^SDL_DYNAPI_PROC\\([^,]+,([A-Za-z_][A-Za-z0-9_]*),.*"
++           "\\1" SDL3_SYMBOL "${SDL3_SYMBOL_DECL}")
++    if(SDL3_SYMBOL MATCHES "^SDL_")
++      file(APPEND "${SDL3_PREFIX_HEADER}"
++           "#define ${SDL3_SYMBOL} ENVPOOL_SDL3_${SDL3_SYMBOL}\n")
++    endif()
++  endforeach()
++  if(MSVC)
++    target_compile_options(SDL3-static PRIVATE "/FI${SDL3_PREFIX_HEADER}")
++  else()
++    target_compile_options(SDL3-static PRIVATE "-include" "${SDL3_PREFIX_HEADER}")
++  endif()
++  target_compile_definitions(SDL3-static PRIVATE SDL_ENVPOOL_STATIC_PREFIX)
+   target_compile_definitions(SDL3-static PRIVATE "$<$<CONFIG:Debug>:DEBUG>")
+   set_property(TARGET SDL3-static PROPERTY UNITY_BUILD OFF)
+   if ("c_std_99" IN_LIST CMAKE_C_COMPILE_FEATURES)
+diff --git a/src/dynapi/SDL_dynapi.h b/src/dynapi/SDL_dynapi.h
+--- a/src/dynapi/SDL_dynapi.h
++++ b/src/dynapi/SDL_dynapi.h
+@@ -71,7 +71,11 @@
+ 
+ // everyone else. This is where we turn on the API if nothing forced it off.
+ #ifndef SDL_DYNAMIC_API
++#ifdef SDL_ENVPOOL_STATIC_PREFIX
++#define SDL_DYNAMIC_API 0
++#else
+ #define SDL_DYNAMIC_API 1
++#endif
+ #endif
+ 
+ #endif

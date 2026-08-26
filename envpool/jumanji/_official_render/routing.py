@@ -599,7 +599,7 @@ class MMSTViewer(MatplotlibViewer):
                 c=color,
                 linewidth=2,
             )
-            ax.add_artist(line)
+            ax.add_line(line)
             lines[key] = line
 
         circles = []
@@ -676,8 +676,8 @@ class MMSTViewer(MatplotlibViewer):
     ) -> tuple[plt.Circle, plt.Circle]:
         outer = plt.Circle(xy, radius, color=line_color, zorder=100)
         inner = plt.Circle(xy, radius - thickness, color=fill_color, zorder=100)
-        ax.add_artist(outer)
-        ax.add_artist(inner)
+        ax.add_patch(outer)
+        ax.add_patch(inner)
         return outer, inner
 
 

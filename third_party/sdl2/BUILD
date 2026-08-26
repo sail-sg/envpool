@@ -12,4 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-exports_files(["windows_xinput_stub.patch"])
+exports_files([
+    "static_sdl3_compat.patch",
+    "static_sdl3_namespace.patch",
+])

@@ -386,7 +386,7 @@ genrule(
     name = "iwadpicker_cocoa_o",
     srcs = glob(["src/**"]) + [
         ":viz_version",
-        "@sdl2//:include/SDL.h",
+        "@sdl2//:include/SDL2/SDL.h",
         "@sdl2//:srcs",
     ],
     outs = ["iwadpicker_cocoa.o"],
@@ -394,7 +394,7 @@ genrule(
 generated_dir=$$(dirname "$(execpath :viz_version)")
 vizdoom_src="$(location src/posix/osx/iwadpicker_cocoa.mm)"
 vizdoom_src="$${vizdoom_src%/posix/osx/iwadpicker_cocoa.mm}"
-sdl_include=$$(dirname "$(location @sdl2//:include/SDL.h)")
+sdl_include=$$(dirname "$(location @sdl2//:include/SDL2/SDL.h)")
 /usr/bin/xcrun --sdk macosx clang++ -c -x objective-c++ -std=c++17 \
   -Dstricmp=strcasecmp \
   -Dstrnicmp=strncasecmp \
@@ -422,7 +422,7 @@ genrule(
     name = "i_system_mm_o",
     srcs = glob(["src/**"]) + [
         ":viz_version",
-        "@sdl2//:include/SDL.h",
+        "@sdl2//:include/SDL2/SDL.h",
         "@sdl2//:srcs",
     ],
     outs = ["i_system.mm.o"],
@@ -430,7 +430,7 @@ genrule(
 generated_dir=$$(dirname "$(execpath :viz_version)")
 vizdoom_src="$(location src/posix/sdl/i_system.mm)"
 vizdoom_src="$${vizdoom_src%/posix/sdl/i_system.mm}"
-sdl_include=$$(dirname "$(location @sdl2//:include/SDL.h)")
+sdl_include=$$(dirname "$(location @sdl2//:include/SDL2/SDL.h)")
 /usr/bin/xcrun --sdk macosx clang++ -c -x objective-c++ -std=c++17 \
   -Dstricmp=strcasecmp \
   -Dstrnicmp=strncasecmp \

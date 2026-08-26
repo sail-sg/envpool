@@ -44,6 +44,11 @@ use_repo(python, "python_3_12", "python_3_13", "python_3_14", "python_versions")
 
 # Short internal hub names keep Windows DLL runfile paths below MAX_PATH.
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip.override(
+    file = "jumanji-1.1.2-py3-none-any.whl",
+    patch_strip = 1,
+    patches = ["//third_party/jumanji:matplotlib_311_autoscale.patch"],
+)
 pip.parse(
     hub_name = "p",
     python_version = "3.12",
@@ -127,6 +132,7 @@ use_repo(
     "sdl2",
     "sdl2_gfx",
     "sdl2_ttf",
+    "sdl3",
     "threadpool",
     "tinyobjloader",
     "tinyxml2",
