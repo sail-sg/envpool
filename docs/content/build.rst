@@ -165,6 +165,10 @@ Procgen (``Qt6Core.dll`` and ``Qt6Gui.dll``) directly next to
 ``procgen_envpool.pyd``. End users installing the wheel do **not** need a
 separate Qt installation at runtime on Windows.
 
+macOS wheels do not bundle Qt frameworks. Install Homebrew Qt 6 with
+``brew install qtbase`` before importing EnvPool; the frameworks are required
+at runtime as well as at build time. Qt 6.11 requires macOS 13 or newer.
+
 Linux MuJoCo wheels also use system EGL and OpenGL libraries (``libEGL.so.1``,
 ``libOpenGL.so.0``, and ``libGLdispatch.so.0``). Keeping these on the system GL
 dispatch stack avoids ``auditwheel`` renaming EGL libraries that MuJoCo's GL

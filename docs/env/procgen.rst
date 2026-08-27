@@ -12,6 +12,9 @@ See https://github.com/openai/procgen/tree/0.10.7
    ``libQt5Gui.so.5``, install the system Qt 5 runtime, for example with
    ``apt install qtbase5-dev`` or ``dnf install qt5-qtbase``.
 
+   macOS wheels require Homebrew Qt 6 at runtime: run ``brew install qtbase``
+   before importing EnvPool. Windows wheels bundle their Qt runtime DLLs.
+
 
 Render Compare
 --------------
