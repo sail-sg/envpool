@@ -245,6 +245,7 @@ class TArray : public Array {
    */
   // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
   void Assign(const TArray& value) const { Array::Assign(value); }
+  // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
   void Assign(const Array& value) const { Array::Assign(value); }
 
   /**

@@ -135,11 +135,13 @@ def _symlink_tree(repository_ctx, include_dir):
         repository_ctx.symlink(source, module)
 
 def _qt_major(repository_ctx):
-    for line in repository_ctx.read("QtCore/qconfig.h").splitlines():
+    # qconfig.h can be an architecture-dispatch wrapper in distro packages.
+    for line in repository_ctx.read("QtCore/qtcoreversion.h").splitlines():
         fields = [field for field in line.replace("\t", " ").split(" ") if field]
-        if len(fields) == 3 and fields[1] == "QT_VERSION_MAJOR":
-            if fields[2] in ["5", "6"]:
-                return fields[2]
+        if len(fields) == 3 and fields[1] == "QTCORE_VERSION_STR":
+            major = fields[2].strip('"').split(".")[0]
+            if major in ["5", "6"]:
+                return major
     fail("EnvPool requires Qt 5 or Qt 6.")
 
 def _symlink_if_exists(repository_ctx, source, destination):
