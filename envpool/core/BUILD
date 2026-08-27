@@ -50,6 +50,15 @@ cc_library(
     ],
 )
 
+cc_test(
+    name = "array_test",
+    srcs = ["array_test.cc"],
+    deps = [
+        ":array",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "dict",
     hdrs = ["dict.h"],

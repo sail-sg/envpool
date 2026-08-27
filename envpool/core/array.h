@@ -37,6 +37,16 @@ class Array {
   std::vector<std::size_t> shape_;
   std::shared_ptr<char> ptr_;
 
+  // An aliasing shared_ptr with an empty owner stores ptr without allocating a
+  // control block. It remains non-owning, matching existing view semantics.
+  template <class Shape>
+  Array(char* ptr, Shape&& shape, std::size_t element_size)  // NOLINT
+      : size(Prod(shape.data(), shape.size())),
+        ndim(shape.size()),
+        element_size(element_size),
+        shape_(std::forward<Shape>(shape)),
+        ptr_(std::shared_ptr<char>(), ptr) {}
+
   template <class Shape, class Deleter>
   Array(char* ptr, Shape&& shape, std::size_t element_size,  // NOLINT
         Deleter&& deleter)
@@ -59,8 +69,7 @@ class Array {
 
   /**
    * Constructor an `Array` of shape defined by `spec`, with `data` as pointer
-   * to its raw memory. With an empty deleter, which means Array does not own
-   * the memory.
+   * to its raw memory. Array does not own the memory.
    */
   template <class Deleter>
   Array(const ShapeSpec& spec, char* data, Deleter&& deleter)  // NOLINT
@@ -68,20 +77,22 @@ class Array {
               std::forward<Deleter>(deleter)) {}
 
   Array(const ShapeSpec& spec, char* data)
-      : Array(data, spec.Shape(), spec.element_size, [](char* /*unused*/) {}) {}
+      : Array(data, spec.Shape(), spec.element_size) {}
 
   /**
    * Constructor an `Array` of shape defined by `spec`. This constructor
    * allocates and owns the memory.
    */
-  explicit Array(const ShapeSpec& spec)
-      : Array(spec, nullptr, [](char* /*unused*/) {}) {
+  explicit Array(const ShapeSpec& spec) : Array(spec, nullptr) {
     auto buffer = std::make_shared<std::vector<char>>(size * element_size);
     ptr_ = std::shared_ptr<char>(buffer, buffer->data());
   }
 
   /**
    * Take multidimensional index into the Array.
+   *
+   * The returned view does not extend this Array's storage lifetime.
+   * Callers must keep the backing Array alive while using it.
    */
   template <typename... Index>
   Array operator()(Index... index) const {
@@ -95,7 +106,7 @@ class Array {
     return Array(
         ptr_.get() + offset * element_size,
         std::vector<std::size_t>(shape_.begin() + num_index, shape_.end()),
-        element_size, [](char* /*unused*/) {});
+        element_size);
   }
 
   /**
@@ -105,6 +116,9 @@ class Array {
 
   /**
    * Take a slice at the first axis of the Array.
+   *
+   * The returned view does not extend this Array's storage lifetime.
+   * Callers must keep the backing Array alive while using it.
    */
   [[nodiscard]] Array Slice(std::size_t start, std::size_t end) const {
     DCHECK_GT(ndim, (std::size_t)0);
@@ -117,7 +131,7 @@ class Array {
       offset = start * size / shape_[0];
     }
     return {ptr_.get() + offset * element_size, std::move(new_shape),
-            element_size, [](char* p) {}};
+            element_size};
   }
 
   /**
