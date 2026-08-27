@@ -242,6 +242,12 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "BAZEL_RULES_QT_DIR=$env:QT_ROOT_DIR"
           Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $env:QT_ROOT_DIR "bin")
           Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files\Git\usr\bin"
+      - name: Collect Qt licenses and notices
+        shell: bash
+        run: |
+          qt_prefix=$(cygpath -u "$QT_ROOT_DIR")
+          bash third_party/qt/build_release.sh --licenses-only "$qt_prefix"
+          echo "WHEEL_LICENSE_DIR=$(cygpath -m "$qt_prefix/licenses/qt6")" >> "$GITHUB_ENV"
       - name: Install bazelisk
         shell: pwsh
         run: |

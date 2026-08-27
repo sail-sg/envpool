@@ -177,6 +177,9 @@ Windows release wheels currently bundle the Qt runtime DLLs required by
 Procgen (``Qt6Core.dll`` and ``Qt6Gui.dll``) directly next to
 ``procgen_envpool.pyd``. End users installing the wheel do **not** need a
 separate Qt installation at runtime on Windows.
+The Qt license texts, SDK component notices, and build configuration are also
+included under ``.dist-info/licenses/qt6``. Release builds collect these with
+``third_party/qt/build_release.sh --licenses-only "$QT_ROOT_DIR"``.
 
 macOS wheels do not bundle Qt frameworks. Install Homebrew Qt 6 with
 ``brew install qtbase`` before importing EnvPool; the frameworks are required
