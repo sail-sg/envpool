@@ -26,6 +26,8 @@ if [[ ${1:-} == --licenses-only ]]; then
   licenses_only=true
   shift
   : "${1:?--licenses-only requires the installed Qt SDK path}"
+  # Native curl needs Git Bash path conversion; this subprocess runs no Bazel.
+  unset MSYS2_ARG_CONV_EXCL MSYS_NO_PATHCONV
 fi
 prefix=${1:-/opt/envpool-qt6}
 work_dir=$(mktemp -d)
