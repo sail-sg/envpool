@@ -18,6 +18,7 @@ exports_files([
     "apollo_mesh_paths.patch",
     "go1_mesh_paths.patch",
     "h1_mesh_paths.patch",
+    "jax_clip.patch",
     "mujoco_menagerie.BUILD",
     "mujoco_playground_source.BUILD",
     "op3_mesh_paths.patch",

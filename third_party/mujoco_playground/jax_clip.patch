@@ -1,0 +1,24 @@
+diff --git a/mujoco_playground/_src/manipulation/leap_hand/reorient.py b/mujoco_playground/_src/manipulation/leap_hand/reorient.py
+--- a/mujoco_playground/_src/manipulation/leap_hand/reorient.py
++++ b/mujoco_playground/_src/manipulation/leap_hand/reorient.py
+@@ -423,7 +423,7 @@
+     cube_goal_ori = self.get_cube_goal_orientation(data)
+     quat_diff = math.quat_mul(cube_ori, math.quat_inv(cube_goal_ori))
+     quat_diff = math.normalize(quat_diff)
+-    return 2.0 * jp.asin(jp.clip(math.norm(quat_diff[1:]), a_max=1.0))
++    return 2.0 * jp.asin(jp.clip(math.norm(quat_diff[1:]), max=1.0))
+
+   def _reward_cube_orientation(self, data: mjx.Data) -> jax.Array:
+     ori_error = self._cube_orientation_error(data)
+diff --git a/mujoco_playground/_src/manipulation/franka_emika_panda_robotiq/push_cube.py b/mujoco_playground/_src/manipulation/franka_emika_panda_robotiq/push_cube.py
+--- a/mujoco_playground/_src/manipulation/franka_emika_panda_robotiq/push_cube.py
++++ b/mujoco_playground/_src/manipulation/franka_emika_panda_robotiq/push_cube.py
+@@ -469,7 +469,7 @@
+   def _orientation_error(self, object_quat, target_quat) -> jax.Array:
+     quat_diff = math.quat_mul(object_quat, math.quat_inv(target_quat))
+     quat_diff = math.normalize(quat_diff)
+-    ori_error = 2.0 * jp.asin(jp.clip(math.norm(quat_diff[1:]), a_max=1.0))
++    ori_error = 2.0 * jp.asin(jp.clip(math.norm(quat_diff[1:]), max=1.0))
+     return ori_error
+
+   def _get_obs(self, state: mjx_env.State) -> jax.Array:

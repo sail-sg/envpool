@@ -6,10 +6,11 @@ See https://github.com/openai/procgen/tree/0.10.7
 
 .. note::
 
-   Procgen links against Qt 5. Linux wheels do not vendor the Qt runtime; if
-   making a Procgen environment reports missing ``libQt5Core.so.5`` or
-   ``libQt5Gui.so.5``, install the system Qt 5 runtime, for example with
-   ``apt install qtbase5-dev`` or ``dnf install qt5-qtbase``.
+   Linux ``manylinux_2_28`` wheels bundle Qt 6.11.1 ``QtCore``/``QtGui``, built from source
+   in the release image. Procgen does not require a system Qt installation.
+
+   macOS wheels require Homebrew Qt 6 at runtime: run ``brew install qtbase``
+   before importing EnvPool. Windows wheels bundle their Qt runtime DLLs.
 
 
 Render Compare

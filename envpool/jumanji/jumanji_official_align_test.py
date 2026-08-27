@@ -357,6 +357,7 @@ def _envpool_kwargs_from_official_state(
         future_rewards = [reward for _, _, reward, _ in future_rollout]
         future_done = [done for _, _, _, done in future_rollout]
         return {
+            "cvrp_max_capacity": int(_as_numpy(official_state.capacity)),
             "cvrp_coordinates": _csv_flat(official_state.coordinates),
             "cvrp_demands": _csv_flat(official_observation.demands),
             "cvrp_distance_matrix": _cvrp_distance_matrix(official_state),
@@ -1136,6 +1137,24 @@ def _envpool_action(action: Any) -> np.ndarray:
     return action_array.reshape((1, *action_array.shape))
 
 
+def _assert_reward_bitwise(
+    actual: Any,
+    expected: Any,
+    info: dict[str, Any],
+    task_id: str,
+    label: str,
+) -> None:
+    expected = _as_numpy(expected)
+    if task_id == "SearchAndRescue-v0":
+        np.testing.assert_array_equal(
+            info["searcher_rewards"][0], expected, err_msg=label
+        )
+        expected = expected.sum(dtype=np.float32)
+    np.testing.assert_array_equal(
+        np.asarray(actual)[0], expected, err_msg=label
+    )
+
+
 def _first_valid_action(
     official_env: Any,
     observation: Any,
@@ -1247,10 +1266,12 @@ class JumanjiOfficialAlignTest(absltest.TestCase):
                             expected_obs,
                             f"{task_id} step {step} obs",
                         )
-                        np.testing.assert_array_equal(
-                            np.asarray(envpool_reward)[0],
-                            _as_numpy(official_timestep.reward),
-                            err_msg=f"{task_id} step {step} reward",
+                        _assert_reward_bitwise(
+                            envpool_reward,
+                            official_timestep.reward,
+                            envpool_info,
+                            task_id,
+                            f"{task_id} step {step} reward",
                         )
                         np.testing.assert_array_equal(
                             np.asarray(envpool_terminated)[0],
@@ -1337,10 +1358,12 @@ class JumanjiOfficialAlignTest(absltest.TestCase):
                             expected_obs,
                             f"{task_id} long step {step} obs",
                         )
-                        np.testing.assert_array_equal(
-                            np.asarray(envpool_reward)[0],
-                            _as_numpy(official_timestep.reward),
-                            err_msg=f"{task_id} long step {step} reward",
+                        _assert_reward_bitwise(
+                            envpool_reward,
+                            official_timestep.reward,
+                            envpool_info,
+                            task_id,
+                            f"{task_id} long step {step} reward",
                         )
                         official_done = bool(
                             _as_numpy(official_timestep.last())

@@ -120,7 +120,7 @@ class NamedVector {
 
  public:
   using Keys = StringKeys;
-  constexpr static std::size_t kSize = std::tuple_size<Keys>::value;
+  constexpr static std::size_t kSize = std::tuple_size_v<Keys>;
   explicit NamedVector(Vector* values) : values_(values) {}
   NamedVector(const Keys& keys, Vector* values) : values_(values) {}
   template <typename Key,
@@ -155,7 +155,7 @@ class Dict : public std::decay_t<TupleOrVector> {
  public:
   using Values = std::decay_t<TupleOrVector>;
   using Keys = StringKeys;
-  constexpr static std::size_t kSize = std::tuple_size<Keys>::value;
+  constexpr static std::size_t kSize = std::tuple_size_v<Keys>;
 
   /**
    * Check that the size of values / keys tuple should match
@@ -283,7 +283,7 @@ class Dict : public std::decay_t<TupleOrVector> {
  * The above makes a dict { "abc": 0., "xyz": 0., "ijk": 1 }
  */
 template <typename... Value>
-decltype(auto) MakeDict(Value... v) {
+decltype(auto) MakeDict(const Value&... v) {
   return Dict(std::make_tuple(typename Value::Key()...),
               std::make_tuple(v.v...));
 }

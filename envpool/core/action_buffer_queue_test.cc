@@ -36,6 +36,7 @@ TEST(ActionBufferQueueTest, Concurrent) {
   std::srand(std::time(nullptr));
   std::size_t mul = 2000;
   std::vector<ActionSlice> actions;
+  actions.reserve(num_envs);
   // enqueue all envs
   for (std::size_t i = 0; i < num_envs; ++i) {
     actions.push_back(ActionSlice{

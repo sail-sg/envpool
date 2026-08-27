@@ -40,8 +40,11 @@ class JumanjiSearchAndRescueTest(absltest.TestCase):
             self.assertAlmostEqual(float(obs["targets_remaining"][0]), 1.0)
 
             action = np.asarray([[[1.0, 0.0], [0.0, 0.0]]], dtype=np.float32)
-            obs, reward, terminated, truncated, _ = env.step(action)
+            obs, reward, terminated, truncated, info = env.step(action)
             self.assertAlmostEqual(float(reward[0]), 1.0)
+            np.testing.assert_array_equal(
+                info["searcher_rewards"][0], [1.0, 0.0]
+            )
             self.assertTrue(bool(terminated[0]))
             self.assertFalse(bool(truncated[0]))
             self.assertAlmostEqual(float(obs["positions"][0, 0, 0]), 0.1)

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ---
+# Fixed RNG seeds, startup registries, and polymorphic templates are intentional.
+# Keep existing arithmetic, conditional, and type-alias spelling conventions.
 Checks:     '
             bugprone-*,
             clang-analyzer-*,
@@ -24,17 +26,24 @@ Checks:     '
             -bugprone-implicit-widening-of-multiplication-result,
             -bugprone-branch-clone,
             -bugprone-narrowing-conversions,
+            -bugprone-random-generator-seed,
+            -bugprone-throwing-static-initialization,
             -modernize-use-trailing-return-type,
             -modernize-use-nodiscard,
+            -portability-template-virtual-member-function,
             -readability-convert-member-functions-to-static,
             -readability-function-cognitive-complexity,
             -readability-identifier-length,
             -readability-magic-numbers,
             -readability-make-member-function-const,
+            -readability-math-missing-parentheses,
             -readability-named-parameter,
             -readability-non-const-parameter,
+            -readability-redundant-typename,
             -readability-static-accessed-through-instance,
             -readability-uppercase-literal-suffix,
+            -readability-use-concise-preprocessor-directives,
+            -readability-use-std-min-max,
             '
 CheckOptions:
   - { key: readability-identifier-naming.ClassCase,             value: CamelCase  }

@@ -105,6 +105,7 @@ class AsyncEnvPool : public EnvPool<typename Env::Spec> {
     std::size_t processor_count = std::thread::hardware_concurrency();
     ThreadPool init_pool(std::min(processor_count, num_envs_));
     std::vector<std::future<void>> result;
+    result.reserve(num_envs_);
     for (std::size_t i = 0; i < num_envs_; ++i) {
       result.emplace_back(init_pool.enqueue(
           [i, this] { envs_[i].reset(new Env(this->spec, i)); }));

@@ -187,7 +187,7 @@ class MetaWorldEnvBase : public Env<EnvSpecT>,
     elapsed_step_ = 0;
     ResetToInitialState();
     ResetModel();
-    CaptureResetState();
+    CaptureTaskResetState();
     prev_obs_ = CurrentObsNoGoal();
     WriteState(ComputeReward({0.0, 0.0, 0.0, 0.0}), true);
   }
@@ -2660,7 +2660,7 @@ class MetaWorldEnvBase : public Env<EnvSpecT>,
                     in_place, obj_to_target);
   }
 
-  void CaptureResetState() {
+  void CaptureTaskResetState() {
     qpos0_.fill(0.0);
     qvel0_.fill(0.0);
     qacc0_.fill(0.0);

@@ -558,7 +558,7 @@ class EglContext final : public GlContext {
     static std::mutex mutex;
     static std::shared_ptr<DisplayHandle> display;
 
-    std::lock_guard<std::mutex> lock(mutex);
+    std::scoped_lock lock(mutex);
     if (display != nullptr) {
       return display;
     }

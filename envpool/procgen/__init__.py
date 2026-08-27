@@ -25,22 +25,29 @@ _PROCGEN_EXPORTS = {
     "ProcgenGymnasiumEnvPool",
 }
 _LINUX_QT_RUNTIME_ERROR = (
-    "EnvPool Procgen requires the system Qt 5 runtime on Linux. "
-    "Install the Qt5 Core/Gui shared libraries, for example via "
-    "`apt install qtbase5-dev` or `dnf install qt5-qtbase`."
+    "EnvPool Procgen requires the system Qt runtime on Linux. "
+    "Install the Qt{major} Core/Gui shared libraries, for example via "
+    "`apt install {apt_package}` or `dnf install qt{major}-qtbase`."
 )
 _PROCGEN_IMPORT_ERROR: ImportError | None = None
 
 
 def _is_linux_qt_import_error(exc: ImportError) -> bool:
-    return sys.platform.startswith("linux") and (
-        "libQt5Core" in str(exc) or "libQt5Gui" in str(exc)
+    return sys.platform.startswith("linux") and any(
+        f"libQt{major}{module}" in str(exc)
+        for major in (5, 6)
+        for module in ("Core", "Gui")
     )
 
 
 def _raise_procgen_import_error() -> None:
     assert _PROCGEN_IMPORT_ERROR is not None
-    raise ImportError(_LINUX_QT_RUNTIME_ERROR) from _PROCGEN_IMPORT_ERROR
+    major = "6" if "libQt6" in str(_PROCGEN_IMPORT_ERROR) else "5"
+    message = _LINUX_QT_RUNTIME_ERROR.format(
+        major=major,
+        apt_package="qt6-base-dev" if major == "6" else "qtbase5-dev",
+    )
+    raise ImportError(message) from _PROCGEN_IMPORT_ERROR
 
 
 if sys.platform == "win32" and hasattr(os, "add_dll_directory"):

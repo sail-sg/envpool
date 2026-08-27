@@ -6,6 +6,11 @@ Python 3.12-3.14 in ``manylinux_2_28_x86_64`` and
 ``manylinux_2_28_aarch64`` environments for Linux, on ``macos-14`` for
 macOS, and on ``windows-2022`` for Windows.
 
+Runtime data ships in the three ``envpool-assets*`` packages from the ``0.4.x``
+compatibility line, including the updated MyoSuite and Playground models.
+The main wheel requires this asset version line; older EnvPool releases remain
+on ``0.3.x`` so they do not automatically receive the new models.
+
 We use `bazel <https://bazel.build/>`_ to build EnvPool. Comparing with
 `pip <https://pip.pypa.io/>`_, using Bazel to build python package with C++ .so
 files has some advantages:
@@ -75,7 +80,7 @@ EnvPool source builds share a few common requirements across platforms:
 - **Java 17**
 - **Go >= 1.22** plus ``bazelisk`` / ``bazel``
 - **SWIG**
-- **Qt 5**
+- **Qt 6** (Qt 5 is also supported for source builds)
 
 The default build and test shortcuts in this repo use **Bazel 9.2.0** via
 ``bazelisk``. Bazel dependencies are configured as modules in
@@ -90,27 +95,24 @@ install the required development packages:
 .. code-block:: bash
 
     sudo apt install -y build-essential openjdk-17-jdk python3-dev \
-      python3-pip python-is-python3 golang-go cmake ninja-build swig qtbase5-dev \
-      qtdeclarative5-dev
-
-    # Some Bazel Qt rules still look for this legacy include path.
-    sudo ln -sf "$(qmake -query QT_INSTALL_HEADERS)" /usr/include/qt
+      python3-pip python-is-python3 golang-go cmake ninja-build swig qt6-base-dev
 
 macOS
 ^^^^^
 
-Install the Xcode Command Line Tools first, then install the user-space
+macOS 13 or newer is required by Qt 6.11. Install the Xcode Command Line Tools
+first, then install the user-space
 dependencies with Homebrew:
 
 .. code-block:: bash
 
     xcode-select --install
-    brew install go openjdk@17 cmake ninja swig qt@5
+    brew install go openjdk@17 cmake ninja swig qtbase
     sudo ln -sf "$(brew --prefix cmake)/bin/cmake" /usr/local/bin/cmake
     sudo ln -sf "$(brew --prefix ninja)/bin/ninja" /usr/local/bin/ninja
 
     export PATH="$(brew --prefix openjdk@17)/bin:$PATH"
-    export BAZEL_RULES_QT_DIR="$(brew --prefix qt@5)"
+    export BAZEL_RULES_QT_DIR="$(brew --prefix qtbase)"
 
 Windows
 ^^^^^^^
@@ -122,7 +124,7 @@ Install the following before building from source:
 - Git for Windows
 - Java 17
 - Go 1.22+
-- Qt 5.15.2 with the ``msvc2019_64`` toolchain
+- Qt 6.11.1 with the ``msvc2022_64`` toolchain
 
 Then install the remaining command-line dependencies and export the Bazel / Qt
 environment variables:
@@ -131,7 +133,7 @@ environment variables:
 
     choco install -y cmake make ninja strawberryperl swig
     $env:BAZEL_SH = "C:/Program Files/Git/usr/bin/bash.exe"
-    $env:QT_ROOT_DIR = "C:/Qt/5.15.2/msvc2019_64"
+    $env:QT_ROOT_DIR = "C:/Qt/6.11.1/msvc2022_64"
     $env:BAZEL_RULES_QT_DIR = $env:QT_ROOT_DIR
     $env:PATH = "$env:QT_ROOT_DIR\\bin;$env:PATH"
 
@@ -151,16 +153,37 @@ tests and before the GLFW-backed render path.
 Graphics runtime in wheels
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Linux release wheels intentionally exclude the Qt shared libraries used by
-Procgen (``libQt5Core.so.5`` and ``libQt5Gui.so.5``) from ``auditwheel``
-repair. Bundling those libraries also pulls in a large Qt / ICU runtime stack,
-so Procgen users on Linux should install the system Qt 5 runtime instead, for
-example with ``apt install qtbase5-dev`` or ``dnf install qt5-qtbase``.
+Linux ``manylinux_2_28`` wheels bundle Qt 6.11.1 ``QtCore``/``QtGui`` through ``auditwheel``.
+``third_party/qt/build_release.sh`` builds the shared libraries from the pinned
+official sources inside each architecture's AlmaLinux 8 image, preserving the
+``glibc 2.28`` baseline. Procgen only needs raster drawing and PNG decoding, so this
+build omits ICU, window-system backends, fonts, and unused Qt modules. End users
+do not need a separate Qt installation. Release tests run with the build SDK
+moved out of its install path and check that Qt is loaded from the wheel.
+
+The bundled Qt libraries use LGPLv3. Their license texts, component notices,
+source URL, checksum, and build configuration are included under the wheel's
+``.dist-info/licenses/qt6`` directory. For a local ``manylinux`` release build, run:
+
+.. code-block:: bash
+
+    python3 -m pip install --upgrade cmake ninja
+    bash third_party/qt/build_release.sh /opt/envpool-qt6
+    export BAZEL_RULES_QT_DIR=/opt/envpool-qt6
+    export WHEEL_LICENSE_DIR=/opt/envpool-qt6/licenses/qt6
+    make pypi-wheel
 
 Windows release wheels currently bundle the Qt runtime DLLs required by
-Procgen (``Qt5Core.dll`` and ``Qt5Gui.dll``) directly next to
+Procgen (``Qt6Core.dll`` and ``Qt6Gui.dll``) directly next to
 ``procgen_envpool.pyd``. End users installing the wheel do **not** need a
 separate Qt installation at runtime on Windows.
+The Qt license texts, SDK component notices, and build configuration are also
+included under ``.dist-info/licenses/qt6``. Release builds collect these with
+``third_party/qt/build_release.sh --licenses-only "$QT_ROOT_DIR"``.
+
+macOS wheels do not bundle Qt frameworks. Install Homebrew Qt 6 with
+``brew install qtbase`` before importing EnvPool; the frameworks are required
+at runtime as well as at build time. Qt 6.11 requires macOS 13 or newer.
 
 Linux MuJoCo wheels also use system EGL and OpenGL libraries (``libEGL.so.1``,
 ``libOpenGL.so.0``, and ``libGLdispatch.so.0``). Keeping these on the system GL
@@ -168,9 +191,9 @@ dispatch stack avoids ``auditwheel`` renaming EGL libraries that MuJoCo's GL
 loader needs to recognize. For Mesa on Ubuntu, install
 ``libegl1 libopengl0 libgl1-mesa-dri``.
 
-Source builds still require a local Qt 5 installation so Bazel can compile and
-link against Qt. Linux and macOS continue to rely on system Qt packages at
-build time.
+Source builds prefer a local Qt 6 installation; Qt 5 remains supported when
+Qt 6 is unavailable. Set ``BAZEL_RULES_QT_DIR`` to select a specific install.
+Source builds can use system Qt packages or a custom installation prefix.
 
 Install CUDA to enable XLA: see https://developer.nvidia.com/cuda-downloads
 

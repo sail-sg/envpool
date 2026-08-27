@@ -185,28 +185,31 @@ def _jumanji_render(
 def with_jumanji_python_render(cls: _GymEnvT, task_id: str) -> _GymEnvT:
     """Install a task-specific Python render override on a GymnasiumEnvPool class."""
     env_cls = cast(Any, cls)
-    original_reset = cast(Callable[..., Any], env_cls.reset)
     original_step = cast(Callable[..., Any], env_cls.step)
     original_recv = cast(Callable[..., Any], env_cls.recv)
     original_close = getattr(env_cls, "close", None)
 
-    def reset(self: Any, *args: Any, **kwargs: Any) -> Any:
-        output = original_reset(self, *args, **kwargs)
-        _cache_gymnasium_output(self, output, reset=True)
-        return output
-
     def step(self: Any, *args: Any, **kwargs: Any) -> Any:
-        action = args[0] if args else kwargs.get("action", None)
-        output = original_step(self, *args, **kwargs)
-        _cache_gymnasium_output(self, output, reset=False, action=action)
-        return output
+        # step() delegates to recv(); update the render cache there exactly once.
+        self._jumanji_render_step_action = (
+            args[0] if args else kwargs.get("action", None)
+        )
+        try:
+            return original_step(self, *args, **kwargs)
+        finally:
+            del self._jumanji_render_step_action
 
     def recv(self: Any, *args: Any, **kwargs: Any) -> Any:
         reset_output = (
             bool(args[0]) if args else bool(kwargs.get("reset", False))
         )
         output = original_recv(self, *args, **kwargs)
-        _cache_gymnasium_output(self, output, reset=reset_output)
+        _cache_gymnasium_output(
+            self,
+            output,
+            reset=reset_output,
+            action=getattr(self, "_jumanji_render_step_action", None),
+        )
         return output
 
     def close(self: Any, *args: Any, **kwargs: Any) -> Any:
@@ -217,7 +220,6 @@ def with_jumanji_python_render(cls: _GymEnvT, task_id: str) -> _GymEnvT:
         return None
 
     env_cls._jumanji_task_id = task_id
-    env_cls.reset = reset
     env_cls.step = step
     env_cls.recv = recv
     env_cls.close = close

@@ -67,6 +67,7 @@ class CVRPEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict(
+        "cvrp_max_capacity"_.Bind(20),
         "cvrp_coordinates"_.Bind(std::string("")),
         "cvrp_demands"_.Bind(std::string("")),
         "cvrp_distance_matrix"_.Bind(std::string("")),
@@ -97,6 +98,7 @@ using CVRPEnvSpec = EnvSpec<CVRPEnvFns>;
 
 class CVRPEnv : public Env<CVRPEnvSpec>, public RenderableEnv {
  protected:
+  const int kMaxCapacity;
   cvrp::Coordinates coordinates_{};
   cvrp::Coordinates configured_coordinates_{};
   std::array<float, cvrp::kNumNodes> demands_{};
@@ -111,7 +113,7 @@ class CVRPEnv : public Env<CVRPEnvSpec>, public RenderableEnv {
   bool use_replay_;
   int position_{0};
   int trajectory_size_{0};
-  float capacity_{1.0f};
+  int capacity_{0};
   int step_count_{0};
   bool done_{true};
 
@@ -121,6 +123,7 @@ class CVRPEnv : public Env<CVRPEnvSpec>, public RenderableEnv {
 
   CVRPEnv(const Spec& spec, int env_id)
       : Env<CVRPEnvSpec>(spec, env_id),
+        kMaxCapacity(spec.config["cvrp_max_capacity"_]),
         configured_coordinates_(
             cvrp::ParseCoordinates(spec.config["cvrp_coordinates"_])),
         configured_demands_(parse::CsvArray<float, cvrp::kNumNodes>(
@@ -134,7 +137,9 @@ class CVRPEnv : public Env<CVRPEnvSpec>, public RenderableEnv {
         use_configured_coordinates_(!spec.config["cvrp_coordinates"_].empty()),
         use_configured_distances_(
             !spec.config["cvrp_distance_matrix"_].empty()),
-        use_replay_(!spec.config["cvrp_replay_rewards"_].empty()) {}
+        use_replay_(!spec.config["cvrp_replay_rewards"_].empty()) {
+    CHECK_GT(kMaxCapacity, 0);
+  }
 
   bool IsDone() override { return done_; }
 
@@ -190,7 +195,7 @@ class CVRPEnv : public Env<CVRPEnvSpec>, public RenderableEnv {
         coordinates_[node * 2 + 1] = 0.0f;
       }
       if (spec_.config["cvrp_demands"_].empty()) {
-        demands_[node] = node == 0 ? 0.0f : 0.05f;
+        demands_[node] = node == 0 ? 0.0f : 1.0f / kMaxCapacity;
       } else {
         demands_[node] = configured_demands_[node];
       }
@@ -199,7 +204,7 @@ class CVRPEnv : public Env<CVRPEnvSpec>, public RenderableEnv {
     trajectory_.fill(0);
     position_ = 0;
     trajectory_size_ = 1;
-    capacity_ = 1.0f;
+    capacity_ = kMaxCapacity;
     step_count_ = 0;
     done_ = false;
     WriteState(0.0f);
@@ -214,9 +219,9 @@ class CVRPEnv : public Env<CVRPEnvSpec>, public RenderableEnv {
       reward = -Distance(position_, node);
       position_ = node;
       if (node == 0) {
-        capacity_ = 1.0f;
+        capacity_ = kMaxCapacity;
       } else {
-        capacity_ -= demands_[node];
+        capacity_ -= DemandUnits(node);
         unvisited_[node] = false;
       }
       if (trajectory_size_ < cvrp::kTrajectoryLength) {
@@ -235,11 +240,17 @@ class CVRPEnv : public Env<CVRPEnvSpec>, public RenderableEnv {
   }
 
  private:
+  // Upstream subtracts integer demand units before normalizing observations.
+  // Subtracting normalized float32 demands instead accumulates rounding error.
+  int DemandUnits(int node) const {
+    return static_cast<int>(std::lround(demands_[node] * kMaxCapacity));
+  }
+
   bool IsActionValid(int node) const {
     if (node == 0) {
       return position_ != 0;
     }
-    return unvisited_[node] && demands_[node] <= capacity_;
+    return unvisited_[node] && DemandUnits(node) <= capacity_;
   }
 
   float Distance(int from, int to) const {
@@ -268,7 +279,7 @@ class CVRPEnv : public Env<CVRPEnvSpec>, public RenderableEnv {
       state["obs:trajectory"_][i] = trajectory_[i];
     }
     state["obs:position"_] = position_;
-    state["obs:capacity"_] = capacity_;
+    state["obs:capacity"_] = static_cast<float>(capacity_) / kMaxCapacity;
     state["reward"_] = reward;
   }
 };

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <QtCore/qglobal.h>
+
 #include "envpool/core/py_envpool.h"
 #include "envpool/procgen/procgen_env.h"
 
@@ -19,5 +21,6 @@ using ProcgenEnvSpec = PyEnvSpec<procgen::ProcgenEnvSpec>;
 using ProcgenEnvPool = PyEnvPool<procgen::ProcgenEnvPool>;
 
 PYBIND11_MODULE(procgen_envpool, m) {
+  m.attr("_qt_version") = qVersion();
   REGISTER(m, ProcgenEnvSpec, ProcgenEnvPool)
 }

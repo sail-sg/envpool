@@ -36,7 +36,7 @@ jobs:
           make cpplint
       - name: clang-format
         run: |
-          make CLANG_FORMAT_BIN=clang-format-20 clang-format
+          make clang-format
       - name: buildifier
         run: |
           make buildifier

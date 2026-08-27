@@ -80,6 +80,7 @@ class SearchAndRescueEnvFns {
         "obs:searcher_views"_.Bind(Spec<float>({2, 3, 128}, {-1.0f, 1.0f})),
         "obs:targets_remaining"_.Bind(Spec<float>({}, {0.0f, 1.0f})),
         "obs:step"_.Bind(Spec<int>({}, {0, 400})),
+        "info:searcher_rewards"_.Bind(Spec<float>({2})),
         "obs:positions"_.Bind(Spec<float>({2, 2}, {0.0f, 1.0f})));
   }
   template <typename Config>
@@ -109,12 +110,13 @@ class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
   std::array<float, searchrescue::kReplaySteps * searchrescue::kPositionsSize>
       replay_positions_{};
   std::array<float, searchrescue::kReplaySteps> replay_targets_remaining_{};
-  std::array<float, searchrescue::kReplaySteps> replay_rewards_{};
+  std::array<float, searchrescue::kReplaySteps * searchrescue::kNumSearchers>
+      replay_rewards_{};
   std::array<bool, searchrescue::kReplaySteps> replay_done_{};
   float configured_targets_remaining_;
   bool use_configured_state_;
   bool use_replay_;
-  bool target_found_{false};
+  float targets_remaining_{1.0f};
   int step_count_{0};
   bool done_{true};
 
@@ -147,7 +149,8 @@ class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
         replay_targets_remaining_(
             parse::CsvArray<float, searchrescue::kReplaySteps>(
                 spec.config["search_and_rescue_replay_targets_remaining"_])),
-        replay_rewards_(parse::CsvArray<float, searchrescue::kReplaySteps>(
+        replay_rewards_(parse::CsvArray<float, searchrescue::kReplaySteps *
+                                                   searchrescue::kNumSearchers>(
             spec.config["search_and_rescue_replay_rewards"_])),
         replay_done_(parse::CsvArray<bool, searchrescue::kReplaySteps>(
             spec.config["search_and_rescue_replay_done"_])),
@@ -193,10 +196,10 @@ class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
       heading_ = {0.0f, 0.0f};
       speed_ = {0.0f, 0.0f};
     }
-    target_found_ = configured_targets_remaining_ <= 0.0f;
+    targets_remaining_ = configured_targets_remaining_;
     step_count_ = 0;
     done_ = false;
-    WriteState(0.0f);
+    WriteState({});
   }
 
   void Step(const Action& action) override {
@@ -217,9 +220,16 @@ class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
                                        searchrescue::kSearcherViewsSize +
                                    i];
       }
-      target_found_ = replay_targets_remaining_[step_count_ - 1] <= 0.0f;
+      targets_remaining_ = replay_targets_remaining_[step_count_ - 1];
       done_ = replay_done_[step_count_ - 1];
-      WriteState(replay_rewards_[step_count_ - 1]);
+      std::array<float, searchrescue::kNumSearchers> rewards{};
+      for (int searcher = 0; searcher < searchrescue::kNumSearchers;
+           ++searcher) {
+        rewards[searcher] =
+            replay_rewards_[(step_count_ - 1) * searchrescue::kNumSearchers +
+                            searcher];
+      }
+      WriteState(rewards);
       return;
     }
     for (int searcher = 0; searcher < searchrescue::kNumSearchers; ++searcher) {
@@ -239,26 +249,38 @@ class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
         y_[searcher] = std::clamp(y_[searcher] + 0.1f * dy, 0.0f, 1.0f);
       }
     }
-    float reward = 0.0f;
-    if (!target_found_ && TargetDetected()) {
-      target_found_ = true;
-      reward = 1.0f;
+    std::array<float, searchrescue::kNumSearchers> rewards{};
+    if (targets_remaining_ > 0.0f) {
+      rewards = TargetRewards();
+      if (std::any_of(rewards.begin(), rewards.end(),
+                      [](float reward) { return reward > 0.0f; })) {
+        targets_remaining_ = 0.0f;
+      }
     }
     ++step_count_;
-    done_ = target_found_ || step_count_ >= searchrescue::kTimeLimit;
-    WriteState(reward);
+    done_ =
+        targets_remaining_ <= 0.0f || step_count_ >= searchrescue::kTimeLimit;
+    WriteState(rewards);
   }
 
  private:
-  bool TargetDetected() const {
+  std::array<float, searchrescue::kNumSearchers> TargetRewards() const {
+    std::array<float, searchrescue::kNumSearchers> rewards{};
+    int num_detected = 0;
     for (int searcher = 0; searcher < searchrescue::kNumSearchers; ++searcher) {
       if (searchrescue::Distance(
               x_[searcher], y_[searcher], searchrescue::kTargetX,
               searchrescue::kTargetY) <= searchrescue::kDetectionRadius) {
-        return true;
+        rewards[searcher] = 1.0f;
+        ++num_detected;
       }
     }
-    return false;
+    if (num_detected > 0) {
+      for (float& reward : rewards) {
+        reward /= num_detected;
+      }
+    }
+    return rewards;
   }
 
   void DrawPoint(int width, int height, float x, float y,
@@ -279,9 +301,13 @@ class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
     }
   }
 
-  void WriteState(float reward) {
+  void WriteState(
+      const std::array<float, searchrescue::kNumSearchers>& rewards) {
     auto state = Allocate();
+    float total_reward = 0.0f;
     for (int searcher = 0; searcher < searchrescue::kNumSearchers; ++searcher) {
+      state["info:searcher_rewards"_][searcher] = rewards[searcher];
+      total_reward += rewards[searcher];
       for (int row = 0; row < searchrescue::kViewRows; ++row) {
         for (int col = 0; col < searchrescue::kViewCols; ++col) {
           state["obs:searcher_views"_](searcher, row, col) = 0.0f;
@@ -306,9 +332,9 @@ class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
       state["obs:positions"_](searcher, 0) = x_[searcher];
       state["obs:positions"_](searcher, 1) = y_[searcher];
     }
-    state["obs:targets_remaining"_] = target_found_ ? 0.0f : 1.0f;
+    state["obs:targets_remaining"_] = targets_remaining_;
     state["obs:step"_] = step_count_;
-    state["reward"_] = reward;
+    state["reward"_] = total_reward;
   }
 };
 

@@ -54,6 +54,11 @@ _PNG_ZLIB_STRATEGIES = (
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--license-dir",
+        type=Path,
+        help="Notices for bundled runtime libraries.",
+    )
     parser.add_argument("wheels", nargs="+", help="Wheel file(s) to optimize.")
     return parser.parse_args()
 
@@ -309,7 +314,7 @@ def _format_bytes(num_bytes: int) -> str:
     return f"{num_bytes / (1024 * 1024):.2f} MiB"
 
 
-def _optimize_wheel(wheel_path: Path) -> None:
+def _optimize_wheel(wheel_path: Path, license_dir: Path | None = None) -> None:
     if not wheel_path.is_file():
         raise FileNotFoundError(f"Wheel not found: {wheel_path}")
 
@@ -317,6 +322,12 @@ def _optimize_wheel(wheel_path: Path) -> None:
     with tempfile.TemporaryDirectory(prefix=wheel_path.stem + ".") as tmp_dir:
         unpack_dir = Path(tmp_dir) / "wheel"
         original_infos = _unpack_wheel(wheel_path, unpack_dir)
+        if license_dir is not None:
+            shutil.copytree(
+                license_dir,
+                _find_dist_info_dir(unpack_dir) / "licenses" / license_dir.name,
+                dirs_exist_ok=True,
+            )
         stripped_binaries, failures = _strip_native_binaries(unpack_dir)
         if failures:
             details = "; ".join(failures)
@@ -341,7 +352,7 @@ def main() -> int:
     """Optimize each wheel passed on the command line."""
     args = _parse_args()
     for wheel in args.wheels:
-        _optimize_wheel(Path(wheel))
+        _optimize_wheel(Path(wheel), args.license_dir)
     return 0
 
 

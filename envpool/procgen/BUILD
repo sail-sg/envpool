@@ -62,6 +62,7 @@ pybind_extension(
     deps = [
         ":procgen_env",
         "//envpool/core:py_envpool",
+        "@qt//:qt_core",
     ],
 )
 

@@ -38,6 +38,8 @@ from typing import Any, ClassVar
 # optional x86 SIMD kernels and its scalar kernel differ by single-ULP amounts,
 # so pin the oracle helper to the portable baseline before NumPy is imported.
 _NUMPY_X86_BASELINE_FEATURE_MASK = (
+    "X86_V3",
+    "X86_V4",
     "AVX",
     "AVX2",
     "FMA3",

@@ -26,8 +26,7 @@ RUN $HOME/go/bin/bazel version
 RUN useradd -ms /bin/zsh github-action
 
 RUN apt-get update \
-    && apt-get install -y clang-format clang-tidy swig qtbase5-dev qtdeclarative5-dev \
+    && apt-get install -y swig qt6-base-dev \
     && rm -rf /var/lib/apt/lists/*
-RUN ln -sf /usr/include/x86_64-linux-gnu/qt5 /usr/include/qt
 
 WORKDIR /app

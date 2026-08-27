@@ -26,17 +26,15 @@ RELEASE_PYTHON ?= $(shell python3 -c 'import sys; print("{}.{}".format(sys.versi
 RELEASE_SETUP_TARGET = //:setup_py$(subst .,,$(RELEASE_PYTHON))
 PYPI_WHEEL_PLAT ?= manylinux_2_28_x86_64
 WHEEL_SIZE_LIMIT_BYTES ?= 100000000
-# Linux wheels use system Qt to avoid vendoring its large Qt/ICU stack.
-# Keep EGL/OpenGL on the system GL dispatch stack too: MuJoCo's GL loader
+WHEEL_LICENSE_DIR ?=
+# Keep EGL/OpenGL on the system GL dispatch stack: MuJoCo's GL loader
 # does not recognize auditwheel's renamed EGL library.
-AUDITWHEEL_EXCLUDE_LIBS ?= libQt5Core.so.5 libQt5Gui.so.5 \
-	libEGL.so.1 libOpenGL.so.0 libGLdispatch.so.0
+AUDITWHEEL_EXCLUDE_LIBS ?= libEGL.so.1 libOpenGL.so.0 libGLdispatch.so.0
 AUDITWHEEL_EXCLUDE_FLAGS = $(foreach lib,$(AUDITWHEEL_EXCLUDE_LIBS),--exclude $(lib))
-CLANG_TIDY_MAJOR = 20
-CLANG_TIDY_BIN = clang-tidy-$(CLANG_TIDY_MAJOR)
+LLVM_VERSION = 22.1.8
+CLANG_TIDY_BIN ?= clang-tidy
 CLANG_FORMAT_BIN ?= clang-format
-CLANG_TIDY_WRAPPER_DIR = $(HOME)/.cache/$(PROJECT_NAME)/bin
-PATH           := $(CLANG_TIDY_WRAPPER_DIR):$(HOME)/go/bin:$(PATH)
+PATH           := $(HOME)/go/bin:$(PATH)
 CLANG_TIDY_TARGET_RESOLVER = python3 scripts/clang_tidy_targets.py
 ifeq ($(OS),Windows_NT)
 BAZEL_RUNFILES_SUFFIX = .exe.runfiles
@@ -78,12 +76,10 @@ cpplint-install:
 	$(call check_install, cpplint)
 
 clang-format-install:
-	command -v $(CLANG_FORMAT_BIN) || sudo apt-get install -y $(CLANG_FORMAT_BIN)
+	python3 -c "from importlib.metadata import version; assert version('clang-format') == '$(LLVM_VERSION)'" || python3 -m pip install "clang-format==$(LLVM_VERSION)"
 
 clang-tidy-install:
-	command -v $(CLANG_TIDY_BIN) || sudo apt-get install -y $(CLANG_TIDY_BIN)
-	mkdir -p $(CLANG_TIDY_WRAPPER_DIR)
-	ln -sf $$(command -v $(CLANG_TIDY_BIN)) $(CLANG_TIDY_WRAPPER_DIR)/clang-tidy
+	python3 -c "from importlib.metadata import version; assert version('clang-tidy') == '$(LLVM_VERSION)'" || python3 -m pip install "clang-tidy==$(LLVM_VERSION)"
 
 doxygen-install:
 	command -v doxygen || (if command -v sudo >/dev/null 2>&1; then sudo apt-get update && sudo apt-get install -y doxygen; else apt-get update && apt-get install -y doxygen; fi)
@@ -170,7 +166,8 @@ clang-tidy: clang-tidy-install bazel-pip-requirement-dev
 		exit 0; \
 	fi; \
 	echo "Running clang-tidy on: $$targets"; \
-	$(BAZEL) build $(BAZELOPT) $$targets --config=clang-tidy --config=test
+	$(BAZEL) build $(BAZELOPT) $$targets --config=clang-tidy --config=test \
+		--action_env=ENVPOOL_CLANG_TIDY_BIN=$$(command -v $(CLANG_TIDY_BIN))
 
 bazel-debug: bazel-install bazel-pip-requirement-dev
 	$(BAZEL) run $(BAZELOPT) //:setup --config=debug -- bdist_wheel
@@ -257,7 +254,7 @@ pypi-wheel: $(PYPI_WHEEL_PREREQS) bazel-release
 	rm -rf wheelhouse
 	CURRENT_WHEEL=$$(ls -Art dist/*.whl | tail -n 1); \
 	$(PYPI_WHEEL_REPAIR_COMMAND)
-	python3 scripts/optimize_wheel.py wheelhouse/*.whl
+	python3 scripts/optimize_wheel.py $(if $(WHEEL_LICENSE_DIR),--license-dir "$(WHEEL_LICENSE_DIR)",) wheelhouse/*.whl
 	python3 scripts/check_wheel_size.py --limit-bytes $(WHEEL_SIZE_LIMIT_BYTES) wheelhouse/*.whl
 
 release-test1:

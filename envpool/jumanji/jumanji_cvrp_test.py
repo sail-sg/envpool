@@ -16,19 +16,24 @@
 from __future__ import annotations
 
 import numpy as np
-from absl.testing import absltest
+from absl.testing import absltest, parameterized
 
 import envpool.jumanji.registration  # noqa: F401
 from envpool.registration import make_gymnasium
 
 
-class JumanjiCVRPTest(absltest.TestCase):
+class JumanjiCVRPTest(parameterized.TestCase):
     """Checks native CVRP transitions."""
 
-    def test_visit_customer_and_return_to_depot(self) -> None:
+    @parameterized.parameters(3, 20, 30)
+    def test_visit_customer_and_return_to_depot(self, capacity: int) -> None:
         """Checks visiting a customer then returning to depot."""
         env = make_gymnasium(
-            "CVRP-v1", num_envs=1, seed=0, render_mode="rgb_array"
+            "CVRP-v1",
+            num_envs=1,
+            seed=0,
+            cvrp_max_capacity=capacity,
+            render_mode="rgb_array",
         )
         try:
             obs, _ = env.reset()
@@ -37,6 +42,7 @@ class JumanjiCVRPTest(absltest.TestCase):
             self.assertTrue(bool(obs["action_mask"][0, 1]))
             self.assertAlmostEqual(float(obs["coordinates"][0, 1, 0]), 0.05)
             self.assertAlmostEqual(float(obs["capacity"][0]), 1.0)
+            self.assertAlmostEqual(float(obs["demands"][0, 1]), 1 / capacity)
 
             obs, reward, terminated, truncated, _ = env.step(
                 np.asarray([1], dtype=np.int32)
@@ -48,7 +54,9 @@ class JumanjiCVRPTest(absltest.TestCase):
             self.assertFalse(bool(obs["unvisited_nodes"][0, 1]))
             self.assertFalse(bool(obs["action_mask"][0, 1]))
             self.assertTrue(bool(obs["action_mask"][0, 0]))
-            self.assertAlmostEqual(float(obs["capacity"][0]), 0.95, places=6)
+            self.assertAlmostEqual(
+                float(obs["capacity"][0]), (capacity - 1) / capacity, places=6
+            )
             self.assertEqual(int(obs["trajectory"][0, 0]), 0)
             self.assertEqual(int(obs["trajectory"][0, 1]), 1)
 

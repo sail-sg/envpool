@@ -20,8 +20,9 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+from pathlib import Path
 
-QT_HINT = "EnvPool Procgen requires the system Qt 5 runtime on Linux."
+QT_HINT = "EnvPool Procgen requires the system Qt runtime on Linux."
 
 
 def _run_child(name: str, code: str) -> None:
@@ -38,6 +39,8 @@ def _run_child(name: str, code: str) -> None:
         )
     if result.returncode == 0:
         print(f"{name}: ok")
+        print(result.stdout, end="")
+        print(result.stderr, file=sys.stderr, end="")
         return
     print(f"{name}: failed", file=sys.stderr)
     print(result.stdout, file=sys.stderr, end="")
@@ -72,6 +75,56 @@ def _present_smoke() -> None:
             env.reset()
         finally:
             env.close()
+        """,
+    )
+    # Reuse the native consistency/pixel and all-task render suites against the
+    # installed wheel. The optional upstream oracle is not a release dependency.
+    for filename, tests in (
+        (
+            "procgen_test.py",
+            [
+                "_ProcgenEnvPoolTest.test_align",
+                "_ProcgenEnvPoolTest.test_channel_first",
+                "_ProcgenEnvPoolTest.test_deterministic",
+            ],
+        ),
+        ("procgen_render_test.py", []),
+    ):
+        test_path = (
+            Path(__file__).resolve().parents[1] / "envpool/procgen" / filename
+        )
+        _run_child(
+            f"qt-present {filename}",
+            f"""
+            import runpy
+            import sys
+
+            sys.argv = {[str(test_path), *tests]!r}
+            runpy.run_path({str(test_path)!r}, run_name="__main__")
+            """,
+        )
+
+
+def _bundled_smoke() -> None:
+    _run_child(
+        "qt-bundled library origins",
+        """
+        from pathlib import Path
+        import envpool
+        from envpool.procgen.procgen_envpool import _qt_version
+
+        assert _qt_version.startswith("6."), _qt_version
+        library_dir = Path(envpool.__file__).resolve().parent.parent / "envpool.libs"
+        loaded = {
+            Path(line.split()[-1]).resolve()
+            for line in Path("/proc/self/maps").read_text().splitlines()
+            if "/libQt" in line
+        }
+        for module in ("Core", "Gui"):
+            paths = {p for p in loaded if p.name.startswith(f"libQt6{module}")}
+            assert paths, f"Qt6{module} was not loaded: {loaded}"
+            assert all(p.parent == library_dir for p in paths), paths
+        print(f"Qt {_qt_version} loaded from {library_dir}")
         """,
     )
 
@@ -120,14 +173,20 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--qt-runtime",
-        choices=("present", "absent"),
+        choices=("present", "absent", "bundled"),
         required=True,
-        help="Whether the platform Qt runtime is expected to be installed.",
+        help="Expected Qt runtime; bundled also checks Linux library origins.",
     )
     args = parser.parse_args()
 
-    if args.qt_runtime == "present":
+    if args.qt_runtime in ("present", "bundled"):
+        if args.qt_runtime == "bundled" and not sys.platform.startswith(
+            "linux"
+        ):
+            raise SystemExit("--qt-runtime=bundled is only valid on Linux")
         _present_smoke()
+        if args.qt_runtime == "bundled":
+            _bundled_smoke()
     else:
         if not sys.platform.startswith("linux"):
             raise SystemExit("--qt-runtime=absent is only valid on Linux")

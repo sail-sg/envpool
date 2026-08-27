@@ -1,0 +1,90 @@
+diff --git a/myosuite/envs/myo/myochallenge/bimanual_v0.py b/myosuite/envs/myo/myochallenge/bimanual_v0.py
+--- a/myosuite/envs/myo/myochallenge/bimanual_v0.py
++++ b/myosuite/envs/myo/myochallenge/bimanual_v0.py
+@@ -102,7 +102,7 @@
+         self.obj_bid = self.id_info.manip_body_id
+         self.obj_sid = self.mj_model.site("touch_site").id
+-        self.obj_gid = self.mj_model.body(self.obj_bid).geomadr + 1
++        self.obj_gid = self.mj_model.body(self.obj_bid).geomadr[0] + 1
+         self.obj_mid = next(
+             i for i in range(self.mj_model.nmesh) if "box" in self.mj_model.mesh(i).name
+         )
+         self.init_obj_z = self.mj_data.site_xpos[self.obj_sid][-1]
+@@ -195,8 +195,8 @@
+         """
+         self.obj_size0 = self.mj_model.geom_size[self.obj_gid].copy()
+         self.obj_vert_addr = np.arange(
+-            self.mj_model.mesh(self.obj_mid).vertadr,
+-            self.mj_model.mesh(self.obj_mid).vertadr + self.mj_model.mesh(0).vertnum,
++            self.mj_model.mesh(self.obj_mid).vertadr[0],
++            self.mj_model.mesh(self.obj_mid).vertadr[0] + self.mj_model.mesh(0).vertnum[0],
+         )
+         q = self.mj_model.geom(self.obj_gid - 1).quat
+         r = R.from_quat([q[1], q[2], q[3], q[0]])
+@@ -563,13 +563,13 @@
+         )
+
+         self.manip_joint_range = np.arange(
+-            model.joint("manip_object/freejoint").qposadr,
+-            model.joint("manip_object/freejoint").qposadr + 7,
++            model.joint("manip_object/freejoint").qposadr[0],
++            model.joint("manip_object/freejoint").qposadr[0] + 7,
+         )
+
+         self.manip_dof_range = np.arange(
+-            model.joint("manip_object/freejoint").dofadr,
+-            model.joint("manip_object/freejoint").dofadr + 6,
++            model.joint("manip_object/freejoint").dofadr[0],
++            model.joint("manip_object/freejoint").dofadr[0] + 6,
+         )
+
+         self.start_id = model.body("start").id
+diff --git a/myosuite/envs/myo/myochallenge/chasetag_v0.py b/myosuite/envs/myo/myochallenge/chasetag_v0.py
+--- a/myosuite/envs/myo/myochallenge/chasetag_v0.py
++++ b/myosuite/envs/myo/myochallenge/chasetag_v0.py
+@@ -641,11 +641,11 @@
+         win_cdt = self._win_condition()
+         lose_cdt = self._lose_condition()
+         if self.current_task.name == "CHASE":
+-            score = self._get_score(float(self.obs_dict["time"])) if win_cdt else 0
++            score = self._get_score(float(np.asarray(self.obs_dict["time"]).item())) if win_cdt else 0
+             self.obs_dict["time"] = self.maxTime if lose_cdt else self.obs_dict["time"]
+         elif self.current_task.name == "EVADE":
+             score = (
+-                self._get_score(float(self.obs_dict["time"]))
++                self._get_score(float(np.asarray(self.obs_dict["time"]).item()))
+                 if (win_cdt or lose_cdt)
+                 else 0
+             )
+diff --git a/myosuite/envs/myo/myochallenge/soccer_v0.py b/myosuite/envs/myo/myochallenge/soccer_v0.py
+--- a/myosuite/envs/myo/myochallenge/soccer_v0.py
++++ b/myosuite/envs/myo/myochallenge/soccer_v0.py
+@@ -458,7 +458,7 @@
+                 # Example: simple distance function
+                 # Optional Keys
+                 ("goal_scored", float(goal_scored)),
+-                ("time_cost", float(self.obs_dict["time"])),
++                ("time_cost", float(np.asarray(self.obs_dict["time"]).item())),
+                 ("act_reg", act_mag),
+                 ("pain", pain),
+                 # Must keys
+@@ -562,16 +562,16 @@
+         # Add some noise to the joints
+         for jnt in self.myo_joints:
+             self.mj_data.joint(jnt).qpos[0] += self.np_random.uniform(
+-                -np.abs(self.rnd_joint_noise), np.abs(self.rnd_joint_noise), size=(1,)
++                -np.abs(self.rnd_joint_noise), np.abs(self.rnd_joint_noise)
+             )
+
+         # Body start position randomizations
+         # Treatment for root joint is different
+         self.mj_data.joint("root").qpos[0] += self.np_random.uniform(
+-            -np.abs(self.rnd_pos_noise), 0, size=(1,)
++            -np.abs(self.rnd_pos_noise), 0
+         )  # Only allow body to move behind the ball, not in front
+         self.mj_data.joint("root").qpos[1] += self.np_random.uniform(
+-            -np.abs(self.rnd_pos_noise), np.abs(self.rnd_pos_noise), size=(1,)
++            -np.abs(self.rnd_pos_noise), np.abs(self.rnd_pos_noise)
+         )  # Y-direction movement allowable
+
+         return self.mj_data.qpos.copy(), self.mj_data.qvel.copy()

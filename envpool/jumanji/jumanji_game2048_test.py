@@ -90,17 +90,19 @@ class JumanjiGame2048Test(absltest.TestCase):
             ],
             dtype=np.int32,
         )
-        env = make_gymnasium(
-            "Game2048-v1",
-            num_envs=1,
-            seed=0,
-            game2048_initial_board=",".join(map(str, initial.reshape(-1))),
-            game2048_add_random_cell=False,
-            render_mode="rgb_array",
-        )
+        options = {
+            "num_envs": 1,
+            "seed": 0,
+            "game2048_initial_board": ",".join(map(str, initial.reshape(-1))),
+            "game2048_add_random_cell": False,
+            "render_mode": "rgb_array",
+        }
+        env = make_gymnasium("Game2048-v1", **options)
+        async_env = make_gymnasium("Game2048-v1", **options)
         try:
             board = np.array(initial, copy=True)
             obs, info = env.reset()
+            async_env.reset()
             np.testing.assert_array_equal(obs["board"][0], board)
             np.testing.assert_array_equal(
                 obs["action_mask"][0], _action_mask(board)
@@ -112,6 +114,8 @@ class JumanjiGame2048Test(absltest.TestCase):
                 obs, reward, terminated, truncated, info = env.step(
                     np.asarray([action], dtype=np.int32)
                 )
+                async_env.send(np.asarray([action], dtype=np.int32))
+                async_env.recv()
                 np.testing.assert_array_equal(obs["board"][0], board)
                 np.testing.assert_array_equal(
                     obs["action_mask"][0], _action_mask(board)
@@ -128,10 +132,15 @@ class JumanjiGame2048Test(absltest.TestCase):
             frame = env.render(env_ids=np.asarray([0], dtype=np.int32))
 
             assert frame is not None
+            # Both APIs must accumulate each merge's score only once.
+            np.testing.assert_array_equal(
+                frame, async_env.render(env_ids=np.asarray([0], dtype=np.int32))
+            )
             self.assertEqual(frame.shape, (1, 256, 256, 3))
             self.assertGreater(int(frame.max() - frame.min()), 0)
         finally:
             env.close()
+            async_env.close()
 
     def test_seeded_reset_is_deterministic(self) -> None:
         """Checks seeded resets produce identical boards."""
