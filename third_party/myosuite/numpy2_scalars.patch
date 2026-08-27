@@ -68,3 +68,23 @@ diff --git a/myosuite/envs/myo/myochallenge/soccer_v0.py b/myosuite/envs/myo/myo
                  ("act_reg", act_mag),
                  ("pain", pain),
                  # Must keys
+@@ -562,16 +562,16 @@
+         # Add some noise to the joints
+         for jnt in self.myo_joints:
+             self.mj_data.joint(jnt).qpos[0] += self.np_random.uniform(
+-                -np.abs(self.rnd_joint_noise), np.abs(self.rnd_joint_noise), size=(1,)
++                -np.abs(self.rnd_joint_noise), np.abs(self.rnd_joint_noise)
+             )
+ 
+         # Body start position randomizations
+         # Treatment for root joint is different
+         self.mj_data.joint("root").qpos[0] += self.np_random.uniform(
+-            -np.abs(self.rnd_pos_noise), 0, size=(1,)
++            -np.abs(self.rnd_pos_noise), 0
+         )  # Only allow body to move behind the ball, not in front
+         self.mj_data.joint("root").qpos[1] += self.np_random.uniform(
+-            -np.abs(self.rnd_pos_noise), np.abs(self.rnd_pos_noise), size=(1,)
++            -np.abs(self.rnd_pos_noise), np.abs(self.rnd_pos_noise)
+         )  # Y-direction movement allowable
+ 
+         return self.mj_data.qpos.copy(), self.mj_data.qvel.copy()

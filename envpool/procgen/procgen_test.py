@@ -19,6 +19,7 @@ from typing import Any, cast
 import numpy as np
 from absl import logging
 from absl.testing import absltest
+from envpool.procgen.procgen_envpool import _qt_version
 
 from envpool.procgen.registration import distribution, procgen_game_config
 from envpool.registration import make_gym
@@ -186,6 +187,9 @@ class _ProcgenEnvPoolTest(absltest.TestCase):
         self.assertEqual(info["level_seed"][0], 1263407424)
         self.assertEqual(info["prev_level_complete"][0], 0)
         pixel_mean_ref = [144.37373564, 150.09581459, 177.80634478]
+        if _qt_version.startswith("6."):
+            # Qt 6 rasterizes the same CoinRun trajectory differently from Qt 5.
+            pixel_mean_ref = [144.527015, 150.136006, 177.757678]
         pixel_mean = (sum_obs / cnt).mean(axis=0).mean(axis=0)  # type: ignore
         # Apple Silicon renders the same trajectory with sub-1e-3 pixel drift.
         np.testing.assert_allclose(
