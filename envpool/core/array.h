@@ -228,6 +228,8 @@ class TArray : public Array {
   /**
    * Index operator of array, takes the index along the first axis.
    */
+  // Preserve the typed wrapper API while forwarding to Array.
+  // NOLINTBEGIN(bugprone-derived-method-shadowing-base-method)
   TArray operator[](int index) const { return this->operator()(index); }
 
   /**
@@ -295,6 +297,7 @@ class TArray : public Array {
     TArray ret(ptr_, std::move(new_shape), element_size);
     return ret;
   }
+  // NOLINTEND(bugprone-derived-method-shadowing-base-method)
 };
 
 #endif  // ENVPOOL_CORE_ARRAY_H_

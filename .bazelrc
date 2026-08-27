@@ -31,6 +31,9 @@ test:macos --test_env=PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/s
 
 build:windows --cxxopt=/std:c++20
 build:windows --host_cxxopt=/std:c++20
+# Qt 6 checks the standard through __cplusplus, not MSVC's legacy value.
+build:windows --cxxopt=/Zc:__cplusplus
+build:windows --host_cxxopt=/Zc:__cplusplus
 build:windows --action_env=BAZEL_SH
 build:windows --repo_env=BAZEL_SH
 build:windows --@rules_python//python/config_settings:bootstrap_impl=script

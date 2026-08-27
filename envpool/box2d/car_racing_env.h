@@ -69,8 +69,8 @@ class CarRacingBox2dEnv : public RenderableEnv {
 
   const float kGrassDim = kPlayfiled / 20;
   const float kMaxShapeDim =
-      std::max(kGrassDim, std::max(kTrackWidth, kTrackDetailStep)) * sqrt(2.f) *
-      kZoom * kScale;
+      std::max({kGrassDim, kTrackWidth, kTrackDetailStep}) * sqrt(2.f) * kZoom *
+      kScale;
   const int kCheckPoint = 12;
 
   friend class CarRacingFrictionDetector;

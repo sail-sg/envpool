@@ -93,7 +93,7 @@ class StateBufferQueue {
           auto buffer = std::make_unique<StateBuffer>(batch_, max_num_players_,
                                                       specs_, is_player_state_);
           {
-            std::lock_guard<std::mutex> lock(stock_buffer_put_mu_);
+            std::scoped_lock lock(stock_buffer_put_mu_);
             stock_buffer_.Put(std::move(buffer));
           }
           if (quit_) {
