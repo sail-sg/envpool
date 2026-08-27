@@ -143,7 +143,7 @@ def _check_asset_package(
     distribution: str, module_name: str, rels: list[str]
 ) -> None:
     asset_version = Version(version(distribution))
-    if not Version("0.3.0") <= asset_version < Version("0.4.0"):
+    if not Version("0.4.0") <= asset_version < Version("0.5.0"):
         raise RuntimeError(
             f"unexpected {distribution} version: {asset_version}"
         )

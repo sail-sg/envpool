@@ -6,6 +6,11 @@ Python 3.12-3.14 in ``manylinux_2_28_x86_64`` and
 ``manylinux_2_28_aarch64`` environments for Linux, on ``macos-14`` for
 macOS, and on ``windows-2022`` for Windows.
 
+Runtime data ships in the three ``envpool-assets*`` packages from the ``0.4.x``
+compatibility line, including the updated MyoSuite and Playground models.
+The main wheel requires this asset version line; older EnvPool releases remain
+on ``0.3.x`` so they do not automatically receive the new models.
+
 We use `bazel <https://bazel.build/>`_ to build EnvPool. Comparing with
 `pip <https://pip.pypa.io/>`_, using Bazel to build python package with C++ .so
 files has some advantages:
