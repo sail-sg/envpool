@@ -23,21 +23,21 @@ diff --git a/myosuite/envs/myo/myochallenge/bimanual_v0.py b/myosuite/envs/myo/m
          r = R.from_quat([q[1], q[2], q[3], q[0]])
 @@ -563,13 +563,13 @@
          )
- 
+
          self.manip_joint_range = np.arange(
 -            model.joint("manip_object/freejoint").qposadr,
 -            model.joint("manip_object/freejoint").qposadr + 7,
 +            model.joint("manip_object/freejoint").qposadr[0],
 +            model.joint("manip_object/freejoint").qposadr[0] + 7,
          )
- 
+
          self.manip_dof_range = np.arange(
 -            model.joint("manip_object/freejoint").dofadr,
 -            model.joint("manip_object/freejoint").dofadr + 6,
 +            model.joint("manip_object/freejoint").dofadr[0],
 +            model.joint("manip_object/freejoint").dofadr[0] + 6,
          )
- 
+
          self.start_id = model.body("start").id
 diff --git a/myosuite/envs/myo/myochallenge/chasetag_v0.py b/myosuite/envs/myo/myochallenge/chasetag_v0.py
 --- a/myosuite/envs/myo/myochallenge/chasetag_v0.py
@@ -75,7 +75,7 @@ diff --git a/myosuite/envs/myo/myochallenge/soccer_v0.py b/myosuite/envs/myo/myo
 -                -np.abs(self.rnd_joint_noise), np.abs(self.rnd_joint_noise), size=(1,)
 +                -np.abs(self.rnd_joint_noise), np.abs(self.rnd_joint_noise)
              )
- 
+
          # Body start position randomizations
          # Treatment for root joint is different
          self.mj_data.joint("root").qpos[0] += self.np_random.uniform(
@@ -86,5 +86,5 @@ diff --git a/myosuite/envs/myo/myochallenge/soccer_v0.py b/myosuite/envs/myo/myo
 -            -np.abs(self.rnd_pos_noise), np.abs(self.rnd_pos_noise), size=(1,)
 +            -np.abs(self.rnd_pos_noise), np.abs(self.rnd_pos_noise)
          )  # Y-direction movement allowable
- 
+
          return self.mj_data.qpos.copy(), self.mj_data.qvel.copy()

@@ -10,7 +10,7 @@ cooperative reward. Individual rewards are available in
 
 .. note::
 
-   Some existing Jumanji oracle fixtures preload short state/reward trajectories
+   Some existing Jumanji oracle fixtures load short state/reward trajectories
    for replay. Those checks cover replay and rendering compatibility, not
    arbitrary-action semantic alignment. Native rule and determinism tests run
    separately; full action-driven oracle coverage is still pending.

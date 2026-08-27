@@ -6,7 +6,7 @@ See https://github.com/openai/procgen/tree/0.10.7
 
 .. note::
 
-   Procgen source builds prefer Qt 6. Linux manylinux 2.28 wheels still use Qt 5
+   Procgen source builds prefer Qt 6. Linux ``manylinux_2_28`` wheels still use Qt 5
    and do not vendor the Qt runtime; if
    making a Procgen environment reports missing ``libQt5Core.so.5`` or
    ``libQt5Gui.so.5``, install the system Qt 5 runtime, for example with

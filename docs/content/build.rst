@@ -75,7 +75,7 @@ EnvPool source builds share a few common requirements across platforms:
 - **Java 17**
 - **Go >= 1.22** plus ``bazelisk`` / ``bazel``
 - **SWIG**
-- **Qt 6** (Qt 5 is also supported for manylinux 2.28 builds)
+- **Qt 6** (Qt 5 is also supported for ``manylinux_2_28`` builds)
 
 The default build and test shortcuts in this repo use **Bazel 9.2.0** via
 ``bazelisk``. Bazel dependencies are configured as modules in
@@ -148,7 +148,7 @@ tests and before the GLFW-backed render path.
 Graphics runtime in wheels
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Linux manylinux 2.28 wheels still use Qt 5 because the AlmaLinux 8 build image
+Linux ``manylinux_2_28`` wheels still use Qt 5 because the AlmaLinux 8 build image
 does not provide Qt 6 packages. They exclude the Qt shared libraries used by
 Procgen (``libQt5Core.so.5`` and ``libQt5Gui.so.5``) from ``auditwheel``
 repair. Bundling those libraries also pulls in a large Qt / ICU runtime stack,
