@@ -26,12 +26,10 @@ RELEASE_PYTHON ?= $(shell python3 -c 'import sys; print("{}.{}".format(sys.versi
 RELEASE_SETUP_TARGET = //:setup_py$(subst .,,$(RELEASE_PYTHON))
 PYPI_WHEEL_PLAT ?= manylinux_2_28_x86_64
 WHEEL_SIZE_LIMIT_BYTES ?= 100000000
-# Linux wheels use system Qt to avoid vendoring its large Qt/ICU stack.
-# Keep EGL/OpenGL on the system GL dispatch stack too: MuJoCo's GL loader
+WHEEL_LICENSE_DIR ?=
+# Keep EGL/OpenGL on the system GL dispatch stack: MuJoCo's GL loader
 # does not recognize auditwheel's renamed EGL library.
-AUDITWHEEL_EXCLUDE_LIBS ?= libQt5Core.so.5 libQt5Gui.so.5 \
-	libQt6Core.so.6 libQt6Gui.so.6 \
-	libEGL.so.1 libOpenGL.so.0 libGLdispatch.so.0
+AUDITWHEEL_EXCLUDE_LIBS ?= libEGL.so.1 libOpenGL.so.0 libGLdispatch.so.0
 AUDITWHEEL_EXCLUDE_FLAGS = $(foreach lib,$(AUDITWHEEL_EXCLUDE_LIBS),--exclude $(lib))
 LLVM_VERSION = 22.1.8
 CLANG_TIDY_BIN ?= clang-tidy
@@ -256,7 +254,7 @@ pypi-wheel: $(PYPI_WHEEL_PREREQS) bazel-release
 	rm -rf wheelhouse
 	CURRENT_WHEEL=$$(ls -Art dist/*.whl | tail -n 1); \
 	$(PYPI_WHEEL_REPAIR_COMMAND)
-	python3 scripts/optimize_wheel.py wheelhouse/*.whl
+	python3 scripts/optimize_wheel.py $(if $(WHEEL_LICENSE_DIR),--license-dir "$(WHEEL_LICENSE_DIR)",) wheelhouse/*.whl
 	python3 scripts/check_wheel_size.py --limit-bytes $(WHEEL_SIZE_LIMIT_BYTES) wheelhouse/*.whl
 
 release-test1:

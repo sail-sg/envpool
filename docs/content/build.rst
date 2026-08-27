@@ -80,7 +80,7 @@ EnvPool source builds share a few common requirements across platforms:
 - **Java 17**
 - **Go >= 1.22** plus ``bazelisk`` / ``bazel``
 - **SWIG**
-- **Qt 6** (Qt 5 is also supported for ``manylinux_2_28`` builds)
+- **Qt 6** (Qt 5 is also supported for source builds)
 
 The default build and test shortcuts in this repo use **Bazel 9.2.0** via
 ``bazelisk``. Bazel dependencies are configured as modules in
@@ -153,12 +153,25 @@ tests and before the GLFW-backed render path.
 Graphics runtime in wheels
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Linux ``manylinux_2_28`` wheels still use Qt 5 because the AlmaLinux 8 build image
-does not provide Qt 6 packages. They exclude the Qt shared libraries used by
-Procgen (``libQt5Core.so.5`` and ``libQt5Gui.so.5``) from ``auditwheel``
-repair. Bundling those libraries also pulls in a large Qt / ICU runtime stack,
-so Procgen users on Linux should install the system Qt 5 runtime instead, for
-example with ``apt install qtbase5-dev`` or ``dnf install qt5-qtbase``.
+Linux ``manylinux_2_28`` wheels bundle Qt 6.11.1 ``QtCore``/``QtGui`` through ``auditwheel``.
+``third_party/qt/build_release.sh`` builds the shared libraries from the pinned
+official sources inside each architecture's AlmaLinux 8 image, preserving the
+``glibc 2.28`` baseline. Procgen only needs raster drawing and PNG decoding, so this
+build omits ICU, window-system backends, fonts, and unused Qt modules. End users
+do not need a separate Qt installation. Release tests run with the build SDK
+moved out of its install path and check that Qt is loaded from the wheel.
+
+The bundled Qt libraries use LGPLv3. Their license texts, component notices,
+source URL, checksum, and build configuration are included under the wheel's
+``.dist-info/licenses/qt6`` directory. For a local ``manylinux`` release build, run:
+
+.. code-block:: bash
+
+    python3 -m pip install --upgrade cmake ninja
+    bash third_party/qt/build_release.sh /opt/envpool-qt6
+    export BAZEL_RULES_QT_DIR=/opt/envpool-qt6
+    export WHEEL_LICENSE_DIR=/opt/envpool-qt6/licenses/qt6
+    make pypi-wheel
 
 Windows release wheels currently bundle the Qt runtime DLLs required by
 Procgen (``Qt6Core.dll`` and ``Qt6Gui.dll``) directly next to
@@ -177,7 +190,7 @@ loader needs to recognize. For Mesa on Ubuntu, install
 
 Source builds prefer a local Qt 6 installation; Qt 5 remains supported when
 Qt 6 is unavailable. Set ``BAZEL_RULES_QT_DIR`` to select a specific install.
-Linux and macOS continue to rely on system Qt packages at build time.
+Source builds can use system Qt packages or a custom installation prefix.
 
 Install CUDA to enable XLA: see https://developer.nvidia.com/cuda-downloads
 

@@ -10,9 +10,15 @@ WORKDIR $HOME
 
 RUN dnf install -y \
     git curl wget zsh gcc gcc-c++ make tmux golang java-17-openjdk-devel \
-    qt5-qtbase-devel qt5-qtdeclarative-devel perl-IO-Compress \
+    perl-IO-Compress mesa-libEGL-devel mesa-libGL-devel libglvnd-devel mesa-dri-drivers \
     && dnf clean all
-RUN ln -sf "$(qmake-qt5 -query QT_INSTALL_HEADERS)" /usr/include/qt
+
+ENV PATH=/opt/python/cp312-cp312/bin:$PATH
+RUN python3 -m pip install --upgrade cmake ninja
+COPY third_party/qt/build_release.sh /tmp/build_qt_release.sh
+RUN bash /tmp/build_qt_release.sh /opt/envpool-qt6
+ENV BAZEL_RULES_QT_DIR=/opt/envpool-qt6
+ENV WHEEL_LICENSE_DIR=/opt/envpool-qt6/licenses/qt6
 
 RUN go install github.com/bazelbuild/bazelisk@latest && ln -sf $HOME/go/bin/bazelisk $HOME/go/bin/bazel
 

@@ -36,6 +36,7 @@ def _resolve_qt_include_dir(repository_ctx, raw_path):
 def _resolve_qt_lib_dir(repository_ctx, raw_path, include_dir):
     candidates = [
         raw_path + "/lib",
+        raw_path + "/lib64",
         include_dir + "/../lib",
     ]
     for candidate in candidates:
@@ -217,7 +218,10 @@ def _qt_autoconf_impl(repository_ctx):
     }
 
     if "linux" in os_name:
-        linkopts["qt_core"] = ["-lQt%sCore" % major]
+        # Release builds install Qt under a private prefix inside manylinux.
+        # The rpath also lets auditwheel locate the libraries for bundling.
+        search_opts = ["-L%s" % lib_dir, "-Wl,-rpath,%s" % lib_dir] if lib_dir else []
+        linkopts["qt_core"] = search_opts + ["-lQt%sCore" % major]
         linkopts["qt_gui"] = ["-lQt%sGui" % major]
     elif include_dir and lib_dir:
         if _has_qt_framework(repository_ctx, lib_dir, "QtCore") and _has_qt_framework(repository_ctx, lib_dir, "QtGui"):
