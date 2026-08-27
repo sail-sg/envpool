@@ -229,12 +229,13 @@ class TArray : public Array {
    * Index operator of array, takes the index along the first axis.
    */
   // Preserve the typed wrapper API while forwarding to Array.
-  // NOLINTBEGIN(bugprone-derived-method-shadowing-base-method)
+  // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
   TArray operator[](int index) const { return this->operator()(index); }
 
   /**
    * Take a slice at the first axis of the Array.
    */
+  // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
   [[nodiscard]] TArray Slice(std::size_t start, std::size_t end) const {
     return TArray(Array::Slice(start, end));
   }
@@ -242,6 +243,7 @@ class TArray : public Array {
   /**
    * Copy the content of another Array to this Array.
    */
+  // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
   void Assign(const TArray& value) const { Array::Assign(value); }
   void Assign(const Array& value) const { Array::Assign(value); }
 
@@ -291,13 +293,13 @@ class TArray : public Array {
    * Truncate the Array. Return a new Array that shares the same memory
    * location but with a truncated shape.
    */
+  // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
   [[nodiscard]] TArray Truncate(std::size_t end) const {
     auto new_shape = std::vector<std::size_t>(shape_);
     new_shape[0] = end;
     TArray ret(ptr_, std::move(new_shape), element_size);
     return ret;
   }
-  // NOLINTEND(bugprone-derived-method-shadowing-base-method)
 };
 
 #endif  // ENVPOOL_CORE_ARRAY_H_
