@@ -286,7 +286,7 @@
   "moduleExtensions": {
     "//envpool:workspace0.bzl%repositories": {
       "general": {
-        "bzlTransitiveDigest": "Rr1iqCrCjvkOFgcAPKCdzKh98KLNebqX+b5bUyJUlvE=",
+        "bzlTransitiveDigest": "t1CJj+68JGwjVM/txu7pKFqoU3onrKclfM/NSKQpFz4=",
         "usagesDigest": "SajRKIR8nOGpEzuKj8QlLVuws2HdnARUg1NP1i0Q7/M=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
