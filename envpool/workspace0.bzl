@@ -16,6 +16,7 @@
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
+load("//third_party/craftax:repo.bzl", "craftax_archive")
 load("//third_party/cuda:cuda.bzl", "cuda_configure")
 load("//third_party/freedoom:defs.bzl", "freedoom_archive")
 load("//third_party/gfootball:repo.bzl", "gfootball_archive")
@@ -24,6 +25,8 @@ load("//third_party/vizdoom:repo.bzl", "vizdoom_archive")
 
 def workspace():
     """Load requested packages."""
+
+    craftax_archive()
 
     maybe(
         http_archive,

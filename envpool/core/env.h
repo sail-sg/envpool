@@ -200,6 +200,10 @@ class Env {
   virtual bool IsDone() { throw std::runtime_error("is_done not implemented"); }
 
  protected:
+  // Same-step autoreset implementations publish the terminal transition before
+  // restarting this counter for the next external action.
+  void ResetStepCount() { current_step_ = 0; }
+
   virtual int CurrentMaxEpisodeSteps() const {
     return spec_.config["max_episode_steps"_];
   }

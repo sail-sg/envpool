@@ -24,6 +24,7 @@
 - [x] [MyoSuite](https://envpool.readthedocs.io/en/latest/env/myosuite.html)
 - [x] [PGX](https://envpool.readthedocs.io/en/latest/env/pgx.html)
 - [x] [Jumanji](https://envpool.readthedocs.io/en/latest/env/jumanji.html)
+- [x] [Craftax and Craftax Classic](https://envpool.readthedocs.io/en/latest/env/craftax.html)
 - [x] [MuJoCo Playground](https://envpool.readthedocs.io/en/latest/env/mujoco_playground.html)
 
 Here are EnvPool's several highlights:

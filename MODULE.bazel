@@ -95,8 +95,14 @@ pip.parse(
     python_version = "3.12",
     requirements_lock = "//third_party/myosuite:oracle_requirements.txt",
 )
+pip.parse(
+    hub_name = "c",
+    python_version = "3.12",
+    requirements_lock = "//third_party/craftax:oracle_requirements.txt",
+)
 use_repo(
     pip,
+    craftax_oracle_requirements = "c",
     jumanji_oracle_requirements = "j",
     myosuite_oracle_requirements = "m",
     pip_requirements = "p",
@@ -114,6 +120,7 @@ use_repo(
     "com_google_absl",
     "com_google_googletest",
     "concurrentqueue",
+    "craftax_upstream",
     "cuda",
     "freedoom",
     "freetype",
