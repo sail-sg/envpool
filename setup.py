@@ -62,8 +62,9 @@ class BuildPy(build_py):
             )
 
         qt_bin = Path(qt_root) / "bin"
+        qt_major = "6" if (qt_bin / "Qt6Core.dll").is_file() else "5"
         # Python 3.8+ no longer resolves extension DLL dependencies from PATH.
-        for dll_name in ("Qt5Core.dll", "Qt5Gui.dll"):
+        for dll_name in (f"Qt{qt_major}Core.dll", f"Qt{qt_major}Gui.dll"):
             source = qt_bin / dll_name
             if not source.is_file():
                 raise FileNotFoundError(

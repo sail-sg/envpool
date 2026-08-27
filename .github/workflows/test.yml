@@ -46,11 +46,8 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-tidy-20 cmake lcov ninja-build swig qtbase5-dev qtdeclarative5-dev libegl1-mesa-dev libopengl-dev
+          sudo apt-get install -y cmake lcov ninja-build swig qt6-base-dev libegl1-mesa-dev libopengl-dev
           python -m pip install --upgrade cmake
-          qmake_bin="$(command -v qmake-qt5 || command -v qmake)"
-          qt_include_dir="$("$qmake_bin" -query QT_INSTALL_HEADERS)"
-          sudo ln -sfn "$qt_include_dir" /usr/include/qt
       - name: Restore Bazel caches
         uses: actions/cache/restore@v6
         with:
@@ -167,11 +164,8 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-20 clang-tidy-20 cmake lcov ninja-build swig qtbase5-dev qtdeclarative5-dev libegl1-mesa-dev libopengl-dev
+          sudo apt-get install -y clang-20 cmake lcov ninja-build swig qt6-base-dev libegl1-mesa-dev libopengl-dev
           python -m pip install --upgrade cmake
-          qmake_bin="$(command -v qmake-qt5 || command -v qmake)"
-          qt_include_dir="$("$qmake_bin" -query QT_INSTALL_HEADERS)"
-          sudo ln -sfn "$qt_include_dir" /usr/include/qt
       - name: Restore Bazel caches
         uses: actions/cache/restore@v6
         with:
@@ -243,7 +237,7 @@ jobs:
           python-version: "3.12"
       - name: Install macOS dependencies
         run: |
-          brew install ninja swig qt@5
+          brew install ninja swig qtbase
           python -m pip install --upgrade cmake
           CMAKE_BIN_DIR="$(python -c "import cmake; print(cmake.CMAKE_BIN_DIR)")"
           CMAKE_BIN="$CMAKE_BIN_DIR/cmake"
@@ -251,7 +245,7 @@ jobs:
           sudo ln -sfn "$CMAKE_BIN" /usr/local/bin/cmake
           PATH="$CMAKE_BIN_DIR:$PATH" cmake --version
           sudo ln -sfn "$(brew --prefix ninja)/bin/ninja" /usr/local/bin/ninja
-          echo "BAZEL_RULES_QT_DIR=$(brew --prefix qt@5)" >> "$GITHUB_ENV"
+          echo "BAZEL_RULES_QT_DIR=$(brew --prefix qtbase)" >> "$GITHUB_ENV"
       - name: Restore Bazel caches
         uses: actions/cache/restore@v6
         with:
@@ -348,11 +342,11 @@ jobs:
         run: |
           Add-Content -Path $env:GITHUB_ENV -Value "ENVPOOL_DLL_DIR=$env:GITHUB_WORKSPACE\.mesa"
           Add-Content -Path $env:GITHUB_PATH -Value "$env:GITHUB_WORKSPACE\.mesa"
-      - name: Install Qt 5
+      - name: Install Qt 6
         uses: jurplel/install-qt-action@v4
         with:
-          version: "5.15.2"
-          arch: "win64_msvc2019_64"
+          version: "6.11.1"
+          arch: "win64_msvc2022_64"
           set-env: "true"
       - name: Export Qt location
         shell: pwsh

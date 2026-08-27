@@ -56,12 +56,12 @@ def workspace():
         http_archive,
         name = "openxla_ffi_headers",
         build_file = "//third_party/openxla_ffi:ffi_api.BUILD",
-        sha256 = "753df38eab0d430da20e614316401663bcfca433905b976745a6e59998635ce8",
-        strip_prefix = "xla-187a5eb58277a85847d1516bd1e20b7faf03d5ef/xla/ffi/api",
+        sha256 = "4c89ecfff5a662a6edfb4e2d403fedf55be40a3a0079e3c2f8ba47b37c16eaab",
+        strip_prefix = "xla-dcf304bc5dca1932b99f740b911dbd73631a1a69/xla/ffi/api",
         type = "tar.gz",
         urls = [
-            "https://codeload.github.com/openxla/xla/tar.gz/187a5eb58277a85847d1516bd1e20b7faf03d5ef",
-            "https://github.com/openxla/xla/archive/187a5eb58277a85847d1516bd1e20b7faf03d5ef.tar.gz",
+            "https://codeload.github.com/openxla/xla/tar.gz/dcf304bc5dca1932b99f740b911dbd73631a1a69",
+            "https://github.com/openxla/xla/archive/dcf304bc5dca1932b99f740b911dbd73631a1a69.tar.gz",
         ],
     )
 
@@ -419,10 +419,10 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "qhull",
-        sha256 = "78029ba5d4276fab14df5ef54dd8b72a3c835ef400db022373b3488999bb6c38",
-        strip_prefix = "qhull-62ccc56af071eaa478bef6ed41fd7a55d3bb2d80",
+        sha256 = "421177cc21a7dcb4c1bbc51f65bc16f21d1f157814116bb5c341d694e23d154d",
+        strip_prefix = "qhull-d1c2fc0caa5f644f3a0f220290d4a868c68ed4f6",
         urls = [
-            "https://github.com/qhull/qhull/archive/62ccc56af071eaa478bef6ed41fd7a55d3bb2d80.tar.gz",
+            "https://github.com/qhull/qhull/archive/d1c2fc0caa5f644f3a0f220290d4a868c68ed4f6.tar.gz",
         ],
         build_file = "//third_party/qhull:qhull.BUILD",
     )
@@ -495,6 +495,8 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "myosuite_source",
+        patch_args = ["-p1"],
+        patches = ["//third_party/myosuite:numpy2_scalars.patch"],
         sha256 = "9fc2c610c5d71d2640cc75a0ea989c4f864622b49f67d38bfe7f1f6623396257",
         strip_prefix = "myosuite-2.12.2",
         urls = [
@@ -507,6 +509,8 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "myosuite_myo_sim",
+        # MyoSuite 2.12.2 still includes the legacy hand/elbow XML fragments.
+        # myo_sim 0.2 replaces them with MjSpec composition, so keep its gitlink.
         sha256 = "bd8fdf313b46dbefcd25bf42cf8ddcc45066798164bb3551a990690cad514ebd",
         strip_prefix = "myo_sim-33f3ded946f55adbdcf963c99999587aadaf975f",
         urls = [
@@ -519,13 +523,13 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "myosuite_object_sim",
-        sha256 = "beed226fcf1d27b91f9147221ef450c2ccab8e5bb7b5954dbcb5635024ed4874",
-        strip_prefix = "object_sim-0.1.0",
+        sha256 = "70ec63c83dc11d7c9f597b91daec5b40f94d6c09ccd2127b61b7efec99d2ca5b",
+        strip_prefix = "object_sim-0.1.1",
         urls = [
             # MyoSuite v2.12.2 gitlinks vikashplus/object_sim@87cd8dd, but
             # that commit is no longer fetchable from GitHub archives.
-            "https://github.com/MyoHub/object_sim/archive/refs/tags/v0.1.0.tar.gz",
-            "https://codeload.github.com/MyoHub/object_sim/tar.gz/refs/tags/v0.1.0",
+            "https://github.com/MyoHub/object_sim/archive/refs/tags/v0.1.1.tar.gz",
+            "https://codeload.github.com/MyoHub/object_sim/tar.gz/refs/tags/v0.1.1",
         ],
         build_file = "//third_party/myosuite:simhive_source.BUILD",
     )
@@ -545,11 +549,11 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
     maybe(
         http_archive,
         name = "myosuite_ycb_sim",
-        sha256 = "81caf29e5b5c01b4af56991731b3f731a95d486addccafaaaedc7600a9f2437e",
-        strip_prefix = "YCB_sim-46edd9c361061c5d81a82f2511d4fbf76fead569",
+        sha256 = "200ea58c4d4add1eabf68ee735c88a6cb8503d518b9c3bc6b0ce3ad7ee845ccf",
+        strip_prefix = "YCB_sim-57546b87f4724c947eadd4241a7892473febb88d",
         urls = [
-            "https://github.com/vikashplus/YCB_sim/archive/46edd9c361061c5d81a82f2511d4fbf76fead569.tar.gz",
-            "https://codeload.github.com/vikashplus/YCB_sim/tar.gz/46edd9c361061c5d81a82f2511d4fbf76fead569",
+            "https://github.com/vikashplus/YCB_sim/archive/57546b87f4724c947eadd4241a7892473febb88d.tar.gz",
+            "https://codeload.github.com/vikashplus/YCB_sim/tar.gz/57546b87f4724c947eadd4241a7892473febb88d",
         ],
         build_file = "//third_party/myosuite:simhive_source.BUILD",
     )
@@ -576,6 +580,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
             "//third_party/mujoco_playground:apollo_mesh_paths.patch",
             "//third_party/mujoco_playground:go1_mesh_paths.patch",
             "//third_party/mujoco_playground:h1_mesh_paths.patch",
+            "//third_party/mujoco_playground:jax_clip.patch",
             "//third_party/mujoco_playground:op3_mesh_paths.patch",
             "//third_party/mujoco_playground:oracle_imports.patch",
             "//third_party/mujoco_playground:panda_include_paths.patch",
@@ -598,11 +603,11 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         patches = [
             "//third_party/mujoco_playground:panda_menagerie_mesh_paths.patch",
         ],
-        sha256 = "376e2d66b31e0cf3adfc91d9aba5e36b9093c542ee8f8ddb1801c41d74cc689d",
-        strip_prefix = "mujoco_menagerie-1b86ece576591213e2b666ebf59508454200ca97",
+        sha256 = "b03591082fc46b4334d79785b6cc24864c6d6cda8be6947b87a0f4f5e731d7f5",
+        strip_prefix = "mujoco_menagerie-da76818e269b82289eba39808e2fb91d679d6994",
         urls = [
-            "https://github.com/google-deepmind/mujoco_menagerie/archive/1b86ece576591213e2b666ebf59508454200ca97.tar.gz",
-            "https://codeload.github.com/google-deepmind/mujoco_menagerie/tar.gz/1b86ece576591213e2b666ebf59508454200ca97",
+            "https://github.com/google-deepmind/mujoco_menagerie/archive/da76818e269b82289eba39808e2fb91d679d6994.tar.gz",
+            "https://codeload.github.com/google-deepmind/mujoco_menagerie/tar.gz/da76818e269b82289eba39808e2fb91d679d6994",
         ],
         build_file = "//third_party/mujoco_playground:mujoco_menagerie.BUILD",
     )

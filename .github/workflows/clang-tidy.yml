@@ -41,7 +41,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-tidy-20 swig qtbase5-dev qtdeclarative5-dev
+          sudo apt-get install -y swig qt6-base-dev
           python -m pip install --upgrade cmake
       - name: Restore Bazel caches
         uses: actions/cache/restore@v6

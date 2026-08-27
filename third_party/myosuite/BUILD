@@ -18,6 +18,7 @@ load("//third_party/myosuite:defs.bzl", "myosuite_native_assets")
 load("//third_party/myosuite:oracle_requirements.bzl", "oracle_requirement")
 
 exports_files([
+    "numpy2_scalars.patch",
     "oracle_requirements.txt",
     "myosuite_source.BUILD",
     "simhive_source.BUILD",

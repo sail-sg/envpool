@@ -56,9 +56,9 @@ jobs:
           PATH="$CMAKE_BIN_DIR:$PATH" cmake --version
       - name: Install macOS dependencies
         run: |
-          brew install ninja swig qt@5
+          brew install ninja swig qtbase
           sudo ln -sfn "$(brew --prefix ninja)/bin/ninja" /usr/local/bin/ninja
-          echo "BAZEL_RULES_QT_DIR=$(brew --prefix qt@5)" >> "$GITHUB_ENV"
+          echo "BAZEL_RULES_QT_DIR=$(brew --prefix qtbase)" >> "$GITHUB_ENV"
       - name: Install bazelisk
         run: |
           go install github.com/bazelbuild/bazelisk@latest
@@ -219,11 +219,11 @@ jobs:
         run: |
           Add-Content -Path $env:GITHUB_ENV -Value "ENVPOOL_DLL_DIR=$env:GITHUB_WORKSPACE\.mesa"
           Add-Content -Path $env:GITHUB_PATH -Value "$env:GITHUB_WORKSPACE\.mesa"
-      - name: Install Qt 5
+      - name: Install Qt 6
         uses: jurplel/install-qt-action@v4
         with:
-          version: "5.15.2"
-          arch: "win64_msvc2019_64"
+          version: "6.11.1"
+          arch: "win64_msvc2022_64"
           set-env: "true"
       - name: Export Qt location
         shell: pwsh

@@ -23,9 +23,10 @@ build:linux --action_env=LD_LIBRARY_PATH=/usr/local/lib:/usr/lib/nvidia
 build:macos --cxxopt=-std=c++17
 build:macos --host_cxxopt=-std=c++17
 build:macos --client_env=BAZEL_CXXOPTS=-std=c++17
-build:macos --action_env=MACOSX_DEPLOYMENT_TARGET=11.0
-build:macos --copt=-mmacosx-version-min=11.0
-build:macos --linkopt=-mmacosx-version-min=11.0
+# Qt 6.11 requires macOS 13 or newer.
+build:macos --action_env=MACOSX_DEPLOYMENT_TARGET=13.0
+build:macos --copt=-mmacosx-version-min=13.0
+build:macos --linkopt=-mmacosx-version-min=13.0
 test:macos --test_env=PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
 build:windows --cxxopt=/std:c++20

@@ -15,11 +15,7 @@
 
 set -euo pipefail
 
-if command -v clang-tidy-18 >/dev/null 2>&1; then
-  clang_tidy_bin="clang-tidy-18"
-else
-  clang_tidy_bin="clang-tidy"
-fi
+clang_tidy_bin="${CLANG_TIDY_BIN:-clang-tidy}"
 
 gcc_install_dir="$(dirname "$(gcc -print-file-name=include)")"
 

@@ -21,7 +21,7 @@ import sys
 import tempfile
 import textwrap
 
-QT_HINT = "EnvPool Procgen requires the system Qt 5 runtime on Linux."
+QT_HINT = "EnvPool Procgen requires the system Qt runtime on Linux."
 
 
 def _run_child(name: str, code: str) -> None:

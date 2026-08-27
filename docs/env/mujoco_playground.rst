@@ -6,7 +6,7 @@ EnvPool provides native C++ implementations for the non-DM-Control tasks from
 Playground locomotion tasks and all 10 Playground manipulation tasks in that
 release. The implementation uses the pinned Playground XMLs together with
 ``google-deepmind/mujoco_menagerie`` commit
-``1b86ece576591213e2b666ebf59508454200ca97`` for robot assets.
+``da76818e269b82289eba39808e2fb91d679d6994`` for robot assets.
 
 MuJoCo Playground also vendors DM Control Suite tasks, but EnvPool already
 ships those through the existing :doc:`dm_control` family. They are not

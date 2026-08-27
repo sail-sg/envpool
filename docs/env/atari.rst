@@ -1,8 +1,8 @@
 Atari
 =====
 
-We use ``ale_py==0.7.5`` as the codebase.
-See https://github.com/mgbellemare/Arcade-Learning-Environment/tree/v0.7.5
+We use ``ale_py==0.12.1`` as the codebase.
+See https://github.com/Farama-Foundation/Arcade-Learning-Environment/tree/v0.12.1
 
 
 Render Compare

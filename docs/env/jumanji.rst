@@ -4,6 +4,17 @@ Jumanji
 EnvPool provides native C++ batched implementations for the public task IDs in
 ``jumanji==1.1.2``.
 
+``SearchAndRescue-v0`` returns the sum of the searchers' rewards as its scalar
+cooperative reward. Individual rewards are available in
+``info["searcher_rewards"]`` with shape ``(num_envs, 2)``.
+
+.. note::
+
+   Some existing Jumanji oracle fixtures preload short state/reward trajectories
+   for replay. Those checks cover replay and rendering compatibility, not
+   arbitrary-action semantic alignment. Native rule and determinism tests run
+   separately; full action-driven oracle coverage is still pending.
+
 
 Render Compare
 --------------
