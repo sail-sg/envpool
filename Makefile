@@ -169,7 +169,7 @@ clang-tidy: clang-tidy-install bazel-pip-requirement-dev
 	fi; \
 	echo "Running clang-tidy on: $$targets"; \
 	$(BAZEL) build $(BAZELOPT) $$targets --config=clang-tidy --config=test \
-		--action_env=CLANG_TIDY_BIN=$$(command -v $(CLANG_TIDY_BIN))
+		--action_env=ENVPOOL_CLANG_TIDY_BIN=$$(command -v $(CLANG_TIDY_BIN))
 
 bazel-debug: bazel-install bazel-pip-requirement-dev
 	$(BAZEL) run $(BAZELOPT) //:setup --config=debug -- bdist_wheel

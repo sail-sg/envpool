@@ -15,7 +15,8 @@
 
 set -euo pipefail
 
-clang_tidy_bin="${CLANG_TIDY_BIN:-clang-tidy}"
+# bazel_clang_tidy uses CLANG_TIDY_BIN for this wrapper itself.
+clang_tidy_bin="${ENVPOOL_CLANG_TIDY_BIN:-clang-tidy}"
 
 gcc_install_dir="$(dirname "$(gcc -print-file-name=include)")"
 
