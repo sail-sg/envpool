@@ -12,4 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-exports_files(["config.h"])
+exports_files([
+    "config.h",
+    "windows_sdk_headers.patch",
+])

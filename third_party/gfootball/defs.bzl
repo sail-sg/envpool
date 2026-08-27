@@ -35,7 +35,7 @@ def envpool_gfootball_generated_files(name):
         name = "gen_gfootball_scenarios_inc",
         srcs = ["@google_research_football//:gfootball_python"],
         outs = ["gfootball_scenarios.inc"],
-        cmd = "$(location //third_party/gfootball:generate_scenarios) $(locations @google_research_football//:gfootball_python) > $@",
+        cmd = "$(execpath //third_party/gfootball:generate_scenarios) $(execpaths @google_research_football//:gfootball_python) > $@",
         tools = ["//third_party/gfootball:generate_scenarios"],
     )
 

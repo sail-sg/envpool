@@ -28,7 +28,7 @@ genrule(
     name = "config_h",
     srcs = ["@//third_party/nasm:config.h"],
     outs = ["config/config.h"],
-    cmd = "cp $(location @//third_party/nasm:config.h) $@",
+    cmd = "cp $(execpath @//third_party/nasm:config.h) $@",
 )
 
 cc_library(

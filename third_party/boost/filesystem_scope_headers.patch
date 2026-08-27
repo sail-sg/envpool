@@ -1,13 +1,25 @@
 --- boost.BUILD
 +++ boost.BUILD
-@@ -866,6 +866,10 @@
+@@ -852,6 +852,7 @@
+         ":predef",
+         ":range",
++        ":scope",
+         ":scoped_array",
+         ":smart_ptr",
+         ":static_assert",
+@@ -1758,6 +1759,15 @@
+     ],
+ )
  
++boost_library(
++    name = "scope",
++    deps = [
++        ":config",
++        ":core",
++        ":type_traits",
++    ],
++)
++
  boost_library(
-     name = "filesystem",
-+    hdrs = glob([
-+        "boost/scope/**/*.h",
-+        "boost/scope/**/*.hpp",
-+    ]),
-     copts = _w_no_deprecated,
-     defines = [
-         "BOOST_FILESYSTEM_NO_CXX20_ATOMIC_REF",
+     name = "scope_exit",
+     deps = [

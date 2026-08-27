@@ -309,14 +309,14 @@ genrule(
         "simd/x86_64/jsimdcpu.o",
     ],
     cmd = "for out in $(OUTS); do\n" +
-          "  $(location @nasm//:nasm) -f elf64" +
+          "  $(execpath @nasm//:nasm) -f elf64" +
           "    -DELF -DPIC -D__x86_64__" +
-          "    -I $$(dirname $(location jconfig.h))/" +
-          "    -I $$(dirname $(location jconfigint.h))/" +
-          "    -I $$(dirname $(location simd/nasm/jsimdcfg.inc.h))/" +
-          "    -I $$(dirname $(location simd/x86_64/jccolext-sse2.asm))/" +
+          "    -I $$(dirname $(execpath jconfig.h))/" +
+          "    -I $$(dirname $(execpath jconfigint.h))/" +
+          "    -I $$(dirname $(execpath simd/nasm/jsimdcfg.inc.h))/" +
+          "    -I $$(dirname $(execpath simd/x86_64/jccolext-sse2.asm))/" +
           "    -o $$out" +
-          "    $$(dirname $(location simd/x86_64/jccolext-sse2.asm))/$$(basename $${out%.o}.asm)\n" +
+          "    $$(dirname $(execpath simd/x86_64/jccolext-sse2.asm))/$$(basename $${out%.o}.asm)\n" +
           "done",
     tools = ["@nasm"],
 )
@@ -533,12 +533,12 @@ genrule(
         "simd/x86_64/jsimdcpu.obj",
     ],
     cmd = "for out in $(OUTS); do\n" +
-          "  $(location @nasm//:nasm) -fwin64 -DWIN64 -D__x86_64__" +
-          "    -I $$(dirname $(location simd/x86_64/jccolext-sse2.asm))/" +
-          "    -I $$(dirname $(location simd/nasm/jdct.inc))/" +
-          "    -I $$(dirname $(location simd/nasm/jdct.inc))/../../win/" +
+          "  $(execpath @nasm//:nasm) -fwin64 -DWIN64 -D__x86_64__" +
+          "    -I $$(dirname $(execpath simd/x86_64/jccolext-sse2.asm))/" +
+          "    -I $$(dirname $(execpath simd/nasm/jdct.inc))/" +
+          "    -I $$(dirname $(execpath simd/nasm/jdct.inc))/../../win/" +
           "    -o $$out" +
-          "    $$(dirname $(location simd/x86_64/jccolext-sse2.asm))/$$(basename $${out%.obj}.asm)\n" +
+          "    $$(dirname $(execpath simd/x86_64/jccolext-sse2.asm))/$$(basename $${out%.obj}.asm)\n" +
           "done",
     tools = ["@nasm"],
 )
@@ -726,14 +726,14 @@ genrule(
     ],
     outs = ["jconfig.h"],
     cmd = select({
-        ":windows": "cp $(location jconfig_win.h) $@",
-        ":k8": "cp $(location jconfig_nowin_simd.h) $@",
-        ":armeabi-v7a": "cp $(location jconfig_nowin_simd.h) $@",
-        ":arm64-v8a": "cp $(location jconfig_nowin_simd.h) $@",
-        ":darwin_arm64": "cp $(location jconfig_nowin_simd.h) $@",
-        ":linux_arm64": "cp $(location jconfig_nowin_simd.h) $@",
-        ":linux_ppc64le": "cp $(location jconfig_nowin_simd.h) $@",
-        "//conditions:default": "cp $(location jconfig_nowin_nosimd.h) $@",
+        ":windows": "cp $(execpath jconfig_win.h) $@",
+        ":k8": "cp $(execpath jconfig_nowin_simd.h) $@",
+        ":armeabi-v7a": "cp $(execpath jconfig_nowin_simd.h) $@",
+        ":arm64-v8a": "cp $(execpath jconfig_nowin_simd.h) $@",
+        ":darwin_arm64": "cp $(execpath jconfig_nowin_simd.h) $@",
+        ":linux_arm64": "cp $(execpath jconfig_nowin_simd.h) $@",
+        ":linux_ppc64le": "cp $(execpath jconfig_nowin_simd.h) $@",
+        "//conditions:default": "cp $(execpath jconfig_nowin_nosimd.h) $@",
     }),
 )
 
@@ -746,14 +746,14 @@ genrule(
     ],
     outs = ["jconfigint.h"],
     cmd = select({
-        ":windows": "cp $(location jconfigint_win.h) $@",
-        ":k8": "cp $(location jconfigint_nowin_simd.h) $@",
-        ":armeabi-v7a": "cp $(location jconfigint_nowin_simd.h) $@",
-        ":arm64-v8a": "cp $(location jconfigint_nowin_simd.h) $@",
-        ":darwin_arm64": "cp $(location jconfigint_nowin_simd.h) $@",
-        ":linux_arm64": "cp $(location jconfigint_nowin_simd.h) $@",
-        ":linux_ppc64le": "cp $(location jconfigint_nowin_simd.h) $@",
-        "//conditions:default": "cp $(location jconfigint_nowin_nosimd.h) $@",
+        ":windows": "cp $(execpath jconfigint_win.h) $@",
+        ":k8": "cp $(execpath jconfigint_nowin_simd.h) $@",
+        ":armeabi-v7a": "cp $(execpath jconfigint_nowin_simd.h) $@",
+        ":arm64-v8a": "cp $(execpath jconfigint_nowin_simd.h) $@",
+        ":darwin_arm64": "cp $(execpath jconfigint_nowin_simd.h) $@",
+        ":linux_arm64": "cp $(execpath jconfigint_nowin_simd.h) $@",
+        ":linux_ppc64le": "cp $(execpath jconfigint_nowin_simd.h) $@",
+        "//conditions:default": "cp $(execpath jconfigint_nowin_nosimd.h) $@",
     }),
 )
 

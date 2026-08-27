@@ -1,0 +1,40 @@
+diff --git MODULE.bazel MODULE.bazel
+--- MODULE.bazel
++++ MODULE.bazel
+@@ -3,4 +3,3 @@
+ bazel_dep(name = "bazel_skylib", version = "1.9.0")
+-bazel_dep(name = "boringssl", version = "0.20251124.0")
+ bazel_dep(name = "bzip2", version = "1.0.8.bcr.3")
+ bazel_dep(name = "platforms", version = "1.0.0")
+@@ -7,10 +6,4 @@
+ bazel_dep(name = "xz", version = "5.4.5.bcr.6")
+ bazel_dep(name = "zlib", version = "1.3.1.bcr.8")
+ bazel_dep(name = "zstd", version = "1.5.7")
+ bazel_dep(name = "rules_cc", version = "0.0.10")
+-
+-non_module_boost_repositories = use_extension("@com_github_nelhage_rules_boost//:boost/repositories.bzl", "non_module_dependencies")
+-use_repo(
+-    non_module_boost_repositories,
+-    "boost",
+-)
+diff --git boost.BUILD boost.BUILD
+--- boost.BUILD
++++ boost.BUILD
+@@ -440,17 +440,5 @@
+         ":static_assert",
+         ":system",
+         ":throw_exception",
+-    ],
+-)
+-
+-cc_library(
+-    name = "asio_ssl",
+-    srcs = [
+-        "@com_github_nelhage_rules_boost//src:build_asio_ssl.cpp",
+-    ],
+-    visibility = ["//visibility:public"],
+-    deps = [
+-        ":asio",
+-        "@boringssl//:ssl",
+     ],
+ )
