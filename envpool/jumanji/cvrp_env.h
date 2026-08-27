@@ -195,7 +195,7 @@ class CVRPEnv : public Env<CVRPEnvSpec>, public RenderableEnv {
         coordinates_[node * 2 + 1] = 0.0f;
       }
       if (spec_.config["cvrp_demands"_].empty()) {
-        demands_[node] = node == 0 ? 0.0f : 0.05f;
+        demands_[node] = node == 0 ? 0.0f : 1.0f / kMaxCapacity;
       } else {
         demands_[node] = configured_demands_[node];
       }
