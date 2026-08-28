@@ -119,6 +119,27 @@ expose their upstream state observations. Every task also supports native
    )
    frames = env.render(env_ids=[3, 1])  # (2, 240, 320, 3)
 
+The following comparisons cover every task after four external action steps,
+using one physics-state synchronization immediately after reset. EnvPool is on
+the left and the pinned official environment is on the right. The generator
+checks every displayed image for pixel equality before writing the figures.
+
+.. image:: ../_static/render_samples/dmc-locomotion-humanoid.png
+   :alt: All CMU humanoid tasks, EnvPool left and official dm_control right
+
+.. image:: ../_static/render_samples/dmc-locomotion-rodent.png
+   :alt: All rodent tasks, EnvPool left and official dm_control right
+
+.. image:: ../_static/render_samples/dmc-locomotion-soccer.png
+   :alt: All Soccer walker types, EnvPool left and official dm_control right
+
+Regenerate the figures with the test-only oracle and the shared MuJoCo engine:
+
+.. code-block:: bash
+
+   bazel run --config=test //envpool/mujoco/locomotion:render_doc -- \
+       --output "$PWD/docs/_static/render_samples"
+
 Soccer players
 --------------
 
@@ -160,6 +181,12 @@ Each environment has independent random streams, including the draws that the
 upstream maze and two-touch examples make through NumPy's global random state.
 Resetting another environment cannot change its rollout. Seeds are configured
 when creating the pool, following the normal EnvPool seed API.
+
+On macOS, CGL's multisample readback can differ slightly even when rendering
+the same official scene twice. Tests restrict this residual to the three
+egocentric maze cameras: at most five color channels per CMU frame by two
+levels, or one rodent channel by one level. Dynamics, rewards, all other camera
+observations, and public render comparisons retain exact deterministic checks.
 
 Official XML, skins, textures, and LabMaze 1.0.6 sources are fetched at build
 time. Only the needed texture styles and model assets are packaged. The CMU

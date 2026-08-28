@@ -17,7 +17,9 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
+import mujoco
 import numpy as np
+from dm_control.composer import arena
 from dm_control.locomotion import soccer
 from dm_control.locomotion.examples import (
     basic_cmu_2019,
@@ -41,7 +43,14 @@ def make_oracle(task: str, seed: int = 0, **kwargs: Any) -> Any:
     def mocap_path(version: str = "2020") -> str:
         return str(_ORACLE_ASSETS / f"oracle_{version}.h5")
 
-    with mock.patch.object(cmu_mocap_data, "get_path_for_cmu", mocap_path):
+    # Resolve Bazel runfile links before MJCF derives relative texture paths.
+    # Otherwise composer/../locomotion/... can exceed Windows MAX_PATH even
+    # though the same files have short, valid paths in the external repository.
+    arena_xml = str(Path(arena._ARENA_XML_PATH).resolve())
+    with (
+        mock.patch.object(cmu_mocap_data, "get_path_for_cmu", mocap_path),
+        mock.patch.object(arena, "_ARENA_XML_PATH", arena_xml),
+    ):
         if task.startswith("soccer_"):
             return soccer.load(
                 team_size=kwargs.pop("team_size", 2),
@@ -55,6 +64,21 @@ def make_oracle(task: str, seed: int = 0, **kwargs: Any) -> Any:
             module for module in EXAMPLE_MODULES if hasattr(module, task)
         )
         return getattr(module, task)(random_state=seed)
+
+
+def activate_oracle_context(official: Any) -> None:
+    """Restore GL state after another renderer ran on the same thread."""
+    # DMC caches the current context in Python, but EnvPool's C++ renderer can
+    # unbind it (CGL/WGL) or replace its framebuffer. Use DMC's executor so this
+    # also respects EGL's dedicated rendering thread.
+    gl = official.physics.contexts.gl
+    with gl.make_current() as context:
+        context.call(gl._platform_make_current)
+        context.call(
+            mujoco.mjr_setBuffer,
+            mujoco.mjtFramebuffer.mjFB_OFFSCREEN,
+            official.physics.contexts.mujoco.ptr,
+        )
 
 
 def oracle_observations(value: Any) -> dict[str, np.ndarray]:

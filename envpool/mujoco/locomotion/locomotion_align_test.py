@@ -22,7 +22,7 @@ from typing import Any
 from envpool.mujoco.oracle import configure_mujoco_package_shared_lib
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
-configure_mujoco_package_shared_lib()
+configure_mujoco_package_shared_lib(include_linux=True)
 preload_windows_gl_dlls(strict=True)
 if platform.system() == "Linux":
     os.environ.setdefault("MUJOCO_GL", "egl")
@@ -39,6 +39,7 @@ from envpool.mujoco.dmc.render_oracle import configure_macos_dm_control_renderer
 from envpool.mujoco.locomotion.locomotion_test import assert_egocentric
 from envpool.mujoco.locomotion.oracle import (
     EXAMPLE_MODULES,
+    activate_oracle_context,
     make_oracle,
     oracle_observations,
 )
@@ -194,8 +195,7 @@ class LocomotionAlignTest(parameterized.TestCase):
             official.physics.data.act[:] = state["act"]
         official.physics.data.qacc_warmstart[:] = state["warmstart"]
         frame = env.render()[0]
-        if platform.system() == "Darwin":
-            official.physics.contexts.gl._platform_make_current()
+        activate_oracle_context(official)
         # Reset render also uses the synchronized state; no post-reset sync is
         # necessary for any later observation or frame.
         reference_frame = official.physics.render(height, width, camera)
@@ -240,8 +240,7 @@ class LocomotionAlignTest(parameterized.TestCase):
                 )
             # EnvPool render() can temporarily use the calling thread's GL
             # context. Invalidate DMC's cached binding before its next render.
-            if platform.system() == "Darwin":
-                official.physics.contexts.gl._platform_make_current()
+            activate_oracle_context(official)
             oracle_ts = official.step(
                 action if task.startswith("soccer_") else action[0]
             )
@@ -281,8 +280,7 @@ class LocomotionAlignTest(parameterized.TestCase):
                 )
             if step in (0, 3, 31, 127) or oracle_ts.last():
                 frame = env.render()[0]
-                if platform.system() == "Darwin":
-                    official.physics.contexts.gl._platform_make_current()
+                activate_oracle_context(official)
                 np.testing.assert_array_equal(
                     frame,
                     official.physics.render(height, width, camera),
@@ -422,8 +420,7 @@ class LocomotionAlignTest(parameterized.TestCase):
         rewards = []
         for step in range(12):
             action = np.full((1, *env.action_spec().shape), 0.05 * np.sin(step))
-            if platform.system() == "Darwin":
-                official.physics.contexts.gl._platform_make_current()
+            activate_oracle_context(official)
             oracle_ts = official.step(action[0])
             timestep = env.step(action)
             self.assert_observations(
@@ -444,8 +441,7 @@ class LocomotionAlignTest(parameterized.TestCase):
                     snapshot[key], getattr(official.physics.data, key)
                 )
             frame = env.render()[0]
-            if platform.system() == "Darwin":
-                official.physics.contexts.gl._platform_make_current()
+            activate_oracle_context(official)
             np.testing.assert_array_equal(
                 frame, official.physics.render(80, 96)
             )
@@ -505,8 +501,7 @@ class LocomotionAlignTest(parameterized.TestCase):
                 action[0, 8:] = 1
             if 24 <= step < duration:
                 action[0, 8:] = amplitude
-            if platform.system() == "Darwin":
-                official.physics.contexts.gl._platform_make_current()
+            activate_oracle_context(official)
             oracle_ts = official.step(action[0])
             timestep = env.step(action)
             self.assert_observations(

@@ -93,14 +93,15 @@ def _bazel_shared_library(name: str) -> Path:
     raise RuntimeError(f"could not locate Bazel-built {name} under {runfiles}")
 
 
-def configure_mujoco_package_shared_lib() -> None:
+def configure_mujoco_package_shared_lib(*, include_linux: bool = False) -> None:
     """Use the identical source-built engine in macOS/Windows official oracles.
 
-    Linux must keep its pinned pip wheel: replacing that package library
-    corrupts Python binding model-name reads in MuJoCo 3.11.
+    Existing Linux suites retain their pip-engine baseline. New suites can
+    opt into the source-built engine for bitwise stepping, with the shared
+    library declared explicitly in their Bazel data dependencies.
     """
     system = platform.system()
-    if system not in {"Darwin", "Windows"} or getattr(
+    if (system not in {"Darwin", "Windows"} and not include_linux) or getattr(
         configure_mujoco_package_shared_lib, "_configured", False
     ):
         return
@@ -117,8 +118,15 @@ def configure_mujoco_package_shared_lib() -> None:
         if len(dylibs) != 1:
             raise RuntimeError(f"expected one MuJoCo dylib under {package_dir}")
         library_name = dylibs[0].name
-    else:
+    elif system == "Windows":
         library_name = "mujoco.dll"
+    else:
+        libraries = tuple(package_dir.glob("libmujoco.so.*"))
+        if len(libraries) != 1:
+            raise RuntimeError(
+                f"expected one MuJoCo library under {package_dir}"
+            )
+        library_name = libraries[0].name
 
     patched_root = Path(tempfile.mkdtemp(prefix="mujoco-oracle-"))
     atexit.register(shutil.rmtree, patched_root, ignore_errors=True)

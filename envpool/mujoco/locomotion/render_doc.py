@@ -22,7 +22,7 @@ from typing import Any
 from envpool.mujoco.oracle import configure_mujoco_package_shared_lib
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
-configure_mujoco_package_shared_lib()
+configure_mujoco_package_shared_lib(include_linux=True)
 preload_windows_gl_dlls(strict=True)
 if platform.system() == "Linux":
     os.environ.setdefault("MUJOCO_GL", "egl")
@@ -34,7 +34,10 @@ from PIL import Image, ImageDraw, ImageFont
 
 import envpool.mujoco.locomotion.registration  # noqa: F401
 from envpool.mujoco.dmc.render_oracle import configure_macos_dm_control_renderer
-from envpool.mujoco.locomotion.oracle import make_oracle
+from envpool.mujoco.locomotion.oracle import (
+    activate_oracle_context,
+    make_oracle,
+)
 from envpool.registration import make_dm
 
 configure_macos_dm_control_renderer()
@@ -50,7 +53,7 @@ def generate(output: Path) -> None:
         official.reset()
         camera = -1
         if "maze" not in task and "forage" not in task:
-            for candidate in ("walker/side", "top_down"):
+            for candidate in ("walker/side", "soccer_ball/ball_cam_far"):
                 camera = (
                     official.physics.model.name2id(candidate, "camera")
                     if candidate
@@ -79,13 +82,11 @@ def generate(output: Path) -> None:
             action = np.full(
                 (players, *env.action_spec().shape), 0.05 * np.sin(step)
             )
-            if platform.system() == "Darwin":
-                official.physics.contexts.gl._platform_make_current()
+            activate_oracle_context(official)
             official.step(action if players > 1 else action[0])
             env.step(action)
         native_frame = env.render()[0]
-        if platform.system() == "Darwin":
-            official.physics.contexts.gl._platform_make_current()
+        activate_oracle_context(official)
         oracle_frame = official.physics.render(240, 320, camera)
         np.testing.assert_array_equal(native_frame, oracle_frame, err_msg=task)
         row = Image.new("RGB", (640, 268), "white")

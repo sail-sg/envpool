@@ -163,11 +163,15 @@ py_library(
     name = "oracle",
     testonly = True,
     srcs = ["oracle.py"],
-    data = ["//third_party/dmc_locomotion:mocap_oracle"],
+    data = [
+        "//third_party/dmc_locomotion:mocap_oracle",
+        "@mujoco//:mujoco_shared_lib",
+    ],
     imports = ["../../.."],
     deps = [
         requirement("dm-control"),
         requirement("h5py"),
+        requirement("mujoco"),
         requirement("numpy"),
     ],
 )
