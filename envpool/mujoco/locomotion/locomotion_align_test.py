@@ -68,7 +68,9 @@ class LocomotionAlignTest(parameterized.TestCase):
             if suffix in {"appendages_pos", "target", "origin"}:
                 tolerance = 2e-15
             elif suffix == "sensors_torque":
-                tolerance = 2e-16
+                # NumPy's vector tanh and scalar libm differ by up to two
+                # ULPs around 0.5 on Linux arm64 (one machine epsilon).
+                tolerance = float(np.finfo(np.float64).eps)
             elif suffix.startswith("stats_") or suffix in {
                 "velocimeter_control",
                 "gyro_control",

@@ -77,7 +77,13 @@ cc_library(
     hdrs = ["random.h"],
     # NumPy's legacy distributions use ordinary compiled C expressions, unlike
     # the separate ufunc operations in scene/observation code. Keep the normal
-    # platform contraction behavior here (FMA on arm64, scalar SSE2 on x64).
+    # platform contraction behavior here. The Linux arm64 NumPy wheel disables
+    # contraction, unlike the macOS arm64 wheel; nonzero Uniform bounds expose
+    # the difference in gap geometry and Soccer respawns.
+    copts = select({
+        "//:linux_arm64": ["-ffp-contract=off"],
+        "//conditions:default": [],
+    }),
 )
 
 copy_to_directory(
@@ -117,6 +123,7 @@ py_library(
     imports = ["../../.."],
     deps = [
         "//envpool/python:api",
+        "//envpool/python:glfw_context",
         requirement("dm-env"),
         requirement("gymnasium"),
         requirement("numpy"),
@@ -199,6 +206,9 @@ py_test(
     timeout = "long",
     srcs = ["locomotion_align_test.py"],
     imports = ["../../.."],
+    # Full episodes and all 36 tracking clips include native camera readback.
+    # Keep the same checks practical on the software-rendered ARM64 runner.
+    shard_count = 4,
     deps = [
         ":oracle",
         ":registration",

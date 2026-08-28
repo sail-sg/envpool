@@ -602,9 +602,11 @@ std::shared_ptr<GlContext> CreateGlContext(bool share_cgl_context,
     // `glfw.terminate()`, so do not cache them across renderer instances.
     return std::make_shared<BorrowedWglContext>();
   }
-  thread_local std::shared_ptr<GlContext> context =
-      std::make_shared<WglContext>();
-  return context;
+  // WGL cleanup can join driver threads. Destroying a thread_local context
+  // during an EnvPool worker's TLS teardown holds Windows' loader lock and
+  // deadlocks drivers whose threads also need that lock to exit (AMD WGL).
+  // Keep destruction within the renderer's lifetime, before TLS teardown.
+  return std::make_shared<WglContext>();
 #elif defined(ENVPOOL_HAS_EGL)
   (void)share_cgl_context;
   (void)prefer_offline_cgl_context;

@@ -22,6 +22,9 @@ import gymnasium
 import numpy as np
 
 from envpool.python.api import py_env
+from envpool.python.glfw_context import preload_windows_gl_dlls
+
+preload_windows_gl_dlls(strict=True)
 
 from .locomotion_envpool import (
     _LocomotionEnvPool,
