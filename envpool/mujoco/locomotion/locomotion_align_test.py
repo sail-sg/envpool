@@ -31,12 +31,11 @@ if platform.system() == "Linux":
 import mujoco
 import numpy as np
 from absl.testing import absltest, parameterized
-from dm_control.locomotion import soccer
 from envpool.mujoco.locomotion.locomotion_envpool import TASKS
 
 import envpool.mujoco.locomotion.registration  # noqa: F401
 from envpool.mujoco.dmc.render_oracle import configure_macos_dm_control_renderer
-from envpool.mujoco.locomotion.locomotion_test import assert_egocentric
+from envpool.mujoco.locomotion.locomotion_test import assert_pixels
 from envpool.mujoco.locomotion.oracle import (
     EXAMPLE_MODULES,
     activate_oracle_context,
@@ -94,7 +93,7 @@ class LocomotionAlignTest(parameterized.TestCase):
             self.assertEqual(a.dtype, b.dtype, key)
             # Only derived Python/NumPy math differs: BLAS reduction order and
             # libm tanh/quaternion operations. Raw MuJoCo state/sensors, all
-            # discrete values, and images must remain bitwise equal.
+            # discrete values remain bitwise; camera residuals are separate.
             suffix = key.removeprefix("walker/")
             tolerance = 0.0
             if suffix in {"appendages_pos", "target", "origin"}:
@@ -122,7 +121,7 @@ class LocomotionAlignTest(parameterized.TestCase):
             }:
                 tolerance = 2e-14
             if key == "walker/egocentric_camera":
-                assert_egocentric(a, b, task, context)
+                assert_pixels(a, b, task, context, egocentric=True)
             elif tolerance:
                 np.testing.assert_allclose(
                     a, b, rtol=0, atol=tolerance, err_msg=f"{context}, {key}"
@@ -249,9 +248,7 @@ class LocomotionAlignTest(parameterized.TestCase):
                 official.physics.model.to_bytes()
             )
 
-        np.testing.assert_array_equal(
-            frame, reference_frame, err_msg=f"{task}, reset render"
-        )
+        assert_pixels(frame, reference_frame, task, f"{task}, reset render")
         random = np.random.RandomState(123)
         for step in range(2001):
             if pattern == "reference":
@@ -308,10 +305,11 @@ class LocomotionAlignTest(parameterized.TestCase):
             if step in (0, 3, 31, 127) or oracle_ts.last():
                 frame = env.render()[0]
                 activate_oracle_context(official)
-                np.testing.assert_array_equal(
+                assert_pixels(
                     frame,
                     official.physics.render(height, width, camera),
-                    err_msg=f"{task}, render step {step}",
+                    task,
+                    f"{task}, render step {step}",
                 )
             if oracle_ts.last():
                 break
@@ -375,6 +373,8 @@ class LocomotionAlignTest(parameterized.TestCase):
 
     def test_upstream_registry_coverage(self) -> None:
         """Discover upstream factories and actually reset every public ID."""
+        from dm_control.locomotion import soccer
+
         expected = {
             name
             for module in EXAMPLE_MODULES

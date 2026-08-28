@@ -23,31 +23,46 @@ import envpool.mujoco.locomotion.registration  # noqa: F401
 from envpool.registration import make_dm, make_gymnasium
 
 
-def assert_egocentric(
-    actual: np.ndarray, expected: np.ndarray, task: str, context: str
+def assert_pixels(
+    actual: np.ndarray,
+    expected: np.ndarray,
+    task: str,
+    context: str,
+    *,
+    egocentric: bool = False,
 ) -> None:
-    """Check camera pixels, including the isolated CGL rounding residual."""
-    if platform.system() == "Darwin" and task in {
-        "cmu_humanoid_maze_forage",
-        "cmu_humanoid_heterogeneous_forage",
-        "rodent_maze_forage",
-    }:
-        # CGL can change color levels even when the official Camera renders
-        # the very same MjvScene twice: reproduced over 10,000 frames with
-        # bitwise-equal skin vertices/normals and copied MuJoCo state.
-        # The CMU cameras also exercise context migration across workers:
-        # up to five channels differ by at most two levels; the rodent camera
-        # needs only one channel/level. Keep these budgets within each 64x64
-        # frame. Other task images, public renders and physics stay bitwise.
+    """Check pixels with measured CGL limits on affected cameras only."""
+    peak = total = 0
+    if platform.system() == "Darwin":
+        # Apple's CGL/Metal renderer can return different pixels for identical
+        # model arrays, camera/lights/geoms and skin vertices/normals. This also
+        # reproduces in official-only rendering, even serialized, without
+        # dithering, MSAA or shadows. Do not change visual settings to hide it.
+        # Five complete multi-worker replays measured the budgets below; use
+        # an absolute error sum per frame, not a percentage of changed pixels.
+        if egocentric and task in {
+            "cmu_humanoid_run_walls",
+            "cmu_humanoid_run_gaps",
+            "cmu_humanoid_maze_forage",
+            "cmu_humanoid_heterogeneous_forage",
+        }:
+            peak, total = 5, 20
+        elif egocentric and task == "rodent_maze_forage":
+            peak = total = 1
+        elif not egocentric and task in {
+            "cmu_humanoid_go_to_target",
+            "rodent_escape_bowl",
+        }:
+            peak, total = 1, 3
+        elif not egocentric and task == "cmu_humanoid_tracking":
+            peak = total = 1
+    if total:
         np.testing.assert_equal(actual.shape, expected.shape)
         np.testing.assert_equal(actual.dtype, expected.dtype)
         delta = np.abs(actual.astype(np.int16) - expected.astype(np.int16))
-        cmu = task.startswith("cmu_")
-        np.testing.assert_array_less(delta, 3 if cmu else 2, err_msg=context)
+        np.testing.assert_array_less(delta, peak + 1, err_msg=context)
         np.testing.assert_array_less(
-            np.count_nonzero(delta, axis=(-3, -2, -1)),
-            6 if cmu else 2,
-            err_msg=context,
+            delta.sum(axis=(-3, -2, -1)), total + 1, err_msg=context
         )
     else:
         np.testing.assert_array_equal(actual, expected, err_msg=context)
@@ -84,8 +99,12 @@ class LocomotionTest(parameterized.TestCase):
             for key in left_obs:
                 context = f"{task}: step {step}, {key}"
                 if key == "walker/egocentric_camera":
-                    assert_egocentric(
-                        left_obs[key][li], right_obs[key][ri], task, context
+                    assert_pixels(
+                        left_obs[key][li],
+                        right_obs[key][ri],
+                        task,
+                        context,
+                        egocentric=True,
                     )
                 else:
                     np.testing.assert_array_equal(
@@ -100,8 +119,15 @@ class LocomotionTest(parameterized.TestCase):
                 assert a is not None and b is not None
                 self.assertEqual(a.shape, (2, 80, 96, 3))
                 self.assertEqual(a.dtype, np.uint8)
-                np.testing.assert_array_equal(a, b)
-                np.testing.assert_array_equal(a[:1], left.render(env_ids=[1]))
+                assert_pixels(a, b, task, f"{task}, render step {step}")
+                repeat = left.render(env_ids=[1])
+                assert repeat is not None
+                assert_pixels(
+                    a[:1],
+                    repeat,
+                    task,
+                    f"{task}, repeated render step {step}",
+                )
             action = random.uniform(
                 -0.25, 0.25, (len(li), *left.action_space.shape)
             )

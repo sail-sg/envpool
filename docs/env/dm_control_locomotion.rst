@@ -78,12 +78,12 @@ the pinned upstream example factories and ``soccer.WalkerType`` enumeration.
      - 45 s
      - Soccer with CMU humanoid walkers
 
-All actions are ``float64`` with bounds ``[-1, 1]``. Control timesteps are
+All actions are ``float64`` with bounds ``[-1, 1]``. Control time steps are
 0.03 s for CMU examples, 0.02 s for rodent examples, and 0.025 s for Soccer.
 ``time_limit`` overrides the task's limit in seconds; ``max_episode_steps``
 can impose a shorter limit in control steps. Failures and task completion can
 end an episode earlier. Tracking clip boundaries preserve the upstream
-discount of one and are reported as truncations by the Gymnasium API.
+discount of one and set the Gymnasium ``truncated`` flag.
 
 Observations and rendering
 --------------------------
@@ -91,7 +91,7 @@ Observations and rendering
 Gymnasium observations are dictionaries with the original upstream keys,
 including slashes such as ``walker/joints_pos``. The ``dm_env`` API exposes the
 same dictionary as ``timestep.observation.obs`` alongside EnvPool's environment
-and player identifiers. Shapes and dtypes match the upstream observation
+and player identifiers. Shapes and data types match the upstream observation
 specification, with the leading EnvPool batch dimension added.
 
 The eight corridor, maze, bowl, and two-touch examples include the upstream
@@ -182,17 +182,34 @@ upstream maze and two-touch examples make through NumPy's global random state.
 Resetting another environment cannot change its rollout. Seeds are configured
 when creating the pool, following the normal EnvPool seed API.
 
-On macOS, CGL's multisample readback can differ slightly even when rendering
-the same official scene twice. Tests restrict this residual to the three
-egocentric maze cameras: at most five color channels per CMU frame by two
-levels, or one rodent channel by one level. Dynamics, rewards, all other camera
-observations, and public render comparisons retain exact deterministic checks.
+On macOS, Apple's CGL/Metal renderer can return slightly different pixels for
+identical model arrays, camera, lights, geometry, and skin vertices and normal
+vectors.
+This also reproduces with the official renderer alone, with serialized calls
+and with dithering, multisampling, or shadows disabled. Visual settings remain
+unchanged. The four CMU egocentric cameras allow at most five color levels per
+channel and a total absolute error of 20 across the entire 64-by-64 frame;
+the rodent maze camera allows one level in one channel. Public renders allow
+one level in at most three channels for go-to-target and escape-bowl, or one
+channel for tracking. Other images and all native dynamics/reward replays
+remain bitwise. These limits are checked per frame, not averaged over a rollout.
+
+Oracle reward checks retain only small derived-math residuals: tracking's
+quaternion/exponential reductions, the bowl's distance norm, and, on Linux
+x86-64 only, up to two ULPs in TwoTouch's exponential shaping reward. The
+underlying MuJoCo state and discrete task transitions are checked exactly.
+
+The oracle uses the pinned MuJoCo source build. On Windows, LabMaze's official
+1.0.6 Python binding is also built from source with the native toolchain:
+its seeded layouts depend on the C++ standard library's distribution and
+shuffle algorithms, which differ from the published wheel. No maze or task
+algorithm is patched, and model geometry is checked before reset-state sync.
 
 Official XML, skins, textures, and LabMaze 1.0.6 sources are fetched at build
 time. Only the needed texture styles and model assets are packaged. The CMU
-2019 Soccer initializer clip and all 36 CMU 2020 ``WALK_TINY`` clips are extracted
-from the official, SHA-256-pinned datasets into approximately 7 MB of native
-data. Runtime installation does not download the full motion capture datasets
+2019 clip used to initialize Soccer and all 36 CMU 2020 ``WALK_TINY`` clips are
+extracted from the official, SHA-256-pinned datasets into approximately 7 MB
+of native data. Runtime installation does not download the full motion capture datasets
 or require HDF5, SciPy, LabMaze's Python extension, or ``dm_control``.
 
 The source models and tasks are available in the

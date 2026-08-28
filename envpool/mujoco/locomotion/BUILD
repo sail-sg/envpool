@@ -173,9 +173,13 @@ py_library(
     data = [
         "//third_party/dmc_locomotion:mocap_oracle",
         "@mujoco//:mujoco_shared_lib",
-    ],
+    ] + select({
+        "//:windows": ["@labmaze_source//labmaze/cc/python:_random_maze"],
+        "//conditions:default": [],
+    }),
     imports = ["../../.."],
     deps = [
+        "//envpool/mujoco:mujoco_oracle",
         requirement("dm-control"),
         requirement("h5py"),
         requirement("mujoco"),

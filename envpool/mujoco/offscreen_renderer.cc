@@ -28,6 +28,7 @@
 #include <stdexcept>
 #include <string_view>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #if defined(__APPLE__) && __has_include(<OpenGL/OpenGL.h>)
@@ -236,7 +237,7 @@ class WglWindowThread {
     });
     std::promise<HWND> ready;
     auto result = ready.get_future();
-    thread_ = std::thread([&ready] {
+    thread_ = std::thread([ready = std::move(ready)]() mutable {
       HWND dispatcher = CreateWindowExA(
           0, kWindowClassName, "EnvPoolWGLDispatcher", 0, 0, 0, 0, 0,
           HWND_MESSAGE, nullptr, GetModuleHandleA(nullptr), nullptr);
