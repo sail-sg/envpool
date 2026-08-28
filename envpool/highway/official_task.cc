@@ -972,7 +972,7 @@ void SpawnIntersectionVehicle(Road* road, std::mt19937* generator,
   }
   const int incoming = std::uniform_int_distribution<int>(0, 3)(*generator);
   int outgoing = std::uniform_int_distribution<int>(0, 2)(*generator);
-  outgoing += outgoing >= incoming;
+  outgoing += static_cast<int>(outgoing >= incoming);
   if (straight) {
     outgoing = (incoming + 2) % 4;
   }

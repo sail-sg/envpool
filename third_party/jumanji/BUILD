@@ -29,7 +29,7 @@ genrule(
     name = "pacman_maze_header",
     srcs = ["@jumanji_pacman_constants//file"],
     outs = ["pacman_maze.h"],
-    cmd = "$(execpath :generate_pacman_maze) $(location @jumanji_pacman_constants//file) $@",
+    cmd = "$(execpath :generate_pacman_maze) $(execpath @jumanji_pacman_constants//file) $@",
     tools = [":generate_pacman_maze"],
 )
 

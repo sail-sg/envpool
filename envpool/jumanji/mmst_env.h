@@ -143,7 +143,7 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
       const int x = width * (node % 6) / 6 + width / 12;
       const int y = height * (node / 6) / 6 + height / 12;
       for (int other = node + 1; other < mmst::kNumNodes; ++other) {
-        if (adjacency_[node * mmst::kNumNodes + other]) {
+        if (adjacency_[node * mmst::kNumNodes + other] != 0) {
           render::DrawLine(
               width, height, x, y, width * (other % 6) / 6 + width / 12,
               height * (other / 6) / 6 + height / 12, {180, 180, 180}, rgb);
@@ -221,7 +221,10 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
       const int node = std::clamp(static_cast<int>(action["action"_](0, agent)),
                                   0, mmst::kNumNodes - 1);
       nodes[agent] = HasEdge(agent, node) ? node : -1;
-      choices[agent] = nodes[agent] < 0 ? -1 : selected[node] ? -2 : node;
+      choices[agent] = -1;
+      if (nodes[agent] >= 0) {
+        choices[agent] = selected[node] ? -2 : node;
+      }
       if (choices[agent] >= 0) {
         selected[node] = true;
       }
@@ -240,12 +243,12 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
         positions_[agent] = nodes[agent];
         visited_[agent][nodes[agent]] = true;
       }
-      if (!finished_[agent]) {
-        reward += choice == -2 ? 0.0f
-                  : choice >= 0 && node_types_[positions_[agent]] == agent
-                      ? 10.0f
-                  : choice == -1 ? -2.0f
-                                 : -1.0f;
+      if (!finished_[agent] && choice != -2) {
+        if (choice >= 0 && node_types_[positions_[agent]] == agent) {
+          reward += 10.0f;
+        } else {
+          reward += choice == -1 ? -2.0f : -1.0f;
+        }
       }
     }
     UpdateBlockedNodes();
@@ -324,7 +327,7 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
   }
 
   bool HasEdge(int agent, int node) const {
-    return adjacency_[positions_[agent] * mmst::kNumNodes + node] &&
+    return adjacency_[positions_[agent] * mmst::kNumNodes + node] != 0 &&
            !blocked_[agent][node];
   }
 

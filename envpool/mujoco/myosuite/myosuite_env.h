@@ -1340,8 +1340,10 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
         model_->geom_rgba[4 * geom + channel] = color[channel];
       }
     }
-    const mjtNum half_height =
-        type == 3 ? 1.3 * size[1] : (type == 5 ? size[1] : size[2]);
+    mjtNum half_height = type == 5 ? size[1] : size[2];
+    if (type == 3) {
+      half_height = 1.3 * size[1];
+    }
     for (const char* name : {"top", "bot", "t_top", "t_bot"}) {
       const int geom = GeomId(name);
       mju_zero(model_->geom_pos + 3 * geom, 3);
@@ -1365,9 +1367,10 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
       return;
     }
     const bool random = std::string_view(metadata_.reset_type) == "random";
-    const int key =
-        random ? (Uniform(0, 1) < 0.5 ? 2 : 3)
-               : (std::string_view(metadata_.reset_type) == "init" ? 2 : 0);
+    int key = std::string_view(metadata_.reset_type) == "init" ? 2 : 0;
+    if (random) {
+      key = Uniform(0, 1) < 0.5 ? 2 : 3;
+    }
     mju_copy(data_->qpos, model_->key_qpos + key * model_->nq, model_->nq);
     mju_copy(data_->qvel, model_->key_qvel + key * model_->nv, model_->nv);
     if (random) {
@@ -1591,7 +1594,10 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
                                               "trackfield.hills_difficulties",
                                               "trackfield.rough_difficulties"};
     const int selected = std::uniform_int_distribution<int>(0, 2)(gen_);
-    track_terrain_type_ = mixed ? 4 : (selected == 0 ? 3 : selected);
+    track_terrain_type_ = selected == 0 ? 3 : selected;
+    if (mixed) {
+      track_terrain_type_ = 4;
+    }
     const int rows = model_->hfield_nrow[0];
     const int cols = model_->hfield_ncol[0];
     const int patches =
@@ -1637,18 +1643,21 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     std::vector<mjtNum> values(size * size, 0);
     if (type != 0) {
       for (int i = 0; i < size * size; ++i) {
-        values[i] =
-            type == 1
-                ? std::sin(10 * M_PI * i / (size * size - 1) + M_PI / 2) - 1
-            : type == 2 ? Uniform(-1, 1)
-                        : reset_parameters_.at("heightfield.relief")[i];
+        if (type == 1) {
+          values[i] =
+              std::sin(10 * M_PI * i / (size * size - 1) + M_PI / 2) - 1;
+        } else if (type == 2) {
+          values[i] = Uniform(-1, 1);
+        } else {
+          values[i] = reset_parameters_.at("heightfield.relief")[i];
+        }
       }
       const auto [minimum, maximum] =
           std::minmax_element(values.begin(), values.end());
-      const mjtNum scale =
-          SampleRange(type == 1   ? "heightfield.hills_range"
-                      : type == 2 ? "heightfield.rough_range"
-                                  : "heightfield.relief_range");
+      constexpr std::array<const char*, 3> ranges = {
+          "heightfield.hills_range", "heightfield.rough_range",
+          "heightfield.relief_range"};
+      const mjtNum scale = SampleRange(ranges[type - 1]);
       const mjtNum low = *minimum;
       const mjtNum span = *maximum - low;
       for (auto& value : values) {
@@ -1683,7 +1692,7 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
         do {
           type = std::uniform_int_distribution<int>(0, 2)(gen_);
         } while (type == 1 && hills == 2);
-        hills += type == 1;
+        hills += static_cast<int>(type == 1);
         SampleChasePatch(row, col, type);
       }
     }
@@ -1694,16 +1703,17 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     }
     const int rows = model_->hfield_nrow[0];
     const int cols = model_->hfield_ncol[0];
-    const int x =
-        std::clamp(static_cast<int>(
-                       data_->qpos[0] * rows /
-                           reset_parameters_.at("heightfield.real_length")[0] +
-                       rows / 2),
-                   0, rows - 2);
+    const int x = std::clamp(
+        static_cast<int>(
+            data_->qpos[0] /
+                (reset_parameters_.at("heightfield.real_length")[0] / rows) +
+            rows / 2.0),
+        0, rows - 2);
     const int y = std::clamp(
-        static_cast<int>(data_->qpos[1] * cols /
-                             reset_parameters_.at("heightfield.real_width")[0] +
-                         cols / 2),
+        static_cast<int>(
+            data_->qpos[1] /
+                (reset_parameters_.at("heightfield.real_width")[0] / cols) +
+            cols / 2.0),
         0, cols - 2);
     SampleChasePatch(x / (rows / patches), y / (rows / patches), 0);
     const int terrain = GeomId("terrain");
@@ -1731,16 +1741,16 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
       data_->mocap_pos[1] = Uniform(-3.3, 3.3);
       EulerToQuaternion({0, 0, 0}, data_->mocap_quat);
     } else if (task_.kind == MyoSuiteTaskKind::kChallengeChaseTag) {
-      chase_task_ =
-          std::string_view(metadata_.task_choice) == "random"
-              ? std::uniform_int_distribution<int>(0, 1)(gen_)
-              : (std::string_view(metadata_.task_choice) == "EVADE" ? 1 : 0);
+      chase_task_ = std::string_view(metadata_.task_choice) == "EVADE" ? 1 : 0;
+      if (std::string_view(metadata_.task_choice) == "random") {
+        chase_task_ = std::uniform_int_distribution<int>(0, 1)(gen_);
+      }
       if (random) {
         data_->qpos[0] = Uniform(-5, 5);
         data_->qpos[1] = Uniform(-5, 5);
-        mjtNum matrix[9];
-        mju_quat2Mat(matrix, data_->qpos + 3);
-        const auto angles = MatToEuler(matrix);
+        std::array<mjtNum, 9> matrix{};
+        mju_quat2Mat(matrix.data(), data_->qpos + 3);
+        const auto angles = MatToEuler(matrix.data());
         const mjtNum yaw = Uniform(0, 2 * M_PI);
         EulerToQuaternion({angles[0], angles[1], yaw}, data_->qpos + 3);
         const mjtNum speed = std::hypot(data_->qvel[0], data_->qvel[1]);
@@ -1783,8 +1793,8 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
         const mjtNum pitch = std::asin(
             std::clamp(2 * (quat[0] * quat[2] - quat[3] * quat[1]), -1.0, 1.0));
         const mjtNum yaw = Uniform(-125 * M_PI / 180, -60 * M_PI / 180);
-        const mjtNum angles[] = {roll, pitch, yaw};
-        mju_euler2Quat(data_->qpos + 3, angles, "XYZ");
+        const std::array<mjtNum, 3> angles = {roll, pitch, yaw};
+        mju_euler2Quat(data_->qpos + 3, angles.data(), "XYZ");
         const mjtNum speed = std::hypot(data_->qvel[0], data_->qvel[1]);
         data_->qvel[0] = std::cos(yaw) * speed;
         data_->qvel[1] = std::sin(yaw) * speed;
@@ -2318,9 +2328,9 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     const mjtNum length = reset_parameters_.at(prefix + ".real_length")[0];
     const mjtNum width = reset_parameters_.at(prefix + ".real_width")[0];
     const mjtNum distance = reset_parameters_.at(prefix + ".view_distance")[0];
-    mjtNum matrix[9];
-    mju_quat2Mat(matrix, data_->qpos + 3);
-    const mjtNum yaw = MatToEuler(matrix)[2];
+    std::array<mjtNum, 9> matrix{};
+    mju_quat2Mat(matrix.data(), data_->qpos + 3);
+    const mjtNum yaw = MatToEuler(matrix.data())[2];
     const std::array<mjtNum, 10> points = {-0.4, -0.3, -0.2, -0.1, 0,
                                            0.1,  0.2,  0.3,  0.4,  0.5};
     for (int y = 0; y < 10; ++y) {
@@ -2331,10 +2341,12 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
         const mjtNum world_y =
             data_->qpos[1] +
             distance * (std::sin(yaw) * points[x] + std::cos(yaw) * points[y]);
-        const int row = std::clamp(
-            static_cast<int>(world_y * rows / length + rows / 2), 0, rows - 2);
-        const int col = std::clamp(
-            static_cast<int>(world_x * cols / width + cols / 2), 0, cols - 2);
+        const int row =
+            std::clamp(static_cast<int>(world_y / (length / rows) + rows / 2.0),
+                       0, rows - 2);
+        const int col =
+            std::clamp(static_cast<int>(world_x / (width / cols) + cols / 2.0),
+                       0, cols - 2);
         heights[(9 - x) * 10 + 9 - y] = model_->hfield_data[row * cols + col];
       }
     }
@@ -2914,8 +2926,11 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
       values["distance"] = distance;
       values["lose"] = lose ? 1.0 : 0.0;
       const mjtNum elapsed = std::round(data_->time * 100.0) / 100.0 / 20.0;
-      values["sparse"] = chase_task_ == 0 ? (win ? 1.0 - elapsed : 0.0)
-                                          : (win || lose ? elapsed : 0.0);
+      if (chase_task_ == 0) {
+        values["sparse"] = win ? 1.0 - elapsed : 0.0;
+      } else {
+        values["sparse"] = win || lose ? elapsed : 0.0;
+      }
       values["solved"] = win ? 1.0 : 0.0;
       values["done"] = (win || lose) ? 1.0 : 0.0;
       const int indicator = SiteId("opponent_indicator");

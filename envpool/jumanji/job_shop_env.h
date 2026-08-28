@@ -174,7 +174,7 @@ class JobShopEnv : public Env<JobShopEnvSpec>, public RenderableEnv {
     }
     int completed = 0;
     for (int job = 0; job < jobshop::kNumJobs; ++job) {
-      completed += NextOperation(job) < 0 && !JobBusy(job);
+      completed += static_cast<int>(NextOperation(job) < 0 && !JobBusy(job));
     }
     const int completed_w =
         std::clamp(width * completed / jobshop::kNumJobs, 0, width);

@@ -226,17 +226,17 @@ class MultiCVRPEnv : public Env<MultiCVRPEnvSpec>, public RenderableEnv {
               : std::uniform_real_distribution<float>(0, 10)(gen_);
       windows_end_[node] = use_configured_state_ ? configured_windows_end_[node]
                                                  : windows_start_[node] + 20.0f;
-      coeffs_early_[node] =
-          use_configured_state_
-              ? configured_coeffs_early_[node]
-              : (node == 0
-                     ? 0.0f
-                     : std::uniform_real_distribution<float>(0, 0.2f)(gen_));
-      coeffs_late_[node] =
-          use_configured_state_
-              ? configured_coeffs_late_[node]
-              : (node == 0 ? 0.0f
-                           : std::uniform_real_distribution<float>(0, 1)(gen_));
+      if (use_configured_state_) {
+        coeffs_early_[node] = configured_coeffs_early_[node];
+        coeffs_late_[node] = configured_coeffs_late_[node];
+      } else {
+        coeffs_early_[node] =
+            node == 0 ? 0.0f
+                      : std::uniform_real_distribution<float>(0, 0.2f)(gen_);
+        coeffs_late_[node] =
+            node == 0 ? 0.0f
+                      : std::uniform_real_distribution<float>(0, 1)(gen_);
+      }
     }
     if (!use_configured_state_) {
       const int total = std::accumulate(demands_.begin(), demands_.end(), 0);

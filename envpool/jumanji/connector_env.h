@@ -191,7 +191,7 @@ class ConnectorEnv : public Env<ConnectorEnvSpec>, public RenderableEnv {
           std::clamp(static_cast<int>(action["action"_](0, agent)), 0, 4);
       const int row = row_[agent] + connector::kMoves[move][0];
       const int col = col_[agent] + connector::kMoves[move][1];
-      if (move && IsValidPosition(agent, row, col)) {
+      if (move != 0 && IsValidPosition(agent, row, col)) {
         next_row[agent] = row;
         next_col[agent] = col;
       }

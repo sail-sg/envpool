@@ -233,7 +233,7 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
     if (valid) {
       for (int dr = 0; dr < 4; ++dr) {
         for (int dc = 0; dc < 4; ++dc) {
-          if (piece[dr * 4 + dc]) {
+          if (piece[dr * 4 + dc] != 0) {
             grid_[tetris::Offset(row + dr, col + dc)] = 1;
           }
         }
@@ -291,7 +291,7 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
     int left = 4;
     for (int row = 0; row < 4; ++row) {
       for (int col = 0; col < 4; ++col) {
-        if (piece[row * 4 + col]) {
+        if (piece[row * 4 + col] != 0) {
           top = std::min(top, row);
           left = std::min(left, col);
         }
@@ -311,9 +311,9 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
     for (int row = 0; row < tetris::kRows; ++row) {
       for (int dr = 0; dr < 4; ++dr) {
         for (int dc = 0; dc < 4; ++dc) {
-          if (piece[dr * 4 + dc] &&
+          if (piece[dr * 4 + dc] != 0 &&
               (row + dr >= tetris::kRows || col + dc >= tetris::kCols ||
-               grid_[tetris::Offset(row + dr, col + dc)])) {
+               grid_[tetris::Offset(row + dr, col + dc)] != 0)) {
             return row - 1;
           }
         }

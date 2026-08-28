@@ -197,14 +197,14 @@ class FlatPackEnv : public Env<FlatPackEnvSpec>, public RenderableEnv {
     std::uniform_int_distribution<int> side(0, 1);
     for (int col = 2; col < flatpack::kGridSize - 1; col += 2) {
       for (int row = 0; row < flatpack::kGridSize; ++row) {
-        const int neighbor = col + (side(gen_) ? 1 : -1);
+        const int neighbor = col + (side(gen_) != 0 ? 1 : -1);
         solved[flatpack::Offset(row, col)] =
             solved[flatpack::Offset(row, neighbor)];
       }
     }
     for (int row = 2; row < flatpack::kGridSize - 1; row += 2) {
       for (int col = 0; col < flatpack::kGridSize; ++col) {
-        const int neighbor = row + (side(gen_) ? 1 : -1);
+        const int neighbor = row + (side(gen_) != 0 ? 1 : -1);
         solved[flatpack::Offset(row, col)] =
             solved[flatpack::Offset(neighbor, col)];
       }

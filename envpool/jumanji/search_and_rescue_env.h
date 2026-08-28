@@ -50,10 +50,9 @@ inline float Wrap(float value, float period = 1.0f) {
 
 inline float Shortest(float from, float to, float period = 1.0f) {
   const float delta = to - from;
-  const float alternate = (delta > 0.0f   ? 1.0f
-                           : delta < 0.0f ? -1.0f
-                                          : 0.0f) *
-                          (std::abs(delta) - period);
+  const float sign = delta > 0.0f ? 1.0f : -1.0f;
+  const float alternate =
+      (delta == 0.0f ? 0.0f : sign) * (std::abs(delta) - period);
   return std::abs(delta) < std::abs(alternate) ? delta : alternate;
 }
 
