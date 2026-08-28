@@ -103,10 +103,9 @@ class Array {
     for (((offset = offset * shape_[i++] + index), ...); i < ndim; ++i) {
       offset *= shape_[i];
     }
-    return Array(
-        ptr_.get() + offset * element_size,
-        std::vector<std::size_t>(shape_.begin() + num_index, shape_.end()),
-        element_size);
+    return {ptr_.get() + offset * element_size,
+            std::vector<std::size_t>(shape_.begin() + num_index, shape_.end()),
+            element_size};
   }
 
   /**

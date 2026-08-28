@@ -16,6 +16,7 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cstddef>
 #include <memory>
 #include <vector>
@@ -64,11 +65,11 @@ TEST(ArrayTest, TruncateAndSharedPtrKeepOwnedStorageAlive) {
 
 TEST(ArrayTest, SharedPtrPreservesNonOwningDataPointer) {
   ShapeSpec spec(sizeof(int), {2});
-  int data[2] = {};
-  Array array(spec, reinterpret_cast<char*>(data));
+  std::array<int, 2> data{};
+  Array array(spec, reinterpret_cast<char*>(data.data()));
 
   auto shared = array.SharedPtr();
-  EXPECT_EQ(shared.get(), reinterpret_cast<char*>(data));
+  EXPECT_EQ(shared.get(), reinterpret_cast<char*>(data.data()));
 }
 
 TEST(ArrayTest, ViewsDoNotExtendBackingStorageLifetime) {

@@ -100,6 +100,11 @@ reset timing explicitly implemented and tested, and EnvPool aliases.
   both dense and masked probability distributions.
 - Expensive immutable official texture caches are test-only Bazel build
   artifacts, shared across tests instead of regenerated for every shard.
+- Full Clang-Tidy also visits the shared core touched by the reset-counter
+  hook. It exposed two style errors introduced by baseline `35b3282`'s Array
+  change: a repeated return type and a C-style array in its existing test.
+  Use a braced return and `std::array` without changing view or lifetime
+  semantics; retain the existing behavioral tests.
 - God mode can walk outside the map. Map views use the oracle's padded
   dynamic-slice clipping, while entity coordinates still follow the player.
 
