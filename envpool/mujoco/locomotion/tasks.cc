@@ -33,7 +33,9 @@ void SplineFilter(std::array<double, 60>* values) {
   auto& c = *values;
   constexpr double pole = -0.267949192431122706472553658494127633;
   const double gain = (1 - pole) * (1 - 1 / pole);
-  for (double& value : c) value *= gain;
+  for (double& value : c) {
+    value *= gain;
+  }
   const double end = std::pow(pole, 59);
   c[0] += end * c[59];
   double power = pole;
@@ -42,16 +44,23 @@ void SplineFilter(std::array<double, 60>* values) {
     power *= pole;
   }
   c[0] /= 1 - end * end;
-  for (int i = 1; i < 60; ++i) c[i] += pole * c[i - 1];
+  for (int i = 1; i < 60; ++i) {
+    c[i] += pole * c[i - 1];
+  }
   c[59] = (pole * c[58] + c[59]) * pole / (pole * pole - 1);
-  for (int i = 58; i >= 0; --i) c[i] = pole * (c[i + 1] - c[i]);
+  for (int i = 58; i >= 0; --i) {
+    c[i] = pole * (c[i + 1] - c[i]);
+  }
 }
 
 std::array<double, 4> SplineWeights(double position) {
-  const double x = position - std::floor(position), y = 1 - x;
+  const double x = position - std::floor(position);
+  const double y = 1 - x;
   std::array<double, 4> weights{y * y * y / 6, (x * x * (x - 2) * 3 + 4) / 6,
                                 (y * y * (y - 2) * 3 + 4) / 6, 1};
-  for (int i = 0; i < 3; ++i) weights[3] -= weights[i];
+  for (int i = 0; i < 3; ++i) {
+    weights[3] -= weights[i];
+  }
   return weights;
 }
 
@@ -59,30 +68,32 @@ std::array<double, 4> SplineWeights(double position) {
 
 void Scene::Bowl() {
   Floor(20, true);
-  auto camera = Find(world(), "camera", "top_camera");
+  auto camera = Find(World(), "camera", "top_camera");
   camera.parent().remove_child(camera);
-  Set(Find(world(), "geom", "groundplane"), "size", {20, 20, .5});
-  auto terrain = asset().prepend_child("hfield");
+  Set(Find(World(), "geom", "groundplane"), "size", {20, 20, .5});
+  auto terrain = Asset().prepend_child("hfield");
   Set(terrain, "name", "terrain");
   Set(terrain, "nrow", 201);
   Set(terrain, "ncol", 201);
   Set(terrain, "size", {6, 6, .5, .1});
-  auto geom = world().prepend_child("geom");
+  auto geom = World().prepend_child("geom");
   Set(geom, "name", "terrain");
   Set(geom, "type", "hfield");
   Set(geom, "pos", {0, 0, -.01});
   Set(geom, "hfield", "terrain");
   Set(geom, "material", "aesthetic_material");
   ground_geoms.insert(ground_geoms.begin(), "terrain");
-  auto map = Child(Child(root(), "visual"), "map");
+  auto map = Child(Child(Root(), "visual"), "map");
   Set(map, "znear", .00025);
   Set(map, "zfar", 50);
 }
 
 void Simulation::ResetBowl() {
-  double quaternion[4];
-  for (double& value : quaternion) value = random_.Normal();
-  mju_normalize4(quaternion);
+  std::array<double, 4> quaternion;
+  for (double& value : quaternion) {
+    value = random_.Normal();
+  }
+  mju_normalize4(quaternion.data());
   double* qpos = data_->qpos + model_->jnt_qposadr[walkers_[0].freejoint];
   const int flags = model_->opt.disableflags;
   model_->opt.disableflags |= mjDSBL_ACTUATION;
@@ -91,7 +102,7 @@ void Simulation::ResetBowl() {
   for (int attempt = 0; attempt < 999; ++attempt, height += .01) {
     qpos[0] = qpos[1] = 0;
     qpos[2] = height;
-    mju_copy4(qpos + 3, quaternion);
+    mju_copy4(qpos + 3, quaternion.data());
     mj_forward(model_.get(), data_.get());
     if (data_->ncon == 0) {
       clear = true;
@@ -99,7 +110,9 @@ void Simulation::ResetBowl() {
     }
   }
   model_->opt.disableflags = flags;
-  if (!clear) throw std::runtime_error("Bowl spawn has no contact-free height");
+  if (!clear) {
+    throw std::runtime_error("Bowl spawn has no contact-free height");
+  }
   // The task's initialize hook runs before the arena's. The spawn is found
   // against the initial flat hfield; only then does Bowl generate the terrain.
   GenerateBowl();
@@ -107,15 +120,19 @@ void Simulation::ResetBowl() {
 
 void Simulation::GenerateBowl() {
   std::array<double, 3600> bumps;
-  for (double& value : bumps) value = random_.Uniform(.5, 1);
+  for (double& value : bumps) {
+    value = random_.Uniform(.5, 1);
+  }
   std::array<double, 60> line;
   for (int axis = 0; axis < 2; ++axis) {
     for (int i = 0; i < 60; ++i) {
-      for (int j = 0; j < 60; ++j)
-        line[j] = bumps[axis ? i * 60 + j : j * 60 + i];
+      for (int j = 0; j < 60; ++j) {
+        line[j] = bumps[(axis != 0) ? i * 60 + j : j * 60 + i];
+      }
       SplineFilter(&line);
-      for (int j = 0; j < 60; ++j)
-        bumps[axis ? i * 60 + j : j * 60 + i] = line[j];
+      for (int j = 0; j < 60; ++j) {
+        bumps[(axis != 0) ? i * 60 + j : j * 60 + i] = line[j];
+      }
     }
   }
   std::array<std::array<double, 4>, 201> weights;
@@ -125,8 +142,12 @@ void Simulation::GenerateBowl() {
     weights[i] = SplineWeights(coordinate);
     for (int j = 0; j < 4; ++j) {
       int index = static_cast<int>(std::floor(coordinate)) - 1 + j;
-      if (index < 0) index = -index;
-      if (index > 59) index = 118 - index;
+      if (index < 0) {
+        index = -index;
+      }
+      if (index > 59) {
+        index = 118 - index;
+      }
       indices[i][j] = index;
     }
   }
@@ -141,7 +162,8 @@ void Simulation::GenerateBowl() {
           smooth += value;
         }
       }
-      const double px = x * .01 - 1, py = y * .01 - 1;
+      const double px = x * .01 - 1;
+      const double py = y * .01 - 1;
       const double radius = std::clamp(std::sqrt(px * px + py * py), .1, 1.);
       const double bowl = .5 - std::cos(2 * std::acos(-1) * radius) / 2;
       model_->hfield_data[y * 201 + x] = bowl * smooth;
@@ -171,7 +193,9 @@ void Simulation::TouchReward() {
     const double* hand =
         data_->xpos + 3 * Id(mjOBJ_BODY, walkers_[0].prefix + name);
     double distance = 0;
-    for (int i = 0; i < 3; ++i) distance += std::abs(hand[i] - target[i]);
+    for (int i = 0; i < 3; ++i) {
+      distance += std::abs(hand[i] - target[i]);
+    }
     closest = std::max(closest, std::exp(-3 * distance));
   }
   rewards[0] = .01 * closest * 25;
@@ -199,7 +223,9 @@ void Simulation::TouchReward() {
       second_touch_time_ = data_->time;
     }
   } else if (touch_timeout_) {
-    if (data_->time > second_touch_time_ + 1.2) touch_timeout_ = false;
+    if (data_->time > second_touch_time_ + 1.2) {
+      touch_timeout_ = false;
+    }
   } else if (data_->time > second_touch_time_) {
     randomize_touch_ = true;
   }

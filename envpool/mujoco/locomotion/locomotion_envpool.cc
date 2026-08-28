@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <array>
 #include <cstring>
 #include <map>
 #include <string>
@@ -45,8 +46,8 @@ PYBIND11_MODULE(locomotion_envpool, m) {
         return self.Inspect(
             env_id, [include_model](const mujoco_locomotion::Simulation& sim) {
               py::dict result;
-              const mjModel* model = sim.model();
-              const mjData* data = sim.data();
+              const mjModel* model = sim.Model();
+              const mjData* data = sim.Data();
               for (const auto& [key, ptr, size] :
                    std::vector<std::tuple<const char*, const double*, int>>{
                        {"qpos", data->qpos, model->nq},
@@ -65,8 +66,8 @@ PYBIND11_MODULE(locomotion_envpool, m) {
                 std::vector<char> bytes(mj_sizeModel(model));
                 mj_saveModel(model, nullptr, bytes.data(), bytes.size());
                 result["model"] = py::bytes(bytes.data(), bytes.size());
-                result["maze"] = sim.scene().maze_entities;
-                result["variations"] = sim.scene().maze_variations;
+                result["maze"] = sim.GetScene().maze_entities;
+                result["variations"] = sim.GetScene().maze_variations;
               }
               return result;
             });

@@ -34,8 +34,14 @@
 
 namespace mujoco_locomotion {
 
-enum class Walker { kCmu2019, kCmu2020, kRodent, kBoxhead, kAnt };
-enum class Task {
+enum class Walker : std::uint8_t {
+  kCmu2019,
+  kCmu2020,
+  kRodent,
+  kBoxhead,
+  kAnt
+};
+enum class Task : std::uint8_t {
   kWalls,
   kGaps,
   kTarget,
@@ -72,9 +78,9 @@ pugi::xml_node Find(pugi::xml_node root, const char* tag,
 class Scene {
  public:
   Scene(std::string asset_path, std::string labmaze_asset_path);
-  pugi::xml_node root() { return document_.child("mujoco"); }
-  pugi::xml_node world() { return Child(root(), "worldbody"); }
-  pugi::xml_node asset() { return Child(root(), "asset"); }
+  pugi::xml_node Root() { return document_.child("mujoco"); }
+  pugi::xml_node World() { return Child(Root(), "worldbody"); }
+  pugi::xml_node Asset() { return Child(Root(), "asset"); }
   void LoadArena(const std::string& name, double timestep);
   void Corridor(const TaskConfig& task, RandomState* random);
   void Floor(double size, bool outdoor = false);
@@ -98,10 +104,10 @@ class Scene {
   std::string maze_entities, maze_variations;
   std::array<double, 2> pitch_size{}, field_size{};
   std::array<double, 3> goal_size{};
-  const auto& virtual_files() const { return virtual_files_; }
+  const auto& VirtualFiles() const { return virtual_files_; }
 
  private:
-  enum class RootJoint { kFixed, kFree, kSlides };
+  enum class RootJoint : std::uint8_t { kFixed, kFree, kSlides };
   void Attach(pugi::xml_node model, const std::string& prefix,
               RootJoint joints = RootJoint::kFree);
   void OutdoorTexture();

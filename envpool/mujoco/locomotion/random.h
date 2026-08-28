@@ -34,7 +34,9 @@ class RandomState {
   double Uniform(double low = 0, double high = 1);
 
   uint32_t Int(uint32_t high) {
-    if (high <= 1) return 0;
+    if (high <= 1) {
+      return 0;
+    }
     uint32_t mask = high - 1;
     mask |= mask >> 1;
     mask |= mask >> 2;

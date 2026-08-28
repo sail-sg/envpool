@@ -42,7 +42,7 @@ genrule(
         "metadata.h",
         "tasks.json",
     ],
-    cmd = "$(location :generate_metadata) --source $(location @mujoco_dmc_xml//:__init__.py) --labmaze $(location @labmaze_source//:labmaze/assets/__init__.py) --header $(location metadata.h) --registry $(location tasks.json)",
+    cmd = "$(execpath :generate_metadata) --source $(execpath @mujoco_dmc_xml//:__init__.py) --labmaze $(execpath @labmaze_source//:labmaze/assets/__init__.py) --header $(execpath metadata.h) --registry $(execpath tasks.json)",
     tools = [":generate_metadata"],
 )
 
@@ -75,7 +75,7 @@ genrule(
         "oracle_2020.h5",
         "mocap.json",
     ],
-    cmd = "$(location :generate_mocap) --source $(location @mujoco_dmc_xml//:__init__.py) --cmu-2019 $(location @dmc_cmu_mocap_2019//file) --cmu-2020 $(location @dmc_cmu_mocap_2020//file) --output $(@D)",
+    cmd = "$(execpath :generate_mocap) --source $(execpath @mujoco_dmc_xml//:__init__.py) --cmu-2019 $(execpath @dmc_cmu_mocap_2019//file) --cmu-2020 $(execpath @dmc_cmu_mocap_2020//file) --output $(@D)",
     tools = [":generate_mocap"],
 )
 

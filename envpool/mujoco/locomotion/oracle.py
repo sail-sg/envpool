@@ -13,6 +13,7 @@
 # limitations under the License.
 """Pinned Composer factories used only by tests and documentation tooling."""
 
+import importlib.machinery
 import importlib.util
 import sys
 from pathlib import Path
@@ -34,7 +35,11 @@ if sys.platform == "win32":
         runfiles_repository("labmaze_source")
         / "labmaze/cc/python/_random_maze.pyd"
     ).resolve()
-    _spec = importlib.util.spec_from_file_location(_binding, _source)
+    _spec = importlib.util.spec_from_file_location(
+        _binding,
+        _source,
+        loader=importlib.machinery.ExtensionFileLoader(_binding, str(_source)),
+    )
     if _spec is None or _spec.loader is None:
         raise RuntimeError(f"Cannot load pinned LabMaze binding: {_source}")
     _module = importlib.util.module_from_spec(_spec)

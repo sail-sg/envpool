@@ -30,7 +30,9 @@ double RandomState::Normal() {
     has_gaussian_ = false;
     return gaussian_;
   }
-  double x, y, radius;
+  double x;
+  double y;
+  double radius;
   do {
     x = 2 * Uniform() - 1;
     y = 2 * Uniform() - 1;

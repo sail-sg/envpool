@@ -16,6 +16,7 @@
  */
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <limits>
 #include <stdexcept>
@@ -46,7 +47,9 @@ void Simulation::InitializeSoccer() {
       if (walker.freejoint >= 0) {
         double* qpos = data_->qpos + model_->jnt_qposadr[walker.freejoint];
         const double norm = std::sqrt(mju_dot(qpos + 3, qpos + 3, 4));
-        for (int i = 3; i < 7; ++i) qpos[i] /= norm;
+        for (int i = 3; i < 7; ++i) {
+          qpos[i] /= norm;
+        }
         qpos[0] = x;
         qpos[1] = y;
         ShiftWalker(player, {0, 0, 0}, rotation);
@@ -58,7 +61,8 @@ void Simulation::InitializeSoccer() {
                                            walker.prefix + "root_y/")]] = y;
         // BoxHead.set_pose extracts yaw from the quaternion and leaves the
         // translational root joints independent of its steering hinge.
-        const double c = std::cos(rotation / 2), s = std::sin(rotation / 2);
+        const double c = std::cos(rotation / 2);
+        const double s = std::sin(rotation / 2);
         data_->qpos[model_->jnt_qposadr[Id(mjOBJ_JOINT,
                                            walker.prefix + "steer")]] =
             std::atan2(2 * c * s, 1 - 2 * s * s);
@@ -68,8 +72,8 @@ void Simulation::InitializeSoccer() {
     bool retry = false;
     for (int i = 0; i < data_->ncon; ++i) {
       const auto& contact = data_->contact[i];
-      const int a = geom_player_[contact.geom1],
-                b = geom_player_[contact.geom2];
+      const int a = geom_player_[contact.geom1];
+      const int b = geom_player_[contact.geom2];
       // The pinned UniformInitializer's ball set contains a Binding rather
       // than a geom ID, so its retry loop only rejects player-player contacts.
       if (a >= 0 && b >= 0 && a != b) {
@@ -77,7 +81,9 @@ void Simulation::InitializeSoccer() {
         break;
       }
     }
-    if (!retry) return;
+    if (!retry) {
+      return;
+    }
   }
   throw std::runtime_error("Soccer initializer exceeded 100 collision retries");
 }
@@ -96,11 +102,15 @@ void Simulation::BeforeSoccerStep() {
 
 void Simulation::SoccerDetections() {
   const double* ball = data_->geom_xpos + 3 * ball_geom_;
+  const std::array<std::string, 3> detector_names{"home_goal/", "away_goal/",
+                                                  "field/"};
+  const std::array<std::array<float, 4>, 3> inactive_colors{
+      {{.2f, .2f, 1.f, .5f}, {1.f, .2f, .2f, .5f}, {1.f, 1.f, 1.f, 1.f}}};
   for (int detector = 0; detector < 3; ++detector) {
-    const std::string name = detector == 0   ? "home_goal/"
-                             : detector == 1 ? "away_goal/"
-                                             : "field/";
-    if (detector == 2 && options_.enable_field_box) continue;
+    const auto& name = detector_names[detector];
+    if (detector == 2 && options_.enable_field_box) {
+      continue;
+    }
     const auto* lower = model_->site_pos + 3 * Id(mjOBJ_SITE, name + "lower");
     const auto* upper = model_->site_pos + 3 * Id(mjOBJ_SITE, name + "upper");
     bool inside = true;
@@ -115,40 +125,42 @@ void Simulation::SoccerDetections() {
       goals_[detector] = goals_[detector] || detected;
       goals_now_[detector] = detected;
     }
-    if (detected == previous) continue;
-    const float rgba[4]{detected        ? 0.f
-                        : detector == 0 ? .2f
-                                        : 1.f,
-                        detected        ? 1.f
-                        : detector == 2 ? 1.f
-                                        : .2f,
-                        detected        ? 0.f
-                        : detector == 1 ? .2f
-                                        : 1.f,
-                        detected        ? .25f
-                        : detector == 2 ? 1.f
-                                        : .5f};
+    if (detected == previous) {
+      continue;
+    }
+    const auto rgba = detected ? std::array<float, 4>{0.f, 1.f, 0.f, .25f}
+                               : inactive_colors[detector];
     std::copy_n(
-        rgba, 4,
+        rgba.data(), 4,
         model_->site_rgba + 4 * Id(mjOBJ_SITE, name + "detection_zone"));
     if (detector < 2) {
       for (int geom = 0; geom < model_->ngeom; ++geom) {
         const char* geom_name = mj_id2name(model_.get(), mjOBJ_GEOM, geom);
-        if (geom_name && std::string(geom_name).find(name) == 0) {
-          std::copy_n(rgba, 3, model_->geom_rgba + 4 * geom);
+        if ((geom_name != nullptr) && std::string(geom_name).find(name) == 0) {
+          std::copy_n(rgba.data(), 3, model_->geom_rgba + 4 * geom);
           model_->geom_rgba[4 * geom + 3] = 1;
         }
       }
     }
   }
-  scoring_team_ = goals_[0] ? 1 : goals_[1] ? 0 : -1;
+  scoring_team_ = -1;
+  if (goals_[0]) {
+    scoring_team_ = 1;
+  } else if (goals_[1]) {
+    scoring_team_ = 0;
+  }
 }
 
 void Simulation::AfterSoccerStep() {
-  if (scoring_team_ >= 0 && !options_.terminate_on_goal) InitializeSoccer();
+  if (scoring_team_ >= 0 && !options_.terminate_on_goal) {
+    InitializeSoccer();
+  }
   for (int player = 0; player < players_; ++player) {
     const int team = player / options_.team_size;
-    rewards[player] = scoring_team_ < 0 ? 0 : team == scoring_team_ ? 1 : -1;
+    rewards[player] = 0;
+    if (scoring_team_ >= 0) {
+      rewards[player] = team == scoring_team_ ? 1 : -1;
+    }
   }
   success_ = scoring_team_ >= 0 && options_.terminate_on_goal;
   discount = success_ ? 0 : 1;
@@ -169,10 +181,13 @@ std::vector<double> Simulation::SoccerObservation(
     return {start, start + ActionSize(task_.walker)};
   }
   if (key.find("ball_ego_") == 0) {
-    return SensorValues(walker.prefix +
-                        (key == "ball_ego_angular_velocity" ? "ball_ego_angvel"
-                         : key == "ball_ego_position" ? "ball_ego_pos"
-                                                      : "ball_ego_linvel"));
+    std::string sensor = "ball_ego_linvel";
+    if (key == "ball_ego_angular_velocity") {
+      sensor = "ball_ego_angvel";
+    } else if (key == "ball_ego_position") {
+      sensor = "ball_ego_pos";
+    }
+    return SensorValues(walker.prefix + sensor);
   }
   if ((key.find("teammate_") == 0 || key.find("opponent_") == 0) &&
       key[9] >= '0' && key[9] <= '9') {
@@ -184,9 +199,12 @@ std::vector<double> Simulation::SoccerObservation(
     int other =
         same ? (player / options_.team_size) * options_.team_size + index
              : (1 - player / options_.team_size) * options_.team_size + index;
-    if (same && other >= player) ++other;
-    if (suffix == "end_effectors_pos")
+    if (same && other >= player) {
+      ++other;
+    }
+    if (suffix == "end_effectors_pos") {
       return WalkerObservation(walkers_[other], suffix);
+    }
     std::vector<double> result;
     auto append = [&](const std::string& sensor) {
       const auto values = SensorValues(walker.prefix + sensor);
@@ -199,7 +217,9 @@ std::vector<double> Simulation::SoccerObservation(
                "_end_effector");
       }
     } else if (suffix == "ego_orientation") {
-      for (char axis : std::string("xyz")) append(key + "_" + axis);
+      for (char axis : std::string("xyz")) {
+        append(key + "_" + axis);
+      }
     } else {
       append(key);
     }
@@ -214,71 +234,88 @@ std::vector<double> Simulation::SoccerObservation(
   if (arena_key != arena_keys.end()) {
     int index = std::distance(arena_keys.begin(), arena_key);
     const int dimension = index == 1 || index == 5 ? 3 : 2;
-    if (player >= options_.team_size) index = (index + 4) % 8;
-    const char* sites[]{"home_goal/lower", "home_goal/mid",   "home_goal/upper",
-                        "field/upper",     "away_goal/upper", "away_goal/mid",
-                        "away_goal/lower", "field/lower"};
+    if (player >= options_.team_size) {
+      index = (index + 4) % 8;
+    }
+    const std::array sites{
+        "home_goal/lower", "home_goal/mid", "home_goal/upper", "field/upper",
+        "away_goal/upper", "away_goal/mid", "away_goal/lower", "field/lower"};
     const double* position =
         model_->site_pos + 3 * Id(mjOBJ_SITE, sites[index]);
     const double* origin = data_->xpos + 3 * walker.root;
     const double* matrix = data_->xmat + 9 * walker.root;
     std::vector<double> result(dimension, 0);
     for (int j = 0; j < dimension; ++j) {
-      for (int i = 0; i < dimension; ++i)
+      for (int i = 0; i < dimension; ++i) {
         result[j] += (position[i] - origin[i]) * matrix[3 * i + j];
+      }
     }
     return result;
   }
-  if (key.find("stats_") != 0) return WalkerObservation(walker, key);
+  if (key.find("stats_") != 0) {
+    return WalkerObservation(walker, key);
+  }
   const double* position = data_->xpos + 3 * walker.root;
   const double* ball = data_->geom_xpos + 3 * ball_geom_;
   const int team = player / options_.team_size;
-  if (key == "stats_home_score")
+  if (key == "stats_home_score") {
     return {static_cast<double>(scoring_team_ == team)};
-  if (key == "stats_away_score")
+  }
+  if (key == "stats_away_score") {
     return {static_cast<double>(scoring_team_ >= 0 && scoring_team_ != team)};
-  if (key == "stats_veloc_forward")
+  }
+  if (key == "stats_veloc_forward") {
     return {WalkerObservation(walker, "sensors_velocimeter")[0]};
+  }
   if (key == "stats_home_avg_teammate_dist") {
     double sum = 0;
     for (int other = team * options_.team_size;
          other < (team + 1) * options_.team_size; ++other) {
-      if (other == player) continue;
-      double delta[3];
-      mju_sub3(delta, position, data_->xpos + 3 * walkers_[other].root);
-      sum += mju_norm3(delta);
+      if (other == player) {
+        continue;
+      }
+      std::array<double, 3> delta;
+      mju_sub3(delta.data(), position, data_->xpos + 3 * walkers_[other].root);
+      sum += mju_norm3(delta.data());
     }
     return {options_.team_size == 1 ? 0 : sum / (options_.team_size - 1)};
   }
   if (key == "stats_vel_ball_to_goal") {
-    double delta[3];
-    mju_sub3(delta,
-             model_->site_pos +
-                 3 * Id(mjOBJ_SITE, team ? "home_goal/mid" : "away_goal/mid"),
-             ball);
-    const double norm = mju_norm3(delta);
-    if (norm)
-      for (double& value : delta) value /= norm;
+    std::array<double, 3> delta;
+    mju_sub3(
+        delta.data(),
+        model_->site_pos +
+            3 * Id(mjOBJ_SITE, (team != 0) ? "home_goal/mid" : "away_goal/mid"),
+        ball);
+    const double norm = mju_norm3(delta.data());
+    if (norm != 0.0) {
+      for (double& value : delta) {
+        value /= norm;
+      }
+    }
     const auto velocity = SensorValues("soccer_ball/linear_velocity");
-    return {mju_dot3(delta, velocity.data())};
+    return {mju_dot3(delta.data(), velocity.data())};
   }
   if (key == "stats_closest_vel_to_ball") {
     double nearest = std::numeric_limits<double>::infinity();
     int closest = -1;
     for (int other = team * options_.team_size;
          other < (team + 1) * options_.team_size; ++other) {
-      double delta[3];
-      mju_sub3(delta, ball, data_->xpos + 3 * walkers_[other].root);
-      const double distance = mju_norm3(delta);
+      std::array<double, 3> delta;
+      mju_sub3(delta.data(), ball, data_->xpos + 3 * walkers_[other].root);
+      const double distance = mju_norm3(delta.data());
       if (distance < nearest) {
         nearest = distance;
         closest = other;
       }
     }
-    if (closest != player) return {0};
+    if (closest != player) {
+      return {0};
+    }
   }
   if (key == "stats_closest_vel_to_ball" || key == "stats_vel_to_ball") {
-    const double dx = ball[0] - position[0], dy = ball[1] - position[1];
+    const double dx = ball[0] - position[0];
+    const double dy = ball[1] - position[1];
     const double norm = std::sqrt(dx * dx + dy * dy) + 1e-7;
     const double* velocity = data_->cvel + 6 * walker.root + 3;
     return {(dx / norm) * velocity[0] + (dy / norm) * velocity[1]};

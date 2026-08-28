@@ -16,6 +16,7 @@
  */
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <functional>
 #include <map>
@@ -30,9 +31,15 @@
 namespace mujoco_locomotion {
 
 int ActionSize(Walker walker) {
-  if (walker == Walker::kBoxhead) return 3;
-  if (walker == Walker::kAnt) return 8;
-  if (walker == Walker::kRodent) return 38;
+  if (walker == Walker::kBoxhead) {
+    return 3;
+  }
+  if (walker == Walker::kAnt) {
+    return 8;
+  }
+  if (walker == Walker::kRodent) {
+    return 38;
+  }
   return 56;
 }
 
@@ -44,28 +51,46 @@ std::vector<Observation> ObservationLayout(const std::string& name,
   const bool cmu =
       task.walker == Walker::kCmu2019 || task.walker == Walker::kCmu2020;
   const bool ant = task.walker == Walker::kAnt;
-  const int joints = rodent ? 30 : cmu ? 56 : ant ? 8 : 1;
+  int joints = 1;
+  if (rodent) {
+    joints = 30;
+  } else if (cmu) {
+    joints = 56;
+  } else if (ant) {
+    joints = 8;
+  }
   const int effectors = task.walker == Walker::kBoxhead ? 3 : 12;
   std::vector<Observation> result;
   auto add = [&](const std::string& key, std::vector<int> shape,
                  int storage = 0, bool boolean = false) {
-    if (soccer) shape.insert(shape.begin(), 1);
+    if (soccer) {
+      shape.insert(shape.begin(), 1);
+    }
     const std::string prefix =
         soccer || key == "task_logic" || key.find("reference_props_") == 0
             ? ""
             : "walker/";
     result.push_back({prefix + key, std::move(shape), storage, boolean});
   };
-  if (task.task == Task::kTwoTouch) add("task_logic", {1}, 1);
+  if (task.task == Task::kTwoTouch) {
+    add("task_logic", {1}, 1);
+  }
   if (task.task == Task::kTracking) {
     add("reference_props_pos_global", {0});
     add("reference_props_quat_global", {0});
   }
-  if (cmu || rodent)
-    add("actuator_activation", {rodent                            ? 38
-                                : task.walker == Walker::kCmu2020 ? 56
-                                                                  : 0});
-  if (cmu || rodent || ant) add("appendages_pos", {ant ? 12 : 15});
+  if (cmu || rodent) {
+    int activations = 0;
+    if (rodent) {
+      activations = 38;
+    } else if (task.walker == Walker::kCmu2020) {
+      activations = 56;
+    }
+    add("actuator_activation", {activations});
+  }
+  if (cmu || rodent || ant) {
+    add("appendages_pos", {ant ? 12 : 15});
+  }
   if (ant) {
     add("bodies_pos", {39});
     add("bodies_quats", {52});
@@ -77,9 +102,13 @@ std::vector<Observation> ObservationLayout(const std::string& name,
   add("end_effectors_pos", {effectors});
   add("joints_pos", {joints});
   add("joints_vel", {joints});
-  if (soccer) add("prev_action", {ActionSize(task.walker)});
+  if (soccer) {
+    add("prev_action", {ActionSize(task.walker)});
+  }
   add("sensors_accelerometer", {3});
-  if (!soccer) add("sensors_force", {0});
+  if (!soccer) {
+    add("sensors_force", {0});
+  }
   add("sensors_gyro", {3});
   if (!soccer) {
     add("sensors_torque", {cmu ? 6 : 0});
@@ -91,8 +120,12 @@ std::vector<Observation> ObservationLayout(const std::string& name,
     add("tendons_vel", {8});
   }
   add("world_zaxis", {3});
-  if (task.task == Task::kTarget) add("target", {3});
-  if (task.task == Task::kBowl) add("origin", {3});
+  if (task.task == Task::kTarget) {
+    add("target", {3});
+  }
+  if (task.task == Task::kBowl) {
+    add("origin", {3});
+  }
   if (task.task == Task::kTracking) {
     add("reference_rel_joints", {280});
     add("reference_rel_bodies_pos_global", {465});
@@ -131,8 +164,9 @@ std::vector<Observation> ObservationLayout(const std::string& name,
     }
     for (const char* key : {"stats_vel_to_ball", "stats_closest_vel_to_ball",
                             "stats_veloc_forward", "stats_vel_ball_to_goal",
-                            "stats_home_avg_teammate_dist"})
+                            "stats_home_avg_teammate_dist"}) {
       add(key, {});
+    }
     add("stats_teammate_spread_out", {}, 1, true);
     add("stats_home_score", {});
     add("stats_away_score", {});
@@ -141,7 +175,7 @@ std::vector<Observation> ObservationLayout(const std::string& name,
   for (auto& observation : result) {
     observation.size =
         std::accumulate(observation.shape.begin(), observation.shape.end(), 1,
-                        std::multiplies<int>());
+                        std::multiplies<>());
     observation.offset = offsets[observation.storage];
     offsets[observation.storage] += observation.size;
   }
@@ -151,7 +185,9 @@ std::vector<Observation> ObservationLayout(const std::string& name,
 int StorageSize(const std::vector<Observation>& layout, int storage) {
   int size = 0;
   for (const auto& observation : layout) {
-    if (observation.storage == storage) size += observation.size;
+    if (observation.storage == storage) {
+      size += observation.size;
+    }
   }
   return size;
 }
@@ -162,9 +198,9 @@ std::vector<double> Simulation::RelativePositions(
   const auto* origin = data_->xpos + 3 * walker.root;
   const auto* matrix = data_->xmat + 9 * walker.root;
   for (std::size_t i = 0; i < bodies.size(); ++i) {
-    double delta[3];
-    mju_sub3(delta, data_->xpos + 3 * bodies[i], origin);
-    mju_mulMatTVec3(result.data() + 3 * i, matrix, delta);
+    std::array<double, 3> delta;
+    mju_sub3(delta.data(), data_->xpos + 3 * bodies[i], origin);
+    mju_mulMatTVec3(result.data() + 3 * i, matrix, delta.data());
   }
   return result;
 }
@@ -172,7 +208,9 @@ std::vector<double> Simulation::RelativePositions(
 std::vector<double> Simulation::WalkerObservation(
     const WalkerIds& walker, const std::string& key) const {
   std::vector<double> result;
-  if (key == "body_height") return {data_->xpos[3 * walker.root + 2]};
+  if (key == "body_height") {
+    return {data_->xpos[3 * walker.root + 2]};
+  }
   if (key == "world_zaxis") {
     return {data_->xmat + 9 * walker.root + 6,
             data_->xmat + 9 * walker.root + 9};
@@ -191,7 +229,9 @@ std::vector<double> Simulation::WalkerObservation(
   } else if (key == "actuator_activation") {
     for (int actuator : walker.actuators) {
       const int address = model_->actuator_actadr[actuator];
-      if (address >= 0) result.push_back(data_->act[address]);
+      if (address >= 0) {
+        result.push_back(data_->act[address]);
+      }
     }
   } else if (key == "end_effectors_pos") {
     for (int sensor : walker.effector_sensors) {
@@ -209,7 +249,9 @@ std::vector<double> Simulation::WalkerObservation(
       return result;
     }
     auto bodies = walker.effectors;
-    if (walker.head >= 0) bodies.push_back(walker.head);
+    if (walker.head >= 0) {
+      bodies.push_back(walker.head);
+    }
     result = RelativePositions(walker, bodies);
   } else if (key == "bodies_pos" || key == "bodies_quats") {
     for (int body : walker.bodies) {
@@ -219,15 +261,15 @@ std::vector<double> Simulation::WalkerObservation(
       result.insert(result.end(), values.begin(), values.end());
     }
   } else if (key == "target" || key == "origin") {
-    double delta[3];
+    std::array<double, 3> delta;
     if (key == "target") {
-      mju_sub3(delta, model_->site_pos + 3 * Id(mjOBJ_SITE, "target"),
+      mju_sub3(delta.data(), model_->site_pos + 3 * Id(mjOBJ_SITE, "target"),
                data_->xpos + 3 * walker.root);
     } else {
-      mju_scl3(delta, data_->xpos + 3 * walker.root, -1);
+      mju_scl3(delta.data(), data_->xpos + 3 * walker.root, -1);
     }
     result.resize(3);
-    mju_mulMatTVec3(result.data(), data_->xmat + 9 * walker.root, delta);
+    mju_mulMatTVec3(result.data(), data_->xmat + 9 * walker.root, delta.data());
   } else if (key.find("sensors_") == 0) {
     const std::map<std::string, int> types{
         {"sensors_accelerometer", mjSENS_ACCELEROMETER},
@@ -241,8 +283,12 @@ std::vector<double> Simulation::WalkerObservation(
       for (int sensor : found->second) {
         for (int i = 0; i < model_->sensor_dim[sensor]; ++i) {
           double value = data_->sensordata[model_->sensor_adr[sensor] + i];
-          if (key == "sensors_touch") value = value > .001;
-          if (key == "sensors_torque") value = std::tanh(2 * value / 60);
+          if (key == "sensors_touch") {
+            value = static_cast<double>(value > .001);
+          }
+          if (key == "sensors_torque") {
+            value = std::tanh(2 * value / 60);
+          }
           result.push_back(value);
         }
       }
@@ -275,11 +321,14 @@ void Simulation::Observe() {
                &option);
       } else if (observation.storage == 0) {
         const auto found = tracking_observations_.find(key);
-        const auto values = task_.task == Task::kSoccer
-                                ? SoccerObservation(player, key)
-                            : found != tracking_observations_.end()
-                                ? found->second
-                                : WalkerObservation(walker, key);
+        std::vector<double> values;
+        if (task_.task == Task::kSoccer) {
+          values = SoccerObservation(player, key);
+        } else if (found != tracking_observations_.end()) {
+          values = found->second;
+        } else {
+          values = WalkerObservation(walker, key);
+        }
         if (values.size() != static_cast<std::size_t>(observation.size)) {
           throw std::runtime_error("Wrong native observation shape: " +
                                    observation.name);
@@ -292,7 +341,9 @@ void Simulation::Observe() {
         discrete[observation.offset] = clip_id_;
       } else if (task_.task == Task::kSoccer) {
         discrete[player * StorageSize(layout_, 1) + observation.offset] =
-            SoccerObservation(player, "stats_home_avg_teammate_dist")[0] > 5;
+            static_cast<int64_t>(
+                SoccerObservation(player, "stats_home_avg_teammate_dist")[0] >
+                5);
       }
     }
   }

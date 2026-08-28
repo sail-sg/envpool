@@ -76,11 +76,14 @@ class LocomotionEnvSpec : public EnvSpec<LocomotionEnvFns> {
     Config config(values);
     const auto task = GetTaskConfig(config["task_name"_]);
     const int team = config["team_size"_];
-    if (team < 1 || team > 11)
+    if (team < 1 || team > 11) {
       throw std::invalid_argument("team_size must be between 1 and 11");
+    }
     config["max_num_players"_] = task.task == Task::kSoccer ? 2 * team : 1;
     double& limit = config["time_limit"_];
-    if (limit == -1) limit = task.time_limit;
+    if (limit == -1) {
+      limit = task.time_limit;
+    }
     if (!std::isfinite(limit) || limit <= 0 ||
         config["max_episode_steps"_] <= 0) {
       throw std::invalid_argument(
@@ -97,16 +100,16 @@ class LocomotionEnv : public Env<LocomotionEnvSpec>, public RenderableEnv {
   LocomotionEnv(const Spec& spec, int env_id)
       : Base(spec, env_id), simulation_(MakeOptions(spec, seed_)) {}
 
-  bool IsDone() override { return simulation_.done(); }
+  bool IsDone() override { return simulation_.Done(); }
 
   void Reset() override {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     simulation_.Reset();
     WriteState();
   }
 
   void Step(const Action& action) override {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     simulation_.Step(static_cast<const double*>(action["action"_].Data()));
     WriteState();
   }
@@ -117,9 +120,10 @@ class LocomotionEnv : public Env<LocomotionEnvSpec>, public RenderableEnv {
 
   void Render(int width, int height, int camera,
               unsigned char* output) override {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (simulation_.model() == nullptr)
+    std::scoped_lock lock(mutex_);
+    if (simulation_.Model() == nullptr) {
       throw std::runtime_error("reset before rendering");
+    }
     simulation_.Render(width, height, camera, output);
   }
 
@@ -128,9 +132,10 @@ class LocomotionEnv : public Env<LocomotionEnvSpec>, public RenderableEnv {
   // changes the simulator or synchronizes either side of an oracle rollout.
   template <typename Function>
   auto Inspect(Function function) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (simulation_.model() == nullptr)
+    std::scoped_lock lock(mutex_);
+    if (simulation_.Model() == nullptr) {
       throw std::runtime_error("reset before inspecting physics");
+    }
     return function(simulation_);
   }
 #endif
@@ -154,7 +159,7 @@ class LocomotionEnv : public Env<LocomotionEnvSpec>, public RenderableEnv {
   }
 
   void WriteState() {
-    State state = Allocate(simulation_.players());
+    State state = Allocate(simulation_.Players());
     state["obs:continuous"_] = 0;
     state["obs:discrete"_] = 0;
     state["obs:pixels"_] = 0;
@@ -164,13 +169,13 @@ class LocomotionEnv : public Env<LocomotionEnvSpec>, public RenderableEnv {
               static_cast<int64_t*>(state["obs:discrete"_].Data()));
     std::copy(simulation_.pixels.begin(), simulation_.pixels.end(),
               static_cast<uint8_t*>(state["obs:pixels"_].Data()));
-    for (int i = 0; i < simulation_.players(); ++i) {
+    for (int i = 0; i < simulation_.Players(); ++i) {
       state["reward"_][i] = simulation_.rewards[i];
       state["reward64"_][i] = simulation_.rewards[i];
       state["discount"_][i] = simulation_.discount;
     }
-    state["terminated"_] = simulation_.terminated();
-    state["trunc"_] = simulation_.truncated();
+    state["terminated"_] = simulation_.Terminated();
+    state["trunc"_] = simulation_.Truncated();
   }
 
   Simulation simulation_;
@@ -196,8 +201,9 @@ class LocomotionEnvPool : public AsyncEnvPool<LocomotionEnv> {
 #ifdef ENVPOOL_TEST
   template <typename Function>
   auto Inspect(int env_id, Function function) {
-    if (env_id < 0 || env_id >= static_cast<int>(envs_.size()))
+    if (env_id < 0 || env_id >= static_cast<int>(envs_.size())) {
       throw std::out_of_range("invalid env_id");
+    }
     return envs_[env_id]->Inspect(function);
   }
 #endif
@@ -225,13 +231,15 @@ class LocomotionEnvPool : public AsyncEnvPool<LocomotionEnv> {
     for (std::size_t i = 0; i < actions[0].size; ++i) {
       const int id = env_ids[i];
       if (id < 0 || id >= static_cast<int>(envs_.size()) ||
-          !selected.insert(id).second)
+          !selected.insert(id).second) {
         throw std::invalid_argument("invalid or duplicate env_id");
+      }
     }
     for (std::size_t i = 0; i < actions[1].size; ++i) {
       const int id = player_ids[i];
-      if (!selected.count(id) || ++counts[id] > players)
+      if ((selected.count(id) == 0u) || ++counts[id] > players) {
         throw std::invalid_argument("expected one action for every player");
+      }
     }
   }
 };

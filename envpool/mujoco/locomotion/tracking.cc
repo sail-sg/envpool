@@ -16,6 +16,7 @@
  */
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <map>
 #include <numeric>
@@ -34,16 +35,23 @@ void NormalizeFeature(double* quaternion) {
   // elementwise division. Reciprocal multiplication changes CoMic's acos
   // argument near one and amplifies otherwise harmless quaternion roundoff.
   double squared = 0;
-  for (int i = 0; i < 4; ++i) squared += quaternion[i] * quaternion[i];
+  for (int i = 0; i < 4; ++i) {
+    squared += quaternion[i] * quaternion[i];
+  }
   const double norm = std::sqrt(squared);
-  for (int i = 0; i < 4; ++i) quaternion[i] /= norm;
+  for (int i = 0; i < 4; ++i) {
+    quaternion[i] /= norm;
+  }
 }
 
 std::array<double, 4> QuaternionDifference(const double* source,
                                            const double* target) {
   // Match transformations.quat_diff's Hamilton product, without normalizing
   // its operands: the reference quaternions were recorded as float32.
-  const double w = source[0], x = -source[1], y = -source[2], z = -source[3];
+  const double w = source[0];
+  const double x = -source[1];
+  const double y = -source[2];
+  const double z = -source[3];
   return {w * target[0] - x * target[1] - y * target[2] - z * target[3],
           x * target[0] + w * target[1] - z * target[2] + y * target[3],
           y * target[0] + z * target[1] + w * target[2] - x * target[3],
@@ -51,9 +59,9 @@ std::array<double, 4> QuaternionDifference(const double* source,
 }
 
 std::array<double, 9> QuaternionMatrix(const double* quaternion) {
-  double q[4];
+  std::array<double, 4> q;
   const double norm = mju_dot(quaternion, quaternion, 4);
-  mju_scl(q, quaternion, std::sqrt(2 / norm), 4);
+  mju_scl(q.data(), quaternion, std::sqrt(2 / norm), 4);
   return {1 - q[2] * q[2] - q[3] * q[3], q[1] * q[2] - q[3] * q[0],
           q[1] * q[3] + q[2] * q[0],     q[1] * q[2] + q[3] * q[0],
           1 - q[1] * q[1] - q[3] * q[3], q[2] * q[3] - q[1] * q[0],
@@ -80,15 +88,18 @@ void Simulation::SelectTrackingClip() {
         possible_starts_.emplace_back(clip, step);
       }
     }
-    if (possible_starts_.empty())
+    if (possible_starts_.empty()) {
       throw std::runtime_error("No valid mocap starts");
+    }
     const double probability = 1. / possible_starts_.size();
     double sum = 0;
     for (std::size_t i = 0; i < possible_starts_.size(); ++i) {
       sum += probability;
       start_cdf_.push_back(sum);
     }
-    for (double& value : start_cdf_) value /= sum;
+    for (double& value : start_cdf_) {
+      value /= sum;
+    }
   }
   const auto index = std::upper_bound(start_cdf_.begin(), start_cdf_.end(),
                                       random_.Uniform()) -
@@ -116,7 +127,9 @@ Simulation::Features Simulation::TrackingFeatures() const {
         data_->qvel[model_->jnt_dofadr[joint]]);
   }
   for (int body : walker.bodies) {
-    if (body == walker.root) continue;
+    if (body == walker.root) {
+      continue;
+    }
     const double* pos = data_->xpos + 3 * body;
     const double* quat = data_->xquat + 4 * body;
     features["body_positions"].insert(features["body_positions"].end(), pos,
@@ -152,8 +165,9 @@ void Simulation::ResetTracking() {
   model_->opt.disableflags = flags;
   tracking_features_ = TrackingFeatures();
   previous_features_ = tracking_features_;
-  if (TrackingError() > 1e-2)
+  if (TrackingError() > 1e-2) {
     throw std::runtime_error("CMU reference and walker disagree at reset");
+  }
   UpdateTrackingObservations();
 }
 
@@ -163,11 +177,14 @@ double Simulation::TrackingError() const {
   for (const char* key : {"body_positions", "joints"}) {
     const auto& values = tracking_features_.at(key);
     const auto* reference = clip.Frame(key, reference_step_);
-    if (values.size() != static_cast<std::size_t>(clip.features.at(key).width))
+    if (values.size() !=
+        static_cast<std::size_t>(clip.features.at(key).width)) {
       throw std::runtime_error("CMU reference shape mismatch");
+    }
     double error = 0;
-    for (std::size_t i = 0; i < values.size(); ++i)
+    for (std::size_t i = 0; i < values.size(); ++i) {
       error += std::abs(reference[i] - values[i]);
+    }
     result += .5 * (error / values.size());
   }
   return result;
@@ -196,20 +213,24 @@ void Simulation::UpdateTrackingObservations() {
   };
   for (int lookahead = 1; lookahead <= 5; ++lookahead) {
     const int frame = reference_step_ + lookahead;
-    for (int index : joint_order)
+    for (int index : joint_order) {
       obs["reference_rel_joints"].push_back(
           clip.Frame("joints", frame)[index] -
           tracking_features_.at("joints")[index]);
+    }
     const auto& positions = tracking_features_.at("body_positions");
     for (std::size_t i = 0; i < positions.size(); i += 3) {
-      double delta[3], local[3];
-      mju_sub3(delta, clip.Frame("body_positions", frame) + i,
+      std::array<double, 3> delta;
+      std::array<double, 3> local;
+      mju_sub3(delta.data(), clip.Frame("body_positions", frame) + i,
                positions.data() + i);
-      mju_mulMatTVec3(local, matrix, delta);
+      mju_mulMatTVec3(local.data(), matrix, delta.data());
       obs["reference_rel_bodies_pos_global"].insert(
-          obs["reference_rel_bodies_pos_global"].end(), delta, delta + 3);
+          obs["reference_rel_bodies_pos_global"].end(), delta.data(),
+          delta.data() + 3);
       obs["reference_rel_bodies_pos_local"].insert(
-          obs["reference_rel_bodies_pos_local"].end(), local, local + 3);
+          obs["reference_rel_bodies_pos_local"].end(), local.data(),
+          local.data() + 3);
     }
     const auto& quaternions = tracking_features_.at("body_quaternions");
     for (std::size_t i = 0; i < quaternions.size(); i += 4) {
@@ -225,21 +246,26 @@ void Simulation::UpdateTrackingObservations() {
     const auto* appendages = clip.Frame("appendages", frame);
     obs["reference_appendages_pos"].insert(
         obs["reference_appendages_pos"].end(), appendages, appendages + 15);
-    double delta[3], local[3];
-    mju_sub3(delta, clip.Frame("position", frame),
+    std::array<double, 3> delta;
+    std::array<double, 3> local;
+    mju_sub3(delta.data(), clip.Frame("position", frame),
              tracking_features_.at("position").data());
-    mju_mulMatTVec3(local, matrix, delta);
+    mju_mulMatTVec3(local.data(), matrix, delta.data());
     obs["reference_rel_root_pos_local"].insert(
-        obs["reference_rel_root_pos_local"].end(), local, local + 3);
+        obs["reference_rel_root_pos_local"].end(), local.data(),
+        local.data() + 3);
   }
   const auto prev_matrix =
       QuaternionMatrix(previous_features_.at("quaternion").data());
-  double velocity[3], local[3];
-  mju_sub3(velocity, tracking_features_.at("position").data(),
+  std::array<double, 3> velocity;
+  std::array<double, 3> local;
+  mju_sub3(velocity.data(), tracking_features_.at("position").data(),
            previous_features_.at("position").data());
-  for (double& value : velocity) value /= task_.control_timestep;
-  mju_mulMatTVec3(local, prev_matrix.data(), velocity);
-  obs["velocimeter_control"] = {local, local + 3};
+  for (double& value : velocity) {
+    value /= task_.control_timestep;
+  }
+  mju_mulMatTVec3(local.data(), prev_matrix.data(), velocity.data());
+  obs["velocimeter_control"] = {local.data(), local.data() + 3};
   auto quat = QuaternionDifference(previous_features_.at("quaternion").data(),
                                    tracking_features_.at("quaternion").data());
   mju_normalize4(quat.data());
@@ -249,15 +275,17 @@ void Simulation::UpdateTrackingObservations() {
   if (angle >= 1e-10) {
     const double sine = std::sin(angle / 2);
     double wrapped = std::fmod(angle + pi, 2 * pi) - pi;
-    for (int i = 0; i < 3; ++i)
+    for (int i = 0; i < 3; ++i) {
       obs["gyro_control"][i] =
           (quat[i + 1] / sine) * wrapped / task_.control_timestep;
+    }
   }
-  for (int index : joint_order)
+  for (int index : joint_order) {
     obs["joints_vel_control"].push_back(
         (tracking_features_.at("joints")[index] -
          previous_features_.at("joints")[index]) /
         task_.control_timestep);
+  }
   obs["time_in_clip"] = {(reference_start_ * clip.dt + data_->time) /
                          ((clip.frames - 1) * clip.dt)};
 }
@@ -287,9 +315,9 @@ void Simulation::AfterTrackingStep() {
     // The official reward normalizes its feature snapshots in place; keep
     // that mutation in the cached features used on the following timestep.
     NormalizeFeature(quats.data() + i);
-    double reference[4];
-    mju_copy4(reference, target + i);
-    NormalizeFeature(reference);
+    std::array<double, 4> reference;
+    mju_copy4(reference.data(), target + i);
+    NormalizeFeature(reference.data());
     const double* source = quats.data() + i;
     // einsum's four-element sum-of-products kernel uses two pairwise sums.
     const double dot = (source[0] * reference[0] + source[1] * reference[1]) +

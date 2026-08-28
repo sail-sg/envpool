@@ -18,6 +18,7 @@
 #include "envpool/mujoco/locomotion/simulation.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstring>
 #include <map>
@@ -60,8 +61,9 @@ Simulation::~Simulation() = default;
 
 int Simulation::Id(mjtObj object, const std::string& name) const {
   const int id = mj_name2id(model_.get(), object, name.c_str());
-  if (id < 0)
+  if (id < 0) {
     throw std::runtime_error("Missing locomotion model element " + name);
+  }
   return id;
 }
 
@@ -70,7 +72,9 @@ void Simulation::Compile() {
   data_.reset();
   model_.reset(scene_.Compile());
   data_.reset(mj_makeData(model_.get()));
-  if (!data_) throw std::runtime_error("Cannot allocate locomotion physics");
+  if (!data_) {
+    throw std::runtime_error("Cannot allocate locomotion physics");
+  }
   CacheIds();
 }
 
@@ -89,8 +93,9 @@ void Simulation::CacheIds() {
                                                  : "target_sphere")));
   }
   hand_geoms_.clear();
-  for (const auto& name : scene_.ground_geoms)
+  for (const auto& name : scene_.ground_geoms) {
     ground_geoms_.push_back(Id(mjOBJ_GEOM, name));
+  }
   for (int player = 0; player < players_; ++player) {
     WalkerIds walker{};
     walker.prefix = players_ == 1
@@ -101,7 +106,12 @@ void Simulation::CacheIds() {
         task_.walker == Walker::kCmu2019 || task_.walker == Walker::kCmu2020;
     const bool rodent = task_.walker == Walker::kRodent;
     const bool boxhead = task_.walker == Walker::kBoxhead;
-    const std::string torso = cmu ? "root" : boxhead ? "head_body" : "torso";
+    std::string torso = "torso";
+    if (cmu) {
+      torso = "root";
+    } else if (boxhead) {
+      torso = "head_body";
+    }
     walker.root = Id(mjOBJ_BODY, walker.prefix + torso);
     walker.frame = Id(mjOBJ_BODY, walker.prefix);
     walker.freejoint = boxhead ? -1 : Id(mjOBJ_JOINT, walker.prefix);
@@ -110,14 +120,17 @@ void Simulation::CacheIds() {
                       : -1;
     walker.pelvis = rodent ? Id(mjOBJ_BODY, walker.prefix + "pelvis") : -1;
     walker.camera = Id(mjOBJ_CAMERA, walker.prefix + "egocentric");
-    const std::vector<std::string> effectors =
-        cmu ? std::vector<std::string>{"rradius", "lradius", "rfoot", "lfoot"}
-        : rodent ? std::vector<std::string>{"lower_arm_R", "lower_arm_L",
-                                            "foot_R", "foot_L"}
-        : boxhead
-            ? std::vector<std::string>{"head_body"}
-            : std::vector<std::string>{"front_left_foot", "front_right_foot",
-                                       "back_right_foot", "back_left_foot"};
+    std::vector<std::string> effectors;
+    if (cmu) {
+      effectors = {"rradius", "lradius", "rfoot", "lfoot"};
+    } else if (rodent) {
+      effectors = {"lower_arm_R", "lower_arm_L", "foot_R", "foot_L"};
+    } else if (boxhead) {
+      effectors = {"head_body"};
+    } else {
+      effectors = {"front_left_foot", "front_right_foot", "back_right_foot",
+                   "back_left_foot"};
+    }
     for (const auto& name : effectors) {
       walker.effectors.push_back(Id(mjOBJ_BODY, walker.prefix + name));
       walker.effector_sensors.push_back(
@@ -128,7 +141,9 @@ void Simulation::CacheIds() {
       return name && std::string(name).find(walker.prefix) == 0;
     };
     for (int i = 0; i < model_->nu; ++i) {
-      if (!belongs(mjOBJ_ACTUATOR, i)) continue;
+      if (!belongs(mjOBJ_ACTUATOR, i)) {
+        continue;
+      }
       walker.actuators.push_back(i);
       if (model_->actuator_trntype[i] == mjTRN_JOINT) {
         const int joint = model_->actuator_trnid[2 * i];
@@ -140,15 +155,19 @@ void Simulation::CacheIds() {
       }
     }
     for (int i = 0; i < model_->ntendon; ++i) {
-      if (belongs(mjOBJ_TENDON, i)) walker.tendons.push_back(i);
+      if (belongs(mjOBJ_TENDON, i)) {
+        walker.tendons.push_back(i);
+      }
     }
     for (int i = 0; i < model_->nsensor; ++i) {
-      if (belongs(mjOBJ_SENSOR, i))
+      if (belongs(mjOBJ_SENSOR, i)) {
         walker.sensors[model_->sensor_type[i]].push_back(i);
+      }
     }
     for (int i = 0; i < model_->nbody; ++i) {
-      if (i != walker.frame && belongs(mjOBJ_BODY, i))
+      if (i != walker.frame && belongs(mjOBJ_BODY, i)) {
         walker.bodies.push_back(i);
+      }
     }
     std::vector<int> feet;
     if (cmu) {
@@ -156,8 +175,9 @@ void Simulation::CacheIds() {
               Id(mjOBJ_BODY, walker.prefix + "rfoot")};
     } else if (rodent) {
       for (const char* name :
-           {"foot_L", "foot_R", "hand_L", "hand_R", "vertebra_C1"})
+           {"foot_L", "foot_R", "hand_L", "hand_R", "vertebra_C1"}) {
         feet.push_back(Id(mjOBJ_BODY, walker.prefix + name));
+      }
     } else if (!boxhead) {
       feet = walker.effectors;
     }
@@ -176,9 +196,10 @@ void Simulation::CacheIds() {
         body = model_->body_parentid[body];
       }
     }
-    if (boxhead)
+    if (boxhead) {
       walker.ground_contact_geoms.push_back(
           Id(mjOBJ_GEOM, walker.prefix + "shell"));
+    }
     walkers_.push_back(std::move(walker));
   }
   if (task_.task == Task::kSoccer) {
@@ -187,10 +208,13 @@ void Simulation::CacheIds() {
     geom_player_.assign(model_->ngeom, -1);
     for (int geom = 0; geom < model_->ngeom; ++geom) {
       const char* name = mj_id2name(model_.get(), mjOBJ_GEOM, geom);
-      if (!name) continue;
+      if (name == nullptr) {
+        continue;
+      }
       for (int player = 0; player < players_; ++player) {
-        if (std::string(name).find(walkers_[player].prefix) == 0)
+        if (std::string(name).find(walkers_[player].prefix) == 0) {
           geom_player_[geom] = player;
+        }
       }
     }
   }
@@ -200,7 +224,7 @@ void Simulation::ResetWalker(int index) {
   const auto& walker = walkers_[index];
   for (int joint = 0; joint < model_->njnt; ++joint) {
     const char* name = mj_id2name(model_.get(), mjOBJ_JOINT, joint);
-    if (name && model_->jnt_bodyid[joint] != walker.frame &&
+    if ((name != nullptr) && model_->jnt_bodyid[joint] != walker.frame &&
         std::string(name).find(walker.prefix) == 0) {
       const int count = model_->jnt_type[joint] == mjJNT_BALL ? 4 : 1;
       mju_copy(data_->qpos + model_->jnt_qposadr[joint],
@@ -229,7 +253,9 @@ void Simulation::ResetWalker(int index) {
     position[5] = 1;
     position[6] = .859;
     const double norm = std::sqrt(mju_dot(position + 3, position + 3, 4));
-    for (int i = 3; i < 7; ++i) position[i] /= norm;
+    for (int i = 3; i < 7; ++i) {
+      position[i] /= norm;
+    }
   }
   if (task_.task == Task::kSoccer && mocap_) {
     const auto& clip = mocap_->clips[0];
@@ -253,19 +279,26 @@ void Simulation::ResetWalker(int index) {
 void Simulation::ShiftWalker(int index, const std::array<double, 3>& position,
                              double rotation) {
   const auto& walker = walkers_[index];
-  if (walker.freejoint < 0) return;
+  if (walker.freejoint < 0) {
+    return;
+  }
   double* qpos = data_->qpos + model_->jnt_qposadr[walker.freejoint];
   if (rotation != 0) {
-    const double turn[4]{std::cos(rotation / 2), 0, 0, std::sin(rotation / 2)};
-    double quat[4];
-    mju_mulQuat(quat, turn, qpos + 3);
+    const std::array<double, 4> turn{std::cos(rotation / 2), 0, 0,
+                                     std::sin(rotation / 2)};
+    std::array<double, 4> quat;
+    mju_mulQuat(quat.data(), turn.data(), qpos + 3);
     // Entity.set_pose normalizes with elementwise division, also when it is
     // called by shift_pose. MuJoCo's normalize4 uses reciprocal multiplication.
-    const double norm = std::sqrt(mju_dot(quat, quat, 4));
-    for (double& value : quat) value /= norm;
-    mju_copy4(qpos + 3, quat);
+    const double norm = std::sqrt(mju_dot(quat.data(), quat.data(), 4));
+    for (double& value : quat) {
+      value /= norm;
+    }
+    mju_copy4(qpos + 3, quat.data());
   }
-  for (int i = 0; i < 3; ++i) qpos[i] += position[i];
+  for (int i = 0; i < 3; ++i) {
+    qpos[i] += position[i];
+  }
 }
 
 void Simulation::Reset() {
@@ -277,15 +310,20 @@ void Simulation::Reset() {
   const bool corridor = task_.task == Task::kWalls || task_.task == Task::kGaps;
   const bool maze =
       task_.task == Task::kForage || task_.task == Task::kHeterogeneous;
-  if (task_.task == Task::kTracking) SelectTrackingClip();
-  scene_.LoadArena(
-      corridor
-          ? (task_.task == Task::kWalls ? "walls_corridor" : "gaps_corridor")
-      : maze ? (task_.task == Task::kForage ? "random_maze" : "maze")
-      : task_.task == Task::kBowl   ? "bowl"
-      : task_.task == Task::kSoccer ? "randomized_pitch"
-                                    : "floor",
-      task_.physics_timestep);
+  if (task_.task == Task::kTracking) {
+    SelectTrackingClip();
+  }
+  std::string arena = "floor";
+  if (corridor) {
+    arena = task_.task == Task::kWalls ? "walls_corridor" : "gaps_corridor";
+  } else if (maze) {
+    arena = task_.task == Task::kForage ? "random_maze" : "maze";
+  } else if (task_.task == Task::kBowl) {
+    arena = "bowl";
+  } else if (task_.task == Task::kSoccer) {
+    arena = "randomized_pitch";
+  }
+  scene_.LoadArena(arena, task_.physics_timestep);
   if (corridor) {
     scene_.Corridor(task_, &random_);
   } else if (task_.task == Task::kTarget || task_.task == Task::kTracking) {
@@ -303,11 +341,17 @@ void Simulation::Reset() {
   } else {
     throw std::runtime_error("Unsupported locomotion scene: " + options_.task);
   }
-  if (task_.task != Task::kSoccer) scene_.AddWalker(task_.walker, "walker/");
-  if (maze) scene_.AddTargets(task_, &random_);
-  if (task_.task == Task::kTwoTouch) scene_.TwoTouchTarget();
+  if (task_.task != Task::kSoccer) {
+    scene_.AddWalker(task_.walker, "walker/");
+  }
+  if (maze) {
+    scene_.AddTargets(task_, &random_);
+  }
+  if (task_.task == Task::kTwoTouch) {
+    scene_.TwoTouchTarget();
+  }
   if (task_.task == Task::kTarget) {
-    auto target = scene_.world().append_child("site");
+    auto target = scene_.World().append_child("site");
     Set(target, "name", "target");
     Set(target, "type", "sphere");
     const double x = random_.Uniform(-4, 4);
@@ -325,8 +369,12 @@ void Simulation::Reset() {
   // TargetSphere.initialize_episode reads Composer's cached contact list.
   // Walker pose writes are still dirty there: the contacts belong to the
   // XML reset pose, not the subsequently selected maze spawn.
-  if (maze) AfterSubstep();
-  for (int player = 0; player < players_; ++player) ResetWalker(player);
+  if (maze) {
+    AfterSubstep();
+  }
+  for (int player = 0; player < players_; ++player) {
+    ResetWalker(player);
+  }
   if (corridor) {
     ShiftWalker(0, {task_.walker == Walker::kRodent ? 5 : .5, 0, 0});
   } else if (maze) {
@@ -367,11 +415,12 @@ void Simulation::RespawnMaze() {
     int direction = 0;
     for (int i = 0; i < 10; ++i) {
       const double theta = 2 * std::acos(-1) * i / 10;
-      const double origin[3]{position[0], position[1], .1};
-      const double ray[3]{std::cos(theta), std::sin(theta), 0};
+      const std::array<double, 3> origin{position[0], position[1], .1};
+      const std::array<double, 3> ray{std::cos(theta), std::sin(theta), 0};
       int geom = -1;
-      const double distance = mj_ray(model_.get(), data_.get(), origin, ray,
-                                     nullptr, 1, -1, &geom, nullptr);
+      const double distance =
+          mj_ray(model_.get(), data_.get(), origin.data(), ray.data(), nullptr,
+                 true, -1, &geom, nullptr);
       if (distance > maximum) {
         maximum = distance;
         direction = i;
@@ -391,26 +440,36 @@ void Simulation::AfterSubstep() {
     return;
   }
   if (task_.task == Task::kTwoTouch) {
-    if (touched_twice_) return;
+    if (touched_twice_) {
+      return;
+    }
     for (int j = 0; j < data_->ncon; ++j) {
       const auto& contact = data_->contact[j];
       int other = -1;
-      if (contact.geom1 == target_geoms_[0]) other = contact.geom2;
-      if (contact.geom2 == target_geoms_[0]) other = contact.geom1;
+      if (contact.geom1 == target_geoms_[0]) {
+        other = contact.geom2;
+      }
+      if (contact.geom2 == target_geoms_[0]) {
+        other = contact.geom1;
+      }
       if (std::find(hand_geoms_.begin(), hand_geoms_.end(), other) ==
-          hand_geoms_.end())
+          hand_geoms_.end()) {
         continue;
+      }
       const bool previous_once = touched_once_;
       const bool previous_twice = touched_twice_;
       if (!touched_once_) {
         touched_once_ = true;
         touch_time_ = data_->time;
       }
-      if (data_->time > touch_time_ + .2) touched_twice_ = true;
+      if (data_->time > touch_time_ + .2) {
+        touched_twice_ = true;
+      }
       // TargetSphereTwoTouch writes texid only on a state transition. That
       // PyMJCF write marks dynamics dirty; repeated contact does not.
-      if (previous_once == touched_once_ && previous_twice == touched_twice_)
+      if (previous_once == touched_once_ && previous_twice == touched_twice_) {
         continue;
+      }
       const int texture =
           Id(mjOBJ_TEXTURE, touched_twice_ ? "target_0_0/target_sphere_final"
                                            : "target_0_0/target_sphere_inter");
@@ -421,7 +480,9 @@ void Simulation::AfterSubstep() {
     return;
   }
   for (std::size_t i = 0; i < target_geoms_.size(); ++i) {
-    if (target_activated_[i]) continue;
+    if (target_activated_[i]) {
+      continue;
+    }
     for (int j = 0; j < data_->ncon; ++j) {
       const auto& contact = data_->contact[j];
       if (contact.geom1 == target_geoms_[i] ||
@@ -438,18 +499,20 @@ bool Simulation::DisallowedContact() const {
   for (int contact_id = 0; contact_id < data_->ncon; ++contact_id) {
     const auto& contact = data_->contact[contact_id];
     for (int orientation = 0; orientation < 2; ++orientation) {
-      const int ground = orientation ? contact.geom1 : contact.geom2;
-      const int geom = orientation ? contact.geom2 : contact.geom1;
+      const int ground = (orientation != 0) ? contact.geom1 : contact.geom2;
+      const int geom = (orientation != 0) ? contact.geom2 : contact.geom1;
       if (std::find(ground_geoms_.begin(), ground_geoms_.end(), ground) ==
-          ground_geoms_.end())
+          ground_geoms_.end()) {
         continue;
+      }
       const auto& walker = walkers_[0];
       const char* name = mj_id2name(model_.get(), mjOBJ_GEOM, geom);
-      if (name && std::string(name).find(walker.prefix) == 0 &&
+      if ((name != nullptr) && std::string(name).find(walker.prefix) == 0 &&
           std::find(walker.ground_contact_geoms.begin(),
                     walker.ground_contact_geoms.end(),
-                    geom) == walker.ground_contact_geoms.end())
+                    geom) == walker.ground_contact_geoms.end()) {
         return true;
+      }
     }
   }
   return false;
@@ -459,8 +522,9 @@ void Simulation::AfterStep() {
   const bool corridor = task_.task == Task::kWalls || task_.task == Task::kGaps;
   failure_ = false;
   if (task_.walker != Walker::kRodent && task_.task != Task::kSoccer &&
-      task_.task != Task::kTracking)
+      task_.task != Task::kTracking) {
     failure_ = DisallowedContact();
+  }
   if (task_.task == Task::kSoccer) {
     AfterSoccerStep();
     return;
@@ -472,7 +536,9 @@ void Simulation::AfterStep() {
   if (corridor) {
     const double height = task_.walker == Walker::kRodent ? -.3 : -.5;
     for (int body : walkers_[0].effectors) {
-      if (data_->xpos[3 * body + 2] < height) failure_ = true;
+      if (data_->xpos[3 * body + 2] < height) {
+        failure_ = true;
+      }
     }
     const double velocity = data_->subtree_linvel[3 * walkers_[0].root];
     const double target = task_.walker == Walker::kRodent ? 1 : 3;
@@ -483,7 +549,7 @@ void Simulation::AfterStep() {
     const auto* position = data_->xpos + 3 * walkers_[0].root;
     const double dx = model_->site_pos[3 * target] - position[0];
     const double dy = model_->site_pos[3 * target + 1] - position[1];
-    rewards[0] = std::sqrt(dx * dx + dy * dy) < 1;
+    rewards[0] = static_cast<double>(std::sqrt(dx * dx + dy * dy) < 1);
   } else if (task_.task == Task::kForage ||
              task_.task == Task::kHeterogeneous) {
     rewards[0] = task_.task == Task::kHeterogeneous ? .01 : 0;
@@ -491,9 +557,11 @@ void Simulation::AfterStep() {
     for (std::size_t i = 0; i < target_activated_.size(); ++i) {
       success_ = success_ && target_activated_[i];
       if (target_activated_[i] && !target_rewarded_[i]) {
-        rewards[0] += task_.task == Task::kForage   ? 50
-                      : scene_.target_types[i] == 0 ? 30
-                                                    : -10;
+        double collected_reward = 50;
+        if (task_.task == Task::kHeterogeneous) {
+          collected_reward = scene_.target_types[i] == 0 ? 30 : -10;
+        }
+        rewards[0] += collected_reward;
         target_rewarded_[i] = true;
       }
     }
@@ -531,15 +599,20 @@ void Simulation::Step(const double* actions) {
   }
   std::copy(actions, actions + players_ * action_size,
             previous_actions_.begin());
-  if (task_.task == Task::kTwoTouch && randomize_touch_) RandomizeTouchTarget();
-  if (task_.task == Task::kSoccer) BeforeSoccerStep();
+  if (task_.task == Task::kTwoTouch && randomize_touch_) {
+    RandomizeTouchTarget();
+  }
+  if (task_.task == Task::kSoccer) {
+    BeforeSoccerStep();
+  }
   const int substeps = static_cast<int>(
       std::round(task_.control_timestep / task_.physics_timestep));
   for (int step = 0; step < substeps; ++step) {
-    if (model_->opt.integrator == mjINT_RK4)
+    if (model_->opt.integrator == mjINT_RK4) {
       mj_step(model_.get(), data_.get());
-    else
+    } else {
       mj_step2(model_.get(), data_.get());
+    }
     mj_step1(model_.get(), data_.get());
     mj_subtreeVel(model_.get(), data_.get());
     // Soccer's position detectors access a bound geom after the first
@@ -556,8 +629,9 @@ void Simulation::Step(const double* actions) {
   // triggers a forward pass on the next derived observation read.
   if (task_.task == Task::kWalls || task_.task == Task::kGaps ||
       task_.task == Task::kTarget || task_.task == Task::kTracking ||
-      model_dirty_)
+      model_dirty_) {
     mj_forward(model_.get(), data_.get());
+  }
   model_dirty_ = false;
   AfterStep();
   truncated_ = data_->time >= options_.time_limit ||
@@ -571,8 +645,9 @@ void Simulation::Step(const double* actions) {
 void Simulation::SetResetState(
     const std::vector<double>& qpos, const std::vector<double>& qvel,
     const std::map<std::string, std::array<double, 3>>& geoms) {
-  if (steps_ != 0 || !model_)
+  if (steps_ != 0 || !model_) {
     throw std::logic_error("oracle fixtures may only change reset state");
+  }
   if (qpos.size() != static_cast<std::size_t>(model_->nq) ||
       qvel.size() != static_cast<std::size_t>(model_->nv)) {
     throw std::invalid_argument("wrong reset state shape");
@@ -600,17 +675,19 @@ void Simulation::SetResetState(
 void Simulation::Render(int width, int height, int camera,
                         unsigned char* output, const mjvOption* option) {
   mjvOption settings;
-  if (option)
+  if (option != nullptr) {
     settings = *option;
-  else
+  } else {
     mjv_defaultOption(&settings);
+  }
   // dm_control.wrapper.MjvOption disables rangefinder visualization, unlike
   // MuJoCo's raw default (visible on Soccer Ant's eight rangefinders).
   settings.flags[mjVIS_RANGEFINDER] = 0;
-  if (!renderer_)
+  if (!renderer_) {
     renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
         envpool::mujoco::CameraPolicy::kDmControl, false, false, true, false,
         false);
+  }
   renderer_->Render(model_.get(), data_.get(), width, height, camera, output,
                     nullptr, &settings);
 }

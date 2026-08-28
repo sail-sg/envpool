@@ -13,7 +13,7 @@
 # limitations under the License.
 """Register every factory and Soccer walker from the pinned upstream source."""
 
-from envpool.registration import register
+from envpool.registration import asset_base_path, register
 
 from .locomotion_envpool import TASKS
 
@@ -27,4 +27,7 @@ for task in TASKS:
         dm_cls="LocomotionDMEnvPool",
         gymnasium_cls="LocomotionGymnasiumEnvPool",
         task_name=task,
+        base_path=asset_base_path(
+            "envpool", "mujoco/locomotion/assets_dm_control"
+        ),
     )

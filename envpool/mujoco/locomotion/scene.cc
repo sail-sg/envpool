@@ -19,6 +19,7 @@
 #include "envpool/mujoco/locomotion/scene.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstring>
 #include <filesystem>  // NOLINT(build/c++17)
@@ -54,18 +55,23 @@ void Namespace(pugi::xml_node node, const std::string& prefix) {
       "tendon2", "body",    "body1",      "body2",     "target",
       "objname", "refname", "actuator",   "cranksite", "slidersite"};
   for (auto attribute : node.attributes()) {
-    if (references.count(attribute.name()) && *attribute.value()) {
+    if ((references.count(attribute.name()) != 0u) &&
+        ((*attribute.value()) != 0)) {
       attribute.set_value((prefix + attribute.value()).c_str());
     }
   }
-  for (auto child : node.children()) Namespace(child, prefix);
+  for (auto child : node.children()) {
+    Namespace(child, prefix);
+  }
 }
 
 std::vector<double> Values(pugi::xml_attribute attribute) {
   std::istringstream input(attribute.value());
   std::vector<double> values;
   double value;
-  while (input >> value) values.push_back(value);
+  while (input >> value) {
+    values.push_back(value);
+  }
   return values;
 }
 
@@ -104,10 +110,15 @@ TaskConfig GetTaskConfig(const std::string& name) {
     result.physics_timestep = 0.001;
     result.control_timestep = 0.02;
   }
-  if (name.find("run_walls") != std::string::npos) result.task = Task::kWalls;
-  if (name.find("run_gaps") != std::string::npos) result.task = Task::kGaps;
-  if (name.find("maze_forage") != std::string::npos)
+  if (name.find("run_walls") != std::string::npos) {
+    result.task = Task::kWalls;
+  }
+  if (name.find("run_gaps") != std::string::npos) {
+    result.task = Task::kGaps;
+  }
+  if (name.find("maze_forage") != std::string::npos) {
     result.task = Task::kForage;
+  }
   if (name.find("heterogeneous") != std::string::npos) {
     result.task = Task::kHeterogeneous;
     result.physics_timestep = 0.001;
@@ -117,7 +128,9 @@ TaskConfig GetTaskConfig(const std::string& name) {
     result.task = Task::kBowl;
     result.time_limit = 20;
   }
-  if (name == "rodent_two_touch") result.task = Task::kTwoTouch;
+  if (name == "rodent_two_touch") {
+    result.task = Task::kTwoTouch;
+  }
   if (name == "cmu_humanoid_tracking") {
     result.task = Task::kTracking;
     result.walker = Walker::kCmu2020;
@@ -128,8 +141,12 @@ TaskConfig GetTaskConfig(const std::string& name) {
     result.physics_timestep = 0.005;
     result.control_timestep = 0.025;
     result.time_limit = 45;
-    if (name == "soccer_boxhead") result.walker = Walker::kBoxhead;
-    if (name == "soccer_ant") result.walker = Walker::kAnt;
+    if (name == "soccer_boxhead") {
+      result.walker = Walker::kBoxhead;
+    }
+    if (name == "soccer_ant") {
+      result.walker = Walker::kAnt;
+    }
   }
   return result;
 }
@@ -138,7 +155,9 @@ std::string Numbers(const double* values, int size) {
   std::ostringstream output;
   output << std::setprecision(17);
   for (int i = 0; i < size; ++i) {
-    if (i) output << ' ';
+    if (i != 0) {
+      output << ' ';
+    }
     output << values[i];
   }
   return output.str();
@@ -150,7 +169,9 @@ std::string Numbers(std::initializer_list<double> values) {
 
 void Set(pugi::xml_node node, const char* key, const std::string& value) {
   auto attribute = node.attribute(key);
-  if (!attribute) attribute = node.append_attribute(key);
+  if (!attribute) {
+    attribute = node.append_attribute(key);
+  }
   attribute.set_value(value.c_str());
 }
 
@@ -165,7 +186,7 @@ void Set(pugi::xml_node node, const char* key,
 
 pugi::xml_node Child(pugi::xml_node parent, const char* tag) {
   auto child = parent.child(tag);
-  return child ? child : parent.append_child(tag);
+  return (child != nullptr) ? child : parent.append_child(tag);
 }
 
 pugi::xml_node Find(pugi::xml_node root, const char* tag,
@@ -189,29 +210,29 @@ void Scene::LoadArena(const std::string& name, double timestep) {
   target_types.clear();
   virtual_files_.clear();
   Load(&document_, asset_path_ + "/composer/arena.xml");
-  root().child("compiler").remove_attribute("coordinate");
-  Set(root(), "model", name);
-  Set(Child(root(), "option"), "timestep", timestep);
+  Root().child("compiler").remove_attribute("coordinate");
+  Set(Root(), "model", name);
+  Set(Child(Root(), "option"), "timestep", timestep);
 }
 
 void Scene::OutdoorTexture() {
-  for (auto node = asset().first_child(); node;) {
+  for (auto node = Asset().first_child(); node != nullptr;) {
     const auto next = node.next_sibling();
     if (std::string(node.attribute("type").value()) == "skybox") {
-      asset().remove_child(node);
+      Asset().remove_child(node);
     }
     node = next;
   }
   const auto path = asset_path_ + "/locomotion/arenas/assets/outdoor_natural/";
-  auto texture = asset().append_child("texture");
+  auto texture = Asset().append_child("texture");
   Set(texture, "name", "aesthetic_texture");
   Set(texture, "type", "2d");
   Set(texture, "file", path + "OutdoorGrassFloorD.png");
-  auto material = asset().append_child("material");
+  auto material = Asset().append_child("material");
   Set(material, "name", "aesthetic_material");
   Set(material, "texture", "aesthetic_texture");
   Set(material, "texuniform", "true");
-  auto sky = asset().append_child("texture");
+  auto sky = Asset().append_child("texture");
   Set(sky, "name", "aesthetic_skybox");
   Set(sky, "type", "skybox");
   Set(sky, "file", path + "OutdoorSkybox2048.png");
@@ -220,14 +241,14 @@ void Scene::OutdoorTexture() {
 }
 
 void Scene::Floor(double size, bool outdoor) {
-  auto headlight = Child(Child(root(), "visual"), "headlight");
+  auto headlight = Child(Child(Root(), "visual"), "headlight");
   Set(headlight, "ambient", {.4, .4, .4});
   Set(headlight, "diffuse", {.8, .8, .8});
   Set(headlight, "specular", {.1, .1, .1});
   if (outdoor) {
     OutdoorTexture();
   } else {
-    auto texture = asset().append_child("texture");
+    auto texture = Asset().append_child("texture");
     Set(texture, "name", "groundplane");
     Set(texture, "type", "2d");
     Set(texture, "builtin", "checker");
@@ -237,20 +258,20 @@ void Scene::Floor(double size, bool outdoor) {
     Set(texture, "height", 200);
     Set(texture, "mark", "edge");
     Set(texture, "markrgb", {.8, .8, .8});
-    auto material = asset().append_child("material");
+    auto material = Asset().append_child("material");
     Set(material, "name", "groundplane");
     Set(material, "texture", "groundplane");
     Set(material, "texrepeat", {2, 2});
     Set(material, "texuniform", "true");
     Set(material, "reflectance", .2);
   }
-  auto ground = world().append_child("geom");
+  auto ground = World().append_child("geom");
   Set(ground, "name", "groundplane");
   Set(ground, "type", "plane");
   Set(ground, "material", outdoor ? "aesthetic_material" : "groundplane");
   Set(ground, "size", {size, size, .25});
-  ground_geoms.push_back("groundplane");
-  auto camera = world().append_child("camera");
+  ground_geoms.emplace_back("groundplane");
+  auto camera = World().append_child("camera");
   Set(camera, "name", "top_camera");
   Set(camera, "pos", {0, 0, 100});
   Set(camera, "quat", {1, 0, 0, 0});
@@ -261,29 +282,29 @@ void Scene::Corridor(const TaskConfig& task, RandomState* random) {
   const bool rodent = task.walker == Walker::kRodent;
   const double length = rodent ? 40 : 100;
   const double width = rodent ? 2 : 10;
-  auto walls = world().append_child("body");
+  auto walls = World().append_child("body");
   Set(walls, "name", "walls");
-  auto visual = Child(root(), "visual");
+  auto visual = Child(Root(), "visual");
   Set(Child(visual, "map"), "znear", .00025);
   Set(Child(visual, "map"), "zfar", 4);
   auto headlight = Child(visual, "headlight");
   Set(headlight, "ambient", {.4, .4, .4});
   Set(headlight, "diffuse", {.8, .8, .8});
   Set(headlight, "specular", {.1, .1, .1});
-  auto sky = asset().append_child("texture");
+  auto sky = Asset().append_child("texture");
   Set(sky, "type", "skybox");
   Set(sky, "builtin", "gradient");
   Set(sky, "rgb1", {.4, .6, .8});
   Set(sky, "rgb2", {0, 0, 0});
   Set(sky, "width", 100);
   Set(sky, "height", 600);
-  auto ground = world().append_child("geom");
+  auto ground = World().append_child("geom");
   Set(ground, "name", "//unnamed_geom_0");
   Set(ground, "type", "plane");
   Set(ground, "rgba", {.5, .5, .5, 1});
   Set(ground, "pos", {length / 2, 0, 0});
   Set(ground, "size", {length / 2 + 2, width / 2, 1});
-  ground_geoms.push_back("//unnamed_geom_0");
+  ground_geoms.emplace_back("//unnamed_geom_0");
   const std::array<std::array<double, 6>, 4> axes{{{1, 0, 0, 0, 0, 1},
                                                    {-1, 0, 0, 0, 0, 1},
                                                    {0, 1, 0, 0, 0, 1},
@@ -294,7 +315,7 @@ void Scene::Corridor(const TaskConfig& task, RandomState* random) {
        {-2, 0, 2},
        {length + 2, 0, 2}}};
   for (int i = 0; i < 4; ++i) {
-    auto plane = world().append_child("geom");
+    auto plane = World().append_child("geom");
     Set(plane, "name", "//unnamed_geom_" + std::to_string(i + 1));
     Set(plane, "type", "plane");
     Set(plane, "pos", Numbers(positions[i].data(), 3));
@@ -305,13 +326,14 @@ void Scene::Corridor(const TaskConfig& task, RandomState* random) {
   }
   if (task.task == Task::kWalls) {
     int index = 0;
-    for (double x = 2; x < length; x += 4, ++index) {
+    for (int distance = 2; distance < length; distance += 4, ++index) {
+      const double x = distance;
       const double wall_width = random->Uniform(1, 7);
       auto wall = walls.append_child("geom");
       Set(wall, "type", "box");
       Set(wall, "name", "wall_" + std::to_string(index));
       Set(wall, "pos",
-          {x, (index % 2 ? -1 : 1) * (width - wall_width) / 2, 1.5});
+          {x, (((index % 2) != 0) ? -1 : 1) * (width - wall_width) / 2, 1.5});
       Set(wall, "size", {.08, wall_width / 2, 1.5});
       Set(wall, "rgba", {1, 1, 1, 1});
     }
@@ -319,8 +341,10 @@ void Scene::Corridor(const TaskConfig& task, RandomState* random) {
   }
   Set(ground, "pos", {length / 2, 0, -10});
   Set(ground, "rgba", {0, 0, 0, 0});
-  if (rodent) OutdoorTexture();
-  auto platforms = world().append_child("body");
+  if (rodent) {
+    OutdoorTexture();
+  }
+  auto platforms = World().append_child("body");
   Set(platforms, "name", "ground");
   auto add_platform = [&](const std::string& name, double start, double size) {
     auto geom = platforms.append_child("geom");
@@ -328,10 +352,11 @@ void Scene::Corridor(const TaskConfig& task, RandomState* random) {
     Set(geom, "type", "box");
     Set(geom, "pos", {start + size / 2, 0, -.16});
     Set(geom, "size", {size / 2, width / 2, .16});
-    if (rodent)
+    if (rodent) {
       Set(geom, "material", "aesthetic_material");
-    else
+    } else {
       Set(geom, "rgba", {.5, .5, .5, 1});
+    }
     ground_geoms.push_back(name);
   };
   add_platform("start_floor", 0, 6);
@@ -349,11 +374,12 @@ void Scene::Attach(pugi::xml_node model, const std::string& prefix,
   // PyMJCF merges singleton model settings on attachment. Arena settings take
   // precedence, but walker defaults (notably rodent's shadow map) survive.
   for (const char* section : {"visual", "statistic"}) {
-    if (model.child(section))
-      MergeSettings(Child(root(), section), model.child(section));
+    if (model.child(section) != nullptr) {
+      MergeSettings(Child(Root(), section), model.child(section));
+    }
   }
   for (auto attribute : model.child("size").attributes()) {
-    auto size = Child(root(), "size");
+    auto size = Child(Root(), "size");
     Set(size, attribute.name(),
         size.attribute(attribute.name()).as_double() + attribute.as_double());
   }
@@ -361,7 +387,7 @@ void Scene::Attach(pugi::xml_node model, const std::string& prefix,
   Set(defaults, "class", "");
   Namespace(model, prefix);
   Set(defaults, "class", prefix);
-  Child(root(), "default").append_copy(defaults);
+  Child(Root(), "default").append_copy(defaults);
   for (const char* section :
        {"asset", "contact", "equality", "tendon", "actuator", "sensor"}) {
     for (auto node : model.child(section).children()) {
@@ -372,30 +398,34 @@ void Scene::Attach(pugi::xml_node model, const std::string& prefix,
            tag == "mesh" || tag == "pair")) {
         Set(node, "class", prefix);
       }
-      if (tag == "skin" && node.attribute("file")) {
+      if (tag == "skin" && (node.attribute("file") != nullptr)) {
         std::ifstream input(node.attribute("file").value(), std::ios::binary);
         std::vector<unsigned char> bytes(std::istreambuf_iterator<char>{input},
                                          {});
         auto integer = [&](std::size_t offset) {
-          if (offset + 4 > bytes.size())
+          if (offset + 4 > bytes.size()) {
             throw std::runtime_error("Truncated skin asset");
+          }
           uint32_t value = 0;
-          for (int i = 0; i < 4; ++i)
+          for (int i = 0; i < 4; ++i) {
             value |= static_cast<uint32_t>(bytes[offset + i]) << (8 * i);
+          }
           return value;
         };
         const auto bones = integer(12);
         std::size_t offset =
             16 + 4 * (3 * integer(0) + 2 * integer(4) + 3 * integer(8));
         for (uint32_t bone = 0; bone < bones; ++bone) {
-          if (offset + 72 > bytes.size())
+          if (offset + 72 > bytes.size()) {
             throw std::runtime_error("Truncated skin bone");
+          }
           const std::string body(
               reinterpret_cast<char*>(bytes.data() + offset),
               strnlen(reinterpret_cast<char*>(bytes.data() + offset), 40));
           const auto name = prefix + body;
-          if (name.size() >= 40)
+          if (name.size() >= 40) {
             throw std::runtime_error("Skin bone name too long");
+          }
           std::fill_n(bytes.data() + offset, 40, 0);
           std::memcpy(bytes.data() + offset, name.data(), name.size());
           const auto vertices = integer(offset + 68);
@@ -406,13 +436,13 @@ void Scene::Attach(pugi::xml_node model, const std::string& prefix,
         virtual_files_[filename] = std::move(bytes);
         Set(node, "file", filename);
       }
-      Child(root(), std::string_view(section) == "asset"
+      Child(Root(), std::string_view(section) == "asset"
                         ? "envpool_attached_asset"
                         : section)
           .append_copy(node);
     }
   }
-  auto frame = world().append_child("body");
+  auto frame = World().append_child("body");
   Set(frame, "name", prefix);
   Set(frame, "childclass", prefix);
   if (joints == RootJoint::kFree) {
@@ -429,7 +459,9 @@ void Scene::Attach(pugi::xml_node model, const std::string& prefix,
            static_cast<double>(i == 2)});
     }
   }
-  for (auto node : model.child("worldbody").children()) frame.append_copy(node);
+  for (auto node : model.child("worldbody").children()) {
+    frame.append_copy(node);
+  }
 }
 
 void Scene::AddWalker(Walker walker, const std::string& prefix, int player,
@@ -457,8 +489,9 @@ void Scene::AddWalker(Walker walker, const std::string& prefix, int player,
     Set(node, "file", file.lexically_normal().string());
   }
   const bool cmu = walker == Walker::kCmu2019 || walker == Walker::kCmu2020;
-  if (cmu && (walker == Walker::kCmu2020 || player >= 0))
+  if (cmu && (walker == Walker::kCmu2020 || player >= 0)) {
     CmuVisuals(model, walker, player, red);
+  }
   if (cmu) {
     auto actuators = Child(model, "actuator");
     actuators.remove_children();
@@ -468,9 +501,12 @@ void Scene::AddWalker(Walker walker, const std::string& prefix, int player,
     for (const auto& parameter : parameters) {
       auto joint = Find(model, "joint", parameter.name);
       const auto range = Values(joint.attribute("range"));
-      if (range.size() != 2)
+      if (range.size() != 2) {
         throw std::runtime_error("Missing CMU joint range");
-      if (parameter.damping >= 0) Set(joint, "damping", parameter.damping);
+      }
+      if (parameter.damping >= 0) {
+        Set(joint, "damping", parameter.damping);
+      }
       const double slope = (range[1] - range[0]) / 2;
       auto actuator = actuators.append_child("general");
       Set(actuator, "name", parameter.name);
@@ -507,14 +543,16 @@ void Scene::AddWalker(Walker walker, const std::string& prefix, int player,
   } else {
     torso = "head_body";
     effectors = {"head_body"};
-    const double marker[4]{red ? .8 : .1, .1, red ? .1 : .8, 1};
+    const std::array<double, 4> marker{red ? .8 : .1, .1, red ? .1 : .8, 1};
     std::vector<unsigned char> pixels;
-    unsigned width = 0, height = 0;
+    unsigned width = 0;
+    unsigned height = 0;
     const std::string digits =
         asset_path_ + "/locomotion/soccer/assets/boxhead/digits/" +
         (player < 10 ? "0" : "") + std::to_string(player) + ".png";
-    if (lodepng::decode(pixels, width, height, digits))
+    if (lodepng::decode(pixels, width, height, digits) != 0u) {
       throw std::runtime_error("Cannot decode BoxHead digit asset");
+    }
     for (std::size_t i = 0; i < pixels.size(); i += 4) {
       const double alpha = pixels[i + 3] / 255.;
       const double out_alpha = alpha + (1 - alpha);
@@ -528,8 +566,10 @@ void Scene::AddWalker(Walker walker, const std::string& prefix, int player,
     }
     const auto filename = "boxhead_" + std::string(red ? "red_" : "blue_") +
                           std::to_string(player) + ".png";
-    if (lodepng::encode(virtual_files_[filename], pixels, width, height))
+    if (lodepng::encode(virtual_files_[filename], pixels, width, height) !=
+        0u) {
       throw std::runtime_error("Cannot encode BoxHead digit asset");
+    }
     auto head_texture = Child(model, "asset").append_child("texture");
     Set(head_texture, "name", "head_texture");
     Set(head_texture, "type", "2d");
@@ -546,7 +586,7 @@ void Scene::AddWalker(Walker walker, const std::string& prefix, int player,
     Set(texture, "name", "ball_body");
     Set(texture, "type", "cube");
     Set(texture, "builtin", "checker");
-    Set(texture, "rgb1", Numbers(marker, 3));
+    Set(texture, "rgb1", Numbers(marker.data(), 3));
     Set(texture, "rgb2", {.8, .8, .8});
     Set(texture, "width", 100);
     Set(texture, "height", 100);
@@ -554,8 +594,9 @@ void Scene::AddWalker(Walker walker, const std::string& prefix, int player,
     Set(material, "name", "ball_body");
     Set(material, "texture", "ball_body");
     Set(Find(model, "geom", "shell"), "material", "ball_body");
-    for (const char* name : {"arm_l", "arm_r", "eye_l", "eye_r"})
-      Set(Find(model, "geom", name), "rgba", Numbers(marker, 4));
+    for (const char* name : {"arm_l", "arm_r", "eye_l", "eye_r"}) {
+      Set(Find(model, "geom", name), "rgba", Numbers(marker.data(), 4));
+    }
     for (const char* name : {"camera_pitch", "camera_yaw"}) {
       auto joint = Find(model, "joint", name);
       joint.parent().remove_child(joint);
@@ -605,24 +646,28 @@ std::string Scene::Xml() const {
   auto defaults = Child(model, "default");
   auto arena_defaults = defaults.prepend_child("default");
   Set(arena_defaults, "class", "/");
-  for (auto node = arena_defaults.next_sibling(); node;) {
+  for (auto node = arena_defaults.next_sibling(); node != nullptr;) {
     auto next = node.next_sibling();
-    if (std::string_view(node.name()) != "default")
+    if (std::string_view(node.name()) != "default") {
       arena_defaults.append_move(node);
+    }
     node = next;
   }
   for (auto node : model.child("worldbody").children()) {
     const auto tag = std::string_view(node.name());
-    if (tag == "body" && !node.attribute("childclass"))
+    if (tag == "body" && !node.attribute("childclass")) {
       Set(node, "childclass", "/");
-    else if ((tag == "geom" || tag == "site" || tag == "camera" ||
-              tag == "light") &&
-             !node.attribute("class"))
+    } else if ((tag == "geom" || tag == "site" || tag == "camera" ||
+                tag == "light") &&
+               !node.attribute("class")) {
       Set(node, "class", "/");
+    }
   }
   for (auto node : model.child("asset").children()) {
-    if (std::string_view(node.name()) == "material" && !node.attribute("class"))
+    if (std::string_view(node.name()) == "material" &&
+        !node.attribute("class")) {
       Set(node, "class", "/");
+    }
   }
   for (auto node : model.child("envpool_attached_asset").children()) {
     Child(model, "asset").append_copy(node);
@@ -645,7 +690,9 @@ mjModel* Scene::Compile() const {
   mjModel* model =
       mj_loadXML("locomotion.xml", &vfs, error.data(), error.size());
   mj_deleteVFS(&vfs);
-  if (model == nullptr) throw std::runtime_error(error.data());
+  if (model == nullptr) {
+    throw std::runtime_error(error.data());
+  }
   return model;
 }
 

@@ -242,7 +242,9 @@ class WglWindowThread {
           0, kWindowClassName, "EnvPoolWGLDispatcher", 0, 0, 0, 0, 0,
           HWND_MESSAGE, nullptr, GetModuleHandleA(nullptr), nullptr);
       ready.set_value(dispatcher);
-      if (dispatcher == nullptr) return;
+      if (dispatcher == nullptr) {
+        return;
+      }
       MSG message;
       while (GetMessageA(&message, nullptr, 0, 0) > 0) {
         TranslateMessage(&message);
@@ -273,7 +275,7 @@ class WglWindowThread {
   static std::shared_ptr<WglWindowThread> Acquire() {
     static std::mutex mutex;
     static std::weak_ptr<WglWindowThread> existing;
-    const std::lock_guard<std::mutex> lock(mutex);
+    const std::scoped_lock lock(mutex);
     auto owner = existing.lock();
     if (!owner) {
       owner = std::make_shared<WglWindowThread>();
@@ -294,8 +296,9 @@ class WglWindowThread {
           0, kWindowClassName, "EnvPoolMuJoCoOffscreen", WS_OVERLAPPEDWINDOW, 0,
           0, 1, 1, nullptr, nullptr, GetModuleHandleA(nullptr), nullptr));
     }
-    if (message == kDestroy)
+    if (message == kDestroy) {
       return DestroyWindow(reinterpret_cast<HWND>(lparam));
+    }
     if (message == kStop) {
       PostQuitMessage(0);
       return 0;

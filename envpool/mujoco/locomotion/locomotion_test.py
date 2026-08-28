@@ -54,7 +54,10 @@ def assert_pixels(
             "rodent_escape_bowl",
         }:
             peak, total = 1, 3
-        elif not egocentric and task == "cmu_humanoid_tracking":
+        elif not egocentric and task in {
+            "cmu_humanoid_tracking",
+            "cmu_humanoid_heterogeneous_forage",
+        }:
             peak = total = 1
     if total:
         np.testing.assert_equal(actual.shape, expected.shape)

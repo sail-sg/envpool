@@ -43,7 +43,7 @@ struct Observation {
   int size{1};
 };
 
-std::vector<Observation> ObservationLayout(const std::string& task,
+std::vector<Observation> ObservationLayout(const std::string& name,
                                            int team_size);
 int StorageSize(const std::vector<Observation>& layout, int storage);
 int ActionSize(Walker walker);
@@ -72,16 +72,16 @@ class Simulation {
   void Observe();
   void Render(int width, int height, int camera, unsigned char* output,
               const mjvOption* option = nullptr);
-  const mjModel* model() const { return model_.get(); }
-  const mjData* data() const { return data_.get(); }
-  const Scene& scene() const { return scene_; }
-  bool done() const { return done_; }
-  bool truncated() const { return truncated_; }
-  bool terminated() const {
+  const mjModel* Model() const { return model_.get(); }
+  const mjData* Data() const { return data_.get(); }
+  const Scene& GetScene() const { return scene_; }
+  bool Done() const { return done_; }
+  bool Truncated() const { return truncated_; }
+  bool Terminated() const {
     return failure_ || (success_ && task_.task != Task::kTracking);
   }
-  int players() const { return players_; }
-  const std::vector<Observation>& layout() const { return layout_; }
+  int Players() const { return players_; }
+  const std::vector<Observation>& Layout() const { return layout_; }
 #ifdef ENVPOOL_TEST
   void SetResetState(const std::vector<double>& qpos,
                      const std::vector<double>& qvel,
