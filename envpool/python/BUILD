@@ -18,6 +18,17 @@ load("//envpool:requirements.bzl", "requirement")
 package(default_visibility = ["//visibility:public"])
 
 py_library(
+    name = "seed_test_utils",
+    testonly = True,
+    srcs = ["seed_test_utils.py"],
+    imports = ["../.."],
+    deps = [
+        "//envpool:registration",
+        requirement("numpy"),
+    ],
+)
+
+py_library(
     name = "protocol",
     srcs = ["protocol.py"],
     imports = ["../.."],

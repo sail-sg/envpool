@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import atexit
 import ctypes
+import hashlib
 import importlib
 import json
 import os
@@ -499,6 +500,71 @@ def _import_official() -> tuple[Any, Any, Any]:
     gym = importlib.import_module("myosuite.utils").gym
     gym_registry_specs = official_myosuite.gym_registry_specs
     return official_myosuite, gym_registry_specs, gym
+
+
+def _reset_randomization_report(task_ids: list[str]) -> dict[str, Any]:
+    """Measure the pinned oracle's reset contract without state injection.
+
+    Model parameters matter as well as observations: a randomized mass or
+    terrain can leave the initial observation unchanged. Do not include RNG
+    keys, counters, solver caches, or other seed metadata as proof of variation.
+    """
+    official, _, gym = _import_official()
+    data_keys = ("qpos", "qvel", "act", "mocap_pos", "mocap_quat")
+    model_keys = (
+        "site_pos",
+        "site_quat",
+        "site_size",
+        "body_pos",
+        "body_quat",
+        "body_mass",
+        "geom_pos",
+        "geom_quat",
+        "geom_size",
+        "geom_friction",
+        "hfield_data",
+    )
+    reports = {}
+    for task_id in task_ids:
+        traces: list[dict[str, list[str]]] = []
+        for seed in (11, 12, 43, 44):
+            env = gym.make(task_id, seed=seed)
+            try:
+                unwrapped = env.unwrapped
+                trace: dict[str, list[str]] = {}
+                for _ in range(8):
+                    obs, _ = env.reset()
+                    state = {
+                        "obs": obs,
+                        **{
+                            key: getattr(unwrapped.mj_data, key)
+                            for key in data_keys
+                        },
+                        **{
+                            key: getattr(unwrapped.mj_model, key)
+                            for key in model_keys
+                        },
+                    }
+                    for key, value in state.items():
+                        trace.setdefault(key, []).append(
+                            hashlib.sha256(
+                                np.asarray(value).tobytes()
+                            ).hexdigest()
+                        )
+                traces.append(trace)
+            finally:
+                env.close()
+        reports[task_id] = {
+            key: (
+                traces[0][key] != traces[2][key]
+                or traces[1][key] != traces[3][key],
+                any(len(set(trace[key])) > 1 for trace in traces),
+                traces[0][key] != traces[1][key]
+                or traces[2][key] != traces[3][key],
+            )
+            for key in traces[0]
+        }
+    return {"version": official.__version__, "tasks": reports}
 
 
 def _space_report(task_ids: list[str]) -> dict[str, Any]:
@@ -1059,7 +1125,13 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--mode",
-        choices=("metadata", "space", "rollout", "trace"),
+        choices=(
+            "metadata",
+            "space",
+            "rollout",
+            "trace",
+            "reset_randomization",
+        ),
         required=True,
     )
     parser.add_argument("--out", required=True)
@@ -1091,7 +1163,9 @@ def main() -> None:
         else None
     )
 
-    if args.mode == "space":
+    if args.mode == "reset_randomization":
+        report = _reset_randomization_report(args.task_id)
+    elif args.mode == "space":
         report = _space_report(args.task_id)
     elif args.mode == "rollout":
         report = _rollout_report(

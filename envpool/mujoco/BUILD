@@ -691,6 +691,29 @@ py_test(
 )
 
 py_test(
+    name = "myosuite_seed_test",
+    size = "enormous",
+    srcs = [
+        "myosuite/myosuite_oracle_align_test.py",
+        "myosuite/myosuite_seed_test.py",
+        "myosuite/myosuite_test.py",
+    ],
+    data = [":myosuite_oracle_probe"],
+    imports = ["../.."],
+    main = "myosuite/myosuite_seed_test.py",
+    shard_count = 8,
+    deps = [
+        ":myosuite",
+        ":myosuite_registration",
+        ":myosuite_task_metadata",
+        "//envpool/python:glfw_context",
+        "//envpool/python:seed_test_utils",
+        requirement("absl-py"),
+        requirement("numpy"),
+    ],
+)
+
+py_test(
     name = "myosuite_render_test",
     size = "enormous",
     srcs = ["myosuite/myosuite_render_test.py"],
