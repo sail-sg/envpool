@@ -21,6 +21,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <random>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -191,11 +192,17 @@ class CVRPEnv : public Env<CVRPEnvSpec>, public RenderableEnv {
     }
     for (int node = 0; node < cvrp::kNumNodes; ++node) {
       if (!use_configured_coordinates_) {
-        coordinates_[node * 2] = static_cast<float>(node) / 20.0f;
-        coordinates_[node * 2 + 1] = 0.0f;
+        coordinates_[node * 2] =
+            std::uniform_real_distribution<float>(0, 1)(gen_);
+        coordinates_[node * 2 + 1] =
+            std::uniform_real_distribution<float>(0, 1)(gen_);
       }
       if (spec_.config["cvrp_demands"_].empty()) {
-        demands_[node] = node == 0 ? 0.0f : 1.0f / kMaxCapacity;
+        demands_[node] =
+            node == 0 ? 0.0f
+                      : static_cast<float>(
+                            std::uniform_int_distribution<int>(1, 9)(gen_)) /
+                            kMaxCapacity;
       } else {
         demands_[node] = configured_demands_[node];
       }

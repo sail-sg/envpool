@@ -36,7 +36,7 @@ class _VizdoomEnvPoolBasicTest(parameterized.TestCase):
         for task_id in registered_task_ids("envpool.vizdoom")
     ])
     def test_seed_determinism(self, task_id: str) -> None:
-        """Check every scenario, including those omitted by the render test."""
+        """Check every registered scenario, including the custom factory."""
         kwargs: dict[str, Any] = {}
         if task_id == "VizdoomCustom-v1":
             # The custom factory requires caller-supplied scenario files.
@@ -57,6 +57,15 @@ class _VizdoomEnvPoolBasicTest(parameterized.TestCase):
                 self, task_id, expected=(None, None, None), **kwargs
             )
             check_seeded_rollouts(self, task_id, **kwargs)
+
+    def test_invalid_scenario_mode_reports_initialization_error(self) -> None:
+        """Failed startup must report the engine error without crashing cleanup."""
+        with (
+            TemporaryDirectory(prefix="vizdoom-invalid-mode-") as directory,
+            chdir(directory),
+            self.assertRaises(RuntimeError),
+        ):
+            make_gym("Cig-v1", num_envs=1, game_args="")
 
     @contextmanager
     def _managed_env(self, env: Any) -> Iterator[Any]:

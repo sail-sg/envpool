@@ -20,6 +20,8 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <numeric>
+#include <random>
 #include <string>
 #include <utility>
 
@@ -138,11 +140,7 @@ class FlatPackEnv : public Env<FlatPackEnvSpec>, public RenderableEnv {
     if (use_configured_blocks_) {
       blocks_ = configured_blocks_;
     } else {
-      for (int row = 0; row < 2; ++row) {
-        for (int col = 0; col < 2; ++col) {
-          blocks_[row * 3 + col] = 1;
-        }
-      }
+      GenerateBlocks();
     }
     step_count_ = 0;
     done_ = false;
@@ -185,6 +183,71 @@ class FlatPackEnv : public Env<FlatPackEnvSpec>, public RenderableEnv {
   }
 
  private:
+  void GenerateBlocks() {
+    constexpr int count = (flatpack::kGridSize - 1) / 2;
+    std::array<int, flatpack::kGridSize * flatpack::kGridSize> solved{};
+    for (int row = 0; row < flatpack::kGridSize; ++row) {
+      for (int col = 0; col < flatpack::kGridSize; ++col) {
+        solved[flatpack::Offset(row, col)] =
+            1 + std::min(col / 2, count - 1) +
+            count * std::min(row / 2, count - 1);
+      }
+    }
+    // Randomly assign each shared boundary cell to one of its two neighbors.
+    std::uniform_int_distribution<int> side(0, 1);
+    for (int col = 2; col < flatpack::kGridSize - 1; col += 2) {
+      for (int row = 0; row < flatpack::kGridSize; ++row) {
+        const int neighbor = col + (side(gen_) ? 1 : -1);
+        solved[flatpack::Offset(row, col)] =
+            solved[flatpack::Offset(row, neighbor)];
+      }
+    }
+    for (int row = 2; row < flatpack::kGridSize - 1; row += 2) {
+      for (int col = 0; col < flatpack::kGridSize; ++col) {
+        const int neighbor = row + (side(gen_) ? 1 : -1);
+        solved[flatpack::Offset(row, col)] =
+            solved[flatpack::Offset(neighbor, col)];
+      }
+    }
+    std::array<int, flatpack::kNumBlocks> order{};
+    std::iota(order.begin(), order.end(), 1);
+    std::shuffle(order.begin(), order.end(), gen_);
+    for (int index = 0; index < flatpack::kNumBlocks; ++index) {
+      const int label = order[index];
+      int first_row = flatpack::kGridSize;
+      int first_col = flatpack::kGridSize;
+      for (int row = 0; row < flatpack::kGridSize; ++row) {
+        for (int col = 0; col < flatpack::kGridSize; ++col) {
+          if (solved[flatpack::Offset(row, col)] == label) {
+            first_row = std::min(first_row, row);
+            first_col = std::min(first_col, col);
+          }
+        }
+      }
+      std::array<int, 9> block{};
+      for (int row = 0; row < 3 && first_row + row < flatpack::kGridSize;
+           ++row) {
+        for (int col = 0; col < 3 && first_col + col < flatpack::kGridSize;
+             ++col) {
+          if (solved[flatpack::Offset(first_row + row, first_col + col)] ==
+              label) {
+            block[row * 3 + col] = label;
+          }
+        }
+      }
+      for (int rotation = std::uniform_int_distribution<int>(0, 3)(gen_);
+           rotation > 0; --rotation) {
+        const auto previous = block;
+        for (int row = 0; row < 3; ++row) {
+          for (int col = 0; col < 3; ++col) {
+            block[row * 3 + col] = previous[(2 - col) * 3 + row];
+          }
+        }
+      }
+      std::copy(block.begin(), block.end(), blocks_.begin() + 9 * index);
+    }
+  }
+
   int BlockCell(int block, int rotation, int row, int col) const {
     if (rotation == 1) {
       return blocks_[block * 9 + (2 - col) * 3 + row];

@@ -52,6 +52,8 @@ _ROLLOUT_TASK_IDS = frozenset({
     "MyoHandAirplaneFly-v0",
     "myoFingerReachFixed-v0",
     "myoFingerPoseFixed-v0",
+    "myoFingerReachRandom-v0",
+    "myoFingerPoseRandom-v0",
     "myoHandReachFixed-v0",
     "myoHandPoseFixed-v0",
     "myoHandKeyTurnFixed-v0",
@@ -75,11 +77,16 @@ _ROLLOUT_TASK_IDS = frozenset({
 _BITWISE_ROLLOUT_TASK_IDS = frozenset({
     "myoFingerReachFixed-v0",
     "myoFingerPoseFixed-v0",
+    "myoFingerReachRandom-v0",
+    "myoFingerPoseRandom-v0",
 })
 _LINUX_AARCH64_FINGER_ROLLOUT_RTOL = 1e-5
 _LINUX_AARCH64_FINGER_ROLLOUT_ATOL = 1e-7
 _EXPECTED_ORACLE_NUMPY2_BROKEN_IDS: frozenset[str] = frozenset()
 _SYNC_STATE_KEYS = (
+    "target_jnt_value",
+    "baoding_goal_parameters",
+    "chase_task",
     "qpos0",
     "qvel0",
     "act0",
@@ -113,6 +120,9 @@ _SYNC_STATE_KEYS = (
     "fatigue_tl",
 )
 _SYNC_STATE_SIZES = {
+    "target_jnt_value": "nq",
+    "baoding_goal_parameters": "five",
+    "chase_task": "one",
     "qpos0": "nq",
     "qvel0": "nv",
     "act0": "na",
@@ -346,6 +356,8 @@ def _run_oracle_space_reports(
 
 def _sync_state_from_info(info: dict[str, Any]) -> dict[str, Any]:
     dims = {
+        "one": 1,
+        "five": 5,
         "nq": int(np.asarray(info["model_nq"]).ravel()[0]),
         "nv": int(np.asarray(info["model_nv"]).ravel()[0]),
         "na": int(np.asarray(info["model_na"]).ravel()[0]),

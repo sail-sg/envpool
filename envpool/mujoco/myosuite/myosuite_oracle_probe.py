@@ -802,7 +802,9 @@ def _sync_osl_phase_from_qpos(env: Any) -> None:
     controller.start()
 
 
-def _sync_baoding_goal_from_envpool_reset_state(env: Any) -> None:
+def _sync_baoding_goal_from_envpool_reset_state(
+    env: Any, state: dict[str, Any]
+) -> None:
     if not all(
         hasattr(env, attr)
         for attr in (
@@ -815,26 +817,28 @@ def _sync_baoding_goal_from_envpool_reset_state(env: Any) -> None:
         )
     ):
         return
-    task_type = type(getattr(env, "which_task", object()))
-    if hasattr(task_type, "BAODING_CCW"):
-        env.which_task = task_type.BAODING_CCW
-    env.ball_1_starting_angle = np.pi / 4.0
-    env.ball_2_starting_angle = env.ball_1_starting_angle - np.pi
+    radius_x, radius_y, period, angle, direction = state[
+        "baoding_goal_parameters"
+    ]
+    task_type = type(env.which_task)
+    env.which_task = task_type({0: 0, -1: 1, 1: 2}[int(direction)])
+    env.ball_1_starting_angle = angle
+    env.ball_2_starting_angle = angle - np.pi
     env.center_pos = np.array([-0.0125, -0.07], dtype=np.float64)
-    env.x_radius = 0.025
-    env.y_radius = 0.028
+    env.x_radius = radius_x
+    env.y_radius = radius_y
     env.goal = env.create_goal_trajectory(
-        time_step=float(getattr(env, "dt", 0.025)), time_period=6.0
+        time_step=float(getattr(env, "dt", 0.025)), time_period=period
     )
     env.counter = 0
 
 
-def _sync_chasetag_hidden_state(env: Any) -> None:
+def _sync_chasetag_hidden_state(env: Any, state: dict[str, Any]) -> None:
     if not all(hasattr(env, attr) for attr in ("current_task", "opponent")):
         return
     task_type = type(env.current_task)
     if hasattr(task_type, "CHASE"):
-        env.current_task = task_type.CHASE
+        env.current_task = task_type(int(state["chase_task"][0]))
     opponent = env.opponent
     opponent.opponent_policy = "stationary"
     opponent.opponent_vel = np.zeros((2,), dtype=np.float64)
@@ -898,8 +902,11 @@ def _sync_to_envpool_reset_state(env: Any, state: dict[str, Any]) -> np.ndarray:
     _assign_sync_array(state, "ctrl", data.ctrl)
     mujoco.mj_forward(model, data)
     _sync_osl_phase_from_qpos(env)
-    _sync_baoding_goal_from_envpool_reset_state(env)
-    _sync_chasetag_hidden_state(env)
+    if getattr(env, "target_jnt_value", None) is not None:
+        size = np.asarray(env.target_jnt_value).size
+        env.target_jnt_value = np.asarray(state["target_jnt_value"][:size])
+    _sync_baoding_goal_from_envpool_reset_state(env, state)
+    _sync_chasetag_hidden_state(env, state)
     _sync_fatigue_hidden_state(env, state)
     obs = env.get_obs()
     _assign_sync_array(state, "qacc0", data.qacc)

@@ -25,10 +25,17 @@ from envpool.registration import make_gymnasium
 class JumanjiConnectorTest(absltest.TestCase):
     """Checks native Connector transitions."""
 
-    def test_parallel_connections_on_default_layout(self) -> None:
-        """Checks parallel agents connect on the default layout."""
+    def test_parallel_connections_on_configured_layout(self) -> None:
+        """Checks parallel agents connect on a configured layout."""
+        grid = np.zeros((10, 10), dtype=np.int32)
+        grid[:, 0] = 2 + 3 * np.arange(10)
+        grid[:, -1] = 3 + 3 * np.arange(10)
         env = make_gymnasium(
-            "Connector-v3", num_envs=1, seed=0, render_mode="rgb_array"
+            "Connector-v3",
+            num_envs=1,
+            seed=0,
+            render_mode="rgb_array",
+            connector_grid=",".join(map(str, grid.ravel())),
         )
         try:
             obs, info = env.reset()
@@ -51,7 +58,7 @@ class JumanjiConnectorTest(absltest.TestCase):
 
             for _ in range(8):
                 obs, reward, terminated, truncated, info = env.step(action)
-            self.assertAlmostEqual(float(reward[0]), 1.0, places=6)
+            self.assertAlmostEqual(float(reward[0]), 0.97, places=6)
             self.assertTrue(bool(terminated[0]))
             self.assertFalse(bool(truncated[0]))
             self.assertEqual(int(info["num_connections"][0]), 10)

@@ -20,8 +20,10 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <random>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
@@ -33,7 +35,6 @@ namespace binpack {
 
 constexpr int kNumEms = 40;
 constexpr int kNumItems = 20;
-constexpr int kActiveItems = 2;
 constexpr int kTimeLimit = 20;
 constexpr int kReplaySteps = 32;
 
@@ -259,12 +260,7 @@ class BinPackEnv : public Env<BinPackEnvSpec>, public RenderableEnv {
       item_z_ = configured_item_z_;
       items_mask_ = configured_items_mask_;
     } else {
-      for (int item = 0; item < binpack::kActiveItems; ++item) {
-        item_x_[item] = 0.5f;
-        item_y_[item] = 0.5f;
-        item_z_[item] = 0.5f;
-        items_mask_[item] = true;
-      }
+      GenerateItems();
     }
     step_count_ = 0;
     done_ = false;
@@ -286,11 +282,8 @@ class BinPackEnv : public Env<BinPackEnvSpec>, public RenderableEnv {
     float reward = 0.0f;
     if (valid) {
       items_placed_[item] = true;
-      items_mask_[item] = false;
       reward = item_x_[item] * item_y_[item] * item_z_[item];
       SplitEms(ems, item);
-    } else {
-      reward = -1.0f;
     }
     ++step_count_;
     done_ = !valid || !HasValidAction() || step_count_ >= binpack::kTimeLimit;
@@ -298,6 +291,50 @@ class BinPackEnv : public Env<BinPackEnvSpec>, public RenderableEnv {
   }
 
  private:
+  void GenerateItems() {
+    // Match the pinned generator: split a 20-foot container into solvable
+    // integer-sized items, choosing an axis uniformly and an item by length.
+    constexpr std::array<int, 3> container{5870, 2330, 2200};
+    std::array<std::array<int, 3>, binpack::kNumItems> sizes{};
+    sizes.fill(container);
+    items_mask_[0] = true;
+    while (std::count(items_mask_.begin(), items_mask_.end(), true) <
+           binpack::kNumItems - 1) {
+      const int axis = std::uniform_int_distribution<int>(0, 2)(gen_);
+      std::array<double, binpack::kNumItems> weights{};
+      for (int item = 0; item < binpack::kNumItems; ++item) {
+        weights[item] = items_mask_[item] ? sizes[item][axis] : 0;
+      }
+      const int item =
+          std::discrete_distribution<int>(weights.begin(), weights.end())(gen_);
+      const int length = sizes[item][axis];
+      int cut = 0;
+      if (std::uniform_real_distribution<float>(0, 1)(gen_) < 0.7f) {
+        const int padding = static_cast<int>(0.3f * length);
+        cut = std::uniform_int_distribution<int>(padding,
+                                                 length - padding - 1)(gen_);
+      } else {
+        if (std::uniform_int_distribution<int>(1, 2)(gen_) == 1) {
+          continue;
+        }
+        cut = length / 2;
+      }
+      const auto free =
+          std::find(items_mask_.begin(), items_mask_.end(), false) -
+          items_mask_.begin();
+      sizes[free] = sizes[item];
+      sizes[item][axis] = cut;
+      sizes[free][axis] = length - cut;
+      items_mask_[item] = cut > 0;
+      items_mask_[free] = length - cut > 0;
+    }
+    for (int item = 0; item < binpack::kNumItems; ++item) {
+      item_x_[item] = static_cast<float>(sizes[item][0]) / container[0];
+      item_y_[item] = static_cast<float>(sizes[item][1]) / container[1];
+      item_z_[item] = static_cast<float>(sizes[item][2]) / container[2];
+    }
+  }
+
   bool IsActionValid(int ems, int item) const {
     if (!ems_mask_[ems] || !items_mask_[item] || items_placed_[item]) {
       return false;
@@ -321,70 +358,78 @@ class BinPackEnv : public Env<BinPackEnvSpec>, public RenderableEnv {
     return false;
   }
 
-  void WriteEms(std::array<float, binpack::kNumEms>* x1,
-                std::array<float, binpack::kNumEms>* x2,
-                std::array<float, binpack::kNumEms>* y1,
-                std::array<float, binpack::kNumEms>* y2,
-                std::array<float, binpack::kNumEms>* z1,
-                std::array<float, binpack::kNumEms>* z2,
-                std::array<bool, binpack::kNumEms>* mask, int index, float a_x1,
-                float a_x2, float a_y1, float a_y2, float a_z1,
-                float a_z2) const {
-    if (index >= binpack::kNumEms || a_x1 >= a_x2 || a_y1 >= a_y2 ||
-        a_z1 >= a_z2) {
-      return;
-    }
-    (*x1)[index] = a_x1;
-    (*x2)[index] = a_x2;
-    (*y1)[index] = a_y1;
-    (*y2)[index] = a_y2;
-    (*z1)[index] = a_z1;
-    (*z2)[index] = a_z2;
-    (*mask)[index] = true;
-  }
-
-  void SplitEms(int ems, int item) {
-    std::array<float, binpack::kNumEms> next_x1{};
-    std::array<float, binpack::kNumEms> next_x2{};
-    std::array<float, binpack::kNumEms> next_y1{};
-    std::array<float, binpack::kNumEms> next_y2{};
-    std::array<float, binpack::kNumEms> next_z1{};
-    std::array<float, binpack::kNumEms> next_z2{};
-    std::array<bool, binpack::kNumEms> next_mask{};
-    int out = 0;
-    const float old_x1 = ems_x1_[ems];
-    const float old_x2 = ems_x2_[ems];
-    const float old_y1 = ems_y1_[ems];
-    const float old_y2 = ems_y2_[ems];
-    const float old_z1 = ems_z1_[ems];
-    const float old_z2 = ems_z2_[ems];
-    const float item_x2 = old_x1 + item_x_[item];
-    const float item_y2 = old_y1 + item_y_[item];
-    const float item_z2 = old_z1 + item_z_[item];
-    WriteEms(&next_x1, &next_x2, &next_y1, &next_y2, &next_z1, &next_z2,
-             &next_mask, out++, old_x1, old_x2, old_y1, old_y2, item_z2,
-             old_z2);
-    WriteEms(&next_x1, &next_x2, &next_y1, &next_y2, &next_z1, &next_z2,
-             &next_mask, out++, old_x1, old_x2, item_y2, old_y2, old_z1,
-             old_z2);
-    WriteEms(&next_x1, &next_x2, &next_y1, &next_y2, &next_z1, &next_z2,
-             &next_mask, out++, item_x2, old_x2, old_y1, old_y2, old_z1,
-             old_z2);
-    for (int old = 0; old < binpack::kNumEms && out < binpack::kNumEms; ++old) {
-      if (old == ems || !ems_mask_[old]) {
+  void SplitEms(int selected, int item) {
+    using Box = std::array<float, 6>;
+    const Box placed{ems_x1_[selected], ems_x1_[selected] + item_x_[item],
+                     ems_y1_[selected], ems_y1_[selected] + item_y_[item],
+                     ems_z1_[selected], ems_z1_[selected] + item_z_[item]};
+    std::vector<Box> candidates;
+    for (int ems = 0; ems < binpack::kNumEms; ++ems) {
+      if (!ems_mask_[ems]) {
         continue;
       }
-      WriteEms(&next_x1, &next_x2, &next_y1, &next_y2, &next_z1, &next_z2,
-               &next_mask, out++, ems_x1_[old], ems_x2_[old], ems_y1_[old],
-               ems_y2_[old], ems_z1_[old], ems_z2_[old]);
+      const Box old{ems_x1_[ems], ems_x2_[ems], ems_y1_[ems],
+                    ems_y2_[ems], ems_z1_[ems], ems_z2_[ems]};
+      bool intersects = true;
+      for (int axis = 0; axis < 3; ++axis) {
+        intersects = intersects && old[2 * axis] < placed[2 * axis + 1] &&
+                     placed[2 * axis] < old[2 * axis + 1];
+      }
+      if (!intersects) {
+        candidates.push_back(old);
+        continue;
+      }
+      // Every intersecting maximal space must be cut, not only the chosen one.
+      for (int axis = 0; axis < 3; ++axis) {
+        if (placed[2 * axis] > old[2 * axis]) {
+          auto remaining = old;
+          remaining[2 * axis + 1] = placed[2 * axis];
+          candidates.push_back(remaining);
+        }
+        if (placed[2 * axis + 1] < old[2 * axis + 1]) {
+          auto remaining = old;
+          remaining[2 * axis] = placed[2 * axis + 1];
+          candidates.push_back(remaining);
+        }
+      }
     }
-    ems_x1_ = next_x1;
-    ems_x2_ = next_x2;
-    ems_y1_ = next_y1;
-    ems_y2_ = next_y2;
-    ems_z1_ = next_z1;
-    ems_z2_ = next_z2;
-    ems_mask_ = next_mask;
+    std::vector<Box> spaces;
+    for (std::size_t i = 0; i < candidates.size(); ++i) {
+      bool contained = false;
+      for (std::size_t j = 0; j < candidates.size(); ++j) {
+        if (i == j || (candidates[i] == candidates[j] && i < j)) {
+          continue;
+        }
+        bool inside = true;
+        for (int axis = 0; axis < 3; ++axis) {
+          inside = inside &&
+                   candidates[i][2 * axis] >= candidates[j][2 * axis] &&
+                   candidates[i][2 * axis + 1] <= candidates[j][2 * axis + 1];
+        }
+        contained = contained || inside;
+      }
+      if (!contained) {
+        spaces.push_back(candidates[i]);
+      }
+    }
+    auto volume = [](const Box& box) {
+      return (box[1] - box[0]) * (box[3] - box[2]) * (box[5] - box[4]);
+    };
+    std::stable_sort(
+        spaces.begin(), spaces.end(),
+        [&](const Box& a, const Box& b) { return volume(a) > volume(b); });
+    ems_mask_.fill(false);
+    for (int ems = 0; ems < binpack::kNumEms; ++ems) {
+      const bool active = ems < static_cast<int>(spaces.size());
+      const Box box = active ? spaces[ems] : Box{};
+      ems_x1_[ems] = box[0];
+      ems_x2_[ems] = box[1];
+      ems_y1_[ems] = box[2];
+      ems_y2_[ems] = box[3];
+      ems_z1_[ems] = box[4];
+      ems_z2_[ems] = box[5];
+      ems_mask_[ems] = active;
+    }
   }
 
   void WriteState(float reward) {

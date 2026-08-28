@@ -19,10 +19,13 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
+#include <random>
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
@@ -77,6 +80,7 @@ class ConnectorEnvFns {
         "obs:grid"_.Bind(Spec<int>({10, 10}, {0, 31})),
         "obs:action_mask"_.Bind(Spec<bool>({10, 5}, {false, true})),
         "obs:step_count"_.Bind(Spec<int>({}, {0, 50})),
+        "info:agent_rewards"_.Bind(Spec<float>({connector::kNumAgents})),
         "info:num_connections"_.Bind(Spec<int>({}, {0, 10})),
         "info:ratio_connections"_.Bind(Spec<float>({}, {0.0f, 1.0f})),
         "info:total_path_length"_.Bind(Spec<int>({}, {0, 100})));
@@ -99,6 +103,7 @@ class ConnectorEnv : public Env<ConnectorEnvSpec>, public RenderableEnv {
   std::array<int, connector::kNumAgents> target_row_{};
   std::array<int, connector::kNumAgents> target_col_{};
   std::array<bool, connector::kNumAgents> connected_{};
+  std::array<float, connector::kNumAgents> agent_rewards_{};
   bool use_configured_grid_;
   int step_count_{0};
   bool done_{true};
@@ -165,18 +170,9 @@ class ConnectorEnv : public Env<ConnectorEnvSpec>, public RenderableEnv {
         }
       }
     } else {
-      grid_.fill(connector::kEmpty);
-      for (int agent = 0; agent < connector::kNumAgents; ++agent) {
-        row_[agent] = agent;
-        col_[agent] = 0;
-        target_row_[agent] = agent;
-        target_col_[agent] = connector::kGridSize - 1;
-        grid_[connector::Offset(row_[agent], col_[agent])] =
-            connector::PositionValue(agent);
-        grid_[connector::Offset(target_row_[agent], target_col_[agent])] =
-            connector::TargetValue(agent);
-      }
+      GenerateBoard();
     }
+    agent_rewards_.fill(0);
     for (int agent = 0; agent < connector::kNumAgents; ++agent) {
       connected_[agent] = row_[agent] == target_row_[agent] &&
                           col_[agent] == target_col_[agent];
@@ -187,42 +183,146 @@ class ConnectorEnv : public Env<ConnectorEnvSpec>, public RenderableEnv {
   }
 
   void Step(const Action& action) override {
-    std::array<bool, connector::kNumAgents> was_connected = connected_;
+    const auto was_connected = connected_;
+    auto next_row = row_;
+    auto next_col = col_;
     for (int agent = 0; agent < connector::kNumAgents; ++agent) {
-      const int action_id =
+      const int move =
           std::clamp(static_cast<int>(action["action"_](0, agent)), 0, 4);
-      if (action_id == 0 || connected_[agent]) {
-        continue;
+      const int row = row_[agent] + connector::kMoves[move][0];
+      const int col = col_[agent] + connector::kMoves[move][1];
+      if (move && IsValidPosition(agent, row, col)) {
+        next_row[agent] = row;
+        next_col[agent] = col;
       }
-      const int next_row = row_[agent] + connector::kMoves[action_id][0];
-      const int next_col = col_[agent] + connector::kMoves[action_id][1];
-      if (!IsValidPosition(agent, next_row, next_col)) {
-        continue;
+    }
+    // The official simultaneous update gives a contested cell to the higher ID.
+    const auto proposed_row = next_row;
+    const auto proposed_col = next_col;
+    for (int agent = 0; agent < connector::kNumAgents; ++agent) {
+      for (int other = agent + 1; other < connector::kNumAgents; ++other) {
+        if (proposed_row[agent] == proposed_row[other] &&
+            proposed_col[agent] == proposed_col[other]) {
+          next_row[agent] = row_[agent];
+          next_col[agent] = col_[agent];
+        }
       }
-      grid_[connector::Offset(row_[agent], col_[agent])] =
-          connector::PathValue(agent);
-      row_[agent] = next_row;
-      col_[agent] = next_col;
+    }
+    double reward = 0;
+    for (int agent = 0; agent < connector::kNumAgents; ++agent) {
+      if (row_[agent] != next_row[agent] || col_[agent] != next_col[agent]) {
+        grid_[connector::Offset(row_[agent], col_[agent])] =
+            connector::PathValue(agent);
+        row_[agent] = next_row[agent];
+        col_[agent] = next_col[agent];
+        grid_[connector::Offset(row_[agent], col_[agent])] =
+            connector::PositionValue(agent);
+      }
       connected_[agent] = row_[agent] == target_row_[agent] &&
                           col_[agent] == target_col_[agent];
-      grid_[connector::Offset(row_[agent], col_[agent])] =
-          connector::PositionValue(agent);
+      agent_rewards_[agent] = was_connected[agent]
+                                  ? 0.0f
+                                  : -0.03f + (connected_[agent] ? 1.0f : 0.0f);
+      reward += agent_rewards_[agent];
     }
     ++step_count_;
-    float reward = 0.0f;
-    for (int agent = 0; agent < connector::kNumAgents; ++agent) {
-      if (!was_connected[agent]) {
-        reward = -0.03f;
-      }
-      if (!was_connected[agent] && connected_[agent]) {
-        reward = 1.0f;
-      }
-    }
     done_ = step_count_ >= connector::kTimeLimit || AllConnectedOrBlocked();
-    WriteState(reward);
+    // Keep EnvPool's scalar reward; expose individual rewards in info as well.
+    WriteState(static_cast<float>(reward / connector::kNumAgents));
   }
 
  private:
+  std::vector<int> EmptyNeighbors(int row, int col) const {
+    std::vector<int> neighbors;
+    for (int move = 1; move < 5; ++move) {
+      const int r = row + connector::kMoves[move][0];
+      const int c = col + connector::kMoves[move][1];
+      if (connector::InGrid(r, c) &&
+          grid_[connector::Offset(r, c)] == connector::kEmpty) {
+        neighbors.push_back(connector::Offset(r, c));
+      }
+    }
+    return neighbors;
+  }
+
+  void GenerateBoard() {
+    grid_.fill(connector::kEmpty);
+    for (int agent = 0; agent < connector::kNumAgents; ++agent) {
+      std::vector<int> starts;
+      for (int cell = 0; cell < connector::kGridSize * connector::kGridSize;
+           ++cell) {
+        if (grid_[cell] == connector::kEmpty &&
+            !EmptyNeighbors(cell / connector::kGridSize,
+                            cell % connector::kGridSize)
+                 .empty()) {
+          starts.push_back(cell);
+        }
+      }
+      const int start = starts[std::uniform_int_distribution<int>(
+          0, static_cast<int>(starts.size()) - 1)(gen_)];
+      row_[agent] = start / connector::kGridSize;
+      col_[agent] = start % connector::kGridSize;
+      grid_[start] = connector::PathValue(agent);
+      const auto neighbors = EmptyNeighbors(row_[agent], col_[agent]);
+      const int first = neighbors[std::uniform_int_distribution<int>(
+          0, static_cast<int>(neighbors.size()) - 1)(gen_)];
+      target_row_[agent] = first / connector::kGridSize;
+      target_col_[agent] = first % connector::kGridSize;
+      grid_[first] = connector::PositionValue(agent);
+    }
+    for (int step = 1; step < 15; ++step) {
+      auto next_row = target_row_;
+      auto next_col = target_col_;
+      for (int agent = 0; agent < connector::kNumAgents; ++agent) {
+        std::array<double, 4> weights{};
+        for (int move = 1; move < 5; ++move) {
+          const int row = target_row_[agent] + connector::kMoves[move][0];
+          const int col = target_col_[agent] + connector::kMoves[move][1];
+          if (connector::InGrid(row, col) &&
+              grid_[connector::Offset(row, col)] == connector::kEmpty) {
+            const int projection =
+                connector::kMoves[move][0] *
+                    (target_row_[agent] - row_[agent]) +
+                connector::kMoves[move][1] * (target_col_[agent] - col_[agent]);
+            weights[move - 1] = std::exp(static_cast<double>(projection));
+          }
+        }
+        if (std::any_of(weights.begin(), weights.end(),
+                        [](double weight) { return weight > 0; })) {
+          const int move = 1 + std::discrete_distribution<int>(
+                                   weights.begin(), weights.end())(gen_);
+          next_row[agent] += connector::kMoves[move][0];
+          next_col[agent] += connector::kMoves[move][1];
+        }
+      }
+      const auto proposed_row = next_row;
+      const auto proposed_col = next_col;
+      for (int agent = 0; agent < connector::kNumAgents; ++agent) {
+        for (int other = agent + 1; other < connector::kNumAgents; ++other) {
+          if (proposed_row[agent] == proposed_row[other] &&
+              proposed_col[agent] == proposed_col[other]) {
+            next_row[agent] = target_row_[agent];
+            next_col[agent] = target_col_[agent];
+          }
+        }
+        grid_[connector::Offset(target_row_[agent], target_col_[agent])] =
+            connector::PathValue(agent);
+        grid_[connector::Offset(next_row[agent], next_col[agent])] =
+            connector::PositionValue(agent);
+      }
+      target_row_ = next_row;
+      target_col_ = next_col;
+    }
+    // Keep only endpoints; the sampled disjoint walks prove a solution exists.
+    grid_.fill(connector::kEmpty);
+    for (int agent = 0; agent < connector::kNumAgents; ++agent) {
+      grid_[connector::Offset(row_[agent], col_[agent])] =
+          connector::PositionValue(agent);
+      grid_[connector::Offset(target_row_[agent], target_col_[agent])] =
+          connector::TargetValue(agent);
+    }
+  }
+
   bool IsValidPosition(int agent, int row, int col) const {
     if (!connector::InGrid(row, col) || connected_[agent]) {
       return false;
@@ -271,6 +371,8 @@ class ConnectorEnv : public Env<ConnectorEnvSpec>, public RenderableEnv {
 
   void WriteState(float reward) {
     auto state = Allocate();
+    state["info:agent_rewards"_].Assign(agent_rewards_.data(),
+                                        agent_rewards_.size());
     for (int row = 0; row < connector::kGridSize; ++row) {
       for (int col = 0; col < connector::kGridSize; ++col) {
         state["obs:grid"_](row, col) = grid_[connector::Offset(row, col)];

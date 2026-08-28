@@ -22,6 +22,8 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <numeric>
+#include <random>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -121,6 +123,8 @@ class MultiCVRPEnv : public Env<MultiCVRPEnvSpec>, public RenderableEnv {
   std::array<float, multicvrp::kNumVehicles> configured_local_times_{};
   std::array<std::int16_t, multicvrp::kNumVehicles> configured_capacities_{};
   std::array<bool, multicvrp::kActionMaskSize> configured_action_mask_{};
+  std::array<float, multicvrp::kNumVehicles> distances_{};
+  std::array<float, multicvrp::kNumVehicles> time_penalties_{};
   bool use_configured_node_coordinates_;
   bool use_configured_state_;
   int step_count_{0};
@@ -205,28 +209,50 @@ class MultiCVRPEnv : public Env<MultiCVRPEnvSpec>, public RenderableEnv {
     }
     for (int node = 0; node < multicvrp::kNumNodes; ++node) {
       if (!use_configured_node_coordinates_) {
-        node_coordinates_[node * 2] = static_cast<float>(node) / 2.0f;
-        node_coordinates_[node * 2 + 1] = 0.0f;
+        node_coordinates_[node * 2] =
+            std::uniform_real_distribution<float>(0, 10)(gen_);
+        node_coordinates_[node * 2 + 1] =
+            std::uniform_real_distribution<float>(0, 10)(gen_);
       }
       if (use_configured_state_) {
         demands_[node] = configured_demands_[node];
       } else {
-        demands_[node] = node == 0 ? 0 : 10;
+        demands_[node] =
+            node == 0 ? 0 : std::uniform_int_distribution<int>(0, 9)(gen_);
       }
       windows_start_[node] =
-          use_configured_state_ ? configured_windows_start_[node] : 0.0f;
-      windows_end_[node] =
-          use_configured_state_ ? configured_windows_end_[node] : 30.0f;
+          use_configured_state_
+              ? configured_windows_start_[node]
+              : std::uniform_real_distribution<float>(0, 10)(gen_);
+      windows_end_[node] = use_configured_state_ ? configured_windows_end_[node]
+                                                 : windows_start_[node] + 20.0f;
       coeffs_early_[node] =
-          use_configured_state_ ? configured_coeffs_early_[node] : 0.0f;
+          use_configured_state_
+              ? configured_coeffs_early_[node]
+              : (node == 0
+                     ? 0.0f
+                     : std::uniform_real_distribution<float>(0, 0.2f)(gen_));
       coeffs_late_[node] =
-          use_configured_state_ ? configured_coeffs_late_[node] : 0.0f;
+          use_configured_state_
+              ? configured_coeffs_late_[node]
+              : (node == 0 ? 0.0f
+                           : std::uniform_real_distribution<float>(0, 1)(gen_));
     }
+    if (!use_configured_state_) {
+      const int total = std::accumulate(demands_.begin(), demands_.end(), 0);
+      const float scale = static_cast<float>(multicvrp::kVehicleCapacity *
+                                             multicvrp::kNumVehicles) /
+                          std::max(total, 1);
+      for (auto& demand : demands_) {
+        demand = std::min<std::int16_t>(
+            10, static_cast<std::int16_t>(demand * scale));
+      }
+    }
+    distances_.fill(0);
+    time_penalties_.fill(0);
     for (int vehicle = 0; vehicle < multicvrp::kNumVehicles; ++vehicle) {
-      vehicle_coordinates_[vehicle * 2] =
-          use_configured_node_coordinates_ ? node_coordinates_[0] : 0.0f;
-      vehicle_coordinates_[vehicle * 2 + 1] =
-          use_configured_node_coordinates_ ? node_coordinates_[1] : 0.0f;
+      vehicle_coordinates_[vehicle * 2] = node_coordinates_[0];
+      vehicle_coordinates_[vehicle * 2 + 1] = node_coordinates_[1];
       local_times_[vehicle] =
           use_configured_state_ ? configured_local_times_[vehicle] : 0.0f;
       capacities_[vehicle] = use_configured_state_
@@ -239,38 +265,66 @@ class MultiCVRPEnv : public Env<MultiCVRPEnvSpec>, public RenderableEnv {
   }
 
   void Step(const Action& action) override {
-    float reward = 0.0f;
-    bool valid = true;
+    const float old_distance = distances_[0] + distances_[1];
+    const float old_penalty = time_penalties_[0] + time_penalties_[1];
+    bool all_at_depot = true;
     for (int vehicle = 0; vehicle < multicvrp::kNumVehicles; ++vehicle) {
-      const int node =
-          std::clamp(static_cast<int>(action["action"_](0, vehicle)), 0,
-                     multicvrp::kNumNodes - 1);
+      int node = std::clamp(static_cast<int>(action["action"_](0, vehicle)), 0,
+                            multicvrp::kNumNodes - 1);
+      // Invalid or duplicate customer choices return that vehicle to the depot.
       if (!IsActionValid(vehicle, node)) {
-        valid = false;
-        continue;
+        node = 0;
       }
-      const float next_x = node_coordinates_[node * 2];
-      const float next_y = node_coordinates_[node * 2 + 1];
-      const float distance = multicvrp::Distance(
-          vehicle_coordinates_[vehicle * 2],
-          vehicle_coordinates_[vehicle * 2 + 1], next_x, next_y);
-      reward -= distance;
+      all_at_depot = all_at_depot && node == 0;
+      const float x = node_coordinates_[node * 2];
+      const float y = node_coordinates_[node * 2 + 1];
+      const float distance =
+          multicvrp::Distance(vehicle_coordinates_[vehicle * 2],
+                              vehicle_coordinates_[vehicle * 2 + 1], x, y);
+      distances_[vehicle] += distance;
       local_times_[vehicle] += distance;
-      vehicle_coordinates_[vehicle * 2] = next_x;
-      vehicle_coordinates_[vehicle * 2 + 1] = next_y;
-      if (node == 0) {
-        capacities_[vehicle] = multicvrp::kVehicleCapacity;
-      } else {
-        capacities_[vehicle] -= demands_[node];
-        demands_[node] = 0;
-      }
+      time_penalties_[vehicle] += TimePenalty(node, local_times_[vehicle]);
+      vehicle_coordinates_[vehicle * 2] = x;
+      vehicle_coordinates_[vehicle * 2 + 1] = y;
+      capacities_[vehicle] = node == 0 ? multicvrp::kVehicleCapacity
+                                       : capacities_[vehicle] - demands_[node];
+      demands_[node] = 0;
     }
     ++step_count_;
-    done_ = !valid || AllServed() || step_count_ >= multicvrp::kTimeLimit;
-    WriteState(valid ? reward : -100.0f);
+    done_ =
+        (AllServed() && all_at_depot) || step_count_ >= multicvrp::kTimeLimit;
+    float reward = (old_distance - (distances_[0] + distances_[1])) +
+                   (old_penalty - (time_penalties_[0] + time_penalties_[1]));
+    if (step_count_ >= multicvrp::kTimeLimit) {
+      float remaining_distance = 0;
+      for (int node = 1; node < multicvrp::kNumNodes; ++node) {
+        if (demands_[node] > 0) {
+          remaining_distance +=
+              2 * multicvrp::Distance(node_coordinates_[0],
+                                      node_coordinates_[1],
+                                      node_coordinates_[node * 2],
+                                      node_coordinates_[node * 2 + 1]);
+        }
+      }
+      const float time =
+          (local_times_[0] + local_times_[1]) / 2 + remaining_distance;
+      float remaining_penalty = 0;
+      for (int node = 1; node < multicvrp::kNumNodes; ++node) {
+        if (demands_[node] > 0) {
+          remaining_penalty += TimePenalty(node, time);
+        }
+      }
+      reward = -remaining_distance - remaining_penalty;
+    }
+    WriteState(reward);
   }
 
  private:
+  float TimePenalty(int node, float time) const {
+    return std::max(0.0f, windows_start_[node] - time) * coeffs_early_[node] +
+           std::max(0.0f, time - windows_end_[node]) * coeffs_late_[node];
+  }
+
   bool IsActionValid(int vehicle, int node) const {
     if (node == 0) {
       return true;
@@ -304,7 +358,9 @@ class MultiCVRPEnv : public Env<MultiCVRPEnvSpec>, public RenderableEnv {
       state["obs:vehicles.capacities"_][vehicle] = capacities_[vehicle];
       for (int node = 0; node < multicvrp::kNumNodes; ++node) {
         state["obs:action_mask"_](vehicle, node) =
-            use_configured_state_ && step_count_ == 0
+            use_configured_state_ &&
+                    !spec_.config["multi_cvrp_action_mask"_].empty() &&
+                    step_count_ == 0
                 ? configured_action_mask_[vehicle * multicvrp::kNumNodes + node]
                 : IsActionValid(vehicle, node);
       }

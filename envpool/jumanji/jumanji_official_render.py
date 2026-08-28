@@ -204,6 +204,7 @@ def _init_aux(
         return {
             "_render_step": 0,
             "connected_nodes": connected,
+            "nodes_to_connect": _mmst_nodes_to_connect(obs, config),
             "position_index": np.zeros(3, np.int32),
         }
     if task_id == "MultiCVRP-v0":
@@ -215,6 +216,7 @@ def _init_aux(
 def _update_aux(
     task_id: str,
     aux: dict[str, Any],
+    obs: Mapping[str, Any],
     previous_obs: Mapping[str, Any] | None,
     action: Any,
     config: Mapping[str, Any],
@@ -294,6 +296,10 @@ def _update_aux(
         connected = np.asarray(aux["connected_nodes"], dtype=np.int32)
         index = np.asarray(aux["position_index"], dtype=np.int32)
         for agent, node in enumerate(actions.tolist()):
+            if node != int(obs["positions"][agent]) or node == int(
+                previous_obs["positions"][agent]
+            ):
+                continue
             next_index = int(index[agent]) + 1
             if next_index < connected.shape[1]:
                 connected[agent, next_index] = int(node)
@@ -396,7 +402,7 @@ def update_render_aux(
     """Update per-env renderer state from the latest EnvPool transition."""
     if reset or aux is None:
         return _init_aux(task_id, obs, config)
-    return _update_aux(task_id, aux, previous_obs, action, config)
+    return _update_aux(task_id, aux, obs, previous_obs, action, config)
 
 
 def _make_bin_pack_state(
@@ -628,7 +634,9 @@ def _make_mmst_state(
         adj_matrix=_a(obs["adj_matrix"]),
         connected_nodes=_a(connected),
         connected_nodes_index=_a(np.full((3, 36), -1, dtype=np.int32)),
-        nodes_to_connect=_a(_mmst_nodes_to_connect(obs, config)),
+        nodes_to_connect=_a(
+            aux.get("nodes_to_connect", _mmst_nodes_to_connect(obs, config))
+        ),
         node_edges=_a(np.full((3, 36, 36), -1, dtype=np.int32)),
         positions=_a(positions),
         position_index=_a(position_index),
@@ -688,77 +696,33 @@ def _make_pac_man_state(obs: Mapping[str, Any]) -> Any:
 
 
 def _make_robot_warehouse_state(
-    obs: Mapping[str, Any], config: Mapping[str, Any]
+    obs: Mapping[str, Any], info: Mapping[str, Any]
 ) -> Any:
-    grid = _config_array(
-        config,
-        "robot_warehouse_render_grid",
-        (2, 20, 10),
-        np.int32,
-        np.zeros((2, 20, 10), dtype=np.int32),
-    )
-    agent_x = _config_array(
-        config,
-        "robot_warehouse_render_agent_x",
-        (4,),
-        np.int32,
-        np.zeros(4, dtype=np.int32),
-    )
-    agent_y = _config_array(
-        config,
-        "robot_warehouse_render_agent_y",
-        (4,),
-        np.int32,
-        np.arange(4, dtype=np.int32),
-    )
-    shelf_x = _config_array(
-        config,
-        "robot_warehouse_render_shelf_x",
-        (80,),
-        np.int32,
-        np.zeros(80, dtype=np.int32),
-    )
-    shelf_y = _config_array(
-        config,
-        "robot_warehouse_render_shelf_y",
-        (80,),
-        np.int32,
-        np.zeros(80, dtype=np.int32),
-    )
+    agents_view = _asarray(obs["agents_view"], np.int32)
+    shelves = _asarray(info["shelf_positions"], np.int32)
+    grid = np.zeros((2, 20, 10), dtype=np.int32)
+    grid[0, shelves[:, 0], shelves[:, 1]] = np.arange(1, 81)
+    grid[1, agents_view[:, 0], agents_view[:, 1]] = np.arange(1, 5)
     return routing.RobotWarehouseState(
         grid=_a(grid),
         agents=routing.RobotAgent(
-            position=routing.RobotPosition(_a(agent_x), _a(agent_y)),
+            position=routing.RobotPosition(
+                _a(agents_view[:, 0]), _a(agents_view[:, 1])
+            ),
             direction=_a(
-                _config_array(
-                    config,
-                    "robot_warehouse_render_agent_direction",
-                    (4,),
-                    np.int32,
-                    np.zeros(4, dtype=np.int32),
-                )
+                np.argmax(agents_view[:, 3:7], axis=1).astype(np.int32)
             ),
-            is_carrying=_a(
-                _csv_bool_array(
-                    config,
-                    "robot_warehouse_render_agent_carrying",
-                    (4,),
-                    np.zeros(4, dtype=bool),
-                )
-            ),
+            is_carrying=_a(agents_view[:, 2]),
         ),
         shelves=routing.Shelf(
-            position=routing.RobotPosition(_a(shelf_x), _a(shelf_y)),
-            is_requested=_a(
-                _csv_bool_array(
-                    config,
-                    "robot_warehouse_render_shelf_requested",
-                    (80,),
-                    np.zeros(80, dtype=bool),
-                )
+            position=routing.RobotPosition(
+                _a(shelves[:, 0]), _a(shelves[:, 1])
             ),
+            is_requested=_a(info["shelf_requested"]),
         ),
-        request_queue=_a(np.zeros(8, dtype=np.int32)),
+        request_queue=_a(
+            np.flatnonzero(info["shelf_requested"]).astype(np.int32)
+        ),
         step_count=_a(obs["step_count"], np.int32),
         action_mask=_a(obs["action_mask"]),
         key=_key(),
@@ -774,7 +738,10 @@ def _make_rubiks_state(obs: Mapping[str, Any]) -> Any:
 
 
 def _make_search_and_rescue_state(
-    obs: Mapping[str, Any], config: Mapping[str, Any], aux: Mapping[str, Any]
+    obs: Mapping[str, Any],
+    config: Mapping[str, Any],
+    aux: Mapping[str, Any],
+    info: Mapping[str, Any],
 ) -> Any:
     target_pos = _config_array(
         config,
@@ -784,7 +751,10 @@ def _make_search_and_rescue_state(
         np.zeros((40, 2), dtype=np.float32),
     )
     target_pos = np.asarray(
-        aux.get("search_and_rescue_target_positions", target_pos),
+        aux.get(
+            "search_and_rescue_target_positions",
+            info.get("target_positions", target_pos),
+        ),
         dtype=np.float32,
     )
     headings = np.asarray(
@@ -812,6 +782,14 @@ def _make_search_and_rescue_state(
         ),
         dtype=bool,
     )
+    if "search_and_rescue_headings" not in aux:
+        headings = np.asarray(
+            info.get("searcher_headings", headings), dtype=np.float32
+        )
+    if "search_and_rescue_target_found" not in aux:
+        target_found = np.asarray(
+            info.get("target_found", target_found), dtype=bool
+        )
     return swarms.SearchAndRescueState(
         searchers=swarms.AgentState(
             pos=_a(obs["positions"]),
@@ -973,7 +951,6 @@ def render_official_frame(
     score: float,
 ) -> NDArray[np.uint8]:
     """Render a Jumanji EnvPool observation through vendored official viewers."""
-    del info
     render_passes = 1
     if task_id == "BinPack-v2":
         viewer = _cached_viewer(
@@ -1095,7 +1072,7 @@ def render_official_frame(
                 (20, 10), goals, "RobotWarehouse", "rgb_array"
             ),
         )
-        state = _make_robot_warehouse_state(obs, config)
+        state = _make_robot_warehouse_state(obs, info)
     elif task_id.startswith("RubiksCube"):
         viewer = _cached_viewer(
             aux,
@@ -1115,7 +1092,7 @@ def render_official_frame(
                 "SearchAndRescue", render_mode="rgb_array"
             ),
         )
-        state = _make_search_and_rescue_state(obs, config, aux)
+        state = _make_search_and_rescue_state(obs, config, aux, info)
         render_passes = 2
     elif task_id == "SlidingTilePuzzle-v0":
         viewer = _cached_viewer(

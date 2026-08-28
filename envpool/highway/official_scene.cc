@@ -79,11 +79,18 @@ CollisionBox ToRegulationBox(Vec2 position, double heading) {
 std::array<Vec2, 4> Corners(const CollisionBox& box) {
   const double cos_h = std::cos(box.heading);
   const double sin_h = std::sin(box.heading);
-  const Vec2 longitudinal{cos_h * box.length / 2.0, sin_h * box.length / 2.0};
-  const Vec2 lateral{-sin_h * box.width / 2.0, cos_h * box.width / 2.0};
-  return {
-      box.center - longitudinal - lateral, box.center - longitudinal + lateral,
-      box.center + longitudinal + lateral, box.center + longitudinal - lateral};
+  const std::array<Vec2, 4> local = {Vec2{-box.length / 2.0, -box.width / 2.0},
+                                     Vec2{-box.length / 2.0, box.width / 2.0},
+                                     Vec2{box.length / 2.0, box.width / 2.0},
+                                     Vec2{box.length / 2.0, -box.width / 2.0}};
+  std::array<Vec2, 4> corners{};
+  for (std::size_t i = 0; i < local.size(); ++i) {
+    // Rotate the local corner before translating, matching rotation @ points.
+    corners[i] =
+        box.center + Vec2{std::fma(-sin_h, local[i].y, cos_h * local[i].x),
+                          std::fma(cos_h, local[i].y, sin_h * local[i].x)};
+  }
+  return corners;
 }
 
 std::array<Vec2, 9> RegulationPoints(const CollisionBox& box) {
@@ -174,7 +181,7 @@ CollisionResult CollidePolygons(const std::array<Vec2, 4>& a,
       if (norm <= 0.0) {
         continue;
       }
-      axis = (1.0 / norm) * axis;
+      axis = {axis.x / norm, axis.y / norm};
 
       auto [a_low, a_high] = Project(a, axis);
       const auto [b_low, b_high] = Project(b, axis);
@@ -642,6 +649,12 @@ bool Mobil(const Road& road, int vehicle_index, const LaneIndex& lane_index) {
     return false;
   }
   const double self_pred_a = IDMAcceleration(road, &self, new_preceding);
+  if (!self.route.empty() && self.route.front().id != kUnknownLaneId) {
+    const auto sign = [](int value) { return (value > 0) - (value < 0); };
+    return sign(lane_index.id - self.target_lane_index.id) ==
+               sign(self.route.front().id - self.target_lane_index.id) &&
+           self_pred_a >= -kLaneChangeMaxBrakingImposed;
+  }
   const auto [old_preceding, old_following] =
       RoadNeighbors(road, self, self.lane_index);
   const double self_a = IDMAcceleration(road, &self, old_preceding);

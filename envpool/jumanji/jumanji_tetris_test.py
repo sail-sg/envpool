@@ -27,8 +27,14 @@ class JumanjiTetrisTest(absltest.TestCase):
 
     def test_drop_square_piece(self) -> None:
         """Checks dropping the square piece updates the board."""
+        square = np.zeros((4, 4), dtype=np.int32)
+        square[:2, :2] = 1
         env = make_gymnasium(
-            "Tetris-v0", num_envs=1, seed=0, render_mode="rgb_array"
+            "Tetris-v0",
+            num_envs=1,
+            seed=0,
+            render_mode="rgb_array",
+            tetris_tetromino=",".join(map(str, square.ravel())),
         )
         try:
             obs, _ = env.reset()
@@ -45,7 +51,7 @@ class JumanjiTetrisTest(absltest.TestCase):
             self.assertAlmostEqual(float(reward[0]), 0.0)
             self.assertFalse(bool(terminated[0]))
             self.assertFalse(bool(truncated[0]))
-            self.assertEqual(int(obs["step_count"][0]), 1)
+            self.assertEqual(int(obs["step_count"][0]), 0)
             np.testing.assert_array_equal(
                 obs["grid"][0, 8:10, 0:2],
                 np.ones((2, 2), dtype=obs["grid"].dtype),

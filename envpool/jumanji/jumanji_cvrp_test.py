@@ -33,6 +33,12 @@ class JumanjiCVRPTest(parameterized.TestCase):
             num_envs=1,
             seed=0,
             cvrp_max_capacity=capacity,
+            cvrp_coordinates=",".join(
+                str(value) for node in range(21) for value in (node / 20, 0)
+            ),
+            cvrp_demands=",".join(
+                str(0 if node == 0 else 1 / capacity) for node in range(21)
+            ),
             render_mode="rgb_array",
         )
         try:

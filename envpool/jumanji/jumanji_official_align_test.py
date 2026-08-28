@@ -1145,6 +1145,11 @@ def _assert_reward_bitwise(
     label: str,
 ) -> None:
     expected = _as_numpy(expected)
+    if task_id == "Connector-v3":
+        np.testing.assert_array_equal(
+            info["agent_rewards"][0], expected, err_msg=label
+        )
+        expected = np.float32(expected.mean(dtype=np.float64))
     if task_id == "SearchAndRescue-v0":
         np.testing.assert_array_equal(
             info["searcher_rewards"][0], expected, err_msg=label

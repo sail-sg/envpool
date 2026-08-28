@@ -307,8 +307,8 @@ class NativeBaseFns {
     return MakeDict(
         "scenario"_.Bind(std::string("merge")), "duration"_.Bind(40),
         "simulation_frequency"_.Bind(15), "policy_frequency"_.Bind(1),
-        "screen_width"_.Bind(600), "screen_height"_.Bind(150),
-        "render_agent"_.Bind(true),
+        "spawn_probability"_.Bind(0.6), "screen_width"_.Bind(600),
+        "screen_height"_.Bind(150), "render_agent"_.Bind(true),
         "neighbour_vehicles_connected_lanes"_.Bind(false),
         "lanes_count"_.Bind(2), "vehicles_count"_.Bind(3),
         "before_merge_length"_.Bind(150.0), "converge_merge_length"_.Bind(80.0),
@@ -418,6 +418,12 @@ class NativeGoalFns : public NativeBaseFns {
 
 class NativeAttributesFns : public NativeBaseFns {
  public:
+  static decltype(auto) DefaultConfig() {
+    return ConcatDict(
+        NativeBaseFns::DefaultConfig(),
+        MakeDict("state_noise"_.Bind(0.05), "derivative_noise"_.Bind(0.05)));
+  }
+
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     const double inf = std::numeric_limits<double>::infinity();
@@ -844,16 +850,19 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
           scenario_ == "parking_parked");
     } else if (scenario_ == "exit") {
       official_road_ = official::MakeExitRoad();
-      official_ego_index_ = official::ResetExitVehicles(&*official_road_);
+      official_ego_index_ =
+          official::ResetExitVehicles(&*official_road_, &this->gen_);
     } else if (scenario_ == "intersection" ||
                scenario_ == "intersection_continuous") {
       official_road_ = official::MakeIntersectionRoad();
-      official_ego_index_ =
-          official::ResetIntersectionVehicles(&*official_road_);
+      official_road_->connected_lane_neighbors = connected_lane_neighbors_;
+      official_ego_index_ = official::ResetIntersectionVehicles(
+          &*official_road_, &this->gen_, 1, simulation_frequency_);
     } else if (scenario_ == "intersection_multi") {
       official_road_ = official::MakeIntersectionRoad();
-      official_ego_index_ =
-          official::ResetMultiAgentIntersectionVehicles(&*official_road_);
+      official_road_->connected_lane_neighbors = connected_lane_neighbors_;
+      official_ego_index_ = official::ResetIntersectionVehicles(
+          &*official_road_, &this->gen_, 2, simulation_frequency_);
       official_player_count_ = 2;
     } else if (scenario_ == "lane_keeping") {
       official_road_ = official::MakeLaneKeepingRoad();
@@ -861,12 +870,9 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       official_active_lane_index_ = {"c", "d", 0};
     } else if (scenario_.find("racetrack") == 0) {
       official_road_ = official::MakeRacetrackRoad(scenario_);
-      const double longitudinal = scenario_ == "racetrack"        ? 48.0
-                                  : scenario_ == "racetrack_oval" ? 50.0
-                                                                  : 80.0;
       official_ego_index_ =
-          official::ResetRacetrackVehicles(&*official_road_, longitudinal, 0);
-      official_active_lane_index_ = {"a", "b", 0};
+          official::ResetRacetrackVehicles(&*official_road_, &this->gen_);
+      official_active_lane_index_ = OfficialEgo().lane_index;
     } else if (IsRoundaboutScenario()) {
       if (scenario_ == "roundabout_generic") {
         official_road_ = official::MakeRoundaboutGenericRoad(
@@ -878,14 +884,16 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       } else {
         official_road_ = official::MakeRoundaboutRoad();
         official_ego_index_ =
-            official::ResetRoundaboutVehicles(&*official_road_);
+            official::ResetRoundaboutVehicles(&*official_road_, &this->gen_);
       }
     } else if (scenario_ == "two_way") {
       official_road_ = official::MakeTwoWayRoad();
-      official_ego_index_ = official::ResetTwoWayVehicles(&*official_road_);
+      official_ego_index_ =
+          official::ResetTwoWayVehicles(&*official_road_, &this->gen_);
     } else if (scenario_ == "u_turn") {
       official_road_ = official::MakeUTurnRoad();
-      official_ego_index_ = official::ResetUTurnVehicles(&*official_road_);
+      official_ego_index_ =
+          official::ResetUTurnVehicles(&*official_road_, &this->gen_);
     } else if (scenario_ == "merge_generic") {
       const int lanes = this->spec_.config["lanes_count"_];
       const double before = this->spec_.config["before_merge_length"_];
@@ -970,6 +978,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
               scenario_ == "intersection_continuous") &&
              OfficialIntersectionArrived(OfficialEgo()));
     WriteState(static_cast<float>(OfficialReward()));
+    UpdateOfficialTraffic();
   }
 
   void StepOfficialMultiAgentIntersection(const Action& action) {
@@ -999,6 +1008,7 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     }
     done_ = done_ || all_players_arrived;
     WriteOfficialMultiAgentState();
+    UpdateOfficialTraffic();
   }
 
   void StepOfficialLaneKeeping(const Action& action) {
@@ -1067,6 +1077,17 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
             (scenario_ == "intersection_continuous" &&
              OfficialIntersectionArrived(OfficialEgo()));
     WriteState(static_cast<float>(OfficialReward()));
+    UpdateOfficialTraffic();
+  }
+
+  void UpdateOfficialTraffic() {
+    if (scenario_.find("intersection") == 0) {
+      // IntersectionEnv returns the pre-spawn observation, then updates
+      // traffic.
+      official::UpdateIntersectionTraffic(
+          &*official_road_, &this->gen_, official_player_count_,
+          this->spec_.config["spawn_probability"_]);
+    }
   }
 
   void StepOfficialRoadFrames() {
@@ -1882,10 +1903,16 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
                                                   derivative[4], derivative[5]};
     const std::array<double, 4> reference_values{reference_y, reference_heading,
                                                  0.0, 0.0};
+    const double state_noise = this->spec_.config["state_noise"_];
+    const double derivative_noise = this->spec_.config["derivative_noise"_];
     for (int i = 0; i < 4; ++i) {
-      s(i, 0) = state_values[i];
-      d(i, 0) = derivative_values[i];
+      s(i, 0) =
+          state_values[i] + Uniform(&this->gen_, -state_noise, state_noise);
       r(i, 0) = reference_values[i];
+    }
+    for (int i = 0; i < 4; ++i) {
+      d(i, 0) = derivative_values[i] +
+                Uniform(&this->gen_, -derivative_noise, derivative_noise);
     }
   }
 

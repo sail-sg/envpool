@@ -37,28 +37,30 @@ namespace highway::official {
                                             double max_position,
                                             std::mt19937* generator);
 [[nodiscard]] Road MakeRoundaboutRoad();
-[[nodiscard]] int ResetRoundaboutVehicles(Road* road);
+[[nodiscard]] int ResetRoundaboutVehicles(Road* road, std::mt19937* generator);
 [[nodiscard]] Road MakeRoundaboutGenericRoad(double radius, int lanes);
 [[nodiscard]] int ResetRoundaboutGenericVehicles(Road* road, int vehicle_count,
                                                  std::mt19937* generator);
 [[nodiscard]] Road MakeTwoWayRoad();
-[[nodiscard]] int ResetTwoWayVehicles(Road* road);
+[[nodiscard]] int ResetTwoWayVehicles(Road* road, std::mt19937* generator);
 [[nodiscard]] Road MakeUTurnRoad();
-[[nodiscard]] int ResetUTurnVehicles(Road* road);
+[[nodiscard]] int ResetUTurnVehicles(Road* road, std::mt19937* generator);
 [[nodiscard]] Road MakeParkingRoad();
 [[nodiscard]] int ResetParkingVehicles(Road* road, double ego_x,
                                        double ego_heading, int goal_spot,
                                        bool add_parked_vehicles);
 [[nodiscard]] Road MakeExitRoad();
-[[nodiscard]] int ResetExitVehicles(Road* road);
+[[nodiscard]] int ResetExitVehicles(Road* road, std::mt19937* generator);
 [[nodiscard]] Road MakeIntersectionRoad();
-[[nodiscard]] int ResetIntersectionVehicles(Road* road);
-[[nodiscard]] int ResetMultiAgentIntersectionVehicles(Road* road);
+void UpdateIntersectionTraffic(Road* road, std::mt19937* generator, int players,
+                               double spawn_probability);
+[[nodiscard]] int ResetIntersectionVehicles(Road* road, std::mt19937* generator,
+                                            int players,
+                                            int simulation_frequency);
 [[nodiscard]] Road MakeLaneKeepingRoad();
 [[nodiscard]] int ResetLaneKeepingVehicle(Road* road);
 [[nodiscard]] Road MakeRacetrackRoad(const std::string& scenario);
-[[nodiscard]] int ResetRacetrackVehicles(Road* road, double longitudinal,
-                                         int lane);
+[[nodiscard]] int ResetRacetrackVehicles(Road* road, std::mt19937* generator);
 
 }  // namespace highway::official
 

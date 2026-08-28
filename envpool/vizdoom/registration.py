@@ -50,4 +50,6 @@ for game in _vizdoom_game_list() + ["vizdoom_custom"]:
         wad_path=wad_path,
         max_episode_steps=525,
         base_path=_VIZDOOM_BASE_PATH,
+        # These arenas contain deathmatch starts, not a single-player start.
+        game_args="-deathmatch" if game in {"cig", "multi_duel"} else "",
     )

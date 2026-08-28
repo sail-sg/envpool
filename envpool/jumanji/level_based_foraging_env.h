@@ -21,9 +21,11 @@
 #include <array>
 #include <cstddef>
 #include <cstdlib>
+#include <random>
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
@@ -171,33 +173,70 @@ class LevelBasedForagingEnv : public Env<LevelBasedForagingEnvSpec>,
   }
 
   void Reset() override {
-    if (use_configured_agents_) {
-      for (int agent = 0; agent < lbf::kNumAgents; ++agent) {
-        agent_row_[agent] =
-            std::clamp(configured_agents_[agent * 3], 0, lbf::kGridSize - 1);
-        agent_col_[agent] = std::clamp(configured_agents_[agent * 3 + 1], 0,
-                                       lbf::kGridSize - 1);
-        agent_level_[agent] = std::max(1, configured_agents_[agent * 3 + 2]);
-      }
-    } else {
-      agent_row_ = {0, 0};
-      agent_col_ = {0, 1};
-      agent_level_ = {1, 1};
-    }
-    loading_.fill(false);
-    if (use_configured_food_) {
-      for (int food = 0; food < lbf::kNumFood; ++food) {
+    for (int food = 0; food < lbf::kNumFood; ++food) {
+      if (use_configured_food_) {
         food_row_[food] =
             std::clamp(configured_food_[food * 3], 0, lbf::kGridSize - 1);
         food_col_[food] =
             std::clamp(configured_food_[food * 3 + 1], 0, lbf::kGridSize - 1);
         food_level_[food] = std::max(1, configured_food_[food * 3 + 2]);
+      } else {
+        std::vector<int> available;
+        for (int row = 1; row < lbf::kGridSize - 1; ++row) {
+          for (int col = 1; col < lbf::kGridSize - 1; ++col) {
+            bool free = true;
+            for (int previous = 0; previous < food; ++previous) {
+              free = free && std::abs(row - food_row_[previous]) +
+                                     std::abs(col - food_col_[previous]) >
+                                 1;
+            }
+            if (free) {
+              available.push_back(row * lbf::kGridSize + col);
+            }
+          }
+        }
+        const int position = available[std::uniform_int_distribution<int>(
+            0, static_cast<int>(available.size()) - 1)(gen_)];
+        food_row_[food] = position / lbf::kGridSize;
+        food_col_[food] = position % lbf::kGridSize;
       }
-    } else {
-      food_row_ = {1, 7};
-      food_col_ = {0, 7};
-      food_level_ = {2, 2};
     }
+    std::vector<int> available;
+    for (int row = 0; row < lbf::kGridSize; ++row) {
+      // Jumanji 1.1.2 indexes the first axis with food_positions when
+      // masking agent starts, excluding these rows rather than single cells.
+      bool free = true;
+      for (int food = 0; food < lbf::kNumFood; ++food) {
+        free = free && row != food_row_[food] && row != food_col_[food];
+      }
+      if (free) {
+        for (int col = 0; col < lbf::kGridSize; ++col) {
+          available.push_back(row * lbf::kGridSize + col);
+        }
+      }
+    }
+    if (!use_configured_agents_) {
+      std::shuffle(available.begin(), available.end(), gen_);
+    }
+    int total_level = 0;
+    for (int agent = 0; agent < lbf::kNumAgents; ++agent) {
+      if (use_configured_agents_) {
+        agent_row_[agent] =
+            std::clamp(configured_agents_[agent * 3], 0, lbf::kGridSize - 1);
+        agent_col_[agent] = std::clamp(configured_agents_[agent * 3 + 1], 0,
+                                       lbf::kGridSize - 1);
+        agent_level_[agent] = std::max(1, configured_agents_[agent * 3 + 2]);
+      } else {
+        agent_row_[agent] = available[agent] / lbf::kGridSize;
+        agent_col_[agent] = available[agent] % lbf::kGridSize;
+        agent_level_[agent] = std::uniform_int_distribution<int>(1, 2)(gen_);
+      }
+      total_level += agent_level_[agent];
+    }
+    if (!use_configured_food_) {
+      food_level_.fill(total_level);
+    }
+    loading_.fill(false);
     eaten_.fill(false);
     step_count_ = 0;
     done_ = false;

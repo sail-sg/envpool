@@ -27,8 +27,20 @@ class JumanjiJobShopTest(absltest.TestCase):
 
     def test_schedule_two_jobs(self) -> None:
         """Checks scheduling advances both jobs."""
+        machines = np.full((20, 8), -1, dtype=np.int32)
+        durations = np.full_like(machines, -1)
+        machines[0, :2], durations[0, :2] = [0, 2], [2, 1]
+        machines[1, 0], durations[1, 0] = 1, 3
         env = make_gymnasium(
-            "JobShop-v0", num_envs=1, seed=0, render_mode="rgb_array"
+            "JobShop-v0",
+            num_envs=1,
+            seed=0,
+            render_mode="rgb_array",
+            job_shop_ops_machine_ids=",".join(map(str, machines.ravel())),
+            job_shop_ops_durations=",".join(map(str, durations.ravel())),
+            job_shop_ops_mask=",".join(
+                map(str, (machines >= 0).astype(int).ravel())
+            ),
         )
         try:
             obs, _ = env.reset()
@@ -54,13 +66,16 @@ class JumanjiJobShopTest(absltest.TestCase):
             obs, _, terminated, truncated, _ = env.step(action)
             self.assertFalse(bool(terminated[0]))
             self.assertFalse(bool(truncated[0]))
-            self.assertEqual(int(obs["machines_job_ids"][0, 0]), 20)
+            self.assertEqual(int(obs["machines_job_ids"][0, 0]), 0)
+            self.assertTrue(bool(obs["action_mask"][0, 2, 0]))
             self.assertEqual(int(obs["machines_remaining_times"][0, 1]), 1)
 
+            action[0, 2] = 0
             obs, _, terminated, truncated, _ = env.step(action)
             self.assertTrue(bool(terminated[0]))
             self.assertFalse(bool(truncated[0]))
-            self.assertEqual(int(obs["machines_job_ids"][0, 1]), 20)
+            self.assertEqual(int(obs["machines_job_ids"][0, 1]), 1)
+            self.assertFalse(bool(obs["ops_mask"][0, 0].any()))
 
             frame = env.render(env_ids=np.asarray([0], dtype=np.int32))
 

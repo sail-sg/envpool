@@ -96,9 +96,9 @@ class JumanjiRegistryTest(parameterized.TestCase):
         if task_id in {"Minesweeper-v0", "PacMan-v1"}:
             # Mines are hidden at reset; PacMan has stochastic ghost movement.
             check_seeded_resets(self, task_id, expected=(None, None, None))
-            check_seeded_rollouts(self, task_id)
         else:
             check_seeded_resets(self, task_id)
+        check_seeded_rollouts(self, task_id)
 
     def test_registered_ids_match_pinned_oracle_list(self) -> None:
         """Checks EnvPool exposes every pinned Jumanji v1.1.2 ID."""

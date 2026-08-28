@@ -27,8 +27,16 @@ class JumanjiBinPackTest(absltest.TestCase):
 
     def test_place_item_in_empty_space(self) -> None:
         """Checks placement updates item and EMS state."""
+        lengths = ",".join(map(str, [0.5] * 8 + [0] * 12))
         env = make_gymnasium(
-            "BinPack-v2", num_envs=1, seed=0, render_mode="rgb_array"
+            "BinPack-v2",
+            num_envs=1,
+            seed=0,
+            render_mode="rgb_array",
+            bin_pack_item_x_len=lengths,
+            bin_pack_item_y_len=lengths,
+            bin_pack_item_z_len=lengths,
+            bin_pack_items_mask=",".join(map(str, [1] * 8 + [0] * 12)),
         )
         try:
             obs, _ = env.reset()
@@ -45,9 +53,22 @@ class JumanjiBinPackTest(absltest.TestCase):
             self.assertFalse(bool(terminated[0]))
             self.assertFalse(bool(truncated[0]))
             self.assertTrue(bool(obs["items_placed"][0, 0]))
-            self.assertFalse(bool(obs["items_mask"][0, 0]))
+            self.assertTrue(bool(obs["items_mask"][0, 0]))
             self.assertFalse(bool(obs["action_mask"][0, 0, 0]))
             self.assertTrue(bool(np.any(obs["action_mask"][0])))
+
+            total_reward = float(reward[0])
+            for item in range(1, 8):
+                valid_spaces = np.flatnonzero(obs["action_mask"][0, :, item])
+                self.assertNotEmpty(valid_spaces)
+                obs, reward, terminated, truncated, _ = env.step(
+                    np.asarray([[valid_spaces[0], item]], dtype=np.int32)
+                )
+                total_reward += float(reward[0])
+                self.assertEqual(bool(terminated[0]), item == 7)
+                self.assertFalse(bool(truncated[0]))
+            self.assertAlmostEqual(total_reward, 1.0)
+            self.assertFalse(bool(obs["action_mask"].any()))
 
             frame = env.render(env_ids=np.asarray([0], dtype=np.int32))
 

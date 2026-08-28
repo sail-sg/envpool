@@ -42,7 +42,7 @@ SCALAR_DEFAULTS = {
     "target_y_vel": 0.0,
 }
 
-ORACLE_BROKEN_SOURCE_METADATA = {
+ORACLE_BROKEN_SOURCE_METADATA: dict[str, dict[str, Any]] = {
     "myosuite.envs.myo.myochallenge.bimanual_v0:BimanualEnvV1": {
         "obs_keys": [
             "time",
@@ -133,6 +133,21 @@ def _escape(value: str) -> str:
     return value.replace("\\", "\\\\").replace('"', '\\"')
 
 
+def _parameter_csv(parameters: dict[str, Any]) -> str:
+    fields = []
+    for name, value in sorted(parameters.items()):
+        if isinstance(value, dict):
+            fields.append(
+                _parameter_csv({
+                    f"{name}.{key}": val for key, val in value.items()
+                })
+            )
+        else:
+            values = ",".join(repr(float(item)) for item in _flat(value))
+            fields.append(f"{name}:{values}")
+    return ";".join(fields)
+
+
 def _entry(
     task: dict[str, Any], metadata: dict[str, Any] | None
 ) -> dict[str, Any]:
@@ -159,6 +174,14 @@ def _entry(
         "target_reach_low": ";".join(low_ranges),
         "target_reach_high": ";".join(high_ranges),
         "reset_type": str(metadata.get("reset_type", "")),
+        "target_type": str(metadata.get("target_type", "")),
+        "task_choice": str(metadata.get("task_choice", "")),
+        "terrain": str(metadata.get("terrain", "")),
+        "variant": str(metadata.get("variant", "")),
+        "weight_bodyname": str(metadata.get("weight_bodyname") or ""),
+        "reset_parameters": _parameter_csv(
+            metadata.get("reset_parameters", {})
+        ),
     }
     for key, default in SCALAR_DEFAULTS.items():
         value = metadata.get(key, default)
@@ -205,6 +228,12 @@ def _write_header(entries: list[dict[str, Any]], output: Path) -> None:
         "  const char* target_reach_low;",
         "  const char* target_reach_high;",
         "  const char* reset_type;",
+        "  const char* target_type;",
+        "  const char* task_choice;",
+        "  const char* terrain;",
+        "  const char* variant;",
+        "  const char* weight_bodyname;",
+        "  const char* reset_parameters;",
         "  double far_th;",
         "  double goal_th;",
         "  int hip_period;",
@@ -236,6 +265,21 @@ def _write_header(entries: list[dict[str, Any]], output: Path) -> None:
             f'        "{_escape(entry["target_reach_low"])}",',
             f'        "{_escape(entry["target_reach_high"])}",',
             f'        "{_escape(entry["reset_type"])}",',
+            f'        "{_escape(entry["target_type"])}",',
+            f'        "{_escape(entry["task_choice"])}",',
+            f'        "{_escape(entry["terrain"])}",',
+            f'        "{_escape(entry["variant"])}",',
+            f'        "{_escape(entry["weight_bodyname"])}",',
+            # MSVC limits each individual string literal; adjacent chunks
+            # preserve the compact generated geometry catalogs on Windows.
+            *[
+                f'        "{_escape(chunk)}"'
+                for chunk in (
+                    entry["reset_parameters"][offset : offset + 4096]
+                    for offset in range(0, len(entry["reset_parameters"]), 4096)
+                )
+            ],
+            '        "",',
             f"        {float(entry['far_th']):.17g},",
             f"        {float(entry['goal_th']):.17g},",
             f"        {int(entry['hip_period'])},",

@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <random>
 #include <string>
 #include <utility>
 
@@ -35,7 +36,6 @@ constexpr int kNumJobs = 20;
 constexpr int kNumOps = 8;
 constexpr int kNumMachines = 10;
 constexpr int kNoJob = 20;
-constexpr int kActiveJobs = 2;
 constexpr int kTimeLimit = 1000;
 constexpr int kOpsSize = kNumJobs * kNumOps;
 constexpr int kActionMaskSize = kNumMachines * (kNoJob + 1);
@@ -101,7 +101,6 @@ class JobShopEnv : public Env<JobShopEnvSpec>, public RenderableEnv {
   std::array<bool, jobshop::kReplaySteps * jobshop::kActionMaskSize>
       replay_action_mask_{};
   std::array<float, jobshop::kReplaySteps> replay_rewards_{};
-  std::array<bool, jobshop::kNumJobs> completed_{};
   bool use_configured_ops_;
   bool use_configured_action_mask_;
   bool use_replay_;
@@ -173,10 +172,12 @@ class JobShopEnv : public Env<JobShopEnvSpec>, public RenderableEnv {
                          (machine + 1) * row_h - 2, render::Palette(job), rgb);
       }
     }
-    const auto completed = static_cast<int>(
-        std::count(completed_.begin(), completed_.end(), true));
+    int completed = 0;
+    for (int job = 0; job < jobshop::kNumJobs; ++job) {
+      completed += NextOperation(job) < 0 && !JobBusy(job);
+    }
     const int completed_w =
-        std::clamp(width * completed / jobshop::kActiveJobs, 0, width);
+        std::clamp(width * completed / jobshop::kNumJobs, 0, width);
     if (completed_w > 0) {
       render::FillRect(width, height, 0, 0, completed_w, row_h, {60, 190, 90},
                        rgb);
@@ -193,7 +194,6 @@ class JobShopEnv : public Env<JobShopEnvSpec>, public RenderableEnv {
     op_mask_.fill(false);
     machine_job_ids_.fill(jobshop::kNoJob);
     machine_remaining_times_.fill(0);
-    completed_.fill(false);
     if (use_configured_ops_) {
       op_machine_ids_ = configured_op_machine_ids_;
       op_durations_ = configured_op_durations_;
@@ -201,12 +201,17 @@ class JobShopEnv : public Env<JobShopEnvSpec>, public RenderableEnv {
       machine_job_ids_ = configured_machine_job_ids_;
       machine_remaining_times_ = configured_machine_remaining_times_;
     } else {
-      op_machine_ids_[0] = 0;
-      op_durations_[0] = 2;
-      op_mask_[0] = true;
-      op_machine_ids_[jobshop::kNumOps] = 1;
-      op_durations_[jobshop::kNumOps] = 3;
-      op_mask_[jobshop::kNumOps] = true;
+      for (int job = 0; job < jobshop::kNumJobs; ++job) {
+        const int operations =
+            std::uniform_int_distribution<int>(1, jobshop::kNumOps)(gen_);
+        for (int op = 0; op < operations; ++op) {
+          const int index = job * jobshop::kNumOps + op;
+          op_machine_ids_[index] = std::uniform_int_distribution<int>(
+              0, jobshop::kNumMachines - 1)(gen_);
+          op_durations_[index] = std::uniform_int_distribution<int>(1, 6)(gen_);
+          op_mask_[index] = true;
+        }
+      }
     }
     step_count_ = 0;
     done_ = false;
@@ -221,53 +226,76 @@ class JobShopEnv : public Env<JobShopEnvSpec>, public RenderableEnv {
       return;
     }
     bool valid = true;
+    std::array<int, jobshop::kNumMachines> operations{};
+    operations.fill(-1);
+    // Validate against the pre-step mask before assigning any machines.
     for (int machine = 0; machine < jobshop::kNumMachines; ++machine) {
-      const int selected_job = std::clamp(
-          static_cast<int>(action["action"_](0, machine)), 0, jobshop::kNoJob);
-      if (selected_job == jobshop::kNoJob) {
-        continue;
+      const int job = static_cast<int>(action["action"_](0, machine));
+      if (job != jobshop::kNoJob) {
+        const bool can_start =
+            job >= 0 && job < jobshop::kNumJobs && CanStart(machine, job);
+        valid = valid && can_start;
+        if (can_start) {
+          operations[machine] = NextOperation(job);
+        }
       }
-      if (!CanStart(machine, selected_job)) {
-        valid = false;
-        continue;
-      }
-      machine_job_ids_[machine] = selected_job;
-      machine_remaining_times_[machine] =
-          op_durations_[selected_job * jobshop::kNumOps];
-      op_mask_[selected_job * jobshop::kNumOps] = false;
     }
     for (int machine = 0; machine < jobshop::kNumMachines; ++machine) {
-      if (machine_job_ids_[machine] == jobshop::kNoJob) {
-        continue;
-      }
-      --machine_remaining_times_[machine];
-      if (machine_remaining_times_[machine] == 0) {
-        completed_[machine_job_ids_[machine]] = true;
+      const int job = static_cast<int>(action["action"_](0, machine));
+      if (operations[machine] >= 0) {
+        const int index = job * jobshop::kNumOps + operations[machine];
+        machine_job_ids_[machine] = job;
+        machine_remaining_times_[machine] = op_durations_[index];
+        op_mask_[index] = false;
+      } else if (machine_remaining_times_[machine] == 0) {
         machine_job_ids_[machine] = jobshop::kNoJob;
       }
+      machine_remaining_times_[machine] =
+          std::max(0, machine_remaining_times_[machine] - 1);
     }
     ++step_count_;
-    done_ = !valid || AllCompleted() || step_count_ >= jobshop::kTimeLimit;
-    WriteState(valid ? -1.0f : -10.0f);
+    const bool idle =
+        std::all_of(machine_job_ids_.begin(), machine_job_ids_.end(),
+                    [](int job) { return job == jobshop::kNoJob; });
+    done_ =
+        !valid || idle || AllCompleted() || step_count_ >= jobshop::kTimeLimit;
+    WriteState(!valid || idle ? -static_cast<float>(jobshop::kNumJobs *
+                                                    jobshop::kNumOps * 6)
+                              : -1.0f);
   }
 
  private:
-  bool CanStart(int machine, int job) const {
-    if (machine_job_ids_[machine] != jobshop::kNoJob ||
-        job >= jobshop::kActiveJobs || completed_[job]) {
-      return false;
+  int NextOperation(int job) const {
+    for (int op = 0; op < jobshop::kNumOps; ++op) {
+      if (op_mask_[job * jobshop::kNumOps + op]) {
+        return op;
+      }
     }
-    const int op = job * jobshop::kNumOps;
-    return op_mask_[op] && op_machine_ids_[op] == machine;
+    return -1;
+  }
+
+  bool JobBusy(int job) const {
+    for (int machine = 0; machine < jobshop::kNumMachines; ++machine) {
+      if (machine_job_ids_[machine] == job &&
+          machine_remaining_times_[machine] > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool CanStart(int machine, int job) const {
+    const int op = NextOperation(job);
+    return machine_remaining_times_[machine] == 0 && op >= 0 && !JobBusy(job) &&
+           op_machine_ids_[job * jobshop::kNumOps + op] == machine;
   }
 
   bool AllCompleted() const {
-    for (int job = 0; job < jobshop::kActiveJobs; ++job) {
-      if (!completed_[job]) {
-        return false;
-      }
-    }
-    return true;
+    return std::none_of(op_mask_.begin(), op_mask_.end(),
+                        [](bool pending) { return pending; }) &&
+           std::all_of(machine_remaining_times_.begin(),
+                       machine_remaining_times_.end(),
+                       [](int time) { return time == 0; });
   }
 
   void WriteState(float reward) {

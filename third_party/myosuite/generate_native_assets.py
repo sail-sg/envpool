@@ -25,15 +25,18 @@ package.
 from __future__ import annotations
 
 import argparse
+import ast
 import contextlib
 import importlib
 import importlib.util
+import inspect
 import json
 import os
 import posixpath
 import shutil
 import sys
 import tempfile
+import textwrap
 import warnings
 from pathlib import Path
 from typing import Any, cast
@@ -265,6 +268,126 @@ def _state_report(env: Any) -> dict[str, Any]:
     }
 
 
+def _reset_parameters(env: Any) -> dict[str, Any]:
+    """Export sampling parameters, not sampled reset states, from the oracle."""
+    parameters = {
+        name: _jsonable(getattr(env, name))
+        for name in (
+            "target_jnt_range",
+            "joint_random_range",
+            "key_init_range",
+            "key_init_pos",
+            "weight_range",
+            "object_init_pos",
+            "goal_init_pos",
+            "goal_pos",
+            "goal_rot",
+            "obj_mass_range",
+            "obj_size_range",
+            "obj_scale_range",
+            "obj_friction_range",
+            "obj_geom_range",
+            "obj_xyz_range",
+            "target_xyz_range",
+            "target_rxryrz_range",
+            "qpos_noise_range",
+            "goal_time_period",
+            "goal_xrange",
+            "goal_yrange",
+            "start_center",
+            "goal_center",
+            "start_shifts",
+            "goal_shifts",
+            "paddle_mass_range",
+            "ball_friction_range",
+            "ball_xyz_range",
+            "ball_qvel",
+            "rnd_pos_noise",
+            "rnd_joint_noise",
+            "real_width",
+            "start_pos",
+        )
+        if hasattr(env, name) and getattr(env, name) is not None
+    }
+    for child_name, names in (
+        (
+            "heightfield",
+            (
+                "hills_range",
+                "rough_range",
+                "relief_range",
+                "patches_per_side",
+                "real_length",
+                "real_width",
+                "view_distance",
+            ),
+        ),
+        (
+            "trackfield",
+            (
+                "hills_difficulties",
+                "rough_difficulties",
+                "stairs_difficulties",
+                "real_length",
+                "real_width",
+                "view_distance",
+            ),
+        ),
+        ("opponent", ("min_spawn_distance", "opponent_probabilities")),
+    ):
+        child = getattr(env, child_name, None)
+        if child is not None:
+            parameters[child_name] = {
+                name: _jsonable(getattr(child, name)) for name in names
+            }
+    if getattr(env, "heightfield", None) is not None:
+        heightfields_file = Path(inspect.getfile(type(env.heightfield)))
+        parameters["heightfield"]["relief"] = _jsonable(
+            np.load(heightfields_file.parent / "myo/assets/myo_relief.npy")
+        )
+    for attribute, prefix in (
+        ("myo_joints", "myo"),
+        ("biological_jnt", "biological"),
+    ):
+        if hasattr(env, attribute):
+            joints = [
+                env.mj_model.joint(name) for name in getattr(env, attribute)
+            ]
+            parameters[prefix + "_qpos_adrs"] = [
+                int(joint.qposadr[0]) for joint in joints
+            ]
+            parameters[prefix + "_qvel_adrs"] = [
+                int(joint.dofadr[0]) for joint in joints
+            ]
+    if "reorient_sar_v0" in type(env).__module__:
+        # Upstream keeps the geometry catalogs inside reset(). Generate the
+        # tables from that pinned source instead of copying them into C++.
+        source = textwrap.dedent(inspect.getsource(type(env).reset))
+        reset = cast(ast.FunctionDef, ast.parse(source).body[0])
+        for statement in reset.body:
+            if not isinstance(statement, ast.Assign):
+                continue
+            if not isinstance(statement.targets[0], ast.Name):
+                continue
+            name = statement.targets[0].id
+            if name in {"caps", "ellips", "cyl", "box"}:
+                catalog = ast.literal_eval(statement.value)
+                parameters["sar_" + name] = [
+                    catalog[index][0] + catalog[index][1]
+                    for index in sorted(catalog)
+                ]
+            elif name == "color" and isinstance(statement.value, ast.List):
+                parameters["sar_color"] = ast.literal_eval(statement.value)
+            elif name == "color" and isinstance(statement.value, ast.ListComp):
+                parameters["sar_color"] = [
+                    value / 255
+                    for value in ast.literal_eval(
+                        statement.value.generators[0].iter
+                    )
+                ]
+    return parameters
+
+
 def _metadata_report(task_ids: list[str], gym: Any) -> dict[str, Any]:
     import mujoco
 
@@ -288,6 +411,7 @@ def _metadata_report(task_ids: list[str], gym: Any) -> dict[str, Any]:
                 "obs_keys": list(unwrapped.obs_keys),
                 "observation_shape": list(env.observation_space.shape),
                 "rwd_keys_wt": dict(unwrapped.rwd_keys_wt),
+                "reset_parameters": _reset_parameters(unwrapped),
             }
             for attr in (
                 "far_th",
@@ -299,10 +423,13 @@ def _metadata_report(task_ids: list[str], gym: Any) -> dict[str, Any]:
                 "pose_thd",
                 "reset_type",
                 "target_rot",
+                "target_type",
+                "task_choice",
                 "target_x_vel",
                 "target_y_vel",
                 "terrain",
                 "variant",
+                "weight_bodyname",
             ):
                 if hasattr(unwrapped, attr):
                     task[attr] = _jsonable(getattr(unwrapped, attr))
