@@ -215,16 +215,6 @@ CollisionResult CollidePolygons(const std::array<Vec2, 4>& a,
           will_intersect ? min_distance * translation_axis : Vec2{}};
 }
 
-CollisionResult BoxesCollide(const CollisionBox& a, const CollisionBox& b,
-                             Vec2 displacement_a, Vec2 displacement_b) {
-  if (Distance(a.center, b.center) >
-      (a.diagonal + b.diagonal) / 2.0 + Norm(displacement_a)) {
-    return {};
-  }
-  return CollidePolygons(Corners(a), Corners(b), displacement_a, displacement_b,
-                         a.center, b.center);
-}
-
 bool IntersectsRegulationBox(PositionHeading lhs, PositionHeading rhs) {
   const auto lhs_box = ToRegulationBox(lhs.position, lhs.heading);
   const auto rhs_box = ToRegulationBox(rhs.position, rhs.heading);
@@ -235,8 +225,15 @@ bool IntersectsRegulationBox(PositionHeading lhs, PositionHeading rhs) {
 template <typename OtherT>
 CollisionResult CheckBoxCollision(const Vehicle& a, const OtherT& b,
                                   double dt) {
-  return BoxesCollide(ToCollisionBox(a), ToCollisionBox(b), BoxVelocity(a) * dt,
-                      BoxVelocity(b) * dt);
+  const auto box_a = ToCollisionBox(a);
+  const auto box_b = ToCollisionBox(b);
+  // The official spherical precheck uses signed speed, including reversing.
+  if (Distance(a.position, b.position) >
+      (box_a.diagonal + box_b.diagonal) / 2.0 + a.speed * dt) {
+    return {};
+  }
+  return CollidePolygons(Corners(box_a), Corners(box_b), BoxVelocity(a) * dt,
+                         BoxVelocity(b) * dt, a.position, b.position);
 }
 
 void SetImpact(Vehicle* vehicle, Vec2 impact) {

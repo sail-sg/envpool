@@ -355,6 +355,7 @@ class NativeKinematics7Action3Fns : public NativeBaseFns {
   static decltype(auto) StateSpec(const Config& conf) {
     const float inf = std::numeric_limits<float>::infinity();
     return MakeDict("obs"_.Bind(Spec<float>({15, 7}, {-inf, inf})),
+                    "terminated"_.Bind(Spec<bool>({})),
                     "info:speed"_.Bind(Spec<float>({})),
                     "info:crashed"_.Bind(Spec<bool>({})));
   }
@@ -371,6 +372,7 @@ class NativeKinematics8ContinuousFns : public NativeBaseFns {
   static decltype(auto) StateSpec(const Config& conf) {
     const float inf = std::numeric_limits<float>::infinity();
     return MakeDict("obs"_.Bind(Spec<float>({5, 8}, {-inf, inf})),
+                    "terminated"_.Bind(Spec<bool>({})),
                     "info:speed"_.Bind(Spec<float>({})),
                     "info:crashed"_.Bind(Spec<bool>({})));
   }
@@ -457,15 +459,21 @@ class NativeOccupancyFns : public NativeBaseFns {
 
 class NativeMultiAgentFns : public NativeBaseFns {
  public:
+  static decltype(auto) DefaultConfig() {
+    return ConcatDict(NativeBaseFns::DefaultConfig(),
+                      MakeDict("terminate_on_any_crash"_.Bind(true)));
+  }
+
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     const float inf = std::numeric_limits<float>::infinity();
     // TODO(jiayi): Expose per-player termination for
-    // intersection-multi-agent-v1.
+    // intersection-multi-agent-v1/v2.
     // The official wrapper can return mixed terminal tuples such as
     // (false, true), while EnvPool's top-level done is env-level scalar.
     return MakeDict(
         "obs:players.obs"_.Bind(Spec<float>({-1, 15, 7}, {-inf, inf})),
+        "terminated"_.Bind(Spec<bool>({})),
         "info:players.speed"_.Bind(Spec<float>({-1})),
         "info:players.crashed"_.Bind(Spec<bool>({-1})));
   }
@@ -999,15 +1007,22 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
       official_road_->Step(dt);
     }
     time_ += 1.0 / static_cast<double>(policy_frequency_);
-    done_ = elapsed_step_ >= max_episode_steps_;
+    bool any_player_crashed = false;
     bool all_players_arrived = true;
+    bool all_players_done = true;
     for (int player = 0; player < official_player_count_; ++player) {
-      done_ = done_ || OfficialPlayer(player).crashed;
-      all_players_arrived = all_players_arrived &&
-                            OfficialIntersectionArrived(OfficialPlayer(player));
+      const auto& vehicle = OfficialPlayer(player);
+      const bool arrived = OfficialIntersectionArrived(vehicle);
+      any_player_crashed = any_player_crashed || vehicle.crashed;
+      all_players_arrived = all_players_arrived && arrived;
+      all_players_done = all_players_done && (vehicle.crashed || arrived);
     }
-    done_ = done_ || all_players_arrived;
-    WriteOfficialMultiAgentState();
+    // v0 reports joint termination; v1/v2 expose each player's termination.
+    const bool terminated = this->spec_.config["terminate_on_any_crash"_]
+                                ? any_player_crashed || all_players_arrived
+                                : all_players_done;
+    done_ = elapsed_step_ >= max_episode_steps_ || terminated;
+    WriteOfficialMultiAgentState(terminated);
     UpdateOfficialTraffic();
   }
 
@@ -1518,10 +1533,11 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
   void WriteState(float reward) {
     if constexpr (std::is_same_v<AdapterT, MultiAgentAdapter>) {
       if (UseOfficialBackend()) {
-        WriteOfficialMultiAgentState(reward);
+        WriteOfficialMultiAgentState(false, reward);
         return;
       }
       State state = this->Allocate(2);
+      state["terminated"_] = agents_[0].crashed;
       for (int player = 0; player < 2; ++player) {
         auto obs = state["obs:players.obs"_];
         for (int r = 0; r < 5; ++r) {
@@ -1538,12 +1554,20 @@ class NativeTaskEnv : public Env<SpecT>, public RenderableEnv {
     } else {
       State state = this->Allocate();
       state["reward"_] = reward;
+      if constexpr (std::is_same_v<SpecT, NativeK73Spec> ||
+                    std::is_same_v<SpecT, NativeK8CSpec>) {
+        state["terminated"_] =
+            elapsed_step_ > 0 && (OfficialEgo().crashed ||
+                                  OfficialIntersectionArrived(OfficialEgo()));
+      }
       WriteObs(&state);
     }
   }
 
-  void WriteOfficialMultiAgentState(std::optional<float> reset_reward = {}) {
+  void WriteOfficialMultiAgentState(bool terminated,
+                                    std::optional<float> reset_reward = {}) {
     State state = this->Allocate(official_player_count_);
+    state["terminated"_] = terminated;
     auto obs = state["obs:players.obs"_];
     official::KinematicObservationConfig config;
     config.vehicles_count = 15;
