@@ -31,6 +31,8 @@ class JumanjiLevelBasedForagingTest(absltest.TestCase):
             "LevelBasedForaging-v0",
             num_envs=1,
             seed=0,
+            lbf_agents="0,0,1,0,1,1",
+            lbf_food="1,0,2,7,7,2",
             render_mode="rgb_array",
         )
         try:

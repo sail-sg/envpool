@@ -21,6 +21,7 @@ import numpy as np
 from absl.testing import absltest
 
 import envpool.mujoco.metaworld.registration as metaworld_registration
+from envpool.python.seed_test_utils import check_seeded_resets
 from envpool.registration import list_all_envs, make_gymnasium, make_spec
 
 _TASK_IDS = tuple(metaworld_registration.metaworld_v3_task_ids)
@@ -115,7 +116,7 @@ class MetaWorldTest(absltest.TestCase):
                     env.close()
 
     def test_all_v3_tasks_are_deterministic(self) -> None:
-        """Same seed and same actions should produce identical rollouts."""
+        """Replay the same seed and randomize poses or hidden reset goals."""
         rng = np.random.default_rng(123)
         actions = rng.uniform(
             -1.0,
@@ -124,6 +125,8 @@ class MetaWorldTest(absltest.TestCase):
         ).astype(np.float32)
         for task_id in _TASK_IDS:
             with self.subTest(task_id=task_id):
+                # Partially observable tasks may only change the hidden goal.
+                check_seeded_resets(self, task_id, info_keys=("target0",))
                 env0 = make_gymnasium(task_id, num_envs=2, seed=42)
                 env1 = make_gymnasium(task_id, num_envs=2, seed=42)
                 try:

@@ -28,18 +28,29 @@ class JumanjiSearchAndRescueTest(absltest.TestCase):
     def test_searcher_finds_target(self) -> None:
         """Checks a searcher finds a target."""
         env = make_gymnasium(
-            "SearchAndRescue-v0", num_envs=1, seed=0, render_mode="rgb_array"
+            "SearchAndRescue-v0",
+            num_envs=1,
+            seed=0,
+            render_mode="rgb_array",
+            search_and_rescue_positions="0,0,0.5,0.5",
+            search_and_rescue_headings="0,0",
+            search_and_rescue_speeds="0.005,0.005",
+            search_and_rescue_target_positions=",".join(
+                map(str, [0.025, 0.0] + [0.75, 0.75] * 39)
+            ),
+            search_and_rescue_target_found=",".join(map(str, [0] + [1] * 39)),
+            search_and_rescue_target_acc_std=0.0,
         )
         try:
             obs, _ = env.reset()
             self.assertAlmostEqual(float(obs["positions"][0, 0, 0]), 0.0)
             self.assertAlmostEqual(float(obs["positions"][0, 0, 1]), 0.0)
             self.assertAlmostEqual(
-                float(obs["searcher_views"][0, 0, 0, 0]), 0.1
+                float(obs["searcher_views"][0, 0, 2, 64]), 0.25
             )
-            self.assertAlmostEqual(float(obs["targets_remaining"][0]), 1.0)
+            self.assertAlmostEqual(float(obs["targets_remaining"][0]), 1.0 / 40)
 
-            action = np.asarray([[[1.0, 0.0], [0.0, 0.0]]], dtype=np.float32)
+            action = np.asarray([[[0.0, 1.0], [0.0, 0.0]]], dtype=np.float32)
             obs, reward, terminated, truncated, info = env.step(action)
             self.assertAlmostEqual(float(reward[0]), 1.0)
             np.testing.assert_array_equal(
@@ -47,7 +58,7 @@ class JumanjiSearchAndRescueTest(absltest.TestCase):
             )
             self.assertTrue(bool(terminated[0]))
             self.assertFalse(bool(truncated[0]))
-            self.assertAlmostEqual(float(obs["positions"][0, 0, 0]), 0.1)
+            self.assertAlmostEqual(float(obs["positions"][0, 0, 0]), 0.01)
             self.assertAlmostEqual(float(obs["targets_remaining"][0]), 0.0)
             self.assertEqual(int(obs["step"][0]), 1)
 

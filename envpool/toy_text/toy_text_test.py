@@ -19,15 +19,39 @@ from typing import Any, cast, no_type_check
 import gymnasium as gym
 import numpy as np
 from absl import logging
-from absl.testing import absltest
+from absl.testing import absltest, parameterized
 from dm_env import TimeStep
 
 import envpool.toy_text.registration  # noqa: F401
 from envpool.python.protocol import DMEnvPool, GymnasiumEnvPool
+from envpool.python.seed_test_utils import (
+    check_seeded_resets,
+    check_seeded_rollouts,
+    registered_task_ids,
+)
 from envpool.registration import make, make_gymnasium
 
 
-class _ToyTextEnvTest(absltest.TestCase):
+class _ToyTextEnvTest(parameterized.TestCase):
+    @parameterized.named_parameters([
+        (task_id.replace("-", "_"), task_id)
+        for task_id in registered_task_ids("envpool.toy_text")
+    ])
+    def test_seed_determinism(self, task_id: str) -> None:
+        """Distinguish random resets, stochastic steps, and fixed dynamics."""
+        if task_id in {"CliffWalking-v0", "CliffWalking-v1"}:
+            check_seeded_resets(self, task_id, expected=(False, False, False))
+            check_seeded_rollouts(self, task_id, expect_different=False)
+        elif task_id.startswith((
+            "FrozenLake",
+            "NChain",
+            "CliffWalkingSlippery",
+        )):
+            check_seeded_resets(self, task_id, expected=(None, None, None))
+            check_seeded_rollouts(self, task_id)
+        else:
+            check_seeded_resets(self, task_id)
+
     def test_catch(self) -> None:
         num_envs = 3
         row, col = 10, 5

@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import atexit
 import ctypes
+import hashlib
 import importlib
 import json
 import os
@@ -501,6 +502,71 @@ def _import_official() -> tuple[Any, Any, Any]:
     return official_myosuite, gym_registry_specs, gym
 
 
+def _reset_randomization_report(task_ids: list[str]) -> dict[str, Any]:
+    """Measure the pinned oracle's reset contract without state injection.
+
+    Model parameters matter as well as observations: a randomized mass or
+    terrain can leave the initial observation unchanged. Do not include RNG
+    keys, counters, solver caches, or other seed metadata as proof of variation.
+    """
+    official, _, gym = _import_official()
+    data_keys = ("qpos", "qvel", "act", "mocap_pos", "mocap_quat")
+    model_keys = (
+        "site_pos",
+        "site_quat",
+        "site_size",
+        "body_pos",
+        "body_quat",
+        "body_mass",
+        "geom_pos",
+        "geom_quat",
+        "geom_size",
+        "geom_friction",
+        "hfield_data",
+    )
+    reports = {}
+    for task_id in task_ids:
+        traces: list[dict[str, list[str]]] = []
+        for seed in (11, 12, 43, 44):
+            env = gym.make(task_id, seed=seed)
+            try:
+                unwrapped = env.unwrapped
+                trace: dict[str, list[str]] = {}
+                for _ in range(8):
+                    obs, _ = env.reset()
+                    state = {
+                        "obs": obs,
+                        **{
+                            key: getattr(unwrapped.mj_data, key)
+                            for key in data_keys
+                        },
+                        **{
+                            key: getattr(unwrapped.mj_model, key)
+                            for key in model_keys
+                        },
+                    }
+                    for key, value in state.items():
+                        trace.setdefault(key, []).append(
+                            hashlib.sha256(
+                                np.asarray(value).tobytes()
+                            ).hexdigest()
+                        )
+                traces.append(trace)
+            finally:
+                env.close()
+        reports[task_id] = {
+            key: (
+                traces[0][key] != traces[2][key]
+                or traces[1][key] != traces[3][key],
+                any(len(set(trace[key])) > 1 for trace in traces),
+                traces[0][key] != traces[1][key]
+                or traces[2][key] != traces[3][key],
+            )
+            for key in traces[0]
+        }
+    return {"version": official.__version__, "tasks": reports}
+
+
 def _space_report(task_ids: list[str]) -> dict[str, Any]:
     official_myosuite, gym_registry_specs, gym = _import_official()
     registry = gym_registry_specs()
@@ -736,7 +802,9 @@ def _sync_osl_phase_from_qpos(env: Any) -> None:
     controller.start()
 
 
-def _sync_baoding_goal_from_envpool_reset_state(env: Any) -> None:
+def _sync_baoding_goal_from_envpool_reset_state(
+    env: Any, state: dict[str, Any]
+) -> None:
     if not all(
         hasattr(env, attr)
         for attr in (
@@ -749,26 +817,28 @@ def _sync_baoding_goal_from_envpool_reset_state(env: Any) -> None:
         )
     ):
         return
-    task_type = type(getattr(env, "which_task", object()))
-    if hasattr(task_type, "BAODING_CCW"):
-        env.which_task = task_type.BAODING_CCW
-    env.ball_1_starting_angle = np.pi / 4.0
-    env.ball_2_starting_angle = env.ball_1_starting_angle - np.pi
+    radius_x, radius_y, period, angle, direction = state[
+        "baoding_goal_parameters"
+    ]
+    task_type = type(env.which_task)
+    env.which_task = task_type({0: 0, -1: 1, 1: 2}[int(direction)])
+    env.ball_1_starting_angle = angle
+    env.ball_2_starting_angle = angle - np.pi
     env.center_pos = np.array([-0.0125, -0.07], dtype=np.float64)
-    env.x_radius = 0.025
-    env.y_radius = 0.028
+    env.x_radius = radius_x
+    env.y_radius = radius_y
     env.goal = env.create_goal_trajectory(
-        time_step=float(getattr(env, "dt", 0.025)), time_period=6.0
+        time_step=float(getattr(env, "dt", 0.025)), time_period=period
     )
     env.counter = 0
 
 
-def _sync_chasetag_hidden_state(env: Any) -> None:
+def _sync_chasetag_hidden_state(env: Any, state: dict[str, Any]) -> None:
     if not all(hasattr(env, attr) for attr in ("current_task", "opponent")):
         return
     task_type = type(env.current_task)
     if hasattr(task_type, "CHASE"):
-        env.current_task = task_type.CHASE
+        env.current_task = task_type(int(state["chase_task"][0]))
     opponent = env.opponent
     opponent.opponent_policy = "stationary"
     opponent.opponent_vel = np.zeros((2,), dtype=np.float64)
@@ -832,8 +902,11 @@ def _sync_to_envpool_reset_state(env: Any, state: dict[str, Any]) -> np.ndarray:
     _assign_sync_array(state, "ctrl", data.ctrl)
     mujoco.mj_forward(model, data)
     _sync_osl_phase_from_qpos(env)
-    _sync_baoding_goal_from_envpool_reset_state(env)
-    _sync_chasetag_hidden_state(env)
+    if getattr(env, "target_jnt_value", None) is not None:
+        size = np.asarray(env.target_jnt_value).size
+        env.target_jnt_value = np.asarray(state["target_jnt_value"][:size])
+    _sync_baoding_goal_from_envpool_reset_state(env, state)
+    _sync_chasetag_hidden_state(env, state)
     _sync_fatigue_hidden_state(env, state)
     obs = env.get_obs()
     _assign_sync_array(state, "qacc0", data.qacc)
@@ -1059,7 +1132,13 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--mode",
-        choices=("metadata", "space", "rollout", "trace"),
+        choices=(
+            "metadata",
+            "space",
+            "rollout",
+            "trace",
+            "reset_randomization",
+        ),
         required=True,
     )
     parser.add_argument("--out", required=True)
@@ -1091,7 +1170,9 @@ def main() -> None:
         else None
     )
 
-    if args.mode == "space":
+    if args.mode == "reset_randomization":
+        report = _reset_randomization_report(args.task_id)
+    elif args.mode == "space":
         report = _space_report(args.task_id)
     elif args.mode == "rollout":
         report = _rollout_report(

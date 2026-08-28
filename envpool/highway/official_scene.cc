@@ -79,11 +79,18 @@ CollisionBox ToRegulationBox(Vec2 position, double heading) {
 std::array<Vec2, 4> Corners(const CollisionBox& box) {
   const double cos_h = std::cos(box.heading);
   const double sin_h = std::sin(box.heading);
-  const Vec2 longitudinal{cos_h * box.length / 2.0, sin_h * box.length / 2.0};
-  const Vec2 lateral{-sin_h * box.width / 2.0, cos_h * box.width / 2.0};
-  return {
-      box.center - longitudinal - lateral, box.center - longitudinal + lateral,
-      box.center + longitudinal + lateral, box.center + longitudinal - lateral};
+  const std::array<Vec2, 4> local = {Vec2{-box.length / 2.0, -box.width / 2.0},
+                                     Vec2{-box.length / 2.0, box.width / 2.0},
+                                     Vec2{box.length / 2.0, box.width / 2.0},
+                                     Vec2{box.length / 2.0, -box.width / 2.0}};
+  std::array<Vec2, 4> corners{};
+  for (std::size_t i = 0; i < local.size(); ++i) {
+    // Rotate the local corner before translating, matching rotation @ points.
+    corners[i] =
+        box.center + Vec2{std::fma(-sin_h, local[i].y, cos_h * local[i].x),
+                          std::fma(cos_h, local[i].y, sin_h * local[i].x)};
+  }
+  return corners;
 }
 
 std::array<Vec2, 9> RegulationPoints(const CollisionBox& box) {
@@ -174,7 +181,7 @@ CollisionResult CollidePolygons(const std::array<Vec2, 4>& a,
       if (norm <= 0.0) {
         continue;
       }
-      axis = (1.0 / norm) * axis;
+      axis = {axis.x / norm, axis.y / norm};
 
       auto [a_low, a_high] = Project(a, axis);
       const auto [b_low, b_high] = Project(b, axis);
@@ -208,16 +215,6 @@ CollisionResult CollidePolygons(const std::array<Vec2, 4>& a,
           will_intersect ? min_distance * translation_axis : Vec2{}};
 }
 
-CollisionResult BoxesCollide(const CollisionBox& a, const CollisionBox& b,
-                             Vec2 displacement_a, Vec2 displacement_b) {
-  if (Distance(a.center, b.center) >
-      (a.diagonal + b.diagonal) / 2.0 + Norm(displacement_a)) {
-    return {};
-  }
-  return CollidePolygons(Corners(a), Corners(b), displacement_a, displacement_b,
-                         a.center, b.center);
-}
-
 bool IntersectsRegulationBox(PositionHeading lhs, PositionHeading rhs) {
   const auto lhs_box = ToRegulationBox(lhs.position, lhs.heading);
   const auto rhs_box = ToRegulationBox(rhs.position, rhs.heading);
@@ -228,8 +225,15 @@ bool IntersectsRegulationBox(PositionHeading lhs, PositionHeading rhs) {
 template <typename OtherT>
 CollisionResult CheckBoxCollision(const Vehicle& a, const OtherT& b,
                                   double dt) {
-  return BoxesCollide(ToCollisionBox(a), ToCollisionBox(b), BoxVelocity(a) * dt,
-                      BoxVelocity(b) * dt);
+  const auto box_a = ToCollisionBox(a);
+  const auto box_b = ToCollisionBox(b);
+  // The official spherical precheck uses signed speed, including reversing.
+  if (Distance(a.position, b.position) >
+      (box_a.diagonal + box_b.diagonal) / 2.0 + a.speed * dt) {
+    return {};
+  }
+  return CollidePolygons(Corners(box_a), Corners(box_b), BoxVelocity(a) * dt,
+                         BoxVelocity(b) * dt, a.position, b.position);
 }
 
 void SetImpact(Vehicle* vehicle, Vec2 impact) {
@@ -642,6 +646,12 @@ bool Mobil(const Road& road, int vehicle_index, const LaneIndex& lane_index) {
     return false;
   }
   const double self_pred_a = IDMAcceleration(road, &self, new_preceding);
+  if (!self.route.empty() && self.route.front().id != kUnknownLaneId) {
+    const auto sign = [](int value) { return (value > 0) - (value < 0); };
+    return sign(lane_index.id - self.target_lane_index.id) ==
+               sign(self.route.front().id - self.target_lane_index.id) &&
+           self_pred_a >= -kLaneChangeMaxBrakingImposed;
+  }
   const auto [old_preceding, old_following] =
       RoadNeighbors(road, self, self.lane_index);
   const double self_a = IDMAcceleration(road, &self, old_preceding);

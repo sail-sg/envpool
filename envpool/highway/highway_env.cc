@@ -537,6 +537,7 @@ void HighwayEnv::Reset() {
   elapsed_step_ = 0;
   time_ = 0.0;
   done_ = false;
+  terminated_ = false;
   ResetRoad();
   CreateVehicles();
   WriteState(0.0f);
@@ -564,8 +565,8 @@ void HighwayEnv::Step(const Action& action) {
     RoadStep(dt);
   }
 
-  done_ = vehicles_[0].crashed || elapsed_step_ >= max_episode_steps_ ||
-          (offroad_terminal_ && !EgoOnRoad());
+  terminated_ = vehicles_[0].crashed || (offroad_terminal_ && !EgoOnRoad());
+  done_ = terminated_ || elapsed_step_ >= max_episode_steps_;
   WriteState(static_cast<float>(Reward(act)));
 }
 
@@ -903,6 +904,7 @@ double HighwayEnv::Reward(int action) const {
 
 void HighwayEnv::WriteState(float reward) {
   auto state = Allocate();
+  state["terminated"_] = terminated_;
   const Vehicle& ego = vehicles_[0];
   auto obs = state["obs"_];
 

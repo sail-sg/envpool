@@ -22,6 +22,7 @@ from absl.testing import absltest
 
 import envpool.minigrid.registration  # noqa: F401
 from envpool.minigrid.babyai_test_utils import babyai_task_ids
+from envpool.python.seed_test_utils import check_seeded_resets
 from envpool.registration import make_gym
 
 
@@ -101,6 +102,7 @@ class BabyAIEnvPoolDeterministicTest(absltest.TestCase):
         action_seed: int = 1,
         **kwargs: Any,
     ) -> None:
+        check_seeded_resets(self, task_id, **kwargs)
         env0 = make_gym(task_id, num_envs=num_envs, seed=0, **kwargs)
         env1 = make_gym(task_id, num_envs=num_envs, seed=1, **kwargs)
         act_space = env0.action_space
@@ -145,18 +147,7 @@ class BabyAIEnvPoolDeterministicTest(absltest.TestCase):
 
     def test_randomized_envs_different_seed(self) -> None:
         """Different seeds should eventually diverge for randomized tasks."""
-        for task_id in [
-            "BabyAI-BossLevel-v0",
-            "BabyAI-GoToObj-v0",
-            "BabyAI-GoToObjMazeS4R2-v0",
-            "BabyAI-MiniBossLevel-v0",
-            "BabyAI-OpenDoorsOrderN4-v0",
-            "BabyAI-PickupLoc-v0",
-            "BabyAI-PutNextS7N4-v0",
-            "BabyAI-SynthSeq-v0",
-            "BabyAI-UnblockPickup-v0",
-            "BabyAI-UnlockToUnlock-v0",
-        ]:
+        for task_id in babyai_task_ids():
             with self.subTest(task_id=task_id):
                 self._run_different_seed_check(task_id)
 

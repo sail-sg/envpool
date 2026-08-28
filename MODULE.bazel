@@ -127,6 +127,7 @@ use_repo(
     "google_research_football",
     "gym3_libenv",
     "gymnasium_robotics_assets",
+    "jumanji_pacman_constants",
     "libjpeg_turbo",
     "lodepng",
     "marchingcubecpp",

@@ -155,10 +155,12 @@ py_test(
     size = "medium",
     srcs = ["vizdoom_test.py"],
     imports = ["../.."],
+    shard_count = 4,
     tags = ["exclusive"],
     deps = [
         ":vizdoom",
         ":vizdoom_registration",
+        "//envpool/python:seed_test_utils",
         requirement("numpy"),
         requirement("absl-py"),
     ],

@@ -21,15 +21,27 @@ import cv2
 import jax.numpy as jnp
 import numpy as np
 from absl import logging
-from absl.testing import absltest
+from absl.testing import absltest, parameterized
 from envpool.atari.atari_envpool import _AtariEnvPool, _AtariEnvSpec
 from jax import jit, lax
 
 import envpool.atari.registration  # noqa: F401
+from envpool.python.seed_test_utils import (
+    check_seeded_resets,
+    registered_task_ids,
+)
 from envpool.registration import make_dm, make_gym, make_gymnasium
 
 
-class _AtariEnvPoolTest(absltest.TestCase):
+class _AtariEnvPoolTest(parameterized.TestCase):
+    @parameterized.named_parameters([
+        (task_id.replace("-", "_"), task_id)
+        for task_id in registered_task_ids("envpool.atari")
+    ])
+    def test_seed_determinism(self, task_id: str) -> None:
+        """Random no-op advancement must affect RAM even on static screens."""
+        check_seeded_resets(self, task_id, info_keys=("ram",))
+
     def test_raw_envpool(self) -> None:
         conf = dict(
             zip(

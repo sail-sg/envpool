@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <random>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -212,28 +213,35 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
 
   void Reset() override {
     grid_ = use_configured_grid_ ? configured_grid_ : tetris::Grid{};
-    tetromino_ = configured_tetromino_;
+    tetromino_ = spec_.config["tetris_tetromino"_].empty()
+                     ? SampleTetromino()
+                     : configured_tetromino_;
     step_count_ = 0;
     done_ = false;
     WriteState(0.0f);
   }
 
   void Step(const Action& action) override {
+    const int rotation =
+        std::clamp(static_cast<int>(action["action"_](0, 0)), 0, 3);
     const int col = std::clamp(static_cast<int>(action["action"_](0, 1)), 0,
                                tetris::kCols - 1);
-    const bool valid = CanPlace(col);
+    const auto piece = RotatedTetromino(rotation);
+    const int row = DropRow(piece, col);
+    const bool valid = row >= 0;
     float reward = 0.0f;
     if (valid) {
-      const int row = DropRow(col);
-      for (int dr = 0; dr < 2; ++dr) {
-        for (int dc = 0; dc < 2; ++dc) {
-          grid_[tetris::Offset(row + dr, col + dc)] = 1;
+      for (int dr = 0; dr < 4; ++dr) {
+        for (int dc = 0; dc < 4; ++dc) {
+          if (piece[dr * 4 + dc] != 0) {
+            grid_[tetris::Offset(row + dr, col + dc)] = 1;
+          }
         }
       }
-      reward = static_cast<float>(ClearFullRows());
-    } else {
-      reward = -1.0f;
+      constexpr std::array<float, 5> rewards{0, 40, 100, 300, 1200};
+      reward = rewards[ClearFullRows()];
     }
+    tetromino_ = SampleTetromino();
     ++step_count_;
     if (use_replay_ && step_count_ <= tetris::kReplaySteps) {
       for (int i = 0; i < tetris::kRows * tetris::kCols; ++i) {
@@ -253,34 +261,77 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
   }
 
  private:
-  bool CanPlace(int col) const {
-    return col + 1 < tetris::kCols && DropRow(col) >= 0;
+  tetris::Tetromino SampleTetromino() {
+    // Initial orientations of I, S, Z, O, T, L and J in Jumanji 1.1.2.
+    constexpr std::array<std::array<int, 4>, 7> cells{{{0, 4, 8, 12},
+                                                       {1, 2, 4, 5},
+                                                       {0, 1, 5, 6},
+                                                       {0, 1, 4, 5},
+                                                       {0, 1, 2, 5},
+                                                       {0, 4, 8, 9},
+                                                       {1, 5, 8, 9}}};
+    tetris::Tetromino piece{};
+    for (int cell : cells[std::uniform_int_distribution<int>(0, 6)(gen_)]) {
+      piece[cell] = 1;
+    }
+    return piece;
   }
 
-  int DropRow(int col) const {
-    if (col + 1 >= tetris::kCols) {
-      return -1;
-    }
-    for (int row = tetris::kRows - 2; row >= 0; --row) {
-      bool collision = false;
-      for (int dr = 0; dr < 2; ++dr) {
-        for (int dc = 0; dc < 2; ++dc) {
-          if (grid_[tetris::Offset(row + dr, col + dc)] != 0) {
-            collision = true;
-          }
+  tetris::Tetromino RotatedTetromino(int rotation) const {
+    auto piece = tetromino_;
+    for (int turn = 0; turn < rotation; ++turn) {
+      const auto previous = piece;
+      for (int row = 0; row < 4; ++row) {
+        for (int col = 0; col < 4; ++col) {
+          piece[row * 4 + col] = previous[(3 - col) * 4 + row];
         }
       }
-      if (!collision) {
-        return row;
+    }
+    int top = 4;
+    int left = 4;
+    for (int row = 0; row < 4; ++row) {
+      for (int col = 0; col < 4; ++col) {
+        if (piece[row * 4 + col] != 0) {
+          top = std::min(top, row);
+          left = std::min(left, col);
+        }
+      }
+    }
+    tetris::Tetromino cropped{};
+    for (int row = top; row < 4; ++row) {
+      for (int col = left; col < 4; ++col) {
+        cropped[(row - top) * 4 + col - left] = piece[row * 4 + col];
+      }
+    }
+    return cropped;
+  }
+
+  int DropRow(const tetris::Tetromino& piece, int col) const {
+    // Stop at the first collision; a hard drop cannot pass through a roof.
+    for (int row = 0; row < tetris::kRows; ++row) {
+      for (int dr = 0; dr < 4; ++dr) {
+        for (int dc = 0; dc < 4; ++dc) {
+          if (piece[dr * 4 + dc] != 0 &&
+              (row + dr >= tetris::kRows || col + dc >= tetris::kCols ||
+               grid_[tetris::Offset(row + dr, col + dc)] != 0)) {
+            return row - 1;
+          }
+        }
       }
     }
     return -1;
   }
 
+  bool CanPlace(int rotation, int col) const {
+    return DropRow(RotatedTetromino(rotation), col) >= 0;
+  }
+
   bool HasValidPlacement() const {
-    for (int col = 0; col < tetris::kCols; ++col) {
-      if (CanPlace(col)) {
-        return true;
+    for (int rotation = 0; rotation < 4; ++rotation) {
+      for (int col = 0; col < tetris::kCols; ++col) {
+        if (CanPlace(rotation, col)) {
+          return true;
+        }
       }
     }
     return false;
@@ -325,7 +376,7 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
     }
     for (int rotation = 0; rotation < 4; ++rotation) {
       for (int col = 0; col < tetris::kCols; ++col) {
-        bool action_mask = CanPlace(col);
+        bool action_mask = CanPlace(rotation, col);
         if (use_replay_ && step_count_ > 0 &&
             step_count_ <= tetris::kReplaySteps) {
           action_mask =
@@ -338,7 +389,9 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
         state["obs:action_mask"_](rotation, col) = action_mask;
       }
     }
-    state["obs:step_count"_] = use_replay_ ? 0 : step_count_;
+    // The pinned oracle reports zero here; its internal step count still
+    // controls the episode limit.
+    state["obs:step_count"_] = 0;
     state["reward"_] = reward;
   }
 };

@@ -27,20 +27,10 @@ from absl.testing import absltest
 import envpool.vizdoom.registration as reg
 from envpool.registration import make_gym
 
-_UNSTABLE_TASK_IDS = {
-    # These scenarios are not reliably renderable in the current local test
-    # setup: CIG and multi-duel can segfault during initialization, and the
-    # custom task has no bundled scenario config.
-    "Cig-v1",
-    "MultiDuel-v1",
-    "VizdoomCustom-v1",
-}
 _TASK_IDS = tuple(
     sorted(
         f"{''.join(piece.capitalize() for piece in game.split('_'))}-v1"
         for game in reg._vizdoom_game_list()
-        if f"{''.join(piece.capitalize() for piece in game.split('_'))}-v1"
-        not in _UNSTABLE_TASK_IDS
     )
 )
 _RENDER_STEPS = 3
@@ -87,10 +77,10 @@ class VizdoomRenderTest(absltest.TestCase):
             return np.repeat(gray[:, :, np.newaxis], 3, axis=2)
         return obs.transpose(1, 2, 0)
 
-    def test_render_matches_screen_buffer_for_multiple_steps_for_stable_tasks(
+    def test_render_matches_screen_buffer_for_multiple_steps(
         self,
     ) -> None:
-        """Stable scenarios should render the same pixels across steps."""
+        """All bundled scenarios should render their current screen buffer."""
         for task_id in _TASK_IDS:
             with self.subTest(task_id=task_id):
                 with _temporary_workdir():

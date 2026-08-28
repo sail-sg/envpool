@@ -144,6 +144,7 @@ py_test(
     deps = [
         ":atari",
         ":atari_registration",
+        "//envpool/python:seed_test_utils",
         requirement("numpy"),
         requirement("jax"),
         requirement("dm-env"),

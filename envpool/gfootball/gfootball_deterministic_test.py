@@ -46,48 +46,47 @@ def _assert_info_equal(
 
 class _GfootballDeterministicTest(absltest.TestCase):
     def run_deterministic_check(self, task_id: str) -> None:
-        num_steps = min(32, int(TASK_CONFIG[task_id]["max_episode_steps"]))
+        num_steps = min(64, int(TASK_CONFIG[task_id]["max_episode_steps"]))
         env0 = make_gymnasium(task_id, num_envs=2, seed=7)
         env1 = make_gymnasium(task_id, num_envs=2, seed=7)
         env2 = make_gymnasium(task_id, num_envs=2, seed=8)
         try:
-            obs0, info0 = env0.reset()
-            obs1, info1 = env1.reset()
-            obs2, info2 = env2.reset()
-            np.testing.assert_array_equal(obs0, obs1)
-            _assert_info_equal(info0, info1)
-            differs = not np.array_equal(obs0, obs2) or not np.array_equal(
-                info0["engine_seed"], info2["engine_seed"]
-            )
+            differs = False
             rng = np.random.default_rng(123)
-            for _ in range(num_steps):
-                action = rng.integers(0, 19, size=2, dtype=np.int32)
-                step0 = env0.step(action)
-                step1 = env1.step(action)
-                step2 = env2.step(action)
-                for actual, expected in zip(
-                    step0[:-1], step1[:-1], strict=True
-                ):
-                    np.testing.assert_array_equal(actual, expected)
-                _assert_info_equal(step0[-1], step1[-1])
-                differs = differs or any(
-                    not np.array_equal(actual, other)
-                    for actual, other in zip(
-                        step0[:-1], step2[:-1], strict=True
+            for _ in range(3):
+                obs0, info0 = env0.reset()
+                obs1, info1 = env1.reset()
+                obs2, _ = env2.reset()
+                np.testing.assert_array_equal(obs0, obs1)
+                _assert_info_equal(info0, info1)
+                differs |= not np.array_equal(obs0, obs2)
+                for _ in range(num_steps):
+                    action = rng.integers(0, 19, size=2, dtype=np.int32)
+                    step0 = env0.step(action)
+                    step1 = env1.step(action)
+                    step2 = env2.step(action)
+                    for actual, expected in zip(
+                        step0[:-1], step1[:-1], strict=True
+                    ):
+                        np.testing.assert_array_equal(actual, expected)
+                    _assert_info_equal(step0[-1], step1[-1])
+                    differs = differs or any(
+                        not np.array_equal(actual, other)
+                        for actual, other in zip(
+                            step0[:-1], step2[:-1], strict=True
+                        )
                     )
-                )
-                differs = differs or any(
-                    not np.array_equal(step0[-1][key], step2[-1][key])
-                    for key in (
-                        "score",
-                        "game_mode",
-                        "ball_owned_team",
-                        "ball_owned_player",
-                        "steps_left",
-                        "engine_seed",
-                        "episode_number",
+                    # A different engine_seed or episode counter alone does
+                    # not demonstrate that the simulated trajectory changed.
+                    differs = differs or any(
+                        not np.array_equal(step0[-1][key], step2[-1][key])
+                        for key in (
+                            "score",
+                            "game_mode",
+                            "ball_owned_team",
+                            "ball_owned_player",
+                        )
                     )
-                )
             self.assertTrue(
                 differs, msg=f"expected different rollout for {task_id}"
             )

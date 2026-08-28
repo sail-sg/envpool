@@ -27,8 +27,15 @@ class JumanjiFlatPackTest(absltest.TestCase):
 
     def test_place_first_block(self) -> None:
         """Checks placing the first block updates the grid."""
+        blocks = np.zeros((25, 3, 3), dtype=np.int32)
+        blocks[:, 0, 0] = np.arange(1, 26)
+        blocks[0, :2, :2] = 1
         env = make_gymnasium(
-            "FlatPack-v0", num_envs=1, seed=0, render_mode="rgb_array"
+            "FlatPack-v0",
+            num_envs=1,
+            seed=0,
+            render_mode="rgb_array",
+            flat_pack_blocks=",".join(map(str, blocks.ravel())),
         )
         try:
             obs, _ = env.reset()

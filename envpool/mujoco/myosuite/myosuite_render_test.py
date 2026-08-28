@@ -159,6 +159,9 @@ _MAX_RENDER_BLOCK_MEAN_ABS_DIFF = 24.0
 _MAX_RENDER_LARGE_MISMATCH_RATIO = 0.50
 _LARGE_RENDER_DELTA = 32
 _SYNC_STATE_KEYS = (
+    "target_jnt_value",
+    "baoding_goal_parameters",
+    "chase_task",
     "qpos0",
     "qvel0",
     "act0",
@@ -192,6 +195,9 @@ _SYNC_STATE_KEYS = (
     "fatigue_tl",
 )
 _SYNC_STATE_SIZES = {
+    "target_jnt_value": "nq",
+    "baoding_goal_parameters": "five",
+    "chase_task": "one",
     "qpos0": "nq",
     "qvel0": "nv",
     "act0": "na",
@@ -379,6 +385,8 @@ def _oracle_trace(
 
 def _sync_state_from_info(info: dict[str, Any]) -> dict[str, Any]:
     dims = {
+        "one": 1,
+        "five": 5,
         "nq": int(np.asarray(info["model_nq"]).ravel()[0]),
         "nv": int(np.asarray(info["model_nv"]).ravel()[0]),
         "na": int(np.asarray(info["model_na"]).ravel()[0]),

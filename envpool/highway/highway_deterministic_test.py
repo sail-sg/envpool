@@ -21,31 +21,27 @@ import numpy as np
 from absl.testing import absltest
 
 from envpool.highway.highway_oracle_util import register_highway_envs
+from envpool.python.seed_test_utils import (
+    check_seeded_resets,
+    registered_task_ids,
+)
 from envpool.registration import make_gymnasium
 
 register_highway_envs()
 
-_ALL_TASKS = (
-    "Exit-v0",
-    "Highway-v0",
-    "HighwayFast-v0",
-    "Intersection-v0",
-    "Intersection-v1",
-    "IntersectionMultiAgent-v0",
-    "IntersectionMultiAgent-v1",
-    "LaneKeeping-v0",
-    "Merge-v0",
-    "Parking-v0",
-    "ParkingActionRepeat-v0",
-    "ParkingParked-v0",
-    "Racetrack-v0",
-    "RacetrackLarge-v0",
-    "RacetrackOval-v0",
-    "Roundabout-v0",
-    "TwoWay-v0",
-    "UTurn-v0",
-)
+_ALL_TASKS = registered_task_ids("envpool.highway")
 _ALL_TASKS_DETERMINISTIC_STEPS = 500
+
+
+def _traffic_state(env: Any) -> np.ndarray:
+    # Occupancy grids can hide different positions within the same cell.
+    return np.array(
+        [
+            [(v.x, v.y, v.heading, v.speed) for v in state.vehicles]
+            for state in env.debug_states()
+        ],
+        dtype=object,
+    )
 
 
 def _assert_tree_equal(actual: Any, expected: Any) -> None:
@@ -144,6 +140,7 @@ class _HighwayDeterministicTest(absltest.TestCase):
     def test_all_registered_highway_tasks_are_deterministic(self) -> None:
         for task_id in _ALL_TASKS:
             with self.subTest(task_id=task_id):
+                check_seeded_resets(self, task_id, extra_state=_traffic_state)
                 num_envs = (
                     1 if task_id.startswith("IntersectionMultiAgent") else 3
                 )

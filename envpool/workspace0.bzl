@@ -14,7 +14,7 @@
 
 """Pinned native repositories for EnvPool's Bzlmod extension."""
 
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 load("//third_party/craftax:repo.bzl", "craftax_archive")
 load("//third_party/cuda:cuda.bzl", "cuda_configure")
@@ -27,6 +27,16 @@ def workspace():
     """Load requested packages."""
 
     craftax_archive()
+
+    maybe(
+        http_file,
+        name = "jumanji_pacman_constants",
+        downloaded_file_path = "constants.py",
+        sha256 = "04430c2a20edaa573639fe58ffe9c515f9b930dfc9bf7ca6f06315ecf09f0ec4",
+        urls = [
+            "https://raw.githubusercontent.com/instadeepai/jumanji/0584fdc4ddb3f616e28546f7aaf65f1dd59aeb48/jumanji/environments/routing/pac_man/constants.py",
+        ],
+    )
 
     maybe(
         http_archive,
@@ -331,6 +341,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         patches = [
             "//third_party/vizdoom:sdl_thread.patch",
             "//third_party/vizdoom:windows_msvc_compat.patch",
+            "//third_party/vizdoom:concurrent_runtime_directory.patch",
         ],
     )
 
@@ -344,6 +355,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         patches = [
             "//third_party/vizdoom_lib:windows_create_process.patch",
             "//third_party/vizdoom_lib:unique_instance_ids.patch",
+            "//third_party/vizdoom_lib:failed_init_cleanup.patch",
         ],
         sha256 = "76ddf186d7f093ef85cbcb0e7e387757d60e45190eb5da6d075aab31ffc316ed",
         strip_prefix = "ViZDoom-1.3.0/",

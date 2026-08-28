@@ -18,13 +18,15 @@ from __future__ import annotations
 import os
 import unittest
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 from absl.testing import absltest
 
 import envpool.mujoco.myosuite.registration as myosuite_registration
+from envpool.mujoco.myosuite.myosuite_oracle_align_test import _run_oracle_probe
 from envpool.mujoco.myosuite.tasks import MYOSUITE_TASKS, MyoSuiteTask
+from envpool.python.seed_test_utils import check_seeded_resets
 from envpool.registration import list_all_envs, make_gymnasium, make_spec
 
 _TASKS = tuple(MYOSUITE_TASKS)
@@ -150,11 +152,39 @@ class MyoSuiteTest(absltest.TestCase):
             self.assertFalse(task["oracle_numpy2_broken"], task["id"])
 
     def test_reference_surface_is_deterministic(self) -> None:
-        """Same seed and action sequence must produce identical rollouts."""
+        """Replay the same seed and require the oracle's reset randomization."""
+        report = _run_oracle_probe(
+            "reset_randomization", tuple(task["id"] for task in _SHARDED_TASKS)
+        )
+        tasks = cast(dict[str, dict[str, Any]], report["tasks"])
         rng = np.random.default_rng(123)
         for task in _SHARDED_TASKS:
             task_id = task["id"]
             with self.subTest(task_id=task_id):
+                fields = {
+                    key: cast(
+                        tuple[bool | None, bool | None, bool | None],
+                        tuple(True if flag else None for flag in flags),
+                    )
+                    for key, flags in tasks[task_id].items()
+                }
+                # Each randomized physical field must vary. Pose noise must
+                # not hide a frozen goal, terrain, mass, or friction setting.
+                check_seeded_resets(
+                    self,
+                    task_id,
+                    info_keys=tuple(key for key in fields if key != "obs"),
+                    expected=cast(
+                        tuple[bool | None, bool | None, bool | None],
+                        tuple(
+                            True
+                            if any(flags[i] for flags in fields.values())
+                            else None
+                            for i in range(3)
+                        ),
+                    ),
+                    field_expectations=fields,
+                )
                 actions = rng.uniform(
                     -1.0,
                     1.0,

@@ -12,7 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_python//python:defs.bzl", "py_binary")
+
 exports_files([
     "matplotlib_311_autoscale.patch",
     "oracle_requirements.txt",
 ])
+
+py_binary(
+    name = "generate_pacman_maze",
+    srcs = ["generate_pacman_maze.py"],
+)
+
+genrule(
+    name = "pacman_maze_header",
+    srcs = ["@jumanji_pacman_constants//file"],
+    outs = ["pacman_maze.h"],
+    cmd = "$(execpath :generate_pacman_maze) $(execpath @jumanji_pacman_constants//file) $@",
+    tools = [":generate_pacman_maze"],
+)
+
+cc_library(
+    name = "pacman_maze",
+    hdrs = [":pacman_maze_header"],
+    visibility = ["//visibility:public"],
+)

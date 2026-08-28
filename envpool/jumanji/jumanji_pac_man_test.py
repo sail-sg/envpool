@@ -32,25 +32,33 @@ class JumanjiPacManTest(absltest.TestCase):
         )
         try:
             obs, _ = env.reset()
-            self.assertEqual(int(obs["player_locations"]["y"][0]), 1)
-            self.assertEqual(int(obs["player_locations"]["x"][0]), 1)
+            self.assertEqual(int(obs["player_locations"]["y"][0]), 13)
+            self.assertEqual(int(obs["player_locations"]["x"][0]), 23)
             np.testing.assert_array_equal(
-                obs["pellet_locations"][0, 0], np.asarray([1, 2])
+                obs["pellet_locations"][0, 0], np.asarray([1, 1])
             )
-            self.assertTrue(bool(obs["action_mask"][0, 2]))
+            self.assertTrue(bool(obs["action_mask"][0, 3]))
             self.assertFalse(bool(obs["action_mask"][0, 4]))
 
             obs, reward, terminated, truncated, _ = env.step(
-                np.asarray([2], dtype=np.int32)
+                np.asarray([3], dtype=np.int32)
             )
             self.assertAlmostEqual(float(reward[0]), 10.0)
             self.assertFalse(bool(terminated[0]))
             self.assertFalse(bool(truncated[0]))
-            self.assertEqual(int(obs["player_locations"]["x"][0]), 2)
+            self.assertEqual(int(obs["player_locations"]["y"][0]), 14)
             self.assertEqual(int(obs["score"][0]), 10)
-            np.testing.assert_array_equal(
-                obs["pellet_locations"][0, 0], np.asarray([-1, -1])
+            self.assertFalse(
+                np.any(np.all(obs["pellet_locations"][0] == [14, 23], axis=1))
             )
+            # A blocked move leaves the player in place without ending the game.
+            obs, reward, terminated, _, _ = env.step(
+                np.asarray([0], dtype=np.int32)
+            )
+            self.assertEqual(float(reward[0]), 0.0)
+            self.assertFalse(bool(terminated[0]))
+            self.assertEqual(int(obs["player_locations"]["y"][0]), 14)
+            self.assertEqual(int(obs["player_locations"]["x"][0]), 23)
 
             frame = env.render(env_ids=np.asarray([0], dtype=np.int32))
 

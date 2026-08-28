@@ -80,7 +80,8 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
         env0 = gym.make("CartPole-v1")
         env1 = make_gym("CartPole-v1")
         self.run_space_check(env0, env1)
-        self.run_deterministic_check("CartPole-v1")
+        for task_id in ("CartPole-v0", "CartPole-v1"):
+            self.run_deterministic_check(task_id)
 
     def test_cartpole_gymnasium_vector_wrapper(self) -> None:
         num_envs = 4
@@ -124,7 +125,8 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
         env0 = gym.make("Pendulum-v1")
         env1 = make_gym("Pendulum-v1")
         self.run_space_check(env0, env1)
-        self.run_deterministic_check("Pendulum-v1")
+        for task_id in ("Pendulum-v0", "Pendulum-v1"):
+            self.run_deterministic_check(task_id)
 
     def test_mountain_car(self) -> None:
         self.run_deterministic_check("MountainCar-v0")

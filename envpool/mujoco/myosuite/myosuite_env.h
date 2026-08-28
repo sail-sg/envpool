@@ -77,6 +77,9 @@ class MyoSuiteEnvFns {
         "info:solved"_.Bind(Spec<mjtNum>({-1}, {0.0, 1.0})),
         "info:oracle_numpy2_broken"_.Bind(Spec<bool>({})),
 #ifdef ENVPOOL_TEST
+        "info:target_jnt_value"_.Bind(Spec<mjtNum>({2048})),
+        "info:baoding_goal_parameters"_.Bind(Spec<mjtNum>({5})),
+        "info:chase_task"_.Bind(Spec<int>({})),
         "info:qpos0"_.Bind(Spec<mjtNum>({2048})),
         "info:qvel0"_.Bind(Spec<mjtNum>({2048})),
         "info:act0"_.Bind(Spec<mjtNum>({2048})),
@@ -190,6 +193,14 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
   std::vector<std::string> target_sites_;
   std::vector<std::vector<mjtNum>> target_reach_low_;
   std::vector<std::vector<mjtNum>> target_reach_high_;
+  std::unordered_map<std::string, std::vector<mjtNum>> reset_parameters_;
+  std::vector<mjtNum> reset_geom_pos_;
+  std::vector<mjtNum> reset_geom_size_;
+  std::array<mjtNum, 5> baoding_goal_parameters_{0.025, 0.028, 6.0, M_PI / 4,
+                                                 1};
+  bool bimanual_ignore_first_scale_{true};
+  int track_terrain_type_{0};
+  int chase_task_{0};
   std::vector<mjtNum> last_ctrl_;
   std::vector<int> muscle_actuator_ids_;
   std::vector<mjtNum> fatigue_tauact_;
@@ -296,6 +307,7 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
         target_sites_(SplitList(metadata_.target_sites)),
         target_reach_low_(ParseNumberGroups(metadata_.target_reach_low)),
         target_reach_high_(ParseNumberGroups(metadata_.target_reach_high)),
+        reset_parameters_(ParseResetParameters(metadata_.reset_parameters)),
         last_ctrl_(model_->nu, 0.0)
 #ifdef ENVPOOL_TEST
         ,
@@ -356,6 +368,17 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     ApplyBimanualInitialState();
     InitializeRobotEnv();
     InitializeTaskCaches();
+    if (task_.kind == MyoSuiteTaskKind::kChallengeBaoding) {
+      // The oracle's setup step initializes the visible targets once. Resets
+      // then keep the last target sites while sampling the next trajectory.
+      baoding_goal_parameters_[0] = SampleRange("goal_xrange");
+      baoding_goal_parameters_[1] = SampleRange("goal_yrange");
+      PreStepTaskUpdate();
+    }
+    reset_geom_pos_.assign(model_->geom_pos,
+                           model_->geom_pos + 3 * model_->ngeom);
+    reset_geom_size_.assign(model_->geom_size,
+                            model_->geom_size + 3 * model_->ngeom);
   }
 
   bool IsDone() override { return done_; }
@@ -516,6 +539,64 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
                           static_cast<mjtNum>(std::stod(item.substr(sep + 1))));
     }
     return result;
+  }
+
+  static std::unordered_map<std::string, std::vector<mjtNum>>
+  ParseResetParameters(std::string_view text) {
+    std::unordered_map<std::string, std::vector<mjtNum>> result;
+    for (const auto& field : SplitList(text, ';')) {
+      const auto separator = field.find(':');
+      result.emplace(field.substr(0, separator),
+                     ParseNumbers(field.substr(separator + 1)));
+    }
+    return result;
+  }
+
+  mjtNum Uniform(mjtNum low, mjtNum high) {
+    return std::uniform_real_distribution<mjtNum>(low, high)(gen_);
+  }
+
+  mjtNum SampleRange(const std::string& name, int index = 0) {
+    const auto low = reset_parameters_.find(name + ".low");
+    if (low != reset_parameters_.end()) {
+      const auto& high = reset_parameters_.at(name + ".high");
+      return Uniform(low->second.at(low->second.size() == 1 ? 0 : index),
+                     high.at(high.size() == 1 ? 0 : index));
+    }
+    const auto& range = reset_parameters_.at(name);
+    return Uniform(range.at(0), range.at(1));
+  }
+
+  bool HasRange(const std::string& name) const {
+    return reset_parameters_.count(name) != 0 ||
+           reset_parameters_.count(name + ".low") != 0;
+  }
+
+  void SampleRange(const std::string& name, mjtNum* values, int size) {
+    for (int i = 0; i < size; ++i) {
+      values[i] = SampleRange(name, i);
+    }
+  }
+
+  static void EulerToQuaternion(const std::array<mjtNum, 3>& euler,
+                                mjtNum* quat) {
+    // MyoSuite's quat_math.euler2quat uses intrinsic XYZ rotations.
+    const mjtNum si = std::sin(euler[2] / 2);
+    const mjtNum sj = std::sin(-euler[1] / 2);
+    const mjtNum sk = std::sin(euler[0] / 2);
+    const mjtNum ci = std::cos(euler[2] / 2);
+    const mjtNum cj = std::cos(-euler[1] / 2);
+    const mjtNum ck = std::cos(euler[0] / 2);
+    quat[0] = cj * ci * ck + sj * si * sk;
+    quat[1] = cj * ci * sk - sj * si * ck;
+    quat[2] = -(cj * si * sk + sj * ci * ck);
+    quat[3] = cj * si * ck - sj * ci * sk;
+  }
+
+  void SampleOrientation(const std::string& range, mjtNum* quat) {
+    std::array<mjtNum, 3> angles{};
+    SampleRange(range, angles.data(), 3);
+    EulerToQuaternion(angles, quat);
   }
 
   static mjtNum Norm(const std::vector<mjtNum>& values) {
@@ -1087,6 +1168,14 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
   }
 
   void ApplyResetTargets() {
+    ApplyPoseReset();
+    const bool random_stand = task_.kind == MyoSuiteTaskKind::kWalkReach &&
+                              reset_parameters_.at("joint_random_range")[0] !=
+                                  reset_parameters_.at("joint_random_range")[1];
+    if (random_stand) {
+      RandomizeStandingPose();
+      mj_forward(model_, data_);
+    }
     const int count = std::min({static_cast<int>(target_sites_.size()),
                                 static_cast<int>(target_reach_low_.size()),
                                 static_cast<int>(target_reach_high_.size())});
@@ -1097,40 +1186,390 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
         continue;
       }
       for (int axis = 0; axis < 3; ++axis) {
-        // Use the midpoint as the native deterministic reset target. Oracle
-        // alignment tests sync randomized upstream state immediately after
-        // reset when the official task randomizes this site.
         model_->site_pos[3 * site_id + axis] =
-            (target_reach_low_[i][axis] + target_reach_high_[i][axis]) * 0.5;
+            Uniform(target_reach_low_[i][axis], target_reach_high_[i][axis]);
+        if (task_.kind == MyoSuiteTaskKind::kWalkReach) {
+          model_->site_pos[3 * site_id + axis] +=
+              data_->site_xpos[3 * SiteId(tip_sites_[i].c_str()) + axis];
+        }
       }
     }
+    if (random_stand) {
+      RandomizeStandingPose();
+    }
+    ApplyManipulationReset();
+    ApplyWalkingReset();
+    ApplyChallengeObjectReset();
+    ApplyChallengeRunTrackTerrainReset();
+    ApplyLocomotionReset();
     if (task_.kind == MyoSuiteTaskKind::kChallengeBimanual) {
       const int start = BodyId("start");
       const int goal = BodyId("goal");
-      if (start >= 0) {
-        model_->body_pos[3 * start] = -0.4;
-        model_->body_pos[3 * start + 1] = -0.25;
-        model_->body_pos[3 * start + 2] = 1.05;
-      }
-      if (goal >= 0) {
-        model_->body_pos[3 * goal] = 0.4;
-        model_->body_pos[3 * goal + 1] = -0.25;
-        model_->body_pos[3 * goal + 2] = 1.05;
+      for (const auto& [body, prefix] :
+           {std::pair{start, std::string("start")},
+            std::pair{goal, std::string("goal")}}) {
+        for (int axis = 0; axis < 3; ++axis) {
+          model_->body_pos[3 * body + axis] =
+              reset_parameters_.at(prefix + "_center")[axis] +
+              reset_parameters_.at(prefix + "_shifts")[axis] * Uniform(-1, 1);
+        }
       }
       const int object_joint = JointId("manip_object/freejoint");
       if (object_joint >= 0) {
         const int qpos_id = model_->jnt_qposadr[object_joint];
-        data_->qpos[qpos_id] = -0.4;
-        data_->qpos[qpos_id + 1] = -0.25;
-        data_->qpos[qpos_id + 2] = 1.15;
+        mju_copy3(data_->qpos + qpos_id, model_->body_pos + 3 * start);
+        data_->qpos[qpos_id + 2] += 0.1;
       }
+      const int object = BodyId("manip_object");
+      const int geom = model_->body_geomadr[object] + 1;
+      if (HasRange("obj_mass_range")) {
+        model_->body_mass[object] = SampleRange("obj_mass_range");
+      }
+      if (HasRange("obj_friction_range")) {
+        SampleRange("obj_friction_range", model_->geom_friction + 3 * geom, 3);
+      }
+      if (HasRange("obj_scale_range") && !bimanual_ignore_first_scale_) {
+        for (int axis = 0; axis < 3; ++axis) {
+          model_->geom_size[3 * geom + axis] =
+              reset_geom_size_[3 * geom + axis] *
+              (1 + SampleRange("obj_scale_range", axis));
+        }
+      }
+      bimanual_ignore_first_scale_ = false;
     }
-    ApplyChallengeRunTrackTerrainReset();
     mj_forward(model_, data_);
     if (task_.kind == MyoSuiteTaskKind::kChallengeBimanual) {
       bimanual_init_obj_z_ = SiteXpos(SiteId("touch_site"))[2];
       bimanual_init_palm_z_ = SiteXpos(SiteId("S_grasp"))[2];
     }
+  }
+
+  void ApplyPoseReset() {
+    if (task_.kind != MyoSuiteTaskKind::kPose) {
+      return;
+    }
+    if (metadata_.weight_bodyname[0] != '\0') {
+      const int body = BodyId(metadata_.weight_bodyname);
+      const mjtNum mass = SampleRange("weight_range");
+      model_->body_mass[body] = mass;
+      model_->geom_size[3 * model_->body_geomadr[body]] = 0.01 + 0.025 * mass;
+    }
+    if (std::string_view(metadata_.target_type) == "generate") {
+      const auto& ranges = reset_parameters_.at("target_jnt_range");
+      for (std::size_t i = 0; i < target_jnt_value_.size(); ++i) {
+        target_jnt_value_[i] = Uniform(ranges[2 * i], ranges[2 * i + 1]);
+      }
+    }
+    // Compute target markers from forward kinematics at the target pose,
+    // then independently reset the controlled joints as in PoseEnvV0.
+    if (static_cast<int>(target_jnt_value_.size()) == model_->nq) {
+      mju_copy(data_->qpos, target_jnt_value_.data(), model_->nq);
+      mj_forward(model_, data_);
+      for (std::size_t i = 0; i < tip_sites_.size(); ++i) {
+        mju_copy3(model_->site_pos + 3 * SiteId(target_sites_[i].c_str()),
+                  data_->site_xpos + 3 * SiteId(tip_sites_[i].c_str()));
+      }
+      mju_copy(data_->qpos, initial_qpos_.data(), model_->nq);
+    }
+    if (std::string_view(metadata_.reset_type) == "random") {
+      for (int joint = 0; joint < model_->njnt; ++joint) {
+        data_->qpos[model_->jnt_qposadr[joint]] = Uniform(
+            model_->jnt_range[2 * joint], model_->jnt_range[2 * joint + 1]);
+      }
+    }
+  }
+
+  void RandomizeStandingPose() {
+    mju_copy(data_->qpos, initial_qpos_.data(), model_->nq);
+    for (int joint = 0; joint < model_->njnt; ++joint) {
+      const int address = model_->jnt_qposadr[joint];
+      data_->qpos[address] = std::clamp(
+          data_->qpos[address] + SampleRange("joint_random_range"),
+          model_->jnt_range[2 * joint], model_->jnt_range[2 * joint + 1]);
+    }
+  }
+
+  void ApplyManipulationReset() {
+    if (task_.kind == MyoSuiteTaskKind::kKeyTurn) {
+      data_->qpos[model_->nq - 1] = SampleRange("key_init_range");
+      const auto& range = reset_parameters_.at("key_init_range");
+      if (range[0] != range[1]) {
+        for (int axis = 0; axis < 3; ++axis) {
+          model_->body_pos[3 * (model_->nbody - 1) + axis] =
+              reset_parameters_.at("key_init_pos")[axis] + Uniform(-0.01, 0.01);
+        }
+      }
+    } else if (task_.kind == MyoSuiteTaskKind::kObjHoldRandom) {
+      const int goal = SiteId("goal");
+      for (int axis = 0; axis < 3; ++axis) {
+        model_->site_pos[3 * goal + axis] =
+            reset_parameters_.at("object_init_pos")[axis] +
+            Uniform(-0.03, 0.03);
+        const mjtNum size = Uniform(0.02, 0.03);
+        model_->geom_size[3 * (model_->ngeom - 1) + axis] = size;
+        model_->site_size[3 * goal + axis] = size;
+      }
+    } else if (task_.kind == MyoSuiteTaskKind::kPenTwirlRandom) {
+      EulerToQuaternion({Uniform(-1, 1), Uniform(-1, 1), 0},
+                        model_->body_quat + 4 * BodyId("target"));
+    } else if (task_.kind == MyoSuiteTaskKind::kReorientSar) {
+      ApplySarReset();
+    }
+  }
+
+  void ApplySarReset() {
+    const int type = std::uniform_int_distribution<int>(3, 6)(gen_);
+    const std::array<std::string, 4> names = {"sar_caps", "sar_ellips",
+                                              "sar_cyl", "sar_box"};
+    const auto& catalog = reset_parameters_.at(names[type - 3]);
+    const int count = static_cast<int>(catalog.size()) / 7;
+    const int index = std::uniform_int_distribution<int>(0, count - 1)(gen_);
+    const int color_index =
+        count == 2 ? index
+                   : std::uniform_int_distribution<int>(0, count - 1)(gen_);
+    const auto fixed_color = reset_parameters_.find("sar_color");
+    const mjtNum* size = catalog.data() + 7 * index;
+    const mjtNum* color = fixed_color == reset_parameters_.end()
+                              ? catalog.data() + 7 * color_index + 3
+                              : fixed_color->second.data();
+    for (const char* name : {"obj", "target"}) {
+      const int geom = GeomId(name);
+      mju_copy3(model_->geom_size + 3 * geom, size);
+      model_->geom_type[geom] = type;
+      for (int channel = 0; channel < 4; ++channel) {
+        model_->geom_rgba[4 * geom + channel] = color[channel];
+      }
+    }
+    mjtNum half_height = type == 5 ? size[1] : size[2];
+    if (type == 3) {
+      half_height = 1.3 * size[1];
+    }
+    for (const char* name : {"top", "bot", "t_top", "t_bot"}) {
+      const int geom = GeomId(name);
+      mju_zero(model_->geom_pos + 3 * geom, 3);
+      model_->geom_pos[3 * geom + 2] =
+          std::string_view(name).find("top") != std::string_view::npos
+              ? half_height
+              : -half_height;
+    }
+    model_->body_mass[BodyId("Object")] = 1.2;
+    if (count != 2) {
+      model_->geom_condim[GeomId("obj")] = 3;
+    }
+    EulerToQuaternion({Uniform(-1, 1), Uniform(-0.8, 1.2), 0},
+                      model_->body_quat + 4 * BodyId("target"));
+  }
+
+  void ApplyWalkingReset() {
+    if (task_.kind != MyoSuiteTaskKind::kWalk &&
+        task_.kind != MyoSuiteTaskKind::kTerrain &&
+        task_.kind != MyoSuiteTaskKind::kChallengeChaseTag) {
+      return;
+    }
+    const bool random = std::string_view(metadata_.reset_type) == "random";
+    int key = std::string_view(metadata_.reset_type) == "init" ? 2 : 0;
+    if (random) {
+      key = Uniform(0, 1) < 0.5 ? 2 : 3;
+    }
+    mju_copy(data_->qpos, model_->key_qpos + key * model_->nq, model_->nq);
+    mju_copy(data_->qvel, model_->key_qvel + key * model_->nv, model_->nv);
+    if (random) {
+      std::normal_distribution<mjtNum> noise(0, 0.02);
+      for (int i = 0; i < model_->nq; ++i) {
+        // The upstream slice aliases qpos, so quaternion coordinates receive
+        // noise too; only the separately copied height remains unchanged.
+        if (i != 2) {
+          data_->qpos[i] += noise(gen_);
+        }
+      }
+    }
+    if (task_.kind == MyoSuiteTaskKind::kTerrain &&
+        std::string_view(metadata_.terrain) == "rough") {
+      std::vector<mjtNum> rough(model_->nhfielddata);
+      for (auto& value : rough) {
+        value = Uniform(-0.5, 0.5);
+      }
+      const auto [minimum, maximum] =
+          std::minmax_element(rough.begin(), rough.end());
+      for (int i = 0; i < model_->nhfielddata; ++i) {
+        model_->hfield_data[i] =
+            (rough[i] - *minimum) / (*maximum - *minimum) * 0.08 - 0.02;
+      }
+      const int terrain = GeomId("terrain");
+      mju_zero(model_->geom_pos + 3 * terrain, 3);
+      model_->geom_rgba[4 * terrain + 3] = 1;
+      model_->geom_contype[terrain] = 1;
+      model_->geom_conaffinity[terrain] = 1;
+    }
+  }
+
+  void ApplyChallengeObjectReset() {
+    if (task_.kind == MyoSuiteTaskKind::kChallengeBaoding) {
+      if (std::string_view(metadata_.task_choice) == "random") {
+        constexpr std::array<mjtNum, 3> directions{0, -1, 1};
+        baoding_goal_parameters_[4] =
+            directions[std::uniform_int_distribution<int>(0, 2)(gen_)];
+        baoding_goal_parameters_[3] = Uniform(0, 2 * M_PI);
+      }
+      baoding_goal_parameters_[0] = SampleRange("goal_xrange");
+      baoding_goal_parameters_[1] = SampleRange("goal_yrange");
+      baoding_goal_parameters_[2] = SampleRange("goal_time_period");
+      for (const char* name : {"ball1", "ball2"}) {
+        if (HasRange("obj_mass_range")) {
+          model_->body_mass[BodyId(name)] = SampleRange("obj_mass_range");
+        }
+        const int geom = GeomId(name);
+        if (HasRange("obj_friction_range")) {
+          SampleRange("obj_friction_range", model_->geom_friction + 3 * geom,
+                      3);
+        }
+        if (HasRange("obj_size_range")) {
+          const mjtNum size = SampleRange("obj_size_range");
+          std::fill_n(model_->geom_size + 3 * geom, 3, size);
+        }
+      }
+    } else if (task_.kind == MyoSuiteTaskKind::kChallengeReorient) {
+      const int target = BodyId("target");
+      for (int axis = 0; axis < 3; ++axis) {
+        model_->body_pos[3 * target + axis] =
+            reset_parameters_.at("goal_init_pos")[axis] +
+            SampleRange("goal_pos");
+      }
+      SampleOrientation("goal_rot", model_->body_quat + 4 * target);
+      const int object = BodyId("Object");
+      const int first = model_->body_geomadr[object];
+      const int count = model_->body_geomnum[object];
+      SampleRange("obj_friction_range", model_->geom_friction + 3 * first,
+                  3 * count);
+      model_->body_mass[object] = SampleRange("obj_mass_range");
+      const mjtNum size_delta = SampleRange("obj_size_range");
+      const int target_geom = GeomId("target_dice");
+      for (int axis = 0; axis < 3; ++axis) {
+        model_->geom_size[3 * target_geom + axis] =
+            reset_geom_size_[3 * target_geom + axis] + size_delta;
+      }
+      for (int i = 0; i < count; ++i) {
+        for (int axis = 0; axis < 3; ++axis) {
+          const int address = 3 * (first + i) + axis;
+          model_->geom_size[address] =
+              reset_geom_size_[address] +
+              (i >= count - 3 || axis == 1 ? size_delta : 0);
+          const mjtNum position = reset_geom_pos_[address];
+          model_->geom_pos[address] = position / std::abs(position + 1e-16) *
+                                      (std::abs(position) + size_delta);
+        }
+      }
+    } else if (task_.kind == MyoSuiteTaskKind::kChallengeRelocate) {
+      ApplyRelocateReset();
+    } else if (task_.kind == MyoSuiteTaskKind::kChallengeTableTennis) {
+      const int ball = BodyId("pingpong");
+      const int ball_joint = JointId("pingpong_freejoint");
+      const int qpos = model_->jnt_qposadr[ball_joint];
+      const int qvel = model_->jnt_dofadr[ball_joint];
+      mju_copy(data_->qpos, model_->key_qpos, model_->nq);
+      if (HasRange("paddle_mass_range")) {
+        model_->body_mass[BodyId("paddle")] = SampleRange("paddle_mass_range");
+      }
+      if (HasRange("ball_friction_range")) {
+        SampleRange("ball_friction_range",
+                    model_->geom_friction + 3 * GeomId("pingpong"), 3);
+      }
+      if (HasRange("ball_xyz_range")) {
+        SampleRange("ball_xyz_range", model_->body_pos + 3 * ball, 3);
+        mju_copy3(data_->qpos + qpos, model_->body_pos + 3 * ball);
+      }
+      if (HasRange("qpos_noise_range")) {
+        for (int joint = 0; joint < model_->njnt - 2; ++joint) {
+          const int address = model_->jnt_qposadr[joint];
+          const mjtNum low = model_->jnt_range[2 * joint];
+          const mjtNum high = model_->jnt_range[2 * joint + 1];
+          data_->qpos[address] =
+              std::clamp(data_->qpos[address] +
+                             SampleRange("qpos_noise_range") * (high - low),
+                         low, high);
+        }
+      }
+      if (HasRange("ball_qvel") && reset_parameters_.at("ball_qvel")[0] != 0) {
+        const mjtNum vertical_speed = Uniform(-0.1, 0.1);
+        const mjtNum time =
+            (vertical_speed +
+             std::sqrt(vertical_speed * vertical_speed +
+                       2 * 9.81 * (data_->qpos[qpos + 2] - 0.785))) /
+            9.81;
+        data_->qvel[qvel] =
+            Uniform(0.5 - data_->qpos[qpos], 1.35 - data_->qpos[qpos]) / time;
+        data_->qvel[qvel + 1] = Uniform(-0.60 - data_->qpos[qpos + 1],
+                                        0.70 - data_->qpos[qpos + 1]) /
+                                time;
+        data_->qvel[qvel + 2] = vertical_speed;
+      }
+    }
+  }
+
+  void ApplyRelocateReset() {
+    const int goal = BodyId("target");
+    const int object = BodyId("Object");
+    // The official reset rejects object placements that start in contact.
+    // Bound retries so an incompatible model fails instead of recursing
+    // forever.
+    for (int attempt = 0; attempt < 1000; ++attempt) {
+      SampleRange("target_xyz_range", model_->body_pos + 3 * goal, 3);
+      SampleOrientation("target_rxryrz_range", model_->body_quat + 4 * goal);
+      if (HasRange("obj_xyz_range")) {
+        SampleRange("obj_xyz_range", model_->body_pos + 3 * object, 3);
+      }
+      if (HasRange("obj_geom_range")) {
+        for (int i = 0; i < model_->body_geomnum[object]; ++i) {
+          const int geom = model_->body_geomadr[object] + i;
+          model_->geom_type[geom] =
+              std::uniform_int_distribution<int>(2, 6)(gen_);
+          SampleRange("obj_geom_range", model_->geom_size + 3 * geom, 3);
+          const auto& high = reset_parameters_.at("obj_geom_range.high");
+          mju_copy3(model_->geom_aabb + 6 * geom + 3, high.data());
+          model_->geom_rbound[geom] =
+              2 * *std::max_element(high.begin(), high.end());
+          for (int axis = 0; axis < 3; ++axis) {
+            const mjtNum size = model_->geom_size[3 * geom + axis];
+            model_->geom_pos[3 * geom + axis] = Uniform(-size, size);
+            model_->geom_rgba[4 * geom + axis] = Uniform(0.2, 0.9);
+          }
+          model_->geom_rgba[4 * geom + 3] = 1;
+          EulerToQuaternion(
+              {Uniform(-M_PI / 2, M_PI / 2), Uniform(-M_PI / 2, M_PI / 2),
+               Uniform(-M_PI / 2, M_PI / 2)},
+              model_->geom_quat + 4 * geom);
+          if (HasRange("obj_friction_range")) {
+            SampleRange("obj_friction_range", model_->geom_friction + 3 * geom,
+                        3);
+          }
+        }
+        if (HasRange("obj_mass_range")) {
+          model_->body_mass[object] = SampleRange("obj_mass_range");
+        }
+      }
+      // Reset after sampling model poses: mj_resetData copies a mocap
+      // target's new body pose into data, which mj_forward alone does not do.
+      ResetToInitialState();
+      if (HasRange("qpos_noise_range")) {
+        // This upstream parameter is a fixed fraction of joint range, not
+        // an additional random draw; preserve the last six object coordinates.
+        for (int i = 0; i < model_->nq - 6; ++i) {
+          data_->qpos[i] =
+              initial_qpos_[i] +
+              reset_parameters_.at("qpos_noise_range")[0] *
+                  (model_->jnt_range[2 * i + 1] - model_->jnt_range[2 * i]);
+        }
+      }
+      mj_forward(model_, data_);
+      if (data_->ncon == 0) {
+        return;
+      }
+    }
+    throw std::runtime_error(
+        std::string(task_.id) +
+        " could not sample a contact-free object placement (geoms " +
+        std::to_string(data_->contact[0].geom1) + ", " +
+        std::to_string(data_->contact[0].geom2) + ")");
   }
 
   void ApplyChallengeRunTrackTerrainReset() {
@@ -1145,6 +1584,231 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     model_->geom_pos[3 * terrain + 1] = 0.0;
     model_->geom_pos[3 * terrain + 2] = 0.005;
     model_->geom_rgba[4 * terrain + 3] = 1.0;
+    std::fill_n(model_->hfield_data, model_->nhfielddata, 0.0F);
+    if (std::string_view(metadata_.terrain) == "flat") {
+      track_terrain_type_ = 0;
+      return;
+    }
+    const bool mixed = std::string_view(metadata_.terrain) == "random_mixed";
+    const std::array<std::string, 3> names = {"trackfield.stairs_difficulties",
+                                              "trackfield.hills_difficulties",
+                                              "trackfield.rough_difficulties"};
+    const int selected = std::uniform_int_distribution<int>(0, 2)(gen_);
+    track_terrain_type_ = selected == 0 ? 3 : selected;
+    if (mixed) {
+      track_terrain_type_ = 4;
+    }
+    const int rows = model_->hfield_nrow[0];
+    const int cols = model_->hfield_ncol[0];
+    const int patches =
+        mixed ? 24 : reset_parameters_.at(names[selected]).size();
+    const int length = rows / patches;
+    for (int start = 0, patch = 0; start + length < rows;
+         start += length, ++patch) {
+      const int type =
+          mixed ? std::uniform_int_distribution<int>(0, 2)(gen_) : selected;
+      const mjtNum difficulty = reset_parameters_.at(names[type]).at(patch);
+      if (type == 0) {
+        const int stair_length = length / 6;
+        for (int stair = 0; stair < 6; ++stair) {
+          const mjtNum height = (stair <= 3 ? stair : 6 - stair) * difficulty;
+          for (int row = 0; row < stair_length; ++row) {
+            std::fill_n(model_->hfield_data +
+                            (start + stair * stair_length + row) * cols,
+                        cols, static_cast<float>(height));
+          }
+        }
+      } else {
+        std::vector<mjtNum> values(length * cols);
+        for (std::size_t i = 0; i < values.size(); ++i) {
+          values[i] = type == 1 ? std::sin(M_PI * i / (values.size() - 1))
+                                : Uniform(-1, 1);
+        }
+        const auto [minimum, maximum] =
+            std::minmax_element(values.begin(), values.end());
+        const mjtNum scale = type == 1 ? difficulty : Uniform(0, difficulty);
+        for (std::size_t i = 0; i < values.size(); ++i) {
+          const std::size_t source = type == 1 ? values.size() - 1 - i : i;
+          model_->hfield_data[start * cols + i] =
+              (values[source] - *minimum) / (*maximum - *minimum) * scale;
+        }
+      }
+    }
+  }
+
+  void SampleChasePatch(int row, int col, int type) {
+    const int patches = reset_parameters_.at("heightfield.patches_per_side")[0];
+    const int size = model_->hfield_nrow[0] / patches;
+    const int cols = model_->hfield_ncol[0];
+    std::vector<mjtNum> values(size * size, 0);
+    if (type != 0) {
+      for (int i = 0; i < size * size; ++i) {
+        if (type == 1) {
+          values[i] =
+              std::sin(10 * M_PI * i / (size * size - 1) + M_PI / 2) - 1;
+        } else if (type == 2) {
+          values[i] = Uniform(-1, 1);
+        } else {
+          values[i] = reset_parameters_.at("heightfield.relief")[i];
+        }
+      }
+      const auto [minimum, maximum] =
+          std::minmax_element(values.begin(), values.end());
+      constexpr std::array<const char*, 3> ranges = {
+          "heightfield.hills_range", "heightfield.rough_range",
+          "heightfield.relief_range"};
+      const mjtNum scale = SampleRange(ranges[type - 1]);
+      const mjtNum low = *minimum;
+      const mjtNum span = *maximum - low;
+      for (auto& value : values) {
+        value = (value - low) / span * scale - (type == 2 ? 0.02 : 0);
+      }
+    }
+    const bool rotate = type == 1 && Uniform(0, 1) < 0.5;
+    for (int y = 0; y < size; ++y) {
+      for (int x = 0; x < size; ++x) {
+        int source = y * size + x;
+        if (type == 1) {
+          source =
+              rotate ? (size - 1 - x) * size + y : size * size - 1 - source;
+        } else if (type == 3) {
+          source = (size - 1 - y) * size + x;
+        }
+        model_->hfield_data[(row * size + y) * cols + col * size + x] =
+            values[source];
+      }
+    }
+  }
+
+  void SampleChaseTerrain() {
+    if (!HasRange("heightfield.patches_per_side")) {
+      return;
+    }
+    const int patches = reset_parameters_.at("heightfield.patches_per_side")[0];
+    int hills = 0;
+    for (int row = 0; row < patches; ++row) {
+      for (int col = 0; col < patches; ++col) {
+        int type;
+        do {
+          type = std::uniform_int_distribution<int>(0, 2)(gen_);
+        } while (type == 1 && hills == 2);
+        hills += static_cast<int>(type == 1);
+        SampleChasePatch(row, col, type);
+      }
+    }
+    if (Uniform(0, 1) < 0.2) {
+      const int row = std::uniform_int_distribution<int>(0, patches - 1)(gen_);
+      const int col = std::uniform_int_distribution<int>(0, patches - 1)(gen_);
+      SampleChasePatch(row, col, 3);
+    }
+    const int rows = model_->hfield_nrow[0];
+    const int cols = model_->hfield_ncol[0];
+    const int x = std::clamp(
+        static_cast<int>(
+            data_->qpos[0] /
+                (reset_parameters_.at("heightfield.real_length")[0] / rows) +
+            rows / 2.0),
+        0, rows - 2);
+    const int y = std::clamp(
+        static_cast<int>(
+            data_->qpos[1] /
+                (reset_parameters_.at("heightfield.real_width")[0] / cols) +
+            cols / 2.0),
+        0, cols - 2);
+    SampleChasePatch(x / (rows / patches), y / (rows / patches), 0);
+    const int terrain = GeomId("terrain");
+    model_->geom_rgba[4 * terrain + 3] = 1;
+    mju_zero(model_->geom_pos + 3 * terrain, 3);
+  }
+
+  void ApplyLocomotionReset() {
+    const bool random = std::string_view(metadata_.reset_type) == "random";
+    if (task_.kind == MyoSuiteTaskKind::kChallengeSoccer) {
+      mju_copy(data_->qpos, model_->key_qpos, model_->nq);
+      mju_copy(data_->qvel, model_->key_qvel, model_->nv);
+      if (random) {
+        const mjtNum joint_noise = reset_parameters_.at("rnd_joint_noise")[0];
+        for (mjtNum address : reset_parameters_.at("myo_qpos_adrs")) {
+          data_->qpos[static_cast<int>(address)] +=
+              Uniform(-joint_noise, joint_noise);
+        }
+        const mjtNum position_noise = reset_parameters_.at("rnd_pos_noise")[0];
+        const int root = model_->jnt_qposadr[JointId("root")];
+        data_->qpos[root] += Uniform(-position_noise, 0);
+        data_->qpos[root + 1] += Uniform(-position_noise, position_noise);
+      }
+      data_->mocap_pos[0] = 50;
+      data_->mocap_pos[1] = Uniform(-3.3, 3.3);
+      EulerToQuaternion({0, 0, 0}, data_->mocap_quat);
+    } else if (task_.kind == MyoSuiteTaskKind::kChallengeChaseTag) {
+      chase_task_ = std::string_view(metadata_.task_choice) == "EVADE" ? 1 : 0;
+      if (std::string_view(metadata_.task_choice) == "random") {
+        chase_task_ = std::uniform_int_distribution<int>(0, 1)(gen_);
+      }
+      if (random) {
+        data_->qpos[0] = Uniform(-5, 5);
+        data_->qpos[1] = Uniform(-5, 5);
+        std::array<mjtNum, 9> matrix{};
+        mju_quat2Mat(matrix.data(), data_->qpos + 3);
+        const auto angles = MatToEuler(matrix.data());
+        const mjtNum yaw = Uniform(0, 2 * M_PI);
+        EulerToQuaternion({angles[0], angles[1], yaw}, data_->qpos + 3);
+        const mjtNum speed = std::hypot(data_->qvel[0], data_->qvel[1]);
+        data_->qvel[0] = std::cos(yaw) * speed;
+        data_->qvel[1] = std::sin(yaw) * speed;
+      }
+      SampleChaseTerrain();
+      const auto& probabilities =
+          reset_parameters_.at("opponent.opponent_probabilities");
+      const int policy = std::discrete_distribution<int>(
+          probabilities.begin(), probabilities.end())(gen_);
+      mjtNum yaw;
+      do {
+        data_->mocap_pos[0] = Uniform(-5, 5);
+        data_->mocap_pos[1] = Uniform(-5, 5);
+        yaw = Uniform(-2 * M_PI, 2 * M_PI);
+      } while (std::hypot(data_->mocap_pos[0] - data_->qpos[0],
+                          data_->mocap_pos[1] - data_->qpos[1]) <
+               reset_parameters_.at("opponent.min_spawn_distance")[0]);
+      if (chase_task_ == 0 && policy == 0) {
+        data_->mocap_pos[0] = 0;
+        data_->mocap_pos[1] = -5;
+        yaw = 0;
+      }
+      EulerToQuaternion({0, 0, yaw}, data_->mocap_quat);
+    } else if (task_.kind == MyoSuiteTaskKind::kChallengeRunTrack) {
+      const int key =
+          random ? std::uniform_int_distribution<int>(0, 2)(gen_) : 0;
+      mju_copy(data_->qpos, model_->key_qpos + key * model_->nq, model_->nq);
+      mju_copy(data_->qvel, model_->key_qvel + key * model_->nv, model_->nv);
+      osl_phase_ = key == 1 ? OslPhase::kESwing : OslPhase::kEStance;
+      if (random) {
+        const mjtNum width = reset_parameters_.at("real_width")[0] * 0.8;
+        data_->qpos[0] = Uniform(-width, width);
+        data_->qpos[1] = reset_parameters_.at("start_pos")[0] + 1;
+        const mjtNum* quat = data_->qpos + 3;
+        const mjtNum roll =
+            std::atan2(2 * (quat[0] * quat[1] + quat[2] * quat[3]),
+                       1 - 2 * (quat[1] * quat[1] + quat[2] * quat[2]));
+        const mjtNum pitch = std::asin(
+            std::clamp(2 * (quat[0] * quat[2] - quat[3] * quat[1]), -1.0, 1.0));
+        const mjtNum yaw = Uniform(-125 * M_PI / 180, -60 * M_PI / 180);
+        const std::array<mjtNum, 3> angles = {roll, pitch, yaw};
+        mju_euler2Quat(data_->qpos + 3, angles.data(), "XYZ");
+        const mjtNum speed = std::hypot(data_->qvel[0], data_->qvel[1]);
+        data_->qvel[0] = std::cos(yaw) * speed;
+        data_->qvel[1] = std::sin(yaw) * speed;
+      }
+      if (std::string_view(metadata_.reset_type) != "init") {
+        mj_forward(model_, data_);
+        mjtNum height = std::numeric_limits<mjtNum>::infinity();
+        for (const char* name :
+             {"r_heel_btm", "r_toe_btm", "l_heel_btm", "l_toe_btm"}) {
+          height = std::min(height, data_->site_xpos[3 * SiteId(name) + 2]);
+        }
+        data_->qpos[2] += 0.005 - height;
+      }
+    }
   }
 
   void WarmstartFromCurrentAcceleration() {
@@ -1318,13 +1982,14 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     if (target1 < 0 || target2 < 0) {
       return;
     }
-    const mjtNum x_radius = 0.025;
-    const mjtNum y_radius = 0.028;
+    const mjtNum x_radius = baoding_goal_parameters_[0];
+    const mjtNum y_radius = baoding_goal_parameters_[1];
     const mjtNum center_x = -0.0125;
     const mjtNum center_y = -0.07;
     const mjtNum phase =
-        (static_cast<mjtNum>(task_step_) * Dt()) / static_cast<mjtNum>(6.0);
-    const mjtNum angle1 = 2.0 * M_PI * phase + M_PI / 4.0;
+        (static_cast<mjtNum>(task_step_) * Dt()) / baoding_goal_parameters_[2];
+    const mjtNum angle1 = 2.0 * M_PI * phase * baoding_goal_parameters_[4] +
+                          baoding_goal_parameters_[3];
     const mjtNum angle2 = angle1 - M_PI;
     model_->site_pos[3 * target1] = x_radius * std::cos(angle1) + center_x;
     model_->site_pos[3 * target1 + 1] = y_radius * std::sin(angle1) + center_y;
@@ -1656,6 +2321,38 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     return result;
   }
 
+  std::vector<mjtNum> HeightMapObservation(const std::string& prefix) const {
+    std::vector<mjtNum> heights(100);
+    const int rows = model_->hfield_nrow[0];
+    const int cols = model_->hfield_ncol[0];
+    const mjtNum length = reset_parameters_.at(prefix + ".real_length")[0];
+    const mjtNum width = reset_parameters_.at(prefix + ".real_width")[0];
+    const mjtNum distance = reset_parameters_.at(prefix + ".view_distance")[0];
+    std::array<mjtNum, 9> matrix{};
+    mju_quat2Mat(matrix.data(), data_->qpos + 3);
+    const mjtNum yaw = MatToEuler(matrix.data())[2];
+    const std::array<mjtNum, 10> points = {-0.4, -0.3, -0.2, -0.1, 0,
+                                           0.1,  0.2,  0.3,  0.4,  0.5};
+    for (int y = 0; y < 10; ++y) {
+      for (int x = 0; x < 10; ++x) {
+        const mjtNum world_x =
+            data_->qpos[0] +
+            distance * (std::cos(yaw) * points[x] - std::sin(yaw) * points[y]);
+        const mjtNum world_y =
+            data_->qpos[1] +
+            distance * (std::sin(yaw) * points[x] + std::cos(yaw) * points[y]);
+        const int row =
+            std::clamp(static_cast<int>(world_y / (length / rows) + rows / 2.0),
+                       0, rows - 2);
+        const int col =
+            std::clamp(static_cast<int>(world_x / (width / cols) + cols / 2.0),
+                       0, cols - 2);
+        heights[(9 - x) * 10 + 9 - y] = model_->hfield_data[row * cols + col];
+      }
+    }
+    return heights;
+  }
+
   ObsDict BuildObsDict() {
     ObsDict obs;
     MyoDmReferenceFrame myodm_reference;
@@ -1782,6 +2479,45 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
       obs["opponent_pose"] = {opponent[0], opponent[1], 0.0};
     }
     obs["opponent_vel"] = {0.0, 0.0};
+    if (task_.kind == MyoSuiteTaskKind::kChallengeChaseTag ||
+        task_.kind == MyoSuiteTaskKind::kChallengeRunTrack) {
+      const bool chase = task_.kind == MyoSuiteTaskKind::kChallengeChaseTag;
+      obs["task"] = {static_cast<mjtNum>(chase_task_)};
+      obs["terrain"] = {static_cast<mjtNum>(track_terrain_type_)};
+      obs["model_root_pos"] = QposSlice(0, 2);
+      obs["model_root_vel"] = QvelSlice(0, 2, false);
+      obs["torso_angle"] = BodyXquat(BodyId("pelvis"));
+      obs["socket_force"] = SensorData("r_socket_load");
+      obs["grf"].clear();
+      for (const char* name : {"r_foot", "r_toes", "l_foot", "l_toes"}) {
+        if (chase || name[0] == 'l') {
+          const auto sensor = SensorData(name);
+          obs["grf"].push_back(sensor[0]);
+        }
+      }
+      const std::string field = chase ? "heightfield" : "trackfield";
+      if (HasRange(field + ".real_length")) {
+        obs["hfield"] = HeightMapObservation(field);
+      }
+      if (chase) {
+        obs["internal_qpos"] = QposSlice(7, 35);
+        obs["internal_qvel"] = QvelSlice(6, 34, true);
+      }
+    }
+    for (const auto& prefix : {std::string("myo"), std::string("biological")}) {
+      if (HasRange(prefix + "_qpos_adrs")) {
+        obs["internal_qpos"].clear();
+        obs["internal_qvel"].clear();
+        for (mjtNum address : reset_parameters_.at(prefix + "_qpos_adrs")) {
+          obs["internal_qpos"].push_back(
+              data_->qpos[static_cast<int>(address)]);
+        }
+        for (mjtNum address : reset_parameters_.at(prefix + "_qvel_adrs")) {
+          obs["internal_qvel"].push_back(
+              data_->qvel[static_cast<int>(address)] * dt);
+        }
+      }
+    }
 
     obs["pelvis_pos"] = SiteXpos(SiteId("pelvis"));
     obs["body_qpos"] =
@@ -2182,13 +2918,19 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
       const bool out_of_bounds =
           std::abs(pelvis[0]) > 6.5 || std::abs(pelvis[1]) > 6.5;
       const bool fallen = pelvis[2] < 0.5;
-      const bool win = tagged;
-      const bool lose = data_->time >= 20.0 || out_of_bounds || fallen;
+      const bool win = chase_task_ == 0 ? tagged : data_->time >= 20.0;
+      const bool lose = chase_task_ == 0
+                            ? data_->time >= 20.0 || out_of_bounds || fallen
+                            : tagged || out_of_bounds;
       values["act_reg"] = ActMagnitude(obs);
       values["distance"] = distance;
       values["lose"] = lose ? 1.0 : 0.0;
-      values["sparse"] =
-          win ? 1.0 - std::round(data_->time * 100.0) / 100.0 / 20.0 : 0.0;
+      const mjtNum elapsed = std::round(data_->time * 100.0) / 100.0 / 20.0;
+      if (chase_task_ == 0) {
+        values["sparse"] = win ? 1.0 - elapsed : 0.0;
+      } else {
+        values["sparse"] = win || lose ? elapsed : 0.0;
+      }
       values["solved"] = win ? 1.0 : 0.0;
       values["done"] = (win || lose) ? 1.0 : 0.0;
       const int indicator = SiteId("opponent_indicator");
@@ -2494,6 +3236,12 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     state["info:model_nmocap"_] = model_->nmocap;
 #ifdef ENVPOOL_TEST
     CapturePaddedCurrentState();
+    auto* target = static_cast<mjtNum*>(state["info:target_jnt_value"_].Data());
+    std::fill_n(target, 2048, 0.0);
+    std::copy(target_jnt_value_.begin(), target_jnt_value_.end(), target);
+    state["info:baoding_goal_parameters"_].Assign(
+        baoding_goal_parameters_.data(), baoding_goal_parameters_.size());
+    state["info:chase_task"_] = chase_task_;
     state["info:qpos0"_].Assign(qpos0_pad_.data(), qpos0_pad_.size());
     state["info:qvel0"_].Assign(qvel0_pad_.data(), qvel0_pad_.size());
     state["info:act0"_].Assign(act0_pad_.data(), act0_pad_.size());

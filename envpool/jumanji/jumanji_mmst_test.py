@@ -27,8 +27,21 @@ class JumanjiMMSTTest(absltest.TestCase):
 
     def test_agents_expand_tree_frontiers(self) -> None:
         """Checks agents expand tree frontiers."""
+        adjacency = np.zeros((36, 36), dtype=np.int32)
+        node_types = np.full(36, -1, dtype=np.int32)
+        for agent, start in enumerate((0, 12, 24)):
+            node_types[start : start + 4] = 2 * agent + 1
+            node_types[start] = 2 * agent
+            for node in range(start, start + 3):
+                adjacency[node, node + 1] = adjacency[node + 1, node] = 1
         env = make_gymnasium(
-            "MMST-v0", num_envs=1, seed=0, render_mode="rgb_array"
+            "MMST-v0",
+            num_envs=1,
+            seed=0,
+            render_mode="rgb_array",
+            mmst_node_types=",".join(map(str, node_types)),
+            mmst_adj_matrix=",".join(map(str, adjacency.ravel())),
+            mmst_positions="0,12,24",
         )
         try:
             obs, _ = env.reset()
@@ -41,14 +54,23 @@ class JumanjiMMSTTest(absltest.TestCase):
             obs, reward, terminated, truncated, _ = env.step(
                 np.asarray([[1, 13, 25]], dtype=np.int32)
             )
-            self.assertAlmostEqual(float(reward[0]), 3.0)
+            self.assertAlmostEqual(float(reward[0]), 30.0)
             self.assertFalse(bool(terminated[0]))
             self.assertFalse(bool(truncated[0]))
             np.testing.assert_array_equal(
                 obs["positions"][0], np.asarray([1, 13, 25])
             )
-            self.assertEqual(int(obs["node_types"][0, 1]), 5)
+            self.assertEqual(int(obs["node_types"][0, 1]), 0)
             self.assertEqual(int(obs["step_count"][0]), 1)
+
+            for offset in (2, 3):
+                obs, reward, terminated, _, _ = env.step(
+                    np.asarray(
+                        [[offset, 12 + offset, 24 + offset]], dtype=np.int32
+                    )
+                )
+                self.assertEqual(float(reward[0]), 30.0)
+                self.assertEqual(bool(terminated[0]), offset == 3)
 
             frame = env.render(env_ids=np.asarray([0], dtype=np.int32))
 

@@ -54,6 +54,7 @@ cc_library(
     ],
     deps = [
         "//envpool/core:async_envpool",
+        "//third_party/jumanji:pacman_maze",
     ],
 )
 
@@ -107,6 +108,7 @@ py_test(
     deps = [
         ":jumanji",
         ":jumanji_registration",
+        "//envpool/python:seed_test_utils",
         requirement("absl-py"),
         requirement("gymnasium"),
         requirement("numpy"),

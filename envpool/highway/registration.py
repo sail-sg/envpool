@@ -60,7 +60,12 @@ _NEW_TASKS: tuple[tuple[str, str, str, str, bool, dict[str, Any]], ...] = (
         "NativeMultiAgent",
         "intersection_multi",
         True,
-        {"duration": 13, "screen_height": 600, "max_num_players": 2},
+        {
+            "duration": 13,
+            "screen_height": 600,
+            "max_num_players": 2,
+            "terminate_on_any_crash": False,
+        },
     ),
     (
         "Merge-v1",
@@ -229,6 +234,7 @@ register(
     screen_width=600,
     screen_height=600,
     max_num_players=2,
+    terminate_on_any_crash=False,
     **_NATIVE_COMMON,
 )
 

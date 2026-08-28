@@ -21,6 +21,8 @@
 #include <array>
 #include <cstddef>
 #include <cstdlib>
+#include <numeric>
+#include <random>
 #include <string>
 #include <utility>
 
@@ -38,8 +40,6 @@ constexpr int kTimeLimit = 70;
 constexpr int kAdjMatrixSize = kNumNodes * kNumNodes;
 constexpr int kActionMaskSize = kNumAgents * kNumNodes;
 constexpr int kReplaySteps = 32;
-
-inline bool Adjacent(int a, int b) { return std::abs(a - b) == 1; }
 
 }  // namespace mmst
 
@@ -79,7 +79,12 @@ using MMSTEnvSpec = EnvSpec<MMSTEnvFns>;
 
 class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
  protected:
-  std::array<bool, mmst::kNumNodes> visited_{};
+  std::array<int, mmst::kNumNodes> node_types_{};
+  std::array<int, mmst::kAdjMatrixSize> adjacency_{};
+  std::array<std::array<bool, mmst::kNumNodes>, mmst::kNumAgents> visited_{};
+  std::array<std::array<bool, mmst::kNumNodes>, mmst::kNumAgents> blocked_{};
+  std::array<bool, mmst::kNumAgents> finished_{};
+  std::array<bool, mmst::kNumAgents> mask_finished_{};
   std::array<int, mmst::kNumAgents> positions_{};
   std::array<int, mmst::kNumNodes> configured_node_types_{};
   std::array<int, mmst::kAdjMatrixSize> configured_adj_matrix_{};
@@ -135,27 +140,25 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
               unsigned char* rgb) override {
     render::Clear(width, height, render::kWhite, rgb);
     for (int node = 0; node < mmst::kNumNodes; ++node) {
-      const int row = node / 6;
-      const int col = node % 6;
-      const int x = width * col / 6 + width / 12;
-      const int y = height * row / 6 + height / 12;
-      if (col + 1 < 6) {
-        render::DrawLine(width, height, x, y, x + width / 6, y, {180, 180, 180},
-                         rgb);
-      }
-      if (row + 1 < 6) {
-        render::DrawLine(width, height, x, y, x, y + height / 6,
-                         {180, 180, 180}, rgb);
+      const int x = width * (node % 6) / 6 + width / 12;
+      const int y = height * (node / 6) / 6 + height / 12;
+      for (int other = node + 1; other < mmst::kNumNodes; ++other) {
+        if (adjacency_[node * mmst::kNumNodes + other] != 0) {
+          render::DrawLine(
+              width, height, x, y, width * (other % 6) / 6 + width / 12,
+              height * (other / 6) / 6 + height / 12, {180, 180, 180}, rgb);
+        }
       }
     }
     for (int node = 0; node < mmst::kNumNodes; ++node) {
       const int x = width * (node % 6) / 6 + width / 12;
       const int y = height * (node / 6) / 6 + height / 12;
-      render::Color color =
-          visited_[node] ? render::Palette(2) : render::kWhite;
-      for (int position : positions_) {
-        if (position == node) {
-          color = render::Palette(0);
+      render::Color color = node_types_[node] < 0
+                                ? render::kWhite
+                                : render::Palette(node_types_[node]);
+      for (int agent = 0; agent < mmst::kNumAgents; ++agent) {
+        if (visited_[agent][node]) {
+          color = render::Palette(agent);
         }
       }
       render::FillCircle(width, height, x, y, 5, color, rgb);
@@ -164,12 +167,38 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
   }
 
   void Reset() override {
-    visited_.fill(false);
-    positions_ = use_configured_state_ ? configured_positions_
-                                       : decltype(positions_){0, 12, 24};
-    for (int position : positions_) {
-      visited_[position] = true;
+    for (auto& visits : visited_) {
+      visits.fill(false);
     }
+    for (auto& blocks : blocked_) {
+      blocks.fill(false);
+    }
+    finished_.fill(false);
+    mask_finished_.fill(false);
+    if (use_configured_state_) {
+      adjacency_ = configured_adj_matrix_;
+      positions_ = configured_positions_;
+      for (int node = 0; node < mmst::kNumNodes; ++node) {
+        const int value = configured_node_types_[node];
+        node_types_[node] = value < 0 ? -1 : value / 2;
+      }
+    } else {
+      GenerateGraph();
+      node_types_.fill(-1);
+      for (int agent = 0; agent < mmst::kNumAgents; ++agent) {
+        std::array<int, 12> nodes{};
+        std::iota(nodes.begin(), nodes.end(), agent * 12);
+        std::shuffle(nodes.begin(), nodes.end(), gen_);
+        positions_[agent] = nodes[0];
+        for (int i = 0; i < 4; ++i) {
+          node_types_[nodes[i]] = agent;
+        }
+      }
+    }
+    for (int agent = 0; agent < mmst::kNumAgents; ++agent) {
+      visited_[agent][positions_[agent]] = true;
+    }
+    UpdateBlockedNodes();
     step_count_ = 0;
     done_ = false;
     WriteState(0.0f);
@@ -182,32 +211,141 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
       WriteState(replay_rewards_[step_count_ - 1]);
       return;
     }
-    float reward = 0.0f;
-    bool valid = true;
-    for (int agent = 0; agent < mmst::kNumAgents; ++agent) {
+    std::array<int, mmst::kNumAgents> nodes{};
+    std::array<int, mmst::kNumAgents> choices{};
+    std::array<int, mmst::kNumAgents> order{};
+    std::array<bool, mmst::kNumNodes> selected{};
+    std::iota(order.begin(), order.end(), 0);
+    std::shuffle(order.begin(), order.end(), gen_);
+    for (int agent : order) {
       const int node = std::clamp(static_cast<int>(action["action"_](0, agent)),
                                   0, mmst::kNumNodes - 1);
-      if (!IsActionValid(agent, node)) {
-        valid = false;
-        continue;
+      nodes[agent] = HasEdge(agent, node) ? node : -1;
+      choices[agent] = -1;
+      if (nodes[agent] >= 0) {
+        choices[agent] = selected[node] ? -2 : node;
       }
-      positions_[agent] = node;
-      visited_[node] = true;
-      reward += 1.0f;
+      if (choices[agent] >= 0) {
+        selected[node] = true;
+      }
+      // The pinned implementation marks revisits after resolving ties.
+      if (visited_[agent][nodes[agent] < 0 ? mmst::kNumNodes - 1 : node]) {
+        choices[agent] = -3;
+      }
+      if (finished_[agent]) {
+        choices[agent] = -1;
+      }
+    }
+    float reward = 0.0f;
+    for (int agent = 0; agent < mmst::kNumAgents; ++agent) {
+      const int choice = choices[agent];
+      if (choice != -1 && choice != -2 && nodes[agent] >= 0) {
+        positions_[agent] = nodes[agent];
+        visited_[agent][nodes[agent]] = true;
+      }
+      if (!finished_[agent] && choice != -2) {
+        if (choice >= 0 && node_types_[positions_[agent]] == agent) {
+          reward += 10.0f;
+        } else {
+          reward += choice == -1 ? -2.0f : -1.0f;
+        }
+      }
+    }
+    UpdateBlockedNodes();
+    mask_finished_ = finished_;
+    for (int agent = 0; agent < mmst::kNumAgents; ++agent) {
+      finished_[agent] = true;
+      for (int node = 0; node < mmst::kNumNodes; ++node) {
+        if (node_types_[node] == agent && !visited_[agent][node]) {
+          finished_[agent] = false;
+        }
+      }
     }
     ++step_count_;
-    done_ = !valid || AllVisited() || step_count_ >= mmst::kTimeLimit;
-    WriteState(valid ? reward : -1.0f);
+    done_ = std::all_of(finished_.begin(), finished_.end(),
+                        [](bool value) { return value; }) ||
+            step_count_ >= mmst::kTimeLimit;
+    WriteState(reward);
   }
 
  private:
-  bool IsActionValid(int agent, int node) const {
-    return !visited_[node] && mmst::Adjacent(positions_[agent], node);
+  void GenerateGraph() {
+    adjacency_.fill(0);
+    std::array<bool, mmst::kAdjMatrixSize> directed_edges{};
+    std::array<int, mmst::kNumNodes> degree{};
+    int edges = 0;
+    auto add_edge = [&](int a, int b) {
+      const int index = a * mmst::kNumNodes + b;
+      // Jumanji 1.1.2 counts ordered edges and permits degree max_degree + 1.
+      if (a == b || directed_edges[index] || degree[a] > 5 || degree[b] > 5) {
+        return false;
+      }
+      directed_edges[index] = true;
+      adjacency_[index] = adjacency_[b * mmst::kNumNodes + a] = 1;
+      ++degree[a];
+      ++degree[b];
+      ++edges;
+      return true;
+    };
+    auto random_node = [&](int first, int last) {
+      return std::uniform_int_distribution<int>(first, last - 1)(gen_);
+    };
+    auto fill_edges = [&](int first, int last, int total) {
+      while (edges < total) {
+        const int a = random_node(first, last);
+        int b = random_node(first, last - 1);
+        b += b >= a ? 1 : 0;
+        add_edge(a, b);
+      }
+    };
+    for (int group = 0; group < mmst::kNumAgents; ++group) {
+      const int offset = group * 12;
+      std::array<bool, 12> reached{};
+      int current = random_node(offset, offset + 11);
+      reached[current - offset] = true;
+      int count = 1;
+      while (count < 12) {
+        const int next = random_node(offset, offset + 12);
+        if (!reached[next - offset] &&
+            add_edge(std::min(current, next), std::max(current, next))) {
+          reached[next - offset] = true;
+          ++count;
+        }
+        current = next;
+      }
+      fill_edges(offset, offset + 12, (group + 1) * 12);
+    }
+    // Each subgraph has 12 edges; merge with 12, then 24 additional edges.
+    const int first = random_node(0, 12);
+    const int second = random_node(12, 24);
+    add_edge(first, second);
+    fill_edges(0, 24, 48);
+    const int merged = random_node(0, 24);
+    const int third = random_node(24, 36);
+    add_edge(merged, third);
+    fill_edges(0, 36, 72);
   }
 
-  bool AllVisited() const {
-    return std::all_of(visited_.begin(), visited_.end(),
-                       [](bool value) { return value; });
+  bool HasEdge(int agent, int node) const {
+    return adjacency_[positions_[agent] * mmst::kNumNodes + node] != 0 &&
+           !blocked_[agent][node];
+  }
+
+  bool IsActionValid(int agent, int node) const {
+    return HasEdge(agent, node) && !mask_finished_[agent];
+  }
+
+  void UpdateBlockedNodes() {
+    for (int agent = 0; agent < mmst::kNumAgents; ++agent) {
+      const int node = positions_[agent];
+      if (node_types_[node] < 0) {
+        for (int other = 0; other < mmst::kNumAgents; ++other) {
+          if (other != agent) {
+            blocked_[other][node] = true;
+          }
+        }
+      }
+    }
   }
 
   void WriteState(float reward) {
@@ -219,13 +357,17 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
       } else if (use_configured_state_ && step_count_ == 0) {
         state["obs:node_types"_][node] = configured_node_types_[node];
       } else {
-        state["obs:node_types"_][node] = visited_[node] ? 5 : 0;
+        int type = node_types_[node] < 0 ? -1 : 2 * node_types_[node] + 1;
+        for (int agent = 0; agent < mmst::kNumAgents; ++agent) {
+          if (visited_[agent][node]) {
+            type = 2 * agent;
+          }
+        }
+        state["obs:node_types"_][node] = type;
       }
       for (int other = 0; other < mmst::kNumNodes; ++other) {
         state["obs:adj_matrix"_](node, other) =
-            use_configured_state_
-                ? configured_adj_matrix_[node * mmst::kNumNodes + other]
-                : static_cast<int>(mmst::Adjacent(node, other));
+            adjacency_[node * mmst::kNumNodes + other];
       }
     }
     for (int agent = 0; agent < mmst::kNumAgents; ++agent) {
@@ -241,7 +383,8 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
                                    agent) *
                                       mmst::kNumNodes +
                                   node];
-        } else if (use_configured_state_ && step_count_ == 0) {
+        } else if (use_configured_state_ && step_count_ == 0 &&
+                   !spec_.config["mmst_action_mask"_].empty()) {
           state["obs:action_mask"_](agent, node) =
               configured_action_mask_[agent * mmst::kNumNodes + node];
         } else {

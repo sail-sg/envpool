@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 #include <random>
 #include <stdexcept>
 #include <string>
@@ -31,6 +32,14 @@ using Lines = std::array<LineType, 2>;
 constexpr LineType kContinuous = LineType::kContinuous;
 constexpr LineType kNone = LineType::kNone;
 constexpr LineType kStriped = LineType::kStriped;
+
+double NormalNoise(std::mt19937* generator, double scale) {
+  return std::normal_distribution<double>(0.0, scale)(*generator);
+}
+
+double UniformValue(std::mt19937* generator, double low, double high) {
+  return std::uniform_real_distribution<double>(low, high)(*generator);
+}
 
 void AddMergeHighwayLane(RoadNetwork* net, int lane, const Lines& line_type,
                          const Lines& line_type_merge) {
@@ -418,7 +427,7 @@ Road MakeRoundaboutRoad() {
   return road;
 }
 
-int ResetRoundaboutVehicles(Road* road) {
+int ResetRoundaboutVehicles(Road* road, std::mt19937* generator) {
   road->vehicles.clear();
   const Lane& ego_lane = road->network.GetLane({"ser", "ses", 0});
   Vehicle ego = MakeMDPVehicle(road->network, ego_lane.Position(125.0, 0.0),
@@ -429,10 +438,19 @@ int ResetRoundaboutVehicles(Road* road) {
   PlanRouteTo(&ego, road->network, "nxs");
   road->vehicles.push_back(ego);
 
-  MakeRoundaboutIDM(road, {"we", "sx", 1}, 5.0, 16.0, "nxr");
-  MakeRoundaboutIDM(road, {"we", "sx", 0}, 20.0, 16.0, "sxr");
-  MakeRoundaboutIDM(road, {"we", "sx", 0}, -20.0, 16.0, "exr");
-  MakeRoundaboutIDM(road, {"eer", "ees", 0}, 50.0, 16.0, "nxr");
+  const std::array<LaneIndex, 4> lanes = {
+      {{"we", "sx", 1}, {"we", "sx", 0}, {"we", "sx", 0}, {"eer", "ees", 0}}};
+  const std::array<double, 4> positions = {5.0, 20.0, -20.0, 50.0};
+  const std::array<const char*, 3> destinations = {"exr", "sxr", "nxr"};
+  for (int i = 0; i < 4; ++i) {
+    const double position = positions[i] + NormalNoise(generator, 2.0);
+    const double speed = 16.0 + NormalNoise(generator, 2.0);
+    const int destination =
+        std::uniform_int_distribution<int>(0, 2)(*generator);
+    MakeRoundaboutIDM(road, lanes[i], position, speed,
+                      destinations[destination]);
+    road->vehicles.back().idm_delta = UniformValue(generator, 3.5, 4.5);
+  }
   return 0;
 }
 
@@ -602,7 +620,7 @@ Vehicle MakeTwoWayIDM(const RoadNetwork& network, const LaneIndex& lane_index,
   return vehicle;
 }
 
-int ResetTwoWayVehicles(Road* road) {
+int ResetTwoWayVehicles(Road* road, std::mt19937* generator) {
   road->vehicles.clear();
   const LaneIndex ego_lane_index{"a", "b", 1};
   const Lane& ego_lane = road->network.GetLane(ego_lane_index);
@@ -615,12 +633,16 @@ int ResetTwoWayVehicles(Road* road) {
   road->vehicles.push_back(ego);
 
   for (int i = 0; i < 3; ++i) {
+    const double position = 70.0 + 40.0 * i + NormalNoise(generator, 10.0);
+    const double speed = 24.0 + NormalNoise(generator, 2.0);
     road->vehicles.push_back(
-        MakeTwoWayIDM(road->network, {"a", "b", 1}, 70.0 + 40.0 * i, 24.0));
+        MakeTwoWayIDM(road->network, {"a", "b", 1}, position, speed));
   }
   for (int i = 0; i < 2; ++i) {
+    const double position = 200.0 + 100.0 * i + NormalNoise(generator, 10.0);
+    const double speed = 20.0 + NormalNoise(generator, 5.0);
     road->vehicles.push_back(
-        MakeTwoWayIDM(road->network, {"b", "a", 0}, 200.0 + 100.0 * i, 20.0));
+        MakeTwoWayIDM(road->network, {"b", "a", 0}, position, speed));
   }
   return 0;
 }
@@ -676,7 +698,7 @@ Vehicle MakeUTurnIDM(const RoadNetwork& network, const LaneIndex& lane_index,
   return vehicle;
 }
 
-int ResetUTurnVehicles(Road* road) {
+int ResetUTurnVehicles(Road* road, std::mt19937* generator) {
   road->vehicles.clear();
   const LaneIndex ego_lane_index{"a", "b", 0};
   const Lane& ego_lane = road->network.GetLane(ego_lane_index);
@@ -690,18 +712,24 @@ int ResetUTurnVehicles(Road* road) {
   PlanRouteTo(&ego, road->network, "d");
   road->vehicles.push_back(ego);
 
-  road->vehicles.push_back(
-      MakeUTurnIDM(road->network, {"a", "b", 0}, 25.0, 13.5));
-  road->vehicles.push_back(
-      MakeUTurnIDM(road->network, {"a", "b", 1}, 56.0, 14.5));
-  road->vehicles.push_back(
-      MakeUTurnIDM(road->network, {"b", "c", 1}, 0.5, 4.5));
-  road->vehicles.push_back(
-      MakeUTurnIDM(road->network, {"b", "c", 0}, 17.5, 5.5));
-  road->vehicles.push_back(
-      MakeUTurnIDM(road->network, {"c", "d", 0}, 1.0, 3.5));
-  road->vehicles.push_back(
-      MakeUTurnIDM(road->network, {"c", "d", 1}, 30.0, 5.5));
+  const std::array<LaneIndex, 6> lanes = {{{"a", "b", 0},
+                                           {"a", "b", 1},
+                                           {"b", "c", 1},
+                                           {"b", "c", 0},
+                                           {"c", "d", 0},
+                                           {"c", "d", 1}}};
+  const std::array<double, 6> positions = {25.0, 56.0, 0.5, 17.5, 1.0, 30.0};
+  const std::array<double, 6> speeds = {13.5, 14.5, 4.5, 5.5, 3.5, 5.5};
+  for (int i = 0; i < 6; ++i) {
+    const double position = positions[i] + NormalNoise(generator, 2.0);
+    const double speed = speeds[i] + NormalNoise(generator, 2.0);
+    road->vehicles.push_back(
+        MakeUTurnIDM(road->network, lanes[i], position, speed));
+    // Upstream randomizes the leading blocker's IDM behavior only.
+    if (i == 0) {
+      road->vehicles.back().idm_delta = UniformValue(generator, 3.5, 4.5);
+    }
+  }
   return 0;
 }
 
@@ -826,20 +854,35 @@ Vehicle MakeExitTraffic(const RoadNetwork& network, const LaneIndex& lane_index,
   return vehicle;
 }
 
-int ResetExitVehicles(Road* road) {
+int ResetExitVehicles(Road* road, std::mt19937* generator) {
   road->vehicles.clear();
   const LaneIndex ego_lane_index{"0", "1", 0};
   const Lane& ego_lane = road->network.GetLane(ego_lane_index);
-  Vehicle ego = MakeMDPVehicle(road->network, ego_lane.Position(30.0, 0.0),
-                               ego_lane.HeadingAt(30.0), 25.0, std::nullopt,
-                               std::nullopt, {18.0, 24.0, 30.0});
+  const double ego_offset = 2.0 * (12.0 + 25.0) * std::exp(-5.0 / 40.0 * 6.0);
+  const double ego_position =
+      ego_offset * (3.0 + UniformValue(generator, 0.9, 1.1));
+  Vehicle ego =
+      MakeMDPVehicle(road->network, ego_lane.Position(ego_position, 0.0),
+                     ego_lane.HeadingAt(ego_position), 25.0, std::nullopt,
+                     std::nullopt, {18.0, 24.0, 30.0});
   ego.lane_index = ego_lane_index;
   ego.target_lane_index = ego_lane_index;
   road->vehicles.push_back(ego);
 
   for (int i = 0; i < 20; ++i) {
-    const int lane = 1 + (i % 5);
-    const double longitudinal = 45.0 + 18.0 * static_cast<double>(i);
+    const std::array<double, 6> weights = {0, 1, 2, 3, 4, 5};
+    const int lane = std::discrete_distribution<int>(weights.begin(),
+                                                     weights.end())(*generator);
+    const Lane& traffic_lane = road->network.GetLane({"0", "1", lane});
+    double longitudinal = -std::numeric_limits<double>::infinity();
+    for (const auto& vehicle : road->vehicles) {
+      longitudinal = std::max(
+          longitudinal,
+          traffic_lane.LocalCoordinates(vehicle.position).longitudinal);
+    }
+    const double offset =
+        (12.0 + traffic_lane.SpeedLimit()) / 1.5 * std::exp(-5.0 / 40.0 * 6.0);
+    longitudinal += offset * UniformValue(generator, 0.9, 1.1);
     road->vehicles.push_back(
         MakeExitTraffic(road->network, {"0", "1", lane}, longitudinal));
   }
@@ -920,66 +963,91 @@ Vehicle MakeIntersectionIDM(const RoadNetwork& network, int incoming,
   return vehicle;
 }
 
-int ResetIntersectionVehicles(Road* road) {
-  road->regulated_steps = 3 * 15;
-  road->vehicles.clear();
-  const LaneIndex ego_lane_index{"o0", "ir0", 0};
-  const Lane& ego_lane = road->network.GetLane(ego_lane_index);
-  Vehicle ego = MakeMDPVehicle(road->network, ego_lane.Position(65.0, 0.0),
-                               ego_lane.HeadingAt(60.0), ego_lane.SpeedLimit(),
-                               std::nullopt, std::nullopt, {0.0, 4.5, 9.0});
-  ego.lane_index = ego_lane_index;
-  ego.target_lane_index = ego_lane_index;
-  ego.speed_index = 2;
-  ego.target_speed = 9.0;
-  PlanRouteTo(&ego, road->network, "o1");
-  road->vehicles.push_back(ego);
-
-  road->vehicles.push_back(
-      MakeIntersectionIDM(road->network, 1, 32.0, 8.0, "o3"));
-  road->vehicles.push_back(
-      MakeIntersectionIDM(road->network, 2, 44.0, 8.5, "o0"));
-  road->vehicles.push_back(
-      MakeIntersectionIDM(road->network, 3, 56.0, 7.5, "o1"));
-  road->vehicles.push_back(
-      MakeIntersectionIDM(road->network, 0, 85.0, 8.0, "o2"));
-  road->vehicles.push_back(
-      MakeIntersectionIDM(road->network, 1, 74.0, 8.0, "o2"));
-  return 0;
+void SpawnIntersectionVehicle(Road* road, std::mt19937* generator,
+                              double longitudinal, double probability,
+                              double position_deviation, double speed_deviation,
+                              bool straight) {
+  if (UniformValue(generator, 0.0, 1.0) > probability) {
+    return;
+  }
+  const int incoming = std::uniform_int_distribution<int>(0, 3)(*generator);
+  int outgoing = std::uniform_int_distribution<int>(0, 2)(*generator);
+  outgoing += static_cast<int>(outgoing >= incoming);
+  if (straight) {
+    outgoing = (incoming + 2) % 4;
+  }
+  const double position =
+      longitudinal + 5.0 + NormalNoise(generator, position_deviation);
+  const double speed = 8.0 + NormalNoise(generator, speed_deviation);
+  Vehicle vehicle = MakeIntersectionIDM(road->network, incoming, position,
+                                        speed, "o" + std::to_string(outgoing));
+  for (const Vehicle& other : road->vehicles) {
+    if (Norm(other.position - vehicle.position) < 15.0) {
+      return;
+    }
+  }
+  vehicle.idm_delta = UniformValue(generator, 3.5, 4.5);
+  road->vehicles.push_back(vehicle);
 }
 
-int ResetMultiAgentIntersectionVehicles(Road* road) {
-  road->regulated_steps = 3 * 15;
+void UpdateIntersectionTraffic(Road* road, std::mt19937* generator, int players,
+                               double spawn_probability) {
+  road->vehicles.erase(
+      std::remove_if(
+          road->vehicles.begin() + players, road->vehicles.end(),
+          [&](const Vehicle& vehicle) {
+            const LaneIndex& index = vehicle.lane_index;
+            const Lane& lane = road->network.GetLane(index);
+            return vehicle.route.empty() ||
+                   (index.from.find("il") != std::string::npos &&
+                    index.to.find('o') != std::string::npos &&
+                    lane.LocalCoordinates(vehicle.position).longitudinal >=
+                        lane.Length() - 4.0 * kVehicleLength);
+          }),
+      road->vehicles.end());
+  SpawnIntersectionVehicle(road, generator, 0.0, spawn_probability, 1.0, 1.0,
+                           false);
+}
+
+int ResetIntersectionVehicles(Road* road, std::mt19937* generator, int players,
+                              int simulation_frequency) {
+  road->regulated_steps = 0;
   road->vehicles.clear();
+  for (int i = 0; i < 9; ++i) {
+    SpawnIntersectionVehicle(road, generator, 80.0 * i / 9.0, 0.6, 1.0, 1.0,
+                             false);
+  }
+  for (int frame = 0; frame < 3 * simulation_frequency; ++frame) {
+    road->Act();
+    road->Step(1.0 / simulation_frequency);
+  }
+  SpawnIntersectionVehicle(road, generator, 60.0, 1.0, 0.1, 0.0, true);
 
-  const LaneIndex ego0_lane_index{"o0", "ir0", 0};
-  const Lane& ego0_lane = road->network.GetLane(ego0_lane_index);
-  Vehicle ego0 =
-      MakeMDPVehicle(road->network, ego0_lane.Position(65.0, 0.0),
-                     ego0_lane.HeadingAt(60.0), ego0_lane.SpeedLimit());
-  ego0.lane_index = ego0_lane_index;
-  ego0.target_lane_index = ego0_lane_index;
-  ego0.speed_index = 0;
-  ego0.target_speed = 20.0;
-  PlanRouteTo(&ego0, road->network, "o1");
-  road->vehicles.push_back(ego0);
-
-  const LaneIndex ego1_lane_index{"o1", "ir1", 0};
-  const Lane& ego1_lane = road->network.GetLane(ego1_lane_index);
-  Vehicle ego1 =
-      MakeMDPVehicle(road->network, ego1_lane.Position(66.0, 0.0),
-                     ego1_lane.HeadingAt(60.0), ego1_lane.SpeedLimit());
-  ego1.lane_index = ego1_lane_index;
-  ego1.target_lane_index = ego1_lane_index;
-  ego1.speed_index = 0;
-  ego1.target_speed = 20.0;
-  PlanRouteTo(&ego1, road->network, "o1");
-  road->vehicles.push_back(ego1);
-
-  road->vehicles.push_back(
-      MakeIntersectionIDM(road->network, 2, 55.0, 8.5, "o0"));
-  road->vehicles.push_back(
-      MakeIntersectionIDM(road->network, 3, 70.0, 7.5, "o1"));
+  std::vector<Vehicle> controlled;
+  for (int player = 0; player < players; ++player) {
+    const std::string index = std::to_string(player % 4);
+    const LaneIndex lane_index{"o" + index, "ir" + index, 0};
+    const Lane& lane = road->network.GetLane(lane_index);
+    const double longitudinal = 65.0 + NormalNoise(generator, 5.0);
+    Vehicle ego = MakeMDPVehicle(
+        road->network, lane.Position(longitudinal, 0.0), lane.HeadingAt(60.0),
+        lane.SpeedLimit(), std::nullopt, std::nullopt, {0.0, 4.5, 9.0});
+    ego.lane_index = lane_index;
+    ego.target_lane_index = lane_index;
+    ego.speed_index = 2;
+    ego.target_speed = 9.0;
+    PlanRouteTo(&ego, road->network, "o1");
+    road->vehicles.erase(
+        std::remove_if(road->vehicles.begin(), road->vehicles.end(),
+                       [&](const Vehicle& vehicle) {
+                         return Norm(vehicle.position - ego.position) < 20.0;
+                       }),
+        road->vehicles.end());
+    controlled.push_back(ego);
+  }
+  // EnvPool addresses controlled players by their leading vehicle indexes.
+  road->vehicles.insert(road->vehicles.begin(), controlled.begin(),
+                        controlled.end());
   return 0;
 }
 
@@ -1120,14 +1188,25 @@ Road MakeRacetrackRoad(const std::string& scenario) {
   return road;
 }
 
-int ResetRacetrackVehicles(Road* road, double longitudinal, int lane) {
+int ResetRacetrackVehicles(Road* road, std::mt19937* generator) {
   road->vehicles.clear();
+  const int lanes = road->network.AllSideLanes({"a", "b", 0}).size();
+  const int lane = std::uniform_int_distribution<int>(0, lanes - 1)(*generator);
+  const double longitudinal = UniformValue(generator, 20.0, 50.0);
   const LaneIndex lane_index{"a", "b", lane};
   const double speed_limit = road->network.GetLane(lane_index).SpeedLimit();
   Vehicle ego =
       MakeVehicleOnLane(road->network, lane_index, longitudinal, speed_limit);
   ego.kind = VehicleKind::kVehicle;
   road->vehicles.push_back(ego);
+  const LaneIndex front_lane{"b", "c", lane};
+  const Lane& front = road->network.GetLane(front_lane);
+  const double front_position = UniformValue(generator, 0.0, front.Length());
+  const double front_speed = UniformValue(generator, 6.0, 9.0);
+  Vehicle traffic =
+      MakeIDMVehicle(road->network, front.Position(front_position, 0),
+                     front.HeadingAt(front_position), front_speed);
+  road->vehicles.push_back(traffic);
   return 0;
 }
 

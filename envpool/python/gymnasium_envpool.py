@@ -224,7 +224,8 @@ class GymnasiumEnvPoolMeta(
                 return obs, info
             done = cast(np.ndarray, state["done"])
             trunc = cast(np.ndarray, state["trunc"])
-            terminated = done & ~trunc
+            # Some tasks can terminate on the same step as the time limit.
+            terminated = state.get("terminated", done & ~trunc)
             return obs, state["reward"], terminated, trunc, info
 
         attrs["_to"] = _to_gymnasium

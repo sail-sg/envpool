@@ -1,0 +1,8 @@
+--- src/m_specialpaths.cpp
++++ src/m_specialpaths.cpp
+@@ -531 +531,4 @@
+-		if (mkdir (path, S_IRUSR | S_IWUSR | S_IXUSR) == -1)
++		// Another Doom instance may create the directory after stat().
++		if (mkdir (path, S_IRUSR | S_IWUSR | S_IXUSR) == -1 &&
++			(errno != EEXIST || stat (path, &info) == -1 ||
++			 !S_ISDIR(info.st_mode)))

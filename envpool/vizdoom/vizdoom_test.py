@@ -14,17 +14,59 @@
 """Unit tests for vizdoom environments."""
 
 import os
-from contextlib import contextmanager
+from contextlib import chdir, contextmanager
+from tempfile import TemporaryDirectory
 from typing import Any, Iterator
 
 import numpy as np
-from absl.testing import absltest
+from absl.testing import absltest, parameterized
 
-import envpool.vizdoom.registration  # noqa: F401
+import envpool.vizdoom.registration as vizdoom_registration
+from envpool.python.seed_test_utils import (
+    check_seeded_resets,
+    check_seeded_rollouts,
+    registered_task_ids,
+)
 from envpool.registration import make_dm, make_gym, make_spec
 
 
-class _VizdoomEnvPoolBasicTest(absltest.TestCase):
+class _VizdoomEnvPoolBasicTest(parameterized.TestCase):
+    @parameterized.named_parameters([
+        (task_id.replace("-", "_"), task_id)
+        for task_id in registered_task_ids("envpool.vizdoom")
+    ])
+    def test_seed_determinism(self, task_id: str) -> None:
+        """Check every registered scenario, including the custom factory."""
+        kwargs: dict[str, Any] = {}
+        if task_id == "VizdoomCustom-v1":
+            # The custom factory requires caller-supplied scenario files.
+            kwargs = {
+                "cfg_path": os.path.join(
+                    vizdoom_registration.maps_path, "basic.cfg"
+                ),
+                "wad_path": os.path.join(
+                    vizdoom_registration.maps_path, "basic.wad"
+                ),
+            }
+        # The engine writes _vizdoom in cwd, as in the render test harness.
+        with (
+            TemporaryDirectory(prefix="vizdoom-seed-") as directory,
+            chdir(directory),
+        ):
+            check_seeded_resets(
+                self, task_id, expected=(None, None, None), **kwargs
+            )
+            check_seeded_rollouts(self, task_id, **kwargs)
+
+    def test_invalid_scenario_mode_reports_initialization_error(self) -> None:
+        """Failed startup must report the engine error without crashing cleanup."""
+        with (
+            TemporaryDirectory(prefix="vizdoom-invalid-mode-") as directory,
+            chdir(directory),
+            self.assertRaises(RuntimeError),
+        ):
+            make_gym("Cig-v1", num_envs=1, game_args="")
+
     @contextmanager
     def _managed_env(self, env: Any) -> Iterator[Any]:
         try:
