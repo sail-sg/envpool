@@ -113,6 +113,76 @@ _HEADER_HEIGHT = 28
 _MARGIN = 16
 
 
+def _make_craftax_family() -> RenderFamily:
+    """Build the Craftax comparison adapter using actual gameplay frames."""
+    import envpool.craftax.registration  # noqa: F401
+    from envpool.craftax.oracle import (
+        encode,
+        jax,
+        make_oracle,
+        native,
+        renderer,
+    )
+    from envpool.registration import make_gymnasium
+
+    scenes = {
+        "Classic": (True, 0, 96),
+        "Craftax": (False, 0, 96),
+        "Cave": (False, 2, 48),
+    }
+
+    def render_pair(
+        scene: str, cfg: RenderCompareConfig
+    ) -> tuple[np.ndarray, np.ndarray]:
+        classic, level, length = scenes[scene]
+        task = (
+            "Craftax-"
+            + ("Classic-" if classic else "")
+            + "Symbolic-AutoReset-v1"
+        )
+        oracle, params = make_oracle(task)
+        key = jax.random.PRNGKey(cfg.seed)
+        _, state = oracle.reset(key, params)
+        kwargs = {}
+        if level:
+            state = state.replace(
+                player_level=jax.numpy.asarray(level, dtype=jax.numpy.int32),
+                player_position=state.up_ladders[level],
+            )
+            layout = native.Game(native.Params(classic)).get_state()
+            kwargs["initial_state"] = encode(state, layout).tolist()
+        pool = make_gymnasium(
+            task, num_envs=1, seed=cfg.seed, render_mode="rgb_array", **kwargs
+        )
+        step = jax.jit(oracle.step)
+        rng = np.random.default_rng(40)
+        try:
+            pool.reset()
+            for _ in range(length):
+                key, draw = jax.random.split(key)
+                action = int(rng.integers(17 if classic else 43))
+                _, state, _, _, _ = step(draw, state, action, params)
+                pool.step(np.array([action], np.int32))
+            actual = np.asarray(pool.render())[0]
+            expected = np.asarray(renderer(classic)(state)).astype(np.uint8)
+            np.testing.assert_array_equal(actual, expected)
+            return actual, expected
+        finally:
+            pool.close()
+
+    return RenderFamily(
+        items=tuple(
+            RenderItem(key=scene, label=f"{scene} / {length} actions")
+            for scene, (_, _, length) in scenes.items()
+        ),
+        default_output=Path(
+            "docs/_static/render_samples/craftax_official_compare.png"
+        ),
+        render_pair=render_pair,
+        right_title="Official Craftax 1.6.1",
+    )
+
+
 def _make_metaworld_family() -> RenderFamily:
     """Build the MetaWorld render comparison adapter."""
     import mujoco
@@ -1342,6 +1412,7 @@ def _make_mujoco_playground_family() -> RenderFamily:
 
 
 _FAMILY_BUILDERS: dict[str, Callable[[], RenderFamily]] = {
+    "craftax": _make_craftax_family,
     "jumanji": _make_jumanji_family,
     "metaworld": _make_metaworld_family,
     "mujoco_playground": _make_mujoco_playground_family,

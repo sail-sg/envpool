@@ -144,6 +144,14 @@ EnvPool is on the left and the pinned official renderer is on the right.
 The documentation generator checks exact RGB equality after each displayed
 action sequence before writing the comparison image.
 
+Regenerate it with the shared documentation tool:
+
+.. code-block:: bash
+
+   bazel run --config=test //scripts:render_compare -- \
+     --family=craftax --seed=11 --columns=1 --require-bitwise \
+     --tile-width=352 --tile-height=416
+
 Validation
 ----------
 
@@ -177,6 +185,3 @@ The observation tests allow only these demonstrated exceptions:
 Inventory, all other channels and scalar tails, symbolic observations, game
 state, rewards, information, and rendered uint8 RGB frames remain exact.
 There is no general observation or gameplay tolerance.
-
-The implementation and acceptance record is maintained in
-``docs/plans/active/2026-08-27-craftax-native.md``.

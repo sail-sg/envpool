@@ -60,13 +60,3 @@ cc_library(
     name = "constants",
     hdrs = [":generate_constants"],
 )
-
-py_binary(
-    name = "render_compare",
-    testonly = True,
-    srcs = ["render_compare.py"],
-    deps = [
-        "//envpool/craftax:craftax_registration",
-        "//envpool/craftax:oracle",
-    ],
-)
