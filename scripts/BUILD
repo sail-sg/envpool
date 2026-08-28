@@ -18,10 +18,13 @@ load("//third_party/jumanji:oracle_requirements.bzl", "jumanji_oracle_requiremen
 
 py_binary(
     name = "render_compare",
+    testonly = True,
     srcs = ["render_compare.py"],
     imports = [".."],
     visibility = ["//visibility:public"],
     deps = [
+        "//envpool/craftax:craftax_registration",
+        "//envpool/craftax:oracle",
         "//envpool/jumanji",
         "//envpool/jumanji:jumanji_registration",
         "//envpool/mujoco:metaworld",

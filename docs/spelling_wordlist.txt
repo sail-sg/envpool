@@ -118,3 +118,14 @@ Goalcycle
 GoalCycle
 gridworld
 Ndousse
+Craftax
+renderers
+autoreset
+AutoReset
+namedtuples
+reproducibility
+Threefry
+partitionable
+JAXlib
+grayscale
+gameplay

@@ -66,6 +66,7 @@ _FAMILY_SMOKE_TASKS: dict[str, tuple[str, ...]] = {
     "envpool.atari": ("Defender-v5",),
     "envpool.box2d": ("LunarLander-v3",),
     "envpool.classic_control": ("CartPole-v1",),
+    "envpool.craftax": ("Craftax-Symbolic-v1",),
     "envpool.gfootball": ("gfootball/academy_empty_goal_close-v1",),
     "envpool.highway": ("HighwayFast-v0",),
     "envpool.jumanji": ("Game2048-v1",),

@@ -1,0 +1,7 @@
+# Craftax source is supplied by the pinned archive, not a runtime wheel.
+jax[cpu]==0.11.1
+flax==0.12.9
+numpy==2.5.2
+imageio==2.37.4
+pillow==12.3.0
+matplotlib==3.11.1

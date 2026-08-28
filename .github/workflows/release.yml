@@ -133,10 +133,13 @@ jobs:
           python -m pip install --upgrade cmake ninja
           CMAKE_BIN_DIR="$(python -c "import cmake; print(cmake.CMAKE_BIN_DIR)")"
           CMAKE_BIN="$CMAKE_BIN_DIR/cmake"
+          NINJA_BIN="$(python -c 'import sysconfig; print(sysconfig.get_path("scripts") + "/ninja")')"
           echo "$CMAKE_BIN_DIR" >> "$GITHUB_PATH"
           ln -sfn "$CMAKE_BIN" /usr/local/bin/cmake
+          # The ARM64 Bazel toolchain finds Ninja through the action PATH.
+          ln -sfn "$NINJA_BIN" /usr/local/bin/ninja
           PATH="$CMAKE_BIN_DIR:$PATH" cmake --version
-          ninja --version
+          PATH=/bin:/usr/bin:/usr/local/bin ninja --version
       - name: Cache Qt 6
         id: qt-cache
         uses: actions/cache@v6
