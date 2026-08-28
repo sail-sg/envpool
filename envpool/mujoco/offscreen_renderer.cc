@@ -21,11 +21,13 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <future>
 #include <limits>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 #if defined(__APPLE__) && __has_include(<OpenGL/OpenGL.h>)
@@ -214,36 +216,108 @@ namespace {
 
 constexpr char kWindowClassName[] = "EnvPoolMuJoCoOffscreenWindow";
 
-void EnsureWindowClassRegistered() {
-  static std::once_flag registered;
-  std::call_once(registered, [] {
-    WNDCLASSA window_class = {};
-    window_class.style = CS_OWNDC;
-    window_class.lpfnWndProc = DefWindowProcA;
-    window_class.hInstance = GetModuleHandleA(nullptr);
-    window_class.lpszClassName = kWindowClassName;
-    if (RegisterClassA(&window_class) == 0 &&
-        GetLastError() != ERROR_CLASS_ALREADY_EXISTS) {
-      throw std::runtime_error("failed to register WGL window class");
+// WGL contexts can move between workers once unbound, but DestroyWindow must
+// run on the window's creating thread. Keep only HWND ownership on one shared
+// message thread; rendering still runs concurrently on the EnvPool workers.
+class WglWindowThread {
+ public:
+  WglWindowThread() {
+    static std::once_flag registered;
+    std::call_once(registered, [] {
+      WNDCLASSA window_class = {};
+      window_class.style = CS_OWNDC;
+      window_class.lpfnWndProc = WindowProc;
+      window_class.hInstance = GetModuleHandleA(nullptr);
+      window_class.lpszClassName = kWindowClassName;
+      if (RegisterClassA(&window_class) == 0 &&
+          GetLastError() != ERROR_CLASS_ALREADY_EXISTS) {
+        throw std::runtime_error("failed to register WGL window class");
+      }
+    });
+    std::promise<HWND> ready;
+    auto result = ready.get_future();
+    thread_ = std::thread([&ready] {
+      HWND dispatcher = CreateWindowExA(
+          0, kWindowClassName, "EnvPoolWGLDispatcher", 0, 0, 0, 0, 0,
+          HWND_MESSAGE, nullptr, GetModuleHandleA(nullptr), nullptr);
+      ready.set_value(dispatcher);
+      if (dispatcher == nullptr) return;
+      MSG message;
+      while (GetMessageA(&message, nullptr, 0, 0) > 0) {
+        TranslateMessage(&message);
+        DispatchMessageA(&message);
+      }
+      DestroyWindow(dispatcher);
+    });
+    dispatcher_ = result.get();
+    if (dispatcher_ == nullptr) {
+      thread_.join();
+      throw std::runtime_error("failed to create WGL window dispatcher");
     }
-  });
-}
+  }
+
+  ~WglWindowThread() {
+    SendMessageA(dispatcher_, kStop, 0, 0);
+    thread_.join();
+  }
+
+  HWND Create() const {
+    return reinterpret_cast<HWND>(SendMessageA(dispatcher_, kCreate, 0, 0));
+  }
+
+  void Destroy(HWND window) const {
+    SendMessageA(dispatcher_, kDestroy, 0, reinterpret_cast<LPARAM>(window));
+  }
+
+  static std::shared_ptr<WglWindowThread> Acquire() {
+    static std::mutex mutex;
+    static std::weak_ptr<WglWindowThread> existing;
+    const std::lock_guard<std::mutex> lock(mutex);
+    auto owner = existing.lock();
+    if (!owner) {
+      owner = std::make_shared<WglWindowThread>();
+      existing = owner;
+    }
+    return owner;
+  }
+
+ private:
+  static constexpr UINT kCreate = WM_APP + 1;
+  static constexpr UINT kDestroy = WM_APP + 2;
+  static constexpr UINT kStop = WM_APP + 3;
+
+  static LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam,
+                                     LPARAM lparam) {
+    if (message == kCreate) {
+      return reinterpret_cast<LRESULT>(CreateWindowExA(
+          0, kWindowClassName, "EnvPoolMuJoCoOffscreen", WS_OVERLAPPEDWINDOW, 0,
+          0, 1, 1, nullptr, nullptr, GetModuleHandleA(nullptr), nullptr));
+    }
+    if (message == kDestroy)
+      return DestroyWindow(reinterpret_cast<HWND>(lparam));
+    if (message == kStop) {
+      PostQuitMessage(0);
+      return 0;
+    }
+    return DefWindowProcA(window, message, wparam, lparam);
+  }
+
+  HWND dispatcher_{nullptr};
+  std::thread thread_;
+};
 
 }  // namespace
 
 class WglContext final : public GlContext {
  public:
-  WglContext() {
-    EnsureWindowClassRegistered();
-    window_ = CreateWindowExA(0, kWindowClassName, "EnvPoolMuJoCoOffscreen",
-                              WS_OVERLAPPEDWINDOW, 0, 0, 1, 1, nullptr, nullptr,
-                              GetModuleHandleA(nullptr), nullptr);
+  WglContext() : window_thread_(WglWindowThread::Acquire()) {
+    window_ = window_thread_->Create();
     if (window_ == nullptr) {
       throw std::runtime_error("failed to create WGL window");
     }
     device_context_ = GetDC(window_);
     if (device_context_ == nullptr) {
-      DestroyWindow(window_);
+      window_thread_->Destroy(window_);
       window_ = nullptr;
       throw std::runtime_error("failed to acquire WGL device context");
     }
@@ -263,7 +337,7 @@ class WglContext final : public GlContext {
         SetPixelFormat(device_context_, format_id, &pixel_format) == FALSE) {
       ReleaseDC(window_, device_context_);
       device_context_ = nullptr;
-      DestroyWindow(window_);
+      window_thread_->Destroy(window_);
       window_ = nullptr;
       throw std::runtime_error("failed to configure WGL pixel format");
     }
@@ -272,7 +346,7 @@ class WglContext final : public GlContext {
     if (context_ == nullptr) {
       ReleaseDC(window_, device_context_);
       device_context_ = nullptr;
-      DestroyWindow(window_);
+      window_thread_->Destroy(window_);
       window_ = nullptr;
       throw std::runtime_error("failed to create WGL context");
     }
@@ -287,7 +361,7 @@ class WglContext final : public GlContext {
       ReleaseDC(window_, device_context_);
     }
     if (window_ != nullptr) {
-      DestroyWindow(window_);
+      window_thread_->Destroy(window_);
     }
   }
 
@@ -304,6 +378,7 @@ class WglContext final : public GlContext {
   }
 
  private:
+  std::shared_ptr<WglWindowThread> window_thread_;
   HWND window_{nullptr};
   HDC device_context_{nullptr};
   HGLRC context_{nullptr};
@@ -578,8 +653,10 @@ class EglContext final : public GlContext {
 #endif
 
 std::shared_ptr<GlContext> CreateGlContext(bool share_cgl_context,
-                                           bool prefer_offline_cgl_context) {
+                                           bool prefer_offline_cgl_context,
+                                           bool borrow_wgl_context) {
 #if defined(ENVPOOL_HAS_CGL)
+  (void)borrow_wgl_context;
   if (share_cgl_context) {
     if (prefer_offline_cgl_context) {
       thread_local std::shared_ptr<GlContext> offline_context =
@@ -597,7 +674,8 @@ std::shared_ptr<GlContext> CreateGlContext(bool share_cgl_context,
 #elif defined(ENVPOOL_HAS_WGL)
   (void)share_cgl_context;
   (void)prefer_offline_cgl_context;
-  if (wglGetCurrentContext() != nullptr && wglGetCurrentDC() != nullptr) {
+  if (borrow_wgl_context && wglGetCurrentContext() != nullptr &&
+      wglGetCurrentDC() != nullptr) {
     // Borrowed WGL handles become invalid if another library later calls
     // `glfw.terminate()`, so do not cache them across renderer instances.
     return std::make_shared<BorrowedWglContext>();
@@ -610,6 +688,7 @@ std::shared_ptr<GlContext> CreateGlContext(bool share_cgl_context,
 #elif defined(ENVPOOL_HAS_EGL)
   (void)share_cgl_context;
   (void)prefer_offline_cgl_context;
+  (void)borrow_wgl_context;
   // EnvPool worker threads can process a different environment on a later
   // reset/step. If multiple renderers created on one worker share a thread
   // local EGLContext, those renderers can later try to make the same context
@@ -619,6 +698,7 @@ std::shared_ptr<GlContext> CreateGlContext(bool share_cgl_context,
 #else
   (void)share_cgl_context;
   (void)prefer_offline_cgl_context;
+  (void)borrow_wgl_context;
   throw std::runtime_error(
       "MuJoCo rendering is unsupported on this platform/build");
 #endif
@@ -628,11 +708,13 @@ OffscreenRenderer::OffscreenRenderer(CameraPolicy camera_policy,
                                      bool disable_auxiliary_visuals,
                                      bool share_cgl_context,
                                      bool prefer_offline_cgl_context,
-                                     bool resize_offscreen)
+                                     bool resize_offscreen,
+                                     bool borrow_wgl_context)
     : camera_policy_(camera_policy),
       share_cgl_context_(share_cgl_context),
       prefer_offline_cgl_context_(prefer_offline_cgl_context),
-      resize_offscreen_(resize_offscreen) {
+      resize_offscreen_(resize_offscreen),
+      borrow_wgl_context_(borrow_wgl_context) {
   mjv_defaultScene(&scene_);
   mjv_defaultCamera(&camera_);
   mjv_defaultOption(&option_);
@@ -675,8 +757,8 @@ OffscreenRenderer::~OffscreenRenderer() {
 }
 
 void OffscreenRenderer::Initialize(const mjModel* model) {
-  gl_context_ =
-      CreateGlContext(share_cgl_context_, prefer_offline_cgl_context_);
+  gl_context_ = CreateGlContext(share_cgl_context_, prefer_offline_cgl_context_,
+                                borrow_wgl_context_);
   gl_context_->MakeCurrent();
   mjv_makeScene(model, &scene_, 10000);
   mjr_makeContext(model, &context_, mjFONTSCALE_150);

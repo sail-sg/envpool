@@ -607,18 +607,12 @@ void Simulation::Render(int width, int height, int camera,
   // dm_control.wrapper.MjvOption disables rangefinder visualization, unlike
   // MuJoCo's raw default (visible on Soccer Ant's eight rangefinders).
   settings.flags[mjVIS_RANGEFINDER] = 0;
-#ifdef _WIN32
-  envpool::mujoco::OffscreenRenderer renderer(
-      envpool::mujoco::CameraPolicy::kDmControl);
-  renderer.Render(model_.get(), data_.get(), width, height, camera, output,
-                  nullptr, &settings);
-#else
   if (!renderer_)
     renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
-        envpool::mujoco::CameraPolicy::kDmControl, false, false, true, false);
+        envpool::mujoco::CameraPolicy::kDmControl, false, false, true, false,
+        false);
   renderer_->Render(model_.get(), data_.get(), width, height, camera, output,
                     nullptr, &settings);
-#endif
 }
 
 }  // namespace mujoco_locomotion

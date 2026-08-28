@@ -51,6 +51,38 @@ configure_macos_dm_control_renderer()
 class LocomotionAlignTest(parameterized.TestCase):
     """Compare native rollouts to independent Composer task state."""
 
+    def assert_rewards(
+        self, native: np.ndarray, oracle: Any, task: str, context: str
+    ) -> None:
+        """Compare rewards with only the measured scalar-math residuals."""
+        expected = np.broadcast_to(oracle, native.shape)
+        if (
+            task == "rodent_two_touch"
+            and platform.system() == "Linux"
+            and platform.machine().lower() in {"x86_64", "amd64"}
+        ):
+            # NumPy's x86 SIMD exp and scalar glibc exp differ by one ULP.
+            # The .01 * exp(-3 * distance) * 25 shaping term can amplify that
+            # to two ULPs. Recomputing the oracle with math.exp reproduces the
+            # native result exactly, including all three contact transitions.
+            with self.subTest(context=context):
+                np.testing.assert_array_max_ulp(native, expected, maxulp=2)
+            return
+        # Bowl's 3-vector norm differs by one ULP between BLAS and MuJoCo,
+        # amplified by cancellation in 1 - (6 - distance) / 6. Tracking also
+        # combines scalar exp and quaternion reductions (see tracking.cc).
+        np.testing.assert_allclose(
+            native,
+            expected,
+            rtol=0,
+            atol=3e-15
+            if task == "cmu_humanoid_tracking"
+            else 1e-16
+            if task == "rodent_escape_bowl"
+            else 0,
+            err_msg=context,
+        )
+
     def assert_observations(
         self, native: dict, oracle: dict, task: str, context: str
     ) -> None:
@@ -255,18 +287,11 @@ class LocomotionAlignTest(parameterized.TestCase):
                 task,
                 f"{task}, {pattern}, step {step}",
             )
-            # Bowl uses a 3-vector norm: BLAS and MuJoCo can differ by one
-            # ULP, amplified by cancellation in 1 - (6 - distance) / 6.
-            np.testing.assert_allclose(
+            self.assert_rewards(
                 timestep.reward,
-                np.broadcast_to(oracle_ts.reward, (player_count,)),
-                rtol=0,
-                atol=3e-15
-                if task == "cmu_humanoid_tracking"
-                else 1e-16
-                if task == "rodent_escape_bowl"
-                else 0,
-                err_msg=f"{task}, reward step {step}",
+                oracle_ts.reward,
+                task,
+                f"{task}, reward step {step}",
             )
             np.testing.assert_array_equal(
                 timestep.discount,
@@ -512,7 +537,12 @@ class LocomotionAlignTest(parameterized.TestCase):
                 task,
                 f"two_touch, outcome {outcome}, step {step}",
             )
-            np.testing.assert_array_equal(timestep.reward, [oracle_ts.reward])
+            self.assert_rewards(
+                timestep.reward,
+                oracle_ts.reward,
+                task,
+                f"two_touch, outcome {outcome}, reward step {step}",
+            )
             np.testing.assert_array_equal(
                 timestep.discount, [oracle_ts.discount]
             )
