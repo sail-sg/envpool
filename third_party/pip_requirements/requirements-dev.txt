@@ -20,6 +20,8 @@ torch>=1.0,!=2.0.0,!=2.0.1
 tianshou>=0.5.1,<1.0.0
 opencv-python-headless==5.0.0.93
 dm-control==1.0.44
+# DMC's mocap loader uses FieldDescriptor.label, removed in protobuf 7.
+protobuf==6.33.6
 mujoco==3.11.0
 mujoco-mjx==3.11.0
 trimesh==5.0.0

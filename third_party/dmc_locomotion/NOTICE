@@ -1,0 +1,18 @@
+Native dm_control locomotion assets and implementation
+
+Models, textures, task definitions and preprocessed motion capture data:
+Copyright The dm_control Authors, licensed under Apache License 2.0.
+https://github.com/google-deepmind/dm_control/tree/1.0.44
+
+LabMaze maze generator and texture assets:
+Copyright The LabMaze Authors, licensed under Apache License 2.0.
+https://github.com/google-deepmind/labmaze
+
+The original motion capture database was created by Carnegie Mellon University.
+It may be copied, modified and redistributed; see http://mocap.cs.cmu.edu/faqs.php.
+The dm_control authors fitted this data to the CMU humanoid. This package
+includes only CMU_077_02 from the 2019 dataset and the 36 WALK_TINY clips from
+the 2020 dataset. The original float32 samples are preserved.
+
+The cubic-spline terrain interpolation is derived from SciPy's BSD-licensed
+ndimage implementation. See LICENSE.scipy.

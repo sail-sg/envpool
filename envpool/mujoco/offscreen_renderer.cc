@@ -736,6 +736,11 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
   if (resize_offscreen_ &&
       (context_.offWidth != width || context_.offHeight != height)) {
     mjr_resizeOffscreen(width, height, &context_);
+  } else if (width > context_.offWidth || height > context_.offHeight) {
+    // A persistent DMC framebuffer must still cover the requested viewport.
+    // Grow without shrinking it between egocentric and public render calls.
+    mjr_resizeOffscreen(std::max(width, context_.offWidth),
+                        std::max(height, context_.offHeight), &context_);
   }
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
   UpdateCamera(model, data, camera_id, camera_override);

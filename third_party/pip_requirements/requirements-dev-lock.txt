@@ -68,7 +68,7 @@ pandas==3.0.5
 pettingzoo==1.27.0
 pgx==2.6.0
 pillow==12.3.0
-protobuf==7.35.1
+protobuf==6.33.6
 pygame-ce==2.5.8
 pyopengl==3.1.10
 pyparsing==3.3.2

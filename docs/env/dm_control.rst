@@ -22,6 +22,9 @@ converted into ``DomainNameTaskName-v1`` in envpool, e.g.,
 EnvPool implements the ``suite.ALL_TASKS`` task set from
 ``dm_control==1.0.44``.
 
+Composer locomotion examples and Soccer are covered separately in
+:doc:`dm_control_locomotion`.
+
 
 Render Compare
 --------------

@@ -1,0 +1,3 @@
+# Build tooling only: no dm_control or HDF5 dependency enters EnvPool runtime.
+h5py==3.16.0
+numpy==2.5.2

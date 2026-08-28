@@ -1,0 +1,175 @@
+DeepMind Control Locomotion
+===========================
+
+EnvPool implements the ten example factories and all three Soccer walker types
+from ``dm_control==1.0.44``, using ``mujoco==3.11.0``. These Composer tasks are
+separate from :doc:`dm_control`, which implements ``suite.ALL_TASKS``.
+The independent ``dm_control.manipulation`` task collection is not included here.
+
+Scene construction, maze generation, terrain generation, motion capture loading,
+observations, stepping, rewards, and rendering run in C++. The official Python
+package is only an oracle for tests and documentation generation.
+
+Registered tasks
+----------------
+
+Each task also has an alias of the form
+``dm_control/locomotion/<upstream_factory_name>``. The registry is generated from
+the pinned upstream example factories and ``soccer.WalkerType`` enumeration.
+
+.. list-table:: Tasks
+   :header-rows: 1
+   :widths: 48 12 16 24
+
+   * - EnvPool ID
+     - Actions
+     - Time limit
+     - Task
+   * - ``DmcCmuHumanoidRunWalls-v1``
+     - 56
+     - 30 s
+     - Corridor with walls
+   * - ``DmcCmuHumanoidRunGaps-v1``
+     - 56
+     - 30 s
+     - Corridor with gaps
+   * - ``DmcCmuHumanoidGoToTarget-v1``
+     - 56
+     - 30 s
+     - Reach a target
+   * - ``DmcCmuHumanoidMazeForage-v1``
+     - 56
+     - 30 s
+     - Random maze foraging
+   * - ``DmcCmuHumanoidHeterogeneousForage-v1``
+     - 56
+     - 25 s
+     - Targets with positive and negative rewards
+   * - ``DmcRodentEscapeBowl-v1``
+     - 38
+     - 20 s
+     - Escape a generated terrain bowl
+   * - ``DmcRodentRunGaps-v1``
+     - 38
+     - 30 s
+     - Corridor with gaps
+   * - ``DmcRodentMazeForage-v1``
+     - 38
+     - 30 s
+     - Random maze foraging
+   * - ``DmcRodentTwoTouch-v1``
+     - 38
+     - 30 s
+     - Touch a target twice at the required interval
+   * - ``DmcCmuHumanoidTracking-v1``
+     - 56
+     - 30 s
+     - All 36 ``WALK_TINY`` motion capture clips
+   * - ``DmcSoccerBoxhead-v1``
+     - 3 per player
+     - 45 s
+     - Soccer with BoxHead walkers
+   * - ``DmcSoccerAnt-v1``
+     - 8 per player
+     - 45 s
+     - Soccer with Ant walkers
+   * - ``DmcSoccerHumanoid-v1``
+     - 56 per player
+     - 45 s
+     - Soccer with CMU humanoid walkers
+
+All actions are ``float64`` with bounds ``[-1, 1]``. Control timesteps are
+0.03 s for CMU examples, 0.02 s for rodent examples, and 0.025 s for Soccer.
+``time_limit`` overrides the task's limit in seconds; ``max_episode_steps``
+can impose a shorter limit in control steps. Failures and task completion can
+end an episode earlier. Tracking clip boundaries preserve the upstream
+discount of one and are reported as truncations by the Gymnasium API.
+
+Observations and rendering
+--------------------------
+
+Gymnasium observations are dictionaries with the original upstream keys,
+including slashes such as ``walker/joints_pos``. The ``dm_env`` API exposes the
+same dictionary as ``timestep.observation.obs`` alongside EnvPool's environment
+and player identifiers. Shapes and dtypes match the upstream observation
+specification, with the leading EnvPool batch dimension added.
+
+The eight corridor, maze, bowl, and two-touch examples include the upstream
+``64 x 64 x 3`` egocentric camera observation. Go-to-target, tracking, and Soccer
+expose their upstream state observations. Every task also supports native
+``render_mode="rgb_array"`` and batched ``render(env_ids=[...])``. Images are
+``uint8`` in height-width-channel order.
+
+.. code-block:: python
+
+   import envpool
+   import numpy as np
+
+   env = envpool.make_gymnasium(
+       "DmcRodentEscapeBowl-v1",
+       num_envs=4,
+       seed=0,
+       render_mode="rgb_array",
+       render_width=320,
+       render_height=240,
+   )
+   observation, info = env.reset()
+   observation, reward, terminated, truncated, info = env.step(
+       np.zeros((4, 38), dtype=np.float64)
+   )
+   frames = env.render(env_ids=[3, 1])  # (2, 240, 320, 3)
+
+Soccer players
+--------------
+
+``team_size`` defaults to two and supports one through eleven players per team.
+``max_num_players`` is derived as ``2 * team_size``. Player ordering within each
+match is all home players followed by all away players. Actions, observations,
+rewards, and discounts use the player batch dimension; ``step_type``,
+``terminated``, and ``truncated`` use the match batch dimension. Use
+``info["players"]["env_id"]`` (or ``timestep.observation.players.env_id``)
+to associate players with their matches.
+
+Soccer retains the upstream singleton observation buffer dimension: for
+example, BoxHead joint positions have shape ``(players, 1, 1)``. Rewards are
+``float32`` per player, as in the official Soccer API. Single-player Composer
+rewards retain ``float64`` precision.
+
+.. code-block:: python
+
+   soccer = envpool.make_gymnasium(
+       "DmcSoccerBoxhead-v1", num_envs=8, team_size=2, seed=0
+   )
+   observation, info = soccer.reset()
+   action = np.zeros((32, 3), dtype=np.float64)
+   observation, reward, terminated, truncated, info = soccer.step(
+       action, env_id=info["env_id"]
+   )
+   # reward.shape == (32,), terminated.shape == truncated.shape == (8,)
+
+The ``disable_walker_contacts``, ``enable_field_box``, ``keep_aspect_ratio``, and
+``terminate_on_goal`` options follow ``soccer.load``. With
+``terminate_on_goal=False``, a goal awards the per-team reward and restarts play
+inside the same episode. Out-of-bounds balls are returned to play on the next
+control step unless the field box is enabled.
+
+Reproducibility and assets
+--------------------------
+
+Each environment has independent random streams, including the draws that the
+upstream maze and two-touch examples make through NumPy's global random state.
+Resetting another environment cannot change its rollout. Seeds are configured
+when creating the pool, following the normal EnvPool seed API.
+
+Official XML, skins, textures, and LabMaze 1.0.6 sources are fetched at build
+time. Only the needed texture styles and model assets are packaged. The CMU
+2019 Soccer initializer clip and all 36 CMU 2020 ``WALK_TINY`` clips are extracted
+from the official, SHA-256-pinned datasets into approximately 7 MB of native
+data. Runtime installation does not download the full motion capture datasets
+or require HDF5, SciPy, LabMaze's Python extension, or ``dm_control``.
+
+The source models and tasks are available in the
+`official locomotion package <https://github.com/google-deepmind/dm_control/tree/1.0.44/dm_control/locomotion>`_.
+Original motion capture data is provided by
+`Carnegie Mellon University <http://mocap.cs.cmu.edu/>`_ and fitted to the humanoid
+by the dm_control authors. License notices are included with the packaged assets.

@@ -77,6 +77,11 @@ _FAMILY_SMOKE_TASKS: dict[str, tuple[str, ...]] = {
     "envpool.minigrid": ("MiniGrid-DoorKey-8x8-v0",),
     "envpool.mujoco.dmc": ("WalkerWalk-v1",),
     "envpool.mujoco.gym": ("Ant-v5",),
+    "envpool.mujoco.locomotion": (
+        "DmcRodentMazeForage-v1",
+        "DmcCmuHumanoidTracking-v1",
+        "DmcSoccerHumanoid-v1",
+    ),
     "envpool.mujoco.metaworld": ("MetaWorld/Reach-v3",),
     "envpool.mujoco.playground": (
         "Go1JoystickFlatTerrain-v1",
