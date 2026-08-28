@@ -160,15 +160,23 @@ through the actual pool; ``debug_state=True`` exposes its diagnostic encoding
 in ``info["state"]``. Neither option provides a mid-episode synchronization
 path. The diagnostic encoding is not a stable saved-game format.
 
-The only floating comparison exception is Classic pixel observations on
-macOS arm64. JAX changes the final blue-channel blend's fused multiply-add
-order between its reset/non-AutoReset step graphs and standalone renderer.
-Map blue is allowed one ULP at reset and two during steps; while sleeping,
-grayscale propagates that residual into map red/green, also bounded by two
-ULPs. Inventory pixels, awake red/green, AutoReset step observations, full
-Craftax observations, game state, rewards, information, and rendered uint8
-RGB frames remain exact. The test records the operation that reproduces the
-difference; it does not use a general observation or gameplay tolerance.
+Native float RGB agrees bitwise with the standalone official renderer. JAX
+changes the final daylight blend's fused multiply-add operand order when
+compiling some combined reset/step graphs. Reversing just that operation
+reproduces the residual, including its propagation through sleep's grayscale.
+The observation tests allow only these demonstrated exceptions:
+
+* ARM64 (macOS and Linux), Classic reset/non-AutoReset step: map blue in
+  four-pixel vector blocks (columns 0--59), one ULP at reset and two during
+  steps. While sleeping, the same region's RGB channels allow two ULPs.
+* x86-64 (Linux and Windows), Classic AutoReset step: map red, up to two ULPs;
+  while sleeping, map green/blue in columns 0--55 have the same bound.
+* x86-64, full-game reset: map red/green in eight-pixel vector blocks
+  (columns 0--103), one ULP.
+
+Inventory, all other channels and scalar tails, symbolic observations, game
+state, rewards, information, and rendered uint8 RGB frames remain exact.
+There is no general observation or gameplay tolerance.
 
 The implementation and acceptance record is maintained in
 ``docs/plans/active/2026-08-27-craftax-native.md``.

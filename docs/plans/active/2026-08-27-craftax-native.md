@@ -31,8 +31,14 @@ reset timing explicitly implemented and tested, and EnvPool aliases.
 - [x] Finish registration, package data, documentation, and comparison images.
 - [x] Pass local source, static, documentation, release build, and installed
   wheel checks on macOS arm64 with Python 3.12.
-- [ ] Pass all-platform source CI and release packaging CI. GitHub currently
-  refuses to start jobs because the account is locked for a billing issue.
+- [x] Open draft PR #433 at source commit `f95035b`.
+- [x] Reproduce macOS full source CI: 102/102 uncached targets passed.
+- [x] Reproduce the platform-specific JAX pixel FMA differences using native
+  and official standalone renderers, then the identical blend operands.
+- [ ] Pass all-platform source CI and release packaging CI using the existing
+  macOS, Linux x86-64, native ARM64 VM, and Windows hosts. GitHub-hosted jobs
+  cannot start because of the account billing lock; local runs are recorded
+  separately and are not represented as successful hosted checks.
 
 ## Surprises & Discoveries
 
@@ -66,14 +72,24 @@ reset timing explicitly implemented and tested, and EnvPool aliases.
 - Classic score needs the ordered float32 achievement reduction, reciprocal
   mean, and the pinned LLVM float32 exponential polynomial. Using `expf` or
   multiplying the achievement count by log(101) changes its last bits.
-- On macOS arm64, JAX changes the blue-channel final-blend FMA operand order
+- On ARM64 (macOS and Linux), JAX changes the blue-channel final-blend FMA order
   in four-pixel blocks for Classic pixel reset/non-AutoReset step graphs.
   Reversing that operation for x < 60 reproduces both awake and sleeping
   observations exactly. Keep the native renderer independent of LLVM vector
   width: only map blue allows one ULP at reset/two at step; while sleeping,
   its grayscale propagates this residual into map red/green (two ULPs).
-  Inventory, awake red/green, AutoReset step observations, full-game pixels,
-  game state, rewards, information, and uint8 RGB frames remain exact.
+  Its scalar tail remains exact and is excluded from the exception.
+- On x86-64 (Linux and Windows), the same FMA reversal affects Classic
+  AutoReset steps' map red and full resets' map red/green in eight-pixel blocks
+  (x < 104). The standalone official renderer still agrees bitwise with C++.
+  Reconstructing those exact operations reproduced all 24 reset/step probe
+  frames across Windows and Linux ARM64 with zero residual. Complete 21-case
+  trajectory diagnostics then measured at most two ULPs for Classic steps
+  (including sleeping RGB) and one ULP for full resets, with no state, reward,
+  termination, information, or uint8-render tolerance. Scope the comparison
+  to those regions rather than changing rendering to follow LLVM vector width.
+  Sleep probes also reproduced the residual exactly after respecting the
+  x86-64 green/blue scalar tail (x >= 56), which remains bitwise and is excluded.
 - Broader weighted-draw probes exposed a real selection bug: a sequential
   cumulative sum differed on 83/10,000 normalized 4096-entry draws. The pinned
   XLA CPU graph recursively scans 16-entry tiles. JAX v0.11.1 pins XLA commit
@@ -106,9 +122,10 @@ reset timing explicitly implemented and tested, and EnvPool aliases.
 
 ## Outcomes & Retrospective
 
-The native implementation and local validation are complete. Full acceptance
-remains in progress: cross-platform CI cannot start until the GitHub billing
-lock is resolved. No branch, pull request, or package has been published.
+The native implementation is in draft PR #433. Full acceptance remains in
+progress while source and release checks are reproduced on all four supported
+platforms with the established local CI hosts. No package has been published
+for this port. GitHub-hosted checks remain blocked by the account billing lock.
 
 Validation evidence so far:
 

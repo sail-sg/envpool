@@ -39,37 +39,48 @@ def assert_observation(
     reset: bool,
     sleeping: bool = False,
 ) -> None:
-    """Compare observations with the documented blue-channel rounding exception."""
+    """Keep only the pinned JAX graph's demonstrated FMA regions non-bitwise."""
     expected = np.asarray(expected)
-    if (
-        (reset or "-AutoReset-" not in task_id)
-        and task_id.startswith("Craftax-Classic-Pixels")
-        and platform.system() == "Darwin"
-        and platform.machine() == "arm64"
-    ):
-        # JAX 0.11.1's reset and non-AutoReset step vectorization change the blue-channel FMA
-        # operand order in four-pixel vector blocks, leaving its scalar tail
-        # unchanged. A probe using the same operands and reversing that FMA
-        # for x < 60 reproduces the oracle exactly. The standalone official
-        # renderer uses the native order. Do not tie runtime gameplay to LLVM
-        # vector widths: allow one ULP at reset and two after the step
-        # normalization (rescaling a one-ULP RGB residual can span two ULPs).
-        # Sleep's grayscale also propagates this blue residual into red/green;
-        # reversing the same FMA reproduces that case exactly as well.
-        # Inventory, awake red/green, AutoReset step observations, and RGB
-        # renders stay exact.
-        np.testing.assert_array_equal(actual[49:], expected[49:])
-        if sleeping:
-            np.testing.assert_array_max_ulp(
-                actual[:49], expected[:49], maxulp=2
-            )
-        else:
-            np.testing.assert_array_equal(actual[..., :2], expected[..., :2])
-            np.testing.assert_array_max_ulp(
-                actual[:49, :, 2], expected[:49, :, 2], maxulp=1 if reset else 2
-            )
-    else:
+    if "-Pixels-" not in task_id:
         np.testing.assert_array_equal(actual, expected)
+        return
+
+    # Native float RGB matches the standalone official renderer bitwise.
+    # JAX 0.11.1 changes the final blend from fma(day, rgb, (1-day)*night)
+    # to fma(1-day, night, day*rgb) in these reset/step graph regions:
+    # ARM64 Classic reset/non-AutoReset step: blue, four-pixel blocks (x<60).
+    # x86-64 Classic AutoReset step: red, including the scalar tail.
+    # x86-64 full reset: red/green, eight-pixel blocks (x<104).
+    # Reversing just that FMA reproduces the observed differences exactly on
+    # macOS, Linux (both architectures), and Windows. Sleep's grayscale
+    # propagates the Classic channel residual into RGB, except x86-64's
+    # green/blue scalar tail (x>=56). Keep runtime rendering independent of
+    # LLVM vector widths; constrain only those test pixels.
+    # Reciprocal normalization can turn one RGB ULP into two observation ULPs.
+    # Inventory, other channels/tails, state, reward, info, and uint8 render
+    # remain exact; docs/env/craftax.rst records the platform scope.
+    architecture = platform.machine().lower()
+    classic = "-Classic-" in task_id
+    auto = "-AutoReset-" in task_id
+    allowed = np.zeros(actual.shape, dtype=bool)
+    maxulp = 0
+    if architecture in ("arm64", "aarch64") and classic and (reset or not auto):
+        allowed[:49, :60, :] = sleeping
+        allowed[:49, :60, 2] = True
+        maxulp = 1 if reset and not sleeping else 2
+    elif architecture in ("amd64", "x86_64"):
+        if classic and auto and not reset:
+            allowed[:49, :56, 1:] = sleeping
+            allowed[:49, :, 0] = True
+            maxulp = 2
+        elif not classic and reset:
+            allowed[:90, :104, :2] = True
+            maxulp = 1
+    np.testing.assert_array_equal(actual[~allowed], expected[~allowed])
+    if maxulp:
+        np.testing.assert_array_max_ulp(
+            actual[allowed], expected[allowed], maxulp=maxulp
+        )
 
 
 class CraftaxAlignmentTest(parameterized.TestCase):
