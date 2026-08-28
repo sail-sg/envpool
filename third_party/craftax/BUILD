@@ -37,7 +37,7 @@ genrule(
         "@craftax_upstream//:craftax/craftax_classic/constants.py",
     ],
     outs = ["textures.cc"],
-    cmd = "$(location :generate_assets) --classic $(location @craftax_upstream//:craftax/craftax_classic/constants.py) --full $(location @craftax_upstream//:craftax/craftax/constants.py) --output $@",
+    cmd = "$(execpath :generate_assets) --classic $(execpath @craftax_upstream//:craftax/craftax_classic/constants.py) --full $(execpath @craftax_upstream//:craftax/craftax/constants.py) --output $@",
     tools = [":generate_assets"],
 )
 
@@ -52,7 +52,7 @@ genrule(
         "constants.h",
         "info.h",
     ],
-    cmd = "$(location :generate_metadata) --classic $(location @craftax_upstream//:craftax/craftax_classic/constants.py) --full $(location @craftax_upstream//:craftax/craftax/constants.py) --world $(location @craftax_upstream//:craftax/craftax/world_gen/world_gen_configs.py) --output $(location constants.h) --info-output $(location info.h)",
+    cmd = "$(execpath :generate_metadata) --classic $(execpath @craftax_upstream//:craftax/craftax_classic/constants.py) --full $(execpath @craftax_upstream//:craftax/craftax/constants.py) --world $(execpath @craftax_upstream//:craftax/craftax/world_gen/world_gen_configs.py) --output $(execpath constants.h) --info-output $(execpath info.h)",
     tools = [":generate_metadata"],
 )
 

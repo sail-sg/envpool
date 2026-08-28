@@ -153,7 +153,7 @@ genrule(
         "oracle_textures/classic.bz2",
         "oracle_textures/full.bz2",
     ],
-    cmd = "$(location :generate_oracle_cache) --classic $(location oracle_textures/classic.bz2) --full $(location oracle_textures/full.bz2)",
+    cmd = "$(execpath :generate_oracle_cache) --classic $(execpath oracle_textures/classic.bz2) --full $(execpath oracle_textures/full.bz2)",
     tools = [":generate_oracle_cache"],
 )
 

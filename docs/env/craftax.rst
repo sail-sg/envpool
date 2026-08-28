@@ -132,7 +132,7 @@ Rendering
 ``render_tile_size=16``, Classic frames are ``(144, 144, 3)`` and full Craftax
 frames are ``(208, 176, 3)``. ``render_tile_size=64`` selects the official human
 texture resolution. The standard ``render_width`` and ``render_height``
-options resize the resulting frame by nearest-neighbour sampling.
+options resize the resulting frame by nearest-neighbor sampling.
 
 The renderer includes the official sprites, inventory digits, projectiles,
 light and night effects, sleep shading, and full-game floor visibility.
