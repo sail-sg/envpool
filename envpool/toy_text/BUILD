@@ -69,6 +69,7 @@ py_test(
     deps = [
         ":toy_text",
         ":toy_text_registration",
+        "//envpool/python:seed_test_utils",
         requirement("absl-py"),
         requirement("dm_env"),
         requirement("gymnasium"),

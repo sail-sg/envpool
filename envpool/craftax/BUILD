@@ -106,6 +106,7 @@ py_test(
     deps = [
         ":craftax",
         ":craftax_registration",
+        "//envpool/python:seed_test_utils",
         requirement("absl-py"),
         requirement("numpy"),
     ],

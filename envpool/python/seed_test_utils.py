@@ -16,16 +16,31 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from collections.abc import Callable
 from contextlib import ExitStack
 from typing import Any
 
 import numpy as np
 
-from envpool.registration import make_gymnasium
+from envpool.registration import make_gymnasium, registry
 
 _NUM_ENVS = 2
 _SEEDS = (11, 11, 43)
+
+
+def registered_task_ids(module: str) -> list[str]:
+    """Return a family's registered tasks, deduplicating identical aliases."""
+    tasks = []
+    seen = set()
+    for task_id, (owner, spec, config) in sorted(registry.specs.items()):
+        if owner != module:
+            continue
+        key = (spec, json.dumps(config, sort_keys=True, default=str))
+        if key not in seen:
+            seen.add(key)
+            tasks.append(task_id)
+    return tasks
 
 
 def _fingerprint(value: Any, slot: int | None = None) -> bytes:

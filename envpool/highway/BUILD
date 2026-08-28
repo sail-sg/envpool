@@ -128,6 +128,7 @@ py_test(
     deps = [
         ":highway",
         ":highway_registration",
+        "//envpool/python:seed_test_utils",
         requirement("absl-py"),
         requirement("numpy"),
     ],

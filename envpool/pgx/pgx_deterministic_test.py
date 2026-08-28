@@ -21,6 +21,7 @@ import numpy as np
 from absl.testing import absltest
 
 import envpool.pgx.registration  # noqa: F401
+from envpool.python.seed_test_utils import check_seeded_resets
 from envpool.registration import make_gymnasium
 
 _GO_TASKS = (
@@ -158,6 +159,9 @@ class PgxDeterministicTest(absltest.TestCase):
         )
         for task_id, size in _GO_TASKS:
             with self.subTest(task_id=task_id):
+                check_seeded_resets(
+                    self, task_id, info_keys=("current_player",)
+                )
                 env0 = _make_env(task_id)
                 env1 = _make_env(task_id)
                 obs0, info0 = env0.reset()
@@ -196,6 +200,10 @@ class PgxDeterministicTest(absltest.TestCase):
         """Native PGX board games should replay the same actions exactly."""
         for task_id in (*_BOARD_GAME_TASKS, *_CARD_GAME_TASKS):
             with self.subTest(task_id=task_id):
+                # Identical empty boards can have a different starting player.
+                check_seeded_resets(
+                    self, task_id, info_keys=("current_player",)
+                )
                 if task_id == "AnimalShogi-v1":
                     info_keys = (
                         "board",
@@ -327,6 +335,7 @@ class PgxDeterministicTest(absltest.TestCase):
         """Single-player PGX tasks should replay the same rollout exactly."""
         for task_id in _SINGLE_PLAYER_TASKS:
             with self.subTest(task_id=task_id):
+                check_seeded_resets(self, task_id)
                 info_keys = ("board", "legal_action_mask")
                 env0 = _make_env(task_id)
                 env1 = _make_env(task_id)

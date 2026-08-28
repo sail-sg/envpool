@@ -103,6 +103,7 @@ py_test(
     deps = [
         ":pgx",
         ":pgx_registration",
+        "//envpool/python:seed_test_utils",
         requirement("absl-py"),
         requirement("numpy"),
     ],

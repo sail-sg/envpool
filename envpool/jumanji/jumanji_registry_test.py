@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Registry and smoke tests for the native Jumanji family."""
+"""Registry, smoke, and determinism tests for the native Jumanji family."""
 
 from __future__ import annotations
 
@@ -19,9 +19,13 @@ from typing import Any
 
 import gymnasium
 import numpy as np
-from absl.testing import absltest
+from absl.testing import absltest, parameterized
 
 import envpool.jumanji.registration as jumanji_registration
+from envpool.python.seed_test_utils import (
+    check_seeded_resets,
+    check_seeded_rollouts,
+)
 from envpool.registration import list_all_envs, make_gymnasium, make_spec
 
 _OFFICIAL_JUMANJI_ORACLE_IDS = (
@@ -80,8 +84,21 @@ def _assert_render_batch(frame: np.ndarray | None, num_envs: int) -> None:
         assert int(np.max(env_frame)) > int(np.min(env_frame)), env_id
 
 
-class JumanjiRegistryTest(absltest.TestCase):
+class JumanjiRegistryTest(parameterized.TestCase):
     """Smoke and registry coverage for the native Jumanji bindings."""
+
+    @parameterized.named_parameters([
+        (task_id.replace("-", "_"), task_id)
+        for task_id in jumanji_registration.jumanji_env_ids
+    ])
+    def test_seed_determinism(self, task_id: str) -> None:
+        """Check default generators and transitions without oracle replay."""
+        if task_id in {"Minesweeper-v0", "PacMan-v1"}:
+            # Mines are hidden at reset; PacMan has stochastic ghost movement.
+            check_seeded_resets(self, task_id, expected=(None, None, None))
+            check_seeded_rollouts(self, task_id)
+        else:
+            check_seeded_resets(self, task_id)
 
     def test_registered_ids_match_pinned_oracle_list(self) -> None:
         """Checks EnvPool exposes every pinned Jumanji v1.1.2 ID."""

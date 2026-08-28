@@ -13,12 +13,14 @@
 # limitations under the License.
 """Determinism checks for the C++ MiniGrid backend."""
 
+import re
 from typing import Any
 
 import numpy as np
 from absl.testing import absltest
 
 import envpool.minigrid.registration  # noqa: F401
+from envpool.python.seed_test_utils import check_seeded_resets
 from envpool.registration import list_all_envs, make_gym, make_spec
 
 
@@ -97,8 +99,15 @@ class _MiniGridEnvPoolDeterministicTest(absltest.TestCase):
         num_envs: int = 4,
         total: int | None = None,
         action_seed: int = 1,
+        expect_different: bool = True,
         **kwargs: Any,
     ) -> None:
+        check_seeded_resets(
+            self,
+            task_id,
+            expected=(expect_different, expect_different, expect_different),
+            **kwargs,
+        )
         if total is None:
             total = _max_episode_steps(task_id)
         env0 = make_gym(task_id, num_envs=num_envs, seed=0, **kwargs)
@@ -126,9 +135,7 @@ class _MiniGridEnvPoolDeterministicTest(absltest.TestCase):
                 )
                 if differs:
                     break
-            self.assertTrue(
-                differs, msg=f"expected different rollouts for {task_id}"
-            )
+            self.assertEqual(differs, expect_different, task_id)
         finally:
             env0.close()
             env1.close()
@@ -138,22 +145,16 @@ class _MiniGridEnvPoolDeterministicTest(absltest.TestCase):
             with self.subTest(task_id=task_id):
                 self.run_deterministic_check(task_id)
 
-    def test_randomized_envs_different_seed(self) -> None:
-        for task_id in [
-            "MiniGrid-Empty-Random-5x5-v0",
-            "MiniGrid-DoorKey-8x8-v0",
-            "MiniGrid-Dynamic-Obstacles-Random-6x6-v0",
-            "MiniGrid-Fetch-8x8-N3-v0",
-            "MiniGrid-KeyCorridorS6R3-v0",
-            "MiniGrid-LockedRoom-v0",
-            "MiniGrid-MemoryS17Random-v0",
-            "MiniGrid-MultiRoom-N6-v0",
-            "MiniGrid-ObstructedMaze-Full-v1",
-            "MiniGrid-PutNear-8x8-N3-v0",
-            "MiniGrid-WFC-MazeSimple-v0",
-        ]:
+    def test_registered_minigrid_envs_different_seed(self) -> None:
+        for task_id in self.minigrid_task_ids():
+            fixed = bool(
+                re.fullmatch(r"MiniGrid-Empty-\d+x\d+-v0", task_id)
+            ) or task_id.startswith("MiniGrid-DistShift")
+            # These generators deliberately fix the walls, agent, and goal.
             with self.subTest(task_id=task_id):
-                self.run_different_seed_check(task_id)
+                self.run_different_seed_check(
+                    task_id, expect_different=not fixed
+                )
 
 
 if __name__ == "__main__":

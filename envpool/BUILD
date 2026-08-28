@@ -91,17 +91,3 @@ py_test(
         requirement("absl-py"),
     ],
 )
-
-py_test(
-    name = "seed_test",
-    size = "enormous",
-    srcs = ["seed_test.py"],
-    imports = [".."],
-    shard_count = 8,
-    deps = [
-        ":envpool",
-        "//envpool/python:seed_test_utils",
-        requirement("absl-py"),
-        requirement("numpy"),
-    ],
-)

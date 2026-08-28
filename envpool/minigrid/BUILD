@@ -116,6 +116,7 @@ py_test(
     deps = [
         ":minigrid",
         ":minigrid_registration",
+        "//envpool/python:seed_test_utils",
         requirement("absl-py"),
         requirement("gymnasium"),
         requirement("numpy"),
@@ -164,6 +165,7 @@ py_test(
     deps = [
         ":minigrid",
         ":minigrid_registration",
+        "//envpool/python:seed_test_utils",
         requirement("absl-py"),
         requirement("gymnasium"),
         requirement("numpy"),

@@ -159,6 +159,7 @@ py_test(
     deps = [
         ":vizdoom",
         ":vizdoom_registration",
+        "//envpool/python:seed_test_utils",
         requirement("numpy"),
         requirement("absl-py"),
     ],

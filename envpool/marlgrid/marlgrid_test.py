@@ -29,6 +29,7 @@ import numpy as np
 from absl.testing import absltest
 
 import envpool.marlgrid.registration  # noqa: F401
+from envpool.python.seed_test_utils import check_seeded_resets
 from envpool.registration import list_all_envs, make_gymnasium, make_spec
 
 _TASK_CONFIGS = {
@@ -937,6 +938,9 @@ class MarlGridTest(absltest.TestCase):
             with self.subTest(
                 task_id=task_id, observation_format=observation_format
             ):
+                check_seeded_resets(
+                    self, task_id, observation_format=observation_format
+                )
                 env0 = make_gymnasium(
                     task_id,
                     num_envs=num_envs,

@@ -20,6 +20,7 @@ from absl.testing import absltest, parameterized
 
 import envpool.craftax.registration  # noqa: F401
 from envpool.craftax._registry import CRAFTAX_IDS
+from envpool.python.seed_test_utils import check_seeded_resets
 from envpool.registration import list_all_envs, make_dm, make_gymnasium
 
 
@@ -42,6 +43,7 @@ class CraftaxTest(parameterized.TestCase):
     @parameterized.parameters(*CRAFTAX_IDS)
     def test_replay_and_batched_render(self, task_id: str) -> None:
         """Replay actions across thread counts and check selected render order."""
+        check_seeded_resets(self, task_id)
         classic = "-Classic-" in task_id
         pixels = "-Pixels-" in task_id
         kwargs = dict(
