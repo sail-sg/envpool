@@ -155,6 +155,7 @@ py_test(
     size = "medium",
     srcs = ["vizdoom_test.py"],
     imports = ["../.."],
+    shard_count = 4,
     tags = ["exclusive"],
     deps = [
         ":vizdoom",
