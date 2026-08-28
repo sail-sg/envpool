@@ -19,7 +19,6 @@ package(default_visibility = ["//visibility:public"])
 
 py_library(
     name = "seed_test_utils",
-    testonly = True,
     srcs = ["seed_test_utils.py"],
     imports = ["../.."],
     deps = [
@@ -175,5 +174,6 @@ py_library(
     imports = ["../.."],
     deps = [
         ":api",
+        ":seed_test_utils",  # Installed-wheel checks reuse these assertions.
     ],
 )

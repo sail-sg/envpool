@@ -153,6 +153,7 @@ class HighwayEnvFns {
     const float inf = std::numeric_limits<float>::infinity();
     return MakeDict("obs"_.Bind(Spec<float>(
                         {conf["observation_vehicles_count"_], 5}, {-inf, inf})),
+                    "terminated"_.Bind(Spec<bool>({})),
                     "info:speed"_.Bind(Spec<float>({})),
                     "info:crashed"_.Bind(Spec<bool>({})));
   }
@@ -231,6 +232,7 @@ class HighwayEnv : public Env<HighwayEnvSpec>, public RenderableEnv {
   bool offroad_terminal_;
   bool other_vehicles_check_collisions_;
   bool done_{true};
+  bool terminated_{false};
 
   std::vector<Vehicle> vehicles_;
 
