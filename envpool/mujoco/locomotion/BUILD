@@ -31,6 +31,14 @@ copy_to_directory(
     strip_prefix = "mujoco_dmc_xml/",
 )
 
+copy_to_directory(
+    name = "licenses",
+    srcs = ["//third_party/dmc_locomotion:licenses"],
+    out = "licenses",
+    flatten = True,
+    strip_prefix = "",
+)
+
 cc_library(
     name = "simulation",
     srcs = [
@@ -118,6 +126,7 @@ py_library(
     data = [
         ":assets",
         ":labmaze_assets",
+        ":licenses",
         ":locomotion_envpool",
     ],
     imports = ["../../.."],

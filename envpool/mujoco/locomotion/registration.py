@@ -28,6 +28,6 @@ for task in TASKS:
         gymnasium_cls="LocomotionGymnasiumEnvPool",
         task_name=task,
         base_path=asset_base_path(
-            "envpool", "mujoco/locomotion/assets_dm_control"
+            "envpool_assets", "mujoco/locomotion/assets_dm_control"
         ),
     )

@@ -10,6 +10,8 @@ Runtime data ships in the three ``envpool-assets*`` packages from the ``0.4.x``
 compatibility line, including the updated MyoSuite and Playground models.
 The main wheel requires this asset version line; older EnvPool releases remain
 on ``0.3.x`` so they do not automatically receive the new models.
+The base ``envpool-assets`` package must be at least ``0.4.1`` for the DMC
+Composer locomotion and Soccer assets; the other two packages still accept ``0.4.0``.
 
 We use `bazel <https://bazel.build/>`_ to build EnvPool. Comparing with
 `pip <https://pip.pypa.io/>`_, using Bazel to build python package with C++ .so

@@ -80,14 +80,21 @@ genrule(
 )
 
 filegroup(
-    name = "mocap_runtime",
+    name = "licenses",
     srcs = [
         "LICENSE.scipy",
         "NOTICE",
+        "@labmaze_source//:LICENSE",
+    ],
+)
+
+filegroup(
+    name = "mocap_runtime",
+    srcs = [
         "mocap.json",
         "mocap_2019.bin",
         "mocap_2020.bin",
-        "@labmaze_source//:LICENSE",
+        ":licenses",
     ],
 )
 

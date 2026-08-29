@@ -18,6 +18,9 @@ _ASSET_PACKAGES = {
             "gfootball/assets/data",
             "mujoco/assets_dmc/cartpole.xml",
             "mujoco/assets_gym/ant.xml",
+            "mujoco/locomotion/assets_dm_control/mocap_2019.bin",
+            "mujoco/locomotion/assets_dm_control/mocap_2020.bin",
+            "mujoco/locomotion/assets_labmaze/style_01/wall_blue_d.png",
             "mujoco/metaworld/assets/objects/assets/drawer.xml",
             "mujoco/robotics/assets/fetch/reach.xml",
             "procgen/assets/platformer/playerBlue_dead.png",
@@ -178,10 +181,22 @@ def main() -> None:
             f"{package_base_path}, expected {envpool_package}"
         )
 
+    bundled_locomotion_assets = list(
+        (envpool_package / "mujoco/locomotion").glob("assets_*")
+    )
+    if bundled_locomotion_assets:
+        raise RuntimeError(
+            "locomotion data must ship in envpool-assets, not envpool: "
+            f"{bundled_locomotion_assets}"
+        )
+
     for distribution, (module_name, rels) in _ASSET_PACKAGES.items():
         _check_asset_package(distribution, module_name, rels)
 
     required_package_files = [
+        envpool_package / "mujoco/locomotion/licenses/LICENSE",
+        envpool_package / "mujoco/locomotion/licenses/LICENSE.scipy",
+        envpool_package / "mujoco/locomotion/licenses/NOTICE",
         envpool_package / "vizdoom/bin/vizdoom",
         envpool_package / "vizdoom/bin/vizdoom.pk3",
     ]

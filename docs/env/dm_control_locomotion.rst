@@ -208,8 +208,12 @@ not guarantee identical mazes across platforms. No maze or task algorithm is
 patched, and model geometry is checked before reset-state sync.
 
 Official XML, skins, textures, and LabMaze 1.0.6 sources are fetched at build
-time. Only the needed texture styles and model assets are packaged. The CMU
-2019 clip used to initialize Soccer and all 36 CMU 2020 ``WALK_TINY`` clips are
+time. The needed texture styles, model assets, motion clips, and license
+notices ship separately in ``envpool-assets>=0.4.1,<0.5.0``, keeping the main
+``envpool`` wheel below the PyPI size limit. Source builds use the generated
+Bazel assets directly, and the main wheel retains the native code's license
+notices. The CMU 2019 clip used to initialize Soccer and all 36 CMU 2020
+``WALK_TINY`` clips are
 extracted from the official, SHA-256-pinned datasets into approximately 7 MB
 of native data. Runtime installation does not download the full motion capture datasets
 or require HDF5, SciPy, LabMaze's Python extension, or ``dm_control``.
