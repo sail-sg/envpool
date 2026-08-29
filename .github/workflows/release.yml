@@ -158,11 +158,35 @@ jobs:
           rm -rf dist wheelhouse
           make PYPI_WHEEL_PLAT=${{ matrix.auditwheel-plat }} pypi-wheel
           python -m pip install wheelhouse/*.whl --force-reinstall
+      - name: Install Mesa runtime dependencies
+        id: mesa-deps
+        shell: bash
+        run: |
+          # llvm-libs alone can resolve to the old LLVM 17 compatibility package.
+          dnf install -y llvm-devel libdrm
+          echo "llvm=$(llvm-config --version)" >> "$GITHUB_OUTPUT"
+      - name: Cache Mesa software renderer
+        id: mesa-cache
+        uses: actions/cache@v6
+        with:
+          path: /opt/envpool-mesa
+          key: mesa-manylinux_2_28-${{ matrix.arch }}-${{ steps.mesa-deps.outputs.llvm }}-${{ hashFiles('third_party/mesa/build_runtime.sh') }}
+      - name: Build Mesa software renderer
+        if: steps.mesa-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          dnf install -y libdrm-devel libglvnd-devel expat-devel zlib-devel libzstd-devel elfutils-libelf-devel flex bison
+          # The cached native driver is independent of the wheel's Python ABI.
+          export PATH="/opt/python/cp312-cp312/bin:$PATH"
+          python3 -m pip install meson ninja Mako PyYAML packaging
+          bash third_party/mesa/build_runtime.sh
       - name: Test with only the bundled Qt runtime
         shell: bash
         run: |
           mv "$BAZEL_RULES_QT_DIR" "${BAZEL_RULES_QT_DIR}-sdk-unused"
           trap 'mv "${BAZEL_RULES_QT_DIR}-sdk-unused" "$BAZEL_RULES_QT_DIR"' EXIT
+          export LD_LIBRARY_PATH="/opt/envpool-mesa/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          export __EGL_VENDOR_LIBRARY_FILENAMES=/opt/envpool-mesa/share/glvnd/egl_vendor.d/50_mesa.json
           make PROCGEN_QT_RUNTIME=bundled release-test
       - name: Upload artifact
         uses: actions/upload-artifact@v7

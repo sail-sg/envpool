@@ -62,6 +62,14 @@ New families and upstream task extensions must also meet
 rule out the frozen reset/goal regression from
 `issue #432 <https://github.com/sail-sg/envpool/issues/432>`_.
 
+When using Mesa ``llvmpipe`` for headless MuJoCo rendering on Linux, use
+`Mesa 23.1.6 <https://docs.mesa3d.org/relnotes/23.1.6.html>`_ or later, or a
+distribution package containing its resource lifetime fix. Older drivers can
+crash when environments render concurrently. The ``manylinux`` release jobs
+build the same pinned Mesa 24.3.4 software renderer for both Linux architectures
+using ``third_party/mesa/build_runtime.sh``. It is selected only when testing the
+installed wheels and is not bundled into EnvPool.
+
 To collect a merged Python + C/C++ LCOV report locally, run:
 
 .. code-block:: bash
