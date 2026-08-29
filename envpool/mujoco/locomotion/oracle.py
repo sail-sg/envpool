@@ -22,29 +22,29 @@ from unittest import mock
 
 from envpool.mujoco.oracle import runfiles_repository
 
-if sys.platform == "win32":
-    # LabMaze explicitly leaves seeded layouts dependent on STL distributions
-    # and shuffle. Its Windows wheel and our MSVC build produce different
-    # layouts even with the same seed. Compile the unmodified 1.0.6 binding
-    # with the native toolchain, just as we do for the MuJoCo oracle. Keep the
-    # official Python maze, Composer and task code unchanged.
-    _binding = "labmaze.cc.python._random_maze"
-    if _binding in sys.modules:
-        raise RuntimeError("Configure the locomotion oracle before LabMaze")
-    _source = (
-        runfiles_repository("labmaze_source")
-        / "labmaze/cc/python/_random_maze.pyd"
-    ).resolve()
-    _spec = importlib.util.spec_from_file_location(
-        _binding,
-        _source,
-        loader=importlib.machinery.ExtensionFileLoader(_binding, str(_source)),
-    )
-    if _spec is None or _spec.loader is None:
-        raise RuntimeError(f"Cannot load pinned LabMaze binding: {_source}")
-    _module = importlib.util.module_from_spec(_spec)
-    sys.modules[_binding] = _module
-    _spec.loader.exec_module(_module)
+# LabMaze's seeded layouts depend on STL distributions and shuffle. Build its
+# unmodified 1.0.6 binding with the native toolchain on every platform, as for
+# the MuJoCo oracle, rather than depending on a wheel's compiler/STL version.
+# Keep the official Python maze, Composer and task code unchanged.
+_binding = "labmaze.cc.python._random_maze"
+if _binding in sys.modules:
+    raise RuntimeError("Configure the locomotion oracle before LabMaze")
+_extension = (
+    "_random_maze.pyd" if sys.platform == "win32" else "_random_maze.so"
+)
+_source = (
+    runfiles_repository("labmaze_source") / "labmaze/cc/python" / _extension
+).resolve()
+_spec = importlib.util.spec_from_file_location(
+    _binding,
+    _source,
+    loader=importlib.machinery.ExtensionFileLoader(_binding, str(_source)),
+)
+if _spec is None or _spec.loader is None:
+    raise RuntimeError(f"Cannot load pinned LabMaze binding: {_source}")
+_module = importlib.util.module_from_spec(_spec)
+sys.modules[_binding] = _module
+_spec.loader.exec_module(_module)
 
 import mujoco
 import numpy as np

@@ -172,11 +172,9 @@ py_library(
     srcs = ["oracle.py"],
     data = [
         "//third_party/dmc_locomotion:mocap_oracle",
+        "@labmaze_source//labmaze/cc/python:_random_maze",
         "@mujoco//:mujoco_shared_lib",
-    ] + select({
-        "//:windows": ["@labmaze_source//labmaze/cc/python:_random_maze"],
-        "//conditions:default": [],
-    }),
+    ],
     imports = ["../../.."],
     deps = [
         "//envpool/mujoco:mujoco_oracle",

@@ -199,11 +199,13 @@ quaternion/exponential reductions, the bowl's distance norm, and, on Linux
 x86-64 only, up to two ULPs in TwoTouch's exponential shaping reward. The
 underlying MuJoCo state and discrete task transitions are checked exactly.
 
-The oracle uses the pinned MuJoCo source build. On Windows, LabMaze's official
-1.0.6 Python binding is also built from source with the native toolchain:
-its seeded layouts depend on the C++ standard library's distribution and
-shuffle algorithms, which differ from the published wheel. No maze or task
-algorithm is patched, and model geometry is checked before reset-state sync.
+On every platform, the oracle builds both pinned MuJoCo and LabMaze's official
+1.0.6 Python binding from source with the same toolchain as EnvPool.
+LabMaze's seeded layouts depend on the C++ standard library's distribution and
+shuffle algorithms, so a published wheel can produce different mazes even on
+the same platform. This aligns the native and oracle builds locally; it does
+not guarantee identical mazes across platforms. No maze or task algorithm is
+patched, and model geometry is checked before reset-state sync.
 
 Official XML, skins, textures, and LabMaze 1.0.6 sources are fetched at build
 time. Only the needed texture styles and model assets are packaged. The CMU
