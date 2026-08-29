@@ -13,6 +13,7 @@
 # limitations under the License.
 """Full-episode checks against dm_control 1.0.44, MuJoCo 3.11.0."""
 
+import hashlib
 import inspect
 import os
 import platform
@@ -35,7 +36,10 @@ from envpool.mujoco.locomotion.locomotion_envpool import TASKS
 
 import envpool.mujoco.locomotion.registration  # noqa: F401
 from envpool.mujoco.dmc.render_oracle import configure_macos_dm_control_renderer
-from envpool.mujoco.locomotion.locomotion_test import assert_pixels
+from envpool.mujoco.locomotion.locomotion_test import (
+    assert_pixels,
+    check_reset_randomization,
+)
 from envpool.mujoco.locomotion.oracle import (
     EXAMPLE_MODULES,
     activate_oracle_context,
@@ -47,8 +51,85 @@ from envpool.registration import make_dm
 configure_macos_dm_control_renderer()
 
 
+def randomized_components(pool: Any, env_id: int, obs: dict) -> dict:
+    """Inspect the independent random components of the pinned factories."""
+    task = pool.config["task_name"]
+    state = pool._snapshot(env_id, include_model=True)
+    model = mujoco.MjModel.from_binary_path(
+        "reset.mjb", {"reset.mjb": state["model"]}
+    )
+    fields = {"spawn": state["qpos"]}
+    if task.endswith(("run_walls", "run_gaps")):
+        # These factories keep the initial walker pose fixed. Check geometry,
+        # so camera noise or a changing texture cannot hide a frozen corridor.
+        fields = {"layout": np.c_[model.geom_pos, model.geom_size]}
+    elif task.endswith("forage"):
+        # Sorting within each reward type excludes mere target-ID shuffling.
+        fields["targets"] = np.asarray(
+            sorted(
+                (int(name.split("_")[1]), *model.body_pos[i])
+                for i in range(model.nbody)
+                if (name := model.body(i).name).startswith("target_")
+            )
+        )
+        if "heterogeneous" in task:
+            # Walls and the walker pose are fixed; goal locations and the
+            # association of red/green textures with reward types are random.
+            fields.pop("spawn")
+            fields["target_colors"] = model.tex_data
+        else:
+            walls = state["maze"].replace("P", " ").replace("G", " ")
+            fields["layout"] = np.frombuffer(walls.encode(), np.uint8)
+    elif task == "cmu_humanoid_go_to_target":
+        # The public target vector is relative to the walker: random spawn
+        # positions must not mask an absolute goal stuck at a fixed location.
+        fields["goal"] = model.site("target").pos
+    elif task == "rodent_two_touch":
+        fields["goal"] = model.geom("target_0_0/geom").pos
+    elif task == "rodent_escape_bowl":
+        fields["terrain"] = model.hfield_data
+    elif task == "cmu_humanoid_tracking":
+        fields["velocity"] = state["qvel"]
+        fields["reference_clip"] = obs["walker/clip_id"]
+        fields["reference_time"] = obs["walker/time_in_clip"]
+    elif task.startswith("soccer_"):
+        offset = model.jnt_qposadr[model.joint("soccer_ball/").id]
+        fields = {
+            "ball": state["qpos"][offset : offset + 3],
+            "players": np.r_[
+                state["qpos"][:offset], state["qpos"][offset + 7 :]
+            ],
+            "pitch": np.r_[
+                model.site("field/lower").pos,
+                model.site("field/upper").pos,
+            ],
+        }
+        if task == "soccer_humanoid":
+            hinges = model.jnt_type == mujoco.mjtJoint.mjJNT_HINGE
+            fields["pose"] = state["qpos"][model.jnt_qposadr[hinges]]
+    else:
+        raise AssertionError(f"Missing randomization components for {task}")
+
+    fingerprints = {}
+    for name, value in fields.items():
+        value = np.asarray(value)
+        if np.issubdtype(value.dtype, np.floating):
+            value = value.copy()
+            value[value == 0] = 0  # Signed zero is not state variation.
+        # Do not retain dozens of complete heightfields and texture images.
+        digest = hashlib.sha256(str((value.dtype, value.shape)).encode())
+        digest.update(value.tobytes())
+        fingerprints[name] = np.frombuffer(digest.digest(), np.uint8)
+    return fingerprints
+
+
 class LocomotionAlignTest(parameterized.TestCase):
     """Compare native rollouts to independent Composer task state."""
+
+    @parameterized.named_parameters((task, task) for task in TASKS)
+    def test_randomized_components(self, task: str) -> None:
+        """Check real goals, layouts and spawns without oracle state sync."""
+        check_reset_randomization(self, task, randomized_components)
 
     def assert_rewards(
         self, native: np.ndarray, oracle: Any, task: str, context: str

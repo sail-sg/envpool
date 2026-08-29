@@ -156,7 +156,7 @@ Verify:
 If there is an upstream registry, add a test that fails when EnvPool misses an
 upstream ID that is supposed to be supported.
 
-### 2. Deterministic Test
+### 2. Determinism and Randomization
 
 At minimum:
 
@@ -173,6 +173,29 @@ the same external action sequence must produce the same rollout, not just the
 same initial state.
 For new tasks added to an existing family, mirror the coverage shape of the old
 tasks instead of only testing one new ID.
+
+Also enforce the regression boundary from
+[#432](https://github.com/sail-sg/envpool/issues/432): a task that ignores its
+seed or freezes its goals can still pass same-seed equality tests.
+
+- Test the default public configuration of every intended task. Do not enable
+  a special randomization option just to make a test pass.
+- For upstream-stochastic tasks, check different seeds, consecutive resets
+  without reseeding, and parallel environment streams. Recreating a pool with
+  the same seed must reproduce the whole sequence of resets and rollouts.
+- Compare actual observations and semantic state, not IDs, episode counters,
+  RNG metadata, or numerical/rendering noise. Group multi-player state by
+  environment rather than comparing players within the same match.
+- Check independently randomized components separately, such as initial pose,
+  goal, layout, terrain, or object properties. Pose noise must not hide a
+  frozen goal. Inspect hidden task/model state when observations cannot prove
+  that a component changes.
+- Preserve behavior that the pinned upstream intentionally keeps fixed. If
+  randomness appears only during stepping, use identical external actions
+  across seeds and vector slots and check real rollouts for that variation.
+- Keep these assertions in the existing family tests, run them on all supported
+  platforms, and include public reset checks in installed-wheel validation.
+  A manual probe alone is not permanent regression coverage.
 
 ### 3. Alignment Test
 
@@ -200,6 +223,9 @@ Do not skip entire envs or platforms to get CI green.
 Do not replace state-sync oracle checks with long-horizon score-only checks.
 When a family already has older align tests, the new-task align setup should
 look the same unless a documented upstream difference forces a change.
+Reset-time synchronization can conceal missing native randomization; it does
+not replace the separate #432 checks above. Those checks must observe native
+resets without synchronizing or overwriting their state.
 
 ### 4. Render Test
 
@@ -271,6 +297,8 @@ Before opening or updating a PR, verify:
 
 - no Python bridge leaked into runtime implementation
 - tests cover all registered IDs
+- default seed, repeated-reset, and parallel-state variation satisfy #432;
+  independent randomized fields are checked without oracle state sync
 - docs match actual supported IDs and render results
 - any tolerance is justified and scoped
 - reset-time oracle state sync, if used, happens only once and is documented

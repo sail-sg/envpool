@@ -788,8 +788,47 @@ documentation
 Add Unit Test for CartPoleEnv
 -----------------------------
 
-It is highly encouraged to write unit tests to ensure the correctness of the
-new environment. You can write both Python and C++ tests.
+New environment families require behavior tests for registration, deterministic
+rollouts, upstream alignment, rendering, and the seed checks below. You can
+write both Python and C++ tests.
+
+
+.. _seed_randomization_acceptance:
+
+Seed and Randomization Acceptance
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+`Issue #432 <https://github.com/sail-sg/envpool/issues/432>`_ exposed a gap in
+same-seed equality tests: an environment that ignores its seed or always resets
+to a fixed goal can still pass them. Every new family and upstream task extension
+must also check the default public configuration for the following behavior:
+
+- Recreating pools with the same seed reproduces their sequences of resets and
+  multi-step rollouts.
+- Where the pinned upstream is stochastic, different seeds, consecutive resets
+  without reseeding, and parallel environment streams produce meaningful state
+  variation. Keep identical external actions across seeds and vector slots when
+  testing randomness that only appears during stepping.
+- Independently randomized components are checked separately: initial pose,
+  goal, layout, terrain, object properties, or other task-specific state.
+  Changing pose must not hide a frozen goal. Inspect hidden task/model state
+  when public observations cannot distinguish them.
+- IDs, episode counters, RNG metadata, and small rendering or numerical
+  differences do not establish randomization. For multi-player tasks, compare
+  complete environments rather than individual players in the same match.
+
+Match the upstream contract: some initial states or task components are
+intentionally fixed, and discrete random samples may repeat. Use several resets
+and seeds rather than demanding that every pair of samples differs. Do not turn
+on a special randomization option to compensate for a broken default path.
+
+Run these assertions in the existing family test targets on every supported
+platform, with public reset checks also exercised by installed-wheel tests.
+Reuse ``envpool/python/seed_test_utils.py`` where its comparison rules fit the
+family. An ad hoc probe is not a substitute for permanent regression coverage.
+An oracle reset-time state synchronization can conceal missing randomization;
+the seed checks must inspect native resets without synchronizing or replacing
+their state.
 
 
 C++ Env Tests
@@ -856,6 +895,8 @@ is complete end-to-end:
 - Add deterministic tests that replay the same external action sequence across
   reset plus nontrivial multi-step rollouts for every registered ID. If render
   is supported, include rendered frames in the determinism check.
+- Meet :ref:`seed_randomization_acceptance`: check default seed/reset/parallel
+  variation and independent randomized components without oracle state sync.
 - Add step-level oracle alignment tests when an official implementation exists.
   A reset-time state sync is acceptable when needed, but do not sync state
   again during the rollout. Compare observations, rewards, terminated/truncated

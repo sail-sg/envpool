@@ -14,6 +14,9 @@
 """Exercise every native task through EnvPool's batched public APIs."""
 
 import platform
+from collections.abc import Callable
+from contextlib import ExitStack
+from typing import Any
 
 import numpy as np
 from absl.testing import absltest, parameterized
@@ -71,8 +74,123 @@ def assert_pixels(
         np.testing.assert_array_equal(actual, expected, err_msg=context)
 
 
+def assert_observations(
+    actual: dict[str, np.ndarray],
+    expected: dict[str, np.ndarray],
+    task: str,
+    context: str,
+) -> None:
+    """Compare native observations with the existing camera budgets."""
+    np.testing.assert_equal(sorted(actual), sorted(expected))
+    for key, value in actual.items():
+        if key == "walker/egocentric_camera":
+            assert_pixels(value, expected[key], task, context, egocentric=True)
+        else:
+            np.testing.assert_array_equal(
+                value, expected[key], err_msg=f"{context}, {key}"
+            )
+
+
+def check_reset_randomization(
+    test: absltest.TestCase,
+    task: str,
+    components: Callable[[Any, int, dict], dict] | None = None,
+) -> None:
+    """Reject frozen resets (#432), including independently random fields."""
+    sequences = []
+    for seed in (11, 11, 43):
+        with ExitStack() as stack:
+            pool = make_gymnasium(
+                f"dm_control/locomotion/{task}",
+                num_envs=4,
+                num_threads=2,
+                seed=seed,
+            )
+            stack.callback(pool.close)
+            resets = []
+            for _ in range(8):
+                obs, info = pool.reset()
+                # Compare complete matches, not players on opposite teams.
+                rows = []
+                for env_id in range(4):
+                    mask = info["players"]["env_id"] == env_id
+                    row = {key: value[mask] for key, value in obs.items()}
+                    rows.append(
+                        row
+                        if components is None
+                        else components(pool, env_id, row)
+                    )
+                resets.append(rows)
+            sequences.append(resets)
+
+    def differs(left: dict, right: dict, field: str | None = None) -> bool:
+        if field is not None:
+            left, right = {field: left[field]}, {field: right[field]}
+        try:
+            assert_observations(left, right, task, "reset variation")
+        except AssertionError:
+            return True
+        return False
+
+    for reset in range(8):
+        for env_id in range(4):
+            assert_observations(
+                sequences[0][reset][env_id],
+                sequences[1][reset][env_id],
+                task,
+                f"{task}, seed replay, reset {reset}, env {env_id}",
+            )
+    # No IDs, counters, RNG state, or reset-time oracle synchronization can
+    # establish randomization. Ignore the same CGL noise used in replay checks.
+    fields = [None, *sequences[0][0][0]] if components else [None]
+    for field in fields:
+        with test.subTest(task=task, component=field):
+            test.assertTrue(
+                any(
+                    differs(sequences[0][r][e], sequences[2][r][e], field)
+                    for r in range(8)
+                    for e in range(4)
+                ),
+                "different seeds must change state",
+            )
+            test.assertTrue(
+                any(
+                    differs(resets[r][0], resets[r][e], field)
+                    for resets in sequences
+                    for r in range(8)
+                    for e in range(1, 4)
+                ),
+                "parallel environments must differ",
+            )
+            test.assertTrue(
+                any(
+                    differs(resets[0][e], resets[r][e], field)
+                    for resets in sequences
+                    for r in range(1, 8)
+                    for e in range(4)
+                ),
+                "successive resets must change state",
+            )
+    # Every stream must advance, but discrete components may legitimately
+    # repeat individual samples (e.g. either assignment of target colors).
+    for pool_index, resets in enumerate(sequences):
+        for env_id in range(4):
+            test.assertTrue(
+                any(
+                    differs(resets[0][env_id], resets[r][env_id])
+                    for r in range(1, 8)
+                ),
+                f"{task}, frozen reset stream: pool {pool_index}, env {env_id}",
+            )
+
+
 class LocomotionTest(parameterized.TestCase):
     """Check public batching, rendering, and repeatable complete rollouts."""
+
+    @parameterized.named_parameters((task, task) for task in TASKS)
+    def test_seeded_resets(self, task: str) -> None:
+        """Keep default seed/reset/parallel variation in installed-wheel tests."""
+        check_reset_randomization(self, task)
 
     @parameterized.named_parameters((task, task) for task in TASKS)
     def test_deterministic_rollout(self, task: str) -> None:
@@ -98,21 +216,13 @@ class LocomotionTest(parameterized.TestCase):
         for step in range(195):
             li = np.argsort(left_info["players"]["env_id"], kind="stable")
             ri = np.argsort(right_info["players"]["env_id"], kind="stable")
-            self.assertEqual(left_obs.keys(), right_obs.keys())
+            assert_observations(
+                {key: value[li] for key, value in left_obs.items()},
+                {key: value[ri] for key, value in right_obs.items()},
+                task,
+                f"{task}: step {step}",
+            )
             for key in left_obs:
-                context = f"{task}: step {step}, {key}"
-                if key == "walker/egocentric_camera":
-                    assert_pixels(
-                        left_obs[key][li],
-                        right_obs[key][ri],
-                        task,
-                        context,
-                        egocentric=True,
-                    )
-                else:
-                    np.testing.assert_array_equal(
-                        left_obs[key][li], right_obs[key][ri], err_msg=context
-                    )
                 self.assertTrue(
                     left.observation_space[key].contains(left_obs[key][0]), key
                 )

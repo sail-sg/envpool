@@ -48,6 +48,7 @@ For PRs that add a new environment family or new upstream task family:
 - [ ] All intended upstream task IDs/scenarios are registered, documented, and covered by tests.
 - [ ] The upstream oracle/version is pinned, and tests check EnvPool registration/configs against it.
 - [ ] Determinism tests cover reset plus multi-step rollouts for every registered ID, including render frames when rendering is supported.
+- [ ] Default stochastic tasks vary across seeds, consecutive resets, and parallel environments; independently randomized fields are checked without oracle state sync ([#432](https://github.com/sail-sg/envpool/issues/432)), on all supported platforms and in installed-wheel tests where observable.
 - [ ] Oracle alignment tests compare step-level observations, rewards, done/truncation, info, and renders after at most one reset-time state sync.
 - [ ] Render tests cover reset, multi-step, batched render/env-id selection, and docs include EnvPool-vs-official images when an official renderer exists.
 - [ ] `envpool/make_test.py`, release packaging, docs, and README support lists are updated.

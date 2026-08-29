@@ -57,6 +57,11 @@ This command will run automatic tests in the main directory:
 
     make bazel-test
 
+New families and upstream task extensions must also meet
+:ref:`seed_randomization_acceptance`. Same-seed reproducibility alone does not
+rule out the frozen reset/goal regression from
+`issue #432 <https://github.com/sail-sg/envpool/issues/432>`_.
+
 To collect a merged Python + C/C++ LCOV report locally, run:
 
 .. code-block:: bash
