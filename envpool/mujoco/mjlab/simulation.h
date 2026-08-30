@@ -69,6 +69,8 @@ struct RaySensor {
   std::string alignment;
   float max_distance;
   bool terrain_height;
+
+  void GenerateGrid(const Json& pattern);
 };
 
 class Simulation;

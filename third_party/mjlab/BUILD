@@ -17,7 +17,7 @@ load("@python_versions//3.12:defs.bzl", py_binary_312 = "py_binary")
 load("@rules_cc//cc:cc_import.bzl", "cc_import")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_python//python:defs.bzl", "py_binary", "py_library")
-load(":defs.bzl", "native_assets", "wheel_files")
+load(":defs.bzl", "codegen_bundle", "native_assets", "wheel_files")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -145,7 +145,36 @@ py_binary(
     main = "link.py",
 )
 
-native_assets(name = "generate_native_assets")
+py_binary_312(
+    name = "codegen",
+    srcs = ["codegen.py"],
+)
+
+filegroup(
+    name = "codegen_recipe",
+    srcs = ["BUILD"] + glob([
+        "*.BUILD",
+        "*.bzl",
+        "*.patch",
+        "*.py",
+        "*.txt",
+    ]),
+)
+
+# This optional input is supplied by the release codegen job.
+# buildifier: disable=constant-glob
+_CODEGEN_INPUT = glob(["codegen_input.tar.gz"])
+
+native_assets(
+    name = "generate_native_assets",
+    archive = _CODEGEN_INPUT[0] if _CODEGEN_INPUT else None,
+)
+
+codegen_bundle(
+    name = "codegen_bundle",
+    srcs = [":generate_native_assets"],
+    tags = ["manual"],
+)
 
 filegroup(
     name = "assets",
@@ -205,14 +234,10 @@ py_binary_312(
     deps = [requirement("warp-lang")],
 )
 
-genrule(
+filegroup(
     name = "warp_headers",
-    outs = [
-        "warp_headers/exports.h",
-        "warp_headers/version.h",
-    ],
-    cmd = "$(execpath :generate_headers) $(execpath warp_headers/exports.h) $(execpath warp_headers/version.h)",
-    tools = [":generate_headers"],
+    srcs = [":generate_native_assets"],
+    output_group = "warp_headers",
 )
 
 cc_library(

@@ -149,3 +149,4 @@ _vizdoom*
 MUJOCO_LOG.TXT
 .vscode/
 plan.md
+third_party/mjlab/codegen_input.tar.gz

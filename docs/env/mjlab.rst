@@ -230,6 +230,21 @@ The test fixture is generated locally using the pinned upstream CSV conversion
 code. It exercises moving references and short-recording wraparound, but is
 not a motion dataset or a default training benchmark.
 
+Building from source
+--------------------
+
+The official SDK is needed only to generate C++ sources and model data, not to
+run EnvPool. Its ARM Linux wheel requires glibc 2.34 or newer. Release builds
+therefore generate portable inputs on Ubuntu, then compile them inside
+manylinux 2.28. This keeps the existing wheel compatibility floor.
+
+For a source build on an older Linux system, run
+``bazel build //third_party/mjlab:codegen_bundle`` on a supported build host and
+copy ``bazel-bin/third_party/mjlab/codegen/codegen_input.tar.gz`` into
+``third_party/mjlab/`` in the same source revision. Bazel validates the generator
+recipe and every archived file before using it. Remove that input to regenerate
+locally. Neither the archive nor the SDK is included in a released wheel.
+
 Validation
 ----------
 

@@ -16,6 +16,33 @@ permissions:
   contents: read
 
 jobs:
+  mjlab-codegen:
+    name: Generate portable MJLab build inputs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.27"
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Export portable C++ and data with the official SDK
+        run: |
+          make bazel-install bazel-pip-requirement-dev
+          "$HOME/go/bin/bazelisk" build --config=test --jobs=2 \
+            //third_party/mjlab:codegen_bundle
+      - uses: actions/upload-artifact@v7
+        with:
+          name: mjlab-codegen
+          path: bazel-bin/third_party/mjlab/codegen/codegen_input.tar.gz
+          if-no-files-found: error
+
   release-macos:
     name: release-macos (py${{ matrix.python-version }})
     runs-on: macos-14
@@ -80,6 +107,7 @@ jobs:
 
   release-linux:
     name: release-linux (${{ matrix.arch }}, py${{ matrix.python-version }})
+    needs: mjlab-codegen
     runs-on: ${{ matrix.runner }}
     container: ${{ matrix.container }}
     timeout-minutes: 120
@@ -106,6 +134,11 @@ jobs:
           ) }}
     steps:
       - uses: actions/checkout@v7
+      - name: Restore generated MJLab build inputs
+        uses: actions/download-artifact@v8
+        with:
+          name: mjlab-codegen
+          path: third_party/mjlab
       - uses: actions/setup-go@v7
         with:
           go-version: "1.27"
@@ -193,11 +226,13 @@ jobs:
           export __EGL_VENDOR_LIBRARY_FILENAMES=/opt/envpool-mesa/share/glvnd/egl_vendor.d/50_mesa.json
           make PROCGEN_QT_RUNTIME=bundled release-test
       - name: Compare MJLab with the official CPU oracle in manylinux
-        if: matrix.python-version == '3.12'
+        if: matrix.python-version == '3.12' && matrix.arch == 'x86_64'
         shell: bash
         run: |
           # Ubuntu's newer libm cannot expose all differences in the wheel's
           # glibc 2.28 runtime. Keep this comparison inside the release image.
+          # The official ARM Warp SDK requires glibc >= 2.34; its full oracle
+          # suite runs on Ubuntu in test.yml. Native ARM wheels still use 2.28.
           export LD_LIBRARY_PATH="/opt/envpool-mesa/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
           export __EGL_VENDOR_LIBRARY_FILENAMES=/opt/envpool-mesa/share/glvnd/egl_vendor.d/50_mesa.json
           MJLAB_ASSET_ROOT="$(python3 -c 'import envpool_assets_mjlab; print(envpool_assets_mjlab.asset_path())')"

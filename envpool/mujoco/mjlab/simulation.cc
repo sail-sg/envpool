@@ -190,6 +190,10 @@ Simulation::Simulation(const std::string& asset_path, uint32_t seed,
       }
       sensor.offsets = Floats(state.at("_local_offsets"));
       sensor.directions = Floats(state.at("_local_directions"));
+      const auto& pattern = sensor_cfg.at("pattern");
+      if (pattern.as_object().contains("resolution")) {
+        sensor.GenerateGrid(pattern);
+      }
       sensor.max_distance = Param(sensor_cfg, "max_distance");
       sensor.alignment = Name(sensor_cfg, "ray_alignment");
       sensor.terrain_height = type == "TerrainHeightSensor";

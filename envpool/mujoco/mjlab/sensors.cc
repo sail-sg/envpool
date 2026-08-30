@@ -23,6 +23,55 @@
 
 namespace mjlab {
 
+void RaySensor::GenerateGrid(const Json& pattern) {
+  // Torch 2.9's arange uses float NEON lanes, double x64 lanes, and a
+  // double scalar tail. Exporting one host's rounded grid into shared assets
+  // changes height scans on another host, even with identical robot poses.
+  const double step = boost::json::value_to<double>(pattern.at("resolution"));
+  const int width = std::min(ReductionWidth(), 8);  // arange disables AVX512.
+  const auto axis = [&](double size) {
+    const double start = -size / 2;
+    const double end = size / 2 + step * 0.5;
+    const int count = static_cast<int>(std::ceil((end - start) / step));
+    const int vector_end = count / (2 * width) * (2 * width);
+    const auto advance = [&](double base, int index) {
+#ifdef _WIN32
+      return base + step * index;
+#else
+      return std::fma(step, static_cast<double>(index), base);
+#endif
+    };
+    std::vector<float> values(count);
+    for (int i = 0; i < count; ++i) {
+      if (i >= vector_end) {
+        values[i] = static_cast<float>(advance(start, i));
+        continue;
+      }
+      const float base = static_cast<float>(advance(start, i / width * width));
+#if defined(__aarch64__) || defined(_M_ARM64)
+      values[i] = std::fma(static_cast<float>(step),
+                           static_cast<float>(i % width), base);
+#else
+      values[i] = static_cast<float>(advance(base, i % width));
+#endif
+    }
+    return values;
+  };
+  const auto x = axis(boost::json::value_to<double>(pattern.at("size").at(0)));
+  const auto y = axis(boost::json::value_to<double>(pattern.at("size").at(1)));
+  if (x.size() * y.size() * 3 != offsets.size()) {
+    throw std::invalid_argument("MJLab grid size disagrees with ray buffers");
+  }
+  std::size_t index = 0;
+  for (float yy : y) {
+    for (float xx : x) {
+      offsets[index++] = xx;
+      offsets[index++] = yy;
+      offsets[index++] = 0;
+    }
+  }
+}
+
 void Simulation::Sense() {
   std::map<std::string, std::vector<Vec3>> frame_positions;
   for (const auto& entry : rays) {
