@@ -421,6 +421,7 @@ pybind_extension(
 
 py_binary_312(
     name = "generate_myosuite_render_sample",
+    testonly = True,
     srcs = [
         "myosuite/myosuite_oracle_probe.py",
         "//third_party/myosuite:generate_render_sample.py",
@@ -438,6 +439,7 @@ py_binary_312(
     main = "generate_render_sample.py",
     deps = [
         ":mujoco_oracle",
+        ":mujoco_render_oracle",
         ":myosuite",
         ":myosuite_registration",
         oracle_requirement("click"),
@@ -745,6 +747,7 @@ py_test(
 
 py_binary_312(
     name = "myosuite_oracle_probe",
+    testonly = True,
     srcs = ["myosuite/myosuite_oracle_probe.py"],
     data = [
         "@myosuite_furniture_sim//:source",

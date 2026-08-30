@@ -28,6 +28,7 @@ cmake(
     name = "build",
     cache_entries = {
         "BUILD_SHARED_LIBS": "OFF",
+        "CMAKE_INSTALL_LIBDIR": "lib",
         "CMAKE_POLICY_VERSION_MINIMUM": "3.5",
         "SLEEF_BUILD_GNUABI_LIBS": "OFF",
         "SLEEF_BUILD_SCALAR_LIB": "ON",
