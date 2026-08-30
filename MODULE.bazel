@@ -152,8 +152,6 @@ use_repo(
     "marchingcubecpp",
     "marlgrid",
     "metaworld_assets",
-    "mjlab_mkl",
-    "mjlab_sleef",
     "mjlab_source",
     "mjlab_warp",
     "mujoco",
