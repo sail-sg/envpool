@@ -238,9 +238,15 @@ run EnvPool. Its ARM Linux wheel requires glibc 2.34 or newer. Release builds
 therefore generate portable inputs on Ubuntu, then compile them inside
 manylinux 2.28. This keeps the existing wheel compatibility floor.
 
-For a source build on an older Linux system, run
-``bazel build //third_party/mjlab:codegen_bundle`` on a supported build host and
-copy ``bazel-bin/third_party/mjlab/codegen/codegen_input.tar.gz`` into
+For a source build on an older Linux system, prepare the usual build
+dependencies on a supported host, then run:
+
+.. code-block:: bash
+
+   make bazel-pip-requirement-dev
+   bazel build --config=test //third_party/mjlab:codegen_bundle
+
+Copy ``bazel-bin/third_party/mjlab/codegen/codegen_input.tar.gz`` into
 ``third_party/mjlab/`` in the same source revision. Bazel validates the generator
 recipe and every archived file before using it. Remove that input to regenerate
 locally. Neither the archive nor the SDK is included in a released wheel.

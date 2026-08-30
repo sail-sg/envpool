@@ -27,7 +27,7 @@ void RaySensor::GenerateGrid(const Json& pattern) {
   // Torch 2.9's arange uses float NEON lanes, double x64 lanes, and a
   // double scalar tail. Exporting one host's rounded grid into shared assets
   // changes height scans on another host, even with identical robot poses.
-  const double step = boost::json::value_to<double>(pattern.at("resolution"));
+  const auto step = boost::json::value_to<double>(pattern.at("resolution"));
   const int width = std::min(ReductionWidth(), 8);  // arange disables AVX512.
   const auto axis = [&](double size) {
     const double start = -size / 2;
@@ -47,7 +47,7 @@ void RaySensor::GenerateGrid(const Json& pattern) {
         values[i] = static_cast<float>(advance(start, i));
         continue;
       }
-      const float base = static_cast<float>(advance(start, i / width * width));
+      const auto base = static_cast<float>(advance(start, i / width * width));
 #if defined(__aarch64__) || defined(_M_ARM64)
       values[i] = std::fma(static_cast<float>(step),
                            static_cast<float>(i % width), base);

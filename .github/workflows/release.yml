@@ -34,7 +34,8 @@ jobs:
           python-version: "3.12"
       - name: Export portable C++ and data with the official SDK
         run: |
-          make bazel-install bazel-pip-requirement-dev
+          go install github.com/bazelbuild/bazelisk@latest
+          make bazel-pip-requirement-dev
           "$HOME/go/bin/bazelisk" build --config=test --jobs=2 \
             //third_party/mjlab:codegen_bundle
       - uses: actions/upload-artifact@v7
