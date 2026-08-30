@@ -84,6 +84,10 @@ jobs:
     container: ${{ matrix.container }}
     timeout-minutes: 120
     env:
+      # ARM oracle sdists must use this image's compiler, not the standalone
+      # Python interpreter's build-time clang++, which is not installed here.
+      CC: gcc
+      CXX: g++
       BAZEL_RULES_QT_DIR: /opt/envpool-qt6
       WHEEL_LICENSE_DIR: /opt/envpool-qt6/licenses/qt6
       MUJOCO_GL: egl
@@ -188,6 +192,22 @@ jobs:
           export LD_LIBRARY_PATH="/opt/envpool-mesa/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
           export __EGL_VENDOR_LIBRARY_FILENAMES=/opt/envpool-mesa/share/glvnd/egl_vendor.d/50_mesa.json
           make PROCGEN_QT_RUNTIME=bundled release-test
+      - name: Compare MJLab with the official CPU oracle in manylinux
+        if: matrix.python-version == '3.12'
+        shell: bash
+        run: |
+          # Ubuntu's newer libm cannot expose all differences in the wheel's
+          # glibc 2.28 runtime. Keep this comparison inside the release image.
+          export LD_LIBRARY_PATH="/opt/envpool-mesa/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          export __EGL_VENDOR_LIBRARY_FILENAMES=/opt/envpool-mesa/share/glvnd/egl_vendor.d/50_mesa.json
+          MJLAB_ASSET_ROOT="$(python3 -c 'import envpool_assets_mjlab; print(envpool_assets_mjlab.asset_path())')"
+          make bazel-test BAZEL_TEST_TARGETS=//envpool/mujoco/mjlab:mjlab_align_test \
+            BAZELOPT="--nocache_test_results --local_test_jobs=2 --test_output=errors \
+            --test_env=ENVPOOL_ASSETS_PATH=$MJLAB_ASSET_ROOT \
+            --test_env=MUJOCO_GL --test_env=EGL_PLATFORM \
+            --test_env=LIBGL_ALWAYS_SOFTWARE --test_env=MESA_LOADER_DRIVER_OVERRIDE \
+            --test_env=GALLIUM_DRIVER --test_env=LD_PRELOAD \
+            --test_env=LD_LIBRARY_PATH --test_env=__EGL_VENDOR_LIBRARY_FILENAMES"
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:

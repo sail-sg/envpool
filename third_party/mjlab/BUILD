@@ -188,7 +188,13 @@ cc_library(
             "-ffp-contract=off",
             "-mcpu=generic",
         ],
-        "//conditions:default": ["-ffp-contract=off"],
+        "//conditions:default": [
+            "-ffp-contract=off",
+            # Keep the upstream CPU JIT's separate calls. GCC combines them
+            # into sincosf, which rounds differently on glibc 2.28 x64.
+            "-fno-builtin-sinf",
+            "-fno-builtin-cosf",
+        ],
     }),
     deps = ["@mjlab_warp//:native"],
 )

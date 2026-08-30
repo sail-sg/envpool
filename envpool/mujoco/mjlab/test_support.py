@@ -98,4 +98,7 @@ def public_components(task: str, obs: dict[str, np.ndarray], slot: int) -> dict:
     # The Yam robot's reset is fixed; cubes and target positions are random.
     if "camera" in obs:
         return {"objects": obs["camera"][slot], "goal": obs["actor"][slot, -3:]}
-    return {"object": critic[16:19], "goal_relative": critic[19:22]}
+    # Both distances use the fixed robot frame. Adding them removes the
+    # randomized object position, exposing the goal relative to the fixed
+    # reset gripper. Object motion must not conceal a frozen target (#432).
+    return {"object": critic[16:19], "goal": critic[16:19] + critic[19:22]}

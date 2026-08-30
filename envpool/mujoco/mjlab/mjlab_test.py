@@ -189,7 +189,8 @@ class MjlabTest(parameterized.TestCase):
         for component in sequences[0][0][0]:
 
             def differs(a: dict, b: dict, name: str = component) -> bool:
-                return not np.array_equal(a[name], b[name])
+                # Semantic variation must exceed arithmetic/render roundoff.
+                return bool(np.max(np.abs(a[name] - b[name])) > 1e-4)
 
             with self.subTest(component=component):
                 self.assertTrue(

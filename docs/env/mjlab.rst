@@ -233,7 +233,7 @@ not a motion dataset or a default training benchmark.
 Validation
 ----------
 
-The oracle uses unmodified MJLab 1.6.0, Torch 2.9.0, MuJoCo-Warp 3.11.0, and
+The CPU oracle uses unmodified MJLab 1.6.0, Torch 2.9.0, MuJoCo-Warp 3.11.0, and
 Warp 1.14.0. It synchronizes native state once immediately after reset, then
 compares complete episodes driven by identical external actions. Tests cover
 every task, observations including camera pixels, rewards, termination,
