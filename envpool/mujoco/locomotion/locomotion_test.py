@@ -49,7 +49,9 @@ def assert_pixels(
             "cmu_humanoid_maze_forage",
             "cmu_humanoid_heterogeneous_forage",
         }:
-            peak, total = 5, 20
+            # Gaps also reaches 23 with identical model/physics arrays and
+            # non-camera observations across native worker counts.
+            peak, total = 5, 23 if task == "cmu_humanoid_run_gaps" else 20
         elif egocentric and task == "rodent_maze_forage":
             peak = total = 1
         elif not egocentric and task in {

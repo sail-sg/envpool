@@ -188,7 +188,8 @@ vectors.
 This also reproduces with the official renderer alone, with serialized calls
 and with dithering, multisampling, or shadows disabled. Visual settings remain
 unchanged. The four CMU egocentric cameras allow at most five color levels per
-channel and a total absolute error of 20 across the entire 64-by-64 frame;
+channel and a total absolute error of 20 across the entire 64-by-64 frame
+(23 for gaps, measured with identical native model and physics arrays);
 the rodent maze camera allows one level in one channel. Public renders allow
 one level in at most three channels for go-to-target and escape-bowl, four for
 tracking, or one for maze and heterogeneous forage. Captured tracking and maze
