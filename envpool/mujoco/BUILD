@@ -76,6 +76,13 @@ py_library(
     imports = ["../.."],
 )
 
+py_library(
+    name = "mujoco_render_oracle",
+    testonly = True,
+    srcs = ["render_oracle.py"],
+    imports = ["../.."],
+)
+
 copy_to_directory(
     name = "gen_mujoco_gym_xml",
     srcs = [
@@ -750,6 +757,7 @@ py_binary_312(
     imports = ["../.."],
     deps = [
         ":mujoco_oracle",
+        ":mujoco_render_oracle",
         "//envpool/python:glfw_context",
         oracle_requirement("click"),
         oracle_requirement("dm-control"),

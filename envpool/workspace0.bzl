@@ -21,6 +21,7 @@ load("//third_party/cuda:cuda.bzl", "cuda_configure")
 load("//third_party/dmc_locomotion:repositories.bzl", "dmc_locomotion_repositories")
 load("//third_party/freedoom:defs.bzl", "freedoom_archive")
 load("//third_party/gfootball:repo.bzl", "gfootball_archive")
+load("//third_party/mjlab:repositories.bzl", "mjlab_repositories")
 load("//third_party/qt:qt_configure.bzl", "qt_configure")
 load("//third_party/vizdoom:repo.bzl", "vizdoom_archive")
 
@@ -29,6 +30,7 @@ def workspace():
 
     craftax_archive()
     dmc_locomotion_repositories()
+    mjlab_repositories()
 
     maybe(
         http_file,

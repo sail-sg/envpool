@@ -48,6 +48,7 @@ py_library(
         "//envpool/mujoco:playground_registration",
         "//envpool/mujoco:robotics_registration",
         "//envpool/mujoco/locomotion:registration",
+        "//envpool/mujoco/mjlab:registration",
         "//envpool/pgx:pgx_registration",
         "//envpool/procgen:procgen_registration",
         "//envpool/toy_text:toy_text_registration",

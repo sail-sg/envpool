@@ -1,0 +1,46 @@
+diff --git boost.BUILD boost.BUILD
+--- boost.BUILD
++++ boost.BUILD
+@@ -1978,8 +1978,18 @@
+ )
+
+ boost_library(
++    name = "compat",
++    deps = [
++        ":assert",
++        ":config",
++        ":throw_exception",
++    ],
++)
++
++boost_library(
+     name = "system",
+     deps = [
++        ":compat",
+         ":assert",
+         ":cerrno",
+         ":config",
+@@ -2574,13 +2584,16 @@
+
+ boost_library(
+     name = "json",
++    exclude_src = glob(["libs/json/src/*.py"]),
+     deps = [
+         ":align",
+         ":assert",
+         ":config",
+         ":container",
++        ":container_hash",
+         ":core",
+         ":describe",
++        ":endian",
+         ":exception",
+         ":mp11",
+         ":shared_ptr",
+@@ -2588,5 +2601,6 @@
+         ":system",
+         ":throw_exception",
+         ":utility",
++        ":variant2",
+     ],
+ )

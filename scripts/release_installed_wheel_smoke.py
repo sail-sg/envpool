@@ -5,12 +5,14 @@ from __future__ import annotations
 
 import argparse
 import importlib
-from importlib.metadata import version
+from importlib.metadata import requires, version
 from pathlib import Path
 
+from packaging.requirements import Requirement
 from packaging.version import Version
 
 _ASSET_PACKAGES = {
+    "envpool-assets-mjlab": ("envpool_assets_mjlab", []),
     "envpool-assets": (
         "envpool_assets",
         [
@@ -146,12 +148,25 @@ def _check_asset_package(
     distribution: str, module_name: str, rels: list[str]
 ) -> None:
     asset_version = Version(version(distribution))
-    if not Version("0.4.0") <= asset_version < Version("0.5.0"):
+    requirement = next(
+        item
+        for item in map(Requirement, requires("envpool") or [])
+        if item.name == distribution
+    )
+    if asset_version not in requirement.specifier:
         raise RuntimeError(
             f"unexpected {distribution} version: {asset_version}"
         )
     module = importlib.import_module(module_name)
     asset_root = Path(module.asset_path()).resolve()
+    if distribution == "envpool-assets-mjlab":
+        from envpool.mujoco.mjlab import TASKS
+
+        rels = [
+            f"mujoco/mjlab/assets/{task['asset']}/{filename}"
+            for task in TASKS.values()
+            for filename in ("task.json", "model.mjb.json", "physics.wrp.json")
+        ]
     missing = [
         asset_root / rel for rel in rels if not (asset_root / rel).exists()
     ]
@@ -189,6 +204,9 @@ def main() -> None:
             "locomotion data must ship in envpool-assets, not envpool: "
             f"{bundled_locomotion_assets}"
         )
+
+    if (envpool_package / "mujoco/mjlab/assets").exists():
+        raise RuntimeError("MJLab data must ship in envpool-assets-mjlab")
 
     for distribution, (module_name, rels) in _ASSET_PACKAGES.items():
         _check_asset_package(distribution, module_name, rels)

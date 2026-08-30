@@ -1,0 +1,80 @@
+diff --git a/warp/native/crt.h b/warp/native/crt.h
+--- a/warp/native/crt.h
++++ b/warp/native/crt.h
+@@ -273,6 +273,8 @@
+ double ceil(double);
+ float fabsf(float);
+ double fabs(double);
++float copysignf(float, float);
++double copysign(double, double);
+ float roundf(float);
+ double round(double);
+ float truncf(float);
+diff --git a/warp/native/tile.h b/warp/native/tile.h
+--- a/warp/native/tile.h
++++ b/warp/native/tile.h
+@@ -1088,7 +1088,12 @@ inline CUDA_CALLABLE int tile_align(int num_bytes)
+ // (AArch64) or a static variable (x86-64).
+ #if !defined(__CUDA_ARCH__)
+ class tile_shared_storage_t;
+-#if defined(__aarch64__)
++#if defined(WP_NATIVE_THREAD_LOCAL)
++// Ahead-of-time native hosts support TLS, unlike the LLVM JIT. Keep each
++// EnvPool worker's tile scratch independent without reserving an ABI register.
++// tile_shared_storage_t already saves and restores the enclosing pointer.
++inline thread_local tile_shared_storage_t* shared_tile_storage;
++#elif defined(__aarch64__)
+ // x28 is is the last callee-saved register on AArch64. This allows us to call externally
+ // compiled functions without worrying about clobbering the pointer.
+ // We pass -target-feature +reserve-x28 to Clang to exclude it from register allocation.
+diff --git a/warp/native/apic.h b/warp/native/apic.h
+--- a/warp/native/apic.h
++++ b/warp/native/apic.h
+@@ -222,6 +222,8 @@
+ // device_type: APICDeviceType value (APIC_DEVICE_CUDA=0, APIC_DEVICE_CPU=1).
+ // context is ignored for APIC_DEVICE_CPU.
+ WP_API APICGraph* wp_apic_load_graph(void* context, const char* path, int device_type);
++// Native asset packages can reconstruct serialized graphs without temporary files.
++WP_API APICGraph* wp_apic_load_cpu_graph_from_memory(const void* data, size_t size);
+ WP_API void wp_apic_destroy_graph(APICGraph* graph);
+
+ WP_API bool wp_apic_set_param(APICGraph* graph, const char* name, const void* data, size_t size);
+diff --git a/warp/native/apic.cpp b/warp/native/apic.cpp
+--- a/warp/native/apic.cpp
++++ b/warp/native/apic.cpp
+@@ -1777,6 +1777,22 @@
+ // Graph load dispatcher
+ // ============================================================================
+
++struct APICByteView {
++    const uint8_t* bytes;
++    size_t length;
++    const uint8_t* data() const { return bytes; }
++    size_t size() const { return length; }
++};
++
++static APICGraph* apic_load_bytes(void* context, int device_type, const std::string& base_name,
++                                  const std::string& modules_dir, APICByteView file_data);
++
++APICGraph* wp_apic_load_cpu_graph_from_memory(const void* data, size_t size)
++{
++    if (!data) return nullptr;
++    return apic_load_bytes(nullptr, APIC_DEVICE_CPU, "", "", {static_cast<const uint8_t*>(data), size});
++}
++
+ APICGraph* wp_apic_load_graph(void* context, const char* path, int device_type)
+ {
+     if (!path) {
+@@ -1812,6 +1828,12 @@
+         return nullptr;
+     }
+
++    return apic_load_bytes(context, device_type, base_name, modules_dir, {file_data.data(), file_data.size()});
++}
++
++static APICGraph* apic_load_bytes(void* context, int device_type, const std::string& base_name,
++                                  const std::string& modules_dir, APICByteView file_data)
++{
+     if (file_data.size() < sizeof(APICFileHeader)) {
+         wp::set_error_string("Invalid WRP file: too small");
+         return nullptr;

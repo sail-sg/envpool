@@ -1,0 +1,142 @@
+# MJLab b517e0c, frozen uv.lock; only the CPU Torch wheel replaces CUDA.
+# Python 3.12 is isolated from EnvPool runtime/test dependencies.
+absl-py==2.3.1
+annotated-types==0.7.0
+anyio==4.11.0
+asttokens==3.0.0
+attrs==25.4.0
+bcrypt==5.0.0
+certifi==2025.10.5
+cffi==2.0.0 ; platform_python_implementation != 'PyPy'
+charset-normalizer==3.4.4
+click==8.3.0
+cloudpickle==3.1.1
+colorama==0.4.6 ; sys_platform == 'win32'
+colorlog==6.10.1
+contourpy==1.3.2 ; python_full_version < '3.11'
+contourpy==1.3.3 ; python_full_version >= '3.11'
+cryptography==50.0.0
+cycler==0.12.1
+decorator==5.2.1
+deprecated==1.3.1
+docstring-parser==0.17.0
+embreex==2.17.7.post6 ; platform_machine == 'x86_64'
+etils==1.13.0
+exceptiongroup==1.3.0 ; python_full_version < '3.11'
+executing==2.2.1
+fabric==3.2.2
+filelock==3.25.2
+fonttools==4.61.1
+fsspec==2025.9.0
+gitdb==4.0.12
+gitpython==3.1.58
+glfw==2.10.0
+grpcio==1.76.0
+h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
+idna==3.18
+imageio==2.37.0
+imageio-ffmpeg==0.6.0
+importlib-metadata==8.7.0
+importlib-resources==6.5.2
+invoke==2.2.1
+ipython==8.37.0 ; python_full_version < '3.11'
+ipython==9.6.0 ; python_full_version >= '3.11'
+ipython-pygments-lexers==1.1.1 ; python_full_version >= '3.11'
+jedi==0.19.2
+jinja2==3.1.6
+jsonschema==4.25.1
+jsonschema-specifications==2025.9.1
+kiwisolver==1.4.9
+lxml==6.1.0
+manifold3d==3.2.1
+mapbox-earcut==1.0.3
+markdown==3.9
+markdown-it-py==3.0.0
+markupsafe==3.0.3
+matplotlib==3.10.8
+matplotlib-inline==0.1.7
+mdurl==0.1.2
+mediapy==1.2.7
+mjviser==0.0.14
+ml-dtypes==0.5.4
+mpmath==1.3.0
+msgspec==0.19.0
+mujoco==3.11.0
+mujoco-warp==3.11.0
+networkx==3.4.2 ; python_full_version < '3.11'
+networkx==3.5 ; python_full_version >= '3.11'
+numpy==2.2.6 ; python_full_version < '3.11'
+numpy==2.4.6 ; python_full_version == '3.11.*'
+numpy==2.5.1 ; python_full_version >= '3.12'
+onnx==1.22.0
+onnx-ir==0.1.11
+onnxscript==0.5.4
+orjson==3.11.8 ; python_full_version < '3.13'
+packaging==25.0
+paramiko==5.0.0
+parso==0.8.5
+pexpect==4.9.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
+pillow==12.3.0
+platformdirs==4.5.0
+prettytable==3.16.0
+prompt-toolkit==3.0.52
+protobuf==6.33.6
+ptyprocess==0.7.0 ; sys_platform != 'emscripten' and sys_platform != 'win32'
+pure-eval==0.2.3
+pycollada==0.9.2
+pycparser==2.23 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
+pydantic==2.12.3
+pydantic-core==2.41.4
+pygments==2.20.0
+pynacl==1.6.2
+pyopengl==3.1.10
+pyparsing==3.3.2
+python-dateutil==2.9.0.post0
+pyvers==0.1.0
+pyyaml==6.0.3
+referencing==0.37.0
+requests==2.33.1
+rich==14.2.0
+rpds-py==0.27.1
+rsl-rl-lib==5.5.0
+rtree==1.4.1
+scipy==1.15.3 ; python_full_version < '3.11'
+scipy==1.16.2 ; python_full_version >= '3.11'
+sentry-sdk==2.42.1
+setuptools==83.0.0
+shapely==2.1.2
+six==1.17.0
+smmap==5.0.2
+sniffio==1.3.1
+stack-data==0.6.3
+svg-path==7.0
+sympy==1.14.0
+tensorboard==2.20.0
+tensorboard-data-server==0.7.2
+tensordict==0.10.0
+torch==2.9.0 ; sys_platform == 'darwin'
+torch==2.9.0+cpu ; sys_platform != 'darwin'
+torchrunx==0.3.4
+tqdm==4.67.1
+traitlets==5.14.3
+trimesh==4.8.3
+typeguard==4.4.4
+typing-extensions==4.15.0
+typing-inspection==0.4.2
+tyro==1.0.1
+urllib3==2.7.0
+vhacdx==0.0.8.post2
+viser==1.0.27
+wandb==0.22.3
+warp-lang==1.14.0 ; sys_platform != 'darwin'
+warp-lang==1.14.0 ; sys_platform == 'darwin'
+wcwidth==0.2.14
+websockets==15.0.1
+werkzeug==3.1.7
+wrapt==2.0.1
+xxhash==3.6.0
+yourdfpy==0.0.58
+zipp==3.23.0
+zstandard==0.25.0
