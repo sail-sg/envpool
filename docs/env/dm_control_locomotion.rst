@@ -190,9 +190,12 @@ and with dithering, multisampling, or shadows disabled. Visual settings remain
 unchanged. The four CMU egocentric cameras allow at most five color levels per
 channel and a total absolute error of 20 across the entire 64-by-64 frame;
 the rodent maze camera allows one level in one channel. Public renders allow
-one level in at most three channels for go-to-target and escape-bowl, or one
-channel for tracking and heterogeneous forage. Other images and all native dynamics/reward replays
-remain bitwise. These limits are checked per frame, not averaged over a rollout.
+one level in at most three channels for go-to-target and escape-bowl, four for
+tracking, or one for maze and heterogeneous forage. Captured tracking and maze
+frames reproduce this variation in repeated official renders with identical
+model and used scene arrays; extra draws do not eliminate it. Other images and
+all native dynamics/reward replays remain bitwise. These limits are checked per
+frame, not averaged over a rollout.
 
 Oracle reward checks retain only small derived-math residuals: tracking's
 quaternion/exponential reductions, the bowl's distance norm, and, on Linux

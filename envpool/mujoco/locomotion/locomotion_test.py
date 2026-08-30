@@ -41,7 +41,7 @@ def assert_pixels(
         # model arrays, camera/lights/geoms and skin vertices/normals. This also
         # reproduces in official-only rendering, even serialized, without
         # dithering, MSAA or shadows. Do not change visual settings to hide it.
-        # Five complete multi-worker replays measured the budgets below; use
+        # Complete multi-worker replays measured the budgets below; use
         # an absolute error sum per frame, not a percentage of changed pixels.
         if egocentric and task in {
             "cmu_humanoid_run_walls",
@@ -57,9 +57,14 @@ def assert_pixels(
             "rodent_escape_bowl",
         }:
             peak, total = 1, 3
+        elif not egocentric and task == "cmu_humanoid_tracking":
+            # Captured official renders alternate by four color units with
+            # identical model and used scene arrays, even after extra draws.
+            peak, total = 1, 4
         elif not egocentric and task in {
-            "cmu_humanoid_tracking",
             "cmu_humanoid_heterogeneous_forage",
+            # The same official-only CGL variation affects one maze channel.
+            "cmu_humanoid_maze_forage",
         }:
             peak = total = 1
     if total:

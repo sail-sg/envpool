@@ -264,9 +264,10 @@ observations; EnvPool resets a completed slot on its next step.
 
 On macOS, native and oracle rendering settle each new frame with a second GPU
 draw. A captured scene with identical camera, geometry, and lighting bytes
-reproduces a one-level color difference on CGL/Metal's first draw; repeated
-readback alone does not remove it. This does not advance physics or change the
-scene, and pixel comparisons remain exact. Other families and platforms keep
+reproduces a one-level color difference on CGL/Metal's first draw. Reading the
+pixels again without drawing does not remove it. The second draw does not
+advance physics or change the scene, and pixel comparisons remain exact. Other
+families and platforms keep
 their existing rendering path.
 
 Independent tests observe native resets without oracle synchronization. They
