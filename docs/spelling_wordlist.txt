@@ -129,3 +129,7 @@ partitionable
 JAXlib
 grayscale
 gameplay
+CGL
+multisampling
+quaternion
+SHA

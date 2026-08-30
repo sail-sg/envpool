@@ -39,14 +39,16 @@ class GlContext {
 };
 
 std::shared_ptr<GlContext> CreateGlContext(
-    bool share_cgl_context = false, bool prefer_offline_cgl_context = false);
+    bool share_cgl_context = false, bool prefer_offline_cgl_context = false,
+    bool borrow_wgl_context = true);
 
 class OffscreenRenderer {
  public:
   explicit OffscreenRenderer(
       CameraPolicy camera_policy = CameraPolicy::kGymLike,
       bool disable_auxiliary_visuals = false, bool share_cgl_context = false,
-      bool prefer_offline_cgl_context = false, bool resize_offscreen = true);
+      bool prefer_offline_cgl_context = false, bool resize_offscreen = true,
+      bool borrow_wgl_context = true);
   ~OffscreenRenderer();
 
   void Render(const mjModel* model, mjData* data, int width, int height,
@@ -70,6 +72,7 @@ class OffscreenRenderer {
   bool share_cgl_context_;
   bool prefer_offline_cgl_context_;
   bool resize_offscreen_;
+  bool borrow_wgl_context_;
   bool initialized_{false};
   bool free_camera_initialized_{false};
 #if defined(__APPLE__)

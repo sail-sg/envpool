@@ -61,6 +61,7 @@ py_library(
         ":myosuite",
         ":playground",
         ":robotics",
+        "//envpool/mujoco/locomotion",
     ],
 )
 
@@ -829,12 +830,23 @@ py_test(
     srcs = ["dmc/mujoco_dmc_render_test.py"],
     imports = ["../.."],
     deps = [
+        ":dmc_render_oracle",
         ":mujoco_dmc",
         ":mujoco_dmc_registration",
         requirement("numpy"),
         requirement("absl-py"),
         requirement("dm-control"),
         requirement("gymnasium"),
+    ],
+)
+
+py_library(
+    name = "dmc_render_oracle",
+    srcs = ["dmc/render_oracle.py"],
+    imports = ["../.."],
+    deps = [
+        requirement("dm-control"),
+        requirement("mujoco"),
     ],
 )
 

@@ -13,7 +13,6 @@
 # limitations under the License.
 """Tests for the dm_control render path."""
 
-import ctypes
 import os
 import platform
 import subprocess
@@ -66,100 +65,16 @@ def _configure_linux_mujoco_gl() -> None:
 
 _configure_linux_mujoco_gl()
 
-from dm_control import _render, suite
-from dm_control._render import base as dm_control_render_base
-from dm_control._render import executor as dm_control_render_executor
+from dm_control import suite
 from dm_control.mujoco import engine as dm_control_engine
 
 import envpool.mujoco.dmc.registration as reg
+from envpool.mujoco.dmc.render_oracle import (
+    configure_macos_dm_control_renderer as _configure_macos_dm_control_renderer,
+)
 from envpool.registration import make_dm, make_gym
 
 _RENDER_STEPS = 3
-
-
-def _configure_macos_dm_control_renderer() -> None:
-    if platform.system() != "Darwin":
-        return
-
-    class _CglContext(dm_control_render_base.ContextBase):
-        def __init__(self, max_width: int, max_height: int):
-            super().__init__(
-                max_width,
-                max_height,
-                dm_control_render_executor.PassthroughRenderExecutor,
-            )
-
-        def _platform_init(self, max_width: int, max_height: int) -> None:
-            del max_width, max_height
-            from mujoco.cgl import cgl
-
-            attrib = cgl.CGLPixelFormatAttribute
-            profile = cgl.CGLOpenGLProfile
-            attrib_values = (
-                attrib.CGLPFAOpenGLProfile,
-                profile.CGLOGLPVersion_Legacy,
-                attrib.CGLPFAColorSize,
-                24,
-                attrib.CGLPFAAlphaSize,
-                8,
-                attrib.CGLPFADepthSize,
-                24,
-                attrib.CGLPFAStencilSize,
-                8,
-                attrib.CGLPFAAllowOfflineRenderers,
-                0,
-                0,  # terminator
-            )
-            attribs = (ctypes.c_int * len(attrib_values))(*attrib_values)
-            self._pixel_format = cgl.CGLPixelFormatObj()
-            num_pixel_formats = cgl.GLint()
-            cgl.CGLChoosePixelFormat(
-                attribs,
-                ctypes.byref(self._pixel_format),
-                ctypes.byref(num_pixel_formats),
-            )
-            if not self._pixel_format or num_pixel_formats.value == 0:
-                raise RuntimeError("failed to create CGL pixel format")
-
-            self._context = cgl.CGLContextObj()
-            cgl.CGLCreateContext(
-                self._pixel_format,
-                0,
-                ctypes.byref(self._context),
-            )
-            if not self._context:
-                cgl.CGLReleasePixelFormat(self._pixel_format)
-                self._pixel_format = None
-                raise RuntimeError("failed to create CGL context")
-            self._locked = False
-
-        def _platform_make_current(self) -> None:
-            from mujoco.cgl import cgl
-
-            cgl.CGLSetCurrentContext(self._context)
-            # Mirror mujoco.cgl.GLContext so the official renderer uses the
-            # same CGL lifecycle as EnvPool's native renderer.
-            if not self._locked:
-                cgl.CGLLockContext(self._context)
-                self._locked = True
-
-        def _platform_free(self) -> None:
-            from mujoco.cgl import cgl
-
-            if self._context:
-                if self._locked:
-                    cgl.CGLUnlockContext(self._context)
-                    self._locked = False
-                cgl.CGLSetCurrentContext(None)
-                cgl.CGLReleaseContext(self._context)
-                self._context = None
-            if self._pixel_format:
-                cgl.CGLReleasePixelFormat(self._pixel_format)
-                self._pixel_format = None
-
-    _render.Renderer = _CglContext
-    _render.BACKEND = "cgl"
-    _render.USING_GPU = True
 
 
 _configure_macos_dm_control_renderer()

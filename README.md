@@ -14,6 +14,7 @@
 - [x] [Toy text RL envs](https://envpool.readthedocs.io/en/latest/env/toy_text.html): Catch, FrozenLake, Taxi, NChain, CliffWalking, Blackjack
 - [x] [ViZDoom single player](https://envpool.readthedocs.io/en/latest/env/vizdoom.html)
 - [x] [DeepMind Control Suite](https://envpool.readthedocs.io/en/latest/env/dm_control.html)
+- [x] [DeepMind Control Locomotion and Soccer](https://envpool.readthedocs.io/en/latest/env/dm_control_locomotion.html)
 - [x] [Box2D](https://envpool.readthedocs.io/en/latest/env/box2d.html)
 - [x] [Google Research Football](https://envpool.readthedocs.io/en/latest/env/gfootball.html)
 - [x] [Procgen](https://envpool.readthedocs.io/en/latest/env/procgen.html)

@@ -65,6 +65,13 @@ use_repo(python, "python_3_12", "python_3_13", "python_3_14", "python_versions")
 
 # Short internal hub names keep Windows DLL runfile paths below MAX_PATH.
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip.parse(
+    hub_name = "dml",
+    python_version = "3.12",
+    requirements_lock = "//third_party/dmc_locomotion:asset_requirements.txt",
+)
+use_repo(pip, "dml")
+
 pip.override(
     file = "jumanji-1.1.2-py3-none-any.whl",
     patch_strip = 1,
@@ -122,12 +129,15 @@ use_repo(
     "concurrentqueue",
     "craftax_upstream",
     "cuda",
+    "dmc_cmu_mocap_2019",
+    "dmc_cmu_mocap_2020",
     "freedoom",
     "freetype",
     "google_research_football",
     "gym3_libenv",
     "gymnasium_robotics_assets",
     "jumanji_pacman_constants",
+    "labmaze_source",
     "libjpeg_turbo",
     "lodepng",
     "marchingcubecpp",
