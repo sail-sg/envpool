@@ -241,8 +241,17 @@ class MjlabTest(parameterized.TestCase):
             ro, ri = right.reset()
             controls = actions(left.action_space.shape[0], 195)
             endings = np.zeros(2, np.int32)
+            # The pinned robot critic layouts include a noise-free IMU gyro.
+            gyro_offset = (
+                196 if "Tracking" in task else 3 if "Velocity" in task else None
+            )
+            angular_velocities = []
             for step, control in enumerate(controls):
                 lp, rp = np.argsort(li["env_id"]), np.argsort(ri["env_id"])
+                if gyro_offset is not None:
+                    angular_velocities.append(
+                        lo["critic"][lp, gyro_offset : gyro_offset + 3].copy()
+                    )
                 assert_observations(
                     {k: v[lp] for k, v in lo.items()},
                     {k: v[rp] for k, v in ro.items()},
@@ -275,6 +284,14 @@ class MjlabTest(parameterized.TestCase):
                     np.testing.assert_array_equal(a[lp], b[rp])
                 endings += (lt | lx)[lp]
             self.assertTrue(np.all(endings >= 2))
+            if angular_velocities:
+                # Finite, deterministic denormal values can still be an invalid
+                # sensor: GCC alias analysis once lost the real gyro signal.
+                variation = np.ptp(np.stack(angular_velocities), axis=0)
+                self.assertTrue(
+                    np.all(np.max(variation, axis=1) > 1e-5),
+                    "each IMU must respond to the prescribed robot motion",
+                )
 
     @parameterized.named_parameters((task, task) for task in TASKS)
     def test_dm_contract(self, task: str) -> None:

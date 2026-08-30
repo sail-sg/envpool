@@ -208,16 +208,21 @@ cc_library(
 cc_library(
     name = "kernels",
     srcs = [":sources"],
+    # Warp's spatial.h exposes overlapping vec3/vec6 views. Type-based alias
+    # analysis can discard gyro values with GCC 14 on ARM. Preserve those
+    # intended aliases in generated CPU code, without changing its arithmetic.
     copts = select({
         "//:windows": [
             "/fp:strict",
             "/bigobj",
         ],
         ":macos_arm64": [
+            "-fno-strict-aliasing",
             "-ffp-contract=off",
             "-mcpu=generic",
         ],
         "//conditions:default": [
+            "-fno-strict-aliasing",
             "-ffp-contract=off",
             # Keep the upstream CPU JIT's separate calls. GCC combines them
             # into sincosf, which rounds differently on glibc 2.28 x64.
