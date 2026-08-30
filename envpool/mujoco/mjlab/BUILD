@@ -36,13 +36,6 @@ copy_to_directory(
     strip_prefix = "external/",
 )
 
-copy_to_directory(
-    name = "math_runtime_libraries",
-    srcs = ["//third_party/mjlab:math_runtime_libraries"],
-    out = "lib",
-    strip_prefix = "third_party/mjlab/openblas",
-)
-
 cc_library(
     name = "simulation",
     srcs = [
@@ -73,10 +66,7 @@ cc_library(
     data = [":assets"],
     deps = [
         "//third_party/mjlab:kernels",
-        "//third_party/mjlab:math_runtime",
         "@boost//:json",
-        "@mjlab_mkl//:math",
-        "@mjlab_sleef//:sleef",
         "@mjlab_warp//:native",
         "@mujoco//:mujoco_lib",
         "@zlib",
@@ -110,7 +100,6 @@ py_library(
     data = [
         ":assets",
         ":licenses",
-        ":math_runtime_libraries",
         ":mjlab_envpool",
     ],
     imports = ["../../.."],
@@ -155,6 +144,7 @@ py_test(
         ":registration",
         ":test_support",
         "//envpool:registration",
+        "//envpool/mujoco:render_test_utils",
         requirement("absl-py"),
         requirement("numpy"),
     ],
@@ -178,6 +168,7 @@ _ALIGN_DEPS = [
     ":registration",
     ":test_support",
     "//envpool:registration",
+    "//envpool/mujoco:render_test_utils",
     requirement("absl-py"),
     requirement("numpy"),
 ]

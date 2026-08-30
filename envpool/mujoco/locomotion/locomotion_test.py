@@ -13,7 +13,6 @@
 # limitations under the License.
 """Exercise every native task through EnvPool's batched public APIs."""
 
-import platform
 from collections.abc import Callable
 from contextlib import ExitStack
 from typing import Any
@@ -23,62 +22,8 @@ from absl.testing import absltest, parameterized
 from envpool.mujoco.locomotion.locomotion_envpool import TASKS
 
 import envpool.mujoco.locomotion.registration  # noqa: F401
+from envpool.mujoco.render_test_utils import assert_rgb_images
 from envpool.registration import make_dm, make_gymnasium
-
-
-def assert_pixels(
-    actual: np.ndarray,
-    expected: np.ndarray,
-    task: str,
-    context: str,
-    *,
-    egocentric: bool = False,
-) -> None:
-    """Check pixels with measured CGL limits on affected cameras only."""
-    peak = total = 0
-    if platform.system() == "Darwin":
-        # Apple's CGL/Metal renderer can return different pixels for identical
-        # model arrays, camera/lights/geoms and skin vertices/normals. This also
-        # reproduces in official-only rendering, even serialized, without
-        # dithering, MSAA or shadows. Do not change visual settings to hide it.
-        # Complete multi-worker replays measured the budgets below; use
-        # an absolute error sum per frame, not a percentage of changed pixels.
-        if egocentric and task in {
-            "cmu_humanoid_run_walls",
-            "cmu_humanoid_run_gaps",
-            "cmu_humanoid_maze_forage",
-            "cmu_humanoid_heterogeneous_forage",
-        }:
-            # Gaps also reaches 23 with identical model/physics arrays and
-            # non-camera observations across native worker counts.
-            peak, total = 5, 23 if task == "cmu_humanoid_run_gaps" else 20
-        elif egocentric and task == "rodent_maze_forage":
-            peak = total = 1
-        elif not egocentric and task in {
-            "cmu_humanoid_go_to_target",
-            "rodent_escape_bowl",
-        }:
-            peak, total = 1, 3
-        elif not egocentric and task == "cmu_humanoid_tracking":
-            # Captured official renders alternate by four color units with
-            # identical model and used scene arrays, even after extra draws.
-            peak, total = 1, 4
-        elif not egocentric and task in {
-            "cmu_humanoid_heterogeneous_forage",
-            # The same official-only CGL variation affects one maze channel.
-            "cmu_humanoid_maze_forage",
-        }:
-            peak = total = 1
-    if total:
-        np.testing.assert_equal(actual.shape, expected.shape)
-        np.testing.assert_equal(actual.dtype, expected.dtype)
-        delta = np.abs(actual.astype(np.int16) - expected.astype(np.int16))
-        np.testing.assert_array_less(delta, peak + 1, err_msg=context)
-        np.testing.assert_array_less(
-            delta.sum(axis=(-3, -2, -1)), total + 1, err_msg=context
-        )
-    else:
-        np.testing.assert_array_equal(actual, expected, err_msg=context)
 
 
 def assert_observations(
@@ -91,7 +36,7 @@ def assert_observations(
     np.testing.assert_equal(sorted(actual), sorted(expected))
     for key, value in actual.items():
         if key == "walker/egocentric_camera":
-            assert_pixels(value, expected[key], task, context, egocentric=True)
+            assert_rgb_images(value, expected[key], f"{task}, {context}")
         else:
             np.testing.assert_array_equal(
                 value, expected[key], err_msg=f"{context}, {key}"
@@ -239,14 +184,11 @@ class LocomotionTest(parameterized.TestCase):
                 assert a is not None and b is not None
                 self.assertEqual(a.shape, (2, 80, 96, 3))
                 self.assertEqual(a.dtype, np.uint8)
-                assert_pixels(a, b, task, f"{task}, render step {step}")
+                assert_rgb_images(a, b, f"{task}, render step {step}")
                 repeat = left.render(env_ids=[1])
                 assert repeat is not None
-                assert_pixels(
-                    a[:1],
-                    repeat,
-                    task,
-                    f"{task}, repeated render step {step}",
+                assert_rgb_images(
+                    a[:1], repeat, f"{task}, repeated render step {step}"
                 )
             action = random.uniform(
                 -0.25, 0.25, (len(li), *left.action_space.shape)

@@ -112,18 +112,8 @@ class Tracking : public Task {
     delta_position[2] = anchor_position[2];
     const auto delta =
         Multiply(sim_.Orientation(robot_anchor), Inverse(anchor_rotation));
-    const auto scalar_rotation = YawQuat(delta);
-    // MJLab repeats the anchor for every tracked body before computing yaw.
-    // Torch's contiguous atan2 loop processes two SIMD vectors at a time and
-    // uses libc for its tail. A single scalar yaw can differ by a final bit.
-    const int vector_size = 2 * ReductionWidth();
-    const std::size_t vector_end =
-        body_indices_.size() / vector_size * vector_size;
-    const auto vector_rotation =
-        vector_end == 0 ? scalar_rotation : YawQuat(delta, true);
+    const auto delta_rotation = YawQuat(delta);
     for (std::size_t i = 0; i < body_indices_.size(); ++i) {
-      const auto& delta_rotation =
-          i < vector_end ? vector_rotation : scalar_rotation;
       const auto position =
           delta_position +
           Rotate(delta_rotation, ReferencePosition(i) - anchor_position);

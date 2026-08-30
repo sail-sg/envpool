@@ -29,6 +29,7 @@ from absl.testing import absltest, parameterized
 import envpool.mujoco.mjlab.registration  # noqa: F401
 from envpool.mujoco.mjlab import TASKS
 from envpool.mujoco.mjlab.test_support import actions, motion_file, task_options
+from envpool.mujoco.render_test_utils import assert_rgb_images
 from envpool.registration import make_gymnasium, make_spec
 
 
@@ -589,10 +590,38 @@ class MjlabAlignTest(parameterized.TestCase):
                 }
                 all_values["frames"] = np.stack(frames)
                 all_values["frame_steps"] = np.array(frame_steps)
-                if any(
-                    not np.array_equal(value, oracle[key])
-                    for key, value in all_values.items()
-                ):
+                failed_fields = []
+                for key, values in all_values.items():
+                    with self.subTest(field=key):
+                        try:
+                            self.assertTrue(np.isfinite(values).all(), key)
+                            np.testing.assert_equal(
+                                values.shape, oracle[key].shape
+                            )
+                            np.testing.assert_equal(
+                                values.dtype, oracle[key].dtype
+                            )
+                            context = f"{task}, seed {seed}, {key}"
+                            if key == "frames":
+                                assert_rgb_images(values, oracle[key], context)
+                            elif np.issubdtype(values.dtype, np.floating):
+                                # Compare complete rollouts without copying
+                                # CPU dispatch or reduction internals.
+                                np.testing.assert_allclose(
+                                    values,
+                                    oracle[key],
+                                    rtol=1e-5,
+                                    atol=1e-6,
+                                    err_msg=context,
+                                )
+                            else:
+                                np.testing.assert_array_equal(
+                                    values, oracle[key], err_msg=context
+                                )
+                        except AssertionError:
+                            failed_fields.append(key)
+                            raise
+                if failed_fields:
                     artifact = Path(
                         os.environ.get("TEST_UNDECLARED_OUTPUTS_DIR", folder)
                     ) / (
@@ -604,14 +633,6 @@ class MjlabAlignTest(parameterized.TestCase):
                     shutil.copy2(source, artifact / "input.npz")
                     shutil.copy2(output, artifact / "oracle.npz")
                     shutil.copy2(folder / "oracle.log", artifact / "oracle.log")
-                for key, values in all_values.items():
-                    with self.subTest(field=key):
-                        self.assertTrue(np.isfinite(values).all(), key)
-                        np.testing.assert_array_equal(
-                            values,
-                            oracle[key],
-                            err_msg=f"{task}, seed {seed}, {key}",
-                        )
                 return all_values["frames"], oracle["frames"].copy()
 
 

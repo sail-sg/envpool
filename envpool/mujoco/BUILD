@@ -83,6 +83,14 @@ py_library(
     imports = ["../.."],
 )
 
+py_library(
+    name = "render_test_utils",
+    testonly = True,
+    srcs = ["render_test_utils.py"],
+    imports = ["../.."],
+    deps = [requirement("numpy")],
+)
+
 copy_to_directory(
     name = "gen_mujoco_gym_xml",
     srcs = [

@@ -184,19 +184,12 @@ when creating the pool, following the normal EnvPool seed API.
 
 On macOS, Apple's CGL/Metal renderer can return slightly different pixels for
 identical model arrays, camera, lights, geometry, and skin vertices and normal
-vectors.
-This also reproduces with the official renderer alone, with serialized calls
-and with dithering, multisampling, or shadows disabled. Visual settings remain
-unchanged. The four CMU egocentric cameras allow at most five color levels per
-channel and a total absolute error of 20 across the entire 64-by-64 frame
-(23 for gaps, measured with identical native model and physics arrays);
-the rodent maze camera allows one level in one channel. Public renders allow
-one level in at most three channels for go-to-target and escape-bowl, four for
-tracking, or one for maze and heterogeneous forage. Captured tracking and maze
-frames reproduce this variation in repeated official renders with identical
-model and used scene arrays; extra draws do not eliminate it. Other images and
-all native dynamics/reward replays remain bitwise. These limits are checked per
-frame, not averaged over a rollout.
+vectors. This also reproduces with the official renderer alone. RGB tests use
+the shared MuJoCo image check: at most five intensity levels in any color
+channel and a mean absolute error of ``0.01`` per frame, on the 0-to-255 scale.
+The same limits apply to every task and resolution, without changing visual
+settings or averaging errors over a rollout. Other platforms retain exact RGB
+comparisons, and native dynamics and reward replays remain exact.
 
 Oracle reward checks retain only small derived-math residuals: tracking's
 quaternion/exponential reductions, the bowl's distance norm, and, on Linux

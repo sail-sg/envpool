@@ -310,15 +310,11 @@ class Velocity : public Task {
       return {0, 0, 1};
     }
     Vec3 mean{};
-    // The point tensor has a stride of three along its reduction dimension.
-    // Keep masked slots in place and use SumKernel's scalar cascade.
     for (int axis = 0; axis < 3; ++axis) {
-      mean[axis] = Sum(
-                       points,
+      mean[axis] = Sum(points,
                        [axis](const auto& point) {
                          return point.first[axis] * point.second;
-                       },
-                       1) /
+                       }) /
                    valid;
     }
     Mat3 covariance{};
@@ -326,14 +322,7 @@ class Velocity : public Task {
       const auto centered = (point - mean) * mask;
       for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
-#if defined(__aarch64__) || defined(_M_ARM64)
-          // The small BMM kernel is compiled for the baseline CPU: ARM
-          // contracts these products, whereas the x64 wheels do not use FMA.
-          covariance[i * 3 + j] =
-              std::fma(centered[i], centered[j], covariance[i * 3 + j]);
-#else
           covariance[i * 3 + j] += centered[i] * centered[j];
-#endif
         }
       }
     }

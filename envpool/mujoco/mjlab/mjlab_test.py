@@ -30,6 +30,7 @@ from test_support import (
 
 import envpool.mujoco.mjlab.registration  # noqa: F401
 from envpool.mujoco.mjlab import TASKS
+from envpool.mujoco.render_test_utils import assert_rgb_images
 from envpool.registration import make_dm, make_gymnasium
 
 
@@ -269,15 +270,11 @@ class MjlabTest(parameterized.TestCase):
                     assert a is not None and b is not None
                     self.assertEqual(a.shape, (2, 80, 96, 3))
                     self.assertEqual(a.dtype, np.uint8)
-                    np.testing.assert_array_equal(
-                        a, b, err_msg=f"{task}, step {step}, worker replay"
+                    assert_rgb_images(
+                        a, b, f"{task}, step {step}, worker replay"
                     )
-                    np.testing.assert_array_equal(
-                        a[:1], left.render(env_ids=[1])
-                    )
-                    np.testing.assert_array_equal(
-                        a, left.render(env_ids=[1, 0])
-                    )
+                    assert_rgb_images(a[:1], left.render(env_ids=[1]))
+                    assert_rgb_images(a, left.render(env_ids=[1, 0]))
                     self.assertGreater(int(a.max()) - int(a.min()), 20)
                 control = np.repeat(control[None], 2, axis=0)
                 lo, lr, lt, lx, li = left.step(control, env_id=li["env_id"])

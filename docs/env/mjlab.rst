@@ -262,13 +262,17 @@ truncation, physics state, and public rendering at multiple steps.
 The oracle uses the upstream ``auto_reset=False`` option to retain terminal
 observations; EnvPool resets a completed slot on its next step.
 
-On macOS, native and oracle rendering settle each new frame with a second GPU
-draw. A captured scene with identical camera, geometry, and lighting bytes
-reproduces a one-level color difference on CGL/Metal's first draw. Reading the
-pixels again without drawing does not remove it. The second draw does not
-advance physics or change the scene, and pixel comparisons remain exact. Other
-families and platforms keep
-their existing rendering path.
+The implementation uses standard C++ math and MuJoCo's 3-by-3 eigensolver.
+Oracle comparisons allow float32 rounding differences (relative tolerance
+``1e-5``, absolute tolerance ``1e-6``), while discrete outputs and native
+same-seed replays remain exact. The tests still compare every step through
+termination; they do not substitute final scores for behavioral alignment.
+
+RGB rendering shares the existing MuJoCo bootstrap. On macOS, identical scenes
+can produce sparse CGL/Metal color differences. The shared image check allows
+at most five intensity levels in any color channel and a mean absolute error
+of ``0.01`` per frame, on the 0-to-255 scale. Other platforms retain exact RGB
+comparisons. No extra per-frame draw or task-specific pixel limit is required.
 
 Independent tests observe native resets without oracle synchronization. They
 check different seeds, consecutive resets, parallel slots, and replay of the

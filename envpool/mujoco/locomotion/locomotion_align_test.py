@@ -37,7 +37,6 @@ from envpool.mujoco.locomotion.locomotion_envpool import TASKS
 import envpool.mujoco.locomotion.registration  # noqa: F401
 from envpool.mujoco.dmc.render_oracle import configure_macos_dm_control_renderer
 from envpool.mujoco.locomotion.locomotion_test import (
-    assert_pixels,
     check_reset_randomization,
 )
 from envpool.mujoco.locomotion.oracle import (
@@ -46,6 +45,7 @@ from envpool.mujoco.locomotion.oracle import (
     make_oracle,
     oracle_observations,
 )
+from envpool.mujoco.render_test_utils import assert_rgb_images
 from envpool.registration import make_dm
 
 configure_macos_dm_control_renderer()
@@ -202,7 +202,7 @@ class LocomotionAlignTest(parameterized.TestCase):
             }:
                 tolerance = 2e-14
             if key == "walker/egocentric_camera":
-                assert_pixels(a, b, task, context, egocentric=True)
+                assert_rgb_images(a, b, context)
             elif tolerance:
                 np.testing.assert_allclose(
                     a, b, rtol=0, atol=tolerance, err_msg=f"{context}, {key}"
@@ -329,7 +329,7 @@ class LocomotionAlignTest(parameterized.TestCase):
                 official.physics.model.to_bytes()
             )
 
-        assert_pixels(frame, reference_frame, task, f"{task}, reset render")
+        assert_rgb_images(frame, reference_frame, f"{task}, reset render")
         random = np.random.RandomState(123)
         for step in range(2001):
             if pattern == "reference":
@@ -386,10 +386,9 @@ class LocomotionAlignTest(parameterized.TestCase):
             if step in (0, 3, 31, 127) or oracle_ts.last():
                 frame = env.render()[0]
                 activate_oracle_context(official)
-                assert_pixels(
+                assert_rgb_images(
                     frame,
                     official.physics.render(height, width, camera),
-                    task,
                     f"{task}, render step {step}",
                 )
             if oracle_ts.last():
