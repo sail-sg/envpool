@@ -261,7 +261,7 @@ class MjlabTest(parameterized.TestCase):
                     self.assertTrue(
                         left.observation_space[name].contains(lo[name][0]), name
                     )
-                if step in (0, 32, 97, 194):
+                if step in (0, 1, 32, 97, 194):
                     a, b = (
                         left.render(env_ids=[1, 0]),
                         right.render(env_ids=[1, 0]),
@@ -274,6 +274,9 @@ class MjlabTest(parameterized.TestCase):
                     )
                     np.testing.assert_array_equal(
                         a[:1], left.render(env_ids=[1])
+                    )
+                    np.testing.assert_array_equal(
+                        a, left.render(env_ids=[1, 0])
                     )
                     self.assertGreater(int(a.max()) - int(a.min()), 20)
                 control = np.repeat(control[None], 2, axis=0)

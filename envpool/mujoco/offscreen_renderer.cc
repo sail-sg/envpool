@@ -817,7 +817,8 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
                                int height, int camera_id, unsigned char* rgb,
                                const mjvCamera* camera_override,
                                const mjvOption* option_override,
-                               bool update_camera_first) {
+                               bool update_camera_first,
+                               bool settle_cgl_frame) {
   if (!initialized_) {
     Initialize(model);
   }
@@ -873,9 +874,18 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
     }
     cgl_first_frame_settled_ = true;
   } else {
+    if (settle_cgl_frame) {
+      // CGL/Metal can leave the first draw of a new scene unsettled, even
+      // after context warmup. Replaying identical camera/geom/light bytes
+      // reproduces one-quantum color changes; another readback does not help.
+      // Only callers requiring per-frame settling pay for this second draw.
+      mjr_finish();
+      mjr_render(viewport, &scene_, &context_);
+    }
     read_pixels();
   }
 #else
+  (void)settle_cgl_frame;
   read_pixels();
 #endif
 

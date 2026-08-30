@@ -146,7 +146,7 @@ class MjlabEnv : public Env<MjlabEnvSpec>, public RenderableEnv {
     }
     renderer_->Render(simulation_.physics.Model(),
                       simulation_.physics.RenderData(), width, height, camera,
-                      output, &camera_, &option_, true);
+                      output, &camera_, &option_, true, true);
   }
 
 #ifdef ENVPOOL_TEST

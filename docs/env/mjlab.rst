@@ -262,6 +262,13 @@ truncation, physics state, and public rendering at multiple steps.
 The oracle uses the upstream ``auto_reset=False`` option to retain terminal
 observations; EnvPool resets a completed slot on its next step.
 
+On macOS, native and oracle rendering settle each new frame with a second GPU
+draw. A captured scene with identical camera, geometry, and lighting bytes
+reproduces a one-level color difference on CGL/Metal's first draw; repeated
+readback alone does not remove it. This does not advance physics or change the
+scene, and pixel comparisons remain exact. Other families and platforms keep
+their existing rendering path.
+
 Independent tests observe native resets without oracle synchronization. They
 check different seeds, consecutive resets, parallel slots, and replay of the
 whole reset sequence. Independently randomized goals, poses, model properties,

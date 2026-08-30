@@ -55,7 +55,7 @@ class OffscreenRenderer {
               int camera_id, unsigned char* rgb,
               const mjvCamera* camera_override = nullptr,
               const mjvOption* option_override = nullptr,
-              bool update_camera_first = false);
+              bool update_camera_first = false, bool settle_cgl_frame = false);
 
  private:
   void Initialize(const mjModel* model);

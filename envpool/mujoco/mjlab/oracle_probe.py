@@ -251,9 +251,14 @@ def main() -> None:
                     # geometry without advancing or synchronizing physics.
                     renderer.update(env.sim.data)
                     frame = renderer.render()
-                    if step == 0 and platform.system() == "Darwin":
-                        for _ in range(4):
-                            renderer.update(env.sim.data)
+                    if platform.system() == "Darwin":
+                        # Match the native CGL warmup and per-frame draw
+                        # settling, without advancing or synchronizing physics.
+                        if step == 0:
+                            for _ in range(4):
+                                renderer.update(env.sim.data)
+                                frame = renderer.render()
+                        else:
                             frame = renderer.render()
                     frames.append(frame.copy())
                     frame_steps.append(step)
