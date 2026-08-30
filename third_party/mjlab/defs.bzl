@@ -145,6 +145,19 @@ codegen_bundle = rule(
     },
 )
 
+# Native runtime libraries come from the pinned oracle wheel, regardless of
+# the interpreter ABI used to build the EnvPool extension.
+_ORACLE_PYTHON_FLAG = str(Label("@rules_python//python/config_settings:python_version"))
+
+def _oracle_python_impl(_settings, _attr):
+    return {_ORACLE_PYTHON_FLAG: "3.12"}
+
+_oracle_python = transition(
+    implementation = _oracle_python_impl,
+    inputs = [],
+    outputs = [_ORACLE_PYTHON_FLAG],
+)
+
 def _wheel_files_impl(ctx):
     outputs = ctx.outputs.outs
     args = ctx.actions.args()
@@ -164,7 +177,14 @@ def _wheel_files_impl(ctx):
 _wheel_files = rule(
     implementation = _wheel_files_impl,
     attrs = {
-        "wheel": attr.label(allow_single_file = [".whl"], mandatory = True),
+        "wheel": attr.label(
+            allow_single_file = [".whl"],
+            cfg = _oracle_python,
+            mandatory = True,
+        ),
+        "_allowlist_function_transition": attr.label(
+            default = "@bazel_tools//tools/allowlists/function_transition_allowlist",
+        ),
         "members": attr.string_list(mandatory = True),
         "outs": attr.output_list(mandatory = True),
         "_extractor": attr.label(
