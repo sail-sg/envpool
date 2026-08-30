@@ -60,6 +60,7 @@ py_library(
         ":mujoco_gym",
         ":myosuite",
         ":playground",
+        ":render_test_utils",
         ":robotics",
         "//envpool/mujoco/locomotion",
     ],
@@ -85,7 +86,6 @@ py_library(
 
 py_library(
     name = "render_test_utils",
-    testonly = True,
     srcs = ["render_test_utils.py"],
     imports = ["../.."],
     deps = [requirement("numpy")],

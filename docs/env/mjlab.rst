@@ -263,7 +263,7 @@ The oracle uses the upstream ``auto_reset=False`` option to retain terminal
 observations; EnvPool resets a completed slot on its next step.
 
 Reward reductions use standard C++ math; the terrain-plane fit uses MuJoCo's
-3-by-3 eigensolver. Only arithmetic and trigonometry that set physical state
+3-by-3 eigenvalue solver. Only arithmetic and trigonometry that set physical state
 retain the pinned oracle's rounding, since tiny changes there can grow into
 different contact trajectories. Sine and cosine use statically linked MKL on
 x64 and SLEEF on ARM64; no additional math runtime or LAPACK solver is needed.
