@@ -46,7 +46,8 @@ float Cos(float v) { return Sleef_cosf1_u10purecfma(v); }
 #endif
 
 Eigen3 SymmetricEigen(Mat3 matrix) {
-  std::array<mjtNum, 9> input{}, vectors{};
+  std::array<mjtNum, 9> input{};
+  std::array<mjtNum, 9> vectors{};
   std::array<mjtNum, 3> values{};
   std::array<mjtNum, 4> quaternion{};
   std::copy(matrix.begin(), matrix.end(), input.begin());
