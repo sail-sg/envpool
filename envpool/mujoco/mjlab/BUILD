@@ -67,11 +67,15 @@ cc_library(
     deps = [
         "//third_party/mjlab:kernels",
         "@boost//:json",
+        "@mjlab_mkl//:math",
         "@mjlab_warp//:native",
         "@mujoco//:mujoco_lib",
         "@zlib",
         "@zstd",
-    ],
+    ] + select({
+        "@platforms//cpu:arm64": ["@mjlab_sleef//:sleef"],
+        "//conditions:default": [],
+    }),
 )
 
 cc_library(

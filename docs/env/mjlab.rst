@@ -262,7 +262,11 @@ truncation, physics state, and public rendering at multiple steps.
 The oracle uses the upstream ``auto_reset=False`` option to retain terminal
 observations; EnvPool resets a completed slot on its next step.
 
-The implementation uses standard C++ math and MuJoCo's 3-by-3 eigensolver.
+Reward reductions use standard C++ math; the terrain-plane fit uses MuJoCo's
+3-by-3 eigensolver. Only arithmetic and trigonometry that set physical state
+retain the pinned oracle's rounding, since tiny changes there can grow into
+different contact trajectories. Sine and cosine use statically linked MKL on
+x64 and SLEEF on ARM64; no additional math runtime or LAPACK solver is needed.
 Oracle comparisons allow float32 rounding differences (relative tolerance
 ``1e-5``, absolute tolerance ``1e-6``), while discrete outputs and native
 same-seed replays remain exact. The tests still compare every step through

@@ -19,7 +19,31 @@
 
 #include "mujoco/mujoco.h"
 
+#ifdef MJLAB_USE_MKL
+#include "mkl_vml.h"
+#else
+#include "sleef.h"
+#endif
+
 namespace mjlab {
+
+// Trigonometry also sets physical orientations during mid-episode motion
+// resampling. Preserve those inputs without emulating tensor CPU dispatch.
+#ifdef MJLAB_USE_MKL
+float Sin(float v) {
+  float result;
+  vmsSin(1, &v, &result, VML_HA | VML_FTZDAZ_OFF | VML_ERRMODE_IGNORE);
+  return result;
+}
+float Cos(float v) {
+  float result;
+  vmsCos(1, &v, &result, VML_HA | VML_FTZDAZ_OFF | VML_ERRMODE_IGNORE);
+  return result;
+}
+#else
+float Sin(float v) { return Sleef_sinf1_u10purecfma(v); }
+float Cos(float v) { return Sleef_cosf1_u10purecfma(v); }
+#endif
 
 Eigen3 SymmetricEigen(Mat3 matrix) {
   std::array<mjtNum, 9> input{}, vectors{};

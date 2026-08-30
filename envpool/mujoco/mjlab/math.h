@@ -31,8 +31,8 @@ using Vec3 = std::array<float, 3>;
 using Quat = std::array<float, 4>;
 using Mat3 = std::array<float, 9>;
 
-inline float Sin(float v) { return std::sin(v); }
-inline float Cos(float v) { return std::cos(v); }
+float Sin(float v);
+float Cos(float v);
 inline float Exp(float v) { return std::exp(v); }
 inline float Log(float v) { return std::log(v); }
 inline float Acos(float v) { return std::acos(v); }
