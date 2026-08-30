@@ -228,7 +228,11 @@ def main() -> None:
                     reward=np.array(reward, np.float32),
                     terminated=np.array(terminated),
                     truncated=np.array(truncated),
-                    elapsed_step=env.episode_length_buf.numpy().copy(),
+                    # EnvPool's elapsed_step info uses int32; MJLab stores its
+                    # internal episode counter as a Torch int64 tensor.
+                    elapsed_step=env.episode_length_buf.numpy().astype(
+                        np.int32
+                    ),
                     qpos=env.sim.data.qpos.numpy().copy(),
                     qvel=env.sim.data.qvel.numpy().copy(),
                 )
