@@ -346,6 +346,7 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
             "//third_party/vizdoom:sdl_thread.patch",
             "//third_party/vizdoom:windows_msvc_compat.patch",
             "//third_party/vizdoom:concurrent_runtime_directory.patch",
+            "//third_party/vizdoom:macos_registration_sections.patch",
         ],
     )
 
