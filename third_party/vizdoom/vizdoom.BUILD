@@ -954,6 +954,9 @@ cc_binary(
         ],
         "@envpool//:windows": _VIZDOOM_WINDOWS_LINKOPTS,
         "//conditions:default": [
+            # Registration tables are scanned between linker markers; their
+            # entries have no direct symbol references for section GC to retain.
+            "-Wl,--no-gc-sections",
             "-lpthread",
             "-lrt",
             "-ldl",
