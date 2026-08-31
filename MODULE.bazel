@@ -20,6 +20,7 @@ archive_override(
     patches = [
         "//third_party/boost:atomic_windows_build.patch",
         "//third_party/boost:filesystem_scope_headers.patch",
+        "//third_party/boost:json_sources.patch",
         "//third_party/boost:unused_dependencies.patch",
         "//third_party/boost:windows_common_defines.patch",
     ],
@@ -71,6 +72,14 @@ pip.parse(
     requirements_lock = "//third_party/dmc_locomotion:asset_requirements.txt",
 )
 use_repo(pip, "dml")
+
+pip.parse(
+    experimental_index_url_overrides = {"torch": "https://download.pytorch.org/whl/cpu"},
+    hub_name = "mjl",
+    python_version = "3.12",
+    requirements_lock = "//third_party/mjlab:oracle_requirements.txt",
+)
+use_repo(pip, "mjl")
 
 pip.override(
     file = "jumanji-1.1.2-py3-none-any.whl",
@@ -143,6 +152,10 @@ use_repo(
     "marchingcubecpp",
     "marlgrid",
     "metaworld_assets",
+    "mjlab_mkl",
+    "mjlab_sleef",
+    "mjlab_source",
+    "mjlab_warp",
     "mujoco",
     "mujoco_dmc_xml",
     "mujoco_gym_xml",

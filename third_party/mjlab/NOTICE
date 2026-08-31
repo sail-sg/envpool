@@ -1,0 +1,36 @@
+EnvPool MJLab implementation
+===========================
+
+The native task managers and serialized model assets are derived from MJLab
+1.6.0, commit b517e0c489139e7fcee95702cfb2b01931264985, distributed under the
+Apache License, Version 2.0. The pinned source includes the Unitree G1, Unitree
+Go1 and I2RT Yam models used by these presets. Original upstream license files
+are included with the runtime assets.
+
+The quaternion expressions in math.h follow MJLab's Isaac Lab math helpers.
+Those helpers retain the Isaac Lab Developers' BSD-3-Clause attribution; see
+LICENSE.isaaclab. Random-number conventions follow PyTorch 2.9.0, commit
+0fabc3ba44823f257e70ce397d989c8de5e362c1; see LICENSE.pytorch. The native
+implementation uses standard C++ math and MuJoCo's small-matrix routines for
+reward calculations, without a dependency on Torch at runtime.
+
+Physics and observation-camera kernels are generated from MuJoCo-Warp 3.11.0;
+see LICENSE.mujoco-warp and AUTHORS.mujoco-warp for its Apache-2.0 license and
+attribution.
+The CPU runtime and generated kernel support use NVIDIA Warp 1.14.0, commit
+b943176fbe3ab70e90708e74d2c48e6f50557145. Warp is distributed under the Apache
+License, Version 2.0 and incorporates third-party components with their own
+notices. The Warp license and its supplied third-party notices are preserved
+in the vendor license directory. EnvPool's changes to Warp are recorded in
+warp_native.patch; they add static CPU replay and thread-local scratch storage.
+
+Sine and cosine used in physical-state resets retain the pinned CPU oracle's
+rounding: SLEEF commit 5a1d179df9cf652951b59010a2d2075372d67f68 on ARM64
+(Boost Software License 1.0), and the required Intel oneMKL VML routines from
+2024.2.0 on Linux x64 and 2025.2.0 on Windows x64. These routines are linked
+statically and their licenses/notices are included in the corresponding core
+wheel. No additional math runtime DLL, BLAS, or LAPACK solver is bundled for
+this family.
+
+The locally generated motion fixture is for testing only. It is not included
+in either the runtime asset package or the EnvPool wheel.

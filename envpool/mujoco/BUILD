@@ -60,6 +60,7 @@ py_library(
         ":mujoco_gym",
         ":myosuite",
         ":playground",
+        ":render_test_utils",
         ":robotics",
         "//envpool/mujoco/locomotion",
     ],
@@ -74,6 +75,20 @@ py_library(
         "//conditions:default": ["@mujoco//:mujoco_shared_lib"],
     }),
     imports = ["../.."],
+)
+
+py_library(
+    name = "mujoco_render_oracle",
+    testonly = True,
+    srcs = ["render_oracle.py"],
+    imports = ["../.."],
+)
+
+py_library(
+    name = "render_test_utils",
+    srcs = ["render_test_utils.py"],
+    imports = ["../.."],
+    deps = [requirement("numpy")],
 )
 
 copy_to_directory(
@@ -414,6 +429,7 @@ pybind_extension(
 
 py_binary_312(
     name = "generate_myosuite_render_sample",
+    testonly = True,
     srcs = [
         "myosuite/myosuite_oracle_probe.py",
         "//third_party/myosuite:generate_render_sample.py",
@@ -431,6 +447,7 @@ py_binary_312(
     main = "generate_render_sample.py",
     deps = [
         ":mujoco_oracle",
+        ":mujoco_render_oracle",
         ":myosuite",
         ":myosuite_registration",
         oracle_requirement("click"),
@@ -738,6 +755,7 @@ py_test(
 
 py_binary_312(
     name = "myosuite_oracle_probe",
+    testonly = True,
     srcs = ["myosuite/myosuite_oracle_probe.py"],
     data = [
         "@myosuite_furniture_sim//:source",
@@ -750,6 +768,7 @@ py_binary_312(
     imports = ["../.."],
     deps = [
         ":mujoco_oracle",
+        ":mujoco_render_oracle",
         "//envpool/python:glfw_context",
         oracle_requirement("click"),
         oracle_requirement("dm-control"),

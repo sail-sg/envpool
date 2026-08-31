@@ -83,6 +83,7 @@ _FAMILY_SMOKE_TASKS: dict[str, tuple[str, ...]] = {
         "DmcSoccerHumanoid-v1",
     ),
     "envpool.mujoco.metaworld": ("MetaWorld/Reach-v3",),
+    "envpool.mujoco.mjlab": ("Mjlab-Cartpole-Balance-v0",),
     "envpool.mujoco.playground": (
         "Go1JoystickFlatTerrain-v1",
         "G1JoystickFlatTerrain-v1",

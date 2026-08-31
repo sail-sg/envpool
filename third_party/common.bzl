@@ -100,7 +100,11 @@ while IFS= read -r src; do
   fi
   dst="$out/$rel"
   mkdir -p "$(dirname "$dst")"
-  cp -R "$src" "$dst"
+  if [ -d "$src" ] && [ -z "$rel" ]; then
+    cp -R "$src/." "$out"
+  else
+    cp -R "$src" "$dst"
+  fi
 done < "$manifest"
 """,
     )

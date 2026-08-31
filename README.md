@@ -27,6 +27,7 @@
 - [x] [Jumanji](https://envpool.readthedocs.io/en/latest/env/jumanji.html)
 - [x] [Craftax and Craftax Classic](https://envpool.readthedocs.io/en/latest/env/craftax.html)
 - [x] [MuJoCo Playground](https://envpool.readthedocs.io/en/latest/env/mujoco_playground.html)
+- [x] [MJLab](https://envpool.readthedocs.io/en/latest/env/mjlab.html)
 
 Here are EnvPool's several highlights:
 

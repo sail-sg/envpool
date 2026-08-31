@@ -36,7 +36,7 @@ constexpr bool is_container_v = false;  // NOLINT
 template <typename D>
 constexpr bool is_container_v<Container<D>> = true;  // NOLINT
 template <typename... T>
-constexpr bool HasContainerType(std::tuple<T...> /*unused*/) {
+constexpr bool HasContainerType(const std::tuple<T...>& /*unused*/) {
   return (is_container_v<typename T::dtype> || ...);
 }
 inline bool HasDynamicDim(const std::vector<int>& shape) {

@@ -39,6 +39,8 @@ _SETUP_DATA = [
     "setup.cfg",
     "//envpool",
     "//third_party/gfootball:setup_py_data",
+    # Materialize the synthetic motion for installed-wheel tests, not packaging.
+    "//third_party/mjlab:testdata",
 ]
 
 _SETUP_DEPS = [

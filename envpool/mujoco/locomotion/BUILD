@@ -157,6 +157,7 @@ py_test(
     deps = [
         ":registration",
         "//envpool:registration",
+        "//envpool/mujoco:render_test_utils",
         requirement("absl-py"),
         requirement("numpy"),
     ],
@@ -170,6 +171,7 @@ py_library(
     deps = [
         ":registration",
         "//envpool:registration",
+        "//envpool/mujoco:render_test_utils",
         requirement("absl-py"),
         requirement("numpy"),
     ],
@@ -227,6 +229,7 @@ py_test(
         "//envpool:registration",
         "//envpool/mujoco:dmc_render_oracle",
         "//envpool/mujoco:mujoco_oracle",
+        "//envpool/mujoco:render_test_utils",
         "//envpool/python:glfw_context",
         requirement("absl-py"),
         requirement("dm-control"),

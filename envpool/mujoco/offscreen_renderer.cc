@@ -816,7 +816,8 @@ void OffscreenRenderer::UpdateCamera(const mjModel* model, const mjData* data,
 void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
                                int height, int camera_id, unsigned char* rgb,
                                const mjvCamera* camera_override,
-                               const mjvOption* option_override) {
+                               const mjvOption* option_override,
+                               bool update_camera_first) {
   if (!initialized_) {
     Initialize(model);
   }
@@ -835,6 +836,12 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
 
   mjrRect viewport = {0, 0, width, height};
   auto render_scene = [&] {
+    // MuJoCo 3.11 adds geoms before updating the GL camera. Infinite planes
+    // are centered on that camera, so a moved tracking camera otherwise uses
+    // the previous frame's plane tessellation (and different lighting).
+    if (update_camera_first) {
+      mjv_updateCamera(model, data, &camera_, &scene_);
+    }
     mjv_updateScene(model, data,
                     option_override != nullptr ? option_override : &option_,
                     &perturb_, &camera_, mjCAT_ALL, &scene_);

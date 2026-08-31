@@ -121,7 +121,15 @@ def _resolve_targets(changed_files: list[str]) -> list[str]:
             path.endswith(CPP_SUFFIXES)
             or pathlib.PurePosixPath(path).name == "BUILD"
         ):
-            package_patterns.add(f"//envpool/{parts[1]}:*")
+            # Nested families own their BUILD files. Selecting only the top
+            # family package would omit their native sources from future PRs.
+            for directory in pathlib.PurePosixPath(path).parents:
+                if any(
+                    (REPO_ROOT / directory / name).is_file()
+                    for name in ("BUILD", "BUILD.bazel")
+                ):
+                    package_patterns.add(f"//{directory.as_posix()}:*")
+                    break
 
     targets: set[str] = set()
     for pattern in sorted(package_patterns):

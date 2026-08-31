@@ -107,6 +107,7 @@ stable version through `envpool.readthedocs.io/en/stable/
    env/toy_text
    env/vizdoom
    env/mujoco_playground
+   env/mjlab
 
 
 Indices and tables
