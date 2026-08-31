@@ -1,15 +1,3 @@
-diff --git a/warp/native/crt.h b/warp/native/crt.h
---- a/warp/native/crt.h
-+++ b/warp/native/crt.h
-@@ -273,6 +273,8 @@
- double ceil(double);
- float fabsf(float);
- double fabs(double);
-+float copysignf(float, float);
-+double copysign(double, double);
- float roundf(float);
- double round(double);
- float truncf(float);
 diff --git a/warp/native/tile.h b/warp/native/tile.h
 --- a/warp/native/tile.h
 +++ b/warp/native/tile.h

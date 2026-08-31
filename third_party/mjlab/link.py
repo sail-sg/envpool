@@ -62,8 +62,7 @@ def main() -> None:
         + "\n  };\n  const auto it = kernels.find(key);\n"
         + "  return it == kernels.end() ? nullptr : it->second;\n}\n}\n"
     )
-    # Warp's generated modules use a standalone CRT declaration header. Keep
-    # the ordinary C++ lookup table in its own translation unit.
+    # Keep the ordinary C++ lookup table separate from generated kernel shards.
     (args.output / "lookup.cc").write_text(lookup)
     for shard in range(16):
         (args.output / f"kernels_{shard}.cc").write_text(

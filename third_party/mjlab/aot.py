@@ -41,6 +41,9 @@ def native_module(source: str, module_hash: str) -> tuple[str, dict[str, str]]:
         raise ValueError("unexpected Warp CPU entry signature")
     namespace = "mjlab_" + module_hash
     preamble, body = source.split(_PREAMBLE)
+    # The JIT resolves CRT calls through clang.dll. Native compilers need the
+    # platform headers: MSVC provides functions such as fabsf only inline.
+    preamble = preamble.replace("#define WP_NO_CRT\n", "")
     body = body.replace('extern "C" {', "").replace("} // extern C", "")
     wrappers = []
     symbols = {}
