@@ -53,9 +53,7 @@
 namespace envpool::mujoco {
 
 #if defined(ENVPOOL_HAS_CGL)
-// Software CGL can still change pixels on pass 5 with identical scene/state;
-// fresh hosted replays were stable from there through pass 32.
-constexpr int kCglFirstFrameSettlePasses = 6;
+constexpr int kCglFirstFrameSettlePasses = 4;
 #endif
 
 namespace {

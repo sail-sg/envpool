@@ -23,6 +23,16 @@ from typing import Any
 from envpool.mujoco.oracle import configure_mujoco_package_shared_lib
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
+# Diagnostic only: Python 3.8+ DLL loading does not search PATH.
+import ctypes
+_asan_name = "clang_rt.asan_dynamic-x86_64.dll"
+_asan_path = next((Path(directory) / _asan_name for directory in os.environ["PATH"].split(os.pathsep) if (Path(directory) / _asan_name).is_file()), None)
+if _asan_path is None:
+    raise RuntimeError("MSVC AddressSanitizer runtime missing from toolchain PATH")
+_asan_directory = os.add_dll_directory(str(_asan_path.parent))
+_asan_runtime = ctypes.WinDLL(str(_asan_path))
+print("ASAN_RUNTIME", _asan_path, flush=True)
+
 configure_mujoco_package_shared_lib(include_linux=True)
 preload_windows_gl_dlls(strict=True)
 if platform.system() == "Linux":

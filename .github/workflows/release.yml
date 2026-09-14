@@ -8,16 +8,17 @@ on:
       - v*
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Keep expensive wheel builds and their diagnostic artifacts on new pushes.
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
 jobs:
-  # Keep active wheel builds; each platform/Python pair queues independently.
   release-macos:
     name: release-macos (py${{ matrix.python-version }})
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-macos-${{ matrix.python-version }}
-      cancel-in-progress: false
     runs-on: macos-14
     timeout-minutes: 60
     strategy:
@@ -91,9 +92,6 @@ jobs:
 
   release-linux:
     name: release-linux (${{ matrix.arch }}, py${{ matrix.python-version }})
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-linux-${{ matrix.arch }}-${{ matrix.python-version }}
-      cancel-in-progress: false
     runs-on: ${{ matrix.runner }}
     container: ${{ matrix.container }}
     timeout-minutes: 120
@@ -255,9 +253,6 @@ jobs:
 
   release-windows:
     name: release-windows (py${{ matrix.python-version }})
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-windows-${{ matrix.python-version }}
-      cancel-in-progress: false
     runs-on: windows-2022
     # Cold optimized builds take about 50 minutes before the wheel tests start.
     timeout-minutes: 120

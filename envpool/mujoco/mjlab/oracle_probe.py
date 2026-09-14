@@ -256,8 +256,7 @@ def main() -> None:
                     renderer.update(env.sim.data)
                     frame = renderer.render()
                     if step == 0 and platform.system() == "Darwin":
-                        # Match the native renderer's first-frame CGL warmup.
-                        for _ in range(6):
+                        for _ in range(4):
                             renderer.update(env.sim.data)
                             frame = renderer.render()
                     frames.append(frame.copy())
