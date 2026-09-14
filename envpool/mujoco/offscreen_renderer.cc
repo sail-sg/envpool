@@ -19,7 +19,6 @@
 #include <cerrno>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <future>
@@ -54,7 +53,9 @@
 namespace envpool::mujoco {
 
 #if defined(ENVPOOL_HAS_CGL)
-constexpr int kCglFirstFrameSettlePasses = 4;
+// Software CGL can still change pixels on pass 5 with identical scene/state;
+// fresh hosted replays were stable from there through pass 32.
+constexpr int kCglFirstFrameSettlePasses = 6;
 #endif
 
 namespace {
@@ -113,6 +114,8 @@ class CglContext final : public GlContext {
         static_cast<CGLPixelFormatAttribute>(0),  // value
         static_cast<CGLPixelFormatAttribute>(0),  // terminator
     };
+    // Most MuJoCo oracles use the default accelerated CGL format; callers can
+    // still request the offline renderer when an upstream oracle does so.
     bool chose_pixel_format = prefer_offline_context
                                   ? ChoosePixelFormat(offline_attribs)
                                   : ChoosePixelFormat(preferred_attribs);
@@ -834,15 +837,6 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
   UpdateCamera(model, data, camera_id, camera_override);
 
   mjrRect viewport = {0, 0, width, height};
-  std::uint64_t scene_hash = 0;
-  const auto fingerprint = [](const void* data, std::size_t size,
-                              std::uint64_t hash = 14695981039346656037ULL) {
-    const auto* bytes = static_cast<const unsigned char*>(data);
-    for (std::size_t i = 0; i < size; ++i) {
-      hash = (hash ^ bytes[i]) * 1099511628211ULL;
-    }
-    return hash;
-  };
   auto render_scene = [&] {
     // MuJoCo 3.11 adds geoms before updating the GL camera. Infinite planes
     // are centered on that camera, so a moved tracking camera otherwise uses
@@ -853,13 +847,6 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
     mjv_updateScene(model, data,
                     option_override != nullptr ? option_override : &option_,
                     &perturb_, &camera_, mjCAT_ALL, &scene_);
-    scene_hash = fingerprint(scene_.camera, sizeof(scene_.camera));
-    scene_hash = fingerprint(scene_.lights, scene_.nlight * sizeof(mjvLight), scene_hash);
-    scene_hash = fingerprint(scene_.flags, sizeof(scene_.flags), scene_hash);
-    for (int i = 0; i < scene_.ngeom; ++i) {
-      scene_hash = fingerprint(scene_.geoms + i, offsetof(mjvGeom, label), scene_hash);
-      scene_hash = fingerprint(&scene_.geoms[i].modelrbound, sizeof(float), scene_hash);
-    }
     mjr_render(viewport, &scene_, &context_);
   };
 
@@ -882,20 +869,9 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
   // renderer so env code does not need task-specific render workarounds.
   if (!cgl_first_frame_settled_) {
     read_pixels();
-    const auto log_settle = [&](int pass) {
-      if (model->nq == 2 && model->nu == 1) {
-        std::fprintf(stderr, "CARTPOLE_SETTLE context=%p pass=%d state=%llu scene=%llu rgb=%llu\n",
-                     static_cast<void*>(this), pass,
-                     static_cast<unsigned long long>(fingerprint(data->qpos, model->nq * sizeof(mjtNum))),
-                     static_cast<unsigned long long>(scene_hash),
-                     static_cast<unsigned long long>(fingerprint(scratch_.data(), scratch_.size())));
-      }
-    };
-    log_settle(0);
-    for (int pass = 0; pass < 6; ++pass) {
+    for (int pass = 0; pass < kCglFirstFrameSettlePasses; ++pass) {
       render_scene();
       read_pixels();
-      log_settle(pass + 1);
     }
     cgl_first_frame_settled_ = true;
   } else {
@@ -905,15 +881,6 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
   read_pixels();
 #endif
 
-  if (model->nq == 2 && model->nu == 1) {
-    auto state_hash = fingerprint(data->qpos, model->nq * sizeof(mjtNum));
-    state_hash = fingerprint(data->qvel, model->nv * sizeof(mjtNum), state_hash);
-    state_hash = fingerprint(&data->time, sizeof(mjtNum), state_hash);
-    std::fprintf(stderr, "CARTPOLE_FRAME state=%llu scene=%llu rgb=%llu\n",
-                 static_cast<unsigned long long>(state_hash),
-                 static_cast<unsigned long long>(scene_hash),
-                 static_cast<unsigned long long>(fingerprint(scratch_.data(), scratch_.size())));
-  }
   std::size_t row_bytes =
       static_cast<std::size_t>(width) * 3 * sizeof(unsigned char);
   for (int y = 0; y < height; ++y) {
