@@ -114,6 +114,9 @@ def check_reset_randomization(
                     )
                 resets.append(rows)
             sequences.append(resets)
+        # close() stops workers; drop the remaining reference to release native
+        # physics before constructing the next four-environment pool.
+        del pool
 
     def differs(left: dict, right: dict, field: str | None = None) -> bool:
         if field is not None:

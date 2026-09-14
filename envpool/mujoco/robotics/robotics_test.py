@@ -16,6 +16,9 @@
 from __future__ import annotations
 
 import ctypes
+import ctypes.util
+import json
+from pathlib import Path
 import os
 import platform
 import subprocess
@@ -962,8 +965,11 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
             )
 
     def test_align_with_upstream_rollout(self) -> None:
-        for task_id in _HAND_ENVS:
+        for task_id in ("HandManipulateEgg-v1", "HandManipulateBlock-v1", "HandManipulatePen-v1"):
             with self.subTest(task_id=task_id):
+                directory = Path(os.environ["TEST_UNDECLARED_OUTPUTS_DIR"]) / task_id
+                directory.mkdir(parents=True, exist_ok=True)
+                os.environ["ENVPOOL_HAND_DIAGNOSTICS"] = str(directory)
                 env0 = _make_upstream_env(task_id)
                 env1 = make_gymnasium(task_id, num_envs=1, seed=0)
                 try:
@@ -981,6 +987,31 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
                         info1["qacc_warmstart0"][0],
                         info1["goal0"][0],
                     )
+                    model = mujoco.MjModel.from_binary_path(str(directory / "native.mjb"))
+                    base = env0.unwrapped
+                    model_diffs = []
+                    for name in dir(model):
+                        value = getattr(model, name)
+                        official = getattr(base.model, name)
+                        if isinstance(value, np.ndarray) and value.shape == official.shape and not np.array_equal(value, official):
+                            model_diffs.append((name, int(np.count_nonzero(value != official)), float(np.abs(value.astype(float) - official.astype(float)).max()) if value.dtype.kind in "biuf" else "text"))
+                    print(task_id, "model differences:", model_diffs, flush=True)
+                    libc = ctypes.CDLL(ctypes.util.find_library("m"))
+                    libc.fma.restype = ctypes.c_double
+                    libc.fma.argtypes = [ctypes.c_double] * 3
+                    def compare_state(step):
+                        native = json.loads((directory / f"native-{step}.json").read_text())
+                        diffs = {key: float(np.max(np.abs(np.asarray(values) - getattr(base.data, key)))) for key, values in native.items() if key == "time" or len(values)}
+                        print(task_id, "step", step, "state differences", diffs, flush=True)
+                        if step:
+                            ranges = base.model.actuator_ctrlrange
+                            scale = (ranges[:, 1] - ranges[:, 0]) / 2
+                            center = (ranges[:, 1] + ranges[:, 0]) / 2
+                            plain = np.clip(center + action * scale, ranges[:, 0], ranges[:, 1])
+                            fused = np.clip([libc.fma(float(a), float(b), float(c)) for a, b, c in zip(action, scale, center)], ranges[:, 0], ranges[:, 1])
+                            ctrl = np.asarray(native["ctrl"])
+                            print(task_id, step, "control comparisons", {"native_plain": int(np.count_nonzero(ctrl != plain)), "native_fma": int(np.count_nonzero(ctrl != fused)), "oracle_plain": int(np.count_nonzero(base.data.ctrl != plain)), "oracle_fma": int(np.count_nonzero(base.data.ctrl != fused))}, flush=True)
+                    compare_state(0)
                     _assert_goal_obs_equal(
                         obs0,
                         _first_env_obs(cast(Any, obs1)),
@@ -990,7 +1021,7 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
 
                     terminated1 = np.array([False])
                     truncated1 = np.array([False])
-                    for _ in range(_max_episode_steps(task_id)):
+                    for step in range(_max_episode_steps(task_id)):
                         action = env0.action_space.sample()
                         obs0, reward0, terminated0, truncated0, info0 = (
                             env0.step(action)
@@ -1003,29 +1034,32 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
                                 np.asarray([0], dtype=np.int32),
                             )
                         )
-                        _assert_goal_obs_equal(
-                            obs0,
-                            _first_env_obs(cast(Any, obs1)),
-                            atol=obs_atol,
-                            rtol=obs_rtol,
-                        )
-                        _assert_scalar_allclose(
-                            reward0,
-                            reward1[0],
-                            atol=1e-5,
-                            rtol=1e-5,
-                        )
-                        self.assertEqual(terminated0, terminated1[0])
-                        self.assertEqual(truncated0, truncated1[0])
-                        np.testing.assert_allclose(
-                            info0["is_success"],
-                            info1["is_success"][0],
-                        )
+                        compare_state(step + 1)
+                        with self.subTest(step=step):
+                            _assert_goal_obs_equal(
+                                obs0,
+                                _first_env_obs(cast(Any, obs1)),
+                                atol=obs_atol,
+                                rtol=obs_rtol,
+                            )
+                            _assert_scalar_allclose(
+                                reward0,
+                                reward1[0],
+                                atol=1e-5,
+                                rtol=1e-5,
+                            )
+                            self.assertEqual(terminated0, terminated1[0])
+                            self.assertEqual(truncated0, truncated1[0])
+                            np.testing.assert_allclose(
+                                info0["is_success"],
+                                info1["is_success"][0],
+                            )
                         if terminated1[0] or truncated1[0]:
                             break
                 finally:
                     env0.close()
                     env1.close()
+                    os.environ.pop("ENVPOOL_HAND_DIAGNOSTICS", None)
 
     def test_v0_alias_matches_canonical_spec(self) -> None:
         for alias_id, target_id in _HAND_CANONICAL_BY_V0.items():
