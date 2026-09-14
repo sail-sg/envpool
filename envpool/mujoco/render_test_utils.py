@@ -28,6 +28,7 @@ def assert_rgb_images(
     *,
     macos_peak_error: int = 5,
     macos_mean_error: float = 0.01,
+    record_mismatch: bool = True,
 ) -> None:
     """Compare RGB frames without requiring identical CGL rounding."""
     assert actual is not None and expected is not None, context
@@ -53,6 +54,8 @@ def assert_rgb_images(
             err_msg=context,
         )
     except AssertionError:
+        if not record_mismatch:
+            raise
         print(
             f"{context}: RGB error sum={delta.sum(axis=(-3, -2, -1))}, "
             f"changed pixels={np.count_nonzero(np.any(delta, axis=-1), axis=(-2, -1))}"

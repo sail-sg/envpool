@@ -21,6 +21,9 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
+#include <fstream>
+#include <iomanip>
 #include <limits>
 #include <random>
 #include <stdexcept>
@@ -791,6 +794,31 @@ class HandEnvBase : public Env<EnvSpecT>, public MujocoRobotEnv {
   }
 
   void WriteState(float reward, bool reset) {
+#ifdef ENVPOOL_TEST
+    if (const char* directory = std::getenv("ENVPOOL_HAND_DIAGNOSTICS")) {
+      const std::string base(directory);
+      if (reset) {
+        mj_saveModel(model_, (base + "/native.mjb").c_str(), nullptr, 0);
+      }
+      std::ofstream out(base + "/native-" + std::to_string(elapsed_step_) + ".json");
+      out << std::setprecision(17) << "{\"time\":" << data_->time;
+      const auto field = [&](const char* name, const mjtNum* values, int size) {
+        out << ",\"" << name << "\":[";
+        for (int i = 0; i < size; ++i) {
+          if (i) out << ',';
+          out << values[i];
+        }
+        out << ']';
+      };
+      field("qpos", data_->qpos, model_->nq);
+      field("qvel", data_->qvel, model_->nv);
+      field("ctrl", data_->ctrl, model_->nu);
+      field("qacc", data_->qacc, model_->nv);
+      field("qacc_warmstart", data_->qacc_warmstart, model_->nv);
+      field("act", data_->act, model_->na);
+      out << '}';
+    }
+#endif
     auto state = Allocate();
     state["reward"_] = reward;
     std::vector<mjtNum> achieved_goal = AchievedGoal();

@@ -16,6 +16,8 @@
 from __future__ import annotations
 
 import ctypes
+import json
+from pathlib import Path
 import os
 import platform
 import subprocess
@@ -962,8 +964,11 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
             )
 
     def test_align_with_upstream_rollout(self) -> None:
-        for task_id in _HAND_ENVS:
+        for task_id in ("HandManipulateEgg-v1", "HandManipulateBlock-v1", "HandManipulatePen-v1"):
             with self.subTest(task_id=task_id):
+                directory = Path(os.environ["TEST_UNDECLARED_OUTPUTS_DIR"]) / task_id
+                directory.mkdir(parents=True, exist_ok=True)
+                os.environ["ENVPOOL_HAND_DIAGNOSTICS"] = str(directory)
                 env0 = _make_upstream_env(task_id)
                 env1 = make_gymnasium(task_id, num_envs=1, seed=0)
                 try:
@@ -981,6 +986,21 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
                         info1["qacc_warmstart0"][0],
                         info1["goal0"][0],
                     )
+                    model = mujoco.MjModel.from_binary_path(str(directory / "native.mjb"))
+                    base = env0.unwrapped
+                    model_diffs = []
+                    for name in dir(model):
+                        value = getattr(model, name)
+                        official = getattr(base.model, name)
+                        if isinstance(value, np.ndarray) and value.shape == official.shape and not np.array_equal(value, official):
+                            model_diffs.append((name, int(np.count_nonzero(value != official)), float(np.abs(value.astype(float) - official.astype(float)).max()) if value.dtype.kind in "biuf" else "text"))
+                    print(task_id, "model differences:", model_diffs, flush=True)
+                    def compare_state(step):
+                        native = json.loads((directory / f"native-{step}.json").read_text())
+                        diffs = {key: float(np.max(np.abs(np.asarray(values) - getattr(base.data, key)))) for key, values in native.items() if key == "time" or len(values)}
+                        print(task_id, "step", step, "state differences", diffs, flush=True)
+                        np.savez_compressed(directory / f"official-{step}.npz", **{key: getattr(base.data, key) for key in native})
+                    compare_state(0)
                     _assert_goal_obs_equal(
                         obs0,
                         _first_env_obs(cast(Any, obs1)),
@@ -990,7 +1010,7 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
 
                     terminated1 = np.array([False])
                     truncated1 = np.array([False])
-                    for _ in range(_max_episode_steps(task_id)):
+                    for step in range(_max_episode_steps(task_id)):
                         action = env0.action_space.sample()
                         obs0, reward0, terminated0, truncated0, info0 = (
                             env0.step(action)
@@ -1003,6 +1023,7 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
                                 np.asarray([0], dtype=np.int32),
                             )
                         )
+                        compare_state(step + 1)
                         _assert_goal_obs_equal(
                             obs0,
                             _first_env_obs(cast(Any, obs1)),
@@ -1026,6 +1047,7 @@ class _GymnasiumRoboticsHandEnvPoolTest(absltest.TestCase):
                 finally:
                     env0.close()
                     env1.close()
+                    os.environ.pop("ENVPOOL_HAND_DIAGNOSTICS", None)
 
     def test_v0_alias_matches_canonical_spec(self) -> None:
         for alias_id, target_id in _HAND_CANONICAL_BY_V0.items():
