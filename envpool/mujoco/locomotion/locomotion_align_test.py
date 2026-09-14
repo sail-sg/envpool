@@ -37,6 +37,7 @@ from envpool.mujoco.locomotion.locomotion_envpool import TASKS
 import envpool.mujoco.locomotion.registration  # noqa: F401
 from envpool.mujoco.dmc.render_oracle import configure_macos_dm_control_renderer
 from envpool.mujoco.locomotion.locomotion_test import (
+    assert_egocentric_images,
     check_reset_randomization,
 )
 from envpool.mujoco.locomotion.oracle import (
@@ -202,7 +203,7 @@ class LocomotionAlignTest(parameterized.TestCase):
             }:
                 tolerance = 2e-14
             if key == "walker/egocentric_camera":
-                assert_rgb_images(a, b, context)
+                assert_egocentric_images(a, b, task, context)
             elif tolerance:
                 np.testing.assert_allclose(
                     a, b, rtol=0, atol=tolerance, err_msg=f"{context}, {key}"
