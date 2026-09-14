@@ -4,6 +4,8 @@ startup --windows_enable_symlinks
 common --enable_bzlmod
 common --noincompatible_disallow_empty_glob
 common --enable_platform_specific_config
+# GitHub source archives can pause longer than the default 20-second read timeout.
+common --http_timeout_scaling=3
 
 build --incompatible_strict_action_env
 build --incompatible_default_to_explicit_init_py

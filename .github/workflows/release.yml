@@ -16,34 +16,6 @@ permissions:
   contents: read
 
 jobs:
-  mjlab-codegen:
-    name: Generate portable MJLab build inputs
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
-        with:
-          go-version: "1.27"
-      - uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: "25"
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-      - name: Export portable C++ and data with the official SDK
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          make bazel-pip-requirement-dev
-          "$HOME/go/bin/bazelisk" build --config=test --jobs=2 \
-            //third_party/mjlab:codegen_bundle
-      - uses: actions/upload-artifact@v7
-        with:
-          name: mjlab-codegen
-          path: bazel-bin/third_party/mjlab/codegen/codegen_input.tar.gz
-          if-no-files-found: error
-
   release-macos:
     name: release-macos (py${{ matrix.python-version }})
     runs-on: macos-14
@@ -108,7 +80,6 @@ jobs:
 
   release-linux:
     name: release-linux (${{ matrix.arch }}, py${{ matrix.python-version }})
-    needs: mjlab-codegen
     runs-on: ${{ matrix.runner }}
     container: ${{ matrix.container }}
     timeout-minutes: 120
@@ -135,11 +106,6 @@ jobs:
           ) }}
     steps:
       - uses: actions/checkout@v7
-      - name: Restore generated MJLab build inputs
-        uses: actions/download-artifact@v8
-        with:
-          name: mjlab-codegen
-          path: third_party/mjlab
       - uses: actions/setup-go@v7
         with:
           go-version: "1.27"
@@ -154,6 +120,27 @@ jobs:
           go install github.com/bazelbuild/bazelisk@latest
           ln -sf /root/go/bin/bazelisk /usr/local/bin/bazelisk
           ln -sf /root/go/bin/bazelisk /usr/local/bin/bazel
+          if [ "${{ matrix.arch }}" = aarch64 ]; then
+            cp /root/go/bin/bazelisk .ci-bazelisk
+          fi
+      # Only the official ARM SDK needs newer glibc. Generate in a sibling
+      # container sharing this checkout; compile and test in manylinux below.
+      - name: Generate ARM MJLab build inputs
+        if: matrix.arch == 'aarch64'
+        uses: docker://ubuntu:24.04
+        env:
+          JAVA_HOME: ""
+        with:
+          entrypoint: /bin/bash
+          args: >-
+            -euc "apt-get update &&
+            apt-get install -y --no-install-recommends ca-certificates python3 make gcc g++ &&
+            make bazel-pip-requirement-dev &&
+            ./.ci-bazelisk --output_user_root=/tmp/envpool-codegen build --config=test --jobs=2
+            //third_party/mjlab:codegen_bundle &&
+            cp bazel-bin/third_party/mjlab/codegen/codegen_input.tar.gz third_party/mjlab/ &&
+            ./.ci-bazelisk --output_user_root=/tmp/envpool-codegen shutdown &&
+            rm .ci-bazelisk"
       - name: Set up Python ${{ matrix.python-version }}
         shell: bash
         run: |

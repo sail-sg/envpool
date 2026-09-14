@@ -18,6 +18,7 @@ load("@bazel_tools//tools/build_defs/repo:utils.bzl", "patch", "workspace_and_bu
 
 _VIZDOOM_PATCH_TARGETS = [
     "src/c_console.cpp",
+    "src/doomtype.h",
     "src/fragglescript/t_func.cpp",
     "src/g_level.cpp",
     "src/m_specialpaths.cpp",

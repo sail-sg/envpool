@@ -234,9 +234,10 @@ Building from source
 --------------------
 
 The official SDK is needed only to generate C++ sources and model data, not to
-run EnvPool. Its ARM Linux wheel requires ``glibc`` 2.34 or newer. Release builds
-therefore generate portable inputs on Ubuntu, then compile them inside
-``manylinux`` 2.28. This keeps the existing wheel compatibility floor.
+run EnvPool. Its ARM Linux wheel requires ``glibc`` 2.34 or newer. The ARM release
+job therefore generates portable inputs in an Ubuntu container, then compiles
+them inside ``manylinux`` 2.28. Other platforms generate them during the ordinary
+build. This keeps the existing wheel compatibility floor.
 
 For a source build on an older Linux system, prepare the usual build
 dependencies on a supported host, then run:
