@@ -8,7 +8,7 @@ on:
   pull_request:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-windows-craftax-validation
+  group: ${{ github.workflow }}-${{ github.ref }}-windows-heap-asan
   cancel-in-progress: false
 
 permissions:
@@ -377,7 +377,7 @@ jobs:
         run: |
           repo_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-repo")
           disk_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-disk")
-          make BAZEL_TEST_TARGETS="//envpool/craftax:craftax_behavior_test" BAZELOPT="--repository_cache=$repo_cache --disk_cache=$disk_cache $BAZEL_CI_RESOURCE_OPTS --test_env=PYTHONFAULTHANDLER=1" bazel-test
+          make BAZEL_TEST_TARGETS="//envpool/mujoco/locomotion:locomotion_align_test" BAZELOPT="--repository_cache=$repo_cache --disk_cache=$disk_cache $BAZEL_CI_RESOURCE_OPTS --test_env=PYTHONFAULTHANDLER=1 --test_env=ASAN_OPTIONS=alloc_dealloc_mismatch=1 --test_filter=*test_randomized_components_rodent_escape_bowl --test_sharding_strategy=disabled --runs_per_test=5 --copt=/fsanitize=address --copt=/Z7 --linkopt=/DEBUG --linkopt=/INCREMENTAL:NO" bazel-test
       - name: Shut down Bazel
         if: ${{ always() && !cancelled() }}
         continue-on-error: true
