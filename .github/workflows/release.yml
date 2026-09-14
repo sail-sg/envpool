@@ -117,11 +117,10 @@ jobs:
         run: |
           dnf install -y git curl wget zsh gcc gcc-c++ make tmux mesa-libEGL-devel mesa-libGL-devel libglvnd-devel mesa-dri-drivers
           dnf clean all
-          go install github.com/bazelbuild/bazelisk@latest
-          ln -sf /root/go/bin/bazelisk /usr/local/bin/bazelisk
-          ln -sf /root/go/bin/bazelisk /usr/local/bin/bazel
+          GOBIN=/usr/local/bin go install github.com/bazelbuild/bazelisk@latest
+          ln -sf /usr/local/bin/bazelisk /usr/local/bin/bazel
           if [ "${{ matrix.arch }}" = aarch64 ]; then
-            cp /root/go/bin/bazelisk .ci-bazelisk
+            cp /usr/local/bin/bazelisk .ci-bazelisk
           fi
       # Only the official ARM SDK needs newer glibc. Generate in a sibling
       # container sharing this checkout; compile and test in manylinux below.
@@ -134,7 +133,7 @@ jobs:
           entrypoint: /bin/bash
           args: >-
             -euc "apt-get update &&
-            apt-get install -y --no-install-recommends ca-certificates python3 make gcc g++ &&
+            apt-get install -y --no-install-recommends ca-certificates python3 make gcc g++ git patch &&
             make bazel-pip-requirement-dev &&
             ./.ci-bazelisk --output_user_root=/tmp/envpool-codegen build --config=test --jobs=2
             //third_party/mjlab:codegen_bundle &&
