@@ -251,7 +251,8 @@ jobs:
   release-windows:
     name: release-windows (py${{ matrix.python-version }})
     runs-on: windows-2022
-    timeout-minutes: 60
+    # Cold optimized builds take about 50 minutes before the wheel tests start.
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
