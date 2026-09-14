@@ -10,8 +10,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  # Keep expensive wheel builds and their diagnostic artifacts on new pushes.
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -65,7 +64,6 @@ jobs:
           go install github.com/bazelbuild/bazelisk@latest
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Build
-        id: build
         run: |
           rm -rf dist wheelhouse
           make RELEASE_PYTHON=${{ matrix.python-version }} pypi-wheel
@@ -83,7 +81,7 @@ jobs:
           path: ${{ runner.temp }}/render-mismatches
           if-no-files-found: ignore
       - name: Upload artifact
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        if: ${{ always() && !cancelled() && hashFiles('wheelhouse/*.whl') != '' }}
         uses: actions/upload-artifact@v7
         with:
           name: wheel-macos-${{ matrix.python-version }}
@@ -190,7 +188,6 @@ jobs:
         run: |
           echo "LD_PRELOAD=$(g++ -print-file-name=libstdc++.so.6)" >> "$GITHUB_ENV"
       - name: Build
-        id: build
         run: |
           rm -rf dist wheelhouse
           make PYPI_WHEEL_PLAT=${{ matrix.auditwheel-plat }} pypi-wheel
@@ -244,7 +241,7 @@ jobs:
             --test_env=GALLIUM_DRIVER --test_env=LD_PRELOAD \
             --test_env=LD_LIBRARY_PATH --test_env=__EGL_VENDOR_LIBRARY_FILENAMES"
       - name: Upload artifact
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        if: ${{ always() && !cancelled() && hashFiles('wheelhouse/*.whl') != '' }}
         uses: actions/upload-artifact@v7
         with:
           name: wheel-linux-${{ matrix.arch }}-${{ matrix.python-version }}
@@ -349,7 +346,6 @@ jobs:
           Add-Content -Path $env:GITHUB_PATH -Value $cmakeBinDir
           & (Join-Path $cmakeBinDir "cmake.exe") --version
       - name: Build
-        id: build
         shell: bash
         run: |
           rm -rf dist wheelhouse
@@ -360,7 +356,7 @@ jobs:
         run: |
           make release-test
       - name: Upload artifact
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        if: ${{ always() && !cancelled() && hashFiles('wheelhouse/*.whl') != '' }}
         uses: actions/upload-artifact@v7
         with:
           name: wheel-windows-${{ matrix.python-version }}

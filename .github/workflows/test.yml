@@ -8,7 +8,7 @@ on:
   pull_request:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-cartpole-framebuffer
+  group: ${{ github.workflow }}-${{ github.ref }}-cartpole-history
   cancel-in-progress: false
 
 permissions:
@@ -267,11 +267,18 @@ jobs:
       - name: Test
         run: |
           if [ "${{ github.event_name }}" = workflow_dispatch ]; then
-            make BAZEL_TEST_TARGETS="//envpool/mujoco/mjlab:mjlab_test //envpool/mujoco/mjlab:mjlab_align_test" \
-              BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS --test_filter=*Cartpole* --test_sharding_strategy=disabled" bazel-test
+            make BAZEL_TEST_TARGETS=//envpool/mujoco/mjlab:mjlab_test \
+              BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS --compilation_mode=opt --test_sharding_strategy=disabled --test_filter=*test_rollout_and_render_Mjlab-Cartpole*" bazel-test
           else
             make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" bazel-test
           fi
+      - name: Replay fixed Cartpole scenes with official MuJoCo
+        if: ${{ !cancelled() }}
+        run: |
+          python -m pip install mujoco==3.11.0 numpy==2.5.2
+          for mode in native_size initial_size no_shadows; do
+            python .ci-probe-official.py bazel-testlogs/envpool/mujoco/mjlab/mjlab_test "$mode"
+          done
       - name: Shut down Bazel
         if: ${{ always() && !cancelled() }}
         continue-on-error: true
