@@ -280,7 +280,7 @@ jobs:
           path: |
             bazel-testlogs/**/test.log
             bazel-testlogs/**/test.xml
-            bazel-testlogs/**/test.outputs/outputs.zip
+            bazel-testlogs/**/test.outputs/**
           if-no-files-found: ignore
       - name: Shut down Bazel
         if: ${{ always() && !cancelled() }}
