@@ -464,9 +464,9 @@ class HandEnvBase : public Env<EnvSpecT>, public MujocoRobotEnv {
   }
 
   void SetHandAction(const float* raw_action) {
-#if defined(__clang__)
-    // NumPy rounds the scaling and addition separately. Fusing them changes
-    // controls by one ULP and can diverge during Egg contact resolution.
+#if defined(__clang__) && defined(__APPLE__)
+    // Apple Clang fuses the multiply/add that NumPy rounds separately,
+    // changing controls by one ULP and diverging during Egg contacts.
 #pragma clang fp contract(off)
 #endif
     for (int i = 0; i < model_->nu; ++i) {
