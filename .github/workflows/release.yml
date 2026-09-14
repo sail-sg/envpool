@@ -19,7 +19,8 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}-macos-${{ matrix.python-version }}
       cancel-in-progress: false
     runs-on: macos-14
-    timeout-minutes: 60
+    # Cold builds plus the full installed-wheel render suite can exceed an hour.
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
