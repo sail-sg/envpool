@@ -1,106 +1,137 @@
-"""Replay captured native inputs using only the pinned official MuJoCo renderer."""
-import sys
+"""Render fixed Cartpole inputs using the pinned official MuJoCo package."""
+
 import ctypes
+import json
 from pathlib import Path
+import sys
 import mujoco
 import numpy as np
+from mujoco.cgl import cgl
 
 root = Path(sys.argv[1])
-
-# Use exactly the pixel format from envpool/mujoco/dmc/render_oracle.py.
-# The official accelerated default cannot create a context on hosted macOS.
-from mujoco.cgl import cgl
-attrib = cgl.CGLPixelFormatAttribute
-profile = cgl.CGLOpenGLProfile
+mode = sys.argv[2]
+attrib, profile = cgl.CGLPixelFormatAttribute, cgl.CGLOpenGLProfile
 values = (
-    attrib.CGLPFAOpenGLProfile, profile.CGLOGLPVersion_Legacy,
-    attrib.CGLPFAColorSize, 24, attrib.CGLPFAAlphaSize, 8,
-    attrib.CGLPFADepthSize, 24, attrib.CGLPFAStencilSize, 8,
-    attrib.CGLPFAAllowOfflineRenderers, 0, 0,
+    attrib.CGLPFAOpenGLProfile,
+    profile.CGLOGLPVersion_Legacy,
+    attrib.CGLPFAColorSize,
+    24,
+    attrib.CGLPFAAlphaSize,
+    8,
+    attrib.CGLPFADepthSize,
+    24,
+    attrib.CGLPFAStencilSize,
+    8,
+    attrib.CGLPFAAllowOfflineRenderers,
+    0,
+    0,
 )
-offline_attribs = (ctypes.c_int * len(values))(*values)
-choose_pixel_format = cgl.CGLChoosePixelFormat
-cgl.CGLChoosePixelFormat = lambda ignored, pix, count: choose_pixel_format(offline_attribs, pix, count)
-gl = ctypes.CDLL('/System/Library/Frameworks/OpenGL.framework/OpenGL')
+offline = (ctypes.c_int * len(values))(*values)
+choose = cgl.CGLChoosePixelFormat
+cgl.CGLChoosePixelFormat = lambda ignored, pix, count: choose(
+    offline, pix, count
+)
+gl = ctypes.CDLL("/System/Library/Frameworks/OpenGL.framework/OpenGL")
 gl.glGetString.restype = ctypes.c_char_p
-reported_driver = False
+reported = False
+
+
+def stats(a, b):
+    delta = np.abs(a.astype(np.int16) - b.astype(np.int16))
+    return np.array(
+        [delta.max(), delta.sum(), np.any(delta, axis=-1).sum()], dtype=int
+    )
+
 
 def inputs(path):
     model = mujoco.MjModel.from_binary_path(str(path))
+    if mode == "no_msaa":
+        model.vis.quality.offsamples = 0
     data = mujoco.MjData(model)
-    with np.load(path.with_suffix('.npz')) as state:
-        for key in ('qpos', 'qvel', 'act', 'ctrl'):
-            getattr(data, key)[:] = state[key]
-        data.qacc_warmstart[:] = state['warmstart']
-        data.time = state['time'].item()
+    with np.load(path.with_suffix(".npz")) as state:
+        viewer = json.loads(str(state["metadata"]))["viewer"]
+        for key in ("qpos", "qvel", "ctrl", "mocap_pos", "mocap_quat"):
+            target = getattr(data, key)
+            target[:] = state[key].reshape(target.shape)
+        data.time = state["time"].item()
     mujoco.mj_forward(model, data)
-    return model, data
+    camera = mujoco.MjvCamera()
+    mujoco.mjv_defaultFreeCamera(model, camera)
+    camera.type = mujoco.mjtCamera.mjCAMERA_TRACKING
+    camera.trackbodyid = mujoco.mj_name2id(
+        model,
+        mujoco.mjtObj.mjOBJ_BODY,
+        viewer["entity_name"] + "/" + viewer["body_name"],
+    )
+    assert camera.trackbodyid >= 0
+    camera.fixedcamid = -1
+    camera.distance, camera.elevation, camera.azimuth = (
+        viewer["distance"],
+        viewer["elevation"],
+        viewer["azimuth"],
+    )
+    camera.lookat[:] = viewer["lookat"]
+    option = mujoco.MjvOption()
+    option.geomgroup[:] = viewer["geom_group"]
+    option.sitegroup[:] = viewer["site_group"]
+    return model, data, camera, option
 
-def stats(actual, expected):
-    delta = np.abs(actual.astype(np.int16) - expected.astype(np.int16))
-    return int(delta.max()), int(delta.sum()), int(np.any(delta, axis=-1).sum())
 
-def draw(renderer, mode):
-    renderer._gl_context.make_current()
-    context = renderer._mjr_context
-    rect = renderer._rect
-    mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN, context)
-    mujoco.mjr_render(rect, renderer.scene, context)
-    mujoco.mjr_finish()
-    pixels = np.empty((64, 64, 3), dtype=np.uint8)
-    if mode == 'finish_resolve' and context.offSamples:
-        gl.glBindFramebuffer(0x8CA8, context.offFBO)  # GL_READ_FRAMEBUFFER
-        gl.glReadBuffer(0x8CE0)  # GL_COLOR_ATTACHMENT0
-        gl.glBindFramebuffer(0x8CA9, context.offFBO_r)  # GL_DRAW_FRAMEBUFFER
-        gl.glDrawBuffer(0x8CE0)
-        gl.glBlitFramebuffer(0, 0, 64, 64, 0, 0, 64, 64, 0x4000, 0x2600)
-        gl.glFinish()
-        gl.glBindFramebuffer(0x8CA8, context.offFBO_r)
-        gl.glReadBuffer(0x8CE0)
-        gl.glReadPixels(0, 0, 64, 64, 0x1907, 0x1401, pixels.ctypes.data_as(ctypes.c_void_p))
-        mujoco.mjr_restoreBuffer(context)
-    else:
-        mujoco.mjr_readPixels(pixels, None, rect, context)
-    error = gl.glGetError()
-    if error:
-        raise RuntimeError(f'OpenGL error: {error:#x}')
-    return pixels[::-1].copy()
-
-for path in sorted(root.rglob('*-left-*.mjb')):
-    for mode in (sys.argv[2],):
-        renderers = []
-        baseline = None
-        repeated_max = np.zeros(3, dtype=int)
-        contexts_max = np.zeros(3, dtype=int)
-        for repeat in range(4):
-            model, data = inputs(path)
-            renderer = mujoco.Renderer(model, height=64, width=64)
-            renderers.append(renderer)
-            if not reported_driver:
-                print('OpenGL driver:', [gl.glGetString(v) for v in (0x1F00, 0x1F01, 0x1F02)], flush=True)
-                reported_driver = True
-            if mode in ('disable_mp', 'query_mp'):
-                context = ctypes.cast(renderer._gl_context._context, ctypes.c_void_p)
-                enabled = ctypes.c_int()
-                gl.CGLIsEnabled(context, 313, ctypes.byref(enabled))
-                if repeat == 0:
-                    print('CGL multiprocessor engine enabled:', enabled.value, flush=True)
-                if mode == 'disable_mp':
-                    result = gl.CGLDisable(context, 313)
-                    if result:
-                        raise RuntimeError(f'CGLDisable: {result}')
-            option = mujoco.MjvOption()
-            option.geomgroup[1] = 0
-            option.flags[mujoco.mjtVisFlag.mjVIS_RANGEFINDER] = 0
-            renderer.update_scene(data, camera='walker/egocentric', scene_option=option)
-            frames = [draw(renderer, mode) for _ in range(8)]
-            reference = frames[4]
-            for frame in frames[5:]:
-                repeated_max = np.maximum(repeated_max, stats(frame, reference))
-            if baseline is None:
-                baseline = reference
-            else:
-                contexts_max = np.maximum(contexts_max, stats(reference, baseline))
-        for renderer in reversed(renderers):
-            renderer.close()
-        print(path.name, mode, 'within_context_peak_sum_pixels=', repeated_max.tolist(), 'between_contexts=', contexts_max.tolist(), flush=True)
+for path in sorted(root.rglob("*-left-*.mjb")):
+    renderers = []
+    baseline = None
+    within = np.zeros(3, dtype=int)
+    between = np.zeros(3, dtype=int)
+    for context in range(4):
+        model, data, camera, option = inputs(path)
+        renderer = mujoco.Renderer(model, height=80, width=96)
+        renderers.append(renderer)
+        if not reported:
+            print(
+                "OpenGL driver:",
+                [gl.glGetString(v) for v in (0x1F00, 0x1F01, 0x1F02)],
+                flush=True,
+            )
+            reported = True
+        renderer.update_scene(data, camera=camera, scene_option=option)
+        renderer.update_scene(data, camera=camera, scene_option=option)
+        if mode == "no_shadows":
+            renderer.scene.flags[mujoco.mjtRndFlag.mjRND_SHADOW] = 0
+        frames = []
+        for draw in range(12):
+            renderer._gl_context.make_current()
+            mujoco.mjr_render(
+                renderer._rect, renderer.scene, renderer._mjr_context
+            )
+            mujoco.mjr_finish()
+            pixels = np.empty((80, 96, 3), np.uint8)
+            mujoco.mjr_readPixels(
+                pixels, None, renderer._rect, renderer._mjr_context
+            )
+            frames.append(pixels[::-1].copy())
+        reference = frames[4]
+        for frame in frames[5:]:
+            within = np.maximum(within, stats(frame, reference))
+        if baseline is None:
+            baseline = reference
+        else:
+            between = np.maximum(between, stats(reference, baseline))
+    for renderer in reversed(renderers):
+        renderer.close()
+    native_path = path.with_name(
+        path.name.rsplit("-left-", 1)[0] + "-frames.npz"
+    )
+    slot = int(path.stem.rsplit("-", 1)[1])
+    with np.load(native_path) as native:
+        native_delta = stats(baseline, native["actual"][1 - slot])
+    print(
+        path.name,
+        mode,
+        "within_peak_sum_pixels=",
+        within.tolist(),
+        "between=",
+        between.tolist(),
+        "native=",
+        native_delta.tolist(),
+        flush=True,
+    )

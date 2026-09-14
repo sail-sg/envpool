@@ -9,7 +9,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   actions: write
@@ -267,8 +267,14 @@ jobs:
       - name: Test
         run: |
           if [ "${{ github.event_name }}" = workflow_dispatch ]; then
-            make BAZEL_TEST_TARGETS=//envpool/mujoco/locomotion:locomotion_test \
-              BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS --compilation_mode=opt --test_filter=*test_deterministic_rollout*" bazel-test
+            status=0
+            make BAZEL_TEST_TARGETS=//envpool/mujoco/mjlab:mjlab_test \
+              BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS --compilation_mode=opt --test_sharding_strategy=disabled --runs_per_test=3 --test_filter=*test_rollout_and_render_Mjlab-Cartpole*" bazel-test || status=$?
+            python -m pip install mujoco==3.11.0 numpy==2.5.2
+            for mode in native_read no_msaa no_shadows native_read; do
+              python .ci-probe-official.py bazel-testlogs/envpool/mujoco/mjlab/mjlab_test "$mode"
+            done
+            exit "$status"
           else
             make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" bazel-test
           fi
