@@ -264,6 +264,16 @@ jobs:
       - name: Test
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" bazel-test
+      - name: Upload failed test outputs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-outputs-macos
+          path: |
+            bazel-testlogs/**/test.log
+            bazel-testlogs/**/test.xml
+            bazel-testlogs/**/test.outputs/outputs.zip
+          if-no-files-found: ignore
       - name: Shut down Bazel
         if: ${{ always() && !cancelled() }}
         continue-on-error: true

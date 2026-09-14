@@ -7,6 +7,8 @@ common --enable_platform_specific_config
 # GitHub source archives can pause longer than the default 20-second read timeout.
 common --http_timeout_scaling=3
 
+# Keep checking independent targets after a build failure in long CI runs.
+build --keep_going
 build --incompatible_strict_action_env
 build --incompatible_default_to_explicit_init_py
 build:debug --cxxopt=-DENVPOOL_TEST --compilation_mode=dbg -s

@@ -14,7 +14,9 @@
 
 """Shared RGB comparison for native and oracle render tests."""
 
+import os
 import platform
+import tempfile
 
 import numpy as np
 
@@ -36,9 +38,31 @@ def assert_rgb_images(
     # both their magnitude and mean per frame, without redrawing at runtime
     # or tuning limits for individual tasks, seeds, or image resolutions.
     delta = np.abs(actual.astype(np.int16) - expected.astype(np.int16))
-    np.testing.assert_array_less(
-        delta.max(axis=(-3, -2, -1)), 6, err_msg=context
-    )
-    np.testing.assert_allclose(
-        delta.mean(axis=(-3, -2, -1)), 0, rtol=0, atol=0.01, err_msg=context
-    )
+    try:
+        np.testing.assert_array_less(
+            delta.max(axis=(-3, -2, -1)), 6, err_msg=context
+        )
+        np.testing.assert_allclose(
+            delta.mean(axis=(-3, -2, -1)), 0, rtol=0, atol=0.01, err_msg=context
+        )
+    except AssertionError:
+        print(
+            f"{context}: RGB error sum={delta.sum(axis=(-3, -2, -1))}, "
+            f"changed pixels={np.count_nonzero(np.any(delta, axis=-1), axis=(-2, -1))}"
+        )
+        output_dir = os.environ.get(
+            "TEST_UNDECLARED_OUTPUTS_DIR"
+        ) or os.environ.get("ENVPOOL_TEST_OUTPUT_DIR")
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+            with tempfile.NamedTemporaryFile(
+                dir=output_dir,
+                prefix="render-mismatch-",
+                suffix=".npz",
+                delete=False,
+            ) as output:
+                np.savez_compressed(
+                    output, actual=actual, expected=expected, context=context
+                )
+            print(f"Saved RGB mismatch: {output.name}")
+        raise

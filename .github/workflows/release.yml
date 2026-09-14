@@ -69,9 +69,19 @@ jobs:
           make RELEASE_PYTHON=${{ matrix.python-version }} pypi-wheel
           python -m pip install wheelhouse/*.whl --force-reinstall
       - name: Test
+        env:
+          ENVPOOL_TEST_OUTPUT_DIR: ${{ runner.temp }}/render-mismatches
         run: |
           make release-test
+      - name: Upload render mismatches
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: render-mismatches-macos-${{ matrix.python-version }}
+          path: ${{ runner.temp }}/render-mismatches
+          if-no-files-found: ignore
       - name: Upload artifact
+        if: ${{ always() && !cancelled() && hashFiles('wheelhouse/*.whl') != '' }}
         uses: actions/upload-artifact@v7
         with:
           name: wheel-macos-${{ matrix.python-version }}
@@ -231,6 +241,7 @@ jobs:
             --test_env=GALLIUM_DRIVER --test_env=LD_PRELOAD \
             --test_env=LD_LIBRARY_PATH --test_env=__EGL_VENDOR_LIBRARY_FILENAMES"
       - name: Upload artifact
+        if: ${{ always() && !cancelled() && hashFiles('wheelhouse/*.whl') != '' }}
         uses: actions/upload-artifact@v7
         with:
           name: wheel-linux-${{ matrix.arch }}-${{ matrix.python-version }}
@@ -344,6 +355,7 @@ jobs:
         run: |
           make release-test
       - name: Upload artifact
+        if: ${{ always() && !cancelled() && hashFiles('wheelhouse/*.whl') != '' }}
         uses: actions/upload-artifact@v7
         with:
           name: wheel-windows-${{ matrix.python-version }}

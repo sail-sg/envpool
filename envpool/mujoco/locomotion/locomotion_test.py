@@ -13,8 +13,10 @@
 # limitations under the License.
 """Exercise every native task through EnvPool's batched public APIs."""
 
+import os
 from collections.abc import Callable
 from contextlib import ExitStack
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -35,12 +37,16 @@ def assert_observations(
     """Compare native observations with the existing camera budgets."""
     np.testing.assert_equal(sorted(actual), sorted(expected))
     for key, value in actual.items():
-        if key == "walker/egocentric_camera":
-            assert_rgb_images(value, expected[key], f"{task}, {context}")
-        else:
+        if key != "walker/egocentric_camera":
             np.testing.assert_array_equal(
                 value, expected[key], err_msg=f"{context}, {key}"
             )
+    if "walker/egocentric_camera" in actual:
+        assert_rgb_images(
+            actual["walker/egocentric_camera"],
+            expected["walker/egocentric_camera"],
+            f"{task}, {context}",
+        )
 
 
 def check_reset_randomization(
@@ -165,15 +171,41 @@ class LocomotionTest(parameterized.TestCase):
         left_obs, left_info = left.reset()
         right_obs, right_info = right.reset()
         saw_end = False
+        saved_snapshot = False
         for step in range(195):
             li = np.argsort(left_info["players"]["env_id"], kind="stable")
             ri = np.argsort(right_info["players"]["env_id"], kind="stable")
-            assert_observations(
-                {key: value[li] for key, value in left_obs.items()},
-                {key: value[ri] for key, value in right_obs.items()},
-                task,
-                f"{task}: step {step}",
-            )
+            with self.subTest(step=step):
+                try:
+                    assert_observations(
+                        {key: value[li] for key, value in left_obs.items()},
+                        {key: value[ri] for key, value in right_obs.items()},
+                        task,
+                        f"{task}: step {step}",
+                    )
+                except AssertionError:
+                    output_dir = os.environ.get("TEST_UNDECLARED_OUTPUTS_DIR")
+                    if (
+                        output_dir
+                        and not saved_snapshot
+                        and hasattr(left, "_snapshot")
+                    ):
+                        for side, pool in (("left", left), ("right", right)):
+                            for env_id in range(2):
+                                state = pool._snapshot(
+                                    env_id, include_model=True
+                                )
+                                model = state.pop("model")
+                                prefix = (
+                                    Path(output_dir)
+                                    / f"{task}-{step}-{side}-{env_id}"
+                                )
+                                prefix.with_suffix(".mjb").write_bytes(model)
+                                np.savez_compressed(
+                                    prefix.with_suffix(".npz"), **state
+                                )
+                        saved_snapshot = True
+                    raise
             for key in left_obs:
                 self.assertTrue(
                     left.observation_space[key].contains(left_obs[key][0]), key
