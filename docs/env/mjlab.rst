@@ -276,8 +276,8 @@ termination; they do not substitute final scores for behavioral alignment.
 RGB rendering shares the existing MuJoCo bootstrap. On macOS, identical scenes
 can produce sparse CGL/Metal color differences. The shared image check allows
 at most five intensity levels in any color channel and a mean absolute error
-of ``0.01`` per frame, on the 0-to-255 scale. Cartpole Balance and Swingup use
-bounds of 32 and ``0.025``: the official MuJoCo renderer alone reproduces a
+of ``0.01`` per frame, on the 0-to-255 scale. ``Mjlab-Cartpole-Balance`` and
+``Mjlab-Cartpole-Swingup`` use bounds of 32 and ``0.025``: the official MuJoCo renderer alone reproduces a
 shadow difference of 25 levels over 13 pixels when replaying the same scene
 with different draw histories. Physics and other task budgets remain unchanged;
 other platforms retain exact RGB comparisons.
