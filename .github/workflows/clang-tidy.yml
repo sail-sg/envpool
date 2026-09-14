@@ -17,7 +17,8 @@ permissions:
 jobs:
   clang-tidy:
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    # Keep time for setup and cache saving after the Bazel step times out.
+    timeout-minutes: 150
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       CLANG_TIDY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -59,9 +60,11 @@ jobs:
           go install github.com/bazelbuild/bazelisk@latest
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Run clang-tidy
+        timeout-minutes: 120
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk" clang-tidy
       - name: Shut down Bazel
+        timeout-minutes: 2
         if: ${{ always() && !cancelled() }}
         continue-on-error: true
         run: bazelisk shutdown
