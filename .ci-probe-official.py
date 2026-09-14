@@ -1,10 +1,29 @@
 """Replay captured native inputs using only the pinned official MuJoCo renderer."""
 import sys
+import ctypes
 from pathlib import Path
 import mujoco
 import numpy as np
 
 root = Path(sys.argv[1])
+
+# Use exactly the pixel format from envpool/mujoco/dmc/render_oracle.py.
+# The official accelerated default cannot create a context on hosted macOS.
+from mujoco.cgl import cgl
+attrib = cgl.CGLPixelFormatAttribute
+profile = cgl.CGLOpenGLProfile
+values = (
+    attrib.CGLPFAOpenGLProfile, profile.CGLOGLPVersion_Legacy,
+    attrib.CGLPFAColorSize, 24, attrib.CGLPFAAlphaSize, 8,
+    attrib.CGLPFADepthSize, 24, attrib.CGLPFAStencilSize, 8,
+    attrib.CGLPFAAllowOfflineRenderers, 0, 0,
+)
+offline_attribs = (ctypes.c_int * len(values))(*values)
+choose_pixel_format = cgl.CGLChoosePixelFormat
+cgl.CGLChoosePixelFormat = lambda ignored, pix, count: choose_pixel_format(offline_attribs, pix, count)
+gl = ctypes.CDLL('/System/Library/Frameworks/OpenGL.framework/OpenGL')
+gl.glGetString.restype = ctypes.c_char_p
+reported_driver = False
 
 def inputs(path):
     model = mujoco.MjModel.from_binary_path(str(path))
@@ -35,6 +54,9 @@ for path in sorted(root.rglob('*-left-*.mjb')):
                 model.vis.quality.offsamples = 0
             renderer = mujoco.Renderer(model, height=64, width=64)
             renderers.append(renderer)
+            if not reported_driver:
+                print('OpenGL driver:', [gl.glGetString(v) for v in (0x1F00, 0x1F01, 0x1F02)], flush=True)
+                reported_driver = True
             option = mujoco.MjvOption()
             option.geomgroup[1] = 0
             option.flags[mujoco.mjtVisFlag.mjVIS_RANGEFINDER] = 0
