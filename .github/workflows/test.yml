@@ -216,7 +216,7 @@ jobs:
           --keep 1
   test-macos:
     name: Test (macos)
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 180
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
