@@ -8,7 +8,7 @@ on:
   pull_request:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-windows-memory-validation
+  group: ${{ github.workflow }}-${{ github.ref }}-windows-craftax-validation
   cancel-in-progress: false
 
 permissions:
