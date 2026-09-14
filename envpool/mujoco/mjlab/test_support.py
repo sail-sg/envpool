@@ -19,6 +19,8 @@ from typing import Any
 
 import numpy as np
 
+from envpool.mujoco.render_test_utils import assert_rgb_images
+
 
 def motion_file() -> str:
     """Locate the motion made by the pinned official CSV-to-NPZ converter."""
@@ -79,6 +81,31 @@ def assert_observations(
         np.testing.assert_array_equal(
             actual[name], expected[name], err_msg=f"{context}: {name}"
         )
+
+
+def assert_render_images(
+    actual: np.ndarray | None,
+    expected: np.ndarray | None,
+    task: str,
+    context: str = "",
+) -> None:
+    """Bound the independently reproduced software CGL shadow residual."""
+    if task in {"Mjlab-Cartpole-Balance", "Mjlab-Cartpole-Swingup"}:
+        # Official MuJoCo 3.11 alone reproduces the same draw-history residual
+        # with identical models, physics, cameras, lights and geoms: peak 25,
+        # sum 552 over 13 pixels of a 96x80 frame (mean 0.02396). An explicit
+        # shadow-map glFinish does not fix it; redrawing every frame doubles
+        # software render time. Keep this budget scoped to the two Cartpoles
+        # on macOS; other platforms still require exact pixels.
+        assert_rgb_images(
+            actual,
+            expected,
+            context,
+            macos_peak_error=32,
+            macos_mean_error=0.025,
+        )
+        return
+    assert_rgb_images(actual, expected, context)
 
 
 def public_components(task: str, obs: dict[str, np.ndarray], slot: int) -> dict:

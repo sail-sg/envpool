@@ -273,7 +273,7 @@ jobs:
           path: |
             bazel-testlogs/**/test.log
             bazel-testlogs/**/test.xml
-            bazel-testlogs/**/test.outputs/**
+            bazel-testlogs/**/test.outputs/render-mismatch-*.npz
           if-no-files-found: ignore
       - name: Shut down Bazel
         if: ${{ always() && !cancelled() }}
