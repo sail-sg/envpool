@@ -152,8 +152,7 @@ py_test(
 
 py_test(
     name = "vizdoom_test",
-    # All-scenario seed replays take about 300s per shard on hosted macOS.
-    size = "large",
+    size = "medium",
     srcs = ["vizdoom_test.py"],
     imports = ["../.."],
     shard_count = 4,

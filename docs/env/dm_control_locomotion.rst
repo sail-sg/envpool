@@ -187,15 +187,9 @@ identical model arrays, camera, lights, geometry, and skin vertices and normal
 vectors. This also reproduces with the official renderer alone. RGB tests use
 the shared MuJoCo image check: at most five intensity levels in any color
 channel and a mean absolute error of ``0.01`` per frame, on the 0-to-255 scale.
-The two CMU forage egocentric cameras have larger sparse shadow differences
-with Apple's software renderer, also reproduced on macOS 14 and 15 using only
-the official MuJoCo renderer and identical serialized models and state.
-Three complete CI replays measured a maximum channel difference of 100 and a
-maximum mean error of 0.0614, affecting at most 12 pixels of a 64-by-64 frame.
-Only these cameras allow a channel difference of 128 and a mean error of
-``0.1`` per frame. Visual settings remain unchanged and errors are never
-averaged over a rollout. Other platforms retain exact RGB comparisons, and
-native dynamics and reward replays remain exact.
+The same limits apply to every task and resolution, without changing visual
+settings or averaging errors over a rollout. Other platforms retain exact RGB
+comparisons, and native dynamics and reward replays remain exact.
 
 Oracle reward checks retain only small derived-math residuals: tracking's
 quaternion/exponential reductions, the bowl's distance norm, and, on Linux
