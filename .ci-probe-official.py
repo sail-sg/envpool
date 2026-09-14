@@ -40,35 +40,61 @@ def stats(actual, expected):
     delta = np.abs(actual.astype(np.int16) - expected.astype(np.int16))
     return int(delta.max()), int(delta.sum()), int(np.any(delta, axis=-1).sum())
 
+def draw(renderer, mode):
+    renderer._gl_context.make_current()
+    context = renderer._mjr_context
+    rect = renderer._rect
+    mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN, context)
+    mujoco.mjr_render(rect, renderer.scene, context)
+    mujoco.mjr_finish()
+    pixels = np.empty((64, 64, 3), dtype=np.uint8)
+    if mode == 'finish_resolve' and context.offSamples:
+        gl.glBindFramebuffer(0x8CA8, context.offFBO)  # GL_READ_FRAMEBUFFER
+        gl.glReadBuffer(0x8CE0)  # GL_COLOR_ATTACHMENT0
+        gl.glBindFramebuffer(0x8CA9, context.offFBO_r)  # GL_DRAW_FRAMEBUFFER
+        gl.glDrawBuffer(0x8CE0)
+        gl.glBlitFramebuffer(0, 0, 64, 64, 0, 0, 64, 64, 0x4000, 0x2600)
+        gl.glFinish()
+        gl.glBindFramebuffer(0x8CA8, context.offFBO_r)
+        gl.glReadBuffer(0x8CE0)
+        gl.glReadPixels(0, 0, 64, 64, 0x1907, 0x1401, pixels.ctypes.data_as(ctypes.c_void_p))
+        mujoco.mjr_restoreBuffer(context)
+    else:
+        mujoco.mjr_readPixels(pixels, None, rect, context)
+    error = gl.glGetError()
+    if error:
+        raise RuntimeError(f'OpenGL error: {error:#x}')
+    return pixels[::-1].copy()
+
 for path in sorted(root.rglob('*-left-*.mjb')):
     if 'run_1_of_3' not in str(path):
         continue
-    for mode in ('default', 'no_msaa', 'no_shadows', 'no_dither'):
+    for mode in ('native_read', 'finish_resolve', 'disable_mp'):
         renderers = []
         baseline = None
         repeated_max = np.zeros(3, dtype=int)
         contexts_max = np.zeros(3, dtype=int)
-        for repeat in range(12):
+        for repeat in range(8):
             model, data = inputs(path)
-            if mode == 'no_msaa':
-                model.vis.quality.offsamples = 0
             renderer = mujoco.Renderer(model, height=64, width=64)
             renderers.append(renderer)
             if not reported_driver:
                 print('OpenGL driver:', [gl.glGetString(v) for v in (0x1F00, 0x1F01, 0x1F02)], flush=True)
                 reported_driver = True
+            if mode == 'disable_mp':
+                context = ctypes.cast(renderer._gl_context._context, ctypes.c_void_p)
+                enabled = ctypes.c_int()
+                gl.CGLIsEnabled(context, 313, ctypes.byref(enabled))
+                if repeat == 0:
+                    print('CGL multiprocessor engine enabled:', enabled.value, flush=True)
+                result = gl.CGLDisable(context, 313)
+                if result:
+                    raise RuntimeError(f'CGLDisable: {result}')
             option = mujoco.MjvOption()
             option.geomgroup[1] = 0
             option.flags[mujoco.mjtVisFlag.mjVIS_RANGEFINDER] = 0
             renderer.update_scene(data, camera='walker/egocentric', scene_option=option)
-            if mode == 'no_shadows':
-                renderer.scene.flags[mujoco.mjtRndFlag.mjRND_SHADOW] = 0
-            if mode == 'no_dither':
-                import ctypes
-                renderer._gl_context.make_current()
-                gl = ctypes.CDLL('/System/Library/Frameworks/OpenGL.framework/OpenGL')
-                gl.glDisable(0x0BD0)  # GL_DITHER
-            frames = [renderer.render().copy() for _ in range(12)]
+            frames = [draw(renderer, mode) for _ in range(10)]
             reference = frames[4]
             for frame in frames[5:]:
                 repeated_max = np.maximum(repeated_max, stats(frame, reference))

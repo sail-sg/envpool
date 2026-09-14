@@ -250,6 +250,7 @@ jobs:
           sudo ln -sfn "$(brew --prefix ninja)/bin/ninja" /usr/local/bin/ninja
           echo "BAZEL_RULES_QT_DIR=$(brew --prefix qtbase)" >> "$GITHUB_ENV"
       - name: Restore Bazel caches
+        if: github.event_name != 'workflow_dispatch'
         uses: actions/cache/restore@v6
         with:
           path: |
@@ -261,6 +262,7 @@ jobs:
             bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.DEFAULT_BRANCH }}-
             bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-
       - name: Install bazelisk
+        if: github.event_name != 'workflow_dispatch'
         run: |
           go install github.com/bazelbuild/bazelisk@latest
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
@@ -291,12 +293,12 @@ jobs:
             bazel-testlogs/**/test.outputs/**
           if-no-files-found: ignore
       - name: Shut down Bazel
-        if: ${{ always() && !cancelled() }}
+        if: ${{ github.event_name != 'workflow_dispatch' && always() && !cancelled() }}
         continue-on-error: true
         run: bazelisk shutdown
       - name: Save Bazel caches
         id: save-bazel-caches
-        if: ${{ always() && !cancelled() }}
+        if: ${{ github.event_name != 'workflow_dispatch' && always() && !cancelled() }}
         uses: actions/cache/save@v6
         with:
           path: |
@@ -305,7 +307,7 @@ jobs:
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}-attempt${{ github.run_attempt }}
       - name: Prune older Bazel caches
-        if: ${{ success() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        if: ${{ github.event_name != 'workflow_dispatch' && success() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
