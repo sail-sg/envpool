@@ -10,7 +10,7 @@ WORKDIR $HOME
 
 RUN dnf install -y \
     git curl wget zsh gcc gcc-c++ make tmux golang java-17-openjdk-devel \
-    perl-IO-Compress mesa-libEGL-devel mesa-libGL-devel libglvnd-devel mesa-dri-drivers \
+    perl-IO-Compress mesa-libEGL-devel mesa-libGL-devel libglvnd-devel mesa-dri-drivers libX11-devel libXext-devel \
     && dnf clean all
 
 ENV PATH=/opt/python/cp312-cp312/bin:$PATH

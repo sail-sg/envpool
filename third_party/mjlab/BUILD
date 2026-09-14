@@ -83,7 +83,7 @@ filegroup(
     ]),
 )
 
-# This optional input is supplied by the release codegen job.
+# This optional input supports builds where the official SDK cannot run.
 # buildifier: disable=constant-glob
 _CODEGEN_INPUT = glob(["codegen_input.tar.gz"])
 

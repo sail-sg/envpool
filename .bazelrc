@@ -4,7 +4,11 @@ startup --windows_enable_symlinks
 common --enable_bzlmod
 common --noincompatible_disallow_empty_glob
 common --enable_platform_specific_config
+# GitHub source archives can pause longer than the default 20-second read timeout.
+common --http_timeout_scaling=3
 
+# Keep checking independent targets after a build failure in long CI runs.
+build --keep_going
 build --incompatible_strict_action_env
 build --incompatible_default_to_explicit_init_py
 build:debug --cxxopt=-DENVPOOL_TEST --compilation_mode=dbg -s
@@ -23,6 +27,8 @@ build:linux --action_env=LD_LIBRARY_PATH=/usr/local/lib:/usr/lib/nvidia
 build:macos --cxxopt=-std=c++17
 build:macos --host_cxxopt=-std=c++17
 build:macos --client_env=BAZEL_CXXOPTS=-std=c++17
+# MuJoCo's build-time exporter invokes sysctl to detect Rosetta.
+build:macos --action_env=PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 # Qt 6.11 requires macOS 13 or newer.
 build:macos --action_env=MACOSX_DEPLOYMENT_TARGET=13.0
 build:macos --copt=-mmacosx-version-min=13.0

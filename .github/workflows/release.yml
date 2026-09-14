@@ -8,44 +8,16 @@ on:
       - v*
   pull_request:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 permissions:
   contents: read
 
 jobs:
-  mjlab-codegen:
-    name: Generate portable MJLab build inputs
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
-        with:
-          go-version: "1.27"
-      - uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: "25"
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-      - name: Export portable C++ and data with the official SDK
-        run: |
-          go install github.com/bazelbuild/bazelisk@latest
-          make bazel-pip-requirement-dev
-          "$HOME/go/bin/bazelisk" build --config=test --jobs=2 \
-            //third_party/mjlab:codegen_bundle
-      - uses: actions/upload-artifact@v7
-        with:
-          name: mjlab-codegen
-          path: bazel-bin/third_party/mjlab/codegen/codegen_input.tar.gz
-          if-no-files-found: error
-
+  # Keep active wheel builds; each platform/Python pair queues independently.
   release-macos:
     name: release-macos (py${{ matrix.python-version }})
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-macos-${{ matrix.python-version }}
+      cancel-in-progress: false
     runs-on: macos-14
     timeout-minutes: 60
     strategy:
@@ -92,14 +64,25 @@ jobs:
           go install github.com/bazelbuild/bazelisk@latest
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Build
+        id: build
         run: |
           rm -rf dist wheelhouse
           make RELEASE_PYTHON=${{ matrix.python-version }} pypi-wheel
           python -m pip install wheelhouse/*.whl --force-reinstall
       - name: Test
+        env:
+          ENVPOOL_TEST_OUTPUT_DIR: ${{ runner.temp }}/render-mismatches
         run: |
           make release-test
+      - name: Upload render mismatches
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: render-mismatches-macos-${{ matrix.python-version }}
+          path: ${{ runner.temp }}/render-mismatches
+          if-no-files-found: ignore
       - name: Upload artifact
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         uses: actions/upload-artifact@v7
         with:
           name: wheel-macos-${{ matrix.python-version }}
@@ -108,7 +91,9 @@ jobs:
 
   release-linux:
     name: release-linux (${{ matrix.arch }}, py${{ matrix.python-version }})
-    needs: mjlab-codegen
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-linux-${{ matrix.arch }}-${{ matrix.python-version }}
+      cancel-in-progress: false
     runs-on: ${{ matrix.runner }}
     container: ${{ matrix.container }}
     timeout-minutes: 120
@@ -135,11 +120,6 @@ jobs:
           ) }}
     steps:
       - uses: actions/checkout@v7
-      - name: Restore generated MJLab build inputs
-        uses: actions/download-artifact@v8
-        with:
-          name: mjlab-codegen
-          path: third_party/mjlab
       - uses: actions/setup-go@v7
         with:
           go-version: "1.27"
@@ -149,11 +129,31 @@ jobs:
           java-version: "25"
       - name: Install build dependencies
         run: |
-          dnf install -y git curl wget zsh gcc gcc-c++ make tmux mesa-libEGL-devel mesa-libGL-devel libglvnd-devel mesa-dri-drivers
+          dnf install -y git curl wget zsh gcc gcc-c++ make tmux mesa-libEGL-devel mesa-libGL-devel libglvnd-devel mesa-dri-drivers libX11-devel libXext-devel
           dnf clean all
-          go install github.com/bazelbuild/bazelisk@latest
-          ln -sf /root/go/bin/bazelisk /usr/local/bin/bazelisk
-          ln -sf /root/go/bin/bazelisk /usr/local/bin/bazel
+          GOBIN=/usr/local/bin go install github.com/bazelbuild/bazelisk@latest
+          ln -sf /usr/local/bin/bazelisk /usr/local/bin/bazel
+          if [ "${{ matrix.arch }}" = aarch64 ]; then
+            cp /usr/local/bin/bazelisk .ci-bazelisk
+          fi
+      # Only the official ARM SDK needs newer glibc. Generate in a sibling
+      # container sharing this checkout; compile and test in manylinux below.
+      - name: Generate ARM MJLab build inputs
+        if: matrix.arch == 'aarch64'
+        uses: docker://ubuntu:24.04
+        env:
+          JAVA_HOME: ""
+        with:
+          entrypoint: /bin/bash
+          args: >-
+            -euc "apt-get update &&
+            apt-get install -y --no-install-recommends ca-certificates python3 make gcc g++ git patch &&
+            make bazel-pip-requirement-dev &&
+            ./.ci-bazelisk --output_user_root=/tmp/envpool-codegen build --config=test --jobs=2
+            //third_party/mjlab:codegen_bundle &&
+            cp bazel-bin/third_party/mjlab/codegen/codegen_input.tar.gz third_party/mjlab/ &&
+            ./.ci-bazelisk --output_user_root=/tmp/envpool-codegen shutdown &&
+            rm .ci-bazelisk"
       - name: Set up Python ${{ matrix.python-version }}
         shell: bash
         run: |
@@ -192,6 +192,7 @@ jobs:
         run: |
           echo "LD_PRELOAD=$(g++ -print-file-name=libstdc++.so.6)" >> "$GITHUB_ENV"
       - name: Build
+        id: build
         run: |
           rm -rf dist wheelhouse
           make PYPI_WHEEL_PLAT=${{ matrix.auditwheel-plat }} pypi-wheel
@@ -245,6 +246,7 @@ jobs:
             --test_env=GALLIUM_DRIVER --test_env=LD_PRELOAD \
             --test_env=LD_LIBRARY_PATH --test_env=__EGL_VENDOR_LIBRARY_FILENAMES"
       - name: Upload artifact
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         uses: actions/upload-artifact@v7
         with:
           name: wheel-linux-${{ matrix.arch }}-${{ matrix.python-version }}
@@ -253,8 +255,12 @@ jobs:
 
   release-windows:
     name: release-windows (py${{ matrix.python-version }})
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-windows-${{ matrix.python-version }}
+      cancel-in-progress: false
     runs-on: windows-2022
-    timeout-minutes: 60
+    # Cold optimized builds take about 50 minutes before the wheel tests start.
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -348,6 +354,7 @@ jobs:
           Add-Content -Path $env:GITHUB_PATH -Value $cmakeBinDir
           & (Join-Path $cmakeBinDir "cmake.exe") --version
       - name: Build
+        id: build
         shell: bash
         run: |
           rm -rf dist wheelhouse
@@ -358,6 +365,7 @@ jobs:
         run: |
           make release-test
       - name: Upload artifact
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         uses: actions/upload-artifact@v7
         with:
           name: wheel-windows-${{ matrix.python-version }}

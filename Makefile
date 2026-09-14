@@ -259,18 +259,24 @@ pypi-wheel: $(PYPI_WHEEL_PREREQS) bazel-release
 
 release-test1:
 	tmpdir=$$(python3 -c 'import tempfile; print(tempfile.mkdtemp(prefix="envpool-release-test-"))'); \
-	cd "$$tmpdir" && PYTHONPATH= python3 "$(CURDIR)/scripts/release_installed_wheel_smoke.py" --source-root "$(CURDIR)" && \
-	cd "$$tmpdir" && PYTHONPATH= python3 "$(CURDIR)/envpool/make_test.py" && \
-	cd "$$tmpdir" && PYTHONPATH= python3 "$(CURDIR)/envpool/jumanji/jumanji_registry_test.py" && \
-	cd "$$tmpdir" && PYTHONPATH= python3 "$(CURDIR)/envpool/mujoco/locomotion/locomotion_test.py" && \
-	cd "$$tmpdir" && PYTHONPATH= ENVPOOL_MJLAB_TEST_MOTION="$(CURDIR)/bazel-bin/third_party/mjlab/generated/testdata/motion.npz" python3 "$(CURDIR)/envpool/mujoco/mjlab/mjlab_test.py"
+	cd "$$tmpdir" || exit 1; \
+	status=0; \
+	PYTHONPATH= python3 "$(CURDIR)/scripts/release_installed_wheel_smoke.py" --source-root "$(CURDIR)" || status=1; \
+	for test in envpool/make_test.py envpool/jumanji/jumanji_registry_test.py envpool/mujoco/locomotion/locomotion_test.py envpool/mujoco/mjlab/mjlab_test.py; do \
+		PYTHONPATH= ENVPOOL_MJLAB_TEST_MOTION="$(CURDIR)/bazel-bin/third_party/mjlab/generated/testdata/motion.npz" python3 "$(CURDIR)/$$test" || status=1; \
+	done; \
+	exit $$status
 
 release-test2:
-	cd examples && python3 make_env.py && python3 env_step.py
+	cd examples || exit 1; \
+	status=0; \
+	for test in make_env.py env_step.py; do python3 "$$test" || status=1; done; \
+	exit $$status
 
 PROCGEN_QT_RUNTIME ?= present
 
 release-test-procgen-qt:
 	PYTHONPATH= python3 scripts/release_procgen_qt_smoke.py --qt-runtime $(PROCGEN_QT_RUNTIME)
 
-release-test: release-test1 release-test2 release-test-procgen-qt
+release-test:
+	$(MAKE) -k release-test1 release-test2 release-test-procgen-qt

@@ -26,21 +26,61 @@ from envpool.mujoco.render_test_utils import assert_rgb_images
 from envpool.registration import make_dm, make_gymnasium
 
 
+def assert_egocentric_images(
+    actual: np.ndarray,
+    expected: np.ndarray,
+    task: str,
+    context: str,
+    *,
+    record_mismatch: bool = True,
+) -> None:
+    """Keep the software CGL shadow residual scoped to the forage cameras."""
+    if task in {
+        "cmu_humanoid_heterogeneous_forage",
+        "cmu_humanoid_maze_forage",
+    }:
+        # Apple Software Renderer also varies in official MuJoCo 3.11 alone,
+        # with identical models/state and serialized, explicitly synchronized
+        # draws. Three complete CI replays measured peak 100, sum 754 over at
+        # most 12 pixels of a 64x64 frame (mean 0.0614). Keep both per-frame
+        # bounds; other cameras, platforms and all numeric state stay strict.
+        assert_rgb_images(
+            actual,
+            expected,
+            context,
+            macos_peak_error=128,
+            macos_mean_error=0.1,
+            record_mismatch=record_mismatch,
+        )
+    else:
+        assert_rgb_images(
+            actual, expected, context, record_mismatch=record_mismatch
+        )
+
+
 def assert_observations(
     actual: dict[str, np.ndarray],
     expected: dict[str, np.ndarray],
     task: str,
     context: str,
+    *,
+    record_mismatch: bool = True,
 ) -> None:
     """Compare native observations with the existing camera budgets."""
     np.testing.assert_equal(sorted(actual), sorted(expected))
     for key, value in actual.items():
-        if key == "walker/egocentric_camera":
-            assert_rgb_images(value, expected[key], f"{task}, {context}")
-        else:
+        if key != "walker/egocentric_camera":
             np.testing.assert_array_equal(
                 value, expected[key], err_msg=f"{context}, {key}"
             )
+    if "walker/egocentric_camera" in actual:
+        assert_egocentric_images(
+            actual["walker/egocentric_camera"],
+            expected["walker/egocentric_camera"],
+            task,
+            f"{task}, {context}",
+            record_mismatch=record_mismatch,
+        )
 
 
 def check_reset_randomization(
@@ -74,12 +114,17 @@ def check_reset_randomization(
                     )
                 resets.append(rows)
             sequences.append(resets)
+        # close() stops workers; drop the remaining reference to release native
+        # physics before constructing the next four-environment pool.
+        del pool
 
     def differs(left: dict, right: dict, field: str | None = None) -> bool:
         if field is not None:
             left, right = {field: left[field]}, {field: right[field]}
         try:
-            assert_observations(left, right, task, "reset variation")
+            assert_observations(
+                left, right, task, "reset variation", record_mismatch=False
+            )
         except AssertionError:
             return True
         return False
@@ -168,12 +213,13 @@ class LocomotionTest(parameterized.TestCase):
         for step in range(195):
             li = np.argsort(left_info["players"]["env_id"], kind="stable")
             ri = np.argsort(right_info["players"]["env_id"], kind="stable")
-            assert_observations(
-                {key: value[li] for key, value in left_obs.items()},
-                {key: value[ri] for key, value in right_obs.items()},
-                task,
-                f"{task}: step {step}",
-            )
+            with self.subTest(step=step):
+                assert_observations(
+                    {key: value[li] for key, value in left_obs.items()},
+                    {key: value[ri] for key, value in right_obs.items()},
+                    task,
+                    f"{task}: step {step}",
+                )
             for key in left_obs:
                 self.assertTrue(
                     left.observation_space[key].contains(left_obs[key][0]), key

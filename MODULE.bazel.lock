@@ -286,7 +286,7 @@
   "moduleExtensions": {
     "//envpool:workspace0.bzl%repositories": {
       "general": {
-        "bzlTransitiveDigest": "zlsVELgSMG94DXAVrY1H/Hi6/Qe99TNQGzrGNDothCQ=",
+        "bzlTransitiveDigest": "w2ac76Ier/VaE2lZgY10uztTpVtOYwJDqH/gB0ZuNgk=",
         "usagesDigest": "SajRKIR8nOGpEzuKj8QlLVuws2HdnARUg1NP1i0Q7/M=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
@@ -696,7 +696,8 @@
               "patches": [
                 "@@//third_party/vizdoom:sdl_thread.patch",
                 "@@//third_party/vizdoom:windows_msvc_compat.patch",
-                "@@//third_party/vizdoom:concurrent_runtime_directory.patch"
+                "@@//third_party/vizdoom:concurrent_runtime_directory.patch",
+                "@@//third_party/vizdoom:macos_registration_sections.patch"
               ]
             }
           },

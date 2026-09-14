@@ -28,8 +28,12 @@ from absl.testing import absltest, parameterized
 
 import envpool.mujoco.mjlab.registration  # noqa: F401
 from envpool.mujoco.mjlab import TASKS
-from envpool.mujoco.mjlab.test_support import actions, motion_file, task_options
-from envpool.mujoco.render_test_utils import assert_rgb_images
+from envpool.mujoco.mjlab.test_support import (
+    actions,
+    assert_render_images,
+    motion_file,
+    task_options,
+)
 from envpool.registration import make_gymnasium, make_spec
 
 
@@ -564,6 +568,7 @@ class MjlabAlignTest(parameterized.TestCase):
             }
             np.savez_compressed(
                 source,
+                allow_pickle=False,
                 **initial,
                 model=np.frombuffer(snapshot["model"], np.uint8),
                 state=snapshot["task"],
@@ -603,7 +608,9 @@ class MjlabAlignTest(parameterized.TestCase):
                             )
                             context = f"{task}, seed {seed}, {key}"
                             if key == "frames":
-                                assert_rgb_images(values, oracle[key], context)
+                                assert_render_images(
+                                    values, oracle[key], task, context
+                                )
                             elif np.issubdtype(values.dtype, np.floating):
                                 # Compare complete rollouts without copying
                                 # CPU dispatch or reduction internals.
@@ -629,7 +636,11 @@ class MjlabAlignTest(parameterized.TestCase):
                         f"-curriculum{curriculum[0] if curriculum else 'none'}"
                     )
                     artifact.mkdir(parents=True, exist_ok=True)
-                    np.savez_compressed(artifact / "native.npz", **all_values)
+                    np.savez_compressed(
+                        artifact / "native.npz",
+                        allow_pickle=False,
+                        **all_values,
+                    )
                     shutil.copy2(source, artifact / "input.npz")
                     shutil.copy2(output, artifact / "oracle.npz")
                     shutil.copy2(folder / "oracle.log", artifact / "oracle.log")

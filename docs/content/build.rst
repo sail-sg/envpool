@@ -97,7 +97,8 @@ install the required development packages:
 .. code-block:: bash
 
     sudo apt install -y build-essential openjdk-17-jdk python3-dev \
-      python3-pip python-is-python3 golang-go cmake ninja-build swig qt6-base-dev
+      python3-pip python-is-python3 golang-go cmake ninja-build swig qt6-base-dev \
+      libegl1-mesa-dev libopengl-dev libx11-dev libxext-dev
 
 macOS
 ^^^^^

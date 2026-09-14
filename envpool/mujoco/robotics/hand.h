@@ -464,6 +464,11 @@ class HandEnvBase : public Env<EnvSpecT>, public MujocoRobotEnv {
   }
 
   void SetHandAction(const float* raw_action) {
+#if defined(__clang__) && defined(__APPLE__)
+    // Apple Clang fuses the multiply/add that NumPy rounds separately,
+    // changing controls by one ULP and diverging during Egg contacts.
+#pragma clang fp contract(off)
+#endif
     for (int i = 0; i < model_->nu; ++i) {
       mjtNum range_low = model_->actuator_ctrlrange[2 * i];
       mjtNum range_high = model_->actuator_ctrlrange[2 * i + 1];

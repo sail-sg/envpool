@@ -145,6 +145,7 @@ class MyoSuiteTest(absltest.TestCase):
                     self.assertTrue(_INFO_KEYS.issubset(info.keys()))
                 finally:
                     env.close()
+                    del env
 
     def test_no_tasks_need_oracle_numpy2_exclusion(self) -> None:
         """The pinned oracle can instantiate every official task under NumPy 2."""
@@ -208,6 +209,7 @@ class MyoSuiteTest(absltest.TestCase):
                 finally:
                     env0.close()
                     env1.close()
+                    del env0, env1
 
 
 if __name__ == "__main__":

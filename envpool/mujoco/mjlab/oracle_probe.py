@@ -256,7 +256,8 @@ def main() -> None:
                     renderer.update(env.sim.data)
                     frame = renderer.render()
                     if step == 0 and platform.system() == "Darwin":
-                        for _ in range(4):
+                        # Match the native renderer's first-frame CGL warmup.
+                        for _ in range(6):
                             renderer.update(env.sim.data)
                             frame = renderer.render()
                     frames.append(frame.copy())
@@ -278,7 +279,7 @@ def main() -> None:
                 action_low=env.single_action_space.low,
                 action_high=env.single_action_space.high,
             )
-            np.savez(args.output, **result)
+            np.savez(args.output, allow_pickle=False, **result)
         finally:
             if renderer is not None:
                 renderer.close()

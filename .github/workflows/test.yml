@@ -6,17 +6,18 @@ on:
       - main
   pull_request:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 permissions:
   actions: write
   contents: read
 
 jobs:
+  # Finish each platform's cold build and save its cache independently; new
+  # pushes replace only that platform's pending successor.
   test-linux-x64:
     name: Test (linux-x64)
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-linux-x64
+      cancel-in-progress: false
     runs-on: ubuntu-24.04
     timeout-minutes: 300
     env:
@@ -46,7 +47,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake lcov ninja-build swig qt6-base-dev libegl1-mesa-dev libopengl-dev
+          sudo apt-get install -y cmake lcov ninja-build swig qt6-base-dev libegl1-mesa-dev libopengl-dev libx11-dev libxext-dev
           python -m pip install --upgrade cmake
       - name: Restore Bazel caches
         uses: actions/cache/restore@v6
@@ -115,7 +116,7 @@ jobs:
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}-attempt${{ github.run_attempt }}
       - name: Prune older Bazel caches
-        if: ${{ success() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        if: ${{ !cancelled() && steps.save-bazel-caches.outcome == 'success' }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -128,6 +129,9 @@ jobs:
           --keep 1
   test-linux-arm64:
     name: Test (linux-arm64)
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-linux-arm64
+      cancel-in-progress: false
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 300
     env:
@@ -164,7 +168,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-20 cmake lcov ninja-build swig qt6-base-dev libegl1-mesa-dev libopengl-dev
+          sudo apt-get install -y clang-20 cmake lcov ninja-build swig qt6-base-dev libegl1-mesa-dev libopengl-dev libx11-dev libxext-dev
           python -m pip install --upgrade cmake
       - name: Restore Bazel caches
         uses: actions/cache/restore@v6
@@ -200,7 +204,7 @@ jobs:
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}-attempt${{ github.run_attempt }}
       - name: Prune older Bazel caches
-        if: ${{ success() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        if: ${{ !cancelled() && steps.save-bazel-caches.outcome == 'success' }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -213,6 +217,9 @@ jobs:
           --keep 1
   test-macos:
     name: Test (macos)
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-macos
+      cancel-in-progress: false
     runs-on: macos-14
     timeout-minutes: 180
     env:
@@ -264,6 +271,16 @@ jobs:
       - name: Test
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" bazel-test
+      - name: Upload failed test outputs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-outputs-macos
+          path: |
+            bazel-testlogs/**/test.log
+            bazel-testlogs/**/test.xml
+            bazel-testlogs/**/test.outputs/render-mismatch-*.npz
+          if-no-files-found: ignore
       - name: Shut down Bazel
         if: ${{ always() && !cancelled() }}
         continue-on-error: true
@@ -279,7 +296,7 @@ jobs:
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}-attempt${{ github.run_attempt }}
       - name: Prune older Bazel caches
-        if: ${{ success() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        if: ${{ !cancelled() && steps.save-bazel-caches.outcome == 'success' }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -292,6 +309,9 @@ jobs:
           --keep 1
   test-windows:
     name: Test (windows)
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-windows
+      cancel-in-progress: false
     runs-on: windows-2022
     timeout-minutes: 300
     env:
@@ -300,7 +320,8 @@ jobs:
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
       # MSVC ignores the POSIX -g0/-O3 flags from --config=test. Use opt mode
       # and a larger capped disk cache so Windows reruns are not cold builds.
-      BAZEL_CI_RESOURCE_OPTS: --compilation_mode=opt --jobs=HOST_CPUS-1 --local_resources=cpu=HOST_CPUS-1 --local_resources=memory=HOST_RAM*.5 --experimental_disk_cache_gc_max_size=4G --experimental_disk_cache_gc_idle_delay=0s
+      # MyoSuite's parallel environments reserve several GB per test process.
+      BAZEL_CI_RESOURCE_OPTS: --compilation_mode=opt --jobs=HOST_CPUS-1 --local_test_jobs=2 --local_resources=cpu=HOST_CPUS-1 --local_resources=memory=HOST_RAM*.5 --experimental_disk_cache_gc_max_size=4G --experimental_disk_cache_gc_idle_delay=0s
       BAZEL_CACHE_PREFIX: bazel-test-v6-windows-opt-cache4g
       MESA_GL_VERSION_OVERRIDE: 4.5COMPAT
       MSYS2_ARG_CONV_EXCL: "*"
@@ -408,7 +429,7 @@ jobs:
             ~/.cache/envpool-bazel-disk
           key: ${{ env.BAZEL_CACHE_PREFIX }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}-attempt${{ github.run_attempt }}
       - name: Prune older Bazel caches
-        if: ${{ success() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        if: ${{ !cancelled() && steps.save-bazel-caches.outcome == 'success' }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -421,6 +442,9 @@ jobs:
           --keep 1
   deploy-coverage-pages:
     name: Deploy coverage page
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-coverage-pages
+      cancel-in-progress: false
     if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-24.04
     needs:

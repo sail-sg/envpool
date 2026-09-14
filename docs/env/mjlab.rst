@@ -234,9 +234,10 @@ Building from source
 --------------------
 
 The official SDK is needed only to generate C++ sources and model data, not to
-run EnvPool. Its ARM Linux wheel requires ``glibc`` 2.34 or newer. Release builds
-therefore generate portable inputs on Ubuntu, then compile them inside
-``manylinux`` 2.28. This keeps the existing wheel compatibility floor.
+run EnvPool. Its ARM Linux wheel requires ``glibc`` 2.34 or newer. The ARM release
+job therefore generates portable inputs in an Ubuntu container, then compiles
+them inside ``manylinux`` 2.28. Other platforms generate them during the ordinary
+build. This keeps the existing wheel compatibility floor.
 
 For a source build on an older Linux system, prepare the usual build
 dependencies on a supported host, then run:
@@ -275,8 +276,11 @@ termination; they do not substitute final scores for behavioral alignment.
 RGB rendering shares the existing MuJoCo bootstrap. On macOS, identical scenes
 can produce sparse CGL/Metal color differences. The shared image check allows
 at most five intensity levels in any color channel and a mean absolute error
-of ``0.01`` per frame, on the 0-to-255 scale. Other platforms retain exact RGB
-comparisons. No extra per-frame draw or task-specific pixel limit is required.
+of ``0.01`` per frame, on the 0-to-255 scale. ``Mjlab-Cartpole-Balance`` and
+``Mjlab-Cartpole-Swingup`` use bounds of 32 and ``0.025``: the official MuJoCo renderer alone reproduces a
+shadow difference of 25 levels over 13 pixels when replaying the same scene
+with different draw histories. Physics and other task budgets remain unchanged;
+other platforms retain exact RGB comparisons.
 
 Independent tests observe native resets without oracle synchronization. They
 check different seeds, consecutive resets, parallel slots, and replay of the
