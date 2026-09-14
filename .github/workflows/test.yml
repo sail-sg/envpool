@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  # Step timeouts fail without cancelling cleanup. Allow 30 extra minutes
+  # Step timeouts fail without cancelling cleanup. Reserve extra time
   # for setup, Bazel shutdown, and saving the completed build actions.
   # Finish each platform's cold build and save its cache independently; new
   # pushes replace only that platform's pending successor.
@@ -321,7 +321,8 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}-windows
       cancel-in-progress: false
     runs-on: windows-2022
-    timeout-minutes: 330
+    # Saving a cold Windows cache alone can take over 30 minutes.
+    timeout-minutes: 360
     env:
       BAZEL_SH: C:/Program Files/Git/usr/bin/bash.exe
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
