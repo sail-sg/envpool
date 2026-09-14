@@ -216,7 +216,7 @@ jobs:
           --keep 1
   test-macos:
     name: Test (macos)
-    runs-on: macos-15
+    runs-on: macos-14
     timeout-minutes: 180
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
@@ -278,7 +278,9 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = workflow_dispatch ]; then
             python -m pip install mujoco==3.11.0 numpy==2.5.2
-            python .ci-probe-official.py "${{ runner.temp }}/render-inputs"
+            for mode in native_read disable_mp query_mp native_read; do
+              python .ci-probe-official.py "${{ runner.temp }}/render-inputs" "$mode"
+            done
           else
             make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" bazel-test
           fi

@@ -67,34 +67,33 @@ def draw(renderer, mode):
     return pixels[::-1].copy()
 
 for path in sorted(root.rglob('*-left-*.mjb')):
-    if 'run_1_of_3' not in str(path):
-        continue
-    for mode in ('native_read', 'finish_resolve', 'disable_mp'):
+    for mode in (sys.argv[2],):
         renderers = []
         baseline = None
         repeated_max = np.zeros(3, dtype=int)
         contexts_max = np.zeros(3, dtype=int)
-        for repeat in range(8):
+        for repeat in range(4):
             model, data = inputs(path)
             renderer = mujoco.Renderer(model, height=64, width=64)
             renderers.append(renderer)
             if not reported_driver:
                 print('OpenGL driver:', [gl.glGetString(v) for v in (0x1F00, 0x1F01, 0x1F02)], flush=True)
                 reported_driver = True
-            if mode == 'disable_mp':
+            if mode in ('disable_mp', 'query_mp'):
                 context = ctypes.cast(renderer._gl_context._context, ctypes.c_void_p)
                 enabled = ctypes.c_int()
                 gl.CGLIsEnabled(context, 313, ctypes.byref(enabled))
                 if repeat == 0:
                     print('CGL multiprocessor engine enabled:', enabled.value, flush=True)
-                result = gl.CGLDisable(context, 313)
-                if result:
-                    raise RuntimeError(f'CGLDisable: {result}')
+                if mode == 'disable_mp':
+                    result = gl.CGLDisable(context, 313)
+                    if result:
+                        raise RuntimeError(f'CGLDisable: {result}')
             option = mujoco.MjvOption()
             option.geomgroup[1] = 0
             option.flags[mujoco.mjtVisFlag.mjVIS_RANGEFINDER] = 0
             renderer.update_scene(data, camera='walker/egocentric', scene_option=option)
-            frames = [draw(renderer, mode) for _ in range(10)]
+            frames = [draw(renderer, mode) for _ in range(8)]
             reference = frames[4]
             for frame in frames[5:]:
                 repeated_max = np.maximum(repeated_max, stats(frame, reference))
