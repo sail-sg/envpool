@@ -10,7 +10,8 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Keep expensive wheel builds and their diagnostic artifacts on new pushes.
+  cancel-in-progress: false
 
 permissions:
   contents: read
