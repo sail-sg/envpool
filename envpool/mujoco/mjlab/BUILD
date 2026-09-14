@@ -132,7 +132,10 @@ py_library(
     srcs = ["test_support.py"],
     data = ["//third_party/mjlab:testdata"],
     imports = ["../../.."],
-    deps = [requirement("numpy")],
+    deps = [
+        "//envpool/mujoco:render_test_utils",
+        requirement("numpy"),
+    ],
 )
 
 py_test(
@@ -148,7 +151,6 @@ py_test(
         ":registration",
         ":test_support",
         "//envpool:registration",
-        "//envpool/mujoco:render_test_utils",
         requirement("absl-py"),
         requirement("numpy"),
     ],
@@ -172,7 +174,6 @@ _ALIGN_DEPS = [
     ":registration",
     ":test_support",
     "//envpool:registration",
-    "//envpool/mujoco:render_test_utils",
     requirement("absl-py"),
     requirement("numpy"),
 ]

@@ -27,7 +27,12 @@ from envpool.registration import make_dm, make_gymnasium
 
 
 def assert_egocentric_images(
-    actual: np.ndarray, expected: np.ndarray, task: str, context: str
+    actual: np.ndarray,
+    expected: np.ndarray,
+    task: str,
+    context: str,
+    *,
+    record_mismatch: bool = True,
 ) -> None:
     """Keep the software CGL shadow residual scoped to the forage cameras."""
     if task in {
@@ -45,9 +50,12 @@ def assert_egocentric_images(
             context,
             macos_peak_error=128,
             macos_mean_error=0.1,
+            record_mismatch=record_mismatch,
         )
     else:
-        assert_rgb_images(actual, expected, context)
+        assert_rgb_images(
+            actual, expected, context, record_mismatch=record_mismatch
+        )
 
 
 def assert_observations(
@@ -55,6 +63,8 @@ def assert_observations(
     expected: dict[str, np.ndarray],
     task: str,
     context: str,
+    *,
+    record_mismatch: bool = True,
 ) -> None:
     """Compare native observations with the existing camera budgets."""
     np.testing.assert_equal(sorted(actual), sorted(expected))
@@ -69,6 +79,7 @@ def assert_observations(
             expected["walker/egocentric_camera"],
             task,
             f"{task}, {context}",
+            record_mismatch=record_mismatch,
         )
 
 
@@ -108,7 +119,9 @@ def check_reset_randomization(
         if field is not None:
             left, right = {field: left[field]}, {field: right[field]}
         try:
-            assert_observations(left, right, task, "reset variation")
+            assert_observations(
+                left, right, task, "reset variation", record_mismatch=False
+            )
         except AssertionError:
             return True
         return False

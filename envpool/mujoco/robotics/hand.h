@@ -464,6 +464,11 @@ class HandEnvBase : public Env<EnvSpecT>, public MujocoRobotEnv {
   }
 
   void SetHandAction(const float* raw_action) {
+#if defined(__clang__)
+    // NumPy rounds the scaling and addition separately. Fusing them changes
+    // controls by one ULP and can diverge during Egg contact resolution.
+#pragma clang fp contract(off)
+#endif
     for (int i = 0; i < model_->nu; ++i) {
       mjtNum range_low = model_->actuator_ctrlrange[2 * i];
       mjtNum range_high = model_->actuator_ctrlrange[2 * i + 1];

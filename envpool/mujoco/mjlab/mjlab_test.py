@@ -14,7 +14,6 @@
 """All-task native API, replay, render and default reset regression checks."""
 
 import io
-import os
 from contextlib import ExitStack
 from pathlib import Path
 from zipfile import ZipFile
@@ -24,6 +23,7 @@ from absl.testing import absltest, parameterized
 from test_support import (
     actions,
     assert_observations,
+    assert_render_images,
     motion_file,
     public_components,
     task_options,
@@ -31,7 +31,6 @@ from test_support import (
 
 import envpool.mujoco.mjlab.registration  # noqa: F401
 from envpool.mujoco.mjlab import TASKS
-from envpool.mujoco.render_test_utils import assert_rgb_images
 from envpool.registration import make_dm, make_gymnasium
 
 
@@ -271,61 +270,16 @@ class MjlabTest(parameterized.TestCase):
                     assert a is not None and b is not None
                     self.assertEqual(a.shape, (2, 80, 96, 3))
                     self.assertEqual(a.dtype, np.uint8)
-                    folder = Path(os.environ["TEST_UNDECLARED_OUTPUTS_DIR"])
-                    folder.mkdir(parents=True, exist_ok=True)
-                    fields = (
-                        "qpos",
-                        "qvel",
-                        "ctrl",
-                        "mocap_pos",
-                        "mocap_quat",
-                        "time",
-                    )
-                    for env_id in range(2):
-                        states = [
-                            pool._snapshot(env_id, include_model=True)
-                            for pool in (left, right)
-                        ]
-                        assert states[0]["model"] == states[1]["model"]
-                        for key in fields:
-                            assert (
-                                states[0]["physics"]["data." + key]
-                                == states[1]["physics"]["data." + key]
-                            ), key
-                        for side, state in zip(("left", "right"), states):
-                            prefix = folder / f"{task}-{step}-{side}-{env_id}"
-                            prefix.with_suffix(".mjb").write_bytes(
-                                state["model"]
-                            )
-                            values = {
-                                key: np.frombuffer(
-                                    state["physics"]["data." + key], np.float32
-                                )
-                                for key in fields
-                            }
-                            np.savez_compressed(
-                                prefix.with_suffix(".npz"),
-                                **values,
-                                metadata=state["metadata"],
-                                task_state=state["task"],
-                            )
-                    np.savez_compressed(
-                        folder / f"{task}-{step}-frames.npz",
-                        actual=a,
-                        expected=b,
-                    )
-                    print(
-                        task,
-                        step,
-                        "models and rendering inputs are byte-identical",
-                        flush=True,
-                    )
                     with self.subTest(render_step=step):
-                        assert_rgb_images(
-                            a, b, f"{task}, step {step}, worker replay"
+                        assert_render_images(
+                            a, b, task, f"{task}, step {step}, worker replay"
                         )
-                        assert_rgb_images(a[:1], left.render(env_ids=[1]))
-                        assert_rgb_images(a, left.render(env_ids=[1, 0]))
+                        assert_render_images(
+                            a[:1], left.render(env_ids=[1]), task
+                        )
+                        assert_render_images(
+                            a, left.render(env_ids=[1, 0]), task
+                        )
                     self.assertGreater(int(a.max()) - int(a.min()), 20)
                 control = np.repeat(control[None], 2, axis=0)
                 lo, lr, lt, lx, li = left.step(control, env_id=li["env_id"])
