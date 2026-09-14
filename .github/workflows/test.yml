@@ -250,7 +250,6 @@ jobs:
           sudo ln -sfn "$(brew --prefix ninja)/bin/ninja" /usr/local/bin/ninja
           echo "BAZEL_RULES_QT_DIR=$(brew --prefix qtbase)" >> "$GITHUB_ENV"
       - name: Restore Bazel caches
-        if: github.event_name != 'workflow_dispatch'
         uses: actions/cache/restore@v6
         with:
           path: |
@@ -262,25 +261,14 @@ jobs:
             bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.DEFAULT_BRANCH }}-
             bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-
       - name: Install bazelisk
-        if: github.event_name != 'workflow_dispatch'
         run: |
           go install github.com/bazelbuild/bazelisk@latest
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
-      - name: Download captured render inputs
-        if: github.event_name == 'workflow_dispatch'
-        uses: actions/download-artifact@v8
-        with:
-          github-token: ${{ github.token }}
-          run-id: 34814997301
-          name: test-outputs-macos
-          path: ${{ runner.temp }}/render-inputs
       - name: Test
         run: |
           if [ "${{ github.event_name }}" = workflow_dispatch ]; then
-            python -m pip install mujoco==3.11.0 numpy==2.5.2
-            for mode in native_read disable_mp query_mp native_read; do
-              python .ci-probe-official.py "${{ runner.temp }}/render-inputs" "$mode"
-            done
+            make BAZEL_TEST_TARGETS=//envpool/mujoco/locomotion:locomotion_test \
+              BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS --compilation_mode=opt --test_filter=*test_deterministic_rollout*" bazel-test
           else
             make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" bazel-test
           fi
@@ -295,12 +283,12 @@ jobs:
             bazel-testlogs/**/test.outputs/**
           if-no-files-found: ignore
       - name: Shut down Bazel
-        if: ${{ github.event_name != 'workflow_dispatch' && always() && !cancelled() }}
+        if: ${{ always() && !cancelled() }}
         continue-on-error: true
         run: bazelisk shutdown
       - name: Save Bazel caches
         id: save-bazel-caches
-        if: ${{ github.event_name != 'workflow_dispatch' && always() && !cancelled() }}
+        if: ${{ always() && !cancelled() }}
         uses: actions/cache/save@v6
         with:
           path: |
@@ -309,7 +297,7 @@ jobs:
             ~/.cache/envpool-bazel-disk
           key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}-attempt${{ github.run_attempt }}
       - name: Prune older Bazel caches
-        if: ${{ github.event_name != 'workflow_dispatch' && success() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
+        if: ${{ success() && (steps.save-bazel-caches.outcome == 'success' || steps.save-bazel-caches.outcome == 'skipped') }}
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
