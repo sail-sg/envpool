@@ -273,6 +273,18 @@ jobs:
             status=0
             make BAZEL_TEST_TARGETS=//envpool/mujoco:robotics_test \
               BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS --test_filter=*_GymnasiumRoboticsHandEnvPoolTest.test_align_with_upstream_rollout" bazel-test || status=$?
+            cp -R -L bazel-testlogs/envpool/mujoco/robotics_test/test.outputs hand-baseline
+            python - <<'PYCODE'
+            from pathlib import Path
+            path = Path("envpool/mujoco/robotics/hand.h")
+            text = path.read_text()
+            needle = "  void SetHandAction(const float* raw_action) {\n"
+            assert needle in text
+            text = text.replace(needle, needle + "#if defined(__clang__)\n#pragma clang fp contract(off)\n#endif\n", 1)
+            path.write_text(text)
+            PYCODE
+            make BAZEL_TEST_TARGETS=//envpool/mujoco:robotics_test \
+              BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS --test_filter=*_GymnasiumRoboticsHandEnvPoolTest.test_align_with_upstream_rollout" bazel-test || status=$?
             make BAZEL_TEST_TARGETS=//envpool/vizdoom:vizdoom_test \
               BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS --test_timeout=1200" bazel-test || status=$?
             exit "$status"
@@ -285,6 +297,7 @@ jobs:
         with:
           name: test-outputs-macos
           path: |
+            hand-baseline/**
             bazel-testlogs/**/test.log
             bazel-testlogs/**/test.xml
             bazel-testlogs/**/test.outputs/**
