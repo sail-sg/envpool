@@ -6,18 +6,18 @@ on:
       - main
   pull_request:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  # Finish cold builds and save their caches; retain only the newest pending run.
-  cancel-in-progress: false
-
 permissions:
   actions: write
   contents: read
 
 jobs:
+  # Finish each platform's cold build and save its cache independently; new
+  # pushes replace only that platform's pending successor.
   test-linux-x64:
     name: Test (linux-x64)
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-linux-x64
+      cancel-in-progress: false
     runs-on: ubuntu-24.04
     timeout-minutes: 300
     env:
@@ -129,6 +129,9 @@ jobs:
           --keep 1
   test-linux-arm64:
     name: Test (linux-arm64)
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-linux-arm64
+      cancel-in-progress: false
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 300
     env:
@@ -214,6 +217,9 @@ jobs:
           --keep 1
   test-macos:
     name: Test (macos)
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-macos
+      cancel-in-progress: false
     runs-on: macos-14
     timeout-minutes: 180
     env:
@@ -303,6 +309,9 @@ jobs:
           --keep 1
   test-windows:
     name: Test (windows)
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-windows
+      cancel-in-progress: false
     runs-on: windows-2022
     timeout-minutes: 300
     env:
@@ -311,7 +320,8 @@ jobs:
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
       # MSVC ignores the POSIX -g0/-O3 flags from --config=test. Use opt mode
       # and a larger capped disk cache so Windows reruns are not cold builds.
-      BAZEL_CI_RESOURCE_OPTS: --compilation_mode=opt --jobs=HOST_CPUS-1 --local_resources=cpu=HOST_CPUS-1 --local_resources=memory=HOST_RAM*.5 --experimental_disk_cache_gc_max_size=4G --experimental_disk_cache_gc_idle_delay=0s
+      # MyoSuite's parallel environments reserve several GB per test process.
+      BAZEL_CI_RESOURCE_OPTS: --compilation_mode=opt --jobs=HOST_CPUS-1 --local_test_jobs=2 --local_resources=cpu=HOST_CPUS-1 --local_resources=memory=HOST_RAM*.5 --experimental_disk_cache_gc_max_size=4G --experimental_disk_cache_gc_idle_delay=0s
       BAZEL_CACHE_PREFIX: bazel-test-v6-windows-opt-cache4g
       MESA_GL_VERSION_OVERRIDE: 4.5COMPAT
       MSYS2_ARG_CONV_EXCL: "*"
@@ -432,6 +442,9 @@ jobs:
           --keep 1
   deploy-coverage-pages:
     name: Deploy coverage page
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-coverage-pages
+      cancel-in-progress: false
     if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-24.04
     needs:

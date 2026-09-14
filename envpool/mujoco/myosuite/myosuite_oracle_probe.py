@@ -187,36 +187,38 @@ def _reset_randomization_report(task_ids: list[str]) -> dict[str, Any]:
         "geom_friction",
         "hfield_data",
     )
+
+    def trace_seed(task_id: str, seed: int) -> dict[str, list[str]]:
+        # Leave this scope before creating the next environment: close() does
+        # not release the MuJoCo data still held by unwrapped and NumPy views.
+        env = gym.make(task_id, seed=seed)
+        try:
+            unwrapped = env.unwrapped
+            trace: dict[str, list[str]] = {}
+            for _ in range(8):
+                obs, _ = env.reset()
+                state = {
+                    "obs": obs,
+                    **{
+                        key: getattr(unwrapped.mj_data, key)
+                        for key in data_keys
+                    },
+                    **{
+                        key: getattr(unwrapped.mj_model, key)
+                        for key in model_keys
+                    },
+                }
+                for key, value in state.items():
+                    trace.setdefault(key, []).append(
+                        hashlib.sha256(np.asarray(value).tobytes()).hexdigest()
+                    )
+            return trace
+        finally:
+            env.close()
+
     reports = {}
     for task_id in task_ids:
-        traces: list[dict[str, list[str]]] = []
-        for seed in (11, 12, 43, 44):
-            env = gym.make(task_id, seed=seed)
-            try:
-                unwrapped = env.unwrapped
-                trace: dict[str, list[str]] = {}
-                for _ in range(8):
-                    obs, _ = env.reset()
-                    state = {
-                        "obs": obs,
-                        **{
-                            key: getattr(unwrapped.mj_data, key)
-                            for key in data_keys
-                        },
-                        **{
-                            key: getattr(unwrapped.mj_model, key)
-                            for key in model_keys
-                        },
-                    }
-                    for key, value in state.items():
-                        trace.setdefault(key, []).append(
-                            hashlib.sha256(
-                                np.asarray(value).tobytes()
-                            ).hexdigest()
-                        )
-                traces.append(trace)
-            finally:
-                env.close()
+        traces = [trace_seed(task_id, seed) for seed in (11, 12, 43, 44)]
         reports[task_id] = {
             key: (
                 traces[0][key] != traces[2][key]

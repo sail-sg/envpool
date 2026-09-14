@@ -108,19 +108,26 @@ def check_seeded_resets(
         key: [[], [], []] for key in field_expectations or {}
     }
     field_parallel = dict.fromkeys(field_sequences, False)
-    with ExitStack() as stack:
-        pools = _make_pools(stack, task_id, kwargs)
-        for reset_index in range(8):
-            states = []
-            for pool_index, (pool, sequence) in enumerate(
-                zip(pools, sequences, strict=True)
-            ):
+    # Keep the two parallel streams, but release each seed's native physics
+    # before constructing the next pool. Large MyoSuite arenas otherwise keep
+    # six environments alive just to compare their compact fingerprints.
+    for pool_index, seed in enumerate(_SEEDS):
+        pool = make_gymnasium(
+            task_id, num_envs=_NUM_ENVS, num_threads=1, seed=seed, **kwargs
+        )
+        try:
+            for reset_index in range(8):
                 obs, info = pool.reset()
                 state = _state(obs, info, info_keys)
                 if extra_state is not None:
                     state["hidden_state"] = extra_state(pool)
-                states.append(_fingerprint(state))
-                sequence.append(states[-1])
+                sequences[pool_index].append(_fingerprint(state))
+                if pool_index == 1:
+                    test.assertEqual(
+                        sequences[0][reset_index],
+                        sequences[1][reset_index],
+                        f"{task_id}: same seed differs at reset {reset_index}",
+                    )
                 parallel_differs |= _fingerprint(state, 0) != _fingerprint(
                     state, 1
                 )
@@ -129,11 +136,9 @@ def check_seeded_resets(
                     field_parallel[key] |= _fingerprint(
                         state[key], 0
                     ) != _fingerprint(state[key], 1)
-            test.assertEqual(
-                states[0],
-                states[1],
-                f"{task_id}: same seed differs at reset {reset_index}",
-            )
+        finally:
+            pool.close()
+            del pool
     actual = (
         sequences[0] != sequences[2],
         any(len(set(sequence)) > 1 for sequence in sequences),
