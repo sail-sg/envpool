@@ -46,7 +46,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake lcov ninja-build swig qt6-base-dev libegl1-mesa-dev libopengl-dev
+          sudo apt-get install -y cmake lcov ninja-build swig qt6-base-dev libegl1-mesa-dev libopengl-dev libx11-dev libxext-dev
           python -m pip install --upgrade cmake
       - name: Restore Bazel caches
         uses: actions/cache/restore@v6
@@ -164,7 +164,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-20 cmake lcov ninja-build swig qt6-base-dev libegl1-mesa-dev libopengl-dev
+          sudo apt-get install -y clang-20 cmake lcov ninja-build swig qt6-base-dev libegl1-mesa-dev libopengl-dev libx11-dev libxext-dev
           python -m pip install --upgrade cmake
       - name: Restore Bazel caches
         uses: actions/cache/restore@v6

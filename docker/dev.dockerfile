@@ -26,7 +26,7 @@ RUN $HOME/go/bin/bazel version
 RUN useradd -ms /bin/zsh github-action
 
 RUN apt-get update \
-    && apt-get install -y swig qt6-base-dev \
+    && apt-get install -y swig qt6-base-dev libx11-dev libxext-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

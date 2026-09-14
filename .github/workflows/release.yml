@@ -115,7 +115,7 @@ jobs:
           java-version: "25"
       - name: Install build dependencies
         run: |
-          dnf install -y git curl wget zsh gcc gcc-c++ make tmux mesa-libEGL-devel mesa-libGL-devel libglvnd-devel mesa-dri-drivers
+          dnf install -y git curl wget zsh gcc gcc-c++ make tmux mesa-libEGL-devel mesa-libGL-devel libglvnd-devel mesa-dri-drivers libX11-devel libXext-devel
           dnf clean all
           GOBIN=/usr/local/bin go install github.com/bazelbuild/bazelisk@latest
           ln -sf /usr/local/bin/bazelisk /usr/local/bin/bazel
