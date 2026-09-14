@@ -264,11 +264,19 @@ jobs:
         run: |
           go install github.com/bazelbuild/bazelisk@latest
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      - name: Download captured render inputs
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/download-artifact@v8
+        with:
+          github-token: ${{ github.token }}
+          run-id: 34814997301
+          name: test-outputs-macos
+          path: ${{ runner.temp }}/render-inputs
       - name: Test
         run: |
           if [ "${{ github.event_name }}" = workflow_dispatch ]; then
-            make BAZEL_TEST_TARGETS=//envpool/mujoco/locomotion:locomotion_test \
-              BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS --compilation_mode=opt --test_filter=*test_deterministic_rollout_cmu_humanoid_*forage* --runs_per_test=3" bazel-test
+            python -m pip install mujoco==3.11.0 numpy==2.5.2
+            python .ci-probe-official.py "${{ runner.temp }}/render-inputs"
           else
             make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" bazel-test
           fi
