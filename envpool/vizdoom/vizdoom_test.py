@@ -303,13 +303,4 @@ class _VizdoomEnvPoolBasicTest(parameterized.TestCase):
 
 
 if __name__ == "__main__":
-    import time
-    original_run = parameterized.TestCase.run
-    def timed_run(self, *args, **kwargs):
-        started = time.monotonic()
-        try:
-            return original_run(self, *args, **kwargs)
-        finally:
-            print(self.id(), "elapsed", time.monotonic() - started, flush=True)
-    parameterized.TestCase.run = timed_run
     absltest.main()
