@@ -53,9 +53,10 @@
 namespace envpool::mujoco {
 
 #if defined(ENVPOOL_HAS_CGL)
-// Software CGL can still change pixels on pass 5 with identical scene/state;
-// fresh hosted replays were stable from there through pass 32.
-constexpr int kCglFirstFrameSettlePasses = 6;
+// Hosted macOS 14 software CGL still changes fixed-scene pixels through draw
+// 10, including with explicit GL state queries. Official MuJoCo replays were
+// stable from draw 11 through 32; leave a margin for cold renderer startup.
+constexpr int kCglFirstFrameSettlePasses = 16;
 #endif
 
 namespace {
