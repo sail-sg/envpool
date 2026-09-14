@@ -142,7 +142,7 @@ class MjlabEnv : public Env<MjlabEnvSpec>, public RenderableEnv {
       throw std::runtime_error("reset before rendering");
     }
     if (!renderer_) {
-      InitializeRenderer();
+      InitializeRenderer(width, height);
     }
     renderer_->Render(simulation_.physics.Model(),
                       simulation_.physics.RenderData(), width, height, camera,
@@ -174,7 +174,7 @@ class MjlabEnv : public Env<MjlabEnvSpec>, public RenderableEnv {
     state["trunc"_] = simulation_.truncated;
   }
 
-  void InitializeRenderer() {
+  void InitializeRenderer(int width, int height) {
     auto* model = simulation_.physics.Model();
     const auto& viewer = simulation_.cfg.at("viewer");
     // Like the official offscreen viewer, the host model is a render/index
@@ -184,6 +184,9 @@ class MjlabEnv : public Env<MjlabEnvSpec>, public RenderableEnv {
     std::fill_n(model->site_sameframe, model->nsite, mjSAMEFRAME_NONE);
     std::fill_n(model->body_simple, model->nbody, 0);
     model->stat.extent = std::max(4.0, 1.5 * Number(viewer.at("distance")));
+    // Match the official viewer: allocate the requested framebuffer directly.
+    model->vis.global.offwidth = width;
+    model->vis.global.offheight = height;
     if (!viewer.at("fovy").is_null()) {
       model->vis.global.fovy = Number(viewer.at("fovy"));
     }
