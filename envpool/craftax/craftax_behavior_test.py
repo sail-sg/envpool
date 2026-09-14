@@ -46,20 +46,22 @@ def replace(state: Any, **fields: Any) -> Any:
 
 
 @lru_cache(maxsize=2)
-def base_state(classic: bool) -> tuple[Any, Any, Any]:
-    """Cache a deterministic official reset shared by directed fixtures."""
+def base_state(classic: bool) -> tuple[Any, Any, Any, Any]:
+    """Cache the official reset and compiled functions across fixtures."""
     oracle, params = make_oracle(
         "Craftax-" + ("Classic-" if classic else "") + "Symbolic-v1", 192
     )
     _, state = oracle.reset(jax.random.PRNGKey(11), params)
-    return oracle, params, state
+    # A fresh bound method passed to jit loses its cache when each rollout
+    # ends. Keep both wrappers alive so every action reuses the same compile.
+    return jax.jit(oracle.step_env), jax.jit(oracle.get_obs), params, state
 
 
 def arena(
     classic: bool, action: int, level: int = 0, block: int | None = None
 ) -> Any:
     """Prepare materials and geometry for an action before synchronization."""
-    _, _, state = base_state(classic)
+    _, _, _, state = base_state(classic)
     constants = cc if classic else fc
     blocks = constants.BlockType
     act = constants.Action(action).name
@@ -226,8 +228,7 @@ class CraftaxBehaviorTest(parameterized.TestCase):
 
     def rollout(self, classic: bool, state: Any, first: int, seed: int) -> None:
         """Synchronize once and compare every transition through episode end."""
-        oracle, params, _ = base_state(classic)
-        step = jax.jit(oracle.step_env)
+        step, get_obs, params, _ = base_state(classic)
         render = renderer(classic)
         config = native.Params(classic)
         config.max_timesteps = int(params.max_timesteps)
@@ -235,9 +236,7 @@ class CraftaxBehaviorTest(parameterized.TestCase):
         # Exactly one synchronization, before any external actions.
         game.set_state(flatten(state))
         layout = game.get_state()
-        np.testing.assert_array_equal(
-            game.obs(), jax.jit(oracle.get_obs)(state)
-        )
+        np.testing.assert_array_equal(game.obs(), get_obs(state))
         np.testing.assert_array_equal(
             game.pixels(16), np.asarray(render(state))
         )
