@@ -1,6 +1,7 @@
 name: Bazel Build and Test
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -16,6 +17,7 @@ permissions:
 
 jobs:
   test-linux-x64:
+    if: github.event_name != 'workflow_dispatch'
     name: Test (linux-x64)
     runs-on: ubuntu-24.04
     timeout-minutes: 300
@@ -127,6 +129,7 @@ jobs:
           --delete-missing-branches
           --keep 1
   test-linux-arm64:
+    if: github.event_name != 'workflow_dispatch'
     name: Test (linux-arm64)
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 300
@@ -263,7 +266,12 @@ jobs:
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Test
         run: |
-          make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" bazel-test
+          if [ "${{ github.event_name }}" = workflow_dispatch ]; then
+            make BAZEL_TEST_TARGETS=//envpool/mujoco/locomotion:locomotion_test \
+              BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS --compilation_mode=opt --test_filter=*test_deterministic_rollout_cmu_humanoid_*forage* --runs_per_test=3" bazel-test
+          else
+            make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" bazel-test
+          fi
       - name: Upload failed test outputs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v7
@@ -301,6 +309,7 @@ jobs:
           --delete-missing-branches
           --keep 1
   test-windows:
+    if: github.event_name != 'workflow_dispatch'
     name: Test (windows)
     runs-on: windows-2022
     timeout-minutes: 300
