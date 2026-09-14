@@ -13,10 +13,8 @@
 # limitations under the License.
 """Exercise every native task through EnvPool's batched public APIs."""
 
-import os
 from collections.abc import Callable
 from contextlib import ExitStack
-from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -26,6 +24,30 @@ from envpool.mujoco.locomotion.locomotion_envpool import TASKS
 import envpool.mujoco.locomotion.registration  # noqa: F401
 from envpool.mujoco.render_test_utils import assert_rgb_images
 from envpool.registration import make_dm, make_gymnasium
+
+
+def assert_egocentric_images(
+    actual: np.ndarray, expected: np.ndarray, task: str, context: str
+) -> None:
+    """Keep the software CGL shadow residual scoped to the forage cameras."""
+    if task in {
+        "cmu_humanoid_heterogeneous_forage",
+        "cmu_humanoid_maze_forage",
+    }:
+        # Apple Software Renderer also varies in official MuJoCo 3.11 alone,
+        # with identical models/state and serialized, explicitly synchronized
+        # draws. Three complete CI replays measured peak 100, sum 754 over at
+        # most 12 pixels of a 64x64 frame (mean 0.0614). Keep both per-frame
+        # bounds; other cameras, platforms and all numeric state stay strict.
+        assert_rgb_images(
+            actual,
+            expected,
+            context,
+            macos_peak_error=128,
+            macos_mean_error=0.1,
+        )
+    else:
+        assert_rgb_images(actual, expected, context)
 
 
 def assert_observations(
@@ -42,9 +64,10 @@ def assert_observations(
                 value, expected[key], err_msg=f"{context}, {key}"
             )
     if "walker/egocentric_camera" in actual:
-        assert_rgb_images(
+        assert_egocentric_images(
             actual["walker/egocentric_camera"],
             expected["walker/egocentric_camera"],
+            task,
             f"{task}, {context}",
         )
 
@@ -171,41 +194,16 @@ class LocomotionTest(parameterized.TestCase):
         left_obs, left_info = left.reset()
         right_obs, right_info = right.reset()
         saw_end = False
-        saved_snapshot = False
         for step in range(195):
             li = np.argsort(left_info["players"]["env_id"], kind="stable")
             ri = np.argsort(right_info["players"]["env_id"], kind="stable")
             with self.subTest(step=step):
-                try:
-                    assert_observations(
-                        {key: value[li] for key, value in left_obs.items()},
-                        {key: value[ri] for key, value in right_obs.items()},
-                        task,
-                        f"{task}: step {step}",
-                    )
-                except AssertionError:
-                    output_dir = os.environ.get("TEST_UNDECLARED_OUTPUTS_DIR")
-                    if (
-                        output_dir
-                        and not saved_snapshot
-                        and hasattr(left, "_snapshot")
-                    ):
-                        for side, pool in (("left", left), ("right", right)):
-                            for env_id in range(2):
-                                state = pool._snapshot(
-                                    env_id, include_model=True
-                                )
-                                model = state.pop("model")
-                                prefix = (
-                                    Path(output_dir)
-                                    / f"{task}-{step}-{side}-{env_id}"
-                                )
-                                prefix.with_suffix(".mjb").write_bytes(model)
-                                np.savez_compressed(
-                                    prefix.with_suffix(".npz"), **state
-                                )
-                        saved_snapshot = True
-                    raise
+                assert_observations(
+                    {key: value[li] for key, value in left_obs.items()},
+                    {key: value[ri] for key, value in right_obs.items()},
+                    task,
+                    f"{task}: step {step}",
+                )
             for key in left_obs:
                 self.assertTrue(
                     left.observation_space[key].contains(left_obs[key][0]), key
