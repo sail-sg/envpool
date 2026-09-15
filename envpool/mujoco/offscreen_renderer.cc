@@ -878,8 +878,13 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
     read_pixels();
     // Software CGL shadow pixels can also depend on earlier frames. Redraw
     // the same scene so readback does not retain that draw-history residual.
-    mjr_render(viewport, &scene_, &context_);
-    read_pixels();
+    const auto* renderer =
+        reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+    if (renderer != nullptr &&
+        std::strcmp(renderer, "Apple Software Renderer") == 0) {
+      mjr_render(viewport, &scene_, &context_);
+      read_pixels();
+    }
   }
 #else
   read_pixels();
