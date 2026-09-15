@@ -260,6 +260,9 @@ def main() -> None:
                         for _ in range(16):
                             renderer.update(env.sim.data)
                             frame = renderer.render()
+                    elif platform.system() == "Darwin":
+                        # Settle software CGL shadows without updating the scene.
+                        frame = renderer.render()
                     frames.append(frame.copy())
                     frame_steps.append(step)
 

@@ -15,6 +15,7 @@
 
 import ctypes
 import platform
+from functools import cache
 from typing import Any
 
 from dm_control import _render
@@ -22,6 +23,7 @@ from dm_control._render import base as dm_control_render_base
 from dm_control._render import executor as dm_control_render_executor
 
 
+@cache
 def configure_macos_dm_control_renderer() -> None:
     """Use the existing DMC CGL context setup on macOS."""
     if platform.system() != "Darwin":
@@ -118,10 +120,12 @@ def configure_macos_dm_control_renderer() -> None:
         if not context._frame_settled:
             # Mirror OffscreenRenderer's sixteen CGL settle passes. Initial MSAA
             # readbacks can change even with an identical scene (including the
-            # CMU side camera). No physics, task state, camera settings, or later
-            # frames are modified.
+            # CMU side camera). The repeated draws reuse the same scene.
             for _ in range(16):
                 render_on_gl_thread(camera, depth, overlays)
             context._frame_settled = True
+        else:
+            # Later shadow readbacks also depend on the preceding draw history.
+            render_on_gl_thread(camera, depth, overlays)
 
     engine.Camera._render_on_gl_thread = settled_render

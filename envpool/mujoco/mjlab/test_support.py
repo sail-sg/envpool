@@ -89,23 +89,8 @@ def assert_render_images(
     task: str,
     context: str = "",
 ) -> None:
-    """Bound the independently reproduced software CGL shadow residual."""
-    if task in {"Mjlab-Cartpole-Balance", "Mjlab-Cartpole-Swingup"}:
-        # Official MuJoCo 3.11 alone reproduces the same draw-history residual
-        # with identical models, physics, cameras, lights and geoms: peak 25,
-        # sum 552 over 13 pixels of a 96x80 frame (mean 0.02396). An explicit
-        # shadow-map glFinish does not fix it; redrawing every frame doubles
-        # software render time. Keep this budget scoped to the two Cartpoles
-        # on macOS; other platforms still require exact pixels.
-        assert_rgb_images(
-            actual,
-            expected,
-            context,
-            macos_peak_error=32,
-            macos_mean_error=0.025,
-        )
-        return
-    assert_rgb_images(actual, expected, context)
+    """Compare every MJLab task with the shared RGB tolerances."""
+    assert_rgb_images(actual, expected, context or task)
 
 
 def public_components(task: str, obs: dict[str, np.ndarray], slot: int) -> dict:
