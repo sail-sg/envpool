@@ -68,6 +68,16 @@ jobs:
         if: ${{ always() && !cancelled() }}
         continue-on-error: true
         run: bazelisk shutdown
+      - name: Trim Bazel cache archive
+        if: ${{ always() && !cancelled() }}
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          # Keep downloads and compiled actions; expanded repos can be recreated.
+          # Move within ~/.cache so large Windows trees do not need copying.
+          if [ -d "$HOME/.cache/envpool-bazel-repo/contents" ]; then
+            mv "$HOME/.cache/envpool-bazel-repo/contents" "$HOME/.cache/envpool-bazel-repo-contents"
+          fi
       - name: Save Bazel caches
         id: save-bazel-caches
         if: ${{ always() && !cancelled() }}
