@@ -53,9 +53,10 @@
 namespace envpool::mujoco {
 
 #if defined(ENVPOOL_HAS_CGL)
-// Software CGL can still change pixels on pass 5 with identical scene/state;
-// fresh hosted replays were stable from there through pass 32.
-constexpr int kCglFirstFrameSettlePasses = 6;
+// Hosted macOS 14 software CGL still changes fixed-scene pixels through draw
+// 10, including with explicit GL state queries. Official MuJoCo replays were
+// stable from draw 11 through 32; leave a margin for cold renderer startup.
+constexpr int kCglFirstFrameSettlePasses = 16;
 #endif
 
 namespace {
@@ -201,9 +202,8 @@ class CglContext final : public GlContext {
 };
 
 void PrimeCglContextForFirstReadback() {
-  // GitHub's macOS 14 CGL/Metal stack lazily finalizes renderer sample state.
-  // These no-op queries happen after MuJoCo creates the offscreen framebuffer
-  // and before the first render, making the first readback deterministic.
+  // Query CGL state after MuJoCo creates the offscreen framebuffer. These
+  // queries alone do not settle software-renderer pixels; Render does that.
   GLint value = 0;
   glGetIntegerv(GL_MAX_SAMPLES, &value);
   glGetIntegerv(GL_SAMPLE_BUFFERS, &value);
@@ -876,6 +876,15 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
     cgl_first_frame_settled_ = true;
   } else {
     read_pixels();
+    // Software CGL shadow pixels can also depend on earlier frames. Redraw
+    // the same scene so readback does not retain that draw-history residual.
+    const auto* renderer =
+        reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+    if (renderer != nullptr &&
+        std::strcmp(renderer, "Apple Software Renderer") == 0) {
+      mjr_render(viewport, &scene_, &context_);
+      read_pixels();
+    }
   }
 #else
   read_pixels();

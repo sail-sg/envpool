@@ -11,6 +11,8 @@ permissions:
   contents: read
 
 jobs:
+  # Step timeouts fail without cancelling cleanup. Reserve extra time
+  # for setup, Bazel shutdown, and saving the completed build actions.
   # Finish each platform's cold build and save its cache independently; new
   # pushes replace only that platform's pending successor.
   test-linux-x64:
@@ -19,7 +21,7 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}-linux-x64
       cancel-in-progress: false
     runs-on: ubuntu-24.04
-    timeout-minutes: 300
+    timeout-minutes: 330
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
@@ -65,6 +67,7 @@ jobs:
           go install github.com/bazelbuild/bazelisk@latest
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Coverage
+        timeout-minutes: 300
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
             BAZEL_TEST_TARGETS="//..." bazel-coverage
@@ -78,9 +81,42 @@ jobs:
             --genhtml-lcov-file coverage/lcov.genhtml.info \
             --repo-root "$GITHUB_WORKSPACE"
       - name: Shut down Bazel
+        timeout-minutes: 2
         if: ${{ always() && !cancelled() }}
         continue-on-error: true
         run: bazelisk shutdown
+      - name: Trim Bazel cache archive
+        if: ${{ always() && !cancelled() }}
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          # Keep downloads and compiled actions; expanded repos can be recreated.
+          # Move within ~/.cache so large Windows trees do not need copying.
+          if [ -d "$HOME/.cache/envpool-bazel-repo/contents" ]; then
+            mv "$HOME/.cache/envpool-bazel-repo/contents" "$HOME/.cache/envpool-bazel-repo-contents"
+          fi
+      - name: Save Bazel caches
+        id: save-bazel-caches
+        if: ${{ always() && !cancelled() }}
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ~/.cache/bazelisk
+            ~/.cache/envpool-bazel-repo
+            ~/.cache/envpool-bazel-disk
+          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}-attempt${{ github.run_attempt }}
+      - name: Prune older Bazel caches
+        if: ${{ !cancelled() && steps.save-bazel-caches.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python scripts/prune_actions_caches.py
+          --repo "${{ github.repository }}"
+          --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-"
+          --group-by-branch
+          --delete-missing-branches
+          --keep 1
       - name: Publish coverage summary
         run: cat coverage/summary.md >> "$GITHUB_STEP_SUMMARY"
       - name: Build coverage site
@@ -105,35 +141,13 @@ jobs:
         uses: actions/upload-pages-artifact@v5
         with:
           path: coverage/site
-      - name: Save Bazel caches
-        id: save-bazel-caches
-        if: ${{ always() && !cancelled() }}
-        uses: actions/cache/save@v6
-        with:
-          path: |
-            ~/.cache/bazelisk
-            ~/.cache/envpool-bazel-repo
-            ~/.cache/envpool-bazel-disk
-          key: bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-${{ env.CACHE_BRANCH }}-${{ github.run_id }}-attempt${{ github.run_attempt }}
-      - name: Prune older Bazel caches
-        if: ${{ !cancelled() && steps.save-bazel-caches.outcome == 'success' }}
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: >-
-          python scripts/prune_actions_caches.py
-          --repo "${{ github.repository }}"
-          --prefix "bazel-test-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.bazelversion') }}-"
-          --group-by-branch
-          --delete-missing-branches
-          --keep 1
   test-linux-arm64:
     name: Test (linux-arm64)
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-linux-arm64
       cancel-in-progress: false
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 300
+    timeout-minutes: 330
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
@@ -186,13 +200,25 @@ jobs:
           go install github.com/bazelbuild/bazelisk@latest
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Test
+        timeout-minutes: 300
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" \
             BAZEL_TEST_TARGETS="//..." bazel-test
       - name: Shut down Bazel
+        timeout-minutes: 2
         if: ${{ always() && !cancelled() }}
         continue-on-error: true
         run: bazelisk shutdown
+      - name: Trim Bazel cache archive
+        if: ${{ always() && !cancelled() }}
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          # Keep downloads and compiled actions; expanded repos can be recreated.
+          # Move within ~/.cache so large Windows trees do not need copying.
+          if [ -d "$HOME/.cache/envpool-bazel-repo/contents" ]; then
+            mv "$HOME/.cache/envpool-bazel-repo/contents" "$HOME/.cache/envpool-bazel-repo-contents"
+          fi
       - name: Save Bazel caches
         id: save-bazel-caches
         if: ${{ always() && !cancelled() }}
@@ -221,7 +247,7 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}-macos
       cancel-in-progress: false
     runs-on: macos-14
-    timeout-minutes: 180
+    timeout-minutes: 210
     env:
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
@@ -269,22 +295,24 @@ jobs:
           go install github.com/bazelbuild/bazelisk@latest
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Test
+        timeout-minutes: 180
         run: |
           make BAZELOPT="--repository_cache=$HOME/.cache/envpool-bazel-repo --disk_cache=$HOME/.cache/envpool-bazel-disk $BAZEL_CI_RESOURCE_OPTS" bazel-test
-      - name: Upload failed test outputs
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: test-outputs-macos
-          path: |
-            bazel-testlogs/**/test.log
-            bazel-testlogs/**/test.xml
-            bazel-testlogs/**/test.outputs/render-mismatch-*.npz
-          if-no-files-found: ignore
       - name: Shut down Bazel
+        timeout-minutes: 2
         if: ${{ always() && !cancelled() }}
         continue-on-error: true
         run: bazelisk shutdown
+      - name: Trim Bazel cache archive
+        if: ${{ always() && !cancelled() }}
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          # Keep downloads and compiled actions; expanded repos can be recreated.
+          # Move within ~/.cache so large Windows trees do not need copying.
+          if [ -d "$HOME/.cache/envpool-bazel-repo/contents" ]; then
+            mv "$HOME/.cache/envpool-bazel-repo/contents" "$HOME/.cache/envpool-bazel-repo-contents"
+          fi
       - name: Save Bazel caches
         id: save-bazel-caches
         if: ${{ always() && !cancelled() }}
@@ -307,13 +335,24 @@ jobs:
           --group-by-branch
           --delete-missing-branches
           --keep 1
+      - name: Upload failed test outputs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-outputs-macos
+          path: |
+            bazel-testlogs/**/test.log
+            bazel-testlogs/**/test.xml
+            bazel-testlogs/**/test.outputs/render-mismatch-*.npz
+          if-no-files-found: ignore
   test-windows:
     name: Test (windows)
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-windows
       cancel-in-progress: false
     runs-on: windows-2022
-    timeout-minutes: 300
+    # Saving a cold Windows cache alone can take over 30 minutes.
+    timeout-minutes: 360
     env:
       BAZEL_SH: C:/Program Files/Git/usr/bin/bash.exe
       CACHE_BRANCH: ${{ github.head_ref || github.ref_name }}
@@ -408,16 +447,28 @@ jobs:
           Add-Content -Path $env:GITHUB_PATH -Value $cmakeBinDir
           & (Join-Path $cmakeBinDir "cmake.exe") --version
       - name: Test
+        timeout-minutes: 300
         shell: bash
         run: |
           repo_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-repo")
           disk_cache=$(cygpath -am "$HOME/.cache/envpool-bazel-disk")
           make BAZELOPT="--repository_cache=$repo_cache --disk_cache=$disk_cache $BAZEL_CI_RESOURCE_OPTS" bazel-test
       - name: Shut down Bazel
+        timeout-minutes: 2
         if: ${{ always() && !cancelled() }}
         continue-on-error: true
         shell: bash
         run: bazelisk shutdown
+      - name: Trim Bazel cache archive
+        if: ${{ always() && !cancelled() }}
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          # Keep downloads and compiled actions; expanded repos can be recreated.
+          # Move within ~/.cache so large Windows trees do not need copying.
+          if [ -d "$HOME/.cache/envpool-bazel-repo/contents" ]; then
+            mv "$HOME/.cache/envpool-bazel-repo/contents" "$HOME/.cache/envpool-bazel-repo-contents"
+          fi
       - name: Save Bazel caches
         id: save-bazel-caches
         if: ${{ always() && !cancelled() }}

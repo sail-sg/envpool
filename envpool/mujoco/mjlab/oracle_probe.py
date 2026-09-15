@@ -257,9 +257,12 @@ def main() -> None:
                     frame = renderer.render()
                     if step == 0 and platform.system() == "Darwin":
                         # Match the native renderer's first-frame CGL warmup.
-                        for _ in range(6):
+                        for _ in range(16):
                             renderer.update(env.sim.data)
                             frame = renderer.render()
+                    elif platform.system() == "Darwin":
+                        # Settle software CGL shadows without updating the scene.
+                        frame = renderer.render()
                     frames.append(frame.copy())
                     frame_steps.append(step)
 
