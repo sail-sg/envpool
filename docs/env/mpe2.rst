@@ -154,3 +154,10 @@ reward, completion, and render comparisons use identical external actions.
 Independent tests inspect native resets without synchronization, including
 goals, keys, treasure types, continuous resets, and parallel streams. Native
 seed sequences are reproducible but do not promise NumPy's seed-to-state map.
+
+Windows alignment pins ``OPENBLAS_CORETYPE=Nehalem`` for the Python oracle.
+NumPy 2.5.2's automatically selected BLAS kernels can fuse the two-dimensional
+dot product used by Collect Treasure, Simple Formation, and Simple Line,
+changing rewards by one floating-point unit in the last place. The pinned
+kernel uses the same separate multiplication and addition as the native
+implementation, preserving bitwise comparisons without a reward tolerance.
