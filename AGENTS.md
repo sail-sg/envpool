@@ -64,13 +64,18 @@ Do not stop at a partial port.
     fundamentally cannot support it
   - keep the same GL/bootstrap strategy before inventing a platform-specific
     workaround
-- If a tolerance is unavoidable, make it:
-  - as small as possible
-  - platform-scoped if possible
-  - documented in the test
-- Do not widen tolerances or add platform-only workarounds until the root cause
-  is understood well enough to explain why bitwise matching is impossible.
-  "macOS only" is not an acceptable first fix.
+- Establish semantic correctness and numerical accuracy; cross-implementation
+  bitwise equality is not a universal requirement.
+- Prefer ordinary native math. Do not copy a backend's reduction order, add
+  platform-specific arithmetic, or pin test-only CPU/BLAS kernels solely to
+  remove harmless last-bit differences.
+- Justify floating-point tolerances from the computation, observed error, and
+  task semantics. Keep them tight, documented, and scoped to the affected
+  quantities and tasks. Add platform-specific budgets only when the evidence
+  requires them, rather than maintaining a branch for every backend.
+- Investigate discrepancies before changing tolerances. Distinguish benign
+  rounding from incorrect state, actions, rewards, or transitions; neither
+  "macOS only" nor a passing test after widening epsilon explains a failure.
 - Do not use `skipTest` to hide a new-env regression on a supported platform
   when the family already has a known-good render / GL setup. Exhaust the
   existing in-tree strategy first, then document the real blocker if one
@@ -171,6 +176,9 @@ Run this for multiple steps, not just reset or one step.
 The determinism bar is end-to-end: resetting with the same seed and replaying
 the same external action sequence must produce the same rollout, not just the
 same initial state.
+Use exact equality for these repeated native runs on the same build and
+platform. This does not require bitwise identity with a different implementation
+or across platforms.
 For new tasks added to an existing family, mirror the coverage shape of the old
 tasks instead of only testing one new ID.
 
@@ -207,16 +215,20 @@ Default standard:
   eliminate RNG/bootstrap differences between implementations
 - after that reset-time sync, drive both sides only with the same external
   actions; do not resynchronize state mid-episode
-- bitwise obs / reward / terminated / truncated / exposed info
-- bitwise render when the renderer is shared or expected to match exactly
+- exact shapes, dtypes, discrete values, agent IDs, masks, and
+  terminated / truncated flags
+- numerical agreement for floating-point observations, rewards, state, and
+  exposed info, using tight, documented absolute and relative tolerances where
+  needed; keep exact comparisons where they are natural and stable
+- exact render comparison when a shared renderer makes that stable; otherwise
+  use a justified pixel error budget that still catches visual regressions
 - cover every registered env ID, not just one representative case
 
-If bitwise fails only because of platform math or renderer backend details,
-keep the residual check narrow:
-
-- only for the affected envs
-- only for the affected platform
-- with the smallest possible epsilon or pixel budget
+When numerical or rendering differences appear, locate their source and measure
+them over full rollouts. Show that the budget covers roundoff or backend details
+without hiding changed task behavior, discrete events, or growing state drift.
+Use that evidence to choose a small error budget, not to emulate every upstream
+hardware kernel. A bounded numerical difference is not by itself a bug.
 
 Do not relax unrelated envs.
 Do not skip entire envs or platforms to get CI green.
@@ -301,6 +313,8 @@ Before opening or updating a PR, verify:
   independent randomized fields are checked without oracle state sync
 - docs match actual supported IDs and render results
 - any tolerance is justified and scoped
+- no backend-specific math emulation or test-only CPU/BLAS pin exists merely
+  to force bitwise oracle agreement
 - reset-time oracle state sync, if used, happens only once and is documented
 - no score-only "correctness" gate is standing in for step-level alignment
 - no large env-specific patch blobs remain in `workspace0.bzl` or ad hoc
