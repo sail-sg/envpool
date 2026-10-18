@@ -96,13 +96,6 @@ py_test(
     name = "mpe2_test",
     size = "large",
     srcs = ["mpe2_test.py"],
-    # NumPy 2.5.2's Windows BLAS kernels can fuse the two-term dot product
-    # depending on the runner CPU. Pin the non-fused baseline so float64
-    # rewards match native scalar arithmetic bitwise on both Intel and AMD.
-    env = select({
-        "//:windows": {"OPENBLAS_CORETYPE": "Nehalem"},
-        "//conditions:default": {},
-    }),
     imports = ["../.."],
     deps = [
         ":mpe2",

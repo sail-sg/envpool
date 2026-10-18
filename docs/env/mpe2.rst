@@ -155,9 +155,9 @@ Independent tests inspect native resets without synchronization, including
 goals, keys, treasure types, continuous resets, and parallel streams. Native
 seed sequences are reproducible but do not promise NumPy's seed-to-state map.
 
-Windows alignment pins ``OPENBLAS_CORETYPE=Nehalem`` for the Python oracle.
-NumPy 2.5.2's automatically selected BLAS kernels can fuse the two-dimensional
-dot product used by Collect Treasure, Simple Formation, and Simple Line,
-changing rewards by one floating-point unit in the last place. The pinned
-kernel uses the same separate multiplication and addition as the native
-implementation, preserving bitwise comparisons without a reward tolerance.
+The float64 reward comparison uses ``rtol=1e-14`` and ``atol=1e-14``. NumPy's
+BLAS contraction, vector math, and reduction order can vary across CPU
+backends, causing last-bit differences from native scalar arithmetic.
+The oracle uses its default backend; native code does not reproduce a
+particular backend's rounding. Observations, state, float32 rewards, benchmark
+data, completion flags, and rendered pixels are still compared exactly.

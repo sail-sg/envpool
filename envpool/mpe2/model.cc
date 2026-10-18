@@ -34,47 +34,9 @@ Vec Difference(const Vec& a, const Vec& b) {
   return {a[0] - b[0], a[1] - b[1]};
 }
 double SquaredNorm(const Vec& v) { return v[0] * v[0] + v[1] * v[1]; }
-double ClippedSum(const double* values, int count) {
-  // Match NumPy 2.5.2's contiguous pairwise reduction (BSD; NUMPY_LICENSE),
-  // including its eight lanes and 128-element block boundary.
-  if (count > 128) {
-    int split = (count / 2) & ~7;
-    return ClippedSum(values, split) +
-           ClippedSum(values + split, count - split);
-  }
-  auto value = [values](int i) { return std::clamp(values[i], 0.0, 2.0); };
-  double sum = -0.0;
-  int offset = 0;
-  if (count >= 8) {
-    std::array<double, 8> lanes{};
-    for (int i = 0; i < 8; ++i) {
-      lanes[i] = value(i);
-    }
-    for (offset = 8; offset + 8 <= count; offset += 8) {
-      for (int i = 0; i < 8; ++i) {
-        lanes[i] += value(offset + i);
-      }
-    }
-    sum = ((lanes[0] + lanes[1]) + (lanes[2] + lanes[3])) +
-          ((lanes[4] + lanes[5]) + (lanes[6] + lanes[7]));
-  }
-  for (; offset < count; ++offset) {
-    sum += value(offset);
-  }
-  return sum;
-}
-double LinearAlgebraNorm(const Vec& v) {
-#if defined(__APPLE__) && defined(__aarch64__)
-  // NumPy 2.5.2's Accelerate ddot fuses the second multiply/add for a
-  // two-element vector. Only np.linalg.norm paths use this rounding;
-  // np.sqrt(np.sum(np.square(...))) and the particle integrator do not.
-  return std::sqrt(std::fma(v[1], v[1], v[0] * v[0]));
-#else
-  return std::sqrt(SquaredNorm(v));
-#endif
-}
+double Norm(const Vec& v) { return std::sqrt(SquaredNorm(v)); }
 double Distance(const Entity& a, const Entity& b) {
-  return std::sqrt(SquaredNorm(Difference(a.pos, b.pos)));
+  return Norm(Difference(a.pos, b.pos));
 }
 bool Collision(const Entity& a, const Entity& b) {
   return Distance(a, b) < a.size + b.size;
@@ -693,7 +655,7 @@ void Model::Assignment() {
   std::vector<std::vector<double>> cost(n, std::vector<double>(n));
   for (int i = 0; i < n; ++i) {
     for (int j = 0; j < n; ++j) {
-      cost[i][j] = LinearAlgebraNorm(Difference(entities[i].pos, expected_[j]));
+      cost[i][j] = Norm(Difference(entities[i].pos, expected_[j]));
     }
   }
   std::vector<double> u(n + 1);
@@ -762,8 +724,10 @@ double Model::GlobalReward() const {
       reward -= closest;
     }
   } else {
-    reward = -ClippedSum(assignment_.data(), assignment_.size()) /
-             kOptions.Players();
+    for (double distance : assignment_) {
+      reward += std::clamp(distance, 0.0, 2.0);
+    }
+    reward = -reward / kOptions.Players();
   }
   return reward;
 }
@@ -899,7 +863,7 @@ double Model::Reward(int player) const {
       for (double& x : centroid) {
         x /= kOptions.collectors;
       }
-      closest = LinearAlgebraNorm(Difference(centroid, a.pos));
+      closest = Norm(Difference(centroid, a.pos));
     }
   }
   if (std::isfinite(closest)) {

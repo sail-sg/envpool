@@ -135,8 +135,14 @@ class _MPE2Test(absltest.TestCase):
                     np.testing.assert_array_equal(
                         reward, expected.astype(np.float32)
                     )
-                    np.testing.assert_array_equal(
-                        info["players"]["reward"], expected
+                    # BLAS contraction, vector math, and reduction order can
+                    # differ in the last bits across NumPy's CPU backends.
+                    np.testing.assert_allclose(
+                        info["players"]["reward"],
+                        expected,
+                        rtol=1e-14,
+                        atol=1e-14,
+                        strict=True,
                     )
                     self.assertEqual(bool(terminated[0]), all(term.values()))
                     self.assertEqual(bool(truncated[0]), all(trunc.values()))
