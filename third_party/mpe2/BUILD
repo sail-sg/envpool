@@ -41,7 +41,7 @@ genrule(
     srcs = ["@mpe2_pcg64//file"],
     outs = ["pcg64.h"],
     cmd = "cp $< $@",
-    cmd_bat = "copy /Y $< $@ >NUL",
+    cmd_bat = 'copy /Y "$<" "$@" >NUL',
 )
 
 cc_library(
