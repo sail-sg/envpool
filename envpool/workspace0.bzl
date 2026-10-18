@@ -27,7 +27,22 @@ load("//third_party/vizdoom:repo.bzl", "vizdoom_archive")
 
 def workspace():
     """Load requested packages."""
-
+    maybe(
+        http_archive,
+        name = "mpe2_upstream",
+        type = "tar.gz",
+        sha256 = "319d1899d86a2ff8a88d322f55424a0ec95bc0ceea013d32686ca6ee9aeeeedb",
+        strip_prefix = "MPE2-1.1.1",
+        urls = ["https://codeload.github.com/Farama-Foundation/MPE2/tar.gz/refs/tags/v1.1.1"],
+        build_file = "//third_party/mpe2:mpe2.BUILD",
+    )
+    maybe(
+        http_file,
+        name = "mpe2_pcg64",
+        sha256 = "2ce9cc9366a9993cfd786a1ee63eaad35d8761c0ff9744ee5508192156f33d4a",
+        urls = ["https://raw.githubusercontent.com/numpy/numpy/v2.5.2/numpy/random/src/pcg64/pcg64.h"],
+        downloaded_file_path = "pcg64.h",
+    )
     craftax_archive()
     dmc_locomotion_repositories()
     mjlab_repositories()

@@ -20,6 +20,7 @@
 - [x] [Procgen](https://envpool.readthedocs.io/en/latest/env/procgen.html)
 - [x] [Minigrid](https://envpool.readthedocs.io/en/latest/env/minigrid.html)
 - [x] [MarlGrid](https://envpool.readthedocs.io/en/latest/env/marlgrid.html)
+- [x] [MPE2](https://envpool.readthedocs.io/en/latest/env/mpe2.html): all 12 particle-world scenarios
 - [x] [Highway](https://envpool.readthedocs.io/en/latest/env/highway.html)
 - [x] [MetaWorld](https://envpool.readthedocs.io/en/latest/env/metaworld.html)
 - [x] [MyoSuite](https://envpool.readthedocs.io/en/latest/env/myosuite.html)

@@ -89,5 +89,5 @@ if __name__ == "__main__":
     with tempfile.TemporaryDirectory(prefix="mjlab-doc-") as scratch:
         os.environ.setdefault("TEST_SRCDIR", os.environ["RUNFILES_DIR"])
         os.environ["TEST_TMPDIR"] = scratch
-        flags.FLAGS.test_tmpdir = scratch
+        flags.FLAGS["test_tmpdir"].value = scratch
         generate(args.output)
