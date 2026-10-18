@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from itertools import product
 from pathlib import Path
 from typing import Any
 
@@ -237,14 +238,19 @@ class _MPE2Test(absltest.TestCase):
 
     def test_render_alignment(self) -> None:
         for name, task_id, _ in TASKS:
-            for continuous in (False, True):
+            for continuous, rescaling in product((False, True), repeat=2):
                 native = make_gymnasium(
                     task_id,
                     seed=19,
                     continuous_actions=continuous,
+                    dynamic_rescaling=rescaling,
                     render_mode="rgb_array",
                 )
-                oracle = make_oracle(name, continuous_actions=continuous)
+                oracle = make_oracle(
+                    name,
+                    continuous_actions=continuous,
+                    dynamic_rescaling=rescaling,
+                )
                 try:
                     oracle.reset(seed=19)
                     _, info = native.reset()
@@ -253,7 +259,10 @@ class _MPE2Test(absltest.TestCase):
                     for step in range(25):
                         if step in (0, 1, 12, 24):
                             with self.subTest(
-                                task=task_id, continuous=continuous, step=step
+                                task=task_id,
+                                continuous=continuous,
+                                rescaling=rescaling,
+                                step=step,
                             ):
                                 np.testing.assert_array_equal(
                                     render_frame(native), oracle.render()
@@ -264,6 +273,38 @@ class _MPE2Test(absltest.TestCase):
                 finally:
                     native.close()
                     oracle.close()
+
+    def test_render_scales_geometry(self) -> None:
+        pools = [
+            make_gymnasium(
+                "MPE2/Simple-v3",
+                seed=29,
+                render_mode="rgb_array",
+                render_width=size,
+                render_height=size,
+            )
+            for size in (350, 700)
+        ]
+        try:
+            infos = [pool.reset()[1] for pool in pools]
+            for step in range(12):
+                if step in (0, 11):
+                    extents = []
+                    for pool in pools:
+                        frame = render_frame(pool)
+                        # The red landmark remains visible above the agent.
+                        pixels = np.argwhere(frame[:, :, 0] > frame[:, :, 1])
+                        extents.append(np.ptp(pixels, axis=0) + 1)
+                    # Integer radii and outlines round separately at each size.
+                    self.assertTrue(
+                        np.all(np.abs(2 * extents[0] - extents[1]) <= 4)
+                    )
+                for i, pool in enumerate(pools):
+                    action = np.array([step % 5], dtype=np.int32)
+                    infos[i] = pool.step(player_actions(infos[i], action))[4]
+        finally:
+            for pool in pools:
+                pool.close()
 
     def test_assignment_population_reduction(self) -> None:
         for name, task_id in (

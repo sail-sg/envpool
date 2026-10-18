@@ -93,9 +93,10 @@ Options
   Tag. MPE2 1.1.1's inherited stage setter is a no-op, so its stage remains
   zero even after calling the upstream stage-advancement methods.
 * ``benchmark_data=False`` enables the scenario's benchmark values.
-* ``dynamic_rescaling=True`` matches upstream camera scaling. Rendering
-  defaults to 700 by 700 RGB pixels; ``render_width`` and ``render_height``
-  can select other output sizes.
+* ``dynamic_rescaling=True`` scales entity radii as the world bounds change.
+  The camera follows the current bounds in both modes, matching MPE2 1.1.1.
+  Rendering defaults to 700 by 700 RGB pixels; ``render_width`` and
+  ``render_height`` select other canvas sizes and scale the geometry.
 * ``max_num_players`` is resolved from the scenario's population at
   construction. A supplied capacity must fit the population.
 

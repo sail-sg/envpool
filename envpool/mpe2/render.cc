@@ -162,7 +162,9 @@ void Render(const Model& model, int width, int height, std::uint8_t* rgb) {
   if (range == 0) {
     range = 1;
   }
+  // Upstream always fits positions to live bounds; the flag affects radii only.
   double scale = 0.9 * model.original_range / range;
+  const double radius_scale = std::min(width, height) / 2.0;
   const int center_x = width / 2;
   const int center_y = height / 2;
   int line = 0;
@@ -174,8 +176,8 @@ void Render(const Model& model, int width, int height, std::uint8_t* rgb) {
                              center_x);
     int y = static_cast<int>(std::floor(-e.pos[1] / range * height / 2) * 0.9 +
                              center_y);
-    int radius =
-        static_cast<int>(e.size * 350 * (model.kOptions.rescaling ? scale : 1));
+    int radius = static_cast<int>(e.size * radius_scale *
+                                  (model.kOptions.rescaling ? scale : 1));
     Circle(rgb, width, height, x, y, radius, e.color);
     if (e.silent) {
       continue;
