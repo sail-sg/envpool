@@ -13,7 +13,6 @@
 #define ENVPOOL_MPE2_RANDOM_H_
 
 #include <array>
-#include <cmath>
 #include <cstdint>
 #include <random>
 
@@ -51,12 +50,7 @@ class Random {
   double Uniform(double low = 0, double high = 1) {
     double unit = static_cast<double>(pcg64_random_r(&engine_) >> 11) *
                   (1.0 / 9007199254740992.0);
-#if defined(__APPLE__) && defined(__aarch64__)
-    // NumPy 2.5.2's arm64 uniform sampler contracts this multiply/add.
-    return std::fma(high - low, unit, low);
-#else
     return low + (high - low) * unit;
-#endif
   }
 
   int Integer(std::uint32_t bound) {
