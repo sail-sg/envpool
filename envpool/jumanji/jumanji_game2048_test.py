@@ -79,6 +79,38 @@ def _action_mask(board: np.ndarray) -> np.ndarray:
 class JumanjiGame2048Test(absltest.TestCase):
     """Checks native Game2048 transitions against a rule reference."""
 
+    def test_render_shows_all_digits_of_large_tiles(self) -> None:
+        """A 2048 tile must show four digits, including in a small frame."""
+        board = np.zeros((4, 4), dtype=np.int32)
+        board[0] = (7, 8, 10, 11)
+        for size in (128, 256):
+            env = make_gymnasium(
+                "Game2048-v1",
+                num_envs=1,
+                game2048_initial_board=",".join(map(str, board.ravel())),
+                render_mode="rgb_array",
+                render_width=size,
+                render_height=size,
+            )
+            try:
+                env.reset()
+                rendered = env.render()
+                assert rendered is not None
+                frame = rendered[0]
+                for col, exponent in enumerate(board[0]):
+                    cell = frame[
+                        : size // 4, col * size // 4 : (col + 1) * size // 4
+                    ]
+                    ink = np.any(cell.max(axis=-1) < 130, axis=0)
+                    digits = np.count_nonzero(
+                        np.diff(np.r_[False, ink, False].astype(int)) == 1
+                    )
+                    self.assertEqual(
+                        digits, len(str(2 ** int(exponent))), (size, exponent)
+                    )
+            finally:
+                env.close()
+
     def test_rollout_matches_reference_without_random_cell(self) -> None:
         """Checks a deterministic rollout against a rule reference."""
         initial = np.asarray(

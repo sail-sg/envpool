@@ -29,11 +29,10 @@ cc_library(
     ],
     hdrs = [
         "model.h",
-        "random.h",
     ],
     copts = _COPTS,
     deps = [
-        "//envpool/utils:numpy_random",
+        "//envpool/utils:random",
         "//third_party/mpe2:metadata_headers",
         "@freetype",
     ],
@@ -66,8 +65,6 @@ py_library(
     data = [
         "FONT_LICENSE",
         "LICENSE",
-        "NUMPY_LICENSE",
-        "PCG64_LICENSE",
         ":mpe2_envpool",
     ],
     imports = ["../.."],

@@ -64,7 +64,6 @@ class SearchAndRescueEnvFns {
   static decltype(auto) DefaultConfig() {
     return MakeDict(
         "search_and_rescue_target_acc_std"_.Bind(0.0001f),
-        "search_and_rescue_searcher_views"_.Bind(std::string("")),
         "search_and_rescue_positions"_.Bind(std::string("")),
         "search_and_rescue_headings"_.Bind(std::string("")),
         "search_and_rescue_speeds"_.Bind(std::string("")),
@@ -109,8 +108,6 @@ class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
   std::array<float, searchrescue::kNumTargets * 2> target_positions_{};
   std::array<float, searchrescue::kNumTargets * 2> target_velocities_{};
   std::array<bool, searchrescue::kNumTargets> target_found_{};
-  std::array<float, searchrescue::kSearcherViewsSize>
-      configured_searcher_views_{};
   std::array<float, searchrescue::kPositionsSize> configured_positions_{};
   std::array<float, searchrescue::kNumSearchers> configured_headings_{};
   std::array<float, searchrescue::kNumSearchers> configured_speeds_{};
@@ -126,9 +123,6 @@ class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
   SearchAndRescueEnv(const Spec& spec, int env_id)
       : Env<SearchAndRescueEnvSpec>(spec, env_id),
         reset_key_{0, static_cast<std::uint32_t>(seed_)},
-        configured_searcher_views_(
-            parse::CsvArray<float, searchrescue::kSearcherViewsSize>(
-                spec.config["search_and_rescue_searcher_views"_], -1.0f)),
         configured_positions_(
             parse::CsvArray<float, searchrescue::kPositionsSize>(
                 spec.config["search_and_rescue_positions"_])),

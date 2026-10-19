@@ -286,7 +286,7 @@
   "moduleExtensions": {
     "//envpool:workspace0.bzl%repositories": {
       "general": {
-        "bzlTransitiveDigest": "Ov8kDEQzue2nRSL0EnZ52f/vuf9d3TtAXhZ4qMoror8=",
+        "bzlTransitiveDigest": "wG9C7qRlrcXyYdk7SbJ7ONM1fM4T1SKSXTkaTcEagnw=",
         "usagesDigest": "SajRKIR8nOGpEzuKj8QlLVuws2HdnARUg1NP1i0Q7/M=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
@@ -302,26 +302,6 @@
                 "https://codeload.github.com/Farama-Foundation/MPE2/tar.gz/refs/tags/v1.1.1"
               ],
               "build_file": "@@//third_party/mpe2:mpe2.BUILD"
-            }
-          },
-          "numpy_pcg64": {
-            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_file",
-            "attributes": {
-              "sha256": "2ce9cc9366a9993cfd786a1ee63eaad35d8761c0ff9744ee5508192156f33d4a",
-              "urls": [
-                "https://raw.githubusercontent.com/numpy/numpy/v2.5.2/numpy/random/src/pcg64/pcg64.h"
-              ],
-              "downloaded_file_path": "pcg64.h"
-            }
-          },
-          "numpy_ziggurat_constants": {
-            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_file",
-            "attributes": {
-              "sha256": "9f8b114014b8475777e88c6af80e126654fe0753693d6eabba365d3c4051236c",
-              "urls": [
-                "https://raw.githubusercontent.com/numpy/numpy/v2.5.2/numpy/random/src/distributions/ziggurat_constants.h"
-              ],
-              "downloaded_file_path": "ziggurat_constants.h"
             }
           },
           "numpy_pocketfft_hdronly": {

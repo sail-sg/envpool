@@ -243,8 +243,9 @@ class SudokuEnv : public Env<SudokuEnvSpec>, public RenderableEnv {
           const int right = (col + 1) * width / sudoku::kBoardWidth;
           const int top = row * height / sudoku::kBoardWidth;
           const int bottom = (row + 1) * height / sudoku::kBoardWidth;
-          render::DrawNumber(width, height, value + 1, left + 6, top + 5,
-                             right - 6, bottom - 5, {70, 70, 70}, rgb);
+          const int pad = std::max(1, std::min(right - left, bottom - top) / 6);
+          render::DrawNumber(width, height, value + 1, left + pad, top + pad,
+                             right - pad, bottom - pad, {70, 70, 70}, rgb);
         }
       }
     }

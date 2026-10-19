@@ -194,17 +194,6 @@ class CglContext final : public GlContext {
   bool locked_{false};
 };
 
-void PrimeCglContextForFirstReadback() {
-  // Query CGL state after MuJoCo creates the offscreen framebuffer.
-  GLint value = 0;
-  glGetIntegerv(GL_MAX_SAMPLES, &value);
-  glGetIntegerv(GL_SAMPLE_BUFFERS, &value);
-  glGetIntegerv(GL_SAMPLES, &value);
-  (void)glGetString(GL_VENDOR);
-  (void)glGetString(GL_RENDERER);
-  (void)glGetString(GL_VERSION);
-}
-
 #elif defined(ENVPOOL_HAS_WGL)
 
 namespace {
@@ -763,9 +752,6 @@ void OffscreenRenderer::Initialize(const mjModel* model) {
   mjr_setBuffer(mjFB_OFFSCREEN, &context_);
   context_.readDepthMap = mjDEPTH_ZEROFAR;
   initialized_ = true;
-#if defined(ENVPOOL_HAS_CGL)
-  PrimeCglContextForFirstReadback();
-#endif
 }
 
 void OffscreenRenderer::UpdateCamera(const mjModel* model, const mjData* data,

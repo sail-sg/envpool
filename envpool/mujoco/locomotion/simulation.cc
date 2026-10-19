@@ -426,9 +426,8 @@ void Simulation::RespawnMaze() {
         direction = i;
       }
     }
-    rotation =
-        2 * std::acos(-1) * direction / 10 +
-        std::acos(-1) * (1 + std::tanh(std::atanh(random_.Uniform(-1, 1))));
+    rotation = 2 * std::acos(-1) * direction / 10 +
+               std::acos(-1) * (1 + random_.Uniform(-1, 1));
     ShiftWalker(0, {0, 0, -100});
   }
   ShiftWalker(0, position, rotation);

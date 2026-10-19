@@ -150,8 +150,10 @@ class MinesweeperEnv : public Env<MinesweeperEnvSpec>, public RenderableEnv {
           const int right = (col + 1) * width / minesweeper::kCols;
           const int top = row * height / minesweeper::kRows;
           const int bottom = (row + 1) * height / minesweeper::kRows;
-          render::DrawNumber(width, height, value, left + 6, top + 5, right - 6,
-                             bottom - 5, render::Palette(value), rgb);
+          const int pad = std::max(1, std::min(right - left, bottom - top) / 6);
+          render::DrawNumber(width, height, value, left + pad, top + pad,
+                             right - pad, bottom - pad, render::Palette(value),
+                             rgb);
         }
       }
     }

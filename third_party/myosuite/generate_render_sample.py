@@ -134,6 +134,9 @@ def _envpool_trace_record(
     )
     try:
         from envpool.mujoco.myosuite.oracle import (
+            sampled_state_from_info,
+        )
+        from envpool.mujoco.myosuite.oracle import (
             sync_state_from_info as _sync_state_from_info,
         )
 
@@ -152,6 +155,9 @@ def _envpool_trace_record(
             reset_before_step.append(elapsed_step == 0)
         plan = {
             "actions": actions,
+            "sampled_states": [
+                sampled_state_from_info(item) for item in infos[1:]
+            ],
             "reset_before_step": reset_before_step,
             "sync_states": [_sync_state_from_info(infos[0])]
             + [

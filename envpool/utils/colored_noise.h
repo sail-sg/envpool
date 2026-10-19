@@ -18,10 +18,10 @@
 #include <complex>
 #include <vector>
 
-#include "envpool/utils/numpy_random.h"
+#include "envpool/utils/random.h"
 #include "third_party/numpy/pocketfft_hdronly.h"
 
-namespace envpool::numpy_random {
+namespace envpool {
 
 // Two-channel, unit-variance beta=2 noise, as used by MyoSuite's NPCs.
 // Generate spectral Gaussian coefficients and transform them to a finite
@@ -36,7 +36,9 @@ class BrownNoise {
   }
 
   std::array<double, 2> Sample(Random* random) {
-    if (cursor_ == size_) Refill(random);
+    if (cursor_ == size_) {
+      Refill(random);
+    }
     const int index = cursor_++;
     return {scale_ * buffer_[index], scale_ * buffer_[size_ + index]};
   }
@@ -83,5 +85,5 @@ class BrownNoise {
   }
 };
 
-}  // namespace envpool::numpy_random
+}  // namespace envpool
 #endif  // ENVPOOL_UTILS_COLORED_NOISE_H_

@@ -149,15 +149,20 @@ Validation
 ----------
 
 The family tests compare all registered tasks against MPE2 1.1.1 using both
-action modes. Reset synchronization happens only once; subsequent state,
-reward, completion, and render comparisons use identical external actions.
+action modes. Native reset state initializes the oracle; both then receive
+identical external actions. Collect Treasure also transfers sampled position
+and type after independently checking each respawn event, before the oracle
+computes observations and rewards. Native respawn bounds, types, variation,
+pickup and delivery are checked separately.
 Independent tests inspect native resets without synchronization, including
 goals, keys, treasure types, continuous resets, and parallel streams. Native
-seed sequences are reproducible but do not promise NumPy's seed-to-state map.
+seed sequences use standard C++ distributions and do not promise NumPy's
+seed-to-state map or draw order.
 
 The float64 reward comparison uses ``rtol=1e-14`` and ``atol=1e-14``. NumPy's
 BLAS contraction, vector math, and reduction order can vary across CPU
 backends, causing last-bit differences from native scalar arithmetic.
 The oracle uses its default backend; native code does not reproduce a
 particular backend's rounding. Observations, state, float32 rewards, benchmark
-data, completion flags, and rendered pixels are still compared exactly.
+data and completion flags are still compared exactly. Rendered RGB channels
+allow one 8-bit level for text-edge alpha quantization.

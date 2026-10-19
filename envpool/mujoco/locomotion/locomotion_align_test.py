@@ -18,7 +18,7 @@ import inspect
 import os
 import platform
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from envpool.mujoco.oracle import configure_mujoco_package_shared_lib
 from envpool.python.glfw_context import preload_windows_gl_dlls
@@ -178,6 +178,8 @@ class LocomotionAlignTest(parameterized.TestCase):
         width: int = 128,
         height: int = 96,
         camera_name: str | None = None,
+        env: Any = None,
+        timestep: Any = None,
     ) -> bool:
         official = make_oracle(task, seed)
         oracle_ts = official.reset()
@@ -191,17 +193,20 @@ class LocomotionAlignTest(parameterized.TestCase):
         visual = official.physics.model.vis.global_
         visual.offwidth = max(visual.offwidth, width)
         visual.offheight = max(visual.offheight, height)
-        env: Any = make_dm(
-            f"dm_control/locomotion/{task}",
-            seed=seed,
-            num_envs=1,
-            num_threads=1,
-            render_mode="rgb_array",
-            render_width=width,
-            render_height=height,
-            render_camera_id=camera,
-        )
-        timestep = env.reset()
+        owns_env = env is None
+        if owns_env:
+            env = make_dm(
+                f"dm_control/locomotion/{task}",
+                seed=seed,
+                num_envs=1,
+                num_threads=1,
+                render_mode="rgb_array",
+                render_width=width,
+                render_height=height,
+                render_camera_id=camera,
+            )
+            timestep = env.reset()
+        env = cast(Any, env)
         specs = official.observation_spec()
         if isinstance(specs, list):
             specs = specs[0]
@@ -229,6 +234,26 @@ class LocomotionAlignTest(parameterized.TestCase):
         )
 
         state = env._snapshot(include_model=True)
+        if task == "cmu_humanoid_tracking":
+            # Select the actual native clip/start, then let the official loader
+            # construct all reference features. No RNG state is reproduced.
+            from unittest import mock
+
+            clip = state["reference_clip"]
+            start = (
+                state["reference_start"]
+                + official.task._dataset.start_steps[clip]
+            )
+            self.assertIn((clip, start), official.task._possible_starts)
+            with (
+                mock.patch.object(
+                    official.task, "_possible_starts", [(clip, start)]
+                ),
+                mock.patch.object(
+                    official.task, "_start_probabilities", np.ones(1)
+                ),
+            ):
+                official.reset()
         native_model = mujoco.MjModel.from_binary_path(
             "native.mjb", {"native.mjb": state["model"]}
         )
@@ -349,7 +374,8 @@ class LocomotionAlignTest(parameterized.TestCase):
         self.assertTrue(env.step(np.zeros_like(action)).first()[0])
         clip_finished = bool(getattr(official.task, "_end_mocap", False))
         official.close()
-        env.close()
+        if owns_env:
+            env.close()
         return clip_finished
 
     def test_tracking_side_camera(self) -> None:
@@ -373,32 +399,53 @@ class LocomotionAlignTest(parameterized.TestCase):
         """Exercise every WALK_TINY clip and the end-of-reference transition."""
         oracle = make_oracle("cmu_humanoid_tracking")
         task = oracle.task
-        starts = task._possible_starts
-        probabilities = task._start_probabilities
-        seeds: dict[int, int] = {}
-        near_end = []
-        for seed in range(10000):
-            index = np.random.RandomState(seed).choice(
-                len(starts), p=probabilities
-            )
-            clip, step = starts[index]
-            seeds.setdefault(clip, seed)
-            if task._dataset.end_steps[clip] - step == 16:
-                near_end.append(seed)
-            if len(seeds) == len(task._dataset.ids) and len(near_end) >= 12:
-                break
-        self.assertLen(seeds, len(task._dataset.ids))
+        ends = np.asarray(task._dataset.end_steps) - np.asarray(
+            task._dataset.start_steps
+        )
+        expected = set(range(len(task._dataset.ids)))
         oracle.close()
-        for clip, seed in sorted(seeds.items()):
-            with self.subTest(clip=clip, seed=seed):
-                self._run_episode("cmu_humanoid_tracking", "random", seed)
-        for seed in near_end:
-            if self._run_episode("cmu_humanoid_tracking", "reference", seed):
-                break
-        else:
-            self.fail(
-                "Reference-following actions never reached a clip boundary"
+        seen = set()
+        finished = False
+        env: Any = make_dm(
+            "dm_control/locomotion/cmu_humanoid_tracking",
+            seed=0,
+            num_envs=1,
+            num_threads=1,
+            render_mode="rgb_array",
+            render_width=128,
+            render_height=96,
+        )
+        try:
+            for reset in range(10000):
+                timestep = env.reset()
+                state = env._snapshot()
+                clip, start = state["reference_clip"], state["reference_start"]
+                if clip not in seen:
+                    with self.subTest(clip=clip, reset=reset):
+                        self._run_episode(
+                            "cmu_humanoid_tracking",
+                            "random",
+                            0,
+                            env=env,
+                            timestep=timestep,
+                        )
+                    seen.add(clip)
+                elif not finished and ends[clip] - start == 16:
+                    finished = self._run_episode(
+                        "cmu_humanoid_tracking",
+                        "reference",
+                        0,
+                        env=env,
+                        timestep=timestep,
+                    )
+                if seen == expected and finished:
+                    break
+            self.assertEqual(seen, expected)
+            self.assertTrue(
+                finished, "Reference actions never reached a clip boundary"
             )
+        finally:
+            env.close()
 
     def test_upstream_registry_coverage(self) -> None:
         """Discover upstream factories and actually reset every public ID."""

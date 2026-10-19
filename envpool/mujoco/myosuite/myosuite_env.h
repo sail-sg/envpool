@@ -46,7 +46,7 @@ constexpr int kMyoSuiteTestStatePad = 65536;
 // The largest pinned collision mesh contains 96,968 polygon indices.
 constexpr int kMyoSuiteTestMeshPad = 131072;
 
-enum class TableTennisResult { kPending, kFault, kSolved };
+enum class TableTennisResult : std::uint8_t { kPending, kFault, kSolved };
 
 inline TableTennisResult EvaluateTableTennisContacts(
     const std::vector<std::uint8_t>& contacts) {
@@ -57,8 +57,12 @@ inline TableTennisResult EvaluateTableTennisContacts(
   // Bits follow the public touching_info order: paddle, own half, opponent.
   for (std::uint8_t contact : contacts) {
     const bool paddle = (contact & 1) != 0;
-    if (!paddle && hit_paddle) left_paddle = true;
-    if (paddle && left_paddle) return TableTennisResult::kFault;
+    if (!paddle && hit_paddle) {
+      left_paddle = true;
+    }
+    if (paddle && left_paddle) {
+      return TableTennisResult::kFault;
+    }
     hit_paddle |= paddle;
     if ((contact & 2) != 0) {
       if (left_own_half || ++own_frames > 2) {
@@ -101,6 +105,14 @@ class MyoSuiteEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     const auto& task = GetMyoSuiteTask(std::string(conf["task_name"_]));
     mjtNum inf = std::numeric_limits<mjtNum>::infinity();
+#ifdef ENVPOOL_TEST
+    const auto& reference = GetMyoSuiteReferenceData(task.id);
+    const int reference_size = reference.type == MyoSuiteReferenceType::kRandom
+                                   ? reference.robot_cols +
+                                         reference.robot_vel_cols +
+                                         reference.object_cols
+                                   : 1;
+#endif
     return MakeDict(
         "obs"_.Bind(StackSpec(Spec<mjtNum>({task.obs_dim}, {-inf, inf}),
                               conf["frame_stack"_])),
@@ -114,7 +126,8 @@ class MyoSuiteEnvFns {
         "info:baoding_goal_parameters"_.Bind(Spec<mjtNum>({5})),
         "info:chase_task"_.Bind(Spec<int>({})),
         "info:npc_parameters"_.Bind(Spec<mjtNum>({3})),
-        "info:task_rng0"_.Bind(Spec<std::uint64_t>({6})),
+        "info:npc_velocity"_.Bind(Spec<mjtNum>({2})),
+        "info:random_reference"_.Bind(Spec<mjtNum>({reference_size})),
         "info:qpos0"_.Bind(Spec<mjtNum>({2048})),
         "info:qvel0"_.Bind(Spec<mjtNum>({2048})),
         "info:act0"_.Bind(Spec<mjtNum>({2048})),
@@ -222,7 +235,7 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     mjtNum ankle_target_angle;
   };
 
-  enum class NpcPolicy {
+  enum class NpcPolicy : std::uint8_t {
     kStatic,
     kStationary,
     kRandom,
@@ -257,9 +270,11 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
   mjtNum npc_speed_{0};
   mjtNum npc_noise_scale_{10};
   std::array<mjtNum, 2> npc_velocity_{};
-  envpool::numpy_random::Random task_random_;
-  envpool::numpy_random::BrownNoise npc_noise_;
-  std::array<std::uint64_t, 6> task_reset_rng_{};
+  envpool::Random task_random_;
+  envpool::BrownNoise npc_noise_;
+#ifdef ENVPOOL_TEST
+  std::vector<mjtNum> random_reference_{0};
+#endif
   std::vector<mjtNum> last_ctrl_;
   std::vector<mjtNum> observation_warmstart_;
   std::vector<mjtNum> integration_warmstart_;
@@ -881,7 +896,9 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     std::vector<mjtNum> quat(4);
     mju_mat2Quat(quat.data(), data_->ximat + 9 * body_id);
     if (quat[0] < 0) {
-      for (auto& value : quat) value = -value;
+      for (auto& value : quat) {
+        value = -value;
+      }
     }
     return quat;
   }
@@ -2019,6 +2036,13 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
                                reference_.robot_vel_cols);
       frame.object = sample(reference_.object, reference_.object_rows,
                             reference_.object_cols);
+#ifdef ENVPOOL_TEST
+      random_reference_ = frame.robot;
+      random_reference_.insert(random_reference_.end(), frame.robot_vel.begin(),
+                               frame.robot_vel.end());
+      random_reference_.insert(random_reference_.end(), frame.object.begin(),
+                               frame.object.end());
+#endif
       return frame;
     }
 
@@ -2057,15 +2081,16 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
   }
 
   void ResetTaskRandomization() {
-    task_reset_rng_ = task_random_.State();
     const bool soccer = task_.kind == MyoSuiteTaskKind::kChallengeSoccer;
-    if (!soccer && task_.kind != MyoSuiteTaskKind::kChallengeChaseTag) return;
+    if (!soccer && task_.kind != MyoSuiteTaskKind::kChallengeChaseTag) {
+      return;
+    }
     npc_velocity_ = {};
     if (soccer) {
       const auto& probabilities =
           reset_parameters_.at("goalkeeper.goalkeeper_probabilities");
-      const NpcPolicy policies[] = {NpcPolicy::kBlockBall, NpcPolicy::kRandom,
-                                    NpcPolicy::kStationary};
+      const std::array<NpcPolicy, 3> policies = {
+          NpcPolicy::kBlockBall, NpcPolicy::kRandom, NpcPolicy::kStationary};
       npc_policy_ = policies[std::discrete_distribution<int>(
           probabilities.begin(), probabilities.end())(gen_)];
       const auto& range = reset_parameters_.at("goalkeeper.random_vel_range");
@@ -2080,10 +2105,18 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
   }
 
   static mjtNum TurnDirection(mjtNum current, mjtNum desired) {
-    while (current > 2 * M_PI) current -= 2 * M_PI;
-    while (current < 0) current += 2 * M_PI;
-    while (desired > 2 * M_PI) desired -= 2 * M_PI;
-    while (desired < 0) desired += 2 * M_PI;
+    while (current > 2 * M_PI) {
+      current -= 2 * M_PI;
+    }
+    while (current < 0) {
+      current += 2 * M_PI;
+    }
+    while (desired > 2 * M_PI) {
+      desired -= 2 * M_PI;
+    }
+    while (desired < 0) {
+      desired += 2 * M_PI;
+    }
     return current + 2 * M_PI - desired < 2 * M_PI - current + desired ? 1 : -1;
   }
 
@@ -2095,7 +2128,9 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     auto consider = [&](mjtNum x, mjtNum y) {
       const mjtNum distance =
           std::hypot(x - data_->mocap_pos[0], y - data_->mocap_pos[1]);
-      if (distance >= 3.5) return;
+      if (distance >= 3.5) {
+        return;
+      }
       center[0] += x;
       center[1] += y;
       force += 10 * std::pow(1 / std::max(distance, 0.00001) - 1 / 3.5, 2);
@@ -2119,7 +2154,8 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     for (int axis = 0; axis < 2; ++axis) {
       direction[axis] = data_->mocap_pos[axis] - center[axis] / count;
       if (std::abs(direction[axis]) <= 0.1) {
-        const int sign = (direction[axis] > 0) - (direction[axis] < 0);
+        const int sign = static_cast<int>(direction[axis] > 0) -
+                         static_cast<int>(direction[axis] < 0);
         direction[axis] = -sign * task_random_.Uniform(0.3, 0.9);
       }
     }
@@ -2129,7 +2165,9 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
 
   void StepNpc() {
     const bool soccer = task_.kind == MyoSuiteTaskKind::kChallengeSoccer;
-    if (!soccer && task_.kind != MyoSuiteTaskKind::kChallengeChaseTag) return;
+    if (!soccer && task_.kind != MyoSuiteTaskKind::kChallengeChaseTag) {
+      return;
+    }
     const mjtNum yaw = YawFromQuat(data_->mocap_quat);
     std::array<mjtNum, 2> velocity{};
     if (npc_policy_ == NpcPolicy::kRandom) {
@@ -2162,7 +2200,9 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     } else {
       velocity[0] = std::abs(velocity[0]);
       npc_velocity_ = velocity;
-      for (auto& value : velocity) value = std::clamp(value, -2.0, 2.0);
+      for (auto& value : velocity) {
+        value = std::clamp(value, -2.0, 2.0);
+      }
       const mjtNum dt = reset_parameters_.at("opponent.dt")[0];
       data_->mocap_pos[0] = std::clamp(
           data_->mocap_pos[0] - dt * velocity[0] * std::cos(yaw + M_PI / 2),
@@ -2415,7 +2455,9 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
   void RecordTableTennisContacts(const std::vector<mjtNum>& touching) {
     std::uint8_t mask = 0;
     for (std::size_t i = 0; i < touching.size(); ++i) {
-      if (touching[i] != 0.0) mask |= 1U << i;
+      if (touching[i] != 0.0) {
+        mask |= 1U << i;
+      }
     }
     tabletennis_contacts_.push_back(mask);
   }
@@ -2436,15 +2478,18 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
 
   std::vector<mjtNum> ActuatorVelocity() const {
     auto result = MuscleValues(data_->actuator_velocity);
-    for (auto& value : result) value = std::clamp(value, -100.0, 100.0);
+    for (auto& value : result) {
+      value = std::clamp(value, -100.0, 100.0);
+    }
     return result;
   }
 
   std::vector<mjtNum> ActuatorForce(bool scaled) const {
     auto result = MuscleValues(data_->actuator_force);
     if (scaled) {
-      for (auto& value : result)
+      for (auto& value : result) {
         value = std::clamp(value / 1000.0, -100.0, 100.0);
+      }
     }
     return result;
   }
@@ -2724,7 +2769,9 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
             StateAtAddresses(data_->qpos, prefix + "_qpos_adrs");
         obs["internal_qvel"] =
             StateAtAddresses(data_->qvel, prefix + "_qvel_adrs");
-        for (auto& value : obs["internal_qvel"]) value *= dt;
+        for (auto& value : obs["internal_qvel"]) {
+          value *= dt;
+        }
       }
     }
 
@@ -3519,7 +3566,9 @@ class MyoSuiteEnvBase : public Env<EnvSpecT>,
     const std::array<mjtNum, 3> npc_parameters = {
         static_cast<mjtNum>(npc_policy_), npc_speed_, npc_noise_scale_};
     state["info:npc_parameters"_].Assign(npc_parameters.data(), 3);
-    state["info:task_rng0"_].Assign(task_reset_rng_.data(), 6);
+    state["info:npc_velocity"_].Assign(npc_velocity_.data(), 2);
+    state["info:random_reference"_].Assign(random_reference_.data(),
+                                           random_reference_.size());
     state["info:qpos0"_].Assign(qpos0_pad_.data(), qpos0_pad_.size());
     state["info:qvel0"_].Assign(qvel0_pad_.data(), qvel0_pad_.size());
     state["info:act0"_].Assign(act0_pad_.data(), act0_pad_.size());

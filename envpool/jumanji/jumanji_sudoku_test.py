@@ -42,7 +42,7 @@ _SOLVED = (
 )
 
 
-def _make_env(task_id: str = "Sudoku-v0") -> Any:
+def _make_env(task_id: str = "Sudoku-v0", size: int = 256) -> Any:
     board = np.array(_SOLVED, copy=True)
     board[8, 8] = -1
     return make_gymnasium(
@@ -51,11 +51,36 @@ def _make_env(task_id: str = "Sudoku-v0") -> Any:
         seed=0,
         sudoku_initial_board=",".join(map(str, board.reshape(-1))),
         render_mode="rgb_array",
+        render_width=size,
+        render_height=size,
     )
 
 
 class JumanjiSudokuTest(absltest.TestCase):
     """Checks native Sudoku transitions for both registered IDs."""
+
+    def test_small_render_shows_filled_cells(self) -> None:
+        """Digits remain visible at small sizes and appear after a move."""
+        for size in (128, 256):
+            env = _make_env(size=size)
+            try:
+                obs, _ = env.reset()
+                for step in range(2):
+                    frame = env.render()[0]
+                    for row, col in np.ndindex(9, 9):
+                        cell = frame[
+                            row * size // 9 + 2 : (row + 1) * size // 9 - 2,
+                            col * size // 9 + 2 : (col + 1) * size // 9 - 2,
+                        ]
+                        self.assertEqual(
+                            bool(np.any(cell.max(axis=-1) < 120)),
+                            bool(obs["board"][0, row, col] >= 0),
+                            (size, step, row, col),
+                        )
+                    if step == 0:
+                        obs, *_ = env.step(np.asarray([[8, 8, 3]], np.int32))
+            finally:
+                env.close()
 
     def test_default_reset_uses_seeded_database(self) -> None:
         """Checks reset draws from the seeded puzzle database."""

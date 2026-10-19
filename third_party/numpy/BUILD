@@ -13,24 +13,12 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
 
-[genrule(
-    name = name + "_header",
-    srcs = ["@numpy_" + name + "//file"],
-    outs = [name + ".h"],
+genrule(
+    name = "pocketfft_hdronly_header",
+    srcs = ["@numpy_pocketfft_hdronly//file"],
+    outs = ["pocketfft_hdronly.h"],
     cmd = "cp $< $@",
     cmd_bat = 'copy /Y "$<" "$@" >NUL',
-) for name in [
-    "pcg64",
-    "ziggurat_constants",
-    "pocketfft_hdronly",
-]]
-
-cc_library(
-    name = "random_headers",
-    hdrs = [
-        ":pcg64_header",
-        ":ziggurat_constants_header",
-    ],
 )
 
 cc_library(

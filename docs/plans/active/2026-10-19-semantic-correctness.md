@@ -23,6 +23,13 @@ Do not merge the PR or change the CI cache/cancellation policy.
 - [x] Review the complete diff and perform both additional cleanup passes.
 - [x] Re-audit RNG/rounding compatibility after the user's follow-up review.
 - [x] Clarify checked hidden-state transfer through native info in AGENTS.md.
+- [ ] Replace PCG64/Ziggurat with native distributions and checked semantic
+  state transfer for MPE2 and MyoSuite (implemented; validating).
+- [ ] Remove JAX sampling/XLA scan-order compatibility using native state.
+- [ ] Remove locomotion RandomState compatibility and ARM FMA flag.
+- [ ] Remove MJLab Torch sampling and RNG draw-count coupling.
+- [ ] Apply the second cleanup pass: unused SearchAndRescue config, duplicated
+  distance helper, uniform-choice CDF, redundant transforms and CGL queries.
 - [x] Finish macOS validation, static/doc checks and all MyoSuite doc images.
 - [x] Run the repository-wide Linux registration and creation check.
 - [ ] Finish the remaining Linux family checks.
@@ -51,10 +58,13 @@ exposed actual behavior defects; repair those before simplifying arithmetic.
   transition/RNG defects, including Minesweeper flood fill, Tetris collisions,
   route completion, native box geometry, and termination semantics. Compare all
   26 tasks through independent episodes; check rendering and async behavior.
-- **MyoSuite:** compare every registered task through an episode, with reset-only
-  synchronization into the actual `Robot.mj_data`. Correct observations, rewards,
+- **MyoSuite:** compare every transition across a complete native episode,
+  copying pre-step integrator state into the actual `Robot.mj_data` and
+  checking its independently computed successor. Correct observations, rewards,
   binary contact categories, TableTennis rallies and simultaneous termination/
-  truncation. Implement native NPC policies with shared PCG64 and colored noise.
+  truncation. Implement native NPC policies with standard random distributions
+  and colored noise, independently stepping the oracle from checked sampled
+  native reference and NPC state.
   Keep small upstream interpolation, goalkeeper-physics and enum-comparison
   patches under `third_party/myosuite` with behavioral regressions.
 - **Playground:** replace 22 copied stepping functions with official task steps
@@ -73,7 +83,8 @@ exposed actual behavior defects; repair those before simplifying arithmetic.
 ## Validation and evidence
 
 Logs and root-cause reports are kept in
-`/private/tmp/envpool-correctness-cleanup/`. Current evidence:
+`/private/tmp/envpool-correctness-cleanup/`. This table records the baseline
+before the follow-up RNG cleanup; it does not certify the current changes:
 
 | Area | Completed local validation |
 | --- | --- |
@@ -110,20 +121,20 @@ the remaining numerical oracle then passed with the field-based checks.
 - Exact repeated-native rollouts and discrete events remain useful checks.
   Cross-implementation floating values instead use justified numerical accuracy.
 - Matching only the observation copy of a physics state does not synchronize the
-  integrator. Copy reset state once into the actual physics data, then let both
-  implementations advance independently.
-- The MyoSuite spectral-noise probe compared 12,060 samples across buffer sizes
-  and refills within 4.27e-14. Its initial RNG state is shared; future noise is not.
+  integrator. Copy into the actual physics data and compare the independently
+  computed successor before any subsequent synchronization.
+- The earlier MyoSuite spectral-noise probe established the spectral algorithm;
+  its 12,060 sample-by-sample comparisons are historical evidence only. The
+  cleanup removes NumPy stream emulation and transfers sampled semantic state.
 - Preserve the upstream intentionally stationary Soccer P1 policy; use P2 to
   exercise moving-goalkeeper behavior.
 - MuJoCo's six-digit XML output lost meaningful edited-model parameters. Export
   those assets at 17 significant digits rather than widening output checks to
   cover that loss.
-- Sensitive contact/muscle trajectories use separate peak and per-component
-  time-average bounds. Equal-control diagnostics isolate control-roundoff effects.
-  Fatigue TableTennis P0 also amplifies tiny model recompilation residuals;
-  its measured accuracy is explicitly documented. Additional model/control replay
-  remains diagnostic only, outside the shipped oracle.
+- Sensitive muscle/contact trajectories amplified benign model residuals.
+  The follow-up cleanup replaces the growing per-task trajectory budgets with
+  uniformly tight, synchronized transition checks. Every successor is compared
+  before copying the next starting state; native uninterrupted replays remain.
 - A task may terminate at the same instant its time limit truncates. Reuse the
   explicit termination state instead of deriving it as `done & ~trunc`.
 - Keep the existing Linux pip MuJoCo engine: replacing C++ MjSpec bindings across
@@ -167,9 +178,9 @@ lists are in `/private/tmp/envpool-correctness-cleanup/self-review-440/audit.md`
   lint passed. Full test/release jobs were still running when inspected.
 - Remaining compatibility candidates include shared NumPy PCG64/Ziggurat,
   JAX keys/sampling/XLA scan order, locomotion's NumPy RandomState clone and
-  platform flag, and MJLab's Torch sampling/draw counter. These are new review
-  suggestions, not implemented removals. Native sampling distributions and
-  temporal correlations remain required behavior.
+  platform flag, and MJLab's Torch sampling/draw counter. The user authorized
+  all four groups. The NumPy group is implemented; the remaining groups are
+  tracked above. Native distributions and temporal correlations remain required.
 - Additional deletion candidates are unused SearchAndRescue observation
   configuration, duplicate distance helpers, a uniform-choice CDF, redundant
   inverse functions, and CGL queries whose results are discarded. Risks and
@@ -182,6 +193,22 @@ lists are in `/private/tmp/envpool-correctness-cleanup/self-review-440/audit.md`
 
 The original audit changes are in ordinary PR #440. Follow-up self-review found
 the validation issues above and additional simplification candidates; the work
-is not complete. Fix the actionable validation/CI failures and track the new
-suggestions separately. Record full test and release results for the real PR
+is not complete. Implement the authorized follow-up cleanup and fix the
+actionable validation/CI failures. Record full test and release results for the real PR
 head before declaring completion and releasing the Linux devbox.
+
+## Follow-up cleanup implementation
+
+- MPE2/MyoSuite use standard native uniform, integer and normal distributions.
+  Delete PCG64/Ziggurat downloads and compatibility code; retain spectral noise.
+  MPE2's 14 methods pass on macOS. MyoSuite uses a common numerical transition
+  budget; eight sensitive tasks pass, with complete reruns still pending.
+- Remove the unused SearchAndRescue field, duplicated distance helper, uniform
+  tracking CDF, inverse-transform round trip and discarded CGL queries. All five
+  tracking checks, including 36 clips and first-use rendering, pass on macOS.
+- Render review found real missing content: fixed padding erased Sudoku digits
+  at 128px, and the shared number renderer truncated values above 99. The new
+  behavior tests fail on the old binary; proportional padding and arbitrary
+  digit counts fix both causes. Full rebuilt target verification is pending.
+- MJLab sampling/state-transfer work is still uncommitted and unvalidated; it
+  must not be included in a completed-cleanup claim.

@@ -38,20 +38,6 @@ def workspace():
     )
     maybe(
         http_file,
-        name = "numpy_pcg64",
-        sha256 = "2ce9cc9366a9993cfd786a1ee63eaad35d8761c0ff9744ee5508192156f33d4a",
-        urls = ["https://raw.githubusercontent.com/numpy/numpy/v2.5.2/numpy/random/src/pcg64/pcg64.h"],
-        downloaded_file_path = "pcg64.h",
-    )
-    maybe(
-        http_file,
-        name = "numpy_ziggurat_constants",
-        sha256 = "9f8b114014b8475777e88c6af80e126654fe0753693d6eabba365d3c4051236c",
-        urls = ["https://raw.githubusercontent.com/numpy/numpy/v2.5.2/numpy/random/src/distributions/ziggurat_constants.h"],
-        downloaded_file_path = "ziggurat_constants.h",
-    )
-    maybe(
-        http_file,
         name = "numpy_pocketfft_hdronly",
         sha256 = "50f4ddbe60432325f560c706b6f1c49f9e0949fc7f20ae6499f2299e37d9790c",
         urls = ["https://raw.githubusercontent.com/mreineck/pocketfft/33ae5dc94c9cdc7f1c78346504a85de87cadaa12/pocketfft_hdronly.h"],

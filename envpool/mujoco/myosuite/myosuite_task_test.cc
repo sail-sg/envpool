@@ -14,9 +14,44 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
+
 #include "envpool/mujoco/myosuite/myosuite_env.h"
 
 namespace myosuite {
+
+TEST(MyoSuiteTaskTest, BrownNoiseHasVariationAndTemporalCorrelation) {
+  double variance = 0;
+  double changes = 0;
+  for (int seed = 0; seed < 32; ++seed) {
+    envpool::Random random(seed);
+    envpool::BrownNoise noise;
+    noise.Reset(2000, 1, &random);
+    std::array<std::array<double, 2>, 2000> samples{};
+    std::array<double, 2> mean{};
+    for (auto& sample : samples) {
+      sample = noise.Sample(&random);
+      for (int channel = 0; channel < 2; ++channel) {
+        mean[channel] += sample[channel] / samples.size();
+      }
+    }
+    for (std::size_t i = 0; i < samples.size(); ++i) {
+      for (int channel = 0; channel < 2; ++channel) {
+        const double centered = samples[i][channel] - mean[channel];
+        variance += centered * centered;
+        if (i > 0) {
+          const double delta = samples[i][channel] - samples[i - 1][channel];
+          changes += delta * delta;
+        }
+      }
+    }
+  }
+  // Unit-variance beta=2 noise has smooth neighboring samples. These broad
+  // distribution checks reject frozen or white noise without matching a PRNG.
+  EXPECT_GT(variance / (32 * 2 * 2000), 0.25);
+  EXPECT_LT(variance / (32 * 2 * 2000), 4.0);
+  EXPECT_LT(changes / variance, 0.05);
+}
 
 TEST(MyoSuiteTaskTest, TableTennisRally) {
   // Contacts are paddle=1, own half=2, opponent half=4.

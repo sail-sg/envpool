@@ -235,9 +235,11 @@ class SnakeEnv : public Env<SnakeEnvSpec>, public RenderableEnv {
   void PlaceFruit(random::Key key) {
     std::vector<float> empty(snake::kCellCount);
     for (int cell = 0; cell < snake::kCellCount; ++cell) {
-      empty[cell] = body_state_[cell] == 0;
+      empty[cell] = body_state_[cell] == 0 ? 1.0f : 0.0f;
     }
-    if (IsComplete()) return;
+    if (IsComplete()) {
+      return;
+    }
     const int offset = random::Choice(key, empty);
     fruit_row_ = offset / snake::kCols;
     fruit_col_ = offset % snake::kCols;

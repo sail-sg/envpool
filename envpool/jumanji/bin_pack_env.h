@@ -296,8 +296,9 @@ class BinPackEnv : public Env<BinPackEnvSpec>, public RenderableEnv {
     const auto includes = [](const Box& outer, const Box& inner) {
       for (int axis = 0; axis < 3; ++axis) {
         if (inner[2 * axis] < outer[2 * axis] ||
-            inner[2 * axis + 1] > outer[2 * axis + 1])
+            inner[2 * axis + 1] > outer[2 * axis + 1]) {
           return false;
+        }
       }
       return true;
     };
@@ -310,14 +311,18 @@ class BinPackEnv : public Env<BinPackEnvSpec>, public RenderableEnv {
                      placed[2 * axis] < old[ems][2 * axis + 1];
       }
       intersected[ems] = intersects;
-      if (intersects) ems_mask_[ems] = false;
+      if (intersects) {
+        ems_mask_[ems] = false;
+      }
     }
     // Match the public action ordering: direction first, then original slot.
     std::vector<Box> candidates;
     for (int direction = 0; direction < 6; ++direction) {
       const int axis = direction / 2;
       for (int ems = 0; ems < binpack::kNumEms; ++ems) {
-        if (!intersected[ems]) continue;
+        if (!intersected[ems]) {
+          continue;
+        }
         auto remaining = old[ems];
         if (direction % 2 == 0) {
           remaining[2 * axis + 1] =
@@ -326,8 +331,9 @@ class BinPackEnv : public Env<BinPackEnvSpec>, public RenderableEnv {
           remaining[2 * axis] =
               std::max(remaining[2 * axis], placed[2 * axis + 1]);
         }
-        if (remaining[2 * axis] < remaining[2 * axis + 1])
+        if (remaining[2 * axis] < remaining[2 * axis + 1]) {
           candidates.push_back(remaining);
+        }
       }
     }
     for (const auto& candidate : candidates) {
@@ -335,13 +341,17 @@ class BinPackEnv : public Env<BinPackEnvSpec>, public RenderableEnv {
           candidates.begin(), candidates.end(), [&](const Box& other) {
             return other != candidate && includes(other, candidate);
           });
-      if (contained) continue;
+      if (contained) {
+        continue;
+      }
       bool already_present = false;
       for (int ems = 0; ems < binpack::kNumEms; ++ems) {
         already_present |= ems_mask_[ems] && includes(ems_[ems], candidate);
       }
-      if (already_present) continue;
-      const auto free = std::find(ems_mask_.begin(), ems_mask_.end(), false);
+      if (already_present) {
+        continue;
+      }
+      auto* const free = std::find(ems_mask_.begin(), ems_mask_.end(), false);
       // The pinned upstream argmin selects slot zero if the buffer is full.
       const int slot = free == ems_mask_.end()
                            ? 0

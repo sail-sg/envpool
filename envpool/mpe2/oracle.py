@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Reset-only MPE2 oracle synchronization for tests and render documentation."""
+"""MPE2 semantic-state synchronization for tests and render documentation."""
 
 from __future__ import annotations
 
@@ -76,21 +76,46 @@ def synchronize_reset(oracle: Any, info: dict[str, Any]) -> None:
         raw.scenario._expected_positions = (
             data[offset + count + 2 :].reshape(count, 2).copy()
         )
-    if "collect_treasure" in name:
-        high, low, inc_high, inc_low, has_uint32, uinteger = map(
-            int, info["respawn_rng"][0]
-        )
-        rng = np.random.PCG64()
-        rng.state = {
-            "bit_generator": "PCG64",
-            "state": {
-                "state": (high << 64) | low,
-                "inc": (inc_high << 64) | inc_low,
-            },
-            "has_uint32": has_uint32,
-            "uinteger": uinteger,
-        }
-        world.np_random = np.random.Generator(rng)
+
+
+def step_oracle(oracle: Any, actions: np.ndarray, info: dict[str, Any]) -> Any:
+    """Advance independently, conditioning treasure respawns on native state.
+
+    Pickup/delivery and respawn timing remain upstream computations. Only the
+    sampled position/type of an already-confirmed respawn is transferred before
+    upstream computes observations and rewards. Native sampling is checked by
+    the unsynchronized reset and pickup/delivery/respawn tests.
+    """
+    raw = oracle.unwrapped
+    if "collect_treasure" not in raw.metadata["name"]:
+        return oracle.step(oracle_actions(oracle, actions))
+    post_step = raw.scenario.post_step
+    width = 10 + raw.world.dim_c
+    records = info["snapshot"][0]
+
+    def sync_respawns(world: Any) -> None:
+        dead = [not landmark.alive for landmark in world.landmarks]
+        post_step(world)
+        for i, landmark in enumerate(world.landmarks):
+            offset = (len(world.agents) + i) * width
+            record = records[offset : offset + width]
+            assert landmark.alive == bool(record[7]), "respawn/pickup timing"
+            if dead[i] and landmark.alive:
+                assert np.all(np.abs(record[:2]) <= 0.95)
+                kind = int(record[9])
+                assert 0 <= kind < len(world.treasure_types)
+                np.testing.assert_array_equal(
+                    record[4:7], world.treasure_colors[kind]
+                )
+                landmark.state.p_pos = record[:2].copy()
+                landmark.type = kind
+                landmark.color = world.treasure_colors[kind].copy()
+
+    raw.scenario.post_step = sync_respawns
+    try:
+        return oracle.step(oracle_actions(oracle, actions))
+    finally:
+        raw.scenario.post_step = post_step
 
 
 def actions_for(pool: Any, info: dict[str, Any], rng: Any) -> np.ndarray:

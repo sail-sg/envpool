@@ -36,21 +36,20 @@ cc_test(
 )
 
 cc_library(
-    name = "jax_random",
-    hdrs = ["jax_random.h"],
+    name = "random",
+    hdrs = ["random.h"],
 )
 
 cc_library(
-    name = "numpy_random",
-    hdrs = ["numpy_random.h"],
-    deps = ["//third_party/numpy:random_headers"],
+    name = "jax_random",
+    hdrs = ["jax_random.h"],
 )
 
 cc_library(
     name = "colored_noise",
     hdrs = ["colored_noise.h"],
     deps = [
-        ":numpy_random",
+        ":random",
         "//third_party/numpy:fft",
     ],
 )

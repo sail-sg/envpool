@@ -203,8 +203,10 @@ class Game2048Env : public Env<Game2048EnvSpec>, public RenderableEnv {
         }
         render::FillRect(width, height, left, top, right, bottom, color, rgb);
         if (value > 0) {
-          render::DrawNumber(width, height, 1 << value, left + 8, top + 8,
-                             right - 8, bottom - 8, {90, 80, 70}, rgb);
+          const int pad =
+              std::max(1, std::min(right - left, bottom - top) / 12);
+          render::DrawNumber(width, height, 1 << value, left + pad, top + pad,
+                             right - pad, bottom - pad, {90, 80, 70}, rgb);
         }
       }
     }
@@ -258,7 +260,7 @@ class Game2048Env : public Env<Game2048EnvSpec>, public RenderableEnv {
   void AddRandomCell(random::Key key) {
     std::vector<float> empty(game2048::kCellCount);
     for (int i = 0; i < game2048::kCellCount; ++i) {
-      empty[i] = board_[i] == 0;
+      empty[i] = board_[i] == 0 ? 1.0f : 0.0f;
     }
     if (std::none_of(empty.begin(), empty.end(),
                      [](float value) { return value != 0; })) {

@@ -426,7 +426,7 @@ class PacManEnv : public Env<PacManEnvSpec>, public RenderableEnv {
               *std::min_element(distances.begin(), distances.end());
           std::vector<float> candidates(4);
           for (int action = 0; action < 4; ++action) {
-            candidates[action] = distances[action] == closest;
+            candidates[action] = distances[action] == closest ? 1.0f : 0.0f;
           }
           const auto choice_key = random::Split(
               random::Split(random::Split(step_key, ghost + 1), 1), 1);
@@ -495,9 +495,7 @@ class PacManEnv : public Env<PacManEnvSpec>, public RenderableEnv {
             action != 4 && GhostCellOpen(row, col);
       }
     }
-    {
-      state["obs:score"_] = score_;
-    }
+    state["obs:score"_] = score_;
     state["reward"_] = reward;
   }
 };

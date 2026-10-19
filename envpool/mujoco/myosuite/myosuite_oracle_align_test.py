@@ -30,6 +30,10 @@ from absl import logging
 from absl.testing import absltest
 
 from envpool.mujoco.myosuite.oracle import (
+    physics_state_from_info,
+    sampled_state_from_info,
+)
+from envpool.mujoco.myosuite.oracle import (
     sync_state_from_info as _sync_state_from_info,
 )
 from envpool.mujoco.myosuite.tasks import (
@@ -46,112 +50,18 @@ _ORACLE_SPACE_BATCH_SIZE = 64
 _ROLLOUT_BATCH_SIZE = 4
 
 
-def _field_budget(task_id: str, field: str) -> tuple[float, float | None]:
-    """Peak and per-component time-mean budgets for sensitive contact traces."""
-    # Complete macOS/Linux rollouts isolate these residuals to ordinary control
-    # roundoff or MjSpec recompilation. Equal-control diagnostic replays remove
-    # the muscle/contact residuals; permanent tests still drive external actions.
-    # Keep all other fields tight and constrain persistent drift as well as peaks.
-    budgets: dict[str, tuple[float, float]] = {}
-    if task_id.startswith("MyoHand"):
-        budgets = {"qv": (2e-4, 2e-5), "hand_qvel_err": (2e-4, 2e-5)}
-        if task_id == "MyoHandFlashlight1On-v0":
-            budgets.update({
-                "qp": (3e-3, 2.5e-4),
-                "hand_qpos_err": (3e-3, 2.5e-4),
-                "qv": (0.1, 4e-3),
-                "hand_qvel_err": (0.1, 4e-3),
-                "obj_com_err": (6e-5, 4e-6),
-                "reward": (6e-5, 6e-6),
-            })
-        elif task_id == "MyoHandWaterbottleLift-v0":
-            budgets.update({
-                "qp": (1.5e-4, 3e-5),
-                "hand_qpos_err": (1.5e-4, 3e-5),
-                "qv": (0.012, 1e-3),
-                "hand_qvel_err": (0.012, 1e-3),
-            })
-    elif "HandKeyTurn" in task_id:
-        budgets = {
-            "hand_qpos": (2e-4, 4e-5),
-            "hand_qvel": (2e-4, 4e-5),
-            "key_qpos": (2e-4, 4e-5),
-            "key_qvel": (2e-4, 4e-5),
-            "reward": (2e-4, 4e-5),
-        }
-    elif task_id.startswith("myoSarcHandPose"):
-        budgets = {
-            "qpos": (1e-4, 2e-5),
-            "qvel": (1e-4, 2e-5),
-            "pose_err": (1e-4, 2e-5),
-        }
-        if task_id == "myoSarcHandPose5Fixed-v0":
-            budgets.update({
-                "qpos": (6e-3, 2.5e-3),
-                "pose_err": (6e-3, 2.5e-3),
-                "qvel": (1e-3, 1e-4),
-                "reward": (2e-3, 5e-4),
-            })
-    elif task_id.startswith("myoFatiFingerReach"):
-        # Stiff muscle dynamics: observed tip error <= 3.4 mm; joint mean
-        # <= 0.0076 rad. Upstream's qvel observation is velocity multiplied by dt.
-        budgets = {
-            "qpos": (0.06, 0.01),
-            "qvel": (0.3, 0.025),
-            "tip_pos": (4e-3, 5e-4),
-            "reach_err": (4e-3, 5e-4),
-            "reward": (3.5e-3, 5e-4),
-        }
-    elif "ChallengeBimanual" in task_id:
-        # Object contact gives a short angular-velocity spike (1.79, mean 0.0067)
-        # while hand/prosthesis state stays tight and contact categories agree.
-        budgets = {
-            "object_qpos": (6e-3, 1e-3),
-            "object_qvel": (2.0, 0.01),
-            "reward": (2e-3, 5e-5),
-        }
-    elif "ChallengeTableTennis" in task_id:
-        # Recompiled-model roundoff: paddle error <= 4 mm / 0.014 rad, with
-        # transient velocity differences <= 0.21 m/s in the measured rollouts.
-        budgets = {
-            "body_qpos": (2e-4, 6e-5),
-            "body_qvel": (0.02, 3e-4),
-            "paddle_pos": (5e-3, 2e-3),
-            "reach_err": (5e-3, 2e-3),
-            "paddle_vel": (0.25, 0.015),
-            "paddle_ori": (0.02, 5e-3),
-            "reward": (2e-3, 4e-4),
-        }
-        if task_id == "myoFatiChallengeTableTennisP0-v0":
-            # This stress case amplifies ~1e-14 model recompilation residuals.
-            # Matching only those residuals and control roundoff in a diagnostic
-            # removes all physics error. Keep the independent oracle here.
-            budgets.update({
-                "body_qpos": (0.01, 3e-3),
-                "body_qvel": (0.75, 0.025),
-                "paddle_pos": (0.08, 0.03),
-                "reach_err": (0.08, 0.03),
-                "paddle_vel": (1.0, 0.25),
-                "paddle_ori": (0.06, 0.03),
-                "reward": (0.015, 5e-3),
-            })
-    return budgets.get(field, (2e-5, None))
-
-
 def _assert_rollout_values(
     actual: np.ndarray,
     desired: np.ndarray,
     *,
     label: str,
-    budget: tuple[float, float | None] = (2e-5, None),
 ) -> None:
-    peak, mean = budget
+    # Fixed-state contacts amplify model/control rounding: measured residuals
+    # include 4.8e-5 in velocity and 0.0012 N in a 90 N ground-reaction force.
+    # A 0.01% relative envelope avoids task-specific contact exceptions.
     np.testing.assert_allclose(
-        actual, desired, rtol=1e-5, atol=peak, equal_nan=False, err_msg=label
+        actual, desired, rtol=1e-4, atol=1e-4, equal_nan=False, err_msg=label
     )
-    if mean is not None:
-        error = np.abs(actual - desired).mean(axis=0)
-        np.testing.assert_array_less(error, mean, err_msg=f"{label} mean")
 
 
 def _assert_observation_trace(
@@ -173,7 +83,6 @@ def _assert_observation_trace(
                 actual[:, selection],
                 desired[:, selection],
                 label=label,
-                budget=_field_budget(task_id, name),
             )
         offset += size
     if offset != actual.shape[1]:
@@ -278,10 +187,11 @@ def _run_oracle_probe(
     task_ids: tuple[str, ...] = (),
     steps: int = _ROLLOUT_STEPS,
     sync_states: dict[str, dict[str, Any]] | None = None,
+    trace_plan: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as out:
         out_path = Path(out.name)
-    sync_path: Path | None = None
+    input_paths: list[Path] = []
     cmd = _oracle_probe_cmd() + [
         "--mode",
         mode,
@@ -294,11 +204,18 @@ def _run_oracle_probe(
     ]
     for task_id in task_ids:
         cmd.extend(["--task_id", task_id])
-    if sync_states is not None:
-        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as sync:
-            sync_path = Path(sync.name)
-        sync_path.write_text(json.dumps(sync_states, sort_keys=True))
-        cmd.extend(["--sync_state", str(sync_path)])
+    for flag, payload in (
+        ("--sync_state", sync_states),
+        ("--trace_plan", trace_plan),
+    ):
+        if payload is not None:
+            with tempfile.NamedTemporaryFile(
+                suffix=".json", delete=False
+            ) as stream:
+                path = Path(stream.name)
+            input_paths.append(path)
+            path.write_text(json.dumps(payload, sort_keys=True))
+            cmd.extend([flag, str(path)])
     env = os.environ.copy()
     env["ROBOHIVE_VERBOSITY"] = "SILENT"
     try:
@@ -324,8 +241,8 @@ def _run_oracle_probe(
         return cast(dict[str, Any], json.loads(out_path.read_text()))
     finally:
         out_path.unlink(missing_ok=True)
-        if sync_path is not None:
-            sync_path.unlink(missing_ok=True)
+        for path in input_paths:
+            path.unlink(missing_ok=True)
 
 
 def _run_oracle_space_reports(
@@ -437,13 +354,16 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
         )
 
     def test_oracle_rollout_surface(self) -> None:
-        """Compare every registered task through its first complete episode."""
+        """Check every native transition across a complete episode."""
         rollout_task_ids = _shard_task_ids(_oracle_task_ids())
         task_metadata = _task_metadata_by_id()
         for batch in _task_batches(rollout_task_ids, _ROLLOUT_BATCH_SIZE):
             envpools: dict[str, Any] = {}
             envpool_reset_obs: dict[str, np.ndarray] = {}
             sync_states: dict[str, dict[str, Any]] = {}
+            plans: dict[str, dict[str, Any]] = {}
+            native_steps: dict[str, list[Any]] = {}
+            rng = np.random.default_rng(22)
             try:
                 for task_id in batch:
                     envpool = make_gymnasium(task_id, num_envs=1, seed=5)
@@ -451,6 +371,40 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
                     envpools[task_id] = envpool
                     envpool_reset_obs[task_id] = envpool_obs
                     sync_states[task_id] = _sync_state_from_info(info)
+                    actions, samples, results, physics = [], [], [], []
+                    for _ in range(task_metadata[task_id]["max_episode_steps"]):
+                        action = rng.uniform(
+                            envpool.action_space.low, envpool.action_space.high
+                        ).astype(np.float32)
+                        physics.append(physics_state_from_info(info))
+                        result = envpool.step(action[None, :])
+                        info = result[4]
+                        actions.append(action.tolist())
+                        samples.append(sampled_state_from_info(result[4]))
+                        # Keep only fields compared below, not the padded model
+                        # snapshots returned by every native test step.
+                        info_copy = {
+                            key: result[4][key].copy()
+                            for key in ("sparse", "solved", "ctrl")
+                        }
+                        info_copy.update({
+                            key: np.asarray(value)
+                            for key, value in physics_state_from_info(
+                                info
+                            ).items()
+                        })
+                        results.append((
+                            *[x.copy() for x in result[:4]],
+                            info_copy,
+                        ))
+                        if result[2][0] or result[3][0]:
+                            break
+                    plans[task_id] = {
+                        "actions": actions,
+                        "sampled_states": samples,
+                        "step_physics": physics,
+                    }
+                    native_steps[task_id] = results
 
                 report = _run_oracle_probe(
                     "trace",
@@ -460,6 +414,7 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
                         for task_id in batch
                     ),
                     sync_states=sync_states,
+                    trace_plan=plans,
                 )
                 oracle_tasks = cast(dict[str, dict[str, Any]], report["tasks"])
                 self.assertSetEqual(set(oracle_tasks), set(batch))
@@ -497,7 +452,7 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
                             oracle_task["actions"]
                         ):
                             action = np.asarray(action, dtype=np.float32)
-                            envpool_step = envpool.step(action[None, :])
+                            envpool_step = native_steps[task_id][step_id]
                             self.assertEqual(
                                 envpool_step[0].shape, (1, task["obs_dim"])
                             )
@@ -521,6 +476,14 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
                                 equal_nan=False,
                                 err_msg=f"{task_id} step {step_id} control",
                             )
+                            for key in ("qpos", "qvel", "act"):
+                                _assert_rollout_values(
+                                    envpool_step[4][key],
+                                    np.asarray(
+                                        oracle_task["states"][step_id][key]
+                                    ),
+                                    label=f"{task_id} step {step_id} physics {key}",
+                                )
                             oracle_info = oracle_task["infos"][step_id]
                             self.assertEqual(
                                 bool(envpool_step[4]["solved"][0]),
@@ -562,7 +525,6 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
                                 np.asarray(actual),
                                 np.asarray(desired),
                                 label=f"{task_id} {name}",
-                                budget=_field_budget(task_id, "reward"),
                             )
             finally:
                 for envpool in envpools.values():

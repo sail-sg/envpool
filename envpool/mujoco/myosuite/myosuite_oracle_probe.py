@@ -470,39 +470,13 @@ def _sync_baoding_goal_from_envpool_reset_state(
     env.counter = 0
 
 
-def _sync_task_random_state(env: Any, state: dict[str, Any]) -> None:
+def _sync_npc_parameters(env: Any, state: dict[str, Any]) -> None:
     npc = getattr(env, "opponent", getattr(env, "goalkeeper", None))
-    if npc is None and not hasattr(env, "ref"):
+    if npc is None:
         return
-    high, low, inc_high, inc_low, has_uint32, uint32 = state["task_rng0"]
-    bitgen = np.random.PCG64()
-    bitgen.state = {
-        "bit_generator": "PCG64",
-        "state": {
-            "state": (high << 64) | low,
-            "inc": (inc_high << 64) | inc_low,
-        },
-        "has_uint32": has_uint32,
-        "uinteger": uint32,
-    }
-    rng = np.random.Generator(bitgen)
-    if hasattr(env, "ref"):
-        env.ref.np_random = rng
-        env.ref.reset()
-        return
-    assert npc is not None
-    import pink
-
     if hasattr(env, "current_task"):
         env.current_task = type(env.current_task)(int(state["chase_task"][0]))
-    policy, speed, scale = state["npc_parameters"]
-    npc.rng = rng
-    # Synchronize only the initial RNG state, not future noise or transitions.
-    # Both implementations subsequently advance their own colored-noise process.
-    soccer = hasattr(env, "goalkeeper")
-    npc.noise_process = pink.ColoredNoiseProcess(
-        beta=2, size=(2, 10 if soccer else 2000), scale=scale, rng=npc.rng
-    )
+    policy, speed, _ = state["npc_parameters"]
     policies = (
         "static_stationary",
         "stationary",
@@ -511,7 +485,7 @@ def _sync_task_random_state(env: Any, state: dict[str, Any]) -> None:
         "chase_player",
         "block_ball",
     )
-    if soccer:
+    if hasattr(env, "goalkeeper"):
         npc.goalkeeper_policy = policies[int(policy)]
         npc.block_velocity = speed
         npc.goalkeeper_vel = np.zeros(2)
@@ -519,6 +493,75 @@ def _sync_task_random_state(env: Any, state: dict[str, Any]) -> None:
         npc.opponent_policy = policies[int(policy)]
         npc.chase_velocity = speed
         npc.opponent_vel = np.zeros(2)
+
+
+def _sync_sampled_state(env: Any, state: dict[str, Any]) -> None:
+    """Transfer checked sampled goals/commands, never evolved body state.
+
+    The oracle still integrates NPC motion and physics, and computes all
+    observations, rewards and episode events. Native noise generation is
+    checked separately; its sample sequence is not an oracle contract.
+    """
+    if "random_reference" in state:
+        from myosuite.logger.reference_motion import ReferenceStruct
+
+        ref = env.ref
+        assert ref.type.name == "RANDOM"
+        values = np.asarray(state["random_reference"], dtype=np.float64)
+        fields = {}
+        offset = 0
+        for key in ("robot", "robot_vel", "object"):
+            bounds = ref.reference[key]
+            count = bounds.shape[1]
+            value = values[offset : offset + count].copy()
+            assert np.all(value >= bounds[0]) and np.all(value <= bounds[1]), (
+                key
+            )
+            fields[key] = value
+            offset += count
+        assert offset == values.size
+        ref.get_reference = lambda time: ReferenceStruct(
+            time=time,
+            **fields,
+            robot_init=ref.reference["robot_init"],
+            object_init=ref.reference["object_init"],
+        )
+    if "npc_velocity" not in state:
+        return
+    npc = getattr(env, "opponent", getattr(env, "goalkeeper", None))
+    assert npc is not None
+    velocity = np.asarray(state["npc_velocity"], dtype=np.float64)
+    assert velocity.shape == (2,) and np.all(np.isfinite(velocity))
+    soccer = hasattr(env, "goalkeeper")
+    policy = npc.goalkeeper_policy if soccer else npc.opponent_policy
+    if policy == "random":
+        limit = (
+            npc.block_velocity
+            if soccer
+            else max(map(abs, npc.random_vel_range))
+        )
+        assert np.all(np.abs(velocity) <= limit)
+        npc.random_movement = lambda: velocity.copy()
+    elif policy == "repeller":
+        pose = npc.get_opponent_pose()
+        repellers = npc.get_repellers()
+        near = repellers[
+            np.linalg.norm(repellers - pose[:2], axis=1) < npc.DIST_INFLUENCE
+        ]
+        # Away from the random fallback/equilibrium branches, also verify the
+        # native command against the unchanged upstream repeller policy.
+        if len(near) and np.all(np.abs(pose[:2] - near.mean(axis=0)) > 0.1):
+            expected = type(npc).repeller_policy(npc)
+            np.testing.assert_allclose(
+                velocity, expected, rtol=1e-10, atol=1e-10
+            )
+        assert (
+            npc.repeller_vel_range[0]
+            <= velocity[0]
+            <= npc.repeller_vel_range[1]
+        )
+        assert abs(velocity[1]) == 1
+        npc.repeller_policy = lambda: velocity.copy()
 
 
 def _sync_fatigue_hidden_state(env: Any, state: dict[str, Any]) -> None:
@@ -626,7 +669,8 @@ def _sync_to_envpool_reset_state(env: Any, state: dict[str, Any]) -> np.ndarray:
         size = np.asarray(env.target_jnt_value).size
         env.target_jnt_value = np.asarray(state["target_jnt_value"][:size])
     _sync_baoding_goal_from_envpool_reset_state(env, state)
-    _sync_task_random_state(env, state)
+    _sync_npc_parameters(env, state)
+    _sync_sampled_state(env, state)
     _sync_fatigue_hidden_state(env, state)
     if hasattr(env, "start_bid") and hasattr(env, "goal_bid"):
         # Bimanual caches its sampled platform positions outside MuJoCo.
@@ -641,6 +685,22 @@ def _sync_to_envpool_reset_state(env: Any, state: dict[str, Any]) -> np.ndarray:
     if hasattr(env, "last_ctrl"):
         env.last_ctrl = data.ctrl.copy()
     return obs
+
+
+def _sync_step_physics(env: Any, state: dict[str, Any]) -> None:
+    """Start a checked transition from native state, retaining task/controller state.
+
+    The previous oracle result is recorded before this copy. This avoids
+    accumulating harmless contact/integration drift across different models;
+    the next qpos/qvel/activation and all public outputs are checked anew.
+    """
+    import mujoco
+
+    for data in (env.mj_data, env.robot.mj_data):
+        for key, value in state.items():
+            getattr(data, key)[:] = value
+        mujoco.mj_forward(env.mj_model, data)
+        data.qacc_warmstart[:] = state["qacc_warmstart"]
 
 
 def _trace_info(info: dict[str, Any]) -> dict[str, Any]:
@@ -744,6 +804,8 @@ def _trace_report(
         planned_actions = task_plan.get("actions")
         planned_resets = task_plan.get("reset_before_step", [])
         planned_sync_states = task_plan.get("sync_states", [])
+        sampled_states = task_plan.get("sampled_states", [])
+        step_physics = task_plan.get("step_physics", [])
         env = gym.make(task_id)
         try:
             reset = env.reset(seed=seed)
@@ -823,6 +885,10 @@ def _trace_report(
                     # action values. Evaluate the reference at double precision
                     # rather than reproduce NumPy's float32 intermediate
                     # rounding in native muscle and robotic control code.
+                    if step_id < len(step_physics):
+                        _sync_step_physics(unwrapped, step_physics[step_id])
+                    if step_id < len(sampled_states):
+                        _sync_sampled_state(unwrapped, sampled_states[step_id])
                     step = env.step(action.astype(np.float64))
                     obs = step[0]
                     trace["obs"].append(_jsonable_array(obs))

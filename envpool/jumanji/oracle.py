@@ -158,14 +158,7 @@ def _minesweeper_flat_mines(official_state: Any) -> set[int]:
     return set(map(int, locations.astype(np.int64).reshape(-1)))
 
 
-def _cvrp_distance_matrix(official_state: Any) -> str:
-    coordinates = _as_numpy(official_state.coordinates).astype(np.float32)
-    deltas = coordinates[:, None, :] - coordinates[None, :, :]
-    distances = np.sqrt(np.sum(deltas * deltas, axis=-1, dtype=np.float32))
-    return _csv_flat(distances.astype(np.float32, copy=False))
-
-
-def _tsp_distance_matrix(official_state: Any) -> str:
+def _distance_matrix(official_state: Any) -> str:
     coordinates = _as_numpy(official_state.coordinates).astype(np.float32)
     deltas = coordinates[:, None, :] - coordinates[None, :, :]
     distances = np.sqrt(np.sum(deltas * deltas, axis=-1, dtype=np.float32))
@@ -189,7 +182,7 @@ def _envpool_kwargs_from_official_state(
             "cvrp_max_capacity": int(_as_numpy(official_state.capacity)),
             "cvrp_coordinates": _csv_flat(official_state.coordinates),
             "cvrp_demands": _csv_flat(official_observation.demands),
-            "cvrp_distance_matrix": _cvrp_distance_matrix(official_state),
+            "cvrp_distance_matrix": _distance_matrix(official_state),
         }
     if task_id == "Cleaner-v0":
         return {
@@ -358,9 +351,6 @@ def _envpool_kwargs_from_official_state(
         return {"rubiks_cube_initial_cube": _csv_flat_int(official_state.cube)}
     if task_id == "SearchAndRescue-v0":
         return {
-            "search_and_rescue_searcher_views": _csv_flat(
-                official_observation.searcher_views
-            ),
             "search_and_rescue_positions": _csv_flat(
                 official_observation.positions
             ),
@@ -401,7 +391,7 @@ def _envpool_kwargs_from_official_state(
     if task_id == "TSP-v1":
         return {
             "tsp_coordinates": _csv_flat(official_state.coordinates),
-            "tsp_distance_matrix": _tsp_distance_matrix(official_state),
+            "tsp_distance_matrix": _distance_matrix(official_state),
         }
     if task_id == "Tetris-v0":
         return {

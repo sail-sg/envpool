@@ -29,6 +29,7 @@ from typing import Any
 import numpy as np
 from absl.testing import absltest
 
+from envpool.mujoco.myosuite.oracle import sampled_state_from_info
 from envpool.mujoco.myosuite.oracle import (
     sync_state_from_info as _sync_state_from_info,
 )
@@ -392,12 +393,14 @@ def _envpool_trace_record(
         actions: list[list[float]] = []
         reset_before_step: list[bool] = []
         sync_states = [_sync_state_from_info(info)]
+        sampled_states = []
         action = _midpoint_action(env)
         for _ in range(3):
             actions.append(action.tolist())
             *_, info = env.step(action[None, :])
             frames.append(_render(env)[0])
             step_info = info
+            sampled_states.append(sampled_state_from_info(info))
             elapsed_step = int(np.asarray(step_info["elapsed_step"]).ravel()[0])
             reset_before_step.append(elapsed_step == 0)
             sync_states.append(
@@ -407,6 +410,7 @@ def _envpool_trace_record(
             "actions": actions,
             "reset_before_step": reset_before_step,
             "sync_states": sync_states,
+            "sampled_states": sampled_states,
         }
         return frames, plan
     finally:

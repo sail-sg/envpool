@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Shared reset-only synchronization for MyoSuite validation and doc images."""
+"""Native hidden-state transfer for MyoSuite validation and doc images."""
 
 from collections.abc import Mapping
 from typing import Any
@@ -23,7 +23,6 @@ _SYNC_STATE_SIZES = {
     "baoding_goal_parameters": "five",
     "chase_task": "one",
     "npc_parameters": "three",
-    "task_rng0": "six",
     "qpos0": "nq",
     "qvel0": "nv",
     "act0": "na",
@@ -64,12 +63,11 @@ _SYNC_STATE_SIZES = {
 
 
 def sync_state_from_info(info: Mapping[str, Any]) -> dict[str, Any]:
-    """Trim padded state arrays while preserving integer RNG state."""
+    """Trim native reset state arrays for the official oracle."""
     dims = {
         "one": 1,
         "five": 5,
         "three": 3,
-        "six": 6,
         "nq": int(np.asarray(info["model_nq"]).ravel()[0]),
         "nv": int(np.asarray(info["model_nv"]).ravel()[0]),
         "na": int(np.asarray(info["model_na"]).ravel()[0]),
@@ -103,4 +101,33 @@ def sync_state_from_info(info: Mapping[str, Any]) -> dict[str, Any]:
             continue
         size = dims[dimension]
         sync_state[key] = np.asarray(info[key][0]).ravel()[:size].tolist()
-    return sync_state
+    sampled = sampled_state_from_info(info)
+    sampled.pop("npc_velocity", None)  # Reset precedes the first NPC command.
+    return dict(sync_state, **sampled)
+
+
+def sampled_state_from_info(info: Mapping[str, Any]) -> dict[str, Any]:
+    """Export sampled goals/commands, without copying evolved physics state."""
+    state = {}
+    if int(info["npc_parameters"][0, 0]) in (2, 3):
+        state["npc_velocity"] = info["npc_velocity"][0].tolist()
+    reference = info["random_reference"][0]
+    if reference.size > 1:
+        state["random_reference"] = reference.tolist()
+    return state
+
+
+def physics_state_from_info(info: Mapping[str, Any]) -> dict[str, Any]:
+    """Current native integrator state, before the next transition is tested."""
+    return {
+        key: np
+        .asarray(info[key][0])
+        .ravel()[: int(np.asarray(info[dimension]).ravel()[0])]
+        .tolist()
+        for key, dimension in (
+            ("qpos", "model_nq"),
+            ("qvel", "model_nv"),
+            ("act", "model_na"),
+            ("qacc_warmstart", "model_nv"),
+        )
+    }

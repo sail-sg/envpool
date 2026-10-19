@@ -83,6 +83,8 @@ class Simulation {
   int Players() const { return players_; }
   const std::vector<Observation>& Layout() const { return layout_; }
 #ifdef ENVPOOL_TEST
+  int ReferenceClip() const { return clip_id_; }
+  int ReferenceStart() const { return reference_start_; }
   void SetResetState(const std::vector<double>& qpos,
                      const std::vector<double>& qvel,
                      const std::map<std::string, std::array<double, 3>>& geoms);
@@ -166,7 +168,6 @@ class Simulation {
   std::shared_ptr<const MocapData> mocap_;
   int clip_id_{0}, reference_step_{0}, reference_start_{0};
   std::vector<std::pair<int, int>> possible_starts_;
-  std::vector<double> start_cdf_;
   Features tracking_features_, previous_features_, tracking_observations_;
   int players_, steps_{0};
   bool done_{true}, truncated_{false}, failure_{false}, success_{false};

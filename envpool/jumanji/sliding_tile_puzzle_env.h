@@ -167,8 +167,9 @@ class SlidingTilePuzzleEnv : public Env<SlidingTilePuzzleEnvSpec>,
               static_cast<float>(tile) / sliding_tile_puzzle::kCellCount);
           render::FillRect(width, height, left + 1, top + 1, right - 1,
                            bottom - 1, color, rgb);
-          render::DrawNumber(width, height, tile, left + 7, top + 7, right - 7,
-                             bottom - 7, {25, 25, 40}, rgb);
+          const int pad = std::max(1, std::min(right - left, bottom - top) / 6);
+          render::DrawNumber(width, height, tile, left + pad, top + pad,
+                             right - pad, bottom - pad, {25, 25, 40}, rgb);
         }
       }
     }

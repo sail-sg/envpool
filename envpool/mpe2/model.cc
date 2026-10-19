@@ -232,7 +232,7 @@ void Options::Validate() const {
 }
 
 Model::Model(const Options& opts, std::uint32_t seed)
-    : kOptions(opts), random(seed), respawn_random(seed) {
+    : kOptions(opts), random(seed) {
   int p = kOptions.Players();
   entities.resize(p + kOptions.Landmarks());
   rewards.resize(p);
@@ -348,8 +348,6 @@ Model::Model(const Options& opts, std::uint32_t seed)
 }
 
 void Model::Reset() {
-  respawn_random =
-      random;  // Upstream deep-copies before consuming reset draws.
   std::fill(rewards.begin(), rewards.end(), 0);
   std::fill(goals.begin(), goals.end(), -1);
   std::fill(expected_.begin(), expected_.end(), Vec{});
@@ -612,10 +610,9 @@ void Model::TreasureEvents() {
           break;
         }
       }
-    } else if (respawn_random.Uniform() <= 1) {
-      lm.pos = {respawn_random.Uniform(-0.95, 0.95),
-                respawn_random.Uniform(-0.95, 0.95)};
-      lm.type = respawn_random.Integer(kOptions.deposits);
+    } else {
+      lm.pos = {random.Uniform(-0.95, 0.95), random.Uniform(-0.95, 0.95)};
+      lm.type = random.Integer(kOptions.deposits);
       lm.color = TreasureColor(lm.type);
       lm.alive = true;
     }

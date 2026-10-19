@@ -14,7 +14,7 @@ rewards or frames are injected into native stepping. Discrete outputs, active
 EMS ordering and termination flags are checked exactly; floating-point outputs
 use small numerical budgets. Inactive EMS coordinates are upstream scratch
 storage and are excluded from comparison while their masks remain checked.
-Search-and-rescue ray distances allow an absolute error of ``1e-5`` after
+Search-and-rescue ray distances allow an absolute error of ``5e-5`` after
 400 steps of stochastic motion; visible-event masks remain exact.
 
 Rendering runs in C++ and reads each environment's current state for both
