@@ -70,7 +70,9 @@ def _configure_linux_mujoco_gl() -> None:
 
 
 _configure_linux_mujoco_gl()
-configure_mujoco_package_shared_lib(include_linux=True)
+# Linux MjSpec bindings must retain their matching pip library: substituting
+# another build crashes while compiling Barkour's contact sensors.
+configure_mujoco_package_shared_lib()
 
 import jax
 import jax.numpy as jnp
