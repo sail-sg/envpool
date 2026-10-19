@@ -201,6 +201,7 @@ def _maze_layout(official: Any, state: dict, model: Any) -> Any:
 
     from dm_control import mjcf
     from labmaze.fixed_maze import FixedMazeWithRandomGoals
+    from labmaze.random_maze import RandomMaze
 
     task = official.task
     arena = task._maze_arena
@@ -208,10 +209,26 @@ def _maze_layout(official: Any, state: dict, model: Any) -> Any:
     assert (fixed.height, fixed.width) == (arena.maze.height, arena.maze.width)
     grid = np.asarray(fixed.entity_layer)
     assert set(np.unique(grid)) <= set("* PG")
-    for token in "PG":
-        assert np.count_nonzero(grid == token) == np.count_nonzero(
-            np.asarray(arena.maze.entity_layer) == token
-        )
+    if isinstance(arena.maze, RandomMaze):
+        # LabMaze may place fewer than max_rooms before exhausting its retries.
+        # Validate each actual room, not the count in an unrelated random maze.
+        variations = np.asarray(fixed.variations_layer)
+        rooms = np.unique(variations[variations != "."])
+        assert 0 < len(rooms) <= arena.maze.max_rooms
+        for token, count in (
+            (arena.maze.spawn_token, arena.maze.spawns_per_room),
+            (arena.maze.object_token, arena.maze.objects_per_room),
+        ):
+            assert np.count_nonzero(grid == token) == len(rooms) * count
+            for room in rooms:
+                assert (
+                    np.count_nonzero(grid[variations == room] == token) == count
+                )
+    else:
+        for token in "PG":
+            assert np.count_nonzero(grid == token) == np.count_nonzero(
+                np.asarray(arena.maze.entity_layer) == token
+            )
     assert np.all(grid[[0, -1]] == "*") and np.all(grid[:, [0, -1]] == "*")
     reachable = set()
     todo = [tuple(np.argwhere(grid == "P")[0])]

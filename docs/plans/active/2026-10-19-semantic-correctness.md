@@ -278,3 +278,10 @@ head before declaring completion and releasing the Linux devbox.
   cell. Both old failures are reproduced and the rebuilt focused check passes;
   identical fixed positions are rejected. The full Jumanji/create-test rerun is
   tracked with the final-head validation.
+
+- Linux's final-source run exposed an oracle validation error for random mazes:
+  the number of rooms can vary, so total spawn/goal counts need not match an
+  independently sampled map. Check the configured counts in each actual room,
+  the room limit and global totals instead. An official 512-map probe contains
+  valid two-, three- and four-room layouts; both previously failing Linux cases
+  pass with the correction. Full macOS alignment and final-platform CI continue.
