@@ -798,6 +798,15 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
                                const mjvCamera* camera_override,
                                const mjvOption* option_override,
                                bool update_camera_first) {
+  int render_passes = 1;
+#if defined(ENVPOOL_HAS_CGL)
+  // Hosted software CGL can draw large incorrect shadows during startup, even
+  // in an official MuJoCo fixed-state replay. Keep the established first-frame
+  // warmup; this addresses incomplete rendering, not last-bit pixel matching.
+  if (!initialized_) {
+    render_passes = 17;
+  }
+#endif
   if (!initialized_) {
     Initialize(model);
   }
@@ -822,20 +831,22 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
     scratch_.resize(frame_bytes);
   }
 
-  // MuJoCo 3.11 adds geoms before updating the GL camera. Infinite planes
-  // are centered on that camera, so a moved tracking camera otherwise uses
-  // the previous frame's plane tessellation (and different lighting).
-  if (update_camera_first) {
-    mjv_updateCamera(model, data, &camera_, &scene_);
-  }
-  mjv_updateScene(model, data,
-                  option_override != nullptr ? option_override : &option_,
-                  &perturb_, &camera_, mjCAT_ALL, &scene_);
-  mjr_render(viewport, &scene_, &context_);
+  for (int pass = 0; pass < render_passes; ++pass) {
+    // MuJoCo 3.11 adds geoms before updating the GL camera. Infinite planes
+    // are centered on that camera, so a moved tracking camera otherwise uses
+    // the previous frame's plane tessellation (and different lighting).
+    if (update_camera_first) {
+      mjv_updateCamera(model, data, &camera_, &scene_);
+    }
+    mjv_updateScene(model, data,
+                    option_override != nullptr ? option_override : &option_,
+                    &perturb_, &camera_, mjCAT_ALL, &scene_);
+    mjr_render(viewport, &scene_, &context_);
 #if defined(ENVPOOL_HAS_CGL)
-  mjr_finish();
+    mjr_finish();
 #endif
-  mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
+    mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
+  }
 
   std::size_t row_bytes =
       static_cast<std::size_t>(width) * 3 * sizeof(unsigned char);
