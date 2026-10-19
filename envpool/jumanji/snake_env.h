@@ -22,6 +22,7 @@
 #include <cstddef>
 #include <random>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -107,9 +108,15 @@ class SnakeEnv : public Env<SnakeEnvSpec>, public RenderableEnv {
 
   SnakeEnv(const Spec& spec, int env_id) : Env<SnakeEnvSpec>(spec, env_id) {
     std::tie(configured_head_row_, configured_head_col_) =
-        snake::ParsePosition(spec.config["snake_head_position"_], 0, 0);
+        snake::ParsePosition(spec.config["snake_head_position"_], -1, -1);
     std::tie(configured_fruit_row_, configured_fruit_col_) =
-        snake::ParsePosition(spec.config["snake_fruit_position"_], 0, 1);
+        snake::ParsePosition(spec.config["snake_fruit_position"_], -1, -1);
+    if (configured_head_row_ >= 0 &&
+        configured_head_row_ == configured_fruit_row_ &&
+        configured_head_col_ == configured_fruit_col_) {
+      throw std::invalid_argument(
+          "Snake head and fruit must occupy different cells");
+    }
   }
 
   bool IsDone() override { return done_; }
@@ -152,19 +159,20 @@ class SnakeEnv : public Env<SnakeEnvSpec>, public RenderableEnv {
     head_col_ = configured_head_col_;
     fruit_row_ = configured_fruit_row_;
     fruit_col_ = configured_fruit_col_;
-    if (spec_.config["snake_head_position"_].empty()) {
-      std::uniform_int_distribution<int> row_dist(0, snake::kRows - 1);
-      std::uniform_int_distribution<int> col_dist(0, snake::kCols - 1);
-      head_row_ = row_dist(gen_);
-      head_col_ = col_dist(gen_);
+    if (head_row_ < 0) {
+      std::uniform_int_distribution<int> cell(0, snake::kCellCount - 1);
       do {
-        fruit_row_ = row_dist(gen_);
-        fruit_col_ = col_dist(gen_);
-      } while (fruit_row_ == head_row_ && fruit_col_ == head_col_);
+        const int position = cell(gen_);
+        head_row_ = position / snake::kCols;
+        head_col_ = position % snake::kCols;
+      } while (head_row_ == fruit_row_ && head_col_ == fruit_col_);
     }
     length_ = 1;
     step_count_ = 0;
     body_state_[snake::Offset(head_row_, head_col_)] = 1;
+    if (fruit_row_ < 0) {
+      PlaceFruit();
+    }
     done_ = !AnyActionAvailable();
     WriteState(0.0f);
   }

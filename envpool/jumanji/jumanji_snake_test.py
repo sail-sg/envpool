@@ -78,6 +78,34 @@ class JumanjiSnakeTest(absltest.TestCase):
         finally:
             env.close()
 
+    def test_partial_initial_positions(self) -> None:
+        """Keep an explicit head or fruit while sampling the other free cell."""
+        for key, position, channel in (
+            ("snake_head_position", "0,1", 1),
+            ("snake_fruit_position", "7,8", 3),
+        ):
+            with self.subTest(key=key):
+                env = make_gymnasium(
+                    "Snake-v1", num_envs=32, seed=17, **{key: position}
+                )
+                try:
+                    for _ in range(3):
+                        obs, _ = env.reset()
+                        grid = obs["grid"]
+                        row, col = map(int, position.split(","))
+                        np.testing.assert_array_equal(
+                            grid[:, row, col, channel], 1
+                        )
+                        np.testing.assert_array_equal(
+                            grid[..., 0] * grid[..., 3], 0
+                        )
+                        sampled = np.argwhere(grid[..., 4 - channel] == 1)[
+                            :, 1:
+                        ]
+                        self.assertGreater(len(np.unique(sampled, axis=0)), 1)
+                finally:
+                    env.close()
+
     def test_invalid_wall_move_terminates(self) -> None:
         """Checks moving into a wall terminates."""
         env = _make_env()

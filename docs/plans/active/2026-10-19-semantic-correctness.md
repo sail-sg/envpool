@@ -271,3 +271,10 @@ head before declaring completion and releasing the Linux devbox.
   sampling/control inputs are checked separately, and independently computed
   successors are recorded before the next integrator-state copy. Full hosted
   checks remain pending; no historical result certifies the latest head.
+
+- The final pass found another Snake reset boundary: a fruit-only override was
+  ignored, while a head-only override could place fruit on the head. Reset now
+  honors each fixed position independently and samples the unspecified free
+  cell. Both old failures are reproduced and the rebuilt focused check passes;
+  identical fixed positions are rejected. The full Jumanji/create-test rerun is
+  tracked with the final-head validation.
