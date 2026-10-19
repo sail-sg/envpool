@@ -685,7 +685,19 @@ def _make_oracle(task_id: str) -> Any:
         config.lin_vel_x = [0.0, 0.0]
         config.lin_vel_y = [0.0, 0.0]
         config.ang_vel_yaw = [0.0, 0.0]
-        return oracle_op3.Joystick(config=config)
+        # The assets-dict loader strips directories and aliases OP3 visual
+        # meshes with same-named collision meshes. Use the pinned file tree
+        # for the entire oracle, including its independent physics rollout.
+        xml = _find_runfile(
+            "envpool/mujoco/playground/assets/mujoco_playground/_src/"
+            "locomotion/op3/xmls/scene_mjx_feetonly.xml"
+        )
+        with mock.patch.object(
+            mujoco.MjModel,
+            "from_xml_string",
+            return_value=mujoco.MjModel.from_xml_path(xml.as_posix()),
+        ):
+            return oracle_op3.Joystick(config=config)
     if task_id in (
         "BerkeleyHumanoidJoystickFlatTerrain-v1",
         "BerkeleyHumanoidJoystickRoughTerrain-v1",
@@ -1615,35 +1627,6 @@ def _assert_frames_close(
         )
 
 
-def _official_render_kwargs(task_id: str) -> dict[str, Any]:
-    if task_id == "SpotGetup-v1":
-        # The existing full OBJ mesh renderer discrepancy peaks at 3.91/255
-        # over the independent rollout; retain its established frame budget.
-        return {"max_mean_abs_diff": 4.2}
-    return {}
-
-
-_OP3_RENDER_MODEL: mujoco.MjModel | None = None
-
-
-def _official_render_model(task_id: str, oracle: Any) -> mujoco.MjModel:
-    if task_id != "Op3Joystick-v1":
-        return oracle.mj_model
-    global _OP3_RENDER_MODEL
-    if _OP3_RENDER_MODEL is None:
-        # The upstream OP3 Python oracle loads XML from an in-memory asset dict.
-        # MuJoCo's asset dict keys collide for OP3 because visual meshes and
-        # simplified collision meshes share basenames, so that path renders the
-        # simplified collision body as the visual body. For render correctness,
-        # load the same pinned XML/assets from filesystem runfiles instead.
-        xml_path = _find_runfile(
-            "envpool/mujoco/playground/assets/mujoco_playground/_src/"
-            "locomotion/op3/xmls/scene_mjx_feetonly.xml"
-        )
-        _OP3_RENDER_MODEL = mujoco.MjModel.from_xml_path(xml_path.as_posix())
-    return _OP3_RENDER_MODEL
-
-
 def _official_render_camera(task_id: str) -> str | int:
     if task_id.startswith((
         "Apollo",
@@ -1661,12 +1644,12 @@ def _official_render_camera(task_id: str) -> str | int:
 
 
 class _OfficialFrameRenderer:
-    def __init__(self, oracle_or_model: Any, task_id: str):
-        model = (
-            oracle_or_model
-            if isinstance(oracle_or_model, mujoco.MjModel)
-            else oracle_or_model.mj_model
-        )
+    def __init__(self, oracle: Any, task_id: str):
+        model = oracle.mj_model
+        # Match native buffer dimensions: skybox projection on CGL depends on
+        # the full offscreen buffer, not just the requested output viewport.
+        model.vis.global_.offwidth = _RENDER_WIDTH
+        model.vis.global_.offheight = _RENDER_HEIGHT
         self._camera = _official_render_camera(task_id)
         self._renderer = mujoco.Renderer(
             model, height=_RENDER_HEIGHT, width=_RENDER_WIDTH
@@ -1819,24 +1802,12 @@ class PlaygroundOracleAlignTest(absltest.TestCase):
                     state = _sync_oracle_state(oracle, state, info)
                     mujoco_data = _make_mujoco_data_from_info(oracle, info)
                     _assert_obs_close(self, task_id, obs, state.obs)
-                    if task_id == "Op3Joystick-v1":
-                        render_model = _official_render_model(task_id, oracle)
-                        render_data = _make_mujoco_data_from_model(
-                            render_model, info
-                        )
-                    else:
-                        render_model = oracle
-                        render_data = mujoco_data
-                    official_renderer = _OfficialFrameRenderer(
-                        render_model, task_id
-                    )
-                    render_kwargs = _official_render_kwargs(task_id)
+                    official_renderer = _OfficialFrameRenderer(oracle, task_id)
                     rendered = env.render(env_ids=[0])
                     assert rendered is not None
                     _assert_frames_close(
                         rendered[0],
-                        official_renderer.render(render_data),
-                        **render_kwargs,
+                        official_renderer.render(mujoco_data),
                     )
 
                     for step, action in enumerate(actions, start=1):
@@ -1846,22 +1817,6 @@ class PlaygroundOracleAlignTest(absltest.TestCase):
                         obs, reward, terminated, truncated, info = env.step(
                             action
                         )
-                        if task_id == "Op3Joystick-v1":
-                            for field in (
-                                "qpos",
-                                "qvel",
-                                "act",
-                                "ctrl",
-                                "mocap_pos",
-                                "mocap_quat",
-                            ):
-                                getattr(render_data, field)[:] = getattr(
-                                    mujoco_data, field
-                                )
-                            render_data.time = mujoco_data.time
-                            mujoco.mj_forward(render_model, render_data)
-                        else:
-                            render_data = mujoco_data
                         with self.subTest(step=step):
                             _assert_rollout_outputs_close(
                                 self,
@@ -1878,8 +1833,7 @@ class PlaygroundOracleAlignTest(absltest.TestCase):
                             assert rendered is not None
                             _assert_frames_close(
                                 rendered[0],
-                                official_renderer.render(render_data),
-                                **render_kwargs,
+                                official_renderer.render(mujoco_data),
                             )
                         if bool(state.done):
                             break

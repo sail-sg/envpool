@@ -335,3 +335,25 @@ head before declaring completion and releasing the Linux devbox.
   ARM64 evidence is in diagnostic run `39286335510`; logs and model/engine
   experiments are under `playground-arm64-rca/` in the local evidence directory.
   These candidate results do not replace the final PR test/release matrix.
+
+## Current verification
+
+- At `256c6d85`, all four release/wheel jobs, both Linux full-test jobs
+  (108 targets each), lint and clang-tidy pass. macOS and Windows full-test
+  results remain pending.
+- MJLab first-use oracle warmup passes all 61 alignment methods on macOS and
+  the two formerly failing hosted episodes. It preserves the image budget.
+- Hosted framebuffer comparisons show that matching the official offscreen
+  dimensions to the native output removes the Leap/Panda skybox discrepancy.
+  Both depth formats are identical; no shared-library patch is needed.
+- The single-model OP3 oracle passes complete original physics/image checks
+  on macOS, Linux and hosted macOS. It removes the second
+  render model and per-step render-state copying.
+- Spot's reset discrepancy comes from derived geometry left at the preceding
+  integration substep after settling. One forward update, as used by Go1
+  Getup, refreshes reset state; the special image budget is removed. The
+  diagnostic that established this stays outside the permanent harness.
+- The complete Playground native, pixel and all-task oracle suites pass on
+  macOS (223.516 seconds). The corresponding Linux run continues; the final
+  commit still requires the complete hosted matrix. Evidence and source
+  hashes are under `macos-hosted-final-rca/` in the local evidence directory.

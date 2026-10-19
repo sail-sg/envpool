@@ -566,7 +566,8 @@ def main() -> None:
             obs = synchronize(env, source, args.output.parent)
             prepare, check_samples = native_sample_checks(env, source)
             rows: dict[str, list] = {}
-            frames, frame_steps = [], []
+            frames: list[np.ndarray] = []
+            frame_steps: list[int] = []
             render_steps = set(source["render_steps"].tolist())
 
             def record(
@@ -603,6 +604,11 @@ def main() -> None:
                     # GL camera. A second scene update settles that derived
                     # geometry without advancing or synchronizing physics.
                     renderer.update(env.sim.data)
+                    if platform.system() == "Darwin" and not frames:
+                        # Match the native first-use CGL warmup: the software
+                        # renderer can otherwise return incomplete shadows.
+                        for _ in range(16):
+                            renderer.render()
                     frame = renderer.render()
                     frames.append(frame.copy())
                     frame_steps.append(step)
