@@ -25,7 +25,10 @@ Do not merge the PR or change the CI cache/cancellation policy.
 - [x] Clarify checked hidden-state transfer through native info in AGENTS.md.
 - [x] Replace PCG64/Ziggurat with native distributions and checked semantic
   state transfer for MPE2 and MyoSuite; complete macOS checks pass.
-- [ ] Remove JAX sampling/XLA scan-order compatibility using native state.
+- [x] Replace Jumanji sampling with native distributions and checked semantic
+  choices; all 26 macOS targets pass. Remove XLA scan-order emulation.
+- [ ] Settle the remaining Craftax keyed-RNG tradeoff; its compact sampler is
+  localized and simplified, but its oracle sequence coupling remains.
 - [x] Remove locomotion RandomState compatibility and ARM FMA flag; macOS
   native 30 and oracle 65 methods pass, all 13 documentation comparisons pass.
 - [x] Remove MJLab Torch sampling and RNG draw-count coupling; native tests
@@ -39,7 +42,9 @@ Do not merge the PR or change the CI cache/cancellation policy.
 - [x] Open one ready-for-review PR, not a draft: #440.
 - [x] Add Jumanji scene-content checks for all 26 IDs; local checks pass.
 - [x] Resolve the initial 36 clang-tidy findings (hosted check passed).
-- [ ] Resolve the remaining Linux MJLab/Playground and CGL validation failures.
+- [x] Diagnose and fix the CGL startup and Linux Playground library-selection
+  failures; native CGL validation passes.
+- [ ] Finish Linux validation of the revised MJLab and Playground checks.
 - [ ] Complete supported-platform CI and installed-wheel release checks.
 - [ ] Preserve useful logs and clean up the task-owned Linux devbox.
 
@@ -58,7 +63,8 @@ exposed actual behavior defects; repair those before simplifying arithmetic.
 ## Implementation
 
 - **Jumanji:** remove future-output configuration and the duplicate Python
-  viewer. Share the JAX key implementation with Craftax. Correct the exposed
+  viewer. Use standard native sampling and checked semantic choices for stochastic
+  steps; keep Craftax's remaining keyed sampler local to that family. Correct the exposed
   transition/RNG defects, including Minesweeper flood fill, Tetris collisions,
   route completion, native box geometry, and termination semantics. Compare all
   26 tasks through independent episodes; check rendering and async behavior.
@@ -117,7 +123,7 @@ git diff --check
 ```
 
 Reuse the existing Bazel cache and checkout. The task-owned Linux machine has
-16 CPUs and 64 GiB RAM. Its latest full related run passed 30 of 31 targets;
+16 CPUs and 64 GiB RAM. An earlier full related run passed 30 of 31 targets;
 the remaining numerical oracle then passed with the field-based checks.
 
 ## Decisions and discoveries
@@ -141,9 +147,10 @@ the remaining numerical oracle then passed with the field-based checks.
   before copying the next starting state; native uninterrupted replays remain.
 - A task may terminate at the same instant its time limit truncates. Reuse the
   explicit termination state instead of deriving it as `done & ~trunc`.
-- The Linux Playground shard using MjSpec crashes. Check its actual engine
-  selection and isolate the cause before changing the adapter; the previous
-  note claiming this suite already retained the pip engine was inaccurate.
+- Linux Playground's official Barkour constructor succeeds with the pip engine
+  but crashes after substituting the source-built library at MjSpec compilation.
+  Keep the Linux bindings paired with their matching pip library. A full
+  29-task validation is running; the isolated constructor check passes.
 
 ## Decision log
 
@@ -231,9 +238,10 @@ head before declaring completion and releasing the Linux devbox.
 - SearchAndRescue uses native Gaussian acceleration and checked target velocity
   in the oracle. Independent tests cover increment statistics, temporal
   independence, speed clipping and wrapped motion. Categorical sampling uses
-  an ordinary cumulative sum instead of emulating XLA tiles. Both changes await
-  their full rebuilt checks. The remaining compact keyed generator needs an
-  explicit maintenance decision.
+  an ordinary cumulative sum instead of emulating XLA tiles. The mixed 32-target rebuilt suite passes. All five other Jumanji
+  samplers have also been replaced; its full 26-target suite passes. Craftax's
+  local sampler simplification passes all three targets. Replacing its remaining
+  core and sequence-coupled harness is a separate pending maintenance decision.
 - The Windows std::array iterator fix is pushed in `0686f7f0`.
 - The official fixed-state macOS replay in run `39249567582` demonstrated large
   incorrect startup shadows (mean error up to 13.44/255), followed by 477 stable
@@ -243,3 +251,23 @@ head before declaring completion and releasing the Linux devbox.
 - Current validation and actionable failures are tracked in
   `/private/tmp/envpool-correctness-cleanup/state.json`. Historical passes do not
   replace checks on the final PR head.
+
+## Latest review and validation follow-up
+
+- `7813612a` replaces the five remaining Jumanji samplers. Oracle checks validate
+  sampled tiles, fruit, pieces and ghost actions; MMST checks all six priority
+  orders. A Snake terminal-wall observation bug exposed by the changed sequences
+  has a regression that fails on the old binary and passes after the fix.
+- `a4b5761d` removes the unused shared JAX sampler target and alias layer, and
+  simplifies Craftax integer, uniform and categorical arithmetic. This does not
+  claim to remove Craftax's remaining Threefry/key sequence coupling.
+- The render-content PR comment is answered and resolved, with all 26 scene
+  checks passing and unrelated checkerboards rejected. No other review comments
+  were present at this check.
+- MJLab's 12 documentation scenes and locomotion's 13 comparisons are regenerated
+  and checked. The Craftax regeneration command passes with a one-level RGB quantization
+  budget instead of requiring bitwise pixels.
+- A follow-up review covers the changed state-transfer boundaries: copied
+  sampling/control inputs are checked separately, and independently computed
+  successors are recorded before the next integrator-state copy. Full hosted
+  checks remain pending; no historical result certifies the latest head.

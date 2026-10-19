@@ -141,15 +141,15 @@ light and night effects, sleep shading, and full-game floor visibility.
    :alt: EnvPool on the left and official Craftax on the right after gameplay
 
 EnvPool is on the left and the pinned official renderer is on the right.
-The documentation generator checks exact RGB equality after each displayed
-action sequence before writing the comparison image.
+The documentation generator checks the rendered scene after each displayed
+action sequence, allowing one RGB level for quantization and float32 rounding.
 
 Regenerate it with the shared documentation tool:
 
 .. code-block:: bash
 
    bazel run --config=test //scripts:render_compare -- \
-     --family=craftax --seed=11 --columns=1 --require-bitwise \
+     --family=craftax --seed=11 --columns=1 --max-ignored-abs-diff=1 \
      --tile-width=352 --tile-height=416
 
 Validation
