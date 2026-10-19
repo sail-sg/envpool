@@ -1589,6 +1589,9 @@ class _OfficialFrameRenderer:
         )
 
     def render(self, data: mujoco.MjData) -> np.ndarray:
+        # MuJoCo builds infinite-plane geometry before updating the camera.
+        # Refresh that geometry at the selected camera before the single draw.
+        self._renderer.update_scene(data, camera=self._camera)
         self._renderer.update_scene(data, camera=self._camera)
         return self._renderer.render()
 

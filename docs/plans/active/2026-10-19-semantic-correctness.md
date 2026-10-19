@@ -304,7 +304,15 @@ head before declaring completion and releasing the Linux devbox.
   permanent oracle. Use a common `1e-3` relative/absolute budget for generalized
   velocities, including their observation fields; retain `1e-4` elsewhere and
   the existing control/discrete checks. Full eight-shard validation of all
-  398 tasks passes on Linux; the macOS rerun is still running.
+  398 tasks passes on Linux and macOS. The related Locomotion and MJLab reruns
+  also pass; the ARM64 release check for `faa62836` is green.
 - Root-cause details, saved artifacts and the normal/maintenance/deletion review
   are in `cgl-sparse-rca/report.md` and `myo-contact-rca/report.md` under the local
   evidence directory. Final-head hosted checks remain pending.
+- A fixed-state Playground probe isolates a camera-order error: the official
+  first frame differs by 11.6/255 from subsequent identical-state frames, while
+  native frames stay unchanged. One extra CPU scene update, without another GPU
+  draw, removes the difference; only the ground-plane position changes (0.8 m).
+  Initialize native plane geometry at the selected camera and refresh the
+  oracle scene before drawing. Keep the existing image budgets. Full-platform
+  checks and the separate ARM64 physics investigation remain in progress.
