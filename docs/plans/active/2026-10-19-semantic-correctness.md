@@ -23,18 +23,20 @@ Do not merge the PR or change the CI cache/cancellation policy.
 - [x] Review the complete diff and perform both additional cleanup passes.
 - [x] Re-audit RNG/rounding compatibility after the user's follow-up review.
 - [x] Clarify checked hidden-state transfer through native info in AGENTS.md.
-- [ ] Replace PCG64/Ziggurat with native distributions and checked semantic
-  state transfer for MPE2 and MyoSuite (implemented; validating).
+- [x] Replace PCG64/Ziggurat with native distributions and checked semantic
+  state transfer for MPE2 and MyoSuite; complete macOS checks pass.
 - [ ] Remove JAX sampling/XLA scan-order compatibility using native state.
 - [ ] Remove locomotion RandomState compatibility and ARM FMA flag.
-- [ ] Remove MJLab Torch sampling and RNG draw-count coupling.
-- [ ] Apply the second cleanup pass: unused SearchAndRescue config, duplicated
+- [ ] Remove MJLab Torch sampling and RNG draw-count coupling (implemented;
+  validating semantic events and ordinary quaternion arithmetic).
+- [x] Apply the second cleanup pass: unused SearchAndRescue config, duplicated
   distance helper, uniform-choice CDF, redundant transforms and CGL queries.
-- [x] Finish macOS validation, static/doc checks and all MyoSuite doc images.
+- [x] Finish baseline macOS validation, static/doc checks and all MyoSuite doc
+  images (before follow-up RNG changes).
 - [x] Run the repository-wide Linux registration and creation check.
 - [ ] Finish the remaining Linux family checks.
 - [x] Open one ready-for-review PR, not a draft: #440.
-- [ ] Close the Jumanji render-content validation gap found in self-review.
+- [x] Add Jumanji scene-content checks for all 26 IDs; local checks pass.
 - [ ] Resolve the Linux MJLab render failures and clang-tidy findings.
 - [ ] Complete supported-platform CI and installed-wheel release checks.
 - [ ] Preserve useful logs and clean up the task-owned Linux devbox.
@@ -201,14 +203,24 @@ head before declaring completion and releasing the Linux devbox.
 
 - MPE2/MyoSuite use standard native uniform, integer and normal distributions.
   Delete PCG64/Ziggurat downloads and compatibility code; retain spectral noise.
-  MPE2's 14 methods pass on macOS. MyoSuite uses a common numerical transition
-  budget; eight sensitive tasks pass, with complete reruns still pending.
+  MPE2's 14 methods and MyoSuite's complete 398-task oracle, native, rendering
+  and C++ tests pass on macOS, using the common transition budget.
 - Remove the unused SearchAndRescue field, duplicated distance helper, uniform
   tracking CDF, inverse-transform round trip and discarded CGL queries. All five
   tracking checks, including 36 clips and first-use rendering, pass on macOS.
 - Render review found real missing content: fixed padding erased Sudoku digits
   at 128px, and the shared number renderer truncated values above 99. The new
   behavior tests fail on the old binary; proportional padding and arbitrary
-  digit counts fix both causes. Full rebuilt target verification is pending.
-- MJLab sampling/state-transfer work is still uncommitted and unvalidated; it
-  must not be included in a completed-cleanup claim.
+  digit counts fix both causes. Both rebuilt environment tests pass. The full
+  first-wave suite has passed all 33 targets on macOS.
+- The Jumanji content-check extension passes all 26 tasks after reset and
+  three steps and rejects an unrelated checkerboard for all 26. It checks
+  semantic landmarks rather than exact drawing styles; the integrated test
+  passes in 47.3 seconds, and its Bazel check is running with the MJLab batch.
+- MJLab now uses native sampling, actual checked command/reference/push state,
+  and per-step physics input. Focused Cartpole and motion-wrap checks pass;
+  the complete-task probe has also passed depth and RGB camera cases. Ordinary
+  quaternion arithmetic and removal of strict floating-point flags still need
+  a rebuilt binary. The changes remain uncommitted until validated.
+- Latest pushed head `8da420d6` passes hosted lint. Full hosted test, clang-tidy
+  and release results remain pending; historical runs are not substituted.

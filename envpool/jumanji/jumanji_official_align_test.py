@@ -33,6 +33,7 @@ from envpool.jumanji.oracle import (
 import jax  # noqa: E402
 import numpy as np  # noqa: E402
 from absl.testing import absltest, parameterized  # noqa: E402
+from matplotlib import colormaps  # noqa: E402
 
 import envpool.jumanji.registration as jumanji_registration  # noqa: E402
 from envpool.registration import make_gymnasium  # noqa: E402
@@ -232,10 +233,344 @@ def _first_valid_action(
     return action
 
 
+def _assert_render_content(
+    image: np.ndarray, state: dict[str, Any], task_id: str
+) -> None:
+    """Check semantic landmarks from oracle state across native drawing styles."""
+    # Small pixel neighborhoods cover coordinate rounding. A 12/255 color budget
+    # stays below the palette separations; neither rule compares exact pixels.
+    colors: Any
+    xy: Any
+    height, width, _ = image.shape
+    palette = (
+        colormaps["tab20"](np.arange(20))[:, :3][
+            list(range(0, 20, 2)) + list(range(1, 20, 2))
+        ]
+        * 255
+    )
+    white = (255, 255, 255)
+
+    def color_at(point: Any, color: Any, radius: int = 1) -> None:
+        x, y = np.rint(point).astype(int)
+        patch = image[
+            max(0, y - radius) : min(height, y + radius + 1),
+            max(0, x - radius) : min(width, x + radius + 1),
+        ].astype(float)
+        assert patch.size and np.any(
+            np.max(np.abs(patch - color), axis=-1) <= 12
+        ), (task_id, "missing landmark", point, color, patch.tolist())
+
+    def center(row: Any, col: Any, shape: Any) -> tuple[float, float]:
+        return ((col + 0.5) * width / shape[1], (row + 0.5) * height / shape[0])
+
+    def cell_color(row: Any, col: Any, shape: Any, color: Any) -> None:
+        color_at(center(row, col, shape), color)
+
+    def points(xy: Any, colors: Any, occlusion: int = 6) -> None:
+        xy = np.asarray(xy)
+        for i, (point, color) in enumerate(zip(xy, colors, strict=True)):
+            if not np.any(
+                np.linalg.norm(xy[i + 1 :] - point, axis=-1) < occlusion
+            ):
+                color_at(point, color, 2)
+
+    def rowcols(rc: Any, shape: Any) -> np.ndarray:
+        return np.asarray([center(r, c, shape) for r, c in rc])
+
+    def pos(p: dict[str, Any]) -> tuple[int, int]:
+        return (int(p["row"]), int(p["col"]))
+
+    if task_id in ("Maze-v0", "Cleaner-v0"):
+        grid = state["walls"] if task_id == "Maze-v0" else state["grid"]
+        if task_id == "Maze-v0":
+            rc = [pos(state["target_position"]), pos(state["agent_position"])]
+            colors = [(0, 210, 70), (220, 30, 30)]
+            cell_colors = [white, (0, 0, 0)]
+        else:
+            rc = state["agents_locations"]
+            colors = palette[: len(rc)]
+            cell_colors = [(0, 240, 40), (250, 250, 250), (0, 0, 0)]
+        xy = rowcols(rc, grid.shape)
+        for r, c in np.ndindex(grid.shape):
+            point = center(r, c, grid.shape)
+            if np.all(np.linalg.norm(xy - point, axis=-1) > 7):
+                color_at(point, cell_colors[int(grid[r, c])])
+        points(xy, colors)
+    elif task_id in ("FlatPack-v0", "Connector-v3"):
+        grid = state["grid"]
+        for r, c in np.ndindex(grid.shape):
+            value = int(grid[r, c])
+            index = value if task_id == "FlatPack-v0" else (value - 1) // 3
+            cell_color(
+                r, c, grid.shape, white if value == 0 else palette[index % 20]
+            )
+    elif task_id.startswith("Sudoku") or task_id in (
+        "Minesweeper-v0",
+        "Game2048-v1",
+        "SlidingTilePuzzle-v0",
+    ):
+        grid = (
+            state["puzzle"]
+            if task_id == "SlidingTilePuzzle-v0"
+            else state["board"]
+        )
+        for r, c in np.ndindex(grid.shape):
+            x0, x1 = (
+                c * width // grid.shape[1],
+                (c + 1) * width // grid.shape[1],
+            )
+            y0, y1 = (
+                r * height // grid.shape[0],
+                (r + 1) * height // grid.shape[0],
+            )
+            patch = image[y0 + 2 : y1 - 2, x0 + 2 : x1 - 2]
+            value = int(grid[r, c])
+            occupied = value >= 0 if task_id.startswith("Sudoku") else value > 0
+            if task_id == "Minesweeper-v0":
+                has_glyph = np.any(np.min(patch, axis=-1) < 140)
+            else:
+                limit = 60 if task_id == "SlidingTilePuzzle-v0" else 120
+                has_glyph = np.any(np.max(patch, axis=-1) < limit)
+            assert bool(has_glyph) == occupied, (
+                task_id,
+                r,
+                c,
+                value,
+                "glyph presence",
+            )
+    elif task_id == "Snake-v1":
+        grid = state["body_state"]
+        head = pos(state["head_position"])
+        fruit = pos(state["fruit_position"])
+        for r, c in np.ndindex(grid.shape):
+            if (r, c) not in (head, fruit):
+                cell_color(
+                    r, c, grid.shape, (40, 170, 40) if grid[r, c] > 0 else white
+                )
+        points(
+            rowcols([fruit, head], grid.shape), [(65, 180, 40), (220, 50, 50)]
+        )
+    elif task_id == "PacMan-v1":
+        shape = state["grid"].shape
+        player = state["player_locations"]
+        ghosts = state["ghost_locations"][:, ::-1]
+        rc = list(ghosts) + [(player["x"], player["y"])]
+        colors = [
+            (80, 100, 255) if state["frightened_state_time"] > 0 else palette[i]
+            for i in range(len(ghosts))
+        ] + [(255, 230, 45)]
+        points(rowcols(rc, shape), colors)
+    elif task_id == "LevelBasedForaging-v0":
+        food = state["food_items"]
+        agents = state["agents"]
+        rc = list(food["position"][~food["eaten"]]) + list(agents["position"])
+        colors = [(210, 30, 30)] * int(np.count_nonzero(~food["eaten"])) + list(
+            palette[: len(agents["id"])]
+        )
+        points(rowcols(rc, (8, 8)), colors)
+    elif task_id == "RobotWarehouse-v0":
+        shelves = state["shelves"]
+        agents = state["agents"]
+        shape = state["grid"].shape[1:]
+        rc = list(
+            zip(shelves["position"]["x"], shelves["position"]["y"], strict=True)
+        ) + list(
+            zip(agents["position"]["x"], agents["position"]["y"], strict=True)
+        )
+        colors = [
+            (230, 130, 40) if requested else (100, 90, 150)
+            for requested in shelves["is_requested"]
+        ] + [
+            (180, 110, 40) if carrying else palette[i]
+            for i, carrying in enumerate(agents["is_carrying"])
+        ]
+        points(rowcols(rc, shape), colors, 4)
+    elif task_id == "Sokoban-v0":
+        grid = state["fixed_grid"]
+        movable = state["variable_grid"]
+        for r, c in np.ndindex(grid.shape):
+            if movable[r, c] == 4:
+                color = (120, 60, 20)
+            elif movable[r, c] == 3:
+                color = (20, 180, 50)
+            elif grid[r, c] == 1:
+                color = (130, 54, 24)
+            else:
+                color = (232, 232, 232)
+            color_at(center(r, c, grid.shape), color, 2)
+    elif task_id == "Tetris-v0":
+        grid = state["grid_padded"][:10, :10]
+        for r, c in np.ndindex(grid.shape):
+            point = (
+                width // 5 + (c + 0.5) * (width * 4 // 5 - width // 5) / 10,
+                height // 5 + (r + 0.5) * (height - 4 - height // 5) / 10,
+            )
+            color_at(point, palette[0] if grid[r, c] else white)
+        block = max(4, width // 4 // 6)
+        for r, c in np.ndindex((4, 4)):
+            point = (
+                width // 2 - 2 * block + (c + 0.5) * block,
+                height // 18 + (r + 0.5) * block,
+            )
+            color_at(
+                point, palette[1] if state["new_tetromino"][r, c] else white
+            )
+    elif task_id in ("TSP-v1", "CVRP-v1", "MultiCVRP-v0"):
+        if task_id == "MultiCVRP-v0":
+            xy = state["nodes"]["coordinates"]
+            active = state["nodes"]["demands"] > 0
+            colors = [
+                (0, 0, 0) if needed or i == 0 else palette[2]
+                for i, needed in enumerate(active)
+            ]
+            vehicle_xy = xy[state["vehicles"]["positions"]]
+            xy = np.concatenate([xy, vehicle_xy])
+            colors += list(palette[: len(vehicle_xy)])
+            xy = xy / 10
+        else:
+            xy = state["coordinates"]
+            visited = state["visited_mask"]
+            current = int(state["position"])
+            colors = [
+                palette[0]
+                if task_id == "TSP-v1" and i == current
+                else palette[2]
+                if seen and not (task_id == "CVRP-v1" and i == 0)
+                else (0, 0, 0)
+                for i, seen in enumerate(visited)
+            ]
+        points(12 + xy * np.array([width - 24, height - 24]), colors, 7)
+    elif task_id == "GraphColoring-v1":
+        colors = state["colors"]
+        angles = np.arange(len(colors)) * 2 * np.pi / len(colors)
+        xy = np.array([width // 2, height // 2]) + np.column_stack([
+            np.cos(angles),
+            np.sin(angles),
+        ]) * (min(width, height) * 38 // 100)
+        points(xy, [palette[c % 20] if c >= 0 else white for c in colors])
+        current = int(state["current_node_index"])
+        color_at(xy[current] + [7, 0], palette[3], 2)
+    elif task_id == "MMST-v0":
+        colors = [
+            white if c < 0 else palette[c % 20] for c in state["node_types"]
+        ]
+        for i, nodes in enumerate(state["connected_nodes"]):
+            for node in nodes[nodes >= 0]:
+                colors[int(node)] = palette[i]
+        points(
+            rowcols([(i // 6, i % 6) for i in range(len(colors))], (6, 6)),
+            colors,
+        )
+    elif task_id.startswith("RubiksCube"):
+        palette_cube = [
+            white,
+            (255, 214, 0),
+            (0, 82, 255),
+            (0, 155, 72),
+            (255, 88, 0),
+            (183, 18, 52),
+        ]
+        side = min(width // 4, height // 3) - 4
+        origin = ((width - 4 * side) // 2, (height - 3 * side) // 2)
+        for face, (fx, fy) in enumerate([
+            (1, 0),
+            (0, 1),
+            (1, 1),
+            (2, 1),
+            (3, 1),
+            (1, 2),
+        ]):
+            for r, c in np.ndindex((3, 3)):
+                point = (
+                    origin[0] + (fx + (c + 0.5) / 3) * side,
+                    origin[1] + (fy + (r + 0.5) / 3) * side,
+                )
+                color_at(point, palette_cube[int(state["cube"][face, r, c])])
+    elif task_id == "SearchAndRescue-v0":
+        xy = np.concatenate([
+            state["targets"]["pos"],
+            state["searchers"]["pos"],
+        ])
+        colors = [
+            (70, 190, 90) if found else (230, 90, 60)
+            for found in state["targets"]["found"]
+        ] + [(60, 120, 230)] * len(state["searchers"]["pos"])
+        points(xy * np.array([width - 1, height - 1]), colors)
+    elif task_id == "Knapsack-v1":
+        packed = np.flatnonzero(state["packed_items"])
+        if not len(packed):
+            color_at((width * 0.5, height * 0.7), (35, 135, 95))
+        else:
+            xy = [
+                (
+                    width // 4
+                    + 8
+                    + (i % 10) * (width * 3 // 4 - width // 4 - 16) // 10,
+                    height // 5
+                    + height // 5
+                    + (i // 10)
+                    * (height * 4 // 5 - height // 5 - height // 5 - 8)
+                    // 5,
+                )
+                for i in packed
+            ]
+            points(xy, [palette[i % 20] for i in packed])
+    elif task_id == "JobShop-v0":
+        starts = state["scheduled_times"]
+        durations = state["ops_durations"]
+        machines = state["ops_machine_ids"]
+        horizon = max(
+            1,
+            int(state["step_count"]),
+            int(np.max(np.where(starts >= 0, starts + durations, 0))),
+        )
+        for job, op in zip(*np.where(starts >= 0), strict=True):
+            color_at(
+                (
+                    (starts[job, op] + durations[job, op] / 2)
+                    * width
+                    / horizon,
+                    (machines[job, op] + 0.5)
+                    * height
+                    / len(state["machines_job_ids"]),
+                ),
+                palette[job % 20],
+            )
+        if not np.any(starts >= 0):
+            color_at((0, height // 2), (0, 0, 0))
+    elif task_id == "BinPack-v2":
+        # The last drawn box is not obscured by another box's edges.
+        placed = np.flatnonzero(state["items_placed"])
+        if not len(placed):
+            color_at((width * 0.1, height * 0.9), (180, 180, 180), 2)
+        else:
+            i = placed[-1]
+            loc = state["items_location"]
+            size = state["items"]
+            container = state["container"]
+            p = np.array([loc[a][i] for a in "xyz"], dtype=float)
+            d = np.array([size[a + "_len"][i] for a in "xyz"], dtype=float)
+            extent = np.array([container[a + "2"] for a in "xyz"])
+            for axis in range(3):
+                corner = p + d
+                corner[axis] -= d[axis] / 2
+                x, y, z = corner / extent
+                color_at(
+                    (
+                        width * (0.1 + 0.6 * x + 0.2 * y),
+                        height * (0.9 - 0.6 * z - 0.2 * y),
+                    ),
+                    palette[i % 20],
+                    2,
+                )
+    else:
+        raise AssertionError(("Missing render coverage", task_id))
+
+
 class JumanjiOfficialAlignTest(parameterized.TestCase):
     """Official oracle alignment for every registered Jumanji task."""
 
-    def test_native_rollout_and_render_surface(self) -> None:
+    def test_native_rollout_and_render_content(self) -> None:
         """Check reset plus three official-driven steps for every task."""
         for task_id in jumanji_registration.jumanji_env_ids:
             with self.subTest(task_id=task_id):
@@ -448,12 +783,12 @@ class JumanjiOfficialAlignTest(parameterized.TestCase):
         task_id: str,
         step: int,
     ) -> None:
-        actual = np.asarray(env.render(env_ids=[0])[0], dtype=np.uint8)
+        actual = np.asarray(env.render(env_ids=[0])[0])
         expected = _official_render(official_env, official_state)
         self.assertEqual(actual.shape, expected.shape)
-        # Native and Matplotlib views intentionally use different drawing
-        # styles. State agreement is checked above; separate regression tests
-        # cover scene content and asynchronous frame selection.
+        # Matplotlib and native drawing styles differ. Check the positions and
+        # contents represented by the independent oracle's semantic state.
+        _assert_render_content(actual, _tree_to_dict(official_state), task_id)
         self.assertEqual(actual.dtype, np.uint8)
         self.assertGreater(int(np.ptp(actual)), 0)
         self.assertGreater(int(np.ptp(expected)), 0)
