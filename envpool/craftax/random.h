@@ -21,7 +21,6 @@ namespace craftax {
 
 using envpool::jax_random::Bits;
 using envpool::jax_random::Choice;
-using envpool::jax_random::Cumulative;
 using envpool::jax_random::Key;
 using envpool::jax_random::RandInt;
 using envpool::jax_random::Split;

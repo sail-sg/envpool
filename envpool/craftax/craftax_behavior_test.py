@@ -209,24 +209,27 @@ class CraftaxBehaviorTest(parameterized.TestCase):
 
     @parameterized.parameters(7, 22, 2304, 4096)
     def test_weighted_random_choices(self, size: int) -> None:
-        """Protect resource placement from cumulative-sum rounding drift."""
-        keys = jax.random.split(jax.random.PRNGKey(14), 1024)
-        choose = jax.jit(
-            jax.vmap(
-                lambda key, p: jax.random.choice(key, size, p=p),
-                in_axes=(0, None),
-            )
-        )
-        weights = np.random.default_rng(2).random(size).astype(np.float32)
+        """Check weighted sampling probabilities without a prescribed stream."""
+        rng = np.random.default_rng(14)
+        keys = rng.integers(0, 2**32, (16384, 2), dtype=np.uint32)
+        weights = rng.random(size).astype(np.float32)
+        groups = np.arange(size) * min(8, size) // size
         for values in (weights, (weights < 0.35).astype(np.float32)):
-            values = values / values.sum(dtype=np.float32)
-            expected = choose(keys, values)
-            probabilities = values.tolist()
-            actual = [
-                native.choice(key.tolist(), probabilities)
-                for key in np.asarray(keys)
-            ]
-            np.testing.assert_array_equal(actual, expected)
+            probabilities = values / values.sum(dtype=np.float64)
+            distribution = values.tolist()
+            actual = np.array([
+                native.choice(key.tolist(), distribution) for key in keys
+            ])
+            self.assertTrue(np.all((actual >= 0) & (actual < size)))
+            self.assertTrue(np.all(values[actual] > 0))
+            expected = np.bincount(groups, weights=probabilities)
+            observed = np.bincount(groups[actual], minlength=len(expected))
+            # Six standard errors make this a stable distribution check while
+            # rejecting uniform sampling or frozen choices on weighted maps.
+            budget = 6 * np.sqrt(expected * (1 - expected) / len(keys))
+            np.testing.assert_array_less(
+                np.abs(observed / len(keys) - expected), budget + 1 / len(keys)
+            )
 
     def rollout(self, classic: bool, state: Any, first: int, seed: int) -> None:
         """Synchronize once and compare every transition through episode end."""

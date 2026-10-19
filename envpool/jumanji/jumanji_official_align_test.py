@@ -104,7 +104,7 @@ def _assert_tree_values(actual: Any, expected: Any, label: str) -> None:
             )
         atol = 1e-6
         if label.startswith("SearchAndRescue-v0 "):
-            # Float32 integration plus ordinary inverse-normal math. Across
+            # Float32 integration of the same checked velocity. Across
             # three 400-step macOS/Linux rollouts: positions <= 3.61e-6 and
             # normalized view distances <= 2.93e-5; visibility stayed exact.
             if label.endswith("positions"):
@@ -132,6 +132,78 @@ def _assert_tree_values(actual: Any, expected: Any, label: str) -> None:
     assert actual_array.dtype == expected_array.dtype, (
         f"{label} dtype mismatch: {actual_array.dtype} != {expected_array.dtype}"
     )
+
+
+def _native_reset_reference(
+    task_id: str,
+    official: Any,
+    state: Any,
+    timestep: Any,
+    obs: dict,
+    info: dict,
+) -> tuple[Any, Any]:
+    """Use actual native reset state when RNG streams need not agree."""
+    if task_id != "SearchAndRescue-v0":
+        return state, timestep
+    for value in (obs["positions"][0], info["target_positions"][0]):
+        assert np.all(np.isfinite(value)) and np.all((value >= 0) & (value < 1))
+    headings = info["searcher_headings"][0]
+    speeds = info["searcher_speeds"][0]
+    assert np.all((headings >= 0) & (headings < 2 * np.pi))
+    assert np.all((speeds >= 0.005) & (speeds <= 0.02))
+    np.testing.assert_array_equal(info["target_velocities"], 0)
+    np.testing.assert_array_equal(info["target_found"], False)
+    state = state.replace(
+        searchers=state.searchers.replace(
+            pos=jax.numpy.asarray(obs["positions"][0]),
+            heading=jax.numpy.asarray(headings),
+            speed=jax.numpy.asarray(speeds),
+        ),
+        targets=state.targets.replace(
+            pos=jax.numpy.asarray(info["target_positions"][0]),
+            vel=jax.numpy.asarray(info["target_velocities"][0]),
+            found=jax.numpy.asarray(info["target_found"][0]),
+        ),
+    )
+    return state, timestep.replace(
+        observation=official._state_to_observation(state)
+    )
+
+
+def _native_step_reference(task_id: str, official: Any) -> Any:
+    """Condition target motion on checked native velocity, not shared draws."""
+    if task_id == "SearchAndRescue-v0":
+        # Gaussian increments and clipping have independent distribution tests.
+        # The official dynamics still integrates positions and the task still
+        # computes visibility, detection, reward and termination independently.
+        official._target_dynamics.acc_std = 0.0
+    compiled = jax.jit(official.step)
+
+    def step(state: Any, action: Any, info: dict) -> tuple[Any, Any]:
+        if task_id != "SearchAndRescue-v0":
+            return compiled(state, action)
+        velocity = info["target_velocities"][0]
+        assert np.all(np.isfinite(velocity))
+        assert np.all(
+            np.linalg.norm(velocity, axis=-1)
+            <= official._target_dynamics.vel_max + 1e-9
+        )
+        state = state.replace(
+            targets=state.targets.replace(vel=jax.numpy.asarray(velocity))
+        )
+        result, timestep = compiled(state, action)
+        np.testing.assert_allclose(
+            info["target_positions"][0],
+            result.targets.pos,
+            rtol=1e-6,
+            atol=5e-6,
+        )
+        np.testing.assert_array_equal(
+            info["target_found"][0], result.targets.found
+        )
+        return result, timestep
+
+    return step
 
 
 def _envpool_action(action: Any) -> np.ndarray:
@@ -581,6 +653,8 @@ class JumanjiOfficialAlignTest(parameterized.TestCase):
                 envpool_kwargs = _envpool_kwargs_from_official_state(
                     task_id, official_state, official_timestep.observation
                 )
+                if task_id == "SearchAndRescue-v0":
+                    envpool_kwargs = {}
                 if task_id == "Sokoban-v0":
                     envpool_kwargs.update(
                         base_path="/tmp/envpool-missing-boxoban",
@@ -595,10 +669,18 @@ class JumanjiOfficialAlignTest(parameterized.TestCase):
                     render_height=_RENDER_SIZE,
                     **envpool_kwargs,
                 )
-                official_step = jax.jit(official_env.step)
+                official_step = _native_step_reference(task_id, official_env)
                 viewer = _find_viewer(official_env)
                 try:
                     envpool_obs, envpool_info = env.reset()
+                    official_state, official_timestep = _native_reset_reference(
+                        task_id,
+                        official_env,
+                        official_state,
+                        official_timestep,
+                        envpool_obs,
+                        envpool_info,
+                    )
                     expected_obs = _project(
                         _tree_to_dict(official_timestep.observation),
                         _first_env_tree(envpool_obs),
@@ -620,9 +702,6 @@ class JumanjiOfficialAlignTest(parameterized.TestCase):
                             task_id=task_id,
                             official_state=official_state,
                         )
-                        official_state, official_timestep = official_step(
-                            official_state, official_action
-                        )
                         (
                             envpool_obs,
                             envpool_reward,
@@ -630,6 +709,9 @@ class JumanjiOfficialAlignTest(parameterized.TestCase):
                             envpool_truncated,
                             envpool_info,
                         ) = env.step(_envpool_action(official_action))
+                        official_state, official_timestep = official_step(
+                            official_state, official_action, envpool_info
+                        )
                         expected_obs = _project(
                             _tree_to_dict(official_timestep.observation),
                             _first_env_tree(envpool_obs),
@@ -681,6 +763,8 @@ class JumanjiOfficialAlignTest(parameterized.TestCase):
                 envpool_kwargs = _envpool_kwargs_from_official_state(
                     task_id, official_state, official_timestep.observation
                 )
+                if task_id == "SearchAndRescue-v0":
+                    envpool_kwargs = {}
                 if task_id == "Sokoban-v0":
                     envpool_kwargs.update(
                         base_path="/tmp/envpool-missing-boxoban",
@@ -692,9 +776,17 @@ class JumanjiOfficialAlignTest(parameterized.TestCase):
                     seed=seed,
                     **envpool_kwargs,
                 )
-                official_step = jax.jit(official_env.step)
+                official_step = _native_step_reference(task_id, official_env)
                 try:
-                    envpool_obs, _ = env.reset()
+                    envpool_obs, envpool_info = env.reset()
+                    official_state, official_timestep = _native_reset_reference(
+                        task_id,
+                        official_env,
+                        official_state,
+                        official_timestep,
+                        envpool_obs,
+                        envpool_info,
+                    )
                     expected_obs = _project(
                         _tree_to_dict(official_timestep.observation),
                         _first_env_tree(envpool_obs),
@@ -714,9 +806,6 @@ class JumanjiOfficialAlignTest(parameterized.TestCase):
                             official_state=official_state,
                             rng=rng,
                         )
-                        official_state, official_timestep = official_step(
-                            official_state, official_action
-                        )
                         (
                             envpool_obs,
                             envpool_reward,
@@ -724,6 +813,9 @@ class JumanjiOfficialAlignTest(parameterized.TestCase):
                             envpool_truncated,
                             envpool_info,
                         ) = env.step(_envpool_action(official_action))
+                        official_state, official_timestep = official_step(
+                            official_state, official_action, envpool_info
+                        )
                         expected_obs = _project(
                             _tree_to_dict(official_timestep.observation),
                             _first_env_tree(envpool_obs),

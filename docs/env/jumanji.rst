@@ -16,6 +16,12 @@ use small numerical budgets. Inactive EMS coordinates are upstream scratch
 storage and are excluded from comparison while their masks remain checked.
 Search-and-rescue ray distances allow an absolute error of ``5e-5`` after
 400 steps of stochastic motion; visible-event masks remain exact.
+SearchAndRescue uses native Gaussian acceleration. Tests independently check
+its velocity distribution and speed limit, copy actual native reset state and
+target velocities into the oracle, and then compare movement, visibility,
+detection, rewards and termination. Matching the oracle's random stream is
+unnecessary.
+
 
 Rendering runs in C++ and reads each environment's current state for both
 synchronous and asynchronous APIs. BinPack shows normalized box outlines;

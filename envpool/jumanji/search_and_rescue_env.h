@@ -29,10 +29,8 @@
 #include "envpool/core/env.h"
 #include "envpool/jumanji/parse_utils.h"
 #include "envpool/jumanji/render_utils.h"
-#include "envpool/utils/jax_random.h"
 
 namespace jumanji {
-namespace random = envpool::jax_random;
 namespace searchrescue {
 
 constexpr int kNumSearchers = 2;
@@ -99,8 +97,6 @@ using SearchAndRescueEnvSpec = EnvSpec<SearchAndRescueEnvFns>;
 class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
                            public RenderableEnv {
  protected:
-  random::Key reset_key_{};
-  random::Key key_{};
   std::array<float, searchrescue::kNumSearchers> x_{};
   std::array<float, searchrescue::kNumSearchers> y_{};
   std::array<float, searchrescue::kNumSearchers> heading_{};
@@ -122,7 +118,6 @@ class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
 
   SearchAndRescueEnv(const Spec& spec, int env_id)
       : Env<SearchAndRescueEnvSpec>(spec, env_id),
-        reset_key_{0, static_cast<std::uint32_t>(seed_)},
         configured_positions_(
             parse::CsvArray<float, searchrescue::kPositionsSize>(
                 spec.config["search_and_rescue_positions"_])),
@@ -161,8 +156,6 @@ class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
   }
 
   void Reset() override {
-    key_ = random::Split(reset_key_, 0);
-    reset_key_ = random::Split(reset_key_, 0);
     if (use_configured_state_) {
       for (int searcher = 0; searcher < searchrescue::kNumSearchers;
            ++searcher) {
@@ -220,12 +213,12 @@ class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
           y_[searcher] + speed_[searcher] * std::sin(heading_[searcher]));
     }
     const float noise = spec_.config["search_and_rescue_target_acc_std"_];
-    const auto target_key = random::TakeKey(&key_);
+    std::normal_distribution<float> acceleration;
     for (int target = 0; target < searchrescue::kNumTargets; ++target) {
       float& vx = target_velocities_[target * 2];
       float& vy = target_velocities_[target * 2 + 1];
-      vx += noise * random::Normal(target_key, 2 * target);
-      vy += noise * random::Normal(target_key, 2 * target + 1);
+      vx += noise * acceleration(gen_);
+      vy += noise * acceleration(gen_);
       const float norm = std::sqrt(vx * vx + vy * vy);
       if (norm > 0.002f) {
         vx = 0.002f * vx / norm;

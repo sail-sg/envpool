@@ -25,6 +25,72 @@ from envpool.registration import make_gymnasium
 class JumanjiSearchAndRescueTest(absltest.TestCase):
     """Checks native SearchAndRescue transitions."""
 
+    def test_target_motion_distribution(self) -> None:
+        """Check Gaussian acceleration, speed clipping, and wrapped motion."""
+        for deviation in (0.0001, 0.002):
+            with self.subTest(acceleration_std=deviation):
+                env = make_gymnasium(
+                    "SearchAndRescue-v0",
+                    num_envs=64,
+                    num_threads=2,
+                    seed=31,
+                    search_and_rescue_target_acc_std=deviation,
+                )
+                try:
+                    _, before = env.reset()
+                    previous = None
+                    for _ in range(5 if deviation == 0.0001 else 1):
+                        _, _, _, _, after = env.step(
+                            np.zeros((64, 2, 2), np.float32)
+                        )
+                        velocity = after["target_velocities"].reshape(-1, 2)
+                        self.assertLessEqual(
+                            float(np.linalg.norm(velocity, axis=-1).max()),
+                            0.002 + 1e-9,
+                        )
+                        increment = velocity - before[
+                            "target_velocities"
+                        ].reshape(-1, 2)
+                        radius = np.linalg.norm(increment, axis=-1)
+                        self.assertLess(
+                            float(np.abs(increment.mean(axis=0)).max()),
+                            6 * deviation / np.sqrt(len(velocity)),
+                        )
+                        # A 2-D Gaussian has a Rayleigh radial CDF before clipping.
+                        for threshold in np.minimum(
+                            3 * deviation, 0.002
+                        ) * np.array([0.25, 0.5, 0.75]):
+                            expected = 1 - np.exp(
+                                -0.5 * (threshold / deviation) ** 2
+                            )
+                            error = 6 * np.sqrt(
+                                expected * (1 - expected) / len(radius)
+                            )
+                            self.assertLess(
+                                abs(np.mean(radius < threshold) - expected),
+                                error,
+                            )
+                        np.testing.assert_allclose(
+                            after["target_positions"],
+                            (
+                                before["target_positions"]
+                                + after["target_velocities"]
+                            )
+                            % 1,
+                            rtol=0,
+                            atol=1e-7,
+                        )
+                        if previous is not None:
+                            self.assertLess(
+                                abs(float(np.mean(previous * increment)))
+                                / deviation**2,
+                                6 / np.sqrt(increment.size),
+                            )
+                        previous = increment
+                        before = after
+                finally:
+                    env.close()
+
     def test_searcher_finds_target(self) -> None:
         """Checks a searcher finds a target."""
         env = make_gymnasium(
