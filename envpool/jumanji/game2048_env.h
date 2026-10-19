@@ -21,7 +21,6 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <random>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -31,13 +30,14 @@
 #include "envpool/core/env.h"
 #include "envpool/jumanji/parse_utils.h"
 #include "envpool/jumanji/render_utils.h"
+#include "envpool/utils/jax_random.h"
 
 namespace jumanji {
+namespace random = envpool::jax_random;
 namespace game2048 {
 
 constexpr int kBoardSize = 4;
 constexpr int kCellCount = kBoardSize * kBoardSize;
-constexpr int kReplaySteps = 32;
 
 using Board = std::array<int, kCellCount>;
 
@@ -135,7 +135,6 @@ class Game2048EnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict("game2048_initial_board"_.Bind(std::string("")),
-                    "game2048_replay_boards"_.Bind(std::string("")),
                     "game2048_add_random_cell"_.Bind(true));
   }
   template <typename Config>
@@ -156,13 +155,12 @@ using Game2048EnvSpec = EnvSpec<Game2048EnvFns>;
 
 class Game2048Env : public Env<Game2048EnvSpec>, public RenderableEnv {
  protected:
+  random::Key reset_key_{};
   game2048::Board board_{};
   game2048::Board initial_board_{};
-  std::array<int, game2048::kReplaySteps * game2048::kCellCount>
-      replay_boards_{};
   bool use_initial_board_;
-  bool use_replay_boards_;
   bool add_random_cell_;
+  random::Key key_{};
   bool done_{true};
   int step_count_{0};
 
@@ -172,13 +170,10 @@ class Game2048Env : public Env<Game2048EnvSpec>, public RenderableEnv {
 
   Game2048Env(const Spec& spec, int env_id)
       : Env<Game2048EnvSpec>(spec, env_id),
+        reset_key_{0, static_cast<std::uint32_t>(seed_)},
         initial_board_(
             game2048::ParseBoard(spec.config["game2048_initial_board"_])),
-        replay_boards_(
-            parse::CsvArray<int, game2048::kReplaySteps * game2048::kCellCount>(
-                spec.config["game2048_replay_boards"_])),
         use_initial_board_(!spec.config["game2048_initial_board"_].empty()),
-        use_replay_boards_(!spec.config["game2048_replay_boards"_].empty()),
         add_random_cell_(spec.config["game2048_add_random_cell"_]) {}
 
   bool IsDone() override { return done_; }
@@ -216,9 +211,13 @@ class Game2048Env : public Env<Game2048EnvSpec>, public RenderableEnv {
   }
 
   void Reset() override {
+    key_ = reset_key_;
+    reset_key_ = random::Split(reset_key_, 0);
+    const auto board_key = random::Split(key_, 1);
+    key_ = random::Split(key_, 0);
     board_ = use_initial_board_ ? initial_board_ : game2048::Board{};
     if (!use_initial_board_) {
-      AddRandomCell();
+      AddRandomCell(board_key);
     }
     step_count_ = 0;
     done_ = !AnyActionAvailable();
@@ -226,21 +225,18 @@ class Game2048Env : public Env<Game2048EnvSpec>, public RenderableEnv {
   }
 
   void Step(const Action& action) override {
+    const auto draw = random::Split(key_, 0);
+    key_ = random::Split(key_, 1);
     const int action_id = std::clamp(static_cast<int>(action["action"_]), 0, 3);
     float reward = 0.0f;
     if (CanMove(action_id)) {
       reward = game2048::Move(&board_, action_id);
       if (add_random_cell_) {
-        AddRandomCell();
+        AddRandomCell(draw);
       }
     }
     ++step_count_;
-    if (use_replay_boards_ && step_count_ <= game2048::kReplaySteps) {
-      for (int i = 0; i < game2048::kCellCount; ++i) {
-        board_[i] =
-            replay_boards_[(step_count_ - 1) * game2048::kCellCount + i];
-      }
-    }
+
     done_ = !AnyActionAvailable();
     WriteState(reward);
   }
@@ -259,20 +255,17 @@ class Game2048Env : public Env<Game2048EnvSpec>, public RenderableEnv {
     return false;
   }
 
-  void AddRandomCell() {
-    std::vector<int> empty;
+  void AddRandomCell(random::Key key) {
+    std::vector<float> empty(game2048::kCellCount);
     for (int i = 0; i < game2048::kCellCount; ++i) {
-      if (board_[i] == 0) {
-        empty.push_back(i);
-      }
+      empty[i] = board_[i] == 0;
     }
-    if (empty.empty()) {
+    if (std::none_of(empty.begin(), empty.end(),
+                     [](float value) { return value != 0; })) {
       return;
     }
-    std::uniform_int_distribution<int> position_dist(
-        0, static_cast<int>(empty.size()) - 1);
-    std::bernoulli_distribution two_dist(0.1);
-    board_[empty[position_dist(gen_)]] = two_dist(gen_) ? 2 : 1;
+    const int cell = random::Choice(random::Split(key, 0), empty);
+    board_[cell] = 1 + random::Choice(random::Split(key, 1), {0.9f, 0.1f});
   }
 
   void WriteState(float reward) {

@@ -20,15 +20,17 @@ import numpy as np
 from absl.testing import absltest, parameterized
 
 from envpool.craftax.oracle import (
-    classic_constants as cc,
-)
-from envpool.craftax.oracle import (
-    encode,
+    assert_floats,
+    assert_pixels,
+    assert_state,
     flatten,
     jax,
     make_oracle,
     native,
     renderer,
+)
+from envpool.craftax.oracle import (
+    classic_constants as cc,
 )
 from envpool.craftax.oracle import (
     full_constants as fc,
@@ -236,10 +238,8 @@ class CraftaxBehaviorTest(parameterized.TestCase):
         # Exactly one synchronization, before any external actions.
         game.set_state(flatten(state))
         layout = game.get_state()
-        np.testing.assert_array_equal(game.obs(), get_obs(state))
-        np.testing.assert_array_equal(
-            game.pixels(16), np.asarray(render(state))
-        )
+        assert_floats(game.obs(), get_obs(state))
+        assert_pixels(game.pixels(16), render(state))
         key = jax.random.PRNGKey(seed)
         actions = np.random.default_rng(seed).integers(
             17 if classic else 43, size=192
@@ -250,25 +250,14 @@ class CraftaxBehaviorTest(parameterized.TestCase):
             obs, state, reward, done, _ = step(draw, state, int(action), params)
             actual_reward = game.step(np.asarray(draw).tolist(), int(action))
             message = f"seed={seed} step={t} action={action}"
-            expected = encode(state, layout)
-            actual = game.encode_state()
-            if not np.array_equal(actual, expected):
-                fields = game.get_state()
-                for field, value in flatten(state).items():
-                    np.testing.assert_array_equal(
-                        fields[field],
-                        value.reshape(-1),
-                        err_msg=message + " " + field,
-                    )
-            np.testing.assert_array_equal(game.obs(), obs, err_msg=message)
+            assert_state(game.encode_state(), state, layout, message)
+            assert_floats(game.obs(), obs, message)
             np.testing.assert_array_equal(
                 actual_reward, reward, err_msg=message
             )
             self.assertEqual(game.done(), bool(done), message)
             if t % 23 == 0 or bool(done):
-                np.testing.assert_array_equal(
-                    game.pixels(16), np.asarray(render(state)), err_msg=message
-                )
+                assert_pixels(game.pixels(16), render(state), message)
             if bool(done):
                 break
         self.assertTrue(

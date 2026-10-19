@@ -30,8 +30,6 @@ config_setting(
 
 exports_files([
     "mjlab.BUILD",
-    "mkl.BUILD.tpl",
-    "sleef.BUILD",
     "oracle_requirements.txt",
     "warp.BUILD",
     "warp_native.patch",
@@ -181,11 +179,7 @@ filegroup(
         "LICENSE.mujoco-warp",
         "LICENSE.pytorch",
         "NOTICE",
-        "@mjlab_mkl//:licenses",
         "@mjlab_source//:licenses",
         "@mjlab_warp//:licenses",
-    ] + select({
-        "@platforms//cpu:arm64": ["@mjlab_sleef//:LICENSE.txt"],
-        "//conditions:default": [],
-    }),
+    ],
 )

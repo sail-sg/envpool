@@ -60,14 +60,13 @@ class RobotWarehouseEnvFns {
     return MakeDict(
         "robot_warehouse_agents_view"_.Bind(std::string("")),
         "robot_warehouse_action_mask"_.Bind(std::string("")),
-        "robot_warehouse_render_grid"_.Bind(std::string("")),
-        "robot_warehouse_render_agent_x"_.Bind(std::string("")),
-        "robot_warehouse_render_agent_y"_.Bind(std::string("")),
-        "robot_warehouse_render_agent_direction"_.Bind(std::string("")),
-        "robot_warehouse_render_agent_carrying"_.Bind(std::string("")),
-        "robot_warehouse_render_shelf_x"_.Bind(std::string("")),
-        "robot_warehouse_render_shelf_y"_.Bind(std::string("")),
-        "robot_warehouse_render_shelf_requested"_.Bind(std::string("")));
+        "robot_warehouse_initial_agent_x"_.Bind(std::string("")),
+        "robot_warehouse_initial_agent_y"_.Bind(std::string("")),
+        "robot_warehouse_initial_agent_direction"_.Bind(std::string("")),
+        "robot_warehouse_initial_agent_carrying"_.Bind(std::string("")),
+        "robot_warehouse_initial_shelf_x"_.Bind(std::string("")),
+        "robot_warehouse_initial_shelf_y"_.Bind(std::string("")),
+        "robot_warehouse_initial_shelf_requested"_.Bind(std::string("")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -161,13 +160,13 @@ class RobotWarehouseEnv : public Env<RobotWarehouseEnvSpec>,
         }
       }
     }
-    if (!conf["robot_warehouse_render_shelf_x"_].empty()) {
+    if (!conf["robot_warehouse_initial_shelf_x"_].empty()) {
       shelf_row_ = parse::CsvArray<int, robotwarehouse::kNumShelves>(
-          conf["robot_warehouse_render_shelf_x"_]);
+          conf["robot_warehouse_initial_shelf_x"_]);
       shelf_col_ = parse::CsvArray<int, robotwarehouse::kNumShelves>(
-          conf["robot_warehouse_render_shelf_y"_]);
+          conf["robot_warehouse_initial_shelf_y"_]);
       requested_ = parse::CsvArray<bool, robotwarehouse::kNumShelves>(
-          conf["robot_warehouse_render_shelf_requested"_]);
+          conf["robot_warehouse_initial_shelf_requested"_]);
     } else {
       std::array<int, robotwarehouse::kNumShelves> ids{};
       std::iota(ids.begin(), ids.end(), 0);
@@ -176,15 +175,15 @@ class RobotWarehouseEnv : public Env<RobotWarehouseEnvSpec>,
         requested_[ids[i]] = true;
       }
     }
-    if (!conf["robot_warehouse_render_agent_x"_].empty()) {
+    if (!conf["robot_warehouse_initial_agent_x"_].empty()) {
       row_ = parse::CsvArray<int, robotwarehouse::kNumAgents>(
-          conf["robot_warehouse_render_agent_x"_]);
+          conf["robot_warehouse_initial_agent_x"_]);
       col_ = parse::CsvArray<int, robotwarehouse::kNumAgents>(
-          conf["robot_warehouse_render_agent_y"_]);
+          conf["robot_warehouse_initial_agent_y"_]);
       direction_ = parse::CsvArray<int, robotwarehouse::kNumAgents>(
-          conf["robot_warehouse_render_agent_direction"_]);
+          conf["robot_warehouse_initial_agent_direction"_]);
       carrying_ = parse::CsvArray<bool, robotwarehouse::kNumAgents>(
-          conf["robot_warehouse_render_agent_carrying"_]);
+          conf["robot_warehouse_initial_agent_carrying"_]);
     } else {
       std::array<int, robotwarehouse::kRows * robotwarehouse::kCols> cells{};
       std::iota(cells.begin(), cells.end(), 0);

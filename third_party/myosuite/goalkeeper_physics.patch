@@ -1,0 +1,23 @@
+--- a/myosuite/envs/myo/myochallenge/soccer_v0.py
++++ b/myosuite/envs/myo/myochallenge/soccer_v0.py
+@@ -500,4 +500,6 @@
+     def step(self, *args, **kwargs):
+         self.goalkeeper.update_goalkeeper_state()
++        self.robot.mj_data.mocap_pos[:] = self.mj_data.mocap_pos
++        self.robot.mj_data.mocap_quat[:] = self.mj_data.mocap_quat
+         results = super().step(*args, **kwargs)
+         return results
+@@ -510,8 +512,12 @@
+         )
+         obs = super(WalkEnvV0, self).reset(reset_qpos=qpos, reset_qvel=qvel, **kwargs)
+         self.goalkeeper.reset_goalkeeper(rng=self.np_random)
++        self.robot.mj_data.mocap_pos[:] = self.mj_data.mocap_pos
++        self.robot.mj_data.mocap_quat[:] = self.mj_data.mocap_quat
++        mujoco.mj_forward(self.mj_model, self.robot.mj_data)
+         mujoco.mj_forward(self.mj_model, self.mj_data)
+-        return obs
++        updated_obs = self.get_obs()
++        return (updated_obs, obs[1]) if isinstance(obs, tuple) else updated_obs
+
+     def _randomize_position_orientation(self, qpos, qvel):
+         qpos[:2] = self.np_random.uniform(-5, 5, size=(2,))

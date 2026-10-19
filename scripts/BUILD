@@ -27,6 +27,7 @@ py_binary(
         "//envpool/craftax:oracle",
         "//envpool/jumanji",
         "//envpool/jumanji:jumanji_registration",
+        "//envpool/jumanji:oracle",
         "//envpool/mujoco:metaworld",
         "//envpool/mujoco:metaworld_registration",
         "//envpool/mujoco:playground",

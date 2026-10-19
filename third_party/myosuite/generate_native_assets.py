@@ -269,10 +269,16 @@ def _state_report(env: Any) -> dict[str, Any]:
 
 
 def _reset_parameters(env: Any) -> dict[str, Any]:
-    """Export sampling parameters, not sampled reset states, from the oracle."""
+    """Export fixed task parameters, including reset sampling distributions."""
     parameters = {
         name: _jsonable(getattr(env, name))
         for name in (
+            "pen_length",
+            "tar_length",
+            "init_paddle_quat",
+            "_lift_z",
+            "win_distance",
+            "maxTime",
             "target_jnt_range",
             "joint_random_range",
             "key_init_range",
@@ -306,6 +312,8 @@ def _reset_parameters(env: Any) -> dict[str, Any]:
             "rnd_joint_noise",
             "real_width",
             "start_pos",
+            "end_pos",
+            "max_time",
         )
         if hasattr(env, name) and getattr(env, name) is not None
     }
@@ -333,18 +341,53 @@ def _reset_parameters(env: Any) -> dict[str, Any]:
                 "view_distance",
             ),
         ),
-        ("opponent", ("min_spawn_distance", "opponent_probabilities")),
+        (
+            "opponent",
+            (
+                "min_spawn_distance",
+                "opponent_probabilities",
+                "chase_vel_range",
+                "random_vel_range",
+                "repeller_vel_range",
+                "dt",
+            ),
+        ),
+        ("goalkeeper", ("goalkeeper_probabilities", "random_vel_range", "dt")),
     ):
         child = getattr(env, child_name, None)
         if child is not None:
             parameters[child_name] = {
-                name: _jsonable(getattr(child, name)) for name in names
+                name: _jsonable(getattr(child, name))
+                for name in names
+                if hasattr(child, name)
             }
     if getattr(env, "heightfield", None) is not None:
         heightfields_file = Path(inspect.getfile(type(env.heightfield)))
         parameters["heightfield"]["relief"] = _jsonable(
             np.load(heightfields_file.parent / "myo/assets/myo_relief.npy")
         )
+    if hasattr(env, "target_rot"):
+        parameters["reference_rotation"] = _jsonable(
+            env.init_qpos[3:7] if env.target_rot is None else env.target_rot
+        )
+    if hasattr(env, "biological_act"):
+        parameters["muscle_actuator_ids"] = [
+            env.mj_model.actuator(name).id for name in env.biological_act
+        ]
+    pain_joints = getattr(env, "pain_jnt", getattr(env, "JNT_OVEREXT", None))
+    if pain_joints is not None:
+        parameters["pain_dofs"] = [
+            int(env.mj_model.joint(name).dofadr[0]) for name in pain_joints
+        ]
+    if hasattr(env, "GOAL_X_POS"):
+        parameters["goal_bounds"] = [
+            [env.GOAL_X_POS, y, z]
+            for z in (env.GOAL_Z_MIN, env.GOAL_Z_MAX)
+            for y in (env.GOAL_Y_MIN, env.GOAL_Y_MAX)
+        ]
+    if "tabletennis" in type(env).__module__:
+        parameters["body_qpos_adrs"] = _jsonable(env.id_info.myo_joint_range)
+        parameters["body_qvel_adrs"] = _jsonable(env.id_info.myo_dof_range)
     for attribute, prefix in (
         ("myo_joints", "myo"),
         ("biological_jnt", "biological"),

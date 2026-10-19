@@ -82,6 +82,10 @@ class JumanjiJobShopTest(absltest.TestCase):
             assert frame is not None
             self.assertEqual(frame.shape, (1, 256, 256, 3))
             self.assertGreater(int(frame.max() - frame.min()), 0)
+            # Machine 1 has finished, but its scheduled job remains visible.
+            # A renderer of only remaining work loses this part of the chart.
+            machine_row = frame[0, 28:48, 8:240].astype(np.int16)
+            self.assertTrue(np.any(np.ptp(machine_row, axis=-1) > 30))
         finally:
             env.close()
 

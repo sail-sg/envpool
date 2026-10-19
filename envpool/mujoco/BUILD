@@ -363,6 +363,7 @@ cc_library(
         ":mujoco_render",
         ":robotics_env",
         "//envpool/core:async_envpool",
+        "//envpool/utils:colored_noise",
         "//third_party/myosuite:myosuite_tasks",
         "@mujoco//:mujoco_lib",
         "@mujoco//:mujoco_obj_decoder_plugin_lib",
@@ -374,6 +375,16 @@ cc_library(
     name = "myosuite_clang_tidy",
     srcs = ["myosuite/myosuite_clang_tidy.cc"],
     deps = [":myosuite_env"],
+)
+
+cc_test(
+    name = "myosuite_task_test",
+    size = "small",
+    srcs = ["myosuite/myosuite_task_test.cc"],
+    deps = [
+        ":myosuite_env",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_library(
@@ -449,6 +460,7 @@ py_binary_312(
         ":mujoco_oracle",
         ":mujoco_render_oracle",
         ":myosuite",
+        ":myosuite_oracle_utils",
         ":myosuite_registration",
         oracle_requirement("click"),
         oracle_requirement("dm-control"),
@@ -478,6 +490,7 @@ py_library(
     name = "myosuite",
     srcs = ["myosuite/__init__.py"],
     data = [
+        "myosuite/POCKETFFT_LICENSE",
         ":gen_myosuite_assets",
         ":myosuite_envpool",
     ],
@@ -644,6 +657,7 @@ py_test(
     size = "enormous",
     srcs = ["playground/playground_oracle_align_test.py"],
     data = [
+        "@mujoco//:mujoco_shared_lib",
         "@mujoco_menagerie_playground//:aloha_assets",
         "@mujoco_menagerie_playground//:apptronik_apollo_assets",
         "@mujoco_menagerie_playground//:berkeley_humanoid_assets",
@@ -666,6 +680,7 @@ py_test(
     shard_count = 4,
     deps = [
         ":mujoco_oracle",
+        ":mujoco_render_oracle",
         ":playground",
         ":playground_registration",
         "//envpool/python:glfw_context",
@@ -693,6 +708,14 @@ py_test(
     ],
 )
 
+py_library(
+    name = "myosuite_oracle_utils",
+    testonly = True,
+    srcs = ["myosuite/oracle.py"],
+    imports = ["../.."],
+    deps = [requirement("numpy")],
+)
+
 py_test(
     name = "myosuite_test",
     size = "enormous",
@@ -706,6 +729,7 @@ py_test(
     shard_count = 8,
     deps = [
         ":myosuite",
+        ":myosuite_oracle_utils",
         ":myosuite_registration",
         ":myosuite_task_metadata",
         "//envpool/python:glfw_context",
@@ -724,6 +748,7 @@ py_test(
     shard_count = 8,
     deps = [
         ":myosuite",
+        ":myosuite_oracle_utils",
         ":myosuite_registration",
         ":myosuite_task_metadata",
         "//envpool/python:glfw_context",
@@ -746,6 +771,7 @@ py_test(
     shard_count = 8,
     deps = [
         ":myosuite",
+        ":myosuite_oracle_utils",
         ":myosuite_registration",
         ":myosuite_task_metadata",
         requirement("absl-py"),

@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
 import importlib.util
 import os
 import shutil
@@ -183,6 +184,29 @@ def _load_mujoco() -> Any:
 
         mujoco = mujoco_module
     return mujoco
+
+
+def _spec_to_xml(spec: Any) -> str:
+    # MuJoCo 3.11 defaults to six significant digits here. That changes joint
+    # limits and tendon rest lengths in edited models, amplifying into visibly
+    # different contact trajectories. Preserve double precision in the asset;
+    # this pinned, build-only hook does not change simulation arithmetic.
+    package = Path(_load_mujoco().__file__).parent
+    library = ctypes.CDLL(
+        str(next(package.glob("libmujoco.*"), package / "mujoco.dll"))
+    )
+    get_precision = library._mjPRIVATE__get_xml_precision
+    get_precision.argtypes = []
+    get_precision.restype = ctypes.c_int
+    set_precision = library._mjPRIVATE__set_xml_precision
+    set_precision.argtypes = [ctypes.c_int]
+    set_precision.restype = None
+    previous = get_precision()
+    set_precision(17)
+    try:
+        return str(spec.to_xml())
+    finally:
+        set_precision(previous)
 
 
 def _read_manifest(path: Path) -> list[Path]:
@@ -413,7 +437,7 @@ def _generate_arm_reach_xml(out: Path) -> None:
         spec = mujoco.MjSpec.from_file(str(spec_arm / "myoarm.xml"))
         _apply_arm_reach_edit(spec)
         spec.compile()
-        (source_arm / "myoarm_reach.xml").write_text(spec.to_xml())
+        (source_arm / "myoarm_reach.xml").write_text(_spec_to_xml(spec))
 
 
 def _recursive_immobilize(
@@ -556,7 +580,7 @@ def _generate_tabletennis_xml(out: Path) -> None:
     source = asset_arm / "myoarm_tabletennis.xml"
     spec = mujoco.MjSpec.from_file(str(source))
     _preprocess_tabletennis_spec(spec)
-    xml_text = _normalize_tabletennis_xml(spec.to_xml())
+    xml_text = _normalize_tabletennis_xml(_spec_to_xml(spec))
     (asset_arm / "myoarm_tabletennis_native.xml").write_text(xml_text)
 
 

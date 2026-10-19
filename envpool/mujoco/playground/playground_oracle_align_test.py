@@ -15,19 +15,21 @@
 
 from __future__ import annotations
 
-import ctypes
 import os
 import platform
 import subprocess
 import sys
+import unittest
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 from jax import config as jax_config
 
 jax_config.update("jax_enable_x64", True)
 
+from envpool.mujoco.oracle import configure_mujoco_package_shared_lib
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
 preload_windows_gl_dlls(strict=True)
@@ -68,6 +70,7 @@ def _configure_linux_mujoco_gl() -> None:
 
 
 _configure_linux_mujoco_gl()
+configure_mujoco_package_shared_lib(include_linux=True)
 
 import jax
 import jax.numpy as jnp
@@ -76,7 +79,6 @@ import numpy as np
 from absl.testing import absltest
 from etils import epath
 from mujoco import mjx
-from mujoco.mjx._src import math as mjx_math
 from mujoco_playground._src import locomotion as oracle_locomotion
 from mujoco_playground._src import manipulation as oracle_manipulation
 from mujoco_playground._src import mjx_env as oracle_mjx_env
@@ -140,150 +142,10 @@ from mujoco_playground._src.manipulation.leap_hand import (
 
 import envpool.mujoco.playground.registration as playground_registration
 from envpool.mujoco.oracle import runfiles_repository
+from envpool.mujoco.render_oracle import configure_macos_mujoco_renderer
 from envpool.registration import make_gymnasium
 
-
-def _configure_macos_mujoco_renderer() -> None:
-    if platform.system() != "Darwin":
-        return
-
-    os.environ["MUJOCO_GL"] = "cgl"
-    from mujoco import gl_context as mujoco_gl_context
-
-    class _CglContext:
-        def __init__(self, width: int, height: int):
-            del width, height
-            from mujoco.cgl import cgl
-
-            self._pixel_format: Any = None
-            self._context: Any = None
-            self._locked = False
-            attrib = cgl.CGLPixelFormatAttribute
-            profile = cgl.CGLOpenGLProfile
-            preferred_attribs = (
-                attrib.CGLPFAOpenGLProfile,
-                profile.CGLOGLPVersion_Legacy,
-                attrib.CGLPFAColorSize,
-                24,
-                attrib.CGLPFAAlphaSize,
-                8,
-                attrib.CGLPFADepthSize,
-                24,
-                attrib.CGLPFAStencilSize,
-                8,
-                attrib.CGLPFAMultisample,
-                attrib.CGLPFASampleBuffers,
-                1,
-                attrib.CGLPFASample,
-                4,
-                attrib.CGLPFAAccelerated,
-                0,  # terminator
-            )
-            offline_attribs = (
-                attrib.CGLPFAOpenGLProfile,
-                profile.CGLOGLPVersion_Legacy,
-                attrib.CGLPFAColorSize,
-                24,
-                attrib.CGLPFAAlphaSize,
-                8,
-                attrib.CGLPFADepthSize,
-                24,
-                attrib.CGLPFAStencilSize,
-                8,
-                attrib.CGLPFAAllowOfflineRenderers,
-                0,  # value
-                0,  # terminator
-            )
-            if not self._choose_pixel_format(
-                cgl, preferred_attribs
-            ) and not self._choose_pixel_format(cgl, offline_attribs):
-                raise RuntimeError("failed to create CGL pixel format")
-
-            self._context = cgl.CGLContextObj()
-            cgl.CGLCreateContext(
-                self._pixel_format,
-                0,
-                ctypes.byref(self._context),
-            )
-            if not self._context:
-                cgl.CGLReleasePixelFormat(self._pixel_format)
-                self._pixel_format = None
-                raise RuntimeError("failed to create CGL context")
-
-        def _choose_pixel_format(
-            self, cgl: Any, attrib_values: tuple[int, ...]
-        ) -> bool:
-            attribs = (ctypes.c_int * len(attrib_values))(*attrib_values)
-            pixel_format = cgl.CGLPixelFormatObj()
-            num_pixel_formats = cgl.GLint()
-            try:
-                cgl.CGLChoosePixelFormat(
-                    attribs,
-                    ctypes.byref(pixel_format),
-                    ctypes.byref(num_pixel_formats),
-                )
-            except cgl.CGLError:
-                return False
-            if not pixel_format or num_pixel_formats.value == 0:
-                if pixel_format:
-                    cgl.CGLReleasePixelFormat(pixel_format)
-                return False
-            self._pixel_format = pixel_format
-            return True
-
-        def make_current(self) -> None:
-            from mujoco.cgl import cgl
-
-            cgl.CGLSetCurrentContext(self._context)
-            # Keep the lock lifecycle idempotent for repeated Renderer.render()
-            # calls, while matching EnvPool's native CGL context setup.
-            if not self._locked:
-                cgl.CGLLockContext(self._context)
-                self._locked = True
-
-        def free(self) -> None:
-            from mujoco.cgl import cgl
-
-            if self._context:
-                if self._locked:
-                    cgl.CGLUnlockContext(self._context)
-                    self._locked = False
-                cgl.CGLSetCurrentContext(None)
-                cgl.CGLReleaseContext(self._context)
-                self._context = None
-            if self._pixel_format:
-                cgl.CGLReleasePixelFormat(self._pixel_format)
-                self._pixel_format = None
-
-        def __del__(self) -> None:
-            try:
-                self.free()
-            except Exception:  # pylint: disable=broad-exception-caught
-                pass
-
-    mujoco_gl_context.GLContext = _CglContext
-    mujoco.GLContext = _CglContext
-    try:
-        import mujoco.cgl as mujoco_cgl
-
-        mujoco_cgl.GLContext = _CglContext
-    except (AttributeError, ImportError):
-        pass
-    try:
-        from mujoco.rendering.classic import gl_context as classic_gl_context
-
-        classic_gl_context.GLContext = _CglContext
-    except (AttributeError, ImportError):
-        pass
-    try:
-        from mujoco.rendering.classic import renderer as classic_renderer
-
-        classic_renderer.gl_context.GLContext = _CglContext
-    except (AttributeError, ImportError):
-        pass
-
-
-_configure_macos_mujoco_renderer()
+configure_macos_mujoco_renderer()
 
 _ALL_TASK_IDS = tuple(
     f"{name}-v1" for name in playground_registration.PLAYGROUND_ENVS
@@ -305,7 +167,7 @@ _FILTERED_TASK_IDS = tuple(
 # or when solver iterations are raised. The alignment oracle therefore uses the
 # pinned upstream XML/assets and official obs/reward formulas while stepping the
 # same MuJoCo C backend that EnvPool embeds.
-_ROLLOUT_STEPS = 3
+_ROLLOUT_STEPS = 128
 _RENDER_WIDTH = 64
 _RENDER_HEIGHT = 48
 _CONFIG = {
@@ -690,18 +552,12 @@ _HANDSTAND_REWARD_INFO_KEYS = (
     "reward_energy",
     "reward_dof_acc",
 )
-_STRICT_OBS_ATOL = 5e-11
-_STRICT_OBS_RTOL = 5e-11
 _STRICT_MJX_DIAGNOSTIC_ATOL = 1e-10
-_STRICT_MUJOCO_STATE_ATOL = 1e-12
-_LEAP_ARM64_QVEL_ATOL = 5e-12
-
-
-def _is_arm64() -> bool:
-    return platform.machine().lower() in ("aarch64", "arm64")
 
 
 def _bazel_shard() -> tuple[int, int]:
+    if status_file := os.environ.get("TEST_SHARD_STATUS_FILE"):
+        Path(status_file).touch()
     total = int(os.environ.get("TEST_TOTAL_SHARDS", "1"))
     index = int(os.environ.get("TEST_SHARD_INDEX", "0"))
     if total < 1 or not 0 <= index < total:
@@ -1374,6 +1230,9 @@ def _sync_mjx_data_from_mujoco(
     state_data: mjx.Data, data: mujoco.MjData, model: mujoco.MjModel
 ) -> mjx.Data:
     return state_data.replace(
+        time=jnp.asarray(data.time),
+        act=jnp.asarray(data.act),
+        qfrc_applied=jnp.asarray(data.qfrc_applied),
         qpos=jnp.asarray(data.qpos),
         qvel=jnp.asarray(data.qvel),
         qacc=jnp.asarray(data.qacc),
@@ -1465,2009 +1324,39 @@ def _h1_contact_by_adr(oracle: Any, data: mjx.Data) -> jax.Array:
     return jnp.hstack([jnp.any(left), jnp.any(right)])
 
 
-def _h1_contact_by_sensor_id(oracle: Any, data: mjx.Data) -> jax.Array:
-    # Upstream H1 reset uses sensor_adr, but step indexes sensordata directly
-    # by sensor id. Mirror that behavior exactly for oracle alignment.
-    left = jnp.array([
-        data.sensordata[sensor_id] > 0
-        for sensor_id in oracle._left_foot_floor_found_sensor
-    ])
-    right = jnp.array([
-        data.sensordata[sensor_id] > 0
-        for sensor_id in oracle._right_foot_floor_found_sensor
-    ])
-    return jnp.hstack([jnp.any(left), jnp.any(right)])
-
-
-def _step_mujoco_berkeley_oracle(
-    oracle: oracle_berkeley.Joystick,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    info["rng"], push1_rng, push2_rng = jax.random.split(info["rng"], 3)
-    push_theta = jax.random.uniform(push1_rng, maxval=2 * jnp.pi)
-    push_magnitude = jax.random.uniform(
-        push2_rng,
-        minval=oracle._config.push_config.magnitude_range[0],  # pylint: disable=protected-access
-        maxval=oracle._config.push_config.magnitude_range[1],  # pylint: disable=protected-access
-    )
-    push = jnp.array([jnp.cos(push_theta), jnp.sin(push_theta)])
-    push *= jnp.mod(info["push_step"] + 1, info["push_interval_steps"]) == 0
-    push *= oracle._config.push_config.enable  # pylint: disable=protected-access
-    data.qvel[:2] += np.asarray(push) * float(push_magnitude)
-
-    motor_targets = (
-        np.asarray(oracle._default_pose)  # pylint: disable=protected-access
-        + action * oracle._config.action_scale  # pylint: disable=protected-access
-    )
-    data.ctrl[:] = motor_targets
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-    contact = _berkeley_contact(oracle, mjx_data)
-    contact_filt = contact | info["last_contact"]
-    first_contact = (info["feet_air_time"] > 0.0) * contact_filt
-    info["feet_air_time"] += oracle.dt
-    foot_pos = mjx_data.site_xpos[oracle._feet_site_id]  # pylint: disable=protected-access
-    info["swing_peak"] = jnp.maximum(info["swing_peak"], foot_pos[..., -1])
-
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info, contact
-    )
-    done = oracle._get_termination(  # pylint: disable=protected-access
-        mjx_data
-    )
-    rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data,
-        jnp.asarray(action),
-        info,
-        metrics,
-        done,
-        first_contact,
-        contact,
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in rewards.items()
-    }
-    reward = jnp.clip(sum(rewards.values()) * oracle.dt, 0.0, 10000.0)
-
-    info["push"] = push
-    info["step"] += 1
-    info["push_step"] += 1
-    phase_tp1 = info["phase"] + info["phase_dt"]
-    info["phase"] = jnp.fmod(phase_tp1 + jnp.pi, 2 * jnp.pi) - jnp.pi
-    info["last_last_act"] = info["last_act"]
-    info["last_act"] = jnp.asarray(action)
-    info["rng"], cmd_rng = jax.random.split(info["rng"])
-    info["command"] = jnp.where(
-        info["step"] > 500,
-        oracle.sample_command(cmd_rng),
-        info["command"],
-    )
-    info["step"] = jnp.where(done | (info["step"] > 500), 0, info["step"])
-    info["feet_air_time"] *= ~contact
-    info["last_contact"] = contact
-    info["swing_peak"] *= ~contact
-    for key, value in rewards.items():
-        metrics[f"reward/{key}"] = value
-    metrics["swing_peak"] = jnp.mean(info["swing_peak"])
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(reward.dtype),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_mujoco_g1_oracle(
-    oracle: oracle_g1.Joystick,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    info["rng"], push1_rng, push2_rng = jax.random.split(info["rng"], 3)
-    push_theta = jax.random.uniform(push1_rng, maxval=2 * jnp.pi)
-    push_magnitude = jax.random.uniform(
-        push2_rng,
-        minval=oracle._config.push_config.magnitude_range[0],  # pylint: disable=protected-access
-        maxval=oracle._config.push_config.magnitude_range[1],  # pylint: disable=protected-access
-    )
-    push = jnp.array([jnp.cos(push_theta), jnp.sin(push_theta)])
-    push *= jnp.mod(info["push_step"] + 1, info["push_interval_steps"]) == 0
-    push *= oracle._config.push_config.enable  # pylint: disable=protected-access
-    data.qvel[:2] += np.asarray(push) * float(push_magnitude)
-
-    motor_targets = (
-        np.asarray(oracle._default_pose)  # pylint: disable=protected-access
-        + action * oracle._config.action_scale  # pylint: disable=protected-access
-    )
-    data.ctrl[:] = motor_targets
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-    contact = _g1_contact(oracle, mjx_data)
-    contact_filt = contact | info["last_contact"]
-    first_contact = (info["feet_air_time"] > 0.0) * contact_filt
-    info["feet_air_time"] += oracle.dt
-    foot_pos = mjx_data.site_xpos[oracle._feet_site_id]  # pylint: disable=protected-access
-    info["swing_peak"] = jnp.maximum(info["swing_peak"], foot_pos[..., -1])
-
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info, contact
-    )
-    done = oracle._get_termination(  # pylint: disable=protected-access
-        mjx_data
-    )
-    rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data,
-        jnp.asarray(action),
-        info,
-        metrics,
-        done,
-        first_contact,
-        contact,
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in rewards.items()
-    }
-    reward = sum(rewards.values()) * oracle.dt
-
-    info["push"] = push
-    info["step"] += 1
-    info["push_step"] += 1
-    phase_tp1 = info["phase"] + info["phase_dt"]
-    info["phase"] = jnp.fmod(phase_tp1 + jnp.pi, 2 * jnp.pi) - jnp.pi
-    info["last_last_act"] = info["last_act"]
-    info["last_act"] = jnp.asarray(action)
-    info["rng"], cmd_rng = jax.random.split(info["rng"])
-    info["command"] = jnp.where(
-        info["step"] > 500,
-        oracle.sample_command(cmd_rng),
-        info["command"],
-    )
-    info["step"] = jnp.where(done | (info["step"] > 500), 0, info["step"])
-    info["feet_air_time"] *= ~contact
-    info["last_contact"] = contact
-    info["swing_peak"] *= ~contact
-    for key, value in rewards.items():
-        metrics[f"reward/{key}"] = value
-    metrics["swing_peak"] = jnp.mean(info["swing_peak"])
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(reward.dtype),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_mujoco_t1_oracle(
-    oracle: oracle_t1.Joystick,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    info["rng"], push1_rng, push2_rng = jax.random.split(info["rng"], 3)
-    push_theta = jax.random.uniform(push1_rng, maxval=2 * jnp.pi)
-    push_magnitude = jax.random.uniform(
-        push2_rng,
-        minval=oracle._config.push_config.magnitude_range[0],  # pylint: disable=protected-access
-        maxval=oracle._config.push_config.magnitude_range[1],  # pylint: disable=protected-access
-    )
-    push = jnp.array([jnp.cos(push_theta), jnp.sin(push_theta)])
-    push *= jnp.mod(info["push_step"] + 1, info["push_interval_steps"]) == 0
-    push *= oracle._config.push_config.enable  # pylint: disable=protected-access
-    data.qvel[:2] += np.asarray(push) * float(push_magnitude)
-
-    motor_targets = (
-        np.asarray(oracle._default_pose)  # pylint: disable=protected-access
-        + action * oracle._config.action_scale  # pylint: disable=protected-access
-    )
-    data.ctrl[:] = motor_targets
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-    info["motor_targets"] = jnp.asarray(motor_targets)
-    info["filtered_linvel"] = oracle.get_local_linvel(mjx_data)
-    info["filtered_angvel"] = oracle.get_gyro(mjx_data)
-    contact = _t1_contact(oracle, mjx_data)
-    contact_filt = contact | info["last_contact"]
-    first_contact = (info["feet_air_time"] > 0.0) * contact_filt
-    info["feet_air_time"] += oracle.dt
-    foot_pos = mjx_data.site_xpos[oracle._feet_site_id]  # pylint: disable=protected-access
-    info["swing_peak"] = jnp.maximum(info["swing_peak"], foot_pos[..., -1])
-
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info, contact
-    )
-    done = oracle._get_termination(  # pylint: disable=protected-access
-        mjx_data
-    )
-    rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data,
-        jnp.asarray(action),
-        info,
-        metrics,
-        done,
-        first_contact,
-        contact,
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in rewards.items()
-    }
-    reward = jnp.clip(sum(rewards.values()) * oracle.dt, 0.0, 10000.0)
-
-    info["push"] = push
-    info["step"] += 1
-    info["push_step"] += 1
-    phase_tp1 = info["phase"] + info["phase_dt"]
-    info["phase"] = jnp.fmod(phase_tp1 + jnp.pi, 2 * jnp.pi) - jnp.pi
-    info["phase"] = jnp.where(
-        jnp.linalg.norm(info["command"]) > 0.01,
-        info["phase"],
-        jnp.ones(2) * jnp.pi,
-    )
-    info["last_last_act"] = info["last_act"]
-    info["last_act"] = jnp.asarray(action)
-    info["rng"], cmd_rng = jax.random.split(info["rng"])
-    info["command"] = jnp.where(
-        info["step"] > 500,
-        oracle.sample_command(cmd_rng),
-        info["command"],
-    )
-    info["step"] = jnp.where(done | (info["step"] > 500), 0, info["step"])
-    info["feet_air_time"] *= ~contact
-    info["last_contact"] = contact
-    info["swing_peak"] *= ~contact
-    for key, value in rewards.items():
-        metrics[f"reward/{key}"] = value
-    metrics["swing_peak"] = jnp.mean(info["swing_peak"])
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(reward.dtype),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_berkeley_oracle_from_envpool_info(
-    oracle: oracle_berkeley.Joystick,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    info_after_step: dict[str, Any],
-) -> oracle_mjx_env.State:
-    """Apply official Berkeley formulas to EnvPool's native MuJoCo state.
-
-    Berkeley rough terrain is contact-sensitive enough that the pip MuJoCo
-    wheel and EnvPool's linked MuJoCo source build diverge after a single hfield
-    solver step. The formulas are still official Playground code; only the
-    physics state comes from EnvPool's native runtime.
-    """
-    mujoco_data = _make_mujoco_data_from_info(oracle, info_after_step)
-    mjx_data = _sync_mjx_data_from_mujoco(
-        state.data, mujoco_data, oracle.mj_model
-    )
-    if "site_xpos" in info_after_step and "site_xmat" in info_after_step:
-        mjx_data = mjx_data.replace(
-            site_xpos=jnp.asarray(
-                info_after_step["site_xpos"][
-                    0, : oracle.mj_model.nsite * 3
-                ].reshape(oracle.mj_model.nsite, 3)
-            ),
-            site_xmat=jnp.asarray(
-                info_after_step["site_xmat"][
-                    0, : oracle.mj_model.nsite * 9
-                ].reshape(oracle.mj_model.nsite, 3, 3)
-            ),
-        )
-    if "actuator_force" in info_after_step:
-        mjx_data = mjx_data.replace(
-            actuator_force=jnp.asarray(info_after_step["actuator_force"][0])
-        )
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    contact = _berkeley_contact(oracle, mjx_data)
-    contact_filt = contact | info["last_contact"]
-    first_contact = (info["feet_air_time"] > 0.0) * contact_filt
-    info["feet_air_time"] += oracle.dt
-    foot_pos = mjx_data.site_xpos[oracle._feet_site_id]  # pylint: disable=protected-access
-    info["swing_peak"] = jnp.maximum(info["swing_peak"], foot_pos[..., -1])
-
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info, contact
-    )
-    done = oracle._get_termination(  # pylint: disable=protected-access
-        mjx_data
-    )
-    rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data,
-        jnp.asarray(action),
-        info,
-        metrics,
-        done,
-        first_contact,
-        contact,
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in rewards.items()
-    }
-    reward = jnp.clip(sum(rewards.values()) * oracle.dt, 0.0, 10000.0)
-
-    info["push"] = jnp.asarray(info_after_step["push"][0])
-    info["step"] += 1
-    info["push_step"] += 1
-    phase_tp1 = info["phase"] + info["phase_dt"]
-    info["phase"] = jnp.fmod(phase_tp1 + jnp.pi, 2 * jnp.pi) - jnp.pi
-    info["last_last_act"] = info["last_act"]
-    info["last_act"] = jnp.asarray(action)
-    info["rng"], cmd_rng = jax.random.split(info["rng"])
-    info["command"] = jnp.where(
-        info["step"] > 500,
-        oracle.sample_command(cmd_rng),
-        info["command"],
-    )
-    info["step"] = jnp.where(done | (info["step"] > 500), 0, info["step"])
-    info["feet_air_time"] *= ~contact
-    info["last_contact"] = contact
-    info["swing_peak"] *= ~contact
-    for key, value in rewards.items():
-        metrics[f"reward/{key}"] = value
-    metrics["swing_peak"] = jnp.mean(info["swing_peak"])
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(reward.dtype),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_g1_oracle_from_envpool_info(
-    oracle: oracle_g1.Joystick,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    info_after_step: dict[str, Any],
-) -> oracle_mjx_env.State:
-    """Apply official G1 formulas to EnvPool's native MuJoCo state."""
-    mujoco_data = _make_mujoco_data_from_info(oracle, info_after_step)
-    mjx_data = _sync_mjx_data_from_mujoco(
-        state.data, mujoco_data, oracle.mj_model
-    )
-    if "site_xpos" in info_after_step and "site_xmat" in info_after_step:
-        mjx_data = mjx_data.replace(
-            site_xpos=jnp.asarray(
-                info_after_step["site_xpos"][
-                    0, : oracle.mj_model.nsite * 3
-                ].reshape(oracle.mj_model.nsite, 3)
-            ),
-            site_xmat=jnp.asarray(
-                info_after_step["site_xmat"][
-                    0, : oracle.mj_model.nsite * 9
-                ].reshape(oracle.mj_model.nsite, 3, 3)
-            ),
-        )
-    if "actuator_force" in info_after_step:
-        mjx_data = mjx_data.replace(
-            actuator_force=jnp.asarray(info_after_step["actuator_force"][0])
-        )
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    contact = _g1_contact(oracle, mjx_data)
-    contact_filt = contact | info["last_contact"]
-    first_contact = (info["feet_air_time"] > 0.0) * contact_filt
-    info["feet_air_time"] += oracle.dt
-    foot_pos = mjx_data.site_xpos[oracle._feet_site_id]  # pylint: disable=protected-access
-    info["swing_peak"] = jnp.maximum(info["swing_peak"], foot_pos[..., -1])
-
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info, contact
-    )
-    done = oracle._get_termination(  # pylint: disable=protected-access
-        mjx_data
-    )
-    rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data,
-        jnp.asarray(action),
-        info,
-        metrics,
-        done,
-        first_contact,
-        contact,
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in rewards.items()
-    }
-    reward = sum(rewards.values()) * oracle.dt
-
-    info["push"] = jnp.asarray(info_after_step["push"][0])
-    info["step"] += 1
-    info["push_step"] += 1
-    phase_tp1 = info["phase"] + info["phase_dt"]
-    info["phase"] = jnp.fmod(phase_tp1 + jnp.pi, 2 * jnp.pi) - jnp.pi
-    info["last_last_act"] = info["last_act"]
-    info["last_act"] = jnp.asarray(action)
-    info["rng"], cmd_rng = jax.random.split(info["rng"])
-    info["command"] = jnp.where(
-        info["step"] > 500,
-        oracle.sample_command(cmd_rng),
-        info["command"],
-    )
-    info["step"] = jnp.where(done | (info["step"] > 500), 0, info["step"])
-    info["feet_air_time"] *= ~contact
-    info["last_contact"] = contact
-    info["swing_peak"] *= ~contact
-    for key, value in rewards.items():
-        metrics[f"reward/{key}"] = value
-    metrics["swing_peak"] = jnp.mean(info["swing_peak"])
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(reward.dtype),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_panda_cartesian_oracle_from_envpool_info(
-    oracle: oracle_panda_pick_cartesian.PandaPickCubeCartesian,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    info_after_step: dict[str, Any],
-) -> oracle_mjx_env.State:
-    mujoco_data = _make_mujoco_data_from_info(oracle, info_after_step)
-    mjx_data = _sync_mjx_data_from_mujoco(
-        state.data, mujoco_data, oracle.mj_model
-    )
-    mjx_data = mjx_data.replace(
-        xpos=jnp.asarray(
-            info_after_step["xpos"][0, : oracle.mj_model.nbody * 3].reshape(
-                oracle.mj_model.nbody, 3
-            )
-        ),
-        xmat=jnp.asarray(
-            info_after_step["xmat"][0, : oracle.mj_model.nbody * 9].reshape(
-                oracle.mj_model.nbody, 3, 3
-            )
-        ),
-        site_xpos=jnp.asarray(
-            info_after_step["site_xpos"][
-                0, : oracle.mj_model.nsite * 3
-            ].reshape(oracle.mj_model.nsite, 3)
-        ),
-        site_xmat=jnp.asarray(
-            info_after_step["site_xmat"][
-                0, : oracle.mj_model.nsite * 9
-            ].reshape(oracle.mj_model.nsite, 3, 3)
-        ),
-    )
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    newly_reset = info["_steps"] == 0
-    raw_rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data, info
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.reward_scales[key]  # pylint: disable=protected-access
-        for key, value in raw_rewards.items()
-    }
-    hand_box = (
-        mjx_data.sensordata[
-            oracle._mj_model.sensor_adr[  # pylint: disable=protected-access
-                oracle._box_hand_found_sensor  # pylint: disable=protected-access
-            ]
-        ]
-        > 0
-    )
-    raw_rewards["no_box_collision"] = jnp.where(hand_box, 0.0, 1.0)
-    total_reward = jnp.clip(sum(rewards.values()), -1e4, 1e4)
-    total_reward += oracle._config.reward_config.action_rate * jnp.linalg.norm(  # pylint: disable=protected-access
-        jnp.asarray(action) - info["prev_action"]
-    )
-    total_reward += (
-        jnp.asarray(info_after_step["no_soln"][0])
-        * oracle._config.reward_config.no_soln_reward  # pylint: disable=protected-access
-    )
-    box_pos = mjx_data.xpos[oracle._obj_body]  # pylint: disable=protected-access
-    lifted = (box_pos[2] > 0.05) * oracle._config.reward_config.lifted_reward  # pylint: disable=protected-access
-    total_reward += lifted
-    success = oracle._get_success(  # pylint: disable=protected-access
-        mjx_data, info
-    )
-    total_reward += success * oracle._config.reward_config.success_reward  # pylint: disable=protected-access
-    reward = jnp.maximum(total_reward - info["prev_reward"], 0.0)
-    reward = jnp.where(newly_reset, 0.0, reward)
-
-    for key in (
-        "target_pos",
-        "reached_box",
-        "prev_reward",
-        "current_pos",
-        "prev_action",
-        "no_soln",
-    ):
-        info[key] = jnp.asarray(info_after_step[key][0])
-    info["_steps"] = jnp.asarray(info_after_step["steps"][0], dtype=jnp.int32)
-    metrics.update({
-        f"reward/{key}": value for key, value in raw_rewards.items()
-    })
-    metrics.update({
-        "out_of_bounds": jnp.asarray(info_after_step["out_of_bounds"][0]),
-        "reward/lifted": lifted.astype(float),
-        "reward/success": success.astype(float),
-    })
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info
-    )
-    obs = jnp.concat(
-        [obs, jnp.reshape(info["no_soln"], (1,)), info["prev_action"]],
-        axis=0,
-    )
-    done = jnp.asarray(info_after_step["terminated"][0]).astype(float)
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done,
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_panda_robotiq_oracle_from_envpool_info(
-    oracle: oracle_panda_robotiq.PandaRobotiqPushCube,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    info_after_step: dict[str, Any],
-) -> oracle_mjx_env.State:
-    mujoco_data = _make_mujoco_data_from_info(oracle, info_after_step)
-    mjx_data = _sync_mjx_data_from_mujoco(
-        state.data, mujoco_data, oracle.mj_model
-    )
-    mjx_data = mjx_data.replace(
-        xpos=jnp.asarray(
-            info_after_step["xpos"][0, : oracle.mj_model.nbody * 3].reshape(
-                oracle.mj_model.nbody, 3
-            )
-        ),
-        xquat=jnp.asarray(
-            info_after_step["xquat"][0, : oracle.mj_model.nbody * 4].reshape(
-                oracle.mj_model.nbody, 4
-            )
-        ),
-        xmat=jnp.asarray(
-            info_after_step["xmat"][0, : oracle.mj_model.nbody * 9].reshape(
-                oracle.mj_model.nbody, 3, 3
-            )
-        ),
-        site_xpos=jnp.asarray(
-            info_after_step["site_xpos"][
-                0, : oracle.mj_model.nsite * 3
-            ].reshape(oracle.mj_model.nsite, 3)
-        ),
-        site_xmat=jnp.asarray(
-            info_after_step["site_xmat"][
-                0, : oracle.mj_model.nsite * 9
-            ].reshape(oracle.mj_model.nsite, 3, 3)
-        ),
-        sensordata=jnp.asarray(
-            info_after_step["sensordata"][0, : mjx_data.sensordata.size]
-        ),
-    )
-
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data, info, jnp.asarray(action)
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.reward_scales[key]  # pylint: disable=protected-access
-        for key, value in rewards.items()
-    }
-    reward = jnp.clip(sum(rewards.values()), -1e4, 1e4)
-    reward_scale_sum = sum(
-        oracle._config.reward_config.reward_scales[key]  # pylint: disable=protected-access
-        for key in rewards
-    )
-    reward /= reward_scale_sum
-    termination = oracle._get_termination(  # pylint: disable=protected-access
-        mjx_data
-    )
-    reward += oracle._config.reward_config.termination_reward * termination  # pylint: disable=protected-access
-    working_state = state.replace(data=mjx_data, info=info, metrics=metrics)
-    working_state, success, success_wait = oracle._get_success(  # pylint: disable=protected-access
-        working_state
-    )
-    metrics = dict(working_state.metrics)
-    reward += (
-        oracle._config.reward_config.success_wait_reward * success_wait  # pylint: disable=protected-access
-    )
-    reward += oracle._config.reward_config.success_reward * success  # pylint: disable=protected-access
-    reward *= oracle.dt
-
-    obs = oracle._get_obs(working_state)  # pylint: disable=protected-access
-    info = dict(working_state.info)
-    info["last_action"] = jnp.asarray(info_after_step["last_action"][0])
-    action_history_size = int(oracle._config.action_history_len) * 7  # pylint: disable=protected-access
-    obs_history_size = int(oracle._config.obs_history_len) * 48  # pylint: disable=protected-access
-    info["action_history"] = jnp.asarray(
-        info_after_step["action_history"][0, :action_history_size]
-    )
-    info["obs_history"] = jnp.asarray(
-        info_after_step["obs_history"][0, :obs_history_size]
-    )
-    for key in ("success_step_count", "prev_step_success", "curriculum_id"):
-        info[key] = jnp.asarray(info_after_step[key][0], dtype=jnp.int32)
-    info["rng"], _ = jax.random.split(info["rng"])
-    metrics.update(out_of_bounds=termination.astype(float), **rewards)
-    done = (
-        termination
-        | jnp.isnan(mjx_data.qpos).any()
-        | jnp.isnan(mjx_data.qvel).any()
-    )
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(float),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_mujoco_hand_rotate_oracle(
-    oracle: Any,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    if isinstance(oracle, oracle_aero_rotate.CubeRotateZAxis):
-        motor_targets = np.asarray(
-            oracle._default_tendon
-        ) + action * np.asarray(  # pylint: disable=protected-access
-            oracle._config.action_scale  # pylint: disable=protected-access
-        )
-    else:
-        motor_targets = (
-            np.asarray(oracle._default_pose)  # pylint: disable=protected-access
-            + action * oracle._config.action_scale  # pylint: disable=protected-access
-        )
-    data.ctrl[:] = motor_targets
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-    info["motor_targets"] = jnp.asarray(motor_targets)
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info, state.obs["state"]
-    )
-    done = oracle._get_termination(  # pylint: disable=protected-access
-        mjx_data
-    )
-    rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data, jnp.asarray(action), info, metrics, done
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in rewards.items()
-    }
-    reward = sum(rewards.values()) * oracle.dt
-    info["last_last_act"] = info["last_act"]
-    info["last_act"] = jnp.asarray(action)
-    info["last_cube_angvel"] = oracle.get_cube_angvel(mjx_data)
-    for key, value in rewards.items():
-        metrics[f"reward/{key}"] = value
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(reward.dtype),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_mujoco_leap_reorient_oracle(
-    oracle: oracle_leap_reorient.CubeReorient,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    delta = action * oracle._config.action_scale  # pylint: disable=protected-access
-    motor_targets = np.asarray(data.ctrl) + delta
-    motor_targets = np.clip(
-        motor_targets,
-        np.asarray(oracle._lowers),  # pylint: disable=protected-access
-        np.asarray(oracle._uppers),  # pylint: disable=protected-access
-    )
-    motor_targets = (
-        oracle._config.ema_alpha * motor_targets  # pylint: disable=protected-access
-        + (1 - oracle._config.ema_alpha) * np.asarray(info["motor_targets"])  # pylint: disable=protected-access
-    )
-    data.ctrl[:] = motor_targets
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-    info["motor_targets"] = jnp.asarray(motor_targets)
-    ori_error = oracle._cube_orientation_error(  # pylint: disable=protected-access
-        mjx_data
-    )
-    success = ori_error < oracle._config.success_threshold  # pylint: disable=protected-access
-    info["steps_since_last_success"] = jnp.where(
-        success, 0, info["steps_since_last_success"] + 1
-    )
-    info["success_count"] = jnp.where(
-        success, info["success_count"] + 1, info["success_count"]
-    )
-    metrics["steps_since_last_success"] = info["steps_since_last_success"]
-    metrics["success_count"] = info["success_count"]
-
-    done = oracle._get_termination(  # pylint: disable=protected-access
-        mjx_data, info
-    )
-    obs = oracle._get_obs(mjx_data, info)  # pylint: disable=protected-access
-    rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data, jnp.asarray(action), info, metrics, done
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in rewards.items()
-    }
-    reward = sum(rewards.values()) * oracle.dt
-
-    info["rng"], goal_rng = jax.random.split(info["rng"])
-    info["goal_quat_dquat"] = jnp.where(
-        success,
-        3 + jax.random.uniform(goal_rng, (3,), minval=-2, maxval=2),
-        info["goal_quat_dquat"] * 0.8,
-    )
-    goal_quat = mjx_math.quat_integrate(
-        state.data.mocap_quat[0],
-        info["goal_quat_dquat"],
-        2 * jnp.array(oracle.dt),
-    )
-    mjx_data = mjx_data.replace(mocap_quat=jnp.array([goal_quat]))
-    data.mocap_quat[:] = np.asarray(mjx_data.mocap_quat)
-    metrics["reward/success"] = success.astype(float)
-    reward += success * oracle._config.reward_config.success_reward  # pylint: disable=protected-access
-
-    info["step"] += 1
-    info["last_last_act"] = info["last_act"]
-    info["last_act"] = jnp.asarray(action)
-    for key, value in rewards.items():
-        metrics[f"reward/{key}"] = value
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(reward.dtype),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_oracle_from_envpool_info(
-    oracle: Any,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    info_after_step: dict[str, Any],
-) -> oracle_mjx_env.State:
-    if isinstance(oracle, oracle_berkeley.Joystick):
-        return _step_berkeley_oracle_from_envpool_info(
-            oracle, state, action, info_after_step
-        )
-    if isinstance(oracle, oracle_g1.Joystick):
-        return _step_g1_oracle_from_envpool_info(
-            oracle, state, action, info_after_step
-        )
-    if isinstance(oracle, oracle_panda_pick_cartesian.PandaPickCubeCartesian):
-        return _step_panda_cartesian_oracle_from_envpool_info(
-            oracle, state, action, info_after_step
-        )
-    if isinstance(oracle, oracle_panda_robotiq.PandaRobotiqPushCube):
-        return _step_panda_robotiq_oracle_from_envpool_info(
-            oracle, state, action, info_after_step
-        )
-    raise TypeError(f"Unsupported native-state oracle {type(oracle)!r}")
-
-
-def _step_mujoco_joystick_oracle(
-    oracle: oracle_go1.Joystick,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    motor_targets = (
-        np.asarray(oracle._default_pose)  # pylint: disable=protected-access
-        + action * oracle._config.action_scale  # pylint: disable=protected-access
-    )
-    data.ctrl[:] = motor_targets
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    contact = jnp.array([
-        mjx_data.sensordata[oracle._mj_model.sensor_adr[sensor_id]] > 0
-        for sensor_id in oracle._feet_floor_found_sensor
-    ])
-    contact_filt = contact | info["last_contact"]
-    first_contact = (info["feet_air_time"] > 0.0) * contact_filt
-    info["feet_air_time"] = info["feet_air_time"] + oracle.dt
-    foot_pos = mjx_data.site_xpos[oracle._feet_site_id]
-    info["swing_peak"] = jnp.maximum(info["swing_peak"], foot_pos[..., -1])
-
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info
-    )
-    done = oracle._get_termination(  # pylint: disable=protected-access
-        mjx_data
-    )
-    rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data,
-        jnp.asarray(action),
-        info,
-        metrics,
-        done,
-        first_contact,
-        contact,
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in rewards.items()
-    }
-    reward = jnp.clip(sum(rewards.values()) * oracle.dt, 0.0, 10000.0)
-
-    info["last_last_act"] = info["last_act"]
-    info["last_act"] = jnp.asarray(action)
-    info["steps_until_next_cmd"] = info["steps_until_next_cmd"] - 1
-    info["rng"], key1, key2 = jax.random.split(info["rng"], 3)
-    info["command"] = jnp.where(
-        info["steps_until_next_cmd"] <= 0,
-        oracle.sample_command(key1, info["command"]),
-        info["command"],
-    )
-    info["steps_until_next_cmd"] = jnp.where(
-        done | (info["steps_until_next_cmd"] <= 0),
-        jnp.round(jax.random.exponential(key2) * 5.0 / oracle.dt).astype(
-            jnp.int32
-        ),
-        info["steps_until_next_cmd"],
-    )
-    info["feet_air_time"] = info["feet_air_time"] * ~contact
-    info["last_contact"] = contact
-    info["swing_peak"] = info["swing_peak"] * ~contact
-    for key, value in rewards.items():
-        metrics[f"reward/{key}"] = value
-    metrics["swing_peak"] = jnp.mean(info["swing_peak"])
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(reward.dtype),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_mujoco_apollo_oracle(
-    oracle: oracle_apollo.Joystick,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    motor_targets = (
-        np.asarray(oracle._default_ctrl)  # pylint: disable=protected-access
-        + action * oracle._config.action_scale  # pylint: disable=protected-access
-    )
-    data.ctrl[:] = motor_targets
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    linvel = oracle.get_local_linvel(mjx_data)
-    info["filtered_linvel"] = linvel * 1.0 + info["filtered_linvel"] * 0.0
-    angvel = oracle.get_gyro(mjx_data)
-    info["filtered_angvel"] = angvel * 1.0 + info["filtered_angvel"] * 0.0
-
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info
-    )
-    done = oracle._get_termination(  # pylint: disable=protected-access
-        mjx_data, metrics
-    )
-    rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data,
-        jnp.asarray(action),
-        info,
-        metrics,
-        done,
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in rewards.items()
-    }
-    reward = sum(rewards.values()) * oracle.dt
-
-    info["step"] += 1
-    phase_tp1 = info["phase"] + info["phase_dt"]
-    info["phase"] = jnp.fmod(phase_tp1 + jnp.pi, 2 * jnp.pi) - jnp.pi
-    info["phase"] = jnp.where(
-        jnp.linalg.norm(info["command"]) > 0.01,
-        info["phase"],
-        jnp.ones(2) * jnp.pi,
-    )
-    info["last_act"] = jnp.asarray(action)
-    info["steps_until_next_cmd"] -= 1
-    info["rng"], key1, key2 = jax.random.split(info["rng"], 3)
-    info["command"] = jnp.where(
-        info["steps_until_next_cmd"] <= 0,
-        oracle.sample_command(key1, info["command"]),
-        info["command"],
-    )
-    info["steps_until_next_cmd"] = jnp.where(
-        done | (info["steps_until_next_cmd"] <= 0),
-        jnp.round(jax.random.exponential(key2) * 5.0 / oracle.dt).astype(
-            jnp.int32
-        ),
-        info["steps_until_next_cmd"],
-    )
-    for key, value in rewards.items():
-        metrics[f"reward/{key}"] = value
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(reward.dtype),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_mujoco_barkour_oracle(
-    oracle: oracle_barkour.Joystick,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    data.xfrc_applied[:] = np.asarray(state.data.xfrc_applied)
-    motor_targets = (
-        np.asarray(oracle._default_pose)  # pylint: disable=protected-access
-        + action * oracle._config.action_scale  # pylint: disable=protected-access
-    )
-    motor_targets = np.clip(
-        motor_targets,
-        np.asarray(oracle._lowers),  # pylint: disable=protected-access
-        np.asarray(oracle._uppers),  # pylint: disable=protected-access
-    )
-    data.ctrl[:] = motor_targets
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    rng, cmd_rng, noise_rng, _ = jax.random.split(info["rng"], 4)
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info, state.obs, noise_rng
-    )
-    joint_angles = mjx_data.qpos[7:]
-    joint_vel = mjx_data.qvel[6:]
-    torso_z = mjx_data.xpos[oracle._torso_body_id, -1]  # pylint: disable=protected-access
-    contact = jnp.array([
-        mjx_data.sensordata[
-            oracle._mj_model.sensor_adr[  # pylint: disable=protected-access
-                oracle._mj_model.sensor(sensor).id  # pylint: disable=protected-access
-            ]
-        ]
-        > 0
-        for sensor in oracle._feet_floor_found_sensor  # pylint: disable=protected-access
-    ])
-    contact_filt = contact | info["last_contact"]
-    first_contact = (info["feet_air_time"] > 0.0) * contact_filt
-    info["feet_air_time"] += oracle.dt
-
-    done = oracle._get_gravity(mjx_data)[-1] < 0  # pylint: disable=protected-access
-    done |= jnp.any(joint_angles < oracle._lowers)  # pylint: disable=protected-access
-    done |= jnp.any(joint_angles > oracle._uppers)  # pylint: disable=protected-access
-    done |= torso_z < 0.18
-
-    rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data, jnp.asarray(action), info, metrics, done, first_contact
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in rewards.items()
-    }
-    reward = jnp.clip(sum(rewards.values()) * oracle.dt, 0.0, 10000.0)
-
-    info["last_act"] = jnp.asarray(action)
-    info["last_vel"] = joint_vel
-    info["step"] += 1
-    info["rng"] = rng
-    info["feet_air_time"] *= ~contact
-    info["last_contact"] = contact
-    info["command"] = jnp.where(
-        info["step"] > 500,
-        oracle.sample_command(cmd_rng),
-        info["command"],
-    )
-    info["step"] = jnp.where(done | (info["step"] > 500), 0, info["step"])
-    for key, value in rewards.items():
-        metrics[f"reward/{key}"] = value
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(reward.dtype),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_mujoco_op3_oracle(
-    oracle: oracle_op3.Joystick,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    motor_targets = (
-        np.asarray(oracle._default_pose)  # pylint: disable=protected-access
-        + action * oracle._config.action_scale  # pylint: disable=protected-access
-    )
-    motor_targets = np.clip(
-        motor_targets,
-        np.asarray(oracle._lowers),  # pylint: disable=protected-access
-        np.asarray(oracle._uppers),  # pylint: disable=protected-access
-    )
-    data.ctrl[:] = motor_targets
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    rng, cmd_rng, noise_rng = jax.random.split(info["rng"], 3)
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info, state.obs, noise_rng
-    )
-    done = oracle._get_termination(  # pylint: disable=protected-access
-        mjx_data
-    )
-    rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data, jnp.asarray(action), info, metrics, done
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in rewards.items()
-    }
-    reward = jnp.clip(sum(rewards.values()) * oracle.dt, 0.0, 10000.0)
-
-    info["motor_targets"] = jnp.asarray(motor_targets)
-    info["last_last_act"] = info["last_act"]
-    info["last_act"] = jnp.asarray(action)
-    info["last_vel"] = mjx_data.qvel[6:]
-    info["step"] += 1
-    info["rng"] = rng
-    info["command"] = jnp.where(
-        info["step"] > 500,
-        oracle.sample_command(cmd_rng),
-        info["command"],
-    )
-    info["step"] = jnp.where(done | (info["step"] > 500), 0, info["step"])
-    for key, value in rewards.items():
-        metrics[f"reward/{key}"] = value
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(reward.dtype),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_mujoco_h1_inplace_oracle(
-    oracle: oracle_h1_inplace.InplaceGaitTracking,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    rng, noise_rng = jax.random.split(info["rng"])
-    motor_targets = (
-        np.asarray(oracle._default_pose)  # pylint: disable=protected-access
-        + action * oracle._config.action_scale  # pylint: disable=protected-access
-    )
-    motor_targets = np.clip(
-        motor_targets,
-        np.asarray(oracle._lowers),  # pylint: disable=protected-access
-        np.asarray(oracle._uppers),  # pylint: disable=protected-access
-    )
-    data.ctrl[:] = motor_targets
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-    info["motor_targets"] = jnp.asarray(motor_targets)
-    contact = _h1_contact_by_sensor_id(oracle, mjx_data)
-    foot_pos = mjx_data.site_xpos[oracle._feet_site_id]  # pylint: disable=protected-access
-    info["swing_peak"] = jnp.maximum(info["swing_peak"], foot_pos[..., -1])
-
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info, noise_rng, contact
-    )
-    done = oracle._get_termination(  # pylint: disable=protected-access
-        mjx_data
-    )
-    pos, neg = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data, jnp.asarray(action), info, metrics, done
-    )
-    pos = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in pos.items()
-    }
-    neg = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in neg.items()
-    }
-    rewards = pos | neg
-    reward = sum(pos.values()) * jnp.exp(0.2 * sum(neg.values())) * oracle.dt
-
-    info["last_last_act"] = info["last_act"]
-    info["last_act"] = jnp.asarray(action)
-    phase_tp1 = info["phase"] + info["phase_dt"]
-    info["phase"] = jnp.fmod(phase_tp1 + jnp.pi, 2 * jnp.pi) - jnp.pi
-    info["rng"] = rng
-    info["swing_peak"] *= ~contact
-    info["left_contact"] = contact[0]
-    info["right_contact"] = contact[1]
-    for key, value in rewards.items():
-        metrics[f"reward/{key}"] = value
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(reward.dtype),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_mujoco_h1_joystick_oracle(
-    oracle: oracle_h1_joystick.JoystickGaitTracking,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    rng, cmd_rng, noise_rng = jax.random.split(info["rng"], 3)
-    motor_targets = (
-        np.asarray(data.ctrl) + action * oracle._config.action_scale  # pylint: disable=protected-access
-    )
-    motor_targets = np.clip(
-        motor_targets,
-        np.asarray(oracle._lowers),  # pylint: disable=protected-access
-        np.asarray(oracle._uppers),  # pylint: disable=protected-access
-    )
-    data.ctrl[:] = motor_targets
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-    info["motor_targets"] = jnp.asarray(motor_targets)
-    contact = _h1_contact_by_sensor_id(oracle, mjx_data)
-    contact_filt = contact | info["last_contact"]
-    first_contact = (info["feet_air_time"] > 0.0) * contact_filt
-    info["feet_air_time"] += oracle.dt
-    foot_pos = mjx_data.site_xpos[oracle._feet_site_id]  # pylint: disable=protected-access
-    info["swing_peak"] = jnp.maximum(info["swing_peak"], foot_pos[..., -1])
-
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info, noise_rng, contact
-    )
-    done = oracle._get_termination(  # pylint: disable=protected-access
-        mjx_data
-    )
-    pos, neg = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data,
-        jnp.asarray(action),
-        info,
-        metrics,
-        done,
-        first_contact,
-        contact,
-    )
-    pos = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in pos.items()
-    }
-    neg = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in neg.items()
-    }
-    rewards = pos | neg
-    reward = jnp.clip(sum(rewards.values()) * oracle.dt, 0.0)
-
-    info["last_last_act"] = info["last_act"]
-    info["last_act"] = jnp.asarray(action)
-    info["step"] += 1
-    phase_tp1 = info["phase"] + info["phase_dt"]
-    info["phase"] = jnp.fmod(phase_tp1 + jnp.pi, 2 * jnp.pi) - jnp.pi
-    info["rng"] = rng
-    info["feet_air_time"] *= ~contact
-    info["last_contact"] = contact
-    info["swing_peak"] *= ~contact
-    info["command"] = jnp.where(
-        info["step"] > 500,
-        oracle.sample_command(cmd_rng),
-        info["command"],
-    )
-    info["step"] = jnp.where(done | (info["step"] > 500), 0, info["step"])
-    for key, value in rewards.items():
-        metrics[f"reward/{key}"] = value
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(reward.dtype),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_mujoco_spot_joystick_oracle(
-    oracle: oracle_spot_joystick.Joystick,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    rng, cmd_rng, noise_rng, _ = jax.random.split(info["rng"], 4)
-    motor_targets = (
-        np.asarray(oracle._default_pose)  # pylint: disable=protected-access
-        + action * oracle._config.action_scale  # pylint: disable=protected-access
-    )
-    motor_targets = np.clip(
-        motor_targets,
-        np.asarray(oracle._lowers),  # pylint: disable=protected-access
-        np.asarray(oracle._uppers),  # pylint: disable=protected-access
-    )
-    data.ctrl[:] = motor_targets
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-    info["motor_targets"] = jnp.asarray(motor_targets)
-    contact = _spot_contact(oracle, mjx_data)
-    contact_filt = contact | info["last_contact"]
-    first_contact = (info["feet_air_time"] > 0.0) * contact_filt
-    info["feet_air_time"] += oracle.dt
-    foot_pos = mjx_data.site_xpos[oracle._feet_site_id]  # pylint: disable=protected-access
-    info["swing_peak"] = jnp.maximum(info["swing_peak"], foot_pos[..., -1])
-
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info, noise_rng
-    )
-    done = oracle._get_termination(  # pylint: disable=protected-access
-        mjx_data
-    )
-    rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data,
-        jnp.asarray(action),
-        info,
-        metrics,
-        done,
-        first_contact,
-        contact,
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in rewards.items()
-    }
-    reward = jnp.clip(sum(rewards.values()) * oracle.dt, 0.0, 10000.0)
-
-    info["last_last_act"] = info["last_act"]
-    info["last_act"] = jnp.asarray(action)
-    info["step"] += 1
-    info["rng"] = rng
-    info["command"] = jnp.where(
-        info["step"] > 200,
-        oracle.sample_command(cmd_rng),
-        info["command"],
-    )
-    info["step"] = jnp.where(done | (info["step"] > 200), 0, info["step"])
-    info["feet_air_time"] *= ~contact
-    info["last_contact"] = contact
-    info["swing_peak"] *= ~contact
-    for key, value in rewards.items():
-        metrics[f"reward/{key}"] = value
-    metrics["swing_peak"] = jnp.mean(info["swing_peak"])
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(reward.dtype),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_mujoco_spot_getup_oracle(
-    oracle: oracle_spot_getup.Getup,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    rng, noise_rng = jax.random.split(info["rng"], 2)
-    motor_targets = (
-        np.asarray(data.qpos[7:]) + action * oracle._config.action_scale  # pylint: disable=protected-access
-    )
-    motor_targets = np.clip(
-        motor_targets,
-        np.asarray(oracle._lowers),  # pylint: disable=protected-access
-        np.asarray(oracle._uppers),  # pylint: disable=protected-access
-    )
-    data.ctrl[:] = motor_targets
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info, noise_rng
-    )
-    joint_angles = mjx_data.qpos[7:]
-    done = jnp.any(joint_angles < oracle._lowers)  # pylint: disable=protected-access
-    done |= jnp.any(joint_angles > oracle._uppers)  # pylint: disable=protected-access
-    rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data,
-        jnp.asarray(action),
-        info,
-        metrics,
-        done,
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in rewards.items()
-    }
-    reward = jnp.clip(sum(rewards.values()) * oracle.dt, 0.0, 10000.0)
-
-    info["last_last_act"] = info["last_act"]
-    info["last_act"] = jnp.asarray(action)
-    info["rng"] = rng
-    for key, value in rewards.items():
-        metrics[f"reward/{key}"] = value
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(reward.dtype),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_mujoco_spot_gait_oracle(
-    oracle: oracle_spot_gait.JoystickGaitTracking,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    rng, cmd_rng, noise_rng = jax.random.split(info["rng"], 3)
-    motor_targets = (
-        np.asarray(oracle._default_pose)  # pylint: disable=protected-access
-        + action * oracle._config.action_scale  # pylint: disable=protected-access
-    )
-    motor_targets = np.clip(
-        motor_targets,
-        np.asarray(oracle._lowers),  # pylint: disable=protected-access
-        np.asarray(oracle._uppers),  # pylint: disable=protected-access
-    )
-    data.ctrl[:] = motor_targets
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-    info["motor_targets"] = jnp.asarray(motor_targets)
-    contact = _spot_contact(oracle, mjx_data)
-    foot_pos = mjx_data.site_xpos[oracle._feet_site_id]  # pylint: disable=protected-access
-    info["swing_peak"] = jnp.maximum(info["swing_peak"], foot_pos[..., -1])
-
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info, noise_rng, contact
-    )
-    done = oracle._get_termination(  # pylint: disable=protected-access
-        mjx_data
-    )
-    pos, neg = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data,
-        jnp.asarray(action),
-        info,
-        metrics,
-        done,
-    )
-    pos = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in pos.items()
-    }
-    neg = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in neg.items()
-    }
-    rewards = pos | neg
-    reward = sum(pos.values()) * jnp.exp(0.2 * sum(neg.values())) * oracle.dt
-
-    info["last_last_act"] = info["last_act"]
-    info["last_act"] = jnp.asarray(action)
-    info["step"] += 1
-    phase_tp1 = info["phase"] + info["phase_dt"]
-    info["phase"] = jnp.fmod(phase_tp1 + jnp.pi, 2 * jnp.pi) - jnp.pi
-    info["rng"] = rng
-    info["command"] = jnp.where(
-        info["step"] > 200,
-        oracle.sample_command(cmd_rng),
-        info["command"],
-    )
-    info["step"] = jnp.where(done | (info["step"] > 200), 0, info["step"])
-    info["last_contact"] = contact
-    info["swing_peak"] *= ~contact
-    for key, value in rewards.items():
-        metrics[f"reward/{key}"] = value
-    metrics["swing_peak"] = jnp.mean(info["swing_peak"])
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(reward.dtype),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_mujoco_getup_oracle(
-    oracle: oracle_go1_getup.Getup,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    motor_targets = (
-        np.asarray(state.data.qpos[7:]) + action * oracle._config.action_scale  # pylint: disable=protected-access
-    )
-    data.ctrl[:] = motor_targets
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-    mujoco.mj_forward(oracle.mj_model, data)
-
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info
-    )
-    done = oracle._get_termination(  # pylint: disable=protected-access
-        mjx_data
-    )
-    rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data,
-        jnp.asarray(action),
-        info,
-        metrics,
-        done,
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in rewards.items()
-    }
-    reward = jnp.clip(sum(rewards.values()) * oracle.dt, 0.0, 10000.0)
-
-    info["last_last_act"] = info["last_act"]
-    info["last_act"] = jnp.asarray(action)
-    for key, value in rewards.items():
-        metrics[f"reward/{key}"] = value
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(reward.dtype),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_mujoco_handstand_oracle(
-    oracle: oracle_go1_handstand.Handstand,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    data.ctrl[:] = (
-        data.ctrl + action * oracle._config.action_scale  # pylint: disable=protected-access
-    )
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-    mujoco.mj_forward(oracle.mj_model, data)
-
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    contact = _handstand_unwanted_contact(oracle, mjx_data)
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info, contact
-    )
-    done = oracle._get_termination(  # pylint: disable=protected-access
-        mjx_data, info, contact
-    )
-    rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data,
-        jnp.asarray(action),
-        info,
-        done,
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in rewards.items()
-    }
-    reward = jnp.clip(sum(rewards.values()) * oracle.dt, 0.0, 10000.0)
-
-    info["last_act"] = jnp.asarray(action)
-    for key, value in rewards.items():
-        metrics[f"reward/{key}"] = value
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(reward.dtype),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_mujoco_aloha_handover_oracle(
-    oracle: oracle_aloha_handover.HandOver,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    info = dict(state.info)
-    newly_reset = info["_steps"] == 0
-    info["episode_picked"] = jnp.where(newly_reset, 0, info["episode_picked"])
-    info["prev_potential"] = jnp.where(newly_reset, 0.0, info["prev_potential"])
-
-    delta = action * oracle._config.action_scale  # pylint: disable=protected-access
-    ctrl = np.asarray(data.ctrl) + delta
-    ctrl = np.clip(
-        ctrl,
-        np.asarray(oracle._lowers),  # pylint: disable=protected-access
-        np.asarray(oracle._uppers),  # pylint: disable=protected-access
-    )
-    data.ctrl[:] = ctrl
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-
-    raw_rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data, info
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in raw_rewards.items()
-    }
-    potential = sum(rewards.values()) / sum(
-        oracle._config.reward_config.scales.values()  # pylint: disable=protected-access
-    )
-    reward = jnp.maximum(
-        potential - info["prev_potential"], jnp.zeros_like(potential)
-    )
-    box_pos = mjx_data.xpos[oracle._box_body]  # pylint: disable=protected-access
-    left_gripper = mjx_data.site_xpos[oracle._left_gripper_site]  # pylint: disable=protected-access
-    condition = oracle_aloha_handover.logistic_barrier(
-        left_gripper[0], direction=-1
-    ) * oracle_aloha_handover.logistic_barrier(box_pos[0], 0.10)
-    reward += 0.02 * potential * condition
-    info["prev_potential"] = jnp.maximum(potential, info["prev_potential"])
-    reward = jnp.where(newly_reset, 0.0, reward)
-
-    picked = box_pos[2] > 0.15
-    info["episode_picked"] = jnp.logical_or(info["episode_picked"], picked)
-    dropped = (box_pos[2] < 0.05) & info["episode_picked"]
-    reward += dropped.astype(float) * -0.1
-    out_of_bounds = jnp.any(jnp.abs(box_pos) > 1.0)
-    out_of_bounds |= box_pos[2] < 0.0
-    done = (
-        out_of_bounds
-        | jnp.isnan(mjx_data.qpos).any()
-        | jnp.isnan(mjx_data.qvel).any()
-        | dropped
-    )
-    info["_steps"] += oracle._config.action_repeat  # pylint: disable=protected-access
-    info["_steps"] = jnp.where(
-        done | (info["_steps"] >= oracle._config.episode_length),  # pylint: disable=protected-access
-        0,
-        info["_steps"],
-    )
-
-    metrics = dict(state.metrics)
-    metrics.update(**rewards, out_of_bounds=out_of_bounds.astype(float))
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info
-    )
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(float),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_mujoco_aloha_peg_oracle(
-    oracle: oracle_aloha_peg.SinglePegInsertion,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    delta = action * oracle._config.action_scale  # pylint: disable=protected-access
-    ctrl = np.asarray(data.ctrl) + delta
-    ctrl = np.clip(
-        ctrl,
-        np.asarray(oracle._lowers),  # pylint: disable=protected-access
-        np.asarray(oracle._uppers),  # pylint: disable=protected-access
-    )
-    data.ctrl[:] = ctrl
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-
-    socket_entrance_pos = mjx_data.site_xpos[oracle._socket_entrance_site]  # pylint: disable=protected-access
-    socket_rear_pos = mjx_data.site_xpos[oracle._socket_rear_site]  # pylint: disable=protected-access
-    peg_end2_pos = mjx_data.site_xpos[oracle._peg_end2_site]  # pylint: disable=protected-access
-    socket_ab = socket_entrance_pos - socket_rear_pos
-    socket_t = jnp.dot(peg_end2_pos - socket_rear_pos, socket_ab)
-    socket_t /= jnp.dot(socket_ab, socket_ab) + 1e-6
-    nearest_pt = socket_rear_pos + socket_t * socket_ab
-    peg_end2_dist_to_line = jnp.linalg.norm(peg_end2_pos - nearest_pt)
-
-    socket_pos = mjx_data.xpos[oracle._socket_body]  # pylint: disable=protected-access
-    peg_pos = mjx_data.xpos[oracle._peg_body]  # pylint: disable=protected-access
-    out_of_bounds = jnp.any(jnp.abs(socket_pos) > 1.0)
-    out_of_bounds |= jnp.any(jnp.abs(peg_pos) > 1.0)
-    raw_rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data, use_peg_insertion_reward=(peg_end2_dist_to_line < 0.005)
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in raw_rewards.items()
-    }
-    reward = sum(rewards.values()) / sum(
-        oracle._config.reward_config.scales.values()  # pylint: disable=protected-access
-    )
-    done = (
-        out_of_bounds
-        | jnp.isnan(mjx_data.qpos).any()
-        | jnp.isnan(mjx_data.qvel).any()
-    )
-    metrics = dict(state.metrics)
-    metrics.update(
-        **rewards,
-        peg_end2_dist_to_line=peg_end2_dist_to_line,
-        out_of_bounds=out_of_bounds.astype(float),
-    )
-    obs = oracle._get_obs(mjx_data)  # pylint: disable=protected-access
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(float),
-        info=state.info,
-        metrics=metrics,
-    )
-
-
-def _step_mujoco_panda_cartesian_oracle(
-    oracle: oracle_panda_pick_cartesian.PandaPickCubeCartesian,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    action = np.asarray(action, dtype=np.float64)
-    action_history = jnp.roll(info["action_history"], 1).at[0].set(action[2])
-    info["action_history"] = action_history
-    action = action.copy()
-    action[2] = float(np.asarray(action_history[0]))
-
-    newly_reset = info["_steps"] == 0
-    info["newly_reset"] = newly_reset
-    info["prev_reward"] = jnp.where(newly_reset, 0.0, info["prev_reward"])
-    info["current_pos"] = jnp.where(
-        newly_reset,
-        oracle._start_tip_transform[:3, 3],  # pylint: disable=protected-access
-        info["current_pos"],
-    )
-    info["reached_box"] = jnp.where(newly_reset, 0.0, info["reached_box"])
-    info["prev_action"] = jnp.where(
-        newly_reset, jnp.zeros(3), info["prev_action"]
-    )
-
-    increment = jnp.zeros(4)
-    increment = increment.at[1:].set(jnp.asarray(action))
-    ctrl, new_tip_position, no_soln = oracle._move_tip(  # pylint: disable=protected-access
-        info["current_pos"],
-        oracle._start_tip_transform[:3, :3],  # pylint: disable=protected-access
-        jnp.asarray(data.ctrl),
-        increment,
-    )
-    ctrl = np.clip(
-        np.asarray(ctrl),
-        np.asarray(oracle._lowers),  # pylint: disable=protected-access
-        np.asarray(oracle._uppers),  # pylint: disable=protected-access
-    )
-    data.ctrl[:] = ctrl
-    info["current_pos"] = new_tip_position
-
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-
-    raw_rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data, info
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.reward_scales[key]  # pylint: disable=protected-access
-        for key, value in raw_rewards.items()
-    }
-
-    hand_box = (
-        mjx_data.sensordata[
-            oracle._mj_model.sensor_adr[  # pylint: disable=protected-access
-                oracle._box_hand_found_sensor  # pylint: disable=protected-access
-            ]
-        ]
-        > 0
-    )
-    raw_rewards["no_box_collision"] = jnp.where(hand_box, 0.0, 1.0)
-    total_reward = jnp.clip(sum(rewards.values()), -1e4, 1e4)
-
-    da = jnp.linalg.norm(jnp.asarray(action) - info["prev_action"])
-    info["prev_action"] = jnp.asarray(action)
-    total_reward += oracle._config.reward_config.action_rate * da  # pylint: disable=protected-access
-    total_reward += no_soln * oracle._config.reward_config.no_soln_reward  # pylint: disable=protected-access
-
-    box_pos = mjx_data.xpos[oracle._obj_body]  # pylint: disable=protected-access
-    lifted = (box_pos[2] > 0.05) * oracle._config.reward_config.lifted_reward  # pylint: disable=protected-access
-    total_reward += lifted
-    success = oracle._get_success(  # pylint: disable=protected-access
-        mjx_data, info
-    )
-    total_reward += success * oracle._config.reward_config.success_reward  # pylint: disable=protected-access
-
-    reward = jnp.maximum(total_reward - info["prev_reward"], 0.0)
-    info["prev_reward"] = jnp.maximum(total_reward, info["prev_reward"])
-    reward = jnp.where(newly_reset, 0.0, reward)
-
-    out_of_bounds = jnp.any(jnp.abs(box_pos) > 1.0)
-    out_of_bounds |= box_pos[2] < 0.0
-    metrics.update(out_of_bounds=out_of_bounds.astype(float))
-    metrics.update({
-        f"reward/{key}": value for key, value in raw_rewards.items()
-    })
-    metrics.update({
-        "reward/lifted": lifted.astype(float),
-        "reward/success": success.astype(float),
-    })
-    done = (
-        out_of_bounds
-        | jnp.isnan(mjx_data.qpos).any()
-        | jnp.isnan(mjx_data.qvel).any()
-        | success
-    )
-    info["_steps"] += oracle._config.action_repeat  # pylint: disable=protected-access
-    info["_steps"] = jnp.where(
-        done | (info["_steps"] >= oracle._config.episode_length),  # pylint: disable=protected-access
-        0,
-        info["_steps"],
-    )
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info
-    )
-    obs = jnp.concat([obs, no_soln.reshape(1), jnp.asarray(action)], axis=0)
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done.astype(float),
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_mujoco_panda_pick_oracle(
-    oracle: oracle_panda_pick.PandaPickCube,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    ctrl = data.ctrl + action * oracle._config.action_scale  # pylint: disable=protected-access
-    data.ctrl[:] = np.clip(
-        ctrl,
-        np.asarray(oracle._lowers),  # pylint: disable=protected-access
-        np.asarray(oracle._uppers),  # pylint: disable=protected-access
-    )
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-    raw_rewards = oracle._get_reward(  # pylint: disable=protected-access
-        mjx_data, info
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in raw_rewards.items()
-    }
-    reward = jnp.clip(sum(rewards.values()), -1e4, 1e4)
-    box_pos = mjx_data.xpos[oracle._obj_body]  # pylint: disable=protected-access
-    out_of_bounds = jnp.any(jnp.abs(box_pos) > 1.0)
-    out_of_bounds |= box_pos[2] < 0.0
-    done = out_of_bounds | jnp.isnan(mjx_data.qpos).any()
-    done |= jnp.isnan(mjx_data.qvel).any()
-    done = done.astype(float)
-
-    metrics.update(**raw_rewards, out_of_bounds=out_of_bounds.astype(float))
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info
-    )
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done,
-        info=info,
-        metrics=metrics,
-    )
-
-
-def _step_mujoco_panda_open_cabinet_oracle(
-    oracle: oracle_panda_open_cabinet.PandaOpenCabinet,
-    state: oracle_mjx_env.State,
-    action: np.ndarray,
-    data: mujoco.MjData,
-) -> oracle_mjx_env.State:
-    info = dict(state.info)
-    metrics = dict(state.metrics)
-    ctrl = data.ctrl + action * oracle._config.action_scale  # pylint: disable=protected-access
-    data.ctrl[:] = np.clip(
-        ctrl,
-        np.asarray(oracle._lowers),  # pylint: disable=protected-access
-        np.asarray(oracle._uppers),  # pylint: disable=protected-access
-    )
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, data)
-
-    mjx_data = _sync_mjx_data_from_mujoco(state.data, data, oracle.mj_model)
-    raw_rewards = oracle._get_rewards(  # pylint: disable=protected-access
-        mjx_data, info
-    )
-    rewards = {
-        key: value * oracle._config.reward_config.scales[key]  # pylint: disable=protected-access
-        for key, value in raw_rewards.items()
-    }
-    reward = jnp.clip(sum(rewards.values()), -1e4, 1e4)
-    box_pos = mjx_data.xpos[oracle._obj_body]  # pylint: disable=protected-access
-    out_of_bounds = jnp.any(jnp.abs(box_pos) > 1.0)
-    out_of_bounds |= box_pos[2] < 0.0
-    done = out_of_bounds | jnp.isnan(mjx_data.qpos).any()
-    done |= jnp.isnan(mjx_data.qvel).any()
-    done = done.astype(float)
-
-    metrics.update(**raw_rewards, out_of_bounds=out_of_bounds.astype(float))
-    obs = oracle._get_obs(  # pylint: disable=protected-access
-        mjx_data, info
-    )
-    return state.replace(
-        data=mjx_data,
-        obs=obs,
-        reward=reward,
-        done=done,
-        info=info,
-        metrics=metrics,
-    )
-
-
 def _step_mujoco_oracle(
     oracle: Any,
     state: oracle_mjx_env.State,
     action: np.ndarray,
     data: mujoco.MjData,
 ) -> oracle_mjx_env.State:
-    if isinstance(oracle, oracle_aloha_handover.HandOver):
-        return _step_mujoco_aloha_handover_oracle(oracle, state, action, data)
-    if isinstance(oracle, oracle_aloha_peg.SinglePegInsertion):
-        return _step_mujoco_aloha_peg_oracle(oracle, state, action, data)
-    if isinstance(oracle, oracle_panda_open_cabinet.PandaOpenCabinet):
-        return _step_mujoco_panda_open_cabinet_oracle(
-            oracle, state, action, data
-        )
-    if isinstance(oracle, oracle_panda_pick_cartesian.PandaPickCubeCartesian):
-        return _step_mujoco_panda_cartesian_oracle(oracle, state, action, data)
-    if isinstance(oracle, oracle_panda_pick.PandaPickCube):
-        return _step_mujoco_panda_pick_oracle(oracle, state, action, data)
-    if isinstance(
-        oracle,
-        (
-            oracle_leap_rotate.CubeRotateZAxis,
-            oracle_aero_rotate.CubeRotateZAxis,
-        ),
-    ):
-        return _step_mujoco_hand_rotate_oracle(oracle, state, action, data)
-    if isinstance(oracle, oracle_leap_reorient.CubeReorient):
-        return _step_mujoco_leap_reorient_oracle(oracle, state, action, data)
-    if isinstance(oracle, oracle_apollo.Joystick):
-        return _step_mujoco_apollo_oracle(oracle, state, action, data)
-    if isinstance(oracle, oracle_barkour.Joystick):
-        return _step_mujoco_barkour_oracle(oracle, state, action, data)
-    if isinstance(oracle, oracle_berkeley.Joystick):
-        return _step_mujoco_berkeley_oracle(oracle, state, action, data)
-    if isinstance(oracle, oracle_g1.Joystick):
-        return _step_mujoco_g1_oracle(oracle, state, action, data)
-    if isinstance(oracle, oracle_t1.Joystick):
-        return _step_mujoco_t1_oracle(oracle, state, action, data)
-    if isinstance(oracle, oracle_op3.Joystick):
-        return _step_mujoco_op3_oracle(oracle, state, action, data)
-    if isinstance(oracle, oracle_h1_inplace.InplaceGaitTracking):
-        return _step_mujoco_h1_inplace_oracle(oracle, state, action, data)
-    if isinstance(oracle, oracle_h1_joystick.JoystickGaitTracking):
-        return _step_mujoco_h1_joystick_oracle(oracle, state, action, data)
-    if isinstance(oracle, oracle_spot_joystick.Joystick):
-        return _step_mujoco_spot_joystick_oracle(oracle, state, action, data)
-    if isinstance(oracle, oracle_spot_getup.Getup):
-        return _step_mujoco_spot_getup_oracle(oracle, state, action, data)
-    if isinstance(oracle, oracle_spot_gait.JoystickGaitTracking):
-        return _step_mujoco_spot_gait_oracle(oracle, state, action, data)
-    if isinstance(oracle, oracle_go1_getup.Getup):
-        return _step_mujoco_getup_oracle(oracle, state, action, data)
-    if isinstance(oracle, oracle_go1_handstand.Handstand):
-        return _step_mujoco_handstand_oracle(oracle, state, action, data)
-    return _step_mujoco_joystick_oracle(oracle, state, action, data)
+    """Run the official task step with an independent MuJoCo C integrator."""
+
+    def step(
+        model: Any, previous: mjx.Data, ctrl: Any, n_substeps: int = 1
+    ) -> mjx.Data:
+        del model
+        # Carry only oracle-owned changes (pushes, targets, activation state)
+        # into physics. No EnvPool state is read after the initial reset sync.
+        for field in (
+            "qpos",
+            "qvel",
+            "act",
+            "qacc_warmstart",
+            "mocap_pos",
+            "mocap_quat",
+            "xfrc_applied",
+            "qfrc_applied",
+        ):
+            getattr(data, field)[:] = np.asarray(getattr(previous, field))
+        data.time = float(previous.time)
+        data.ctrl[:] = np.asarray(ctrl)
+        for _ in range(n_substeps):
+            mujoco.mj_step(oracle.mj_model, data)
+        return _sync_mjx_data_from_mujoco(previous, data, oracle.mj_model)
+
+    with mock.patch.object(oracle_mjx_env, "step", step):
+        return oracle.step(state, jnp.asarray(action))
 
 
 def _make_rough_oracle_for_mjx_diagnostic(
@@ -3550,8 +1439,20 @@ def _compare_mujoco_c_and_mjx_one_control_step(
     }
 
 
+def _rollout_atol(task_id: str) -> float:
+    # Float32 IK targets differ by <= 6e-8; after 128 steps their largest
+    # velocity residual is 9.2e-7 and reward residual is 1.9e-7.
+    if task_id in ("PandaPickCubeCartesian-v1", "PandaRobotiqPushCube-v1"):
+        return 1e-6
+    # Hand contacts amplify double roundoff to < 6e-10 over the full rollout.
+    if task_id == "AeroCubeRotateZAxis-v1":
+        return 1e-9
+    return 5e-11
+
+
 def _assert_obs_close(
     test: absltest.TestCase,
+    task_id: str,
     actual: Any,
     expected: Any,
 ) -> None:
@@ -3570,8 +1471,8 @@ def _assert_obs_close(
     np.testing.assert_allclose(
         np.asarray(actual_state),
         np.asarray(expected_state),
-        atol=_STRICT_OBS_ATOL,
-        rtol=_STRICT_OBS_RTOL,
+        atol=_rollout_atol(task_id),
+        rtol=_rollout_atol(task_id),
         err_msg="obs[state]",
     )
 
@@ -3582,19 +1483,10 @@ def _assert_obs_close(
     np.testing.assert_allclose(
         actual_privileged,
         expected_privileged,
-        atol=_STRICT_OBS_ATOL,
-        rtol=_STRICT_OBS_RTOL,
+        atol=_rollout_atol(task_id),
+        rtol=_rollout_atol(task_id),
         err_msg="obs[privileged_state]",
     )
-
-
-def _mujoco_state_atol(task_id: str, key: str) -> float:
-    if key == "qvel" and task_id == "LeapCubeRotateZAxis-v1" and _is_arm64():
-        # The aarch64 libm/MuJoCo path leaves a 3.5e-12 residual in two hinge
-        # velocities after the third step; qpos, ctrl, obs, reward, and info
-        # stay at the strict 1e-12 bar.
-        return _LEAP_ARM64_QVEL_ATOL
-    return _STRICT_MUJOCO_STATE_ATOL
 
 
 def _assert_mujoco_state_equal(
@@ -3608,7 +1500,7 @@ def _assert_mujoco_state_equal(
         ("qvel", oracle.mj_model.nv),
         ("ctrl", oracle.mj_model.nu),
     ):
-        atol = _mujoco_state_atol(task_id, key)
+        atol = _rollout_atol(task_id)
         np.testing.assert_allclose(
             info[key][0, :size],
             np.asarray(getattr(oracle_state.data, key)),
@@ -3623,125 +1515,26 @@ def _assert_frames_close(
     expected: np.ndarray,
     *,
     max_mean_abs_diff: float = 1.0,
-    max_mismatch_ratio: float = 0.025,
-    max_ignored_abs_diff: int = 3,
 ) -> None:
     if actual.shape != expected.shape:
         raise AssertionError(
             f"frame shapes differ: {actual.shape} != {expected.shape}"
         )
+    # Bound frame-wide visual error. Counting individual edge pixels made the
+    # test depend on rasterization details despite matching independent state.
     diff = np.abs(actual.astype(np.int16) - expected.astype(np.int16))
-    if diff.size == 0:
-        return
-    mean_abs_diff = float(diff.mean())
-    significant = diff > max_ignored_abs_diff
-    mismatch_ratio = float(np.count_nonzero(significant)) / float(diff.size)
-    if mean_abs_diff > max_mean_abs_diff:
+    if diff.size and diff.mean() > max_mean_abs_diff:
         raise AssertionError(
-            "mean render delta "
-            f"{mean_abs_diff:.3f} exceeded {max_mean_abs_diff:.3f}; "
-            f"mismatch_ratio={mismatch_ratio:.4%}; "
-            f"max_delta={int(diff.max())}; "
-            f"ignored_abs_diff={max_ignored_abs_diff}"
-        )
-    if mismatch_ratio > max_mismatch_ratio:
-        raise AssertionError(
-            "render mismatch ratio "
-            f"{mismatch_ratio:.4%} exceeded {max_mismatch_ratio:.4%}; "
-            f"mean_delta={mean_abs_diff:.3f}; max_delta={int(diff.max())}; "
-            f"ignored_abs_diff={max_ignored_abs_diff}"
+            f"mean render delta {diff.mean():.3f} exceeded {max_mean_abs_diff:.3f}"
         )
 
 
 def _official_render_kwargs(task_id: str) -> dict[str, Any]:
-    system = platform.system()
-    if task_id == "ApolloJoystickFlatTerrain-v1":
-        # Apollo's humanoid mesh has many thin STL edges at the low render-test
-        # resolution. With the same fixed camera and bitwise-aligned state the
-        # mean error stays below 1/255, but edge antialiasing leaves more >3/255
-        # channels than the compact Go1 meshes.
-        return {"max_mismatch_ratio": 0.05}
-    if task_id == "Go1Getup-v1":
-        # Getup uses the full-collision Go1 mesh set. The rendered frame is
-        # state-aligned, but GL rasterization leaves a tiny number of edge
-        # channels above the 3/255 rounding budget.
-        return {"max_mismatch_ratio": 0.01}
-    if task_id.startswith("G1"):
-        # G1 has many small visual edges at the compact render-test resolution.
-        # The raw mean delta remains under 1/255 after state sync; the wider
-        # channel budget is only for >3/255 rasterization edge pixels.
-        if task_id == "G1JoystickRoughTerrain-v1" and system == "Windows":
-            # Windows llvmpipe leaves slightly more textured hfield edge energy
-            # while preserving state and low mean pixel error.
-            return {"max_mean_abs_diff": 1.05, "max_mismatch_ratio": 0.095}
-        if (
-            task_id == "G1JoystickRoughTerrain-v1"
-            and system == "Linux"
-            and _is_arm64()
-        ):
-            # ARM64 EGL leaves a deterministic 1.005/255 textured hfield
-            # fringe despite strictly aligned MuJoCo state, obs, and reward.
-            return {"max_mean_abs_diff": 1.01, "max_mismatch_ratio": 0.095}
-        return {"max_mismatch_ratio": 0.095}
-    if task_id.startswith("H1"):
-        # H1's STL edges leave a small low-resolution rasterization fringe after
-        # the <=3/255 channel budget; the mean delta stays below 1/255.
-        return {"max_mismatch_ratio": 0.07}
-    if task_id == "BarkourJoystick-v1" and system == "Darwin":
-        # macOS CGL leaves a tiny extra antialiasing fringe for Barkour's
-        # track-camera body edges. The failing CI frame was 0.026042, so this
-        # only widens the default 0.025 edge-channel budget for this renderer.
-        return {"max_mismatch_ratio": 0.03}
     if task_id == "SpotGetup-v1":
-        # SpotGetup uses the full Boston Dynamics OBJ visual mesh. State and
-        # camera are aligned, but the dense slanted mesh edges leave a visible
-        # low-resolution antialiasing fringe between EnvPool's source-built
-        # renderer and the official MuJoCo wheel.
-        return {"max_mean_abs_diff": 4.2, "max_mismatch_ratio": 0.10}
-    if (
-        task_id
-        in (
-            "LeapCubeReorient-v1",
-            "AeroCubeRotateZAxis-v1",
-        )
-        and system == "Darwin"
-    ):
-        # The hand/cube scenes are state-aligned, but the official MuJoCo wheel
-        # and EnvPool's source-built macOS CGL path leave a larger low-res
-        # object-edge fringe than Linux/Windows. Keep this scoped to the two
-        # CI-failing macOS hand tasks; physics, obs, rewards, and info remain at
-        # the strict numeric alignment thresholds.
-        return {"max_mean_abs_diff": 4.2, "max_mismatch_ratio": 0.15}
-    if task_id == "PandaPickCubeCartesian-v1":
-        # The Cartesian camera scene has high-contrast gripper/cube edges close
-        # to the fixed camera. State and mean pixel error are aligned, while a
-        # small edge fringe crosses the >3/255 channel threshold.
-        return {"max_mismatch_ratio": 0.035}
-    if task_id == "Op3Joystick-v1" and system == "Windows":
-        # OP3's filesystem-loaded visual meshes align with the official model;
-        # Windows llvmpipe leaves a narrow extra fringe above the <=3/255 budget.
-        return {"max_mismatch_ratio": 0.03}
-    if "RoughTerrain" in task_id:
-        # Rough terrain renders a textured hfield. EnvPool's offscreen renderer
-        # and Python `mujoco.Renderer` agree on low mean pixel error. After
-        # ignoring <= 3/255 GL rounding, the remaining differences are mostly
-        # textured floor and robot-edge channels at low test resolution.
-        return {"max_mismatch_ratio": 0.055}
+        # The existing full OBJ mesh renderer discrepancy peaks at 3.91/255
+        # over the independent rollout; retain its established frame budget.
+        return {"max_mean_abs_diff": 4.2}
     return {}
-
-
-def _uses_envpool_native_physics_oracle(task_id: str) -> bool:
-    # These tasks have a known upstream-backend boundary where testing the
-    # official formulas on EnvPool's native MuJoCo state is the meaningful
-    # correctness check. Panda Cartesian's boundary is the analytical IK action
-    # projection: upstream JAX emits float32 joint targets, while EnvPool runs a
-    # C++ port before stepping MuJoCo, leaving only ~4e-8 joint-state residuals.
-    return task_id in (
-        "BerkeleyHumanoidJoystickRoughTerrain-v1",
-        "G1JoystickRoughTerrain-v1",
-        "PandaPickCubeCartesian-v1",
-        "PandaRobotiqPushCube-v1",
-    )
 
 
 _OP3_RENDER_MODEL: mujoco.MjModel | None = None
@@ -3813,10 +1606,8 @@ def _assert_rollout_outputs_close(
     oracle: Any,
 ) -> None:
     _assert_mujoco_state_equal(task_id, info, state, oracle)
-    _assert_obs_close(test, obs, state.obs)
-    # EnvPool exposes `reward` as float32 by API contract, so compare the
-    # official scalar after the same public dtype conversion instead of allowing
-    # a wider numeric tolerance.
+    _assert_obs_close(test, task_id, obs, state.obs)
+    # Compare the public float32 reward after the same dtype conversion.
     reward_report = {
         key: (
             float(np.asarray(info[key][0])),
@@ -3824,9 +1615,11 @@ def _assert_rollout_outputs_close(
         )
         for key in _reward_info_keys(task_id)
     }
-    np.testing.assert_array_equal(
+    np.testing.assert_allclose(
         reward[0],
         np.asarray(state.reward, dtype=reward.dtype),
+        atol=_rollout_atol(task_id),
+        rtol=_rollout_atol(task_id),
         err_msg=f"reward components={reward_report}",
     )
     test.assertEqual(bool(terminated[0]), bool(state.done))
@@ -3836,7 +1629,9 @@ def _assert_rollout_outputs_close(
             info["command"][0],
             np.asarray(state.info["command"]),
         )
-    if "steps_until_next_cmd" in info:
+    # A command deadline sampled after termination cannot affect this episode.
+    # Its RNG draw need not match across implementations; live deadlines do.
+    if "steps_until_next_cmd" in info and not bool(state.done):
         test.assertEqual(
             int(info["steps_until_next_cmd"][0]),
             int(np.asarray(state.info["steps_until_next_cmd"])),
@@ -3846,87 +1641,10 @@ def _assert_rollout_outputs_close(
         np.testing.assert_allclose(
             info[key][0],
             np.asarray(state.metrics[_oracle_metric_name(key, task_id)]),
-            atol=5e-11,
-            rtol=5e-11,
+            atol=_rollout_atol(task_id),
+            rtol=_rollout_atol(task_id),
             err_msg=f"info[{key}]",
         )
-
-
-def _compare_berkeley_pip_and_native_one_step(task_id: str) -> dict[str, float]:
-    oracle = _make_oracle(task_id)
-    env = make_gymnasium(task_id, num_envs=1, seed=0, **_env_config(task_id))
-    try:
-        _, info = env.reset()
-        data = mujoco.MjData(oracle.mj_model)
-        data.qpos[:] = info["qpos"][0, : oracle.mj_model.nq]
-        data.qvel[:] = info["qvel"][0, : oracle.mj_model.nv]
-        data.ctrl[:] = info["ctrl"][0, : oracle.mj_model.nu]
-        mujoco.mj_forward(oracle.mj_model, data)
-        reset_qacc = float(
-            np.max(np.abs(data.qacc - info["qacc"][0, : oracle.mj_model.nv]))
-        )
-        reset_sensordata = float(
-            np.max(
-                np.abs(
-                    data.sensordata
-                    - info["sensordata"][0, : data.sensordata.size]
-                )
-            )
-        )
-        action = _make_actions(1, oracle.action_size)[0]
-        data.ctrl[:] = (
-            np.asarray(oracle._default_pose)  # pylint: disable=protected-access
-            + action[0] * oracle._config.action_scale  # pylint: disable=protected-access
-        )
-        for _ in range(oracle.n_substeps):
-            mujoco.mj_step(oracle.mj_model, data)
-        _, _, _, _, info = env.step(action)
-        return {
-            "reset_qacc": reset_qacc,
-            "reset_sensordata": reset_sensordata,
-            "qpos": float(
-                np.max(
-                    np.abs(info["qpos"][0, : oracle.mj_model.nq] - data.qpos)
-                )
-            ),
-            "qvel": float(
-                np.max(
-                    np.abs(info["qvel"][0, : oracle.mj_model.nv] - data.qvel)
-                )
-            ),
-        }
-    finally:
-        env.close()
-
-
-def _assert_berkeley_rough_hfield_backend_gap(
-    test: absltest.TestCase, rough: dict[str, float]
-) -> None:
-    reset_exact = (
-        rough["reset_qacc"] <= 5e-12 and rough["reset_sensordata"] <= 5e-12
-    )
-    small_backend_gap = rough["qpos"] <= 2e-5 and rough["qvel"] <= 5e-4
-    large_backend_gap = (
-        1e-4 < rough["qpos"] <= 2e-3 and 1e-3 < rough["qvel"] <= 7e-2
-    )
-    if reset_exact and (small_backend_gap or large_backend_gap):
-        return
-
-    if _is_arm64():
-        # The aarch64 hfield contact path can diverge from the PyPI wheel
-        # already at reset forward(), while flat terrain remains exact below.
-        # Keep this as a bounded backend diagnostic; the actual task alignment
-        # test validates EnvPool state with the official obs/reward formulas.
-        for key, bound in (
-            ("reset_qacc", 2.0),
-            ("reset_sensordata", 5e-2),
-            ("qpos", 2e-3),
-            ("qvel", 7e-2),
-        ):
-            test.assertLessEqual(rough[key], bound, rough)
-        return
-
-    test.fail(f"unexpected Berkeley rough hfield backend gap: {rough}")
 
 
 class PlaygroundOracleAlignTest(absltest.TestCase):
@@ -3988,24 +1706,8 @@ class PlaygroundOracleAlignTest(absltest.TestCase):
                         msg=f"{label} {key}: {report}",
                     )
 
-    def test_berkeley_hfield_backend_gap_is_not_formula_drift(self) -> None:
-        """Pins Berkeley rough terrain to a bounded hfield backend gap."""
-        if not _is_primary_shard():
-            return
-        flat = _compare_berkeley_pip_and_native_one_step(
-            "BerkeleyHumanoidJoystickFlatTerrain-v1"
-        )
-        rough = _compare_berkeley_pip_and_native_one_step(
-            "BerkeleyHumanoidJoystickRoughTerrain-v1"
-        )
-        for key in ("reset_qacc", "reset_sensordata"):
-            self.assertLessEqual(flat[key], 5e-12, flat)
-        for key in ("qpos", "qvel"):
-            self.assertLessEqual(flat[key], 1e-12, flat)
-        _assert_berkeley_rough_hfield_backend_gap(self, rough)
-
     def test_rollout_and_render_align_with_oracle(self) -> None:
-        """Checks reset and three rendered control steps against the oracle."""
+        """Checks independent dynamics and rendering over nontrivial rollouts."""
         for task_id in _TASK_IDS:
             with self.subTest(task_id=task_id):
                 oracle = _make_oracle(task_id)
@@ -4025,7 +1727,7 @@ class PlaygroundOracleAlignTest(absltest.TestCase):
                     state = oracle.reset(jax.random.PRNGKey(0))
                     state = _sync_oracle_state(oracle, state, info)
                     mujoco_data = _make_mujoco_data_from_info(oracle, info)
-                    _assert_obs_close(self, obs, state.obs)
+                    _assert_obs_close(self, task_id, obs, state.obs)
                     if task_id == "Op3Joystick-v1":
                         render_model = _official_render_model(task_id, oracle)
                         render_data = _make_mujoco_data_from_model(
@@ -4047,27 +1749,26 @@ class PlaygroundOracleAlignTest(absltest.TestCase):
                     )
 
                     for step, action in enumerate(actions, start=1):
-                        if _uses_envpool_native_physics_oracle(task_id):
-                            obs, reward, terminated, truncated, info = env.step(
-                                action
-                            )
-                            state = _step_oracle_from_envpool_info(
-                                oracle, state, action[0], info
-                            )
-                            mujoco_data = _make_mujoco_data_from_info(
-                                oracle, info
-                            )
-                        else:
-                            state = _step_mujoco_oracle(
-                                oracle, state, action[0], mujoco_data
-                            )
-                            obs, reward, terminated, truncated, info = env.step(
-                                action
-                            )
+                        state = _step_mujoco_oracle(
+                            oracle, state, action[0], mujoco_data
+                        )
+                        obs, reward, terminated, truncated, info = env.step(
+                            action
+                        )
                         if task_id == "Op3Joystick-v1":
-                            render_data = _make_mujoco_data_from_model(
-                                render_model, info
-                            )
+                            for field in (
+                                "qpos",
+                                "qvel",
+                                "act",
+                                "ctrl",
+                                "mocap_pos",
+                                "mocap_quat",
+                            ):
+                                getattr(render_data, field)[:] = getattr(
+                                    mujoco_data, field
+                                )
+                            render_data.time = mujoco_data.time
+                            mujoco.mj_forward(render_model, render_data)
                         else:
                             render_data = mujoco_data
                         with self.subTest(step=step):
@@ -4089,6 +1790,8 @@ class PlaygroundOracleAlignTest(absltest.TestCase):
                                 official_renderer.render(render_data),
                                 **render_kwargs,
                             )
+                        if bool(state.done):
+                            break
                 finally:
                     if official_renderer is not None:
                         official_renderer.close()
@@ -4096,4 +1799,5 @@ class PlaygroundOracleAlignTest(absltest.TestCase):
 
 
 if __name__ == "__main__":
-    absltest.main()
+    # Tasks are sharded above; Abseil would shard the methods a second time.
+    unittest.main()

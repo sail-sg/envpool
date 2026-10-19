@@ -29,15 +29,16 @@
 #include "envpool/core/env.h"
 #include "envpool/jumanji/parse_utils.h"
 #include "envpool/jumanji/render_utils.h"
+#include "envpool/utils/jax_random.h"
 
 namespace jumanji {
+namespace random = envpool::jax_random;
 namespace searchrescue {
 
 constexpr int kNumSearchers = 2;
 constexpr int kViewRows = 3;
 constexpr int kViewCols = 128;
 constexpr int kTimeLimit = 400;
-constexpr int kReplaySteps = 32;
 constexpr int kSearcherViewsSize = kNumSearchers * kViewRows * kViewCols;
 constexpr int kPositionsSize = kNumSearchers * 2;
 constexpr int kNumTargets = 40;
@@ -70,16 +71,7 @@ class SearchAndRescueEnvFns {
         "search_and_rescue_targets_remaining"_.Bind(1.0f),
         "search_and_rescue_target_positions"_.Bind(std::string("")),
         "search_and_rescue_target_velocities"_.Bind(std::string("")),
-        "search_and_rescue_target_found"_.Bind(std::string("")),
-        "search_and_rescue_replay_searcher_views"_.Bind(std::string("")),
-        "search_and_rescue_replay_positions"_.Bind(std::string("")),
-        "search_and_rescue_replay_targets_remaining"_.Bind(std::string("")),
-        "search_and_rescue_replay_rewards"_.Bind(std::string("")),
-        "search_and_rescue_replay_done"_.Bind(std::string("")),
-        "search_and_rescue_render_headings_replay"_.Bind(std::string("")),
-        "search_and_rescue_render_target_positions_replay"_.Bind(
-            std::string("")),
-        "search_and_rescue_render_target_found_replay"_.Bind(std::string("")));
+        "search_and_rescue_target_found"_.Bind(std::string("")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -108,6 +100,8 @@ using SearchAndRescueEnvSpec = EnvSpec<SearchAndRescueEnvFns>;
 class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
                            public RenderableEnv {
  protected:
+  random::Key reset_key_{};
+  random::Key key_{};
   std::array<float, searchrescue::kNumSearchers> x_{};
   std::array<float, searchrescue::kNumSearchers> y_{};
   std::array<float, searchrescue::kNumSearchers> heading_{};
@@ -120,17 +114,7 @@ class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
   std::array<float, searchrescue::kPositionsSize> configured_positions_{};
   std::array<float, searchrescue::kNumSearchers> configured_headings_{};
   std::array<float, searchrescue::kNumSearchers> configured_speeds_{};
-  std::array<float,
-             searchrescue::kReplaySteps * searchrescue::kSearcherViewsSize>
-      replay_searcher_views_{};
-  std::array<float, searchrescue::kReplaySteps * searchrescue::kPositionsSize>
-      replay_positions_{};
-  std::array<float, searchrescue::kReplaySteps> replay_targets_remaining_{};
-  std::array<float, searchrescue::kReplaySteps * searchrescue::kNumSearchers>
-      replay_rewards_{};
-  std::array<bool, searchrescue::kReplaySteps> replay_done_{};
   bool use_configured_state_;
-  bool use_replay_;
   float targets_remaining_{1.0f};
   int step_count_{0};
   bool done_{true};
@@ -141,6 +125,7 @@ class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
 
   SearchAndRescueEnv(const Spec& spec, int env_id)
       : Env<SearchAndRescueEnvSpec>(spec, env_id),
+        reset_key_{0, static_cast<std::uint32_t>(seed_)},
         configured_searcher_views_(
             parse::CsvArray<float, searchrescue::kSearcherViewsSize>(
                 spec.config["search_and_rescue_searcher_views"_], -1.0f)),
@@ -152,27 +137,8 @@ class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
                 spec.config["search_and_rescue_headings"_])),
         configured_speeds_(parse::CsvArray<float, searchrescue::kNumSearchers>(
             spec.config["search_and_rescue_speeds"_])),
-        replay_searcher_views_(
-            parse::CsvArray<float, searchrescue::kReplaySteps *
-                                       searchrescue::kSearcherViewsSize>(
-                spec.config["search_and_rescue_replay_searcher_views"_],
-                -1.0f)),
-        replay_positions_(
-            parse::CsvArray<float, searchrescue::kReplaySteps *
-                                       searchrescue::kPositionsSize>(
-                spec.config["search_and_rescue_replay_positions"_])),
-        replay_targets_remaining_(
-            parse::CsvArray<float, searchrescue::kReplaySteps>(
-                spec.config["search_and_rescue_replay_targets_remaining"_])),
-        replay_rewards_(parse::CsvArray<float, searchrescue::kReplaySteps *
-                                                   searchrescue::kNumSearchers>(
-            spec.config["search_and_rescue_replay_rewards"_])),
-        replay_done_(parse::CsvArray<bool, searchrescue::kReplaySteps>(
-            spec.config["search_and_rescue_replay_done"_])),
         use_configured_state_(
-            !spec.config["search_and_rescue_positions"_].empty()),
-        use_replay_(
-            !spec.config["search_and_rescue_replay_searcher_views"_].empty()) {}
+            !spec.config["search_and_rescue_positions"_].empty()) {}
 
   bool IsDone() override { return done_; }
 
@@ -201,6 +167,8 @@ class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
   }
 
   void Reset() override {
+    key_ = random::Split(reset_key_, 0);
+    reset_key_ = random::Split(reset_key_, 0);
     if (use_configured_state_) {
       for (int searcher = 0; searcher < searchrescue::kNumSearchers;
            ++searcher) {
@@ -242,35 +210,6 @@ class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
   }
 
   void Step(const Action& action) override {
-    if (use_replay_ && step_count_ < searchrescue::kReplaySteps) {
-      ++step_count_;
-      for (int searcher = 0; searcher < searchrescue::kNumSearchers;
-           ++searcher) {
-        x_[searcher] =
-            replay_positions_[(step_count_ - 1) * searchrescue::kPositionsSize +
-                              searcher * 2];
-        y_[searcher] =
-            replay_positions_[(step_count_ - 1) * searchrescue::kPositionsSize +
-                              searcher * 2 + 1];
-      }
-      for (int i = 0; i < searchrescue::kSearcherViewsSize; ++i) {
-        configured_searcher_views_[i] =
-            replay_searcher_views_[(step_count_ - 1) *
-                                       searchrescue::kSearcherViewsSize +
-                                   i];
-      }
-      targets_remaining_ = replay_targets_remaining_[step_count_ - 1];
-      done_ = replay_done_[step_count_ - 1];
-      std::array<float, searchrescue::kNumSearchers> rewards{};
-      for (int searcher = 0; searcher < searchrescue::kNumSearchers;
-           ++searcher) {
-        rewards[searcher] =
-            replay_rewards_[(step_count_ - 1) * searchrescue::kNumSearchers +
-                            searcher];
-      }
-      WriteState(rewards);
-      return;
-    }
     for (int searcher = 0; searcher < searchrescue::kNumSearchers; ++searcher) {
       const float rotation = std::clamp(
           static_cast<float>(action["action"_](0, searcher, 0)), -1.0f, 1.0f);
@@ -287,12 +226,12 @@ class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
           y_[searcher] + speed_[searcher] * std::sin(heading_[searcher]));
     }
     const float noise = spec_.config["search_and_rescue_target_acc_std"_];
-    std::normal_distribution<float> normal(0.0f, 1.0f);
+    const auto target_key = random::TakeKey(&key_);
     for (int target = 0; target < searchrescue::kNumTargets; ++target) {
       float& vx = target_velocities_[target * 2];
       float& vy = target_velocities_[target * 2 + 1];
-      vx += noise * normal(gen_);
-      vy += noise * normal(gen_);
+      vx += noise * random::Normal(target_key, 2 * target);
+      vy += noise * random::Normal(target_key, 2 * target + 1);
       const float norm = std::sqrt(vx * vx + vy * vy);
       if (norm > 0.002f) {
         vx = 0.002f * vx / norm;
@@ -418,9 +357,7 @@ class SearchAndRescueEnv : public Env<SearchAndRescueEnvSpec>,
                   target_positions_[2 * target + 1], 0.1f);
       }
     }
-    if (use_replay_) {
-      views = configured_searcher_views_;
-    }
+
     auto state = Allocate();
     for (int target = 0; target < searchrescue::kNumTargets; ++target) {
       state["info:target_found"_][target] = target_found_[target];

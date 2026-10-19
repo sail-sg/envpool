@@ -29,6 +29,9 @@ from typing import Any
 import numpy as np
 from absl.testing import absltest
 
+from envpool.mujoco.myosuite.oracle import (
+    sync_state_from_info as _sync_state_from_info,
+)
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
 if platform.system() == "Windows":
@@ -158,78 +161,6 @@ _MAX_RENDER_MEAN_ABS_DIFF = 24.0
 _MAX_RENDER_BLOCK_MEAN_ABS_DIFF = 24.0
 _MAX_RENDER_LARGE_MISMATCH_RATIO = 0.50
 _LARGE_RENDER_DELTA = 32
-_SYNC_STATE_KEYS = (
-    "target_jnt_value",
-    "baoding_goal_parameters",
-    "chase_task",
-    "qpos0",
-    "qvel0",
-    "act0",
-    "qacc0",
-    "qacc_warmstart0",
-    "ctrl",
-    "site_pos",
-    "site_quat",
-    "site_size",
-    "site_rgba",
-    "body_pos",
-    "body_quat",
-    "body_mass",
-    "geom_pos",
-    "geom_quat",
-    "geom_size",
-    "geom_rgba",
-    "geom_friction",
-    "geom_aabb",
-    "geom_rbound",
-    "geom_contype",
-    "geom_conaffinity",
-    "geom_type",
-    "geom_condim",
-    "hfield_data",
-    "mocap_pos",
-    "mocap_quat",
-    "fatigue_ma",
-    "fatigue_mr",
-    "fatigue_mf",
-    "fatigue_tl",
-)
-_SYNC_STATE_SIZES = {
-    "target_jnt_value": "nq",
-    "baoding_goal_parameters": "five",
-    "chase_task": "one",
-    "qpos0": "nq",
-    "qvel0": "nv",
-    "act0": "na",
-    "qacc0": "nv",
-    "qacc_warmstart0": "nv",
-    "ctrl": "nu",
-    "site_pos": "nsite3",
-    "site_quat": "nsite4",
-    "site_size": "nsite3",
-    "site_rgba": "nsite4",
-    "body_pos": "nbody3",
-    "body_quat": "nbody4",
-    "body_mass": "nbody",
-    "geom_pos": "ngeom3",
-    "geom_quat": "ngeom4",
-    "geom_size": "ngeom3",
-    "geom_rgba": "ngeom4",
-    "geom_friction": "ngeom3",
-    "geom_aabb": "ngeom6",
-    "geom_rbound": "ngeom",
-    "geom_contype": "ngeom",
-    "geom_conaffinity": "ngeom",
-    "geom_type": "ngeom",
-    "geom_condim": "ngeom",
-    "hfield_data": "nhfielddata",
-    "mocap_pos": "nmocap3",
-    "mocap_quat": "nmocap4",
-    "fatigue_ma": "nu",
-    "fatigue_mr": "nu",
-    "fatigue_mf": "nu",
-    "fatigue_tl": "nu",
-}
 
 
 def _render_shard_task_ids(task_ids: tuple[str, ...]) -> tuple[str, ...]:
@@ -383,42 +314,6 @@ def _oracle_trace(
         plan_path.unlink(missing_ok=True)
 
 
-def _sync_state_from_info(info: dict[str, Any]) -> dict[str, Any]:
-    dims = {
-        "one": 1,
-        "five": 5,
-        "nq": int(np.asarray(info["model_nq"]).ravel()[0]),
-        "nv": int(np.asarray(info["model_nv"]).ravel()[0]),
-        "na": int(np.asarray(info["model_na"]).ravel()[0]),
-        "nu": int(np.asarray(info["model_nu"]).ravel()[0]),
-        "nsite": int(np.asarray(info["model_nsite"]).ravel()[0]),
-        "nbody": int(np.asarray(info["model_nbody"]).ravel()[0]),
-        "ngeom": int(np.asarray(info["model_ngeom"]).ravel()[0]),
-        "nhfielddata": int(np.asarray(info["model_nhfielddata"]).ravel()[0]),
-        "nmocap": int(np.asarray(info["model_nmocap"]).ravel()[0]),
-    }
-    dims.update({
-        "nsite3": dims["nsite"] * 3,
-        "nsite4": dims["nsite"] * 4,
-        "nbody3": dims["nbody"] * 3,
-        "nbody4": dims["nbody"] * 4,
-        "ngeom3": dims["ngeom"] * 3,
-        "ngeom4": dims["ngeom"] * 4,
-        "ngeom6": dims["ngeom"] * 6,
-        "nmocap3": dims["nmocap"] * 3,
-        "nmocap4": dims["nmocap"] * 4,
-    })
-    sync_state = {}
-    for key in _SYNC_STATE_KEYS:
-        if key not in info:
-            continue
-        size = dims[_SYNC_STATE_SIZES[key]]
-        sync_state[key] = (
-            np.asarray(info[key][0], dtype=np.float64).ravel()[:size].tolist()
-        )
-    return sync_state
-
-
 def _render(env: Any) -> np.ndarray:
     frame = env.render()
     if frame is None:
@@ -505,7 +400,9 @@ def _envpool_trace_record(
             step_info = info
             elapsed_step = int(np.asarray(step_info["elapsed_step"]).ravel()[0])
             reset_before_step.append(elapsed_step == 0)
-            sync_states.append(_sync_state_from_info(step_info))
+            sync_states.append(
+                _sync_state_from_info(step_info) if elapsed_step == 0 else {}
+            )
         plan = {
             "actions": actions,
             "reset_before_step": reset_before_step,

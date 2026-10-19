@@ -34,3 +34,23 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "jax_random",
+    hdrs = ["jax_random.h"],
+)
+
+cc_library(
+    name = "numpy_random",
+    hdrs = ["numpy_random.h"],
+    deps = ["//third_party/numpy:random_headers"],
+)
+
+cc_library(
+    name = "colored_noise",
+    hdrs = ["colored_noise.h"],
+    deps = [
+        ":numpy_random",
+        "//third_party/numpy:fft",
+    ],
+)

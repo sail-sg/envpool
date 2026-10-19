@@ -67,14 +67,10 @@ inline float Distance(const std::array<float, kNumNodes * 2>& coordinates,
 class CVRPEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict(
-        "cvrp_max_capacity"_.Bind(20),
-        "cvrp_coordinates"_.Bind(std::string("")),
-        "cvrp_demands"_.Bind(std::string("")),
-        "cvrp_distance_matrix"_.Bind(std::string("")),
-        "cvrp_replay_rewards"_.Bind(std::string("")),
-        "cvrp_replay_done"_.Bind(std::string("")),
-        "cvrp_render_num_total_visits_replay"_.Bind(std::string("")));
+    return MakeDict("cvrp_max_capacity"_.Bind(20),
+                    "cvrp_coordinates"_.Bind(std::string("")),
+                    "cvrp_demands"_.Bind(std::string("")),
+                    "cvrp_distance_matrix"_.Bind(std::string("")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -105,13 +101,10 @@ class CVRPEnv : public Env<CVRPEnvSpec>, public RenderableEnv {
   std::array<float, cvrp::kNumNodes> demands_{};
   std::array<float, cvrp::kNumNodes> configured_demands_{};
   std::array<float, cvrp::kDistanceMatrixSize> configured_distances_{};
-  std::array<float, cvrp::kTimeLimit> replay_rewards_{};
-  std::array<bool, cvrp::kTimeLimit> replay_done_{};
   std::array<bool, cvrp::kNumNodes> unvisited_{};
   std::array<int, cvrp::kTrajectoryLength> trajectory_{};
   bool use_configured_coordinates_;
   bool use_configured_distances_;
-  bool use_replay_;
   int position_{0};
   int trajectory_size_{0};
   int capacity_{0};
@@ -131,14 +124,9 @@ class CVRPEnv : public Env<CVRPEnvSpec>, public RenderableEnv {
             spec.config["cvrp_demands"_])),
         configured_distances_(parse::CsvArray<float, cvrp::kDistanceMatrixSize>(
             spec.config["cvrp_distance_matrix"_])),
-        replay_rewards_(parse::CsvArray<float, cvrp::kTimeLimit>(
-            spec.config["cvrp_replay_rewards"_])),
-        replay_done_(parse::CsvArray<bool, cvrp::kTimeLimit>(
-            spec.config["cvrp_replay_done"_])),
         use_configured_coordinates_(!spec.config["cvrp_coordinates"_].empty()),
         use_configured_distances_(
-            !spec.config["cvrp_distance_matrix"_].empty()),
-        use_replay_(!spec.config["cvrp_replay_rewards"_].empty()) {
+            !spec.config["cvrp_distance_matrix"_].empty()) {
     CHECK_GT(kMaxCapacity, 0);
   }
 
@@ -238,11 +226,9 @@ class CVRPEnv : public Env<CVRPEnvSpec>, public RenderableEnv {
       reward = -1.0f;
     }
     ++step_count_;
-    done_ = !valid || AllVisited() || step_count_ >= cvrp::kTimeLimit;
-    if (use_replay_ && step_count_ <= cvrp::kTimeLimit) {
-      reward = replay_rewards_[step_count_ - 1];
-      done_ = replay_done_[step_count_ - 1];
-    }
+    done_ = !valid || (AllVisited() && position_ == 0) ||
+            step_count_ >= cvrp::kTimeLimit;
+
     WriteState(reward);
   }
 

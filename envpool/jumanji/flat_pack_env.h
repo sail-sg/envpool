@@ -49,9 +49,7 @@ class FlatPackEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict("flat_pack_blocks"_.Bind(std::string("")),
-                    "flat_pack_action_mask"_.Bind(std::string("")),
-                    "flat_pack_replay_rewards"_.Bind(std::string("")),
-                    "flat_pack_replay_done"_.Bind(std::string("")));
+                    "flat_pack_action_mask"_.Bind(std::string("")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -77,12 +75,9 @@ class FlatPackEnv : public Env<FlatPackEnvSpec>, public RenderableEnv {
   std::array<int, flatpack::kNumBlocks * 3 * 3> blocks_{};
   std::array<int, flatpack::kNumBlocks * 3 * 3> configured_blocks_{};
   std::array<bool, flatpack::kActionMaskSize> configured_action_mask_{};
-  std::array<float, flatpack::kTimeLimit> replay_rewards_{};
-  std::array<bool, flatpack::kTimeLimit> replay_done_{};
   std::array<bool, flatpack::kNumBlocks> placed_{};
   bool use_configured_blocks_;
   bool use_configured_action_mask_;
-  bool use_replay_;
   int step_count_{0};
   bool done_{true};
 
@@ -97,14 +92,9 @@ class FlatPackEnv : public Env<FlatPackEnvSpec>, public RenderableEnv {
         configured_action_mask_(
             parse::CsvArray<bool, flatpack::kActionMaskSize>(
                 spec.config["flat_pack_action_mask"_])),
-        replay_rewards_(parse::CsvArray<float, flatpack::kTimeLimit>(
-            spec.config["flat_pack_replay_rewards"_])),
-        replay_done_(parse::CsvArray<bool, flatpack::kTimeLimit>(
-            spec.config["flat_pack_replay_done"_])),
         use_configured_blocks_(!spec.config["flat_pack_blocks"_].empty()),
         use_configured_action_mask_(
-            !spec.config["flat_pack_action_mask"_].empty()),
-        use_replay_(!spec.config["flat_pack_replay_rewards"_].empty()) {}
+            !spec.config["flat_pack_action_mask"_].empty()) {}
 
   bool IsDone() override { return done_; }
 
@@ -170,15 +160,10 @@ class FlatPackEnv : public Env<FlatPackEnvSpec>, public RenderableEnv {
         }
       }
       placed_[block] = true;
-    } else {
-      reward = -1.0f;
     }
     ++step_count_;
-    done_ = !valid || !HasValidAction() || step_count_ >= flatpack::kTimeLimit;
-    if (use_replay_ && step_count_ <= flatpack::kTimeLimit) {
-      reward = replay_rewards_[step_count_ - 1];
-      done_ = replay_done_[step_count_ - 1];
-    }
+    done_ = step_count_ >= flatpack::kTimeLimit;
+
     WriteState(reward);
   }
 
@@ -276,21 +261,6 @@ class FlatPackEnv : public Env<FlatPackEnvSpec>, public RenderableEnv {
       }
     }
     return true;
-  }
-
-  bool HasValidAction() const {
-    for (int block = 0; block < flatpack::kNumBlocks; ++block) {
-      for (int rotation = 0; rotation < 4; ++rotation) {
-        for (int row = 0; row < flatpack::kPlacementSize; ++row) {
-          for (int col = 0; col < flatpack::kPlacementSize; ++col) {
-            if (IsActionValid(block, rotation, row, col)) {
-              return true;
-            }
-          }
-        }
-      }
-    }
-    return false;
   }
 
   void WriteState(float reward) {

@@ -18,7 +18,6 @@ from __future__ import annotations
 import importlib
 import json
 import os
-import platform
 import subprocess
 import sys
 import tempfile
@@ -30,8 +29,10 @@ import numpy as np
 from absl import logging
 from absl.testing import absltest
 
+from envpool.mujoco.myosuite.oracle import (
+    sync_state_from_info as _sync_state_from_info,
+)
 from envpool.mujoco.myosuite.tasks import (
-    MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS,
     MYOSUITE_ORACLE_VERSION,
     MYOSUITE_TASKS,
     MyoSuiteTask,
@@ -43,144 +44,140 @@ importlib.import_module("envpool.mujoco.myosuite.registration")
 _ROLLOUT_STEPS = 128
 _ORACLE_SPACE_BATCH_SIZE = 64
 _ROLLOUT_BATCH_SIZE = 4
-# Keep the expensive 128-step oracle traces to a diagonal sample across
-# orthogonal task modifiers. Full registry/space/render coverage still checks
-# every official ID; this set keeps muscle-condition/player-side combinations
-# from growing as a cartesian product.
-_ROLLOUT_TASK_IDS = frozenset({
-    "MyoHandAirplaneFixed-v0",
-    "MyoHandAirplaneFly-v0",
-    "myoFingerReachFixed-v0",
-    "myoFingerPoseFixed-v0",
-    "myoFingerReachRandom-v0",
-    "myoFingerPoseRandom-v0",
-    "myoHandReachFixed-v0",
-    "myoHandPoseFixed-v0",
-    "myoHandKeyTurnFixed-v0",
-    "myoHandObjHoldFixed-v0",
-    "myoHandPenTwirlFixed-v0",
-    "myoHandReorient8-v0",
-    "myoLegStandRandom-v0",
-    "myoLegWalk-v0",
-    "myoLegRoughTerrainWalk-v0",
-    "myoChallengeBaodingP1-v1",
-    "myoChallengeBimanual-v0",
-    "myoChallengeChaseTagP1-v0",
-    "myoChallengeDieReorientP1-v0",
-    "myoChallengeOslRunFixed-v0",
-    "myoChallengeRelocateP1-v0",
-    "myoChallengeSoccerP1-v0",
-    "myoChallengeTableTennisP0-v0",
-    "myoFatiChallengeBimanual-v0",
-    "myoSarcChallengeSoccerP2-v0",
-})
-_BITWISE_ROLLOUT_TASK_IDS = frozenset({
-    "myoFingerReachFixed-v0",
-    "myoFingerPoseFixed-v0",
-    "myoFingerReachRandom-v0",
-    "myoFingerPoseRandom-v0",
-})
-_LINUX_AARCH64_FINGER_ROLLOUT_RTOL = 1e-5
-_LINUX_AARCH64_FINGER_ROLLOUT_ATOL = 1e-7
-_EXPECTED_ORACLE_NUMPY2_BROKEN_IDS: frozenset[str] = frozenset()
-_SYNC_STATE_KEYS = (
-    "target_jnt_value",
-    "baoding_goal_parameters",
-    "chase_task",
-    "qpos0",
-    "qvel0",
-    "act0",
-    "qacc0",
-    "qacc_warmstart0",
-    "ctrl",
-    "site_pos",
-    "site_quat",
-    "site_size",
-    "site_rgba",
-    "body_pos",
-    "body_quat",
-    "body_mass",
-    "geom_pos",
-    "geom_quat",
-    "geom_size",
-    "geom_rgba",
-    "geom_friction",
-    "geom_aabb",
-    "geom_rbound",
-    "geom_contype",
-    "geom_conaffinity",
-    "geom_type",
-    "geom_condim",
-    "hfield_data",
-    "mocap_pos",
-    "mocap_quat",
-    "fatigue_ma",
-    "fatigue_mr",
-    "fatigue_mf",
-    "fatigue_tl",
-)
-_SYNC_STATE_SIZES = {
-    "target_jnt_value": "nq",
-    "baoding_goal_parameters": "five",
-    "chase_task": "one",
-    "qpos0": "nq",
-    "qvel0": "nv",
-    "act0": "na",
-    "qacc0": "nv",
-    "qacc_warmstart0": "nv",
-    "ctrl": "nu",
-    "site_pos": "nsite3",
-    "site_quat": "nsite4",
-    "site_size": "nsite3",
-    "site_rgba": "nsite4",
-    "body_pos": "nbody3",
-    "body_quat": "nbody4",
-    "body_mass": "nbody",
-    "geom_pos": "ngeom3",
-    "geom_quat": "ngeom4",
-    "geom_size": "ngeom3",
-    "geom_rgba": "ngeom4",
-    "geom_friction": "ngeom3",
-    "geom_aabb": "ngeom6",
-    "geom_rbound": "ngeom",
-    "geom_contype": "ngeom",
-    "geom_conaffinity": "ngeom",
-    "geom_type": "ngeom",
-    "geom_condim": "ngeom",
-    "hfield_data": "nhfielddata",
-    "mocap_pos": "nmocap3",
-    "mocap_quat": "nmocap4",
-    "fatigue_ma": "nu",
-    "fatigue_mr": "nu",
-    "fatigue_mf": "nu",
-    "fatigue_tl": "nu",
-}
 
 
-def _assert_bitwise_rollout_obs(
+def _field_budget(task_id: str, field: str) -> tuple[float, float | None]:
+    """Peak and per-component time-mean budgets for sensitive contact traces."""
+    # Complete macOS/Linux rollouts isolate these residuals to ordinary control
+    # roundoff or MjSpec recompilation. Equal-control diagnostic replays remove
+    # the muscle/contact residuals; permanent tests still drive external actions.
+    # Keep all other fields tight and constrain persistent drift as well as peaks.
+    budgets: dict[str, tuple[float, float]] = {}
+    if task_id.startswith("MyoHand"):
+        budgets = {"qv": (2e-4, 2e-5), "hand_qvel_err": (2e-4, 2e-5)}
+        if task_id == "MyoHandFlashlight1On-v0":
+            budgets.update({
+                "qp": (3e-3, 2.5e-4),
+                "hand_qpos_err": (3e-3, 2.5e-4),
+                "qv": (0.1, 4e-3),
+                "hand_qvel_err": (0.1, 4e-3),
+                "obj_com_err": (6e-5, 4e-6),
+                "reward": (6e-5, 6e-6),
+            })
+        elif task_id == "MyoHandWaterbottleLift-v0":
+            budgets.update({
+                "qp": (1.5e-4, 3e-5),
+                "hand_qpos_err": (1.5e-4, 3e-5),
+                "qv": (0.012, 1e-3),
+                "hand_qvel_err": (0.012, 1e-3),
+            })
+    elif "HandKeyTurn" in task_id:
+        budgets = {
+            "hand_qpos": (2e-4, 4e-5),
+            "hand_qvel": (2e-4, 4e-5),
+            "key_qpos": (2e-4, 4e-5),
+            "key_qvel": (2e-4, 4e-5),
+            "reward": (2e-4, 4e-5),
+        }
+    elif task_id.startswith("myoSarcHandPose"):
+        budgets = {
+            "qpos": (1e-4, 2e-5),
+            "qvel": (1e-4, 2e-5),
+            "pose_err": (1e-4, 2e-5),
+        }
+        if task_id == "myoSarcHandPose5Fixed-v0":
+            budgets.update({
+                "qpos": (6e-3, 2.5e-3),
+                "pose_err": (6e-3, 2.5e-3),
+                "qvel": (1e-3, 1e-4),
+                "reward": (2e-3, 5e-4),
+            })
+    elif task_id.startswith("myoFatiFingerReach"):
+        # Stiff muscle dynamics: observed tip error <= 3.4 mm; joint mean
+        # <= 0.0076 rad. Upstream's qvel observation is velocity multiplied by dt.
+        budgets = {
+            "qpos": (0.06, 0.01),
+            "qvel": (0.3, 0.025),
+            "tip_pos": (4e-3, 5e-4),
+            "reach_err": (4e-3, 5e-4),
+            "reward": (3.5e-3, 5e-4),
+        }
+    elif "ChallengeBimanual" in task_id:
+        # Object contact gives a short angular-velocity spike (1.79, mean 0.0067)
+        # while hand/prosthesis state stays tight and contact categories agree.
+        budgets = {
+            "object_qpos": (6e-3, 1e-3),
+            "object_qvel": (2.0, 0.01),
+            "reward": (2e-3, 5e-5),
+        }
+    elif "ChallengeTableTennis" in task_id:
+        # Recompiled-model roundoff: paddle error <= 4 mm / 0.014 rad, with
+        # transient velocity differences <= 0.21 m/s in the measured rollouts.
+        budgets = {
+            "body_qpos": (2e-4, 6e-5),
+            "body_qvel": (0.02, 3e-4),
+            "paddle_pos": (5e-3, 2e-3),
+            "reach_err": (5e-3, 2e-3),
+            "paddle_vel": (0.25, 0.015),
+            "paddle_ori": (0.02, 5e-3),
+            "reward": (2e-3, 4e-4),
+        }
+        if task_id == "myoFatiChallengeTableTennisP0-v0":
+            # This stress case amplifies ~1e-14 model recompilation residuals.
+            # Matching only those residuals and control roundoff in a diagnostic
+            # removes all physics error. Keep the independent oracle here.
+            budgets.update({
+                "body_qpos": (0.01, 3e-3),
+                "body_qvel": (0.75, 0.025),
+                "paddle_pos": (0.08, 0.03),
+                "reach_err": (0.08, 0.03),
+                "paddle_vel": (1.0, 0.25),
+                "paddle_ori": (0.06, 0.03),
+                "reward": (0.015, 5e-3),
+            })
+    return budgets.get(field, (2e-5, None))
+
+
+def _assert_rollout_values(
     actual: np.ndarray,
     desired: np.ndarray,
     *,
     label: str,
+    budget: tuple[float, float | None] = (2e-5, None),
 ) -> None:
-    if sys.platform.startswith("linux") and platform.machine().lower() in {
-        "aarch64",
-        "arm64",
-    }:
-        # Linux aarch64 accumulates small float32 differences in these long
-        # MuJoCo finger traces after tens of steps. Keep the residual scoped to
-        # that platform and far below a semantically meaningful trajectory drift.
-        try:
-            np.testing.assert_allclose(
-                actual,
-                desired,
-                rtol=_LINUX_AARCH64_FINGER_ROLLOUT_RTOL,
-                atol=_LINUX_AARCH64_FINGER_ROLLOUT_ATOL,
+    peak, mean = budget
+    np.testing.assert_allclose(
+        actual, desired, rtol=1e-5, atol=peak, equal_nan=False, err_msg=label
+    )
+    if mean is not None:
+        error = np.abs(actual - desired).mean(axis=0)
+        np.testing.assert_array_less(error, mean, err_msg=f"{label} mean")
+
+
+def _assert_observation_trace(
+    task_id: str,
+    actual: np.ndarray,
+    desired: np.ndarray,
+    fields: list[tuple[str, int, bool]],
+) -> None:
+    offset = 0
+    for name, size, discrete in fields:
+        selection = slice(offset, offset + size)
+        label = f"{task_id} observation {name}"
+        if discrete or name.startswith("touching_"):
+            np.testing.assert_array_equal(
+                actual[:, selection], desired[:, selection], err_msg=label
             )
-        except AssertionError as exc:
-            raise AssertionError(f"{label}\n{exc}") from exc
-        return
-    np.testing.assert_array_equal(actual, desired, err_msg=label)
+        else:
+            _assert_rollout_values(
+                actual[:, selection],
+                desired[:, selection],
+                label=label,
+                budget=_field_budget(task_id, name),
+            )
+        offset += size
+    if offset != actual.shape[1]:
+        raise AssertionError(f"{task_id}: incomplete observation layout")
 
 
 def _oracle_task_ids() -> tuple[str, ...]:
@@ -211,16 +208,6 @@ def _shard_task_ids(task_ids: tuple[str, ...]) -> tuple[str, ...]:
         task_id
         for index, task_id in enumerate(task_ids)
         if index % total_shards == shard_index
-    )
-
-
-def _oracle_rollout_task_ids() -> tuple[str, ...]:
-    return _shard_task_ids(
-        tuple(
-            task_id
-            for task_id in _oracle_task_ids()
-            if task_id in _ROLLOUT_TASK_IDS
-        )
     )
 
 
@@ -354,52 +341,8 @@ def _run_oracle_space_reports(
     return tasks
 
 
-def _sync_state_from_info(info: dict[str, Any]) -> dict[str, Any]:
-    dims = {
-        "one": 1,
-        "five": 5,
-        "nq": int(np.asarray(info["model_nq"]).ravel()[0]),
-        "nv": int(np.asarray(info["model_nv"]).ravel()[0]),
-        "na": int(np.asarray(info["model_na"]).ravel()[0]),
-        "nu": int(np.asarray(info["model_nu"]).ravel()[0]),
-        "nsite": int(np.asarray(info["model_nsite"]).ravel()[0]),
-        "nbody": int(np.asarray(info["model_nbody"]).ravel()[0]),
-        "ngeom": int(np.asarray(info["model_ngeom"]).ravel()[0]),
-        "nhfielddata": int(np.asarray(info["model_nhfielddata"]).ravel()[0]),
-        "nmocap": int(np.asarray(info["model_nmocap"]).ravel()[0]),
-    }
-    dims.update({
-        "nsite3": dims["nsite"] * 3,
-        "nsite4": dims["nsite"] * 4,
-        "nbody3": dims["nbody"] * 3,
-        "nbody4": dims["nbody"] * 4,
-        "ngeom3": dims["ngeom"] * 3,
-        "ngeom4": dims["ngeom"] * 4,
-        "ngeom6": dims["ngeom"] * 6,
-        "nmocap3": dims["nmocap"] * 3,
-        "nmocap4": dims["nmocap"] * 4,
-    })
-    sync_state = {}
-    for key in _SYNC_STATE_KEYS:
-        if key not in info:
-            continue
-        size = dims[_SYNC_STATE_SIZES[key]]
-        sync_state[key] = (
-            np.asarray(info[key][0], dtype=np.float64).ravel()[:size].tolist()
-        )
-    return sync_state
-
-
 class MyoSuiteOracleAlignTest(absltest.TestCase):
     """Validate native MyoSuite coverage against the pinned oracle surface."""
-
-    def test_no_numpy2_oracle_failures_are_excluded(self) -> None:
-        """Every pinned upstream ID is instantiable by the oracle."""
-        self.assertSetEqual(
-            MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS,
-            _EXPECTED_ORACLE_NUMPY2_BROKEN_IDS,
-        )
-        self.assertEmpty(MYOSUITE_ORACLE_NUMPY2_BROKEN_IDS)
 
     def test_pinned_official_registry_coverage(self) -> None:
         """Every pinned upstream registry ID must be represented locally."""
@@ -440,14 +383,62 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
                     envpool_spec.action_space.shape,
                     (task["action_dim"],),
                 )
+                self.assertTrue(
+                    np.can_cast(
+                        np.dtype(oracle_task["observation_dtype"]),
+                        envpool_spec.observation_space.dtype,
+                        casting="safe",
+                    )
+                )
+                self.assertEqual(
+                    envpool_spec.action_space.dtype,
+                    np.dtype(oracle_task["action_dtype"]),
+                )
                 self.assertEqual(
                     envpool_spec.config.max_episode_steps,
                     task["max_episode_steps"],
                 )
 
+    def test_reference_interpolation(self) -> None:
+        """The upstream interpolation patch preserves a linear trajectory."""
+        if not _shard_task_ids(("reference",)):
+            return
+        report = _run_oracle_probe("reference_interpolation")
+        np.testing.assert_array_equal(
+            report["robot"], [[0, 2], [2, 4], [4, 6], [6, 8], [8, 10]]
+        )
+        np.testing.assert_array_equal(
+            report["robot_vel"], [[1, 3], [3, 5], [5, 7], [7, 9], [9, 11]]
+        )
+        np.testing.assert_array_equal(
+            report["object"],
+            [[i, i + 2, i + 4, 1, 0, 0, 0] for i in (0, 2, 4, 6, 8)],
+        )
+
+    def test_challenge_regressions(self) -> None:
+        """The patched oracle moves collisions and ends completed rallies."""
+        if not _shard_task_ids(("challenge_regressions",)):
+            return
+        report = _run_oracle_probe("challenge_regressions")
+        np.testing.assert_allclose(
+            report["physical"], report["commanded"], rtol=0, atol=1e-14
+        )
+        positions = np.asarray(report["physical"])
+        # The default policy mixture intentionally includes stationary keepers.
+        self.assertGreater(
+            np.linalg.norm(positions[:, -1] - positions[:, 0], axis=-1).max(),
+            1e-4,
+        )
+        self.assertEqual(
+            report["rallies"],
+            [[False, False], [True, True]]
+            + [[False, True]] * 4
+            + [[True, True]],
+        )
+
     def test_oracle_rollout_surface(self) -> None:
-        """Exercise nontrivial rollouts with oracle-generated actions."""
-        rollout_task_ids = _oracle_rollout_task_ids()
+        """Compare every registered task through its first complete episode."""
+        rollout_task_ids = _shard_task_ids(_oracle_task_ids())
         task_metadata = _task_metadata_by_id()
         for batch in _task_batches(rollout_task_ids, _ROLLOUT_BATCH_SIZE):
             envpools: dict[str, Any] = {}
@@ -462,7 +453,13 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
                     sync_states[task_id] = _sync_state_from_info(info)
 
                 report = _run_oracle_probe(
-                    "trace", batch, sync_states=sync_states
+                    "trace",
+                    batch,
+                    steps=max(
+                        task_metadata[task_id]["max_episode_steps"]
+                        for task_id in batch
+                    ),
+                    sync_states=sync_states,
                 )
                 oracle_tasks = cast(dict[str, dict[str, Any]], report["tasks"])
                 self.assertSetEqual(set(oracle_tasks), set(batch))
@@ -473,20 +470,29 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
                     envpool_obs = envpool_reset_obs[task_id]
                     oracle_task = oracle_tasks[task_id]
                     with self.subTest(task_id=task_id):
-                        self.assertLen(oracle_task["obs"], _ROLLOUT_STEPS + 1)
-                        self.assertLen(oracle_task["actions"], _ROLLOUT_STEPS)
+                        self.assertLen(
+                            oracle_task["obs"], len(oracle_task["actions"]) + 1
+                        )
+                        self.assertTrue(
+                            oracle_task["terminated"][-1]
+                            or oracle_task["truncated"][-1]
+                        )
                         self.assertEqual(
                             envpool_obs.shape, (1, task["obs_dim"])
                         )
-                        if task_id in _BITWISE_ROLLOUT_TASK_IDS:
-                            _assert_bitwise_rollout_obs(
-                                envpool_obs[0].astype(np.float32),
-                                np.asarray(
-                                    oracle_task["obs"][0], dtype=np.float32
-                                ),
-                                label=f"{task_id} reset obs",
-                            )
+                        _assert_rollout_values(
+                            envpool_obs[0],
+                            np.asarray(oracle_task["obs"][0]),
+                            label=f"{task_id} reset obs",
+                        )
 
+                        self.assertEqual(
+                            envpool_obs.dtype,
+                            envpool.observation_space.dtype,
+                        )
+                        observations = []
+                        rewards = []
+                        sparse_rewards = []
                         for step_id, action in enumerate(
                             oracle_task["actions"]
                         ):
@@ -498,39 +504,66 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
                             self.assertEqual(envpool_step[1].shape, (1,))
                             self.assertEqual(envpool_step[2].shape, (1,))
                             self.assertEqual(envpool_step[3].shape, (1,))
-                            if task_id in _BITWISE_ROLLOUT_TASK_IDS:
-                                oracle_obs = np.asarray(
-                                    oracle_task["obs"][step_id + 1],
-                                    dtype=np.float32,
-                                )
-                                oracle_reward = np.asarray(
-                                    oracle_task["rewards"][step_id],
-                                    dtype=np.float32,
-                                )
-                                _assert_bitwise_rollout_obs(
-                                    envpool_step[0][0].astype(np.float32),
-                                    oracle_obs,
-                                    label=f"{task_id} step {step_id} obs",
-                                )
-                                self.assertEqual(
-                                    float(envpool_step[1][0]),
-                                    float(oracle_reward),
-                                    msg=f"{task_id} step {step_id} reward",
-                                )
-                                self.assertEqual(
-                                    bool(envpool_step[2][0]),
-                                    bool(oracle_task["terminated"][step_id]),
-                                    msg=f"{task_id} step {step_id} terminated",
-                                )
-                                self.assertEqual(
-                                    bool(envpool_step[3][0]),
-                                    bool(oracle_task["truncated"][step_id]),
-                                    msg=f"{task_id} step {step_id} truncated",
-                                )
+                            self.assertEqual(
+                                envpool_step[0].dtype, envpool_obs.dtype
+                            )
+                            observations.append(envpool_step[0][0].copy())
+                            rewards.append(float(envpool_step[1][0]))
+                            sparse_rewards.append(
+                                float(envpool_step[4]["sparse"][0])
+                            )
+                            oracle_ctrl = oracle_task["states"][step_id]["ctrl"]
+                            np.testing.assert_allclose(
+                                envpool_step[4]["ctrl"][0, : len(oracle_ctrl)],
+                                oracle_ctrl,
+                                rtol=1e-10,
+                                atol=1e-10,
+                                equal_nan=False,
+                                err_msg=f"{task_id} step {step_id} control",
+                            )
+                            oracle_info = oracle_task["infos"][step_id]
+                            self.assertEqual(
+                                bool(envpool_step[4]["solved"][0]),
+                                bool(np.asarray(oracle_info["solved"]).item()),
+                                msg=f"{task_id} step {step_id} solved",
+                            )
+                            self.assertEqual(
+                                bool(envpool_step[2][0]),
+                                bool(oracle_task["terminated"][step_id]),
+                                msg=f"{task_id} step {step_id} terminated",
+                            )
+                            self.assertEqual(
+                                bool(envpool_step[3][0]),
+                                bool(oracle_task["truncated"][step_id]),
+                                msg=f"{task_id} step {step_id} truncated",
+                            )
                             if bool(oracle_task["terminated"][step_id]) or bool(
                                 oracle_task["truncated"][step_id]
                             ):
                                 break
+                        _assert_observation_trace(
+                            task_id,
+                            np.asarray(observations),
+                            np.asarray(oracle_task["obs"][1:]),
+                            oracle_task["obs_fields"],
+                        )
+                        for name, actual, desired in (
+                            ("reward", rewards, oracle_task["rewards"]),
+                            (
+                                "sparse reward",
+                                sparse_rewards,
+                                [
+                                    np.asarray(info["rwd_sparse"]).item()
+                                    for info in oracle_task["infos"]
+                                ],
+                            ),
+                        ):
+                            _assert_rollout_values(
+                                np.asarray(actual),
+                                np.asarray(desired),
+                                label=f"{task_id} {name}",
+                                budget=_field_budget(task_id, "reward"),
+                            )
             finally:
                 for envpool in envpools.values():
                     try:

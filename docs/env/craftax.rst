@@ -168,20 +168,15 @@ through the actual pool; ``debug_state=True`` exposes its diagnostic encoding
 in ``info["state"]``. Neither option provides a mid-episode synchronization
 path. The diagnostic encoding is not a stable saved-game format.
 
-Native float RGB agrees bitwise with the standalone official renderer. JAX
-changes the final daylight blend's fused multiply-add operand order when
-compiling some combined reset/step graphs. Reversing just that operation
-reproduces the residual, including its propagation through sleep's grayscale.
-The observation tests allow only these demonstrated exceptions:
+Scalar native math and the official JAX graphs may round daylight blends,
+normalized observations, and the achievement score differently. Oracle tests
+use float32 accuracy (relative tolerance ``1e-6``, absolute tolerance ``1e-7``),
+including pixels normalized to [0, 1]. Integer RGB output allows one intensity
+level for quantization. These criteria apply across architectures and channels.
 
-* ARM64 (macOS and Linux), Classic reset/non-AutoReset step: map blue in
-  four-pixel vector blocks (columns 0--59), one ULP at reset and two during
-  steps. While sleeping, the same region's RGB channels allow two ULPs.
-* x86-64 (Linux and Windows), Classic AutoReset step: map red, up to two ULPs;
-  while sleeping, map green/blue in columns 0--55 have the same bound.
-* x86-64, full-game reset: map red/green in eight-pixel vector blocks
-  (columns 0--103), one ULP.
-
-Inventory, all other channels and scalar tails, symbolic observations, game
-state, rewards, information, and rendered uint8 RGB frames remain exact.
-There is no general observation or gameplay tolerance.
+Game state is compared by field: discrete maps, inventory, achievements, and
+transitions remain exact; floating-point fields use the numerical criterion
+above. Tests cover complete day/night and AutoReset trajectories to catch
+changed random events or growing state drift. Repeated native runs retain exact
+state and observation equality. Runtime observations read the current state;
+they do not rewrite it to imitate JAX compilation or constant folding.

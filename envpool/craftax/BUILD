@@ -46,6 +46,7 @@ cc_library(
         "//conditions:default": ["-ffp-contract=off"],
     }),
     deps = [
+        "//envpool/utils:jax_random",
         "//third_party/craftax:constants",
         "@lodepng",
     ],

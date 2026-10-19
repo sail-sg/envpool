@@ -263,24 +263,26 @@ truncation, physics state, and public rendering at multiple steps.
 The oracle uses the upstream ``auto_reset=False`` option to retain terminal
 observations; EnvPool resets a completed slot on its next step.
 
-Reward reductions use standard C++ math; the terrain-plane fit uses MuJoCo's
-3-by-3 eigenvalue solver. Only arithmetic and trigonometry that set physical state
-retain the pinned oracle's rounding, since tiny changes there can grow into
-different contact trajectories. Sine and cosine use statically linked MKL on
-x64 and SLEEF on ARM64; no additional math runtime or LAPACK solver is needed.
+Native scalar calculations use standard C++ math; the terrain-plane fit uses
+MuJoCo's 3-by-3 eigenvalue solver. Sine and cosine use the platform standard
+library, without an additional MKL or SLEEF dependency.
 Oracle comparisons allow float32 rounding differences (relative tolerance
 ``1e-5``, absolute tolerance ``1e-6``), while discrete outputs and native
-same-seed replays remain exact. The tests still compare every step through
+same-seed replays remain exact. Tracking tasks additionally bound brief
+contact sensitivity to standard-library trigonometric rounding: peak pose
+error is below ``0.01`` (meters/radians), velocity and derived observation
+error below ``0.3``, and reward error below ``0.0003``. Each individual
+component's mean absolute error over time must remain below one percent of
+its peak budget. An independent 500-step diagnostic using system trigonometry
+in the oracle reproduced the native physics trajectory exactly; the actual
+tests retain the unmodified upstream math. The tests still compare every step through
 termination; they do not substitute final scores for behavioral alignment.
 
 RGB rendering shares the existing MuJoCo bootstrap. On macOS, identical scenes
-can produce sparse CGL/Metal color differences. The shared image check allows
-at most five intensity levels in any color channel and a mean absolute error
-of ``0.01`` per frame, on the 0-to-255 scale. ``Mjlab-Cartpole-Balance`` and
-``Mjlab-Cartpole-Swingup`` use bounds of 32 and ``0.025``: the official MuJoCo renderer alone reproduces a
-shadow difference of 25 levels over 13 pixels when replaying the same scene
-with different draw histories. Physics and other task budgets remain unchanged;
-other platforms retain exact RGB comparisons.
+can produce sparse CGL/Metal color differences. The shared image check bounds
+mean absolute error to ``0.01`` per frame on the 0-to-255 scale. It does not
+reject an otherwise accurate frame for one shadow-edge pixel or redraw the
+scene to force a match. Other platforms retain exact RGB comparisons.
 
 Independent tests observe native resets without oracle synchronization. They
 check different seeds, consecutive resets, parallel slots, and replay of the

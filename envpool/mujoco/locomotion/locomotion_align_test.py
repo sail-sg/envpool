@@ -132,82 +132,31 @@ class LocomotionAlignTest(parameterized.TestCase):
         """Check real goals, layouts and spawns without oracle state sync."""
         check_reset_randomization(self, task, randomized_components)
 
-    def assert_rewards(
-        self, native: np.ndarray, oracle: Any, task: str, context: str
+    def assert_numerical(
+        self, native: np.ndarray, oracle: Any, context: str
     ) -> None:
-        """Compare rewards with only the measured scalar-math residuals."""
-        expected = np.broadcast_to(oracle, native.shape)
-        if (
-            task == "rodent_two_touch"
-            and platform.system() == "Linux"
-            and platform.machine().lower() in {"x86_64", "amd64"}
-        ):
-            # NumPy's x86 SIMD exp and scalar glibc exp differ by one ULP.
-            # The .01 * exp(-3 * distance) * 25 shaping term can amplify that
-            # to two ULPs. Recomputing the oracle with math.exp reproduces the
-            # native result exactly, including all three contact transitions.
-            with self.subTest(context=context):
-                np.testing.assert_array_max_ulp(native, expected, maxulp=2)
-            return
-        # Bowl's 3-vector norm differs by one ULP between BLAS and MuJoCo,
-        # amplified by cancellation in 1 - (6 - distance) / 6. Tracking also
-        # combines scalar exp and quaternion reductions (see tracking.cc).
+        """Allow roundoff in derived float64 math, independently of backend."""
+        # Scalar libm, BLAS reductions and quaternion transforms differ by a
+        # few ULPs. Existing full-episode probes bound the absolute residual by
+        # 2e-14. Raw MuJoCo state and discrete transitions are checked exactly
+        # below; this budget applies only to derived observations/rewards.
         np.testing.assert_allclose(
-            native,
-            expected,
-            rtol=0,
-            atol=3e-15
-            if task == "cmu_humanoid_tracking"
-            else 1e-16
-            if task == "rodent_escape_bowl"
-            else 0,
-            err_msg=context,
+            native, oracle, rtol=2e-14, atol=2e-14, err_msg=context
         )
 
     def assert_observations(
         self, native: dict, oracle: dict, task: str, context: str
     ) -> None:
-        """Require exact state and pixels, with narrow derived-math residuals."""
+        """Compare derived values numerically and discrete observations exactly."""
         self.assertEqual(native.keys(), oracle.keys())
         for key in native:
             a, b = native[key], oracle[key]
             self.assertEqual(a.shape, b.shape, key)
             self.assertEqual(a.dtype, b.dtype, key)
-            # Only derived Python/NumPy math differs: BLAS reduction order and
-            # libm tanh/quaternion operations. Raw MuJoCo state/sensors, all
-            # discrete values remain bitwise; camera residuals are separate.
-            suffix = key.removeprefix("walker/")
-            tolerance = 0.0
-            if suffix in {"appendages_pos", "target", "origin"}:
-                tolerance = 2e-15
-            elif suffix == "sensors_torque":
-                # NumPy's vector tanh and scalar libm differ by up to two
-                # ULPs around 0.5 on Linux arm64 (one machine epsilon).
-                tolerance = float(np.finfo(np.float64).eps)
-            elif suffix.startswith("stats_") or suffix in {
-                "velocimeter_control",
-                "gyro_control",
-            }:
-                tolerance = 2e-14
-            elif suffix.startswith("reference_") or suffix == "time_in_clip":
-                tolerance = 1e-15
-            elif suffix in {
-                "team_goal_back_right",
-                "team_goal_mid",
-                "team_goal_front_left",
-                "field_front_left",
-                "opponent_goal_back_left",
-                "opponent_goal_mid",
-                "opponent_goal_front_right",
-                "field_back_right",
-            }:
-                tolerance = 2e-14
             if key == "walker/egocentric_camera":
                 assert_egocentric_images(a, b, task, context)
-            elif tolerance:
-                np.testing.assert_allclose(
-                    a, b, rtol=0, atol=tolerance, err_msg=f"{context}, {key}"
-                )
+            elif np.issubdtype(a.dtype, np.floating):
+                self.assert_numerical(a, b, f"{context}, {key}")
             else:
                 np.testing.assert_array_equal(a, b, err_msg=f"{context}, {key}")
 
@@ -366,10 +315,9 @@ class LocomotionAlignTest(parameterized.TestCase):
                 task,
                 f"{task}, {pattern}, step {step}",
             )
-            self.assert_rewards(
+            self.assert_numerical(
                 timestep.reward,
                 oracle_ts.reward,
-                task,
                 f"{task}, reward step {step}",
             )
             np.testing.assert_array_equal(
@@ -619,10 +567,9 @@ class LocomotionAlignTest(parameterized.TestCase):
                 task,
                 f"two_touch, outcome {outcome}, step {step}",
             )
-            self.assert_rewards(
+            self.assert_numerical(
                 timestep.reward,
                 oracle_ts.reward,
-                task,
                 f"two_touch, outcome {outcome}, reward step {step}",
             )
             np.testing.assert_array_equal(

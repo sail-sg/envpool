@@ -88,13 +88,11 @@ bool Game::Near(int block) const {
   return false;
 }
 
-float Game::Light(int timestep, bool fused) const {
+float Game::Light(int timestep) const {
   const float progress =
       std::fmod(static_cast<float>(timestep) / params.day_length, 1.0f) + 0.3f;
   const float cosine = std::abs(std::cos(3.141592653589793f * progress));
-  // XLA fuses the final multiply/subtract in the pinned CPU oracle.
-  return fused ? std::fma(-cosine * cosine, cosine, 1.0f)
-               : 1.0f - (cosine * cosine) * cosine;
+  return 1.0f - cosine * cosine * cosine;
 }
 
 void Game::Reset(Key rng) {
@@ -132,21 +130,7 @@ float Game::ClassicScore(const std::vector<std::uint8_t>& achievements,
   for (auto earned : achievements) {
     sum += (earned != 0u) && done ? std::log(101.0f) : 0.0f;
   }
-  float x = sum * (1.0f / 22.0f);
-  // The pinned scalar JAX reduction is ordered. Its exponential uses the
-  // Cephes polynomial also used by LLVM's float32 math lowering, rather than
-  // the platform libm expf. Only the score's finite 0..log(101) domain is
-  // needed.
-  const float n = std::floor(std::fma(x, 1.44269504088896341f, 0.5f));
-  x = std::fma(-0.693359375f, n, x);
-  x = std::fma(2.12194440e-4f, n, x);
-  float z = std::fma(x, 1.9875691500e-4f, 1.3981999507e-3f);
-  for (float coefficient : {8.3334519073e-3f, 4.1665795894e-2f,
-                            1.6666665459e-1f, 5.0000001201e-1f}) {
-    z = std::fma(z, x, coefficient);
-  }
-  z = std::fma(z, x * x, x);
-  return std::ldexp(z + 1.0f, static_cast<int>(n)) - 1.0f;
+  return std::expm1(sum / 22.0f);
 }
 
 // Round a finite float32 value to binary16 and back. Classic's inventory and

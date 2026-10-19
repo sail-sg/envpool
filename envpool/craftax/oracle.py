@@ -81,6 +81,47 @@ def encode(state: Any, layout: Any) -> np.ndarray:
     ])
 
 
+def assert_floats(actual: Any, expected: Any, context: str = "") -> None:
+    """Bound float32 roundoff without emulating JAX's fusion and vector widths."""
+    # The score accumulates 22 logarithms before expm1; daylight/pixel blends
+    # can fuse differently in JAX. A 1e-6 relative budget covers these float32
+    # operations without platform, channel or seed-specific exceptions.
+    np.testing.assert_allclose(
+        actual, expected, rtol=1e-6, atol=1e-7, err_msg=context
+    )
+
+
+def assert_state(
+    actual: np.ndarray, expected: Any, layout: Any, context: str = ""
+) -> None:
+    """Compare encoded state by original dtype; discrete gameplay stays exact."""
+    fields = flatten(expected)
+    offset = 0
+    for key in layout:
+        value = fields[key].ravel()
+        field = actual[offset : offset + value.size]
+        if np.issubdtype(value.dtype, np.floating):
+            assert_floats(field, value, context + " " + key)
+        else:
+            np.testing.assert_array_equal(
+                field, value, err_msg=context + " " + key
+            )
+        offset += value.size
+    assert offset == actual.size, context
+
+
+def assert_pixels(actual: Any, expected: Any, context: str = "") -> None:
+    """Bound daylight blend roundoff and, for uint8 output, its quantization."""
+    actual, expected = np.asarray(actual), np.asarray(expected)
+    assert actual.shape == expected.shape, context
+    if actual.dtype == np.uint8:
+        np.testing.assert_allclose(
+            actual, expected.astype(np.uint8), rtol=0, atol=1, err_msg=context
+        )
+    else:
+        assert_floats(actual / 255, expected / 255, context)
+
+
 def make_oracle(task_id: str, max_steps: int = 257) -> tuple[Any, Any]:
     """Construct the pinned factory name with the requested episode limit."""
     env = make_craftax_env_from_name(
@@ -123,6 +164,9 @@ def reset_info(state: Any, classic: bool) -> dict[str, Any]:
 
 
 __all__ = [
+    "assert_floats",
+    "assert_state",
+    "assert_pixels",
     "native",
     "jax",
     "full_constants",

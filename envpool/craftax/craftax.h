@@ -168,19 +168,13 @@ class CraftaxEnv : public Env<EnvSpec<CraftaxEnvFns<Classic, Pixel>>>,
     }
     first_reset_ = needs_reset_ = false;
     WriteState(0.0f, false, false, true, game_.state.timestep,
-               game_.state.achievements, synchronized);
+               game_.state.achievements);
   }
 
   void Step(const Action& action) override {
     const Key key = TakeKey(&rng_);
     const float reward =
         game_.Step(auto_reset_ ? Split(key, 0) : key, action["action"_]);
-    // In the pinned AutoReset graph, the returned state's select prevents
-    // contraction of the light calculation; its observation uses the fused
-    // result. Preserve both observable results without changing the stream.
-    if (auto_reset_) {
-      game_.state.light_level = game_.Light(game_.state.timestep, false);
-    }
     const bool done = game_.Done();
     const bool terminal =
         game_.state.player_health <= 0 ||
@@ -234,14 +228,8 @@ class CraftaxEnv : public Env<EnvSpec<CraftaxEnvFns<Classic, Pixel>>>,
   int tile_;
 
   void WriteState(float reward, bool done, bool trunc, bool reset, int elapsed,
-                  const std::vector<std::uint8_t>& achievements,
-                  bool synchronized = false) {
+                  const std::vector<std::uint8_t>& achievements) {
     auto state = this->Allocate();
-    const bool reset_obs = reset || (done && auto_reset_);
-    const float saved_light = game_.state.light_level;
-    if (auto_reset_ && !reset_obs) {
-      game_.state.light_level = game_.Light(game_.state.timestep);
-    }
     std::vector<float> obs;
     if constexpr (Pixel) {
       obs = Pixels(game_, Classic ? 7 : 10);
@@ -250,18 +238,7 @@ class CraftaxEnv : public Env<EnvSpec<CraftaxEnvFns<Classic, Pixel>>>,
       }
     } else {
       obs = game_.Symbolic();
-      if constexpr (!Classic) {
-        if (reset_obs && !synchronized) {
-          // Reset constants are folded as division, unlike the dynamic
-          // reciprocal multiplication in step's symbolic observation.
-          constexpr int k_intrinsic_offset = 9 * 11 * 83 + 22;
-          for (int i = 0; i < 5; ++i) {
-            obs[k_intrinsic_offset + i] = 0.9f;
-          }
-        }
-      }
     }
-    game_.state.light_level = saved_light;
     std::copy(obs.begin(), obs.end(),
               static_cast<float*>(state["obs"_].Data()));
     state["reward"_] = reward;

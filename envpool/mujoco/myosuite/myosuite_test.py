@@ -31,7 +31,7 @@ from envpool.registration import list_all_envs, make_gymnasium, make_spec
 
 _TASKS = tuple(MYOSUITE_TASKS)
 _TASK_IDS = tuple(task["id"] for task in _TASKS)
-_DETERMINISM_STEPS = 8
+_DETERMINISM_STEPS = 16
 _INFO_KEYS = {
     "task_id",
     "sparse",
@@ -151,6 +151,37 @@ class MyoSuiteTest(absltest.TestCase):
         """The pinned oracle can instantiate every official task under NumPy 2."""
         for task in _TASKS:
             self.assertFalse(task["oracle_numpy2_broken"], task["id"])
+
+    def test_default_opponent_policies(self) -> None:
+        """Random reset positions must not conceal a frozen NPC policy."""
+        moves = {
+            "myoChallengeChaseTagP1-v0": True,
+            "myoChallengeChaseTagP2eval-v0": True,
+            "myoChallengeSoccerP1-v0": False,  # Upstream intentionally stationary.
+            "myoChallengeSoccerP2-v0": True,
+        }
+        for task in _SHARDED_TASKS:
+            task_id = task["id"]
+            if task_id not in moves:
+                continue
+            with self.subTest(task_id=task_id):
+                moved = False
+                for seed in range(8):
+                    env = make_gymnasium(task_id, num_envs=1, seed=seed)
+                    try:
+                        _, info = env.reset()
+                        initial = info["mocap_pos"].copy()
+                        action = np.zeros((1, task["action_dim"]), np.float32)
+                        for _ in range(16):
+                            _, _, terminated, truncated, info = env.step(action)
+                            moved |= not np.array_equal(
+                                initial, info["mocap_pos"]
+                            )
+                            if terminated[0] or truncated[0]:
+                                break
+                    finally:
+                        env.close()
+                self.assertEqual(moved, moves[task_id], f"{task_id} NPC policy")
 
     def test_reference_surface_is_deterministic(self) -> None:
         """Replay the same seed and require the oracle's reset randomization."""

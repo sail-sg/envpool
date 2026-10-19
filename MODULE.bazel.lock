@@ -286,7 +286,7 @@
   "moduleExtensions": {
     "//envpool:workspace0.bzl%repositories": {
       "general": {
-        "bzlTransitiveDigest": "AN4f6KfyrCoEtRIYICYhOQ7suhYyIpi1ZQnl2xursI8=",
+        "bzlTransitiveDigest": "Ov8kDEQzue2nRSL0EnZ52f/vuf9d3TtAXhZ4qMoror8=",
         "usagesDigest": "SajRKIR8nOGpEzuKj8QlLVuws2HdnARUg1NP1i0Q7/M=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
@@ -304,7 +304,7 @@
               "build_file": "@@//third_party/mpe2:mpe2.BUILD"
             }
           },
-          "mpe2_pcg64": {
+          "numpy_pcg64": {
             "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_file",
             "attributes": {
               "sha256": "2ce9cc9366a9993cfd786a1ee63eaad35d8761c0ff9744ee5508192156f33d4a",
@@ -312,6 +312,26 @@
                 "https://raw.githubusercontent.com/numpy/numpy/v2.5.2/numpy/random/src/pcg64/pcg64.h"
               ],
               "downloaded_file_path": "pcg64.h"
+            }
+          },
+          "numpy_ziggurat_constants": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_file",
+            "attributes": {
+              "sha256": "9f8b114014b8475777e88c6af80e126654fe0753693d6eabba365d3c4051236c",
+              "urls": [
+                "https://raw.githubusercontent.com/numpy/numpy/v2.5.2/numpy/random/src/distributions/ziggurat_constants.h"
+              ],
+              "downloaded_file_path": "ziggurat_constants.h"
+            }
+          },
+          "numpy_pocketfft_hdronly": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_file",
+            "attributes": {
+              "sha256": "50f4ddbe60432325f560c706b6f1c49f9e0949fc7f20ae6499f2299e37d9790c",
+              "urls": [
+                "https://raw.githubusercontent.com/mreineck/pocketfft/33ae5dc94c9cdc7f1c78346504a85de87cadaa12/pocketfft_hdronly.h"
+              ],
+              "downloaded_file_path": "pocketfft_hdronly.h"
             }
           },
           "craftax_upstream": {
@@ -363,10 +383,6 @@
               "downloaded_file_path": "cmu_2020_dfe3e9e0.h5"
             }
           },
-          "mjlab_mkl": {
-            "repoRuleId": "@@//third_party/mjlab:mkl.bzl%mjlab_mkl_repository",
-            "attributes": {}
-          },
           "mjlab_source": {
             "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
@@ -396,22 +412,6 @@
               "patches": [
                 "@@//third_party/mjlab:warp_native.patch"
               ],
-              "patch_args": [
-                "-p1"
-              ]
-            }
-          },
-          "mjlab_sleef": {
-            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
-            "attributes": {
-              "urls": [
-                "https://codeload.github.com/shibatch/sleef/tar.gz/5a1d179df9cf652951b59010a2d2075372d67f68"
-              ],
-              "sha256": "afd1b92010ae7918e20eec3e5bb270b7ca4828b5cb19e4d820a0a4558a04ce63",
-              "type": "tar.gz",
-              "strip_prefix": "sleef-5a1d179df9cf652951b59010a2d2075372d67f68",
-              "build_file": "@@//third_party/mjlab:sleef.BUILD",
-              "patches": [],
               "patch_args": [
                 "-p1"
               ]
@@ -894,7 +894,10 @@
                 "-p1"
               ],
               "patches": [
-                "@@//third_party/myosuite:numpy2_scalars.patch"
+                "@@//third_party/myosuite:numpy2_scalars.patch",
+                "@@//third_party/myosuite:reference_interpolation.patch",
+                "@@//third_party/myosuite:goalkeeper_physics.patch",
+                "@@//third_party/myosuite:tabletennis_termination.patch"
               ],
               "sha256": "9fc2c610c5d71d2640cc75a0ea989c4f864622b49f67d38bfe7f1f6623396257",
               "strip_prefix": "myosuite-2.12.2",

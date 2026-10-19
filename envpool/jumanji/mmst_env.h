@@ -30,8 +30,10 @@
 #include "envpool/core/env.h"
 #include "envpool/jumanji/parse_utils.h"
 #include "envpool/jumanji/render_utils.h"
+#include "envpool/utils/jax_random.h"
 
 namespace jumanji {
+namespace random = envpool::jax_random;
 namespace mmst {
 
 constexpr int kNumNodes = 36;
@@ -39,24 +41,16 @@ constexpr int kNumAgents = 3;
 constexpr int kTimeLimit = 70;
 constexpr int kAdjMatrixSize = kNumNodes * kNumNodes;
 constexpr int kActionMaskSize = kNumAgents * kNumNodes;
-constexpr int kReplaySteps = 32;
 
 }  // namespace mmst
 
 class MMSTEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict(
-        "mmst_node_types"_.Bind(std::string("")),
-        "mmst_adj_matrix"_.Bind(std::string("")),
-        "mmst_positions"_.Bind(std::string("")),
-        "mmst_action_mask"_.Bind(std::string("")),
-        "mmst_replay_node_types"_.Bind(std::string("")),
-        "mmst_replay_positions"_.Bind(std::string("")),
-        "mmst_replay_action_mask"_.Bind(std::string("")),
-        "mmst_replay_rewards"_.Bind(std::string("")),
-        "mmst_render_nodes_to_connect"_.Bind(std::string("")),
-        "mmst_render_connected_nodes_replay"_.Bind(std::string("")));
+    return MakeDict("mmst_node_types"_.Bind(std::string("")),
+                    "mmst_adj_matrix"_.Bind(std::string("")),
+                    "mmst_positions"_.Bind(std::string("")),
+                    "mmst_action_mask"_.Bind(std::string("")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -79,6 +73,8 @@ using MMSTEnvSpec = EnvSpec<MMSTEnvFns>;
 
 class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
  protected:
+  random::Key reset_key_{};
+  random::Key key_{};
   std::array<int, mmst::kNumNodes> node_types_{};
   std::array<int, mmst::kAdjMatrixSize> adjacency_{};
   std::array<std::array<bool, mmst::kNumNodes>, mmst::kNumAgents> visited_{};
@@ -90,13 +86,7 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
   std::array<int, mmst::kAdjMatrixSize> configured_adj_matrix_{};
   std::array<int, mmst::kNumAgents> configured_positions_{};
   std::array<bool, mmst::kActionMaskSize> configured_action_mask_{};
-  std::array<int, mmst::kReplaySteps * mmst::kNumNodes> replay_node_types_{};
-  std::array<int, mmst::kReplaySteps * mmst::kNumAgents> replay_positions_{};
-  std::array<bool, mmst::kReplaySteps * mmst::kActionMaskSize>
-      replay_action_mask_{};
-  std::array<float, mmst::kReplaySteps> replay_rewards_{};
   bool use_configured_state_;
-  bool use_replay_;
   int step_count_{0};
   bool done_{true};
 
@@ -106,6 +96,7 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
 
   MMSTEnv(const Spec& spec, int env_id)
       : Env<MMSTEnvSpec>(spec, env_id),
+        reset_key_{0, static_cast<std::uint32_t>(seed_)},
         configured_node_types_(parse::CsvArray<int, mmst::kNumNodes>(
             spec.config["mmst_node_types"_])),
         configured_adj_matrix_(parse::CsvArray<int, mmst::kAdjMatrixSize>(
@@ -114,19 +105,7 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
             spec.config["mmst_positions"_])),
         configured_action_mask_(parse::CsvArray<bool, mmst::kActionMaskSize>(
             spec.config["mmst_action_mask"_])),
-        replay_node_types_(
-            parse::CsvArray<int, mmst::kReplaySteps * mmst::kNumNodes>(
-                spec.config["mmst_replay_node_types"_])),
-        replay_positions_(
-            parse::CsvArray<int, mmst::kReplaySteps * mmst::kNumAgents>(
-                spec.config["mmst_replay_positions"_])),
-        replay_action_mask_(
-            parse::CsvArray<bool, mmst::kReplaySteps * mmst::kActionMaskSize>(
-                spec.config["mmst_replay_action_mask"_])),
-        replay_rewards_(parse::CsvArray<float, mmst::kReplaySteps>(
-            spec.config["mmst_replay_rewards"_])),
-        use_configured_state_(!spec.config["mmst_node_types"_].empty()),
-        use_replay_(!spec.config["mmst_replay_node_types"_].empty()) {}
+        use_configured_state_(!spec.config["mmst_node_types"_].empty()) {}
 
   bool IsDone() override { return done_; }
 
@@ -167,6 +146,12 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
   }
 
   void Reset() override {
+    key_ = reset_key_;
+    // One problem key, one graph key, then one selection key per agent.
+    for (int draw = 0; draw < mmst::kNumAgents + 2; ++draw) {
+      key_ = random::Split(key_, 1);
+    }
+    reset_key_ = random::Split(reset_key_, 0);
     for (auto& visits : visited_) {
       visits.fill(false);
     }
@@ -205,18 +190,15 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
   }
 
   void Step(const Action& action) override {
-    if (use_replay_ && step_count_ < mmst::kReplaySteps) {
-      ++step_count_;
-      done_ = false;
-      WriteState(replay_rewards_[step_count_ - 1]);
-      return;
-    }
     std::array<int, mmst::kNumAgents> nodes{};
     std::array<int, mmst::kNumAgents> choices{};
     std::array<int, mmst::kNumAgents> order{};
     std::array<bool, mmst::kNumNodes> selected{};
     std::iota(order.begin(), order.end(), 0);
-    std::shuffle(order.begin(), order.end(), gen_);
+    const auto order_key = random::Split(random::TakeKey(&key_), 1);
+    std::stable_sort(order.begin(), order.end(), [&](int a, int b) {
+      return random::Bits(order_key, a) < random::Bits(order_key, b);
+    });
     for (int agent : order) {
       const int node = std::clamp(static_cast<int>(action["action"_](0, agent)),
                                   0, mmst::kNumNodes - 1);
@@ -351,10 +333,7 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
   void WriteState(float reward) {
     auto state = Allocate();
     for (int node = 0; node < mmst::kNumNodes; ++node) {
-      if (use_replay_ && step_count_ > 0 && step_count_ <= mmst::kReplaySteps) {
-        state["obs:node_types"_][node] =
-            replay_node_types_[(step_count_ - 1) * mmst::kNumNodes + node];
-      } else if (use_configured_state_ && step_count_ == 0) {
+      if (use_configured_state_ && step_count_ == 0) {
         state["obs:node_types"_][node] = configured_node_types_[node];
       } else {
         int type = node_types_[node] < 0 ? -1 : 2 * node_types_[node] + 1;
@@ -371,20 +350,10 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
       }
     }
     for (int agent = 0; agent < mmst::kNumAgents; ++agent) {
-      state["obs:positions"_][agent] =
-          use_replay_ && step_count_ > 0 && step_count_ <= mmst::kReplaySteps
-              ? replay_positions_[(step_count_ - 1) * mmst::kNumAgents + agent]
-              : positions_[agent];
+      state["obs:positions"_][agent] = positions_[agent];
       for (int node = 0; node < mmst::kNumNodes; ++node) {
-        if (use_replay_ && step_count_ > 0 &&
-            step_count_ <= mmst::kReplaySteps) {
-          state["obs:action_mask"_](agent, node) =
-              replay_action_mask_[((step_count_ - 1) * mmst::kNumAgents +
-                                   agent) *
-                                      mmst::kNumNodes +
-                                  node];
-        } else if (use_configured_state_ && step_count_ == 0 &&
-                   !spec_.config["mmst_action_mask"_].empty()) {
+        if (use_configured_state_ && step_count_ == 0 &&
+            !spec_.config["mmst_action_mask"_].empty()) {
           state["obs:action_mask"_](agent, node) =
               configured_action_mask_[agent * mmst::kNumNodes + node];
         } else {

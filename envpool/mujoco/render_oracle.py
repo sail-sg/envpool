@@ -104,6 +104,8 @@ def configure_macos_mujoco_renderer() -> None:
             except cgl.CGLError:
                 return False
             if not pixel_format or num_pixel_formats.value == 0:
+                if pixel_format:
+                    cgl.CGLReleasePixelFormat(pixel_format)
                 return False
             self._pixel_format = pixel_format
             return True
@@ -130,7 +132,7 @@ def configure_macos_mujoco_renderer() -> None:
             self.free()
 
     gl_context.GLContext = _CglContext
-    mujoco.gl_context.GLContext = _CglContext
+    mujoco.GLContext = _CglContext
     mujoco_cgl.GLContext = _CglContext
     classic_renderer.gl_context.GLContext = _CglContext
 

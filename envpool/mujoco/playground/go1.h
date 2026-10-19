@@ -354,8 +354,10 @@ class PlaygroundGo1EnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
                         static_cast<mjtNum>(10000.0));
 
     --steps_until_next_cmd_;
-    if (steps_until_next_cmd_ <= 0 || terminated_) {
+    if (steps_until_next_cmd_ <= 0) {
       SampleCommand();
+    }
+    if (steps_until_next_cmd_ <= 0 || terminated_) {
       steps_until_next_cmd_ =
           static_cast<int>(std::llround(exponential_(gen_) * 5.0 / Dt()));
     }
@@ -976,8 +978,7 @@ class PlaygroundGo1GetupEnvBase : public Env<EnvSpecT>,
     for (int i = 0; i < n_substeps_; ++i) {
       mj_step(model_, data_);
     }
-    mj_forward(model_, data_);
-
+    // Keep MuJoCo's post-step sensor timing, as used by the official task.
     mjtNum energy = 0.0;
     for (int i = 0; i < kGo1ActionDim; ++i) {
       energy += std::abs(data_->actuator_force[i] * data_->qvel[6 + i]);
@@ -1488,8 +1489,7 @@ class PlaygroundGo1HandstandEnvBase : public Env<EnvSpecT>,
     for (int i = 0; i < n_substeps_; ++i) {
       mj_step(model_, data_);
     }
-    mj_forward(model_, data_);
-
+    // Keep MuJoCo's post-step sensor timing, as used by the official task.
     mjtNum energy = 0.0;
     for (int i = 0; i < kGo1ActionDim; ++i) {
       energy += std::abs(data_->actuator_force[i] * data_->qvel[6 + i]);

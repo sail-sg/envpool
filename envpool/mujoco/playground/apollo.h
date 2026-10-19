@@ -364,8 +364,10 @@ class PlaygroundApolloEnvBase : public Env<EnvSpecT>,
       phase_[1] = M_PI;
     }
     --steps_until_next_cmd_;
-    if (steps_until_next_cmd_ <= 0 || terminated_) {
+    if (steps_until_next_cmd_ <= 0) {
       SampleCommand();
+    }
+    if (steps_until_next_cmd_ <= 0 || terminated_) {
       steps_until_next_cmd_ =
           static_cast<int>(std::llround(exponential_(gen_) * 5.0 / Dt()));
     }

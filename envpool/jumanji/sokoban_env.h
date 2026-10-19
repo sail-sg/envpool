@@ -184,10 +184,7 @@ inline std::uint8_t CombinedCell(const Level& level, int offset) {
 class SokobanEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict(
-        "sokoban_level_index"_.Bind(-1),
-        "sokoban_render_fixed_grid_replay"_.Bind(std::string("")),
-        "sokoban_render_variable_grid_replay"_.Bind(std::string("")));
+    return MakeDict("sokoban_level_index"_.Bind(-1));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -355,6 +352,8 @@ class SokobanEnv : public Env<SokobanEnvSpec>, public RenderableEnv {
 
   void WriteState(float reward) {
     auto state = Allocate();
+    // Upstream reports these episode endings as terminal, including the limit.
+    state["trunc"_] = false;
     for (int row = 0; row < sokoban::kGridSize; ++row) {
       for (int col = 0; col < sokoban::kGridSize; ++col) {
         const int offset = sokoban::Offset(row, col);

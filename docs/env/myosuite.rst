@@ -434,6 +434,71 @@ tasks; and the corresponding normal, sarcopenia, fatigue, and
 reafferentation variants exposed by upstream.
 
 
+Correctness Validation
+----------------------
+
+All 398 registered tasks are compared numerically with the pinned oracle through
+an episode using the same external actions. Initial model and state differences
+are synchronized once after reset, including the official robot's separate
+physics state. Independent native tests cover reset randomization and exact
+same-seed replays.
+
+Numeric observations retain EnvPool's MuJoCo float64 interface, which represents
+the official float32 observations without narrowing. Observation bounds remain
+unbounded: the upstream generic [-10, 10] box does not contain real force and
+velocity observations.
+
+The initial synchronization also shares compiled collision-face ordering after
+checking that the polygon vertices and normal vectors describe the same geometry.
+MuJoCo's C++ mesh compiler can order those faces differently across builds,
+which changes contact trajectories. Both environments then advance independently;
+no later state or expected output is injected.
+
+The pinned source includes a narrow reference-motion interpolation fix:
+parenthesize the time fraction and multiply robot states instead of raising
+weights to their powers. An endpoint/midpoint regression checks the corrected
+linear trajectory independently of native rollouts.
+
+The oracle receives action values after EnvPool's float32 conversion,
+promoted to float64 for reference calculations. This avoids reproducing
+NumPy's intermediate float32 rounding inside native muscle controls; numerical
+tolerances still account for ordinary math and physics rounding error.
+
+The default numerical comparison uses ``rtol=1e-5, atol=2e-5``. Sensitive
+muscle/contact trajectories have separate bounds for individual observation
+fields, covering both peak error and each component's time-average error.
+Velocity allowances never apply to position fields. Controls, contact categories,
+success, termination, and truncation are checked separately; discrete values
+remain exact. The budgets and their field names live together in the alignment
+test.
+
+Diagnostic replays with identical actuator controls removed all position and
+velocity differences for Bimanual, the sensitive hand-pose and fatigue-finger
+cases, and MyoDM Flashlight. This isolates amplification of rounding errors
+in control values; those diagnostic replays are not used in the permanent
+alignment test.
+Edited ArmReach and TableTennis models are exported with 17 significant digits
+to avoid losing physical parameters in MuJoCo's default six-digit XML output.
+The fatigue TableTennis P0 stress trace still amplifies roughly 1e-14 relative
+model recompilation differences into a measured 6 cm paddle-position difference
+(2.2 cm time average). A diagnostic matching those initial residuals reproduced
+the native physics exactly. That case has a separate bounded allowance; contact
+categories and episode outcomes remain exact, and no such model matching is
+performed by the permanent oracle.
+
+Two additional source fixes keep the oracle's task behavior meaningful:
+Soccer updates the goalkeeper's physical collision body along with its visible
+pose, and TableTennis compares contact outcomes with enum values so invalid
+rallies terminate. Regression checks cover both fixes, and the native contact
+logic reports binary contact categories rather than the number of contact points.
+
+ChaseTag opponents and Soccer goalkeepers run their policies in C++. Their
+Gaussian random streams use the shared PCG64 generator and the upstream spectral
+colored-noise construction. Oracle tests synchronize only the initial random
+state and sampled policy parameters; neither future noise values nor future
+observations are supplied to native stepping.
+
+
 Render Compare
 --------------
 

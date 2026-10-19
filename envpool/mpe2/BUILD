@@ -33,6 +33,7 @@ cc_library(
     ],
     copts = _COPTS,
     deps = [
+        "//envpool/utils:numpy_random",
         "//third_party/mpe2:metadata_headers",
         "@freetype",
     ],

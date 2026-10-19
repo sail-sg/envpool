@@ -908,5 +908,7 @@ is complete end-to-end:
 - Update the environment docs, docs index, README support list, and release
   packaging. If an official renderer exists, add an EnvPool-vs-official render
   comparison image to the environment doc page.
-- Keep tolerances narrow, platform-scoped, and documented. Do not skip new
+- Keep tolerances narrow, justified, and documented. Prefer common numerical
+  and image criteria; add platform-specific budgets only when evidence requires
+  them. Do not skip new
   environment tests on a supported platform just to make CI pass.

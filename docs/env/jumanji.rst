@@ -8,12 +8,22 @@ EnvPool provides native C++ batched implementations for the public task IDs in
 cooperative reward. Individual rewards are available in
 ``info["searcher_rewards"]`` with shape ``(num_envs, 2)``.
 
-.. note::
+Alignment tests initialize both implementations with the same reset state, then
+run complete episodes using identical external actions. No future observations,
+rewards or frames are injected into native stepping. Discrete outputs, active
+EMS ordering and termination flags are checked exactly; floating-point outputs
+use small numerical budgets. Inactive EMS coordinates are upstream scratch
+storage and are excluded from comparison while their masks remain checked.
+Search-and-rescue ray distances allow an absolute error of ``1e-5`` after
+400 steps of stochastic motion; visible-event masks remain exact.
 
-   Some existing Jumanji oracle fixtures load short state/reward trajectories
-   for replay. Those checks cover replay and rendering compatibility, not
-   arbitrary-action semantic alignment. Native rule and determinism tests run
-   separately; full action-driven oracle coverage is still pending.
+Rendering runs in C++ and reads each environment's current state for both
+synchronous and asynchronous APIs. BinPack shows normalized box outlines;
+JobShop displays the complete schedule as a timeline.
+The native views use simple task graphics and do not reproduce Matplotlib's
+fonts, shading, layout or decorative artwork. Tests check native determinism,
+frame shape/dtype, scene-content regressions and reordered asynchronous frame
+selection. The comparisons below provide the official visual reference.
 
 
 Render Compare

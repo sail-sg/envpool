@@ -21,7 +21,6 @@
 #include <array>
 #include <cstddef>
 #include <numeric>
-#include <queue>
 #include <random>
 #include <sstream>
 #include <string>
@@ -41,7 +40,6 @@ constexpr int kCols = 10;
 constexpr int kCellCount = kRows * kCols;
 constexpr int kDefaultMines = 10;
 constexpr int kUnexplored = -1;
-constexpr int kReplaySteps = 32;
 
 using Board = std::array<int, kCellCount>;
 using MineMask = std::array<bool, kCellCount>;
@@ -88,10 +86,7 @@ inline int CountAdjacentMines(const MineMask& mines, int row, int col) {
 class MinesweeperEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("minesweeper_mine_locations"_.Bind(std::string("")),
-                    "minesweeper_replay_boards"_.Bind(std::string("")),
-                    "minesweeper_replay_rewards"_.Bind(std::string("")),
-                    "minesweeper_replay_done"_.Bind(std::string("")));
+    return MakeDict("minesweeper_mine_locations"_.Bind(std::string("")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -116,13 +111,8 @@ class MinesweeperEnv : public Env<MinesweeperEnvSpec>, public RenderableEnv {
   minesweeper::Board board_{};
   minesweeper::MineMask mines_{};
   std::vector<int> configured_mines_;
-  std::array<int, minesweeper::kReplaySteps * minesweeper::kCellCount>
-      replay_boards_{};
-  std::array<float, minesweeper::kReplaySteps> replay_rewards_{};
-  std::array<bool, minesweeper::kReplaySteps> replay_done_{};
   int num_mines_;
   int step_count_{0};
-  bool use_replay_;
   bool done_{true};
 
  public:
@@ -133,18 +123,9 @@ class MinesweeperEnv : public Env<MinesweeperEnvSpec>, public RenderableEnv {
       : Env<MinesweeperEnvSpec>(spec, env_id),
         configured_mines_(minesweeper::ParseMineLocations(
             spec.config["minesweeper_mine_locations"_])),
-        replay_boards_(parse::CsvArray<int, minesweeper::kReplaySteps *
-                                                minesweeper::kCellCount>(
-            spec.config["minesweeper_replay_boards"_],
-            minesweeper::kUnexplored)),
-        replay_rewards_(parse::CsvArray<float, minesweeper::kReplaySteps>(
-            spec.config["minesweeper_replay_rewards"_])),
-        replay_done_(parse::CsvArray<bool, minesweeper::kReplaySteps>(
-            spec.config["minesweeper_replay_done"_])),
         num_mines_(configured_mines_.empty()
                        ? minesweeper::kDefaultMines
-                       : static_cast<int>(configured_mines_.size())),
-        use_replay_(!spec.config["minesweeper_replay_boards"_].empty()) {}
+                       : static_cast<int>(configured_mines_.size())) {}
 
   bool IsDone() override { return done_; }
 
@@ -199,16 +180,6 @@ class MinesweeperEnv : public Env<MinesweeperEnvSpec>, public RenderableEnv {
   }
 
   void Step(const Action& action) override {
-    if (use_replay_ && step_count_ < minesweeper::kReplaySteps) {
-      ++step_count_;
-      for (int i = 0; i < minesweeper::kCellCount; ++i) {
-        board_[i] =
-            replay_boards_[(step_count_ - 1) * minesweeper::kCellCount + i];
-      }
-      done_ = replay_done_[step_count_ - 1];
-      WriteState(replay_rewards_[step_count_ - 1]);
-      return;
-    }
     const int row = std::clamp(static_cast<int>(action["action"_](0, 0)), 0,
                                minesweeper::kRows - 1);
     const int col = std::clamp(static_cast<int>(action["action"_](0, 1)), 0,
@@ -218,7 +189,7 @@ class MinesweeperEnv : public Env<MinesweeperEnvSpec>, public RenderableEnv {
     const bool hit_mine = mines_[offset];
     float reward = 0.0f;
     if (valid_action) {
-      Reveal(row, col);
+      board_[offset] = minesweeper::CountAdjacentMines(mines_, row, col);
       reward = hit_mine ? 0.0f : 1.0f;
     }
     ++step_count_;
@@ -235,38 +206,10 @@ class MinesweeperEnv : public Env<MinesweeperEnvSpec>, public RenderableEnv {
     return explored == minesweeper::kCellCount - num_mines_;
   }
 
-  void Reveal(int row, int col) {
-    std::queue<std::pair<int, int>> frontier;
-    frontier.emplace(row, col);
-    while (!frontier.empty()) {
-      const auto [cell_row, cell_col] = frontier.front();
-      frontier.pop();
-      if (cell_row < 0 || cell_row >= minesweeper::kRows || cell_col < 0 ||
-          cell_col >= minesweeper::kCols) {
-        continue;
-      }
-      const int offset = minesweeper::Offset(cell_row, cell_col);
-      if (board_[offset] != minesweeper::kUnexplored) {
-        continue;
-      }
-      const int adjacent =
-          minesweeper::CountAdjacentMines(mines_, cell_row, cell_col);
-      board_[offset] = adjacent;
-      if (adjacent != 0 || mines_[offset]) {
-        continue;
-      }
-      for (int dr = -1; dr <= 1; ++dr) {
-        for (int dc = -1; dc <= 1; ++dc) {
-          if (dr != 0 || dc != 0) {
-            frontier.emplace(cell_row + dr, cell_col + dc);
-          }
-        }
-      }
-    }
-  }
-
   void WriteState(float reward) {
     auto state = Allocate();
+    // Upstream reports these episode endings as terminal, including the limit.
+    state["trunc"_] = false;
     for (int row = 0; row < minesweeper::kRows; ++row) {
       for (int col = 0; col < minesweeper::kCols; ++col) {
         const int offset = minesweeper::Offset(row, col);

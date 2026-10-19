@@ -31,8 +31,8 @@ using Vec3 = std::array<float, 3>;
 using Quat = std::array<float, 4>;
 using Mat3 = std::array<float, 9>;
 
-float Sin(float v);
-float Cos(float v);
+inline float Sin(float v) { return std::sin(v); }
+inline float Cos(float v) { return std::cos(v); }
 inline float Exp(float v) { return std::exp(v); }
 inline float Log(float v) { return std::log(v); }
 inline float Acos(float v) { return std::acos(v); }
@@ -82,16 +82,6 @@ std::array<float, N> operator*(std::array<float, N> a, float b) {
 
 inline float Square(float value) { return value * value; }
 
-inline float MultiplyAdd(float a, float b, float c) {
-  // Preserve fused arithmetic for physical pose/velocity inputs. Contact
-  // dynamics can amplify a one-ULP perturbation of an applied impulse.
-#if defined(__linux__) || defined(__aarch64__)
-  return std::fma(a, b, c);
-#else
-  return a * b + c;
-#endif
-}
-
 template <typename Range, typename Transform>
 float Sum(const Range& values, Transform transform) {
   // Double accumulation limits rounding error without CPU-specific ordering.
@@ -118,9 +108,9 @@ float Norm(const std::array<float, N>& values) {
 }
 
 inline Vec3 Cross(const Vec3& a, const Vec3& b) {
-  return {MultiplyAdd(a[1], b[2], -a[2] * b[1]),
-          MultiplyAdd(a[2], b[0], -a[0] * b[2]),
-          MultiplyAdd(a[0], b[1], -a[1] * b[0])};
+  return {std::fma(a[1], b[2], -a[2] * b[1]),
+          std::fma(a[2], b[0], -a[0] * b[2]),
+          std::fma(a[0], b[1], -a[1] * b[0])};
 }
 
 inline Quat Conjugate(const Quat& q) { return {q[0], -q[1], -q[2], -q[3]}; }
@@ -227,7 +217,7 @@ class Random {
   }
   float Unit() { return static_cast<float>(Next() & 0xffffffU) * 0x1p-24F; }
   float Uniform(float low, float high) {
-    return MultiplyAdd(Unit(), high - low, low);
+    return std::fma(Unit(), high - low, low);
   }
   int Integer(int high) { return Next() % static_cast<uint32_t>(high); }
   double UnitDouble() {

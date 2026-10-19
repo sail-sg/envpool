@@ -69,9 +69,7 @@ class TSPEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
     return MakeDict("tsp_coordinates"_.Bind(std::string("")),
-                    "tsp_distance_matrix"_.Bind(std::string("")),
-                    "tsp_replay_rewards"_.Bind(std::string("")),
-                    "tsp_replay_done"_.Bind(std::string("")));
+                    "tsp_distance_matrix"_.Bind(std::string("")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -95,13 +93,10 @@ class TSPEnv : public Env<TSPEnvSpec>, public RenderableEnv {
   tsp::Coordinates coordinates_{};
   tsp::Coordinates configured_coordinates_{};
   tsp::Distances distance_matrix_{};
-  std::array<float, tsp::kNumCities> replay_rewards_{};
-  std::array<bool, tsp::kNumCities> replay_done_{};
   tsp::Mask visited_{};
   tsp::Trajectory trajectory_{};
   bool use_configured_coordinates_;
   bool use_configured_distances_;
-  bool use_replay_;
   int position_{-1};
   int num_visited_{0};
   bool done_{true};
@@ -116,13 +111,9 @@ class TSPEnv : public Env<TSPEnvSpec>, public RenderableEnv {
             tsp::ParseCoordinates(spec.config["tsp_coordinates"_])),
         distance_matrix_(parse::CsvArray<float, tsp::kDistanceCount>(
             spec.config["tsp_distance_matrix"_])),
-        replay_rewards_(parse::CsvArray<float, tsp::kNumCities>(
-            spec.config["tsp_replay_rewards"_])),
-        replay_done_(parse::CsvArray<bool, tsp::kNumCities>(
-            spec.config["tsp_replay_done"_])),
         use_configured_coordinates_(!spec.config["tsp_coordinates"_].empty()),
-        use_configured_distances_(!spec.config["tsp_distance_matrix"_].empty()),
-        use_replay_(!spec.config["tsp_replay_rewards"_].empty()) {}
+        use_configured_distances_(
+            !spec.config["tsp_distance_matrix"_].empty()) {}
 
   bool IsDone() override { return done_; }
 
@@ -201,10 +192,7 @@ class TSPEnv : public Env<TSPEnvSpec>, public RenderableEnv {
       reward = -static_cast<float>(tsp::kNumCities) * std::sqrt(2.0f);
     }
     done_ = !valid || num_visited_ == tsp::kNumCities;
-    if (use_replay_ && num_visited_ > 0 && num_visited_ <= tsp::kNumCities) {
-      reward = replay_rewards_[num_visited_ - 1];
-      done_ = replay_done_[num_visited_ - 1];
-    }
+
     WriteState(reward);
   }
 

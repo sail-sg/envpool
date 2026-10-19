@@ -41,13 +41,12 @@ def assert_egocentric_images(
         "rodent_escape_bowl",
     }:
         # Official fixed-state MuJoCo replays show sparse CGL shadow noise.
-        # Share the measured forage-camera budget (peak 100, mean 0.0614)
+        # Share the measured forage-camera budget (mean error 0.0614)
         # with the rodent bowl camera, which exhibits the same kind of noise.
         assert_rgb_images(
             actual,
             expected,
             context,
-            macos_peak_error=128,
             macos_mean_error=0.1,
             record_mismatch=record_mismatch,
         )

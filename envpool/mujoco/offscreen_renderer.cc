@@ -52,13 +52,6 @@
 
 namespace envpool::mujoco {
 
-#if defined(ENVPOOL_HAS_CGL)
-// Hosted macOS 14 software CGL still changes fixed-scene pixels through draw
-// 10, including with explicit GL state queries. Official MuJoCo replays were
-// stable from draw 11 through 32; leave a margin for cold renderer startup.
-constexpr int kCglFirstFrameSettlePasses = 16;
-#endif
-
 namespace {
 
 mjtNum MedianGeomPosition(const mjData* data, int ngeom, int axis) {
@@ -202,8 +195,7 @@ class CglContext final : public GlContext {
 };
 
 void PrimeCglContextForFirstReadback() {
-  // Query CGL state after MuJoCo creates the offscreen framebuffer. These
-  // queries alone do not settle software-renderer pixels; Render does that.
+  // Query CGL state after MuJoCo creates the offscreen framebuffer.
   GLint value = 0;
   glGetIntegerv(GL_MAX_SAMPLES, &value);
   glGetIntegerv(GL_SAMPLE_BUFFERS, &value);
@@ -837,18 +829,6 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
   UpdateCamera(model, data, camera_id, camera_override);
 
   mjrRect viewport = {0, 0, width, height};
-  auto render_scene = [&] {
-    // MuJoCo 3.11 adds geoms before updating the GL camera. Infinite planes
-    // are centered on that camera, so a moved tracking camera otherwise uses
-    // the previous frame's plane tessellation (and different lighting).
-    if (update_camera_first) {
-      mjv_updateCamera(model, data, &camera_, &scene_);
-    }
-    mjv_updateScene(model, data,
-                    option_override != nullptr ? option_override : &option_,
-                    &perturb_, &camera_, mjCAT_ALL, &scene_);
-    mjr_render(viewport, &scene_, &context_);
-  };
 
   std::size_t frame_bytes =
       static_cast<std::size_t>(width) * height * 3 * sizeof(unsigned char);
@@ -856,39 +836,20 @@ void OffscreenRenderer::Render(const mjModel* model, mjData* data, int width,
     scratch_.resize(frame_bytes);
   }
 
-  auto read_pixels = [&] {
-#if defined(ENVPOOL_HAS_CGL)
-    mjr_finish();
-#endif
-    mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
-  };
-
-  render_scene();
-#if defined(ENVPOOL_HAS_CGL)
-  // macOS CGL can expose an unsettled first offscreen frame. Settle once per
-  // renderer so env code does not need task-specific render workarounds.
-  if (!cgl_first_frame_settled_) {
-    read_pixels();
-    for (int pass = 0; pass < kCglFirstFrameSettlePasses; ++pass) {
-      render_scene();
-      read_pixels();
-    }
-    cgl_first_frame_settled_ = true;
-  } else {
-    read_pixels();
-    // Software CGL shadow pixels can also depend on earlier frames. Redraw
-    // the same scene so readback does not retain that draw-history residual.
-    const auto* renderer =
-        reinterpret_cast<const char*>(glGetString(GL_RENDERER));
-    if (renderer != nullptr &&
-        std::strcmp(renderer, "Apple Software Renderer") == 0) {
-      mjr_render(viewport, &scene_, &context_);
-      read_pixels();
-    }
+  // MuJoCo 3.11 adds geoms before updating the GL camera. Infinite planes
+  // are centered on that camera, so a moved tracking camera otherwise uses
+  // the previous frame's plane tessellation (and different lighting).
+  if (update_camera_first) {
+    mjv_updateCamera(model, data, &camera_, &scene_);
   }
-#else
-  read_pixels();
+  mjv_updateScene(model, data,
+                  option_override != nullptr ? option_override : &option_,
+                  &perturb_, &camera_, mjCAT_ALL, &scene_);
+  mjr_render(viewport, &scene_, &context_);
+#if defined(ENVPOOL_HAS_CGL)
+  mjr_finish();
 #endif
+  mjr_readPixels(scratch_.data(), nullptr, viewport, &context_);
 
   std::size_t row_bytes =
       static_cast<std::size_t>(width) * 3 * sizeof(unsigned char);
