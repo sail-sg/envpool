@@ -38,7 +38,7 @@ Do not merge the PR or change the CI cache/cancellation policy.
 - [x] Finish baseline macOS validation, static/doc checks and all MyoSuite doc
   images (before follow-up RNG changes).
 - [x] Run the repository-wide Linux registration and creation check.
-- [ ] Finish the remaining Linux family checks.
+- [x] Finish the remaining Linux family checks.
 - [x] Open one ready-for-review PR, not a draft: #440.
 - [x] Add Jumanji scene-content checks for all 26 IDs; local checks pass.
 - [x] Resolve the initial 36 clang-tidy findings (hosted check passed).
@@ -47,8 +47,10 @@ Do not merge the PR or change the CI cache/cancellation policy.
 - [x] Finish Linux validation of the revised MJLab and Playground checks.
 - [x] Validate the checked Playground C-engine adapter on all 29 tasks on
   Linux x64, Linux ARM64 and macOS; retain existing physics and image checks.
-- [ ] Complete supported-platform CI and installed-wheel release checks.
-- [ ] Preserve useful logs and clean up the task-owned Linux devbox.
+- [x] Complete supported-platform CI and installed-wheel release checks at
+  implementation checkpoint `4bc36e29`.
+- [x] Preserve useful logs and clean up the task-owned Linux devbox and
+  temporary diagnostic branches.
 
 ## Baseline and work sequence
 
@@ -204,11 +206,16 @@ lists are in `/private/tmp/envpool-correctness-cleanup/self-review-440/audit.md`
 
 ## Outcomes and remaining work
 
-The original audit changes are in ordinary PR #440. Follow-up self-review found
-the validation issues above and additional simplification candidates; the work
-is not complete. Implement the authorized follow-up cleanup and fix the
-actionable validation/CI failures. Record full test and release results for the real PR
-head before declaring completion and releasing the Linux devbox.
+The implementation and validation fixes are in ordinary PR #440. All four
+platforms pass the complete test and release matrix at `4bc36e29`, including
+Linux x64 coverage. The review comments are resolved, and the task-owned devbox
+and temporary diagnostic branches have been removed after archiving evidence.
+
+One maintenance decision remains open: Craftax's compact Threefry/key core is
+localized and simplified, but still coupled to the oracle's random sequence.
+The user has not yet chosen between retaining it and replacing it with the
+additional semantic-state validation that replacement requires. This plan does
+not count that coupling as removed. PR #440 remains unmerged.
 
 ## Follow-up cleanup implementation
 
@@ -338,9 +345,13 @@ head before declaring completion and releasing the Linux devbox.
 
 ## Current verification
 
-- At `256c6d85`, all four release/wheel jobs, both Linux full-test jobs
-  (108 targets each), lint and clang-tidy pass. macOS and Windows full-test
-  results remain pending.
+- At `4bc36e29`, the [full-test matrix](https://github.com/sail-sg/envpool/actions/runs/39311239375)
+  passes all 108 targets on each of macOS, Linux x64, Linux ARM64 and Windows;
+  Linux x64 coverage also passes. All four
+  [release/wheel jobs](https://github.com/sail-sg/envpool/actions/runs/39311239535),
+  including the complete manylinux MJLab oracle comparison, pass, as do lint
+  and clang-tidy. The final documentation update records this code checkpoint;
+  current-head checks are available on [PR #440](https://github.com/sail-sg/envpool/pull/440).
 - MJLab first-use oracle warmup passes all 61 alignment methods on macOS and
   the two formerly failing hosted episodes. It preserves the image budget.
 - Hosted framebuffer comparisons show that matching the official offscreen
@@ -354,6 +365,10 @@ head before declaring completion and releasing the Linux devbox.
   Getup, refreshes reset state; the special image budget is removed. The
   diagnostic that established this stays outside the permanent harness.
 - The complete Playground native, pixel and all-task oracle suites pass on
-  macOS (223.516 seconds). The corresponding Linux run continues; the final
-  commit still requires the complete hosted matrix. Evidence and source
+  macOS (223.516 seconds) and Linux (1149.721 seconds), including all 29 tasks,
+  all four shards and the original three oracle methods. Evidence and source
   hashes are under `macos-hosted-final-rca/` in the local evidence directory.
+- Final devbox logs and source differences are archived in
+  `final-devbox-evidence.tar.gz`; all 276 member hashes were checked before
+  deleting the devbox. The temporary diagnostic branch's final patch is saved
+  as `diagnostic-branch-final.patch`. Shared build caches remain available.
