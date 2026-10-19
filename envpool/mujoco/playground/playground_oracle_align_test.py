@@ -15,14 +15,16 @@
 
 from __future__ import annotations
 
+import ctypes
 import os
 import platform
 import subprocess
 import sys
 import unittest
+from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 from unittest import mock
 
 from jax import config as jax_config
@@ -1361,6 +1363,87 @@ def _step_mujoco_oracle(
         return oracle.step(state, jnp.asarray(action))
 
 
+@contextmanager
+def _oracle_physics(task_id: str) -> Iterator[Any]:
+    """Keep sensitive mesh contacts on one C engine, with checked models."""
+    oracle = _make_oracle(task_id)
+    if platform.system() != "Linux" or not isinstance(
+        oracle, (oracle_g1.Joystick, oracle_berkeley.Joystick)
+    ):
+        yield oracle
+        return
+
+    # Linux wheels use libc++, while the native build uses libstdc++.
+    # MjSpec shares C++ strings, so swapping its library is unsafe. Use the C
+    # API for physics and keep the Python bindings with their matching library.
+    import envpool.mujoco.playground_envpool as playground_envpool
+
+    library = ctypes.CDLL(playground_envpool.__file__)
+    library.mj_loadXML.argtypes = [
+        ctypes.c_char_p,
+        ctypes.c_void_p,
+        ctypes.c_char_p,
+        ctypes.c_int,
+    ]
+    library.mj_loadXML.restype = ctypes.c_void_p
+    for name in ("mj_step", "mj_forward"):
+        getattr(library, name).argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        getattr(library, name).restype = None
+    relative = Path(oracle.xml_path).relative_to(oracle_mjx_env.ROOT_PATH)
+    xml = _find_runfile(
+        "envpool/mujoco/playground/assets/mujoco_playground/_src/"
+        + relative.as_posix()
+    )
+    error = ctypes.create_string_buffer(4096)
+    pointer = library.mj_loadXML(os.fsencode(xml), None, error, len(error))
+    if not pointer:
+        raise ValueError(error.value.decode())
+    model = mujoco.MjModel._from_model_ptr(pointer)
+    model.opt.timestep = oracle.mj_model.opt.timestep
+    # Independently compiled models must describe the same task. Float32 mesh
+    # normals differ by <3e-8; double derived fields differ by <3e-14. These tiny
+    # residuals can be amplified during mesh contact dynamics.
+    for name in dir(model):
+        value = getattr(model, name)
+        if isinstance(value, np.ndarray):
+            expected = getattr(oracle.mj_model, name)
+            if np.issubdtype(value.dtype, np.floating):
+                tolerance = 1e-7 if value.dtype.itemsize == 4 else 1e-13
+                np.testing.assert_allclose(
+                    value,
+                    expected,
+                    rtol=tolerance,
+                    atol=tolerance,
+                    err_msg=name,
+                )
+            else:
+                np.testing.assert_array_equal(value, expected, err_msg=name)
+    for name in dir(model.opt):
+        if not name.startswith("_"):
+            np.testing.assert_equal(
+                getattr(model.opt, name),
+                getattr(oracle.mj_model.opt, name),
+                err_msg=name,
+            )
+    model.vis.global_.offwidth = oracle.mj_model.vis.global_.offwidth
+    model.vis.global_.offheight = oracle.mj_model.vis.global_.offheight
+    oracle._mj_model = model
+    oracle._mjx_model = mjx.put_model(model, impl=oracle._config.impl)
+    with (
+        mock.patch.object(
+            mujoco,
+            "mj_step",
+            lambda m, d: library.mj_step(m._address, d._address),
+        ),
+        mock.patch.object(
+            mujoco,
+            "mj_forward",
+            lambda m, d: library.mj_forward(m._address, d._address),
+        ),
+    ):
+        yield oracle
+
+
 def _make_rough_oracle_for_mjx_diagnostic(
     *,
     iterations: int = 1,
@@ -1446,9 +1529,10 @@ def _rollout_atol(task_id: str) -> float:
     # velocity residual is 9.2e-7 and reward residual is 1.9e-7.
     if task_id in ("PandaPickCubeCartesian-v1", "PandaRobotiqPushCube-v1"):
         return 1e-6
-    # Hand contacts amplify double roundoff to < 6e-10 over the full rollout.
+    # Hand contacts amplify control roundoff to < 3e-9 over a full episode;
+    # the float32 reward can differ by one rounding unit (7.5e-9).
     if task_id == "AeroCubeRotateZAxis-v1":
-        return 1e-9
+        return 1e-8
     return 5e-11
 
 
@@ -1714,8 +1798,10 @@ class PlaygroundOracleAlignTest(absltest.TestCase):
     def test_rollout_and_render_align_with_oracle(self) -> None:
         """Checks independent dynamics and rendering over nontrivial rollouts."""
         for task_id in _TASK_IDS:
-            with self.subTest(task_id=task_id):
-                oracle = _make_oracle(task_id)
+            with (
+                self.subTest(task_id=task_id),
+                _oracle_physics(task_id) as oracle,
+            ):
                 env = make_gymnasium(
                     task_id,
                     num_envs=1,

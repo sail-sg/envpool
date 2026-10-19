@@ -45,6 +45,8 @@ Do not merge the PR or change the CI cache/cancellation policy.
 - [x] Diagnose and fix the CGL startup and Linux Playground library-selection
   failures; native CGL validation passes.
 - [x] Finish Linux validation of the revised MJLab and Playground checks.
+- [x] Validate the checked Playground C-engine adapter on all 29 tasks on
+  Linux x64, Linux ARM64 and macOS; retain existing physics and image checks.
 - [ ] Complete supported-platform CI and installed-wheel release checks.
 - [ ] Preserve useful logs and clean up the task-owned Linux devbox.
 
@@ -314,5 +316,22 @@ head before declaring completion and releasing the Linux devbox.
   native frames stay unchanged. One extra CPU scene update, without another GPU
   draw, removes the difference; only the ground-plane position changes (0.8 m).
   Initialize native plane geometry at the selected camera and refresh the
-  oracle scene before drawing. Keep the existing image budgets. Full-platform
-  checks and the separate ARM64 physics investigation remain in progress.
+  oracle scene before drawing, retaining the existing image budgets.
+- The camera-order fix passes all three Playground targets on macOS and Linux.
+  The four originally failing Windows camera tasks also pass their complete
+  oracle checks with unchanged image budgets.
+- ARM64 G1/Berkeley mesh contacts amplify small differences in model compilation
+  and the physics engine enough to change episode termination. Keep independent
+  official task steps, but use the same C engine and independently checked
+  compiled model for these Linux oracle cases. Check every model array and
+  physics option before use. Limit the adapter to one context and retain the
+  matching pip library for MjSpec, whose C++ string ABI prevents replacing the
+  entire library. No production math or build flags change.
+- Aero's separate residual is bounded control roundoff: all 49 termination
+  flags and public observations agree, velocity error stays below 3e-9, and
+  one float32 reward differs by 7.5e-9. Its existing numerical budget becomes
+  1e-8. The complete 29-task, three-method candidate passes on Linux x64
+  (1643.645 s), Linux ARM64 (2875.028 s) and macOS (181.429 s including Bazel).
+  ARM64 evidence is in diagnostic run `39286335510`; logs and model/engine
+  experiments are under `playground-arm64-rca/` in the local evidence directory.
+  These candidate results do not replace the final PR test/release matrix.
