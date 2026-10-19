@@ -34,7 +34,7 @@ def assert_egocentric_images(
     *,
     record_mismatch: bool = True,
 ) -> None:
-    """Keep the software CGL shadow residual scoped to the forage cameras."""
+    """Keep software CGL shadow residuals scoped to the affected cameras."""
     if task in {
         "cmu_humanoid_heterogeneous_forage",
         "cmu_humanoid_maze_forage",
@@ -50,6 +50,19 @@ def assert_egocentric_images(
             context,
             macos_peak_error=128,
             macos_mean_error=0.1,
+            record_mismatch=record_mismatch,
+        )
+    elif task == "rodent_escape_bowl":
+        # Official MuJoCo 3.11 fixed-state replays in independent software CGL
+        # contexts also change one pixel after settling (peak 18, sum 35).
+        # Installed-wheel seed replay exposed one software CGL shadow pixel:
+        # peak 24, sum 52, mean 0.00424, with identical non-image observations.
+        # Keep the shared mean bound and relax only this camera's peak.
+        assert_rgb_images(
+            actual,
+            expected,
+            context,
+            macos_peak_error=32,
             record_mismatch=record_mismatch,
         )
     else:
