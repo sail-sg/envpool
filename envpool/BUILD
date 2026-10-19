@@ -41,6 +41,7 @@ py_library(
         "//envpool/jumanji:jumanji_registration",
         "//envpool/marlgrid:marlgrid_registration",
         "//envpool/minigrid:minigrid_registration",
+        "//envpool/mpe2:registration",
         "//envpool/mujoco:metaworld_registration",
         "//envpool/mujoco:mujoco_dmc_registration",
         "//envpool/mujoco:mujoco_gym_registration",
@@ -73,6 +74,7 @@ py_library(
         "//envpool/jumanji",
         "//envpool/marlgrid",
         "//envpool/minigrid",
+        "//envpool/mpe2",
         "//envpool/mujoco",
         "//envpool/pgx",
         "//envpool/procgen",
@@ -90,6 +92,7 @@ py_test(
     imports = [".."],
     deps = [
         ":envpool",
+        "//envpool/python:seed_test_utils",
         requirement("absl-py"),
     ],
 )

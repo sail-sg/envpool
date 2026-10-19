@@ -156,6 +156,8 @@ use_repo(
     "mjlab_sleef",
     "mjlab_source",
     "mjlab_warp",
+    "mpe2_pcg64",
+    "mpe2_upstream",
     "mujoco",
     "mujoco_dmc_xml",
     "mujoco_gym_xml",

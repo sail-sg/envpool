@@ -27,6 +27,7 @@ from unittest import mock
 
 import dm_env
 import gymnasium
+import numpy as np
 from absl.testing import absltest
 
 import envpool
@@ -75,6 +76,7 @@ _FAMILY_SMOKE_TASKS: dict[str, tuple[str, ...]] = {
         "Goalcycle-demo-solo-v0",
     ),
     "envpool.minigrid": ("MiniGrid-DoorKey-8x8-v0",),
+    "envpool.mpe2": ("MPE2/Simple-v3",),
     "envpool.mujoco.dmc": ("WalkerWalk-v1",),
     "envpool.mujoco.gym": ("Ant-v5",),
     "envpool.mujoco.locomotion": (
@@ -249,6 +251,53 @@ class _MakeTest(absltest.TestCase):
         for import_path, task_ids in smoke_tasks.items():
             with self.subTest(import_path=import_path):
                 self.check_step(list(task_ids))
+
+    def test_mpe2_public_resets(self) -> None:
+        from envpool.python.seed_test_utils import (
+            check_seeded_resets,
+            registered_task_ids,
+        )
+
+        tasks = registered_task_ids("envpool.mpe2")
+        self.assertLen(tasks, 12)
+        self.check_step(tasks)
+        for task_id in tasks:
+            check_seeded_resets(self, task_id)
+            for continuous in (False, True):
+                env = envpool.make_gymnasium(
+                    task_id,
+                    num_envs=2,
+                    continuous_actions=continuous,
+                    render_mode="rgb_array",
+                )
+                try:
+                    _, info = env.reset()
+                    rng = np.random.default_rng(19)
+                    for step in range(27):
+                        if step in (0, 13, 26):
+                            frame = env.render([1, 0])
+                            assert frame is not None
+                            self.assertEqual(frame.shape, (2, 700, 700, 3))
+                            self.assertEqual(frame.dtype, np.uint8)
+                        sizes = info["players"]["action_size"]
+                        actions = (
+                            rng.random((
+                                len(sizes),
+                                env.action_space.shape[0],
+                            )).astype(np.float32)
+                            if continuous
+                            else np.asarray(
+                                [rng.integers(n) for n in sizes], dtype=np.int32
+                            )
+                        )
+                        *_, info = env.step({
+                            "players": {
+                                "env_id": info["players"]["env_id"],
+                                "action": actions,
+                            }
+                        })
+                finally:
+                    env.close()
 
     def test_make_atari(self) -> None:
         self.assertRaises(TypeError, envpool.make, "Pong-v5")

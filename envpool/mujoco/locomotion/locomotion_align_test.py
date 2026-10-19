@@ -501,9 +501,10 @@ class LocomotionAlignTest(parameterized.TestCase):
         env.reset()
         state = env._snapshot()
         model = official.physics.model.ptr
-        fixture = mujoco.MjData(model)
+        # Placement only needs body transforms, not another multi-GB arena.
+        fixture = official.physics.data.ptr
         fixture.qpos[:] = state["qpos"]
-        mujoco.mj_forward(model, fixture)
+        mujoco.mj_kinematics(model, fixture)
         root = "walker/torso" if task.startswith("rodent_") else "walker/root"
         position = fixture.xpos[model.body(root).id]
         targets = official.task._active_targets
@@ -584,10 +585,10 @@ class LocomotionAlignTest(parameterized.TestCase):
         # makes the debounce, timing window and retargeting observable without
         # teleporting either body or target during the rollout.
         model = official.physics.model.ptr
-        fixture = mujoco.MjData(model)
+        # Reuse the oracle arena while constructing the reset-time fixture.
+        fixture = official.physics.data.ptr
         fixture.qpos[:] = state["qpos"]
-        fixture.qvel[:] = state["qvel"]
-        mujoco.mj_forward(model, fixture)
+        mujoco.mj_kinematics(model, fixture)
         position = fixture.xpos[model.body("walker/hand_L").id].copy()
         position[0] += offset
         # Start from the XML pose; the nearby target is then reached by the

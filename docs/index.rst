@@ -97,6 +97,7 @@ stable version through `envpool.readthedocs.io/en/stable/
    env/jumanji
    env/craftax
    env/marlgrid
+   env/mpe2
    env/minigrid
    env/gymnasium_robotics
    env/metaworld

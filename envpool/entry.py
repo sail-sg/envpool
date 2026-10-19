@@ -22,6 +22,7 @@ import envpool.highway.registration  # noqa: F401
 import envpool.jumanji.registration  # noqa: F401
 import envpool.marlgrid.registration  # noqa: F401
 import envpool.minigrid.registration  # noqa: F401
+import envpool.mpe2.registration  # noqa: F401
 import envpool.mujoco.dmc.registration  # noqa: F401
 import envpool.mujoco.gym.registration  # noqa: F401
 import envpool.mujoco.locomotion.registration  # noqa: F401

@@ -216,7 +216,6 @@ py_binary(
 py_test(
     name = "locomotion_align_test",
     size = "enormous",
-    timeout = "long",
     srcs = ["locomotion_align_test.py"],
     imports = ["../../.."],
     # Full episodes and all 36 tracking clips include native camera readback.
