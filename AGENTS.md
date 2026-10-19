@@ -17,6 +17,8 @@ Ship a native EnvPool implementation that is:
 - green in full-platform CI and release packaging
 
 Do not stop at a partial port.
+Minimize long-term maintenance cost when choosing the implementation, validation
+strategy, and scope. Prefer the simplest sound way to establish correctness.
 
 ## Hard Rules
 
@@ -32,12 +34,11 @@ Do not stop at a partial port.
 - Pick the exact upstream oracle/version before implementation and keep tests
   anchored to that target. Do not mix comparison baselines across upstream
   versions in one family.
-- Keep changes localized to the new env family unless shared infrastructure is
-  strictly required.
-- When full CI exposes a failure in another family, establish whether this
-  change caused it. Keep unrelated environment maintenance separate unless
-  the user explicitly extends the scope; a red check alone does not justify
-  expanding the PR.
+- Start with the new env family, but expand to other environments or shared
+  infrastructure when needed to fix a real correctness problem or make its
+  validation reliable. Choose the lowest-maintenance sound solution. Do not
+  expand scope merely to achieve bitwise or pixel identity; a red check alone
+  does not establish a correctness problem.
 - Prefer following the closest already-green in-tree alignment/render harness
   before inventing a new comparison strategy. Reuse proven patterns such as the
   MuJoCo DMC-style oracle and render checks when the family shape matches.
@@ -326,8 +327,9 @@ Before opening or updating a PR, verify:
 - any tolerance is justified and scoped
 - no backend-specific math emulation or test-only CPU/BLAS pin exists merely
   to force bitwise oracle agreement
-- no unrelated environment changes or per-case exceptions were added solely
-  to satisfy an overly strict CI assertion
+- cross-family changes address real correctness or necessary validation issues
+  with the lowest-maintenance sound solution; no per-case exceptions exist
+  solely to force bitwise or pixel identity
 - reset-time oracle state sync, if used, happens only once and is documented
 - no score-only "correctness" gate is standing in for step-level alignment
 - no large env-specific patch blobs remain in `workspace0.bzl` or ad hoc
