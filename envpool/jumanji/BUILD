@@ -54,7 +54,6 @@ cc_library(
     ],
     deps = [
         "//envpool/core:async_envpool",
-        "//envpool/utils:jax_random",
         "//third_party/jumanji:pacman_maze",
     ],
 )

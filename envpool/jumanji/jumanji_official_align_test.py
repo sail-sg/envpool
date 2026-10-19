@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from dataclasses import fields, is_dataclass
 from typing import Any
+from unittest.mock import patch
 
 # Configure the test-only backend before importing JAX on Windows.
 from envpool.jumanji.oracle import (
@@ -31,8 +32,15 @@ from envpool.jumanji.oracle import (
 # isort: split
 
 import jax  # noqa: E402
+import jax.numpy as jnp  # noqa: E402
 import numpy as np  # noqa: E402
 from absl.testing import absltest, parameterized  # noqa: E402
+from jumanji.environments.logic.game_2048.utils import move  # noqa: E402
+from jumanji.environments.packing.tetris import (
+    utils as tetris_utils,  # noqa: E402
+)
+from jumanji.environments.routing.pac_man import utils as pacman_utils
+from jumanji.environments.routing.snake.types import Position  # noqa: E402
 from matplotlib import colormaps  # noqa: E402
 
 import envpool.jumanji.registration as jumanji_registration  # noqa: E402
@@ -134,6 +142,240 @@ def _assert_tree_values(actual: Any, expected: Any, label: str) -> None:
     )
 
 
+def _tetromino_index(env: Any, obs: dict) -> int:
+    matches = np.all(
+        np.asarray(env.TETROMINOES_LIST[:, 0]) == obs["tetromino"][0],
+        axis=(1, 2),
+    )
+    assert matches.sum() == 1
+    return int(matches.argmax())
+
+
+def _fruit_position(obs: dict) -> Any:
+    locations = np.argwhere(obs["grid"][0, ..., 3] == 1)
+    assert locations.shape == (1, 2)
+    return jnp.asarray(locations[0], dtype=jnp.int32)
+
+
+def _sampled_reset(
+    task: str, env: Any, state: Any, timestep: Any, obs: dict
+) -> tuple[Any, Any]:
+    if task == "Game2048-v1":
+        board = jnp.asarray(obs["board"][0])
+        nonzero = np.asarray(board)[np.asarray(board) != 0]
+        assert nonzero.shape == (1,) and nonzero[0] in (1, 2)
+        mask = env._get_action_mask(board)
+        state = state.replace(board=board, action_mask=mask)
+        observation = timestep.observation._replace(
+            board=board, action_mask=mask
+        )
+    elif task == "Snake-v1":
+        grid = obs["grid"][0]
+        heads = np.argwhere(grid[..., 1] == 1)
+        assert heads.shape == (1, 2)
+        body = jnp.asarray(grid[..., 0], dtype=bool)
+        assert body.sum() == 1
+        np.testing.assert_array_equal(grid[..., 0], grid[..., 1])
+        np.testing.assert_array_equal(grid[..., 0], grid[..., 2])
+        np.testing.assert_array_equal(grid[..., 0], grid[..., 4])
+        head = Position(*jnp.asarray(heads[0], dtype=jnp.int32))
+        fruit = Position(*_fruit_position(obs))
+        assert not body[tuple(fruit)]
+        body_state = body.astype(jnp.int32)
+        state = state.replace(
+            body=body,
+            body_state=body_state,
+            head_position=head,
+            tail=body,
+            fruit_position=fruit,
+            length=jnp.array(1),
+            action_mask=env._get_action_mask(head, body_state),
+        )
+        observation = env._state_to_observation(state)
+    else:
+        index = jnp.asarray(_tetromino_index(env, obs), dtype=jnp.int32)
+        piece = env.TETROMINOES_LIST[index, 0]
+        mask = env._calculate_action_mask(state.grid_padded, index)
+        state = state.replace(
+            tetromino_index=index, new_tetromino=piece, action_mask=mask
+        )
+        observation = timestep.observation._replace(
+            tetromino=piece, action_mask=mask
+        )
+    return state, timestep.replace(observation=observation)
+
+
+def _sampled_step(task: str, env: Any) -> Any:
+    if task == "Game2048-v1":
+
+        @jax.jit
+        def place_tile(state: Any, action: Any, cell: Any, value: Any) -> Any:
+            def add(board: Any, _key: Any) -> Any:
+                return (
+                    board.reshape(-1).at[cell].set(value).reshape(board.shape)
+                )
+
+            with patch.object(env, "_add_random_cell", add):
+                return env.step(state, action)
+
+        moved = jax.jit(move)
+
+        def step(state: Any, action: Any, obs: dict, _info: dict) -> Any:
+            board, _ = moved(state.board, action)
+            actual = obs["board"][0]
+            changed = np.flatnonzero(
+                np.asarray(board).ravel() != actual.ravel()
+            )
+            if bool(state.action_mask[action]):
+                assert changed.size == 1
+                cell = int(changed[0])
+                value = int(actual.ravel()[cell])
+                assert np.asarray(board).ravel()[cell] == 0 and value in (1, 2)
+            else:
+                assert changed.size == 0
+                cell, value = 0, 1
+            return place_tile(state, action, cell, value)
+
+        return step
+    elif task == "Snake-v1":
+
+        @jax.jit
+        def move_snake(state: Any, action: Any, fruit: Any) -> Any:
+            with patch.object(
+                env, "_sample_fruit_coord", lambda *_: Position(*fruit)
+            ):
+                return env.step(state, action)
+
+        def snake_step(state: Any, action: Any, obs: dict, _info: dict) -> Any:
+            fruit = _fruit_position(obs)
+            result, timestep = move_snake(state, action, fruit)
+            if not bool(jnp.all(result.body)):
+                assert not result.body[tuple(fruit)]
+            return result, timestep
+
+        return snake_step
+    else:
+
+        @jax.jit
+        def drop_piece(state: Any, action: Any, index: Any) -> Any:
+            with patch.object(
+                tetris_utils,
+                "sample_tetromino_list",
+                lambda _key, pieces: (pieces[index, 0], index),
+            ):
+                return env.step(state, action)
+
+        def tetris_step(state: Any, action: Any, obs: dict, _info: dict) -> Any:
+            return drop_piece(
+                state,
+                action,
+                jnp.asarray(_tetromino_index(env, obs), dtype=jnp.int32),
+            )
+
+    return tetris_step
+
+
+def _pacman_step(env: Any) -> Any:
+    original = pacman_utils.check_ghost_wall_collisions
+
+    @jax.jit
+    def allowed(state: Any, action: Any) -> Any:
+        state = state.replace(last_direction=action)
+        options = []
+        for ghost in range(4):
+            _, walls, candidates = original(
+                state,
+                state.ghost_locations[ghost],
+                ghost,
+                state.player_locations,
+                state.ghost_init_targets[ghost],
+                state.old_ghost_locations[ghost],
+                state.scatter_targets[ghost],
+                env.x_size,
+                env.y_size,
+            )
+            tunnel = jnp.all(walls == jnp.array([1, 0, 1, 0])) | jnp.all(
+                walls == jnp.array([0, 1, 0, 1])
+            )
+            choices = jnp.where(
+                tunnel,
+                jax.nn.one_hot(state.ghost_actions[ghost], 5, dtype=bool),
+                jnp.r_[candidates.astype(bool), False],
+            )
+            options.append(
+                jnp.where(
+                    state.ghost_starts[ghost] < 0,
+                    choices,
+                    jax.nn.one_hot(4, 5, dtype=bool),
+                )
+            )
+        return jnp.stack(options)
+
+    @jax.jit
+    def transition(state: Any, action: Any, choices: Any) -> Any:
+        def selected(*args: Any) -> Any:
+            collision, walls, _ = original(*args)
+            # Restrict the independently validated candidate set to the actual
+            # native ghost action. Upstream still performs movement/collisions.
+            return (
+                collision,
+                walls,
+                jax.nn.one_hot(choices[args[2]], 4, dtype=jnp.int32),
+            )
+
+        with patch.object(
+            pacman_utils, "check_ghost_wall_collisions", selected
+        ):
+            return env.step(state, action)
+
+    def step(state: Any, action: Any, obs: dict, info: dict) -> Any:
+        choices = np.asarray(info["ghost_actions"][0])
+        assert choices.shape == (4,) and np.all((0 <= choices) & (choices <= 4))
+        assert np.asarray(allowed(state, action))[np.arange(4), choices].all()
+        return transition(state, action, jnp.asarray(choices))
+
+    return step
+
+
+def _mmst_step(env: Any) -> Any:
+    # Three agents have only six possible priority orders. Check the native
+    # outcome against the complete official transition set, not one RNG stream.
+    permutations: dict[tuple[int, ...], Any] = {}
+    for seed in range(100):
+        key = jax.random.PRNGKey(seed)
+        order = tuple(
+            np.asarray(
+                jax.random.permutation(jax.random.split(key)[1], 3)
+            ).tolist()
+        )
+        permutations.setdefault(order, key)
+        if len(permutations) == 6:
+            break
+    assert len(permutations) == 6
+    keys = jnp.stack(list(permutations.values()))
+
+    @jax.jit
+    def transitions(state: Any, action: Any) -> Any:
+        return jax.vmap(lambda key: env.step(state.replace(key=key), action))(
+            keys
+        )
+
+    def step(state: Any, action: Any, obs: dict, info: dict) -> Any:
+        states, timesteps = transitions(state, action)
+        matches = np.flatnonzero(
+            np.all(np.asarray(states.positions) == obs["positions"][0], axis=1)
+        )
+        assert matches.size, (
+            "native MMST move does not match any legal priority order"
+        )
+        index = int(matches[0])
+        return jax.tree_util.tree_map(
+            lambda value: value[index], (states, timesteps)
+        )
+
+    return step
+
+
 def _native_reset_reference(
     task_id: str,
     official: Any,
@@ -143,6 +385,8 @@ def _native_reset_reference(
     info: dict,
 ) -> tuple[Any, Any]:
     """Use actual native reset state when RNG streams need not agree."""
+    if task_id in ("Game2048-v1", "Snake-v1", "Tetris-v0"):
+        return _sampled_reset(task_id, official, state, timestep, obs)
     if task_id != "SearchAndRescue-v0":
         return state, timestep
     for value in (obs["positions"][0], info["target_positions"][0]):
@@ -172,6 +416,12 @@ def _native_reset_reference(
 
 def _native_step_reference(task_id: str, official: Any) -> Any:
     """Condition target motion on checked native velocity, not shared draws."""
+    if task_id == "PacMan-v1":
+        return _pacman_step(official)
+    if task_id == "MMST-v0":
+        return _mmst_step(official)
+    if task_id in ("Game2048-v1", "Snake-v1", "Tetris-v0"):
+        return _sampled_step(task_id, official)
     if task_id == "SearchAndRescue-v0":
         # Gaussian increments and clipping have independent distribution tests.
         # The official dynamics still integrates positions and the task still
@@ -179,7 +429,9 @@ def _native_step_reference(task_id: str, official: Any) -> Any:
         official._target_dynamics.acc_std = 0.0
     compiled = jax.jit(official.step)
 
-    def step(state: Any, action: Any, info: dict) -> tuple[Any, Any]:
+    def step(
+        state: Any, action: Any, _obs: dict, info: dict
+    ) -> tuple[Any, Any]:
         if task_id != "SearchAndRescue-v0":
             return compiled(state, action)
         velocity = info["target_velocities"][0]
@@ -642,6 +894,57 @@ def _assert_render_content(
 class JumanjiOfficialAlignTest(parameterized.TestCase):
     """Official oracle alignment for every registered Jumanji task."""
 
+    @parameterized.parameters("Game2048-v1", "Snake-v1", "Tetris-v0")
+    def test_native_sample_distributions(self, task_id: str) -> None:
+        """Check sampled semantic state without synchronizing a native reset."""
+        env = make_gymnasium(task_id, num_envs=64, num_threads=2, seed=31)
+        official = _make_official_env(task_id)
+        samples = []
+        try:
+            key = {
+                "Game2048-v1": "board",
+                "Snake-v1": "grid",
+                "Tetris-v0": "tetromino",
+            }[task_id]
+            for _ in range(64):
+                obs, _ = env.reset()
+                samples.append(obs[key].copy())
+            values = np.concatenate(samples)
+            groups = []
+            if task_id == "Game2048-v1":
+                boards = values.reshape(-1, 16)
+                self.assertTrue(np.all(np.count_nonzero(boards, axis=1) == 1))
+                self.assertTrue(np.all(np.isin(boards, (0, 1, 2))))
+                groups = [
+                    (boards.argmax(axis=1), np.full(16, 1 / 16)),
+                    (boards.max(axis=1) - 1, np.array([0.9, 0.1])),
+                ]
+            elif task_id == "Snake-v1":
+                for channel in (1, 3):
+                    positions = values[..., channel].reshape(-1, 144)
+                    self.assertTrue(np.all(positions.sum(axis=1) == 1))
+                    groups.append((
+                        positions.argmax(axis=1),
+                        np.full(144, 1 / 144),
+                    ))
+                self.assertTrue(np.all(groups[0][0] != groups[1][0]))
+            else:
+                templates = np.asarray(official.TETROMINOES_LIST[:, 0])
+                matches = np.all(values[:, None] == templates, axis=(2, 3))
+                self.assertTrue(np.all(matches.sum(axis=1) == 1))
+                groups = [(matches.argmax(axis=1), np.full(7, 1 / 7))]
+            for labels, expected in groups:
+                observed = np.bincount(labels, minlength=len(expected)) / len(
+                    labels
+                )
+                budget = 6 * np.sqrt(expected * (1 - expected) / len(labels))
+                np.testing.assert_array_less(
+                    np.abs(observed - expected), budget
+                )
+        finally:
+            env.close()
+            official.close()
+
     def test_native_rollout_and_render_content(self) -> None:
         """Check reset plus three official-driven steps for every task."""
         for task_id in jumanji_registration.jumanji_env_ids:
@@ -653,7 +956,12 @@ class JumanjiOfficialAlignTest(parameterized.TestCase):
                 envpool_kwargs = _envpool_kwargs_from_official_state(
                     task_id, official_state, official_timestep.observation
                 )
-                if task_id == "SearchAndRescue-v0":
+                if task_id in (
+                    "SearchAndRescue-v0",
+                    "Game2048-v1",
+                    "Snake-v1",
+                    "Tetris-v0",
+                ):
                     envpool_kwargs = {}
                 if task_id == "Sokoban-v0":
                     envpool_kwargs.update(
@@ -710,7 +1018,10 @@ class JumanjiOfficialAlignTest(parameterized.TestCase):
                             envpool_info,
                         ) = env.step(_envpool_action(official_action))
                         official_state, official_timestep = official_step(
-                            official_state, official_action, envpool_info
+                            official_state,
+                            official_action,
+                            envpool_obs,
+                            envpool_info,
                         )
                         expected_obs = _project(
                             _tree_to_dict(official_timestep.observation),
@@ -763,7 +1074,12 @@ class JumanjiOfficialAlignTest(parameterized.TestCase):
                 envpool_kwargs = _envpool_kwargs_from_official_state(
                     task_id, official_state, official_timestep.observation
                 )
-                if task_id == "SearchAndRescue-v0":
+                if task_id in (
+                    "SearchAndRescue-v0",
+                    "Game2048-v1",
+                    "Snake-v1",
+                    "Tetris-v0",
+                ):
                     envpool_kwargs = {}
                 if task_id == "Sokoban-v0":
                     envpool_kwargs.update(
@@ -814,7 +1130,10 @@ class JumanjiOfficialAlignTest(parameterized.TestCase):
                             envpool_info,
                         ) = env.step(_envpool_action(official_action))
                         official_state, official_timestep = official_step(
-                            official_state, official_action, envpool_info
+                            official_state,
+                            official_action,
+                            envpool_obs,
+                            envpool_info,
                         )
                         expected_obs = _project(
                             _tree_to_dict(official_timestep.observation),

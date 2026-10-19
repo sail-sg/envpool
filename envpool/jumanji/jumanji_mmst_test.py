@@ -25,6 +25,39 @@ from envpool.registration import make_gymnasium
 class JumanjiMMSTTest(absltest.TestCase):
     """Checks native MMST transitions."""
 
+    def test_random_ties_are_fair(self) -> None:
+        """A shared destination admits one winner without fixed agent priority."""
+        adjacency = np.zeros((36, 36), dtype=np.int32)
+        node_types = np.full(36, -1, dtype=np.int32)
+        node_types[:3] = [0, 2, 4]
+        node_types[4:7] = [1, 3, 5]
+        for node in (0, 1, 2, 4, 5, 6):
+            adjacency[node, 3] = adjacency[3, node] = 1
+        env = make_gymnasium(
+            "MMST-v0",
+            num_envs=128,
+            num_threads=2,
+            seed=31,
+            mmst_node_types=",".join(map(str, node_types)),
+            mmst_adj_matrix=",".join(map(str, adjacency.ravel())),
+            mmst_positions="0,1,2",
+        )
+        winners = []
+        try:
+            for _ in range(32):
+                obs, _ = env.reset()
+                self.assertTrue(obs["action_mask"][:, :, 3].all())
+                obs, _, _, _, _ = env.step(np.full((128, 3), 3, dtype=np.int32))
+                selected = obs["positions"] == 3
+                np.testing.assert_array_equal(selected.sum(axis=1), 1)
+                winners.extend(selected.argmax(axis=1))
+            frequency = np.bincount(winners, minlength=3) / len(winners)
+            np.testing.assert_array_less(
+                abs(frequency - 1 / 3), 6 * np.sqrt(2 / (9 * len(winners)))
+            )
+        finally:
+            env.close()
+
     def test_agents_expand_tree_frontiers(self) -> None:
         """Checks agents expand tree frontiers."""
         adjacency = np.zeros((36, 36), dtype=np.int32)

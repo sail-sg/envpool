@@ -21,6 +21,7 @@
 #include <array>
 #include <cstddef>
 #include <limits>
+#include <random>
 #include <sstream>
 #include <string>
 #include <tuple>
@@ -31,11 +32,9 @@
 #include "envpool/core/env.h"
 #include "envpool/jumanji/parse_utils.h"
 #include "envpool/jumanji/render_utils.h"
-#include "envpool/utils/jax_random.h"
 #include "third_party/jumanji/pacman_maze.h"
 
 namespace jumanji {
-namespace random = envpool::jax_random;
 namespace pacman {
 
 constexpr int kRows = 31;
@@ -124,7 +123,8 @@ class PacManEnvFns {
                     "obs:frightened_state_time"_.Bind(Spec<int>({})),
                     "obs:pellet_locations"_.Bind(Spec<int>({318, 2})),
                     "obs:action_mask"_.Bind(Spec<bool>({5}, {false, true})),
-                    "obs:score"_.Bind(Spec<int>({})));
+                    "obs:score"_.Bind(Spec<int>({})),
+                    "info:ghost_actions"_.Bind(Spec<int>({4}, {0, 4})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -137,8 +137,6 @@ using PacManEnvSpec = EnvSpec<PacManEnvFns>;
 
 class PacManEnv : public Env<PacManEnvSpec>, public RenderableEnv {
  protected:
-  random::Key reset_key_{};
-  random::Key key_{};
   pacman::Grid grid_{};
   pacman::Grid configured_grid_{};
   pacman::PelletLocations configured_pellet_locations_{};
@@ -175,7 +173,6 @@ class PacManEnv : public Env<PacManEnvSpec>, public RenderableEnv {
 
   PacManEnv(const Spec& spec, int env_id)
       : Env<PacManEnvSpec>(spec, env_id),
-        reset_key_{0, static_cast<std::uint32_t>(seed_)},
         configured_grid_(pacman::ParseGrid(spec.config["pacman_grid"_])),
         configured_pellet_locations_(
             pacman::ParsePellets(spec.config["pacman_pellet_locations"_])),
@@ -240,8 +237,6 @@ class PacManEnv : public Env<PacManEnvSpec>, public RenderableEnv {
   }
 
   void Reset() override {
-    key_ = reset_key_;
-    reset_key_ = random::Split(reset_key_, 0);
     int pellet = 0;
     int ghost = 0;
     int power_up = 0;
@@ -367,8 +362,6 @@ class PacManEnv : public Env<PacManEnvSpec>, public RenderableEnv {
   }
 
   void MoveGhosts(int player_action) {
-    const auto step_key = key_;
-    key_ = random::Split(key_, 0);
     constexpr std::array<std::array<int, 2>, 5> moves = {
         {{{0, -1}}, {{-1, 0}}, {{0, 1}}, {{1, 0}}, {{0, 0}}}};  // NOLINT
     for (int ghost = 0; ghost < pacman::kNumGhosts; ++ghost) {
@@ -428,9 +421,8 @@ class PacManEnv : public Env<PacManEnvSpec>, public RenderableEnv {
           for (int action = 0; action < 4; ++action) {
             candidates[action] = distances[action] == closest ? 1.0f : 0.0f;
           }
-          const auto choice_key = random::Split(
-              random::Split(random::Split(step_key, ghost + 1), 1), 1);
-          choice = random::Choice(choice_key, candidates);
+          choice = std::discrete_distribution<int>(candidates.begin(),
+                                                   candidates.end())(gen_);
         }
       }
       ghost_actions_[ghost] = choice;
@@ -471,6 +463,7 @@ class PacManEnv : public Env<PacManEnvSpec>, public RenderableEnv {
     state["obs:player_locations.x"_] = player_row_;
 
     for (int ghost = 0; ghost < pacman::kNumGhosts; ++ghost) {
+      state["info:ghost_actions"_][ghost] = ghost_actions_[ghost];
       state["obs:ghost_locations"_](ghost, 0) = ghost_locations_[ghost * 2];
       state["obs:ghost_locations"_](ghost, 1) = ghost_locations_[ghost * 2 + 1];
     }

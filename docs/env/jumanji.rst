@@ -22,6 +22,14 @@ target velocities into the oracle, and then compare movement, visibility,
 detection, rewards and termination. Matching the oracle's random stream is
 unnecessary.
 
+Game2048, Snake and Tetris also use native sampling. Alignment checks validate
+the sampled cell, fruit position or piece before supplying it to the official
+transition; reset distributions are checked separately. PacMan exposes the
+selected directions in ``info["ghost_actions"]`` with shape ``(num_envs, 4)``.
+The oracle checks these against its movement policy before applying movement
+and collision rules. MMST checks each move against all six possible agent
+priority orders, with a separate native test for fair tie breaking.
+
 
 Rendering runs in C++ and reads each environment's current state for both
 synchronous and asynchronous APIs. BinPack shows normalized box outlines;

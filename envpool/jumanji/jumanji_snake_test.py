@@ -83,12 +83,16 @@ class JumanjiSnakeTest(absltest.TestCase):
         env = _make_env()
         try:
             env.reset()
-            _, reward, terminated, truncated, _ = env.step(
+            obs, reward, terminated, truncated, _ = env.step(
                 np.asarray([0], dtype=np.int32)
             )
             self.assertEqual(float(reward[0]), 0.0)
             self.assertTrue(bool(terminated[0]))
             self.assertFalse(bool(truncated[0]))
+            # Jumanji's terminal array state wraps a negative head coordinate.
+            np.testing.assert_array_equal(obs["grid"][0, 11, 0, :3], 1)
+            self.assertEqual(float(obs["grid"][0, :, :, 0].sum()), 1)
+            self.assertEqual(float(obs["grid"][0, 11, 0, 4]), 1)
         finally:
             env.close()
 

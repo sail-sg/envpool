@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <random>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -28,10 +29,8 @@
 #include "envpool/core/env.h"
 #include "envpool/jumanji/parse_utils.h"
 #include "envpool/jumanji/render_utils.h"
-#include "envpool/utils/jax_random.h"
 
 namespace jumanji {
-namespace random = envpool::jax_random;
 namespace tetris {
 
 constexpr int kRows = 10;
@@ -110,7 +109,6 @@ using TetrisEnvSpec = EnvSpec<TetrisEnvFns>;
 
 class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
  protected:
-  random::Key reset_key_{};
   tetris::Grid grid_{};
   tetris::Grid configured_grid_{};
   tetris::Tetromino tetromino_{};
@@ -119,7 +117,6 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
   bool use_configured_grid_;
   bool use_configured_action_mask_;
   int step_count_{0};
-  random::Key key_{};
   bool done_{true};
 
  public:
@@ -128,7 +125,6 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
 
   TetrisEnv(const Spec& spec, int env_id)
       : Env<TetrisEnvSpec>(spec, env_id),
-        reset_key_{0, static_cast<std::uint32_t>(seed_)},
         configured_grid_(
             tetris::ParseGrid(spec.config["tetris_initial_grid"_])),
         tetromino_(tetris::SquareTetromino()),
@@ -192,11 +188,9 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
   }
 
   void Reset() override {
-    key_ = reset_key_;
-    reset_key_ = random::Split(reset_key_, 0);
     grid_ = use_configured_grid_ ? configured_grid_ : tetris::Grid{};
     tetromino_ = spec_.config["tetris_tetromino"_].empty()
-                     ? SampleTetromino(key_)
+                     ? SampleTetromino()
                      : configured_tetromino_;
     step_count_ = 0;
     done_ = false;
@@ -223,7 +217,7 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
       constexpr std::array<float, 5> rewards{0, 40, 100, 300, 1200};
       reward = rewards[ClearFullRows()];
     }
-    tetromino_ = SampleTetromino(random::TakeKey(&key_));
+    tetromino_ = SampleTetromino();
     ++step_count_;
 
     done_ = !valid || !HasValidPlacement() || step_count_ >= tetris::kTimeLimit;
@@ -232,7 +226,7 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
   }
 
  private:
-  tetris::Tetromino SampleTetromino(random::Key key) {
+  tetris::Tetromino SampleTetromino() {
     // Initial orientations of I, S, Z, O, T, L and J in Jumanji 1.1.2.
     constexpr std::array<std::array<int, 4>, 7> cells{{{0, 4, 8, 12},
                                                        {1, 2, 4, 5},
@@ -242,7 +236,7 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
                                                        {0, 4, 8, 9},
                                                        {1, 5, 8, 9}}};
     tetris::Tetromino piece{};
-    for (int cell : cells[random::RandInt(key, 0, 7)]) {
+    for (int cell : cells[std::uniform_int_distribution<int>(0, 6)(gen_)]) {
       piece[cell] = 1;
     }
     return piece;

@@ -30,10 +30,8 @@
 #include "envpool/core/env.h"
 #include "envpool/jumanji/parse_utils.h"
 #include "envpool/jumanji/render_utils.h"
-#include "envpool/utils/jax_random.h"
 
 namespace jumanji {
-namespace random = envpool::jax_random;
 namespace mmst {
 
 constexpr int kNumNodes = 36;
@@ -73,8 +71,6 @@ using MMSTEnvSpec = EnvSpec<MMSTEnvFns>;
 
 class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
  protected:
-  random::Key reset_key_{};
-  random::Key key_{};
   std::array<int, mmst::kNumNodes> node_types_{};
   std::array<int, mmst::kAdjMatrixSize> adjacency_{};
   std::array<std::array<bool, mmst::kNumNodes>, mmst::kNumAgents> visited_{};
@@ -96,7 +92,6 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
 
   MMSTEnv(const Spec& spec, int env_id)
       : Env<MMSTEnvSpec>(spec, env_id),
-        reset_key_{0, static_cast<std::uint32_t>(seed_)},
         configured_node_types_(parse::CsvArray<int, mmst::kNumNodes>(
             spec.config["mmst_node_types"_])),
         configured_adj_matrix_(parse::CsvArray<int, mmst::kAdjMatrixSize>(
@@ -146,12 +141,6 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
   }
 
   void Reset() override {
-    key_ = reset_key_;
-    // One problem key, one graph key, then one selection key per agent.
-    for (int draw = 0; draw < mmst::kNumAgents + 2; ++draw) {
-      key_ = random::Split(key_, 1);
-    }
-    reset_key_ = random::Split(reset_key_, 0);
     for (auto& visits : visited_) {
       visits.fill(false);
     }
@@ -195,10 +184,7 @@ class MMSTEnv : public Env<MMSTEnvSpec>, public RenderableEnv {
     std::array<int, mmst::kNumAgents> order{};
     std::array<bool, mmst::kNumNodes> selected{};
     std::iota(order.begin(), order.end(), 0);
-    const auto order_key = random::Split(random::TakeKey(&key_), 1);
-    std::stable_sort(order.begin(), order.end(), [&](int a, int b) {
-      return random::Bits(order_key, a) < random::Bits(order_key, b);
-    });
+    std::shuffle(order.begin(), order.end(), gen_);
     for (int agent : order) {
       const int node = std::clamp(static_cast<int>(action["action"_](0, agent)),
                                   0, mmst::kNumNodes - 1);
