@@ -34,6 +34,10 @@ Do not stop at a partial port.
   versions in one family.
 - Keep changes localized to the new env family unless shared infrastructure is
   strictly required.
+- When full CI exposes a failure in another family, establish whether this
+  change caused it. Keep unrelated environment maintenance separate unless
+  the user explicitly extends the scope; a red check alone does not justify
+  expanding the PR.
 - Prefer following the closest already-green in-tree alignment/render harness
   before inventing a new comparison strategy. Reuse proven patterns such as the
   MuJoCo DMC-style oracle and render checks when the family shape matches.
@@ -70,12 +74,16 @@ Do not stop at a partial port.
   platform-specific arithmetic, or pin test-only CPU/BLAS kernels solely to
   remove harmless last-bit differences.
 - Justify floating-point tolerances from the computation, observed error, and
-  task semantics. Keep them tight, documented, and scoped to the affected
-  quantities and tasks. Add platform-specific budgets only when the evidence
-  requires them, rather than maintaining a branch for every backend.
+  task semantics. Keep them documented and sensitive to meaningful errors.
+  Prefer a simple common criterion over accumulating backend, task, seed, or
+  pixel-specific exceptions for equivalent outputs.
 - Investigate discrepancies before changing tolerances. Distinguish benign
   rounding from incorrect state, actions, rewards, or transitions; neither
   "macOS only" nor a passing test after widening epsilon explains a failure.
+- Once correctness is established, stop chasing smaller residuals. A last-bit
+  difference or an isolated changed pixel is not by itself a defect. Correct
+  an overly strict assertion instead of adding implementation complexity to
+  satisfy it; zero error and the smallest possible tolerance are not goals.
 - Do not use `skipTest` to hide a new-env regression on a supported platform
   when the family already has a known-good render / GL setup. Exhaust the
   existing in-tree strategy first, then document the real blocker if one
@@ -170,15 +178,16 @@ At minimum:
 - same observations
 - same rewards
 - same terminated / truncated outputs
-- same rendered frames if render exists
+- equivalent rendered content within a justified renderer-noise budget
 
 Run this for multiple steps, not just reset or one step.
 The determinism bar is end-to-end: resetting with the same seed and replaying
 the same external action sequence must produce the same rollout, not just the
 same initial state.
-Use exact equality for these repeated native runs on the same build and
-platform. This does not require bitwise identity with a different implementation
-or across platforms.
+Keep exact checks for deterministic state and discrete outputs on the same
+build and platform. Rendering may contain backend noise even at fixed state;
+apply the same visual correctness criteria used for oracle comparison rather
+than requiring every pixel to repeat bitwise.
 For new tasks added to an existing family, mirror the coverage shape of the old
 tasks instead of only testing one new ID.
 
@@ -220,15 +229,17 @@ Default standard:
 - numerical agreement for floating-point observations, rewards, state, and
   exposed info, using tight, documented absolute and relative tolerances where
   needed; keep exact comparisons where they are natural and stable
-- exact render comparison when a shared renderer makes that stable; otherwise
-  use a justified pixel error budget that still catches visual regressions
+- equivalent rendered scene content within a documented image-error budget
+  that catches meaningful visual regressions; exact pixels are optional when
+  naturally stable, not a completion requirement
 - cover every registered env ID, not just one representative case
 
-When numerical or rendering differences appear, locate their source and measure
-them over full rollouts. Show that the budget covers roundoff or backend details
-without hiding changed task behavior, discrete events, or growing state drift.
-Use that evidence to choose a small error budget, not to emulate every upstream
-hardware kernel. A bounded numerical difference is not by itself a bug.
+Investigate numerical or rendering differences enough to distinguish harmless
+variation from changed task behavior, discrete events, or growing state drift.
+For images, assess scene content and the extent of the difference, not an
+isolated pixel's peak error alone. Use representative full rollouts to justify
+the comparison, then stop once it establishes correctness. Do not reverse
+engineer every hardware kernel or renderer detail to eliminate benign noise.
 
 Do not relax unrelated envs.
 Do not skip entire envs or platforms to get CI green.
@@ -315,6 +326,8 @@ Before opening or updating a PR, verify:
 - any tolerance is justified and scoped
 - no backend-specific math emulation or test-only CPU/BLAS pin exists merely
   to force bitwise oracle agreement
+- no unrelated environment changes or per-case exceptions were added solely
+  to satisfy an overly strict CI assertion
 - reset-time oracle state sync, if used, happens only once and is documented
 - no score-only "correctness" gate is standing in for step-level alignment
 - no large env-specific patch blobs remain in `workspace0.bzl` or ad hoc
