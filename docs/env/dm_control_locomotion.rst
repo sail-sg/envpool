@@ -187,21 +187,16 @@ identical model arrays, camera, lights, geometry, and skin vertices and normal
 vectors. This also reproduces with the official renderer alone. RGB tests use
 the shared MuJoCo image check: at most five intensity levels in any color
 channel and a mean absolute error of ``0.01`` per frame, on the 0-to-255 scale.
-The two CMU forage egocentric cameras have larger sparse shadow differences
-with Apple's software renderer, also reproduced on macOS 14 and 15 using only
-the official MuJoCo renderer and identical serialized models and state.
-Three complete CI replays measured a maximum channel difference of 100 and a
-maximum mean error of 0.0614, affecting at most 12 pixels of a 64-by-64 frame.
-Only these cameras allow a channel difference of 128 and a mean error of
-``0.1`` per frame. The ``rodent_escape_bowl`` egocentric camera also showed a
-single shadow pixel difference in installed-wheel seed replay: a peak of 24
-and a mean of 0.00424, with identical non-image observations. It allows a peak
-of 32 while retaining the shared ``0.01`` mean bound.
-An independent fixed-state replay with official MuJoCo 3.11 on macOS 14 also
-changed one pixel after initial frame settling (peak 18, mean 0.00285).
-Visual settings remain unchanged and errors are never averaged over a
-rollout. Other platforms retain exact RGB comparisons, and native dynamics
-and reward replays remain exact.
+The two CMU forage egocentric cameras and ``rodent_escape_bowl`` share a
+budget for sparse shadow differences from Apple's software renderer. These
+also reproduce on macOS using only the official MuJoCo renderer at fixed
+state. The forage-camera replays measured a maximum channel difference of
+100 and a maximum mean error of 0.0614, affecting at most 12 pixels of a
+64-by-64 frame; the rodent bowl residual was smaller and affected one pixel.
+These cameras allow a channel difference of 128 and a mean error of ``0.1``
+per frame. Visual settings remain unchanged and errors are never averaged
+over a rollout. Other platforms retain exact RGB comparisons, and native
+dynamics and reward replays remain exact.
 
 Oracle reward checks retain only small derived-math residuals: tracking's
 quaternion/exponential reductions, the bowl's distance norm, and, on Linux

@@ -78,7 +78,7 @@ class _MPE2Test(absltest.TestCase):
                     oracle.close()
 
     def _assert_state(
-        self, native: Any, oracle: Any, obs: np.ndarray, info: dict[str, Any]
+        self, oracle: Any, obs: np.ndarray, info: dict[str, Any]
     ) -> None:
         raw = oracle.unwrapped
         for i, agent in enumerate(raw.possible_agents):
@@ -111,7 +111,7 @@ class _MPE2Test(absltest.TestCase):
             obs, info = native.reset()
             synchronize_reset(oracle, info)
             snapshots = [info["snapshot"][0].copy()]
-            self._assert_state(native, oracle, obs, info)
+            self._assert_state(oracle, obs, info)
             rng = np.random.default_rng(717)
             agents = oracle.possible_agents
             for step in range(steps):
@@ -130,7 +130,7 @@ class _MPE2Test(absltest.TestCase):
                 with self.subTest(
                     task=task_id, continuous=continuous, seed=seed, step=step
                 ):
-                    self._assert_state(native, oracle, obs, info)
+                    self._assert_state(oracle, obs, info)
                     expected = np.array([rew[a] for a in agents])
                     np.testing.assert_array_equal(
                         reward, expected.astype(np.float32)

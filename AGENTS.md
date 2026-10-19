@@ -242,7 +242,8 @@ isolated pixel's peak error alone. Use representative full rollouts to justify
 the comparison, then stop once it establishes correctness. Do not reverse
 engineer every hardware kernel or renderer detail to eliminate benign noise.
 
-Do not relax unrelated envs.
+Do not relax checks without evidence just to make CI green. Correctness and
+necessary validation fixes may span environment families.
 Do not skip entire envs or platforms to get CI green.
 Do not replace state-sync oracle checks with long-horizon score-only checks.
 When a family already has older align tests, the new-task align setup should

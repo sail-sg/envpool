@@ -15,7 +15,6 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
-#include <numeric>
 #include <stdexcept>
 #include <vector>
 
@@ -1073,7 +1072,6 @@ std::vector<double> Model::Observation(int player) const {
   }
   std::vector<double> velocities;
   std::vector<double> forest;
-  std::vector<bool> visible(p, true);
   for (int i : others) {
     bool mine = false;
     bool theirs = false;
@@ -1086,14 +1084,14 @@ std::vector<double> Model::Observation(int player) const {
       theirs = theirs || y;
       shared = shared || (x && y);
     }
-    visible[i] = shared || (!mine && !theirs) || player == 0;
-    if (visible[i]) {
+    const bool visible = shared || (!mine && !theirs) || player == 0;
+    if (visible) {
       pos(i);
     } else {
       Append(&out, Vec{});
     }
     if (i >= kOptions.adversaries) {
-      Append(&velocities, visible[i] ? entities[i].vel : Vec{});
+      Append(&velocities, visible ? entities[i].vel : Vec{});
     }
   }
   for (int f = kOptions.obstacles + kOptions.food; f < kOptions.Landmarks();
