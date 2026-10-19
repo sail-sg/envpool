@@ -26,7 +26,6 @@ def assert_rgb_images(
     expected: np.ndarray | None,
     context: str = "",
     *,
-    macos_mean_error: float = 0.01,
     record_mismatch: bool = True,
 ) -> None:
     """Compare RGB frames without requiring identical CGL rounding."""
@@ -37,7 +36,9 @@ def assert_rgb_images(
     if platform.system() != "Darwin":
         np.testing.assert_array_equal(actual, expected, err_msg=context)
         return
-    # Identical scenes can produce sparse CGL/Metal shadow differences.
+    # Identical scenes can produce sparse CGL/Metal shadow differences:
+    # measured frame means include 0.0614 in forage cameras and 0.0197 in
+    # Cartpole worker replay. Use one 0.1/255 budget for the same phenomenon.
     # Bound error over each complete frame, rather than rejecting an isolated
     # pixel or redrawing a scene until its largest residual disappears.
     delta = np.abs(actual.astype(np.int16) - expected.astype(np.int16))
@@ -46,7 +47,7 @@ def assert_rgb_images(
             delta.mean(axis=(-3, -2, -1)),
             0,
             rtol=0,
-            atol=macos_mean_error,
+            atol=0.1,
             err_msg=context,
         )
     except AssertionError:

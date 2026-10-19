@@ -44,7 +44,7 @@ Do not merge the PR or change the CI cache/cancellation policy.
 - [x] Resolve the initial 36 clang-tidy findings (hosted check passed).
 - [x] Diagnose and fix the CGL startup and Linux Playground library-selection
   failures; native CGL validation passes.
-- [ ] Finish Linux validation of the revised MJLab and Playground checks.
+- [x] Finish Linux validation of the revised MJLab and Playground checks.
 - [ ] Complete supported-platform CI and installed-wheel release checks.
 - [ ] Preserve useful logs and clean up the task-owned Linux devbox.
 
@@ -149,8 +149,8 @@ the remaining numerical oracle then passed with the field-based checks.
   explicit termination state instead of deriving it as `done & ~trunc`.
 - Linux Playground's official Barkour constructor succeeds with the pip engine
   but crashes after substituting the source-built library at MjSpec compilation.
-  Keep the Linux bindings paired with their matching pip library. A full
-  29-task validation is running; the isolated constructor check passes.
+  Keep the Linux bindings paired with their matching pip library. Both the
+  isolated constructor and full 29-task rollout/render validation pass.
 
 ## Decision log
 
@@ -285,3 +285,26 @@ head before declaring completion and releasing the Linux devbox.
   the room limit and global totals instead. An official 512-map probe contains
   valid two-, three- and four-room layouts; both previously failing Linux cases
   pass with the correction. Full macOS alignment and final-platform CI continue.
+
+## CI validation follow-up
+
+- The verified Linux source snapshot at `5cff0116` completed all 41 related
+  targets: 39 passed, including all MJLab and Playground oracle shards. The two
+  remaining failures are the corrected LabMaze count guard and one MyoSuite
+  generalized-velocity comparison. The complete `9059fc0e` maze rerun passes.
+- The macOS release artifact shows 14 changed shadow-edge pixels in Cartpole
+  worker replay (mean RGB error 0.0197/255), with unchanged scene content. Use
+  the existing 0.1/255 CGL budget consistently and delete the per-camera wrapper
+  and override parameter. Blank/translated scenes and all three known incorrect
+  startup-shadow frames still fail; all 51 native MJLab methods pass on macOS.
+- For the MyoSuite failure, identical controls leave the 0.00156 velocity
+  residual unchanged; matching model arrays already within `1e-12` relative/
+  absolute error eliminates it. Position stays within 3.11e-6, reward within
+  6.43e-7, and episode events match. Keep this model-copy experiment out of the
+  permanent oracle. Use a common `1e-3` relative/absolute budget for generalized
+  velocities, including their observation fields; retain `1e-4` elsewhere and
+  the existing control/discrete checks. Full eight-shard validation of all
+  398 tasks passes on Linux; the macOS rerun is still running.
+- Root-cause details, saved artifacts and the normal/maintenance/deletion review
+  are in `cgl-sparse-rca/report.md` and `myo-contact-rca/report.md` under the local
+  evidence directory. Final-head hosted checks remain pending.
