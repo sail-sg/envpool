@@ -278,7 +278,7 @@ void Scene::Floor(double size, bool outdoor) {
   Set(camera, "fovy", 360 / std::acos(-1) * std::atan2(1.1 * size, 100));
 }
 
-void Scene::Corridor(const TaskConfig& task, RandomState* random) {
+void Scene::Corridor(const TaskConfig& task, envpool::Random* random) {
   const bool rodent = task.walker == Walker::kRodent;
   const double length = rodent ? 40 : 100;
   const double width = rodent ? 2 : 10;

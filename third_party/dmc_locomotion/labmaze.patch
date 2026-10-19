@@ -10,12 +10,3 @@ diff --git a/labmaze/cc/BUILD b/labmaze/cc/BUILD
 @@ -102 +105 @@
 -    visibility = ["//labmaze/cc/python:__pkg__"],
 +    visibility = ["//visibility:public"],
-diff --git a/labmaze/cc/python/BUILD b/labmaze/cc/python/BUILD
---- a/labmaze/cc/python/BUILD
-+++ b/labmaze/cc/python/BUILD
-@@ -20 +20 @@
--load("//bazel:build_defs.bzl", "pybind11_extension")
-+load("@pybind11_bazel//:build_defs.bzl", pybind11_extension = "pybind_extension")
-@@ -34 +34 @@
--    visibility = ["//labmaze:__subpackages__"],
-+    visibility = ["//visibility:public"],

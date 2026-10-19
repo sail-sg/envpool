@@ -77,7 +77,7 @@ std::vector<Rectangle> Cover(const std::string& grid, char token, int size) {
   return rectangles;
 }
 
-std::string FixedMaze(RandomState* random) {
+std::string FixedMaze(envpool::Random* random) {
   std::string grid;
   std::vector<int> empty;
   for (int y = 0; y < 7; ++y) {
@@ -92,7 +92,6 @@ std::string FixedMaze(RandomState* random) {
   }
   grid[2 * 8 + 3] = 'P';
   grid[4 * 8 + 3] = 'G';
-  // NumPy choice(..., replace=False) permutes the whole candidate array.
   random->Shuffle(&empty);
   for (int i = 0; i < 5; ++i) {
     grid[empty[i]] = 'G';
@@ -102,7 +101,7 @@ std::string FixedMaze(RandomState* random) {
 
 }  // namespace
 
-void Scene::MazeArena(const TaskConfig& task, RandomState* random) {
+void Scene::MazeArena(const TaskConfig& task, envpool::Random* random) {
   const bool rodent = task.walker == Walker::kRodent;
   const bool fixed = task.task == Task::kHeterogeneous;
   const int size = fixed ? 7 : 11;
@@ -110,10 +109,6 @@ void Scene::MazeArena(const TaskConfig& task, RandomState* random) {
   const double height = rodent ? .3 : 2;
   const double offset = (size - 1) / 2.0;
   if (fixed) {
-    // The upstream constructor also draws the first layout before reset.
-    if (!maze_initialized_) {
-      FixedMaze(random);
-    }
     maze_entities = FixedMaze(random);
     maze_variations.clear();
     for (int y = 0; y < size; ++y) {
@@ -123,13 +118,12 @@ void Scene::MazeArena(const TaskConfig& task, RandomState* random) {
     if (!maze_) {
       maze_ = std::make_unique<deepmind::labmaze::RandomMaze>(
           11, 11, 4, 4, 5, 1000, 0, 26, false, true, 1, "P", 3, "G",
-          random->Int(2147483648U));
+          random->Integer(2147483648U));
     }
     maze_->Regenerate();
     maze_entities = maze_->EntityLayer();
     maze_variations = maze_->VariationsLayer();
   }
-  maze_initialized_ = true;
   Set(Child(Child(Root(), "default"), "geom"), "rgba", {1, 1, 1, 1});
   auto add_textures = [&](const std::string& prefix, const auto& textures,
                           const std::string& kind) {
@@ -219,7 +213,7 @@ void Scene::MazeArena(const TaskConfig& task, RandomState* random) {
   auto planes = Root().append_child("envpool_maze_world");
   const std::string wall_texture =
       "labmaze_style_01/" +
-      std::string(kWallTextures[random->Int(kWallTextures.size())]);
+      std::string(kWallTextures[random->Integer(kWallTextures.size())]);
   int wall_id = 0;
   const std::array<std::array<double, 6>, 6> axes{{{0, -1, 0, 0, 0, 1},
                                                    {0, 1, 0, 0, 0, 1},
@@ -269,7 +263,7 @@ void Scene::MazeArena(const TaskConfig& task, RandomState* random) {
       }
     }
   }
-  const auto main_floor = random->Int(floors.size());
+  const auto main_floor = random->Integer(floors.size());
   for (char variation : std::string(".ABCDEFGHIJKLMNOPQRSTUVWXYZ")) {
     if (maze_variations.find(variation) == std::string::npos) {
       break;
@@ -277,7 +271,7 @@ void Scene::MazeArena(const TaskConfig& task, RandomState* random) {
     auto texture = main_floor;
     if (variation != '.') {
       do {
-        texture = random->Int(floors.size());
+        texture = random->Integer(floors.size());
       } while (texture == main_floor);
     }
     int tile_id = 0;
@@ -306,7 +300,7 @@ void Scene::MazeArena(const TaskConfig& task, RandomState* random) {
   }
 }
 
-void Scene::AddTargets(const TaskConfig& task, RandomState* random) {
+void Scene::AddTargets(const TaskConfig& task, envpool::Random* random) {
   // Composer adds these planes at episode initialization, after the walker.
   for (auto plane : Root().child("envpool_maze_world").children()) {
     World().append_copy(plane);
@@ -315,7 +309,7 @@ void Scene::AddTargets(const TaskConfig& task, RandomState* random) {
   auto positions = target_positions;
   random->Shuffle(&positions);
   const bool heterogeneous = task.task == Task::kHeterogeneous;
-  if (heterogeneous && random->Int(2) == 0) {
+  if (heterogeneous && random->Integer(2) == 0) {
     std::swap(target_colors_[0], target_colors_[1]);
   }
   const double radius = task.walker == Walker::kRodent ? .05 : .4;

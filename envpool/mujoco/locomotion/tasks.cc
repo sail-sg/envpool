@@ -173,8 +173,8 @@ void Simulation::GenerateBowl() {
 
 void Simulation::RandomizeTouchTarget() {
   double* position = model_->geom_pos + 3 * target_geoms_[0];
-  position[0] = 1.5 * scene_random_.Uniform(-1, 1);
-  position[1] = 1.5 * scene_random_.Uniform(-1, 1);
+  position[0] = 1.5 * random_.Uniform(-1, 1);
+  position[1] = 1.5 * random_.Uniform(-1, 1);
   position[2] = .14;
   const int texture = Id(mjOBJ_TEXTURE, "target_0_0/target_sphere_init");
   std::fill_n(model_->mat_texid + mjNTEXROLE * target_materials_[0], mjNTEXROLE,

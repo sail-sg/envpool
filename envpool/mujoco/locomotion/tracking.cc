@@ -92,7 +92,7 @@ void Simulation::SelectTrackingClip() {
       throw std::runtime_error("No valid mocap starts");
     }
   }
-  const auto index = random_.Int(possible_starts_.size());
+  const auto index = random_.Integer(possible_starts_.size());
   const auto [clip, step] = possible_starts_.at(index);
   clip_id_ = clip;
   reference_start_ = reference_step_ = step;

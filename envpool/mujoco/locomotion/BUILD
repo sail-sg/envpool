@@ -58,40 +58,19 @@ cc_library(
         "scene.h",
         "simulation.h",
     ],
-    # NumPy evaluates these expressions as separate ufunc operations. Fusing
-    # multiply/add changes terrain geometry and long rollout observations.
-    copts = select({
-        "//:windows": ["/fp:strict"],
-        "//conditions:default": ["-ffp-contract=off"],
-    }),
     data = [
         ":assets",
         ":labmaze_assets",
     ],
     deps = [
-        ":random",
         "//envpool/mujoco:mujoco_render",
+        "//envpool/utils:random",
         "//third_party/dmc_locomotion:task_metadata",
         "@labmaze_source//:maze",
         "@lodepng",
         "@mujoco//:mujoco_lib",
         "@pugixml",
     ],
-)
-
-cc_library(
-    name = "random",
-    srcs = ["random.cc"],
-    hdrs = ["random.h"],
-    # NumPy's legacy distributions use ordinary compiled C expressions, unlike
-    # the separate ufunc operations in scene/observation code. Keep the normal
-    # platform contraction behavior here. The Linux arm64 NumPy wheel disables
-    # contraction, unlike the macOS arm64 wheel; nonzero Uniform bounds expose
-    # the difference in gap geometry and Soccer respawns.
-    copts = select({
-        "//:linux_arm64": ["-ffp-contract=off"],
-        "//conditions:default": [],
-    }),
 )
 
 copy_to_directory(
@@ -183,7 +162,6 @@ py_library(
     srcs = ["oracle.py"],
     data = [
         "//third_party/dmc_locomotion:mocap_oracle",
-        "@labmaze_source//labmaze/cc/python:_random_maze",
         "@mujoco//:mujoco_shared_lib",
     ],
     imports = ["../../.."],
@@ -207,6 +185,7 @@ py_binary(
         "//envpool:registration",
         "//envpool/mujoco:dmc_render_oracle",
         "//envpool/mujoco:mujoco_oracle",
+        "//envpool/mujoco:render_test_utils",
         "//envpool/python:glfw_context",
         requirement("numpy"),
         requirement("pillow"),

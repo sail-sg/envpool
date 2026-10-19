@@ -26,9 +26,10 @@ Do not merge the PR or change the CI cache/cancellation policy.
 - [x] Replace PCG64/Ziggurat with native distributions and checked semantic
   state transfer for MPE2 and MyoSuite; complete macOS checks pass.
 - [ ] Remove JAX sampling/XLA scan-order compatibility using native state.
-- [ ] Remove locomotion RandomState compatibility and ARM FMA flag.
-- [ ] Remove MJLab Torch sampling and RNG draw-count coupling (implemented;
-  validating semantic events and ordinary quaternion arithmetic).
+- [x] Remove locomotion RandomState compatibility and ARM FMA flag; macOS
+  native 30 and oracle 65 methods pass, all 13 documentation comparisons pass.
+- [x] Remove MJLab Torch sampling and RNG draw-count coupling; native tests
+  and all 61 oracle methods pass on macOS.
 - [x] Apply the second cleanup pass: unused SearchAndRescue config, duplicated
   distance helper, uniform-choice CDF, redundant transforms and CGL queries.
 - [x] Finish baseline macOS validation, static/doc checks and all MyoSuite doc
@@ -37,7 +38,8 @@ Do not merge the PR or change the CI cache/cancellation policy.
 - [ ] Finish the remaining Linux family checks.
 - [x] Open one ready-for-review PR, not a draft: #440.
 - [x] Add Jumanji scene-content checks for all 26 IDs; local checks pass.
-- [ ] Resolve the Linux MJLab render failures and clang-tidy findings.
+- [x] Resolve the initial 36 clang-tidy findings (hosted check passed).
+- [ ] Resolve the remaining Linux MJLab/Playground and CGL validation failures.
 - [ ] Complete supported-platform CI and installed-wheel release checks.
 - [ ] Preserve useful logs and clean up the task-owned Linux devbox.
 
@@ -139,9 +141,9 @@ the remaining numerical oracle then passed with the field-based checks.
   before copying the next starting state; native uninterrupted replays remain.
 - A task may terminate at the same instant its time limit truncates. Reuse the
   explicit termination state instead of deriving it as `done & ~trunc`.
-- Keep the existing Linux pip MuJoCo engine: replacing C++ MjSpec bindings across
-  independently built libraries caused ABI failures. The established platform
-  setup remains the reference strategy.
+- The Linux Playground shard using MjSpec crashes. Check its actual engine
+  selection and isolate the cause before changing the adapter; the previous
+  note claiming this suite already retained the pip engine was inaccurate.
 
 ## Decision log
 
@@ -216,11 +218,28 @@ head before declaring completion and releasing the Linux devbox.
 - The Jumanji content-check extension passes all 26 tasks after reset and
   three steps and rejects an unrelated checkerboard for all 26. It checks
   semantic landmarks rather than exact drawing styles; the integrated test
-  passes in 47.3 seconds, and its Bazel check is running with the MJLab batch.
-- MJLab now uses native sampling, actual checked command/reference/push state,
-  and per-step physics input. Focused Cartpole and motion-wrap checks pass;
-  the complete-task probe has also passed depth and RGB camera cases. Ordinary
-  quaternion arithmetic and removal of strict floating-point flags still need
-  a rebuilt binary. The changes remain uncommitted until validated.
-- Latest pushed head `8da420d6` passes hosted lint. Full hosted test, clang-tidy
-  and release results remain pending; historical runs are not substituted.
+  passes in 47.3 seconds, and its full Bazel target passed with the MJLab batch.
+- MJLab uses native sampling, checked command/reference/push/control state and
+  ordinary quaternion arithmetic. Independent probes isolated a stale oracle
+  curriculum and contact amplification of float32 motor-target rounding.
+  All 61 alignment methods and native tests pass on macOS.
+- Locomotion uses native sampling and checked actual layouts, models and target
+  events. Its RandomState clone and ARM FMA/strict flags are removed. The native
+  target passed; fixes to the oracle clock, compiled target placement and a
+  seed-dependent hand fixture pass the full 65-method rerun. All 13
+  documentation comparisons were regenerated and checked.
+- SearchAndRescue uses native Gaussian acceleration and checked target velocity
+  in the oracle. Independent tests cover increment statistics, temporal
+  independence, speed clipping and wrapped motion. Categorical sampling uses
+  an ordinary cumulative sum instead of emulating XLA tiles. Both changes await
+  their full rebuilt checks. The remaining compact keyed generator needs an
+  explicit maintenance decision.
+- The Windows std::array iterator fix is pushed in `0686f7f0`.
+- The official fixed-state macOS replay in run `39249567582` demonstrated large
+  incorrect startup shadows (mean error up to 13.44/255), followed by 477 stable
+  frames. `717c09f1` restores the established first-frame CGL warmup while
+  retaining deletion of unused GL queries and the every-frame duplicate draw.
+  This protects completed rendering; it does not tighten pixel tolerances.
+- Current validation and actionable failures are tracked in
+  `/private/tmp/envpool-correctness-cleanup/state.json`. Historical passes do not
+  replace checks on the final PR head.

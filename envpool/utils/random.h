@@ -12,8 +12,10 @@
 #ifndef ENVPOOL_UTILS_RANDOM_H_
 #define ENVPOOL_UTILS_RANDOM_H_
 
+#include <algorithm>
 #include <cstdint>
 #include <random>
+#include <vector>
 
 namespace envpool {
 
@@ -27,8 +29,14 @@ class Random {
     return std::uniform_real_distribution<double>(low, high)(generator_);
   }
 
-  int Integer(int high) {
-    return std::uniform_int_distribution<int>(0, high - 1)(generator_);
+  template <typename T>
+  T Integer(T high) {
+    return std::uniform_int_distribution<T>(0, high - 1)(generator_);
+  }
+
+  template <typename T>
+  void Shuffle(std::vector<T>* values) {
+    std::shuffle(values->begin(), values->end(), generator_);
   }
 
   double Normal() { return normal_(generator_); }
