@@ -15,18 +15,73 @@
 #ifndef ENVPOOL_CRAFTAX_RANDOM_H_
 #define ENVPOOL_CRAFTAX_RANDOM_H_
 
-#include "envpool/utils/jax_random.h"
+#include <algorithm>
+#include <array>
+#include <cstdint>
+#include <numeric>
+#include <vector>
 
 namespace craftax {
 
-using envpool::jax_random::Bits;
-using envpool::jax_random::Choice;
-using envpool::jax_random::Key;
-using envpool::jax_random::RandInt;
-using envpool::jax_random::Split;
-using envpool::jax_random::TakeKey;
-using envpool::jax_random::Threefry;
-using envpool::jax_random::Uniform;
+// Threefry2x32-20, with JAX's partitionable counter layout. Keys are values:
+// drawing from one never implicitly advances another stream.
+using Key = std::array<std::uint32_t, 2>;
+
+inline Key Threefry(Key key, Key count) {
+  constexpr std::array<int, 8> rotations{13, 15, 26, 6, 17, 29, 16, 24};
+  const std::array<std::uint32_t, 3> keys{key[0], key[1],
+                                          key[0] ^ key[1] ^ 0x1BD11BDAU};
+  count[0] += keys[0];
+  count[1] += keys[1];
+  for (int round = 0; round < 20; ++round) {
+    count[0] += count[1];
+    const int shift = rotations[round % 8];
+    count[1] = (count[1] << shift) | (count[1] >> (32 - shift));
+    count[1] ^= count[0];
+    if (round % 4 == 3) {
+      const int injection = (round + 1) / 4;
+      count[0] += keys[injection % 3];
+      count[1] += keys[(injection + 1) % 3] + injection;
+    }
+  }
+  return count;
+}
+
+inline Key Split(Key key, std::uint32_t index) {
+  return Threefry(key, {0, index});
+}
+
+inline Key TakeKey(Key* key) {
+  const Key draw = Split(*key, 1);
+  *key = Split(*key, 0);
+  return draw;
+}
+
+inline std::uint32_t Bits(Key key, std::uint32_t index = 0) {
+  const Key bits = Threefry(key, {0, index});
+  return bits[0] ^ bits[1];
+}
+
+inline float Uniform(Key key, std::uint32_t index = 0) {
+  return static_cast<float>(Bits(key, index) >> 9) * 0x1p-23F;
+}
+
+inline int RandInt(Key key, int low, int high, std::uint32_t index = 0) {
+  const std::uint64_t value =
+      (static_cast<std::uint64_t>(Bits(Split(key, 0), index)) << 32) |
+      Bits(Split(key, 1), index);
+  return low + static_cast<int>(value % std::max(1, high - low));
+}
+
+// Inputs need not sum to one.
+inline int Choice(Key key, const std::vector<float>& weights) {
+  std::vector<float> cumulative(weights.size());
+  std::partial_sum(weights.begin(), weights.end(), cumulative.begin());
+  const float sample = cumulative.back() * (1.0f - Uniform(key));
+  return static_cast<int>(
+      std::lower_bound(cumulative.begin(), cumulative.end(), sample) -
+      cumulative.begin());
+}
 
 }  // namespace craftax
 

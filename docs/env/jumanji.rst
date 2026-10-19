@@ -22,7 +22,7 @@ target velocities into the oracle, and then compare movement, visibility,
 detection, rewards and termination. Matching the oracle's random stream is
 unnecessary.
 
-Game2048, Snake and Tetris also use native sampling. Alignment checks validate
+``Game2048``, ``Snake`` and ``Tetris`` also use native sampling. Alignment checks validate
 the sampled cell, fruit position or piece before supplying it to the official
 transition; reset distributions are checked separately. PacMan exposes the
 selected directions in ``info["ghost_actions"]`` with shape ``(num_envs, 4)``.

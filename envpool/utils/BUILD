@@ -41,11 +41,6 @@ cc_library(
 )
 
 cc_library(
-    name = "jax_random",
-    hdrs = ["jax_random.h"],
-)
-
-cc_library(
     name = "colored_noise",
     hdrs = ["colored_noise.h"],
     deps = [
