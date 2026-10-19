@@ -898,9 +898,13 @@ is complete end-to-end:
 - Meet :ref:`seed_randomization_acceptance`: check default seed/reset/parallel
   variation and independent randomized components without oracle state sync.
 - Add step-level oracle alignment tests when an official implementation exists.
-  A reset-time state sync is acceptable when needed, but do not sync state
-  again during the rollout. Compare observations, rewards, terminated/truncated
-  semantics, exposed info, and renders when render output is expected to match.
+  Follow the original MuJoCo pattern: export necessary hidden state through
+  ``info`` and set the oracle's state before independent stepping. Reuse native
+  RNG facilities rather than reproducing the oracle's random sequence. Prefer
+  reset-time synchronization; if per-step copies are needed, check the copied
+  behavior separately and document what the comparison verifies. Do not
+  overwrite oracle results before checking them. Compare observations, rewards,
+  terminated/truncated semantics, exposed info, and relevant rendered content.
 - Add render tests for reset frames, multi-step frames, batched rendering, and
   env-id selection when rendering is supported.
 - Add the new family to ``envpool/make_test.py`` so source builds and installed

@@ -14,17 +14,21 @@ Do not merge the PR or change the CI cache/cancellation policy.
 - [x] R1: Replace Jumanji future-output replay with independent native rollouts.
 - [x] R2: Numerically compare all 398 MyoSuite tasks and remove the CPU pin.
 - [x] R3/B1: Use native Jumanji rendering, including asynchronous APIs.
-- [x] R4: Use independent official Playground task steps and full trajectories.
+- [x] R4: Use independent official Playground task steps across all 29 tasks.
 - [x] A1/A2/B4: Simplify Craftax comparisons, score, and light/observation math.
 - [x] A3: Share Playground's CGL bootstrap.
 - [x] A4: Consolidate derived locomotion numerical budgets.
 - [x] B2: Replace MJLab backend-specific trigonometry with ordinary native math.
 - [x] B3: Remove unnecessary CGL redraws using visual correctness evidence.
 - [x] Review the complete diff and perform both additional cleanup passes.
+- [x] Re-audit RNG/rounding compatibility after the user's follow-up review.
+- [x] Clarify checked hidden-state transfer through native info in AGENTS.md.
 - [x] Finish macOS validation, static/doc checks and all MyoSuite doc images.
 - [x] Run the repository-wide Linux registration and creation check.
 - [ ] Finish the remaining Linux family checks.
-- [ ] Open one ready-for-review PR, not a draft.
+- [x] Open one ready-for-review PR, not a draft: #440.
+- [ ] Close the Jumanji render-content validation gap found in self-review.
+- [ ] Resolve the Linux MJLab render failures and clang-tidy findings.
 - [ ] Complete supported-platform CI and installed-wheel release checks.
 - [ ] Preserve useful logs and clean up the task-owned Linux devbox.
 
@@ -133,11 +137,51 @@ the remaining numerical oracle then passed with the field-based checks.
 - 2026-10-19: The user requested an ordinary PR, not a draft. Do not merge it.
 - 2026-10-19: Prefer ordinary math and evidence-backed accuracy over backend
   emulation; retain genuine resource, lifecycle and deterministic-RNG fixes.
+- 2026-10-19: The user clarified that oracle convenience does not justify a
+  compatible PRNG. Expose necessary hidden state through native `info`, check
+  its correctness, and copy it into the oracle before independent stepping.
+  Reuse existing fields; do not introduce a shared-random-input framework.
+  Per-step synchronization is allowed when justified, but does not itself
+  verify copied behavior. AGENTS.md now states this boundary explicitly.
+- 2026-10-19: Read the original implementations, not just recent history:
+  `6c80fcf7` (2021 MountainCar state assignment), `8cacab6c` (2022 HalfCheetah
+  standard C++ sampling plus `info:qpos0`/`info:qvel0` and oracle `set_state`),
+  and `ad139502` (2022 DMC reset through `physics.reset_context`). The existing
+  state-transfer design already solves reset RNG differences; the guide and
+  new-environment documentation now point back to that design.
+
+## Follow-up self-review
+
+The review of `ca83ff4d` supersedes the earlier conclusion that no further
+compatibility cleanup was useful. Detailed evidence and two separate suggestion
+lists are in `/private/tmp/envpool-correctness-cleanup/self-review-440/audit.md`.
+
+- Jumanji's render assertion accepts an unrelated barcode image: shape and
+  nonblank pixels do not establish scene correctness. Extend meaningful scene
+  checks without restoring the duplicate Matplotlib renderer.
+- Both Linux MJLab motion-wrap cases fail exact frame equality after their
+  state/reward checks pass. Saved comparisons localize the visible difference
+  to shadows. Fixed-state investigation is still needed before choosing a
+  visual budget or changing rendering.
+- The first hosted clang-tidy job failed on braces, enum types and conversions;
+  lint passed. Full test/release jobs were still running when inspected.
+- Remaining compatibility candidates include shared NumPy PCG64/Ziggurat,
+  JAX keys/sampling/XLA scan order, locomotion's NumPy RandomState clone and
+  platform flag, and MJLab's Torch sampling/draw counter. These are new review
+  suggestions, not implemented removals. Native sampling distributions and
+  temporal correlations remain required behavior.
+- Additional deletion candidates are unused SearchAndRescue observation
+  configuration, duplicate distance helpers, a uniform-choice CDF, redundant
+  inverse functions, and CGL queries whose results are discarded. Risks and
+  validation needs are recorded separately in the review.
+- Playground covers all 29 tasks, but its oracle horizon is bounded at 128
+  steps or termination. This must not be described as full episodes for every
+  task. Jumanji's documented search-distance tolerance also needs correction.
 
 ## Outcomes and remaining work
 
-All requested implementation and review items, core local checks and doc images
-are complete. Open the ordinary PR so its full-platform CI can run alongside the
-remaining Linux family checks, then inspect and repair any actual failures in
-the complete test and release matrix. Record results for
-the real PR head before declaring completion and releasing the Linux devbox.
+The original audit changes are in ordinary PR #440. Follow-up self-review found
+the validation issues above and additional simplification candidates; the work
+is not complete. Fix the actionable validation/CI failures and track the new
+suggestions separately. Record full test and release results for the real PR
+head before declaring completion and releasing the Linux devbox.
