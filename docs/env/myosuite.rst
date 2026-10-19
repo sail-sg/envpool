@@ -439,9 +439,10 @@ Correctness Validation
 
 All 398 registered tasks are checked over complete native episodes using the
 same external actions. The oracle starts each step from the native pre-step
-joint positions, velocities, activations, and solver warm start. Its resulting
-physics, observations, controls, rewards, and episode events are compared before
-the next state copy. These are synchronized transition checks, not uninterrupted
+joint positions, velocities, muscle activation, and solver warm start. The
+resulting physics, observations, controls, rewards, and episode events are
+compared before the next state copy. These are synchronized transition checks,
+not uninterrupted
 cross-implementation trajectories. Native multi-step determinism and reset
 randomization are tested separately without oracle state copies.
 

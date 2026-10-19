@@ -151,9 +151,9 @@ Validation
 The family tests compare all registered tasks against MPE2 1.1.1 using both
 action modes. Native reset state initializes the oracle; both then receive
 identical external actions. Collect Treasure also transfers sampled position
-and type after independently checking each respawn event, before the oracle
-computes observations and rewards. Native respawn bounds, types, variation,
-pickup and delivery are checked separately.
+and type after independently checking when a collected treasure reappears,
+before the oracle computes observations and rewards. The tests separately
+check sampling bounds, treasure types and variation, pickup, and delivery.
 Independent tests inspect native resets without synchronization, including
 goals, keys, treasure types, continuous resets, and parallel streams. Native
 seed sequences use standard C++ distributions and do not promise NumPy's
