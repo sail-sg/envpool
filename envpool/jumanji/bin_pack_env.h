@@ -21,6 +21,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <iterator>
 #include <numeric>
 #include <random>
 #include <string>
@@ -351,11 +352,11 @@ class BinPackEnv : public Env<BinPackEnvSpec>, public RenderableEnv {
       if (already_present) {
         continue;
       }
-      auto* const free = std::find(ems_mask_.begin(), ems_mask_.end(), false);
+      const int first_free = static_cast<int>(
+          std::distance(ems_mask_.begin(),
+                        std::find(ems_mask_.begin(), ems_mask_.end(), false)));
       // The pinned upstream argmin selects slot zero if the buffer is full.
-      const int slot = free == ems_mask_.end()
-                           ? 0
-                           : static_cast<int>(free - ems_mask_.begin());
+      const int slot = first_free == binpack::kNumEms ? 0 : first_free;
       ems_[slot] = candidate;
       ems_mask_[slot] = true;
     }
