@@ -289,20 +289,7 @@ class Tracking : public Task {
     for (auto& value : probabilities_) {
       value /= sum;
     }
-    // Torch's one-sample multinomial uses an exponential race, including with
-    // replacement=True. The CPU exponential kernel draws double uniforms from
-    // two MT words, then casts the exponential to float32 before the division.
-    float best = -std::numeric_limits<float>::infinity();
-    int selected = 0;
-    for (int i = 0; i < bins; ++i) {
-      const auto exponential =
-          static_cast<float>(-std::log1p(-sim_.random.UnitDouble()));
-      const float score = probabilities_[i] / exponential;
-      if (score > best) {
-        selected = i;
-        best = score;
-      }
-    }
+    const int selected = sim_.random.Choice(probabilities_);
     frame_ = ((static_cast<float>(selected) + sim_.random.Unit()) /
               static_cast<float>(bins)) *
              static_cast<float>(motion_->frames - 1);
@@ -322,7 +309,7 @@ class Tracking : public Task {
     const auto* q = motion_->arrays.at("joint_pos").Frame(frame_);
     const auto* v = motion_->arrays.at("joint_vel").Frame(frame_);
     for (std::size_t i = 0; i < robot_.qadr.size(); ++i) {
-      const float value = q[i] + sim_.Sample(cfg_.at("joint_position_range"));
+      const float value = q[i] + sim_.Uniform(cfg_.at("joint_position_range"));
       sim_.physics.Get("data.qpos")[robot_.qadr[i]] =
           std::clamp(value, robot_.limits[i * 2], robot_.limits[i * 2 + 1]);
       sim_.physics.Get("data.qvel")[robot_.vadr[i]] = v[i];

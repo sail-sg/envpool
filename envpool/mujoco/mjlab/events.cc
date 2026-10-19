@@ -23,6 +23,11 @@
 namespace mjlab {
 
 void Simulation::Events(const std::string& mode) {
+#ifdef ENVPOOL_TEST
+  if (mode == "interval") {
+    push_velocities.clear();
+  }
+#endif
   bool recompute = false;
   for (const auto& entry : cfg.at("event").as_object()) {
     const auto& term = entry.value();
@@ -35,7 +40,7 @@ void Simulation::Events(const std::string& mode) {
       if (timer >= 1.0e-6F) {
         continue;
       }
-      timer = Sample(term.at("interval_range_s"));
+      timer = Uniform(term.at("interval_range_s"));
     }
     const auto fn = Function(term);
     const auto& p = term.at("params");
@@ -57,24 +62,29 @@ void Simulation::Events(const std::string& mode) {
       const auto ids = Select(entity, p, "joint");
       for (int id : ids) {
         const float value =
-            entity.joint_default[id] + Sample(p.at("position_range"));
+            entity.joint_default[id] + Uniform(p.at("position_range"));
         physics.Get("data.qpos")[entity.qadr[id]] =
             std::clamp(value, entity.limits[id * 2], entity.limits[id * 2 + 1]);
       }
       for (int id : ids) {
         physics.Get("data.qvel")[entity.vadr[id]] =
-            entity.velocity_default[id] + Sample(p.at("velocity_range"));
+            entity.velocity_default[id] + Uniform(p.at("velocity_range"));
       }
     } else if (fn == "push_by_setting_velocity") {
       const auto perturbation = SamplePose(p.at("velocity_range"));
-      WriteVelocity(
-          entity,
+      const auto linear =
           LinearVelocity(entity.root, entity.root, Position(entity.root)) +
-              Read<3>(perturbation.data()),
-          AngularVelocity(entity.root) + Read<3>(perturbation.data() + 3));
+          Read<3>(perturbation.data());
+      const auto angular =
+          AngularVelocity(entity.root) + Read<3>(perturbation.data() + 3);
+      WriteVelocity(entity, linear, angular);
+#ifdef ENVPOOL_TEST
+      push_velocities[std::string(entry.key())] = {
+          linear[0], linear[1], linear[2], angular[0], angular[1], angular[2]};
+#endif
     } else if (fn == "encoder_bias") {
       for (int id : Select(entity, p, "joint")) {
-        entity.bias[id] = Sample(p.at("bias_range"));
+        entity.bias[id] = Uniform(p.at("bias_range"));
       }
     } else if (fn == "geom_friction" || fn == "geom_rgba" ||
                fn == "body_com_offset") {
@@ -112,7 +122,7 @@ void Simulation::Events(const std::string& mode) {
               const float hi = Log(static_cast<float>(Number(range.at(1))));
               sample = Exp(random.Unit() * (hi - lo) + lo);
             } else {
-              sample = Sample(range, true);
+              sample = Uniform(range);
             }
           }
           const int address = mapping[ids[i]] * width + axis;

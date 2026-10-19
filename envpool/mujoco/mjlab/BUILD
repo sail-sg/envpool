@@ -59,10 +59,6 @@ cc_library(
         "simulation.h",
         "terrain.h",
     ],
-    copts = select({
-        "//:windows": ["/fp:strict"],
-        "//conditions:default": ["-ffp-contract=off"],
-    }),
     data = [":assets"],
     deps = [
         "//third_party/mjlab:kernels",

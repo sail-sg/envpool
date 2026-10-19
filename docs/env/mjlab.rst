@@ -255,28 +255,35 @@ locally. Neither the archive nor the SDK is included in a released wheel.
 Validation
 ----------
 
-The CPU oracle uses unmodified MJLab 1.6.0, Torch 2.9.0, MuJoCo-Warp 3.11.0, and
-Warp 1.14.0. It synchronizes native state once immediately after reset, then
-compares complete episodes driven by identical external actions. Tests cover
-every task, observations including camera pixels, rewards, termination,
-truncation, physics state, and public rendering at multiple steps.
-The oracle uses the upstream ``auto_reset=False`` option to retain terminal
-observations; EnvPool resets a completed slot on its next step.
+The CPU oracle uses pinned MJLab 1.6.0, Torch 2.9.0, MuJoCo-Warp 3.11.0, and
+Warp 1.14.0. Native model and task state initialize the oracle after reset.
+Each transition then starts from the native position, velocity and solver
+warm-start state; the oracle computes the next transition from the same
+external action. Processed motor targets are independently checked before
+the actual native targets are supplied to physics, so harmless float32 rounding
+is not amplified by contact solving. Tests compare every successor through the complete native
+episode before copying the next starting state. Task, controller and contact
+history evolve independently. The oracle's ``auto_reset=False`` option retains
+terminal observations; EnvPool resets a completed slot on its next step.
+
+Command and external-force events use the actual sampled native target,
+reference pose or resulting velocity after checking their permitted ranges.
+The oracle still determines when the event occurs and computes derived
+commands, observations, rewards and episode flags. Motion sampling weights,
+reference progression, command counters and event timers are also compared.
+This avoids reproducing Torch's random-number stream or counting RNG draws.
+
+Native observation noise is checked against its support, mean and second
+moment. Clean sensor values are compared with noise disabled in the oracle;
+noise samples themselves do not need to match. The existing native multi-step
+and reset tests continue to exercise the public noisy observations.
 
 Native scalar calculations use standard C++ math; the terrain-plane fit uses
 MuJoCo's 3-by-3 eigenvalue solver. Sine and cosine use the platform standard
-library, without an additional MKL or SLEEF dependency.
-Oracle comparisons allow float32 rounding differences (relative tolerance
-``1e-5``, absolute tolerance ``1e-6``), while discrete outputs and native
-same-seed replays remain exact. Tracking tasks additionally bound brief
-contact sensitivity to standard-library trigonometric rounding: peak pose
-error is below ``0.01`` (meters/radians), velocity and derived observation
-error below ``0.3``, and reward error below ``0.0003``. Each individual
-component's mean absolute error over time must remain below one percent of
-its peak budget. An independent 500-step diagnostic using system trigonometry
-in the oracle reproduced the native physics trajectory exactly; the actual
-tests retain the unmodified upstream math. The tests still compare every step through
-termination; they do not substitute final scores for behavioral alignment.
+library, without an additional MKL or SLEEF dependency. Transition comparisons
+use ``rtol=atol=1e-4`` for float32 calculations, with exact discrete outcomes.
+Synchronizing the starting physics eliminates accumulated contact sensitivity
+and the need for separate large tracking-trajectory tolerances.
 
 RGB rendering shares the existing MuJoCo bootstrap. On macOS, identical scenes
 can produce sparse CGL/Metal color differences. The shared image check bounds

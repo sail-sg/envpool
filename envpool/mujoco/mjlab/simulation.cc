@@ -351,14 +351,6 @@ std::vector<float> Simulation::Heights(const std::string& name,
   return values;
 }
 
-float Simulation::Sample(const Json& range, bool tensor_bounds) {
-  const double low = Number(range.at(0));
-  const double high = Number(range.at(1));
-  const float width = tensor_bounds
-                          ? static_cast<float>(high) - static_cast<float>(low)
-                          : static_cast<float>(high - low);
-  return random.Unit() * width + static_cast<float>(low);
-}
 float Simulation::Uniform(const Json& range) {
   return random.Uniform(Number(range.at(0)), Number(range.at(1)));
 }
@@ -366,8 +358,7 @@ std::vector<float> Simulation::SamplePose(const Json& ranges) {
   std::vector<float> result;
   for (const auto* key : {"x", "y", "z", "roll", "pitch", "yaw"}) {
     const auto* range = ranges.as_object().if_contains(key);
-    result.push_back(range == nullptr ? random.Uniform(0, 0)
-                                      : Sample(*range, true));
+    result.push_back(range == nullptr ? 0.0f : Uniform(*range));
   }
   return result;
 }
@@ -385,6 +376,9 @@ void Simulation::WriteActions(bool resetting) {
 }
 
 void Simulation::Reset() {
+#ifdef ENVPOOL_TEST
+  push_velocities.clear();
+#endif
   Curriculum();
   physics.Run("reset");
   for (auto& entry : contacts) {
@@ -405,7 +399,7 @@ void Simulation::Reset() {
   for (const auto& entry : cfg.at("event").as_object()) {
     if (Name(entry.value(), "mode") == "interval") {
       event_timers[std::string(entry.key())] =
-          Sample(entry.value().at("interval_range_s"));
+          Uniform(entry.value().at("interval_range_s"));
     }
   }
   steps = 0;
@@ -692,19 +686,29 @@ void Simulation::Observe() {
   for (const auto& group : cfg.at("observation").as_object()) {
     auto& result = observations[std::string(group.key())];
     result.clear();
+#ifdef ENVPOOL_TEST
+    std::vector<float>* clean = nullptr;
+    if (std::any_of(group.value().as_object().begin(),
+                    group.value().as_object().end(), [](const auto& term) {
+                      return !term.value().at("noise").is_null();
+                    })) {
+      clean = &clean_observations[std::string(group.key())];
+      clean->clear();
+    }
+#endif
     for (const auto& entry : group.value().as_object()) {
       const auto& term = entry.value();
       auto values = EvaluateObservation(term);
       for (std::size_t i = 0; i < values.size(); ++i) {
         float& value = values[i];
+#ifdef ENVPOOL_TEST
+        const float pristine = value;
+#endif
         const auto& noise = term.at("noise");
         if (!noise.is_null()) {
           const float low = Param(noise, "n_min");
           const float high = Param(noise, "n_max");
-          // UniformNoiseCfg uses rand_like()*width+low, not Tensor.uniform_.
-          // Keep its separate float32 operations even on platforms whose
-          // uniform_ kernel contracts the scale and offset into one FMA.
-          const float sample = random.Unit() * (high - low) + low;
+          const float sample = random.Uniform(low, high);
           const auto operation = Name(noise, "operation");
           if (operation == "add") {
             value += sample;
@@ -714,18 +718,27 @@ void Simulation::Observe() {
             value = sample;
           }
         }
-        const auto& clip = term.at("clip");
-        if (!clip.is_null()) {
-          value = std::clamp(value, static_cast<float>(Number(clip.at(0))),
-                             static_cast<float>(Number(clip.at(1))));
+        const auto finish = [&](float value) {
+          const auto& clip = term.at("clip");
+          if (!clip.is_null()) {
+            value = std::clamp(value, static_cast<float>(Number(clip.at(0))),
+                               static_cast<float>(Number(clip.at(1))));
+          }
+          const auto& scale = term.at("scale");
+          if (!scale.is_null()) {
+            value *= scale.is_array() ? Number(scale.at(i)) : Number(scale);
+          }
+          if (!std::isfinite(value)) {
+            value = 0;
+          }
+          return value;
+        };
+        value = finish(value);
+#ifdef ENVPOOL_TEST
+        if (clean != nullptr) {
+          clean->push_back(finish(pristine));
         }
-        const auto& scale = term.at("scale");
-        if (!scale.is_null()) {
-          value *= scale.is_array() ? Number(scale.at(i)) : Number(scale);
-        }
-        if (!std::isfinite(value)) {
-          value = 0;
-        }
+#endif
       }
       result.insert(result.end(), values.begin(), values.end());
     }
@@ -733,9 +746,7 @@ void Simulation::Observe() {
 }
 
 Json Simulation::State() const {
-  boost::json::object result{{"seed", random.Seed()},
-                             {"rng_draws", random.Draws()},
-                             {"steps", steps},
+  boost::json::object result{{"steps", steps},
                              {"total_steps", total_steps},
                              {"origin", ToJson(origin)},
                              {"action", ToJson(action)},
@@ -777,6 +788,18 @@ Json Simulation::State() const {
   result["event_timers"] = std::move(timers);
   result["reward_terms"] = std::move(rewards);
   result["metrics"] = std::move(metric_values);
+#ifdef ENVPOOL_TEST
+  boost::json::object clean;
+  for (const auto& [name, values] : clean_observations) {
+    clean[name] = ToJson(values);
+  }
+  result["clean_observations"] = std::move(clean);
+  boost::json::object pushes;
+  for (const auto& [name, values] : push_velocities) {
+    pushes[name] = ToJson(values);
+  }
+  result["push_velocities"] = std::move(pushes);
+#endif
   return result;
 }
 

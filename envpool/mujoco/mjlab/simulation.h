@@ -135,7 +135,6 @@ class Simulation {
   std::vector<float> JointVelocities(const Entity& entity) const;
   std::vector<float> Sensor(const std::string& name) const;
   std::vector<float> Heights(const std::string& name, float offset = 0) const;
-  float Sample(const Json& range, bool tensor_bounds = false);
   float Uniform(const Json& range);
   std::vector<float> SamplePose(const Json& ranges);
   float EvaluateReward(const Json& term);
@@ -156,6 +155,10 @@ class Simulation {
   std::vector<int> action_joints, action_controls;
   bool position_action{false};
   std::map<std::string, std::vector<float>> observations;
+#ifdef ENVPOOL_TEST
+  std::map<std::string, std::vector<float>> clean_observations;
+  std::map<std::string, std::vector<float>> push_velocities;
+#endif
   std::map<std::string, float> reward_terms, episode_rewards, event_timers;
   std::map<std::string, float> metrics;
   int steps{0}, total_steps{0}, max_steps, decimation;
