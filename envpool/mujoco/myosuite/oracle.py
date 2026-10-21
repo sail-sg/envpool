@@ -47,6 +47,9 @@ def run_oracle_probe(
                 cmd.extend([flag, str(path)])
         env = os.environ.copy()
         env["ROBOHIVE_VERBOSITY"] = "SILENT"
+        # Concurrent Bazel probes must not share a .coverage SQLite database.
+        # LCOV reports still go to the inherited COVERAGE_DIR.
+        env["COVERAGE_FILE"] = str(Path(folder) / ".coverage")
         try:
             result = subprocess.run(
                 cmd,
