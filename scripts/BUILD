@@ -30,6 +30,7 @@ py_binary(
         "//envpool/jumanji:oracle",
         "//envpool/mujoco:metaworld",
         "//envpool/mujoco:metaworld_registration",
+        "//envpool/mujoco:mujoco_render_oracle",
         "//envpool/mujoco:playground",
         "//envpool/mujoco:playground_oracle",
         "//envpool/mujoco:playground_registration",

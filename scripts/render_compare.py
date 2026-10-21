@@ -20,9 +20,6 @@ from __future__ import annotations
 import argparse
 import math
 import os
-import platform
-import subprocess
-import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -31,33 +28,11 @@ from typing import Any
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
+from envpool.mujoco.render_oracle import configure_linux_mujoco_gl
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
 preload_windows_gl_dlls(strict=True)
-
-
-def _configure_linux_mujoco_gl() -> None:
-    """Pick an offscreen MuJoCo GL backend on Linux before importing mujoco."""
-    if platform.system() != "Linux" or os.environ.get("MUJOCO_GL"):
-        return
-
-    for backend in ("egl", "osmesa"):
-        probe_env = os.environ.copy()
-        probe_env["MUJOCO_GL"] = backend
-        code = "import mujoco; mujoco.GLContext(8, 8).free()"
-        proc = subprocess.run(
-            [sys.executable, "-c", code],
-            env=probe_env,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        )
-        if proc.returncode == 0:
-            os.environ["MUJOCO_GL"] = backend
-            return
-
-
-_configure_linux_mujoco_gl()
+configure_linux_mujoco_gl()
 
 
 @dataclass(frozen=True)

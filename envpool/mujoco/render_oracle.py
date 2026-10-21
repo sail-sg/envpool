@@ -16,8 +16,46 @@
 
 import ctypes
 import importlib
+import os
 import platform
+import subprocess
+import sys
 from typing import Any, ClassVar
+
+
+def configure_linux_mujoco_gl() -> None:
+    """Select a usable Linux GL backend before importing MuJoCo bindings."""
+    if platform.system() != "Linux":
+        return
+    if os.environ.get("MUJOCO_GL"):
+        if os.environ["MUJOCO_GL"] == "egl":
+            os.environ.setdefault("EGL_PLATFORM", "surfaceless")
+        return
+    for backend in ("egl", "osmesa"):
+        env = dict(os.environ)
+        env["MUJOCO_GL"] = backend
+        if backend == "egl":
+            env.setdefault("EGL_PLATFORM", "surfaceless")
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import mujoco; "
+                    "ctx = mujoco.GLContext(1, 1); "
+                    "ctx.make_current(); "
+                    "ctx.free()"
+                ),
+            ],
+            env=env,
+            check=False,
+            capture_output=True,
+        )
+        if result.returncode == 0:
+            os.environ["MUJOCO_GL"] = backend
+            if backend == "egl":
+                os.environ.setdefault("EGL_PLATFORM", "surfaceless")
+            return
 
 
 def configure_macos_mujoco_renderer() -> None:

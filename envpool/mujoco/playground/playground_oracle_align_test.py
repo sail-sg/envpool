@@ -18,8 +18,6 @@ from __future__ import annotations
 import ctypes
 import os
 import platform
-import subprocess
-import sys
 import unittest
 from contextlib import contextmanager
 from pathlib import Path
@@ -31,46 +29,14 @@ from jax import config as jax_config
 jax_config.update("jax_enable_x64", True)
 
 from envpool.mujoco.oracle import configure_mujoco_package_shared_lib
+from envpool.mujoco.render_oracle import (
+    configure_linux_mujoco_gl,
+    configure_macos_mujoco_renderer,
+)
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
 preload_windows_gl_dlls(strict=True)
-
-
-def _configure_linux_mujoco_gl() -> None:
-    if platform.system() != "Linux":
-        return
-    if os.environ.get("MUJOCO_GL"):
-        if os.environ["MUJOCO_GL"] == "egl":
-            os.environ.setdefault("EGL_PLATFORM", "surfaceless")
-        return
-    for backend in ("egl", "osmesa"):
-        env = dict(os.environ)
-        env["MUJOCO_GL"] = backend
-        if backend == "egl":
-            env.setdefault("EGL_PLATFORM", "surfaceless")
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-c",
-                (
-                    "import mujoco; "
-                    "ctx = mujoco.GLContext(1, 1); "
-                    "ctx.make_current(); "
-                    "ctx.free()"
-                ),
-            ],
-            env=env,
-            check=False,
-            capture_output=True,
-        )
-        if result.returncode == 0:
-            os.environ["MUJOCO_GL"] = backend
-            if backend == "egl":
-                os.environ.setdefault("EGL_PLATFORM", "surfaceless")
-            return
-
-
-_configure_linux_mujoco_gl()
+configure_linux_mujoco_gl()
 # Linux MjSpec bindings must retain their matching pip library: substituting
 # another build crashes while compiling Barkour's contact sensors.
 configure_mujoco_package_shared_lib()
@@ -136,7 +102,6 @@ from envpool.mujoco.playground.oracle import (
     make_oracle,
     native_config,
 )
-from envpool.mujoco.render_oracle import configure_macos_mujoco_renderer
 from envpool.registration import make_gymnasium
 
 configure_macos_mujoco_renderer()
@@ -513,32 +478,18 @@ def _sync_mjx_data_from_mujoco(
         qacc_warmstart=jnp.asarray(data.qacc_warmstart),
         ctrl=jnp.asarray(data.ctrl),
         sensordata=jnp.asarray(data.sensordata),
-        xpos=jnp.asarray(np.asarray(data.xpos).reshape(model.nbody, 3)),
-        xquat=jnp.asarray(np.asarray(data.xquat).reshape(model.nbody, 4)),
-        xmat=jnp.asarray(np.asarray(data.xmat).reshape(model.nbody, 3, 3)),
-        geom_xpos=jnp.asarray(
-            np.asarray(data.geom_xpos).reshape(model.ngeom, 3)
-        ),
-        geom_xmat=jnp.asarray(
-            np.asarray(data.geom_xmat).reshape(model.ngeom, 3, 3)
-        ),
-        site_xpos=jnp.asarray(
-            np.asarray(data.site_xpos).reshape(model.nsite, 3)
-        ),
-        site_xmat=jnp.asarray(
-            np.asarray(data.site_xmat).reshape(model.nsite, 3, 3)
-        ),
+        xpos=jnp.asarray(data.xpos),
+        xquat=jnp.asarray(data.xquat),
+        xmat=jnp.asarray(data.xmat.reshape(model.nbody, 3, 3)),
+        geom_xpos=jnp.asarray(data.geom_xpos),
+        geom_xmat=jnp.asarray(data.geom_xmat.reshape(model.ngeom, 3, 3)),
+        site_xpos=jnp.asarray(data.site_xpos),
+        site_xmat=jnp.asarray(data.site_xmat.reshape(model.nsite, 3, 3)),
         actuator_force=jnp.asarray(data.actuator_force),
         qfrc_actuator=jnp.asarray(data.qfrc_actuator),
-        xfrc_applied=jnp.asarray(
-            np.asarray(data.xfrc_applied).reshape(model.nbody, 6)
-        ),
-        mocap_pos=jnp.asarray(
-            np.asarray(data.mocap_pos).reshape(model.nmocap, 3)
-        ),
-        mocap_quat=jnp.asarray(
-            np.asarray(data.mocap_quat).reshape(model.nmocap, 4)
-        ),
+        xfrc_applied=jnp.asarray(data.xfrc_applied),
+        mocap_pos=jnp.asarray(data.mocap_pos),
+        mocap_quat=jnp.asarray(data.mocap_quat),
     )
 
 

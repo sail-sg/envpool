@@ -358,10 +358,7 @@ class MyoSuiteOracleAlignTest(absltest.TestCase):
                         observations = []
                         rewards = []
                         sparse_rewards = []
-                        for step_id, action in enumerate(
-                            oracle_task["actions"]
-                        ):
-                            action = np.asarray(action, dtype=np.float32)
+                        for step_id in range(len(oracle_task["actions"])):
                             envpool_step = native_steps[task_id][step_id]
                             self.assertEqual(
                                 envpool_step[0].shape, (1, task["obs_dim"])
