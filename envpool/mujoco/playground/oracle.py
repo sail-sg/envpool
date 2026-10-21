@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -94,14 +95,20 @@ class FrameRenderer:
         model.vis.global_.offheight = height
         self._camera = _official_render_camera(task_id)
         self._renderer = mujoco.Renderer(model, height=height, width=width)
+        self._render_passes = 17 if sys.platform == "darwin" else 1
 
     def render(self, data: mujoco.MjData) -> np.ndarray:
         """Draw the current state after updating camera-dependent geometry."""
         # MuJoCo builds infinite-plane geometry before updating the camera.
-        # Refresh that geometry at the selected camera before the single draw.
-        self._renderer.update_scene(data, camera=self._camera)
-        self._renderer.update_scene(data, camera=self._camera)
-        return self._renderer.render()
+        # Refresh that geometry at the selected camera before drawing.
+        # As in the native renderer, warm up the first CGL frame to avoid
+        # incomplete shadows from the hosted macOS software renderer.
+        for _ in range(self._render_passes):
+            self._renderer.update_scene(data, camera=self._camera)
+            self._renderer.update_scene(data, camera=self._camera)
+            frame = self._renderer.render()
+        self._render_passes = 1
+        return frame
 
     def close(self) -> None:
         """Release the offscreen renderer."""
